@@ -134,7 +134,7 @@ HAL_StatusTypeDef HAL_PCD_Init(PCD_HandleTypeDef *hpcd)
     hpcd->State = HAL_PCD_STATE_BUSY;
 
     /* Init endpoints structures */
-    for (i = 0U; i < hpcd->Init.dev_endpoints ; i++)
+    for (i = 0U; i < hpcd->Init.dev_endpoints; i++)
     {
         /* Init ep structure */
         hpcd->IN_ep[i].is_in = 1U;
@@ -146,7 +146,7 @@ HAL_StatusTypeDef HAL_PCD_Init(PCD_HandleTypeDef *hpcd)
         hpcd->IN_ep[i].xfer_len = 0U;
     }
 
-    for (i = 0U; i < hpcd->Init.dev_endpoints ; i++)
+    for (i = 0U; i < hpcd->Init.dev_endpoints; i++)
     {
         hpcd->OUT_ep[i].is_in = 0U;
         hpcd->OUT_ep[i].num = i;
@@ -577,7 +577,7 @@ HAL_StatusTypeDef HAL_PCD_EP_Open(PCD_HandleTypeDef *hpcd, uint8_t ep_addr, uint
         {
             hpcd->Instance->intrrx |= (1 << ep->num);
             hpcd->Instance->rxmaxp = ep_mps;
-            csr = USB_RXCSR_FLUSHFIFO | USB_RXCSR_CLRDATATOG ;
+            csr = USB_RXCSR_FLUSHFIFO | USB_RXCSR_CLRDATATOG;
             // USB_RXCSR_AUTOCLEAR
 
             if (ep->type == PCD_EP_TYPE_INTR)
@@ -634,8 +634,10 @@ HAL_StatusTypeDef HAL_PCD_EP_Close(PCD_HandleTypeDef *hpcd, uint8_t ep_addr)
         {
             hpcd->Instance->intrrx &= ~(1 << ep->num);
             hpcd->Instance->rxmaxp = 0;
+            // As per Programming Guide:
+            // It may be necessary to set this bit twice in succession if double buffering is enabled
             hpcd->Instance->rxcsr = USB_RXCSR_FLUSHFIFO;
-            hpcd->Instance->rxcsr = USB_RXCSR_FLUSHFIFO; // Why twice ???
+            hpcd->Instance->rxcsr = USB_RXCSR_FLUSHFIFO;
         }
     }
     NVIC_EnableIRQ(USBC_IRQn);
@@ -1321,7 +1323,7 @@ static HAL_StatusTypeDef PCD_EP0_ISR_Handler(PCD_HandleTypeDef *hpcd)
     switch (hpcd->ep0_state)
     {
     case HAL_PCD_EP0_TX:
-        /*ireq on clearing txpktrdy*/
+        /* irq on clearing txpktrdy*/
         if ((csr & USB_CSR0_TXPKTRDY) == 0)
             HAL_PCD_DataInStageCallback(hpcd, 0);
         break;
