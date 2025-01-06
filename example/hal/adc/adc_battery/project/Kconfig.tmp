@@ -1,0 +1,4 @@
+source "D:/Users/zelongjiang/Desktop/bt2/customer/boards/em-lb52d/hcpu/Kconfig.board"
+source "$SIFLI_SDK/customer/boards/Kconfig.v2"
+source "$SIFLI_SDK/Kconfig.v2"
+rsource "Kconfig.proj"

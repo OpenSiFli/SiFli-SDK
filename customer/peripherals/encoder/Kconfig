@@ -1,0 +1,7 @@
+menu "Encoder(Wheel)"
+
+config ENCODER_USING_DK05E01TF412
+    bool "DK05E01T"
+    default n
+
+endmenu

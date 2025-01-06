@@ -1,0 +1,150 @@
+
+config SOC_SF32LB55X
+    bool 
+
+config SOC_SF32LB58X
+    bool 
+    
+config SOC_SF32LB56X
+    bool 
+    
+config SOC_SF32LB52X
+    bool 
+    
+config SOC_SIMULATOR
+    bool 
+
+config BF0_HCPU
+    bool
+
+config BF0_LCPU
+    bool
+
+config BF0_ACPU
+    bool
+
+if BF0_HCPU    
+    config CORE
+    string
+    default "HCPU"
+    
+    config CPU
+    string
+    default "Cortex-M33"
+endif    
+
+if BF0_LCPU
+    config CORE
+    string
+    default "LCPU"
+
+    config CPU
+    string
+    default "Cortex-M33"
+    config CPU_HAS_NO_DSP_FP
+        bool 
+        default y if SOC_SF32LB52X
+    
+endif
+
+
+if !BSP_USING_PC_SIMULATOR
+    menu "Board Config"
+        config LXT_DISABLE
+        bool "Low power crystal disabled"
+        default n
+
+        if !LXT_DISABLE
+            config LXT_FREQ
+            int "Low power crystal frequency"
+            default 32768
+        endif
+
+        config BPS_V33
+            bool "Board with Power Supply 3.3 V for VDD1"
+            depends on !SOC_SF32LB52X
+            default n
+
+        config LXT_LP_CYCLE
+        int
+        default 200
+        
+        config BSP_AVDD_V18_ENABLE
+            bool "Board with Power Supply 1.8V for AVDD"
+            depends on SOC_SF32LB52X
+            default n 
+            
+        config BSP_PVDD_V18_ENABLE
+            bool "Board with Power Supply 1.8V for PVDD"
+            depends on SOC_SF32LB52X
+            default n 
+
+        config BSP_VDDSIP_LDO18_ENABLE
+            bool "VDDSIP is supplied by internal LDO18"
+            depends on !BSP_PVDD_V18_ENABLE
+            depends on SOC_SF32LB52X
+            
+        menuconfig BT_TX_POWER_VAL
+            bool "Select BT RF TX power. Range: 0dbm to 13dbm"
+            default y
+            depends on (BF0_HCPU && (SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X))
+            config BT_TX_POWER_VAL_MAX
+                int "Select MAXIMUM TX power."
+                depends on (BT_TX_POWER_VAL && (SOC_SF32LB56X || SOC_SF32LB58X))
+                default 10
+            config BT_TX_POWER_VAL_MAX
+                int "Select BLE MAX TX power."
+                depends on (BT_TX_POWER_VAL && (SOC_SF32LB52X))
+                default 10
+            config BT_TX_POWER_VAL_MIN
+                int "Select MINIMUM TX power."
+                depends on BT_TX_POWER_VAL
+                default 0
+            config BT_TX_POWER_VAL_INIT
+                int "Select INIT TX power."
+                depends on (BT_TX_POWER_VAL && (SOC_SF32LB56X || SOC_SF32LB58X))
+                default 0
+            config BT_TX_POWER_VAL_INIT
+                int "Select classic BT MAX TX power.IF this value less than BLE MAX TX power,than classic BT max power is equal to BLE MAX TX power"
+                depends on (BT_TX_POWER_VAL && (SOC_SF32LB52X))
+                default 0
+        config BLE_TX_POWER_VAL
+            int "Select BLE TX power. Range: -10dbm to 10dbm"
+            depends on !(SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X)
+            default 0
+
+        config BSP_CHIP_ID_COMPATIBLE
+            depends on SOC_SF32LB55X
+            bool "Support working with different LB55X chip ID"
+            default n
+
+        config BSP_LB55X_CHIP_ID
+            depends on SOC_SF32LB55X
+            int "LB55x CHIP ID"
+            default 3
+
+        choice SF32LB52X_REV_VALUE
+            depends on SOC_SF32LB52X
+            prompt "Select chip revision compatiable"
+            default SF32LB52X_REV_AUTO
+            config SF32LB52X_REV_AUTO
+                bool "Compatiable for all chip revision"
+            config SF32LB52X_REV_A
+                bool "Only for revision A"
+            config SF32LB52X_REV_B
+                bool "Only for revision B"
+        endchoice
+
+        config CFG_SUPPORT_NON_OTP
+            depends on SOC_SF32LB52X
+            bool "Factory data can be stored on platforms without OTP"
+            default n
+        
+        config RF_CAL_USING_RAM_ARRAY
+            bool "Using RAM array instead of const array"
+            depends on SOC_SF32LB52X
+            default n
+
+    endmenu
+endif
+

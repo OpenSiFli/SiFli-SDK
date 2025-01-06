@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_EH_LB551
+    bool
+    select SOC_SF32LB55X
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"

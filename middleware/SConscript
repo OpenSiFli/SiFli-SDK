@@ -1,0 +1,18 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+for d in list:
+    if GetDepend('CFG_FACTORY_DEBUG') and d=='dfu':
+        continue
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+Return('objs')
+

@@ -1,0 +1,16 @@
+config ASIC
+    bool
+    default y
+
+config TOUCH_IRQ_PIN
+    int
+    default 79
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 70
+    
+config BSP_SUPPORT_DSI
+    bool
+    default y
+    

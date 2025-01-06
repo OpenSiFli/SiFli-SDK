@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+path = [cwd]
+group = DefineGroup('Drivers', src, depend = ['BL_USING_AW9364'], CPPPATH = path)
+
+Return('group')

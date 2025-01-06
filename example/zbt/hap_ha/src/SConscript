@@ -1,0 +1,18 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+
+# Add source code
+src = ['bap_unicast_sr.c','has_server.c','main.c','vcp_vol_renderer.c']
+if GetDepend('HAP_HA_HEARING_AID_BINAURAL'):
+    src += ['csip_set_member.c']
+if GetDepend('BT_ASCS_ASE_SRC'):
+    src += ['micp_mic_dev.c']
+if GetDepend('BT_TBS_CLIENT'):
+    src += ['ccp_call_ctrl.c']
+    
+group = DefineGroup('Applications', src, depend = [''],CPPPATH = CPPPATH)
+
+Return('group')

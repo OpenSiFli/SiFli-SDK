@@ -1,0 +1,12 @@
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+CPPPATH = [cwd]
+
+src = ['llt_mem.c']
+
+group = DefineGroup('Utilities', src, depend = [], CPPPATH = CPPPATH)
+
+Return('group')

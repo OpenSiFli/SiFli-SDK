@@ -1,0 +1,29 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+
+CPPPATH = [cwd]
+list = os.listdir(cwd)
+
+objs=[]
+
+d='porting'
+path = os.path.join(cwd, d)
+objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+
+d='service'
+path = os.path.join(cwd, d)
+objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+
+d='stack'
+path = os.path.join(cwd, d)
+objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+        
+#TODO: Add other OS support
+if not GetDepend('BSP_USING_RTTHREAD'):
+    objs=[]
+
+Return('objs')

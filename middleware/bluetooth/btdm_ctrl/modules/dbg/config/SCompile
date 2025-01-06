@@ -1,0 +1,70 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Debug APIs
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (True): # always present 
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    dbg_src_dir = os.path.join(dbg_dir, 'src')
+    dbg_api_dir = os.path.join(dbg_dir, 'api')
+    dbg_cfg_dir = os.path.join(dbg_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    dbg_def_list  = []
+    
+    if(env['DBG'] == 'on'):
+        dbg_def_list += ['CFG_DBG']
+        
+        if env['TRC'] != 'off':
+            env['TRC_REGS'] = []
+            dbg_def_list += ['CFG_TRC_EN']
+            if env['TRC'] == 'all':
+                dbg_def_list += ['CFG_TRC_ALL']
+            else:
+                for key in env['TRC'].split(','):
+                    dbg_def_list += ['CFG_TRC_' + key]
+        else:
+            env['TRC_DICT'] = 'off'
+            
+        #
+        # Prepare object files build
+        #
+        if env['TRC_DICT'] == 'on':
+            env.AppendUnique(CCFLAGS = '-save-temps=obj ')
+            # keep comments
+            env.AppendUnique(CCFLAGS = '-C')
+        
+        if (env['BT_EMB_PRESENT'] == 'on') or (env['BLE_EMB_PRESENT'] == 'on'):
+            # Read/Write memory commands are supported
+            dbg_def_list    +=  ['CFG_DBG_MEM']
+            # Flash debug commands are supported
+            dbg_def_list    += ['CFG_DBG_FLASH']
+            # NVDS feature is supported
+            dbg_def_list    += ['CFG_DBG_NVDS']
+            # CPU stack profiling is supported
+            dbg_def_list    += ['CFG_DBG_STACK_PROF']
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    dbg_inc_list  = []
+    dbg_inc_list += [dbg_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    dbg_src_list = scutils.file_list_read(env, os.path.join(dbg_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, dbg_src_dir, dbg_def_list, dbg_inc_list, dbg_src_list)

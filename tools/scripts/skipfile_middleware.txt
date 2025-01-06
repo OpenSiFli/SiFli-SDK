@@ -1,0 +1,6 @@
+-*/customer/*
+-*/drivers/*
+-*/example/*
+-*/external/*
+-*/rtos/*
+-*/Keil_v5/*/*.h

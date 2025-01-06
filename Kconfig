@@ -1,0 +1,88 @@
+menu "Chipset config"
+choice
+    prompt "Select chipset"
+    default SOC_SF32LB55X
+    config SOC_SF32LB55X
+        bool "SF32LB55X"
+    config SOC_SF32LB58X
+        bool "SF32LB58X"
+    config SOC_SF32LB56X
+        bool "SF32LB56X"
+    config SOC_SF32LB52X
+        bool "SF32LB52X"
+    config SOC_SIMULATOR
+        bool "SIMULATOR"
+endchoice
+
+config BSP_CHIP_ID_COMPATIBLE
+    depends on SOC_SF32LB55X
+    bool "Support working with different LB55X chip ID"
+    default n
+
+config BSP_LB55X_CHIP_ID
+    depends on SOC_SF32LB55X
+    int "LB55x CHIP ID"
+    default 3
+
+choice SF32LB52X_REV_VALUE
+    depends on SOC_SF32LB52X
+    prompt "Select chip revision compatiable"
+    default SF32LB52X_REV_AUTO
+    config SF32LB52X_REV_AUTO
+        bool "Compatiable for all chip revision"
+    config SF32LB52X_REV_A
+        bool "Only for revision A"
+    config SF32LB52X_REV_B
+        bool "Only for revision B"
+endchoice
+
+config CFG_SUPPORT_NON_OTP
+    depends on SOC_SF32LB52X
+    bool "Factory data can be stored on platforms without OTP"
+    default n	
+
+config MEMCPY_NON_DMA
+    bool 
+    depends on !SOC_SIMULATOR
+    default n
+config PSRAM_CACHE_WB
+    bool "Enable PSRAM Cache write back"
+    select MEMCPY_NON_DMA if PSRAM_CACHE_WB
+    depends on !SOC_SIMULATOR
+    default n       
+    
+endmenu
+
+config HAL_USE_LIB
+    bool
+    default n
+
+if BF0_HCPU
+    config CORE
+    string
+    default "HCPU"
+    config CPU
+    string
+    default "Cortex-M33"
+endif
+
+if BF0_LCPU
+    config CORE
+    string
+    default "LCPU"
+    config CPU
+    string
+    default "Cortex-M33"
+    config CPU_HAS_NO_DSP_FP
+        bool 
+        default y if SOC_SF32LB52X    
+endif
+
+source "$SIFLI_SDK/customer/boards/Kconfig"
+source "$SIFLI_SDK/rtos/Kconfig"
+source "$SIFLI_SDK/middleware/Kconfig"
+source "$SIFLI_SDK/external/Kconfig"
+
+
+comment "------------End of SDK configuration-------------"
+

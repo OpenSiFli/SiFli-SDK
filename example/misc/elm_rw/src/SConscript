@@ -1,0 +1,41 @@
+import os
+from building import *
+import rtconfig
+# Add source code
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+
+all_c_files = Glob('**/*.c')
+
+src += ['main.c']
+
+inc += [cwd]
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('Applications', src, depend = ['USING_ELM_RW'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+
+
+
+
+
+
+
+# all_c_files = Glob('**/*.c')
+
+# src = [file for file in all_c_files if 'elm_rw.c' not in file]
+
+
+# group = DefineGroup('Applications', src, depend = ['USING_ELM_RW'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+# Return('group')
+
+

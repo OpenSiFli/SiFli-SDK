@@ -1,0 +1,86 @@
+config KCONFIG_BOARD_V2
+    bool 
+    default y
+source "$SIFLI_SDK/customer/boards/Kconfig_soc"
+source "$SIFLI_SDK/customer/boards/Kconfig_drv"
+menu "Config LCD on board"
+    config BSP_USING_LCD
+        bool "Enable LCD on the board"
+        select BSP_USING_LCDC
+        default n
+    source "$SIFLI_SDK/customer/boards/Kconfig_lcd"
+endmenu
+menu "Select board peripherals"
+source "$SIFLI_SDK/customer/peripherals/Kconfig"
+endmenu
+comment "------------End of Board configuration-----------"
+choice
+    prompt "the uart port for console"
+    default CONSOLE_UART1
+    config CONSOLE_UART1
+        bool "uart1"
+    config CONSOLE_UART2
+        bool "uart2"
+    config CONSOLE_UART3
+        bool "uart3"
+    config CONSOLE_UART4
+        bool "uart4"
+    config CONSOLE_UART5
+        bool "uart5"
+    config CONSOLE_UART6
+        bool "uart6"
+endchoice
+config RT_CONSOLE_DEVICE_NAME
+    string 
+    default "uart1" if CONSOLE_UART1
+    default "uart2" if CONSOLE_UART2
+    default "uart3" if CONSOLE_UART3
+    default "uart4" if CONSOLE_UART4    
+    default "uart5" if CONSOLE_UART5    
+    default "uart6" if CONSOLE_UART6
+    
+menuconfig BSP_USING_KEY1
+    bool "Use KEY1"
+    default n
+    if BSP_USING_KEY1  
+        config BSP_KEY1_PIN
+            int "KEY1 pin number"
+            default 99
+        config BSP_KEY1_ACTIVE_HIGH
+            bool "Level is high if key is pressed"
+            default n
+    endif 
+menuconfig BSP_USING_LED1
+    bool "Use LED1"
+    default n
+    if BSP_USING_LED1  
+        config BSP_LED1_PIN
+            int "LED1 pin number"
+            default 99
+        config BSP_LED1_ACTIVE_HIGH
+            bool "Level is high if LED is on"
+            default n
+    endif 
+
+    config INSERT_DETE_USB_PIN
+        int "USB plug-in detection"
+        depends on BSP_USING_USBD
+        default -1
+
+menuconfig BSP_USING_VBAT
+    bool "Use ADC detect VBAT"
+    default n
+    if BSP_USING_VBAT  
+        config BSP_VBAT_ADC_PIN
+            int "VBAT PIN number"
+            default 123
+        config BSP_VBAT_ADC_CHN
+            int "ADC channel for VBAT"
+            default 5
+        config VBAT2ADC_KOHM
+            int "Impedance between VBAT to ADC PIN"
+            default 470
+        config GND2ADC_KOHM
+            int "Impedance between GND to ADC PIN"
+            default 1000
+    endif 

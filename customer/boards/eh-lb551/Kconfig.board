@@ -1,0 +1,32 @@
+config ASIC
+    bool
+    default y
+
+choice HDK_551_PACKAGE
+    prompt "Select package"
+    default HDK_U4O5
+    config HDK_U8N5
+        bool "8M Dual Flash1 (6600  or 551 U8N5)"
+    config HDK_U4O5
+        bool "U4O5 - 4M Flash1, 4M OPI PSRAM, for 551 only"
+endchoice
+
+config TOUCH_IRQ_PIN
+    int
+    default 79
+config TOUCH_RESET_PIN
+    int
+    default 47
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwm2"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 70
+    

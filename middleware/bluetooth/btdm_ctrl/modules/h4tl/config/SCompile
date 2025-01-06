@@ -1,0 +1,39 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for H4 Transport Layer module
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (env['HCITL'] == 'on') or (env['AHITL'] == 'on') or (env['ISOOHCI'] == 'on'):
+   
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    h4tl_src_dir = os.path.join(h4tl_dir, 'src')
+    h4tl_api_dir = os.path.join(h4tl_dir, 'api')
+    h4tl_cfg_dir = os.path.join(h4tl_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    h4tl_def_list  = []
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    h4tl_inc_list  = []
+    h4tl_inc_list += [h4tl_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    h4tl_src_list = scutils.file_list_read(env, os.path.join(h4tl_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, h4tl_src_dir, h4tl_def_list, h4tl_inc_list, h4tl_src_list)

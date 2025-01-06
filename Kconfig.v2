@@ -1,0 +1,51 @@
+mainmenu "Sifli Configuration"
+
+config SIFLI_SDK
+    string 
+    option env="SIFLI_SDK"
+    default "."
+
+config KCONFIG_V2
+    bool 
+    default y
+
+#SDK configuration	
+source "$SIFLI_SDK/rtos/Kconfig"
+source "$SIFLI_SDK/middleware/Kconfig"
+source "$SIFLI_SDK/external/Kconfig"
+
+menu "Build Options"
+    config USING_MICROLIB
+        bool "Use microlib"
+        default n
+    menu "Optimization Level"
+        choice OPT_LEVEL
+            prompt ""
+            default OPT_LEVEL_SIZE
+            config OPT_LEVEL_0
+                bool "-O0"
+            config OPT_LEVEL_1
+                bool "-O1"
+            config OPT_LEVEL_2
+                bool "-O2"
+            config OPT_LEVEL_3
+                bool "-O3"
+            config OPT_LEVEL_FAST
+                bool "-Ofast"                
+            config OPT_LEVEL_BALANCED
+                bool "-Os balanced"                                
+            config OPT_LEVEL_SIZE
+                bool "-Oz size"
+        endchoice
+        config OPT_LEVEL
+            string
+            default "-O0" if OPT_LEVEL_0
+            default "-O1" if OPT_LEVEL_1
+            default "-O2" if OPT_LEVEL_2
+            default "-O3" if OPT_LEVEL_3
+            default "-Ofast" if OPT_LEVEL_FAST
+            default "-Os" if OPT_LEVEL_BALANCED
+            default "-Oz" if OPT_LEVEL_SIZE
+    endmenu    
+endmenu
+

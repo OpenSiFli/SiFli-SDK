@@ -1,0 +1,13 @@
+menu "Power Amplifier"
+
+config PA_USING_AW882XX
+    bool  "digital PA AW882XX enable"
+    default n
+config PA_USING_AW87390
+    bool  "analog PA AW87390 enable"
+    default n
+config PA_USING_AW8155
+    bool  "analog PA AW8155 enable"
+    default n
+
+endmenu

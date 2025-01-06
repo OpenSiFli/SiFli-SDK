@@ -1,0 +1,115 @@
+menu "SiFli extend"
+        config LV_USING_FREETYPE_ENGINE
+        bool "Enable freetype font engine"
+        select PKG_FREETYPE
+        default n
+
+        choice
+            prompt "Select Freetype Lib"
+            depends on LV_USING_FREETYPE_ENGINE
+            default FREETYPE_TINY_FONT
+            config FREETYPE_TINY_FONT
+                bool "using Freetype Tiny Lib"
+            config FREETYPE_NORMAL_FONT
+                bool "using Freetype Normal Lib"
+        endchoice
+
+        config LV_USE_EZIP
+            bool "Use on-the-fly ezip decoder"
+        
+
+        config LV_USING_EXT_RESOURCE_MANAGER
+            bool "Enable extended resource manager"
+            default n
+        if !LV_USING_EXT_RESOURCE_MANAGER
+            config LV_USING_FILE_RESOURCE
+                bool "Use file image resource"
+                default n
+        endif
+        if LV_USING_EXT_RESOURCE_MANAGER  
+            choice
+                prompt "Resource Package Type"
+                default LV_EXT_RES_STANDALONE
+                config LV_EXT_RES_STANDALONE
+                    bool "standalone resource package"
+
+                config LV_EXT_RES_NON_STANDALONE
+                    bool "non-standalone resource package"
+
+            endchoice
+            
+            if LV_EXT_RES_NON_STANDALONE
+                config LV_EXT_IMG_SEC_NAME
+                    string "image resource section name"
+                    default ".ROM3_IMG"
+            endif
+            
+            config LV_EXT_RES_DEFAULT_LANGUAGE
+                string "Default Language"
+                default "en_us"
+                
+        endif
+
+        menu "LVGL&LCD framebuffer configuration"
+
+            comment "------------1. Config LCD framebuffer on PSRAM-----------"
+            choice
+                prompt "LCD Framebuffer numbers"
+                default LCD_FB_USING_AUTO
+
+                config LCD_FB_USING_AUTO
+                    bool "Auto"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LCD_FB_USING_ONE_UNCOMPRESSED
+                    bool "One screen sized buffer for ram LCD typically"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LCD_FB_USING_TWO_UNCOMPRESSED
+                    bool "Two screen sized buffer for ramless LCD typically"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LCD_FB_USING_ONE_COMPRESSED
+                    bool "One screen sized compressed buffer for ram LCD typically"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LCD_FB_USING_TWO_COMPRESSED
+                    bool "Two screen sized compressed buffer for ramless LCD typically"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LCD_FB_USING_NONE
+                    bool "No Framebuffer"
+            endchoice
+
+
+            comment "------------2. Config LVGL framebuffer on SRAM-----------"
+            choice
+                prompt "LVGL Framebuffer size"
+                default LV_FB_ONE_NOT_SCREEN_SIZE
+
+                config LV_FB_ONE_SCREEN_SIZE
+                    bool "One screen sized framebuffer"
+                    select BSP_USING_LCD_FRAMEBUFFER
+                config LV_FB_TWO_SCREEN_SIZE
+                    bool "TWO screen sized framebuffer"
+                config LV_FB_ONE_NOT_SCREEN_SIZE
+                    bool "One part of screen sized framebuffer"
+                config LV_FB_TWO_NOT_SCREEN_SIZE
+                    bool "Two part of screen sized framebuffer"
+            endchoice
+
+            config LV_FB_LINE_NUM
+                int "LVGL Frame Buffer Line Number(The part size)"
+                depends on LV_FB_ONE_NOT_SCREEN_SIZE ||  LV_FB_TWO_NOT_SCREEN_SIZE
+                default 100
+        endmenu
+    
+        config LV_RES_AUTO
+            bool "Automatic set resolution based on LCD config"
+            default y
+        config LV_HOR_RES_MAX
+            int "horizontal pixels"
+            depends on !LV_RES_AUTO
+            default 480
+        config LV_VER_RES_MAX
+            int "vertical pixels"
+            depends on !LV_RES_AUTO
+            default 272
+
+
+    endmenu

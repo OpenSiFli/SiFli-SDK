@@ -1,0 +1,112 @@
+ENTRY &heap_ptr_alias &heap_end_alias
+
+;PRIVATE &heap_ptr_alias
+;PRIVATE &heap_end_alias
+;;&heap_ptr_alias=VAR.Value(\\lcpu_rom\mem\heap_ptr)
+;;&heap_end_alias=VAR.Value(\\lcpu_rom\mem\heap_end)
+;;do show_heap_lcpu &heap_ptr_alias &heap_end_alias
+
+PRIVATE &block_addr
+PRIVATE &block_cnt
+
+&block_cnt=2
+
+AREA.Create heapAllocation 1000. 2000.
+AREA.Select heapAllocation
+AREA.view heapAllocation
+
+&block_addr=&heap_ptr_alias
+
+IF &block_addr==0
+(
+    ENDDO
+)
+
+WHILE &block_addr<VAR.Value(&heap_end_alias)
+(
+   &block_addr=&heap_ptr_alias+VAR.Value(*(uint32_t *)(&block_addr+4))  ; heap_mem.next field
+   &block_cnt=&block_cnt+1
+)  
+
+
+PRIVATE &COL1
+PRIVATE &COL2
+PRIVATE &COL3
+PRIVATE &COL4
+PRIVATE &COL5
+PRIVATE &ret_addr
+PRIVATE &ret_addr2
+PRIVATE &tick
+PRIVATE &block_size
+PRIVATE &block_pos
+PRIVATE &block_head_size
+
+
+&COL1=FORMAT.String("BLOCK_ADDR", 20., ' ')
+&COL2=FORMAT.String("BLOCK_SIZE", -10., ' ')
+&COL3=FORMAT.String("USED", -10., ' ')
+&COL4=FORMAT.String("TICK", -10., ' ')
+&COL5=FORMAT.String("RETURN ADDR", -40., ' ')
+&COL6=FORMAT.String("RETURN ADDR2", -40., ' ')
+&COL7=FORMAT.String("LV_BLK_SIZE",  -20., ' ')
+&block_head_size=12 ;VAR.Value(sizeof(struct heap_mem))
+
+PRINT "System heap"
+PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3" "&COL4" "&COL5" "&COL6"  "&COL7"
+
+&block_addr=&heap_ptr_alias
+WHILE &block_addr<VAR.Value(&heap_end_alias)
+(
+   PRIVATE &print_block_addr
+   PRIVATE &used_flag
+   PRIVATE &lv_mem_size
+
+   
+   &block_pos=&block_addr-&heap_ptr_alias
+   ;&block_size=VAR.Value(((struct heap_mem *)&block_addr)->next)-&block_pos
+   ;&block_size=&block_size&0x7FFFFFFF
+   ;&block_size=VAR.Value(((struct heap_mem *)&block_addr)->size)
+   &block_size=0
+   &block_size=FORMAT.DecimalU(10., &block_size)
+   &used_flag=VAR.Value(((struct heap_mem *)&block_addr)->used)
+
+   &ret_addr=FORMAT.String("NA", -40., ' ')
+   &ret_addr2=FORMAT.String("NA", -40., ' ')
+   &tick=FORMAT.String("NA", -10., ' ')
+   IF &used_flag==1
+   (
+      ;&ret_addr=VAR.Value(((struct heap_mem *)&block_addr)->ret_addr)
+      &ret_addr=0
+      &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+      ;&tick=VAR.Value(((struct heap_mem *)&block_addr)->tick)
+      &tick=0
+
+      &lv_mem_size=0  
+      IF (STRING.COMPARE("&ret_addr_str","*lv_mem_alloc*"))
+      (
+         &ret_addr2=VAR.Value(((lv_mem_header_t *)(&block_addr+&block_head_size))->s.ret_addr)
+         ;&ret_addr2=sYmbol.Name(P:&ret_addr2)
+         &ret_addr2_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr2),"\",-1)
+         &ret_addr2= FORMAT.String("&ret_addr2_str(&ret_addr2)", -40., ' ')
+         &lv_mem_size=VAR.Value(((lv_mem_header_t *)(&block_addr+&block_head_size))->s.d_size)
+      )
+
+      &tick=FORMAT.DecimalU(20., &tick)
+      ;&ret_addr=sYmbol.Name(P:&ret_addr)
+      &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+      &ret_addr= FORMAT.String("&ret_addr_str(&ret_addr)", -40., ' ')
+      &ret_addr2=FORMAT.String("&ret_addr2", -40., ' ')
+      &lv_mem_size=FORMAT.DecimalU(10., &lv_mem_size)
+	  
+   )
+   
+   &used_flag=FORMAT.DecimalU(10., &used_flag)
+   &print_block_addr=FORMAT.String("&block_addr", 20., ' ')   
+
+   
+   PRINT "&print_block_addr" "&block_size" "&used_flag" "&tick" "&ret_addr" "&ret_addr2"  "&lv_mem_size"
+
+   &block_addr=&heap_ptr_alias+VAR.Value(*(uint32_t *)(&block_addr+4))   ; mem_heap.next field
+) 
+
+enddo

@@ -1,0 +1,12 @@
+ENTRY &cpuflag
+
+DIALOG.File *.txt
+ENTRY &filename
+
+IF "&filename"!=""
+(
+    OS.Hidden SetCpuReg.exe "&cpuflag" "&filename"
+    ;do set_CPU_reg2 S
+    do set_CPU_reg2 N
+)
+

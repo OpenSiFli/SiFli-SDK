@@ -1,0 +1,5 @@
+si SWD
+speed 10000
+r
+loadbin fs.bin 0x64200000
+exit

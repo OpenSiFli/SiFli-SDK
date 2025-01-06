@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+path = [cwd]
+lib = ['MAC_LIB_CM33']
+group = DefineGroup('Drivers', src, depend = ['HR_USING_AFE4404'], CPPPATH = path, LIBS = lib, LIBPATH = path)
+
+Return('group')

@@ -1,0 +1,92 @@
+#***************************************************************************************
+# @file sourcelist.txt
+#
+# @brief This file lists up all the source code that will be
+#        compiled and built for the RWBLE LL SW IP. 
+#
+# Copyright (C) RivieraWaves 2009-2017
+#
+#***************************************************************************************
+
+    co/rwble.c
+    co/ble_util.c
+    co/ble_util_buf.c
+
+    # Link Manager
+    llm/llm.c
+    llm/llm_task.c
+    llm/llm_hci.c
+    llm/llm_adv.c
+    llm/llm_scan.c
+    llm/llm_init.c
+    llm/llm_test.c
+    llm/llm_ch_scan.c
+    
+    # Link ISO
+#if (int(env['ISO_CON']) > 0)
+    lli/lli.c
+    lli/lli_task.c
+    lli/lli_data_path.c
+    lli/lli_test.c
+#endif // (int(env['ISO_CON']) > 0)
+#if (env['BIS'] == 'on') 
+    lli/lli_bi.c
+#endif # (env['BIS'] == 'on')
+#if (env['CIS'] == 'on')
+    lli/lli_ci.c
+#endif # (env['CIS'] == 'on')
+#if (env['ISO_MODE_0'] == 'on')
+    lli/lli_am0.c
+#endif # (env['ISO_MODE_0'] == 'on')
+    
+    # Link Controller
+    llc/llc.c
+    llc/llc_hci.c
+    llc/llc_task.c
+    llc/llc_llcp.c
+    llc/llc_disconnect.c
+    llc/llc_ver_exch.c
+    llc/llc_encrypt.c
+    llc/llc_le_ping.c
+    llc/llc_feat_exch.c
+    llc/llc_dl_upd.c
+    llc/llc_con_upd.c
+    llc/llc_chmap_upd.c
+    llc/llc_phy_upd.c
+    llc/llc_cte.c
+    llc/llc_past.c
+    llc/llc_clk_acc.c
+    llc/llc_dbg.c
+#if (env['CIS'] == 'on')
+    llc/llc_cis.c
+#endif # (env['CIS'] == 'on')
+    llc/llc_pwr.c
+#if (env['BT_53'] == 'on') 
+    llc/llc_subrate.c
+    llc/llc_ch_class.c
+#endif # (env['BT_53'] == 'on') 
+    
+    # Link Driver
+    lld/lld.c
+    lld/lld_adv.c
+    lld/lld_per_adv.c
+    lld/lld_scan.c
+    lld/lld_sync.c
+    lld/lld_test.c
+    lld/lld_init.c
+    lld/lld_con.c
+#if (env['CIS'] == 'on' or env['BIS'] == 'on')
+    lld/lld_iso.c
+    lld/lld_isoal.c
+#endif # (env['CIS'] == 'on' or env['BIS'] == 'on')
+#if (env['CIS'] == 'on')
+    lld/lld_ci.c
+#endif # (env['CIS'] == 'on')
+#if (env['BIS'] == 'on')
+    lld/lld_bi.c
+#endif # (env['BIS'] == 'on')
+    lld/lld_ch_scan.c
+
+#***************************************************************************************
+# End of source list
+#***************************************************************************************

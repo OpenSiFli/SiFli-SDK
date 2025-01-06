@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+path = [cwd]
+lib = ['paw8001_ofn_v116009_1_m33_keil']
+group = DefineGroup('Drivers', src, depend = ['HR_USING_PAH8007'], LIBS = lib, CPPPATH = path, LIBPATH = path)
+                                               
+Return('group')
+
+
+

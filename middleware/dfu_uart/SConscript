@@ -1,0 +1,25 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Split("""
+dfu_uart.c
+""")
+
+
+CPPPATH = [cwd]
+CPPPATH += ['../sibles']
+
+CPPDEFINES = []
+try:
+    if rtconfig.DFU_OTA_ENABLE == True:
+        CPPDEFINES = ['DFU_OTA_MANAGER']
+except:
+    CPPDEFINES = []
+    pass
+
+group = DefineGroup('dfuuart', src, depend = ['BSP_USING_DFU_UART'], CPPPATH = CPPPATH, CPPDEFINES = CPPDEFINES)
+
+Return('group')

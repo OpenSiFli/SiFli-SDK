@@ -1,0 +1,57 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Datapath
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (env['BLE_EMB_PRESENT'] == 'on') and (env['ISO_CON'] > 0):
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    data_path_cfg_dir = os.path.join(data_path_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    data_path_def_list  = []
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    data_path_inc_list  = []
+    data_path_inc_list += [data_path_dir]
+    
+        
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    data_path_src_list = scutils.file_list_read(env, os.path.join(data_path_cfg_dir, 'sourcelist.txt'), "")
+    
+
+    #-----------------------------------------------------------
+    # Other Datapath
+    #-----------------------------------------------------------
+    if env['ISOOHCI'] == 'on':
+        data_path_inc_list += [join(data_path_dir, 'isoohci', 'api')]
+        data_path_def_list += ['CFG_ISOOHCI']
+        data_path_src_list += scutils.file_list_read(env, os.path.join(data_path_dir, "isoohci", 'sourcelist.txt'), "isoohci")
+    if env['ISOGEN'] == 'on':
+        data_path_inc_list += [join(data_path_dir, 'isogen', 'api')]
+        data_path_def_list += ['CFG_ISOGEN']
+        data_path_src_list += scutils.file_list_read(env, os.path.join(data_path_dir, "isogen", 'sourcelist.txt'), "isogen")
+    try:
+        if (('CFG_BLUEBUD_PRIMARY' in app_def_list) or ('CFG_BLUEBUD_SECONDARY' in app_def_list)):
+            data_path_inc_list += [join(data_path_dir, 'bluebud', 'api')]
+            data_path_src_list += scutils.file_list_read(env, os.path.join(data_path_dir, "bluebud", 'sourcelist.txt'), "bluebud")
+    except:
+        pass
+        
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, data_path_dir, data_path_def_list, data_path_inc_list, data_path_src_list)

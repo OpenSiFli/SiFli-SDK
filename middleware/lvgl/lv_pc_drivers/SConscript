@@ -1,0 +1,25 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = []
+
+# add Windows basic code
+src = src + ['./lvgl_drv.c'] 
+
+# add driver common include
+inc = inc + [cwd]
+inc = inc + [cwd + "/display"]
+inc = inc + [cwd + "/indev"]
+
+# add driver basic code
+src = src + Glob('./display/*.c')
+src = src + Glob('./indev/*.c')
+
+# add group to IDE project
+objs = DefineGroup('lv_drivers', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+Return('objs')

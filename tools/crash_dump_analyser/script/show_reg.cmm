@@ -1,0 +1,776 @@
+
+WCLEAR
+AREA.Reset
+
+
+;SYStem.CPU CORTEXM33
+;SYStem.Up
+
+
+LOCAL &folder
+LOCAL &name1
+LOCAL &name2
+LOCAL &name3
+LOCAL &name4
+LOCAL &name5
+LOCAL &name6
+LOCAL &name7
+LOCAL &name8
+LOCAL &name9
+LOCAL &name10
+LOCAL &name11
+LOCAL &name12
+LOCAL &name13
+LOCAL &sel1
+LOCAL &sel2
+LOCAL &sel3
+LOCAL &sel4
+LOCAL &sel5
+LOCAL &sel6
+LOCAL &sel7
+LOCAL &sel8
+LOCAL &sel9
+LOCAL &sel10
+LOCAL &sel11
+LOCAL &sel12
+LOCAL &sel13
+LOCAL &addr1
+LOCAL &addr2
+LOCAL &addr3
+LOCAL &addr4
+LOCAL &addr5
+LOCAL &addr6
+LOCAL &addr7
+LOCAL &addr8
+LOCAL &addr9
+LOCAL &addr10
+LOCAL &addr11
+LOCAL &addr12
+LOCAL &addr13
+LOCAL &devsel
+
+&sel1=0
+&sel2=0
+&sel3=0
+&sel4=0
+&sel5=0
+&sel6=0
+&sel7=0
+&sel8=0
+&sel9=0
+&sel10=0
+&sel11=0
+&sel12=0
+&sel13=0
+
+&devsel=0
+IF OS.FILE("cpucfg.txt")==TRUE()
+(
+    OPEN #1 "cpucfg.txt" /Read
+    READ #1 %LINE &devsel
+    CLOSE #1
+)
+
+WinExt.DIALOG
+(
+    HEADER "select ip register bin path"
+
+    POS 1. 0. 1. 1.
+    DYNTEXT ""
+
+    POS 5. 0. 10. 1.
+BOARD.LB55X: CHOOSEBOX "LB55X"
+    (&-
+        &devsel=0
+        DIALOG.Set CB12 TRUE()
+        DIALOG.Enable CB12
+        DIALOG.Enable FEDIT12
+        DIALOG.Set CB13 TRUE()
+        DIALOG.Enable CB13
+        DIALOG.Enable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x50000000"
+        DIALOG.Set TADDR5 "0x50040000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x40043000"
+        DIALOG.Set TADDR8 "0x40030000"
+        DIALOG.Set TADDR9 "0x40070000"
+        DIALOG.Set TADDR10 "0x50042000"
+        DIALOG.Set TADDR11 "0x50050000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+    )
+    POS 16. 0. 10. 1.
+BOARD.LB58X: CHOOSEBOX "LB58X"
+    (&-
+        &devsel=1
+        DIALOG.Set CB12 TRUE()
+        DIALOG.Enable CB12
+        DIALOG.Enable FEDIT12
+        DIALOG.Set CB13 TRUE()
+        DIALOG.Enable CB13
+        DIALOG.Enable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x40080000"
+        DIALOG.Set TADDR5 "0x50080000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x50003000"
+        DIALOG.Set TADDR8 "0x40040000"
+        DIALOG.Set TADDR9 "0x50040000"
+        DIALOG.Set TADDR10 "0x50082800"
+        DIALOG.Set TADDR11 "0x50090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+    )
+    POS 27. 0. 10. 1.
+BOARD.LB56X: CHOOSEBOX "LB56X"
+    (&-
+        &devsel=2
+        DIALOG.Set CB12 FALSE()
+        DIALOG.Disable CB12
+        DIALOG.Disable FEDIT12
+        DIALOG.Set CB13 FALSE()
+        DIALOG.Disable CB13
+        DIALOG.Disable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x40080000"
+        DIALOG.Set TADDR5 "0x50080000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x50003000"
+        DIALOG.Set TADDR8 "0x40040000"
+        DIALOG.Set TADDR9 "0x50040000"
+        DIALOG.Set TADDR10 "0x50082800"
+        DIALOG.Set TADDR11 "0x50090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+    )
+    POS 38. 0. 10. 1.
+BOARD.LB52X: CHOOSEBOX "LB52X"
+    (&-
+        &devsel=3
+        DIALOG.Set CB12 FALSE()
+        DIALOG.Disable CB12
+        DIALOG.Disable FEDIT12
+        DIALOG.Set CB13 FALSE()
+        DIALOG.Disable CB13
+        DIALOG.Disable FEDIT13
+        DIALOG.Set TADDR1 "0x50007000"
+        DIALOG.Set TADDR2 "0x50006000"
+        DIALOG.Set TADDR3 "0x50008000"
+        DIALOG.Set TADDR4 "0x500a0000"
+        DIALOG.Set TADDR5 "0x40080000"
+        DIALOG.Set TADDR6 "0x50003000"
+        DIALOG.Set TADDR7 "0x40003000"
+        DIALOG.Set TADDR8 "0x500c0000"
+        DIALOG.Set TADDR9 "0x40040000"
+        DIALOG.Set TADDR10 "0x40082800"
+        DIALOG.Set TADDR11 "0x40090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+    )
+    POS 5. 2. 40. 1.
+FDES1: DYNTEXT "* paste or select file folder"
+
+    POS 5. 3. 40. 1.
+FEDIT: EDIT ""
+    (
+        &folder = DIALOG.STRing(FEDIT)
+    )
+
+    POS 45. 3. 2. 1.
+BALL: BUTTON "..." "DIALOG.SetDIR FEDIT *" 	 
+
+    POS 5. 5. 26. 1.
+FDES2: DYNTEXT "* select subitem for register value show"
+
+    POS 32. 5. 15. 1.
+FDES3: DYNTEXT "* file name, you can edit it"
+
+
+    POS 5. 6. 14. 1.
+CB1: CHECKBOX "load epic_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB1)
+        (
+            DIALOG.Enable FEDIT1
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT1
+        )
+    )
+    POS 20. 6. 10. 1.
+TADDR1: EDIT "0x40007000" ""
+    POS 32. 6. 15. 1.
+FEDIT1: EDIT "epic_reg.bin" ""
+
+    POS 5. 7. 14. 1.
+CB2: CHECKBOX "load ezip_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB2)
+        (
+            DIALOG.Enable FEDIT2
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT2
+        )
+    )
+    POS 20. 7. 10. 1.
+TADDR2: EDIT "0x40006000" ""
+    POS 32. 7. 15. 1.
+FEDIT2: EDIT "ezip_reg.bin" ""
+
+    POS 5. 8. 14. 1.
+CB3: CHECKBOX "load lcdc_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB3)
+        (
+            DIALOG.Enable FEDIT3
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT3
+        )
+    )
+    POS 20. 8. 10. 1.
+TADDR3: EDIT "0x40008000" ""
+    POS 32. 8. 15. 1.
+FEDIT3: EDIT "lcdc_reg.bin" ""
+	
+    POS 5. 9. 14. 1.
+CB4: CHECKBOX "load gpio1_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB4)
+        (
+            DIALOG.Enable FEDIT4
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT4
+        )
+    )
+    POS 20. 9. 10. 1.
+TADDR4: EDIT "0x40080000" "" 
+    POS 32. 9. 15. 1.
+FEDIT4: EDIT "gpio1_reg.bin" ""
+	
+    POS 5. 10. 14. 1.
+CB5: CHECKBOX "load gpio2_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB5)
+        (
+            DIALOG.Enable FEDIT5
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT5
+        )
+    )
+    POS 20. 10. 10. 1.
+TADDR5: EDIT "0x50080000" ""
+    POS 32. 10. 15. 1.
+FEDIT5: EDIT "gpio2_reg.bin" ""
+
+    POS 5. 11. 14. 1.
+CB6: CHECKBOX "load pinmux1_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB6)
+        (
+            DIALOG.Enable FEDIT6
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT6
+        )
+    )
+    POS 20. 11. 10. 1.
+TADDR6: EDIT "0x40003000" ""
+    POS 32. 11. 15. 1.
+FEDIT6: EDIT "pinmux1_reg.bin" ""
+
+    POS 5. 12. 14. 1.
+CB7: CHECKBOX "load pinmux2_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB7)
+        (
+            DIALOG.Enable FEDIT7
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT7
+        )
+    )
+    POS 20. 12. 10. 1.
+TADDR7: EDIT "0x50003000" ""
+    POS 32. 12. 15. 1.
+FEDIT7: EDIT "pinmux2_reg.bin" ""
+
+    POS 5. 13. 14. 1.
+CB8: CHECKBOX "load hpsys_aon_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB8)
+        (
+            DIALOG.Enable FEDIT8
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT8
+        )
+    )
+    POS 20. 13. 10. 1.
+TADDR8: EDIT "0x40040000" ""
+    POS 32. 13. 15. 1.
+FEDIT8: EDIT "hpsys_aon_reg.bin" ""
+
+    POS 5. 14. 14. 1.
+CB9: CHECKBOX "load lpsys_aon_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB9)
+        (
+            DIALOG.Enable FEDIT9
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT9
+        )
+    )
+
+    POS 20. 14. 10. 1.
+TADDR9: EDIT "0x50040000" ""
+    POS 32. 14. 15. 1.
+FEDIT9: EDIT "lpsys_aon_reg.bin" ""
+
+    POS 5. 15. 14. 1.
+CB10: CHECKBOX "load rf.bin"
+    (
+        IF DIALOG.BOOLEAN(CB10)
+        (
+            DIALOG.Enable FEDIT10
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT10
+        )
+    )
+    POS 20. 15. 10. 1.
+TADDR10: EDIT "0x50082800" ""
+    POS 32. 15. 15. 1.
+FEDIT10: EDIT "rf.bin" ""
+
+    POS 5. 16. 14. 1.
+CB11: CHECKBOX "load mac.bin"
+    (
+        IF DIALOG.BOOLEAN(CB11)
+        (
+            DIALOG.Enable FEDIT11
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT11
+        )
+    )
+    POS 20. 16. 10. 1.
+TADDR11: EDIT "0x50090000" ""
+    POS 32. 16. 15. 1.
+FEDIT11: EDIT "mac.bin" ""
+
+
+    POS 5. 17. 14. 1.
+CB12: CHECKBOX "load dsi_host_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB12)
+        (
+            DIALOG.Enable FEDIT12
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT12
+        )
+    )
+    POS 20. 17. 10. 1.
+TADDR12: EDIT "0x4001E000" ""
+    POS 32. 17. 15. 1.
+FEDIT12: EDIT "dsi_host_reg.bin" ""
+
+    POS 5. 18. 14. 1.
+CB13: CHECKBOX "load dsi_phy_reg.bin"
+    (
+        IF DIALOG.BOOLEAN(CB13)
+        (
+            DIALOG.Enable FEDIT13
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT13
+        )
+    )
+    POS 20. 18. 10. 1.
+TADDR13: EDIT "0x4001F000" ""
+    POS 32. 18. 15. 1.
+FEDIT13: EDIT "dsi_phy_reg.bin" ""
+
+    POS 10. 20. 30. 2.
+BUTTON "run next step!" "CONTINUE"
+
+    POS 10. 22. 40. 1.
+DYNTEXT "   "
+
+)
+
+IF &devsel==0
+(
+        DIALOG.Set BOARD.LB55X TRUE()
+        DIALOG.Set CB12 TRUE()
+        DIALOG.Enable CB12
+        DIALOG.Enable FEDIT12
+        DIALOG.Set CB13 TRUE()
+        DIALOG.Enable CB13
+        DIALOG.Enable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x50000000"
+        DIALOG.Set TADDR5 "0x50040000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x40043000"
+        DIALOG.Set TADDR8 "0x40030000"
+        DIALOG.Set TADDR9 "0x40070000"
+        DIALOG.Set TADDR10 "0x50042000"
+        DIALOG.Set TADDR11 "0x50050000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+)
+ELSE IF &devsel==1
+(
+        DIALOG.Set BOARD.LB58X TRUE()
+        DIALOG.Set CB12 TRUE()
+        DIALOG.Enable CB12
+        DIALOG.Enable FEDIT12
+        DIALOG.Set CB13 TRUE()
+        DIALOG.Enable CB13
+        DIALOG.Enable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x40080000"
+        DIALOG.Set TADDR5 "0x50080000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x50003000"
+        DIALOG.Set TADDR8 "0x40040000"
+        DIALOG.Set TADDR9 "0x50040000"
+        DIALOG.Set TADDR10 "0x50082800"
+        DIALOG.Set TADDR11 "0x50090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+)
+ELSE &devsel==2
+(
+        DIALOG.Set BOARD.LB56X TRUE()
+        DIALOG.Set CB12 FALSE()
+        DIALOG.Disable CB12
+        DIALOG.Disable FEDIT12
+        DIALOG.Set CB13 FALSE()
+        DIALOG.Disable CB13
+        DIALOG.Disable FEDIT13
+        DIALOG.Set TADDR1 "0x40007000"
+        DIALOG.Set TADDR2 "0x40006000"
+        DIALOG.Set TADDR3 "0x40008000"
+        DIALOG.Set TADDR4 "0x40080000"
+        DIALOG.Set TADDR5 "0x50080000"
+        DIALOG.Set TADDR6 "0x40003000"
+        DIALOG.Set TADDR7 "0x50003000"
+        DIALOG.Set TADDR8 "0x40040000"
+        DIALOG.Set TADDR9 "0x50040000"
+        DIALOG.Set TADDR10 "0x50082800"
+        DIALOG.Set TADDR11 "0x50090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+)
+ELSE
+(
+        DIALOG.Set BOARD.LB52X TRUE()
+        DIALOG.Set CB12 FALSE()
+        DIALOG.Disable CB12
+        DIALOG.Disable FEDIT12
+        DIALOG.Set CB13 FALSE()
+        DIALOG.Disable CB13
+        DIALOG.Disable FEDIT13
+        DIALOG.Set TADDR1 "0x50007000"
+        DIALOG.Set TADDR2 "0x50006000"
+        DIALOG.Set TADDR3 "0x50008000"
+        DIALOG.Set TADDR4 "0x500a0000"
+        DIALOG.Set TADDR5 "0x40080000"
+        DIALOG.Set TADDR6 "0x50003000"
+        DIALOG.Set TADDR7 "0x40003000"
+        DIALOG.Set TADDR8 "0x500c0000"
+        DIALOG.Set TADDR9 "0x40040000"
+        DIALOG.Set TADDR10 "0x40082800"
+        DIALOG.Set TADDR11 "0x40090000"
+        DIALOG.Set TADDR12 "0x4001E000"
+        DIALOG.Set TADDR13 "0x4001F000"
+)
+
+DIALOG.Set FEDIT OS.PresentWorkingDirectory()
+DIALOG.Disable TADDR1
+DIALOG.Disable TADDR2
+DIALOG.Disable TADDR3
+DIALOG.Disable TADDR4
+DIALOG.Disable TADDR5
+DIALOG.Disable TADDR6
+DIALOG.Disable TADDR7
+DIALOG.Disable TADDR8
+DIALOG.Disable TADDR9
+DIALOG.Disable TADDR10
+DIALOG.Disable TADDR11
+DIALOG.Disable TADDR12
+DIALOG.Disable TADDR13
+
+DIALOG.Set CB1 TRUE()
+DIALOG.Set CB2 TRUE()
+DIALOG.Set CB3 TRUE()
+DIALOG.Set CB4 TRUE()
+DIALOG.Set CB5 TRUE()
+DIALOG.Set CB6 TRUE()
+DIALOG.Set CB7 TRUE()
+DIALOG.Set CB8 TRUE()
+DIALOG.Set CB9 TRUE()
+DIALOG.Set CB10 TRUE()
+DIALOG.Set CB11 TRUE()
+
+STOP
+
+&folder=DIALOG.STRing(FEDIT)
+IF DIALOG.BOOLEAN(CB1)
+(
+    &name1= DIALOG.STRing(FEDIT1)
+    &sel1 = 1
+    &addr1= DIALOG.STRing(TADDR1)
+)
+IF DIALOG.BOOLEAN(CB2)
+(
+    &name2= DIALOG.STRing(FEDIT2)
+    &sel2 = 1
+    &addr2= DIALOG.STRing(TADDR2)
+)
+IF DIALOG.BOOLEAN(CB3)
+(
+    &name3= DIALOG.STRing(FEDIT3)
+    &sel3 = 1
+    &addr3= DIALOG.STRing(TADDR3)
+)
+IF DIALOG.BOOLEAN(CB4)
+(
+    &name4= DIALOG.STRing(FEDIT4)
+    &sel4 = 1
+    &addr4= DIALOG.STRing(TADDR4)
+)
+IF DIALOG.BOOLEAN(CB5)
+(
+    &name5= DIALOG.STRing(FEDIT5)
+    &sel5 = 1
+    &addr5= DIALOG.STRing(TADDR5)
+)
+IF DIALOG.BOOLEAN(CB6)
+(
+    &name6= DIALOG.STRing(FEDIT6)
+    &sel6 = 1
+    &addr6= DIALOG.STRing(TADDR6)
+)
+IF DIALOG.BOOLEAN(CB7)
+(
+    &name7= DIALOG.STRing(FEDIT7)
+    &sel7 = 1
+    &addr7= DIALOG.STRing(TADDR7)
+)
+IF DIALOG.BOOLEAN(CB8)
+(
+    &name8= DIALOG.STRing(FEDIT8)
+    &sel8 = 1
+    &addr8= DIALOG.STRing(TADDR8)
+)
+IF DIALOG.BOOLEAN(CB9)
+(
+    &name9= DIALOG.STRing(FEDIT9)
+    &sel9 = 1
+    &addr9= DIALOG.STRing(TADDR9)
+)
+IF DIALOG.BOOLEAN(CB10)
+(
+    &name10= DIALOG.STRing(FEDIT10)
+    &sel10 = 1
+    &addr10= DIALOG.STRing(TADDR10)
+)
+IF DIALOG.BOOLEAN(CB11)
+(
+    &name11= DIALOG.STRing(FEDIT11)
+    &sel11 = 1
+    &addr11= DIALOG.STRing(TADDR11)
+)
+IF DIALOG.BOOLEAN(CB12)
+(
+    &name10= DIALOG.STRing(FEDIT12)
+    &sel12 = 1
+    &addr12= DIALOG.STRing(TADDR12)
+)
+IF DIALOG.BOOLEAN(CB13)
+(
+    &name13= DIALOG.STRing(FEDIT13)
+    &sel13 = 1
+    &addr13= DIALOG.STRing(TADDR13)
+)
+
+OPEN #1 "cpucfg.txt" /CREATE
+WRITE #1 "&devsel"
+CLOSE #1
+
+DIALOG.END
+
+IF "&folder"==""
+(
+	DIALOG.OK "It's wrong, Please select or paste the path of reg bin file !"
+	enddo
+)
+
+IF &sel1==1
+(
+    IF OS.FILE("&folder\&name1")==TRUE()
+        D.LOAD.B &folder\&name1 &addr1 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name1 not be found"
+)
+
+IF &sel2==1
+(
+    IF OS.FILE("&folder\&name2")==TRUE()
+        D.LOAD.B &folder\&name2 &addr2 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name2 not be found"
+)
+
+IF &sel3==1
+(
+    IF OS.FILE("&folder\&name3")==TRUE()
+        D.LOAD.B &folder\&name3 &addr3 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name3 not be found"
+)
+
+IF &sel4==1
+(
+    IF OS.FILE("&folder\&name4")==TRUE()
+        D.LOAD.B &folder\&name4 &addr4 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name4 not be found"
+)
+
+IF &sel5==1
+(
+    IF OS.FILE("&folder\&name5")==TRUE()
+        D.LOAD.B &folder\&name5 &addr5 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name5 not be found"
+)
+
+IF &sel6==1
+(
+    IF OS.FILE("&folder\&name6")==TRUE()
+        D.LOAD.B &folder\&name6 &addr6 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name6 not be found"
+)
+
+IF &sel7==1
+(
+    IF OS.FILE("&folder\&name7")==TRUE()
+        D.LOAD.B &folder\&name7 &addr7 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name7 not be found"
+)
+
+IF &sel8==1
+(
+    IF OS.FILE("&folder\&name8")==TRUE()
+        D.LOAD.B &folder\&name8 &addr8 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name8 not be found"
+)
+
+IF &sel9==1
+(
+    IF OS.FILE("&folder\&name9")==TRUE()
+        D.LOAD.B &folder\&name9 &addr9 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name9 not be found"
+)
+
+IF &sel10==1
+(
+    IF OS.FILE("&folder\&name10")==TRUE()
+        D.LOAD.B &folder\&name10 &addr10 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name10 not be found"
+)
+
+IF &sel11==1
+(
+    IF OS.FILE("&folder\&name11")==TRUE()
+        D.LOAD.B &folder\&name11 &addr11 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name11 not be found"
+)
+
+IF &sel12==1
+(
+    IF OS.FILE("&folder\&name12")==TRUE()
+        D.LOAD.B &folder\&name12 &addr12 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name12 not be found"
+)
+
+IF &sel13==1
+(
+    IF OS.FILE("&folder\&name13")==TRUE()
+        D.LOAD.B &folder\&name13 &addr13 /NOCLEAR
+    ELSE
+        DIALOG.OK "&name13 not be found"
+)
+
+IF &devsel==0
+(
+	IF OS.FILE("reg_55x.per")==TRUE()
+        PER.view "reg_55x.per"
+    ELSE
+        DIALOG.OK "reg_55x.per not be found"
+)
+ELSE IF &devsel==1
+(
+	IF OS.FILE("reg_58x.per")==TRUE()
+        PER.view "reg_58x.per"
+    ELSE
+        DIALOG.OK "reg_58x.per not be found"
+)
+ELSE IF &devsel==2
+(
+	IF OS.FILE("reg_56x.per")==TRUE()
+        PER.view "reg_56x.per"
+    ELSE
+        DIALOG.OK "reg_56x.per not be found"
+)
+ELSE
+(
+	IF OS.FILE("reg_52x.per")==TRUE()
+        PER.view "reg_52x.per"
+    ELSE
+        DIALOG.OK "reg_52x.per not be found"
+)
+
+
+
+enddo

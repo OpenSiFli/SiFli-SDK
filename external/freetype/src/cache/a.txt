@@ -1,0 +1,16 @@
+ Volume in drive D is PersistentDataDisk
+ Volume Serial Number is D6DB-9DA0
+
+ Directory of D:\Sifli_SDK\watch1\external\freetype\src\cache
+
+2020/11/04  10:55               825 ftcache.c
+2020/11/04  10:55            18,442 ftcbasic.c
+2020/11/04  10:55            15,043 ftccache.c
+2020/11/04  10:55            10,141 ftccmap.c
+2020/11/04  10:55             5,571 ftcglyph.c
+2020/11/04  10:55             3,808 ftcimage.c
+2020/11/04  10:55            17,933 ftcmanag.c
+2020/11/04  10:55             7,300 ftcmru.c
+2020/11/04  10:55            12,434 ftcsbits.c
+               9 File(s)         91,497 bytes
+               0 Dir(s)  169,491,591,168 bytes free

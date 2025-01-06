@@ -1,0 +1,23 @@
+import os
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+if GetDepend('BSP_USING_RTTHREAD'):
+    src += Glob("rtthread/*.c")
+    inc += [cwd + '/rtthread']
+elif GetDepend('BSP_USING_NO_OS'):
+    src += Glob("no_os/*.c")
+    inc += [cwd + '/no_os']
+else:
+    assert False, "wrong config"
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = [], CPPPATH = inc)
+Return('objs')

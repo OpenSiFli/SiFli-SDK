@@ -1,0 +1,12 @@
+config BF0_HCPU
+    bool
+    default y
+    
+
+config CUSTOM_MEM_MAP
+    bool
+    default y
+
+config FLASH_TABLE_ONLY
+    bool
+    default y

@@ -1,0 +1,13 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+
+if not GetDepend('SOC_SF32LB55X') or not GetDepend('BF0_HCPU'):
+    src = Glob('*.c')
+
+group = DefineGroup('bt', src, depend = ['BLUETOOTH'],CPPPATH = CPPPATH)
+
+Return('group')

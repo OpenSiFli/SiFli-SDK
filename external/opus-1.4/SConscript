@@ -1,0 +1,36 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+group = []
+
+path = []
+path += [cwd]
+path += [cwd + '/include']
+path += [cwd + '/silk', cwd + '/celt', cwd + '/silk/fixed']
+src += Glob('./celt/*.c')
+src += Glob('./silk/*.c')
+src += Glob('./silk/fixed/*.c')
+src += Glob('./src/*.c')
+
+SrcRemove(src, ['./src/opus_demo.c', './src/repacketizer_demo.c', './src/opus_compare.c', './celt/opus_custom_demo.c'])
+
+if GetDepend(['BF0_ACPU']):
+    SrcRemove(src, ['./src/opus_test.c'])
+
+CPPDEFINES = ['HAVE_LRINTF', 'HAVE_ALLOCA_H', 'USE_ALLOCA', 'OPUS_BUILD', 'FIXED_POINT', 'DISABLE_FLOAT_API']
+
+#LOCAL_CCFLAGS = ' -Wno-error -Wno-#warnings -O3'
+#LOCAL_CCFLAGS = ' -Wno-error -Wno-#warnings -Ofast'
+# TODO:
+if rtconfig.PLATFORM != 'gcc':
+    LOCAL_CCFLAGS = ' -Wno-error -Wno-#warnings -Oz'
+else:    
+    LOCAL_CCFLAGS = ''
+
+# add src and include to group.
+#
+group = DefineGroup('libopus', src, depend = ['PKG_LIB_OPUS'], CPPPATH = path, CPPDEFINES = CPPDEFINES, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')

@@ -1,0 +1,263 @@
+menu "BLE Profiles"
+
+config CFG_PRF
+    bool "BLE profiles"
+	depends on CFG_BLE
+    default y
+config CFG_NB_PRF
+    int "Number of BLE profiles"
+	depends on CFG_PRF
+    default 2
+
+config CFG_PRF_PXPM
+    bool "Proximity Profile Monitor Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_PXPR
+    bool "Proximity Profile Reporter Role"
+	depends on CFG_BLE
+    default n	
+
+config CFG_PRF_FMPL
+    bool "Find Me Profile Locator role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_FMPT
+    bool "Find Me Profile Target role"
+	depends on CFG_BLE
+    default n	
+
+config CFG_PRF_HTPC
+    bool "Health Thermometer Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_HTPT
+    bool "Health Thermometer Profile Thermometer Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_DISC
+    bool "Device Information Service Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_DISS
+    bool "Device Information Service Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_BLPC
+    bool "Blood Pressure Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_BLPS
+    bool "Blood Pressure Profile Sensor Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_TIPC
+    bool "Time Profile Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_TIPS
+    bool "Time Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_HRPC
+    bool "Heart Rate Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_HRPS
+    bool "Heart Rate Profile Sensor Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_SCPPC
+    bool "Scan Parameter Profile Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_SCPPS
+    bool "Scan Parameter Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_BASC
+    bool "Battery Service Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_BASS
+    bool "Battery Service Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_HOGPD
+    bool "HID Device Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_HOGPBH
+    bool "HID Boot Host Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_HOGPRH
+    bool "HID Report Host Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_GLPC
+    bool "Glucose Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_GLPS
+    bool "Glucose Profile Sensor Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_RSCPC
+    bool "Running Speed and Cadence Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_RSCPS
+    bool "Running Speed and Cadence Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_CSCPC
+    bool "Cycling Speed and Cadence Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_CSCPS
+    bool "Cycling Speed and Cadence Profile Server Role"
+	depends on CFG_BLE
+    default n
+	
+config CFG_PRF_CPPC
+    bool "Cycling Power Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_CPPS
+    bool "Cycling Power Profile Server Role"
+	depends on CFG_BLE
+    default n	
+
+config CFG_PRF_LANC
+    bool "Location and Navigation Profile Collector Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_LANS
+    bool "Location and Navigation Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_ANPC
+    bool "Alert Notification Profile Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_ANPS
+    bool "Alert Notification Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_PASPC
+    bool "Phone Alert Status Profile Client Role"
+	depends on CFG_BLE
+    default n	
+config CFG_PRF_PASPS
+    bool "Phone Alert Status Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_IPSC
+    bool "Internet Protocol Support Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_IPSS
+    bool "Internet Protocol Support Profile Server Role"
+	depends on CFG_BLE
+    default n	
+
+config CFG_PRF_ENVC
+    bool "Environmental Sensing Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_ENVS
+    bool "Environmental Sensing Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_WSCC
+    bool "Weight Scale Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_WSCS
+    bool "Weight Scale Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_BCSC
+    bool "Body Composition Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_BCSS
+    bool "Body Composition Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_UDSC
+    bool "User Data Service Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_UDSS
+    bool "User Data Service Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_WPTC
+    bool "Wireless Power Transfer Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_WPTS
+    bool "Wireless Power Transfer Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_PLXC
+    bool "Pulse Oximete Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_PLXS
+    bool "Pulse Oximeter Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_CGMC
+    bool "Continuous Glucose Monitoring Profile Client Role"
+	depends on CFG_BLE
+    default n
+config CFG_PRF_CGMS
+    bool "Continuous Glucose Monitoring Profile Server Role"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_THPP
+    bool "Throughput tester profile for debug usage"
+	depends on CFG_BLE
+    default n
+
+
+config CFG_PRF_SIBLES
+    bool "SiFli BLE server"
+	depends on CFG_BLE
+    default n
+
+config CFG_PRF_SIBLE_FORWARD
+    bool "SiFli BLE forward interface"
+	depends on CFG_PRF_SIBLES
+    default n
+
+config CFG_PRF_SIBLEC
+    bool "SiFli BLE client"
+	depends on CFG_BLE
+    default n
+
+
+endmenu

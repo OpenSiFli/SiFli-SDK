@@ -1,0 +1,261 @@
+#ifndef __LPSYS_RCC_H
+#define __LPSYS_RCC_H
+
+typedef struct
+{
+    __IO uint32_t RSTR1;
+    __IO uint32_t ENR1;
+    __IO uint32_t ESR1;
+    __IO uint32_t ECR1;
+    __IO uint32_t CSR;
+    __IO uint32_t CFGR;
+    __IO uint32_t DBGR;
+} LPSYS_RCC_TypeDef;
+
+
+/**************** Bit definition for LPSYS_RCC_RSTR1 register *****************/
+#define LPSYS_RCC_RSTR1_LCPU_Pos        (0U)
+#define LPSYS_RCC_RSTR1_LCPU_Msk        (0x1UL << LPSYS_RCC_RSTR1_LCPU_Pos)
+#define LPSYS_RCC_RSTR1_LCPU            LPSYS_RCC_RSTR1_LCPU_Msk
+#define LPSYS_RCC_RSTR1_DMAC2_Pos       (1U)
+#define LPSYS_RCC_RSTR1_DMAC2_Msk       (0x1UL << LPSYS_RCC_RSTR1_DMAC2_Pos)
+#define LPSYS_RCC_RSTR1_DMAC2           LPSYS_RCC_RSTR1_DMAC2_Msk
+#define LPSYS_RCC_RSTR1_MAILBOX2_Pos    (2U)
+#define LPSYS_RCC_RSTR1_MAILBOX2_Msk    (0x1UL << LPSYS_RCC_RSTR1_MAILBOX2_Pos)
+#define LPSYS_RCC_RSTR1_MAILBOX2        LPSYS_RCC_RSTR1_MAILBOX2_Msk
+#define LPSYS_RCC_RSTR1_PINMUX2_Pos     (3U)
+#define LPSYS_RCC_RSTR1_PINMUX2_Msk     (0x1UL << LPSYS_RCC_RSTR1_PINMUX2_Pos)
+#define LPSYS_RCC_RSTR1_PINMUX2         LPSYS_RCC_RSTR1_PINMUX2_Msk
+#define LPSYS_RCC_RSTR1_PATCH_Pos       (4U)
+#define LPSYS_RCC_RSTR1_PATCH_Msk       (0x1UL << LPSYS_RCC_RSTR1_PATCH_Pos)
+#define LPSYS_RCC_RSTR1_PATCH           LPSYS_RCC_RSTR1_PATCH_Msk
+#define LPSYS_RCC_RSTR1_USART4_Pos      (5U)
+#define LPSYS_RCC_RSTR1_USART4_Msk      (0x1UL << LPSYS_RCC_RSTR1_USART4_Pos)
+#define LPSYS_RCC_RSTR1_USART4          LPSYS_RCC_RSTR1_USART4_Msk
+#define LPSYS_RCC_RSTR1_USART5_Pos      (6U)
+#define LPSYS_RCC_RSTR1_USART5_Msk      (0x1UL << LPSYS_RCC_RSTR1_USART5_Pos)
+#define LPSYS_RCC_RSTR1_USART5          LPSYS_RCC_RSTR1_USART5_Msk
+#define LPSYS_RCC_RSTR1_PTC2_Pos        (8U)
+#define LPSYS_RCC_RSTR1_PTC2_Msk        (0x1UL << LPSYS_RCC_RSTR1_PTC2_Pos)
+#define LPSYS_RCC_RSTR1_PTC2            LPSYS_RCC_RSTR1_PTC2_Msk
+#define LPSYS_RCC_RSTR1_BTIM3_Pos       (9U)
+#define LPSYS_RCC_RSTR1_BTIM3_Msk       (0x1UL << LPSYS_RCC_RSTR1_BTIM3_Pos)
+#define LPSYS_RCC_RSTR1_BTIM3           LPSYS_RCC_RSTR1_BTIM3_Msk
+#define LPSYS_RCC_RSTR1_BTIM4_Pos       (10U)
+#define LPSYS_RCC_RSTR1_BTIM4_Msk       (0x1UL << LPSYS_RCC_RSTR1_BTIM4_Pos)
+#define LPSYS_RCC_RSTR1_BTIM4           LPSYS_RCC_RSTR1_BTIM4_Msk
+#define LPSYS_RCC_RSTR1_SYSCFG2_Pos     (15U)
+#define LPSYS_RCC_RSTR1_SYSCFG2_Msk     (0x1UL << LPSYS_RCC_RSTR1_SYSCFG2_Pos)
+#define LPSYS_RCC_RSTR1_SYSCFG2         LPSYS_RCC_RSTR1_SYSCFG2_Msk
+#define LPSYS_RCC_RSTR1_GPIO2_Pos       (16U)
+#define LPSYS_RCC_RSTR1_GPIO2_Msk       (0x1UL << LPSYS_RCC_RSTR1_GPIO2_Pos)
+#define LPSYS_RCC_RSTR1_GPIO2           LPSYS_RCC_RSTR1_GPIO2_Msk
+#define LPSYS_RCC_RSTR1_RFC_Pos         (18U)
+#define LPSYS_RCC_RSTR1_RFC_Msk         (0x1UL << LPSYS_RCC_RSTR1_RFC_Pos)
+#define LPSYS_RCC_RSTR1_RFC             LPSYS_RCC_RSTR1_RFC_Msk
+#define LPSYS_RCC_RSTR1_PHY_Pos         (19U)
+#define LPSYS_RCC_RSTR1_PHY_Msk         (0x1UL << LPSYS_RCC_RSTR1_PHY_Pos)
+#define LPSYS_RCC_RSTR1_PHY             LPSYS_RCC_RSTR1_PHY_Msk
+#define LPSYS_RCC_RSTR1_MAC_Pos         (20U)
+#define LPSYS_RCC_RSTR1_MAC_Msk         (0x1UL << LPSYS_RCC_RSTR1_MAC_Pos)
+#define LPSYS_RCC_RSTR1_MAC             LPSYS_RCC_RSTR1_MAC_Msk
+#define LPSYS_RCC_RSTR1_CRC2_Pos        (21U)
+#define LPSYS_RCC_RSTR1_CRC2_Msk        (0x1UL << LPSYS_RCC_RSTR1_CRC2_Pos)
+#define LPSYS_RCC_RSTR1_CRC2            LPSYS_RCC_RSTR1_CRC2_Msk
+
+/***************** Bit definition for LPSYS_RCC_ENR1 register *****************/
+#define LPSYS_RCC_ENR1_DMAC2_Pos        (1U)
+#define LPSYS_RCC_ENR1_DMAC2_Msk        (0x1UL << LPSYS_RCC_ENR1_DMAC2_Pos)
+#define LPSYS_RCC_ENR1_DMAC2            LPSYS_RCC_ENR1_DMAC2_Msk
+#define LPSYS_RCC_ENR1_MAILBOX2_Pos     (2U)
+#define LPSYS_RCC_ENR1_MAILBOX2_Msk     (0x1UL << LPSYS_RCC_ENR1_MAILBOX2_Pos)
+#define LPSYS_RCC_ENR1_MAILBOX2         LPSYS_RCC_ENR1_MAILBOX2_Msk
+#define LPSYS_RCC_ENR1_PINMUX2_Pos      (3U)
+#define LPSYS_RCC_ENR1_PINMUX2_Msk      (0x1UL << LPSYS_RCC_ENR1_PINMUX2_Pos)
+#define LPSYS_RCC_ENR1_PINMUX2          LPSYS_RCC_ENR1_PINMUX2_Msk
+#define LPSYS_RCC_ENR1_PATCH_Pos        (4U)
+#define LPSYS_RCC_ENR1_PATCH_Msk        (0x1UL << LPSYS_RCC_ENR1_PATCH_Pos)
+#define LPSYS_RCC_ENR1_PATCH            LPSYS_RCC_ENR1_PATCH_Msk
+#define LPSYS_RCC_ENR1_USART4_Pos       (5U)
+#define LPSYS_RCC_ENR1_USART4_Msk       (0x1UL << LPSYS_RCC_ENR1_USART4_Pos)
+#define LPSYS_RCC_ENR1_USART4           LPSYS_RCC_ENR1_USART4_Msk
+#define LPSYS_RCC_ENR1_USART5_Pos       (6U)
+#define LPSYS_RCC_ENR1_USART5_Msk       (0x1UL << LPSYS_RCC_ENR1_USART5_Pos)
+#define LPSYS_RCC_ENR1_USART5           LPSYS_RCC_ENR1_USART5_Msk
+#define LPSYS_RCC_ENR1_SECU2_Pos        (7U)
+#define LPSYS_RCC_ENR1_SECU2_Msk        (0x1UL << LPSYS_RCC_ENR1_SECU2_Pos)
+#define LPSYS_RCC_ENR1_SECU2            LPSYS_RCC_ENR1_SECU2_Msk
+#define LPSYS_RCC_ENR1_PTC2_Pos         (8U)
+#define LPSYS_RCC_ENR1_PTC2_Msk         (0x1UL << LPSYS_RCC_ENR1_PTC2_Pos)
+#define LPSYS_RCC_ENR1_PTC2             LPSYS_RCC_ENR1_PTC2_Msk
+#define LPSYS_RCC_ENR1_BTIM3_Pos        (9U)
+#define LPSYS_RCC_ENR1_BTIM3_Msk        (0x1UL << LPSYS_RCC_ENR1_BTIM3_Pos)
+#define LPSYS_RCC_ENR1_BTIM3            LPSYS_RCC_ENR1_BTIM3_Msk
+#define LPSYS_RCC_ENR1_BTIM4_Pos        (10U)
+#define LPSYS_RCC_ENR1_BTIM4_Msk        (0x1UL << LPSYS_RCC_ENR1_BTIM4_Pos)
+#define LPSYS_RCC_ENR1_BTIM4            LPSYS_RCC_ENR1_BTIM4_Msk
+#define LPSYS_RCC_ENR1_SYSCFG2_Pos      (15U)
+#define LPSYS_RCC_ENR1_SYSCFG2_Msk      (0x1UL << LPSYS_RCC_ENR1_SYSCFG2_Pos)
+#define LPSYS_RCC_ENR1_SYSCFG2          LPSYS_RCC_ENR1_SYSCFG2_Msk
+#define LPSYS_RCC_ENR1_GPIO2_Pos        (16U)
+#define LPSYS_RCC_ENR1_GPIO2_Msk        (0x1UL << LPSYS_RCC_ENR1_GPIO2_Pos)
+#define LPSYS_RCC_ENR1_GPIO2            LPSYS_RCC_ENR1_GPIO2_Msk
+#define LPSYS_RCC_ENR1_RFC_Pos          (18U)
+#define LPSYS_RCC_ENR1_RFC_Msk          (0x1UL << LPSYS_RCC_ENR1_RFC_Pos)
+#define LPSYS_RCC_ENR1_RFC              LPSYS_RCC_ENR1_RFC_Msk
+#define LPSYS_RCC_ENR1_PHY_Pos          (19U)
+#define LPSYS_RCC_ENR1_PHY_Msk          (0x1UL << LPSYS_RCC_ENR1_PHY_Pos)
+#define LPSYS_RCC_ENR1_PHY              LPSYS_RCC_ENR1_PHY_Msk
+#define LPSYS_RCC_ENR1_MAC_Pos          (20U)
+#define LPSYS_RCC_ENR1_MAC_Msk          (0x1UL << LPSYS_RCC_ENR1_MAC_Pos)
+#define LPSYS_RCC_ENR1_MAC              LPSYS_RCC_ENR1_MAC_Msk
+#define LPSYS_RCC_ENR1_CRC2_Pos         (21U)
+#define LPSYS_RCC_ENR1_CRC2_Msk         (0x1UL << LPSYS_RCC_ENR1_CRC2_Pos)
+#define LPSYS_RCC_ENR1_CRC2             LPSYS_RCC_ENR1_CRC2_Msk
+
+/***************** Bit definition for LPSYS_RCC_ESR1 register *****************/
+#define LPSYS_RCC_ESR1_DMAC2_Pos        (1U)
+#define LPSYS_RCC_ESR1_DMAC2_Msk        (0x1UL << LPSYS_RCC_ESR1_DMAC2_Pos)
+#define LPSYS_RCC_ESR1_DMAC2            LPSYS_RCC_ESR1_DMAC2_Msk
+#define LPSYS_RCC_ESR1_MAILBOX2_Pos     (2U)
+#define LPSYS_RCC_ESR1_MAILBOX2_Msk     (0x1UL << LPSYS_RCC_ESR1_MAILBOX2_Pos)
+#define LPSYS_RCC_ESR1_MAILBOX2         LPSYS_RCC_ESR1_MAILBOX2_Msk
+#define LPSYS_RCC_ESR1_PINMUX2_Pos      (3U)
+#define LPSYS_RCC_ESR1_PINMUX2_Msk      (0x1UL << LPSYS_RCC_ESR1_PINMUX2_Pos)
+#define LPSYS_RCC_ESR1_PINMUX2          LPSYS_RCC_ESR1_PINMUX2_Msk
+#define LPSYS_RCC_ESR1_PATCH_Pos        (4U)
+#define LPSYS_RCC_ESR1_PATCH_Msk        (0x1UL << LPSYS_RCC_ESR1_PATCH_Pos)
+#define LPSYS_RCC_ESR1_PATCH            LPSYS_RCC_ESR1_PATCH_Msk
+#define LPSYS_RCC_ESR1_USART4_Pos       (5U)
+#define LPSYS_RCC_ESR1_USART4_Msk       (0x1UL << LPSYS_RCC_ESR1_USART4_Pos)
+#define LPSYS_RCC_ESR1_USART4           LPSYS_RCC_ESR1_USART4_Msk
+#define LPSYS_RCC_ESR1_USART5_Pos       (6U)
+#define LPSYS_RCC_ESR1_USART5_Msk       (0x1UL << LPSYS_RCC_ESR1_USART5_Pos)
+#define LPSYS_RCC_ESR1_USART5           LPSYS_RCC_ESR1_USART5_Msk
+#define LPSYS_RCC_ESR1_SECU2_Pos        (7U)
+#define LPSYS_RCC_ESR1_SECU2_Msk        (0x1UL << LPSYS_RCC_ESR1_SECU2_Pos)
+#define LPSYS_RCC_ESR1_SECU2            LPSYS_RCC_ESR1_SECU2_Msk
+#define LPSYS_RCC_ESR1_PTC2_Pos         (8U)
+#define LPSYS_RCC_ESR1_PTC2_Msk         (0x1UL << LPSYS_RCC_ESR1_PTC2_Pos)
+#define LPSYS_RCC_ESR1_PTC2             LPSYS_RCC_ESR1_PTC2_Msk
+#define LPSYS_RCC_ESR1_BTIM3_Pos        (9U)
+#define LPSYS_RCC_ESR1_BTIM3_Msk        (0x1UL << LPSYS_RCC_ESR1_BTIM3_Pos)
+#define LPSYS_RCC_ESR1_BTIM3            LPSYS_RCC_ESR1_BTIM3_Msk
+#define LPSYS_RCC_ESR1_BTIM4_Pos        (10U)
+#define LPSYS_RCC_ESR1_BTIM4_Msk        (0x1UL << LPSYS_RCC_ESR1_BTIM4_Pos)
+#define LPSYS_RCC_ESR1_BTIM4            LPSYS_RCC_ESR1_BTIM4_Msk
+#define LPSYS_RCC_ESR1_SYSCFG2_Pos      (15U)
+#define LPSYS_RCC_ESR1_SYSCFG2_Msk      (0x1UL << LPSYS_RCC_ESR1_SYSCFG2_Pos)
+#define LPSYS_RCC_ESR1_SYSCFG2          LPSYS_RCC_ESR1_SYSCFG2_Msk
+#define LPSYS_RCC_ESR1_GPIO2_Pos        (16U)
+#define LPSYS_RCC_ESR1_GPIO2_Msk        (0x1UL << LPSYS_RCC_ESR1_GPIO2_Pos)
+#define LPSYS_RCC_ESR1_GPIO2            LPSYS_RCC_ESR1_GPIO2_Msk
+#define LPSYS_RCC_ESR1_RFC_Pos          (18U)
+#define LPSYS_RCC_ESR1_RFC_Msk          (0x1UL << LPSYS_RCC_ESR1_RFC_Pos)
+#define LPSYS_RCC_ESR1_RFC              LPSYS_RCC_ESR1_RFC_Msk
+#define LPSYS_RCC_ESR1_PHY_Pos          (19U)
+#define LPSYS_RCC_ESR1_PHY_Msk          (0x1UL << LPSYS_RCC_ESR1_PHY_Pos)
+#define LPSYS_RCC_ESR1_PHY              LPSYS_RCC_ESR1_PHY_Msk
+#define LPSYS_RCC_ESR1_MAC_Pos          (20U)
+#define LPSYS_RCC_ESR1_MAC_Msk          (0x1UL << LPSYS_RCC_ESR1_MAC_Pos)
+#define LPSYS_RCC_ESR1_MAC              LPSYS_RCC_ESR1_MAC_Msk
+#define LPSYS_RCC_ESR1_CRC2_Pos         (21U)
+#define LPSYS_RCC_ESR1_CRC2_Msk         (0x1UL << LPSYS_RCC_ESR1_CRC2_Pos)
+#define LPSYS_RCC_ESR1_CRC2             LPSYS_RCC_ESR1_CRC2_Msk
+
+/***************** Bit definition for LPSYS_RCC_ECR1 register *****************/
+#define LPSYS_RCC_ECR1_DMAC2_Pos        (1U)
+#define LPSYS_RCC_ECR1_DMAC2_Msk        (0x1UL << LPSYS_RCC_ECR1_DMAC2_Pos)
+#define LPSYS_RCC_ECR1_DMAC2            LPSYS_RCC_ECR1_DMAC2_Msk
+#define LPSYS_RCC_ECR1_MAILBOX2_Pos     (2U)
+#define LPSYS_RCC_ECR1_MAILBOX2_Msk     (0x1UL << LPSYS_RCC_ECR1_MAILBOX2_Pos)
+#define LPSYS_RCC_ECR1_MAILBOX2         LPSYS_RCC_ECR1_MAILBOX2_Msk
+#define LPSYS_RCC_ECR1_PINMUX2_Pos      (3U)
+#define LPSYS_RCC_ECR1_PINMUX2_Msk      (0x1UL << LPSYS_RCC_ECR1_PINMUX2_Pos)
+#define LPSYS_RCC_ECR1_PINMUX2          LPSYS_RCC_ECR1_PINMUX2_Msk
+#define LPSYS_RCC_ECR1_PATCH_Pos        (4U)
+#define LPSYS_RCC_ECR1_PATCH_Msk        (0x1UL << LPSYS_RCC_ECR1_PATCH_Pos)
+#define LPSYS_RCC_ECR1_PATCH            LPSYS_RCC_ECR1_PATCH_Msk
+#define LPSYS_RCC_ECR1_USART4_Pos       (5U)
+#define LPSYS_RCC_ECR1_USART4_Msk       (0x1UL << LPSYS_RCC_ECR1_USART4_Pos)
+#define LPSYS_RCC_ECR1_USART4           LPSYS_RCC_ECR1_USART4_Msk
+#define LPSYS_RCC_ECR1_USART5_Pos       (6U)
+#define LPSYS_RCC_ECR1_USART5_Msk       (0x1UL << LPSYS_RCC_ECR1_USART5_Pos)
+#define LPSYS_RCC_ECR1_USART5           LPSYS_RCC_ECR1_USART5_Msk
+#define LPSYS_RCC_ECR1_SECU2_Pos        (7U)
+#define LPSYS_RCC_ECR1_SECU2_Msk        (0x1UL << LPSYS_RCC_ECR1_SECU2_Pos)
+#define LPSYS_RCC_ECR1_SECU2            LPSYS_RCC_ECR1_SECU2_Msk
+#define LPSYS_RCC_ECR1_PTC2_Pos         (8U)
+#define LPSYS_RCC_ECR1_PTC2_Msk         (0x1UL << LPSYS_RCC_ECR1_PTC2_Pos)
+#define LPSYS_RCC_ECR1_PTC2             LPSYS_RCC_ECR1_PTC2_Msk
+#define LPSYS_RCC_ECR1_BTIM3_Pos        (9U)
+#define LPSYS_RCC_ECR1_BTIM3_Msk        (0x1UL << LPSYS_RCC_ECR1_BTIM3_Pos)
+#define LPSYS_RCC_ECR1_BTIM3            LPSYS_RCC_ECR1_BTIM3_Msk
+#define LPSYS_RCC_ECR1_BTIM4_Pos        (10U)
+#define LPSYS_RCC_ECR1_BTIM4_Msk        (0x1UL << LPSYS_RCC_ECR1_BTIM4_Pos)
+#define LPSYS_RCC_ECR1_BTIM4            LPSYS_RCC_ECR1_BTIM4_Msk
+#define LPSYS_RCC_ECR1_SYSCFG2_Pos      (15U)
+#define LPSYS_RCC_ECR1_SYSCFG2_Msk      (0x1UL << LPSYS_RCC_ECR1_SYSCFG2_Pos)
+#define LPSYS_RCC_ECR1_SYSCFG2          LPSYS_RCC_ECR1_SYSCFG2_Msk
+#define LPSYS_RCC_ECR1_GPIO2_Pos        (16U)
+#define LPSYS_RCC_ECR1_GPIO2_Msk        (0x1UL << LPSYS_RCC_ECR1_GPIO2_Pos)
+#define LPSYS_RCC_ECR1_GPIO2            LPSYS_RCC_ECR1_GPIO2_Msk
+#define LPSYS_RCC_ECR1_RFC_Pos          (18U)
+#define LPSYS_RCC_ECR1_RFC_Msk          (0x1UL << LPSYS_RCC_ECR1_RFC_Pos)
+#define LPSYS_RCC_ECR1_RFC              LPSYS_RCC_ECR1_RFC_Msk
+#define LPSYS_RCC_ECR1_PHY_Pos          (19U)
+#define LPSYS_RCC_ECR1_PHY_Msk          (0x1UL << LPSYS_RCC_ECR1_PHY_Pos)
+#define LPSYS_RCC_ECR1_PHY              LPSYS_RCC_ECR1_PHY_Msk
+#define LPSYS_RCC_ECR1_MAC_Pos          (20U)
+#define LPSYS_RCC_ECR1_MAC_Msk          (0x1UL << LPSYS_RCC_ECR1_MAC_Pos)
+#define LPSYS_RCC_ECR1_MAC              LPSYS_RCC_ECR1_MAC_Msk
+#define LPSYS_RCC_ECR1_CRC2_Pos         (21U)
+#define LPSYS_RCC_ECR1_CRC2_Msk         (0x1UL << LPSYS_RCC_ECR1_CRC2_Pos)
+#define LPSYS_RCC_ECR1_CRC2             LPSYS_RCC_ECR1_CRC2_Msk
+
+/***************** Bit definition for LPSYS_RCC_CSR register ******************/
+#define LPSYS_RCC_CSR_SEL_SYS_Pos       (0U)
+#define LPSYS_RCC_CSR_SEL_SYS_Msk       (0x1UL << LPSYS_RCC_CSR_SEL_SYS_Pos)
+#define LPSYS_RCC_CSR_SEL_SYS           LPSYS_RCC_CSR_SEL_SYS_Msk
+#define LPSYS_RCC_CSR_SEL_SYS_LP_Pos    (2U)
+#define LPSYS_RCC_CSR_SEL_SYS_LP_Msk    (0x1UL << LPSYS_RCC_CSR_SEL_SYS_LP_Pos)
+#define LPSYS_RCC_CSR_SEL_SYS_LP        LPSYS_RCC_CSR_SEL_SYS_LP_Msk
+#define LPSYS_RCC_CSR_SEL_PERI_Pos      (4U)
+#define LPSYS_RCC_CSR_SEL_PERI_Msk      (0x1UL << LPSYS_RCC_CSR_SEL_PERI_Pos)
+#define LPSYS_RCC_CSR_SEL_PERI          LPSYS_RCC_CSR_SEL_PERI_Msk
+#define LPSYS_RCC_CSR_SEL_TICK_Pos      (5U)
+#define LPSYS_RCC_CSR_SEL_TICK_Msk      (0x3UL << LPSYS_RCC_CSR_SEL_TICK_Pos)
+#define LPSYS_RCC_CSR_SEL_TICK          LPSYS_RCC_CSR_SEL_TICK_Msk
+
+/***************** Bit definition for LPSYS_RCC_CFGR register *****************/
+#define LPSYS_RCC_CFGR_HDIV1_Pos        (0U)
+#define LPSYS_RCC_CFGR_HDIV1_Msk        (0x3FUL << LPSYS_RCC_CFGR_HDIV1_Pos)
+#define LPSYS_RCC_CFGR_HDIV1            LPSYS_RCC_CFGR_HDIV1_Msk
+#define LPSYS_RCC_CFGR_PDIV1_Pos        (8U)
+#define LPSYS_RCC_CFGR_PDIV1_Msk        (0x7UL << LPSYS_RCC_CFGR_PDIV1_Pos)
+#define LPSYS_RCC_CFGR_PDIV1            LPSYS_RCC_CFGR_PDIV1_Msk
+#define LPSYS_RCC_CFGR_PDIV2_Pos        (12U)
+#define LPSYS_RCC_CFGR_PDIV2_Msk        (0x7UL << LPSYS_RCC_CFGR_PDIV2_Pos)
+#define LPSYS_RCC_CFGR_PDIV2            LPSYS_RCC_CFGR_PDIV2_Msk
+#define LPSYS_RCC_CFGR_MACDIV_Pos       (16U)
+#define LPSYS_RCC_CFGR_MACDIV_Msk       (0xFUL << LPSYS_RCC_CFGR_MACDIV_Pos)
+#define LPSYS_RCC_CFGR_MACDIV           LPSYS_RCC_CFGR_MACDIV_Msk
+#define LPSYS_RCC_CFGR_MACFREQ_Pos      (20U)
+#define LPSYS_RCC_CFGR_MACFREQ_Msk      (0x1FUL << LPSYS_RCC_CFGR_MACFREQ_Pos)
+#define LPSYS_RCC_CFGR_MACFREQ          LPSYS_RCC_CFGR_MACFREQ_Msk
+#define LPSYS_RCC_CFGR_TICKDIV_Pos      (25U)
+#define LPSYS_RCC_CFGR_TICKDIV_Msk      (0x3FUL << LPSYS_RCC_CFGR_TICKDIV_Pos)
+#define LPSYS_RCC_CFGR_TICKDIV          LPSYS_RCC_CFGR_TICKDIV_Msk
+
+/***************** Bit definition for LPSYS_RCC_DBGR register *****************/
+#define LPSYS_RCC_DBGR_SYSCLK_AON_Pos   (0U)
+#define LPSYS_RCC_DBGR_SYSCLK_AON_Msk   (0x1UL << LPSYS_RCC_DBGR_SYSCLK_AON_Pos)
+#define LPSYS_RCC_DBGR_SYSCLK_AON       LPSYS_RCC_DBGR_SYSCLK_AON_Msk
+#define LPSYS_RCC_DBGR_SYSCLK_SWLP_Pos  (1U)
+#define LPSYS_RCC_DBGR_SYSCLK_SWLP_Msk  (0x1UL << LPSYS_RCC_DBGR_SYSCLK_SWLP_Pos)
+#define LPSYS_RCC_DBGR_SYSCLK_SWLP      LPSYS_RCC_DBGR_SYSCLK_SWLP_Msk
+#define LPSYS_RCC_DBGR_SYSCLK_SWBT_Pos  (5U)
+#define LPSYS_RCC_DBGR_SYSCLK_SWBT_Msk  (0x1UL << LPSYS_RCC_DBGR_SYSCLK_SWBT_Pos)
+#define LPSYS_RCC_DBGR_SYSCLK_SWBT      LPSYS_RCC_DBGR_SYSCLK_SWBT_Msk
+
+#endif

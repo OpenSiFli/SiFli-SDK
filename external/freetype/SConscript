@@ -1,0 +1,46 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+group = []
+
+path = []
+
+if GetDepend('LV_USING_FREETYPE_ENGINE'):
+    path  = [cwd + '/include']
+    if GetDepend('FREETYPE_NORMAL_FONT') and os.path.isfile(os.path.join(cwd, 'src/base/ftsystem.c')):
+        src += ['src/base/ftsystem.c',
+                'src/base/ftinit.c',
+                'src/base/ftdebug.c',
+                'src/base/ftbase.c',
+                'src/base/ftbbox.c',
+                'src/base/ftglyph.c',
+                'src/base/ftbitmap.c',
+                'src/sfnt/sfnt.c',
+                'src/truetype/truetype.c',
+                'src/cff/cff.c',
+                'src/smooth/smooth.c',
+                'src/autofit/autofit.c',
+                'src/psnames/psnames.c',
+                'src/gzip/ftgzip.c',
+                'src/pshinter/pshinter.c',
+                'src/cache/ftcbasic.c',
+                'src/cache/ftccache.c',
+                'src/cache/ftccmap.c',
+                'src/cache/ftcglyph.c',
+                'src/cache/ftcimage.c',
+                'src/cache/ftcmanag.c',
+                'src/cache/ftcmru.c',   
+                'src/cache/ftcsbits.c'
+               ]
+    else:
+        src = ['lib_interface/ftsystem.c']
+
+CPPDEFINES = ['FT2_BUILD_LIBRARY']
+
+
+# add src and include to group.
+group = DefineGroup('freetype', src, depend = ['PKG_FREETYPE'], CPPPATH = path, CPPDEFINES = CPPDEFINES)
+
+Return('group')

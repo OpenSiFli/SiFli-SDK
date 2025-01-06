@@ -1,0 +1,51 @@
+#***************************************************************************************
+# @file reglist.txt
+#
+# @brief This file contains the register files for build process. 
+
+# This file contains the description of the register files that must be parsed during
+# the build process.  The first element is the name of the register description file, it
+# is expected to be an XLS (EXCEL) sheet meeting the standard RivieraWaves format.
+# The second element is the base address of the register block described in the input
+# file.
+# The third element informs if the output register file must use long naming format or
+# short one.  Long naming means that the register's name are appended to each field name,
+# short naming means that the field names are used directly.  If two registers are using
+# the same field name, long naming should be used.  This is not verified during register
+# build time but at compilation time.
+#
+# Copyright (C) RivieraWaves 2009-2015
+#
+#***************************************************************************************
+
+# INTC                                     
+    import/reg/INTC.xls         INTC         0x10001000 REG_PL INTC long
+# UART                                     
+    import/reg/UART.xls         UART         0x10007000 REG_PL UART short
+# RIPPLE                                   
+    import/reg/RIPPLE.xls       RIPPLE       0x00000000 REG_RPL RPL short
+# MODEM                                    
+    import/reg/MODEM.xls        MODEM        0x00000000 REG_RPL MDM short
+# UART                                     
+    import/reg/UART.xls         UART2        0x10008000 REG_PL UART2 short
+# MWS EVENT GEN
+    import/reg/MWSGEN.xls       MWSGEN       0x10009000 REG_PL MWSGEN short
+# IQ SAMPLE GEN
+    import/reg/DF-GEN-FS.xls    IQGEN        0x1000A000 REG_PL IQGEN short
+# PLF_CLK
+    ../../modules/audio_sync/import/reg/PLF_CLK.xls PLF_CLK   0x1000A800 REG_PL PLF_CLK short
+# ASSERT_MGR
+    import/reg/ASSERT_MGR.xls   ASSERT_MGR   0x1000D000 REG_PL ASRT long
+# SW_PROFILING
+    import/reg/SW_PROFILING.xls SW_PROFILING 0x1000D100 REG_PL SW_PROF short
+# TIMER 
+    import/reg/TIMER.xls        TIMER        0x1000E000 REG_PL TMR short
+# ASSERT_MGR
+    import/reg/ECC_ACCEL.xls    ECC_ACCEL    0x1000F000 REG_PL ECC short
+# DMA
+    import/reg/DMAC.xls         DMA          0x1000B000 REG_PL DMA long
+    import/reg/DMAC.xls         DMA          0x1000B000 REG_PL DMA long CHANNEL
+
+#***************************************************************************************
+# End of register list
+#***************************************************************************************

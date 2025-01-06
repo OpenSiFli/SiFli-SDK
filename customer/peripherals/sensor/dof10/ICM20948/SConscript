@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['SENSOR_USING_ICM20948'], CPPPATH = CPPPATH)
+
+Return('group')

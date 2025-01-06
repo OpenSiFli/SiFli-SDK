@@ -1,0 +1,48 @@
+si SWD
+speed 10000
+
+
+w4 0x4004f000 1 //Switch to LCPU
+Sleep 500
+usb
+H
+mem32 E000E100 8
+mem32 E000E200 8
+mem32 E000E300 8
+
+
+
+w4 0x4004f000 0 //Switch to HCPU
+Sleep 500
+usb
+H
+mem32 E000E100 8
+mem32 E000E200 8
+mem32 E000E300 8
+
+
+//Dump memorys
+savebin hcpu_ram.bin 0x20000000 0x100000
+savebin hcpu_itcm.bin 0x00010000 0x10000
+savebin ret_ram.bin 0x00020000 0x10000
+savebin psram.bin 0x60000000 0x400000
+
+savebin lcdc_reg.bin 0x40008000 0xE0
+savebin dsi_host_reg.bin 0x4001E000 0xB4
+savebin dsi_phy_reg.bin  0x4001F000 0x68
+savebin epic_reg.bin 0x40007000 0x98
+savebin ezip_reg.bin 0x40006000 0x50
+savebin mac.bin 0x50050000 0x200
+savebin rf.bin 0x50042000 0x209
+savebin gpio1_reg.bin 0x50000000 0xA8
+savebin gpio2_reg.bin 0x50040000 0x70
+savebin pinmux1_reg.bin 0x40003000 0x194
+savebin pinmux2_reg.bin 0x40043000 0xC8
+savebin hpsys_aon_reg.bin 0x40030000 0x38
+savebin lpsys_aon_reg.bin 0x40070000 0x108
+
+savebin lcpu_ram.bin 0x20100000 0x38000
+savebin lcpu_dtcm.bin 0x2B0FC000 0x4000
+
+
+exit

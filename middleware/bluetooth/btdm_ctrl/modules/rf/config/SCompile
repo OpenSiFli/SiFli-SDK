@@ -1,0 +1,74 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for RF
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (env['BT_EMB_PRESENT'] == 'on') or (env['BLE_EMB_PRESENT'] == 'on'):
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    rf_src_dir = os.path.join(rf_dir, 'src')
+    rf_api_dir = os.path.join(rf_dir, 'api')
+    rf_cfg_dir = os.path.join(rf_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    rf_def_list  = []
+
+    if env['RF'] == 'ripple':
+        rf_def_list  += ['CFG_RF_RIPPLE']
+    if env['RF'] == 'ripple_df':
+        rf_def_list  += ['CFG_RF_RIPPLE_DF']
+    elif env['RF'] == 'atlas':
+        rf_def_list  += ['CFG_RF_ATLAS']
+    elif env['RF'] == 'icytrx_v2':
+        rf_def_list  += ['CFG_ICYTRX_V2']
+    elif env['RF'] == 'thetis':
+        rf_def_list  += ['CFG_RF_THETIS']
+    elif env['RF'] == 'btipt':
+        rf_def_list  += ['CFG_RF_BTIPT']
+    elif env['RF'] == 'calypso':
+        rf_def_list  += ['CFG_RF_CALYPSO']
+    elif env['RF'] == 'cal_hpmdm_bypass':
+        rf_def_list  += ['CFG_CAL_HPMDM_BYPASS']
+    elif env['RF'] == 'extrc':
+        rf_def_list  += ['CFG_RF_EXTRC']
+    elif env['RF'] == 'au50xx':
+        rf_def_list  += ['CFG_RF_AU50XX']
+    elif env['RF'] == 'icytrxdm':
+        rf_def_list  += ['CFG_RF_ICYTRXDM']
+
+    # Modem bypass
+    if env['MBP'] == 'on':
+        rf_def_list  += ['CFG_MBP']
+    if env['RP_HWSIM_BYPASS'] == 'on':
+        rf_def_list  += ['RP_HWSIM_BYPASS']    
+
+    if env['MODEM'] == 'none':
+        rf_def_list  += ['CFG_MODEM_NONE']
+    elif env['MODEM'] == 'LE':
+        rf_def_list  += ['CFG_MODEM_LE']
+    elif env['MODEM'] == 'LR':
+        rf_def_list  += ['CFG_MODEM_LR']
+        
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    rf_inc_list  = []
+    rf_inc_list += [rf_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    rf_src_list = scutils.file_list_read(env, os.path.join(rf_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, rf_src_dir, rf_def_list, rf_inc_list, rf_src_list)

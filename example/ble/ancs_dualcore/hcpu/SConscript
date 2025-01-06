@@ -1,0 +1,13 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ['main.c']
+src += ['lcpu_img.c']
+
+CPPPATH = [cwd, str(Dir('#'))]
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

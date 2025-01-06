@@ -1,0 +1,54 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for BLE Controller
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+try:
+    BLE_EMB_PRESENT = (product in ['btdm', 'ble-splitemb', 'ble-fullhost', 'ble-full', 'btdm-full', 'btdm-full-le', 'btdm-full-bt'])
+    env['BLE_EMB_PRESENT']  = "on" if BLE_EMB_PRESENT else "off"
+except: 
+    BLE_EMB_PRESENT = False
+
+if (BLE_EMB_PRESENT):
+    #-----------------------------------------------------------
+    # MODULES REQUIRED
+    #-----------------------------------------------------------
+    env['ECC_P256_PRESENT'] = 'on'
+
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    ble_src_dir = os.path.join(ble_dir, 'src')
+    ble_api_dir = os.path.join(ble_dir, 'api')
+    ble_cfg_dir = os.path.join(ble_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    ble_def_list  = []
+    ble_def_list += ['CFG_BLE_EMB']
+    if(env['BLE_ISO_HW_PRESENT'] == 'on'):
+        ble_def_list += ['CFG_BLE_ISO_HW_PRESENT']
+        
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    ble_inc_list  = []
+    ble_inc_list += [ble_src_dir]
+    ble_inc_list += [ble_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    ble_src_list = scutils.file_list_read(env, os.path.join(ble_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, ble_src_dir, ble_def_list, ble_inc_list, ble_src_list)

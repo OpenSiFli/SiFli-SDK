@@ -1,0 +1,14 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+
+src += ['cpu_usage_profiler.c']
+
+CPPPATH = [cwd]
+
+# add src and include to group.
+group = DefineGroup('middleware', src,depend = ['USING_CPU_USAGE_PROFILER'],CPPPATH = CPPPATH)
+    
+Return('group')

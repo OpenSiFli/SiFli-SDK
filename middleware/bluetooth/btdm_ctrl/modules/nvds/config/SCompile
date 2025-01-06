@@ -1,0 +1,42 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for NVDS
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if env['NVDS'] == 'on':
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    nvds_src_dir = os.path.join(nvds_dir, 'src')
+    nvds_api_dir = os.path.join(nvds_dir, 'api')
+    nvds_cfg_dir = os.path.join(nvds_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    nvds_def_list  = []
+    nvds_def_list += ['CFG_NVDS']
+
+    if env['NVDS_RAM'] == 'on':
+        nvds_def_list += ['CFG_NVDS_RAM']
+
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    nvds_inc_list  = []
+    nvds_inc_list += [nvds_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    nvds_src_list = scutils.file_list_read(env, os.path.join(nvds_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, nvds_src_dir, nvds_def_list, nvds_inc_list, nvds_src_list)

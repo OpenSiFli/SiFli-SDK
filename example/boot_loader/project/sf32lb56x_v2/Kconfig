@@ -1,0 +1,6 @@
+source "$SIFLI_SDK/Kconfig.v2"
+rsource "Kconfig.proj"
+config CFG_BOOTLOADER
+    bool
+    default y
+

@@ -1,0 +1,3 @@
+config PKG_FREETYPE
+    bool "FreeType Library"
+    default n

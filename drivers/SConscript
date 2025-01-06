@@ -1,0 +1,20 @@
+# for module compiling
+import os
+Import('SIFLI_SDK')
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+if not GetDepend(['BSP_USING_PC_SIMULATOR']) and not GetDepend(['BSP_USING_NON_SIFLI_BOARD']):
+    for d in list:
+        path = os.path.join(cwd, d)
+        if os.path.isfile(os.path.join(path, 'SConscript')):
+            if (d=='hal') and GetDepend(['BSP_USING_PC_SIMULATOR'])==True:
+                continue
+            objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+Return('objs')
+

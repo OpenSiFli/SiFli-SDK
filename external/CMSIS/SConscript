@@ -1,0 +1,52 @@
+import rtconfig
+Import('RTT_ROOT')
+from building import *
+
+# Update from https://github.com/ARM-software/CMSIS_5, date Sept 11, 2020, development branch 
+# print ("CMSIS 5.7.0")
+
+# get current directory
+cwd = GetCurrentDir()
+path = [cwd + '/CMSIS/Include']
+
+group=[]    
+src1 = []
+src2 = []
+
+if GetDepend(['BSP_USING_CMSIS_NN']):
+    src1 += Glob('cmsis_NN/Source/ActivationFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/ConvolutionFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/FullyConnectedFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/NNSupportFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/PoolingFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/SoftmaxFunctions/*.c')
+    src1 += Glob('cmsis_NN/Source/NNTest/*.c')      
+    path += [cwd + '/cmsis_NN/Source/NNTest']
+    
+if GetDepend(['BSP_USING_CMSIS_DSP']):
+    src1 += Glob('DSP_Lib/Source/BasicMathFunctions/BasicMathFunctions.c')
+    src1 += Glob('DSP_Lib/Source/BayesFunctions/BayesFunctions.c')
+    src1 += Glob('DSP_Lib/Source/CommonTables/CommonTables.c')
+    src1 += Glob('DSP_Lib/Source/ComplexMathFunctions/ComplexMathFunctions.c')
+    src1 += Glob('DSP_Lib/Source/ControllerFunctions/ControllerFunctions.c')
+    src1 += Glob('DSP_Lib/Source/DistanceFunctions/DistanceFunctions.c')
+    src1 += Glob('DSP_Lib/Source/FastMathFunctions/FastMathFunctions.c')
+    src1 += Glob('DSP_Lib/Source/FilteringFunctions/FilteringFunctions.c')
+    src1 += Glob('DSP_Lib/Source/MatrixFunctions/MatrixFunctions.c')
+    src1 += Glob('DSP_Lib/Source/StatisticsFunctions/StatisticsFunctions.c')
+    src1 += Glob('DSP_Lib/Source/SupportFunctions/SupportFunctions.c')
+    src1 += Glob('DSP_Lib/Source/SVMFunctions/SVMFunctions.c')
+    src1 += Glob('DSP_Lib/Source/TransformFunctions/TransformFunctions.c')
+    
+if GetDepend(['RT_USING_RTT_CMSIS']):
+    path += [cwd + '/RTOS2/Include']    
+    src2 = src2 + Glob('RTOS2/RT-Thread/*.c')
+    group = group + DefineGroup('CMSIS_OS', src2, depend = [''], CPPPATH = path)
+    
+if len(src1) > 0:    
+    ASFLAGS = ''
+    if  rtconfig.CROSS_TOOL != 'gcc':
+        ASFLAGS = ' --cpreproc'
+    group = group + DefineGroup('CMSIS_DSP', src1, depend = [''], CPPPATH = path, ASFLAGS = ASFLAGS)
+
+Return('group')

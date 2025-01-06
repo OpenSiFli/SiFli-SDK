@@ -1,0 +1,12 @@
+#Application specific configuration
+config BF0_HCPU
+    bool
+    default y
+    
+config CFG_BOOTLOADER
+    bool
+    default y
+
+config CUSTOM_MEM_MAP
+    bool
+    default y

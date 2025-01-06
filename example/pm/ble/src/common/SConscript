@@ -1,0 +1,11 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('ble.c')
+CPPPATH = [cwd]
+    
+group = DefineGroup('app_ble', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

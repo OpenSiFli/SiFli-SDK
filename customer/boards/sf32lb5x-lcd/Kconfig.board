@@ -1,0 +1,33 @@
+config ASIC
+    bool
+    default y
+   
+config TOUCH_IRQ_PIN
+    int
+    default 51
+
+config BSP_SUPPORT_DPI
+    bool
+    default y
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwm4"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 119
+
+config LCD_EXTRA_SPI_CS_PIN
+        int
+        default 02
+config LCD_EXTRA_SPI_CLK_PIN
+        int
+        default 17
+config LCD_EXTRA_SPI_MOSI_PIN
+        int
+        default 18

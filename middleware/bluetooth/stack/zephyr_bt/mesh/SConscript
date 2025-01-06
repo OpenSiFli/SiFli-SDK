@@ -1,0 +1,118 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ['main.c','cfg.c','adv.c','beacon.c','net.c','subnet.c','app_keys.c','heartbeat.c','crypto.c','access.c','msg.c','cfg_srv.c','health_srv.c','va.c','transport.c']
+
+if GetDepend('BT_MESH_ADV_LEGACY'):
+    src += ['adv_legacy.c']
+if GetDepend('BT_MESH_ADV_EXT'):
+    src += ['adv_ext.c']
+
+#if GetDepend('BT_SETTINGS'):
+src += ['settings.c']
+
+if GetDepend('BT_MESH_RPL_STORAGE_MODE_SETTINGS'):
+    src += ['rpl.c']
+if GetDepend('BT_MESH_LOW_POWER'):
+    src += ['lpn.c']
+if GetDepend('BT_MESH_FRIEND'):
+    src += ['friend.c']
+if GetDepend('BT_MESH_PROV'):
+    src += ['prov.c']
+if GetDepend('BT_MESH_PROVISIONEE'):
+    src += ['provisionee.c']
+if GetDepend('BT_MESH_PROVISIONER'):
+    src += ['provisioner.c']
+if GetDepend('BT_MESH_PB_ADV'):
+    src += ['pb_adv.c']
+if GetDepend('BT_MESH_PB_GATT_COMMON'):
+    src += ['pb_gatt.c']
+if GetDepend('BT_MESH_PB_GATT'):
+    src += ['pb_gatt_srv.c']
+if GetDepend('BT_MESH_PB_GATT_CLIENT'):
+    src += ['pb_gatt_cli.c']
+if GetDepend('BT_MESH_GATT_CLIENT'):
+    src += ['gatt_cli.c']
+if GetDepend('BT_MESH_PROXY_CLIENT'):
+    src += ['proxy_cli.c']
+if GetDepend('BT_MESH_GATT_PROXY'):
+    src += ['proxy_srv.c']
+if GetDepend('BT_MESH_GATT'):
+    src += ['proxy_msg.c']
+if GetDepend('BT_MESH_CFG_CLI'):
+    src += ['cfg_cli.c']
+if GetDepend('BT_MESH_HEALTH_CLI'):
+    src += ['health_cli.c']
+if GetDepend('BT_MESH_SAR_CFG_CLI'):
+    src += ['sar_cfg_cli.c']
+if GetDepend('BT_MESH_SAR_CFG_SRV'):
+    src += ['sar_cfg_srv.c']
+if GetDepend('BT_MESH_SAR_CFG'):
+    src += ['sar_cfg.c']
+if GetDepend('BT_MESH_OP_AGG_SRV'):
+    src += ['op_agg_srv.c']
+if GetDepend('BT_MESH_OP_AGG_CLI'):
+    src += ['op_agg_cli.c']
+if GetDepend('BT_MESH_OP_AGG'):
+    src += ['op_agg.c']
+if GetDepend('BT_MESH_LARGE_COMP_DATA_SRV'):
+    src += ['large_comp_data_srv.c']
+if GetDepend('BT_MESH_LARGE_COMP_DATA_CLI'):
+    src += ['large_comp_data_cli.c']
+if GetDepend('BT_MESH_PRIV_BEACON_SRV'):
+    src += ['priv_beacon_srv.c']
+if GetDepend('BT_MESH_PRIV_BEACON_CLI'):
+    src += ['priv_beacon_cli.c']
+if GetDepend('BT_MESH_SELF_TEST'):
+    src += ['test.c']
+if GetDepend('BT_MESH_CDB'):
+    src += ['cdb.c']
+if GetDepend('BT_MESH_BLOB_SRV'):
+    src += ['blob_srv.c']
+if GetDepend('BT_MESH_BLOB_CLI'):
+    src += ['blob_cli.c']
+if GetDepend('BT_MESH_BLOB_IO_FLASH'):
+    src += ['blob_io_flash.c']
+if GetDepend('BT_MESH_DFU_CLI'):
+    src += ['dfu_cli.c']
+if GetDepend('BT_MESH_DFU_SRV'):
+    src += ['dfu_srv.c']
+if GetDepend('BT_MESH_DFD_SRV'):
+    src += ['dfd_srv.c']
+if GetDepend('BT_MESH_DFU_SLOTS'):
+    src += ['dfu_slot.c']
+if GetDepend('BT_MESH_DFU_METADATA'):
+    src += ['dfu_metadata.c']
+if GetDepend('BT_MESH_RPR_CLI'):
+    src += ['rpr_cli.c']
+if GetDepend('BT_MESH_RPR_SRV'):
+    src += ['rpr_srv.c']
+if GetDepend('BT_MESH_OD_PRIV_PROXY_CLI'):
+    src += ['od_priv_proxy_cli.c']
+if GetDepend('BT_MESH_OD_PRIV_PROXY_SRV'):
+    src += ['od_priv_proxy_srv.c']
+if GetDepend('BT_MESH_SOL_PDU_RPL_CLI'):
+    src += ['sol_pdu_rpl_cli.c']
+if GetDepend('BT_MESH_OD_PRIV_PROXY_SRV'):
+    src += ['sol_pdu_rpl_srv.c']
+if GetDepend('BT_MESH_BRG_CFG_CLI'):
+    src += ['brg_cfg_cli.c']
+if GetDepend('BT_MESH_BRG_CFG_SRV'):
+    src += ['brg_cfg_srv.c','brg_cfg.c']
+if GetDepend('BT_MESH_SOLICITATION'):
+    src += ['solicitation.c']
+if GetDepend('BT_MESH_STATISTIC'):
+    src += ['statistic.c']
+if GetDepend('BT_MESH_ACCESS_DELAYABLE_MSG'):
+    src += ['delayable_msg.c']
+
+if GetDepend ('BT_MESH_USES_TINYCRYPT'):
+    src += ['crypto_tc.c']
+else:
+    src += ['crypto_psa.c']
+
+CPPPATH = [cwd]
+objs = DefineGroup('zbt_mesh', src, depend = ['BT_MESH'], CPPPATH = CPPPATH)
+Return('objs')

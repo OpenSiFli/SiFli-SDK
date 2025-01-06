@@ -1,0 +1,20 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = ['metrics_collector.c']
+inc = [cwd]
+
+
+if GetDepend('MC_BACKEND_USING_TSDB'):
+    src += ['mc_tsdb_backend.c']
+
+if GetDepend('MC_BACKEND_USING_FILE'):
+    src += ['mc_file_backend.c']
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = ['USING_METRICS_COLLECTOR'], CPPPATH = inc)
+Return('objs')

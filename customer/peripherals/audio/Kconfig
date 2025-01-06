@@ -1,0 +1,16 @@
+menu "Audio Device"
+
+menuconfig AUDIO_USING_DA7212
+    bool "DA7212"
+    default n
+    if AUDIO_USING_DA7212
+        config DA7212_POWER_PIN
+        int "DA7212 POWER PIN"
+        default 37
+
+        config DA7212_INTERFACE_NAME
+        string "DA7212 interface name"
+        default "i2c4"
+    endif
+
+endmenu

@@ -1,0 +1,117 @@
+[INFO]
+cur=v1.1.0
+
+[v1.1.0]
+time    =2023-03-13                 
+change_1=support F35SQA512MX
+change_2=bug fix, keil driver
+
+[v1.0.9]
+time    =2022-12-16                 
+change_1=support F35SQA512MX
+change_2=bug fix, keil driver
+
+[v1.0.8]
+time    =2022-10-14                 
+change_1=support TH25Q-80UA / TH25Q-80U / GD25LE32E / FM25W128 / XM25QH256C / GD25LE80E / GD25LE16E / GD25LE64E / ZB25LQ64A / W25Q32JW / SK25LE032
+change_2=support 56x 58x
+
+[v1.0.7]
+time    =2021-12-24                 
+change_1=support W25Q128JV_RDID / PY25Q128HA / XM25QU128C            
+
+[v1.0.6]
+time    =2021-12-24                 
+change_1=support W25Q256JVM / SK25LP128            
+change_2=support board without 32K crystal
+
+[v1.0.5]
+time    =2021-12-7                 
+change_1=support P25Q128L            
+change_2=keil driver flash2 use 64k block   
+
+[v1.0.2]
+time    =2021-10-19                 
+change_1=support XT25F128B_RDID            
+change_2=flash2 FREQ 80MHz->60MHz   
+
+
+[v0.9.8]                            
+time    =2021-08-27                 
+change_1=support FM25M4AA_RDID/GD25Q128E_RDID             
+
+
+[v0.9.7]
+time    =2021-08-02
+change_1=add crc verify
+change_2=Optimize download stability
+
+[v0.9.6]
+time    =2021-07-23
+change_1=rebase version from SDK
+change_2=add more flash type
+
+[v0.7.1]
+time    =2021-07-13
+change_1=Close wdt1/wdt2/iwdt in init function
+
+
+[FLASH] - NOR
+;; 厂家         类型            型号       ID          大小(Mb)
+;; PUYA         P25Q16LE        NOR        0x856015    16
+;; PUYA         P25Q80LE        NOR        0x856014    8
+;; PUYA         P25Q40SU        NOR        0x856013    4     //56x
+;; sGIGA        GD25LE80E       NOR        0xC86014    8     //56x 58x
+;; sGIGA        GD25LE16E       NOR        0xC86015    16    //56x 58x
+;; sGIGA        GD25LE32E       NOR        0xC86016    32
+;; sGIGA        GD25LE64E       NOR        0xC86017    64    //56x 58x
+;; sGIGA        GD25LQ128E      NOR        0xC86018    128
+;; sGIGA        GD25Q128E       NOR        0xC84018    128
+;; XTX          XT25F64BW       NOR        0x0B4017    64
+;; FM           FM25M4AA        NOR        0xF84218    128
+;; ZB           ZB25LQ64A       NOR        0x5E7017    64    //56x 58x
+;; WINBOND      W25Q32JW        NOR        0xEF6016    32    //56x 58x
+;; XTX          XT25F128B       NOR        0x0B4018    128   //55X 56X
+;; XINXIN       XM25QU128C      NOR        0x204118    128   //55X 56X
+;; TSINGTENG    TH25Q-80UA      NOR        0xEB6013    8
+;; TSINGTENG    TH25Q-80U       NOR        0xEB6014    8
+;; CFX          GM25Q128A       NOR        0x1C4018    128   //55x 
+;; XINXIN       XM25QU128B      NOR        0x205018    128   //55x
+;; PUYA         P25Q32L         NOR        0x856016    32
+;; PUYA         P25Q64H         NOR        0x856017    64
+;; PUYA         P25Q128L        NOR        0x856018    128   //55X 56X
+;; PUYA         PY25Q128HA      NOR        0x852018    128   //55X 56X
+;; SK           SK25LE032       NOR        0x257016    32    //56x
+;; WINBOND      W25Q128JW       NOR        0xEF6018    128
+;; WINBOND      W25Q128JV_RDID  NOR        0xEF4018    128   //55X 56X
+;; XTX          XT25Q128DW      NOR        0x0B6018    128
+;; ZB           ZB25LQ128BW     NOR        0x5E5018    128
+;; FM           FM25W128        NOR        0xA12818    128
+;; WINBOND      W25Q256JW       NOR        0xEF6019    256
+;; WINBOND      W25Q256JVM      NOR        0xEF4019    256
+;; DS           DS25M4BA        NOR        0xE54219    256
+;; BOYA         BY25Q256FS      NOR        0x684919    256   //55x
+;; sGIGA        GD25LQ256D      NOR        0xC86019    256
+;; XTX          XT25F256BW      NOR        0x0B4019    256
+;; XINXIN       XM25QU256C      NOR        0x204119    256
+;; XINXIN       XM25QH256C      NOR        0x204019    256   //55X 56X
+;; PUYA         PY25Q256HB      NOR        0x852019    256   //55x
+;; MXIC         MX25U25643G     NOR        0xC22539    256
+;; SK           SK25LP128       NOR        0x257018    128   //55X 56X
+;; ZB           ZQ25Q256AW1G    NOR        0x5E4019    256   //55x 56x
+;; sGIGA        GD25Q256E       NOR        0xC84019    256   //55x 56x
+
+
+[FLASH] - NAND
+;; 厂家         类型            型号       ID          大小(Gb)
+;; WINBOND      W25N01GW        NAND        0xEFBA21    1
+;; sGIGA        GD5F1GQ4RC      NAND        0xC8A148    1
+;; sGIGA        GD5F1GQ4UC      NAND        0xC8B148    1
+;; HEYANGTEK    HYF1GQ4IDACAE   NAND        0x81C981    1    //55X 58X
+;; Dosilicon    DS35X1GAXXX     NAND        0xE521E5    1
+;; TOSHIBA      TC58CYG0S3HRAIJ NAND        0x98D240    1
+;; TOSHIBA      TC58CYG0S3HRAIJ NAND        0x98DD51    4
+;; FM           FM25LS01        NAND        0xA1A57F    1
+;; FORESEE      F35SQA512MX     NAND        0xCD7070    0.5
+;; FORESEE      F35UQA512MX     NAND        0xCD6060    0.5  //56x
+;; Dosilicon    DS35M2GBXXX     NAND        0xE5A2E5    2  //56x

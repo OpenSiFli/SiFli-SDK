@@ -1,0 +1,303 @@
+config TSC_USING_ADS7846
+    bool
+    default n
+    
+config LCD_USING_GC9A01A
+	bool
+	default n
+config TSC_USING_IT7257
+    bool
+    default n
+
+config TSC_USING_IT7259E
+    bool
+    default n
+    
+config TSC_USING_FT6336
+    bool
+    default n
+
+config TSC_USING_FT3168
+    bool
+    default n
+config TSC_USING_FT3169
+    bool
+    default n
+config TSC_USING_FT5206
+    bool
+    default n
+config TSC_USING_FT5446U
+    bool
+    default n
+
+config TSC_USING_TMA525B
+    bool
+    default n
+
+config TSC_USING_ZTW622
+    bool
+    default n
+
+config TSC_USING_SPD2012
+    bool
+    default n
+
+config TSC_USING_CST918
+    bool
+    default n
+
+config TSC_USING_CST918_0x15
+    bool
+    default n
+
+config TSC_USING_BL7163      
+    bool
+    default n
+    
+config TSC_USING_CST816
+    bool
+    default n
+
+config TSC_USING_BL6133
+    bool
+    default n
+
+config TSC_USING_CHSC5816
+    bool
+    default n
+
+config TSC_USING_GT9271
+    bool
+    default n
+
+config TSC_USING_GT911
+    bool
+    default n
+
+
+config LCD_USING_ST7735
+    bool 
+    default n
+
+config LCD_USING_ILI9341
+    bool 
+    default n
+
+config LCD_USING_ILI9327
+    bool
+    default n
+    
+config LCD_USING_ST7789V
+    bool
+    default n
+    
+config LCD_USING_ST7789H2
+    bool
+    default n
+    
+config LCD_USING_RM69330
+    bool
+    default n
+    
+config LCD_USING_RM69090
+    bool
+    default n
+    
+config LCD_USING_RM690C0
+    bool
+    default n  
+    
+config LCD_USING_JDI387A
+    bool
+    default n
+    
+config LCD_USING_GC9C01
+    bool
+    default n
+
+config LCD_USING_SPD2012
+    bool
+    default n
+
+config LCD_USING_ST7797
+    bool
+    default n
+
+config LCD_USING_ILI8688E
+    bool
+    default n
+
+config LCD_USING_ST77903
+    bool
+    default n
+
+config LCD_USING_SH8601
+    bool
+    default n
+
+config LCD_USING_SH8601A
+    bool
+    default n
+
+config LCD_USING_ATK7016
+    bool
+    default n
+    
+config LCD_USING_XM80240
+    bool
+    default n
+
+config LCD_USING_GC9B71
+    bool
+    default n
+
+config LCD_USING_GC9307
+    bool
+    default n
+
+config LCD_USING_RM6D010
+    bool
+    default n
+
+config LCD_USING_ICN3311
+    bool
+    default n
+
+config LCD_USING_ST7701S
+    bool
+    default n
+    
+config LCD_USING_FT2308
+    bool
+    default n
+config LCD_USING_LS013B7DD02
+    bool
+    default n
+
+config LCD_USING_ST7789_GTM024_08_SPI8P
+    bool
+    default n
+
+config LCD_USING_QX_4300J40R38
+    bool
+    default n
+
+config LCD_USING_EK79202
+    bool
+    default n
+	
+config LCD_USING_EK79001
+    bool
+    default n
+
+config LCD_USING_NV3051F1
+    bool
+    default n
+
+config LCD_USING_NV3041A
+    bool
+    default n
+
+config LCD_USING_JD9165A
+    bool
+    default n
+
+config LCD_USING_HTM_H070A20
+    bool
+    default n
+
+config LCD_USING_JD9365DA
+    bool
+    default n
+
+config LCD_USING_NV3052C
+    bool
+    default n
+	
+config BSP_LCDC_USING_SPI_NODCX_1DATA
+    def_bool n 
+config BSP_LCDC_USING_SPI_NODCX_2DATA
+    def_bool n 
+config BSP_LCDC_USING_SPI_DCX_1DATA
+    def_bool n 
+config BSP_LCDC_USING_SPI_DCX_2DATA
+    def_bool n 
+config BSP_LCDC_USING_QADSPI
+    def_bool n 
+config BSP_LCDC_USING_DDR_QADSPI
+    def_bool n 
+config BSP_LCDC_USING_DBI
+    def_bool n 
+config BSP_LCDC_USING_DSI
+    def_bool n
+config BSP_LCDC_USING_DSI_VIDEO
+	select BSP_USING_RAMLESS_LCD
+    def_bool n
+config BSP_LCDC_USING_DPI
+    select BSP_USING_RAMLESS_LCD
+    def_bool n
+config BSP_USING_RAMLESS_LCD
+    def_bool n
+config BSP_LCDC_USING_JDI_PARALLEL
+    def_bool n
+
+config LCD_USING_PWM_AS_BACKLIGHT
+    def_bool n
+
+config BSP_LCDC1_USE_LCDC2_TE
+    def_bool n
+
+config BSP_USE_LCDC2_ON_HPSYS
+    def_bool n
+
+config BSP_USING_ROUND_TYPE_LCD
+    def_bool n
+
+config BSP_USING_RECT_TYPE_LCD
+    def_bool n
+
+menu "Key Config"
+    menuconfig BSP_USING_KEY1
+        bool "Use key1"
+        default n
+    if BSP_USING_KEY1  
+        config BSP_KEY1_PIN
+            int "KEY1 pin number"
+            default 99
+        config BSP_KEY1_ACTIVE_HIGH
+            bool "Level is high if key is pressed"
+            default n
+    endif 
+    menuconfig BSP_USING_KEY2
+        bool "Use key2"
+        default n
+    if BSP_USING_KEY2 
+        config BSP_KEY2_PIN
+            int "KEY2 pin number"
+            default 96
+        config BSP_KEY2_ACTIVE_HIGH
+            bool "Level is high if key is pressed"
+            default n            
+    endif    
+endmenu
+
+menuconfig TOUCH_WAKEUP_SUPPORT
+    bool "Enable wakeup by Pressing Touch Pannel"
+    default n
+
+menuconfig BSP_USING_SPI_CAMERA
+    bool "Enable SPI Camera"
+    default n
+
+menu "Backlight"
+    menuconfig BL_USING_AW9364
+        bool "BackLight AW9364"
+        default n
+        if BL_USING_AW9364
+            config AW9364_LIN_IO
+            int "AW9364 PIN Number"
+            default 70
+        endif
+endmenu
+
+rsource "*/Kconfig"

@@ -1,0 +1,43 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Host Control Interface
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+env['HCITL'] = 'on' if (('split' in product) or (product in ['btdm', 'bt-std']) or env['HCITL'] == 'on') else 'off'
+
+
+if (1): # HCI is always present
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    hci_src_dir = os.path.join(hci_dir, 'src')
+    hci_api_dir = os.path.join(hci_dir, 'api')
+    hci_cfg_dir = os.path.join(hci_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    hci_def_list  = []
+    if(env['HCITL'] == 'on'):
+        hci_def_list += ['CFG_HCITL']
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    hci_inc_list  = []
+    hci_inc_list += [hci_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    hci_src_list = scutils.file_list_read(env, os.path.join(hci_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, hci_src_dir, hci_def_list, hci_inc_list, hci_src_list)

@@ -1,0 +1,20 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+if GetDepend('PKG_USING_3MICS'):
+    src += ['audio_server_3mics.c']
+else:
+    src += ['audio_server.c']
+
+src += ['audio_test_demo.c']
+
+if GetDepend('PKG_USING_AUDIO_TEST_API'):
+    src += ['./audio_test_api.c']
+group = DefineGroup('audio', src,depend = ['AUDIO_USING_MANAGER'],CPPPATH = CPPPATH)
+
+Return('group')

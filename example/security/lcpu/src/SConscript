@@ -1,0 +1,16 @@
+import os
+import rtconfig
+from building import *
+
+cwd = GetCurrentDir()
+
+# add general drivers
+src = Glob('*.c')
+
+path =  [cwd]
+if GetDepend('SOC_SF32LB55X'):
+    path += [cwd + '/../linker_scripts']
+
+group = DefineGroup('Drivers', src, depend = [''], CPPPATH = path)
+
+Return('group')

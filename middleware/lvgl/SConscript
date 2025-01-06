@@ -1,0 +1,45 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = []
+objs = []
+
+if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
+    # add LittlevGL2RTT common include
+    inc = inc + [cwd]
+
+    # add LittlevGL2RTT basic code
+    #src += ['lvgl_export.c']
+    src += ['littlevgl2rtt.c']
+    # if GetDepend('BSP_USING_LVGL_INPUT_AGENT'):  
+    #    src += ['lvgl_input_agent.c']
+    src += ['lvsf_perf.c']
+
+    objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+
+    if GetDepend('PKG_USING_LITTLEVGL2RTT'):
+        if GetDepend('DISABLE_LVGL_V9'):
+            objs = objs + SConscript(os.path.join('lvsf', 'SConscript'))
+
+        if GetDepend('LCD_SDL2'):
+            objs = objs + SConscript(os.path.join('lv_pc_drivers', 'SConscript'))
+        elif GetDepend('LCD_WINDOWS'):
+            if GetDepend('DISABLE_LVGL_V9'):
+                objs = objs + SConscript(os.path.join('lv_win32', 'SConscript'))
+            else:
+                objs = objs + SConscript(os.path.join('lv_win32_v9', 'SConscript'))
+        else:
+            if GetDepend('DISABLE_LVGL_V9'):
+                objs = objs + SConscript(os.path.join('lv_drivers', 'SConscript'))
+            else:
+                objs = objs + SConscript(os.path.join('lv_drivers_v9', 'SConscript'))
+    Return('objs')
+
+else:
+    objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+    Return('objs')

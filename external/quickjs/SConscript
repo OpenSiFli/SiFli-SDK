@@ -1,0 +1,41 @@
+# RT-Thread building script for JerryScript
+
+import os
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+qjs_lib_src = [
+'quickjs.c',
+'libregexp.c',
+'libunicode.c',
+'cutils.c',
+'quickjs-libc.c',
+]
+
+qjs_src = [
+    'qjs.c',
+]
+
+CPPPATH = [cwd]
+CPPDEFINES = []
+
+if GetDepend('QUICKJS_BIGNUM'):
+    qjs_lib_src+=['libbf.c'] 
+    CPPDEFINES += ['CONFIG_BIGNUM']
+
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    CPPDEFINES += ['_CRT_SECURE_NO_WARNINGS']
+
+src = qjs_src+qjs_lib_src
+    
+if GetDepend('QUICKJS_LVGL'):
+    src += ['lvgl/lvgl_v8_qjs_main.c']
+    src += ['lvgl/lvgl_v8_qjs.c']
+    src += ['lvgl/lvgl_app_qjs.c']
+    
+
+group = DefineGroup('QuickJS', src, depend = ['PKG_USING_QUICKJS'], CPPPATH = CPPPATH, 
+    CPPDEFINES = CPPDEFINES)
+
+Return('group')

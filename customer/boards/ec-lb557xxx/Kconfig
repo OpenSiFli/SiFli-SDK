@@ -1,0 +1,42 @@
+config ASIC
+    bool
+    default y
+
+config HRS3300_POW_PIN
+    int
+    default 105
+
+config TOUCH_IRQ_PIN
+    default 79
+
+config BSP_SUPPORT_DSI
+    bool
+    default y
+
+config BSP_SUPPORT_DPI
+    bool
+    default y
+
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwm4"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 134
+
+
+
+choice
+    prompt "Select package"
+    default LB557_VD3A6
+    config LB557_VD3A6
+        bool "VD3A6 - 1MB Flash1, 16MB OPI PSRAM, and 2MB QSPI PSRAM at LPSYS"
+    config LB557_VC536
+        bool "VC536 - 4MB Flash1,  8MB OPI PSRAM, and 1MB QSPI NOR flash at LPSYS"
+endchoice

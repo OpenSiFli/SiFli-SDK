@@ -1,0 +1,89 @@
+if !SOC_SF32LB55X
+# Kconfig file for package WebRTC
+menuconfig AUDIO
+    bool "Enable Audio"
+choice
+    prompt "Select audio path Type"
+        depends on AUDIO
+    default AUDIO_PATH_USING_HCI
+    config AUDIO_PATH_USING_HCPU
+        bool "HCPU PATH"           
+    config AUDIO_PATH_USING_LCPU
+        bool "LCPU PATH"
+    config AUDIO_PATH_USING_HCI
+        bool "HCI PATH"
+endchoice 
+config AUDIO_PCM_PLC_ENABLE
+    bool "Enable audio PCM PLC"
+        depends on AUDIO
+    default n
+config AUDIO_USING_AUDPROC
+    bool "Enable audio process framework"
+        depends on AUDIO
+    default y
+config AUDIO_USING_MANAGER
+    bool "Enable audio manager"
+        depends on AUDIO && BF0_HCPU
+    default y
+config AUDIO_LOCAL_MUSIC
+    bool "Enable local audio"
+    depends on (AUDIO_USING_AUDPROC && AUDIO && AUDIO_USING_MANAGER && BF0_HCPU)
+    select PKG_USING_LIBHELIX
+    default n
+config AUDIO_BT_AUDIO
+    bool "Enable BT audio"
+    depends on (AUDIO_USING_AUDPROC && AUDIO)
+    default y
+config AUDIO_SOFTEQ
+    bool "Enable audio software EQ"
+    default n
+config AUDIO_FREQSHIFT
+    bool "Enable audio frequency shift"
+    default n
+
+choice
+    prompt "Select speaker Type"
+        depends on AUDIO_USING_AUDPROC && AUDIO
+    default AUDIO_SPEAKER_USING_I2S2
+    config AUDIO_SPEAKER_USING_CODEC
+        bool "CODEC"
+    config AUDIO_SPEAKER_USING_I2S2
+        bool "I2S2"
+endchoice
+choice
+    prompt "Select MIC Type"
+        depends on AUDIO_USING_AUDPROC && AUDIO
+    default AUDIO_MIC_USING_PDM
+    config AUDIO_MIC_USING_CODEC
+        bool "CODEC"
+    config AUDIO_MIC_USING_PDM
+        bool "PDM"
+    config AUDIO_MIC_USING_I2S1
+        bool "I2S1"
+endchoice 
+config PKG_USING_SOUNDPLUS
+    bool "Enable soundplus real-time speech enhancement processing"
+        depends on AUDIO
+    default n
+config PKG_USING_AUDIO_TEST_API
+    bool "mic speaker test api"
+        depends on AUDIO
+    default n
+config PKG_USING_3MICS
+    bool "total three Mics"
+        depends on AUDIO
+    default n
+
+config MULTI_CLIENTS_AT_WORKING
+    bool "multi audio app work together if no hardware conflict"
+        depends on AUDIO
+    default n
+
+if PKG_USING_3MICS
+    config PKG_USING_3MICS_WITHOUT_ADC
+    bool "only two pdm mic"
+    default n
+
+endif
+
+endif

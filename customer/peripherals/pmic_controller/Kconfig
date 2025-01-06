@@ -1,0 +1,12 @@
+menuconfig PMIC_CTRL_ENABLE
+    bool "PMIC Controller"
+    default n
+    if PMIC_CTRL_ENABLE
+        config PMICC_SCL_PIN
+        int "PMIC Controller SCL PIN"
+        default 55
+
+        config PMICC_SDA_PIN
+        int "PMIC Controller SDA PIN"
+        default 44
+    endif

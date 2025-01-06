@@ -1,0 +1,8 @@
+
+config PKG_SIFLI_MBEDTLS_BOOT
+    bool "Seleted MBedTLS functions for boot"
+    default n
+config PKG_USING_SM
+    depends on PKG_SIFLI_MBEDTLS_BOOT
+    bool "Selected SM2/SM3"
+    default n

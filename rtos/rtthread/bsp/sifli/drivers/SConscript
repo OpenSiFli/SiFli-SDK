@@ -1,0 +1,145 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+
+# add the general drivers.
+src = ['drv_dma.c']
+
+if GetDepend(['RT_USING_PIN']):
+    src += ['drv_gpio.c']
+
+if GetDepend(['BSP_USING_BUTTON']):
+    src += ['drv_button.c']
+    
+if GetDepend(['RT_USING_SERIAL']):
+    src += ['drv_usart.c']
+
+if GetDepend(['RT_USING_HWTIMER']):
+    src += ['drv_hwtimer.c']
+
+if GetDepend(['RT_USING_PWM']):
+    src += ['drv_pwm.c']
+    src += ['drv_pwm_lptim.c']
+if GetDepend(['BSP_USING_RGBLED']):
+    src += ['drv_rgbled.c']
+if GetDepend(['RT_USING_SPI']):
+    src += ['drv_spi.c']
+
+if GetDepend(['RT_USING_QSPI']):
+    src += ['drv_qspi.c'] 
+
+if GetDepend(['BSP_USING_USBD']):
+    src += ['drv_usbd.c']
+
+if GetDepend(['RT_USING_I2C', 'RT_USING_I2C_BITOPS']):
+    src += ['drv_soft_i2c.c']
+
+if GetDepend(['BSP_USING_I2C']):
+    src += ['drv_i2c.c']
+
+#if GetDepend('RT_USING_LWIP'):
+   # src += ['drv_eth.c']
+
+if GetDepend(['BSP_USING_ADC']):
+    src += Glob('drv_adc.c')
+
+if GetDepend(['BSP_USING_SDADC']):
+    src += Glob('drv_sdadc.c')
+
+if GetDepend(['BSP_USING_COMP']):
+    src += Glob('drv_comp.c')
+
+if GetDepend(['RT_USING_CAN']):
+    src += ['drv_can.c']
+
+if GetDepend('BSP_USING_SDRAM'):
+    src += ['drv_sdram.c']
+
+if GetDepend('BSP_USING_ONCHIP_RTC'):
+    src += ['drv_rtc.c']
+
+if GetDepend(['BSP_USING_SPI_FLASH']):
+    src += ['drv_spi_flash.c']
+    src += ['drv_spi_nand.c']
+    src += ['drv_sys_cfg.c']
+
+if GetDepend(['BSP_USING_EXT_DMA']):
+    src += ['drv_ext_dma.c']
+
+if GetDepend(['BSP_USING_WDT']):
+    src += ['drv_wdt.c']
+
+if GetDepend(['BSP_USING_SD_LINE']):
+    src += ['drv_sdio.c']
+
+if GetDepend(['BSP_USING_SDHCI']):
+    src += ['drv_sdhci.c']
+
+if GetDepend(['BSP_USING_HWMAILBOX']):
+    src += ['drv_mailbox.c']
+
+if GetDepend(['BSP_USING_I2S']):
+    src += ['drv_i2s_audio.c']
+    src += ['drv_i2s_mic.c']
+
+if GetDepend(['BSP_USING_PDM']):
+    src += ['drv_pdm_audio.c']
+
+if GetDepend(['BSP_ENABLE_AUD_PRC']):
+    src += ['drv_audprc.c']
+
+if GetDepend(['BSP_ENABLE_AUD_CODEC']):
+    if GetDepend('SOC_SF32LB52X'):
+        src += ['drv_audcodec_m.c']
+    else:
+        src += ['drv_audcodec.c']
+
+if GetDepend(['BSP_USING_NN_ACC']):
+    src += ['drv_nnacc.c']
+    
+if GetDepend(['BSP_USING_LCD']):
+    if not GetDepend(['RT_USING_MESSAGEQUEUE']):
+        print("Warning: LCDC driver requrie RT_USING_MESSAGEQUEUE!")
+    else:
+        src += ['drv_lcd_private.c', 'drv_lcd.c', 'drv_ram_lcd.c', 'drv_lcd_test.c','drv_lcd_fb.c']
+
+if GetDepend(['BSP_USING_TOUCHD']) and GetDepend(['RT_USING_PIN']):
+    src += ['drv_touch.c']
+
+if GetDepend(['BSP_USING_EPIC']):
+    if not GetDepend(['RT_USING_MESSAGEQUEUE']):
+        print("Warning: EPIC driver requrie RT_USING_MESSAGEQUEUE!")
+    else:
+        src += ['drv_epic.c']
+
+
+if GetDepend(['RT_USING_BT']):
+    src += ['drv_bt.c']
+
+#if GetDepend(['ENABLE_SOLUTON_BT_INTERFACE']):
+   #src += ['drv_bt.c']	
+if GetDepend(['RT_USING_MOTOR']):
+    src += ['drv_motor.c']
+# PSRAM will process flags in source code.
+src += ['drv_psram.c']
+
+if GetDepend(['BSP_USING_MPI']):
+    src += ['drv_mpi.c']
+
+if GetDepend(['BSP_USING_USBH']):
+    src += ['drv_usbh.c']
+
+if GetDepend(['BSP_USING_USBH']) or GetDepend(['BSP_USING_USBD']):
+    src += ['drv_usb_otg.c']
+
+if GetDepend(['BSP_USING_HW_AES']):
+    src += ['drv_aes.c']
+
+src += ['drv_common.c','drv_dbg.c']
+path =  [cwd]
+
+group = DefineGroup('Drivers', src, depend = [''], CPPPATH = path)
+
+Return('group')

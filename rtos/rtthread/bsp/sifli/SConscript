@@ -1,0 +1,16 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+CPPPATH = [cwd]
+CPPPATH += [cwd + '/../../components/drivers/include/drivers',]
+
+if GetDepend(['BSP_USING_PC_SIMULATOR']):
+    objs = objs + SConscript('drivers_pc/SConscript')
+else:
+    objs = objs + SConscript('drivers/SConscript')
+
+Return('objs')

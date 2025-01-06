@@ -1,0 +1,13 @@
+Import("rtconfig")
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+if rtconfig.CROSS_TOOL == "gcc":
+    group = DefineGroup('Drivers', src, depend = ['HR_USING_SC7R30'], CPPPATH = CPPPATH)
+else:
+    lib = ['SL_SC7R30_BPM_Algo_Driver']
+    group = DefineGroup('Drivers', src, depend = ['HR_USING_SC7R30'], LIBS = lib, CPPPATH = CPPPATH, LIBPATH = CPPPATH)
+
+Return('group')

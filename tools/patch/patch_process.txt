@@ -1,0 +1,38 @@
+BLE ROM Patch development.
+
+0. Prepare Keil in command line build, issue
+    set RTT_CC=keil
+    set RTT_EXEC_PATH=C:/Keil_v5
+    
+    enter example/fe_bsp_m0 for next step.
+
+1. Build ROM image
+   in example/fe_bsp_m0, 
+   
+   scons .
+   
+   to build ROM image, it will generate rom image (bf0_cp.bin) at build subfolder
+   
+   
+2. Build patch
+    
+    All patch project is located under patch/projects subfolder, each project will have one Sconscript, which will define which patches are included in current project.
+    
+    issue
+    
+    3.1  scons --patch=<project> preprocess    
+    to generate preprocess file for each C file.
+    
+    3.2 scons --patch=<project> .
+    will build patch_list.bin and bf0_cp_patch.bin
+    
+3.  Copy patch image patch.bin to BLE patch ram
+    0x00114000(BLE system address) or 0x00114000+0x0B000000(HCPU Address)
+    
+4.  Copy patch install record to BLE end of RAM-256 or 512
+    0x00113C00-256/512
+    
+5. In BLE ROM,
+    call to HAL_PATCH_BCPU will install patch.
+    
+    

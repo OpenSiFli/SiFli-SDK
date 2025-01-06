@@ -1,0 +1,31 @@
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+
+# The set of source files associated with this SConscript file.
+src = Glob('src/lottie/*.cpp')
+src += Glob('src/vector/*.cpp')
+src += Glob('src/vector/freetype/*.cpp')
+src += Glob('src/vector/stb/*.cpp')
+src += Glob('src/binding/c/*.cpp')
+
+path = [cwd + '/inc']
+path += [cwd + '/src/vector']
+path += [cwd + '/src/vector/freetype']
+path += [cwd + '/src/vector/stb']
+
+CPPDEF = ['_ARM_LIBCPP_EXTERNAL_THREADS'] 
+CPPDEF += ['USING_MINI_RLOTTIE']
+
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    CPPDEF += ['_CRT_SECURE_NO_WARNINGS']
+
+if GetDepend('LOTTIE_JSON_SUPPORT'):
+    SrcRemove(src, 'src/lottie/lottieparser.cpp')
+else:    
+    SrcRemove(src, 'src/lottie/lottieroparser.cpp')
+
+group = DefineGroup('Rlottie', src, depend = ['PKG_USING_RLOTTIE'], CPPPATH = path, CPPDEFINES = CPPDEF)
+
+Return('group')

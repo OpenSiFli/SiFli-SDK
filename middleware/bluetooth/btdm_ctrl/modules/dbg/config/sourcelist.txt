@@ -1,0 +1,20 @@
+ #***************************************************************************************
+ # @file sourcelist.txt
+ #
+ # @brief This file lists up all the source code that will be
+ #        compiled and built for DISPLAY module. 
+ #
+ # Copyright (C) RivieraWaves 2009-2015
+ #
+ #***************************************************************************************
+
+
+# dbg
+    dbg_task.c
+    dbg_swdiag.c
+    dbg_mwsgen.c
+    dbg_iqgen.c
+    dbg_trc_tl.c
+    dbg_trc_mem.c
+    dbg_trc.c
+    dbg.c

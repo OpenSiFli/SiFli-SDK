@@ -1,0 +1,16 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+CPPPATH = []
+cwd   = GetCurrentDir()
+
+if GetDepend('USING_ACPU_CTRL_FWK') and GetDepend('SOC_SF32LB58X'):
+    src += ['acpu_ctrl.c']
+
+CPPPATH += [cwd+'/../include']    
+
+# add src and include to group.
+group = DefineGroup('middleware', src, depend = [],CPPPATH = CPPPATH)
+    
+Return('group')

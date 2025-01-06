@@ -1,0 +1,18 @@
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+# add LittlevGL common include
+src = src + Glob('*.c')
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('App_watch_demo', src, depend = [''], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')

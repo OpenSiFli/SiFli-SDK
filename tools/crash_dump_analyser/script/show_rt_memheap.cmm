@@ -1,0 +1,168 @@
+PMACRO.list
+
+
+AREA.Select heapAllocation
+AREA.view heapAllocation
+
+
+PRIVATE &RESULT
+PRIVATE &LIST_HEADER
+PRIVATE &LIST_NODE
+PRIVATE &RT_Object_Class_MemHeap
+&RT_Object_Class_MemHeap=6
+
+;PRIVATE &RESULT
+
+&LIST_HEADER = VAR.Value(&rt_object_container[&RT_Object_Class_MemHeap].object_list)
+
+&LIST_NODE   = VAR.Value(((rt_list_t *)&LIST_HEADER)->next)
+WHILE &LIST_NODE!=&LIST_HEADER
+(
+	LOCAL &MEMHEAP
+	LOCAL &OBJ_NAME
+
+	IF &LIST_NODE==0
+	(
+		ENDDO
+	)
+	
+	;PRINT "LIST_NODE==========  &LIST_NODE "
+	GOSUB GetRtObj &LIST_NODE
+	ENTRY &rt_obj
+	
+	;PRINT "RT_OBJ==========  &rt_obj"
+	&OBJ_NAME=VAR.String(((rt_object_t)&rt_obj)->name)
+	
+
+	
+	&MEMHEAP = &rt_obj
+	PRINT "================================================================================================="
+	PRINT "&OBJ_NAME, address &MEMHEAP"
+
+	GOSUB SubListMemHeap &MEMHEAP
+	&LIST_NODE   = VAR.Value(((rt_list_t *)&LIST_NODE)->next)
+)
+
+
+ENDDO
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;Sub functions;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+GetRtObj:
+	ENTRY &MY_LIST_NODE 
+    &result=&MY_LIST_NODE-VAR.Value((unsigned long)(&((rt_object_t)0)->list))
+	RETURN &result
+
+
+
+
+SubListMemHeap:
+	ENTRY  &MEMHEAP
+
+	LOCAL &MEMHEAP_HEAD
+	LOCAL &MEMHEAP_SIZE
+	LOCAL &MEMHEAP_END
+	LOCAL &block_addr
+
+	LOCAL &COL1
+	LOCAL &COL2
+	LOCAL &COL3
+	LOCAL &COL4
+	LOCAL &COL5
+	LOCAL &ret_addr
+	LOCAL &ret_addr2
+	LOCAL &tick
+	LOCAL &block_size
+	LOCAL &block_head_size
+    
+	&block_head_size=VAR.Value(sizeof(struct rt_memheap_item))
+	&block_addr=VAR.Value(((struct rt_memheap *)&MEMHEAP)->start_addr)
+	&MEMHEAP_HEAD=&block_addr
+	&MEMHEAP_SIZE=VAR.Value(((struct rt_memheap *)&MEMHEAP)->pool_size)
+	&MEMHEAP_END=&block_addr+&MEMHEAP_SIZE
+
+	IF &block_addr==0
+	(
+		PRINT "Wrong Data"
+		RETURN
+	)
+	
+	PRINT "Memory rang[&MEMHEAP_HEAD   -   &MEMHEAP_END], size &MEMHEAP_SIZE"
+
+	&COL1=FORMAT.String("BLOCK_ADDR(UserAddr)", 28., ' ')
+	&COL2=FORMAT.String("BLOCK_SIZE", -10., ' ')
+	&COL3=FORMAT.String("USED", -10., ' ')
+	&COL4=FORMAT.String("TICK", -10., ' ')
+	&COL5=FORMAT.String("RETURN ADDR", -40., ' ')
+	&COL6=FORMAT.String("RETURN ADDR2", -40., ' ')
+
+
+	PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3" "&COL4" "&COL5" "&COL6"
+
+
+	WHILE 1==1
+	(
+	   LOCAL &print_block_addr
+	   LOCAL &used_flag
+	   LOCAL &next_block_addr
+	   LOCAL &user_addr
+	   LOCAL &user_size
+
+	   &user_addr=VAR.Value(((struct rt_memheap_item *)&block_addr)+1)
+	   &next_block_addr=VAR.Value(((struct rt_memheap_item *)&block_addr)->next)
+	   
+	   IF &next_block_addr>&block_addr
+	   (
+	       &block_size=&next_block_addr-&block_addr
+	       &user_size=VAR.Value(((struct rt_memheap_item *)&block_addr)->size)
+	   )
+	   ELSE
+	   (
+	       PRINT "Current block[&block_addr] <= Next block[&next_block_addr], Reach heap end?"
+	       RETURN
+	   )
+
+
+	   &used_flag=VAR.Value((((struct rt_memheap_item *)&block_addr)->magic)&1)
+
+	   &ret_addr=FORMAT.String("NA", -40., ' ')
+	   &ret_addr2=FORMAT.String("NA", -40., ' ')
+	   &tick=FORMAT.String("NA", -10., ' ')
+
+
+	   IF &used_flag==1
+	   (
+		  &ret_addr=VAR.Value(((struct rt_memheap_item *)&block_addr)->ret_addr)
+		  &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+		  &tick=VAR.Value(((struct rt_memheap_item *)&block_addr)->tick)
+
+		  IF (STRING.COMPARE("&ret_addr_str","*lv_mem_alloc*"))
+		  (
+			 &ret_addr2=VAR.Value(((lv_mem_header_t *)(&block_addr+&block_head_size))->s.ret_addr)
+			 ;&ret_addr2=sYmbol.Name(P:&ret_addr2)
+			 &ret_addr2_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr2),"\",-1)
+			 &ret_addr2= FORMAT.String("&ret_addr2_str(&ret_addr2)", -40., ' ')
+		  )
+
+		  &tick=FORMAT.DecimalU(20., &tick)
+		  ;&ret_addr=sYmbol.Name(P:&ret_addr)
+		  &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+		  &ret_addr= FORMAT.String("&ret_addr_str(&ret_addr)", -40., ' ')
+		  &ret_addr2=FORMAT.String("&ret_addr2", -40., ' ')
+	   )
+
+	   &used_flag=FORMAT.DecimalU(10., &used_flag)
+	   &print_block_addr=FORMAT.String("&block_addr(&user_addr)", 28., ' ')   
+
+	   
+	   PRINT "&print_block_addr" "&block_size" "&used_flag" "&tick" "&ret_addr" "&ret_addr2" 
+
+	   
+	   
+	   &block_addr=&next_block_addr
+	) 
+RETURN
+

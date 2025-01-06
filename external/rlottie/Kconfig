@@ -1,0 +1,8 @@
+config PKG_USING_RLOTTIE
+    bool "Enable RLOTTIE"
+    default n
+	select RT_USING_CPLUSPLUS
+config LOTTIE_JSON_SUPPORT
+	bool "Lottie small Json parser support"
+	default n
+	depends on PKG_USING_RLOTTIE

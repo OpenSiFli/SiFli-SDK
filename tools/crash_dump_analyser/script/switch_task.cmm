@@ -1,0 +1,24 @@
+;Brief:  Parse thread's name and overwrite CPU registers.
+;Useage: do switch_to #thread_name#
+
+ENTRY &task_name
+
+PRIVATE &thread_sp_addr
+
+&task_root=VAR.Value(&rt_object_container[0].object_list)
+&task_cur=VAR.Value(((rt_list_t *)&task_root)->next)
+WHILE (&task_root!=&task_cur)
+(
+	PRIVATE &offset
+    PRIVATE &task_stru
+	&offset=VAR.Value(&((rt_thread_t)0)->list)	
+	&task_stru=VAR.Value(&task_cur-&offset)
+    &task_name_2=VAR.String(((rt_thread_t)&task_stru)->name)
+  	if ("&task_name_2"=="&task_name")
+    (
+        &thread_sp_addr=VAR.Value(((rt_thread_t)&task_stru)->sp)	
+        do switch_to &thread_sp_addr
+        break
+    )
+    &task_cur=VAR.Value(((rt_list_t *)&task_cur)->next)
+)

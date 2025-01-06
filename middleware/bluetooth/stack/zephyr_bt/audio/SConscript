@@ -1,0 +1,128 @@
+from building import *
+
+cwd = GetCurrentDir()
+# add the general drivers.
+src = Split("""
+""")
+
+src+=['audio.c']
+
+if GetDepend(['BT_VOCS']) or GetDepend(['BT_VOCS_CLIENT']):
+	src+= ['vocs.c']
+
+if GetDepend(['BT_VOCS_CLIENT']):
+	src+= ['vocs_client.c']
+
+if GetDepend(['BT_AICS']) or GetDepend(['BT_AICS_CLIENT']):
+	src+= ['aics.c']
+
+if GetDepend(['BT_AICS_CLIENT']):
+	src+= ['aics_client.c']
+
+if GetDepend(['BT_VCP_VOL_REND']):
+	src+= ['vcp_vol_rend.c']
+
+if GetDepend(['BT_VCP_VOL_CTLR']):
+	src+= ['vcp_vol_ctlr.c']
+
+if GetDepend(['BT_MICP_MIC_DEV']):
+    src+= ['micp_mic_dev.c']
+
+if GetDepend(['BT_MICP_MIC_CTLR']):
+    src+= ['micp_mic_ctlr.c']
+
+# When CONFIG_BT_AUDIO and CONFIG_BT_CONN is enabled we pull in ccid. It is based on CONFIG_BT_CONN
+# as CCID depends on GATT, and GATT is enabled when CONFIG_BT_CONN=y.
+if GetDepend(['BT_CONN']):
+    src+= ['ccid.c']
+
+if GetDepend(['BT_CSIP_SET_MEMBER']):
+    src+= ['csip_set_member.c']
+if GetDepend(['BT_CSIP_SET_COORDINATOR']):
+    src+= ['csip_set_coordinator.c']
+if GetDepend(['BT_CSIP_SET_MEMBER']) or GetDepend(['BT_CSIP_SET_COORDINATOR']):
+    src+= ['csip_crypto.c']
+
+if GetDepend(['BT_TBS']):
+    src+= ['tbs.c']
+
+if GetDepend(['BT_TBS_CLIENT']):
+    src+= ['tbs_client.c']
+    
+if GetDepend(['BT_MCC']):
+    src+= ['mcc.c']
+
+if GetDepend(['BT_MCS']):
+    src+= ['mcs.c']
+
+if GetDepend(['BT_MPL']):
+    src+= ['mpl.c']
+    
+if GetDepend(['MCTL']):
+    src+= ['media_proxy.c']    
+
+if GetDepend(['BT_ASCS']):
+    src+= ['ascs.c']
+
+if GetDepend(['BT_PACS']):
+    src+= ['pacs.c']
+
+if GetDepend(['BT_BAP_STREAM']):
+    src+= ['bap_stream.c', 'codec.c', 'bap_iso.c']
+
+if GetDepend(['BT_BAP_BASE']):
+    src+= ['bap_base.c']
+
+if GetDepend(['BT_BAP_UNICAST_SERVER']):
+    src+= ['bap_unicast_server.c']
+
+if GetDepend(['BT_BAP_UNICAST_CLIENT']):
+    src+= ['bap_unicast_client.c']
+
+if GetDepend(['BT_BAP_BROADCAST_SOURCE']):
+    src+= ['bap_broadcast_source.c']
+
+if GetDepend(['BT_BAP_BROADCAST_SINK']):
+    src+= ['bap_broadcast_sink.c']
+
+if GetDepend(['BT_BAP_SCAN_DELEGATOR']):
+    src+= ['bap_scan_delegator.c']
+
+if GetDepend(['BT_BAP_BROADCAST_ASSISTANT']):
+    src+= ['bap_broadcast_assistant.c']
+
+if GetDepend(['BT_HAS']):
+    src+= ['has.c']
+
+if GetDepend(['BT_HAS_CLIENT']):
+    src+= ['has_client.c']
+
+if GetDepend(['BT_CAP']):
+    src+= ['cap_stream.c']
+
+if GetDepend(['BT_CAP_ACCEPTOR']):
+    src+= ['cap_acceptor.c']
+    
+if GetDepend(['BT_CAP_INITIATOR']):
+    src+= ['cap_initiator.c']
+
+if GetDepend(['BT_CAP_COMMANDER']):
+    src+= ['cap_commander.c']
+
+if GetDepend(['BT_CAP_INITIATOR_UNICAST']) or GetDepend(['BT_CAP_COMMANDER']):
+    src+= ['cap_common.c']
+
+if GetDepend(['BT_TMAP']):
+    src+= ['tmap.c']
+
+if GetDepend(['BT_GMAP']):
+    src+= ['gmap_client.c', 'gmap_server.c']
+
+if GetDepend(['BT_PBP']):
+    src+= ['pbp.c']
+
+CPPPATH = [cwd]
+
+group = DefineGroup('zbt_audio', src, depend = ['BT_AUDIO'], CPPPATH=CPPPATH, LIBRARY='zbt_audio')
+
+Return('group')

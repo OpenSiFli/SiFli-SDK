@@ -1,0 +1,31 @@
+AREA.Create IsrHistory
+AREA.Select IsrHistory
+AREA.view IsrHistory
+
+PRIVATE &isr_hist_depth
+
+&isr_hist_depth=VAR.Value(sizeof(isr_hist.hist)/sizeof(isr_hist.hist[0]))
+PRIVATE &i
+&i=0.
+PRIVATE &index
+; get the oldest task
+&index=VAR.Value(isr_hist.index+1)
+&index=&index%&isr_hist_depth
+PRIVATE &COL1
+PRIVATE &COL2
+&COL1=FORMAT.String("ISR", 20., ' ')
+&COL2=FORMAT.String("Start Time", -20., ' ')
+PRINT %COLOR.BLUE "&COL1" "&COL2"
+WHILE &i<&isr_hist_depth
+(
+   PRIVATE &isr_name
+   PRIVATE &start_time
+   
+   &isr_name=VAR.String(isr_hist.hist[&index].irq_no)
+   &isr_name=FORMAT.String("&isr_name", 20., ' ') 
+   &start_time=VAR.Value(isr_hist.hist[&index].time.sec)*1000000.+VAR.Value(isr_hist.hist[&index].time.usec)
+   &start_time=FORMAT.DecimalU(20., &start_time)
+   PRINT "&isr_name" "&start_time"
+   &index=(&index+1)%&isr_hist_depth
+   &i=&i+1
+)

@@ -1,0 +1,17 @@
+ #***************************************************************************************
+ # @file sourcelist.txt
+ #
+ # @brief This file lists up all the source code that will be
+ #        compiled and built for COMMON module. 
+ #
+ # Copyright (C) RivieraWaves 2009-2015
+ #
+ #***************************************************************************************
+
+# common
+    co_utils.c
+    co_list.c
+    co_djob.c
+    co_time.c
+    co_buf.c
+    

@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+path = [cwd]
+lib = ['libhbd_drv']
+group = DefineGroup('Drivers', src, depend = ['HR_USING_GH3011'], LIBS = lib, CPPPATH = path, LIBPATH = path)
+
+Return('group')

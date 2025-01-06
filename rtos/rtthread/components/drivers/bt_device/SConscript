@@ -1,0 +1,11 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+if not GetDepend('BT_USING_HF'):
+	SrcRemove(src, 'bt_call_fsm.c')
+	SrcRemove(src, 'bt_call_meaasge.c')
+	
+CPPPATH = [cwd + '/../include/drivers']
+group = DefineGroup('DeviceDrivers', src, depend = ['RT_USING_BT' or 'ENABLE_SOLUTON_BT_INTERFACE'], CPPPATH = CPPPATH)
+Return('group')

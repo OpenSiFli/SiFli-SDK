@@ -1,0 +1,22 @@
+from building import *
+
+cwd     = GetCurrentDir()
+src     = Split("""
+    common/llist.c
+    rpmsg_lite/rpmsg_lite.c
+    rpmsg_lite/rpmsg_ns.c
+    rpmsg_lite/rpmsg_queue.c
+    rpmsg_lite/porting/environment/rpmsg_env_rt-thread.c
+    rpmsg_lite/porting/platform/sf32/rpmsg_platform.c
+    virtio/virtqueue.c
+""")
+
+CPPPATH = [cwd,
+           cwd + r'/include',
+           cwd + r'/include/environment/rt-thread',
+           cwd + r'/include/platform/sf32']
+
+
+group = DefineGroup('rpmsg-lite', src, depend = ['PKG_USING_RPMSG_LITE'], CPPPATH = CPPPATH)
+
+Return('group')

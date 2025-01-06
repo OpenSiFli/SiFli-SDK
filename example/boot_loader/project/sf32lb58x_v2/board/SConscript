@@ -1,0 +1,18 @@
+import os
+import rtconfig
+from building import *
+
+cwd = GetCurrentDir()
+
+# add general drivers
+src = Split('''
+board.c
+bf0_ap_hal_msp.c
+main.c
+''')
+
+path =  [cwd]
+path += [cwd + '/ports']
+
+group = DefineGroup('Drivers', src, depend = [''], CPPPATH = path)
+Return('group')

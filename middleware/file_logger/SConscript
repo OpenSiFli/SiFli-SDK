@@ -1,0 +1,13 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = ['file_logger.c']
+inc = [cwd]
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = ['USING_FILE_LOGGER'], CPPPATH = inc)
+Return('objs')

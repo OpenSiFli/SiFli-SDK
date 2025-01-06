@@ -1,0 +1,14 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+
+src += ['context_backup.c']
+
+CPPPATH = [cwd]
+
+# add src and include to group.
+group = DefineGroup('middleware', src,depend = ['USING_CONTEXT_BACKUP'],CPPPATH = CPPPATH)
+    
+Return('group')

@@ -1,0 +1,25 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = [
+    'boot.c',
+    'check.c',   
+    'dir.c',     
+    'fat.c',     
+    'fsutil.c',
+    'main.c',
+    'porting.c',
+    'pread.c',   
+    'pwrite.c',  
+    'strlcpy.c',
+]    
+
+inc = [cwd]
+
+# add group to IDE project
+objs = DefineGroup('fsck', src, depend = ['USING_FAT_CHECK'], CPPPATH = inc)
+Return('objs')

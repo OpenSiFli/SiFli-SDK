@@ -1,0 +1,36 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = ["utils.c"]
+
+if GetDepend("TINYCRYPT_CTR_PRNG"):
+    src += ["ctr_prng.c"]
+if GetDepend("TINYCRYPT_SHA256"):
+    src += ["sha256.c"]
+if GetDepend("TINYCRYPT_SHA256_HMAC"):
+    src += ["hmac.c"]    
+if GetDepend("TINYCRYPT_SHA256_HMAC_PRNG"):
+    src += ["hmac_prng.c"]    
+if GetDepend("TINYCRYPT_ECC_DH") or GetDepend("TINYCRYPT_ECC_DSA"):    
+    src += ["ecc.c", "ecc_platform_specific.c"]
+if GetDepend("TINYCRYPT_ECC_DH"):
+    src += ["ecc_dh.c"]
+if GetDepend("TINYCRYPT_ECC_DSA"):
+    src += ["ecc_dsa.c"]
+if GetDepend("TINYCRYPT_AES"):
+    src += ["aes_decrypt.c", "aes_encrypt.c"]    
+if GetDepend("TINYCRYPT_AES_CBC"):
+    src += ["cbc_mode.c"]    
+if GetDepend("TINYCRYPT_AES_CTR"):
+    src += ["ctr_mode.c"]    
+if GetDepend("TINYCRYPT_AES_CCM"):
+    src += ["ccm_mode.c"]    
+if GetDepend("TINYCRYPT_AES_CMAC"):
+    src += ["cmac_mode.c"]
+  
+      
+CPPPATH = [cwd+"../include"]
+
+group = DefineGroup('zbt_tinycrypt', src, depend = ['TINYCRYPT'],CPPPATH = CPPPATH,LIBRARY='zbt_tinycrypt')
+
+Return('group')

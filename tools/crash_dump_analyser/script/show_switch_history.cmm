@@ -1,0 +1,76 @@
+AREA.Create TaskSwitchHistory
+AREA.Select TaskSwitchHistory
+AREA.view TaskSwitchHistory
+
+PRIVATE &thread_switch_hist_addr
+;&switch_hist_addr=VAR.Value(&cpu_usage_profiler\thread_switch_hist)
+&thread_switch_hist_addr=VAR.Value(&thread_switch_hist)
+;do show_switch_history &switch_hist_addr
+
+;ENTRY &thread_switch_hist_addr
+PRIVATE &task_switch_depth
+
+&task_switch_depth=VAR.Value(sizeof(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist)/sizeof(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[0]))
+PRIVATE &i
+&i=0.
+PRIVATE &index
+; get the oldest task
+&index=VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->index+1)
+&index=&index%&task_switch_depth
+PRIVATE &COL1
+PRIVATE &COL2
+PRIVATE &COL3
+&COL1=FORMAT.String("Task", 20., ' ')
+&COL2=FORMAT.String("Start Time", -20., ' ')
+&COL3=FORMAT.String("Duration(us)", -20., ' ')
+PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3"
+PRIVATE &prev_task_name
+PRIVATE &prev_start_time 
+WHILE &i<&task_switch_depth
+(
+   PRIVATE &task_name
+   PRIVATE &start_time
+   PRIVATE &duration
+   
+   &task_name=VAR.String((((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&index].thread)->name)
+   &task_name=FORMAT.String("&task_name", 20., ' ') 
+   &start_time=VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&index].time.sec)*1000000.+VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&index].time.usec)
+   &start_time=FORMAT.DecimalU(20., &start_time)
+   IF &i==0
+   (
+       &duration=0.0
+   )
+   ELSE
+   (
+       PRIVATE &prev_index
+       IF &index==0
+       (
+           &prev_index=&task_switch_depth-1
+       )
+       ELSE
+       (
+           &prev_index=&index-1
+       )
+       &t1=VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&index].time.sec)*1000000.+VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&index].time.usec)
+       &t2=VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&prev_index].time.sec)*1000000.+VAR.Value(((thread_switch_hist_t *)&thread_switch_hist_addr)->hist[&prev_index].time.usec)
+       &duration=&t1-&t2
+	   &duration=&duration*1.0
+   )
+   &duration=FORMAT.Float(20.,1.,&duration)
+   
+   IF (&i>0)&&(&i<(&task_switch_depth-1))
+   (
+       PRINT "&prev_task_name" "&prev_start_time" "&duration"
+   ;    PRINT "&task_name" "&start_time" "&duration" 
+   )
+   ELSE IF (&i==&task_switch_depth-1)
+   (
+       PRINT "&prev_task_name" "&prev_start_time" "&duration" 
+       PRINT "&task_name" "&start_time"
+   )
+   &index=(&index+1)%&task_switch_depth
+   &i=&i+1
+   &prev_task_name="&task_name"
+   &prev_start_time="&start_time"
+   
+)

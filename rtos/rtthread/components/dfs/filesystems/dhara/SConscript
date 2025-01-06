@@ -1,0 +1,20 @@
+# RT-Thread building script for component
+
+from building import *
+
+cwd = GetCurrentDir()
+
+src = []
+if GetDepend('RT_DFS_ELM_DHARA_ENABLED') or GetDepend('RT_LFS_DHARA_ENABLED'):
+    src = Glob('dhara/*.c')
+    if GetDepend('RT_DFS_ELM_DHARA_NOR_MODE'):
+        SrcRemove(src, "dhara/nand.c")
+    else:
+        SrcRemove(src, "dhara/nor.c")
+
+depend = []
+CPPPATH = [cwd + '/dhara']
+
+group = DefineGroup('dhara', src , depend = depend, CPPPATH = CPPPATH)
+
+Return('group')

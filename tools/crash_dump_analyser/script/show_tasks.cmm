@@ -1,0 +1,66 @@
+AREA.Reset
+AREA.Create TaskList
+AREA.Select TaskList
+AREA.view TaskList
+PRIVATE &COL1
+PRIVATE &COL2
+PRIVATE &COL3
+PRIVATE &COL4
+PRIVATE &COL5
+PRIVATE &COL6
+PRIVATE &task_root
+PRIVATE &task_cur
+&COL1=FORMAT.String("Task", 20., ' ')
+&COL2=FORMAT.String("States", -20., ' ')
+&COL3=FORMAT.String("SP", -20., ' ')
+&COL4=FORMAT.String("Base", -20., ' ')
+&COL5=FORMAT.String("Used", -20., ' ')
+&COL6=FORMAT.String("Prio", -20., ' ')
+PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3" "&COL4" "&COL5" "&COL6"
+&task_root=VAR.Value(&rt_object_container[0].object_list)
+&task_cur=VAR.Value(((rt_list_t *)&task_root)->next)
+WHILE (&task_root!=&task_cur)
+(
+	PRIVATE &task_name
+	PRIVATE &task_stat
+	PRIVATE &stack_base
+	PRIVATE &stack_size
+	PRIVATE &stack_top
+	PRIVATE &stack_sp
+    PRIVATE &stack_used
+	PRIVATE &task_prio
+	PRIVATE &offset
+    
+	&offset=VAR.Value(&((rt_thread_t)0)->list)
+	
+	&task_stru=VAR.Value(&task_cur-&offset)
+	
+	&task_name=VAR.String(((rt_thread_t)&task_stru)->name)
+	if (&task_stru==VAR.value(rt_current_thread))
+		&task_name=FORMAT.String("*&task_name", 20., ' ')
+	else
+		&task_name=FORMAT.String("&task_name", 20., ' ')
+	&task_stat=VAR.String(((rt_thread_t)&task_stru)->stat)		
+	&task_stat=FORMAT.String("&task_stat", -20., ' ')	
+	
+	&stack_sp=VAR.String(((rt_thread_t)&task_stru)->sp)	
+	&stack_sp=FORMAT.String("&stack_sp", -20., ' ')	
+	
+	&stack_base=VAR.Value(((rt_thread_t)&task_stru)->stack_addr)
+	&stack_size=VAR.Value(((rt_thread_t)&task_stru)->stack_size)
+	&stack_top=VAR.Value(&stack_base)+VAR.Value(&stack_size)
+	&stack_top=FORMAT.String("&stack_top", -20., ' ')	
+    ; const is hex, 0x64=100, convert to percentage
+	&stack_used=(VAR.Value(&stack_top)-VAR.Value(&stack_sp))*64/VAR.Value(&stack_size)
+	&stack_used=FORMAT.DecimalU(-20., &stack_used)	
+    
+	
+	&task_prio=VAR.Value(((rt_thread_t)&task_stru)->current_priority)
+	&task_prio=FORMAT.DecimalU(20., &task_prio)	
+	
+	print "&task_name" "&task_stat" "&stack_sp" "&stack_top" "&stack_used" "&task_prio(&stack_size)" 
+	;task.Stack.Add &stack_sp &stack_sp--&stack_top
+	&task_cur=VAR.Value(((rt_list_t *)&task_cur)->next)
+)
+
+enddo

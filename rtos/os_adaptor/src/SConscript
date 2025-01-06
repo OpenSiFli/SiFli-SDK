@@ -1,0 +1,14 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+#CPPPATH = [cwd, str(Dir('#'))]
+CPPPATH = [cwd]
+CPPPATH += [cwd+'/../inc']
+
+group = DefineGroup('os_adapter', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

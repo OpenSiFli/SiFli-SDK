@@ -1,0 +1,12 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y    
+     
+
+config ENABLE_LC3
+	bool "Enable the LC3 codec"
+	# By default let's enable it in the platforms we know are capable of supporting it
+	default y
+	select LIBLC3

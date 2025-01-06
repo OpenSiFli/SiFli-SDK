@@ -1,0 +1,26 @@
+import os
+import rtconfig
+from building import *
+
+cwd = GetCurrentDir()
+
+# add general drivers
+src = Split('''
+board.c
+''')
+
+if GetDepend("SOC_SF32LB55X"):
+    src += ["bf0_ap_hal_msp_sf32lb55x.c"]
+elif GetDepend("SOC_SF32LB58X"):
+    src += ["bf0_ap_hal_msp_sf32lb58x.c"]
+elif GetDepend("SOC_SF32LB56X"):
+    src += ["bf0_ap_hal_msp_sf32lb56x.c"]
+elif GetDepend("SOC_SF32LB52X"):
+    src += ["bf0_ap_hal_msp_sf32lb52x.c"]
+
+
+path =  [cwd]
+path += [cwd + '/ports']
+
+group = DefineGroup('Drivers', src, depend = [''], CPPPATH = path)
+Return('group')

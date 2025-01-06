@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd + '/../common', cwd]
+group = DefineGroup('Drivers', src, depend = ['TSC_USING_FT5446U'], CPPPATH = CPPPATH)
+
+Return('group')

@@ -1,0 +1,18 @@
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+# The set of source files associated with this SConscript file.
+src = Glob('src/*.c')
+src += Glob('port/fal/src/*.c')
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    SrcRemove(src, 'port/fal/src/fal_flash_sifli_port.c')
+else:
+    SrcRemove(src, 'port/fal/src/fal_flash_sifli_simu.c')
+
+path    = [cwd + '/inc']
+path    += [cwd + '/port/fal/inc']
+
+group = DefineGroup('FlashDB', src, depend = ['PKG_USING_FLASHDB'], CPPPATH = path)
+
+Return('group')

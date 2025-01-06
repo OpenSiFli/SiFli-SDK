@@ -1,0 +1,18 @@
+# for module compiling
+import os
+from building import *
+
+cwd  = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+if GetDepend(['BSP_USING_RTTHREAD']):
+    if not GetDepend(['BSP_USING_PC_SIMULATOR']):
+        for d in list:
+            path = os.path.join(cwd, d)
+            if os.path.isfile(os.path.join(path, 'SConscript')):
+                objs = objs + SConscript(os.path.join(d, 'SConscript'))
+else:
+    objs = objs + SConscript(os.path.join('pmic_controller', 'SConscript'))
+    
+Return('objs')

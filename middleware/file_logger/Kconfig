@@ -1,0 +1,3 @@
+config USING_FILE_LOGGER
+    bool "Use File Logger"
+    default n

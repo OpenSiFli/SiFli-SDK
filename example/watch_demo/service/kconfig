@@ -1,0 +1,67 @@
+menu "Select data service"      
+    if BSP_USING_DATA_SVC
+        config BSP_USING_COMP_SVC
+            bool "Enable Compass Service"
+            select BSP_USING_MAG_SVC
+            default n
+        
+        config BSP_USING_MAG_SVC
+            bool "Enable Magnetic Service"
+            select SENSOR_USING_MAG
+            select MAG_USING_MMC36X0KJ
+            default n
+            
+        config BSP_USING_WEA_SVC
+            bool "Enable Weather Service"
+            select BSP_BLE_SIBLES
+            default n
+            
+        config BSP_USING_HR_SVC
+            bool "Enable HR Service"
+            select SENSOR_USING_HR
+            default n
+
+        config BSP_USING_BARO_SVC
+            bool "Enable Barometer Service"
+            select SENSOR_USING_BAROMETER
+            select SENSOR_USING_BMP280
+            default n 				
+
+        config BSP_USING_ACCE_SVC
+            bool "Enable Accelerator Service"
+            select ACC_USING_LSM6DSL
+            default n 	
+
+        config BSP_USING_GYRO_SVC
+            bool "Enable Gyro Service"
+            select ACC_USING_LSM6DSL
+            default n 	
+
+        config BSP_USING_STEP_SVC
+            bool "Enable Step Service"
+            select ACC_USING_LSM6DSL
+            default n 	
+
+        config BSP_USING_GPS_SVC
+            bool "Enable GPS Service"
+            select GPS_USING_UC6226
+            default n 
+
+        config BSP_USING_TEST_SVC
+            bool "Enable Test Service"
+            default n                 
+
+        config BSP_USING_TELEPHONE_SVC
+            bool "Enable telephone Service"
+            default n   
+
+        config BSP_USING_ALARM_MANAGER_SVC
+            bool "Enable alarm manager Service"
+            default n   
+        if BSP_USING_ALARM_MANAGER_SVC
+            config BSP_ALARM_MAX
+                int "Max number of Alarm could set"
+                default 8          
+        endif
+    endif        
+endmenu

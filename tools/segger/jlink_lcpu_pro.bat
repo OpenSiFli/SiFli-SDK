@@ -1,0 +1,1 @@
+jlink.exe -device SF32LB58X -if SWD -speed 4000 -autoconnect 1 -CommandFile %~dp0\jlink_lcpu_pro.jlink

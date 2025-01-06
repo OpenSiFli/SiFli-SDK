@@ -1,0 +1,13 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = ['bas.c']
+
+CPPPATH = [cwd]
+
+if GetDepend('BT_BAS_BLS'):
+    src += ['bas_bls.c']
+    
+group = DefineGroup('zbt_bas', src, depend = ['BT_BAS'],CPPPATH = CPPPATH)
+
+Return('group')

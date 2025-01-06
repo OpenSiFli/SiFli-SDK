@@ -1,0 +1,18 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+
+CPPPATH = [cwd]
+
+if GetDepend('BT_IAS_CLIENT'):
+    src += ['ias_client.c']
+if GetDepend('BT_IAS'):
+    src += ['ias.c']
+    
+if GetDepend('BT_IAS_CLIENT') or  GetDepend('BT_IAS'):    
+    group = DefineGroup('zbt_bas', src, depend = [''],CPPPATH = CPPPATH)
+else:
+    group = []
+
+Return('group')

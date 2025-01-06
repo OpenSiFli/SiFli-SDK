@@ -1,0 +1,10 @@
+#ifndef __REG_BTCORE_ESCO_H_
+#define __REG_BTCORE_ESCO_H_
+
+#define REG_BTCORE_ESCO_SIZE 32
+
+#define REG_BTCORE_ESCO_BASE_ADDR 0x50090400
+
+
+#endif // __REG_BTCORE_ESCO_H_
+

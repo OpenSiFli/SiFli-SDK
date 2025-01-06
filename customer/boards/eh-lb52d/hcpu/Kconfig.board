@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_EH_LB52D_NAND
+    bool
+    select SOC_SF32LB52X
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"

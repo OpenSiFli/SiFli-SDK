@@ -1,0 +1,11 @@
+from building import *
+
+cwd = GetCurrentDir()
+src	= Glob('*.c')
+inc = [cwd]
+
+lib=['vcSpo2AlgoV151_A80_vc52s_ForKeilM33', 'vcHRAlgoV617ForKeilM33', 'vcSportMotionV10ForM33']
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['HR_USING_VC32S'], CPPPATH = CPPPATH, LIBS=lib, LIBPATH=inc)
+
+Return('group')

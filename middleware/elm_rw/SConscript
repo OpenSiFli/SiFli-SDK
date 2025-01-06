@@ -1,0 +1,21 @@
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src += Glob('./elm_rw.c')
+
+inc += [cwd]
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('elm_rw', src, depend = ['USING_ELM_RW'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

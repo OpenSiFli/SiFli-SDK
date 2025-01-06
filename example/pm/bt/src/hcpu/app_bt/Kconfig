@@ -1,0 +1,5 @@
+#menu "SOLUTION_BT_DEVICE"
+	#config ENABLE_SOLUTON_BT_INTERFACE
+    #bool "ENABLE_SOLUTON_BT_INTERFACE"
+    #default n
+#endmenu

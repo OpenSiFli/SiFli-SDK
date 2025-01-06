@@ -1,0 +1,3 @@
+source "$SIFLI_SDK/rtos/rtthread/components/Kconfig"
+source "$SIFLI_SDK/rtos/rtthread/libcpu/Kconfig"
+source "$SIFLI_SDK/rtos/rtthread/src/Kconfig"

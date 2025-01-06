@@ -1,0 +1,13 @@
+from building import *
+from rtconfig import *
+
+# get current directory
+cwd = GetCurrentDir()
+# The set of source files associated with this SConscript file.
+src = Glob('*.c')
+src += Glob('*.lib')
+path = [cwd]
+
+group = DefineGroup('sensor_lib', src, depend = ['PKG_SENSOR_USING_RISING_HAND'], CPPPATH = path)
+
+Return('group')

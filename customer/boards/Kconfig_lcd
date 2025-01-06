@@ -1,0 +1,486 @@
+if BSP_USING_LCD
+    choice
+        prompt "Select LCD"
+        default LCD_USING_ED_LB55DSI17801
+
+
+        config LCD_USING_ED_LB55DSI17801
+            bool "1.78 rect DSI LCD(ED-LB55DSI17801)"
+            depends on BSP_SUPPORT_DSI
+            select TSC_USING_TMA525B if BSP_USING_TOUCHD
+            select LCD_USING_RM69090
+            select BSP_LCDC_USING_DSI
+            if LCD_USING_ED_LB55DSI17801
+               config LCD_RM69090_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_ED_LB55DSI17801_QADSPI
+            bool "1.78 rect QAD-SPI LCD(ED-LB55DSI17801)"
+            select TSC_USING_TMA525B if BSP_USING_TOUCHD
+            select LCD_USING_RM69090
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB55DSI17801_QADSPI
+               config LCD_RM69090_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_ED_LB55SPI17801
+            bool "1.78 rect QAD-SPI LCD(ED-LB55SPI17801)"
+            select TSC_USING_FT3168 if BSP_USING_TOUCHD
+            select LCD_USING_RM69090
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB55SPI17801
+               config LCD_RM69090_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool n
+            endif
+
+        config LCD_USING_ED_LB55BILI8688E
+            bool "1.78 rect QAD-SPI LCD(ED-LB55DSI17801 - Green)"
+            select LCD_USING_ILI8688E
+            select TSC_USING_CST918 if BSP_USING_TOUCHD
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB55BILI8688E
+               config LCD_ILI8688E_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+        config LCD_USING_ILI8688E_DSI
+            bool "1.78 rect DSI LCD(ED-LB55DSI17801 - Green)"
+            select LCD_USING_ILI8688E
+            select TSC_USING_CST918 if BSP_USING_TOUCHD
+            select BSP_LCDC_USING_DSI
+            depends on BSP_SUPPORT_DSI
+            if LCD_USING_ILI8688E_DSI
+                config LCD_ILI8688E_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+           
+        config LCD_USING_ED_LB55SPI17201
+            bool "1.72 rect QAD-SPI LCD(ED-LB55SPI17201)"
+            select LCD_USING_SPD2012
+            select BSP_LCDC_USING_QADSPI
+            select BL_USING_AW9364
+            if LCD_USING_ED_LB55SPI17201
+               config LCD_SPD2012_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+        config LCD_USING_ED_LB55SPI17202
+            bool "1.77 rect QAD-SPI LCD(ED-LB55SPI17202)"
+            select TSC_USING_CST816 if BSP_USING_TOUCHD
+            select LCD_USING_GC9B71
+            select BSP_LCDC_USING_QADSPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            if LCD_USING_ED_LB55SPI17202
+               config LCD_GC9B71_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_ED_LB55SPI17601
+            bool "1.77 rect QAD-SPI RAMLESS LCD(ED-LB55SPI17601)"
+            select TSC_USING_BL6133 if BSP_USING_TOUCHD
+            select LCD_USING_ST77903
+            select BSP_LCDC_USING_QADSPI
+            select BSP_USING_RAMLESS_LCD
+            select LCD_USING_PWM_AS_BACKLIGHT
+
+            
+        config LCD_USING_ED_LB55SPI17701
+            bool "1.77 rect QAD-SPI LCD(ED-LB55SPI17701)"
+            select TSC_USING_CST816 if BSP_USING_TOUCHD
+            select LCD_USING_GC9B71
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB55SPI17701
+               config LCD_GC9B71_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+        config LCD_USING_ED_LB55DSI13901
+            bool "1.39 round 454RGB*454 DSI LCD(ED-LB55DSI13901)"
+            depends on BSP_SUPPORT_DSI
+            select TSC_USING_ZTW622 if BSP_USING_TOUCHD
+            select LCD_USING_RM69090
+            select BSP_LCDC_USING_DSI
+            select BSP_USING_ROUND_TYPE_LCD
+            if LCD_USING_ED_LB55DSI13901
+               config LCD_RM69090_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+        config LCD_USING_ED_LB55DSI13902
+            bool "1.39 round 454RGB*454 DSI LCD(ED-LB55DSI13902)"
+            depends on BSP_SUPPORT_DSI            
+            select TSC_USING_TMA525B if BSP_USING_TOUCHD
+            select LCD_USING_RM69330
+            select BSP_LCDC_USING_DSI
+            select BSP_USING_ROUND_TYPE_LCD
+            if LCD_USING_ED_LB55DSI13902
+               config LCD_RM69330_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_ED_LB55DSI13903
+            bool "1.39 round 454RGB*454 DSI LCD(ED-LB55DSI13903)"
+            depends on BSP_SUPPORT_DSI
+            select TSC_USING_IT7259E if BSP_USING_TOUCHD
+            select LCD_USING_RM69330
+            select BSP_LCDC_USING_DSI
+            select BSP_USING_ROUND_TYPE_LCD
+            if LCD_USING_ED_LB55DSI13903
+               config LCD_RM69330_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool n
+            endif
+
+        config LCD_USING_ED_LB55DSI_ICN3311
+            bool "round DSI LCD(ED_LB55DSI_ICN3311)"
+            depends on BSP_SUPPORT_DSI
+            select TSC_USING_CST918_0x15 if BSP_USING_TOUCHD
+            select LCD_USING_ICN3311
+            select BSP_LCDC_USING_DSI
+            select BSP_USING_ROUND_TYPE_LCD
+            if LCD_USING_ED_LB55DSI_ICN3311
+               config LCD_ICN3311_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+        config LCD_USING_ATK7016_ASIC
+            bool "ALIENTEK 7INCH RGB DPI TFTLCD"
+            select TSC_USING_FT5206 if BSP_USING_TOUCHD
+            select LCD_USING_ATK7016
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_ATK_MD1018R_ASIC
+            bool "ALIENTEK 10INCH RGB DPI TFTLCD(1280x800)"
+            select TSC_USING_GT9271 if BSP_USING_TOUCHD
+            select LCD_USING_EK79202
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_ST7701S_TFT
+            bool "3.97 inch 480x800 DSI VIDEO TFT LCD ST7701S"
+            depends on BSP_SUPPORT_DSI_VIDEO
+            select LCD_USING_ST7701S
+            select BSP_LCDC_USING_DSI_VIDEO
+ 
+
+        config LCD_USING_JDI387A_JDI
+            bool "1.2 round JDI387A LCD(use LCDC2)"
+            select LCD_USING_JDI387A
+            select BSP_LCDC_USING_JDI_PARALLEL
+            select BSP_USE_LCDC2_ON_HPSYS
+            select BSP_USING_ROUND_TYPE_LCD
+
+        config LCD_USING_LS013B7DD02_JDI
+            bool "1.2 round JDI LS013B7DD02 LCD"
+            select LCD_USING_LS013B7DD02
+            select BSP_LCDC_USING_JDI_PARALLEL
+            select BSP_USING_ROUND_TYPE_LCD
+
+
+        config LCD_USING_ED_LB5XSPI18501
+            bool "1.85 rect QAD-SPI LCD(ED_LB5XSPI18501)"
+            select TSC_USING_CST816 if BSP_USING_TOUCHD
+            select LCD_USING_GC9B71
+            select BSP_LCDC_USING_QADSPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            if LCD_USING_ED_LB5XSPI18501
+               config LCD_GC9B71_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+            
+        config LCD_USING_ED_LB5XSPI19701
+            bool "1.97 rect QAD-SPI LCD(ED-LB5xSPI19701)"
+            select TSC_USING_FT3169 if BSP_USING_TOUCHD
+            select LCD_USING_FT2308
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB5XSPI19701
+               config LCD_FT2308_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_ED_LB5XSPI19701_DDR
+            bool "1.97 rect DDR QAD-SPI LCD(ED-LB5xSPI19701)"
+            select TSC_USING_FT3169 if BSP_USING_TOUCHD
+            select LCD_USING_FT2308
+            select BSP_LCDC_USING_DDR_QADSPI
+            if LCD_USING_ED_LB5XSPI19701_DDR
+               config LCD_FT2308_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+        
+         config LCD_USING_ED_LB5XSPI14901
+            bool "1.49 rect QAD-SPI LCD(ED_LB5XSPI14901)"
+            select TSC_USING_FT3168 if BSP_USING_TOUCHD
+            select LCD_USING_RM690C0
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_ED_LB5XSPI14901
+               config LCD_RM690C0_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool n
+            endif
+        
+         config LCD_USING_ED_LB5XSPI14901_DDR
+            bool "1.49 rect DDR QAD-SPI LCD(ED_LB5XSPI14901)"
+            select TSC_USING_FT3168 if BSP_USING_TOUCHD
+            select LCD_USING_RM690C0
+            select BSP_LCDC_USING_DDR_QADSPI 
+            if LCD_USING_ED_LB5XSPI14901_DDR
+               config LCD_RM690C0_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool n
+            endif
+            
+         config LCD_USING_SPI_ST7789_GTM024_08_SPI8P
+            bool "2.4 rect SPI LCD for test box(GTM024_08_SPI8P_LCM)"
+            select LCD_USING_ST7789_GTM024_08_SPI8P
+            select BSP_LCDC_USING_SPI_DCX_1DATA
+
+        config LCD_USING_ILI9327_240x400_DBI
+            bool "2.4 rect DBI LCD(240X400 ILI9327)"
+            select LCD_USING_ILI9327
+            select BSP_LCDC_USING_DBI
+        
+         config LCD_USING_ST7789_240x320_DBI
+            bool "2.4 rect DBI LCD(240X320 ST7789_DBI)"
+            select LCD_USING_ST7789_DBI
+            select BSP_LCDC_USING_DBI
+
+        config LCD_USING_GC9307_240x284_SPI
+            bool "1.83 rect SPI LCD(240X284 GC9307)"
+            select LCD_USING_GC9307
+            select BSP_LCDC_USING_SPI_DCX_1DATA
+
+        config LCD_USING_QX_4300J40R38_DPI
+            bool "4.3 rect DPI LCD(800X480 LiChuang)"
+            select TSC_USING_FT5446U if BSP_USING_TOUCHD
+            select LCD_USING_QX_4300J40R38
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_ATK_MD0700R
+            bool "ATK MD0700R RGB DPI TFTLCD"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            select LCD_USING_EK79001
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_TFT_AH034A01ZJINV4C30
+            bool "3.4 round DSI Video TFT LCD(800x800)"
+            depends on BSP_SUPPORT_DSI_VIDEO
+            select LCD_USING_NV3051F1
+            select BSP_LCDC_USING_DSI_VIDEO
+            select BSP_USING_ROUND_TYPE_LCD
+
+        config LCD_USING_TFT_H080A11HDIFT4C30_V0_1
+            bool "8.0 rect DSI Video TFT LCD(800x1280 TFT-H080A11HDIFT4C30_V0-1)"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            depends on BSP_SUPPORT_DSI_VIDEO
+            select LCD_USING_JD9365DA
+            select BSP_LCDC_USING_DSI_VIDEO
+            select LCD_USING_PWM_AS_BACKLIGHT
+
+
+        config LCD_USING_TFT_NV3041A
+            bool "4.3 rect QSPI LCD(480x272 TFT-NV3041A)"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            select LCD_USING_NV3041A
+            select BSP_LCDC_USING_QADSPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            if LCD_USING_TFT_NV3041A
+               config LCD_NV3041A_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_JD9165A_DPI
+            bool "7.0 rect RGB FX70026 LCD(1024x600-JD9165A)"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            select LCD_USING_JD9165A
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_HTM_H070A20_RGB_A01
+            bool "7.0 rect RGB 1024x600 LCD(1024x600-HTM-H070A20-RGB-A01)"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            select LCD_USING_HTM_H070A20
+            select BSP_LCDC_USING_DPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            depends on BSP_SUPPORT_DPI
+
+        config LCD_USING_TFT_GC9A01A
+            bool "1.28 rect SPI LCD(240x240 TFT-GC9A01A)"
+            select LCD_USING_GC9A01A
+            select BSP_LCDC_USING_QADSPI
+            if LCD_USING_TFT_GC9A01A
+                config LCD_GC9A01A_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool n
+            endif
+        config LCD_USING_TFT_NV3052C
+            bool "4.0 rect RGB+SPI LCD Module(720x720 TFT-NV3052C)"
+            select TSC_USING_GT911 if BSP_USING_TOUCHD
+            select LCD_USING_NV3052C
+            select BSP_LCDC_USING_DPI            
+            select LCD_USING_PWM_AS_BACKLIGHT
+
+    endchoice
+
+    config LCD_HOR_RES_MAX
+        int
+        default 368 if LCD_USING_ED_LB55DSI17801
+        default 368 if LCD_USING_ED_LB55DSI17801_QADSPI
+        default 368 if LCD_USING_ED_LB55SPI17801
+        default 454 if LCD_USING_ED_LB55DSI13901
+        default 454 if LCD_USING_ED_LB55DSI13902
+        default 454 if LCD_USING_ED_LB55DSI13903
+        default 454 if LCD_USING_ED_LB55DSI_ICN3311
+        default 368 if LCD_USING_ED_LB55BILI8688E
+        default 368 if LCD_USING_ILI8688E_DSI
+        default 1024 if LCD_USING_ATK7016_ASIC
+        default 356 if LCD_USING_ED_LB55SPI17201
+        default 320 if LCD_USING_ED_LB55SPI17202
+        default 480 if LCD_USING_ST7701S_TFT
+        default 240 if LCD_USING_JDI387A_JDI
+        default 260 if LCD_USING_LS013B7DD02_JDI
+        default 320 if LCD_USING_ED_LB5XSPI18501
+        default 320 if LCD_USING_ED_LB55SPI17601
+        default 410 if LCD_USING_ED_LB5XSPI19701
+        default 410 if LCD_USING_ED_LB5XSPI19701_DDR
+        default 480 if LCD_USING_ED_LB5XSPI14901
+        default 480 if LCD_USING_ED_LB5XSPI14901_DDR
+        default 320 if LCD_USING_SPI_ST7789_GTM024_08_SPI8P
+        default 240 if LCD_USING_ILI9327_240x400_DBI
+        default 240 if LCD_USING_GC9307_240x284_SPI
+        default 240 if LCD_USING_ST7789_240x320_DBI
+        default 800 if LCD_USING_QX_4300J40R38_DPI
+        default 1280 if LCD_USING_ATK_MD1018R_ASIC
+        default 1024 if LCD_USING_ATK_MD0700R
+        default 800 if LCD_USING_TFT_AH034A01ZJINV4C30
+        default 480 if LCD_USING_TFT_NV3041A
+        default 1024 if LCD_USING_JD9165A_DPI
+        default 800 if LCD_USING_TFT_H080A11HDIFT4C30_V0_1
+        default 1024 if LCD_USING_HTM_H070A20_RGB_A01
+        default 240 if  LCD_USING_TFT_GC9A01A
+        default 720 if LCD_USING_TFT_NV3052C
+        
+    config LCD_VER_RES_MAX
+        int
+        default 448 if LCD_USING_ED_LB55DSI17801
+        default 448 if LCD_USING_ED_LB55DSI17801_QADSPI
+        default 448 if LCD_USING_ED_LB55SPI17801
+        default 454 if LCD_USING_ED_LB55DSI13901
+        default 454 if LCD_USING_ED_LB55DSI13902
+        default 454 if LCD_USING_ED_LB55DSI13903
+        default 454 if LCD_USING_ED_LB55DSI_ICN3311
+        default 448 if LCD_USING_ED_LB55BILI8688E
+        default 448 if LCD_USING_ILI8688E_DSI
+        default 600 if LCD_USING_ATK7016_ASIC
+        default 400 if LCD_USING_ED_LB55SPI17201
+        default 380 if LCD_USING_ED_LB55SPI17202
+        default 800 if LCD_USING_ST7701S_TFT
+        default 240 if LCD_USING_JDI387A_JDI
+        default 260 if LCD_USING_LS013B7DD02_JDI
+        default 386 if LCD_USING_ED_LB5XSPI18501
+        default 380 if LCD_USING_ED_LB55SPI17601
+        default 494 if LCD_USING_ED_LB5XSPI19701
+        default 494 if LCD_USING_ED_LB5XSPI19701_DDR
+        default 480 if LCD_USING_ED_LB5XSPI14901
+        default 480 if LCD_USING_ED_LB5XSPI14901_DDR
+        default 240 if LCD_USING_SPI_ST7789_GTM024_08_SPI8P
+        default 400 if LCD_USING_ILI9327_240x400_DBI
+        default 284 if LCD_USING_GC9307_240x284_SPI
+        default 320 if LCD_USING_ST7789_240x320_DBI
+        default 480 if LCD_USING_QX_4300J40R38_DPI
+        default 800 if LCD_USING_ATK_MD1018R_ASIC
+        default 600 if LCD_USING_ATK_MD0700R
+        default 800 if LCD_USING_TFT_AH034A01ZJINV4C30
+        default 272 if LCD_USING_TFT_NV3041A
+        default 600 if LCD_USING_JD9165A_DPI
+        default 600 if LCD_USING_HTM_H070A20_RGB_A01
+        default 240 if LCD_USING_TFT_GC9A01A
+        default 1280 if LCD_USING_TFT_H080A11HDIFT4C30_V0_1
+        default 720 if LCD_USING_TFT_NV3052C
+
+    config LCD_DPI
+        int
+        default 315 if LCD_USING_ED_LB55DSI17801
+        default 315 if LCD_USING_ED_LB55DSI17801_QADSPI
+        default 315 if LCD_USING_ED_LB55SPI17801
+        default 315 if LCD_USING_ED_LB55DSI13901
+        default 315 if LCD_USING_ED_LB55DSI13902
+        default 315 if LCD_USING_ED_LB55DSI13903
+        default 315 if LCD_USING_ED_LB55BILI8688E
+        default 315 if LCD_USING_ILI8688E_DSI
+        default 315 if LCD_USING_ED_LB55DSI_ICN3311        
+        default 315 if LCD_USING_ATK7016_ASIC
+        default 315 if LCD_USING_ED_LB55SPI17201
+        default 315 if LCD_USING_ED_LB55SPI17202
+        default 315 if LCD_USING_ST7701S_TFT
+        default 200 if LCD_USING_JDI387A_JDI
+        default 210 if LCD_USING_LS013B7DD02_JDI
+        default 315 if LCD_USING_ED_LB5XSPI18501
+        default 315 if LCD_USING_ED_LB55SPI17601
+        default 315 if LCD_USING_ED_LB5XSPI19701
+        default 315 if LCD_USING_ED_LB5XSPI19701_DDR
+        default 315 if LCD_USING_ED_LB5XSPI14901
+        default 315 if LCD_USING_ED_LB5XSPI14901_DDR
+        default 167 if LCD_USING_SPI_ST7789_GTM024_08_SPI8P
+        default 130 if LCD_USING_ILI9327_240x400_DBI
+        default 203 if LCD_USING_GC9307_240x284_SPI
+        default 120 if LCD_USING_ST7789_240x320_DBI
+        default 315 if LCD_USING_QX_4300J40R38_DPI
+        default 315 if LCD_USING_ATK_MD1018R_ASIC
+        default 315 if LCD_USING_ATK_MD0700R
+        default 235 if LCD_USING_TFT_AH034A01ZJINV4C30
+        default 315 if LCD_USING_TFT_NV3041A
+        default 315 if LCD_USING_JD9165A_DPI
+        default 315 if LCD_USING_HTM_H070A20_RGB_A01
+        default 240 if LCD_USING_TFT_GC9A01A
+        default 235 if LCD_USING_TFT_H080A11HDIFT4C30_V0_1
+        default 315 if LCD_USING_TFT_NV3052C
+
+    config BSP_USING_LCD_FRAMEBUFFER
+        bool
+        default n
+
+
+    config BSP_USING_TOUCHD
+        bool "Enable touch device"
+        default n
+
+if BSP_USING_TOUCHD
+    menu "Touch config"
+        config BSP_TOUCH_IRQ_FROM_DATASVC
+            bool "Touch IRQ using data service in LCPU"
+            default y
+            depends on BSP_USING_DATA_SVC && SOC_SF32LB55X
+
+        config TOUCH_DEVICE_NAME
+            string "Touch device bus name"
+            default "i2c1"
+    endmenu
+endif
+
+endif

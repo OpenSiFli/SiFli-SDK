@@ -1,0 +1,21 @@
+import os
+from building import *
+
+# Add source code
+src = Glob('*.c')
+
+SrcRemove(src, 'lcpu_img.c')
+CPPDEFINES=[]
+simu = GetOption('simu')
+if simu:
+    print("Add flag for 52X LCPU simulation")
+    CPPDEFINES += ['SF32LB52X_58']
+    src = ["lcpu_img.c"]
+    src += ["app_ble.c"]
+    src += ["main.c"]
+    src += ["app_bt.c"]
+
+
+group = DefineGroup('Applications', src, depend = [''], CPPDEFINES=CPPDEFINES)
+
+Return('group')

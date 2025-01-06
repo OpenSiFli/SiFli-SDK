@@ -1,0 +1,18 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+if GetDepend('BF0_LCPU'):
+    src += Glob('bt_audiopath.c')
+
+if GetDepend('BF0_HCPU') and GetDepend('BT_FINSH'):
+    src += Glob('*.c')
+
+
+group = DefineGroup('audio', src,depend = ['AUDIO_BT_AUDIO'],CPPPATH = CPPPATH)
+
+Return('group')

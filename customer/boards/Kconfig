@@ -1,0 +1,230 @@
+menu "Board Config"
+
+choice
+    prompt "Select board"
+    default BSP_USING_BOARD_EC_LB555XXX
+    config BSP_USING_BOARD_EH_SS6500XXX
+        depends on SOC_SF32LB52X
+        bool "SS6500XXX HDK"    
+    config BSP_USING_BOARD_EH_LB520XXX
+        depends on SOC_SF32LB52X
+        bool "SF32LB520XXX HDK"            
+    config BSP_USING_BOARD_EH_LB523XXX
+        depends on SOC_SF32LB52X
+        bool "SF32LB523XXX HDK"    
+    config BSP_USING_BOARD_EH_LB525XXX
+        depends on SOC_SF32LB52X
+        bool "SF32LB525XXX HDK"    
+    config BSP_USING_BOARD_EH_SS6600XXX
+        depends on SOC_SF32LB55X
+        bool "SS6600XXX HDK"
+    config BSP_USING_BOARD_EC_LB551XXX
+        depends on SOC_SF32LB55X
+        bool "SF32LB551XXX EVB"
+    config BSP_USING_BOARD_EC_LB555XXX
+        depends on SOC_SF32LB55X
+        bool "SF32LB555XXX EVB"
+    config BSP_USING_BOARD_EH_LB551
+        depends on SOC_SF32LB55X
+        bool "SF32LB551 HDK"
+    config BSP_USING_BOARD_EH_LB555
+        depends on SOC_SF32LB55X
+        bool "SF32LB555 HDK"
+    config BSP_USING_BOARD_EC_LB557XXX
+        depends on SOC_SF32LB55X
+        bool "SF32LB557XXX EVB"
+    config BSP_USING_BOARD_EC_LB561XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB561XXX EVB"
+    config BSP_USING_BOARD_EH_LB561XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB561XXX HDK"    
+    config BSP_USING_BOARD_EC_LB563XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB563XXX EVB"
+    config BSP_USING_BOARD_EH_LB563XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB563XXX HDK" 
+    config BSP_USING_BOARD_EC_LB567XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB567XXX EVB"
+    config BSP_USING_BOARD_EM_LB567XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB567XXX MOD"
+    config BSP_USING_BOARD_EM_LB566XXX
+        depends on SOC_SF32LB56X
+        bool "SF32LB566XXX MOD"
+    config BSP_USING_BOARD_EC_SS6700XXX
+        select BPS_V33
+        depends on SOC_SF32LB56X
+        bool "SS6700XXX EVB"
+    config BSP_USING_BOARD_EH_SS6700XXX
+        select BPS_V33
+        depends on SOC_SF32LB56X
+        bool "SS6700XXX HDK" 
+    config BSP_USING_BOARD_EC_LB583XXX
+        depends on SOC_SF32LB58X
+        bool "SF32LB583XXX EVB"
+    config BSP_USING_BOARD_EC_LB587XXX
+        depends on SOC_SF32LB58X
+        bool "SF32LB587XXX EVB"
+    config BSP_USING_PC_SIMULATOR
+        depends on SOC_SIMULATOR
+        bool "PC Simulator"
+    config BSP_USING_BOARD_CUSTOMER
+        bool "Sifli Solution customer board"
+    config BSP_USING_NON_SIFLI_BOARD
+        bool "non-SiFli board"
+endchoice
+
+if !BSP_USING_PC_SIMULATOR
+    config LXT_DISABLE
+    bool "Low power crystal disabled"
+    default n
+
+    if !LXT_DISABLE
+        config LXT_FREQ
+        int "Low power crystal frequency"
+        default 32768
+    endif
+
+    config BPS_V33
+        bool "Board with Power Supply 3.3 V for VDD1"
+        depends on !SOC_SF32LB52X
+        default n
+
+    config LXT_LP_CYCLE
+    int
+    default 200
+
+    menuconfig BT_TX_POWER_VAL
+        bool "Select BT RF TX power. Range: 0dbm to 13dbm"
+        default y
+        depends on (BF0_HCPU && (SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X))
+        config BT_TX_POWER_VAL_MAX
+            int "Select MAXIMUM TX power."
+            depends on (BT_TX_POWER_VAL && (SOC_SF32LB56X || SOC_SF32LB58X))
+            default 10
+        config BT_TX_POWER_VAL_MAX
+            int "Select BLE MAX TX power."
+            depends on (BT_TX_POWER_VAL && (SOC_SF32LB52X))
+            default 10
+        config BT_TX_POWER_VAL_MIN
+            int "Select MINIMUM TX power."
+            depends on BT_TX_POWER_VAL
+            default 0
+        config BT_TX_POWER_VAL_INIT
+            int "Select INIT TX power."
+            depends on (BT_TX_POWER_VAL && (SOC_SF32LB56X || SOC_SF32LB58X))
+            default 0
+        config BT_TX_POWER_VAL_INIT
+            int "Select classic BT MAX TX power.IF this value less than BLE MAX TX power,than classic BT max power is equal to BLE MAX TX power"
+            depends on (BT_TX_POWER_VAL && (SOC_SF32LB52X))
+            default 0
+    config BLE_TX_POWER_VAL
+        int "Select BLE TX power. Range: -10dbm to 10dbm"
+        depends on !(SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X)
+        default 0            
+endif
+
+if BSP_USING_BOARD_EH_SS6500XXX
+    source "$SIFLI_SDK/customer/boards/eh-ss6500/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_LB520XXX
+    source "$SIFLI_SDK/customer/boards/eh-lb520/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_LB523XXX
+    source "$SIFLI_SDK/customer/boards/eh-lb523/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_LB525XXX
+    source "$SIFLI_SDK/customer/boards/eh-lb525/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_SS6600XXX
+    source "$SIFLI_SDK/customer/boards/eh-ss6600xxx/Kconfig"
+endif
+if BSP_USING_BOARD_EC_LB551XXX || SIFLI_LB551
+    source "$SIFLI_SDK/customer/boards/ec-lb551xxx/Kconfig"
+endif
+if BSP_USING_BOARD_EC_LB555XXX 
+    source "$SIFLI_SDK/customer/boards/ec-lb555XXX/Kconfig"
+endif
+if BSP_USING_BOARD_EH_LB551
+    source "$SIFLI_SDK/customer/boards/eh-lb551/Kconfig.board"
+endif
+if BSP_USING_BOARD_EH_LB555 
+    source "$SIFLI_SDK/customer/boards/eh-lb555/Kconfig.board"
+endif
+if BSP_USING_BOARD_EC_LB557XXX || SIFLI_LB557
+    source "$SIFLI_SDK/customer/boards/ec-lb557XXX/Kconfig"
+endif
+
+if BSP_USING_BOARD_EC_LB561XXX || SIFLI_LB561
+    source "$SIFLI_SDK/customer/boards/ec-lb561XXX/Kconfig"
+endif
+if BSP_USING_BOARD_EC_LB563XXX || SIFLI_LB563 || BSP_USING_BOARD_EC_SS6700XXX
+    source "$SIFLI_SDK/customer/boards/ec-lb563XXX/Kconfig"
+endif
+
+if BSP_USING_BOARD_EH_SS6700XXX
+    source "$SIFLI_SDK/customer/boards/eh-ss6700/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_LB561XXX
+    source "$SIFLI_SDK/customer/boards/eh-lb561/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EH_LB563XXX
+    source "$SIFLI_SDK/customer/boards/eh-lb563/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EC_LB567XXX || SIFLI_LB567
+    source "$SIFLI_SDK/customer/boards/ec-lb567/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EM_LB567XXX
+    source "$SIFLI_SDK/customer/boards/em-lb567/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EM_LB566XXX
+    source "$SIFLI_SDK/customer/boards/em-lb566/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_EC_LB583XXX || SIFLI_LB583
+    source "$SIFLI_SDK/customer/boards/ec-lb583/Kconfig.board"
+endif
+if BSP_USING_BOARD_EC_LB585XXX || SIFLI_LB585
+    source "$SIFLI_SDK/customer/boards/ec-lb585/Kconfig.board"
+endif
+if BSP_USING_BOARD_EC_LB587XXX || SIFLI_LB587
+    source "$SIFLI_SDK/customer/boards/ec-lb587/Kconfig.board"
+endif
+
+
+if BSP_USING_PC_SIMULATOR
+    source "$SIFLI_SDK/customer/boards/pc/Kconfig"
+endif
+if !BSP_USING_PC_SIMULATOR     
+    menu "Display config"
+    config BSP_USING_LCD
+        bool "Enable LCD on the board"
+            select BSP_USING_EPIC
+            select BSP_USING_LCDC
+            default n
+    if !FPGA
+        source "$SIFLI_SDK/customer/boards/Kconfig_lcd"
+    endif
+    endmenu
+    source "$SIFLI_SDK/customer/boards/Kconfig_drv"
+    menu "Select board peripherals"
+        source "$SIFLI_SDK/customer/peripherals/Kconfig"
+    endmenu
+endif
+
+endmenu
+
+comment "------------End of Board configuration-----------"
+

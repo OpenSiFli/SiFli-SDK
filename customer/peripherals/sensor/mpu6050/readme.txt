@@ -1,0 +1,2 @@
+Motion Driver 6.12
+Support InvenSense MPU6050/MPU6500/MPU9150/MPU9250

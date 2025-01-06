@@ -1,0 +1,38 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+import os
+import sys
+from building import * 
+
+cwd = GetCurrentDir()
+
+src = ['data_service_main.c', 'data_service.c']
+
+if GetDepend('BSP_USING_DATA_SVC'):
+    src += Glob('pin_service.c')
+    if GetDepend('BF0_HCPU'):
+        src += Glob('power_manager_service.c')
+
+if GetDepend('PKG_USING_LITTLEVGL2RTT'):   
+    src += Glob('ui_datasrv_subscriber.c')  
+
+if GetDepend('BSP_USING_ANCS_SVC'):  
+    src += Glob('ancs_service.c')
+    
+if GetDepend('BSP_USING_BLE_NVDS_SVC'):  
+    src += Glob('ble_nvds_service.c')
+
+if GetDepend('BSP_USING_BLE_DFU_PORT_SVC'):
+    src += Glob('dfu_port_srv.c')
+
+if GetDepend('BSP_USING_AMS_SVC'):
+    src += Glob('ams_service.c')
+
+CPPPATH = [cwd]
+
+# sensor data service include sensor data, SifliSDK reuse sensor data strcture from rt-thread.
+CPPPATH += [cwd+'../../include', cwd+"../../../../rtos/rtthread/components/drivers/sensors"]
+    
+group = DefineGroup('data_bus', src, depend = ['BSP_USING_DATA_SVC'], CPPPATH = CPPPATH)
+
+Return('group')

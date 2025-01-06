@@ -1,0 +1,4 @@
+usage: 
+   font2c xxx\xxx.ttf 
+   
+   this tool will generate c file

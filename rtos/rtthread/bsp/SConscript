@@ -1,0 +1,14 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+if not GetDepend(['BSP_USING_NON_SIFLI_BOARD']):
+    objs = objs + SConscript('sifli/SConscript')
+else:
+    objs = objs + SConscript('stm32/SConscript')
+
+Return('objs')

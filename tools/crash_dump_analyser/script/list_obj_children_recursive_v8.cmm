@@ -1,0 +1,239 @@
+ENTRY &obj &depth
+
+PRIVATE &x1
+PRIVATE &x2
+PRIVATE &y1
+PRIVATE &y2
+PRIVATE &child_p
+PRIVATE &child_list
+PRIVATE &child_list_cur
+PRIVATE &child_list_total
+
+PRIVATE &temp
+PRIVATE &obj_info
+PRIVATE &is_local
+PRIVATE &is_trans
+PRIVATE &style_cnt
+PRIVATE &style_map
+
+
+PRIVATE &depth_bak
+PRIVATE &img_desc
+PRIVATE &img_w
+PRIVATE &img_h
+PRIVATE &img_cf
+PRIVATE &img_data
+PRIVATE &img_size
+PRIVATE &img_param
+LOCAL &indent_string
+LOCAL &point
+LOCAL &img_src_type
+
+&indent_string="  "
+&point="->"
+GOSUB GET_INDENTATION &depth
+
+;print obj basic info
+&x1=VAR.Value(((lv_obj_t*)&obj)->coords.x1)
+&x2=VAR.Value(((lv_obj_t*)&obj)->coords.x2)
+&y1=VAR.Value(((lv_obj_t*)&obj)->coords.y1)
+&y2=VAR.Value(((lv_obj_t*)&obj)->coords.y2)
+&x1=FORMAT.Decimal(0., &x1)
+&x2=FORMAT.Decimal(0., &x2)
+&y1=FORMAT.Decimal(0., &y1)
+&y2=FORMAT.Decimal(0., &y2)
+&type=VAR.Value(((lv_obj_t*)&obj)->class_p->constructor_cb)
+&type=STRing.SPLIT(sYmbol.Name(P:&type),"\",-1)
+print %COLOR.GREEN "&indent_string obj:&obj" "    type:&type" "    coords:[" "&x1" ",&y1" ",&x2" ",&y2" "]"
+;print %COLOR.GRAY "&indent_string coords:[" "&x1" ",&y1" ",&x2" ",&y2" "]"
+
+;print style info
+&style_cnt=VAR.Value(((lv_obj_t*)&obj)->style_cnt)
+&style_cur=0
+print %COLOR.GRAY "&indent_string styles_len: &style_cnt"
+
+WHILE (&style_cur<&style_cnt)
+(
+	PRIVATE &style_group
+	PRIVATE &style_selector
+	
+	&is_local=VAR.Value(((lv_obj_t*)&obj)->styles[&style_cur].is_local)
+	&is_trans=VAR.Value(((lv_obj_t*)&obj)->styles[&style_cur].is_trans)
+	&style_map=VAR.Value(((lv_obj_t*)&obj)->styles[&style_cur].style)
+	&style_selector=VAR.Value(((lv_obj_t*)&obj)->styles[&style_cur].selector)
+	&style_group=VAR.Value(((lv_obj_t*)&obj)->styles[&style_cur].style->has_group)
+	print %COLOR.GRAY "&indent_string  [&style_cur] local[&is_local] trans[&is_trans] map:[&style_map] group:[&style_group] selector:[&style_selector]"
+	GOSUB PRINT_STYLE_MAP &style_map
+	&style_cur=&style_cur+1
+)
+
+
+;if is image, print source
+IF (&type==lv_img_constructor)
+(
+	&img_desc=VAR.Value(((lv_img_t*)&obj)->src)
+	IF (&img_desc!=0)
+	(
+		&img_param=VAR.Value((uint8_t)(((uint8_t *)&img_desc)[0]))
+		GOSUB GET_IMG_SCR_TYPE &img_param
+		IF (&img_src_type==0)
+		(
+			&img_cf=VAR.Value(((lv_img_dsc_t *)&img_desc)->header.cf)
+			&img_w=VAR.Value(((lv_img_dsc_t *)&img_desc)->header.w)
+			&img_h=VAR.Value(((lv_img_dsc_t *)&img_desc)->header.h)
+			&img_data=VAR.Value(((lv_img_dsc_t *)&img_desc)->data)
+			&img_size=VAR.Value(((lv_img_dsc_t *)&img_desc)->data_size)
+			&img_w=FORMAT.Decimal(0., &img_w)
+			&img_h=FORMAT.Decimal(0., &img_h)
+			&img_size=FORMAT.Decimal(0., &img_size)
+			print %COLOR.GRAY "&indent_string src:[&img_desc] cf:[&img_cf] w:[&img_w] h:[&img_h] size:[&img_size]"
+		)
+		
+		IF (&img_src_type==1)
+		(
+			LOCAL &filename
+			&filename = VAR.String((char *)&img_desc)
+			print %COLOR.GRAY "&indent_string image file: &filename"
+		)
+	)
+)
+
+;recursive childrens
+&child_list_cur=0
+&child_list_total=VAR.Value((((lv_obj_t*)&obj)->spec_attr->child_cnt))
+&child_list=VAR.Value((((lv_obj_t*)&obj)->spec_attr->children))
+WHILE (&child_list_cur<&child_list_total)
+(
+	&child_p=VAR.Value(((lv_obj_t**)&child_list)[&child_list_cur])
+
+	&depth_bak=&depth
+	&depth=&depth+1
+	do list_obj_children_recursive_v8 &child_p &depth
+	&depth=&depth_bak
+
+	&child_list_cur=&child_list_cur+1
+)
+
+
+enddo
+
+;get indentation string
+GET_INDENTATION:
+ENTRY &dep
+WHILE (&dep>0)
+(
+	&indent_string="&indent_string&point"
+	&dep=&dep-1
+)
+RETURN
+
+;get image source type
+GET_IMG_SCR_TYPE:
+ENTRY &data
+IF (&data>=0x20)
+(
+	IF (&data<=0x7F)
+	(
+		&img_src_type=1 ;LV_IMG_SRC_FILE
+	)
+	ELSE
+	(
+		IF (&data>=0x80)
+		(
+			&img_src_type=2 ;LV_IMG_SRC_SYMBOL
+		)
+		ELSE
+		(
+			&img_src_type=0 ;LV_IMG_SRC_VARIABLE
+		)
+	)
+)
+ELSE
+(
+	&img_src_type=0 ;LV_IMG_SRC_VARIABLE
+)
+RETURN
+
+
+
+PRINT_STYLE_MAP:
+ENTRY &map
+PRIVATE &prop
+PRIVATE &value
+
+
+&prop=VAR.Value(((lv_style_t *)&map)->prop1)
+IF (&prop==0xFFFF)  ;Const prop
+(
+	PRIVATE &const_prop
+	&const_prop=VAR.Value(((lv_style_t *)&map)->v_p.const_props)
+	&prop=VAR.Value(((lv_style_const_prop_t *)&const_prop)->prop)
+	WHILE(&prop!=0)
+	(
+		&value=VAR.Value((uint32_t)(((lv_style_const_prop_t *)&const_prop)->value))
+		
+		GOSUB PRINT_STYLE &prop &value
+		
+		;Goto next
+		&const_prop=VAR.Value(((lv_style_const_prop_t *)&const_prop)+1)
+		&prop=VAR.Value(((lv_style_const_prop_t *)&const_prop)->prop)
+	)
+)
+ELSE 
+(
+	PRIVATE &prop_cnt
+	&prop_cnt=VAR.Value(((lv_style_t *)&map)->prop_cnt)
+	IF (&prop_cnt==1)
+	(
+		&value=VAR.Value((uint32_t)(((lv_style_t *)&map)->v_p.value1))
+		GOSUB PRINT_STYLE &prop &value
+	)
+	ELSE IF (&prop_cnt>1)
+	(
+		PRIVATE &prop_array
+		PRIVATE &value_array
+		PRIVATE &array_idx
+		
+		&prop_array=VAR.Value(((lv_style_t *)&map)->v_p.values_and_props + &prop_cnt * sizeof(lv_style_value_t))
+		&value_array=VAR.Value(((lv_style_t *)&map)->v_p.values_and_props)
+		
+		&array_idx=0
+		REPEAT &prop_cnt
+		(
+			&prop=VAR.Value(((uint16_t *)&prop_array)[&array_idx])
+			&value=VAR.Value(((uint32_t *)&value_array)[&array_idx])
+			
+			GOSUB PRINT_STYLE &prop &value
+
+			&array_idx=&array_idx+1
+		)
+		
+	)
+)
+RETURN
+
+
+
+PRINT_STYLE:
+ENTRY &prop &value
+
+PRIVATE &inherit
+PRIVATE &initial
+PRIVATE &prop_id
+
+&inherit=VAR.Value(((&prop)&0x8000)>>15)
+&initial=VAR.Value(((&prop)&0x4000)>>14)
+&prop_id=VAR.STRing((lv_style_prop_t)(((&prop)&0x3FFF)>>0))
+
+IF (&inherit!=0)
+	&inherit="[inherit]"
+ELSE
+	&inherit=""
+
+IF (&initial==0)
+	print %COLOR.GRAY "&indent_string   ID:&prop_id, v:&value  &inherit"
+ELSE
+	print %COLOR.GRAY "&indent_string   ID:&prop_id, v: see lv_style_prop_get_default(&prop_id)   &inherit"
+
+
+RETURN

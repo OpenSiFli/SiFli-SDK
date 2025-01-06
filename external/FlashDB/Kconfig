@@ -1,0 +1,48 @@
+
+menuconfig PKG_USING_FLASHDB
+    bool "FlashDB: Lightweight embedded database."
+    default n
+
+if PKG_USING_FLASHDB
+
+    config PKG_FLASHDB_PATH
+        string
+        default "/external/FlashDB"
+
+    config FDB_KV_CACHE_TABLE_SIZE
+        int "FlashDB Key-Value cache table size"
+        default 16
+
+    config PKG_FLASHDB_ERASE_GRAN
+        int "Erase minimum granularity"
+        default 2048 if RT_USING_MTD_NAND
+        default 4096
+
+    config PKG_FLASHDB_START_ADDR
+        int "Start addr on flash or partition"
+        default 0
+
+    config PKG_FLASHDB_DEBUG
+        bool "Enable debug log output"
+        default y
+
+    choice
+        prompt "FDB Mode"
+        default PKG_FDB_USING_AUTO_MODE
+        help
+            Select FDB Mode
+
+        config PKG_FDB_USING_AUTO_MODE
+            bool "Auto select Mode based on MTD type"
+
+        config PKG_FDB_USING_FAL_MODE
+            bool "Use FAL Mode"
+
+        config PKG_FDB_USING_FILE_LIBC_MODE
+            bool "Use File LIBC Mode"
+            
+        config PKG_FDB_USING_FILE_POSIX_MODE
+            bool "Use File POSIX Mode"            
+    endchoice        
+
+endif

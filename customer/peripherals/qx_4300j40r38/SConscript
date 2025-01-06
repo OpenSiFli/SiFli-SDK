@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd + '/../common', cwd]
+group = DefineGroup('Drivers', src, depend = ['LCD_USING_QX_4300J40R38'], CPPPATH = CPPPATH)
+
+Return('group')

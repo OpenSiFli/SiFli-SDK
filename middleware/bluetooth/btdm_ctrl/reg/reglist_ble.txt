@@ -1,0 +1,43 @@
+#***************************************************************************************
+# @file reglist.txt
+#
+# @brief This file contains the register files for build process. 
+
+# This file contains the description of the register files that must be parsed during
+# the build process.  The first element is the name of the register description file, it
+# is expected to be an XLS (EXCEL) sheet meeting the standard RivieraWaves format.
+# The second element is the base address of the register block described in the input
+# file.
+# The third element informs if the output register file must use long naming format or
+# short one.  Long naming means that the register's name are appended to each field name,
+# short naming means that the field names are used directly.  If two registers are using
+# the same field name, long naming should be used.  This is not verified during register
+# build time but at compilation time.
+#
+# Copyright (C) RivieraWaves 2009-2015
+#
+#***************************************************************************************
+
+# Common
+    ../../ip/ll/sch/import/RW-EM-ET.xls                 EM       0x50000000 EM EM long ET trace
+    ../../modules/rwip/import/reg/RW-DM-CORE-REG.xls IPCORE   0x50200000 REG_IP IP long
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-REG.xls   IPCORE   0x50200000 REG_IP IP long BTS
+
+# BLE
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-REG.xls   BLECORE  0x50200000 REG_BLE BLE long
+    
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long CS trace
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long TX_DESC
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long RX_DESC trace
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long RX_CTE_DESC trace
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long WPAL
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long RAL
+
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long RX_ISO_DESC 
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long TX_ISO_DESC
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long RX_ISO_BUF 
+    ../../ip/ll/ble/import/reg/RW-BLE-CORE-EM.xls    EM_BLE   0x50000000 EM_BLE EM_BLE long TX_ISO_BUF
+
+#***************************************************************************************
+# End of register list
+#***************************************************************************************

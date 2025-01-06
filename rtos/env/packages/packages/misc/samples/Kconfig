@@ -1,0 +1,8 @@
+menu "samples: kernel and components samples"
+
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/samples/kernel_samples/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/samples/filesystem_samples/Kconfig"
+source "$SIFLI_SDK/rtos/env/packages/packages/misc/samples/network_samples/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/samples/peripheral_samples/Kconfig"
+
+endmenu

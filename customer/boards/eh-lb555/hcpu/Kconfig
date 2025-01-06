@@ -1,0 +1,3 @@
+source "Kconfig.board"
+source "$SIFLI_SDK/customer/boards/Kconfig.v2"
+source "$SIFLI_SDK/customer/boards/Kconfig.common"

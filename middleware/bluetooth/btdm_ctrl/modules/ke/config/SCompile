@@ -1,0 +1,42 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for KE APIs (event, memory, message)
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (True): # always present 
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    ke_src_dir = os.path.join(ke_dir, 'src')
+    ke_api_dir = os.path.join(ke_dir, 'api')
+    ke_cfg_dir = os.path.join(ke_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    ke_def_list  = []
+    
+    if env['KE_MSG_CALLOC'] == 'on':
+        ke_def_list += ['CFG_KE_MSG_CALLOC']
+    
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    ke_inc_list  = []
+    ke_inc_list += [ke_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    ke_src_list = scutils.file_list_read(env, os.path.join(ke_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, ke_src_dir, ke_def_list, ke_inc_list, ke_src_list)

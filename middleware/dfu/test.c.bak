@@ -1,0 +1,320 @@
+// TestCrypto.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//
+
+#include <stdio.h>
+#include <stdint.h>
+#include "mbedtls/cipher.h"
+#include "mbedtls/gcm.h"
+#include "mbedtls/pk.h"
+#include "mbedtls/sha256.h"
+#include "dfu.h"
+
+#define DFU_CHANNEL 0x10
+
+struct vardata{
+    int size;
+    unsigned char data[4096];
+};
+
+
+
+struct vardata data_in;
+int fsize(FILE* fp) {
+    int prev = ftell(fp);
+    fseek(fp, 0L, SEEK_END);
+    int sz = ftell(fp);
+    fseek(fp, prev, SEEK_SET); //go back to where we were
+    return sz;
+}
+
+
+
+struct vardata data_out;
+struct vardata key;
+struct vardata iv;
+struct vardata tag;
+#if 0
+int main(int argc, char * argv[])
+{
+   // Decryption
+    FILE * fpkey;
+       FILE * fpdata;
+
+    fpkey=fopen(argv[1], "rb");
+    fpdata=fopen(argv[2], "rb");
+    if (fpkey==NULL||fpdata==NULL)
+        return -1;
+
+    key.size = 32;
+    fread(key.data, 32, 1, fpkey);
+
+    tag.size = 16;
+    fread(tag.data, 16, 1, fpdata);
+
+    iv.size = 16;
+    fread(iv.data, 16, 1, fpdata);
+
+    data_in.size = fsize(fpdata)-32;
+    fread(data_in.data, data_in.size, 1, fpdata);
+
+    mbedtls_gcm_context aes;
+    mbedtls_gcm_init(&aes);
+    mbedtls_gcm_setkey(&aes, MBEDTLS_CIPHER_ID_AES, (const unsigned char*)key.data, key.size * 8);
+    if (mbedtls_gcm_auth_decrypt(&aes,
+        data_in.size,
+        iv.data, iv.size, NULL, 0, tag.data, tag.size,
+        data_in.data, data_out.data))
+        printf("Integrity check failed\n");
+    mbedtls_gcm_free(&aes);
+    
+    fclose(fpkey);
+    fclose(fpdata);    
+}
+#endif
+
+#if 0
+int main(int argc, char* argv[])
+{
+    // Decryption
+    FILE* fpkey;
+    FILE* fpdata;
+
+    fpkey = fopen(argv[1], "rb");
+    fpdata = fopen(argv[2], "rb");
+    if (fpkey == NULL || fpdata == NULL)
+        return -1;
+
+    int ret = 0;
+    mbedtls_pk_context pk;
+
+    mbedtls_pk_init( &pk );
+
+    data_in.size=256;
+    fread(data_in.data,data_in.size,1,fpdata);
+
+    key.size=fsize(fpkey);
+    fread(key.data,key.size,1,fpkey);
+    
+    /*
+     * Read the RSA privatekey
+     */
+    if( ( ret = mbedtls_pk_parse_key(&pk, key.data, key.size, NULL, 0 ) ) != 0 )
+    {
+        printf( " failed\n  ! mbedtls_pk_parse_keyfile returned -0x%04x\n", -ret );
+        return -1;
+    }    
+
+    mbedtls_rsa_set_padding((mbedtls_rsa_context*)pk.pk_ctx, MBEDTLS_RSA_PKCS_V21, MBEDTLS_MD_SHA256);
+
+    /*
+     * Calculate the RSA encryption of the data.
+    */
+    if( ( ret = mbedtls_pk_decrypt( &pk, data_in.data, data_in.size, data_out.data, (size_t *)&data_out.size, sizeof(data_out.data),
+                                    NULL, NULL ) ) != 0 )
+    {
+        printf( " failed\n  ! mbedtls_pk_decrypt returned -0x%04x\n", -ret );
+        return -2;
+    }
+    fclose(fpkey);
+    fclose(fpdata);    
+}
+#endif
+
+#if 0
+int main(int argc, char* argv[])
+{
+    FILE* fpdata;
+    fpdata = fopen(argv[1], "rb");    
+    if (fpdata == NULL)
+        return -1;
+
+    mbedtls_sha256_context ctx2;
+    mbedtls_sha256_init(&ctx2);
+    mbedtls_sha256_starts(&ctx2, 0); /* SHA-256, not 224 */
+
+    do {
+        data_in.size = fread(data_in.data, 1, sizeof(data_in.data), fpdata);
+        if (data_in.size)
+            mbedtls_sha256_update(&ctx2, data_in.data, data_in.size);
+        if (data_in.size < sizeof(data_in.data))
+            break;
+    } while (1);
+    mbedtls_sha256_finish(&ctx2, data_out.data);
+    fclose(fpdata);
+}
+#endif
+
+#if 0
+// TestCrypto <root_key> <core_key> <flash_table_encrypted> <encrypted image>
+int main(int argc, char* argv[])
+{
+    // Decryption
+    FILE* fpkey_root;
+    FILE* fpkey_core;
+    FILE* fpdata;
+
+    // 1. Get root key
+    fpkey_root = fopen(argv[1], "rb");
+    if (fpkey_root == NULL)
+        return -1;
+    fread(g_sec_config.root_key, 32, 1, fpkey_root);
+    fclose(fpkey_root);
+
+    // 2. Decode core keys using root_key
+    fpkey_core = fopen(argv[2], "rb");
+    if (fpkey_core == NULL)
+        return -2;
+    else {
+        struct dfu_hdr *hdr=(struct dfu_hdr *)data_in.data;
+        hdr->dfu_channel=DFU_CHANNEL;
+        hdr->command=DFU_CONFIG_ENC;
+        hdr->id=DFU_CONFIG_KEY_2;
+        hdr->flags=0;
+        data_in.size=fsize(fpkey_core)+sizeof(struct dfu_hdr);
+        fread(&(data_in.data[sizeof(struct dfu_hdr)]),fsize(fpkey_core),1,fpkey_core);
+        dfu_receive_pkt(data_in.size,data_in.data);
+    }
+    fclose(fpkey_core);
+    
+    // 3. Decode flash_table using root_key
+    fpdata = fopen(argv[3], "rb");
+    if (fpdata == NULL)
+        return -2;
+    else {
+        struct dfu_hdr *hdr=(struct dfu_hdr *)data_in.data;
+        hdr->dfu_channel=DFU_CHANNEL;
+        hdr->command=DFU_CONFIG_ENC;
+        hdr->id=DFU_CONFIG_FLASH_TABLE;
+        hdr->flags=0;
+        data_in.size=fsize(fpdata)+sizeof(struct dfu_hdr);
+        fread(&(data_in.data[sizeof(struct dfu_hdr)]),fsize(fpdata),1,fpdata);
+        dfu_receive_pkt(data_in.size,data_in.data);
+    }
+    
+    // 4. Get Image Header
+#define IMG_ID 1    // Core ID 1, will use DFU_CONFIG_KEY_2 as core key
+    fpdata = fopen(argv[4], "rb");
+    if (fpdata == NULL)
+        return -3;
+    else {
+        struct dfu_hdr *hdr=(struct dfu_hdr *)data_in.data;
+        hdr->dfu_channel=DFU_CHANNEL;
+        hdr->command=DFU_IMG_HDR_ENC;
+        hdr->id=IMG_ID;        
+        hdr->flags=0;
+        data_in.size = 256 + sizeof(struct dfu_hdr);
+        fread(&(data_in.data[sizeof(struct dfu_hdr)]),256,1,fpdata);
+        dfu_receive_pkt(data_in.size,data_in.data);
+    }
+
+    // 5. Get Image body
+    {
+        struct dfu_hdr *hdr=(struct dfu_hdr *)data_in.data;
+        hdr->dfu_channel=DFU_CHANNEL;
+        hdr->command=DFU_IMG_BODY_ENC;
+        hdr->id=IMG_ID;     
+        hdr->flags=0;
+        data_in.size=g_sec_config.imgs[IMG_ID].blksize+32+4;  // 16 bytes hash, 16 bytes nonce, 4 bytes offset(encrypted)
+        while (1) {
+            int len=fread(&(data_in.data[sizeof(struct dfu_hdr)]),1,data_in.size,fpdata);
+            if (len)
+                dfu_receive_pkt(len+sizeof(struct dfu_hdr), data_in.data);
+            if (len<data_in.size)
+                break;
+        }
+    }    
+
+    // 6. Validate HASH for whole image.
+    {
+        struct dfu_hdr *hdr=(struct dfu_hdr *)data_in.data;
+        hdr->dfu_channel=DFU_CHANNEL;
+        hdr->command=DFU_END;
+        hdr->id=IMG_ID;     
+        hdr->flags=0;
+        if (dfu_receive_pkt(sizeof(struct dfu_hdr),data_in.data)==DFU_SUCCESS)
+            printf("Success\n");
+        else 
+            printf("Failed\n");
+    }    
+}
+#endif
+
+// TestCrypto <non-encrypted flash table> <non-encrypted image>
+int main(int argc, char* argv[])
+{
+	FILE* fpdata;
+
+    // 1. Send flash_table
+    fpdata = fopen(argv[1], "rb");
+    if (fpdata == NULL)
+        return -2;
+    else {
+        struct dfu_hdr* hdr = (struct dfu_hdr*)data_in.data;
+        hdr->dfu_channel = DFU_CHANNEL;
+        hdr->command = DFU_CONFIG;
+        hdr->id = DFU_CONFIG_FLASH_TABLE;
+        hdr->flags = 0;
+        data_in.size = fsize(fpdata) + sizeof(struct dfu_hdr);
+        fread(&(data_in.data[sizeof(struct dfu_hdr)]), fsize(fpdata), 1, fpdata);
+        dfu_receive_pkt(data_in.size, data_in.data);
+    }
+
+    //     2. Get Image Header
+#define IMG_ID 1    // Core ID 1 
+#define BLOCK_SIZE  1024 
+    fpdata = fopen(argv[2], "rb");
+    if (fpdata == NULL)
+        return -3;
+    else {
+        struct dfu_hdr* hdr = (struct dfu_hdr*)data_in.data;
+        struct image_header* imghdr = (struct image_header*)(data_in.data+sizeof(struct dfu_hdr));
+        hdr->dfu_channel = DFU_CHANNEL;
+        hdr->command = DFU_IMG_HDR;
+        hdr->id = IMG_ID;
+        hdr->flags = 0;
+        imghdr->blksize=BLOCK_SIZE;
+        imghdr->length=fsize(fpdata);
+        data_in.size = sizeof(struct image_header) + sizeof(struct dfu_hdr);
+        dfu_receive_pkt(data_in.size, data_in.data);
+    }
+
+    // 3. Get Image body
+    {
+        struct dfu_hdr* hdr = (struct dfu_hdr*)data_in.data;
+        hdr->dfu_channel = DFU_CHANNEL;
+        hdr->command = DFU_IMG_BODY;
+        hdr->id = IMG_ID;
+        hdr->flags = 0;
+        while (1) {
+            int offset;
+            int len;
+
+            offset=ftell(fpdata);
+            data_in.size = g_sec_config.imgs[IMG_ID].blksize;  // 4 bytes offset + Body content
+            len= fread(&(data_in.data[8]), 1, data_in.size, fpdata);
+            
+            if (len) {
+                int *i=(int *)&(data_in.data[4]);
+                *i=offset;
+				len += 4;
+				dfu_receive_pkt(len + sizeof(struct dfu_hdr), data_in.data);
+            }
+            if (len < data_in.size)
+                break;
+        }
+    }
+
+	// 4. End of DFU
+	{
+		struct dfu_hdr* hdr = (struct dfu_hdr*)data_in.data;
+		hdr->dfu_channel = DFU_CHANNEL;
+		hdr->command = DFU_END;
+		hdr->id = IMG_ID;
+		hdr->flags = 0;
+		if (dfu_receive_pkt(sizeof(struct dfu_hdr), data_in.data) == DFU_SUCCESS)
+			printf("Success\n");
+		else
+			printf("Failed\n");
+	}
+
+}

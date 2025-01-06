@@ -1,0 +1,1700 @@
+menu "On-chip Peripheral RTOS Drivers"
+
+    menuconfig BSP_USING_GPIO
+        bool "Enable GPIO"
+        select RT_USING_PIN
+        default n
+        if BSP_USING_GPIO
+            config BSP_GPIO_HANDLE
+            int "GPIO BASE number"
+            default 2
+        endif
+    menuconfig BSP_USING_BUTTON
+        bool "Enable BUTTON"
+        default n
+        select BSP_USING_GPIO
+        depends on SOC_SF32LB55X
+        if BSP_USING_BUTTON
+            choice 
+                prompt "select timer used for button"
+                default BSP_USING_GPT2_BUTTON
+                config BSP_USING_GPT2_BUTTON
+                    bool "GPT2 input capture button"
+                    select BSP_USING_TIM
+                    select BSP_USING_GPTIM2               
+                config BSP_USING_GPT3_BUTTON
+                    bool "GPT3 input capture button"
+                    select BSP_USING_TIM
+                    select BSP_USING_GPTIM3
+                config BSP_USING_GPT5_BUTTON
+                    bool "GPT5 input capture button"
+                    select BSP_USING_TIM
+                    select BSP_USING_GPTIM5
+            endchoice
+            config SINGLE_AND_DOUBLE_TRIGGER
+                bool "support single and double click"
+                default y
+            config CONTINUOS_TRIGGER
+                bool "support continuos trigger"
+                default n
+            config LONG_FREE_TRIGGER
+                bool "support long press release"
+                default n    
+            config BUTTON_DEBOUNCE_TIME
+                int "This value is the button debounce time"
+                default 2  
+                help
+                    "This value = (n-1)*(button processing callback cycle)"
+            config BUTTON_CONTINUOS_CYCLE
+                int "This value is the button press the trigger cycle continuously"
+                default 1  
+                help
+                    "This value = (n-1)*(button processing callback cycle)"    
+            config BUTTON_LONG_CYCLE
+                int "This value is the button long press cycle time"
+                default 1  
+                help
+                    "This value = (n-1)*(button processing callback cycle)"
+            config BUTTON_DOUBLE_TIME
+                int "This value is the button double click time"
+                default 15  
+                help
+                    "This value = (n-1)*(button processing callback cycle)"        
+            config BUTTON_LONG_TIME
+                int "This value is the button long press time"
+                default 50  
+                help
+                    "This value = (n-1)*(button processing callback cycle)"        
+        endif
+    
+    config BSP_USING_DMA
+        bool "Enable DMA"
+        default y
+
+    menuconfig BSP_USING_UART
+        bool "Enable UART"
+        default n
+        select RT_USING_SERIAL
+        if BSP_USING_UART
+            config BSP_USING_UART1
+                bool "Enable UART1"
+                default n
+
+            config BSP_UART1_RX_USING_DMA
+                bool "Enable UART1 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART1
+                default n
+
+            config BSP_UART1_TX_USING_DMA
+                bool "Enable UART1 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART1
+                default n
+                
+            config BSP_USING_UART2
+                bool "Enable UART2"
+                default n
+
+            config BSP_UART2_RX_USING_DMA
+                bool "Enable UART2 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART2 
+                default n
+            config BSP_UART2_TX_USING_DMA
+                bool "Enable UART2 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART2 
+                default n
+
+            config BSP_USING_UART3
+                bool "Enable UART3"
+                default n
+
+            config BSP_UART3_RX_USING_DMA
+                bool "Enable UART3 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART3 
+                default n
+            config BSP_UART3_TX_USING_DMA
+                bool "Enable UART3 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART3 
+                default n
+                
+                
+            config BSP_USING_UART4
+                bool "Enable UART4"
+                default n
+
+            config BSP_UART4_RX_USING_DMA
+                bool "Enable UART4 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART4 
+                default n
+            config BSP_UART4_TX_USING_DMA
+                bool "Enable UART4 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART4 
+                default n
+
+            config BSP_USING_UART5
+                bool "Enable UART5"
+                default n
+
+            config BSP_UART5_RX_USING_DMA
+                bool "Enable UART5 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART5 
+                default n
+            config BSP_UART5_TX_USING_DMA
+                bool "Enable UART5 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART5 
+                default n                
+                
+            config BSP_USING_UART6
+                bool "Enable UART6"
+                depends on SOC_SF32LB58X || SOC_SF32LB56X
+                default n
+
+            config BSP_UART6_RX_USING_DMA
+                bool "Enable UART6 RX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART6 
+                default n
+            config BSP_UART6_TX_USING_DMA
+                bool "Enable UART6 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_UART6 
+                default n                
+        endif
+
+    menuconfig BSP_USING_SPI
+        bool "Enable SPI BUS"
+        default n
+        select RT_USING_SPI
+        if BSP_USING_SPI
+            config BSP_USING_SPI1
+                bool "Enable SPI1 BUS"
+                default n
+
+            config BSP_SPI1_TX_USING_DMA
+                bool "Enable SPI1 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_SPI1
+                default n
+                
+            config BSP_SPI1_RX_USING_DMA
+                bool "Enable SPI1 RX DMA"
+                depends on BSP_USING_SPI1
+                select BSP_USING_DMA
+                default n
+
+            config BSP_USING_SPI2
+                bool "Enable SPI2 BUS"
+                default n
+
+            config BSP_SPI2_TX_USING_DMA
+                bool "Enable SPI2 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_SPI2
+                default n
+                
+            config BSP_SPI2_RX_USING_DMA
+                bool "Enable SPI2 RX DMA"
+                depends on BSP_USING_SPI2
+                select BSP_USING_DMA
+                default n
+                
+            config BSP_USING_SPI3
+                bool "Enable SPI3 BUS"
+                default n
+
+            config BSP_SPI3_TX_USING_DMA
+                bool "Enable SPI3 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_SPI3
+                default n
+                
+            config BSP_SPI3_RX_USING_DMA
+                bool "Enable SPI3 RX DMA"
+                depends on BSP_USING_SPI3
+                select BSP_USING_DMA
+                default n
+
+            config BSP_USING_SPI4
+                bool "Enable SPI4 BUS"
+                default n
+
+            config BSP_SPI4_TX_USING_DMA
+                bool "Enable SPI4 TX DMA"
+                select BSP_USING_DMA
+                depends on BSP_USING_SPI4
+                default n
+                
+            config BSP_SPI4_RX_USING_DMA
+                bool "Enable SPI4 RX DMA"
+                depends on BSP_USING_SPI4
+                select BSP_USING_DMA
+                default n
+        endif
+
+        
+    menuconfig BSP_USING_I2C
+        bool "Enable I2C BUS"
+        default n
+        select RT_USING_I2C
+        if BSP_USING_I2C
+            config BSP_USING_I2C1
+                bool "Enable I2C1 BUS"
+                default n
+            config BSP_I2C1_USING_DMA
+                bool "I2C1 use DMA"
+                depends on BSP_USING_I2C1
+                default n
+            config BSP_USING_I2C2
+                bool "Enable I2C2 BUS"
+                default n
+            config BSP_I2C2_USING_DMA
+                bool "I2C2 use DMA"
+                depends on BSP_USING_I2C2
+                default n
+            config BSP_USING_I2C3
+                bool "Enable I2C3 BUS"
+                default n
+            config BSP_I2C3_USING_DMA
+                bool "I2C3 use DMA"
+                depends on BSP_USING_I2C3
+                default n
+            config BSP_USING_I2C4
+                bool "Enable I2C4 BUS"
+                default n
+            config BSP_I2C4_USING_DMA
+                bool "I2C4 use DMA"
+                depends on BSP_USING_I2C4
+                default n
+            config BSP_USING_I2C5
+                bool "Enable I2C5 BUS"
+                depends on !SOC_SF32LB52X
+                default n
+            config BSP_I2C5_USING_DMA
+                bool "I2C5 use DMA"
+                depends on BSP_USING_I2C5
+                default n    
+            config BSP_USING_I2C6
+                depends on !SOC_SF32LB52X
+                bool "Enable I2C6 BUS"
+                default n
+            config BSP_I2C6_USING_DMA
+                bool "I2C6 use DMA"
+                depends on BSP_USING_I2C6
+                default n       
+            config BSP_USING_I2C7
+                bool "Enable I2C7 BUS"
+                depends on SOC_SF32LB58X || SOC_SF32LB56X
+                default n
+            config BSP_I2C7_USING_DMA
+                bool "I2C7 use DMA"
+                depends on BSP_USING_I2C7
+                default n       
+        endif
+
+    menuconfig BSP_USING_SOFT_I2C
+        bool "Enable I2C BUS (software simulation)"
+        default n
+        depends on SOC_SF32LB55X
+        select RT_USING_I2C
+        select RT_USING_I2C_BITOPS
+        select RT_USING_PIN
+        if BSP_USING_SOFT_I2C
+            config BSP_USING_SOFT_I2C1
+                bool "Enable I2C1 BUS"
+                default n
+                
+            if BSP_USING_SOFT_I2C1
+                config BSP_I2C1_SCL_PIN
+                    int "i2c1 scl pin number"
+                    range 1 216
+                    default 34
+                config BSP_I2C1_SDA_PIN
+                    int "I2C1 sda pin number"
+                    range 1 216
+                    default 35
+            endif
+
+            config BSP_USING_SOFT_I2C2
+                bool "Enable I2C2 BUS"
+                default n
+                
+            if BSP_USING_SOFT_I2C2
+                config BSP_I2C2_SCL_PIN
+                    int "i2c2 scl pin number"
+                    range 1 216
+                    default 34
+                config BSP_I2C2_SDA_PIN
+                    int "I2C2 sda pin number"
+                    range 1 216
+                    default 35
+            endif
+
+            config BSP_USING_SOFT_I2C3
+                bool "Enable I2C3 BUS"
+                default n
+
+            if BSP_USING_SOFT_I2C3
+                config BSP_I2C3_SCL_PIN
+                    int "i2c3 scl pin number"
+                    range 1 216
+                    default 34
+                config BSP_I2C3_SDA_PIN
+                    int "I2C3 sda pin number"
+                    range 1 216
+                    default 35
+            endif
+
+            config BSP_USING_SOFT_I2C4
+                bool "Enable I2C4 BUS"
+                default n
+
+            if BSP_USING_SOFT_I2C4
+                config BSP_I2C4_SCL_PIN
+                    int "i2c4 scl pin number"
+                    range 1 216
+                    default 34
+                config BSP_I2C4_SDA_PIN
+                    int "I2C4 sda pin number"
+                    range 1 216
+                    default 35
+            endif
+
+        endif
+    menuconfig BSP_USING_TIM
+        bool "Enable timer"
+        default n
+        select RT_USING_HWTIMER
+        if BSP_USING_TIM
+            config BSP_USING_GPTIM1
+                depends on !BSP_GPADC_USE_GPTIME1
+                bool "Enable GPTimer1"
+                default n
+
+            config BSP_USING_GPTIM2
+                depends on !BSP_GPADC_USE_GPTIME2
+                bool "Enable GPTimer2"
+                default n
+
+            config BSP_USING_GPTIM3
+                depends on !BSP_GPADC_USE_GPTIME3
+                bool "Enable GPTimer3"
+                default n
+
+            config BSP_USING_GPTIM4
+                depends on !BSP_GPADC_USE_GPTIME4
+                bool "Enable GPTimer4"
+                default n
+                
+            config BSP_USING_GPTIM5
+                depends on !BSP_GPADC_USE_GPTIME5
+                bool "Enable GPTimer5"
+                default n                
+                
+            config BSP_USING_ATIM1
+                bool "Enable ATimer1"
+                default n
+                
+            config BSP_USING_ATIM2
+                bool "Enable ATimer2"
+                depends on SOC_SF32LB58X
+                default n
+                
+            config BSP_USING_BTIM1
+                bool "Enable BTimer1"
+                default n
+
+            config BSP_USING_BTIM2
+                bool "Enable BTimer2"
+                default n
+                
+            config BSP_USING_BTIM3
+                bool "Enable BTimer3"
+                default n
+
+            config BSP_USING_BTIM4
+                bool "Enable BTimer4"
+                default n
+
+            config BSP_USING_LPTIM1
+                bool "Enable LPTIM1"
+                default n
+            config BSP_USING_LPTIM2
+                bool "Enable LPTIM2"
+                default n
+            config BSP_USING_LPTIM3
+                bool "Enable LPTIM3"
+                default n    
+        endif
+
+    menuconfig BSP_USING_PWM
+        bool "Enable pwm"
+        default n
+        select RT_USING_PWM
+        if BSP_USING_PWM
+            config BSP_USING_PWM2
+                bool "Using PWM 2(corresponds to HW GPTIM1)"
+                default n
+            config BSP_USING_PWM3
+                depends on !BSP_USING_RGBLED_WITCH_PWM3
+                bool "Using PWM 3(corresponds to HW GPTIM2)"
+                default n
+            config BSP_USING_PWM4
+                bool "Using PWM 4(corresponds to HW GPTIM3)"
+                default n
+            config BSP_USING_PWM5
+                bool "Using PWM 5(corresponds to HW GPTIM4)"
+                default n
+            config BSP_USING_PWM6
+                bool "Using PWM 6(corresponds to HW GPTIM5)"
+                default n
+            config BSP_USING_PWMA1
+                bool "Using PWM A1"
+                default n
+            config BSP_USING_PWMA2
+                bool "Using PWM A2"
+                default n
+            config BSP_USING_PWM_LPTIM1
+                bool "Using PWM with LPTIM1"
+                default n
+            config BSP_USING_PWM_LPTIM2
+                bool "Using PWM with LPTIM2"
+                default n
+            config BSP_USING_PWM_LPTIM3
+                bool "Using PWM with LPTIM3"
+                default n
+        endif
+    menuconfig BSP_USING_RGBLED
+        bool "Enable rgbled"
+        default n
+        if BSP_USING_RGBLED
+            config BSP_USING_RGBLED_WITCH_PWM3
+                bool "Using PWM3 drimver rgbled"
+                default n
+            config BSP_USING_RGBLED_WITCH_PWM3_DMA
+                bool "PWM3 channel1 use DMA"
+                depends on BSP_USING_RGBLED_WITCH_PWM3
+                default n
+        endif
+    menuconfig BSP_USING_ADC
+        bool "Enable ADC"
+        default n
+        select RT_USING_ADC
+        if BSP_USING_ADC
+            config BSP_USING_ADC1
+                bool "Enable GPADC1"
+                default n
+            config BSP_GPADC_USING_DMA
+                bool "Enable GPADC DMA mode"
+                default n
+            config BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
+                bool "Enable GPADC support multi channel sampling"
+                default n       
+            if BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING    
+                    config BSP_GPADC_GPTIME_PEROID
+                        int "GPADC gptimer trigger peroid,uint:us"
+                        default 100
+                    choice
+                        prompt "gpadc use gptimer  select"
+                        default BSP_GPADC_USE_GPTIME1
+                        
+                        config BSP_GPADC_USE_GPTIME1
+                            bool "gpadc use gptimer1"
+                        config BSP_GPADC_USE_GPTIME2
+                            bool "gpadc use gptimer2"
+                        config BSP_GPADC_USE_GPTIME3
+                            depends on !SOC_SF32LB52X
+                            bool "gpadc use gptimer3"
+                        config BSP_GPADC_USE_GPTIME4
+                            depends on !SOC_SF32LB52X
+                            bool "gpadc use gptimer4"
+                        config BSP_GPADC_USE_GPTIME5
+                            depends on !SOC_SF32LB52X
+                            bool "gpadc use gptimer5"
+                    endchoice
+            endif
+        endif
+
+    config BSP_USING_SDADC
+        bool "Enable SDADC"
+        select RT_USING_ADC
+        depends on SOC_SF32LB58X || SOC_SF32LB55X
+        default n
+            
+    config BSP_USING_COMP
+        bool "Enable LPCOMP"
+        default n
+
+    menuconfig BSP_USING_MPI
+        bool "Enable MPI"
+        depends on !SOC_SF32LB55X
+        default y
+
+        config BSP_USING_SPI_FLASH
+            bool "Enable SPI FLASH Driver"
+            depends on BSP_USING_MPI
+            default y
+
+        if BSP_USING_MPI
+            menuconfig BSP_ENABLE_MPI1
+                bool "MPI Controller 1 Enable"
+                default n
+                if BSP_ENABLE_MPI1
+                    config BSP_ENABLE_QSPI1
+                        bool 
+                        default y
+                    choice
+                        prompt "MPI Mode"
+                        default BSP_MPI1_MODE_0
+
+                        config BSP_MPI1_MODE_0
+                            bool "NOR"
+                        config BSP_MPI1_MODE_1
+                            bool "NAND"
+                        config BSP_MPI1_MODE_2
+                            bool "PSRAM"
+                        config BSP_MPI1_MODE_3
+                            bool "OPSRAM"
+                        config BSP_MPI1_MODE_4
+                            bool "HPSRAM"
+                        config BSP_MPI1_MODE_5
+                            bool "LEGACY_PSRAM"
+                        config BSP_MPI1_MODE_6
+                            bool "HYPERBUS_PSRAM"
+                    endchoice
+
+                    config BSP_QSPI1_MODE
+                        int
+                        default 0 if BSP_MPI1_MODE_0
+                        default 1 if BSP_MPI1_MODE_1
+                        default 2 if BSP_MPI1_MODE_2
+                        default 3 if BSP_MPI1_MODE_3
+                        default 4 if BSP_MPI1_MODE_4
+                        default 5 if BSP_MPI1_MODE_5
+                        default 6 if BSP_MPI1_MODE_6
+
+                    if BSP_MPI1_MODE_0
+                        config BSP_USING_NOR_FLASH1
+                            bool
+                            default y
+                        config BSP_QSPI1_USING_DMA
+                            bool 
+                            default y
+                        config BSP_MPI1_EN_DTR
+                            bool "Enable DTR mode"
+                            default n
+                    endif
+                    if BSP_MPI1_MODE_1
+                        config BSP_USING_NAND_FLASH1
+                            bool
+                            default y
+                        config BSP_QSPI1_USING_DMA
+                            bool 
+                            default y
+                    endif
+                    if BSP_MPI1_MODE_2
+                        config BSP_USING_PSRAM1
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI1_MODE_3
+                        config BSP_USING_PSRAM1
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI1_MODE_4
+                        config BSP_USING_PSRAM1
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI1_MODE_5
+                        config BSP_USING_PSRAM1
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI1_MODE_6
+                        config BSP_USING_PSRAM1
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI1_MEM_SIZE
+                        int "MPI1 Mem Size (MB)"
+                        default 8
+                endif        
+                    
+            menuconfig BSP_ENABLE_MPI2
+                bool "MPI Controller 2 Enable"
+                default n
+                if BSP_ENABLE_MPI2
+                    config BSP_ENABLE_QSPI2
+                        bool 
+                        default y
+                    choice
+                        prompt "MPI Mode"
+                        default BSP_MPI2_MODE_0
+
+                        config BSP_MPI2_MODE_0
+                            bool "NOR"
+                        config BSP_MPI2_MODE_1
+                            bool "NAND"
+                        config BSP_MPI2_MODE_2
+                            bool "PSRAM"
+                        config BSP_MPI2_MODE_3
+                            bool "OPSRAM"
+                        config BSP_MPI2_MODE_4
+                            bool "HPSRAM"
+                        config BSP_MPI2_MODE_5
+                            bool "LEGACY_PSRAM"
+                        config BSP_MPI2_MODE_6
+                            bool "HYPERBUS_PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI2_MODE
+                        int
+                        default 0 if BSP_MPI2_MODE_0
+                        default 1 if BSP_MPI2_MODE_1
+                        default 2 if BSP_MPI2_MODE_2
+                        default 3 if BSP_MPI2_MODE_3
+                        default 4 if BSP_MPI2_MODE_4
+                        default 5 if BSP_MPI2_MODE_5
+                        default 6 if BSP_MPI2_MODE_6
+
+                    if BSP_MPI2_MODE_0
+                        config BSP_USING_NOR_FLASH2
+                            bool
+                            default y
+                        config BSP_QSPI2_USING_DMA
+                            bool 
+                            default y
+                        config BSP_MPI2_EN_DTR
+                            bool "Enable DTR mode"
+                            default n
+                    endif
+                    if BSP_MPI2_MODE_1
+                        config BSP_USING_NAND_FLASH2
+                            bool
+                            default y
+                        config BSP_QSPI2_USING_DMA
+                            bool 
+                            default y
+                    endif
+                    if BSP_MPI2_MODE_2
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif         
+                    if BSP_MPI2_MODE_3
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI2_MODE_4
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI2_MODE_5
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI2_MODE_6
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI2_MEM_SIZE
+                        int "MPI2 Mem Size (MB)"
+                        default 32
+                endif
+
+            menuconfig BSP_ENABLE_MPI3
+                bool "MPI Controller 3 Enable"
+                default n
+                if BSP_ENABLE_MPI3
+                    config BSP_ENABLE_QSPI3
+                        bool 
+                        default y
+                    choice
+                        prompt "MPI Mode"
+                        default BSP_MPI3_MODE_0
+
+                        config BSP_MPI3_MODE_0
+                            bool "NOR"
+                        config BSP_MPI3_MODE_1
+                            bool "NAND"
+                        config BSP_MPI3_MODE_2
+                            bool "PSRAM"
+                        config BSP_MPI3_MODE_3
+                            bool "OPSRAM"
+                        config BSP_MPI3_MODE_4
+                            bool "HPSRAM"
+                        config BSP_MPI3_MODE_5
+                            bool "LEGACY_PSRAM"
+                        config BSP_MPI3_MODE_6
+                            bool "HYPERBUS_PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI3_MODE
+                        int
+                        default 0 if BSP_MPI3_MODE_0
+                        default 1 if BSP_MPI3_MODE_1
+                        default 2 if BSP_MPI3_MODE_2
+                        default 3 if BSP_MPI3_MODE_3
+                        default 4 if BSP_MPI3_MODE_4
+                        default 5 if BSP_MPI3_MODE_5
+                        default 6 if BSP_MPI3_MODE_6
+
+                    if BSP_MPI3_MODE_0
+                        config BSP_USING_NOR_FLASH3
+                            bool
+                            default y 
+                        config BSP_QSPI3_USING_DMA
+                            bool 
+                            default y
+                        config BSP_MPI3_EN_DTR
+                            bool "Enable DTR mode"
+                            default n
+                    endif
+                    if BSP_MPI3_MODE_1
+                        config BSP_USING_NAND_FLASH3
+                            bool
+                            default y 
+                        config BSP_QSPI3_USING_DMA
+                            bool 
+                            default y
+                    endif
+                    if BSP_MPI3_MODE_2
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif     
+                    if BSP_MPI3_MODE_3
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI3_MODE_4
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI3_MODE_5
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI3_MODE_6
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI3_MEM_SIZE
+                        int "MPI3 Mem Size (MB)"
+                        default 32
+                endif
+            
+            menuconfig BSP_ENABLE_MPI4
+                bool "MPI Controller 4 Enable"
+                default n
+                depends on SOC_SF32LB58X
+                if BSP_ENABLE_MPI4
+                    config BSP_ENABLE_QSPI4
+                        bool 
+                        default y
+                    choice
+                        prompt "MPI Mode"
+                        default BSP_MPI4_MODE_0
+
+                        config BSP_MPI4_MODE_0
+                            bool "NOR"
+                        config BSP_MPI4_MODE_1
+                            bool "NAND"
+                        config BSP_MPI4_MODE_2
+                            bool "PSRAM"
+                        config BSP_MPI4_MODE_3
+                            bool "OPSRAM"
+                        config BSP_MPI4_MODE_4
+                            bool "HPSRAM"
+                        config BSP_MPI4_MODE_5
+                            bool "LEGACY_PSRAM"
+                        config BSP_MPI4_MODE_5
+                            bool "HYPERBUS_PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI4_MODE
+                        int
+                        default 0 if BSP_MPI4_MODE_0
+                        default 1 if BSP_MPI4_MODE_1
+                        default 2 if BSP_MPI4_MODE_2
+                        default 3 if BSP_MPI4_MODE_3
+                        default 4 if BSP_MPI4_MODE_4
+                        default 5 if BSP_MPI4_MODE_5
+                        default 6 if BSP_MPI4_MODE_6
+
+                    if BSP_MPI4_MODE_0
+                        config BSP_USING_NOR_FLASH4
+                            bool
+                            default y 
+                        config BSP_QSPI4_USING_DMA
+                            bool 
+                            default y
+                        config BSP_MPI4_EN_DTR
+                            bool "Enable DTR mode"
+                            default n
+                    endif
+                    if BSP_MPI4_MODE_1
+                        config BSP_USING_NAND_FLASH4
+                            bool
+                            default y 
+                        config BSP_QSPI4_USING_DMA
+                            bool 
+                            default y
+                    endif
+                    if BSP_MPI4_MODE_2
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI4_MODE_3
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI4_MODE_4
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI4_MODE_5
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI4_MODE_6
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI4_MEM_SIZE
+                        int "MPI4 Mem Size (MB)"
+                        default 4
+                endif
+            menuconfig BSP_ENABLE_MPI5
+                bool "MPI Controller 5 Enable"
+                default y
+                if BSP_ENABLE_MPI5
+                    config BSP_ENABLE_QSPI5
+                        bool 
+                        default y
+                    choice
+                        prompt "MPI Mode"
+                        default BSP_MPI5_MODE_0
+
+                        config BSP_MPI5_MODE_0
+                            bool "NOR"
+                        config BSP_MPI5_MODE_1
+                            bool "NAND"
+                        config BSP_MPI5_MODE_2
+                            bool "PSRAM"
+                        config BSP_MPI5_MODE_3
+                            bool "OPSRAM"
+                        config BSP_MPI5_MODE_4
+                            bool "OPSRAM"
+                        config BSP_MPI5_MODE_5
+                            bool "LEGACY_PSRAM"
+                        config BSP_MPI5_MODE_6
+                            bool "HYPERBUS_PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI5_MODE
+                        int
+                        default 0 if BSP_MPI5_MODE_0
+                        default 1 if BSP_MPI5_MODE_1
+                        default 2 if BSP_MPI5_MODE_2
+                        default 3 if BSP_MPI5_MODE_3
+                        default 4 if BSP_MPI5_MODE_4
+                        default 5 if BSP_MPI5_MODE_5
+                        default 6 if BSP_MPI5_MODE_6
+
+                    if BSP_MPI5_MODE_0
+                        config BSP_USING_NOR_FLASH5
+                            bool
+                            default y 
+                        config BSP_QSPI5_USING_DMA
+                            bool 
+                            default y
+                        config BSP_MPI5_EN_DTR
+                            bool "Enable DTR mode"
+                            default n
+                    endif
+                    if BSP_MPI5_MODE_1
+                        config BSP_USING_NAND_FLASH5
+                            bool
+                            default y 
+                        config BSP_QSPI5_USING_DMA
+                            bool 
+                            default y
+                    endif
+                    if BSP_MPI5_MODE_2
+                        config BSP_USING_PSRAM5
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI5_MODE_3
+                        config BSP_USING_PSRAM5
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI5_MODE_4
+                        config BSP_USING_PSRAM5
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI5_MODE_5
+                        config BSP_USING_PSRAM5
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    if BSP_MPI5_MODE_6
+                        config BSP_USING_PSRAM5
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI5_MEM_SIZE
+                        int "MPI5 Mem Size (MB)"
+                        default 4
+                endif
+            if BSP_MPI2_MODE_1 || BSP_MPI3_MODE_1 || BSP_MPI4_MODE_1
+                config BSP_USING_SPI_NAND
+                    bool
+                    default y
+            endif
+            config BSP_DISABLE_BBM
+                bool "Disable Nand Bad Block Manager"
+                depends on BSP_USING_SPI_NAND
+                default n
+            config BSP_FORCE_ERASE_NAND
+                bool "Force erase nand block ignore bad mark"
+                depends on BSP_USING_SPI_NAND
+                default n
+        endif
+
+    menuconfig BSP_USING_QSPI
+        bool "Enable QSPI"
+        depends on SOC_SF32LB55X
+        default y
+
+        config BSP_USING_SPI_FLASH
+            bool "Enable QSPI Driver"
+            depends on BSP_USING_QSPI
+            default y
+
+        if BSP_USING_QSPI
+            menuconfig BSP_ENABLE_QSPI1
+                bool "QSPI Controller 1 Enable"
+                default y
+                if BSP_ENABLE_QSPI1 = 0
+                    config BSP_QSPI1_MEM_SIZE
+                        depends on BSP_USING_BOARD_EC_SS6600A0
+                        int 
+                        default 0
+                endif
+                if BSP_ENABLE_QSPI1
+                    config BSP_QSPI1_USING_DMA
+                        bool 
+                        default y
+                    config BSP_QSPI1_MODE
+                        int 
+                        default 0
+                    if LB551_U4O5 || HDK_U4O5
+                        config BSP_QSPI1_MEM_SIZE
+                            int 
+                            default 4
+                    endif
+                    if LB551_U8N5 || HDK_U8N5 || BSP_USING_BOARD_EC_SS6600A9
+                        config BSP_QSPI1_MEM_SIZE
+                            int 
+                            default 8
+                    endif
+                    if !LB551_U4O5 && !LB551_U8N5 && !HDK_U4O5 && !HDK_U8N5 && !BSP_USING_BOARD_EC_SS6600A9
+                        config BSP_QSPI1_MEM_SIZE
+                            int "QSPI1 memory size"
+                            default 4
+                    endif
+
+                    config BSP_QSPI1_CHIP_ID
+                        int "QSPI1 Manul & Device ID"
+                        default 0
+                endif
+
+            menuconfig BSP_ENABLE_QSPI2
+                bool "QSPI Controller 2 Enable"
+                default n
+                if BSP_ENABLE_QSPI2
+                    config BSP_QSPI2_USING_DMA
+                        bool 
+                        default y
+                    choice
+                        prompt "QSPI Mode"
+                        default BSP_QSPI2_MODE_0
+
+                        config BSP_QSPI2_MODE_0
+                            bool "NOR"
+                        config BSP_QSPI2_MODE_1
+                            bool "NAND"
+                        config BSP_QSPI2_MODE_2
+                            bool "PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI2_MODE
+                        int
+                        default 0 if BSP_QSPI2_MODE_0
+                        default 1 if BSP_QSPI2_MODE_1
+                        default 2 if BSP_QSPI2_MODE_2
+                        default 3 if BSP_QSPI2_MODE_3
+
+                    if BSP_QSPI2_MODE_2
+                        config BSP_USING_PSRAM2
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI2_MEM_SIZE
+                        int "QSPI2 Mem Size (MB)"
+                        default 32
+                    config BSP_QSPI2_CHIP_ID
+                        int "QSPI2 Manul & Device ID"
+                        default 0
+                    config BSP_QSPI2_DUAL_CHIP
+                        bool "Dual flash chip on QSPI2"
+                        default n
+                endif
+
+            menuconfig BSP_ENABLE_QSPI3
+                bool "QSPI Controller 3 Enable"
+                default n
+                if BSP_ENABLE_QSPI3
+                    config BSP_QSPI3_USING_DMA
+                        bool 
+                        default y
+                    choice
+                        prompt "QSPI Mode"
+                        default BSP_QSPI3_MODE_0
+
+                        config BSP_QSPI3_MODE_0
+                            bool "NOR"
+                        config BSP_QSPI3_MODE_1
+                            bool "NAND"
+                        config BSP_QSPI3_MODE_2
+                            bool "PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI3_MODE
+                        int
+                        default 0 if BSP_QSPI3_MODE_0
+                        default 1 if BSP_QSPI3_MODE_1
+                        default 2 if BSP_QSPI3_MODE_2
+                        default 3 if BSP_QSPI3_MODE_3
+
+                    if BSP_QSPI3_MODE_2
+                        config BSP_USING_PSRAM3
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI3_MEM_SIZE
+                        int "QSPI3 Mem Size (MB)"
+                        default 32
+                    config BSP_QSPI3_CHIP_ID
+                        int "QSPI3 Manul & Device ID"
+                        default 0
+                    config BSP_QSPI3_DUAL_CHIP
+                        bool "Dual flash chip on QSPI3"
+                        default n
+                endif
+            
+            menuconfig BSP_ENABLE_QSPI4
+                bool "QSPI Controller 4 Enable"
+                default n
+                if BSP_ENABLE_QSPI4
+                    config BSP_QSPI4_USING_DMA
+                        bool 
+                        default y
+                    choice
+                        prompt "QSPI Mode"
+                        default BSP_QSPI4_MODE_0
+
+                        config BSP_QSPI4_MODE_0
+                            bool "NOR"
+                        config BSP_QSPI4_MODE_1
+                            bool "NAND"
+                        config BSP_QSPI4_MODE_2
+                            bool "PSRAM"
+                    endchoice    
+
+                    config BSP_QSPI4_MODE
+                        int
+                        default 0 if BSP_QSPI4_MODE_0
+                        default 1 if BSP_QSPI4_MODE_1
+                        default 2 if BSP_QSPI4_MODE_2
+                        default 3 if BSP_QSPI4_MODE_3
+
+                    if BSP_QSPI4_MODE_2
+                        config BSP_USING_PSRAM4
+                            bool
+                            default y 
+                            select BSP_USING_PSRAM
+                    endif
+                    config BSP_QSPI4_MEM_SIZE
+                        int "QSPI4 Mem Size (MB)"
+                        default 32
+                    config BSP_QSPI4_CHIP_ID
+                        int "QSPI4 Manul & Device ID"
+                        default 0
+                    config BSP_QSPI4_DUAL_CHIP
+                        bool "Dual flash chip on QSPI4"
+                        default n
+                endif
+            if BSP_QSPI2_MODE_1 || BSP_QSPI3_MODE_1 || BSP_QSPI4_MODE_1
+                config BSP_USING_SPI_NAND
+                    bool
+                    default y
+            endif
+        endif
+    config BSP_USING_EXT_DMA
+        bool "Enable ext dma"
+        default y
+
+    config BSP_USING_HW_AES
+        bool "Enable hardware AES encryption/decryption"
+        depends on BF0_HCPU
+        default y
+
+    config BSP_USING_PSRAM
+        bool 
+        default n
+
+    config MEMCPY_NON_DMA
+        bool 
+        depends on !SOC_SIMULATOR
+        default n
+    config PSRAM_CACHE_WB
+        bool "Enable PSRAM Cache write back"
+        select MEMCPY_NON_DMA if PSRAM_CACHE_WB
+        depends on !SOC_SIMULATOR && BSP_USING_PSRAM
+        default n 
+        
+    config BSP_USING_PSRAM0
+        bool "Enable OPI PSRAM"
+        default n
+        depends on BF0_HCPU && SOC_SF32LB55X
+        select BSP_USING_PSRAM
+        if BSP_USING_PSRAM && SOC_SF32LB55X
+            config PSRAM_FULL_SIZE
+                int "PSRAM full chip size(MB)"
+                default 4
+            config BSP_USING_EXT_PSRAM
+                bool "Use External PSRAM"
+                default n
+            config BSP_USING_XCCELA_PSRAM
+                bool "Use Xceela PSRAM"
+                default n
+            config BSP_USING_DUAL_PSRAM
+                bool "Use Dual PSRAM"
+                default n
+             if BSP_USING_EXT_DMA
+                config PSRAM_USING_DMA
+                bool "PSRAM use DMA"
+                default n
+            endif
+        endif
+    config BSP_USING_USBD
+        bool "Enable USB Device"
+        select RT_USING_USB_DEVICE
+        default n
+        
+    config BSP_USING_USBH
+        bool "Enable USB Host"
+        select RT_USING_USB_HOST
+        default n
+        
+    config BSP_USING_ONCHIP_RTC
+        bool "Enable RTC"
+        select RT_USING_RTC
+        select RT_USING_LIBC
+        default n
+        
+    config BSP_RTC_PPM
+        int "RTC RC10K compensation"
+        depends on BSP_USING_ONCHIP_RTC
+        default 0
+        help
+            Software compensation for RC10K calibration used in RTC
+            RTC go faster than wall clock with positive RTC_PPM value
+            RTC go slower than wall clock with negtive  RTC_PPM value
+        
+    config BSP_USING_WDT
+        bool "Enable Watchdog Timer"
+        select RT_USING_WDT
+        default n
+        if BSP_USING_WDT                    
+            config BSP_WDT_TIMEOUT
+            int "Watchdog Timer timeout in seconds"
+            default 10
+            
+            config BSP_USING_WDT2_SWITCH
+            bool "Hcpu Control Switch Wdt2"
+            depends on BF0_HCPU
+            default n if !SOC_SF32LB52X
+            default y if SOC_SF32LB52X
+        endif
+        
+    config BSP_USING_EPIC
+        bool "Enable EPIC"
+        select RT_USING_EPIC
+        default n 
+
+    config BSP_USING_LCDC
+        bool "Enable LCDC"
+        select RT_USING_LCDC
+        default n 
+
+    config BSP_USING_CMSIS_NN
+        bool "Enable CMSIS NN"
+        default n
+
+    config BSP_USING_NN_ACC
+        bool "Enable NN ACC"
+        default n
+
+    menuconfig BSP_USING_HWMAILBOX
+        bool "Enable HwMailbox"
+        depends on SOC_SF32LB55X
+        default n
+        select RT_USING_HWMAILBOX
+        if BSP_USING_HWMAILBOX                    
+            config BSP_USING_MB_L2H_CH1
+                bool "Enable Mailbox L2H Channel1"
+                default n
+                help 
+                    Mailbox from LCPU to HCPU, channel 1
+            config BSP_USING_MB_L2H_CH2
+                bool "Enable Mailbox L2H Channel2"
+                default n
+                help 
+                    Mailbox from LCPU to HCPU, channel 2
+            config BSP_USING_MB_H2L_CH1
+                bool "Enable Mailbox H2L Channel1"
+                default n
+                help 
+                    Mailbox from HCPU to LCPU, channel 1
+            config BSP_USING_MB_H2L_CH2
+                bool "Enable Mailbox H2L Channel2"
+                default n
+                help 
+                    Mailbox from HCPU to LCPU, channel 2
+            if BF0_HCPU       
+                config BSP_USING_BIDIR_MB1
+                    bool "Enable Bidirectional Mailbox Channel1"
+                    default n
+                    select BSP_USING_MB_H2L_CH1
+                    select BSP_USING_MB_L2H_CH1
+                    help
+                        Mailbox between HCPU and LCPU, channel 1
+                config BSP_USING_BIDIR_MB3
+                    bool "Enable Bidirectional Mailbox Channel2"
+                    default n
+                    select BSP_USING_MB_H2L_CH2
+                    select BSP_USING_MB_L2H_CH2
+                    help
+                        Mailbox between HCPU and LCPU, channel 2
+            endif
+            if BF0_LCPU
+                config BSP_USING_BIDIR_MB1
+                    bool "Enable Bidirectional Mailbox Channel1"
+                    default n
+                    select BSP_USING_MB_L2H_CH1
+                    select BSP_USING_MB_H2L_CH1
+                    help 
+                        Mailbox between LCPU and HCPU, channel 1
+                config BSP_USING_BIDIR_MB3
+                    bool "Enable Bidirectional Mailbox Channel2"
+                    default n
+                    select BSP_USING_MB_L2H_CH2
+                    select BSP_USING_MB_H2L_CH2
+                    help 
+                        Mailbox between LCPU and HCPU, channel 2    
+            endif
+        endif
+    menuconfig BSP_USING_I2S
+        bool "Enable I2S audio driver"
+        select RT_USING_AUDIO
+        select BSP_USING_DMA
+        default n
+        if BSP_USING_I2S
+            config BSP_ENABLE_I2S_MIC
+                bool "Enable I2S1 for Mic"
+                depends on SOC_SF32LB58X || SOC_SF32LB55X
+                default n
+            config BSP_ENABLE_I2S_CODEC
+                bool "Enable I2S2 for Codec"
+                default n
+            config BSP_ENABLE_I2S3
+                depends on SOC_SF32LB58X || SOC_SF32LB56X	    
+                bool "Enable I2S3 for Codec"
+                default n
+        endif
+
+    menuconfig BSP_USING_SDIO
+        bool "Enable SDIO"
+        select RT_USING_SDIO
+        default n
+        depends on BF0_HCPU
+        if BSP_USING_SDIO
+            config BSP_USING_SDHCI
+                bool "Enable SD Host Control Interface"
+                default n
+                depends on !SOC_SF32LB52X
+                if BSP_USING_SDHCI
+                    config SD_MMC_DDR_SUPPORT
+                    bool "MMC card use DDR mode"
+                    default n
+                    config SD_MMC_OLINE_SUPPORT
+                    bool "MMC card support 8 line"
+                    default n
+                    menuconfig BSP_USING_SDHCI1
+                    bool "Enable SDHCI Handle 1"
+                    default n
+                    if BSP_USING_SDHCI1
+                        config SD_MAX_FREQ
+                        int "SD max output frequecy"
+                        default 24000000
+                        config SD_DMA_MODE
+                        int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
+                        default 2
+                        config SDIO_CARD_MODE
+                        int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                        default 0
+                    endif
+                    menuconfig BSP_USING_SDHCI2
+                    bool "Enable SDHCI Handle 2"
+                    default n
+                    depends on SOC_SF32LB58X || SOC_SF32LB55X
+                    if BSP_USING_SDHCI2
+                        config SD2_MAX_FREQ
+                        int "SD2 max output frequecy"
+                        default 24000000
+                        config SD2_DMA_MODE
+                        int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
+                        default 2
+                        config SDIO2_CARD_MODE
+                        int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                        default 0
+                    endif
+                endif
+            config BSP_USING_SD_LINE
+                bool "Enable Linear SDIO for LITE"
+                default n
+                depends on SOC_SF32LB56X || SOC_SF32LB52X
+                help
+                    Enable Linear SD interface
+
+        endif
+
+    config BSP_USING_PINMUX
+        bool "Enable Pin Mux"
+        default n
+    config BSP_USING_LCPU_PATCH
+        bool "Enable LCPU Patch"
+        default n
+        help
+            Enable LCPU patch binary and install from HCPU
+    config BSP_USING_LCPU_PATCH_IN_RAM
+        bool "LCPU PATCH run in RAM"
+        depends on SOC_SF32LB56X && BSP_USING_LCPU_PATCH
+        default n
+        help
+            LCPU patch running in RAM instead of flash
+
+    menuconfig BSP_USING_PDM
+        bool "Enable PDM audio driver"
+        select RT_USING_AUDIO
+        select BSP_USING_DMA
+        default n
+        if BSP_USING_PDM
+            config BSP_USING_PDM1
+                bool "Enable PDM1"
+                default n
+            config BSP_USING_PDM2
+                bool "Enable PDM2"
+                default n
+        endif
+
+    menuconfig BSP_ENABLE_AUD_PRC
+        bool "Enable Audio Process driver"
+    depends on !SOC_SF32LB55X
+        select RT_USING_AUDIO
+        select BSP_USING_DMA
+        default n
+        if BSP_ENABLE_AUD_PRC
+            config BSP_AUDPRC_TX0_DMA
+                bool "Enable AUDPRC TX Channel 0 DMA"
+                default n
+            config BSP_AUDPRC_TX1_DMA
+                bool "Enable AUDPRC TX Channel 1 DMA"
+                default n
+            config BSP_AUDPRC_TX2_DMA
+                bool "Enable AUDPRC TX Channel 2 DMA"
+                default n
+            config BSP_AUDPRC_TX3_DMA
+                bool "Enable AUDPRC TX Channel 3 DMA"
+                default n
+            config BSP_AUDPRC_RX0_DMA
+                bool "Enable AUDPRC RX Channel 0 DMA"
+                default n
+            config BSP_AUDPRC_RX1_DMA
+                bool "Enable AUDPRC RX Channel 1 DMA"
+                default n
+            config BSP_AUDPRC_TX_OUT0_DMA
+                bool "Enable AUDPRC TX Out Channel 0 DMA"
+                default n
+            config BSP_AUDPRC_TX_OUT1_DMA
+                bool "Enable AUDPRC TX Out Channel 1 DMA"
+                default n
+        endif
+
+    menuconfig BSP_ENABLE_AUD_CODEC
+        bool "Enable Audio codec driver"
+    depends on !SOC_SF32LB55X
+        select RT_USING_AUDIO
+        select BSP_USING_DMA
+        default n
+        if BSP_ENABLE_AUD_CODEC
+            config BSP_AUDCODEC_DAC0_DMA
+                bool "Enable AUDCODEC DAC Channel 0 DMA"
+                default n
+            config BSP_AUDCODEC_DAC1_DMA
+                bool "Enable AUDCODEC DAC Channel 1 DMA"
+                default n
+            config BSP_AUDCODEC_ADC0_DMA
+                bool "Enable AUDCODEC ADC Channel 0 DMA"
+                default n
+            config BSP_AUDCODEC_ADC1_DMA
+                bool "Enable AUDCODEC ADC Channel 1 DMA"
+                default n
+        endif
+
+    menuconfig RT_USING_BT
+        bool "Enable bt device"
+        default n
+        if RT_USING_BT
+            choice
+                prompt "bt driver"
+                default BT_USING_FR508X
+                
+                config BT_USING_FR508X
+                    bool "using fr508x"
+                    select RT_USING_AT
+                    select AT_USING_CLIENT
+                    
+                config BT_USING_BT_5376A2
+                    bool "using bt 5376A2"
+                    select RT_USING_AT
+                    select AT_USING_CLIENT
+                config BT_USING_SIFLI
+                    bool "using SIFLI Bluetooth"
+            endchoice
+            config BT_DEVICE_NAME
+                string "bt device name"
+                default "bt_device"
+            if !BT_USING_SIFLI
+                config BT_UART_NAME
+                    string "bt uart name"
+                    default "uart1"
+                    
+                config BT_UART_BAUD
+                    int "bt uart baud"
+                    default 921600
+                
+                    
+                config BT_RECV_BUFF_LEN
+                    int "bt recv buff size"
+                    default 512
+                    
+                menuconfig BT_PIN_CONFIG
+                    bool "bt pin number config -1:invalid >=0:valid"
+                    default y
+                    if BT_PIN_CONFIG
+                        config MCU_WAKEUP_BT_PIN
+                            int "mcu wakeup bt pin number"
+                            default 121
+                            
+                        config MCU_RESET_BT_PIN
+                            int "mcu reset bt pin number"
+                            default -1
+                            
+                        config BT_LEVEL_SHIFT_PIN
+                            int "bt level shift pin number"
+                            default -1
+                            
+                        config BT_POWER_PIN
+                            int "bt power pin number"
+                            default 104
+                            
+                        config BT_WAKEUP_MCU_PIN
+                            int "bt wakeup mcu pin number"
+                            default -1
+                            
+                        config BT_SPK_PA_EN_PIN
+                            int "bt spk pa en pin number"
+                            default -1
+                    endif
+                
+                config BT_USING_DTMF
+                    bool "bt using dtmf"
+                    default n
+                    
+                config BT_USING_MIC_MUTE
+                    bool "bt using mic mute"
+                    default n
+                    
+                config BT_USING_LOCAL_MEDIA_EX
+                    bool "bt using local media ex function"
+                    default n
+                    
+                config BT_USING_SIRI
+                    bool "bt using siri function"
+                    default n
+                                       
+                config BT_USING_USB
+                    bool "bt using usb function"
+                    default n
+                    
+                config BT_USING_FLASH_DB
+                    bool "bt using flash db storage related settings"
+                    default n
+                    
+                config BT_USING_LINK_BACK
+                    bool "bt using service control link back to BT"
+                    default n
+                    
+                config RT_US_BT_DEBUG
+                    bool "open bt debug switch"
+                    select AT_PRINT_RAW_CMD
+                    default y
+
+                config BT_SHARING_LOG_UART
+                    bool "bt client sharing log uart"
+                    default n
+
+                config BT_USING_DEVICE_TYPE
+                    bool "bt connect device type"
+                    default n
+            endif
+            if BT_USING_SIFLI
+                config BT_USING_HF
+                    bool "bt using hf"
+                    default y
+                    
+                config BT_USING_A2DP
+                    bool "bt using a2dp"
+                    default y
+                    
+                config BT_USING_SPP
+                    bool "bt using spp"
+                    default n
+                    
+                config BT_USING_DTMF
+                    bool "bt using dtmf"
+                    default n
+                    
+                config BT_USING_MIC_MUTE
+                    bool "bt using mic mute"
+                    default n
+
+                config BT_USING_SIRI
+                    depends on BT_USING_HF
+                    bool "bt using siri function"
+                    default n
+                    
+                config BT_USING_AVRCP
+                    bool "bt using avrcp"
+                    default n
+
+                config BT_USING_HID
+                    bool "bt using hid"
+                    default n
+                    
+                config BT_USING_AG
+                    bool "bt using HFP AG"
+                    default n                   
+                    
+                config BT_USING_GATT
+                    bool "bt using gatt"
+                    default n
+                    
+                config BT_USING_PBAP
+                    depends on BT_USING_HF
+                    bool "bt using pbap"
+                    default n 
+            endif            
+        endif
+        
+    config BSP_USING_MOTOR
+        bool "Enable motor device"
+        select RT_USING_MOTOR
+        default n
+
+    config BSP_USING_ACPU
+        bool "Enable ACPU"
+        default n
+        depends on BF0_HCPU && SOC_SF32LB58X
+        help
+            Enable ACPU
+
+    config BSP_USING_BUSMON
+        bool "Enable Busminitor for debugging"
+        depends on !SOC_SF32LB52X
+        default n
+        
+    config BSP_NOT_DISABLE_UNUSED_MODULE
+        bool "Not Disable Unused Module for Power Saving"
+        help 
+             HAL API is used instead of rt device driver, so module cannot be disabled
+        default n
+
+endmenu

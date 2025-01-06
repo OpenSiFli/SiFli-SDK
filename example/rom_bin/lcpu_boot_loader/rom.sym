@@ -1,0 +1,5 @@
+This file was obsoleted, and ROM symbol file was move to:
+
+SifliSDK\drivers\hal\sifli_rom.sym
+
+You can modify it with txt editor.

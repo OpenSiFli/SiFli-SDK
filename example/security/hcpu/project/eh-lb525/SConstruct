@@ -1,0 +1,92 @@
+import os
+import rtconfig
+
+# Check SDK 
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+################################## change rtconfig.xxx to customize build ########################################
+import resource
+variables = {}
+#CODE REGION
+variables['FLASH2_REGION0_OFFSET'] = 0x00040000
+variables['FLASH2_REGION0_SIZE'] = 6*1024*1024
+#GUI IMAGES REGION
+variables['FLASH2_REGION1_OFFSET'] = variables['FLASH2_REGION0_OFFSET'] + variables['FLASH2_REGION0_SIZE']
+variables['FLASH2_REGION1_SIZE'] = 1024 * 128
+#GUI FONTS REGION
+variables['FLASH2_REGION2_OFFSET'] = variables['FLASH2_REGION1_OFFSET'] + variables['FLASH2_REGION1_SIZE']
+variables['FLASH2_REGION2_SIZE'] = 10*1024*1024
+#GUI FILE SYSTEM REGION
+variables['FLASH2_REGION3_OFFSET'] = variables['FLASH2_REGION2_OFFSET'] + variables['FLASH2_REGION2_SIZE']
+variables['FLASH2_REGION3_SIZE'] = 8*1024*1024
+#BT FILE SYSTEM REGION1
+variables['FLASH2_REGION4_OFFSET'] = variables['FLASH2_REGION3_OFFSET'] + variables['FLASH2_REGION3_SIZE']
+variables['FLASH2_REGION4_SIZE'] = 512*1024
+##BT FILE SYSTEM REGION1
+variables['FLASH2_REGION5_OFFSET'] = variables['FLASH2_REGION4_OFFSET'] + variables['FLASH2_REGION4_SIZE']
+variables['FLASH2_REGION5_SIZE'] = 512*1024
+
+#PSRAM CODE REGION
+variables['PSRAM_REGION0_OFFSET'] = 0x00000000
+variables['PSRAM_REGION0_SIZE'] = 4*1024*1024
+#PSRAM DATA REGION
+variables['PSRAM_REGION1_OFFSET'] = variables['PSRAM_REGION0_OFFSET'] + variables['PSRAM_REGION0_SIZE']
+variables['PSRAM_REGION1_SIZE'] = 4*1024*1024
+#NMI SEC REGION
+variables['NMI_SEC_REGION0_OFFSET'] = 0x00052C00
+variables['NMI_SEC_REGION0_SIZE'] = 0x00018F80
+variables['NMI_SEC_REGION1_OFFSET'] = variables['NMI_SEC_REGION0_OFFSET'] + variables['NMI_SEC_REGION0_SIZE']
+variables['NMI_SEC_REGION1_SIZE'] = 0x00000080
+
+template="ptab.template"
+src_file = os.path.abspath('./linker_scripts/'+template)
+resource.GenPartitionJsonFile(src_file, 
+                              os.path.abspath('./linker_scripts'), 
+                              'ptab', 
+                              variables)
+# Add bootloader project
+proj_path = os.path.join(SIFLI_SDK, 'example/boot_loader/project/butterflmicro/ram')
+proj_name = 'bootloader'
+AddChildProj(proj_name, proj_path, False, {"PARTITION_TABLE": './linker_scripts/ptab.json'})
+
+lcpu_proj_path = os.path.join(SIFLI_SDK, 'example/security/lcpu/project/eh-6500')
+lcpu_proj_name = 'lcpu'
+AddChildProj(lcpu_proj_name, lcpu_proj_path, True, {"PARTITION_TABLE": './linker_scripts/ptab.json'})
+
+
+# Set default compile options
+SifliEnv()
+
+
+OUTPUT_DIR=rtconfig.OUTPUT_DIR
+TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+env = Environment(tools = ['mingw'],
+    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
+    CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
+    CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
+    AR = rtconfig.AR, ARFLAGS = '-rc',
+    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
+
+env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+
+# prepare building environment
+objs = PrepareBuilding(env)
+
+# make a building
+DoBuilding(TARGET, objs)
+
+# Add flash table project
+proj_path = os.path.join(SIFLI_SDK, 'example/flash_table/sf32lb52x_common')
+proj_name = 'ftab'
+AddChildProj(proj_name, proj_path, False, {"PARTITION_TABLE": './linker_scripts/ptab.json'})
+
+env['JLINK_DEVICE'] ='SF32LB52X_NAND'
+
+env['DIF'] ='ip'
+
+GenDownloaScript(env)
+

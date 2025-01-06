@@ -1,0 +1,8 @@
+config BF0_LCPU
+    bool
+    default y
+    
+config LCPU_ROM
+    bool
+    default y
+    

@@ -1,0 +1,22 @@
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src += Glob('./shine_mp3.c')
+src += Glob('./mp3_enc_demo.c')
+
+inc += [cwd]
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('tinymp3', src, depend = ['PKG_USING_TINYMP3'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

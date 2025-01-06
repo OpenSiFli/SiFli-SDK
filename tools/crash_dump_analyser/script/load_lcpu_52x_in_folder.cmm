@@ -1,0 +1,177 @@
+
+WCLEAR
+AREA.Reset
+
+GLOBAL &folder
+
+AREA.Create IO ;create an AREA window
+AREA.Select IO ;select the AREA window as PRACTICE input/output window
+AREA.view IO
+PRINT "Enter log folder:"
+ENTER &folder
+
+
+IF "&folder"==""
+(
+&folder = "."
+)
+
+SYStem.CPU CORTEXM33
+SYStem.Up
+
+; RAM
+D.LOAD.B &folder\lcpu_ram.bin 0x20400000
+
+
+; load symbol with executable data because flash data is not restored
+D.LOAD.ELF &folder\watch_l.axf
+
+; load rom symbol
+;D.LOAD.ELF &folder\lcpu_rom.axf /NOCLEAR
+
+; ROM
+;D.LOAD.B *.* 0x00000000
+
+
+; load symbol again because symbol would get lost after command d.load.b
+; D.LOAD.ELF *.axf /nocode
+
+
+winpos 0% 0% 100% 50%
+w.d.l
+winpos 0% 50% 50% 50%
+w.v.f /l /c
+winpos 50% 50% 50% 50%
+w.v.w \\watch_l\cpuport\error_reason
+
+; set sp 
+r.s r13 var.value(\\watch_l\cpuport\saved_stack_pointer)   ;var.value(saved_stack_pointer)  
+r.s r0 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r0)  ;saved_stack_frame
+r.s r1 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r1)
+r.s r2 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r2)
+r.s r3 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r3)
+r.s r4 var.value(\\watch_l\cpuport\saved_stack_frame.r4)
+r.s r5 var.value(\\watch_l\cpuport\saved_stack_frame.r5)
+r.s r6 var.value(\\watch_l\cpuport\saved_stack_frame.r6)
+r.s r7 var.value(\\watch_l\cpuport\saved_stack_frame.r7)
+r.s r8 var.value(\\watch_l\cpuport\saved_stack_frame.r8)
+r.s r9 var.value(\\watch_l\cpuport\saved_stack_frame.r9)
+r.s r10 var.value(\\watch_l\cpuport\saved_stack_frame.r10)
+r.s r11 var.value(\\watch_l\cpuport\saved_stack_frame.r11)
+r.s r12 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r12)
+; set lr
+r.s r14 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.lr) 
+r.s pc var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.pc)
+r.s xpsr var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.psr)
+
+
+
+;Var.NEWLOCAL char[48][128] \isr_name_tbl
+;Var.Set \isr_name_tbl[1]="Reset"
+;Var.Set \isr_name_tbl[2]="NMI"
+;Var.Set \isr_name_tbl[3]="HardFault"
+;Var.Set \isr_name_tbl[4]=""
+;Var.Set \isr_name_tbl[5]=""
+;Var.Set \isr_name_tbl[6]=""
+;Var.Set \isr_name_tbl[7]=""
+;Var.Set \isr_name_tbl[8]=""
+;Var.Set \isr_name_tbl[9]=""
+;Var.Set \isr_name_tbl[10]=""
+;Var.Set \isr_name_tbl[11]="SVC"
+;Var.Set \isr_name_tbl[12]=""
+;Var.Set \isr_name_tbl[13]=""
+;Var.Set \isr_name_tbl[14]="PendSV"
+;Var.Set \isr_name_tbl[15]="SysTick"
+;Var.Set \isr_name_tbl[16]="UART0"
+;Var.Set \isr_name_tbl[17]="UART1"
+;Var.Set \isr_name_tbl[18]="UART2"
+;Var.Set \isr_name_tbl[19]="CRC"
+;Var.Set \isr_name_tbl[20]="DMA"
+;Var.Set \isr_name_tbl[21]="I2C"
+;Var.Set \isr_name_tbl[22]="SPI_S"
+;Var.Set \isr_name_tbl[23]="SPI_M"
+;Var.Set \isr_name_tbl[24]="EMAC"
+;Var.Set \isr_name_tbl[25]=""
+;Var.Set \isr_name_tbl[26]="STB"
+;Var.Set \isr_name_tbl[27]="WDG"
+;Var.Set \isr_name_tbl[28]=""
+;Var.Set \isr_name_tbl[29]=""
+;Var.Set \isr_name_tbl[30]=""
+;Var.Set \isr_name_tbl[31]=""
+;Var.Set \isr_name_tbl[32]=""
+;Var.Set \isr_name_tbl[33]=""
+;Var.Set \isr_name_tbl[34]=""
+;Var.Set \isr_name_tbl[35]=""
+;Var.Set \isr_name_tbl[36]=""
+;Var.Set \isr_name_tbl[37]=""
+;Var.Set \isr_name_tbl[38]=""
+;Var.Set \isr_name_tbl[39]=""
+;Var.Set \isr_name_tbl[40]=""
+;Var.Set \isr_name_tbl[41]=""
+;Var.Set \isr_name_tbl[42]=""
+;Var.Set \isr_name_tbl[43]=""
+;Var.Set \isr_name_tbl[44]="PC"
+;Var.Set \isr_name_tbl[45]="NTB1"
+;Var.Set \isr_name_tbl[46]="NTB0"
+;Var.Set \isr_name_tbl[47]="PlcPHY"
+
+; AREA.Create IsrHistory
+; AREA.Select IsrHistory
+; AREA.view IsrHistory
+; PRIVATE &isr_switch_depth
+; &isr_switch_depth=VAR.Value(sizeof(g_isr_history)/sizeof(g_isr_history[0]))
+; PRIVATE &i
+; &i=0.
+; PRIVATE &index
+; &index=VAR.Value(g_isr_history_index+1)
+; PRIVATE &COL1
+; PRIVATE &COL2
+; PRIVATE &COL3
+; PRIVATE &COL4
+; &COL1=FORMAT.String("ISR", 20., ' ')
+; &COL2=FORMAT.String("Start Time", -20., ' ')
+; &COL3=FORMAT.String("End Time", -20., ' ')
+; &COL4=FORMAT.String("Duration(us)", -20., ' ')
+; PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3" "&COL4"
+; WHILE &i<&isr_switch_depth
+; (
+;    PRIVATE &isr_name
+;    PRIVATE &start_time
+;    PRIVATE &end_time
+;    PRIVATE &duration
+;    PRIVATE &ipsr
+;    
+;    &ipsr=VAR.Value(g_isr_history[&index].ipsr)
+;    &isr_name=VAR.String(\isr_name_tbl[&ipsr])
+;    &isr_name=FORMAT.String("&isr_name", 20., ' ') 
+;    &start_time=VAR.Value(g_isr_history[&index].start)
+;    &end_time=VAR.Value(g_isr_history[&index].end)
+;    &duration=&end_time-&start_time
+;    &duration=(&duration+0x100000000)%0x100000000
+;    &duration=&duration/25.0
+; 
+;    &start_time=FORMAT.DecimalU(20., &start_time)
+;    &end_time=FORMAT.DecimalU(20., &end_time)
+;    &duration=FORMAT.Float(20.,1.,&duration)
+;    
+;    PRINT "&isr_name" "&start_time" "&end_time" "&duration" 
+;    &index=(&index+1)%&isr_switch_depth
+;    &i=&i+1
+; ) 
+
+;PRIVATE &switch_hist_addr
+;&switch_hist_addr=VAR.Value(&\\watch_l\cpu_usage_profiler\thread_switch_hist)
+;&switch_hist_addr=VAR.Value(&thread_switch_hist)
+;do show_switch_history &switch_hist_addr
+;do show_switch_history
+
+do show_tasks
+
+;PRIVATE &heap_ptr_alias
+;PRIVATE &heap_end_alias
+&heap_ptr_alias=VAR.Value(\\lcpu_rom\mem\heap_ptr)
+&heap_end_alias=VAR.Value(\\lcpu_rom\mem\heap_end)
+;do show_heap_lcpu &heap_ptr_alias &heap_end_alias
+;do show_heap_lcpu
+
+enddo

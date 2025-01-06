@@ -1,0 +1,39 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Display module
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if env['DISPLAY'] == 'on':
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    display_src_dir = os.path.join(display_dir, 'src')
+    display_api_dir = os.path.join(display_dir, 'api')
+    display_cfg_dir = os.path.join(display_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    display_def_list  = []
+    display_def_list += ['CFG_DISPLAY']
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    display_inc_list  = []
+    display_inc_list += [display_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    display_src_list = scutils.file_list_read(env, os.path.join(display_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, display_src_dir, display_def_list, display_inc_list, display_src_list)

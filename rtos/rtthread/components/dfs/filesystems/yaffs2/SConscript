@@ -1,0 +1,23 @@
+# RT-Thread building script for component
+
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('*.c')
+comm = Glob('yaffs/*.c')
+SrcRemove(comm, 'yaffs/yaffs_attribs.c')
+SrcRemove(comm, 'yaffs/yaffs_mtdif_multi.c')
+SrcRemove(comm, 'yaffs/yaffs_mtdif_single.c')
+SrcRemove(comm, 'yaffs/yaffs_vfs_multi.c')
+SrcRemove(comm, 'yaffs/yaffs_vfs_single.c')
+direct = Glob('yaffs/direct/*.c')
+
+src = src + comm + direct
+
+depend = ['RT_USING_DFS', 'RT_USING_MTD_NAND', 'PKG_USING_DFS_YAFFS']
+CPPPATH = [cwd + '/yaffs', cwd + '/yaffs/direct']
+
+group = DefineGroup('yaffs', src , depend = depend, CPPPATH = CPPPATH)
+
+Return('group')

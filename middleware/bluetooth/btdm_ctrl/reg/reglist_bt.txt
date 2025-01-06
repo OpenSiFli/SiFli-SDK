@@ -1,0 +1,35 @@
+#***************************************************************************************
+# @file reglist.txt
+#
+# @brief This file contains the register files for build process. 
+
+# This file contains the description of the register files that must be parsed during
+# the build process.  The first element is the name of the register description file, it
+# is expected to be an XLS (EXCEL) sheet meeting the standard RivieraWaves format.
+# The second element is the base address of the register block described in the input
+# file.
+# The third element informs if the output register file must use long naming format or
+# short one.  Long naming means that the register's name are appended to each field name,
+# short naming means that the field names are used directly.  If two registers are using
+# the same field name, long naming should be used.  This is not verified during register
+# build time but at compilation time.
+#
+# Copyright (C) RivieraWaves 2009-2015
+#
+#***************************************************************************************
+
+# Common
+    ../../ip/ll/sch/import/RW-EM-ET.xls                             EM       0x50000000 EM EM long ET trace
+    ../../modules/rwip/import/reg/RW-DM-CORE-REG.xls             IPCORE   0x50100000 REG_IP IP long
+
+# BT
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-REG.xls   BTCORE   0x50100000 REG_BT BT long
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-REG.xls   BTCORE   0x50100000 REG_BT BT long  ESCO
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-REG.xls   BTCORE   0x50100000 REG_BT BT long  AUDIO
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-EM.xls    EM_BT    0x50000000 EM_BT EM_BT long CS
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-EM.xls    EM_BT    0x50000000 EM_BT EM_BT long TXDESC
+    ../../ip/ll/bt/import/reg/RW-BT-CORE-EM.xls    EM_BT    0x50000000 EM_BT EM_BT long RXDESC
+    
+#***************************************************************************************
+# End of register list
+#***************************************************************************************

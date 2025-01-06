@@ -1,0 +1,20 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+list = os.listdir(cwd)
+
+if GetDepend('ZBT'):    
+    objs=[]
+else:
+    objs = DefineGroup('bt', src, depend = ['BSP_BLE_SIBLES'], CPPPATH = CPPPATH)
+
+    for d in list:
+        path = os.path.join(cwd, d)
+        if os.path.isfile(os.path.join(path, 'SConscript')):
+            objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+
+Return('objs')

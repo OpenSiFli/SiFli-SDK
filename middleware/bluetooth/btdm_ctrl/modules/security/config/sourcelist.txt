@@ -1,0 +1,84 @@
+ #***************************************************************************************
+ # @file sourcelist.txt
+ #
+ # @brief This file lists up all the source code that will be
+ #        compiled and built for Security modules:
+ #           - AES-128
+ #           - AES_CMAC
+ #           - ECC P256
+ #           - SHA 256
+ #
+ # Copyright (C) RivieraWaves 2009-2021
+ #
+ #***************************************************************************************
+
+#***************************************************************************************
+#                     AES Functions
+#***************************************************************************************
+    aes/aes.c
+    aes/aes_cmac.c
+    
+    aes/aes_h6.c
+    aes/aes_h7.c
+    aes/aes_h8.c
+    aes/aes_h9.c
+
+#if (env['BLE_EMB_PRESENT'] == "on") or (env['BLE_HOST_PRESENT'] == "on")
+    aes/aes_rpa.c
+#endif // (env['BLE_EMB_PRESENT'] == "on") or (env['BLE_HOST_PRESENT'] == "on")
+    
+#if (env['BLE_HOST_PRESENT'] == "on")
+    aes/aes_s1.c
+    aes/aes_k1.c
+    aes/aes_c1.c
+    aes/aes_f4.c
+    aes/aes_f5.c
+    aes/aes_f6.c
+    aes/aes_g2.c
+#endif // (env['BLE_HOST_PRESENT'] == "on")
+    
+#if (env['BLE_HOST_PRESENT'] == "on") and (env['MESH'] == "on")
+    aes/aes_ccm.c
+    aes/aes_k2.c
+    aes/aes_k3.c
+    aes/aes_k4.c
+#endif // (env['BLE_HOST_PRESENT'] == "on") and (env['MESH'] == "on")
+
+#if (env['GFP_PROVIDER'] == 'on')
+    aes/aes_ctr.c
+#endif // (env['GFP_PROVIDER'] == 'on')
+
+
+#***************************************************************************************
+#                     ECC P256
+#***************************************************************************************
+#if (env['ECC_P256_PRESENT'] == "on")
+    ecc/ecc_p256.c
+#endif // (env['ECC_P256_PRESENT'] == "on")
+
+
+#***************************************************************************************
+#                     SHA 256
+#***************************************************************************************
+#if (env['SHA_PRESENT'] == "on")
+    sha/sha.c
+#endif // (env['SHA_PRESENT'] == "on")
+#if (env['SHA_PRESENT'] == "on") and (env['BT_EMB_PRESENT'] == 'on')
+    sha/sha_bt.c
+#endif // (env['SHA_PRESENT'] == "on") and (env['BT_EMB_PRESENT'] == 'on')
+
+#***************************************************************************************
+#                     RSA 1024
+#***************************************************************************************
+#if (env['RSA_PRESENT'] == "on")
+    rsa/rsa.c
+    rsa/rsa_bytes.c
+    rsa/rsa_montgomery.c
+#endif // (env['RSA_PRESENT'] == "on") 
+
+#***************************************************************************************
+#                     Test Vectors
+#***************************************************************************************
+#if (env['DBG'] == 'on') and (env['BLE_HOST_PRESENT'] == 'on')
+security_dbg_test.c
+#endif // (env['DBG'] == 'on) and (env['BLE_HOST_PRESENT'] == 'on')

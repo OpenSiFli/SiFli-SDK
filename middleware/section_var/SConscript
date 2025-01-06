@@ -1,0 +1,17 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+
+# add driver basic code
+src = src + Glob('./*.c')
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = ['USING_SECTION_ITER'], CPPPATH = inc)
+Return('objs')

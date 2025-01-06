@@ -1,0 +1,4 @@
+config USING_FAT_CHECK
+    bool "FAT filesystem check and repair"
+    depends on RT_USING_DFS_ELMFAT
+    default n

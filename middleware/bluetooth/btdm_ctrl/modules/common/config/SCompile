@@ -1,0 +1,41 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Common APIs
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (True): # always present 
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    common_src_dir = os.path.join(common_dir, 'src')
+    common_api_dir = os.path.join(common_dir, 'api')
+    common_cfg_dir = os.path.join(common_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    common_def_list  = []
+    if env['SYSTEM_MEM_SAFETY_MARGIN_SIZE'] != 'off':
+        common_def_list += ["CFG_SYSTEM_MEM_SAFETY_MARGIN_SIZE=%s"%(env['SYSTEM_MEM_SAFETY_MARGIN_SIZE'])]
+    
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    common_inc_list  = []
+    common_inc_list += [common_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    common_src_list = scutils.file_list_read(env, os.path.join(common_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, common_src_dir, common_def_list, common_inc_list, common_src_list)

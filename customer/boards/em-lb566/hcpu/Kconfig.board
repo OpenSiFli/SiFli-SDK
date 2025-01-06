@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_EM_LB566XXX
+    bool
+    select SOC_SF32LB56X
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"

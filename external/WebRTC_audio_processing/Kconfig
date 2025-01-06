@@ -1,0 +1,58 @@
+# Kconfig file for package WebRTC
+menuconfig PKG_USING_WEBRTC
+     bool "WebRTC: The real-time speech enhancement processing"
+     default n
+
+if PKG_USING_WEBRTC
+    choice
+        prompt "Select noise suppression Type"
+        default WEBRTC_ANS_FIX
+        config WEBRTC_ANS_FIX
+            bool "fix point ns"           
+        config WEBRTC_ANS_FLOAT
+            bool "float point ns"
+        config WEBRTC_ANS_NULL
+            bool "close ns"
+    endchoice 
+    config WEBRTC_ANS_DEMO
+        bool
+        prompt "WebRTC noise suppression test demo"
+        default n
+    config WEBRTC_AGC_FIX
+        bool
+        prompt "WebRTC auto gain control"
+        default n
+    config WEBRTC_AGC_DEMO
+        bool
+        prompt "WebRTC auto gain control test demo"
+        default n
+    choice
+        prompt "Select echo cancellation Type"
+        default WEBRTC_AEC_NULL
+        config WEBRTC_AEC
+            bool "float point AEC"           
+        config WEBRTC_AECM
+            bool "fix point AECM"
+        config WEBRTC_AEC_NULL
+            bool "close echo cancellation"
+    endchoice 
+    config WEBRTC_AEC_DEMO
+        bool
+        prompt "WebRTC echo cancellation test demo"
+        default n
+    choice
+        prompt "Select FFT/IFFT Type"
+        default FFT_USING_WEBRTC
+        config FFT_USING_ONCHIP
+            bool "HARDWARE IP FFT/IFFT"
+            depends on SOC_SF32LB56X || SOC_SF32LB58X
+        config FFT_USING_CMSIS_DSP
+            bool "CMSIS DSP FFT/IFFT"
+        config FFT_USING_WEBRTC
+            bool "WEBRTC default FFT/IFFT"
+    endchoice
+    config CMSIS_BASIC_MATH_FUN
+        bool
+        prompt "basic math function using cmsis"
+        default n
+endif

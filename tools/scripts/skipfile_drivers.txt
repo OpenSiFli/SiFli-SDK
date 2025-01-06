@@ -1,0 +1,6 @@
++*/rtos/rtthread/bsp/sifli/*
+-*/example/*
+-*/middleware/*
+-*/rtos/*
+-*/external/*
+-*/Keil_v5/*/*.h

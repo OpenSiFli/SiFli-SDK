@@ -1,0 +1,67 @@
+;Brief:  Parse thread's SP and overwrite CPU registers.
+;Useage: do switch_to #thread_sp_address#
+
+
+
+ENTRY &thread_sp_addr
+
+PRIVATE &is_fpu_stack
+PRIVATE &exception_stack_offset
+
+&is_fpu_stack=VAR.Value(((struct stack_frame *)&thread_sp_addr)->flag)
+
+r.s r4 var.value(((struct stack_frame *)&thread_sp_addr)->r4)
+r.s r5 var.value(((struct stack_frame *)&thread_sp_addr)->r5)
+r.s r6 var.value(((struct stack_frame *)&thread_sp_addr)->r6)
+r.s r7 var.value(((struct stack_frame *)&thread_sp_addr)->r7)
+r.s r8 var.value(((struct stack_frame *)&thread_sp_addr)->r8)
+r.s r9 var.value(((struct stack_frame *)&thread_sp_addr)->r9)
+r.s r10 var.value(((struct stack_frame *)&thread_sp_addr)->r10)
+r.s r11 var.value(((struct stack_frame *)&thread_sp_addr)->r11)
+
+&exception_stack_offset=VAR.Value(sizeof(struct stack_frame)-sizeof(struct exception_stack_frame))
+
+   IF &is_fpu_stack==1
+   (
+        PRIVATE &exception_stack_sp_with_fpu_addr
+		PRIVATE &FPU_S16_to_S31
+
+		&FPU_S16_to_S31 = 0x40
+
+		//struct stack_frame_fpu was not defined, skip flag,r4 ~ r11 register,FPU register s16 ~ s31 manually
+		&exception_stack_sp_with_fpu_addr=&thread_sp_addr+&exception_stack_offset+&FPU_S16_to_S31
+
+
+		; set sp 
+		r.s r13 var.value(&exception_stack_sp_with_fpu_addr+sizeof(struct exception_stack_frame_fpu))
+		r.s r0 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->r0)
+		r.s r1 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->r1)
+		r.s r2 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->r2)
+		r.s r3 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->r3)
+		r.s r12 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->r12)
+		; set lr
+		r.s r14 var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->lr) 
+		r.s pc var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->pc)
+		r.s xpsr var.value(((struct exception_stack_frame_fpu *)&exception_stack_sp_with_fpu_addr)->psr)
+   )
+   ELSE
+   (
+        PRIVATE &exception_stack_sp_addr
+	
+		//Skip flag,r4 ~ r11 register
+		&exception_stack_sp_addr=&thread_sp_addr+&exception_stack_offset
+		
+		; set sp 
+		r.s r13 var.value(&exception_stack_sp_addr+sizeof(struct exception_stack_frame))
+		r.s r0 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->r0)
+		r.s r1 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->r1)
+		r.s r2 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->r2)
+		r.s r3 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->r3)
+		r.s r12 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->r12)
+		; set lr
+		r.s r14 var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->lr) 
+		r.s pc var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->pc)
+		r.s xpsr var.value(((struct exception_stack_frame *)&exception_stack_sp_addr)->psr)
+   )
+
+

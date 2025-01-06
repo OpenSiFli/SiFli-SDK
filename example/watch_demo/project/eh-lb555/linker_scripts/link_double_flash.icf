@@ -1,0 +1,322 @@
+/*###ICF### Section handled by ICF editor, don't touch! ****/
+/*-Editor annotation file-*/
+/* IcfEditorFile="$TOOLKIT_DIR$\config\ide\IcfEditor\cortex_v1_0.xml" */
+/*-Specials-*/
+define symbol __ICFEDIT_intvec_start__ = 0x10020000;
+/*-Memory Regions-*/
+define symbol __ICFEDIT_region_ROM_start__ = 0x10020000;
+define symbol __ICFEDIT_region_ROM_end__   = 0x10100000;
+define symbol __ICFEDIT_region_RAM_start__ = 0x20000000;
+define symbol __ICFEDIT_region_RAM_end__   = 0x200c8000;
+define symbol __ICFEDIT_region_ROM_EX_start__ = 0x200fbc00;
+define symbol __ICFEDIT_region_ROM_EX_size__ =  0x00004000;
+define symbol __ICFEDIT_region_PSRAM_start__ = 0x60000000;
+define symbol __ICFEDIT_region_PSRAM_size__ = 0x00400000;
+define symbol __ICFEDIT_region_ITCM_start__ = 0x00010000;
+define symbol __ICFEDIT_region_ITCM_size__ = 0x00010000;
+define symbol __ICFEDIT_region_RETM_start__ = 0x00020000;
+define symbol __ICFEDIT_region_RETM_size__ = 0x00010000;
+define symbol __ICFEDIT_region_ROM2_start__ = 0x64000000;
+define symbol __ICFEDIT_region_ROM2_size__ = 0x300000;
+define symbol __ICFEDIT_region_ROM3_start__ = 0x64300000;
+define symbol __ICFEDIT_region_ROM3_size__ = 0x880000;
+
+/*-Sizes-*/
+define symbol __ICFEDIT_size_cstack__ = 0x1000;
+define symbol __ICFEDIT_size_heap__   = 0xC00;
+/**** End of ICF editor section. ###ICF###*/
+
+define memory mem with size = 4G;
+define region ROM_region   = mem:[from __ICFEDIT_region_ROM_start__   to __ICFEDIT_region_ROM_end__];
+define region RAM_region   = mem:[from __ICFEDIT_region_RAM_start__   to __ICFEDIT_region_RAM_end__];
+define region ER_IROM1_EX  = mem:[from __ICFEDIT_region_ROM_EX_start__ size __ICFEDIT_region_ROM_EX_size__];
+define region PSRAM_region = mem:[from __ICFEDIT_region_PSRAM_start__ size __ICFEDIT_region_PSRAM_size__];
+define region ITCM_region = mem:[from __ICFEDIT_region_ITCM_start__ size __ICFEDIT_region_ITCM_size__];
+define region RETM_region = mem:[from __ICFEDIT_region_RETM_start__ size __ICFEDIT_region_RETM_size__];
+define region ROM2_region = mem:[from __ICFEDIT_region_ROM2_start__ size __ICFEDIT_region_ROM2_size__];
+define region ROM3_region = mem:[from __ICFEDIT_region_ROM3_start__ size __ICFEDIT_region_ROM3_size__];
+
+define block RW_IRAM0
+{ 
+    section non_ret,
+    section .*l1_non_ret_data_*,
+    section .*l1_non_ret_bss_*,
+};
+                        
+define block RW_IRAM1
+{
+    section .*l1_ret_data_*,
+    section .*l1_ret_bss_*,
+    readwrite 
+};
+
+define block CSTACK    with alignment = 8, size = __ICFEDIT_size_cstack__   { };
+/* define block HEAP      with alignment = 8, size = __ICFEDIT_size_heap__     { }; */
+
+define block RW_IRAM with fixed order
+{
+    block CSTACK,
+    block RW_IRAM0,
+    block RW_IRAM1,
+
+    /* block HEAP */
+};
+
+define block RW_PSRAM1
+{ 
+    section .*l2_ret_data_*,
+    section .*l2_ret_bss_*,
+    section .*l2_cache_ret_data_*,
+    section .*l2_cache_ret_bss_*,
+};
+   
+define block RW_PSRAM2
+{ 
+    section .nand_cache,
+    section .*l2_non_ret_data_*,
+    section .*l2_non_ret_bss_*,
+    section .*l2_cache_non_ret_data_*,
+    section .*l2_cache_non_ret_bss_*,
+};
+
+define block RW_PSRAM with fixed order
+{
+    block RW_PSRAM1,
+    block RW_PSRAM2
+};
+
+
+define block ER_ITCM$$RW
+{ 
+
+};
+   
+define block ER_ITCM$$ZI
+{ 
+};
+
+define block ER_ITCM$$RO
+{ 
+};
+
+define block ITCM_block
+{
+    block ER_ITCM$$RW,
+    block ER_ITCM$$ZI,
+    block ER_ITCM$$RO,
+};
+
+
+
+define block ER_IROM1_EX$$RO
+{
+    section .text object drv_spi_flash.o,
+    section .text object bf0_hal_qspi.o,
+    section .text object bf0_hal_hpaon.o,
+    section .text object flash_table.o,
+    section .rodata object drv_spi_flash.o,
+    section .rodata object bf0_hal_qspi.o,
+    section .rodata object bf0_hal_hpaon.o,
+    section .rodata object flash_table.o,
+
+    /*object bf0_hal_dma.o symbol HAL_DMA_PollForTransfer,*/
+    /*object drv_common.o symbol HAL_GetTick,*/
+    /*object clock.o symbol rt_tick_get,*/
+    
+    section .l1_non_ret_text_*,
+    section .l1_non_ret_rodata_*,
+
+};
+
+define block RETM_block
+{
+    section .l1_ret_text_*,
+    section .l1_ret_rodata_*,
+
+    symbol sifli_light_handler,
+    symbol sifli_deep_handler,
+    symbol sifli_standby_handler,
+
+    section .text object bf0_hal_rcc.o,
+    section .text object drv_io.o,
+    section .text object bf0_hal_gpio.o,
+
+    section .rodata object bf0_hal_rcc.o,
+    section .rodata object bf0_hal_gpio.o,
+    section .rodata object drv_io.o,
+    
+    section .*retm_data*,
+
+    section .*retm_bss_*,
+    section .bss object idle.o,
+    section .bss object drv_psram.o
+};
+
+define block rom_block
+{
+    readonly, 
+};
+
+initialize by copy 
+{ 
+    section .intvec_RAM  
+};
+
+initialize by copy 
+{ 
+    readwrite,
+};
+
+
+initialize by copy 
+{
+    /* for RETM_region */
+    section .l1_ret_text_*,
+    section .l1_ret_rodata_*,
+
+    symbol sifli_light_handler,
+    symbol sifli_deep_handler,
+    symbol sifli_standby_handler,
+
+    section .text object bf0_hal_rcc.o,
+    section .text object drv_io.o,
+    section .text object bf0_hal_gpio.o,
+
+    section .rodata object bf0_hal_rcc.o,
+    section .rodata object bf0_hal_gpio.o,  
+    section .rodata object drv_io.o,
+
+    section .*retm_data*,
+};
+initialize by copy 
+{
+    /* for ITCM */
+};
+
+
+initialize by copy 
+{
+    /* for ER_IROM1_EX */
+    section .text object drv_spi_flash.o,
+    section .text object bf0_hal_qspi.o,
+    section .text object bf0_hal_hpaon.o,
+    section .text object flash_table.o,
+    section .rodata object drv_spi_flash.o,
+    section .rodata object bf0_hal_qspi.o,
+    section .rodata object bf0_hal_hpaon.o,
+    section .rodata object flash_table.o,
+
+    /*object bf0_hal_dma.o symbol HAL_DMA_PollForTransfer,*/
+    /*object drv_common.o symbol HAL_GetTick,*/
+    /*object clock.o symbol rt_tick_get,*/
+
+    section .l1_non_ret_text_*,
+    section .l1_non_ret_rodata_*,
+};
+
+use init table TableColdBoot for
+{
+    section .intvec_RAM,
+    readwrite,
+
+    /* for RETM_region */
+    section .l1_ret_text_*,
+    section .l1_ret_rodata_*,
+
+    symbol sifli_light_handler,
+    symbol sifli_deep_handler,
+    symbol sifli_standby_handler,
+    
+    section .text object bf0_hal_rcc.o,
+    section .text object drv_io.o,
+    section .text object bf0_hal_gpio.o,
+    
+    section .rodata object bf0_hal_rcc.o,
+    section .rodata object bf0_hal_gpio.o,
+    section .rodata object drv_io.o,
+    
+    section .*retm_data*,     
+};
+
+use init table TableStandby for
+{
+    /* for ITCM */
+
+    /* for ER_IROM1_EX */
+    section .text object drv_spi_flash.o,
+    section .text object bf0_hal_qspi.o,
+    section .text object bf0_hal_hpaon.o,
+    section .text object flash_table.o,
+    section .rodata object drv_spi_flash.o,
+    section .rodata object bf0_hal_qspi.o,
+    section .rodata object bf0_hal_hpaon.o,
+    section .rodata object flash_table.o,
+    
+    section .l1_non_ret_text_*,
+    section .l1_non_ret_rodata_*,
+};
+
+
+do not initialize  { section .noinit };
+do not initialize  
+{ 
+    section .*l1_non_ret_data_*,
+    section .*l1_non_ret_bss_*,
+
+    section .*l2_ret_data_*,
+    section .*l2_ret_bss_*,
+    section .*l2_cache_ret_data_*,
+    section .*l2_cache_ret_bss_*,
+    section .nand_cache,
+    section .*l2_non_ret_data_*,
+    section .*l2_non_ret_bss_*,
+    section .*l2_cache_non_ret_data_*,
+    section .*l2_cache_non_ret_bss_*,
+};
+
+
+place in ITCM_region
+{
+    block ITCM_block
+};
+
+
+place at address mem:__ICFEDIT_region_ROM_start__ { readonly section .intvec };
+
+place in ROM_region   
+{
+    block rom_block
+};
+
+place at address mem:__ICFEDIT_region_RETM_start__ { section .intvec_RAM };
+
+place in RAM_region   { block RW_IRAM };
+
+place in PSRAM_region
+{
+    block RW_PSRAM
+};
+
+place in RETM_region
+{
+    block RETM_block,
+};
+
+place in ER_IROM1_EX  
+{
+    block ER_IROM1_EX$$RO
+};
+
+place in ROM2_region
+{
+    section .ROM1_IMG,
+    section .ROM3_IMG*.*
+};
+
+place in ROM3_region
+{
+    section .rodata* object lvsf_font_*
+};
+
+export symbol __ICFEDIT_region_RAM_start__;
+export symbol __ICFEDIT_region_RAM_end__;

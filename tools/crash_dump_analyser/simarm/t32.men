@@ -1,0 +1,2047 @@
+; --------------------------------------------------------------------------------
+; @Title: TRACE32 default menu file
+; @Description:
+;   Programming file for standard pulldown menu and speedbar of TRACE32 GUI
+; @Keywords: GUI, pulldown, speedbar
+; @Author: -
+; @Copyright: (C) 1989-2014 Lauterbach GmbH, licensed for use with TRACE32(R) only
+; --------------------------------------------------------------------------------
+; $Id: t32.men 12419 2018-04-04 10:34:02Z hlohn $
+
+
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+;   Default menus
+;   NOTE: change this file only if you want to change the default menus
+;         Adding buttons or menus and replacing single entries can be
+;         done without changing this file (see description of ADD item
+;         in MENU command).
+; --------------------------------------------------------------------------------
+;   This file was enhanced by JDT JbergDatenTechnik 97/98.
+; --------------------------------------------------------------------------------
+
+
+
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+;  Speedbar definition
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+
+TOOLBAR
+(
+    SEPARATOR
+    TOOLITEM   "Single Step"              ":step"          "Step"
+    TOOLITEM   "Step Over Call"           ":stepover"      "Step.Over"
+    TOOLITEM   "Step Diverge Path"        ":stepdiverge"   "Step.Diverge"
+    SEPARATOR
+    TOOLITEM   "Go Next"                  ":gonext"        "Go.Next"
+    TOOLITEM   "Go Till Return"           ":goreturn"      "Go.Return"
+    TOOLITEM   "Go Up"                    ":goup"          "Go.Up"
+    SEPARATOR
+    TOOLITEM   "Go"                       ":go"            "Go"
+    TOOLITEM   "Break"                    ":brk"           "Break"
+    SEPARATOR
+    TOOLITEM   "Toggle Mixed/HLL Mode"    ":mode"          "Mode"
+    SEPARATOR
+    TOOLITEM   "Help Topics"              ":help"          "HELP.Topics"
+    TOOLITEM   "Help Context"             ":helpc"         "HELP.PICK"
+    SEPARATOR
+    TOOLITEM   "Stop Command"             ":stop"          "STOP"
+    SEPARATOR
+    TOOLITEM   "Source/List"              ":list"          "List.auto"
+    TOOLITEM   "Memory Dump"              ":dump"          "Data.dump"
+    TOOLITEM   "Register"                 ":reg"           "Register.view"
+    SEPARATOR
+    TOOLITEM   "Watch"                    ":varwatch"      "Var.Watch"
+    TOOLITEM   "Stack"                    ":varframe"      "Frame.view /Locals /Caller"
+    TOOLITEM   "Automatic Watch"          ":varref"        "Var.Ref"
+    SEPARATOR
+    TOOLITEM   "List Breakpoints"         ":break"         "Break.List"
+    TOOLITEM   "List Symbols"             ":symbols"       "sYmbol.Browse"
+    TOOLITEM   "System Settings"          ":config"        "SYStem.state"
+    SEPARATOR
+	TOOLITEM   "run hcpu assert recovery"  "HA,R"      "DO load_hcpu_UI.cmm"
+	TOOLITEM   "run lcpu assert recovery"  "LA,R"      "DO load_lcpu_UI.cmm"
+	SEPARATOR
+    TOOLITEM   "Show IP Reg"              "IP,r"      "DO show_reg.cmm"
+    TOOLITEM   "Show task"                "TL,g"      "DO show_tasks.cmm"
+    TOOLITEM   "Show task_switch"         "TS,b"      "DO show_switch_history.cmm"
+	SEPARATOR
+	TOOLITEM   "Set hcpu reg"             "HR,M"      "DO set_CPU_reg.cmm H"
+	TOOLITEM   "Set lcpu reg"             "LR,O"      "DO set_CPU_reg.cmm L"
+)
+
+
+
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+;  Top pulldown menue definiton
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+
+MENU
+(
+; --------------------------------------------------------------------------------
+;   File pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&File"
+  (
+         DEFAULT
+         MENUITEM  "[:practice]&Run Script..."                  "CD.DO *"
+         MENUITEM  "[:edit]&Edit Script..."                     "CD.PEDIT *"
+         MENUITEM  "[:pfind]&Search for Script..."              "WELCOME.SCRIPTS"
+         SEPARATOR
+         MENUITEM  "[:edit]&Open File..."                       "EDIT *.*"
+         MENUITEM  "[:load]&Load File..."                       "D.LOAD *"
+         MENUITEM  "[:text]&Type File..."                       "TYPE *.*"
+         MENUITEM  "[:dump]D&ump File..."                       "DUMP *.*"
+
+
+         ADDHERE
+         SEPARATOR
+         MENUITEM  "[:stop]Stop Command"                        "STOP"
+         SEPARATOR
+         MENUITEM  "[:PRINTer]Printer Settings..."              "PRinTer"
+     IF  ((VERSION.BUILD()>30330.)&&(OS.VERSION(0)==2.)&&(OS.VERSION(1)>4.))
+     (
+         MENUITEM  "[:screenshot]Window Screenshot to File..."  "SCreenShot"
+     )
+     ELSE
+     (
+         MENUITEM  "[:camera]Window Print..."                   "PRinTer.HardCopy"
+     )
+         SEPARATOR
+         MENUITEM  "[:exit]e&xit"                               "QUIT"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Edit pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Edit"
+  (
+         MENUITEM  "[:save]Save &All Editor Files"              "EDIT.SAVE"
+         MENUITEM  "[:edit]&List all Editor Files"              "EDIT.List"
+         SEPARATOR
+         MENUITEM  "[:find]&Grep in Source Files..."            "Data.GREP """" """" /Word /Case"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   View pulldown submenue
+; --------------------------------------------------------------------------------
+  TEAROFF
+  POPUP  "&View"
+  (
+         MENUITEM  "[:reg]&Registers"                           "Register"
+         MENUITEM  "[:dump]&Dump..."                            "Data.dump"
+         DEFAULT
+         MENUITEM  "[:list]List &Source"                        "List"
+         MENUITEM  "[:varwatch]&Watch"                          "Var.Watch"
+         MENUITEM  "[:varref]Re&ferenced Var"                   "Var.Ref"
+         MENUITEM  "[:varlocal]&Locals"                         "Var.Local"
+         MENUITEM  "[:varframe]Stackframe with Locals"          "Frame /Locals /Caller"
+         MENUITEM  "[:varframe]Stackframe"                      "Frame"
+         MENUITEM  "[:chip]&Peripherals"                        "PER"
+         POPUP     "[:symbols]S&ymbols"
+         (
+                   DEFAULT
+                   MENUITEM  "&Browse"                          "sYmbol.Browse"
+                   MENUITEM  "Browse &Modules"                  "sYmbol.Browse.Module"
+                   MENUITEM  "Browse &Functions"                "sYmbol.Browse.Function"
+                   MENUITEM  "Browse &Variables"                "sYmbol.Browse.Var"
+                   MENUITEM  "Browse &Types"                    "sYmbol.Browse.Type"
+                   MENUITEM  "Symbols Tree View"                "sYmbol.List.TREE"
+                   POPUP     "Source"
+                   (
+                             MENUITEM  "File Names"             "sYmbol.List.SOURCE"
+                             MENUITEM  "Search Paths"           "sYmbol.SPATH.List"
+                   )
+                   MENUITEM  "Details of Symbol"                "sYmbol.INFO *"
+         )
+         MENUITEM  "[:group]Groups"                             "Group.List"
+         MENUITEM  "[:bookmark]Bookmarks"                       "BookMark.List"
+         MENUITEM  "[:alist]Trace List"                         "Trace.List"
+         MENUITEM  "[:area]Messa&ge Area"                       "AREA"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Var pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "Var"
+  (
+         MENUITEM  "[:varwatch]W&atch..."                       "Var.AddWatch *"
+         MENUITEM  "[:var]&View..."                             "Var.View *"
+         MENUITEM  "[:view]&Data View..."                       "Data.View %var *"
+         MENUITEM  "[:breaknew]&Breakpoint..."                  "Var.Break.Set"
+         MENUITEM  "[:list]Show &Function..."                   "sYmbol.Browse.Function * /Click ""Data.List *"" /Delete"
+         MENUITEM  "[:varwatch]Show Watch"                      "Var.AddWatch"
+         MENUITEM  "[:varlocal]Show Locals"                     "Var.Local"
+         MENUITEM  "[:varframe]Show Stack"                      "Frame.view /Locals /Caller"
+         MENUITEM  "[:varref]Show Current Vars"                 "Var.REF"
+         SEPARATOR
+         MENUITEM  "[:varconfig]&Format..."                     "SETUP.Var"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Break pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Break"
+  (
+         MENUITEM  "[:breaknew]&Set..."                         "Break.Set"
+         DEFAULT
+         MENUITEM  "[:break]&List"                              "Break.List"
+     IF  ice()
+     (
+         ENABLE    (CPUBONDOUT()=="C167E1"||CPUBONDOUT()=="C167E2"||CPUBONDOUT()=="C167E3")
+         MENUITEM  "[:break]&List bondoutbreaks"                "Break.List /allop"
+     )
+         MENUITEM  "[:config]Implementation..."                 "Break.IMPLementation"
+         SEPARATOR
+         MENUITEM  "[:removeall]Delete &All"                    "Break.Delete /anh"
+         SEPARATOR
+         SEPARATOR
+     IF  ice()
+     (
+         MENUITEM  "[:trigger]Main &Trigger..."                 "TrMain"
+     )
+     ELSE
+     (
+         MENUITEM  "[:trigger]&Trigger Bus..."                  "TrBus"
+     )
+         MENUITEM  "[:tronchip]&OnChip Trigger..."              "TrOnchip"
+     IF  ice()
+     (
+         MENUITEM  "&Event Trigger..."                          "TrEvent"
+         MENUITEM  "E&xternal Trigger..."                       "TrIn"
+     )
+         SEPARATOR
+         MENUITEM  "Trigger Reset"
+         (
+                   Trigger.Reset
+                   TrOnchip.RESet
+                   IF  ice()
+                   (
+                       TrEvent.RESet
+                       TrIn.RESet
+                   )
+         )
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Run pulldown submenue
+; --------------------------------------------------------------------------------
+  TEAROFF
+  POPUP  "&Run"
+  (
+         DEFAULT
+         MENUITEM  "[:step]&Step,F2"                            "Step"
+         MENUITEM  "[:stepover]Step &Over Call,F3"              "Step.Over"
+         MENUITEM  "[:stepdiverge]Step &Diverge Path,F4"        "Step.Diverge"
+         SEPARATOR
+         MENUITEM  "[:gonext]Go &Next"                          "Go.Next"
+         MENUITEM  "[:goreturn]Go &Return,F5"                   "Go.Return"
+         MENUITEM  "[:goup]Go &Up,F6"                           "Go.Up"
+         MENUITEM  "[:gotill]Go &Till..."                       "Go *"
+         MENUITEM  "[:go]&Go,F7"                                "Go"
+         MENUITEM  "[:brk]&Break,F8"                            "Break"
+         SEPARATOR
+         MENUITEM  "[:mode]&Mode,F9"                            "Mode"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   CPU pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&CPU"
+  (
+         POPUP     "Change Frame"
+         (
+                   MENUITEM  "[:backtree]Frame &Up"             "Frame.Up"
+                   MENUITEM  "[:downtree]Frame &Down"           "Frame.Down"
+                   SEPARATOR
+                   MENUITEM  "[:copy]Frame &Copy"               "Frame.COPY"
+                   MENUITEM  "[:paste]Frame &Swap"              "Frame.SWAP"
+                   SEPARATOR
+                   MENUITEM  "[:undo]Frame Undo"                "Frame.UNDO"
+                   MENUITEM  "[:redo]Frame Redo"                "Frame.REDO"
+         )
+         SEPARATOR
+         MENUITEM  "[:reg]&CPU Registers"                       "Register"
+         MENUITEM  "[:fpureg]&FPU Registers"                    "FPU"
+         ADDHERE
+         MENUITEM  "[:chip]&Peripherals"                        "PER"
+         SEPARATOR
+     IF  ICE()||FIRE()
+     (
+         MENUITEM  "[:econfig]E&xception Control"               "eXception"
+     )
+         DEFAULT
+         MENUITEM  "[:config]S&ystem Settings..."               "SYStem"
+     IF  ICE()||FIRE()
+     (
+         MENUITEM  "[:compound]Cl&ock Frequency"
+         (
+                   Count.RESet
+                   WinPOS ,,,4.
+                   Count
+                   ENDDO
+         )
+         MENUITEM  "[:compound]Set Clock Fre&quency..."         "VCO"
+     )
+         SEPARATOR
+     IF  ICE()||FIRE()
+     (
+         MENUITEM  "&Standalone Reset"                          "SYStem.Mode AloneInt"
+     )
+         MENUITEM  "&In Target Reset"                           "SYStem.RESetTarget"
+         MENUITEM  "&Reset CPU Registers"                       "Register.RESet"
+
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Misc pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Misc"
+  (
+     IF  ICE()||FIRE()||SIMULATOR()
+     (
+         MENUITEM  "[:compound]&Vco Oscillator"                 "VCO"
+     )
+         DEFAULT
+         MENUITEM  "[:compound]Frequency &Counter"              "Count"
+         ENABLE    ICE()||FIRE()||POWERPROBE()
+         MENUITEM  "[:compound]&Pulse Generator"                "PULSE"
+     IF  ICE()||FIRE()
+     (
+         MENUITEM  "[:compound]Pulse Generator &2"              "PULSE2"
+     )
+         MENUITEM  "[:time]&Runtime"                            "RunTime"
+         SEPARATOR
+         MENUITEM  "[:map]Load &Map"                            "sYmbol.List.MAP"
+         MENUITEM  "[:map]Memory Map"                           "Map.List"
+         SEPARATOR
+         MENUITEM  "[:flash]&Flash Programming"                 "FLASH.List"
+         SEPARATOR
+         MENUITEM  "[:colors]Ch&oose Colors..."                 "SETUP.COLOR"
+         MENUITEM  "[:config]&Interface Config..."              "IFCONFIG"
+         POPUP     "[:config]Tools"
+         (
+;                  MENUITEM  "[:colors]Edit bitmap template"    "BITMAPEDIT ~~/demo/menu/addmybutton.cmm"
+                   MENUITEM  "[:colors]Edit bitmap template"
+                   (
+;                            IF   FILE.EXIST("~~/demo/menu/addmybutton.cmm")     ; since build 31361
+                             IF   OS.FILE("~~/demo/menu/addmybutton.cmm")
+                                  BITMAPEDIT "~~/demo/menu/addmybutton.cmm"
+                             ELSE
+                             (
+                                  PRINT  %ERROR "default file ~~/demo/menu/addmybutton.cmm doesn't exist - using file ./addmybutton.cmm instead"
+                                  IF     !OS.FILE("addmybutton.cmm")
+                                  (
+                                         OPEN   #1    "addmybutton.cmm"    /Create /Write
+                                         WRITE  #1    ";|--------------------------------------------------------------------------|"
+                                         WRITE  #1    ";|  This template file addmybutton.cmm is used for creating bitmaps         |"
+                                         WRITE  #1    ";|  which will be used later in an other user PRACTICE script.              |"
+                                         WRITE  #1    ";|                                                                          |"
+                                         WRITE  #1    ";|  The command     BITMAPEDIT addmybutton.cmm                              |"
+                                         WRITE  #1    ";|  will open a window for defining and modifying a bitmap store between    |"
+                                         WRITE  #1    ";|  the 2 square brackets in the script text below.                         |"
+                                         WRITE  #1    ";|--------------------------------------------------------------------------|"
+                                         WRITE  #1    ";|  (c) Copyright by Lauterbach GmbH 2012-04-03, msc                        |"
+                                         WRITE  #1    ";|--------------------------------------------------------------------------|"
+                                         WRITE  #1    ""
+                                         WRITE  #1    ""
+                                         WRITE  #1    "MENU.ReProgram"
+                                         WRITE  #1    "("
+                                         WRITE  #1    "     ADD"
+                                         WRITE  #1    "     TOOLBAR"
+                                         WRITE  #1    "     ("
+                                         WRITE  #1    "         ; The square brackets will later contain the bitmap"
+                                         WRITE  #1    "         TOOLITEM ""newbutton"" ""cmd"""
+                                         WRITE  #1    "         ["
+                                         WRITE  #1    "         ]"
+                                         WRITE  #1    "     )"
+                                         WRITE  #1    ")"
+                                         WRITE  #1    ""
+                                         WRITE  #1    "ENDDO"
+                                         CLOSE  #1
+                                  )
+                                  BITMAPEDIT    addmybutton.cmm
+                             )
+                   )
+                   MENUITEM  "[:t32s]Display internal icon library"         "DO         ~~/demo/menu/internal_icons.cmm"
+         )
+     IF  (OS.VERSION(0)<0x10)
+     (
+         MENUITEM  "Japanese Menu"                              "MENU.ReProgram ~~/t32jp.men"
+     )
+     ELSE
+     (
+         MENUITEM  "Japanese Menu"                              "MENU.ReProgram ~~/t32jp-utf-8.men"
+     )
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Trace pulldown submenue
+; --------------------------------------------------------------------------------
+
+  POPUP  "&Trace"
+  (
+         DEFAULT
+         MENUITEM  "[:aconfig]&Configuration..."                "Trace"
+         MENUITEM  "[:aconfig]&CTS Settings..."                 "CTS"
+IF  !(fire()||ice())
+(
+    IF   (CPUFAMILY()=="TRICORE"||CPUFAMILY()=="C166")
+    (
+         MENUITEM  "MCDS Settings..."                           "MCDS"
+    )
+    IF   (CPUFAMILY()=="QDSP5"||CPUFAMILY()=="QDSP6"||CPUFAMILY()=="CEVA-X"||CPUFAMILY()=="TEAKLITE3")
+    (
+         MENUITEM  "ETM Settings..."                            "ETM"
+    )
+    IF   CPUFAMILY()=="ARM"
+    (
+         MENUITEM  "ETM Settings..."                            "ETM"
+         MENUITEM  "Trigger Dialog..."                          "do ~~/demo/analyzer/trigger/etmdialog.cmm"
+    )
+    IF   CPUFAMILY()=="POWERPC"
+    (
+;           MPC55xx, SPC55xx, MPC56xx, SPC56xx, MPC57xx, SPC57xx
+       IF  (CPUIS(?PC55??*)||CPUIS(?PC56??*)||CPUIS(?PC57??*))
+       (
+         MENUITEM  "NEXUS Settings..."                          "NEXUS"
+       )
+       IF  (STRing.MID(CPU(),0,2)=="P3")||(STRing.MID(CPU(),0,2)=="P4")||(STRing.MID(CPU(),0,2)=="P5")
+       (
+         MENUITEM  "NEXUS Settings..."                          "NEXUS"
+       )
+    )
+    IF   CPUFAMILY()=="ETPU"
+    (
+         MENUITEM  "NEXUS Settings..."                          "NEXUS"
+    )
+)
+
+IF  ICE()||FIRE()
+(
+       IF  (OS.FILE(~~/demo/analyzer/trigger/analyzerdialog.cmm))
+       (
+         ENABLE    ICE()||FIRE()
+         MENUITEM  "Trigger Dialog..."                          "do ~~/demo/analyzer/trigger/analyzerdialog.cmm"
+       )
+       ELSE
+       (
+         ENABLE    ICE()||FIRE()
+         MENUITEM  "Trigger Dialog..."                          "do ~~/analyzerdialog"
+       )
+)
+IF  ICE()||FIRE()
+(
+    POPUP    "[:atrigger]&Trigger Definition"
+    (
+      MENUITEM "[:program]&Current Program"                     "Analyzer.Program"
+      MENUITEM "[:program]&New Program"
+      (
+               Analyzer.ReProgram
+               (
+               )
+               Analyzer.Program
+      )
+      MENUITEM "&Directory..."                                  "Analyzer.Program *.ts"
+      SEPARATOR
+      MENUITEM "Clear Program"
+      (
+               Analyzer.ReProgram
+      )
+      MENUITEM "&Performance A/B"
+      (
+               Analyzer.ReProgram
+               (
+                        Sample.Enable IF AlphaBreak
+                        Sample.Enable IF BetaBreak
+                        Mark.A        IF AlphaBreak
+                        Mark.B        IF BetaBreak
+               )
+               ENDDO
+      )
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+      MENUITEM "&Trace from Start to End..."
+      (
+        DIALOG
+        (
+         HEADER  "Trace from Start to Stop Point"
+         POS     0x1 1.3 30.
+addrA:   DEFEDIT "" ""
+         POS     32. 1.3 7.
+         BUTTON  "Browse..."
+         (
+                 LOCAL &wildcard
+                 &wildcard=DIALOG.STRing(addrA)
+                 IF "&wildcard"==""
+                     &wildcard="*"
+                 IF !STRing.FIND("&wildcard","*?")
+                     &wildcard="*&wildcard*"
+                 sYmbol.Browse &wildcard /Click "DIALOG.Set addrA ""*""" /Delete
+         )
+         POS     0x1 4.3 30.
+addrB:   EDIT    "" ""
+         POS     32. 4.3 7.
+         BUTTON  "Browse..."
+         (
+                 LOCAL &wildcard
+                 &wildcard=DIALOG.STRing(addrB)
+                 IF "&wildcard"==""
+                     &wildcard="*"
+                 IF !STRing.FIND("&wildcard","*?")
+                     &wildcard="*&wildcard*"
+                 sYmbol.Browse &wildcard /Click "DIALOG.Set addrB ""*""" /Delete
+         )
+
+         POS     1. 6.5  9.
+         DEFBUTTON "Ok"
+         (
+                 DIALOG.EXecute apply
+                 DIALOG.END
+         )
+
+         POS     25. 6.5  9.
+         BUTTON  "Cancel" "DIALOG.END"
+
+         POS     13. 6.5  9.
+apply:   BUTTON  "Apply"
+         (
+           LOCAL &addrA &addrdeclA &triggerA &addrB &addrdeclB &triggerB &triggerH
+           LOCAL &VBusA &VBusB
+           &VBusA=""
+           &VBusB=""
+
+           ON ERROR JUMPTO
+           (
+                    BEEP 5.
+                    PRINT "Input error, please check syntax"
+                    ENDDO
+           )
+
+           &triggerH="TRUE"
+           ; ----- A ---------------------------------------------------------------
+           &addrdeclA=""
+           &addrA=DIALOG.STRing(addrA)
+           IF "&addrA"!=""
+           (
+             IF DIALOG.BOOLEAN(hllA)
+                &addrA="v.range(""&addrA"")"
+             ELSE IF DIALOG.BOOLEAN(rangeA)
+                &addrA="y.range(""&addrA"")"
+             &addrdeclA="addr AlphaBreak &addrA"
+             IF  FIRE()&&CPU()=="M68372"
+             (
+                 IF  P:FASBASE.ADDRESS()!=P:0x0ffffffff
+                 (
+                     IF   (P:FASBASE.ADDRESS()<=P:(&addrA))&&(P:(&addrA)<=(P:FASBASE.ADDRESS()+0x7fff))
+                          &VBusA="YES"
+                     ELSE IF (P:(&addrA)<P:FASBASE.ADDRESS())||(P:FASBASE.ADDRESS()+0x7fff)<P:(&addrA)
+                          &VBusA="NO"
+                     ELSE ; not only VBUS or XBUS address area
+                     (
+                          BEEP 5.
+                          PRINT "address range error: address overlaps XBUS and VBUS : &addrA"
+                          ENDDO
+                     )
+                 )
+             )
+           )
+
+           IF DIALOG.BOOLEAN(a.anyA)
+           (
+                 IF "&VBusA"=="YES"
+                      &triggerA="AlphaBreak&&VBUS"
+                 ELSE IF "&VBusA"=="NO"
+                      &triggerA="AlphaBreak&&XBUS"
+                 ELSE
+                      &triggerA="AlphaBreak"
+           )
+           IF DIALOG.BOOLEAN(a.readA)
+           (
+                 IF "&VBusA"=="YES"
+                      &triggerA="AlphaBreak&&VBUS&&VRead"
+                 ELSE IF "&VBusA"=="NO"
+                      &triggerA="AlphaBreak&&XBUS&&Read"
+                 ELSE
+                      &triggerA="AlphaBreak&&Read"
+           )
+           IF DIALOG.BOOLEAN(a.wrA)
+           (
+                 IF   "&VBusA"=="YES"
+                      &triggerA="AlphaBreak&&VBUS&&VWrite"
+                 ELSE IF "&VBusA"=="NO"
+                      &triggerA="AlphaBreak&&XBUS&&Write"
+                 ELSE
+                      &triggerA="AlphaBreak&&Write"
+           )
+
+           ; ----- B ---------------------------------------------------------------
+           &addrdeclB=""
+           &addrB=DIALOG.STRing(addrB)
+           IF "&addrB"!=""
+           (
+                 IF   DIALOG.BOOLEAN(hllB)
+                      &addrB="v.range(""&addrB"")"
+                 ELSE IF DIALOG.BOOLEAN(rangeB)
+                      &addrB="y.range(""&addrB"")"
+                 &addrdeclB="addr BetaBreak &addrB"
+                 IF  FIRE()&&CPU()=="M68372"
+                 (
+                     IF  P:FASBASE.ADDRESS()!=P:0x0ffffffff
+                     (
+                         IF   (P:FASBASE.ADDRESS()<=P:(&addrB))&&(P:(&addrB)<=(P:FASBASE.ADDRESS()+0x7fff))
+                              &VBusB="YES"
+                         ELSE IF (P:(&addrB)<P:FASBASE.ADDRESS())||(P:FASBASE.ADDRESS()+0x7fff)<P:(&addrB)
+                              &VBusB="NO"
+                         ELSE ; not only VBUS or XBUS address area
+                         (
+                              BEEP 5.
+                              PRINT "address range error: address overlaps XBUS and VBUS : &addrB"
+                              ENDDO
+                         )
+                     )
+                 )
+           )
+
+           IF DIALOG.BOOLEAN(b.anyB)
+           (
+                 IF   "&VBusB"=="YES"
+                      &triggerB="BetaBreak&&VBUS"
+                 ELSE IF "&VBusB"=="NO"
+                      &triggerB="BetaBreak&&XBUS"
+                 ELSE
+                      &triggerB="BetaBreak"
+           )
+           IF DIALOG.BOOLEAN(b.readB)
+           (
+                 IF   "&VBusB"=="YES"
+                      &triggerB="BetaBreak&&VBUS&&VRead"
+                 ELSE IF "&VBusB"=="NO"
+                      &triggerB="BetaBreak&&XBUS&&Read"
+                 ELSE
+                      &triggerB="BetaBreak&&Read"
+           )
+           IF DIALOG.BOOLEAN(b.wrB)
+           (
+                 IF   "&VBusB"=="YES"
+                      &triggerB="BetaBreak&&VBUS&&VWrite"
+                 ELSE IF "&VBusB"=="NO"
+                      &triggerB="BetaBreak&&XBUS&&Write"
+                 ELSE
+                      &triggerB="BetaBreak&&Write"
+           )
+           ; ----- HLL only --------------------------------------------------------
+           IF DIALOG.BOOLEAN(hllonly)
+           (
+                 Break.Delete  /Charly
+                 Break.SetLine /Charly /NPreFetch
+                 &triggerH="CharlyBreak"
+           )
+           ; -----------------------------------------------------------------------
+           ; normal ANALYZERS
+           IF    !(Analyzer.CONFIG.HAC())
+           (
+                 Analyzer.ReProgram
+                 (
+                               &addrdeclA
+                               &addrdeclB
+
+                   start:
+                               Mark.A          IF &triggerA
+                               Sample.enable   IF &triggerA
+                               CONTinue        IF &triggerA
+
+                   occured:
+                               Sample.enable   IF &triggerH
+                               Mark.B          IF &triggerB
+                               Goto    Start   IF &triggerB
+                 )
+           )
+
+           ; HAC Analyzer
+           IF    Analyzer.CONFIG.HAC()
+           (
+            ;    special for HAC ( only two Trigger can be supported )
+                 Analyzer.ReProgram
+                 (
+                               &addrdeclA
+                               &addrdeclB
+
+                   start:
+                               Mark.A          IF &triggerA
+                               Sample.enable   IF &triggerA
+                               CONTinue        IF &triggerA
+
+                   occured:
+                               Sample.enable
+                               Mark.B          IF &triggerB
+                               Goto    Start   IF &triggerB
+                 )
+           )
+           PRINT "Analyzer programmed."
+         )
+         POS       0. 0. 40. 3.5
+         BOX       "Address / Expression for Start Point"
+
+         POS       0. 3.0 40. 3.5
+         BOX      "Address / Expression for Stop Point"
+
+         POS       41. 0.8 6. 1.
+hllA:    CHECKBOX "HLL"
+         (
+                 IF      DIALOG.BOOLEAN(hllA)
+                         DIALOG.Disable rangeA
+                 ELSE
+                         DIALOG.Enable  rangeA
+         )
+
+rangeA:  CHECKBOX "Range"
+         (
+                 IF      DIALOG.BOOLEAN(rangeA)
+                         DIALOG.Disable hllA
+                 ELSE
+                         DIALOG.Enable  hllA
+         )
+
+         POS       48. 0.8 5. 1.
+a.anyA:  CHOOSEBOX "Any" ""
+         POS       53. 0.8 6. 1.
+a.readA: CHOOSEBOX "Read" ""
+a.wrA:   CHOOSEBOX "Write" ""
+
+         POS       41. 3.8 6. 1.
+hllB:    CHECKBOX  "HLL"
+         (
+                 IF      DIALOG.BOOLEAN(hllB)
+                         DIALOG.Disable rangeB
+                 ELSE
+                         DIALOG.Enable  rangeB
+         )
+
+rangeB:  CHECKBOX "Range"
+         (
+                 IF      DIALOG.BOOLEAN(rangeB)
+                         DIALOG.Disable hllB
+                 ELSE
+                         DIALOG.Enable  hllB
+         )
+
+         POS       48. 3.8 5. 1.
+b.anyB:  CHOOSEBOX "Any" ""
+         POS       53. 3.8 6. 1.
+b.readB: CHOOSEBOX "Read" ""
+b.wrB:   CHOOSEBOX "Write" ""
+
+         POS       41. 6.5  11. 1.
+hllonly: CHECKBOX  "only HLL Lines" ""
+        )
+        DIALOG.Set a.anyA
+        DIALOG.Set b.anyB
+        IF Analyzer.CONFIG.HAC()
+            DIALOG.Disable hllonly
+
+;     v   MENUITEM "&Trace from Start to End..."
+      )
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+      MENUITEM "&Selective Trace..."
+      (
+        DIALOG.view
+        (
+         HEADER    "Address Selective Trace"
+         POS       0x1 0x1 30.
+addr:    DEFEDIT   "" ""
+         POS       32. 1. 7.
+         BUTTON    "Browse..."
+         (
+                   LOCAL &wildcard
+                   &wildcard=DIALOG.STRing(addr)
+                   IF "&wildcard"==""
+                       &wildcard="*"
+                   IF !STRing.FIND("&wildcard","*?")
+                       &wildcard="*&wildcard*"
+                   sYmbol.Browse &wildcard /Click "DIALOG.Set addr ""*""" /Delete
+         )
+
+         POS       0. 0. 41. 3.25
+         BOX       "Address / Expression"
+
+         POS       1. 3.5 11. 1.
+b.ab:    CHOOSEBOX "Alpha"  ""
+b.bb:    CHOOSEBOX "Beta"   ""
+b.cb:    CHOOSEBOX "Charly" ""
+
+
+         POS       13. 3.5 11. 1.
+a.any:   CHOOSEBOX "Any"   ""
+a.read:  CHOOSEBOX "Read"  ""
+a.write: CHOOSEBOX "Write" ""
+
+         POS       42. 0.5 8. 1.
+
+hll:     CHECKBOX  "HLL"
+         (
+             IF    DIALOG.BOOLEAN(hll)
+                   DIALOG.Disable range
+             ELSE
+                   DIALOG.Enable  range
+         )
+range:   CHECKBOX  "Range"
+         (
+             IF    DIALOG.BOOLEAN(range)
+                   DIALOG.Disable hll
+             ELSE
+                   DIALOG.Enable  hll
+         )
+
+         POS       34. 5.5 14. 1.
+Ohll:    CHECKBOX  "only HLL Lines"
+         (
+             IF DIALOG.BOOLEAN(Ohll)
+             (
+                   DIALOG.Disable b.ab
+                   DIALOG.Disable b.bb
+                   DIALOG.Disable b.cb
+                   DIALOG.Disable a.any
+                   DIALOG.Disable a.read
+                   DIALOG.Disable a.write
+                   DIALOG.Disable range
+                   DIALOG.Disable hll
+                   DIALOG.Disable addr
+             )
+             ELSE
+             (
+                   DIALOG.Enable b.ab
+                   DIALOG.Enable b.bb
+                   IF !(Analyzer.CONFIG.HAC())
+                   (
+                          DIALOG.Enable b.cb
+                   )
+                   DIALOG.Enable a.any
+                   DIALOG.Enable a.read
+                   DIALOG.Enable a.write
+                   DIALOG.Enable range
+                   DIALOG.Enable hll
+                   DIALOG.Enable addr
+             )
+         )
+
+         POS       1. 7.5  9.
+         DEFBUTTON "Ok"
+         (
+                   DIALOG.EXecute apply
+                   DIALOG.END
+         )
+
+         POS       25. 7.5  9.
+         BUTTON    "Cancel" "DIALOG.END"
+
+         POS       13. 7.5 9.
+apply:   BUTTON    "Apply"
+         (
+           LOCAL &addr &addrdecl &bpused &trigger
+           LOCAL &VBus
+
+           ON ERROR JUMPTO
+           (
+                    BEEP 5.
+                    PRINT "Input error, please check syntax"
+                    ENDDO
+           )
+
+           &addrdecl=""
+           &VBus=""
+
+           &bpused="AlphaBreak"
+           IF DIALOG.BOOLEAN(b.bb)
+             &bpused="BetaBreak"
+           IF DIALOG.BOOLEAN(b.cb)
+             &bpused="CharlyBreak"
+
+           &addr=DIALOG.STRing(addr)
+           IF "&addr"!=""
+           (
+             IF  DIALOG.BOOLEAN(hll)
+                 &addr="v.range(""&addr"")"
+             ELSE IF DIALOG.BOOLEAN(range)
+                 &addr="y.range(""&addr"")"
+             &addrdecl="addr &bpused &addr"
+
+             IF  FIRE()&&CPU()=="M68372"
+             (
+                 IF  P:FASBASE.ADDRESS()!=P:0x0ffffffff
+                 (
+                     IF   (P:FASBASE.ADDRESS()<=P:(&addr))&&(P:(&addr)<=(P:FASBASE.ADDRESS()+0x7fff))
+                          &VBus="YES"
+                     ELSE IF (P:(&addr)<P:FASBASE.ADDRESS())||(P:FASBASE.ADDRESS()+0x7fff)<P:(&addr)
+                          &VBus="NO"
+                     ELSE ; not only VBUS or XBUS address area
+                     (
+                          BEEP 5.
+                          PRINT "address range error: address overlaps XBUS and VBUS : &addr"
+                          ENDDO
+                     )
+                 )
+             )
+           )
+
+           IF DIALOG.BOOLEAN(a.read)
+           (
+              IF      "&VBus"=="YES"
+                      &trigger="&bpused&&VBUS&&VRead"
+              ELSE IF "&VBus"=="NO"
+                      &trigger="&bpused&&XBUS&&Read"
+              ELSE
+                      &trigger="&bpused&&Read"
+           )
+           ELSE IF DIALOG.BOOLEAN(a.write)
+           (
+              IF      "&VBus"=="YES"
+                      &trigger="&bpused&&VBUS&&VWrite"
+              ELSE IF "&VBus"=="NO"
+                      &trigger="&bpused&&XBUS&&Write"
+              ELSE
+                      &trigger="&bpused&&Write"
+           )
+           ELSE
+           (
+              IF      "&VBus"=="YES"
+                      &trigger="&bpused&&VBUS"
+              ELSE IF "&VBus"=="NO"
+                      &trigger="&bpused&&XBUS"
+              ELSE
+                      &trigger="&bpused"
+           )
+           IF DIALOG.BOOLEAN(Ohll)
+           (
+                    &addrdecl=""
+                    &trigger="AlphaBreak"
+                    Break.Delete  /Alpha
+                    Break.SetLine /Alpha /NPreFetch
+           )
+
+           Analyzer.ReProgram
+           (
+                    &addrdecl
+                    Sample.ENABLE IF &trigger
+           )
+           PRINT "Analyzer programmed."
+         )
+        )
+        IF Analyzer.CONFIG.HAC()
+        (
+;          currently not supported from HAC
+           DIALOG.Disable b.cb
+        )
+        DIALOG.Set b.ab
+        DIALOG.Set a.any
+
+;     v MENUITEM "&Selective Trace..."
+      )
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+      MENUITEM "&Trace around / Trigger..."
+      (
+       DIALOG
+       (
+         HEADER    "Trace around or Trigger"
+         POS       0x1 0x1 32.
+addr:    DEFEDIT   "" ""
+         POS       34. 1. 7.
+         BUTTON    "Browse..."
+         (
+                   LOCAL &wildcard
+                   &wildcard=DIALOG.STRing(addr)
+                   IF "&wildcard"==""
+                       &wildcard="*"
+                   IF !STRing.FIND("&wildcard","*?")
+                       &wildcard="*&wildcard*"
+                   sYmbol.Browse &wildcard /Click "DIALOG.Set addr ""*""" /Delete
+         )
+
+         POS       0. 0. 42. 3.25
+         BOX       "Address / Expression"
+
+         POS       43. 0.75 8. 1.
+
+hllp:    CHECKBOX  "HLL"
+         (
+                   IF   DIALOG.BOOLEAN(hllp)
+                        DIALOG.Disable rangep
+                   ELSE
+                        DIALOG.Enable  rangep
+         )
+
+rangep:  CHECKBOX  "Range"
+         (
+                   IF   DIALOG.BOOLEAN(rangep)
+                        DIALOG.Disable hllp
+                   ELSE
+                        DIALOG.Enable  hllp
+         )
+
+         POS       1. 3.5 11. 1.
+b.ab:    CHOOSEBOX "Alpha"           ""
+b.bb:    CHOOSEBOX "Beta"            ""
+b.cb:    CHOOSEBOX "Charly"          ""
+
+         POS       13. 3.5 11. 1.
+a.any:   CHOOSEBOX "Any"             ""
+a.read:  CHOOSEBOX "Read"            ""
+a.write: CHOOSEBOX "Write"           ""
+
+         POS       25. 3.5 11. 1.
+d.pre:   CHOOSEBOX "Trace Before"    ""
+d.center:CHOOSEBOX "Center"          ""
+d.post:  CHOOSEBOX "Trace After"     ""
+
+         POS       38. 3.5 12. 1.
+t.break: CHOOSEBOX "Break Analyzer"  ""
+t.trigg: CHOOSEBOX "Break Program"   ""
+
+
+hllrec:  CHECKBOX  "only HLL Lines"
+         (
+              IF   DIALOG.BOOLEAN(hllrec)
+                   DIALOG.Disable b.cb
+              ELSE
+                   DIALOG.Enable  b.cb
+         )
+
+         POS       1. 7.5  9.
+         DEFBUTTON "Ok"
+         (
+                   DIALOG.EXecute apply
+                   DIALOG.END
+         )
+
+         POS       25. 7.5  9.
+         BUTTON    "Cancel" "DIALOG.END"
+
+         POS       13. 7.5 9.
+apply:   BUTTON    "Apply"
+         (
+           LOCAL &addr &addrdecl &bpused &trigger &tdelay &breakarg &tracetrigger
+           LOCAL &VBus
+
+           ON ERROR JUMPTO
+           (
+                    BEEP 5.
+                    PRINT "Input error, please check syntax"
+                    ENDDO
+           )
+
+           &addrdecl=""
+           &VBus=""
+           IF DIALOG.BOOLEAN(hllrec)
+           (
+                IF DIALOG.BOOLEAN(b.cb)
+                        DIALOG.Set b.bb
+           )
+           &bpused="AlphaBreak"
+           IF DIALOG.BOOLEAN(b.bb)
+             &bpused="BetaBreak"
+           IF DIALOG.BOOLEAN(b.cb)
+             &bpused="CharlyBreak"
+
+           &addr=DIALOG.STRing(addr)
+           IF "&addr"!=""
+           (
+                IF      DIALOG.BOOLEAN(hllp)
+                        &addr="v.range(""&addr"")"
+                ELSE IF DIALOG.BOOLEAN(rangep)
+                        &addr="y.range(""&addr"")"
+                &addrdecl="addr &bpused &addr"
+
+                IF  FIRE()&&CPU()=="M68372"
+                (
+                    IF  P:FASBASE.ADDRESS()!=P:0x0ffffffff
+                    (
+                        IF   (P:FASBASE.ADDRESS()<=P:(&addr))&&(P:(&addr)<=(P:FASBASE.ADDRESS()+0x7fff))
+                             &VBus="YES"
+                        ELSE IF (P:(&addr)<P:FASBASE.ADDRESS())||(P:FASBASE.ADDRESS()+0x7fff)<P:(&addr)
+                             &VBus="NO"
+                        ELSE ; not only VBUS or XBUS address area
+                        (
+                             BEEP 5.
+                             PRINT "address range error: address overlaps XBUS and VBUS : &addr"
+                             ENDDO
+                        )
+                    )
+                )
+           )
+
+           IF DIALOG.BOOLEAN(a.read)
+           (
+                IF   "&VBus"=="YES"
+                     &trigger="&bpused&&VBUS&&VRead"
+                ELSE IF "&VBus"=="NO"
+                     &trigger="&bpused&&XBUS&&Read"
+                ELSE
+                     &trigger="&bpused&&Read"
+           )
+           ELSE IF DIALOG.BOOLEAN(a.write)
+           (
+                IF   "&VBus"=="YES"
+                     &trigger="&bpused&&VBUS&&VWrite"
+                ELSE IF "&VBus"=="NO"
+                     &trigger="&bpused&&XBUS&&Write"
+                ELSE
+                     &trigger="&bpused&&Write"
+           )
+           ELSE
+           (
+                IF   "&VBus"=="YES"
+                     &trigger="&bpused&&VBUS"
+                ELSE IF "&VBus"=="NO"
+                     &trigger="&bpused&&XBUS"
+                ELSE
+                     &trigger="&bpused"
+           )
+
+           IF   DIALOG.BOOLEAN(d.pre)
+                &tdelay="10."
+           ELSE IF DIALOG.BOOLEAN(d.center)
+                &tdelay=Analyzer.SIZE()/2.
+           ELSE
+                &tdelay=Analyzer.SIZE()-30.
+
+           IF   FIRE()
+           (
+                IF   DIALOG.BOOLEAN(Trace.Break)
+                     &breakarg="BREAK.TRACE   IF tdelay"
+                ELSE
+                     &breakarg="BREAK.PROGRAM IF tdelay"
+           )
+           ELSE
+           (
+                IF   DIALOG.BOOLEAN(Trace.Break)
+                     &breakarg="BREAK         IF tdelay"
+                ELSE
+                     &breakarg="TRIGGER.A     IF tdelay"
+           )
+           &tracetrigger="TRUE"
+
+           IF   DIALOG.BOOLEAN(hllrec)
+           (
+                Break.Delete  /Charly
+                Break.SetLine /Charly /NPreFetch
+                &tracetrigger="CharlyBreak"
+           )
+
+           Analyzer.ReProgram
+           (
+                    &addrdecl
+                    EVENT tdelay &tdelay
+
+                    start:
+                                  Sample.enable
+                                  Mark.A         IF &trigger
+                                  CONTinue       IF &trigger
+                    occured:
+                                  Sample.enable
+                                  Count.enable tdelay
+                                  &breakarg
+           )
+
+           PRINT "Analyzer programmed."
+         )
+       )
+       DIALOG.Set b.ab
+       DIALOG.Set a.any
+       DIALOG.Set d.center
+       DIALOG.Set t.break
+       IF Analyzer.CONFIG.HAC()
+       (
+;         currently not supported from HAC
+          DIALOG.Disable b.bb
+          DIALOG.Disable b.cb
+          DIALOG.Disable hllrec
+       )
+
+;     v   MENUITEM "&Trace around / Trigger..."
+      )
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+      MENUITEM "Multiple trace after..."
+      (
+         DIALOG
+         (
+            HEADER    "Multiple trace after "
+            POS       0x1 0x1 30.
+addr:       DEFEDIT   "" ""
+            POS       32. 1. 7.
+            BUTTON    "Browse..."
+            (
+                      LOCAL &wildcard
+                      &wildcard=DIALOG.STRing(addr)
+                      IF "&wildcard"==""
+                         &wildcard="*"
+                      IF !STRing.FIND("&wildcard","*?")
+                         &wildcard="*&wildcard*"
+                      sYmbol.Browse &wildcard /Click "DIALOG.Set addr ""`*`""" /Delete
+            )
+            POS       0. 0. 40. 3.
+            BOX       "Address / Expression"
+
+            POS       42. 0.5 8. 1.
+
+hllp:       CHECKBOX  "HLL"
+            (
+                      IF   DIALOG.BOOLEAN(hllp)
+                           DIALOG.Disable rangep
+                      ELSE
+                           DIALOG.Enable rangep
+            )
+
+rangep:     CHECKBOX  "Range"
+            (
+                      IF   DIALOG.BOOLEAN(rangep)
+                           DIALOG.Disable hllp
+                      ELSE
+                           DIALOG.Enable hllp
+            )
+
+            POS       1. 3.5 11. 1.
+b.ab:       CHOOSEBOX "Alpha"  ""
+b.bb:       CHOOSEBOX "Beta"   ""
+b.cb:       CHOOSEBOX "Charly" ""
+
+            POS       13. 3.5 11. 1.
+a.any:      CHOOSEBOX "Any" ""
+a.read:     CHOOSEBOX "Read" ""
+a.write:    CHOOSEBOX "Write" ""
+
+            POS       25. 3.5 11. 1.
+            TEXT      "Cycles to trace:"
+delay:      EDIT      "10." ""
+            POS       25. 5.5 12. 1.
+hllrec:     CHECKBOX  "only HLL Lines"
+            (
+                      IF   DIALOG.BOOLEAN(hllrec)
+                           DIALOG.Disable b.cb
+                      ELSE
+                           DIALOG.Enable b.cb
+            )
+
+            POS       1. 7.5  9.
+            DEFBUTTON "Ok"
+            (
+                      DIALOG.EXecute apply
+                      DIALOG.END
+            )
+
+            POS       25. 7.5  9.
+            BUTTON    "Cancel" "DIALOG.END"
+
+            POS       13. 7.5 9.
+apply:      BUTTON    "Apply"
+            (
+               LOCAL &addr &addrdecl &bpused &trigger &tdelay &tracetrigger
+               LOCAL &VBus
+
+               ON ERROR JUMPTO
+               (
+                        BEEP 5.
+                        PRINT "Input error, please check syntax"
+                        ENDDO
+               )
+
+               &addrdecl=""
+               &VBus=""
+
+               IF DIALOG.BOOLEAN(hllrec)
+               (
+                     IF DIALOG.BOOLEAN(b.cb)
+                             DIALOG.Set b.bb
+               )
+
+               &bpused="AlphaBreak"
+               IF DIALOG.BOOLEAN(b.bb)
+                  &bpused="BetaBreak"
+               IF DIALOG.BOOLEAN(b.cb)
+                  &bpused="CharlyBreak"
+
+               &addr=DIALOG.STRing(addr)
+               IF "&addr"!=""
+               (
+                 IF DIALOG.BOOLEAN(hllp)
+                    &addr="v.range(""&addr"")"
+                 ELSE IF DIALOG.BOOLEAN(rangep)
+                    &addr="y.range(""&addr"")"
+                 &addrdecl="ADDR &bpused &addr"
+
+                 IF  FIRE()&&CPU()=="M68372"
+                 (
+                     IF  P:FASBASE.ADDRESS()!=P:0x0ffffffff
+                     (
+                         IF   (P:FASBASE.ADDRESS()<=P:(&addr))&&(P:(&addr)<=(P:FASBASE.ADDRESS()+0x7fff))
+                              &VBus="YES"
+                         ELSE IF (P:(&addr)<P:FASBASE.ADDRESS())||(P:FASBASE.ADDRESS()+0x7fff)<P:(&addr)
+                              &VBus="NO"
+                         ELSE ; not only VBUS or XBUS address area
+                         (
+                              BEEP 5.
+                              PRINT "address range error: address overlaps XBUS and VBUS : &addr"
+                              ENDDO
+                         )
+                     )
+                 )
+               )
+
+
+               IF DIALOG.BOOLEAN(a.read)
+               (
+                  IF   "&VBus"=="YES"
+                       &trigger="&bpused&&VBUS&&VRead"
+                  ELSE IF "&VBus"=="NO"
+                       &trigger="&bpused&&XBUS&&Read"
+                  ELSE
+                       &trigger="&bpused&&Read"
+               )
+               ELSE IF DIALOG.BOOLEAN(a.write)
+               (
+                  IF   "&VBus"=="YES"
+                       &trigger="&bpused&&VBUS&&VWrite"
+                  ELSE IF "&VBus"=="NO"
+                       &trigger="&bpused&&XBUS&&Write"
+                  ELSE
+                       &trigger="&bpused&&Write"
+               )
+               ELSE
+               (
+                  IF   "&VBus"=="YES"
+                       &trigger="&bpused&&VBUS"
+                  ELSE IF "&VBus"=="NO"
+                       &trigger="&bpused&&XBUS"
+                  ELSE
+                       &trigger="&bpused"
+               )
+
+               &tdelay=DIALOG.STRing(delay)
+
+               &tracetrigger="TRUE"
+
+               IF DIALOG.BOOLEAN(hllrec)
+               (
+                  Break.Delete  /Charly
+                  Break.SetLine /Charly /NPreFetch
+                  &tracetrigger="CharlyBreak"
+               )
+
+               IF !(Analyzer.CONFIG.HAC())
+               (
+                  Analyzer.ReProgram
+                  (
+                              &addrdecl
+                              EVENT delay         &tdelay
+                     start:
+                              Sample.enable       IF &trigger
+                              Mark.A              IF &trigger
+                              CONTinue            IF &trigger
+                     occured:
+                              Sample.enable       IF &tracetrigger
+                              Count.enable  delay IF &tracetrigger
+                              Count.Restart delay IF delay
+                              GOTO start          IF delay
+                  )
+               )
+               IF Analyzer.CONFIG.HAC()
+               (
+;                 this differentiation won't be necessary in the future anymore
+                  Analyzer.ReProgram
+                  (
+                              &addrdecl
+                              EVENT delay         &tdelay
+                     start:
+                              Sample.enable       IF &trigger
+                              Mark.A              IF &trigger
+                              CONTinue            IF &trigger
+                     occured:
+                              Sample.enable
+                              Count.enable delay
+;                             currently not supported from HAC
+;                             Count.Restart delay IF delay
+                              GOTO start          IF delay
+                  )
+               )
+               PRINT "Analyzer programmed."
+;           v   end BUTTON OK
+            )
+;        v   end DIALOG
+         )
+         DIALOG.Set b.ab
+         DIALOG.Set a.any
+         IF Analyzer.CONFIG.HAC()
+         (
+;           v   currently not supported from HAC
+            DIALOG.Disable b.bb
+            DIALOG.Disable b.cb
+            DIALOG.Disable hllrec
+         )
+;     v   end MENUITEM  multiple trace after
+      )
+
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+           MENUITEM "Trace on &Write..."
+           (
+                    WinPOS ,,,,,, tracevar
+                    sYmbol.Browse.Var * /Click "gosub tracevar *"
+                    STOP
+tracevar:
+                    LOCAL &varname
+                    ENTRY &varname
+                    IF  CPUBONDOUT()!=""&&fire()
+                    (
+                        Analyzer.ReProgram
+                        (
+                                 ADDR AlphaBreak v.range(&varname) /write
+                                 Sample.enable IF AlphaBreak
+                        )
+                    )
+                    ELSE
+                    (
+                        Analyzer.ReProgram
+                        (
+                                 ADDR AlphaBreak v.range(&varname)
+                                 Sample.enable IF AlphaBreak&&Write
+                        )
+                    )
+                    PRINT    "Analyzer programmed to trace &varname ..."
+                    WinCLEAR tracevar
+                    ENDDO
+           )
+
+           MENUITEM "Trace on &Read..."
+           (
+                    WinPOS ,,,,,, tracevar
+                    sYmbol.Browse.Var * /Click "gosub tracevar *"
+                    STOP
+tracevar:
+                    LOCAL &varname
+                    ENTRY &varname
+                    IF  CPUBONDOUT()!=""&&fire()
+                    (
+                        Analyzer.ReProgram
+                        (
+                                 ADDR AlphaBreak v.range(&varname) /Read
+                                 Sample.enable IF AlphaBreak
+                        )
+                    )
+                    ELSE
+                    (
+                        Analyzer.ReProgram
+                        (
+                                 ADDR AlphaBreak v.range(&varname)
+                                 Sample.enable IF AlphaBreak&&Read
+                        )
+                    )
+                    PRINT    "Analyzer programmed to trace &varname ..."
+                    WinCLEAR tracevar
+                    ENDDO
+           )
+
+           MENUITEM "&Trace on Access..."
+           (
+                    WinPOS ,,,,,, tracevar
+                    sYmbol.Browse.Var * /Click "gosub tracevar *"
+                    STOP
+tracevar:
+                    LOCAL &varname
+                    ENTRY &varname
+                    Analyzer.ReProgram
+                    (
+                             ADDR AlphaBreak v.range(&varname)
+                             Sample.enable IF AlphaBreak
+                    )
+                    PRINT    "Analyzer programmed to trace &varname ..."
+                    WinCLEAR tracevar
+                    ENDDO
+           )
+    )
+;   IF ICE()||FIRE()     POPUP    "[:atrigger]&Trigger Definition"
+)
+
+
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    POPUP "[:alist]&List"
+    (
+         DEFAULT
+         MENUITEM  "&Default"                                   "Trace.List"
+         MENUITEM  "&All"                                       "Trace.List ALL"
+         MENUITEM  "[:correlate]&Tracking with Source"
+         (
+                   Data.List E: /Track
+                   Trace.List
+         )
+         MENUITEM  "[:alistcts]List &Context Tracking System"   "CTS.List"
+    )
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    POPUP "[:atiming]&Timing"
+    (
+         DEFAULT
+         MENUITEM  "&Default"                                   "Trace.Timing"
+         MENUITEM  "&All"                                       "Trace.Timing ALL"
+         MENUITEM  "[:correlate]&Tracking with List and Source"
+         (
+                   Data.List    E:  /Track
+                   Trace.List       /Track
+                   Trace.Timing ALL /Track
+         )
+    )
+    POPUP "[:achart]&Chart"
+    (
+         DEFAULT
+         MENUITEM  "&Symbols"                                   "Trace.Chart.sYmbol"
+         MENUITEM  "[:correlate]&Tracking with List and Source"
+         (
+                   Data.List          E: /Track
+                   Trace.List            /Track
+                   Trace.Chart.sYmbol    /Track
+         )
+    )
+    ADDHERE
+    SEPARATOR
+    MENUITEM  "[:save]Save trace data ..."                      "Trace.SAVE"
+    MENUITEM  "[:load]Load reference data ..."                  "Trace.LOAD *"
+    SEPARATOR
+;     -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    MENUITEM  "&Reset"                                          "Trace.RESet"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Probe pulldown submenue (Logic Analyzer)
+; --------------------------------------------------------------------------------
+ IF VERSION.BUILD()>6305.
+ (
+  IF powerprobe()||Integrator()||IProbe()
+  (
+   POPUP "Probe"
+   (
+     IF  IProbe()
+     (
+         MENUITEM  "[:aconfig]Configuration IProbe..."          "IProbe.state"
+      IF IProbe.ANALOG()
+      (
+         MENUITEM  "[:adraw]Draw"                               "IProbe.Draw"
+      )
+      ELSE
+      (
+         MENUITEM  "[:atiming]Timing"                           "IProbe.Timing"
+      )
+         MENUITEM  "[:alist]List"                               "IProbe.List"
+         ENABLE    IProbe.ANALOG()
+         MENUITEM  "Analog Settings..."                         "POD IP"
+      IF powerprobe()||Integrator()||(IProbe()&&!IProbe.ANALOG())
+      (
+         SEPARATOR
+      )
+     )
+     IF  powerprobe()
+     (
+         MENUITEM  "[:aconfig]Configuration PowerProbe..."      "Probe.state"
+         MENUITEM  "[:atiming]Timing"                           "Probe.Timing"
+         MENUITEM  "[:alist]List"                               "Probe.List"
+         MENUITEM  "Pulse Generator..."                         "PULSE"
+         MENUITEM  "Pattern Generator..."                       "PATTERN"
+         SEPARATOR
+     )
+     IF  Integrator()
+     (
+         MENUITEM  "[:aconfig]Configuration Integrator..."      "Integrator.state"
+         MENUITEM  "[:atiming]Timing"                           "Integrator.Timing"
+         MENUITEM  "[:alist]List"                               "Integrator.List"
+         SEPARATOR
+     )
+     IF  powerprobe()||Integrator()||(IProbe()&&!IProbe.ANALOG())
+     (
+         MENUITEM  "[:pod]&Configure Probes..."                 "POD"
+     )
+   )
+  )
+ )
+
+
+
+; --------------------------------------------------------------------------------
+;   Perf pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Perf"
+  (
+         DEFAULT
+         MENUITEM  "[:pconfig]Perf &Configuration..."            "PERF"
+         MENUITEM  "[:pperf]Perf &List"                          "PERF.List"
+         MENUITEM  "[:pperf]Perf List Dynamic"                   "PERF.List DYNamic"
+         SEPARATOR
+
+         POPUP     "&Function Runtime"
+         (
+              IF   ICE()||FIRE()
+              (
+                   ENABLE    ICE()||FIRE()
+                   MENUITEM  "&Prepare"
+                   (
+                             IF   Trace.METHOD.Analyzer()
+                             (
+                                  Analyzer.AutoInit ON
+                                  Analyzer.STATistic.PreFetch ON
+                             )
+
+                             Break.Delete /Alpha /Beta /Charly
+
+                             IF   (ICE()||FIRE())&&!Analyzer.MODE.FLOW()
+                             (
+                                  IF   Analyzer.CONFIG.HAC()
+                                  (
+                                       Analyzer.ReProgram
+                                       (
+                                            Sample.enable IF AlphaBreak
+                                            Sample.enable IF BetaBreak
+                                            Mark.A        IF AlphaBreak
+                                            Mark.B        IF BetaBreak
+                                       )
+                                  )
+                                  ELSE
+                                  (
+                                       Analyzer.ReProgram
+                                       (
+                                            Sample.enable IF AlphaBreak||BetaBreak
+                                            Mark.A        IF AlphaBreak
+                                            Mark.B        IF BetaBreak
+                                       )
+                                  )
+                             )
+
+                             Break.SetFunc
+                   )
+              )
+                   ADDHERE
+                   MENUITEM  "[:perf]Show &Numerical"           "Trace.STATistic.FUNC"
+                   MENUITEM  "[:perf]Show as &Tree"             "Trace.STATistic.TREE"
+                   MENUITEM  "[:perf]Show &Detailed Tree"       "Trace.STAT.TREE ALL"
+                   MENUITEM  "[:achart]Show as T&iming"         "Trace.CHART.FUNC"
+                   MENUITEM  "[:alistnest]Show N&esting"        "Trace.ListNesting"
+         )
+         POPUP     "&Distribution"
+         (
+                   MENUITEM  "[:perf]Show &Numerical"           "Trace.STATistic.DistriB Data"
+                   MENUITEM  "[:achart]Show as &Timing"         "Trace.CHART.DistriB Data"
+                   MENUITEM  "[:perf]Show &Detailed"            "Trace.STATistic.DistriB Data /List ALL"
+         )
+         POPUP     "&Duration A to B"
+         (
+                   ENABLE    ICE()||FIRE()
+                   MENUITEM  "&Prepare"
+                   (
+                             IF   Analyzer.CONFIG.HAC()
+                             (
+                                  Analyzer.ReProgram
+                                  (
+                                       Sample.enable IF AlphaBreak
+                                       Sample.enable IF BetaBreak
+                                       Mark.A        IF AlphaBreak
+                                       Mark.B        IF BetaBreak
+                                  )
+                             )
+                             ELSE
+                             (
+                                  Analyzer.ReProgram
+                                  (
+                                       Sample.enable IF AlphaBreak||BetaBreak
+                                       Mark.A        IF AlphaBreak
+                                       Mark.B        IF BetaBreak
+                                  )
+                             )
+                   )
+                   MENUITEM  "[:perf]Show &Numerical"           "Trace.STATistic.DURation"
+                   MENUITEM  "[:aprofile]Show as &Timing"       "Trace.PROfileChart.DURation"
+         )
+         POPUP     "D&istance trace records"
+         (
+                   MENUITEM  "[:perf]Show &Numerical"           "Trace.STATistic.DIStance"
+                   MENUITEM  "[:aprofile]Show as &Timing"       "Trace.PROfileChart.DIStance"
+         )
+         ADDHERE
+         SEPARATOR
+         MENUITEM  "&Reset"
+         (
+                   PERF.RESet
+                   Break.Delete /Alpha /Beta /Charly
+                   IF   ICE()||FIRE()
+                        Analyzer.ReProgram
+         )
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Cov pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "C&ov"
+  (
+     IF  !((ICE()||FIRE()))
+     (
+         DEFAULT
+         MENUITEM  "[:aconfig]&Configuration..."                "COVerage.state"
+         MENUITEM  "[:coverage]List Ranges"                     "COVerage.List"
+         MENUITEM  "[:coverage]List Functions"                  "COVerage.ListFunc"
+         MENUITEM  "[:coverage]List Modules"                    "COVerage.ListModule"
+         MENUITEM  "[:coverage]List Variables"                  "COVerage.ListVar"
+         ADDHERE
+         SEPARATOR
+         MENUITEM  "[:coveragenew]&Add Tracebuffer"             "COVerage.ADD"
+      IF OS.FILE("~~/demo/coverage/multi_file_report/create_report.cmm")
+      (
+         MENUITEM  "[:report]Create Report"                     "DO ~~/demo/coverage/multi_file_report/create_report.cmm"
+      )
+         SEPARATOR
+         MENUITEM  "Reset"                                      "COVerage.RESet"
+     )
+     IF  (ICE()||FIRE())
+     (
+         POPUP     "[:coverage]Trace-based"
+         (
+                   DEFAULT
+                   ENABLE    !(ICE()||FIRE())
+                   MENUITEM  "[:aconfig]&Configuration..."      "COVerage.state"
+                   MENUITEM  "[:coverage]List Ranges"           "COVerage.List"
+                   MENUITEM  "[:coverage]List Functions"        "COVerage.ListFunc"
+                   MENUITEM  "[:coverage]List Modules"          "COVerage.ListModule"
+                   MENUITEM  "[:coverage]List Variables"        "COVerage.ListVar"
+                   ADDHERE
+                   SEPARATOR
+                   MENUITEM  "[:coveragenew]&Add Tracebuffer"   "COVerage.ADD"
+                   SEPARATOR
+                   MENUITEM  "Reset"                            "COVerage.RESet"
+         )
+         SEPARATOR
+         POPUP     "[:flag]Memory-based"
+         (
+                   ENABLE    FLAG()
+                   MENUITEM  "[:flag]List Ranges"               "Flag.List"
+                   DEFAULT
+                   ENABLE    FLAG()
+                   MENUITEM  "[:flag]List Functions"            "Flag.ListFunc"
+                   ENABLE    FLAG()
+                   MENUITEM  "[:flag]List Modules"              "Flag.ListModul"
+                   ENABLE    FLAG()
+                   MENUITEM  "[:flag]List Variables"            "Flag.ListVar"
+                   SEPARATOR
+                   ENABLE    FLAG()
+                   MENUITEM  "Reset"                            "Flag.Init"
+         )
+     )
+  )
+  ADDHERE
+
+
+
+; --------------------------------------------------------------------------------
+;   Window pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Window"
+  (
+         MENUITEM  "Create Duplicate window"                    "winduplicate"
+         MENUITEM  "[:remove]Clear Windows on &Page"            "winclear"
+         MENUITEM  "[:removeall]Clear &all Windows"             "Winpage.Reset"
+         SEPARATOR
+         MENUITEM  "[:save]S&tore Windows to ..."               "STOre * Win"
+         MENUITEM  "[:load]&Load Windows from ..."              "do *"
+  )
+
+
+
+; --------------------------------------------------------------------------------
+;   Help pulldown submenue
+; --------------------------------------------------------------------------------
+  POPUP  "&Help"
+  (
+         DEFAULT
+         MENUITEM  "[:help]&Contents"                           "HELP.Topics"
+         MENUITEM  "[:index]&Index"                             "HELP.Index"
+         MENUITEM  "[:find]&Find"                               "HELP.Find"
+         MENUITEM  "[:tree]T&ree"                               "HELP.Tree"
+         SEPARATOR
+         MENUITEM  "[:manual]TRACE32 PowerView User Manual"     "HELP __IDE_USER_"
+         SEPARATOR
+     IF  ice()
+     (
+         MENUITEM  "[:manual]&ICE Target Manual"
+         (
+                   LOCAL &item
+                   &item=CPUHELP()
+                   HELP  __em&(item)_
+         )
+         MENUITEM  "[:manual]ICE &User Manual"                  "HELP __E_USER_"
+     )
+     ELSE
+     (
+       IF fire()
+       (
+         MENUITEM  "[:manual]&FIRE Target Manual"
+         (
+                   LOCAL &item
+                   &item=CPUHELP()
+                   HELP  __em&(item)_
+         )
+         MENUITEM  "[:manual]FIRE &User Manual"                 "HELP __FIRE_USER_"
+       )
+       ELSE
+       (
+         MENUITEM  "[:manual]&Processor Architecture Manual"
+         (
+                   LOCAL &item
+                   &item=CPUHELP()
+                   HELP  __em&(item)_
+         )
+         MENUITEM  "[:manual]Debugger &User Guide"              "HELP __B_USER_"
+       )
+     )
+     IF  (!(ICE()||FIRE())&&(CPUFAMILY()=="C166"))||(CPUFAMILY()=="TRICORE")||(CPUFAMILY()=="PCP")||(CPUFAMILY()=="GTM")
+     (
+         MENUITEM  "[:manual]MCDS User Guide"                   "HELP __MCDS_USER_"
+     )
+         ENABLE    (ICE()||FIRE())&&Analyzer()
+         MENUITEM  "[:manual]&Analyzer User Manual"             "HELP __A_USER_"
+         ADDHERE
+         SEPARATOR
+     IF  ta32()
+     (
+         MENUITEM  "[:manual]Timing Analyzer User Manual"       "HELP __TA_USER_"
+     )
+         ENABLE    powerprobe()
+         MENUITEM  "[:manual]Power Probe User Manual"           "HELP __PP_USER_"
+         ENABLE    stg()
+         MENUITEM  "[:manual]Stimuli Generator User Manual"     "HELP __STG_USER_"
+         SEPARATOR
+         POPUP     "[:manual]Training Manuals"
+         (
+                   MENUITEM  "[:manual]HLL Debugging"           "HELP __TRHLL_"
+                   MENUITEM  "[:manual]PRACTICE"                "HELP __TRPRA_"
+            IF     ice()
+            (
+                   MENUITEM  "[:manual]ICE Basics"              "HELP __TRICE_"
+                   MENUITEM  "[:manual]ICE Analyzer"            "HELP __TRICEA_"
+            )
+            IF     fire()
+            (
+                   MENUITEM  "[:manual]FIRE Basics"             "HELP __TRFIRE_"
+                   MENUITEM  "[:manual]FIRE Analyzer"           "HELP __TRFIREA_"
+                   MENUITEM  "[:manual]FIRE Port Analyzer"      "HELP __TRFIREPA_"
+            )
+            ELSE
+            (
+              IF   (CPUFAMILY()!="I386")
+              (
+                   MENUITEM  "[:manual]Debugger"                "HELP __TRICD_"
+              )
+            )
+
+            IF     (CPUFAMILY()=="TRICORE")
+            (
+                   MENUITEM  "[:manual]AURIX Trace"             "HELP __TR_AURIX_"
+            )
+
+            IF     (CPUFAMILY()=="QDSP6")
+            (
+                   MENUITEM  "[:manual]HEXAGON ETM Trace"       "HELP __TR_HEX_ETM_"
+            )
+            IF     (CPUFAMILY()=="I386")
+            (
+                   MENUITEM  "[:manual]Debugger x86/x64"        "HELP __TRICD_X86_"
+                   MENUITEM  "[:manual]Intel Processor Trace"   "HELP __TRIPT_"
+            )
+            IF     (CPUFAMILY()=="ARM")
+            (
+                   MENUITEM  "[:manual]ARM ETM Trace"           "HELP __TRETM_"
+            )
+            IF     (CPUFAMILY()=="ARM")||(CPUFAMILY()=="MIPS")||(CPUFAMILY()=="SH")
+            (
+                   MENUITEM  "[:manual]OS Linux"                "HELP __TR_RTOS_LINUX_"
+            )
+            IF     (CPUFAMILY()=="I386")
+            (
+                   MENUITEM  "[:manual]OS Linux x86/x64"        "HELP __TR_RTOS_LINUX_X86_"
+            )
+            IF     powernexus()&&(CPUFAMILY()=="POWERPC")
+            (
+                   MENUITEM  "[:manual]Nexus Trace"             "HELP __TRNEXUS_"
+            )
+
+            IF     powerprobe()
+            (
+                   MENUITEM  "[:manual]Power Probe"             "HELP __TRPP_"
+            )
+         )
+         SEPARATOR
+         ENABLE    !(ICE()||FIRE())
+         MENUITEM  "[:pfind]Demo Scripts"                       "WELCOME.SCRIPTS"
+         ENABLE    !(ICE()||FIRE())
+         MENUITEM  "[:welcome]Welcome to TRACE32"               "WELCOME.view"
+         SEPARATOR
+         MENUITEM  "[:config]Setup PDF Viewer"                  "SETUP.PDFViewer"
+         SEPARATOR
+     IF  VERSION.BUILD()>5540.
+     (
+       IF (OS.VERSION(0)==2.)||(OS.VERSION(0)==1.)
+       (
+         MENUITEM  "Lauterbach &Homepage"
+         (
+                   IF   OS.VERSION(0)==2.
+                        OS.screen cmd /C start "" "http://www.lauterbach.com/"
+                   ELSE
+                        OS.screen        start    "http://www.lauterbach.com/"
+         )
+       )
+     )
+         POPUP     "&Support"
+         (
+                   MENUITEM  "[:config]&Systeminfo..."
+                   (
+                             &file=  "support.cmm"
+                             &dir=   "~~/demo/etc/diagnosis/environment"
+                             IF      OS.FILE("&dir/&file")
+                                     &file= "&dir/&file"
+                             ELSE IF OS.FILE("~~/&file")
+                                     &file= "~~/&file"
+                             ELSE
+                                     &file=""
+                             IF   (VERSION.BUILD()<12409.)&&("&file"!="")
+                             (
+                                  OPEN  #1 "&file" /Read
+                                  READ  #1 %LINE &line
+                                  CLOSE #1
+                                  IF    STRing.MID("&line",0,26.)=="trace32 encrypted cmm file"
+                                        &file=""
+                             )
+                             IF   "&file"==""
+                                  DIALOG.OK "Please copy http://www.lauterbach.com/support/static/support.cmm to your TRACE32 system directory first."
+                             ELSE
+                                  DO "&file"
+                   )             
+             IF OS.FILE("~~/demo/etc/t32update.cmm")&&(((OS.VERSION(0)==0x02)&&((SOFTWARE.64BIT()&&OS.FILE("~~/bin/windows64/t32update.exe"))||(!SOFTWARE.64BIT()&&OS.FILE("~~/bin/windows/t32update.exe"))))||((OS.VERSION(0)>=0x10)&&(OS.VERSION(0)<=0x11)&&((SOFTWARE.64BIT()&&OS.FILE("~~/bin/pc_linux64/t32update"))||(!SOFTWARE.64BIT()&&OS.FILE("~~/bin/pc_linux/t32update"))))||((OS.VERSION(0)==0x40)&&OS.FILE("~~/bin/macosx64/t32update")))
+             (
+                   MENUITEM  "[:eload]&Update TRACE32..."
+                   (
+                             DO "~~/demo/etc/t32update.cmm"
+                   )
+             )
+             IF VERSION.BUILD()>5540.
+             (
+                IF (OS.VERSION(0)==2.)||(OS.VERSION(0)==1.)
+                (
+                   MENUITEM  "[:t32]&Online Support"
+                   (
+                             IF   OS.VERSION(0)==2.
+                                  OS.screen cmd /C start "" "http://www.lauterbach.com/frames.html?tsupport.html"
+                             ELSE
+                                  OS.screen        start    "http://www.lauterbach.com/frames.html?tsupport.html"
+                   )
+                   MENUITEM  "[:email]&Contact Lauterbach"
+                   (
+                             &ePhone="Company       :%0APrefix        :%0AFirstname     :%0ASurname       :%0ADepartment    :%0AStreet        :%0AP.O.Box       :%0ACity          :%0AState         :%0AZIP           :%0ACountry       :%0ACountryCode   :%0ATelephone     :%0AFAX           :%0AEMAIL         :%0A%0ASerial No     :%0AProduct       :%0ATarget CPU    :%0AHostsystem    :%0ACompiler      :%0ARealtimekernel:%0AInterface     :%0AEnvironment   :"
+                             &eNote= "Please refer to http://www.lauterbach.com/ephone.html to find out a more subject-specific support e-mail addresses.%0AThe form below can be completed by using 'TRACE32:Help>Support>Systeminfo...'. (Use 'Save to Clipboard' and paste into this e-mail.)"
+                             IF   OS.VERSION(0)==2.
+                                  OS.screen cmd /C start "" "mailto:support@lauterbach.com?subject=SUPPORT&body=&eNote%0A%0A&ePhone"
+                             ELSE
+                                  OS.screen start "mailto:support@lauterbach.com?subject=SUPPORT&body=&ePhone"
+                   )
+                )
+             )
+             IF (VERSION.BUILD()>12239.)&&(VERSION.BUILD()<24341.)
+             (
+                   MENUITEM  "License details"                  "LICENSE.List"
+             )
+             IF (VERSION.BUILD()>15282.)&&(BDM())
+             (
+                IF VERSION.BUILD.BASE()>16962.
+                (
+                   MENUITEM  "Program maintenance license into cable..."
+                   (
+                             LICENSE.UPDATE license*.t32
+                             LICENSE.List
+                   )
+                )
+             )
+             IF VERSION.BUILD()>7807.
+             (
+                IF (AUTOFOCUS())&&(PowerTrace())
+                (
+                   MENUITEM  "[:afocus]&AutoFocus Diagnosis"
+                   (
+                             &file=   "afdiagnosis.cmm"
+                             &dir=    "demo/etc/diagnosis/autofocus"
+                             &dir2=   "demo/arm/etc/diagnosis"
+                             IF      OS.FILE("~~/&dir/&file")
+                                     DO "~~/&dir/&file"
+                             ELSE IF OS.FILE("~~/&file")
+                                     DO "~~/&file"
+                             ELSE IF OS.FILE("~~/&dir2/&file")
+                                     DO "~~/&dir2/&file"
+                             ELSE
+                                     DIALOG.OK "Sorry, can't find '&file'."
+                   )
+                )
+             )
+;        v POPUP   "&Support"
+         )
+         MENUITEM  "[:t32]About TRACE32..."                     "VERSION"
+; v POPUP  "&Help"
+  )
+
+)
+;^ MENU
+
+
+
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+;  Additional speedbar buttons for dedicated windows
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------
+
+ADD
+; Buttons for SYStem.DETECT SHOWChain
+BUTTONS "sys.detect.showc"
+(
+  IF SIMULATOR()
+  (
+    MENUITEM "[:refresh]refresh" "SYStem.DETECT SHOWChain"
+  )
+  ELSE
+  (
+    MENUITEM "[:refresh]refresh"
+    (
+        PRIVATE &cmd
+        &cmd=WINdow.COMMAND(WinTOP)
+        &cmd
+    )
+  )
+  IF VERSION.BUILD.BASE()>69398.
+  (
+    WIDTH WIDER
+  )
+    MENUITEM "[:config]SYStem" "SYStem.state"
+    MENUITEM "debug port"      "SYStem.CONFIG /DebugPort"
+    MENUITEM "pre / post"      "SYStem.CONFIG /JTAG"
+)
+; --------------------------------------------------------------------------------
+; --------------------------------------------------------------------------------

@@ -1,0 +1,2 @@
+source "$SIFLI_SDK/rtos/rtthread/components/drivers/Kconfig"
+source "$SIFLI_SDK/middleware/bluetooth/Kconfig.hw"

@@ -1,0 +1,38 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for EM Memory
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (env['BT_EMB_PRESENT'] == 'on') or (env['BLE_EMB_PRESENT'] == 'on'):
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    em_src_dir = os.path.join(em_dir, 'src')
+    em_api_dir = os.path.join(em_dir, 'api')
+    em_cfg_dir = os.path.join(em_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    em_def_list  = []
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    em_inc_list  = []
+    em_inc_list += [em_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    em_src_list = scutils.file_list_read(env, os.path.join(em_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, em_src_dir, em_def_list, em_inc_list, em_src_list)

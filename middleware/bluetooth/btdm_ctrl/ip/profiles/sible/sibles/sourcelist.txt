@@ -1,0 +1,13 @@
+#***************************************************************************************
+# @file sourcelist.txt
+#
+# @brief This file lists up all the source code that will be
+#        compiled and built for XXXX module. 
+#
+# Copyright (C) SiFli 2019-2022
+#
+#***************************************************************************************
+
+    sibles.c
+    sibles_task.c
+

@@ -1,0 +1,10 @@
+#ifndef __REG_EM_BLE_TX_ISO_DESC_H_
+#define __REG_EM_BLE_TX_ISO_DESC_H_
+
+#define REG_EM_BLE_TX_ISO_DESC_SIZE 12
+
+#define REG_EM_BLE_TX_ISO_DESC_BASE_ADDR 0x20408000
+
+
+#endif // __REG_EM_BLE_TX_ISO_DESC_H_
+

@@ -1,0 +1,17 @@
+menuconfig BUZZER_ENABLED
+    bool "Buzzer"
+    default n
+    if BUZZER_ENABLED
+        config BUZZER_INTERFACE_NAME
+        string "BUZZER interface name"
+        default "pwm2"
+
+        config BUZZER_CHANEL_NUM
+        int "BUZZER channel in PWM"
+        default 1
+
+        config BUZZER_FREQ
+        int "BUZZER PWM freq"
+        default 2730
+
+    endif

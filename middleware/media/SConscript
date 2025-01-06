@@ -1,0 +1,14 @@
+import os
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+cwd = GetCurrentDir()
+inc    += [cwd]
+src  += Glob('./*.c')
+
+group = DefineGroup('ffmpeg', src, depend = ['PKG_USING_FFMPEG'], CPPPATH = inc)
+
+Return('group')

@@ -1,0 +1,34 @@
+
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src += Glob('./real/*.c')
+src += Glob('./mp3tabs.c')
+src += Glob('./mp3dec.c')
+
+
+
+inc += [cwd]
+inc += [cwd + "/pub"]
+inc += [cwd + "/real"]
+
+#aac player demo
+#SrcRemove(src, './demo.c')
+#src += Glob('./demo_cmd.c')
+
+LOCAL_CCFLAGS = ''
+LOCAL_CCFLAGS += ' -DARM'
+
+
+group = DefineGroup('libhelix', src, depend = ['PKG_USING_LIBHELIX'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

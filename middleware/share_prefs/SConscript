@@ -1,0 +1,19 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+src   = []
+cwd   = GetCurrentDir()
+CPPPATH = [cwd]
+
+src += Glob('share_prefs_cmd.c')
+if GetDepend(['PKG_USING_EASYFLASH']):
+    src += ['share_prefs_ezflash.c']
+if GetDepend(['PKG_USING_FLASHDB']):
+    src += ['share_prefs_flashdb.c']
+
+
+# add src and include to group.
+group = DefineGroup('share_prefs', src, depend = ['BSP_SHARE_PREFS'], CPPPATH = CPPPATH)
+
+Return('group')

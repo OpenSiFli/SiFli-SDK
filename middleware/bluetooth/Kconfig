@@ -1,0 +1,320 @@
+menu "Bluetooth"
+    config BLUETOOTH
+    bool "Enable bluetooth"
+
+    config CFG_BLE
+        bool 
+        default n
+    config CFG_BT
+        bool 
+        default n
+    config CFG_BT_PWR_CTRL
+        bool 
+        default n    
+    config CFG_TRC_EN
+        bool "Trace enabled"
+        default n
+    choice
+        depends on CFG_TRC_EN
+        prompt "Select trace level"
+        config CFG_TRC_HCI
+            bool "HCI trace enabled"
+        config CFG_TRC_ALL
+            bool "All trace enabled"
+    endchoice
+    
+    # rsource "stack/ble/Kconfig"
+    # rsource "stack/bt/Kconfig"
+
+    config BSP_BLE_SIBLES
+        bool "Bluetooth service"
+        select USING_IPC_QUEUE if !BSP_USING_PC_SIMULATOR
+        depends on BLUETOOTH && (!BF0_LCPU || (BF0_LCPU && SOC_SF32LB55X))
+        default y
+  
+    if BSP_BLE_SIBLES
+        menu "Common service"
+            config BSP_BLE_NVDS_SYNC
+            bool "Enable NVDS synchronous"
+            depends on BSP_BLE_SIBLES && (BF0_HCPU || BSP_USING_PC_SIMULATOR)
+            default y
+            config NVDS_AUTO_UPDATE_MAC_ADDRESS
+            bool "Using MAC address from product area"
+            default y
+            depends on BSP_BLE_NVDS_SYNC
+        
+            config BT_METRICS
+            bool "Enable BT metrics"
+            depends on BSP_BLE_SIBLES && !SOC_SF32LB55X
+            select USING_METRICS_COLLECTOR
+            default n
+            
+            config BT_RF_TEST
+            bool "Enable RF test on shell"
+            depends on BSP_BLE_SIBLES && !SOC_SF32LB55X
+            default y
+        
+        endmenu
+    endif
+
+    menu "BLE service"
+        depends on BSP_BLE_SIBLES
+
+        config BLE_GAP_CENTRAL
+            bool "Enable BLE GAP central role"
+            depends on BSP_BLE_SIBLES
+            default y        
+
+        config BLE_GATT_CLIENT
+            bool "Enable BLE GATT client"
+            depends on BSP_BLE_SIBLES
+            default y
+
+        config BSP_BLE_CONNECTION_MANAGER
+            bool "Enable BLE connection manager"
+            depends on BSP_BLE_SIBLES
+            default y
+            if BSP_BLE_CONNECTION_MANAGER
+                config BLE_CONNECTION_PRIORITY_SYNC
+                bool "Enable priority sync"
+                default n
+            endif
+            if BSP_BLE_CONNECTION_MANAGER
+                config BLE_CM_RESOLVE_ADDRESS
+                bool "Enable resolve address"
+                default n
+            endif
+            if BSP_BLE_CONNECTION_MANAGER
+                config BLE_CTKD_ENABLE
+                bool "Enable cross-transport key derivation"
+                default y
+            endif
+            if BSP_BLE_CONNECTION_MANAGER
+                config BLE_CM_BOND_DISABLE
+                bool "Disable pair and bond function"
+                default n
+            endif
+     
+        config SIBLES_TRANSPARENT_ENABLE
+            bool "Enable transparent data exchange"
+            depends on BSP_BLE_SIBLES
+            default n
+            if SIBLES_TRANSPARENT_ENABLE
+                config SIFLI_TRAN_OUTPUT_PORT
+                string "Transparent output port"
+                default "uart3"
+            endif
+
+        config SIBLES_SERIAL_DEVICE
+            bool "Enable serial device"
+            depends on BSP_BLE_SIBLES
+            select ULOG_USING_FILTER
+            default n
+            if SIBLES_SERIAL_DEVICE
+                config SIBLE_SERIAL_POOL_SIZE
+                int "BLE serial RX buffer pool size"
+                default 1024
+                config SIBLES_SERIAL_DEVICE_AUTO
+                bool "Switch console to BLE"
+                default n
+                config SIBLES_IGNORE_CONSOLE_ECHO
+                bool "Ignore command echo print"
+                default y
+            endif   
+
+        config BSP_BLE_ANCS
+            bool "Enable BLE ANCS"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BQB_TEST
+            bool "Enable BQB test"
+            depends on BSP_BLE_SIBLES
+            default n
+       config BSP_BLE_TIMEC
+            bool "Enable BLE time client"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_TIMES
+            bool "Enable BLE time server"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_HRPC
+            bool "Enable BLE heart rate collector"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_BASC
+            bool "Enable BLE battery service client"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_CSCPC
+            bool "Enable BLE cycling speed and cadence collector"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_CPPC
+            bool "Enable BLE cycling power collector"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_DISS
+            bool "Enable BLE device information service server"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BSP_BLE_AMS
+            bool "Enable BLE AMS"
+            depends on BSP_BLE_SIBLES
+            default n
+
+        config BLE_EQ_CONFIG_SERVER
+            bool "Enable BLE EQ config server"
+            depends on BSP_BLE_SIBLES
+            default n
+        config BLE_EQ_CONFIG_CLIENT
+            bool "Enable BLE EQ config client"
+            depends on BSP_BLE_SIBLES
+            default n
+        
+        config BSP_BLE_LOG
+            bool "Enable log over BLE"
+            depends on BSP_BLE_SIBLES
+            default n
+ 
+         config BSP_BLE_PXPR
+            bool "Enable BLE PxPR"
+            depends on BSP_BLE_SIBLES
+            default n
+ 
+        config BSP_BLE_SERIAL_TRANSMISSION
+            bool "Enable BLE serial transmission"
+            depends on BSP_BLE_SIBLES
+            default n
+         
+        config BSP_BLE_WATCH_FACE
+            bool "Enable watch face downloaded via BLE"
+            depends on BSP_BLE_SIBLES
+            default n
+        
+        config BLE_SVC_CHG_ENABLE
+            bool "Enable service change"
+            depends on BSP_BLE_SIBLES
+            default y
+    endmenu
+
+    menu "Classic BT service"
+        depends on BSP_BLE_SIBLES    
+        
+        config BT_FINSH_PAN
+            bool "Enable BT pan finsh"
+            depends on BT_FINSH && RT_USING_LWIP
+            default n
+
+        config BT_FINSH
+            bool "Enable BT finsh"
+            depends on BSP_BLE_SIBLES && !SOC_SF32LB55X
+            default n     
+
+        config BT_PROFILE_CUSTOMIZE
+            bool "Manually select profiles"
+            default n     
+ 
+        config CFG_SPP_CLT
+            bool "Enable SPP client"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+
+        config CFG_SPP_SRV
+            bool "Enable SPP server"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n
+            config SPP_TRAN_ONLY
+                bool "Using SPP lib only"
+                depends on CFG_SPP_SRV
+                default n
+
+        config CFG_HFP_HF
+            bool "Enable HandsFree HF"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+
+        config CFG_HFP_AG
+            bool "Enable HandsFree AG"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+
+        config CFG_PAN
+            bool "Enable PAN"
+            depends on BT_PROFILE_CUSTOMIZE
+            select BT_FINSH_PAN
+            default n
+        config CFG_AV
+            bool "Enable A2DP"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n
+        config CFG_AV_SRC
+            depends on BT_PROFILE_CUSTOMIZE && CFG_AV
+            bool "Enable A2DP source profile"
+            default n     
+        config CFG_AV_SNK
+            depends on BT_PROFILE_CUSTOMIZE && CFG_AV
+            bool "Enable A2DP sink profile"
+            default n     
+
+        config CFG_AVRCP
+            bool "Enable AVRCP"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+
+        config CFG_HID
+            bool "Enable HID"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+
+        config CFG_PBAP_CLT
+            bool "Enable PBAP client"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+        config CFG_BT_L2CAP_PROFILE
+            bool "Enable L2CAP custom profile"
+            depends on BT_PROFILE_CUSTOMIZE
+            default n     
+         
+        config BSP_BT_CONNECTION_MANAGER
+            bool "Enable BT connection manager"
+            depends on BSP_BLE_SIBLES && BT_FINSH && !SOC_SF32LB55X
+            select PKG_USING_STATE_MACHINE
+            default y
+            if BSP_BT_CONNECTION_MANAGER
+                config BT_AUTO_CONNECT_LAST_DEVICE
+                bool "Re-connect to last device if connection timeout happened or system power on"
+                default n
+            endif
+
+        config BSP_BT_APP
+            bool "Enable bt app in watch-demo"
+            depends on BT_FINSH
+            default y
+         
+        config BTS2_APP_MENU
+            bool "Enable BT finsh shell"
+            depends on BT_FINSH
+            default n
+        
+        config BT_CON_NUM_CUSTOMIZE
+            bool "Manually config bt connection number"
+            default n     
+ 
+        config CFG_MAX_BT_ACL_NUM
+            int "config max bt acl number"
+            depends on BT_CON_NUM_CUSTOMIZE
+            default 1     
+        config CFG_MAX_BT_BOND_NUM
+            int "config max bt bond number"
+            depends on BT_CON_NUM_CUSTOMIZE
+            default 2     
+    endmenu
+    
+    #KCONFIG_BOARD_V2 is used when merging configs.
+    if !KCONFIG_V2 || KCONFIG_BOARD_V2
+        rsource "Kconfig.hw"
+    endif
+   
+    rsource "stack/zephyr_bt/Kconfig"
+endmenu

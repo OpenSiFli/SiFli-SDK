@@ -1,0 +1,47 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+src = []
+group=[]
+inc=[cwd]
+
+LOCAL_CCFLAGS = ''
+
+
+#include all subfolder
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+#Add resources.
+# Ensure directory is created before any builder is executed
+# If the path is not present, it would not be added in "include path" and 'lang_pack.h' dependency would not work
+Execute(Mkdir('resource/strings'))
+objs.extend(SConscript(os.path.join(cwd, '../../resource/images/SConscript'), variant_dir="resource/images", duplicate=0))
+objs.extend(SConscript(os.path.join(cwd, '../../resource/fonts/SConscript'), variant_dir="resource/fonts", duplicate=0))
+objs.extend(SConscript(os.path.join(cwd, '../../resource/strings/SConscript'), variant_dir="resource/strings", duplicate=0))
+
+#Add GUI applications
+app_objs = SConscript(os.path.join(cwd, '../../gui_apps/SConscript'), variant_dir="gui_apps", duplicate=0)
+
+#if GetDepend('LV_USING_EXT_RESOURCE_MANAGER'):
+#    Depends(app_objs, Env['lang'])
+objs.extend(app_objs)
+
+#Add Service
+objs.extend(SConscript(os.path.join(cwd, '../../service/SConscript'), variant_dir="service", duplicate=0))
+
+#Add applications utils
+objs.extend(SConscript(os.path.join(cwd, '../../app_utils/SConscript'), variant_dir="app_utils", duplicate=0))
+
+
+# Add SDK
+Import('SIFLI_SDK')
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
+Return('objs')

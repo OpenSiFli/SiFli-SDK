@@ -1,0 +1,58 @@
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+obj = []
+lib = []
+
+# add LittlevGL common include
+src = src + Glob('*.c')
+if  GetDepend('FREETYPE_TINY_FONT'):
+    if GetDepend('BSP_USING_PC_SIMULATOR'):
+        if os.path.isfile(os.path.join(cwd, 'Tiny_font_msvc.lib')):
+            lib=['Tiny_font_msvc']
+    else:
+        if os.path.isfile(os.path.join(cwd, 'Tiny_font_rvds.lib')):
+            lib=['Tiny_font_rvds']    
+    
+if not os.path.isfile(os.path.join(cwd, '../src/SConscript')) or GetDepend('USING_LIBRARY_ONLY'):
+    if GetDepend('BSP_USING_PC_SIMULATOR'):
+        lib=lib+['sifli_lib_msvc']
+    else:
+        if GetDepend('BF0_HCPU'):
+            if rtconfig.PLATFORM=='gcc':
+                lib=lib+['libsifli_lib_gcc']
+            else:
+                lib=lib+['sifli_lib_rvds']
+        else:
+            if rtconfig.PLATFORM=='gcc':
+                lib=lib+['libsifli_lib_l_gcc']
+            else:
+                lib=lib+['sifli_lib_l_rvds']
+
+
+if GetDepend('BLUETOOTH'): 
+    if GetDepend('BF0_HCPU'):
+        if rtconfig.PLATFORM=='gcc':
+            if GetDepend('SPP_TRAN_ONLY'):
+                lib=lib+['lib_bt_gcc_tran_only']
+            else:
+                lib=lib+['lib_bt_gcc']
+        else:
+            if GetDepend('SPP_TRAN_ONLY'):
+                lib=lib+['lib_bt_rvds_tran_only']
+            else:
+                lib=lib+['lib_bt_rvds']
+    elif GetDepend('BSP_USING_PC_SIMULATOR'):
+        lib=lib+['lib_bt_msvc']
+
+if GetDepend('PKG_USING_SOUNDPLUS'):
+    lib=lib+['soundplus_sve.lib']
+
+obj = DefineGroup('sifli_lib', src, depend = [''], CPPPATH = inc, LIBS=lib, LIBPATH=inc)
+Return('obj')

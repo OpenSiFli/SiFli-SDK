@@ -1,0 +1,103 @@
+menu "Bluetooth Hardware Config"
+    depends on (BF0_LCPU || FPGA || BSP_USING_PC_SIMULATOR || (BF0_HCPU && !SOC_SF32LB55X))
+    config ROM_ATT_BUF_SIZE
+    int "ATT database size"
+    default 3084
+    config ROM_LOG_SIZE
+        int "Log buffer size"
+        default 4096
+    choice ROM_ENV_BUFF
+        prompt "Select ROM envoirment buffer"
+        default BLE_ACTIVITY_6
+        depends on SOC_SF32LB55X
+        config BLE_ACTIVITY_6
+            bool "Conifg maximum 6 links"           
+        config BLE_ACTIVITY_2
+            bool "Config maximum 2 links"
+    endchoice
+    menu "STACK_CONFIG"
+        depends on (SOC_SF32LB56X || SOC_SF32LB52X) && BF0_LCPU
+        menuconfig STACK_BT_ON
+            bool "BT classical enable"
+            default y
+            config MAX_BT_ACL
+                int "Supported ACL number. Maximum is 2"
+                depends on STACK_BT_ON
+                default 2
+            config MAX_BT_SCO
+                int "Supported SCO number. Maximum is 1"
+                depends on STACK_BT_ON
+                default 1
+        menuconfig STACK_BLE_ON
+            bool "BLE enable"
+            default y
+            config MAX_BLE_ACT
+                int "Supported ACL number. Maximum is 10"
+                depends on STACK_BLE_ON
+                default 6
+            config MAX_BLE_RAL
+                int "Supported RAL number. Maximum is 6"
+                depends on STACK_BLE_ON
+                default 3
+    endmenu 
+    choice STACK_ENV_BUFF
+        prompt "Select ROM envoirment buffer"
+        default BT_DUAL_CTRL_MEM
+        depends on (SOC_SF32LB58X || SOC_SF32LB56X || SOC_SF32LB52X)
+        config BT_DUAL_FULL_MEM
+            bool "Conifg BT dual-mode full memory"
+            depends on BF0_LCPU
+        config BT_DUAL_CTRL_MEM
+            bool "Config BT dual-mode controller memory"
+            depends on BF0_LCPU
+        config BT_DUAL_HOST_MEM
+            bool "Config BT dual-mode host memory"
+            depends on BF0_HCPU
+    endchoice
+    config ROM_LOG_PORT
+    string "ROM log port"
+    default "uart3"
+    depends on SOC_SF32LB55X
+    choice
+        depends on (SOC_SF32LB58X || SOC_SF32LB56X || SOC_SF32LB52X || BSP_USING_PC_SIMULATOR)
+        prompt "Select stack data transfer port"
+        default MB_PORT
+        config UART_PORT0
+            bool "Use UART as transfer port"
+            config UART_PORT0_PORT
+            depends on UART_PORT0
+            string "Choose uart port"
+            default "uart3"
+        config MB_PORT
+            bool "Use HW Mailbox as transfer port"
+        config IPC_PORT
+            bool "Use IPC as transfer port"
+    endchoice
+    choice
+        prompt "Select trace port"
+        depends on ((SOC_SF32LB58X || SOC_SF32LB56X) && BF0_LCPU) || ((SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X) && BF0_HCPU)
+        default UART_PORT1
+        config UART_PORT1
+            bool "Use UART as trace port"
+            config UART_PORT1_PORT
+            depends on UART_PORT1
+            string "Choose uart port"
+            default "uart4"
+        config HCI_ON_FLASH
+            bool "Write HCI log to dedicated flash area"
+            depends on (SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X) && BF0_HCPU
+        config HCI_ON_LOG
+            bool "Write HCI log to ulog"
+            depends on SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X
+            config LOG_ON_CONSOLE
+            bool "Mixed HCI log with system log"
+                depends on HCI_ON_LOG
+                default n
+            config HCI_LOG_SIZE
+            int "Mixed HCI Log buffer size"
+                depends on HCI_ON_LOG
+                default 131072
+        config HCI_DISABLE
+            bool "Disable bt host HCI log"
+    endchoice
+endmenu

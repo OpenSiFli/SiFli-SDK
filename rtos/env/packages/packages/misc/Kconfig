@@ -1,0 +1,19 @@
+menu "miscellaneous packages"
+
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/libcsv/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/optparse/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/fastlz/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/miniLZO/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/quicklz/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/MultiButton/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/CanFestival/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/zlib/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/dstr/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/TinyFrame/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/kendryte-demo/Kconfig"
+
+source "$SIFLI_SDK/rtos/env/packages/packages/misc/samples/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/hello/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/misc/vi/Kconfig"
+
+endmenu

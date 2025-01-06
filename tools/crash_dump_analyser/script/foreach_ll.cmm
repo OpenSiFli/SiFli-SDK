@@ -1,0 +1,23 @@
+;Brief:  foreach ll list.
+;Useage: do foreach_ll.cmm [node struct] [list member] [list]
+;For example: do foreach_ll.cmm "lv_task_t" &_lv_task_ll
+;For example: do foreach_ll.cmm "struct _lv_task_t" &_lv_task_ll
+
+ENTRY &node_type &list 
+&node_type=&node_type  // Removes quotes from string
+
+v.w ((lv_ll_t *)&list)
+
+PRIVATE &cursor
+PRIVATE &list_head
+PRIVATE &next_offset
+
+&list_head=VAR.Value(((lv_ll_t *)&list)->head)
+&next_offset=VAR.Value(((lv_ll_t *)&list)->n_size + sizeof(lv_ll_node_t *))
+
+&cursor = &list_head
+WHILE (&cursor!=VAR.Value(0))
+(
+	v.AddWatch %Hex (&node_type *)(&cursor)
+	&cursor = VAR.Value(*((lv_ll_node_t **)(&cursor+&next_offset)))
+)

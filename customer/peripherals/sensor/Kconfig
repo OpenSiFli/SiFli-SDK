@@ -1,0 +1,299 @@
+menu "Sensor"
+
+menuconfig SENSOR_USING_HR
+    bool "Heart Rate Sensor"
+    default n
+    if SENSOR_USING_HR
+        menuconfig HR_USING_GH3011
+            bool "GH3011"
+            select RT_USING_SENSOR
+            default n
+            if HR_USING_GH3011
+                config GH3011_I2C_BUS
+                string "GH3011 I2C bus name"
+                default "i2c4"
+                config HR_MODEL_NAME
+                string "GH3011 model name"
+                default "gh3011"
+
+                config GH3011_INT_BIT
+                int "Heart rate ready int pin"
+                default 79
+                config GH3011_RST_PIN
+                int "Heart rate reset pin"
+                default 78
+            endif   
+        menuconfig HR_USING_HRS3300
+            bool "HRS3300"
+            select RT_USING_SENSOR
+            default n
+            if HR_USING_HRS3300
+                config HRS3300_I2C_BUS
+                string "HRS3300 I2C bus name"
+                default "i2c4"
+                config HR_MODEL_NAME
+                string "HRS3300 model name"
+                default "hrs3300"
+
+                config HRS3300_POW_PIN
+                int "Heart rate power pin"
+                default 78
+                
+                config HRS3300_INT_PIN
+                int "Heart rate int pin"
+                default 1
+				
+		config HR_USR_POLLING_MODE
+                bool "HR use polling mode"
+                default y
+            endif             
+    menuconfig HR_USING_SC7R30
+            bool "SC7R30"
+            select RT_USING_SENSOR
+            default n
+            if HR_USING_SC7R30
+                config SC7R30_I2C_BUS
+                string "SC7R30 I2C bus name"
+                default "i2c4"
+            endif
+            
+    menuconfig HR_USING_PAH8007
+            bool "PAH8007"
+            select RT_USING_SENSOR
+            default n
+            if HR_USING_PAH8007
+                config PAH8007_I2C_BUS
+                string "PAH8007 I2C bus name"
+                default "i2c4"
+            endif
+	menuconfig HR_USING_VC32S
+            bool "VC32S"
+            select RT_USING_SENSOR
+            default n
+            if HR_USING_VC32S
+                config VC32S_I2C_BUS
+                string "VC32S I2C bus name"
+                default "i2c4"
+                config HR_MODEL_NAME
+                string "VC32S model name"
+                default "vc32s"
+
+                config VC32S_INT_BIT
+                int "Heart rate ready int pin"
+                default 140
+                config VC32S_RST_PIN
+                int "Heart rate reset pin"
+                default 102
+		config VC32S_POW_PIN
+                int "Heart rate power pin"
+                default -1
+		config HR_USR_INT_MODE
+                bool "HR use INT mode"
+                default y
+            endif 
+    endif
+    
+menuconfig SENSOR_USING_PEDO
+    bool "Pedometer Sensor"
+      default n
+    if SENSOR_USING_PEDO
+        menuconfig SENSOR_USING_SC7A20
+            bool "SC7A20"
+            select RT_USING_SENSOR
+            default n
+            if SENSOR_USING_SC7A20
+                config SC7A20_I2C_BUS
+                string "Sensor SC7A20 I2C"
+                default "i2c4"    
+            endif
+    endif
+
+menuconfig SENSOR_USING_6D
+    bool "6D Sensor for Accelerator and Gyro"
+    default n
+    if SENSOR_USING_6D
+        menuconfig ACC_USING_LSM6DSL
+            bool "LSM6DSL"
+            select RT_USING_SENSOR
+            default n
+            if ACC_USING_LSM6DSL
+                config LSM6DSL_USING_I2C
+                int "LSM6DSL BUS type: 1 = I2C, 0 = SPI"
+                default 0
+                config LSM6DSL_BUS_NAME
+                string "Sensor LSM6DSL BUS name"
+                default "spi1"
+                config GSENSOR_MODEL_NAME
+                string "Gsensor Model name"
+                default "lsm6dsl"
+        
+                config LSM6DSL_INT_GPIO_BIT
+                int "LSM6DSL Interrupt 1 PIN"
+                default 97
+                config LSM6DSL_INT2_GPIO_BIT
+                int "LSM6DSL Interrupt 2 PIN"
+                default 94
+                config LSM6DSL_POW_PIN
+                int "lsm6dsl power pin"
+                default 121
+
+                config LSM_USING_AWT
+                bool "Enable AWT fucntion"
+                default y
+                config LSM_USING_PEDO
+                bool "Enable Pedometer fucntion"
+                default y
+        config GSENSOR_UES_FIFO
+                bool "LSM6DSL use fifo"
+                default y
+            endif
+    menuconfig ACC_USING_SC7A20
+            bool "SC7A20"
+            select RT_USING_SENSOR
+            default n
+            if ACC_USING_SC7A20
+                config SC7A20_I2C_BUS
+                string "SC7A20 I2C bus name"
+                default "i2c5"
+                config GSENSOR_MODEL_NAME
+                string "Gsensor Model name"
+                default "sc7a20"
+
+                config SC7A20_INT_PIN
+                int "SC7A20 int pin"
+                default 144
+            endif
+    menuconfig ACC_USING_SC7A22
+            bool "SC7A22"
+            select RT_USING_SENSOR
+            default n
+            if ACC_USING_SC7A22
+                config SC7A22_USING_I2C
+                int "SC7A22 BUS type: 1 = I2C, 0 = SPI"
+                default 0
+                config SC7A22_BUS_NAME
+                string "Sensor SC7A22 BUS name"
+                default "spi3"
+                config GSENSOR_MODEL_NAME
+                string "Gsensor Model name"
+                default "sc7a22"
+        
+                config SC7A22_INT_GPIO_BIT
+                int "SC7A22 Interrupt 1 PIN"
+                default 140
+                
+                config SC7A22_POW_PIN
+                int "SC7A22 power pin"
+                default 97
+                
+                config GSENSOR_UES_FIFO
+                bool "SC7A22 use fifo"
+                default y
+            endif            
+	menuconfig ACC_USING_STK8328C
+            bool "STK8328C"
+            select RT_USING_SENSOR
+            default n
+            if ACC_USING_STK8328C
+                config STK8328C_BUS_NAME
+                string "Sensor STK8328C BUS name"
+                default "i2c6"
+                config GSENSOR_MODEL_NAME
+                string "Gsensor Model name"
+                default "stk8328c"
+        
+                config STK8328C_INT1
+                int "STK8328C Interrupt 1 PIN"
+                default 139
+                
+				config STK8328C_INT2
+                int "STK8328C Interrupt 2 PIN"
+                default 105
+				
+				config STK8328C_POW_PIN
+                int "STK8328C power pin"
+                default -1
+
+                config GSENSOR_UES_FIFO
+                bool "STK8328C use fifo"
+                default y
+            endif
+    config USING_GYRO_SENSOR
+           bool "using gyro"
+           default n
+    endif
+
+menuconfig SENSOR_USING_MAG
+    bool "Magnetic Sensor"
+    default n
+    if SENSOR_USING_MAG
+        menuconfig MAG_USING_MMC36X0KJ
+            bool "MMC36X0KJ"
+            select RT_USING_SENSOR
+            default n
+            if MAG_USING_MMC36X0KJ
+                config MMC36X0KJ_I2C_BUS
+                string "Sensor MMC36X0KJ I2C"
+                default "i2c4"    
+            endif 
+    endif
+
+menuconfig SENSOR_USING_BAROMETER
+    bool "Barometer Sensor"
+    default n
+    if SENSOR_USING_BAROMETER
+        menuconfig SENSOR_USING_BMP280
+            bool "BMP280"
+            select RT_USING_SENSOR
+            default n
+            if SENSOR_USING_BMP280
+                config BMP280_I2C_BUS
+                string "Sensor BMP280 I2C"
+                default "i2c4"    
+            endif
+    endif    
+
+menuconfig SENSOR_USING_ASL
+    bool "ASL Sensor"
+    default n
+    if SENSOR_USING_ASL
+        menuconfig ASL_USING_TSL2572
+            bool "TSL2572"
+            select RT_USING_SENSOR
+            default n
+            if ASL_USING_TSL2572
+                config TSL2572_I2C_NAME
+                string "TSL2572 I2C BUS"
+                default "i2c4"
+            endif
+    endif
+	
+menuconfig SENSOR_USING_MPU6050
+    bool "MPU6050"
+    default n
+    select RT_USING_SENSOR
+    if SENSOR_USING_MPU6050
+        config MPU6050
+        bool
+        default y
+
+        config SENSOR_I2C
+        string "Sensor I2C"
+        default "i2c1"
+    endif    
+ 
+menuconfig SENSOR_USING_DOF10
+    bool "DOF10"
+    select RT_USING_SENSOR
+    default n
+    if SENSOR_USING_DOF10
+        config SENSOR_USING_ICM20948
+        bool "ICM20948"
+        default n
+
+        config SENSOR_I2C_BUS
+        string "Sensor I2C"
+        default "i2c1"
+    endif
+
+endmenu

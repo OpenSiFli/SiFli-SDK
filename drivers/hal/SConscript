@@ -1,0 +1,185 @@
+import rtconfig
+import os
+Import('RTT_ROOT')
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+src = Glob('./*.c')
+inc = [cwd]
+
+if GetDepend('SOC_SF32LB55X'):
+    SrcRemove(src, 'bf0_hal_mpi.c')
+    SrcRemove(src, 'bf0_hal_mpi_ex.c')
+    SrcRemove(src, 'bf0_hal_mpi_psram.c')
+else:
+    SrcRemove(src, 'bf0_hal_qspi.c')
+    SrcRemove(src, 'bf0_hal_qspi_ex.c')
+    
+if GetDepend('SOC_SF32LB52X'):
+    SrcRemove(src, 'bf0_hal_audcodec.c')
+else:
+    SrcRemove(src, 'bf0_hal_audcodec_m.c')
+
+path = [cwd + '/../Include']
+CPPDEFINES = ['USE_HAL_DRIVER']
+
+try:
+    CPPDEFINES += ['SIFLI_BUILD="'+rtconfig.sifli_build+'\"']
+except:
+    pass
+
+try:
+    CPPDEFINES += ['SIFLI_VERSION='+ str(rtconfig.sifli_version)]
+except:
+    pass
+
+try:
+    if rtconfig.keil_version >= "5.32":    
+        CPPDEFINES += ['__FILE__=__FILE_NAME__']
+except:
+    pass
+
+if GetDepend('BSP_USING_SPI_NAND'):
+    CPPDEFINES += ['HAL_USE_NAND']
+elif GetDepend('CFG_BOOTLOADER'):
+    CPPDEFINES += ['HAL_USE_NAND']
+
+if GetDepend('BSP_VDDSIP_LDO18_ENABLE'):
+    CPPDEFINES += ['HAL_VDDSIP_LDO18_ENABLE']
+
+if GetDepend('BSP_USING_FULL_ASSERT'):
+    CPPDEFINES += ['USE_FULL_ASSERT']
+elif GetDepend('BSP_USING_LOOP_ASSERT'):
+    CPPDEFINES += ['USE_LOOP_ASSERT']
+else:
+    pass
+
+if rtconfig.CROSS_TOOL == 'gcc':
+    # rtconfig.LFLAGS in SifliGccEnv uses list
+    LINKFLAGS = []
+else:
+    # rtconfig.LFLAGS in SifliKeilEnv uses string
+    LINKFLAGS = ''
+
+lib = []
+if GetDepend('BF0_HCPU'):
+    CPPDEFINES+=['SOC_BF0_HCPU']
+    CPPDEFINES += ['ARM_MATH_LOOPUNROLL']
+    SFLIB=['bfhal_hcpu.lib']
+
+    if GetDepend('BF0_ACPU'):
+        CPPDEFINES+=['SOC_BF0_ACPU']
+        SFLIB=['bfhal_acpu.lib']
+elif GetDepend('BF0_LCPU'):
+    CPPDEFINES+=['SOC_BF0_LCPU']
+    CPPDEFINES += ['ARM_MATH_LOOPUNROLL']
+    SFLIB=['bfhal_lcpu.lib']
+    if rtconfig.CROSS_TOOL == 'keil':
+        if GetDepend('SOC_SF32LB58X'):
+            rom_src_name = 'sifli_rom_58x.sym'
+        elif GetDepend('SOC_SF32LB55X'):
+            if GetDepend('LCPU_XIP_CODE'):
+                if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
+                    rom_src_name = 'sifli_rom_55x_a3_xip.sym'
+                else:    
+                    rom_src_name = 'sifli_rom_55x_xip.sym'
+            else:
+                if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
+                    rom_src_name = 'sifli_rom_55x_a3.sym'
+                else:    
+                    rom_src_name = 'sifli_rom_55x.sym'
+        elif GetDepend('SOC_SF32LB56X'):
+            rom_src_name = 'sifli_rom_56x.sym'
+        elif GetDepend('SOC_SF32LB52X'):
+            rom_src_name = 'sifli_rom_52x.sym'
+    elif rtconfig.CROSS_TOOL == 'gcc': 
+        if GetDepend('SOC_SF32LB58X'):
+            rom_src_name = 'sifli_rom_58x_gcc.sym'
+        elif GetDepend('SOC_SF32LB55X'):
+            if GetDepend('LCPU_XIP_CODE'):
+                if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
+                    rom_src_name = 'sifli_rom_55x_a3_xip_gcc.sym'
+                else:    
+                    rom_src_name = 'sifli_rom_55x_xip_gcc.sym'
+            else:
+                if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
+                    rom_src_name = 'sifli_rom_55x_a3_gcc.sym'
+                else:    
+                    rom_src_name = 'sifli_rom_55x_gcc.sym'
+        elif GetDepend('SOC_SF32LB56X'):
+            rom_src_name = 'sifli_rom_56x_gcc.sym'
+        elif GetDepend('SOC_SF32LB52X'):
+            rom_src_name = 'sifli_rom_52x_gcc.sym'
+
+    if not GetDepend('ROM_ATTR') and not GetDepend('LCPU_ROM_DISABLED'):
+        if rtconfig.CROSS_TOOL == 'keil':
+            if not GetOption('target'):
+                # build from commandline, generate lib in target dir
+                lib += Env.RomLib(Glob(rom_src_name))
+            else:
+                # Generate project, use src file as lib directly
+                lib += Glob(rom_src_name)
+        elif rtconfig.CROSS_TOOL == 'gcc':
+            LINKFLAGS += ['-T', os.path.join(cwd, rom_src_name).replace('\\', '/')]
+
+else:
+    print("Core need to be selected")
+
+
+if (GetDepend('LCPU_ROM')):
+    CPPDEFINES+=['ROM_ENABLED']
+
+if GetDepend('SOC_SF32LB55X'): 
+    CPPDEFINES+=['SF32LB55X']
+    CPPDEFINES += ['LB55X_CHIP_ID='+str(GetConfigValue('BSP_LB55X_CHIP_ID'))]
+    if rtconfig.PLATFORM == 'armcc':
+        LINKFLAGS += '  --predefine=-DLB55X_CHIP_ID='+str(GetConfigValue('BSP_LB55X_CHIP_ID'))
+elif GetDepend('SOC_SF32LB58X'):
+    CPPDEFINES+=['SF32LB58X']
+elif GetDepend('SOC_SF32LB56X'):
+    CPPDEFINES+=['SF32LB56X']
+elif GetDepend('SOC_SF32LB52X'):
+    CPPDEFINES+=['SF32LB52X']
+else:
+    print("Chipset need to be selected")
+
+if GetDepend('BPS_V33'):
+    CPPDEFINES += ['BPS_V33_HAL']
+
+if GetDepend('PSRAM_CACHE_WB'):
+    CPPDEFINES += ['PSRAM_CACHE_WB']
+
+if GetDepend('MEMCPY_NON_DMA'):
+    CPPDEFINES += ['MEMCPY_NON_DMA']
+
+if GetDepend('RF_CAL_USING_RAM_ARRAY'):
+    CPPDEFINES += ['RF_CAL_USING_RAM_ARRAY']
+
+if GetDepend('FPGA'):
+    CPPDEFINES += ['FPGA']
+
+if GetDepend('BSP_AVDD_V18_ENABLE'):
+    CPPDEFINES += ['AVDD_V18_ENABLE']
+
+if GetDepend('BSP_PVDD_V18_ENABLE'):
+    CPPDEFINES += ['PVDD_V18_ENABLE']
+
+tick_per_second = GetConfigValue('RT_TICK_PER_SECOND')
+if tick_per_second == '':
+    tick_per_second = 1000
+
+CPPDEFINES += ['HAL_TICK_PER_SECOND={}'.format(tick_per_second)]
+
+if '-Omax' in rtconfig.CFLAGS:
+    print ('Omax Do not support library')
+    group = DefineGroup('BF0_HAL', src, depend = [''], CPPPATH = path, CPPDEFINES = CPPDEFINES, LINKFLAGS = LINKFLAGS, LIBS=lib, LIBPATH=[])
+else: 
+    if rtconfig.PLATFORM == 'armcc':
+        if GetDepend('LTO_SUPPORT'):
+            group = DefineGroup('BF0_HAL', src, depend = [''], CPPPATH = path, CPPDEFINES = CPPDEFINES, LINKFLAGS = LINKFLAGS)
+        else:
+            group = DefineGroup('BF0_HAL', src, depend = [''], CPPPATH = path, CPPDEFINES = CPPDEFINES, LIBRARY='bf0_hal.lib', LINKFLAGS = LINKFLAGS, LIBS=lib, LIBPATH=[])
+    else:
+        group = DefineGroup('BF0_HAL', src, depend = [''], CPPPATH = path, CPPDEFINES = CPPDEFINES, LINKFLAGS = LINKFLAGS)
+Return('group')

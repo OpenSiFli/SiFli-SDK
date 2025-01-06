@@ -1,0 +1,14 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+
+src += ['mod_installer.c']
+
+CPPPATH = [cwd]
+
+# add src and include to group.
+group = DefineGroup('middleware', src,depend = ['USING_MOD_INSTALLER'],CPPPATH = CPPPATH)
+    
+Return('group')

@@ -1,0 +1,26 @@
+# RT-Thread building script for trace component
+
+from building import *
+
+src_folder = 'SystemView_Src'
+
+cwd = GetCurrentDir()
+
+src = []
+
+if GetDepend('PKG_USING_SEGGER_RTT'):
+    src += Glob(src_folder +'/SEGGER/SEGGER_RTT.c')
+
+    if GetDepend('PKG_USING_SYSTEMVIEW'):
+        src += Glob(src_folder +'/SEGGER/SEGGER_SYSVIEW.c')
+        src += Glob(src_folder +'/Config/SEGGER_SYSVIEW_RTThread.c')
+        src += Glob(src_folder +'/Config/SEGGER_SYSVIEW_Config_RTThread.c')
+
+    if GetDepend('PKG_SEGGER_RTT_AS_SERIAL_DEVICE'):
+        src += Glob(src_folder +'/Config/SEGGER_RTT_Device.c')
+
+CPPPATH = [cwd, os.path.join(cwd, src_folder+'/Config')]
+CPPPATH += [cwd, os.path.join(cwd, src_folder+'/SEGGER')]
+group = DefineGroup('trace', src, depend = ['PKG_USING_SEGGER_RTT'], CPPPATH = CPPPATH)
+
+Return('group')

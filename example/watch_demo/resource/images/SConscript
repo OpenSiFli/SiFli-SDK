@@ -1,0 +1,42 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+objs_ezip = []
+objs_no_ezip = []
+if (GetConfigValue('LCD_HOR_RES_MAX') != 240) or (GetConfigValue('LCD_VER_RES_MAX') != 240):
+    objs_ezip += Glob('common/ezip/*.png')
+    objs_ezip += Glob('common/ezip/*.gif')
+    objs_no_ezip = Glob('common/no_ezip/*.png')
+    objs_no_ezip += Glob('common/no_ezip/*.gif')
+
+resolution = '{}x{}'.format(GetConfigValue('LCD_HOR_RES_MAX'), GetConfigValue('LCD_VER_RES_MAX'))
+objs_ezip += Glob('{}/ezip/*.png'.format(resolution))
+objs_ezip += Glob('{}/ezip/*.gif'.format(resolution))
+objs_no_ezip += Glob('{}/no_ezip/*.png'.format(resolution))
+objs_no_ezip += Glob('{}/no_ezip/*.gif'.format(resolution))
+
+#color_fmt, file_fmt, section_name
+if 16 == GetConfigValue('LV_COLOR_DEPTH'):
+    color_fmt = '-rgb565'
+else:
+    color_fmt = '-rgb888'
+   
+
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    objs = Env.ImgResource(objs_no_ezip + objs_ezip, color_fmt, '1', 'ROM3_IMG', True)
+else:
+    objs = Env.ImgResource(objs_no_ezip, color_fmt, '1', 'ROM3_IMG')
+    objs += Env.ImgResource(objs_ezip, color_fmt, '2', 'ROM3_IMG')
+
+if GetOption('no_cc'):
+    objs = []
+    
+objs = DefineGroup('resource', objs, depend = ['PKG_USING_LITTLEVGL2RTT'])  
+
+Return ('objs')
+

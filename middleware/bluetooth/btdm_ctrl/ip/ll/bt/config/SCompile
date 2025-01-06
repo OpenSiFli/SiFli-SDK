@@ -1,0 +1,53 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for BT Controller
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+try:
+    BT_EMB_PRESENT = (product in ['btdm', 'bt-std', 'btdm-full-le', 'btdm-full', 'bt-full', 'btdm-full-bt']) and (plf not in ['tlm'])
+    env['BT_EMB_PRESENT']  = "on" if BT_EMB_PRESENT else "off"
+except: 
+    BT_EMB_PRESENT = False
+
+if (BT_EMB_PRESENT):
+    #-----------------------------------------------------------
+    # MODULES REQUIRED
+    #-----------------------------------------------------------
+    env['SHA_PRESENT'] = 'on'
+    env['ECC_P256_PRESENT'] = 'on'
+
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    bt_src_dir = os.path.join(bt_dir, 'src')
+    bt_api_dir = os.path.join(bt_dir, 'api')
+    bt_cfg_dir = os.path.join(bt_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    bt_def_list  = []
+    bt_def_list += ['CFG_BT_EMB']
+    
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    bt_inc_list  = []
+    bt_inc_list += [bt_src_dir]
+    bt_inc_list += [bt_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    bt_src_list = scutils.file_list_read(env, os.path.join(bt_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, bt_src_dir, bt_def_list, bt_inc_list, bt_src_list)

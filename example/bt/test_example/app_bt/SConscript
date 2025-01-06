@@ -1,0 +1,16 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = []
+
+if GetDepend('BT_FINSH'):
+    src += Glob('app_bt.c')
+    CPPPATH += [cwd, str(Dir('#'))]
+
+group = DefineGroup('app_bt', src,depend = ['BT_FINSH','RT_USING_BT'],CPPPATH = CPPPATH)
+
+Return('group')
+

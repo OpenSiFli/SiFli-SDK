@@ -1,0 +1,22 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+Import('SIFLI_SDK')
+
+src = []
+group=[]
+inc=[cwd]
+
+LOCAL_CCFLAGS = ''
+
+# Add example source code
+objs.extend(SConscript(os.path.join(cwd, '../src/SConscript'), variant_dir="lvgl_example", duplicate=0))
+
+#Add SDK
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
+Return('objs')

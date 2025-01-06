@@ -1,0 +1,44 @@
+function note: 
+
+1) eZIP cfile generate:
+		- CMD: ezip -convert xxx\xxx.png -rgb565 -cfile 2  -section ROM1_IMG -detailcf
+     		usage: it will generate a ezip cfile. this cmd  only convert one file. default -rgb565
+     	
+		- CMD: ezip -dir xxx -rgb565 -cfile 2  -section ROM1_IMG -detailcf
+     		usage: it will decode all png of dir "xxx" and it sub dir, generate a ezip cfile. this cmd  will convert batch file. default -rgb565
+	 
+2) eZIP Binary file generate:	
+		- CMD: ezip -convert xxx\yyy.png -rgb565 -binfile 2 -binext .ezip -detailcf
+    		usage: it will generate a bin file, with a lvgl header(4bytes) and ezip binary . this cmd  only convert one file
+
+		- CMD: ezip -dir xxx -rgb565 -binfile 2 -binext .ezip -detailcf
+
+3)	pixel cfile generate:
+		- CMD: ezip -convert xxx\yyy.png -rgb565 -cfile 1  -section ROM2_IMG -detailcf
+    		usage: it will generate a pixel cfile, with a lvgl header(4bytes) and pixel . this cmd  only convert one file. default -rgb565
+    
+    - CMD: ezip -dir xxx -rgb565 -cfile 1  -section ROM2_IMG -detailcf
+
+4)	pixel binary generate:
+		- CMD: ezip -convert xxx\yyy.png -rgb565 -binfile 1  -section ROM3_IMG -binext .ezip -detailcf
+    	usage: it will generate a bin file, with a lvgl header(4bytes) and pixel binary (pixel data same as cfile) . this cmd  only convert one file. default -rgb565
+
+    - CMD: ezip -dir xxx -rgb565 -binfile 1  -section ROM3_IMG -binext .ezip -detailcf
+5)  GIF convert to C
+		- CMD: ezip -gif xxx\yyy.gif
+		
+6)  ttf convert to C
+		- CMD: ezip -gif xxx\yyy.ttf		
+Note:
+for detailcf:		
+		RAW_RGB565:  0x0F
+		RAW_RGB565A: 0x10
+		RAW_RGB888:  0x11
+		RAW_RGB888A: 0x12
+		PXL_RGB565:  0x13
+		PXL_RGB565A: 0x14
+		PXL_RGB888:  0x15
+		PXL_RGB888A: 0X16
+
+for binext  : 
+		any extension not exceeding 20 bytes can be used

@@ -1,0 +1,266 @@
+#ifndef __HPSYS_CFG_H
+#define __HPSYS_CFG_H
+
+typedef struct
+{
+    __IO uint32_t BMR;
+    __IO uint32_t IDR;
+    __IO uint32_t SCR;
+    __IO uint32_t USBCR;
+    __IO uint32_t MCR;
+    __IO uint32_t ULPMCR;
+    __IO uint32_t RTC_TR;
+    __IO uint32_t RTC_DR;
+    __IO uint32_t DBGR;
+    __IO uint32_t CAU2_ATEST;
+    __IO uint32_t CAU2_RSVD1;
+    __IO uint32_t CAU2_RSVD2;
+    __IO uint32_t BISTR;
+} HPSYS_CFG_TypeDef;
+
+/* starting from DBGR, for PA49 UART1_TX function */
+#define HPSYS_CFG_PINR_OFFSET        (8)
+#define HPSYS_CFG_PINR_SIZE          (1)
+
+/***************** Bit definition for HPSYS_CFG_BMR register ******************/
+#define HPSYS_CFG_BMR_BOOT_MODE_Pos     (0U)
+#define HPSYS_CFG_BMR_BOOT_MODE_Msk     (0x1UL << HPSYS_CFG_BMR_BOOT_MODE_Pos)
+#define HPSYS_CFG_BMR_BOOT_MODE         HPSYS_CFG_BMR_BOOT_MODE_Msk
+
+/***************** Bit definition for HPSYS_CFG_IDR register ******************/
+#define HPSYS_CFG_IDR_REVID_Pos         (0U)
+#define HPSYS_CFG_IDR_REVID_Msk         (0xFFUL << HPSYS_CFG_IDR_REVID_Pos)
+#define HPSYS_CFG_IDR_REVID             HPSYS_CFG_IDR_REVID_Msk
+#define HPSYS_CFG_IDR_PID_Pos           (8U)
+#define HPSYS_CFG_IDR_PID_Msk           (0xFFUL << HPSYS_CFG_IDR_PID_Pos)
+#define HPSYS_CFG_IDR_PID               HPSYS_CFG_IDR_PID_Msk
+#define HPSYS_CFG_IDR_CID_Pos           (16U)
+#define HPSYS_CFG_IDR_CID_Msk           (0xFFUL << HPSYS_CFG_IDR_CID_Pos)
+#define HPSYS_CFG_IDR_CID               HPSYS_CFG_IDR_CID_Msk
+#define HPSYS_CFG_IDR_SID_Pos           (24U)
+#define HPSYS_CFG_IDR_SID_Msk           (0xFFUL << HPSYS_CFG_IDR_SID_Pos)
+#define HPSYS_CFG_IDR_SID               HPSYS_CFG_IDR_SID_Msk
+
+/***************** Bit definition for HPSYS_CFG_SCR register ******************/
+#define HPSYS_CFG_SCR_FKEY_MODE_Pos     (0U)
+#define HPSYS_CFG_SCR_FKEY_MODE_Msk     (0x1UL << HPSYS_CFG_SCR_FKEY_MODE_Pos)
+#define HPSYS_CFG_SCR_FKEY_MODE         HPSYS_CFG_SCR_FKEY_MODE_Msk
+
+/**************** Bit definition for HPSYS_CFG_USBCR register *****************/
+#define HPSYS_CFG_USBCR_USB_EN_Pos      (0U)
+#define HPSYS_CFG_USBCR_USB_EN_Msk      (0x1UL << HPSYS_CFG_USBCR_USB_EN_Pos)
+#define HPSYS_CFG_USBCR_USB_EN          HPSYS_CFG_USBCR_USB_EN_Msk
+#define HPSYS_CFG_USBCR_LDO_VSEL_Pos    (1U)
+#define HPSYS_CFG_USBCR_LDO_VSEL_Msk    (0x7UL << HPSYS_CFG_USBCR_LDO_VSEL_Pos)
+#define HPSYS_CFG_USBCR_LDO_VSEL        HPSYS_CFG_USBCR_LDO_VSEL_Msk
+#define HPSYS_CFG_USBCR_LDO_LP_EN_Pos   (4U)
+#define HPSYS_CFG_USBCR_LDO_LP_EN_Msk   (0x1UL << HPSYS_CFG_USBCR_LDO_LP_EN_Pos)
+#define HPSYS_CFG_USBCR_LDO_LP_EN       HPSYS_CFG_USBCR_LDO_LP_EN_Msk
+#define HPSYS_CFG_USBCR_DM_PD_Pos       (5U)
+#define HPSYS_CFG_USBCR_DM_PD_Msk       (0x1UL << HPSYS_CFG_USBCR_DM_PD_Pos)
+#define HPSYS_CFG_USBCR_DM_PD           HPSYS_CFG_USBCR_DM_PD_Msk
+#define HPSYS_CFG_USBCR_TX_RTUNE_Pos    (8U)
+#define HPSYS_CFG_USBCR_TX_RTUNE_Msk    (0x7UL << HPSYS_CFG_USBCR_TX_RTUNE_Pos)
+#define HPSYS_CFG_USBCR_TX_RTUNE        HPSYS_CFG_USBCR_TX_RTUNE_Msk
+#define HPSYS_CFG_USBCR_DC_TE_Pos       (12U)
+#define HPSYS_CFG_USBCR_DC_TE_Msk       (0x1UL << HPSYS_CFG_USBCR_DC_TE_Pos)
+#define HPSYS_CFG_USBCR_DC_TE           HPSYS_CFG_USBCR_DC_TE_Msk
+#define HPSYS_CFG_USBCR_DC_TR_Pos       (13U)
+#define HPSYS_CFG_USBCR_DC_TR_Msk       (0x7UL << HPSYS_CFG_USBCR_DC_TR_Pos)
+#define HPSYS_CFG_USBCR_DC_TR           HPSYS_CFG_USBCR_DC_TR_Msk
+#define HPSYS_CFG_USBCR_RSVD0_Pos       (16U)
+#define HPSYS_CFG_USBCR_RSVD0_Msk       (0xFFUL << HPSYS_CFG_USBCR_RSVD0_Pos)
+#define HPSYS_CFG_USBCR_RSVD0           HPSYS_CFG_USBCR_RSVD0_Msk
+#define HPSYS_CFG_USBCR_RSVD1_Pos       (24U)
+#define HPSYS_CFG_USBCR_RSVD1_Msk       (0xFFUL << HPSYS_CFG_USBCR_RSVD1_Pos)
+#define HPSYS_CFG_USBCR_RSVD1           HPSYS_CFG_USBCR_RSVD1_Msk
+
+/***************** Bit definition for HPSYS_CFG_MCR register ******************/
+#define HPSYS_CFG_MCR_PD_ROM_Pos        (0U)
+#define HPSYS_CFG_MCR_PD_ROM_Msk        (0x1UL << HPSYS_CFG_MCR_PD_ROM_Pos)
+#define HPSYS_CFG_MCR_PD_ROM            HPSYS_CFG_MCR_PD_ROM_Msk
+#define HPSYS_CFG_MCR_PD_ITCM_Pos       (1U)
+#define HPSYS_CFG_MCR_PD_ITCM_Msk       (0x1UL << HPSYS_CFG_MCR_PD_ITCM_Pos)
+#define HPSYS_CFG_MCR_PD_ITCM           HPSYS_CFG_MCR_PD_ITCM_Msk
+#define HPSYS_CFG_MCR_PD_CACHE_Pos      (2U)
+#define HPSYS_CFG_MCR_PD_CACHE_Msk      (0x1UL << HPSYS_CFG_MCR_PD_CACHE_Pos)
+#define HPSYS_CFG_MCR_PD_CACHE          HPSYS_CFG_MCR_PD_CACHE_Msk
+#define HPSYS_CFG_MCR_PD_RAM0_Pos       (3U)
+#define HPSYS_CFG_MCR_PD_RAM0_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM0_Pos)
+#define HPSYS_CFG_MCR_PD_RAM0           HPSYS_CFG_MCR_PD_RAM0_Msk
+#define HPSYS_CFG_MCR_PD_RAM1_Pos       (4U)
+#define HPSYS_CFG_MCR_PD_RAM1_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM1_Pos)
+#define HPSYS_CFG_MCR_PD_RAM1           HPSYS_CFG_MCR_PD_RAM1_Msk
+#define HPSYS_CFG_MCR_PD_RAM2_Pos       (5U)
+#define HPSYS_CFG_MCR_PD_RAM2_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM2_Pos)
+#define HPSYS_CFG_MCR_PD_RAM2           HPSYS_CFG_MCR_PD_RAM2_Msk
+#define HPSYS_CFG_MCR_PD_RAM3_Pos       (6U)
+#define HPSYS_CFG_MCR_PD_RAM3_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM3_Pos)
+#define HPSYS_CFG_MCR_PD_RAM3           HPSYS_CFG_MCR_PD_RAM3_Msk
+#define HPSYS_CFG_MCR_PD_RAM4_Pos       (7U)
+#define HPSYS_CFG_MCR_PD_RAM4_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM4_Pos)
+#define HPSYS_CFG_MCR_PD_RAM4           HPSYS_CFG_MCR_PD_RAM4_Msk
+#define HPSYS_CFG_MCR_PD_RAM5_Pos       (8U)
+#define HPSYS_CFG_MCR_PD_RAM5_Msk       (0x1UL << HPSYS_CFG_MCR_PD_RAM5_Pos)
+#define HPSYS_CFG_MCR_PD_RAM5           HPSYS_CFG_MCR_PD_RAM5_Msk
+#define HPSYS_CFG_MCR_PD_OTHER_Pos      (9U)
+#define HPSYS_CFG_MCR_PD_OTHER_Msk      (0x1UL << HPSYS_CFG_MCR_PD_OTHER_Pos)
+#define HPSYS_CFG_MCR_PD_OTHER          HPSYS_CFG_MCR_PD_OTHER_Msk
+#define HPSYS_CFG_MCR_FORCE_ON_Pos      (31U)
+#define HPSYS_CFG_MCR_FORCE_ON_Msk      (0x1UL << HPSYS_CFG_MCR_FORCE_ON_Pos)
+#define HPSYS_CFG_MCR_FORCE_ON          HPSYS_CFG_MCR_FORCE_ON_Msk
+
+/**************** Bit definition for HPSYS_CFG_ULPMCR register ****************/
+#define HPSYS_CFG_ULPMCR_RM_Pos         (0U)
+#define HPSYS_CFG_ULPMCR_RM_Msk         (0x7UL << HPSYS_CFG_ULPMCR_RM_Pos)
+#define HPSYS_CFG_ULPMCR_RM             HPSYS_CFG_ULPMCR_RM_Msk
+#define HPSYS_CFG_ULPMCR_RME_Pos        (4U)
+#define HPSYS_CFG_ULPMCR_RME_Msk        (0x1UL << HPSYS_CFG_ULPMCR_RME_Pos)
+#define HPSYS_CFG_ULPMCR_RME            HPSYS_CFG_ULPMCR_RME_Msk
+#define HPSYS_CFG_ULPMCR_RA_Pos         (5U)
+#define HPSYS_CFG_ULPMCR_RA_Msk         (0x3UL << HPSYS_CFG_ULPMCR_RA_Pos)
+#define HPSYS_CFG_ULPMCR_RA             HPSYS_CFG_ULPMCR_RA_Msk
+#define HPSYS_CFG_ULPMCR_WA_Pos         (7U)
+#define HPSYS_CFG_ULPMCR_WA_Msk         (0x7UL << HPSYS_CFG_ULPMCR_WA_Pos)
+#define HPSYS_CFG_ULPMCR_WA             HPSYS_CFG_ULPMCR_WA_Msk
+#define HPSYS_CFG_ULPMCR_WPULSE_Pos     (10U)
+#define HPSYS_CFG_ULPMCR_WPULSE_Msk     (0x7UL << HPSYS_CFG_ULPMCR_WPULSE_Pos)
+#define HPSYS_CFG_ULPMCR_WPULSE         HPSYS_CFG_ULPMCR_WPULSE_Msk
+
+/**************** Bit definition for HPSYS_CFG_RTC_TR register ****************/
+#define HPSYS_CFG_RTC_TR_SS_Pos         (0U)
+#define HPSYS_CFG_RTC_TR_SS_Msk         (0x3FFUL << HPSYS_CFG_RTC_TR_SS_Pos)
+#define HPSYS_CFG_RTC_TR_SS             HPSYS_CFG_RTC_TR_SS_Msk
+#define HPSYS_CFG_RTC_TR_SU_Pos         (11U)
+#define HPSYS_CFG_RTC_TR_SU_Msk         (0xFUL << HPSYS_CFG_RTC_TR_SU_Pos)
+#define HPSYS_CFG_RTC_TR_SU             HPSYS_CFG_RTC_TR_SU_Msk
+#define HPSYS_CFG_RTC_TR_ST_Pos         (15U)
+#define HPSYS_CFG_RTC_TR_ST_Msk         (0x7UL << HPSYS_CFG_RTC_TR_ST_Pos)
+#define HPSYS_CFG_RTC_TR_ST             HPSYS_CFG_RTC_TR_ST_Msk
+#define HPSYS_CFG_RTC_TR_MNU_Pos        (18U)
+#define HPSYS_CFG_RTC_TR_MNU_Msk        (0xFUL << HPSYS_CFG_RTC_TR_MNU_Pos)
+#define HPSYS_CFG_RTC_TR_MNU            HPSYS_CFG_RTC_TR_MNU_Msk
+#define HPSYS_CFG_RTC_TR_MNT_Pos        (22U)
+#define HPSYS_CFG_RTC_TR_MNT_Msk        (0x7UL << HPSYS_CFG_RTC_TR_MNT_Pos)
+#define HPSYS_CFG_RTC_TR_MNT            HPSYS_CFG_RTC_TR_MNT_Msk
+#define HPSYS_CFG_RTC_TR_HU_Pos         (25U)
+#define HPSYS_CFG_RTC_TR_HU_Msk         (0xFUL << HPSYS_CFG_RTC_TR_HU_Pos)
+#define HPSYS_CFG_RTC_TR_HU             HPSYS_CFG_RTC_TR_HU_Msk
+#define HPSYS_CFG_RTC_TR_HT_Pos         (29U)
+#define HPSYS_CFG_RTC_TR_HT_Msk         (0x3UL << HPSYS_CFG_RTC_TR_HT_Pos)
+#define HPSYS_CFG_RTC_TR_HT             HPSYS_CFG_RTC_TR_HT_Msk
+#define HPSYS_CFG_RTC_TR_PM_Pos         (31U)
+#define HPSYS_CFG_RTC_TR_PM_Msk         (0x1UL << HPSYS_CFG_RTC_TR_PM_Pos)
+#define HPSYS_CFG_RTC_TR_PM             HPSYS_CFG_RTC_TR_PM_Msk
+
+/**************** Bit definition for HPSYS_CFG_RTC_DR register ****************/
+#define HPSYS_CFG_RTC_DR_DU_Pos         (0U)
+#define HPSYS_CFG_RTC_DR_DU_Msk         (0xFUL << HPSYS_CFG_RTC_DR_DU_Pos)
+#define HPSYS_CFG_RTC_DR_DU             HPSYS_CFG_RTC_DR_DU_Msk
+#define HPSYS_CFG_RTC_DR_DT_Pos         (4U)
+#define HPSYS_CFG_RTC_DR_DT_Msk         (0x3UL << HPSYS_CFG_RTC_DR_DT_Pos)
+#define HPSYS_CFG_RTC_DR_DT             HPSYS_CFG_RTC_DR_DT_Msk
+#define HPSYS_CFG_RTC_DR_MU_Pos         (8U)
+#define HPSYS_CFG_RTC_DR_MU_Msk         (0xFUL << HPSYS_CFG_RTC_DR_MU_Pos)
+#define HPSYS_CFG_RTC_DR_MU             HPSYS_CFG_RTC_DR_MU_Msk
+#define HPSYS_CFG_RTC_DR_MT_Pos         (12U)
+#define HPSYS_CFG_RTC_DR_MT_Msk         (0x1UL << HPSYS_CFG_RTC_DR_MT_Pos)
+#define HPSYS_CFG_RTC_DR_MT             HPSYS_CFG_RTC_DR_MT_Msk
+#define HPSYS_CFG_RTC_DR_WD_Pos         (13U)
+#define HPSYS_CFG_RTC_DR_WD_Msk         (0x7UL << HPSYS_CFG_RTC_DR_WD_Pos)
+#define HPSYS_CFG_RTC_DR_WD             HPSYS_CFG_RTC_DR_WD_Msk
+#define HPSYS_CFG_RTC_DR_YU_Pos         (16U)
+#define HPSYS_CFG_RTC_DR_YU_Msk         (0xFUL << HPSYS_CFG_RTC_DR_YU_Pos)
+#define HPSYS_CFG_RTC_DR_YU             HPSYS_CFG_RTC_DR_YU_Msk
+#define HPSYS_CFG_RTC_DR_YT_Pos         (20U)
+#define HPSYS_CFG_RTC_DR_YT_Msk         (0xFUL << HPSYS_CFG_RTC_DR_YT_Pos)
+#define HPSYS_CFG_RTC_DR_YT             HPSYS_CFG_RTC_DR_YT_Msk
+#define HPSYS_CFG_RTC_DR_CB_Pos         (24U)
+#define HPSYS_CFG_RTC_DR_CB_Msk         (0x1UL << HPSYS_CFG_RTC_DR_CB_Pos)
+#define HPSYS_CFG_RTC_DR_CB             HPSYS_CFG_RTC_DR_CB_Msk
+#define HPSYS_CFG_RTC_DR_ERR_Pos        (31U)
+#define HPSYS_CFG_RTC_DR_ERR_Msk        (0x1UL << HPSYS_CFG_RTC_DR_ERR_Pos)
+#define HPSYS_CFG_RTC_DR_ERR            HPSYS_CFG_RTC_DR_ERR_Msk
+
+/***************** Bit definition for HPSYS_CFG_DBGR register *****************/
+#define HPSYS_CFG_DBGR_SEL_Pos  (0U)
+#define HPSYS_CFG_DBGR_SEL_Msk  (0x3UL << HPSYS_CFG_DBGR_SEL_Pos)
+#define HPSYS_CFG_DBGR_SEL      HPSYS_CFG_DBGR_SEL_Msk
+#define HPSYS_CFG_DBGR_BITEN_L_Pos  (8U)
+#define HPSYS_CFG_DBGR_BITEN_L_Msk  (0xFFUL << HPSYS_CFG_DBGR_BITEN_L_Pos)
+#define HPSYS_CFG_DBGR_BITEN_L      HPSYS_CFG_DBGR_BITEN_L_Msk
+#define HPSYS_CFG_DBGR_SEL_H_Pos  (16U)
+#define HPSYS_CFG_DBGR_SEL_H_Msk  (0x7UL << HPSYS_CFG_DBGR_SEL_H_Pos)
+#define HPSYS_CFG_DBGR_SEL_H      HPSYS_CFG_DBGR_SEL_H_Msk
+#define HPSYS_CFG_DBGR_BITEN_H_Pos  (24U)
+#define HPSYS_CFG_DBGR_BITEN_H_Msk  (0xFFUL << HPSYS_CFG_DBGR_BITEN_H_Pos)
+#define HPSYS_CFG_DBGR_BITEN_H      HPSYS_CFG_DBGR_BITEN_H_Msk
+
+
+
+/************** Bit definition for HPSYS_CFG_CAU2_ATEST register **************/
+#define HPSYS_CFG_CAU2_ATEST_DC_TR_Pos  (0U)
+#define HPSYS_CFG_CAU2_ATEST_DC_TR_Msk  (0x7UL << HPSYS_CFG_CAU2_ATEST_DC_TR_Pos)
+#define HPSYS_CFG_CAU2_ATEST_DC_TR      HPSYS_CFG_CAU2_ATEST_DC_TR_Msk
+#define HPSYS_CFG_CAU2_ATEST_DC_BR_Pos  (3U)
+#define HPSYS_CFG_CAU2_ATEST_DC_BR_Msk  (0x7UL << HPSYS_CFG_CAU2_ATEST_DC_BR_Pos)
+#define HPSYS_CFG_CAU2_ATEST_DC_BR      HPSYS_CFG_CAU2_ATEST_DC_BR_Msk
+#define HPSYS_CFG_CAU2_ATEST_DC_MR_Pos  (6U)
+#define HPSYS_CFG_CAU2_ATEST_DC_MR_Msk  (0x7UL << HPSYS_CFG_CAU2_ATEST_DC_MR_Pos)
+#define HPSYS_CFG_CAU2_ATEST_DC_MR      HPSYS_CFG_CAU2_ATEST_DC_MR_Msk
+
+/************** Bit definition for HPSYS_CFG_CAU2_RSVD1 register **************/
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE0_Pos  (0U)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE0_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD1_RESERVE0_Pos)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE0   HPSYS_CFG_CAU2_RSVD1_RESERVE0_Msk
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE1_Pos  (8U)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE1_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD1_RESERVE1_Pos)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE1   HPSYS_CFG_CAU2_RSVD1_RESERVE1_Msk
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE2_Pos  (16U)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE2_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD1_RESERVE2_Pos)
+#define HPSYS_CFG_CAU2_RSVD1_RESERVE2   HPSYS_CFG_CAU2_RSVD1_RESERVE2_Msk
+
+/************** Bit definition for HPSYS_CFG_CAU2_RSVD2 register **************/
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE3_Pos  (0U)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE3_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD2_RESERVE3_Pos)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE3   HPSYS_CFG_CAU2_RSVD2_RESERVE3_Msk
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE4_Pos  (8U)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE4_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD2_RESERVE4_Pos)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE4   HPSYS_CFG_CAU2_RSVD2_RESERVE4_Msk
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE5_Pos  (16U)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE5_Msk  (0xFFUL << HPSYS_CFG_CAU2_RSVD2_RESERVE5_Pos)
+#define HPSYS_CFG_CAU2_RSVD2_RESERVE5   HPSYS_CFG_CAU2_RSVD2_RESERVE5_Msk
+
+/**************** Bit definition for HPSYS_CFG_BISTR register *****************/
+#define HPSYS_CFG_BISTR_BIST_FAIL_ITCM_Pos  (0U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_ITCM_Msk  (0x3FUL << HPSYS_CFG_BISTR_BIST_FAIL_ITCM_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_ITCM  HPSYS_CFG_BISTR_BIST_FAIL_ITCM_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_RAM_Pos  (6U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_RAM_Msk  (0x3FUL << HPSYS_CFG_BISTR_BIST_FAIL_RAM_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_RAM   HPSYS_CFG_BISTR_BIST_FAIL_RAM_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_HCPU_Pos  (12U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_HCPU_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_HCPU_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_HCPU  HPSYS_CFG_BISTR_BIST_FAIL_HCPU_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_EPIC_Pos  (13U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EPIC_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_EPIC_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EPIC  HPSYS_CFG_BISTR_BIST_FAIL_EPIC_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_EZIP_Pos  (14U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EZIP_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_EZIP_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EZIP  HPSYS_CFG_BISTR_BIST_FAIL_EZIP_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_EXTDMA_Pos  (15U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EXTDMA_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_EXTDMA_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_EXTDMA  HPSYS_CFG_BISTR_BIST_FAIL_EXTDMA_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC1_Pos  (16U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC1_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_SDMMC1_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC1  HPSYS_CFG_BISTR_BIST_FAIL_SDMMC1_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC2_Pos  (17U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC2_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_SDMMC2_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_SDMMC2  HPSYS_CFG_BISTR_BIST_FAIL_SDMMC2_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_USBC_Pos  (18U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_USBC_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_USBC_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_USBC  HPSYS_CFG_BISTR_BIST_FAIL_USBC_Msk
+#define HPSYS_CFG_BISTR_BIST_FAIL_LPSYS_Pos  (19U)
+#define HPSYS_CFG_BISTR_BIST_FAIL_LPSYS_Msk  (0x1UL << HPSYS_CFG_BISTR_BIST_FAIL_LPSYS_Pos)
+#define HPSYS_CFG_BISTR_BIST_FAIL_LPSYS  HPSYS_CFG_BISTR_BIST_FAIL_LPSYS_Msk
+
+#endif

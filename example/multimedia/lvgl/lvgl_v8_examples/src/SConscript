@@ -1,0 +1,33 @@
+from building import *
+import rtconfig
+import os
+
+src = []
+inc = []
+cwd = GetCurrentDir() # get current dir path
+
+src=Glob('*.c')
+inc+= [cwd+'/examples']
+
+# check if .h or .hpp files exsit
+def check_h_hpp_exsit(path):
+    file_dirs = os.listdir(path)
+    for file_dir in file_dirs:
+        if os.path.splitext(file_dir)[1] in ['.h', '.hpp']:
+            return True
+    return False
+
+inc = inc + [cwd]
+for root, dirs, files in os.walk(cwd+'/examples'):
+    for dir in dirs:
+        current_path = os.path.join(root, dir)
+
+        #Use relative path for C source code, so .o will generated in build subfolder
+        current_path2 = current_path.replace(cwd, '')
+        current_path2 = current_path2[1:]
+        src = src + Glob(os.path.join(current_path2,'*.c')) # add all .c files
+        if check_h_hpp_exsit(current_path): # add .h and .hpp path
+            inc = inc + [current_path]
+
+group = DefineGroup('LVGL_EXAMPLE', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+Return('group')

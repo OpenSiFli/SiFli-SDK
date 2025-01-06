@@ -1,0 +1,124 @@
+;running_app_list
+;rm_app_list
+;gui_runing_app_t
+;subpage_node_t
+
+AREA.Reset
+AREA.Create AppPages
+AREA.Select AppPages
+AREA.view AppPages
+
+
+
+
+PRINT "-----------------running app list-----------------------"
+GOSUB ListApps &running_app_list
+PRINT "-----------------removing app list-----------------------"
+GOSUB ListApps &rm_app_list
+ENDDO
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;Sub functions;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GetAppHandle:
+	ENTRY &APPNODE 
+    &result=&APPNODE-VAR.Value((unsigned long)(&((gui_runing_app_t *)0)->node))
+	RETURN &result
+
+
+GetPageHanle:
+	ENTRY &PAGENODE 
+    &result=&PAGENODE-VAR.Value((unsigned long)(&((subpage_node_t *)0)->node))
+	RETURN &result
+
+
+
+ListPages:
+    ENTRY &PAGELIST
+
+    LOCAL &CUR_PAGE_NODE
+    LOCAL &PAGE_LIST_END
+
+    &CUR_PAGE_NODE = VAR.Value(((rt_list_t *)&PAGELIST)->next)
+    &PAGE_LIST_END = VAR.Value(&PAGELIST)
+
+
+    WHILE &CUR_PAGE_NODE!=&PAGE_LIST_END
+    (
+        LOCAL &P_PAGE
+
+        ;Get page handler
+        GOSUB GetPageHanle &CUR_PAGE_NODE
+        ENTRY &P_PAGE
+        
+        ;Print page info
+        &ID     = VAR.String(((subpage_node_t *)&P_PAGE)->name)
+        &SCR_ID = VAR.String(((subpage_node_t *)&P_PAGE)->scr)
+        &STATE  = VAR.String(((subpage_node_t *)&P_PAGE)->state)
+        &TGT_STATE  = VAR.String(((subpage_node_t *)&P_PAGE)->target_state)
+        
+
+        
+        PRINT "       &P_PAGE  SCR_ID[&SCR_ID]  [&STATE]->[&TGT_STATE]   [&ID]"
+
+        
+        ;Go to next app
+        &CUR_PAGE_NODE =  VAR.Value(((rt_list_t *)&CUR_PAGE_NODE)->next)
+    )
+    
+    RETURN
+
+
+
+ListApps:
+	ENTRY  &APPLIST
+
+    LOCAL &CUR_APP_NODE
+    LOCAL &APP_LIST_END
+
+    &CUR_APP_NODE      = VAR.Value(((rt_list_t *)&APPLIST)->next)
+    &APP_LIST_END      = VAR.Value(&APPLIST)
+
+
+    WHILE &CUR_APP_NODE!=&APP_LIST_END
+    (
+        LOCAL &P_APP
+        LOCAL &PREFIX
+
+        ;Get app handler
+        GOSUB GetAppHandle &CUR_APP_NODE
+        ENTRY &P_APP
+        
+        
+        
+        ;Print app info
+        LOCAL &ID
+        LOCAL &PARAM
+        &ID = VAR.String(((gui_runing_app_t *)&P_APP)->id)
+        &PARAM = VAR.String(((gui_runing_app_t *)&P_APP)->param.content)
+        if (&CUR_APP_NODE==VAR.value(actived_app))
+        (
+            &PREFIX=FORMAT.String("*", 1., ' ')
+        )
+        else
+        (
+            &PREFIX=FORMAT.String(" ", 1., ' ')
+        )
+
+        PRINT "&PREFIX &P_APP  id:[&ID]  param:[&PARAM]"
+
+
+
+        ;Print pages
+        LOCAL &PAGELIST
+        &PAGELIST = VAR.Value(&((gui_runing_app_t *)&P_APP)->page_list)
+        GOSUB ListPages  &PAGELIST
+        
+        ;Go to next app
+        &CUR_APP_NODE =  VAR.Value(((rt_list_t *)&CUR_APP_NODE)->next)
+    )
+
+    RETURN

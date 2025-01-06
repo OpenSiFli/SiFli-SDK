@@ -1,0 +1,83 @@
+menu "GPS Device"
+
+menuconfig SENSOR_USING_GPS
+    bool "Enable GPS Sensor"
+    default n
+    if SENSOR_USING_GPS
+        menuconfig GPS_USING_UC6226
+            bool "Enable GPS module UC6226"
+            select RT_USING_SENSOR
+            default n
+            if GPS_USING_UC6226
+                config GPS_UART_NAME
+                string "GPS Uart"
+                default "uart3"
+
+                config GPS_GPIO_BIT
+                int "GPS RESET PIN"
+                default 69
+
+                config GPS_POWER_BIT
+                int "GPS POWER BIT"
+                default 72
+            endif
+    endif
+
+menuconfig RT_USING_GPS
+    bool "Enable GPS device"
+    select RT_USING_AT
+    select AT_USING_CLIENT
+    select GPS_USING_NMEALIB
+    default n
+    if RT_USING_GPS
+        config GPS_USING_AG3335M
+            bool "gps device switch"
+            default y
+			
+		menuconfig GPS_PIN_CONFIG
+			bool "gps pin number config -1:invalid >=0:valid"
+			default y
+			if GPS_PIN_CONFIG		
+				config MCU_WAKEUP_GPS_PIN
+					int "mcu wakeup gps pin number"
+					default -1
+					
+				config MCU_RESET_GPS_PIN
+					int "mcu reset gps pin number"
+					default -1
+					
+				config GPS_LEVEL_SHIFT_PIN
+					int "gps level shift pin number"
+					default -1
+					
+				config GPS_POWER_PIN
+					int "gps power pin number"
+					default -1
+					
+				config GPS_WAKEUP_MCU_PIN
+					int "gps wakeup mcu pin number"
+					default -1
+		endif
+		
+        config GPS_DEVICE_NAME
+            string "gps device name"
+            default "gps_device"
+            
+        config GPS_UART_NAME
+            string "gps uart name"
+            default "uart4"
+            
+        config GPS_UART_BAUD
+            int "gps uart baud"
+            default 115200
+            
+        config GPS_RECV_BUFF_LEN
+            int "gps recv buff size"
+            default 256
+            
+        config RT_US_GPS_DEBUG
+        bool "open gps debug switch"
+        default n
+    endif
+
+endmenu

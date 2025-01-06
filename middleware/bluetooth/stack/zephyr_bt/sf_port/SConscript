@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+CPPPATH = [cwd]
+group = DefineGroup('zbt_sf', src, depend = ['ZBT'],CPPPATH = CPPPATH, LIBRARY='zbt_sf')
+
+Return('group')

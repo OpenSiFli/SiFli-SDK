@@ -1,0 +1,36 @@
+import rtconfig
+Import('RTT_ROOT')
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+
+# The set of source files associated with this SConscript file.
+src = Split("""
+library/aes.c
+library/cipher.c
+library/cipher_wrap.c
+library/md.c
+library/md_wrap.c
+library/platform.c
+library/sha256.c
+library/sha512.c
+library/asn1parse.c
+library/bignum.c
+library/oid.c
+library/pk.c
+library/pkparse.c
+library/pk_wrap.c
+library/rsa.c
+library/sm2.c
+library/sm3.c
+library/ecp.c
+library/ecp_curves.c
+library/ctr_drbg.c
+""")
+
+path = [cwd + '/include']
+
+group = DefineGroup('mbedtls', src, depend = ['PKG_SIFLI_MBEDTLS_BOOT'], CPPPATH = path)
+
+Return('group')

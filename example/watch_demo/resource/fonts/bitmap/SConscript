@@ -1,0 +1,19 @@
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = []
+group=[]
+
+
+src += Glob('*.c')
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('App_watch_demo_res', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')

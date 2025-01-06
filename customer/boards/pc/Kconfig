@@ -1,0 +1,189 @@
+menu "PC RTT drivers"
+
+config CONSOLE_UART_DMA
+    bool "Console DMA support"
+    default n
+
+config PCRTT_UART
+    string "Uart port 1"
+    default "COM1"
+
+config PCRTT_UART2
+    string "Uart port 2"
+    default "COM2"
+    
+config LCD_SDL2
+    bool "Enable PC SDL2 LCD simulator"
+    default n
+
+config LCD_WINDOWS
+    bool "Enable PC Windows simulator"
+    default n
+    
+config BSP_USING_PSRAM
+    bool "Enable PSRAM simulation"
+    default n    
+
+config WIN32_DIRDISK_ROOT
+    string "Disk root path"
+    default "./disk"
+
+menuconfig PERI_USING_BT
+    bool "Enable bt peripherals device"
+    select RT_USING_BT
+    default n  
+  
+    if PERI_USING_BT
+        config BT_USING_SIFLI_SIMU
+            bool 
+            default y
+        menuconfig EXT_BT_DEVICE
+            depends on SOC_SF32LB55X
+            bool "external BT config"
+            default n
+                
+            if EXT_BT_DEVICE    
+                menuconfig EXT_BT_UART  
+                    bool "bt uart device config"
+                    default y
+                    
+                    if EXT_BT_DEVICE 
+                        config BT_UART_NAME
+                            string "bt uart name"
+                            default "uart1"
+                            
+                        config BT_UART_BAUD
+                            int "bt uart baud"
+                            default 921600
+                            
+                        config BT_RECV_BUFF_LEN
+                            int "bt recv buff size"
+                            default 512
+                    endif
+                
+                menuconfig BT_PIN_CONFIG
+                    bool "bt pin number config -1:invalid >=0:valid"
+                    default y
+                    if BT_PIN_CONFIG
+                        config MCU_WAKEUP_BT_PIN
+                            int "mcu wakeup bt pin number"
+                            default 121
+                            
+                        config MCU_RESET_BT_PIN
+                            int "mcu reset bt pin number"
+                            default -1
+                            
+                        config BT_LEVEL_SHIFT_PIN
+                            int "bt level shift pin number"
+                            default -1
+                            
+                        config BT_POWER_PIN
+                            int "bt power pin number"
+                            default 104
+                            
+                        config BT_WAKEUP_MCU_PIN
+                            int "bt wakeup mcu pin number"
+                            default -1
+                            
+                        config BT_SPK_PA_EN_PIN
+                            int "bt spk pa en pin number"
+                            default -1
+                    endif
+            endif
+        
+        menuconfig BT_FUNC_CONFIG
+            bool "bt function configuration"
+            default y
+            
+             if BT_FUNC_CONFIG
+                config BT_USING_DTMF
+                    bool "bt using dtmf"
+                    default n
+                    
+                    
+                config BT_USING_MIC_MUTE
+                    bool "bt using mic mute"
+                    default n
+                    
+                config BT_USING_LOCAL_MEDIA_EX
+					depends on !BT_USING_SIFLI
+                    bool "bt using local media ex function"
+                    default n
+                    
+                config BT_USING_SIRI
+                    bool "bt using siri function"
+                    default n
+                    
+                config BT_USING_AVRCP
+                    bool "bt using avrcp"
+                    default n
+                    
+                config BT_USING_HID
+                    bool "bt using hid"
+                    default n
+					
+                config BT_USING_3WAY
+                    bool "bt using three way calling"
+                    default n
+                    
+                config BT_USING_USB
+					depends on !BT_USING_SIFLI
+                    bool "bt using usb function"
+                    default n
+                
+                config BT_USING_LINK_BACK
+                    bool "bt using service control link back to BT"
+                    default n
+
+                config BT_SHARING_LOG_UART
+					depends on !BT_USING_SIFLI
+                    bool "bt client sharing log uart"
+                    default n
+
+                config BT_USING_DEVICE_TYPE
+					depends on !BT_USING_SIFLI
+                    bool "bt connect device type"
+                    default n
+					
+				config BT_USING_CUSTOMIZE_MAC
+					depends on BT_USING_SIFLI
+                    bool "BT use a different address than BLE"
+                    default n
+					
+	            config BT_USING_INFINITE_RECONNECTION
+					depends on BT_USING_SIFLI
+                    bool "use infinite reconnection"
+                    default n
+        endif
+            
+        config RT_US_BT_DEBUG
+            bool "open bt debug switch"
+            default y
+		
+	config BT_USING_INDEPENDENT_THREAD
+            bool "use a separate thread to handle BT control"
+            default n
+    endif
+    menuconfig RT_USING_BT
+        bool "Enable bt device"
+        default n
+        config BT_USING_SIFLI_PC
+            bool 
+            default y
+        config BT_DEVICE_NAME
+            string "bt device name"
+            default "bt_device"
+        if BT_USING_SIFLI_PC
+            config BT_USING_AVRCP
+                bool "bt using avrcp"
+                default n
+
+            config BT_USING_HID
+                bool "bt using hid"
+                default n
+                
+            config BT_USING_AG
+                bool "bt using HFP AG"
+                default n                    
+        endif            
+endmenu

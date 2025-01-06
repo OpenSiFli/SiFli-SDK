@@ -1,0 +1,17 @@
+ #***************************************************************************************
+ # @file sourcelist.txt
+ #
+ # @brief This file lists up all the source code that will be
+ #        compiled and built for KERNEL module. 
+ #
+ # Copyright (C) RivieraWaves 2009-2019
+ #
+ #***************************************************************************************
+
+    ke_timer.c
+    ke_msg.c
+    ke_queue.c
+    ke_mem.c
+    ke_task.c
+    ke_event.c
+    ke.c

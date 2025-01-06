@@ -1,0 +1,36 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+list = os.listdir(cwd)
+
+CPPPATH = [cwd]
+CPPPATH += [cwd + './include']
+
+
+if GetDepend('BF0_HCPU'):
+    CPPPATH += [cwd, str(Dir('#'))]
+    CPPPATH += [cwd + '/../btdm_internal/plf',]
+    CPPPATH += [cwd + '/../../external/libhelix-mp3/pub',]
+    CPPPATH += [cwd + '/../app_fwk',]
+    CPPPATH += [cwd + '/soundplus',]
+
+
+objs = group = DefineGroup('audio', src,depend = ['AUDIO'],CPPPATH = CPPPATH)
+
+if GetDepend('FPGA'):
+    objs = objs + SConscript(os.path.join('fpga', 'SConscript'))
+    
+if GetDepend('AUDIO'):
+    if GetDepend('BSP_USING_PC_SIMULATOR'):
+        objs = objs + SConscript(os.path.join('pc', 'SConscript'))    
+        objs = objs + SConscript(os.path.join('audio_port', 'SConscript'))    
+    else:
+        for d in list:
+            path = os.path.join(cwd, d)
+            if os.path.isfile(os.path.join(path, 'SConscript')):
+                objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+
+Return('objs')

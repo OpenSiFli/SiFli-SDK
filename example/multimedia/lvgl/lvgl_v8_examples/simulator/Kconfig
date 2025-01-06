@@ -1,0 +1,14 @@
+mainmenu "Sifli Configuration"
+
+config SIFLI_SDK
+    string 
+    option env="SIFLI_SDK"
+    default "."
+
+config LV_BUILD_EXAMPLES
+    bool 
+    default y
+
+#SDK configuration	
+source "$SIFLI_SDK/Kconfig"
+

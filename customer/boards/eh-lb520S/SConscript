@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_EH_LB520S'], CPPPATH = path)
+
+if GetDepend('BSP_USING_BOARD_EH_LB520S'):
+    group = group + SConscript('../eh-lb52xu/script/SConscript')
+
+Return('group')

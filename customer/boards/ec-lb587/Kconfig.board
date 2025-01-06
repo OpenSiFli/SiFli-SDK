@@ -1,0 +1,24 @@
+config ASIC
+    bool
+    default y
+   
+config TOUCH_IRQ_PIN
+    int
+    default 69
+    
+config BSP_SUPPORT_DSI
+    bool
+    default y
+    depends on BF0_HCPU
+
+config BSP_SUPPORT_DSI_VIDEO
+    bool
+    default y
+    depends on BF0_HCPU
+
+select BSP_LCDC1_USE_LCDC2_TE if BF0_HCPU
+
+config LCD_USE_GPIO_TE
+    int
+    depends on LCD_USING_ILI8688E_DSI
+    default 98

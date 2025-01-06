@@ -1,0 +1,14 @@
+import os
+from building import *
+
+# Add source code
+src = ['main.c']
+
+if GetDepend('BOARD_BBC_MICROBIT'):
+    src += ['microbit.c']
+else:
+    src += ['board.c']
+
+group = DefineGroup('Applications', src, depend = [''])
+
+Return('group')

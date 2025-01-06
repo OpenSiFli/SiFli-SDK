@@ -1,0 +1,24 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ['main.c']
+
+if GetDepend('PKG_USING_LITTLEVGL2RTT') and not GetDepend('BSP_USING_PC_SIMULATOR'):
+    src+=['tofile.c']
+
+if GetDepend('BSP_BLE_SIBLES'):
+    src+=['ble_app.c']
+
+if GetDepend('BSP_BT_APP'):
+    src+=['bt_app.c']
+
+if not CheckChildProjPresent('lcpu') and not GetDepend('BSP_USING_PC_SIMULATOR'):
+    src+=['lcpu_img.c']
+
+CPPPATH = [cwd, str(Dir('#'))]
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

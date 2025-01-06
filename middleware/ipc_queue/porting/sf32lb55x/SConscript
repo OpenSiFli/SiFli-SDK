@@ -1,0 +1,23 @@
+import os
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+if GetDepend('BF0_LCPU'):
+    src += Glob("lcpu/*.c")
+    inc += [cwd + '/lcpu']
+elif GetDepend('BF0_HCPU'):
+    src += Glob("hcpu/*.c")
+    inc += [cwd + '/hcpu']
+else:
+    assert("wrong config")
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = ['SOC_SF32LB55X'], CPPPATH = inc)
+Return('objs')

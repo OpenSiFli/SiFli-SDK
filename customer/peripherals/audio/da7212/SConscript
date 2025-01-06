@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['AUDIO_USING_DA7212'], CPPPATH = CPPPATH)
+
+Return('group')

@@ -1,0 +1,16 @@
+menu "RTOS"
+    choice
+        prompt "Select RTOS"
+        default BSP_USING_RTTHREAD
+        config BSP_USING_NO_OS
+            bool "No RTOS"           
+        config BSP_USING_RTTHREAD
+            bool "RT Thread"
+        config BSP_USING_FREERTOS
+            bool "FreeRTOS"
+    endchoice  
+    if BSP_USING_RTTHREAD
+        source "$SIFLI_SDK/rtos/rtthread/Kconfig"
+    endif
+	source "$SIFLI_SDK/rtos/env/packages/Kconfig"
+endmenu

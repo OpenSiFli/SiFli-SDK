@@ -1,0 +1,41 @@
+menuconfig USING_METRICS_COLLECTOR
+    bool "Use Metrics Collector"
+    default n   
+    if USING_METRICS_COLLECTOR
+        config MC_PERIOD_SPEEDUP_FACTOR
+        int "Collector Period Speedup Factor for test purpose, e.g. 2: 2x faster, 3: 3x faster"
+        default 1
+        
+        config MC_CLIENT_ENABLED
+        bool "Client without direct storage access"
+        default n
+        
+        config MC_SERVICE_ENABLED
+        bool "Enable Metrics Save Service which can be used by client"
+        default n
+
+        if !MC_CLIENT_ENABLED
+            config MC_DEFAULT_DB_SIZE
+                int "Default DB Size in byte"
+                default 2048
+            
+            config MC_AUTO_INIT_DISABLED
+                bool "Disable auto init"
+                default n
+
+            choice
+                prompt "Select Backend"
+                default MC_BACKEND_USING_TSDB
+
+                config MC_BACKEND_USING_TSDB
+                    bool "Use TSDB"
+
+                config MC_BACKEND_USING_FILE
+                    bool "Use File"
+                    select USING_FILE_LOGGER
+
+                config MC_BACKEND_USING_CONSOLE
+                    bool "Use Console Device"
+            endchoice  
+        endif    
+    endif

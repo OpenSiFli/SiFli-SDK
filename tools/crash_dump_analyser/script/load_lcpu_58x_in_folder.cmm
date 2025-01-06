@@ -1,0 +1,79 @@
+
+WCLEAR
+AREA.Reset
+
+GLOBAL &folder
+
+AREA.Create IO ;create an AREA window
+AREA.Select IO ;select the AREA window as PRACTICE input/output window
+AREA.view IO
+PRINT "Enter log folder:"
+ENTER &folder
+
+SYStem.CPU CORTEXM33
+SYStem.Up
+
+; RAM
+D.LOAD.B &folder\lcpu_ram.bin  0x20400000
+; DTCM
+D.LOAD.B &folder\lcpu_dtcm.bin 0x203FC000
+
+
+; load symbol with executable data because flash data is not restored
+D.LOAD.ELF &folder\watch_l.axf
+
+; load rom symbol
+D.LOAD.ELF &folder\lcpu_rom.axf /NOCLEAR
+
+; ROM
+;D.LOAD.B *.* 0x00000000
+
+
+; load symbol again because symbol would get lost after command d.load.b
+; D.LOAD.ELF *.axf /nocode
+
+
+winpos 0% 0% 100% 50%
+w.d.l
+winpos 0% 50% 50% 50%
+w.v.f /l /c
+winpos 50% 50% 50% 50%
+w.v.w \\watch_l\cpuport\error_reason
+
+; set sp 
+r.s r13 var.value(\\watch_l\cpuport\saved_stack_pointer)   ;var.value(saved_stack_pointer)  
+r.s r0 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r0)  ;saved_stack_frame
+r.s r1 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r1)
+r.s r2 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r2)
+r.s r3 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r3)
+r.s r4 var.value(\\watch_l\cpuport\saved_stack_frame.r4)
+r.s r5 var.value(\\watch_l\cpuport\saved_stack_frame.r5)
+r.s r6 var.value(\\watch_l\cpuport\saved_stack_frame.r6)
+r.s r7 var.value(\\watch_l\cpuport\saved_stack_frame.r7)
+r.s r8 var.value(\\watch_l\cpuport\saved_stack_frame.r8)
+r.s r9 var.value(\\watch_l\cpuport\saved_stack_frame.r9)
+r.s r10 var.value(\\watch_l\cpuport\saved_stack_frame.r10)
+r.s r11 var.value(\\watch_l\cpuport\saved_stack_frame.r11)
+r.s r12 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.r12)
+; set lr
+r.s r14 var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.lr) 
+r.s pc var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.pc)
+r.s xpsr var.value(\\watch_l\cpuport\saved_stack_frame.exception_stack_frame.psr)
+
+
+
+
+PRIVATE &switch_hist_addr
+;&switch_hist_addr=VAR.Value(&\\watch_l\cpu_usage_profiler\thread_switch_hist)
+;&switch_hist_addr=VAR.Value(&thread_switch_hist)
+;do show_switch_history &switch_hist_addr
+
+do show_tasks
+
+PRIVATE &heap_ptr_alias
+PRIVATE &heap_end_alias
+&heap_ptr_alias=VAR.Value(\\lcpu_rom\mem\heap_ptr)
+&heap_end_alias=VAR.Value(\\lcpu_rom\mem\heap_end)
+do show_heap_lcpu &heap_ptr_alias &heap_end_alias
+
+enddo

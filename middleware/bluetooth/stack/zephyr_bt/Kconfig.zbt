@@ -1,0 +1,15 @@
+    
+config SEGGER_RTT_MAX_NUM_UP_BUFFERS
+    int
+    default 8
+
+config UTF8
+    bool
+    default y    
+
+config LIBLC3
+	bool "liblc3 Support"
+    default y if ZBT
+    default n if !ZBT
+	help
+	  This option enables the Android liblc3 library for Bluetooth LE Audio            

@@ -1,0 +1,20 @@
+menu "Hardware Drivers Config"
+
+config SOC_BF0_HCPU
+    bool
+    select SOC_SERIES_BF0_HCPU
+    default y
+
+config CFG_BOOTLOADER
+    bool
+    default y
+
+menu "Onboard Peripheral Drivers"
+
+endmenu
+
+menu "Board extended module Drivers"
+
+endmenu
+
+endmenu

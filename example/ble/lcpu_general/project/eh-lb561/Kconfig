@@ -1,0 +1,22 @@
+mainmenu "Sifli Configuration"
+
+config SIFLI_SDK
+    string 
+    option env="SIFLI_SDK"
+    default "."
+
+#SDK configuration	
+source "$SIFLI_SDK/Kconfig"
+
+config BF0_LCPU
+    bool
+    default y
+
+config LCPU_ROM
+    bool
+    default y
+
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y

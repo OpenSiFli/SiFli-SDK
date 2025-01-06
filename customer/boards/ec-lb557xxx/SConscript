@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_EC_LB557XXX'], CPPPATH = path)
+
+Return('group')

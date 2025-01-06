@@ -1,0 +1,29 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+if GetDepend('BT_DIS'):
+    src +=['dis.c']
+
+if GetDepend('BT_CTS'):
+    src +=['cts.c']
+
+if GetDepend('BT_HRS'):
+    src +=['hrs.c']
+
+if GetDepend('BT_TPS'):
+    src +=['tps.c']
+    
+objs = DefineGroup('zbt_service', src, depend = ['ZBT'], CPPPATH = CPPPATH)
+
+list = os.listdir(cwd)
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+
+Return('objs')

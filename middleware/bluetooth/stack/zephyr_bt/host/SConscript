@@ -1,0 +1,67 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+#if GetDepend('BT_HCI_RAW'):
+#    src+=['hci_raw.c', 'hci_common.c']
+
+if GetDepend('BT_MONITOR'):
+    src+=['monitor.c']
+
+if GetDepend('BT_TINYCRYPT_ECC'):
+    src+=['hci_ecc.c']    
+    
+if GetDepend('BT_SETTINGS'):
+    src+=['settings.c']    
+
+if GetDepend('BT_HOST_CCM'):
+    src+=['aes_ccm.c']     
+    
+if GetDepend('BT_LONG_WQ'):
+    src+=['long_wq.c']  
+
+if GetDepend('BT_HCI_HOST'):
+    src+=['uuid.c','addr.c','buf.c','data.c','id.c']
+
+if GetDepend('BT_HCI_HOST'):
+    src+=['hci_common.c']
+    
+# Replaced by sf_port/zbt_hci.c
+#if GetDepend('BT_HCI_HOST'):
+#    src+=['hci_core.c']
+
+if GetDepend('BT_BROADCASTER'):
+    src+=['adv.c']  
+
+if GetDepend('BT_OBSERVER'):
+    src+=['scan.c']  
+
+if GetDepend('BT_USE_PSA_API'):
+    src+=['crypto_psa.c'] 
+else:    
+    src+=['crypto_tc.c'] 
+
+if GetDepend('BT_ECC'):
+    src+=['ecc.c'] 
+
+if GetDepend('BT_CONN'):
+    src+=['conn.c','l2cap.c','att.c','gatt.c']
+    if GetDepend('BT_SMP'):
+        src+=['smp.c','keys.c']
+    else:    
+        src+=['smp_null.c']
+
+if GetDepend('BT_ISO'):
+    src+=['iso.c','conn.c']
+
+if GetDepend('BT_CHANNEL_SOUNDING'):
+    src+=['cs.c']
+
+if GetDepend('BT_DF'):
+    src+=['direction.c']
+
+group = DefineGroup('zbt_host', src, depend = ['ZBT'],CPPPATH = CPPPATH, LIBRARY='zbt_host')
+
+Return('group')

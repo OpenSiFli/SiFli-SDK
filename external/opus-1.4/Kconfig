@@ -1,0 +1,3 @@
+config PKG_LIB_OPUS
+    bool "libopus"
+    default n

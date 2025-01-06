@@ -1,0 +1,11 @@
+elm_trans_test 1 mp3_3.mp3
+elm_trans_test 1 mp3_3.mp3
+elm_trans_len 0x000801c0
+elm_trans_info OK
+msh />elm_trans_test 2 mp3_3.mp3 0x000801c0
+elm_trans_test 2 mp3_3.mp3 0x000801c0
+elm_trans_out START
+elm_trans_out_waitrx
+elm_trans_crc 0xc3292ed5
+elm_trans_out OK
+msh />

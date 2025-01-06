@@ -1,0 +1,32 @@
+from building import *
+Import('rtconfig')
+import os
+import resource
+
+cwd = GetCurrentDir()
+env = GetCurrentEnv()
+
+src_file = None
+
+curr_env = GetCurrentEnv()
+try:
+    simu = GetOption('simu')
+except:
+    simu =False
+
+if GetDepend("SOC_SF32LB56X"):
+    if simu:
+        bin = curr_env.CopyFile(Glob('lcpu_img_56x_52.bin'))
+        hex = curr_env.CopyFile(Glob('lcpu_img_56x_52.hex'))
+    elif GetDepend("ZBT"):
+        bin = curr_env.CopyFile(Glob('lcpu_rom_patch_iso.bin'))
+        hex = curr_env.CopyFile(Glob('lcpu_rom_patch_iso.hex'))
+    else:
+        bin = curr_env.CopyFile(Glob('lcpu_rom_patch.bin'))
+        hex = curr_env.CopyFile(Glob('lcpu_rom_patch.hex'))
+        
+    AddCustomImg("lcpu_patch", hex, bin)
+
+group = []
+    
+Return('group')

@@ -1,0 +1,54 @@
+import os
+import rtconfig
+import re
+
+# Check SDK 
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+# Set default compile options
+SifliEnv()
+if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
+    old_str = 'rom_sym=sifli_rom_55x.sym'
+    new_str = 'rom_sym=sifli_rom_55x_a3.sym'
+else:
+    old_str = 'rom_sym=sifli_rom_55x_a3.sym'
+    new_str = 'rom_sym=sifli_rom_55x.sym'
+
+try:
+    with open('prebuild.bat', 'r+') as hdl:
+        data = hdl.read()
+        if data.find(old_str) > 0:
+            data1 = data.replace(old_str, new_str, 1)
+            print("new_data:"+data1)
+            hdl.seek(0)
+            hdl.truncate()
+            hdl.write(data1)
+except:
+    print('prebuild.bat not existed')
+os.system("prebuild.bat")
+################################## change rtconfig.xxx to customize build ########################################
+# print (rtconfig.OUTPUT_DIR)
+
+OUTPUT_DIR=rtconfig.OUTPUT_DIR
+TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+BIN_TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.bin'
+rtconfig.POST_ACTION ='fromelf --bin $TARGET --output ' + OUTPUT_DIR + rtconfig.TARGET_NAME + '.bin \n'
+rtconfig.POST_ACTION +='python '+SIFLI_SDK+'/tools/patch/gen_src.py lcpu '+ BIN_TARGET +' '+SIFLI_SDK+'/example/rom_bin/lcpu_general_ble_img/lcpu_lb555.c\n '
+
+env = Environment(tools = ['mingw'],
+    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
+    CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
+    AR = rtconfig.AR, ARFLAGS = '-rc',
+    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
+env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+
+# prepare building environment
+objs = PrepareBuilding(env)
+
+TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+# make a building
+DoBuilding(TARGET, objs)

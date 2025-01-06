@@ -1,0 +1,45 @@
+from building import *
+Import('rtconfig')
+import os
+import resource
+import logging
+cwd = GetCurrentDir()
+env = GetCurrentEnv()
+
+src_file = None
+
+if GetDepend('USING_PARTITION_TABLE'):
+    if GetBoardName():
+        if IsChildProjEnv():
+            # use parents's ptab if build as child project, parent project always use hcpu board
+            board = GetBoardName("HCPU")
+            bsp_root = str(Dir('#'))
+        else:
+            board = GetBoardName()
+            bsp_root = env['BSP_ROOT']
+        if os.path.exists(os.path.join(bsp_root, board + '/ptab.json')):
+            src_file = os.path.join(bsp_root, board + '/ptab.json')
+        elif os.path.exists(os.path.join(os.path.join(bsp_root, rtconfig.CHIP.lower() + '/ptab.json'))):
+            src_file = os.path.join(bsp_root, rtconfig.CHIP.lower() + '/ptab.json')
+        elif os.path.exists(os.path.join(bsp_root, 'ptab.json')):
+            src_file = os.path.join(bsp_root, 'ptab.json')
+        else:
+            path1, path2 = GetBoardPath(GetBoardName())
+            src_file = os.path.join(path1, 'ptab.json')
+        logging.debug("ptab.json:{}".format(src_file))
+        env['PARTITION_TABLE'] = src_file
+        output_dir = env['BUILD_DIR_FULL_PATH']
+    else:    
+        if 'PARTITION_TABLE' in env:
+            src_file = os.path.join(env['PARTITION_TABLE'])
+            output_dir = os.path.join(env['BSP_ROOT'], './linker_scripts')
+        else:
+            src_file = os.path.join(env['BSP_ROOT'], './linker_scripts/ptab.json')
+            env['PARTITION_TABLE'] = src_file
+            output_dir = os.path.join(env['BSP_ROOT'], './linker_scripts')    
+
+    resource.GenPartitionTableHeaderFile(src_file, output_dir, 'ptab')
+
+group = []
+    
+Return('group')

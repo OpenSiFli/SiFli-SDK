@@ -1,0 +1,10 @@
+#ifndef __REG_BTCORE_AUDIO_H_
+#define __REG_BTCORE_AUDIO_H_
+
+#define REG_BTCORE_AUDIO_SIZE 4
+
+#define REG_BTCORE_AUDIO_BASE_ADDR 0x50090400
+
+
+#endif // __REG_BTCORE_AUDIO_H_
+

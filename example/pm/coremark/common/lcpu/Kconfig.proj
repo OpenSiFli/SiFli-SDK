@@ -1,0 +1,18 @@
+config BF0_LCPU
+    bool
+    default y
+    
+config LCPU_ROM
+    bool
+    default y
+    
+config S_SLIM
+    bool
+    default y
+    depends on SOC_SF32LB52X 
+    
+config CUSTOM_MEM_MAP    
+    bool
+    default y    
+    depends on SOC_SF32LB52X 
+       

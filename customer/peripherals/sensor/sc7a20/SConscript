@@ -1,0 +1,11 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('sc7a20.c')
+src += Glob('sc7a20_driver.c')
+src += Glob('sensor_sc7a20.c')
+path = [cwd]
+lib = ['SL_Watch_Algorithm']
+group = DefineGroup('Drivers', src, depend = ['ACC_USING_SC7A20'], LIBS = lib, CPPPATH = path, LIBPATH = path )
+
+Return('group')

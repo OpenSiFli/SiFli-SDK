@@ -1,0 +1,38 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Activity scheduler
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (env['BT_EMB_PRESENT'] == 'on') or (env['BLE_EMB_PRESENT'] == 'on'):
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    sch_src_dir = os.path.join(sch_dir, 'src')
+    sch_api_dir = os.path.join(sch_dir, 'api')
+    sch_cfg_dir = os.path.join(sch_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    sch_def_list  = []
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    sch_inc_list  = []
+    sch_inc_list += [sch_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    sch_src_list = scutils.file_list_read(env, os.path.join(sch_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, sch_src_dir, sch_def_list, sch_inc_list, sch_src_list)

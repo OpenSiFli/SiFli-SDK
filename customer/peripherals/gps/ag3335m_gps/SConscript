@@ -1,0 +1,8 @@
+from building import *
+cwd = GetCurrentDir()
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+src = Glob('*.c')
+path = [cwd]
+path += [SIFLI_SDK +'/external/nmealib/include/nmea']
+group = DefineGroup('Drivers', src, depend = ['GPS_USING_AG3335M'], CPPPATH = path)
+Return('group')

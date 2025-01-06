@@ -1,0 +1,8 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['ASL_USING_TSL2572'], CPPPATH = CPPPATH)
+
+Return('group')

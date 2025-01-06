@@ -1,0 +1,44 @@
+menuconfig MOTOR_ENABLED
+    bool "Motor"
+    default n
+    if MOTOR_ENABLED
+       menuconfig MOTOR_USE_PWM
+       bool "Enable MOTOR USE PWM"
+       select RT_USING_MOTOR
+       default n
+       if MOTOR_USE_PWM
+           config MOTOR_INTERFACE_NAME
+           string "motor interface name"
+           default "pwm2"
+
+           config MOTOR_CHANEL_NUM
+           int "motor channel in PWM"
+           default 2
+
+           config MOTOR_PERIOD
+           int "motor period ms"
+           default 200
+
+           config MOTOR_POWER_IO
+           int "motor power pin"
+           default 44
+       endif
+
+       menuconfig MOTOR_SW_CONTRL
+       bool "Enable MOTOR USE SW"
+       select RT_USING_MOTOR
+       default y
+       if MOTOR_SW_CONTRL
+           config MOTOR_POWER_IO
+           int "motor power pin"
+           default 44
+
+           config MOTOR_CTRL_IO
+           int "motor contrl pin"
+           default 45
+		   
+		   config MOTOR_PERIOD
+           int "motor period ms"
+           default 200
+       endif
+    endif

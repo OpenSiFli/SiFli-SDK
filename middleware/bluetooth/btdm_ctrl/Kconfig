@@ -1,0 +1,218 @@
+if !SOC_SF32LB55X
+menu "Interal Bluetooth"
+
+config RWBT_52_ENABLE
+    bool "Use RW 5.2 Bluetooth stack"
+    default n
+
+if RWBT_52_ENABLE
+config CFG_EMB
+    bool "Emb enabled"
+    default y
+
+   
+config CFG_BLE
+    bool "BLE enabled"
+    default y
+
+if CFG_BLE
+menu "BLE config"
+config CFG_BLE_HOST
+    bool "BLE_HOST_PRESENT"
+    default n
+
+if CFG_BLE_HOST
+rsource "ip/profiles/Kconfig"
+endif
+
+config CFG_BLE_EMB
+    bool "BLE_EMB_PRESENT"
+    default n
+
+config CFG_APP
+    bool "BLE_APP_PRESENT"
+    default n
+
+config CFG_AHI
+    bool "BLE Application host interface"
+    default n
+    config CFG_AHITL
+    depends on CFG_AHI
+    bool
+    default y
+config CFG_AOD
+    bool "BLE AOD"
+    default n
+config CFG_AOA
+    bool "BLE AOA"
+    default n
+    
+config CFG_ISOOHCI
+    bool "ISO over HCI"
+    default n
+
+config CFG_ISOGEN
+    bool "ISO generarator for validation"
+    default n
+
+config CFG_CIS
+    bool "CFG_CIS"
+    default n
+
+config CFG_BIS
+    bool "CFG_BIS"
+    default n
+
+config CFG_CIS_IN_FLASH
+    bool "CFG CIS IN FLASH"
+    default n
+
+config CFG_BIS_IN_FLASH
+    bool "CFG BIS IN FLASH"
+    default n
+
+config CFG_LE_PWR_CTRL
+    bool "LEPC"
+    default y
+
+config CFG_RF_EXTRC
+    bool "CFG_RF_EXTRC"
+    default n
+config CFG_PAST
+    bool "CFG_PAST"
+    default y
+menu "Configure role"
+        depends on RWBT_52_ENABLE
+        config CFG_ALLROLES
+            bool "All roles"
+			default y
+        config CFG_BROADCASTER
+            bool "Broadcaster"
+			default n
+        config CFG_OBSERVER
+            bool "Observer"
+			default n
+		config CFG_CENTRAL
+			bool "Central"
+			default n
+		config CFG_PERIPHERAL
+			bool "Peripheral"
+			default n
+endmenu
+endmenu
+endif
+
+config CFG_BT
+    bool "BT enabled"
+    default y
+    
+if CFG_BT    
+menu "BT config"
+config CFG_BT_HOST
+    bool "BT_HOST_PRESENT"
+    default n
+    if CFG_BT_HOST
+        rsource "../stack/bt/Kconfig"
+    endif
+config CFG_BT_EMB
+    bool "BT_EMB_PRESENT"
+    default n
+config CFG_VOHCI
+    bool "Voice over HCI"
+    default n
+config CFG_PCA
+    bool "Piconet Adjustment"
+    default n
+config CFG_BT_READ_PICONET_CLOCK
+    bool "Read Piconet clock"
+    default n
+config CFG_CSB
+    bool "CFG_CSB"
+    default n
+config CFG_BT_PWR_CTRL
+    bool "bt power control"
+    default y
+endmenu
+endif
+
+menuconfig CFG_TRC_EN
+    bool "Trace enabled"
+    default n
+    choice
+        depends on CFG_TRC_EN
+        prompt "Select trace level"
+        default CFG_TRC_HCI2
+        config CFG_TRC_HCI2
+            select CFG_TRC_HCI
+            bool "HCI trace enabled"
+        config CFG_TRC_ALL
+            bool "All trace enabled"
+    endchoice
+
+config CFG_HCITL
+    bool "HCI Transport Layer"
+    default n  
+     
+config CFG_SEC_CON
+    bool "Secure connection enabled"
+    default y
+config CFG_ECC_P256_SUPPORT
+    bool "Security P256 ECC"
+    default y
+config CFG_NVDS
+    bool "NVDS"
+    default y
+
+endif
+
+menu "Configure supported number"
+	depends on RWBT_52_ENABLE
+    config CFG_CON_ACL
+		int "Max ACL connections"
+		default 7
+    config CFG_CON_SCO
+		int "Max SCO connections"
+		default 2
+	config CFG_ISO_CON
+        int "Max ISO connections"
+		default 3
+	config CFG_ACT
+		int "Activity numbers"
+		default 12
+	config CFG_CON
+		int "Connection numbers"
+		default 10
+	config CFG_RAL
+		int "RAL number"
+		default 6
+endmenu
+
+config CFG_DBG
+    bool "Debug enabled"
+    default n  
+
+config CFG_HCI_SLIM
+    bool "Slim HCI msg part"
+    default n
+    
+menu "Debug feature"
+	depends on CFG_DBG
+    config CFG_DBG_MEM  
+		bool "Debug memory"
+		default n
+    config CFG_DBG_FLASH
+		bool "Debug flash"
+		default n
+	config CFG_DBG_NVDS 
+        bool "Debug nvds"
+		default n
+	config CFG_DBG_STACK_PROF
+		bool "Debug stack profile"
+		default n
+endmenu
+
+
+
+endmenu
+endif
+

@@ -1,0 +1,22 @@
+;Brief:  foreach rt_list.
+;Useage: do foreach.cmm [node struct] [list member] [list]
+;For example: do foreach.cmm "lv_obj_datasubs_node_t" list &obj_datasubs_list
+
+ENTRY &node_type &member &list 
+&node_type=&node_type  // Removes quotes from string
+
+v.w (*(rt_list_t *)&list)
+
+PRIVATE &cursor
+PRIVATE &list_head
+PRIVATE &offset
+
+&list_head=VAR.Value(&list)
+&offset=VAR.Value(&(((&node_type*)0)->&member))
+
+&cursor=VAR.Value((rt_list_t *)(((rt_list_t *)&list)->next))
+WHILE (&cursor!=&list_head)
+(
+	v.AddWatch %Hex (&node_type *)(&cursor-&offset)
+	&cursor = VAR.Value((rt_list_t *)(((rt_list_t *)&cursor)->next))
+)

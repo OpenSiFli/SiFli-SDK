@@ -1,0 +1,16 @@
+config ASIC
+    bool
+    default y
+
+config TOUCH_IRQ_PIN
+    default 140
+
+config BSP_SUPPORT_DSI
+    bool
+    default y
+
+
+config LCD_USE_GPIO_TE
+    int
+    depends on LCD_USING_ILI8688E_DSI
+    default 114

@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = ['core/driver/mpu6050_wrapper.c',
+       'core/driver/eMPL/inv_mpu.c']
+       
+CPPPATH = [cwd + '/core/driver',
+           cwd + '/core/driver/eMPL',]
+group = DefineGroup('Drivers', src, depend = ['SENSOR_USING_MPU6050'], CPPPATH = CPPPATH)
+
+Return('group')

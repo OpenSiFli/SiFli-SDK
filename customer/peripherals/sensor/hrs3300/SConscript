@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+src	= []
+path = [cwd]
+lib = []
+
+if GetDepend('HR_USING_HRS3300'):
+	src = src + Glob('./*.c')
+
+lib = ['m33_3300_keil_20210607_02d']
+	
+group = DefineGroup('Drivers', src, depend = ['HR_USING_HRS3300'], LIBS = lib, CPPPATH = path, LIBPATH = path)
+
+Return('group')

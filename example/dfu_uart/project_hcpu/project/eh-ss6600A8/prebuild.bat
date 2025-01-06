@@ -1,0 +1,1 @@
+copy ..\..\..\..\rom_bin\lcpu_general_ble_img\lcpu_ss6600.c ..\..\src\lcpu_img.c

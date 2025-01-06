@@ -1,0 +1,8 @@
+config BSP_USING_BOARD_EH_SS6700XXX
+    bool
+    select SOC_SF32LB56X
+    select BF0_LCPU
+    default y
+
+rsource "../Kconfig.board"
+

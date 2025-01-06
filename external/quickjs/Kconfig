@@ -1,0 +1,19 @@
+config PKG_USING_QUICKJS
+    bool "Enable Quick JS"
+    default n
+	
+if PKG_USING_QUICKJS
+	config QUICKJS_BIGNUM
+    bool "QuickJS: Enable Big number"
+    default n
+	config QUICKJS_LVGL
+    bool "QuickJS: Enable LVGL v7/v8 support"
+    default n
+	config QUICKJS_USING_PSRAM
+    bool "QuickJS: Using PSRAM Heap"
+    default n
+	config QUICKJS_PSRAM_SIZE
+    int "QuickJS: PSRAM Heap Size"
+    default 524288
+    depends on QUICKJS_USING_PSRAM
+endif

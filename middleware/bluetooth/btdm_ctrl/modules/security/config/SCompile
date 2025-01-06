@@ -1,0 +1,74 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for Security functions
+#     - AES 128
+#     - ECC P256
+#     - SHA 256
+#
+# Copyright (C) RivieraWaves 2009-2021
+#
+#########################################################################################
+try:
+    ECC_P256_SUPPORT = True if env['ECC_P256_PRESENT'] == 'on' else False
+except:
+    env['ECC_P256_PRESENT'] = 'off'
+    ECC_P256_SUPPORT = False
+
+try:
+    SHA_256_SUPPORT = True if env['SHA_PRESENT'] == 'on' else False
+except:
+    env['SHA_PRESENT'] = 'off'
+    SHA_256_SUPPORT = False
+    
+try:
+    RSA_SUPPORT = True if env['RSA_PRESENT'] == 'on' else False
+except:
+    env['RSA_PRESENT'] = 'off'
+    RSA_SUPPORT = False
+    
+if (True): # Always present
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    security_src_dir = os.path.join(security_dir, 'src')
+    security_api_dir = os.path.join(security_dir, 'api')
+    security_cfg_dir = os.path.join(security_dir, 'config')
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    security_def_list  = []
+    
+    if(ECC_P256_SUPPORT):
+        security_def_list += ['CFG_ECC_P256_SUPPORT']
+        if (env['SEC_CON'] == '16'):
+            security_def_list += ['CFG_ECC_16_BITS_ALGO']  # use 16 bits multiplication algorithm
+        if (env['BT_EMB_PRESENT'] == 'on') and (env['CRYPTO_UT'] == 'on') and (env['DBG'] == 'on'):
+            security_def_list += ['CFG_CRYPTO_UT']
+            
+    if(SHA_256_SUPPORT):
+        security_def_list += ['CFG_SHA_256_SUPPORT']
+        
+    if(env['GFP_PROVIDER'] == 'on'):
+        security_def_list += ['CFG_AES_CTR_SUPPORT']
+        
+    if(RSA_SUPPORT):
+        security_def_list += ['CFG_RSA_SUPPORT']
+    
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    security_inc_list  = []
+    security_inc_list += [security_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    security_src_list = scutils.file_list_read(env, os.path.join(security_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, security_src_dir, security_def_list, security_inc_list, security_src_list)

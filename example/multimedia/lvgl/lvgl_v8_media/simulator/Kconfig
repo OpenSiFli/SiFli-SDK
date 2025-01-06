@@ -1,0 +1,10 @@
+mainmenu "Sifli Configuration"
+
+config SIFLI_SDK
+    string 
+    option env="SIFLI_SDK"
+    default "."
+#SDK configuration	
+source "$SIFLI_SDK/Kconfig"
+rsource "../src/Kconfig"
+

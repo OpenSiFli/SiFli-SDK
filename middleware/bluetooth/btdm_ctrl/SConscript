@@ -1,0 +1,284 @@
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+src = []
+
+if GetDepend('CFG_AHI'):
+    ahi_present = True
+else:
+    ahi_present = False
+
+if GetDepend('CFG_APP'):
+    src += Glob('app/src/*.c')
+    
+if GetDepend('CFG_BLE_HOST'):
+    src += Glob('ip/hl/ble/src/gap/gapc/*.c')
+    src += Glob('ip/hl/ble/src/gap/gapm/*.c')
+    src += Glob('ip/hl/ble/src/gap/smpc/*.c')
+    src += Glob('ip/hl/ble/src/gatt/attc/*.c')
+    src += Glob('ip/hl/ble/src/gatt/attm/*.c')
+    src += Glob('ip/hl/ble/src/gatt/atts/*.c')
+    src += Glob('ip/hl/ble/src/gatt/gattc/*.c')
+    src += Glob('ip/hl/ble/src/gatt/gattm/*.c')
+    src += Glob('ip/hl/ble/src/l2c/l2cc/*.c')
+    src += Glob('ip/hl/ble/src/l2c/l2cm/*.c')
+    src += Glob('ip/hl/ble/src/prf/*.c')
+    src += Glob('ip/hl/ble/src/rwble_hl/*.c')
+
+src += Glob('ip/hci/src/*.c')
+if GetDepend('CFG_BT_HOST'):
+    src += Glob('ip/hl/src/*.c')
+    src += Glob('ip/hl/bt/src/*.c')
+
+if ahi_present:
+    src += Glob('ip/ahi/src/*.c')
+
+if GetDepend('CFG_PRF_ANPC'):
+    src += Glob('ip/profiles/anp/anpc/src/*.c')
+if GetDepend('CFG_PRF_ANPS'):
+    src += Glob('ip/profiles/anp/anps/src/*.c')
+if GetDepend('CFG_PRF_BASC'):
+    src += Glob('ip/profiles/bas/basc/src/*.c')
+if GetDepend('CFG_PRF_BASS'):
+    src += Glob('ip/profiles/bas/bass/src/*.c')
+if GetDepend('CFG_PRF_BCSC'):
+    src += Glob('ip/profiles/bcs/bcsc/src/*.c')
+if GetDepend('CFG_PRF_BCSS'):
+    src += Glob('ip/profiles/bcs/bcss/src/*.c')
+if GetDepend('CFG_PRF_BLPC'):
+    src += Glob('ip/profiles/blp/blpc/src/*.c')
+if GetDepend('CFG_PRF_BLPS'):
+    src += Glob('ip/profiles/blp/blps/src/*.c')
+if GetDepend('CFG_PRF_CPPC'):
+    src += Glob('ip/profiles/cpp/cppc/src/*.c')
+if GetDepend('CFG_PRF_CPPS'):
+    src += Glob('ip/profiles/cpp/cpps/src/*.c')
+if GetDepend('CFG_PRF_CSCPC'):
+    src += Glob('ip/profiles/cscp/cscpc/src/*.c')
+if GetDepend('CFG_PRF_CSCPS'):
+    src += Glob('ip/profiles/cscp/cscps/src/*.c')
+if GetDepend('CFG_PRF_DISC'):
+    src += Glob('ip/profiles/dis/disc/src/*.c')
+if GetDepend('CFG_PRF_DISS'):
+    src += Glob('ip/profiles/dis/diss/src/*.c')
+if GetDepend('CFG_PRF_FMPL'):
+    src += Glob('ip/profiles/find/findl/src/*.c')
+if GetDepend('CFG_PRF_FMPT'):
+    src += Glob('ip/profiles/find/findt/src/*.c')
+if GetDepend('CFG_PRF_GLPC'):
+    src += Glob('ip/profiles/glp/glpc/src/*.c')
+if GetDepend('CFG_PRF_GLPS'):
+    src += Glob('ip/profiles/glp/glps/src/*.c')
+if GetDepend('CFG_PRF_HRPC'):
+    src += Glob('ip/profiles/hrp/hrpc/src/*.c')
+if GetDepend('CFG_PRF_HRPS'):
+    src += Glob('ip/profiles/hrp/hrps/src/*.c')
+if GetDepend('CFG_PRF_HTPC'):
+    src += Glob('ip/profiles/htp/htpc/src/*.c')
+if GetDepend('CFG_PRF_HTPT'):
+    src += Glob('ip/profiles/htp/htpt/src/*.c')
+if GetDepend('CFG_PRF_LANC'):
+    src += Glob('ip/profiles/lan/lanc/src/*.c')
+if GetDepend('CFG_PRF_LANS'):
+    src += Glob('ip/profiles/lan/lans/src/*.c')
+if GetDepend('CFG_PRF_PASPC'):
+    src += Glob('ip/profiles/pasp/paspc/src/*.c')
+if GetDepend('CFG_PRF_PASPS'):
+    src += Glob('ip/profiles/pasp/pasps/src/*.c')
+if GetDepend('CFG_PRF_PXPM'):
+    src += Glob('ip/profiles/prox/proxm/src/*.c')
+if GetDepend('CFG_PRF_PXPR'):
+    src += Glob('ip/profiles/prox/proxr/src/*.c')
+if GetDepend('CFG_PRF_RSCPC'):
+    src += Glob('ip/profiles/rscp/rscpc/src/*.c')
+if GetDepend('CFG_PRF_RSCPS'):
+    src += Glob('ip/profiles/rscp/rscps/src/*.c')
+if GetDepend('CFG_PRF_SCPPC'):
+    src += Glob('ip/profiles/scpp/scppc/src/*.c')
+if GetDepend('CFG_PRF_SCPPS'):
+    src += Glob('ip/profiles/scpp/scpps/src/*.c')
+if GetDepend('CFG_PRF_TIPC'):
+    src += Glob('ip/profiles/tip/tipc/src/*.c')
+if GetDepend('CFG_PRF_TIPS'):
+    src += Glob('ip/profiles/tip/tips/src/*.c')
+if GetDepend('CFG_PRF_UDSC'):
+    src += Glob('ip/profiles/uds/udsc/src/*.c')
+if GetDepend('CFG_PRF_UDSS'):
+    src += Glob('ip/profiles/uds/udss/src/*.c')
+if GetDepend('CFG_PRF_WSCC'):
+    src += Glob('ip/profiles/wscp/wscc/src/*.c')
+if GetDepend('CFG_PRF_WSCS'):
+    src += Glob('ip/profiles/wscp/wscs/src/*.c')
+if GetDepend('CFG_PRF_SIBLEC'):
+    src += Glob('ip/profiles/sible/siblec/src/*.c')
+if GetDepend('CFG_PRF_SIBLES'):
+    src += Glob('ip/profiles/sible/sibles/src/*.c')
+    
+src += Glob('modules/h4tl/src/*.c')
+src += Glob('modules/ke/src/*.c')
+src += Glob('modules/rwip/src/*.c')
+src += Glob('modules/common/src/*.c')
+src += Glob('modules/dbg/src/*.c')
+src += Glob('plf/*.c')
+src += Glob('porting/*.c')
+src += Glob('patch/*.c')
+
+#if  GetDepend('CFG_SEC_CON'):
+src += Glob('modules/security/src/aes/*.c')
+src += Glob('modules/security/src/ecc/*.c')
+src += Glob('modules/security/src/sha/*.c')
+
+if GetDepend('CFG_EMB'):
+    src += Glob('ip/ll/ble/src/co/*.c')
+    src += Glob('ip/ll/ble/src/llc/*.c')
+    src += Glob('ip/ll/ble/src/lld/*.c')
+    src += Glob('ip/ll/ble/src/lli/*.c')
+    src += Glob('ip/ll/ble/src/llm/*.c')
+    
+    src += Glob('ip/ll/bt/src/co/*.c')
+    src += Glob('ip/ll/bt/src/lb/*.c')
+    src += Glob('ip/ll/bt/src/lc/*.c')
+    src += Glob('ip/ll/bt/src/ld/*.c')
+    src += Glob('ip/ll/bt/src/lm/*.c')    
+
+    src += Glob('ip/ll/data_path/*.c')
+    src += Glob('ip/ll/data_path/isogen/src/*.c')
+    src += Glob('ip/ll/data_path/isoohci/src/*.c')
+    
+    src += Glob('ip/ll/sch/src/*.c')
+    
+    if GetDepend('CFG_BT_EMB'):
+        src += Glob('modules/rf/src/rf_bf_dual_fpga.c')
+    else:
+        src += Glob('modules/rf/src/rf_bf_fpga.c')
+
+if GetDepend('CFG_NVDS'):
+    src += Glob('modules/sifli_nvds/src/*.c')
+
+CPPPATH = [
+    cwd + '/',
+    cwd + '/app/api',
+    cwd + '/ip/ble/hl/api',
+    cwd + '/ip/ble/hl/inc',
+    cwd + '/ip/hl/ble/api',
+    cwd + '/ip/hl/ble/inc',
+    cwd + '/ip/hci/api',
+    cwd + '/ip/ahi/api',
+    cwd + '/modules/common/api',
+    cwd + '/modules/dbg/api',
+    cwd + '/modules/h4tl/api',
+    cwd + '/modules/ke/api',
+    cwd + '/modules/rwip/api',
+    cwd + '/modules/rf/api',
+    cwd + '/modules/security/api',
+    cwd + '/modules/sifli_nvds/api',
+    cwd + '/plf',
+    cwd + '/plf/driver/reg',
+    cwd + '/ip/profiles/anp/anpc/api',
+    cwd + '/ip/profiles/anp/anps/api',
+    cwd + '/ip/profiles/anp',
+    cwd + '/ip/profiles/bas/basc/api',
+    cwd + '/ip/profiles/bas/bass/api',
+    cwd + '/ip/profiles/bcs/bcsc/api',
+    cwd + '/ip/profiles/bcs/bcss/api',
+    cwd + '/ip/profiles/bcs',
+    cwd + '/ip/profiles/blp/blpc/api',
+    cwd + '/ip/profiles/blp/blps/api',
+    cwd + '/ip/profiles/blp',
+    cwd + '/ip/profiles/cpp/cppc/api',
+    cwd + '/ip/profiles/cpp/cpps/api',
+    cwd + '/ip/profiles/cpp',    
+    cwd + '/ip/profiles/cscp/cscpc/api',
+    cwd + '/ip/profiles/cscp/cscps/api',
+    cwd + '/ip/profiles/cscp', 
+    cwd + '/ip/profiles/dis/disc/api',
+    cwd + '/ip/profiles/dis/diss/api',
+    cwd + '/ip/profiles/find/findl/api',
+    cwd + '/ip/profiles/find/findt/api',
+    cwd + '/ip/profiles/find/',
+    cwd + '/ip/profiles/glp/glpc/api',
+    cwd + '/ip/profiles/glp/glps/api',
+    cwd + '/ip/profiles/glp/',    
+    cwd + '/ip/profiles/hrp/hrpc/api',
+    cwd + '/ip/profiles/hrp/hrps/api',
+    cwd + '/ip/profiles/hrp/',
+    cwd + '/ip/profiles/htp/htpc/api',
+    cwd + '/ip/profiles/htp/htpt/api',
+    cwd + '/ip/profiles/htp/',
+    cwd + '/ip/profiles/lan/lanc/api',
+    cwd + '/ip/profiles/lan/lans/api',
+    cwd + '/ip/profiles/lan/',    
+    cwd + '/ip/profiles/pasp/paspc/api',
+    cwd + '/ip/profiles/pasp/pasps/api',
+    cwd + '/ip/profiles/pasp/',    
+    cwd + '/ip/profiles/prox/proxm/api',
+    cwd + '/ip/profiles/prox/proxr/api',
+    cwd + '/ip/profiles/rscp/rscpc/api',
+    cwd + '/ip/profiles/rscp/rscps/api',
+    cwd + '/ip/profiles/rscp/',
+    cwd + '/ip/profiles/scpp/scppc/api',
+    cwd + '/ip/profiles/scpp/scpps/api',
+    cwd + '/ip/profiles/scpp/',
+    cwd + '/ip/profiles/tip/tipc/api',
+    cwd + '/ip/profiles/tip/tips/api',
+    cwd + '/ip/profiles/tip/',    
+    cwd + '/ip/profiles/uds/udsc/api',
+    cwd + '/ip/profiles/uds/udss/api',
+    cwd + '/ip/profiles/uds/',        
+    cwd + '/ip/profiles/wscp/wscc/api',
+    cwd + '/ip/profiles/wscp/wscs/api',
+    cwd + '/ip/profiles/wscp/',    
+    cwd + '/ip/profiles/sible/siblec/api',
+    cwd + '/ip/profiles/sible/sibles/api',
+    cwd + '/ip/ll/sch/api',
+    cwd + '/ip/ll/em/api',
+    cwd + '/ip/ll/ble/api',
+    cwd + '/ip/ll/bt/api',
+    cwd + '/ip/ll/ble/src',
+    cwd + '/ip/ll/bt/src',
+    cwd + '/ip/hl/api',
+    cwd + '/ip/hl/src',
+    cwd + '/modules/ke/api/',
+    cwd + '/porting',
+    cwd + '/app/api/',
+    cwd + '/ip/ll/data_path',
+    cwd + '/ip/ll/data_path/isogen/api',
+    cwd + '/ip/ll/data_path/isoohci/api',
+    cwd + '/patch',
+    cwd + '/ip/hl/ble/src/gap/gapm',
+    ]
+    
+if  GetDepend('SOC_SF32LB55X'):
+    CPPPATH += [cwd + '/plf/reg/fw/a0']
+if  GetDepend('SOC_SF32LB58X'):
+    CPPPATH += [cwd + '/plf/reg/fw/pro']
+if  GetDepend('SOC_SF32LB56X'):
+    CPPPATH += [cwd + '/plf/reg/fw/lite']
+if  GetDepend('SOC_SF32LB52X'):
+    CPPPATH += [cwd + '/plf/reg/fw/micro']
+
+CPPDEFINES = []
+
+if ahi_present:
+    CPPDEFINES += ['CFG_AHITL']
+    CPPDEFINES += ['CFG_AHIINT']
+
+grp = 'bt'
+lib = []
+
+try :
+    if rtconfig.host_lib == 1:
+        grp = 'lib_bt'
+except:
+    try :
+        if GetDepend('ROM_ATTR'):
+            lib = []
+    except:
+        src = []
+        lib = lib+['lib_bt_rvds']
+        pass
+
+group = DefineGroup(grp, src, depend = ['RWBT_52_ENABLE'], CPPPATH = CPPPATH, CPPDEFINES = CPPDEFINES, LIBS=lib, LIBPATH=CPPPATH)
+
+Return('group')

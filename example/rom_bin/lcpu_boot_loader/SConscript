@@ -1,0 +1,11 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+objs = []
+
+Return ('objs')

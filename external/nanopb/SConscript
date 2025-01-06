@@ -1,0 +1,27 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+list = os.listdir(cwd)
+objs = []
+# init src and inc vars
+src = []
+inc = [cwd]
+
+
+if GetDepend('BSP_USING_PC_SIMULATOR') or GetDepend('BF0_HCPU'):
+    src = src + Glob('./*.c')
+
+
+# add group to IDE project
+objs = DefineGroup('App_watch_custom', src, depend = ['PKG_USING_NANOPB'], CPPPATH = inc)
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))              
+
+Return('objs')

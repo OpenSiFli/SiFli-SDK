@@ -1,0 +1,30 @@
+menu "Third party packages"
+
+source "$SIFLI_SDK/external/CmBacktrace-v1.3.0/Kconfig"
+source "$SIFLI_SDK/external/CMSIS/Kconfig"
+source "$SIFLI_SDK/external/coremark/Kconfig"
+source "$SIFLI_SDK/external/FlashDB/Kconfig"
+source "$SIFLI_SDK/external/freetype/Kconfig"
+source "$SIFLI_SDK/external/libhelix-mp3/Kconfig"
+source "$SIFLI_SDK/external/lvgl_v8/Kconfig"
+source "$SIFLI_SDK/external/lz4/Kconfig"
+source "$SIFLI_SDK/external/mbedtls/Kconfig"
+source "$SIFLI_SDK/external/nanopb/Kconfig"
+source "$SIFLI_SDK/external/opus-1.4/Kconfig"
+source "$SIFLI_SDK/external/quickjs/Kconfig"
+source "$SIFLI_SDK/external/rlottie/Kconfig"
+source "$SIFLI_SDK/external/rpmsg-lite/Kconfig"
+source "$SIFLI_SDK/external/SEGGER_SystemView-master/Kconfig"
+source "$SIFLI_SDK/external/sensor-lib/Kconfig"
+source "$SIFLI_SDK/external/WebRTC_audio_processing/Kconfig"
+source "$SIFLI_SDK/external/tinymp3/Kconfig"
+source "$SIFLI_SDK/external/fsck/Kconfig"
+source "$SIFLI_SDK/external/state_machine-latest/Kconfig"
+source "$SIFLI_SDK/external/cJSON-1.7.17/Kconfig"
+source "$SIFLI_SDK/external/webclient/Kconfig"
+
+config PKG_SCHRIFT
+    bool "SCHRIFT Library"
+    default n
+
+endmenu

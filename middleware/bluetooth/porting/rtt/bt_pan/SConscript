@@ -1,0 +1,13 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+
+SIFLI_SDK=os.getenv('SIFLI_SDK')
+Rtt_Root = SIFLI_SDK + 'rtos/rtthread'
+CPPPATH += [Rtt_Root + '/components/drivers/include/drivers']
+
+group = DefineGroup('DeviceDrivers', src, depend = ['RT_USING_BLUETOOTH','BT_FINSH_PAN'], CPPPATH = CPPPATH)
+
+Return('group')

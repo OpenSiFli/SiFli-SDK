@@ -1,0 +1,17 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+
+# Add source code
+src = ['main.c', 'cap_initiator_tx.c']
+
+if GetDepend("SAMPLE_UNICAST"):
+    src+=['cap_initiator_unicast.c']
+elif GetDepend("SAMPLE_BROADCAST"):
+    src+=['cap_initiator_broadcast.c']
+
+group = DefineGroup('Applications', src, depend = [''],CPPPATH = CPPPATH)
+
+Return('group')

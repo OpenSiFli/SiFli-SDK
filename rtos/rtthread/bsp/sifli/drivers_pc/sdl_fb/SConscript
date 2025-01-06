@@ -1,0 +1,16 @@
+from building import *
+Import ('SIFLI_SDK')
+cwd  = GetCurrentDir()
+
+LIBS = []
+LIBPATH = []
+CPPPATH = [cwd]
+src = Glob('*.c')
+if GetDepend('LCD_SDL2') == True:
+    LIBS.append('SDL2')
+    LIBPATH=[SIFLI_SDK +'/external/SDL2-2.0.7/lib/x86']
+    CPPPATH=CPPPATH+[SIFLI_SDK +'/external/SDL2-2.0.7/include']
+
+group = DefineGroup('Drivers', src, depend = ['LCD_SDL2'], LIBS=LIBS, CPPPATH = CPPPATH, LIBPATH=LIBPATH)
+
+Return('group')

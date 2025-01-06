@@ -1,0 +1,81 @@
+import rtconfig
+Import('RTT_ROOT')
+from building import *
+
+# get current directory
+cwd = GetCurrentDir()
+
+try:
+    if rtconfig.CORE=='LCPU':
+         AddDepend('BF0_LCPU')
+    elif rtconfig.CORE=='HCPU':
+         AddDepend('BF0_HCPU')
+except:
+    if GetDepend("BF0_HCPU"):
+        rtconfig.CORE='HCPU'
+    elif GetDepend("BF0_LCPU"):
+        rtconfig.CORE='LCPU'
+    else:
+        print('Warning: Rtconfig.core not defined')
+     
+src=['bf0_pin_const.c']
+src += ['Templates/system_bf0_ap.c']
+if GetDepend(['BF0_HCPU']):
+    if GetDepend(['BSP_USING_LCPU_PATCH_IN_RAM']):
+        src += ['lcpu_patch_ram.c']
+    elif GetDepend("ZBT"):
+        src += ['lcpu_patch_iso.c']
+    else:
+        src += ['lcpu_patch.c']
+    if not GetDepend(['USE_ATE_MODE']):
+        src += ['bt_rf_fulcal.c']
+
+
+ASFLAGS = ''
+CCFLAGS = ''
+CPPDEFINES=['SF32LB56X']
+
+if GetDepend(['BF0_HCPU']):
+    if  rtconfig.PLATFORM != 'gcc':
+        ASFLAGS = ' --cpreproc'
+        CCFLAGS = ' -march=armv8-m.main+cdecp1'
+    if rtconfig.PLATFORM == 'gcc':
+        src += ['Templates/gcc/startup_bf0_hcpu.s']
+    elif rtconfig.PLATFORM == 'armcc':
+        if not GetDepend('BF0_ACPU'):
+            src += ['Templates/arm/startup_bf0_hcpu.S']
+        else:
+            src += ['Templates/arm/startup_bf0_acpu.S']
+    elif rtconfig.PLATFORM == 'iar':
+        src += ['Templates/iar/startup_bf0_hcpu.s']
+elif GetDepend(['BF0_LCPU']):
+    if  rtconfig.PLATFORM != 'gcc':
+        ASFLAGS = ' --cpreproc'
+        CCFLAGS = ' -march=armv8-m.main+cdecp1'    
+    if rtconfig.PLATFORM == 'gcc':
+        if GetDepend(['ROM_ATTR']):
+            src += ['Templates/gcc/startup_bf0_lcpu_rom.s']
+        else:
+            src += ['Templates/gcc/startup_bf0_lcpu.s']
+    elif rtconfig.PLATFORM == 'armcc':
+        if GetDepend(['ROM_ATTR']):
+            src += ['Templates/arm/startup_bf0_lcpu_rom.S']
+        else:
+            src += ['Templates/arm/startup_bf0_lcpu.S']
+    elif rtconfig.PLATFORM == 'iar':
+        src += ['Templates/iar/startup_bf0_lcpu.s']
+        src += ['Templates/iar/startup_bf0_lcpu_rom.s']
+
+path = [cwd, cwd + '/../Include']
+path = path + [cwd + '/../../../external/CMSIS/Include']
+
+if GetDepend('CFG_BOOTROM'):
+    CPPDEFINES+=['SIMP_FLASHTAB']
+
+if len(src) > 0:
+    group = DefineGroup('CMSIS_BF0', src, depend = ['SOC_SF32LB56X'], ASFLAGS = ASFLAGS, CPPPATH=path, CCFLAGS=CCFLAGS, CPPDEFINES=CPPDEFINES)
+else :
+    group =[]
+
+Return('group')
+

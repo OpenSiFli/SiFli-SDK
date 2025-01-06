@@ -1,0 +1,43 @@
+config ASIC
+    bool
+    default y
+    
+config HRS3300_POW_PIN
+    int
+    default 78
+
+choice
+    prompt "Select package"
+    default LB551_U4O5
+    config LB551_U8N5
+        bool "U8N5 - 8M Dual Flash1"
+    config LB551_U4O5
+        bool "U4O5 - 4M Flash1, 4M OPI PSRAM"
+endchoice
+
+config LB551_VERSION
+int "Board version"
+default 3
+
+if LB551_VERSION=1
+    config TOUCH_IRQ_PIN
+        int
+        default 125
+    config TOUCH_RESET_PIN
+        int
+        default 1
+endif
+
+if LB551_VERSION=2
+    config TOUCH_IRQ_PIN
+        int 
+        default 45
+    config TOUCH_RESET_PIN
+        int
+        default 44
+endif
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 70
+

@@ -1,0 +1,11 @@
+config ASIC
+    bool
+    default y
+   
+config TOUCH_IRQ_PIN
+    int
+    default 50
+
+config BSP_SUPPORT_DPI
+    bool
+    default y

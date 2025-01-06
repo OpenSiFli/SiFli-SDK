@@ -1,0 +1,10 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+CPPPATH = [cwd]
+
+group = DefineGroup('bt', src, depend = ['BT_FINSH'],CPPPATH = CPPPATH)
+
+Return('group')

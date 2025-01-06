@@ -1,0 +1,25 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+if GetDepend(['SOC_SF32LB55X']):
+    path += [cwd + '/../include/config/sf32lb55x']
+elif GetDepend(['SOC_SF32LB58X']):
+    path += [cwd + '/../include/config/sf32lb58x']
+elif GetDepend(['SOC_SF32LB56X']):
+    path += [cwd + '/../include/config/sf32lb56x']    
+elif GetDepend(['SOC_SF32LB52X']):
+    path += [cwd + '/../include/config/sf32lb52x']    
+elif GetDepend(['SOC_SIMULATOR']):
+    print("Simulator used")
+else:
+    raise AssertionError
+
+group = DefineGroup('Drivers', src, depend = [], CPPPATH = path)
+
+Return('group')

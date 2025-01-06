@@ -1,0 +1,1 @@
+source "$SIFLI_SDK/customer/boards/eh-lb56xu/Kconfig.board"

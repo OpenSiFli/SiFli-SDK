@@ -1,0 +1,6 @@
+
+menuconfig PKG_USING_LZ4
+    bool "LZ4 compression lib"
+    default n
+
+

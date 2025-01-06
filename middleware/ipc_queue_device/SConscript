@@ -1,0 +1,14 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+
+src += ['ipc_queue_device.c']
+
+CPPPATH = []
+
+# add src and include to group.
+group = DefineGroup('middleware', src,depend = ['USING_IPC_QUEUE_DEVICE_WRAPPER'],CPPPATH = CPPPATH)
+    
+Return('group')

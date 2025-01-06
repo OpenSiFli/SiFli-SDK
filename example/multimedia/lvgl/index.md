@@ -1,0 +1,7 @@
+# lvgl
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

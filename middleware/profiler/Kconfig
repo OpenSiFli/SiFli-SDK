@@ -1,0 +1,61 @@
+menuconfig USING_PROFILER
+	bool "System profiler"
+    select PKG_USING_SEGGER_RTT
+	default n
+
+if USING_PROFILER
+
+config CONFIG_MAX_NUMBER_OF_CUSTOM_EVENTS
+	int "Maximum number of stored custom event types"
+	default 32
+	range 0 32
+
+config CONFIG_PROFILER_CUSTOM_EVENT_BUF_LEN
+	int "Length of data buffer for custom event data (in bytes)"
+	default 64
+
+config CONFIG_MAX_LENGTH_OF_CUSTOM_EVENTS_DESCRIPTIONS
+	int "Maximum number of characters used to describe single event type"
+	default 128
+
+menu "Profiler advanced"
+
+config CONFIG_PROFILER_START_LOGGING_ON_SYSTEM_START
+	bool "Start logging on system start"
+	default n
+
+config CONFIG_PROFILER_COMMAND_BUFFER_SIZE
+	int "Command buffer size"
+	default 16
+
+config CONFIG_PROFILER_DATA_BUFFER_SIZE
+	int "Data buffer size"
+	default 2048
+
+config CONFIG_PROFILER_INFO_BUFFER_SIZE
+	int "Info buffer size"
+	default 1024
+
+config CONFIG_PROFILER_RTT_CHANNEL_DATA
+	int "Data up channel index"
+	default 1
+
+config CONFIG_PROFILER_RTT_CHANNEL_INFO
+	int "Info up channel index"
+	default 2
+
+config CONFIG_PROFILER_RTT_CHANNEL_COMMANDS
+	int "Command down channel index"
+	default 1
+
+config CONFIG_PROFILER_STACK_SIZE
+	int "Stack size for thread handling host input"
+	default 512
+
+config CONFIG_PROFILER_THREAD_PRIORITY
+	int "Priority of thread handling host input"
+	default 10
+
+endmenu # Advanced
+
+endif # USING_PROFILER

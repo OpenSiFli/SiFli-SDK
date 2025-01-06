@@ -1,0 +1,11 @@
+config BSP_USING_CMSIS_NN
+    bool "Enable ARM CMSIS NN"
+    default n
+
+config BSP_USING_CMSIS_DSP
+    bool "Enable ARM CMSIS DSP"
+    default n
+
+config RT_USING_RTT_CMSIS
+    bool "Enable RT-Thread support for CMSIS OS"
+    default n

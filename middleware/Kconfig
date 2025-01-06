@@ -1,0 +1,434 @@
+menu "Sifli middleware"
+    choice
+        prompt "Select HAL Assert Type"
+        default BSP_USING_EMPTY_ASSERT
+        config BSP_USING_FULL_ASSERT
+            bool "Print and loop"
+        config BSP_USING_LOOP_ASSERT
+            bool "Endless Loop"
+        config BSP_USING_EMPTY_ASSERT
+            bool "Empty"
+    endchoice
+    
+    rsource "bluetooth/Kconfig"
+ 
+    menuconfig BSP_USING_PM
+        bool "Enable Low power support"
+        select RT_USING_PM
+        select USING_CONTEXT_BACKUP if !SOC_SF32LB52X
+        default n
+    if BSP_USING_PM
+        config BSP_PM_STANDBY_SHUTDOWN
+            bool "Use STANDBY as SHUTDOWN"
+            default n
+        config BSP_PM_DEBUG
+            bool "Enable PM Debug"
+            default n
+        config BSP_PM_PIN_BACKUP_DISABLED
+            bool "PIN Backup/Restore is disabled"
+            default n
+        menuconfig PM_METRICS_ENABLED
+            bool "Enable PM Metrics"
+            default n
+            if PM_METRICS_ENABLED
+                choice
+                    prompt "Select Metrics Report Type"
+                    default PM_METRICS_USE_COLLECTOR
+                    config PM_METRICS_USE_COLLECTOR
+                        select USING_METRICS_COLLECTOR
+                        bool "Save by Metrics Collector"
+                    config PM_METRICS_PRINT_DIRECTLY
+                        bool "Print Directly"
+                endchoice
+                if PM_METRICS_PRINT_DIRECTLY
+                    config PM_METRICS_PRINT_PERIOD
+                        int "Print period in second"
+                        default 10
+                endif 
+            endif             
+        config PM_WAKEUP_PIN_AS_OUTPUT_IN_SLEEP
+            bool "Wakeup PIN is used as output PIN during sleep"
+            default n
+            depends on BF0_LCPU
+        config BSP_PM_FREQ_SCALING
+            bool "Enable frequency scaling, btim1 is used HCPU and btim3 is used by LCPU"
+            default n
+            select BSP_USING_BTIM1 if BF0_HCPU
+            select BSP_USING_BTIM3 if BF0_LCPU
+        config PM_ITCM_NOT_BACKUP
+            bool "Not backup ITCM region when Sleep"
+            default n
+        config PM_USE_RC48
+            bool "Use RC48 to save power"
+            depends on BF0_LCPU
+            default n
+            select USING_CPU_USAGE_PROFILER
+        config PM_LP_TIMER_DISABLE
+            depends on BF0_LCPU
+            bool "Disable low power timer in PM"
+            default n
+    endif
+    menuconfig BSP_USING_DATA_SVC
+        bool "Enable Data service"
+        default n
+        if BSP_USING_DATA_SVC
+            config DATA_SVC_MBOX_THREAD_STACK_SIZE
+                int "MBOX Thread stack size in byte"
+                default 1024
+            config DATA_SVC_MBOX_THREAD_DYNAMIC
+                bool "Use Dynamic MBOX Thread stack"
+                default n 
+            config DATA_SVC_MBOX_THREAD_PRIORITY
+                int "MBOX Thread Priority"
+                default 13
+                
+            config DATA_SVC_PROC_THREAD_STACK_SIZE
+                int "Proc Thread stack size in byte"
+                default 4096 if BF0_HCPU
+                default 2048 if BF0_LCPU
+                default 2048 if BSP_USING_PC_SIMULATOR
+                
+            config DATA_SVC_PROC_THREAD_DYNAMIC
+                bool "Use Dynamic Proc Thread stack"
+                default n 
+            config DATA_SVC_PROC_THREAD_PRIORITY
+                int "Proc Thread Priority"
+                default 14
+            config DATA_SVC_MBOX_THREAD_DISABLED
+                bool "Disable MBOX Thread and Related Queue"
+                default n
+            config DATA_SVC_PROC_THREAD_DISABLED
+                bool "Disable Proc Thread and Related Queue"
+                default n
+                depends on DATA_SVC_MBOX_THREAD_DISABLED
+        endif
+        
+        if BSP_USING_DATA_SVC
+            config BSP_USING_ANCS_SVC
+            bool "Enable ANCS Service"
+            select BSP_BLE_SIBLES
+            select BSP_BLE_ANCS
+            default n
+        endif
+        if BSP_USING_DATA_SVC
+            config BSP_USING_BLE_NVDS_SVC
+            bool "Enable ble nvds Service"
+            depends on PKG_USING_EASYFLASH || PKG_USING_FLASHDB
+            default n
+            config NVDS_AUTO_UPDATE_MAC_ADDRESS
+            bool "Using MAC address from product area"
+            default n
+            depends on BSP_USING_BLE_NVDS_SVC
+        endif
+        if BSP_USING_DATA_SVC
+            config BSP_USING_BLE_DFU_PORT_SVC
+            bool "Enable DFU port service"
+            select BSP_BLE_SIBLES
+            default n
+        endif
+        if BSP_USING_DATA_SVC
+            config BSP_USING_AMS_SVC
+            bool "Enable AMS Service"
+            select BSP_BLE_SIBLES
+            select BSP_BLE_AMS
+            default n
+        endif
+    config BSP_USING_DFU_UART
+        bool "Device firmware update by uart"
+        depends on BF0_HCPU
+        default n
+    config BSP_USING_DFU
+        bool "Device firmware update support functions"
+        depends on BF0_HCPU
+        default n    
+    config BSP_USING_DFU_COMPRESS
+        bool "Device firmware using compress"
+        depends on BSP_USING_DFU
+        default n
+    config DFU_DECOMPRESS_USING_SOFTWARE
+        bool "Use software function to decompress zlib ota code"
+        depends on BSP_USING_DFU_COMPRESS
+        default n
+    config DFU_USING_DOWNLOAD_BACKUP
+        bool "Backup for ota download content"
+        default n
+        if DFU_USING_DOWNLOAD_BACKUP
+            config DFU_USING_BACK_UP_FLASH
+            bool "Store backup content on flash"
+            depends on BSP_USING_DFU_COMPRESS
+            default n
+        endif
+        if DFU_USING_DOWNLOAD_BACKUP
+            config DFU_USING_BACK_UP_PSRAM
+            bool "Store backup content on psram"
+            depends on BSP_USING_DFU_COMPRESS
+            default n
+        endif
+    config OTA_SECTION_CHANGE
+        bool "Support change image download address"
+        depends on BSP_USING_DFU
+        default n
+    config OTA_ERROR_HANDLE_IN_USR
+        bool "OTA error handle in user bin"
+        depends on BSP_USING_DFU
+        default n
+    config OTA_USING_SOL_FUNC
+        bool "OTA will use solution's version check and power off function"
+        depends on BSP_USING_DFU
+        default n
+    config OTA_55X
+        bool "NOR flash OTA"
+        depends on BSP_USING_DFU
+        default n
+        if OTA_55X
+            config OTA_NOR_OTA_MANAGER_LITE
+            bool "support lite or none ota manager"
+            default n
+        endif
+    config OTA_56X_NAND
+        bool "NAND flash OTA"
+        depends on BSP_USING_DFU
+        default n
+        if OTA_56X_NAND
+            config OTA_NAND_ONLY
+            bool "Support nand only board"
+            default n
+        endif
+    config OTA_NOR_LCPU_ROM_PATCH_SIZE
+        int "nor ota lcpu rom patch download size"
+        depends on DFU_USING_BACK_UP_FLASH
+        default 8192
+    config DFU_LCPU_ROM_PATCH_COMPARE
+        bool "skip update lcpu rom patch if compare result is the same"
+        depends on DFU_USING_BACK_UP_FLASH
+        default n
+    config BSP_SHARE_PREFS
+        bool "Enable share preferences"
+        depends on PKG_USING_EASYFLASH || PKG_USING_FLASHDB
+        default n
+    config BSP_USING_LVGL_INPUT_AGENT
+        bool "Enable input agent for LittlevGL"
+        depends on PKG_USING_LITTLEVGL2RTT
+        default n
+
+
+    menuconfig GUI_APP_FRAMEWORK
+        bool "Enable GUI application framework"
+        default n
+        if GUI_APP_FRAMEWORK
+            choice
+                prompt "App switch animation type"
+                default APP_TRANS_ANIMATION_SCALE
+                config APP_TRANS_ANIMATION_NONE
+                    bool "No animation (0 buffer)"
+                config APP_TRANS_ANIMATION_OVERWRITE
+                    bool "Overwrite animation (0 buffer)"
+                config APP_TRANS_ANIMATION_SCALE
+                    bool "Enlarge/Shrink Animation (2 buffers)"
+            endchoice
+
+            config GUI_MAX_RUNNING_APPS
+                int "max running GUI apps at same time"
+                default 2
+                
+            config GUI_PM_METRICS_ENABLED    
+                bool "Enable GUI PM Metrics"
+                default n
+        endif
+        
+    menuconfig USING_BUTTON_LIB
+        bool "Enable button library"
+        select RT_USING_PIN
+        default n
+        
+        if USING_BUTTON_LIB
+        
+            config BUTTON_MAX_NUM
+                int "max button number"
+                default 2
+            
+            config BUTTON_ADV_ACTION_CHECK_DELAY
+                int "detection time for advanced action in millisecond"
+                default 3000
+            config BUTTON_SERVICE_ENABLED
+                bool "Register Button as Data Service"
+                default n
+            if BUTTON_SERVICE_ENABLED  
+                config BUTTON_SERVICE_MAX_CLIENT_NUM
+                    int "max number of supported clients"
+                    default 1
+            endif
+            menuconfig USING_ADC_BUTTON
+                bool "Enable ADC Buttons"
+                default n
+                if USING_ADC_BUTTON
+                    config ADC_BUTTON_GROUP_NUM
+                        int "Number of ADC Button Groups"
+                        default 1
+                    config ADC_BUTTON_ADC_DEV_NAME
+                        string "ADC Device Name"
+                        default "bat1"
+                    if ADC_BUTTON_GROUP_NUM > 0
+                    comment "----------- Button Group1 ------------"    
+                        config ADC_BUTTON_GROUP1_MAX_NUM
+                            int "Number of Buttons in Group1"
+                            default 2
+                        config ADC_BUTTON_GROUP1_ADC_DEV_CHANNEL
+                            int "ADC Device Channel"
+                            default 7
+                        if ADC_BUTTON_GROUP1_MAX_NUM > 0
+                            config ADC_BUTTON_GROUP1_BUTTON1_VOLT
+                                int "ADC Button1 Voltage"
+                                default 1000
+                        endif     
+                        if ADC_BUTTON_GROUP1_MAX_NUM > 1
+                            config ADC_BUTTON_GROUP1_BUTTON2_VOLT
+                                int "ADC Button2 Voltage"
+                                default 1000
+                        endif     
+                        if ADC_BUTTON_GROUP1_MAX_NUM > 2
+                            config ADC_BUTTON_GROUP1_BUTTON3_VOLT
+                                int "ADC Button3 Voltage"
+                                default 1000
+                        endif     
+                    endif  
+                    if ADC_BUTTON_GROUP_NUM > 1
+                    comment "----------- Button Group2 ------------"                        
+                        config ADC_BUTTON_GROUP2_MAX_NUM
+                            int "Number of Buttons in Group1"
+                            default 2
+                        config ADC_BUTTON_GROUP2_ADC_DEV_CHANNEL
+                            int "ADC Device Channel"
+                            default 7
+                        if ADC_BUTTON_GROUP2_MAX_NUM > 0
+                            config ADC_BUTTON_GROUP2_BUTTON1_VOLT
+                                int "ADC Button1 Voltage"
+                                default 1000
+                        endif     
+                        if ADC_BUTTON_GROUP2_MAX_NUM > 1
+                            config ADC_BUTTON_GROUP2_BUTTON2_VOLT
+                                int "ADC Button2 Voltage"
+                                default 1000
+                        endif     
+                        if ADC_BUTTON_GROUP2_MAX_NUM > 2
+                            config ADC_BUTTON_GROUP2_BUTTON3_VOLT
+                                int "ADC Button3 Voltage"
+                                default 1000
+                        endif     
+                    endif                     
+                endif         
+        endif
+    source "$SIFLI_SDK/middleware/profiler/Kconfig"
+    
+    config USING_SECTION_ITER
+        bool "Enable Section Iterator"
+        default n
+        
+    config USING_IPC_QUEUE
+        bool "Enable IPC Queue Library"
+        default n
+        
+    config USING_IPC_QUEUE_DEVICE_WRAPPER
+        bool "Enable Wrapper Device for IPC Queue Library"
+        default n
+        depends on USING_IPC_QUEUE
+           
+    config USING_MOD_INSTALLER
+        bool "Enable Module Installer"
+        default n   
+        depends on RT_USING_MODULE
+        depends on RT_USING_XIP_MODULE
+
+    menuconfig USING_CPU_USAGE_PROFILER
+        bool "Enable CPU Usage Profiler"
+        default n   
+        if USING_CPU_USAGE_PROFILER
+            config CPU_PROFILER_MAX_THREAD_SWITCH_HIST_LEN
+                int "Thread switch history recording number"
+                default 64
+            config CPU_PROFILER_RECORD_ISR_HISTORY_ENABLED
+                bool "Enable ISR History Recording"
+                default n
+                config CPU_PROFILER_MAX_ISR_HIST_LEN
+                    int "ISR history recording number"
+                    default 16
+                    depends on CPU_PROFILER_RECORD_ISR_HISTORY_ENABLED
+            config CPU_USAGE_METRICS_ENABLED
+                bool "Enable CPU Usage Metrics"
+                # pthread uses user_data which is used by metrics to record thread run time
+                depends on !RT_USING_PTHREADS
+                default n
+                
+                if CPU_USAGE_METRICS_ENABLED
+                    choice
+                        prompt "Select Metrics Report Type"
+                        default CPU_USAGE_METRICS_USE_COLLECTOR
+                        config CPU_USAGE_METRICS_USE_COLLECTOR
+                            select USING_METRICS_COLLECTOR
+                            bool "Save by Metrics Collector"
+                        config CPU_USAGE_METRICS_PRINT_DIRECTLY
+                            bool "Print Directly"
+                    endchoice
+                    if CPU_USAGE_METRICS_PRINT_DIRECTLY
+                        config CPU_USAGE_METRICS_PRINT_PERIOD
+                            int "Print period in second"
+                            default 10
+                    endif 
+                endif    
+        endif
+        
+    menuconfig USING_CONTEXT_BACKUP
+        bool "Enable Context Backup"
+        default n 
+        if USING_CONTEXT_BACKUP
+        config CONTEXT_BACKUP_COMPRESSION_ENABLED
+            bool "Enable compression"
+            default n
+            select PKG_USING_LZ4
+        endif
+        
+    config USING_LIBRARY_ONLY
+        bool "Use library binary instead of source"
+        default n
+
+    source "$SIFLI_SDK/middleware/metrics_collector/Kconfig"
+        
+    menuconfig USING_EZIPA_DEC
+        bool "Enable eZIP-A Decoder"
+        default n
+        if USING_EZIPA_DEC
+            config EZIPA_MEM_CUSTOM
+                bool "Use Custom malloc/free"
+            config EZIPA_CUSTOM_INCLUDE_FILE
+                string "Custom Include Header File"
+                depends on EZIPA_MEM_CUSTOM
+                default "custom_inc.h"
+        endif
+    config USING_CMSIS_DSP_ACC
+        bool "Enable CMSIS DSP Acceleration"
+        depends on SOC_SF32LB58X || SOC_SF32LB56X
+        select BSP_USING_CMSIS_DSP
+        default n
+    config USING_ACPU_CTRL_FWK
+        bool "Enable ACPU Control Framework"
+        default n
+
+    source "$SIFLI_SDK/middleware/file_logger/Kconfig"
+
+    source "$SIFLI_SDK/middleware/audio/Kconfig"
+    config USING_PARTITION_TABLE
+        bool "Use partition table to manage all memory layout"
+        default y if KCONFIG_V2
+        default n if !KCONFIG_V2
+    config USING_ELM_RW
+        bool "Use elm trans tool"
+        default n
+    config USING_SEC_ENV
+        bool "Use security environment"
+        depends on USING_IPC_QUEUE
+        default n
+    config APP_BSP_TEST
+        bool "BSP testcases"
+        default n
+
+endmenu

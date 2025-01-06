@@ -1,0 +1,3 @@
+source "$SIFLI_SDK/rtos/env/packages/packages/Kconfig"
+
+

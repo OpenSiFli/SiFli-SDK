@@ -1,0 +1,127 @@
+;for solution mem_heap
+
+PRIVATE &block_addr
+PRIVATE &block_cnt
+
+&block_cnt=2
+
+AREA.Create heapAllocation 1000. 4000.
+AREA.Select heapAllocation
+AREA.view heapAllocation
+
+&block_addr=VAR.Value(heap_ptr)
+
+IF &block_addr==0
+(
+    ENDDO
+)
+
+;WHILE &block_addr<VAR.Value(heap_end)
+;(
+;   &block_addr=VAR.Value(heap_ptr)+VAR.Value(((struct heap_mem *)&block_addr)->next)
+;   &block_cnt=&block_cnt+1
+;)  
+
+
+PRIVATE &COL1
+PRIVATE &COL2
+PRIVATE &COL3
+PRIVATE &COL4
+PRIVATE &COL5
+PRIVATE &ret_addr
+PRIVATE &ret_addr2
+PRIVATE &tick
+PRIVATE &block_size
+PRIVATE &block_pos
+PRIVATE &block_head_size
+PRIVATE &last_addr
+
+
+&COL1=FORMAT.String("BLOCK_ADDR", 20., ' ')
+&COL1_1=FORMAT.String("USER_ADDR", 20., ' ')
+&COL2=FORMAT.String("BLOCK_SIZE", -10., ' ')
+&COL3=FORMAT.String("USED", -10., ' ')
+&COL4=FORMAT.String("TICK", -10., ' ')
+&COL5=FORMAT.String("RETURN ADDR", -40., ' ')
+&COL6=FORMAT.String("RETURN ADDR2", -40., ' ')
+&COL7=FORMAT.String("LV_BLK_SIZE",  -20., ' ')
+&block_head_size=VAR.Value(sizeof(struct heap_mem))
+&last_addr=0
+
+PRINT "System heap"
+PRINT %COLOR.BLUE "&COL1" "&COL1_1" "&COL2" "&COL3" "&COL4" "&COL5" "&COL6"  "&COL7"
+&idx=1
+&block_addr=VAR.Value(heap_ptr)
+WHILE &block_addr<VAR.Value(heap_end)
+(
+   PRIVATE &print_block_addr
+   PRIVATE &used_flag
+   PRIVATE &lv_mem_size
+   PRIVATE &user_addr
+   PRIVATE &print_user_addr
+
+   &block_pos=&block_addr-VAR.Value(heap_ptr)
+   IF &block_addr==&last_addr
+   (
+      PRINT %COLOR.RED "Memory heap has loop, please check"
+      ENDDO
+   )   
+   &last_addr=&block_addr
+   ;&block_size=VAR.Value(((struct heap_mem *)&block_addr)->next)-&block_pos
+   ;&block_size=&block_size&0x7FFFFFFF
+
+   &used_flag=VAR.Value(((struct heap_mem *)&block_addr)->used)
+   
+   &user_addr=VAR.Value(((struct heap_mem *)&block_addr)+1)
+
+   &ret_addr=FORMAT.String("NA", -40., ' ')
+   &ret_addr2=FORMAT.String("NA", -40., ' ')
+   &tick=FORMAT.String("NA", -10., ' ')
+   &idx=&idx+1
+   IF &idx>4000 
+   (
+      PRINT %COLOR.RED "More than 1000 memory item, please double check"
+      ENDDO
+   )
+   IF &used_flag==0x1ea1
+   (
+      &ret_addr=VAR.Value(((struct heap_mem *)&block_addr)->ret_addr)
+      &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+      &tick=VAR.Value(((struct heap_mem *)&block_addr)->tick)
+
+      &lv_mem_size=0  
+      IF (STRING.COMPARE("&ret_addr_str","*lv_mem_alloc*"))
+      (
+         &ret_addr2=VAR.Value(((lv_mem_header_t *)(&block_addr+&block_head_size))->s.ret_addr)
+         ;&ret_addr2=sYmbol.Name(P:&ret_addr2)
+         &ret_addr2_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr2),"\",-1)
+         &ret_addr2= FORMAT.String("&ret_addr2_str(&ret_addr2)", -40., ' ')
+         &lv_mem_size=VAR.Value(((lv_mem_header_t *)(&block_addr+&block_head_size))->s.d_size)
+      )
+
+      &tick=FORMAT.DecimalU(20., &tick)
+      ;&ret_addr=sYmbol.Name(P:&ret_addr)
+      &ret_addr_str= STRing.SPLIT(sYmbol.Name(P:&ret_addr),"\",-1)	   
+      &ret_addr= FORMAT.String("&ret_addr_str(&ret_addr)", -40., ' ')
+      &ret_addr2=FORMAT.String("&ret_addr2", -40., ' ')
+      &lv_mem_size=FORMAT.DecimalU(10., &lv_mem_size)
+	  &block_size=VAR.Value(((struct heap_mem *)&block_addr)->size)
+   )
+   else
+   (
+      &block_size=VAR.Value(((uint32_t)(((struct heap_mem *)&block_addr)->next)) - ((uint32_t)&block_addr))
+   )
+      
+   &block_size=FORMAT.DecimalU(10., &block_size)
+   &used_flag=FORMAT.String("  &used_flag", 10., ' ')
+   &print_block_addr=FORMAT.String("&block_addr", 20., ' ')   
+   &print_user_addr=FORMAT.String("&user_addr", 20., ' ')   
+
+
+   
+   PRINT "&print_block_addr" "&print_user_addr" "&block_size" "&used_flag" "&tick" "&ret_addr" "&ret_addr2"  "&lv_mem_size"
+
+   &block_addr=VAR.Value(((struct heap_mem *)&block_addr)->next)
+) 
+
+enddo

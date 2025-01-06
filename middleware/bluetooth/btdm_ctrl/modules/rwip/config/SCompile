@@ -1,0 +1,151 @@
+########################################################################################
+#
+# @file SCompile
+#
+# @brief Compilation instructions for RW IP
+#
+# Copyright (C) RivieraWaves 2009-2020
+#
+#########################################################################################
+
+if (True): # always present
+    #-----------------------------------------------------------
+    # Paths
+    #-----------------------------------------------------------
+    rwip_src_dir = os.path.join(rwip_dir, 'src')
+    rwip_api_dir = os.path.join(rwip_dir, 'api')
+    rwip_cfg_dir = os.path.join(rwip_dir, 'config')
+    
+    env['HW_VERSION'] = '52'
+
+    #-----------------------------------------------------------
+    # Compilation Flags
+    #-----------------------------------------------------------
+    rwip_def_list  = []
+
+    if env['STATIC'] == 'on':
+        rwip_def_list += ['CFG_STATIC']
+        
+    if (env['BLE_EMB_PRESENT'] == "on") or env['BT_EMB_PRESENT'] == "on":
+        # MWS coex
+        if env['MWSCOEX'] == 'on':
+            rwip_def_list += ['CFG_MWS_COEX']
+        # MWS coex test
+        if env['MWSCOEXTST'] == 'on':
+            rwip_def_list += ['CFG_MWS_COEX_TEST']
+        # Wlan coex
+        if env['WLCOEX'] == 'on':
+            rwip_def_list += ['CFG_WLAN_COEX']
+        # Wlan coex test
+        if env['WLCOEXTST'] == 'on':
+            rwip_def_list += ['CFG_WLAN_COEX_TEST']
+
+    # BT 5.3 support
+    if env['BT_53'] == 'on':
+        rwip_def_list += ['CFG_BT_53']
+        
+    if (env['BLE_EMB_PRESENT'] == "on") or env['BLE_HOST_PRESENT'] == "on":
+        # BLE role
+        if env['ROLE'] == 'broadcaster':
+            rwip_def_list += ['CFG_BROADCASTER']
+        elif env['ROLE'] == 'observer':
+            rwip_def_list += ['CFG_OBSERVER']
+        elif env['ROLE'] == 'peripheral':
+            rwip_def_list += ['CFG_PERIPHERAL']
+        elif env['ROLE'] == 'central':
+            rwip_def_list += ['CFG_CENTRAL']
+        elif env['ROLE'] == 'noncon':
+            rwip_def_list += ['CFG_BROADCASTER']
+            rwip_def_list += ['CFG_OBSERVER']
+        else:
+            rwip_def_list += ['CFG_ALLROLES']
+            
+        if env['CON_CTE_REQ'] == 'on':
+            rwip_def_list += ['CFG_CON_CTE_REQ']
+        if env['CON_CTE_RSP'] == 'on':
+            rwip_def_list += ['CFG_CON_CTE_RSP']
+        if env['CONLESS_CTE_TX'] == 'on':
+            rwip_def_list += ['CFG_CONLESS_CTE_TX']
+        if env['CONLESS_CTE_RX'] == 'on':
+            rwip_def_list += ['CFG_CONLESS_CTE_RX']
+        
+        # AUX Frame Space extension
+        if env['AFS_EXT'] == 'on':
+            rwip_def_list += ['CFG_AFS_EXT']
+        
+        # BT Classic Power Control
+        if env['BT_PWR_CTRL'] == 'on':
+            rwip_def_list += ['CFG_BT_PWR_CTRL']
+
+        # LE Power Control
+        if env['LE_PWR_CTRL'] == 'on':
+            rwip_def_list += ['CFG_LE_PWR_CTRL']
+            
+        if env['AOD'] == 'on':
+            rwip_def_list += ['CFG_AOD']
+        if env['AOA'] == 'on':
+            rwip_def_list += ['CFG_AOA']
+            
+        # Maximum number of ISO connections
+        rwip_def_list += ['CFG_ISO_CON=' + env['ISO_CON']]
+        
+        # Connected Isochronous Stream
+        if (env['CIS'] == 'on'):
+            rwip_def_list += ['CFG_CIS']
+        
+        # Broadcast Isochronous Stream
+        if (env['BIS'] == 'on'):
+            rwip_def_list += ['CFG_BIS']
+	        
+	    # ISO Mode 0
+	    if (env['ISO_MODE_0'] == 'on'):
+	        rwip_def_list += ['CFG_ISO_MODE_0']
+        
+        # Maximum number of Devices in RAL
+        rwip_def_list += ['CFG_RAL=' + env['RAL']]
+        
+    if (env['BT_EMB_PRESENT'] == "on") or env['BT_HOST_PRESENT'] == "on":
+        # Maximum number of ACL connections
+        rwip_def_list += ['CFG_CON_ACL=' + env['ACL']]
+        # Maximum number of SCO connections
+        rwip_def_list += ['CFG_CON_SCO=' + env['SCO']]
+        
+        # Voice Over HCI
+        if (env['SCO'] > 0) and (env['VOHCI'] == 'on'):
+            rwip_def_list += ['CFG_VOHCI']
+        
+        # Connectionless Slave Broadcast
+        if env['CSB'] == 'on':
+            rwip_def_list += ['CFG_CSB']
+        
+        # Piconet Clock Adjust
+        if env['PCA'] == 'on':
+            rwip_def_list += ['CFG_PCA']
+        
+        # Read Piconet Clock
+        if env['RD_PICONET_CLK'] == 'on':
+            rwip_def_list += ['CFG_BT_READ_PICONET_CLOCK']
+
+    # Maximum number of activities
+    rwip_def_list += ['CFG_ACT=' + env['ACT']]
+    
+    # Eavesdropping customization
+    if (env['ED'] == "on"):
+        env['HW_VERSION'] = '52_ED'
+        rwip_def_list += ['CFG_ED']
+            
+    #-----------------------------------------------------------
+    # Include List
+    #-----------------------------------------------------------
+    rwip_inc_list  = []
+    rwip_inc_list += [rwip_api_dir]
+
+    #-----------------------------------------------------------
+    # Source List
+    #-----------------------------------------------------------
+    rwip_src_list = scutils.file_list_read(env, os.path.join(rwip_cfg_dir, 'sourcelist.txt'), "")
+    
+    #-----------------------------------------------------------
+    # Prepare module build
+    #-----------------------------------------------------------
+    scutils.module_build_prep(env, module_path, rwip_src_dir, rwip_def_list, rwip_inc_list, rwip_src_list)

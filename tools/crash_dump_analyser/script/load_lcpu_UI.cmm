@@ -1,0 +1,463 @@
+
+WCLEAR
+AREA.Reset
+
+
+SYStem.CPU CORTEXM33
+SYStem.Up
+
+LOCAL &lcpu_ram_file
+LOCAL &lcpu_rom_file
+LOCAL &lcpu_rom_patch_file
+LOCAL &folder
+LOCAL &name1
+LOCAL &name2
+LOCAL &name3
+LOCAL &name4
+LOCAL &name5
+LOCAL &name6
+LOCAL &sel1
+LOCAL &sel2
+LOCAL &sel3
+LOCAL &sel4
+LOCAL &sel5
+LOCAL &sel6
+LOCAL &addr1
+LOCAL &addr2
+LOCAL &addr3
+LOCAL &devsel
+
+&sel1=0
+&sel2=0
+&sel3=0
+&sel4=0
+&sel5=0
+&sel6=0
+
+&devsel=0
+IF OS.FILE("cpucfg.txt")==TRUE()
+(
+    OPEN #1 "cpucfg.txt" /Read
+    READ #1 %LINE &devsel
+    CLOSE #1
+)
+
+WinExt.DIALOG
+(
+    HEADER "select bin and axf path"
+
+    POS 1. 0. 1. 1.
+    DYNTEXT ""
+
+    POS 5. 0. 10. 1.
+BOARD.LB55X: CHOOSEBOX "LB55X"
+    (&-
+        &devsel=0
+        DIALOG.Set CB3 FALSE()
+        DIALOG.Disable CB3
+        DIALOG.Disable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20100000"
+        DIALOG.Set TADDR2 "0x200fc000"
+    )
+    POS 16. 0. 10. 1.
+BOARD.LB58X: CHOOSEBOX "LB58X"
+    (&-
+        &devsel=1
+        DIALOG.Set CB3 TRUE()
+        DIALOG.Enable CB3
+        DIALOG.Enable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+    )
+    POS 27. 0. 10. 1.
+BOARD.LB56X: CHOOSEBOX "LB56X"
+    (&-
+        &devsel=2
+        DIALOG.Set CB3 TRUE()
+        DIALOG.Enable CB3
+        DIALOG.Enable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+    )
+    POS 38. 0. 10. 1.
+BOARD.LB52X: CHOOSEBOX "LB52X"
+    (&-
+        &devsel=3
+        DIALOG.Set CB3 FALSE()
+        DIALOG.Disable CB3
+        DIALOG.Disable FEDIT3
+        DIALOG.Set CB2 FALSE()
+        DIALOG.Disable CB2
+        DIALOG.Disable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+    )
+    POS 5. 2. 40. 1.
+FDES1: DYNTEXT "* paste or select file folder"
+
+    POS 5. 3. 40. 1.
+FEDIT: EDIT ""
+    (
+        &folder = DIALOG.STRing(FEDIT)
+    )
+
+    POS 45. 3. 2. 1.
+BALL: BUTTON "..." "DIALOG.SetDIR FEDIT *" 	 
+
+    POS 5. 5. 26. 1.
+FDES2: DYNTEXT "* select subitem for assert analyse"
+
+    POS 32. 5. 15. 1.
+FDES3: DYNTEXT "* file name, you can edit it"
+
+    POS 5. 7. 14. 1.
+CB1: CHECKBOX "load lcpu_ram.bin"
+    (
+        IF DIALOG.BOOLEAN(CB1)
+        (
+            DIALOG.Enable FEDIT1
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT1
+        )
+    )
+
+    POS 20. 7. 10. 1.
+TADDR1: EDIT "0x20100000" ""
+
+    POS 32. 7. 15. 1.
+FEDIT1: EDIT "lcpu_ram.bin" ""
+
+    POS 5. 9. 14. 1.
+CB2: CHECKBOX "load lcpu_dtcm.bin"
+    (
+        IF DIALOG.BOOLEAN(CB2)
+        (
+            DIALOG.Enable FEDIT2
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT2
+        )
+    )
+
+    POS 20. 9. 10. 1.
+TADDR2: EDIT "0x200fc000" ""
+
+    POS 32. 9. 15. 1.
+FEDIT2: EDIT "lcpu_dtcm.bin" ""
+
+    POS 5. 11. 14. 1.
+CB3: CHECKBOX "load lcpu_itcm.bin"
+    (
+        IF DIALOG.BOOLEAN(CB3)
+        (
+            DIALOG.Enable FEDIT3
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT3
+        )
+    )
+	
+    POS 20. 11. 10. 1.	
+TADDR3: EDIT "0x20bfc000" ""
+
+    POS 32. 11. 15. 1.
+FEDIT3: EDIT "lcpu_itcm.bin" ""
+
+ POS 5. 13. 26. 1.
+CB4: CHECKBOX "load lcpu axf"
+    (
+        IF DIALOG.BOOLEAN(CB4)
+        (
+            DIALOG.Enable FEDIT4
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT4
+        )
+    )
+    POS 32. 13. 15. 1.
+FEDIT4: EDIT "watch_l.axf" ""
+
+POS 5. 15. 26. 1.
+CB5: CHECKBOX "load lcpu rom axf"
+    (
+        IF DIALOG.BOOLEAN(CB5)
+        (
+            DIALOG.Enable FEDIT5
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT5
+        )
+    )
+    POS 32. 15. 15. 1.
+FEDIT5: EDIT "lcpu_rom.axf" ""
+
+POS 5. 17. 26. 1.
+CB6: CHECKBOX "load lcpu rom patch axf"
+    (
+        IF DIALOG.BOOLEAN(CB6)
+        (
+            DIALOG.Enable FEDIT6
+        )
+        ELSE
+        (
+            DIALOG.Disable FEDIT6
+        )
+    )
+    POS 32. 17. 15. 1.
+FEDIT6: EDIT "lcpu_rom_patch.axf" ""
+
+    POS 10. 20. 30. 2.
+    BUTTON "run next step!" "CONTINUE"
+
+    POS 10. 22. 40. 1.
+    DYNTEXT "   "
+
+)
+
+IF &devsel==0
+(
+        DIALOG.Set BOARD.LB55X TRUE()
+        DIALOG.Set CB3 FALSE()
+        DIALOG.Disable CB3
+        DIALOG.Disable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20100000"
+        DIALOG.Set TADDR2 "0x200fc000"
+)
+ELSE IF &devsel==1
+(
+        DIALOG.Set BOARD.LB58X TRUE()
+        DIALOG.Set CB3 TRUE()
+        DIALOG.Enable CB3
+        DIALOG.Enable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+)
+ELSE &devsel==2
+(
+        DIALOG.Set BOARD.LB56X TRUE()
+        DIALOG.Set CB3 TRUE()
+        DIALOG.Enable CB3
+        DIALOG.Enable FEDIT3
+        DIALOG.Set CB2 TRUE()
+        DIALOG.Enable CB2
+        DIALOG.Enable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+)
+ELSE
+(
+        DIALOG.Set BOARD.LB52X TRUE()
+        DIALOG.Set CB3 FALSE()
+        DIALOG.Disable CB3
+        DIALOG.Disable FEDIT3
+        DIALOG.Set CB2 FALSE()
+        DIALOG.Disable CB2
+        DIALOG.Disable FEDIT2
+        DIALOG.Set TADDR1 "0x20400000"
+        DIALOG.Set TADDR2 "0x203fc000"
+)
+
+DIALOG.Set FEDIT OS.PresentWorkingDirectory()
+DIALOG.Disable TADDR1
+DIALOG.Disable TADDR2
+DIALOG.Disable TADDR3
+DIALOG.Set CB1 TRUE()
+DIALOG.Set CB4 TRUE()
+DIALOG.Set CB5 TRUE()
+DIALOG.Set CB6 FALSE()
+DIALOG.Disable FEDIT6
+
+STOP
+
+&folder=DIALOG.STRing(FEDIT)
+IF DIALOG.BOOLEAN(CB1)
+(
+    &name1=DIALOG.STRing(FEDIT1)
+    &sel1 = 1
+	&addr1 = DIALOG.STRing(TADDR1)
+)
+IF DIALOG.BOOLEAN(CB2)
+(
+    &name2=DIALOG.STRing(FEDIT2)
+    &sel2 = 1
+	&addr2 = DIALOG.STRing(TADDR2)
+)
+IF DIALOG.BOOLEAN(CB3)
+(
+    &name3=DIALOG.STRing(FEDIT3)
+    &sel3 = 1
+	&addr3 = DIALOG.STRing(TADDR3)
+)
+IF DIALOG.BOOLEAN(CB4)
+(
+    &name4=DIALOG.STRing(FEDIT4)
+    &lcpu_ram_file = STRing.Replace("&name4",".axf","",0)
+    &sel4 = 1
+)
+IF DIALOG.BOOLEAN(CB5)
+(
+    &name5=DIALOG.STRing(FEDIT5)
+    &lcpu_rom_file = STRing.Replace("&name5",".axf","",0)
+    &sel5 = 1
+)
+IF DIALOG.BOOLEAN(CB6)
+(
+    &name6=DIALOG.STRing(FEDIT6)
+    &lcpu_rom_patch_file = STRing.Replace("&name6",".axf","",0)
+    &sel6 = 1
+)
+
+OPEN #1 "cpucfg.txt" /CREATE
+WRITE #1 "&devsel"
+CLOSE #1
+
+DIALOG.END
+
+IF "&folder"==""
+(
+    DIALOG.OK "It's wrong, Please select or paste the path of reg bin file !"
+    enddo
+)
+
+
+; RAM
+IF &sel1==1
+(
+	D.LOAD.B &folder\&name1 &addr1
+)
+
+; DTCM
+IF &sel2==1
+(
+	D.LOAD.B &folder\&name2 &addr2
+)
+
+; ITCM
+IF &sel3==1
+(
+    D.LOAD.B &folder\&name3 &addr3
+)
+
+; LCPU AXF
+IF &sel4==1
+(
+    D.LOAD.ELF &folder\&name4 /NOCLEAR
+)
+
+; LCPU ROM AXF
+IF &sel5==1
+(
+    D.LOAD.ELF &folder\&name5 /NOCLEAR
+)
+
+; LCPU ROM PATCH AXF
+IF &sel6==1
+(
+    D.LOAD.ELF &folder\&name6 /NOCLEAR
+)
+
+winpos 0% 0% 100% 50%
+w.d.l
+winpos 0% 50% 50% 50%
+w.v.f /l /c
+winpos 50% 50% 50% 50%
+
+
+IF &devsel==3
+(
+    ; 52x
+    
+    w.v.w error_reason
+
+    ; set sp 
+    r.s r13 var.value(saved_stack_pointer)   ;var.value(saved_stack_pointer)  
+    r.s r0 var.value(saved_stack_frame.exception_stack_frame.r0)  ;saved_stack_frame
+    r.s r1 var.value(saved_stack_frame.exception_stack_frame.r1)
+    r.s r2 var.value(saved_stack_frame.exception_stack_frame.r2)
+    r.s r3 var.value(saved_stack_frame.exception_stack_frame.r3)
+    r.s r4 var.value(saved_stack_frame.r4)
+    r.s r5 var.value(saved_stack_frame.r5)
+    r.s r6 var.value(saved_stack_frame.r6)
+    r.s r7 var.value(saved_stack_frame.r7)
+    r.s r8 var.value(saved_stack_frame.r8)
+    r.s r9 var.value(saved_stack_frame.r9)
+    r.s r10 var.value(saved_stack_frame.r10)
+    r.s r11 var.value(saved_stack_frame.r11)
+    r.s r12 var.value(saved_stack_frame.exception_stack_frame.r12)
+    ; set lr
+    r.s r14 var.value(saved_stack_frame.exception_stack_frame.lr) 
+    r.s pc var.value(saved_stack_frame.exception_stack_frame.pc)
+    r.s xpsr var.value(saved_stack_frame.exception_stack_frame.psr)
+)    
+ELSE
+(
+    w.v.w \\&lcpu_rom_file\cpuport\error_reason
+
+    ; set sp 
+    r.s r13 var.value(\\&lcpu_rom_file\cpuport\saved_stack_pointer)   ;var.value(saved_stack_pointer)  
+    r.s r0 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.r0)  ;saved_stack_frame
+    r.s r1 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.r1)
+    r.s r2 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.r2)
+    r.s r3 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.r3)
+    r.s r4 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r4)
+    r.s r5 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r5)
+    r.s r6 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r6)
+    r.s r7 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r7)
+    r.s r8 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r8)
+    r.s r9 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r9)
+    r.s r10 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r10)
+    r.s r11 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.r11)
+    r.s r12 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.r12)
+    ; set lr
+    r.s r14 var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.lr) 
+    r.s pc var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.pc)
+    r.s xpsr var.value(\\&lcpu_rom_file\cpuport\saved_stack_frame.exception_stack_frame.psr)
+)
+
+;PRIVATE &switch_hist_addr
+;&switch_hist_addr=VAR.Value(&\\&lcpu_rom_file\cpu_usage_profiler\thread_switch_hist)
+;&switch_hist_addr=VAR.Value(&thread_switch_hist)
+;do show_switch_history &switch_hist_addr
+;do show_switch_history
+
+do show_tasks
+
+PRIVATE &heap_ptr_alias
+PRIVATE &heap_end_alias
+IF &devsel==3
+(
+    ; 52x
+    &heap_ptr_alias=VAR.Value(heap_ptr)
+    &heap_end_alias=VAR.Value(heap_end)
+)
+ELSE
+(
+    &heap_ptr_alias=VAR.Value(\\&lcpu_rom_file\mem\heap_ptr)
+    &heap_end_alias=VAR.Value(\\&lcpu_rom_file\mem\heap_end)
+)
+do show_heap_lcpu &heap_ptr_alias &heap_end_alias
+;do show_heap_lcpu 
+ 
+enddo
+

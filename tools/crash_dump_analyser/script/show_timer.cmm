@@ -1,0 +1,45 @@
+
+AREA.Create TimerList
+AREA.Select TimerList
+AREA.view TimerList
+PRIVATE &COL1
+PRIVATE &COL2
+PRIVATE &COL3
+PRIVATE &COL4
+PRIVATE &timer_root
+PRIVATE &timer_cur
+&COL1=FORMAT.String("Timer", 20., ' ')
+&COL2=FORMAT.String("Init Tick", -20., ' ')
+&COL3=FORMAT.String("Timeout", -20., ' ')
+&COL4=FORMAT.String("Active", -20., ' ')
+PRINT %COLOR.BLUE "&COL1" "&COL2" "&COL3" "&COL4"
+&timer_root=VAR.Value(&rt_object_container[8].object_list)
+&timer_cur=VAR.Value(((rt_list_t *)&timer_root)->next)
+WHILE (&timer_root!=&timer_cur)
+(
+	PRIVATE &timer_name
+	PRIVATE &init_tick
+	PRIVATE &timeout_tick
+	PRIVATE &active
+    PRIVATE &timer_struct
+    
+	&offset=VAR.Value(&((rt_object_t)0)->list)
+	
+	&timer_struct=VAR.Value(&timer_cur-&offset)
+	
+	&timer_name=VAR.String(((rt_timer_t)&timer_struct)->parent.name)
+    &timer_name=FORMAT.String("&timer_name", 20., ' ')
+	&init_tick=VAR.Value(((rt_timer_t)&timer_struct)->init_tick)		
+	&init_tick=FORMAT.DecimalU(-20., &init_tick)	
+	
+    &timeout_tick=VAR.Value(((rt_timer_t)&timer_struct)->timeout_tick)		
+	&timeout_tick=FORMAT.DecimalU(-20., &timeout_tick)
+    
+    &active=VAR.Value(((rt_timer_t)&timer_struct)->parent.flag)&1		
+	&active=FORMAT.DecimalU(-20., &active)
+
+	print "&timer_name" "&init_tick" "&timeout_tick" "&active"
+	&timer_cur=VAR.Value(((rt_list_t *)&timer_cur)->next)    
+)
+
+enddo

@@ -1,0 +1,55 @@
+#***************************************************************************************
+# @file sourcelist.txt
+#
+# @brief This file lists up all the source code that will be
+#        compiled and built for the RWBT SW IP. 
+#
+# Copyright (C) RivieraWaves 2009-2015
+#
+#***************************************************************************************
+
+    co/rwbt.c
+    co/bt_util_buf.c
+    co/bt_util_key.c
+    co/bt_util_sp.c
+#if (env['ED'] == 'on')
+    ed/ed_task.c
+    ed/ed.c
+#endif # (env['ED'] == 'on')
+    lm/lm.c
+    lm/lm_task.c
+    lm/lm_test.c
+    lc/lc_sniff.c
+    lc/lc_sco.c
+    lc/lm_sco.c
+    lc/lc.c
+    lc/lc_task.c
+    lc/lc_util.c
+    lc/lc_lmppdu.c
+#if (env['RD_PICONET_CLK'] == 'on')
+    lc/lc_clk.c
+#endif # (env['RD_PICONET_CLK'] == 'on')
+    lb/lb.c
+    lb/lb_task.c
+    ld/ld.c
+    ld/ld_inq.c
+    ld/ld_iscan.c
+    ld/ld_page.c
+    ld/ld_pscan.c
+    ld/ld_acl.c
+    ld/ld_bcst.c
+    ld/ld_csb_tx.c
+    ld/ld_csb_rx.c
+    ld/ld_sscan.c
+    ld/ld_strain.c
+    ld/ld_pca.c
+    ld/ld_util.c
+    ld/ld_test.c
+#if (env['ED'] == 'on')
+    ld/ld_ed.c
+#endif # (env['ED'] == 'on')
+
+
+#***************************************************************************************
+# End of source list
+#***************************************************************************************

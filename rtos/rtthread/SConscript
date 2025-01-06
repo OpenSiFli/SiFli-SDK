@@ -1,0 +1,13 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+kernel_vdir='rtos/rtthread'
+if GetDepend(['BSP_USING_RTTHREAD']) and not GetOption('no_rt'):
+    objs = objs + SConscript(os.path.join('bsp', 'SConscript'))
+
+Return('objs')

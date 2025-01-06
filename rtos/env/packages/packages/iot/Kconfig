@@ -1,0 +1,25 @@
+menu "IoT - internet of things"
+
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/pahomqtt/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/webclient/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/webnet/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/mongoose/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/WebTerminal/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/cJSON/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/jsmn/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/libmodbus/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/ljson/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/ezXML/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/nanopb/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/WiFi/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/coap/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/nopoll/Kconfig"
+source "$SIFLI_SDK/rtos/env/packages/packages/iot/netutils/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/at_device/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/wiznet/Kconfig"
+
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/iot_cloud/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/NimBLE/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/iot/ota_downloader/Kconfig"
+
+endmenu

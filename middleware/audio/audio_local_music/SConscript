@@ -1,0 +1,20 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+CPPPATH = [cwd]
+
+if not GetDepend('PKG_USING_AUDIO_TEST_API'):
+    SrcRemove(src, './audio_test_api.c')
+
+if not GetDepend('PKG_USING_LIBHELIX'):
+    SrcRemove(src, './mp3id3parse.c')
+    
+if not GetDepend('PKG_USING_TINYMP3'):
+    SrcRemove(src, './audio_recorder.c')
+
+group = DefineGroup('audio', src,depend = ['BF0_HCPU'],CPPPATH = CPPPATH)
+
+Return('group')

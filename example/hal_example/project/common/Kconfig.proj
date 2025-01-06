@@ -1,0 +1,17 @@
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y    
+    
+config BLE_TEST
+	bool
+	default y
+       
+config APP_HAL_EXAMPLE    
+	bool
+	default y
+
+config RT_HAL_DEBUG
+	bool
+	default n
+	

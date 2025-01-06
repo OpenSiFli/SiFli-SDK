@@ -1,0 +1,259 @@
+/**
+  ******************************************************************************
+  * @file   sd_sim.c
+  * @author Sifli software development team
+  ******************************************************************************
+*/
+/**
+ * @attention
+ * Copyright (c) 2019 - 2022,  Sifli Technology
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form, except as embedded into a Sifli integrated circuit
+ *    in a product or a software update for such product, must reproduce the above
+ *    copyright notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of Sifli nor the names of its contributors may be used to endorse
+ *    or promote products derived from this software without specific prior written permission.
+ *
+ * 4. This software, with or without modification, must only be used with a
+ *    Sifli integrated circuit.
+ *
+ * 5. Any software provided in binary form under this license must not be reverse
+ *    engineered, decompiled, modified and/or disassembled.
+ *
+ * THIS SOFTWARE IS PROVIDED BY SIFLI TECHNOLOGY "AS IS" AND ANY EXPRESS
+ * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL SIFLI TECHNOLOGY OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include <rtthread.h>
+#include <dfs.h>
+
+#ifdef DEBUG
+    #define SD_TRACE     rt_kprintf
+#else
+    #define SD_TRACE(...)
+#endif
+
+#define SDCARD_SIM  "sd.bin"
+#define SDCARD_SIZE (16*1024*1024)  //16M
+
+struct sdcard_device
+{
+    struct rt_device parent;
+    FILE *file;
+};
+static struct sdcard_device _sdcard;
+
+#define SDCARD_DEVICE(device)       (( struct sdcard_device*)(device))
+
+static rt_mutex_t lock;
+
+/* RT-Thread device interface */
+
+static rt_err_t rt_sdcard_init(rt_device_t dev)
+{
+    return RT_EOK;
+}
+
+static rt_err_t rt_sdcard_open(rt_device_t dev, rt_uint16_t oflag)
+{
+    return RT_EOK;
+}
+
+static rt_err_t rt_sdcard_close(rt_device_t dev)
+{
+    return RT_EOK;
+}
+
+/* position: block page address, not bytes address
+ * buffer:
+ * size  : how many blocks
+ */
+static rt_size_t rt_sdcard_read(rt_device_t device, rt_off_t position, void *buffer, rt_size_t size)
+{
+    struct sdcard_device *sd;
+    int result = 0;
+
+    SD_TRACE("sd read: pos %d, size %d\n", position, size);
+
+    rt_mutex_take(lock, RT_WAITING_FOREVER);
+    sd = SDCARD_DEVICE(device);
+    fseek(sd->file, position * SECTOR_SIZE, SEEK_SET);
+
+    result = fread(buffer, size * SECTOR_SIZE, 1, sd->file);
+    if (result < 0)
+        goto _err;
+
+    rt_mutex_release(lock);
+    return size;
+
+_err:
+    SD_TRACE("sd read errors!\n");
+    rt_mutex_release(lock);
+    return 0;
+}
+
+/* position: block page address, not bytes address
+ * buffer:
+ * size  : how many blocks
+ */
+static rt_size_t rt_sdcard_write(rt_device_t device, rt_off_t position, const void *buffer, rt_size_t size)
+{
+    struct sdcard_device *sd;
+    int result = 0;
+
+    SD_TRACE("sst write: pos %d, size %d\n", position, size);
+
+    rt_mutex_take(lock, RT_WAITING_FOREVER);
+    sd = SDCARD_DEVICE(device);
+    fseek(sd->file, position * SECTOR_SIZE, SEEK_SET);
+
+    result = fwrite(buffer, size * SECTOR_SIZE, 1, sd->file);
+    if (result < 0)
+        goto _err;
+
+    rt_mutex_release(lock);
+    return size;
+
+_err:
+    SD_TRACE("sd write errors!\n");
+    rt_mutex_release(lock);
+    return 0;
+}
+
+static rt_err_t rt_sdcard_control(rt_device_t dev, int cmd, void *args)
+{
+    struct sdcard_device *sd;
+    unsigned int size;
+
+    RT_ASSERT(dev != RT_NULL);
+
+    sd = SDCARD_DEVICE(dev);
+
+    if (cmd == RT_DEVICE_CTRL_BLK_GETGEOME)
+    {
+        struct rt_device_blk_geometry *geometry;
+
+        geometry = (struct rt_device_blk_geometry *)args;
+        if (geometry == RT_NULL) return -RT_ERROR;
+
+        geometry->bytes_per_sector = SECTOR_SIZE;
+        geometry->block_size = SECTOR_SIZE;
+
+        fseek(sd->file, 0, SEEK_END);
+        size = ftell(sd->file);
+
+        geometry->sector_count = size / SECTOR_SIZE;
+    }
+    return RT_EOK;
+}
+
+
+rt_err_t rt_hw_sdcard_init(const char *spi_device_name)
+{
+    int size;
+    struct sdcard_device *sd;
+    struct rt_device *device;
+
+    sd = &_sdcard;
+    device = &(sd->parent);
+
+    lock = rt_mutex_create("lock", RT_IPC_FLAG_FIFO);
+
+    /* open sd card file, if not exist, then create it  */
+    sd->file = fopen(SDCARD_SIM, "rb+");
+    if (sd->file == NULL)
+    {
+        /* create a file to simulate sd card */
+        sd->file = fopen(SDCARD_SIM, "wb+");
+
+        fseek(sd->file, 0, SEEK_END);
+        size = ftell(sd->file);
+
+        fseek(sd->file, 0, SEEK_SET);
+        if (size < SDCARD_SIZE)
+        {
+            int i;
+            unsigned char *ptr;
+
+            ptr = (unsigned char *) malloc(1024 * 1024);
+            if (ptr == NULL)
+            {
+                SD_TRACE("malloc error, no memory!\n");
+                return RT_ERROR;
+            }
+            memset(ptr, 0x0, 1024 * 1024);
+
+            fseek(sd->file, 0, SEEK_SET);
+
+            for (i = 0; i < (SDCARD_SIZE / (1024 * 1024)); i++)
+                fwrite(ptr, 1024 * 1024, 1, sd->file);
+
+            free(ptr);
+        }
+    }
+    fseek(sd->file, 0, SEEK_SET);
+
+    device->type  = RT_Device_Class_Block;
+    device->init = rt_sdcard_init;
+    device->open = rt_sdcard_open;
+    device->close = rt_sdcard_close;
+    device->read = rt_sdcard_read;
+    device->write = rt_sdcard_write;
+    device->control = rt_sdcard_control;
+    device->user_data = NULL;
+
+    rt_device_register(device, "sd0",
+                       RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_REMOVABLE | RT_DEVICE_FLAG_STANDALONE);
+
+    return RT_EOK;
+}
+
+#ifdef RT_USING_FINSH
+#include <finsh.h>
+int sd_erase(void)
+{
+    rt_uint32_t index;
+    char *buffer;
+    struct rt_device *device;
+    device = &_sdcard.parent;
+    if ((buffer = rt_malloc(SECTOR_SIZE)) == RT_NULL)
+    {
+        rt_kprintf("out of memory\n");
+        return -1;
+    }
+
+    memset(buffer, 0, SECTOR_SIZE);
+    /* just erase the MBR! */
+    for (index = 0; index < 2; index ++)
+    {
+        rt_sdcard_write(device, index, buffer, SECTOR_SIZE);
+    }
+    rt_free(buffer);
+    return 0;
+}
+FINSH_FUNCTION_EXPORT(sd_erase, erase all block in SPI flash);
+#endif
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

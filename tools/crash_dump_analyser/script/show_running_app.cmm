@@ -1,0 +1,104 @@
+; running_app_list
+; foreach running app list
+; 	foreach page list
+;		foreach cur_page->scr's obj list
+AREA.Create running_app_list 1000. 4000.
+AREA.SELECT running_app_list
+; clear area at first.
+AREA.CLEAR running_app_list
+AREA.VIEW running_app_list
+
+;do foreach.cmm gui_runing_app_t node &running_app_list
+;do foreach.cmm subpage_node_t node 0x200e9df0
+
+;;show running_app_list
+print "======== running app list ========"
+PRIVATE &running_app_list_head
+PRIVATE &cursor
+PRIVATE &app_id
+PRIVATE &param_content
+PRIVATE &offset
+LOCAL &cur_page_list
+LOCAL &state_name
+LOCAL &lvgl_ver
+
+GOSUB GET_LVGL_VERSION
+
+
+&running_app_list_head = VAR.Value(&running_app_list)
+&cursor=VAR.Value((((rt_list_t*)&running_app_list_head))->next)
+WHILE (&cursor!=&running_app_list_head)
+(
+	&offset=VAR.Value(&((gui_runing_app_t *)0)->node)
+	&cur_app=VAR.Value(&cursor-&offset)
+	&app_id=VAR.String(((gui_runing_app_t*)&cur_app)->id)
+	&param_content=VAR.String(((gui_runing_app_t*)&cur_app)->param.content)
+	;
+	print %COLOR.RED "app:[&app_id] param:[&param_content] [&cur_app]"
+	; foreach page list
+	&cur_page_list=VAR.Value(&(((gui_runing_app_t*)&cur_app)->page_list))
+	GOSUB FOREACH_PAGE
+	&cursor=VAR.Value(((rt_list_t*)&cursor)->next)
+)
+
+
+
+ENDDO
+
+FOREACH_PAGE:
+;print "======== page list:[&cur_page_list] ========"
+PRIVATE &indentation
+PRIVATE &page_list_head
+PRIVATE &cursor
+PRIVATE &cur_page
+PRIVATE &offset
+PRIVATE &page_name
+PRIVATE &page_scr
+PRIVATE &page_state
+&page_list_head = VAR.Value(&cur_page_list)
+&cursor=VAR.Value((((rt_list_t*)&page_list_head))->next)
+&offset=VAR.Value(&((subpage_node_t *)0)->node)
+&indentation=".."
+WHILE (&cursor!=&page_list_head)
+(
+	&cur_page=VAR.Value(&cursor-&offset)
+	&page_name=VAR.String(((subpage_node_t*)&cur_page)->name)
+	&page_scr=VAR.Value(((subpage_node_t*)&cur_page)->scr)
+	&page_state=VAR.Value(((subpage_node_t *)&cur_page)->state)
+	GOSUB STATE_NAME &page_state
+	print %COLOR.BLUE "&indentation [&cur_page] page name:[&page_name] page state:[&state_name] page screen:[&page_scr]"
+	IF (&lvgl_ver==7)
+	(
+		do list_obj_children_recursive &page_scr 1
+	)
+	IF (&lvgl_ver==8)
+	(
+		do list_obj_children_recursive_v8 &page_scr 1
+	)
+	&cursor=VAR.Value(((rt_list_t*)&cursor)->next)
+)
+RETURN
+
+STATE_NAME:
+ENTRY &state
+IF (&state==1)
+	&state_name="CREATED"
+IF (&state==2)
+	&state_name="STARTED"
+IF (&state==3)
+	&state_name="RESUMED"
+IF (&state==4)
+	&state_name="PAUSED"
+IF (&state==5)
+	&state_name="STOPED"
+RETURN
+
+
+GET_LVGL_VERSION:
+LOCAL &lv_obj_size
+&lv_obj_size=VAR.Value(sizeof(lv_obj_t))
+IF (&lv_obj_size<50)
+	&lvgl_ver=8
+IF (&lv_obj_size>50)
+	&lvgl_ver=7
+RETURN

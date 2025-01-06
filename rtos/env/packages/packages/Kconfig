@@ -1,0 +1,12 @@
+menu "RT-Thread online packages"
+
+source "$SIFLI_SDK/rtos/env//packages/packages/iot/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/security/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/language/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/multimedia/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/tools/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/system/Kconfig"
+#source "$SIFLI_SDK/rtos/env/packages/packages/peripherals/Kconfig"
+source "$SIFLI_SDK/rtos/env/packages/packages/misc/Kconfig"
+
+endmenu

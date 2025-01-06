@@ -1,0 +1,25 @@
+;Add some extra buttons to the toolbar
+
+ menu.rp
+ (
+  add
+  toolbar
+  (
+   separator
+   toolitem "List Tracebuffer" ":alist" "Analyzer.List"
+   separator
+  )
+ )
+
+
+;Start the demo application
+ do armc
+
+ HELP.FILTER.RESet
+ HELP.FILTER.ADD    demo
+ HELP.FILTER ON
+
+ PWD ..\script
+
+ enddo
+

@@ -1,0 +1,27 @@
+mainmenu "Sifli Configuration"
+
+config SIFLI_SDK
+    string 
+    option env="SIFLI_SDK"
+    default "."
+
+#SDK configuration	
+source "$SIFLI_SDK/Kconfig"
+
+#Application specific configuration
+config BF0_HCPU
+    bool
+    default y
+    
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y
+    
+config BLE_TEST
+	bool
+	default y
+       
+config APP_HAL_EXAMPLE    
+	bool
+	default y

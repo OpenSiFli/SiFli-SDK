@@ -1,0 +1,4 @@
++*/rtos/rtthread/bsp/sifli/*
+-*/external/*
+-*/rtos/*
+-*/Keil_v5/*/*.h

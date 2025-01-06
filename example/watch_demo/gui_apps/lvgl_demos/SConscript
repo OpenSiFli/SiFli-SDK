@@ -1,0 +1,24 @@
+from building import * 
+import rtconfig
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = []
+
+# add LittlevGL common include
+src = src + Glob('*.c')
+
+LOCAL_CCFLAGS = ''
+
+# add lvgl demos
+src.extend(SConscript(os.path.join(cwd, '../../../multimedia/lvgl/lvgl_v8_demos/src/lv_demos/SConscript'), variant_dir=".", duplicate=0))
+
+
+group = DefineGroup('App_watch_demo', src, depend = ['LV_USE_DEMO'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+
+ 
+Return('group')

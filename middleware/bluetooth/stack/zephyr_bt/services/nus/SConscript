@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = ['nus.c','nus_inst.c']
+
+CPPPATH = [cwd]
+
+if GetDepend('BT_ZEPHYR_NUS_AUTO_START_BLUETOOTH'):
+    src += ['bt_nus_auto_start_bt.c']
+group = DefineGroup('zbt_nus', src, depend = ['BT_ZEPHYR_NUS'],CPPPATH = CPPPATH)
+
+Return('group')
