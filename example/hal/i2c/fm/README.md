@@ -1,5 +1,5 @@
 # I2C FM示例
-源码路径：example/hal/i2c/fm
+源码路径：[example/hal/i2c/fm](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/i2c/fm)
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb520

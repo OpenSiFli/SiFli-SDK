@@ -1,5 +1,5 @@
 # ADC示例
-源码路径：example/hal/adc/multichannel
+源码路径：[example/hal/adc/multichannel](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/adc/multichannel)
 ## 支持的平台
 例程可以运行在以下开发板
 * em-lb520
