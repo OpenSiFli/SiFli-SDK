@@ -315,6 +315,4 @@ menu "Bluetooth"
     if !KCONFIG_V2 || KCONFIG_BOARD_V2
         rsource "Kconfig.hw"
     endif
-   
-    rsource "stack/zephyr_bt/Kconfig"
 endmenu
