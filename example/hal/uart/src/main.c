@@ -3,7 +3,7 @@
 #include "drv_io.h"
 #include "stdio.h"
 #include "string.h"
-#include "rtthread.h"
+
 
 #include "uart_config.h"
 #include "dma_config.h"
@@ -42,6 +42,7 @@ UART_HandleTypeDef UartHandle;
 #elif __ICCARM__
 
 #else
+
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 int _write(int fd, char *ptr, int len)
 {
@@ -61,7 +62,7 @@ static uint8_t buffer[BUFF_LEN];
 
 void UART_IRQ_HANDLER(void)
 {
-    rt_interrupt_enter();
+
     if ((__HAL_UART_GET_FLAG(&UartHandle, UART_FLAG_IDLE) != RESET) &&
             (__HAL_UART_GET_IT_SOURCE(&UartHandle, UART_IT_IDLE) != RESET))
     {
@@ -74,25 +75,26 @@ void UART_IRQ_HANDLER(void)
         if (recv_len)
         {
             int i;
-            rt_kprintf("Receive %d\n", recv_len);
+            printf("Receive %d\n", recv_len);
+            printf("rev:");
             for (i = 0; i < recv_len; i++)
             {
-                rt_kprintf("%02X ", buffer[(i + last_index) % BUFF_LEN]);
+                printf("%c", buffer[(i + last_index) % BUFF_LEN]);
             }
-            rt_kprintf("\n");
+            printf("\n");
         }
         last_index = recv_total_index;
         __HAL_UART_CLEAR_IDLEFLAG(&UartHandle);
     }
-    rt_interrupt_leave();
+
 }
 
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 void UART_RX_DMA_IRQ_HANDLER(void)
 {
-    rt_interrupt_enter();
+
     HAL_DMA_IRQHandler(&dma_rx_handle);
-    rt_interrupt_leave();
+
 }
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
@@ -120,7 +122,7 @@ int main(void)
     HAL_StatusTypeDef  ret = HAL_OK;
 
     /* Output a message on console using printf function */
-    rt_kprintf("Start uart demo!\n");
+
 
     /*##-1- Configure the UART peripheral ######################################*/
     /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
@@ -181,13 +183,14 @@ int main(void)
         HAL_NVIC_EnableIRQ(UART_INTERRUPT);
     }
     /* Output a message on Hyperterminal using printf function */
+    printf("Start uart demo!\n");
     printf("uart2 hal demo!\n");
     /* Output a message on Hyperterminal using hal function */
     uint8_t ptr[] = {'u', 'a', 'r', 't', '2', '\n'};
     int len = 6 ;
     HAL_UART_Transmit(&UartHandle, ptr, len, 0xFFFF);
 
-    rt_kprintf("uart demo end!\n");
+    printf("uart demo end!\n");
     while (1);
     return 0;
 }

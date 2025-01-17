@@ -1431,7 +1431,21 @@ menu "On-chip Peripheral RTOS Drivers"
                 default n
                 depends on SOC_SF32LB56X || SOC_SF32LB52X
                 help
-                    Enable Linear SD interface
+                    Enable Linear SD interface                
+            config SDIO_PM_MODE
+                bool "Enable SDIO PM"
+                default n
+                depends on PM_STANDBY_ENABLE
+                if SDIO_PM_MODE
+                    choice
+                        prompt "Select SDIO PM Mode"
+                        default SDIO_POWER_PM_UP
+                        config SDIO_POWER_PM_UP
+                            bool "VCC and VCCQ Don't lose power"
+                        config SDIO_POWER_PM_ALL_DOWN
+                            bool "VCC and VCCQ All power off"
+                    endchoice
+                endif
 
         endif
 

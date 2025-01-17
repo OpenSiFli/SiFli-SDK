@@ -29,7 +29,7 @@
 menuconfig --board=em-lb525
 ```
 BSP使能RGBLED   
-![BSP_USING_RGBLED：](./rtt/assets/menuconfig_rgbled.png)
+![BSP_USING_RGBLED：](./assets/menuconfig_rgbled.png)
 
 
 ### 编译和烧录
@@ -69,7 +69,7 @@ please input the serial port num:5
 
 1. 通过PWM/DMA寄存器确认PWM/DMA配置状态：
 
-![PWM_DMA](./rtt/assets/reg_rgbled.png)
+![PWM_DMA](./assets/reg_rgbled.png)
 
 
 ## 参考文档

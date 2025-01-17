@@ -1,7 +1,0 @@
-config BSP_USING_BOARD_EH_LB525_SD
-    bool
-    select SOC_SF32LB52X
-    select BF0_LCPU
-    default y
-
-rsource "../Kconfig.board"

@@ -744,7 +744,7 @@ void bt_hid_mouse_left_click(bts2_app_stru *bts2_app_data)
 {
     if (!is_hid_point_calibrated)
     {
-        USER_TRACE("%s wait calibrated.", __func__);
+        // USER_TRACE("%s wait calibrated.", __func__);
         return;
     }
 
@@ -1046,7 +1046,7 @@ void bt_hid_timeout_handler_drag_up(void *parameter)
 void bt_hid_timeout_handler_reset_at_middle1(void *parameter)
 {
     bts2_app_stru *bts2_app_data = (bts2_app_stru *)parameter;
-    LOG_D("bt_hid_timeout_handler_reset_at_middle1\n");
+    // LOG_D("bt_hid_timeout_handler_reset_at_middle1\n");
     // bt_hid_mouse_reset_at_middle(bts2_app_data);
     bt_hid_mouse_move_without_reset(bts2_app_data, 0, -DRAG_SPEED_Ios);
     bt_hid_mouse_move_without_reset(bts2_app_data, 0, -DRAG_SPEED_Ios);

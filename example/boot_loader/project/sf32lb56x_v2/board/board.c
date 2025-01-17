@@ -205,6 +205,7 @@ int board_boot_from(void)
 // Use internal LDO to power on flash.
 void board_flash_power_on()
 {
+#if defined(BSP_USING_BOARD_EH_LB561XXX) || defined(BSP_USING_BOARD_EH_LB563XXX)
     // Power on flash
     HAL_PBR0_FORCE1_DISABLE();
     MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_SEL_Msk, MAKE_REG_VAL(1, RTC_PBR0R_SEL_Msk, RTC_PBR0R_SEL_Pos));// cancle PBR0 force 1
@@ -216,6 +217,7 @@ void board_flash_power_on()
     MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_SEL_Msk, MAKE_REG_VAL(0, RTC_PBR0R_SEL_Msk, RTC_PBR0R_SEL_Pos));// recover PBR0 force 1
     HAL_PBR0_FORCE1_ENABLE();
     HAL_Delay_us(5000);
+#endif /* BSP_USING_BOARD_EH_LB561XXX || BSP_USING_BOARD_EH_LB563XXX */
     return;
 
 }

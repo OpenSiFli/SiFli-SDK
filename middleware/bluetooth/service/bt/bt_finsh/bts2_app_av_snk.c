@@ -535,7 +535,7 @@ bt_err_t bt_avsnk_conn_2_src(BTS2S_BD_ADDR *bd)
 
     if (!bd_eq(bd, &temp))
     {
-        bt_av_conn(bd, AV_SNK);
+        bt_av_conn(bd, AV_SRC);
         USER_TRACE(">> av snk connect\n");
     }
     else

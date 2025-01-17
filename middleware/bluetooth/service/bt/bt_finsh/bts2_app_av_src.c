@@ -198,7 +198,7 @@ static void bt_avsrc_send_cb(uint16_t m, void *para)
  *----------------------------------------------------------------------------*/
 void bt_avsrc_conn_2_snk(BTS2S_BD_ADDR *bd)
 {
-    bt_av_conn(bd, AV_SRC);
+    bt_av_conn(bd, AV_SNK);
 }
 
 /*----------------------------------------------------------------------------*
@@ -1042,6 +1042,8 @@ static uint16_t bt_avsrc_send_data(struct rt_ringbuffer *rb)
     U16 i;
     U16 payload_len;
 
+    uint8_t is_empty = 0;
+
     con_idx = bt_avsrc_get_plyback_conn(inst);
 
 
@@ -1110,13 +1112,11 @@ static uint16_t bt_avsrc_send_data(struct rt_ringbuffer *rb)
                     return 0;
                 }
                 inst->src_data.input_cb(as_callback_cmd_cache_half_empty, NULL, 0);
-                send_timer_added = 1;
-                inst->src_data.tid = bts2_timer_ev_add(inst->src_data.m_sec_per_pkt, bt_avsrc_send_cb, 0, (void *)rb);
 #endif
-                return 0;
+                is_empty = 1;
             }
 
-            uint8_t *ptr = bmalloc(act_cfg->bytes_to_rd);
+            uint8_t *ptr = bcalloc(1, act_cfg->bytes_to_rd);
             if (!ptr)
                 break;
 
@@ -1129,19 +1129,22 @@ static uint16_t bt_avsrc_send_data(struct rt_ringbuffer *rb)
                 break;
             }
 
-            rt_ringbuffer_get((struct rt_ringbuffer *)rb, ptr, act_cfg->bytes_to_rd);
-
-            len = rt_ringbuffer_data_len((struct rt_ringbuffer *)rb);
-#ifdef AUDIO_USING_MANAGER
-            if ((len <= rt_ringbuffer_get_size((struct rt_ringbuffer *)rb) / 2)
-                    || (len < act_cfg->bytes_to_rd))
+            if (!is_empty)
             {
-                if (inst->src_data.input_cb)
+                rt_ringbuffer_get((struct rt_ringbuffer *)rb, ptr, act_cfg->bytes_to_rd);
+
+                len = rt_ringbuffer_data_len((struct rt_ringbuffer *)rb);
+#ifdef AUDIO_USING_MANAGER
+                if ((len <= rt_ringbuffer_get_size((struct rt_ringbuffer *)rb) / 2)
+                        || (len < act_cfg->bytes_to_rd))
                 {
-                    inst->src_data.input_cb(as_callback_cmd_cache_empty, NULL, 0);
+                    if (inst->src_data.input_cb)
+                    {
+                        inst->src_data.input_cb(as_callback_cmd_cache_empty, NULL, 0);
+                    }
                 }
-            }
 #endif
+            }
 
             payload_ptr = sbc_frm_ptr = pkt_ptr + AV_FIXED_MEDIA_PKT_HDR_SIZE;
             frms = 0;

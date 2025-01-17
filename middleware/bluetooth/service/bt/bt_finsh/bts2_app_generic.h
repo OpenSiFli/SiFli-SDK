@@ -63,13 +63,13 @@ extern BTS2S_ETHER_ADDR   bts2_local_ether_addr;
  *      bts2_app_stru *bts2_app_data:
  *
  * OUTPUT:
- *      void.
+ *      int8_t.
  *
  * NOTE:
  *      none.
  *
  *----------------------------------------------------------------------------*/
-void bt_start_inquiry(bts2_app_stru *bts2_app_data);
+int8_t bt_start_inquiry(bts2_app_stru *bts2_app_data, U32 dev_mask_cls, U16 timeout, U8 max_dis_res);
 
 /*----------------------------------------------------------------------------*
  *

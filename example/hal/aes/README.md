@@ -1,5 +1,5 @@
 # AES示例
-源码路径:[example/hal/aes](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/aes)
+源码路径:example/hal/aes
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525

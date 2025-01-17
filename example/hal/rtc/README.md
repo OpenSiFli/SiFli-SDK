@@ -1,5 +1,5 @@
 # RTC示例
-源码路径:[example/hal/rtc](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/rtc)
+源码路径:example/hal/rtc
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525

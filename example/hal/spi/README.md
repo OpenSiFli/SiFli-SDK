@@ -1,5 +1,5 @@
 # SPI示例
-源码路径:[example/hal/spi](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/spi)
+源码路径:example/hal/spi
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525

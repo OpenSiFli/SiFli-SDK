@@ -12,5 +12,6 @@ rt_driver/*
 storage/index
 system/index
 misc/index
+bt/index
 
 ```

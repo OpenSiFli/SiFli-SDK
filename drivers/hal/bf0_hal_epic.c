@@ -831,8 +831,8 @@ static bool EPIC_ClipLayerSrcByOutput(
         y_round_v = 1;
     }
 
-    if (input_layer->x_offset_frac != 0) ext_x = x_round_v;
-    if (input_layer->y_offset_frac != 0) ext_y = y_round_v;
+    if (input_layer->x_offset_frac != 0) ext_x = 1;
+    if (input_layer->y_offset_frac != 0) ext_y = 1;
 
 
     AreaFromLayer(&output_layer_area, output_layer);
@@ -890,10 +890,10 @@ static bool EPIC_ClipLayerSrcByOutput(
             epic_pitch_y = EPIC_CONV_SCALE_FACTOR(rot_cfg->scale_y);
 
             /*
-                Add 'round_v' pitch pixels around of source layer, to make sure scaling get enough source data.
+                Add '1' pitch pixels around of source layer, to make sure scaling get enough source data.
              */
-            ext_x += x_round_v;
-            ext_y += y_round_v;
+            ext_x += 1;
+            ext_y += 1;
 
             output_layer_area.x0 = EPIC_RSCALE_INT16(output_layer_area.x0 - ext_x, epic_pitch_x, -(EPIC_SCALE_1 - 1))/*round up RSCALE value*/;
             output_layer_area.x1 = EPIC_RSCALE_INT16(output_layer_area.x1 + ext_x, epic_pitch_x, EPIC_SCALE_1 - 1);
@@ -929,17 +929,6 @@ static bool EPIC_ClipLayerSrcByOutput(
         /*output_layer_area is base on input_layer's TL now*/
     }
 
-    if (x_round_v > 1)
-    {
-        output_layer_area.x0 = HAL_ALIGN_DOWN(output_layer_area.x0, x_round_v);
-        output_layer_area.x1 = HAL_ALIGN(output_layer_area.x1 + 1, x_round_v) - 1;
-    }
-    if (y_round_v > 1)
-    {
-        output_layer_area.y0 = HAL_ALIGN_DOWN(output_layer_area.y0, y_round_v);
-        output_layer_area.y1 = HAL_ALIGN(output_layer_area.y1 + 1, y_round_v) - 1;
-    }
-
     if (ext_x != 0)
     {
         output_layer_area.x0 = output_layer_area.x0 - ext_x;
@@ -951,6 +940,16 @@ static bool EPIC_ClipLayerSrcByOutput(
         output_layer_area.y1 = output_layer_area.y1 + ext_y;
     }
 
+    if (x_round_v > 1)
+    {
+        output_layer_area.x0 = HAL_ALIGN_DOWN(output_layer_area.x0, x_round_v);
+        //output_layer_area.x1 = HAL_ALIGN(output_layer_area.x1 + 1, x_round_v) - 1;
+    }
+    if (y_round_v > 1)
+    {
+        output_layer_area.y0 = HAL_ALIGN_DOWN(output_layer_area.y0, y_round_v);
+        if (v_mirror_enabled) output_layer_area.y1 = HAL_ALIGN(output_layer_area.y1 + 1, y_round_v) - 1;
+    }
 
     AreaFromLayer(&input_layer_area, input_layer);
     AreaMove(&input_layer_area, -input_layer->x_offset, -input_layer->y_offset);
@@ -961,11 +960,6 @@ static bool EPIC_ClipLayerSrcByOutput(
 
     if (HAL_EPIC_AreaIntersect(&input_clip, &input_layer_area, &output_layer_area))
     {
-        HAL_ASSERT(0 == (input_clip.x0 & (x_round_v - 1)));
-        HAL_ASSERT(0 == (input_clip.y0 & (y_round_v - 1)));
-        HAL_ASSERT(0 == ((input_clip.x1 - input_clip.x0 + 1) & (x_round_v - 1)));
-        HAL_ASSERT(0 == ((input_clip.y1 - input_clip.y0 + 1) & (y_round_v - 1)));
-
         if (IS_EZIP_COLOR_MODE(input_layer->color_mode))
         {
             HAL_ASSERT(!v_mirror_enabled);//Not supported
@@ -977,25 +971,28 @@ static bool EPIC_ClipLayerSrcByOutput(
             tgt_x = input_clip.x0;
             //Move to the beginning of last line if v_mirror_enabled
             tgt_y = v_mirror_enabled ? input_clip.y1 : input_clip.y0;
-
+            HAL_ASSERT(0 == (tgt_x & (x_round_v - 1)));
+            HAL_ASSERT(0 == (tgt_y & (y_round_v - 1)));
+            //To avoid misaligned total_width of A2,A4 format
+            uint16_t algined_total_w = HAL_ALIGN(input_layer->total_width, x_round_v);
             if (IS_YUV_COLOR_MODE(input_layer->color_mode))
             {
 #ifdef EPIC_SUPPORT_YUV
                 if (EPIC_COLOR_YUV420_PLANAR == input_layer->color_mode)
                 {
-                    input_layer->yuv.y_buf += (tgt_y * input_layer->total_width + tgt_x) * 1;
-                    input_layer->yuv.u_buf += ((tgt_y >> 1) * (input_layer->total_width >> 1) + (tgt_x >> 1)) * 1;
-                    input_layer->yuv.v_buf += ((tgt_y >> 1) * (input_layer->total_width >> 1) + (tgt_x >> 1)) * 1;
+                    input_layer->yuv.y_buf += (tgt_y * algined_total_w + tgt_x) * 1;
+                    input_layer->yuv.u_buf += ((tgt_y >> 1) * (algined_total_w >> 1) + (tgt_x >> 1)) * 1;
+                    input_layer->yuv.v_buf += ((tgt_y >> 1) * (algined_total_w >> 1) + (tgt_x >> 1)) * 1;
                 }
                 else
                 {
-                    input_layer->yuv.y_buf += (tgt_y * input_layer->total_width + tgt_x) * 2;
+                    input_layer->yuv.y_buf += (tgt_y * algined_total_w + tgt_x) * 2;
                 }
 #endif /* EPIC_SUPPORT_YUV */
             }
             else
             {
-                input_layer->data += (HAL_ALIGN((tgt_y * input_layer->total_width + tgt_x) * color_depth, 8) >> 3);
+                input_layer->data += (HAL_ALIGN((tgt_y * algined_total_w + tgt_x) * color_depth, 8) >> 3);
             }
 
         }

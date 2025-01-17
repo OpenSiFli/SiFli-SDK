@@ -1352,9 +1352,6 @@ void HAL_RCC_MspInit(void)
 {
 #ifdef SOC_BF0_HCPU
 
-#ifndef BSP_USING_UART1
-    HAL_RCC_DisableModule(RCC_MOD_USART1);
-#endif /* !BSP_USING_UART1 */
 #ifndef BSP_USING_UART2
     HAL_RCC_DisableModule(RCC_MOD_USART2);
 #endif /* BSP_USING_UART2 */

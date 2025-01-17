@@ -6,15 +6,14 @@
 
 #else
     #define LCD_VCC_EN              (47)        // GPIO_A47
-    //#define LCD_VIO_EN                        // NO pin
+    #define LCD_VIO_EN              (31)          // GPIO_A31
     #define LCD_RESET_PIN           (43)         // GPIO_A43
 #endif /* BSP_LCDC_USING_DPI */
 
 
-//#define TP_VCC_EN           (12)          // NO pin
-//#define TP_VIO_EN           (13)          // NO pin
-#define TP_RESET            (18)            // GPIO_B18
-#define TP_INT              (50)            // GPIO_A50
+#define TP_VCC_EN           (46)          // GPIO_A46
+#define TP_VIO_EN           (45)          // GPIO_A45
+#define TP_RESET            (44)          // GPIO_A44
 
 
 extern void BSP_GPIO_Set(int pin, int val, int is_porta);
@@ -35,7 +34,7 @@ void BSP_LCD_PowerDown(void)
     BSP_GPIO_Set(LCD_VCC_EN, 0, 1);
 #endif /* LCD_VCC_EN */
 #ifdef LCD_VIO_EN
-    BSP_GPIO_Set(LCD_VIO_EN, 0, 0);
+    BSP_GPIO_Set(LCD_VIO_EN, 0, 1);
 #endif
     BSP_LCD_Reset(0);
 }
@@ -88,7 +87,7 @@ void BSP_LCD_PowerUp(void)
     BSP_GPIO_Set(LCD_VCC_EN, 1, 1);
 #endif /* LCD_VCC_EN */
 #ifdef LCD_VIO_EN
-    BSP_GPIO_Set(LCD_VIO_EN, 1, 0);
+    BSP_GPIO_Set(LCD_VIO_EN, 1, 1);
 #endif
 }
 
@@ -100,7 +99,7 @@ void BSP_TP_PowerUp(void)
 #ifdef TP_VIO_EN
     BSP_GPIO_Set(TP_VIO_EN, 1, 1);
 #endif
-    BSP_GPIO_Set(TP_RESET,  1, 0);
+    BSP_GPIO_Set(TP_RESET,  1, 1);
 }
 
 void BSP_TP_PowerDown(void)
@@ -111,11 +110,11 @@ void BSP_TP_PowerDown(void)
 #ifdef TP_VIO_EN
     BSP_GPIO_Set(TP_VIO_EN, 0, 1);
 #endif
-    BSP_GPIO_Set(TP_RESET,  0, 0);
+    BSP_GPIO_Set(TP_RESET,  0, 1);
 }
 
 void BSP_TP_Reset(uint8_t high1_low0)
 {
-    BSP_GPIO_Set(TP_RESET, high1_low0, 0);
+    BSP_GPIO_Set(TP_RESET, high1_low0, 1);
 }
 

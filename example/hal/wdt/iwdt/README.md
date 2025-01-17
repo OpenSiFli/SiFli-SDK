@@ -1,6 +1,6 @@
 # IWDT示例
 
-源码路径：[example/hal/wdt/iwdt](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/wdt/iwdt)
+源码路径：example/hal/wdt/iwdt
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

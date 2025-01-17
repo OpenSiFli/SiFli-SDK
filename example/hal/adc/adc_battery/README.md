@@ -1,5 +1,5 @@
 # ADC_battery示例
-源码路径：[example/hal/adc/adc_battery](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/adc/adc_battery)
+源码路径：example\hal\adc\adc_battery
 ## 支持的平台
 例程可以运行在以下开发板
 * em-lb52d

@@ -6,7 +6,7 @@
 #include "rtthread.h"
 #include <stdlib.h>
 #include "bf0_hal_tsen.h"
-#include "tc_utils.h"
+
 
 static TSEN_HandleTypeDef   TsenHandle;
 

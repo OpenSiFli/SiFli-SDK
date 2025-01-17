@@ -1,9 +1,0 @@
-menu "Hardware Drivers Config"
-
-config SOC_BF0_HCPU
-    bool
-    select SOC_SERIES_BF0_HCPU
-    default y
-
-endmenu
-

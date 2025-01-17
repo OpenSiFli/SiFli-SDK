@@ -177,6 +177,54 @@ uint8_t bt_addr_convert_to_bts(bd_addr_t  *src_addr, BTS2S_BD_ADDR *dest_addr)
 
 
 
+static int8_t stohex(char ch)
+{
+
+    int8_t r = 0;
+    if (ch >= '0' && ch <= '9')
+        r = ch - '0';
+    else if (ch >= 'a' && ch <= 'f')
+        r = ch - 'a' + 10;
+    else if (ch >= 'A' && ch <= 'F')
+        r = ch - 'A' + 10;
+    else
+        r = -1;
+
+    return r;
+}
+
+
+// Only handle str foramt as : xxbxxbxxbxxbxxbxx or xxxxxxxxxxxx. x is a hex string(0-9,a-f,A-F),
+// b could only string except 0
+int bt_addr_convert_from_string_to_general(char *hexstr, bd_addr_t *addr)
+{
+    int i = 0;
+    int j = 0;
+
+    while (*(hexstr + j) && i < BD_ADDR_LEN)
+    {
+
+        uint8_t high_part = stohex(*(hexstr + j++));
+        uint8_t low_part = stohex(*(hexstr + j++));
+        if (low_part < 0 || high_part < 0)
+            break;
+
+        addr->addr[i] = (high_part << 4) + low_part;
+        i++;
+
+        int8_t temp = stohex(*(hexstr + j));
+        if (temp < 0)
+        {
+            temp = stohex(*(hexstr + j + 1));
+            if (temp < 0)
+                break;
+            j++;
+        }
+    }
+    return i;
+}
+
+
 
 __WEAK ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
 {

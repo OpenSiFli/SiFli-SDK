@@ -1,0 +1,21 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+
+# add driver basic code
+src = src + Glob('./*.c')
+
+# add sifli folder
+inc = inc + [cwd+'/sifli']
+src = src + Glob('sifli/*.c')
+
+# add group to IDE project
+objs = DefineGroup('lv_drivers', src, depend = [''], CPPPATH = inc)
+Return('objs')

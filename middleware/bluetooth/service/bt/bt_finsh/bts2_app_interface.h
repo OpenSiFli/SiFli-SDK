@@ -78,10 +78,18 @@ void bt_interface_open_bt(void);
 void bt_interface_close_bt(void);
 
 /**
- * @brief           Start device discovery/inquiry
+ * @brief           Start device discovery/inquiry for BT_DEVCLS_AUDIO device
  *
  **/
 void bt_interface_start_inquiry(void);
+
+/**
+ * @brief           Start device discovery/inquiry with more parameters
+ * @param[in] param Parameters for inquiry condition
+ *
+ * @return int8_t
+ **/
+int8_t bt_interface_start_inquiry_ex(bt_start_inquiry_ex_t *param);
 
 /**
  * @brief           Stop device discovery/inquiry
@@ -109,9 +117,24 @@ bt_err_t bt_interface_conn_to_source_ext(unsigned char *mac, bt_profile_t ext_pr
 
 /**
  * @brief                   Disconnect with the specified profile
+ * @param[in] mac    Remote device address
  * @param[in] ext_profile : Profile value
  *
- * @return           void
+ * @return           bt_err_t
+ *
+ *                   BT_ERROR_INPARAM            = 0x10000001,  input param error
+ *                   BT_ERROR_UNSUPPORTED        = 0x10000002,  unsupported function
+ *                   BT_ERROR_TIMEOUT            = 0x10000003,  error timout
+ *                   BT_ERROR_DISCONNECTED       = 0x10000004,  the bt device is disconnected
+ *                   BT_ERROR_STATE              = 0x10000005,  current state  unsupported this function
+ *                   BT_ERROR_PARSING            = 0x10000006,  parsing at response error
+ *                   BT_ERROR_POWER_OFF          = 0x10000007,  current bt device has been power off
+ *                   BT_ERROR_NOTIFY_CB_FULL     = 0x10000008,  register notify cb is more than BT_MAX_EVENT_NOTIFY_CB_NUM
+ *                   BT_ERROR_DEVICE_EXCEPTION   = 0x10000009,  current bt device has happend exception
+ *                   BT_ERROR_RESP_FAIL          = 0x10000010,  at cmd response fail
+ *                   BT_ERROR_AVRCP_NO_REG       = 0x10000011,  set absolute volume, but remote device dont register the event
+ *                   BT_ERROR_IN_PROGRESS        = 0x10000012,  for non-blocking processing, wait until the corresponding event is reported
+ *                   BT_ERROR_OUT_OF_MEMORY      = 0x10000013,  System heap is not enough
  **/
 bt_err_t bt_interface_disc_ext(unsigned char *mac, bt_profile_t ext_profile);
 
@@ -597,7 +620,7 @@ void bt_interface_make_call_res(U8 res);
 
 /**
  * @brief                       Create/Close an audio connection
- * @param[in] bt_hfp_audio_switch_t 
+ * @param[in] bt_hfp_audio_switch_t
  *
  * @return                       bt_err_t
  **/

@@ -244,6 +244,9 @@ config BSP_LCDC_USING_JDI_PARALLEL
 config LCD_USING_PWM_AS_BACKLIGHT
     def_bool n
 
+config BL_USING_AW9364
+    def_bool n
+
 config BSP_LCDC1_USE_LCDC2_TE
     def_bool n
 
@@ -289,15 +292,6 @@ menuconfig BSP_USING_SPI_CAMERA
     bool "Enable SPI Camera"
     default n
 
-menu "Backlight"
-    menuconfig BL_USING_AW9364
-        bool "BackLight AW9364"
-        default n
-        if BL_USING_AW9364
-            config AW9364_LIN_IO
-            int "AW9364 PIN Number"
-            default 70
-        endif
-endmenu
+
 
 rsource "*/Kconfig"

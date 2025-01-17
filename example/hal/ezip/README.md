@@ -1,6 +1,6 @@
 # EZIP示例
 
-源码路径：[example/hal/ezip](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/ezip)
+源码路径：example/hal/ezip
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

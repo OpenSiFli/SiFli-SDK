@@ -445,6 +445,13 @@ SECTIONS
     *(non_ret)
     *(.*l1_non_ret_data_*)
     *(.*l1_non_ret_bss_*)
+#ifndef BSP_USING_PSRAM  
+    *(.nand_cache)  
+    *(.*l2_non_ret_data_*)
+    *(.*l2_non_ret_bss_*)
+    *(.*l2_cache_non_ret_data_*)
+    *(.*l2_cache_non_ret_bss_*)
+#endif /* BSP_USING_PSRAM */
   } > RAM 
 
   /**
@@ -505,6 +512,7 @@ SECTIONS
 
   __etext2 = ALIGN (4);
 
+#ifdef BSP_USING_PSRAM
   .RW_PSRAM1 :
   {
     . = ALIGN(4);
@@ -546,7 +554,7 @@ SECTIONS
     __rw_psram2_end__ = .;
 
   } > PSRAM2
-
+#endif /* BSP_USING_PSRAM */
 
   .bss :
   {

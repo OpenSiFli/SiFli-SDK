@@ -9,3 +9,15 @@ config TOUCH_IRQ_PIN
 config BSP_SUPPORT_DPI
     bool
     default y
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwm2"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 35

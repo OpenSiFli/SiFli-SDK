@@ -294,6 +294,23 @@ typedef enum
     BT_NOTIFY_PBAP_VCARD_LIST_CMPL,
 } bt_notify_pbap_event_id_t;
 
+
+
+/// Inquiry parameters
+typedef struct
+{
+    /// Device class mask, A device with a specific Class of Device responded to the Inquiry process.
+    /// 0 is used for unlimited class of device
+    uint32_t dev_cls_mask;
+    /// Maxium amount of time specified before the inquiry procedure halted
+    /// with SECOND. 0 is used for unlimited time
+    uint16_t max_timeout;
+    /// Maxium number of responses from the inquiry before the inquiry is halted.
+    /// 0 is used for unlimited number of responses
+    uint8_t max_rsp;
+} bt_start_inquiry_ex_t;
+
+
 ///  bt device mac information
 typedef struct
 {

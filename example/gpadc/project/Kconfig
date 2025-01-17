@@ -1,9 +1,0 @@
-#Kconfig root for APP.
-source "$SIFLI_SDK/Kconfig.v2"
-rsource "Kconfig.proj"
-config USE_AVERAGE_METHOD
-    bool "Output the Average"
-    default y
-    help
-        y: Output the average value multiple times, which is more stable(but takes longer to process)
-        n: Collect once and output immediately.

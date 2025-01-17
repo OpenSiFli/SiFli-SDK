@@ -1,5 +1,5 @@
 # CRC示例
-源码路径:[example/hal/crc](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/crc)
+源码路径:example/hal/crc
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525

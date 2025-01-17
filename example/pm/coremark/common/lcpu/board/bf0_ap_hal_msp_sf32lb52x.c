@@ -3,6 +3,10 @@
 #include "bf0_hal.h"
 #include "drv_io.h"
 
+void HAL_MspInit(void)
+{
+}
+
 void HAL_PostMspInit(void)
 {
 

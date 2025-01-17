@@ -98,6 +98,17 @@ static DMA_HandleTypeDef fdma_data;
 
 #define UT_HAL_FLASH_SIZE           (4096)
 #define UT_HAL_FLASH_CASE           (3)
+#if defined(BSP_USING_BOARD_EC_LB585XXX)
+    #define TEST_FLASH_BASE      FLASH1_BASE_ADDR
+    #define TEST_FLASH           FLASH1
+    #define TEST_FLASH_RCC       RCC_MOD_MPI1
+    #define TEST_FLASH_DMA_REQUEST    DMA_REQUEST_0
+#else
+    #define TEST_FLASH_BASE      FLASH3_BASE_ADDR
+    #define TEST_FLASH           FLASH3
+    #define TEST_FLASH_RCC       RCC_MOD_MPI3
+    #define TEST_FLASH_DMA_REQUEST    DMA_REQUEST_2
+#endif /* BSP_USING_BOARD_EC_LB585XXX */
 
 static QSPI_FLASH_CTX_T spi_flash_ctx;
 ALIGN(8)
@@ -126,21 +137,21 @@ static int utest_flash_init(void)
 #if 1
     // when test on xip flash, can not initial again to avoid xip issue, copy DRV CTX to use.
     extern FLASH_HandleTypeDef *Addr2Handle(uint32_t addr);
-    FLASH_HandleTypeDef *flash_hand = Addr2Handle(FLASH3_BASE_ADDR);
+    FLASH_HandleTypeDef *flash_hand = Addr2Handle(TEST_FLASH_BASE);
     if (flash_hand != NULL) // it has been initial before
     {
         memcpy(&spi_flash_ctx.handle, flash_hand, sizeof(FLASH_HandleTypeDef));
-        spi_flash_ctx.base_addr = FLASH3_BASE_ADDR;
+        spi_flash_ctx.base_addr = TEST_FLASH_BASE;
         return 1;
     }
 #endif
     dma_handle = &fdma_data; //(DMA_HandleTypeDef *)malloc(sizeof(DMA_HandleTypeDef));
 
-    HAL_RCC_EnableModule(RCC_MOD_MPI3); // enable MPI3
+    HAL_RCC_EnableModule(TEST_FLASH_RCC); // enable MPI3
 
     // initial flash configure
-    flash_cfg.Instance = FLASH3;        // flash 3
-    flash_cfg.base = FLASH3_BASE_ADDR;  // each flash has a base address in mem_map.h
+    flash_cfg.Instance = TEST_FLASH;        // flash 3
+    flash_cfg.base = TEST_FLASH_BASE;  // each flash has a base address in mem_map.h
     flash_cfg.line = 2;         // 0 single, 2 qual line
     flash_cfg.msize = 8;        // 8 MB
     flash_cfg.SpiMode = 0;      // 0 nor, 1, nand, 2 qspi psram
@@ -149,7 +160,7 @@ static int utest_flash_init(void)
     flash_dma.dma_irq = DMAC1_CH3_IRQn;
     flash_dma.dma_irq_prio = 0;
     flash_dma.Instance = DMA1_Channel3;
-    flash_dma.request = DMA_REQUEST_2;
+    flash_dma.request = TEST_FLASH_DMA_REQUEST;
 
 
     //uint16_t div = BSP_GetFlash3DIV();

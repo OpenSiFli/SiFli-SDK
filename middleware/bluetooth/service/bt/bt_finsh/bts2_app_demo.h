@@ -118,7 +118,8 @@ extern "C" {
 typedef enum
 {
     BTS_APP_IDLE,
-    BTS_APP_READY,
+    BTS_APP_STACK_READY,
+    BTS_APP_PROFILE_READY,
 } bts_app_state_t;
 
 

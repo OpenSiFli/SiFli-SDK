@@ -46,6 +46,9 @@ menu "Build Options"
             default "-Ofast" if OPT_LEVEL_FAST
             default "-Os" if OPT_LEVEL_BALANCED
             default "-Oz" if OPT_LEVEL_SIZE
-    endmenu    
+    endmenu
+    config USING_CPLUSPLUS
+        bool "Support C++"
+        default n
 endmenu
 

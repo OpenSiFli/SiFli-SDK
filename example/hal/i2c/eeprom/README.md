@@ -1,5 +1,5 @@
 # I2C EEPROM示例
-源码路径：[example/hal/i2c/eeprom](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/i2c/eeprom)
+源码路径：example\hal\i2c\eeprom
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525

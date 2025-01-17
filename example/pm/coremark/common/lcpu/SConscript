@@ -15,13 +15,14 @@ for d in list:
 objs.extend(SConscript(os.path.join(cwd,  '../../src/lcpu/SConscript'), variant_dir="main", duplicate=0))
 
 
-# Add SDK
-Import('SIFLI_SDK')
-objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
-
 if GetDepend("SOC_SF32LB52X"):
     import imp
 
     filter = imp.load_source('filter', os.path.join(cwd, 'filter.py'))
     SetRomSymFilter(filter.rename_rules)
+
+# Add SDK
+Import('SIFLI_SDK')
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
 Return('objs')

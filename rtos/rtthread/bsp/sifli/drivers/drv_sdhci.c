@@ -51,6 +51,7 @@
 
 #include "drv_sdhci.h"
 #include "drv_config.h"
+#include "drv_io.h"
 
 //extern int dbg_message(uint8_t debug_level, const char *fmt, ...);
 //#define DRIVER_NAME "sdhci"
@@ -83,6 +84,9 @@ static int sdhci_wait_completed(struct sdhci_host *sdio, int flag);
 static void sdhci_cmd_irq(struct sdhci_host *host, uint32_t intmask);
 static void sdhci_data_irq(struct sdhci_host *host, uint32_t intmask);
 static void sdhci_set_ios(struct rt_mmcsd_host *mmc, struct rt_mmcsd_io_cfg *ios);
+#ifdef SDIO_PM_MODE
+    static int sdmmc_pm_resume_init(uint8_t id);
+#endif
 
 int rt_hw_sdmmc_init(void);
 int rt_sdhci_init_instance(uint8_t id);
@@ -129,7 +133,7 @@ static struct rt_sdhci_configuration rt_sdhci_cfg_def[2] =
 #endif  // BSP_USING_SDHCI2
 };
 
-#if SDHCI_SLEEP_LITE_MODE
+#ifdef RT_USING_PM
 #define _DUMP_REG_DEBUG         (0)
 #define _SDHCI_DUMP_RCNT        (23)
 static uint32_t sdhci_reg_arr[_SDHCI_DUMP_RCNT];
@@ -137,7 +141,7 @@ static void dump_sdhci_reg(int id)
 {
     int i;
     uint32_t *sdhci_base_reg;
-    if (id == 1)
+    if (id == 0)
     {
         sdhci_base_reg = (uint32_t *)SDMMC1_BASE;
     }
@@ -163,7 +167,7 @@ static void recov_sdhci_reg(int id)
 {
     int i;
     uint32_t *sdhci_base_reg;
-    if (id == 1)
+    if (id == 0)
     {
         sdhci_base_reg = (uint32_t *)SDMMC1_BASE;
     }
@@ -189,7 +193,7 @@ static void recov_sdhci_reg(int id)
         sdhci_base_reg++;
     }
 }
-#endif // SDHCI_SLEEP_LITE_MODE
+#endif
 
 static void sdhci_init(struct sdhci_host *host, int soft)
 {
@@ -764,8 +768,8 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 
 static void sdhci_set_ddr(struct sdhci_host *host, unsigned int ddr)
 {
-    if (host->usr_cfg.ddr_mode == ddr)
-        return;
+//    if (host->usr_cfg.ddr_mode == ddr)
+//        return;
 
     LOG_I("Enable DDR mode %d\n", ddr);
     host->usr_cfg.ddr_mode = ddr;
@@ -1759,10 +1763,12 @@ static rt_err_t rt_sdhci_control(struct rt_device *dev, int cmd, void *args)
     {
         if (PM_SLEEP_MODE_STANDBY == mode)
         {
-            //rt_kprintf("Resume from stand by \n");
-            //rt_sdhci_init_instance(id);
-#if SDHCI_SLEEP_LITE_MODE
-            recov_sdhci_reg(1);
+            rt_kprintf("Resume from stand by id=%d\n", id);
+#ifdef SDIO_POWER_PM_ALL_DOWN
+            BSP_SD_PowerUp();
+            sdmmc_pm_resume_init(id);
+#else
+            recov_sdhci_reg(id);
 #endif
         }
         break;
@@ -1771,9 +1777,11 @@ static rt_err_t rt_sdhci_control(struct rt_device *dev, int cmd, void *args)
     {
         if ((PM_SLEEP_MODE_STANDBY == mode) && (sdhci_ctx[id].mmc != NULL))
         {
-            //rt_kprintf("SD suspend\n");
-#if SDHCI_SLEEP_LITE_MODE
-            dump_sdhci_reg(1);
+            rt_kprintf("SD suspend\n");
+#ifdef SDIO_POWER_PM_ALL_DOWN
+            BSP_SD_PowerDown();
+#else
+            dump_sdhci_reg(id);
 #endif
         }
         break;
@@ -1878,7 +1886,7 @@ int rt_sdhci_init_instance(uint8_t id)
     HAL_NVIC_SetPriority((IRQn_Type)rt_sdhci_cfg_def[id].irqn, 2, 0);
     HAL_NVIC_EnableIRQ((IRQn_Type)rt_sdhci_cfg_def[id].irqn);
 
-#ifdef RT_USING_PM
+#ifdef SDIO_PM_MODE
     if (PM_STANDBY_BOOT != SystemPowerOnModeGet())
     {
         rt_sdhci_register_rt_device(id);
@@ -1971,6 +1979,296 @@ int sdhci_reinit_host(uint8_t host_index)
 
     return 0;
 }
+#ifdef SDIO_PM_MODE
+#define read_memory(addr)        (*(volatile unsigned int *)((addr)))
+#define write_memory(addr,value) (*(volatile unsigned int *)((addr))) = (value)
+#define read_byte(addr)          (*(volatile unsigned char *)((addr)))
+#define write_byte(addr,value)   (*(volatile unsigned char *)((addr))) = (value)
+#define read_hword(addr)         (*(volatile unsigned short *)((addr)))
+#define write_hword(addr,value)  (*(volatile unsigned short *)((addr))) = (value)
+#define RESP_R1b     (2 << 0)
+#define RESP_R5b     (7 << 0)
+SDHCI_HandleTypeDef sdhci_handle;
+void sd_wr_word(uint8_t reg_addr, uint32_t data)
+{
+    write_memory(sdhci_handle.Instance + (uint32_t)reg_addr, data);
+    //HAL_SDHCI_WRITE_LONG(data, sdhci_handle.Instance + reg_addr);
+}
+
+void sd_wr_hword(uint8_t reg_addr, uint16_t data)
+{
+    write_hword(sdhci_handle.Instance + (uint32_t)reg_addr, data);
+    //HAL_SDHCI_WRITE_SHORT(data, sdhci_handle.Instance + reg_addr);
+}
+
+void sd_wr_byte(uint8_t reg_addr, uint8_t data)
+{
+    write_byte(sdhci_handle.Instance + (uint32_t)reg_addr, data);
+    //HAL_SDHCI_WRITE_BYTE(data, sdhci_handle.Instance + reg_addr);
+}
+
+uint32_t sd_rd_word(uint8_t reg_addr)
+{
+    return read_memory(sdhci_handle.Instance + (uint32_t)reg_addr);
+}
+
+uint16_t sd_rd_hword(uint8_t reg_addr)
+{
+    return read_hword(sdhci_handle.Instance + (uint32_t)reg_addr);
+}
+
+uint8_t sd_rd_byte(uint8_t reg_addr)
+{
+    return read_hword(sdhci_handle.Instance + (uint32_t)reg_addr);
+}
+uint32_t sd_wait_cmd()
+{
+    while ((sd_rd_word(SDHCI_INT_STATUS) & SDHCI_INT_CMD_MASK) == 0);
+    return (sd_rd_word(SDHCI_INT_STATUS) & SDHCI_INT_CMD_MASK);
+}
+uint32_t sd_clr_status()
+{
+    sd_wr_word(SDHCI_INT_STATUS, SDHCI_INT_ALL_MASK);
+    return 0;
+}
+
+void sd_get_rsp(uint32_t *rsp_arg1, uint32_t *rsp_arg2, uint32_t *rsp_arg3, uint32_t *rsp_arg4)
+{
+    *rsp_arg1 = sd_rd_word(SDHCI_RESPONSE);
+    *rsp_arg2 = sd_rd_word(SDHCI_RESPONSE + 0x4);
+    *rsp_arg3 = sd_rd_word(SDHCI_RESPONSE + 0x8);
+    *rsp_arg4 = sd_rd_word(SDHCI_RESPONSE + 0xc);
+}
+
+uint32_t sd_send_cmd(uint8_t cmd_idx, uint32_t cmd_arg)
+{
+    SDHCI_CmdArgTypeDef mcmd;
+    mcmd.Arg = (uint32_t)cmd_arg;
+    mcmd.CmdIndex = (uint32_t)cmd_idx;
+
+    uint32_t resp_type;
+    uint8_t with_data;
+    uint8_t cmd_para;
+    switch (cmd_idx)
+    {
+    case  0:
+    case  4:
+    case 15:
+        resp_type = RESP_NONE;
+        break;
+    case  2:
+    case  9:
+    case 10:
+        resp_type = RESP_R2;
+        break;
+    case 41:
+        resp_type = RESP_R3;
+        break; //ACMD41
+    case  3:
+        resp_type = RESP_R6;
+        break;
+    case  8:
+        resp_type = RESP_R7;
+        break;
+    case  6:
+    case  7:
+        resp_type = RESP_R1b;
+        break;
+    default:
+        resp_type = RESP_R1;
+        break;
+    }
+
+    switch (cmd_idx)
+    {
+    case 24:
+    case 25:
+    case 21:
+    case 17:
+    case 18:
+        with_data = 1;
+        break;
+    default:
+        with_data = 0;
+        break;
+    }
+    switch (resp_type)
+    {
+    case RESP_NONE:
+        cmd_para = SDHCI_CMD_RESP_NONE;
+        break;
+    case RESP_R2:
+        cmd_para = SDHCI_CMD_RESP_LONG | SDHCI_CMD_CRC;
+        break;
+    case RESP_R3:
+    case RESP_R4:
+        cmd_para = SDHCI_CMD_RESP_SHORT;
+        break;
+    case RESP_R1:
+    case RESP_R5:
+    case RESP_R6:
+    case RESP_R7:
+        cmd_para = SDHCI_CMD_RESP_SHORT | SDHCI_CMD_CRC | SDHCI_CMD_INDEX;
+        break;
+    case RESP_R1b:
+        cmd_para = SDHCI_CMD_RESP_SHORT_BUSY | SDHCI_CMD_CRC | SDHCI_CMD_INDEX;
+        break;
+    default:
+        cmd_para = SDHCI_CMD_RESP_SHORT;
+        break;
+    }
+
+    if (with_data) cmd_para |= SDHCI_CMD_DATA;
+    mcmd.RespType = (uint32_t)cmd_para;
+    hal_sdhci_send_command(&sdhci_handle, &mcmd);
+    return sd_wait_cmd();
+}
+uint32_t sd_send_acmd(uint8_t cmd_idx, uint32_t cmd_arg, uint16_t rca)
+{
+    uint8_t cmd_result;
+
+    cmd_result = sd_send_cmd(55, (uint32_t)rca << 16);
+    if (cmd_result != SDHCI_INT_RESPONSE)
+        return cmd_result;
+    sd_clr_status();
+
+    cmd_result = sd_send_cmd(cmd_idx, cmd_arg);
+    return cmd_result;
+}
+
+uint32_t sd_wait_read()
+{
+    while ((sd_rd_word(SDHCI_INT_STATUS) & SDHCI_INT_DATA_MASK) == 0);
+    return (sd_rd_word(SDHCI_INT_STATUS) & SDHCI_INT_DATA_MASK);
+}
+
+void sdmmc_set_clock_line(uint8_t id)
+{
+    rt_uint32_t arg = 0, i = 0;
+    hal_sdhci_set_clk(&sdhci_handle, sdhci_ctx[id].clock, sdhci_ctx[id].max_clk);
+    HAL_Delay(1);
+
+    if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_4 || sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_8)
+    {
+        arg = (0x03 << 24) | (185 << 16) | (1 << 8) | 1;
+        sd_send_cmd(SWITCH, arg);
+        sd_clr_status();
+    }
+    arg = (0x03 << 24) | (183 << 16) | (sdhci_ctx[id].mmc->io_cfg.bus_width << 8) | 1;
+    sd_send_cmd(SWITCH, arg);
+    sd_clr_status();
+    hal_sdhci_set_power(&sdhci_handle, sdhci_ctx[id].mmc->io_cfg.vdd);
+
+    uint8_t ctrl = 0;
+
+    if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_4)
+    {
+        ctrl = 4;
+        sdhci_set_ddr(&sdhci_ctx[id], 0);
+        sd_clr_status();
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_8)
+    {
+        ctrl = 8;
+        sdhci_set_ddr(&sdhci_ctx[id], 0);
+        sd_clr_status();
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_4)
+    {
+        ctrl = 4;
+        sdhci_set_ddr(&sdhci_ctx[id], 1);
+        sd_clr_status();
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_8)
+    {
+        ctrl = 8;
+        sdhci_set_ddr(&sdhci_ctx[id], 1);
+        sd_clr_status();
+    }
+    else
+        ctrl = 1;
+
+    hal_sdhci_set_bus_width(&sdhci_handle, ctrl);
+    sd_clr_status();
+}
+
+static int sdmmc_pm_resume_init(uint8_t id)
+{
+    uint32_t rsp_arg1;
+    uint32_t rsp_arg2;
+    uint32_t rsp_arg3;
+    uint32_t rsp_arg4;
+    uint32_t cmd_arg;
+    uint16_t i;
+    uint16_t rca;
+    uint8_t  cmd_result;
+    if (id == 0)
+        sdhci_handle.Instance = (uint32_t)SDIO1;
+    else
+        sdhci_handle.Instance = (uint32_t)SDIO2;
+
+    hal_sdhci_reset(&sdhci_handle, SDHCI_RESET_ALL);
+    hal_sdhci_set_clk(&sdhci_handle, 400 * 1000, sdhci_ctx[id].max_clk);
+    hal_sdhci_set_power(&sdhci_handle, sdhci_ctx[id].mmc->io_cfg.vdd | 0x100);
+    hal_sdhci_init(&sdhci_handle, 0);
+    hal_sdhci_enable_card_detection(&sdhci_handle);
+
+    rca = 0x1;
+    //reset eMMC
+    cmd_result = sd_send_cmd(0, 0); //CMD0
+    sd_clr_status();
+
+    //CMD1
+    cmd_arg = 0x40000080;
+    while (1)  //wait for card busy status
+    {
+        cmd_result = sd_send_cmd(1, cmd_arg);
+        sd_clr_status();
+        sd_get_rsp(&rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+        if (rsp_arg1 == 0xC0FF8080)
+        {
+            break; //card power up done
+        }
+        for (i = 0; i < 1000; i++) {} //add some delay
+    }
+
+    //CMD2
+    cmd_arg = 0x0;
+    cmd_result = sd_send_cmd(2, cmd_arg); //CMD2
+    sd_clr_status();
+    sd_get_rsp(&rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+
+    //CMD3
+    cmd_arg = rca << 16;
+    cmd_result = sd_send_cmd(3, cmd_arg); //CMD3
+    sd_clr_status();
+    sd_get_rsp(&rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+
+    sd_wr_byte(SDHCI_POWER_CONTROL, 0x10); //push-pull mode for cmd line
+
+    //start card transfer
+    //CMD9
+    cmd_arg = (uint32_t)rca << 16;
+    cmd_result = sd_send_cmd(9, cmd_arg);
+    sd_clr_status();
+    sd_get_rsp(&rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+
+    //CMD7 (SELECT_CARD)
+    cmd_arg = (uint32_t)rca << 16;
+    cmd_result = sd_send_cmd(7, cmd_arg);
+    sd_clr_status();
+
+    //step 1, CMD8
+    cmd_arg = 0x000001aa; //VHS=1
+    cmd_result = sd_send_cmd(8, cmd_arg); //CMD8
+    sd_clr_status();
+
+    sdmmc_set_clock_line(id);
+    for (i = 0; i < 1000; i++) {} //add some delay
+    return 0;
+}
+
+#endif
 
 #define DRV_SDHCI_TEST
 #ifdef DRV_SDHCI_TEST

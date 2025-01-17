@@ -65,6 +65,9 @@ choice
     config BSP_USING_BOARD_EC_LB583XXX
         depends on SOC_SF32LB58X
         bool "SF32LB583XXX EVB"
+    config BSP_USING_BOARD_EC_LB585XXX
+        depends on SOC_SF32LB58X
+        bool "SF32LB585XXX EVB"
     config BSP_USING_BOARD_EC_LB587XXX
         depends on SOC_SF32LB58X
         bool "SF32LB587XXX EVB"

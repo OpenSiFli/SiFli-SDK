@@ -119,8 +119,8 @@ static volatile uint32_t setValue = 0;
     static uint32_t inPin = 1;
     static uint32_t outPin = 3;
 #elif defined(BSP_USING_BOARD_EH_SS6600XXX)
-    static uint32_t inPin = 80;
-    static uint32_t outPin = 3;
+    static uint32_t inPin = 10;
+    static uint32_t outPin = 80;
 #elif defined(BSP_USING_BOARD_EC_LB555XXX)||defined(BSP_USING_BOARD_EC_LB553XXX)||defined(BSP_USING_BOARD_EC_LB557XXX)
     static uint32_t inPin = 1;
     static uint32_t outPin = 3;

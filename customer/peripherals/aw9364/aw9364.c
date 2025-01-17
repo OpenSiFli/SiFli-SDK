@@ -45,7 +45,6 @@
 
 #include <rtthread.h>
 #include "board.h"
-#include "aw9364.h"
 #include "string.h"
 
 /* Define -------------------------------------------------------------------*/
@@ -54,20 +53,22 @@
 #define LOG_TAG              "drv.bl"
 #include <drv_log.h>
 
-// gptimer 4, channel 1, (backup channel 2)
-//#define AW9364_PWM_ID       "pwm3"
-//#define AW9364_PWM_CHN          1
+/* macro ------------------------------------------------------------------*/
+//larger than 20 us, set to 50
+#define AW9364_READYTIME_TON               (50)
 
-// use backlight line as gpio, and use a gptimer to set calc period
-// move them to configure later
-//#define AW9364_LIN_IO           (1)
-//#define AW9364_TIMER_NAME       "gptim3"
+// larger than 0.5us ,set to 50
+#define AW9364_PULSE_THI                   (50)
 
-// use a test pin on FPGA to check wave, REMOVE it later
-//#ifdef AW9364_LIN_IO
-//#undef AW9364_LIN_IO
-//#define AW9364_LIN_IO       (4)
-//#endif
+// larger than 0.5us and less than 500us, set to 50
+#define AW9364_PULSE_TLO                   (50)
+
+// larger than 2.5ms
+#define AW9364_SHUTDONW_TSHDN              (3000)
+
+
+#define AW9364_LIGHT_MAX_LEVEL             (16)
+
 
 /* function and value-----------------------------------------------------------*/
 
@@ -149,7 +150,7 @@ static void aw9364_set_pulse_normal()
 }
 
 /* output interface -----------------------------------------------------------*/
-int sif_aw9364_set_backlight(uint8_t backlight)
+static int sif_aw9364_set_backlight(uint8_t backlight)
 {
     int ret = 0;
 
@@ -238,47 +239,5 @@ static int sif_aw9364_init(void)
 }
 
 INIT_COMPONENT_EXPORT(sif_aw9364_init);
-
-
-#define AW9364_FUNC_TEST
-#ifdef AW9364_FUNC_TEST
-
-#include <string.h>
-
-int cmd_aw9364(int argc, char *argv[])
-{
-    int res;
-    if (argc >= 2)
-    {
-        if (strcmp(argv[1], "-bl") == 0)
-        {
-            rt_device_t device = rt_device_find("lcdlight");
-            rt_err_t err = rt_device_open(device, RT_DEVICE_OFLAG_RDWR);
-            uint8_t val = 0;
-
-            res = rt_device_read(device, 0, &val, 1);
-            LOG_I("Get backlight %d, result %d\n", val, res);
-
-            val = atoi(argv[2]);
-            res = rt_device_write(device, 0, &val, 1);
-
-            LOG_I("Set backlight %d, result %d\n", val, res);
-
-            rt_device_close(device);
-        }
-        else
-        {
-            LOG_I("Invalid parameter\n");
-        }
-    }
-    else
-    {
-        LOG_I("Invalid parameter\n");
-    }
-    return 0;
-}
-
-FINSH_FUNCTION_EXPORT_ALIAS(cmd_aw9364, __cmd_aw9364, Test hw bl);
-#endif  /* AW9364_FUNC_TEST */
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

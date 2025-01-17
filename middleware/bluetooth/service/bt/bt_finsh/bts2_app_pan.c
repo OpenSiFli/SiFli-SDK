@@ -252,7 +252,7 @@ void bt_pan_reg(bts2_app_stru *bts2_app_data)
         pan_reg_req(bts2_task_get_app_task_id(), bts2_task_get_pan_task_id(), bts2_app_data->local_bd);
         ptr->pan_st = PAN_IDLE_ST;
         bt_pan_enable(bts2_app_data);
-        USER_TRACE(">> PAN register successful\n");
+        USER_TRACE(">> PAN register start\n");
     }
     else
     {

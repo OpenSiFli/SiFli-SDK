@@ -329,8 +329,16 @@ static void fill_color_bar(uint8_t *buf, uint32_t width, uint32_t height, uint16
 #ifdef BSP_USING_LCD
 #define FB_WIDTH  LCD_HOR_RES_MAX
 #define FB_HEIGHT LCD_VER_RES_MAX
-#define FB_COLOR_FORMAT RTGRAPHIC_PIXEL_FORMAT_RGB888
-#define FB_PIXEL_BYTES  3
+/*
+    Using RGB888 format framebuffer if there is PSRAM on board.
+*/
+#ifdef BSP_USING_PSRAM
+    #define FB_COLOR_FORMAT RTGRAPHIC_PIXEL_FORMAT_RGB888
+    #define FB_PIXEL_BYTES  3
+#else
+    #define FB_COLOR_FORMAT RTGRAPHIC_PIXEL_FORMAT_RGB565
+    #define FB_PIXEL_BYTES  2
+#endif
 #define FB_TOTAL_BYTES (FB_WIDTH * FB_HEIGHT *FB_PIXEL_BYTES)
 
 /*

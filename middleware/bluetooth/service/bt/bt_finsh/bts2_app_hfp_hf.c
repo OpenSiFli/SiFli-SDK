@@ -1238,14 +1238,6 @@ static void bt_hfp_hf_at_cmd_cfm_hdl(BTS2S_HF_AT_CMD_CFM *msg)
         break;
     }
     case HFP_HF_AT_BCC:
-    {
-        bt_notify_device_sco_info_t sco_info;
-        sco_info.sco_type = BT_NOTIFY_HFP_HF;
-        sco_info.sco_res = msg->res;
-        bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_SCO_CONNECTED,
-                                     &sco_info, sizeof(bt_notify_device_sco_info_t));
-        break;
-    }
     case HFP_HF_AT_CIND_STATUS:
     case HFP_HF_AT_CMER:
     case HFP_HF_AT_CHLD_CMD:

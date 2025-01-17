@@ -18,12 +18,13 @@ d='service'
 path = os.path.join(cwd, d)
 objs = objs + SConscript(os.path.join(d, 'SConscript'))    
 
-d='stack'
-path = os.path.join(cwd, d)
-objs = objs + SConscript(os.path.join(d, 'SConscript'))    
-        
-#TODO: Add other OS support
-if not GetDepend('BSP_USING_RTTHREAD'):
-    objs=[]
+if GetDepend('CFG_BT_HOST') or  GetDepend('CFG_BLE_HOST') :
+    d='stack'
+    path = os.path.join(cwd, d)
+    objs = objs + SConscript(os.path.join(d, 'SConscript'))    
+else:
+    d='lib'
+    path = os.path.join(cwd, d)
+    objs = objs + SConscript(os.path.join(d, 'SConscript'))    
 
 Return('objs')

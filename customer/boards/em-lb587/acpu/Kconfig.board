@@ -1,9 +1,0 @@
-config BSP_USING_BOARD_EM_LB587XXX
-    bool
-    select SOC_SF32LB58X
-    select BF0_ACPU
-    select BF0_HCPU
-    default y
-
-rsource "../Kconfig.board"
-

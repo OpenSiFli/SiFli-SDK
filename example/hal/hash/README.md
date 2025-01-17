@@ -1,5 +1,5 @@
 # HASH示例
-源码路径:[example/hal/hash](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/hash)
+源码路径:example/hal/hash
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525

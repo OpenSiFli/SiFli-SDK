@@ -16,6 +16,10 @@ choice
         bool "LVGL V8"
         select DISABLE_LVGL_V7
         select DISABLE_LVGL_V9
+    config LVGL_V9
+        bool "LVGL V9"
+        select DISABLE_LVGL_V7
+        select DISABLE_LVGL_V8
 endchoice
 
 config DISABLE_LVGL_V9
@@ -27,6 +31,9 @@ config DISABLE_LVGL_V7
     
 if LVGL_V8
     source "$SIFLI_SDK/external/lvgl_v8/Kconfig_v8"
+endif
+if LVGL_V9
+    source "$SIFLI_SDK/external/lvgl_v9/Kconfig"
 endif
 
 choice

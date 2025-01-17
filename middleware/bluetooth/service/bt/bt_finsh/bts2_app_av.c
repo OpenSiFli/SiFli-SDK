@@ -162,27 +162,10 @@ static void bt_av_init_data(bts2s_av_inst_data *inst, bts2_app_stru *bts2_app_da
 //TODO: check the dedicated role. For MP, just recovery all seid.
 static void bt_av_recovery_local_seid(bts2s_av_inst_data *inst, uint16_t role)
 {
-    U8 i = 0;
-
-#ifdef CFG_AV_SNK
-    if (role == AV_AUDIO_SNK)
+    for (U8 i = 0; i < (MAX_NUM_LOCAL_SNK_SEIDS + MAX_NUM_LOCAL_SRC_SEIDS); i++)
     {
-        for (; i < MAX_NUM_LOCAL_SNK_SEIDS; i++)
-        {
-            inst->local_seid_info[i].local_seid.in_use = FALSE;
-        }
+        inst->local_seid_info[i].local_seid.in_use = FALSE;
     }
-#endif // CFG_AV_SNK
-
-#ifdef CFG_AV_SRC
-    if (role == AV_AUDIO_SRC)
-    {
-        for (; i < MAX_NUM_LOCAL_SRC_SEIDS + MAX_NUM_LOCAL_SNK_SEIDS; i++)
-        {
-            inst->local_seid_info[i].local_seid.in_use = FALSE;
-        }
-    }
-#endif //CFG_AV_SRC
 }
 
 U8 bt_av_get_idx_from_cid(bts2s_av_inst_data *inst, U16 sought_cid)
@@ -224,29 +207,18 @@ static uint16_t bt_av_get_role_from_sep_type(uint8_t sep)
 
 static uint8_t bt_av_get_local_seid(bts2s_av_inst_data *inst, uint16_t cfg, uint8_t codec)
 {
-    uint32_t i = 0;
     uint8_t local_id = 0xFF;
-#ifdef CFG_AV_SNK
-    if (cfg == AV_AUDIO_SNK)
-        for (; i < MAX_NUM_LOCAL_SNK_SEIDS; i++)
-            if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
-                    && (inst->local_seid_info[i].local_seid.codec == codec))
-            {
-                local_id = i;
-                break;
-            }
-#endif // CFG_AV_SNK
 
-#ifdef CFG_AV_SRC
-    if (cfg == AV_AUDIO_SRC)
-        for (i = MAX_NUM_LOCAL_SNK_SEIDS; i < MAX_NUM_LOCAL_SNK_SEIDS + MAX_NUM_LOCAL_SNK_SEIDS; i++)
-            if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
-                    && (inst->local_seid_info[i].local_seid.codec == codec))
-            {
-                local_id = i;
-                break;
-            }
-#endif //CFG_AV_SRC
+    for (uint32_t i = 0; i < (MAX_NUM_LOCAL_SRC_SEIDS + MAX_NUM_LOCAL_SNK_SEIDS); i++)
+    {
+        if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
+                && (inst->local_seid_info[i].local_seid.codec == codec))
+        {
+            local_id = i;
+            break;
+        }
+    }
+
     return local_id;
 }
 
@@ -2453,16 +2425,16 @@ void bt_av_conn(BTS2S_BD_ADDR *bd_addr, uint8_t peer_role)
 #ifdef CFG_AV_SNK
     if (peer_role == AV_SRC)
     {
-        local_role = AV_AUDIO_SRC;
-        peer_role_1 = AV_AUDIO_SNK;
+        local_role = AV_AUDIO_SNK;
+        peer_role_1 = AV_AUDIO_SRC;
     }
 #endif //CFG_AV_SNK
 
 #ifdef CFG_AV_SRC
     if (peer_role == AV_SNK)
     {
-        local_role = AV_AUDIO_SNK;
-        peer_role_1 = AV_AUDIO_SRC;
+        local_role = AV_AUDIO_SRC;
+        peer_role_1 = AV_AUDIO_SNK;
     }
 #endif // CFG_AV_SRC
     USER_TRACE(" -- av conn rmt device... peer_role:%d local_role:%d\n", peer_role_1, local_role);
@@ -2666,48 +2638,68 @@ void bt_av_get_cfg(uint8_t con_idx)
 
 void bt_av_set_can_play(void)
 {
+#ifdef CFG_AV_SNK
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     inst->snk_data.can_play = 1;
     inst->snk_data.reveive_start = 1;
+#endif //CFG_AV_SNK
 }
 
 void bt_av_set_filter_prompt_enable(U8 enable)
 {
+#ifdef CFG_AV_SNK
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     inst->snk_data.filter_prompt_enable = enable;
+#endif // CFG_AV_SNK
 }
 
 
 U8 bt_av_get_filter_prompt_enable(void)
 {
+#ifdef CFG_AV_SNK
+
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     return inst->snk_data.filter_prompt_enable;
+#else // !CFG_AV_SNK
+    return 0;
+#endif // CFG_AV_SNK
 }
 
 
 void bt_av_set_slience_filter_enable(U8 enable)
 {
+#ifdef CFG_AV_SNK
+
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     inst->snk_data.slience_filter_enable = enable;
+#endif //CFG_AV_SNK
 }
 
 
 U8 bt_av_get_slience_filter_enable(void)
 {
+#ifdef CFG_AV_SNK
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     return inst->snk_data.slience_filter_enable;
+#else // !CFG_AV_SNK
+    return 0;
+#endif // CFG_AV_SNK
 }
 
 U8 bt_av_get_receive_a2dp_start(void)
 {
+#ifdef CFG_AV_SNK
     bts2s_av_inst_data *inst = bt_av_get_inst_data();
 
     return inst->snk_data.reveive_start;
+#else // !CFG_AV_SNK
+    return 0;
+#endif //CFG_AV_SNK
 }
 
 #ifndef CFG_AVRCP

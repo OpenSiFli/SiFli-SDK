@@ -1,0 +1,35 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+CPPPATH = [cwd+"/../include"]
+src = Glob('*.c')
+objs =[]
+
+if GetDepend('BF0_HCPU'):
+    if rtconfig.PLATFORM=='gcc':
+        if GetDepend('SPP_TRAN_ONLY'):
+            lib=['lib_bt_gcc_tran_only']
+        else:
+            lib=['lib_bt_gcc']
+    else:
+        if GetDepend('SPP_TRAN_ONLY'):
+            lib=['lib_bt_rvds_tran_only']
+        else:
+            lib=['lib_bt_rvds']
+elif GetDepend('BSP_USING_PC_SIMULATOR'):
+    lib=['lib_bt_msvc']
+else:
+    lib=[]        
+    
+#TODO: Add other OS support
+if not GetDepend('BSP_USING_RTTHREAD'):
+    objs=[]
+
+try:
+    objs = DefineGroup('sifli_bt', src, depend = [''], CPPPATH = CPPPATH, LIBS=lib, LIBPATH=[cwd])
+except:
+    pass
+
+Return('objs')

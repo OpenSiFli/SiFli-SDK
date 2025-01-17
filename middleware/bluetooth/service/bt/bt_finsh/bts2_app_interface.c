@@ -102,7 +102,13 @@ void bt_interface_close_bt(void)
 void bt_interface_start_inquiry(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
-    bt_start_inquiry(bts2_app_data);
+    bt_start_inquiry(bts2_app_data, BT_DEVCLS_AUDIO, 60, MAX_DISCOV_RESS);
+}
+
+int8_t bt_interface_start_inquiry_ex(bt_start_inquiry_ex_t *param)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    return bt_start_inquiry(bts2_app_data, param->dev_cls_mask, param->max_timeout, param->max_rsp);
 }
 
 void bt_interface_stop_inquiry(void)

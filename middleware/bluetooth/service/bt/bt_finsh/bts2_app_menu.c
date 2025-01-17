@@ -405,7 +405,7 @@ static void bt_hdl_menu_gen(bts2_app_stru *bts2_app_data)
     {
     case '1':
     {
-        bt_start_inquiry(bts2_app_data);
+        bt_start_inquiry(bts2_app_data, BT_DEVCLS_AUDIO, 60, MAX_DISCOV_RESS);
         break;
     }
     case '2':
@@ -4659,12 +4659,20 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
     }
     case '9':
     {
+#if RT_USING_DFS
         bt_spp_srv_set_write_into_file(bts2_app_data, 1);
+#else
+        printf("DFS not enable!\n");
+#endif
         break;
     }
     case 'x':
     {
+#if RT_USING_DFS
         bt_spp_srv_set_write_into_file(bts2_app_data, 0);
+#else
+        printf("DFS not enable!\n");
+#endif
         break;
     }
     case 'd':
@@ -4893,7 +4901,11 @@ static void bt_hdl_menu_spp_srv_4(bts2_app_stru *bts2_app_data)
 
         device_id = bts2_app_data->input_str[0] - '0';
         srv_chl = bts2_app_data->input_str[1] - '0';
+#if RT_USING_DFS
         bt_spp_srv_select_file_to_send(bts2_app_data, device_id, srv_chl);
+#else
+        printf("DFS not enable!\n");
+#endif
     }
 }
 

@@ -1,4 +1,0 @@
-#Kconfig root for APP.
-source "$SIFLI_SDK/Kconfig.v2"
-rsource "Kconfig.proj"
-

@@ -1,0 +1,8 @@
+config BSP_USING_BOARD_EC_LB585XXX
+    bool
+    select SOC_SF32LB58X
+    select BF0_LCPU
+    default y
+
+rsource "../Kconfig.board"
+

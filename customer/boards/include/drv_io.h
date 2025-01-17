@@ -141,7 +141,7 @@ int BSP_Flash_Init(void);
  * @brief SDIO
  */
 void BSP_SD_PowerUp(void);
-
+void BSP_SD_PowerDown(void);
 
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 

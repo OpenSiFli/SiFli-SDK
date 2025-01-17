@@ -240,6 +240,7 @@ def GetLangBuildObject(objs):
     return objs_bak
 
 def rom_sym_filter(srcfile, dstfile, filter):
+    import rtconfig
     fp = open(srcfile, 'r')
     fp2 = open(dstfile, 'w')
     for line in fp:
@@ -247,14 +248,27 @@ def rom_sym_filter(srcfile, dstfile, filter):
             fp2.writelines(line)
             continue
         line = line.rstrip('\n')
-        info = re.split(' ', line)
-        renamed = 0
-        for rule in filter:
-            if (re.match(rule,info[2])):
-                info[2] = info[2]+"_rom"
-                fp2.writelines(info[0]+" "+info[1]+" "+info[2]+'\n')
-                renamed = 1
-                break
+        if rtconfig.PLATFORM == 'armcc':
+            info = re.split(' ', line)
+            renamed = 0
+            for rule in filter:
+                if (re.match(rule,info[2])):
+                    info[2] = info[2]+"_rom"
+                    fp2.writelines(info[0]+" "+info[1]+" "+info[2]+'\n')
+                    renamed = 1
+                    break
+        elif rtconfig.PLATFORM == 'gcc':
+            info = re.split('=', line)
+            renamed = 0
+            for rule in filter:
+                if (re.match(rule,info[0])):
+                    info[0] = info[0].rstrip() + "_rom"
+                    fp2.writelines(info[0] + " =" + info[1]+'\n')
+                    renamed = 1
+                    break
+        else:
+            assert False, "Unknown PLATFORM: {}".format(rtconfig.PLATFORM)
+            
         if (renamed == 0):
             fp2.writelines(line+'\n')
     fp.close()
@@ -1274,7 +1288,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         )
 
     # fix the linker for C++
-    if GetDepend('RT_USING_CPLUSPLUS'):
+    if GetDepend('RT_USING_CPLUSPLUS') or GetDepend('USING_CPLUSPLUS'):
         if env['LINK'].find('gcc') != -1:
             env['LINK'] = env['LINK'].replace('gcc', 'g++')
 
@@ -1988,6 +2002,8 @@ def EndBuilding(target, program = None):
             Depends(program, lds_file)
             # always build lds file as it would not get rebuilt when header file changes
             AlwaysBuild(lds_file)
+            if "ROM_SYM" in Env and Env['ROM_SYM']:
+                Depends(program, Env['ROM_SYM'])
 
 def SrcRemove(src, remove):
     if not src:

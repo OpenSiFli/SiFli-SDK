@@ -5,7 +5,8 @@
 * em-lb525
 * em-lb587
 ## 概述
-* 在RT-Thread操作系统下采用RX DMA方式，操作UART跟电脑串口之间进行通讯演示
+* 在RT-Thread操作系统下采用RX DMA方式，操作UART2检验其串口的收发能力
+* 注意开发板复位之后uart2打印log同下方图片内容一致即为发送成功,验证uart2接收能力使用的是默认串口打印log来验证其接收内容的准确性
 
 ## 例程的使用
 ### 编译和烧录
@@ -50,9 +51,15 @@ menuconfig --board=em-lb525
 
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 #### 例程输出结果展示:
-* log输出:左边为机器log，右边为电脑串口端接收和发送数据：
+* log输出:左边为机器log，右边为电脑usb转串口端发送数据和接收数据：
 ![alt text](assets/uart_log.png)
-log结尾收到的`rev: `为接收到的电脑串口TX发来的字符
+
+* 注意：串口开启有两个串口，一个是代码配置电脑usb转串口的uart2,一个是自带的调试口uart1
+
+
+log结尾收到的`rev: `为接收到的电脑USB转串口TX发来的字符
+
+* 注意：这里打印接收数据是用默认串口打印而不是uart2,因为uart2的发送数据功能也是例程中的一项
 ```
     SFBL
     Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000080
@@ -77,19 +84,26 @@ log结尾收到的`rev: `为接收到的电脑串口TX发来的字符
     send:uart2 demo
     uart demo end!
     msh />
-    uart_rec: cnt = 83,count = 83
-    uart_rec: cnt = 0,count = 83
-    rev:abcdefghijklmnopqrstuvwxyz0abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz2
     uart_rec: cnt = 5,count = 5
     uart_rec: cnt = 0,count = 5
     rev:abc
 ```
-下面为电脑串口端接收到从uart2接收到的`uart2 demo`字符和发送的数据
+下面为开发板复位后电脑USB转串口发送的数据`uart2 demo`字符以及检验uart2是否能接收串口数据而人为发送的数据
 ```c    
-   uart2 demo
-TX:abcdefghijklmnopqrstuvwxyz0abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz2
-TX:abc
+    uart2 demo
+    TX:abc
 ```
+检验uart2的接收内容正确性功能:在uart2的log窗口下发送了abc,进入对应uart2的中断后会接收到`abc`字符、换行符，回车符，共5个字符ASCII码,打印以下内容
+* 注意:始终多打印一次log是考虑到持续接收会导致超出可接收的最大值从而分多次接收如:接收最大为256而接收的是260则会打印\
+uart_rec: cnt = 256,count = 256\
+uart_rec: cnt = 4,count = 260\
+uart_rec: cnt = 0,count = 260
+```c    
+    uart_rec: cnt = 5,count = 5
+    uart_rec: cnt = 0,count = 5
+    rev:abc
+```
+
 #### uart2配置流程
 * 确保`rtconfig.h`文件中是否包含了下面3个宏：
 编译窗口输入命令查看board=（版型）
@@ -117,7 +131,8 @@ menuconfig --board=em-lb525
 1. 除55x芯片外,可以配置到任意带有PA*_I2C_UART功能的IO输出UART2波形（想查询引脚复用表可在项目路径下文件中查找如：bf0_pin_const.c）
 2.  HAL_PIN_Set 最后一个参数为hcpu/lcpu选择, 1:选择hcpu,0:选择lcpu 
 3.  Hcpu的PA口不能配置为Lcpu的uart外设，比如uart5,uart6输出
-* 先后`rt_device_find`,`rt_device_control`,`rt_device_open`分别查找、配置和打开`uart2`设备
+* 串口初始化函数int uart2_init(void)部分内容讲解:\
+先后`rt_device_find`,`rt_device_control`,`rt_device_open`分别查找、配置和打开`uart2`设备
 ```c
 #define UART_DEMO_NAME "uart2"
 
@@ -166,6 +181,30 @@ menuconfig --board=em-lb525
     else
     {
         ret = RT_ERROR;
+    }
+```
+* static void serial_rx_thread_entry(void parameter)接收处理RX DMA收到的数据:使用默认的串口打印函数`rt_kprintf`来检验uart2接收到的数据,不断循环使用`cnt = rt_device_read()`检验当前是否接收到数据,所以log打印会始终多打印一次cnt=0时的情况
+```c
+uint16_t count = 0;
+    uint8_t cnt = 0;
+
+    while (1)
+    {
+        rt_sem_take(&rx_sem, RT_WAITING_FOREVER);
+        while (1)
+        {
+            cnt = rt_device_read(g_uart_device, -1, &data[count], ONE_DATA_MAXLEN);
+            count += cnt;
+            rt_kprintf("uart_rec: cnt = %d,count = %d\n", cnt, count);
+            if (0 == cnt) break;
+        }
+        rt_kprintf("rev:");
+        for (uint16_t i = 0; i < count; i++)
+        {
+            rt_kprintf("%c", data[i]);
+        }
+        count = 0;
+        rt_kprintf("\n");
     }
 ```
 * uart2通过uart_send_data函数发送数据

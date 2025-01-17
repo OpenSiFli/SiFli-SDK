@@ -377,7 +377,6 @@ static void bt_start_a2dp_thread()
 }
 
 
-extern uint8_t bts2s_avsnk_openFlag;
 static bt_cm_err_t bt_cm_profile_connect(uint32_t profile_bit, bt_cm_conned_dev_t *conn)
 {
     bt_cm_err_t err = BT_CM_ERR_NO_ERR;
@@ -398,12 +397,15 @@ static bt_cm_err_t bt_cm_profile_connect(uint32_t profile_bit, bt_cm_conned_dev_
 #ifdef CFG_AV
         if (profile_bit == BT_CM_A2DP)
         {
+#ifdef CFG_OPEN_AVSNK
             // Call A2DP
+            extern uint8_t bts2s_avsnk_openFlag;
             if (bts2s_avsnk_openFlag == 0)
             {
                 err = BT_CM_ERR_RESOURCE_NOT_ENOUGH;
             }
             else
+#endif // CFG_AV_SNK
             {
                 uint16_t role = bt_cm_get_profile_role(conn->info.role, BT_CM_A2DP);
                 uint16_t rmt_role;
@@ -1877,7 +1879,7 @@ void bt_cm(uint8_t argc, char **argv)
                   bd_addr.nap,
                   bd_addr.uap,
                   bd_addr.lap);
-            bt_av_conn(&bd_addr, AV_SRC);
+            bt_av_conn(&bd_addr, AV_SNK);
         }
         else if (strcmp(argv[1], "av_disconn") == 0)
         {

@@ -197,10 +197,11 @@ static rt_err_t _audio_dev_open(struct rt_device *dev, rt_uint16_t oflag)
             ret = rt_device_open(RT_DEVICE(audio->record->audio_pipe), RT_DEVICE_OFLAG_RDONLY);
             if (ret != RT_EOK)
             {
+                RT_ASSERT(0);
                 AUDIO_DBG("audio pipe open fail, %s\n", pipe_name);
+                rt_audio_pipe_destroy(audio->record->audio_pipe);
                 rt_free(audio->record);
                 audio->record = RT_NULL;
-                rt_audio_pipe_destroy(audio->record->audio_pipe);
                 return ret;
             }
         }

@@ -1,3 +1,0 @@
-UART OTA 工程示例
-project_ota是ota manager，可以配合串口工具，通过uart下载
-project_hcpu是hcpu工程

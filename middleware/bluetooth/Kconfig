@@ -23,9 +23,6 @@ menu "Bluetooth"
             bool "All trace enabled"
     endchoice
     
-    # rsource "stack/ble/Kconfig"
-    # rsource "stack/bt/Kconfig"
-
     config BSP_BLE_SIBLES
         bool "Bluetooth service"
         select USING_IPC_QUEUE if !BSP_USING_PC_SIMULATOR
@@ -311,8 +308,10 @@ menu "Bluetooth"
             default 2     
     endmenu
     
+    
     #KCONFIG_BOARD_V2 is used when merging configs.
     if !KCONFIG_V2 || KCONFIG_BOARD_V2
         rsource "Kconfig.hw"
     endif
+  
 endmenu

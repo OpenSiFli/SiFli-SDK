@@ -490,7 +490,7 @@ void BSP_QSPI_PowerDown(void)
 #else
 #ifndef HDK_U4O5
     /* for U4O5, SIP PSRAM is also controlled by PA58, it cannot be powered down */
-    OUTPUT_0(58); //QSPI2_EN norflash
+    // OUTPUT_0(58); //QSPI2_EN norflash
 #endif /* HDK_U4O5 */
 #endif
 }

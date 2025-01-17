@@ -1,6 +1,6 @@
 # HWTIMER示例
 
-源码路径：[example/hal/hwtimer0](https://github.com/OpenSiFli/SiFli-SDK/tree/main/example/hal/hwtimer0)
+源码路径：example/hal/hwtimer0
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

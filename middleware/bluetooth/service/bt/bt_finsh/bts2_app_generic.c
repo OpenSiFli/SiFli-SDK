@@ -120,13 +120,13 @@ void bt_pincode_indi(bts2_app_stru *bts2_app_data)
  *      none.
  *
  *----------------------------------------------------------------------------*/
-void bt_start_inquiry(bts2_app_stru *bts2_app_data)
+int8_t bt_start_inquiry(bts2_app_stru *bts2_app_data, U32 dev_mask_cls, U16 timeout, U8 max_dis_res)
 {
     BTS2S_CPL_FILTER inq_filter;
     U8 i = 0;
 
     inq_filter.filter = BTS2_INQ_FILTER_CLEAR;
-    inq_filter.dev_mask_cls = BT_DEVCLS_AUDIO;
+    inq_filter.dev_mask_cls = dev_mask_cls;
     bts2_app_data->bd_list_num = 0;
     bts2_app_data->inquiry_list_num = 0;
     bts2_app_data->inquiry_flag = TRUE;
@@ -136,8 +136,10 @@ void bt_start_inquiry(bts2_app_stru *bts2_app_data)
         bts2_app_data->inquiry_list[i].nap = CFG_BD_NAP;
         bts2_app_data->inquiry_list[i].uap = CFG_BD_UAP;
     }
-    gap_discov_req(bts2_app_data->phdl, MAX_DISCOV_RESS, 60, &inq_filter, TRUE);
+    gap_discov_req(bts2_app_data->phdl, max_dis_res, timeout, &inq_filter, TRUE);
     USER_TRACE(">> inquiry start...\n");
+
+    return 0;
 }
 
 
@@ -1520,9 +1522,14 @@ void bt_hdl_gap_msg(bts2_app_stru *bts2_app_data)
         BTS2S_GAP_RD_LOCAL_NAME_CFM *msg = (BTS2S_GAP_RD_LOCAL_NAME_CFM *)bts2_app_data->recv_msg;
 
         USER_TRACE("<< Local device name: %s\n", &msg->local_name);
-        bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_BT_STACK_READY, NULL, 0);
+        USER_TRACE("service state %d", bts2_app_data->state);
+        if (bts2_app_data->state == BTS_APP_STACK_READY)
+        {
+            bts2_app_data->state = BTS_APP_PROFILE_READY;
+            bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_BT_STACK_READY, NULL, 0);
+            USER_TRACE("bt stack ready\n");
+        }
         bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_LOCAL_NAME_RSP, &msg->local_name, sizeof(BTS2S_DEV_NAME));
-        USER_TRACE("bt stack ready\n");
         break;
     }
     case BTS2MU_GAP_RD_LOCAL_BD_ADDR_CFM:
@@ -1571,7 +1578,7 @@ void bt_hdl_gap_msg(bts2_app_stru *bts2_app_data)
                 INFO_TRACE("Create keyboard thread fail\r\n");
             }
 #endif
-            bts2_app_data->state = BTS_APP_READY;
+            bts2_app_data->state = BTS_APP_STACK_READY;
         }
         break;
     }

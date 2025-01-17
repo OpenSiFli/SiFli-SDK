@@ -295,7 +295,14 @@ static void bt_sifli_notify_hdl_at_cmd(uint8_t cmd_id, uint8_t res)
         urc_func_bt_call_vol_ind_sifli(res);
         break;
     }
-
+    case HFP_HF_AT_BCC:
+    {
+        if (res)
+        {
+            urc_func_call_link_ested_sifli(res);
+        }
+        break;
+    }
     default:
         break;
     }

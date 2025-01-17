@@ -1,9 +1,0 @@
-if RT_USING_DFS
-    config RT_USING_DFS_WINSHAREDIR
-    depends on BSP_USING_PC_SIMULATOR
-    bool "Enable shared file system between windows"
-    default n
-endif
-config MEDIA_CACHE_SIZE
-    int "Media cache size"
-    default 4000000

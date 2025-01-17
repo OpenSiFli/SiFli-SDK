@@ -1,8 +1,0 @@
-# audio
-
-```{toctree}
-:titlesonly:
-:glob:
-
-*/*
-```

@@ -121,7 +121,13 @@ elif GetDepend('BF0_LCPU'):
                 # Generate project, use src file as lib directly
                 lib += Glob(rom_src_name)
         elif rtconfig.CROSS_TOOL == 'gcc':
-            LINKFLAGS += ['-T', os.path.join(cwd, rom_src_name).replace('\\', '/')]
+            if "ROM_SYM_FILTER" in Env and Env["ROM_SYM_FILTER"]:
+                rom_lib = Env.RomLib(rom_src_name)
+                AlwaysBuild(rom_lib)
+                LINKFLAGS += ['-T', rom_lib[0].abspath.replace('\\', '/')]
+                Env['ROM_SYM'] = rom_lib
+            else:
+                LINKFLAGS += ['-T', os.path.join(cwd, rom_src_name).replace('\\', '/')]
 
 else:
     print("Core need to be selected")
