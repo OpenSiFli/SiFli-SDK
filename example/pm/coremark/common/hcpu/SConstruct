@@ -12,5 +12,5 @@ SIFLI_SDK = os.getenv('SIFLI_SDK')
 
 AddFTAB(SIFLI_SDK, rtconfig.CHIP)
 
-GenDownloaScript(env)
+GenDownloadScript(env)
 

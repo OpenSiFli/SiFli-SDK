@@ -39,4 +39,4 @@ DoBuilding(TARGET, objs)
 # Add flash table
 AddFTAB(SIFLI_SDK,rtconfig.CHIP)
 
-GenDownloaScript(env)
+GenDownloadScript(env)
