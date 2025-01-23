@@ -39,5 +39,5 @@ DoBuilding(TARGET, objs)
 
 AddFTAB(SIFLI_SDK, rtconfig.CHIP)
 
-GenDownloaScript(env)
+GenDownloadScript(env)
 

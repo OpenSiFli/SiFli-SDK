@@ -30,5 +30,5 @@ objs = PrepareBuilding(env)
 # make a building
 DoBuilding(TARGET, objs)
 
-GenDownloaScript(env)
+GenDownloadScript(env)
 
