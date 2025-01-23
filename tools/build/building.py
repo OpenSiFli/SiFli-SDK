@@ -487,7 +487,7 @@ def AddCustomImg(name, hex = None, bin = None):
 def GetCustomImgList():
     return CustomImgList
 
-def GenDownloaScript(main_env):
+def GenDownloadScript(main_env):
     import resource
     
     PrintEnvList()
