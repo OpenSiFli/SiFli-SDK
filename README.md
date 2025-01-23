@@ -10,7 +10,7 @@ SiFli SDK是官方提供的基于RT-Thread定制开发的一套软件开发框�
 
 软件框架如下图，
 
-[![sdk arch](img/sdk_arch_diagram.png)](https://docs.sifli.com/projects/sdk/v2.3/sf32lb55x/_images/sdk_arch_diagram.png)
+![sdk_arch_diagram](img/sdk_arch_diagram.png)
 
 - HAL为硬件抽象层，提供不依赖于操作系统服务的驱动功能
 - RT-Thread设备驱动（Device Driver）基于HAL实现，提供了更高层的封装，用户无需实现中断服务程序，更易于使用，HAL与RT-Thread设备驱动更详细的比较请参考[芯片外设驱动](https://docs.sifli.com/projects/sdk/v2.3/sf32lb55x/app_development/drivers.html)。
