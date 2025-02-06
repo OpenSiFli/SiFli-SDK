@@ -15,9 +15,7 @@
             {
                 "offset": "0x00008000", 
                 "max_size": "0x00010000", 
-                "tags": [
-                    "FLASH_BOOT_LOADER"
-                ], 
+                "tags": [], 
                 "ftab": {
                     "name": "bootloader", 
                     "address": [
