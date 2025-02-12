@@ -25,18 +25,20 @@ menuconfig --board=em-lb525
 如下图，选择spi1(需要用到DMA，选择对应DMA选项)，保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/menuconfig.png)
 * 切换到例程project目录，运行scons命令执行编译：
-```c
-> scons --board=em-lb525 -j8
 ```
-* 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+scons --board=em-lb525 -j8
+```
+* 运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
->`build_em-lb525_hcpu\uart_download.bat`
+```
+build_em-lb525_hcpu\uart_download.bat
 
->`Uart Download`
+Uart Download
 
->`please input the serial port num:5`
+please input the serial port num:5
+```
 
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 
 ### 硬件连接
 

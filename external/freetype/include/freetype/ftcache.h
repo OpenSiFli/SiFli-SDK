@@ -905,19 +905,17 @@ FT_BEGIN_HEADER
    */
   typedef struct  FTC_SBitRec_
   {
-    FT_Byte   width;
-    FT_Byte   height;
-    FT_Char   left;
-    FT_Char   top;
-
-    FT_Byte   format;
-    FT_Byte   max_grays;
-    FT_Short  pitch;
-    FT_Char   xadvance;
-    FT_Char   yadvance;
-
-    FT_Byte*  buffer;
-
+      FT_UShort  width;
+      FT_UShort  height;
+      FT_Short   left;
+      FT_Short   top;
+    
+      FT_UShort  format;
+      FT_UShort  max_grays;
+      FT_Short   pitch;
+      FT_Short   xadvance;
+      FT_Short   yadvance;
+      FT_Byte*   buffer;
   } FTC_SBitRec;
 
 

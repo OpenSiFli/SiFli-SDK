@@ -94,6 +94,48 @@ typedef enum
     AVRCP_TG_NFY_BV_08_C,
 } AVRCP_BQB_TEST;
 
+typedef struct
+{
+    uint32_t size;
+    uint8_t song_name[BT_MAX_SONG_NAME_LEN];
+} bt_avrcp_music_song_name_t;
+
+typedef struct
+{
+    uint32_t size;
+    uint8_t singer_name[BT_MAX_SINGER_NAME_LEN];
+} bt_avrcp_music_singer_name_t;
+
+
+typedef struct
+{
+    uint32_t size;
+    uint8_t album_name[BT_MAX_ALBUM_INFO_LEN];
+} bt_avrcp_music_album_info_t;
+
+typedef struct
+{
+    uint32_t size;
+    uint8_t play_time[BT_MAX_PLAY_TIME_LEN];//ascii code  ,unit:ms
+} bt_avrcp_music_play_time_t;
+
+typedef struct
+{
+    uint32_t  song_total_size;          /**< the song's total length */
+    bt_avrcp_music_play_time_t duration;                  /**< the song's total duration */
+    bt_avrcp_music_song_name_t song_name;          /**< the song's name */
+    bt_avrcp_music_singer_name_t singer_name;      /**< the song's singer name */
+    bt_avrcp_music_album_info_t album_info;        /**< the song's album name */
+    uint16_t          character_set_id;  //UTF-8 0x006A; other??
+} bt_avrcp_music_detail_info_t;
+
+typedef struct
+{
+    uint8_t  track_id;
+    uint8_t  attri_req;
+    bt_avrcp_music_detail_info_t detail_info;
+} bt_avrcp_music_detail_t;
+
 /*----------------------------------------------------------------------------*
  *
  * DESCRIPTION:
@@ -109,6 +151,23 @@ typedef enum
  *
  *----------------------------------------------------------------------------*/
 void bt_avrcp_int(bts2_app_stru *bts2_app_data);
+
+/*----------------------------------------------------------------------------*
+ *
+ * DESCRIPTION:
+ *
+ * INPUT:
+ *      bts2_app_stru *bts2_app_data:
+ *      BTS2S_BD_ADDR *bd_addr
+ *
+ * OUTPUT:
+ *      U8
+ *
+ * NOTE:
+ *      none.
+ *
+ *----------------------------------------------------------------------------*/
+U8 bt_avrcp_get_role_by_addr(bts2_app_stru *bts2_app_data, BTS2S_BD_ADDR *bd_addr);
 
 /*----------------------------------------------------------------------------*
  *
@@ -181,6 +240,14 @@ void bt_avrcp_get_play_status_request(bts2_app_stru *bts2_app_data);
 void bt_avrcp_play_status_changed_register_response(bts2_app_stru *bts2_app_data, U8 response, U8 play_status);
 
 void bt_avrcp_track_changed_register_response(bts2_app_stru *bts2_app_data, U8 response, U8 track_changed);
+
+void bt_avrcp_get_element_attributes_request(bts2_app_stru *bts2_app_data, U8 media_attribute);
+
+void bt_avrcp_playback_register_request(bts2_app_stru *bts2_app_data);
+
+void bt_avrcp_playback_pos_register_request(bts2_app_stru *bts2_app_data);
+
+void bt_avrcp_track_register_request(bts2_app_stru *bts2_app_data);
 
 
 /*----------------------------------------------------------------------------*

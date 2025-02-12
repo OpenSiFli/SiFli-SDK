@@ -323,25 +323,25 @@ void bt_interface_close_avrcp(void);
  * @brief            Control the phone to switch to the next music
  *
  **/
-void bt_interface_phone_play_next(void);
+void bt_interface_avrcp_next(void);
 
 /**
  * @brief            Control the mobile phone to play music
  *
  **/
-void bt_interface_phone_play(void);
+void bt_interface_avrcp_play(void);
 
 /**
  * @brief            Control the mobile phone to suspend music
  *
  **/
-void bt_interface_phone_play_pause(void);
+void bt_interface_avrcp_pause(void);
 
 /**
  * @brief            Control the mobile phone to stop music
  *
  **/
-void bt_interface_phone_play_stop(void);
+void bt_interface_avrcp_stop(void);
 
 /**
  * @brief            Control the phone to turn up the volume
@@ -359,7 +359,13 @@ void bt_interface_avrcp_volume_down(void);
  * @brief            Control the phone to switch to the previous music
  *
  **/
-void bt_interface_phone_play_previous(void);
+void bt_interface_avrcp_previous(void);
+
+/**
+ * @brief            Control the phone rewind
+ *
+ **/
+void bt_interface_avrcp_rewind(void);
 
 /**
  * @brief            Adjust the volume of mobile phone through avrcp
@@ -374,27 +380,81 @@ bt_err_t bt_interface_avrcp_volume_changed(U8 volume);
  * @param[in] volume The volume value you want to adjust
  *
  **/
-bt_err_t bt_interface_set_absolute_volume(U8 volume);
+bt_err_t bt_interface_avrcp_set_absolute_volume(U8 volume);
+
+/**
+ * @brief            playback status register request
+ *
+ **/
+void bt_interface_avrcp_playback_register_request(void);
+
+/**
+ * @brief            playback pos change register request
+ *
+ **/
+void bt_interface_avrcp_playback_pos_register_request(void);
+
+/**
+ * @brief            track change register request
+ *
+ **/
+void bt_interface_avrcp_track_change_register_request(void);
+
+/**
+ * @brief            volume change register request
+ *
+ **/
+void bt_interface_avrcp_volume_change_register_request(void);
+
+/**
+ * @brief            track change register request
+ * @param[in] media_attribute The media attribute value you want to get
+ *
+ **/
+void bt_interface_avrcp_get_element_attributes_request(U8 media_attribute);
+
+/**
+ * @brief            play status register request
+ *
+ **/
+void bt_interface_avrcp_get_play_status_request(void);
 
 /**
  * @brief            Set the playback status of avrcp
  * @param[in] playback_status The playback status of avrcp
  *
  **/
-void bt_interface_set_avrcp_playback_status(U8 playback_status);
+void bt_interface_avrcp_set_playback_status(U8 playback_status);
 
 /**
  * @brief            Get the playback status of avrcp
  *
  **/
-void bt_interface_set_can_play(void);
+void bt_interface_avrcp_set_can_play(void);
+
+/**
+ * @brief            Check the avrcp role valid
+ * @param[in] role   Avrcp role
+ * @return           Is the role valid?
+ *
+ **/
+BOOL bt_interface_check_avrcp_role_valid(U8 role);
+
+/**
+ * @brief            Set the avrcp role
+ * @param[in] bd_addr    The pointer of bd address
+ * @param[in] role    Avrcp role
+ * @return           The results of send spp data
+ *
+ **/
+bt_err_t bt_interface_set_avrcp_role(BTS2S_BD_ADDR *bd_addr, U8 role);
 
 /**
  * @brief            Get the playback status of avrcp
  * @return           The playback status of avrcp
  *
  **/
-U8 bt_interface_get_avrcp_playback_status(void);
+U8 bt_interface_avrcp_get_playback_status(void);
 /// @}  BT_AVRCP_SRV
 
 /** @defgroup BT_HID_SRV  HID profile interfaces

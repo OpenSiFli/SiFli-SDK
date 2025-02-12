@@ -15,7 +15,7 @@
             {
                 "offset": "0x00003000", 
                 "max_size": "0x00004000", 
-                "tags": [], 
+                "tags": [],
                 "ftab": {
                     "name": "bootloader", 
                     "address": [

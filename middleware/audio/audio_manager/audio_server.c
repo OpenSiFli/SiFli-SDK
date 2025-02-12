@@ -2729,9 +2729,9 @@ void audio_server_entry()
             if (a2dp_sink->device.output
                     && a2dp_sink->is_busy)
             {
+                first = device_get_tx_in_running(a2dp_sink, 0);
                 if (evt & AUDIO_SERVER_EVENT_TX_A2DP_SINK)
                 {
-                    first = device_get_tx_in_running(a2dp_sink, 0);
                     if (first)
                     {
                         if (a2dp_sink_need_trigger)
@@ -2743,7 +2743,7 @@ void audio_server_entry()
                             first->callback(as_callback_cmd_cache_half_empty, first->user_data, 0);
                     }
                 }
-                if (first->callback)
+                if (first && first->callback)
                 {
                     if (evt & AUDIO_SERVER_EVENT_A2DP_NEXT)
                     {

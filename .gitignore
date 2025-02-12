@@ -1,3 +1,9 @@
+*.bak
+*.un~
+*.*~
+*.scvd
+*.old
+*.uvoptx
 /**/build_*
 /**/*.pyc
 .sconsign.dblite

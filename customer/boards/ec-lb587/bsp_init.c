@@ -202,7 +202,7 @@ void HAL_PreInit(void)
 
     HAL_RCC_HCPU_SetDiv(1, 2, 5);
 
-    HAL_RCC_HCPU_DeepWFIClockSelect(false, RCC_SYSCLK_HXT48);
+    HAL_RCC_HCPU_DeepWFIClockSelect(true, RCC_SYSCLK_HXT48);
     HAL_RCC_HCPU_SetDeepWFIDiv(48, 0, 1);
 
 #ifdef PMIC_CTRL_ENABLE

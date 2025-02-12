@@ -1,7 +1,7 @@
 # 使用SPI通过CMD指令读取TF卡ID
 源码路径：example\rt_device\spi
 ## 支持平台
-* em-lb52D
+* em-lb525
 * em-lb587
 
 ## 概述
@@ -37,7 +37,7 @@ scons --board=em-lb52d -j8
 
 >`please input the serial port num:5`
 
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 
 ### 硬件连接
 ```{eval-rst}

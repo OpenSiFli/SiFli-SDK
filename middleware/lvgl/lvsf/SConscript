@@ -16,6 +16,10 @@ inc = inc + [cwd+'/..']
 src = src + Glob('./*.c')
 if not (GetDepend('PKG_USING_UI_BINARY_LOADER') or GetDepend('PKG_USING_UI_XML_LOADER')):
     SrcRemove(src, 'lv_layout_loader.c')
+
+if not GetDepend('LV_USING_FREETYPE_ENGINE'):
+    SrcRemove(src, 'lv_freetype.c')
+
 #if not GetDepend(['SOLUTION_WATCH']):
 #	src = src + Glob('./resource/*.c')
 

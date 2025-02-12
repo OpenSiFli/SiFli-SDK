@@ -66,6 +66,9 @@
 #elif defined(SOC_SF32LB52X)
 #define  AW8155_GPIO_PIN    10
 #define  AW8155_GPIO_HWP    hwp_gpio1
+#elif defined(BSP_USING_BOARD_EM_LB587XXX)
+#define  AW8155_GPIO_PIN    23
+#define  AW8155_GPIO_HWP    hwp_gpio2
 #else
 #define  AW8155_GPIO_PIN    21
 #define  AW8155_GPIO_HWP    hwp_gpio2

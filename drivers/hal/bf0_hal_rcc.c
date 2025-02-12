@@ -2456,16 +2456,11 @@ void HAL_RCC_HCPU_GetDeepWFIDiv(int *div, int *pdiv1, int *pdiv2)
 
 __HAL_ROM_USED void HAL_RCC_HCPU_DeepWFIClockSelect(bool sys_clk, uint32_t sys_clk_src)
 {
-    if (sys_clk)
-    {
-        hwp_hpsys_rcc->DWCFGR &= ~HPSYS_RCC_DWCFGR_SEL_SYS_LP;
-        MODIFY_REG(hwp_hpsys_rcc->DWCFGR, HPSYS_RCC_DWCFGR_SEL_SYS_Msk,
-                   MAKE_REG_VAL(sys_clk_src, HPSYS_RCC_DWCFGR_SEL_SYS_Msk, HPSYS_RCC_DWCFGR_SEL_SYS_Pos));
-    }
-    else
-    {
-        hwp_hpsys_rcc->DWCFGR |= HPSYS_RCC_DWCFGR_SEL_SYS_LP;
-    }
+
+    hwp_hpsys_rcc->DWCFGR &= ~HPSYS_RCC_DWCFGR_SEL_SYS_LP;
+    MODIFY_REG(hwp_hpsys_rcc->DWCFGR, HPSYS_RCC_DWCFGR_SEL_SYS_Msk,
+               MAKE_REG_VAL(sys_clk_src, HPSYS_RCC_DWCFGR_SEL_SYS_Msk, HPSYS_RCC_DWCFGR_SEL_SYS_Pos));
+
 }
 #endif /* SF32LB55X */
 

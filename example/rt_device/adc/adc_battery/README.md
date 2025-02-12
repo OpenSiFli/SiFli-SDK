@@ -1,10 +1,8 @@
 # ADC_battery示例
-源码路径：example\rt_device\adc\adc_battery
+源码路径：example/rt_device/adc/adc_battery
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525
-* em-lb52d
-
 
 ## 概述
 * 在RT-Thread操作系统下，adc单路采样读取vbat电池电压
@@ -13,9 +11,11 @@
 ### 编译和烧录
 * 此例程中用到了adc，在采用RT-Thread操作系统，adc外设会虚拟成了一个rt_device来进行读写操作，此时需要确认所在路径下`rtconfig.h`文件中是否包含了下面2个宏：
 
-> #define BSP_USING_ADC 1
-> #define BSP_USING_ADC1 1
-> #define RT_USING_ADC 1
+```c
+#define BSP_USING_ADC 1
+#define BSP_USING_ADC1 1
+#define RT_USING_ADC 1
+```
 
 只有包含了上面三个宏，在`sifli_adc_init`函数中才会通过`rt_hw_adc_register`函数注册`"bat1"`这个`rt_device`，后面该设备才能`rt_device_find`和`rt_device_control`成功。<br>
 **注意**<br>
@@ -31,15 +31,19 @@ SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参
 ![alt text](assets/MENUCONFIG_ADC.png)
 * 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-'bread nmae' -j8
+```
+scons --board=em_lb525 -j8
+```
 
-* 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+* 运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb52d_hcpu\uart_download.bat
+```
+build_em-lb52d_hcpu\uart_download.bat
 
->Uart Download
+Uart Download
 
->please input the serial port num:5
+please input the serial port num:5
+```
 
 #### 例程输出结果展示:
 * 接入电池前读取的电压log

@@ -595,11 +595,13 @@ SECTIONS
   /* Check if data + heap + stack exceeds RAM limit */
   /* ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack") */
   
+  /*
   .rom2 :
   {
     *(.ROM1_IMG)
     *(.ROM3_IMG*.*)
   } > ROM2
+  */
 
   .rom3 :
   {

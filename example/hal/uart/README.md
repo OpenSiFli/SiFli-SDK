@@ -11,7 +11,7 @@
 * 注意:电脑端串口已经关闭,此串口将不会有log打印
 ## 例程的使用
 ### 编译和烧录
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 
 确认rtconfig.h中不能包含下面两个宏，否则rt-thread系统驱动也会初始化一次RT系统的uart，
 导致uart重复定义
@@ -35,15 +35,19 @@
 
 切换到例程project目录，运行scons命令执行编译：（board=板子型号）
 
-> scons --board=em-lb525 -j8
+```
+scons --board=em-lb525 -j8
+```
 
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+```
+build_em-lb525_hcpu\uart_download.bat
 
-> Uart Download
+Uart Download
 
-> please input the serial port num:5
+please input the serial port num:5
+```
 
 ### 硬件连接
 物理位置指管脚对应在板子上的引脚排针位置

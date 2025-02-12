@@ -721,6 +721,13 @@ int8_t bt_avsrc_hdl_start_cfm(bts2s_av_inst_data *inst, uint8_t con_idx)
     }
 #endif
 
+    if (!ret)
+    {
+#if defined(CFG_AV)
+        bt_interface_bt_event_notify(BT_NOTIFY_A2DP, BT_NOTIFY_A2DP_START_CFM, NULL, 0);
+#endif
+    }
+
     return ret;
 
 }

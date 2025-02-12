@@ -1,10 +1,10 @@
 # GPIO 示例
-源码路径：example\hal\gpio
+源码路径：example/hal/gpio
 
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525
-* em-lb587
+
 
 ## 示例概述
 * 配置GPIO输入，输出，输入中断操作，进行GPIO HAL函数演示
@@ -42,24 +42,32 @@ HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模
 #### SF525工程代码编译
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb525 -j8
+```
+scons --board=em-lb525 -j8
+```
 
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+```
+build_em-lb525_hcpu\uart_download.bat
 
->Uart Download
+Uart Download
 
->please input the serial port num:5
+please input the serial port num:5
+```
 
 #### SF587工程代码编译
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb587 -j8
+```
+scons --board=em-lb587 -j8
+```
 
-切换到例程`project/build_xx`目录，运行`download.bat`，程序通过JLink自动下载：
+运行`build_em-lb587_hcpu\download.bat`，程序通过JLink自动下载：
 
-> build_em-lb587_hcpu\download.bat
+```
+build_em-lb587_hcpu\download.bat
+```
 
 
 ### 例程输出结果展示:

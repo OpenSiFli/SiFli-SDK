@@ -47,6 +47,7 @@
 #include <rtthread.h>
 #include "board.h"
 #include "pmic_controller.h"
+#include <stdlib.h>
 
 #define DBG_TAG           "aw87390"
 #define DBG_LVL           AUDIO_DBG_LVL

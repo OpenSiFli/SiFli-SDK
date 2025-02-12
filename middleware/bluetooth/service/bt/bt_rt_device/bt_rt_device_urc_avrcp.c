@@ -180,7 +180,7 @@ int bt_sifli_notify_avrcp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t d
         urc_func_profile_disc_sifli(profile_info->mac.addr, BT_PROFILE_AVRCP, profile_info->res);
         break;
     }
-    case BT_NOTIFY_AVRCP_MP3_DETAIL_INFO:
+    case BT_NOTIFY_AVRCP_MUSIC_DETAIL_INFO:
     {
         urc_func_bt_avrcp_mp3_detail_sifli((bt_mp3_detail_info_t *) data);
         break;

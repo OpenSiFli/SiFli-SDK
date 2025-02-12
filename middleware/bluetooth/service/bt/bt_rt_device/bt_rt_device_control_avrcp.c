@@ -85,7 +85,7 @@ bt_err_t bt_sifli_set_avrcp_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
     {
         if (BT_ROLE_MASTER == dev->role)
         {
-            ret = bt_interface_set_absolute_volume(volume);
+            ret = bt_interface_avrcp_set_absolute_volume(volume);
         }
         else
         {
@@ -141,25 +141,25 @@ bt_err_t bt_sifli_control_avrcp(struct rt_bt_device *bt_handle, int cmd, void *a
     break;
     case BT_CONTROL_PHONE_PLAY_NEXT:
     {
-        bt_interface_phone_play_next();
+        bt_interface_avrcp_next();
     }
     break;
 
     case BT_CONTROL_PHONE_PLAY:
     {
-        bt_interface_phone_play();
+        bt_interface_avrcp_play();
     }
     break;
 
     case BT_CONTROL_PHONE_PLAY_SUSPEND:
     {
-        bt_interface_phone_play_pause();
+        bt_interface_avrcp_pause();
     }
     break;
 
     case BT_CONTROL_PHONE_PLAY_STOP:
     {
-        bt_interface_phone_play_stop();
+        bt_interface_avrcp_stop();
     }
     break;
 
@@ -177,7 +177,7 @@ bt_err_t bt_sifli_control_avrcp(struct rt_bt_device *bt_handle, int cmd, void *a
 
     case BT_CONTROL_PHONE_PLAY_PREVIOUS:
     {
-        bt_interface_phone_play_previous();
+        bt_interface_avrcp_previous();
     }
     break;
 

@@ -1,5 +1,4 @@
-# WDT示例
-
+# 看门狗
 
 ```{toctree}
 :titlesonly:
@@ -7,9 +6,6 @@
 
 */*
 
-
 ```
 
-本例程基于HCPU，使用到IWDT和WDT1。\
-[IWDT](./iwdt/README.md)\
-[WDT1](./wdt1/README.md)
+

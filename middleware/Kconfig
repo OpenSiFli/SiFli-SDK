@@ -11,6 +11,11 @@ menu "Sifli middleware"
     endchoice
     
     rsource "bluetooth/Kconfig"
+    
+    config SF_WLAN_COEX
+        depends on BF0_LCPU
+        bool "enable wifi coexist"
+        default n
  
     menuconfig BSP_USING_PM
         bool "Enable Low power support"

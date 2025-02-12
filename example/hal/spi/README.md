@@ -13,9 +13,9 @@
 #### 以 em-lb525 开发板为例
 * 切换到例程project目录，运行scons命令执行编译对应命令：
 ```
-> scons --board=em-lb525 -j8
+scons --board=em-lb525 -j8
 ```
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 ```
 > build_em-lb525_hcpu\uart_download.bat
 
@@ -23,7 +23,7 @@
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 ### 硬件连接
 
 ```{eval-rst}

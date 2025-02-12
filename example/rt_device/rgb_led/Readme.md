@@ -34,18 +34,18 @@ BSP使能RGBLED
 
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
-```c
-> scons -j8 --board=em-lb525 
 ```
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
-```c
+scons -j8 --board=em-lb525 
+```
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+```
 $ ./uart_download.bat
 
      Uart Download
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[快速上手](xxxxx)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 
 ## 例程的预期结果
 <!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->

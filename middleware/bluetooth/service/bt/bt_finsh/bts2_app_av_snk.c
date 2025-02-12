@@ -576,7 +576,7 @@ void bt_avsnk_disc_2_src(BOOL is_close)
     }
 }
 
-void bt_avsnk_disc_2_src_by_addr(BTS2S_BD_ADDR *bd_addr, BOOL is_close)
+void bt_avsnk_disc_by_addr(BTS2S_BD_ADDR *bd_addr, BOOL is_close)
 {
     bts2s_av_inst_data *inst_data;
     inst_data = bt_av_get_inst_data();

@@ -11,7 +11,7 @@
 ## 例程的使用
 ### 编译和烧录
 
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 * 此例程中用到了uart2，在采用RT-Thread操作系统时，uart2外设会虚拟成了一个rt_device来进行读写操作，此时需要确认工程编译所在路径下`rtconfig.h`文件中是否包含了下面3个宏：
 ```c
 #define BSP_USING_UART 1
@@ -27,16 +27,18 @@ menuconfig --board=em-lb525
 如下图，选择uart2和rx dma，保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/menuconfig.png)
 * 切换到例程project目录，运行scons命令执行编译：
-```c
-> scons --board=em-lb525 -j8
 ```
-* 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+scons --board=em-lb525 -j8
+```
+* 运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> `build_em-lb525_hcpu\uart_download.bat`
+```
+build_em-lb525_hcpu\uart_download.bat
 
-> `Uart Download`
+Uart Download
 
-> `please input the serial port num:5`
+please input the serial port num:5
+```
 
 ### 硬件连接
 

@@ -530,17 +530,18 @@ INIT_PREV_EXPORT(ft_callback_reg);
 //For the SDK, this is an example of registering fonts.
 //For the Solution, the registering fonts will implemented in butterfli.exe tool.
 #ifndef SOLUTION_WATCH
-//LVSF_FREETYPE_FONT_REGISTER(tiny55_full);
-//LVSF_FREETYPE_FONT_REGISTER(hindi);
-//LVSF_FREETYPE_FONT_REGISTER(arab);
-#if defined (FREETYPE_TINY_FONT_FULL)
-    LVSF_FREETYPE_FONT_REGISTER(tiny55_full);
-#elif defined (FREETYPE_TINY_FONT_LITE)
-    LVSF_FREETYPE_FONT_REGISTER(tiny55_lite);
-#else //FREETYPE_NORMAL_FONT
-    LVSF_FREETYPE_FONT_REGISTER(SourceHanSansCN_Normal);
-#endif
+#ifdef FREETYPE_FONT_NAME
+    LVSF_FREETYPE_FONT_REGISTER(FREETYPE_FONT_NAME);
+#else
+    #if defined (FREETYPE_TINY_FONT_FULL)
+        LVSF_FREETYPE_FONT_REGISTER(tiny55_full);
+    #elif defined (FREETYPE_TINY_FONT_LITE)
+        LVSF_FREETYPE_FONT_REGISTER(tiny55_lite);
+    #else //FREETYPE_NORMAL_FONT
+        LVSF_FREETYPE_FONT_REGISTER(SourceHanSansCN_Normal);
+    #endif /* FREETYPE_FONT_NAME */
 
+#endif /* !SOLUTION_WATCH */
 
 #ifdef FREETYPE_FONT_IN_FILE_SYSTEM
 lv_font_freetype_lib_dsc_t SourceHanSansCN_Normal_lib = { 0, "/ex/fonts/SourceHanSansCN-Bold.ttf" };

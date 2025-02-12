@@ -139,7 +139,7 @@ void bt_avsnk_abort_stream(bts2_app_stru *bts2_app_data);
  *----------------------------------------------------------------------------*/
 void bt_avsnk_disc_2_src(BOOL is_close);
 
-void bt_avsnk_disc_2_src_by_addr(BTS2S_BD_ADDR *bd_addr, BOOL is_close);
+void bt_avsnk_disc_by_addr(BTS2S_BD_ADDR *bd_addr, BOOL is_close);
 /*----------------------------------------------------------------------------*
  *
  * DESCRIPTION:

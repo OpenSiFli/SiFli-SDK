@@ -87,50 +87,7 @@ uint8_t   bts2s_avrcp_openFlag;//0x00:dont open avrcp profile; 0x01:open avrcp p
 
 // #define SDK_AVRCP_USE_PASS_THROUGH      1
 
-typedef struct
-{
-    uint32_t size;
-    uint8_t song_name[BT_MAX_SONG_NAME_LEN];
-} bt_avrcp_mp3_song_name_t;
-
-typedef struct
-{
-    uint32_t size;
-    uint8_t singer_name[BT_MAX_SINGER_NAME_LEN];
-} bt_avrcp_mp3_singer_name_t;
-
-
-typedef struct
-{
-    uint32_t size;
-    uint8_t album_name[BT_MAX_ALBUM_INFO_LEN];
-} bt_avrcp_mp3_album_info_t;
-
-typedef struct
-{
-    uint32_t size;
-    uint8_t play_time[BT_MAX_PLAY_TIME_LEN];//ascii code  ,unit:ms
-} bt_avrcp_mp3_play_time_t;
-
-typedef struct
-{
-    uint32_t  song_total_size;          /**< the song's total length */
-    bt_avrcp_mp3_play_time_t duration;                  /**< the song's total duration */
-    bt_avrcp_mp3_song_name_t song_name;          /**< the song's name */
-    bt_avrcp_mp3_singer_name_t singer_name;      /**< the song's singer name */
-    bt_avrcp_mp3_album_info_t album_info;        /**< the song's album name */
-    uint16_t          character_set_id;  //UTF-8 0x006A; other??
-} bt_avrcp_mp3_detail_info_t;
-
-typedef struct
-{
-    uint8_t  track_id;
-    uint8_t  attri_req;
-    bt_avrcp_mp3_detail_info_t detail_info;
-} bt_avrcp_mp3_detail_t;
-
-
-bt_avrcp_mp3_detail_t mp3_detail_info;
+bt_avrcp_music_detail_t music_detail_info;
 
 /*----------------------------------------------------------------------------*
  *
@@ -159,6 +116,11 @@ void bt_avrcp_int(bts2_app_stru *bts2_app_data)
     bts2_app_data->avrcp_inst.abs_volume_pending = 0;
     bts2_app_data->avrcp_inst.playback_status = 0;
     bts2_app_data->avrcp_inst.ab_volume = 20;//default value;
+    for (U8 i = 0; i < AVRCP_MAX_CONNS; i++)
+    {
+        bd_set_empty(&bts2_app_data->avrcp_inst.con[i].rmt_bd);
+        bts2_app_data->avrcp_inst.con[i].role = AVRCP_NO_ROLE;
+    }
 #ifdef CFG_OPEN_AVRCP
     bts2s_avrcp_openFlag = 1;
 #else
@@ -169,8 +131,8 @@ void bt_avrcp_int(bts2_app_stru *bts2_app_data)
         avrcp_enb_req(bts2_app_data->phdl, AVRCP_CT);
     }
 
-    memset(&mp3_detail_info, 0x00, sizeof(bt_avrcp_mp3_detail_t));
-    mp3_detail_info.track_id = 0xff;
+    memset(&music_detail_info, 0x00, sizeof(bt_avrcp_music_detail_t));
+    music_detail_info.track_id = 0xff;
 }
 
 void bt_avrcp_open(void)
@@ -212,7 +174,28 @@ void bt_avrcp_close(void)
     }
 }
 
-
+U8 bt_avrcp_get_role_by_addr(bts2_app_stru *bts2_app_data, BTS2S_BD_ADDR *bd_addr)
+{
+    //!Only applicable to avrcp single connection
+    U8 role = AVRCP_CT;
+    for (U8 i = 0; i < AVRCP_MAX_CONNS; i++)
+    {
+        if (bd_eq(bd_addr, &bts2_app_data->avrcp_inst.con[i].rmt_bd) == TRUE)
+        {
+            if (bts2_app_data->avrcp_inst.con[i].role != AVRCP_NO_ROLE)
+            {
+                role = bts2_app_data->avrcp_inst.con[i].role;
+                return role;
+            }
+            else
+            {
+                USER_TRACE("Unable to judge role, the default is AVRCP CT\n");
+                return role;
+            }
+        }
+    }
+    return role;
+}
 
 
 /*----------------------------------------------------------------------------*
@@ -872,8 +855,8 @@ void bt_avrcp_get_capabilities_response(bts2_app_stru *bts2_app_data, int tlabel
     // capability count
     *(data + 9) = 2;
     // event ID volume changed
-    *(data + 10) = 0x01;
-    *(data + 11) = 0x0d;
+    *(data + 10) = AVRCP_VENDOR_DEPENDENT_EVENT_PLAYBACK_STATUS_CHANGED;
+    *(data + 11) = AVRCP_VENDOR_DEPENDENT_EVENT_VOLUME_CHANGED;
 
     avrcp_cmd_data_rsp(bts2_app_data->phdl,
                        tlabel,
@@ -1158,22 +1141,24 @@ void bt_avrcp_get_capabilities_confirm(bts2_app_stru *bts2_app_data, BTS2S_AVRCP
             {
                 bmemcpy(events_id, avrcmsg->data + 10, capability_count);
 
+                U8 role = bt_avrcp_get_role_by_addr(bts2_app_data, &bts2_app_data->avrcp_inst.con[0].rmt_bd);
+
                 for (int i = 0; i < capability_count; i++)
                 {
                     U8 event = *(events_id + i);
-                    if (event == AVRCP_VENDOR_DEPENDENT_EVENT_PLAYBACK_STATUS_CHANGED)
+                    if ((event == AVRCP_VENDOR_DEPENDENT_EVENT_PLAYBACK_STATUS_CHANGED) && (role == AVRCP_CT))
                     {
                         bt_avrcp_playback_register_request(bts2_app_data);
                     }
-                    else if (event == AVRCP_VENDOR_DEPENDENT_EVENT_TRACK_CHANGED)
+                    else if ((event == AVRCP_VENDOR_DEPENDENT_EVENT_TRACK_CHANGED) && (role == AVRCP_CT))
                     {
                         bt_avrcp_track_register_request(bts2_app_data);
                     }
-                    else if (event == AVRCP_VENDOR_DEPENDENT_EVENT_VOLUME_CHANGED)
+                    else if ((event == AVRCP_VENDOR_DEPENDENT_EVENT_VOLUME_CHANGED) && (role == AVRCP_TG))
                     {
                         bt_avrcp_volume_register_request(bts2_app_data);
                     }
-                    else if (AVRCP_VENDOR_DEPENDENT_EVENT_PLAYBACK_POS_CHANGED == event)
+                    else if ((AVRCP_VENDOR_DEPENDENT_EVENT_PLAYBACK_POS_CHANGED == event) && (role == AVRCP_CT))
                     {
                         bt_avrcp_playback_pos_register_request(bts2_app_data);
                     }
@@ -1254,7 +1239,7 @@ bt_err_t bt_avrcp_change_play_status(bts2_app_stru *bts2_app_data, U8 play_statu
 }
 
 
-static void bt_avrcp_get_element_attributes_request(bts2_app_stru *bts2_app_data, U8 media_attribute)
+void bt_avrcp_get_element_attributes_request(bts2_app_stru *bts2_app_data, U8 media_attribute)
 {
     U8 data_len = 21;
     U8 data[21];
@@ -1332,10 +1317,10 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
     //data[8]:number of attribute,is 1 general.jump
     U32 media_attribute;
     media_attribute = ((avrcmsg->data[9] << 24) | (avrcmsg->data[10] << 16) | (avrcmsg->data[11] << 8) | (avrcmsg->data[12]));
-    USER_TRACE("avrcp media_attribute %x  req_attr %x\n", media_attribute, mp3_detail_info.attri_req);
+    USER_TRACE("avrcp media_attribute %x  req_attr %x\n", media_attribute, music_detail_info.attri_req);
 
-    mp3_detail_info.detail_info.character_set_id = ((avrcmsg->data[13] << 8) | (avrcmsg->data[14]));
-    USER_TRACE("avrcp character_set_id %x\n", mp3_detail_info.detail_info.character_set_id);
+    music_detail_info.detail_info.character_set_id = ((avrcmsg->data[13] << 8) | (avrcmsg->data[14]));
+    USER_TRACE("avrcp character_set_id %x\n", music_detail_info.detail_info.character_set_id);
 
     U16 value_length;
     value_length = ((avrcmsg->data[15] << 8) | (avrcmsg->data[16]));
@@ -1343,7 +1328,14 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
 
     U8 *value;
 
-    if (media_attribute != mp3_detail_info.attri_req)
+    bt_notify_avrcp_media_attribute_cfm_t media_attribute_cfm;
+    media_attribute_cfm.media_attribute = media_attribute;
+    media_attribute_cfm.value_length = value_length;
+    media_attribute_cfm.value = (U8 *)(avrcmsg->data + 17);
+
+    bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_MEDIA_ATTRIBUTE_CFM, &media_attribute_cfm, sizeof(bt_notify_avrcp_media_attribute_cfm_t));
+
+    if (media_attribute != music_detail_info.attri_req)
     {
         return;
     }
@@ -1361,7 +1353,7 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
             bfree(value);
 #endif
         }
-        mp3_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_ARTIST;
+        music_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_ARTIST;
         bt_avrcp_get_element_attributes_request(bts2_app_data, AVRCP_MEDIA_ATTRIBUTES_ARTIST);
         break;
     }
@@ -1376,8 +1368,8 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         {
             value = (U8 *)(avrcmsg->data + 17);
 
-            mp3_detail_info.detail_info.singer_name.size = value_length;
-            memcpy(mp3_detail_info.detail_info.singer_name.singer_name, (const void *) value, value_length);
+            music_detail_info.detail_info.singer_name.size = value_length;
+            memcpy(music_detail_info.detail_info.singer_name.singer_name, (const void *) value, value_length);
 
             // TODO: process value
 #if 0
@@ -1388,9 +1380,9 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         }
         else
         {
-            mp3_detail_info.detail_info.singer_name.size = 0;
+            music_detail_info.detail_info.singer_name.size = 0;
         }
-        mp3_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_ALBUM;
+        music_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_ALBUM;
         bt_avrcp_get_element_attributes_request(bts2_app_data, AVRCP_MEDIA_ATTRIBUTES_ALBUM);
         break;
     }
@@ -1405,8 +1397,8 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         {
             value = (U8 *)(avrcmsg->data + 17);
 
-            mp3_detail_info.detail_info.album_info.size = value_length;
-            memcpy(mp3_detail_info.detail_info.album_info.album_name, (const void *) value, value_length);
+            music_detail_info.detail_info.album_info.size = value_length;
+            memcpy(music_detail_info.detail_info.album_info.album_name, (const void *) value, value_length);
             // TODO: process value
 #if 0
             value = bmalloc(value_length);
@@ -1416,9 +1408,9 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         }
         else
         {
-            mp3_detail_info.detail_info.album_info.size = 0;
+            music_detail_info.detail_info.album_info.size = 0;
         }
-        mp3_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_TITLE;
+        music_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_TITLE;
         bt_avrcp_get_element_attributes_request(bts2_app_data, AVRCP_MEDIA_ATTRIBUTES_TITLE);
         break;
     }
@@ -1433,8 +1425,8 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         {
             value = (U8 *)(avrcmsg->data + 17);
 
-            mp3_detail_info.detail_info.song_name.size = value_length;
-            memcpy(mp3_detail_info.detail_info.song_name.song_name, (const void *) value, value_length);
+            music_detail_info.detail_info.song_name.size = value_length;
+            memcpy(music_detail_info.detail_info.song_name.song_name, (const void *) value, value_length);
             // TODO: process value
 #if 0
             value = bmalloc(value_length);
@@ -1444,9 +1436,9 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         }
         else
         {
-            mp3_detail_info.detail_info.song_name.size = 0;
+            music_detail_info.detail_info.song_name.size = 0;
         }
-        mp3_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_PLAYTIME;
+        music_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_PLAYTIME;
         bt_avrcp_get_element_attributes_request(bts2_app_data, AVRCP_MEDIA_ATTRIBUTES_PLAYTIME);
         break;
     }
@@ -1461,8 +1453,8 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         {
             value = (U8 *)(avrcmsg->data + 17);
 
-            mp3_detail_info.detail_info.duration.size = value_length;
-            bmemcpy(mp3_detail_info.detail_info.duration.play_time, avrcmsg->data + 17, value_length);
+            music_detail_info.detail_info.duration.size = value_length;
+            bmemcpy(music_detail_info.detail_info.duration.play_time, avrcmsg->data + 17, value_length);
             // TODO: process value
 #if 0
             value = bmalloc(value_length);
@@ -1472,18 +1464,18 @@ static void bt_avrcp_get_element_attributes_confirm(bts2_app_stru *bts2_app_data
         }
         else
         {
-            mp3_detail_info.detail_info.duration.size = 0;
+            music_detail_info.detail_info.duration.size = 0;
         }
 
-        mp3_detail_info.attri_req = 0x00;
+        music_detail_info.attri_req = 0x00;
 
-        if ((0 == mp3_detail_info.detail_info.singer_name.size) && (0 == mp3_detail_info.detail_info.album_info.size))
+        if ((0 == music_detail_info.detail_info.singer_name.size) && (0 == music_detail_info.detail_info.album_info.size))
         {
             break;
         }
-        USER_TRACE("URC BT mp3 detail end %x\n", mp3_detail_info.track_id);
+        USER_TRACE("URC BT music detail end %x\n", music_detail_info.track_id);
 #if defined(CFG_AVRCP)
-        bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_MP3_DETAIL_INFO, &mp3_detail_info.detail_info, sizeof(bt_mp3_detail_info_t));
+        bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_MUSIC_DETAIL_INFO, &music_detail_info.detail_info, sizeof(bt_notify_avrcp_music_detail_t));
 #endif
         break;
     }
@@ -2080,14 +2072,14 @@ static void bt_avrcp_hdl_vendor_depend_cmd_cfm(bts2_app_stru *bts2_app_data)
                         }
                     }
 
-                    INFO_TRACE("<<track_CHANGED identifier_result %x track_id_old %x  track_id_new%x\n", identifier_result, mp3_detail_info.track_id, value);
+                    INFO_TRACE("<<track_CHANGED identifier_result %x track_id_old %x  track_id_new%x\n", identifier_result, music_detail_info.track_id, value);
 
                     if (identifier_result != 1 && avrcmsg->c_type == AVRCP_CR_INTERIM)
                     {
                         // playing, should get element attributes
-                        memset(&mp3_detail_info, 0x00, sizeof(bt_avrcp_mp3_detail_t));
-                        mp3_detail_info.track_id = value;
-                        mp3_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_GENRE;
+                        memset(&music_detail_info, 0x00, sizeof(bt_avrcp_music_detail_t));
+                        music_detail_info.track_id = value;
+                        music_detail_info.attri_req = AVRCP_MEDIA_ATTRIBUTES_GENRE;
                         bt_avrcp_get_element_attributes_request(bts2_app_data, AVRCP_MEDIA_ATTRIBUTES_GENRE);
                     }
                     else if (identifier_result == 1)
@@ -2423,6 +2415,9 @@ static void bt_avrcp_hdl_conn_cfm(bts2_app_stru *bts2_app_data)
     {
         USER_TRACE("<< confirmation connect successed \n");
         bts2_app_data->avrcp_inst.st = avrcp_conned;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.lap = msg->bd.lap;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.nap = msg->bd.nap;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.uap = msg->bd.uap;
 #if defined(CFG_AVRCP)
         bt_notify_profile_state_info_t profile_state;
         bt_addr_convert(&msg->bd, profile_state.mac.addr);
@@ -2433,10 +2428,10 @@ static void bt_avrcp_hdl_conn_cfm(bts2_app_stru *bts2_app_data)
         INFO_TRACE("URC avrcp conn,cfm\n");
 #endif
 
-        bt_cm_conn_info_t *bonded_dev = bt_cm_find_bonded_dev_by_addr(profile_state.mac.addr);
-        if (bonded_dev->role == BT_CM_SLAVE)
+        U8 role = bt_avrcp_get_role_by_addr(bts2_app_data, &bts2_app_data->avrcp_inst.con[0].rmt_bd);
+        bt_avrcp_get_capabilities_request(bts2_app_data);
+        if (role == AVRCP_CT)
         {
-            bt_avrcp_get_capabilities_request(bts2_app_data);
             bt_avrcp_get_play_status_request(bts2_app_data);
             bts2_app_data->avrcp_inst.abs_volume_pending = 0;
         }
@@ -2542,9 +2537,9 @@ void bt_avrcp_msg_handler(bts2_app_stru *bts2_app_data)
     {
         BTS2S_AVRCP_CONN_IND *msg;
         msg = (BTS2S_AVRCP_CONN_IND *)bts2_app_data->recv_msg;
-        bts2_app_data->avrcp_inst.rmt_bd.lap = msg->bd.lap;
-        bts2_app_data->avrcp_inst.rmt_bd.nap = msg->bd.nap;
-        bts2_app_data->avrcp_inst.rmt_bd.uap = msg->bd.uap;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.lap = msg->bd.lap;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.nap = msg->bd.nap;
+        bts2_app_data->avrcp_inst.con[0].rmt_bd.uap = msg->bd.uap;
 
         bts2_app_data->avrcp_inst.st = avrcp_conned;
         USER_TRACE("<< avrcp indicate to connect with remote device\n");
@@ -2557,10 +2552,10 @@ void bt_avrcp_msg_handler(bts2_app_stru *bts2_app_data)
                                      &profile_state, sizeof(bt_notify_profile_state_info_t));
         INFO_TRACE("URC avrcp conn,ind\n");
 #endif
-        bt_cm_conn_info_t *bonded_dev = bt_cm_find_bonded_dev_by_addr(profile_state.mac.addr);
-        if (bonded_dev->role == BT_CM_SLAVE)
+        U8 role = bt_avrcp_get_role_by_addr(bts2_app_data, &bts2_app_data->avrcp_inst.con[0].rmt_bd);
+        bt_avrcp_get_capabilities_request(bts2_app_data);
+        if (role == AVRCP_CT)
         {
-            bt_avrcp_get_capabilities_request(bts2_app_data);
             bt_avrcp_get_play_status_request(bts2_app_data);
             bts2_app_data->avrcp_inst.abs_volume_pending = 0;
         }
@@ -2571,9 +2566,7 @@ void bt_avrcp_msg_handler(bts2_app_stru *bts2_app_data)
         BTS2S_AVRCP_DISC_IND *msg;
         bts2_app_data->avrcp_inst.st = avrcp_idle;
         msg = (BTS2S_AVRCP_DISC_IND *)bts2_app_data->recv_msg;
-        bts2_app_data->avrcp_inst.rmt_bd.lap = msg->bd.lap;
-        bts2_app_data->avrcp_inst.rmt_bd.nap = msg->bd.nap;
-        bts2_app_data->avrcp_inst.rmt_bd.uap = msg->bd.uap;
+        bd_set_empty(&bts2_app_data->avrcp_inst.con[0].rmt_bd);
 
         bts2_app_data->avrcp_inst.tgRegStatus = 0;
         bts2_app_data->avrcp_inst.tgRegStatus1 = 0;

@@ -1708,6 +1708,9 @@ static void bt_av_hdl_suspend_cfm(bts2_app_stru *bts2_app_data)
         bt_avrcp_change_play_status(bts2_app_data, play_status);
 #endif
 #endif
+#if defined(CFG_AV)
+        bt_interface_bt_event_notify(BT_NOTIFY_A2DP, BT_NOTIFY_A2DP_SUSPEND_CFM, NULL, 0);
+#endif
     }
     else
     {
@@ -2340,6 +2343,9 @@ void bt_av_msg_handler(bts2_app_stru *bts2_app_data)
     }
     case BTS2MU_AV_SUSPEND_IND:
     {
+#if defined(CFG_AV)
+        bt_interface_bt_event_notify(BT_NOTIFY_A2DP, BT_NOTIFY_A2DP_SUSPEND_IND, NULL, 0);
+#endif
         bt_av_hdl_suspend_ind(bts2_app_data);
         break;
     }

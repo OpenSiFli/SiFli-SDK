@@ -54,6 +54,9 @@
 #include "bf0_sibles_advertising.h"
 
 #define LOG_TAG "ble_app"
+
+#include "bts2_app_inc.h"
+#include "bt_connection_manager.h"
 #include "log.h"
 
 enum ble_app_att_list
@@ -506,6 +509,33 @@ ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
 
 }
 
+static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8_t *data, uint16_t data_len)
+{
+    if (type == BT_NOTIFY_AVRCP)
+    {
+        switch (event_id)
+        {
+        case BT_NOTIFY_AVRCP_PROFILE_CONNECTED:
+        {
+            LOG_I("AVRCP connected");
+            BTS2S_BD_ADDR bd_addr;
+            bt_notify_profile_state_info_t *profile_info = (bt_notify_profile_state_info_t *)data;
+            bt_addr_convert_to_bts((bd_addr_t *)&profile_info->mac, &bd_addr);
+            bt_interface_set_avrcp_role(&bd_addr, AVRCP_TG);
+        }
+        break;
+        case BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED:
+        {
+            LOG_I("AVRCP disconnected");
+        }
+        break;
+        }
+    }
+
+    return 0;
+}
+
+
 int main(void)
 {
     int count = 0;
@@ -522,6 +552,9 @@ int main(void)
                               rt_tick_from_millisecond(15 * 1000), RT_TIMER_FLAG_PERIODIC | RT_TIMER_FLAG_SOFT_TIMER); // 15s
     rt_timer_start(env->rc10k_time_handle);
 #endif
+
+    bt_interface_register_bt_event_notify_callback(bt_app_interface_event_handle);
+
     while (1)
     {
         uint32_t value;

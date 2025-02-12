@@ -42,6 +42,10 @@
     #define NOR_FLASH3_DEV_NAME             "flash3"
 #endif /* NOR_FLASH3_DEV_NAME */
 
+#ifndef NOR_FLASH4_DEV_NAME
+    #define NOR_FLASH4_DEV_NAME             "flash4"
+#endif /* NOR_FLASH4_DEV_NAME */
+
 
 #define FAL_PART_DEF(flash_part_id)      \
     {FAL_PART_MAGIC_WORD,                \

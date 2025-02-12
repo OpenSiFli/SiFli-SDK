@@ -115,6 +115,8 @@ extern "C" {
 
 #define CFG_PIN_CODE               "0000"
 
+#define AVRCP_MAX_CONNS 1
+
 typedef enum
 {
     BTS_APP_IDLE,
@@ -289,8 +291,15 @@ typedef enum
 
 typedef struct
 {
+    BTS2S_BD_ADDR rmt_bd;
+    U8            role;
+} bts2_avrcp_conn;
+
+
+typedef struct
+{
     bts2_avrcp_st  st;
-    BTS2S_BD_ADDR  rmt_bd;
+    bts2_avrcp_conn con[AVRCP_MAX_CONNS];
     U8             release_type;
     rt_timer_t     avrcp_time_handle;
     rt_timer_t     avrcp_vol_time_handle;

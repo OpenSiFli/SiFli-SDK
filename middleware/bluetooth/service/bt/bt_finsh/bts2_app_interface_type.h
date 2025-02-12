@@ -200,6 +200,12 @@ typedef enum
     BT_NOTIFY_A2DP_PROFILE_DISCONNECTED,
     ///  receive a2dp start command from remote device indication event
     BT_NOTIFY_A2DP_START_IND,
+    ///  receive a2dp suspend command from remote device indication event
+    BT_NOTIFY_A2DP_SUSPEND_IND,
+    ///  receive a2dp start response from remote device indication event
+    BT_NOTIFY_A2DP_START_CFM,
+    ///  receive a2dp suspend response from remote device indication event
+    BT_NOTIFY_A2DP_SUSPEND_CFM,
 } bt_notify_a2dp_event_id_t;
 
 ///  these type are BT_NOTIFY_AVRCP event id
@@ -214,7 +220,7 @@ typedef enum
     ///  AVRCP profile disconnection complete event
     BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED,
     ///  get music information event
-    BT_NOTIFY_AVRCP_MP3_DETAIL_INFO,
+    BT_NOTIFY_AVRCP_MUSIC_DETAIL_INFO,
     ///  peer device register the absolute volume change notify event
     BT_NOTIFY_AVRCP_VOLUME_CHANGED_REGISTER,
     ///  peer device adjusts the absolute volume event
@@ -225,7 +231,26 @@ typedef enum
     BT_NOTIFY_AVRCP_SONG_PROGREAS_STATUS,
     ///  play song change event
     BT_NOTIFY_AVRCP_TRACK_CHANGE_STATUS,
+    ///  get media attribute confirm event
+    BT_NOTIFY_AVRCP_MEDIA_ATTRIBUTE_CFM,
 } bt_notify_avrcp_event_id_t;
+
+#ifdef  CFG_AVRCP
+typedef struct
+{
+    uint32_t  media_attribute;
+    uint16_t  value_length;
+    uint8_t   *value;
+} bt_notify_avrcp_media_attribute_cfm_t;
+
+typedef struct
+{
+    uint8_t  track_id;
+    uint8_t  attri_req;
+    bt_avrcp_music_detail_info_t detail_info;
+} bt_notify_avrcp_music_detail_t;
+#endif
+
 
 ///  these type are BT_NOTIFY_HID event id
 typedef enum

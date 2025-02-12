@@ -65,8 +65,8 @@
 
 #define RF_FORCE 0
 
-static PTC_HandleTypeDef    PtcHandle[4];
-const static uint8_t g_ptc_task[4] = {1, 2, 4, 5};
+static PTC_HandleTypeDef    PtcHandle[6];
+const static uint8_t g_ptc_task[6] = {1, 2, 4, 5, 6, 7};
 
 #ifdef PTC_DYN_CTRL
     #ifdef SOC_SF32LB58X
@@ -183,7 +183,16 @@ void PTC2_IRQHandler(void)
         HAL_PTC_IRQHandler(&PtcHandle[3]);
         agc_recovery();
     }
-
+#if SF_WLAN_COEX
+    if ((isr_flag & (1 << g_ptc_task[4])) != 0)
+    {
+        HAL_PTC_IRQHandler(&PtcHandle[4]);
+    }
+    if ((isr_flag & (1 << g_ptc_task[5])) != 0)
+    {
+        HAL_PTC_IRQHandler(&PtcHandle[5]);
+    }
+#endif
 
     rt_interrupt_leave();
 
@@ -226,6 +235,37 @@ static uint16_t  ptc_delay_cal(uint16_t ns)
 
 }
 
+#if SF_WLAN_COEX
+
+#ifdef SOC_SF32LB58X
+//PB10
+uint32_t g_pta_address[2] = {0x50080008, 0x5008000C};
+uint32_t g_pta_data[2] = {0x400, 0x400};
+#endif
+void pta_ptc_config(uint8_t index, uint8_t sel_idx, uint8_t tripol, uint16_t delay)
+{
+    PtcHandle[index].Instance = hwp_ptc2;
+    PtcHandle[index].Init.Channel = g_ptc_task[index];
+    PtcHandle[index].Init.Address = g_pta_address[index - 4];
+    PtcHandle[index].Init.data = g_pta_data[index - 4];   // data to handle with value in Address.
+    PtcHandle[index].Init.Operation = PTC_OP_OR;                       // Or and write back
+    PtcHandle[index].Init.Sel = sel_idx;
+    PtcHandle[index].Init.Tripol = tripol;
+    PtcHandle[index].Init.Delay = delay;
+    NVIC_EnableIRQ(PTC2_IRQn);
+
+    if (HAL_PTC_Init(& PtcHandle[index]) != HAL_OK)                     // Initialize PTC
+    {
+        /* Initialization Error */
+        RT_ASSERT(RT_FALSE);
+    }
+    HAL_PTC_Enable(&PtcHandle[index], 1);                              // Enable PTC
+
+    PtcHandle[index].Instance->IER &= (~(1UL << PtcHandle[index].Init.Channel));//disable isr
+
+}
+#endif
+
 #endif // BLUETOOTH_PTC_CONFIG
 
 void rf_ptc_config(uint8_t is_reset)
@@ -248,6 +288,12 @@ void rf_ptc_config(uint8_t is_reset)
 #endif
     ptc_config(2, PTC_LCPU_BT_EDR2, 1, 0); //PTC_LCPU_BT_RXDONE
     ptc_config(3, PTC_LCPU_BT_EDR3, 1, 0);
+
+#if SF_WLAN_COEX
+    pta_ptc_config(4, PTC_LCPU_BT_PRIORITY, 0, 0);
+    pta_ptc_config(5, PTC_LCPU_BT_PRIORITY, 1, 0);
+#endif
+
 #endif // BLUETOOTH_PTC_CONFIG
 }
 
@@ -349,6 +395,42 @@ void rf_ptc_config(uint8_t is_reset)
 
     ptc_config(0, PTC_LCPU_BT_PKTDET, 0, 0);
 #endif
+}
+
+#endif
+
+#if defined(SF_WLAN_COEX) && defined(BF0_LCPU)
+void pta_io_config(void)
+{
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    HAL_PIN_Set(PAD_PB08, BT_ACTIVE,   PIN_PULLDOWN, 0);
+    HAL_PIN_Set(PAD_PB09, WLAN_ACTIVE, PIN_PULLDOWN, 0);
+    HAL_PIN_Set(PAD_PB10, GPIO_B10,  PIN_PULLDOWN, 0);
+
+    GPIO_InitStruct.Pin = 8;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init((GPIO_TypeDef *)hwp_gpio2, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = 10;
+    HAL_GPIO_Init((GPIO_TypeDef *)hwp_gpio2, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = 9;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    HAL_GPIO_Init((GPIO_TypeDef *)hwp_gpio2, &GPIO_InitStruct);
+
+}
+
+void wlan_coex_config(void)
+{
+    hwp_bt_mac->BTCOEXIFCNTL1 = (4 << BT_MAC_BTCOEXIFCNTL1_WLCPRXTHR_Pos);
+    hwp_bt_mac->BTCOEXIFCNTL2 |= BT_MAC_BTCOEXIFCNTL2_PTA_MASKTX |
+                                 BT_MAC_BTCOEXIFCNTL2_PTA_MASKRX  |
+                                 (3 << BT_MAC_BTCOEXIFCNTL2_PTA_ACTSEL_Pos);
+
+    hwp_bt_mac->BTCOEXIFCNTL0 |= BT_MAC_BTCOEXIFCNTL0_WLANCOEX_EN;
+    hwp_bt_mac->BLECOEXIFCNTL0 |= BT_MAC_BLECOEXIFCNTL0_WLANCOEX_EN;
 }
 
 #endif

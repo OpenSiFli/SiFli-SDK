@@ -114,6 +114,8 @@ typedef enum
     e_ffmpeg_suspended,
     e_ffmpeg_resumed,
     e_ffmpeg_progress, //val is seconds
+    e_ffmpeg_play_to_error, //read frame error
+    e_ffmpeg_play_to_loop,  //loop again
 } ffmpeg_cmd_e;
 
 typedef struct

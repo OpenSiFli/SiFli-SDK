@@ -8,7 +8,7 @@ config SOLUTION_ALLOC_MEM
     bool
     default y
 
-config FREETYPE_TINY_FONT_LITE 
+config FREETYPE_TINY_FONT_FULL
     bool
     default y
 

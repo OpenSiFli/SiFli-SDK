@@ -1,8 +1,7 @@
 # ADC_battery示例
-源码路径：example\hal\adc\adc_battery
+源码路径：example/hal/adc/adc_battery
 ## 支持的平台
 例程可以运行在以下开发板
-* em-lb52d
 * em-lb525
 
 ## 概述
@@ -14,22 +13,28 @@
 
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb52d -j8
+```
+scons --board=em-lb525 -j8
+```
 
 执行烧写命令
-> build_em-lb52d_hcpu\uart_download.bat
+```
+build_em-lb525_hcpu\uart_download.bat
+```
 
 按提示选择端口即可进行下载：
 
->please input the serial port num:5
-
+```none
+please input the serial port num:5
+```
 
 #### 例程输出结果展示:
 * 接入电池前读取的电压log
+
 ![alt text](assets/beffer.png)
 
-
 * 接入电池后读取的电压log
+
 ![alt text](assets/last.png)
 
 log中打印value值原始寄存器值，Voltage是转换后的mV电压
@@ -38,19 +43,22 @@ log中打印value值原始寄存器值，Voltage是转换后的mV电压
 #### ADC配置流程
 
 * 设置电池Vbat接口对应的通道7
+
 ![alt text](assets/1.png)
 
 * 在menuconfig中打开adc device
 
-> 'menuconfig --board=em-lb52d'
+```
+menuconfig --board=em-lb525
+```
 
 ![alt text](assets/2.png)
 
 **注意**: 
 * 打开对应的ADC的时钟源（默认代码开启，此处不是必须）
-```
-    /* 2, open adc clock source  */
-    HAL_RCC_EnableModule(RCC_MOD_GPADC);
+```c
+/* 2, open adc clock source  */
+HAL_RCC_EnableModule(RCC_MOD_GPADC);
 ```
 
 * ADC校准

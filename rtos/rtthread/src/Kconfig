@@ -96,6 +96,7 @@ config RT_TIMER_THREAD_PRIO
 
 config RT_TIMER_THREAD_STACK_SIZE
     int "The stack size of timer thread"
+    default 1024 if BF0_HCPU
     default 512
 
 endif

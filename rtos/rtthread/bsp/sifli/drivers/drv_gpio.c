@@ -659,21 +659,20 @@ static rt_err_t sifli_pin_irq_enable(struct rt_device *device, rt_base_t pin,
     {
         level = rt_hw_interrupt_disable();
 
+        for (i = 0; i < pin_irq_hdr_num; i++)
+            if (pin_irq_hdr_tab[i].pin == pin)
+                break;
+        if (i < pin_irq_hdr_num)
+        {
+            pin_irq_hdr_tab[i].en = 0;
+        }
         if (gphandle)
         {
             HAL_GPIO_DeInit(gphandle, GPIO_InitStruct.Pin);
-            pin_irq_hdr_tab[i].en = 0;
         }
         else
         {
 #ifdef hwp_pbr
-            for (i = 0; i < pin_irq_hdr_num; i++)
-                if (pin_irq_hdr_tab[i].pin == pin)
-                    break;
-            if (i < pin_irq_hdr_num)
-            {
-                pin_irq_hdr_tab[i].en = 0;
-            }
             pbr_pin_irq_en[pbr_pin] = 0;
             pbr_pin_irq_pending_bitmap &= ~(1 << pbr_pin);
 #else

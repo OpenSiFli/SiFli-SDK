@@ -1377,6 +1377,7 @@ static void draw_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *ds
         mask_map = NULL;
         mask_coords = &mask_param.cfg.coords;
         only_1map_mask = false;
+        mask_cf  = LV_IMG_CF_ALPHA_8BIT;
     }
 
 

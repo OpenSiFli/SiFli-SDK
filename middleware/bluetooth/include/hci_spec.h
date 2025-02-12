@@ -5721,6 +5721,7 @@ typedef struct
 #define SSI_BPP_SRV                (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
 #define SSI_DUN_GW                 (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
 #define SSI_PAN                    (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
+#define SSI_RFCOMM                 (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
 #define SSI_HCRP                   (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
 #define SSI_SYNC_SRV               (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)
 #define SSI_SIM                    (SSI_AUTHEN | SSI_ENCRPT | SSI_AUTHOR)

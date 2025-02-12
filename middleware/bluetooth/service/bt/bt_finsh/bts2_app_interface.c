@@ -270,7 +270,7 @@ bt_err_t bt_interface_disc_ext(unsigned char *mac, bt_profile_t ext_profile)
     {
     case BT_PROFILE_A2DP:
 #ifdef CFG_AV_SNK
-        bt_avsnk_disc_2_src_by_addr(bd_addr, FALSE);
+        bt_avsnk_disc_by_addr(bd_addr, FALSE);
 #endif
         break;
 
@@ -579,25 +579,25 @@ void bt_interface_close_avrcp(void)
     bt_avrcp_close();
 }
 
-void bt_interface_phone_play_next(void)
+void bt_interface_avrcp_next(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_forward(bts2_app_data);
 }
 
-void bt_interface_phone_play(void)
+void bt_interface_avrcp_play(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_ply(bts2_app_data);
 }
 
-void bt_interface_phone_play_pause(void)
+void bt_interface_avrcp_pause(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_pause(bts2_app_data);
 }
 
-void bt_interface_phone_play_stop(void)
+void bt_interface_avrcp_stop(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_stop(bts2_app_data);
@@ -615,10 +615,16 @@ void bt_interface_avrcp_volume_down(void)
     bt_avrcp_volume_down(bts2_app_data);
 }
 
-void bt_interface_phone_play_previous(void)
+void bt_interface_avrcp_previous(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_backward(bts2_app_data);
+}
+
+void bt_interface_avrcp_rewind(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_rewind(bts2_app_data);
 }
 
 bt_err_t bt_interface_avrcp_volume_changed(U8 volume)
@@ -633,7 +639,7 @@ bt_err_t bt_interface_avrcp_volume_changed(U8 volume)
     return ret;
 }
 
-bt_err_t bt_interface_set_absolute_volume(U8 volume)
+bt_err_t bt_interface_avrcp_set_absolute_volume(U8 volume)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_err_t ret = BT_EOK;
@@ -643,6 +649,42 @@ bt_err_t bt_interface_set_absolute_volume(U8 volume)
 
     ret = bt_avrcp_set_absolute_volume_request(bts2_app_data, volume);
     return ret;
+}
+
+void bt_interface_avrcp_playback_register_request(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_playback_register_request(bts2_app_data);
+}
+
+void bt_interface_avrcp_playback_pos_register_request(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_playback_pos_register_request(bts2_app_data);
+}
+
+void bt_interface_avrcp_track_change_register_request(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_track_register_request(bts2_app_data);
+}
+
+void bt_interface_avrcp_volume_change_register_request(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_volume_register_request(bts2_app_data);
+}
+
+void bt_interface_avrcp_get_element_attributes_request(U8 media_attribute)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_get_element_attributes_request(bts2_app_data, media_attribute);
+}
+
+void bt_interface_avrcp_get_play_status_request(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_avrcp_get_play_status_request(bts2_app_data);
 }
 
 void bt_interface_set_avrcp_playback_status(U8 playback_status)
@@ -667,6 +709,41 @@ void bt_interface_set_can_play(void)
 {
 #ifdef CFG_AV
     bt_av_set_can_play();
+#endif
+}
+
+BOOL bt_interface_check_avrcp_role_valid(U8 role)
+{
+    if ((role == AVRCP_CT) || (role == AVRCP_TG))
+        return TRUE;
+    else
+        return FALSE;
+}
+
+bt_err_t bt_interface_set_avrcp_role(BTS2S_BD_ADDR *bd_addr, U8 role)
+{
+    bt_err_t ret = BT_EOK;
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+#ifdef CFG_AVRCP
+    for (U8 i = 0; i < AVRCP_MAX_CONNS; i++)
+    {
+        if (bd_eq(bd_addr, &bts2_app_data->avrcp_inst.con[i].rmt_bd) == TRUE)
+        {
+            if (bt_interface_check_avrcp_role_valid(role))
+            {
+                bts2_app_data->avrcp_inst.con[i].role = role;
+                return ret;
+            }
+            else
+            {
+                ret = BT_ERROR_INPARAM;
+                return ret;
+            }
+        }
+    }
+    return BT_ERROR_INPARAM;
+#else
+    return BT_ERROR_UNSUPPORTED;
 #endif
 }
 #endif

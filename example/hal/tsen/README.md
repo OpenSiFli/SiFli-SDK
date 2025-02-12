@@ -1,5 +1,5 @@
 # tsen示例
-源码路径 example\tsen\src
+源码路径 example/hal/tsen
 ## 支持的平台
 * em-lb525
 * em-lb587
@@ -9,18 +9,20 @@
 
 ## 例程的使用
 ### 编译和烧录
-```c
-> scons --board=em-lb525 -j8
 ```
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+scons --board=em-lb525 -j8
+```
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+```
+build_em-lb525_hcpu\uart_download.bat
 
->Uart Download
+Uart Download
 
->please input the serial port num:5
+please input the serial port num:5
+```
 
-关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
+关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
 ## 使用 TSEN 的方法
 以下是使用 TSEN 的一般步骤：
 

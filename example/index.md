@@ -4,14 +4,14 @@
 :titlesonly:
 :glob:
 
+get-started/index
 hal/index
 rt_device/index
+rt_driver/*
+ble/index
 multimedia/index
 multicore/index
-rt_driver/*
-storage/index
-system/index
+pm/index
 misc/index
-bt/index
 
 ```

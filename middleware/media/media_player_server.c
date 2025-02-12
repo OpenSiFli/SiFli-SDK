@@ -487,6 +487,7 @@ static void media_read_thread(void *p)
     rt_tick_t  io_start, io_ticks = 0;
     uint32_t io_read_size = 0;
 #endif /*DEBUG_IO_SPEED*/
+    int read_ret;
     ffmpeg_handle thiz = p;
     LOG_I("%s", __FUNCTION__);
 
@@ -566,24 +567,39 @@ static void media_read_thread(void *p)
         io_start = rt_tick_get_millisecond();
 #endif /*DEBUG_IO_SPEED*/
         TRACE_MARK_START(TRACEID_AV_PACKET);
-        if (av_read_frame(thiz->fmt_ctx, &pkt) < 0)
+        read_ret = av_read_frame(thiz->fmt_ctx, &pkt);
+        if (read_ret < 0)
         {
-
             TRACE_MARK_STOP(TRACEID_AV_PACKET);
             if (thiz->cfg.notify && !thiz->is_closing)
-                thiz->cfg.notify(thiz->user_data, e_ffmpeg_play_to_end, 0);
-
-            if (thiz->cfg.is_loop)
             {
-                pkt.data = NULL;
-                pkt.size = 0;
-                av_seek_frame(thiz->fmt_ctx, 0, 0, AVSEEK_FLAG_BACKWARD);
-                thiz->frame_index = 0;
-                thiz->last_seconds = -1;
-                continue;
+                if (read_ret == AVERROR_EOF)
+                {
+                    LOG_I("read frame error eof");
+                    if (thiz->cfg.is_loop)
+                    {
+                        pkt.data = NULL;
+                        pkt.size = 0;
+                        av_seek_frame(thiz->fmt_ctx, 0, 0, AVSEEK_FLAG_BACKWARD);
+                        thiz->frame_index = 0;
+                        thiz->last_seconds = -1;
+                        thiz->cfg.notify(thiz->user_data, e_ffmpeg_play_to_loop, 0);
+                        continue;
+                    }
+                    else
+                    {
+                        thiz->cfg.notify(thiz->user_data, e_ffmpeg_play_to_end, 0);
+                    }
+                }
+                else
+                {
+                    LOG_I("read frame error=%d", read_ret);
+                    thiz->cfg.notify(thiz->user_data, e_ffmpeg_play_to_error, 0);
+                    thiz->cfg.notify(thiz->user_data, e_ffmpeg_play_to_end, 0);
+                }
             }
-            else
-                break;
+
+            break;
 
         }
         TRACE_MARK_STOP(TRACEID_AV_PACKET);
@@ -1583,7 +1599,7 @@ int ffmpeg_open(ffmpeg_handle *return_hanlde, ffmpeg_config_t *cfg, uint32_t use
     rt_thread_startup(thiz->av_pkt_read_thread);
 
     rt_uint32_t evt = 0;
-    os_event_flags_wait(thiz->evt_init, EVT_INIT_OK | EVT_INIT_FAILED, OS_EVENT_FLAG_WAIT_ANY | OS_EVENT_FLAG_CLEAR, 5000, &evt);
+    os_event_flags_wait(thiz->evt_init, EVT_INIT_OK | EVT_INIT_FAILED, OS_EVENT_FLAG_WAIT_ANY | OS_EVENT_FLAG_CLEAR, 20000, &evt);
 
     ret = RT_ERROR;
     if (evt & EVT_INIT_OK)
@@ -1614,6 +1630,12 @@ int ffmpeg_open(ffmpeg_handle *return_hanlde, ffmpeg_config_t *cfg, uint32_t use
 
     if (ret != RT_EOK)
     {
+        while (rt_thread_find("ffmpeg_read"))
+        {
+            rt_thread_mdelay(100);
+            LOG_I("wait ffmpeg_read exit");
+        }
+
         if (g_player)
         {
             g_player->magic = ~FFMPEG_HANDLE_MAGIC;

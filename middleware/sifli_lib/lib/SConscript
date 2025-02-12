@@ -16,6 +16,9 @@ if  GetDepend('FREETYPE_TINY_FONT'):
     if GetDepend('BSP_USING_PC_SIMULATOR'):
         if os.path.isfile(os.path.join(cwd, 'Tiny_font_msvc.lib')):
             lib=['Tiny_font_msvc']
+    elif rtconfig.PLATFORM=='gcc':
+        if os.path.isfile(os.path.join(cwd, 'libTiny_font_gcc.a')):
+            lib=['Tiny_font_gcc']    
     else:
         if os.path.isfile(os.path.join(cwd, 'Tiny_font_rvds.lib')):
             lib=['Tiny_font_rvds']    

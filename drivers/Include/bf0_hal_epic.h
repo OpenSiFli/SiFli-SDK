@@ -354,9 +354,7 @@ typedef struct
     /** data size in bytes, only valid if data is in ezip format and saved in NAND */
     uint32_t data_size;
 
-#ifdef EPIC_SUPPORT_YUV
     EPIC_YUVCfgTypeDef  yuv;  /**< YUV data*/
-#endif /* EPIC_SUPPORT_YUV */
 
     uint16_t lookup_table_size;  /**< Lookup table color numbers*/
 } EPIC_BlendingDataType;
@@ -401,9 +399,7 @@ typedef struct
     /** data size in bytes, only valid if data is in ezip format and saved in NAND */
     uint32_t data_size;
 
-#ifdef EPIC_SUPPORT_YUV
     EPIC_YUVCfgTypeDef  yuv;  /**< YUV data*/
-#endif /* EPIC_SUPPORT_YUV */
 
     uint16_t lookup_table_size;  /**< Lookup table color numbers, maximum is 'EPIC_MAX_LOOKUP_TABLE_CNT' */
     /****** Keep above members as same as struct 'EPIC_BlendingDataType'  *************/

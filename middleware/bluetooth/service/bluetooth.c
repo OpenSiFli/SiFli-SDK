@@ -521,6 +521,9 @@ RT_USED void ble_standby_sleep_after_handler()
 #if (defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X)|| defined(SOC_SF32LB52X)) && defined(BF0_LCPU)
     rf_ptc_config(0);
 #endif
+#if defined(SF_WLAN_COEX) && defined(BF0_LCPU)
+    wlan_coex_config();
+#endif
 }
 #endif // !ROM_ATTR
 #endif
@@ -687,6 +690,11 @@ __ROM_USED int bluetooth_init(void)
     *((volatile uint32_t *)(LPSYS_DEBUG_SWITCH_ADDRESS)) |= LPSYS_DEBUG_SWITCH_BLE_PATTER;
     *((volatile uint32_t *)(LPSYS_BLE_DEBUG_SWITCH_ADDRESS)) = 0x8383;
     //hwp_lpsys_aon->DBGMUX |= (2 << LPSYS_AON_DBGMUX_PB44_SEL_Pos) | (2 << LPSYS_AON_DBGMUX_PB43_SEL_Pos);
+#endif
+
+#if defined(SF_WLAN_COEX) && defined(BF0_LCPU)
+    //pta_io_config();
+    wlan_coex_config();
 #endif
     return 0;
 

@@ -1983,7 +1983,7 @@ def EndBuilding(target, program = None):
     if not GetOption('help') and not GetOption('target'):
         if not os.path.exists(rtconfig.EXEC_PATH) and not GetDepend('BSP_USING_PC_SIMULATOR'):
             logging.error("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
-            need_exit = True
+            exit(1)
 
     if need_exit:
         exit(0)
@@ -2426,6 +2426,14 @@ def LoadRtconfig(board):
     import rtconfig
     
     board_path1, board_path2 = GetBoardPath(board)
+    if not os.path.exists(board_path1):
+        logging.error('Board path "{}" not found'.format(board_path1))
+        exit(1)
+
+    if not os.path.exists(board_path2):
+        logging.error('Board path "{}"" not found'.format(board_path2))
+        exit(1)
+
     proj_rtconfig = imp.load_source('main', os.path.join(board_path2, 'rtconfig.py'))
     MergeRtconfig(proj_rtconfig, rtconfig)
         

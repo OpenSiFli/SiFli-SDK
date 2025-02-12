@@ -1,7 +1,7 @@
 (example-button)=
 
-# button示例
-源码路径example\button\src
+# 按键
+源码路径：example/misc/button
 ## 支持的平台
 * em-lb525
 * em-lb587
@@ -21,16 +21,19 @@
 ### 编译和烧录
 
 切换到例程project目录，运行scons命令执行编译(board=版型)：
-```c
-> scons --board=em-lb525 -j8
 ```
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+scons --board=em-lb525 -j8
+```
 
-> build_em-lb525_hcpu\uart_download.bat
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
->Uart Download
+```
+build_em-lb525_hcpu\uart_download.bat
 
->please input the serial port num:5
+Uart Download
+
+please input the serial port num:5
+```
 
 确认rtconfig.h中包含下面两个宏
 支持的最大按键数和长按动作检测阈值由以下宏配置

@@ -1,5 +1,5 @@
 # I2C EEPROM示例
-源码路径：example\hal\i2c\eeprom
+源码路径：example/hal/i2c/eeprom
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525
@@ -31,25 +31,32 @@ AT24CO8SC的SDA,SCK分别按照下表，根据开发板型号进行连接
 #### SF525工程代码编译
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb525 -j8
+```
+scons --board=em-lb525 -j8
+```
 
-切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+```
+build_em-lb525_hcpu\uart_download.bat
 
->Uart Download
+Uart Download
 
->please input the serial port num:5
+please input the serial port num:5
+```
 
 #### SF587工程代码编译
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb587 -j8
+```
+scons --board=em-lb587 -j8
+```
 
-切换到例程`project/build_xx`目录，运行`download.bat`，程序通过JLink自动下载：
+`build_em-lb525_hcpu\download.bat`，程序通过JLink自动下载：
 
-> build_em-lb587_hcpu\download.bat
-
+```
+build_em-lb587_hcpu\download.bat
+```
 
 ### 例程输出结果展示:
 * log输出:

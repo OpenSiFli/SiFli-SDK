@@ -347,9 +347,19 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PB04, LCDC2_SPI_DIO2, PIN_PULLUP, 0);
     //HAL_PIN_Set(PAD_PB05, LCDC2_SPI_RSTB, PIN_PULLUP, 0); Use default gpio mode
     HAL_PIN_Set(PAD_PB06, LCDC2_SPI_DIO3, PIN_PULLUP, 0);
+#ifdef BF0_LCPU
+#ifndef SF_WLAN_COEX
     HAL_PIN_Set(PAD_PB08, LCDC2_SPI_CS,   PIN_PULLUP, 0);
     HAL_PIN_Set(PAD_PB09, LCDC2_SPI_DIO0, PIN_PULLUP, 0);
     HAL_PIN_Set(PAD_PB10, LCDC2_SPI_CLK,  PIN_PULLUP, 0);
+#else
+    {
+        extern void pta_io_config(void);
+        pta_io_config();
+    }
+#endif
+#endif
+
 #endif
 
 #if !defined(BSP_LCDC_USING_JDI_PARALLEL)
