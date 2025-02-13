@@ -44,4 +44,4 @@ AddFTAB(SIFLI_SDK,rtconfig.CHIP)
 fs_bin=FileSystemBuild( "../disk", env)
 AddCustomImg("fs_root",bin=[fs_bin])
 
-GenDownloaScript(env)
+GenDownloadScript(env)
