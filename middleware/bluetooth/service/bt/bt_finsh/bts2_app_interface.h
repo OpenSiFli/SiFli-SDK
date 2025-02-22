@@ -368,19 +368,19 @@ void bt_interface_avrcp_previous(void);
 void bt_interface_avrcp_rewind(void);
 
 /**
- * @brief            Adjust the volume of mobile phone through avrcp
+ * @brief            As CT role to adjust the volume of remote device through avrcp
  * @param[in] volume The volume value you want to adjust
  * @return           The result of adjusting the volume
  *
  **/
-bt_err_t bt_interface_avrcp_volume_changed(U8 volume);
+bt_err_t bt_interface_avrcp_set_absolute_volume_as_ct_role(U8 volume);
 
 /**
- * @brief            Adjust the absolute volume by avrcp command
+ * @brief            As TG role to adjust the volume of remote device through avrcp
  * @param[in] volume The volume value you want to adjust
  *
  **/
-bt_err_t bt_interface_avrcp_set_absolute_volume(U8 volume);
+bt_err_t bt_interface_avrcp_set_absolute_volume_as_tg_role(U8 volume);
 
 /**
  * @brief            playback status register request

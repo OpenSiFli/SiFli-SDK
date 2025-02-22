@@ -142,6 +142,9 @@
     #define DFU_RAM_RUN_STATE_START_ADDR 0xFFFFFFFF
 #endif
 #define DFU_RAM_RUN_ADDR DFU_RAM_RUN_STATE_START_ADDR
+#ifndef DFU_DOWNLOAD_REGION_START_ADDR
+    #define DFU_DOWNLOAD_REGION_START_ADDR 0xFFFFFFFF
+#endif
 
 
 #define DFU_FLASH_IMG_IDX(flash_id)  ((flash_id)-(DFU_FLASH_IMG_LCPU))
@@ -386,6 +389,8 @@ typedef struct
 #define FLASH_UNINIT_32     0xffffffff
 #define FLASH_UNINIT_8      0xff
 
+#define DFU_OFFLINE_INSTALL 0x7F
+#define DFU_OFFLINE_INSTALL_FINISH 0x3F
 
 struct sec_configuration
 {
@@ -406,6 +411,13 @@ typedef struct
     uint8_t running_target;
 } dfu_nand_info;
 
+typedef struct
+{
+    uint32_t magic;
+    uint8_t version;
+    uint8_t install_state;
+} dfu_install_info;
+
 typedef enum
 {
     DFU_RAM_STATE_NONE,
@@ -413,6 +425,13 @@ typedef enum
     DFU_RAM_STATE_UPDATED,
     DFU_RAM_STATE_UPDATE_FAIL,
 } dfu_ram_state_t;
+
+typedef enum
+{
+    DFU_FORCE_MODE_NONE,
+    DFU_FORCE_MODE_REBOOT_TO_USER,
+    DFU_FORCE_MODE_REBOOT_TO_OFFLINE_OTA_MANAGER,
+} dfu_force_mode_t;
 
 typedef struct
 {

@@ -53,6 +53,7 @@
 
 #include "dfu_internal.h"
 #include "bf0_sibles.h"
+
 #ifdef BLUETOOTH
     #include "bf0_sibles_internal.h"
 #endif
@@ -386,6 +387,7 @@ int8_t dfu_protocol_packet_send(uint8_t *data)
 {
     if (!data)
         return -1;
+#ifdef BLUETOOTH
     dfu_protocol_port_env_t *env = dfu_protocol_get_env();
     ble_serial_tran_data_t t_data;
     dfu_tran_protocol_t *msg = dfu_packet2msg(data);
@@ -396,14 +398,14 @@ int8_t dfu_protocol_packet_send(uint8_t *data)
 #if !defined(BSP_BLE_SIBLES) && defined(BSP_USING_DATA_SVC)
     ble_dfu_service_send_data(env, &t_data);
 #else
-#ifdef BLUETOOTH
     ble_serial_tran_send_data(&t_data);
 #endif
-#endif
     free(msg);
+#endif
     return 0;
 }
 
+#ifdef BSP_BLE_SERIAL_TRANSMISSION
 static void ble_dfu_serial_callback(uint8_t event, uint8_t *data)
 {
     if (!data)
@@ -459,7 +461,7 @@ static void ble_dfu_serial_callback(uint8_t event, uint8_t *data)
 
 
 }
-
+#endif
 
 
 
@@ -628,11 +630,22 @@ uint8_t dfu_set_last_packet_wait()
 #endif
 }
 
-void dfu_record_current_tx()
+uint8_t dfu_record_current_tx()
 {
 #ifdef BLUETOOTH
     dfu_protocol_port_env_t *env = dfu_protocol_get_env();
     env->rc.last_tx_packet = sibles_get_tx_pkts();
+
+    if (env->rc.is_connected == 0)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+#else
+    return 0;
 #endif
 }
 

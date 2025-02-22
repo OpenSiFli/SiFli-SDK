@@ -53,17 +53,19 @@
 
 #include "dfu.h"
 #include "drv_flash.h"
-#include "mbedtls/cipher.h"
-#include "mbedtls/pk.h"
-#include "mbedtls/sha256.h"
-
+#ifndef OTA_INSTALL_OFFLINE
+    #include "mbedtls/cipher.h"
+    #include "mbedtls/pk.h"
+    #include "mbedtls/sha256.h"
+#endif
 #include "dfu_internal.h"
 
 #include "log.h"
 struct sec_configuration *g_sec_config;
-static uint8_t config_malloc = 0;
 
-static mbedtls_sha256_context ctx2;
+#ifndef OTA_INSTALL_OFFLINE
+    static mbedtls_sha256_context ctx2;
+#endif
 
 DFU_NON_RET_SECT_BEGIN
 static uint8_t dfu_hash[DFU_SIG_HASH_SIZE];
@@ -172,41 +174,19 @@ void dfu_sec_init(void)
 
 #ifdef OTA_56X_NAND
 #ifdef OTA_NAND_ONLY
-    config_malloc = 0;
+    g_sec_config = malloc(sizeof(struct sec_configuration));
+    dfu_packet_read_flash_ext(0x62000000, 0, (uint8_t *)g_sec_config, sizeof(struct sec_configuration));
 #else
     g_sec_config = (struct sec_configuration *)0x1c000000;
 #endif
 #endif
     if (dfu_secure_boot_check() == 0)
     {
+        LOG_I("dfu_secure_boot_check");
         g_dfu_efuse_read_hook = dfu_get_efuse_hook;
     }
-}
 
-void dfu_sec_config_malloc()
-{
-#ifdef OTA_NAND_ONLY
-    LOG_I("dfu_sec_config_malloc");
-    if (config_malloc == 0)
-    {
-        g_sec_config = malloc(sizeof(struct sec_configuration));
-        OS_ASSERT(g_sec_config);
-        config_malloc = 1;
-    }
-    dfu_packet_read_flash_ext(0x62000000, 0, (uint8_t *)g_sec_config, sizeof(struct sec_configuration));
-#endif
-}
 
-void dfu_sec_config_free()
-{
-#ifdef OTA_NAND_ONLY
-    LOG_I("dfu_sec_config_free");
-    if (config_malloc == 1)
-    {
-        config_malloc = 0;
-        free(g_sec_config);
-    }
-#endif
 }
 
 void dump_config()
@@ -289,6 +269,7 @@ uint8_t *dfu_get_counter(uint32_t offset)
 {
     int i;
     sifli_hw_efuse_read(EFUSE_ID_SIG_HASH, g_aes_ctr_iv, DFU_SIG_HASH_SIZE);
+    LOG_HEX("g_aes_ctr_iv", 16, g_aes_ctr_iv, DFU_SIG_HASH_SIZE);
     memset(&g_aes_ctr_iv[8], 0, 8);
     offset >>= 4;   // Counter is increased every 16 bytes
     for (i = 15; i >= 12 && offset > 0; i--, offset >>= 8)
@@ -298,50 +279,43 @@ uint8_t *dfu_get_counter(uint32_t offset)
     return g_aes_ctr_iv;
 }
 
-
 uint8_t *dfu_dec_verify(uint8_t *key, uint32_t offset,
                         uint8_t *in_data, uint8_t *out_data, int size, uint8_t *hash)
 {
+#ifndef OTA_INSTALL_OFFLINE
     uint8_t *r = NULL;
 
-#ifdef SOC_SF32LB52X
     uint8_t *temp_out;
-    int align_size = (size / 32 + 1) * 32;
-    temp_out = rt_malloc(align_size + 32);
+    int align_size = (size / 16 + 1) * 16;
+    temp_out = rt_malloc(align_size);
     OS_ASSERT(temp_out);
 
-    uint8_t align_offset = 0;
-    if ((uint32_t)temp_out % 32 != 0)
-    {
-        align_offset = 32 - (uint32_t)temp_out % 32;
-    }
+    SCB_InvalidateDCache_by_Addr(temp_out, align_size);
+    SCB_InvalidateICache_by_Addr(temp_out, align_size);
 
-    SCB_InvalidateDCache_by_Addr(temp_out + align_offset, align_size);
-    SCB_InvalidateICache_by_Addr(temp_out + align_offset, align_size);
-
-    sifli_hw_dec(key, in_data, temp_out + align_offset, size, offset);
-    rt_memcpy(out_data, temp_out + align_offset, size);
+    sifli_hw_dec(key, in_data, temp_out, size, offset);
+    memcpy(out_data, temp_out, size);
     rt_free(temp_out);
-#else
-    sifli_hw_dec(key, in_data, out_data, size, offset);
-#endif
 
     mbedtls_sha256_init(&ctx2);
     mbedtls_sha256_starts(&ctx2, 0); /* SHA-256, not 224 */
     mbedtls_sha256_update(&ctx2, out_data, size);
 
     uint8_t temp_hash[32] = {0};
-    memcpy(temp_hash, dfu_hash, DFU_SIG_HASH_SIZE);
     mbedtls_sha256_finish(&ctx2, temp_hash);
     memcpy(dfu_hash, temp_hash, DFU_SIG_HASH_SIZE);
 
     if (memcmp(dfu_hash, hash, DFU_SIG_HASH_SIZE) == 0)
         r = out_data;
     return r;
+#else
+    return 0;
+#endif
 }
 
 int8_t dfu_integrate_verify(uint8_t *in_data, int size, uint8_t *hash)
 {
+#ifndef OTA_INSTALL_OFFLINE
     int8_t ret = -1;
 
     mbedtls_sha256_init(&ctx2);
@@ -356,13 +330,18 @@ int8_t dfu_integrate_verify(uint8_t *in_data, int size, uint8_t *hash)
     if (memcmp(dfu_hash, hash, DFU_SIG_HASH_SIZE) == 0)
         ret = 0;
     return ret;
+#else
+    return 0;
+#endif
 }
+
 
 uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
 {
+#ifndef OTA_INSTALL_OFFLINE
 #ifdef OTA_55X
     dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
-    if (env->prog.dfu_ID == DFU_ID_OTA_MANAGER)
+    if (env->mode == DFU_CTRL_NORMAL_MODE && env->ota_state.dfu_ID == DFU_ID_OTA_MANAGER)
     {
         curr_info = &env->ota_state.fw_context.code_img.curr_img_info;
     }
@@ -375,6 +354,7 @@ uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
     uint32_t read_size = DFU_MAX_BLK_SIZE;
     uint8_t status = DFU_ERR_FW_INVALID;
     uint8_t *sig_pub_key = dfu_get_public_key();
+    uint32_t cal_count = 0;
     {
         // Calculate HASH
         mbedtls_sha256_context ctx2;
@@ -394,6 +374,17 @@ uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
             if (size < read_size)
                 break;
             offset += size;
+            cal_count++;
+            if (cal_count % DFU_HASH_VERIFY_WDT_PET_FREQUENCY == 0)
+            {
+#ifdef RT_USING_WDT
+                uint32_t status = rt_hw_watchdog_get_status();
+                if (0 != status)
+                {
+                    rt_hw_watchdog_pet();
+                }
+#endif
+            }
         }
         while (1);
         mbedtls_sha256_finish(&ctx2, dfu_temp);
@@ -421,10 +412,14 @@ uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
 
     return 0;
 #endif
+#else
+    return 0;
+#endif
 }
 
 uint8_t dfu_img_verification_ext(dfu_ctrl_ext_env_t *env)
 {
+#ifndef OTA_INSTALL_OFFLINE
     dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
     dfu_image_header_int_t *img_hdr = curr_info->header;
     int offset = 0;
@@ -435,6 +430,7 @@ uint8_t dfu_img_verification_ext(dfu_ctrl_ext_env_t *env)
     uint32_t read_size = DFU_MAX_BLK_SIZE;
     uint8_t status = DFU_ERR_FW_INVALID;
     uint8_t *sig_pub_key = dfu_get_public_key();
+    uint32_t cal_count = 0;
     {
         // Calculate HASH
         mbedtls_sha256_context ctx2;
@@ -454,6 +450,17 @@ uint8_t dfu_img_verification_ext(dfu_ctrl_ext_env_t *env)
             if (size < read_size)
                 break;
             offset += size;
+            cal_count++;
+            if (cal_count % DFU_HASH_VERIFY_WDT_PET_FREQUENCY == 0)
+            {
+#ifdef RT_USING_WDT
+                uint32_t status = rt_hw_watchdog_get_status();
+                if (0 != status)
+                {
+                    rt_hw_watchdog_pet();
+                }
+#endif
+            }
         }
         while (1);
         mbedtls_sha256_finish(&ctx2, dfu_temp);
@@ -478,6 +485,9 @@ uint8_t dfu_img_verification_ext(dfu_ctrl_ext_env_t *env)
     }
     free(dfu_temp);
     return status;
+#else
+    return 0;
+#endif
 }
 
 
@@ -495,6 +505,7 @@ int dfu_encrypt_packet(dfu_image_header_int_t *header, uint32_t offset, uint8_t 
 
 int8_t dfu_ctrl_ctrl_header_sig_verify(dfu_ctrl_env_t *env, uint8_t *packet, uint16_t total_len, uint8_t *sig)
 {
+#ifndef OTA_INSTALL_OFFLINE
     uint16_t packet_size = total_len - DFU_SIG_SIZE;
     //uint8_t *sig = (uint8_t *)packet + packet_size;
     uint8_t hash[DFU_IMG_HASH_SIZE];
@@ -526,11 +537,14 @@ int8_t dfu_ctrl_ctrl_header_sig_verify(dfu_ctrl_env_t *env, uint8_t *packet, uin
 
     }
     return ret;
-
+#else
+    return 0;
+#endif
 }
 
 int8_t dfu_ctrl_ctrl_header_sig_verify_ext(uint8_t *packet, uint16_t total_len, uint8_t *sig)
 {
+#ifndef OTA_INSTALL_OFFLINE
     uint16_t packet_size = total_len - DFU_SIG_SIZE;
     //uint8_t *sig = (uint8_t *)packet + packet_size;
     uint8_t hash[DFU_IMG_HASH_SIZE];
@@ -562,9 +576,10 @@ int8_t dfu_ctrl_ctrl_header_sig_verify_ext(uint8_t *packet, uint16_t total_len, 
 
     }
     return ret;
-
+#else
+    return 0;
+#endif
 }
-
 
 static void dfu_update_sec_flash(struct sec_configuration *sec_config)
 {
@@ -576,6 +591,7 @@ static void dfu_update_sec_flash(struct sec_configuration *sec_config)
 
 void dfu_update_img_header(dfu_ctrl_env_t *env)
 {
+#if 0
     dfu_dl_image_header_t *dl_hdr = &env->prog.fw_context.code_img;
     struct image_header_enc *enc_hdr;
     struct sec_configuration *cache = (struct sec_configuration *)malloc(sizeof(struct sec_configuration));
@@ -596,6 +612,7 @@ void dfu_update_img_header(dfu_ctrl_env_t *env)
     }
     dfu_update_sec_flash(cache);
     free((uint8_t *)cache);
+#endif
 }
 
 void dfu_update_img_header_ext(dfu_ctrl_ext_env_t *env)
@@ -661,5 +678,62 @@ void dfu_bootjump_sec_config(dfu_ctrl_env_t *env, uint8_t *dest)
 #endif /* OTA_55X */
 }
 
+static uint32_t CrcTable[256] =
+{
+    0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b,
+    0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61,
+    0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd, 0x4c11db70, 0x48d0c6c7,
+    0x4593e01e, 0x4152fda9, 0x5f15adac, 0x5bd4b01b, 0x569796c2, 0x52568b75,
+    0x6a1936c8, 0x6ed82b7f, 0x639b0da6, 0x675a1011, 0x791d4014, 0x7ddc5da3,
+    0x709f7b7a, 0x745e66cd, 0x9823b6e0, 0x9ce2ab57, 0x91a18d8e, 0x95609039,
+    0x8b27c03c, 0x8fe6dd8b, 0x82a5fb52, 0x8664e6e5, 0xbe2b5b58, 0xbaea46ef,
+    0xb7a96036, 0xb3687d81, 0xad2f2d84, 0xa9ee3033, 0xa4ad16ea, 0xa06c0b5d,
+    0xd4326d90, 0xd0f37027, 0xddb056fe, 0xd9714b49, 0xc7361b4c, 0xc3f706fb,
+    0xceb42022, 0xca753d95, 0xf23a8028, 0xf6fb9d9f, 0xfbb8bb46, 0xff79a6f1,
+    0xe13ef6f4, 0xe5ffeb43, 0xe8bccd9a, 0xec7dd02d, 0x34867077, 0x30476dc0,
+    0x3d044b19, 0x39c556ae, 0x278206ab, 0x23431b1c, 0x2e003dc5, 0x2ac12072,
+    0x128e9dcf, 0x164f8078, 0x1b0ca6a1, 0x1fcdbb16, 0x018aeb13, 0x054bf6a4,
+    0x0808d07d, 0x0cc9cdca, 0x7897ab07, 0x7c56b6b0, 0x71159069, 0x75d48dde,
+    0x6b93dddb, 0x6f52c06c, 0x6211e6b5, 0x66d0fb02, 0x5e9f46bf, 0x5a5e5b08,
+    0x571d7dd1, 0x53dc6066, 0x4d9b3063, 0x495a2dd4, 0x44190b0d, 0x40d816ba,
+    0xaca5c697, 0xa864db20, 0xa527fdf9, 0xa1e6e04e, 0xbfa1b04b, 0xbb60adfc,
+    0xb6238b25, 0xb2e29692, 0x8aad2b2f, 0x8e6c3698, 0x832f1041, 0x87ee0df6,
+    0x99a95df3, 0x9d684044, 0x902b669d, 0x94ea7b2a, 0xe0b41de7, 0xe4750050,
+    0xe9362689, 0xedf73b3e, 0xf3b06b3b, 0xf771768c, 0xfa325055, 0xfef34de2,
+    0xc6bcf05f, 0xc27dede8, 0xcf3ecb31, 0xcbffd686, 0xd5b88683, 0xd1799b34,
+    0xdc3abded, 0xd8fba05a, 0x690ce0ee, 0x6dcdfd59, 0x608edb80, 0x644fc637,
+    0x7a089632, 0x7ec98b85, 0x738aad5c, 0x774bb0eb, 0x4f040d56, 0x4bc510e1,
+    0x46863638, 0x42472b8f, 0x5c007b8a, 0x58c1663d, 0x558240e4, 0x51435d53,
+    0x251d3b9e, 0x21dc2629, 0x2c9f00f0, 0x285e1d47, 0x36194d42, 0x32d850f5,
+    0x3f9b762c, 0x3b5a6b9b, 0x0315d626, 0x07d4cb91, 0x0a97ed48, 0x0e56f0ff,
+    0x1011a0fa, 0x14d0bd4d, 0x19939b94, 0x1d528623, 0xf12f560e, 0xf5ee4bb9,
+    0xf8ad6d60, 0xfc6c70d7, 0xe22b20d2, 0xe6ea3d65, 0xeba91bbc, 0xef68060b,
+    0xd727bbb6, 0xd3e6a601, 0xdea580d8, 0xda649d6f, 0xc423cd6a, 0xc0e2d0dd,
+    0xcda1f604, 0xc960ebb3, 0xbd3e8d7e, 0xb9ff90c9, 0xb4bcb610, 0xb07daba7,
+    0xae3afba2, 0xaafbe615, 0xa7b8c0cc, 0xa379dd7b, 0x9b3660c6, 0x9ff77d71,
+    0x92b45ba8, 0x9675461f, 0x8832161a, 0x8cf30bad, 0x81b02d74, 0x857130c3,
+    0x5d8a9099, 0x594b8d2e, 0x5408abf7, 0x50c9b640, 0x4e8ee645, 0x4a4ffbf2,
+    0x470cdd2b, 0x43cdc09c, 0x7b827d21, 0x7f436096, 0x7200464f, 0x76c15bf8,
+    0x68860bfd, 0x6c47164a, 0x61043093, 0x65c52d24, 0x119b4be9, 0x155a565e,
+    0x18197087, 0x1cd86d30, 0x029f3d35, 0x065e2082, 0x0b1d065b, 0x0fdc1bec,
+    0x3793a651, 0x3352bbe6, 0x3e119d3f, 0x3ad08088, 0x2497d08d, 0x2056cd3a,
+    0x2d15ebe3, 0x29d4f654, 0xc5a92679, 0xc1683bce, 0xcc2b1d17, 0xc8ea00a0,
+    0xd6ad50a5, 0xd26c4d12, 0xdf2f6bcb, 0xdbee767c, 0xe3a1cbc1, 0xe760d676,
+    0xea23f0af, 0xeee2ed18, 0xf0a5bd1d, 0xf464a0aa, 0xf9278673, 0xfde69bc4,
+    0x89b8fd09, 0x8d79e0be, 0x803ac667, 0x84fbdbd0, 0x9abc8bd5, 0x9e7d9662,
+    0x933eb0bb, 0x97ffad0c, 0xafb010b1, 0xab710d06, 0xa6322bdf, 0xa2f33668,
+    0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
+};
+
+uint32_t dfu_crc32mpeg2(uint8_t *data, uint32_t len)
+{
+    uint32_t crc = 0xFFFFFFFF;
+
+    for (uint32_t i = 0; i < len; i++)
+    {
+        crc = (crc << 8) ^ CrcTable[((crc >> 24) ^ *data++) & 0xFF];
+    }
+    return crc;
+}
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

@@ -1,0 +1,116 @@
+[
+    {
+        "mem": "flash1", 
+        "base": "0x10000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00005000", 
+                "tags": [
+                    "FLASH_TABLE"
+                ], 
+                "img": "ftab",
+                "exec": "ftab"
+            },      
+            {
+                "offset": "0x00020000", 
+                "max_size": "0x00280000", 
+                "tags": [
+                    "HCPU_FLASH_CODE"
+                ], 
+                "img": "main:ER_IROM1.bin",
+                "exec": "main"
+            },
+            {
+                "offset": "0x002a0000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_DFU_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x002a4000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_BLE_REGION"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "psram1", 
+        "base": "0x60000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00400000", 
+                "tags": [
+                    "PSRAM_DATA"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "flash2", 
+        "base": "0x64000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00800000", 
+                "tags": [
+                    "DATA_REGION"
+                ],
+                "img": "main:ER_IROM2.bin"
+            }, 
+            {
+                "offset": "0x00800000", 
+                "max_size": "0x00800000", 
+                "img": "fs_root", 
+                "tags": [
+                    "FS_REGION"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "hpsys_ram", 
+        "base": "0x20000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x000fbb80", 
+                "tags": [
+                    "HCPU_RAM_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x000fbb80", 
+                "max_size": "0x00004080", 
+                "tags": [
+                    "HCPU_RO_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x000FFC00", 
+                "max_size": "0x00000400", 
+                "tags": [
+                    "HPSYS_MBOX"
+                ]
+            }, 
+            {
+                "offset": "0x000FFC00", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "HCPU2LCPU_MB_CH2_BUF"
+                ]
+            }, 
+            {
+                "offset": "0x000FFE00", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "HCPU2LCPU_MB_CH1_BUF"
+                ]
+            }
+        ]
+    }
+]

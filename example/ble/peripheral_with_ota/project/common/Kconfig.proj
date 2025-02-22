@@ -1,0 +1,17 @@
+config BF0_HCPU
+    bool
+    default y
+    
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y    
+    
+config EXTRA_LCPU_IMG
+    bool "using extra lcpu imag"
+	default n
+
+config ENABLE_DFU
+    bool "enable dfu and add dfu sub-project"
+	default n
+    

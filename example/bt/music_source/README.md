@@ -1,11 +1,14 @@
 # BT music source示例
 
-源码路径：[example/bt/music_source](#)
+源码路径：example/bt/music_source
 
+{#Platform_music_src}
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525
 + eh-lb563
++ eh-lb567
++ eh-lb58x
 
 ## 概述
 <!-- 例程简介 -->
@@ -36,7 +39,7 @@
 
 ### 硬件需求
 运行该例程前，需要准备：
-+ 一块本例程支持的开发板（[支持的平台](#支持的平台)）。
++ 一块本例程支持的开发板（[支持的平台](#Platform_music_src)）。
 + 喇叭。
 
 ### menuconfig配置
@@ -56,7 +59,7 @@
 5. (`AUDIO_LOCAL_MUSIC`)
 ![AUDIO_LOCAL_MUSIC](./assets/mc_local_music.png)
 6. 预置音频文件，放到如下\disk\目录下即可预置下载：  
-[\example\bt\music_source\disk\test.mp3](#)
+* 音频文件在music_source/disk/test.mp3
 7. 使能蓝牙(`BLUETOOTH`)：
 ![BLUETOOTH](./assets/mc_bluetooth.png)
 8. 使能A2DP source和AVRCP：
@@ -80,7 +83,7 @@ $ ./uart_download.bat
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[快速上手](xxxxx)的相关介绍。
+关于编译、下载的详细步骤，请参考[快速入门](/quickstart/get-started.md)的相关介绍。
 
 ## 例程的预期结果
 <!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->

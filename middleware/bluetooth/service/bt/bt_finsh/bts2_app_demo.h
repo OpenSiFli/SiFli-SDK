@@ -304,8 +304,8 @@ typedef struct
     rt_timer_t     avrcp_time_handle;
     rt_timer_t     avrcp_vol_time_handle;
     rt_sem_t       volume_change_sem;
-    U8             tgRegStatus;//0:TG has not register absolute volume; 1:TG has register absolute volume.
-    U8             tgRegStatus1;
+    U8             abs_vol_support;//0:TG has not register absolute volume; 1:TG has register absolute volume.
+    U8             play_status_notify;
     U8             ab_volume;//the absolute volue be set.
     U8             tgTlable;
     U8             tgTlable_1;

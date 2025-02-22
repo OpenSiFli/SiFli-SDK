@@ -1,0 +1,6 @@
+.config
+config.h
+kconfiglist
+*.pyc
+build/*
+build_*/*

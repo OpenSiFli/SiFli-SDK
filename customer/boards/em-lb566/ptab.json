@@ -13,8 +13,8 @@
                 "exec": "ftab"
             },      
             {
-                "offset": "0x00020000", 
-                "max_size": "0x00020000", 
+                "offset": "0x00020000",
+                "max_size": "0x00020000",
                 "tags": [
                     "FLASH_BOOT_LOADER"
                 ], 
@@ -76,8 +76,31 @@
                 }
             }, 
             {
-                "offset": "0x00200000", 
-                "max_size": "0x00400000", 
+                "offset": "0x00220000",
+                "max_size": "0x00060000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "img": "dfu",
+                "exec": "dfu",
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "base",
+                        "xip"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00280000",
+                "max_size": "0x00120000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {
+                "offset": "0x003A0000",
+                "max_size": "0x00260000",
                 "img": "fs_root", 
                 "tags": [
                     "FS_REGION"

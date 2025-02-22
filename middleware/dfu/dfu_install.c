@@ -61,6 +61,7 @@
 #ifdef DFU_DECOMPRESS_USING_SOFTWARE
     #include "zlib.h"
 #endif
+#define LOG_TAG "DFUINSTALL"
 #include "log.h"
 
 #include "bf0_hal_ezip.h"
@@ -83,6 +84,7 @@
 #else
     #define CB_IS_IN_EZIP_ADDR_RANGE(addr)  (true)
 #endif
+uint32_t g_uncompress_len;
 
 static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint8_t *uncompress_buf, uint32_t *pksize, uint8_t *compress_buf, uint32_t *packet_len,
                           uint32_t *total_uncompress_len, uint32_t *uncompress_offset)
@@ -107,6 +109,8 @@ static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint
         EZIP_DecodeConfigTypeDef config;
         EZIP_HandleTypeDef ezip_handle = {0};
 
+        SCB_InvalidateDCache_by_Addr(temp_compress_buf, compress_len);
+        SCB_InvalidateDCache_by_Addr(uncompress_buf, *pksize);
         config.input = temp_compress_buf;
         config.output = uncompress_buf;
         config.start_x = 0;
@@ -115,8 +119,13 @@ static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint
         config.height = 0;
         config.work_mode = HAL_EZIP_MODE_GZIP;
         config.output_mode = HAL_EZIP_OUTPUT_AHB;
+#ifndef hwp_ezip
+#define hwp_ezip hwp_ezip1
+#endif
         ezip_handle.Instance = hwp_ezip;
         HAL_EZIP_Init(&ezip_handle);
+        SCB_InvalidateDCache_by_Addr(temp_compress_buf, compress_len);
+        SCB_InvalidateDCache_by_Addr(uncompress_buf, *pksize);
 
         // disbale interrupt
         register rt_base_t ret;
@@ -144,6 +153,7 @@ static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint
         dfu_packet_write_flash(header, *uncompress_offset, uncompress_buf, *pksize);
     }
     //LOG_D("pk len %d", *packet_len);
+    //dfu_ctrl_update_install_progress(header->img_id, *uncompress_offset, g_uncompress_len);
     RT_ASSERT(*total_uncompress_len >= *pksize);
     *total_uncompress_len -= *pksize;
     *uncompress_offset += *pksize;
@@ -151,7 +161,40 @@ static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint
 
 }
 
-uint32_t g_uncompress_len;
+static int dfu_full_img_install_flash(dfu_ctrl_env_t *env, uint8_t *dfu_key, dfu_image_header_int_t *header)
+{
+    dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
+    curr_info->img_id = header->img_id;
+    curr_info->img_state = DFU_CTRL_IMG_STATE_DOWNLOADING;
+    curr_info->header = header;
+
+    header->flag &= ~DFU_FLAG_COMPRESS;
+    dfu_packet_erase_flash(header, 0, header->length);
+
+    uint32_t copy_offset = 0;
+    uint16_t copy_size = 4096;
+    uint8_t *copy_buf = malloc(copy_size);
+    while (copy_offset < header->length)
+    {
+        if (copy_offset + copy_size > header->length)
+        {
+            copy_size = header->length - copy_offset;
+        }
+
+        header->flag |= DFU_FLAG_COMPRESS;
+        dfu_read_storage_data(header, copy_offset, copy_buf, copy_size);
+
+        header->flag &= ~DFU_FLAG_COMPRESS;
+        dfu_packet_write_flash(header, copy_offset, copy_buf, copy_size);
+
+        copy_offset += copy_size;
+
+        //dfu_ctrl_update_install_progress(header->img_id, copy_offset, header->length);
+    }
+
+    free(copy_buf);
+    return 0;
+}
 
 static int dfu_img_install_flash(dfu_ctrl_env_t *env, uint8_t *dfu_key, dfu_image_header_int_t *header)
 {
@@ -318,7 +361,7 @@ static int dfu_img_install_flash(dfu_ctrl_env_t *env, uint8_t *dfu_key, dfu_imag
                 left_size += sizeof(dfu_compress_packet_header_t);
                 left_len -= sizeof(dfu_compress_packet_header_t);
 
-                while (packet_len < left_len)
+                while ((packet_len < left_len) || ((packet_len == left_len) && (total_len == 0)))
                 {
 
                     r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, dfu_temp + left_size,
@@ -400,7 +443,7 @@ static int dfu_img_install_flash(dfu_ctrl_env_t *env, uint8_t *dfu_key, dfu_imag
             temp_left = blksize + blk_offset - temp_offset;
             blk_offset = 0;
             // Handle compress pksize smaller than bksize
-            while (packet_len < temp_left)
+            while ((packet_len < temp_left) || ((packet_len == temp_left) && (total_len == 0)))
             {
                 r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, dfu_temp + temp_offset,
                                    &packet_len, &total_uncompress_len, &uncompress_offset);
@@ -444,6 +487,7 @@ static int dfu_img_install_flash(dfu_ctrl_env_t *env, uint8_t *dfu_key, dfu_imag
     }
 
 END:
+    //dfu_ctrl_update_install_progress(header->img_id, g_uncompress_len, g_uncompress_len);
     LOG_I("total len %d, uncom len %d, compress buf %x\r\n", total_len, total_uncompress_len, compress_buf);
     //RT_ASSERT(compress_buf == NULL);
     free(uncompress_buf);
@@ -453,7 +497,10 @@ END:
     if (r == DFU_SUCCESS)
     {
         curr_info->img_state = DFU_CTRL_IMG_STATE_DOWNLOADED;
-        curr_info->header->length = total_hdr_len;
+        if (env->prog.dfu_ID != DFU_ID_CODE_BACKGROUND)
+        {
+            curr_info->header->length = total_hdr_len;
+        }
         dfu_ctrl_update_prog_info(env);
     }
 
@@ -548,6 +595,348 @@ int dfu_img_install_lcpu_rom_patch(dfu_ctrl_env_t *env)
     return r;
 }
 
+int dfu_image_install_flash_offline(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag)
+{
+    if (image_flag == 0)
+    {
+        LOG_I("dfu_image_install_flash_offline copy");
+        dfu_image_header_int_t *header = malloc(sizeof(dfu_image_header_int_t));
+        header->flag = 0;
+        header->img_id = image_id;
+        header->length = length;
+
+        dfu_packet_erase_flash(header, 0, length);
+
+        uint32_t process_len = 0;
+        uint32_t copy_size = 2048;
+        uint8_t *copy_data = malloc(copy_size);
+
+        while (process_len < length)
+        {
+            if (process_len + copy_size >= length)
+            {
+                copy_size = length - process_len;
+            }
+
+            dfu_flash_read(DFU_DOWNLOAD_REGION_START_ADDR + image_offset + process_len, copy_data, copy_size);
+            dfu_packet_write_flash(header, process_len, copy_data, copy_size);
+
+            process_len += copy_size;
+        }
+
+        free(copy_data);
+        free(header);
+        return 0;
+    }
+
+    LOG_I("dfu_image_install_flash_offline");
+    dfu_image_header_int_t *header = malloc(sizeof(dfu_image_header_int_t));
+
+    uint8_t *dfu_key = NULL;
+
+    uint8_t img_header_get = 1;
+    uint32_t total_len, total_uncompress_len, packet_len, total_hdr_len = 0, uncompress_offset = 0;
+    uint8_t *compress_buf = NULL, *uncompress_buf = NULL;
+    uint8_t *dfu_temp;
+    dfu_temp = malloc(DFU_MAX_BLK_SIZE);
+    OS_ASSERT(dfu_temp);
+    uint32_t offset = 0, com_offset = 0, pksize = 0;
+    int r = DFU_SUCCESS;
+    uint32_t blksize, body_size = 0, comp_len, blk_offset = 0;
+    uint8_t is_last_small_packet = 0;
+
+    header->flag = 16;
+    header->img_id = image_id;
+    header->length = length;
+
+    //curr_info->img_id = DFU_IMG_ID_HCPU;
+    //curr_info->header = header;
+
+    header->flag &= ~DFU_FLAG_COMPRESS;
+    total_len = header->length;
+    blksize = 512;
+
+    //uint8_t *enc_data = malloc(blksize);
+    // Parser the 1st img
+    while (total_len)
+    {
+        if (blksize >= total_len)
+            blksize = total_len;
+
+        /* Should read from compress section. */
+        header->flag |= DFU_FLAG_COMPRESS;
+        //header->flag |= DFU_FLAG_ENC;
+
+        //HAL_sw_breakpoint();
+        //dfu_read_storage_data(header, offset, dfu_temp + blk_offset, blksize);
+        dfu_flash_read(DFU_DOWNLOAD_REGION_START_ADDR + image_offset + offset, dfu_temp + blk_offset, blksize);
+
+        header->flag &= ~DFU_FLAG_COMPRESS;
+        //header->flag &= ~DFU_FLAG_ENC;
+
+        total_len -= blksize;
+        offset += blksize;
+
+        // paser the 1st part
+        if (img_header_get)
+        {
+            uint32_t temp_left, temp_offset;
+            img_header_get = 0;
+            struct img_header_compress_info *hdr;
+            //get the first img
+            // len is decided by pksize, default is 10K
+            hdr = (struct img_header_compress_info *)dfu_temp;
+            pksize = hdr->pksize;
+            total_hdr_len = total_uncompress_len = hdr->total_len;
+            g_uncompress_len = total_uncompress_len;
+            LOG_I("uncompre len %d \r\n", total_uncompress_len);
+
+            dfu_packet_erase_flash(header, 0, total_uncompress_len);
+
+            packet_len = ((dfu_compress_packet_header_t *)(dfu_temp + sizeof(struct img_header_compress_info)))->packet_len;
+
+            uncompress_buf = malloc(pksize);
+            OS_ASSERT(uncompress_buf);
+
+            temp_offset = sizeof(struct img_header_compress_info) + sizeof(dfu_compress_packet_header_t);
+            temp_left = blksize - temp_offset;
+            // Handle compress pksize smaller than bksize
+            while (packet_len < temp_left)
+            {
+                r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, dfu_temp + temp_offset,
+                                   &packet_len, &total_uncompress_len, &uncompress_offset);
+
+                if (r != DFU_DECOM_OK)
+                    break;
+                temp_left -= packet_len;
+                temp_offset += packet_len;
+                if (temp_left < sizeof(dfu_compress_packet_header_t))
+                {
+                    memcpy(dfu_temp, dfu_temp + temp_offset, temp_left);
+                    blk_offset = temp_left;
+                    break;
+                }
+                packet_len = ((dfu_compress_packet_header_t *)(dfu_temp + temp_offset))->packet_len;
+                temp_offset += sizeof(dfu_compress_packet_header_t);
+                temp_left -= sizeof(dfu_compress_packet_header_t);
+
+            }
+
+            if (r != DFU_DECOM_OK)
+                break;
+
+            // blk_offset has value means packet_len could not get
+            if (blk_offset == 0)
+            {
+                // already make sure packet len is larger than left data in dfu_temp
+                compress_buf = malloc(packet_len);
+                OS_ASSERT(compress_buf);
+
+                memcpy(compress_buf, dfu_temp + temp_offset, temp_left);
+                com_offset += temp_left;
+            }
+
+            continue;
+            // Get compress length
+            // Prepare Hash calcualte
+        }
+
+        if (compress_buf)
+        {
+            //LOG_I("left size %d, offset %d, blkszie %d, pack %d\r\n", total_len, com_offset, blksize, packet_len);
+            if (com_offset + blksize >= packet_len)
+            {
+                // uncompress
+                OS_ASSERT(packet_len >= com_offset);
+
+                uint32_t left_size = packet_len - com_offset;
+                uint32_t left_len = com_offset + blksize - packet_len;
+
+                // handle the combine buffer : compress_buf
+                memcpy(compress_buf + com_offset, dfu_temp, left_size);
+                r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, compress_buf, &packet_len,
+                                   &total_uncompress_len, &uncompress_offset);
+                free(compress_buf);
+                compress_buf = NULL;
+                com_offset = 0;
+                if (r != DFU_DECOM_OK)
+                    break;
+
+                //LOG_I("Before uncompre len %d, total len %d \r\n", total_uncompress_len, total_len);
+                //if (!total_len && left_len)
+                //  RT_ASSERT(0);
+                // Parse new header
+
+                // The last packet
+                if (!total_len && !left_len)
+                    break;
+
+                if (!total_uncompress_len)
+                    break;
+                // Always read more if could
+
+
+                if (left_len < sizeof(dfu_compress_packet_header_t))
+                {
+                    memcpy(dfu_temp, dfu_temp + left_size, left_len);
+                    blk_offset = left_len;
+                    continue;
+                }
+                packet_len = ((dfu_compress_packet_header_t *)(dfu_temp + left_size))->packet_len;
+                // reuse for used of dfu_temp
+                left_size += sizeof(dfu_compress_packet_header_t);
+                left_len -= sizeof(dfu_compress_packet_header_t);
+
+                while ((packet_len < left_len) || ((packet_len == left_len) && (total_len == 0)))
+                {
+
+                    r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, dfu_temp + left_size,
+                                       &packet_len, &total_uncompress_len, &uncompress_offset);
+                    left_len -= packet_len;
+                    left_size += packet_len;
+
+                    if (r != DFU_DECOM_OK)
+                        goto END;
+
+                    // The last packet
+                    if (!total_len && !left_len)
+                        goto END;
+
+                    if (!total_uncompress_len)
+                        goto END;
+
+                    if (left_len < sizeof(dfu_compress_packet_header_t))
+                    {
+                        memcpy(dfu_temp, dfu_temp + left_size, left_len);
+                        blk_offset = left_len;
+                        break;
+                    }
+                    packet_len = ((dfu_compress_packet_header_t *)(dfu_temp + left_size))->packet_len;
+                    left_size += sizeof(dfu_compress_packet_header_t);
+                    left_len -= sizeof(dfu_compress_packet_header_t);
+
+
+                }
+
+                if (blk_offset == 0)
+                {
+                    compress_buf = malloc(packet_len);
+                    OS_ASSERT(compress_buf);
+                    memcpy(compress_buf, dfu_temp + left_size, left_len);
+                    com_offset += left_len;
+                }
+                // To avoid the last packet
+                //LOG_I("After uncompre len %d, total len %d \r\n", total_uncompress_len, total_len);
+            }
+            else
+            {
+                // if last compress packet is less than blksize,
+                if (!is_last_small_packet)
+                {
+                    if (total_uncompress_len < pksize)
+                    {
+                        // already last packet
+                    }
+                    else
+                    {
+                        if (total_uncompress_len - pksize < blksize)
+                        {
+                            LOG_I("is_last_small_packet %d, %d, %d", total_uncompress_len, total_uncompress_len - pksize, blksize);
+                            is_last_small_packet = 1;
+                        }
+                    }
+                }
+
+                if (total_len < blksize && is_last_small_packet)
+                {
+                    LOG_I("ADD LAST PACKET");
+                    total_len += blksize;
+                }
+
+                memcpy(compress_buf + com_offset, dfu_temp, blksize);
+                com_offset += blksize;
+            }
+        }
+        else
+        {
+            // Allocate failed will assert, this case is for not get packet len
+            uint32_t temp_left, temp_offset;
+            //RT_ASSERT(blk_offset != 0);
+            packet_len = ((dfu_compress_packet_header_t *)(dfu_temp))->packet_len;
+
+
+            temp_offset = sizeof(dfu_compress_packet_header_t);
+            temp_left = blksize + blk_offset - temp_offset;
+            blk_offset = 0;
+            // Handle compress pksize smaller than bksize
+            while ((packet_len < temp_left) || ((packet_len == temp_left) && (total_len == 0)))
+            {
+                r = dfu_decompress(header, dfu_key, uncompress_buf, &pksize, dfu_temp + temp_offset,
+                                   &packet_len, &total_uncompress_len, &uncompress_offset);
+                temp_left -= packet_len;
+                temp_offset += packet_len;
+
+                if (r != DFU_DECOM_OK)
+                    goto END;
+
+                // The last packet
+                if (!total_len && !temp_left)
+                    goto END;
+
+                if (!total_uncompress_len)
+                    goto END;
+
+                if (temp_left < sizeof(dfu_compress_packet_header_t))
+                {
+                    // move to the dfu beginning
+                    memcpy(dfu_temp, dfu_temp + temp_offset, temp_left);
+                    blk_offset = temp_left;
+                    break;
+                }
+                packet_len = ((dfu_compress_packet_header_t *)(dfu_temp + temp_offset))->packet_len;
+                temp_offset += sizeof(dfu_compress_packet_header_t);
+                temp_left -= sizeof(dfu_compress_packet_header_t);
+
+            }
+
+            // blk_offset has value means packet_len could not get
+            if (blk_offset == 0)
+            {
+                // already make sure packet len is larger than left data in dfu_temp
+                compress_buf = malloc(packet_len);
+                OS_ASSERT(compress_buf);
+
+                memcpy(compress_buf, dfu_temp + temp_offset, temp_left);
+                com_offset += temp_left;
+            }
+        }
+    }
+
+END:
+    // dfu_install_progress_ind(g_uncompress_len, g_uncompress_len);
+    LOG_I("total len %d, uncom len %d, compress buf %x\r\n", total_len, total_uncompress_len, compress_buf);
+    //RT_ASSERT(compress_buf == NULL);
+    free(uncompress_buf);
+    //free(enc_data);
+    free(dfu_temp);
+
+    //HAL_sw_breakpoint();
+
+    //free(curr_info);
+    free(header);
+
+    if (r == DFU_SUCCESS)
+    {
+        //curr_info->img_state = DFU_CTRL_IMG_STATE_DOWNLOADED;
+        //curr_info->header->length = total_hdr_len;
+        // dfu_ctrl_update_prog_info(env);
+    }
+
+    LOG_I("Instasll r %d\r\n", r);
+    return r;
+}
+
+
 int dfu_img_install(dfu_ctrl_env_t *env)
 {
     dfu_dl_image_header_t *dl_header = &env->prog.fw_context.code_img;
@@ -576,7 +965,17 @@ int dfu_img_install(dfu_ctrl_env_t *env)
             }
             else
             {
-                r = dfu_img_install_flash(env, NULL, &dl_header->img_header[i]);
+                LOG_I("dfu_img_install ID %d, %d", env->prog.dfu_ID, dl_header->img_header[i].img_id);
+                if ((env->prog.dfu_ID == DFU_ID_CODE_FULL_BACKUP || env->prog.dfu_ID == DFU_ID_CODE_BACKGROUND) && dl_header->img_header[i].img_id == DFU_IMG_ID_RES)
+                {
+                    LOG_I("dfu_full_img_install_flash");
+                    r = dfu_full_img_install_flash(env, NULL, &dl_header->img_header[i]);
+                }
+                else
+                {
+                    LOG_I("dfu_img_install_flash");
+                    r = dfu_img_install_flash(env, NULL, &dl_header->img_header[i]);
+                }
                 if (r != DFU_SUCCESS)
                 {
                     LOG_E("Install failed!(%d)", dl_header->img_header[i].img_id);

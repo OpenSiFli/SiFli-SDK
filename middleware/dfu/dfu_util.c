@@ -145,7 +145,7 @@ __WEAK uint8_t dfu_ctrl_compare_FW_version(void)
 dfu_image_header_int_t *dfu_img_get_img_header_by_img_id(dfu_ctrl_env_t *env, uint8_t img_id)
 {
     dfu_dl_image_header_t *header = &env->prog.fw_context.code_img;
-    if (env->prog.dfu_ID == DFU_ID_OTA_MANAGER)
+    if (env->mode == DFU_CTRL_NORMAL_MODE && env->ota_state.dfu_ID == DFU_ID_OTA_MANAGER)
     {
         header = (dfu_dl_image_header_t *)&env->ota_state.fw_context.code_img;
     }

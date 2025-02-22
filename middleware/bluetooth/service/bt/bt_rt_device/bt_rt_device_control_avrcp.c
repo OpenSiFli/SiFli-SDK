@@ -85,11 +85,11 @@ bt_err_t bt_sifli_set_avrcp_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
     {
         if (BT_ROLE_MASTER == dev->role)
         {
-            ret = bt_interface_avrcp_set_absolute_volume(volume);
+            ret = bt_interface_avrcp_set_absolute_volume_as_tg_role(volume);
         }
         else
         {
-            ret = bt_interface_avrcp_volume_changed(volume);
+            ret = bt_interface_avrcp_set_absolute_volume_as_ct_role(volume);
         }
     }
 

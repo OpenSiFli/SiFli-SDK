@@ -73,7 +73,8 @@
 // wait ios to support link lose check, we can change to 6s
 #define DFU_SYNC_DOWNLOAD_TIMER 6000
 #define DFU_SYNC_ERASE_TIMER 240000
-#define DFU_SYNC_FILE_DOWNLOAD_TIMER 6000
+#define DFU_SYNC_FILE_DOWNLOAD_TIMER 12000
+#define DFU_SYNC_RSP_TIMER 6000
 
 #define DFU_OTA_MANAGER_COM_SIZE ((DFU_FLASH_CODE_SIZE * 7 / 10 / 4 + 1) * 4)
 #define DFU_BOOTLOADER_COM_SIZE ((FLASH_BOOT_LOADER_SIZE * 7 / 10 / 4 + 1) * 4)
@@ -85,6 +86,7 @@
 
 #define DFU_INTERVAL_SLOW 20
 #define DFU_OTA_VERSION_LEN_MAX 32
+#define DFU_HASH_VERIFY_WDT_PET_FREQUENCY 20
 
 #define DFU_PROTOCOL_PKT_BUFF_ALLOC(msg_id, msg_struct) \
     (msg_struct *)dfu_protocol_packet_buffer_alloc(msg_id, sizeof(msg_struct));
@@ -116,11 +118,11 @@
     #define DFU_NAND_PATCH_DOWNLOAD_SIZE HCPU_PATCH_SIZE
 #else
     #define DFU_NAND_PATCH_DOWNLOAD_ADDR 0
-    #define DFU_NAND_HCPU_FIRST_ADDR 0
-    #define DFU_NAND_HCPU_BACK_UP_ADDR 0
+    #define DFU_NAND_HCPU_FIRST_ADDR 0x14000000
+    #define DFU_NAND_HCPU_BACK_UP_ADDR 0x14200000
 
-    #define DFU_NAND_HCPU_DOWNLOAD_SIZE 0
-    #define DFU_NAND_HCPU_BACK_UP_SIZE 0
+    #define DFU_NAND_HCPU_DOWNLOAD_SIZE 0x200000
+    #define DFU_NAND_HCPU_BACK_UP_SIZE 0x200000
     #define DFU_NAND_PATCH_DOWNLOAD_SIZE 0
 #endif
 
@@ -172,6 +174,8 @@ typedef enum
     DFU_CTRL_OFFLINE_INSTALL,
     DFU_CTRL_REBOOT_INSTALL_PREPARE,
     DFU_CTRL_REBOOT_INSTALL,
+    DFU_CTRL_OFFLINE_INSTALL_V2_PREPARE,
+    DFU_CTRL_OFFLINE_INSTALL_V2,
 } dfu_ctrl_state_t;
 
 typedef enum
@@ -311,6 +315,12 @@ typedef enum
     LCPU_INSTALL_UPDATED = 2,
 } lcpu_cpu_install;
 
+typedef enum
+{
+    OFFLINE_INSTALL_TYPE_IMAGE,
+    OFFLINE_INSTALL_TYPE_OTA_MANAGER,
+} dfu_offline_install_type_t;
+
 typedef struct
 {
     uint16_t blk_size;
@@ -345,6 +355,11 @@ typedef struct
     uint8_t ota_lite;
     // use for ota lite sol record hcpu or mix
     uint8_t ota_mode;
+
+    uint32_t all_length;
+    uint32_t all_count;
+    uint32_t current_count;
+    uint32_t crc;
 
 #ifdef OTA_MODEM_RECORD
     uint8_t modem_ota_state;
@@ -597,6 +612,7 @@ typedef struct
     uint8_t is_abort;
     uint8_t is_mount;
 
+    uint32_t remote_version;
     // remote command
     uint32_t running_hcpu;
     uint32_t back_up_hcpu;
@@ -627,6 +643,7 @@ typedef enum
     DFU_FLASH_MSG_TYPE_DATA,
     DFU_FLASH_MSG_TYPE_EXIT,
     DFU_FLASH_MSG_TYPE_VERIFY,
+    DFU_FLASH_MSG_TYPE_ERASE,
 } dfu_flash_msg_t;
 
 typedef enum
@@ -649,6 +666,17 @@ typedef struct
     uint32_t size;
 } flash_write_t;
 
+
+typedef struct
+{
+    uint8_t msg_type;
+    uint32_t base_addr;
+    uint32_t offset;
+    uint32_t size;
+    uint8_t data[2048];
+} flash_write_offline_t;
+
+
 typedef struct
 {
     uint32_t addr;
@@ -665,10 +693,30 @@ typedef struct
 
 typedef struct
 {
+    uint32_t magic;
+    uint8_t version;
+    uint8_t install_state;
+    uint16_t image_count;
+    uint32_t crc;
+    uint8_t image_info[0];
+} dfu_offline_install_packet_v2_t;
+
+
+typedef struct
+{
     uint8_t id;
     uint32_t offset;
     uint32_t len;
 } dfu_offline_image_info_t;
+
+typedef struct
+{
+    uint8_t id;
+    uint8_t flag;
+    uint32_t offset;
+    uint32_t len;
+} dfu_offline_image_info_v2_t;
+
 
 int dfu_packet_erase_flash(dfu_image_header_int_t *header, uint32_t offset, uint32_t size);
 
@@ -784,7 +832,7 @@ uint8_t dfu_set_last_packet_wait();
 
 void dfu_ctrl_last_packet_handler();
 
-void dfu_record_current_tx();
+uint8_t dfu_record_current_tx();
 
 // get file res state, see @dfu_ctrl_state_t
 uint8_t dfu_get_res_state();
@@ -820,6 +868,12 @@ void dfu_offline_install_start();
 #endif
 
 uint8_t dfu_get_download_state();
+
+int dfu_image_install_flash_offline(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag);
+
+uint32_t dfu_crc32mpeg2(uint8_t *data, uint32_t len);
+
+
 #endif //__DFU_INTERNAL_H
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

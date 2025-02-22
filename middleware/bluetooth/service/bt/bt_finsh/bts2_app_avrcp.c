@@ -80,9 +80,9 @@ uint8_t   bts2s_avrcp_openFlag;//0x00:dont open avrcp profile; 0x01:open avrcp p
 
 
 #define BEGIN_ACCESS_VAR()              {rt_sem_take(bts2g_app_p->avrcp_inst.volume_change_sem, RT_WAITING_FOREVER);  \
-                                         LOG_D("enter modifly tgRegStatus\n");}
+                                         LOG_D("enter modifly abs_vol_support\n");}
 #define END_ACCESS_VAR()                {rt_sem_release(bts2g_app_p->avrcp_inst.volume_change_sem); \
-                                         LOG_D("exit modifly tgRegStatus\n");}
+                                         LOG_D("exit modifly abs_vol_support\n");}
 
 
 // #define SDK_AVRCP_USE_PASS_THROUGH      1
@@ -111,8 +111,8 @@ void bt_avrcp_int(bts2_app_stru *bts2_app_data)
     bts2_app_data->avrcp_inst.avrcp_time_handle = NULL;
     bts2_app_data->avrcp_inst.avrcp_vol_time_handle = NULL;
     bts2_app_data->avrcp_inst.volume_change_sem = rt_sem_create("bt_avrcp_vol_change", 1, RT_IPC_FLAG_FIFO);
-    bts2_app_data->avrcp_inst.tgRegStatus = 0;
-    bts2_app_data->avrcp_inst.tgRegStatus1 = 0;
+    bts2_app_data->avrcp_inst.abs_vol_support = 0;
+    bts2_app_data->avrcp_inst.play_status_notify = 0;
     bts2_app_data->avrcp_inst.abs_volume_pending = 0;
     bts2_app_data->avrcp_inst.playback_status = 0;
     bts2_app_data->avrcp_inst.ab_volume = 20;//default value;
@@ -1174,12 +1174,12 @@ void bt_avrcp_get_capabilities_confirm(bts2_app_stru *bts2_app_data, BTS2S_AVRCP
 bt_err_t bt_avrcp_change_volume(bts2_app_stru *bts2_app_data, U8 volume)
 {
     BEGIN_ACCESS_VAR();
-    USER_TRACE("absolute volume tgRegStatus%x volume%x \n", bts2_app_data->avrcp_inst.tgRegStatus, volume);
+    USER_TRACE("absolute volume abs_vol_support%x volume%x \n", bts2_app_data->avrcp_inst.abs_vol_support, volume);
 
-    if (1 == bts2_app_data->avrcp_inst.tgRegStatus)
+    if (1 == bts2_app_data->avrcp_inst.abs_vol_support)
     {
         bts2_app_data->avrcp_inst.ab_volume = volume;
-        bts2_app_data->avrcp_inst.tgRegStatus = 0;//the life cycle of volume change:(begin:CT register; end:TG changed)
+        bts2_app_data->avrcp_inst.abs_vol_support = 0;//the life cycle of volume change:(begin:CT register; end:TG changed)
         bt_avrcp_volume_register_response(bts2_app_data, AVRCP_CR_CHANGED, volume);
         END_ACCESS_VAR();
         return BT_EOK;
@@ -1208,11 +1208,11 @@ bt_err_t bt_avrcp_change_volume(bts2_app_stru *bts2_app_data, U8 volume)
 bt_err_t bt_avrcp_change_play_status(bts2_app_stru *bts2_app_data, U8 play_status)
 {
     BEGIN_ACCESS_VAR();
-    USER_TRACE("play status tgRegStatus%x play_status%d \n", bts2_app_data->avrcp_inst.tgRegStatus1, play_status);
+    USER_TRACE("play status play_status_changed%x play_status%d \n", bts2_app_data->avrcp_inst.play_status_notify, play_status);
 
-    if (1 == bts2_app_data->avrcp_inst.tgRegStatus1)
+    if (1 == bts2_app_data->avrcp_inst.play_status_notify)
     {
-        bts2_app_data->avrcp_inst.tgRegStatus1 = 0;//the life cycle of volume change:(begin:CT register; end:TG changed)
+        bts2_app_data->avrcp_inst.play_status_notify = 0;//the life cycle of volume change:(begin:CT register; end:TG changed)
         bt_avrcp_play_status_changed_register_response(bts2_app_data, AVRCP_CR_CHANGED, play_status);
         END_ACCESS_VAR();
         return BT_EOK;
@@ -1711,7 +1711,7 @@ static void bt_avrcp_hdl_vendor_depend_cmd_ind(bts2_app_stru *bts2_app_data)
 
                     USER_TRACE("<< register notificaiton volume changed %d\n", current_volume);
 
-                    bts2_app_data->avrcp_inst.tgRegStatus = 1;
+                    bts2_app_data->avrcp_inst.abs_vol_support = 1;
                     bt_avrcp_volume_register_response(bts2_app_data, AVRCP_CR_INTERIM, current_volume);
                     END_ACCESS_VAR();
 
@@ -1747,7 +1747,7 @@ static void bt_avrcp_hdl_vendor_depend_cmd_ind(bts2_app_stru *bts2_app_data)
 
                     USER_TRACE("<< register play status changed %d\n", play_status);
 
-                    bts2_app_data->avrcp_inst.tgRegStatus1 = 1;
+                    bts2_app_data->avrcp_inst.play_status_notify = 1;
                     bt_avrcp_play_status_changed_register_response(bts2_app_data, AVRCP_CR_INTERIM, play_status);
                     END_ACCESS_VAR();
                     break;
@@ -2461,8 +2461,8 @@ void bt_avrcp_close_boundary_condition(bts2_app_stru *bts2_app_data)
     {
     case BTS2MU_AVRCP_DISB_CFM:
     {
-        bts2_app_data->avrcp_inst.tgRegStatus = 0;
-        bts2_app_data->avrcp_inst.tgRegStatus1 = 0;
+        bts2_app_data->avrcp_inst.abs_vol_support = 0;
+        bts2_app_data->avrcp_inst.play_status_notify = 0;
 #if defined(CFG_AVRCP)
         bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_CLOSE_COMPLETE, NULL, 0);
         INFO_TRACE("<< URC av had been disabled \n");
@@ -2568,8 +2568,8 @@ void bt_avrcp_msg_handler(bts2_app_stru *bts2_app_data)
         msg = (BTS2S_AVRCP_DISC_IND *)bts2_app_data->recv_msg;
         bd_set_empty(&bts2_app_data->avrcp_inst.con[0].rmt_bd);
 
-        bts2_app_data->avrcp_inst.tgRegStatus = 0;
-        bts2_app_data->avrcp_inst.tgRegStatus1 = 0;
+        bts2_app_data->avrcp_inst.abs_vol_support = 0;
+        bts2_app_data->avrcp_inst.play_status_notify = 0;
         bts2_app_data->avrcp_inst.abs_volume_pending = 0;
         USER_TRACE("bd : %4lx %4x %4x\n", msg->bd.lap, msg->bd.nap, msg->bd.uap);
         USER_TRACE("<< avrcp indicate to disconnect with remote device\n");
@@ -2602,8 +2602,8 @@ void bt_avrcp_msg_handler(bts2_app_stru *bts2_app_data)
     }
     case BTS2MU_AVRCP_DISB_CFM:
     {
-        bts2_app_data->avrcp_inst.tgRegStatus = 0;
-        bts2_app_data->avrcp_inst.tgRegStatus1 = 0;
+        bts2_app_data->avrcp_inst.abs_vol_support = 0;
+        bts2_app_data->avrcp_inst.play_status_notify = 0;
         INFO_TRACE("BTS2MU_AVRCP_DISB_CFM\n");
         break;
     }

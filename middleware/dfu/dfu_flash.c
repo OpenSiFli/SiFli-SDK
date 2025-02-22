@@ -137,6 +137,45 @@ static void dfu_erase_download_buffer_size_check(uint8_t img_id, uint8_t flag, u
 #endif
 }
 
+static uint32_t dfu_backup_addr_res_get()
+{
+    uint32_t flash_addr = 0xFFFFFFFF;
+
+    flash_addr = DFU_RES_FLASH_CODE_START_ADDR + OTA_NOR_LCPU_ROM_PATCH_SIZE * 2 + HCPU_FLASH_CODE_SIZE * 0.7;
+    if (flash_addr % 0x1000 != 0)
+    {
+        flash_addr = (flash_addr + 0x1000) / 0x1000 * 0x1000;
+    }
+
+    return flash_addr;
+}
+
+static uint32_t dfu_backup_addr_font_get()
+{
+    uint32_t flash_addr = 0xFFFFFFFF;
+
+    flash_addr = dfu_backup_addr_res_get() + HCPU_FLASH2_IMG_SIZE;
+    if (flash_addr % 0x1000 != 0)
+    {
+        flash_addr = (flash_addr + 0x1000) / 0x1000 * 0x1000;
+    }
+
+    return flash_addr;
+}
+
+static uint32_t dfu_backup_addr_ex_get()
+{
+    uint32_t flash_addr = 0xFFFFFFFF;
+
+    flash_addr = dfu_backup_addr_font_get() + HCPU_FLASH2_FONT_SIZE * 0.7;
+    if (flash_addr % 0x1000 != 0)
+    {
+        flash_addr = (flash_addr + 0x1000) / 0x1000 * 0x1000;
+    }
+
+    return flash_addr;
+}
+
 static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
 {
     uint32_t flash_addr = 0xFFFFFFFF;
@@ -152,7 +191,7 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
     case DFU_IMG_ID_HCPU:
         if (flag & DFU_FLAG_COMPRESS)
         {
-            flash_addr = DFU_RES_FLASH_CODE_START_ADDR + OTA_NOR_LCPU_ROM_PATCH_SIZE * 2 + image_offset;
+            flash_addr = DFU_RES_FLASH_CODE_START_ADDR + OTA_NOR_LCPU_ROM_PATCH_SIZE * 2;
         }
         else
             flash_addr = HCPU_FLASH_CODE_START_ADDR;
@@ -175,7 +214,10 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
         break;
 #endif
     case DFU_IMG_ID_FONT:
-        flash_addr = HCPU_FLASH2_FONT_START_ADDR;
+        if (flag & DFU_FLAG_COMPRESS)
+            flash_addr = dfu_backup_addr_font_get();
+        else
+            flash_addr = HCPU_FLASH2_FONT_START_ADDR;
         break;
     case DFU_IMG_ID_TINY_FONT:
 #ifdef HCPU_FLASH2_TINY_FONT_START_ADDR
@@ -183,11 +225,17 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
 #endif
         break;
     case DFU_IMG_ID_RES:
-        flash_addr = HCPU_FLASH2_IMG_START_ADDR;
+        if (flag & DFU_FLAG_COMPRESS)
+            flash_addr = dfu_backup_addr_res_get();
+        else
+            flash_addr = HCPU_FLASH2_IMG_START_ADDR;
         break;
     case DFU_IMG_ID_EX:
 #ifdef HCPU_FS_ROOT_BURN_ADDR
-        flash_addr = HCPU_FS_ROOT_BURN_ADDR;
+        if (flag & DFU_FLAG_COMPRESS)
+            flash_addr = dfu_backup_addr_ex_get();
+        else
+            flash_addr = HCPU_FS_ROOT_BURN_ADDR;
 #endif
         break;
     case DFU_IMG_ID_RES_UPGRADE:
@@ -201,9 +249,12 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
             flash_addr = DFU_RES_FLASH_CODE_START_ADDR + OTA_NOR_LCPU_ROM_PATCH_SIZE;
         break;
 #endif
+
+#ifdef FLASH_BOOT_LOADER_START_ADDR
     case DFU_IMG_ID_BOOTLOADER:
         flash_addr = FLASH_BOOT_LOADER_START_ADDR;
         break;
+#endif
     default:
         break;
     }
@@ -368,7 +419,84 @@ int dfu_flash_erase(uint32_t dest, uint32_t size)
 
 #ifdef OTA_56X_NAND
 
-#include "flash_map.h"
+//#include "flash_map.h"
+
+__WEAK uint32_t dfu_res_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FS_ROOT_BURN_ADDR
+    addr = HCPU_FS_ROOT_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_dyn_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FS_DYN_BURN_ADDR
+    addr = HCPU_FS_DYN_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_music_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FS_MUSIC_BURN_ADDR
+    addr = HCPU_FS_MUSIC_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_pic_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FLASH2_IMG_BURN_ADDR
+    addr = HCPU_FLASH2_IMG_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_font_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FLASH2_FONT_BURN_ADDR
+    addr = HCPU_FLASH2_FONT_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_lang_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FLASH2_LANG_START_ADDR
+    addr = HCPU_FLASH2_LANG_START_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
+
+__WEAK uint32_t dfu_ring_addr_get()
+{
+    uint32_t addr;
+#ifdef HCPU_FLASH2_RING_BURN_ADDR
+    addr = HCPU_FLASH2_RING_BURN_ADDR;
+#else
+    OS_ASSERT(0);
+#endif
+    return addr;
+}
 
 static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
 {
@@ -389,25 +517,25 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
         flash_addr = DFU_LCPU_PATCH_DOWNLOAD_ADDR;
         break;
     case DFU_IMG_ID_RES:
-#ifdef HCPU_FS_ROOT_BURN_ADDR
-        flash_addr = HCPU_FS_ROOT_BURN_ADDR;
-#else
-        OS_ASSERT(0);
-#endif
+        flash_addr = dfu_res_addr_get();
         break;
     case DFU_IMG_ID_DYN:
-#ifdef HCPU_FS_DYN_BURN_ADDR
-        flash_addr = HCPU_FS_DYN_BURN_ADDR;
-#else
-        OS_ASSERT(0);
-#endif
+        flash_addr = dfu_dyn_addr_get();
         break;
     case DFU_IMG_ID_MUSIC:
-#ifdef HCPU_FS_MUSIC_BURN_ADDR
-        flash_addr = HCPU_FS_MUSIC_BURN_ADDR;
-#else
-        OS_ASSERT(0);
-#endif
+        flash_addr = dfu_music_addr_get();
+        break;
+    case DFU_IMG_ID_PIC:
+        flash_addr = dfu_pic_addr_get();
+        break;
+    case DFU_IMG_ID_FONT:
+        flash_addr = dfu_font_addr_get();
+        break;
+    case DFU_IMG_ID_RING:
+        flash_addr = dfu_ring_addr_get();
+        break;
+    case DFU_IMG_ID_LANG:
+        flash_addr = dfu_lang_addr_get();
         break;
     default:
         break;
@@ -422,72 +550,6 @@ static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
     return flash_addr;
 }
 
-
-int dfu_packet_erase_flash(dfu_image_header_int_t *header, uint32_t offset, uint32_t size)
-{
-    uint32_t dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
-    int ret = -1;
-
-    // erase should 8k aligned
-    if (size % 0x20000 != 0)
-    {
-        size = (size + 0x20000) / 0x20000 * 0x20000;
-    }
-
-    LOG_I("dfu_packet_erase_flash dest 0x%x, size %d", dest, size);
-    if (dest != 0xFFFFFFFF)
-    {
-        int ret1 = rt_nand_erase(dest, size);
-        //int ret1 = 0;
-        if (ret1 != 0)
-        {
-            ret = -2;
-            LOG_E("dfu_packet_erase_flash Fail!");
-        }
-        else
-        {
-            ret = 0;
-        }
-    }
-    return ret;
-}
-
-int dfu_packet_write_flash(dfu_image_header_int_t *header, uint32_t offset, uint8_t *data, uint32_t size)
-{
-    uint32_t dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
-    int ret = -1;
-    if (dest != 0xFFFFFFFF)
-    {
-        //LOG_I("dfu_packet_write_flash dest 0x%x, size %d", dest + offset, size);
-        uint32_t wr_size;
-        wr_size  = rt_nand_write_page(dest + offset, data, size, NULL, 0);
-        //uint32_t wr_size = size;
-        if (wr_size != size)
-            ret = 0;
-        else
-            ret = 0;
-    }
-    return ret;
-}
-
-
-int dfu_packet_read_flash(dfu_image_header_int_t *header, uint32_t offset, uint8_t *data, uint32_t size)
-{
-    uint32_t dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
-    int ret = -1;
-    if (dest != 0xFFFFFFFF)
-    {
-        uint32_t rd_size = rt_nand_read(dest + offset, data, size);
-        //uint32_t rd_size = size;
-        if (rd_size != size)
-            ret = -2;
-        else
-            ret = 0;
-    }
-    return ret;
-}
-
-
 int dfu_packet_erase_flash_ext(uint32_t dest, uint32_t offset, uint32_t size, uint8_t type)
 {
     int ret = -1;
@@ -501,9 +563,9 @@ int dfu_packet_erase_flash_ext(uint32_t dest, uint32_t offset, uint32_t size, ui
     }
     else if (type == DFU_FLASH_TYPE_NOR)
     {
-        if (size % 0x1000 != 0)
+        if (size % 0x2000 != 0)
         {
-            size = (size + 0x1000) / 0x1000 * 0x1000;
+            size = (size + 0x2000) / 0x2000 * 0x2000;
         }
     }
 
@@ -569,6 +631,188 @@ int dfu_packet_read_flash_ext(uint32_t dest, uint32_t offset, uint8_t *data, uin
         else
             ret = 0;
     }
+    return ret;
+}
+
+int dfu_packet_erase_flash(dfu_image_header_int_t *header, uint32_t offset, uint32_t size)
+{
+    uint32_t dest;
+    uint32_t align_size;
+    dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
+
+    int ret = -1;
+
+    uint8_t flash_type;
+    FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(dest);
+    if (fhandle != NULL)
+    {
+        // nand flash
+        flash_type = DFU_FLASH_TYPE_NAND;
+    }
+    else
+    {
+        extern FLASH_HandleTypeDef *Addr2Handle(uint32_t addr);
+        fhandle = Addr2Handle(dest);
+        if (fhandle == NULL)
+        {
+            LOG_I("invalid addr 0x%x", dest);
+            return -3;
+        }
+        else
+        {
+            flash_type = DFU_FLASH_TYPE_NOR;
+        }
+    }
+
+    // dfu_erase_download_buffer_size_check(header->img_id, header->flag, size);
+
+
+    if (flash_type == DFU_FLASH_TYPE_NOR)
+    {
+        // 55x is 8k, other is 4k
+        align_size = rt_flash_get_erase_alignment(dest);
+    }
+    else
+    {
+        align_size = HAL_NAND_BLOCK_SIZE(fhandle);
+    }
+
+    if (size % align_size != 0)
+    {
+        size = (size + align_size) / align_size * align_size;
+    }
+
+    LOG_I("dfu_packet_erase_flash dest 0x%x, size %d, align 0x%x, %d", dest, size, align_size, flash_type);
+    int ret1;
+
+
+    if (dest != 0xFFFFFFFF)
+    {
+        if (flash_type == DFU_FLASH_TYPE_NOR)
+        {
+            ret1 = rt_flash_erase(dest, size);
+        }
+        else
+        {
+            ret1 = rt_nand_erase(dest, size);
+        }
+
+        if (ret1 != 0)
+        {
+            ret = -2;
+            LOG_E("dfu_packet_erase_flash Fail! %d", ret1);
+        }
+        else
+        {
+            ret = 0;
+        }
+    }
+    return ret;
+}
+
+
+int dfu_packet_write_flash(dfu_image_header_int_t *header, uint32_t offset, uint8_t *data, uint32_t size)
+{
+    uint32_t dest;
+    uint32_t align_size;
+    dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
+
+    uint8_t flash_type;
+    FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(dest);
+    if (fhandle != NULL)
+    {
+        // nand flash
+        flash_type = DFU_FLASH_TYPE_NAND;
+    }
+    else
+    {
+        extern FLASH_HandleTypeDef *Addr2Handle(uint32_t addr);
+        fhandle = Addr2Handle(dest);
+        if (fhandle == NULL)
+        {
+            LOG_I("invalid addr 0x%x", dest);
+            return -3;
+        }
+        else
+        {
+            flash_type = DFU_FLASH_TYPE_NOR;
+        }
+    }
+
+
+    int ret = -1;
+    uint32_t wr_size;
+    if (dest != 0xFFFFFFFF)
+    {
+        if (flash_type == DFU_FLASH_TYPE_NOR)
+        {
+            wr_size = rt_flash_write(dest + offset, data, size);
+        }
+        else
+        {
+            uint32_t page_size = HAL_NAND_PAGE_SIZE(fhandle);
+            uint32_t wr_size;
+            wr_size = rt_nand_write_page(dest + offset, data, size, NULL, 0);
+            if (size != page_size)
+            {
+                size = page_size;
+            }
+        }
+
+        if (wr_size != size)
+            ret = -2;
+        else
+            ret = 0;
+    }
+    return ret;
+}
+
+int dfu_packet_read_flash(dfu_image_header_int_t *header, uint32_t offset, uint8_t *data, uint32_t size)
+{
+    uint32_t dest;
+    dest = dfu_get_download_addr_by_imgid(header->img_id, header->flag);
+
+    uint8_t flash_type;
+    FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(dest);
+    if (fhandle != NULL)
+    {
+        // nand flash
+        flash_type = DFU_FLASH_TYPE_NAND;
+    }
+    else
+    {
+        extern FLASH_HandleTypeDef *Addr2Handle(uint32_t addr);
+        fhandle = Addr2Handle(dest);
+        if (fhandle == NULL)
+        {
+            LOG_I("invalid addr 0x%x", dest);
+            return -3;
+        }
+        else
+        {
+            flash_type = DFU_FLASH_TYPE_NOR;
+        }
+    }
+
+    int ret = -1;
+    uint32_t rd_size;
+    if (dest != 0xFFFFFFFF)
+    {
+        if (flash_type == DFU_FLASH_TYPE_NOR)
+        {
+            rd_size = rt_flash_read(dest + offset, data, size);
+        }
+        else
+        {
+            rd_size = rt_nand_read(dest + offset, data, size);
+        }
+
+        if (rd_size != size)
+            ret = -2;
+        else
+            ret = 0;
+    }
+
     return ret;
 }
 #endif

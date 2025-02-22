@@ -627,7 +627,7 @@ void bt_interface_avrcp_rewind(void)
     bt_avrcp_rewind(bts2_app_data);
 }
 
-bt_err_t bt_interface_avrcp_volume_changed(U8 volume)
+bt_err_t bt_interface_avrcp_set_absolute_volume_as_ct_role(U8 volume)
 {
     bt_err_t ret = BT_ERROR_UNSUPPORTED;
 
@@ -639,7 +639,7 @@ bt_err_t bt_interface_avrcp_volume_changed(U8 volume)
     return ret;
 }
 
-bt_err_t bt_interface_avrcp_set_absolute_volume(U8 volume)
+bt_err_t bt_interface_avrcp_set_absolute_volume_as_tg_role(U8 volume)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_err_t ret = BT_EOK;

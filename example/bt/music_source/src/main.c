@@ -99,15 +99,27 @@ static rt_mailbox_t g_bt_app_mb;
 
 
 /** Mount file system if using NAND, as BT NVDS is save in file*/
-#if defined(BSP_USING_SPI_NAND) && defined(RT_USING_DFS) && !defined(ZBT)
+#if defined(RT_USING_DFS) && !defined(ZBT)
 #include "dfs_file.h"
 #include "dfs_posix.h"
 #include "drv_flash.h"
 #define NAND_MTD_NAME    "root"
+
+#ifdef RT_USING_MTD_NOR
+    #define ADDR_MASK 0xFF000000
+    #define register_fs_device(flash_base, offset, size, name) register_nor_device(flash_base, offset, size, name)
+#elif defined(RT_USING_MTD_NAND)
+    #define ADDR_MASK 0xFC000000
+    #define register_fs_device(flash_base, offset, size, name) register_nand_device(flash_base, offset, size, name)
+#else
+    #define ADDR_MASK 0xFC000000
+    #define register_fs_device(flash_base, offset, size, name)
+#endif
+
 int mnt_init(void)
 {
     //TODO: how to get base address
-    register_nand_device(FS_REGION_START_ADDR & (0xFC000000), FS_REGION_START_ADDR - (FS_REGION_START_ADDR & (0xFC000000)), FS_REGION_SIZE, NAND_MTD_NAME);
+    register_fs_device(FS_REGION_START_ADDR & (ADDR_MASK), FS_REGION_START_ADDR - (FS_REGION_START_ADDR & (ADDR_MASK)), FS_REGION_SIZE, NAND_MTD_NAME);
     if (dfs_mount(NAND_MTD_NAME, "/", "elm", 0, 0) == 0) // fs exist
     {
         rt_kprintf("mount fs on flash to root success\n");
@@ -274,7 +286,11 @@ void mp3_proc_thread_entry(void *params)
                                         msg.param.filename,  /* file path */
                                         play_callback_func,  /* play callback function. */
                                         NULL);
-            RT_ASSERT(g_mp3_handle);
+            if (g_mp3_handle == NULL)
+            {
+                LOG_E("MP3 open failed!!");
+                break;
+            }
             /* Set loop times. */
             mp3ctrl_ioctl(g_mp3_handle,   /* handle returned by mp3ctrl_open. */
                           0,              /* cmd = 0, set loop times. */
@@ -505,7 +521,7 @@ __ROM_USED void music(int argc, char **argv)
         {
             // 0-127
             uint8_t vol = atoi(argv[2]);
-            bt_interface_avrcp_set_absolute_volume(vol);
+            bt_interface_avrcp_set_absolute_volume_as_tg_role(vol);
         }
     }
 }

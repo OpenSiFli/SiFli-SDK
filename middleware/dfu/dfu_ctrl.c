@@ -121,6 +121,8 @@ static void dfu_link_sync_end();
 static void dfu_link_lose_check_req(uint32_t current_index, uint16_t new_num_of_rsp);
 static rt_thread_t ble_dfu_flash_write_thread_start();
 static void dfu_flash_exit_msg_send();
+static rt_thread_t ble_dfu_offline_flash_thread_start();
+
 
 
 // TODO: find a better way to set this mode
@@ -139,6 +141,13 @@ static dfu_ctrl_env_t *dfu_ctrl_get_env(void)
 {
     return &g_dfu_ctrl_env;
 }
+
+void dfu_ctrl_set_mode(uint8_t mode)
+{
+    dfu_ctrl_env_t *env = dfu_ctrl_get_env();
+    env->mode = mode;
+}
+
 
 static void clear_interrupt_setting(void)
 {
@@ -734,9 +743,11 @@ void dfu_ota_bootloader_ram_run_set(uint8_t state)
     info.magic = SEC_CONFIG_MAGIC;
     info.ota_addr = 0x120a2000;
     info.dfu_state = state;
-    dfu_flash_erase(addr, 4096);
-
-    dfu_flash_write(addr, (uint8_t *)&info, sizeof(dfu_ram_info));
+    if (addr != 0xFFFFFFFF)
+    {
+        dfu_flash_erase(addr, 4096);
+        dfu_flash_write(addr, (uint8_t *)&info, sizeof(dfu_ram_info));
+    }
 }
 
 static uint8_t dfu_ctrl_packet_img_header_check(dfu_ctrl_env_t *env, dfu_code_image_header_t *header)
@@ -2505,13 +2516,31 @@ static void dfu_img_send_start_handler(dfu_ctrl_env_t *env, uint8_t *data, uint1
 static void dfu_flash_exit_msg_send()
 {
     dfu_ctrl_env_t *env = dfu_ctrl_get_env();
-    if (env->mb_handle)
+
+    rt_thread_t thread;
+    thread = rt_thread_find("ble_dfu_flash");
+    if (thread != RT_NULL)
     {
-        flash_write_t *fwrite;
-        fwrite = rt_malloc(sizeof(flash_write_t));
-        OS_ASSERT(fwrite);
-        fwrite->msg_type = DFU_FLASH_MSG_TYPE_EXIT;
-        rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+        if (env->mb_handle)
+        {
+            flash_write_t *fwrite;
+            fwrite = rt_malloc(sizeof(flash_write_t));
+            OS_ASSERT(fwrite);
+            fwrite->msg_type = DFU_FLASH_MSG_TYPE_EXIT;
+            rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+        }
+    }
+    else
+    {
+        thread = rt_thread_find("ble_dfu_offline");
+        if (env->mb_handle)
+        {
+            flash_write_offline_t *fwrite;
+            fwrite = rt_malloc(sizeof(flash_write_offline_t));
+            OS_ASSERT(fwrite);
+            fwrite->msg_type = DFU_FLASH_MSG_TYPE_EXIT;
+            rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+        }
     }
 }
 
@@ -3211,6 +3240,86 @@ void dfu_offline_reboot()
     }
 }
 
+static dfu_offline_install_packet_v2_t *dfu_offline_header_alloc_v2(uint32_t data_addr)
+{
+    //uint32_t data_addr = DFU_RES_FLASH_CODE_START_ADDR;
+
+    uint8_t remote_version;
+    uint16_t image_count;
+    uint32_t image_maglc;
+
+    dfu_flash_read(data_addr, (uint8_t *)&image_maglc, 4);
+    dfu_flash_read(data_addr + 4, (uint8_t *)&remote_version, 1);
+    dfu_flash_read(data_addr + 4 + 2, (uint8_t *)&image_count, 2);
+
+    if (image_maglc != SEC_CONFIG_MAGIC)
+    {
+        LOG_E("magic error");
+        return NULL;
+    }
+
+    LOG_I("dfu_offline_header_alloc_v2 image_count info_len %d, %d", image_count, remote_version);
+
+    dfu_offline_install_packet_v2_t *packet = malloc(sizeof(dfu_offline_install_packet_v2_t) + sizeof(dfu_offline_image_info_v2_t) * image_count);
+
+    uint16_t info_len = 6 * image_count;
+    uint16_t read_len = sizeof(dfu_offline_install_packet_v2_t) + info_len;
+    uint8_t *p_data = malloc(read_len);
+
+    uint8_t *data = p_data;
+
+    OS_ASSERT(p_data);
+    OS_ASSERT(packet);
+
+    dfu_flash_read(data_addr, data, read_len);
+
+    memcpy((uint8_t *)&packet->magic, data, 4);
+    data += 4;
+
+    memcpy((uint8_t *)&packet->version, data, 1);
+    data += 1;
+
+    memcpy((uint8_t *)&packet->install_state, data, 1);
+    data += 1;
+
+    memcpy((uint8_t *)&packet->image_count, data, 2);
+    data += 2;
+
+    memcpy((uint8_t *)&packet->crc, data, 4);
+    data += 4;
+
+
+    dfu_offline_image_info_v2_t *image_info = (dfu_offline_image_info_v2_t *)(&packet->image_info);
+
+    uint32_t offset = 12 + info_len;
+    for (uint8_t i = 0; i < packet->image_count; i++)
+    {
+        memcpy((uint8_t *)&image_info[i].id, data, 1);
+        data += 1;
+
+        memcpy((uint8_t *)&image_info[i].flag, data, 1);
+        data += 1;
+
+        memcpy((uint8_t *)&image_info[i].len, data, 4);
+        data += 4;
+
+        image_info[i].offset = offset;
+        offset += image_info[i].len;
+    }
+
+    /*
+        for (uint8_t i = 0; i < packet->image_count; i++)
+        {
+            // DEBUG
+            LOG_I("count %d, id %d, offset %d, len %d", i, image_info[i].id, image_info[i].offset, image_info[i].len);
+        }
+    */
+    free(p_data);
+
+    return packet;
+}
+
+
 static dfu_offline_install_packet_t *dfu_offline_header_alloc(uint32_t data_addr)
 {
     //uint32_t data_addr = DFU_RES_FLASH_CODE_START_ADDR;
@@ -3304,7 +3413,7 @@ static void dfu_reboot_install()
         dfu_update_img_header(env);
         LOG_I("dfu_ctrl_boot_to_user_fw");
         env->prog.hcpu_available = DFU_IMAGE_AVAILABLE;
-        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 1);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
         drv_reboot();
         //dfu_ctrl_boot_to_user_fw();
     }
@@ -3313,6 +3422,110 @@ static void dfu_reboot_install()
         env->is_force = 1;
         dfu_ctrl_error_handle(env);
         // HAL_PMU_Reboot();
+    }
+}
+
+static uint8_t dfu_offline_install_v2(uint8_t type)
+{
+    dfu_ctrl_env_t *env = dfu_ctrl_get_env();
+    uint32_t download_base = DFU_DOWNLOAD_REGION_START_ADDR;
+    uint8_t install_result = DFU_ERR_GENERAL_ERR;
+
+    dfu_offline_install_packet_v2_t *packet = dfu_offline_header_alloc_v2(download_base);
+    do
+    {
+        if (!packet)
+        {
+            LOG_I("alloc failed");
+            break;
+        }
+
+        dfu_offline_image_info_v2_t *image_info = (dfu_offline_image_info_v2_t *)(&packet->image_info);
+
+        uint32_t image_length = 0;
+        for (int i = 0; i < packet->image_count; i++)
+        {
+            image_length += image_info[i].len;
+        }
+        LOG_I("dfu_offline_install_v2 len %d header %d", image_length, (12 + 6 * packet->image_count));
+        uint8_t *p_data;
+        p_data = (uint8_t *)DFU_DOWNLOAD_REGION_START_ADDR;
+
+        uint8_t offset;
+        offset = 12 + 6 * packet->image_count;
+
+        uint32_t cal_crc = dfu_crc32mpeg2(p_data + offset, image_length);
+        if (cal_crc != packet->crc)
+        {
+            LOG_I("crc error, 0x%x, 0x%x", cal_crc, packet->crc);
+            dfu_offline_header_free((uint8_t *)packet);
+            break;
+        }
+
+        if (type == OFFLINE_INSTALL_TYPE_IMAGE)
+        {
+            uint8_t current_state;
+            dfu_flash_read(DFU_DOWNLOAD_REGION_START_ADDR + 5, &current_state, 1);
+            if (current_state != 0xFF)
+            {
+                LOG_W("install state not init %d", current_state);
+            }
+            current_state = DFU_OFFLINE_INSTALL;
+            dfu_flash_write(DFU_DOWNLOAD_REGION_START_ADDR + 5, &current_state, 1);
+        }
+
+        for (int i = 0; i < packet->image_count; i++)
+        {
+            if (type == OFFLINE_INSTALL_TYPE_IMAGE)
+            {
+                if (image_info[i].id != DFU_IMG_ID_OTA_MANAGER)
+                {
+                    dfu_image_install_flash_offline(env, image_info[i].id, image_info[i].len, image_info[i].offset, image_info[i].flag);
+                }
+            }
+            else
+            {
+                if (image_info[i].id == DFU_IMG_ID_OTA_MANAGER)
+                {
+                    LOG_I("update ota manager");
+                    dfu_image_install_flash_offline(env, image_info[i].id, image_info[i].len, image_info[i].offset, image_info[i].flag);
+                }
+            }
+        }
+
+        LOG_I("instasll finish");
+        if (type == OFFLINE_INSTALL_TYPE_IMAGE)
+        {
+            uint8_t current_state = DFU_OFFLINE_INSTALL_FINISH;
+            dfu_flash_write(DFU_DOWNLOAD_REGION_START_ADDR + 5, &current_state, 1);
+        }
+
+        install_result = DFU_ERR_NO_ERR;
+        dfu_offline_header_free((uint8_t *)packet);
+    }
+    while (0);
+
+    if (type == 0)
+    {
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
+        env->prog.state = DFU_CTRL_OFFLINE_INSTALL_V2;
+        dfu_ctrl_update_prog_info(env);
+        HAL_PMU_Reboot();
+    }
+    return install_result;
+}
+
+void dfu_offline_install_set_v2()
+{
+    dfu_ctrl_env_t *env = dfu_ctrl_get_env();
+    uint8_t ret = dfu_offline_install_v2(OFFLINE_INSTALL_TYPE_OTA_MANAGER);
+
+    LOG_I("dfu_offline_install_set_v2 %d", ret);
+    if (ret == DFU_ERR_NO_ERR)
+    {
+        env->prog.state = DFU_CTRL_OFFLINE_INSTALL_V2_PREPARE;
+        dfu_ctrl_update_prog_info(env);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_OFFLINE_OTA_MANAGER);
     }
 }
 
@@ -3753,7 +3966,7 @@ static void dfu_ctrl_install_completed(dfu_ctrl_env_t *env, uint16_t status)
         dfu_flash_addr_reset(0);
         dfu_ctrl_update_prog_info(env);
         dfu_update_img_header(env);
-        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 1);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
         drv_reboot();
         //dfu_ctrl_boot_to_user_fw();
     }
@@ -3806,7 +4019,10 @@ void dfu_protocol_close_handler(void)
         env->flash_erase_state = DFU_FLASH_ERASE_INTERRUPT;
     }
 
-    env->callback(DFU_APP_ERROR_DISCONNECT_IND, &ind);
+    if (env->callback)
+    {
+        env->callback(DFU_APP_ERROR_DISCONNECT_IND, &ind);
+    }
     dfu_ctrl_error_handle(env);
 }
 
@@ -3817,6 +4033,329 @@ static void dfu_link_lose_check_rsp(dfu_ctrl_env_t *env, uint8_t *data, uint16_t
     dfu_link_sync_end();
 
     dfu_link_sync_start(DFU_SYNC_TYPE_DOWNLOAD);
+}
+
+static void dfu_image_offline_start_rsp(dfu_ctrl_env_t *env, uint16_t result, uint32_t completed_count)
+{
+    LOG_I("dfu_image_offline_start_rsp %d, %d", result, completed_count);
+    dfu_image_offline_start_rsp_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_IMAGE_OFFLINE_START_RSP, dfu_image_offline_start_rsp_t);
+    rsp->result = result;
+    rsp->reserved = 0;
+    rsp->completed_count = completed_count;
+    dfu_protocol_packet_send((uint8_t *)rsp);
+}
+
+static void dfu_image_offline_start_handler(dfu_ctrl_env_t *env, uint8_t *data, uint16_t len)
+{
+    LOG_I("dfu_image_offline_start_handler");
+
+    uint16_t status = DFU_ERR_NO_ERR;
+
+    uint8_t *aligned_data = malloc(len);
+    memcpy(aligned_data, data, len);
+
+    dfu_image_offline_start_req_t *req = (dfu_image_offline_start_req_t *)aligned_data;
+
+    /*
+        uint32_t file_len;
+        uint32_t packet_count;
+        uint32_t crc_value;
+        memcpy((uint8_t *)&file_len, &req->file_len, 4);
+        memcpy((uint8_t *)&packet_count, &req->packet_count, 4);
+        memcpy((uint8_t *)&crc_value, &req->crc_value, 4);
+    */
+    if (env->dfu_flash_thread == NULL)
+    {
+        LOG_I("use dfu thread");
+        env->dfu_flash_thread = ble_dfu_offline_flash_thread_start();
+    }
+
+    uint32_t completed_count = 0;
+    // check resume
+    if (req->file_len == env->prog.all_length &&
+            req->packet_count == env->prog.all_count &&
+            req->crc_value == env->prog.crc)
+    {
+        LOG_I("resume at %d", env->prog.current_count);
+        completed_count = env->prog.current_count;
+    }
+
+    do
+    {
+        if (completed_count == 0)
+        {
+            uint32_t size = req->file_len;
+            uint32_t align_size;
+#ifdef SOC_SF32LB55X
+            // erase should 8k aligned
+            align_size = 0x2000;
+#else
+            // none 55x 4k aligned
+            align_size = 0x1000;
+#endif
+            if (size % align_size != 0)
+            {
+                size = (size + align_size) / align_size * align_size;
+            }
+            LOG_I("dfu_image_offline_start_handler erase 0x%x, 0x%x", DFU_DOWNLOAD_REGION_START_ADDR, size);
+            if (size > DFU_DOWNLOAD_REGION_SIZE)
+            {
+                status = DFU_ERR_SPACE_NOT_ENOUGH;
+                break;
+            }
+            env->prog.all_length = req->file_len;
+            env->prog.all_count = req->packet_count;
+            env->prog.current_count = 0;
+            env->prog.crc = req->crc_value;
+            if (env->mb_handle)
+            {
+                flash_write_offline_t *fwrite;
+                fwrite = rt_malloc(sizeof(flash_write_offline_t));
+                OS_ASSERT(fwrite);
+                fwrite->base_addr = DFU_DOWNLOAD_REGION_START_ADDR;
+                fwrite->offset = 0;
+                fwrite->size = size;
+                fwrite->msg_type = DFU_FLASH_MSG_TYPE_ERASE;
+                //LOG_I("fwrite %d, %d, 0x%x", fwrite->offset, fwrite->size, fwrite);
+                rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+            }
+            else
+            {
+                int ret = dfu_flash_erase(DFU_DOWNLOAD_REGION_START_ADDR, size);
+                if (ret != 0)
+                {
+                    status = DFU_ERR_FLASH;
+                }
+            }
+        }
+    }
+    while (0);
+
+    if (status == DFU_ERR_NO_ERR)
+    {
+        env->prog.state = DFU_CTRL_TRAN_START;
+    }
+    free(aligned_data);
+
+    if (completed_count != 0 || (completed_count == 0 && !env->mb_handle) || status != DFU_ERR_NO_ERR)
+    {
+        dfu_image_offline_start_rsp(env, status, completed_count);
+    }
+}
+
+static void dfu_offline_image_packet_rsp(dfu_ctrl_env_t *env, uint16_t result, uint8_t retrans, uint32_t completed_count)
+{
+    if (result != DFU_ERR_NO_ERR)
+    {
+        LOG_I("dfu_offline_image_packet_rsp %d, %d, %d", result, retrans, completed_count);
+    }
+    dfu_image_offline_packet_rsp_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_IMAGE_OFFLINE_PACKET_RSP, dfu_image_offline_packet_rsp_t);
+    rsp->result = result;
+    rsp->retransmission = retrans;
+    rsp->reserved = 0;
+    rsp->completed_count = completed_count;
+    dfu_protocol_packet_send((uint8_t *)rsp);
+}
+
+static void dfu_offline_image_packet_handler(dfu_ctrl_env_t *env, uint8_t *data, uint16_t len)
+{
+    uint8_t status = DFU_ERR_NO_ERR;
+    uint8_t retrans = 0;
+
+    do
+    {
+        if (env->prog.state != DFU_CTRL_TRAN_START)
+        {
+            status = DFU_ERR_NOT_READY;
+            break;
+        }
+
+        dfu_image_offline_packet_t *packet = (dfu_image_offline_packet_t *)data;
+        if (packet->packet_index != env->prog.current_count + 1)
+        {
+            LOG_I
+            ("dfu_offline_image_packet_handler index error, expect %d, receive %d", env->prog.current_count + 1, packet->packet_index);
+            status = DFU_ERR_INDEX_ERROR;
+            retrans = 1;
+            break;
+        }
+
+        uint32_t cal_crc = dfu_crc32mpeg2(packet->data, packet->data_len);
+
+        if (cal_crc != packet->crc)
+        {
+            status = DFU_ERR_GENERAL_ERR;
+            retrans = 1;
+            break;
+        }
+
+        // last packet
+        if (env->prog.current_count + 1 == env->prog.all_count)
+        {
+            if (env->prog.all_length != env->prog.current_count * 2048 + packet->data_len)
+            {
+                status = DFU_ERR_GENERAL_ERR;
+                retrans = 0;
+                break;
+            }
+        }
+
+        LOG_D("dfu_image_offline_packet_handler %d", env->prog.current_count);
+        if (env->mb_handle)
+        {
+            flash_write_offline_t *fwrite;
+            fwrite = rt_malloc(sizeof(flash_write_offline_t));
+            OS_ASSERT(fwrite);
+
+            fwrite->base_addr = DFU_DOWNLOAD_REGION_START_ADDR;
+            fwrite->offset = 2048 * env->prog.current_count;
+            fwrite->size = packet->data_len;
+            fwrite->msg_type = DFU_FLASH_MSG_TYPE_DATA;
+            memcpy(fwrite->data, packet->data, packet->data_len);
+
+            //LOG_I("fwrite %d, %d, 0x%x", fwrite->offset, fwrite->size, fwrite);
+            rt_err_t mb_ret = rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+            while (mb_ret != RT_EOK)
+            {
+                LOG_I("MB RET %d", mb_ret);
+                rt_thread_mdelay(100);
+                rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+            }
+            return;
+        }
+        else
+        {
+            dfu_flash_write(DFU_DOWNLOAD_REGION_START_ADDR + 2048 * env->prog.current_count, packet->data, packet->data_len);
+
+            env->prog.current_count++;
+        }
+    }
+    while (0);
+    dfu_offline_image_packet_rsp(env, status, retrans, env->prog.current_count);
+}
+
+static void dfu_image_offline_end_rsp(dfu_ctrl_env_t *env, uint16_t result)
+{
+    LOG_I("dfu_image_offline_end_rsp");
+    dfu_image_offline_end_rsp_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_IMAGE_OFFLINE_END_RSP, dfu_image_offline_end_rsp_t);
+    rsp->result = result;
+    dfu_protocol_packet_send((uint8_t *)rsp);
+}
+
+static void dfu_image_offline_end_handler(dfu_ctrl_env_t *env, uint8_t *data, uint16_t len)
+{
+    LOG_I("dfu_image_offline_end_handler");
+    uint8_t status = DFU_ERR_NO_ERR;
+    do
+    {
+        if (env->prog.state != DFU_CTRL_TRAN_START)
+        {
+            status = DFU_ERR_NOT_READY;
+            break;
+        }
+
+        dfu_image_offline_end_req_t *packet = (dfu_image_offline_end_req_t *)data;
+        if (env->prog.all_count != env->prog.current_count)
+        {
+            status = DFU_ERR_FW_INVALID;
+            break;
+        }
+    }
+    while (0);
+
+    if (env->mb_handle)
+    {
+        flash_write_offline_t *fwrite;
+        fwrite = rt_malloc(sizeof(flash_write_offline_t));
+        OS_ASSERT(fwrite);
+        fwrite->msg_type = DFU_FLASH_MSG_TYPE_EXIT;
+        rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
+    }
+
+    dfu_image_offline_end_rsp(env, status);
+    dfu_offline_install_set_v2();
+
+    dfu_set_reboot_after_disconnect();
+    dfu_protocol_session_close();
+}
+
+static void ble_dfu_offline_flash()
+{
+    LOG_I("ble_dfu_flash_write: try to recv a mail");
+    int thread_run = 1;
+    uint8_t status;
+
+    dfu_ctrl_env_t *env = dfu_ctrl_get_env();
+    env->mb_handle = rt_mb_create("dfu_flash", 12, RT_IPC_FLAG_FIFO);
+
+    while (thread_run)
+    {
+        flash_write_offline_t *fwrite;
+        uint32_t p;
+        int ret = 0;
+        if (rt_mb_recv(env->mb_handle, (rt_uint32_t *)&p, RT_WAITING_FOREVER) == RT_EOK)
+        {
+            //LOG_I("ble_dfu_flash_write %d", p);
+            fwrite = (flash_write_offline_t *)p;
+
+            switch (fwrite->msg_type)
+            {
+            case DFU_FLASH_MSG_TYPE_DATA:
+                //LOG_I("ble_dfu_flash_write id %d, flag %d, OFFSET %d, SIZE %d, addr 0x%x", fwrite->heade.img_id, fwrite->heade.img_id,fwrite->offset, fwrite->size, fwrite);
+                dfu_flash_write(fwrite->base_addr + fwrite->offset, fwrite->data, fwrite->size);
+
+                rt_free(fwrite);
+
+                if (ret != 0)
+                {
+                    LOG_I("ble_dfu_flash_write %d", ret);
+                    OS_ASSERT(0);
+                }
+                env->prog.current_count++;
+                dfu_offline_image_packet_rsp(env, 0, 0, 0);
+                break;
+            case DFU_FLASH_MSG_TYPE_EXIT:
+                LOG_I("DFU_FLASH_MSG_TYPE_EXIT");
+                thread_run = 0;
+                rt_free(fwrite);
+                break;
+            case DFU_FLASH_MSG_TYPE_ERASE:
+                LOG_I("DFU_FLASH_MSG_TYPE_ERASE");
+                int ret = dfu_flash_erase(fwrite->base_addr, fwrite->size);
+                if (ret != 0)
+                {
+                    status = DFU_ERR_FLASH;
+                }
+                else
+                {
+                    status = DFU_ERR_NO_ERR;
+                }
+                rt_free(fwrite);
+                dfu_image_offline_start_rsp(env, status, 0);
+                break;
+            }
+        }
+    }
+
+    if (env->mb_handle)
+    {
+        LOG_I("mb delete");
+        rt_mb_delete(env->mb_handle);
+        env->mb_handle = NULL;
+    }
+    env->dfu_flash_thread = NULL;
+}
+
+static rt_thread_t ble_dfu_offline_flash_thread_start()
+{
+    LOG_I("ble_dfu_offline_flash_thread_start");
+    rt_thread_t tid;
+    tid = rt_thread_create("ble_dfu_offline", ble_dfu_offline_flash, NULL, 4096, RT_MAIN_THREAD_PRIORITY + 5, 10);
+    if (tid != RT_NULL)
+    {
+        rt_thread_startup(tid);
+    }
+    return tid;
 }
 
 void dfu_protocol_packet_handler(dfu_tran_protocol_t *msg, uint16_t length)
@@ -3904,6 +4443,21 @@ void dfu_protocol_packet_handler(dfu_tran_protocol_t *msg, uint16_t length)
         dfu_link_lose_check_rsp(env, msg->data, msg->length);
         break;
     }
+    case DFU_IMAGE_OFFLINE_START_REQ:
+    {
+        dfu_image_offline_start_handler(env, msg->data, msg->length);
+        break;
+    }
+    case DFU_IMAGE_OFFLINE_PACKET_REQ:
+    {
+        dfu_offline_image_packet_handler(env, msg->data, msg->length);
+        break;
+    }
+    case DFU_IMAGE_OFFLINE_END_REQ:
+    {
+        dfu_image_offline_end_handler(env, msg->data, msg->length);
+        break;
+    }
     default:
         break;
     }
@@ -3980,7 +4534,7 @@ static void dfu_ctrl_timer_2_normal_mode_handler(void *para)
     os_timer_stop(g_dfu_timer);
     os_timer_delete(g_dfu_timer);
     // dfu_ctrl_boot_to_user_fw();
-    HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 1);
+    HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
     drv_reboot();
 }
 
@@ -3997,7 +4551,7 @@ static void dfu_ctrl_enter_idle_state_of_normal_mode(dfu_ctrl_env_t *env)
         // os_timer_create(g_dfu_timer, dfu_ctrl_timer_2_normal_mode_handler, NULL, OS_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
         // os_timer_start(g_dfu_timer, 500);
         // dfu_ctrl_boot_to_user_fw();
-        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 1);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
         drv_reboot();
     }
     else
@@ -4458,6 +5012,7 @@ static void rc10_task_entry(void *param)
 
 uint8_t dfu_ctrl_reset_handler(void)
 {
+    //HAL_sw_breakpoint();
     dfu_ctrl_env_t *env = dfu_ctrl_get_env();
     RT_ASSERT(env->mode == DFU_CTRL_OTA_MODE);
     uint16_t state = env->prog.state;
@@ -4467,9 +5022,9 @@ uint8_t dfu_ctrl_reset_handler(void)
     LOG_I("dfu_ctrl_reset_handler %d", state);
     dfu_ota_bootloader_ram_run_set(DFU_RAM_STATE_UPDATE_FAIL);
 
-    if (HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE) == 1)
+    if (HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE) == DFU_FORCE_MODE_REBOOT_TO_USER)
     {
-        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 0);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_NONE);
         dfu_flash_addr_reset(0);
         dfu_ctrl_boot_to_user_fw();
     }
@@ -4534,7 +5089,7 @@ uint8_t dfu_ctrl_reset_handler(void)
     {
         if (env->callback)
         {
-            env->callback(DFU_APP_OFFLINE_INSTALL_IND, NULL);
+            //env->callback(DFU_APP_OFFLINE_INSTALL_IND, NULL);
         }
         is_jump = 0;
         dfu_offline_install();
@@ -4544,6 +5099,11 @@ uint8_t dfu_ctrl_reset_handler(void)
     {
         dfu_reboot_install();
         break;
+    }
+    case DFU_CTRL_OFFLINE_INSTALL_V2_PREPARE:
+    {
+        is_jump = 0;
+        dfu_offline_install_v2(OFFLINE_INSTALL_TYPE_IMAGE);
     }
     default:
         is_jump = 1;
@@ -4560,7 +5120,7 @@ uint8_t dfu_ctrl_reset_handler(void)
 #ifdef OTA_ERROR_HANDLE_IN_USR
         if (env->is_force)
         {
-            HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 1);
+            HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_REBOOT_TO_USER);
             dfu_ctrl_boot_to_user_fw();
         }
 #endif
@@ -4716,15 +5276,17 @@ int dfu_ctrl_init(void)
         HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, ver_addr);
 #else
         env->mode = DFU_CTRL_NORMAL_MODE;
-        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, 0);
+        HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, DFU_FORCE_MODE_NONE);
 #endif
     }
     while (0);
     // debug use
     //env->prog.state = DFU_CTRL_FORCE_UPDATE;
     if (env->mode == DFU_CTRL_NORMAL_MODE &&
-            env->prog.state == DFU_CTRL_UPDATING)
+            (env->prog.state == DFU_CTRL_UPDATING ||
+             env->prog.state == DFU_CTRL_OFFLINE_INSTALL_V2))
     {
+        LOG_I("dfu finish");
         env->prog.state = DFU_CTRL_IDLE;
         env->is_force = 0;
 #ifdef OTA_MODEM_RECORD
@@ -4819,6 +5381,10 @@ static void dfu_cmd(uint8_t argc, char **argv)
         {
             int val = atoi(argv[2]);
             dfu_ota_bootloader_ram_run_set(val);
+        }
+        else if (strcmp(argv[1], "show") == 0)
+        {
+            LOG_I("114");
         }
     }
 }

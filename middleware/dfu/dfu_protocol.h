@@ -56,7 +56,7 @@
 
 #include "dfu.h"
 
-#define OTA_CODE_VERSION 1
+#define OTA_CODE_VERSION 2
 
 typedef enum
 {
@@ -121,6 +121,12 @@ typedef enum
     DFU_LINK_LOSE_CHECK_REQ,
     DFU_LINK_LOSE_CHECK_RSP,
     DFU_ABORT_COMMAND = 37,
+    DFU_IMAGE_OFFLINE_START_REQ = 38,
+    DFU_IMAGE_OFFLINE_START_RSP = 39,
+    DFU_IMAGE_OFFLINE_PACKET_REQ = 40,
+    DFU_IMAGE_OFFLINE_PACKET_RSP = 41,
+    DFU_IMAGE_OFFLINE_END_REQ = 42,
+    DFU_IMAGE_OFFLINE_END_RSP = 43,
 } dfu_protocol_msg_id_t;
 
 
@@ -129,6 +135,8 @@ typedef enum
     DFU_ID_CODE,
     DFU_ID_CODE_MIX,
     DFU_ID_OTA_MANAGER,
+    DFU_ID_CODE_FULL_BACKUP,
+    DFU_ID_CODE_BACKGROUND,
     DFU_ID_DL,
     DFU_ID_CODE_DOWNLOAD_IN_HCPU = 10,
     DFU_ID_CODE_RES_DOWNLOAD_IN_HCPU,
@@ -175,7 +183,11 @@ typedef enum
     DFU_IMG_ID_LCPU_PATCH,
     DFU_IMG_ID_DYN,
     DFU_IMG_ID_MUSIC,
-    DFU_IMG_ID_MAX = DFU_IMG_ID_MUSIC,
+    DFU_IMG_ID_PIC,
+    DFU_IMG_ID_FONT,
+    DFU_IMG_ID_RING,
+    DFU_IMG_ID_LANG,
+    DFU_IMG_ID_MAX = DFU_IMG_ID_LANG,
 } dfu_img_id_t;
 #endif
 
@@ -305,6 +317,13 @@ typedef struct
 
 typedef struct
 {
+    uint32_t pkt_idx;
+    uint16_t img_id;
+    uint16_t size;
+    uint8_t packet[0];
+} dfu_image_send_packet_v2_t;
+typedef struct
+{
     uint16_t result;
 } dfu_image_send_packet_response_t;
 
@@ -417,6 +436,46 @@ typedef struct
 {
     uint16_t result;
 } dfu_link_lose_check_rsp_t;
+
+typedef struct
+{
+    uint32_t file_len;
+    uint32_t packet_count;
+    uint32_t crc_value;
+} dfu_image_offline_start_req_t;
+
+typedef struct
+{
+    uint16_t result;
+    uint16_t reserved;
+    uint32_t completed_count;
+} dfu_image_offline_start_rsp_t;
+
+typedef struct
+{
+    uint32_t packet_index;
+    uint32_t data_len;
+    uint32_t crc;
+    uint8_t data[0];
+} dfu_image_offline_packet_t;
+
+typedef struct
+{
+    uint16_t result;
+    uint8_t retransmission;
+    uint8_t reserved;
+    uint32_t completed_count;
+} dfu_image_offline_packet_rsp_t;
+
+typedef struct
+{
+    uint16_t reserved;
+} dfu_image_offline_end_req_t;
+
+typedef struct
+{
+    uint16_t result;
+} dfu_image_offline_end_rsp_t;
 
 typedef struct
 {

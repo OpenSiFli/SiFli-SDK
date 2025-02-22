@@ -190,6 +190,11 @@ menu "Sifli middleware"
             bool "support lite or none ota manager"
             default n
         endif
+        if OTA_55X
+            config OTA_INSTALL_OFFLINE
+            bool "only provide install"
+            default n
+        endif
     config OTA_56X_NAND
         bool "NAND flash OTA"
         depends on BSP_USING_DFU

@@ -47,12 +47,14 @@
 #include <rtthread.h>
 #include "dfu.h"
 #include "board.h"
-#ifndef BSP_USING_HW_AES
-    #include "mbedtls/aes.h"
+#ifndef OTA_INSTALL_OFFLINE
+    #ifndef BSP_USING_HW_AES
+        #include "mbedtls/aes.h"
+    #endif
+    #include "mbedtls/cipher.h"
+    #include "mbedtls/pk.h"
+    #include "mbedtls/sha256.h"
 #endif
-#include "mbedtls/cipher.h"
-#include "mbedtls/pk.h"
-#include "mbedtls/sha256.h"
 
 ALIGN(4)
 uint8_t g_uid[DFU_UID_SIZE];
@@ -219,6 +221,7 @@ int sifli_hw_efuse_write(uint8_t id, uint8_t *data, int size)
 
 int sifli_hw_dec(uint8_t *key, uint8_t *in_data, uint8_t *out_data, int size, uint32_t init_offset)
 {
+#ifndef OTA_INSTALL_OFFLINE
     uint32_t offset = 0;
 
     if (g_dfu_efuse_read_hook && !key)
@@ -252,7 +255,11 @@ int sifli_hw_dec(uint8_t *key, uint8_t *in_data, uint8_t *out_data, int size, ui
     }
 #endif
     return offset;
+#else
+    return 0;
+#endif
 }
+
 
 void sifli_hw_init_xip_key(uint8_t *enc_img_key)
 {
@@ -366,6 +373,4 @@ void sifli_hw_enc_with_key(uint8_t *key, uint8_t *in_data, uint8_t *out_data, in
 
 #endif
 }
-
-
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

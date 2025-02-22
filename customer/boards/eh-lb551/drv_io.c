@@ -501,7 +501,7 @@ void BSP_Power_Up(bool is_deep_sleep)
     {
 #if defined (BSP_USING_PSRAM)
         extern int rt_psram_exit_low_power(char *name);
-        rt_psram_exit_low_power("psram0");
+        // rt_psram_exit_low_power("psram0");
 #endif
     }
 #ifndef PMIC_CTRL_ENABLE
@@ -653,8 +653,8 @@ void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
         if (is_deep_sleep)
         {
 #if defined (BSP_USING_PSRAM)
-            extern int rt_psram_enter_low_power(char *name);
-            rt_psram_enter_low_power("psram0");
+            // extern int rt_psram_enter_low_power(char *name);
+            // rt_psram_enter_low_power("psram0");
 #endif
         }
 

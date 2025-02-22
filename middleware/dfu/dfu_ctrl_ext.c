@@ -296,7 +296,6 @@ int dfu_ctrl_ext_init(void)
     dfu_set_ota_update_state(ota_update);
     dfu_set_ota_version(&old, &cur);
 
-    // init_flash_des();
 #endif
     LOG_I("dfu_ctrl_ext_init");
     dfu_sec_init();
@@ -597,7 +596,7 @@ static void uncompress_patch(uint8_t *compress_buf, uint32_t packet_len, uint8_t
         config.height = 0;
         config.work_mode = HAL_EZIP_MODE_GZIP;
         config.output_mode = HAL_EZIP_OUTPUT_AHB;
-        ezip_handle.Instance = hwp_ezip;
+        // ezip_handle.Instance = hwp_ezip;
         HAL_EZIP_Init(&ezip_handle);
 
         // disbale interrupt
@@ -871,7 +870,11 @@ static uint8_t check_current_img_need_overwrite(int img_id)
 {
     if (img_id == DFU_IMG_ID_RES ||
             img_id == DFU_IMG_ID_DYN ||
-            img_id == DFU_IMG_ID_MUSIC)
+            img_id == DFU_IMG_ID_MUSIC ||
+            img_id == DFU_IMG_ID_PIC ||
+            img_id == DFU_IMG_ID_FONT ||
+            img_id == DFU_IMG_ID_RING ||
+            img_id == DFU_IMG_ID_LANG)
     {
         return 1;
     }
@@ -1280,7 +1283,7 @@ void dfu_link_sync_start(uint8_t sync_type)
     else if (sync_type == DFU_SYNC_TYPE_RSP)
     {
         os_timer_create(g_dfu_sync_timer, dfu_rsp_sync_handler, NULL, OS_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
-        os_timer_start(g_dfu_sync_timer, DFU_SYNC_FILE_DOWNLOAD_TIMER);
+        os_timer_start(g_dfu_sync_timer, DFU_SYNC_RSP_TIMER);
     }
 }
 
@@ -1365,6 +1368,7 @@ static void dfu_ctrl_error_handle(dfu_ctrl_ext_env_t *env)
 static void dfu_img_send_start_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, uint16_t len)
 {
     DFU_ERR_CHECK(env && data);
+    dfu_link_sync_end();
     uint16_t state = env->prog.state;
     dfu_image_send_start_t *s_data = (dfu_image_send_start_t *)data;
     dfu_img_info_t *curr_img = &env->prog.fw_context.code_img.curr_img_info;
@@ -1509,9 +1513,7 @@ static void dfu_img_send_start_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, u
                 env->callback(DFU_APP_IMAGE_DL_START_IND, callback_len, &ind);
             }
 
-            if (curr_img->img_id == DFU_IMG_ID_RES ||
-                    curr_img->img_id == DFU_IMG_ID_DYN ||
-                    curr_img->img_id == DFU_IMG_ID_MUSIC)
+            if (check_current_img_need_overwrite(curr_img->img_id))
             {
                 env->prog.ota_mode = 2;
             }
@@ -1542,9 +1544,7 @@ static void dfu_img_send_start_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, u
             curr_img->img_info.dl_info.curr_pkt_num = 0;
             curr_img->img_info.dl_info.curr_img_length = 0;
 
-            if (curr_img->img_id == DFU_IMG_ID_RES ||
-                    curr_img->img_id == DFU_IMG_ID_DYN ||
-                    curr_img->img_id == DFU_IMG_ID_MUSIC)
+            if (check_current_img_need_overwrite(curr_img->img_id))
             {
                 env->prog.ota_mode = 2;
             }
@@ -1681,6 +1681,10 @@ static void dfu_verification_handle()
         LOG_E("dfu_img_send_end_handler rsp error: %d", status);
         dfu_ctrl_error_handle(env);
     }
+    else
+    {
+        dfu_link_sync_start(DFU_SYNC_TYPE_RSP);
+    }
 }
 
 static void ble_dfu_flash_write()
@@ -1736,7 +1740,6 @@ static void ble_dfu_flash_write()
         env->mb_handle = NULL;
     }
 
-    env->dfu_flash_thread = NULL;
 }
 
 static rt_thread_t ble_dfu_flash_write_thread_start()
@@ -1784,10 +1787,12 @@ static int dfu_packet_download(dfu_ctrl_ext_env_t *env, uint8_t img_id, uint8_t 
 
                 //LOG_I("fwrite %d, %d, 0x%x", fwrite->offset, fwrite->size, fwrite);
                 mb_ret = rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
-                if (mb_ret != RT_EOK)
+                while (mb_ret != RT_EOK)
                 {
                     LOG_I("MB RET %d", mb_ret);
-                    OS_ASSERT(0);
+                    //OS_ASSERT(0);
+                    rt_thread_mdelay(100);
+                    mb_ret = rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
                 }
             }
             else
@@ -1824,10 +1829,12 @@ static int dfu_packet_download(dfu_ctrl_ext_env_t *env, uint8_t img_id, uint8_t 
 
                 //LOG_I("fwrite %d, %d, 0x%x", fwrite->offset, fwrite->size, fwrite);
                 mb_ret = rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
-                if (mb_ret != RT_EOK)
+                while (mb_ret != RT_EOK)
                 {
                     LOG_I("MB RET %d", mb_ret);
-                    OS_ASSERT(0);
+                    //OS_ASSERT(0);
+                    rt_thread_mdelay(100);
+                    mb_ret = rt_mb_send(env->mb_handle, (rt_uint32_t)fwrite);
                 }
             }
             else
@@ -1852,12 +1859,33 @@ static void dfu_img_send_packet_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, 
     DFU_ERR_CHECK(env && data);
     uint16_t state = env->prog.state;
     dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
-    dfu_image_send_packet_t *packet = (dfu_image_send_packet_t *)data;
+    dfu_image_send_packet_v2_t *packet;
+    dfu_image_send_packet_t *packet_old;
+    uint8_t packet_img_id;
+    uint32_t packet_index;
+    uint32_t packet_size;
+    uint8_t *packet_data;
+    if (env->remote_version >= 102)
+    {
+        packet = (dfu_image_send_packet_v2_t *)data;
+        packet_data = packet->packet;
+        packet_img_id = packet->img_id;
+        packet_index = packet->pkt_idx;
+        packet_size = packet->size;
+    }
+    else
+    {
+        packet_old = (dfu_image_send_packet_t *)data;
+        packet_data = packet_old->packet;
+        packet_img_id = packet_old->img_id;
+        packet_index = packet_old->pkt_idx;
+        packet_size = packet_old->size;
+    }
     dfu_image_header_int_t *img_header = env->prog.fw_context.code_img.img_header;
     uint16_t status = DFU_ERR_GENERAL_ERR;
     do
     {
-        if (packet->img_id != curr_info->img_id)
+        if (packet_img_id != curr_info->img_id)
         {
             status = DFU_ERR_PARAMETER_INVALID;
             break;
@@ -1871,13 +1899,13 @@ static void dfu_img_send_packet_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, 
             ind.event = DFU_APP_IMAGE_DL_ROPGRESS_IND;
             uint16_t len = sizeof(dfu_app_img_dl_progress_ind_ext_t);
 
-            LOG_D("packet count(%d), len(%d)\r\n", packet->pkt_idx, packet->size);
+            LOG_D("packet count(%d), len(%d)\r\n", packet_index, packet_size);
             int ret;
-            if (curr_info->img_length < curr_info->img_info.dl_info.curr_img_length + packet->size)
+            if (curr_info->img_length < curr_info->img_info.dl_info.curr_img_length + packet_size)
             {
                 break;
             }
-            else if ((curr_info->img_info.dl_info.curr_pkt_num + 1) != packet->pkt_idx)
+            else if ((curr_info->img_info.dl_info.curr_pkt_num + 1) != packet_index)
             {
                 LOG_W("error curr count(%d)\r\n", curr_info->img_info.dl_info.curr_pkt_num);
 
@@ -1894,7 +1922,14 @@ static void dfu_img_send_packet_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, 
             //else if (packet->size > env->prog.fw_context.code_img.blk_size)
             //break;
 
-            ret = dfu_packet_download(env, curr_info->img_id, packet->packet, packet->size);
+            ret = dfu_packet_download(env, curr_info->img_id, packet_data, packet_size);
+            if (ret == -1)
+            {
+                LOG_W("packet error (%d), retry", curr_info->img_info.dl_info.curr_pkt_num);
+                dfu_link_lose_check_req(curr_info->img_info.dl_info.curr_pkt_num, curr_info->img_info.dl_info.num_of_rsp);
+                dfu_link_sync_start(DFU_SYNC_TYPE_RSP);
+                status = DFU_ERR_NO_ERR;
+            }
 
             if (ret != 0)
             {
@@ -1904,7 +1939,7 @@ static void dfu_img_send_packet_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, 
 
             status = DFU_ERR_NO_ERR;
             curr_info->img_info.dl_info.curr_pkt_num++;
-            curr_info->img_info.dl_info.curr_img_length += packet->size;
+            curr_info->img_info.dl_info.curr_img_length += packet_size;
 
             ind.img_id = curr_info->img_id;
             ind.curr_img_recv_length = curr_info->img_info.dl_info.curr_img_length;
@@ -2032,6 +2067,10 @@ static void dfu_img_send_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, uin
         LOG_E("dfu_img_send_end_handler rsp error: %d", status);
         dfu_ctrl_error_handle(env);
     }
+    else
+    {
+        dfu_link_sync_start(DFU_SYNC_TYPE_RSP);
+    }
 }
 
 static void dfu_ctrl_install_completed(dfu_ctrl_ext_env_t *env, uint16_t status)
@@ -2043,23 +2082,20 @@ static void dfu_ctrl_install_completed(dfu_ctrl_ext_env_t *env, uint16_t status)
     ind.include_hcpu = 0;
     //env->callback(DFU_APP_INSTALL_COMPLETD_IND, &ind);
 
+    dfu_dl_image_header_t *dl_header = &env->prog.fw_context.code_img;
+    for (uint32_t i = 0; i < dl_header->img_count; i++)
+    {
+        if (dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU_PATCH ||
+                dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU)
+        {
+            ind.include_hcpu = 1;
+            dfu_running_image_switch();
+            break;
+        }
+    }
+
     if (status == DFU_ERR_NO_ERR)
     {
-        dfu_dl_image_header_t *dl_header = &env->prog.fw_context.code_img;
-        for (uint32_t i = 0; i < dl_header->img_count; i++)
-        {
-            if (dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU_PATCH ||
-                    dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU)
-            {
-                ind.include_hcpu = 1;
-
-                // move forward
-                // env->prog.hcpu_target = env->back_up_hcpu;
-                // dfu_running_image_switch();
-                break;
-            }
-        }
-
         //env->callback(DFU_APP_TO_USER, NULL);
         env->prog.state = DFU_CTRL_UPDATING;
         env->prog.FW_state = DFU_CTRL_FW_INSTALLED;
@@ -2086,6 +2122,10 @@ static void dfu_ctrl_install_completed(dfu_ctrl_ext_env_t *env, uint16_t status)
     if (status != DFU_ERR_NO_ERR)
     {
         dfu_ctrl_error_handle(env);
+    }
+    else
+    {
+        HAL_PMU_Reboot();
     }
 }
 
@@ -2125,6 +2165,10 @@ static int check_patch_install(dfu_ctrl_ext_env_t *env)
             */
 
             break;
+        }
+        if (env->is_abort)
+        {
+            r = DFU_FAIL;
         }
     }
 
@@ -2587,6 +2631,7 @@ uint8_t dfu_image_download_complete_check(dfu_ctrl_ext_env_t *env)
 static void dfu_img_tramission_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, uint16_t len)
 {
     LOG_I("dfu_img_tramission_end_handler");
+    dfu_link_sync_end();
     DFU_ERR_CHECK(env && data);
     uint16_t state = env->prog.state;
     dfu_image_header_int_t *img_header = env->prog.fw_context.code_img.img_header;
@@ -2598,6 +2643,14 @@ static void dfu_img_tramission_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *dat
     {
     case DFU_CTRL_TRAN_START:
     {
+        dfu_app_img_install_start_ind_ext_t ind_over;
+        ind_over.total_imgs_len = 0;
+        ind_over.event = DFU_APP_DL_END_AND_INSTALL_START_IND;
+        uint16_t len = sizeof(dfu_app_img_install_start_ind_ext_t);
+        if (env->callback)
+        {
+            env->callback(DFU_APP_DL_END_AND_INSTALL_START_IND, len, &ind_over);
+        }
         int ret;
 
         ret = check_patch_install(env);
@@ -2607,7 +2660,9 @@ static void dfu_img_tramission_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *dat
             status = DFU_ERR_NO_ERR;
         }
 
-        dfu_update_hcpu_switch_lcpu_state_and_ota_mode(env);
+        // TODO FINAL
+        status = dfu_image_download_complete_check(env);
+        //dfu_update_hcpu_switch_lcpu_state_and_ota_mode(env);
         dfu_record_current_tx();
         dfu_end_int_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_END_IND, dfu_end_int_t);
         rsp->result = status;
@@ -2990,10 +3045,9 @@ static void dfu_ctrl_request_init_handler_ext(dfu_ctrl_ext_env_t *env, uint8_t *
     uint8_t status = DFU_ERR_GENERAL_ERR;
     env->resume_status = 0;
 
-    if (env->dfu_flash_thread)
-    {
-        dfu_flash_exit_msg_send();
-    }
+    env->dfu_flash_thread = NULL;
+    env->mb_handle = NULL;
+
 
 #ifdef OTA_NAND_ONLY
     dfu_sec_config_malloc();
@@ -3136,6 +3190,14 @@ static void dfu_ctrl_request_init_handler_ext(dfu_ctrl_ext_env_t *env, uint8_t *
                 else if (dl_hdr->curr_img_info.img_state == DFU_CTRL_IMG_STATE_DOWNLOADED)
                 {
                     LOG_I("DFU_CTRL_IMG_STATE_DOWNLOADED");
+                    uint8_t last_id = 0;
+                    for (int j = 0; j < dl_hdr->img_count; j++)
+                    {
+                        if (dl_hdr->img_header[j].img_id > last_id)
+                        {
+                            last_id = dl_hdr->img_header[j].img_id;
+                        }
+                    }
                     /* Find next image. */
                     uint32_t i = 0;
                     for (i = 0; i < dl_hdr->img_count; i++)
@@ -3148,16 +3210,34 @@ static void dfu_ctrl_request_init_handler_ext(dfu_ctrl_ext_env_t *env, uint8_t *
                         env->prog.FW_state = DFU_CTRL_FW_NO_STATE;
                         rsp->is_restart = 1; // No img_count is correct so just re-transmission.
                     }
-                    else if (i == dl_hdr->img_count - 1)
+                    else if (dl_hdr->curr_img_info.img_id == last_id)
                     {
                         /* The last img already downloaded just need send current info .*/
                     }
                     else
                     {
-                        /* Wait remote device send from beginning. */
-                        dl_hdr->curr_img_info.img_id = dl_hdr->img_header[i + 1].img_id;
-                        dl_hdr->curr_img_info.img_state = DFU_CTRL_IMG_STATE_IDLE;
-                        dl_hdr->curr_img_info.img_info.dl_info.curr_pkt_num = 0;
+                        uint8_t next_id = DFU_IMG_ID_MAX + 1;
+                        for (int j = 0; j < dl_hdr->img_count; j++)
+                        {
+                            if (dl_hdr->img_header[j].img_id > dl_hdr->curr_img_info.img_id && dl_hdr->img_header[j].img_id < next_id)
+                            {
+                                next_id = dl_hdr->img_header[j].img_id;
+                            }
+                        }
+                        if (next_id == DFU_IMG_ID_MAX + 1)
+                        {
+                            LOG_I("next id fail to find");
+                            env->prog.FW_state = DFU_CTRL_FW_NO_STATE;
+                            rsp->is_restart = 1;
+                        }
+                        else
+                        {
+                            LOG_I("next id %d", next_id);
+                            /* Wait remote device send from beginning. */
+                            dl_hdr->curr_img_info.img_id = next_id;
+                            dl_hdr->curr_img_info.img_state = DFU_CTRL_IMG_STATE_IDLE;
+                            dl_hdr->curr_img_info.img_info.dl_info.curr_pkt_num = 0;
+                        }
                     }
                 }
 
@@ -3173,8 +3253,7 @@ static void dfu_ctrl_request_init_handler_ext(dfu_ctrl_ext_env_t *env, uint8_t *
 
             rsp->num_of_rsp = env->prog.fw_context.code_img.curr_img_info.img_info.dl_info.num_of_rsp;
 
-            if (env->is_mount == 1 && (dl_hdr->curr_img_info.img_id == DFU_IMG_ID_RES ||
-                                       dl_hdr->curr_img_info.img_id == DFU_IMG_ID_DYN || dl_hdr->curr_img_info.img_id == DFU_IMG_ID_MUSIC))
+            if (env->is_mount == 1 && check_current_img_need_overwrite(dl_hdr->curr_img_info.img_id))
             {
                 rsp->curr_img = dl_hdr->curr_img_info.img_id;
                 rsp->curr_packet_num = 0;
@@ -3323,6 +3402,10 @@ static void dfu_file_init_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, uint16
     dfu_image_file_total_start_t *s_data = (dfu_image_file_total_start_t *)data;
     LOG_I("dfu_file_init_handler %d %d", state, res_state);
 
+    uint32_t remote_version;
+    memcpy(&remote_version, s_data->version, s_data->version_len);
+    LOG_I("dfu_file_init_handler remote version %d", remote_version);
+    env->remote_version = remote_version;
     // remote is unaligned
     uint32_t file_count;
     uint32_t file_total_len;
@@ -3408,6 +3491,7 @@ static void dfu_file_init_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, uint16
         dfu_image_file_init_response_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_IMAGE_FILE_INIT_RESPONSE, dfu_image_file_init_response_t);
 
         rsp->result = result;
+        rsp->ver = OTA_CODE_VERSION;
         rsp->resume_status = env->resume_status;
         if (rsp->resume_status == 1)
         {
@@ -3930,10 +4014,6 @@ static void dfu_file_total_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, u
             break;
         }
 
-        if (total_end->hcpu_upgrade == 0)
-        {
-            env->prog.ota_mode = OTA_APP_RES_WAIT_INSTALL;
-        }
 
 
         dfu_ctrl_update_prog_info_ext(env);
@@ -3945,11 +4025,6 @@ static void dfu_file_total_end_handler(dfu_ctrl_ext_env_t *env, uint8_t *data, u
             ind.hcpu_upgrade = total_end->hcpu_upgrade;
             uint16_t len = sizeof(dfu_file_total_end_ind_t);
             ret = env->callback(DFU_APP_RES_FILE_TOTAL_END_IND, len, &ind);
-        }
-        else
-        {
-            LOG_I("set no res");
-            env->prog.state = DFU_CTRL_INSTALL;
         }
 
         if (total_end->hcpu_upgrade == 0)

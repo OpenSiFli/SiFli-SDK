@@ -71,7 +71,7 @@ typedef enum
     DFU_APP_RES_FILE_DATA_IND,
     DFU_APP_RES_FILE_END_IND,
     DFU_APP_RES_FILE_TOTAL_END_IND,
-    DFU_APP_OFFLINE_INSTALL_IND,
+    DFU_APP_REBOOT_INSTALL_IND,
 } dfu_app_event_t;
 
 typedef enum
@@ -282,6 +282,11 @@ typedef struct
     uint16_t event;
 } dfu_file_error_ind_t;
 
+typedef struct
+{
+    uint32_t current_len;
+    uint32_t total_len;
+} dfu_app_img_install_progress_ind_t;
 void dfu_file_init_response(dfu_file_init_response_resume_info_t *info);
 
 void dfu_file_start_response(uint8_t result);
@@ -292,6 +297,7 @@ void dfu_file_end_response(uint8_t result);
 
 void dfu_file_total_end_reponse(uint8_t result);
 
+void dfu_ctrl_set_mode(uint8_t mode);
 
 #endif //__DFU_SERVICE_H
 

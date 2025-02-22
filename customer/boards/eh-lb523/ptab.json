@@ -26,7 +26,7 @@
             }, 
             {
                 "offset": "0x00020000", 
-                "max_size": "0x00380000", 
+                "max_size": "0x00300000",
                 "tags": [
                     "HCPU_FLASH_CODE"
                 ], 
@@ -39,10 +39,33 @@
                 }, 
                 "img": "main",
                 "exec": "main"
-            }, 
+            },
             {
-                "offset": "0x003A0000", 
-                "max_size": "0x00400000", 
+                "offset": "0x00320000",
+                "max_size": "0x00060000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "img": "dfu",
+                "exec": "dfu",
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "base",
+                        "xip"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00380000",
+                "max_size": "0x00120000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {
+                "offset": "0x004A0000",
+                "max_size": "0x00300000",
                 "img": "fs_root", 
                 "tags": [
                     "FS_REGION"

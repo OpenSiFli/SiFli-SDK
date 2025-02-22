@@ -2595,7 +2595,13 @@ def AddFTAB(SIFLI_SDK, chip):
     elif "SF32LB58X" == chip:
         proj_path = os.path.join(SIFLI_SDK, 'example/flash_table/sf32lb58x_common_v2')
         AddChildProj(proj_name, proj_path, False)
-        
+
+def AddDFU(SIFLI_SDK):
+    proj_path = None
+    proj_name = 'dfu'
+    proj_path = os.path.join(SIFLI_SDK, 'example/dfu/project')
+    AddChildProj(proj_name, proj_path, False)
+
 def AddLCPU(SIFLI_SDK, chip,target_file=None):
     if "SF32LB56X" == chip or "SF32LB52X" == chip or "SF32LB58X" == chip:
         proj_path = None
@@ -2674,15 +2680,11 @@ def SifliEnv(BSP_Root = None):
 
     rtconfig.keil_version=0
 
-    # rtconfig.sifli_build=os.popen('git describe --tags --abbrev=6 --first-parent HEAD').read()
-    rtconfig.sifli_build=os.popen('git rev-parse HEAD').read()
-    try:
-        if len(rtconfig.sifli_build)==0:
-            rtconfig.sifli_build='00000000'
-        else:
-            rtconfig.sifli_build=rtconfig.sifli_build[0:8]
-    except:
-        rtconfig.sifli_build='00000000'
+    sifli_build=os.popen('cd {} && git rev-parse HEAD'.format(SIFLI_SDK)).read()
+    if len(sifli_build) < 8:
+        rtconfig.sifli_build = '00000000'
+    else:
+        rtconfig.sifli_build = sifli_build[0:8]
     logging.debug("Version %08x, Build %s" %(rtconfig.sifli_version,rtconfig.sifli_build)) 
 
     try:       

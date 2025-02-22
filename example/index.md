@@ -8,10 +8,11 @@ get-started/index
 hal/index
 rt_device/index
 rt_driver/*
-ble/index
 multimedia/index
 multicore/index
 pm/index
 misc/index
+bt/index
+ble/index
 
 ```
