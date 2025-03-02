@@ -158,6 +158,10 @@ SECTIONS
     *core_util.o (.text* .rodata*)
     *core_portme.o (.text* .rodata*)
     *main.o (.text.run_while_loop)
+    *main.o (.text.disable_module2)
+    *main.o (.text.disable_module1)
+    *main.o (.text.enable_module1)
+    *main.o (.text.enable_module2)
     *main.o (.text.shutdown)
 
   } > RAM0 AT > ROM
