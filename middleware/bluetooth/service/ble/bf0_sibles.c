@@ -1558,41 +1558,6 @@ void sibles_send_remote_svc_change_ind(uint8_t conn_idx, uint16_t start_hdl, uin
     ble_event_publish(SIBLES_REMOTE_SVC_CHANGE_IND, &ind, sizeof(sibles_remote_svc_change_ind_t));
 }
 
-int8_t  sibles_tx_malloc_buff(uint16_t remote_handle, uint8_t conn_idx, sibles_write_remote_value_t *value)
-{
-    struct sibles_rte_wr_info  *node;
-    struct sibles_value_write_req_content_t *req;
-    int8_t ret = OTHER_ERR;
-    //the size of struct + the length of value[__ARRAY_EMPTY];
-    req = bt_mem_alloc(sizeof(struct sibles_value_write_req_content_t) + value->len);
-    if (req)
-    {
-        req->conn_idx = conn_idx;
-        req->write_type = value->write_type;
-        req->seq_num = remote_handle;
-        req->handle = value->handle;
-        req->length =  value->len;
-        memcpy(req->value, value->value, value->len);
-        node = bt_mem_alloc(sizeof(struct sibles_rte_wr_info));
-        BT_OOM_ASSERT(node);
-        memset(node, 0, sizeof(struct sibles_rte_wr_info));
-
-        node->value = req;
-
-        rt_enter_critical();
-        rt_slist_append(&g_sibles.wr_node, (rt_slist_t *)node);
-        rt_exit_critical();
-
-
-        LOG_D("add node addr %x\n", node);
-        ret = SIBLES_WRITE_NO_ERR;
-    }
-    else
-        ret = SIBLES_OUT_OF_MEMORY;
-
-    return ret;
-}
-
 int8_t sibles_write_remote_value(uint16_t remote_handle, uint8_t conn_idx, sibles_write_remote_value_t *value)
 {
     sifli_task_id_t task_id = g_sibles.app_task_id;
@@ -1611,8 +1576,51 @@ int8_t sibles_write_remote_value(uint16_t remote_handle, uint8_t conn_idx, sible
     }
     if (0 == acq_tx)
     {
-        res = sibles_tx_malloc_buff(remote_handle, conn_idx, value);
-        return res;
+        struct sibles_rte_wr_info  *node;
+        struct sibles_value_write_req_content_t *wr_req;
+        //the size of struct + the length of value[__ARRAY_EMPTY];
+        wr_req = bt_mem_alloc(sizeof(struct sibles_value_write_req_content_t) + value->len);
+        node = bt_mem_alloc(sizeof(struct sibles_rte_wr_info));
+        if (wr_req && node)
+        {
+            rt_enter_critical();
+            if (sibles_get_tx_pkts() == 0)
+            {
+                wr_req->conn_idx = conn_idx;
+                wr_req->write_type = value->write_type;
+                wr_req->seq_num = remote_handle;
+                wr_req->handle = value->handle;
+                wr_req->length =  value->len;
+                memcpy(wr_req->value, value->value, value->len);
+                memset(node, 0, sizeof(struct sibles_rte_wr_info));
+                node->value = wr_req;
+                rt_slist_append(&g_sibles.wr_node, (rt_slist_t *)node);
+                rt_exit_critical();
+
+                LOG_D("add node addr %x\n", node);
+                return SIBLES_WRITE_NO_ERR;
+            }
+            else
+            {
+                sibles_acquire_tx_pkts();
+                rt_exit_critical();
+                LOG_I("directly send after malloc wr node, tx left %d", g_sibles.num_of_tx_pkt);
+                bt_mem_free(node);
+                bt_mem_free(wr_req);
+            }
+        }
+        else
+        {
+            if (wr_req)
+            {
+                bt_mem_free(wr_req);
+            }
+            if (node)
+            {
+                bt_mem_free(node);
+            }
+            return SIBLES_OUT_OF_MEMORY;
+        }
     }
 
     struct sibles_value_write_req_t *req = (struct sibles_value_write_req_t *)sifli_msg_alloc(SIBLES_VALUE_WRITE_REQ,

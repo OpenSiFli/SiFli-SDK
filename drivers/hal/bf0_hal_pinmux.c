@@ -1142,7 +1142,7 @@ __HAL_ROM_USED int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
                     val |= RTC_PBR0R_PS_Msk;
                 }
                 i = MAKE_REG_VAL(i, RTC_PBR0R_SEL_Msk, RTC_PBR0R_SEL_Pos);
-                *pin = val | i | flags;
+                *pin = val | i;
                 r = 0;
             }
             else

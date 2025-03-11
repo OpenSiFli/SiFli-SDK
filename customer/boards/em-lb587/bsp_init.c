@@ -107,13 +107,6 @@ static void LRC_init(void)
 }
 #endif
 
-
-
-__weak int rt_hw_flash_init(void)
-{
-    return 0;
-}
-
 void HAL_PreInit(void)
 {
 #ifdef SOC_BF0_HCPU
@@ -198,7 +191,7 @@ void HAL_PreInit(void)
 #ifdef BSP_USING_NOR_FLASH4
     if (PM_STANDBY_BOOT == SystemPowerOnModeGet())
     {
-        BSP_Flash_hw4_init();
+        BSP_Flash_Init();
     }
     else
     {
@@ -209,10 +202,6 @@ void HAL_PreInit(void)
 #endif
     }
 #endif
-
-
-
-
 
 
     HAL_RCC_HCPU_SetDiv(1, 2, 5);
