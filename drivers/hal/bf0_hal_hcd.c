@@ -89,8 +89,8 @@ static int ep_2_ch(HCD_HandleTypeDef *hhcd, int ep_num)
 
     for (chnum = 0; chnum < 16; chnum++)
     {
-        if ((ep_num & USB_DIR_IN) && (hhcd->hc[chnum].ep_is_in == 0) ||
-                (ep_num & USB_DIR_IN) == 0 && (hhcd->hc[chnum].ep_is_in))
+        if (((ep_num & USB_DIR_IN) && (hhcd->hc[chnum].ep_is_in == 0)) ||
+                ((ep_num & USB_DIR_IN) == 0 && (hhcd->hc[chnum].ep_is_in)))
             continue;
         if (hhcd->hc[chnum].ep_num == (ep_num & 0x7f) && hhcd->hc[chnum].max_packet > 0)
         {
@@ -1527,8 +1527,6 @@ static void HCD_HC_OUT_IRQHandler(HCD_HandleTypeDef *hhcd, uint8_t chnum)
     //int chnum = ep_2_ch(hhcd, ep_num);
     uint16_t txcsr = musb->ep[chnum].epN.txcsr;
 
-    if (chnum < 0)
-        return;
     HAL_DBG_printf("tx complete: chnum=%d,csr=0x%x\n", chnum, txcsr);
     if (txcsr & USB_TXCSR_H_RXSTALL)
     {

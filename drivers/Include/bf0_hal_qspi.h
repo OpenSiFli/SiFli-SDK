@@ -73,7 +73,7 @@ extern "C" {
   * @{
   */
 
-#define SPI_FLASH_OTP_BASE          (0X1000)
+#define SPI_FLASH_OTP_BASE          (0X1000U)
 
 /**
   * @brief  SPI_FLASH configure tyep

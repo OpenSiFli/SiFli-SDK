@@ -702,7 +702,7 @@ uint32_t HAL_PCD_EP_Receive(PCD_HandleTypeDef *hpcd, uint8_t ep_addr, uint8_t *p
         r = ep0->count0;
         if (r > ep->xfer_len)
             r = ep->xfer_len;
-        for (i = 0; i < r; i++)
+        for (i = 0; i < (int)r; i++)
             *(pBuf + i) = *fifox;
         csr = USB_CSR0_P_SVDRXPKTRDY;
         if (r < ep->maxpacket)
@@ -864,7 +864,7 @@ HAL_StatusTypeDef HAL_PCD_EP_Transmit(PCD_HandleTypeDef *hpcd, uint8_t ep_addr, 
         __IO uint8_t *fifox = (__IO uint8_t *) & (hpcd->Instance->fifox[ep->num]);
         __IO struct musb_ep0_regs *ep0 = &(hpcd->Instance->ep[ep->num].ep0);
 
-        for (i = 0; i < len; i++) // REVISIT: Use 16bits/32bits FIFO to speed up
+        for (i = 0; i < (int)len; i++) // REVISIT: Use 16bits/32bits FIFO to speed up
             *fifox = *(pBuf + i);
         csr = USB_CSR0_TXPKTRDY;
 

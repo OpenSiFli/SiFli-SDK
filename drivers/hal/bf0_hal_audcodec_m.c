@@ -171,9 +171,9 @@ __weak int bf0_enable_pll(uint32_t freq, uint8_t type)// need updata drv_audcode
     uint32_t fc_vco;
     uint32_t fc_vco_min;
     uint32_t fc_vco_max;
-    uint32_t delta_cnt;
-    uint32_t delta_cnt_min;
-    uint32_t delta_cnt_max;
+    uint32_t delta_cnt=0;
+    uint32_t delta_cnt_min=0;
+    uint32_t delta_cnt_max=0;
     uint32_t delta_fc_vco;
     uint32_t target_cnt = 1838;
 

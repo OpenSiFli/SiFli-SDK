@@ -131,7 +131,7 @@ typedef struct
   */
 #define __HAL_WDT_START(__HANDLE__)    \
 { \
-    int cnt=0;\
+    unsigned int cnt=0U;\
     WRITE_REG((__HANDLE__)->Instance->WDT_CCR, WDT_CMD_START);\
     while (((__HANDLE__)->Instance->WDT_SR & WDT_WDT_SR_WDT_ACTIVE) == 0 && cnt<HAL_WDT_DEFAULT_TIMEOUT) {\
         cnt++; \
@@ -146,7 +146,7 @@ typedef struct
   */
 #define __HAL_WDT_STOP(__HANDLE__)     \
 {\
-    int cnt=0;\
+    unsigned int cnt=0U;\
     WRITE_REG((__HANDLE__)->Instance->WDT_CCR, WDT_CMD_STOP);\
     while (((__HANDLE__)->Instance->WDT_SR & WDT_WDT_SR_WDT_ACTIVE) == WDT_WDT_SR_WDT_ACTIVE && cnt<HAL_WDT_DEFAULT_TIMEOUT) {\
         cnt++; \

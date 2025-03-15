@@ -1655,7 +1655,8 @@ __HAL_ROM_USED uint32_t HAL_NAND_BLOCK_SIZE(FLASH_HandleTypeDef *handle)
 __HAL_ROM_USED int HAL_QSPIEX_WRITE_PAGE(FLASH_HandleTypeDef *hflash, uint32_t addr, const uint8_t *buf, uint32_t size)
 {
     HAL_StatusTypeDef ret;
-    int i, aligned_size;
+    int i;
+    uint32_t aligned_size;
     SPI_FLASH_CMD_E cid;
     uint16_t dlen;
     uint32_t param;
@@ -2660,7 +2661,7 @@ __HAL_ROM_USED int HAL_FLASH_READ_SFDP(FLASH_HandleTypeDef *hflash, uint32_t *bu
     if (res != 0)
         return 0;
 
-    for (i = 0; i < len / 4; i++)
+    for (i = 0; i < (int)len / 4; i++)
     {
         *ptr = HAL_FLASH_READ32(hflash);
         ptr++;

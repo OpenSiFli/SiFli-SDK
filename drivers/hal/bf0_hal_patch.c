@@ -56,7 +56,7 @@ __USED int HAL_PATCH_install2(struct patch_entry_desc *patch_entries, uint32_t s
     __IO uint32_t *p_a = (__IO uint32_t *)PATCH_BASE;
 
     hwp_patch->CER = 0;
-    for (i = 0; i < size ; i++, patch_entries++)
+    for (i = 0; i < (int)size ; i++, patch_entries++)
     {
         int pn = i + (cer ? PATCH_AON : 0);
         if (cer == 0 || (cer & (1UL << pn)))
@@ -110,7 +110,7 @@ __USED int HAL_PATCH_save(struct patch_entry_desc *patch_entries, uint32_t size,
     int i;
     __IO uint32_t *p_a = (__IO uint32_t *)PATCH_BASE;
 
-    for (i = PATCH_AON; i < MAX_PATCH_ENTRIES && i < (PATCH_AON + size); i++, patch_entries++)
+    for (i = PATCH_AON; i < MAX_PATCH_ENTRIES && i < (int)(PATCH_AON + size); i++, patch_entries++)
     {
         if ((1UL << i) & hwp_patch->CER)
         {

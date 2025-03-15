@@ -982,7 +982,7 @@ HAL_StatusTypeDef HAL_MPI_PSRAM_Init(FLASH_HandleTypeDef *handle, qspi_configure
 {
     HAL_StatusTypeDef res = HAL_OK;
     uint32_t sys_clk;
-    uint8_t r_lat, w_lat;
+    uint8_t r_lat, w_lat=0;
 
     handle->isNand = (uint8_t)qspi_cfg->SpiMode;
     if (qspi_cfg->SpiMode == SPI_MODE_OPSRAM)  // exla opi psram

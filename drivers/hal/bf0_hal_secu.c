@@ -67,7 +67,7 @@ typedef struct
     uint32_t *reg_addr;
 } MemRegInfo;
 
-const static MemRegInfo MemRegList[] =
+static const MemRegInfo MemRegList[] =
 {
     {SECU_MEM_MPI1, SECU_FLAG_PRIV, 2, 0, (uint32_t *) &hwp_secu1->MPI1_PRIV_CFG0},
     {SECU_MEM_MPI1, SECU_FLAG_SECU, 2, 0, (uint32_t *) &hwp_secu1->MPI1_SEC_CFG0},

@@ -84,7 +84,7 @@ typedef struct
     uint32_t ulpmcr;
 } HPSYS_DvfsConfigTypeDef;
 
-const static HPSYS_DvfsConfigTypeDef hpsys_dvfs_config[HPSYS_DVFS_MODE_NUM] =
+static const HPSYS_DvfsConfigTypeDef hpsys_dvfs_config[HPSYS_DVFS_MODE_NUM] =
 {
     //                         LDO,  BUCK,  ULPMCR
     //                         0.9V, 1.0V
@@ -98,7 +98,7 @@ const static HPSYS_DvfsConfigTypeDef hpsys_dvfs_config[HPSYS_DVFS_MODE_NUM] =
 };
 
 /* maximum DLL2 frequency(Hz) of each dvfs mode */
-const static uint32_t hpsys_dll2_limit[HPSYS_DVFS_MODE_NUM] =
+static const uint32_t hpsys_dll2_limit[HPSYS_DVFS_MODE_NUM] =
 {
     [HPSYS_DVFS_MODE_D0] = 0,
     [HPSYS_DVFS_MODE_D1] = 0,
@@ -1430,12 +1430,12 @@ __HAL_ROM_USED void HAL_RCC_HCPU_ClockSelect(int clk_module, int src)
     uint32_t mask;
 
     if ((HPSYS_RCC_CSR_SEL_SYS_Pos == clk_module)
-            || ((clk_module >= RCC_CLK_MOD_FLASH1) && (clk_module < RCC_CLK_MOD_HP_PERI))
+            || ((clk_module >= (int)RCC_CLK_MOD_FLASH1) && (clk_module < (int)RCC_CLK_MOD_HP_PERI))
 #ifdef   HPSYS_RCC_CSR_SEL_SDMMC_Pos
-            || (HPSYS_RCC_CSR_SEL_SDMMC_Pos == clk_module)
+            || ((int)HPSYS_RCC_CSR_SEL_SDMMC_Pos == clk_module)
 #endif
 #ifdef   RCC_CLK_MOD_HP_TICK
-            || (RCC_CLK_MOD_HP_TICK == clk_module)
+            || ((int)RCC_CLK_MOD_HP_TICK == clk_module)
 #endif /* RCC_CLK_MOD_HP_TICK */
        )
     {
@@ -1448,7 +1448,7 @@ __HAL_ROM_USED void HAL_RCC_HCPU_ClockSelect(int clk_module, int src)
 
     csr &= ~(mask << clk_module);
     hwp_hpsys_rcc->CSR = csr | ((src & mask) << clk_module);
-    if (clk_module == RCC_CLK_MOD_SYS)
+    if (clk_module == (int)RCC_CLK_MOD_SYS)
         SystemCoreClock = HAL_RCC_GetHCLKFreq(CORE_ID_HCPU);
 }
 
@@ -1459,12 +1459,12 @@ __HAL_ROM_USED int HAL_RCC_HCPU_GetClockSrc(int clk_module)
     uint8_t src;
 
     if ((HPSYS_RCC_CSR_SEL_SYS_Pos == clk_module)
-            || ((clk_module >= RCC_CLK_MOD_FLASH1) && (clk_module < RCC_CLK_MOD_HP_PERI))
+            || ((clk_module >= (int)RCC_CLK_MOD_FLASH1) && (clk_module < (int)RCC_CLK_MOD_HP_PERI))
 #ifdef   HPSYS_RCC_CSR_SEL_SDMMC_Pos
-            || (HPSYS_RCC_CSR_SEL_SDMMC_Pos == clk_module)
+            || ((int)HPSYS_RCC_CSR_SEL_SDMMC_Pos == clk_module)
 #endif
 #ifdef   RCC_CLK_MOD_HP_TICK
-            || (RCC_CLK_MOD_HP_TICK == clk_module)
+            || ((int)RCC_CLK_MOD_HP_TICK == clk_module)
 #endif /* RCC_CLK_MOD_HP_TICK */
        )
     {

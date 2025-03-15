@@ -5125,7 +5125,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_Han
 
     EPIC_CommitInstance(hepic);
 #ifdef HAL_EZIP_MODULE_ENABLED
-    if (HAL_EPIC_STATE_BUSY == hepic_s->hezip->State)
+    if ((int)HAL_EPIC_STATE_BUSY == (int)hepic_s->hezip->State)
     {
         hepic->hezip->CpltCallback = hepic_s->hezip->CpltCallback;
         hepic->hezip->RamInstance_used = 1;

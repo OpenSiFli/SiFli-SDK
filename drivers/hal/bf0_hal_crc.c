@@ -208,7 +208,7 @@ __HAL_ROM_USED uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint8_t *pBu
     if (((uint32_t)(pBuffer)) & 3)                                  // First few bytes if not word aligned
     {
         int cnt = 4 - (((uint32_t)(pBuffer)) & 3);
-        for (index = 0; index < cnt; index++, size++)
+        for (index = 0; index < (uint32_t)cnt; index++, size++)
         {
             uint32_t t = (uint32_t)pBuffer[index];
             t <<= (8 * index);

@@ -614,7 +614,7 @@ uint8_t dpsk_gain[79] =
 #define BT_CHANNEL_NUM 120
 
 #ifdef CMD_CONST
-CONST static uint16_t rxon_cmd[] =
+static CONST uint16_t rxon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(18), OR(17), OR(16), WR(0x10),  // 5
@@ -662,7 +662,7 @@ CONST static uint16_t rxon_cmd[] =
 };
 
 
-CONST static uint16_t rxoff_cmd[] =
+static CONST uint16_t rxoff_cmd[] =
 {
     //VDDPSW/RFBG/LODIST5G_RX_EN/LO_IARY_EN
     RD(0x10), RD(0x10), AND(18), AND(17), AND(16), AND(9), WR(0x10), // 6
@@ -692,7 +692,7 @@ CONST static uint16_t rxoff_cmd[] =
     END, //53
 };
 
-CONST static uint16_t txon_cmd[] =
+static CONST uint16_t txon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(17), OR(18), OR(16), WR(0x10),  // 5
@@ -733,7 +733,7 @@ CONST static uint16_t txon_cmd[] =
     END, //47
 };
 
-CONST static uint16_t txoff_cmd[] =
+static CONST uint16_t txoff_cmd[] =
 {
     //VDDPSW /RFBG_EN/LO_IARY_EN/ LODIST5G_BLETX_EN
     RD(0x10), RD(0x10), AND(8), AND(16), AND(17), AND(18), WR(0x10), // 6
@@ -781,7 +781,7 @@ CONST static uint16_t txoff_cmd[] =
 
 
 
-CONST static uint16_t bt_txon_cmd[] =
+static CONST uint16_t bt_txon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(16), OR(17), OR(18), WR(0x10),  // 5
@@ -856,7 +856,7 @@ CONST static uint16_t bt_txon_cmd[] =
 };
 
 
-CONST static uint16_t bt_txoff_cmd[] =
+static CONST uint16_t bt_txoff_cmd[] =
 {
     // EDR_PA_PU
     // EDR_TMXBUF_PU EDR_TMX_PU
@@ -2084,7 +2084,7 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     const uint32_t residual_cnt_vth = 33864;
     const uint32_t residual_cnt_vtl = 30224;
     uint32_t p0;
-    uint32_t p1;
+    uint32_t p1=0;
 
 
     uint32_t pre_acal_up;
@@ -2112,9 +2112,9 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1;
+    uint8_t idac1=0;
     uint8_t capcode0;
-    uint8_t capcode1;
+    uint8_t capcode1=0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
     uint32_t     err_tx    = 0xffffffff;
@@ -2997,9 +2997,9 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1;
+    uint8_t idac1=0;
     uint8_t capcode0;
-    uint8_t capcode1;
+    uint8_t capcode1=0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
     uint32_t     err_tx_3g = 0xffffffff;
@@ -3018,7 +3018,7 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint32_t residual_cnt;
 
     uint32_t p0;
-    uint32_t p1;
+    uint32_t p1=0;
 
 
     uint32_t pre_acal_up;
@@ -3574,9 +3574,11 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_gpadc->ADC_CTRL_REG2 = gpadc_ctrl2 ;
     //hwp_hpsys_cfg->ANAU_CR &= ~HPSYS_CFG_ANAU_CR_EN_BG;
 
-    //hwp_gpadc->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   & \
-    //                           ~GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         & \
-    //                           ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
+    /*
+      hwp_gpadc->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   & \
+                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         & \
+                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
+    */
     //write to rf_mem
     reg_addr = rslt_start_addr  ;
     reg_data = 0;
@@ -5126,7 +5128,7 @@ void bt_rf_cal_index(void)
 {
     int8_t min_pwr, max_pwr, i;
     int8_t pwr_tab[] = {0, 3, 6, 10, 13, 16, 19};
-    uint8_t s_min_level, s_max_level;
+    uint8_t s_min_level=0, s_max_level=0;
 
     min_pwr = bt_rf_get_min_tx_pwr();
     if (bt_rf_get_max_tx_pwr() >= bt_rf_get_init_tx_pwr())

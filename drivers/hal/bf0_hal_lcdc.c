@@ -3208,8 +3208,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *
         uint32_t _ptc_reg = (((op) << PTC_TCR1_OP_Pos) | (trigger));\
         _ptc_reg |= ((repeat) > 0) ? (PTC_TCR1_REPEN|PTC_TCR1_REPTRIG) : 0; \
         if((delay)>0) HAL_LCDC_ASSERT(_ptc_ch < 4);                \
-        HAL_LCDC_ASSERT((delay) <= (PTC_RCR1_DLY_Msk >> PTC_RCR1_DLY_Pos));\
-        HAL_LCDC_ASSERT((repeat) <= (PTC_RCR1_REP_Msk >> PTC_RCR1_REP_Pos));\
+        HAL_LCDC_ASSERT((repeat) <= (int)(PTC_RCR1_REP_Msk >> PTC_RCR1_REP_Pos));\
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) _ptc_reg; \
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) (addr);            \
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) (data);            \
@@ -3640,7 +3639,7 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_START(LCDC_HandleTypeDef *lc
 
     uint32_t data_len_mod4 = (data_len % 4);
 
-    uint32_t i, cur_data;
+    uint32_t i, cur_data=0;
 
 
     PTC_PHASE_INIT();

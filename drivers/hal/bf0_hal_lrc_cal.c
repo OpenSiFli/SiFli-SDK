@@ -764,7 +764,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
     uint8_t temp_cycle = HAL_RC_CAL_GetLPCycle();
     uint32_t alpha;
 
-    int temp;
+    int temp=0;
 
     if (HAL_RTC_LXT_ENABLED())
     {
@@ -957,7 +957,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
         cal_lvl = 2;
     }
 
-    if (count < ave_window)
+    if (count < (uint32_t)ave_window)
         count++;
 
     if (count < 2)

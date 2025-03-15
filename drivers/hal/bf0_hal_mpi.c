@@ -1706,7 +1706,7 @@ __HAL_ROM_USED int HAL_QSPI_GET_UID(FLASH_HandleTypeDef *hflash, uint32_t *uid, 
     //uid[1] = HAL_FLASH_READ32(hflash);
     //uid[2] = HAL_FLASH_READ32(hflash);
     //uid[3] = HAL_FLASH_READ32(hflash);
-    for (i = 0; i < len / 4; i++)
+    for (i = 0; i < (int)len / 4; i++)
         uid[i] = HAL_FLASH_READ32(hflash);
 
     return 0;

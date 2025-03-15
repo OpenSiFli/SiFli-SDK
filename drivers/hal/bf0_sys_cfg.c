@@ -85,7 +85,7 @@ static uint8_t BSP_OTP_CFG_READ(uint8_t id, uint8_t *data, uint8_t size, uint8_t
             break;
         }
 
-        if ((i + len + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size)   // More than max configuration area?
+        if ((i + len + SYSCFG_FACTORY_HDR_SIZE) >= (int)fac_cfg_size)   // More than max configuration area?
         {
             len = 0;
             break;
@@ -300,7 +300,7 @@ int BSP_CONFIG_get(int type, uint8_t *buf, int length)
 #endif
     if (type == FACTORY_CFG_ID_ADC)
     {
-        if (length >= sizeof(FACTORY_CFG_ADC_T))
+        if (length >= (int)sizeof(FACTORY_CFG_ADC_T))
         {
             FACTORY_CFG_ADC_T *cfg = (FACTORY_CFG_ADC_T *)buf;
             ret = length;
@@ -356,7 +356,7 @@ int BSP_CONFIG_get(int type, uint8_t *buf, int length)
     }
     else if (type == FACTORY_CFG_ID_VBUCK)
     {
-        if (length >= sizeof(FACTORY_CFG_VBK_LDO_T))
+        if (length >= (int)sizeof(FACTORY_CFG_VBK_LDO_T))
         {
             FACTORY_CFG_VBK_LDO_T *cfg = (FACTORY_CFG_VBK_LDO_T *)buf;
             ret = length;
@@ -406,7 +406,7 @@ int BSP_CONFIG_get(int type, uint8_t *buf, int length)
     }
     else if (type == FACTORY_CFG_ID_CHARGER)
     {
-        if (length >= sizeof(FACTORY_CFG_CHARGER_T))
+        if (length >= (int)sizeof(FACTORY_CFG_CHARGER_T))
         {
             FACTORY_CFG_CHARGER_T *cfg = (FACTORY_CFG_CHARGER_T *)buf;
             ret = length;

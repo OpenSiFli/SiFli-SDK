@@ -235,7 +235,7 @@ static int bbm_map_new_blk(uint16_t bblk)
             break;
         }
     }
-    if (i >= (bkup_blk - 4)) // stru_tbl full ?
+    if (i >= (int)(bkup_blk - 4)) // stru_tbl full ?
     {
         BBM_ERR("Map table full, can not map new bad block!\n");
         BBM_ASSERT(0);
@@ -336,7 +336,8 @@ static int bbm_map_new_blk(uint16_t bblk)
 
 static int bbm_get_page_num(uint32_t blk)
 {
-    int page, res, status;
+    int res, status;
+    uint32_t page;
 
     status = 0;
     page = 0;
@@ -432,7 +433,7 @@ static int bbm_write_talbe(int tid, uint16_t blk)
     }
 
     page = bbm_get_page_num(blk);
-    if ((page < 0) || (page >= bbm_blk_size / bbm_page_size))
+    if ((page < 0) || (page >= (int)(bbm_blk_size / bbm_page_size)))
         return -1;
 
     memset((void *)bbm_page_cache, 0xff, bbm_page_size);
@@ -480,7 +481,7 @@ static int bbm_det_bbm_blk(void)
 #endif
         memset(bbm_page_cache, 0xff, bbm_page_size);
         res = port_read_page(blk, page, 0, bbm_page_cache, bbm_page_size, NULL, 0);
-        if (res == bbm_page_size)
+        if (res == (int)bbm_page_size)
         {
             Sifli_NandBBM *bbmt = (Sifli_NandBBM *)bbm_page_cache;
             if (bbmt->magic == BBM_MAGIC_NUM)   // table block
@@ -556,7 +557,8 @@ static int bbm_det_bbm_blk(void)
 
 static int bbm_get_version_inblk(int blk, int *plast_page)
 {
-    int page, vers, res;
+    int vers, res;
+    uint32_t page;
     Sifli_NandBBM *tab;
 
     if (plast_page == NULL)
@@ -827,7 +829,7 @@ int bbm_init_table()
         }
         memset(bbm_page_cache, 0xff, bbm_page_size);
         res = port_read_page(next_idle, 0, 0, bbm_page_cache, bbm_page_size, NULL, 0);
-        if (res == bbm_page_size)
+        if (res == (int)bbm_page_size)
         {
             Sifli_NandBBM *bbmt = (Sifli_NandBBM *)bbm_page_cache;
             if (bbmt->magic == 0xffffffff)   // empty
@@ -969,7 +971,7 @@ int bbm_get_phy_blk(uint16_t log_blk)
         if (bbm_local[0].stru_tbl[i].logic_blk == log_blk)
         {
             res = bbm_local[0].stru_tbl[i].physical_blk;
-            if (res < user_blk) // map error!
+            if (res < (int)user_blk) // map error!
             {
                 BBM_ERR("Get map block error %d --> %d\n", log_blk, res);
                 BBM_ASSERT(0);
@@ -1053,7 +1055,7 @@ retry:
             {
                 // ignor error, data haved lost before if read error
                 res = port_read_page(nblk, i, 0, bbm_page_cache, bbm_page_size, NULL, 0);
-                if (res != bbm_page_size)
+                if (res != (int)bbm_page_size)
                 {
                     // old block can not read ?
                     BBM_ERR("Old blck %d read fail\n", nblk);

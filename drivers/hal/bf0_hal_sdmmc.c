@@ -335,7 +335,7 @@ HAL_StatusTypeDef HAL_SDMMC_WIRTE(SD_TypeDef *hsd, uint32_t *buf, uint32_t size)
     if (hsd == NULL || buf == NULL)
         return HAL_ERROR;
 
-    for (i = 0; i < size / 4; i++)
+    for (i = 0; i < (int)size / 4; i++)
         hsd->FIFO = *(buf + i);
 
     return HAL_OK;
@@ -347,7 +347,7 @@ HAL_StatusTypeDef HAL_SDMMC_READ(SD_TypeDef *hsd, uint32_t *buf, uint32_t size)
     if (hsd == NULL || buf == NULL)
         return HAL_ERROR;
 
-    for (i = 0; i < size / 4; i++)
+    for (i = 0; i < (int)size / 4; i++)
         *(buf + i) = hsd->FIFO;
 
     return HAL_OK;
