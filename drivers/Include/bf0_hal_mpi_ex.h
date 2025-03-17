@@ -322,7 +322,9 @@ typedef enum
   * @param value source value
   * @retval true if success
   */
+#ifndef IS_ALIGNED  
 #define IS_ALIGNED(align, value)            (((value) & ((align)-1))==0)
+#endif
 
 /**
   * @}

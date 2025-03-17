@@ -84,7 +84,7 @@ pm_power_on_mode_t SystemPowerOnModeGet(void);
 
 void SystemVectorTableRemapping(void);
 
-void mpu_config(void);
+//void mpu_config(void);
 
 void cache_enable(void);
 

@@ -75,6 +75,11 @@ extern "C" {
 
 #include "bf0_hal_def.h"
 
+uint32_t __arm_cx2(int, uint32_t, uint32_t);
+uint32_t __arm_cx2a(int, uint32_t, uint32_t, uint32_t);
+uint64_t __arm_cx2d(int, uint32_t, uint32_t);
+uint64_t __arm_cx2da(int, uint64_t, uint32_t, uint32_t);
+
 /** @addtogroup MATH
   * @ingroup BF0_HAL_Driver
   * @{
