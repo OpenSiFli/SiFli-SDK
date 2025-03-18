@@ -208,13 +208,14 @@ HAL_StatusTypeDef HAL_Init(void)
     /* Set Interrupt Group Priority */
     HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
+#ifndef NONE_HAL_TICK_INIT
     /* Use SysTick as time base source and configure 1ms tick (default clock after Reset is MSI) */
     if (HAL_InitTick(TICK_INT_PRIORITY) != HAL_OK)
     {
         status = HAL_ERROR;
     }
     else
-
+#endif
     {
 #ifdef SOC_BF0_HCPU
         /* init AES_ACC as normal mode */

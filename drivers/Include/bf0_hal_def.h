@@ -209,6 +209,7 @@ typedef enum
 #define __CLANG_ARM
 #endif
 
+#ifndef HAL_SECTION
 #if defined(__CC_ARM) || defined(__CLANG_ARM)           /* ARM Compiler */
 #define HAL_SECTION(x)                  __attribute__((section(x)))
 #elif defined (__IAR_SYSTEMS_ICC__)     /* for IAR Compiler */
@@ -217,6 +218,7 @@ typedef enum
 #define HAL_SECTION(x)                  __attribute__((section(x)))
 #else
 #define HAL_SECTION(x)
+#endif
 #endif
 
 #define HAL_STRINGIFY_(val)       #val

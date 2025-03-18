@@ -44,6 +44,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include "rtconfig.h"
 #include "string.h"
 #include "bf0_hal.h"
 #include "math.h"
