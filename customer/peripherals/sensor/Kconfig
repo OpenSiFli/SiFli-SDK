@@ -117,35 +117,17 @@ menuconfig SENSOR_USING_6D
             select RT_USING_SENSOR
             default n
             if ACC_USING_LSM6DSL
-                config LSM6DSL_USING_I2C
-                int "LSM6DSL BUS type: 1 = I2C, 0 = SPI"
-                default 0
-                config LSM6DSL_BUS_NAME
-                string "Sensor LSM6DSL BUS name"
-                default "spi1"
-                config GSENSOR_MODEL_NAME
-                string "Gsensor Model name"
-                default "lsm6dsl"
-        
-                config LSM6DSL_INT_GPIO_BIT
-                int "LSM6DSL Interrupt 1 PIN"
-                default 97
-                config LSM6DSL_INT2_GPIO_BIT
-                int "LSM6DSL Interrupt 2 PIN"
-                default 94
-                config LSM6DSL_POW_PIN
-                int "lsm6dsl power pin"
-                default 121
+                config PKG_USING_LSM6DSL_ACCE
+                    bool "Enable lsm6dsl acce"
+                    default y
 
-                config LSM_USING_AWT
-                bool "Enable AWT fucntion"
-                default y
-                config LSM_USING_PEDO
-                bool "Enable Pedometer fucntion"
-                default y
-        config GSENSOR_UES_FIFO
-                bool "LSM6DSL use fifo"
-                default y
+                config PKG_USING_LSM6DSL_GYRO
+                    bool "Enable lsm6dsl gyro"
+                    default y
+
+                config PKG_USING_LSM6DSL_STEP
+                    bool "Enable lsm6dsl step"
+                    default y
             endif
     menuconfig ACC_USING_SC7A20
             bool "SC7A20"
@@ -236,6 +218,10 @@ menuconfig SENSOR_USING_MAG
                 string "Sensor MMC36X0KJ I2C"
                 default "i2c4"    
             endif 
+        menuconfig MAG_USING_MMC56X3
+            bool "MMC56X03"
+            select RT_USING_SENSOR
+            default n
     endif
 
 menuconfig SENSOR_USING_BAROMETER
@@ -266,6 +252,11 @@ menuconfig SENSOR_USING_ASL
                 string "TSL2572 I2C BUS"
                 default "i2c4"
             endif
+        
+        menuconfig ASL_USING_LTR303
+            bool "LTR303"
+            select RT_USING_SENSOR
+            default n
     endif
 	
 menuconfig SENSOR_USING_MPU6050

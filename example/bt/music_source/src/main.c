@@ -498,6 +498,7 @@ __ROM_USED void music(int argc, char **argv)
         {
             bd_addr_t mac;
             bt_addr_convert_from_string_to_general(argv[2], &mac);
+            gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
             bt_interface_conn_to_source_ext((unsigned char *)&mac, BT_PROFILE_A2DP);
         }
         else if (strcmp(argv[1], "play_default") == 0)

@@ -1006,9 +1006,10 @@ INIT_BOARD_EXPORT(sifli_adc_init);
 static int rt_adc_freq_chg(const struct rt_device *device, uint8_t mode)
 {
     uint32_t adc_freq = 240000; // use 240k for 52x to meet ATE setting
-    HAL_ADC_SetFreq(&sifli_adc_obj[0].ADC_Handler, adc_freq);
+    if (sizeof(sifli_adc_obj) > 0)
+        HAL_ADC_SetFreq(&sifli_adc_obj[0].ADC_Handler, adc_freq);
     //rt_kprintf("OP changed with adc freq update : data_samp_delay %d, conv_width %d, sample_width %d\n",
-    //    sifli_adc_obj[0].ADC_Handler.Init.data_samp_delay , sifli_adc_obj[0].ADC_Handler.Init.conv_width, sifli_adc_obj[0].ADC_Handler.Init.sample_width);
+    //sifli_adc_obj[0].ADC_Handler.Init.data_samp_delay , sifli_adc_obj[0].ADC_Handler.Init.conv_width, sifli_adc_obj[0].ADC_Handler.Init.sample_width);
     return 0;
 }
 

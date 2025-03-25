@@ -29,6 +29,9 @@ if GetDepend(['BF0_HCPU']):
         src += ['lcpu_patch.c']
     if not GetDepend(['USE_ATE_MODE']):
         src += ['bt_rf_fulcal.c']
+    if not GetDepend(['CFG_BOOTLOADER']):
+        src += ['bt_rf_cw_config.c']
+        src += ['bt_power_config.c']
 
 
 ASFLAGS = ''

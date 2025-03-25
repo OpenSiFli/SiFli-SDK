@@ -1614,6 +1614,11 @@ bt_err_t bt_avrcp_set_absolute_volume_request(bts2_app_stru *bts2_app_data, U8 v
     {
         return BT_ERROR_STATE;
     }
+    else if (bts2_app_data->avrcp_inst.st != avrcp_conned)
+    {
+        USER_TRACE("avrcp is not connected\n");
+        return BT_ERROR_DISCONNECTED;
+    }
     else
     {
         U8 data_len = 9;
@@ -2198,6 +2203,7 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     USER_TRACE("PLAY OFF\n");
                     //input_ev(inst->input, EV_KEY, KEY_PLY, 0);
 
+#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
                     int con_idx;
 
@@ -2207,9 +2213,6 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     if (con_idx == - 1)
                         break;
 
-
-
-#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH)
                     if (inst->con[con_idx].st == avconned_open && bt_avsrc_get_start_flag() && (inst->src_data.input_cb != NULL))
                         inst->src_data.input_cb(as_callback_cmd_play_resume, NULL, 0);
 #elif defined(CFG_AVRCP)
@@ -2232,7 +2235,16 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                 {
                     USER_TRACE("STOP OFF\n");
                     // input_ev(inst->input, EV_KEY, KEY_STOP, 0);
-#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH)
+#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
+                    bts2s_av_inst_data *inst = bt_av_get_inst_data();
+                    int con_idx;
+
+                    con_idx = bt_avsrc_get_plyback_conn(inst);
+
+
+                    if (con_idx == - 1)
+                        break;
+
                     if (inst->con[con_idx].st == avconned_streaming && (inst->src_data.input_cb != NULL))
                         inst->src_data.input_cb(as_callback_cmd_play_pause, NULL, 0);
 #elif defined(CFG_AVRCP)
@@ -2256,6 +2268,7 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     USER_TRACE("PAUSE OFF\n");
                     //input_ev(inst->input, EV_KEY, KEY_PLYPAUSE, 0);
 
+#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
                     int con_idx;
 
@@ -2265,7 +2278,6 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     if (con_idx == - 1)
                         break;
 
-#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH)
                     if (inst->con[con_idx].st == avconned_streaming && (inst->src_data.input_cb != NULL))
                         inst->src_data.input_cb(as_callback_cmd_play_pause, NULL, 0);
 #elif defined(CFG_AVRCP)
@@ -2289,6 +2301,7 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     USER_TRACE("FORWARD OFF\n");
                     // input_ev(inst->input, EV_KEY, KEY_NEXTSONG, 0);
                     /*  avrcp_target(BT_AVRCP_FORWARD, NULL);*/
+#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
                     int con_idx;
 
@@ -2298,7 +2311,6 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     if (con_idx == - 1)
                         break;
 
-#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH)
                     if (inst->con[con_idx].st == avconned_streaming && (inst->src_data.input_cb != NULL))
                         inst->src_data.input_cb(as_callback_cmd_play_to_next, NULL, 0);
 #elif defined(CFG_AVRCP)
@@ -2323,6 +2335,7 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     USER_TRACE("BACKWARD OFF\n");
                     //input_ev(inst->input, EV_KEY, KEY_PRESONG, 0);
 
+#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
                     int con_idx;
 
@@ -2332,7 +2345,6 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     if (con_idx == - 1)
                         break;
 
-#if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH)
                     if (inst->con[con_idx].st == avconned_streaming && (inst->src_data.input_cb != NULL))
                         inst->src_data.input_cb(as_callback_cmd_play_to_prev, NULL, 0);
 #elif defined(CFG_AVRCP)

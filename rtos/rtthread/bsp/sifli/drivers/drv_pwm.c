@@ -70,7 +70,7 @@
 #define MAX_PERIOD_GPT (0xFFFF)
 #define MAX_PERIOD_ATM (0xFFFFFFFF)
 #define MIN_PERIOD 3
-#define MIN_PULSE 2
+#define MIN_PULSE 1
 
 //extern void HAL_GPT_MspPostInit(GPT_HandleTypeDef *htim);
 
@@ -278,9 +278,9 @@ static rt_err_t drv_pwm_set(GPT_HandleTypeDef *htim, struct rt_pwm_configuration
     {
         pulse = MIN_PULSE;
     }
-    else if (pulse > period)
+    else if (pulse >= period)       /*if pulse reach to 100%, need set pulse = period + 1, because pulse = period, the real percentage = 99.9983%  */
     {
-        pulse = period;
+        pulse = period + 1;
     }
     __HAL_GPT_SET_COMPARE(htim, channel, pulse - 1);
     //__HAL_GPT_SET_COUNTER(htim, 0);

@@ -345,6 +345,24 @@ if BSP_USING_LCD
             select BSP_LCDC_USING_DPI            
             select LCD_USING_PWM_AS_BACKLIGHT
 
+        config LCD_USING_TFT_CO5300
+            bool "1.85 rect QSPI Single-Screen LCD(LCD_1P85_390*450_DevKit_Adapter_V1.0.0)"
+            select LCD_USING_CO5300
+            select TSC_USING_FT6146 if BSP_USING_TOUCHD
+            select BSP_LCDC_USING_QADSPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+            if LCD_USING_TFT_CO5300
+               config LCD_CO5300_VSYNC_ENABLE
+                    bool "Enable LCD VSYNC (TE signal)"
+                    def_bool y
+            endif
+
+        config LCD_USING_TFT_CO5300_DUAL
+            bool "1.85 rect QSPI Dual-Screen LCD(Dual_1P85_390_450_DevKit_Adapter_V1.0)"
+            select LCD_USING_CO5300_DUAL
+            select BSP_LCDC_USING_QADSPI
+            select LCD_USING_PWM_AS_BACKLIGHT
+  
     endchoice
 
     config LCD_HOR_RES_MAX
@@ -384,6 +402,9 @@ if BSP_USING_LCD
         default 1024 if LCD_USING_HTM_H070A20_RGB_A01
         default 240 if  LCD_USING_TFT_GC9A01A
         default 720 if LCD_USING_TFT_NV3052C
+        default 390 if LCD_USING_TFT_CO5300
+        default 780 if LCD_USING_TFT_CO5300_DUAL
+
         
     config LCD_VER_RES_MAX
         int
@@ -422,6 +443,8 @@ if BSP_USING_LCD
         default 240 if LCD_USING_TFT_GC9A01A
         default 1280 if LCD_USING_TFT_H080A11HDIFT4C30_V0_1
         default 720 if LCD_USING_TFT_NV3052C
+        default 450 if LCD_USING_TFT_CO5300
+        default 450 if LCD_USING_TFT_CO5300_DUAL
 
     config LCD_DPI
         int
@@ -460,6 +483,8 @@ if BSP_USING_LCD
         default 240 if LCD_USING_TFT_GC9A01A
         default 235 if LCD_USING_TFT_H080A11HDIFT4C30_V0_1
         default 315 if LCD_USING_TFT_NV3052C
+        default 300 if LCD_USING_TFT_CO5300
+        default 300 if LCD_USING_TFT_CO5300_DUAL
 
     config BSP_USING_LCD_FRAMEBUFFER
         bool

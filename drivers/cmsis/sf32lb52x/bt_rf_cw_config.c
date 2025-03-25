@@ -55,7 +55,8 @@
 
 
 extern void ble_rf_power_set(int8_t txpwr);
-
+extern void blebredr_rf_power_set(uint8_t type, int8_t txpwr);
+uint8_t is_br = 0;
 
 static void cw_rf_power_set(uint8_t pa)
 {
@@ -72,9 +73,11 @@ static void cw_rf_power_set(uint8_t pa)
         pwr = 10;
         break;
     default:
+        pwr = pa;
         break;
     }
-    ble_rf_power_set(pwr);
+    //ble_rf_power_set(pwr);
+    blebredr_rf_power_set(0, pwr);
 }
 
 static void cw_rf_channel_set(uint8_t channel)
@@ -86,7 +89,14 @@ static void cw_rf_channel_set(uint8_t channel)
     //RADIOCNTL1    FORCE_CHANNEL   0x4009_0074[30] w   0x1 使能channel number的force
     //RADIOCNTL1    CHANNEL 0x4009_0074[29:23]  w   0xN 设置为chnnelN，即2402+2*N MHz
     hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_CHANNEL;
-    hwp_bt_mac->DMRADIOCNTL1 |= (2 * channel) << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+    if (is_br == 0)
+    {
+        hwp_bt_mac->DMRADIOCNTL1 |= (2 * channel) << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+    }
+    else
+    {
+        hwp_bt_mac->DMRADIOCNTL1 |= (channel) << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+    }
     HAL_Delay_us(20);
     hwp_bt_mac->DMRADIOCNTL1 |= BT_MAC_DMRADIOCNTL1_FORCE_CHANNEL;
 
@@ -96,7 +106,7 @@ static void cw_rf_channel_set(uint8_t channel)
 
 static void cw_config_start(uint8_t pa, uint8_t channel)
 {
-
+    HAL_RCC_Reset_and_Halt_LCPU(0);
     //LB52X_MAC_RESET   LB55X_MAC_RESET 0x4000_0000[20] w   0x1 reset MAC
     hwp_lpsys_rcc->RSTR1 |= LPSYS_RCC_RSTR1_MAC;
     HAL_Delay_us(20);
@@ -115,7 +125,10 @@ static void cw_config_start(uint8_t pa, uint8_t channel)
 
     hwp_bt_mac->DMRADIOCNTL1 |= 0x01 << BT_MAC_DMRADIOCNTL1_FORCE_SYNCWORD_Pos;
     hwp_bt_mac->DMRADIOCNTL1 |= 0x01 << BT_MAC_DMRADIOCNTL1_FORCE_NBT_BLE_Pos;
-    hwp_bt_mac->DMRADIOCNTL1 |= 0x01 << BT_MAC_DMRADIOCNTL1_FORCE_NBT_BLE_VAL_Pos;
+    if (is_br == 0)
+    {
+        hwp_bt_mac->DMRADIOCNTL1 |= 0x01 << BT_MAC_DMRADIOCNTL1_FORCE_NBT_BLE_VAL_Pos;
+    }
     //hwp_bt_mac->DMRADIOCNTL1 |= 0x01 << BT_MAC_DMRADIOCNTL1_FORCE_CHANNEL_Pos;
 
     //AESCNTL   FORCE_POLAR_PWR       0x4009_00B0[8]    w  0x1      使能polar power target的force
@@ -171,12 +184,12 @@ static void cw_config_stop(void)
     hwp_lpsys_rcc->RSTR1 |= LPSYS_RCC_RSTR1_MAC;
     HAL_Delay_us(20);
     hwp_lpsys_rcc->RSTR1 &= ~LPSYS_RCC_RSTR1_MAC;
-
+    HAL_RCC_ReleaseLCPU();
     //hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
 }
 
 /**
-  * @brief  single-carrier test
+  * @brief  single-carrier test(2MHz frequency interval)
   * @param  start or stop test
   * @param  power value, 0:0dbm 1:4dbm  2:10dbm
   * @param  set channel N, means 2402+2*N MHz
@@ -184,11 +197,33 @@ static void cw_config_stop(void)
 
 void cw_config(uint8_t is_start, uint8_t pa, uint8_t channel)
 {
-    //RT_ASSERT((pa < 3) && (channel < 40));
     if (is_start)
+    {
+        is_br = 0;
         cw_config_start(pa, channel);
+    }
     else
+    {
         cw_config_stop();
+    }
+}
+/**
+  * @brief  single-carrier test(1MHz frequency interval)
+  * @param  start or stop test
+  * @param  power value, 0:0dbm 1:4dbm  2:10dbm
+  * @param  set channel N, means 2402+ N MHz
+  */
+void cw_config_bt(uint8_t is_start, uint8_t pa, uint8_t channel)
+{
+    if (is_start)
+    {
+        is_br = 1;
+        cw_config_start(pa, channel);
+    }
+    else
+    {
+        cw_config_stop();
+    }
 }
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

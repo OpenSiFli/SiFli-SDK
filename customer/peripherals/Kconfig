@@ -17,6 +17,10 @@ config TSC_USING_FT6336
     bool
     default n
 
+config TSC_USING_FT6146
+    bool
+    default n
+
 config TSC_USING_FT3168
     bool
     default n
@@ -112,6 +116,14 @@ config LCD_USING_JDI387A
     default n
     
 config LCD_USING_GC9C01
+    bool
+    default n
+
+config LCD_USING_CO5300
+    bool
+    default n
+
+config LCD_USING_CO5300_DUAL
     bool
     default n
 

@@ -1302,22 +1302,15 @@ int bt_cm_gap_event_handler(uint16_t event_id, uint8_t *msg)
     {
         BTS2S_GAP_ENCRYPTION_IND *ind = (BTS2S_GAP_ENCRYPTION_IND *)msg;
 
-        bt_cm_conned_dev_t *conn = bt_cm_find_conn_by_addr(env, &ind->bd);
+        // bt_cm_conned_dev_t *conn = bt_cm_find_conn_by_addr(env, &ind->bd);
 
         LOG_I("BTS2MU_GAP_ENCRYPTION_IND");
 
         //conn->rmt_smc = 1;
 
-        if ((NULL != conn) && (NULL != conn->tim_hdl)) //incoming call
-        {
-            // rt_timer_start(conn->tim_hdl);
-            uint8_t addr[6];
-            bt_addr_convert(&ind->bd, addr);
-            bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_ENCRYPTION, addr, 6);
-            INFO_TRACE("encryption ind\n");
-        }
-
-
+        uint8_t addr[6];
+        bt_addr_convert(&ind->bd, addr);
+        bt_interface_bt_event_notify(BT_NOTIFY_COMMON, BT_NOTIFY_COMMON_ENCRYPTION, addr, 6);
 
         break;
     }
