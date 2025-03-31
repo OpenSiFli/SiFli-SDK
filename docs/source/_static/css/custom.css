@@ -1,0 +1,82 @@
+.wy-side-nav-search>a {
+    color: #000000; 
+}
+
+.wy-side-nav-search > div[role="search"] {
+color: black;
+}
+
+.version-selector {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-bottom: 10px;
+}
+
+.version-selector select {
+margin-bottom: 10px;
+border-radius: 5px;
+padding: 5px;
+width: 120px;
+}
+
+/* .rst-content ol.arabic > li > ol {
+    counter-reset: item;
+}
+
+.rst-content ol.arabic > li > ol > li {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.3em;
+}
+
+.rst-content ol.arabic > li > ol > li:before {
+    content: counter(item) ")";
+    counter-increment: item;
+}
+ */
+
+ .rst-content ol.arabic ol {
+    counter-reset: subitem; /* 初始化子计数器 */
+    list-style: none; /* 移除默认列表样式 */
+    padding-left: 1em; /* 为嵌套列表增加左侧内边距 */
+}
+
+.rst-content ol.arabic ol > li {
+    display: block;
+    position: relative;
+    margin-bottom: 0.3em; /* 为嵌套列表项增加下间距 */
+}
+
+.rst-content ol.arabic ol > li:before {
+    content: counter(subitem) ") "; /* 使用带括号的数字编号，并在编号后加上括号和空格 */
+    counter-increment: subitem; /* 递增子计数器 */
+    position: absolute;
+    left: -1.5em; /* 调整子编号位置 */
+}
+
+
+.rst-content ol.arabic ol ol {
+    counter-reset: thirdlevel; /* 初始化子计数器 */
+    list-style: none; /* 移除默认列表样式 */
+    padding-left: 0.1em; /* 为嵌套列表增加左侧内边距 */
+}
+
+.rst-content ol.arabic ol ol > li {
+    display: block;
+    position: relative;
+    margin-bottom: 0.1em; /* 为嵌套列表项增加下间距 */
+}
+
+.rst-content ol.arabic ol ol > li:before {
+    content: counter(thirdlevel, lower-alpha) ") "; /* 使用带括号的数字编号，并在编号后加上括号和空格 */
+    counter-increment: thirdlevel; /* 递增子计数器 */
+    position: absolute;
+    left: -1.3em; /* 调整子编号位置 */
+}
+
+.nav-versions li:hover {
+    background-color: var(--sy-c-surface); /* 设置鼠标悬停时的背景颜色 */
+    color: var(--sy-c-link-hover); /* 设置鼠标悬停时的文本颜色 */
+    cursor: pointer; /* 设置鼠标悬停时的指针样式 */
+}

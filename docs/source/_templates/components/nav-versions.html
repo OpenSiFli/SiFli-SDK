@@ -1,0 +1,99 @@
+{%- if versions -%}
+  <div class="nav-versions">
+    <button type="button" aria-label="{{ _("Versions") }}">
+      <span class="md:hidden">{{ _("版本") }}</span>
+      <span class="hidden md:inline">{{ _("版本") }}</span>
+      <i class="i-lucide chevron-down"></i>
+    </button>
+    <div class="nav-versions-choices">
+      {%- if versions -%}
+      <ul id="versionList">
+        {%- for version in versions -%}
+          <li data-version="{{ version[1] }}">{{ version[0] }}</li>
+        {%- endfor -%}
+      </ul>
+      {%- endif -%}
+    </div>
+  </div>
+{%- endif -%}
+
+{%- if chips -%}
+  <div class="nav-versions">
+    <button type="button" aria-label="{{ _("芯片系列") }}">
+      <span class="md:hidden">{{ _("芯片系列") }}</span>
+      <span class="hidden md:inline">{{ _("芯片系列") }}</span>
+      <i class="i-lucide chevron-down"></i>
+    </button>
+    <div class="nav-versions-choices">
+      {%- if chips -%}
+      <ul id="chipList">
+        {%- for chip in chips -%}
+          <li data-chip="{{ chip[1] }}">{{ chip[0] }}</li>
+        {%- endfor -%}
+      </ul>
+      {%- endif -%}
+    </div>
+  </div>
+{%- endif -%}
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const versionList = document.getElementById('versionList');
+    const chipList = document.getElementById('chipList');
+    const currentVersion = '{{ current_version }}'.toLowerCase();
+    const currentChip = '{{ current_chip }}'.toLowerCase();
+    let selectedVersion = currentVersion;
+    let selectedChip = currentChip;
+
+    // Automatically select the current version
+    const versionItems = versionList.querySelectorAll('li');
+    versionItems.forEach(item => {
+      if (item.textContent.trim() === currentVersion) {
+        item.classList.add('selected');
+      }
+    });
+
+    // Automatically select the current version
+    const chipItems = chipList.querySelectorAll('li');
+    chipItems.forEach(item => {
+      if (item.textContent.trim() === currentChip) {
+        item.classList.add('selected');
+      }
+    });
+
+    function navigateToSelectedPage() {
+      if (selectedVersion && selectedChip) {
+        const currentUrl = window.location.href;
+        const urlParts = currentUrl.split('/');
+        const versionIndex = urlParts.findIndex(part => part === currentVersion);
+        const chipIndex = urlParts.findIndex(chip => chip === currentChip);
+        if (versionIndex !== -1) {
+          urlParts[versionIndex] = selectedVersion.toLowerCase();
+        }        
+        if (chipIndex !== -1) {
+          urlParts[chipIndex] = selectedChip.toLowerCase();
+        }        
+        const newUrl = urlParts.join('/');
+        // console.log(newUrl);
+        if (newUrl !== currentUrl) {
+          window.location.href = newUrl;
+        }
+      }
+    }
+
+    versionList.addEventListener('click', function(event) {
+      if (event.target.tagName === 'LI') {
+        selectedVersion = event.target.getAttribute('data-version');
+        navigateToSelectedPage();
+      }
+    });
+
+    chipList.addEventListener('click', function(event) {
+      if (event.target.tagName === 'LI') {
+        selectedChip = event.target.getAttribute('data-chip');
+        navigateToSelectedPage();
+      }
+    });
+  });
+</script>

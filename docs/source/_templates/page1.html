@@ -1,0 +1,107 @@
+{% extends "!page.html" %}
+
+{% block footer %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const fetchVersionData = () => {
+      return fetch('http://doc.sifli.cc/sdk/version.json') //use version file url 
+        .then(response => response.json());
+    };
+    const getSupportedChips = versionData => {
+      const chipOptions = new Set();
+      Object.values(versionData).forEach(({ supported_chips }) => {
+        supported_chips.forEach(chip => chipOptions.add(chip));
+      });
+      return chipOptions;
+    };
+    const getVersionOptions = (versionData, selectedChip) => {
+      return Object.keys(versionData)
+        .filter(version => versionData[version].supported_chips.includes(selectedChip))
+        .map(version => `<option value="${version}">${version}</option>`)
+        .join('');
+    };
+    fetchVersionData()
+      .then(versionData => {
+        const chipOptions = getSupportedChips(versionData);
+        const chipSelectHTML = `
+          <select id="chip-select">
+            ${Array.from(chipOptions).map(chip => `<option value="${chip}">${chip}</option>`).join('')}
+          </select>
+        `;
+        const versionSelectHTML = `
+          <select id="version-select">
+            ${getVersionOptions(versionData, chipOptions.values().next().value)}
+          </select>
+        `;
+        const versionSelector = document.createElement('div');
+        versionSelector.className = 'version-selector';
+        versionSelector.innerHTML = `${chipSelectHTML}${versionSelectHTML}`;
+        const searchForm = document.getElementById('rtd-search-form');
+        searchForm.parentElement.insertBefore(versionSelector, searchForm);
+        const chipSelect = document.getElementById('chip-select');
+        const versionSelect = document.getElementById('version-select');
+        chipSelect.addEventListener('change', updateVersionOptions);
+        chipSelect.addEventListener('change', redirectToVersion);
+        versionSelect.addEventListener('change', redirectToVersion);
+
+        const breadcrumbsAside = document.querySelector('.wy-breadcrumbs-aside');
+        const pdfLink = document.createElement('a');
+        //pdfLink.href = `${window.location.protocol}//${window.location.host}/pdf/${selectedChip}/${versionSelect.value}/documentation.pdf`;
+        pdfLink.textContent = 'Download PDF';
+        pdfLink.classList.add('fa', 'fa-file-pdf-o');
+
+        breadcrumbsAside.appendChild(pdfLink);
+        updatePDFLinkURL(pdfLink, chipSelect.value, versionSelect.value);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+      });
+    function updatePDFLinkURL(pdfLink, chip, version) {
+      if (pdfLink) {
+        //const pdfUrl = `${window.location.protocol}//${window.location.host}/pdf/${chip}/${version}/documentation.pdf`;
+        const pdfUrl = `path/documentation.pdf`;
+        pdfLink.href = pdfUrl;
+      }
+    }
+    function updateVersionOptions(event) {
+      const selectedChip = event.target.value;
+      const versionSelect = document.getElementById('version-select');
+      fetchVersionData()
+        .then(versionData => {
+          versionSelect.innerHTML = getVersionOptions(versionData, selectedChip);
+        })
+        .catch(error => {
+          console.error('Error fetching version data:', error);
+        });
+    }
+
+    function redirectToVersion(event) {
+      const chipSelect = document.getElementById('chip-select');
+      const versionSelect = document.getElementById('version-select');
+      const selectedChip = chipSelect.value;
+      const selectedVersion = versionSelect.value;
+      fetchVersionData()
+        .then(versionData => {
+          const supportedVersions = Object.keys(versionData)
+            .filter(version => versionData[version].supported_chips.includes(selectedChip));
+          if (!supportedVersions.includes(selectedVersion)) {
+            versionSelect.value = supportedVersions[supportedVersions.length - 1];
+          }
+
+          const pdfUrl = `${window.location.protocol}//${window.location.host}/pdf/${selectedChip}/${versionSelect.value}/documentation.pdf`;
+          const pdfLink = document.querySelector('.wy-breadcrumbs-aside .fa.fa-file-pdf-o');
+          if (pdfLink) {
+            pdfLink.href = pdfUrl;
+          }
+
+          const url = `${window.location.protocol}//${window.location.host}/sdk/${versionSelect.value}/${selectedChip}/`;
+          window.location.href = url;
+        })
+        .catch(error => {
+          console.error('Error fetching version data:', error);
+        });
+    }
+  });
+</script>
+{% endblock %}

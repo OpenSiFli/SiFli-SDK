@@ -4,7 +4,8 @@
 *.scvd
 *.old
 *.uvoptx
-/**/build_*
+/**/build_*/
+/**/build/
 /**/*.pyc
 .sconsign.dblite
 Kconfig.tmp

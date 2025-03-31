@@ -1,0 +1,10 @@
+{
+    "latest": {
+        "supported_chips": ["SF32LB55x", "SF32LB58x", "SF32LB56x", "SF32LB52x"]
+    },
+    "v2.2.4": {
+        "supported_chips": ["SF32LB55x", "SF32LB58x", "SF32LB56x", "SF32LB52x"]
+    }
+}
+
+
