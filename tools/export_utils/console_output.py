@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
-# SPDX-FileContrightText: 2025 SiFli
+# SPDX-FileCopyrightText: 2025 SiFli
 # SPDX-License-Identifier: Apache-2.0
 import sys
 from typing import Any

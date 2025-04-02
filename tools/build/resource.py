@@ -1027,7 +1027,6 @@ def BuildJLinkLoadScript(main_env):
                         'name': os.path.relpath(bin_path, work_dir),
                         'addr': 0XFFFFFFFF
                     })
-                    print(f"download file: {download_file}")
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                     s_num += 1
@@ -1037,7 +1036,6 @@ def BuildJLinkLoadScript(main_env):
                         'name': os.path.relpath(bin_path, work_dir),
                         'addr': 0XFFFFFFFF
                     })
-                print(f"download file: {download_file}")
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                 s_num += 1
