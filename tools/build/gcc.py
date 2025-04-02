@@ -26,15 +26,18 @@ import re
 import platform 
 
 def GetGCCRoot(rtconfig):
-    exec_path = rtconfig.EXEC_PATH
-    prefix = rtconfig.PREFIX
-
-    if prefix.endswith('-'):
-        prefix = prefix[:-1]
-
-    root_path = os.path.join(exec_path, '..', prefix)
-
-    return root_path
+    executable_name = "arm-none-eabi-gcc.exe" if os.name == 'nt' else "arm-none-eabi-gcc"
+    paths = os.environ.get("PATH", "").split(os.pathsep)
+    
+    for directory in paths:
+        candidate = os.path.join(directory, executable_name)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            exe_dir = os.path.dirname(candidate)
+            if os.path.basename(exe_dir).lower() == "bin":
+                return os.path.join(os.path.dirname(exe_dir), 'arm-none-eabi')
+            else:
+                return exe_dir
+    return None
 
 def CheckHeader(rtconfig, filename):
     root = GetGCCRoot(rtconfig)
@@ -75,7 +78,8 @@ def GCCResult(rtconfig, str):
             return re.search(pattern, string).group(0)
         return None
 
-    gcc_cmd = os.path.join(rtconfig.EXEC_PATH, rtconfig.CC)
+    # gcc_cmd = os.path.join(rtconfig.EXEC_PATH, rtconfig.CC)
+    gcc_cmd = rtconfig.CC
 
     # use temp file to get more information 
     f = open('__tmp.c', 'w')
@@ -119,11 +123,11 @@ def GCCResult(rtconfig, str):
             if re.search('union[ \t]+sigval', line):
                 have_sigval = 1
 
-            if re.search('char\* version', line):
+            if re.search(r'char\* version', line):
                 version = re.search(r'\"([^"]+)\"', line).groups()[0]
 
-            if re.findall('iso_c_visible = [\d]+', line):
-                stdc = re.findall('[\d]+', line)[0]
+            if re.findall(r'iso_c_visible = \d+', line):
+                stdc = re.findall(r'\d+', line)[0]
 
             if re.findall('pthread_create', line):
                 posix_thread = 1
@@ -152,10 +156,10 @@ def GCCResult(rtconfig, str):
     return result
 
 def GenerateGCCConfig(rtconfig, path=''):
-    if not os.path.exists(rtconfig.EXEC_PATH):
-        # not generate empty ccconfig.h if toolchain is not present
-        print("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
-        return
+    # if not os.path.exists(rtconfig.EXEC_PATH):
+    #     # not generate empty ccconfig.h if toolchain is not present
+    #     print("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
+    #     return
             
     str = ''
     cc_header = ''

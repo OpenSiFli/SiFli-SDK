@@ -5,7 +5,7 @@ import os
 import subprocess
 import shutil
 import sys
-import png
+# import png
 import logging
 
 output_folder = "output"
@@ -907,6 +907,7 @@ def BuildJLinkLoadScript(main_env):
     s_file = MakeLine('[FILEINFO]')
     s_num = 0
 
+    download_file = []
     env_list = building.GetEnvList()
     for env in env_list:
         # if building.IsEmbeddedProjEnv(env):
@@ -924,14 +925,20 @@ def BuildJLinkLoadScript(main_env):
                 for d in dir_list:
                     bin_path = os.path.join(bin_file, d)
                     s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_path, work_dir), info[d]))
-
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info[d]))
                     s_num += 1
             else:
                 assert os.path.isfile(bin_file), "{} should be a file as map defines".format(env['name'])
                 s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_file, work_dir), info))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_file, work_dir),
+                        'addr': info
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info))
                 s_num += 1
@@ -946,18 +953,25 @@ def BuildJLinkLoadScript(main_env):
                         continue
                     hex_path = os.path.join(hex_file, d)
                     s += MakeLine('loadfile {}'.format(os.path.relpath(hex_path, work_dir)))
-
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                     s_num += 1
             elif not building.IsEmbeddedProjEnv(env):
                 s += MakeLine('loadfile {}'.format(os.path.relpath(hex_file, work_dir)))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                 s_num += 1
 
     custom_img_list = building.GetCustomImgList()
+    
     for env in custom_img_list:
         if env['name'] in img_download_info:
             # load address is defined in map, load binary using address
@@ -977,11 +991,18 @@ def BuildJLinkLoadScript(main_env):
 
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info[d]))
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                     s_num += 1
             else:
                 assert os.path.isfile(bin_file), "{} should be a file as map defines".format(bin_file)
                 s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_file, work_dir), info))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info))
                 s_num += 1
@@ -1002,13 +1023,19 @@ def BuildJLinkLoadScript(main_env):
                         continue
                     hex_path = os.path.join(hex_file, d)
                     s += MakeLine('loadfile {}'.format(os.path.relpath(hex_path, work_dir)))
-
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': 0XFFFFFFFF
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                     s_num += 1
             elif not building.IsEmbeddedProjEnv(env):
                 s += MakeLine('loadfile {}'.format(os.path.relpath(hex_file, work_dir)))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': 0XFFFFFFFF
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                 s_num += 1
@@ -1042,11 +1069,18 @@ def BuildJLinkLoadScript(main_env):
     f.write(s)
     f.close()
 
+    device = main_env['JLINK_DEVICE']
+    device = device.split('_')[0][:-1]
+
+    download_list = ' '.join(f"\"{file['name']}@0x{file['addr']:08X}\"" for file in download_file)
+
     uart_comment = '@echo off\ntitle=uart download\nset WORK_PATH=%~dp0\nset CURR_PATH=%cd%\ncd %WORK_PATH%\n:start\necho,\necho      \
 Uart Download\necho,\nset /p input=please input the serial port num:\ngoto download\n:download\necho com%input%\n'
-    uart_comment += MakeLine('{} --func 0 --port com%input% --baund 3000000 --loadram 1 --postact 1 --device {} \
---file ImgBurnList.ini --log ImgBurn.log\nif %errorlevel%==0 (\n    echo Download Successful\n)else (\n    echo Download Failed\n    \
-echo logfile:%WORK_PATH%ImgBurn.log\n)\ncd %CURR_PATH%\n'.format(ImgDownUart_PATH, main_env['JLINK_DEVICE']))
+#     uart_comment += MakeLine('{} --func 0 --port com%input% --baund 3000000 --loadram 1 --postact 1 --device {} \
+# --file ImgBurnList.ini --log ImgBurn.log\nif %errorlevel%==0 (\n    echo Download Successful\n)else (\n    echo Download Failed\n    \
+# echo logfile:%WORK_PATH%ImgBurn.log\n)\ncd %CURR_PATH%\n'.format(ImgDownUart_PATH, main_env['JLINK_DEVICE']))
+    # print("123123123")
+    uart_comment += MakeLine(f"sftool -p COM%input% -c {device} write_flash {download_list}\n")
     uart_comment += MakeLine('if "%ENV_ROOT%"=="" pause\n')
     uart_f = open(os.path.join(main_env['build_dir'], 'uart_download.bat'), 'w')
     uart_f.write(uart_comment)

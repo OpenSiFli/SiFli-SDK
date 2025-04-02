@@ -64,7 +64,7 @@ int libc_stdio_set_console(const char* device_name, int mode)
             _GLOBAL_REENT->_stderr = std_console;
         }
 
-        _GLOBAL_REENT->__sdidinit = 1;
+        // _GLOBAL_REENT->__sdidinit = 1;
     }
 
     if (std_console) return fileno(std_console);

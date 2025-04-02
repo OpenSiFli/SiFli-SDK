@@ -24,7 +24,7 @@
 #                             group definition.
 #
 
-import imp
+import importlib
 import os
 import re
 import shutil
@@ -407,9 +407,9 @@ def LdsBuild(target, source, env):
     target_path = os.path.join(os.path.dirname(str(target[0])), 'link_copy.lds')
 
     p = subprocess.Popen([rtconfig.CC, '-E', '-P'] + include_paths + ['-x', 'c', str(source[0])], stdout=subprocess.PIPE)
-    (result, error) = p.communicate()    
+    (result, error) = p.communicate()
     f = open(target_path, "wb")
-    f.write(str(result))
+    f.write(result)
     f.close()   
 
 def FsBuild(target, source, env):
@@ -616,11 +616,12 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
     if board:
         board_path1, board_path2 = GetBoardPath(board)
         logging.debug("Load {}".format(os.path.join(board_path2, 'rtconfig.py')))
-        proj_rtconfig = imp.load_source(proj_name, os.path.join(board_path2, 'rtconfig.py'))
-        proj_rtconfig2 = imp.load_source(proj_name, os.path.join(proj_path, 'rtconfig.py'))
+
+        proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(board_path2, 'rtconfig.py')))
+        proj_rtconfig2 = ( lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'rtconfig.py')))
         MergeRtconfig(proj_rtconfig, proj_rtconfig2)
     else:    
-        proj_rtconfig = imp.load_source(proj_name, os.path.join(proj_path, 'rtconfig.py'))
+        proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'rtconfig.py')))
 
     parent_name = ParentProjStack[-1]['name']
     if (len(ParentProjStack) == 1):
@@ -663,7 +664,7 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
 
     child_builder = None
     if os.path.isfile(os.path.join(proj_path, 'SConstruct.py')):
-        child_builder = imp.load_source(proj_name, os.path.join(proj_path, 'SConstruct.py'))
+        child_builder = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'SConstruct.py')))
         proj_env = child_builder.create_env(proj_path)
         
     else:
@@ -967,7 +968,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
     if (v_major >= 4):
         # compilation database is supported since SCons 4.x  
         env.Tool('compilation_db')
-        cdb = env.CompilationDatabase('compile_database.json')
+        cdb = env.CompilationDatabase(os.path.join(rtconfig.OUTPUT_DIR, 'compile_commands.json'))
         Alias('cdb', cdb)
 
     # make an absolute root directory
@@ -1022,11 +1023,11 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
 
 
     # auto change the 'RTT_EXEC_PATH' when 'rtconfig.EXEC_PATH' get failed
-    if not os.path.exists(rtconfig.EXEC_PATH):
-        if 'RTT_EXEC_PATH' in os.environ:
-            # del the 'RTT_EXEC_PATH' and using the 'EXEC_PATH' setting on rtconfig.py
-            del os.environ['RTT_EXEC_PATH']
-            utils.ReloadModule(rtconfig)
+    # if not os.path.exists(rtconfig.EXEC_PATH):
+    #     if 'RTT_EXEC_PATH' in os.environ:
+    #         # del the 'RTT_EXEC_PATH' and using the 'EXEC_PATH' setting on rtconfig.py
+    #         del os.environ['RTT_EXEC_PATH']
+    #         utils.ReloadModule(rtconfig)
 
     # add compability with Keil MDK 4.6 which changes the directory of armcc.exe
     if rtconfig.PLATFORM == 'armcc':
@@ -1215,12 +1216,13 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         rtconfig.POST_ACTION = ''
 
     if GetOption('compiledb'):
-        env.Replace(
-        CC   = 'clang',
-        CXX  = 'clang++',
-        # skip as and link
-        LINK = 'true',
-        AS   = 'true',)    
+        pass
+        # env.Replace(
+        # CC   = 'clang',
+        # CXX  = 'clang++',
+        # # skip as and link
+        # LINK = 'true',
+        # AS   = 'true',)    
 
     # generate cconfig.h file
     GenCconfigFile(env, BuildOptions)
@@ -1234,17 +1236,16 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         genconfig()
         exit(0)
 
-    if env['PLATFORM'] != 'win32':
-        if not option_added:
-            AddOption('--menuconfig',
-                        dest = 'menuconfig',
-                        action = 'store_true',
-                        default = False,
-                        help = 'make menuconfig for RT-Thread BSP')
-        if GetOption('menuconfig'):
-            from menuconfig import menuconfig
-            menuconfig(Rtt_Root)
-            exit(0)
+    if not option_added:
+        AddOption('--menuconfig',
+                    dest = 'menuconfig',
+                    action = 'store_true',
+                    default = False,
+                    help = 'make menuconfig for RT-Thread BSP')
+    if GetOption('menuconfig'):
+        board = f"--board={GetOption('board')}"
+        subprocess.call([sys.executable, os.path.join(SIFLI_SDK, 'tools',"kconfig" , 'menuconfig.py'), board])
+        exit(0)
 
     if not option_added:
         AddOption('--pyconfig',
@@ -1322,6 +1323,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         logging.debug("No rtthread included in build")
     else:
         # include kernel
+
         objs.extend(SConscript(Rtt_Root + '/src/SConscript', variant_dir=kernel_vdir + '/src', duplicate=0))
         # include libcpu
         if not has_libcpu:
@@ -1402,7 +1404,8 @@ def InitBuild(bsp_root, build_dir, board):
         f.close()
 
     SIFLI_SDK = os.getenv('SIFLI_SDK')
-    KCONFIG_PATH = os.path.join(SIFLI_SDK, "tools/menuconfig/dist/kconfig.exe")
+    KCONFIG_PATH = os.path.join(SIFLI_SDK, "tools/kconfig/kconfig.py")
+
 
     board_path = board_path.replace("$SIFLI_SDK", SIFLI_SDK)
     board_path = os.path.dirname(board_path)   
@@ -1440,14 +1443,13 @@ def InitBuild(bsp_root, build_dir, board):
     #    os.remove(os.path.join(build_dir, "rtconfig.h"))
 
     if (is_verbose()):
-        retcode = subprocess.call([KCONFIG_PATH, '--handwritten-input-configs', '--verbose', os.path.join(build_dir, 'Kconfig'), 
+        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', '--verbose', os.path.join(build_dir, 'Kconfig'),
                          os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"), 
                          os.path.join(build_dir, "kconfiglist")] + conf_list)
     else:
-        retcode = subprocess.call([KCONFIG_PATH, '--handwritten-input-configs', os.path.join(build_dir, 'Kconfig'), 
-                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"), 
+        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', os.path.join(build_dir, 'Kconfig'),
+                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"),
                          os.path.join(build_dir, "kconfiglist")] + conf_list)
-    
     assert retcode == 0, "Fail to generate .config and rtconfig.h"
 
     src = GetCustomMemMapSrc(bsp_root, build_dir, rtconfig.CHIP, board)
@@ -1980,10 +1982,10 @@ def EndBuilding(target, program = None):
         from cscope import CscopeDatabase
         CscopeDatabase(Projects)
 
-    if not GetOption('help') and not GetOption('target'):
-        if not os.path.exists(rtconfig.EXEC_PATH) and not GetDepend('BSP_USING_PC_SIMULATOR'):
-            logging.error("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
-            exit(1)
+    # if not GetOption('help') and not GetOption('target'):
+    #     if not os.path.exists(rtconfig.EXEC_PATH) and not GetDepend('BSP_USING_PC_SIMULATOR'):
+    #         logging.error("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
+    #         exit(1)
 
     if need_exit:
         exit(0)
@@ -2434,7 +2436,7 @@ def LoadRtconfig(board):
         logging.error('Board path "{}"" not found'.format(board_path2))
         exit(1)
 
-    proj_rtconfig = imp.load_source('main', os.path.join(board_path2, 'rtconfig.py'))
+    proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location('main', os.path.join(board_path2, 'rtconfig.py')))
     MergeRtconfig(proj_rtconfig, rtconfig)
         
     proj_rtconfig.OUTPUT_DIR = 'build_' + board + '/'
@@ -2716,8 +2718,7 @@ def SifliEnv(BSP_Root = None):
     # bsp lib config
     rtconfig.BSP_LIBRARY_TYPE = None        
 
-    if os.getenv('RTT_EXEC_PATH'):
-        rtconfig.EXEC_PATH = os.getenv('RTT_EXEC_PATH')
+    rtconfig.EXEC_PATH = os.getenv('RTT_EXEC_PATH')
 
     if not rtconfig.ARCH=='sim':
         rtconfig.LINK_SCRIPT_SRC = rtconfig.LINK_SCRIPT

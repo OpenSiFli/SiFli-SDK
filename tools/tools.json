@@ -1,0 +1,289 @@
+{
+  "tools": [
+    {
+      "description": "sftool is a download tool for the SiFli family of chips",
+      "export_paths": [
+        [
+          ""
+        ]
+      ],
+      "export_vars": {},
+      "info_url": "https://github.com/OpenSiFli/sftool",
+      "install": "always",
+      "license": "Apache-2.0",
+      "name": "sftool",
+      "supported_targets": [
+        "all"
+      ],
+      "version_cmd": [
+        "sftool",
+        "--version"
+      ],
+      "version_regex": "sftool\\s+([\\d.]+)",
+      "versions": [
+        {
+          "name": "0.1.3",
+          "status": "recommended",
+          "macos-arm64": {
+            "sha256": "DF2637591C9D725870E7D3ACD511B789556A0FE2FD360BA71CA480439475DA57",
+            "size": 4045836,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-aarch64-apple-darwin.tar.xz"
+          },
+          "linux-arm64": {
+            "sha256": "C4F9AD915F0EB8A77058749A9745F2F76D35680B3E6138BA38F4A57595C868FC",
+            "size": 4129384,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-aarch64-unknown-linux-gnu.tar.xz"
+          },
+          "win32": {
+            "sha256": "66F59A4F8BC6F99FA8EF551B49A7E4FFF0F6F307A072F18AF80D058FD07E36DD",
+            "size": 4787123,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-i686-pc-windows-msvc.zip"
+          },
+          "linux-i686": {
+            "sha256": "68C3D7E4E6B9A90174168C21E8AA5C08B3E40E5359727FD2DD623B9E05783A5D",
+            "size": 4355032,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-i686-unknown-linux-gnu.tar.xz"
+          },
+          "macos": {
+            "sha256": "355CA06C84BD993D55B7212F78B1F94A8E6B1E1E66BC0A6F20078989C9843223",
+            "size": 4131728,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-x86_64-apple-darwin.tar.xz"
+          },
+          "win64": {
+            "sha256": "1CF3B6F081FDE66AB8E2EC1F14E533E3C2425E35707C4DEF9F513E15C6E4A294",
+            "size": 4841466,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-x86_64-pc-windows-msvc.zip"
+          },
+          "linux-amd64": {
+            "sha256": "A4593CEF1D69C8AD7D00856498C7DDED7A61C7B6F64E499AC7988BF42E60359C",
+            "size": 4231336,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.1.3/sftool-0.1.3-x86_64-unknown-linux-gnu.tar.xz"
+          }
+        }
+      ]
+    },
+    {
+      "description": "SiFli-SDK wrapper tool for Windows",
+      "export_paths": [
+        [
+          ""
+        ]
+      ],
+      "export_vars": {},
+      "info_url": "https://github.com/OpenSiFli/sifli_sdk_wrapper",
+      "install": "never",
+      "license": "Apache-2.0",
+      "name": "sdk-exe",
+      "platform_overrides": [
+        {
+          "install": "always",
+          "platforms": [
+            "win32",
+            "win64"
+          ]
+        }
+      ],
+      "supported_targets": [
+        "all"
+      ],
+      "version_cmd": [
+        "sdk.py.exe",
+        "-v"
+      ],
+      "version_regex": "([0-9.]+)",
+      "versions": [
+        {
+          "name": "0.1.1",
+          "status": "recommended",
+          "win32": {
+            "sha256": "6A3FF0A3F747C2C5FD958FEBFCCA9537767C84A9ED00401140AB5121C9BDA99C",
+            "size": 137374,
+            "url": "https://github.com/OpenSiFli/sifli_sdk_wrapper/releases/download/0.1.1/sdk-py-v0.1.1.zip"
+          },
+          "win64": {
+            "sha256": "6A3FF0A3F747C2C5FD958FEBFCCA9537767C84A9ED00401140AB5121C9BDA99C",
+            "size": 137374,
+            "url": "https://github.com/OpenSiFli/sifli_sdk_wrapper/releases/download/0.1.1/sdk-py-v0.1.1.zip"
+          }
+        }
+      ]
+    },
+    {
+      "description": "CMake build system",
+      "export_paths": [
+        [
+          "bin"
+        ]
+      ],
+      "export_vars": {},
+      "info_url": "https://github.com/Kitware/CMake",
+      "install": "on_request",
+      "license": "BSD-3-Clause",
+      "name": "cmake",
+      "platform_overrides": [
+        {
+          "install": "always",
+          "platforms": [
+            "win32",
+            "win64"
+          ]
+        },
+        {
+          "export_paths": [
+            [
+              "CMake.app",
+              "Contents",
+              "bin"
+            ]
+          ],
+          "platforms": [
+            "macos",
+            "macos-arm64"
+          ]
+        }
+      ],
+      "strip_container_dirs": 1,
+      "supported_targets": [
+        "all"
+      ],
+      "version_cmd": [
+        "cmake",
+        "--version"
+      ],
+      "version_regex": "cmake version ([0-9.]+)",
+      "versions": [
+        {
+          "linux-amd64": {
+            "sha256": "cdd7fb352605cee3ae53b0e18b5929b642900e33d6b0173e19f6d4f2067ebf16",
+            "size": 53635506,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-linux-x86_64.tar.gz"
+          },
+          "linux-arm64": {
+            "sha256": "d18f50f01b001303d21f53c6c16ff12ee3aa45df5da1899c2fe95be7426aa026",
+            "size": 54889935,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-linux-aarch64.tar.gz"
+          },
+          "linux-armel": {
+            "sha256": "446650c69ea74817a770f96446c162bb7ad24ffecaacb35fcd4845ec7d3c9099",
+            "size": 17035042,
+            "url": "https://dl.espressif.com/dl/cmake/cmake-3.30.2-Linux-armv7l.tar.gz"
+          },
+          "linux-armhf": {
+            "sha256": "446650c69ea74817a770f96446c162bb7ad24ffecaacb35fcd4845ec7d3c9099",
+            "size": 17035042,
+            "url": "https://dl.espressif.com/dl/cmake/cmake-3.30.2-Linux-armv7l.tar.gz"
+          },
+          "macos": {
+            "sha256": "c6fdda745f9ce69bca048e91955c7d043ba905d6388a62e0ff52b681ac17183c",
+            "size": 79199037,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-macos-universal.tar.gz"
+          },
+          "macos-arm64": {
+            "sha256": "c6fdda745f9ce69bca048e91955c7d043ba905d6388a62e0ff52b681ac17183c",
+            "size": 79199037,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-macos-universal.tar.gz"
+          },
+          "name": "3.30.2",
+          "status": "recommended",
+          "win32": {
+            "sha256": "48bf4b3dc2d668c578e0884cac7878e146b036ca6b5ce4f8b5572f861b004c25",
+            "size": 45404613,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-windows-x86_64.zip"
+          },
+          "win64": {
+            "sha256": "48bf4b3dc2d668c578e0884cac7878e146b036ca6b5ce4f8b5572f861b004c25",
+            "size": 45404613,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-windows-x86_64.zip"
+          }
+        },
+        {
+          "linux-amd64": {
+            "sha256": "3e15dadfec8d54eda39c2f266fc1e571c1b88bf32f9d221c8a039b07234206fa",
+            "size": 39509848,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Linux-x86_64.tar.gz"
+          },
+          "macos": {
+            "sha256": "655d6ed41a1c276676ca6a1ec381c179d394420c489f2d39b3cf2ef26bfae799",
+            "size": 35799298,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Darwin-x86_64.tar.gz"
+          },
+          "macos-arm64": {
+            "sha256": "655d6ed41a1c276676ca6a1ec381c179d394420c489f2d39b3cf2ef26bfae799",
+            "size": 35799298,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Darwin-x86_64.tar.gz"
+          },
+          "name": "3.16.3",
+          "status": "supported",
+          "win32": {
+            "sha256": "4b1370b3252acda0850d26c75e9bc6b8e019daaa7978a19f5d8dc008450d3548",
+            "size": 32807681,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-win64-x64.zip"
+          },
+          "win64": {
+            "sha256": "4b1370b3252acda0850d26c75e9bc6b8e019daaa7978a19f5d8dc008450d3548",
+            "size": 32807681,
+            "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-win64-x64.zip"
+          }
+        }
+      ]
+    },
+    {
+      "description": "Toolchain for 32-bit Arm based on GCC",
+      "export_paths": [
+        [
+          "bin"
+        ]
+      ],
+      "export_vars": {},
+      "info_url": "https://github.com/OpenSiFli/crosstool-NG",
+      "install": "always",
+      "license": "GPL-3.0-with-GCC-exception",
+      "name": "arm-none-eabi-gcc",
+      "supported_targets": [
+        "sf32lb52"
+      ],
+      "version_cmd": [
+        "arm-none-eabi-gcc",
+        "--version"
+      ],
+      "version_regex": "\\)\\s+([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "versions": [
+        {
+          "linux-amd64": {
+            "sha256": "b93f17586b0048c15211c7ace48916f6b83d20fdfa985a790186b13c81f9c9a5",
+            "size": 152823552,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-x86_64-linux-gnu.tar.xz"
+          },
+          "linux-arm64": {
+            "sha256": "75c5b7888ad380e37391063d0a3fe33b3f12dd3481b492c85aaa5ebb738a5834",
+            "size": 149283092,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-aarch64-linux-gnu.tar.xz"
+          },
+          "macos": {
+            "sha256": "ce32a964e1ab16e814c1c65b19214da7b1c99ae9ed66a2ee7b2e7ddd87f8fb81",
+            "size": 145067960,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-x86_64-apple-darwin.tar.xz"
+          },
+          "macos-arm64": {
+            "sha256": "9cfb59dcf7c3e348a288577a4eba3a925cd08963b6c4d00ee7bb1468f6e2a495",
+            "size": 135121680,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-aarch64-apple-darwin.tar.xz"
+          },
+          "name": "14.2.1",
+          "status": "recommended",
+          "win32": {
+            "sha256": "6facb152ce431ba9a4517e939ea46f057380f8f1e56b62e8712b3f3b87d994e1",
+            "size": 305393359,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-i686-w64-mingw32.zip"
+          },
+          "win64": {
+            "sha256": "f074615953f76036e9a51b87f6577fdb4ed8e77d3322a6f68214e92e7859888f",
+            "size": 312299563,
+            "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-x86_64-w64-mingw32.zip"
+          }
+        }
+      ]
+    }
+  ],
+  "version": 2
+}
