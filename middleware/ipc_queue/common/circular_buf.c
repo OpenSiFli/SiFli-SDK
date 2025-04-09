@@ -398,7 +398,7 @@ __ROM_USED size_t circular_buf_putchar(struct circular_buf *cb, const uint8_t ch
     cb->wr_buffer_ptr[wr_idx] = ch;
 
     /* flip mirror */
-    if (wr_idx == cb->buffer_size - 1)
+    if ((int16_t)wr_idx == cb->buffer_size - 1)
     {
         wr_mirror = ~wr_mirror;
         wr_idx = 0;
@@ -433,7 +433,7 @@ __ROM_USED size_t circular_buf_putchar_force(struct circular_buf *cb, const uint
     cb->wr_buffer_ptr[wr_idx] = ch;
 
     /* flip mirror */
-    if (wr_idx == cb->buffer_size - 1)
+    if ((int16_t)wr_idx == cb->buffer_size - 1)
     {
         wr_mirror = ~wr_mirror;
         wr_idx = 0;
@@ -477,7 +477,7 @@ __ROM_USED size_t circular_buf_getchar(struct circular_buf *cb, uint8_t *ch)
     /* put character */
     *ch = cb->rd_buffer_ptr[rd_idx];
 
-    if (rd_idx == cb->buffer_size - 1)
+    if ((int16_t)rd_idx == cb->buffer_size - 1)
     {
         rd_mirror = ~rd_mirror;
         rd_idx = 0;
