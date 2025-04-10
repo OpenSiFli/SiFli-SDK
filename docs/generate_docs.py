@@ -21,13 +21,13 @@ def generate_doxygen_xml(board):
     os.makedirs(xml_dir)
     
     if board == '52x':
-        run_command('..\..\\tools\doxygen\\bin\doxygen Doxyfile_52x.sphinx', cwd=doxygen_dir)
+        run_command('doxygen Doxyfile_52x.sphinx', cwd=doxygen_dir)
     elif board == '55x':
-        run_command('..\..\\tools\doxygen\\bin\doxygen Doxyfile_55x.sphinx', cwd=doxygen_dir)
+        run_command('doxygen Doxyfile_55x.sphinx', cwd=doxygen_dir)
     elif board == '56x':
-        run_command('..\..\\tools\doxygen\\bin\doxygen Doxyfile_56x.sphinx', cwd=doxygen_dir)
+        run_command('doxygen Doxyfile_56x.sphinx', cwd=doxygen_dir)
     elif board == '58x':
-        run_command('..\..\\tools\doxygen\\bin\doxygen Doxyfile_58x.sphinx', cwd=doxygen_dir)
+        run_command('doxygen Doxyfile_58x.sphinx', cwd=doxygen_dir)
 
 
 def make_html(board):
