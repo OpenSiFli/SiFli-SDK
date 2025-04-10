@@ -14,13 +14,11 @@
 
 ## 下载程序
 
-保持开发板与电脑的USB连接，运行`build_em-lb525_hcpu\uart_download.bat`下载程序到开发板，当提示`please input serial port number`，输入开发板实际，例如COM19就输入19，输入完成后敲回车即开始下载程序，下载过程中会以百分比提示下载进度，完成后按提示按任意键回到命令行提示符。
+保持开发板与电脑的USB连接，运行`build_em-lb525_hcpu\uart_download.bat`下载程序到开发板，当提示`please input serial port number`，输入开发板实际，例如COM19就输入19，输入完成后敲回车即开始下载程序，完成后按提示按任意键回到命令行提示符。
 ```{note}
-Linux和macOS用户请运行`build_em-lb525_hcpu/uart_download.sh`，端口号格式为`/dev/ttyUSB0`，请根据实际情况修改
+Linux和macOS用户建议直接使用`sftool`工具下载，使用方法可参考[sftool](https://wiki.sifli.com/tools/SFTool.html)。需要下载的文件在有bootloader.elf、ftab.elf、main.elf
 ```
 
 ## 运行程序
 
-下载完成后，按下开发板上的RESET键，程序会自动运行，串口助手会打印出hello world的提示信息。
-
-
+下载完成后，会自动执行软件复位，或者也可以按下开发板上的RESET键，程序会自动运行，串口助手会打印出hello world的提示信息。
