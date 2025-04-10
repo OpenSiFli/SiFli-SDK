@@ -1,6 +1,6 @@
-# 手动安装
+# 安装环境
 
-## 0x00 安装准备
+## 安装准备
 
 为了安装SiFli-SDK，需要根据操作系统安装一些软件包。可以参考以下安装指南，安装 Linux 和 macOS 的系统上所有需要的软件包。
 
@@ -53,22 +53,28 @@ sudo pacman -S --needed gcc git make flex bison gperf python cmake ninja ccache 
 SiFli-SDK 将使用 macOS 上默认安装的 Python 版本。
 
 - 安装 CMake 和 Ninja 编译工具：
-    - Homebrew 用户：
+  - Homebrew 用户：
+
         ```bash
         brew install cmake ninja
         ```
-    - MacPort 用户
+
+  - MacPort 用户
+
         ```bash
         sudo port install cmake ninja
         ```
-    - 都不是
+
+  - 都不是
         若以上均不适用，请访问 CMake 和 Ninja 主页，查询有关 macOS 平台的下载安装问题。
 
 :::{note}
 如在上述任何步骤中遇到以下错误:
+
 ```
 xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools), missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun
 ```
+
 则必须安装 XCode 命令行工具，可运行 `xcode-select --install` 命令进行安装。
 :::
 
@@ -76,7 +82,7 @@ xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools
 
 ::::::
 
-## 0x01 获取 SiFli-SDK
+## 获取 SiFli-SDK
 
 在围绕 SF32 构建应用程序之前，请先获取 SiFli 提供的软件库文件 [SiFli-SDK 仓库](https://github.com/OpenSiFli/SiFli-SDK)。
 
@@ -88,28 +94,35 @@ xcrun: error: invalid active developer path (/Library/Developer/CommandLineTools
 :sync-group: os
 
 :::{tab-item} Windows
+
 ```powershell
 mkdir -p C:\OpenSiFli
 cd C:\OpenSiFli
 git clone --recursive https://github.com/OpenSiFli/SiFli-SDK
 ```
+
 :::
 
 :::{tab-item} Linux & macOS
+
 ```bash
 mkdir -p ~/OpenSiFli
 cd ~/OpenSiFli
 git clone --recursive https://github.com/OpenSiFli/SiFli-SDK
 ```
+
 :::
 
 ::::
 
 ```{note}
 上面的SDK路径仅做示例，用户可以根据自己的需要选择路径。
+
+如果在国内访问 GitHub 较慢，可以使用以下命令替换上面的命令：
+git clone --recursive https://gitee.com/SiFli/sifli-sdk
 ```
 
-## 0x02 设置工具
+## 安装工具
 
 除了 SiFli-SDK 本身，还需要为支持 SF32 的项目安装 SiFli-SDK 使用的各种工具，比如编译器、调试器、Python 包等。
 
@@ -117,49 +130,82 @@ git clone --recursive https://github.com/OpenSiFli/SiFli-SDK
 :sync-group: os
 
 :::{tab-item} Windows
+
 ```powershell
 cd C:\OpenSiFli\SiFli-SDK
 .\install.ps1
+国内用户可以使用如下命令通过国内镜像源安装工具包
+cd C:\OpenSiFli\SiFli-SDK
+set SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
+./install.ps1
 ```
+
 :::
 
 :::{tab-item} Linux & macOS
+
 ```bash
 cd ~/OpenSiFli/SiFli-SDK
 ./install.sh
+国内用户可以使用如下命令通过国内镜像源安装工具包
+cd ~/OpenSiFli/SiFli-SDK
+export SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
+./install.sh
 ```
+
 :::
 
 ::::
 
-## 0x03 设置环境变量
+## 设置环境变量
 
-此时，刚刚安装的工具尚未添加至 PATH 环境变量，无法通过“命令窗口”使用这些工具。因此，必须设置一些环境变量。这可以通过 SiFli-SDK 提供的另一个脚本进行设置。
+通过以上步骤，SDK和相关工具就安装好了，但是他们的路径并不在环境变量里，没办法在任意目录使用。因此，必须设置一些环境变量。这可以通过 SiFli-SDK 提供的另一个脚本进行设置。
 
-请在需要运行 ESP-IDF 的终端窗口运行以下命令：
+请在需要使用编译或下载命令的终端窗口运行以下命令：
 ::::{tab-set}
 :sync-group: os
 
 :::{tab-item} Windows
+
 ```powershell
 export.ps1
 ```
 
+如果需要经常运行 SiFli-SDK，并且希望在每次打开终端时自动设置环境变量，可以新建一个 PowerShell 配置文件，具体步骤如下：
+在 PowerShell中按下 `Ctrl+,` 打开设置，点击添加新的配置文件，选择复制配置文件 `Windows PowerShell`，然后按照以下步骤进行操作：
+
+1. 将名称改为SiFli-SDK
+2. 把命令行的配置改为如下,最后的export.ps1文件位置改成你的SDK路径
+```powershell
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe  -ExecutionPolicy Bypass -NoExit -File  D:\SIFIL\SiFli-SDK\export.ps1
+```
+3. 启动目录改为使用父进程目录
+4. 其他配置可以不改动
+5. 点击保存
+
+后续只需要在任意代码目录下打开PowerShell，点击右上角的下拉菜单，选择SiFli-SDK，就可以自动设置环境变量了。在新打开的窗口中就可以使用SDK的编译和下载命令了。
+
+:::
+
 :::{tab-item} Linux & macOS
+
 ```bash
 source export.sh
 ```
 
 如果需要经常运行 SiFli-SDK，可以为执行 export.sh 创建一个别名，具体步骤如下：
+
 1. 复制并粘贴以下命令到 shell 配置文件中（.profile、.bashrc、.zprofile 等）
+
 ```bash
 alias get_sf32='. $HOME/OpenSiFli/SiFli-SDK/export.sh'
 ```
+
 2. 通过重启终端窗口或运行 `source [path to profile]`，如 `source ~/.bashrc` 来刷新配置文件
 
-现在可以在任何终端窗口中运行 get_idf 来设置或刷新 ESP-IDF 环境。
+现在可以在任何终端窗口中运行 get_sf32 来设置或刷新 SiFli-SDK 环境。
 
-不建议直接将 export.sh 添加到 shell 的配置文件。这样做会导致在每个终端会话中都激活 IDF 虚拟环境（包括无需使用 ESP-IDF 的会话）。这违背了使用虚拟环境的目的，还可能影响其他软件的使用。
+不建议直接将 export.sh 添加到 shell 的配置文件。这样做会导致在每个终端会话中都激活 SDK 虚拟环境（包括无需使用 SiFli-SDK 的会话）。这违背了使用虚拟环境的目的，还可能影响其他软件的使用。
 :::
 
 ::::

@@ -3,8 +3,8 @@
 ```{toctree}
 
 get-started
-arch
-
 install/index
+build
+arch
 
 ```
