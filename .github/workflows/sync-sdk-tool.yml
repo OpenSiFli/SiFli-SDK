@@ -1,0 +1,37 @@
+name: Sync SDK Tools
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/tools.json'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  sync-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: ./tools/sync
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run sync tool script
+        working-directory: ./tools/sync
+        run: |
+          python sync_tool.py \
+            --secret-id ${{ secrets.COS_TOOL_SECRET_ID }} \
+            --secret-key ${{ secrets.COS_TOOL_SECRET_KEY }} \
+            --region ${{ secrets.COS_STOOL_REGION }} \
+            --bucket ${{ secrets.COS_TOOL_BUCKET }} 
