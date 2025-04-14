@@ -1,0 +1,30 @@
+name: GitHub to Gitee Sync
+
+on:
+  push:
+    branches:
+      - main  # 根据您的主分支名称可能需要调整
+  workflow_dispatch:  # 允许手动触发
+  schedule:
+    - cron: '0 2 * * *'  # 每天凌晨2点自动同步
+
+jobs:
+  mirror-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 获取完整的提交历史
+
+      - name: GitHub to Gitee Sync
+        uses: Yikun/hub-mirror-action@master
+        with:
+          src: github/OpenSiFli
+          dst: gitee/SiFli
+          dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}
+          dst_token: ${{ secrets.GITEE_TOKEN }}
+          static_list: "SiFli-SDK"  # 指定要同步的仓库名
+          force_update: true  # 强制推送
+          mappings: "SiFli-SDK=>sifli-sdk"  # 源仓库名到目标仓库名的映射
+          debug: true  # 开启调试日志
