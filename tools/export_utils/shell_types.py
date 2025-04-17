@@ -102,7 +102,7 @@ class UnixShell(Shell):
         if stdout is not None:
             fd.write(f'{stdout}\n')
         fd.write((f'echo "\nDone! You can now compile SIFLI-SDK projects.\n'
-                  'Go to the project directory and run:\n\n  sdk.py build"\n'))
+                  'Go to the project directory and run:\n\n  You can refer to the https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html to continue"\n'))
 
     def export(self) -> None:
         with open(self.script_file_path, 'w', encoding='utf-8') as fd:
@@ -259,7 +259,7 @@ class PowerShell(Shell):
             functions = self.get_functions()
             fd.write(f'{functions}\n')
             fd.write((f'echo "\nDone! You can now compile SiFli-SDK projects.\n'
-                      'Go to the project directory and run:\n\n  sdk.py build\n"'))
+                      'Go to the project directory and run:\n\n  You can refer to the https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html to continue\n"'))
 
     def spawn(self) -> None:
         self.init_file()
@@ -308,10 +308,11 @@ class WinCmd(Shell):
             fd.write('\n'.join([
                 'echo.',
                 'echo Done! You can now compile SiFli-SDK projects.',
-                'echo Go to the project directory and run:',
-                'echo.',
-                'echo   sdk.py build',
-                'echo.',
+                'echo You can refer to the https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html to continue'
+                # 'echo Go to the project directory and run:',
+                # 'echo.',
+                # 'echo   sdk.py build',
+                # 'echo.',
             ]))
 
     def spawn(self) -> None:
