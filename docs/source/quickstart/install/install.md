@@ -145,6 +145,8 @@ cd C:\OpenSiFli\SiFli-SDK
 cd C:\OpenSiFli\SiFli-SDK
 $env:SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
 ./install.ps1
+如果提示禁止执行脚本，请运行以下命令
+Set-ExecutionPolicy RemoteSigned -Scope Process
 ```
 
 :::
