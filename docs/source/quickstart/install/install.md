@@ -144,6 +144,8 @@ cd C:\OpenSiFli\SiFli-SDK
 国内用户可以使用如下命令通过国内镜像源安装工具包
 cd C:\OpenSiFli\SiFli-SDK
 $env:SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
+python.exe -m pip install -i https://mirrors.ustc.edu.cn/pypi/simple pip -U
+pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/simple
 ./install.ps1
 如果提示禁止执行脚本，请运行以下命令
 Set-ExecutionPolicy RemoteSigned -Scope Process
