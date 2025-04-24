@@ -4,11 +4,18 @@
 
 为了安装SiFli-SDK，需要根据操作系统安装一些软件包。可以参考以下安装指南，安装 Linux 和 macOS 的系统上所有需要的软件包。
 
-```{important}
-对 Windows 用户来说，只需要保证环境变量中存在 `Python` 环境变量即可。
+对 Windows 用户来说，只需要保证环境变量中存在 `Python` 和`git`环境变量，且python版本大于3.9即可。
 
-如果没有安装 Python，请参考 [Python 官网](https://www.python.org/downloads/) 下载并安装 Python 3.9 以上版本。安装完成后，确保将 Python 添加到系统的环境变量中。
-```
+:::{dropdown} 没有装python和git的用户可以参考以下步骤安装
+
+- 安装 Python 3.9 或更高版本
+  [国内下载链接](https://mirrors.ustc.edu.cn/python/3.12.0/python-3.12.0.exe)
+  安装时在第一个界面勾选Add python.exe to PATH 其他保持不变默认安装即可
+- 安装git
+  [国内下载链接](https://mirrors.huaweicloud.com/git-for-windows/v2.47.0.windows.1/Git-2.47.0-64-bit.exe)
+  全部默认安装即可
+:::
+
 
 ::::::{tab-set}
 :sync-group: os
@@ -136,8 +143,12 @@ cd C:\OpenSiFli\SiFli-SDK
 .\install.ps1
 国内用户可以使用如下命令通过国内镜像源安装工具包
 cd C:\OpenSiFli\SiFli-SDK
-set SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
+$env:SIFLI_SDK_GITHUB_ASSETS="downloads.sifli.com/github_assets"
+python.exe -m pip install -i https://mirrors.ustc.edu.cn/pypi/simple pip -U
+pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/simple
 ./install.ps1
+如果提示禁止执行脚本，请运行以下命令
+Set-ExecutionPolicy RemoteSigned -Scope Process
 ```
 
 :::
