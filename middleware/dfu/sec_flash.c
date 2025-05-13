@@ -268,7 +268,7 @@ int sec_flash_read(int flashid, uint32_t offset, uint8_t *data, uint32_t size)
 
 void sec_flash_init()
 {
-    uint32_t start_addr = NULL;
+    uint32_t start_addr = 0;
     uint8_t is_enable = flash_is_enabled(0);
 
     // Boot order will be : flash1 -> flash2
