@@ -17,7 +17,7 @@ except:
         rtconfig.CORE='LCPU'
     else:
         print('Warning: Rtconfig.core not defined')
-     
+
 src=['bf0_pin_const.c']
 src += ['Templates/system_bf0_ap.c']
 if GetDepend('SOC_SF32LB55X') and GetDepend(['BF0_HCPU']):
@@ -37,23 +37,23 @@ if GetDepend(['BF0_HCPU']):
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
     if rtconfig.PLATFORM == 'gcc':
-        src += ['Templates/gcc/startup_bf0_hcpu.s']
+        src += ['Templates/gcc/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
         src += ['Templates/arm/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_hcpu.s']
+        src += ['Templates/iar/startup_bf0_hcpu.S']
 elif GetDepend(['BF0_LCPU']):
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
     if rtconfig.PLATFORM == 'gcc':
-        src += ['Templates/gcc/startup_bf0_lcpu.s']
+        src += ['Templates/gcc/startup_bf0_lcpu.S']
         #src += ['Templates/gcc/startup_bf0_lcpu_rom.s']
     elif rtconfig.PLATFORM == 'armcc':
         src += ['Templates/arm/startup_bf0_lcpu.S']
         src += ['Templates/arm/startup_bf0_lcpu_rom.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_lcpu.s']
-        src += ['Templates/iar/startup_bf0_lcpu_rom.s']       
+        src += ['Templates/iar/startup_bf0_lcpu.S']
+        src += ['Templates/iar/startup_bf0_lcpu_rom.S']
 
 path = [cwd, cwd + '/../Include']
 path = path + [cwd + '/../../../external/CMSIS/Include']

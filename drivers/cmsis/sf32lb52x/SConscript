@@ -44,28 +44,28 @@ if GetDepend(['BF0_HCPU']):
         ASFLAGS = ' --cpreproc'
         CCFLAGS = ' -march=armv8-m.main+cdecp1'
     if rtconfig.PLATFORM == 'gcc':
-        src += ['Templates/gcc/startup_bf0_hcpu.s']
+        src += ['Templates/gcc/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
         src += ['Templates/arm/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_hcpu.s']
+        src += ['Templates/iar/startup_bf0_hcpu.S']
 elif GetDepend(['BF0_LCPU']):
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
-        CCFLAGS = ' -march=armv8-m.main+cdecp1'    
+        CCFLAGS = ' -march=armv8-m.main+cdecp1'
     if rtconfig.PLATFORM == 'gcc':
         if GetDepend(['ROM_ATTR']):
-            src += ['Templates/gcc/startup_bf0_lcpu_rom.s']
+            src += ['Templates/gcc/startup_bf0_lcpu_rom.S']
         else:
-            src += ['Templates/gcc/startup_bf0_lcpu.s']
+            src += ['Templates/gcc/startup_bf0_lcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
         if GetDepend(['ROM_ATTR']):
             src += ['Templates/arm/startup_bf0_lcpu_rom.S']
         else:
             src += ['Templates/arm/startup_bf0_lcpu.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_lcpu.s']
-        src += ['Templates/iar/startup_bf0_lcpu_rom.s']
+        src += ['Templates/iar/startup_bf0_lcpu.S']
+        src += ['Templates/iar/startup_bf0_lcpu_rom.S']
 
 path = [cwd, cwd + '/../Include']
 path = path + [cwd + '/../../../external/CMSIS/Include']
