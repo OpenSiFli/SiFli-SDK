@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+GREEN='\e[32m'
+ORANGE='\e[38;5;208m'
+BOLD='\e[1m'
+RESET='\e[0m'
+
+echo -e "${BOLD}${ORANGE}🎉 Welcome, to SIFLI-SDK Dev Container! 👋${RESET}"
+echo " "
+echo "To load your SIFLI SDK environment, please run:"
+echo -e " ${ORANGE}*${RESET} Cmd: ${GREEN}source export.sh${RESET} Or"
+echo -e " ${ORANGE}*${RESET} Cmd: ${GREEN}init${RESET}"
+echo " "
+echo "After sourcing, you can either start a shell or begin your build, e.g.:"
+echo -e " ${ORANGE}*${RESET} Cmd: ${GREEN}cd example/get-started/hello_world/rtt/project/${RESET}"
+echo -e " ${ORANGE}*${RESET} Cmd: ${GREEN}scons --board=ec-lb587 -j16${RESET}"
+echo " "

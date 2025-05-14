@@ -2,15 +2,14 @@
     "name": "SiFli SDK Embedded DevContainer",
     "build":
     {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        "context": ".."
     },
-    "postCreateCommand": "echo 'source /home/src/export.sh' >> ~/.bashrc && ./install.sh",
     "mounts":
     [
-        "source=${localWorkspaceFolder},target=/home/vscode/src,type=bind,consistency=cached"
+        "source=${localWorkspaceFolder},target=/home/sifli/src,type=bind,consistency=cached"
     ],
-
-    "workspaceFolder": "/home/vscode/src",
+    "workspaceFolder": "/home/sifli/src",
     "shutdownAction": "stopContainer",
-    "remoteUser": "vscode"
+    "remoteUser": "sifli"
 }
