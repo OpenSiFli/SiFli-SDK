@@ -1,0 +1,3 @@
+name: hal_sifli
+build:
+  cmake: .
