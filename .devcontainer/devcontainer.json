@@ -1,0 +1,15 @@
+{
+    "name": "SiFli SDK Embedded DevContainer",
+    "build":
+    {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    "mounts":
+    [
+        "source=${localWorkspaceFolder},target=/home/sifli/src,type=bind,consistency=cached"
+    ],
+    "workspaceFolder": "/home/sifli/src",
+    "shutdownAction": "stopContainer",
+    "remoteUser": "sifli"
+}

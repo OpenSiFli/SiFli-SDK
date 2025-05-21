@@ -65,7 +65,6 @@ fi
 sdk_exports=$("$SIFLI_PYTHON" "${sdk_path}/tools/activate.py" --export --shell $shell_type)
 eval "${sdk_exports}"
 unset sdk_path
-return 0
 
-# SDK 2.x
-
+# Fix RTT_EXEC_PATH
+export RTT_EXEC_PATH="${PATH}"
