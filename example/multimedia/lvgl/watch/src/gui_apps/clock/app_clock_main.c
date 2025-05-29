@@ -392,7 +392,7 @@ static void tileview_event_cb_t(lv_event_t *event)
     {
     case LV_EVENT_VALUE_CHANGED:
     {
-        rt_uint16_t active_pos = (rt_uint16_t)lv_event_get_param(event);
+        rt_uint16_t active_pos = (rt_uint16_t)(uint32_t)lv_event_get_param(event);
 
         if (gui_app_is_actived(APP_ID)) //value_changed could be sent after app paused
             app_clock_main_select(active_pos);

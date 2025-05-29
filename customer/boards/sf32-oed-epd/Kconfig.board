@@ -6,7 +6,9 @@ config TOUCH_IRQ_PIN
     int
     default 30
 
-
+config TOUCH_RESET_PIN
+    int
+    default 31
 
 
     config TPS_SDA

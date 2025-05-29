@@ -16,7 +16,7 @@ build-sdk:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
-    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
       when: always

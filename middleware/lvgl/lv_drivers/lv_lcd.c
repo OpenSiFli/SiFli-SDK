@@ -695,15 +695,20 @@ uint8_t drv_gpu_is_cached_ram(uint32_t start, uint32_t len)
 
 
 
-
+/*
+    Try to get the compeleted uncompressed screen buffer of current display.
+*/
 void *get_disp_buf(uint32_t size)
 {
+    /*The lvgl draw buffer is compressed in `DRV_EPIC_NEW_API` mode */
+#if defined(DRV_EPIC_NEW_API)&& !defined(FB_CMPR_RATE)
     lv_disp_draw_buf_t *draw_buf = lv_disp_get_draw_buf(lv_disp_get_default());
     uint32_t buf_size = draw_buf->size * LV_COLOR_DEPTH / 8;
     if (buf_size >= size)
     {
         return (void *) draw_buf->buf_act;
     }
+
 
 #if defined(LV_FB_TWO_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_SCREEN_SIZE)
     //two buffer: buf1_1 and buf1_2 exist
@@ -712,8 +717,9 @@ void *get_disp_buf(uint32_t size)
         return (void *) draw_buf->buf1;
     }
 #endif
+#endif
 
-#ifndef LCD_FB_USING_NONE
+#if !defined(LCD_FB_USING_NONE) && !defined(FB_CMPR_RATE)
     if (size <= sizeof(buf2_1))
         return (void *) get_draw_buf();
 #endif /* LCD_FB_USING_NONE */

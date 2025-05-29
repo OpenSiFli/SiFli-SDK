@@ -1,0 +1,10 @@
+---
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AllowShortFunctionsOnASingleLine: None
+BreakBeforeBraces: Allman
+IndentWidth: 4
+PPIndentWidth: 4
+TabWidth: 4
+SpacesInParentheses: false
+IndentPPDirectives: BeforeHash

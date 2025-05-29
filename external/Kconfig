@@ -27,6 +27,7 @@ source "$SIFLI_SDK/external/tinymp3/Kconfig"
 source "$SIFLI_SDK/external/vglite/Kconfig"
 source "$SIFLI_SDK/external/WebRTC_audio_processing/Kconfig"
 source "$SIFLI_SDK/external/webclient/Kconfig"
+source "$SIFLI_SDK/external/faad2/Kconfig"
 
 config PKG_SCHRIFT
     bool "SCHRIFT Library"

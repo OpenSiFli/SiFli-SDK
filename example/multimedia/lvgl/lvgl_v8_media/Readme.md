@@ -1,4 +1,7 @@
 # lvgl_v8_media
+```{warning}
+未验证
+```
 @使用指南
     @介绍：本示例用来演示媒体播放，用户可以将H264格式的MP4文件覆盖到disk/video_example.mp4，编译下载后就可以播放了。
 		    如果T卡加载文件系统成功，将优先从T卡根目录读取video_example.mp4

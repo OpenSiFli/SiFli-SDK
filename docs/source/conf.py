@@ -60,17 +60,13 @@ html_static_path = ['_static']
 html_context = {
     "versions": [
         ("latest", "latest"),
-        ("v2.3.4", "v2.3.4"),
-        ("v2.3.3", "v2.3.3"),
-        ("v2.3.2", "v2.3.2"),
-        ("v2.3.1", "v2.3.1"),
-        ("v2.3",   "v2.3"),
+        # 只保留latest版本，其他版本通过JavaScript动态加载
     ],
     "chips": [
-        ("SF32LB52x", "SF32LB52x"),
-        ("SF32LB56x", "SF32LB56x"),
-        ("SF32LB58x", "SF32LB58x"),
-        ("SF32LB55x", "SF32LB55x"),
+        ("SF32LB52x", "sf32lb52x"),
+        ("SF32LB56x", "sf32lb56x"),
+        ("SF32LB58x", "sf32lb58x"),
+        ("SF32LB55x", "sf32lb55x"),
     ],
     "current_version": version,
     "current_chip": chip,

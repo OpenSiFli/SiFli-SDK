@@ -6,43 +6,6 @@ pipeline {
                 echo "[NODE_NAME]: ${env.NODE_NAME}\n[GERRIT_PROJECT]: ${env.GERRIT_PROJECT}\n[GERRIT_BRANCH]: ${env.GERRIT_BRANCH}\n[GERRIT_CHANGE_OWNER_EMAIL]: ${env.GERRIT_CHANGE_OWNER_EMAIL}\n[GERRIT_CHANGE_SUBJECT]: ${env.GERRIT_CHANGE_SUBJECT}\n[GIT_COMMIT]: ${env.GIT_COMMIT}" 
             }
         }
-        //stage('Submodule Update') {
-        //    steps {
-        //        script {
-        //            checkout([$class: 'GitSCM', 
-        //                userRemoteConfigs: [[credentialsId: '4', url: 'ssh://qsxu@gerrit:29418/bluetooth']],
-        //                extensions: [
-        //                    [$class: 'SubmoduleOption', 
-        //                     disableSubmodules: false, 
-        //                     parentCredentials: false, 
-        //                     recursiveSubmodules: true]
-        //                ]
-        //            ])
-        //        }
-        //    }
-        //}
-        //stage('Submodule Update') {
-        //    steps {
-        //        script {
-        //            dir('middleware/bluetooth') {
-        //                checkout ([$class: 'GitSCM',
-        //                    userRemoteConfigs: [[credentialsId: '4', url: 'ssh://qsxu@gerrit:29418/bluetooth']],
-        //                    branches: [[name: 'master']], 
-        //                    //extensions: [
-        //                    //    [$class: 'SubmoduleOption', 
-        //                    //     disableSubmodules: false, 
-        //                    //     recursiveSubmodules: true]
-        //                    //]
-        //                ])
-        //            echo "git checkout master"
-        //            }
-        //        }
-        //        //sshagent(['3']) {
-        //        //    sh 'git submodule update --init --recursive'
-        //        //}
-        //
-        //    }
-        //}
         stage('Parallel Stage') {
             //failFast true
             parallel {
@@ -81,34 +44,6 @@ pipeline {
                         '''
                     }
                 } 
-                // stage('ec-lb563_bsp') {
-                //     steps {
-                //         bat'''
-                //         tools\\autotest\\build.bat test\\drivers\\project\\ec-lb563\\hcpu
-                //         '''
-                //     }
-                // }
-                // stage('ec-lb583_bsp') {
-                //     steps {
-                //         bat'''
-                //         tools\\autotest\\build.bat test\\drivers\\project\\ec-lb58xxxxxx001\\v11_583
-                //         '''
-                //     }
-                // }
-                //stage('52x_fpga_v3_nor') {
-                //    steps {
-                //        bat'''
-                //       tools\\autotest\\build.bat test\\drivers\\project\\52x_fpga\\hcpu_v3
-                //        '''
-                //    }
-                //}
-                //stage('52x_hdk') {
-                //    steps {
-                //        bat'''
-                //        tools\\autotest\\build.bat test\\drivers\\project\\52x_hdk\\hcpu_523
-                //        '''
-                //    }
-                //} 
             }
         }
          stage('Archive files') {

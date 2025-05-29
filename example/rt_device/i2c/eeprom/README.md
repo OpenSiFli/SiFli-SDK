@@ -2,8 +2,8 @@
 源码路径：example/rt_device/i2c/eeprom
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 * 在RT-Thread操作系统下,通过对EEPROM芯片AT24CO8SC模块的读写操作，演示I2C的使用方法
@@ -16,12 +16,12 @@ AT24CO8SC的SDA,SCK分别按照下表，根据开发板型号进行连接
 
 |开发板    |SDA管脚|SDA管脚名称|SCL管脚|SCL管脚名称|
 |:---     |:---    |:---     |:---   |:---      |
-|em-lb525 |3       |PA42     |5      |PA41      |
-|em-lb587 |3       |PB29     |       |PB28      |
+|sf32lb52-lcd_n16r8 |3       |PA42     |5      |PA41      |
+|sf32lb58-lcd_n16r64n4 |3       |PB29     |       |PB28      |
 
 * 更详细的引脚定义请参考\
-`[em-lb525]()`\
-`[em-lb587]()`
+`[sf32lb52-lcd_n16r8]()`\
+`[sf32lb58-lcd_n16r64n4]()`
 
 * AT24C08SC
 ![alt text](assets/at24c08sc.png)
@@ -38,7 +38,7 @@ AT24CO8SC的SDA,SCK分别按照下表，根据开发板型号进行连接
 
 如果缺失上面三个宏，就需要通过`menuconfig`如下命令进行打开
 ```c
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 如下图，选择I2C2，保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/i2c2_menuconfig.png)
@@ -46,13 +46,13 @@ menuconfig --board=em-lb525
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 
@@ -63,12 +63,12 @@ please input the serial port num:5
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb587 -j8
+scons --board=sf32lb58-lcd_n16r64n4 -j8
 ```
 
 切换到例程`project/build_xx`目录，运行`download.bat`，程序通过JLink自动下载：
 
-> build_em-lb587_hcpu\download.bat
+> build_sf32lb58-lcd_n16r64n4_hcpu\download.bat
 
 
 ### 例程输出结果展示:

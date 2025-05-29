@@ -4,7 +4,7 @@
 
 ## 支持的开发板
 例程可以运行在以下开发板.
-* em-lb525
+* sf32lb52-lcd_n16r8
 
 
 **注意：** 一般而言，例程都是运行芯片的HCPU，"eh-lb563_v2" 等效于"eh-lb563_v2_hcpu"，如果想在LCPU运行例程，可以使用"eh-lb563_v2_lcpu"。目前USB功能暂时只支持在HCPU上运行。
@@ -52,7 +52,7 @@ USB_MSTORAGE工程包含了1个.c文件(main.c),下面的树状结构展示 了�
 ### menuconfig配置
 ```
 //指令执行
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 **注意：** HDK52X中的USB引脚没有与UART复用因此可跳过1、2步骤。
 
@@ -80,9 +80,9 @@ menuconfig --board=em-lb525
 按照以下步骤，可以完成编译和烧录。
 
 ```
-scons --board=em-lb525
+scons --board=sf32lb52-lcd_n16r8
 
-.\build_em-lb525_hcpu\uart_download.bat
+.\build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 ```
 
 ## 例程输出结果展示
@@ -118,9 +118,9 @@ D:\MyWork\code_sdk\siflisdk\customer\boards\ec-lb555xxx
 HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_NOPULL, 1);//USB VBUS
 ```
 
-## 例程实例 em-lb52d
+## 例程实例 sf32lb52-lcd_52d
 
-以下是使用em-lb52d来实现u盘功能的实例步骤
+以下是使用sf32lb52-lcd_52d来实现u盘功能的实例步骤
 ### 硬件需求
 * 运行例程的前提，需要拥有一块支持该例程的开发板。
 * 两根具备数据传输能力的USB数据线。
@@ -133,7 +133,7 @@ HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_NOPULL, 1);//USB VBUS
 * 连接的数据线有损坏，无法进行数据传输
 
 以下是一些解决方法：
-* 通过 menuconfig --board=em-lb52d 命令进入menu页面，开启  Enable USB Device 后通过查看寄存器数据以达到自检效果
+* 通过 menuconfig --board=sf32lb52-lcd_52d 命令进入menu页面，开启  Enable USB Device 后通过查看寄存器数据以达到自检效果
 
 ![alt text](assets/code4.PNG)
 
@@ -147,8 +147,8 @@ HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_NOPULL, 1);//USB VBUS
 执行以下命令，可以完成对-emlb52d的编译和烧录。
 
 ```
-scons --board=em-lb52d -j8
-build_em-lb52d_hcpu\uart_download.bat
+scons --board=sf32lb52-lcd_52d -j8
+build_sf32lb52-lcd_52d_hcpu\uart_download.bat
 
 ```
 
@@ -166,7 +166,7 @@ build_em-lb52d_hcpu\uart_download.bat
 执行以下命令，可以完成对-emlb587的编译。
 
 ```
-scons --board=em-lb587 -j8 
+scons --board=sf32lb58-lcd_n16r64n4 -j8 
 ```
 
 编译后打开J-LINK连接工具 执行 connect 命令进行连接 若是连接不成功自检串口是否被占用或其他问题 J-LINK连接成功后进行文件的烧录
@@ -174,7 +174,7 @@ scons --board=em-lb587 -j8
 执行以下命令，可以完成对-emlb587的烧录。
 
 ```
-build_em-lb587_hcpu\download.bat 
+build_sf32lb58-lcd_n16r64n4_hcpu\download.bat 
 ```
 
 

@@ -2,22 +2,22 @@
 源码路径:example/hal/spi
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 * 操作SPI Hal函数进行读写nor flash演示
 
 ## 例程的使用
 ### 编译和烧录
-#### 以 em-lb525 开发板为例
+#### 以 sf32lb52-lcd_n16r8 开发板为例
 * 切换到例程project目录，运行scons命令执行编译对应命令：
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 ```
-> build_em-lb525_hcpu\uart_download.bat
+> build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
      Uart Download
 
@@ -30,7 +30,7 @@ please input the serial port num:5
 +---------+--------+------------+------------+-----------------+
 |开发板   |功能引脚|本端设备引脚|对端设备引脚|物理引脚（CONN2）|   
 +=========+========+============+============+=================+ 
-|em-lb52x |PA_24   |dio         |SPI_MOSI    |19               |
+|sf32lb52-lcd |PA_24   |dio         |SPI_MOSI    |19               |
 |         +--------+------------+------------+-----------------+     
 |         |PA_25   |di          |SPI_MISO    |21               |     
 |         +--------+------------+------------+-----------------+
@@ -38,7 +38,7 @@ please input the serial port num:5
 |         +--------+------------+------------+-----------------+  
 |         |PA_29   |cs          |SPI_CS      |24               |
 +---------+--------+------------+------------+-----------------+
-|em-lb58x |PA_21   |do          |SPI_MOSI    |8                |    
+|sf32lb58-lcd |PA_21   |do          |SPI_MOSI    |8                |    
 |         +--------+------------+------------+-----------------+ 
 |         |PA_20   |di          |SPI_MISO    |10               |     
 |         +--------+------------+------------+-----------------+
@@ -49,7 +49,7 @@ please input the serial port num:5
 ```
 
       
-em-lb525硬件原理图参考如下图：
+sf32lb52-lcd_n16r8硬件原理图参考如下图：
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 ![alt text](assets/nor_flash.png)
 #### 例程输出结果展示:
@@ -81,7 +81,7 @@ em-lb525硬件原理图参考如下图：
 
 #### SPI1配置流程
 
-* 以em-lb525为例，设置对应spi1的IO口
+* 以sf32lb52-lcd_n16r8为例，设置对应spi1的IO口
 ```c
     /* 1, pinmux set to spi1 mode */
     HAL_PIN_Set(PAD_PA24, SPI1_DIO, PIN_PULLDOWN, 1);       // SPI1 (Nor flash)

@@ -10,9 +10,11 @@ SF32LB52X为双核芯片，有内置和外置多个存储接口，MPI1为内置�
 
 ## 一级Bootloader
 
-一级Bootloader固化在了芯片的ROM中，其中断向量表地址为0。上电后会首先运行一级Bootloader，根据芯片封装类型，确定Flash分区表的位置（内部或者外部Flash，下文称为启动Flash），根据Flash分区表指示的二级Bootloader地址（必须在启动Flash上），拷贝二级Bootloader代码到RAM中并跳转运行。
+一级Bootloader固化在了芯片的ROM中，其中断向量表地址为0。上电后会首先运行一级Bootloader，根据芯片封装类型，确定Flash分区表的位置（内部或者外部Flash，下文称为启动Flash，Flash包括NOR、NAND、SD和eMMC），根据Flash分区表指示的二级Bootloader地址（必须在启动Flash上），拷贝二级Bootloader代码到RAM中并跳转运行。
 
 一级Bootloader阶段大核以上电默认的时钟频率运行，初始化启动Flash的IO配置。
+
+数字系列芯片在一级bootloader阶段会打开VDD33_LDO2（对应芯片的VDD33_VOUT1输出）。字母系列芯片在一级bootloader阶段会将PA21输出高电平。
 
 ## 二级Bootloader
 

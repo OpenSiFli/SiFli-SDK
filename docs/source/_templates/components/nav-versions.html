@@ -46,54 +46,233 @@
     let selectedVersion = currentVersion;
     let selectedChip = currentChip;
 
-    // Automatically select the current version
-    const versionItems = versionList.querySelectorAll('li');
-    versionItems.forEach(item => {
-      if (item.textContent.trim() === currentVersion) {
-        item.classList.add('selected');
-      }
-    });
-
-    // Automatically select the current version
-    const chipItems = chipList.querySelectorAll('li');
-    chipItems.forEach(item => {
-      if (item.textContent.trim() === currentChip) {
-        item.classList.add('selected');
-      }
-    });
-
-    function navigateToSelectedPage() {
-      if (selectedVersion && selectedChip) {
-        const currentUrl = window.location.href;
-        const urlParts = currentUrl.split('/');
-        const versionIndex = urlParts.findIndex(part => part === currentVersion);
-        const chipIndex = urlParts.findIndex(chip => chip === currentChip);
-        if (versionIndex !== -1) {
-          urlParts[versionIndex] = selectedVersion.toLowerCase();
-        }        
-        if (chipIndex !== -1) {
-          urlParts[chipIndex] = selectedChip.toLowerCase();
-        }        
-        const newUrl = urlParts.join('/');
-        // console.log(newUrl);
-        if (newUrl !== currentUrl) {
-          window.location.href = newUrl;
+    // 动态加载版本信息
+    async function loadVersions() {
+      try {
+        // 构建相对路径到version.json
+        // 假设URL结构为 /projects/sdk/{version}/{chip}/
+        const currentPath = window.location.pathname;
+        let versionJsonPath = '/projects/sdk/version.json';
+        
+        // 如果当前路径包含项目结构，使用相对路径
+        if (currentPath.includes('/projects/sdk/')) {
+          // 从当前路径计算到version.json的相对路径
+          const pathParts = currentPath.split('/');
+          const sdkIndex = pathParts.indexOf('sdk');
+          if (sdkIndex >= 0) {
+            // 计算需要回退的级别数
+            const levelsUp = pathParts.length - sdkIndex - 2; // 回到SDK根目录
+            const upPath = '../'.repeat(Math.max(0, levelsUp));
+            versionJsonPath = upPath + 'version.json';
+          }
         }
+        
+        console.log(`尝试从 ${versionJsonPath} 获取版本信息`);
+        
+        const response = await fetch(versionJsonPath);
+        if (response.ok) {
+          const versionData = await response.json();
+          updateVersionList(versionData);
+          console.log('成功获取版本信息');
+        } else {
+          console.warn('无法获取版本信息，HTTP状态:', response.status);
+        }
+      } catch (error) {
+        console.warn('无法获取远程版本信息，使用本地版本:', error);
       }
     }
 
-    versionList.addEventListener('click', function(event) {
-      if (event.target.tagName === 'LI') {
-        selectedVersion = event.target.getAttribute('data-version');
-        navigateToSelectedPage();
-      }
-    });
+    // 更新版本列表
+    function updateVersionList(versionData) {
+      if (!versionList || !versionData || !Array.isArray(versionData)) return;
+      versionList.innerHTML = '';
+      
+      // 按照排序规则排序（latest排在最前面）
+      const sortedVersionData = [...versionData].sort((a, b) => {
+        if (a.version === 'latest') return -1;
+        if (b.version === 'latest') return 1;
+        return b.version.localeCompare(a.version, undefined, {numeric: true});
+      });
 
-    chipList.addEventListener('click', function(event) {
-      if (event.target.tagName === 'LI') {
-        selectedChip = event.target.getAttribute('data-chip');
-        navigateToSelectedPage();
+      sortedVersionData.forEach(versionItem => {
+        const version = versionItem.version;
+        const li = document.createElement('li');
+        li.setAttribute('data-version', version);
+        li.textContent = version;
+        if (version === currentVersion) {
+          li.classList.add('selected');
+        }
+        versionList.appendChild(li);
+      });
+
+      // 更新芯片列表（基于当前选择的版本）
+      updateChipList(versionData);
+
+      bindEvents();
+    }
+
+    // 更新芯片列表
+    function updateChipList(versionData, targetVersion = currentVersion) {
+      if (!chipList || !Array.isArray(versionData)) return;
+      
+      // 获取指定版本的支持芯片
+      const versionItem = versionData.find(item => item.version === targetVersion) || 
+                          versionData.find(item => item.version === 'latest');
+      
+      if (!versionItem || !versionItem.supported_chips) return;
+      
+      chipList.innerHTML = '';
+      versionItem.supported_chips.forEach(chip => {
+        const li = document.createElement('li');
+        li.setAttribute('data-chip', chip.toLowerCase());
+        li.textContent = chip;
+        if (chip.toLowerCase() === currentChip) {
+          li.classList.add('selected');
+        }
+        chipList.appendChild(li);
+      });
+    }
+
+    // 绑定事件监听器
+    function bindEvents() {
+      if (versionList) {
+        versionList.addEventListener('click', function(event) {
+          if (event.target.tagName === 'LI') {
+            selectedVersion = event.target.getAttribute('data-version');
+            // 更新版本选择的视觉状态
+            versionList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+            event.target.classList.add('selected');
+            
+            // 根据新选择的版本更新芯片列表，并检查当前芯片是否仍然支持
+            loadVersionsAndUpdateChips(selectedVersion).then(() => {
+              // 检查当前选择的芯片是否在新版本中仍然支持
+              if (chipList) {
+                const availableChips = Array.from(chipList.querySelectorAll('li')).map(li => li.getAttribute('data-chip'));
+                if (!availableChips.includes(selectedChip)) {
+                  // 如果当前芯片不支持，选择第一个可用的芯片
+                  if (availableChips.length > 0) {
+                    selectedChip = availableChips[0];
+                    chipList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+                    chipList.querySelector(`li[data-chip="${selectedChip}"]`)?.classList.add('selected');
+                    console.log(`芯片 ${currentChip} 在版本 ${selectedVersion} 中不支持，自动切换到 ${selectedChip}`);
+                  }
+                }
+              }
+              
+              // 导航到新页面
+              navigateToPage();
+            }).catch(error => {
+              console.warn('版本切换失败:', error);
+              // 即使芯片列表更新失败，仍然可以导航
+              navigateToPage();
+            });
+          }
+        });
       }
-    });
+
+      if (chipList) {
+        chipList.addEventListener('click', function(event) {
+          if (event.target.tagName === 'LI') {
+            selectedChip = event.target.getAttribute('data-chip');
+            // 更新芯片选择的视觉状态
+            chipList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+            event.target.classList.add('selected');
+            
+            // 导航到新页面
+            navigateToPage();
+          }
+        });
+      }
+    }
+
+    // 加载版本信息并更新特定版本的芯片列表
+    async function loadVersionsAndUpdateChips(targetVersion) {
+      try {
+        const currentPath = window.location.pathname;
+        let versionJsonPath = '/projects/sdk/version.json';
+        
+        if (currentPath.includes('/projects/sdk/')) {
+          const pathParts = currentPath.split('/');
+          const sdkIndex = pathParts.indexOf('sdk');
+          if (sdkIndex >= 0) {
+            const levelsUp = pathParts.length - sdkIndex - 2;
+            const upPath = '../'.repeat(Math.max(0, levelsUp));
+            versionJsonPath = upPath + 'version.json';
+          }
+        }
+        
+        const response = await fetch(versionJsonPath);
+        if (response.ok) {
+          const versionData = await response.json();
+          if (Array.isArray(versionData)) {
+            updateChipList(versionData, targetVersion);
+            return versionData;
+          } else {
+            throw new Error('版本数据格式不正确');
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.warn('无法更新芯片列表:', error);
+        throw error;
+      }
+    }
+
+    // 导航到新页面
+    function navigateToPage() {
+      if (selectedVersion && selectedChip) {
+        const currentUrl = window.location.href;
+        const urlParts = currentUrl.split('/');
+        
+        const versionIndex = urlParts.findIndex(part => part === currentVersion);
+        if (versionIndex !== -1) {
+          urlParts[versionIndex] = selectedVersion.toLowerCase();
+        }
+        
+        // 查找并替换芯片型号
+        const chipIndex = urlParts.findIndex(part => part === currentChip);
+        if (chipIndex !== -1) {
+          urlParts[chipIndex] = selectedChip.toLowerCase();
+        }
+        
+        const newUrl = urlParts.join('/');
+        console.log(`导航从 ${currentUrl} 到 ${newUrl}`);
+        
+        if (newUrl !== currentUrl) {
+          window.location.href = newUrl;
+        }
+      } else {
+        console.warn('导航失败: 版本或芯片未选择', {selectedVersion, selectedChip});
+      }
+    }
+
+    // 初始化选中状态
+    function initializeSelection() {
+      if (versionList) {
+        const versionItems = versionList.querySelectorAll('li');
+        versionItems.forEach(item => {
+          item.classList.remove('selected');
+          if (item.getAttribute('data-version') === currentVersion) {
+            item.classList.add('selected');
+          }
+        });
+      }
+
+      if (chipList) {
+        const chipItems = chipList.querySelectorAll('li');
+        chipItems.forEach(item => {
+          item.classList.remove('selected');
+          if (item.getAttribute('data-chip') === currentChip) {
+            item.classList.add('selected');
+          }
+        });
+      }
+    }
+
+    // 初始化
+    initializeSelection();
+    bindEvents();
+    loadVersions();
   });
 </script>

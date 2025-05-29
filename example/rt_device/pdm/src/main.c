@@ -374,13 +374,14 @@ static rt_err_t example_pdm_record_start(rt_uint32_t channels, rt_uint32_t sampl
         rt_kprintf("CONFIG ch %d samplefmt %d samplerate %d\n", caps.udata.config.channels, caps.udata.config.samplefmt, caps.udata.config.samplerate);
         rt_device_control(g_pdm_device, AUDIO_CTL_CONFIGURE, &caps);
 
+        int vol = 90; /* set volume */
+        rt_device_control(g_pdm_device, AUDIO_CTL_SETVOLUME, (void *)vol);
+
         /* Set rx callback. */
         rt_device_set_rx_indicate(g_pdm_device, audio_rx_ind);
         /* Start recording. */
         int stream = AUDIO_STREAM_RECORD;
         rt_device_control(g_pdm_device, AUDIO_CTL_START, &stream);
-        int vol = 30; /* set volume */
-        rt_device_control(g_pdm_device, AUDIO_CTL_SETVOLUME, (void *)vol);
     }
 
     return RT_EOK;

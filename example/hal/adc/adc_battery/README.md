@@ -2,7 +2,7 @@
 源码路径：example/hal/adc/adc_battery
 ## 支持的平台
 例程可以运行在以下开发板
-* em-lb525
+* sf32lb52-lcd_n16r8
 
 ## 概述
 * 操作Hal函数单路ADC读取电池电压
@@ -14,12 +14,12 @@
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
 执行烧写命令
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 ```
 
 按提示选择端口即可进行下载：
@@ -49,7 +49,7 @@ log中打印value值原始寄存器值，Voltage是转换后的mV电压
 * 在menuconfig中打开adc device
 
 ```
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 ![alt text](assets/2.png)

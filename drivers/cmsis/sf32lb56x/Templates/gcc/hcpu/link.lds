@@ -76,6 +76,9 @@ MEMORY
     RAM (rw) : ORIGIN = __RAM_BASE, LENGTH = __RAM_SIZE
     ROM_EX(rw):ORIGIN = __ROM_EX_BASE, LENGTH = __ROM_EX_SIZE
     PSRAM(rw): ORIGIN = __PSRAM_BASE, LENGTH = __PSRAM_SIZE
+#ifdef PSRAM_DATA2_START_ADDR
+    PSRAM2(rw): ORIGIN = PSRAM_DATA2_START_ADDR, LENGTH = PSRAM_DATA2_SIZE
+#endif
     ROM2 (rx): ORIGIN = __ROM2_BASE, LENGTH = __ROM2_SIZE
     ROM3 (rx): ORIGIN = __ROM3_BASE, LENGTH = __ROM3_SIZE
 }
@@ -185,6 +188,7 @@ SECTIONS
     *bf0_pin_const.o    (.text* .rodata*)
     *drv_common.o       (.text.rt_hw_us_delay)
     *.o                 (.text.rt_memset)
+    *.o                 (.text.memset)
     
     *.o (.retm_data_*)
 
@@ -412,19 +416,31 @@ SECTIONS
     . = ALIGN(4);
     /* init data */
     _sinit = ABSOLUTE(.);
+    PROVIDE(__ctors_start__ = .);
     PROVIDE_HIDDEN (__init_array_start = .);
+    /* old GCC version uses .ctors */
+    KEEP(*(SORT(.ctors.*)))
+    KEEP(*(.ctors))
+    /* new GCC version uses .init_array */
     KEEP(*(SORT(.init_array.*)))
     KEEP(*(.init_array))
     _einit = ABSOLUTE(.);
     PROVIDE_HIDDEN (__init_array_end = .);
+    PROVIDE(__ctors_end__ = .);
 
 
     . = ALIGN(4);
     /* finit data */
+    PROVIDE(__dtors_start__ = .);
     PROVIDE_HIDDEN (__fini_array_start = .);
+    
+    KEEP(*(SORT(.dtors.*)))
+    KEEP(*(.dtors))
+
     KEEP(*(SORT(.fini_array.*)))
     KEEP(*(.fini_array))
     PROVIDE_HIDDEN (__fini_array_end = .);
+    PROVIDE(__dtors_end__ = .);
 
     KEEP(*(.jcr*))
     . = ALIGN(4);
@@ -445,6 +461,22 @@ SECTIONS
   __etext2 = ALIGN (4);
 
 #ifdef BSP_USING_PSRAM
+
+#ifdef PSRAM_DATA2_START_ADDR
+  /*
+  * PSRAM2 is for l2 frame buffer only.
+  */
+  .RW_PSRAM2 :
+  {
+    . = ALIGN(4);
+    __rw_psram2_start__ = .;
+    *(.*l2_non_ret_bss_frambuf*)
+    . = ALIGN(4);
+    __rw_psram2_end__ = .;
+
+  } > PSRAM2
+#endif
+
   .RW_PSRAM1 :
   {
     . = ALIGN(4);

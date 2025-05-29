@@ -2,15 +2,15 @@
 源码路径：example\rt_device\spi
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 * 在RT-Thread操作系统下，通过spi接口进行读写nor flash演示
 
 ## 例程的使用
 ### 编译和烧录
-#### 以em-lb525为例
+#### 以sf32lb52-lcd_n16r8为例
 * 此例程中用到了spi1，在采用RT-Thread操作系统时，spi1外设会虚拟成了一个rt_device来进行读写操作，此时需要确认所在路径下`rtconfig.h`文件中是否包含了下面2个宏：
 ```c
 #define BSP_USING_SPI 1
@@ -20,17 +20,17 @@
 
 如果缺失上面三个宏，就需要通过`menuconfig`如下命令进行打开
 ```c
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 如下图，选择spi1(需要用到DMA，选择对应DMA选项)，保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/menuconfig.png)
 * 切换到例程project目录，运行scons命令执行编译：
 ```c
-> scons --board=em-lb525 -j8
+> scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 * 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
 
->`build_em-lb525_hcpu\uart_download.bat`
+>`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`
 
 >`Uart Download`
 
@@ -44,7 +44,7 @@ menuconfig --board=em-lb525
 +---------+--------+------------+------------+-----------------+
 |开发板   |功能引脚|本端设备引脚|对端设备引脚|物理引脚（CONN2）|   
 +=========+========+============+============+=================+ 
-|em-lb52x |PA_24   |dio         |SPI_MOSI    |19               |
+|sf32lb52-lcd |PA_24   |dio         |SPI_MOSI    |19               |
 |         +--------+------------+------------+-----------------+     
 |         |PA_25   |di          |SPI_MISO    |21               |     
 |         +--------+------------+------------+-----------------+
@@ -52,7 +52,7 @@ menuconfig --board=em-lb525
 |         +--------+------------+------------+-----------------+  
 |         |PA_29   |cs          |SPI_CS      |24               |
 +---------+--------+------------+------------+-----------------+
-|em-lb58x |PA_21   |do          |SPI_MOSI    |8                |    
+|sf32lb58-lcd |PA_21   |do          |SPI_MOSI    |8                |    
 |         +--------+------------+------------+-----------------+ 
 |         |PA_20   |di          |SPI_MISO    |10               |     
 |         +--------+------------+------------+-----------------+
@@ -63,7 +63,7 @@ menuconfig --board=em-lb525
 ```
 
       
-em-lb525硬件原理图参考如下图：
+sf32lb52-lcd_n16r8硬件原理图参考如下图：
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 ![alt text](assets/nor_flash.png)
 #### 例程输出结果展示:
@@ -110,7 +110,7 @@ em-lb525硬件原理图参考如下图：
 1. 如果使用TX DMA，则需要打开`#define BSP_SPI1_TX_USING_DMA 1`；
 2. 在SPI的数据量不多的情况下，采用DMA会增加代码开销，反而实时性会更低；
 
-* 以em-lb52x开发版为例，配置对应的spi1对应的IO口
+* 以sf32lb52-lcd开发版为例，配置对应的spi1对应的IO口
 ```c
     /* 1, pinmux set to spi1 mode */
     HAL_PIN_Set(PAD_PA24, SPI1_DIO, PIN_PULLDOWN, 1);       // SPI1 (Nor flash)

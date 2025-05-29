@@ -4,22 +4,22 @@
 例程可以运行在以下开发板.
 * sf32lb56-devkit-lcd_n16r12n1
 * eh-lb551
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 ## 概述
 * 在RT-Thread操作系统下，进入低功耗和唤醒PM工程演示
 
 ## 例程的使用
 ### 编译和烧录
-#### em-lb566编译方法
+#### sf32lb56-devkit-lcd_n16r12n1编译方法
 56平台默认已配置为Standby Sleep模式休眠<br>
 编译命令<br>
 ```c
-> scons --board=em-lb566 -j8
+> scons --board=sf32lb56-devkit-lcd_n16r12n1 -j8
 ```
 * 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口（boot脚拉高后有打印的串口）即可进行下载：
-```c
-> build_em-lb566_hcpu\uart_download.bat
+```shell
+> build_sf32lb56-devkit-lcd_n16r12n1_hcpu\uart_download.bat
 
      Uart Download
 
@@ -34,55 +34,55 @@ please input the serial port num:5
 确认Jlink正确连接，并且可以成功通讯，如下<br>
 ![alt text](assets/551-jlink.png)
 * 切换到例程`project/build_xx`目录，该551例程目前只支持Jlink下载，运行`download.bat`进行下载
-```c
+```shell
 > build_eh-lb551_hcpu\download.bat
 ```
-#### em-lb525编译方法
+#### sf32lb52-lcd_n16r8编译方法
 menuconfig配置为Deep Sleep模式休眠<br>
-```c
+```shell
 menuconfig
 ```
-![alt text](assets/em-lb525-menuconfig.png)
+![alt text](assets/sf32lb52-lcd_n16r8-menuconfig.png)
 52平台推荐采用Deep Sleep模式，这里修改为Enable Deep Mode，保存退出<br>
 ```
  → RTOS → RT-Thread Components → Device Drivers → Using Power Management device driverselect PM Mode
 ```
 编译命令<br>
-```c
-> scons --board=em-lb525 -j8
+```shell
+> scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 * 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
-```c
-> build_em-lb525_hcpu\uart_download.bat
+```shell
+> build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
      Uart Download
 
 please input the serial port num:5
 ```
-#### em-lb587编译方法
+#### sf32lb58-lcd_n16r64n4编译方法
 56平台默认已配置为Standby Sleep模式休眠<br>
 编译命令<br>
-```c
-> scons --board=em-lb587 -j8
+```shell
+> scons --board=sf32lb58-lcd_n16r64n4 -j8
 ```
-* 切换到例程`project/build_em-lb587_hcpu`目录，运行`download.bat`，此处演示用Jlink进行下载：<br>
-```c
-> build_em-lb587_hcpu\download.bat
+* 切换到例程`project/build_sf32lb58-lcd_n16r64n4_hcpu`目录，运行`download.bat`，此处演示用Jlink进行下载：<br>
+```shell
+> build_sf32lb58-lcd_n16r64n4_hcpu\download.bat
 
 ```
-* em-lb587板子Jlink连接方法如下图：<br>
-![alt text](assets/em-lb587-jlink.png)<br>
+* sf32lb58-lcd_n16r64n4板子Jlink连接方法如下图：<br>
+![alt text](assets/sf32lb58-lcd_n16r64n4-jlink.png)<br>
 ### 硬件连接
-#### em-lb566
+#### sf32lb56-devkit-lcd_n16r12n1
 采用板子上按键PB32为唤醒PIN0`#WKUP_PIN0`，按下按键电平变高唤醒Hcpu
 #### eh-lb551
 板子上按键KEY1`PB48`作为Lcpu的唤醒PIN5`#WKUP_PIN5`，按下按键电平变低进行Lcpu唤醒<br>
-#### em-lb525
+#### sf32lb52-lcd_n16r8
 采用板子上按键PA34为唤醒PIN10`#WKUP_PIN10`，按下按键电平变高唤醒Hcpu
-#### em-lb587
+#### sf32lb58-lcd_n16r64n4
 采用板子上按键PB54为唤醒PIN0`#WKUP_PIN0`，按下按键电平变高唤醒Hcpu
 ### 例程输出结果
-#### em-lb566
+#### sf32lb56-devkit-lcd_n16r12n1
 * 566 hcpu log，进入standyby待机
 ```
     Serial:c2,Chip:3,Package:1,Rev:2  Reason:00000000
@@ -230,8 +230,8 @@ TX:sleep down
    Lcpu wake_key_handle!!!
    [pm]S:4,90946
 ```
-#### em-lb525
-* em-lb525运行的log输出
+#### sf32lb52-lcd_n16r8
+* sf32lb52-lcd_n16r8运行的log输出
 ```
    SFBL
    Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
@@ -271,7 +271,7 @@ TX:sleep down
    hcpu timer wakeup!!!
    [pm]S:3,462881
 ```
-* em-lb525进入hibernate和按键唤醒的log
+* sf32lb52-lcd_n16r8进入hibernate和按键唤醒的log
 ```
     SFBL
     Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
@@ -330,8 +330,8 @@ TX:sleep down
     boot from hibernate!!!
     [pm]S:3,135216
 ```
-#### em-lb587
-* em-lb587 hcpu运行的log输出，包含进入standby待机，PB54按键唤醒的log
+#### sf32lb58-lcd_n16r64n4
+* sf32lb58-lcd_n16r64n4 hcpu运行的log输出，包含进入standby待机，PB54按键唤醒的log
 ```
  Serial:c2,Chip:2,Package:0,Rev:1  Reason:00000000
  Serial PowerOnMOde:0 rtc_record:00000000
@@ -371,7 +371,7 @@ TX:sleep down
  hcpu timer wakeup!!!
  [pm]S:4,309501
 ```
-* em-lb587 lcpu运行的log输出，包含进入standby待机，PB54按键唤醒的log
+* sf32lb58-lcd_n16r64n4 lcpu运行的log输出，包含进入standby待机，PB54按键唤醒的log
 ```
  \ | /
 - SiFli Corporation
@@ -388,7 +388,7 @@ msh >
 [pm]WSR:0x60
 [pm]S:4,309537
 ```
-* em-lb587 hcpu在串口接收到命令sleep down进入hibernate后，并且在PB54按键唤醒开机的log
+* sf32lb58-lcd_n16r64n4 hcpu在串口接收到命令sleep down进入hibernate后，并且在PB54按键唤醒开机的log
 ```
     Serial:c2,Chip:2,Package:0,Rev:1  Reason:00000000
     Serial PowerOnMOde:0 rtc_record:00000000
@@ -453,7 +453,7 @@ msh >
     [pm]S:4,308566
 ```
 ### 休眠流程
-#### em-lb566
+#### sf32lb56-devkit-lcd_n16r12n1
 * hcpu休眠唤醒<br>
 在 hcpu 进入 idle 线程，并判断是否符合休眠条件，会按下面流程进行休眠和唤醒<br>
 rt_thread_idle_entry->rt_system_power_manager->_pm_enter_sleep->'pm->ops->sleep(pm, mode);->sifli_sleep -> log 打印[pm]S:4,11620140 -> RT_DEVICE_CTRL_SUSPEND 设备挂起 -> 
@@ -469,14 +469,14 @@ Lcpu休眠唤醒流程跟 hcpu 待机流程基本一样，差异点：sifli_stan
 SystemPowerOnModeInit -> HAL_Init -> BSP_IO_Init->restore_context-> PC 指针设置到 sifli_standby_handler 函数 WFI 后指令继续运行 -> BSP_Power_Up-> 执行 RTT 设备 RT_DEVICE_CTRL_RESUME 设备恢复函数 -> log 打印[pm]W:11620520 -> log 打印[pm]WSR:0x80<br>
 * LCPU休眠唤醒<br>
 Lcpu唤醒流程56系列一样
-#### em-lb525
+#### sf32lb52-lcd_n16r8
 * hcpu休眠唤醒<br>
 52系列跟56系列的待机流程差异的点在进的是`sifli_deep_handler();`待机函数,并且少了外设的SUSPEND/RESUME和恢复现场过程，睡眠唤醒更快<br>
 sifli_sleep -> log 打印[pm]S:3,11620140 -> sifli_deep_handler ->BSP_IO_Power_Down-> 汇编 WFI 进入 deep-> 定时器或者IO唤醒 ->  WFI 后指令继续运行 -> BSP_Power_Up->  log 打印
 [pm]W:11620520 -> log 打印[pm]WSR:0x80<br>
 * LCPU休眠唤醒<br>
 52系列的Lcpu不开放代码修改，这块不用考虑<br>
-#### em-lb587
+#### sf32lb58-lcd_n16r64n4
 * hcpu休眠唤醒<br>
 58系列跟56系列待机流程一样，<br>
 * LCPU休眠唤醒<br>

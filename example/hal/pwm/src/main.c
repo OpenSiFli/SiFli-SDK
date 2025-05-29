@@ -118,7 +118,7 @@ void ATIM1_Init(void)
     rt_kprintf("ATIM1_Init\n");
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     atim_Handle.Instance = (GPT_TypeDef *)hwp_atim1;
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     atim_Handle.Instance = (GPT_TypeDef *)hwp_atim2;
 #endif
 
@@ -212,7 +212,7 @@ T_haltest_pwm_cfg testcfg[] =
 {
     {hwp_gptim2, CORE_ID_HCPU, GPTIM2_CH1, GPT_CHANNEL_1, 5000000, 1000000, 0},
 };  //period:0.5s  pulse:0.25s
-#elif defined BSP_USING_BOARD_EM_LB587XXX
+#elif defined BSP_USING_BOARD_SF32LB58_LCD_N16R64N4
 T_haltest_pwm_cfg testcfg[] =
 {
     {hwp_gptim1, CORE_ID_HCPU, GPTIM1_CH2, GPT_CHANNEL_2, 5000000, 1000000, 0},
@@ -353,7 +353,7 @@ static HAL_StatusTypeDef pwm_set(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *pCf
 #ifdef  SF32LB55X
     #define PAD_PB_22 PAD_PB22
     //#define GPTIM2_CH_0 GPTIM2_CH1
-#elif defined(BSP_USING_BOARD_EM_LB587XXX)
+#elif defined(BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     #define PAD_PA_51 PAD_PA51
     //#define GPTIM2_CH_0 GPTIM2_CH1
 #elif defined(SF32LB56X)
@@ -369,7 +369,7 @@ void pwm_test_pinset(T_haltest_pwm_cfg *cfg)
 {
 #ifdef  SF32LB55X
     HAL_PIN_Set(PAD_PB_22, cfg->pad_func, PIN_PULLUP, 0);
-#elif defined(BSP_USING_BOARD_EM_LB587XXX)
+#elif defined(BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     HAL_PIN_Set(PAD_PA_51, cfg->pad_func, PIN_PULLUP, 1);
 #elif defined(SF32LB56X)
     HAL_PIN_Set(PAD_PA_05, cfg->pad_func, PIN_PULLUP, 1);
@@ -433,7 +433,7 @@ int main(void)
     HAL_PIN_Set(PAD_PA02, ATIM1_CH1N, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA03, ATIM1_CH2,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA04, ATIM1_CH2N, PIN_PULLUP, 1);
-#elif defined(BSP_USING_BOARD_EM_LB587XXX)
+#elif defined(BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
 
     HAL_PIN_Set(PAD_PA84, ATIM2_CH1,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA86, ATIM2_CH1N, PIN_PULLUP, 1);

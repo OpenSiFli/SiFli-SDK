@@ -5,7 +5,7 @@
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525
-+ em-lb525
++ sf32lb52-lcd_n16r8
 
 ## 概述
 <!-- 例程简介 -->
@@ -47,7 +47,7 @@
 ### 硬件连接\PIN CONFIG
 
 以`SF32LB52_DevKit-LCD`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
-```C
+```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
 #ifdef SOC_SF32LB52X
@@ -58,9 +58,10 @@
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
 #endif
 #endif
+```
 
 如需使用其他型号开发板，需要更改pinmux配置，这里以56x 为例：
-
+```c
 #ifdef SOC_SF32LB56X
     HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA40, I2S1_BCK, PIN_NOPULL, 1);
@@ -68,7 +69,8 @@
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
 #endif
-````
+```
+
 接线：
 开发板A | -- | 开发板B
 --|--|--
@@ -92,11 +94,11 @@ SF32LB56x_DevKit_40p图片：
 
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
-```c
+```shell
 > scons --board=eh-lb525 -j32
 ```
 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
-```c
+```shell
 $ ./uart_download.bat
 
      Uart Download
@@ -195,7 +197,7 @@ I2S接收|i2s rx [rx channels:1/2] [rx采样率] [rx采样位数]|`i2s rx 1 1600
 
 3. 开发板B播放接收的数据
 
-```c
+```
     01-03 00:52:13:543 TX:audprc tx 1 16000 16
     01-03 00:52:13:591    [EX_I2S]audprc_tx_entry
     01-03 00:52:13:600    [EX_I2S]prc_codec : sub_type=1 channel 1, samplerate 16000, bits 16

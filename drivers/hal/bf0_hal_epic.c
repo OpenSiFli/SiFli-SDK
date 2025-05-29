@@ -1499,16 +1499,8 @@ static HAL_StatusTypeDef EPIC_ConfigLayer(EPIC_HandleTypeDef *hepic, EPIC_LAYER_
         layer_x->CFG |= EPIC_L0_CFG_EZIP_EN;
 #endif
 #ifdef SF32LB58X
-        if (hepic->hezip->Instance == hwp_ezip1)
-        {
-            MODIFY_REG(layer_x->MISC_CFG, EPIC_L0_MISC_CFG_EZIP_SEL_Msk,
-                       MAKE_REG_VAL(0, EPIC_L0_MISC_CFG_EZIP_SEL_Msk, EPIC_L0_MISC_CFG_EZIP_SEL_Pos));
-        }
-        else
-        {
-            MODIFY_REG(layer_x->MISC_CFG, EPIC_L0_MISC_CFG_EZIP_SEL_Msk,
-                       MAKE_REG_VAL(1, EPIC_L0_MISC_CFG_EZIP_SEL_Msk, EPIC_L0_MISC_CFG_EZIP_SEL_Pos));
-        }
+        MODIFY_REG(layer_x->MISC_CFG, EPIC_L0_MISC_CFG_EZIP_SEL_Msk,
+                   MAKE_REG_VAL(0, EPIC_L0_MISC_CFG_EZIP_SEL_Msk, EPIC_L0_MISC_CFG_EZIP_SEL_Pos));
 #endif /* SF32LB58X */
     }
 #endif /* HAL_EZIP_MODULE_ENABLED */
@@ -2631,16 +2623,8 @@ static HAL_StatusTypeDef EPIC_ConfigVideoLayer(EPIC_HandleTypeDef *epic_handle,
 #endif
 
 #ifdef SF32LB58X
-            if (epic_handle->hezip->Instance == hwp_ezip1)
-            {
-                MODIFY_REG(Vlayer_x->MISC_CFG, EPIC_VL_MISC_CFG_EZIP_SEL_Msk,
-                           MAKE_REG_VAL(0, EPIC_VL_MISC_CFG_EZIP_SEL_Msk, EPIC_VL_MISC_CFG_EZIP_SEL_Pos));
-            }
-            else
-            {
-                MODIFY_REG(Vlayer_x->MISC_CFG, EPIC_VL_MISC_CFG_EZIP_SEL_Msk,
-                           MAKE_REG_VAL(1, EPIC_VL_MISC_CFG_EZIP_SEL_Msk, EPIC_VL_MISC_CFG_EZIP_SEL_Pos));
-            }
+            MODIFY_REG(Vlayer_x->MISC_CFG, EPIC_VL_MISC_CFG_EZIP_SEL_Msk,
+                       MAKE_REG_VAL(0, EPIC_VL_MISC_CFG_EZIP_SEL_Msk, EPIC_VL_MISC_CFG_EZIP_SEL_Pos));
 #endif /* SF32LB55X */
         }
 #endif /* HAL_EZIP_MODULE_ENABLED */

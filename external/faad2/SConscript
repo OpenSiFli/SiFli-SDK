@@ -1,0 +1,34 @@
+
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src  = Glob('./libfaad/libfaad/*.c')
+
+inc += [cwd + '/libfaad/include']
+inc += [cwd + '/libfaad/libfaad']
+
+#aac player demo
+#src += Glob('./demo.c')
+
+LOCAL_CCFLAGS = ''
+
+#notice: FIXED_POINT doesn't work with MAIN and SSR yet(ref common.h)
+#LOCAL_CCFLAGS += ' -DFIXED_POINT'
+
+LOCAL_CCFLAGS += ' -DSTDC_HEADERS'
+LOCAL_CCFLAGS += ' -Wno-constant-conversion'
+LOCAL_CCFLAGS += ' -Wno-parentheses-equality'
+LOCAL_CCFLAGS += ' -Wno-unused-value'
+
+group = DefineGroup('aac_libfaad', src, depend = ['PKG_USING_AAC_DECODER_LIBFAAD'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

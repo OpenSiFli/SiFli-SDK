@@ -2,7 +2,8 @@
 源码路径：example\hal\adc\multichannel
 ## 支持的平台
 例程可以运行在以下开发板
-* em-lb520
+- sf32lb52-lcd_n16r8
+
 ## 概述
 * 操作Hal函数单路ADC或DMA六通道采样演示
 
@@ -14,11 +15,11 @@
 ```
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb525 -j8
+> scons --board=sf32lb52-lcd_n16r8 -j8
 
 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+> build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 >Uart Download
 

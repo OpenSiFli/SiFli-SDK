@@ -1,3 +1,6 @@
+================
+ezip usage
+================
 function note: 
 
 1) eZIP cfile generate:
@@ -29,6 +32,12 @@ function note:
 		
 6)  ttf convert to C
 		- CMD: ezip -gif xxx\yyy.ttf		
+
+7) ezip to png
+                - CMD: ezip -convert xxx.bin -spt 1 -dpt 0 -outdir dst -dec_off_no_header 0
+                 usage: it will try to read an ezip(no lvgl header) from offset 0, and convert it into a png file , and output to 'dst' directory. 
+
+
 Note:
 for detailcf:		
 		RAW_RGB565:  0x0F
@@ -42,3 +51,16 @@ for detailcf:
 
 for binext  : 
 		any extension not exceeding 20 bytes can be used
+		
+		
+===============
+jlinkezip2png.py USAGE
+===============
+
+# jlinkezip2png.py example:
+# Connect target device by 2MHz SWD，read 4kB ezip bin at 0x600c7f50, and conver it to png
+python jlinkezip2png.py "-if SWD -speed 2000" 0x600c7f50 4000
+
+
+# Semilar to the previous one, but connect to the remote SWD via localhost 19025 port
+python jlinkezip2png.py "-ip 127.0.0.1:19025 -if SWD -speed 1000" 0x600c7f50 4000

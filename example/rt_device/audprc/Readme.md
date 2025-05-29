@@ -1,11 +1,11 @@
 # Audprc示例
 
-源码路径：[example/rt_device/audprc](#)
+源码路径：example/rt_device/audprc
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + eh-lb525
-+ em-lb525
++ sf32lb52-lcd_n16r8
 + ec-lb587
 
 ## 概述

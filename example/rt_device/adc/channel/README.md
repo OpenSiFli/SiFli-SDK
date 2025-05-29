@@ -1,10 +1,15 @@
 # ADC示例
 源码路径：example\rt_device\adc\channel
+
+```{warning}
+未验证
+```
+
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb520
-* em-lb52d
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb52-lcd_52d
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 * 在RT-Thread操作系统下，adc单路采样演示
@@ -22,9 +27,9 @@
 SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参考宏`BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING`内定义和芯片用户手册
 * 如果缺失上面三个宏，就需要通过`menuconfig`如下命令进行打开  
 
-> menuconfig --board=em-lb525       525开发板
-> menuconfig --board=em-lb52d       52d开发板
-> menuconfig --board=em-lb587       587开发板
+> menuconfig --board=sf32lb52-lcd_n16r8       525开发板
+> menuconfig --board=sf32lb52-lcd_52d       52d开发板
+> menuconfig --board=sf32lb58-lcd_n16r64n4       587开发板
 
 如下图，选择GPADC1,保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/MENUCONFIG_ADC.png)
@@ -34,19 +39,19 @@ SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参
 
 * 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
 
-> build_em-lb525_hcpu\uart_download.bat
+> build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 >Uart Download
 
 >please input the serial port num:5
 
-### em-lb587烧录
-em-lb587烧录与52系列烧录不同，需要用到J-link进行烧录。将J-link与开发板和pc进行连接
+### sf32lb58-lcd_n16r64n4烧录
+sf32lb58-lcd_n16r64n4烧录与52系列烧录不同，需要用到J-link进行烧录。将J-link与开发板和pc进行连接
 ![alt text](assets/connect.png)
 在 J-Link Commandekr 中输入'connect'与'?'命令选择对应型号完成连接，连接成功如下图：
 
 ![alt text](assets/J-link.png)
-连接成功后回到ConEmu输入'build_em-lb587_hcpu\download.bat'进行烧录
+连接成功后回到ConEmu输入'build_sf32lb58-lcd_n16r64n4_hcpu\download.bat'进行烧录
 ### 硬件连接（52系列）
 * PA28为ADC1 Channel 0的固定输出IO    
 ![alt text](assets/SF32LB52_DevKit_ADC.png)

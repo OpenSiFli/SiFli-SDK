@@ -1,4 +1,7 @@
 # lvgl_v8_examples
+```{warning}
+未验证
+```
 @使用指南
     @介绍：本示例用来测试LVGL V8 TTF字体使用的API，TTF库使用的是schrift.
 

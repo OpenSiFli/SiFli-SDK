@@ -2,8 +2,8 @@
 源码路径：example\rt_device\uart
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 ## 概述
 * 在RT-Thread操作系统下采用RX DMA方式，操作UART2检验其串口的收发能力
 * 注意开发板复位之后uart2打印log同下方图片内容一致即为发送成功,验证uart2接收能力使用的是默认串口打印log来验证其接收内容的准确性
@@ -22,18 +22,18 @@
 
 如果缺失上面三个宏，就需要通过`menuconfig`如下命令进行打开(注意：缺失可能并不会报出错误，若配置串口没有信息打印请及时查看是否打开)
 ```c
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 如下图，选择uart2和rx dma，保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/menuconfig.png)
 * 切换到例程project目录，运行scons命令执行编译：
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
-* 运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+* 运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 
@@ -114,7 +114,7 @@ uart_rec: cnt = 0,count = 260
 #define BSP_USING_UART2 1
 #define BSP_UART2_RX_USING_DMA 1
 
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 

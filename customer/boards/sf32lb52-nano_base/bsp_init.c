@@ -50,7 +50,7 @@
 #endif
 
 #ifndef PWRKEY_CNT_CLOCK_FREQ
-    #define PWRKEY_CNT_CLOCK_FREQ  (32768)
+    #define PWRKEY_CNT_CLOCK_FREQ  (32000)
 #endif
 
 #ifndef PWRKEY_HARD_RESET_TIME
@@ -139,7 +139,7 @@ void HAL_PreInit(void)
         HAL_HPAON_StartGTimer();
         HAL_PMU_EnableRC32K(1);
         HAL_PMU_LpCLockSelect(PMU_LPCLK_RC32);
-        hwp_pmuc->PWRKEY_CNT = PWRKEY_CNT_CLOCK_FREQ * PWRKEY_HARD_RESET_TIME ;     //set pwrkey hard reset time time*32768
+        hwp_pmuc->PWRKEY_CNT = PWRKEY_CNT_CLOCK_FREQ * PWRKEY_HARD_RESET_TIME ;     //set pwrkey hard reset time time*32000
 
         HAL_PMU_EnableDLL(1);
 

@@ -98,7 +98,16 @@ static void uart_output_id(uint32_t dev_id)
 
 int nand_read_id(FLASH_HandleTypeDef *handle, uint8_t dummy);
 uint32_t HAL_QSPI_GET_SRC_CLK(FLASH_HandleTypeDef *fhandle);
-#define FLASH_CLK_INVERT_THD            (60000000)
+/* TODO: confirm whether 100MHz can be used by all chips.
+ *  Actually this value only affects the config when reading ID, after reading ID, MPI_MISCR_RXCLKINV will always be changed to 0.
+ *
+ * on 52x (e.g. 520 or 52B), if 3.3V sip flash using RXCLKINV=1, ID reading will fail
+ */
+#ifndef SF32LB52X
+    #define FLASH_CLK_INVERT_THD            (60000000)
+#else
+    #define FLASH_CLK_INVERT_THD            (100000000)
+#endif /* SF32LB52X */
 #define QSPI_FIFO_SIZE      (64)
 
 #define QSPI_USE_CMD2

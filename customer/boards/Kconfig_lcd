@@ -364,11 +364,13 @@ if BSP_USING_LCD
         
         config LCD_USING_EDP_OPM060E9_V10
             bool "6.0 rect electronic paper display(EPD OPM060E9_V1.0 1448x1072)"
+            select TSC_USING_FT5446U if BSP_USING_TOUCHD
             select LCD_USING_OPM060E9_V10
             select BSP_LCDC_USING_EPD_8BIT
 
         config LCD_USING_EDP_YZC052_V105
             bool "6.0 rect electronic paper display(EPD YZC052_V1.05 1032x758)"
+            select TSC_USING_FT5446U if BSP_USING_TOUCHD
             select LCD_USING_OPM060E9_V10
             select BSP_LCDC_USING_EPD_8BIT
 

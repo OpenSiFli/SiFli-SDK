@@ -1,10 +1,31 @@
-{
-    "latest": {
-        "supported_chips": ["SF32LB55x", "SF32LB58x", "SF32LB56x", "SF32LB52x"]
+[
+    {
+        "version": "latest",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
     },
-    "v2.2.4": {
-        "supported_chips": ["SF32LB55x", "SF32LB58x", "SF32LB56x", "SF32LB52x"]
+    {
+        "version": "v2.4",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.3.4",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.3.3",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.3.2",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.3.1",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.3",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
     }
-}
-
+]
 

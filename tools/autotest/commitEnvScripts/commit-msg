@@ -80,7 +80,7 @@ pattern_tapd_story='^tapd: story#[0-9]+'
 pattern_ext_redmine_bug='^ext-redmine: bug#[0-9]+'
 pattern_ext_redmine_feat='^ext-redmine: feat#[0-9]+'
 #pattern_header='^\[(doc|int|ble|sol|rel|gui|AI)+\] '
-pattern_header='^\[(int|rel)\]\[(bug|new|opt)\]\[[a-zA-Z0-9_ ]+\].'
+pattern_header='^\[(bug|new|opt)\]\[[a-zA-Z0-9_ ]+\].'
 
 
 if [[ $tapd_bug ]]; then
@@ -110,7 +110,7 @@ if [[ $branch == *"$br1"* ]]; then
         echo -e "\033[32m commit success! \033[0m"
     else
         echo -e "\033[31m Error: must be correct tags and redmineid or tapdid \033[m"
-        echo -e "\033[31m eg: [int|rel][bug|new|opt][module_name] Fixed games assert when start \033[m"
+        echo -e "\033[31m eg: [bug|new|opt][module_name] Fixed games assert when start \033[m"
         echo -e "\033[31m eg: redmine: #1999, REDMINE-1999 \033[m"
         echo -e "\033[31m eg: ext-redmine: bug#2356|ext-redmine: feat#2356 \033[m"
         echo -e "\033[31m eg: tapd: bug#1999|tapd: story#1999 \033[m"
@@ -122,7 +122,7 @@ else
     else
         echo -e "\033[31m Error: the commit message is irregular \033[m"
         echo -e "\033[31m Error: must be three correct tags [doc|int|ble|sol|rel|gui|AI]\033[m"
-        echo -e "\033[31m eg: [int|rel][bug|new|opt][module_name] Fixed watchdemo crush bug \033[m"
+        echo -e "\033[31m eg: [bug|new|opt][module_name] Fixed watchdemo crush bug \033[m"
         exit 1
     fi
 fi

@@ -32,7 +32,7 @@ default_boards: &default_boards
   - ec-lb585_hcpu
   - ec-lb583_hcpu
   - sf32lb52-lcd_n16r8
-  # - em-lb52d
+  - sf32lb52-lcd_52d
   - sf32lb56-lcd_a128r12n1
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_n16r64n4
@@ -48,7 +48,7 @@ bt_boards: &bt_boards
   - ec-lb585_hcpu
   - ec-lb583_hcpu
   - sf32lb52-lcd_n16r8 
-  # - em-lb52d
+  - sf32lb52-lcd_52d
   - sf32lb56-lcd_a128r12n1
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_n16r64n4
@@ -76,6 +76,7 @@ after_55x_boards: &after_55x_boards
   - ec-lb583_hcpu
   - ec-lb585_hcpu
   - sf32lb52-lcd_n16r8 
+  - sf32lb52-lcd_52d
   - sf32lb56-lcd_a128r12n1
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_n16r64n4
@@ -128,61 +129,12 @@ common_projects:
   - path: example/bt/pan/project
     boards: *bt_boards
 
+  - path: example/bt/spp/project
+    boards: 
+      - sf32lb58-lcd_n16r64n4
+
   - path: example/bt/test_example/project
     boards: *bt_boards
-
-  # - path: example/printer/project
-  #   boards:
-  #     - eh-lb520s
-
-  - path: example/pm/coremark/project/hcpu
-    boards: *default_boards
-
-  - path: example/multimedia/lvgl/lvgl_v8_demos/project
-    boards: *default_boards
-
-  - path: example/multimedia/lvgl/lvgl_v8_examples/project
-    boards: *default_boards
-
-  - path: example/multimedia/lvgl/lvgl_v9_demos/project
-    boards: 
-      - ec-lb567_hcpu
-      - eh-lb563_hcpu
-      - eh-lb561_hcpu
-      - eh-lb525_hcpu
-      - eh-lb523_hcpu
-      - eh-lb551_hcpu
-      - eh-lb555_hcpu
-      - ec-lb587_hcpu
-      - ec-lb585_hcpu
-      - ec-lb583_hcpu
-      - sf32lb52-lcd_n16r8 
-      - sf32lb56-lcd_a128r12n1
-      - sf32lb56-lcd_n16r12n1
-      - sf32lb58-lcd_n16r64n4
-
-  - path: example/multimedia/lvgl/lvgl_v9_examples/project
-    boards: 
-      - ec-lb567_hcpu
-      - eh-lb563_hcpu
-      - eh-lb561_hcpu
-      - eh-lb525_hcpu
-      - eh-lb523_hcpu
-      - eh-lb551_hcpu
-      - eh-lb555_hcpu
-      - ec-lb587_hcpu
-      - ec-lb585_hcpu
-      - ec-lb583_hcpu
-      - sf32lb52-lcd_n16r8 
-      - sf32lb56-lcd_a128r12n1
-      - sf32lb56-lcd_n16r12n1
-      - sf32lb58-lcd_n16r64n4
-
-  - path: example/multimedia/audio/local_music/project
-    boards: *after_55x_boards
-
-  - path: example/multimedia/audio/record/project
-    boards: *after_55x_boards
 
   - path: example/get-started/blink/rtt/project
     boards: *default_boards
@@ -190,60 +142,11 @@ common_projects:
   - path: example/get-started/blink/no-os/project
     boards: *default_boards
 
-  - path: example/storage/file_system/project
-    boards: *default_boards
-
   - path: example/get-started/hello_world/no-os/project
     boards: *default_boards
 
   - path: example/get-started/hello_world/rtt/project
     boards: *default_boards
-
-  # - path: example/multimedia/lvgl/lvgl_v8_media/project
-  #   boards: *after_55x_boards
-
-  - path: example/hal_example/project
-    boards: *default_boards
-
-  - path: example/rt_driver/project
-    boards: *default_boards
-
-  - path: example/uart/project
-    boards: *default_boards
-
-  - path: example/pm/ble/project/hcpu
-    boards:
-      - eh-lb551_hcpu
-      - eh-lb555_hcpu
-
-  - path: example/pm/bt/project/hcpu
-    boards: *bt_boards
-
-  - path: example/multicore/rpmsg-lite/project/hcpu
-    boards: *multicore_boards
-
-  - path: example/multicore/data_service/project/hcpu
-    boards: *multicore_boards
-
-  - path: example/multicore/ipc_queue/project/hcpu
-    boards: *multicore_boards
-
-  - path: example/multimedia/lvgl/watch/project
-    boards:
-      - eh-lb551_hcpu
-      - eh-lb555_hcpu
-      - ec-lb567_hcpu
-      - eh-lb563_hcpu
-      - eh-lb561_hcpu
-      - eh-lb525_hcpu
-      - eh-lb523_hcpu
-      - ec-lb587_hcpu
-      - ec-lb585_hcpu
-      - ec-lb583_hcpu
-      - sf32lb52-lcd_n16r8 
-      - sf32lb56-lcd_a128r12n1
-      - sf32lb56-lcd_n16r12n1
-      - sf32lb58-lcd_n16r64n4
 
   - path: example/hal/adc/adc_battery/project
     boards: *525_devkit_lcd_boards
@@ -293,21 +196,123 @@ common_projects:
   - path: example/hal/wdt/wdt1/project
     boards: *525_devkit_lcd_boards
 
+  - path: example/hal_example/project
+    boards: *default_boards
+
+  - path: example/misc/button/project
+    boards: *525_devkit_lcd_boards
+
+  - path: example/multicore/rpmsg-lite/project/hcpu
+    boards: *multicore_boards
+
+  - path: example/multicore/data_service/project/hcpu
+    boards: *multicore_boards
+
+  - path: example/multicore/ipc_queue/project/hcpu
+    boards: *multicore_boards
+
+  - path: example/multimedia/audio/local_music/project
+    boards: *after_55x_boards
+
+  - path: example/multimedia/audio/record/project
+    boards: *after_55x_boards
+
+  - path: example/multimedia/lvgl/lvgl_v8_demos/project
+    boards: *default_boards
+
+  - path: example/multimedia/lvgl/lvgl_v8_examples/project
+    boards: *default_boards
+
+  # - path: example/multimedia/lvgl/lvgl_v8_media/project
+  #   boards: *after_55x_boards
+  - path: example/multimedia/lvgl/lvgl_v9_demos/project
+    boards: 
+      - ec-lb567_hcpu
+      - eh-lb563_hcpu
+      - eh-lb561_hcpu
+      - eh-lb525_hcpu
+      - eh-lb523_hcpu
+      - eh-lb551_hcpu
+      - eh-lb555_hcpu
+      - ec-lb587_hcpu
+      - ec-lb585_hcpu
+      - ec-lb583_hcpu
+      - sf32lb52-lcd_n16r8 
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_n16r64n4
+
+  - path: example/multimedia/lvgl/lvgl_v9_examples/project
+    boards: 
+      - ec-lb567_hcpu
+      - eh-lb563_hcpu
+      - eh-lb561_hcpu
+      - eh-lb525_hcpu
+      - eh-lb523_hcpu
+      - eh-lb551_hcpu
+      - eh-lb555_hcpu
+      - ec-lb587_hcpu
+      - ec-lb585_hcpu
+      - ec-lb583_hcpu
+      - sf32lb52-lcd_n16r8 
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_n16r64n4
+
+  - path: example/multimedia/lvgl/watch/project
+    boards:
+      - eh-lb551_hcpu
+      - eh-lb555_hcpu
+      - ec-lb567_hcpu
+      - eh-lb563_hcpu
+      - eh-lb561_hcpu
+      - eh-lb525_hcpu
+      - eh-lb523_hcpu
+      - ec-lb587_hcpu
+      - ec-lb585_hcpu
+      - ec-lb583_hcpu
+      - sf32lb52-lcd_n16r8 
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_n16r64n4
+
+  - path: example/pm/ble/project/hcpu
+    boards:
+      - eh-lb551_hcpu
+      - eh-lb555_hcpu
+
+  - path: example/pm/bt/project/hcpu
+    boards: *bt_boards
+
+  - path: example/pm/coremark/project/hcpu
+    boards: *default_boards
+
+  # - path: example/printer/project
+  #   boards:
+  #     - eh-lb520s
+
   - path: example/rt_device/adc/adc_battery/project
     boards: *525_devkit_lcd_boards
 
   - path: example/rt_device/audprc/project
     boards: *after_55x_boards
 
+  - path: example/rt_device/gpio/project
+    boards: *525_devkit_lcd_boards
+
   - path: example/rt_device/i2c/eeprom/project
     boards: *525_devkit_lcd_boards
 
-  # - path: example/rt_device/pdm/project
-  #   boards: *525_devkit_lcd_boards
+  - path: example/rt_device/i2s/project
+    boards: *525_devkit_lcd_boards
+
+  - path: example/rt_device/pdm/project
+    boards: *525_devkit_lcd_boards
 
   - path: example/rt_device/pm/project/hcpu
     boards:
       - sf32lb56-lcd_n16r12n1
+      - sf32lb56-lcd_a128r12n1
       - eh-lb551
       - sf32lb52-lcd_n16r8
       - sf32lb58-lcd_n16r64n4
@@ -327,6 +332,9 @@ common_projects:
   - path: example/rt_device/spi/card/project
     boards: *525_devkit_lcd_boards
 
+  - path: example/rt_device/spi_tf/project
+    boards: *525_devkit_lcd_boards
+
   - path: example/rt_device/uart/project
     boards: *525_devkit_lcd_boards
 
@@ -339,6 +347,12 @@ common_projects:
   - path: example/rt_device/wdt/project
     boards: *525_devkit_lcd_boards    
 
+  - path: example/rt_driver/project
+    boards: *default_boards
+
+  - path: example/storage/file_system/project
+    boards: *default_boards
+
   - path: example/storage/flashdb/project/nand
     boards:
       - eh-lb525
@@ -347,4 +361,7 @@ common_projects:
     boards:
       - eh-lb523
       - sf32lb52-lcd_n16r8 
+
+  - path: example/uart/project
+    boards: *default_boards
 

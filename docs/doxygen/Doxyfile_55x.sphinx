@@ -820,12 +820,12 @@ WARN_LOGFILE           = warnings_sifli.txt
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = \
-                         ../../../drivers/include \
-                         ../../../middleware/include \
-                         ../../../drivers/cmsis/Include \
-                         ../../../drivers/cmsis/sf32lb55x \
-                         ../../../middleware/bluetooth/service/bt/bt_finsh/bts2_app_interface.h \
-                         ../../../middleware/bluetooth/include
+                         ../../drivers/Include \
+                         ../../middleware/include \
+                         ../../drivers/cmsis/Include \
+                         ../../drivers/cmsis/sf32lb55x \
+                         ../../middleware/bluetooth/service/bt/bt_finsh/bts2_app_interface.h \
+                         ../../middleware/bluetooth/include
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses

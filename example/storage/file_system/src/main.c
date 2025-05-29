@@ -1,3 +1,5 @@
+<<<<<<< PATCH SET (283343 [int][bug][edut file_system] Split file_system)
+=======
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -56,3 +58,4 @@ int main(void)
     return 0;
 }
 
+>>>>>>> BASE      (87f518 [opt][board] Change rc32k freq to 32000Hz and remove unused )

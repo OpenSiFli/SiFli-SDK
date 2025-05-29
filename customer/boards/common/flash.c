@@ -101,7 +101,7 @@ __weak int IsExtFlashAddr(uint32_t addr)
     return 0;
 }
 
-static void *flash_memset(void *s, int c, long count)
+void *flash_memset(void *s, int c, long count)
 {
     char *xs = (char *)s;
 

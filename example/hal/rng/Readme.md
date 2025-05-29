@@ -2,8 +2,8 @@
 源码路径:example/hal/rng
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ em-lb525
-+ em-lb587
++ sf32lb52-lcd_n16r8
++ sf32lb58-lcd_n16r64n4
 ## 概述
 <!-- 例程简介 -->
 本例程演示使用RNG（随机数生成器）生成随机数种子和随机数。
@@ -20,9 +20,9 @@
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
 ```
-scons --board=em-lb525 -j32
+scons --board=sf32lb52-lcd_n16r8 -j32
 ```
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 ```
 $ ./uart_download.bat
 

@@ -1,8 +1,8 @@
 # tsen示例
 源码路径 example/hal/tsen
 ## 支持的平台
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 用于表示 "Temperature Sensor"（温度传感器）的硬件模块。具体来说，TSEN 是一种集成温度传感器，设计用于测量片上温度，以帮助实现温度监控和温度相关的系统功能。
@@ -10,12 +10,12 @@
 ## 例程的使用
 ### 编译和烧录
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 

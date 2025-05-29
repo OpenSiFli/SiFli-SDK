@@ -1,2 +1,0 @@
-source "$SIFLI_SDK/customer/boards/sf32lb52-ulp_base/Kconfig.board"
-

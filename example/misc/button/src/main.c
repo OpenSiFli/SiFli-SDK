@@ -66,7 +66,7 @@ int main(void)
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     HAL_PIN_Set(PAD_PA34, GPIO_A34, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA11, GPIO_A11, PIN_PULLDOWN, 1);
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     HAL_PIN_Set(PAD_PB56, GPIO_B56, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PB54, GPIO_B54, PIN_PULLDOWN, 1);
 #endif
@@ -80,7 +80,7 @@ int main(void)
 
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     cfg.pin = 34;
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     cfg.pin = 152;
 #endif
     cfg.active_state = BUTTON_ACTIVE_HIGH;
@@ -93,7 +93,7 @@ int main(void)
 
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     cfg.pin = 11;
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     cfg.pin = 150;
 #endif
     cfg.active_state = BUTTON_ACTIVE_HIGH;

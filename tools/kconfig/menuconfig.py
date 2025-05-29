@@ -688,6 +688,10 @@ def _main():
         "--board", 
         type=str,
         help="board name")        
+    parser.add_argument(
+        "--board_search_path", 
+        type=str,
+        help="board search path")        
 
     args=parser.parse_args()
 
@@ -714,8 +718,12 @@ def _main():
         sdk_root_path = os.environ.get("SIFLI_SDK")
         if not sdk_root_path:
             sys.exit("SIFLI_SDK not defined")
-        board_path = "customer/boards/{}/{}".format(board, core)
-        board_path = os.path.join(sdk_root_path, board_path)
+        board_root = os.path.join(sdk_root_path, "customer/boards")
+        if args.board_search_path:
+            args.board_search_path = os.path.abspath(args.board_search_path)
+            if os.path.exists(os.path.join(args.board_search_path, board)):
+                board_root = args.board_search_path
+        board_path = os.path.join(board_root, "{}/{}".format(board, core))
         board_conf_path = os.path.join(board_path, "board.conf")
         if not os.path.exists(board_conf_path):
             sys.exit("Board config {} not found".format(board_conf_path))

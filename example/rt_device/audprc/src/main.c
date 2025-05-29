@@ -286,7 +286,7 @@ static void config_tx(rt_uint32_t channels, rt_uint32_t sr, rt_uint32_t fmt)
     rt_device_control(g_audcodec_dev, AUDIO_CTL_SETOUTPUT, (void *)AUDPRC_TX_TO_CODEC);
     caps.main_type = AUDIO_TYPE_OUTPUT;
     caps.sub_type = 1 << HAL_AUDCODEC_DAC_CH0;
-#if defined(BSP_USING_BOARD_EM_LB587XXX)
+#if defined(BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     caps.sub_type |= (1 << HAL_AUDCODEC_DAC_CH1);
 #endif
     caps.udata.config.channels   = channels; // L,R,L,R,L,R, ......

@@ -22,7 +22,7 @@ void pwm_set(uint8_t percentage, uint32_t period)
     /* 1, pinmux set to pwm2 mode */
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     HAL_PIN_Set(PAD_PA20, GPTIM1_CH2, PIN_NOPULL, 1);
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
 #endif
 //    LOG_I("hysys_GPTIM2_PINR1:%x",((hwp_hpsys_cfg->GPTIM1_PINR) & HPSYS_CFG_GPTIM1_PINR_CH2_PIN_Msk)>>HPSYS_CFG_GPTIM1_PINR_CH2_PIN_Pos);

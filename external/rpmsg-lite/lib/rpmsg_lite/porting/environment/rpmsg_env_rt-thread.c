@@ -61,10 +61,12 @@
 
 static int32_t env_init_counter       = 0;
 static rt_sem_t env_sema     = ((void *)0);
-static rt_event_t event_group = ((void *)0);
+// static rt_event_t event_group = ((void *)0);
+static rt_mq_t env_mq;
 #if defined(RL_USE_STATIC_API) && (RL_USE_STATIC_API == 1)
 struct rt_semaphore env_sem_static_context;
-struct rt_event event_group_static_context;
+// struct rt_event event_group_static_context;
+struct rt_mq env_mq_static_context;
 #endif
 
 /* RL_ENV_MAX_MUTEX_COUNT is an arbitrary count greater than 'count'
@@ -125,6 +127,8 @@ uint32_t env_wait_for_link_up(volatile uint32_t *link_state, uint32_t link_id, u
 {
     rt_uint32_t recved;
     rt_int32_t timeout;
+    rt_tick_t start_tick;
+    rt_tick_t curr_tick;
 
     if (*link_state != 1U)
     {
@@ -133,6 +137,7 @@ uint32_t env_wait_for_link_up(volatile uint32_t *link_state, uint32_t link_id, u
         else
             timeout = rt_tick_from_millisecond(timeout_ms);
 
+#if 0            
         if (rt_event_recv(event_group, 1 << link_id, RT_EVENT_FLAG_CLEAR | RT_EVENT_FLAG_OR, timeout, &recved) == RT_EOK)
         {
             return 1U;
@@ -141,6 +146,32 @@ uint32_t env_wait_for_link_up(volatile uint32_t *link_state, uint32_t link_id, u
         {
             LOG_E("rt_event_recv failed...");
             return 0U;
+        }
+#endif   
+
+        start_tick = rt_tick_get();
+        while (1)
+        {
+            if (rt_mq_recv(env_mq, &recved, sizeof(uint32_t), timeout) == RT_EOK)
+            {
+                if (recved == (1U << link_id))
+                {
+                    return 1U;
+                }
+            }
+            curr_tick = rt_tick_get();
+            if (timeout != RT_WAITING_FOREVER)
+            {
+                if ((curr_tick - start_tick) >= timeout)
+                {
+                    return 0U;
+                }
+                else
+                {
+                    timeout = timeout - (curr_tick - start_tick);
+                }
+                start_tick = curr_tick;
+            }
         }
     }
     else
@@ -157,7 +188,13 @@ uint32_t env_wait_for_link_up(volatile uint32_t *link_state, uint32_t link_id, u
  */
 void env_tx_callback(uint32_t link_id)
 {
-    rt_event_send(event_group, 1UL << link_id);
+    uint32_t val;
+    rt_err_t err;
+
+    // rt_event_send(event_group, 1UL << link_id);
+    val = 1UL << link_id;
+    err = rt_mq_send(env_mq, &val, sizeof(uint32_t));
+    RT_ASSERT(err == RT_EOK);
 }
 
 /*!
@@ -195,14 +232,16 @@ int32_t env_init(void)
         }
         env_sema = &env_sem_static_context;
 
-        if (rt_event_init(&event_group_static_context, "rl_event", RT_IPC_FLAG_FIFO) != EOK)
+        // if (rt_event_init(&event_group_static_context, "rl_event", RT_IPC_FLAG_FIFO) != EOK)
+        if (rt_mq_init(&env_mq_static_context, "rl_mq", sizeof(uint32_t), 10, RT_IPC_FLAG_FIFO) != RT_EOK)
         {
             LOG_E("rt_event_init failed ...");
             rt_sem_detach(&env_sem_static_context);
             rt_hw_interrupt_enable(level);
             return -1;
         }
-        event_group = &event_group_static_context;
+        // event_group = &event_group_static_context;
+        env_mq = &env_queue_static_context;
 #else
         env_sema = rt_sem_create("rl_sem", 0, RT_IPC_FLAG_FIFO);
         if (env_sema == RT_NULL)
@@ -211,8 +250,10 @@ int32_t env_init(void)
             return -1;
         }
 
-        event_group = rt_event_create("rl_event", RT_IPC_FLAG_FIFO);
-        if (event_group == RT_NULL)
+        // event_group = rt_event_create("rl_event", RT_IPC_FLAG_FIFO);
+        env_mq = rt_mq_create("rl_mq", sizeof(uint32_t), 10, RT_IPC_FLAG_FIFO);
+        // if (event_group == RT_NULL)
+        if (env_mq == RT_NULL)
         {
             rt_sem_delete(env_sema);
             rt_hw_interrupt_enable(level);
@@ -270,8 +311,17 @@ int32_t env_deinit(void)
         /* last call */
         (void)memset(isr_table, 0, sizeof(isr_table));
         retval = platform_deinit();
-        rt_event_delete(event_group);
-        event_group = ((void *)0);
+#if defined(RL_USE_STATIC_API) && (RL_USE_STATIC_API == 1)
+        // rt_event_detach(event_group);
+        rt_mq_detach(env_mq);
+        // event_group = ((void *)0);
+        env_mq = (void *)0;
+#else        
+        // rt_event_delete(event_group);
+        // event_group = ((void *)0);
+        rt_mq_delete(env_mq);
+        env_mq = (void *)0;
+#endif         
         rt_sem_delete(env_sema);
         env_sema = ((void *)0);
         rt_hw_interrupt_enable(level);

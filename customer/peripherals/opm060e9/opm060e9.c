@@ -53,6 +53,7 @@
 #include "epd_wave_tables.h"
 #include "epd_tps.h"
 #include "mem_section.h"
+#include "wfmlib.h"
 
 #define  DBG_LEVEL            DBG_INFO  //DBG_LOG //
 
@@ -84,15 +85,16 @@ static LCDC_InitTypeDef lcdc_int_cfg =
 };
 
 static uint8_t  lcdc_input_idx = 0;
-static uint8_t  lcdc_input_buffer[2][DISPLAY_LINE_CLOCKS];
-#ifdef MIXED_REFRESH_METHODS
-    /*
-    Define a 4bpp grey framebuffer on PSRAM to save previous frame
-    */
-    L2_NON_RET_BSS_SECT_BEGIN(frambuf)
-    L2_NON_RET_BSS_SECT(frambuf, ALIGN(4) static uint8_t previous_frame[LCD_HOR_RES_MAX * LCD_VER_RES_MAX / 2];);
-    L2_NON_RET_BSS_SECT_END
-#endif
+ALIGN(4) static uint8_t  lcdc_input_buffer[2][DISPLAY_LINE_CLOCKS];
+
+/*
+Define a mixed grey framebuffer on PSRAM
+high 4 bits for old pixel and low 4 bits for new pixel in every byte.
+*/
+L2_NON_RET_BSS_SECT_BEGIN(frambuf)
+L2_NON_RET_BSS_SECT(frambuf, ALIGN(4) static uint8_t mixed_framebuffer[LCD_HOR_RES_MAX * LCD_VER_RES_MAX];);
+L2_NON_RET_BSS_SECT_END
+
 /**
   * @brief  Power on the LCD.
   * @param  None
@@ -107,7 +109,11 @@ static void LCD_Init(LCDC_HandleTypeDef *hlcdc)
     HAL_LCDC_Init(hlcdc);
 
     //Initialize power supply chip
-    oedtps_init();
+#ifdef LCD_USING_EDP_YZC052_V105
+    oedtps_init(1050);
+#else
+    oedtps_init(2100);
+#endif
 
     hlcdc->Instance->LAYER0_CONFIG = (4   << LCD_IF_LAYER0_CONFIG_FORMAT_Pos) |       //RGB332
                                      (1   << LCD_IF_LAYER0_CONFIG_ALPHA_SEL_Pos) |     // use layer alpha
@@ -137,6 +143,8 @@ static void LCD_Init(LCDC_HandleTypeDef *hlcdc)
     EPD_GMODE_H_hs();
 
     epd_wave_table();
+
+
 }
 
 /**
@@ -177,15 +185,12 @@ static void LCD_SetRegion(LCDC_HandleTypeDef *hlcdc, uint16_t Xpos0, uint16_t Yp
 static uint32_t wait_lcd_ticks;
 
 
-L1_RET_CODE_SECT(epd_codes, void epd_load_and_send_pic(LCDC_HandleTypeDef *hlcdc, const uint8_t *old_pic, const uint8_t *new_pic, uint32_t pic_bpp, uint8_t frame))
+L1_RET_CODE_SECT(epd_codes, void epd_load_and_send_pic(LCDC_HandleTypeDef *hlcdc, const uint8_t *gray_buffer, uint8_t frame))
 {
 
     uint8_t *p_lcdc_input = (uint8_t *) &lcdc_input_buffer[lcdc_input_idx][0];
 
-    if(1 == pic_bpp)
-    epd_wave_table_convert_i1o2(p_lcdc_input, old_pic, new_pic, LCD_HOR_RES_MAX/8, frame);
-    else if(4 == pic_bpp)
-    epd_wave_table_convert_i4o2(p_lcdc_input, old_pic, new_pic, LCD_HOR_RES_MAX/2, frame);
+    get_waveform((uint8_t *)gray_buffer, (int *)p_lcdc_input, LCD_HOR_RES_MAX, 1, frame);
 
     //Wait previous LCDC done.
     uint32_t start_tick = HAL_DBG_DWT_GetCycles();
@@ -212,18 +217,88 @@ L1_RET_CODE_SECT(epd_codes, void epd_load_and_send_pic(LCDC_HandleTypeDef *hlcdc
     lcdc_input_idx = !lcdc_input_idx;
 }
 
+L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBCode, uint16_t Xpos0, uint16_t Ypos0, uint16_t Xpos1, uint16_t Ypos1))
+{
+    uint32_t total_pixels = LCD_HOR_RES_MAX * LCD_VER_RES_MAX;
+    RT_ASSERT((total_pixels % 4) == 0); // 必须是4像素的倍数
+
+    //Convert layer data to 4bit gray data
+    if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_MONO)
+    {
+        RT_ASSERT(0);//Fix me!
+    }
+    else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_A4)
+    {
+        uint32_t n = total_pixels / 4; // 每次处理4像素（4字节）
+        uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
+        const uint8_t *p_src = RGBCode;
+
+        while (n--)
+        {
+            uint8_t byte0 = *p_src++;
+            uint8_t byte1 = *p_src++;
+
+            // 生成4像素的新值
+            uint32_t src_v = ((byte1 << 20) | (byte1 << 16) | (byte0 << 4) | byte0) & 0x0F0F0F0F;
+
+            // 读取原像素，旧像素清零，新像素移入老像素
+            uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
+
+            // 合并新像素
+            *p_dst++ = dst_v | src_v;
+        }
+    }
+    else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_RGB565)
+    {
+        uint32_t n = total_pixels / 4; // 每次处理4像素（4字节）
+        uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
+        const uint16_t *p_src = (const uint16_t *)RGBCode;
+
+        // 计算灰度值
+        // 0.299*R + 0.587*G + 0.114*B
+#define RGB565_TO_GRAY4(rgb)  ( \
+        (uint8_t)(( \
+        ((((rgb) >> 8) & 0xF8) * 77 + \
+         (((rgb) >> 3) & 0xFC) * 150 + \
+         (((rgb) << 3) & 0xF8) * 29) >> 8) >> 4) \
+        )
+
+        while (n--)
+        {
+            uint8_t pixel0 = RGB565_TO_GRAY4(*p_src);
+            p_src++;
+            uint8_t pixel1 = RGB565_TO_GRAY4(*p_src);
+            p_src++;
+            uint8_t pixel2 = RGB565_TO_GRAY4(*p_src);
+            p_src++;
+            uint8_t pixel3 = RGB565_TO_GRAY4(*p_src);
+            p_src++;
+
+
+            // 生成4像素的新值
+            uint32_t src_v = ((pixel3 << 24) | (pixel2 << 16) | (pixel1 << 8) | pixel0) & 0x0F0F0F0F;
+
+            // 读取原像素，旧像素清零，新像素移入老像素
+            uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
+
+            // 合并新像素
+            *p_dst++ = dst_v | src_v;
+        }
+    }
+    else
+        RT_ASSERT(0);
+}
+
+#define PART_DISP_TIMES       10        //局刷PART_DISP_TIMES-1次后全刷一次
+int reflesh_times = 0;
+
 L1_RET_CODE_SECT(epd_codes, static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBCode, uint16_t Xpos0, uint16_t Ypos0, uint16_t Xpos1, uint16_t Ypos1))
 {
-    uint8_t frame;
-    uint32_t line, pic_bpp, line_bytes, frame_bytes;
-    uint8_t *ptrnext;
+    uint32_t line, line_bytes;
     //波形帧数量，用于局刷和全刷控制
     unsigned int frame_times = 0;
-#ifdef MIXED_REFRESH_METHODS
-    uint8_t *old_ptr = (uint8_t *)previous_frame;
-#else
-    uint8_t *old_ptr = NULL;
-#endif /* MIXED_REFRESH_METHODS */
+
+
 
     // __disable_irq();
     uint32_t start_tick = rt_tick_get();
@@ -234,20 +309,30 @@ L1_RET_CODE_SECT(epd_codes, static void LCD_WriteMultiplePixels(LCDC_HandleTypeD
 
     LOG_I("LCD_WriteMultiplePixels ColorMode=%d", hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format);
 
-    if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_MONO)
-        pic_bpp = 1;
-    else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_A4)
-        pic_bpp = 4;
+
+    uint8_t temperature = 26;
+
+    if (reflesh_times % PART_DISP_TIMES == 0)
+    {
+        frame_times = get_frame(2, temperature); //Full refresh
+    }
     else
-        RT_ASSERT(0);
-    line_bytes = LCD_HOR_RES_MAX/8*pic_bpp;
-    frame_bytes = line_bytes * DISPLAY_ROWS;
-  
-    frame_times = epd_wave_table_start_flush();
+    {
+        frame_times = get_frame(1, temperature); //Partial refresh
+    }
+    reflesh_times++;
+
+    CopyToMixedGrayBuffer(hlcdc, RGBCode, Xpos0, Ypos0, Xpos1, Ypos1);
+    LOG_I("Convert layer data take=%d(ms) \r\n", rt_tick_get() - start_tick);
+
+
+
+    line_bytes = LCD_HOR_RES_MAX;
     wait_lcd_ticks = 0;
     EPD_GMODE_H_hs();
-    for (frame = 0; frame < frame_times; frame++)
+    for (uint32_t frame = 0; frame < frame_times; frame++)
     {
+        uint32_t frame_start_tick = rt_tick_get();
         EPD_STV_H_hs();
         EPD_STV_L_hs();
         HAL_Delay_us(1);
@@ -273,20 +358,22 @@ L1_RET_CODE_SECT(epd_codes, static void LCD_WriteMultiplePixels(LCDC_HandleTypeD
         EPD_OE_H_hs();
         EPD_CPV_H_hs();
 
-      
+
         for (line = 0; line < DISPLAY_ROWS; line++)                 //共有DISPLAY_ROWS列数据
         {
-            epd_load_and_send_pic(hlcdc, old_ptr + (line * line_bytes), RGBCode + (line * line_bytes), pic_bpp, frame); //传完一列数据后传下一列，一列数据有
+            epd_load_and_send_pic(hlcdc, &mixed_framebuffer[line * line_bytes], frame); //传完一列数据后传下一列，一列数据有
         }
-        epd_load_and_send_pic(hlcdc, old_ptr + ((line - 1) * line_bytes), RGBCode + ((line - 1) * line_bytes), pic_bpp, frame); //最后一行还需GATE CLK,故再传一行没用数据
+        epd_load_and_send_pic(hlcdc, &mixed_framebuffer[(line - 1) * line_bytes], frame); //最后一行还需GATE CLK,故再传一行没用数据
 
-        
+
 
 
         while (hlcdc->Instance->STATUS & LCD_IF_STATUS_LCD_BUSY) {;}
         EPD_CPV_L_hs();
         HAL_Delay_us(1);
         EPD_OE_L_hs();
+
+        //LOG_I("Frame%02d take=%d(ms) \r\n", frame, rt_tick_get() - frame_start_tick);
     }
     EPD_GMODE_L_hs();
     EPD_LE_L_hs();
@@ -300,11 +387,7 @@ L1_RET_CODE_SECT(epd_codes, static void LCD_WriteMultiplePixels(LCDC_HandleTypeD
     oedtps_vcom_disable();
     LCD_DRIVER_DELAY_MS(10);
     oedtps_source_gate_disable();
-#ifdef MIXED_REFRESH_METHODS
-    extern void *sifli_memcpy(void *dst, const void *src, rt_ubase_t count);
-    sifli_memcpy(old_ptr, RGBCode, frame_bytes);
-#endif /* MIXED_REFRESH_METHODS */
-    LOG_I("Cost time=%d wait_lcd=%d(us)\r\n", rt_tick_get() - start_tick, wait_lcd_ticks / 240);
+    LOG_I("Total %d frames, take time=%dms wait_lcd=%d(us)\r\n", frame_times, rt_tick_get() - start_tick, wait_lcd_ticks / 240);
     // __enable_irq();
 
     /* Simulate LCDC IRQ handler, call user callback */

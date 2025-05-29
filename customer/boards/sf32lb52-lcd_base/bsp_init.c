@@ -181,20 +181,6 @@ void HAL_PreInit(void)
 
 #ifndef CFG_BOOTLOADER
         {
-#ifdef LXT_DISABLE
-            uint8_t is_enable_lxt = 0;
-#else
-            uint8_t is_enable_lxt = 1;
-#endif
-            uint32_t wdt_staus = 0xFF;
-            uint32_t wdt_time = 0;
-            uint16_t wdt_clk = 32768;
-            uint8_t is_lcpu_rccal = 1;
-            HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_XTAL_ENABLED, &is_enable_lxt, 1);
-            HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_STATUS, &wdt_staus, 4);
-            HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_TIME, &wdt_time, 4);
-            HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_CLK_FEQ, &wdt_clk, 2);
-            HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_RC_CAL_IN_L, &is_lcpu_rccal, 1);
             HAL_PMU_SetWdt((uint32_t)hwp_wdt2);   // Add reboot cause for watchdog2
         }
 

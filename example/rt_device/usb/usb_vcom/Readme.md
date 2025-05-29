@@ -4,8 +4,8 @@
 
 ## 支持的开发板
 例程可以运行在以下开发板.<br>
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 **注意：** 一般而言，例程都是运行芯片的HCPU，"eh-lb563" 等效于"eh-lb563_hcpu"，如果想在LCPU运行例程，可以使用"eh-lb563_lcpu"。目前USB功能暂时只支持在HCPU上运行。
 
@@ -52,7 +52,7 @@ USB_MSTORAGE工程包含了1个.c文件(main.c),下面的树状结构展示 了�
 ### menuconfig配置
 ```
 //指令执行
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 **注意：** HDK52X中的USB引脚没有与UART复用因此可跳过1、2步骤。
 
@@ -63,7 +63,7 @@ menuconfig --board=em-lb525
 ![alt text](assets/usb_2.jpg)
 
 3、使能USB的device功能；"Enable USB Device"
-* 再编译界面中输入`menuconfig --board=em-lb52d`进入菜单，在`(Top) → On-chip Peripheral RTOS Drivers`下进行如下配置
+* 再编译界面中输入`menuconfig --board=sf32lb52-lcd_52d`进入菜单，在`(Top) → On-chip Peripheral RTOS Drivers`下进行如下配置
 ![alt text](assets/usb_3.jpg)
 * 在`(Top) → Device Drivers → Using USB`,进行如下使能CDC device,设置虚拟串口字符大小，使能虚拟串口的dma功能。
 ![alt text](assets/enable.png)
@@ -74,11 +74,11 @@ menuconfig --board=em-lb525
 按照以下步骤，可以完成编译和烧录。
 
 ```
-scons --board=em-lb525 -j8
-build_em-lb525_hcpu\uart_download.bat
+scons --board=sf32lb52-lcd_n16r8 -j8
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 ```
 
-（操作不同的芯片板子只需将芯片名进行更改即可，例如587板子，只需将'eh-lb525'更换成'em-lb587'）
+（操作不同的芯片板子只需将芯片名进行更改即可，例如587板子，只需将'eh-lb525'更换成'sf32lb58-lcd_n16r64n4'）
 
 ## 例程输出结果展示
 下面结果展示了例程在开发板运行起来后的log。如果看不到这些log，就说明例程没能按预期运行成功，需要进行原因排查。
@@ -122,13 +122,13 @@ MSH_CMD_EXPORT(vcom_write, vcom write);
 可以打开Ozone选择芯片进行连接，然后查看
 ![alt text](assets/image.jpg)
 ![alt text](assets/image-1.jpg)
-* 如果时钟没有使能，则可进入menuconfig -–board=em-lb52d菜单，进行开启（具体操作如下）
+* 如果时钟没有使能，则可进入menuconfig -–board=sf32lb52-lcd_52d菜单，进行开启（具体操作如下）
 ![alt text](assets/image2.jpg)
 在进行连接虚拟串口USB即可
  ## 例程扩展
  
  如果想要修改VBUS的检测引脚号，可按照如下方式进行修改。
- 1.  修改配置menuconfig --board=em-lb525中重新修改 将"usb Insertion detection PIN"中的参数修改为想要的检测引脚
+ 1.  修改配置menuconfig --board=sf32lb52-lcd_n16r8中重新修改 将"usb Insertion detection PIN"中的参数修改为想要的检测引脚
  D:\MyWork\code_sdk\siflisdk\customer\boards\ec-lb555xxx
  2.  修改pinmux配置文件 **"\siflisdk\customer\boards\ec-lb对应的型号目录\bsp_pinmux.c"**，将该引脚配置为GPIO模式；
   ```c

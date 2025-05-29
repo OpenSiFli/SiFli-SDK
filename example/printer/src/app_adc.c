@@ -301,6 +301,37 @@ extern void BSP_GPIO_Set(int pin, int val, int is_porta);
 
 __weak void BSP_adc_pinmux_config()
 {
+    HAL_PIN_Set(PAD_PA28, GPIO_A28, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA29, GPIO_A29, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA30, GPIO_A30, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA31, GPIO_A31, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA33, GPIO_A33, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA34, GPIO_A34, PIN_NOPULL, 1);
+
+    /*adc1_ch0*/
+    HAL_PIN_Set_Analog(PAD_PA28, 1);
+    //HAL_PIN_SetMode(PAD_PA28, 1, PIN_ANALOG_INPUT);
+
+    /*adc1_ch1*/
+    HAL_PIN_Set_Analog(PAD_PA29, 1);
+    //HAL_PIN_SetMode(PAD_PA29, 1, PIN_ANALOG_INPUT);
+
+    /*adc1_ch2*/
+    HAL_PIN_Set_Analog(PAD_PA30, 1);
+    //HAL_PIN_SetMode(PAD_PA30, 1, PIN_ANALOG_INPUT);
+
+    /*adc1_ch3*/
+    HAL_PIN_Set_Analog(PAD_PA31, 1);
+    //HAL_PIN_SetMode(PAD_PA31, 1, PIN_ANALOG_INPUT);
+
+    /*adc1_ch4*/
+    HAL_PIN_Set_Analog(PAD_PA32, 1);
+    //HAL_PIN_SetMode(PAD_PA32, 1, PIN_ANALOG_INPUT);
+
+    /*adc1_ch5*/
+    HAL_PIN_Set_Analog(PAD_PA33, 1);
+    //HAL_PIN_SetMode(PAD_PA33, 1, PIN_ANALOG_INPUT);
 
 }
 
@@ -325,7 +356,7 @@ static rt_err_t adc_init1(void)
     }
     else
     {
-        LOG_I("Find %s device fail\n", adc_dev);
+        rt_kprintf("Find %s device fail\n", adc_dev);
     }
 
 #ifdef PM_DEBUG_PIN_TEST
@@ -333,6 +364,7 @@ static rt_err_t adc_init1(void)
     PM_DEBUG_PIN_HIGH();
 #endif
     //BSP_GPIO_Set(34, 1, 1);
+    rt_kprintf("adc_init ok\n");
 
     return res;
 }
@@ -343,7 +375,7 @@ rt_timer_t adc_timer_handle;
 
 void adc_timeout_handler(void *parameter)
 {
-    for (uint8_t i = 0; i < 7; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
         rt_kprintf("ch[%d] =%d;\n", i, rt_adc_read((rt_adc_device_t)adc_dev, i));
     }

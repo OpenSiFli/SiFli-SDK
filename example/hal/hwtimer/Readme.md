@@ -4,7 +4,7 @@
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ em-lb525
++ sf32lb52-lcd_n16r8
 
 
 ## 概述
@@ -27,9 +27,9 @@
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
-`build_em-lb525_hcpu\uart_download.bat`,按提示选择端口即可进行下载：
+`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`,按提示选择端口即可进行下载：
 ```
 $ ./uart_download.bat
 

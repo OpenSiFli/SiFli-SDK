@@ -313,9 +313,7 @@ static EPIC_HandleTypeDef *epic = NULL;
 
 #ifndef __DEBUG__
     static void gpu_reset(void);
-    #ifndef DRV_EPIC_NEW_API
-        static void epic_abort_callback(EPIC_HandleTypeDef *epic);
-    #endif /*!DRV_EPIC_NEW_API*/
+    static void epic_abort_callback(EPIC_HandleTypeDef *epic);
 #endif
 
 L1_RET_BSS_SECT_BEGIN(drv_epic_ram)
@@ -801,9 +799,7 @@ static rt_err_t wait_gpu_done(rt_int32_t time)
             LOG_E("wait_gpu_done timeout(-2)? err=%d", err);
 #ifndef __DEBUG__
             gpu_reset();
-#ifndef DRV_EPIC_NEW_API
             epic_abort_callback(&epic_handle);
-#endif /*!DRV_EPIC_NEW_API*/
 #else
             RT_ASSERT(0); //Raise an assertion in debug mode.
 #endif /* __RELEASE__ */
@@ -2340,6 +2336,12 @@ static void epic_cplt_callback(EPIC_HandleTypeDef *epic)
     epic_sem_release();
 }
 
+static void epic_abort_callback(EPIC_HandleTypeDef *epic)
+{
+    epic_cbk_ctx_t *p_ctx = (epic_cbk_ctx_t *) epic->user_data;
+    epic_sem_release();
+}
+
 static void pixel_offset(uint32_t offset_bytes, uint32_t line_width, uint32_t color_bytes, int16_t *x_off, int16_t *y_off)
 {
     RT_ASSERT(0 == (offset_bytes % color_bytes));
@@ -2649,7 +2651,7 @@ static HAL_StatusTypeDef Call_Hal_Api(HAL_API_TypeDef api, void *p1, void *p2, v
         statistics_hal_start();
         ret = HAL_EPIC_Adv(hw_epic_handle,
                            (EPIC_LayerConfigTypeDef *)p1,
-                           (uint8_t)p2,
+                           (uint8_t)(uint32_t)p2,
                            (EPIC_LayerConfigTypeDef *)p3);
         statistics_hal_end();
         epic_sem_release();
@@ -2715,7 +2717,7 @@ static HAL_StatusTypeDef Call_Hal_Api(HAL_API_TypeDef api, void *p1, void *p2, v
             case HAL_API_BLEND_EX:
                 ret = HAL_EPIC_BlendStartEx_IT(shadow_epic,
                                                (EPIC_LayerConfigTypeDef *)p1,
-                                               (uint8_t) p2,
+                                               (uint8_t)(uint32_t)p2,
                                                (EPIC_LayerConfigTypeDef *)p3);
                 break;
             case HAL_API_COPY:
@@ -2772,7 +2774,7 @@ static HAL_StatusTypeDef Call_Hal_Api(HAL_API_TypeDef api, void *p1, void *p2, v
             case HAL_API_BLEND_EX:
                 ret = HAL_EPIC_BlendStartEx_IT(hw_epic_handle,
                                                (EPIC_LayerConfigTypeDef *)p1,
-                                               (uint8_t) p2,
+                                               (uint8_t)(uint32_t)p2,
                                                (EPIC_LayerConfigTypeDef *)p3);
                 break;
             case HAL_API_COPY:

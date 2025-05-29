@@ -1,4 +1,7 @@
 # LVGL v8 lottie Example
+```{warning}
+未验证
+```
 ## 介绍
 
 本示例用来测试LVGL V8 lottie API。

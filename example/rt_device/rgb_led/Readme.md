@@ -1,11 +1,11 @@
 # RGBLED示例
 
-源码路径：[example/rt_device/rgbled/](#)
+源码路径：example/rt_device/rgbled
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ em-lb525
-+ em-lb587
++ sf32lb52-lcd_n16r8
++ sf32lb58-lcd_n16r64n4
 ## 概述
 <!-- 例程简介 -->
 本例程演示基于rt-device（使用rt-thread）的rgbled驱动，包含：
@@ -20,13 +20,13 @@
 对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 
 ### 硬件需求
-运行该例程前，需要准备一块本例程支持的开发板（[支持的平台](#支持的平台)）。
+运行该例程前，需要准备一块本例程支持的开发板
 
 ### menuconfig配置
 
 运行如下命令
 ```c
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 外设使能RGBLED   
 ![Enable rgbled:](./assets/menuconfig_rgb2.png)
@@ -47,9 +47,9 @@ pwmt通道与rgb配置的不同出现错误：
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
 ```
-scons -j8 --board=em-lb525 
+scons -j8 --board=sf32lb52-lcd_n16r8 
 ```
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 ```
 $ ./uart_download.bat
 

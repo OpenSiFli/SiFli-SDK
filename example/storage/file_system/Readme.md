@@ -1,3 +1,5 @@
+<<<<<<< PATCH SET (283343 [int][bug][edut file_system] Split file_system)
+=======
 # file_system示例
 @使用指南
     @介绍
@@ -23,3 +25,4 @@
  @工程说明
         - 编译方法: 进入project目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb561板子，完整命令为`scons --board=eh-lb561 -j8`
           编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考通<<用工程构建方法>>
+>>>>>>> BASE      (87f518 [opt][board] Change rc32k freq to 32000Hz and remove unused )

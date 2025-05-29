@@ -2,8 +2,8 @@
 源码路径:example/hal/uart
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 概述
 * 操作UART hal函数采用RX DMA方式,操作UART2检验其串口的收发能力
@@ -33,7 +33,7 @@ CONFIG_USING_MICROLIB=y
 
 
 ```
-menuconfig --board=em-lb525
+menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 ![alt text](assets/common.png)
@@ -44,13 +44,13 @@ menuconfig --board=em-lb525
 
 切换到例程project目录，运行scons命令执行编译：（board=板子型号）
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 

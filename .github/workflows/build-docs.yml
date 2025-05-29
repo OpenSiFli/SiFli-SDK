@@ -12,9 +12,26 @@ on:
 jobs:
   build-docs:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [52x, 56x, 58x, 55x]
+    outputs:
+      version: ${{ steps.determine-version.outputs.VERSION }}
     steps:
+      - name: Determine version tag
+        id: determine-version
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "VERSION=latest" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" =~ refs/heads/release/(.*) ]]; then
+            VERSION=${BASH_REMATCH[1]}
+            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,76 +45,82 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Install doxygen
+      - name: Install doxygen and upload tools
         run: |
           sudo apt-get update
           sudo apt-get install -y doxygen
-
-      - name: Determine version tag
-        id: determine-version
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "VERSION=latest" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" =~ refs/heads/release/(.*) ]]; then
-            VERSION=${BASH_REMATCH[1]}
-            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Build documentation for 52x
-        working-directory: ./docs
-        run: python generate_docs.py 52x
-
-      - name: Build documentation for 56x
-        working-directory: ./docs
-        run: python generate_docs.py 56x
-
-      - name: Build documentation for 58x
-        working-directory: ./docs
-        run: python generate_docs.py 58x
-
-      - name: Build documentation for 55x
-        working-directory: ./docs
-        run: python generate_docs.py 55x
-
-      - name: Archive documentation
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs-${{ steps.determine-version.outputs.VERSION }}
-          path: |
-            docs/build_52x/html
-            docs/build_56x/html
-            docs/build_58x/html
-            docs/build_55x/html
-          retention-days: 7
-      
-      - name: Install COSCMD
-        run: |
           pip install coscmd
+
+      - name: Build documentation for ${{ matrix.variant }}
+        working-directory: ./docs
+        run: python generate_docs.py ${{ matrix.variant }}
 
       - name: Configure COSCMD
         run: |
           coscmd config -a ${{ secrets.COS_DOCS_SECRET_ID }} -s ${{ secrets.COS_DOCS_SECRET_KEY }} -b ${{ secrets.COS_DOCS_BUCKET }} -r ${{ secrets.COS_DOCS_REGION }}
 
-      - name: Upload to COS - 52x
+      - name: Upload ${{ matrix.variant }} documentation to COS
         run: |
           VERSION=${{ steps.determine-version.outputs.VERSION }}
-          coscmd upload -rs --delete --yes ./docs/build_52x/html/ projects/sdk/$VERSION/sf32lb52x/
-          echo "Uploaded documentation for 52x to $VERSION/52x/"
+          if [ -d "./docs/build_${{ matrix.variant }}/html" ]; then
+            coscmd upload -rs --delete --yes ./docs/build_${{ matrix.variant }}/html/ projects/sdk/$VERSION/sf32lb${{ matrix.variant }}/
+            echo "Uploaded documentation for ${{ matrix.variant }} to $VERSION/sf32lb${{ matrix.variant }}/"
+          else
+            echo "Warning: Build directory for ${{ matrix.variant }} not found"
+            exit 1
+          fi
 
-      - name: Upload to COS - 56x
-        run: |
-          VERSION=${{ steps.determine-version.outputs.VERSION }}
-          coscmd upload -rs --delete --yes ./docs/build_56x/html/ projects/sdk/$VERSION/sf32lb56x/
-          echo "Uploaded documentation for 56x to $VERSION/56x/"
+      - name: Upload ${{ matrix.variant }} documentation artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-${{ matrix.variant }}
+          path: docs/build_${{ matrix.variant }}/html/
+          retention-days: 1
+  archive:
+    needs: [build-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all documentation artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: docs-*
+          merge-multiple: false
 
-      - name: Upload to COS - 58x
-        run: |
-          VERSION=${{ steps.determine-version.outputs.VERSION }}
-          coscmd upload -rs --delete --yes ./docs/build_58x/html/ projects/sdk/$VERSION/sf32lb58x/
-          echo "Uploaded documentation for 58x to $VERSION/58x/"
+      - name: Archive all documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-${{ needs.build-docs.outputs.version }}
+          path: |
+            docs-52x/
+            docs-56x/
+            docs-58x/
+            docs-55x/
+          retention-days: 7
 
-      - name: Upload to COS - 55x
+  finalize:
+    needs: [build-docs]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install upload tools
         run: |
-          VERSION=${{ steps.determine-version.outputs.VERSION }}
-          coscmd upload -rs --delete --yes ./docs/build_55x/html/ projects/sdk/$VERSION/sf32lb55x/
-          echo "Uploaded documentation for 55x to $VERSION/55x/"
+          pip install coscmd tccli
+
+      - name: Configure COSCMD
+        run: |
+          coscmd config -a ${{ secrets.COS_DOCS_SECRET_ID }} -s ${{ secrets.COS_DOCS_SECRET_KEY }} -b ${{ secrets.COS_DOCS_BUCKET }} -r ${{ secrets.COS_DOCS_REGION }}
+
+      - name: Upload to COS - version.json
+        run: |
+          VERSION=${{ needs.build-docs.outputs.version }}
+          coscmd upload --yes ./docs/version.json projects/sdk/version.json
+          echo "Uploaded version.json to projects/sdk/version.json"
+      
+      - name: Purge CDN Cache
+        run: |
+          export TENCENTCLOUD_SECRET_ID=${{ secrets.COS_DOCS_SECRET_ID }}
+          export TENCENTCLOUD_SECRET_KEY=${{ secrets.COS_DOCS_SECRET_KEY }}
+          export TENCENTCLOUD_REGION=${{ secrets.COS_DOCS_REGION }}
+          tccli cdn PurgePathCache --cli-unfold-argument --Paths 'https://docs.sifli.com/projects/sdk/' --FlushType flush

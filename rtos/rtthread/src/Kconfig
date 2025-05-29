@@ -205,7 +205,8 @@ config RT_USING_MUTEX
 
 config RT_USING_EVENT
     bool "Enable event flag"
-    default y
+    depends on !SOC_SF32LB58X || !BF0_LCPU || !LCPU_CONFIG_V2
+    default y 
 
 config RT_USING_MAILBOX
     bool "Enable mailbox"

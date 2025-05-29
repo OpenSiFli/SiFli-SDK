@@ -3,8 +3,8 @@
 
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 
 ## 示例概述
 * 配置GPIO输出，输入中断操作，进行GPIO HAL函数演示
@@ -31,25 +31,25 @@ HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模
 
 |开发板    |OUT管脚 |OUT管脚名称|IN管脚 |IN管脚名称 |
 |:---     |:---    |:---      |:---   |:---      |
-|em-lb525 |5       |PA41      |3      |PA42      |
-|em-lb587 |5       |PB28      |3      |PB29      |
+|sf32lb52-lcd_n16r8 |5       |PA41      |3      |PA42      |
+|sf32lb58-lcd_n16r64n4 |5       |PB28      |3      |PB29      |
 
 * 更详细的引脚定义请参考\
-`[em-lb525]()`\
-`[em-lb587]()`
+`[sf32lb52-lcd_n16r8]()`\
+`[sf32lb58-lcd_n16r64n4]()`
 
 ### 编译和烧录
 #### SF525工程代码编译
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 
@@ -60,13 +60,13 @@ please input the serial port num:5
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb587 -j8
+scons --board=sf32lb58-lcd_n16r64n4 -j8
 ```
 
-运行`build_em-lb587_hcpu\download.bat`，程序通过JLink自动下载：
+运行`build_sf32lb58-lcd_n16r64n4_hcpu\download.bat`，程序通过JLink自动下载：
 
 ```
-build_em-lb587_hcpu\download.bat
+build_sf32lb58-lcd_n16r64n4_hcpu\download.bat
 ```
 
 
@@ -115,7 +115,7 @@ Pin_In 42, value = 0
 ## 例程说明
 
 ```{note}
-例程说明以em-lb525为例
+例程说明以sf32lb52-lcd_n16r8为例
 ```
 
 ### 宏定义

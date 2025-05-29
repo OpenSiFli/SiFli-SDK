@@ -89,7 +89,9 @@
     /* workaround large bin size produced by arm-none-eabi-gcc xpack version
     * see https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/discussions/23
     */
-    char __aeabi_unwind_cpp_pr0[0];
+    __WEAK int __aeabi_unwind_cpp_pr0(void) { return 0; }
+    __WEAK int __aeabi_unwind_cpp_pr1(void) { return 0; }
+    __WEAK int __aeabi_unwind_cpp_pr2(void) { return 0; }
 #endif
 
 /** @defgroup HAL_Exported_Variables HAL Exported Variables

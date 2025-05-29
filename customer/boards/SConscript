@@ -6,10 +6,19 @@ cwd  = GetCurrentDir()
 objs = []
 list = os.listdir(cwd)
 
-#include all subfolder
+# include all subfolder
 for d in list:
     path = os.path.join(cwd, d)
     if os.path.isfile(os.path.join(path, 'SConscript')):
         objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+
+# include board source files if not in SDK folder
+board_name = GetBoardName()
+if board_name:
+    board_path1, board_path2 = GetBoardPath(board_name)
+    curr_path = cwd.replace("\\", "/")
+    if curr_path not in board_path1:
+        objs = objs + SConscript(os.path.join(board_path1, 'SConscript'), variant_dir=board_name, duplicate=0)
 
 Return('objs')

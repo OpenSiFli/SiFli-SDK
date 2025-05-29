@@ -46,14 +46,14 @@ Blink工程包含了1个.c文件(main.c),下面的树状结构展示 了工程�
 
 ### 编译和烧录
 按照以下步骤，可以完成编译和烧录。
-```c
+```shell
 menuconfig --board=eh-lb523
 scons --board=eh-lb523 -j8
  .\build_eh-lb523\uart_download.bat
 ```
 ## 例程输出结果展示
 下面结果展示了例程在开发板运行起来后的log。如果看不到这些log，就说明例程没能按预期运行成功，需要进行原因排查。
-```c
+```
 Start example blink
 Turning the LED OFF
 Turning the LED ON
@@ -67,7 +67,7 @@ Turning the LED ON
  
  如果实现控制更多led，下面以在开发板 eh-lb523 增加第二led为例，展示了如何扩展例程：
  1.  修改kconfig文件 **"\siflisdk\customer\boards\Kconfig.v2"**，增加LED2 选项：BSP_USING_LED2;
- ```c
+ ```kconfig
  menuconfig BSP_USING_LED2
     bool "Use LED2"
     default n

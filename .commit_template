@@ -1,12 +1,8 @@
-[int|rel][bug|new|opt][module_name] one line description
-
-Project: SiFliSDK
+[bug|new|opt][module_name] one line description
 
 redmine: #id, REDMINE-id
 
 ext-redmine: #id, REDMINE-id
 
 [Description in detail]
-
-Affected branch: [main]
 

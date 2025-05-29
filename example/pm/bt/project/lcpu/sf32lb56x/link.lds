@@ -252,19 +252,31 @@ SECTIONS
     . = ALIGN(4);
     /* init data */
     _sinit = ABSOLUTE(.);
+    PROVIDE(__ctors_start__ = .);
     PROVIDE_HIDDEN (__init_array_start = .);
+    /* old GCC version uses .ctors */
+    KEEP(*(SORT(.ctors.*)))
+    KEEP(*(.ctors))
+    /* new GCC version uses .init_array */
     KEEP(*(SORT(.init_array.*)))
     KEEP(*(.init_array))
     _einit = ABSOLUTE(.);
     PROVIDE_HIDDEN (__init_array_end = .);
+    PROVIDE(__ctors_end__ = .);
 
 
     . = ALIGN(4);
     /* finit data */
+    PROVIDE(__dtors_start__ = .);
     PROVIDE_HIDDEN (__fini_array_start = .);
+    
+    KEEP(*(SORT(.dtors.*)))
+    KEEP(*(.dtors))
+
     KEEP(*(SORT(.fini_array.*)))
     KEEP(*(.fini_array))
     PROVIDE_HIDDEN (__fini_array_end = .);
+    PROVIDE(__dtors_end__ = .);
 
     KEEP(*(.jcr*))
     . = ALIGN(4);

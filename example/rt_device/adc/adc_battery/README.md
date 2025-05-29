@@ -2,7 +2,7 @@
 源码路径：example/rt_device/adc/adc_battery
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
+* sf32lb52-lcd_n16r8
 
 ## 概述
 * 在RT-Thread操作系统下，adc单路采样读取vbat电池电压
@@ -22,9 +22,9 @@
 SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参考宏`BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING`内定义和芯片用户手册
 * 如果缺失上面三个宏，就需要通过`menuconfig`如下命令进行打开  
 
-> menuconfig --board=em-lb525       525开发板
+> menuconfig --board=sf32lb52-lcd_n16r8       525开发板
 
-> menuconfig --board=em-lb52d       52d开发板
+> menuconfig --board=sf32lb52-lcd_52d       52d开发板
 
 
 如下图，选择GPADC1,保存并退出menuconfig，查看`rtconfig.h`宏是否生成
@@ -35,10 +35,10 @@ SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参
 scons --board=em_lb525 -j8
 ```
 
-* 运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+* 运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb52d_hcpu\uart_download.bat
+build_sf32lb52-lcd_52d_hcpu\uart_download.bat
 
 Uart Download
 

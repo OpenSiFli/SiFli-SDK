@@ -601,7 +601,7 @@ static bool get_next_refr_area(const lv_disp_t *disp, lv_area_t *area)
  */
 static void lv_refr_join_area(void)
 {
-    lv_coord_t update_rows = LV_FB_LINE_NUM;
+    lv_coord_t update_rows = (lv_coord_t) get_max_row(disp_refr, LV_HOR_RES_MAX, LV_FB_LINE_NUM);
     uint16_t  new_inv_p = 0;
     lv_area_t new_inv_areas[LV_INV_BUF_SIZE];
     lv_area_t refresh_area;
@@ -611,7 +611,7 @@ static void lv_refr_join_area(void)
     refresh_area.x1 = 0;
     refresh_area.x2 = LV_HOR_RES_MAX-1;
 
-    LV_ASSERT(update_rows <= LV_VER_RES_MAX);
+    LV_ASSERT((update_rows > 0)&&(update_rows <= LV_VER_RES_MAX));
     if(disp_refr->driver->rotated == LV_DISP_ROT_180)
     {
         refresh_area.y2 = LV_VER_RES_MAX - 1;

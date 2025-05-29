@@ -22,6 +22,19 @@
     #include <dlmodule.h>
 #endif
 
+#if defined(SF32LB58X) && defined(SOC_BF0_LCPU) && defined(LCPU_CONFIG_V2)
+
+extern struct rt_object_information rt_object_container_rom[];
+
+/* ROM implemented objects are saved in rom's rt_object_container, others use ram's rt_object_container */
+#define RT_OBJ_CONTAINER(type)                                               \
+    (((type)==RT_Object_Class_Thread) || ((type)==RT_Object_Class_Semaphore) \
+    || ((type)==RT_Object_Class_Mutex) || ((type)==RT_Object_Class_MemPool)  \
+    || ((type)==RT_Object_Class_Device) || ((type)==RT_Object_Class_Timer)) ? rt_object_container_rom : rt_object_container
+#else
+#define RT_OBJ_CONTAINER(type) rt_object_container
+#endif /* SF32LB58X && SOC_BF0_LCPU && LCPU_CONFIG_V2 */
+
 /*
  * define object_info for the number of rt_object_container items.
  */
@@ -223,9 +236,12 @@ __ROM_USED struct rt_object_information *
 rt_object_get_information(enum rt_object_class_type type)
 {
     int index;
+    struct rt_object_information *obj_info;
+
+    obj_info = RT_OBJ_CONTAINER(type);
 
     for (index = 0; index < RT_Object_Info_Unknown; index ++)
-        if (rt_object_container[index].type == type) return &rt_object_container[index];
+        if (obj_info[index].type == type) return &obj_info[index];
 
     return RT_NULL;
 }

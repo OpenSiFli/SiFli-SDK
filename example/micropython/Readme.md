@@ -1,4 +1,7 @@
 # micropython示例
+```{warning}
+未验证
+```
 @使用指南
     @介绍
         micropython应用会在板子flash上面验证mycropython的功能，文件系统采用FAT格式，在UART console可以调用常用的文件命令，如:

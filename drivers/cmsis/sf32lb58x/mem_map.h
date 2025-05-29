@@ -513,6 +513,14 @@
     #define EM_BUF_SIZE                                        (0x0000F000)
     #undef  EM_BUF_OFFSET
     #define EM_BUF_OFFSET                                      (0x000F0000)
+
+    #undef  LCPU2HCPU_MB_CH2_BUF_START_ADDR
+    #define LCPU2HCPU_MB_CH2_BUF_START_ADDR                    (0x204FEE00)
+    #undef  LCPU2HCPU_MB_CH2_BUF_SIZE
+    #define LCPU2HCPU_MB_CH2_BUF_SIZE                          (0x00000200)
+    #undef  LCPU2HCPU_MB_CH2_BUF_OFFSET
+    #define LCPU2HCPU_MB_CH2_BUF_OFFSET                        (0x000FEE00)
+
     #undef  LCPU_AUDIO_MEM_START_ADDR
     #define LCPU_AUDIO_MEM_START_ADDR                          (0x204FF000)
     #undef  LCPU_AUDIO_MEM_SIZE

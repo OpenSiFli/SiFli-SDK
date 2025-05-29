@@ -3,14 +3,14 @@
 源码路径：example\rt_device\pulse_encoder
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb587
+* sf32lb58-lcd_n16r64n4
 ## 概述
 * 脉冲编码器能够精确地测量旋转轴的位置。每转动一定角度，编码器就会生成一个脉冲信号。通过计算这些脉冲的数量，可以确定旋转轴的当前位置。
 * GPtimerd的encoder模式让外部脉冲编码器控制定时器的CNT增减示例
 
 ## 例程的使用
 ### 硬件需求
-运行该例程前，需要准备一块本例程支持的开发板（[支持的平台](#支持的平台)）
+运行该例程前，需要准备一块本例程支持的开发板
 
 
 ### menuconfig配置
@@ -21,12 +21,12 @@
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
 
-> scons --board=em-lb587 -j8
+> scons --board=sf32lb58-lcd_n16r64n4 -j8
 
 切换到例程`project/build_xx`目录，运行`download.bat`
 
 
-> build_em-lb587_hcpu\download.bat
+> build_sf32lb58-lcd_n16r64n4_hcpu\download.bat
 
 
 

@@ -871,6 +871,8 @@ uint32_t osThreadEnumerate(osThreadId_t *thread_array, uint32_t array_items)
 
 //  ==== Thread Flags Functions ====
 
+#ifdef RT_USING_EVENT
+
 /// Set the specified Thread Flags of a thread.
 /// \param[in]     thread_id     thread ID obtained by \ref osThreadNew or \ref osThreadGetId.
 /// \param[in]     flags         specifies the flags of the thread that shall be set.
@@ -1063,6 +1065,8 @@ uint32_t osThreadFlagsWait(uint32_t flags, uint32_t options, uint32_t timeout)
 
     return return_value;
 }
+#endif /* RT_USING_EVENT */
+
 
 //  ==== Generic Wait Functions ====
 

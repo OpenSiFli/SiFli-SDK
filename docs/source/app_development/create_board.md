@@ -1,8 +1,8 @@
 # 创建板子
-创建新板子最快捷的方法是基于一块硬件配置相近的板子修改，下面以板子em-lb525（即sf32lb52-devkit-lcd）为例，演示如何创建一块板子，新板子与em-lb525同样使用了SF32LB525芯片，外置了NOR Flash，因此选择em-lb525会是一个比较好的起点。
+创建新板子最快捷的方法是基于一块硬件配置相近的板子修改，下面以板子sf32lb52-lcd_n16r8（即sf32lb52-devkit-lcd）为例，演示如何创建一块板子，新板子与sf32lb52-lcd_n16r8同样使用了SF32LB525芯片，外置了NOR Flash，因此选择sf32lb52-lcd_n16r8会是一个比较好的起点。
 
 操作步骤如下：
-1. 在`boards`目录下创建文件夹`testboard_525`，将`em-lb525`下的文件拷贝到`testboard_525`下
+1. 在`boards`目录下创建文件夹`testboard_525`，将`sf32lb52-lcd_n16r8`下的文件拷贝到`testboard_525`下
 1. 在`boards`目录下创建文件夹`testboard_525_base`，将`sf32lb52-devkit-lcd`下的文件拷贝到`testboard_525_base`下
 1. 修改`testboard_525/SConscript`，把图中1和2的宏开关名字改为新板子，图中3引用的SConscript文件路径改为`testboard_525_base`
     ```{image} assets/create_board_sconscript.png

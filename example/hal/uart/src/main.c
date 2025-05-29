@@ -14,7 +14,7 @@
 
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH6_IRQHandler
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH5_IRQHandler
 #endif
 #define UART2_RX_DMA_RCC                 0
@@ -253,7 +253,7 @@ int main(void)
 #if defined(BSP_USING_BOARD_SF32LB52_LCD_N16R8)
     HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
-#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     HAL_PIN_Set(PAD_PA29, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
 #endif

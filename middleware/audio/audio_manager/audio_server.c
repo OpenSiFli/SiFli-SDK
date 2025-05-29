@@ -161,7 +161,7 @@ enum
 /*------------------   define ----------------------*/
 #define m_max(a, b)  ((a) > (b) ? (a ): (b))
 
-#if defined(SOFTWARE_TX_MIX_ENABLE) || defined(AUDIO_RX_USING_I2S)
+#if defined(SOFTWARE_TX_MIX_ENABLE) || defined(AUDIO_RX_USING_I2S) || defined(AUDIO_TX_USING_I2S)
     #define TX_DMA_SIZE         (CODEC_DATA_UNIT_LEN)
 #else
     #define TX_DMA_SIZE         (CODEC_DATA_UNIT_LEN * 5)
@@ -1109,7 +1109,10 @@ static void i2s_config(audio_device_speaker_t *my, bool is_tx)
 
     caps.main_type = AUDIO_TYPE_INPUT;
     caps.sub_type = AUDIO_DSP_MODE;
-    caps.udata.value = 1; //0 master mode, 1 slave mode
+    if (is_tx)
+        caps.udata.value = 0;   /*set 0, because i2s speaker use master mode */
+    else
+        caps.udata.value = 1;   //0 master mode, 1 slave mode
     if (RT_EOK != rt_device_control(my->i2s, AUDIO_CTL_CONFIGURE, &caps))
     {
         LOG_E("Fail to control i2s mode");
@@ -1324,14 +1327,25 @@ static void start_txrx(audio_device_speaker_t *my)
 {
     int stream;
 #if defined(AUDIO_RX_USING_PDM)
+    //7 DAC start
+    stream = AUDIO_STREAM_REPLAY | ((1 << HAL_AUDPRC_TX_CH0) << 8);
+    rt_device_control(my->audprc_dev, AUDIO_CTL_START, (void *)&stream);
+    stream = AUDIO_STREAM_REPLAY | ((1 << HAL_AUDCODEC_DAC_CH0) << 8);
+    rt_device_control(my->audcodec_dev, AUDIO_CTL_START, &stream);
+    my->opened_map_flag |= OPEN_MAP_TX;
+    my->tx_ready = 1;
+#if START_RX_IN_TX_INTERUPT
+    //wait rx start
+    rt_err_t got = rt_event_recv(my->event, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, 1000, NULL) ;
+    LOG_I("got rx start %d", got);
+#else
     if (my->need_pdm_rx)
     {
         my->need_pdm_rx = 0;
         stream = AUDIO_STREAM_PDM_START;
         rt_device_control(my->pdm, AUDIO_CTL_START, &stream);
-        my->opened_map_flag |= OPEN_MAP_TX;
-        my->tx_ready = 1;
     }
+#endif
 #elif defined(AUDIO_RX_USING_I2S)
     if (my->need_i2s_rx)
     {
@@ -1623,6 +1637,9 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
         LOG_I("codec START stream=0x%x", stream);
         rt_device_control(my->audcodec_dev, AUDIO_CTL_START, &stream);
         rt_thread_mdelay(10);
+#else
+        stream  = AUDIO_STREAM_REPLAY;
+        rt_device_control(my->i2s, AUDIO_CTL_START, &stream);
 #endif
         my->opened_map_flag |= OPEN_MAP_TX;
         my->tx_ready = 1;
@@ -3650,9 +3667,9 @@ put_raw:
         for (uint32_t i = 0; i + 1 < samples; i += 2)
         {
             left = p[i];
-            right = p[i+1];
+            right = p[i + 1];
             p[i] = (left >> 1) + (right >> 1);
-            p[i+1] = p[i];
+            p[i + 1] = p[i];
         }
     }
 #endif

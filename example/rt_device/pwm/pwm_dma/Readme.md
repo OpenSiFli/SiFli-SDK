@@ -3,21 +3,20 @@
 源码路径：example\rt_device\pwm
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb525
-* em-lb587
+* sf32lb52-lcd_n16r8
+* sf32lb58-lcd_n16r64n4
 ## 概述
 * 包含了Gtime,Atime使用pwm+dma功能通过IO口输出PWM波形的示例
 
 
 ## 例程的使用
 ### 硬件需求
-运行该例程前，需要准备一块本例程支持的开发板（[支持的平台](#支持的平台)）
-
+运行该例程前，需要准备一块本例程支持的开发板
 
 ### menuconfig配置
-em-lb525的menuconfig配置
+sf32lb52-lcd_n16r8的menuconfig配置
 ![Enable timer:](./assets/menuconfig_52x.png)
-em-lb587的menuconfig配置
+sf32lb58-lcd_n16r64n4的menuconfig配置
 ![Enable timer:](./assets/menuconfig_58x.png)
 **注意**: pwm设置已经是设置TIM配置，注意检查Enable timer配置是否造成冲突
 ![Enable timer:](./assets/menuconfig_rgb3.png)
@@ -29,13 +28,13 @@ em-lb587的menuconfig配置
 切换到例程project目录，运行scons命令执行编译：
 
 ```
-scons --board=em-lb525 -j8
+scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-运行`build_em-lb525_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
+运行`build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`，按提示选择端口即可进行下载：
 
 ```
-build_em-lb525_hcpu\uart_download.bat
+build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
 Uart Download
 
