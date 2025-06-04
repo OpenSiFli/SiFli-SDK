@@ -5,38 +5,60 @@ Apple 通知中心服务（ANCS）是 IOS 设备中的 GATT 服务。 该服务�
 本地设备充当附件，称为通知消费者（NC）。
 
 NP有3个特点：
-	- 通知来源
-		NC 启用 CCCD 后，通知源特性将发送带有 categoryID 和计数的通知。
-		![](/assets/formatOfGATTNotifications_2x.png) 通知数据格式
-			- 事件 ID 通知 NC 是否添加、修改或删除通知。
-			- EventFlags 通知通知的特殊性。 NC 可以决定是通知用户还是只是过滤。
-			- CategoryID 通知通知的类别，如来电、新闻或消息。
-			- CategoryCount 通知通知中心中存在的通知计数。
-			- NotificationUID 是用于标识类别的 32 位 ID。
-			
-	- 控制点和数据源
-	
-		NC 可以向控制点写入命令以与 NP 交互以获取详细信息或执行操作。 有3个命令：
-			- 获取通知属性。 此命令允许 NC 从 Notification 检索通知的模式详细信息。
-					![](/assets/formatOfAGetNotificationAttributesCommand_2x.png) 获取通知属性命令格式
-				- CommandID 应设置为 0
-				- NotificationUID 来自通知源的通知。
-				- AttributeIDs是NC想要获取更多详细信息的通知属性。
-					![](/assets/formatOfAResponseToAGetNotificationAttributesCommand_2x.png) 获取通知属性命令的响应格式
-				- CommandID、Notification UID、Attribute_ID 都与 get Notification Attributes 命令相同。
-				- 属性长度和属性是与属性ID 相关联的长度和数据。 数据包括详细信息。
-			- 获取APP属性。 该命令允许 NC 检索已安装 APP 的详细信息。
-				![](/assets/formatOfAGetAppAttributesCommand_2x.png) 获取APP属性命令格式
-					- CommandID 应设置为 1
-					- APP Identifier 是从通知 APP_ID 属性中获取的字符串 ID。 表示在IOS中注册的APP ID。
-					- APP AttributeIDs是NC想要获取更多详细信息的APP属性。
-				![](/assets/formatOfAResponseToAGetAppAttributesCommand_2x.png) 获取APP属性命令的响应格式
-					- CommandID、APP Identifier 与 get APP Attributes 命令相同。
-					- 属性长度和属性是与属性ID 相关联的长度和数据。 数据包括详细信息。 
-			- 执行通知操作。 此命令允许 NC 对特定 IOS 通知执行预定操作。 有两个动作：
-				1. 积极行动
-				2. 消极行动
-			IOS 会根据动作执行行为，但UI 行为取决于IOS 和通知。 例如，如果通知是来电，则积极动作可能会接听它，而消极动作可能会拒绝它。 但行为可能会在其他通知中改变。
+
+- 1. 通知来源
+
+    NC 启用 CCCD 后，通知源特性将发送带有 categoryID 和计数的通知。
+    	![通知数据格式](../../assets/formatOfGATTNotifications_2x.png)
+    事件 ID 通知 NC 是否添加、修改或删除通知。
+
+    - EventFlags 通知通知的特殊性。 NC 可以决定是通知用户还是只是过滤。
+    - CategoryID 通知通知的类别，如来电、新闻或消息。
+    - CategoryCount 通知通知中心中存在的通知计数。
+    - NotificationUID 是用于标识类别的 32 位 ID。
+
+
+- 2. 控制点和数据源
+
+  NC 可以向控制点写入命令以与 NP 交互以获取详细信息或执行操作。 有3个命令：
+
+  - 获取通知属性。 此命令允许 NC 从 Notification 检索通知的模式详细信息。![获取通知属性命令格式](../../assets/formatOfAGetNotificationAttributesCommand_2x.png)
+
+  - - CommandID 应设置为 0
+       - NotificationUID 来自通知源的通知。
+       - AttributeIDs是NC想要获取更多详细信息的通知属性。
+
+       
+       ![获取通知-属性命令的响应格式](../../assets/formatOfAResponseToAGetNotificationAttributesCommand_2x.png) 
+
+       - CommandID、Notification UID、Attribute_ID 都与 get Notification Attributes 命令相同。
+       - 属性长度和属性是与属性ID 相关联的长度和数据。 数据包括详细信息。
+
+       - 获取APP属性。 该命令允许 NC 检索已安装 APP 的详细信息。
+         ![获取APP属性命令格式](../../assets/formatOfAGetAppAttributesCommand_2x.png) 
+
+       - CommandID 应设置为 1
+
+       - APP Identifier 是从通知 APP_ID 属性中获取的字符串 ID。 表示在IOS中注册的APP ID。
+
+       - APP AttributeIDs是NC想要获取更多详细信息的APP属性。
+         ![获取APP属性命令的响应格式](../../assets/formatOfAResponseToAGetAppAttributesCommand_2x.png) 
+
+       - CommandID、APP Identifier 与 get APP Attributes 命令相同。
+
+       - 属性长度和属性是与属性ID 相关联的长度和数据。 数据包括详细信息。
+
+         
+
+- 3. 执行通知操作 。 
+     此命令允许 NC 对特定 IOS 通知执行预定操作。 有两个动作：
+
+     - 1. 积极行动
+
+     - 2. 消极行动
+
+     ​    IOS 会根据动作执行行为，但UI 行为取决于IOS 和通知。 例如，如果通知是来电，则积极动作可能会接听它，而消极动作可能会拒绝它。 但行为可能会在其他通知中改变。
+
 
 ## 实施 ANCS NC
 
@@ -122,3 +144,5 @@ int app_ancs_event_handler(uint16_t event_id, uint8_t *data, uint16_t len, uint3
 
 // Reigster event to listen ancs events.
 BLE_EVENT_REGISTER(app_ancs_event_handler, NULL);
+
+```

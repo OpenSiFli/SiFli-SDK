@@ -9,7 +9,7 @@
 尚未使用配置特性。
 
 数据特性用于传输串行数据。 其数据格式为：
-![](/assets/ble_serail_data.png)
+![](../../assets/ble_serail_data.png)
 	- CateID, is categoryID for differernt users.
 	- Flag, is for fragmentation.
 		- 0x00: Completed packet.

@@ -13,7 +13,7 @@
 - 属性值，是属性的数据。
 - 属性权限，指示属性是否可以读取或写入。
 
-![](/assets/att_format.png)
+![](../../assets/att_format.png)
 
 基于属性，服务框架层次结构为：配置文件、服务、包含服务和特征。 
 - 配置文件是由一个或多个服务组成的高级概念。 它定义了访问服务的行为。
@@ -21,12 +21,12 @@
 - 包含服务是指服务器上存在的其他服务定义。
 - 特征描述详细数据格式和行为。 它包含特征声明、特征值和特征描述符。
 
-![](/assets/gatt_hierarchy.png)
+![](../../assets/gatt_hierarchy.png)
 
 以下是电池服务的示例。 电池服务是通知客户电池更换。 因此，该服务具有具有可读性和通知属性的电池电量特性。
 客户端可以编写客户端特征配置描述符（CCCD）以启用通知。 然后电池服务将通知电池电量。
 
-![](/assets/att_example.png)
+![](../../assets/att_example.png)
 
 
 
@@ -186,16 +186,16 @@ void ble_bass_init(ble_bass_callback callback, uint8_t battery_lvl)
 
 - 立即阅读回复
 
-![](/assets/gatt_read_response_realtime.png)
+![](../../assets/gatt_read_response_realtime.png)
 
 - 读取响应预设
 
-![](/assets/gatt_read_response_preset.png)
+![](../../assets/gatt_read_response_preset.png)
 
 - 写回复
 
-![](/assets/gatt_write.png)
+![](../../assets/gatt_write.png)
 
 - 指示
 
-![](/assets/gatt_indication.png)
+![](../../assets/gatt_indication.png)
