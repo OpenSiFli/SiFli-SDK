@@ -54,6 +54,10 @@ if RT_USING_DFS
             bool "Using RT_DFS_ELM_WORD_ACCESS"
             default y
 
+        config RT_DFS_ELM_USE_EXFAT
+            bool "Add support for exFAT"
+            default y
+
         choice
             prompt "Support long file name"
             default RT_DFS_ELM_USE_LFN_3
