@@ -1,4 +1,4 @@
-# BT/BLE  uart收发HCI示例
+# btstack 示例
 
 源码路径：example/bt/btstack/src
 
