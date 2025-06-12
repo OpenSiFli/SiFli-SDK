@@ -1,0 +1,55 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+Import('SIFLI_SDK')
+from building import *
+import os
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+CPPPATH = [cwd]
+
+BTSTACK_ROOT = os.path.join(SIFLI_SDK, 'external/libbtstack')
+
+CPPPATH += [f"{BTSTACK_ROOT}/3rd-party/micro-ecc",
+            f"{BTSTACK_ROOT}/3rd-party/bluedroid/decoder/include",
+            f"{BTSTACK_ROOT}/3rd-party/bluedroid/encoder/include",
+            f"{BTSTACK_ROOT}/3rd-party/lc3-google/include",
+            f"{BTSTACK_ROOT}/3rd-party/md5",
+            f"{BTSTACK_ROOT}/3rd-party/hxcmod-player",
+            f"{BTSTACK_ROOT}/3rd-party/hxcmod-player/mod",
+            f"{BTSTACK_ROOT}/3rd-party/rijndael",
+            f"{BTSTACK_ROOT}/3rd-party/yxml",
+            f"{BTSTACK_ROOT}/3rd-party/tinydir",
+            f"{BTSTACK_ROOT}/src",
+            f"{BTSTACK_ROOT}/platform/embedded"]
+
+SOURCES_SRC        = Glob(f"{BTSTACK_ROOT}/src/*.c" )
+SOURCES_BLE        = Glob(f"{BTSTACK_ROOT}/src/ble/*.c")
+SOURCES_BLUEDROID  = Glob(f"{BTSTACK_ROOT}/3rd-party/bluedroid/encoder/srce/*.c")
+SOURCES_BLUEDROID += Glob(f"{BTSTACK_ROOT}/3rd-party/bluedroid/decoder/srce/*.c")
+SOURCES_CLASSIC    = Glob(f"{BTSTACK_ROOT}/src/classic/*.c")
+SOURCES_CLASSIC   += Glob(f"{BTSTACK_ROOT}/example/sco_demo_util.c")
+SOURCES_MESH       = Glob(f"{BTSTACK_ROOT}/src/mesh/*.c")
+SOURCES_GATT       = Glob(f"{BTSTACK_ROOT}/src/ble/gatt-service/*.c")
+SOURCES_UECC       = Glob(f"{BTSTACK_ROOT}/3rd-party/micro-ecc/uECC.c")#ecc
+SOURCES_RIJNDAEL   = Glob(f"{BTSTACK_ROOT}/3rd-party/rijndael/rijndael.c")#btstack_crypto.c aes
+SOURCES_LC3_GOOGLE = Glob(f"{BTSTACK_ROOT}/3rd-party/lc3-google/src/*.c")
+SOURCES_HCI_STDOUT = Glob(f"{BTSTACK_ROOT}/platform/embedded/hci_dump_embedded_stdout.c")
+
+#f"{BTSTACK_ROOT}/src/ble/le_device_db_memory.c"
+
+src += SOURCES_BLE
+src += SOURCES_BLUEDROID
+src += SOURCES_CLASSIC
+src += SOURCES_GATT
+src += SOURCES_MESH
+src += SOURCES_RIJNDAEL
+src += SOURCES_SRC
+src += SOURCES_UECC
+#src += SOURCES_HCI_STDOUT
+
+
+group = DefineGroup('libbtstack', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

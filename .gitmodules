@@ -1,3 +1,6 @@
 [submodule "middleware/bluetooth"]
 	path = middleware/bluetooth
 	url = ../SiFli-Bluetooth.git
+[submodule "external/libbtstack"]
+	path = external/libbtstack
+	url = https://github.com/bluekitchen/btstack.git

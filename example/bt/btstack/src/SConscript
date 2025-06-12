@@ -1,0 +1,20 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+Import('SIFLI_SDK')
+from building import *
+import os
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+CPPPATH = [cwd]
+
+BTSTACK_ROOT = os.path.join(SIFLI_SDK, 'external/libbtstack')
+
+src.extend(SConscript(os.path.join(cwd, 'port/SConscript'), variant_dir="libbtstack", duplicate=0))
+
+src += Glob(f"{BTSTACK_ROOT}/example/a2dp_sink_demo.c")
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')
