@@ -23,6 +23,9 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive
 
 include:
+  # 动态构建系统 - 运行时动态生成子Pipeline
   - local: '.gitlab/ci/build_sdk.yml'
+  
+  # 其他配置保持不变
   - local: '.gitlab/ci/sync_to_github.yml'
   - local: '.gitlab/ci/mirror_to_external.yml'

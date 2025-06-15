@@ -3689,6 +3689,7 @@ HAL_StatusTypeDef HAL_EPIC_Init(EPIC_HandleTypeDef *epic)
         epic->RamLTabSize[i] = 0;
     }
 #endif /* EPIC_SUPPORT_L8 */
+    EPIC_InitRamInstance(epic);
 
 #ifndef SF32LB55X
     HAL_RCC_EnableModule(RCC_MOD_EPIC);

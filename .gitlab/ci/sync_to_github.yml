@@ -1,13 +1,11 @@
 sync_to_github:
   stage: sync_to_github
-  image: ubuntu:22.04
+  image: $CI_DOCKER_BASE_REGISTRY:latest
   tags:
     - docker
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
-    # 安装必要的依赖
-    - apt-get update && apt-get install -y git openssh-client curl jq
     # 启动SSH Agent
     - eval $(ssh-agent -s)
     # 添加SSH私钥（base64编码格式）
@@ -20,20 +18,23 @@ sync_to_github:
     # 配置Git用户信息
     - git config --global user.name "$GIT_CI_USER_NAME"
     - git config --global user.email "$GIT_CI_USER_EMAIL"
+    - |
+      gh_token=$(gh-token generate \
+          --base64-key "$GITHUB_APPS_PRIVATE_KEY" \
+          --app-id $GITHUB_APPS_ID \
+          --installation-id $GITHUB_APPS_INSTALLATION_ID \
+          | jq -r ".token")
+    - gh auth login --with-token <<< "$gh_token"
   script:
     - |
-      # 添加GitHub远程仓库（使用SSH）
       git remote add github git@github.com:${GITHUB_REPO}.git || git remote set-url github git@github.com:${GITHUB_REPO}.git
       
-      # 获取当前分支名
       export CURRENT_BRANCH=${CI_COMMIT_REF_NAME}
       echo "Current branch: $CURRENT_BRANCH"
       
-      # 获取远程仓库最新信息
       echo "Fetching remote repository info..."
       git fetch github
       
-      # 推送到GitHub
       echo "Starting sync to GitHub..."
       git push github "HEAD:$CURRENT_BRANCH" --force-with-lease
       
@@ -45,19 +46,12 @@ sync_to_github:
     - |
       # 触发GitHub Action
       echo "Triggering GitHub Action merge_prs workflow..."
-      RESPONSE=$(curl -L \
-        -X POST \
-        -H "Accept: application/vnd.github+json" \
-        -H "Authorization: Bearer $GITHUB_APP_TOKEN" \
-        -H "X-GitHub-Api-Version: 2022-11-28" \
-        https://api.github.com/repos/OpenSiFli/SiFli-SDK/actions/workflows/merge_prs.yml/dispatches \
-        -d '{"ref":"'$CURRENT_BRANCH'"}')
+      #gh workflow run merge_prs.yml --repo ${GITHUB_REPO} --ref "$CURRENT_BRANCH"
       
       if [ $? -eq 0 ]; then
         echo "✅ GitHub Action triggered successfully"
       else
         echo "❌ Failed to trigger GitHub Action"
-        echo "Response: $RESPONSE"
         exit 1
       fi
 

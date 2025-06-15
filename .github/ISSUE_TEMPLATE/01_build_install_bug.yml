@@ -1,0 +1,80 @@
+name: Installation or build bug report
+description: Report installation or build bugs
+labels: ['Type: Bug']
+body:
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Answers checklist.
+      description: Before submitting a new issue, please follow the checklist and try to find the answer.
+      options:
+        - label: I have read the documentation [SiFli-SDK Programming Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/index.html) and the issue is not addressed there.
+          required: true
+        - label: I have updated my SiFli-SDK branch (main or release) to the latest version and checked that the issue is present there.
+          required: true
+        - label: I have searched the issue tracker for a similar issue and not found a similar issue.
+          required: true
+  - type: input
+    id: sdk_version
+    attributes:
+      label: SiFli-SDK version.
+      description: On which SDK version does this issue occur on? Run `git describe --tags` to find it.
+      placeholder: ex. v2.4-5-g8167000f
+    validations:
+      required: true
+  - type: dropdown
+    id: operating_system
+    attributes:
+      label: Operating System used.
+      multiple: false
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What is the expected behavior?
+      description: Please provide a clear and concise description of the expected behavior.
+      placeholder: I expected it to...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What is the actual behavior?
+      description: Please describe actual behavior.
+      placeholder: Instead it...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce.
+      description: 'How did the issue occur? Please provide a detailed step-by-step description. If this is a build issue, please attach your minimal reproducible project.'
+      value: |
+        1. Step
+        2. Step
+        3. Step
+        ...
+    validations:
+      required: true
+  - type: textarea
+    id: debug_logs
+    attributes:
+      label: Build or installation Logs.
+      description: Build or installation log goes here, should contain the backtrace, as well as the reset source if it is a crash.
+      placeholder: Your log goes here.
+      render: plain
+    validations:
+      required: false
+  - type: textarea
+    id: more-info
+    attributes:
+      label: More Information.
+      description: Do you have any other information from investigating this?
+      placeholder: ex. I tried on my friend's Windows 10 PC and the command works there.
+    validations:
+      required: false

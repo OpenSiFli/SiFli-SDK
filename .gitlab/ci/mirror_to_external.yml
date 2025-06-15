@@ -1,13 +1,11 @@
-# 将GitLab仓库镜像推送到外部仓库
 mirror_to_external:
   stage: mirror
-  image: ubuntu:22.04
+  image: $CI_DOCKER_BASE_REGISTRY:latest
   tags:
     - docker
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
   before_script:
-    - apt-get update && apt-get install -y git openssh-client
     # 设置SSH配置和私钥
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
@@ -28,6 +26,8 @@ mirror_to_external:
 
     - echo "推送完成"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "api" && $MIRROR_EXTERNAL == "true"'
+    - if: '$CI_PIPELINE_SOURCE == "api" && $MIRROR_EXTERNAL'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web" && $MIRROR_EXTERNAL'
       when: always
     - when: never

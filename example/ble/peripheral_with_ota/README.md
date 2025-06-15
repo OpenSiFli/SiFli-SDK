@@ -59,7 +59,7 @@ DFU_DOWNLOAD_REGION是存放下载文件的空间，需要预留一次升级所�
 ![boot1](./assets/bootloader1.png)
  
 
-同时main.c的void dfu_boot_img_in_flash（int flashid）中两个2 * CODE_MAX判断，需要改为4 * CORE_MAX
+同时main.c的void dfu_boot_img_in_flash（int flashid）中两处检查core id的地方，都要或上CORE_LCPU
 ![boot2](./assets/bootloader2.png)
 
 

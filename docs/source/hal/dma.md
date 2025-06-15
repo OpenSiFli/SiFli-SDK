@@ -13,12 +13,13 @@ DMA 有2个一个在HCPU,一个在LCPU, 分别都支持内存-内存，内存-�
  - 支持循环缓冲模式，单次传输完成后自动重新启动
  - 每个通道支持3种事件标志-传输完成，过半传输，传输出错，并能各自独立产生中断请求
  - 单次配置最大传输单元数为65536，每单元根据不同配置分别为单字节/双字节/4字节传输
+```{only} SF32LB55X or SF32LB56X or SF32LB58X
  - 单次配置传输地址范围限制在1M字节以内，即传输过程中源地址和目标地址均不可越过1M字节边界(地址的bit31-bit20不可改变)
-
+```
 
 ## DMAC对应的外设request id
 
-|req_sel		|55x DMAC1			|55x DMAC2			|58x DMAC1			|58x DMAC2			|58x DMAC3			|56x DMAC1			|56x DMAC2			|54x DMAC1			|54x DMAC2			|
+|req_sel		|55x DMAC1			|55x DMAC2			|58x DMAC1			|58x DMAC2			|58x DMAC3			|56x DMAC1			|56x DMAC2			|52x DMAC1			|52x DMAC2			|
 |---------------|-------------------|-------------------|-------------------|-------------------|-------------------|-------------------|-------------------|-------------------|-------------------|
 |0			|qspi1			|usart3_tx			|mpi1			|i2s1_tx			|usart4_tx			|mpi1			|usart4_tx			|mpi1			|usart4_tx|
 |1			|qspi2			|usart3_rx			|mpi2/i2c4			|i2s1_rx			|usart4_rx			|mpi2			|usart4_rx			|mpi2			|usart4_rx|

@@ -1,6 +1,12 @@
 if BSP_USING_LCD
+
+config BSP_USING_BUILTIN_LCD
+    bool "Built-in LCD module driver"
+    default y
+
+if BSP_USING_BUILTIN_LCD
     choice
-        prompt "Select LCD"
+        prompt "Built-in LCD module driver"
         default LCD_USING_ED_LB55DSI17801
 
 
@@ -362,13 +368,8 @@ if BSP_USING_LCD
             select BSP_LCDC_USING_QADSPI
             select LCD_USING_PWM_AS_BACKLIGHT
         
-        config LCD_USING_EDP_OPM060E9_V10
-            bool "6.0 rect electronic paper display(EPD OPM060E9_V1.0 1448x1072)"
-            select TSC_USING_FT5446U if BSP_USING_TOUCHD
-            select LCD_USING_OPM060E9_V10
-            select BSP_LCDC_USING_EPD_8BIT
 
-        config LCD_USING_EDP_YZC052_V105
+        config LCD_USING_EPD_YZC052_V105
             bool "6.0 rect electronic paper display(EPD YZC052_V1.05 1032x758)"
             select TSC_USING_FT5446U if BSP_USING_TOUCHD
             select LCD_USING_OPM060E9_V10
@@ -520,8 +521,7 @@ if BSP_USING_LCD
         default 720 if LCD_USING_TFT_NV3052C
         default 390 if LCD_USING_TFT_CO5300
         default 780 if LCD_USING_TFT_CO5300_DUAL
-        default 1448 if LCD_USING_EDP_OPM060E9_V10
-        default 1032 if LCD_USING_EDP_YZC052_V105
+        default 1032 if LCD_USING_EPD_YZC052_V105
         default 410 if AM196Q410502LK_196_410x502
         default 368 if AM178Q368448LK_178_368x448
         default 466 if AM151Q466466LK_151_466x466_C
@@ -572,8 +572,7 @@ if BSP_USING_LCD
         default 720 if LCD_USING_TFT_NV3052C
         default 450 if LCD_USING_TFT_CO5300
         default 450 if LCD_USING_TFT_CO5300_DUAL
-        default 1072 if LCD_USING_EDP_OPM060E9_V10
-        default 758 if LCD_USING_EDP_YZC052_V105
+        default 758 if LCD_USING_EPD_YZC052_V105
         default 502 if AM196Q410502LK_196_410x502
         default 448 if AM178Q368448LK_178_368x448
         default 466 if AM151Q466466LK_151_466x466_C
@@ -623,8 +622,7 @@ if BSP_USING_LCD
         default 315 if LCD_USING_TFT_NV3052C
         default 300 if LCD_USING_TFT_CO5300
         default 300 if LCD_USING_TFT_CO5300_DUAL
-        default 300 if LCD_USING_EDP_OPM060E9_V10
-        default 212 if LCD_USING_EDP_YZC052_V105
+        default 212 if LCD_USING_EPD_YZC052_V105
         default 300 if AM196Q410502LK_196_410x502
         default 300 if AM178Q368448LK_178_368x448
         default 300 if AM151Q466466LK_151_466x466_C
@@ -634,7 +632,7 @@ if BSP_USING_LCD
         default 300 if H0198S005AMT005_V0_195_410x502
         default 213 if LCD_USING_GC9107_128x128_SPI
 
-        
+endif
 
 
     config BSP_USING_LCD_FRAMEBUFFER

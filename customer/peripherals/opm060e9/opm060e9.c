@@ -109,11 +109,8 @@ static void LCD_Init(LCDC_HandleTypeDef *hlcdc)
     HAL_LCDC_Init(hlcdc);
 
     //Initialize power supply chip
-#ifdef LCD_USING_EDP_YZC052_V105
     oedtps_init(1050);
-#else
-    oedtps_init(2100);
-#endif
+
 
     hlcdc->Instance->LAYER0_CONFIG = (4   << LCD_IF_LAYER0_CONFIG_FORMAT_Pos) |       //RGB332
                                      (1   << LCD_IF_LAYER0_CONFIG_ALPHA_SEL_Pos) |     // use layer alpha

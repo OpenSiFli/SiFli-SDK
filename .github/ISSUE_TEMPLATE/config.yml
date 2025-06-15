@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: SiFli-SDK Programming Guide
+    url: https://docs.sifli.com/projects/sdk/latest/sf32lb52x/index.html
+    about: Documentation for configuring and using SiFli-SDK
+  - name: SiFli wiki
+    url: https://wiki.sifli.com/index.html
+    about: General information about SiFli, Includes hardware design documentation and manuals, as well as some application notes.
+  - name: BBS
+    url: https://bbs.sifli.com
+    about: SiFli Forum, where you can ask questions or share your experiences.

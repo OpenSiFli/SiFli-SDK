@@ -97,12 +97,12 @@ void dfu_boot_img_in_flash(int flashid)
         if (sifli_sigkey_pub_verify(sec_config->sig_pub_key, DFU_SIG_KEY_SIZE))
             sifli_secboot_exception(SECBOOT_SIGKEY_PUB_ERR);
 
-        if (coreid < 4 * CORE_MAX)
+        if (coreid < 2 * CORE_MAX)
         {
             coreid %= CORE_MAX;
             // Read Root key
             boot_efuse_init_stage2();
-            if (coreid == CORE_HCPU || coreid == CORE_BL)
+            if (coreid == CORE_HCPU || coreid == CORE_BL || coreid == CORE_LCPU)
             {
                 ALIGN(4)
                 static uint8_t dfu_key[DFU_KEY_SIZE];
@@ -137,10 +137,10 @@ void dfu_boot_img_in_flash(int flashid)
             }
         }
     }
-    if (coreid < 4 * CORE_MAX)
+    if (coreid < 2 * CORE_MAX)
     {
         coreid %= CORE_MAX;
-        if (coreid == CORE_HCPU || coreid == CORE_BL)
+        if (coreid == CORE_HCPU || coreid == CORE_BL || coreid == CORE_LCPU)
         {
             if (is_addr_in_nor(dest))
                 HAL_FLASH_ALIAS_CFG(boot_handle, dest, img_hdr->length, src - dest);
@@ -184,7 +184,7 @@ void boot_images_help()
             if ((HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE) == DFU_FORCE_MODE_REBOOT_TO_PACKAGE_OTA_MANAGER) ||
                     (info.magic == SEC_CONFIG_MAGIC) && (info.install_state == DFU_PACKAGE_INSTALL))
             {
-                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)]);
+                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
             }
         }
 

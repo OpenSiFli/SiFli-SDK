@@ -689,7 +689,7 @@ def GenFtabCFile(src, output_name, imgs_info):
     finally:
         f.close()
 
-        # Get binary image size
+    # Get binary image size
     img_size = {}
     for img in imgs_info:
         img_name = img['name']
@@ -750,6 +750,10 @@ def GenFtabCFile(src, output_name, imgs_info):
     elif 'bootloader' in ftab:
         bootloader_needed = True
     # assert 'main' in ftab, "main not configured"
+    if 'dfu' in img_size:
+        dfu_present = True
+    else:
+        dfu_present = False
 
     InitIndentation()
     s = ''
@@ -773,6 +777,11 @@ def GenFtabCFile(src, output_name, imgs_info):
         '.ftab[0] = {.base = FLASH_TABLE_START_ADDR,      .size = FLASH_TABLE_SIZE,      .xip_base = 0, .flags = 0},')
     s += MakeLine(
         '.ftab[1] = {.base = FLASH_CAL_TABLE_START_ADDR,  .size = FLASH_CAL_TABLE_SIZE,  .xip_base = 0, .flags = 0},')
+    
+    if dfu_present:
+        s += MakeLine('.ftab[2] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
+            ftab['dfu']['base'], ftab['dfu']['max_size'], ftab['dfu']['xip']))
+
     if bootloader_needed:
         s += MakeLine('.ftab[3] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
             ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
@@ -807,7 +816,11 @@ def GenFtabCFile(src, output_name, imgs_info):
     s += MakeLine(
         '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
             size))
-    s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)] = {.length = 0xFFFFFFFF},')
+    if dfu_present:
+        s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
+            img_size['dfu'][0]['size']))
+    else:
+        s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)] = {.length = 0xFFFFFFFF},')
     if bootloader_needed:
         s += MakeLine(
             '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
@@ -825,7 +838,7 @@ def GenFtabCFile(src, output_name, imgs_info):
     ex_region_names = ['DFU_FLASH_HCPU_EXT2', 'DFU_FLASH_LCPU_EXT1', 'DFU_FLASH_LCPU_EXT2']
     ex_region_idx = 0
     for k, v in ftab.items():
-        if (k != 'main') and (k != 'bootloader'):
+        if (k != 'main') and (k != 'bootloader') and (k != 'dfu') :
             ftab_item = v
             if 'img' in ftab_item:
                 assert 'base' in ftab_item, 'base of {} is not defined'.format(k)
@@ -856,7 +869,14 @@ def GenFtabCFile(src, output_name, imgs_info):
             '*)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)]),')
     else:
         s += MakeLine('.running_imgs[CORE_HCPU] = (struct image_header_enc *)0xFFFFFFFF,')
-    s += MakeLine('.running_imgs[CORE_LCPU] = (struct image_header_enc *)0xFFFFFFFF,')
+
+    if dfu_present:
+        s += MakeLine(
+            '.running_imgs[CORE_LCPU] = (struct image_header_enc *)&(((struct sec_configuration '
+            '*)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]),')
+    else:
+        s += MakeLine('.running_imgs[CORE_LCPU] = (struct image_header_enc *)0xFFFFFFFF,')
+
     if bootloader_needed:
         s += MakeLine(
             '.running_imgs[CORE_BL] = (struct image_header_enc *)&(((struct sec_configuration '
