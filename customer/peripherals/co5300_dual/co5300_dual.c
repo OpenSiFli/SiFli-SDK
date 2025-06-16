@@ -73,7 +73,7 @@
 #define REG_VCOM_SET           0xBB
 #define REG_LCM_CTRL           0xC0
 #define REG_SET_TIME_SRC       0xC2
-#define REG_SET_DISP_MODE      0xC4
+#define REG_SET_SPI_MODE       0xC4
 #define REG_VCOMH_OFFSET_SET   0xC5
 #define REG_FR_CTRL            0xC6
 #define REG_POWER_CTRL         0xD0
@@ -228,7 +228,7 @@ static void LCD_Drv_Init(LCDC_HandleTypeDef *hlcdc)
     parameter[0] = 0x00;
     LCD_WriteReg(hlcdc, REG_CMD_PAGE_SWITCH, parameter, 1);
     parameter[0] = 0x80;
-    LCD_WriteReg(hlcdc, REG_SET_DISP_MODE, parameter, 1);
+    LCD_WriteReg(hlcdc, REG_SET_SPI_MODE, parameter, 1);
     parameter[0] = 0x55;
     LCD_WriteReg(hlcdc, REG_COLOR_MODE, parameter, 1);
     parameter[0] = 0x00;
