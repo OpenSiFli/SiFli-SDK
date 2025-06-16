@@ -13,7 +13,7 @@
 #include "drivers/audio.h"
 
 
-#define WAIT_PA_STABLE_TIME_MS      100
+#define WAIT_PA_STABLE_TIME_MS      200
 
 /* some board stop PA has pop noise, need delay some time than close DAC*/
 #define PA_CLOSE_DELAY_MS           10

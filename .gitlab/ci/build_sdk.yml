@@ -1,18 +1,21 @@
-build-sdk:
+# GitLab CI 动态构建系统
+# 运行时动态解析配置并生成子Pipeline
+
+# 动态Pipeline生成Job
+generate_dynamic_pipeline:
   stage: build
   tags:
     - build
-  script: |
-    . ./export.sh
-    python tools/autotest/build_sdk.py -c=build_config_gcc.yaml -p=gcc -j=1
-    echo "SDK构建完成"
+  script:
+    - echo "🚀 开始动态生成构建Pipeline..."
+    - python3 tools/ci/dynamic_pipeline.py -c build_config_gcc.yaml -o child-pipeline.yml
+    - echo "📄 生成的子Pipeline配置:"
+    - head -20 child-pipeline.yml
+    - echo "..."
   artifacts:
     paths:
-      - ci_build_logs
-      - ci_report_logs
-      - artifacts
-    expire_in: 1 week
-    when: always
+      - child-pipeline.yml
+    expire_in: 1 hour
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
@@ -22,4 +25,23 @@ build-sdk:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
-    - when: never
+
+# 触发动态生成的子Pipeline
+trigger_child_pipeline:
+  stage: build
+  trigger:
+    include:
+      - artifact: child-pipeline.yml
+        job: generate_dynamic_pipeline
+    strategy: depend
+  needs:
+    - generate_dynamic_pipeline
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always

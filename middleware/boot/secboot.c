@@ -379,10 +379,10 @@ void dfu_boot_img_in_flash(int flashid)
             is_flash = 0;
         }
 
-        if (coreid < 4 * CORE_MAX)
+        if (coreid < 2 * CORE_MAX)
         {
             coreid %= CORE_MAX;
-            if (coreid == CORE_HCPU || coreid == CORE_BL)
+            if (coreid == CORE_HCPU || coreid == CORE_BL || coreid == CORE_LCPU)
             {
                 if (is_addr_in_mpi((uint32_t)dest))
                 {
@@ -450,10 +450,10 @@ void dfu_boot_img_in_flash(int flashid)
             boot_copy_img(dest, src, img_hdr->length);
 #endif /* SECBOOT_USING_APP_IMG_SIG_VERIFIY */
         }
-        if (coreid < 4 * CORE_MAX)
+        if (coreid < 2 * CORE_MAX)
         {
             coreid %= CORE_MAX;
-            if (coreid == CORE_HCPU || coreid == CORE_BL)
+            if (coreid == CORE_HCPU || coreid == CORE_BL || coreid == CORE_LCPU)
             {
                 if (is_addr_in_flash((uint32_t)dest))
                 {

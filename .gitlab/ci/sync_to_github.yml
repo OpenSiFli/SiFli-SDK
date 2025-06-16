@@ -1,13 +1,61 @@
 sync_to_github:
   stage: sync_to_github
-  image: python:3.10
+  image: $CI_DOCKER_BASE_REGISTRY:latest
   tags:
     - docker
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
+  before_script:
+    # 启动SSH Agent
+    - eval $(ssh-agent -s)
+    # 添加SSH私钥（base64编码格式）
+    - echo "$GITHUB_DEPLOY_KEY" | base64 -d | tr -d '\r' | ssh-add -
+    # 创建SSH目录并配置
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    # 添加GitHub到known_hosts
+    - ssh-keyscan github.com >> ~/.ssh/known_hosts
+    # 配置Git用户信息
+    - git config --global user.name "$GIT_CI_USER_NAME"
+    - git config --global user.email "$GIT_CI_USER_EMAIL"
+    - |
+      gh_token=$(gh-token generate \
+          --base64-key "$GITHUB_APPS_PRIVATE_KEY" \
+          --app-id $GITHUB_APPS_ID \
+          --installation-id $GITHUB_APPS_INSTALLATION_ID \
+          | jq -r ".token")
+    - gh auth login --with-token <<< "$gh_token"
   script:
-    - pip install -r tools/ci/requirements.txt -i https://mirrors.ustc.edu.cn/pypi/simple
-    - python3 tools/ci/gitlab_to_github_sync.py
+    - |
+      git remote add github git@github.com:${GITHUB_REPO}.git || git remote set-url github git@github.com:${GITHUB_REPO}.git
+      
+      export CURRENT_BRANCH=${CI_COMMIT_REF_NAME}
+      echo "Current branch: $CURRENT_BRANCH"
+      
+      echo "Fetching remote repository info..."
+      git fetch github
+      
+      echo "Starting sync to GitHub..."
+      git push github "HEAD:$CURRENT_BRANCH" --force-with-lease
+      
+      # 如果是主分支，同时推送标签
+      if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+        echo "Pushing tags to GitHub..."
+        git push github --tags
+      fi
+    - |
+      # 触发GitHub Action
+      echo "Triggering GitHub Action merge_prs workflow..."
+      #gh workflow run merge_prs.yml --repo ${GITHUB_REPO} --ref "$CURRENT_BRANCH"
+      
+      if [ $? -eq 0 ]; then
+        echo "✅ GitHub Action triggered successfully"
+      else
+        echo "❌ Failed to trigger GitHub Action"
+        exit 1
+      fi
+
+      echo "✅ Sync completed successfully"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $SYNC_GITHUB'
       when: always
