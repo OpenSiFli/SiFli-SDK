@@ -105,7 +105,6 @@
 #define REG_WRHBMDISBV         0x63
 #define REG_SET_DISPLAY_MODE   0xC2
 #define REG_SET_SPI_MODE       0xC4
-#define REG_VCOMH_OFFSET_SET   0xC5
 #define REG_PASSWD1            0xF4
 #define REG_PASSWD2            0xF5
 #define REG_CMD_PAGE_SWITCH    0xFE
