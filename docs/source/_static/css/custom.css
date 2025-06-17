@@ -80,3 +80,100 @@ width: 120px;
     color: var(--sy-c-link-hover); /* 设置鼠标悬停时的文本颜色 */
     cursor: pointer; /* 设置鼠标悬停时的指针样式 */
 }
+
+
+.sy-foot-feedback {
+    font-size: 1.0rem;
+  }
+  
+.sy-foot-feedback a {
+  font-weight: 600;
+}
+
+.sy-foot-feedback a:hover {
+  text-decoration: underline;
+}
+  
+
+  #feedback-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #e24329;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 9999;
+  }
+  
+#feedback-popup {
+  max-width: 420px;
+  width: 90vw;
+  min-width: 260px;
+  min-height: 430px;
+  box-sizing: border-box;
+  padding: 24px 18px 16px 18px;
+  background: #f6f8fa;
+  border-radius: 8px;
+  border: 2px solid #b3b3b3;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.18);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  display: none;
+  overflow: auto;
+}
+ 
+
+#feedback-popup input, #feedback-popup textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+#feedback-popup .feedback-actions {
+  margin-top: 18px;
+  text-align: right;
+}
+
+#feedback-popup .feedback-actions button {
+  min-width: 72px;
+  padding: 7px 18px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 5px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+#feedback-popup #feedback-cancel {
+  background: #e0e3e8;
+  color: #333;
+}
+#feedback-popup #feedback-cancel:hover {
+  background: #d0d3d8;
+}
+#feedback-popup #feedback-submit {
+  background: #3477f5;
+  color: #fff;
+}
+#feedback-popup #feedback-submit:hover {
+  background: #2457c5;
+}
+
+@media (max-width: 500px) {
+  #feedback-popup {
+    max-width: 98vw;
+    padding: 12px 4vw 12px 4vw;
+    min-height: 0;
+  }
+  #feedback-popup .flex-row {
+    flex-direction: column;
+    gap: 8px !important;
+  }
+}
+

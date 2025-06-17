@@ -698,16 +698,17 @@ void boot_images_main()
             dfu_boot_img_in_flash(flash_id);
         }
 
+        /* load extended img if present, such as ACPU img */
+        if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_UNINIT_32)
+        {
+            dfu_boot_img_in_flash(DFU_FLASH_HCPU_EXT2);
+        }
+
         if (g_sec_config->running_imgs[CORE_HCPU] != (struct image_header_enc *)FLASH_UNINIT_32)
         {
             int flash_id = ((uint32_t)sec_config_cache.running_imgs[CORE_HCPU] - FLASH_BASE_ADDR - 0x1000) / sizeof(struct image_header_enc) + DFU_FLASH_IMG_LCPU;
             dfu_boot_img_in_flash(flash_id);
         }
-
-        // if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_UNINIT_32)
-        // {
-        //     dfu_boot_img_in_flash(DFU_FLASH_HCPU_EXT2);
-        // }
 
         boot_image(CORE_HCPU, 0);
     }

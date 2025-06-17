@@ -49,7 +49,7 @@ supported_boards/index
 bootloader
 example/index
 api/index
-
+contribute/index
 ```
 
 

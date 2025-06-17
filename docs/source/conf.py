@@ -88,10 +88,12 @@ html_theme_options = {
 
 html_css_files = [
     'css/custom.css',
+    'css/feedback.css',
 ]
 
 html_js_files = [
     'js/baidu.js',
+    'js/feedback.js',
 ]
 
 # -- Options for Breathe ----------------------------------------------------

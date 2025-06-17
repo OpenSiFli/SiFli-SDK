@@ -55,7 +55,7 @@ please input the serial port num:5
 |---|--|--|--|
 录音|audprc rx [channels:1/2] [采样率] [采样位数]|`audprc rx 1 16000 16` |录音存放到ram buffer（录音满1M后自动停止录音）
 播放录音|audprc tx [channels:1/2] [采样率] [采样位数]|`audprc tx 1 16000 16`| 播放数据来ram buffer（需要先录音）
-Loopback|audprc rxtx [rx channels:1/2] [rx采样率] [rx采样位数] [tx channels:1/2] [tx采样率] [tx采样位数]|`audprc rxtx 1 16000 16 1 16000 16`|边录（mic）边播放（speaker）（执行录音、播放命令前，如正在运行Loopback，需先停止。）
+Loopback|audprc txrx [rx channels:1/2] [rx采样率] [rx采样位数] [tx channels:1/2] [tx采样率] [tx采样位数]|`audprc rxtx 1 16000 16 1 16000 16`|边录（mic）边播放（speaker）（执行录音、播放命令前，如正在运行Loopback，需先停止。）
 停止Loopback|audprc txrxstop|`audprc txrxstop`|停止Loopback
 
 串口打印如下：
