@@ -260,7 +260,7 @@ typedef struct
   * @param  \__FLAG__ ADC irq flag
   * @retval None
   */
-#define __HAL_ADC_ENABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ |= (__FLAG__))
+#define __HAL_ADC_ENABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ &= ~(__FLAG__))
 
 /**
   * @brief Disable ADC irq
@@ -268,7 +268,7 @@ typedef struct
   * @param  \__FLAG__ ADC irq flag
   * @retval None
   */
-#define __HAL_ADC_DISABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ &= ~(__FLAG__))
+#define __HAL_ADC_DISABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ |= (__FLAG__))
 
 /**
   * @brief Enable ADC LdoRef
