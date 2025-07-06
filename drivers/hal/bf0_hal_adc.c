@@ -352,7 +352,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Prepare(ADC_HandleTypeDef *hadc)
     /* - Clear state bitfield related to regular group conversion results   */
     /* - Set state bitfield related to regular operation                    */
     ADC_STATE_CLR_SET(hadc->State,
-                      HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC | HAL_ADC_STATE_REG_OVR,
+                      HAL_ADC_STATE_READY | HAL_ADC_STATE_REG_EOC | HAL_ADC_STATE_REG_OVR | HAL_ADC_START_IRQ_DONE,
                       HAL_ADC_STATE_REG_BUSY);
 
     /* Reset ADC all error code fields */
@@ -384,7 +384,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Start(ADC_HandleTypeDef *hadc)
     /* Perform ADC enable and conversion start if no conversion is on going */
     res = HAL_ADC_Prepare(hadc);
     if (res == HAL_OK)
-        hadc->Instance->ADC_CTRL_REG |= GPADC_ADC_CTRL_REG_ADC_START;
+        __HAL_ADC_START_CONV(hadc);
 
     return res;
 }
@@ -492,7 +492,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_PollForConversion(ADC_HandleTypeDef *ha
   */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Start_IT(ADC_HandleTypeDef *hadc)
 {
-    HAL_StatusTypeDef tmp_hal_status = HAL_OK;
+    HAL_StatusTypeDef res = HAL_OK;
 
     /* Check ADC handle */
     if (hadc == NULL)
@@ -500,11 +500,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Start_IT(ADC_HandleTypeDef *hadc)
         return HAL_ERROR;
     }
 
-    __HAL_ADC_ENABLE_IRQ(hadc, GPADC_GPADC_IRQ_GPADC_IMR);
-
-    __HAL_ADC_START_CONV(hadc);
+    res = HAL_ADC_Prepare(hadc);
+    if (res == HAL_OK)
+    {
+        __HAL_ADC_ENABLE_IRQ(hadc, GPADC_GPADC_IRQ_GPADC_IMR);
+        __HAL_ADC_START_CONV(hadc);
+    }
+    
     /* Return function status */
-    return tmp_hal_status;
+    return res;
 }
 
 
@@ -877,6 +881,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_SetTimer(ADC_HandleTypeDef *hadc, HAL_A
   */
 __HAL_ROM_USED void HAL_ADC_IRQHandler(ADC_HandleTypeDef *hadc)
 {
+    if(__HAL_ADC_GET_FLAG(hadc, GPADC_GPADC_IRQ_GPADC_IRSR))
+        HAL_ADC_ConvCpltCallback(hadc);
+    
     /* Clear ISR */
     __HAL_ADC_CLEAR_FLAG(hadc, GPADC_GPADC_IRQ_GPADC_ICR);
 

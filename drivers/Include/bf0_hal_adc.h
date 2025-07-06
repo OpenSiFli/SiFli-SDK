@@ -712,6 +712,20 @@ HAL_StatusTypeDef       HAL_ADC_Start_IT(ADC_HandleTypeDef *hadc);
   */
 HAL_StatusTypeDef       HAL_ADC_Stop_IT(ADC_HandleTypeDef *hadc);
 
+/**
+  * @brief  Handle ADC interrupt request.
+  * @param  hadc ADC handle.
+  * @retval None
+  */
+void HAL_ADC_IRQHandler(ADC_HandleTypeDef *hadc);
+
+/**
+  * @brief  Conversion complete callback in non blocking mode
+  * @param  hadc ADC handle
+  * @retval None
+  */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);
+
 /* Non-blocking mode: DMA */
 
 /**
