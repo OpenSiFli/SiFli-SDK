@@ -60,6 +60,9 @@ extern "C" {
 #define RTTHREAD_VERSION                ((RTT_VERSION * 10000) + \
                                          (RTT_SUBVERSION * 100) + RTT_REVISION)
 
+/* e.g. #if (RTTHREAD_VERSION >= RT_VERSION_CHECK(4, 1, 0) */
+#define RT_VERSION_CHECK(major, minor, revise)          ((major * 10000U) + (minor * 100U) + revise)
+
 //#define RT_MEM_RECORD_THREAD_NAME
 
 /* RT-Thread basic data type definitions */
