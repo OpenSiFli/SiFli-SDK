@@ -67,7 +67,7 @@ extern "C" {
 /*********************
  *      DEFINES
  *********************/
-typedef  int32_t lv_coord_t;
+// typedef  int32_t lv_coord_t;
 /**********************
  *      TYPEDEFS
  **********************/

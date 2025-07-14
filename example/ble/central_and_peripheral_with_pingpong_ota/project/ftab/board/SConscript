@@ -1,0 +1,51 @@
+import os
+import rtconfig
+from building import *
+
+cwd = GetCurrentDir()
+
+CPPDEFINES = ['SF32LB58X']
+CPPDEFINES += ['SOC_BF0_HCPU']
+
+src = []
+
+curr_env = GetCurrentEnv()
+if 'PARTITION_TABLE' in curr_env:
+    imgs_info = []
+    target_list = []
+    for env in GetEnvList():
+        if (env == curr_env) or (IsChildProjEnv(env) and env['IMG_EMBEDDED']):
+            continue
+        if IsChildProjEnv(env):
+            proj_name = env['name']
+        else:
+            proj_name = 'main'
+        target_list += env['target']
+        target_list += env['program_binary']
+        target_list += env['program_hex']
+        imgs_info.append({"name": proj_name, "binary": env['program_binary']})
+    src_file = [File(curr_env['PARTITION_TABLE'])]
+    ftab_cfile = curr_env.FtabCFile('ftab.c', src_file, IMGS_INFO = imgs_info)
+    Depends(ftab_cfile, target_list)
+else:
+    src_file = [File('ftab.template')]
+    ftab_cfile = curr_env.FtabCFile('ftab.c', src_file)    
+        
+src += ftab_cfile
+
+Import('SIFLI_SDK')
+path = [cwd]
+path += [
+    os.path.join(SIFLI_SDK, 'drivers/Include'),
+    os.path.join(SIFLI_SDK, 'drivers/cmsis/Include'),
+    os.path.join(SIFLI_SDK, 'drivers/cmsis/sf32lb58x'),
+    os.path.join(SIFLI_SDK, 'customer/boards/include'),
+    os.path.join(SIFLI_SDK, 'external/CMSIS/Include'),
+    os.path.join(SIFLI_SDK, 'middleware/include'),
+    os.path.join(SIFLI_SDK, 'middleware/dfu'),
+    os.path.join(SIFLI_SDK, 'rtos/rtthread/include'),
+    os.path.join(SIFLI_SDK, 'rtos/rtthread/components/drivers/include'),
+]
+
+group = DefineGroup('Application', src, depend = [''], CPPDEFINES = CPPDEFINES, CPPPATH = path)
+Return('group')

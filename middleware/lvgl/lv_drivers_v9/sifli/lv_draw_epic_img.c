@@ -228,19 +228,14 @@ static void img_draw_core(lv_draw_unit_t *draw_unit, const lv_draw_image_dsc_t *
         EPIC_LayerConfigTypeDef input_layers[3];
         EPIC_LayerConfigTypeDef output_canvas;
 
-
         uint8_t input_layer_cnt = 2;
 
-
-
         if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_unit, clipped_img_area))
-            return;/*Fully clipped, nothing to do*/
-
+            return; /*Fully clipped, nothing to do*/
 
 
         /*Setup fg layer*/
         HAL_EPIC_LayerConfigInit(&input_layers[1]);
-
 
         input_layers[1].transform_cfg.angle   = (draw_dsc->rotation + 3600) % 3600;
         input_layers[1].transform_cfg.pivot_x = draw_dsc->pivot.x;
@@ -297,70 +292,99 @@ static void img_draw_core(lv_draw_unit_t *draw_unit, const lv_draw_image_dsc_t *
             input_layer_cnt++;
         }
 
-
-
         lv_image_decoder_dsc_t mask_decoder_dsc;
         lv_result_t decoder_res = LV_RESULT_INVALID;
+
         if (draw_dsc->bitmap_mask_src != NULL)
         {
             lv_area_t mask_area;
-            lv_result_t decoder_res = lv_image_decoder_open(&mask_decoder_dsc, draw_dsc->bitmap_mask_src, NULL);
-            if (decoder_res == LV_RESULT_OK && mask_decoder_dsc.decoded)
+            const lv_image_dsc_t *mask_dsc = draw_dsc->bitmap_mask_src;
+            lv_image_src_t mask_src_type = lv_image_src_get_type(mask_dsc);
+            // Determine whether it is a variable type and in A8 format.
+            if (lv_image_src_get_type(mask_dsc) == LV_IMAGE_SRC_VARIABLE && mask_dsc->header.cf == LV_COLOR_FORMAT_A8)
             {
-                if (mask_decoder_dsc.decoded->header.cf == LV_COLOR_FORMAT_A8 ||
-                        mask_decoder_dsc.decoded->header.cf == LV_COLOR_FORMAT_L8)
-                {
-                    const lv_draw_buf_t *mask_img = mask_decoder_dsc.decoded;
-
-                    const lv_area_t *image_area;
-                    if (lv_area_get_width(&draw_dsc->image_area) < 0) image_area = img_coords;
-                    else image_area = &draw_dsc->image_area;
-                    lv_area_set(&mask_area, 0, 0, mask_img->header.w - 1, mask_img->header.h - 1);
-                    lv_area_align(image_area, &mask_area, LV_ALIGN_CENTER, 0, 0);
 
 
+                const lv_image_header_t *header = &mask_dsc->header;
+
+                const lv_area_t *image_area;
+                if (lv_area_get_width(&draw_dsc->image_area) < 0) image_area = img_coords;
+                else image_area = &draw_dsc->image_area;
+
+                lv_area_set(&mask_area, 0, 0, header->w - 1, header->h - 1);
+                lv_area_align(image_area, &mask_area, LV_ALIGN_CENTER, 0, 0);
+
+                HAL_EPIC_LayerConfigInit(&input_layers[input_layer_cnt]);
+
+                input_layers[input_layer_cnt].alpha = 255;
+                input_layers[input_layer_cnt].x_offset = mask_area.x1;
+                input_layers[input_layer_cnt].y_offset = mask_area.y1;
+                input_layers[input_layer_cnt].color_mode = EPIC_INPUT_A8;
+                input_layers[input_layer_cnt].data = (uint8_t *)mask_dsc->data;
+                input_layers[input_layer_cnt].ax_mode = ALPHA_BLEND_OVERWRITE;
+                input_layers[input_layer_cnt].width = lv_area_get_width(&mask_area);
+                input_layers[input_layer_cnt].height = lv_area_get_height(&mask_area);
+                input_layers[input_layer_cnt].total_width = header->stride;
 
 
-
-                    //Setup mask layer
-                    HAL_EPIC_LayerConfigInit(&input_layers[input_layer_cnt]);
-
-                    input_layers[input_layer_cnt].alpha = 255;
-                    input_layers[input_layer_cnt].x_offset = mask_area.x1;
-                    input_layers[input_layer_cnt].y_offset = mask_area.y1;
-                    input_layers[input_layer_cnt].color_mode = EPIC_INPUT_A8;
-                    input_layers[input_layer_cnt].data = (uint8_t *)mask_img->data;
-                    input_layers[input_layer_cnt].ax_mode = ALPHA_BLEND_OVERWRITE;
-                    input_layers[input_layer_cnt].width = lv_area_get_width(&mask_area);
-                    input_layers[input_layer_cnt].height = lv_area_get_height(&mask_area);
-                    input_layers[input_layer_cnt].total_width = mask_img->header.stride;
-
-                    input_layer_cnt++;
-
-                }
-                else
-                {
-                    LV_LOG_WARN("The mask image is not A8/L8 format. Drawing the image without mask.");
-                }
+                input_layer_cnt++;
             }
             else
             {
-                LV_LOG_WARN("Couldn't decode the mask image. Drawing the image without mask.");
+
+                decoder_res = lv_image_decoder_open(&mask_decoder_dsc, draw_dsc->bitmap_mask_src, NULL);
+                if (decoder_res == LV_RESULT_OK && mask_decoder_dsc.decoded)
+                {
+                    const lv_draw_buf_t *mask_img = mask_decoder_dsc.decoded;
+
+                    if (mask_img->header.cf == LV_COLOR_FORMAT_A8 ||
+                            mask_img->header.cf == LV_COLOR_FORMAT_L8)
+                    {
+                        const lv_area_t *image_area;
+                        if (lv_area_get_width(&draw_dsc->image_area) < 0) image_area = img_coords;
+                        else image_area = &draw_dsc->image_area;
+
+                        lv_area_set(&mask_area, 0, 0, mask_img->header.w - 1, mask_img->header.h - 1);
+                        lv_area_align(image_area, &mask_area, LV_ALIGN_CENTER, 0, 0);
+
+                        // Setup mask layer
+                        HAL_EPIC_LayerConfigInit(&input_layers[input_layer_cnt]);
+
+                        input_layers[input_layer_cnt].alpha = 255;
+                        input_layers[input_layer_cnt].x_offset = mask_area.x1;
+                        input_layers[input_layer_cnt].y_offset = mask_area.y1;
+                        input_layers[input_layer_cnt].color_mode = EPIC_INPUT_A8;
+                        input_layers[input_layer_cnt].data = (uint8_t *)mask_img->data;
+                        input_layers[input_layer_cnt].ax_mode = ALPHA_BLEND_OVERWRITE;
+                        input_layers[input_layer_cnt].width = lv_area_get_width(&mask_area);
+                        input_layers[input_layer_cnt].height = lv_area_get_height(&mask_area);
+                        input_layers[input_layer_cnt].total_width = mask_img->header.stride;
+
+                        input_layer_cnt++;
+                    }
+                    else
+                    {
+                        LV_LOG_WARN("The mask image is not A8/L8 format. Drawing the image without mask.\n");
+                    }
+
+                    lv_image_decoder_close(&mask_decoder_dsc);
+                }
+                else
+                {
+                    LV_LOG_WARN("Couldn't decode the mask image. Drawing the image without mask.\n");
+                }
             }
         }
-
-
-
 
         int ret = drv_epic_blend(input_layers, input_layer_cnt, &output_canvas, NULL);
         LV_ASSERT(0 == ret);
 
-
-
-        if (decoder_res == LV_RESULT_OK) lv_image_decoder_close(&mask_decoder_dsc);
+        if (decoder_res == LV_RESULT_OK)
+        {
+            lv_image_decoder_close(&mask_decoder_dsc);
+        }
     }
 }
-
 
 
 

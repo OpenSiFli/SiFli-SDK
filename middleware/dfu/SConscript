@@ -13,7 +13,7 @@ if not (GetDepend('RAM_PATCH') or GetDepend('CFG_BOOTLOADER')):
     dfu_sec.c
     dfu_install.c
     """)
-    if (GetDepend('SOLUTION_WATCH')):
+    if (GetDepend('SOLUTION_WATCH') or GetDepend('SOL_DFU')):
         src += Split("""
         sol/dfu_ctrl_sol.c
         sol/dfu_ctrl_ext_sol.c

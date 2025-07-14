@@ -1,0 +1,8 @@
+# Multimedia
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

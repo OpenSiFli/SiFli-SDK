@@ -1,7 +1,7 @@
 #include "lvgl.h"
 #if LV_USE_TINY_TTF
 
-static const uint8_t ubuntu_font[] =
+static const uint8_t ubuntu_font2[] =
 {
     0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x01, 0x00, 0x00, 0x04, 0x00, 0x10, 0x44, 0x53, 0x49, 0x47,
     0x1b, 0x79, 0x61, 0x63, 0x00, 0x02, 0xd2, 0x78, 0x00, 0x00, 0x19, 0x30, 0x47, 0x53, 0x55, 0x42,
@@ -11970,7 +11970,7 @@ static const uint8_t ubuntu_font[] =
 
 
 
-static const int ubuntu_font_size = sizeof(ubuntu_font);
+const int ubuntu_font2_size = sizeof(ubuntu_font2);
 
 const lv_font_t *lv_font_ubuntu_12 = NULL;
 const lv_font_t *lv_font_ubuntu_14 = NULL;
@@ -12000,16 +12000,16 @@ static lv_font_t *font_create(const void *data, size_t data_size, int32_t font_s
 
 void lv_font_tiny_init(void)
 {
-    lv_font_ubuntu_12 = font_create(ubuntu_font, ubuntu_font_size, 12);
-    lv_font_ubuntu_14 = font_create(ubuntu_font, ubuntu_font_size, 14);
-    lv_font_ubuntu_16 = font_create(ubuntu_font, ubuntu_font_size, 16);
-    lv_font_ubuntu_18 = font_create(ubuntu_font, ubuntu_font_size, 18);
-    lv_font_ubuntu_20 = font_create(ubuntu_font, ubuntu_font_size, 20);
-    lv_font_ubuntu_24 = font_create(ubuntu_font, ubuntu_font_size, 24);
-    lv_font_ubuntu_28 = font_create(ubuntu_font, ubuntu_font_size, 28);
-    lv_font_ubuntu_36 = font_create(ubuntu_font, ubuntu_font_size, 36);
-    lv_font_ubuntu_56 = font_create(ubuntu_font, ubuntu_font_size, 56);
-    lv_font_ubuntu_72 = font_create(ubuntu_font, ubuntu_font_size, 72);
+    lv_font_ubuntu_12 = font_create(ubuntu_font2, ubuntu_font2_size, 12);
+    lv_font_ubuntu_14 = font_create(ubuntu_font2, ubuntu_font2_size, 14);
+    lv_font_ubuntu_16 = font_create(ubuntu_font2, ubuntu_font2_size, 16);
+    lv_font_ubuntu_18 = font_create(ubuntu_font2, ubuntu_font2_size, 18);
+    lv_font_ubuntu_20 = font_create(ubuntu_font2, ubuntu_font2_size, 20);
+    lv_font_ubuntu_24 = font_create(ubuntu_font2, ubuntu_font2_size, 24);
+    lv_font_ubuntu_28 = font_create(ubuntu_font2, ubuntu_font2_size, 28);
+    lv_font_ubuntu_36 = font_create(ubuntu_font2, ubuntu_font2_size, 36);
+    lv_font_ubuntu_56 = font_create(ubuntu_font2, ubuntu_font2_size, 56);
+    lv_font_ubuntu_72 = font_create(ubuntu_font2, ubuntu_font2_size, 72);
 }
 
 #endif

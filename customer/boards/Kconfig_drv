@@ -591,10 +591,33 @@ menu "On-chip Peripheral RTOS Drivers"
         default n
         select RT_USING_ENCODER
         if BSP_USING_ENCODER
-            config BSP_USING_ENCODER1
-                bool "Enable encoder1"
-                depends on BSP_USING_ENCODER
+            config BSP_USING_ENCODER_GPTIM1
+                bool "Enable encoder_gtim1"
                 default n
+            config BSP_USING_ENCODER_GPTIM2
+                bool "Enable encoder_gtim2"
+                default n
+            config BSP_USING_ENCODER_GPTIM3
+                bool "Enable encoder_gtim3"
+                depends on !SOC_SF32LB52X
+                default n
+            config BSP_USING_ENCODER_GPTIM4
+                bool "Enable encoder_gtim4"
+                depends on !SOC_SF32LB52X               
+                default n
+            config BSP_USING_ENCODER_GPTIM5
+                bool "Enable encoder_gtim5"
+                depends on !SOC_SF32LB52X
+                default n
+            config BSP_USING_ENCODER_ATIM1
+                bool "Enable encoder_atim1"
+                depends on !SOC_SF32LB55X 
+                default n
+            config BSP_USING_ENCODER_ATIM2
+                bool "Enable encoder_atim2"
+                depends on !SOC_SF32LB55X && !SOC_SF32LB52X && !SOC_SF32LB56X
+                default n
+                
     endif
 
     menuconfig BSP_USING_ADC

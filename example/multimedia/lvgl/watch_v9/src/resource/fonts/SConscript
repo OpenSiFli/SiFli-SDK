@@ -1,0 +1,15 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+
+src += Glob('*.c')
+
+# add group to IDE project
+objs = DefineGroup('fonts', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+Return('objs')

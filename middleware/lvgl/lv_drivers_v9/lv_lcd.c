@@ -420,7 +420,48 @@ static void lcd_flush(lv_display_t *disp_drv, const lv_area_t *refresh_area, uin
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
 
 }
+void *get_disp_buf(uint32_t size)
+{
+    lv_display_t *disp = lv_display_get_default();
+    if (!disp)
+    {
+        LOG_E("Display not initialized");
+        return NULL;
+    }
 
+    lv_draw_buf_t *draw_buf = lv_display_get_buf_active(disp);
+    if (!draw_buf || !draw_buf->data)
+    {
+        LOG_E("Active draw buffer is NULL or invalid");
+        return NULL;
+    }
+
+    uint32_t buf_size = draw_buf->header.stride * draw_buf->header.h * lv_color_format_get_size(draw_buf->header.cf);
+    if (buf_size >= size)
+    {
+        return (void *)draw_buf->data;
+    }
+
+#if defined(LV_FB_TWO_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_SCREEN_SIZE)
+    if (disp->buf_1 && disp->buf_2 &&
+            draw_buf == disp->buf_1 &&
+            (uint32_t)((uintptr_t)disp->buf_2->data - (uintptr_t)disp->buf_1->data) == buf_size &&
+            2 * buf_size >= size)
+    {
+        return (void *)disp->buf_1->data;
+    }
+#endif
+
+#ifndef LCD_FB_USING_NONE
+    if (size <= sizeof(buf2_1))
+    {
+        return (void *)get_draw_buf();
+    }
+#endif
+
+    LOG_W("No suitable display buffer found for size: %u", size);
+    return NULL;
+}
 
 
 

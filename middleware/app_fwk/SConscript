@@ -14,8 +14,10 @@ src = src + Glob('./*.c')
 
 if GetDepend("DISABLE_LVGL_V8") and GetDepend("DISABLE_LVGL_V9"):
     src = src + Glob('./lvgl_v7/*.c')
-else:
+elif GetDepend("DISABLE_LVGL_V7") and GetDepend("DISABLE_LVGL_V9"):
     src = src + Glob('./lvgl_v8/*.c')
+elif GetDepend("DISABLE_LVGL_V7") and GetDepend("DISABLE_LVGL_V8"):
+    src = src + Glob('./lvgl_v9/*.c')
 
 # add group to IDE project
 objs = DefineGroup('app_fwk', src, depend = ['GUI_APP_FRAMEWORK'], CPPPATH = inc)

@@ -16,9 +16,11 @@ objs.extend(SConscript(os.path.join(cwd,  '../../src/lcpu/SConscript'), variant_
 
 
 if GetDepend("SOC_SF32LB52X"):
-    import imp
+    import importlib.util
 
-    filter = imp.load_source('filter', os.path.join(cwd, 'filter.py'))
+    spec = importlib.util.spec_from_file_location('filter', os.path.join(cwd, 'filter.py'))
+    filter = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(filter)
     SetRomSymFilter(filter.rename_rules)
 
 # Add SDK

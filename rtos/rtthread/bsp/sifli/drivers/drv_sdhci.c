@@ -84,8 +84,13 @@ static int sdhci_wait_completed(struct sdhci_host *sdio, int flag);
 static void sdhci_cmd_irq(struct sdhci_host *host, uint32_t intmask);
 static void sdhci_data_irq(struct sdhci_host *host, uint32_t intmask);
 static void sdhci_set_ios(struct rt_mmcsd_host *mmc, struct rt_mmcsd_io_cfg *ios);
+static void sdhci_set_ddr(struct sdhci_host *host, unsigned int ddr);
+
 #ifdef SDIO_PM_MODE
     static int sdmmc_pm_resume_init(uint8_t id);
+    uint32_t sd_send_cmd(uint8_t cmd_idx, uint32_t cmd_arg);
+    uint32_t sd_clr_status();
+    SDHCI_HandleTypeDef sdhci_handle;
 #endif
 
 int rt_hw_sdmmc_init(void);
@@ -134,6 +139,26 @@ static struct rt_sdhci_configuration rt_sdhci_cfg_def[2] =
 };
 
 #ifdef RT_USING_PM
+static void sdhci_pm_set_ddr(uint8_t id)
+{
+    if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_4)
+    {
+        sdhci_set_ddr(&sdhci_ctx[id], 0);
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_8)
+    {
+        sdhci_set_ddr(&sdhci_ctx[id], 0);
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_4)
+    {
+        sdhci_set_ddr(&sdhci_ctx[id], 1);
+    }
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_8)
+    {
+        sdhci_set_ddr(&sdhci_ctx[id], 1);
+    }
+}
+
 #define _DUMP_REG_DEBUG         (0)
 #define _SDHCI_DUMP_RCNT        (23)
 static uint32_t sdhci_reg_arr[_SDHCI_DUMP_RCNT];
@@ -192,6 +217,7 @@ static void recov_sdhci_reg(int id)
 #endif
         sdhci_base_reg++;
     }
+    sdhci_pm_set_ddr(id);//this is bug only 56X ddr mode
 }
 #endif
 
@@ -764,6 +790,19 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
     hal_sdhci_set_clk(&host->handle, clock, host->max_clk);
 
     host->clock = clock;
+}
+
+void sdhci_update_clk(void)
+{
+#ifdef BSP_USING_SDHCI1
+    LOG_D("sdhci_ctx[0]->clock=%d \n", sdhci_ctx[0].clock);
+    sdhci_set_clock(&sdhci_ctx[0], sdhci_ctx[0].clock);
+#endif
+
+#ifdef BSP_USING_SDHCI2
+    LOG_D("SDDEBUG: sdhci.c sdhci_request \n");
+    sdhci_set_clock(&sdhci_ctx[1], sdhci_ctx[1].clock);
+#endif
 }
 
 static void sdhci_set_ddr(struct sdhci_host *host, unsigned int ddr)
@@ -1749,11 +1788,23 @@ uint32_t rt_sdmmc_get_clock(int id)
 }
 
 #ifdef RT_USING_PM
+__weak void BSP_SD_PowerUp(void)
+{
+}
+__weak void BSP_SD_PowerDown(void)
+{
+}
 static rt_err_t rt_sdhci_control(struct rt_device *dev, int cmd, void *args)
 {
     rt_err_t result = RT_EOK;
     uint8_t mode = (uint8_t)((uint32_t)args);
     uint8_t id = (uint8_t)((uint32_t)dev->user_data);
+#ifdef SDIO_PM_MODE
+    if (id == 0)
+        sdhci_handle.Instance = (uint32_t)SDIO1;
+    else
+        sdhci_handle.Instance = (uint32_t)SDIO2;
+#endif
     if (id > 1)
         return RT_ERROR;
 
@@ -1764,9 +1815,15 @@ static rt_err_t rt_sdhci_control(struct rt_device *dev, int cmd, void *args)
         if (PM_SLEEP_MODE_STANDBY == mode)
         {
             rt_kprintf("Resume from stand by id=%d\n", id);
-#ifdef SDIO_POWER_PM_ALL_DOWN
             BSP_SD_PowerUp();
+#ifdef SDIO_POWER_PM_UP
+            recov_sdhci_reg(id);
+#elif SDIO_POWER_PM_ALL_DOWN
             sdmmc_pm_resume_init(id);
+#elif SDIO_POWER_PM_VCC_DOWN
+            recov_sdhci_reg(id);
+            sd_send_cmd(5, 0);
+            sd_clr_status();
 #else
             recov_sdhci_reg(id);
 #endif
@@ -1777,12 +1834,20 @@ static rt_err_t rt_sdhci_control(struct rt_device *dev, int cmd, void *args)
     {
         if ((PM_SLEEP_MODE_STANDBY == mode) && (sdhci_ctx[id].mmc != NULL))
         {
-            rt_kprintf("SD suspend\n");
-#ifdef SDIO_POWER_PM_ALL_DOWN
-            BSP_SD_PowerDown();
+            rt_kprintf("SD suspend id=%d\n", id);
+
+#ifdef SDIO_POWER_PM_UP
+            dump_sdhci_reg(id);
+#elif SDIO_POWER_PM_ALL_DOWN
+            //do nothing
+#elif SDIO_POWER_PM_VCC_DOWN
+            sd_send_cmd(5, 0);
+            sd_clr_status();
+            dump_sdhci_reg(id);
 #else
             dump_sdhci_reg(id);
 #endif
+            BSP_SD_PowerDown();
         }
         break;
     }
@@ -1925,9 +1990,37 @@ int rt_hw_sdmmc_init(void)
 
 INIT_DEVICE_EXPORT(rt_hw_sdmmc_init);
 
-int rt_hw_sdmmc_deinit(void)
+int rt_hw_sdmmc_num_init(uint8_t sdhci_num)
 {
-    uint8_t id = 0;
+    int ret = 0;
+    switch (sdhci_num)
+    {
+    case 0:
+#ifdef BSP_USING_SDHCI1
+        HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
+        sdhci_ctx[0].hw_name = "sdmmc";
+        sdhci_ctx[0].ops = &sdhci_ops;
+        sdhci_ctx[0].handle.Instance = (uint32_t)SDIO1;
+        sdhci_ctx[0].irq_flag = 0;
+        ret = rt_sdhci_init_instance(0);
+#endif
+        break;
+    case 1:
+#ifdef BSP_USING_SDHCI2
+        HAL_RCC_EnableModule(RCC_MOD_SDMMC2);
+        sdhci_ctx[1].hw_name = "sdmmc2";
+        sdhci_ctx[1].ops = &sdhci_ops;
+        sdhci_ctx[1].handle.Instance = (uint32_t)SDIO2;
+        sdhci_ctx[1].irq_flag = 0;
+        ret = rt_sdhci_init_instance(1);
+#endif
+        break;
+    }
+    return ret;
+}
+
+int rt_hw_sdmmc_deinit(uint8_t id)
+{
     mmcsd_host_lock(sdhci_ctx[id].mmc);
     sdio_unregister_card(sdhci_ctx[id].mmc->card);
     rt_mmcsd_blk_remove(sdhci_ctx[id].mmc->card);
@@ -2053,6 +2146,9 @@ uint32_t sd_send_cmd(uint8_t cmd_idx, uint32_t cmd_arg)
     {
     case  0:
     case  4:
+    case  5:
+        resp_type = RESP_R4;
+        break;
     case 15:
         resp_type = RESP_NONE;
         break;

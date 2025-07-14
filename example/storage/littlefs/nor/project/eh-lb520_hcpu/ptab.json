@@ -1,0 +1,143 @@
+[
+    {
+        "mem": "flash1", 
+        "base": "0x10000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00008000", 
+                "tags": [
+                    "FLASH_TABLE"
+                ], 
+                "img": "ftab",
+                "exec": "ftab"                
+            }, 
+            {
+                "offset": "0x00008000", 
+                "max_size": "0x00010000", 
+                "tags": [],
+                "ftab": {
+                    "name": "bootloader", 
+                    "address": [
+                        "base"
+                    ]
+                }, 
+                "img": "bootloader"
+            }, 
+            {
+                "offset": "0x00018000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_DFU_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x0001C000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_BLE_REGION"
+                ]
+            },
+            {
+                "offset": "0x00020000", 
+                "max_size": "0x000A0000", 
+                "tags": [
+                    "HCPU_FLASH_CODE"
+                ], 
+                "ftab": {
+                    "name": "main", 
+                    "address": [
+                        "base", 
+                        "xip"
+                    ]
+                }, 
+                "img": "main",
+                "exec": "main"
+            }, 
+            {
+                "offset": "0x000C0000", 
+                "max_size": "0x00040000", 
+                "img": "fs_root", 
+                "tags": [
+                    "FS_REGION"
+                ]
+            } 
+        ]
+    }, 
+ 
+    {
+        "mem": "hpsys_ram", 
+        "base": "0x20000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x0006BC00", 
+                "tags": [
+                    "HCPU_RAM_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x00020000", 
+                "max_size": "0x00010000", 
+                "ftab": {
+                    "name": "bootloader", 
+                    "address": [
+                        "xip"
+                    ]
+                }, 
+                "tags": [
+                    "FLASH_BOOT_LOADER"
+                ],
+                "exec": "bootloader" 
+            }, 
+            {
+                "offset": "0x00030000", 
+                "max_size": "0x00010000", 
+                "tags": [
+                    "BOOTLOADER_RAM_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x0006BC00", 
+                "max_size": "0x00014000", 
+                "tags": [
+                    "HCPU_RO_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x0007FC00", 
+                "max_size": "0x00000400", 
+                "tags": [
+                    "HPSYS_MBOX"
+                ]
+            }, 
+            {
+                "offset": "0x0007FC00", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "HCPU2LCPU_MB_CH2_BUF"
+                ]
+            }, 
+            {
+                "offset": "0x0007FE00", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "HCPU2LCPU_MB_CH1_BUF"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "lpsys_ram", 
+        "base": "0x20400000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00006000", 
+                "tags": [
+                    "LPSYS_RAM"
+                ]
+            }
+        ]
+    }
+]

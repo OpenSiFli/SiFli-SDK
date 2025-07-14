@@ -1,0 +1,28 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+#include all subfolder
+for d in list:
+    path = os.path.join(cwd, d)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+# Add SDK
+Import('SIFLI_SDK')
+#Add source code
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'example/ble/central_and_peripheral_with_pingpong_ota/src/SConscript'), variant_dir="peripheral", duplicate=0))
+
+
+# Add SDK
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
+
+#Add LCPU patch
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'example/rom_bin/lcpu_general_ble_img/SConscript'), variant_dir="lcpu_patch", duplicate=0))
+
+
+Return('objs')

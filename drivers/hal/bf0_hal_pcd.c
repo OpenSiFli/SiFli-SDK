@@ -734,7 +734,7 @@ HAL_StatusTypeDef HAL_PCD_EP_Prepare_Receive(PCD_HandleTypeDef *hpcd, uint8_t ep
         }
     }
     else
-        ep0_state_change(hpcd, HAL_PCD_EP0_TX);
+        ep0_state_change(hpcd, HAL_PCD_EP0_RX);
 
     return HAL_OK;
 }

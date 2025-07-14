@@ -1,4 +1,4 @@
-# AGif示例
+# 基于AGif+LVGL的动画示例
 
 源码路径：example/multimedia/agif/lvgl
 

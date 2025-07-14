@@ -1,0 +1,8 @@
+# Powermanagement
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

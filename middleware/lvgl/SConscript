@@ -23,10 +23,11 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
     objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
 
     if GetDepend('PKG_USING_LITTLEVGL2RTT'):
+        
         if GetDepend('DISABLE_LVGL_V9'):
             objs = objs + SConscript(os.path.join('lvsf', 'SConscript'))
-        else:
-            # Add lvsf fonts
+        elif GetDepend('LVGL_V9'):
+            objs = objs + SConscript(os.path.join('lvsf_v9', 'SConscript'))
             objs = objs + SConscript(os.path.join('lvsf_font_v9', 'SConscript'))
 
         if GetDepend('LCD_SDL2'):

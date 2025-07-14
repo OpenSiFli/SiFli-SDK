@@ -719,7 +719,7 @@ static int vg_lite_init(void)
     }
 
 #if !_BAREMETAL /*for rt500*/
-    os_sem_create(int_queue, 0);
+    int_queue = os_sem_create("vglite", 0);
     device->int_queue = int_queue;
     device->int_flags = 0;
 #endif

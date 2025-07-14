@@ -1,8 +1,8 @@
 {%- if versions -%}
   <div class="nav-versions">
-    <button type="button" aria-label="{{ _("Versions") }}">
-      <span class="md:hidden">{{ _("版本") }}</span>
-      <span class="hidden md:inline">{{ _("版本") }}</span>
+    <button type="button" aria-label="{{ _("Versions") if language == 'en' else _("版本") }}">
+      <span class="md:hidden">{{ _("Versions") if language == 'en' else _("版本") }}</span>
+      <span class="hidden md:inline">{{ _("Versions") if language == 'en' else _("版本") }}</span>
       <i class="i-lucide chevron-down"></i>
     </button>
     <div class="nav-versions-choices">
@@ -19,9 +19,9 @@
 
 {%- if chips -%}
   <div class="nav-versions">
-    <button type="button" aria-label="{{ _("芯片系列") }}">
-      <span class="md:hidden">{{ _("芯片系列") }}</span>
-      <span class="hidden md:inline">{{ _("芯片系列") }}</span>
+    <button type="button" aria-label="{{ _("Chip Series") if language == 'en' else _("芯片系列") }}">
+      <span class="md:hidden">{{ _("Chip Series") if language == 'en' else _("芯片系列") }}</span>
+      <span class="hidden md:inline">{{ _("Chip Series") if language == 'en' else _("芯片系列") }}</span>
       <i class="i-lucide chevron-down"></i>
     </button>
     <div class="nav-versions-choices">

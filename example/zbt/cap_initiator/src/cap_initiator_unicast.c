@@ -85,7 +85,7 @@ static bool is_tx_stream(struct bt_bap_stream *stream)
     err = bt_bap_ep_get_info(stream->ep, &ep_info);
     if (err != 0)
     {
-        LOG_ERR("Failed to get ep info: %d", err);
+        LOG_E("Failed to get ep info: %d", err);
 
         return false;
     }
@@ -96,31 +96,31 @@ static bool is_tx_stream(struct bt_bap_stream *stream)
 static void unicast_stream_configured_cb(struct bt_bap_stream *stream,
         const struct bt_bap_qos_cfg_pref *pref)
 {
-    LOG_INF("Configured stream %p", stream);
+    LOG_I("Configured stream %p", stream);
 
     /* TODO: The preference should be used/taken into account when
      * setting the QoS
      */
 
-    LOG_INF("Remote preferences: unframed %s, phy %u, rtn %u, latency %u, pd_min %u, pd_max "
-            "%u, pref_pd_min %u, pref_pd_max %u",
-            pref->unframed_supported ? "supported" : "not supported", pref->phy, pref->rtn,
-            pref->latency, pref->pd_min, pref->pd_max, pref->pref_pd_min, pref->pref_pd_max);
+    LOG_I("Remote preferences: unframed %s, phy %u, rtn %u, latency %u, pd_min %u, pd_max "
+          "%u, pref_pd_min %u, pref_pd_max %u",
+          pref->unframed_supported ? "supported" : "not supported", pref->phy, pref->rtn,
+          pref->latency, pref->pd_min, pref->pd_max, pref->pref_pd_min, pref->pref_pd_max);
 }
 
 static void unicast_stream_qos_set_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("QoS set stream %p", stream);
+    LOG_I("QoS set stream %p", stream);
 }
 
 static void unicast_stream_enabled_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("Enabled stream %p", stream);
+    LOG_I("Enabled stream %p", stream);
 }
 
 static void unicast_stream_started_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("Started stream %p", stream);
+    LOG_I("Started stream %p", stream);
     total_rx_iso_packet_count = 0U;
     total_unicast_tx_iso_packet_count = 0U;
 
@@ -133,24 +133,24 @@ static void unicast_stream_started_cb(struct bt_bap_stream *stream)
         err = cap_initiator_tx_register_stream(cap_stream);
         if (err != 0)
         {
-            LOG_ERR("Failed to register %p for TX: %d", stream, err);
+            LOG_E("Failed to register %p for TX: %d", stream, err);
         }
     }
 }
 
 static void unicast_stream_metadata_updated_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("Metadata updated stream %p", stream);
+    LOG_I("Metadata updated stream %p", stream);
 }
 
 static void unicast_stream_disabled_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("Disabled stream %p", stream);
+    LOG_I("Disabled stream %p", stream);
 }
 
 static void unicast_stream_stopped_cb(struct bt_bap_stream *stream, uint8_t reason)
 {
-    LOG_INF("Stopped stream %p with reason 0x%02X", stream, reason);
+    LOG_I("Stopped stream %p with reason 0x%02X", stream, reason);
 
     if (is_tx_stream(stream))
     {
@@ -161,14 +161,14 @@ static void unicast_stream_stopped_cb(struct bt_bap_stream *stream, uint8_t reas
         err = cap_initiator_tx_unregister_stream(cap_stream);
         if (err != 0)
         {
-            LOG_ERR("Failed to unregister %p for TX: %d", stream, err);
+            LOG_E("Failed to unregister %p for TX: %d", stream, err);
         }
     }
 }
 
 static void unicast_stream_released_cb(struct bt_bap_stream *stream)
 {
-    LOG_INF("Released stream %p", stream);
+    LOG_I("Released stream %p", stream);
 
     if (stream == &peer.source_stream.bap_stream)
     {
@@ -190,7 +190,7 @@ static void unicast_stream_recv_cb(struct bt_bap_stream *stream,
 
     if ((total_rx_iso_packet_count % 100U) == 0U)
     {
-        LOG_INF("Received %llu HCI ISO data packets", total_rx_iso_packet_count);
+        LOG_I("Received %llu HCI ISO data packets", total_rx_iso_packet_count);
     }
 
     total_rx_iso_packet_count++;
@@ -202,7 +202,7 @@ static void unicast_stream_sent_cb(struct bt_bap_stream *stream)
 
     if ((total_unicast_tx_iso_packet_count % 100U) == 0U)
     {
-        LOG_INF("Sent %llu HCI ISO data packets", total_unicast_tx_iso_packet_count);
+        LOG_I("Sent %llu HCI ISO data packets", total_unicast_tx_iso_packet_count);
     }
 
     total_unicast_tx_iso_packet_count++;
@@ -234,8 +234,8 @@ static bool log_codec_cb(struct bt_data *data, void *user_data)
 
 static void log_codec(const struct bt_audio_codec_cap *codec_cap, enum bt_audio_dir dir)
 {
-    LOG_INF("codec id 0x%02x cid 0x%04x vid 0x%04x count %u", codec_cap->id, codec_cap->cid,
-            codec_cap->vid, codec_cap->data_len);
+    LOG_I("codec id 0x%02x cid 0x%04x vid 0x%04x count %u", codec_cap->id, codec_cap->cid,
+          codec_cap->vid, codec_cap->data_len);
 
     if (codec_cap->id == BT_HCI_CODING_FORMAT_LC3)
     {
@@ -253,7 +253,7 @@ static void add_remote_sink(struct bt_bap_ep *ep)
 {
     if (peer.sink_ep == NULL)
     {
-        LOG_INF("Sink ep: %p", (void *)ep);
+        LOG_I("Sink ep: %p", (void *)ep);
         peer.sink_ep = ep;
         return;
     }
@@ -263,7 +263,7 @@ static void add_remote_source(struct bt_bap_ep *ep)
 {
     if (peer.source_ep == NULL)
     {
-        LOG_INF("Source ep: %p", (void *)ep);
+        LOG_I("Source ep: %p", (void *)ep);
         peer.source_ep = ep;
         return;
     }
@@ -275,22 +275,22 @@ static void discover_cb(struct bt_conn *conn, int err, enum bt_audio_dir dir)
     {
         if (err != 0)
         {
-            LOG_ERR("Discovery sinks failed: %d", err);
+            LOG_E("Discovery sinks failed: %d", err);
         }
         else
         {
-            LOG_INF("Discover sinks complete");
+            LOG_I("Discover sinks complete");
         }
     }
     else if (dir == BT_AUDIO_DIR_SOURCE)
     {
         if (err != 0)
         {
-            LOG_ERR("Discovery sources failed: %d", err);
+            LOG_E("Discovery sources failed: %d", err);
         }
         else
         {
-            LOG_INF("Discover sources complete");
+            LOG_I("Discover sources complete");
         }
     }
 
@@ -319,7 +319,7 @@ static int discover_sinks(void)
 {
     int err;
 
-    LOG_INF("Discovering sink ASEs");
+    LOG_I("Discovering sink ASEs");
     k_sem_reset(&sem_proc);
 
     bt_cap_stream_ops_register(&peer.sink_stream, &unicast_stream_ops);
@@ -327,14 +327,14 @@ static int discover_sinks(void)
     err = bt_bap_unicast_client_discover(peer.conn, BT_AUDIO_DIR_SINK);
     if (err != 0)
     {
-        LOG_ERR("Failed to discover sink: %d", err);
+        LOG_E("Failed to discover sink: %d", err);
         return err;
     }
 
     err = k_sem_take(&sem_proc, SEM_TIMEOUT);
     if (err != 0)
     {
-        LOG_ERR("Timeout on sinks discover: %d", err);
+        LOG_E("Timeout on sinks discover: %d", err);
         return err;
     }
 
@@ -345,7 +345,7 @@ static int discover_sources(void)
 {
     int err;
 
-    LOG_INF("Discovering source ASEs");
+    LOG_I("Discovering source ASEs");
     k_sem_reset(&sem_proc);
 
     bt_cap_stream_ops_register(&peer.source_stream, &unicast_stream_ops);
@@ -353,14 +353,14 @@ static int discover_sources(void)
     err = bt_bap_unicast_client_discover(peer.conn, BT_AUDIO_DIR_SOURCE);
     if (err != 0)
     {
-        LOG_ERR("Failed to discover sources: %d", err);
+        LOG_E("Failed to discover sources: %d", err);
         return err;
     }
 
     err = k_sem_take(&sem_proc, SEM_TIMEOUT);
     if (err != 0)
     {
-        LOG_ERR("Timeout on sources discover: %d", err);
+        LOG_E("Timeout on sources discover: %d", err);
         return err;
     }
 
@@ -399,11 +399,11 @@ static int unicast_group_create(void)
     err = bt_bap_unicast_group_create(&group_param, &unicast_group);
     if (err != 0)
     {
-        LOG_ERR("Failed to create group: %d", err);
+        LOG_E("Failed to create group: %d", err);
         return err;
     }
 
-    LOG_INF("Created group");
+    LOG_I("Created group");
 
     return err;
 }
@@ -415,12 +415,12 @@ static int unicast_group_delete(void)
     err = bt_bap_unicast_group_delete(unicast_group);
     if (err != 0)
     {
-        LOG_ERR("Failed to delete group: %d", err);
+        LOG_E("Failed to delete group: %d", err);
         return err;
     }
     unicast_group = NULL;
 
-    LOG_INF("Deleted group");
+    LOG_I("Deleted group");
 
     return err;
 }
@@ -431,19 +431,19 @@ static void cap_discovery_complete_cb(struct bt_conn *conn, int err,
 {
     if (err != 0)
     {
-        LOG_ERR("CAS discovery completed with error: %d", err);
+        LOG_E("CAS discovery completed with error: %d", err);
 
         return;
     }
 
     if (IS_ENABLED(CONFIG_BT_CAP_ACCEPTOR_SET_MEMBER) && csis_inst != NULL)
     {
-        LOG_INF("Found CAS with CSIS %p", csis_inst);
+        LOG_I("Found CAS with CSIS %p", csis_inst);
         /* TODO: Do set member discovery */
     }
     else
     {
-        LOG_INF("Found CAS");
+        LOG_I("Found CAS");
     }
 
     k_sem_give(&sem_proc);
@@ -453,7 +453,7 @@ static void unicast_start_complete_cb(int err, struct bt_conn *conn)
 {
     if (err != 0)
     {
-        LOG_ERR("Failed to start (failing conn %p): %d", (void *)conn, err);
+        LOG_E("Failed to start (failing conn %p): %d", (void *)conn, err);
         return;
     }
 
@@ -464,20 +464,20 @@ static int discover_cas(void)
 {
     int err;
 
-    LOG_INF("Discovering CAS");
+    LOG_I("Discovering CAS");
     k_sem_reset(&sem_proc);
 
     err = bt_cap_initiator_unicast_discover(peer.conn);
     if (err != 0)
     {
-        LOG_ERR("Failed to discover CAS: %d", err);
+        LOG_E("Failed to discover CAS: %d", err);
         return err;
     }
 
     err = k_sem_take(&sem_proc, SEM_TIMEOUT);
     if (err != 0)
     {
-        LOG_ERR("Timeout on CAS discover: %d", err);
+        LOG_E("Timeout on CAS discover: %d", err);
         return err;
     }
 
@@ -491,7 +491,7 @@ static int unicast_audio_start(void)
     struct bt_cap_unicast_audio_start_param param = {0};
     int err;
 
-    LOG_INF("Starting streams");
+    LOG_I("Starting streams");
 
     if (peer.sink_ep != NULL)
     {
@@ -517,7 +517,7 @@ static int unicast_audio_start(void)
     err = bt_cap_initiator_unicast_audio_start(&param);
     if (err != 0)
     {
-        LOG_ERR("Failed to start unicast audio: %d", err);
+        LOG_E("Failed to start unicast audio: %d", err);
         return err;
     }
 
@@ -526,7 +526,7 @@ static int unicast_audio_start(void)
 
 static void att_mtu_updated_cb(struct bt_conn *conn, uint16_t tx, uint16_t rx)
 {
-    LOG_INF("MTU exchanged: %u/%u", tx, rx);
+    LOG_I("MTU exchanged: %u/%u", tx, rx);
     k_sem_give(&sem_mtu_exchanged);
 }
 
@@ -537,11 +537,11 @@ static void start_scan(void)
     err = bt_le_scan_start(BT_LE_SCAN_PASSIVE, NULL);
     if (err != 0)
     {
-        LOG_ERR("Scanning failed to start: %d", err);
+        LOG_E("Scanning failed to start: %d", err);
         return;
     }
 
-    LOG_INF("Scanning successfully started");
+    LOG_I("Scanning successfully started");
 }
 
 static void connected_cb(struct bt_conn *conn, uint8_t err)
@@ -552,7 +552,7 @@ static void connected_cb(struct bt_conn *conn, uint8_t err)
 
     if (err != 0)
     {
-        LOG_ERR("Failed to connect to %s: %u", addr, err);
+        LOG_E("Failed to connect to %s: %u", addr, err);
 
         bt_conn_unref(peer.conn);
         peer.conn = NULL;
@@ -566,7 +566,7 @@ static void connected_cb(struct bt_conn *conn, uint8_t err)
         return;
     }
 
-    LOG_INF("Connected: %s", addr);
+    LOG_I("Connected: %s", addr);
     k_sem_give(&sem_state_change);
 }
 
@@ -581,7 +581,7 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason)
 
     (void)bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-    LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
+    LOG_I("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
     bt_conn_unref(peer.conn);
     peer.conn = NULL;
@@ -594,23 +594,23 @@ static void security_changed_cb(struct bt_conn *conn, bt_security_t level,
 {
     if (sec_err == 0)
     {
-        LOG_INF("Security changed: %u", level);
+        LOG_I("Security changed: %u", level);
         k_sem_give(&sem_security_changed);
     }
     else
     {
-        LOG_ERR("Failed to set security level: %s(%d)",
-                bt_security_err_to_str(sec_err), sec_err);
+        LOG_E("Failed to set security level: %s(%d)",
+              bt_security_err_to_str(sec_err), sec_err);
 
         if (sec_err == BT_SECURITY_ERR_PIN_OR_KEY_MISSING)
         {
             int err;
 
-            LOG_INF("Removing old key");
+            LOG_I("Removing old key");
             err = bt_unpair(BT_ID_DEFAULT, bt_conn_get_dst(conn));
             if (err != 0)
             {
-                LOG_ERR("Failed to remove old key: %d", err);
+                LOG_E("Failed to remove old key: %d", err);
             }
         }
     }
@@ -653,12 +653,12 @@ static bool check_audio_support_and_connect_cb(struct bt_data *data, void *user_
     }
 
     bt_addr_le_to_str(addr, addr_str, sizeof(addr_str));
-    LOG_INF("Attempt to connect to %s", addr_str);
+    LOG_I("Attempt to connect to %s", addr_str);
 
     err = bt_le_scan_stop();
     if (err != 0)
     {
-        LOG_ERR("Failed to stop scan: %d", err);
+        LOG_E("Failed to stop scan: %d", err);
         return false;
     }
 
@@ -698,7 +698,7 @@ static int scan_and_connect(void)
     err = k_sem_take(&sem_state_change, K_FOREVER);
     if (err != 0)
     {
-        LOG_ERR("Failed to take sem_state_change: %d", err);
+        LOG_E("Failed to take sem_state_change: %d", err);
         return err;
     }
 
@@ -709,12 +709,12 @@ static void exchange_cb(struct bt_conn *conn, uint8_t err, struct bt_gatt_exchan
 {
     if (err == BT_ATT_ERR_SUCCESS)
     {
-        LOG_INF("MTU exchange done");
+        LOG_I("MTU exchange done");
         k_sem_give(&sem_proc);
     }
     else
     {
-        LOG_ERR("MTU exchange failed: err %u", err);
+        LOG_E("MTU exchange failed: err %u", err);
     }
 }
 
@@ -729,29 +729,29 @@ static int exchange_mtu(void)
             .func = exchange_cb,
         };
 
-        LOG_INF("Exchanging MTU");
+        LOG_I("Exchanging MTU");
 
         k_sem_reset(&sem_proc);
 
         err = bt_gatt_exchange_mtu(peer.conn, &exchange_params);
         if (err != 0)
         {
-            LOG_ERR("Failed to exchange MTU: %d", err);
+            LOG_E("Failed to exchange MTU: %d", err);
         }
 
         err = k_sem_take(&sem_proc, SEM_TIMEOUT);
         if (err != 0)
         {
-            LOG_ERR("Timeout on MTU exchange request: %d", err);
+            LOG_E("Timeout on MTU exchange request: %d", err);
             return err;
         }
     }
 
-    LOG_INF("Waiting for MTU exchange");
+    LOG_I("Waiting for MTU exchange");
     err = k_sem_take(&sem_mtu_exchanged, SEM_TIMEOUT);
     if (err != 0)
     {
-        LOG_ERR("Timeout on MTU exchange: %d", err);
+        LOG_E("Timeout on MTU exchange: %d", err);
         return err;
     }
 
@@ -765,15 +765,15 @@ static int update_security(void)
     err = bt_conn_set_security(peer.conn, BT_SECURITY_L2);
     if (err != 0)
     {
-        LOG_ERR("Failed to set security: %d", err);
+        LOG_E("Failed to set security: %d", err);
         return err;
     }
 
-    LOG_INF("Waiting for security change");
+    LOG_I("Waiting for security change");
     err = k_sem_take(&sem_security_changed, SEM_TIMEOUT);
     if (err != 0)
     {
-        LOG_ERR("Timeout on security: %d", err);
+        LOG_E("Timeout on security: %d", err);
         return err;
     }
 
@@ -806,7 +806,7 @@ static int init_cap_initiator(void)
     err = bt_cap_initiator_register_cb(&cap_cb);
     if (err != 0)
     {
-        LOG_ERR("Failed to register CAP callbacks: %d", err);
+        LOG_E("Failed to register CAP callbacks: %d", err);
 
         return err;
     }
@@ -814,7 +814,7 @@ static int init_cap_initiator(void)
     err = bt_bap_unicast_client_register_cb(&unicast_client_cbs);
     if (err != 0)
     {
-        LOG_ERR("Failed to register BAP unicast client callbacks: %d", err);
+        LOG_E("Failed to register BAP unicast client callbacks: %d", err);
 
         return err;
     }
@@ -837,7 +837,7 @@ static int reset_cap_initiator(void)
 {
     int err;
 
-    LOG_INF("Resetting");
+    LOG_I("Resetting");
 
     if (peer.conn != NULL)
     {
@@ -850,7 +850,7 @@ static int reset_cap_initiator(void)
         err = k_sem_take(&sem_state_change, K_FOREVER);
         if (err != 0)
         {
-            LOG_ERR("Timeout on disconnect: %d", err);
+            LOG_E("Timeout on disconnect: %d", err);
             return err;
         }
     }
@@ -860,7 +860,7 @@ static int reset_cap_initiator(void)
         err = k_sem_take(&peer.source_stream_sem, SEM_TIMEOUT);
         if (err != 0)
         {
-            LOG_ERR("Timeout on source_stream_sem: %d", err);
+            LOG_E("Timeout on source_stream_sem: %d", err);
             return err;
         }
     }
@@ -870,7 +870,7 @@ static int reset_cap_initiator(void)
         err = k_sem_take(&peer.sink_stream_sem, SEM_TIMEOUT);
         if (err != 0)
         {
-            LOG_ERR("Timeout on sink_stream_sem: %d", err);
+            LOG_E("Timeout on sink_stream_sem: %d", err);
             return err;
         }
     }
@@ -907,14 +907,14 @@ int cap_initiator_unicast(void)
         return err;
     }
 
-    LOG_INF("CAP initiator unicast initialized");
+    LOG_I("CAP initiator unicast initialized");
 
     while (true)
     {
         err = reset_cap_initiator();
         if (err != 0)
         {
-            LOG_ERR("Failed to reset");
+            LOG_E("Failed to reset");
 
             return err;
         }
@@ -997,7 +997,7 @@ int cap_initiator_unicast(void)
         err = k_sem_take(&sem_state_change, K_FOREVER);
         if (err != 0)
         {
-            LOG_ERR("Failed to take sem_state_change: err %d", err);
+            LOG_E("Failed to take sem_state_change: err %d", err);
 
             return err;
         }

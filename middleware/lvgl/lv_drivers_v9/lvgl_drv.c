@@ -75,7 +75,7 @@ void lv_hal_init(const char *name)
     lv_touchscreen_create("touch");
 
     // Init keyboard driver
-    //keypad_init();
+    keypad_init();
 
 
     //wheel_init();

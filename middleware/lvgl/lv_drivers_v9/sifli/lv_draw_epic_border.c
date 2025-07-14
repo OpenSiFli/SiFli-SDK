@@ -52,7 +52,7 @@
 
 #if LV_USE_DRAW_EPIC
 #include "lv_epic_utils.h"
-
+#include "lv_api_map_v8.h"
 
 
 #include "../../misc/lv_area_private.h"

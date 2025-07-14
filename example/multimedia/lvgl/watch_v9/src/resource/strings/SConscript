@@ -1,0 +1,22 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+objs = []
+if GetDepend('LV_EXT_RES_NON_STANDALONE'):
+    objs = Glob('*.json')
+
+    objs = Env.Lang(objs, DEFAULT_LANG = GetConfigValue('LV_EXT_RES_DEFAULT_LANGUAGE'))
+    #Env['lang'] = objs
+    objs = GetLangBuildObject(objs)
+    if GetOption('no_cc'):
+        objs = []
+    
+    objs = DefineGroup('resource', objs, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = '.')  
+
+Return ('objs')
+

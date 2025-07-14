@@ -10,7 +10,7 @@
 
 #include "board.h"
 
-#if defined(BSP_USING_SPI_NAND) && defined(RT_USING_DFS)
+#if defined(RT_USING_DFS)
 
 #include "dfs_file.h"
 #include "dfs_posix.h"

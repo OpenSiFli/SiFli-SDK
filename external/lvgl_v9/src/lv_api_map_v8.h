@@ -15,7 +15,7 @@ extern "C" {
  *********************/
 
 #include "misc/lv_types.h"
-
+#include "lv_buttonmatrix.h"
 /*********************
  *      DEFINES
  *********************/
@@ -310,6 +310,11 @@ static inline void lv_obj_move_background(lv_obj_t * obj)
 
 #define lv_image_decoder_built_in_open      lv_bin_decoder_open
 #define lv_image_decoder_built_in_close     lv_bin_decoder_close
+
+static inline uint32_t lv_img_buf_get_img_size(lv_coord_t w, lv_coord_t h, uint8_t cf)
+{
+    return lv_draw_buf_width_to_stride(w, cf) * h;
+}
 
 /**********************
  *      MACROS

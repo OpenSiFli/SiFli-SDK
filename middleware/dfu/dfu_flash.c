@@ -623,7 +623,7 @@ __WEAK uint32_t dfu_ring_addr_get()
     return addr;
 }
 
-static uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
+uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
 {
     uint32_t flash_addr = 0xFFFFFFFF;
 

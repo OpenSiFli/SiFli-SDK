@@ -34,6 +34,9 @@ menuconfig --board=sf32lb52-lcd_n16r8
 对应外设的pwm,Channel配置
 ![Enable PWM:](./assets/menuconfig_rgb2.png)
 
+开启PWM的DMA驱动 
+![Enable rgbled:](./assets/add.png)
+
 **注意**: pwm设置已经是设置TIM配置，注意检查Enable timer配置是否造成冲突
 ![Enable timer:](./assets/menuconfig_rgb3.png)
 

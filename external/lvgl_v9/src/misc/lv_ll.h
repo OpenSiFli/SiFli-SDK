@@ -154,6 +154,13 @@ void lv_ll_move_before(lv_ll_t * ll_p, void * n_act, void * n_after);
  */
 bool lv_ll_is_empty(lv_ll_t * ll_p);
 
+/**
+ * concatenate `from` list to the end of `to` list
+ * @param from pointer to the linked list to
+ * @param to pointer to the linked list
+ */
+void lv_ll_merge_list(lv_ll_t *to, lv_ll_t *from);
+
 /**********************
  *      MACROS
  **********************/

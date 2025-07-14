@@ -73,7 +73,9 @@
         #define SDIO_USING_DMA          (1)
     #endif  //SDMMC2_DMA_INSTANCE
 #endif  //SOC_SF32LB52X
-
+#ifndef SDIO_USING_DMA
+    #error "SDIO_USING_DMA must be defined,the DMA function of sdio must be enabled"
+#endif
 int rt_hw_sdio_init(void);
 
 static struct sifli_sdio_config sdio_config = SDIO_BUS_CONFIG;
@@ -182,6 +184,65 @@ static int get_order(rt_uint32_t data)
     return order;
 }
 
+
+#define _DUMP_REG_DEBUG         (0)
+#define _SDHCI_DUMP_RCNT        (23)
+static uint32_t sdhci_reg_arr[_SDHCI_DUMP_RCNT];
+static void dump_sdio_reg(void)
+{
+    int i;
+    uint32_t *sdhci_base_reg;
+    sdhci_base_reg = (uint32_t *)SDCARD_INSTANCE;;
+
+    for (i = 0; i < _SDHCI_DUMP_RCNT; i++)
+    {
+        sdhci_reg_arr[i] = *sdhci_base_reg++;
+#if _DUMP_REG_DEBUG
+        rt_kprintf("%08x ", sdhci_reg_arr[i]);
+        if ((i + 1) % 8 == 0)
+        {
+            rt_kprintf("\n");
+        }
+        rt_kprintf("\n");
+#endif
+    }
+}
+
+static void recov_sdio_reg(void)
+{
+    int i;
+    uint32_t *sdhci_base_reg;
+
+    sdhci_base_reg = (uint32_t *)SDCARD_INSTANCE;
+
+    for (i = 0; i < _SDHCI_DUMP_RCNT; i++)
+    {
+        *sdhci_base_reg = sdhci_reg_arr[i];
+        // read only reg: 0x10, 0x14, 0x18, 0x1c for response
+        // 0x24 for sr, 0x30 for clear sr, w1c;
+        // 0x40 , 0x44, 0x48 for capbility
+        // 0x54 for adma error status
+#if _DUMP_REG_DEBUG
+        rt_kprintf("%08x ", *sdhci_base_reg);
+        if ((i + 1) % 8 == 0)
+        {
+            rt_kprintf("\n");
+        }
+        rt_kprintf("\n");
+#endif
+        sdhci_base_reg++;
+    }
+}
+
+void rt_hw_sdio_timeout_handle(void)
+{
+    dump_sdio_reg();
+    HAL_RCC_ResetModule(RCC_MOD_SDMMC1);
+    rt_thread_mdelay(1);
+    recov_sdio_reg();
+}
+
+
 /**
   * @brief  This function wait sdio completed.
   * @param  sdio  rthw_sdio
@@ -195,10 +256,11 @@ static void rthw_sdio_wait_completed(struct rthw_sdio *sdio)
     SD_TypeDef *hw_sdio = sdio->sdio_des.hw_sdio;
 
     if (rt_event_recv(&sdio->event, 0xffffffff, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
-                      rt_tick_from_millisecond(5000), &status) != RT_EOK)
+                      rt_tick_from_millisecond(500), &status) != RT_EOK)
     {
         LOG_E("wait %d completed timeout 0x%08x,arg 0x%08x\n", cmd->cmd_code, HAL_SDMMC_GET_STA(hw_sdio), cmd->arg);
         cmd->err = -RT_ETIMEOUT;
+        rt_hw_sdio_timeout_handle();
         return;
     }
 
@@ -255,6 +317,7 @@ static void rthw_sdio_wait_completed(struct rthw_sdio *sdio)
         if (status & HW_SDIO_IT_CTIMEOUT)
         {
             cmd->err = -RT_ETIMEOUT;
+            rt_hw_sdio_timeout_handle();
         }
 
         if ((status & HW_SDIO_IT_DCRCFAIL) && (data != NULL))
@@ -265,6 +328,7 @@ static void rthw_sdio_wait_completed(struct rthw_sdio *sdio)
         if ((status & HW_SDIO_IT_DTIMEOUT) && (data != NULL))
         {
             data->err = -RT_ETIMEOUT;
+            rt_hw_sdio_timeout_handle();
         }
 
         if (cmd->err == RT_EOK)
@@ -338,7 +402,7 @@ static void rthw_sdio_transfer_by_dma(struct rthw_sdio *sdio, struct sdio_pkg *p
 
     if (data->flags & DATA_DIR_WRITE)
     {
-
+        mpu_dcache_clean(buff, (uint32_t)size);
         sdio->sdio_des.txconfig((rt_uint32_t *)buff, (rt_uint32_t *)&hw_sdio->FIFO, size);
         //hw_sdio->DCTR |= HW_SDIO_DMA_ENABLE;
         // use ext-dma to replace it, sram to sdcard?
@@ -447,6 +511,12 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
           data ? data->blks * data->blksize : 0,
           data ? data->blksize : 0, rt_tick_get()
          );
+#ifdef RT_USING_PM
+    rt_pm_request(PM_SLEEP_MODE_IDLE);
+#ifdef BSP_PM_FREQ_SCALING
+    rt_pm_hw_device_start();
+#endif
+#endif
 
     // switch to normal command mode before set command
     if (sdio->ahb_en)
@@ -522,10 +592,6 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
     else
         reg_cmd = 1; //HW_SDIO_RESPONSE_SHORT;
 
-#ifdef RT_USING_PM
-    // add to avoid freq changed
-    rt_pm_hw_device_start();
-#endif
     /* send cmd */
     //hw_sdio->arg = cmd->arg;
     //hw_sdio->cmd = reg_cmd;
@@ -539,7 +605,7 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
     {
         volatile rt_uint32_t count = SDIO_TX_RX_COMPLETE_TIMEOUT_LOOPS;
         //LOG_D("before data: 0x%08x\n",HAL_SDMMC_GET_STA(hw_sdio));
-
+        int dma_res;
 #ifndef SDIO_USING_DMA
         rthw_sdio_transfer_by_cpu(sdio, pkg);
 
@@ -553,7 +619,10 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
         }
 #else
         if (data->flags & DATA_DIR_WRITE)
-            HAL_DMA_PollForTransfer(&sdio_obj.dma.handle_tx, HAL_DMA_FULL_TRANSFER, 1000);
+            dma_res = HAL_DMA_PollForTransfer(&sdio_obj.dma.handle_tx, HAL_DMA_FULL_TRANSFER, 1000);
+        else if (data->flags & DATA_DIR_READ)
+            dma_res = HAL_DMA_PollForTransfer(&sdio_obj.dma.handle_rx, HAL_DMA_FULL_TRANSFER, 1000);
+        RT_ASSERT(dma_res == HAL_OK);
 #endif
         //LOG_D("after data: 0x%08x\n",HAL_SDMMC_GET_STA(hw_sdio));
         while (count && (HAL_SDMMC_GET_STA(hw_sdio) & (HW_SDIO_IT_TXACT)))
@@ -576,10 +645,7 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
     HAL_SDMMC_SET_IRQ_MASK(hw_sdio, mask);
 
     //HAL_SDMMC_CLR_DATA_CTRL(hw_sdio);
-#ifdef RT_USING_PM
-    // recover auto status
-    rt_pm_hw_device_stop();
-#endif
+
     /* clear pkg */
     sdio->pkg = RT_NULL;
 
@@ -603,6 +669,12 @@ static void rthw_sdio_send_command(struct rthw_sdio *sdio, struct sdio_pkg *pkg)
         }
         HAL_SDMMC_SWITCH_AHB(hw_sdio);
     }
+#ifdef RT_USING_PM
+#ifdef BSP_PM_FREQ_SCALING
+    rt_pm_hw_device_stop();
+#endif
+    rt_pm_release(PM_SLEEP_MODE_IDLE);
+#endif
 
     //LOG_I("set comd func done\n");
 }
@@ -705,6 +777,12 @@ static int rthw_sdio_set_clk(struct rt_mmcsd_host *host, uint32_t clk)
 
     return 0;
 }
+
+void sdio_update_clk(void)
+{
+    rthw_sdio_set_clk(sdio_host, SDIO_MAX_FREQ);
+}
+
 /**
   * @brief  This function config sdio.
   * @param  host    rt_mmcsd_host

@@ -78,6 +78,14 @@ ALIGN(64) static uint8_t render_buffer[SLOW_SPEED_SRAM + BUF_TOTAL_BYTES * 2];
 L2_NON_RET_BSS_SECT_BEGIN(test_images)
 L2_NON_RET_BSS_SECT(test_images, ALIGN(64) static uint8_t test_image[TEST_IMAGE_WIDTH * TEST_IMAGE_HEIGHT * TEST_IMAGE_PIXEL_BYTES]);
 L2_NON_RET_BSS_SECT_END
+
+/* Test data. */
+ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
+const static uint8_t ezip_data_argb565[] =
+{
+#include "../assets/clock_simple_bg_565A.dat"
+};
+
 void dummy_func(void)
 {
 }
@@ -247,6 +255,37 @@ static void draw_img(drv_epic_render_buf *p_buf)
 
     drv_epic_commit_op(o);
 }
+
+static void draw_ezip_img(drv_epic_render_buf *p_buf)
+{
+    drv_epic_operation *o = drv_epic_alloc_op(p_buf);
+    RT_ASSERT(o != NULL);
+
+
+    o->op = DRV_EPIC_DRAW_IMAGE;
+    o->clip_area.x0 = 0;
+    o->clip_area.y0 = 0;
+    o->clip_area.x1 = LCD_HOR_RES_MAX - 1;
+    o->clip_area.y1 = LCD_VER_RES_MAX - 1;
+
+    HAL_EPIC_LayerConfigInit(&o->mask);
+    o->desc.blend.use_dest_as_bg = EPIC_BLEND_MODE_NORMAL;
+
+    EPIC_LayerConfigTypeDef *p_src_layer = &o->desc.blend.layer;
+    HAL_EPIC_LayerConfigInit(p_src_layer);
+    p_src_layer->alpha = 50;
+    p_src_layer->x_offset = 0;
+    p_src_layer->y_offset = 0;
+
+    p_src_layer->data = (uint8_t *)&ezip_data_argb565[0];
+    p_src_layer->color_mode = EPIC_INPUT_EZIP;
+    p_src_layer->width = 454;
+    p_src_layer->total_width = 454;
+    p_src_layer->height = 454;
+
+    drv_epic_commit_op(o);
+}
+
 
 static void draw_rects(drv_epic_render_buf *p_buf)
 {
@@ -808,8 +847,12 @@ int main(void)
 {
     rt_kprintf("__main start\r\n");
 
+    /*
+      1 - Show the rendering result on LCD
+      0 - Do not show the rendering result on LCD, just render to buffer.
+    */
+    uint8_t show_on_lcd = 1;
     uint8_t pixel_align;
-    uint8_t shown_on_lcd = 0;
     rt_device_t lcd_device = open_lcd(&pixel_align);
     if (!lcd_device)
     {
@@ -849,7 +892,8 @@ int main(void)
 
         /*Draw somthing*/
         draw_fill(&virtual_render_buf);
-        draw_img(&virtual_render_buf);
+        //draw_img(&virtual_render_buf);
+        draw_ezip_img(&virtual_render_buf);
         draw_rects(&virtual_render_buf);
         draw_borders(&virtual_render_buf);
         draw_arcs(&virtual_render_buf);//arc
@@ -858,8 +902,8 @@ int main(void)
         draw_polygon(&virtual_render_buf);
 
         // generate_image((uint8_t *)&test_image[0], TEST_IMAGE_COLOR_FORMAT, TEST_IMAGE_WIDTH, TEST_IMAGE_HEIGHT);
-        // draw_img_3d_rotated(&virtual_render_buf);
-        // draw_img_3d_rotated_2(&virtual_render_buf);
+        //draw_img_3d_rotated(&virtual_render_buf);
+        //draw_img_3d_rotated_2(&virtual_render_buf);
         //draw_arc_anim(&virtual_render_buf);
 
 
@@ -874,11 +918,10 @@ int main(void)
         msg.content.rd.usr_data = lcd_device;
         msg.content.rd.pixel_align = pixel_align;
 
-        if (0 == shown_on_lcd)
+        if (show_on_lcd)
         {
             /*and show the resule on LCD at first time*/
             msg.content.rd.partial_done_cb = partial_done_cb;
-            shown_on_lcd = 1;
         }
         else
         {
@@ -887,12 +930,15 @@ int main(void)
 
         drv_epic_render_msg_commit(&msg);
 
-        /*Wait rendering done.*/
-        rt_err_t err;
-        err = rt_sem_take(&render_done_sema, rt_tick_from_millisecond(3000));
-        RT_ASSERT(RT_EOK == err);
-        /*Wait LCD asynchronize flushing done.*/
-        wait_lcd_flush_done();
+        if (show_on_lcd)
+        {
+            /*Wait rendering done.*/
+            rt_err_t err;
+            err = rt_sem_take(&render_done_sema, rt_tick_from_millisecond(3000));
+            RT_ASSERT(RT_EOK == err);
+            /*Wait LCD asynchronize flushing done.*/
+            wait_lcd_flush_done();
+        }
     }
 
 

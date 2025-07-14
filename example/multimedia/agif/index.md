@@ -1,0 +1,9 @@
+# AGIF
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+
+
+```

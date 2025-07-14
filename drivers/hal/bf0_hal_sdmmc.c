@@ -26,6 +26,9 @@ HAL_StatusTypeDef HAL_SDMMC_INIT(SD_TypeDef *hsd)
     hsd->CLKCR |= SD_CLKCR_VOID_FIFO_ERROR;
     hsd->SR = 0X3FFFF;
     hsd->IER = 0;
+#if defined(SF32LB52X)
+    hsd->CDR &= ~SD_CDR_ITIMING_SEL;
+#endif
     HAL_SDMMC_SET_TIMEOUT(hsd, HAL_SDMMC_DEFAULT_TIMEOUT);
 
     return HAL_OK;

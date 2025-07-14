@@ -58,8 +58,8 @@ static bool log_codec_cfg_cb(struct bt_data *data, void *user_data)
 
 static void log_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
 {
-    LOG_INF("codec_cfg 0x%02x cid 0x%04x vid 0x%04x count %u", codec_cfg->id, codec_cfg->cid,
-            codec_cfg->vid, codec_cfg->data_len);
+    LOG_I("codec_cfg 0x%02x cid 0x%04x vid 0x%04x count %u", codec_cfg->id, codec_cfg->cid,
+          codec_cfg->vid, codec_cfg->data_len);
 
     if (codec_cfg->id == BT_HCI_CODING_FORMAT_LC3)
     {
@@ -73,30 +73,30 @@ static void log_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
         ret = bt_audio_codec_cfg_get_freq(codec_cfg);
         if (ret > 0)
         {
-            LOG_INF("\tFrequency: %d Hz", bt_audio_codec_cfg_freq_to_freq_hz(ret));
+            LOG_I("\tFrequency: %d Hz", bt_audio_codec_cfg_freq_to_freq_hz(ret));
         }
 
         ret = bt_audio_codec_cfg_get_frame_dur(codec_cfg);
         if (ret > 0)
         {
-            LOG_INF("\tFrame Duration: %d us",
-                    bt_audio_codec_cfg_frame_dur_to_frame_dur_us(ret));
+            LOG_I("\tFrame Duration: %d us",
+                  bt_audio_codec_cfg_frame_dur_to_frame_dur_us(ret));
         }
 
         if (bt_audio_codec_cfg_get_chan_allocation(codec_cfg, &chan_allocation, true) ==
                 0)
         {
-            LOG_INF("\tChannel allocation: 0x%08X", chan_allocation);
+            LOG_I("\tChannel allocation: 0x%08X", chan_allocation);
         }
 
         ret = bt_audio_codec_cfg_get_octets_per_frame(codec_cfg);
         if (ret > 0)
         {
-            LOG_INF("\tOctets per frame: %d", ret);
+            LOG_I("\tOctets per frame: %d", ret);
         }
 
-        LOG_INF("\tFrames per SDU: %d",
-                bt_audio_codec_cfg_get_frame_blocks_per_sdu(codec_cfg, true));
+        LOG_I("\tFrames per SDU: %d",
+              bt_audio_codec_cfg_get_frame_blocks_per_sdu(codec_cfg, true));
     }
     else
     {
@@ -108,8 +108,8 @@ static void log_codec_cfg(const struct bt_audio_codec_cfg *codec_cfg)
 
 static void log_qos(const struct bt_bap_qos_cfg *qos)
 {
-    LOG_INF("QoS: interval %u framing 0x%02x phy 0x%02x sdu %u rtn %u latency %u pd %u",
-            qos->interval, qos->framing, qos->phy, qos->sdu, qos->rtn, qos->latency, qos->pd);
+    LOG_I("QoS: interval %u framing 0x%02x phy 0x%02x sdu %u rtn %u latency %u pd %u",
+          qos->interval, qos->framing, qos->phy, qos->sdu, qos->rtn, qos->latency, qos->pd);
 }
 
 static int unicast_server_config_cb(struct bt_conn *conn, const struct bt_bap_ep *ep,
@@ -121,7 +121,7 @@ static int unicast_server_config_cb(struct bt_conn *conn, const struct bt_bap_ep
 {
     struct bt_cap_stream *cap_stream;
 
-    LOG_INF("ASE Codec Config: conn %p ep %p dir %u", (void *)conn, (void *)ep, dir);
+    LOG_I("ASE Codec Config: conn %p ep %p dir %u", (void *)conn, (void *)ep, dir);
 
     log_codec_cfg(codec_cfg);
 
@@ -136,7 +136,7 @@ static int unicast_server_config_cb(struct bt_conn *conn, const struct bt_bap_ep
 
     *bap_stream = &cap_stream->bap_stream;
 
-    LOG_INF("ASE Codec Config bap_stream %p", *bap_stream);
+    LOG_I("ASE Codec Config bap_stream %p", *bap_stream);
 
     *pref = qos_pref;
 
@@ -148,7 +148,7 @@ static int unicast_server_reconfig_cb(struct bt_bap_stream *bap_stream, enum bt_
                                       struct bt_bap_qos_cfg_pref *const pref,
                                       struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("ASE Codec Reconfig: bap_stream %p", bap_stream);
+    LOG_I("ASE Codec Reconfig: bap_stream %p", bap_stream);
     log_codec_cfg(codec_cfg);
     *pref = qos_pref;
 
@@ -158,7 +158,7 @@ static int unicast_server_reconfig_cb(struct bt_bap_stream *bap_stream, enum bt_
 static int unicast_server_qos_cb(struct bt_bap_stream *bap_stream, const struct bt_bap_qos_cfg *qos,
                                  struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("QoS: bap_stream %p qos %p", bap_stream, qos);
+    LOG_I("QoS: bap_stream %p qos %p", bap_stream, qos);
 
     log_qos(qos);
 
@@ -168,14 +168,14 @@ static int unicast_server_qos_cb(struct bt_bap_stream *bap_stream, const struct 
 static int unicast_server_enable_cb(struct bt_bap_stream *bap_stream, const uint8_t meta[],
                                     size_t meta_len, struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("Enable: bap_stream %p meta_len %zu", bap_stream, meta_len);
+    LOG_I("Enable: bap_stream %p meta_len %zu", bap_stream, meta_len);
 
     return 0;
 }
 
 static int unicast_server_start_cb(struct bt_bap_stream *bap_stream, struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("Start: bap_stream %p", bap_stream);
+    LOG_I("Start: bap_stream %p", bap_stream);
 
     return 0;
 }
@@ -208,7 +208,7 @@ static int unicast_server_metadata_cb(struct bt_bap_stream *bap_stream, const ui
     };
     int err;
 
-    LOG_INF("Metadata: bap_stream %p meta_len %zu", bap_stream, meta_len);
+    LOG_I("Metadata: bap_stream %p meta_len %zu", bap_stream, meta_len);
 
     err = bt_audio_data_parse(meta, meta_len, data_func_cb, &func_param);
     if (err != 0)
@@ -218,7 +218,7 @@ static int unicast_server_metadata_cb(struct bt_bap_stream *bap_stream, const ui
 
     if (!func_param.stream_context_present)
     {
-        LOG_ERR("Stream audio context not present");
+        LOG_E("Stream audio context not present");
         *rsp = BT_BAP_ASCS_RSP(BT_BAP_ASCS_RSP_CODE_METADATA_REJECTED,
                                BT_BAP_ASCS_REASON_NONE);
 
@@ -230,21 +230,21 @@ static int unicast_server_metadata_cb(struct bt_bap_stream *bap_stream, const ui
 
 static int unicast_server_disable_cb(struct bt_bap_stream *bap_stream, struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("Disable: bap_stream %p", bap_stream);
+    LOG_I("Disable: bap_stream %p", bap_stream);
 
     return 0;
 }
 
 static int unicast_server_stop_cb(struct bt_bap_stream *bap_stream, struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("Stop: bap_stream %p", bap_stream);
+    LOG_I("Stop: bap_stream %p", bap_stream);
 
     return 0;
 }
 
 static int unicast_server_release_cb(struct bt_bap_stream *bap_stream, struct bt_bap_ascs_rsp *rsp)
 {
-    LOG_INF("Release: bap_stream %p", bap_stream);
+    LOG_I("Release: bap_stream %p", bap_stream);
 
     return 0;
 }
@@ -265,21 +265,21 @@ static const struct bt_bap_unicast_server_cb unicast_server_cb =
 static void unicast_stream_configured_cb(struct bt_bap_stream *bap_stream,
         const struct bt_bap_qos_cfg_pref *pref)
 {
-    LOG_INF("Configured bap_stream %p", bap_stream);
+    LOG_I("Configured bap_stream %p", bap_stream);
 
     /* TODO: The preference should be used/taken into account when
      * setting the QoS
      */
 
-    LOG_INF("Local preferences: unframed %s, phy %u, rtn %u, latency %u, pd_min %u, pd_max "
-            "%u, pref_pd_min %u, pref_pd_max %u",
-            pref->unframed_supported ? "supported" : "not supported", pref->phy, pref->rtn,
-            pref->latency, pref->pd_min, pref->pd_max, pref->pref_pd_min, pref->pref_pd_max);
+    LOG_I("Local preferences: unframed %s, phy %u, rtn %u, latency %u, pd_min %u, pd_max "
+          "%u, pref_pd_min %u, pref_pd_max %u",
+          pref->unframed_supported ? "supported" : "not supported", pref->phy, pref->rtn,
+          pref->latency, pref->pd_min, pref->pd_max, pref->pref_pd_min, pref->pref_pd_max);
 }
 
 static void unicast_stream_qos_set_cb(struct bt_bap_stream *bap_stream)
 {
-    LOG_INF("QoS set bap_stream %p", bap_stream);
+    LOG_I("QoS set bap_stream %p", bap_stream);
 }
 
 static void unicast_stream_enabled_cb(struct bt_bap_stream *bap_stream)
@@ -287,12 +287,12 @@ static void unicast_stream_enabled_cb(struct bt_bap_stream *bap_stream)
     struct bt_bap_ep_info ep_info;
     int err;
 
-    LOG_INF("Enabled bap_stream %p", bap_stream);
+    LOG_I("Enabled bap_stream %p", bap_stream);
 
     err = bt_bap_ep_get_info(bap_stream->ep, &ep_info);
     if (err != 0)
     {
-        LOG_ERR("Failed to get ep info: %d", err);
+        LOG_E("Failed to get ep info: %d", err);
 
         return;
     }
@@ -303,7 +303,7 @@ static void unicast_stream_enabled_cb(struct bt_bap_stream *bap_stream)
         err = bt_bap_stream_start(bap_stream);
         if (err != 0)
         {
-            LOG_ERR("Failed to start: %d", err);
+            LOG_E("Failed to start: %d", err);
 
             return;
         }
@@ -312,23 +312,23 @@ static void unicast_stream_enabled_cb(struct bt_bap_stream *bap_stream)
 
 static void unicast_stream_started_cb(struct bt_bap_stream *bap_stream)
 {
-    LOG_INF("Started bap_stream %p", bap_stream);
+    LOG_I("Started bap_stream %p", bap_stream);
     total_unicast_rx_iso_packet_count = 0U;
 }
 
 static void unicast_stream_metadata_updated_cb(struct bt_bap_stream *bap_stream)
 {
-    LOG_INF("Metadata updated bap_stream %p", bap_stream);
+    LOG_I("Metadata updated bap_stream %p", bap_stream);
 }
 
 static void unicast_stream_disabled_cb(struct bt_bap_stream *bap_stream)
 {
-    LOG_INF("Disabled bap_stream %p", bap_stream);
+    LOG_I("Disabled bap_stream %p", bap_stream);
 }
 
 static void unicast_stream_stopped_cb(struct bt_bap_stream *bap_stream, uint8_t reason)
 {
-    LOG_INF("Stopped bap_stream %p with reason 0x%02X", bap_stream, reason);
+    LOG_I("Stopped bap_stream %p with reason 0x%02X", bap_stream, reason);
 }
 
 static void unicast_stream_released_cb(struct bt_bap_stream *bap_stream)
@@ -336,7 +336,7 @@ static void unicast_stream_released_cb(struct bt_bap_stream *bap_stream)
     struct bt_cap_stream *cap_stream =
         CONTAINER_OF(bap_stream, struct bt_cap_stream, bap_stream);
 
-    LOG_INF("Released bap_stream %p", bap_stream);
+    LOG_I("Released bap_stream %p", bap_stream);
 
     stream_released(cap_stream);
 }
@@ -351,7 +351,7 @@ static void unicast_stream_recv_cb(struct bt_bap_stream *bap_stream,
 
     if ((total_unicast_rx_iso_packet_count % 100U) == 0U)
     {
-        LOG_INF("Received %llu HCI ISO data packets", total_unicast_rx_iso_packet_count);
+        LOG_I("Received %llu HCI ISO data packets", total_unicast_rx_iso_packet_count);
     }
 
     total_unicast_rx_iso_packet_count++;
@@ -363,7 +363,7 @@ static void unicast_stream_sent_cb(struct bt_bap_stream *stream)
 
     if ((total_unicast_tx_iso_packet_count % 100U) == 0U)
     {
-        LOG_INF("Sent %llu HCI ISO data packets", total_unicast_tx_iso_packet_count);
+        LOG_I("Sent %llu HCI ISO data packets", total_unicast_tx_iso_packet_count);
     }
 
     total_unicast_tx_iso_packet_count++;
@@ -412,7 +412,7 @@ static void tx_thread_func(void *arg1, void *arg2, void *arg3)
                     }
                     else
                     {
-                        LOG_ERR("Unable to send: %d", err);
+                        LOG_E("Unable to send: %d", err);
                         net_buf_unref(buf);
                     }
                 }
@@ -453,7 +453,7 @@ int init_cap_acceptor_unicast(struct peer_config *peer)
         err = bt_bap_unicast_server_register(&param);
         if (err != 0)
         {
-            LOG_ERR("Failed to register BAP unicast server: %d", err);
+            LOG_E("Failed to register BAP unicast server: %d", err);
 
             return -ENOEXEC;
         }
@@ -461,7 +461,7 @@ int init_cap_acceptor_unicast(struct peer_config *peer)
         err = bt_bap_unicast_server_register_cb(&unicast_server_cb);
         if (err != 0)
         {
-            LOG_ERR("Failed to register BAP unicast server callbacks: %d", err);
+            LOG_E("Failed to register BAP unicast server callbacks: %d", err);
 
             return -ENOEXEC;
         }

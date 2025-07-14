@@ -19,6 +19,7 @@
 #include "flash_config.h"
 #include "sifli_bbm.h"
 #include "secboot.h"
+#include "../dfu/dfu_protocol.h"
 
 // Target is retention memory 0x20000, 0x20000000 is temp before retention memory ready
 #define HCPU_RAM_RETENTION_ADDR 0x20000000
@@ -56,6 +57,10 @@ struct sec_configuration *g_sec_config;
 
 struct sec_configuration sec_config_cache;
 flash_read_func dfu_flash_reader = NULL;
+static flash_read_func mpi5_flash_reader;
+static flash_write_func mpi5_flash_writer;
+static flash_erase_func mpi5_flash_eraser;
+
 
 __STATIC_INLINE void dwtIpInit(void)
 {
@@ -346,6 +351,28 @@ static int read_nor(uint32_t addr, const int8_t *buf, uint32_t size)
     return size;
 }
 
+static int write_nor(uint32_t addr, const int8_t *buf, uint32_t size)
+{
+    return BSP_Nor_write(addr, buf, size);
+}
+
+static int erase_nor(uint32_t addr, uint32_t size)
+{
+    return BSP_Nor_erase(addr, size);
+}
+
+static void init_mpi5(void)
+{
+    BSP_SetFlash5DIV(2);
+    int res = BSP_Flash_hw5_init();
+    if (res != 1)
+        //return;
+        HAL_ASSERT(0);
+
+    mpi5_flash_reader = read_nor;
+    mpi5_flash_writer = write_nor;
+    mpi5_flash_eraser = erase_nor;
+}
 
 // Return:
 // BOOT_INVALID_ADDR means init failed
@@ -362,6 +389,9 @@ static int boot_flash_init(boot_flash_t flash)
         return ret;
     uint8_t id = flash == BOOT_FLASH1 ? 0 : 1;
     flash_enable_func init_func;
+
+    /* init mpi5 for OTA */
+    init_mpi5();
 
     if (flash == BOOT_FLASH1)
     {
@@ -574,6 +604,141 @@ void boot_images()
 {
 }
 
+struct sec_configuration g_temp_sec_config;
+struct sec_configuration *temp_sec_config;
+
+static void update_sec_flash(struct sec_configuration *sec_config)
+{
+    uint32_t flash_addr = FLASH_BASE_ADDR;
+    //uint32_t size = (sizeof(struct sec_configuration) + SPI_NAND_PAGE_SIZE * 2) & (~(SPI_NAND_PAGE_SIZE * 2 - 1));
+    uint32_t size = sizeof(struct sec_configuration);
+    if (size % 4096 != 0)
+    {
+        size = (size + 4096) / 4096 * 4096;
+    }
+    mpi5_flash_eraser(flash_addr, size);
+    mpi5_flash_writer(flash_addr, (const int8_t *)sec_config, sizeof(struct sec_configuration));
+
+    g_sec_config = (struct sec_configuration *)FLASH_BASE_ADDR;
+}
+
+static void select_boot()
+{
+    uint8_t hcpu_des = HAL_Get_backup(RTC_BACKUP_NAND_OTA_DES);
+    uint32_t hcpu_len = HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE);
+    temp_sec_config = &g_temp_sec_config;
+
+    struct sec_configuration *flash_config = (struct sec_configuration *)FLASH_BASE_ADDR;
+    //memcpy((const int8_t *)temp_sec_config, (uint8_t *)MPI5_MEM_BASE, sizeof(struct sec_configuration));
+    read_nor(FLASH_BASE_ADDR, (const int8_t *)temp_sec_config, sizeof(struct sec_configuration));
+
+    int hcpu1_img_idx = DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU);
+    int hcpu2_img_idx = DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2);
+    // HAL_sw_breakpoint();
+
+    if (sec_config_cache.running_imgs[CORE_HCPU] == &(flash_config->imgs[hcpu1_img_idx]))
+    {
+        // now we are running on hcpu1
+        switch (hcpu_des)
+        {
+        case DFU_DES_RUNNING_ON_HCPU1:
+        {
+            // normal power on hcpu1
+            break;
+        }
+        case DFU_DES_SWITCH_TO_HCPU2:
+        {
+            // switch to hcpu2
+
+            sec_config_cache.running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu2_img_idx]);
+
+            hcpu_des = DFU_DES_UPDATE_HCPU2;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+
+            temp_sec_config->running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu2_img_idx]);
+            if (hcpu_len != 0)
+            {
+                temp_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)].length = hcpu_len;
+            }
+
+            update_sec_flash(temp_sec_config);
+            break;
+        }
+        case DFU_DES_UPDATE_HCPU2:
+        {
+            // switch to hcpu2 fail, back to hcpu1
+            sec_config_cache.running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu1_img_idx]);
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU1;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+
+            temp_sec_config->running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu1_img_idx]);
+            update_sec_flash(temp_sec_config);
+            break;
+        }
+        case DFU_DES_NONE:
+        {
+            // first power on, use current
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU1;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+            break;
+        }
+        default:
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU1;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+        }
+
+    }
+    else if (sec_config_cache.running_imgs[CORE_HCPU] == &(flash_config->imgs[hcpu2_img_idx]))
+    {
+        // now we are running on hcpu2
+        switch (hcpu_des)
+        {
+        case DFU_DES_RUNNING_ON_HCPU2:
+        {
+            // normal power on hcpu2
+            break;
+        }
+        case DFU_DES_SWITCH_TO_HCPU1:
+        {
+            // switch to hcpu1
+            sec_config_cache.running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu1_img_idx]);
+            hcpu_des = DFU_DES_UPDATE_HCPU1;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+
+            temp_sec_config->running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu1_img_idx]);
+            if (hcpu_len != 0)
+            {
+                temp_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)].length = hcpu_len;
+            }
+
+            update_sec_flash(temp_sec_config);
+            break;
+        }
+        case DFU_DES_UPDATE_HCPU1:
+        {
+            // switch to hcpu1 fail, back to hcpu2
+            sec_config_cache.running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu2_img_idx]);
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU2;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+
+            temp_sec_config->running_imgs[CORE_HCPU] = &(flash_config->imgs[hcpu2_img_idx]);
+            update_sec_flash(temp_sec_config);
+            break;
+        }
+        case DFU_DES_NONE:
+        {
+            // first power on, use current
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU2;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+            break;
+        }
+        default:
+            hcpu_des = DFU_DES_RUNNING_ON_HCPU2;
+            HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
+        }
+    }
+}
+
 void boot_images_main()
 {
     int i;
@@ -680,6 +845,8 @@ void boot_images_main()
     g_sec_config = (struct sec_configuration *)FLASH_BASE_ADDR;
 
     read_nor(FLASH_BASE_ADDR, (const int8_t *)&sec_config_cache, sizeof(struct sec_configuration));
+
+    select_boot();
 
     if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
     {

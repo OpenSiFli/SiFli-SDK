@@ -1,0 +1,11 @@
+# Blink
+
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+
+
+```

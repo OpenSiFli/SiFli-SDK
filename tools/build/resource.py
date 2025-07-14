@@ -723,6 +723,9 @@ def GenFtabCFile(src, output_name, imgs_info):
                     assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
                     ftab_item['base'] = start_addr
                     # add img info if img is specified
+                if 'base2' in region['ftab']['address']:
+                    assert 'base2' not in ftab_item, 'base2 address already configured in {}'.format(item_name)
+                    ftab_item['base2'] = start_addr
                 if 'img' in region:
                     img_name = region['img'].split(':')
                     proj_name = img_name[0]
@@ -795,8 +798,12 @@ def GenFtabCFile(src, output_name, imgs_info):
         s += MakeLine('.ftab[7] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
             ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
     if 'main' in ftab:
-        s += MakeLine('.ftab[8] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
-            ftab['main']['base'], ftab['main']['max_size'], ftab['main']['xip']))
+        if 'base2' in ftab['main']:
+            s += MakeLine('.ftab[8] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
+                ftab['main']['base2'], ftab['main']['max_size'], ftab['main']['xip']))
+        else:
+            s += MakeLine('.ftab[8] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
+                ftab['main']['base'], ftab['main']['max_size'], ftab['main']['xip']))
     s += MakeLine(
         '.ftab[9] = {.base = BOOTLOADER_PATCH_CODE_ADDR,  .size = FLASH_BOOT_PATCH_SIZE, .xip_base = '
         'BOOTLOADER_PATCH_CODE_ADDR, .flags = 0},')
@@ -830,7 +837,9 @@ def GenFtabCFile(src, output_name, imgs_info):
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT)] = {.length = 0xFFFFFFFF},')
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU2)] = {.length = 0xFFFFFFFF},')
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},')
-    s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {.length = 0xFFFFFFFF},')
+    s +=  MakeLine(
+        '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
+            size))
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT2)] = {.length = 0xFFFFFFFF},')
 
     # If more images are specified in partition table, use EXT region to describe how it's saved

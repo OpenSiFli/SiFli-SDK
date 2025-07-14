@@ -1,0 +1,7 @@
+# Multicore
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

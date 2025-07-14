@@ -282,105 +282,110 @@
     #ifndef LV_USE_IMG
         #define LV_USE_IMG LV_USE_IMAGE
     #endif
+    typedef unsigned char lv_img_cf_t;
+    #define LV_COLOR_CYAN lv_color_make(0x00, 0xFF, 0xFF)
+    #define lv_img_cache_invalidate_src(img) lv_image_cache_drop((const void * )img)
 
-    //typedef uint8_t lv_img_cf_t;
+    //#ifdef LV_USE_LVSF
 
-    #ifdef LV_USE_LVSF
 
-        #if 0//(0 == LVGL_VERSION_MINOR) && (0== LVGL_VERSION_PATCH) //v9.0.0
-            #define lv_btnmatrix_ctrl_t lv_buttonmatrix_ctrl_t
-            #define lv_btnmatrix_get_btn_text lv_buttonmatrix_get_button_text
-            #define LV_COLOR_WHITE lv_color_make(0xFF, 0xFF, 0xFF)
-            #define LV_COLOR_SILVER lv_color_make(0xC0, 0xC0, 0xC0)
-            #define LV_COLOR_GRAY lv_color_make(0x80, 0x80, 0x80)
-            #define LV_COLOR_BLACK lv_color_make(0x00, 0x00, 0x00)
-            #define LV_COLOR_RED lv_color_make(0xFF, 0x00, 0x00)
-            #define LV_COLOR_MAROON lv_color_make(0x80, 0x00, 0x00)
-            #define LV_COLOR_YELLOW lv_color_make(0xFF, 0xFF, 0x00)
-            #define LV_COLOR_OLIVE lv_color_make(0x80, 0x80, 0x00)
-            #define LV_COLOR_LIME lv_color_make(0x00, 0xFF, 0x00)
-            #define LV_COLOR_GREEN lv_color_make(0x00, 0x80, 0x00)
-            #define LV_COLOR_CYAN lv_color_make(0x00, 0xFF, 0xFF)
-            #define LV_COLOR_AQUA LV_COLOR_CYAN
-            #define LV_COLOR_TEAL lv_color_make(0x00, 0x80, 0x80)
-            #define LV_COLOR_BLUE lv_color_make(0x00, 0x00, 0xFF)
-            #define LV_COLOR_NAVY lv_color_make(0x00, 0x00, 0x80)
-            #define LV_COLOR_MAGENTA lv_color_make(0xFF, 0x00, 0xFF)
-            #define LV_COLOR_PURPLE lv_color_make(0x80, 0x00, 0x80)
-            #define LV_COLOR_ORANGE lv_color_make(0xFF, 0xA5, 0x00)
-            #define LV_IMG_ZOOM_NONE 256
-            #define lv_mem_alloc lv_malloc
-            #define lv_mem_free lv_free
-            #define LV_CANVAS_BUF_SIZE_TRUE_COLOR(w,h) LV_CANVAS_BUF_SIZE(w,h,LV_COLOR_DEPTH,1)
-            #define lv_canvas_get_img lv_canvas_get_image
-            #define lv_draw_img_dsc_t lv_draw_image_dsc_t
-            #define lv_draw_img_dsc_init lv_draw_image_dsc_init
-            #define lv_img_t lv_image_t
-            #define lv_img_class lv_image_class
-            #define lv_img_decoder_t lv_image_decoder_t
-            #define lv_img_header_t lv_image_header_t
-            #define lv_img_src_t lv_image_src_t
-            #define lv_img_src_get_type lv_image_src_get_type
-            #define lv_img_cache_invalidate_src(img) lv_image_cache_drop((const void * )img)
-            #define lv_img_decoder_dsc_t lv_image_decoder_dsc_t
-            #define lv_img_decoder_get_info lv_image_decoder_get_info
-            #define lv_img_decoder_create lv_image_decoder_create
-            #define lv_img_decoder_set_info_cb lv_image_decoder_set_info_cb
-            #define lv_img_decoder_set_open_cb  lv_image_decoder_set_open_cb
-            #define lv_img_decoder_set_read_line_cb  lv_image_decoder_set_read_line_cb
-            #define lv_img_decoder_set_close_cb lv_image_decoder_set_close_cb
-            #define LV_IMG_SRC_FILE LV_IMAGE_SRC_FILE
-            #define LV_INDEV_DEF_READ_PERIOD LV_DEF_REFR_PERIOD
-            #define lv_list_btn_class lv_list_button_class
-            #define LV_DISP_ROT_NONE LV_DISPLAY_ROTATION_0
-            #define LV_DISP_ROT_180 LV_DISPLAY_ROTATION_180
-            #define lv_scr_load lv_screen_load
-            #define lv_btn_class lv_button_class
-            #define lv_btnmatrix_class lv_buttonmatrix_class
-            #define lv_disp_drv_t lv_display_t
-            #define lv_disp_drv_init lv_display_init
-            #define lv_disp_dpx lv_display_dpx
-            #define LV_STYLE_PROP_ALL LV_STYLE_PROP_FLAG_ALL
-            #define LV_IMG_PX_SIZE_ALPHA_BYTE _LV_COLOR_NATIVE_WITH_ALPHA_SIZE
-            #define lv_style_set_bg_img_src lv_style_set_bg_image_src
-            #define lv_label_set_text_sel_start lv_label_set_text_selection_start
-            #define lv_label_set_text_sel_end lv_label_set_text_selection_end
-            #define lv_image_get_size_mode(obj) 0
-            #define lv_image_set_size_mode(obj,mode)
-            #define lv_label_get_recolor(obj) 1
-            #define lv_label_set_recolor(obj,en)
-            #define lv_indev_drv_t lv_indev_t
-        #endif /* 0 */
+    #if 1//(0 == LVGL_VERSION_MINOR) && (0== LVGL_VERSION_PATCH) //v9.0.0
+        //#define lv_btnmatrix_ctrl_t lv_buttonmatrix_ctrl_t
+        #define lv_btnmatrix_get_btn_text lv_buttonmatrix_get_button_text
+        #define LV_COLOR_WHITE lv_color_make(0xFF, 0xFF, 0xFF)
+        #define LV_COLOR_SILVER lv_color_make(0xC0, 0xC0, 0xC0)
+        #define LV_COLOR_GRAY lv_color_make(0x80, 0x80, 0x80)
+        #define LV_COLOR_BLACK lv_color_make(0x00, 0x00, 0x00)
+        #define LV_COLOR_RED lv_color_make(0xFF, 0x00, 0x00)
+        #define LV_COLOR_MAROON lv_color_make(0x80, 0x00, 0x00)
+        #define LV_COLOR_YELLOW lv_color_make(0xFF, 0xFF, 0x00)
+        #define LV_COLOR_OLIVE lv_color_make(0x80, 0x80, 0x00)
+        #define LV_COLOR_LIME lv_color_make(0x00, 0xFF, 0x00)
+        #define LV_COLOR_GREEN lv_color_make(0x00, 0x80, 0x00)
+        #define LV_COLOR_CYAN lv_color_make(0x00, 0xFF, 0xFF)
+        #define LV_COLOR_AQUA LV_COLOR_CYAN
+        #define LV_COLOR_TEAL lv_color_make(0x00, 0x80, 0x80)
+        #define LV_COLOR_BLUE lv_color_make(0x00, 0x00, 0xFF)
+        #define LV_COLOR_NAVY lv_color_make(0x00, 0x00, 0x80)
+        #define LV_COLOR_MAGENTA lv_color_make(0xFF, 0x00, 0xFF)
+        #define LV_COLOR_PURPLE lv_color_make(0x80, 0x00, 0x80)
+        #define LV_COLOR_ORANGE lv_color_make(0xFF, 0xA5, 0x00)
+        #define LV_IMG_ZOOM_NONE 256
+        #define lv_mem_alloc lv_malloc
+        #define lv_mem_free lv_free
+        #define LV_CANVAS_BUF_SIZE_TRUE_COLOR(w,h) LV_CANVAS_BUF_SIZE(w,h,LV_COLOR_DEPTH,1)
+        #define lv_canvas_get_img lv_canvas_get_image
+        #define lv_draw_img_dsc_t lv_draw_image_dsc_t
+        #define lv_draw_img_dsc_init lv_draw_image_dsc_init
+        #define lv_img_t lv_image_t
+        #define lv_img_class lv_image_class
+        #define lv_img_decoder_t lv_image_decoder_t
+        #define lv_img_header_t lv_image_header_t
+        #define lv_img_src_t lv_image_src_t
+        #define lv_img_src_get_type lv_image_src_get_type
 
-        #if (2 == LVGL_VERSION_MINOR) && (0== LVGL_VERSION_PATCH) //v9.2.0
-            #define lv_img_class lv_image_class
-            #define lv_btn_class lv_button_class
-            #define lv_btnmatrix_class lv_buttonmatrix_class
-            #define lv_list_btn_class lv_list_button_class
+        #define lv_img_decoder_dsc_t lv_image_decoder_dsc_t
+        #define lv_img_decoder_get_info lv_image_decoder_get_info
+        #define lv_img_decoder_create lv_image_decoder_create
+        #define lv_img_decoder_set_info_cb lv_image_decoder_set_info_cb
+        #define lv_img_decoder_set_open_cb  lv_image_decoder_set_open_cb
+        #define lv_img_decoder_set_read_line_cb  lv_image_decoder_set_read_line_cb
+        #define lv_img_decoder_set_close_cb lv_image_decoder_set_close_cb
+        #define LV_IMG_SRC_FILE LV_IMAGE_SRC_FILE
+        #define LV_INDEV_DEF_READ_PERIOD LV_DEF_REFR_PERIOD
+        #define lv_list_btn_class lv_list_button_class
+        #define LV_DISP_ROT_NONE LV_DISPLAY_ROTATION_0
+        #define LV_DISP_ROT_180 LV_DISPLAY_ROTATION_180
+        #define lv_scr_load lv_screen_load
+        #define lv_btn_class lv_button_class
+        #define lv_btnmatrix_class lv_buttonmatrix_class
+        #define lv_disp_drv_t lv_display_t
+        #define lv_disp_drv_init lv_display_init
+        #define lv_disp_dpx lv_display_dpx
+        #define LV_STYLE_PROP_ALL LV_STYLE_PROP_FLAG_ALL
+        #define LV_IMG_PX_SIZE_ALPHA_BYTE _LV_COLOR_NATIVE_WITH_ALPHA_SIZE
+        #define lv_style_set_bg_img_src lv_style_set_bg_image_src
+        #define lv_label_set_text_sel_start lv_label_set_text_selection_start
+        #define lv_label_set_text_sel_end lv_label_set_text_selection_end
+        #define lv_image_get_size_mode(obj) 0
+        #define lv_image_set_size_mode(obj,mode)
+        #define lv_label_get_recolor(obj) 1
+        #define lv_label_set_recolor(obj,en)
+        #define lv_indev_drv_t lv_indev_t
+    #endif /* 0 */
 
-            #define lv_theme_get_font_bigl lv_theme_get_font_large
-            #define lv_theme_get_font_title lv_theme_get_font_normal
-            #define lv_theme_get_font_subtitle lv_theme_get_font_small
+    #if (2 == LVGL_VERSION_MINOR) && (0== LVGL_VERSION_PATCH) //v9.2.0
+        #define lv_img_class lv_image_class
+        #define lv_btn_class lv_button_class
+        #define lv_btnmatrix_class lv_buttonmatrix_class
+        #define lv_list_btn_class lv_list_button_class
 
-            #define lv_disp_drv_t lv_display_t
-            #define lv_img_header_t lv_image_header_t
-        #endif
+        #define lv_theme_get_font_bigl lv_theme_get_font_large
+        #define lv_theme_get_font_title lv_theme_get_font_normal
+        #define lv_theme_get_font_subtitle lv_theme_get_font_small
 
-        #if LV_COLOR_DEPTH == 1
-            #define LV_COLOR_SIZE 8
-        #elif LV_COLOR_DEPTH == 8
-            #define LV_COLOR_SIZE 8
-        #elif LV_COLOR_DEPTH == 16
-            #define LV_COLOR_SIZE 16
-        #elif LV_COLOR_DEPTH == 24
-            #define LV_COLOR_SIZE 24
-        #elif LV_COLOR_DEPTH == 32
-            #define LV_COLOR_SIZE 32
-        #else
-            #error "Invalid LV_COLOR_DEPTH in lv_conf.h! Set it to 1, 8, 16 or 32!"
-        #endif
+        #define lv_disp_drv_t lv_display_t
+        #define lv_img_header_t lv_image_header_t
+    #endif
 
-    #endif /* LV_USE_LVSF */
+
+
+    //#endif /* LV_USE_LVSF */
+
+    #if LV_COLOR_DEPTH == 1
+        #define LV_COLOR_SIZE 8
+    #elif LV_COLOR_DEPTH == 8
+        #define LV_COLOR_SIZE 8
+    #elif LV_COLOR_DEPTH == 16
+        #define LV_COLOR_SIZE 16
+    #elif LV_COLOR_DEPTH == 24
+        #define LV_COLOR_SIZE 24
+    #elif LV_COLOR_DEPTH == 32
+        #define LV_COLOR_SIZE 32
+    #else
+        #error "Invalid LV_COLOR_DEPTH in lv_conf.h! Set it to 1, 8, 16 or 32!"
+    #endif
+
 #endif
 
 #endif /*LV_CONF_SIFLI_H*/

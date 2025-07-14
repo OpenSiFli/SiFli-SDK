@@ -8,7 +8,7 @@
 #include <zephyr/bluetooth/audio/bap.h>
 #include <zephyr/bluetooth/audio/cap.h>
 #include <zephyr/bluetooth/conn.h>
-
+#include <ulog.h>
 struct tx_stream
 {
     struct bt_cap_stream *stream;

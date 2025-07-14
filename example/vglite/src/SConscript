@@ -1,0 +1,14 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ['main.c']
+src += Glob('vglite/*.c')
+
+CPPPATH = [cwd, str(Dir('#'))]
+CPPPATH += [os.path.join(cwd, "vglite/util")]
+
+group = DefineGroup('App_utils', src, depend = [''], variant_dir="ble", CPPPATH = CPPPATH)
+
+Return('group')

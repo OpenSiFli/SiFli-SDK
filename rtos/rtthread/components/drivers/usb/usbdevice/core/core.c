@@ -2159,9 +2159,7 @@ static void rt_usbd_thread_entry(void *parameter)
         }
 
         RT_DEBUG_LOG(RT_DEBUG_USB, ("message type %d\n", msg.type));
-#ifndef RT_USB_DEVICE_MSTORAGE
-        rt_thread_mdelay(2);//Temporarily solve the problem of slow connection,
-#endif
+
         switch (msg.type)
         {
         case USB_MSG_SOF:

@@ -24,12 +24,12 @@ int main(void)
     err = bt_enable(NULL);
     if (err != 0)
     {
-        LOG_ERR("Bluetooth enable failed: %d", err);
+        LOG_E("Bluetooth enable failed: %d", err);
 
         return 0;
     }
 
-    LOG_INF("Bluetooth initialized");
+    LOG_I("Bluetooth initialized");
 
     /* Broadcast is started first as the unicast part is run as loop */
     if (IS_ENABLED(CONFIG_SAMPLE_BROADCAST))
@@ -38,7 +38,7 @@ int main(void)
 
         if (err != 0)
         {
-            LOG_ERR("Failed to run CAP Initiator as broadcaster: %d", err);
+            LOG_E("Failed to run CAP Initiator as broadcaster: %d", err);
         }
     }
 
@@ -55,7 +55,7 @@ int main(void)
 
         if (err != 0)
         {
-            LOG_ERR("Failed to run CAP Initiator as unicast: %d", err);
+            LOG_E("Failed to run CAP Initiator as unicast: %d", err);
         }
     }
 

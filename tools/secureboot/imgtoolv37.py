@@ -248,12 +248,14 @@ def compress_and_sign_image_help(img, eimg) :
     # 1. Align image to 16 bytes
     data = open(img, "rb").read()
     data = bytearray(data)
-    remain = (len(data) % 16)
-    if (remain > 0):
-        remain = 16 - remain
-        str = u'0'
-        for i in range(0, remain):
-            data.append(0)
+
+    if (FLAGS.align == 1):
+        remain = (len(data) % 16)
+        if (remain > 0):
+            remain = 16 - remain
+            str = u'0'
+            for i in range(0, remain):
+                data.append(0)
 
     img_len = to_bytes(len(data))
 
@@ -465,12 +467,13 @@ def dfu_packed_bin(img, eimg, session_key, is_enc=True):
     # 2. Align image to 16 bytes
     data = open(img, "rb").read()
     data = bytearray(data)
-    remain = (len(data) % 16)
-    if remain > 0:
-        remain = 16 - remain
-        str = u'0'
-        for i in range(0, remain):
-            data.append(0)
+    if (FLAGS.align == 1):
+        remain = (len(data) % 16)
+        if remain > 0:
+            remain = 16 - remain
+            str = u'0'
+            for i in range(0, remain):
+                data.append(0)
 
     img_len = to_bytes(len(data))
 
@@ -523,12 +526,13 @@ def dfu_compress_bin(img, eimg):
     # 1. Align image to 16 bytes
     data = open(img, "rb").read()
     data = bytearray(data)
-    remain = (len(data) % 16)
-    if (remain > 0):
-        remain = 16 - remain
-        str = u'0'
-        for i in range(0, remain):
-            data.append(0)
+    if (FLAGS.align == 1):
+        remain = (len(data) % 16)
+        if (remain > 0):
+            remain = 16 - remain
+            str = u'0'
+            for i in range(0, remain):
+                data.append(0)
 
     img_len = to_bytes(len(data))
 
@@ -893,6 +897,11 @@ if __name__ == '__main__':
         type=int,
         default=0,
         help='general offline install packet')
+    parser.add_argument(
+        '--align',
+        type=int,
+        default=1,
+        help='make general file 16-byte alignment')
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS, unparsed = parser.parse_known_args()

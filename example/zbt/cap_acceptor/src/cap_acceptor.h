@@ -10,6 +10,7 @@
 #include <zephyr/bluetooth/audio/cap.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/kernel.h>
+#include <ulog.h>
 
 #define SINK_CONTEXT        BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED
 #define SOURCE_CONTEXT      BT_AUDIO_CONTEXT_TYPE_UNSPECIFIED

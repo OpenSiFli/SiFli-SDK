@@ -5082,6 +5082,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_Han
         hepic->hezip->CpltCallback = hepic_s->hezip->CpltCallback;
         hepic->hezip->RamInstance_used = 1;
         hepic->hezip->user_data = (void *)hepic;
+        hepic_s->hezip->user_data = NULL; // clear user_data in hezip_s
         res = HAL_EZIP_DecodeFast_IT(hepic->hezip);
         HAL_ASSERT(res == HAL_OK);
     }

@@ -107,15 +107,28 @@
         [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00400000", 
+                "max_size": "0x00200000", 
                 "tags": [
-                    "HCPU_FLASH_CODE"
+                    "HCPU_FLASH_CODE_LOAD_REGION"
                 ], 
                 "img": "main",
                 "ftab": {
                     "name": "main",
                     "address": [
                         "base"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00200000", 
+                "max_size": "0x00200000", 
+                "tags": [
+                    "HCPU_FLASH_CODE_LOAD_REGION2"
+                ], 
+                "ftab": {
+                    "name": "main",
+                    "address": [
+                        "base2"
                     ]
                 }
             },

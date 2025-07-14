@@ -420,7 +420,7 @@ sync_again:
         printk("Syncing to broadcast\n");
         err = bt_bap_broadcast_sink_sync(broadcast_sink, bis_index_bitfield,
                                          streams_p, NULL);
-        if (err == -EIO)
+        if (err == -EIO || err == -EINVAL)
         {
             err = k_sem_take(&sem_base_received, SEM_TIMEOUT);
             goto sync_again;

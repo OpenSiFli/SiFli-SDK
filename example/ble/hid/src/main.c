@@ -54,15 +54,27 @@
 #include "ble_connection_manager.h"
 #define LOG_TAG "ble_app"
 #include "log.h"
-
+#include "button.h"
 
 /* Choose one HID type. */
-//#define HID_KEYBOARD
-#define HID_CONSUMER
+#define HID_KEYBOARD
+// #define HID_CONSUMER
 
+#define HIDS_TEST
 /* 24 * 1.25 = 30ms */
 #define BLE_APP_HIGH_PERFORMANCE_INTERVAL (24)
 #define BLE_APP_TIMEOUT_INTERVAL (5000)
+
+typedef struct
+{
+    uint8_t key_code;      // Physical keycode
+    uint8_t hid_code;      // HID keycode
+} key_mapping_t;
+
+static key_mapping_t key_mapping_table[1] =
+{
+    {0x01, 0x04}        // HID keycode for 'a'
+};
 
 typedef struct
 {
@@ -516,11 +528,9 @@ void key_report_send(uint8_t *key_val, uint16_t key_val_len)
         value.len = key_val_len;
         value.value = key_val;
         sibles_write_value(env->conn_idx, &value);
+        LOG_I("key_report_send: sibles_write_value called");
     }
 }
-
-
-
 
 
 /********************** End of HID Application *********************************/
@@ -680,8 +690,13 @@ static void ble_app_advertising_start(void)
 
     /* Prepare appearance filed .*/
     para.adv_data.appearance = rt_malloc(2);
+#ifdef HID_KEYBOARD
+    // Keyboard (HID subtype)
+    uint16_t appearance = 961;
+#elif defined(HID_CONSUMER)
     // Mouse (HID subtype)
     uint16_t appearance = 962;
+#endif
     memcpy(para.adv_data.appearance, &appearance, 2);
 
     // set ad type flag
@@ -700,20 +715,66 @@ static void ble_app_advertising_start(void)
     {
         sibles_advertising_start(g_app_advertising_context);
     }
-
     rt_free(para.rsp_data.appearance);
     rt_free(para.rsp_data.completed_name);
     rt_free(para.adv_data.manufacturer_data);
 }
 
+#ifdef HIDS_TEST
 
+    #ifdef HID_KEYBOARD
+        #define HID_KEY_SET(key) hid_kbd_state_key_set(key)
+        #define HID_KEY_CLEAR(key) hid_kbd_state_key_clear(key)
+        #define HID_KEY_SEND() key_report_send((uint8_t *)&hid_keyboard_state, sizeof(hid_keyboard_state))
+    #elif defined(HID_CONSUMER)
+        #define HID_KEY_SET(key) hid_consume_state_key_set_bit(key)
+        #define HID_KEY_CLEAR(key) hid_consume_state_key_clear_bit(key)
+        #define HID_KEY_SEND() key_report_send((uint8_t *)&hid_consume_state, sizeof(hid_consume_state))
+    #endif
+#endif
+#ifdef HID_KEYBOARD
+static void key_button_handler(int32_t pin, button_action_t action)
+{
+    uint8_t hid_code = key_mapping_table[0].hid_code;
+    switch (action)
+    {
+    case BUTTON_PRESSED:
+        HID_KEY_SET(hid_code);
+        HID_KEY_SEND();
+        break;
+    case BUTTON_RELEASED:
+        HID_KEY_CLEAR(hid_code);
+        HID_KEY_SEND();
+        break;
+    default:
+        break;
+    }
+}
+
+static void key_button_init(void)
+{
+    button_cfg_t key_cfg =
+    {
+        .pin = BSP_KEY1_PIN,
+        .mode = PIN_MODE_INPUT_PULLUP,
+        .active_state = BUTTON_ACTIVE_HIGH,
+        .button_handler = key_button_handler,
+    };
+    int key_id = button_init(&key_cfg);
+    if (key_id >= 0)button_enable(key_id);
+
+
+}
+#endif
 int main(void)
 {
     int count = 0;
     app_env_t *env = ble_app_get_env();
     env->mb_handle = rt_mb_create("app", 8, RT_IPC_FLAG_FIFO);
     sifli_ble_enable();
-
+#ifdef HID_KEYBOARD
+    key_button_init(); // Initialize key button
+#endif
     while (1)
     {
         uint32_t value;
@@ -806,18 +867,7 @@ int ble_app_event_handler(uint16_t event_id, uint8_t *data, uint16_t len, uint32
 BLE_EVENT_REGISTER(ble_app_event_handler, NULL);
 
 
-#define HIDS_TEST
 #ifdef HIDS_TEST
-
-#ifdef HID_KEYBOARD
-    #define HID_KEY_SET(key) hid_kbd_state_key_set(key)
-    #define HID_KEY_CLEAR(key) hid_kbd_state_key_clear(key)
-    #define HID_KEY_SEND() key_report_send((uint8_t *)&hid_keyboard_state, sizeof(hid_keyboard_state))
-#elif defined(HID_CONSUMER)
-    #define HID_KEY_SET(key) hid_consume_state_key_set_bit(key)
-    #define HID_KEY_CLEAR(key) hid_consume_state_key_clear_bit(key)
-    #define HID_KEY_SEND() key_report_send((uint8_t *)&hid_consume_state, sizeof(hid_consume_state))
-#endif
 
 static rt_err_t test_hids(int argc, char **argv)
 {

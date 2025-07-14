@@ -822,6 +822,7 @@ WARN_LOGFILE           = warnings_sifli.txt
 INPUT                  = \
                          ../../drivers/Include \
                          ../../middleware/include \
+                         ../../middleware/ipc_queue/include \
                          ../../drivers/cmsis/Include \
                          ../../drivers/cmsis/sf32lb56x \
                          ../../middleware/bluetooth/service/bt/bt_finsh/bts2_app_interface.h \

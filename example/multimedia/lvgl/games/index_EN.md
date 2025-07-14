@@ -1,0 +1,8 @@
+# Games
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

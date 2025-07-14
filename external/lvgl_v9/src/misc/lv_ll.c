@@ -296,6 +296,39 @@ void lv_ll_clear(lv_ll_t * ll_p)
     lv_ll_clear_custom(ll_p, NULL);
 }
 
+/**
+ * concatenate `from` list to the end of `to` list
+ * @param from pointer to the linked list to
+ * @param to pointer to the linked list
+ */
+void lv_ll_merge_list(lv_ll_t *to, lv_ll_t *from)
+{
+    void *from_head;
+
+    from_head = lv_ll_get_head(from);
+    if (!from_head)
+    {
+        return;
+    }
+
+    node_set_prev(to, from_head, to->tail);
+
+    if (to->tail != NULL)  /*If there is old tail then after it goes the new*/
+    {
+        node_set_next(to, to->tail, from_head);
+    }
+
+    to->tail = from->tail;       /*Set the new tail in the dsc.*/
+    if (to->head == NULL)  /*If there is no head (first node) set the head too*/
+    {
+        to->head = from_head;
+    }
+
+    from->head = NULL;
+    from->tail = NULL;
+}
+
+
 /**********************
  *   STATIC FUNCTIONS
  **********************/

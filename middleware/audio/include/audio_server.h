@@ -1,6 +1,11 @@
 #ifndef AUDIO_SERVER_H
 #define AUDIO_SERVER_H  1
 #include <rtthread.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "audioproc.h"
 #include "audio_mem.h"
 
@@ -13,7 +18,7 @@
     all API should called after INIT_ENV_EXPORT(audio_server_init)
 */
 #if SOFTWARE_TX_MIX_ENABLE
-    #define TWS_MIX_ENABLE              1
+#define TWS_MIX_ENABLE              1
 #endif
 
 typedef struct
@@ -191,16 +196,16 @@ int audio_close(audio_client_t handle);
 int audio_server_select_public_audio_device(audio_device_e audio_device);
 
 #ifdef AUDIO_USING_MANAGER
-    /**
-    * @brief  set audio_type's private audio device to overload audio_type's public audio_device
-    should call by system UI or app UI
-    * @param  audio_type audio type
-    * @param  audio_device  audio_type's audio device
-    * @retval int  0 success, other failed
-    */
-    int audio_server_select_private_audio_device(audio_type_t audio_type, audio_device_e audio_device);
+/**
+* @brief  set audio_type's private audio device to overload audio_type's public audio_device
+should call by system UI or app UI
+* @param  audio_type audio type
+* @param  audio_device  audio_type's audio device
+* @retval int  0 success, other failed
+*/
+int audio_server_select_private_audio_device(audio_type_t audio_type, audio_device_e audio_device);
 #else
-    #define  audio_server_select_private_audio_device(audio_type, audio_device) 0
+#define  audio_server_select_private_audio_device(audio_type, audio_device) 0
 #endif
 /**
   * @brief  register audio device, must not be called before INIT_ENV_EXPORT(audio_server_init)
@@ -295,7 +300,7 @@ void bt_tx_event_to_audio_server(); //only for bt
 
 int is_a2dp_working(void);
 #ifndef _WIN32
-    bool audio_device_is_a2dp_sink();
+bool audio_device_is_a2dp_sink();
 #endif /* _WIN32 */
 uint8_t get_server_current_device(void);
 uint8_t get_server_current_play_status(void);
@@ -308,6 +313,10 @@ void micbias_power_on();
 
 #define BAP_BROADCAST_SINK_CACHE_SIZE        (960 * 4)  // 10ms * 4
 void audio_server_seup_ble_bap_src(struct rt_ringbuffer *rb, void (*ble_src_callback)());
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

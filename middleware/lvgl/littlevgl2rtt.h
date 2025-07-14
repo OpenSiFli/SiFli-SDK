@@ -1,6 +1,10 @@
 #ifndef __LITTLEVGL2RTT_H__
 #define __LITTLEVGL2RTT_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "rtthread.h"
 #include "lvgl.h"
 
@@ -18,5 +22,8 @@ float lv_get_fps(void);
 void set_display_fps_and_cpu_load(int en);
 int get_display_fps_and_cpu_load(void);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

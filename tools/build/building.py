@@ -680,7 +680,7 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
 
         proj_env = Environment(tools = ['mingw'],
             AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-            CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
+            CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
             AR = rtconfig.AR, ARFLAGS = '-rc', LIBPATH=['.'],
             LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
             
@@ -2409,7 +2409,7 @@ def SifliKeilEnv(cpu, BSP_ROOT=''):
     rtconfig.AFLAGS += ' --cpreproc_opts=-D__UVISION_VERSION="532" '
     rtconfig.AFLAGS += ' --diag_suppress=A1609 '
 
-    rtconfig.CXXFLAGS = rtconfig.CFLAGS + ' -xc++ -std=c++14 -fno-exceptions ' 
+    rtconfig.CXXFLAGS = rtconfig.CFLAGS + ' -xc++ -std=c++20 -fno-exceptions ' 
     rtconfig.CXXFLAGS += ' -I' + rtconfig.EXEC_PATH + '/ARM/ARMCLANG/include/libcxx'
     rtconfig.CCFLAGS =  rtconfig.CFLAGS
     rtconfig.CFLAGS = rtconfig.CFLAGS + ' -xc -std=c99 '
@@ -2675,7 +2675,7 @@ def AddLCPU(SIFLI_SDK, chip,target_file=None):
         proj_path = None
         proj_path = os.path.join(SIFLI_SDK, 'example/ble/lcpu_general/project/common')
         lcpu_proj_name = 'lcpu'
-        AddChildProj(lcpu_proj_name, proj_path, True, core="LCPU")
+        return AddChildProj(lcpu_proj_name, proj_path, True, core="LCPU")
     elif "SF32LB55X" == chip:
         import rtconfig
         if target_file != None:
@@ -2691,7 +2691,7 @@ def AddLCPU(SIFLI_SDK, chip,target_file=None):
                 shutil.copy(os.path.join(SIFLI_SDK, 'example/rom_bin/lcpu_general_ble_img/lcpu_general_6600.c'), target_file)
             elif "SS6600_A3"==rtconfig.PACKAGE:
                 shutil.copy(os.path.join(SIFLI_SDK, 'example/rom_bin/lcpu_general_ble_img/lcpu_general_6600_a3.c'), target_file)
-            
+        return None   
 # For parent project, BSP_Root should be None
 def SifliEnv(BSP_Root = None):
     import rtconfig

@@ -17,7 +17,8 @@ PrepareEnv()
 AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 
 # Add LCPU project
-AddLCPU(SIFLI_SDK,rtconfig.CHIP,"../../src/lcpu_img.c")
+lcpu_env = AddLCPU(SIFLI_SDK,rtconfig.CHIP,"../../src/lcpu_img.c")
+lcpu_env.AppendUnique(CPPDEFINES = ['ZBT'])
 
 # Set default compile options
 SifliEnv()

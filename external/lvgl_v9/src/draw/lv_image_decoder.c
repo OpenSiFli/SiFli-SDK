@@ -93,7 +93,10 @@ lv_result_t lv_image_decoder_open(lv_image_decoder_dsc_t * dsc, const void * src
 {
     lv_memzero(dsc, sizeof(lv_image_decoder_dsc_t));
 
-    if(src == NULL) return LV_RESULT_INVALID;
+    if(src == NULL) 
+    {
+        return LV_RESULT_INVALID;
+    }
     dsc->src = src;
     dsc->src_type = lv_image_src_get_type(src);
 

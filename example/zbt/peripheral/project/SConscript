@@ -1,0 +1,18 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = os.listdir(cwd)
+
+# Add SDK
+Import('SIFLI_SDK')
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
+# Add LCPU Patch
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'example/rom_bin/lcpu_general_ble_img/SConscript'), variant_dir="lcpu_patch", duplicate=0))
+
+# Add application source code
+objs.extend(SConscript(cwd+'/../src/SConscript', variant_dir="src", duplicate=0))
+
+Return('objs')

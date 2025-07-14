@@ -8,7 +8,7 @@
 #define LOG_TAG             "drv.encoder"
 #include <drv_log.h>
 
-#if defined(BSP_USING_ENCODER1) || defined(_SIFLI_DOXYGEN_)
+#if defined(BSP_USING_ENCODER) || defined(_SIFLI_DOXYGEN_)
 
 
 struct bf0_encoder
@@ -21,9 +21,35 @@ struct bf0_encoder
 
 static struct bf0_encoder bf0_encoder_obj[] =
 {
-#ifdef BSP_USING_ENCODER1
-    ENCODER1_CONFIG,
+#ifdef BSP_USING_ENCODER_GPTIM1
+    ENCODER_GPTIM1_CONFIG,
 #endif
+
+#ifdef BSP_USING_ENCODER_GPTIM2
+    ENCODER_GPTIM2_CONFIG,
+#endif
+
+#ifdef BSP_USING_ENCODER_GPTIM3
+    ENCODER_GPTIM3_CONFIG,
+#endif
+
+
+#ifdef BSP_USING_ENCODER_GPTIM4
+    ENCODER_GPTIM4_CONFIG,
+#endif
+
+#ifdef BSP_USING_ENCODER_GPTIM5
+    ENCODER_GPTIM5_CONFIG,
+#endif
+
+#ifdef BSP_USING_ENCODER_ATIM1
+    ENCODER_ATIM1_CONFIG,
+#endif
+
+#ifdef BSP_USING_ENCODER_ATIM2
+    ENCODER_ATIM2_CONFIG,
+#endif
+
 };
 
 static rt_err_t drv_encoder_control(struct rt_device_encoder *device, int cmd, void *arg);
@@ -69,7 +95,7 @@ static rt_err_t bf0_hw_encoder_init(struct bf0_encoder *device)
         result = -RT_ERROR;
 
     }
-    LOG_E("HAL_GPT_Encoder_Init success");
+    LOG_E("HAL_GPT_Encoder_Init %s success", device->name);
     __HAL_GPT_URS_ENABLE(tim);
 
     return result;
@@ -152,23 +178,26 @@ static rt_err_t drv_encoder_control(struct rt_device_encoder *device, int cmd, v
 
 int  bf0_encoder_init(void)
 {
-
     int result = RT_EOK;
-    if (bf0_hw_encoder_init(&bf0_encoder_obj[0]) != RT_EOK)
+    for (int i = 0; i < sizeof(bf0_encoder_obj) / sizeof(bf0_encoder_obj[0]); i++)
     {
-        LOG_E("%s init failed", bf0_encoder_obj[0].name);
-        return -RT_ERROR;
-    }
+        if (bf0_hw_encoder_init(&bf0_encoder_obj[i]) != RT_EOK)
+        {
+            LOG_E("%s init failed", bf0_encoder_obj[i].name);
+            result = -RT_ERROR;
+            continue; // Continue to initialize other encoders even if one fails
+        }
+        LOG_I("%s init success!!", bf0_encoder_obj[i].name);
 
-    if (rt_device_pulse_encoder_register(&bf0_encoder_obj[0].encoder_device, bf0_encoder_obj[0].name, &drv_ops, &bf0_encoder_obj[0]) != RT_EOK)
-    {
-        LOG_D("%s register failed", bf0_encoder_obj[0].name);
-        return -RT_ERROR;
-    }
-    else
-    {
-        LOG_E("%s register success", bf0_encoder_obj[0].name);
-
+        if (rt_device_pulse_encoder_register(&bf0_encoder_obj[i].encoder_device, bf0_encoder_obj[i].name, &drv_ops, &bf0_encoder_obj[i]) != RT_EOK)
+        {
+            LOG_D("%s register failed", bf0_encoder_obj[i].name);
+            result = -RT_ERROR;
+        }
+        else
+        {
+            LOG_E("%s register success", bf0_encoder_obj[i].name);
+        }
     }
     return result;
 }

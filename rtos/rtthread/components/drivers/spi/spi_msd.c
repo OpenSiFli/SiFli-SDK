@@ -16,13 +16,11 @@
 #include <string.h>
 #include "spi_msd.h"
 
-#ifndef CONFIG_MSD_SPI_BUS_NAME
-    #define SPI_BUS_NAME      "spi1"
-#else
-    #define __TO_STR(name) #name
-    #define _TO_STR(name) __TO_STR(name)
-    #define SPI_BUS_NAME _TO_STR(CONFIG_MSD_SPI_BUS_NAME)
+#ifndef MSD_SPI_BUS_NAME
+    #define MSD_SPI_BUS_NAME "spi1"
 #endif
+
+
 //#define MSD_TRACE
 
 #if 1//def MSD_TRACE
@@ -1870,19 +1868,19 @@ int rt_spi_msd_init(void)
     rt_device_t spi_bus = rt_device_find("sdcard");
     if (spi_bus == RT_NULL)
     {
-        if (rt_hw_spi_device_attach(SPI_BUS_NAME, "sdcard") == RT_EOK)
+        if (rt_hw_spi_device_attach(MSD_SPI_BUS_NAME, "sdcard") == RT_EOK)
         {
-            rt_kprintf("[BUS]SPI1 probe sdcard...\n");
+            rt_kprintf("[BUS]%s probe sdcard...\n", MSD_SPI_BUS_NAME);
         }
         else
         {
-            rt_kprintf("[BUS]SPI1 probe RT_ERROR\n");
+            rt_kprintf("[BUS]%s probe RT_ERROR\n", MSD_SPI_BUS_NAME);
             return RT_ERROR;
         }
     }
     rt_device_t spi_dev = rt_device_find("sdcard");
     if (rt_device_open(spi_dev,  RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX | RT_DEVICE_FLAG_RDWR) != RT_EOK)
-        rt_kprintf("[SD] OPEN SPI1 FAIL !\n");
+        rt_kprintf("[SD] OPEN %s FAIL !\n", MSD_SPI_BUS_NAME);
 
     if (msd_init("sd0", "sdcard") != RT_EOK)
     {

@@ -248,8 +248,13 @@ int8_t dfu_protocol_reset_env_prepare(void)
 {
 #ifdef BSP_BLE_SIBLES
     sifli_ble_enable();
+#ifdef OS_ADAPTOR_V2
+    g_dfu_sem = os_sem_create("dfu_sem", 0);
+    g_dfu_tid = os_thread_create("dfu_tid", dfu_protocol_reset_entry, NULL, NULL, 4096, RT_MAIN_THREAD_PRIORITY + 8, 10);
+#else
     os_sem_create(g_dfu_sem, 0);
     os_thread_create(g_dfu_tid, dfu_protocol_reset_entry, NULL, NULL, 4096, RT_MAIN_THREAD_PRIORITY + 8, 10);
+#endif
     return 0;
 #else // BSP_BLE_SIBLES
     return -1;

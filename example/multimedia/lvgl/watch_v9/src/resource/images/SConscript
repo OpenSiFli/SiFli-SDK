@@ -1,0 +1,52 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+objs_ezip = []
+objs_no_ezip = []
+objs_large_ezip = []
+
+objs_ezip += Glob('common/ezip/*.png')
+objs_ezip += Glob('common/ezip/*.gif')
+objs_no_ezip = Glob('common/no_ezip/*.png')
+objs_no_ezip += Glob('common/no_ezip/*.gif')
+objs_large_ezip += Glob('common/large_ezip/*.png')
+objs_large_ezip += Glob('common/large_ezip/*.gif')
+
+def align_to_power_of_two_and_str(num):
+    power = 1
+    while power < num:
+        power *= 2
+    return str(power)
+
+#color_fmt, file_fmt, section_name
+if 16 == GetConfigValue('LV_COLOR_DEPTH'):
+    img_flags = '-rgb565'
+else:
+    img_flags = '-rgb888'
+
+img_flags = img_flags + '  -section ROM3_IMG  -lvgl_version 9'
+
+if GetDepend('LV_FB_LINE_NUM'):
+    ers_v = align_to_power_of_two_and_str(GetConfigValue('LV_FB_LINE_NUM'))
+else:
+    ers_v = '128'
+
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    objs = Env.ImgResource(objs_no_ezip + objs_ezip + objs_large_ezip, img_flags+' -cfile 1 -simu')
+else:
+    objs = Env.ImgResource(objs_no_ezip, img_flags+' -cfile 1 -dpt 1')
+    objs += Env.ImgResource(objs_ezip, img_flags+' -cfile 2 -dpt 1')
+    objs += Env.ImgResource(objs_large_ezip, img_flags+' -cfile 2 -dpt 4 -ers '+ers_v)
+
+if GetOption('no_cc'):
+    objs = []
+    
+objs = DefineGroup('resource', objs, depend = ['PKG_USING_LITTLEVGL2RTT'])  
+
+Return ('objs')
+

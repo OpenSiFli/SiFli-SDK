@@ -28,24 +28,13 @@ fi
 # echo -e "\033[31m The commit msg: \033[0m $msg"
 echo -e "The commit msg:\n\n$msg"
 echo -e "\033[32m \n ****HOOK LOG****\n \033[0m"
-#redmineid=`sed '/^redmine:/!d;s/.*=//' .git/COMMIT_EDITMSG` 
+
 redmineid=$(echo "$msg" | grep "redmine: #")
 echo -e " The redmine content: $redmineid"
 
-#tapdid=`sed '/^tapd: bug|story/!d;s/.*=//' .git/COMMIT_EDITMSG` 
-#echo -e " The tapd content: $tapdid"
+ext_redmineid=$(echo "$msg" | grep "ext-redmine: #")
+echo -e " The ext_redmine content: $ext_redmineid"
 
-#tapd_bug=`sed '/^tapd: bug/!d;s/.*=//' .git/COMMIT_EDITMSG` 
-tapd_bug=$(echo "$msg" | grep "tapd: bug")
-echo -e " The tapd_bug content: $tapd_bug"
-
-ext_redmine_bug=$(echo "$msg" | grep "ext-redmine: bug")
-echo -e " The ext_redmine_bug content: $ext_redmine_bug"
-#tapd_story=`sed '/^tapd: story/!d;s/.*=//' .git/COMMIT_EDITMSG` 
-tapd_story=$(echo "$msg" | grep "tapd: story")
-echo -e " The tapd_story content: $tapd_story"
-ext_redmine_feat=$(echo "$msg" | grep "ext-redmine: feat")
-echo -e " The ext_redmine_feat content: $ext_redmine_feat"
 
 #if [[ $string == mas* ]];  start with 'mas' in string
 # get branch
@@ -69,51 +58,22 @@ if [[ $msg =~ $mergePattern ]]; then
     exit 0
 fi
 # check the commit msg
-br1="master"
-br2="Solution_release_1.1.0"
 
-maxLength=50
-length=${#msg}
 pattern_redmine='^redmine: #[0-9]+'
-pattern_tapd_bug='^tapd: bug#[0-9]+'
-pattern_tapd_story='^tapd: story#[0-9]+'
-pattern_ext_redmine_bug='^ext-redmine: bug#[0-9]+'
-pattern_ext_redmine_feat='^ext-redmine: feat#[0-9]+'
-#pattern_header='^\[(doc|int|ble|sol|rel|gui|AI)+\] '
+pattern_ext_redmine='^ext-redmine: #[0-9]+'
 pattern_header='^\[(bug|new|opt|chore)\]\[[a-zA-Z0-9_ ]+\].'
 
 
-if [[ $tapd_bug ]]; then
-    #echo -e " tapdid is $tapd_bug"
-    tapdid=$tapd_bug
-    pattern_tapd=$pattern_tapd_bug
-else
-    #echo -e " tapdid is $tapd_story"
-    tapdid=$tapd_story
-    pattern_tapd=$pattern_tapd_story
-fi
-
-if [[ $ext_redmine_bug ]]; then
-    #echo -e " ext-redmineid is $ext_redmine_bug"
-    ext_remineid=$ext_redmine_bug
-    pattern_ext_redmine=$pattern_ext_redmine_bug
-else
-    #echo -e " ext_remineid is $ext_redmine_feat"
-    ext_remineid=$ext_redmine_feat
-    pattern_ext_redmine=$pattern_ext_redmine_feat
-fi
-
 #if [[ $branch == *"$br1"* || $branch == *"$br2"* ]]; then
-if [[ $branch == *"$br1"* ]]; then
+if [[ "$branch" == *"main"* || "$branch" == *"release/"* ]]; then
     echo -e "\033[32m ******** \033[0m"
-    if [[ $msg =~ $pattern_header && ($redmineid =~ $pattern_redmine || $tapdid =~ $pattern_tapd || $ext_remineid =~ $pattern_ext_redmine) ]]; then
+    if [[ $msg =~ $pattern_header && ($redmineid =~ $pattern_redmine || $ext_redmineid =~ $pattern_ext_redmine) ]]; then
         echo -e "\033[32m commit success! \033[0m"
     else
         echo -e "\033[31m Error: must be correct tags and redmineid or tapdid \033[m"
         echo -e "\033[31m eg: [bug|new|opt|chore][module_name] Fixed games assert when start \033[m"
         echo -e "\033[31m eg: redmine: #1999, REDMINE-1999 \033[m"
-        echo -e "\033[31m eg: ext-redmine: bug#2356|ext-redmine: feat#2356 \033[m"
-        echo -e "\033[31m eg: tapd: bug#1999|tapd: story#1999 \033[m"
+        echo -e "\033[31m eg: ext-redmine: #2356|ext-redmine: #2356 \033[m"
         exit 1
     fi
 else
@@ -121,7 +81,7 @@ else
         echo -e "\033[32m commit success! \033[0m"
     else
         echo -e "\033[31m Error: the commit message is irregular \033[m"
-        echo -e "\033[31m Error: must be three correct tags [doc|int|ble|sol|rel|gui|AI]\033[m"
+        echo -e "\033[31m Error: must be four correct tags [bug|new|opt|chore]\033[m"
         echo -e "\033[31m eg: [bug|new|opt|chore][module_name] Fixed watchdemo crush bug \033[m"
         exit 1
     fi

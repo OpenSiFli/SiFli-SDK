@@ -74,7 +74,7 @@ static void connected_cb(struct bt_conn *conn, uint8_t err)
     char addr[BT_ADDR_LE_STR_LEN];
 
     (void)bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_INF("Connected: %s", addr);
+    LOG_I("Connected: %s", addr);
 
     peer.conn = bt_conn_ref(conn);
     k_sem_give(&sem_state_change);
@@ -90,7 +90,7 @@ static void disconnected_cb(struct bt_conn *conn, uint8_t reason)
     }
 
     (void)bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
-    LOG_INF("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
+    LOG_I("Disconnected: %s, reason 0x%02x %s", addr, reason, bt_hci_err_to_str(reason));
 
     bt_conn_unref(peer.conn);
     peer.conn = NULL;
@@ -110,7 +110,7 @@ static int advertise(void)
     err = bt_le_ext_adv_create(BT_LE_EXT_ADV_CONN, NULL, &adv);
     if (err)
     {
-        LOG_ERR("Failed to create advertising set: %d", err);
+        LOG_E("Failed to create advertising set: %d", err);
 
         return err;
     }
@@ -118,7 +118,7 @@ static int advertise(void)
     err = bt_le_ext_adv_set_data(adv, ad, ARRAY_SIZE(ad), NULL, 0);
     if (err)
     {
-        LOG_ERR("Failed to set advertising data: %d", err);
+        LOG_E("Failed to set advertising data: %d", err);
 
         return err;
     }
@@ -126,18 +126,18 @@ static int advertise(void)
     err = bt_le_ext_adv_start(adv, BT_LE_EXT_ADV_START_DEFAULT);
     if (err)
     {
-        LOG_ERR("Failed to start advertising set: %d", err);
+        LOG_E("Failed to start advertising set: %d", err);
 
         return err;
     }
 
-    LOG_INF("Advertising successfully started");
+    LOG_I("Advertising successfully started");
 
     /* Wait for connection*/
     err = k_sem_take(&sem_state_change, K_FOREVER);
     if (err != 0)
     {
-        LOG_ERR("Failed to take sem_state_change: err %d", err);
+        LOG_E("Failed to take sem_state_change: err %d", err);
 
         return err;
     }
@@ -175,7 +175,7 @@ static int reset_cap_acceptor(void)
 {
     int err;
 
-    LOG_INF("Resetting");
+    LOG_I("Resetting");
 
     if (peer.conn != NULL)
     {
@@ -188,7 +188,7 @@ static int reset_cap_acceptor(void)
         err = k_sem_take(&sem_state_change, K_FOREVER);
         if (err != 0)
         {
-            LOG_ERR("Timeout on disconnect: %d", err);
+            LOG_E("Timeout on disconnect: %d", err);
             return err;
         }
     }
@@ -198,14 +198,14 @@ static int reset_cap_acceptor(void)
         err = bt_le_ext_adv_stop(adv);
         if (err != 0)
         {
-            LOG_ERR("Failed to stop advertiser: %d", err);
+            LOG_E("Failed to stop advertiser: %d", err);
             return err;
         }
 
         err = bt_le_ext_adv_delete(adv);
         if (err != 0)
         {
-            LOG_ERR("Failed to delete advertiser: %d", err);
+            LOG_E("Failed to delete advertiser: %d", err);
             return err;
         }
 
@@ -217,7 +217,7 @@ static int reset_cap_acceptor(void)
         err = k_sem_take(&peer.source_stream_sem, SEM_TIMEOUT);
         if (err != 0)
         {
-            LOG_ERR("Timeout on source_stream_sem: %d", err);
+            LOG_E("Timeout on source_stream_sem: %d", err);
             return err;
         }
     }
@@ -227,7 +227,7 @@ static int reset_cap_acceptor(void)
         err = k_sem_take(&peer.sink_stream_sem, SEM_TIMEOUT);
         if (err != 0)
         {
-            LOG_ERR("Timeout on sink_stream_sem: %d", err);
+            LOG_E("Timeout on sink_stream_sem: %d", err);
             return err;
         }
     }
@@ -246,7 +246,7 @@ static int register_pac(enum bt_audio_dir dir, enum bt_audio_context context,
     err = bt_pacs_cap_register(dir, cap);
     if (err != 0)
     {
-        LOG_ERR("Failed to register capabilities: %d", err);
+        LOG_E("Failed to register capabilities: %d", err);
 
         return err;
     }
@@ -254,7 +254,7 @@ static int register_pac(enum bt_audio_dir dir, enum bt_audio_context context,
     err = bt_pacs_set_location(dir, BT_AUDIO_LOCATION_MONO_AUDIO);
     if (err != 0)
     {
-        LOG_ERR("Failed to set location: %d", err);
+        LOG_E("Failed to set location: %d", err);
 
         return err;
     }
@@ -262,7 +262,7 @@ static int register_pac(enum bt_audio_dir dir, enum bt_audio_context context,
     err = bt_pacs_set_supported_contexts(dir, context);
     if (err != 0 && err != -EALREADY)
     {
-        LOG_ERR("Failed to set supported contexts: %d", err);
+        LOG_E("Failed to set supported contexts: %d", err);
 
         return err;
     }
@@ -270,7 +270,7 @@ static int register_pac(enum bt_audio_dir dir, enum bt_audio_context context,
     err = bt_pacs_set_available_contexts(dir, context);
     if (err != 0 && err != -EALREADY)
     {
-        LOG_ERR("Failed to set available contexts: %d", err);
+        LOG_E("Failed to set available contexts: %d", err);
 
         return err;
     }
@@ -288,12 +288,12 @@ static int init_cap_acceptor(void)
     err = bt_enable(NULL);
     if (err != 0)
     {
-        LOG_ERR("Bluetooth enable failed: %d", err);
+        LOG_E("Bluetooth enable failed: %d", err);
 
         return 0;
     }
 
-    LOG_INF("Bluetooth initialized");
+    LOG_I("Bluetooth initialized");
 
     if (IS_ENABLED(CONFIG_BT_PAC_SNK))
     {
@@ -306,7 +306,7 @@ static int init_cap_acceptor(void)
         err = register_pac(BT_AUDIO_DIR_SINK, SINK_CONTEXT, &sink_cap);
         if (err != 0)
         {
-            LOG_ERR("Failed to register sink capabilities: %d", err);
+            LOG_E("Failed to register sink capabilities: %d", err);
 
             return -ENOEXEC;
         }
@@ -323,7 +323,7 @@ static int init_cap_acceptor(void)
         err = register_pac(BT_AUDIO_DIR_SOURCE, SOURCE_CONTEXT, &source_cap);
         if (err != 0)
         {
-            LOG_ERR("Failed to register sink capabilities: %d", err);
+            LOG_E("Failed to register sink capabilities: %d", err);
 
             return -ENOEXEC;
         }
@@ -360,14 +360,14 @@ int main(void)
         }
     }
 
-    LOG_INF("CAP Acceptor initialized");
+    LOG_I("CAP Acceptor initialized");
 
     while (true)
     {
         err = reset_cap_acceptor();
         if (err != 0)
         {
-            LOG_ERR("Failed to reset");
+            LOG_E("Failed to reset");
 
             break;
         }
@@ -392,7 +392,7 @@ int main(void)
         err = k_sem_take(&sem_state_change, K_FOREVER);
         if (err != 0)
         {
-            LOG_ERR("Failed to take sem_state_change: err %d", err);
+            LOG_E("Failed to take sem_state_change: err %d", err);
 
             break;
         }

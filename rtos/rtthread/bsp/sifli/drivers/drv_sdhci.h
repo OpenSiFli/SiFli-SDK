@@ -143,7 +143,7 @@ extern void sdhci_free_host(struct sdhci_host *host);
 extern int sdhci_add_host(struct sdhci_host *host);
 extern void sdhci_remove_host(struct sdhci_host *host, int dead);
 
-int rt_hw_sdmmc_deinit(void);
+int rt_hw_sdmmc_deinit(uint8_t id);
 int rt_hw_sdmmc_init(void);
 
 //#if DRV_DEBUG

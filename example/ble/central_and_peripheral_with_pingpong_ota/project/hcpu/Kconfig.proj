@@ -1,0 +1,12 @@
+config BF0_HCPU
+    bool
+    default y
+    
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y
+
+config SOL_DFU
+    bool "using solution dfu protocol"
+	default n

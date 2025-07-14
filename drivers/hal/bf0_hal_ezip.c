@@ -948,6 +948,9 @@ HAL_StatusTypeDef HAL_EZIP_DecodeFast_IT(EZIP_HandleTypeDef *hezip)
     hezip->RamInstance_used = 0;
     hezip->Instance = hezip->HwInstance;
 
+    /* clear old status */
+    EZIP_CLEAR_INT_STATUS(hezip->Instance);
+
     memcpy((void *)&hezip->Instance->SRC_ADDR, (const void *)&hezip->RamInstance->SRC_ADDR,
            ((uint32_t)&hezip->Instance->DB_SEL) - ((uint32_t)&hezip->Instance->SRC_ADDR));
 

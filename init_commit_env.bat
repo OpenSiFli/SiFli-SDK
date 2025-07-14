@@ -50,7 +50,7 @@ git config commit.template .commit_template
 exit
 
 :submodule
-copy tools\autotest\commitEnvScripts\submodule\commit-msg %dst%\hooks\>nul  /Y
+copy tools\autotest\commitEnvScripts\commit-msg %dst%\hooks\>nul  /Y
 copy tools\autotest\commitEnvScripts\pre-commit %dst%\hooks\>nul  /Y
 git config commit.template .commit_template
 exit

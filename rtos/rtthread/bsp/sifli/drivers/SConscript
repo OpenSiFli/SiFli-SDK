@@ -137,7 +137,7 @@ if GetDepend(['BSP_USING_USBH']) or GetDepend(['BSP_USING_USBD']):
 if GetDepend(['BSP_USING_HW_AES']):
     src += ['drv_aes.c']
 
-if GetDepend(['BSP_USING_ENCODER1']):
+if GetDepend(['BSP_USING_ENCODER']):
     src += ['drv_encoder.c']
 
 src += ['drv_common.c','drv_dbg.c']

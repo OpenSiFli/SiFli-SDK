@@ -170,19 +170,59 @@ int media_audio_get(AVFrame *frame, uint16_t *audio_data, uint32_t audio_data_si
         {
             float *fl = (float *)frame->extended_data[0];
             float *fr = (float *)frame->extended_data[1];
-
+            float t;
             if (frame->channels  == 2)
             {
                 for (int j = 0; j < frame->nb_samples; j++)
                 {
-                    audio_data[2 * j] = (int16_t)(fl[j] * 32767.0f);
-                    audio_data[2 * j + 1] = (int16_t)(fr[j] * 32767.0f);
+                    t = fl[j];
+                    if (t >= +0x999999f)
+                    {
+                        audio_data[2 * j] = 0x7FFF;
+                    }
+                    else if (t <= -0x999999f)
+                    {
+                        audio_data[2 * j] = 0x8000;
+                    }
+                    else
+                    {
+                        audio_data[2 * j] = (int16_t)(t * 32767.0f);
+                    }
+
+                    t = fr[j];
+
+                    if (t >= +0x999999f)
+                    {
+                        audio_data[2 * j + 1] = 0x7FFF;
+                    }
+                    else if (t <= -0x999999f)
+                    {
+                        audio_data[2 * j + 1] = 0x8000;
+                    }
+                    else
+                    {
+                        audio_data[2 * j + 1] = (int16_t)(t * 32767.0f);
+                    }
                 }
             }
             else
             {
                 for (int j = 0; j < frame->nb_samples; j++)
-                    audio_data[j] = (int16_t)(fl[j] * 32767.0f);
+                {
+                    t = fl[j];
+                    if (t >= +0x999999f)
+                    {
+                        audio_data[j] = 0x7FFF;
+                    }
+                    else if (t <= -0x999999f)
+                    {
+                        audio_data[j] = 0x8000;
+                    }
+                    else
+                    {
+                        audio_data[j] = (int16_t)(t * 32767.0f);
+                    }
+                }
             }
         }
         else

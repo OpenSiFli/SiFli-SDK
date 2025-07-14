@@ -297,7 +297,7 @@ watchface_event_ack_t file_recv_event_handler(uint16_t event, uint16_t length, v
             ble_watchface_file_start_rsp(BLE_WATCHFACE_STATUS_FILE_SIZE_ALIGNED_MISSING);
             goto __FAILED;
         }
-        if (files->file_name_len + 1 > FILE_MAX_LEN)
+        if (files->file_name_len + 1 + strlen(FILE_RECV_DIR) > FILE_MAX_LEN)
         {
             LOG_E("file name len  %d is too long!!", files->file_name_len);
             ble_watchface_file_start_rsp(BLE_WATCHFACE_STATUS_APP_ERROR);
@@ -307,13 +307,27 @@ watchface_event_ack_t file_recv_event_handler(uint16_t event, uint16_t length, v
         env->total_size = files->file_len;
         env->name_len = files->file_name_len;
         env->crc_result = CRC_INIT_VAL;
+
+        char *temp = malloc(env->name_len + 1);
+        RT_ASSERT(temp);
+        rt_memcpy(temp, files->file_name, env->name_len);
+        temp[env->name_len] = 0;
+
         rt_memset(env->path, 0, sizeof(env->path));
-        rt_memcpy(env->path, files->file_name, env->name_len);
-        //Place file in the designated directory
-        char *p = strrchr(env->path, '/');
-        if (p) p += 1;
         strcpy(env->path, FILE_RECV_DIR);
-        strcat(env->path, p);
+
+        //Place file in the designated directory
+        char *p = strrchr(temp, '/');
+        if (p)
+        {
+            p += 1;
+            strcat(env->path, p);
+        }
+        else
+        {
+            rt_memcpy(&env->path[strlen(FILE_RECV_DIR)], files->file_name, env->name_len);
+        }
+        free(temp);
         LOG_I("file: %s", env->path);
         if (!env->space_check)
         {
@@ -380,6 +394,7 @@ watchface_event_ack_t file_recv_event_handler(uint16_t event, uint16_t length, v
             goto __FAILED;
         }
         LOG_I("file recv success!");
+        ble_watchface_end_rsp(BLE_WATCHFACE_STATUS_OK);
         break;
     }
     case WATCHFACE_APP_FILE_INFO:

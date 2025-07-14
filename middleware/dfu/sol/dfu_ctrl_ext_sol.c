@@ -2133,6 +2133,10 @@ static void dfu_ctrl_install_completed(dfu_ctrl_ext_env_t *env, uint16_t status)
         if (dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU_PATCH ||
                 dl_header->img_header[i].img_id == DFU_IMG_ID_NAND_HCPU)
         {
+            uint32_t hcpu_len = dl_header->img_header[i].length;
+            LOG_I("hcpu len 0x%X", hcpu_len);
+            HAL_Set_backup(RTC_BAKCUP_OTA_FORCE_MODE, hcpu_len);
+
             ind.include_hcpu = 1;
             dfu_running_image_switch();
             break;
@@ -4401,6 +4405,10 @@ static void dfu_cmd(uint8_t argc, char **argv)
         if (strcmp(argv[1], "reset") == 0)
         {
             fdb_kv_set_default(p_dfu_ext_db);
+        }
+        else if (strcmp(argv[1], "ver") == 0)
+        {
+            LOG_I("XXXXXXXXXXXXXXXX");
         }
     }
 }

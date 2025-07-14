@@ -5,8 +5,9 @@
 #endif
 
 #include <shell.h>
-#include "dfs_fs.h"
-
+#ifdef RT_USING_DFS
+    #include "dfs_fs.h"
+#endif
 
 static int platform_init_done = 0;
 int platform_init(void)

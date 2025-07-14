@@ -31,7 +31,7 @@ static rt_list_t blk_devices = RT_LIST_OBJECT_INIT(blk_devices);
 
 #define cache_max_blks  8
 #define cache_blk_size 512
-ALIGN(4) static rt_uint8_t  blk_cache_buf[cache_blk_size * cache_max_blks];
+ALIGN(32) static rt_uint8_t  blk_cache_buf[cache_blk_size * cache_max_blks];
 
 #define BLK_MIN(a, b) ((a) < (b) ? (a) : (b))
 #define BLK_REQ_ADDR_UNALIGNED(X)    ((rt_uint32_t)(X) & (sizeof(rt_uint32_t) - 1))
@@ -332,6 +332,7 @@ static rt_size_t rt_mmcsd_write(rt_device_t dev,
     rt_err_t err = 0;
     rt_size_t offset = 0;
     rt_size_t req_size = 0;
+    rt_bool_t addr_unaligned = RT_FALSE;
     rt_size_t remain_size = size;
     void *wr_ptr = (void *)buffer;
     struct mmcsd_blk_device *blk_dev = (struct mmcsd_blk_device *)dev->user_data;
@@ -344,10 +345,21 @@ static rt_size_t rt_mmcsd_write(rt_device_t dev,
     }
 
     rt_sem_take(part->lock, RT_WAITING_FOREVER);
+    addr_unaligned = BLK_REQ_ADDR_UNALIGNED(buffer);
+
     while (remain_size)
     {
-        req_size = (remain_size > blk_dev->max_req_size) ? blk_dev->max_req_size : remain_size;
-        err = rt_mmcsd_req_blk(blk_dev->card, part->offset + pos + offset, wr_ptr, req_size, 1);
+        if (addr_unaligned)
+        {
+            req_size = (remain_size > cache_max_blks) ? cache_max_blks : remain_size;
+            rt_memcpy(blk_cache_buf, wr_ptr, req_size * 512);
+            err = rt_mmcsd_req_blk(blk_dev->card, part->offset + pos + offset, blk_cache_buf, req_size, 1);
+        }
+        else
+        {
+            req_size = (remain_size > blk_dev->max_req_size) ? blk_dev->max_req_size : remain_size;
+            err = rt_mmcsd_req_blk(blk_dev->card, part->offset + pos + offset, wr_ptr, req_size, 1);
+        }
         if (err)
             break;
         offset += req_size;

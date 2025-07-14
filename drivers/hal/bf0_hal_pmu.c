@@ -199,6 +199,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
     /* turn off LDO2 to ensure flash changing to 3byte address mode when boot up */
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO2_3V3, 0, 1);
     HAL_Delay_us_(8000);
+    /* Change RC48 to default frequency */
+    if (RCC_SYSCLK_HRC48 == HAL_RCC_HCPU_GetClockSrc(RCC_CLK_MOD_SYS))
+    {
+        HAL_HPAON_EnableXT48();
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, RCC_SYSCLK_HXT48);
+    }
+
+    hwp_pmuc->HRC_CR = 0xA50C015;
+    hwp_rtc->BKP0R = 0x5050;
 #endif /* SF32LB52X */
 
     /* clear WSR as it's not cleared if triggered in sleep */
@@ -233,6 +242,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
     /* turn off LDO2 to ensure flash changing to 3byte address mode when boot up */
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO2_3V3, 0, 1);
     HAL_Delay_us_(8000);
+    /* Change RC48 to default frequency */
+    if (RCC_SYSCLK_HRC48 == HAL_RCC_HCPU_GetClockSrc(RCC_CLK_MOD_SYS))
+    {
+        HAL_HPAON_EnableXT48();
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, RCC_SYSCLK_HXT48);
+    }
+
+    hwp_pmuc->HRC_CR = 0xA50C015;
+    hwp_rtc->BKP0R = 0x5050;
 #endif /* SF32LB52X */
 
     /* clear WSR as it's not cleared if triggered in sleep */
@@ -536,6 +554,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_EnableBuck2(void)
     /* turn off LDO2 to ensure flash changing to 3byte address mode when boot up */
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO2_3V3, 0, 1);
     HAL_Delay_us_(8000);
+
+    /* Change RC48 to default frequency */
+    if (RCC_SYSCLK_HRC48 == HAL_RCC_HCPU_GetClockSrc(RCC_CLK_MOD_SYS))
+    {
+        HAL_HPAON_EnableXT48();
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, RCC_SYSCLK_HXT48);
+    }
+
+    hwp_pmuc->HRC_CR = 0xA50C015;
+    hwp_rtc->BKP0R = 0x5050;
+
 #endif
 
     if (hwp_pmuc->CR & PMUC_CR_REBOOT)

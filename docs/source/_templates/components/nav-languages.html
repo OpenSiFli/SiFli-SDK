@@ -1,0 +1,140 @@
+{%- if languages -%}
+<div class="nav-languages">
+  <button type="button">
+    <span class="md:hidden">{{ _("Translations") }}</span>
+    <iconify-icon icon="lucide:languages"></iconify-icon>
+  </button>
+  <div class="nav-languages-choices">
+    <ul>
+      {%- for item in languages -%}
+        <li><a href="#" data-lang="{{ item[2] }}" class="language-switch">{{ item[0] }}</a></li>
+      {%- endfor -%}
+    </ul>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const languageSwitches = document.querySelectorAll('.language-switch');
+    
+    // 从Sphinx上下文获取当前版本和芯片信息
+    const currentVersion = '{{ current_version }}';
+    const currentChip = '{{ current_chip }}';
+    const currentLang = '{{ language }}';
+    
+    languageSwitches.forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetLang = this.getAttribute('data-lang');
+            if (targetLang === currentLang) {
+                return; // 如果点击的是当前语言，不做任何操作
+            }
+            
+            const currentUrl = window.location.href;
+            const url = new URL(currentUrl);
+            const currentPath = url.pathname;
+            
+            // 调试信息
+            console.log('Current path:', currentPath);
+            console.log('Current version:', currentVersion);
+            console.log('Current chip:', currentChip);
+            console.log('Current lang:', currentLang);
+            console.log('Target lang:', targetLang);
+            
+            let newPath;
+            
+            // 获取当前页面相对于文档根目录的路径
+            // 路径结构: $base/$version/$lang/$chip/$page (英文)
+            // 或者:     $base/$version/$chip/$page (中文)
+            const pathParts = currentPath.split('/').filter(part => part !== '');
+            
+            // 查找版本和芯片在路径中的位置
+            let versionIndex = -1;
+            let chipIndex = -1;
+            let hasLanguageInPath = false;
+            
+            for (let i = 0; i < pathParts.length; i++) {
+                if (pathParts[i] === currentVersion) {
+                    versionIndex = i;
+                    break;
+                }
+            }
+            
+            if (versionIndex >= 0) {
+                // 检查版本后面是否有语言标识符
+                if (versionIndex + 1 < pathParts.length) {
+                    if (pathParts[versionIndex + 1] === 'en' || pathParts[versionIndex + 1] === 'zh_CN') {
+                        hasLanguageInPath = true;
+                        // 语言标识符后面应该是芯片
+                        if (versionIndex + 2 < pathParts.length && pathParts[versionIndex + 2] === currentChip) {
+                            chipIndex = versionIndex + 2;
+                        }
+                    } else if (pathParts[versionIndex + 1] === currentChip) {
+                        // 直接是芯片，说明是中文路径
+                        chipIndex = versionIndex + 1;
+                    }
+                }
+            }
+            
+            // 如果没有找到芯片，尝试在整个路径中查找
+            if (chipIndex === -1) {
+                for (let i = 0; i < pathParts.length; i++) {
+                    if (pathParts[i] === currentChip) {
+                        chipIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            // 调试信息
+            console.log('Version index:', versionIndex);
+            console.log('Chip index:', chipIndex);
+            console.log('Has language in path:', hasLanguageInPath);
+            console.log('Path parts:', pathParts);
+            
+            // 构建新的完整路径
+            if (versionIndex >= 0 && chipIndex >= 0) {
+                // 提取页面路径（芯片之后的部分）
+                let pagePath = 'index.html';
+                if (chipIndex + 1 < pathParts.length) {
+                    pagePath = pathParts.slice(chipIndex + 1).join('/');
+                }
+                
+                // 构建base路径（版本之前的部分）
+                let basePath = '';
+                if (versionIndex > 0) {
+                    basePath = '/' + pathParts.slice(0, versionIndex).join('/');
+                }
+                
+                if (targetLang === 'zh_CN') {
+                    // 切换到中文：版本/芯片/页面
+                    newPath = `${basePath}/${currentVersion}/${currentChip}/${pagePath}`;
+                } else {
+                    // 切换到其他语言：版本/语言/芯片/页面
+                    newPath = `${basePath}/${currentVersion}/${targetLang}/${currentChip}/${pagePath}`;
+                }
+            } else {
+                // 如果无法解析路径，使用默认路径
+                if (targetLang === 'zh_CN') {
+                    newPath = `/${currentVersion}/${currentChip}/index.html`;
+                } else {
+                    newPath = `/${currentVersion}/${targetLang}/${currentChip}/index.html`;
+                }
+            }
+            
+            console.log('New path:', newPath);
+            
+            // 构建完整的新URL
+            const newUrl = new URL(newPath, url.origin);
+            
+            console.log('New URL:', newUrl.href);
+            
+            // 跳转到新URL
+            window.location.href = newUrl.href;
+        });
+    });
+});
+</script>
+{%- endif -%}

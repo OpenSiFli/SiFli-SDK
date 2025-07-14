@@ -22,9 +22,9 @@ scons -j16
 ```
 其中参数`-j16 `是16线程编译 <br>
 编译过程：<br>
-![alt text](./assert/lib001.png)<br>
+![alt text](assert/lib001.png)<br>
 生成如下lib：<br>
-![alt text](./assert/lib002.png)<br>
+![alt text](assert/lib002.png)<br>
 **备注**<br>
 编译成lib的文件为`SConscript`文件中定为为`lib`的分组，编译分组在`rtconfig.py`的libname的指定，如果需要可以自行同步修改；<br>
 `example\misc\generate_lib\lib\SConscript` 内配置<br>
@@ -37,7 +37,7 @@ libname="lib"
 ```
 ## 使用方法
 1. 复制生成的`lib_rvds.lib`文件到需要编译的工程目录中，并修改对应目录的SConscript文件，这里以`example\get-started\hello_world\rtt`例程为例，如下图：<br>
-![alt text](./assert/lib003.png)<br>
+![alt text](assert/lib003.png)<br>
 ```
 path = GetCurrentDir()
 lib = ['lib_rvds']

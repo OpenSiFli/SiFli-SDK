@@ -534,7 +534,7 @@ static inline audio_server_t *get_server()
 uint8_t get_server_current_device(void)
 {
     if (ble_bap_src_enabled)
-        return AUDIO_DEVICE_A2DP_SINK;
+        return AUDIO_DEVICE_BLE_BAP_SINK;
 
     return current_audio_device;
 }
@@ -2358,7 +2358,11 @@ static void audio_device_open(audio_server_t *server, audio_client_t client)
         if (tx_num == 1)
         {
             hight = device_get_tx_in_running(device, 0);
-            RT_ASSERT(hight);
+            if (!hight)
+            {
+                RT_ASSERT(0);
+                goto Exit;
+            }
             goto tx_mix_check;
         }
         else if (tx_num == 2)
@@ -2366,14 +2370,18 @@ static void audio_device_open(audio_server_t *server, audio_client_t client)
             audio_client_t tmp;
             low = device_get_tx_in_running(device, 0);
             hight = device_get_tx_in_running(device, 1);
-            RT_ASSERT(low && hight);
+            if (!low || !hight)
+            {
+                RT_ASSERT(0);
+                goto Exit;
+            }
 
             diff = client_compare_priority(hight, low, device->device_type);
             if (diff < 0)
             {
                 tmp = hight;
                 hight = low;
-                low   = tmp;
+                low = tmp;
             }
             diff = client_compare_priority(client, low, device->device_type);
             if (diff >= 0)

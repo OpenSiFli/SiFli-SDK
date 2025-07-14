@@ -263,7 +263,7 @@ static bool is_substring(const char *substr, const char *str)
             return false;
         }
 
-        if (strncasecmp(substr, &str[pos], sub_str_len) == 0)
+        if (strncmp(substr, &str[pos], sub_str_len) == 0)
         {
             return true;
         }
