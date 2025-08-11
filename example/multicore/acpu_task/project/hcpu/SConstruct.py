@@ -22,18 +22,14 @@ def create_env(proj_path = None):
     # Set default compile options
     SifliEnv(proj_path)
 
-    env = Environment(tools = ['mingw'],
-        AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-        CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-        AR = rtconfig.AR, ARFLAGS = '-rc',
-        LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-    env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
-    return env
 
-def build(env):
+def build():
     # prepare building environment
-    objs = PrepareBuilding(env)
+    objs = PrepareBuilding(None)
+    env = GetCurrentEnv()
 
     TARGET = os.path.join(env['build_dir'], rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT)
     # make a building
     DoBuilding(TARGET, objs)
+
+    return env

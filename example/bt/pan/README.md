@@ -51,6 +51,9 @@
    通过输入finsh命令“weather”获取当前天气，打印成功信息如下：\
    ![WEATHER_PRINT](./assets/weather_print.png)
 4. 默认本例程已开启OTA功能，输入finsh命令pan_cmd ota_pan，可以通过BT PAN下载main.c的URL指定的image并安装。关于OTA本身的介绍，见peripheral_with_ota工程
+5. 本例程增加了autoconnect 自动回连的flag，可以输入finsh 命令进行开启： pan_cmd set_retry_flag 1 /输入命令进行关闭：pan_cmd set_retry_flag 0
+6. 本例程增加了autoconnect 自动回连的次数，可以输入finsh 命令进行设置最大回连次数： pan_cmd set_retry_time 5（次数）
+7. 确保手机已经打开网络共享，手机断开pan之后，如果想要自动回连，可以输入finsh命令：pan_cmd autoconnect
 
 ### 硬件需求
 运行该例程前，需要准备：

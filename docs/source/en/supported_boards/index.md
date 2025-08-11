@@ -56,11 +56,11 @@ Abbreviation |  Model                    |    Board Directory   |
 -------------|---------------------------|----------------------|
 583-EVB      | SF32LB58X_EVB_CORE(583)   |   ec-lb583          | 
 585-EVB      | SF32LB58X_EVB_CORE(585)   |   ec-lb585          | 
-587-EVB      | SF32LB58X_EVB_CORE(587)   |   ec-lb587          | 
-LCD-A128R12N1-DSI | SF32LB58-DevKit-LCD |   sf32lb58-lcd_a128r12n1_dsi    |
-LCD-N16R32N1-DPI | SF32LB58-DevKit-LCD |   sf32lb58-lcd_n16r32n1_dpi    |
-LCD-N16R32N1-DSI | SF32LB58-DevKit-LCD |   sf32lb58-lcd_n16r32n1_dsi    |
-
+587-EVB       | SF32LB58X_EVB_CORE(587)   |   [ec-lb587](boards/ec-lb587/doc/index.md)    | 
+LCD-A128R32N1-DSI | SF32LB58-DevKit-LCD |   [sf32lb58-lcd_a128r32n1_dsi](boards/sf32lb58-lcd_a128r32n1_dsi/doc/index.md)    |
+LCD-N16R32N1-DPI | SF32LB58-DevKit-LCD |   [sf32lb58-lcd_n16r32n1_dpi](boards/sf32lb58-lcd_n16r32n1_dpi/doc/index.md)    |
+LCD-N16R32N1-DSI | SF32LB58-DevKit-LCD |   [sf32lb58-lcd_n16r32n1_dsi](boards/sf32lb58-lcd_n16r32n1_dsi/doc/index.md)    |
+LCD-N16R64N4-DSI | SF32LB58-DevKit-LCD |   [sf32lb58-lcd-n16r64n4_dsi](boards/sf32lb58-lcd_n16r64n4/doc/index.md)    |
 
 ## SF32LB56x Series
 
@@ -70,8 +70,8 @@ Abbreviation  |  Model                    |    Board Directory   |
 561-HDK       | EH-SF32LB56XU(561)        |   eh-lb561          | 
 563-HDK       | EH-SF32LB56XU(561)        |   eh-lb563          | 
 6700-HDK      | EH-SF32LB56XU(6700)       |   eh-ss6700         | 
-LCD-A128R12N1 | SF32LB56-DevKit-LCD |   sf32lb56-lcd_a128r12n1    |
-LCD-N16R12N1 | SF32LB56-DevKit-LCD |   sf32lb56-lcd_n16r12n1    |
+LCD-A128R12N1 | SF32LB56-DevKit-LCD |   [sf32lb56-lcd_a128r12n1](boards/sf32lb56-lcd_a128r12n1/doc/index.md)    |
+LCD-N16R12N1 | SF32LB56-DevKit-LCD |   [sf32lb56-lcd_n16r12n1](boards/sf32lb56-lcd_n16r12n1/doc/index.md)    |
 
 
 The boards in the following table are no longer maintained and cannot be used for project compilation, but the directories are still retained
@@ -94,5 +94,26 @@ Abbreviation |  Model                    |    Board Directory   |
 NANO-52b     | Nano(52b)                 |   sf32lb52-nano_52b | 
 NANO-52j     | Nano(52j)                 |   sf32lb52-nano_52j | 
 ULP(Huangshan Pi) | ULP(525)            |   sf32lb52-ulp      | 
-LCD-525      | SF32LB52-DevKit-LCD(525)  |   sf32lb52-lcd_n16r8|
-LCD-52b      | SF32LB52-DevKit-LCD(52b)  |   sf32lb52-lcd_52d  |
+LCD-525 | SF32LB52-DevKit-LCD(525) |   [sf32lb52-lcd_n16r8](boards/sf32lb52-lcd_n16r8/doc/index.md)    |
+LCD-52b | SF32LB52-DevKit-LCD(52b) |   [sf32lb52-lcd_52d](boards/sf32lb52-lcd_52d/doc/index.md)    |
+
+
+```{toctree}
+:titlesonly:
+:glob:
+
+boards/ec-lb587/doc/index
+boards/ec-lb587_a2/doc/index
+boards/sf32lb52-core_52j_e8/doc/index
+boards/sf32lb52-core_52j_n16/doc/index
+boards/sf32lb52-lcd_52d/doc/index
+boards/sf32lb52-lcd_n16r8/doc/index.
+boards/sf32lb52-lcd_n16r8_jdi/doc/index
+boards/sf32lb56-lcd_a128r12n1/doc/index
+boards/sf32lb56-lcd_n16r12n1/doc/index
+boards/sf32lb58-lcd_a128r32n1_dsi/doc/index
+boards/sf32lb58-lcd_n16r32n1_dpi/doc/index
+boards/sf32lb58-lcd_n16r32n1_dsi/doc/index
+boards/sf32lb58-lcd_n16r64n4/doc/index
+
+```

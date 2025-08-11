@@ -1,55 +1,55 @@
-# Benchmark demo
+# 基准测试演示
 
-## Overview
+## 概述
 
-The benchmark demo tests the performance in various cases.
-For example rectangle, border, shadow, text, image blending, image transformation, blending modes, etc.
-All tests are repeated with 50% opacity.
+基准测试演示在各种情况下测试性能。
+例如矩形、边框、阴影、文本、图像混合、图像变换、混合模式等。
+所有测试都使用50%透明度重复进行。
 
-The size and position of the objects during testing are set with a pseudo random number to make the benchmark repeatable.
+测试期间对象的大小和位置使用伪随机数设置，以使基准测试可重复。
 
-On to top of the screen the title of the current test step, and the result of the previous step is displayed.
+在屏幕顶部显示当前测试步骤的标题和上一步的结果。
 
-## Run the benchmark
-- In `lv_conf.h` or equivalent places set `LV_USE_DEMO_BENCHMARK 1`
-- After `lv_init()` and initializing the drivers call `lv_demo_benchmark()`
-- If you only want to run a specific scene for any purpose (e.g. debug, performance optimization etc.), you can call `lv_demo_benchmark_run_scene()` instead of `lv_demo_benchmark()`and pass the scene number.
-- If you enabled trace output by setting macro `LV_USE_LOG` to `1` and trace level `LV_LOG_LEVEL` to `LV_LOG_LEVEL_USER` or higher, benchmark results are printed out in `csv` format.
-- If you want to know when the testing is finished, you can register a callback function via `lv_demo_benchmark_register_finished_handler()` before calling `lv_demo_benchmark()` or `lv_demo_benchmark_run_scene()`. 
-- If you want to know the maximum rendering performance of the system, call `lv_demo_benchmark_set_max_speed(true)` before `lv_demo_benchmark()`.
+## 运行基准测试
+- 在 `lv_conf.h` 或等效位置设置 `LV_USE_DEMO_BENCHMARK 1`
+- 在 `lv_init()` 和初始化驱动程序后调用 `lv_demo_benchmark()`
+- 如果您只想出于任何目的运行特定场景（例如调试、性能优化等），可以调用 `lv_demo_benchmark_run_scene()` 而不是 `lv_demo_benchmark()` 并传递场景编号。
+- 如果您通过将宏 `LV_USE_LOG` 设置为 `1` 并将跟踪级别 `LV_LOG_LEVEL` 设置为 `LV_LOG_LEVEL_USER` 或更高来启用跟踪输出，基准测试结果将以 `csv` 格式打印出来。
+- 如果您想知道测试何时完成，可以在调用 `lv_demo_benchmark()` 或 `lv_demo_benchmark_run_scene()` 之前通过 `lv_demo_benchmark_register_finished_handler()` 注册回调函数。
+- 如果您想知道系统的最大渲染性能，请在 `lv_demo_benchmark()` 之前调用 `lv_demo_benchmark_set_max_speed(true)`。
 
-## Interpret the result
+## 解释结果
 
-The FPS is measured like this:
-- load the next step
-- in the display driver's `monitor_cb` accumulate the time-to-render and the number of cycles
-- measure for 1 second
-- calculate `FPS = time_sum / render_cnt`
+FPS 的测量方式如下：
+- 加载下一步
+- 在显示驱动程序的 `monitor_cb` 中累积渲染时间和周期数
+- 测量1秒
+- 计算 `FPS = time_sum / render_cnt`
 
-Note that it can result in very high FPS results for simple cases.
-E.g. if some simple rectangles are drawn in 5 ms, the benchmark will tell it's 200 FPS.
-So it ignores `LV_DISP_REFR_PERIOD` which tells LVGL how often it should refresh the screen.
-In other words, the benchmark shows the FPS from the pure rendering time.
+请注意，对于简单情况，它可能产生非常高的FPS结果。
+例如，如果一些简单的矩形在5毫秒内绘制，基准测试将显示它是200 FPS。
+因此它忽略了 `LV_DISP_REFR_PERIOD`，该参数告诉LVGL应该多久刷新一次屏幕。
+换句话说，基准测试显示的是纯渲染时间的FPS。
 
-By default, only the changed areas are refreshed. It means if only a few pixels are changed in 1 ms the benchmark will show 1000 FPS. To measure the performance with full screen refresh uncomment `lv_obj_invalidate(lv_scr_act())` in `monitor_cb()` in `lv_demo_benchmark.c`.
+默认情况下，只刷新更改的区域。这意味着如果在1毫秒内只有几个像素发生变化，基准测试将显示1000 FPS。要测量全屏刷新的性能，请在 `lv_demo_benchmark.c` 中的 `monitor_cb()` 中取消注释 `lv_obj_invalidate(lv_scr_act())`。
 
-![LVGL benchmark running](screenshot1.png)
+![LVGL基准测试运行](screenshot1.png)
 
-If you are doing performance analysis for 2D image processing optimization, LCD latency (flushing data to LCD) introduced by `disp_flush()` might dilute the performance results of the LVGL drawing process, hence make it harder to see your optimization results (gain or loss). To avoid such problem, please:
+如果您正在进行2D图像处理优化的性能分析，`disp_flush()` 引入的LCD延迟（将数据刷新到LCD）可能会稀释LVGL绘制过程的性能结果，因此更难看到您的优化结果（增益或损失）。为避免此类问题，请：
 
-1. Use a flag to control the LCD flushing inside `disp_flush()`. For example:
+1. 在 `disp_flush()` 内部使用标志控制LCD刷新。例如：
 
 ```c
 volatile bool disp_flush_enabled = true;
 
-/* Enable updating the screen (the flushing process) when disp_flush() is called by LVGL
+/* 当LVGL调用disp_flush()时启用屏幕更新（刷新过程）
  */
 void disp_enable_update(void)
 {
     disp_flush_enabled = true;
 }
 
-/* Disable updating the screen (the flushing process) when disp_flush() is called by LVGL
+/* 当LVGL调用disp_flush()时禁用屏幕更新（刷新过程）
  */
 void disp_disable_update(void)
 {
@@ -66,13 +66,13 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
                         (const uint8_t *)color_p);
     }
 
-    /*IMPORTANT!!!
-     *Inform the graphics library that you are ready with the flushing*/
+    /*重要！！！
+     *通知图形库您已完成刷新*/
     lv_disp_flush_ready(disp_drv);
 }
 ```
 
-2. Disable flushing before calling `lv_demo_benchmark()` or `lv_demo_benchmark_run_scene()`, for example:
+2. 在调用 `lv_demo_benchmark()` 或 `lv_demo_benchmark_run_scene()` 之前禁用刷新，例如：
 
 ```c
 extern void disp_enable_update(void);
@@ -89,9 +89,9 @@ int main(void)
     lv_port_disp_init();
     lv_port_indev_init();
 
-    LV_LOG("Running LVGL Benchmark...");
-    LV_LOG("Please stand by...");
-    LV_LOG("NOTE: You will NOT see anything until the end.");
+    LV_LOG("运行LVGL基准测试...");
+    LV_LOG("请稍候...");
+    LV_LOG("注意：在结束之前您将看不到任何内容。");
 
     disp_disable_update();
     
@@ -99,36 +99,36 @@ int main(void)
     lv_demo_benchmark_set_max_speed(true);
     lv_demo_benchmark();
     
-    //lv_demo_benchmark_run_scene(43);      // run scene no 31
+    //lv_demo_benchmark_run_scene(43);      // 运行场景编号31
 
     ...
     while(1){
-        lv_timer_handler();                 //! run lv task at the max speed
+        lv_timer_handler();                 //! 以最大速度运行lv任务
     }
 }
 ```
 
 
 
-3. Alternatively, you can use trace output to get the benchmark results in csv format by:
-   - Setting macro `LV_USE_LOG` to `1` 
-   - Setting trace level `LV_LOG_LEVEL` to `LV_LOG_LEVEL_USER` or higher.
+3. 或者，您可以通过以下方式使用跟踪输出来获得csv格式的基准测试结果：
+   - 将宏 `LV_USE_LOG` 设置为 `1`
+   - 将跟踪级别 `LV_LOG_LEVEL` 设置为 `LV_LOG_LEVEL_USER` 或更高。
 
 
 
 
-## Result summary
-In the end, a table is created to display measured FPS values.
+## 结果摘要
+最后，创建一个表格来显示测量的FPS值。
 
-On top of the summary screen, the "Weighted FPS" value is shown.
-In this, the result of the more common cases are taken into account with a higher weight.
+在摘要屏幕顶部，显示"加权FPS"值。
+其中，更常见情况的结果以更高的权重考虑。
 
-"Opa. speed" shows the speed of the measurements with opacity compared to full opacity.
-E.g. "Opa. speed = 90%" means that rendering with opacity is 10% slower.
+"透明度速度"显示使用透明度测量的速度与完全不透明相比。
+例如，"透明度速度 = 90%"意味着使用透明度渲染慢10%。
 
-In the first section of the table, "Slow but common cases", those cases are displayed which are considered common but were slower than 20 FPS.
+在表格的第一部分"慢但常见情况"中，显示那些被认为是常见但慢于20 FPS的情况。
 
-Below this in the "All cases section" all the results are shown. The < 10 FPS results are shown with red, the >= 10 but < 20 FPS values are displayed with orange.
+在此下方的"所有情况部分"中显示所有结果。小于10 FPS的结果用红色显示，大于等于10但小于20 FPS的值用橙色显示。
 
 
-![LVGL benchmark result summary](https://github.com/lvgl/lvgl/tree/master/demos/benchmark/screenshot2.png?raw=true)
+![LVGL基准测试结果摘要](https://github.com/lvgl/lvgl/tree/master/demos/benchmark/screenshot2.png?raw=true)

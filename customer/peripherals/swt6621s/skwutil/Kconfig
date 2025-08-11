@@ -1,0 +1,20 @@
+#
+# SEEKWAVE Platfrom Device Drivers (NEW )Configuration
+#
+config SKW_BSP_UCOM
+	tristate "SeekWave BSP Drivers util For SeekWave Chip"
+	depends on SEEKWAVE_BSP_DRIVERS
+	default m
+	help
+	  This is support seekwave chip for incard board.
+	  if you want to buildin bsp driver.
+	  please say "y".
+		Thanks.
+config SKW_BSP_BOOT
+	tristate "Seekwave Platform SKW BOOT Driver Support"
+        depends on SEEKWAVE_BSP_DRIVERS
+	default m
+	help
+	  Enable this module for seekwave.
+	  if you want to use this driver,please insmod skw_boot.ko.
+	  Thanks.

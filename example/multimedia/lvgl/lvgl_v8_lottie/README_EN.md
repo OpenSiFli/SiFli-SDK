@@ -1,20 +1,42 @@
-# LVGL v8 lottie Example
+# LVGL v8 Lottie Example
+
+Source Path: example/multimedia/lvgl/lvgl_v8_lottie
 ```{warning}
-Not verified
+Unverified
 ```
 ## Introduction
 
-This example is used to test LVGL V8 lottie API.
+This example is used to test the LVGL V8 Lottie API.
+
+## Usage
+
+The following sections provide only essential information. For complete steps on configuring SiFli-SDK and building/running projects, please refer to the [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html).
+
+### Supported Development Boards
+
+This example can run on the following development boards:
+- eh-lb563
+- SF32LB52x series
+- SF32LB56x series
 
 ## Project Compilation and Download:
-Board projects in the project directory can be compiled for corresponding boards by specifying the board parameter,
-- For example, to compile a project that can run on HDK 563, execute scons --board=eh-lb563 to generate the project
-- Download can be performed through download.bat in the build directory. For example, to flash the 563 project generated in the previous step, execute .\build_eh-lb563\download.bat to download via jlink
-- Special note: for SF32LB52x/SF32LB56x series, an additional uart_download.bat will be generated. You can execute this script and input the download UART port number to perform the download
-Simulator projects are in the simulator directory,
-- Use scons for compilation. The simulator/msvc_setup.bat file needs to be modified accordingly to match the local MSVC configuration
-- You can also use scons --target=vs2017 to generate MSVC project project.vcxproj and compile using Visual Studio.
+The board project is located in the project directory. You can compile projects adapted to different boards by specifying the board parameter:
+- To compile for HDK 563 development board, execute: scons --board=eh-lb563
+- Download via JLink: Run .\build_<board_name>\download.bat
+- For SF32LB52x/SF32LB56x series, an additional uart_download.bat is generated. Execute this script and enter the UART port number to download
+
+The simulator project is located in the simulator directory:
+- Compile with scons. The SiFli-SDK/msvc_setup.bat file needs to be modified accordingly to match the local MSVC configuration
+- You can also generate an MSVC project using scons --target=vs2017 and compile with Visual Studio
 
 ```{note}
-If not using VS2017, for example VS2022, when loading the project, it will prompt to upgrade the MSVC SDK. After upgrading, it can be used.
+If you are not using VS2017 (e.g., using VS2022), you will be prompted to upgrade the MSVC SDK when loading the project. After upgrading, it can be used normally.
 ```
+
+## Troubleshooting
+
+If you have any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+
+## Reference Documentation
+
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)

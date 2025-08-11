@@ -1,13 +1,13 @@
-# Keypad and Encoder demo
+# 键盘和编码器演示
 
-## Overview
+## 概述
 
-LVGL allows you to control the widgets with keypad and/or encoder without touchpad.
-This demo shows how to handle buttons, drop-down lists, rollers, sliders, switches and text inputs without touchpad.
-Learn more about the touchpad-less usage of LVGL [here](https://docs.lvgl.io/master/overview/indev.html#keypad-and-encoder).
+LVGL允许您使用键盘和/或编码器控制小部件，而无需触摸板。
+此演示显示如何在没有触摸板的情况下处理按钮、下拉列表、滚轮、滑块、开关和文本输入。
+了解更多关于LVGL无触摸板使用的信息[这里](https://docs.lvgl.io/master/overview/indev.html#keypad-and-encoder)。
 
-![Keypad and encoder navigation in LVGL embedded GUI library](screenshot1.gif)
+![LVGL嵌入式GUI库中的键盘和编码器导航](screenshot1.gif)
 
-## Run the demo
-- In `lv_conf.h` or equivalent places set `LV_USE_DEMO_KEYPAD_AND_ENCODER 1`
-- After `lv_init()` and initializing the drivers call `lv_demo_keypad_encoder()`
+## 运行演示
+- 在 `lv_conf.h` 或等效位置设置 `LV_USE_DEMO_KEYPAD_AND_ENCODER 1`
+- 在 `lv_init()` 和初始化驱动程序后调用 `lv_demo_keypad_encoder()`

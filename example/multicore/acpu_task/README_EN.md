@@ -1,26 +1,40 @@
-﻿# ACPU Custom Task Execution
-Source code path: `example/multicore/acpu_ctrl`
-## Supported Platforms
+# ACPU Executes Custom Tasks
+Source Code Path: `example/multicore/acpu_task`
+
+## Usage
+
+### Supported Development Boards
 <!-- Which boards and chip platforms are supported -->
 + ec-lb583
 + ec-lb587
 
 ## Overview
-<!-- Example introduction -->
-This example demonstrates how to configure ACPU to execute custom tasks.
+
+This example demonstrates how to configure ACPU to execute custom tasks, send task instructions through HCPU, and receive execution results. This example mainly uses the multi-core communication framework and task scheduling functions of SiFli-SDK.
+Based on this example, developers can build application scenarios that require heterogeneous multi-core collaboration, such as assigning computationally intensive tasks to ACPU for processing to improve overall system performance.
+<!-- Example Introduction -->
+This example demonstrates how to configure ACPU to execute custom tasks
+
+### Hardware Requirements
+
+No special hardware requirements, just use a supported development board to run normally.
+
+### Compilation and Flashing
 
 ## Directory Structure
+
 - `project/hcpu`: HCPU project
 - `project/acpu`: ACPU project
 - `src/acpu`: ACPU application code
 - `src/hcpu`: HCPU application code
 
-### Compilation and Programming
-Execute the `scons --board=<board_name>` command in the `project/hcpu` directory to compile and generate image files for the required board, such as executing `scons --board=ec-lb587` to generate image files for the `587-evb` development board. After compilation, run the command `build_<board_name>\download.bat` to flash the image file, for example `build_ec-lb587\download.bat`.
+### Compilation and Flashing
 
-## Expected Results of the Example
+Execute the `scons --board=<board_name>` command in the `project/hcpu` directory to compile and generate the image file for the required board. For example, execute the `scons --board=ec-lb587` command to generate the image file for the `587-evb` development board. After compilation, run the command `build_<board_name>\download.bat` to flash the image file, such as `build_ec-lb587\download.bat`
 
-Send the `run_acpu <task_id>` command (requires carriage return) in the serial console window, where `<task_id>` takes values of numbers greater than or equal to 0, corresponding to TASK_0, TASK_1, etc. respectively. The running results are as follows:
+## Expected Result of the Example
+
+Send the `run_acpu <task_id>` command (with carriage return) in the serial console window, where `<task_id>` is a number greater than or equal to 0, corresponding to TASK_0, TASK_1, etc. in sequence. The running result is as follows
 ```
 12-28 20:17:23:794    msh />
 12-28 20:17:23:844    msh />
@@ -45,14 +59,12 @@ Send the `run_acpu <task_id>` command (requires carriage return) in the serial c
 12-28 20:17:31:464    msh />
 ```
 
-## Code Description
-The function `acpu_main` in `src/acpu/main.c` serves as the entry function for ACPU task processing, executing corresponding code based on the received task ID.
+## Code Explanation
 
-In `src/hcpu/main.c`, the `acpu_run_task` function is called to configure ACPU to execute a specific task. This function runs in blocking mode and only returns after ACPU returns results. During this period, the thread calling this function will be suspended while waiting for the semaphore.
-
-ACPU's image file is stored in Flash and burned to Flash by the programming script. The secondary bootloader copies ACPU code to the RAM corresponding to address 0 in ACPU instruction space.
-For example, the following code excerpt from the generated ftab.c shows `.base=0x69100000` indicating that ACPU's image file is stored in Flash starting from address 0x69100000, and `xip_base=0x20200000` indicates that the secondary bootloader will copy ACPU code to RAM starting from 0x20200000, where 0x20200000 corresponds to address 0 in ACPU instruction space.
-
+The function `acpu_main` in `src/acpu/main.c` is the entry function for ACPU to process tasks, executing corresponding code according to the received task ID
+The `acpu_run_task` function is called in `src/hcpu/main.c` to configure ACPU to execute a certain task. This function runs in blocking mode and will not return until ACPU returns the result. During this period, the thread calling this function will be suspended due to waiting for a semaphore
+The ACPU image file is stored in Flash and programmed into Flash by the programming script. The secondary boot copies the ACPU code to the RAM corresponding to address 0 of the ACPU instruction space.
+For example, the following code is excerpted from the compiled ftab.c. `.base=0x69100000` indicates that the ACPU image file is stored in Flash starting from address 0x69100000. `xip_base=0x20200000` indicates that the secondary boot will copy the ACPU code to the RAM starting from 0x20200000. 0x20200000 corresponds to address 0 of the ACPU instruction space.
 ```c
 RT_USED const struct sec_configuration sec_config =
 {
@@ -61,8 +73,7 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)] = {.length = 0x00000AE4, .blksize = 512, .flags = DFU_FLAG_AUTO},
 };
 ```
-
-The implementation of secondary bootloader copying ACPU code can be found in the function `boot_images` in `example\boot_loader\project\sf32lb58x_v2\board\main.c` in the following section:
+The implementation of the secondary boot copying ACPU code can be found in the `boot_images` function in `example\boot_loader\project\sf32lb58x_v2\board\main.c` as follows:
 ```c
 if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_UNINIT_32)
 {
@@ -70,8 +81,12 @@ if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_U
 }
 ```
 
-## Exception Diagnosis
+## Troubleshooting
 
-## Reference Documentation
+- **Compilation Errors**: Ensure the SiFli-SDK development environment is configured correctly and check that the board name is correct
+- **Programming Failure**: Confirm the development board is connected correctly and try re-plugging the USB cable
 
-## Update History
+## Reference Documents
+
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [Multi-core Communication Development Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/multicore/index.html)

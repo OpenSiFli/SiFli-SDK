@@ -108,6 +108,8 @@ static void audio_data_stop(void);
 
 static audio_device_e current_audio_device;
 static uint8_t current_play_status;
+static uint8_t g_tws_volume = 15;
+static uint8_t g_tws_volume_relative;
 #define g_hardware_mix_enable    0 //mix is left + right, make big volume
 
 enum
@@ -1376,78 +1378,27 @@ static rt_err_t micbias_rx_ind(rt_device_t dev, rt_size_t size)
     return 0;
 }
 
+static audio_client_t g_micbias;
 AUDIO_API void micbias_power_on()
 {
-    int stream;
-    rt_err_t err;
-    audio_server_t *server = get_server();
-    audio_device_speaker_t *my = &server->device_speaker_private;
-    LOG_I("%s 0x%p", __FUNCTION__, my->audcodec_dev);
-    if (!my->audprc_dev)
-    {
-        my->audprc_dev = rt_device_find(AUDIO_SPEAKER_NAME);
-        RT_ASSERT(my->audprc_dev);
-        {
-            err = rt_device_open(my->audprc_dev, RT_DEVICE_FLAG_RDWR);
-            RT_ASSERT(RT_EOK == err);
-        }
-
-        my->audcodec_dev = rt_device_find(AUDIO_PRC_CODEC_NAME);
-        RT_ASSERT(my->audcodec_dev);
-        err = rt_device_open(my->audcodec_dev, RT_DEVICE_FLAG_WRONLY);
-        RT_ASSERT(RT_EOK == err);
-    }
-    {
-        rt_device_set_rx_indicate(my->audprc_dev, micbias_rx_ind);
-        //config ADC
-        struct rt_audio_caps caps;
-        int stream;
-        rt_device_control(my->audcodec_dev, AUDIO_CTL_SETINPUT, (void *)AUDPRC_RX_FROM_CODEC);
-        caps.main_type = AUDIO_TYPE_INPUT;
-        caps.sub_type = 1 << HAL_AUDCODEC_ADC_CH0;
-        caps.udata.config.channels   = 1;
-        caps.udata.config.samplerate = 8000;
-        caps.udata.config.samplefmt = 16;
-        rt_device_control(my->audcodec_dev, AUDIO_CTL_CONFIGURE, &caps);
-
-        LOG_I("codec input parameter:sub_type=%d channels %d, rate %d, bits %d", caps.sub_type, caps.udata.config.channels,
-              caps.udata.config.samplerate, caps.udata.config.samplefmt);
-
-        rt_device_control(my->audprc_dev, AUDIO_CTL_SETINPUT, (void *)AUDPRC_RX_FROM_CODEC);
-
-        caps.main_type = AUDIO_TYPE_INPUT;
-        caps.sub_type = HAL_AUDPRC_RX_CH0 - HAL_AUDPRC_RX_CH0;
-        caps.udata.config.channels   = 1;
-        caps.udata.config.samplerate = 8000;
-        caps.udata.config.samplefmt = 16;
-        LOG_I("mic input:rx channel %d, channels %d, rate %d, bitwidth %d", 0, caps.udata.config.channels,
-              caps.udata.config.samplerate, caps.udata.config.samplefmt);
-        rt_device_control(my->audprc_dev, AUDIO_CTL_CONFIGURE, &caps);
-        stream = AUDIO_STREAM_RECORD | ((1 << HAL_AUDCODEC_ADC_CH0) << 8);
-        rt_device_control(my->audcodec_dev, AUDIO_CTL_START, &stream);
-        stream = AUDIO_STREAM_RECORD | ((1 << HAL_AUDPRC_RX_CH0) << 8);
-        rt_device_control(my->audprc_dev, AUDIO_CTL_START, &stream);
-        HAL_NVIC_DisableIRQ(AUDPRC_RX0_DMA_IRQ);
-    }
+    audio_parameter_t pa = {0};
+    pa.write_bits_per_sample = 16;
+    pa.write_channnel_num = 1;
+    pa.write_samplerate = 8000;
+    pa.read_bits_per_sample = 16;
+    pa.read_channnel_num = 1;
+    pa.read_samplerate = 16000;
+    pa.read_cache_size = 0;
+    pa.write_cache_size = 0;
+    g_micbias = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, NULL, NULL);
+    RT_ASSERT(g_micbias);
+    HAL_NVIC_DisableIRQ(AUDPRC_RX0_DMA_IRQ);
 }
 
 AUDIO_API void micbias_power_off()
 {
-    audio_server_t *server = get_server();
-    audio_device_speaker_t *my = &server->device_speaker_private;
-    int stream_audcodec = AUDIO_STREAM_RECORD | ((1 << HAL_AUDCODEC_ADC_CH0) << 8);
-    int stream_audprc = AUDIO_STREAM_RECORD | ((1 << HAL_AUDPRC_RX_CH0) << 8);
-    LOG_I("%s 0x%p", __FUNCTION__, my->audprc_dev);
-    if (my->audprc_dev)
-    {
-        rt_device_control(my->audcodec_dev, AUDIO_CTL_STOP, &stream_audcodec);
-        rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
-        bf0_disable_pll();
-        rt_device_close(my->audcodec_dev);
-        rt_device_close(my->audprc_dev);
-        my->audcodec_dev = NULL;
-        my->audprc_dev = NULL;
-    }
+    audio_close(g_micbias);
+    g_micbias = NULL;
 }
 
 static int audio_device_speaker_open(void *user_data, audio_device_input_callback callback)
@@ -2648,7 +2599,9 @@ inline static void audio_client_start(audio_client_t client)
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
 #ifdef SF32LB52X
+    LOG_I("start pm scenario audio");
     pm_scenario_start(PM_SCENARIO_AUDIO);
+
     if (client->audio_type == AUDIO_TYPE_BT_VOICE)
     {
         HAL_HPAON_WakeCore(CORE_ID_LCPU);
@@ -2757,6 +2710,7 @@ Exit:
 
     if (audio_pm_debug == 0)
     {
+        LOG_I("stop pm scenario audio");
         pm_scenario_stop(PM_SCENARIO_AUDIO);
         current_play_status = 0;
     }
@@ -3671,6 +3625,19 @@ static inline void ble_sink_adjust_pll(struct rt_ringbuffer *rb)
 }
 #endif
 
+AUDIO_API void audio_set_tws_volume(uint8_t volume)
+{
+    if (volume > 15)
+        volume = 15;
+    g_tws_volume = volume;
+}
+
+AUDIO_API void audio_set_tws_volume_type(uint8_t is_relative)
+{
+    g_tws_volume_relative = is_relative;
+}
+
+
 /**
   * @brief  write pcm data to downlink cache buffer
   * @param  handle value return by audio_open
@@ -3741,6 +3708,16 @@ put_raw:
     ble_sink_adjust_pll(&handle->ring_buf);
 #endif
 
+    if (handle->device_using == AUDIO_DEVICE_A2DP_SINK && g_tws_volume_relative)
+    {
+        int16_t *p = (int16_t *)data;
+        uint32_t samples = data_len >> 1;
+        for (uint32_t i = 0; i < samples; i++)
+        {
+            p[i] = p[i] >> (15 - g_tws_volume);
+        }
+    }
+
     len = rt_ringbuffer_put(&handle->ring_buf, data, data_len);
 #if defined(BT_BAP_BROADCAST_SINK) || defined(BT_BAP_BROADCAST_SOURCE)
     if (len != data_len)
@@ -3777,11 +3754,11 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
         return -1;
     }
     LOG_D("audio_ioctl: cmd=%d", cmd);
-    if (cmd == 0)
+    if (cmd == AUDIO_IOCTL_FACTORY_LOOPBACK_GAIN)
     {
         handle->is_factory_loopback = gain | 0x80;
     }
-    else if (cmd == 1)
+    else if (cmd == AUDIO_IOCTL_FLUSH_TIME_MS)
     {
         uint32_t *time_ms = (uint32_t *)parameter;
         ret = -1;
@@ -3790,12 +3767,12 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
             uint32_t bytes_per_second = handle->parameter.write_samplerate * handle->parameter.write_channnel_num * 2;
             if (bytes_per_second)
             {
-                *time_ms = rt_ringbuffer_data_len(&handle->ring_buf)  * 1000 / bytes_per_second;
+                *time_ms = rt_ringbuffer_data_len(&handle->ring_buf) * 1000 / bytes_per_second;
                 ret = 0;
             }
         }
     }
-    else if (cmd == 2)
+    else if (cmd == AUDIO_IOCTL_IS_FADE_OUT_DONE)
     {
 #if !SOFTWARE_TX_MIX_ENABLE
         ret = -1;
@@ -3805,7 +3782,7 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
         }
 #endif
     }
-    else if (cmd == 3)
+    else if (cmd == AUDIO_IOCTL_BYTES_IN_CACHE)
     {
         uint32_t *byte_left = (uint32_t *)parameter;
         ret = -1;
@@ -3815,7 +3792,7 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
             ret = 0;
         }
     }
-    else if (cmd == -1)
+    else if (cmd == AUDIO_IOCTL_FADE_OUT_START)
     {
 #if !SOFTWARE_TX_MIX_ENABLE
         lock();
@@ -3828,6 +3805,15 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
         }
         unlock();
 #endif
+    }
+    else if (cmd == AUDIO_IOCTL_ENABLE_CPU_LOW_SPEED)
+    {
+        uint32_t enable = (uint32_t)parameter;
+        LOG_I("cpu low speed enable=%d", enable);
+        if (enable)
+            pm_scenario_stop(PM_SCENARIO_AUDIO);
+        else
+            pm_scenario_start(PM_SCENARIO_AUDIO);
     }
     LOG_D("audio_ioctl: cmd=%d ret=%d", cmd, ret);
     return ret;

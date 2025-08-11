@@ -1,0 +1,11 @@
+import os
+from building import *
+
+# Add source code
+src = Glob('*.c')
+src += Glob('components/*.c')
+src += Glob('screens/*.c')
+
+group = DefineGroup('Applications', src, depend = [''])
+
+Return('group')

@@ -54,6 +54,9 @@ For rt_device examples, you also need to list the configuration switches used in
    input the finsh command "weather" to get current weather information. Successful output is shown below:\
    ![WEATHER_PRINT](./assets/weather_print.png)
 4. By default, this example has OTA functionality enabled. Input the finsh command "pan_cmd ota_pan" to download and install the image specified by the URL in main.c via BT PAN. For OTA introduction, see the peripheral_with_ota project.
+5. This example has added an autoconnect flag. You can enable it by entering the finsh command: pan_cmd set_retry_flag 1 / You can disable it by entering the command: pan_cmd set_retry_flag 0
+6. This example has added the number of autoconnect retries. You can set the maximum retry count by entering the finsh command: pan_cmd set_retry_time 5 (number of retries)
+7. Ensure that the phone has enabled network sharing. After the phone disconnects from pan, if you want to automatically reconnect, you can enter the finsh command: pan_cmd autoconnect
 
 ### Hardware Requirements
 Before running this example, you need to prepare:

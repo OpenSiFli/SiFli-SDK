@@ -1,0 +1,2554 @@
+---
+set.middleware.wireless.wpa_supplicant:
+  section-type: set
+  belong_to: set.middleware.wireless.wpa_supplicant
+  section_info:
+    fixed_id: nxp_wifi_wpa_supplicant
+    version: 2.11.0
+    type: middleware
+    display_name: wpa_supplicant-rtos
+    description: NXP Wi-Fi WPA Supplicant
+    set_location:
+      repo_base_path: middleware/wireless/wpa_supplicant-rtos
+    vendor: NXP
+    product:
+      kex_package:
+        scr:
+        - scr.middleware.wireless.wpa_supplicant
+        kex_web_ui:
+          ui_control: true
+          ui_release_specific: true
+          ui_control_default: false
+          ui_category: Middleware
+      cmsis_pack:
+        vendor: NXP
+        scr:
+        - scr.middleware.wireless.wpa_supplicant
+        supported: true
+        pack_root:
+          pack_type: SWP
+          pack_name: WIRELESS_WPA_SUPPLICANT
+          pack_version: 1.0.0
+    component_taxonomy:
+      wireless:
+        cclass: Wireless
+        cgroup: wpa_supplicant
+  dependency:
+    allOf:
+    - board:
+      - evkmimxrt595
+      - evkmimxrt685
+      - mimxrt685audevk
+      - evkmimxrt1020
+      - evkmimxrt1040
+      - evkbimxrt1050
+      - evkmimxrt1060
+      - evkbmimxrt1060
+      - evkcmimxrt1060
+      - evkmimxrt1064
+      - evkmimxrt1160
+      - evkmimxrt1170
+      - evkbmimxrt1170
+      - evkmimxrt1180
+      - evkmimxrt1180a
+      - mcxn9xxevk
+      - mcxn5xxevk
+      - rdrw612bga
+      - rdrw612qfn
+    - set.middleware.lwip
+    - set.middleware.freertos-kernel
+    - set.middleware.mbedtls
+license.wpa_supplicant_license:
+  section-type: license
+  belong_to: set.middleware.wireless.wpa_supplicant
+  contents:
+    repo_base_path: middleware/wireless/wpa_supplicant-rtos
+    files:
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/README
+    package_base_path: middleware/wireless/wpa_supplicant-rtos
+  section_info:
+    Outgoing License: BSD-3-Clause
+scr.middleware.wireless.wpa_supplicant:
+  section-type: scr
+  belong_to: set.middleware.wireless.wpa_supplicant
+  contents:
+    license:
+    - license.wpa_supplicant_license
+    Name: wpa_supplicant-rtos
+    Version: 2.11.0
+    Format: source code
+    Description: WPA Supplicant & HOSTAPD
+    Location: middleware/wireless/wpa_supplicant-rtos
+    Origin: https://w1.fi/wpa_supplicant/ and https://w1.fi/hostapd/
+middleware.wireless.wpa_supplicant.rtos:
+  section-type: component
+  contents:
+    repo_base_path: middleware/wireless/wpa_supplicant-rtos
+    project_base_path: wpa_supplicant-rtos
+    cc-include:
+    - repo_relative_path: "./"
+      project_relative_path: "./"
+      package_relative_path: "./"
+    - repo_relative_path: src
+      project_relative_path: src
+      package_relative_path: src
+    - repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+    - repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+    - repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+    - repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+    - repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+    - repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+    - repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+    - repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+    - repo_relative_path: src/eapol_auth
+      project_relative_path: src/eapol_auth
+      package_relative_path: src/eapol_auth
+    - repo_relative_path: src/eapol_supp
+      project_relative_path: src/eapol_supp
+      package_relative_path: src/eapol_supp
+    - repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+    - repo_relative_path: src/l2_packet
+      project_relative_path: src/l2_packet
+      package_relative_path: src/l2_packet
+    - repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+    - repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+    - repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+    - repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+    - repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+    - repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+    - repo_relative_path: port/mbedtls
+      project_relative_path: port/mbedtls
+      package_relative_path: port/mbedtls
+    - repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+    - repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+    - repo_relative_path: freertos
+      project_relative_path: freertos
+      package_relative_path: freertos
+    - repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+    files:
+    - source: middleware/wireless/wpa_supplicant-rtos/port/mbedtls/wpa_supp_mbedtls_config.h
+      repo_relative_path: port/mbedtls
+      project_relative_path: port/mbedtls
+      package_relative_path: port/mbedtls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/port/mbedtls/wpa_supp_els_pkc_mbedtls_config.h
+      repo_relative_path: port/mbedtls
+      project_relative_path: port/mbedtls
+      package_relative_path: port/mbedtls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/port/mbedtls/wpa_supp_ele_s400_mbedtls_config.h
+      repo_relative_path: port/mbedtls
+      project_relative_path: port/mbedtls
+      package_relative_path: port/mbedtls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/wpa_common.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ieee802_11_common.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/hw_features_common.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/wpa_ctrl.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/cli.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/driver_common.c
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/drivers.c
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/l2_packet/l2_packet.h
+      repo_relative_path: src/l2_packet
+      project_relative_path: src/l2_packet
+      package_relative_path: src/l2_packet
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/l2_packet/l2_packet_freertos.c
+      repo_relative_path: src/l2_packet
+      project_relative_path: src/l2_packet
+      package_relative_path: src/l2_packet
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/driver_freertos.c
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/base64.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/common.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/wpabuf.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/bitfield.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/os_freertos.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/crc32.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/ip_addr.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/block_alloc.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/dl_list.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ap.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/autoscan.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/bgscan.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/bss.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/bssid_ignore.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/config.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/config_ssid.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ctrl_iface.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/dpp_supplicant.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/driver_i.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/gas_query.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/hs20_supplicant.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ibss_rsn.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/interworking.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/mesh.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/mesh_mpm.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/mesh_rsn.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/notify.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/offchannel.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/p2p_supplicant.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/scan.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/sme.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wifi_display.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wmm_ac.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wnm_sta.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wpas_glue.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wpas_kay.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wpa_supplicant_i.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wps_supplicant.h
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/binder/binder.h
+      repo_relative_path: wpa_supplicant/binder
+      project_relative_path: wpa_supplicant/binder
+      package_relative_path: wpa_supplicant/binder
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/dbus/dbus_common.h
+      repo_relative_path: wpa_supplicant/dbus
+      project_relative_path: wpa_supplicant/dbus
+      package_relative_path: wpa_supplicant/dbus
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/dbus/dbus_new.h
+      repo_relative_path: wpa_supplicant/dbus
+      project_relative_path: wpa_supplicant/dbus
+      package_relative_path: wpa_supplicant/dbus
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/supp_main.h
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/supp_api.h
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/wpa_cli.h
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/wpa_cli.c
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/config.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/notify.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/bss.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/eap_register.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/op_classes.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/rrm.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wmm_ac.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/config_none.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/sme.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wpa_supplicant.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/events.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/bssid_ignore.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wpas_glue.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/scan.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/robust_av.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ctrl_iface.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ctrl_iface_udp.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/mbo.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wnm_sta.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/README
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: other
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/wpa_debug.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/supp_main.c
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/freertos/src/supp_api.c
+      repo_relative_path: freertos/src
+      project_relative_path: freertos/src
+      package_relative_path: freertos/src
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/ap.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_config.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_drv_ops.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_list.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_mlme.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/authsrv.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/beacon.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/bss_load.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/dfs.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/drv_callbacks.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/eap_user_db.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/hostapd.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/hw_features.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_auth.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_he.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_ht.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_shared.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_vht.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_1x.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/neighbor_db.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/p2p_hostapd.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/pmksa_cache_auth.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/preauth_auth.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/rrm.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/sta_info.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/tkip_countermeasures.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/utils.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wmm.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ctrl_iface_ap.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/mbo_ap.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_ie.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_ft.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_glue.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_common.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_identity.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_methods.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eapol_auth/eapol_auth_sm.c
+      repo_relative_path: src/eapol_auth
+      project_relative_path: src/eapol_auth
+      package_relative_path: src/eapol_auth
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-eax.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-encblock.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-ctr.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-cbc.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-siv.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-unwrap.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-wrap.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/des-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/dh_groups.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/rc4.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/md4-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/md5.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/md5-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/fips_prf_internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/tls_none.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/ms_funcs.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1-tlsprf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1-prf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256-prf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1-pbkdf2.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-omac1.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-internal-enc.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-internal-dec.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes-internal.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa.c
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/preauth.c
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/pmksa_cache.c
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa_ie.c
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/crypto_mbedtls2.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/tls_mbedtls2.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256-kdf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha384-kdf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha512-kdf.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/sae.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dragonfly.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/p2p_supplicant.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/p2p_supplicant_sd.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_utils.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_parse.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_build.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_go_neg.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_sd.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_pd.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_invitation.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_dev_disc.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_group.c
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/gas.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/gas_query.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/offchannel.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/wps_supplicant.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/uuid.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_wsc.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_wsc_common.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wps_hostapd.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_common.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_attr_parse.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_attr_build.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_attr_process.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_dev_attr.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_enrollee.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_registrar.c
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eapol_supp/eapol_supp_sm.c
+      repo_relative_path: src/eapol_supp
+      project_relative_path: src/eapol_supp
+      package_relative_path: src/eapol_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_methods.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_tls.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_tls_common.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_peap.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_peap_common.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_ttls.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_mschapv2.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/chap.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/mschapv2.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_fast.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_fast_pac.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_gtc.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_fast_common.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/hlr_auc_gw.c
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/ctrl_iface.c
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/eap_register.c
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/config_file.h
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/ctrl_iface.h
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/eap_register.h
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/hostapd/README
+      repo_relative_path: hostapd
+      project_relative_path: hostapd
+      package_relative_path: hostapd
+      type: other
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa_ft.c
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wnm_ap.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/eth_p_oui.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_wsc.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_tls.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_server.c
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_das.c
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_client.c
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius.c
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_sim_db.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_sim_common.c
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_ttls.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_tls_common.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_peap.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_mschapv2.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_md5.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_gtc.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_fast.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_sim.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_server_aka.c
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/acs.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/acs.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/eloop_freertos.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/milenage.c
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_sim.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_aka.c
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/dpp_supplicant.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/wpa_supplicant/interworking.c
+      repo_relative_path: wpa_supplicant
+      project_relative_path: wpa_supplicant
+      package_relative_path: wpa_supplicant
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_auth.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_backup.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_crypto.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_pkex.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_reconfig.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_tcp.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/gas_server.c
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/json.c
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/asn1.c
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/dpp_hostapd.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/gas_query_ap.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/gas_serv.c
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: src
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/accounting.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/airtime_policy.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_config.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_drv_ops.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_list.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ap_mlme.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/authsrv.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/beacon.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/bss_load.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ctrl_iface_ap.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/dfs.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/dhcp_snoop.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/dpp_hostapd.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/eth_p_oui.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/fils_hlp.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/gas_query_ap.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/gas_serv.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/hostapd.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/hs20.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/hw_features.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11_auth.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_11.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ieee802_1x.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/mbo_ap.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/ndisc_snoop.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/neighbor_db.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/p2p_hostapd.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/pmksa_cache_auth.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/preauth_auth.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/rrm.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/sta_info.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/taxonomy.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/tkip_countermeasures.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/vlan.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/vlan_init.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/vlan_util.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wmm.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wnm_ap.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_glue.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_ie.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_i.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wpa_auth_kay.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/wps_hostapd.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/ap/x_snoop.h
+      repo_relative_path: src/ap
+      project_relative_path: src/ap
+      package_relative_path: src/ap
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/brcm_vendor.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/cli.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ctrl_iface_common.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/defs.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dhcp.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dpp_i.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/dragonfly.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/eapol_common.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/gas.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/gas_server.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/hw_features_common.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ieee802_11_common.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ieee802_11_defs.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ieee802_1x_defs.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/linux_bridge.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/linux_vlan.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ocv.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/privsep_commands.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/ptksa_cache.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/qca-vendor-attr.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/qca-vendor.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/sae.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/tnc.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/version.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/wpa_common.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/wpa_ctrl.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/common/wpa_helpers.h
+      repo_relative_path: src/common
+      project_relative_path: src/common
+      package_relative_path: src/common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/driver.h
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/driver_hostap.h
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/driver_freertos.h
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/drivers/rfkill.h
+      repo_relative_path: src/drivers
+      project_relative_path: src/drivers
+      package_relative_path: src/drivers
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eapol_auth/eapol_auth_sm.h
+      repo_relative_path: src/eapol_auth
+      project_relative_path: src/eapol_auth
+      package_relative_path: src/eapol_auth
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eapol_auth/eapol_auth_sm_i.h
+      repo_relative_path: src/eapol_auth
+      project_relative_path: src/eapol_auth
+      package_relative_path: src/eapol_auth
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_config.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_fast_pac.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_i.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_methods.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_proxy.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_teap_pac.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/eap_tls_common.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/ikev2.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/mschapv2.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_peer/tncc.h
+      repo_relative_path: src/eap_peer
+      project_relative_path: src/eap_peer
+      package_relative_path: src/eap_peer
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_ctrl_aux.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_ctrl_defs.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_ctrl_iface.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_defs.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_group.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_iface.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_internal.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/fst/fst_session.h
+      repo_relative_path: src/fst
+      project_relative_path: src/fst
+      package_relative_path: src/fst
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/pae/ieee802_1x_cp.h
+      repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/pae/ieee802_1x_kay.h
+      repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/pae/ieee802_1x_kay_i.h
+      repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/pae/ieee802_1x_key.h
+      repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/pae/ieee802_1x_secy_ops.h
+      repo_relative_path: src/pae
+      project_relative_path: src/pae
+      package_relative_path: src/pae
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/pmksa_cache.h
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/preauth.h
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa.h
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa_ie.h
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/rsn_supp/wpa_i.h
+      repo_relative_path: src/rsn_supp
+      project_relative_path: src/rsn_supp
+      package_relative_path: src/rsn_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/base64.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/bitfield.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/block_alloc.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/browser.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/build_config.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/common.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/config.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/const_time.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/crc32.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/edit.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/eloop.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/ext_password.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/ext_password_i.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/http-utils.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/includes.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/ip_addr.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/json.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/module_tests.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/os.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/pcsc_funcs.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/platform.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/state_machine.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/trace.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/uuid.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/wpabuf.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/wpa_debug.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/utils/xml-utils.h
+      repo_relative_path: src/utils
+      project_relative_path: src/utils
+      package_relative_path: src/utils
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes_siv.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/aes_wrap.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/crypto.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/des_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/dh_group5.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/dh_groups.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/md5.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/md5_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/milenage.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/ms_funcs.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/random.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha1_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha256_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha384.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha384_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha512.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/sha512_i.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/crypto/tls.h
+      repo_relative_path: src/crypto
+      project_relative_path: src/crypto
+      package_relative_path: src/crypto
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/chap.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_defs.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_eke_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_fast_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_gpsk_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_ikev2_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_pax_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_peap_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_psk_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_pwd_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_sake_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_sim_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_teap_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_tlv_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_ttls.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/eap_wsc_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_common/ikev2_common.h
+      repo_relative_path: src/eap_common
+      project_relative_path: src/eap_common
+      package_relative_path: src/eap_common
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eapol_supp/eapol_supp_sm.h
+      repo_relative_path: src/eapol_supp
+      project_relative_path: src/eapol_supp
+      package_relative_path: src/eapol_supp
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_i.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_methods.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_sim_db.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/eap_tls_common.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/ikev2.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/eap_server/tncs.h
+      repo_relative_path: src/eap_server
+      project_relative_path: src/eap_server
+      package_relative_path: src/eap_server
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p.h
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/p2p/p2p_i.h
+      repo_relative_path: src/p2p
+      project_relative_path: src/p2p
+      package_relative_path: src/p2p
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_client.h
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_das.h
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius.h
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/radius/radius_server.h
+      repo_relative_path: src/radius
+      project_relative_path: src/radius
+      package_relative_path: src/radius
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/asn1.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/bignum.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/pkcs1.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/pkcs5.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/pkcs8.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/rsa.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_client.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_client_i.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_common.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_cred.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_record.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_server.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/tlsv1_server_i.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/tls/x509v3.h
+      repo_relative_path: src/tls
+      project_relative_path: src/tls
+      package_relative_path: src/tls
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/http_client.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/http.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/httpread.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/http_server.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/upnp_xml.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_attr_parse.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_defs.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_dev_attr.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_er.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_i.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_upnp.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/src/wps/wps_upnp_i.h
+      repo_relative_path: src/wps
+      project_relative_path: src/wps
+      package_relative_path: src/wps
+      type: c_include
+    - source: middleware/wireless/wpa_supplicant-rtos/middleware_wireless_wpa_supplicant_rtos.cmake
+      type: workspace
+      toolchains: armgcc
+      hidden: true
+    configuration:
+      tools:
+        iar:
+          cc-flags:
+          - "--dlib_config full"
+          ld-flags:
+          - "--semihosting"
+          - "--redirect __iar_sh_stdout=__iar_sh_stdout_swo"
+        armgcc:
+          cc-flags:
+          - "-fomit-frame-pointer"
+          - "-Wno-unused-function"
+        mcux:
+          cc-flags:
+          - "-fomit-frame-pointer"
+      cc-define:
+        USE_RTOS: 1
+        SDK_OS_FREE_RTOS: 
+        FSL_OSA_TASK_ENABLE: 1
+        PRINTF_ADVANCED_ENABLE: 1
+        MBEDTLS_CONFIG_FILE: '"wpa_supp_mbedtls_config.h"'
+    package_base_path: middleware/wireless/wpa_supplicant-rtos
+  belong_to: set.middleware.wireless.wpa_supplicant
+  section_info:
+    need_require: true
+    version: 2.11.0
+    type: middleware
+    full_name: Wpa supplicant rtos
+    description: Wpa supplicant rtos
+    user_visible: always
+    display_name: wpa_supplicant-rtos
+    taxonomy:
+      csub: rtos
+      cclass: Wireless
+      cgroup: wpa_supplicant
+    vendor: NXP
+  dependency:
+    allOf:
+    - middleware.freertos-kernel
+    - utility.debug_console
+    - component.osa_free_rtos
+    - middleware.wifi
+    - middleware.lwip
+    - middleware.mbedtls
+  meta-name: middleware.wireless.wpa_supplicant.rtos
+  cmake_module_name: middleware_wireless_wpa_supplicant_rtos

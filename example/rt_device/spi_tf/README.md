@@ -1,8 +1,5 @@
-# SD卡文件系统性能测试示例
-
-（有关示例及其用法的总体概述，请参阅上级 "examples" 目录中的 `README.md` 文件。）
-
-本示例展示了如何在 SF32LB52x 平台上通过 SPI 接口对 SD 卡进行文件系统性能测试。该示例实现了实时速度监控、缓冲区优化和详细的性能分析功能。
+# SPI TF卡文件系统示例
+本示例展示了如何在 SF32LB52x 平台上通过 SPI 接口对 TF 卡进行文件系统性能测试。该示例实现了实时速度监控、缓冲区优化和详细的性能分析功能。
 
 本示例使用了 SiFli-SDK 的以下功能：
 - **RT-Thread 文件系统**：使用 DFS（设备文件系统）框架进行文件操作 - [API参考](https://www.rt-thread.org/document/site/programming-manual/filesystem/filesystem/)
@@ -482,25 +479,25 @@ mount fs on flash to root fail
 - [SD 卡 SPI 模式协议规范](https://www.sdcard.org/downloads/pls/)
 
 
-# SD Card Performance Test - Quick Command Reference
+## 【附录】SD卡性能测试-快速指令参考
 
-## 基本测试命令 | Basic Test Commands
+### 基本测试命令 | Basic Test Commands
 
-### 写入速度测试 | Write Speed Test
+#### 写入速度测试 | Write Speed Test
 ```bash
 fs_write <filename> <size_mb>
 # 示例 | Example:
 fs_write /test.dat 16    # 测试写入16MB | Test writing 16MB
 ```
 
-### 读取速度测试 | Read Speed Test
+#### 读取速度测试 | Read Speed Test
 ```bash
 fs_read <filename> <size_mb>
 # 示例 | Example:
 fs_read /test.dat 16     # 测试读取16MB | Test reading 16MB
 ```
 
-### 综合速度测试 | Complete Speed Test
+#### 综合速度测试 | Complete Speed Test
 ```bash
 fs_speed_test [size_mb]
 # 示例 | Example:
@@ -508,25 +505,25 @@ fs_speed_test 32         # 32MB读写测试 | 32MB read/write test
 fs_speed_test            # 默认32MB | Default 32MB
 ```
 
-## 优化命令 | Optimization Commands
+### 优化命令 | Optimization Commands
 
-### 缓冲区优化 | Buffer Optimization
+#### 缓冲区优化 | Buffer Optimization
 ```bash
 buffer_optimize
 # 自动测试4KB到512KB的缓冲区大小
 # Automatically tests buffer sizes from 4KB to 512KB
 ```
 
-### SD卡配置检查 | SD Card Configuration Check
+#### SD卡配置检查 | SD Card Configuration Check
 ```bash
 sd_optimize
 # 显示SD卡类型、容量、速度等信息
 # Shows SD card type, capacity, speed, etc.
 ```
 
-## 文件系统命令 | File System Commands
+### 文件系统命令 | File System Commands
 
-### 列出文件 | List Files
+#### 列出文件 | List Files
 ```bash
 ls [path]
 # 示例 | Example:
@@ -534,28 +531,28 @@ ls /              # 列出根目录 | List root directory
 ls /misc          # 列出misc目录 | List misc directory
 ```
 
-### 删除文件 | Delete File
+#### 删除文件 | Delete File
 ```bash
 rm <filename>
 # 示例 | Example:
 rm /test.dat      # 删除测试文件 | Delete test file
 ```
 
-### 查看文件内容 | View File Content
+#### 查看文件内容 | View File Content
 ```bash
 cat <filename>
 # 示例 | Example:
 cat /readme.txt
 ```
 
-### 复制文件 | Copy File
+#### 复制文件 | Copy File
 ```bash
 copy <source> <destination>
 # 示例 | Example:
 copy /test.dat /backup.dat
 ```
 
-## 典型测试流程 | Typical Test Flow
+### 典型测试流程 | Typical Test Flow
 
 ```bash
 # 1. 检查SD卡状态 | Check SD card status
@@ -575,22 +572,14 @@ rm /speed_test.dat
 ls /
 ```
 
-## 性能参考值 | Performance Reference
 
-| 参数 Parameter | 典型值 Typical Value |
-|----------------|---------------------|
-| 写入速度 Write Speed | 2.0-2.5 MB/s |
-| 读取速度 Read Speed | 3.0-4.0 MB/s |
-| 最佳缓冲区 Optimal Buffer | 64 KB |
-| SPI时钟 SPI Clock | 12 MHz |
-
-## 快捷键提示 | Tips
+### 快捷键提示 | Tips
 
 - 使用 `help` 查看所有命令 | Use `help` to see all commands
 - 使用 Tab 键自动补全命令 | Use Tab for command completion
 - 使用上下箭头键查看命令历史 | Use arrow keys for command history
 
-## 故障快速排查 | Quick Troubleshooting
+### 故障快速排查 | Quick Troubleshooting
 
 | 问题 Issue | 解决方案 Solution |
 |-----------|------------------|
@@ -602,6 +591,3 @@ ls /
 | Low speed | Run `buffer_optimize` |
 | 测试卡死 | 重启系统 |
 | Test hangs | Restart system |
-
----
-*SF32LB52x SD Card Performance Test v1.0*

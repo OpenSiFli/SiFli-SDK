@@ -1,7 +1,9 @@
 # Simple FFT Example
 
-## 支持的平台
-例程可以运行在以下开发板.
+源码路径: example/hal/fft/simple
+
+## 支持的开发板
+此示例可在以下开发板上运行：
 - sf32lb56-lcd_a128r12n1
 
 ## 示例概述
@@ -11,7 +13,9 @@
 - 复数FFT（Complex FFT - 将复数序列转换为频域  
 - 逆FFT（Inverse FFT - 将频域数据转换回时域
 
-## 例程的使用
+## 用法
+
+下面的小节仅提供绝对必要的信息。有关配置 SiFli-SDK 及使用其构建和运行项目的完整步骤，请参阅 [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
 
 ### 硬件连接
 本例程不需要特殊的硬件连接，只需将开发板连接到电脑。
@@ -75,6 +79,14 @@ Inverse FFT completed successfully
           FFT Example Complete          
 =========================================
 ```
+
+## 异常诊断
+
+如有任何技术疑问，请在 GitHub 上提出 [issue](https://github.com/OpenSiFli/SiFli-SDK/issues)
+
+## 参考文档
+
+- [SiFli-SDK 官方文档](https://docs.sifli.com/)
 
 ## 更新记录
 |版本  |日期    |发布说明 |

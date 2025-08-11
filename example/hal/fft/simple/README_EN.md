@@ -1,24 +1,28 @@
 # Simple FFT Example
 
-## Supported Platforms
-The example can run on the following development boards.
+Source Path: example/hal/fft/simple
+
+## Supported Development Boards
+This example can run on the following development boards:
 - sf32lb56-lcd_a128r12n1
 
 ## Example Overview
 
 This example demonstrates the following basic FFT operations:
-- Real FFT (Real FFT) - Convert real number sequences to frequency domain
-- Complex FFT (Complex FFT) - Convert complex number sequences to frequency domain  
-- Inverse FFT (Inverse FFT) - Convert frequency domain data back to time domain
+- Real FFT - Converts real number sequences to frequency domain
+- Complex FFT - Converts complex number sequences to frequency domain
+- Inverse FFT - Converts frequency domain data back to time domain
 
-## Example Usage
+## Usage
 
-### Hardware Connection
-This example does not require special hardware connections, just connect the development board to the computer.
+The following sections provide only absolutely necessary information. For complete steps on configuring SiFli-SDK and building/running projects, please refer to the [SiFli-SDK Quick Start Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
 
-### Expected Results
+### Hardware Requirements
+This example requires no special hardware configuration. Simply connect the development board to your computer via USB.
 
-Under expected conditions, you will see the following output:
+## Example Output
+
+Under normal circumstances, you will see the following output:
 
 ```log
 =========================================
@@ -76,8 +80,16 @@ Inverse FFT completed successfully
 =========================================
 ```
 
-## Update Log
-|Version  |Date    |Release Notes |
-|:---  |:---    |:---    |
-|1.0.0 |6/2025 |Initial version |
-|      |        |        |
+## Troubleshooting
+
+For any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+
+## Reference Documentation
+
+- [SiFli-SDK Official Documentation](https://docs.sifli.com/)
+
+## Update History
+| Version | Date    | Release Notes |
+|:--------|:--------|:--------------|
+| 1.0.0   | 6/2025  | Initial version |
+|         |         |               |

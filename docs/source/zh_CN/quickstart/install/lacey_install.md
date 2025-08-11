@@ -6,7 +6,7 @@
 
 目前 SiFli-ENV 工具的最新下载链接为：<https://downloads.sifli.com/sdk/env_1.1.2.zip>。
 
-如果出现`Plase upgrate env to v1.1.2 or greater`的提示，说明你使用的ENV版本太久，请使用上述链接下载最新版本的 SiFli-ENV 工具。
+如果出现`Plase upgrate env to v1.1.2 or greater`的提示，说明你使用的ENV版本太旧，请使用上述链接下载最新版本的 SiFli-ENV 工具。
 
 下载完成后，解压缩到你希望存放 SiFli-ENV 的目录中。双击 `env.bat` 文件，可以打开命令行窗口。
 ![](image/2025-05-26-13-55-36.png)

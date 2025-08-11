@@ -16,12 +16,6 @@ SifliEnv()
 
 OUTPUT_DIR=rtconfig.OUTPUT_DIR
 TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
-env = Environment(tools = ['mingw'],
-    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-    CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-    AR = rtconfig.AR, ARFLAGS = '-rc',
-    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
 
 AddOption('--patch',
   dest='patch',
@@ -34,7 +28,8 @@ patch = GetOption('patch')
 
 if (patch==1):
     # prepare building environment
-    objs = PrepareBuilding(env)
+    objs = PrepareBuilding(None)
+    env = GetCurrentEnv()
     #Build patch
     env['LINKFLAGS'] = "--cpu=Cortex-M33 --strict --scatter ./board/linker_scripts/patch_link.sct --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols --info sizes --info totals --info unused --info veneers --list build/patch.map --libpath=C:/Keil_v5/ARM/ARMCLANG/lib build/bootloader.symdefs "
     TARGET2 = 'boot_patch' + '.' + rtconfig.TARGET_EXT    
@@ -43,7 +38,8 @@ if (patch==1):
     DoBuilding(TARGET2, objs_2)
 else:
     # prepare building environment
-    objs = PrepareBuilding(env)
+    objs = PrepareBuilding(None)
+    env = GetCurrentEnv()
     # make a building
     DoBuilding(TARGET, objs)
     

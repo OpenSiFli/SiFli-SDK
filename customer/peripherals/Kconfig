@@ -337,6 +337,10 @@ menuconfig BSP_USING_SPI_CAMERA
     bool "Enable SPI Camera"
     default n
 
+menuconfig BSP_WIFI_SWT6621
+    bool "Enable swt 6621 wifi mode"
+    default n
+
 
 
 rsource "*/Kconfig"

@@ -43,3 +43,16 @@ lib = ['lib_rvds']
 group = DefineGroup('lib', src, depend = [''], LIBS = lib, CPPPATH = path, LIBPATH = path)
 ```
 2. During compilation, if functions in `lib_rvds.lib` can be found, the lib linking is successful<br>
+
+## Troubleshooting
+
+- **Compilation Failure**: Ensure source files have no syntax errors and build environment is configured correctly
+- **Linking Errors**: Check library file path is correct and function declarations match
+- **Library File Not Generated**: Verify `SConscript` and `rtconfig.py` configurations
+
+For any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub
+
+## Reference Documentation
+
+- [SiFli-SDK Quick Start Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [SCons Build System Documentation](https://scons.org/documentation.html)

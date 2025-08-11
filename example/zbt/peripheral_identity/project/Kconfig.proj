@@ -1,0 +1,14 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y    
+
+config SAMPLE_CONN_ITERATIONS
+	int "Connection iterations"
+	range 0 255
+	default 0
+	help
+	  Expected number of times connect and disconnect from
+	  central_multilink sample.
+      

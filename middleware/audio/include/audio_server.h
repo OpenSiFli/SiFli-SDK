@@ -86,16 +86,18 @@ typedef struct audio_client_base_t *audio_client_t;
 
 typedef struct
 {
+    //only used for 3mic branch
     uint8_t codec;
     uint8_t tsco;
+
     // write parameter, only invalid when rwflag is AUDIO_TX/AUDIO_TXRX
-    //int      output_device; // now only codec
     uint32_t write_samplerate; //only effecty when rwflag is AUDIO_TX or AUDIO_TXRX
     uint32_t write_cache_size;
     uint8_t  write_channnel_num;
     uint8_t  write_bits_per_sample;
     uint8_t  is_need_3a;
     uint8_t  disable_uplink_agc;
+
     // read paramter, only invalid when rwflag is AUDIO_RX/AUDIO_TXRX
     uint32_t read_samplerate;
     uint32_t read_cache_size;
@@ -181,6 +183,16 @@ audio_client_t audio_open2(audio_type_t audio_type, audio_rwflag_t rwflag, audio
 int audio_write(audio_client_t handle, uint8_t *data, uint32_t data_len);
 
 int audio_read(audio_client_t handle, uint8_t *buf, uint32_t buf_size);
+
+#define AUDIO_IOCTL_FADE_OUT_START                  -1  // parameter type is NA
+#define AUDIO_IOCTL_FACTORY_LOOPBACK_GAIN           0   // parameter type is uint32_t
+#define AUDIO_IOCTL_FLUSH_TIME_MS                   1   // parameter type is uint32_t *
+#define AUDIO_IOCTL_IS_FADE_OUT_DONE                2   // parameter type is NA
+#define AUDIO_IOCTL_BYTES_IN_CACHE                  3   // parameter type is uint32_t *
+#define AUDIO_IOCTL_ENABLE_CPU_LOW_SPEED            4   /* parameter type is uint32_t
+                                                              1 low speed
+                                                              0 high speed */
+
 
 int audio_ioctl(audio_client_t handle, int cmd, void *parameter);
 
@@ -313,6 +325,8 @@ void micbias_power_on();
 
 #define BAP_BROADCAST_SINK_CACHE_SIZE        (960 * 4)  // 10ms * 4
 void audio_server_seup_ble_bap_src(struct rt_ringbuffer *rb, void (*ble_src_callback)());
+void audio_set_tws_volume(uint8_t volume);
+void audio_set_tws_volume_type(uint8_t is_relative);
 
 #ifdef __cplusplus
 }

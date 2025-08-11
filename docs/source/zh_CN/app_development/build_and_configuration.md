@@ -19,10 +19,18 @@ scons --board=sf32lb52-lcd_n16r8 --target=mdk5 -s
 需要注意的是，SDK采用多工程编译，应用程序的工程只是主工程，会联动编译相应的子工程，如二级boot、ftab等工程，但使用`--target`仅生成主工程对应的Keil工程，直接使用该工程编译会有问题，只能用于阅读代码
 ```
 
-除了使用SDK自带的板子配置，还可以使用`--board_search_path`指定一个目录作为第三方板子的搜索路径，这个目录可以在SDK之外，可以是相对路径也可以是绝对路径，当指定了搜索路径后，编译时除了从SDK的板子目录查找板子，还会从这个目录获取板子配置，如果两个目录下有同名的板子，会使用`--board_search_path`指定目录下的板子。例如在app1的project目录下执行如下的编译命令，以相对路径指定板子的搜索路径
+除了使用SDK自带的板子配置，还可以使用`--board_search_path`指定一个目录作为第三方板子的搜索路径，这个目录可以在SDK之外，可以是相对路径也可以是绝对路径，当指定了搜索路径后，编译时除了从SDK的板子目录查找板子，还会从这个目录获取板子配置，如果两个目录下有同名的板子，会使用`--board_search_path`指定目录下的板子。例如在app1的project目录下执行如下的编译命令，以相对路径指定板子的搜索路径。
 
 ```shell
 scons --board=test_board --board_search_path=../../boards -j8
+```
+
+当然，也可以使用`SIFLI_SDK_BOARD_SEARCH_PATH`环境变量来指定搜索路径，这样就不需要每次都输入`--board_search_path`参数了。
+
+```shell
+export SIFLI_SDK_BOARD_SEARCH_PATH="../../boards" # unix
+$env:SIFLI_SDK_BOARD_SEARCH_PATH="../../boards" # powershell
+scons --board=test_board -j8
 ```
 
 代码的目录结构如下，以上命令是在`app1/project`目录下执行，板子`test_board`在`boards`目录下，`workspace`是任意路径的一个工作目录，可以在SDK之外

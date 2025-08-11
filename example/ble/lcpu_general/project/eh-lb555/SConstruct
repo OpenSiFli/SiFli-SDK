@@ -39,15 +39,9 @@ BIN_TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.bin'
 rtconfig.POST_ACTION ='fromelf --bin $TARGET --output ' + OUTPUT_DIR + rtconfig.TARGET_NAME + '.bin \n'
 rtconfig.POST_ACTION +='python '+SIFLI_SDK+'/tools/patch/gen_src.py lcpu '+ BIN_TARGET +' '+SIFLI_SDK+'/example/rom_bin/lcpu_general_ble_img/lcpu_lb555.c\n '
 
-env = Environment(tools = ['mingw'],
-    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-    CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-    AR = rtconfig.AR, ARFLAGS = '-rc',
-    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
-
 # prepare building environment
-objs = PrepareBuilding(env)
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
 
 TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
 # make a building

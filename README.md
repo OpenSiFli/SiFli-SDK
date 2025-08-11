@@ -1,5 +1,7 @@
 # SiFli-SDK
 
+[English](README_EN.md) | 中文
+
 ## 上手指南
 SiFli SDK是官方提供的基于RT-Thread定制开发的一套软件开发框架，使用它可以快速开发运行于思澈科技芯片平台的应用程序。
 

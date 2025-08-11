@@ -485,25 +485,25 @@ If you have any technical questions, please submit an [issue](https://github.com
 - [FAT File System Specification](http://elm-chan.org/fsw/ff/00index_e.html)
 - [SD Card SPI Mode Protocol Specification](https://www.sdcard.org/downloads/pls/)
 
-# SD Card Performance Test - Quick Command Reference
+## SD Card Performance Test - Quick Command Reference
 
-## Basic Test Commands
+### Basic Test Commands
 
-### Write Speed Test
+#### Write Speed Test
 ```bash
 fs_write <filename> <size_mb>
 # Example:
 fs_write /test.dat 16    # Test writing 16MB
 ```
 
-### Read Speed Test
+#### Read Speed Test
 ```bash
 fs_read <filename> <size_mb>
 # Example:
 fs_read /test.dat 16     # Test reading 16MB
 ```
 
-### Complete Speed Test
+#### Complete Speed Test
 ```bash
 fs_speed_test [size_mb]
 # Example:
@@ -511,23 +511,23 @@ fs_speed_test 32         # 32MB read/write test
 fs_speed_test            # Default 32MB
 ```
 
-## Optimization Commands
+### Optimization Commands
 
-### Buffer Optimization
+#### Buffer Optimization
 ```bash
 buffer_optimize
 # Automatically tests buffer sizes from 4KB to 512KB
 ```
 
-### SD Card Configuration Check
+#### SD Card Configuration Check
 ```bash
 sd_optimize
 # Shows SD card type, capacity, speed, etc.
 ```
 
-## File System Commands
+### File System Commands
 
-### List Files
+#### List Files
 ```bash
 ls [path]
 # Example:
@@ -535,28 +535,28 @@ ls /              # List root directory
 ls /misc          # List misc directory
 ```
 
-### Delete File
+#### Delete File
 ```bash
 rm <filename>
 # Example:
 rm /test.dat      # Delete test file
 ```
 
-### View File Content
+#### View File Content
 ```bash
 cat <filename>
 # Example:
 cat /readme.txt
 ```
 
-### Copy File
+#### Copy File
 ```bash
 copy <source> <destination>
 # Example:
 copy /test.dat /backup.dat
 ```
 
-## Typical Test Flow
+### Typical Test Flow
 
 ```bash
 # 1. Check SD card status
@@ -576,22 +576,13 @@ rm /speed_test.dat
 ls /
 ```
 
-## Performance Reference
-
-| Parameter | Typical Value |
-|-----------|---------------|
-| Write Speed | 2.0-2.5 MB/s |
-| Read Speed | 3.0-4.0 MB/s |
-| Optimal Buffer | 64 KB |
-| SPI Clock | 12 MHz |
-
-## Tips
+### Tips
 
 - Use `help` to see all commands
 - Use Tab for command completion
 - Use arrow keys for command history
 
-## Quick Troubleshooting
+### Quick Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -600,5 +591,3 @@ ls /
 | Low speed | Run `buffer_optimize` |
 | Test hangs | Restart system |
 
----
-*SF32LB52x SD Card Performance Test v1.0*

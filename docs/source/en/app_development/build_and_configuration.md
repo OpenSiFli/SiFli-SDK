@@ -31,6 +31,14 @@ In addition to using the SDK’s built-in board configurations, you can use `--b
 scons --board=test_board --board_search_path=../../boards -j8
 ```
 
+Of course, you can also use the `SIFLI_SDK_BOARD_SEARCH_PATH` environment variable to specify the search path, so you don't have to input the `--board_search_path` parameter every time.
+
+```shell
+export SIFLI_SDK_BOARD_SEARCH_PATH="../../boards" # unix
+$env:SIFLI_SDK_BOARD_SEARCH_PATH="../../boards" # powershell
+scons --board=test_board -j8
+```
+
 The directory structure of the code is as follows. The above command is executed in the `app1/project` directory, where the `test_board` is located in the `boards` directory. The `workspace` is an arbitrary working directory, which can be outside the SDK.
 
 ```

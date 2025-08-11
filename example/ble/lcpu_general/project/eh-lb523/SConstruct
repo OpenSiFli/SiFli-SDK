@@ -24,12 +24,6 @@ BIN_TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.bin'
 #rtconfig.POST_ACTION +=' python ../../../../../tools/patch/gen_src.py lcpu '+ BIN_TARGET + ' ../hcpu_big/applications/ \n'
 #rtconfig.POST_ACTION +=' python ../../../../../tools/patch/gen_src.py lcpu '+ BIN_TARGET + ' ../hcpu/applications/ \n'
 #rtconfig.POST_ACTION +=' python ../../../../../tools/patch/gen_src.py lcpu '+ BIN_TARGET + ' ../hcpu_v5/applications/ \n'
-env = Environment(tools = ['mingw'],
-    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-    CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-    AR = rtconfig.AR, ARFLAGS = '-rc',
-    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
 
 AddOption('--patch',
   dest='patch',
@@ -64,7 +58,8 @@ def generate_patch(src_files):
 patch = GetOption('patch')
 
 # prepare building environment
-objs = PrepareBuilding(env)
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
 
 if (patch == None) :
     TARGET = OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT

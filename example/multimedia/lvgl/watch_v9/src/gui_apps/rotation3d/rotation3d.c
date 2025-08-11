@@ -443,20 +443,20 @@ static rt_err_t rotate_run(int argc, char **argv)
 MSH_CMD_EXPORT(rotate_run, rotate_run);
 
 
-extern void lv_gpu_adv_log(uint32_t level);
-static rt_err_t rotate_gpu_log(int argc, char **argv)
-{
-    if (argc > 1)
-    {
-        uint32_t level = (uint32_t)strtol(argv[1], 0, 16);
+// extern void lv_gpu_adv_log(uint32_t level);
+// static rt_err_t rotate_gpu_log(int argc, char **argv)
+// {
+//     if (argc > 1)
+//     {
+//         uint32_t level = (uint32_t)strtol(argv[1], 0, 16);
 
-        lv_gpu_adv_log(level);
-    }
+//         lv_gpu_adv_log(level);
+//     }
 
 
-    return RT_EOK;
-}
-MSH_CMD_EXPORT(rotate_gpu_log, lv_gpu_adv_log);
+//     return RT_EOK;
+// }
+// MSH_CMD_EXPORT(rotate_gpu_log, lv_gpu_adv_log);
 
 
 #endif

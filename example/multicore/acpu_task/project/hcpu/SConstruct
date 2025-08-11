@@ -5,8 +5,8 @@ import rtconfig
 
 PrepareEnv()
 
-env = SConstruct.create_env()
-SConstruct.build(env)
+SConstruct.create_env()
+env = SConstruct.build()
 
 SIFLI_SDK = os.getenv('SIFLI_SDK')
 

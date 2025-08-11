@@ -45,6 +45,18 @@ group = DefineGroup('lib', src, depend = [''], LIBS = lib, CPPPATH = path, LIBPA
 ```
 2. 编译时如果能找到`lib_rvds.lib`内的函数，就链接lib成功了<br>
 
+## 异常诊断
+
+- **编译失败**：确保源文件无语法错误，编译环境配置正确
+- **链接错误**：检查库文件路径是否正确，函数声明是否匹配
+- **库文件未生成**：确认`SConscript`和`rtconfig.py`配置正确
+
+如有任何技术疑问，请在GitHub上提出[issue](https://github.com/OpenSiFli/SiFli-SDK/issues)
+
+## 参考文档
+
+- [SiFli-SDK快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [SCons构建系统文档](https://scons.org/documentation.html)
 
 
 

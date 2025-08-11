@@ -1,0 +1,4 @@
+config SKW_SDIOHAL
+    tristate "Seekwave Platform  SDIO Driver Support"
+    default n
+

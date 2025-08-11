@@ -1,7 +1,6 @@
-(example-button)=
-
 # 按键
 源码路径：example/misc/button
+
 ## 支持的平台
 * sf32lb52-lcd_n16r8
 * sf32lb58-lcd_n16r64n4
@@ -17,7 +16,9 @@
 - 点击：按钮被按下和释放，中间不会触发长按动作
 
 用户可以注册每个按钮的处理程序以在发生任何操作时获得通知。 按钮活动状态是可配置的。
+
 ## 例程的使用
+
 ### 编译和烧录
 
 切换到例程project目录，运行scons命令执行编译(board=版型)：
@@ -51,6 +52,7 @@ please input the serial port num:5
 
 ## 使用按钮库
 在下面的示例中，它首先初始化按钮，即将按钮与 pin 设备绑定并注册按钮动作处理程序。 然后启用按钮检测，即启用引脚 IRQ。
+
 ### 硬件连接
 * 注意:587引脚分A,B组,B组管脚数要加上96
 
@@ -99,6 +101,7 @@ button_cfg_t cfg;
     RT_ASSERT(id >= 0);
     RT_ASSERT(SF_EOK == button_enable(id));
 ```
+
 #### 按键引脚参数修改
 
 ```c

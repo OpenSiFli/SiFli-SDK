@@ -46,6 +46,7 @@ ChildProjList = []
 EnvList = []
 ParentProjStack = [{'name': 'main'}]
 CustomImgList = []
+BOARD_SEARCH_PATH = os.path.abspath(os.environ.get('SIFLI_SDK_BOARD_SEARCH_PATH', '')) if 'SIFLI_SDK_BOARD_SEARCH_PATH' in os.environ else None
 
 def is_verbose():
     if (logging.root.level<=logging.DEBUG):
@@ -424,6 +425,9 @@ def FsBuild(target, source, env):
         
     found=0
     for mem in mems:
+        if 'version' in mem:
+            # skip header
+            continue
         mem_base = int(mem['base'], 0)
         for region in mem['regions']:
             offset = int(region['offset'], 0)
@@ -1288,7 +1292,8 @@ def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
                     help = 'make menuconfig for RT-Thread BSP')
     if GetOption('menuconfig'):
         board = f"--board={GetOption('board')}"
-        board_search_path = f"--board_search_path={GetOption('board_search_path')}"
+        global BOARD_SEARCH_PATH
+        board_search_path = f"--board_search_path={BOARD_SEARCH_PATH}" if 'BOARD_SEARCH_PATH' in globals() else ''
         subprocess.run([sys.executable, os.path.join(SIFLI_SDK, 'tools',"kconfig" , 'menuconfig.py'), board, board_search_path], check=True)
         exit(0)
 
@@ -2592,9 +2597,8 @@ def GetBoardPath(board):
 
 
     board_root = os.path.join(SIFLI_SDK, 'customer/boards')
-    board_search_path = os.getenv('BOARD_SEARCH_PATH')
-    if (board_search_path is not None) and os.path.exists(os.path.join(board_search_path, board_path)):
-        board_root = board_search_path
+    if (BOARD_SEARCH_PATH is not None) and os.path.exists(os.path.join(BOARD_SEARCH_PATH, board_path)):
+        board_root = BOARD_SEARCH_PATH
     board_path1 = os.path.join(board_root, board_path).replace('\\', '/')
     board_path2 = os.path.join(board_path1, subfolder).replace('\\', '/')
 
@@ -2638,7 +2642,7 @@ def IsInitBuild():
         return False    
 
 
-def PrepareEnv(board=None, board_search_path=None):
+def PrepareEnv(board=None):
     import rtconfig
     global BuildOptions
 
@@ -2651,7 +2655,7 @@ def PrepareEnv(board=None, board_search_path=None):
         AddOption('--board_search_path',
                     dest = 'board_search_path',
                     type = 'string',
-                    default=board_search_path,
+                    default=None,
                     help = 'board search path in addition to sdk board path')            
         AddOption('--bconf',
                     dest = 'bconf',
@@ -2681,8 +2685,9 @@ def PrepareEnv(board=None, board_search_path=None):
     logging.info("Board: {}".format(board))
 
     if GetOption('board_search_path'):
-        os.environ["BOARD_SEARCH_PATH"] = os.path.abspath(GetOption('board_search_path'))
-        logging.info("Board search path: {}".format(os.getenv('BOARD_SEARCH_PATH')))
+        global BOARD_SEARCH_PATH
+        BOARD_SEARCH_PATH = os.path.abspath(GetOption('board_search_path'))
+        logging.info(f"Board search path: {BOARD_SEARCH_PATH}")
 
     if board:
         LoadRtconfig(board)

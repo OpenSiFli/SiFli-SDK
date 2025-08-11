@@ -335,45 +335,10 @@ void app_message_free(void *p)
 }
 
 
-#ifdef DISABLE_LVGL_V8
-#if 0
-/**
- * Get the memory consumption of a raw bitmap, given color format and dimensions.
- * @param w width
- * @param h height
- * @param cf color format
- * @return size in bytes
- */
-uint32_t lv_img_buf_get_img_size(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf)
+static inline uint32_t lv_img_buf_get_img_size(lv_coord_t w, lv_coord_t h, uint8_t cf)
 {
-    switch (cf)
-    {
-    case LV_IMG_CF_TRUE_COLOR:
-        return LV_IMAGE_BUF_SIZE_TRUE_COLOR(w, h);
-    case LV_IMG_CF_TRUE_COLOR_ALPHA:
-        return LV_IMAGE_BUF_SIZE_TRUE_COLOR_ALPHA(w, h);
-    case LV_COLOR_FORMAT_A1:
-        return LV_IMAGE_BUF_SIZE_ALPHA_1BIT(w, h);
-    case LV_COLOR_FORMAT_A2:
-        return LV_IMAGE_BUF_SIZE_ALPHA_2BIT(w, h);
-    case LV_COLOR_FORMAT_A4:
-        return LV_IMAGE_BUF_SIZE_ALPHA_4BIT(w, h);
-    case LV_IMG_CF_ALPHA_8BIT:
-        return LV_IMAGE_BUF_SIZE_ALPHA_8BIT(w, h);
-    case LV_COLOR_FORMAT_I1:
-        return LV_IMAGE_BUF_SIZE_INDEXED_1BIT(w, h);
-    case LV_COLOR_FORMAT_I2:
-        return LV_IMAGE_BUF_SIZE_INDEXED_2BIT(w, h);
-    case LV_COLOR_FORMAT_I4:
-        return LV_IMAGE_BUF_SIZE_INDEXED_4BIT(w, h);
-    case LV_COLOR_FORMAT_I8:
-        return LV_IMAGE_BUF_SIZE_INDEXED_8BIT(w, h);
-    default:
-        return 0;
-    }
+    return lv_draw_buf_width_to_stride(w, cf) * h;
 }
-#endif
-#endif
 
 lv_img_dsc_t *app_cache_img_alloc(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf, uint32_t data_size, image_cache_t cache_type)
 {

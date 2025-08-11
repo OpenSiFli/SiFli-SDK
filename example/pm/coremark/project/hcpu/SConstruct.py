@@ -29,8 +29,9 @@ def create_env(proj_path = None):
 
     env = Environment(tools = ['mingw'],
         AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-        CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
+        CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
         AR = rtconfig.AR, ARFLAGS = '-rc',
+        CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
         LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS, CPPDEFINES = CPPDEFINES)
     env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
     return env

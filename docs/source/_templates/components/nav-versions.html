@@ -36,6 +36,22 @@
   </div>
 {%- endif -%}
 
+<style>
+  .nav-versions .nav-versions-choices {
+    min-width: 200px !important;
+    width: auto !important;
+  }
+  
+  .nav-versions .nav-versions-choices ul {
+    min-width: 200px !important;
+    width: auto !important;
+  }
+  
+  .nav-versions .nav-versions-choices li {
+    white-space: nowrap;
+    padding: 8px 16px;
+  }
+</style>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -87,14 +103,34 @@
       if (!versionList || !versionData || !Array.isArray(versionData)) return;
       versionList.innerHTML = '';
       
-      // 按照排序规则排序（latest排在最前面）
-      const sortedVersionData = [...versionData].sort((a, b) => {
+      // 分离稳定版本和预发布版本
+      const stableVersions = [];
+      const preReleaseVersions = [];
+      
+      versionData.forEach(versionItem => {
+        if (versionItem.type === 'branch') {
+          preReleaseVersions.push(versionItem);
+        } else {
+          stableVersions.push(versionItem);
+        }
+      });
+      
+      // 对稳定版本排序（版本号从大到小）
+      stableVersions.sort((a, b) => {
+        return b.version.localeCompare(a.version, undefined, {numeric: true});
+      });
+      
+      // 对预发布版本排序（latest排第一，然后按版本号排序）
+      preReleaseVersions.sort((a, b) => {
         if (a.version === 'latest') return -1;
         if (b.version === 'latest') return 1;
+        if (a.version === 'master') return -1;
+        if (b.version === 'master') return 1;
         return b.version.localeCompare(a.version, undefined, {numeric: true});
       });
 
-      sortedVersionData.forEach(versionItem => {
+      // 首先添加稳定版本
+      stableVersions.forEach(versionItem => {
         const version = versionItem.version;
         const li = document.createElement('li');
         li.setAttribute('data-version', version);
@@ -104,6 +140,35 @@
         }
         versionList.appendChild(li);
       });
+
+      // 如果有预发布版本，添加分隔线和标题
+      if (preReleaseVersions.length > 0) {
+        // 添加分隔线
+        const separator = document.createElement('li');
+        separator.className = 'version-separator';
+        separator.innerHTML = '<hr style="margin: 8px 0; border: none; border-top: 1px solid #e0e0e0;">';
+        versionList.appendChild(separator);
+        
+        // 添加预发布版本标题
+        const preReleaseTitle = document.createElement('li');
+        preReleaseTitle.className = 'version-category-title';
+        preReleaseTitle.textContent = 'Pre-Release Versions';
+        preReleaseTitle.style.cssText = 'color: #888; font-size: 0.75em; padding: 2px 12px; pointer-events: none; font-weight: 400; letter-spacing: 0.5px;';
+        versionList.appendChild(preReleaseTitle);
+        
+        // 添加预发布版本
+        preReleaseVersions.forEach(versionItem => {
+          const version = versionItem.version;
+          const li = document.createElement('li');
+          li.setAttribute('data-version', version);
+          li.textContent = version;
+          li.classList.add('pre-release-version');
+          if (version === currentVersion) {
+            li.classList.add('selected');
+          }
+          versionList.appendChild(li);
+        });
+      }
 
       // 更新芯片列表（基于当前选择的版本）
       updateChipList(versionData);
@@ -137,10 +202,12 @@
     function bindEvents() {
       if (versionList) {
         versionList.addEventListener('click', function(event) {
-          if (event.target.tagName === 'LI') {
+          if (event.target.tagName === 'LI' && 
+              !event.target.classList.contains('version-separator') && 
+              !event.target.classList.contains('version-category-title')) {
             selectedVersion = event.target.getAttribute('data-version');
             // 更新版本选择的视觉状态
-            versionList.querySelectorAll('li').forEach(li => li.classList.remove('selected'));
+            versionList.querySelectorAll('li:not(.version-separator):not(.version-category-title)').forEach(li => li.classList.remove('selected'));
             event.target.classList.add('selected');
             
             // 根据新选择的版本更新芯片列表，并检查当前芯片是否仍然支持
@@ -250,7 +317,7 @@
     // 初始化选中状态
     function initializeSelection() {
       if (versionList) {
-        const versionItems = versionList.querySelectorAll('li');
+        const versionItems = versionList.querySelectorAll('li:not(.version-separator):not(.version-category-title)');
         versionItems.forEach(item => {
           item.classList.remove('selected');
           if (item.getAttribute('data-version') === currentVersion) {

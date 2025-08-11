@@ -156,7 +156,7 @@ int mnt_init(void)
 INIT_ENV_EXPORT(mnt_init);
 
 /* Optimized write test function - add operation interval control */
-void cmd_fs_write_t_with_buffer(char *path, int num, uint32_t buffer_size)
+void cmd_fs_write_t_with_buffer(const char *path, int num, uint32_t buffer_size)
 {
     struct dfs_fd fd_test_sd;
     speed_test_t stats = {0};
@@ -247,7 +247,7 @@ void cmd_fs_write_t_with_buffer(char *path, int num, uint32_t buffer_size)
 }
 
 /* Optimized read test function - add operation interval control */
-void cmd_fs_read_t_with_buffer(char *path, int num, uint32_t buffer_size)
+void cmd_fs_read_t_with_buffer(const char *path, int num, uint32_t buffer_size)
 {
     struct dfs_fd fd_read;
     speed_test_t stats = {0};
@@ -345,12 +345,12 @@ void cmd_fs_read_t_with_buffer(char *path, int num, uint32_t buffer_size)
 }
 
 /* Compatibility functions - use default buffer size */
-void cmd_fs_write_t(char *path, int num)
+void cmd_fs_write_t(const char *path, int num)
 {
     cmd_fs_write_t_with_buffer(path, num, OPTIMAL_BUFFER_SIZE);
 }
 
-void cmd_fs_read_t(char *path, int num)
+void cmd_fs_read_t(const char *path, int num)
 {
     cmd_fs_read_t_with_buffer(path, num, OPTIMAL_BUFFER_SIZE);
 }

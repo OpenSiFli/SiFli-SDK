@@ -16,7 +16,7 @@ if GetDepend('BF0_HCPU'):
     CPPPATH += [cwd + '/../btdm_internal/plf',]
     CPPPATH += [cwd + '/../../external/libhelix-mp3/pub',]
     CPPPATH += [cwd + '/../app_fwk',]
-    CPPPATH += [cwd + '/soundplus',]
+    CPPPATH += [cwd + '/anyka',]
     CPPPATH += [cwd + '/vbe_drc',]
 
 

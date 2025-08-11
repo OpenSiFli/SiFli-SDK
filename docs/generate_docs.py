@@ -3,6 +3,7 @@ import argparse
 import os
 import shutil
 from copy_example_doc import ExampleDocCopier
+from copy_board_doc import BoardDocCopier
 
 def run_command(command, cwd=None):
     result = subprocess.run(command, shell=True, cwd=cwd)
@@ -90,7 +91,12 @@ def main(chip, lang):
     copier = ExampleDocCopier(lang)
     copier.copy_example_docs("../example", f"source/{lang}/example")
 
-    # Step 3: Build HTML documentation
+    # Step 3: Copy board documents
+    print("Copying board documents...")
+    board_copier = BoardDocCopier(lang)
+    board_copier.copy_board_docs("../", f"source/{lang}/supported_boards")
+
+    # Step 4: Build HTML documentation
     copy_templates(chip, lang)
     make_html(chip, lang)
 

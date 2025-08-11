@@ -638,7 +638,7 @@ static rt_err_t drv_pwm_enable(struct bf0_pwm *pwm, struct rt_pwm_configuration 
             {
                 HAL_DMA_Init(&(pwm_dma->dma_handle));
                 __HAL_LINKDMA(htim, hdma[pwm_dma->dma_handle_index], pwm_dma->dma_handle);
-                HAL_NVIC_SetPriority(pwm_dma->dma_handle.Init.Priority, 0, 0);
+                HAL_NVIC_SetPriority(pwm_dma->dma_irq, pwm_dma->dma_handle.Init.Priority, 0);
                 HAL_NVIC_EnableIRQ(pwm_dma->dma_irq);
                 pwm_dma->flag_dma_eanbled = 1;
             }

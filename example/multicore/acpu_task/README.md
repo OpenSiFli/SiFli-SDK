@@ -1,24 +1,36 @@
-﻿# ACPU执行自定义任务
-源码路径: `example/multicore/acpu_ctrl`
-## 支持的平台
+﻿﻿# ACPU执行自定义任务
+源码路径: `example/multicore/acpu_task`
+
+## 用法
+
+### 支持的开发板
 <!-- 支持哪些板子和芯片平台 -->
 + ec-lb583
 + ec-lb587
 
-
 ## 概述
+
+本例程展示了如何配置ACPU执行自定义任务，通过HCPU发送任务指令并接收执行结果。该示例主要使用了SiFli-SDK的多核通信框架和任务调度功能。
+基于此示例，开发者可以构建需要异构多核协作的应用场景，如将计算密集型任务分配给ACPU处理，提高系统整体性能。
 <!-- 例程简介 -->
 本例程展示了如何配置ACPU执行自定义任务
 
+### 硬件需求
+
+无特殊硬件需求，使用支持的开发板即可正常运行。
+
+### 编译和烧录
+
 ## 目录结构
+
 - `project/hcpu`：HCPU的工程
 - `project/acpu`：ACPU的工程
 - `src/acpu`：ACPU的应用代码
 - `src/hcpu`：HCPU的应用代码
 
 ### 编译和烧录
-在`project/hcpu`目录下执行`scons --board=<board_name>`命令，编译生成所需板子的镜像文件，如执行`scons --board=ec-lb587`命令生成`587-evb`开发板的镜像文件。编译完成后运行命令`build_<board_name>\download.bat`烧写镜像文件，比如`build_ec-lb587\download.bat`
 
+在`project/hcpu`目录下执行`scons --board=<board_name>`命令，编译生成所需板子的镜像文件，如执行`scons --board=ec-lb587`命令生成`587-evb`开发板的镜像文件。编译完成后运行命令`build_<board_name>\download.bat`烧写镜像文件，比如`build_ec-lb587\download.bat`
 
 ## 例程的预期结果
 
@@ -72,11 +84,13 @@ if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_U
 }
 ```
 
-
-
 ## 异常诊断
 
+- **编译错误**：确保已正确配置SiFli-SDK开发环境，检查板型名称是否正确
+- **烧录失败**：确认开发板已正确连接，尝试重新插拔USB线缆
 
 ## 参考文档
 
-## 更新记录
+- [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [多核通信开发指南](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/multicore/index.html)
+

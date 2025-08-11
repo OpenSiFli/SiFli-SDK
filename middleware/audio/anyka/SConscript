@@ -1,0 +1,15 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+src = []
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+libpath = [cwd]
+
+if GetDepend('PKG_USING_ANYKA'):
+    src = Glob('*.c')
+
+group = DefineGroup('audio', src,depend = ['PKG_USING_ANYKA'],CPPPATH = CPPPATH, LIBS=['libakaudiofilter'], LIBPATH=libpath)
+
+Return('group')

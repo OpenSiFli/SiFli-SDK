@@ -315,10 +315,10 @@ __weak FT_CONST SPI_FLASH_FACT_CFG_T flash_cmd_table_list[] =
             {0x00, 0, 0, 0, 0, 0, 0, 0, 0}, /* SPI_FLASH_CMD_RBLUT*/
             {0x00, 0, 0, 0, 0, 0, 0, 0, 0}, /* SPI_FLASH_CMD_CFREAD*/
             {0x00, 0, 0, 0, 0, 0, 0, 0, 0}, /* SPI_FLASH_CMD_C4READ*/
-            {0x4b, 0, 1, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_RUID*/
-            {0x48, 0, 1, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_RDSCUR*/
-            {0x42, 1, 1, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_PRSCUR*/
-            {0x44, 0, 0, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_ERSCUR*/
+            {0x4b, 0, 1, 8, 0, 0, 3, 1, 1}, /* SPI_FLASH_CMD_RUID*/
+            {0x48, 0, 1, 8, 0, 0, 3, 1, 1}, /* SPI_FLASH_CMD_RDSCUR*/
+            {0x42, 1, 1, 0, 0, 0, 3, 1, 1}, /* SPI_FLASH_CMD_PRSCUR*/
+            {0x44, 0, 0, 0, 0, 0, 3, 1, 1}, /* SPI_FLASH_CMD_ERSCUR*/
             {0xb9, 0, 0, 0, 0, 0, 0, 0, 1}, /* SPI_FLASH_CMD_DPD*/
             {0xab, 0, 0, 0, 0, 0, 0, 0, 1}, /* SPI_FLASH_CMD_RDP*/
             {0x00, 0, 0, 0, 0, 0, 0, 0, 0}, /* SPI_FLASH_CMD_DTR4R*/

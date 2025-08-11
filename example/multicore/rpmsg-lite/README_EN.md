@@ -12,10 +12,21 @@ This example demonstrates the basic usage of the RPMsg-Lite component.
   To compile programs for 555hdk, execute the command `scons --board=eh-lb555 -j8`. After compilation, use the `build_eh-lb551/download.bat` command to download the bin file to the board.
 
 ## Example Output
-- Select the serial ports corresponding to HCPU and LCPU logs according to the development board documentation. Some development boards use separate serial ports for HCPU and LCPU log output, while others multiplex the same serial port for log output.
-- After power-on, HCPU automatically calls lcpu_power_on to start LCPU. After successful startup, boot logs can be seen on LCPU's console.
-- HCPU and LCPU automatically send timed messages to each other. When LCPU receives a message, it prints `rx: hello_from_hcpu`. When HCPU receives a message, it prints `rx: hello_from_lcpu`.
-- The big core can send strings to the other core through the console command `send message`, where `message` is the content to be sent. If the string contains spaces, it needs to be enclosed in double quotes.
-  The other core will then print the received string.
-  For example, sending `send "Hello LCPU, this is HCPU"` in HCPU's console will result in the print `rx: Hello LCPU, this is HCPU` appearing in LCPU's console.
-  To demonstrate the sleep functionality, HCPU will enter sleep state after executing the send command, and LCPU will also go to sleep accordingly, each being woken up by timers or messages.
+HCPU and LCPU automatically send messages to each other at regular intervals:
+- When LCPU receives a message, it prints: `rx: hello_from_hcpu`
+- When HCPU receives a message, it prints: `rx: hello_from_lcpu`
+- The master core can send a string to the other core using the console command `send message`, where `message` is the content to send. If the string contains spaces, it must be enclosed in double quotes. The other core will print the received string.
+```bash
+# Send message in HCPU console
+send "Hello LCPU, this is HCPU"
+```
+The LCPU console will display:
+```
+rx: Hello LCPU, this is HCPU
+```
+
+> To demonstrate sleep functionality, HCPU will enter sleep state after executing the send command, and LCPU will also sleep. Both will be woken up by timers or messages.
+
+## Reference Documentation
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [Multi-core Communication Development Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/multicore/index.html)

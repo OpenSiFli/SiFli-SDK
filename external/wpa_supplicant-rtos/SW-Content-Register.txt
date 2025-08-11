@@ -1,0 +1,12 @@
+Release Name: WPA supplicant and hostapd
+Version: 2.11.0                      
+Outgoing License: BSD-3-Clause                    
+License File: LICENSE.txt                                    
+Format: source code                               
+Description: WPA Supplicant & HOSTAPD             
+Location: https://github.com/nxp-mcuxpresso/wpa_supplicant 
+Origin:
+       NXP (BSD-3-Clause),
+       wpa-supplicant - BSD-3-Clause (https://w1.fi/wpa_supplicant/),
+       hostapd - BSD-3-Clause (https://w1.fi/hostapd/)
+       mbedtls - Apache License, Version 2.0

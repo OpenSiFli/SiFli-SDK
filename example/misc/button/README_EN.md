@@ -1,5 +1,3 @@
-(example-button)=
-
 # Button
 Source code path: example/misc/button
 

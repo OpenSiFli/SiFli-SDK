@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_SF32LB52_LCD_A128R16
+    bool
+    select SOC_SF32LB52X
+    select BF0_LCPU
+    default y
+
+rsource "../Kconfig.board"

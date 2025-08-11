@@ -1,16 +1,49 @@
-# lvgl_v8_examples
-```{warning}
-Not verified
-```
-@User Guide
-    @Introduction: This example is used to test LVGL V8 TTF font usage APIs. The TTF library used is schrift.
+# lvgl_v8_ttf_example
 
-    @Project Compilation and Download:
-        Board projects in the project directory can be compiled by specifying the board to compile projects adapted to the corresponding board.
-            - For example, to compile a project that can run on HDK 563, execute scons --board=eh-lb563 to generate the project
-            - Download can be done through download.bat in the build directory. For example, to program the 563 project generated in the previous step, execute .\build_eh-lb563\download.bat to download via jlink
-            - Special note: For SF32LB52x/SF32LB56x series, an additional uart_download.bat will be generated. You can execute this script and input the download UART port number to perform download
-        Simulator projects are in the simulator directory.
-            - Use scons for compilation. The simulator/msvc_setup.bat file needs to be modified accordingly to match the local MSVC configuration
-            - You can also use scons --target=vs2017 to generate MSVC project project.vcxproj, and use Visual Studio for compilation.
-                 Note: If not using VS2017, for example VS2022, when loading the project, it will prompt to upgrade the MSVC SDK. After upgrading, it can be used.
+```{warning}
+Unverified
+```
+
+Source Path: example/lvgl_v8_ttf
+
+This example is used to test the API for using LVGL V8 TTF fonts, utilizing the schrift TTF library. It demonstrates how to integrate and use TrueType font rendering functionality in SiFli-SDK.
+
+### Project Compilation and Download
+
+#### Development Board Project
+The board project is located in the project directory. You can compile for specific development boards by specifying the board parameter:
+- Compile for HDK 563: Execute `scons --board=eh-lb563` to generate the project
+- Download method: Use download.bat in the build directory, e.g., flash eh-lb563 project: `./build_eh-lb563/download.bat` (via J-Link)
+- Special note: For SF32LB52x/SF32LB56x series, an additional uart_download.bat will be generated. Execute this script and enter the UART port number for UART download
+
+#### Simulator Project
+The simulator project is located in the simulator directory:
+- Compile with `scons` (requires modifying simulator/msvc_setup.bat to match local MSVC configuration first)
+- Generate Visual Studio project: `scons --target=vs2017` to generate project.vcxproj, compile with Visual Studio
+  > Note: If using a version other than VS2017 (e.g., VS2022), you'll be prompted to upgrade the MSVC SDK when loading the project. After upgrading, it can be used normally
+
+## Supported Development Boards
+
+This example supports the following development boards:
+- eh-lb563 (HDK 563)
+- SF32LB52x series
+- SF32LB56x series
+
+## Hardware Requirements
+
+- The development board must be connected to the computer via USB for program download and debugging
+- For UART download method, ensure the UART port of the development board is correctly connected and configured
+
+## Example Output
+
+No specific serial output information is provided for this example. When run, it will display TTF font rendering test results, including text display effects with different font sizes and styles.
+
+## Troubleshooting
+
+For any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+
+## Reference Documentation
+
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [LVGL V8 Official Documentation](https://docs.lvgl.io/v8/)
+- [schrift Font Library Documentation](https://github.com/turbolent/schrift)

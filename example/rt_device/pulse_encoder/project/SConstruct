@@ -20,16 +20,11 @@ AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 SifliEnv()
 
 TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
-env = Environment(tools = ['mingw'],
-    AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-    CC = rtconfig.CC, CCFLAGS = rtconfig.CFLAGS,
-    CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
-    AR = rtconfig.AR, ARFLAGS = '-rc',
-    LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
-env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+
    
 # Prepare building environment
-objs = PrepareBuilding(env)
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
 
 # Build application.
 DoBuilding(TARGET, objs)

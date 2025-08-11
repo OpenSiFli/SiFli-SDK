@@ -47,9 +47,34 @@ typedef struct
     BOOL bt_connected;
     bt_notify_device_mac_t bd_addr;
     rt_timer_t pan_connect_timer;
+    uint8_t pan_connected;
+    uint8_t retry_flag;
+    uint8_t retry_times;
+    uint8_t retry_max_times;
 } bt_app_t;
+
 static bt_app_t g_bt_app_env;
 static rt_mailbox_t g_bt_app_mb;
+
+void bt_pan_set_retry_flag(uint8_t enable)
+{
+    g_bt_app_env.retry_flag = enable;
+}
+
+uint8_t bt_pan_get_retry_flag(void)
+{
+    return g_bt_app_env.retry_flag;
+}
+
+void bt_pan_set_retry_times(uint8_t times)
+{
+    g_bt_app_env.retry_max_times = times;
+}
+
+uint8_t bt_pan_get_retry_time(void)
+{
+    return g_bt_app_env.retry_max_times;
+}
 
 void bt_app_connect_pan_timeout_handle(void *parameter)
 {
@@ -58,6 +83,35 @@ void bt_app_connect_pan_timeout_handle(void *parameter)
     return;
 }
 
+void pan_reconnect(void)
+{
+    const int reconnect_interval_ms = 10000; // 10秒
+    while (g_bt_app_env.retry_times < g_bt_app_env.retry_max_times)
+    {
+        LOG_I("Attempting to reconnect PAN, attempt %d", g_bt_app_env.retry_times + 1);
+        if (!g_bt_app_env.retry_flag)
+        {
+            return;
+        }
+
+        if (g_bt_app_env.pan_connect_timer)
+        {
+            rt_timer_stop(g_bt_app_env.pan_connect_timer);
+        }
+
+        bt_interface_conn_ext((char *)&g_bt_app_env.bd_addr, BT_PROFILE_HID);
+        g_bt_app_env.retry_times++;
+        rt_thread_mdelay(reconnect_interval_ms);
+        // 检查是否连接成功
+        if (g_bt_app_env.pan_connected)
+        {
+            LOG_I("PAN reconnected successfully%d\n", g_bt_app_env.pan_connected);
+            g_bt_app_env.retry_times = 0;
+            return;
+        }
+    }
+    g_bt_app_env.retry_times = 0;
+}
 
 #if defined(BSP_USING_SPI_NAND) && defined(RT_USING_DFS)
 #include "dfs_file.h"
@@ -113,8 +167,7 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
                   info->mac.addr[4], info->mac.addr[3], info->mac.addr[2],
                   info->mac.addr[1], info->mac.addr[0], info->res);
             g_bt_app_env.bt_connected = FALSE;
-            memset(&g_bt_app_env.bd_addr, 0xFF, sizeof(g_bt_app_env.bd_addr));
-
+            // memset(&g_bt_app_env.bd_addr, 0xFF, sizeof(g_bt_app_env.bd_addr));
             if (g_bt_app_env.pan_connect_timer)
                 rt_timer_stop(g_bt_app_env.pan_connect_timer);
         }
@@ -136,6 +189,14 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
                 g_bt_app_env.bd_addr = info->mac;
                 pan_conn = 1;
             }
+        }
+        case BT_NOTIFY_COMMON_KEY_MISSING:
+        {
+            bt_notify_device_base_info_t *info =
+                (bt_notify_device_base_info_t *)data;
+            LOG_I("Key missing %d", info->res);
+            memset(&g_bt_app_env.bd_addr, 0xFF, sizeof(g_bt_app_env.bd_addr));
+            bt_cm_delete_bonded_devs_and_linkkey(info->mac.addr);
         }
         break;
         default:
@@ -169,18 +230,46 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             {
                 rt_timer_stop(g_bt_app_env.pan_connect_timer);
             }
+            g_bt_app_env.pan_connected = 1;
         }
         break;
         case BT_NOTIFY_PAN_PROFILE_DISCONNECTED:
         {
             LOG_I("pan disconnect with remote device\n");
+            g_bt_app_env.pan_connected = 0;
         }
         break;
         default:
             break;
         }
     }
-
+    else if (type == BT_NOTIFY_HID)
+    {
+        switch (event_id)
+        {
+        case BT_NOTIFY_HID_PROFILE_CONNECTED:
+        {
+            LOG_I("HID connected\n");
+            if (!g_bt_app_env.pan_connected)
+            {
+                if (g_bt_app_env.pan_connect_timer)
+                {
+                    rt_timer_stop(g_bt_app_env.pan_connect_timer);
+                }
+                bt_interface_conn_ext((char *)&g_bt_app_env.bd_addr,
+                                      BT_PROFILE_PAN);
+            }
+        }
+        break;
+        case BT_NOTIFY_HID_PROFILE_DISCONNECTED:
+        {
+            LOG_I("HID disconnected\n");
+        }
+        break;
+        default:
+            break;
+        }
+    }
 
     return 0;
 }
@@ -189,7 +278,6 @@ uint32_t bt_get_class_of_device()
 {
     return (uint32_t)BT_SRVCLS_NETWORK | BT_DEVCLS_LAP | BT_LAP_FULLY;
 }
-
 
 /**
   * @brief  Main program
@@ -210,6 +298,9 @@ int main(void)
 #endif // BSP_BT_CONNECTION_MANAGER
 
     bt_interface_register_bt_event_notify_callback(bt_app_interface_event_handle);
+    // for auto connect
+    bt_pan_set_retry_flag(1);
+    bt_pan_set_retry_times(5);
 
     sifli_ble_enable();
     while (1)
@@ -254,7 +345,22 @@ static void pan_cmd(int argc, char **argv)
         bt_dfu_pan_download(URL);
 #endif
     }
+    else if (strcmp(argv[1], "set_retry_flag") == 0)
+    {
+        uint8_t flag = atoi(argv[2]);//Can it be enabled 1 open 0 stop
+        bt_pan_set_retry_flag(flag);
+    }
+    else if (strcmp(argv[1], "set_retry_time") == 0)
+    {
+        uint8_t times = atoi(argv[2]);//Can it be enabled 1 open 0 stop
+        bt_pan_set_retry_times(times);
+    }
+    else if (strcmp(argv[1], "autoconnect") == 0)
+    {
+        pan_reconnect();
+    }
 }
+
 MSH_CMD_EXPORT(pan_cmd, Connect PAN to last paired device);
 
 

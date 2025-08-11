@@ -113,7 +113,7 @@
             }, 
             {
                 "offset": "0x00020000", 
-                "max_size": "0x00020000", 
+                "max_size": "0x00010000", 
                 "ftab": {
                     "name": "bootloader", 
                     "address": [

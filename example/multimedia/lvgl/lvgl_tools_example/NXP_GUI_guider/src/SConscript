@@ -1,0 +1,13 @@
+import os
+from building import *
+
+# Add source code
+src = Glob('*.c')
+src += Glob('generated/*.c')
+src += Glob('generated/images/*.c')
+src += Glob('generated/guider_fonts/*.c')
+src += Glob('generated/guider_customer_fonts/*.c')
+
+group = DefineGroup('Applications', src, depend = [''])
+
+Return('group')

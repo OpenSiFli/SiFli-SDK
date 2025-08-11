@@ -1,13 +1,32 @@
 # HAL Comprehensive Example
 
-## Introduction
-Use commands in the serial port:
-1. help can display all commands
-2. utest_list can display all supported examples
-3. utest_run example_xxx can run a specific module's example
+Source Code Path: example/hal_example
 
-## Project Compilation and Download:
-Projects can be compiled by specifying the board to generate programs that can run on the corresponding board
-- For example, to compile a project that can run on HDK 525, execute scons --board=eh-lb525 to generate the image file
-- Download can be done through download.bat in the build directory. For example, to program the 525 project generated in the previous step, execute `build_eh-lb525\download.bat` to download via jlink
-- Special note: For SF32LB52x series, an additional uart_download.bat will be generated. You can execute this script and input the download UART port number to perform download
+## Overview
+The HAL comprehensive example demonstrates how to use the Hardware Abstraction Layer (HAL) features of SiFli-SDK. This example provides a series of test commands that allow users to run different module test cases through serial port interaction.
+
+## Usage
+
+### Supported Development Boards
+- eh-lb525
+
+### Hardware Requirements
+No special hardware requirements; a standard development board is sufficient.
+
+## Project Compilation and Download
+The project can be compiled for specific boards by specifying the board name:
+- Compilation command: `scons --board=eh-lb525`
+- Download method: Execute `build_eh-lb525\download.bat` for J-Link download
+- For SF32LB52x series, execute `uart_download.bat` and enter the UART port number for download
+
+## Example Usage
+Use the following commands in the serial port to interact:
+1. `help` - Display all supported commands
+2. `utest_list` - Show all available test cases
+3. `utest_run example_xxx` - Run a specific module test case
+
+## Troubleshooting
+No specific troubleshooting information available. For issues, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+
+## Reference Documentation
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)

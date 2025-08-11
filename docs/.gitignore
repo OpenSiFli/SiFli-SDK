@@ -4,3 +4,5 @@ source/zh_CN/example/
 source/en/example/
 source/zh_CN/_templates
 source/en/_templates
+source/zh_CN/supported_boards/boards
+source/en/supported_boards/boards

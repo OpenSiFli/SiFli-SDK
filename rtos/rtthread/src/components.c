@@ -198,6 +198,11 @@ extern int main(void);
 /* Add -eentry to arm-none-eabi-gcc argument */
 int entry(void)
 {
+#ifdef PSRAM_CACHE_WB
+    // If scatter loading copy code to PSRAM and XIP, need to clean DCache first.
+    // Please note that this function itself could not be loaded to PSRAM in this case.
+    SCB_CleanDCache();
+#endif /* PSRAM_CACHE_WB */
     pre_main();
     rtthread_startup();
     return 0;

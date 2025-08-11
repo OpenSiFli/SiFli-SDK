@@ -260,7 +260,7 @@ typedef struct
   * @param  \__FLAG__ ADC irq flag
   * @retval None
   */
-#define __HAL_ADC_ENABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ |= (__FLAG__))
+#define __HAL_ADC_ENABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ &= ~(__FLAG__))
 
 /**
   * @brief Disable ADC irq
@@ -268,7 +268,7 @@ typedef struct
   * @param  \__FLAG__ ADC irq flag
   * @retval None
   */
-#define __HAL_ADC_DISABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ &= ~(__FLAG__))
+#define __HAL_ADC_DISABLE_IRQ(__HANDLE__, __FLAG__)  ((__HANDLE__)->Instance->GPADC_IRQ |= (__FLAG__))
 
 /**
   * @brief Enable ADC LdoRef
@@ -711,6 +711,20 @@ HAL_StatusTypeDef       HAL_ADC_Start_IT(ADC_HandleTypeDef *hadc);
   * @retval HAL_StatusTypeDef
   */
 HAL_StatusTypeDef       HAL_ADC_Stop_IT(ADC_HandleTypeDef *hadc);
+
+/**
+  * @brief  Handle ADC interrupt request.
+  * @param  hadc ADC handle.
+  * @retval None
+  */
+void HAL_ADC_IRQHandler(ADC_HandleTypeDef *hadc);
+
+/**
+  * @brief  Conversion complete callback in non blocking mode
+  * @param  hadc ADC handle
+  * @retval None
+  */
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);
 
 /* Non-blocking mode: DMA */
 

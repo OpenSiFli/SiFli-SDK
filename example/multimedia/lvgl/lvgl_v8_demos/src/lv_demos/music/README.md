@@ -1,27 +1,27 @@
-# Music player demo
+# 音乐播放器演示
 
-## Overview
-The music player demo shows what kind of modern, smartphone-like user interfaces can be created on LVGL. It works the best with display with 480x272 or 272x480 resolution.
+## 概述
+音乐播放器演示显示了可以在LVGL上创建的现代智能手机样用户界面。它在480x272或272x480分辨率的显示器上效果最佳。
 
 
-![Music player demo with LVGL embedded GUI library](screenshot1.gif)
+![LVGL嵌入式GUI库的音乐播放器演示](screenshot1.gif)
 
-## Run the demo
-- In `lv_conf.h` or equivalent places set `LV_USE_DEMO_MUSIC 1`
-- With `LV_DEMO_MUSIC_AUTO_PLAY` enabled a ~60 sec demo will be played.
-- After `lv_init()` and initializing the drivers call `lv_demo_music()`
+## 运行演示
+- 在 `lv_conf.h` 或等效位置设置 `LV_USE_DEMO_MUSIC 1`
+- 启用 `LV_DEMO_MUSIC_AUTO_PLAY` 后将播放约60秒的演示。
+- 在 `lv_init()` 和初始化驱动程序后调用 `lv_demo_music()`
 
-## How the spectrum animation works
-- `assets/spectrum.py` creates an array of spectrum values from a music. 4 band are created with 33 samples/sec: bass, bass-mid, mid, mid-treble.
-- The spectrum meter UI does the followings:
-	- Zoom the album cover proportionality to the current bass value
-	- Display the 4 bands on the left side of a circle by default at 0°, 45°, 90°, 135°
-	- Add extra bars next to the "main bars" with a cosine shape. Add more bars for the lower bands.
-	- If there is a large enough bass, add a random offset to the position of the bars. E.g. start from 63° instead of 0°. (bars greater than 180° start again from 0°)
-	- If there is no bass, add 1 to the offset of the bars (it creates a "walking" effect)
-	- Mirror the bars to the right side of the circle
+## 频谱动画的工作原理
+- `assets/spectrum.py` 从音乐创建频谱值数组。以33样本/秒创建4个频段：低音、中低音、中音、中高音。
+- 频谱计UI执行以下操作：
+	- 根据当前低音值按比例缩放专辑封面
+	- 默认在圆的左侧显示4个频段，位置为0°、45°、90°、135°
+	- 在"主条"旁边添加具有余弦形状的额外条。为较低频段添加更多条。
+	- 如果有足够大的低音，为条的位置添加随机偏移。例如从63°开始而不是0°。（大于180°的条从0°重新开始）
+	- 如果没有低音，为条的偏移加1（它创建"行走"效果）
+	- 将条镜像到圆的右侧
 	
-## Using spectrum.py
-- install `librosa` with `pip3 install librosa`	
-- run `python sectrum.py my_file.mp3`
-- see the result in `spectrum.h`
+## 使用spectrum.py
+- 使用 `pip3 install librosa` 安装 `librosa`
+- 运行 `python spectrum.py my_file.mp3`
+- 在 `spectrum.h` 中查看结果

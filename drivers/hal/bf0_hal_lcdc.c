@@ -1065,7 +1065,9 @@ static HAL_StatusTypeDef SendSingleCmd(LCDC_HandleTypeDef *lcdc, uint32_t addr, 
 
 }
 
-
+/*
+    Waiting for LCDC interface(except RAMLESS interface) busy flag clear.
+*/
 static HAL_StatusTypeDef WaitBusy(LCDC_HandleTypeDef *lcdc)
 {
     const uint32_t timeout_ms = LCDC_TIMEOUT_SECONDS * 1000;
@@ -1101,6 +1103,38 @@ static HAL_StatusTypeDef WaitBusy(LCDC_HandleTypeDef *lcdc)
     return HAL_TIMEOUT;
 }
 
+/*
+    Waitting all LCDC interface busy flag clear.
+*/
+static HAL_StatusTypeDef WaitBusy2(LCDC_HandleTypeDef *lcdc)
+{
+    const uint32_t timeout_ms = LCDC_TIMEOUT_SECONDS * 1000;
+
+    uint32_t start_tick = HAL_GetTick();
+
+    do
+    {
+        if ((lcdc->Instance->STATUS & LCD_IF_STATUS_LCD_BUSY) || (lcdc->Instance->LCD_SINGLE & LCD_IF_LCD_SINGLE_LCD_BUSY)) continue;
+
+#ifdef HAL_DSI_MODULE_ENABLED
+        if (HAL_LCDC_IS_DSI_IF(lcdc->Init.lcd_itf))
+        {
+#ifndef HAL_USING_HTOL
+            if (HAL_DSI_IsBusy(&lcdc->hdsi)) continue;
+#endif /* HAL_USING_HTOL */
+        }
+#endif /* HAL_DSI_MODULE_ENABLED */
+
+        return HAL_OK;
+    }
+    while (HAL_GetTick() - start_tick < timeout_ms);
+
+    lcdc->ErrorCode |= HAL_LCDC_ERROR_TIMEOUT;
+    LCDC_LOG_E("WaitBusy2 Timeout");
+    //HAL_LCDC_ASSERT(0);
+
+    return HAL_TIMEOUT;
+}
 
 
 
@@ -2302,6 +2336,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_DeInit(LCDC_HandleTypeDef *lcdc)
         /* Disable DPI */
         lcdc->Instance->DPI_CTRL &= ~LCD_IF_DPI_CTRL_DPI_EN;
     }
+
+    WaitBusy2(lcdc);
 
     return HAL_OK;
 }

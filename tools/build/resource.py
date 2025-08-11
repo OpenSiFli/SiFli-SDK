@@ -603,30 +603,423 @@ def GenPartitionJsonFile(src, output_dir, output_name, variables):
     json.dump(mems, f, indent=4)
     f.close()
 
+def Convert2CBUSAddr55x(addr, offset, core=None):
+    return addr, offset
 
-def GenPartitionTableHeaderFile(src, output_dir, output_name):
+
+def Convert2CBUSAddr56x(addr, offset, core=None):
+    cbus_addr  = addr
+    cbus_offset = offset
+
+    if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+        cbus_addr -= 0x50000000
+
+    return cbus_addr, cbus_offset
+
+
+def Convert2CBUSAddr58x(addr, offset, core=None):
+    cbus_addr  = addr
+    cbus_offset = offset
+
+    if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+        cbus_addr -= 0x50000000
+    elif (addr >= 0x20000000) and (addr <= 0x2FFFFFFF) and core and core.lower() == "acpu":
+        cbus_addr -= 0x20200000
+        assert cbus_addr >=  0, "0x{:8X} is not a valid address for ACPU"
+        cbus_offset -= 0x00200000
+
+    return cbus_addr, cbus_offset
+
+def Convert2CBUSAddr52x(addr, offset, core=None):
+    cbus_addr  = addr
+    cbus_offset = offset
+
+    if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+        cbus_addr -= 0x50000000
+
+    return cbus_addr, cbus_offset
+
+
+def Convert2CBUSAddr(addr, offset, core=None):
     import building
-    import rtconfig
 
-    logging.debug('output ptab.h:{}'.format(output_dir))
-    env = building.GetCurrentEnv()
+    if building.GetDepend("SOC_SF32LB55X"):
+        return Convert2CBUSAddr55x(addr, offset, core)
+    elif building.GetDepend("SOC_SF32LB56X"):
+        return Convert2CBUSAddr56x(addr, offset, core)
+    elif building.GetDepend("SOC_SF32LB58X"):
+        return Convert2CBUSAddr58x(addr, offset, core)
+    elif building.GetDepend("SOC_SF32LB52X"):
+        return Convert2CBUSAddr52x(addr, offset, core)
+    else:
+        raise Exception("unknown chip")
+   
 
-    f = open(src)
-    try:
-        mems = json.load(f)
-    except ValueError as e:
-        print("ptab.json syntax error, might be caused by trailing comma of last item")
-        print("Error message: {}".format(e))
-        print("Please check file {}".format(src))
-        exit(1)
-    finally:
-        f.close()
-    InitIndentation()
-    s = MakeLine('#ifndef __{}__H__'.format(output_name.upper()))
-    s += MakeLine('#define __{}__H__'.format(output_name.upper()))
-    s += MakeLine('')
-    s += MakeLine('')
 
+def PtabAddAddDefaultRegion55x(mems):
+    ftab_found = False
+    flash1_mem = None
+    for mem in mems:
+        if 'flash1' == mem['mem']:
+            flash1_mem = mem
+        if "regions" not in mem:
+            continue    
+        for region in mem['regions']:
+            if "name" in region and 'ftab' == region['name']:
+                ftab_found = True
+
+        if ftab_found:
+            break
+
+    if not ftab_found:
+        if not flash1_mem:
+            flash1_mem = {
+                "mem": "flash1", 
+                "base": "0x10000000", 
+                "regions": []
+            }
+            mems.insert(0, flash1_mem)
+
+        if 'regions' not in flash1_mem:
+            flash1_mem['regions'] =  []
+
+
+        ftab_region = {
+            "offset": "0x00000000", 
+            "max_size": "0x00005000", 
+            "tags": [
+                "FLASH_TABLE"
+            ], 
+            "name": "ftab",
+            "type": ["app_img", "app_exec"]
+        }                    
+        flash1_mem['regions'].insert(0, ftab_region)
+
+
+def PtabAddAddDefaultRegion56x(mems):
+    ftab_found = False
+    bootloader_found = False
+    flash5_mem = None
+    for mem in mems:
+        if 'flash5' == mem['mem']:
+            flash5_mem = mem
+        if "regions" not in mem:
+            continue    
+        for region in mem['regions']:
+            if "name" in region and 'ftab' == region['name']:
+                ftab_found = True
+            if "name" in region and 'bootloader' == region['name']:
+                bootloader_found = True
+
+        if ftab_found and bootloader_found:
+            break
+
+    if (not ftab_found) or (not bootloader_found):
+        if not flash5_mem:
+            flash5_mem = {
+                "mem": "flash5", 
+                "base": "0x1C000000", 
+                "regions": []
+            }
+            mems.insert(0, flash5_mem)
+
+        if 'regions' not in flash5_mem:
+            flash5_mem['regions'] =  []
+
+        if not ftab_found:
+            ftab_region = {
+                "offset": "0x00000000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "FLASH_TABLE"
+                ], 
+                "name": "ftab",
+                "type": ["app_img", "app_exec"]
+            }                    
+            flash5_mem['regions'].insert(0, ftab_region)
+   
+        if not bootloader_found:
+            bootloader_region =  {
+                "offset": "0x00020000", 
+                "max_size": "0x0000C000", 
+                "tags": [
+                    "FLASH_BOOT_LOADER"
+                ], 
+                "name": "bootloader",
+                "type": ["app_img", "app_exec"]
+            }
+            flash5_mem['regions'].insert(0, bootloader_region)
+
+
+def PtabAddAddDefaultRegion58x(mems):
+    ftab_found = False
+    bootloader_found = False
+    flash5_mem = None
+    for mem in mems:
+        if 'flash5' == mem['mem']:
+            flash5_mem = mem
+        if "regions" not in mem:
+            continue    
+        for region in mem['regions']:
+            if "name" in region and 'ftab' == region['name']:
+                ftab_found = True
+            if "name" in region and 'bootloader' == region['name']:
+                bootloader_found = True
+
+        if ftab_found and bootloader_found:
+            break
+
+    if (not ftab_found) or (not bootloader_found):
+        if not flash5_mem:
+            flash5_mem = {
+                "mem": "flash5", 
+                "base": "0x1C000000", 
+                "regions": []
+            }
+            mems.insert(0, flash5_mem)
+
+        if 'regions' not in flash5_mem:
+            flash5_mem['regions'] =  []
+
+        if not ftab_found:
+            ftab_region = {
+                "offset": "0x00000000", 
+                "max_size": "0x00005000", 
+                "tags": [
+                    "FLASH_TABLE"
+                ], 
+                "name": "ftab",
+                "type": ["app_img", "app_exec"]
+            }                    
+            flash5_mem['regions'].insert(0, ftab_region)
+   
+        if not bootloader_found:
+            bootloader_region =  {
+                "offset": "0x00020000", 
+                "max_size": "0x00020000", 
+                "tags": [
+                    "FLASH_BOOT_LOADER"
+                ], 
+                "name": "bootloader",
+                "type": ["app_img", "app_exec"]
+            }
+            flash5_mem['regions'].insert(0, bootloader_region)
+
+
+def PtabAddAddDefaultRegion52x(mems):
+    import building
+    ftab_found = False
+    bootloader_exec_found = False
+    bootloader_img_found = False
+    bootloader_data_found = False
+    boot_mem = None
+    hpsys_ram_mem = None
+    
+    for mem in mems:
+        # guess boot_dev_type and boot_mem by memory name and address
+        if "flash1" == mem['mem']:
+            boot_mem = mem
+            boot_dev_type = "nor"
+        elif "flash2" == mem['mem']:
+            boot_mem = mem
+            if "0x12000000" == mem['base']:
+                boot_dev_type = "nor"
+            else:
+                boot_dev_type = "nand"
+        elif "sd1" == mem['mem']:
+            boot_mem = mem
+            boot_dev_type = 'sd'
+
+        if "hpsys_ram" == mem['mem']:
+            hpsys_ram_mem = mem
+            continue
+
+        for region in mem['regions']:
+            if "name" in region and 'ftab' == region['name']:
+                ftab_found = True
+            if "name" in region and 'bootloader' == region['name']:
+                bootloader_img_found = True
+
+    for region in hpsys_ram_mem:
+        if "name" in region and 'bootloader' == region['name'] and 'type' in region and "app_exec" in region['type']:
+            bootloader_exec_found = True
+            
+        if "name" in region and 'bootloader' == region['name']:
+            bootloader_data_found = True
+
+    if not bootloader_exec_found:
+        bootloader_region = {
+            "offset": "0x00020000", 
+            "max_size": "0x00010000", 
+            "name": "bootloader",
+            "type": ["app_exec"],
+            "tags": ["FLASH_BOOT_LOADER"]
+        }
+        hpsys_ram_mem["regions"].insert(0, bootloader_region)
+
+    if not bootloader_data_found:
+        bootloader_region = {
+            "offset": "0x00040000", 
+            "max_size": "0x00010000", 
+            "tags": ["BOOTLOADER_RAM_DATA"]
+        }
+        hpsys_ram_mem['regions'].insert(0, bootloader_region)
+
+    if (not ftab_found) or (not bootloader_img_found):
+        if not ftab_found:
+            if "sd" == boot_dev_type :
+                # MBR uses first 4096 bytes
+                ftab_region = {
+                    "offset": "0x00001000", 
+                    "max_size": "0x00008000", 
+                    "tags": ["FLASH_TABLE"], 
+                    "name": "ftab",
+                    "type": ["app_img", "app_exec"]
+                }                    
+            else:
+                ftab_region = {
+                    "offset": "0x00000000", 
+                    "max_size": "0x00008000", 
+                    "tags": ["FLASH_TABLE"], 
+                    "name": "ftab",
+                    "type": ["app_img", "app_exec"]
+                }
+
+            boot_mem['regions'].insert(0, ftab_region)
+   
+        if not bootloader_img_found:
+            if "sd" == boot_dev_type:
+                bootloader_region =  {
+                    "offset": "0x00011000", 
+                    "max_size": "0x00010000", 
+                    "tags": [],
+                    "name": "bootloader",
+                    "type": ["app_img"]
+                }
+            elif "nor" == boot_dev_type:
+                bootloader_region =  {
+                    "offset": "0x00010000", 
+                    "max_size": "0x00010000", 
+                    "tags": [],
+                    "name": "bootloader",
+                    "type": ["app_img"]
+                }    
+            elif "nand" == boot_dev_type:
+                bootloader_region =  {
+                    "offset": "0x00080000", 
+                    "max_size": "0x00010000", 
+                    "tags": [],                    
+                    "name": "bootloader",
+                    "type": ["app_img"]
+                }
+            else:
+                raise Exception(f"unknown type {boot_dev_type}")
+            boot_mem['regions'].insert(0, bootloader_region)
+
+
+def PtabAddAddDefaultRegion(mems):
+    import building
+    
+    if building.GetDepend("SOC_SF32LB55X"):
+        PtabAddAddDefaultRegion55x(mems)
+    elif building.GetDepend("SOC_SF32LB56X"):
+        PtabAddAddDefaultRegion56x(mems)
+    elif building.GetDepend("SOC_SF32LB58X"):
+        PtabAddAddDefaultRegion58x(mems)
+    elif building.GetDepend("SOC_SF32LB52X"):
+        PtabAddAddDefaultRegion52x(mems)
+    else:
+        raise Exception("unknown chip")
+
+
+def GenPartitionTableHeaderContentV2(env, mems):
+    s =  ''
+    PtabAddAddDefaultRegion(mems)
+    for mem in mems:
+        mem_base = int(mem['base'], 0)
+        s += MakeLine('')
+        s += MakeLine('')
+        s += MakeLine('/* {} */'.format(mem['mem']))
+        for region in mem['regions']:
+            offset = int(region['offset'], 0)
+            max_size = int(region['max_size'], 0)
+            start_addr = mem_base + offset
+
+            if 'tags' in region:
+                for tag in region['tags']:
+                    start_addr_name = '{}_START_ADDR'.format(tag)
+                    size_name = '{}_SIZE'.format(tag)
+                    offset_name = '{}_OFFSET'.format(tag)
+                    s += MakeLine('#undef  {}'.format(start_addr_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, start_addr))
+                    s += MakeLine('#undef  {}'.format(size_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
+                    s += MakeLine('#undef  {}'.format(offset_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, offset))
+
+            if 'custom' in region:
+                for custom in region['custom']:
+                    s += MakeLine('#undef  {}'.format(custom))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(custom, region['custom'][custom]))
+
+            # Add cbus related macro for code region
+            if 'name' in region:
+                temp = region['name'].split(':')
+                if len(temp) > 1:
+                    base, ext =  temp
+                else:
+                    base = temp[0]
+                    ext = None
+
+                if ('type' in region) and ('app_exec' in region['type']):
+                    if (not ext) or ('1' == ext):
+                        name_prefix = 'APP_{}_CODE'.format(base.upper())  
+                    else:
+                        name_prefix = 'APP_{}_CODE{}'.format(base.upper(), ext)  
+
+                    start_addr_name = f'{name_prefix}_START_ADDR'
+                    size_name = f'{name_prefix}_SIZE'
+                    offset_name = f'{name_prefix}_OFFSET'
+
+                    core =  region.get('core')
+                    cbus_addr, cbus_offset = Convert2CBUSAddr(start_addr, offset, core)
+                    s += MakeLine('#undef  {}'.format(start_addr_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                    s += MakeLine('#undef  {}'.format(size_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
+                    s += MakeLine('#undef  {}'.format(offset_name))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+
+                    if (base == env['name']):
+                        if (not ext) or ('1' == ext):
+                            s += MakeLine('#define {:<50} ({})'.format("CODE_START_ADDR", start_addr_name))
+                            s += MakeLine('#define {:<50} ({})'.format("CODE_SIZE", size_name))
+                        else:
+                            s += MakeLine('#define {:<50} ({})'.format(f"CODE{ext}_START_ADDR", start_addr_name))
+                            s += MakeLine('#define {:<50} ({})'.format(f"CODE{ext}_SIZE", size_name))
+
+                    # Add `ACPU_CODE_REGION1` for compatibility as link file uses this macro
+                    if core and (core.lower() == 'acpu') :
+                        if ext:
+                            num = ext
+                        else:
+                            num =  1
+                        name_prefix = f'ACPU_CODE_REGION{num}'
+                        start_addr_name = f'{name_prefix}_START_ADDR'
+                        size_name = f'{name_prefix}_SIZE'
+                        offset_name = f'{name_prefix}_OFFSET'                        
+                        s += MakeLine('#undef  {}'.format(start_addr_name))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                        s += MakeLine('#undef  {}'.format(size_name))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
+                        s += MakeLine('#undef  {}'.format(offset_name))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+    
+    return s               
+
+
+def GenPartitionTableHeaderContentV1(env, mems):
+    s = ''
     for mem in mems:
         mem_base = int(mem['base'], 0)
         s += MakeLine('')
@@ -656,8 +1049,42 @@ def GenPartitionTableHeaderFile(src, output_dir, output_name):
                         s += MakeLine('#define {:<50} ({})'.format("CODE_START_ADDR", start_addr_name))
                         s += MakeLine('#define {:<50} ({})'.format("CODE_SIZE", size_name))
                     else:
-                        s += MakeLine('#define {:<50} ({:08X})'.format("CODE_START_ADDR", start_addr))
-                        s += MakeLine('#define {:<50} ({:08X})'.format("CODE_SIZE", max_size))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format("CODE_START_ADDR", start_addr))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format("CODE_SIZE", max_size))
+    return s
+
+
+def GenPartitionTableHeaderFile(src, output_dir, output_name):
+    import building
+    import rtconfig
+
+    logging.debug('output ptab.h:{}'.format(output_dir))
+    env = building.GetCurrentEnv()
+
+    f = open(src)
+    try:
+        mems = json.load(f)
+    except ValueError as e:
+        print("ptab.json syntax error, might be caused by trailing comma of last item")
+        print("Error message: {}".format(e))
+        print("Please check file {}".format(src))
+        exit(1)
+    finally:
+        f.close()
+    InitIndentation()
+    s = MakeLine('#ifndef __{}__H__'.format(output_name.upper()))
+    s += MakeLine('#define __{}__H__'.format(output_name.upper()))
+    s += MakeLine('')
+    s += MakeLine('')
+
+    header = mems[0] if len(mems) > 0 else {}
+    if 'version' in header:
+        if "2" == header['version']:
+            s += GenPartitionTableHeaderContentV2(env, mems[1:])
+        else:
+            s += GenPartitionTableHeaderContentV1(env, mems[1:])
+    else:
+        s += GenPartitionTableHeaderContentV1(env, mems)
 
     s += MakeLine('')
     s += MakeLine('')
@@ -681,24 +1108,125 @@ def CalcBinarySize(binary_file):
 
     return bin_size
 
+def GetMultiBinaryName(ext):
+    return f'ER_IROM{ext}.bin'
 
-def GenFtabCFile(src, output_name, imgs_info):
+def ConstructFtabDictV2(ftab, mems, img_size):
     import building
-    f = open(src)
-    try:
-        mems = json.load(f)
-    finally:
-        f.close()
+    flash_table_start = None
+    PtabAddAddDefaultRegion(mems)
+    for mem in mems:
+        mem_base = int(mem['base'], 0)
+        for region in mem['regions']:
+            offset = int(region['offset'], 0)
+            max_size = int(region['max_size'], 0)
+            start_addr = mem_base + offset
+            if 'tags' in region and 'FLASH_TABLE' in region['tags']:
+                flash_table_start = start_addr
+            if 'name' in region:
+                temp = region['name'].split(':')
+                if len(temp) > 1:
+                    base, ext =  temp
+                else:
+                    base = temp[0]
+                    ext = None
 
-    # Get binary image size
-    img_size = {}
-    for img in imgs_info:
-        img_name = img['name']
-        img_bin = str(img['binary'][0])
-        img_size[img_name] = CalcBinarySize(img_bin)
+                if 'ftab' == base:
+                    # no need to add ftab item
+                    continue
+                
+                if 'type' not in region or (("app_img" not in region['type']) and ('app_exec' not in region['type']) and ("app_img2" not in region['type'])):
+                    continue
 
-    # construct ftab dictionary
-    ftab = {}
+                if ext and ext != '1':
+                    # no need to construct ftab for non-first part
+                    continue
+
+                region_type_list = region['type']
+                item_name = base
+                if item_name not in ftab:
+                    ftab[item_name] = {}
+
+                ftab_item = ftab[item_name]
+                assert ('max_size' not in ftab_item) or (
+                        max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab['max_size'], max_size)
+                ftab_item['max_size'] = max_size
+                if 'app_exec' in region_type_list and ((not ext) or ('1' == ext)):
+                    # only first binary need to be described in ftab
+                    assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
+                    ftab_item['xip'] = start_addr
+                if 'app_img' in region_type_list and ((not ext) or ('1' == ext)):
+                    assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
+                    ftab_item['base'] = start_addr
+                if 'app_img2' in region_type_list:
+                    assert 'base2' not in ftab_item, 'base2 address already configured in {}'.format(item_name)
+                    ftab_item['base2'] = start_addr
+                
+                # add img info if img is specified
+                proj_name = base
+                if proj_name in img_size:
+                    if not ext:
+                        assert len(img_size[
+                                    proj_name]) == 1, "img '{}' is expected to be a file but it's a directory " \
+                                                        "now".format(proj_name)
+                        size = img_size[proj_name][0]['size']
+                    else:
+                        bin_name = GetMultiBinaryName(ext)
+                        size = 0
+                        for img in img_size[proj_name]:
+                            if img['name'] == bin_name:
+                                size = img['size']
+                                break
+                    assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+                    ftab_item['img'] = {'name': region['name'], 'size': size}
+
+    # check if all images defined in img_size are in ftab
+    for k, v in img_size.items():
+        if "main" != k and "bootloader" != k and "dfu" != k:
+            continue
+
+        if k not in ftab:
+            raise Exception("Image {} not defined in ptab for ftab construction".format(k))
+        
+
+    #  Add default bootloader configuration if not specified in ptab
+    if not building.GetDepend("SOC_SF32BL55X") and "bootloader" not in ftab:
+        ftab['bootloader'] = {}
+        ftab_item = ftab["bootloader"]
+        ftab_item['max_size'] = max_size
+        if 'app_exec' in region_type_list and ((not ext) or ('1' == ext)):
+            # only first binary need to be described in ftab
+            assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
+            ftab_item['xip'] = start_addr
+        if 'app_img' in region_type_list and ((not ext) or ('1' == ext)):
+            assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
+            ftab_item['base'] = start_addr
+        if 'app_img2' in region_type_list:
+            assert 'base2' not in ftab_item, 'base2 address already configured in {}'.format(item_name)
+            ftab_item['base2'] = start_addr
+        
+        # add img info if img is specified
+        proj_name = base
+        if proj_name in img_size:
+            if not ext:
+                assert len(img_size[
+                            proj_name]) == 1, "img '{}' is expected to be a file but it's a directory " \
+                                                "now".format(proj_name)
+                size = img_size[proj_name][0]['size']
+            else:
+                bin_name = GetMultiBinaryName(ext)
+                size = 0
+                for img in img_size[proj_name]:
+                    if img['name'] == bin_name:
+                        size = img['size']
+                        break
+            assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+            ftab_item['img'] = {'name': region['name'], 'size': size}
+
+
+    return flash_table_start
+
+def ConstructFtabDictV1(ftab, mems, img_size):
     flash_table_start = None
     for mem in mems:
         mem_base = int(mem['base'], 0)
@@ -715,7 +1243,7 @@ def GenFtabCFile(src, output_name, imgs_info):
 
                 ftab_item = ftab[item_name]
                 assert ('max_size' not in ftab) or (
-                        max_size == ftab_item['max_size']), "{} max_size must be same".format(item_name)
+                        max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab['max_size'], max_size)
                 ftab_item['max_size'] = max_size
                 if 'xip' in region['ftab']['address']:
                     assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
@@ -723,10 +1251,10 @@ def GenFtabCFile(src, output_name, imgs_info):
                 if 'base' in region['ftab']['address']:
                     assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
                     ftab_item['base'] = start_addr
-                    # add img info if img is specified
                 if 'base2' in region['ftab']['address']:
                     assert 'base2' not in ftab_item, 'base2 address already configured in {}'.format(item_name)
                     ftab_item['base2'] = start_addr
+                # add img info if img is specified
                 if 'img' in region:
                     img_name = region['img'].split(':')
                     proj_name = img_name[0]
@@ -747,6 +1275,39 @@ def GenFtabCFile(src, output_name, imgs_info):
                         ftab_item['img'] = {'name': region['img'], 'size': size}
                     else:
                         print('WARNING: img "{}" not found'.format(proj_name))
+
+
+
+    return flash_table_start
+
+
+def GenFtabCFile(src, output_name, imgs_info):
+    import building
+    f = open(src)
+    try:
+        mems = json.load(f)
+    finally:
+        f.close()
+
+    # Get binary image size
+    img_size = {}
+    for img in imgs_info:
+        img_name = img['name']
+        img_bin = str(img['binary'][0])
+        img_size[img_name] = CalcBinarySize(img_bin)
+
+    # construct ftab dictionary
+    ftab = {}
+    flash_table_start = None
+
+    header = mems[0]
+    if 'version' in header:
+        if "2" == header['version']:
+            flash_table_start = ConstructFtabDictV2(ftab, mems[1:], img_size)
+        else:
+            flash_table_start = ConstructFtabDictV1(ftab, mems[1:], img_size)
+    else:
+        flash_table_start = ConstructFtabDictV1(ftab, mems, img_size)
 
     bootloader_needed = not building.GetDepend('SOC_SF32LB55X')
     if bootloader_needed:
@@ -904,6 +1465,62 @@ def GenFtabCFile(src, output_name, imgs_info):
     f.close()
 
 
+def ConstructImgDownloadInfoV2(img_download_info, mems):
+    PtabAddAddDefaultRegion(mems)
+    for mem in mems:
+        mem_base = int(mem['base'], 0)
+        for region in mem['regions']:
+            offset = int(region['offset'], 0)
+            start_addr = mem_base + offset
+            if 'name' in region:
+                temp = region['name'].split(':')
+                if len(temp) > 1:
+                    base, ext =  temp
+                else:
+                    base = temp[0]
+                    ext = None
+
+                if 'type' in region and 'app_exec' in region['type'] and (1 == len(region['type'])):
+                    # no need to download to region with app_exec type only
+                    continue
+
+                if 'type' in region and 'app_img2' in region['type'] and (1 == len(region['type'])):
+                    # no need to download to region with app_img2 type only, as it's only used by ftab
+                    continue
+
+                proj_name = base
+                if not ext:
+                    assert proj_name not in img_download_info, "{} download address already configured".format(proj_name)
+                    img_download_info[proj_name] = start_addr
+                else:
+                    if proj_name not in img_download_info:
+                        img_download_info[proj_name] = {}
+                    assert ext not in img_download_info[
+                        proj_name], "{} download address already configured".format(region['img'])
+                    img_download_info[proj_name][GetMultiBinaryName(ext)] = start_addr
+
+
+def ConstructImgDownloadInfoV1(img_download_info, mems):    
+    for mem in mems:
+        mem_base = int(mem['base'], 0)
+        for region in mem['regions']:
+            offset = int(region['offset'], 0)
+            start_addr = mem_base + offset
+            if 'img' in region:
+                img_name = region['img']
+                img_name = img_name.split(':')
+                proj_name = img_name[0]
+                if len(img_name) == 1:
+                    assert proj_name not in img_download_info, "{} download address already configured".format(proj_name)
+                    img_download_info[proj_name] = start_addr
+                else:
+                    if proj_name not in img_download_info:
+                        img_download_info[proj_name] = {}
+                    assert img_name[1] not in img_download_info[
+                        proj_name], "{} download address already configured".format(region['img'])
+                    img_download_info[proj_name][img_name[1]] = start_addr
+
+
 def BuildJLinkLoadScript(main_env):
     import building
 
@@ -917,24 +1534,15 @@ def BuildJLinkLoadScript(main_env):
             mems = json.load(f)
         finally:
             f.close()
-        for mem in mems:
-            mem_base = int(mem['base'], 0)
-            for region in mem['regions']:
-                offset = int(region['offset'], 0)
-                start_addr = mem_base + offset
-                if 'img' in region:
-                    img_name = region['img']
-                    img_name = img_name.split(':')
-                    proj_name = img_name[0]
-                    if len(img_name) == 1:
-                        assert proj_name not in img_download_info, "{} download address already configured".format(proj_name)
-                        img_download_info[proj_name] = start_addr
-                    else:
-                        if proj_name not in img_download_info:
-                            img_download_info[proj_name] = {}
-                        assert img_name[1] not in img_download_info[
-                            proj_name], "{} download address already configured".format(region['img'])
-                        img_download_info[proj_name][img_name[1]] = start_addr
+
+        header = mems[0]
+        if 'version' in header:
+            if "2" == header['version']:
+                ConstructImgDownloadInfoV2(img_download_info, mems[1:])
+            else:
+                ConstructImgDownloadInfoV1(img_download_info, mems[1:])
+        else:
+            ConstructImgDownloadInfoV1(img_download_info, mems)
 
     work_dir = main_env['build_dir']
     InitIndentation()
@@ -1111,8 +1719,9 @@ def BuildJLinkLoadScript(main_env):
     f.write(s)
     f.close()
 
-    device = main_env['JLINK_DEVICE']
-    device = device.split('_')[0][:-1]
+    decice_memory = main_env['JLINK_DEVICE'].split('_')
+    device = decice_memory[0][:-1]
+    memory = decice_memory[1] if len(decice_memory) > 1 else 'NOR'
 
     download_list = ' '.join(
         f"\"{file['name']}\"" if file['name'].lower().endswith(('.elf', '.hex')) 
@@ -1122,6 +1731,7 @@ def BuildJLinkLoadScript(main_env):
 
     generate_uart_download_bat(main_env, device, download_list, ImgDownUart_PATH)
     generate_uart_download_sh(main_env, device, download_list, ImgDownUart_PATH)
+    generate_sftool_param(main_env, device, memory, download_file)
 
 
 def generate_uart_download_bat(main_env, device, download_list, ImgDownUart_PATH):
@@ -1140,7 +1750,7 @@ goto download
 echo com%input%
 '''
     if os.getenv("LEGACY_ENV"):
-        uart_comment += MakeLine('''{}  --func 0 --port com%input% --baund 1000000 --loadram 1 --postact 1 --verify --device {} --file ImgBurnList.ini --log ImgBurn.log
+        uart_comment += MakeLine('''{}  --func 0 --port com%input% --baund 1000000 --loadram 1 --postact 1 --compare --verify --device {} --file ImgBurnList.ini --log ImgBurn.log
 if %errorlevel%==0 (
     echo Download Successful
 )else (
@@ -1183,3 +1793,38 @@ echo "$input"
     uart_f.close()
     
     os.chmod(uart_sh_path, 0o755)
+
+def generate_sftool_param(main_env, device, memory, download_list):
+    import json
+    
+    # Convert download_list to sftool format
+    files = []
+    for item in download_list:      
+        addr_str = f"0x{item['addr']:08X}"
+        
+        if item['name'].lower().endswith(('.elf', '.hex')):
+            files.append({"path": item['name']})
+        else:
+            files.append({"path": item['name'], "address": addr_str})
+
+    # Create sftool configuration
+    config = {
+        "chip": device,
+        "memory": memory,
+    }
+    
+    config["write_flash"] = {
+        "verify": True,
+        "files": files
+    }
+    
+    # Write JSON file
+    json_path = os.path.join(main_env['build_dir'], 'sftool_param.json')
+    try:
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+        print(f"Generated sftool param: {json_path}")
+    except Exception as e:
+        print(f"Error writing sftool param: {e}")
+
+    return json_path

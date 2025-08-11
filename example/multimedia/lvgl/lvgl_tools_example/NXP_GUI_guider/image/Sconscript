@@ -1,0 +1,26 @@
+# for module compiling
+import os
+from building import *
+
+
+cwd = GetCurrentDir()
+
+src = []
+
+cwd = GetCurrentDir()  # get current dir path
+objs_no_ezip = []
+objs_ezip = []
+objs_no_ezip += Glob('no_ezip/*.c')
+objs_ezip += Glob('ezip/*.c')
+
+if 16 == GetConfigValue('LV_COLOR_DEPTH'):
+    img_flags = '-rgb565'
+else:
+    img_flags = '-rgb888'
+
+src = Env.ImgResource(objs_no_ezip, img_flags+' -cfile 1 -dpt 1')
+src = Env.ImgResource(objs_ezip, img_flags+' -cfile 2 -pal_support')
+
+group = DefineGroup('image', src, depend = ['PKG_USING_LITTLEVGL2RTT'])  
+
+Return ('group')
