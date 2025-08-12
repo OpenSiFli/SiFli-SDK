@@ -248,6 +248,34 @@ typedef enum
 #endif
 } RTC_BACKUP;
 
+/**
+  * @name BOOTOPT backup register fields
+  * @{
+  */
+#define RTC_BACKUP_BOOTOPT_SRC_Pos 0U
+#define RTC_BACKUP_BOOTOPT_SRC_Msk (0xFUL << RTC_BACKUP_BOOTOPT_BOOT_SRC_Pos)
+#define RTC_BACKUP_BOOTOPT_PD_DELAY_Pos 4U
+#define RTC_BACKUP_BOOTOPT_PD_DELAY_Msk (0xFFUL << RTC_BACKUP_BOOTOPT_PD_DELAY_Pos)
+#define RTC_BACKUP_BOOTOPT_PU_DELAY_Pos 12U
+#define RTC_BACKUP_BOOTOPT_PU_DELAY_Msk (0xFFFUL << RTC_BACKUP_BOOTOPT_PU_DELAY_Pos)
+/**
+  * @}
+  */
+
+/**
+  * @brief Set boot options PD delay
+  * @param delay PD delay in ms
+  */
+#define RTC_BACKUP_BOOTOPT_PD_DELAY_MS(delay) \
+    (((delay) << RTC_BACKUP_BOOTOPT_PD_DELAY_Pos) & RTC_BACKUP_BOOTOPT_PD_DELAY_Msk)
+
+/**
+  * @brief Set boot options PU delay
+  * @param delay PU delay in ms
+  */
+#define RTC_BACKUP_BOOTOPT_PU_DELAY_MS(delay) \
+    (((delay) << RTC_BACKUP_BOOTOPT_PU_DELAY_Pos) & RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)
+
 #ifdef WIN32
 #define HAL_Set_backup(idx,value)
 #define HAL_Get_backup(idx) 0
