@@ -207,7 +207,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
     }
 
     hwp_pmuc->HRC_CR = 0xA50C015;
-    hwp_rtc->BKP0R = 0x5050;
+
+    /* configure default delays in boot options when not set */
+    uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+        HAL_Set_backup(RTC_BACKUP_BOOTOPT,
+                       (bootopt |
+                        RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |
+                        RTC_BACKUP_BOOTOPT_PU_DELAY_MS(5)));
+    }
 #endif /* SF32LB52X */
 
     /* clear WSR as it's not cleared if triggered in sleep */
@@ -250,7 +258,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
     }
 
     hwp_pmuc->HRC_CR = 0xA50C015;
-    hwp_rtc->BKP0R = 0x5050;
+
+    /* configure default delays in boot options when not set */
+    uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+        HAL_Set_backup(RTC_BACKUP_BOOTOPT,
+                       (bootopt |
+                        RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |
+                        RTC_BACKUP_BOOTOPT_PU_DELAY_MS(5)));
+    }
 #endif /* SF32LB52X */
 
     /* clear WSR as it's not cleared if triggered in sleep */
@@ -563,8 +579,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_EnableBuck2(void)
     }
 
     hwp_pmuc->HRC_CR = 0xA50C015;
-    hwp_rtc->BKP0R = 0x5050;
 
+    /* configure default delays in boot options when not set */
+    uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+        HAL_Set_backup(RTC_BACKUP_BOOTOPT,
+                       (bootopt |
+                        RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |
+                        RTC_BACKUP_BOOTOPT_PU_DELAY_MS(5)));
+    }
 #endif
 
     if (hwp_pmuc->CR & PMUC_CR_REBOOT)
