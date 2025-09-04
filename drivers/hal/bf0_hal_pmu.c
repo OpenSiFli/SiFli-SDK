@@ -61,6 +61,24 @@ typedef struct
 HAL_RETM_BSS_SECT(pmu_cal_data, static PMU_CalDataTypeDef pmu_cal_data);
 #endif /* (SF32LB52X || SF32LB56X) && SOC_BF0_HCPU*/
 
+static inline int16_t PMU_RoundF_I16(float val)
+{
+	if (val < 0.0f) {
+		return (int16_t)(val - 0.5f);
+	} else {
+		return (int16_t)(val + 0.5f);
+	}
+}
+
+static inline uint16_t PMU_RoundF_U16(float val)
+{
+	if (val < 0.0f) {
+		return 0U;
+	} else {
+		return (uint16_t)(val + 0.5f);
+	}
+}
+
 #ifdef PMUC_CR_PIN0_SEL
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_SelectWakeupPin(uint8_t pin, uint8_t aon_wakeup_pin)
 {
@@ -953,7 +971,7 @@ uint32_t HAL_PMU_ChgConfigTargetVolt(PMU_ChgHandleTypeDef *handle, uint32_t volt
         goto __EXIT;
     }
 
-    delta = (uint16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = PMU_RoundF_U16(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     cv_vctrl = handle->cv_vctrl + delta;
     max = GET_REG_VAL(PMUC_CHG_CR1_CV_VCTRL_Msk, PMUC_CHG_CR1_CV_VCTRL_Msk, PMUC_CHG_CR1_CV_VCTRL_Pos);
     if (cv_vctrl > max)
@@ -991,7 +1009,7 @@ uint32_t HAL_PMU_ChgConfigVbatHighVolt(PMU_ChgHandleTypeDef *handle, uint32_t vo
         goto __EXIT;
     }
 
-    delta = (uint16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = PMU_RoundF_U16(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     high_vctrl = handle->cv_vctrl + delta;
     max = GET_REG_VAL(PMUC_CHG_CR2_HIGH_VCTRL_Msk, PMUC_CHG_CR2_HIGH_VCTRL_Msk, PMUC_CHG_CR2_HIGH_VCTRL_Pos);
     if (high_vctrl > max)
@@ -1027,7 +1045,7 @@ uint32_t HAL_PMU_ChgConfigRepVolt(PMU_ChgHandleTypeDef *handle, uint32_t volt_mv
      * rep_vol_adj = -40mV + delta * 20mV
      * rep_cvtrl = cv + delta
      */
-    delta = (int16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = PMU_RoundF_I16(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     if (delta < -(int16_t)(handle->cv_vctrl))
     {
         delta = -handle->cv_vctrl;
