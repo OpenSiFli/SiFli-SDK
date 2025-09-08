@@ -1,0 +1,23 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ["main.c"]
+#src += Glob('*.c') + Glob('*/*.c')
+
+if GetDepend("SOC_SF32LB55X"):
+    src += ["lcpu_img.c"]
+
+CPPPATH = [cwd, str(Dir('#'))]
+
+CPPDEFINES=[]
+
+lib=['lib_find_my_rvds']
+lib += ['wolfssl']
+
+
+#group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH, LIBS=lib, CPPDEFINES=CPPDEFINES, LIBPATH=CPPPATH)
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH, CPPDEFINES=CPPDEFINES, LIBPATH=CPPPATH)
+
+Return('group')

@@ -1,0 +1,26 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+group = []
+path = []
+
+path = [cwd]
+path += [
+	cwd + '/fmna',
+	cwd + '/fmna_platform',
+	cwd + '../../middleware/bluetooth/lib',
+]
+
+src += Glob('./fmna_platform/*.c')
+
+CPPDEFINES=[]
+
+lib=['lib_find_my_rvds']
+lib += ['wolfssl']
+
+
+group = DefineGroup('grp_fmna', src, depend = ['PKG_USING_FMNA'], CPPPATH = path, LIBS=lib, CPPDEFINES=CPPDEFINES, LIBPATH=path)
+
+Return('group')

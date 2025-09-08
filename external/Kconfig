@@ -32,6 +32,7 @@ source "$SIFLI_SDK/external/faad2/Kconfig"
 source "$SIFLI_SDK/external/wpa_supplicant-rtos/Kconfig"
 source "$SIFLI_SDK/external/cherryusb/Kconfig.rttpkg"
 source "$SIFLI_SDK/external/cwm_lib/Kconfig"
+source "$SIFLI_SDK/external/findmy/Kconfig"
 
 config PKG_SCHRIFT
     bool "SCHRIFT Library"
