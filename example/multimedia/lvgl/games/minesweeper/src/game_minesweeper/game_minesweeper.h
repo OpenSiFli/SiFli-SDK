@@ -17,7 +17,7 @@ extern "C"
      * @brief 扫雷小游戏 FOR SF32
      * @author 启凡科创
      * @date 2025-06-11
-     * @version 1.1
+     * @version 1.2
      * @copyright OwO
      */
 
