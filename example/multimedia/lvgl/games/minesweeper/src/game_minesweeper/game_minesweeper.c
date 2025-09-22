@@ -11,10 +11,8 @@ LV_IMG_DECLARE(game_minesweeper_img_flag_big);
 LV_IMG_DECLARE(game_minesweeper_img_smile);
 LV_IMG_DECLARE(game_minesweeper_img_cry);
 LV_IMG_DECLARE(game_minesweeper_img_cool);
-LV_IMG_DECLARE(app_mouse_img_pointer);
 
 LV_FONT_DECLARE(game_minesweeper_font_24);
-LV_FONT_DECLARE(game_minesweeper_font_16);
 
 typedef enum
 {
@@ -164,6 +162,7 @@ static void mouse_read_cb(lv_indev_drv_t *indev, lv_indev_data_t *data)
 {
     static uint8_t pre_cnt = 0;
     lv_indev_data_t indev_data;
+    static lv_indev_data_t last_indev_data;
     paras->indev_sys->driver->read_cb(&paras->indev_mouse_drv, &indev_data);
 
     if (indev_data.state == LV_INDEV_STATE_PR)
@@ -247,8 +246,7 @@ static void img_event(lv_event_t *e)
 
         lv_obj_t *flag = lv_img_create(paras->scr);
         lv_img_set_src(flag, &game_minesweeper_img_flag_big); // 显示旗帜图标
-        lv_obj_align(flag, LV_ALIGN_TOP_LEFT, OLED_RADIUS_PIX + 20, paras->offy - game_minesweeper_img_flag_big.header.h * 2);
-        lv_img_set_zoom(flag, 256 * 2);
+        lv_obj_align(flag, LV_ALIGN_TOP_LEFT, OLED_RADIUS_PIX + 20, paras->offy - game_minesweeper_img_flag_big.header.h - 10);
 
         paras->label_flag = lv_label_create(paras->scr); // 显示旗帜数量
         lv_label_set_text_fmt(paras->label_flag, "%d", paras_save->flag_cnt);
@@ -261,7 +259,6 @@ static void img_event(lv_event_t *e)
         lv_obj_add_flag(paras->img_smile, LV_OBJ_FLAG_CLICKABLE);                         // 笑脸图标可点击
         lv_obj_add_event_cb(paras->img_smile, smile_click_event, LV_EVENT_CLICKED, NULL); // 添加点击事件
         change_smile_img(paras->img_smile);                                               // 显示笑脸
-        lv_img_set_zoom(paras->img_smile, 256 * 2);
 
         paras->label_time = lv_label_create(paras->scr); // 显示游戏时长
 
@@ -270,7 +267,7 @@ static void img_event(lv_event_t *e)
         lv_obj_set_style_text_font(paras->label_time, &game_minesweeper_font_24, LV_PART_MAIN);
         lv_obj_set_style_text_color(paras->label_time, lv_color_hex(0xff0000), LV_PART_MAIN);
 
-        lv_obj_align(paras->img_smile, LV_ALIGN_TOP_RIGHT, -OLED_RADIUS_PIX - 20, paras->offy - game_minesweeper_img_smile.header.h * 2);
+        lv_obj_align(paras->img_smile, LV_ALIGN_TOP_RIGHT, -OLED_RADIUS_PIX - 20, paras->offy - game_minesweeper_img_smile.header.h - 10);
         lv_obj_align_to(paras->label_time, paras->img_smile, LV_ALIGN_OUT_LEFT_MID, -20, 0);
 
         paras->time_cnt_en = 1; // 允许游戏时长计时
@@ -314,14 +311,14 @@ static void img_event(lv_event_t *e)
     if (paras->slide_flag)
         return;
 
-    if (paras->choose_point.x < paras->offx && paras->choose_point.x >= (paras->offx + 16 * paras->hor_num))
+    if (paras->choose_point.x < paras->offx && paras->choose_point.x >= (paras->offx + 24 * paras->hor_num))
         return;
-    if (paras->choose_point.y < paras->offy && paras->choose_point.y >= (paras->offy + 16 * paras->ver_num))
+    if (paras->choose_point.y < paras->offy && paras->choose_point.y >= (paras->offy + 24 * paras->ver_num))
         return;
     paras->choose_point.x -= paras->offx;
     paras->choose_point.y -= paras->offy;
-    paras->choose_point.x = paras->choose_point.x * paras->hor_num / (16 * paras->hor_num);
-    paras->choose_point.y = paras->choose_point.y * paras->ver_num / (16 * paras->ver_num);
+    paras->choose_point.x = paras->choose_point.x * paras->hor_num / (24 * paras->hor_num);
+    paras->choose_point.y = paras->choose_point.y * paras->ver_num / (24 * paras->ver_num);
 
     if (paras->click_flag == 0) // 开始双击计时
     {
@@ -462,9 +459,9 @@ static void create_around_booms_label(uint8_t line, uint8_t row)
         return;
     lv_obj_t **pix = paras->pix_obj + row * paras->hor_num + line;
     *pix = lv_label_create(paras->game_box);
-    lv_obj_set_style_text_font(*pix, &game_minesweeper_font_16, LV_PART_MAIN);
+    lv_obj_set_style_text_font(*pix, &game_minesweeper_font_24, LV_PART_MAIN);
     lv_label_set_text_fmt(*pix, "%d", cnt);
-    lv_obj_set_pos(*pix, line * 16 + 3, row * 16 - 1);
+    lv_obj_set_pos(*pix, line * 24 + 4, row * 24 - 2);
     lv_obj_set_style_text_color(*pix, lv_color_hex(number_color[cnt - 1]), LV_PART_MAIN);
 }
 
@@ -510,7 +507,7 @@ static void create_pix(uint8_t line, uint8_t row, pix_sta_t sta)
     default:
         break;
     }
-    lv_obj_set_pos(*pix, line * 16, row * 16);
+    lv_obj_set_pos(*pix, line * 24, row * 24);
 }
 
 static void change_pix_sta(uint8_t line, uint8_t row, pix_sta_t sta)
@@ -806,10 +803,10 @@ void game_minesweeper_load()
     }
 
     memset(paras, 0, sizeof(game_minesweeper_paras_t));
-    paras->hor_num = LV_HOR_RES / 16;
-    paras->ver_num = (LV_VER_RES - OLED_RADIUS_PIX * 2) / 16;
-    paras->offx = (LV_HOR_RES - paras->hor_num * 16) / 2;
-    paras->offy = (LV_VER_RES - paras->ver_num * 16) / 2;
+    paras->hor_num = LV_HOR_RES / 24;
+    paras->ver_num = (LV_VER_RES - OLED_RADIUS_PIX * 2) / 24;
+    paras->offx = (LV_HOR_RES - paras->hor_num * 24) / 2;
+    paras->offy = (LV_VER_RES - paras->ver_num * 24) / 2;
 
     if (first_flg)
     {
@@ -866,7 +863,7 @@ void game_minesweeper_load()
 
     paras->game_box = lv_img_create(paras->scr); // 创建空地图
     lv_img_set_src(paras->game_box, &game_minesweeper_img_space);
-    lv_obj_set_size(paras->game_box, paras->hor_num * 16, paras->ver_num * 16);
+    lv_obj_set_size(paras->game_box, paras->hor_num * 24, paras->ver_num * 24);
     lv_obj_set_pos(paras->game_box, paras->offx, paras->offy);
     lv_obj_add_flag(paras->game_box, LV_OBJ_FLAG_HIDDEN);
 
@@ -897,7 +894,7 @@ void game_minesweeper_load()
     lv_scr_load_anim(paras->scr, LV_SCR_LOAD_ANIM_FADE_ON, 0, 100, 0);   // 加载APP界面
 
     paras->game_time_timer = lv_timer_create(time_cnt_cb, 1000, NULL); // 游戏时长计时
-    paras->time_cnt_en = 0;                                         // 有提示语不允许计时
+    paras->time_cnt_en = 0;                                            // 有提示语不允许计时
 
     first_flg = 0;
 }
