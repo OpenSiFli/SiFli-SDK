@@ -1554,7 +1554,7 @@ static HAL_StatusTypeDef _SendLayerData(LCDC_HandleTypeDef *lcdc, LCDC_AsyncMode
 
         /* Interrupt after send half of 'max_line' data */
         lcdc->Instance->JDI_PAR_CTRL &= ~LCD_IF_JDI_PAR_CTRL_INT_LINE_NUM_Msk;
-        lcdc->Instance->JDI_PAR_CTRL |= ((max_line / 2) - 1) << LCD_IF_JDI_PAR_CTRL_INT_LINE_NUM_Pos;
+        lcdc->Instance->JDI_PAR_CTRL |= max_line << LCD_IF_JDI_PAR_CTRL_INT_LINE_NUM_Pos;
 
         lcdc->Instance->SETTING |= LCD_IF_SETTING_JDI_PARL_INTR_MASK | LCD_IF_SETTING_EOF_MASK;
         //Pull up rst
