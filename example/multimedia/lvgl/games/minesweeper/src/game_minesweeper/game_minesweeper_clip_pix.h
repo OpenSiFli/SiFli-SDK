@@ -1,9 +1,9 @@
 
 /*
-格式为：
-x1,y1,(禁止布雷点1)
-x2,y2,(禁止布雷点1)
-...(禁止布雷点N)
+格式为 format：
+x1,y1,(禁止布雷点1  prohibit point 1)
+x2,y2,(禁止布雷点1  prohibit point 2)
+...(禁止布雷点N   prohibit point N)
 */
 
     0, 0,
