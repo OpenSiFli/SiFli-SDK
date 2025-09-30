@@ -215,6 +215,7 @@ static int rt_hw_flash_init(void)
     int fen = 0;
     HAL_StatusTypeDef res;
     uint16_t div;
+    uint8_t hex[16];	
 #ifdef DUAL_FLASH_AUTO_DETECT
     int dual = 0;
 #endif
@@ -304,13 +305,25 @@ static int rt_hw_flash_init(void)
     // init hardware, set dma, clock
     res = HAL_FLASH_Init(&(spi_flash_handle[2]), &flash_cfg3, &spi_flash_dma_handle[2], &flash_dma3, div);
     if (res == HAL_OK)
+    {
         fen |= FLASH3_ENABLED;
+    }
+    debug_print("flash3 dev id: ");
+    debug_print((char *)htoa(hex, spi_flash_handle[2].dev_id));
+    debug_print("\n");
+		
 #endif  // BSP_ENABLE_QSPI3
 #endif //#if !defined(JLINK) || defined(JLINK_FLASH_3)
 
     if (rt_hw_flash4_init(0))
+    {
         fen |= FLASH4_ENABLED;
+    }
 
+    debug_print("flash4 dev id: ");
+    debug_print((char *)htoa(hex, spi_flash_handle[3].dev_id));
+    debug_print("\n");		
+		
 #if !defined(JLINK) || defined(JLINK_FLASH_5)
 #ifdef BSP_ENABLE_QSPI5 // add qspi check to make sure config table exist
     qspi_configure_t flash_cfg5 = FLASH5_CONFIG;

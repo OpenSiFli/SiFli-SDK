@@ -98,7 +98,7 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     //MODIFY_REG(hwp_qspi2->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
     //MODIFY_REG(hwp_qspi3->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
 
-#ifdef JLINK_FLASH_4
+#if defined(JLINK_FLASH_4) || defined(KEIL)
     //HAL_PIN_Set(PAD_PA58, GPIO_A58, PIN_NOPULL, 1);             // QSPI2/QSPI3 Power
 #ifdef FLASH4_PINMUX_TYPE1
     HAL_PIN_Set(PAD_PA10, MPI4_CS, PIN_NOPULL, 1);
@@ -118,7 +118,7 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     BSP_GPIO_Set(MPI3_POWER_PIN, 1, 1);
 #endif
 
-#ifdef JLINK_FLASH_3
+#if defined(JLINK_FLASH_3) || defined(KEIL)
     HAL_PIN_Set(PAD_PA46, MPI3_CLK, PIN_NOPULL, 1);            // QSPI3
     HAL_PIN_Set(PAD_PA44, MPI3_CS, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA50, MPI3_DIO0, PIN_PULLDOWN, 1);
