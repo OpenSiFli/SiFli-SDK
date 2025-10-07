@@ -63,7 +63,7 @@ For detailed API documentation, refer to [EPIC](#hal-epic).
 
 ## Color Storage Format in SRAM
 
-|        | bit31~bit25 | bit24~bit17 | bit16~bit8 | bit7~bit0 |
+|        | bit31~bit24 | bit23~bit16 | bit15~bit8 | bit7~bit0 |
 | ------ | ------ | ------ | ------ | ------ |
 | RGB565   |    /    |    /       | R4~R0G5~G3         | G2~G0B4~B0 |
 | ARGB8565 |    /    | A7 ~ A0    | R4~R0G5~G3         | G2~G0B4~B0 |

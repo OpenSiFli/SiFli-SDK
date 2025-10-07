@@ -1,0 +1,14 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_SF32LB52_WLAN_CORE_N16R16'], CPPPATH = path)
+
+if GetDepend('BSP_USING_BOARD_SF32LB52_WLAN_CORE_N16R16'):
+    group = group + SConscript(os.path.join(cwd, '../sf32lb52-wlan-core_base/SConscript.base'), variant_dir="base", duplicate=0)
+
+Return('group')

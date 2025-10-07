@@ -13,6 +13,7 @@ config KCONFIG_V2
 source "$SIFLI_SDK/rtos/Kconfig"
 source "$SIFLI_SDK/middleware/Kconfig"
 source "$SIFLI_SDK/external/Kconfig"
+osource "$PKGS_ROOT/packages/Kconfig"
 
 menu "Build Options"
     config USING_MICROLIB

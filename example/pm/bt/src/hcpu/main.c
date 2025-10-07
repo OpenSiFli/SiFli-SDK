@@ -482,7 +482,6 @@ void rc10k_timeout_handler(void *parameter)
 int main(void)
 {
     int count = 0;
-
     app_wakeup();
     app_env_t *env = ble_app_get_env();
     env->mb_handle = rt_mb_create("app", 8, RT_IPC_FLAG_FIFO);

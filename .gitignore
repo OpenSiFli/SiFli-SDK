@@ -13,3 +13,4 @@
 Kconfig.tmp
 .venv
 _*/
+**/packages/

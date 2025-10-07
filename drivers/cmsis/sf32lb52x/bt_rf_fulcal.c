@@ -9,10 +9,11 @@
 
 
 //#include "rtconfig.h"
-#include "bf0_hal_rcc.h"
+#include "bf0_hal.h"
 #include "register.h"
 #include "ble_rf_cal.h"
 #include "math.h"
+#include "lcpu_config_type.h"
 //#include "rtthread.h"
 //#include "rtdef.h"
 //#include "rthw.h"
@@ -939,8 +940,8 @@ uint32_t bt_rfc_init()
     uint32_t *bt_txon_cmd = malloc(BT_CHANNEL_NUM * 4);
     uint32_t *bt_txoff_cmd = malloc(BT_CHANNEL_NUM * 4);
 #endif
-    uint32_t cmd;
-    uint32_t reg_data;
+    //uint32_t cmd;
+    //uint32_t reg_data;
     uint32_t reg_addr = 0x0 ;
     //enable adc q for all phy
     hwp_bt_phy->RX_CTRL1 |= BT_PHY_RX_CTRL1_ADC_Q_EN_1;
@@ -2044,7 +2045,7 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     const uint32_t residual_cnt_vth = 33864;
     const uint32_t residual_cnt_vtl = 30224;
     uint32_t p0;
-    uint32_t p1=0;
+    uint32_t p1 = 0;
 
 
     uint32_t pre_acal_up;
@@ -2072,15 +2073,15 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1=0;
+    uint8_t idac1 = 0;
     uint8_t capcode0;
-    uint8_t capcode1=0;
+    uint8_t capcode1 = 0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
-    uint32_t     err_tx    = 0xffffffff;
-    uint32_t     err_rx_1m = 0xffffffff;
-    uint32_t     err_rx_2m = 0xffffffff;
-    uint32_t     err_rx_bt = 0xffffffff;
+    //uint32_t     err_tx    = 0xffffffff;
+    //uint32_t     err_rx_1m = 0xffffffff;
+    //uint32_t     err_rx_2m = 0xffffffff;
+    //uint32_t     err_rx_bt = 0xffffffff;
 
     //RF_PRINTF("begin fulcal\n");
 
@@ -2957,12 +2958,12 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1=0;
+    uint8_t idac1 = 0;
     uint8_t capcode0;
-    uint8_t capcode1=0;
+    uint8_t capcode1 = 0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
-    uint32_t     err_tx_3g = 0xffffffff;
+    //uint32_t     err_tx_3g = 0xffffffff;
 
     uint8_t  *idac_tbl = malloc(MAX_CAL_STEP);
     uint8_t  *capcode_tbl = malloc(MAX_CAL_STEP);
@@ -2978,7 +2979,7 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint32_t residual_cnt;
 
     uint32_t p0;
-    uint32_t p1=0;
+    uint32_t p1 = 0;
 
 
     uint32_t pre_acal_up;
@@ -3584,8 +3585,8 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
 int64_t bt_rfc_get_mixer_pwr(uint8_t freq)
 {
     int64_t mixer_pwr;
-    int64_t mixer_pwr_i;
-    int64_t mixer_pwr_q;
+    //int64_t mixer_pwr_i;
+    //int64_t mixer_pwr_q;
     int64_t mixer_i_sum = 0;
     int64_t mixer_q_sum = 0;
     //uint32_t dc_out;
@@ -3893,21 +3894,22 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
 
 
     int64_t mixer_pwr;
-    int64_t mixer_pwr_i;
-    int64_t mixer_pwr_q;
+    //int64_t mixer_pwr_i;
+    //int64_t mixer_pwr_q;
     int64_t mixer_i_sum = 0;
     int64_t mixer_q_sum = 0;
     int64_t dc_out_min = 0x7fffffffffffffff;
     //uint32_t dc_out;
-    int mixer_i;
-    int mixer_q;
-    int mixer_cos;
-    int mixer_sin;
+    //int mixer_i;
+    //int mixer_q;
+    //int mixer_cos;
+    //int mixer_sin;
     uint16_t adc_data;
-    int16_t cos_table[16] = {1024, 946, 724, 392, 0, -392, -724, -946, -1024, -946, -724, -392, 0, 392, 724, 946};
-    int16_t sin_table[16] = {0, -392, -724, -946, -1024, -946, -724, -392, 0, 392, 724, 946, 1024, 946, 724, 392};
+    //int16_t cos_table[16] = {1024, 946, 724, 392, 0, -392, -724, -946, -1024, -946, -724, -392, 0, 392, 724, 946};
+    //int16_t sin_table[16] = {0, -392, -724, -946, -1024, -946, -724, -392, 0, 392, 724, 946, 1024, 946, 724, 392};
     uint32_t mem_data;
-    int k, m;
+    int k;
+    //int m;
 
     //int64_t dc_out[32];
 #if defined(ENABLE_RF_ATE)
@@ -4632,7 +4634,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     write_memory(0x400841AC, 0x0045F42C);
     write_memory(0x400841B0, 0x00000470);
 #endif
-    uint32_t pwr_ref;
+    //uint32_t pwr_ref;
     uint32_t reg_addr = rslt_start_addr;
 //#ifdef TMXCAP_SEL_EFUSE
     if (bt_rf_is_golden_unit())
@@ -4701,7 +4703,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
                     hwp_dmac2->IFCR |= DMAC_IFCR_CTCIF8;
                     mixer_i_sum = 0;
                     mixer_q_sum = 0;
-                    int phase_index = 0;
+                    //int phase_index = 0;
                     for (k = 0; k < 1024; k++)
                     {
 
@@ -5088,7 +5090,7 @@ void bt_rf_cal_index(void)
 {
     int8_t min_pwr, max_pwr, i;
     int8_t pwr_tab[] = {0, 3, 6, 10, 13, 16, 19};
-    uint8_t s_min_level=0, s_max_level=0;
+    uint8_t s_min_level = 0, s_max_level = 0;
 
     min_pwr = bt_rf_get_min_tx_pwr();
     if (bt_rf_get_max_tx_pwr() >= bt_rf_get_init_tx_pwr())

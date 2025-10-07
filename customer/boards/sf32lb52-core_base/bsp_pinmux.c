@@ -209,7 +209,7 @@ static void BSP_PIN_Common(void)
     /* Keep default pull-down unchanged. Uart download driver would use this function,
      * if pulldown is disabled, download driver would not work on the board without external pull-down
      */
-
+    BSP_GPIO_Set(21, 0, 1);
 #endif
 
 }
@@ -270,6 +270,23 @@ void BSP_PIN_LCD(void)
     HAL_PIN_Set(PAD_PA06, LCDC1_SPI_DIO1, PIN_NOPULL, 1);
 
     // GPIOs A00, A7-A9, A26, A30, A33, A39-A43
+#elif defined(BSP_LCDC_USING_JDI_PARALLEL)
+    HAL_PIN_Set(PAD_PA02, LCDC1_JDI_B2, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA03, LCDC1_JDI_B1, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA04, LCDC1_JDI_G1, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA05, LCDC1_JDI_R1, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA06, LCDC1_JDI_HST, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA07, LCDC1_JDI_ENB, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA08, LCDC1_JDI_VST, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA39, LCDC1_JDI_VCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA40, LCDC1_JDI_XRST, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA41, LCDC1_JDI_HCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA42, LCDC1_JDI_R2, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA43, LCDC1_JDI_G2, PIN_NOPULL, 1);
+
+    HAL_PIN_Set(PAD_PA24, PBR_LPTIM2_OUT, PIN_NOPULL, 1);  //FRP
+    HAL_PIN_Set(PAD_PA25, PBR_LPTIM2_INV_OUT, PIN_NOPULL, 1);  //XFRP
+
 #else
     /* disable compile error as LCD may be disabled by some example, such as hal_example */
 // #error LCD type not supported in this board.

@@ -343,6 +343,14 @@ int shutdown(int argc, char *argv[])
         HAL_PMU_DisableXTAL32();
 #endif /* SF32LB56X */
 
+#ifdef BSP_USING_BOARD_SF32LB52_CORE_N16R16
+        FLASH_HandleTypeDef *flash_handle;
+        flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
+        HAL_FLASH_DEEP_PWRDOWN(flash_handle);
+        HAL_Delay_us(3);
+        hwp_pmuc->CR |= PMUC_CR_PIN_RET;
+#endif /* BSP_USING_BOARD_SF32LB52_CORE_N16R16 */
+
         HAL_PMU_EnterHibernate();
 
         /* while loop until system is down */
@@ -382,6 +390,13 @@ int shutdown(int argc, char *argv[])
 #else
 #endif
         rt_hw_interrupt_disable();
+#ifdef BSP_USING_BOARD_SF32LB52_CORE_N16R16
+        FLASH_HandleTypeDef *flash_handle;
+        flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
+        HAL_FLASH_DEEP_PWRDOWN(flash_handle);
+        HAL_Delay_us(3);
+        hwp_pmuc->CR |= PMUC_CR_PIN_RET;
+#endif /* BSP_USING_BOARD_SF32LB52_CORE_N16R16 */
         /* Enter shutdown mode, system can be woken up by KEY1 */
         HAL_PMU_EnterShutdown();
         /* while loop until system is down */
@@ -785,8 +800,8 @@ int main(void)
     rt_timer_init(&rsp_timeout_timer, "test", rsp_timeout, 0, rt_tick_from_millisecond(50000),
                   RT_TIMER_FLAG_SOFT_TIMER);
 
-    lcpu_power_on();
-
+    /*For the 52, the small cores are not activated because activation would cause the current to be too high.*/
+    HAL_LPAON_Sleep();
 #ifdef DEEPSLEEP_PIN_WAKEUP_TEST
     uint32_t button_pin = 34;
 

@@ -1,4 +1,4 @@
-# Ble Audio播放器
+# Ble Audio播放器（接收设备）
 
 源码路径：example/zbt/bap_broadcast_sink
 

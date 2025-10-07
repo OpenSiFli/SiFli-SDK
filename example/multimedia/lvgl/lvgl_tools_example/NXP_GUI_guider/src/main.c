@@ -6,7 +6,7 @@
 #include "lvgl.h"
 #include "littlevgl2rtt.h"
 #include "lv_ex_data.h"
-#include "events_init.h"
+#include "generated/events_init.h"
 #include "generated/gui_guider.h"
 
 

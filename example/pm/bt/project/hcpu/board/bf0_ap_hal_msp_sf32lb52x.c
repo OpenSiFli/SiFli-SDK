@@ -10,15 +10,13 @@ void HAL_PostMspInit(void)
     /*  Avoid IO Leakage */
     HAL_PIN_Set(PAD_PA00, GPIO_A0, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA01, GPIO_A1, PIN_PULLDOWN, 1);
-
-    HAL_PIN_Set(PAD_PA04, GPIO_A4, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA03, GPIO_A3, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA04, GPIO_A4, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA05, GPIO_A5, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA06, GPIO_A6, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA07, GPIO_A7, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA08, GPIO_A8, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLDOWN, 1);
-
     HAL_PIN_Set(PAD_PA09, GPIO_A9, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA10, GPIO_A10, PIN_PULLDOWN, 1);
 
@@ -31,7 +29,6 @@ void HAL_PostMspInit(void)
     HAL_PIN_Set(PAD_PA17, GPIO_A17, PIN_PULLDOWN, 1);
 #endif /* BSP_ENABLE_MPI2 */
     HAL_PIN_Set(PAD_PA20, GPIO_A20, PIN_PULLDOWN, 1);
-
     //HAL_PIN_Set(PAD_PA24, GPIO_A24, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA25, GPIO_A25, PIN_PULLDOWN, 1);
 
@@ -40,30 +37,23 @@ void HAL_PostMspInit(void)
 
     HAL_PIN_Set(PAD_PA28, GPIO_A28, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA29, GPIO_A29, PIN_PULLDOWN, 1);
-
     HAL_PIN_Set(PAD_PA30, GPIO_A30, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA31, GPIO_A31, PIN_PULLDOWN, 1);
-
     HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA33, GPIO_A33, PIN_PULLDOWN, 1);
-
-    //HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_PULLDOWN, 1);
-    //HAL_PIN_Set(PAD_PA36, GPIO_A36, PIN_PULLDOWN, 1);
-
     HAL_PIN_Set(PAD_PA37, GPIO_A37, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA38, GPIO_A38, PIN_PULLDOWN, 1);
-
     HAL_PIN_Set(PAD_PA39, GPIO_A39, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA40, GPIO_A40, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA41, GPIO_A41, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA42, GPIO_A42, PIN_PULLDOWN, 1);
-
+    HAL_PIN_Set(PAD_PA43, GPIO_A43, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA44, GPIO_A44, PIN_PULLDOWN, 1);
 
     /* pullup as default to allow sleep */
     //HAL_PIN_Set(PAD_PA30, GPIO_A30, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA24, GPIO_A24, PIN_PULLUP, 1);
-    HAL_PBR_ConfigMode(0, false);
+    HAL_PBR_ConfigMode(0, false);   //true: output mode, false: input mode
 
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO3_3V3, false, true);
 
@@ -138,15 +128,10 @@ HAL_RAM_RET_CODE_SECT(BSP_PowerDownCustom, void BSP_PowerDownCustom(int coreid, 
 {
 #ifdef SOC_BF0_HCPU
 #ifdef BSP_USING_NOR_FLASH2
-    HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO2_3V3, false, true);
-
-    HAL_PIN_Set(PAD_PA16, GPIO_A16, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA12, GPIO_A12, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA15, GPIO_A15, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA13, GPIO_A13, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA14, GPIO_A14, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA17, GPIO_A17, PIN_PULLDOWN, 1);
-
+    FLASH_HandleTypeDef *flash_handle;
+    flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
+    HAL_FLASH_DEEP_PWRDOWN(flash_handle);
+    HAL_Delay_us(3);
 #elif defined(BSP_USING_NOR_FLASH1)
     FLASH_HandleTypeDef *flash_handle;
     flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI1_MEM_BASE);
@@ -171,17 +156,10 @@ HAL_RAM_RET_CODE_SECT(BSP_PowerUpCustom, void BSP_PowerUpCustom(bool is_deep_sle
     if (!is_deep_sleep)
     {
 #ifdef BSP_USING_NOR_FLASH2
-        HAL_PIN_Set(PAD_PA16, MPI2_CLK,  PIN_NOPULL,   1);
-        HAL_PIN_Set(PAD_PA12, MPI2_CS,   PIN_NOPULL,   1);
-        HAL_PIN_Set(PAD_PA15, MPI2_DIO0, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_PA13, MPI2_DIO1, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_PA14, MPI2_DIO2, PIN_PULLUP,   1);
-        HAL_PIN_Set(PAD_PA17, MPI2_DIO3, PIN_PULLUP, 1);
-
-        HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO2_3V3, true, true);
-
-
-        BSP_Flash_hw2_init();
+        FLASH_HandleTypeDef *flash_handle;
+        flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
+        HAL_FLASH_RELEASE_DPD(flash_handle);
+        HAL_Delay_us(80);
 #elif defined(BSP_USING_NOR_FLASH1)
         FLASH_HandleTypeDef *flash_handle;
         flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI1_MEM_BASE);

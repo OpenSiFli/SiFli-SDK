@@ -1,5 +1,4 @@
-# Ble Audio播放器
-
+# Ble Audio播放器（源设备）
 源码路径：example/zbt/bap_broadcast_src_with_classic_bt
 
 ## 支持的平台

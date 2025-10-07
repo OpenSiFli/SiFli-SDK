@@ -1220,8 +1220,13 @@ def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
                 return ' '.join(tlist)
 
             def expand_ldir(target, source, env, for_signature):
-                slist = [str(a).replace('\\','\\\\') for a in env['LIBPATH']]
-                return '-L' + ' -L'.join(slist)
+                if 'LIBPATH' in env and len(env['LIBPATH']) > 0:
+                    slist = [str(a).replace('\\','\\\\') for a in env['LIBPATH']]
+                    ldir = '-L' + ' -L'.join(slist)
+                else:
+                    ldir = ''
+
+                return ldir
 
             env['EXPANDED_SOURCES'] = expand_sources
             env['EXPANDED_TARGETS'] = expand_target            
@@ -1485,6 +1490,10 @@ def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
                                variant_dir=kernel_vdir + '/components',
                                duplicate=0,
                                exports='remove_components'))
+
+    # Add rt-thread online packages
+    if os.path.isfile(os.path.join(Env['BSP_ROOT'], 'packages/SConscript')):
+        objs.extend(SConscript(os.path.join(Env['BSP_ROOT'], 'packages/SConscript'), variant_dir=bsp_vdir + '/rt-pkgs', duplicate=0))
 
     return objs
 

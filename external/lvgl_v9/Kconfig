@@ -44,7 +44,7 @@ menu "LVGL V9 configuration"
 	menu "Memory Settings"
 		choice
 			prompt "Malloc functions source"
-			default LV_USE_BUILTIN_MALLOC
+			default LV_USE_RTTHREAD_MALLOC
 
 		config LV_USE_BUILTIN_MALLOC
 			bool "LVGL's built in implementation"

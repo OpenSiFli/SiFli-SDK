@@ -9,7 +9,6 @@
 #include "ipc_hw.h"
 
 static void lcpu2hcpu_notification_callback(MAILBOX_HandleTypeDef *hmailbox, uint8_t q_idx);
-static void acpu2hcpu_notification_callback(MAILBOX_HandleTypeDef *hmailbox, uint8_t q_idx);
 
 ipc_hw_t ipc_hw_obj =
 {

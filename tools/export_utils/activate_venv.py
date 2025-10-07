@@ -83,6 +83,8 @@ def get_sifli_sdk_env() -> Dict[str,str]:
     cmd = [sys.executable, conf.SIFLI_SDK_TOOLS_PY, 'export', '--format', 'key-value', '--add_paths_extras', extra_paths]
     stdout = run_cmd(cmd)
 
+    sifli_sdk_tools_path = os.environ.get('SIFLI_SDK_TOOLS_PATH') or os.path.expanduser(os.path.join('~', '.sifli'))
+
     # sifli_sdk_tools.py might not export certain environment variables if they are already set
     sifli_sdk_env: Dict[str, Any] = {
         'SIFLI_SDK_PATH': os.environ['SIFLI_SDK_PATH'],
@@ -91,6 +93,8 @@ def get_sifli_sdk_env() -> Dict[str,str]:
         # TODO: 2.x env, remove at 3.x
         'SIFLI_SDK': f"{os.environ['SIFLI_SDK_PATH']}/",
         'RTT_CC': 'gcc',
+        'PKGS_ROOT': os.path.join(sifli_sdk_tools_path, 'rt-pkg'),
+        'PKGS_DIR': os.path.join(sifli_sdk_tools_path, 'rt-pkg'),
         'PYTHONPATH': os.pathsep.join([os.path.join(conf.SIFLI_SDK_PATH, 'tools', 'build')]),
     }
 

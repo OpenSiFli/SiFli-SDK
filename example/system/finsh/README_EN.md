@@ -69,9 +69,9 @@ void myhello(void)
 
 MSH_CMD_EXPORT(myhello , say hello to RT-Thread);
 ```
-Run the hello command, the result is as follows:
+Run the myhello command, the result is as follows:
 ```
-msh />hello
+msh />myhello
 hello RT_Thread!
 msh />
 ```

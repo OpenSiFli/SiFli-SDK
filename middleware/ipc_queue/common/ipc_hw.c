@@ -72,10 +72,7 @@ int32_t ipc_hw_enable_interrupt(ipc_hw_q_handle_t *hw_q_handle, uint8_t qid, uin
     hw_q_handle->q_idx = q_idx;
 
     /* receiver enable NVIC IRQ */
-    /* set the mailbox priority */
-    HAL_NVIC_SetPriority(ch_cfg->rx.irqn, 3, 0);
-    /* enable the mailbox global Interrupt */
-    HAL_NVIC_EnableIRQ(ch_cfg->rx.irqn);
+    os_interrupt_start(ch_cfg->rx.irqn, 3, 0);
 
     /* sender unmask interrupt */
     __HAL_MAILBOX_UNMASK_CHANNEL_IT(&ch_cfg->tx.handle, q_idx);
@@ -110,10 +107,7 @@ int32_t ipc_hw_enable_interrupt2(ipc_hw_q_handle_t *hw_q_handle, uint8_t qid, ui
     hw_q_handle->q_idx = q_idx;
 
     /* receiver enable NVIC IRQ */
-    /* set the mailbox priority */
-    HAL_NVIC_SetPriority(ch_cfg->rx.irqn, 3, 0);
-    /* enable the mailbox global Interrupt */
-    HAL_NVIC_EnableIRQ(ch_cfg->rx.irqn);
+    os_interrupt_start(ch_cfg->rx.irqn, 3, 0);
 
     /* receiver unmask interrupt */
 #ifdef SOC_BF0_HCPU
@@ -171,7 +165,7 @@ int32_t ipc_hw_disable_interrupt(ipc_hw_q_handle_t *hw_q_handle)
     if (0 == ch->data.act_bitmap)
     {
         /* disable the mailbox global Interrupt */
-        HAL_NVIC_DisableIRQ(ch_cfg->rx.irqn);
+        os_interrupt_stop(ch_cfg->rx.irqn);
     }
 
     /* tx */
@@ -206,7 +200,7 @@ int32_t ipc_hw_disable_interrupt2(ipc_hw_q_handle_t *hw_q_handle)
     if (0 == ch->data.act_bitmap)
     {
         /* disable the mailbox global Interrupt */
-        HAL_NVIC_DisableIRQ(ch_cfg->rx.irqn);
+        os_interrupt_stop(ch_cfg->rx.irqn);
     }
 
     /* receiver mask the interrupt */

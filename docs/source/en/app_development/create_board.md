@@ -7,7 +7,7 @@ The steps are as follows:
 
 1. Create a folder `testboard_525` under the `boards` directory and copy the files from `sf32lb52-lcd_n16r8` to `testboard_525`.
 
-2. Create a folder `testboard_525_base` under the `boards` directory and copy the files from `sf32lb52-devkit-lcd` to `testboard_525_base`.
+2. Create a folder `testboard_525_base` under the `boards` directory and copy the files from `sf32lb52-lcd_base` to `testboard_525_base`.
 
 3. Modify `testboard_525/SConscript`, changing the macro names in locations 1 and 2 to the new board's name, and change the SConscript file path referenced in location 3 to `testboard_525_base`.
 

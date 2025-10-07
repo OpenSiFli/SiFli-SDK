@@ -20,6 +20,15 @@ extern "C" {
 #define os_interrupt_enter()        rt_interrupt_enter()
 #define os_interrupt_exit()         rt_interrupt_leave()
 
+#define os_interrupt_start(irq_number,priority,sub_priority) \
+{ \
+    HAL_NVIC_SetPriority(irq_number, priority, sub_priority); \
+    HAL_NVIC_EnableIRQ(irq_number); \
+}
+
+#define os_interrupt_stop(irq_number) \
+     HAL_NVIC_DisableIRQ(irq_number);
+
 /// @}  file
 
 #ifdef __cplusplus

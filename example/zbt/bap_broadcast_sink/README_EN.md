@@ -1,4 +1,4 @@
-# BLE Audio Player
+# BLE Audio Player (Sink)
 
 Source path: example/zbt/bap_broadcast_sink
 

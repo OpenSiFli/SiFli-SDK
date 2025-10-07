@@ -32,7 +32,6 @@ HAL_RAM_RET_CODE_SECT(HAL_PostMspInit, void HAL_PostMspInit(void))
     HAL_PIN_Set(PAD_PA17, GPIO_A17, PIN_PULLDOWN, 1);
 #endif /* BSP_ENABLE_MPI2 */
     HAL_PIN_Set(PAD_PA20, GPIO_A20, PIN_PULLDOWN, 1);
-
     //HAL_PIN_Set(PAD_PA24, GPIO_A24, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA25, GPIO_A25, PIN_PULLDOWN, 1);
 
@@ -66,7 +65,6 @@ HAL_RAM_RET_CODE_SECT(HAL_PostMspInit, void HAL_PostMspInit(void))
     HAL_PBR_ConfigMode(0, false);
 
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO3_3V3, false, false);
-
     if (PM_COLD_BOOT == SystemPowerOnModeGet())
     {
         status = HAL_RCC_CalibrateRC48();

@@ -125,6 +125,10 @@ SECTIONS
     *system_bf0_ap.o    (.text* .rodata*)
     *bf0_hal.o          (.text* .rodata*)
     *bf0_hal_rcc.o      (.text* .rodata*)
+    *.o (.text.rt_wdt_restore)
+    *.o (.text.HAL_Get_backup)
+    *.o (.text.HAL_LPTIM_GetFreq)
+    *.o (.text.HAL_WDT_Init)	
 
     *bf0_pm.o           (.text.sifli_light_handler)
     *bf0_pm.o           (.text.sifli_deep_handler)

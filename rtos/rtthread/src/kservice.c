@@ -921,6 +921,27 @@ static char *print_number(char *buf,
 
 #ifdef RT_PRINT_HAS_FLOAT
 #define CVTBUFSIZE 80
+#ifndef isnan
+static int isnan(double x)
+{
+    uint64_t u;
+    memcpy(&u, &x, sizeof(u));
+    /* exponent all 1s and fraction != 0 => NaN */
+    return ((u & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL) &&
+           ((u & 0x000FFFFFFFFFFFFFULL) != 0ULL);
+}
+#endif
+
+#ifndef isinf
+static int isinf(double x)
+{
+    uint64_t u;
+    memcpy(&u, &x, sizeof(u));
+    /* exponent all 1s and fraction == 0 => infinity (sign bit may be set) */
+    return ((u & 0x7FF0000000000000ULL) == 0x7FF0000000000000ULL) &&
+           ((u & 0x000FFFFFFFFFFFFFULL) == 0ULL);
+}
+#endif
 
 static char *cvt(double arg, int ndigits, int *decpt, int *sign, char *buf, int eflag)
 {
@@ -1024,6 +1045,24 @@ static void parse_float(double value, char *buffer, char fmt, int precision)
         capexp = 1;
         fmt += 'a' - 'A';
     }
+
+    if (isnan(value))
+    {
+        buffer[0] = 'N';
+        buffer[1] = 'a';
+        buffer[2] = 'N';
+        buffer[3] = '\0';
+        return;
+    }
+    if (isinf(value))
+    {
+        buffer[0] = 'I';
+        buffer[1] = 'n';
+        buffer[2] = 'f';
+        buffer[3] = '\0';
+        return;
+    }
+
 
     if (fmt == 'g')
     {
@@ -1178,7 +1217,7 @@ static void cropzeros(char *buffer)
     sign = 0;
     if (flags & SIGN)
     {
-        if (num < 0.0)
+        if ((num < 0.0) && !isnan(num))
         {
             sign = '-';
             num = -num;

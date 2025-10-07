@@ -63,6 +63,9 @@ for pr in queue_prs:
 # 将修改之后的代码推送到Gitlab
 try:
     git_repo = git.Repo(os.getcwd())
+    git_repo.git.checkout(GITHUB_BRANCH)
+    git_repo.git.pull('origin', GITHUB_BRANCH)
+
     gitlab_url = f'https://SiFli-bot:{GITLAB_TOKEN}@{GITLAB_URL}/{GITLAB_REPO}.git'
     git_repo.git.remote('add', 'gitlab', gitlab_url)
     git_repo.git.push('gitlab', f'{GITHUB_BRANCH}:{GITLAB_BRANCH}', force=True)

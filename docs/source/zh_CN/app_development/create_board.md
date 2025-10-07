@@ -3,7 +3,7 @@
 
 操作步骤如下：
 1. 在`boards`目录下创建文件夹`testboard_525`，将`sf32lb52-lcd_n16r8`下的文件拷贝到`testboard_525`下
-1. 在`boards`目录下创建文件夹`testboard_525_base`，将`sf32lb52-devkit-lcd`下的文件拷贝到`testboard_525_base`下
+1. 在`boards`目录下创建文件夹`testboard_525_base`，将`sf32lb52-lcd_base`下的文件拷贝到`testboard_525_base`下
 1. 修改`testboard_525/SConscript`，把图中1和2的宏开关名字改为新板子，图中3引用的SConscript文件路径改为`testboard_525_base`
     ```{image} ../../assets/create_board_sconscript.png
     ```

@@ -23,8 +23,11 @@ LR_IROM1 LCPU_RAM_CODE_START_ADDR LCPU_RAM_CODE_SIZE {    ; load region size_reg
    flash.o (+RO)
    system_bf0_ap.o (+RO)
    bf0_hal.o (+RO)
-   
    bf0_hal_rcc.o   (+RO)
+   *.o (.text.rt_wdt_restore)
+   *.o (.text.HAL_Get_backup)
+   *.o (.text.HAL_LPTIM_GetFreq)
+   *.o (.text.HAL_WDT_Init)	
 
    bf0_pm.o        (.text.sifli_light_handler)
    bf0_pm.o        (.text.sifli_deep_handler)

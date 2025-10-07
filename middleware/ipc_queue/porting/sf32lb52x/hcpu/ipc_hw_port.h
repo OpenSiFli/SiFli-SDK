@@ -33,6 +33,9 @@ extern "C" {
 #define IPC_HL_HW_QUEUE_6  (6)
 #define IPC_HL_HW_QUEUE_7  (7)
 
+void LCPU2HCPU_IRQHandler(void);
+
+
 /// @}  file
 
 #ifdef __cplusplus

@@ -69,7 +69,11 @@ PYTHON = sys.executable
 # note: os.environ changes don't automatically propagate to child processes,
 # you have to pass env=os.environ explicitly anywhere that we create a process
 os.environ['PYTHON'] = sys.executable
-
+# SiFLi-SDK env variables
+os.environ['BSP_ROOT'] = os.getcwd()
+if not os.getenv("ENV_ROOT"):
+    # env is not used, shell is used instead, use shell env path as ENV_ROOT
+    os.environ['ENV_ROOT'] = os.getenv("SIFLI_SDK_PYTHON_ENV_PATH")
 
 def check_environment() -> List:
     """
@@ -78,6 +82,9 @@ def check_environment() -> List:
     (cmake will check a lot of other things)
     """
     checks_output = []
+    if os.getenv('LEGACY_ENV'):
+        # No need to check environment in ENV 
+        return checks_output
 
     # verify that SIFLI_SDK_PATH env variable is set
     # find the directory sdk.py is in, then the parent directory of this, and assume this is SIFLI_SDK_PATH

@@ -8,6 +8,13 @@ import struct
 import random
 from array import array
 
+def _array_tobytes(a):
+    """Return bytes for array('B', ...) compatible with Python2 and Python3."""
+    # Python3: array.tobytes(); Python2: array.tostring()
+    if hasattr(a, "tobytes"):
+        return a.tobytes()
+    return a.tostring()
+
 class bmp:
     """ bmp data structure """
 
@@ -118,6 +125,19 @@ class bmp:
     #offset   - bin offset to read
     def convert_bin2bmp(self, bin_format, bin_array, offset):
         index = offset
+        # Normalize bin_array so indexing yields integers on both Python2 and Python3.
+        try:
+            is_py2 = (sys.version_info[0] == 2)
+        except Exception:
+            is_py2 = False
+        if is_py2:
+            # In Python2 bytes is 'str' and bin_array[i] is a 1-char str -> convert once to array('B')
+            if isinstance(bin_array, str):
+                bin_array = array('B', bin_array)
+        else:
+            # In Python3 bytes/bytearray indexing already returns int, but convert for uniformity
+            if isinstance(bin_array, (bytes, bytearray)):
+                bin_array = array('B', bin_array)
         bit_mask = 0
         bit_pos  = 0
         for y in range(self.h-1,-1,-1):
@@ -241,11 +261,11 @@ class bmp:
     def save_image(self, name="save.bmp"):
         with open(name, 'wb') as f:
             #write bmp header
-            f.write(array('B', self.bmp_header).tobytes())
-
+            f.write(_array_tobytes(array('B', self.bmp_header)))
+ 
             #write rgb data
             zeroBytes = self.dataSize // self.h - self.w * 3
-
+ 
             for r in range(self.h):
                 l = []
                 for i in range(len(self.rgbData[r])):
@@ -255,8 +275,9 @@ class bmp:
                     l.append(p & 0x0000ff)
                     p >>= 8
                     l.append(p & 0x0000ff)
-
-                f.write(array('B', l).tobytes())
-
-                for i in range(zeroBytes):
-                    f.write(bytes([0]))
+ 
+                f.write(_array_tobytes(array('B', l)))
+                if zeroBytes > 0:
+                    # produce a single zero-bytes chunk compatible with Py2/Py3
+                    zero_chunk = _array_tobytes(array('B', [0])) * zeroBytes
+                    f.write(zero_chunk)

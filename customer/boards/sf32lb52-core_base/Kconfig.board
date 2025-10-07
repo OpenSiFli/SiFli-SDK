@@ -18,3 +18,6 @@ config LCD_BACKLIGHT_CONTROL_PIN
     int
     default 1
     
+config JDI_FRP_LPPWM_INTERFACE_NAME
+    string
+    default "pwmlp2"

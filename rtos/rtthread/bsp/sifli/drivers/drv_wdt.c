@@ -69,11 +69,13 @@ void WDT_IRQHandler(void)
     if (printed == 0)
     {
         printed++;
+#ifdef SOC_BF0_HCPU
         sifli_record_crash_status(1);
         sifli_record_wdt_irq_status(1);
         sifli_record_crash_save_process(RECORD_CRASH_SAVE_WDT_START);
         wdt_reconfig();
         wdt_store_exception_information();
+#endif
     }
 }
 #else
@@ -382,22 +384,25 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
 #if defined(RT_USING_PM)
     case RT_DEVICE_CTRL_SUSPEND:
     {
+#ifdef SOC_BF0_HCPU
         uint32_t status = wdt_get_backup_status();
         wdt_set_iwdt_timeout(&hiwdt, IWDT_SLEEP_TIMEOUT);
+#endif
     }
     break;
 
     case RT_DEVICE_CTRL_RESUME:
     {
+#ifdef SOC_BF0_HCPU
         uint32_t status = wdt_get_backup_status();
         if (0x01 == status)
         {
             __HAL_WDT_STOP(&hwdt);
             hwdt.Instance = hwp_wdt1;
             wdt_set_timeout(&hwdt, wdt_get_backup_time());
-
             wdt_set_iwdt_timeout(&hiwdt, wdt_get_backup_time() + IWDT_RELOAD_DIFFTIME);
         }
+#endif
     }
     break;
 #endif

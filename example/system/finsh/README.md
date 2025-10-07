@@ -69,9 +69,9 @@ void myhello(void)
 
 MSH_CMD_EXPORT(myhello , say hello to RT-Thread);
 ```
-运行 hello 命令，运行结果如下所示：
+运行 myhello 命令，运行结果如下所示：
 ```
-msh />hello
+msh />myello
 hello RT_Thread!
 msh />
 ```
