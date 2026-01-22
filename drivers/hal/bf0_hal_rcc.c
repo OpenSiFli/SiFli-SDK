@@ -2441,6 +2441,16 @@ __HAL_ROM_USED void HAL_RCC_HCPU_DeepWFIClockSelect(bool sys_clk, uint32_t sys_c
 }
 #endif /* SF32LB55X */
 
+#ifdef HPSYS_RCC_CFGR_TICKDIV_Msk
+
+void HAL_RCC_HCPU_SetTickDiv(uint8_t div)
+{
+    MODIFY_REG(hwp_hpsys_rcc->CFGR, HPSYS_RCC_CFGR_TICKDIV_Msk,
+               MAKE_REG_VAL(div, HPSYS_RCC_CFGR_TICKDIV_Msk, HPSYS_RCC_CFGR_TICKDIV_Pos));
+}
+
+#endif /* HPSYS_RCC_CFGR_TICKDIV_Msk */
+
 #if defined(SF32LB56X)
 void HAL_RCC_Reset_DMAC2_and_MPI5()
 {
