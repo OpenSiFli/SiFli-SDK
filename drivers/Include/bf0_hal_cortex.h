@@ -91,7 +91,7 @@ typedef struct
 /** @defgroup CORTEX_SysTick_clock_source CORTEX SysTick clock source
   * @{
   */
-#define SYSTICK_CLKSOURCE_HCLK_DIV8    ((uint32_t)0x00000000)
+#define SYSTICK_CLKSOURCE_TICK_CLK     ((uint32_t)0x00000000)
 #define SYSTICK_CLKSOURCE_HCLK         ((uint32_t)0x00000004)
 /**
   * @}
@@ -407,7 +407,7 @@ uint32_t HAL_NVIC_GetEnableIRQ(IRQn_Type IRQn);
   * @brief  Configure the SysTick clock source.
   * @param  CLKSource: specifies the SysTick clock source.
   *          This parameter can be one of the following values:
-  *             @arg SYSTICK_CLKSOURCE_HCLK_DIV8: AHB clock divided by 8 selected as SysTick clock source.
+  *             @arg SYSTICK_CLKSOURCE_TICK_CLK: Tick clock selected as SysTick clock source.
   *             @arg SYSTICK_CLKSOURCE_HCLK: AHB clock selected as SysTick clock source.
   * @retval None
   */
@@ -482,7 +482,7 @@ void HAL_MPU_ConfigRegion(MPU_Region_InitTypeDef *MPU_Init);
 #define IS_NVIC_DEVICE_IRQ(IRQ)                ((IRQ) >= 0x00)
 
 #define IS_SYSTICK_CLK_SOURCE(SOURCE) (((SOURCE) == SYSTICK_CLKSOURCE_HCLK) || \
-                                       ((SOURCE) == SYSTICK_CLKSOURCE_HCLK_DIV8))
+                                       ((SOURCE) == SYSTICK_CLKSOURCE_TICK_CLK))
 
 #if (__MPU_PRESENT == 1)
 #define IS_MPU_REGION_ENABLE(STATE) (((STATE) == MPU_REGION_ENABLE) || \

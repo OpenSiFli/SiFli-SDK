@@ -292,7 +292,7 @@ __HAL_ROM_USED uint32_t HAL_NVIC_GetEnableIRQ(IRQn_Type IRQn)
   * @brief  Configure the SysTick clock source.
   * @param  CLKSource: specifies the SysTick clock source.
   *          This parameter can be one of the following values:
-  *             @arg SYSTICK_CLKSOURCE_HCLK_DIV8: AHB clock divided by 8 selected as SysTick clock source.
+  *             @arg SYSTICK_CLKSOURCE_TICK_CLK: Tick clock selected as SysTick clock source.
   *             @arg SYSTICK_CLKSOURCE_HCLK: AHB clock selected as SysTick clock source.
   * @retval None
   */
