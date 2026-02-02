@@ -1,8 +1,8 @@
 # 创建并上传 SiFli 组件包
 
-本节介绍如何登录、创建、构建并上传自己的 SiFli 组件包。
+本节介绍如何登录、创建、构建并上传 SiFli 组件包。
 
-## 获取访问令牌
+## 获取个人访问令牌
 
 1. 打开 <https://packages.sifli.com/zh>，使用 GitHub 账号登录，用户名即为 GitHub 用户名（全小写）。
 2. 登录后进入 **Profile**。
@@ -20,13 +20,13 @@
 ## 登录 SiFli 组件注册表
 
 ```bash
-sdk.py sf-pkg-login -u <小写的 GitHub 用户名> -t 获取的 token
+sdk.py sf-pkg-login -u <namespace> -t 获取的 token
 ```
 
 ![登录成功](./assert/sdk-pkg-login.png)
 
 ```{warning}
--n 参数必须是小写的 GitHub 用户名！否则会导致上传失败。
+-u 参数可以在个人资料的命名空间处找到。
 ```
 
 ## 创建包配置（sf-pkg-new）
@@ -86,7 +86,7 @@ class Example_AddRecipe(ConanFile):
 我们需要着重关注以下参数：
 - `name`：包名称，必填项，用于在`https://packages.sifli.com`中作为唯一标识。
 - `version`：包版本号，建议使用语义化版本号，如 `0.0.1`、`1.0.0` 等。
-- `user`：在 `https://packages.sifli.com` 上的用户名，也叫`namespace`，必选项。
+- `user`：在 `https://packages.sifli.com` 上的命名空间，也叫`namespace`，必选项。
 - `license`：开源协议，常见的有 `Apache-2.0`、`MIT`、`GPL-3.0`、`BSD-3-Clause` 等，默认是 `Apache-2.0`。
 - `author`：包作者/维护者名称，可选项。
 - `url`：包的仓库地址 （GitHub/GitLab 等），可选项。
@@ -129,7 +129,7 @@ sdk.py sf-pkg-build --version 版本号
 ## 上传包（sf-pkg-upload）
 
 ```bash
-sdk.py sf-pkg-upload --name 包名/版本号@用户名
+sdk.py sf-pkg-upload --name 包名/版本号@命名空间
 ```
 
 ![上传包](./assert/sf-pkg-upload.png)
@@ -138,7 +138,7 @@ sdk.py sf-pkg-upload --name 包名/版本号@用户名
 
 - `包名`：在 `conanfile.py` 中定义的包名
 - `版本号`：构建时指定的版本号
-- `用户名`：你的 GitHub 用户名
+- `命名空间`：个人资料中的显示项
 
 ### 上传失败的处理
 
@@ -152,7 +152,7 @@ sdk.py sf-pkg-upload --name 包名/版本号@用户名
    ```
 3. 再次上传：
    ```bash
-   sdk.py sf-pkg-upload --name 包名/版本号@用户名
+   sdk.py sf-pkg-upload --name 包名/版本号@命名空间
    ```
 
 ### 验证上传结果
@@ -160,3 +160,36 @@ sdk.py sf-pkg-upload --name 包名/版本号@用户名
 上传成功后，可在服务器网站上看到已上传的包：
 
 ![服务器上的包](./assert/pkg_in_website.png)
+
+
+## 作为组织使用
+
+作为组织和作为个人使用时，大多数步骤均相同，只有令牌的获取方式和命名空间的不同。
+
+### 创建组织令牌
+
+1. 打开<https://packages.sifli.com/zh>，使用 GitHub 账号登录。
+2. 登陆后进入组织管理。
+3. 找到想要管理的组织，点击管理
+4. 在组织管理申请访问令牌（Token），并妥善保存，后续用于 `sdk.py sf-pkg-login` 命令。
+
+![进入组织管理](./assert/enter_org.png)
+![管理组织](./assert/check_org.png)
+![创建token](./assert/create_org_token.png)
+![获取token](./assert/get_org_token.png)
+
+```{note}
+组织token和个人token互斥，登陆组织token后本地保存的个人token将被登出清理。
+```
+
+### 有关命名空间的说明
+
+1. 当作为组织登陆时，命名空间实际上为组织名，所以在终端中登录时，命令为
+
+    ```bash
+    sdk.py sf-pkg-login -u <org_name> -t 获取的 token
+    ```
+
+    org_name为组织名
+
+2. 在创建包配置时，author 的设定不受 namespace 的影响，其表示该组织内的作者，user 字段请确保与组织名一致，**不然无法成功上传组件包** 。
