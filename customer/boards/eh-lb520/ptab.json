@@ -56,7 +56,7 @@
             }, 
             {
                 "offset": "0x00220000",
-                "max_size": "0x00060000",
+                "max_size": "0x00080000",
                 "tags": [
                     "DFU_FLASH_CODE"
                 ],
@@ -71,14 +71,14 @@
                 }
             },
             {
-                "offset": "0x00280000",
+                "offset": "0x002A0000",
                 "max_size": "0x00120000",
                 "tags": [
                     "DFU_DOWNLOAD_REGION"
                 ]
             },
             {
-                "offset": "0x003A0000",
+                "offset": "0x003C0000",
                 "max_size": "0x00280000",
                 "img": "fs_root", 
                 "tags": [
