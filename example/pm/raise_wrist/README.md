@@ -1,5 +1,5 @@
 # 抬腕亮屏示例
-源码路径：example/raise_wrist
+源码路径：example/pm/raise_wrist
 
 ## 支持的平台
 例程可以运行在以下开发板

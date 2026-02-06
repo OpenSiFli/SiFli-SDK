@@ -1,5 +1,7 @@
 # GUI_PM Low-Power Example Guide
 
+Source code path: example/pm/gui_pm
+
 ## Supported Platforms
 This example runs on the following development board:
 - sf32lb52-lchspi-ulp

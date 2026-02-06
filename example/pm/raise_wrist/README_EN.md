@@ -1,6 +1,6 @@
 # Raise Wrist to Light Up Screen Example
 
-Source code path: example/raise_wrist
+Source code path: example/pm/raise_wrist
 
 ## Supported Platforms
 
