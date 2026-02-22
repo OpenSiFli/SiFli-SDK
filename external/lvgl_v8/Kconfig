@@ -39,24 +39,24 @@ endif
 choice
     prompt "Performance monitor position."
     depends on LV_USE_PERF_MONITOR
-    default LV_PERF_MONITOR_ALIGN_BOTTOM_RIGHT
-    config LV_PERF_MONITOR_ALIGN_TOP_LEFT
+    default CONFIG_LV_PERF_MONITOR_ALIGN_BOTTOM_RIGHT
+    config CONFIG_LV_PERF_MONITOR_ALIGN_TOP_LEFT
         bool "Top left"
-    config LV_PERF_MONITOR_ALIGN_TOP_MID
+    config CONFIG_LV_PERF_MONITOR_ALIGN_TOP_MID
         bool "Top middle"
-    config LV_PERF_MONITOR_ALIGN_TOP_RIGHT
+    config CONFIG_LV_PERF_MONITOR_ALIGN_TOP_RIGHT
         bool "Top right"
-    config LV_PERF_MONITOR_ALIGN_BOTTOM_LEFT
+    config CONFIG_LV_PERF_MONITOR_ALIGN_BOTTOM_LEFT
         bool "Bottom left"
-    config LV_PERF_MONITOR_ALIGN_BOTTOM_MID
+    config CONFIG_LV_PERF_MONITOR_ALIGN_BOTTOM_MID
         bool "Bottom middle"
-    config LV_PERF_MONITOR_ALIGN_BOTTOM_RIGHT
+    config CONFIG_LV_PERF_MONITOR_ALIGN_BOTTOM_RIGHT
         bool "Bottom right"
-    config LV_PERF_MONITOR_ALIGN_LEFT_MID
+    config CONFIG_LV_PERF_MONITOR_ALIGN_LEFT_MID
         bool "Left middle"
-    config LV_PERF_MONITOR_ALIGN_RIGHT_MID
+    config CONFIG_LV_PERF_MONITOR_ALIGN_RIGHT_MID
         bool "Right middle"
-    config LV_PERF_MONITOR_ALIGN_CENTER
+    config CONFIG_LV_PERF_MONITOR_ALIGN_CENTER
         bool "Center"
 endchoice
 choice
@@ -80,25 +80,25 @@ endchoice
 choice
     prompt "Memory monitor position."
     depends on LV_USE_MEM_MONITOR
-    default LV_MEM_MONITOR_ALIGN_BOTTOM_LEFT
+    default CONFIG_LV_MEM_MONITOR_ALIGN_BOTTOM_LEFT
 
-    config LV_MEM_MONITOR_ALIGN_TOP_LEFT
+    config CONFIG_LV_MEM_MONITOR_ALIGN_TOP_LEFT
         bool "Top left"
-    config LV_MEM_MONITOR_ALIGN_TOP_MID
+    config CONFIG_LV_MEM_MONITOR_ALIGN_TOP_MID
         bool "Top middle"
-    config LV_MEM_MONITOR_ALIGN_TOP_RIGHT
+    config CONFIG_LV_MEM_MONITOR_ALIGN_TOP_RIGHT
         bool "Top right"
-    config LV_MEM_MONITOR_ALIGN_BOTTOM_LEFT
+    config CONFIG_LV_MEM_MONITOR_ALIGN_BOTTOM_LEFT
         bool "Bottom left"
-    config LV_MEM_MONITOR_ALIGN_BOTTOM_MID
+    config CONFIG_LV_MEM_MONITOR_ALIGN_BOTTOM_MID
         bool "Bottom middle"
-    config LV_MEM_MONITOR_ALIGN_BOTTOM_RIGHT
+    config CONFIG_LV_MEM_MONITOR_ALIGN_BOTTOM_RIGHT
         bool "Bottom right"
-    config LV_MEM_MONITOR_ALIGN_LEFT_MID
+    config CONFIG_LV_MEM_MONITOR_ALIGN_LEFT_MID
         bool "Left middle"
-    config LV_MEM_MONITOR_ALIGN_RIGHT_MID
+    config CONFIG_LV_MEM_MONITOR_ALIGN_RIGHT_MID
         bool "Right middle"
-    config LV_MEM_MONITOR_ALIGN_CENTER
+    config CONFIG_LV_MEM_MONITOR_ALIGN_CENTER
         bool "Center"
 endchoice
 choice
