@@ -2162,6 +2162,98 @@ error:
 #endif /* DMA_LINK_LIST_SUPPORT */
 
 /**
+  * @brief  Configure SPI DMA mode for tx/rx channels.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure.
+  * @param  TxMode DMA mode for Tx channel.
+  * @param  RxMode DMA mode for Rx channel.
+  * @retval HAL status
+  */
+__HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_DMASetMode(SPI_HandleTypeDef *hspi, uint32_t TxMode, uint32_t RxMode)
+{
+    HAL_StatusTypeDef status;
+
+    if (hspi == NULL)
+    {
+        return HAL_ERROR;
+    }
+
+    HAL_ASSERT(IS_DMA_MODE(TxMode));
+    HAL_ASSERT(IS_DMA_MODE(RxMode));
+
+    if ((hspi->State != HAL_SPI_STATE_READY) && (hspi->State != HAL_SPI_STATE_RESET))
+    {
+        return HAL_BUSY;
+    }
+
+    if ((hspi->hdmatx == NULL) && (hspi->hdmarx == NULL))
+    {
+        return HAL_ERROR;
+    }
+
+    if (hspi->hdmatx != NULL)
+    {
+        if ((hspi->hdmatx->State != HAL_DMA_STATE_READY) &&
+                (hspi->hdmatx->State != HAL_DMA_STATE_RESET))
+        {
+            return HAL_BUSY;
+        }
+
+        hspi->hdmatx->Init.Mode = TxMode;
+        status = HAL_DMA_Init(hspi->hdmatx);
+        if (status != HAL_OK)
+        {
+            return status;
+        }
+    }
+
+    if (hspi->hdmarx != NULL)
+    {
+        if ((hspi->hdmarx->State != HAL_DMA_STATE_READY) &&
+                (hspi->hdmarx->State != HAL_DMA_STATE_RESET))
+        {
+            return HAL_BUSY;
+        }
+
+        hspi->hdmarx->Init.Mode = RxMode;
+        status = HAL_DMA_Init(hspi->hdmarx);
+        if (status != HAL_OK)
+        {
+            return status;
+        }
+    }
+
+    return HAL_OK;
+}
+
+/**
+  * @brief  Receive data with DMA circular mode.
+  * @param  hspi pointer to a SPI_HandleTypeDef structure.
+  * @param  pData pointer to receive buffer.
+  * @param  Size transfer size.
+  * @retval HAL status
+  */
+__HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive_DMA_Circular(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size)
+{
+    HAL_StatusTypeDef status;
+    uint32_t tx_mode = DMA_NORMAL;
+
+    if ((hspi != NULL) &&
+            (hspi->Init.Direction == SPI_DIRECTION_2LINES) &&
+            (hspi->Init.Mode == SPI_MODE_MASTER))
+    {
+        tx_mode = DMA_CIRCULAR;
+    }
+
+    status = HAL_SPI_DMASetMode(hspi, tx_mode, DMA_CIRCULAR);
+    if (status != HAL_OK)
+    {
+        return status;
+    }
+
+    return HAL_SPI_Receive_DMA(hspi, pData, Size);
+}
+
+/**
   * @brief  Abort ongoing transfer (blocking mode).
   * @param  hspi SPI handle.
   * @note   This procedure could be used for aborting any ongoing transfer (Tx and Rx),
