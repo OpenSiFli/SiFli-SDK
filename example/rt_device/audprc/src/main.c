@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -139,23 +144,22 @@ static void audprc_rx_tx_entry(void *param)
     while (1)
     {
         rt_event_recv(g_rx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        while (1)
-        {
-            /* RX read (from mic)*/
-            len = rt_device_read(g_audprc_dev, 0, g_pipe_data, (AUDIO_BUF_SIZE / 2));
-            // rt_kprintf("len = %d\n", len);
-            if (len != (AUDIO_BUF_SIZE / 2))
-            {
-                rt_kprintf("Got abnormal audio size = %d\n", len);
-            }
 
-            /* TX write (to speaker)*/
-            len = rt_device_write(g_audprc_dev, 0, g_pipe_data, (AUDIO_BUF_SIZE / 2));
-            if (len != (AUDIO_BUF_SIZE / 2))
-            {
-                rt_kprintf("Write abnormal size = %d\n", len);
-            }
+        /* RX read (from mic)*/
+        len = rt_device_read(g_audprc_dev, 0, g_pipe_data, (AUDIO_BUF_SIZE / 2));
+        // rt_kprintf("len = %d\n", len);
+        if (len != (AUDIO_BUF_SIZE / 2))
+        {
+            rt_kprintf("Got abnormal audio size = %d\n", len);
         }
+
+        /* TX write (to speaker)*/
+        len = rt_device_write(g_audprc_dev, 0, g_pipe_data, (AUDIO_BUF_SIZE / 2));
+        if (len != (AUDIO_BUF_SIZE / 2))
+        {
+            rt_kprintf("Write abnormal size = %d\n", len);
+        }
+
     }
 }
 
@@ -175,27 +179,26 @@ static void audprc_rx_entry(void *param)
     while (1)
     {
         rt_event_recv(g_rx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        while (1)
-        {
-            /* RX read (from mic)*/
-            len = rt_device_read(g_audprc_dev, 0, g_pipe_data, AUDIO_BUF_SIZE / 2); //AUDIO_BUF_SIZE/2
-            if (len != (AUDIO_BUF_SIZE / 2))
-            {
-                rt_kprintf("Got abnormal audio size = %d\n", len);
-            }
 
-            /* Save to RAM Buffer. */
-            if ((g_tmp_pos + (AUDIO_BUF_SIZE / 2)) < AUDRX_BUF_MAX)
-            {
-                memcpy(&g_audrx_buf[g_tmp_pos], g_pipe_data, AUDIO_BUF_SIZE / 2);
-                g_tmp_pos += (AUDIO_BUF_SIZE / 2);
-            }
-            else
-            {
-                /* Record buffer is up to  AUDRX_BUF_MAX. Stop recording. */
-                goto __EXIT;
-            }
+        /* RX read (from mic)*/
+        len = rt_device_read(g_audprc_dev, 0, g_pipe_data, AUDIO_BUF_SIZE / 2); //AUDIO_BUF_SIZE/2
+        if (len != (AUDIO_BUF_SIZE / 2))
+        {
+            rt_kprintf("Got abnormal audio size = %d\n", len);
         }
+
+        /* Save to RAM Buffer. */
+        if ((g_tmp_pos + (AUDIO_BUF_SIZE / 2)) < AUDRX_BUF_MAX)
+        {
+            memcpy(&g_audrx_buf[g_tmp_pos], g_pipe_data, AUDIO_BUF_SIZE / 2);
+            g_tmp_pos += (AUDIO_BUF_SIZE / 2);
+        }
+        else
+        {
+            /* Record buffer is up to  AUDRX_BUF_MAX. Stop recording. */
+            goto __EXIT;
+        }
+
     }
 
 __EXIT:
