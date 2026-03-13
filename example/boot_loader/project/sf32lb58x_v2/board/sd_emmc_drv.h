@@ -61,7 +61,7 @@ uint32_t sd_wait_write();
 void sd_read(uint8_t wire_mode, uint8_t block_num);
 uint32_t sd_wait_read();
 
-int sdmmc_init();
+int sdmmc_init(uint32_t sdmmc_base);
 int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
 
 
