@@ -1,0 +1,14 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+
+# Add board source code (main.c, board.c, bf0_ap_hal_msp.c)
+objs.extend(SConscript(os.path.join(cwd, 'board/SConscript'), variant_dir="dfu", duplicate=0))
+
+# Add SDK
+Import('SIFLI_SDK')
+objs.extend(SConscript(os.path.join(SIFLI_SDK, 'SConscript'), variant_dir="sifli_sdk", duplicate=0))
+
+Return('objs')
