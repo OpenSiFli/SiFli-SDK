@@ -1,0 +1,121 @@
+    menuconfig USING_DFU_V2
+        bool "DFU V2 — Next Generation Firmware Update"
+        depends on BF0_HCPU
+        depends on !BSP_USING_DFU
+        depends on !USING_DFU_PAN
+        select PKG_USING_FLASHDB
+        default n
+        help
+            Unified DFU subsystem with modular Engine/Mode/Transport architecture.
+            Replaces both legacy BLE DFU and PAN DFU.
+
+    if USING_DFU_V2
+        # Selects the OTA image-ID / partition layout (NOR vs NAND) used by the
+        # BLE transport and the AES path. Shared with the legacy DFU subsystem,
+        # so the OTA_55X / OTA_56X_NAND names are kept. The default tracks each
+        # SoC's usual flash type; boards whose flash differs from the SoC default
+        # (e.g. a NAND-based 57x board) must override in board.conf / proj.conf.
+        config OTA_55X
+            bool "NOR-flash OTA image layout"
+            default y if SOC_SF32LB52X || SOC_SF32LB55X || SOC_SF32LB57X
+            default n
+            help
+                NOR-flash OTA image-ID / partition layout. Default on for the
+                NOR-based SoCs (52x / 55x / 57x). NOR takes priority if both
+                this and OTA_56X_NAND are set.
+
+        config OTA_56X_NAND
+            bool "NAND-flash OTA image layout"
+            default y if SOC_SF32LB56X || SOC_SF32LB58X
+            default n
+            help
+                NAND-flash OTA image-ID / partition layout. Default on for the
+                NAND-based SoCs (56x / 58x). Enable this (and clear OTA_55X) on
+                NAND-based boards of other SoCs, e.g. a NAND 57x board.
+
+        comment "--- Engine ---"
+
+        config DFU_V2_ENGINE_PROGRESS_INTERVAL
+            int "Progress callback interval (bytes, 0=default 4096)"
+            default 0
+
+        config DFU_V2_ENGINE_ERASE_VERIFY
+            bool "Verify flash erase (read-back check)"
+            default n
+
+        comment "--- Mode ---"
+
+        config DFU_V2_USE_HOST_MODE
+            bool "Enable Host-Initiated Mode (push)"
+            default y
+            help
+                Host pushes firmware via protocol frames (CDC or BLE).
+
+        config DFU_V2_USE_DEVICE_MODE
+            bool "Enable Device-Initiated Mode (pull)"
+            default n
+            help
+                Device pulls firmware from server via HTTP (PAN network).
+
+        comment "--- Push Transport (Host Mode) ---"
+        choice
+            prompt "Push Transport"
+            optional
+            depends on DFU_V2_USE_HOST_MODE
+            help
+                Push transport used in Host Mode. At most one transport may be
+                active (mutually exclusive). May be left unselected for builds
+                that drive the DFU engine directly without a push transport
+                (e.g. the PAN OTA example, which writes firmware-info via the
+                dfu_fwinfo API and never calls dfu_init()).
+
+            config DFU_V2_USE_CDC_TRANSPORT
+                bool "USB CDC Transport"
+                help
+                    USB CDC virtual COM port for PC OTA tool.
+                    Uses CherryUSB directly (not RT-Thread USB device framework).
+
+            config DFU_V2_USE_BLE_TRANSPORT
+                bool "BLE Transport"
+                depends on BSP_BLE_SIBLES
+                help
+                    BLE GATT for phone OTA. Translates legacy BLE DFU protocol.
+        endchoice
+
+        if DFU_V2_USE_CDC_TRANSPORT
+            config DFU_V2_CDC_RINGBUF_SIZE
+                int "CDC ring buffer size (bytes)"
+                default 4096
+        endif
+
+        comment "--- Pull Transports (Device Mode) ---"
+
+        config DFU_V2_USE_PAN_TRANSPORT
+            bool "PAN HTTP Transport"
+            default n
+            depends on DFU_V2_USE_DEVICE_MODE
+            depends on PKG_USING_WEBCLIENT
+            help
+                HTTP download via Bluetooth PAN network.
+
+        if DFU_V2_USE_PAN_TRANSPORT
+            config DFU_V2_PAN_RESP_BUFSZ
+                int "HTTP response buffer size (bytes)"
+                default 1024
+
+            config DFU_V2_PAN_TIMEOUT_MS
+                int "HTTP connection timeout (ms)"
+                default 30000
+        endif
+
+        comment "--- Mailbox ---"
+
+        config DFU_V2_MB_SIZE
+            int "Mailbox capacity (messages)"
+            default 32
+
+        comment "WARNING: Device Mode enabled but no Pull Transport!"
+            depends on DFU_V2_USE_DEVICE_MODE
+            depends on !DFU_V2_USE_PAN_TRANSPORT
+
+    endif
