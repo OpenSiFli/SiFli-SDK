@@ -18,5 +18,6 @@ bt/index
 ble/index
 zbt/index
 cherryusb/index
+dfu_v2/index
 
 ```
