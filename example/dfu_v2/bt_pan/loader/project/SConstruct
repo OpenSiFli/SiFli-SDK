@@ -1,0 +1,16 @@
+from building import *
+import os
+import SConstruct
+import rtconfig
+
+PrepareEnv()
+
+SConstruct.create_env()
+env = SConstruct.build()
+
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+
+AddFTAB(SIFLI_SDK, rtconfig.CHIP)
+
+GenDownloadScript(env)
+

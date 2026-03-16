@@ -1,0 +1,14 @@
+# No image assets needed for the new dark-theme UI
+# (all icons removed, using LVGL drawing primitives only)
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+
+if GetOption('no_cc'):
+    objs = []
+
+objs = DefineGroup('resource', objs, depend = ['PKG_USING_LITTLEVGL2RTT'])
+
+Return('objs')
