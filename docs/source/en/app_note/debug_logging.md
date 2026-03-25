@@ -1,60 +1,75 @@
+# app_watc 25 ready 0x00000100 0x00002800 26% 0x00000008 000 tshell 20 suspend 0x000000f4 0x00001000 13% 0x00000008 000 ble_app 15 suspend 0x000001b4 0x00000400 54% 0x00000007 000 mbox_th 10 suspend 0x00000110 0x00001000 51% 0x00000006 000 ds_proc 12 suspend 0x0000011c 0x00000800 24% 0x00000005 000 ds_mb 11 suspend 0x00000148 0x00000400 32% 0x0000000a 000 touch_th 10 suspend 0x000000ec 0x00000200 59% 0x00000006 000 test 15 suspend 0x0000011c 0x00000400 27% 0x0000000a 000 alarmsvc 8 suspend 0x00000074 0x00000200 22% 0x00000001 000 ulog_asy 30 ready 0x000000ec 0x00000400 36% 0x0000000b 000 tidle 31 ready 0x00000064 0x00000200 19% 0x00000008 000 timer 4 suspend 0x000000e0 0x00000400 23% 0x00000003 000 main 10 suspend 0x000000ec 0x00000800 31% 0x0000000c 000
 
-# Debugging and Logging
+## 1. Hardware Interfaces
+The SF32FB55X utilizes the Serial Wire Debug (SWD) interface for debugging.
+Users can switch between the HCPU and LCPU via configuration.
 
-## 1. Hardware Interface
-The SF32FB55X uses SWD as the debugging interface. Users can configure it to switch between HCPU or LCPU.
+The system defaults to the HCPU upon power-up. To debug the LCPU, execute the
+SDK tool _$SDK_ROOT/tools/segger/jlink_lcpu_a0.bat_ to switch the SWD connection
+to the LCPU.
 
-By default, the system powers up with HCPU. If you need to debug LCPU, you can use the SDK tool _$SDK_ROOT/tools/segger/jlink_lcpu_a0.bat_ to switch the SWD to LCPU.
+Conversely, if the SWD is currently connected to the LCPU, execute the SDK tool
+_$SDK_ROOT/tools/segger/jlink_hcpu_a0.bat_ to switch the connection back to the
+HCPU.
 
-Similarly, if SWD is currently connected to LCPU, you can use the SDK tool _$SDK_ROOT/tools/segger/jlink_hcpu_a0.bat_ to switch the SWD back to HCPU.
-
-```{note} 
-1. Since SWD uses PB IO, when debugging with SWD, make sure that LPSYS is in active or light sleep mode, whether the SWD is connected to HCPU or LCPU.<br>
-2. Sending a reset command from JLink will not change the current CPU connected via SWD.<br>
-3. After LPSYS wakes up from standby, SWD will automatically switch back to HCPU.
-```
-
+  ```{note} 
+  1. Since SWD utilizes PB IOs, ensure that the LPSYS remains in either Active or Light Sleep state during debugging, regardless of whether the SWD is connected to the HCPU or LCPU.<br>
+  2. Issuing a reset command via J-Link does not change the CPU currently selected by the SWD interface.<br>
+  3. After the LPSYS wakes up from Standby mode, the SWD interface reverts to its default connection (HCPU).<br>
+  ```
 ### LCPU Log Interface
-The system ROM, during initialization, uses UART3 of LCPU as the console interface with a baud rate of 1,000,000 bps for logging and command input. It is recommended to retain this interface for LCPU logs.<br>
+During initialization, the System ROM uses UART3 (assigned to the LCPU) as the
+console interface with a baud rate of 1,000,000 bps for logging and command
+input. It is recommended to reserve this interface as the dedicated log port for
+the LCPU.<br>
 
 ### HCPU Log Interface
-The HCPU log interface can be selected between UART1/2 or SWD. If you need to use UART3/4/5 of LCPU, ensure that the LCPU is in an active state.
+The HCPU log interface can be assigned to UART1, UART2, or SWD. If LCPU-owned
+peripherals (UART3/4/5) are used, ensure the LCPU remains in an awake state
+during operation.
 
-## 2. Debugging Methods
-This section covers common methods for analyzing Assert or HardFault errors and solving system crashes. The JLink debugger is used for all methods.
+## 2. Debugging Methodologies
+This section describes common analysis methods for Assertions and HardFaults, as
+well as recovery procedures for system hangs using a J-Link debugger.
 
 ### Setting Breakpoints
-When JLink connects to HCPU/LCPU, the system is usually already initialized. If you need to debug initialization processes, such as cold starts or standby wake-ups, you need to halt the system as early as possible.  
-We suggest users modify the system initialization code:
-- HCPU  
-  _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_hcpu.S_  
-- LCPU  
-  _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_lcpu.S_
+By the time J-Link connects to the HCPU or LCPU, the system has typically
+completed initialization. To debug early-stage processes such as cold boots or
+wake-up from Standby, the CPU must be halted as early as possible. <br> It is
+recommended that users modify the system startup sequence:
+ - HCPU: <br>
+   _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_hcpu.S_ <br>
+ - LCPU: <br>
+   _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_lcpu.S_ <br> In
+   the Reset_Handler, uncomment the first instruction by removing the ';' to
+   enable: <br> B . <br> This causes the CPU to loop on the first instruction
+   upon startup. Once the J-Link connection is established, manually increment
+   the Program Counter (PC) register (e.g., +2) and set the required breakpoints
+   to debug the initialization sequence.
 
-In the `Reset_Handler`, uncomment the first instruction `;` to change it to:  
-  B  .  
-This will halt the CPU at the first instruction. Once JLink is connected, you can adjust the PC register (+2) and set breakpoints to debug the initialization process.
-
-This method can also be used at other points to halt the system at a specific event and debug at the suspected location. In C files, you can add:  
-  _asm("B .");  
-This will stop the system at that instruction. Then, reconnect JLink, adjust the PC register (+2), and continue debugging.
-
+This technique can also be applied elsewhere to halt the system at specific
+events. In C source files, inserting <br> __asm("B ."); <br> will trap the CPU
+at that instruction. After connecting J-Link, the PC can be incremented (+2) to
+resume execution for further debugging.
 ```{note} 
-Do not use `while(1);` because the system will optimize it and make the statements after `while(1)` ineffective.
+Do not use `while(1);` for this purpose, as the compiler may optimize out subsequent statements, making them unreachable.
 ```
 
 ### Assert/HardFault Error Analysis
-When an error occurs, if the development board is connected via SWD to JLink, you can use the tool _$SDK_ROOT/tools/crash_dump_analyser/script/save_ram_a0.bat_ to save RAM, EPIC registers, and PSRAM content to the current path. This is helpful for analyzing the cause of the crash.
-
+When an error occurs, if the board is connected to a J-Link via SWD, use the
+script _$SDK_ROOT/tools/crash_dump_analyser/script/save_ram_a0.bat_ to dump the
+RAM, EPIC registers, and PSRAM contents to the current directory. This data is
+critical for post-mortem analysis of system crashes.
 ```{note} 
-Make sure to add the JLink path to your Windows PATH environment variable, e.g., _C:/Program Files (x86)/SEGGER/JLink_v672b_, so you can load RAM via JLink to restore the crash context.
+Ensure the J-Link installation path (e.g., _C:/Program Files (x86)/SEGGER/JLink_v672b_) is added to the Windows PATH environment variable. The saved RAM dumps can subsequently be reloaded via J-Link to reconstruct the crash state.
 ```
-
-#### Analyzing Logs
-By default, the SDK will output the breakpoint line and the last CPU registers during an Assert to the log interface. Analyze the contents of the log. Note that if the log interface is asynchronous, it may not output the complete log.
-
+#### Log Analysis
+By default, the SDK outputs the assertion line and the final CPU register states
+via the log interface during an Assert. Analyze the issue based on this output.
+Note that if the log interface is configured for asynchronous output, the
+information may be incomplete.
 ```
-Assertion failed at function:app_exit, line number:704 ,(app_node->next != &running_app_list)
+Assertion failed at function:app_exit, line number:704 ,(app_node-&gt;next != &amp;running_app_list)
 ===================
 Thread Info        
 ===================
@@ -151,97 +166,122 @@ r12: 0x10069305
 fatal error on thread: app_watc?
 ```
 
-#### Analyzing Crash Context with Ozone
-##### Using Jlink (USB) connection for configuration
-If the log analysis cannot pinpoint the crash issue, the Ozone debugging tool provided by Segger can be used. Ozone is easier to attach to the chip via JLink during a crash compared to Keil (as Keil configurations can easily reset the chip and destroy the crash context).
 
-> Ozone can also be used in cases where the board is not crashed and can be attached for step-by-step debugging, similar to Keil, although its stack analysis seems to be less effective.
 
-- Create a new project, select the appropriate Device driver (Cortex-M33), choose the Register Set as Cortex-M33 (with FPU), and the peripheral SVD file (select based on the chip model, the path is in _$SDK_ROOT/tools/svd_external)
+#### Analyzing Crash State via Ozone
+##### Configuration using J-Link (USB) connection
+If the logs are insufficient for crash analysis, you can use Ozone, a debugging
+tool provided by SEGGER. Compared to Keil, Ozone makes it easier to attach to a
+chip via J-Link after a crash occurs (Keil's configuration often triggers a chip
+reset, which destroys the crash context).
 
-![Ozone Debug Step 1](../../assets/Ozone_debug_Step1.png)
+> Ozone can also be used to attach to a running board and perform single-step
+> debugging, similar to Keil’s functionality. However, its stack unwinding
+> capabilities may not be as robust as those in Keil.
+- Create a new project and select the appropriate device driver (Cortex-M33).
+  Set the Register Set to Cortex-M33 (with FPU) and select the peripheral SVD
+  file (depending on the chip model, located in _$SDK_ROOT/tools/svd_external).
 
-- Select the connection method for JLink, using SWD interface.
+![](../../assets/Ozone_debug_Step1.png)
 
-![Ozone Debug Step 2](../../assets/Ozone_debug_Step2.png)
+- In the next step, select the J-Link connection method and use the SWD
+  interface.
 
-- Choose the ELF file for flashing and read the symbol information.
+![](../../assets/Ozone_debug_Step2.png)
 
-![Ozone Debug Step 3](../../assets/Ozone_debug_Step3.png)
-
-- Once the project is set up, attach Ozone to the crashed board via JLink and halt the board.
-
-![Ozone Debug Step 4](../../assets/Ozone_debug_Step4.png)
-
-- Now you can perform step-by-step debugging, variable inspection, stack analysis, etc., similar to Keil.
-
-![Ozone Debug Step 5](../../assets/Ozone_debug_Step5.png)
-
-##### Configure using serial port connection method
-- Create a new project, select the appropriate Device driver (Cortex-M33), choose the Register Set as Cortex-M33 (with FPU), and the peripheral SVD file (select based on the chip model, the path is $_SDK_ROOT/tools/svd_external)
-
-- Open _SifliUsartServer.exe_ and click on "Connect". Pay attention to the selected core for debugging and the corresponding serial port number for that core.
-
-![](../../assets/UsartServer.png)
-
-- Next, OZone selects the connection method for UART, Host Interface is set to IP, and IP Address is filled with SERVER of UartServer.
-
-![](../../assets/Ozone_uart_debug_Step1.png)
-
-- Select the ELF file for the burning program and read the symbol information
+- Select the ELF file of the target firmware to load symbol information.
 
 ![](../../assets/Ozone_debug_Step3.png)
 
-## 3. Log Interface
+- Once the project is created, attach Ozone to the crashed board via J-Link and
+  halt the target.
 
-### Logging via UART
-The pinmux configuration for UART is not discussed here. Please refer to [](../hal/uart.md) for details.
+![](../../assets/Ozone_debug_Step4.png)
 
-If using RT-Thread RTOS, after configuring the UART pinmux, you can choose different UART devices through the following menuconfig configuration:
-![RTT Console Configuration](../../assets/config_rtt_console.png)
+- You can then use the menu functions to perform single-step debugging, inspect
+  variables, and analyze the call stack, similar to the workflow in Keil.
 
-Additionally, the SDK uses ULOG as the general logging output interface, detailed in [](../middleware/logger.md).
+![](../../assets/Ozone_debug_Step5.png)
 
-### Logging via JLink
-If there are not enough pins available, you can use JLink's RTT functionality as a console interface. The configuration steps are as follows (Segger RTT functionality is integrated into the RT-Thread RTOS provided by the SDK):
+##### Configuration using Serial (UART) connection
+- Create a new project and select the appropriate device driver (Cortex-M33).
+  Set the Register Set to Cortex-M33 (with FPU) and select the peripheral SVD
+  file (depending on the chip model, located in _$SDK_ROOT/tools/svd_external).
 
-1. Enable the Segger RTT functionality through menuconfig (it will automatically register an `rt-device` named `segger`).
-![JLink RTT Configuration Step 1](../../assets/jlink_trace_config_step1.png)
+- Open _SifliUsartServer.exe_ and click Connect. Ensure you select the target
+  core to be debugged and its corresponding COM port.
 
-2. Assign the default console of RT-Thread to the `segger` rt-device.
-![JLink RTT Configuration Step 2](../../assets/jlink_trace_config_step2.png)
+![](../../assets/UsartServer.png)
 
-3. Connect to the board using Ozone. If the ELF file is already specified, Ozone will automatically search for `RTT_Ctrlb`. Otherwise, you need to specify it manually.
-![JLink RTT Configuration Step 3](../../assets/jlink_trace_config_step3.png)
+- In OZone, select UART as the connection method. Set the Host Interface to IP
+  and enter the UartServer IP address.
 
-## 4. Using Bus Monitors
+![](../../assets/Ozone_uart_debug_Step1.png)
 
-Bus monitors can track access on the bus and trigger interrupts or callbacks when specific conditions are met. This is useful for debugging memory or peripheral device accesses during development.
+- Select the ELF file of the target firmware to load symbol information.
+
+![](../../assets/Ozone_debug_Step3.png)
+
+
+## 3. Log Interfaces
+
+### UART Output
+For details regarding UART pinmux configuration, please refer to
+[](../hal/uart.md).
+
+When using the RT-Thread RTOS, configure the UART pinmux and then select the
+desired UART device via menuconfig as shown below:
+![](../../assets/config_rtt_console.png)
+
+Additionally, the SDK utilizes ULOG as the standard logging interface. For more
+details, see [](../middleware/logger.md).
+
+### J-Link RTT Output
+If GPIO pins are limited, the J-Link RTT (Real Time Transfer) feature can be
+used as the console. The configuration steps are as follows (Segger RTT is
+already integrated into the SDK's RT-Thread RTOS):
+
+1. Enable the Segger RTT function via menuconfig, which will automatically
+   register an RT-Thread device named "segger":
+   ![](../../assets/jlink_trace_config_step1.png)
+
+2. Set the default RT-Thread console to the "segger" device:
+   ![]../../assets/jlink_trace_config_step2.png)
+
+3. Connect to the board using OZone. If an ELF file is specified, OZone will
+   automatically locate the RTT control block; otherwise, it must be specified
+   manually: ![](../../assets/jlink_trace_config_step3.png)
+
+## 4. Bus Monitor
+
+The Bus Monitor tracks bus access and triggers an interrupt callback when
+specified conditions are met. This is useful for monitoring specific memory
+regions or peripheral accesses during debugging.
 
 ### Enabling the Bus Monitor
-Enable the bus controller functionality through the following menuconfig configuration:
-![Bus Monitor Config](../../assets/config_busmon.png)
+The Bus Monitor can be enabled via menuconfig as follows:
+![](../../assets/config_busmon.png)
 
 ### Using the Bus Monitor
-In the code, you can add the following code to implement specific functionality:
+
+The following code snippet demonstrates how to implement specific functionality:
 ```c
 void busmon_cbk()
 {
-    rt_kprintf("Busmon captured
-");        // Trigger callback when a specific bus access occurs. Users can assert here and further debug.
+    rt_kprintf("Busmon captured\n");        // Callback triggered upon specific bus access. Users can insert assertions here for further debugging and analysis.
 }
 
 ...
 
-dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
-dbg_busmon_read(0x20080000,1);             // Trigger bus monitor on first read of address 0x20080000
+    dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
+    dbg_busmon_read(0x20080000, 1);            // Trigger the bus monitor on the first read access to address 0x20080000
 
-// Reconfigure
-dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
-dbg_busmon_write(0x20080004,3);            // Trigger bus monitor on third write of address 0x20080004
+    // Reconfiguration
+    dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
+    dbg_busmon_write(0x20080004, 3);           // Trigger the bus monitor on the third write access to address 0x20080004
 
-// Reconfigure
-dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
-dbg_busmon_write(0x20080008,2);            // Trigger bus monitor on second read or write of address 0x20080008
+    // Reconfiguration
+    dbg_busmon_reg_callback(busmon_cbk);       // Register the callback
+    dbg_busmon_write(0x20080008, 2);           // Trigger the bus monitor on the second access (either read or write) to address 0x20080008
 ```
 
