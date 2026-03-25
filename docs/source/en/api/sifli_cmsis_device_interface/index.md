@@ -4,6 +4,4 @@
 :titlesonly:
 
 peripheral_memory_map.md
-
-
 ```
