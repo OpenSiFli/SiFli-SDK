@@ -1,14 +1,26 @@
-
 # Graphical Application Framework
 
 ## Terminology
-- **App**: Refers to the GUI part of an application, specifically the View in the MVC model. It is a collection of pages. Both built-in and dynamically installed Apps are supported.
-- **Page**: Refers to a display page where users can create controls, register input device handlers, link data services, and display content (Note: This is not the same as `lv_page`). Each page has its own `lv_screen`, state handling callback functions, and transition animations.
-- **lv_screen**: A virtual screen in LittleVGL (LVGL). Only one `lv_screen` can be displayed at a time on a physical LCD, and input devices can only interact with the currently displayed `lv_screen`.
+App: Refers to the GUI component of an application, corresponding to the View in
+the MVC model. It consists of a collection of pages and supports both built-in
+and dynamically installed applications.\
+\
+Page: Refers to a single display page where users can create widgets, register
+input device handlers, link data services, and display information (note: this
+is distinct from `lv_page`). Each page possesses an independent `lv_screen`,
+state handling callbacks, and transition animations.\
+\
+lv_screen: A virtual screen in LVGL. Only one `lv_screen` can be displayed on a
+physical LCD at a time, and input devices can only interact with the currently
+active `lv_screen`.
+
+
 
 ## Features
-- Provides scheduling and transition animations for display interfaces between and within Apps.
-- Keeps track of the order in which Apps are opened and the order in which Pages are opened within an App.
+- Provides scheduling and transition animations for display interfaces between
+  and within Apps.
+- Keeps track of the order in which Apps are opened and the order in which Pages
+  are opened within an App.
 - Supports background refreshing of Apps and Pages.
 
 ## Restrictions
@@ -18,37 +30,45 @@
 - Only one App can be active at a time.
 
 ## Scheduling Between Pages
-For AppA and AppB, each having three pages, labeled A1~A3 and B1~B3 respectively, the diagram below shows the final state of each page in various scheduling scenarios (Note: the transition states are ignored here).
+For AppA and AppB, each having three pages, labeled A1~A3 and B1~B3
+respectively, the diagram below shows the final state of each page in various
+scheduling scenarios (Note: the transition states are ignored here).
 
 ![Figure 1: Scheduling Between Pages](../../assets/app_fsm.png)
 
+
 ## Page State Machine and State Implementation Guidelines
-- **entryfunction()**: The function that starts the page. If no parameters are needed, this step can be merged with `on_start`.
-    - Allocate memory
-    - Receive processing parameters
+-   **entryfunction()**: The function that starts the page. If no parameters are
+    needed, this step can be merged with `on_start`.
+    -   Allocate memory
+    -   Receive processing parameters
 
-- **on_start()**:
-    - Create and layout `lv` controls within the current page.
-    - Subscribe to services.
-    - Request data from services.
+-   **on_start()**:
+    -   Create and layout `lv` controls within the current page.
+    -   Subscribe to services.
+    -   Request data from services.
 
-- **on_resume()**:
-    - Run internal `lv_task` or timers within the App.
+-   **on_resume()**:
+    -   Run internal `lv_task` or timers within the App.
 
-- **on_pause()**:
-    - Stop or delete internal `lv_task` in the App.
+-   **on_pause()**:
+    -   Stop or delete internal `lv_task` in the App.
 
-- **on_stop()**:
-    - Unsubscribe from services.
-    - Release memory.
-    - Created `lv` controls will be automatically deleted, no need for manual deletion.
+-   **on_stop()**:
+    -   Unsubscribe from services.
+    -   Release memory.
+    -   Created `lv` controls will be automatically deleted, no need for manual
+        deletion.
 
 ![Figure 2: Page Internal State Machine](../../assets/app_page_fsm.png)
 
-### Additional Handling Functions:
-- **xxx_service_callback()**: The handler for services subscribed within the page. @see data_service
-- **Page’s lv_task()**: Optional `lv_task` handling function within the page.
-- **lv_obj_callback()**: Event handling function for LittleVGL objects.
+Description of other handler functions in the illustrated example:
+-   xxx_service_callback(): A handler function for subscribing to services
+    within a Page. @see data_service
+
+-   Page’s lv_task(): An optional `lv_task` handler function within the Page.
+
+-   lv_obj_callback(): An event handler function for LVGL objects.
 
 ## Application Example
 
@@ -162,7 +182,7 @@ static void on_start(void)
     /* Subscribe to service data */
     p_compass->srv_handle = datac_open();
     RT_ASSERT(DATA_CLIENT_INVALID_HANDLE != p_compass->srv_handle);
-    
+
     ui_datac_subscribe(p_compass->srv_handle, "COMP", 
                       compass_data_callback, 0);
 }
