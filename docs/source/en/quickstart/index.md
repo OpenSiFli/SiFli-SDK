@@ -4,9 +4,8 @@
 :maxdepth: 2
 :titlesonly:
 
-get-started
-install/index
-build
-arch
-
+Getting Started
+Installation Guide
+Build System
+Architecture Overview
 ```
