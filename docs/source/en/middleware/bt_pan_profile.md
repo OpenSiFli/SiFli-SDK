@@ -1,21 +1,36 @@
 # BT_PAN
-PAN (Personal Area Networking Profile) is a personal area networking protocol. It describes how two or more Bluetooth-enabled devices form an ad-hoc network and how to use the same mechanism to access remote networks through network access points.
+PAN (Personal Area Networking Profile) is a personal area networking protocol.
+It describes how two or more Bluetooth-enabled devices form an ad-hoc network
+and how to use the same mechanism to access remote networks through network
+access points.
+- Network Access Point NAP (Network Access Point)
+    - A Bluetooth device supporting Network Access Point (NAP) is a Bluetooth
+      device that provides some functions of an Ethernet bridge to support
+      network services. Devices with NAP service forward network packets between
+      each connected Bluetooth device. NAP exchanges data with PANU using
+      Bluetooth Network Encapsulation Protocol (BNEP). Devices supporting NAP
+      service can allow one or more connected devices to access the network.
+- Group Ad-hoc Network GN (Group Ad-hoc Network)
+    - Group ad-hoc network allows mobile hosts to collaboratively create ad-hoc
+      wireless networks without using additional network hardware. A group
+      ad-hoc network consists of one Bluetooth device operating as a master
+      node, communicating with 1 to 7 Bluetooth devices operating as slave
+      nodes. GN exchanges data with PANU using Bluetooth Network Encapsulation
+      Protocol (BNEP). Additionally, there may be more inactive group network
+      members in park mode. Bluetooth enforces a limit of only 7 active slave
+      devices in a group ad-hoc network.
+- Personal Area Network User PANU (Personal Area Network User)
+    - PANU is a Bluetooth device that uses NAP or GN services. PANU supports
+      client roles for both NAP and GN roles, or direct PANU to PANU
+      communication.
 
 The main roles included in PAN Profile are:
-- Network Access Point NAP (Network Access Point)
-    - A Bluetooth device supporting Network Access Point (NAP) is a Bluetooth device that provides some functions of an Ethernet bridge to support network services. Devices with NAP service forward network packets between each connected Bluetooth device. NAP exchanges data with PANU using Bluetooth Network Encapsulation Protocol (BNEP). Devices supporting NAP service can allow one or more connected devices to access the network.
-- Group Ad-hoc Network GN (Group Ad-hoc Network)
-    - Group ad-hoc network allows mobile hosts to collaboratively create ad-hoc wireless networks without using additional network hardware. A group ad-hoc network consists of one Bluetooth device operating as a master node, communicating with 1 to 7 Bluetooth devices operating as slave nodes. GN exchanges data with PANU using Bluetooth Network Encapsulation Protocol (BNEP). Additionally, there may be more inactive group network members in park mode. Bluetooth enforces a limit of only 7 active slave devices in a group ad-hoc network.
-- Personal Area Network User PANU (Personal Area Network User)
-    - PANU is a Bluetooth device that uses NAP or GN services. PANU supports client roles for both NAP and GN roles, or direct PANU to PANU communication.
-
-This document is mainly based on Sifli SDK, introducing how to use basic bt pan functions as a PANU role.
-Related files include:
 - bts2_app_interface
 - bts2_app_pan
-  
+
 ## bt_pan Initialization
-- PAN initialization function: bt_pan_init, assigns initial values to PAN-related states and flags
+- PAN initialization function: bt_pan_init, assigns initial values to
+  PAN-related states and flags
 - PAN service enable function: bt_pan_reg, enables PAN profile
 
 ```c
@@ -23,7 +38,7 @@ void bt_pan_init(bts2_app_stru *bts2_app_data)
 {
     U8 i;
     bts2_app_data->pan_inst_ptr = &bts2_app_data->pan_inst;
-    
+
     //Assign initial state of PAN
     bts2_app_data->pan_inst.pan_st = PAN_REG_ST;
     //Each PAN connection will be allocated an ID
@@ -76,11 +91,23 @@ typedef enum
 ```
 
 ## PAN Device Connection
-The following process describes how PANU discovers, connects to, and uses NAP and its network services.
-1. The first step is to discover available NAP devices in the vicinity. For this, PANU can perform a search on nearby devices, then use SDP to retrieve NAP services from those devices that support NAP role. (Note: Devices supporting NAP must include the Networking bit in the service class field of class of device)
-2. Select a NAP device to connect to. Choose the device to connect to and initiate ACL connection. If the NAP device connects to multiple PANU devices simultaneously, role switch may be required after ACL connection.
-3. BNEP connection. Once ACL connection is established, PANU should initiate BNEP L2CAP connection. The BNEP connection process includes required BNEP control commands and optional packet filter setup. If NAP supports filtering, all accepted network packet type filters should be stored for each connection.
-4. Network packet interaction. NAP should forward network packets to connected PANU devices. This behaves similarly to a network bridge.
+The following process describes how PANU discovers, connects to, and uses NAP
+and its network services.
+1. The first step is to discover available NAP devices in the vicinity. For
+   this, PANU can perform a search on nearby devices, then use SDP to retrieve
+   NAP services from those devices that support NAP role. (Note: Devices
+   supporting NAP must include the Networking bit in the service class field of
+   class of device)
+2. Select a NAP device to connect to. Choose the device to connect to and
+   initiate ACL connection. If the NAP device connects to multiple PANU devices
+   simultaneously, role switch may be required after ACL connection.
+3. BNEP connection. Once ACL connection is established, PANU should initiate
+   BNEP L2CAP connection. The BNEP connection process includes required BNEP
+   control commands and optional packet filter setup. If NAP supports filtering,
+   all accepted network packet type filters should be stored for each
+   connection.
+4. Network packet interaction. NAP should forward network packets to connected
+   PANU devices. This behaves similarly to a network bridge.
 5. PANU or NAP can terminate the connection at any time.
 
 - PAN device connection interface:
@@ -121,7 +148,7 @@ void bt_pan_conn(BTS2S_BD_ADDR *bd)
     ptr = bts2_app_data->pan_inst_ptr;
 
     USER_TRACE(" pan st %x\n", ptr->pan_st);
-    
+
     //Check if state is PAN_IDLE_ST
     if (ptr->pan_st == PAN_IDLE_ST)
     {
@@ -171,7 +198,7 @@ void bt_pan_conn(BTS2S_BD_ADDR *bd)
     }
 }
 ```
-       
+
 - PAN device disconnection interface:
     - bts2_app_interface disconnection interface: bt_interface_disc_ext
     - bts2_app_pan disconnection interface: bt_pan_disc
@@ -191,7 +218,7 @@ void bt_pan_disc(BTS2S_BD_ADDR *bd)
     bts2_app_stru *bts2_app_data = getApp();
     bts2_pan_inst_data *ptr = NULL;
     ptr = bts2_app_data->pan_inst_ptr;
-    
+
     //State must be PAN_BUSY_ST to disconnect
     if (ptr->pan_st == PAN_BUSY_ST)
     {
@@ -205,15 +232,14 @@ void bt_pan_disc(BTS2S_BD_ADDR *bd)
     }
 }
 ```
-        
+
 - PAN event handling:
     - PAN connection status callback events
         - PAN connection successful: BT_NOTIFY_PAN_PROFILE_CONNECTED
         - PAN connection failed: BT_NOTIFY_PAN_PROFILE_DISCONNECTED
 
-:::{note}
-Note: The address parameters passed by the two interfaces need to be converted accordingly.
-:::
+:::{note} Note: The address parameters passed by the two interfaces need to be
+converted accordingly. :::
 ```c
 // After calling the API to connect PAN, the PAN connection success message is sent to user through notify
 // Users need to implement hdl functions to receive notify events, such as: bt_notify_handle
@@ -284,9 +310,13 @@ void bt_pan_scan_proc_net_dev(void);
 ```
 
 #### bt_lwip Interface Layer
-Sifli SDK's network implementation is based on lwip, and PAN does not directly call lwip interfaces, but indirectly calls through bt_lwip as an intermediate layer.
-LwIP is Light Weight IP protocol, which can run with or without operating system support.
-The focus of LwIP implementation is to reduce RAM usage while maintaining the main functions of TCP protocol. It only needs about ten KB of RAM and about 40K ROM to run, making LwIP protocol stack suitable for use in low-end embedded systems.
+Sifli SDK's network implementation is based on lwip, and PAN does not directly
+call lwip interfaces, but indirectly calls through bt_lwip as an intermediate
+layer. LwIP is Light Weight IP protocol, which can run with or without operating
+system support. The focus of LwIP implementation is to reduce RAM usage while
+maintaining the main functions of TCP protocol. It only needs about ten KB of
+RAM and about 40K ROM to run, making LwIP protocol stack suitable for use in
+low-end embedded systems.
 ```c
 //1. bt_lwip initialization
 static struct rt_bt_prot_ops ops =
@@ -492,9 +522,13 @@ rt_err_t rt_bt_instance_transfer_prot(struct rt_bt_pan_instance *bt_instance, vo
 ```
 
 ## PAN Functionality Usage Demo
-- First, during project initialization, register the processing function for receiving notify events
-- Enter the MAC address of the phone to connect to, wait for connection success message
-- To use PAN, you must enable Bluetooth network sharing on the phone. Different operating systems have different ways to enable Bluetooth network sharing, which can be searched online
+- First, during project initialization, register the processing function for
+  receiving notify events
+- Enter the MAC address of the phone to connect to, wait for connection success
+  message
+- To use PAN, you must enable Bluetooth network sharing on the phone. Different
+  operating systems have different ways to enable Bluetooth network sharing,
+  which can be searched online
 ```c
 //register notify event handle function start
 int bt_sifli_notify_pan_event_hdl(uint16_t event_id, uint8_t *data, uint16_t data_len)
@@ -552,7 +586,7 @@ int bt_sifli_notify_pan_event_hdl(uint16_t event_id, uint8_t *data, uint16_t dat
         bfree(msg->payload);
         break;
     }
-    
+
     default:
         return -1;
     }
