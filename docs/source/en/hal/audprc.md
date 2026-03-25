@@ -1,17 +1,19 @@
 # AUDPRC
 
-AUDPRC (audio processor) completes specific data processing functions for audio paths. Main functions include:\
+AUDPRC (audio processor) completes specific data processing functions for audio
+paths. Main functions include:\
 - Audio sampling rate conversion\
 - Audio equalizer EQ for matching output audio devices\
-- Audio mixing function, mixing audio from different sources for output, supports mixing audio of different sampling rates\
+- Audio mixing function, mixing audio from different sources for output,
+  supports mixing audio of different sampling rates\
 - Supports data input/output from I2S/MEM/AUDCODEC\
-- Supports mono/stereo various data formats, including interleaving and de-interleaving of left and right channel data
+- Supports mono/stereo various data formats, including interleaving and
+  de-interleaving of left and right channel data
 
 ## Using AUDPRC HAL Driver:
 HAL AUDPRC sample for TX:
 
 ```c
-
 const audprc_src_table_t src_table[] =
 {
     {8000,  11025, 0, 0, 0, 0, 0, 0, 1, 0x2e709c60},
@@ -87,37 +89,36 @@ const audprc_src_table_t src_table[] =
     {48000, 32000, 1, 1, 0, 0, 0, 0, 1, 0x2fffd780},
     {48000, 44100, 0, 0, 0, 0, 0, 0, 1, 0x45a84680},
 };
-AUDPRC_HandleTypeDef *haprc = &aprc;
+AUDPRC_HandleTypeDef *haprc = &amp;aprc;
 AUDPRC_ChnlCfgTypeDef cfg;
 
 int res = HAL_AUDPRC_Init(haprc);
 
 cfg.dma_mask = 0;
 cfg.en = 1;
-cfg.format = caps->udata.config.samplefmt == 16 ? 0 : 1;
-if (cfg.format == 0) // only 16 bit support stereo
-    cfg.mode = caps->udata.config.channels == 1 ? 0 : 1;
+cfg.format = caps-&gt;udata.config.samplefmt == 16 ? 0 : 1;
+if (cfg.format == 0) // Stereo is only supported in 16-bit format
+    cfg.mode = caps-&gt;udata.config.channels == 1 ? 0 : 1;
 else
     cfg.mode = 0;
-HAL_AUDPRC_Config_TChanel(haudprc, 3, &cfg);
+HAL_AUDPRC_Config_TChanel(haudprc, 3, &amp;cfg);
 
-haudprc->Init.dac_cfg.src_hbf3_mode = src_table[i].hbf3_mode;
-haudprc->Init.dac_cfg.src_hbf3_en = src_table[i].hbf3_en;
-haudprc->Init.dac_cfg.src_hbf2_mode = src_table[i].hbf2_mode;
-haudprc->Init.dac_cfg.src_hbf2_en = src_table[i].hbf2_en;
-haudprc->Init.dac_cfg.src_hbf1_mode = src_table[i].hbf1_mode;
-haudprc->Init.dac_cfg.src_hbf1_en = src_table[i].hbf1_en;
-haudprc->Init.dac_cfg.src_sinc_en = src_table[i].sinc_en;
-haudprc->Init.dac_cfg.sinc_ratio = src_table[i].sinc_ratio;
-haudprc->Init.dac_cfg.src_ch_en = 3;
-HAL_AUDPRC_Config_DACPath(haudprc, &(haudprc->Init.dac_cfg));
+haudprc-&gt;Init.dac_cfg.src_hbf3_mode = src_table[i].hbf3_mode;
+haudprc-&gt;Init.dac_cfg.src_hbf3_en = src_table[i].hbf3_en;
+haudprc-&gt;Init.dac_cfg.src_hbf2_mode = src_table[i].hbf2_mode;
+haudprc-&gt;Init.dac_cfg.src_hbf2_en = src_table[i].hbf2_en;
+haudprc-&gt;Init.dac_cfg.src_hbf1_mode = src_table[i].hbf1_mode;
+haudprc-&gt;Init.dac_cfg.src_hbf1_en = src_table[i].hbf1_en;
+haudprc-&gt;Init.dac_cfg.src_sinc_en = src_table[i].sinc_en;
+haudprc-&gt;Init.dac_cfg.sinc_ratio = src_table[i].sinc_ratio;
+haudprc-&gt;Init.dac_cfg.src_ch_en = 3;
+HAL_AUDPRC_Config_DACPath(haudprc, &amp;(haudprc-&gt;Init.dac_cfg));
 
-res = HAL_AUDPRC_Transmit_DMA(haudprc, haudprc->buf[HAL_AUDPRC_TX_CH0], haudprc->bufSize, HAL_AUDPRC_TX_CH0);
+res = HAL_AUDPRC_Transmit_DMA(haudprc, haudprc-&gt;buf[HAL_AUDPRC_TX_CH0], haudprc-&gt;bufSize, HAL_AUDPRC_TX_CH0);
 HAL_NVIC_EnableIRQ(AUDPRC_TX0_DMA_IRQ);
 
-/* enable AUDPRC at last*/
+/** Enable AUDPRC as the final step*/
 __HAL_AUDPRC_ENABLE(haudprc);
-    
 ```
 HAL AUDPRC sample for RX:
 
@@ -129,31 +130,31 @@ int res = HAL_AUDPRC_Init(haprc);
 
 cfg.dma_mask = 0;
 cfg.en = 1;
-cfg.format = caps->udata.config.samplefmt == 16 ? 0 : 1;
-if (cfg.format == 0) // only 16 bit support stereo
-    cfg.mode = caps->udata.config.channels == 1 ? 0 : 1;
+cfg.format = caps-&gt;udata.config.samplefmt == 16 ? 0 : 1;
+if (cfg.format == 0) // Stereo is only supported in 16-bit format
+    cfg.mode = caps-&gt;udata.config.channels == 1 ? 0 : 1;
 else
     cfg.mode = 0;
-HAL_AUDPRC_Config_RChanel(haudprc, 0, &cfg);
+HAL_AUDPRC_Config_RChanel(haudprc, 0, &amp;cfg);
 
-haudprc->Init.adc_cfg.src_hbf3_mode = src_table[i].hbf3_mode;
-haudprc->Init.adc_cfg.src_hbf3_en = src_table[i].hbf3_en;
-haudprc->Init.adc_cfg.src_hbf2_mode = src_table[i].hbf2_mode;
-haudprc->Init.adc_cfg.src_hbf2_en = src_table[i].hbf2_en;
-haudprc->Init.adc_cfg.src_hbf1_mode = src_table[i].hbf1_mode;
-haudprc->Init.adc_cfg.src_hbf1_en = src_table[i].hbf1_en;
-haudprc->Init.adc_cfg.src_sinc_en = src_table[i].sinc_en;
-haudprc->Init.adc_cfg.sinc_ratio = src_table[i].sinc_ratio;
-haudprc->Init.adc_cfg.src_ch_en = 3;
-HAL_AUDPRC_Config_ADCPath(haudprc, &(haudprc->Init.adc_cfg));
+haudprc-&gt;Init.adc_cfg.src_hbf3_mode = src_table[i].hbf3_mode;
+haudprc-&gt;Init.adc_cfg.src_hbf3_en = src_table[i].hbf3_en;
+haudprc-&gt;Init.adc_cfg.src_hbf2_mode = src_table[i].hbf2_mode;
+haudprc-&gt;Init.adc_cfg.src_hbf2_en = src_table[i].hbf2_en;
+haudprc-&gt;Init.adc_cfg.src_hbf1_mode = src_table[i].hbf1_mode;
+haudprc-&gt;Init.adc_cfg.src_hbf1_en = src_table[i].hbf1_en;
+haudprc-&gt;Init.adc_cfg.src_sinc_en = src_table[i].sinc_en;
+haudprc-&gt;Init.adc_cfg.sinc_ratio = src_table[i].sinc_ratio;
+haudprc-&gt;Init.adc_cfg.src_ch_en = 3;
+HAL_AUDPRC_Config_ADCPath(haudprc, &amp;(haudprc-&gt;Init.adc_cfg));
 
-res = HAL_AUDPRC_Receive_DMA(haudprc, haudprc->buf[HAL_AUDPRC_RX_CH0], haudprc->bufSize, HAL_AUDPRC_RX_CH0);
+res = HAL_AUDPRC_Receive_DMA(haudprc, haudprc-&gt;buf[HAL_AUDPRC_RX_CH0], haudprc-&gt;bufSize, HAL_AUDPRC_RX_CH0);
 HAL_NVIC_EnableIRQ(AUDPRC_RX0_DMA_IRQ);
 
-/* enable AUDPRC at last*/
+/** Enable AUDPRC as the final step**/
 __HAL_AUDPRC_ENABLE(haudprc);
-    
 ```
 
 ## API Reference
-[](/api/hal/audprc.md)
+[]
+
