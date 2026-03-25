@@ -1,10 +1,12 @@
 # PSRAM
 
-PSRAM HAL provides basic APIs for accessing PSRAM peripheral registers.
-This module only exists in the A0 series. After the PRO version, PSRAM functionality is replaced by the MPI module, and the HAL layer no longer exists independently.
+PSRAM HAL provides basic APIs for accessing PSRAM peripheral registers. This
+module only exists in the A0 series. After the PRO version, PSRAM functionality
+is replaced by the MPI module, and the HAL layer no longer exists independently.
 
 ## Using PSRAM
-After initialization, PSRAM memory can be accessed by CPU and DMA like normal SRAM memory, as shown below:
+After initialization, PSRAM memory can be accessed by CPU and DMA like normal
+SRAM memory, as shown below:
 
 ```c
 // Initial PSRAM hardware before using it
@@ -34,5 +36,7 @@ memcpy(dst, src, 1000);
 // Close device, keep it open for more users.
 ```
 
+
 ## API Reference
-[](../api/hal/psram.md)
+[]
+
