@@ -1,155 +1,188 @@
 # BT_A2DP_SOURCE
-A2DP (Advanced Audio Distribution Profile) is a Bluetooth audio transmission protocol, typically used for Bluetooth headphones. A2DP protocol's audio data is transmitted over ACL Link, which is distinguished from voice data transmitted over SCO. A2DP does not include remote control functionality; remote control functionality refers to the AVRCP protocol. AVDTP defines the parameter negotiation, establishment, and transmission process of data stream handles between Bluetooth devices, as well as the signaling entity formats that are mutually exchanged. This protocol is the foundation protocol of the A2DP framework.
-
-A2DP is designed to transmit high-quality audio streams over Bluetooth connections. The basic compression algorithm it uses is SBC, which is used to reduce the size of audio data while maintaining high sound quality. SBC is a mandatory compression algorithm that must be supported. In addition to SBC, A2DP can also support other advanced codecs such as AAC, LHDC, etc., but support for these codecs depends on the device's own support capabilities.
-
-A2DP implementation relies on GAVDP and GAP, where GAVDP defines the stream connection establishment process. The protocol dependency relationship of A2DP is shown in the following diagram:
-![A2DP Stack](../../assets/a2dp_arch.png)
-
-In A2DP, two different roles are defined: SRC (source) and SNK (sink). SRC sends audio data, SNK receives audio data. The corresponding protocol model is as follows:
-![A2DP Stack](../../assets/a2dp_stack.png)
-
-The main roles included in A2DP Profile are:
+A2DP (Advanced Audio Distribution Profile) is a Bluetooth audio transmission
+protocol, typically used for Bluetooth headphones. A2DP protocol's audio data is
+transmitted over ACL Link, which is distinguished from voice data transmitted
+over SCO. A2DP does not include remote control functionality; remote control
+functionality refers to the AVRCP protocol. AVDTP defines the parameter
+negotiation, establishment, and transmission process of data stream handles
+between Bluetooth devices, as well as the signaling entity formats that are
+mutually exchanged. This protocol is the foundation protocol of the A2DP
+framework.
 - source (SRC): device that sends audio data
 - sink (SNK): device that receives audio data
 
-A2DP is built on the foundation of the AVDTP transport protocol. AVDTP specifies how connections are established. After the connection is established, audio data can be sent and received after compression. Audio data is bidirectional. The A2DP data transmission and reception process based on AVDTP is shown in the following diagram:
-![A2DP Stack](../../assets/a2dp_transport_data.png)
+A2DP is designed to transmit high-quality audio streams over Bluetooth
+connections. The basic compression algorithm it uses is SBC, which is used to
+reduce the size of audio data while maintaining high sound quality. SBC is a
+mandatory compression algorithm that must be supported. In addition to SBC, A2DP
+can also support other advanced codecs such as AAC, LHDC, etc., but support for
+these codecs depends on the device's own support capabilities.
 
-Overall summary of the entire process:
-1. UL collects PCM data and sends it to A2DP. A2DP compresses it into specific audio formats through codec PCM lib (SBC, MPEG-1,2 Audio MPEG-2,4 AAC ATRAC family, or custom encoder pcm lib), then hands it to AVDTP. AVDTP transfers it to L2CAP, L2CAP transfers it to HCI through ACL format, then reaches the BT chip and transmits via RF.
-2. BT chip receives incoming data via RF, then transfers it to HCI through ACL, then to L2CAP, L2CAP to AVDTP, AVDTP to A2DP. A2DP receives compressed data from the remote device, which is then decompressed into PCM data through codec pcm lib (SBC, MPEG-1,2 Audio MPEG-2,4 AAC ATRAC family, or custom encoder pcm lib), and then handed to the sound card for playback.
+A2DP implementation relies on GAVDP and GAP, where GAVDP defines the stream
+connection establishment process. The protocol dependency relationship of A2DP
+is shown in the following diagram: ![A2DP Stack]{1}
+1. UL collects PCM data and sends it to A2DP. A2DP compresses it into specific
+   audio formats through codec PCM lib (SBC, MPEG-1,2 Audio MPEG-2,4 AAC ATRAC
+   family, or custom encoder pcm lib), then hands it to AVDTP. AVDTP transfers
+   it to L2CAP, L2CAP transfers it to HCI through ACL format, then reaches the
+   BT chip and transmits via RF.
+2. BT chip receives incoming data via RF, then transfers it to HCI through ACL,
+   then to L2CAP, L2CAP to AVDTP, AVDTP to A2DP. A2DP receives compressed data
+   from the remote device, which is then decompressed into PCM data through
+   codec pcm lib (SBC, MPEG-1,2 Audio MPEG-2,4 AAC ATRAC family, or custom
+   encoder pcm lib), and then handed to the sound card for playback.
 
 ## AVDTP Introduction
-AVDTP (A/V Distribution Transport Protocol) is an audio/video distribution transport protocol, mainly used for transmitting audio/video data. The architecture diagram of the entire protocol stack is as follows:
-![A2DP Stack](../../assets/avdtp_arch.png)
-
+AVDTP (A/V Distribution Transport Protocol) is an audio/video distribution
+transport protocol, mainly used for transmitting audio/video data. The
+architecture diagram of the entire protocol stack is as follows: ![A2DP
+Stack](../../assets/avdtp_arch.png)
 1. AVDTP Terminology Introduction
    - Stream: Streaming data between two point-to-point devices.
-   - Source (SRC) and Sink (SNK): SRC is the sender of audio/video, SNK is the receiver of audio/video.
-   - Initiator (INT) and Acceptor (ACP): The device that initiates the process acts as the initiator, and the device that accepts the initiation is the acceptor. Note that INT and ACP are independent of the SRC and SNK defined by the upper application. In a CMD and RESPONSE, the device sending the CMD is the INT role, and the device responding with RESPONSE is the ACP role, so their roles will be dynamically switching.
-   - Application and Transport Service Capabilities: Application service and transport service capabilities. Application service capabilities include negotiating and configuring codec of source devices, content protection systems, etc.; transport service capabilities include data packet segmentation and reassembly, packet loss detection, etc.
-   - Services, Service Categories, and Service Parameters: Services, service categories, service parameters.
-   - Media Packets, Recovery Packets, and Reporting Packets: Media packets, data recovery packets, report packets.
-   - Stream End Point (SEP): Stream endpoint, which is an application that exposes available transport services and A/V capabilities for negotiating a stream.
-   - Stream Context (SC): Stream context. Refers to the common understanding of stream configuration reached by two peer devices during the stream setup process, including selected services, parameters, and transport channel allocation.
-   - Stream Handle (SH): Stream handle. An independent identifier allocated after SRC and SNK establish a connection, representing the upper layer's reference to the stream.
-   - Stream End Point Identifier (SEID): Stream endpoint identifier, cross-device reference for specific devices.
+   - Source (SRC) and Sink (SNK): SRC is the sender of audio/video, SNK is the
+     receiver of audio/video.
+   - Initiator (INT) and Acceptor (ACP): The device that initiates the process
+     acts as the initiator, and the device that accepts the initiation is the
+     acceptor. Note that INT and ACP are independent of the SRC and SNK defined
+     by the upper application. In a CMD and RESPONSE, the device sending the CMD
+     is the INT role, and the device responding with RESPONSE is the ACP role,
+     so their roles will be dynamically switching.
+   - Application and Transport Service Capabilities: Application service and
+     transport service capabilities. Application service capabilities include
+     negotiating and configuring codec of source devices, content protection
+     systems, etc.; transport service capabilities include data packet
+     segmentation and reassembly, packet loss detection, etc.
+   - Services, Service Categories, and Service Parameters: Services, service
+     categories, service parameters.
+   - Media Packets, Recovery Packets, and Reporting Packets: Media packets, data
+     recovery packets, report packets.
+   - Stream End Point (SEP): Stream endpoint, which is an application that
+     exposes available transport services and A/V capabilities for negotiating a
+     stream.
+   - Stream Context (SC): Stream context. Refers to the common understanding of
+     stream configuration reached by two peer devices during the stream setup
+     process, including selected services, parameters, and transport channel
+     allocation.
+   - Stream Handle (SH): Stream handle. An independent identifier allocated
+     after SRC and SNK establish a connection, representing the upper layer's
+     reference to the stream.
+   - Stream End Point Identifier (SEID): Stream endpoint identifier,
+     cross-device reference for specific devices.
    - Stream End Point State: Stream endpoint state.
-   - Transport Session: Transport session. Within the A/V transport layer, streams can be decomposed into one, two, or multiple three transport sessions between paired AVDTP entities.
-   - Transport Session Identifier (TSID): Transport session identifier. Represents a reference to a transport session.
-   - Transport Channel: Transport channel. Transport channel refers to the abstraction of the underlying bearer program of the A/V transport layer, always corresponding to L2CAP channels.
-   - Transport Channel Identifier (TCID): Transport channel identifier. Represents a reference to a transport channel.
+   - Transport Session: Transport session. Within the A/V transport layer,
+     streams can be decomposed into one, two, or multiple three transport
+     sessions between paired AVDTP entities.
+   - Transport Session Identifier (TSID): Transport session identifier.
+     Represents a reference to a transport session.
+   - Transport Channel: Transport channel. Transport channel refers to the
+     abstraction of the underlying bearer program of the A/V transport layer,
+     always corresponding to L2CAP channels.
+   - Transport Channel Identifier (TCID): Transport channel identifier.
+     Represents a reference to a transport channel.
    - Reserved for Future Additions (RFA): Reserved for future additions.
    - Reserved for Future Definitions (RFD): Reserved for future definitions.
-  
-2. AVDTP Packet Format
-AVDTP mainly has two types of packets: signal packets on the signal channel and media packets on the media channel.
-![A2DP Stack](../../assets/avdtp_signal_packet.png)
-The above is the Signal header format, which can be seen to have 3 packet formats:
-&emsp;&emsp;1) Single packet
-&emsp;&emsp;2) Start packet, generally used for the first packet when packet size > MTU fragmentation
-&emsp;&emsp;3) Continue packet and end packet, generally used for continue packets and end packets when packet size > MTU
-The following explains the parameters:
-   - Transaction Label: Transport identifier, 4 bits, filled by the INT role, ACP must return the same value
-   - Packet Type: Packet type, with the following types:
-![A2DP Stack](../../assets/avdtp_transaction_label.png)
-Message Type: Message type, with the following types:
-![A2DP Stack](../../assets/avdtp_message_type.png)
-Signal Identifier: Signaling identifier, with the following values:
-![A2DP Stack](../../assets/avdtp_signal_identifer.png)
-NOSP = Number Of Signal Packets: Start packet will inform how many subsequent packets need to be transmitted
 
-3. AVDTP Signal Commands
-There are the following signaling commands in total:
-![A2DP Stack](../../assets/avdtp_signal_identifer.png)
+2. AVDTP Packet Format AVDTP mainly has two types of packets: signal packets on
+   the signal channel and media packets on the media channel. ![A2DP
+   Stack](../../assets/avdtp_signal_packet.png) The above is the Signal header
+   format, which can be seen to have 3 packet formats: 1) Single packet 2) Start
+   packet, generally used for the first packet when packet size > MTU
+   fragmentation 3) Continue packet and end packet, generally used for continue
+   packets and end packets when packet size > MTU The following explains the
+   parameters:
+   - Transaction Label: Transport identifier, 4 bits, filled by the INT role,
+     ACP must return the same value
+   - Packet Type: Packet type, with the following types: ![A2DP
+     Stack](../../assets/avdtp_transaction_label.png) Message Type: Message
+     type, with the following types: ![A2DP
+     Stack](../../assets/avdtp_message_type.png) Signal Identifier: Signaling
+     identifier, with the following values: ![A2DP
+     Stack](../../assets/avdtp_signal_identifer.png) NOSP = Number Of Signal
+     Packets: Start packet will inform how many subsequent packets need to be
+     transmitted
 
-Before explaining specific commands, let's first lay some groundwork by explaining Service Capabilities, which will all be used, so we'll explain them in advance.
-The Service Capabilities format is as follows:
-![A2DP Stack](../../assets/avdtp_service_capability.png)
-This part is also similar to the TLV (Type Length Value) type, where Service Category is TYPE, with values as follows:
-![A2DP Stack](../../assets/avdtp_service_capability_value.png)
-Where Length Of Service Capabilities (LOSC) is similar to length, i.e., the length of the subsequent Service Capabilities Information Elements.
-Service Capabilities Information Elements are specific values, which require a large section to explain. Here we mainly explain Media Codec Capabilities.
-![A2DP Stack](../../assets/avdtp_media_codec_capability.png)
-Where Media Type has the following values:
-![A2DP Stack](../../assets/avdtp_media_type.png)
-Where Media Codec Type has the following values:
-![A2DP Stack](../../assets/avdtp_media_codec.png)
-The Media Codec Specific Information Elements in this part are some upper-layer codec information, such as the following figure for SBC:
-![A2DP Stack](../../assets/avdtp_sbc_media_codec.png)
+3. AVDTP Signal Commands There are the following signaling commands in total:
+   ![A2DP Stack](../../assets/avdtp_signal_identifer.png)
 
-- 3.1 AVDTP Signal Commands
-Each AVDTP endpoint will register one or more SEPs, identified by SEID. This command is to obtain the SEP information of the peer, including SEID (SEP ID), In Use (whether it is being used), Media Type (Audio, Media, MultiMedia), TSEP (whether the role is Sink or Source)
-The process is as follows:
-![A2DP Stack](../../assets/avdtp_discover.png)
+Before explaining specific commands, let's first lay some groundwork by
+explaining Service Capabilities, which will all be used, so we'll explain them
+in advance. The Service Capabilities format is as follows: ![A2DP
+Stack](../../assets/avdtp_service_capability.png) This part is also similar to
+the TLV (Type Length Value) type, where Service Category is TYPE, with values as
+follows: ![A2DP Stack](../../assets/avdtp_service_capability_value.png) Where
+Length Of Service Capabilities (LOSC) is similar to length, i.e., the length of
+the subsequent Service Capabilities Information Elements. Service Capabilities
+Information Elements are specific values, which require a large section to
+explain. Here we mainly explain Media Codec Capabilities. ![A2DP
+Stack](../../assets/avdtp_media_codec_capability.png) Where Media Type has the
+following values: ![A2DP Stack](../../assets/avdtp_media_type.png) Where Media
+Codec Type has the following values: ![A2DP
+Stack](../../assets/avdtp_media_codec.png) The Media Codec Specific Information
+Elements in this part are some upper-layer codec information, such as the
+following figure for SBC: ![A2DP Stack](../../assets/avdtp_sbc_media_codec.png)
 
-- 3.2 Get Capabilities
-This command uses SEID to obtain the peer's Capabilities. The Capabilities have been introduced before. Let's look at the program flow:
-![A2DP Stack](../../assets/avdtp_get_capability.png)
+- 3.1 AVDTP Signal Commands Each AVDTP endpoint will register one or more SEPs,
+  identified by SEID. This command is to obtain the SEP information of the peer,
+  including SEID (SEP ID), In Use (whether it is being used), Media Type (Audio,
+  Media, MultiMedia), TSEP (whether the role is Sink or Source) The process is
+  as follows: ![A2DP Stack](../../assets/avdtp_discover.png)
 
-- 3.3 Get All Capabilities
-This command is used to replace Get Capabilities, also using SEID to obtain the peer's Capabilities. The Capabilities have been introduced before. Let's look at the program flow:
-![A2DP Stack](../../assets/avdtp_get_all_capability.png)
+- 3.2 Get Capabilities This command uses SEID to obtain the peer's Capabilities.
+  The Capabilities have been introduced before. Let's look at the program flow:
+  ![A2DP Stack](../../assets/avdtp_get_capability.png)
 
-- 3.4 Set Configuration Command
-After obtaining Capabilities, this part selects specific functional parameters. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_set_configure.png)
+- 3.3 Get All Capabilities This command is used to replace Get Capabilities,
+  also using SEID to obtain the peer's Capabilities. The Capabilities have been
+  introduced before. Let's look at the program flow: ![A2DP
+  Stack](../../assets/avdtp_get_all_capability.png)
 
-- 3.5 Get Stream Configuration
-This command is used to obtain configuration based on SEID. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_get_configure.png)
+- 3.4 Set Configuration Command After obtaining Capabilities, this part selects
+  specific functional parameters. The program flow is as follows: ![A2DP
+  Stack](../../assets/avdtp_set_configure.png)
 
-- 3.6 Stream Establishment
-This command is used to open a certain SEID, i.e., establish a media channel. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_stream_establishment.png)
+- 3.5 Get Stream Configuration This command is used to obtain configuration
+  based on SEID. The program flow is as follows: ![A2DP
+  Stack](../../assets/avdtp_get_configure.png)
 
-- 3.7 Stream Start
-This command is used to start media transmission for a SEID, i.e., start playing music. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_stream_start.png)
+- 3.6 Stream Establishment This command is used to open a certain SEID, i.e.,
+  establish a media channel. The program flow is as follows: ![A2DP
+  Stack](../../assets/avdtp_stream_establishment.png)
 
-- 3.8 Stream Suspend
-This command is used to pause media transmission, i.e., pause music. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_suspend.png)
+- 3.7 Stream Start This command is used to start media transmission for a SEID,
+  i.e., start playing music. The program flow is as follows: ![A2DP
+  Stack](../../assets/avdtp_stream_start.png)
 
-- 3.9 Stream Release
-This command is used to close media transmission. The program flow is as follows:
-![A2DP Stack](../../assets/avdtp_release.png)
+- 3.8 Stream Suspend This command is used to pause media transmission, i.e.,
+  pause music. The program flow is as follows: ![A2DP
+  Stack](../../assets/avdtp_suspend.png)
+
+- 3.9 Stream Release This command is used to close media transmission. The
+  program flow is as follows: ![A2DP Stack](../../assets/avdtp_release.png)
 
 ## A2DP Introduction
-A2DP (Advanced Audio Distribution Profile) is a Bluetooth high-quality audio transmission protocol used for transmitting mono and stereo music (generally used for stereo dual-channel in A2DP), typically applied to Bluetooth headphones. A2DP does not include remote control functionality; remote control functionality refers to the AVRCP protocol.
-
-1. Audio Codec
-In the above process, we also mentioned the need for Audio codec algorithms. In the A2DP protocol, there are the following regulations:
-![A2DP Stack](../../assets/a2dp_codec.png)
-First, all devices are mandatorily required to have SBC codec algorithm, which is a lossy algorithm with sound quality comparable to MP3. Additionally, it supports 3 optional algorithms: MPEG-1,2 audio/MPEG-2,4 AAC, ATRAC family. Of course, there are also some custom extended codec algorithms, such as the popular APTX, LDAC, etc.
-
-1.1 SBC Codec
-SBC is a protocol mandatorily required to be supported by Bluetooth. The Codec Specific Information Elements are defined as follows:
-![A2DP Stack](../../assets/a2dp_sbc_codec.png)
-Sampling Frequency: This part is the sampling frequency. The Source end mandatorily requires support for either 44.1KHz or 48KHz, while Sink requires support for both 44.1KHz and 48KHz. The corresponding values are as follows:
-![A2DP Stack](../../assets/a2dp_sbc_sample_frequency.png)
-Channel Mode: Number of channels. Sink requires full support, while Source only mandatorily requires support for Mono, others are optional:
-![A2DP Stack](../../assets/a2dp_sbc_channel_mode.png)
-Block Length: Block length
-![A2DP Stack](../../assets/a2dp_sbc_block_length.png)
-Subbands: Subbands
-![A2DP Stack](../../assets/a2dp_sbc_subbands.png)
-Allocation Method: Allocation method
-![A2DP Stack](../../assets/a2dp_sbc_allocation_method.png)
-Minimum Bitpool Value:
-Maximum Bitpool Value: In playback devices, you can set SBC encoding quality, this value is called bitpool, approximately 1 bitpool = 6~7 kbit/s. SBC is an encoding format with relatively low complexity and slightly inferior sound quality at the same bit rate. According to comparisons on this website, the highest 328kbit/s SBC sound quality is approximately between 224 kbit/s to 256 kbit/s MP3. Additionally, improper settings, poor signal, device not supporting high bitpool, etc., will cause transmission bit rate to decrease and sound quality to deteriorate. The sound quality of the headphones or speakers themselves is also a very important factor. The following are bit rates for different bitpools:
-![A2DP Stack](../../assets/a2dp_sbc_bitpool.png)
+A2DP (Advanced Audio Distribution Profile) is a Bluetooth high-quality audio
+transmission protocol used for transmitting mono and stereo music (generally
+used for stereo dual-channel in A2DP), typically applied to Bluetooth
+headphones. A2DP does not include remote control functionality; remote control
+functionality refers to the AVRCP protocol.
+1. Audio Codec In the above process, we also mentioned the need for Audio codec
+   algorithms. In the A2DP protocol, there are the following regulations: ![A2DP
+   Stack](../../assets/a2dp_codec.png) First, all devices are mandatorily
+   required to have SBC codec algorithm, which is a lossy algorithm with sound
+   quality comparable to MP3. Additionally, it supports 3 optional algorithms:
+   MPEG-1,2 audio/MPEG-2,4 AAC, ATRAC family. Of course, there are also some
+   custom extended codec algorithms, such as the popular APTX, LDAC, etc.
 
 # Sifli SDK A2DP Introduction
-This document is mainly based on Sifli SDK, introducing how to use basic A2DP functions as an A2DP source role.
-Related files include:
+This document is mainly based on Sifli SDK, introducing how to use basic A2DP
+functions as an A2DP source role. Related files include:
 - bts2_app_interface
 - bts2_app_av
 - bts2_app_av_src
-  
+
 ## A2DP Source Initialization
-- A2DP initialization functions: bt_av_init, bt_avsrc_init, will first initialize A2DP, then initialize A2DP source
+- A2DP initialization functions: bt_av_init, bt_avsrc_init, will first
+  initialize A2DP, then initialize A2DP source
 
 ```c
 //Initialize A2DP
@@ -233,15 +266,23 @@ static void bt_avsrc_init_data(bts2s_av_inst_data *inst, bts2_app_stru *bts2_app
 ```
 
 ## A2DP Source Device Connection
-The following process describes how A2DP source discovers, connects to, and plays music.
-1. The first step is to discover available A2DP sink devices (e.g., headphones, speakers) in the vicinity. For this, the A2DP source can perform a search on nearby devices, then use SDP to retrieve A2DP sink services from those devices that support the A2DP sink role.
-2. Select an A2DP sink device to connect to. Choose the device to connect to and initiate an ACL connection.
-3. A2DP connection. Once the ACL connection is established, the A2DP source can initiate an L2CAP connection for the A2DP signal channel. After connecting to the A2DP signal channel, a series of A2DP commands need to be initiated, then the A2DP source can initiate an L2CAP connection for the A2DP media channel.
+The following process describes how A2DP source discovers, connects to, and
+plays music.
+1. The first step is to discover available A2DP sink devices (e.g., headphones,
+   speakers) in the vicinity. For this, the A2DP source can perform a search on
+   nearby devices, then use SDP to retrieve A2DP sink services from those
+   devices that support the A2DP sink role.
+2. Select an A2DP sink device to connect to. Choose the device to connect to and
+   initiate an ACL connection.
+3. A2DP connection. Once the ACL connection is established, the A2DP source can
+   initiate an L2CAP connection for the A2DP signal channel. After connecting to
+   the A2DP signal channel, a series of A2DP commands need to be initiated, then
+   the A2DP source can initiate an L2CAP connection for the A2DP media channel.
 4. A2DP source starts playing music.
 5. A2DP sink or A2DP source can terminate the connection at any time.
 
-- A2DP source device connection interface:
-    //Users can call the following interface to connect A2DP
+- A2DP source device connection interface: //Users can call the following
+  interface to connect A2DP
     - bts2_app_interface connection interface: bt_interface_conn_to_source_ext
     - bts2_app_av_src connection interface: bt_avsrc_conn_2_snk
 ```c
@@ -320,9 +361,9 @@ void bt_av_conn(BTS2S_BD_ADDR *bd_addr, uint8_t peer_role)
         av_conn_req(bts2_task_get_app_task_id(), *bd_addr, peer_role_1, local_role);
 }
 ```
-       
-- A2DP source device disconnection interface:
-    //Users can call the following interface to disconnect A2DP
+
+- A2DP source device disconnection interface: //Users can call the following
+  interface to disconnect A2DP
     - bts2_app_interface disconnection interface: bt_interface_disc_ext
     - bts2_app_av_src disconnection interface: bt_avsnk_disc_by_addr
 ```c
@@ -574,18 +615,20 @@ static uint16_t bt_avsrc_send_data(struct rt_ringbuffer *rb)
     return bytes_rd;
 }
 ```
-        
+
 - A2DP source event handling:
     - A2DP source connection status callback events:
         - A2DP source connection successful: BT_NOTIFY_A2DP_PROFILE_CONNECTED
-        - A2DP source connection disconnected: BT_NOTIFY_A2DP_PROFILE_DISCONNECTED
+        - A2DP source connection disconnected:
+          BT_NOTIFY_A2DP_PROFILE_DISCONNECTED
     - A2DP sink playback status callback events
-        - A2DP source receives response to play command sent to peer: BT_NOTIFY_A2DP_START_CFM
-        - A2DP source receives response to pause command sent to peer: BT_NOTIFY_A2DP_SUSPEND_CFM
+        - A2DP source receives response to play command sent to peer:
+          BT_NOTIFY_A2DP_START_CFM
+        - A2DP source receives response to pause command sent to peer:
+          BT_NOTIFY_A2DP_SUSPEND_CFM
 
-:::{note}
-Note: The address parameters passed by the two interfaces need to be converted accordingly.
-:::
+:::{note} Note: The address parameters passed by the two interfaces need to be
+converted accordingly. :::
 ```c
 // After calling the API to connect A2DP, the A2DP connection successful message is sent to the user through notify
 // Users need to implement hdl functions to receive notify events, such as: bt_notify_handle
@@ -743,9 +786,11 @@ The search interface is: bt_interface_start_inquiry
 - A2DP source search event: BT_NOTIFY_COMMON_DISCOVER_IND
 
 ## A2DP Functionality Usage Demo
-- First, during project initialization, register the processing function for receiving notify events
+- First, during project initialization, register the processing function for
+  receiving notify events
 - Search for connectable devices
-- Enter the MAC address of the phone to connect to, wait for connection success message
+- Enter the MAC address of the phone to connect to, wait for connection success
+  message
 - Phone plays music
 ```c
 int bt_sifli_notify_a2dp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t data_len)
@@ -777,7 +822,7 @@ int bt_sifli_notify_a2dp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t da
         //Received suspend response from peer device, users implement their own corresponding processing functions
         break;
     }
-    
+
     default:
         return -1;
     }
