@@ -1,6 +1,7 @@
 # FFT
 
-HAL FFT module provides abstract software interface to operate hardware FFT module, implementing FFT and DCT transforms for fixed-point numbers.
+HAL FFT module provides abstract software interface to operate hardware FFT
+module, implementing FFT and DCT transforms for fixed-point numbers.
 
 ```{note}
 SF32LB55x does not support FFT
@@ -14,7 +15,13 @@ For detailed API documentation, refer to [FFT](#hal-fft).
 
 ## Using HAL FFT
 
-First call `HAL_FFT_Init` to initialize HAL_FFT. Need to specify the FFT hardware module used (i.e., FFT instance) in #FFT_HandleTypeDef. The number of FFT instances varies by chip. For example, SF32LB58x series has two FFT instances, #hwp_fft1 and #hwp_fft2, while SF32LB56x series has only one FFT instance, #hwp_fft1. Initialization only needs to be done once, then `HAL_FFT_StartFFT`, `HAL_FFT_StartDCT` and other functions can be called to process data.
+First call `HAL_FFT_Init` to initialize HAL_FFT. Need to specify the FFT
+hardware module used (i.e., FFT instance) in #FFT_HandleTypeDef. The number of
+FFT instances varies by chip. For example, SF32LB58x series has two FFT
+instances, #hwp_fft1 and #hwp_fft2, while SF32LB56x series has only one FFT
+instance, #hwp_fft1. Initialization only needs to be done once, then
+`HAL_FFT_StartFFT`, `HAL_FFT_StartDCT` and other functions can be called to
+process data.
 
 ```{note}
 Source and destination addresses need to be 4-byte aligned, supporting same source and destination addresses
@@ -32,9 +39,9 @@ void init_fft(void)
 { 	// Initialize driver and enable FFT IRQ
     HAL_NVIC_SetPriority(FFT1_IRQn, 3, 0);
     HAL_NVIC_EnableIRQ(FFT1_IRQn);
-    
+
     HAL_RCC_EnableModule(RCC_MOD_FFT1);
-    
+
     fft_handle.Instance = hwp_fft1 ;
     HAL_FFT_Init(&fft_handle);
 }
@@ -102,7 +109,7 @@ void fft_example_it(void)
     fft_done_flag = 0;
     fft_handle.CpltCallback = fft_done;    
     res = HAL_FFT_StartFFT_IT(&fft_handle, &config);
-    
+
     /* wait for interrupt, fft_done_flag is changed to 1 in fft_done */
     while (0 == fft_done_flag)
     {
@@ -111,4 +118,4 @@ void fft_example_it(void)
 ```
 
 ## API Reference
-[](#hal-fft)
+[]
