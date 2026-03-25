@@ -1,27 +1,44 @@
 # HFP_AG
-HFP (Hands-Free Profile) is a Bluetooth hands-free protocol that allows Bluetooth devices to control phone calls on peer Bluetooth devices, such as Bluetooth headsets controlling phone call answering, hanging up, rejecting, voice dialing, etc. Data interaction between the two Bluetooth ends in HFP is communicated through predefined AT commands. HFP defines two roles: Audio Gateway (AG) and Hands-Free component (HF):
-- Audio Gateway (AG): This device serves as the gateway for audio input/output. Typical gateway devices are mobile phones
-- Hands-Free component (HF): This device serves as the remote audio input/output mechanism for the audio gateway and can provide several remote control functions. Typical hands-free component devices are car systems and Bluetooth headsets
-![HFP Role](../../assets/HFP_ARCH.png)
+HFP (Hands-Free Profile) is a Bluetooth hands-free protocol that allows
+Bluetooth devices to control phone calls on peer Bluetooth devices, such as
+Bluetooth headsets controlling phone call answering, hanging up, rejecting,
+voice dialing, etc. Data interaction between the two Bluetooth ends in HFP is
+communicated through predefined AT commands. HFP defines two roles: Audio
+Gateway (AG) and Hands-Free component (HF):
+- Audio Gateway (AG): This device serves as the gateway for audio input/output.
+  Typical gateway devices are mobile phones
+- Hands-Free component (HF): This device serves as the remote audio input/output
+  mechanism for the audio gateway and can provide several remote control
+  functions. Typical hands-free component devices are car systems and Bluetooth
+  headsets ![HFP Role](../../assets/HFP_ARCH.png)
 - AT command rules:
     - One command line can only represent one AT command
-    - < cr > abbreviation for carriage return, equivalent to the enter key, ASCII code is 0x0D
-    - < lf > abbreviation for NL line feed, new line, equivalent to the line feed key, ASCII code is 0x0A
+    - < cr > abbreviation for carriage return, equivalent to the enter key,
+      ASCII code is 0x0D
+    - < lf > abbreviation for NL line feed, new line, equivalent to the line
+      feed key, ASCII code is 0x0A
     - HF -> AG sends AT command format: < AT command >< cr >
-    - AG -> HF sends AT command format: < cr >< lf >result code< cr >< lf > 
-    - If the AT command result code sent by AG to HF is a message reply, it must be followed by an OK message, unless the reply is a +CME ERROR message, where the following parameters represent the reason for failure.
+    - AG -> HF sends AT command format: < cr >< lf >result code< cr >< lf >
+    - If the AT command result code sent by AG to HF is a message reply, it must
+      be followed by an OK message, unless the reply is a +CME ERROR message,
+      where the following parameters represent the reason for failure.
 
-This document is mainly based on Sifli SDK, introducing how to use basic functions of AG role. Related files include:
+This document is mainly based on Sifli SDK, introducing how to use basic
+functions of AG role. Related files include:
 - bts2_app_interface
 - bts2_app_hfp_ag
-
 ## HFP_AG Initialization
-- AG initialization function: bt_hfp_ag_app_init, assigns initial values to AG-related states and flags
-- AG service startup function: bt_hfp_start_profile_service, configures +BRSF related attributes, users can adjust corresponding feature values according to requirements
-- AT cmd: 
-    - +BRSF: AG support features (Bluetooth Retrieve Supported Features)
+- AG initialization function: bt_hfp_ag_app_init, assigns initial values to
+  AG-related states and flags
+- AG service startup function: bt_hfp_start_profile_service, configures +BRSF
+  related attributes, users can adjust corresponding feature values according to
+  requirements
+- AT command:
+    - +BRSF: AG supported features (Bluetooth Retrieve Supported Features)
     - Format: +BRSF:< AG support features >
-    - After the HF side sends its supported features to the AG side, the AG end must also send its supported features to HF through "+BRSF:< AG support features >".
+    - After the HF side sends its supported features to the AG side, the AG end
+      must also send its supported features to HF through "+BRSF:< AG support
+      features >".
 ```c
 U32 features = (U32)(HFP_AG_FEAT_ECNR | \
                              HFP_AG_FEAT_INBAND | \
@@ -50,47 +67,52 @@ U32 features = (U32)(HFP_AG_FEAT_ECNR | \
 #define HFP_AG_FEAT_HF_IND  0x00000400      /* HF Indicators */
 #define HFP_AG_FEAT_ESCO    0x00000800      /* eSCO S4 (and T2) setting supported */
 
-/* Proprietary features: using 31 ~ 16 bits */
+/* Proprietary features: using bits 16–31 */
 #define HFP_AG_FEAT_BTRH    0x00010000      /* CCAP incoming call hold */
-#define HFP_AG_FEAT_UNAT    0x00020000      /* Pass unknown AT commands to app */
+#define HFP_AG_FEAT_UNAT    0x00020000      /* Pass unknown AT commands to application */
 #define HFP_AG_FEAT_NOSCO   0x00040000      /* No SCO control performed by BTA AG */
 #define HFP_AG_FEAT_NO_ESCO 0x00080000      /* Do not allow or use eSCO */
 #define HFP_AG_FEAT_VOIP    0x00100000      /* VoIP call */
 ```
-
 ## HFP_AG Device Connection
-When LM Link and RFCOMM Connection already exist, user behavior or other internal events that want to use HFP service need to first establish SLC (Service Level Connection). Establishing SLC connection requires the following 5 phases:
+When LM Link and RFCOMM Connection already exist, user behavior or other
+internal events that want to use HFP service need to first establish SLC
+(Service Level Connection). Establishing SLC connection requires the following 5
+phases:
 1. Supported features exchange (AT+BRSF)
 2. Codec Negotiation (AT+BAC)
 3. AG Indicators (AT+CIND, AT+CMER, +CIEV, AT+CHLD)
 4. HF Indicators (AT+BIND, AT+BIEV)
-5. End of Service Level Connection
-![HFP Connect Progress](../../assets/hfp_connect_progress.png)
-- AT cmd: 
+5. End of Service Level Connection ![HFP Connect
+   Progress](../../assets/hfp_connect_progress.png)
+- AT command:
     - AT+BAC: (Bluetooth Available Codecs)
     - Format: AT+BAC=< codec_id1 >,< codec_id2 >
     - HF side informs AG side which encoding methods are supported
     - codec: CVSD and msbc
-- AT cmd: 
-    - AT+CIND: (Standard indicator update AT command)
+- AT command:
+    - AT+CIND: Indicator Control
     - Format:
-        - AT+CIND=? Test command. HF obtains indicator index values and ranges supported by AG side. Must be requested at least once before sending indicator-related commands (AT+CIND? or AT_CMER).
+        - AT+CIND=? Test command. HF obtains indicator index values and ranges
+          supported by AG side. Must be requested at least once before sending
+          indicator-related commands (AT+CIND? or AT_CMER).
         - AT+CIND? Read command, HF reads current indicator values from AG side
-- AT cmd: 
-    - +CIEV: unsolicited result code (Standard indicator events reporting unsolicited result code)
+- AT command:
+    - +CIEV: unsolicited result code (Standard indicator events reporting
+      unsolicited result code)
     - Format: +CIEV: < ind >,< value >
-    - When AG indicators change, AG needs to actively notify HF side using +ciev AT cmd
-    ![indicator type](../../assets/HFP_AG_INDICATOR.png)
+    - When AG indicators change, AG needs to actively notify HF side using +ciev
+      AT cmd ![indicator type](../../assets/HFP_AG_INDICATOR.png)
 - AG device connection interface:
     - bts2_app_interface connection interface: bt_interface_conn_to_source_ext
     - bts2_app_hfp_ag connection interface: bt_hfp_connect_profile
-       
+
 - AG device disconnection interface:
     - bts2_app_hfp_ag disconnection interface: bt_hfp_disconnect_profile
-        
-- AG connection status callback events: 
-        - AG connection successful: BT_NOTIFY_AG_PROFILE_CONNECTED 
-        - AG connection failed: BT_NOTIFY_AG_PROFILE_DISCONNECTED
+
+- AG connection status callback events: - AG connection successful:
+  BT_NOTIFY_AG_PROFILE_CONNECTED - AG connection failed:
+  BT_NOTIFY_AG_PROFILE_DISCONNECTED
 ```c
 // After calling the API to connect AG role, the AG connection success message is sent to user through notify
 // Users need to implement hdl functions to receive notify events, such as: bt_notify_handle
@@ -133,12 +155,13 @@ int bt_sifli_notify_hfp_ag_event_hdl(uint16_t event_id, uint8_t *data, uint16_t 
     return 0;
 }
 ```
-:::{note}
-Note: The address parameters passed by the two interfaces need to be converted accordingly.
-:::
-- During AG SLC connection process, event when receiving AT+CIND=? cmd from HF: BT_NOTIFY_AG_GET_INDICATOR_STATUS_REQ
+:::{note} Note: The address parameters passed by the two interfaces need to be
+converted accordingly. :::
+- During AG SLC connection process, event when receiving AT+CIND=? cmd from HF:
+  BT_NOTIFY_AG_GET_INDICATOR_STATUS_REQ
 - AG needs to reply to event: BT_NOTIFY_AG_GET_INDICATOR_STATUS_REQ
-    - bts2_app_interface indicator status reply interface: bt_interface_get_all_indicator_info_res
+    - bts2_app_interface indicator status reply interface:
+      bt_interface_get_all_indicator_info_res
     - bts2_app_hfp_ag indicator status reply interface: bt_hfp_ag_cind_response
 ```c
 typedef struct
@@ -174,30 +197,40 @@ typedef struct
     cind_status.callheld = 0;
     bt_interface_get_all_indicator_info_res(&cind_status);
 ```
-
 ## HFP_AG Basic Functionality Usage
 ### Call Audio Establishment
-Audio Connection in HFP specification usually refers to SCO/eSCO voice path connection. Before SCO/eSCO, HF (AT+BCC) needs to notify AG to first select codec algorithm.
-- AT cmd: 
+Audio Connection in HFP specification usually refers to SCO/eSCO voice path
+connection. Before SCO/eSCO, HF (AT+BCC) needs to notify AG to first select
+codec algorithm.
+- AT command:
     - AT+BCC: Bluetooth Codec Connection
     - Format: AT+BCC
     - HF sends to AG, triggers AG to initiate codec connection process
-    - If AG decides to initiate codec connection process, reply OK; otherwise ERROR. After replying OK, AG side will send +BCS:< codec_id > and HF side replies: AT+BCS=< codec_id >. After that, eSCO link is established
-- AT cmd: 
+    - If AG decides to initiate codec connection process, reply OK; otherwise
+      ERROR. After replying OK, AG side will send +BCS:< codec_id > and HF side
+      replies: AT+BCS=< codec_id >. After that, eSCO link is established
+- AT command:
     - AT+BCS: Bluetooth Codec Selection
     - Format: AT+BCS=< codec_id >
     - +BCS: Bluetooth Codec Selection
     - Format: +BCS:< codec_id >
     - codec: (codec_id=1) CVSD and (codec_id=2) msbc
-    - Before AG establishes eSCO, it will send command +BCS:< codec_id > to HF. HF side replies: AT+BCS=< codec_id >. If both AG and HF support this ID, the secondary link will be established. But if ID is not supported, HF will respond with AT+BAC and its available codecs. If (e)SCO link cannot be established, AG will restart the Codec Connection establishment process. Before Codec connection establishment, CVSD encoding will be enabled.
-
+    - Before AG establishes eSCO, it will send command +BCS:< codec_id > to HF.
+      HF side replies: AT+BCS=< codec_id >. If both AG and HF support this ID,
+      the secondary link will be established. But if ID is not supported, HF
+      will respond with AT+BAC and its available codecs. If (e)SCO link cannot
+      be established, AG will restart the Codec Connection establishment
+      process. Before Codec connection establishment, CVSD encoding will be
+      enabled.
 #### Sifli HFP_AG Connect/Disconnect Call Audio
-- bts2_app_interface call audio connection interface: bt_interface_ag_audio_switch
+- bts2_app_interface call audio connection interface:
+  bt_interface_ag_audio_switch
 - bts2_app_hfp_ag call audio connection interface: bt_hfp_connect_audio
-- bts2_app_interface call audio disconnection interface: bt_interface_ag_audio_switch
+- bts2_app_interface call audio disconnection interface:
+  bt_interface_ag_audio_switch
 - bts2_app_hfp_ag call audio disconnection interface: bt_hfp_disconnect_audio
 ```c
-    // Call audio establishment connection interface bt_interface_ag_audio_switch parameters: type 0:connect audio type 1:disconnect audio + device mac address
+// Call audio establishment connection interface bt_interface_ag_audio_switch parameters: type 0:connect audio type 1:disconnect audio + device mac address
     // Call audio connection successful BT_NOTIFY_COMMON_SCO_CONNECTED event: sco type (distinguish HF or AG) status (status)
     // For specific structure explanation, please refer to relevant descriptions in interface
 static int bt_notify_handle(uint16_t type, uint16_t event_id, uint8_t *data, uint16_t data_len)
@@ -234,26 +267,35 @@ int bt_sifli_notify_common_event_hdl(uint16_t event_id, uint8_t *data, uint16_t 
     return 0;
 }
 ```
-
 ### AG Phone Status Update
-- AT cmd: 
-    - AT+CIND: (Standard indicator update AT command)
+- AT command:
+    - AT+CIND: Indicator Control
     - Format:
-        - AT+CIND=? Test command. HF obtains indicator index values and ranges supported by AG side. Must be requested at least once before sending indicator-related commands (AT+CIND? or AT_CMER).
+        - AT+CIND=? Test command. HF obtains indicator index values and ranges
+          supported by AG side. Must be requested at least once before sending
+          indicator-related commands (AT+CIND? or AT_CMER).
         - AT+CIND? Read command, HF reads current indicator values from AG side
-- AT cmd: 
-    - +CIEV: unsolicited result code (Standard indicator events reporting unsolicited result code)
+- AT command:
+    - +CIEV: unsolicited result code (Standard indicator events reporting
+      unsolicited result code)
     - Format: +CIEV: < ind >,< value >
-    - When AG indicators change, AG needs to actively notify HF side using +ciev AT cmd
-- AT cmd: 
-    - AT+CLCC: Standard list current calls command
+    - When AG indicators change, AG needs to actively notify HF side using +ciev
+      AT cmd
+- AT command:
+    - AT+CLCC: List Current Calls
     - Format: AT+CLCC
     - +CLCC: Standard list current calls command
-    - Format: +CLCC: < idx >,< dir >,< status >,< mode >,< mpty >,< number >,< type >
-    - HF requests current call information list, AG side replies current call information list through "+CLCC". If there are currently no calls, AG side must also reply with OK command.
+    - Format: +CLCC: < idx >,< dir >,< status >,< mode >,< mpty >,< number >,<
+      type >
+    - HF requests current call information list, AG side replies current call
+      information list through "+CLCC". If there are currently no calls, AG side
+      must also reply with OK command.
 
-Once the phone AG end call status changes, AG should notify HF of the current changed call status. For example, after an incoming call, Bluetooth headset HF end answers, call status changes, AG side +CIEV:2,1 notifies HF to reject or AG hangs up, AG side +CIEV:2,0 notifies HF end.
-- call Status
+Once the phone AG end call status changes, AG should notify HF of the current
+changed call status. For example, after an incoming call, Bluetooth headset HF
+end answers, call status changes, AG side +CIEV:2,1 notifies HF to reject or AG
+hangs up, AG side +CIEV:2,0 notifies HF end.
+- Call Status
     - 0: No calls (held or active)
     - 1: Call is present (active or held)
 - callsetup status
@@ -263,17 +305,20 @@ Once the phone AG end call status changes, AG should notify HF of the current ch
     - 3: Outgoing call setup in alerting state
 - callheld status
     - 0: No call held
-    - 1: Call is placed on hold or active/held calls swapped
-    - 2: Call on hold, no active call
-- Incoming call state transition: 
-    - call_idle <----> call_incoming <-----> call_active <----> call_idle
-- Outgoing call state transition: 
-    - call_idle <----> call_outgoing_dialing ----> call_outgoing_alerting <-----> call_active <----> call_idle
-    - call_idle <----> call_outgoing_dialing ----> call_outgoing_alerting <-----> call_idle
-
+    - 1: Call placed on hold or active/held calls swapped
+    - 2: Call on hold with no active call
+- Incoming call state transition:
+    -  call_idle <----> call_incoming <-----> call_active <----> call_idle
+- Outgoing call state transition:
+    - call_idle <----> call_outgoing_dialing ----> call_outgoing_alerting
+      <-----> call_active <----> call_idle
+    - call_idle <----> call_outgoing_dialing ----> call_outgoing_alerting
+      <-----> call_idle
 #### Sifli AG Update Phone Information
-- bts2_app_interface phone status update interface: bt_interface_phone_state_changed
-- bts2_app_hfp_ag phone status update interface: bt_hfp_ag_call_state_update_listener
+- bts2_app_interface phone status update interface:
+  bt_interface_phone_state_changed
+- bts2_app_hfp_ag phone status update interface:
+  bt_hfp_ag_call_state_update_listener
 ```c
 typedef struct
 {
@@ -286,97 +331,99 @@ typedef struct
     U8 phone_number[1];
 } HFP_CALL_INFO_T;
 
-// a call incoming
+// Incoming call
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 0;
 call_info.num_held = 0;
 call_info.callsetup_state = 1;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
 
-// a call active
+// Active call
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 1;
 call_info.num_held = 0;
 call_info.callsetup_state = 0;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
-// a call idle
+// Idle call
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 0;
 call_info.num_held = 0;
 call_info.callsetup_state = 0;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
 
-// a call outgoing dialing
+// Outgoing call: Dialing
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 0;
 call_info.num_held = 0;
 call_info.callsetup_state = 2;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
-// a call outgoing alerting
+// Outgoing call: Alerting
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 0;
 call_info.num_held = 0;
 call_info.callsetup_state = 3;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
-// a call active
+// Active call
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 1;
 call_info.num_held = 0;
 call_info.callsetup_state = 0;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 
-// a call idle
+// Idle call
 HFP_CALL_INFO_T call_info;
 call_info.num_active = 0;
 call_info.num_held = 0;
 call_info.callsetup_state = 0;
 call_info.phone_type = 0x81;
 char *str = "1234567";
-bmemcpy(&call_info.phone_number, str, strlen(str) + 1);
+bmemcpy(&amp;call_info.phone_number, str, strlen(str) + 1);
 call_info.phone_len = strlen(str) + 1;
-bt_interface_phone_state_changed(&call_info);
+bt_interface_phone_state_changed(&amp;call_info);
 ```
-
 ### AG Information Synchronization Processing
-- AT cmd: 
-    - +CIEV: unsolicited result code (Standard indicator events reporting unsolicited result code)
+- AT command:
+    - +CIEV: unsolicited result code (Standard indicator events reporting
+      unsolicited result code)
     - Format: +CIEV: < ind >,< value >
-    - When AG indicators change, AG needs to actively notify HF side using +ciev AT cmd
+    - When AG indicators change, AG needs to actively notify HF side using +ciev
+      AT cmd
 - Indicator status value update
     - When AG end indicators change, AG needs to actively update status
-    - bts2_app_interface status update interface: bt_interface_indicator_status_changed
+    - bts2_app_interface status update interface:
+      bt_interface_indicator_status_changed
     - bts2_app_hfp_ag status update interface: bt_hfp_ag_ind_status_update
-    - Common indicator types are shown in the following figure:
-    ![Figure 1: indicator type](../../assets/HFP_AG_INDICATOR.png)
+    - Common indicator types are shown in the following figure: ![Figure 1:
+      indicator type](../../assets/HFP_AG_INDICATOR.png)
     - Service status update demo:
 ```c
 typedef struct
@@ -401,44 +448,25 @@ ind_info.ind_type = HFP_AG_CIND_SERVICE_TYPE;
 ind_info.ind_val = 3;
 bt_interface_indicator_status_changed(&ind_info);
 ```
-
-##### AG Local Number Synchronization
-- AT cmd: 
-    - AT+CNUM: Subscriber Number Information
-    - Format: AT+CNUM
-    - This command is used to query local number
-    - +CNUM: Subscriber Number Information
-    - Format: +CNUM: ,< number >,< type >[,, < service >]
-    - After AG receives this request, it will reply the phone's local number to HF side through +CNUM.
-- Event when receiving HF end request for local number: BT_NOTIFY_AG_GET_LOCAL_PHONE_INFO_REQ
-- Interface to reply local number:
-    - bts2_app_interface local number reply interface: bt_interface_local_phone_info_res 
-    - bts2_app_hfp_ag local number reply interface: bt_hfp_ag_cnum_response
-```c
-typedef struct
-{
-    char phone_number[PHONE_NUM_LEN];
-    U8 type;
-} hfp_phone_number_t;
-
-hfp_phone_number_t local_phone_num;
-char *str = "19396395979";
-bmemcpy(&local_phone_num.phone_number, str, strlen(str));
-local_phone_num.type = 0x81;
-bt_interface_local_phone_info_res(&local_phone_num);
-```
-
 #### AG All Call Status Information
-- AT cmd: 
+- AT command:
     - AT+CLCC: Standard list current calls command
     - Format: AT+CLCC
     - +CLCC: Standard list current calls command
-    - Format: +CLCC: < idx >,< dir >,< status >,< mode >,< mpty >,< number >,< type >
-    - HF requests current call information list, AG side replies current call information list through "+CLCC". If there are currently no calls, AG side must also reply with OK command.
-- Event when receiving HF end request for all call status information: BT_NOTIFY_AG_GET_ALL_REMT_CALLS_INFO_REQ
+    - Format: +CLCC: < idx >,< dir >,< status >,< mode >,< mpty >,< number >,<
+      type >
+    - HF requests current call information list, AG side replies current call
+      information list through "+CLCC". If there are currently no calls, AG side
+      must also reply with OK command.
+    - Upon receiving this request, the AG returns the local phone number to the
+      HF using the +CNUM response.
+- Event when receiving HF end request for all call status information:
+  BT_NOTIFY_AG_GET_ALL_REMT_CALLS_INFO_REQ
 - Interface to reply all call status information:
-    - bts2_app_interface all call status information interface: bt_interface_remote_call_info_res
-    - bts2_app_hfp_ag all call status information interface: bt_hfp_ag_remote_calls_res_hdl
+    - bts2_app_interface all call status information interface:
+      bt_interface_remote_call_info_res
+    - bts2_app_hfp_ag all call status information interface:
+      bt_hfp_ag_remote_calls_res_hdl
 ```c
 typedef struct
 {
@@ -485,69 +513,146 @@ calls.num_call = 1;
 calls.calls = &call_info;
 bt_interface_remote_call_info_res((hfp_remote_calls_info_t *)calls);
 ```
+#### Status information for all AG calls
+- AT command:
+    - AT+CLCC: List Current Calls
+    - Format: AT+CLCC
+    - +CLCC: Standard list current calls command
+    - Format: +CLCC: < idx >,< dir >,< status >,< mode >,< mpty >,< number >,<
+      type >
+    - HF requests current call information list, AG side replies current call
+      information list through "+CLCC". If there are currently no calls, AG side
+      must also reply with OK command.
+- Received the event from the HF (Hands-Free) unit requesting status information
+  for all calls: BT_NOTIFY_AG_GET_ALL_REMT_CALLS_INFO_REQ
+- Interface for reporting the status of all calls:
+    - Interface for retrieving status information for all calls in
+      bts2_app_interface: bt_interface_remote_call_info_res
+    - Interface for retrieving status information for all calls in
+      bts2_app_hfp_ag: bt_hfp_ag_remote_calls_res_hdl
+```c
+typedef struct
+{
+    // Number of calls
+    U8 num_call;
+    hfp_phone_call_info_t *calls;
+} hfp_remote_calls_info_t;
 
+typedef struct
+{
+    // Call index (starts from 1)
+    U8 call_idx;
+    // Call direction: 0 = Outgoing, 1 = Incoming
+    U8 call_dir;
+    // 0: Active
+    // 1: Held
+    // 2: Dialing (outgoing calls only)
+    // 3: Alerting (outgoing calls only)
+    // 4: Incoming (incoming calls only)
+    // 5: Waiting (incoming calls only)
+    // 6: Call held by Response and Hold
+    U8 call_status;
+    // Call mode: 0 (Voice), 1 (Data), 2 (FAX)
+    U8 call_mode;
+    // Multi-party call flag: 0 = Not a multi-party call, 1 = Multi-party call
+    U8 call_mtpty;
+    // Phone number and number type
+    hfp_phone_number_t phone_info;
+} hfp_phone_call_info_t;
+
+hfp_phone_call_info_t call_info;
+bmemset(&amp;call_info, 0x00, sizeof(hfp_phone_call_info_t));
+call_info.call_idx = 1;
+call_info.call_dir = 1;
+call_info.call_status = 1;
+call_info.call_mode = 0;
+call_info.call_mtpty = 0;
+char *str = "123456";
+bmemcpy(&amp;call_info.phone_info.phone_number, str, strlen(str) + 1);
+call_info.phone_info.type = 0x81;
+
+hfp_remote_calls_info_t calls;
+calls.num_call = 1;
+calls.calls = &amp;call_info;
+bt_interface_remote_call_info_res((hfp_remote_calls_info_t *)calls);
+```
 ### HFP_AG Phone Related Functions
-- AT cmd: 
-    - AT+CLIP: Calling Line Identification notification
+- AT command:
+    - AT+CLIP: Calling Line Identification Presentation
     - Format: AT+CLIP=(0/1)
     - +CLIP: Calling Line Identification notification
     - Format: +CLIP: < number >,< type >
-    - Enable or disable caller ID notification. When enabled, AG side sends current incoming call number and type to HF through "+CLIP" command during incoming calls
-- AT cmd: 
+    - Enable or disable caller ID notification. When enabled, AG side sends
+      current incoming call number and type to HF through "+CLIP" command during
+      incoming calls
+- AT command:
     - AT+CCWA: Three-Way Call Handling
     - Format: AT+CCWA=(0/1)
     - Enable or disable three-way call waiting reminder
     - +CCWA: Call Waiting Notification
     - Format: +CCWA: < number >,< type >
-    - When enabled, if there's already one connected call and another call comes in, AG will send +CCWA
-- AT cmd: 
+    - When enabled, if there's already one connected call and another call comes
+      in, AG will send +CCWA
+- AT command:
     - ATD: Dial call req
     - Format: ATDdd…dd
     - HF actively requests to make a call
     - AT+BLDN: Bluetooth Last Dialed Number
     - Format: AT+BLDN
-    - Request AG side to redial the last call. After receiving this request, AG initiates a call based on the most recently dialed number.
-- AT cmd: 
-    - ATA: call answer
+    - Request AG side to redial the last call. After receiving this request, AG
+      initiates a call based on the most recently dialed number.
+- AT command:
+    - ATA: Answer Call
     - Format: ATA
-    - Answer call. When connected, +CIEV:< call_ind >, < 1 > and +CIEV:< call_setup_ind >, < 0 > appear
-- AT cmd: 
-    - AT+CHUP: Reject an Incoming Call/Terminate a Call Process
+    - Answer call. When connected, +CIEV:< call_ind >, < 1 > and +CIEV:<
+      call_setup_ind >, < 0 > appear
+- AT command:
+    - AT+CHUP: Hang up Call
     - Format: AT+CHUP
-    - Reject or hang up call, +CIEV:< call_setup_ind >, < 0 > / +CIEV:< call_ind >, < 0 > appears
+    - Reject or hang up call, +CIEV:< call_setup_ind >, < 0 > / +CIEV:< call_ind
+      >, < 0 > appears
 
 - Phone related functions
     - Event when receiving HF end answer call: BT_NOTIFY_AG_ANSWER_CALL_REQ
     - Event when receiving HF end hang up call: BT_NOTIFY_AG_HANGUP_CALL_REQ
-    - Event when receiving HF end control call volume: BT_NOTIFY_AG_VOLUME_CHANGE
+    - Event when receiving HF end control call volume:
+      BT_NOTIFY_AG_VOLUME_CHANGE
     - Event when receiving HF end make call: BT_NOTIFY_AG_MAKE_CALL_REQ
-    - When receiving make call request, need to check number validity, reply check result
+    - When receiving make call request, need to check number validity, reply
+      check result
         - bts2_app_interface result reply interface: bt_interface_make_call_res
         - bts2_app_hfp_ag result reply interface: bt_hfp_ag_at_result_res
     - During call, event when receiving DTMF key: BT_NOTIFY_AG_RECV_DTMF_KEY
-- AT cmd: 
+- AT command:
     - AT+VGM: Gain of Microphone
     - Format: AT+VGM=< gain >
-    - +VGM: Gain of Microphone
+    - +VGM: Microphone gain
     - Format: +VGM:< gain >
     - Adjust MIC volume in audio path, value range 0~15
-- AT cmd: 
-    - AT+VGS: Gain of Speaker
+- AT command:
+    - AT+VGS: Speaker gain
     - Format: AT+VGS=< gain >
-    - +VGS: Gain of Speaker
+    - +VGS: Speaker gain
     - Format: +VGS:< gain >
     - Adjust speaker volume in audio path, value range 0~15
 - Active volume control interface:
-    - bts2_app_interface speaker volume control interface: bt_interface_set_speaker_volume
+    - bts2_app_interface speaker volume control interface:
+      bt_interface_set_speaker_volume
     - bts2_app_hfp_hf speaker volume control interface: bt_hfp_hf_update_spk_vol
-    - bts2_app_hfp_hf microphone volume control interface: bt_hfp_hf_update_mic_vol
-    - Volume setting processing result event: BT_NOTIFY_HF_AT_CMD_CFM with cmd_id (HFP_HF_AT_VGS/HFP_HF_AT_VGM)
+    - bts2_app_hfp_hf microphone volume control interface:
+      bt_hfp_hf_update_mic_vol
+    - Volume setting processing result event: BT_NOTIFY_HF_AT_CMD_CFM with
+      cmd_id (HFP_HF_AT_VGS/HFP_HF_AT_VGM)
     - Active speaker volume control:
-        - bts2_app_interface speaker volume control interface: bt_interface_spk_vol_change_req
-        - bts2_app_hfp_ag speaker volume control interface: bt_hfp_ag_spk_vol_control
+        - bts2_app_interface speaker volume control interface:
+          bt_interface_spk_vol_change_req
+        - bts2_app_hfp_ag speaker volume control interface:
+          bt_hfp_ag_spk_vol_control
     - Active microphone volume control:
-        - bts2_app_interface microphone volume control interface: bt_interface_mic_vol_change_req
-        - bts2_app_hfp_ag microphone volume control interface: bt_hfp_ag_mic_vol_control
+        - bts2_app_interface microphone volume control interface:
+          bt_interface_mic_vol_change_req
+        - bts2_app_hfp_ag microphone volume control interface:
+          bt_hfp_ag_mic_vol_control
 ```c
 //register notify event handle function start
 //step1: Call connection interface, AG connection success message: BT_NOTIFY_AG_PROFILE_CONNECTED
