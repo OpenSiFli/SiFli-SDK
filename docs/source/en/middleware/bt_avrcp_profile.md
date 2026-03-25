@@ -1,152 +1,183 @@
 # BT_AVRCP
-AVRCP (Audio/Video Remote Control Profile) defines the characteristics and processes for communication between Bluetooth devices and audio/video control functions, and is also used for remote control of audio/video devices. The underlying transport is based on the AVCTP transport protocol. This Profile defines the AV/C digital command control set. Commands and information are transmitted through the AVCTP (Audio/Video Control Transport Protocol) protocol. Browsing functionality is through the second channel of AVCTP rather than AV/C. Media information transmission is through the BIP (Bluetooth Basic Imaging Profile) protocol based on the OBEX protocol.
-
+AVRCP (Audio/Video Remote Control Profile) defines the characteristics and
+processes for communication between Bluetooth devices and audio/video control
+functions, and is also used for remote control of audio/video devices. The
+underlying transport is based on the AVCTP transport protocol. This Profile
+defines the AV/C digital command control set. Commands and information are
+transmitted through the AVCTP (Audio/Video Control Transport Protocol) protocol.
+Browsing functionality is through the second channel of AVCTP rather than AV/C.
+Media information transmission is through the BIP (Bluetooth Basic Imaging
+Profile) protocol based on the OBEX protocol.
 ## AVCTP Introduction
-1. AVCTP Protocol Architecture
-The AVCTP protocol describes the format and mechanism for exchanging Audio/Video control signals between Bluetooth devices. It is a general protocol, with specific control information implemented by its designated protocols (such as AVRCP). AVCTP itself only specifies the general format of control commands and responses.
+1. AVCTP Protocol Architecture The AVCTP protocol describes the format and
+   mechanism for exchanging Audio/Video control signals between Bluetooth
+   devices. It is a general protocol, with specific control information
+   implemented by its designated protocols (such as AVRCP). AVCTP itself only
+   specifies the general format of control commands and responses.
 
-Several important points:
-&emsp;&emsp;(1) AVCTP is based on point-to-point L2CAP connections.
-&emsp;&emsp;(2) Each AVCTP connection should support both AVRCP CT and TG functionality.
-&emsp;&emsp;(3) There may be multiple AVCTP connections between two devices, but each AVCTP connection has a unique PSM value.
-&emsp;&emsp;(4) Each AVCTP packet should be transmitted in one L2CAP packet.
-&emsp;&emsp;(5) The same transaction Label on different L2CAP channels belongs to different messages. That is, packets on two L2CAP channels are unrelated and cannot belong to the same message.
-![AVCTP Architect](../../assets/avctp_arch.png)
+Several important points: (1) AVCTP is based on point-to-point L2CAP
+connections. (2) Each AVCTP connection should support both AVRCP CT and TG
+functionality. (3) There may be multiple AVCTP connections between two devices,
+but each AVCTP connection has a unique PSM value. (4) Each AVCTP packet should
+be transmitted in one L2CAP packet. (5) The same transaction Label on different
+L2CAP channels belongs to different messages. That is, packets on two L2CAP
+channels are unrelated and cannot belong to the same message. ![AVCTP
+Architect](../../assets/avctp_arch.png)
 
-2. AVCTP Packet Format
-AVCTP packet format is divided into two types:
-&emsp;&emsp;1) Unfragmented (smaller than L2CAP MTU)
-&emsp;&emsp;2) Fragmented (larger than L2CAP MTU)
-The following introduces the format of each type:
-&emsp;&emsp;1) Unfragmented (smaller than L2CAP MTU)
-![AVCTP Packet](../../assets/avctp_packet.png)
-   - Transaction label field: (octet 0, bits 7-4) Transport identifier, provided by upper layer;
 
-   - Packet_type field: (octet 0, bits 3 and 2) This part 00b indicates unfragmented;
+2. AVCTP Packet Format AVCTP packet format is divided into two types: 1)
+   Unfragmented (smaller than L2CAP MTU) 2) Fragmented (larger than L2CAP MTU)
+   The following introduces the format of each type: 1) Unfragmented (smaller
+   than L2CAP MTU) ![AVCTP Packet](../../assets/avctp_packet.png)
+   - Transaction label field: (octet 0, bits 7-4) Transport identifier, provided
+     by upper layer;
+
+   - Packet_type field: (octet 0, bits 3 and 2) This part 00b indicates
+     unfragmented;
 
    - C/R: (octet 0, bit 1) 0 represents command, 1 represents response
 
-   - PID: bit (octet 0, bit 0) Set to 0 in command, set to 0 in response represents normal PID
+   - PID: bit (octet 0, bit 0) Set to 0 in command, set to 0 in response
+     represents normal PID
 
-   - Profile Identifier (PID): This part fills in 16-bit UUID, such as AVRCP UUID 0x110e. The subsequent Message Information is the upper layer protocol data
+   - Profile Identifier (PID): This part fills in 16-bit UUID, such as AVRCP
+     UUID 0x110e. The subsequent Message Information is the upper layer protocol
+     data
 
-&emsp;&emsp;&emsp;&emsp;2) Fragmented (larger than L2CAP MTU)
-Fragmented data packet format has three types in total:
-&emsp;&emsp;&emsp;&emsp;![AVCTP Start Packet](../../assets/avctp_start_packet.png)
-&emsp;&emsp;&emsp;&emsp;![AVCTP Continue Packet](../../assets/avctp_continue_packet.png)
-&emsp;&emsp;&emsp;&emsp;![AVCTP End Packet](../../assets/avctp_end_packet.png)
-&emsp;&emsp;&emsp;&emsp;Here we only introduce two aspects, others are consistent with unfragmented:
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Packet_type: Start packet is 01b, continue packet 10b, end packet is 11b
-&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Number of AVCTP Packets: Indicates the total number of fragmented packets, including this start packet, so the number of this packet must be greater than 1.
+2) Fragmented (larger than L2CAP MTU) Fragmented data packet format has three
+types in total: ![AVCTP Start Packet](../../assets/avctp_start_packet.png)
+![AVCTP Continue Packet](../../assets/avctp_continue_packet.png) ![AVCTP End
+Packet](../../assets/avctp_end_packet.png) Here we only introduce two aspects,
+others are consistent with unfragmented: Packet_type: Start packet is 01b,
+continue packet 10b, end packet is 11b Number of AVCTP Packets: Indicates the
+total number of fragmented packets, including this start packet, so the number
+of this packet must be greater than 1.
+
 
 ## AVRCP Introduction
-1. AVRCP Protocol Architecture
-![AVRCP ARCH](../../assets/avrcp_arch.png)
-AVRCP Profile defines two roles:
-    - CT (controller devices)
-      Controller is a device that initiates transactions by sending command frames to target devices, such as headphones, speakers, car Bluetooth devices.
-    - TG (target devices)
-      Target is a device that receives command frames sent by the controller and generates corresponding response frames, such as mobile phones.
+1. AVRCP Protocol Architecture ![AVRCP ARCH](../../assets/avrcp_arch.png) AVRCP
+   Profile defines two roles:
+    - CT (controller devices) Controller is a device that initiates transactions
+      by sending command frames to target devices, such as headphones, speakers,
+      car Bluetooth devices.
+    - TG (target devices) Target is a device that receives command frames sent
+      by the controller and generates corresponding response frames, such as
+      mobile phones.
 
-2. AVRCP Connection
-AVCTP connection is divided into two channels: Control channel and Browsing channel, with different corresponding L2CAP PSMs. The control channel PSM is 0x0017, AVCTP browsing channel PSM is 0x001B. Both controller and target roles can initiate connections on both channels. Note that AVCTP browsing part based on L2CAP cannot use basic mode, Enhanced Retransmission Mode is required, and AVCTP browsing channel connection can only be initiated when both sides support AVCTP browsing.
-The entire establishment process follows these flows:
-![AVRCP Controller Connect](../../assets/avrcp_connect_ct.png)
-![AVRCP Target Connect](../../assets/avrcp_connect_tg.png)
-![AVRCP Mult Connect](../../assets/avrcp_connect_mult.png)
+2. AVRCP Connection AVCTP connection is divided into two channels: Control
+   channel and Browsing channel, with different corresponding L2CAP PSMs. The
+   control channel PSM is 0x0017, AVCTP browsing channel PSM is 0x001B. Both
+   controller and target roles can initiate connections on both channels. Note
+   that AVCTP browsing part based on L2CAP cannot use basic mode, Enhanced
+   Retransmission Mode is required, and AVCTP browsing channel connection can
+   only be initiated when both sides support AVCTP browsing. The entire
+   establishment process follows these flows: ![AVRCP Controller
+   Connect](../../assets/avrcp_connect_ct.png) ![AVRCP Target
+   Connect](../../assets/avrcp_connect_tg.png) ![AVRCP Mult
+   Connect](../../assets/avrcp_connect_mult.png)
 
-3. AVRCP Disconnection
-Disconnection can be operated from AVRCP controller or target role. Note that if there is an AVCTP browsing connection, disconnect the AVCTP browsing channel connection first. The entire process is as follows:
-![AVRCP Disconnect](../../assets/avrcp_disconnect.png)
 
-4. AVRCP AV/C Command Format
-&emsp;4.1 VENDOR DEPENDENT Format
-&emsp;&emsp;1) Command header format:
-&emsp;&emsp;![AVRCP Vendor Command](../../assets/avrcp_vendor_command.png)
-&emsp;&emsp;Ctype: This is the command type, divided into 5 types in total. Generally, we use 3 types in AVRCP protocol: CONTROL control command, STATUS get status command, NOTIFY notification command. The types are as follows:
-&emsp;&emsp;![AVRCP Vendor Ctype](../../assets/avrcp_vendor_ctype.png)
-&emsp;&emsp;Subunit_type: Subunit type, with the following definitions. Generally use PANEL in AVRCP
-&emsp;&emsp;![AVRCP Vendor Subunit](../../assets/avrcp_vendor_subunit.png)
-&emsp;&emsp;Subunit_id: This part we generally fill 0
-&emsp;&emsp;Opcode: We only need to know what the specific command opcode is. VENDOR DEPENDENT value is 0.
-&emsp;&emsp;Company ID: This part needs to fill in the Bluetooth SIG ID
-&emsp;&emsp;2) Response header format:
-&emsp;&emsp;![AVRCP Response Header](../../assets/avrcp_response_header.png)
-&emsp;&emsp;As you can see, command and response formats are exactly the same. We won't repeat other parameters. Let's talk about Response values:
-&emsp;&emsp;![AVRCP Response status](../../assets/avrcp_response_status.png)
+3. AVRCP Disconnection Disconnection can be operated from AVRCP controller or
+   target role. Note that if there is an AVCTP browsing connection, disconnect
+   the AVCTP browsing channel connection first. The entire process is as
+   follows: ![AVRCP Disconnect](../../assets/avrcp_disconnect.png)
 
-&emsp;4.2 PASS THROUGH Format
-&emsp;&emsp;1) Command:
-&emsp;&emsp;![AVRCP Pass Through Command](../../assets/avrcp_pass_through_command.png)
+4. AVRCP AV/C Command Format 4.1 VENDOR DEPENDENT Format 1) Command header
+   format: ![AVRCP Vendor Command](../../assets/avrcp_vendor_command.png) Ctype:
+   This is the command type, divided into 5 types in total. Generally, we use 3
+   types in AVRCP protocol: CONTROL control command, STATUS get status command,
+   NOTIFY notification command. The types are as follows: ![AVRCP Vendor
+   Ctype](../../assets/avrcp_vendor_ctype.png) Subunit_type: Subunit type, with
+   the following definitions. Generally use PANEL in AVRCP ![AVRCP Vendor
+   Subunit](../../assets/avrcp_vendor_subunit.png) Subunit_id: This part we
+   generally fill 0 Opcode: We only need to know what the specific command
+   opcode is. VENDOR DEPENDENT value is 0. Company ID: This part needs to fill
+   in the Bluetooth SIG ID 2) Response header format: ![AVRCP Response
+   Header](../../assets/avrcp_response_header.png) As you can see, command and
+   response formats are exactly the same. We won't repeat other parameters.
+   Let's talk about Response values: ![AVRCP Response
+   status](../../assets/avrcp_response_status.png)
 
-&emsp;&emsp;1) Response:
-&emsp;&emsp;![AVRCP Pass Through Response](../../assets/avrcp_pass_through_response.png)
+4.2 PASS THROUGH Format 1) Command: ![AVRCP Pass Through
+Command](../../assets/avrcp_pass_through_command.png)
 
-&emsp;&emsp;We won't introduce others in detail, only Operation_ID and state_flag
-&emsp;&emsp;&emsp;Operation_ID: Operation ID
-&emsp;&emsp;&emsp;![AVRCP Pass Through Operation ID](../../assets/avrcp_pass_through_operation_id.png)
-&emsp;&emsp;&emsp;![AVRCP Pass Through Operation ID](../../assets/avrcp_pass_through_operation_id_1.png)
-&emsp;&emsp;&emsp;![AVRCP Pass Through Operation ID](../../assets/avrcp_pass_through_operation_id_2.png)
-&emsp;&emsp;&emsp;![AVRCP Pass Through Operation ID](../../assets/avrcp_pass_through_operation_id_3.png)
+1) Response: ![AVRCP Pass Through
+Response](../../assets/avrcp_pass_through_response.png)
 
-&emsp;&emsp;&emsp;State_flag: Simply put, it's divided into press and release actions. When sending, this value is 0 for press and 1 for release
+We won't introduce others in detail, only Operation_ID and state_flag
+Operation_ID: Operation ID ![AVRCP Pass Through Operation
+ID](../../assets/avrcp_pass_through_operation_id.png) ![AVRCP Pass Through
+Operation ID](../../assets/avrcp_pass_through_operation_id_1.png) ![AVRCP Pass
+Through Operation ID](../../assets/avrcp_pass_through_operation_id_2.png)
+![AVRCP Pass Through Operation
+ID](../../assets/avrcp_pass_through_operation_id_3.png)
 
-&emsp;4.3 AVRCP Specific Commands
-&emsp;&emsp;AVRCP specific commands include the following:
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_0.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_1.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_2.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_3.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_4.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_5.png)
-&emsp;&emsp;![AVRCP Special Command](../../assets/avrcp_special_command_6.png)
+State_flag: Simply put, it's divided into press and release actions. When
+sending, this value is 0 for press and 1 for release
 
-&emsp;&emsp;1) Get Capabilities
-&emsp;&emsp;![AVRCP Get Capability](../../assets/avrcp_get_capability.png)
-&emsp;&emsp;This is sent by AVRCP controller to target to get the capabilities of the peer device, including company name and supported events.
-&emsp;&emsp;![AVRCP Get Capability Packet](../../assets/avrcp_get_capability_packet.png)
-&emsp;&emsp;Get company ID response format:
-&emsp;&emsp;![AVRCP Get Capability Company](../../assets/avrcp_get_capability_cpmpany.png)
-&emsp;&emsp;Get supported event response format:
-&emsp;&emsp;![AVRCP Get Capability Event](../../assets/avrcp_get_capability_event.png)
-&emsp;&emsp;Where EventID includes:
-&emsp;&emsp;![AVRCP Event Support](../../assets/avrcp_event_support.png)
-&emsp;&emsp;In practical applications, we generally only use Get Capability for event to get the events supported by the peer, facilitating notify registration. As you can see in the above figure, it supports playback status change, track change, and player setting change.
+4.3 AVRCP Specific Commands AVRCP specific commands include the following:
+![AVRCP Special Command](../../assets/avrcp_special_command_0.png) ![AVRCP
+Special Command](../../assets/avrcp_special_command_1.png) ![AVRCP Special
+Command](../../assets/avrcp_special_command_2.png) ![AVRCP Special
+Command](../../assets/avrcp_special_command_3.png) ![AVRCP Special
+Command](../../assets/avrcp_special_command_4.png) ![AVRCP Special
+Command](../../assets/avrcp_special_command_5.png) ![AVRCP Special
+Command](../../assets/avrcp_special_command_6.png)
 
-&emsp;&emsp;2) Get PlayStatus
-&emsp;&emsp;This command is sent by controller to target to get playback status. The return value includes total song length, current song progress, and playback status, totaling 9 bytes (4 bytes song length, 4 bytes current progress, 1 byte playback status)
-&emsp;&emsp;![AVRCP Get Play Status](../../assets/avrcp_get_play_status.png)
+1) Get Capabilities ![AVRCP Get
+Capability](../../assets/avrcp_get_capability.png) This is sent by AVRCP
+controller to target to get the capabilities of the peer device, including
+company name and supported events. ![AVRCP Get Capability
+Packet](../../assets/avrcp_get_capability_packet.png) Get company ID response
+format: ![AVRCP Get Capability
+Company](../../assets/avrcp_get_capability_cpmpany.png) Get supported event
+response format: ![AVRCP Get Capability
+Event](../../assets/avrcp_get_capability_event.png) Where EventID includes:
+![AVRCP Event Support](../../assets/avrcp_event_support.png) In practical
+applications, we generally only use Get Capability for event to get the events
+supported by the peer, facilitating notify registration. As you can see in the
+above figure, it supports playback status change, track change, and player
+setting change.
 
-&emsp;&emsp;3) Register Notification
-&emsp;&emsp;This is CT registering messages with TG, then TG will notify when there are corresponding updates. The specific messages are those we mentioned earlier in get capability with event (Note: each registration is only valid once, need to re-register after receiving change):
-&emsp;&emsp;![AVRCP Register Notify](../../assets/avrcp_register_notify.png)
-&emsp;&emsp;![AVRCP Register Notify](../../assets/avrcp_register_notify_1.png)
 
-&emsp;&emsp;Let's talk about each EVENT ID below:
-&emsp;&emsp;EVENT_PLAYBACK_STATUS_CHANGED: Playback status change, with the following values:
-&emsp;&emsp;![AVRCP Play Status Register Notify](../../assets/avrcp_play_status_notify.png)
-&emsp;&emsp;EVENT_TRACK_CHANGED: Track name change
-&emsp;&emsp;EVENT_TRACK_REACHED_END: Track reached end
-&emsp;&emsp;EVENT_TRACK_REACHED_START: Track start
-&emsp;&emsp;EVENT_PLAYBACK_POS_CHANGED: Track playback progress change
-&emsp;&emsp;![AVRCP Playback Pos Change Notify](../../assets/avrcp_playback_pos_change.png)
-&emsp;&emsp;EVENT_BATT_STATUS_CHANGED: Battery status change, with the following values:
-&emsp;&emsp;![AVRCP Batt Status Change Notify](../../assets/avrcp_batt_status_change.png)
+2) Get PlayStatus This command is sent by controller to target to get playback
+status. The return value includes total song length, current song progress, and
+playback status, totaling 9 bytes (4 bytes song length, 4 bytes current
+progress, 1 byte playback status) ![AVRCP Get Play
+Status](../../assets/avrcp_get_play_status.png)
 
-&emsp;&emsp;4) Metadata Attributes for Current Media Item
-&emsp;&emsp;This is mainly for getting song information (including name/album name/artist name/song index/total number of songs, etc.)
-&emsp;&emsp;![AVRCP Get Element](../../assets/avrcp_get_element.png)
-&emsp;&emsp;AttributeID list is as follows:
-&emsp;&emsp;![AVRCP Get Element Attribute](../../assets/avrcp_get_element_attribute.png)
+3) Register Notification This is CT registering messages with TG, then TG will
+notify when there are corresponding updates. The specific messages are those we
+mentioned earlier in get capability with event (Note: each registration is only
+valid once, need to re-register after receiving change): ![AVRCP Register
+Notify](../../assets/avrcp_register_notify.png) ![AVRCP Register
+Notify](../../assets/avrcp_register_notify_1.png)
+
+Let's talk about each EVENT ID below: EVENT_PLAYBACK_STATUS_CHANGED: Playback
+status change, with the following values: ![AVRCP Play Status Register
+Notify](../../assets/avrcp_play_status_notify.png) EVENT_TRACK_CHANGED: Track
+name change EVENT_TRACK_REACHED_END: Track reached end
+EVENT_TRACK_REACHED_START: Track start EVENT_PLAYBACK_POS_CHANGED: Track
+playback progress change ![AVRCP Playback Pos Change
+Notify](../../assets/avrcp_playback_pos_change.png) EVENT_BATT_STATUS_CHANGED:
+Battery status change, with the following values: ![AVRCP Batt Status Change
+Notify](../../assets/avrcp_batt_status_change.png)
+
+4) Metadata Attributes for Current Media Item This is mainly for getting song
+information (including name/album name/artist name/song index/total number of
+songs, etc.) ![AVRCP Get Element](../../assets/avrcp_get_element.png)
+AttributeID list is as follows: ![AVRCP Get Element
+Attribute](../../assets/avrcp_get_element_attribute.png)
 
 # Sifli SDK AVRCP Introduction
-This document is mainly based on Sifli SDK, introducing how to use basic AVRCP functions.
-Related files include:
+This document is mainly based on Sifli SDK, introducing how to use basic AVRCP
+functions. Related files include:
 - bts2_app_interface
 - bts2_app_avrcp
-  
+
 ## bt_avrcp Initialization
-- AVRCP initialization function: bt_avrcp_int, initializes AVRCP related states and assigns initial values to flags
+- AVRCP initialization function: bt_avrcp_int, initializes AVRCP related states
+  and assigns initial values to flags
 - AVRCP service enable function: bt_avrcp_open, enables AVRCP profile
 
 ```c
@@ -218,11 +249,20 @@ void bt_avrcp_open(void)
 ```
 
 ## AVRCP Device Connection
-The following process describes how AVRCP CT discovers, connects to, and uses AVRCP TG services.
-1. The first step is to discover available AVRCP TG devices in the vicinity. For this, AVRCP CT can perform a search on nearby devices, then use SDP to retrieve AVRCP TG services from those devices that support the AVRCP TG role.
-2. Select an AVRCP TG device to connect to. Choose the device to connect to and initiate an ACL connection.
-3. AVRCP connection. Once the ACL connection is established, AVRCP CT should initiate the AVRCP L2CAP connection.
-4. After AVRCP is connected, it needs to first query the capabilities supported by the peer (the peer may also query the capabilities supported by this end and register corresponding notification events), then register corresponding notification events before using corresponding functions (such as controlling music pause/play, volume adjustment, etc.).
+The following process describes how AVRCP CT discovers, connects to, and uses
+AVRCP TG services.
+1. The first step is to discover available AVRCP TG devices in the vicinity. For
+   this, AVRCP CT can perform a search on nearby devices, then use SDP to
+   retrieve AVRCP TG services from those devices that support the AVRCP TG role.
+2. Select an AVRCP TG device to connect to. Choose the device to connect to and
+   initiate an ACL connection.
+3. AVRCP connection. Once the ACL connection is established, AVRCP CT should
+   initiate the AVRCP L2CAP connection.
+4. After AVRCP is connected, it needs to first query the capabilities supported
+   by the peer (the peer may also query the capabilities supported by this end
+   and register corresponding notification events), then register corresponding
+   notification events before using corresponding functions (such as controlling
+   music pause/play, volume adjustment, etc.).
 5. AVRCP TG and AVRCP CT can terminate the connection at any time.
 
 - AVRCP device connection interface:
@@ -285,7 +325,7 @@ void bt_avrcp_conn_2_dev(BTS2S_BD_ADDR *bd, BOOL is_target)
     }
 }
 ```
-       
+
 - AVRCP device disconnection interface:
     - bts2_app_interface disconnection interface: bt_interface_disc_ext
     - bts2_app_avrcp disconnection interface: bt_avrcp_disc_2_dev
@@ -317,15 +357,14 @@ void bt_avrcp_disc_2_dev(BTS2S_BD_ADDR *bd_addr)
     }
 }
 ```
-        
+
 - AVRCP event handling:
     - AVRCP connection status callback events:
         - AVRCP connection successful: BT_NOTIFY_AVRCP_PROFILE_CONNECTED
         - AVRCP connection failed: BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED
 
-:::{note}
-Note: The address parameters passed by the two interfaces need to be converted accordingly.
-:::
+:::{note} Note: The address parameters passed by the two interfaces need to be
+converted accordingly. :::
 ```c
 // After calling the API to connect AVRCP, the AVRCP connection successful message is sent to the user through notify
 // Users need to implement hdl functions to receive notify events, such as: bt_notify_handle
@@ -465,8 +504,10 @@ void bt_interface_avrcp_get_element_attributes_request(U8 media_attribute);
 void bt_interface_avrcp_get_play_status_request(void);
 
 ## AVRCP Functionality Usage Demo
-- First, during project initialization, register the processing function for receiving notify events
-- Enter the MAC address of the phone to connect to, wait for connection success message
+- First, during project initialization, register the processing function for
+  receiving notify events
+- Enter the MAC address of the phone to connect to, wait for connection success
+  message
 - Play phone music, control phone play/pause
 ```c
 int bt_sifli_notify_avrcp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t data_len)
@@ -542,7 +583,7 @@ int bt_sifli_notify_avrcp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t d
         //Users implement their own corresponding processing functions, based on media_attribute can determine what information was obtained
         break;
     }
-    
+
     default:
         return -1;
     }
