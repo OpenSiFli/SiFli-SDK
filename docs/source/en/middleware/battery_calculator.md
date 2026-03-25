@@ -1,15 +1,22 @@
 # Battery Calculator
 
-The battery calculator module is used to calculate the current battery percentage based on battery voltage values. It considers both charging and discharging states, uses different battery curve tables, and implements a multi-level filtering algorithm to improve the accuracy and stability of battery level calculation.
+The battery calculator module is used to calculate the current battery
+percentage based on battery voltage values. It considers both charging and
+discharging states, uses different battery curve tables, and implements a
+multi-level filtering algorithm to improve the accuracy and stability of battery
+level calculation.
 
 ## Features
 
-- **Dual Curve Support**: Supports separate battery voltage curves for charging and discharging states
+- **Dual Curve Support**: Supports separate battery voltage curves for charging
+  and discharging states
 - **Multi-level Filtering Algorithm**:
   - Primary Filter: Threshold-based jump filtering
   - Secondary Filter: Weighted average smoothing (optional)
-- **Charge/Discharge State Detection**: Automatically recognizes current charging state and switches corresponding curves
-- **Linear Interpolation Calculation**: Performs precise percentage calculation within curve tables
+- **Charge/Discharge State Detection**: Automatically recognizes current
+  charging state and switches corresponding curves
+- **Linear Interpolation Calculation**: Performs precise percentage calculation
+  within curve tables
 
 ## Core Structure
 
@@ -85,27 +92,15 @@ uint8_t battery_calculator_get_percent(battery_calculator_t *calc,
 **Example**:
 ```c
 uint32_t voltage = 38000;  // 3.8V
-uint8_t percentage = battery_calculator_get_percent(&battery_calc, voltage);
+uint8_t percentage = battery_calculator_get_percent(&amp;battery_calc, voltage);
 rt_kprintf("Battery: %d%%\n", percentage);
 ```
 
 ## Usage Example
 
 First, enable the required macro switches in menuconfig
-1. Enable the ADC to read the battery voltage.
-![Battery Calculator](../../assets/enable_adc.png)
-2. Enable battery calculator function
-![Battery Calculator](../../assets/battery_open1.png)
-3. Enable charge
-![Battery Calculator](../../assets/battery_open2.png)
-4. Select the charging chip for your board. If not available, use simple charge
-![Battery Calculator](../../assets/battery_open4.png)
-5. Configure plug/unplug detection pin corresponding to your board's detection pin
-![Battery Calculator](../../assets/battery_open3.png)
-6. Select the polarity of the plug/unplug detection pin for the current board (choose according to actual situation).
-![Battery Calculator](../../assets/charge_pin_2.png)
-Selecting this option means enabling the `BSP_CHARGER_INT_PIN_ACTIVE_HIGH` macro. This macro defines the polarity of the charger detection pin. When `BSP_CHARGER_INT_PIN_ACTIVE_HIGH` is defined, it indicates that the charger insertion state is represented by a high level. When this macro is not defined, the default is to use a low level to represent the charger insertion state.
-![Battery Calculator](../../assets/charge_pin.png)
+
+
 
 ### Complete Application Layer Example Code
 ```c
@@ -127,21 +122,21 @@ void battery_monitor_task(void *parameter)
         .secondary_filter_weight_pre = 90,  // Previous voltage weight 90%
         .secondary_filter_weight_cur = 10   // Current voltage weight 10%
     };
-    
+
     battery_calculator_init(&battery_calc, &calc_config);
-    
+
     while (1)
     {
         // 2. Read ADC voltage value
         rt_device_t battery_device = rt_device_find("bat1");
         rt_adc_cmd_read_arg_t read_arg;
         read_arg.channel = 7;
-        
+
         rt_adc_enable((rt_adc_device_t)battery_device, read_arg.channel);
         rt_thread_mdelay(300);
         rt_uint32_t voltage = rt_adc_read((rt_adc_device_t)battery_device, read_arg.channel);
         rt_adc_disable((rt_adc_device_t)battery_device, read_arg.channel);
-        
+
         // 3. Calculate battery percentage
         uint8_t percentage = battery_calculator_get_percent(&battery_calc, voltage);   
 
@@ -154,39 +149,45 @@ void battery_monitor_task(void *parameter)
 
 ### Filter Threshold Settings
 
-| Parameter | Recommended Value | Description |
-|------|--------|------|
-| `charge_filter_threshold` | 50mV | Voltage jump threshold in charging state |
-| `discharge_filter_threshold` | 30mV | Voltage jump threshold in discharging state |
-| `filter_count` | 3 | Number of consecutive times threshold must be exceeded to update |
+| Parameter                    | Recommended Value | Description                                                      |
+| ---------------------------- | ----------------- | ---------------------------------------------------------------- |
+| `charge_filter_threshold`    | 50 mV             | Voltage jump threshold in charging state                         |
+| `discharge_filter_threshold` | 30 mV             | Voltage jump threshold in discharging state                      |
+| `filter_count`               | 3                 | Number of consecutive times threshold must be exceeded to update |
 
 ### Secondary Filter Parameters
 
-| Parameter | Recommended Value | Description |
-|------|--------|------|
-| `secondary_filter_enabled` | true | Whether to enable secondary filter |
-| `secondary_filter_weight_pre` | 90 | Historical voltage weight (0-100) |
-| `secondary_filter_weight_cur` | 10 | Current voltage weight (0-100) |
+| Parameter                     | Recommended Value | Description                        |
+| ----------------------------- | ----------------- | ---------------------------------- |
+| `secondary_filter_enabled`    | true              | Whether to enable secondary filter |
+| `secondary_filter_weight_pre` | 90                | Historical voltage weight (0-100)  |
+| `secondary_filter_weight_cur` | 10                | Current voltage weight (0-100)     |
 
 **Note**: `weight_pre + weight_cur = 100`
 
 ## Battery Curve Table Configuration
 
-**Important Note**: The default battery curve table provided in the board directory is only a reference example and may not be suitable for the actual battery currently in use. To ensure the accuracy of battery level calculation, **it is strongly recommended to obtain matching battery voltage-capacity curve data from the battery manufacturer**and configure the corresponding lookup table according to the actual curve.
+**Important Note**: The default battery curve table provided in the board
+directory is only a reference example and may not be suitable for the actual
+battery currently in use. To ensure the accuracy of battery level calculation,
+**it is strongly recommended to obtain matching battery voltage-capacity curve
+data from the battery manufacturer**and configure the corresponding lookup table
+according to the actual curve.
 
 Battery curve table interface description:
 1. **Charging curve table**
    - Variable name: `charging_curve_table`
    - Type: `const battery_lookup_point_t[]`
-   - Description: Defines the voltage-percentage relationship during battery charging state, with voltage values arranged in descending order
+   - Description: Defines the voltage-percentage relationship during battery
+     charging state, with voltage values arranged in descending order
 
 2. **Discharging curve table**
    - Variable name: `discharge_curve_table`
    - Type: `const battery_lookup_point_t[]`
-   - Description: Defines the voltage-percentage relationship during battery discharging state, with voltage values arranged in descending order
+   - Description: Defines the voltage-percentage relationship during battery
+     discharging state, with voltage values arranged in descending order
 
 Battery curve tables are defined in `battery_table.c` in the following format:
-
 ```c
 const battery_lookup_point_t chargeing_curve_table[] = {
     { 100,  41808},  // 4.18V -> 100%
@@ -209,24 +210,33 @@ const battery_lookup_point_t chargeing_curve_table[] = {
 
 ## Important Notes
 
-1. **Initialization Order**: Must call `battery_calculator_init()` before using `battery_calculator_get_percent()`
+1. **Initialization Order**: Must call `battery_calculator_init()` before using
+   `battery_calculator_get_percent()`
 2. **Voltage Units**: All voltage values use millivolts (mV) as the unit
-3. **Curve Table Requirements**: Curve table must be sorted by voltage from high to low
-4. **Charging State Detection**: Module automatically detects charging state through `CHARGE_DETECT_PIN`
-5. **Filter Parameter Adjustment**: Adjust filter parameters according to actual battery characteristics and application scenarios
+3. **Curve Table Requirements**: Curve table must be sorted by voltage from high
+   to low
+4. **Charging State Detection**: Module automatically detects charging state
+   through `CHARGE_DETECT_PIN`
+5. **Filter Parameter Adjustment**: Adjust filter parameters according to actual
+   battery characteristics and application scenarios
 
 ## FAQ
 
-**Q: Battery level jumps too quickly?**  
-A: Increase filter threshold or increase `filter_count` value, or enable secondary filter and increase historical weight.
+**Q: Battery level jumps too quickly?**\
+A: Increase filter threshold or increase `filter_count` value, or enable
+secondary filter and increase historical weight.
 
-**Q: Battery level display is inaccurate?**  
-A: Check if the battery curve table matches actual battery characteristics. Recalibrate curve points if necessary.
+**Q: Battery level display is inaccurate?**\
+A: Check if the battery curve table matches actual battery characteristics.
+Recalibrate curve points if necessary.
 
-**Q: How to disable secondary filter?**  
+**Q: How to disable secondary filter?**\
 A: Set `secondary_filter_enabled = false`.
 
-**Q: Battery level value stuck at a fixed number?**
-A: The current battery algorithm has the following logic processing: in charging state, battery level is not allowed to decrease, and in discharging state, battery level is not allowed to increase. When such abnormal situations occur, the battery level will remain at the current value for stabilization. You can check the log to confirm whether "Current status" matches the real state. If they don't match, you need to adjust the `BSP_CHARGER_INT_PIN_ACTIVE_HIGH` macro.
-
-
+**Q: Battery level value stuck at a fixed number?** A: The current battery
+algorithm has the following logic processing: in charging state, battery level
+is not allowed to decrease, and in discharging state, battery level is not
+allowed to increase. When such abnormal situations occur, the battery level will
+remain at the current value for stabilization. You can check the log to confirm
+whether "Current status" matches the real state. If they don't match, you need
+to adjust the `BSP_CHARGER_INT_PIN_ACTIVE_HIGH` macro.
