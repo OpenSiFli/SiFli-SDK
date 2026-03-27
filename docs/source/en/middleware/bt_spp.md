@@ -1,32 +1,31 @@
-
 # SPP (Serial Port Profile)
-
-SPP stands for Serial Port Profile, which allows devices to wirelessly transfer data by simulating a serial port connection. Based on the RFCOMM communication layer, the SPP protocol is similar to the traditional RS-232 serial port standard, making it ideal for low-speed, short-range data transmission, such as communication between Android devices, sensors, and microcontrollers.
-
-SPP defines two roles:
-
-- **Device A (DevA)** – The device that initiates the connection to another device.
+SPP stands for Serial Port Profile, which allows devices to wirelessly transfer
+data by simulating a serial port connection. Based on the RFCOMM communication
+layer, the SPP protocol is similar to the traditional RS-232 serial port
+standard, making it ideal for low-speed, short-range data transmission, such as
+communication between Android devices, sensors, and microcontrollers.
+- **Device A (DevA)** – The device that initiates the connection to another
+  device.
     - Initiates requests through SDP to query DevB's RFCOMM channel.
     - Can perform security authentication with the other device.
-    - Can establish an L2CAP (RFCOMM) RFCOMM (DLC) channel with the other device through the queried RFCOMM channel.
+    - Can establish an L2CAP (RFCOMM) RFCOMM (DLC) channel with the other device
+      through the queried RFCOMM channel.
     - Can send and receive data.
     - Can disconnect the connection.
-
-- **Device B (DevB)** – The device that waits for another device to initiate the connection.
+- **Device B (DevB)** – The device that waits for another device to initiate the
+  connection.
     - Registers the SPP-related UUID in the SDP database so DevA can query it.
     - Can perform security authentication with the other device.
     - Receives the connection request from the other device.
     - Can send and receive data.
     - Can disconnect the connection.
 
-This document mainly describes the basic functionality support for DevB in SPP based on the Sifli SDK. The relevant files are:
+SPP defines two roles:
 - `bts2_app_interface`
 - `bts2_app_spp_s`
-
 ## SPP Initialization
-
-- The SPP initialization function: `bt_spp_srv_init`, which initializes SPP-related states, flags, and registers the SPP UUID.
-
+- The SPP initialization function: `bt_spp_srv_init`, which initializes
+  SPP-related states, flags, and registers the SPP UUID.
 ```c
 //step1: Users can override the bt_spp_srv_add_uuid_list function to register custom SPP UUIDs into the BR/EDR SDP database
 //step2: When enabling the SPP profile, the SPP will register data into the SDP
@@ -87,13 +86,12 @@ void bt_spp_srv_start_enb(bts2_app_stru *bts2_app_data)
 ");
 }
 ```
-
 ## SPP Data Transmission and Reception
-
-SPP, as a DevB feature, can only receive connection requests initiated by the other device.
-
+SPP, as a DevB feature, can only receive connection requests initiated by the
+other device.
 - **SPP disconnect device interface:**
-    - `bts2_app_interface` disconnect interface: `bt_interface_dis_spp_by_addr_and_chl`
+    - `bts2_app_interface` disconnect interface:
+      `bt_interface_dis_spp_by_addr_and_chl`
     - `bts2_app_spp_s` disconnect interface: `bt_spp_srv_disc_req`
 
 - **SPP connection status callback events:**
@@ -105,13 +103,15 @@ SPP, as a DevB feature, can only receive connection requests initiated by the ot
 - **SPP data transmission and reception interfaces and events:**
     - **Data sending:**
         - `bts2_app_interface` data send interface: `bt_interface_spp_send_data`
-        - `bts2_app_spp_s` data send interface: `bt_spp_srv_sending_data_by_device_id_and_srv_chnl`
+        - `bts2_app_spp_s` data send interface:
+          `bt_spp_srv_sending_data_by_device_id_and_srv_chnl`
         - Data send success event: `BT_NOTIFY_SPP_DATA_CFM`
     - **Data reception:**
-        - `bts2_app_interface` data reception success response interface: `bt_interface_spp_srv_data_rsp`
-        - `bts2_app_spp_s` data reception success response interface: `spp_srv_data_rsp_ext`
+        - `bts2_app_interface` data reception success response interface:
+          `bt_interface_spp_srv_data_rsp`
+        - `bts2_app_spp_s` data reception success response interface:
+          `spp_srv_data_rsp_ext`
         - Data received event: `BT_NOTIFY_SPP_DATA_IND`
-
 ```c
 // step1: When receiving a connection from the other device, if only a single channel is connected, handle the events: BT_NOTIFY_SPP_PROFILE_CONNECTED and BT_NOTIFY_SPP_PROFILE_DISCONNECTED
 // step2: When multiple channels are connected, handle the related connection events: BT_NOTIFY_SPP_CONN_IND and BT_NOTIFY_SPP_DISC_IND
@@ -234,5 +234,3 @@ int app_bt_notify_init(void)
 INIT_ENV_EXPORT(app_bt_notify_init);
 // Register notify event handle function end
 ```
-
-This document provides an overview of SPP functionality, implementation details, and the necessary SDK files.
