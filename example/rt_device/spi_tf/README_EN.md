@@ -353,7 +353,7 @@ Buffer: 64 KB
 ====================================
 
 [00:01] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 1.3/8.0 MB (15.6%)
-[00:02] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 2.5/8.0 MB (31.3%)
+[00:02] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 2.5/31.3 MB (31.3%)
 [00:03] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 3.8/8.0 MB (46.9%)
 [00:04] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 5.0/8.0 MB (62.5%)
 [00:05] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 6.3/8.0 MB (78.1%)
@@ -368,19 +368,20 @@ Average speed: 1.20 MB/s
 ========== Test Complete ==========
 ```
 
-### 使能USB传输挂载U盘性能测试
+### Performance test for U-disk mounting via USB transmission
 
-本例程在实际测试环境下的使能USB传输，将文件系统挂载为U盘性能表现如下：
+The performance of this example, with USB transmission enabled and the file
+system mounted as a U-disk in the test environment, is as follows:
 
-#### 写入性能
-- 测试条件：写入200MB (204800KB) 数据
-- 耗时：6分53秒 (413秒)
-- 平均写入速度：约495KB/s
+#### Write Performance
+- Test Conditions: Write 200 MB (204,800 KB) of data
+- Duration: 6 min 53 sec (413 sec)
+- Average Write Speed: Approx. 495 KB/s
 
-#### 读取性能
-- 测试条件：读取200MB (204800KB) 数据
-- 耗时：6分01秒 (361秒)
-- 平均读取速度：约567KB/s
+#### Read Performance
+- Test Conditions: Read 200 MB (204,800 KB) of data
+- Duration: 6 min 01 sec (361 sec)
+- Average Read Speed: Approx. 567 KB/s
 
 ## Example Analysis
 
@@ -450,7 +451,7 @@ Error: the flash device name (sd0) is not found.
 #### 2. File System Mount Failure
 **Error Message**:
 ```
-mount fs on flash to root fail
+Failed to mount flash file system to root.
 ```
 **Solution**:
 - Check if SD card format is FAT32
@@ -465,11 +466,11 @@ mount fs on flash to root fail
 **Solution**:
 1. Run buffer optimization:
    ```
-   msh />buffer_optimize
+   msh /&gt;buffer_optimize
    ```
 2. Check SD card configuration:
    ```
-   msh />sd_optimize
+   msh /&gt;sd_optimize
    ```
 3. Replace with higher speed class SD card (recommend Class 10 or UHS-I)
 
@@ -489,12 +490,12 @@ mount fs on flash to root fail
 
 2. **Monitor Memory Usage**
    ```
-   msh />free
+   msh /&gt;free
    ```
 
 3. **View Thread Status**
    ```
-   msh />list_thread
+   msh /&gt;list_thread
    ```
 
 If you have any technical questions, please submit an
@@ -610,13 +611,13 @@ ls /
 
 ### Quick Troubleshooting
 
-| Issue        | Solution                    |
-| ------------ | --------------------------- |
-| SD not found | Re-insert SD card           |
-| Mount failed | Execute `dfs_mkfs elm root` |
-| Low speed    | Run `buffer_optimize`       |
-| Test hangs   | Restart system              |
-| 速度过低         | 运行 `buffer_optimize`        |
-| Low speed    | Run `buffer_optimize`       |
-| Test hangs   | Restart system              |
-| Test hangs   | Restart system              |
+| Issue              | Solution                    |
+| ------------------ | --------------------------- |
+| SD not found       | Re-insert SD card           |
+| Mount failed       | Execute `dfs_mkfs elm root` |
+| Low speed          | Run `buffer_optimize`       |
+| Test hangs         | Restart system              |
+| Throughput too low | Execute `buffer_optimize`   |
+| Low speed          | Run `buffer_optimize`       |
+| Test hangs         | Restart system              |
+| Test hangs         | Restart system              |
