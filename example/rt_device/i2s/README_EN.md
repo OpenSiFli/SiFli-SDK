@@ -3,55 +3,62 @@
 Source path: example/rt_device/i2s
 
 ## Supported Platforms
-<!-- Which boards and chip platforms are supported -->
+<!-- 支持哪些板子和芯片平台 -->
 + sf32lb52-nano
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
 
 ## Overview
-<!-- Example introduction -->
-In this example, two development boards are used to demonstrate I2S transmission and reception (one development board A as tx, one development board B as rx), including:
+<!-- 例程简介 -->
+In this example, two development boards are used to demonstrate I2S transmission
+and reception (one development board A as tx, one development board B as rx),
+including:
 + Development board A:
     - mic recording.
     - Send to development board B via i2s.
-+ Development board B:
++ Development board A:
     - Receive data from development board A via i2s.
     - speaker playback.
-* Due to the special nature of the sf32lb58-lcd board, it can only function as a master when using I2S. Therefore, the sf32lb52-lcd and sf32lb56-lcd boards need to be used as slaves for testing. The master device records audio and sends it to the slaves via I2S for playback.
+
+* Due to the special nature of the sf32lb58-lcd board, it can only function as a
+  master when using I2S. Therefore, the sf32lb52-lcd and sf32lb56-lcd boards
+  need to be used as slaves for testing. The master device records audio and
+  sends it to the slaves via I2S for playback.
 
 ## Example Usage
-<!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
-For rt_device examples, you also need to list the configuration switches used by this example, such as PWM example using PWM1, which needs to be enabled in the onchip menu -->
+<!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
+对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 
 ### Hardware Requirements
 Before running this example, you need to prepare:
-+ Two development boards supported by this example ([Supported platforms](quick_start)).
++ Two development boards supported by this example ([Supported
+  platforms](quick_start)).
 + Speaker.
 + Two data cables (used for program flashing of the two boards respectively).
 
 ### menuconfig Configuration
 
-1. Enable I2S
-![AUDIO CODEC & PROC](./assets/mc_i2s.png)
-![AUDIO CODEC & PROC](./assets/mc_i2s_codec.png)
+1. Enable I2S ![AUDIO CODEC & PROC](./assets/mc_i2s.png) ![AUDIO CODEC &
+   PROC](./assets/mc_i2s_codec.png)
     ```{tip}
     If the chip supports multiple I2S, configure according to actual usage.
     ```
-2. Enable AUDIO CODEC and AUDIO PROC:
-![AUDIO CODEC & PROC](./assets/mc_audcodec_audprc.png)
+2. Enable AUDIO CODEC and AUDIO PROC: ![AUDIO CODEC &
+   PROC](./assets/mc_audcodec_audprc.png)
 
-3. This example uses FINSH functionality, need to enable `RT_USING_FINSH`.  
+3. This example uses FINSH functionality, need to enable `RT_USING_FINSH`.
 
 ```{tip}
 Configurations 2 and 3 are used for auxiliary function demonstration in this example, not necessary for I2S configuration.
-```  
+```
 
 ### Hardware Connection\PIN CONFIG
 
-Taking `SF32LB52_DevKit-LCD` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
+Taking `SF32LB52_DevKit-LCD` as an example, this example uses `PA02 ~ PA06` as
+I2S pins, pin configuration is as follows:
 ```c
-    /* PIN CONFIG */
+/* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
 #ifdef SOC_SF32LB52X
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
@@ -63,7 +70,8 @@ Taking `SF32LB52_DevKit-LCD` as an example, this example uses `PA02 ~ PA06` as I
 #endif
 ```
 
-If you need to use other development board models, you need to change the pinmux configuration. Here is an example for 56x and 58x models:
+If you need to use other development board models, you need to change the pinmux
+configuration. Here is an example for 56x and 58x models:
 ```c
 #ifdef SOC_SF32LB56X
     HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
@@ -82,22 +90,25 @@ If you need to use other development board models, you need to change the pinmux
 ```
 
 Wiring:
-Development board A | -- | Development board B
---|--|--
-I2S1_LRCK|--|I2S1_LRCK
-I2S1_BCK|--|I2S1_BCK
-I2S1_SDI|--|I2S1_SDO
-I2S1_SDO|--|I2S1_SDI
-I2S1_MCLK|--|I2S1_MCLK
+| Development board A | --  | Development board B |
+| ------------------- | --- | ------------------- |
+| I2S1_LRCK           | --  | I2S1_LRCK           |
+| I2S1_BCK            | --  | I2S1_BCK            |
+| I2S1_SDI            | --  | I2S1_SDO            |
+| I2S1_SDO            | --  | I2S1_SDI            |
+| I2S1_MCLK           | --  | I2S1_MCLK           |
 
-Since `sf32lb58-lcd` is rather special, when connecting the wires here, 58 should be used as A (master), and `sf32lb52-lcd` should be used as B (slave) for the connection.
-If you are unsure about pin positioning, you can refer to the following figures:
-SF32LB52x_DevKit_40p diagram:
-![AUDIO CODEC & PROC](./assets/52x.png)
-SF32LB56x_DevKit_40p diagram:
-![AUDIO CODEC & PROC](./assets/56x.png)
+Since `sf32lb58-lcd` is rather special, when connecting the wires here, 58
+should be used as A (master), and `sf32lb52-lcd` should be used as B (slave) for
+the connection. If you are unsure about pin positioning, you can refer to the
+following figures: SF32LB52x_DevKit_40p diagram: ![AUDIO CODEC & PROC]{1}
+SF32LB56x_DevKit_40p diagram: ![AUDIO CODEC & PROC]{2}
 
-[SF32LB58x_DevKitPin Definition Diagram](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+[SF32LB58x_DevKitPin Definition Diagram](./assets/52x.png)
+
+[SF32LB58x_DevKit Pin Definition
+Diagram](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+
 ```{warning}
 On `SF32LB52_DevKit-LCD`:  
 + `PA02 ~ PA06` will be used when LCD is configured, pay attention to conflicts (need to disable LCD: `BSP_USING_LCD = n BSP_USING_LCDC = n`).  
@@ -106,11 +117,13 @@ For other form factors, you need to refer to the specification to select pins.
 ```
 
 ### Compilation and Programming
-Switch to the example project directory and run the scons command to execute compilation:
+Switch to the example project directory and run the scons command to execute
+compilation:
 ```shell
-> scons --board=eh-lb525 -j32
+&gt; scons --board=eh-lb525 -j32
 ```
-Switch to the example `project/build_xx` directory and run `uart_download.bat`, select the port as prompted to download:
+Switch to the example `project/build_xx` directory and run `uart_download.bat`,
+select the port as prompted to download:
 ```shell
 $ ./uart_download.bat
 
@@ -118,24 +131,24 @@ $ ./uart_download.bat
 
 please input the serial port num:5 (Board A port number)
 ```
-Flash board B again
-$ ./uart_download.bat
+Flash board B again $ ./uart_download.bat
 
-     Uart Download
+    UART Download
 
 please input the serial port num:6 (Board B port number)
 
-For detailed steps on compilation and downloading, please refer to the relevant introduction in [Quick Start](quick_start).
+For detailed steps on compilation and downloading, please refer to the relevant
+introduction in [Quick Start](quick_start).
 
 ## Expected Results
-<!-- Explain the example running results, such as which LEDs will light up, what logs will be printed, so that users can judge whether the example is running normally. The running results can be explained step by step combined with the code -->
+<!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
 This example operates through FINSH commands:
-Purpose | Command | Example |Notes
-|---|--|--|--|
-Recording|audprc rx [channels:1/2] [sampling rate] [sampling bits]|`audprc rx 1 16000 16` |Recording is saved to ram buffer (recording automatically stops after reaching 1M)
-I2S transmission|i2s tx [tx channels:1/2] [tx sampling rate] [tx sampling bits]|`i2s tx 1 16000 16`|Send recorded data in ram buffer via i2s. `The example is configured in master mode by default.` Configuration method can be seen in `i2s_config_tx`.
-I2S reception|i2s rx [rx channels:1/2] [rx sampling rate] [rx sampling bits]|`i2s rx 1 16000 16`|Received data is saved to ram buffer (stops receiving after reaching 1M). `The example is configured in slave mode by default.` Configuration method can be seen in `i2s_config_rx`.
-Playback recording|audprc tx [channels:1/2] [sampling rate] [sampling bits]|`audprc tx 1 16000 16`| Playback data from ram buffer
+| Purpose            | Command                                                        | Example                | Notes                                                                                                                                                                                |
+| ------------------ | -------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Recording          | audprc rx [channels:1/2] [sampling rate] [sampling bits]       | `audprc rx 1 16000 16` | Recording is saved to ram buffer (recording automatically stops after reaching 1M)                                                                                                   |
+| I2S transmission   | i2s tx [tx channels:1/2] [tx sampling rate] [tx sampling bits] | `i2s tx 1 16000 16`    | Send recorded data in ram buffer via i2s. `The example is configured in master mode by default.` Configuration method can be seen in `i2s_config_tx`.                                |
+| I2S reception      | i2s rx [rx channels:1/2] [rx sampling rate] [rx sampling bits] | `i2s rx 1 16000 16`    | Received data is saved to ram buffer (stops receiving after reaching 1M). `The example is configured in slave mode by default.` Configuration method can be seen in `i2s_config_rx`. |
+| Playback recording | audprc tx [channels:1/2] [sampling rate] [sampling bits]       | `audprc tx 1 16000 16` | Playback data from ram buffer                                                                                                                                                        |
 
 Operations are as follows:
 1. Development board A, record an audio clip.
@@ -172,9 +185,9 @@ Operations are as follows:
     01-03 00:51:03:854    [I/drv.audprc] bf0_audio_stop 0x1001
     ```
 
-2. I2S transmission and reception  
+2. I2S transmission and reception
 
-    Development board A starts I2S transmission
+   Development board A starts I2S transmission
     ```c
     01-03 00:51:44:552 TX:i2s tx 1 16000 16
     01-03 00:51:44:577    [EX_I2S]I2S TX:
@@ -189,7 +202,7 @@ Operations are as follows:
     01-03 00:52:00:957    [EX_I2S]I2S TX finished.
     01-03 00:52:00:962    [EX_I2S]i2s_stop_tx
     ```
-    `At the same time`, development board B starts I2S reception
+   `At the same time`, development board B starts I2S reception
     ```c
     01-03 00:51:43:833 TX:i2s rx 1 16000 16
     01-03 00:51:43:865    [EX_I2S]I2S RX.
@@ -210,7 +223,7 @@ Operations are as follows:
 3. Development board B plays the received data
 
 ```
-    01-03 00:52:13:543 TX:audprc tx 1 16000 16
+01-03 00:52:13:543 TX:audprc tx 1 16000 16
     01-03 00:52:13:591    [EX_I2S]audprc_tx_entry
     01-03 00:52:13:600    [EX_I2S]prc_codec : sub_type=1 channel 1, samplerate 16000, bits 16
     01-03 00:52:13:604    [EX_I2S]speaker OUTPUTSRC channel=1 in_rate=16000 out_rate=16000
@@ -259,3 +272,4 @@ Operations are as follows:
 |0.0.1 |12/2024 |Initial version |
 | | | |
 | | | |
+```
