@@ -7,13 +7,16 @@ The example can run on the following development boards:
 - sf32lb58-lcd_n16r64n4
 
 ## Overview
-This example demonstrates the continuous transmission and reception of SPI HAL in **DMA Circular mode**:
+This example demonstrates the continuous transmission and reception of SPI HAL
+in **DMA Circular mode**:
 - SPI1 master mode, `2Lines`, 8bit, default `SPI MODE0`
-- TX DMA + RX DMA working simultaneously, continuously triggering clock and circularly transferring data
+- TX DMA + RX DMA working simultaneously, continuously triggering clock and
+  circularly transferring data
 - Statistics of operation status through DMA half-full/full callbacks
 - Statistics of exceptions and printing of error codes through error callbacks
 
-The focus of this example is to verify "whether the DMA circular link is stable", not to read NOR ID in blocking mode.
+The focus of this example is to verify "whether the DMA circular link is
+stable", not to read NOR ID in blocking mode.
 
 ## Usage of the Example
 
@@ -31,7 +34,8 @@ Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat` and select the port as pro
 
 please input the serial port num:5
 ```
-For detailed steps on compilation and download, please refer to the relevant introduction in [](/quickstart/get-started.md).
+For detailed steps on compilation and download, please refer to the relevant
+introduction in [](/quickstart/get-started.md).
 
 Enable SPI1 DMA related switches in `project/proj.conf`:
 
@@ -43,9 +47,12 @@ CONFIG_BSP_SPI1_RX_USING_DMA=y
 ### Hardware Connection
 
 - Only short `MOSI(DIO/DO)` to `MISO(DI)`
-- `CLK` and `CS` remain normal output, no need to connect to external slave devices
+- `CLK` and `CS` remain normal output, no need to connect to external slave
+  devices
 
-You can also connect to a real slave device (another board as SPI Slave), in which case connect according to the standard four-wire connection and share ground.
+You can also connect to a real slave device (another board as SPI Slave), in
+which case connect according to the standard four-wire connection and share
+ground.
 
 ```{eval-rst}
 +--------------+----------+---------------+---------------------+
@@ -69,15 +76,14 @@ You can also connect to a real slave device (another board as SPI Slave), in whi
 +--------------+--------------+--------------+----------------------+
 ```
 Refer to the following diagram for the hardware schematic of sf32lb52-lcd_n16r8:
-![alt text](assets/52-DevKit-lcd-V1.0.png)
-![alt text](assets/nor_flash.png)
+![alt text](assets/52-DevKit-lcd-V1.0.png) ![alt text](assets/nor_flash.png)
 #### Example Output Results:
 
 ### Startup Log
 ```text
-Start spi dma circular demo!
-spi dma running, tx/rx circular started.
-tip: short SPI1 MOSI(DIO/DO) to MISO(DI) for loopback verification.
+Starting SPI DMA circular mode demo.
+SPI DMA active; TX/RX circular transfer initiated.
+Note: Short SPI1 MOSI (DIO/DO) to MISO (DI) for loopback verification.
 ```
 
 ### Running Log (Example)
@@ -89,16 +95,19 @@ rx[0..7]: 00 01 02 03 04 05 06 07, rx[mid..mid+7]: 80 81 82 83 84 85 86 87
 ```
 
 Description:
-- `half/full` will continuously increase, indicating that DMA is working in circular mode
+- `half/full` will continuously increase, indicating that DMA is working in
+  circular mode
 - `err` should normally remain `0`
-- In loopback short-circuit scenario, `rx` is commonly a cyclic sequence of 0x00~0xFF (may have phase offset)
+- In loopback short-circuit scenario, `rx` is commonly a cyclic sequence of
+  0x00~0xFF (may have phase offset)
 
 ## Functional Flow
 
 1. Configure SPI1 pinmux and clock
 2. Initialize SPI1 (Master, 2Lines, 8bit)
 3. Initialize RX/TX DMA, both in `DMA_CIRCULAR` mode
-4. Call `HAL_SPI_TransmitReceive_DMA()` to start continuous transmission and reception
+4. Call `HAL_SPI_TransmitReceive_DMA()` to start continuous transmission and
+   reception
 5. Statistics status in DMA half-full/full callbacks
 6. Print status and sample RX data in main loop
 
@@ -118,10 +127,10 @@ Description:
 
 ## Reference Documents
 * EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx
-* DS0052-SF32LB52x-芯片技术规格书 V0p3.pdf
+* DS0052-SF32LB52x-Datasheet V0p3.pdf
 * PY25Q128HA_datasheet_V1.1.pdf
 
 ## Update Records
-| Version | Date | Release Notes |
-|:---|:---|:---|
-| 0.1.0 | 03/2026 | Initial version |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.1.0   | 03/2026 | Initial version |
