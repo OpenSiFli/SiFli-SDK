@@ -1,4 +1,5 @@
 # FinSH
+Source path: example/system/finsh
 
 ## Supported Platforms
 The example can run on the following development boards.
@@ -6,29 +7,36 @@ The example can run on the following development boards.
 * sf32lb56-lcd series
 * sf32lb58-lcd series
 
-
 ## Overview
-* FinSH is RT-Thread's command line component (shell), providing a set of operational interfaces for users to call from the command line, mainly used for debugging or viewing system information. In addition to FinSH's built-in commands, FinSH also provides multiple macro interfaces to export custom commands, and exported commands can be executed directly in FinSH.
+* FinSH is RT-Thread's command line component (shell), providing a set of
+  operational interfaces for users to call from the command line, mainly used
+  for debugging or viewing system information. In addition to FinSH's built-in
+  commands, FinSH also provides multiple macro interfaces to export custom
+  commands, and exported commands can be executed directly in FinSH.
 
 ## FinSH Function Configuration
-* FinSH functionality can be trimmed, with macro configuration options defined in the _rtconfig.h_ file. The specific configuration items are shown in the table below.
+* FinSH functionality can be trimmed, with macro configuration options defined
+  in the _rtconfig.h_ file. The specific configuration items are shown in the
+  table below.
 
-|Macro Definition	                           |Value Type	            |Description	|Default Value|
-|:---                             |:---                    |:---   |:---|
-|#define RT_USING_FINSH	          |None	  |Enable FinSH	         |Enabled|
-|#define FINSH_THREAD_NAME	      |String |FinSH thread name	      |"tshell"|
-|define  FINSH_USING_HISTORY	  |None	  |Enable history recall function	      |Enabled|
-|#define FINSH_HISTORY_LINES	  |Integer |Number of history command lines that can be recalled	   |5|
-|#define FINSH_USING_SYMTAB	      |None	  |Enable symbol table usage in FinSH	   |Enabled|
-|#define FINSH_USING_DESCRIPTION  |None	  |Add a description to each FinSH symbol	|Enabled|
-|#define FINSH_USING_MSH	      |None	  |Enable msh mode	          |Enabled|
-|#define FINSH_ARG_MAX	          |Integer |Maximum number of input parameters	           |10|
-|#define FINSH_USING_AUTH	      |None	  |Enable permission verification	              |Disabled|
-|#define FINSH_DEFAULT_PASSWORD   |String |Permission verification password	              |Disabled |
+| Macro Definition                | Value Type | Description                                          | Default Value |
+| ------------------------------- | ---------- | ---------------------------------------------------- | ------------- |
+| #define RT_USING_FINSH          | None       | Enable FinSH                                         | On            |
+| #define FINSH_THREAD_NAME       | String     | FinSH thread name                                    | "tshell"      |
+| define FINSH_USING_HISTORY      | None       | Enable history recall function                       | On            |
+| #define FINSH_HISTORY_LINES     | Integer    | Number of history command lines that can be recalled | 5             |
+| #define FINSH_USING_SYMTAB      | None       | Enable symbol table usage in FinSH                   | On            |
+| #define FINSH_USING_DESCRIPTION | None       | Add a description to each FinSH symbol               | On            |
+| #define FINSH_USING_MSH         | None       | Enable msh mode                                      | On            |
+| #define FINSH_ARG_MAX           | Integer    | Maximum number of input parameters                   | 10            |
+| #define FINSH_USING_AUTH        | None       | Enable permission verification                       | Off           |
+| #define FINSH_DEFAULT_PASSWORD  | String     | Permission verification password                     | Off           |
 
 
-* The reference configuration example in _rtconfig.h_ is shown below, and can be configured according to actual functional requirements. Enter `menuconfig` in the compilation interface and configure under `RTOS → RT-Thread Components → Command shell`.
-![Figure 1: FinSH Configuration Menu](assets/finsh_menu.png)
+* The reference configuration example in _rtconfig.h_ is shown below, and can be
+  configured according to actual functional requirements. Enter `menuconfig` in
+  the compilation interface and configure under `RTOS → RT-Thread Components →
+  Command shell`. ![Figure 1: FinSH Configuration Menu](assets/finsh_menu.png)
 ```c
 /* Enable FinSH */
 #define RT_USING_FINSH
@@ -60,7 +68,9 @@ The example can run on the following development boards.
 ```
 ## FinSH Custom Command Application Examples
 ### msh Command Example without Parameters
-* Export a custom command to msh, example code is shown below. The code creates a `myhello` function, then uses the `MSH_CMD_EXPORT` command to export the `myhello` function to the FinSH command list.
+* Export a custom command to msh, example code is shown below. The code creates
+  a `myhello` function, then uses the `MSH_CMD_EXPORT` command to export the
+  `myhello` function to the FinSH command list.
 ```c
 #include <rtthread.h>
 
@@ -69,7 +79,7 @@ void myhello(void)
     rt_kprintf("hello RT-Thread!\n");
 }
 
-MSH_CMD_EXPORT(myhello , say hello to RT-Thread);
+MSH_CMD_EXPORT(myhello , say hello to RT-Thread);</rtthread.h>
 ```
 Run the myhello command, the result is as follows:
 ```
@@ -78,15 +88,17 @@ hello RT_Thread!
 msh />
 ```
 ### msh Command Example with Parameters
-* Export a custom command with parameters to FinSH, example code is shown below. The code creates an `atcmd()` function, then uses the `MSH_CMD_EXPORT` command to export the `atcmd()` function to the msh command list.
+* Export a custom command with parameters to FinSH, example code is shown below.
+  The code creates an `atcmd()` function, then uses the `MSH_CMD_EXPORT` command
+  to export the `atcmd()` function to the msh command list.
 ```c
 #include <rtthread.h>
 
 static void atcmd(int argc, char**argv)
 {
-    if (argc < 2)
+    if (argc &lt; 2)
     {
-        rt_kprintf("Please input'atcmd <server|client>'\n");
+        rt_kprintf("Please input 'atcmd <server|client>'\n");
         return;
     }
 
@@ -100,37 +112,33 @@ static void atcmd(int argc, char**argv)
     }
     else
     {
-        rt_kprintf("Please input'atcmd <server|client>'\n");
+        rt_kprintf("Please input 'atcmd <server|client>'\n");
     }
 }
 
-MSH_CMD_EXPORT(atcmd, atcmd sample: atcmd <server|client>);
-
+MSH_CMD_EXPORT(atcmd, atcmd sample: atcmd <server|client>);</server|client></server|client></server|client></rtthread.h>
 ```
 Run the `atcmd` command, the result is as follows:
 ```
-msh />atcmd
+msh /&gt;atcmd
 Please input 'atcmd <server|client>'
-msh />
-
+msh /&gt;</server|client>
 ```
 Run the `atcmd server` command, the result is as follows:
 ```
-msh />atcmd server
+msh /&gt;atcmd server
 AT server!
-msh />
-
+msh /&gt;
 ```
 Run the `atcmd client` command, the result is as follows:
 ```
-msh />atcmd client
+msh /&gt;atcmd client
 AT client!
-msh />
-
+msh /&gt;
 ```
 
-**Note**: 
-An infinite loop must be added in the main function to enter the msh command.
+**Note**: An infinite loop must be added in the main function to enter the msh
+command.
 ```c
 int main(void)
 {
@@ -140,13 +148,12 @@ int main(void)
     }
     return 0;
 }
-
 ```
 
 ## Reference Documentation
 * 
 ## Update Log
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |12/2024 |Initial version |
-| | | |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 12/2024 | Initial version |
+|         |         |                 |

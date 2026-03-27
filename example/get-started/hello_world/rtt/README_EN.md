@@ -3,7 +3,8 @@
 Source Code Path: example/get-started/hello_world/rtt
 
 ## Overview
-The Hello_world application will print "hello world!" on the board's serial port.
+The Hello_world application will print "hello world!" on the board's serial
+port.
 
 ## Usage
 
@@ -23,7 +24,8 @@ scons --board=pc -j32
 ```
 
 ## Example Output
-If the example runs successfully, you will see the following output on the serial port:
+If the example runs successfully, you will see the following output on the
+serial port:
 ```
 Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
 
@@ -57,8 +59,11 @@ msh />Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
 ```
 
 ## Troubleshooting
-No specific troubleshooting information available. For any issues, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+No specific troubleshooting information available. For any issues, please submit
+an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
 
 ## Reference Documentation
-- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
-- [SiFli-SDK Development Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/development/index.html)
+- [SiFli-SDK Quick
+  Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+- [SiFli-SDK Development
+  Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/development/index.html)

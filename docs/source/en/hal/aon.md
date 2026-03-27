@@ -1,10 +1,24 @@
 # AON
 
-HAL AON provides abstract software interface to operate hardware AON (Always On) module, used to control low power modes of various subsystems in the chip. The chip is divided into HPSYS and LPSYS subsystems (power domains), corresponding to HPAON ({c:macro}`hwp_hpsys_aon`) and LPAON ({c:macro}`hwp_lpsys_aon`) respectively. The control methods for both power domains are similar, and supported features include:
-- PIN, RTC, LPTIM, MAILBOX and manual wakeup. LPSYS also supports LPCOMP and BLE wakeup. PIN wakeup can be level-triggered or edge-triggered. Manual wakeup means another core operates specific registers to wake up the designated core.
-  MAILBOX wakeup means waking up the corresponding core by triggering mailbox interrupt, for example, LPSYS can configure #L2H_MAILBOX to trigger MAILBOX interrupt to HPSYS, if HPSYS enables MAILBOX wakeup, it can be automatically awakened by this interrupt.
-- HPSYS supports 4 wakeup PINs, LPSYS supports 6 wakeup PINs, all bound to fixed GPIO pins
-- Supports LIGHT/DEEP/STANDBY three low power modes. In LIGHT and DEEP modes, digital modules will not power down, all registers and SRAM will be retained. In STANDBY mode, digital modules will power down, all registers will be lost, SRAM can be selectively retained.
+HAL AON provides abstract software interface to operate hardware AON (Always On)
+module, used to control low power modes of various subsystems in the chip. The
+chip is divided into HPSYS and LPSYS subsystems (power domains), corresponding
+to HPAON ({c:macro}`hwp_hpsys_aon`) and LPAON ({c:macro}`hwp_lpsys_aon`)
+respectively. The control methods for both power domains are similar, and
+supported features include:
+- PIN, RTC, LPTIM, MAILBOX and manual wakeup. LPSYS also supports LPCOMP and BLE
+  wakeup. PIN wakeup can be level-triggered or edge-triggered. Manual wakeup
+  means another core operates specific registers to wake up the designated core.
+  MAILBOX wakeup means waking up the corresponding core by triggering mailbox
+  interrupt, for example, LPSYS can configure #L2H_MAILBOX to trigger MAILBOX
+  interrupt to HPSYS, if HPSYS enables MAILBOX wakeup, it can be automatically
+  awakened by this interrupt.
+- HPSYS supports 4 wakeup PINs, LPSYS supports 6 wakeup PINs, all bound to fixed
+  GPIO pins
+- Supports LIGHT/DEEP/STANDBY three low power modes. In LIGHT and DEEP modes,
+  digital modules will not power down, all registers and SRAM will be retained.
+  In STANDBY mode, digital modules will power down, all registers will be lost,
+  SRAM can be selectively retained.
 
 ````{note}
 Due to delay in PIN edge detection, if woken up by other wakeup sources when there's a wakeup PIN level change, the PIN wakeup flag in WSR register may still be 0 when AON interrupt occurs, and becomes 1 after a while. Since the corresponding GPIO edge detection is not ready yet, the PIN wakeup status in WSR register won't be cleared and will keep not sleeping while missing one GPIO interrupt for edge detection. If not using `SysTick_Handler` implemented in drv_common.c in SDK as SysTick interrupt service routine, it's recommended to add the following code in custom SysTick interrupt service routine. When edge-triggered wakeup PIN flag is found to be 1, manually trigger GPIO interrupt callback function once.
@@ -46,24 +60,24 @@ Due to delay in PIN edge detection, if woken up by other wakeup sources when the
 ### SF32LB55X
 #### HPSYS
 
-Wakeup PIN       | GPIO           | 
------------------|----------------|
-  PIN0           |  GPIO_A77      |
-  PIN1           |  GPIO_A78      |  
-  PIN2           |  GPIO_A79      |  
-  PIN3           |  GPIO_A80      |  
+| Wakeup PIN | GPIO     |
+| ---------- | -------- |
+| PIN0       | GPIO_A77 |
+| PIN1       | GPIO_A78 |
+| PIN2       | GPIO_A79 |
+| PIN3       | GPIO_A80 |
 
 
 #### LPSYS
 
-Wakeup PIN       | GPIO           | 
------------------|----------------|
-  PIN0           |  GPIO_B43      |
-  PIN1           |  GPIO_B44      |  
-  PIN2           |  GPIO_B45      |  
-  PIN3           |  GPIO_B46      |  
-  PIN4           |  GPIO_B47      |  
-  PIN5           |  GPIO_B48      |  
+| Wakeup PIN | GPIO     |
+| ---------- | -------- |
+| PIN0       | GPIO_B43 |
+| PIN1       | GPIO_B44 |
+| PIN2       | GPIO_B45 |
+| PIN3       | GPIO_B46 |
+| PIN4       | GPIO_B47 |
+| PIN5       | GPIO_B48 |
 
 For detailed API documentation, refer to [AON](#hal-aes).
 
@@ -73,21 +87,20 @@ For detailed API documentation, refer to [AON](#hal-aes).
 ```c
 void example(void)
 {
-    /* Enable LPTIM1 as wakeup source */
+    /* Enable LPTIM1 as a wakeup source */
     HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_LPTIM1, AON_PIN_MODE_HIGH);
-    /* Enable MAILBOX interrupt triggered by LPSYS as wakeup source */
+    /* Enable the MAILBOX interrupt triggered by LPSYS as a wakeup source */
     HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_LP2HP_IRQ, AON_PIN_MODE_HIGH);
     /* Enable manual wakeup triggered by LPSYS */
     HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_LP2HP_REQ, AON_PIN_MODE_HIGH);
-    /* Enable PIN0 low level wakeup  */
+    /* Enable PIN0 low-level wakeup */
     HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_PIN0, AON_PIN_MODE_LOW);
 
     ...
-    
-    /* Configure HPSYS enter LIGHT mode */
+
+    /* Configure HPSYS to enter LIGHT mode */
     HAL_HPAON_EnterLightSleep(0);
 }
-
 ```
 
 ### Query Wakeup PIN and Corresponding GPIO Pin
@@ -97,17 +110,17 @@ void example(void)
     int8_t wakeup_pin;
     uint16_t *gpio_pin;
     GPIO_TypeDef *gpio;
-    
-    /* Query which wakeup pin is mapping to GPIO_A80, 
-       if found return value >=0, otherwise, return -1 */
+
+    /* Query the wakeup pin mapped to GPIO_A80.
+       Returns value &gt;= 0 if found; otherwise, returns -1. */
     wakeup_pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 80);
 
-    /* Query which GPIO PIN is mapping to wakeup pin0, 
-       if found, return GPIO instance and pin id, otherwise return NULL */
-    gpio = HAL_HPAON_QueryWakeupGpioPin(0, &pin);
+    /* Query the GPIO pin mapped to wakeup pin 0.
+       If found, returns the GPIO instance and pin ID; otherwise, returns NULL. */
+    gpio = HAL_HPAON_QueryWakeupGpioPin(0, &amp;pin);
 }
-
 ```
+
 
 ## Using HAL LPAON
 
@@ -115,21 +128,20 @@ void example(void)
 ```c
 void example(void)
 {
-    /* Enable LPTIM2 as wakeup source */
+    /* Enable LPTIM2 as a wakeup source */
     HAL_LPAON_EnableWakeupSrc(LPAON_WAKEUP_SRC_LPTIM2, AON_PIN_MODE_HIGH);
-    /* Enable MAILBOX interrupt triggered by HPSYS as wakeup source */
+    /* Enable the MAILBOX interrupt triggered by HPSYS as a wakeup source */
     HAL_LPAON_EnableWakeupSrc(LPAON_WAKEUP_SRC_HP2LP_IRQ, AON_PIN_MODE_HIGH);
     /* Enable manual wakeup triggered by HPSYS */
     HAL_LPAON_EnableWakeupSrc(LPAON_WAKEUP_SRC_HP2LP_REQ, AON_PIN_MODE_HIGH);
-    /* Enable PIN0 low level wakeup  */
+    /* Enable PIN0 low-level wakeup */
     HAL_LPAON_EnableWakeupSrc(LPAON_WAKEUP_SRC_PIN0, AON_PIN_MODE_LOW);
 
     ...
-    
-    /* Configure LPSYS enter LIGHT mode */
+
+    /* Configure LPSYS to enter LIGHT mode */
     HAL_LPAON_EnterLightSleep(0);
 }
-
 ```
 
 ### Query Wakeup PIN and Corresponding GPIO Pin
@@ -139,16 +151,16 @@ void example(void)
     int8_t wakeup_pin;
     uint16_t *gpio_pin;
     GPIO_TypeDef *gpio;
-    
-    /* Query which wakeup pin is mapping to GPIO_B43, 
-       if found return value >=0, otherwise, return -1 */
+
+    /* Query the wakeup pin mapped to GPIO_B43.
+       Returns value &gt;= 0 if found; otherwise, returns -1. */
     wakeup_pin = HAL_LPAON_QueryWakeupPin(hwp_gpio2, 43);
 
-    /* Query which GPIO PIN is mapping to wakeup pin0, 
-       if found, return GPIO instance and pin id, otherwise return NULL */
-    gpio = HAL_HPAON_QueryWakeupGpioPin(0, &pin);
+    /* Query the GPIO pin mapped to wakeup pin 0.
+       If found, returns the GPIO instance and pin ID; otherwise, returns NULL. */
+    gpio = HAL_HPAON_QueryWakeupGpioPin(0, &amp;pin);
 }
-
 ```
 ## API Reference
-[](#hal-aon)
+[]
+

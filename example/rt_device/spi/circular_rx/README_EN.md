@@ -6,22 +6,23 @@ Source path: `example/rt_device/spi/circular_rx`
 - `sf32lb58-lcd_n16r64n4`
 
 ## Overview
-This example validates DMA circular mode in the RT-Thread SPI driver and supports three modes:
+This example validates DMA circular mode in the RT-Thread SPI driver and
+supports three modes:
 - **Master TRX mode**: full-duplex TX/RX, suitable for loopback testing
 - **Slave RX mode**: receive only, requires an external Master to provide clock
 - **Slave TX mode**: transmit only, requires an external Master to provide clock
 
 ## API Reference
 
-| API | Description |
-|------|------|
-| `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` | Configure circular DMA direction |
-| `rt_device_set_rx_indicate()` | Register RX half-buffer / full-buffer callback |
-| `rt_device_set_tx_complete()` | Register TX half-buffer / full-buffer callback |
-| `rt_spi_transfer()` | Start TX+RX full-duplex circular DMA |
-| `rt_device_read()` | Start RX only circular DMA |
-| `rt_device_write()` | Start TX only circular DMA |
-| `rt_device_control(..., RT_SPI_CTRL_STOP_DMA_CIRCULAR, ...)` | Stop circular DMA |
+| API                                                            | Description                                    |
+| -------------------------------------------------------------- | ---------------------------------------------- |
+| `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` | Configure circular DMA direction               |
+| `rt_device_set_rx_indicate()`                                  | Register RX half-buffer / full-buffer callback |
+| `rt_device_set_tx_complete()`                                  | Register TX half-buffer / full-buffer callback |
+| `rt_spi_transfer()`                                            | Start TX+RX full-duplex circular DMA           |
+| `rt_device_read()`                                             | Start RX only circular DMA                     |
+| `rt_device_write()`                                            | Start TX only circular DMA                     |
+| `rt_device_control(..., RT_SPI_CTRL_STOP_DMA_CIRCULAR, ...)`   | Stop circular DMA                              |
 
 ## Required Configuration
 `project/proj.conf` should include:
@@ -45,7 +46,8 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 2. Attach/open the `spi_circular` device
 3. Configure SPI (Master, Mode0, 8bit, 20MHz)
 4. Call `rt_spi_take_bus()/rt_spi_release_bus()` to trigger DMA handle linking
-5. Call `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` with `TXRX`
+5. Call `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` with
+   `TXRX`
 6. Call `rt_spi_transfer()` to start circular DMA
 7. Short MOSI and MISO for loopback verification
 
@@ -67,16 +69,16 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 
 ### Pin Mapping Table
 
-| Board | Function Pin | Local Device Pin | Remote Device Pin | Physical Pin (CONN2) |
-|--------|----------|--------------|--------------|-------------------|
-| sf32lb52-lcd | PA_24 | dio | SPI_MOSI | 19 |
-|              | PA_25 | di  | SPI_MISO | 21 |
-|              | PA_28 | clk | SPI_CLK  | 23 |
-|              | PA_29 | cs  | SPI_CS   | 24 |
-| sf32lb58-lcd | PA_21 | dio | SPI_MOSI | 8 |
-|              | PA_20 | di  | SPI_MISO | 10 |
-|              | PA_28 | clk | SPI_CLK  | 5 |
-|              | PA_29 | cs  | SPI_CS   | 3 |
+| Board        | Function Pin | Local Device Pin | Remote Device Pin | Physical Pin (CONN2) |
+| ------------ | ------------ | ---------------- | ----------------- | -------------------- |
+| sf32lb52-lcd | PA_24        | dio              | SPI_MOSI          | 19                   |
+|              | PA_25        | di               | SPI_MISO          | 21                   |
+|              | PA_28        | clk              | SPI_CLK           | 23                   |
+|              | PA_29        | cs               | SPI_CS            | 24                   |
+| sf32lb58-lcd | PA_21        | dio              | SPI_MOSI          | 8                    |
+|              | PA_20        | di               | SPI_MISO          | 10                   |
+|              | PA_28        | clk              | SPI_CLK           | 5                    |
+|              | PA_29        | cs               | SPI_CS            | 3                    |
 
 The hardware schematic of `sf32lb52-lcd_n16r8` is shown below:
 
@@ -97,29 +99,29 @@ Connect with standard 4-wire SPI. An external Master must provide clock.
 
 ### Master TRX Mode
 ```text
-Start SPI circular DMA demo!
+Starting SPI circular DMA demo.
 Mode: Master TRX (loopback)
-Circular DMA started on spi1
-Tip: Short MOSI(DO) to MISO(DI) for loopback verification.
-RX: half=1 full=0 rx[0..7]: 00 01 02 03 04 05 06 07, rx[mid..mid+7]: 80 81 82 83 84 85 86 87, mismatch=0
+Circular DMA initialized on spi1.
+Note: Short MOSI(DO) to MISO(DI) for loopback verification.
+RX: half=1 full=0, rx[0..7]: 00 01 02 03 04 05 06 07, rx[mid..mid+7]: 80 81 82 83 84 85 86 87, mismatch=0
 ```
 
 ### Slave RX Mode
 ```text
-Start SPI circular DMA demo!
+Starting SPI circular DMA demo.
 Mode: Slave RX only
-Tip: Connect external SPI Master to provide clock.
-Circular DMA started on spi1
+Note: Connect an external SPI Master to provide the clock signal.
+Circular DMA initialized on spi1.
 RX: half=1 full=0
 ```
 
 ### Slave TX Mode
 ```text
-Start SPI circular DMA demo!
+Starting SPI circular DMA demo.
 Mode: Slave TX only
-Tip: Connect external SPI Master to provide clock.
-Circular DMA started on spi1
-TX: half=1 full=0 tx[0..7]: 00 01 02 03 04 05 06 07, tx[mid..mid+7]: 80 81 82 83 84 85 86 87
+Note: Connect an external SPI Master to provide the clock signal.
+Circular DMA initialized on spi1.
+TX: half=1 full=0, tx[0..7]: 00 01 02 03 04 05 06 07, tx[mid..mid+7]: 80 81 82 83 84 85 86 87
 ```
 
 ## Callback Functions
@@ -164,6 +166,6 @@ Check:
 - Header: `rtos/rtthread/bsp/sifli/drivers/drv_spi.h`
 
 ## Changelog
-| Version | Date | Description |
-|:---|:---|:---|
-| 1.0.0 | 03/2026 | Initial release, supporting Master TRX / Slave RX / Slave TX modes |
+| Version | Date    | Description                                                        |
+| ------- | ------- | ------------------------------------------------------------------ |
+| 1.0.0   | 03/2026 | Initial release, supporting Master TRX / Slave RX / Slave TX modes |

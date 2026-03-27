@@ -5,11 +5,15 @@ The example can run on the following development boards.
 * sf32lb52-lcd_n16r8
 
 ## Overview
-* Under RT-Thread operating system, ADC single-channel sampling to read vbat battery voltage
+* Under RT-Thread operating system, ADC single-channel sampling to read vbat
+  battery voltage
 
 ## Example Usage
 ### Compilation and Flashing
-* This example uses ADC. Under RT-Thread operating system, ADC peripheral is virtualized as an rt_device for read/write operations. At this time, you need to confirm whether the `rtconfig.h` file in the current path contains the following 2 macros:
+* This example uses ADC. Under RT-Thread operating system, ADC peripheral is
+  virtualized as an rt_device for read/write operations. At this time, you need
+  to confirm whether the `rtconfig.h` file in the current path contains the
+  following 2 macros:
 
 ```c
 #define BSP_USING_ADC 1
@@ -17,58 +21,69 @@ The example can run on the following development boards.
 #define RT_USING_ADC 1
 ```
 
-Only when the above three macros are included, the `sifli_adc_init` function will register the `"bat1"` rt_device through the `rt_hw_adc_register` function, and then the device can be successfully found with `rt_device_find` and controlled with `rt_device_control`.<br>
-**Note**<br>
-SiFli series MCUs support timer interrupt to trigger multi-channel simultaneous sampling. You can refer to the definition within macro `BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING` and the chip user manual
-* If the above three macros are missing, you need to enable them through `menuconfig` with the following command  
+Only when the above three macros are included, the `sifli_adc_init` function
+will register the `"bat1"` rt_device through the `rt_hw_adc_register` function,
+and then the device can be successfully found with `rt_device_find` and
+controlled with `rt_device_control`.<br> **Note**<br> SiFli series MCUs support
+timer interrupt to trigger multi-channel simultaneous sampling. You can refer to
+the definition within macro `BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING` and the chip
+user manual
+* If the above three macros are missing, you need to enable them through
+  `menuconfig` with the following command
 
-> menuconfig --board=sf32lb52-lcd_n16r8       525 development board
+> menuconfig --board=sf32lb52-lcd_n16r8 525 development board
 
-> menuconfig --board=sf32lb52-lcd_52d       52d development board
+> menuconfig --board=sf32lb52-lcd_52d 52d development board
 
 
-As shown in the figure below, select GPADC1, save and exit menuconfig, check if the `rtconfig.h` macro is generated
-![alt text](assets/MENUCONFIG_ADC.png)
+As shown in the figure below, select GPADC1, save and exit menuconfig, check if
+the `rtconfig.h` macro is generated ![alt text](assets/MENUCONFIG_ADC.png)
 * Switch to the example project directory and run the scons command to compile:
 
 ```
 scons --board=em_lb525 -j8
 ```
 
-* Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as prompted to download:
+* Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as
+  prompted to download:
 
 ```
 build_sf32lb52-lcd_52d_hcpu\uart_download.bat
 
-Uart Download
+UART Download
 
-please input the serial port num:5
+Please input the serial port number: 5
 ```
 
 #### Example Output Results Display:
-* Voltage reading log before connecting battery
-![alt text](assets/beffer.png)
+* Voltage reading log before connecting battery ![alt text](assets/beffer.png)
 
 
-* Voltage reading log after connecting battery
-![alt text](assets/last.png)
+* Voltage reading log after connecting battery ![alt text](assets/last.png)
 
-The value printed in the log is the original register value, Voltage is the converted mV voltage
+The value printed in the log is the original register value, Voltage is the
+converted mV voltage
 
 
 #### ADC Configuration Process
 
-* Set channel 7 corresponding to battery Vbat interface
-![alt text](assets/1.png)
+* Set channel 7 corresponding to battery Vbat interface ![alt
+  text](assets/1.png)
 
-**Note**  
-1. ADC input ports are fixed IO ports, as shown in the figure below:<br>52 chip ADC CH1-7 distribution, corresponding to software configured Channel0-6, the last channel CH8(Channel 7) is internally connected to battery Vbat detection and is not mapped to external IO<br>
-![alt text](assets/ADC_MAP.png)
-1. `HAL_PIN_Set` `HAL_PIN_Set_Analog` the last parameter is for hcpu/lcpu selection, 1: select hcpu, 0: select lcpu<br>
+**Note**
+1. ADC input ports are fixed IO ports, as shown in the figure below:<br>52 chip
+   ADC CH1-7 distribution, corresponding to software configured Channel0-6, the
+   last channel CH8(Channel 7) is internally connected to battery Vbat detection
+   and is not mapped to external IO<br> ![alt text](assets/ADC_MAP.png)
+1. `HAL_PIN_Set` `HAL_PIN_Set_Analog` the last parameter is for hcpu/lcpu
+   selection, 1: select hcpu, 0: select lcpu<br>
 
 
-* Use `rt_device_find` and `rt_device_control` sequentially to find and configure the `bat1` device interface function.
-`rt_adc_ops` does not define `rt_device_open`, so not executing `rt_device_open` will not affect ADC functionality, it will only affect whether `bat1` shows open status in `list_device`
+* Use `rt_device_find` and `rt_device_control` sequentially to find and
+  configure the `bat1` device interface function. `rt_adc_ops` does not define
+  `rt_device_open`, so not executing `rt_device_open` will not affect ADC
+  functionality, it will only affect whether `bat1` shows open status in
+  `list_device`
 ```c
 #define ADC_DEV_NAME        "bat1"      /* ADC1 device, already registered in rt_hw_adc_register function, cannot be modified arbitrarily */
 #define ADC_DEV_CHANNEL     7           /* ADC channel selection vbat fixed to CH8(Channel 7) */
@@ -90,7 +105,7 @@ void adc_example(void)
     read_arg.channel = ADC_DEV_CHANNEL;
 
     r = rt_adc_enable((rt_adc_device_t)s_adc_dev, read_arg.channel);
-    
+
     /* This interface will call sifli_adc_control function, read only once, users can process data themselves */   
     r = rt_device_control(s_adc_dev, RT_ADC_CMD_READ, &read_arg.channel);
     /* Log printed value is in 0.1mV units, 20846 equals 2084.6mV or 2.0846V  */
@@ -111,12 +126,14 @@ void adc_example(void)
 ## Exception Diagnosis
 * Program crashes with the following log
 ```c
-   Start adc demo!
-   Assertion failed at function:rt_adc_enable, line number:144 ,(dev)
-   Previous ISR enable 0
+Starting ADC demo...
+Assertion failed at function: rt_adc_enable, line: 144, (dev)
+Previous ISR enable: 0
 ```
-Reason:  
-`BSP_USING_ADC1` is not defined, causing `rt_hw_adc_register` function to not register `"bat1"`, and Assert crashes when `rt_device_find` searches for this device  
+Reason:\
+`BSP_USING_ADC1` is not defined, causing `rt_hw_adc_register` function to not
+register `"bat1"`, and Assert crashes when `rt_device_find` searches for this
+device\
 Ensure the `rtconfig.h` file contains the following 3 macros:
 ```c
 #define BSP_USING_ADC 1
@@ -125,10 +142,12 @@ Ensure the `rtconfig.h` file contains the following 3 macros:
 ```
 * ADC sampled voltage value is incorrect
 
-1. Use `list_device` command to check if `bat1` device exists. ADC driver does not affect ADC functionality when `bat1` device is not opened with `rt_device_open`
+1. Use `list_device` command to check if `bat1` device exists. ADC driver does
+   not affect ADC functionality when `bat1` device is not opened with
+   `rt_device_open`
 ```
-    msh />
- TX:list_device
+msh /&gt;
+ TX: list_device
     list_device
     device           type         ref count
     -------- -------------------- ----------
@@ -150,23 +169,27 @@ Ensure the `rtconfig.h` file contains the following 3 macros:
     uart2    Character Device     0       
     uart1    Character Device     2       
     pin      Miscellaneous Device 0       
-    msh />
+    msh /&gt;
 ```
-2. Check if ADC hardware is connected correctly. ADC sampling channels are fixed IO ports and cannot be specified arbitrarily. For specific CH0-7 IO assignments, refer to the chip manual  
-3. ADC input voltage range is 0V - reference voltage (52 defaults to 3v3), cannot exceed input range  
+2. Check if ADC hardware is connected correctly. ADC sampling channels are fixed
+   IO ports and cannot be specified arbitrarily. For specific CH0-7 IO
+   assignments, refer to the chip manual
+3. ADC input voltage range is 0V - reference voltage (52 defaults to 3v3),
+   cannot exceed input range
 * ADC accuracy is insufficient
 1. Whether ADC calibration parameters are obtained and used
 2. Whether the accuracy of voltage divider resistors meets requirements
-3. Whether ADC reference voltage is stable and has excessive ripple (refer to ADC voltage reference chip manual for details) 
-
+3. Whether ADC reference voltage is stable and has excessive ripple (refer to
+   ADC voltage reference chip manual for details)
 
 ## Reference Documents
 * EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx
-* DS0052-SF32LB52x-芯片技术规格书 V0p3.pdf
-* [RT-Thread Official Website](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/adc/adc)<br>
-https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/adc/adc
+* DS0052-SF32LB52x-Datasheet V0p3.pdf
+* [RT-Thread Official
+  Website](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/adc/adc)<br>
+  https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/adc/adc
 ## Update History
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |11/2024 |Initial version |
-| | | |
+| Version | Date     | Release Notes   |
+| ------- | -------- | --------------- |
+| 0.0.1   | Nov 2024 | Initial version |
+|         |          |                 |

@@ -1,28 +1,38 @@
 # DSI
 
-DSI (MIPI DSI) module supports 1-lane or 2-lane DSI screens, currently supporting bandwidth configurations of 240/288/336/384/480Mbps, based on MIPI protocol version V1.1 (55x does not support Video mode).
+
+DSI (MIPI DSI) module supports 1-lane or 2-lane DSI screens, currently
+supporting bandwidth configurations of 240/288/336/384/480Mbps, based on MIPI
+protocol version V1.1 (55x does not support Video mode).
 
 ## Supported Color Output Formats
 - `RGB565 DSI` transmission order: [G3~G5R0~R4][B0~B4G0~G2]
 - `RGB888 DSI` transmission order: [R0~R7][G0~G7][B0~B7]
-- `RGB565_SWAP DSI` transmission order (55X not supported): [B0~B4G0~G2][G3~G5R0~R4]
+- `RGB565_SWAP DSI` transmission order (55X not supported):
+  [B0~B4G0~G2][G3~G5R0~R4]
 
-DSI module can work independently, but operating through LCDC encapsulated interface can achieve optimal performance.
+DSI module can work independently, but operating through LCDC encapsulated
+interface can achieve optimal performance.
+
 
 ```{note}
 On 55x, DSI needs multiple operations to complete the entire screen refresh, refreshing 2N lines each time (N varies depending on refresh area size), until the entire screen refresh is completed
 ```
 
-![Figure 1: Relationship between DSI module and LCDC module](../../assets/hal_dsi_arch.png)
+![Figure 1: Relationship between DSI module and LCDC
+module](../../assets/hal_dsi_arch.png)
+
+
 
 ## DSI Usage Example
-Open DSI screen through LCDC interface, then draw a 100x100 rectangular area to LCD:
+Open DSI screen through LCDC interface, then draw a 100x100 rectangular area to
+LCD:
+
 
 ```c
-
 static LCDC_HandleTypeDef hlcdc_rm69090;
 
- 
+
 /*DSI LCD configuration*/
 static const LCDC_InitTypeDef lcdc_int_cfg =
 {
@@ -101,7 +111,7 @@ static const LCDC_InitTypeDef lcdc_int_cfg =
 /**********************
  *   FUNCTIONS
  **********************/
- 
+
 __ROM_USED void LCDC1_IRQHandler(void)
 {
     /* enter interrupt */
@@ -126,7 +136,7 @@ void HAL_LCDC_SendLayerDataCpltCbk(LCDC_HandleTypeDef *lcdc)
 static void RM69090_Init_Seq(LCDC_HandleTypeDef *hlcdc)
 {
     ...
-    
+
     //Sleep out
     HAL_LCDC_WriteU8Reg(hlcdc, 0x11, (uint8_t *)NULL, 0);
 
@@ -170,9 +180,9 @@ static void main(int argc, char **argv)
     /*Turn on LCD board power supply*/
     Poweron_LCD_Board();
 
-    
+
     memset(&hlcdc_rm69090, 0, sizeof(hlcdc_rm69090));
-    
+
     hlcdc_rm69090.Instance = hwp_lcdc;
 
     /*Set background layer color*/
@@ -200,7 +210,7 @@ static void main(int argc, char **argv)
     RM69090_Init_Seq(&hlcdc_rm69090);
 
     {//Read LCD id
-    
+
         uint32_t rd_data = 0;
 
         HAL_LCDC_ReadU8Reg(&hlcdc_rm69090, 0x04, (uint8_t *)&rd_data, 4);
@@ -214,7 +224,7 @@ static void main(int argc, char **argv)
 
     /*Fill framebuffer with single color*/
     memset(p_framebuffer, 0xE0, 100*100*2);
-    
+
     /*Assign framebuffer  and area to layer*/
     HAL_LCDC_LayerSetData(&hlcdc_rm69090, HAL_LCDC_LAYER_DEFAULT, (uint8_t *)p_framebuffer, 100, 100, 199, 199);
 
@@ -247,9 +257,7 @@ static void main(int argc, char **argv)
     HAL_NVIC_DisableIRQ(LCDC_IRQ_NUM);
 
 }
-
-
 ```
 
 ## API Reference
-[](../api/hal/dsi.md)
+[]

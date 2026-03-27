@@ -1,20 +1,18 @@
-
 # Logger
 
-SIFLI SDK uses RT-Thread's `ulog` as the logging (log) output mechanism. As a concise and easy-to-use logging output component, `ulog` supports:
-- Logs with different output levels.
-- Output by module.
-- Thread safety with options for synchronous or asynchronous log output.
-- Configurable output format.
-- Configurable output backends, which can be UART or flash.
+SIFLI SDK uses RT-Thread's `ulog` as the logging (log) output mechanism. As a
+concise and easy-to-use logging output component, `ulog` supports:
 
-For specific design architecture and implementation methods, you can refer to the [ulog documentation](https://www.rt-thread.org/document/site/programming-manual/ulog/ulog).
+For specific design architecture and implementation methods, you can refer to
+the [ulog
+documentation]<a href="https://www.rt-thread.org/document/site/programming-manual/ulog/ulog">.</a>
 
 ## ulog Configuration
 
-`ulog` can be configured through many options in `menuconfig`, including log output levels, synchronous or asynchronous output, and custom output formats.
+`ulog` can be configured through many options in `menuconfig`, including log
+output levels, synchronous or asynchronous output, and custom output formats.
 
-![Logger Configuration]( ../../assets/logger_config.png)
+![Logger Configuration](../../assets/logger_config.png)
 
 ## ulog Usage Example
 

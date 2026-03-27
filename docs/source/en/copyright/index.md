@@ -1,4 +1,4 @@
-# 版权
+# Copyright
 
 ```{toctree}
 :titlesonly:

@@ -1,10 +1,13 @@
-
 # I2C Device
 
-The I2C driver consists of two layers: the Hardware Access Layer (HAL) and the RT-Thread adapter layer.  
-The hardware access layer provides basic APIs for accessing I2C peripheral registers. For more details, please refer to the I2C HAL API documentation.  
-The adapter layer provides support for the RT-Thread driver framework. Users can use the RT-Thread POSIX driver interface for I2C programming. Please refer to the RT-Thread driver API documentation.  
-Main features include:
+The I2C driver consists of two layers: the Hardware Access Layer (HAL) and the
+RT-Thread adapter layer.\
+The hardware access layer provides basic APIs for accessing I2C peripheral
+registers. For more details, please refer to the I2C HAL API documentation.\
+The adapter layer provides support for the RT-Thread driver framework. Users can
+use the RT-Thread POSIX driver interface for I2C programming. Please refer to
+the RT-Thread driver API documentation.\
+Main features include: <br>
 - Multi-instance support
 - I2C operates in master mode
 - Supports I2C operation at speeds of 100Kbps/400Kbps/1Mbps
@@ -14,7 +17,9 @@ Main features include:
 
 ## Driver Configuration
 
-In the `{menuselection}` `On-Chip Peripheral RTOS Drivers --> Enable I2C BUS` menu, select the I2C bus device to be used and configure whether DMA support is required.
+In the `{menuselection}` `On-Chip Peripheral RTOS Drivers --> Enable I2C BUS`
+menu, select the I2C bus device to be used and configure whether DMA support is
+required.
 
 The following macro switches enable I2C1/I2C2/I2C3 devices, and all support DMA:
 ```c
@@ -32,11 +37,11 @@ Selecting DMA in menuconfig only configures the driver to support DMA, but wheth
 ```
 
 ## Device Names
-- `i2c<x>`,
-Where `x` is the device number, such as `i2c1`, `i2c2`, corresponding to the peripheral number being operated on.
-
+- `i2c<x>`, Where `x` is the device number, such as `i2c1`, `i2c2`,
+  corresponding to the peripheral number being operated on.
 
 ## Example Code
+
 
 ```c
 // Find and open device
@@ -75,78 +80,64 @@ rt_size_t rt_i2c_transfer(struct rt_i2c_bus_device *bus,
 // Interrupt callback, try not to issue read in interrupt context.
 __weak void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c);
 __weak void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
-
-
-```
-// example
-void i2c_trans_test()
-{
-    struct rt_i2c_bus_device *i2c_bus = RT_NULL;
-	struct rt_i2c_msg msgs;
-	struct rt_i2c_configuration cfg = {0};
-    rt_uint8_t *rd_buff;
-	rt_err_t ret;
-	
-	
-    i2c_bus = rt_i2c_bus_device_find("i2c1");
-	if (RT_NULL == i2c_bus)
-    {
-        return;
-    }
-	
-    ret = rt_device_open(&(i2c_bus->parent), RT_DEVICE_FLAG_RDWR);
-    if (RT_EOK != ret)
-    {
-        return;
-    }
-	
-    cfg.timeout = 5000;
-    cfg.max_hz = 400000;
-	//cfg.mode |= RT_I2C_ADDR_10BIT;
-	//cfg.addr = 0xe;
-
-    if (rt_i2c_configure(i2c_bus, &cfg) != HAL_OK)
-    {
-		rt_device_close(&(i2c_bus->parent));
-		return;
-    }
-	
-	rd_buff = rt_malloc(100);
-    if (RT_NULL == rd_buff)
-    {
-        rt_device_close(&(i2c_bus->parent));
-        return;
-    }
-
-    for (int m = 0; m < rw_len; m++)
-    {
-        rd_buff[m] = m;
-    }
-		
-    msgs.addr = 0xe;
-    msgs.flags = RT_I2C_WR;
-    msgs.buf = rd_buff;
-    msgs.len = 100;
-
-    rt_i2c_transfer(i2c_bus, &msgs, 1);
-
-    //msgs.addr = 0xe;
-    msgs.flags = RT_I2C_RD;
-    //msgs.buf = rd_buff;
-    //msgs.len = 100;
-
-    rt_i2c_transfer(i2c_bus, &msgs, 1);
-
-    rt_device_close(&(i2c_bus->parent));
-}
 ```
 
 ```{note}
-DMA support is configured via the menuconfig tool. To use DMA, developers need to set the corresponding flag when opening the device.
+i2c_bus = rt_i2c_bus_device_find("i2c1");
+if (RT_NULL == i2c_bus)
+{
+    return;
+}
+
+ret = rt_device_open(&(i2c_bus->parent), RT_DEVICE_FLAG_RDWR);
+if (RT_EOK != ret)
+{
+    return;
+}
+
+cfg.timeout = 5000;
+cfg.max_hz = 400000;
+//cfg.mode |= RT_I2C_ADDR_10BIT;
+//cfg.addr = 0xe;
+
+if (rt_i2c_configure(i2c_bus, &cfg) != HAL_OK)
+{
+	rt_device_close(&(i2c_bus->parent));
+	return;
+}
+
+rd_buff = rt_malloc(100);
+if (RT_NULL == rd_buff)
+{
+    rt_device_close(&(i2c_bus->parent));
+    return;
+}
+
+for (int m = 0; m < rw_len; m++)
+{
+    rd_buff[m] = m;
+}
+
+msgs.addr = 0xe;
+msgs.flags = RT_I2C_WR;
+msgs.buf = rd_buff;
+msgs.len = 100;
+
+rt_i2c_transfer(i2c_bus, &msgs, 1);
+
+//msgs.addr = 0xe;
+msgs.flags = RT_I2C_RD;
+//msgs.buf = rd_buff;
+//msgs.len = 100;
+
+rt_i2c_transfer(i2c_bus, &msgs, 1);
+
+rt_device_close(&(i2c_bus->parent));
 ```
 
 
-[i2c]: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/i2c/i2c
+[I2C]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/i2c/i2c
 ## RT-Thread Reference Documentation
 
-- [I2C Device][i2c]
+- [I2C Device][I2C]

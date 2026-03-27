@@ -1,50 +1,57 @@
 # Touch Screen
 ## Introduction
 
-For touch controller drivers, we have implemented a unified interface called "touch" rt_device that provides a simple framework for registering different touch controller drivers and automatically selecting the appropriate driver.
-This chapter mainly introduces the internal framework functionality of Touch device and how to register a new touch controller to this framework.
+For touch controller drivers, we have implemented a unified interface called
+"touch" rt_device that provides a simple framework for registering different
+touch controller drivers and automatically selecting the appropriate driver.
+This chapter mainly introduces the internal framework functionality of Touch
+device and how to register a new touch controller to this framework.
 
 Touch device implementation consists of 2 parts:
 - rt_device device (drv_touch.c)
-    - Registers a device named "touch" that provides interrupt callback registration and touch data reading interfaces
-    - Creates a task for slow communication with touch devices (such as initialization, reading touch point data, etc.)
-    - Performs caching, filtering (filtering duplicate points), and cache overflow packet dropping for touch data points read
+    - Registers a device named "touch" that provides interrupt callback
+      registration and touch data reading interfaces
+    - Creates a task for slow communication with touch devices (such as
+      initialization, reading touch point data, etc.)
+    - Performs caching, filtering (filtering duplicate points), and cache
+      overflow packet dropping for touch data points read
 - Specific touch device driver implementation
-    - Registers a new driver with touch_device and provides the following implementations:
-		- probe   - Identify supported devices
-		- init    - Initialization after device identification
-		- deinit  - Deinitialization after device identification
-		- read_point   - Read a valid data point (**Note: Return RT_EOK if there are still unread data points, otherwise return other values**)
-		- A semaphore   - Used to block rt_device layer threads
-	- Also needs to implement internally:
-	   - Touch interrupt detection
-	   - Communication interface initialization
+    - Registers a new driver with touch_device and provides the following
+      implementations:
+        - probe - Identify supported devices
+        - init - Initialization after device identification
+        - deinit - Deinitialization after device identification
+        - read_point - Read a valid data point (**Note: Return RT_EOK if there
+          are still unread data points, otherwise return other values**)
+        - A semaphore - Used to block rt_device layer threads
+    - Also needs to implement internally:
+       - Touch interrupt detection
+       - Communication interface initialization
 
-![Figure 1: Touch driver software architecture](../../assets/touch_device_arch.png)
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
+![Figure 1: Touch driver software
+architecture](../../assets/touch_device_arch.png) <br> <br> <br> <br> <br> <br>
 
 ## Process for Adding New Touch Controller Code
 ## 1. Select the corresponding board project under example\\rt_driver
-- This project contains a thread _touch_read_task_ that reads touch data and prints it
+- This project contains a thread _touch_read_task_ that reads touch data and
+  prints it
 
 ## 2. Add new driver to compilation project
 - Add new touch controller code to directory _customer\\peripherals_
-    - You can copy code from other existing drivers, then change the name, Slave_Address, read process, etc. to your own
+    - You can copy code from other existing drivers, then change the name,
+      Slave_Address, read process, etc. to your own
     ```{note} 
     Note to modify the depend macro in the Kconfig file under the copied code directory
     ```
-- In _customer\\peripherals\\Kconfig_, add a hidden option for the newly added driver, for example:
+- In _customer\\peripherals\\Kconfig_, add a hidden option for the newly added
+  driver, for example:
     ```c
     config TSC_USING_TMA525B
         bool
         default n
     ```
-- Add the previously added hidden touch controller switch to the board-level configuration screen module switch:
+- Add the previously added hidden touch controller switch to the board-level
+  configuration screen module switch:
     ```c
     config LCD_USING_ED_LB55DSI13902_DSI_LB555
         bool "1.39 round 454RGB*454 DSI LCD(ED-LB55DSI13902)"
@@ -57,29 +64,32 @@ Touch device implementation consists of 2 parts:
                 def_bool n
         endif
     ```
-- If using scons compilation, need to enter the project menuconfig selection menu, then select the newly added screen module, finally generating _.config_ and _rtconfig.h_
-- If using Keil compilation, you can also directly add source code (but still recommend the same method as scons compilation, so it will be automatically included when regenerating Keil project next time)
+- If using scons compilation, need to enter the project menuconfig selection
+  menu, then select the newly added screen module, finally generating _.config_
+  and _rtconfig.h_
+- If using Keil compilation, you can also directly add source code (but still
+  recommend the same method as scons compilation, so it will be automatically
+  included when regenerating Keil project next time)
 
 ## 3. Check pinmux for pins used by new touch controller and reset pin
-- In the SDK's `drv_io.c`, functions _BSP_TP_PowerUp&BSP_TP_PowerDown_ perform power up/down and reset operations for touch controllers
-<br>
-<br>
-
+- In the SDK's `drv_io.c`, functions _BSP_TP_PowerUp&BSP_TP_PowerDown_ perform
+  power up/down and reset operations for touch controllers <br> <br>
 
 ## Touch Controller Debugging Suggestions
 - First check if power supply and reset pin status are normal
-- Then check if communication interface waveforms are normal, such as whether I2C interface has ack
-<br>
-
+- Then check if communication interface waveforms are normal, such as whether
+  I2C interface has ack <br>
 
 ## TMA525B Touch Device Driver Implementation Example Code
 
-TMA525B uses the falling edge of TOUCH_IRQ_PIN as trigger condition, I2C as communication interface at 400KHz speed, I2C read/write timeout of 5ms
-This implementation releases semaphore in interrupt to make touch_device layer call its own read_point to get touch data
-Also disables interrupt enable in interrupt, then re-enables interrupt enable after entering read_point, preventing too many interrupts from repeatedly releasing too many semaphores
+TMA525B uses the falling edge of TOUCH_IRQ_PIN as trigger condition, I2C as
+communication interface at 400KHz speed, I2C read/write timeout of 5ms This
+implementation releases semaphore in interrupt to make touch_device layer call
+its own read_point to get touch data Also disables interrupt enable in
+interrupt, then re-enables interrupt enable after entering read_point,
+preventing too many interrupts from repeatedly releasing too many semaphores
 
 ```c
-
 static struct rt_i2c_bus_device *ft_bus = NULL;
 static struct touch_drivers tma525b_driver;
 
@@ -95,7 +105,7 @@ static rt_err_t i2c_write(rt_uint8_t *buf, rt_uint16_t len)
     msgs.buf   = buf;              /* Send data pointer */
     msgs.len   = len;
 
-    if (rt_i2c_transfer(ft_bus, &msgs, 1) == 1)
+    if (rt_i2c_transfer(ft_bus, &amp;msgs, 1) == 1)
     {
         res = RT_EOK;
     }
@@ -154,23 +164,23 @@ static rt_err_t read_point(touch_msg_t p_msg)
     {
 		if(touch_report[1] == 1)
 		{
-			p_msg->event = TOUCH_EVENT_DOWN;
+			p_msg-&gt;event = TOUCH_EVENT_DOWN;
 		}
 		else
 		{
-			p_msg->event = TOUCH_EVENT_UP;
+			p_msg-&gt;event = TOUCH_EVENT_UP;
 		}
 
-		p_msg->x     = touch_report[2];
-		p_msg->y     = touch_report[3];
+		p_msg-&gt;x     = touch_report[2];
+		p_msg-&gt;y     = touch_report[3];
 
-		if(touch_report[4] > 1)
+		if(touch_report[4] &gt; 1)
 			return RT_EOK;       //More pending touch data
 		else	
 			return RT_EEMPTY;    //No more touch data to be read
     }
 
-	p_msg->event = TOUCH_EVENT_NONE; //Read point fail
+	p_msg-&gt;event = TOUCH_EVENT_NONE; //Read point fail
     return RT_ERROR;
 }
 
@@ -195,7 +205,7 @@ static rt_bool_t probe(void)
     rt_err_t err;
 
     ft_bus = (struct rt_i2c_bus_device *)rt_device_find(TOUCH_DEVICE_NAME);
-    if (RT_Device_Class_I2CBUS != ft_bus->parent.type)
+    if (RT_Device_Class_I2CBUS != ft_bus-&gt;parent.type)
     {
         ft_bus = NULL;
     }
@@ -205,7 +215,7 @@ static rt_bool_t probe(void)
     }
     else
     {
-        LOG_I("bus not find\n");
+        LOG_I("bus not found\n");
         return RT_FALSE;
     }
 
@@ -218,7 +228,7 @@ static rt_bool_t probe(void)
             .max_hz  = 400000,
         };
 
-        rt_i2c_configure(ft_bus, &configuration);
+        rt_i2c_configure(ft_bus, &amp;configuration);
     }
 
     LOG_I("tma525b probe OK");
@@ -238,11 +248,11 @@ static struct touch_ops ops =
 static int rt_tma525b_init(void)
 {
     tma525b_driver.probe = probe;
-    tma525b_driver.ops = &ops;
+    tma525b_driver.ops = &amp;ops;
     tma525b_driver.user_data = RT_NULL;
     tma525b_driver.isr_sem = rt_sem_create("tma525b", 0, RT_IPC_FLAG_FIFO);
 
-    rt_touch_drivers_register(&tma525b_driver);
+    rt_touch_drivers_register(&amp;tma525b_driver);
 
     return 0;
 }
@@ -252,21 +262,22 @@ INIT_COMPONENT_EXPORT(rt_tma525b_init);
 <br>
 
 ## Touch Device Upper Layer Usage Example Code
-Example registers interrupt callback to release semaphore, then semaphore drives reading touch data, then prints touch points
+Example registers interrupt callback to release semaphore, then semaphore drives
+reading touch data, then prints touch points
 
 ```c
 static struct rt_semaphore tp_sema;
 
 static rt_err_t tp_rx_indicate(rt_device_t dev, rt_size_t size)
 {
-    rt_sem_release(&tp_sema);
+    rt_sem_release(&amp;tp_sema);
 
     return RT_EOK;
 }
 
 static void touch_read_task(void *parameter)
 {
-    rt_sem_init(&tp_sema, "tpsem", 0, RT_IPC_FLAG_FIFO);
+    rt_sem_init(&amp;tp_sema, "tpsem", 0, RT_IPC_FLAG_FIFO);
 
     /*Open touch device*/
     rt_device_t touch_device = NULL;
@@ -275,17 +286,17 @@ static void touch_read_task(void *parameter)
     {
         if (RT_EOK == rt_device_open(touch_device, RT_DEVICE_FLAG_RDONLY))
         {
-            touch_device->rx_indicate = tp_rx_indicate;
+            touch_device-&gt;rx_indicate = tp_rx_indicate;
 
             while (1)
             {
                 rt_err_t err;
                 struct touch_message touch_data;
 
-                err = rt_sem_take(&tp_sema, rt_tick_from_millisecond(500));
+                err = rt_sem_take(&amp;tp_sema, rt_tick_from_millisecond(500));
                 if (RT_EOK == err)
                 {
-                    rt_device_read(touch_device, 0, &touch_data, 1);
+                    rt_device_read(touch_device, 0, &amp;touch_data, 1);
                     rt_kprintf("read data %d, [%d,%d]\r\n", touch_data.event, touch_data.x, touch_data.y);
                 }
             }
@@ -302,5 +313,5 @@ static void touch_read_task(void *parameter)
     }
 
 }
-
 ```
+

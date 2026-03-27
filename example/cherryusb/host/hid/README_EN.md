@@ -3,39 +3,44 @@
 Source Code Path: example\cherryusb\host\hid
 
 ## Supported Platforms
-<!-- Which boards and chip platforms are supported -->
+<!-- 支持哪些板子和芯片平台 -->
 + sf32lb52-lcd_n16r8
 
 ## Overview
-<!-- Example introduction -->
-This example demonstrates USB HID HOST functionality based on cherryusb, including:
-+ When a keyboard is connected to the device, pressing keys will display keyboard data sent to the host via serial port.
-+ When a mouse is connected to the device, clicking buttons will display mouse data sent to the host via serial port.
+<!-- 例程简介 -->
+This example demonstrates USB HID HOST functionality based on cherryusb,
+including:
++ When a keyboard is connected to the device, pressing keys will display
+  keyboard data sent to the host via serial port.
++ When a mouse is connected to the device, clicking buttons will display mouse
+  data sent to the host via serial port.
 
 ## How to Use the Example
-<!-- Instructions on how to use the example, such as which hardware pins to connect for waveform observation, compilation and flashing can reference related documentation.
-For rt_device examples, you also need to list the configuration switches used by this example, such as PWM examples using PWM1, which needs to be enabled in the onchip menu -->
+<!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
+对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 
 ### Hardware Requirements
 Before running this example, you need to prepare:
-+ A development board supported by this example (see [Supported Platforms](quick_start)).
-+ A USB-A to Type-C data cable with data transmission capability to connect the development board and slave devices (keyboard, mouse).
-+ A USB-B to Type-C data cable with data transmission capability to connect PC and development board (for flashing and serial printing).
++ A development board supported by this example (see [Supported
+  Platforms](quick_start)).
++ A USB-A to Type-C data cable with data transmission capability to connect the
+  development board and slave devices (keyboard, mouse).
++ A USB-B to Type-C data cable with data transmission capability to connect PC
+  and development board (for flashing and serial printing).
 + USB-compatible slave devices (keyboard, mouse).
 
 ### Menuconfig Configuration
 
-1. Enable HOST MODE:
-![USB HOST MODE](./assets/enable_host_mode.png)
-2. Enable HOST HID Driver:
-![USB HID DRIVER](./assets/enable_host_HID_mode.png)
+1. Enable HOST MODE: ![USB HOST MODE](./assets/enable_host_mode.png)
+2. Enable HOST HID Driver: ![USB HID DRIVER](./assets/enable_host_HID_mode.png)
 
 ### Compilation and Flashing
 Switch to the example project directory and run the scons command to compile:
 ```c
 scons --board=sf32lb52-lcd_n16r8 -j32
 ```
-Switch to the example `project/build_xx` directory, run `uart_download.bat`, and select the port as prompted to download:
+Switch to the example `project/build_xx` directory, run `uart_download.bat`, and
+select the port as prompted to download:
 ```c
 $ ./uart_download.bat
 
@@ -43,19 +48,21 @@ $ ./uart_download.bat
 
 please input the serial port num:
 ```
-For detailed steps on compilation and downloading, please refer to the relevant introduction in [Quick Start](quick_start).
+For detailed steps on compilation and downloading, please refer to the relevant
+introduction in [Quick Start](quick_start).
 
 ## Expected Results
 
 ### Keyboard Device Testing
 
 #### Device Connection
-When a keyboard is connected to the development board USB port, the serial debug assistant will display device enumeration information:
+When a keyboard is connected to the development board USB port, the serial debug
+assistant will display device enumeration information:
 
 ```
 cherryusb host demo!
 hid host test
-msh />[I/usbh_hub] New low-speed device on Bus 0, Hub 1, Port 1 connected
+msh /&gt;[I/usbh_hub] New low-speed device on Bus 0, Hub 1, Port 1 connected
 [I/usbh_core] New device found,idVendor:046d,idProduct:c31c,bcdDevice:4920
 [I/usbh_core] The device has 1 bNumConfigurations
 [I/usbh_core] The device has 2 interfaces
@@ -73,11 +80,11 @@ mount a keyboard
 
 HID keyboard uses **8-byte report format**, with the following data structure:
 
-| Byte Position | Function Description | Notes |
-| :------: | :--------- | :---------------------------- |
-| Byte 0 | Modifier Key Status | Ctrl, Alt, Shift, Win and other combination keys |
-| Byte 1 | Reserved Byte | Usually 0x00 |
-| Bytes 2-7 | Key Scan Codes | Supports up to 6 regular keys pressed simultaneously |
+| Byte Position | Function Description | Notes                                                |
+| :-----------: | -------------------- | ---------------------------------------------------- |
+|    Byte 0     | Modifier Key Status  | Ctrl, Alt, Shift, Win and other combination keys     |
+|    Byte 1     | Reserved Byte        | Usually 0x00                                         |
+|   Bytes 2-7   | Key Scan Codes       | Supports up to 6 regular keys pressed simultaneously |
 
 **Data Transmission Mechanism:**
 - **Key Press**: Sends 8-byte report containing key scan codes
@@ -85,7 +92,8 @@ HID keyboard uses **8-byte report format**, with the following data structure:
 
 #### Keyboard Key Test Data
 
-Serial port output example when pressing keyboard keys (pressing s-i-f-l-i as example):
+Serial port output example when pressing keyboard keys (pressing s-i-f-l-i as
+example):
 
 ```
 0x00 0x00 0x16 0x00 0x00 0x00 0x00 0x00 nbytes:8  ← Press 's' key (scan code 0x16)
@@ -103,12 +111,13 @@ Serial port output example when pressing keyboard keys (pressing s-i-f-l-i as ex
 ### Mouse Device Testing
 
 #### Device Connection
-When a mouse is connected to the development board USB port, the serial debug assistant displays:
+When a mouse is connected to the development board USB port, the serial debug
+assistant displays:
 
 ```
 cherryusb host demo!
 hid host test
-msh />[I/usbh_hub] New low-speed device on Bus 0, Hub 1, Port 1 connected
+msh /&gt;[I/usbh_hub] New low-speed device on Bus 0, Hub 1, Port 1 connected
 [I/usbh_core] New device found,idVendor:046d,idProduct:c077,bcdDevice:7200
 [I/usbh_core] The device has 1 bNumConfigurations
 [I/usbh_core] The device has 1 interfaces
@@ -123,12 +132,12 @@ mount a mouse
 
 HID mouse uses **4-byte report format**, with the following data structure:
 
-| Byte Position | Function Description | Value Range |
-| :------: | :---------- | :------------------------------ |
-| Byte 0 | Button Status | Bit0: Left button, Bit1: Right button, Bit2: Middle button |
-| Byte 1 | X-axis Relative Displacement | -128 ~ +127 (signed) |
-| Byte 2 | Y-axis Relative Displacement | -128 ~ +127 (signed) |
-| Byte 3 | Scroll Wheel | -128 ~ +127 (signed) |
+| Byte Position | Function Description         | Value Range                                                |
+| :-----------: | ---------------------------- | ---------------------------------------------------------- |
+|    Byte 0     | Button Status                | Bit0: Left button, Bit1: Right button, Bit2: Middle button |
+|    Byte 1     | X-axis Relative Displacement | -128 to +127 (signed)                                      |
+|    Byte 2     | Y-axis Relative Displacement | -128 to +127 (signed)                                      |
+|    Byte 3     | Scroll Wheel                 | -128 to +127 (signed)                                      |
 
 #### Mouse Movement Test Data
 
@@ -157,12 +166,13 @@ Serial port output example when moving the mouse:
 
 
 ## Reference Documentation
-<!-- For rt_device examples, RT-Thread official documentation provides detailed explanations, you can add webpage links here, for example, refer to RT-Thread's [RTC Documentation](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
-Reference cherryUSB official documentation: https://cherryusb.readthedocs.io/zh-cn/latest/
+<!-- 对于rt_device的示例，rt-thread官网文档提供的较详细说明，可以在这里添加网页链接，例如，参考RT-Thread的[RTC文档](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
+Reference cherryUSB official documentation:
+https://cherryusb.readthedocs.io/zh-cn/latest/
 
 ## Update History
-| Version | Date | Release Notes |
-| :---- | :------ | :------- |
-| 0.0.1 | 09/2025 | Initial version |
-|       |         |          |
-|       |         |          |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 09/2025 | Initial version |
+|         |         |                 |
+|         |         |                 |

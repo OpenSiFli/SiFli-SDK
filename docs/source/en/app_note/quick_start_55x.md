@@ -1,103 +1,117 @@
 ﻿
-# SDK Quick Start
 
 ## 1. Development Environment Setup
 ### Required Software
-1. Sifli env and SiFli SDK (Download from Weiyun)
-2. Keil V5.32 or above, armcc V6 version or above
-   Add the ARM and Jlink paths to the Windows environment variable PATH, such as _C:\Keil_v5\ARM\ARMCLANG\bin_ and _C:\Program Files(x86)\SEGGER\JLink_v672b_, which is helpful for some scripts.
-3. Segger Jlink, V6.72b or above. [Jlink Download Link](https://www.segger.com/downloads/jlink/JLink_Windows.exe)
-4. Visual Studio 2017 or higher version
+1. Sifli env and SiFli SDK (Download from WeDisk)
+1. Keil V5.32 or higher, armcc V6 or higher. To enable script support, add the
+   ARM and J-Link paths to the Windows PATH environment variable (e.g.,
+   _C:\Keil_v5\ARM\ARMCLANG\bin_ and _C:\Program
+   Files(x86)\SEGGER\JLink_v672b_).
+1. SEGGER J-Link, V6.72b or higher [J-Link
+   Download](https://www.segger.com/downloads/jlink/JLink_Windows.exe)
+1. Visual Studio 2017 or higher
 
 ### Required Hardware
-1. Windows PC x1
-2. ARM Emulator x1   
-```{note}  
-  There is a conflict between the power supply of the emulator and the EVB board, so you need to disable the emulator's power supply. If the emulator connection fails, check the power supply jumper on the Jlink.  
-  The following image shows the common Jlink power supply jumper that needs to be removed.
-  ![](/assets/disable_jlink_power_supply.png)
-```  
-3. USB Type-C Cable x1  
-   Used to power the EVB and connect the FTDI USB2UART chip on the EVB to capture serial log data from the EVB.
-4. EVB Development Board x1 set  
-   Includes an interface baseboard EI-LB55XXXX001, a CPU sub-board LB551, and a screen sub-board (the model of the sub-board varies depending on the screen).  
->  EVB Development Board Interface Overview  ![](../../assets/evb_a0_overview.png)
-
-### Compilation Necessary Configuration
-1. Extract the env to your PC, such as _c:\work\env_
-2. Enter the env directory and run _env.exe_ in this directory. If it fails to open, try using _env.bat_ 
-3. Right-click on the associated folder and select the "ConEmu Here" menu  
-![ ](../../assets/Add_Env_To_Right-click_Menu.png)
-
-### Adding Keil Flash Writing Driver
-Copy _sf32lb55x.FLM_ from the _tools/flash/keil_drv/sf32lb55x_ directory to _C:\Keil_v5\ARM\Flash_ (this is the default Keil installation directory; if installed in another directory, place it in the appropriate folder).
-
-## 2. Compile Example Projects
-
-### Compile EVB Project (DSI Screen)
-1. Open the SifliSDK directory, right-click and select "ConEmu Here" to open ConEmu, execute the batch file `set_env.bat` (this sets the necessary environment variables, and if ConEmu remains open, this only needs to be done once; reopening ConEmu will require the setup again).
-```{note}  
-The _set_env.bat_ file includes the Keil installation directory (default is _C:/Keil_v5_). Users need to modify it according to their installation directory.
+1. One Windows PC
+1. ARM Emulator x1
+```{note} 
+Conflicts may occur between the emulator's power supply and the EVB. Ensure emulator power output is disabled. If connection fails, check the J-Link hardware power jumper. The figure below illustrates the power jumper on a common J-Link; it must be removed.
+  ![](../../assets/disable_jlink_power_supply.png)
 ```
-2. Switch to _example/watch_demo/project/ec-lb551_
+1. USB Type-C cable x1\
+   Used for EVB power supply and for connecting the FTDI USB-to-UART bridge to
+   capture serial data.
+1. EVB Development Kit x1\
+   Includes an interface baseboard (EI-LB55XXXX001), a CPU daughterboard
+   (LB551), and a display daughterboard (models vary by display type).
+> EVB Interface Overview ![](../../assets/evb_a0_overview.png)
+
+### Required Build Configurations
+1. Extract 'env' to your PC (e.g., _c:\work\env_).
+2. Navigate to the 'env' directory and run _env.exe_. If it fails to open, try
+   _env.bat_.
+3. Associate the "ConEmu Here" context menu with folders. ![
+   ](../../assets/Add_Env_To_Right-click_Menu.png)
+
+### Add Keil Flash Programming Driver
+Copy sf32lb55x.FLM from _tools/flash/keil_drv/sf32lb55x_ to
+_C:\Keil_v5\ARM\Flash_ (Note: Adjust the path if Keil is installed in a
+non-default directory).
+
+## 2. Compiling the Sample Project
+
+### Compiling the EVB Project (DSI Display)
+1. 1. Navigate to the SifliSDK directory, right-click and select "ConEmu Here"
+   to open the terminal. Execute the batch file `set_env.bat` to configure the
+   necessary environment variables. (Environment variables only need to be set
+   once per ConEmu session; if you open a new ConEmu window, you must run this
+   command again.)
+```{note} _set_env.bat_ 里面有设置Keil的安装目录(默认是 _C:/Keil_v5_ )，用户需要根据自己的安装目录进行修改。
+2. Switch to the directory: _example/watch_demo/project/ec-lb551_
 3. Run the command `scons --target=mdk5 –s` to generate the Keil project.
-4. Then open the _project.uvprojx_ in Keil to compile.
-```{note}  
-The compilation for the `ec-lb555` project is similar.
+4. Open _project.uvprojx_ in Keil and proceed to compile.
+```
+The compilation process for the ec-lb555 project is similar.
+```
+### Compiling the Simulator Project
+1. Navigate to the SifliSDK directory, right-click and select "ConEmu Here" to open the terminal, then execute _set_env.bat_.
+2. Switch to the directory: _example\watch_demo\project\watch_simu_
+3. Run the command `scons --target=vs2017 -s` to generate the Visual Studio project. Open _project.vcxproj_ in Visual Studio 2017 to compile and run.
+```
+If Visual Studio reports that _SDL2.DLL_ cannot be found at runtime, add the
+path _env\tools\Python27_ to the PATH environment variable and restart Visual
+Studio.
 ```
 
-### Compile Simulator Project
-1. Open the SifliSDK directory, right-click and select "ConEmu Here" to open ConEmu, execute the batch file _set_env.bat_
-2. Switch to _example\watch_demo\project\watch_simu_
-3. Run the command `scons --target=vs2017 -s` to generate the VS project, then open the _project.vcxproj_ in Visual Studio 2017 to compile and run.
-```{note}  
-If Visual Studio prompts that it cannot find _SDL2.DLL_, add the path _env\tools\Python27_ to the PATH environment variable, then restart Visual Studio.
 ```
-```{note}  
-If a different version of Visual Studio is installed, change the Windows SDK version as prompted when opening the project.
+If using a different version of Visual Studio, you may need to update the
+Windows SDK version as prompted when opening the project.
 ```
+## 3. Programming the EVB
 
-## 3. Flashing the EVB
-
-The SDK provides three methods to flash the EVB. One uses the Keil environment, and the other two use Jlink tools.
-
-```{note}  
-Normally, there is no need to change the jumper `boot_mode`. If there are persistent issues with flashing, or if the user program crashes, place the jumper on the VDD side, press reset to enter boot mode, and try flashing again. After flashing is complete, place the jumper on the GND side and press reset to reboot for normal operation.
+The SDK provides three methods for programming the EVB: one via the Keil environment and two using J-Link tools.
 ```
-### 3.1 Flash EVB using Keil
-To flash the EVB using Keil, you first need to add the Keil Flash writing driver. Copy _sf32lb55x.FLM_ from the _tools\flash\keil_drv\sf32lb55x_ directory to _C:\Keil_v5\ARM\Flash_ (this is the default Keil installation directory; if installed in another directory, place it in the appropriate folder).
+Under normal circumstances, the `boot_mode` jumper does not need to be adjusted.
+If programming issues persist or the user application hangs, move the
+`boot_mode` jumper to the VDD side and press the reset button to enter boot mode
+before re-attempting flash programming. Once programming is complete, restore
+the `boot_mode` jumper to the GND side and reset the device to resume normal
+operation.
+```
+### 3.1 Programming the EVB via Keil
+To program the EVB flash using Keil, you must first install the Keil Flash driver. Copy _sf32lb55x.FLM_ from the _tools\flash\keil_drv\sf32lb55x_ directory to _C:\Keil_v5\ARM\Flash_ (assuming the default Keil installation path; if installed elsewhere, use the corresponding folder).
 
-The EVB requires at least two parts to be flashed:  
-- Flash Table (flash only once, used for ROM to read address from FlashTable and jump to user code after reset). The default flash table is already written when the user receives the EVB. Unless the flash is corrupted, this step can usually be ignored.  
-- Project Code
+At a minimum, two components must be programmed to the EVB:
+- **Flash Table**: This only needs to be programmed once. The ROM reads the Flash Table after reset to determine the entry point for jumping to user code. For detailed usage, refer to [Secure Bootloader](../../bootloader.md). EVBs are shipped with a default flash table; unless the flash memory is corrupted, users can typically skip this step.
+- **Project Code**
 
-#### Flashing the Flash Table
-1. Open the project _example/flash_table/project.uvprojx_
-2. Follow the previous section to select the Keil Flash writing driver.
-3. Select Flash1 as the compilation target, then compile and flash.
+#### Programming the Flash Table
+1. Open the project _example/flash_table/project.uvprojx_.
+2. Select the Keil Flash driver as described in the final section.
+3. Select "flash1" as the build target, then compile and program.
 ![ ](../../assets/keil_download_flash_table.png)
 
-#### Flashing the Project Code
-1. Open _example/hal_example/project/ec_lb551/project.uvprojx_
-2. Follow the previous section to select the Keil Flash writing driver.
-3. After compiling, flash the code.
+#### Programming Project Code
+1. Open _example/hal_example/project/ec_lb551/project.uvprojx_.
+2. Select the Keil Flash driver as described in the final section.
+3. Compile and then program the flash.
 
-#### Selecting Keil Flash Writing Driver
-- Open the project options, and choose the Flash driver as shown below:
+#### Selecting the Keil Flash Driver
+- Open the project options and select the Flash driver as shown below:
 ![ ](../../assets/keil_flash_download_config_a0.png)
 
-### 3.2 Flash EVB using Jlink
 
-This example uses Jlink version v672b, with the installation path _D:\Software\JLink_v672b_
+### 3.2 Programming the EVB via J-Link
 
-#### Adding Jlink Flash Writing Driver
-1. Create a directory _SiFli_ in the Jlink program directory _D:\Software\JLink_v672b\Devices_
-2. Copy the elf files from _tools/flash/jlink_drv/sf32lb55x_ to the newly created SiFli directory (each elf corresponds to a flash writing driver).
+This guide uses J-Link version v672b as an example, installed at _D:\Software\JLink_v672b_.
+#### Adding the J-Link Flash Driver
+1. Create a new directory named _SiFli_ within the J-Link device directory: _D:\Software\JLink_v672b\Devices_.
+2. Copy the .elf files from _tools/flash/jlink_drv/sf32lb55x_ to the newly created "SiFli" directory (each .elf file corresponds to a specific flash driver).
 ![](../../assets/add_sifli_jlink_device_A0_1.png)
-3. Modify the Jlink registered Device list to include the newly added file path and run parameters, as shown below:
+3. Update the J-Link registered device list to include the new file paths and execution parameters, as shown here:
 ![](../../assets/add_sifli_jlink_device_2.png)
 
-The added xml content is shown below:
+The XML content to be added is as follows:
 ```
   <!--                                    -->
   <!-- SiFli Z0(Cortex-M33 devices)-->
@@ -119,66 +133,76 @@ The added xml content is shown below:
   </Device>
 ```
 
-#### Flashing Bin/Hex Files to Flash
-1. Open Jlink, connect, and select the SiFli device (make sure SF32LB55X corresponds to the EVB flash driver).
-![](../../assets/download_with_jlink_a0_1.png)
 
-2. Select the SWD interface, configure the speed, choose the corresponding bin file, and flash it to the appropriate address (you can flash ROM/RAM/FLASH). Jlink's speed depends on the hardware and is usually set to over 4MHz, with the chip supporting a maximum of 10MHz.
-![](../../assets/download_with_jlink_2.png)
+#### Programming Bin/Hex Files to Flash
+1. Open J-Link, connect, and select the SiFli device (note that SF32LB55X
+   represents the EVB flash driver)
+   ![](../../assets/download_with_jlink_a0_1.png)
 
-3. Flashing result.
-![](../../assets/download_with_jlink_3.png)
+2. Select the SWD interface and configure the clock speed. Select the
+   corresponding binary to flash to a specific address (ROM, RAM, or FLASH). The
+   maximum J-Link speed depends on the hardware; it can typically be set to 4
+   MHz or higher, while the chip supports up to 10 MHz.
+   ![](../../assets/download_with_jlink_2.png)
 
-4. For flashing Hex files, change `loadbin` to `loadfile` and **do not include the address**.
-![](../../assets/download_with_jlink_4.png)
+3. Programming results ![](../../assets/download_with_jlink_3.png)
 
-### 3.3 Integrating into Windows, Right-Click to Flash Hex Files
-After adding the Jlink drivers, for convenience in debugging, you can integrate flashing Hex files into the Windows right-click menu. Only Hex files can be flashed this way, as they have predefined addresses. Bin files do not have predefined addresses and are unsupported.
+4. To program a Hex file, replace `loadbin` with `loadfile`.<b> Note that no
+   target address is required for Hex files.</b>
+   ![](../../assets/download_with_jlink_4.png)
 
-1. Add to the right-click menu
-![](../../assets/integrate_jlink_download_to_right_click_menu_A0_1.png)
+### 3.3 Windows Shell Integration: Right-Click to Program Hex Files
+After installing the J-Link driver, you can integrate Hex file programming into
+the Windows context menu for convenience. Note that only .hex files are
+supported as they contain embedded address information; .bin files do not
+include addresses and are therefore unsupported by this method.
 
-2. Right-click on the directory to flash, and it will convert the files in the directory to `.hex` and flash them one by one.
-![](../../assets/integrate_jlink_download_to_right_click_menu_A0_2.png)
+1. Add to context menu
+   ![](../../assets/integrate_jlink_download_to_right_click_menu_A0_1.png)
 
-3. You can also choose to flash a single Hex file (only `.hex` files are supported).
-![](../../assets/integrate_jlink_download_to_right_click_menu_3.png)
+2. To program via the directory context menu: this action will rename files in
+   the directory to have a .hex extension and program them sequentially.
+   ![](../../assets/integrate_jlink_download_to_right_click_menu_A0_2.png)
 
-```{note}  
-For BLE applications to run properly, input the following commands in the serial port:  
-1. `nvds reset_all 1`  
-2. `nvds update addr 6 <Bluetooth address>`  
-   For example: `nvds update addr 6 1234567890C8`, note that the Bluetooth address format should be maintained, and it is recommended not to modify the C8 part. Other parts can be changed by the user.  
-   Then press reset to reboot.
+3. Alternatively, you can select and program a single .hex file (only files with
+   the .hex extension are supported).
+   ![](../../assets/integrate_jlink_download_to_right_click_menu_3.png)
+
+```{note} 为了使得BLE 应用运行正常，请在串口输入\
+1. `nvds reset_all 1`
+2. `nvds update addr 6 `
+   Example: `nvds update addr 6 1234567890C8`. Note that the Bluetooth address must follow a specific format. It is recommended to keep `C8` unchanged; other values may be customized by the user.
+Then, press reset to reboot.
 ```
 
-```{warning}  
-For the 56 and 58 series projects, after compilation, the build directory will generate _download.bat_ and _download.jlink_ files. Run _download.bat_ to download the image. Do not use the right-click method to download the Hex file. If you do, it will modify the _download.jlink_ file content, causing the download to fail. Please delete the modified _download.jlink_ file and recompile to use _download.bat_ for downloading.
+```{warning}
+For 56 and 58 series projects, _download.bat_ and _download.jlink_ files are generated in the build directory after compilation. Run _download.bat_ to execute the flash download. Do not use the right-click context menu to download HEX files. Doing so will modify the contents of _download.jlink_, leading to download failure. If this occurs, delete the modified download.jlink file, recompile the project, and use _download.bat_ for downloading.
 ```
 
-## 4. Power-Up Boot Process
-| Phase                    | Function                        | File Path                                                       |
-|--------------------------|---------------------------------|-----------------------------------------------------------------|
-| Interrupt Vector Table    | ResetHandler                   | SifliSDK\drivers\cmsis\sf32lb55x\Templates\arm\startup_bf0_hcpu.S |
-| MPU Setup, BOOTMODE Check | SystemInit()                   | SifliSDK\drivers\cmsis\sf32lb55x\Templates\system_bf0_ap.c  |
-| RO/RW/ZI Initialization   | __main()                        |                                                                 |
-| RT_THREAD_MAIN Entry      | `$Sub$$main`                    | SifliSDK\rtos\rtthread\src\components.c                    |
-| ^                         | rtthread_startup()              | SifliSDK\rtos\rtthread\src\components.c                    |
-| Hardware Initialization   | rt_hw_board_init()              |                                                                 |
-|                          | HAL_Init();                     |                                                                 |
-| RCC Configuration         | HAL_PreInit()                   | SifliSDK\drivers\boards\ec-lb551XXX\drv_io.c               |
-|                          | HAL_MspInit()                   |                                                                 |
-| Pin Configuration         | BSP_IO_Init()                   |                                                                 |
-|                          | rt_system_heap_init             |                                                                 |
-| Log Output Initialization | rt_console_set_device           |                                                                 |
-| Driver Initialization     | rt_components_board_init();     |                                                                 |
-| Upper-Level Initialization| rt_application_init()           | SifliSDK\rtos\rtthread\src\components.c                    |
-|                          | main_thread_entry               | SifliSDK\rtos\rtthread\src\components.c                    |
-| Upper-Level Middleware    | rt_components_init              |                                                                 |
-|                          | Main()                          |   Project's main function                                       |
-| Start Thread Scheduling   | rt_system_scheduler_start()     |                                                                 |
 
-```{note}  
-After plugging in the EVB development board to the PC, the PC will enumerate four serial ports. The smallest numbered port is the Boot/LCPU terminal, and the second smallest is the HCPU terminal. Currently, it is recommended for users to focus on the HCPU UART output. The other two serial ports are not assigned yet.
+## 4. Power-on Boot Sequence
+| Stage                             | Function                    | File Path                                                               |
+| --------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| Interrupt Vector Table            | ResetHandler                | SifliSDK\\drivers\\cmsis\\sf32lb55x\\Templates\\arm\\startup_bf0_hcpu.S |
+| MPU configuration, BOOTMODE check | SystemInit()                | SifliSDK\\drivers\\cmsis\\sf32lb55x\\Templates\\system_bf0_ap.c         |
+| RO/RW/ZI initialization           | __main()                    |                                                                         |
+| RT-Thread main entry              | `$Sub$$main`                | SifliSDK\\rtos\\rtthread\\src\\components.c                             |
+| ^                                 | rtthread_startup()          | SifliSDK\\rtos\\rtthread\\src\\components.c                             |
+| Hardware initialization           | rt_hw_board_init()          |                                                                         |
+|                                   | HAL_Init();                 |                                                                         |
+| RCC configuration                 | HAL_PreInit()               | SifliSDK\\drivers\\boards\\ec-lb551XXX\\drv_io.c                        |
+|                                   | HAL_MspInit()               |                                                                         |
+| Pin configuration                 | BSP_IO_Init()               |                                                                         |
+|                                   | rt_system_heap_init         |                                                                         |
+| Log console initialization        | rt_console_set_device       |                                                                         |
+| Driver initialization             | rt_components_board_init(); |                                                                         |
+| High-level initialization         | rt_application_init()       | SifliSDK\\rtos\\rtthread\\src\\components.c                             |
+|                                   | main_thread_entry           | SifliSDK\\rtos\\rtthread\\src\\components.c                             |
+| High-level middleware             | rt_components_init          |                                                                         |
+|                                   | Main()                      | Project main function                                                   |
+| Start thread scheduler            | rt_system_scheduler_start() |                                                                         |
+
+```{note} 
+When the EVB is connected to a PC, the system enumerates four serial ports. The port with the lowest index serves as the Boot/LCPU terminal, while the second port is the HCPU terminal. Users are currently advised to monitor the HCPU UART output. The remaining two serial ports are currently unassigned.
 ```
 

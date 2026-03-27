@@ -1,68 +1,140 @@
 # FatFs NOR Example
+Source path: example/storage/fatfs/nor
+
 ## Usage Guide
-This example demonstrates FatFs file system functionality using FAT format. Common file commands can be called in UART console, such as:
+- sf32lb52-lcd_n16r8
+- sf32lb56-lcd_n16r12n1
+- sf32lb58-lcd_n16r32n1
+
+## Example Usage Instructions
+This example demonstrates the FatFs file system functionality using the FAT
+format. Standard file system commands can be invoked via the UART console, such
+as:
 
 ```
-df               - Disk free
-mountfs          - Mount device to file system
-mkfs             - Format disk with file system
-mkdir            - Create the DIRECTORY.
-pwd              - Print the name of the current working directory.
-cd               - Change the shell working directory.
-rm               - Remove(unlink) the FILE(s).
-cat              - Concatenate FILE(s)
+df               - Display free disk space.
+mountfs          - Mount a device to the file system.
+mkfs             - Format a disk with a file system.
+mkdir            - Create a directory.
+pwd              - Print the current working directory.
+cd               - Change the working directory.
+rm               - Remove (unlink) files.
+cat              - Concatenate and display file content.
 mv               - Rename SOURCE to DEST.
 cp               - Copy SOURCE to DEST.
-ls               - List information about the FILEs.
-
+ls               - List information about files.
 ```
-  
-### File System Packaging
-
-The default compilation script does not download file system partition image files, so if the mount fails during the first program run, it will automatically format the partition. For specific implementation, see the `mnt_init` function in `main.c`. The SDK also provides functionality to package files in specified directories and generate file system image files. You can uncomment the following code in `SConstruct`. This code packages files in the disk directory during compilation and generates the `fs_root.bin` file in the build directory. If the partition table in `ptab.json` defines a partition with `img` attribute as `fs_root`, the download script will simultaneously download that bin file.
-      
-```
-# fs_bin=FileSystemBuild( "../disk", env)
-# AddCustomImg("fs_root",bin=[fs_bin])
-```
-## Example Usage Instructions
 ### Hardware Requirements
-1. To run the example, you need to have a development board that supports this example
-2. A USB data cable capable of data transmission
+This example includes a file system performance testing feature, which can be
+executed using the `fs_test` command:
+- To run the example, you need to have a development board that supports this
+  example
+- A USB data cable capable of data transmission
+- The test evaluates both write and read speeds.
+
+Expected test results are as follows:
+```c
+TX:fs_test 2048 4
+ Creating test file with 2048 KB data using 4K buffer...
+ Written 100 KB...
+ Written 200 KB...
+ Written 300 KB...
+ Written 400 KB...
+ Written 500 KB...
+ Written 600 KB...
+ Written 700 KB...
+ Written 800 KB...
+ Written 900 KB...
+ Written 1000 KB...
+ Written 1100 KB...
+ Written 1200 KB...
+ Written 1300 KB...
+ Written 1400 KB...
+ Written 1500 KB...
+ Written 1600 KB...
+ Written 1700 KB...
+ Written 1800 KB...
+ Written 1900 KB...
+ Written 2000 KB...
+ Written 2048 KB...
+ Write test completed
+ Write Speed: 385505 bytes/sec (376.47 KB/s)
+ Reading test file...
+ Read 100 KB...
+ Read 200 KB...
+ Read 300 KB...
+ Read 400 KB...
+ Read 500 KB...
+ Read 600 KB...
+ Read 700 KB...
+ Read 800 KB...
+ Read 900 KB...
+ Read 1000 KB...
+ Read 1100 KB...
+ Read 1200 KB...
+ Read 1300 KB...
+ Read 1400 KB...
+ Read 1500 KB...
+ Read 1600 KB...
+ Read 1700 KB...
+ Read 1800 KB...
+ Read 1900 KB...
+ Read 2000 KB...
+ Read 2048 KB...
+ Read test completed
+ Read Speed: 27962026 bytes/sec (27306.67 KB/s)
+ msh /&gt;msh /&gt;
+```
+### menuconfig Configuration
+
+![alt text]{1} 2. Use device virtual file system
+
+```
+//Execute command
+ menuconfig --board=em-lb561
+```
+## Project Description
+### Hardware Requirements
+1. Prerequisites: A development board supported by this routine. 2. A USB data
+cable capable of data transmission.
 ### menuconfig Configuration
 ```
- //Execute command
+// Execute command
  menuconfig --board=em-lb561
-```  
-1. First, you need to enable MTD Nor Flash device in menuconfig
+```
+1. First, enable the MTD Nor Flash device in menuconfig.
 
-![alt text](assets/file_system_1.png)
-2. Use device virtual file system
+![alt text](assets/file_system_1.png) 2. Enable the Device Virtual File System
+(VFS).
 
-![alt text](assets/file_system_2.png)
-3. Select HAL Assert type
+![alt text](assets/file_system_2.png) 3. Select the HAL Assert type.
 
 ![alt text](assets/file_system_3.png)
 
-## Project Description
-- Compilation method: Enter project directory and execute command `scons --board=<board_name> -j8`, where board_name is the board name. For example, to compile eh-lb561 board, the complete command is `scons --board=eh-lb561 -j8`. The compiled image file is stored in HCPU's build_<board_name> directory. For common project usage, refer to <<General Project Build Method>>
-- Download method: Enter project directory and execute command `build_<board_name>_hcpu\download.bat(uart_download.bat)`, where board_name is the board name. If download has uart prefix, it uses serial port for program burning; without it, it uses jlink burning (depending on whether the board model supports jlink burning). For example, compiling eh-lb561 board, the complete command is `build_en-lb561_hcpu\download.bat`
-
 ## Example Output Results Display
-The following results show the log after the example runs on the development board. If you cannot see these logs, it means the example did not run successfully as expected and requires troubleshooting.
+- Send ls through serial port to view files in root directory
+- Input mkdir test2 to create test2 folder (directory)
+
+## Example Output
+The following log shows the output of the example running on the development
+board. If these logs are not visible, the example is not running as expected and
+requires troubleshooting.
 ```
-mount fs on flash root success//Indicates successful file system mounting
+Filesystem successfully mounted on flash root.
 ```
-1. Send ls through serial port to view files in root directory
+1. Execute the `ls` command via the serial port to view the files in the root
+directory.
 
-2. Input mkdir test2 to create test2 folder (directory)
+2. Enter `mkdir test2` to create a folder (directory) named "test2".
 
-3. Input ls again to see if test2 folder (directory) was created successfully
+3. Enter `ls` again to verify if the "test2" folder (directory) was successfully
+created.
 
-4. Input pwd to view current working path
-![alt text](assets/file_system_log_1.png)
+4. Enter `pwd` to check the current working directory path. ![alt
+text](assets/file_system_log_1.png)
 ### Troubleshooting
-If the log does not show expected log and phenomena, troubleshooting can be done from the following aspects:
-* Whether hardware connection is normal
-* Check if USB cable has data transmission capability
-* Whether the above menuconfig is configured correctly
+If the expected logs or behavior do not appear, please troubleshoot the
+following areas:
+* Verify that the hardware connections are secure and correct.
+* Ensure the USB cable supports data transfer.
+* Is the menuconfig configured correctly?

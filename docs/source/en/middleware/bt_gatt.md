@@ -1,17 +1,21 @@
 # GATT over BR/EDR
-GATT is a general specification for sending and receiving short data segments over Bluetooth connections. These short data segments are called attributes. GATT over BR/EDR mainly transmits data through BR/EDR L2CAP.
+GATT is a general specification for sending and receiving short data segments
+over Bluetooth connections. These short data segments are called attributes.
+GATT over BR/EDR mainly transmits data through BR/EDR L2CAP.
 
-This document is mainly based on Sifli SDK, introducing basic functionality support for GATT over BR/EDR. Related files include:
-- bts2_app_interface 
-- bts2_app_bt_gatt 
-
+This document is mainly based on Sifli SDK, introducing basic functionality
+support for GATT over BR/EDR. Related files include:
+- bts2_app_interface
+- bts2_app_bt_gatt
 ## GATT Basic Functionality
-- The main purpose of GATT over BR/EDR is to reuse BLE services, so GATT mainly registers BLE UUIDs to BR/EDR SDP
+- The main purpose of GATT over BR/EDR is to reuse BLE services, so GATT mainly
+  registers BLE UUIDs to BR/EDR SDP
     - bts2_app_interface registration interface: bt_interface_bt_gatt_reg
     - Event after successful registration: BT_NOTIFY_GATT_REGISTER_RESPONSE
     - bts2_app_interface unregistration interface: bt_interface_bt_gatt_unreg
     - Event after successful unregistration: BT_NOTIFY_GATT_UNREGISTER_RESPONSE
-    - bts2_app_interface L2CAP MTU change interface: bt_interface_bt_gatt_mtu_changed
+    - bts2_app_interface L2CAP MTU change interface:
+      bt_interface_bt_gatt_mtu_changed
     - Event after MTU value change: BT_NOTIFY_GATT_CHANGE_MTU_RESPONSE
 ```c
 //register notify event handle function start

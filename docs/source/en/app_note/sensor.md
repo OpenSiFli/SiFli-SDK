@@ -1,17 +1,34 @@
-
 # Sensor Adding Guide
 
 ## 1. Preparation
-When a new sensor device needs to be added to the SiFli Technology SDK, the first step is to determine the sensor's functionality type and interface type. <br/>
-From a functionality perspective, supported sensors include 6-axis (acceleration, angular velocity), temperature, pressure, geomagnetic, light sensing, GPS, motor, etc. From an interface perspective, the currently supported types include I2C, SPI, and UART. <br/>
-Once the device's datasheet is obtained, first determine the interface used, ensuring with hardware that the necessary interfaces are enabled and routed through the pins. Additionally, verify that the voltage and frequency ranges match. Then, based on the functional descriptions in the datasheet, confirm with the user the interfaces and other information required. <br/>
+When a new sensor device needs to be added to the SiFli Technology SDK, the
+first step is to determine the sensor's functionality type and interface type.
+<br/> From a functionality perspective, supported sensors include 6-axis
+(acceleration, angular velocity), temperature, pressure, geomagnetic, light
+sensing, GPS, motor, etc. From an interface perspective, the currently supported
+types include I2C, SPI, and UART. <br/> Once the device's datasheet is obtained,
+first determine the interface used, ensuring with hardware that the necessary
+interfaces are enabled and routed through the pins. Additionally, verify that
+the voltage and frequency ranges match. Then, based on the functional
+descriptions in the datasheet, confirm with the user the interfaces and other
+information required.<br/>
+
 
 ## 2. Code Preparation
 
-Currently, peripheral code is placed under _rtos/rthread/bsp/sifli/peripherals_. After confirming the interface and implementation plan, a new directory is added under this path. 
-Additionally, the _rtos/rthread/bsp/sifli/peripherals/Kconfig_ file needs to be modified to include menuconfig items, such as sensor control macros, I2C/SPI interface configuration, pin settings for switches, power, and interrupts. <br/>
-Once the Kconfig modifications are complete, implement the code in the newly added directory. The interface names, pin numbers, interrupt numbers, etc., used in the code can be obtained from the configuration in Kconfig. Finally, link the Kconfig switch macros in the SConscript file for the directory. <br/>
-After completing the code and configuration, go to the project directory's menuconfig configuration page. Choose "Select board peripherals" to enter the peripheral configuration. Find the newly added module, enable it, and proceed with further configuration. <br/>
+Currently, peripheral code is placed under _rtos/rthread/bsp/sifli/peripherals_.
+After confirming the interface and implementation plan, a new directory is added
+under this path. Additionally, the _rtos/rthread/bsp/sifli/peripherals/Kconfig_
+file needs to be modified to include menuconfig items, such as sensor control
+macros, I2C/SPI interface configuration, pin settings for switches, power, and
+interrupts. <br/> Once the Kconfig modifications are complete, implement the
+code in the newly added directory. The interface names, pin numbers, interrupt
+numbers, etc., used in the code can be obtained from the configuration in
+Kconfig. Finally, link the Kconfig switch macros in the SConscript file for the
+directory. <br/> After completing the code and configuration, go to the project
+directory's menuconfig configuration page. Choose "Select board peripherals" to
+enter the peripheral configuration. Find the newly added module, enable it, and
+proceed with further configuration.<br/>
 
 ## 3. Interface Configuration
 
@@ -52,15 +69,27 @@ menuconfig SENSOR_USING_6D
             endif    
     endif
 ```
-The macro `SENSOR_USING_6D` is the main switch for enabling the 6D sensor in the system. Below, the supported sensor models will be listed, such as LSM6DSL, SC7A20, etc. It's recommended to enable only one sensor at a time to avoid interface conflicts. <br/>
-For LSM6DSL, `ACC_USING_LSM6DSL` is the switch for this specific sensor. <br/>
-`LSM6DSL_USING_I2C` defines the interface type. Since this sensor supports both I2C and SPI, the configuration must specify which interface is used. If the sensor only supports one interface, this configuration is unnecessary. <br/>
-`LSM6DSL_BUS_NAME` is used to define the interface name, which RT-Thread's sensor uses to find the interface device. For more details, refer to the code implementation. <br/>
-`LSM6DSL_INT_GPIO_BIT/LSM6DSL_INT2_GPIO_BIT` define the interrupt pins (if allocated in hardware). <br/>
-`LSM_USING_AWT/LSM_USING_PEDO/LSM6DSL_USE_FIFO` correspond to specific functionalities of the sensor and are not explained here. <br/>
+The macro `SENSOR_USING_6D` is the main switch for enabling the 6D sensor in the
+system. Below, the supported sensor models will be listed, such as LSM6DSL,
+SC7A20, etc. It's recommended to enable only one sensor at a time to avoid
+interface conflicts. <br/> For LSM6DSL, `ACC_USING_LSM6DSL` is the switch for
+this specific sensor. <br/> `LSM6DSL_USING_I2C` defines the interface type.
+Since this sensor supports both I2C and SPI, the configuration must specify
+which interface is used. If the sensor only supports one interface, this
+configuration is unnecessary. <br/> `LSM6DSL_BUS_NAME` is used to define the
+interface name, which RT-Thread's sensor uses to find the interface device. For
+more details, refer to the code implementation. <br/>
+`LSM6DSL_INT_GPIO_BIT/LSM6DSL_INT2_GPIO_BIT` define the interrupt pins (if
+allocated in hardware). <br/> `LSM_USING_AWT/LSM_USING_PEDO/LSM6DSL_USE_FIFO`
+correspond to specific functionalities of the sensor and are not explained
+here.<br/>
 
-Example of using interface devices: <br/>
-Through the `rt_i2c_bus_device_find` or `rt_device_find` functions, you can find the bus device, then call the corresponding read/write functions of the bus according to the interface mode to read and write to the device. The specific control commands for the device need to be implemented based on the device's address and register definitions from the datasheet. <br/>
+Example of using interface devices: <br/> Through the `rt_i2c_bus_device_find`
+or `rt_device_find` functions, you can find the bus device, then call the
+corresponding read/write functions of the bus according to the interface mode to
+read and write to the device. The specific control commands for the device need
+to be implemented based on the device's address and register definitions from
+the datasheet.<br/>
 ```c
 int LSM6DSL_I2C_Init()
 {
@@ -117,13 +146,16 @@ int32_t LSM_I2C_Read(void *ctx, uint8_t reg, uint8_t *data, uint16_t len)
 
     return -3;
 }
-
 ```
 
-Example of using interrupt PINs: <br/>
-Set the interrupt PIN to input mode using `rt_pin_mode`; 
-Set the interrupt handler and conditions for triggering the interrupt using `rt_pin_attach_irq`, where interrupts can be triggered on rising edge `PIN_IRQ_MODE_RISING`, falling edge `PIN_IRQ_MODE_FALLING`, both edges `PIN_IRQ_MODE_RISING_FALLING`, or high/low level `PIN_IRQ_MODE_HIGH_LEVEL` / `PIN_IRQ_MODE_LOW_LEVEL`; <br/>
-Enable or disable interrupts using `rt_pin_irq_enable`. The interrupt handler implementation depends on the specific sensor. <br/>
+Example of using interrupt PINs: <br/> Set the interrupt PIN to input mode using
+`rt_pin_mode`; Set the interrupt handler and conditions for triggering the
+interrupt using `rt_pin_attach_irq`, where interrupts can be triggered on rising
+edge `PIN_IRQ_MODE_RISING`, falling edge `PIN_IRQ_MODE_FALLING`, both edges
+`PIN_IRQ_MODE_RISING_FALLING`, or high/low level `PIN_IRQ_MODE_HIGH_LEVEL` /
+`PIN_IRQ_MODE_LOW_LEVEL`; <br/> Enable or disable interrupts using
+`rt_pin_irq_enable`. The interrupt handler implementation depends on the
+specific sensor.<br/>
 ```c
 int lsm6dsl_gpio_int_enable(void)
 {
@@ -156,13 +188,17 @@ int lsm6dsl_gpio_int_enable(void)
 
 ## 4. Register SENSOR Device
 
-In the added device directory, create a file `sensor_xxx.c` to register the new sensor device to the RT-Thread sensor device list, so that upper-level code can directly control the corresponding sensor device through the sensor device. <br/>
-This part mainly consists of two parts: device registration and control callback implementation. <br/>
-The code example is for the BMP280 barometric and temperature sensor: <br/>
-Fill in the device information, interface type, data range, etc., then register it to the sensor device list using the `rt_hw_sensor_register` function. The `sensor_ops` defines the operation callbacks. <br/>
-The callback handles mainly include data reading, mode control, sleep/wake-up, etc. <br/>
+In the added device directory, create a file `sensor_xxx.c` to register the new
+sensor device to the RT-Thread sensor device list, so that upper-level code can
+directly control the corresponding sensor device through the sensor device.
+<br/> This part mainly consists of two parts: device registration and control
+callback implementation. <br/> The code example is for the BMP280 barometric and
+temperature sensor: <br/> Fill in the device information, interface type, data
+range, etc., then register it to the sensor device list using the
+`rt_hw_sensor_register` function. The `sensor_ops` defines the operation
+callbacks. <br/> The callback handles mainly include data reading, mode control,
+sleep/wake-up, etc.<br/>
 ```c
-
 int rt_hw_bmp280_init(const char *name, struct rt_sensor_config *cfg)
 {
     rt_int8_t result;
@@ -175,23 +211,23 @@ int rt_hw_bmp280_init(const char *name, struct rt_sensor_config *cfg)
         goto __exit;
     }
 
-    /* temperature sensor register */
+    /* Register temperature sensor */
     {
         sensor_temp = rt_calloc(1, sizeof(struct rt_sensor_device));
         if (sensor_temp == RT_NULL)
             return -1;
 
-        sensor_temp->info.type       = RT_SENSOR_CLASS_TEMP;
-        sensor_temp->info.vendor     = RT_SENSOR_VENDOR_BOSCH;
-        sensor_temp->info.model      = "bmp280_temp";
-        sensor_temp->info.unit       = RT_SENSOR_UNIT_DCELSIUS;
-        sensor_temp->info.intf_type  = RT_SENSOR_INTF_I2C;
-        sensor_temp->info.range_max  = 85;
-        sensor_temp->info.range_min  = -40;
-        sensor_temp->info.period_min = 5;
+        sensor_temp-&gt;info.type       = RT_SENSOR_CLASS_TEMP;
+        sensor_temp-&gt;info.vendor     = RT_SENSOR_VENDOR_BOSCH;
+        sensor_temp-&gt;info.model      = "bmp280_temp";
+        sensor_temp-&gt;info.unit       = RT_SENSOR_UNIT_DCELSIUS;
+        sensor_temp-&gt;info.intf_type  = RT_SENSOR_INTF_I2C;
+        sensor_temp-&gt;info.range_max  = 85;
+        sensor_temp-&gt;info.range_min  = -40;
+        sensor_temp-&gt;info.period_min = 5;
 
-        rt_memcpy(&sensor_temp->config, cfg, sizeof(struct rt_sensor_config));
-        sensor_temp->ops = &sensor_ops;
+        rt_memcpy(&amp;sensor_temp-&gt;config, cfg, sizeof(struct rt_sensor_config));
+        sensor_temp-&gt;ops = &amp;sensor_ops;
 
         result = rt_hw_sensor_register(sensor_temp, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
         if (result != RT_EOK)
@@ -201,23 +237,23 @@ int rt_hw_bmp280_init(const char *name, struct rt_sensor_config *cfg)
         }
     }
 
-    /* barometer sensor register */
+    /* Register barometer sensor */
     {
         sensor_baro = rt_calloc(1, sizeof(struct rt_sensor_device));
         if (sensor_baro == RT_NULL)
             goto __exit;
 
-        sensor_baro->info.type       = RT_SENSOR_CLASS_BARO;
-        sensor_baro->info.vendor     = RT_SENSOR_VENDOR_BOSCH;
-        sensor_baro->info.model      = "bmp280_bora";
-        sensor_baro->info.unit       = RT_SENSOR_UNIT_PA;
-        sensor_baro->info.intf_type  = RT_SENSOR_INTF_I2C;
-        sensor_baro->info.range_max  = 110000;
-        sensor_baro->info.range_min  = 30000;
-        sensor_baro->info.period_min = 5;
+        sensor_baro-&gt;info.type       = RT_SENSOR_CLASS_BARO;
+        sensor_baro-&gt;info.vendor     = RT_SENSOR_VENDOR_BOSCH;
+        sensor_baro-&gt;info.model      = "bmp280_bora";
+        sensor_baro-&gt;info.unit       = RT_SENSOR_UNIT_PA;
+        sensor_baro-&gt;info.intf_type  = RT_SENSOR_INTF_I2C;
+        sensor_baro-&gt;info.range_max  = 110000;
+        sensor_baro-&gt;info.range_min  = 30000;
+        sensor_baro-&gt;info.period_min = 5;
 
-        rt_memcpy(&sensor_baro->config, cfg, sizeof(struct rt_sensor_config));
-        sensor_baro->ops = &sensor_ops;
+        rt_memcpy(&amp;sensor_baro-&gt;config, cfg, sizeof(struct rt_sensor_config));
+        sensor_baro-&gt;ops = &amp;sensor_ops;
 
         result = rt_hw_sensor_register(sensor_baro, name, RT_DEVICE_FLAG_RDWR, RT_NULL);
         if (result != RT_EOK)
@@ -239,19 +275,24 @@ __exit:
         rt_free(bmp_dev);
     return -RT_ERROR;
 }
-
 ```
 
 ## 5. Debug Method
 
-After adding the code, you can perform basic functionality verification of the sensor device by adding a command-line function. <br/>
+After adding the code, you can perform basic functionality verification of the
+sensor device by adding a command-line function.<br/>
 
-Create a command function `int cmd_xxx(int argc, char *argv[])`, and use `FINSH_FUNCTION_EXPORT_ALIAS` to register the function as a Finsh command. <br/>
-The command function should include the following methods: <br/>
-Sensor initialization— including interface initialization and device address checking; <br/>
-Register read/write—use I2C/SPI interfaces to perform read and write operations to the SENSOR's internal registers. <br/>
-Sensor functionality verification—this depends on the specific sensor type. For example, a pressure sensor should be able to get the correct pressure, a temperature sensor should get the temperature, and an accelerometer should retrieve velocity information. <br/>
-The following is part of the command-line implementation for the BMP280 pressure sensor: <br/>
+Create a command function `int cmd_xxx(int argc, char *argv[])`, and use
+`FINSH_FUNCTION_EXPORT_ALIAS` to register the function as a Finsh command. <br/>
+The command function should include the following methods: <br/> Sensor
+initialization— including interface initialization and device address checking;
+<br/> Register read/write—use I2C/SPI interfaces to perform read and write
+operations to the SENSOR's internal registers. <br/> Sensor functionality
+verification—this depends on the specific sensor type. For example, a pressure
+sensor should be able to get the correct pressure, a temperature sensor should
+get the temperature, and an accelerometer should retrieve velocity information.
+<br/> The following is part of the command-line implementation for the BMP280
+pressure sensor:<br/>
 
 ```c
 #define DRV_BMP280_TEST
@@ -317,7 +358,8 @@ int cmd_bmpt(int argc, char *argv[])
 FINSH_FUNCTION_EXPORT_ALIAS(cmd_bmpt, __cmd_bmpt, Test driver bmp280);
 
 #endif //DRV_BMP280_TEST
-
 ```
+
+
 
 

@@ -1,9 +1,7 @@
-# cherryusb
+# CherryUSB
 ```{toctree}
 :titlesonly:
 :glob:
 
 */*
-
-
 ```

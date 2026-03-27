@@ -1,18 +1,32 @@
 # USB CDC ACM Host Example
+This example demonstrates how to implement a CDC ACM (Communication Device Class
+- Abstract Control Model) host using the CherryUSB stack to identify and connect
+to USB CDC ACM devices (such as virtual serial port devices). The host can
+enumerate CDC ACM devices, receive data from devices, and support bidirectional
+data transfer.
 
-This example demonstrates how to implement a CDC ACM (Communication Device Class - Abstract Control Model) host using the CherryUSB stack to identify and connect to USB CDC ACM devices (such as virtual serial port devices). The host can enumerate CDC ACM devices, receive data from devices, and support bidirectional data transfer.
+This example demonstrates how to implement a CDC ACM (Communication Device Class
+– Abstract Control Model) host using the CherryUSB stack to identify and connect
+to USB CDC ACM devices, such as virtual serial ports. The host is capable of
+enumerating CDC ACM devices, receiving transmitted data, and supporting
+bidirectional data communication.
 
 ## Features
 
-- **CDC ACM Host Class Implementation**: Compliant with USB CDC ACM standard, supporting host connection to CDC devices
-- **Automatic Device Recognition**: Automatic enumeration and identification of connected CDC ACM devices
-- **Data Reception Capability**: Support for receiving data from USB CDC devices with real-time printing
-- **DTR/RTS Control**: Support for setting DTR and RTS control signals of CDC devices
-- **Interrupt Reception Mode**: Using interrupt-driven data reception for improved response speed
-- **Real-Time Operating System Integration**: Implemented based on RT-Thread RTOS
-- **CherryUSB Stack**: Utilizing lightweight, high-performance CherryUSB host protocol stack
-
-
+- **CDC ACM Host Class Implementation**: Compliant with USB CDC ACM standard,
+  supporting host connection to CDC devices
+- **Automatic Device Recognition**: Automatic enumeration and identification of
+  connected CDC ACM devices
+- **Data Reception Capability**: Support for receiving data from USB CDC devices
+  with real-time printing
+- **DTR/RTS Control**: Support for setting DTR and RTS control signals of CDC
+  devices
+- **Interrupt Reception Mode**: Using interrupt-driven data reception for
+  improved response speed
+- **Real-Time Operating System Integration**: Implemented based on RT-Thread
+  RTOS
+- **CherryUSB Stack**: Utilizing lightweight, high-performance CherryUSB host
+  protocol stack
 
 ## Hardware Connection
 
@@ -20,8 +34,10 @@ This example demonstrates how to implement a CDC ACM (Communication Device Class
 - **SF32LB52_LCD_N16R8**: LCD development board based on SF32LB52 chip
 
 ### USB Connection
-- Connect USB CDC ACM devices (such as virtual serial port devices, Arduino, etc.) to the development board's USB Host port
-- Ensure the development board's USB Host port is properly powered and capable of supplying power to external devices
+- Connect USB CDC ACM devices (such as virtual serial port devices, Arduino,
+  etc.) to the development board's USB Host port
+- Ensure the development board's USB Host port is properly powered and capable
+  of supplying power to external devices
 - Supports USB 2.0 full-speed mode (depending on configuration)
 
 ### Connection Topology
@@ -31,7 +47,8 @@ This example demonstrates how to implement a CDC ACM (Communication Device Class
 ```
 
 ### USB Host Configuration
-This example uses the internal USB controller in host mode with the following main configurations:
+This example uses the internal USB controller in host mode with the following
+main configurations:
 - **USB Base Address**: USBC_BASE
 - **CDC Device Name**: ttyACM0
 - **Receive Buffer**: 4096 bytes
@@ -40,7 +57,7 @@ This example uses the internal USB controller in host mode with the following ma
 
 ## Build and Usage
 
-### 1  Build
+### 1 Build
 
 Navigate to the example's project directory and run the scons command to build:
 
@@ -51,7 +68,8 @@ scons --board=sf32lb52-lcd_n16r8 -j8
 
 ### 2 Download
 
-Run the corresponding download script for the development board and select the port as prompted:
+Run the corresponding download script for the development board and select the
+port as prompted:
 
 **LCD development board download:**
 ```bash
@@ -70,14 +88,17 @@ please input the serial port num:5
 4. The system initializes the USB host controller
 
 #### 3.2 Connecting CDC Device
-1. Connect the CDC ACM device via USB cable to the development board's USB Host port
-2. Wait approximately 2 seconds for the system to automatically enumerate the device
+1. Connect the CDC ACM device via USB cable to the development board's USB Host
+   port
+2. Wait approximately 2 seconds for the system to automatically enumerate the
+   device
 3. If the device is successfully recognized, it will print: "ttyACM0 found!"
 4. If the device is not found, it will print: "ttyACM0 not found!"
 
 #### 3.3 Data Reception Test
 1. **Automatic Data Reception**:
-   - When the CDC device sends data, the host automatically triggers the receive callback
+   - When the CDC device sends data, the host automatically triggers the receive
+     callback
    - Received data is immediately printed to the debug serial port
    - Each reception displays the data length and content
 
@@ -99,20 +120,22 @@ please input the serial port num:5
 #### 3.4 DTR/RTS Control
 - The host automatically sets the DTR signal to 1 after the device is opened
 - RTS signal is set to 0
-- These signals are passed to the CDC device and can be used to control device behavior
+- These signals are passed to the CDC device and can be used to control device
+  behavior
 - For example, the CDC Device example only sends data when DTR is enabled
-
-
 
 ## Technical Details
 
 ### Code Structure
-- **main.c**: Main program entry, initializes USB host controller and manages CDC ACM device connection
-- **usb_config.h**: CherryUSB host configuration file, defines various USB parameters and options
+- **main.c**: Main program entry, initializes USB host controller and manages
+  CDC ACM device connection
+- **usb_config.h**: CherryUSB host configuration file, defines various USB
+  parameters and options
 
 ### Configuration Parameters
 - **Receive Buffer Size**: 4096 bytes
-- **Device Enumeration Delay**: 2000 milliseconds (waiting for device enumeration to complete)
+- **Device Enumeration Delay**: 2000 milliseconds (waiting for device
+  enumeration to complete)
 - **Device Name**: ttyACM0
 - **Open Flags**: RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX
 - **DTR State**: Enabled (1)
@@ -121,7 +144,8 @@ please input the serial port num:5
 ### CherryUSB Host Features
 - Supports USB host controller initialization
 - Supports automatic CDC ACM device identification and enumeration
-- Supports interrupt reception mode with automatic callback triggering when data arrives
+- Supports interrupt reception mode with automatic callback triggering when data
+  arrives
 - Supports DTR/RTS control signal configuration
 - Integrated with RT-Thread device driver framework
 
@@ -151,16 +175,20 @@ please input the serial port num:5
 ### Common Issues
 
 1. **Device Cannot Be Recognized (prints "ttyACM0 not found!")**
-   - Check if the CDC device is properly connected to the development board's USB Host port
-   - Confirm that the CDC device is properly powered (some devices require external power)
+   - Check if the CDC device is properly connected to the development board's
+     USB Host port
+   - Confirm that the CDC device is properly powered (some devices require
+     external power)
    - Check USB cable quality and data line integrity
    - Increase enumeration delay time (currently 2 seconds)
-   - Confirm that the CDC device itself is working properly (can test by connecting to PC first)
+   - Confirm that the CDC device itself is working properly (can test by
+     connecting to PC first)
    - Review debug logs to confirm USB enumeration process
 
 2. **Device Recognized But No Data Reception**
    - Confirm whether the CDC device is sending data
-   - Check device-side DTR signal requirements (some devices only send data when DTR is enabled)
+   - Check device-side DTR signal requirements (some devices only send data when
+     DTR is enabled)
    - Verify that the receive callback function is properly registered
    - Check if USB host controller initialization was successful
    - Check if device open flags include INT_RX
@@ -173,7 +201,8 @@ please input the serial port num:5
 
 4. **System Instability**
    - Check if USB power supply capability is sufficient
-   - Confirm that external device power consumption does not exceed USB Host power supply capability
+   - Confirm that external device power consumption does not exceed USB Host
+     power supply capability
    - Verify memory usage to avoid memory shortage
    - Check for stack overflow issues
 
@@ -186,22 +215,28 @@ please input the serial port num:5
 ## Test Scenarios
 
 ### Testing with CDC ACM Device Example
-1. Prepare two development boards: one running the CDC ACM Device example, one running this Host example
+1. Prepare two development boards: one running the CDC ACM Device example, one
+   running this Host example
 2. Connect the Device side via USB to the Host side's USB Host port
-3. The Host side will automatically recognize the Device and start receiving data
+3. The Host side will automatically recognize the Device and start receiving
+   data
 4. You can see the Host side continuously printing test data sent by the Device
 
 ## Reference Documentation
-* CDC ACM Host Class: https://cherryusb.readthedocs.io/zh_CN/latest/quick_start/cdc_acm.html
+* CDC ACM Host Class:
+  https://cherryusb.readthedocs.io/zh_CN/latest/quick_start/cdc_acm.html
 * CherryUSB Documentation: https://cherryusb.readthedocs.io/
 * CherryUSB Official Repository: https://github.com/cherry-embedded/CherryUSB
-* RT-Thread Official Website: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/README
-* USB CDC Specification: https://www.usb.org/document-library/class-definitions-communication-devices-12
+* RT-Thread Official Website:
+  https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/README
+* USB CDC Specification:
+  https://www.usb.org/document-library/class-definitions-communication-devices-12
 
 ## Development Guide
 
 ### Custom Development
-If you need to perform custom development based on this example, you can modify the following:
+If you need to perform custom development based on this example, you can modify
+the following:
 
 1. **Data Reception Processing**:
    - Modify the `rx_cb()` function to implement custom data processing logic
@@ -238,17 +273,17 @@ If you need to perform custom development based on this example, you can modify 
 #### RT-Thread Device Operations
 - `rt_device_find(name)`: Find device
   - Returns device handle, or RT_NULL on failure
-  
+
 - `rt_device_open(dev, flags)`: Open device
   - flags: RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX
-  
+
 - `rt_device_read(dev, pos, buffer, size)`: Read device data
   - pos: Offset position (typically 0 for CDC devices)
   - Returns actual number of bytes read
-  
+
 - `rt_device_write(dev, pos, buffer, size)`: Write device data
   - Used to send data to CDC device
-  
+
 - `rt_device_set_rx_indicate(dev, rx_ind)`: Set receive indication callback
   - rx_ind: Receive callback function pointer
 
@@ -269,10 +304,11 @@ if (len > 0) {
 
 ## Related Examples
 
-- **CDC ACM Device Example**: Companion CDC ACM device-side example, can be used to test host functionality
+- **CDC ACM Device Example**: Companion CDC ACM device-side example, can be used
+  to test host functionality
 
 ## Version History
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|1.0.0 |11/2025 |Enhanced feature description and usage instructions, added technical details and development guide |
-|0.0.1 |11/2025 |Initial version, implemented basic CDC ACM host functionality |
+| Version | Date    | Release Notes                                                                                      |
+| ------- | ------- | -------------------------------------------------------------------------------------------------- |
+| 1.0.0   | 11/2025 | Enhanced feature description and usage instructions, added technical details and development guide |
+| 0.0.1   | 11/2025 | Initial version, implemented basic CDC ACM host functionality                                      |

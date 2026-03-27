@@ -1,15 +1,15 @@
-
 # Audprc/Audcodec Audio Device
-The chip contains Audprc and Audcodec. Audprc is used for digital processing, while Audcodec is for digital-to-analog conversion.
-The common audio data flow is Audprc --> Audcodec --> Speaker.
-Another possible configuration is Audprc --> I2S --> External Codec chip.
-Main functionalities include:
+The chip contains Audprc and Audcodec. Audprc is used for digital processing,
+while Audcodec is for digital-to-analog conversion. The common audio data flow
+is Audprc --> Audcodec --> Speaker. Another possible configuration is Audprc -->
+I2S --> External Codec chip. Main functionalities include: <br>
 - Input and output sample rate settings
 - Input and output channel count settings
 - Bit depth setting for each sample
 - Volume control settings
 
-The playback code explanation, with specific examples, can be found in the `drv_audprc.c` file and the `example/rt_device/audprc` directory.
+The playback code explanation, with specific examples, can be found in the
+`drv_audprc.c` file and the `example/rt_device/audprc` directory.
 
 ```c
 static rt_event_t g_tx_ev;
@@ -40,14 +40,14 @@ void test_demo()
 
     // 2. Set the callback for transmission completion
     rt_device_set_tx_complete(audprc_dev, speaker_tx_done);
-    
+
     // 3. Set the size of one DMA buffer, the underlying driver uses two such buffers for ping-pong buffering
     rt_device_control(audprc_dev, AUDIO_CTL_SET_TX_DMA_SIZE, (void *)DMA_BUF_SIZE);
 
     // 4. Output audio to the codec, if using I2S, set AUDPRC_TX_TO_I2S
     rt_device_control(audcodec_dev, AUDIO_CTL_SETOUTPUT, (void *)AUDPRC_TX_TO_CODEC);
     rt_device_control(audprc_dev,   AUDIO_CTL_SETOUTPUT, (void *)AUDPRC_TX_TO_CODEC);
-    
+
     // 5. Configure codec parameters
     struct rt_audio_caps caps;
 
@@ -60,7 +60,7 @@ void test_demo()
     caps.udata.config.samplerate = 16000; // Sample rate, options: 8000/11025/12000/16000/22050/24000/32000/44100/48000
     caps.udata.config.samplefmt = 16; // Bit depth: 8, 16, 24, or 32
     rt_device_control(audcodec_dev, AUDIO_CTL_CONFIGURE, &caps);
-    
+
     struct rt_audio_sr_convert cfg;
     cfg.channel = 2; // Source data channels, if 2, data will be in interleave format: LRLRLR...
     cfg.source_sr = 16000; // Source data sample rate
@@ -114,7 +114,6 @@ void test_demo()
     rt_event_delete(g_tx_ev);
 }
 ```
-
 Receiving Code Explanation:
 
 ```c
@@ -140,7 +139,7 @@ void test_demo()
     RT_ASSERT(RT_EOK == err);
     err = rt_device_open(audcodec_dev, RT_DEVICE_FLAG_WRONLY);
     RT_ASSERT(RT_EOK == err);
-    
+
     // Set the callback for reception of one frame
     rt_device_set_rx_indicate(audprc_dev, mic_rx_ind);
 
@@ -171,7 +170,7 @@ void test_demo()
     stream = AUDIO_STREAM_RECORD | ((1 << HAL_AUDPRC_RX_CH0) << 8);
     rt_device_control(audprc_dev, AUDIO_CTL_START, &stream);
     rt_uint32_t evt;
-    
+
     uint8_t g_pipe_data[CFG_AUDIO_RECORD_PIPE_SIZE];
     while (1)
     {
@@ -183,14 +182,12 @@ void test_demo()
     rt_event_delete(g_rx_ev);
 }
 ```
-
 ## Driver Configuration
 Enable in {menuselection}:
-- `On-Chip Peripheral RTOS Drivers --> Enable Audio codec Driver`
-- `On-Chip Peripheral RTOS Drivers --> Enable Audio Process driver --> Enable AUDPRC TX Channel 0 DMA`
-- `On-Chip Peripheral RTOS Drivers --> Enable Audio Process driver --> Enable AUDPRC RX Channel 0 DMA`
 
-
+[audio]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/audio/audio
 ## RT-Thread Documentation
 
-- [AUDIO Device Documentation](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/audio/audio)
+- [AUDIO Device Documentation][audio]
+

@@ -1,12 +1,22 @@
 # RTC Device
 
-The Real-Time Clock (RTC) of SIFLI chipset is an independent binary coded decimal (BCD) timer/counter. 
-The RTC core consists of counter, prescaler, clock divider, alarm data registers, etc.
-Like any standard RTC chip, the embedded RTC can be used to provide full-featured software-based calendar as well as alarm functionality.
-However, more work needs to be done on the software side rather than hardware side. When using RTC chips, you only need to read or write separate date-time registers. In SIFLI chipset, we need to do more than this because there are no separate date-time registers.
 
-Resetting or waking up the MCU from sleep/standby mode does not reinitialize the time once set.
-The effect is better if there is a backup battery on the backup battery (VBAT) pin. All VDD of SIFLI chipset can be turned off, in other words, the entire MCU core can be completely shut down, but the backup battery keeps the RTC and backup domain running. Therefore, time does not change or get lost during power-off and sleep modes. The main features of SIFLI embedded RTC are as follows:
+The Real-Time Clock (RTC) of SIFLI chipset is an independent binary coded
+decimal (BCD) timer/counter. The RTC core consists of counter, prescaler, clock
+divider, alarm data registers, etc. Like any standard RTC chip, the embedded RTC
+can be used to provide full-featured software-based calendar as well as alarm
+functionality. However, more work needs to be done on the software side rather
+than hardware side. When using RTC chips, you only need to read or write
+separate date-time registers. In SIFLI chipset, we need to do more than this
+because there are no separate date-time registers.
+
+Resetting or waking up the MCU from sleep/standby mode does not reinitialize the
+time once set. The effect is better if there is a backup battery on the backup
+battery (VBAT) pin. All VDD of SIFLI chipset can be turned off, in other words,
+the entire MCU core can be completely shut down, but the backup battery keeps
+the RTC and backup domain running. Therefore, time does not change or get lost
+during power-off and sleep modes. The main features of SIFLI embedded RTC are as
+follows:
 
 Programmable prescaler: division factor up to
 - 18-bit programmable counter for long-term wakeup.
@@ -17,7 +27,8 @@ For detailed API of RTC driver, please refer to [RTC](#hal-rtc).
 
 ## Driver Configuration
 
-Select to enable RTC device in the {menuselection}`On-Chip Peripheral RTOS Drivers --> Enable RTC` menu.
+Select to enable RTC device in the {menuselection}`On-Chip Peripheral RTOS
+Drivers --> Enable RTC` menu.
 
 The following macro switch indicates that RTC device is enabled:
 ```c
@@ -29,7 +40,8 @@ The following macro switch indicates that RTC device is enabled:
 
 ## Example Code
 
-The following code will initialize RTC registers and use them as timestamps later.
+The following code will initialize RTC registers and use them as timestamps
+later.
 
 ```c
 { 	// Set time to January 7, 2020, 16:02:15
@@ -50,25 +62,26 @@ The following code will use RTC for alarm service.
 rt_device_t device;
 struct rt_rtc_wkalarm alm;
 
-// Set alarm at 18:30:00
+// Set alarm for 18:30:00
 alm.enable = 1
 alm.tm_hour = 18;
 alm.tm_min  = 30;
 alm.tm_sec  = 00;
 device = rt_device_find("rtc");
-rt_device_control(device, RT_DEVICE_CTRL_RTC_SET_ALARM, &alm);
+rt_device_control(device, RT_DEVICE_CTRL_RTC_SET_ALARM, &amp;alm);
 
 ...
-    
+
 void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
 {
     LOG_I("Alarm triggered");
 }
-    
 ```
 
-[rtc]: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc
+[rtc]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc
 
 ## RT-Thread Reference Documentation
 
 - [RTC Device][rtc]
+

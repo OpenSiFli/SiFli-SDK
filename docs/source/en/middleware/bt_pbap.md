@@ -1,16 +1,14 @@
-
 # PBAP (Phone Book Access Profile)
-
-PBAP stands for Phone Book Access Profile, an upper-layer protocol based on OBEX. This protocol allows synchronization of contacts, call logs, and other information from devices with phone book functionality, such as mobile phones.
+PBAP stands for Phone Book Access Profile, an upper-layer protocol based on
+OBEX. This protocol allows synchronization of contacts, call logs, and other
+information from devices with phone book functionality, such as mobile phones.
+- **PSE (Phone Book Server Equipment)**: The device that holds the phone book
+  source data, acting as the server, such as a mobile phone.
+- **PCE (Phone Book Client Equipment)**: The device that requests phone book
+  information from the PSE, acting as the client, such as a car infotainment
+  system.
 
 PBAP defines two roles:
-
-- **PSE (Phone Book Server Equipment)**: The device that holds the phone book source data, acting as the server, such as a mobile phone.
-- **PCE (Phone Book Client Equipment)**: The device that requests phone book information from the PSE, acting as the client, such as a car infotainment system.
-
-The PSE can be a mobile phone or a device with a SIM card. The stored contact information may reside on the phone or the SIM card. The PCE must specify the path from which to retrieve the data during synchronization, i.e., whether to sync from the phone or the SIM card.
-
-The following objects are supported in PBAP:
 - Phone Book object (pb): `pb.vcf`
 - Incoming Calls History object (ich): `ich.vcf`
 - Outgoing Calls History object (och): `och.vcf`
@@ -19,46 +17,47 @@ The following objects are supported in PBAP:
 - Speed-Dial object (spd): `spd.vcf`
 - Favorite Contacts object (fav): `fav.vcf`
 
-**Contact paths:**
+The PSE can be a mobile phone or a device with a SIM card. The stored contact
+information may reside on the phone or the SIM card. The PCE must specify the
+path from which to retrieve the data during synchronization, i.e., whether to
+sync from the phone or the SIM card.
 - Phone path: `telecom/xxx.vcf`
 - SIM card path: `SIM1/telecom/xxx.vcf`
 
-This document mainly describes the basic functionality support for PBAP in the PCE based on the Sifli SDK. The relevant files are:
+The following objects are supported in PBAP:
 - `bts2_app_interface`
 - `bts2_app_pbap_c`
-
 ## PBAP Initialization
-
-- The PBAP initialization function: `bt_pbap_clt_init`, which initializes PBAP-related states and flags.
-
+- The PBAP initialization function: `bt_pbap_clt_init`, which initializes
+  PBAP-related states and flags.
 ```c
 void bt_pbap_clt_init(bts2_app_stru *bts2_app_data)
 {
     local_inst = (bts2s_pbap_clt_inst_data *)bmalloc(sizeof(bts2s_pbap_clt_inst_data));
     // Must allocate successful
     BT_ASSERT(local_inst);
-    local_inst->pbap_clt_st = BT_PBAPC_IDLE_ST;
-    local_inst->is_valid_vcard = FALSE;
-    local_inst->elem_index = BT_PBAP_ELEM_VCARD_IDLE;
-    local_inst->pbab_vcard = NULL;
-    local_inst->mfs = pbap_clt_get_max_mtu();
-    local_inst->rmt_supp_repos = 0;
-    local_inst->curr_cmd = BT_PBAP_CLT_IDLE;
+    local_inst-&gt;pbap_clt_st = BT_PBAPC_IDLE_ST;
+    local_inst-&gt;is_valid_vcard = FALSE;
+    local_inst-&gt;elem_index = BT_PBAP_ELEM_VCARD_IDLE;
+    local_inst-&gt;pbab_vcard = NULL;
+    local_inst-&gt;mfs = pbap_clt_get_max_mtu();
+    local_inst-&gt;rmt_supp_repos = 0;
+    local_inst-&gt;curr_cmd = BT_PBAP_CLT_IDLE;
 
-    local_inst->curr_repos = PBAP_LOCAL;
-    local_inst->curr_phonebook = PBAP_PB;
+    local_inst-&gt;curr_repos = PBAP_LOCAL;
+    local_inst-&gt;curr_phonebook = PBAP_PB;
 
-    local_inst->target_repos = PBAP_UNKNOWN_REPO;
-    local_inst->target_phonebook = PBAP_UNKNOWN_PHONEBOOK;
+    local_inst-&gt;target_repos = PBAP_UNKNOWN_REPO;
+    local_inst-&gt;target_phonebook = PBAP_UNKNOWN_PHONEBOOK;
 
-    local_inst->cur_file_hdl = NULL;
+    local_inst-&gt;cur_file_hdl = NULL;
 }
 ```
-
 ### PBAP Function for Getting Contact Names
-
-Since there are many phone books on the mobile phone and syncing all the data to a watch would result in too much data, this feature retrieves contact names by querying the phone using a number during a call. Note: This feature requires permission from the phone during pairing.
-
+Since there are many phone books on the mobile phone and syncing all the data to
+a watch would result in too much data, this feature retrieves contact names by
+querying the phone using a number during a call. Note: This feature requires
+permission from the phone during pairing.
 - **PBAP connection device interfaces:**
     - `bts2_app_interface` connection interface: `bt_interface_conn_ext`
     - `bts2_app_pbap_c` connection interface: `bt_pbap_clt_conn_to_srv`
@@ -67,14 +66,16 @@ Since there are many phone books on the mobile phone and syncing all the data to
     - `bts2_app_interface` disconnect interface: `bt_interface_disc_ext`
     - `bts2_app_pbap_c` disconnect interface: `bt_pbap_clt_disc_to_srv`
 
-- **PBAP select and set contact repository (by default, it is set to phone storage):**
-    - `bts2_app_pbap_c` interface for setting contact repository: `bt_pbap_client_set_pb`
-
-- **PBAP retrieve contact name by number (this is called when there is a call):**
-    - `bts2_app_pbap_c` interface to get contact name by number: `bt_pbap_client_get_name_by_number`
-    - Contact name event: `BT_NOTIFY_PBAP_VCARD_LIST_ITEM_IND`
-    - Event indicating the end of contact name retrieval: `BT_NOTIFY_PBAP_VCARD_LIST_CMPL`
-
+- **PBAP select and set contact repository (by default, it is set to phone
+  storage):**
+    - `bts2_app_pbap_c` interface for setting contact repository:
+      `bt_pbap_client_set_pb`
+    - PBAP retrieves contact names by phone number (invoked during active
+      calls):
+    - bts2_app_pbap_c interface for setting the contact repository:
+      bt_pbap_client_get_name_by_number
+    - Contact name event: BT_NOTIFY_PBAP_VCARD_LIST_ITEM_IND
+    - Contact name retrieval completion event: BT_NOTIFY_PBAP_VCARD_LIST_CMPL
 ```c
 // Register notify event handle function start
 // step1: Successfully establish PBAP connection via interface
@@ -180,5 +181,3 @@ int app_bt_notify_init(void)
 INIT_ENV_EXPORT(app_bt_notify_init);
 // Register notify event handle function end
 ```
-
-This document provides an overview of PBAP functionality, implementation details, and the necessary SDK files.

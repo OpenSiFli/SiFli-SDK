@@ -1,6 +1,7 @@
-# FACC
+# Flash Accumulator (FACC)
 
-HAL FACC module provides hardware acceleration for 8bit/16bit convolution, FIR and IIR filtering. FIR and convolution also add support for CMSIS-DSP.
+HAL FACC module provides hardware acceleration for 8bit/16bit convolution, FIR
+and IIR filtering. FIR and convolution also add support for CMSIS-DSP.
 
 ```{note}
 55x does not support this module. 58x has one FACC module each in HCPU/LCPU, 56x only provides one FACC module in HCPU.
@@ -36,7 +37,7 @@ param = (FACC_ConfigTypeDef *)&iir_iir_param;                       // Parameter
 HAL_FACC_Config(&hfacc, param);                                     
 HAL_FACC_SetCoeff(&hfacc, iir_iir_coef_b, (uint16_t)sizeof(iir_iir_coef_b), iir_iir_coef_a, (uint16_t)sizeof(iir_iir_coef_a), 0); // Input filter function coefficients
 HAL_FACC_Start(&hfacc, iir_iir_input, facc_out, sizeof(iir_iir_input)); // Start IIR calculation. Synchronous completion.
-
 ```
 ## API Reference
-[](#hal-facc)
+[]
+

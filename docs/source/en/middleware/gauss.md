@@ -1,13 +1,17 @@
-
 # Gaussian Blur
+Our Gaussian blur uses a fast algorithm, which performs closer to standard
+Gaussian blur when the blur degree is relatively high. Additionally, considering
+memory usage and computational load, the current Gaussian blur calculation has a
+minimum radius and step of 25 pixels. Further optimization will be carried out
+in the future.
 
-Our Gaussian blur uses a fast algorithm, which performs closer to standard Gaussian blur when the blur degree is relatively high. Additionally, considering memory usage and computational load, the current Gaussian blur calculation has a minimum radius and step of 25 pixels. Further optimization will be carried out in the future.
 
 ```{note}
 Gaussian blur utilizes NNACC and EPIC, so make sure to use them alternately.
 ```
 
 ## Usage Example
+
 
 ```c
 static void gauss_done_cbk(void)

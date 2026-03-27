@@ -1,6 +1,6 @@
 # API Reference
 
-Here is a list of all modules:
+Table of Contents:
 
 ```{toctree}
 :titlesonly:
@@ -11,6 +11,5 @@ Here is a list of all modules:
 hal/index
 middleware/index
 sifli_cmsis_device_interface/index
-
 ```
 

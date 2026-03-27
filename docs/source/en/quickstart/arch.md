@@ -1,14 +1,24 @@
-
 # Software Architecture
 
-SiFli SDK is an officially provided software development framework customized based on RT-Thread. Using it, you can quickly develop applications running on SiFli Technology chip platforms.
+SiFli SDK is an officially provided software development framework customized
+based on RT-Thread. Using it, you can quickly develop applications running on
+SiFli Technology chip platforms.
 
 The software framework is shown in the following diagram:
 ![](../../assets/sdk_arch_diagram.png)
 
-- HAL is the Hardware Abstraction Layer, providing driver functionality independent of operating system services
-- RT-Thread Device Driver is implemented based on HAL, providing higher-level encapsulation. Users do not need to implement interrupt service routines, making it easier to use. For a more detailed comparison between HAL and RT-Thread device drivers, please refer to [drivers.md](/app_development/drivers.md).
-- Middleware (components) includes RT-Thread's built-in software components (such as finsh, ulog), third-party components (located in the `external` directory), and self-developed components (located in the `middleware` directory). Applications can use all service interfaces including HAL to develop applications.
+- HAL is the Hardware Abstraction Layer, providing driver functionality
+  independent of operating system services
+- RT-Thread Device Driver is implemented based on HAL, providing higher-level
+  encapsulation. Users do not need to implement interrupt service routines,
+  making it easier to use. For a more detailed comparison between HAL and
+  RT-Thread device drivers, please refer to
+  [drivers.md](../app_development/drivers.md).
+- Middleware (components) includes RT-Thread's built-in software components
+  (such as finsh, ulog), third-party components (located in the `external`
+  directory), and self-developed components (located in the `middleware`
+  directory). Applications can use all service interfaces including HAL to
+  develop applications.
 
 SDK Directory Structure
 ```
@@ -53,3 +63,6 @@ SDK Directory Structure
 |       
 |
 \---tools                    // Tools
+```
+
+

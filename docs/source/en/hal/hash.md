@@ -1,18 +1,23 @@
 # Hash
 
-The HASH engine is a computational accelerator for hash sequence algorithms. Users can select different hash algorithms to calculate hash values for specific data in memory. The HASH engine is faster than software algorithms and more flexible in configuration. Users can also implement multi-threaded HASH computation through custom initial vectors. The HASH engine supports the following algorithms:
+The HASH engine is a computational accelerator for hash sequence algorithms.
+Users can select different hash algorithms to calculate hash values for specific
+data in memory. The HASH engine is faster than software algorithms and more
+flexible in configuration. Users can also implement multi-threaded HASH
+computation through custom initial vectors. The HASH engine supports the
+following algorithms:
 
 - SHA1
 - SHA224
-- SHA256 
+- SHA256
 - SM3
- 
+
 ## Using Hash HAL Driver
-Hash supports both polling and interrupt modes, which can call different HASH interfaces.
+Hash supports both polling and interrupt modes, which can call different HASH
+interfaces.
 
 Example of Hash HAL polling with block processing:
 ```c
-
 // Output result stored in g_temp, length is 20 bytes for SHA1, 32 bytes for other algorithms.
 uint8_t g_temp[32];
 
@@ -26,7 +31,7 @@ uint8_t g_temp[32];
         else
             // Continue previous calculation, load previous run result
             HAL_HASH_init((uint32_t*)g_temp, HASH_ALGO_SHA1, i);  
-            
+
         if (i+SPLIT_THRESHOLD<len) {            
             LOG_I("AES run %d\n", i);
             status = HAL_HASH_run(&(g_hash_input[i]), SPLIT_THRESHOLD, 0);
@@ -48,7 +53,6 @@ uint8_t g_temp[32];
 
 Example of Hash HAL using interrupt, completed in one pass:
 ```c
-
 // Input array is g_hash_input, length is len, using SHA256 algorithm 
 
 // Output result stored in g_temp, length is 20 bytes for SHA1, 32 bytes for other algorithms.
@@ -58,7 +62,7 @@ uint8_t g_temp[32];
 void AES_IRQHandler(void)
 {
     rt_interrupt_enter();
-    
+
     // Check Hash completion interrupt source
     if (hwp_aes_acc->IRQ & HASH_DONE_STAT)
     {
@@ -88,8 +92,9 @@ void AES_IRQHandler(void)
 
     // Output Hash to g_temp, length depends on different Hash algorithms.
     HAL_HASH_result(g_temp);    
-    
+
     ...
 ```
 ## API Reference
-[](#hal-aes)
+[]
+

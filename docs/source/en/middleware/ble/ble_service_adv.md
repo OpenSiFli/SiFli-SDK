@@ -1,17 +1,20 @@
+
 # Sibles Advertising
 
-Sibles advertising provides simple APIs based on GAP advertising APIs. Users can configure some parameters and then start advertising.
+Sibles advertising provides simple APIs based on GAP advertising APIs. Users can
+configure some parameters and then start advertising.
 - Configure advertising mode to determine advertising behavior.
     - SIBLES_ADV_CONNECT_MODE: Start connectable advertising to establish links.
     - SIBLES_ADV_BROADCAST_MODE: Start non-connectable broadcast advertising.
-    - SIBLES_ADV_DIRECTED_CONNECT_MODE: Start directed advertising for dedicated link establishment.
-- Configure parameters for each mode, such as interval, duration, and whether to repeat.
+    - SIBLES_ADV_DIRECTED_CONNECT_MODE: Start directed advertising for dedicated
+      link establishment.
+- Configure parameters for each mode, such as interval, duration, and whether to
+  repeat.
 - Set advertising data and scan response data to the provided structure.
-	
+
 Here is an example:
 
 ```c
-
 // Declare app advertising context
 SIBLES_ADVERTISING_CONTEXT_DECLAR(g_app_advertising_context);
 
@@ -79,7 +82,7 @@ static void app_advertising_start(void)
 
 
     para.evt_handler = app_advertising_event;
-    
+
     ret = sibles_advertising_init(g_app_advertising_context, &para);
     if (ret == SIBLES_ADV_NO_ERR)
     {
@@ -87,6 +90,4 @@ static void app_advertising_start(void)
     }
 
 }
-
-
 ```

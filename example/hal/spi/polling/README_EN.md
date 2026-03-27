@@ -6,7 +6,8 @@ Source path: `example/hal/spi/polling`
 - `sf32lb58-lcd_n16r64n4`
 
 ## Overview
-This example demonstrates SPI HAL in **blocking polling mode** with self loopback verification.
+This example demonstrates SPI HAL in **blocking polling mode** with self
+loopback verification.
 
 Core behavior:
 - SPI1 master mode, 2Lines, 8-bit, default MODE0.
@@ -24,7 +25,8 @@ For `sf32lb58-lcd_n16r64n4`:
 scons --board=sf32lb58-lcd_n16r64n4 -j8
 ```
 
-After build, enter the generated `build_*` directory and run the download script.
+After build, enter the generated `build_*` directory and run the download
+script.
 
 ## Hardware Setup
 ### Single-board loopback (recommended)
@@ -34,17 +36,18 @@ Short SPI1 MOSI and MISO:
 
 Keep:
 - `CLK`: `PA28`
-- `CS`:  `PA29`
+- `CS`: `PA29`
 
 Notes:
-- This example uses one-shot `HAL_SPI_TransmitReceive` per round; no manual `TAKE/RELEASE CS` is used.
+- This example uses one-shot `HAL_SPI_TransmitReceive` per round; no manual
+  `TAKE/RELEASE CS` is used.
 - Without loopback wiring, `mismatch` is usually high or data appears random.
 
 ## Expected Logs
 Startup logs:
 ```text
-Start spi polling loopback demo!
-tip: short SPI1 MOSI(DIO/DO) to MISO(DI) for loopback verification.
+Starting SPI polling loopback demo...
+Note: Short SPI1 MOSI (DIO/DO) to MISO (DI) to verify loopback.
 ```
 
 Runtime logs:
@@ -84,9 +87,9 @@ Field meanings:
 
 ## Reference Documents
 - `EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx`
-- `DS0052-SF32LB52x-芯片技术规格书 V0p3.pdf`
+- `DS0052-SF32LB52x-Datasheet-V0p3.pdf`
 
 ## Update Log
-| Version | Date | Notes |
-|:---|:---|:---|
-| 0.1.0 | 03/2026 | Switched to polling loopback self TX/RX demo |
+| Version | Date    | Notes                                        |
+| ------- | ------- | -------------------------------------------- |
+| 0.1.0   | 03/2026 | Switched to polling loopback self TX/RX demo |

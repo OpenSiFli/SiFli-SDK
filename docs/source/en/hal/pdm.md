@@ -1,6 +1,8 @@
 # PDM
 
-The PDM (Pulse Density Modulation) module is used to filter PDM signals output from external PDM microphones, convert them to PCM signals, and provide them to the CPU for subsequent processing.
+The PDM (Pulse Density Modulation) module is used to filter PDM signals output
+from external PDM microphones, convert them to PCM signals, and provide them to
+the CPU for subsequent processing.
 
 ## Supported Configurations
  - Mono (left/right), stereo
@@ -13,8 +15,10 @@ The PDM (Pulse Density Modulation) module is used to filter PDM signals output f
   - 8-bit + mono
   - 16-bit + mono
   - 32-bit + mono: Upper 8 bits are 0, actual valid data is lower 24 bits
-  - 16-bit + stereo: Left and right channels each occupy 16 bits forming one 32-bit data (supports left/right channel swapping)
-  - 32-bit + stereo: Only supports left and right channels stored in separate 2 buffers
+  - 16-bit + stereo: Left and right channels each occupy 16 bits forming one
+    32-bit data (supports left/right channel swapping)
+  - 32-bit + stereo: Only supports left and right channels stored in separate 2
+    buffers
 
 ## Example
 PDM1 mono 16KHz, 16-bit depth, using DMA to read 1024 bytes of data
@@ -63,5 +67,7 @@ void pdm_receive(void)
 ...
 ```
 
+
 ## API Reference
-[](../api/hal/pdm.md)
+[]
+

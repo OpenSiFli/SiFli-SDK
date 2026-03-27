@@ -3,35 +3,37 @@
 Source path: example/storage/flashdb
 
 ## Supported Platforms
-<!-- Which boards and chip platforms are supported -->
+<!-- 支持哪些板子和芯片平台 -->
 + sf32lb52-nano series
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
 
 ## Overview
-<!-- Example introduction -->
-FlashDB is an ultra-lightweight embedded database that focuses on providing data storage solutions for embedded products. FlashDB provides two database modes:
-+ Key-value database(KVDB): It is a non-relational database that stores data as a collection of key-value pairs, where the key is used as a unique identifier. 
-+ Time Series Database(TSDB): Time Series Database.  
+<!-- 例程简介 -->
+FlashDB is an ultra-lightweight embedded database that focuses on providing data
+storage solutions for embedded products. FlashDB provides two database modes:
++ Key-value database(KVDB): It is a non-relational database that stores data as
+  a collection of key-value pairs, where the key is used as a unique identifier.
++ Time Series Database(TSDB): Time Series Database.
 
 This example demonstrates the configuration and usage of FlashDB, including:
 + project/nand: KVDB/TSDB configuration and usage on Nand flash.
 + project/nor: KVDB/TSDB configuration and usage on Nor flash.
 
-
 ## Example Usage
-<!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
-For rt_device examples, you also need to list the configuration switches used by this example, such as PWM example using PWM1, which needs to be enabled in the onchip menu -->
+<!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
+对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 
 ### Hardware Requirements
 Before running this example, you need to prepare:
-+ One development board supported by this example ([Supported platforms](quick_start)).
++ One development board supported by this example ([Supported
+  platforms](quick_start)).
 
 ### menuconfig Configuration
 
-1. Enable FlashDB:  
-![FLASHDB](./assets/mc_flashdb.png)    
+1. Enable FlashDB:\
+   ![FLASHDB](./assets/mc_flashdb.png)
      ```{tip}
      FDB Mode:
      + `Use FAL Mode` : Using FAL storage mode
@@ -42,16 +44,16 @@ Before running this example, you need to prepare:
      + Nand uses `FILE MODE`, operates through file system, `FDB Mode` configured as `PKG_FDB_USING_FILE_POSIX_MODE`.
      + Nor uses `FAL MODE`, operates flash directly, `FDB Mode` configured as `PKG_FDB_USING_FAL_MODE`.
      ```
-2. Configure `FAT` file system (when using `FILE MODE`)   
-![RT_USING_DFS_ELMFAT](./assets/mc_fat.png)
+2. Configure `FAT` file system (when using `FILE MODE`)\
+   ![RT_USING_DFS_ELMFAT](./assets/mc_fat.png)
 
      ```{tip}
      Mount file system partition in mnt_init. FDB initialization requires specifying a storage path (directory in the file system).
      ```
-3. FAL partition configuration (when using `FAL MODE`)   
+3. FAL partition configuration (when using `FAL MODE`)
 + `project/nor/ptab.json`:
      ```c
-            {
+     {
                 "offset": "0x00620000", 
                 "max_size": "0x00004000", 
                 "tags": [
@@ -64,8 +66,8 @@ Before running this example, you need to prepare:
                 "tags": [
                     "TSDB_TST_REGION"
                 ]
-            }, 
-     ```  
+            },
+     ```
 + `project/nor/custom_mem_map.h`
      ```c
      #define FAL_PART_TABLE \
@@ -74,41 +76,44 @@ Before running this example, you need to prepare:
           {FAL_PART_MAGIC_WORD,       "tsdb_tst",      NOR_FLASH2_DEV_NAME,    TSDB_TST_REGION_OFFSET,   TSDB_TST_REGION_SIZE, 0}, \
           ... ...
      }
-     ``` 
+     ```
 
      ```{tip}
      FDB initialization requires specifying flash partition name (for example, in this example it is "kvd_tst"/"tsd_tst").
      ```
 
 ### Compilation and Programming
-Switch to the example project/nand directory and run the scons command to execute compilation:
+Switch to the example project/nand directory and run the scons command to
+execute compilation:
 ```c
-> scons --board=eh-lb525 -j32
+&gt; scons --board=eh-lb525 -j32
 ```
-Switch to the example `project/nand/build_xx` directory and run `uart_download.bat`, select the port as prompted to download:
+Switch to the example `project/nand/build_xx` directory and run
+`uart_download.bat`, select the port as prompted to download:
 ```c
 $ ./uart_download.bat
 
-     Uart Download
+     UART Download
 
-please input the serial port num:5
+Please input the serial port number: 5
 ```
-For detailed steps on compilation and downloading, please refer to the relevant introduction in [Quick Start](quick_start).
+For detailed steps on compilation and downloading, please refer to the relevant
+introduction in [Quick Start](quick_start).
 
 ```{tip}
 project/nor is the corresponding nor solution, compilation and download methods are the same, the difference is the corresponding board.
 ```
 ## Expected Results
-<!-- Explain the example running results, such as which LEDs will light up, what logs will be printed, so that users can judge whether the example is running normally. The running results can be explained step by step combined with the code -->
-This example operates FlashDB through FINSH commands:  
+<!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
+This example operates FlashDB through FINSH commands:\
 KVDB:
-Purpose | Command | Example
-|---|--|--|
-Set kvdb|kvdb set [key] [data type:int\|str] [value]|`kvdb set "kv1" int 100` 
-Read kvdb|kvdb get [key] [data type:int\|str]|`kvdb get "kv1" int`
-Delete kvdb|kvdb del [key]|`kvdb del "kv1"`
+| Purpose     | Command                                    | Example                  |
+| ----------- | ------------------------------------------ | ------------------------ |
+| Set kvdb    | kvdb set [key] [data type:int|str] [value] | `kvdb set "kv1" int 100` |
+| Read kvdb   | kvdb get [key] [data type:int|str]         | `kvdb get "kv1" int`     |
+| Delete kvdb | kvdb del [key]                             | `kvdb del "kv1"`         |
 
-Serial port output as follows:  
+Serial port output as follows:
 
 ```c
 // Set, read integer data
@@ -138,16 +143,16 @@ Serial port output as follows:
 12-23 00:53:20:116    kvdb get "key1" int
 12-23 00:53:20:120    [key1] int
 12-23 00:53:20:147    get the key1 failed
-```  
+```
 TSDB:
-Purpose | Command | Example
-|---|--|--|
-Add tsdb|tsdb append [value]|`tsdb append 1` 
-Query all tsdb|tsdb query_all|`tsdb query_all`
-Query tsdb by time|tsdb query_by_time [from timestamp] [to timestamp]|`tsdb query_by_time 0 946686530`
-Clear tsdb|tsdb clear|`tsdb clear`
+| Purpose            | Command                                            | Example                          |
+| ------------------ | -------------------------------------------------- | -------------------------------- |
+| Add tsdb           | tsdb append [value]                                | `tsdb append 1`                  |
+| Query all tsdb     | tsdb query_all                                     | `tsdb query_all`                 |
+| Query tsdb by time | tsdb query_by_time [from timestamp] [to timestamp] | `tsdb query_by_time 0 946686530` |
+| Clear tsdb         | tsdb clear                                         | `tsdb clear`                     |
 
-Serial port output as follows:  
+Serial port output as follows:
 ```c
 // clear tsdb
 12-23 00:55:21:376 TX:tsdb clear
@@ -189,14 +194,14 @@ Serial port output as follows:
 
 
 ## Reference Documentation
-<!-- For rt_device examples, the RT-Thread official website documentation provides more detailed explanations, you can add webpage links here, for example, refer to RT-Thread's [RTC documentation](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
+<!-- 对于rt_device的示例，rt-thread官网文档提供的较详细说明，可以在这里添加网页链接，例如，参考RT-Thread的[RTC文档](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
 
 + siflisdk\external\FlashDB\README.md
 + siflisdk\external\FlashDB\README_zh.md
 
 ## Update Log
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |10/2024 |Initial version |
-| | | |
-| | | |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 10/2024 | Initial version |
+|         |         |                 |
+|         |         |                 |

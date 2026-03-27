@@ -1,34 +1,37 @@
-
 # RT-Thread Device Drivers
 
-[device]: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/device
+[device]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/device
 
-[watchdog]: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/watchdog/watchdog
+[watchdog]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/watchdog/watchdog
 
-[touch]: https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/touch/touch
+[touch]:
+https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/touch/touch
 
 
-Introduction to RT-Thread device model: [I/O Device Model][device]
+For an introduction to the RT-Thread device model, see [I/O Device
+Model][device].
 
 
-## Chip Peripherals
+## On-chip Peripherals
 
-Device Driver            | Corresponding HAL           |
--------------------------|-----------------------------|
-[UART Device](uart.md)   | [UART](../hal/uart.md)            |
-[PIN Device](gpio.md)    | [GPIO](../hal/gpio.md)            | 
-[ADC Device](adc.md)     | [ADC](../hal/adc.md)             | 
-[HWTIMER Device](timer.md)| [GPT](../hal/gpt.md)             | 
-[I2C Device](i2c.md)     | [I2C](../hal/i2c.md)             | 
-[PWM Device](pwm.md)     | [GPT](../hal/gpt.md)             | 
-[RTC Device](rtc.md)     | [RTC](../hal/rtc.md)             | 
-[SPI Device](spi.md)     | [SPI](../hal/spi.md)             | 
-[Watchdog Device][watchdog] | [WDT](../hal/wdt.md)          | 
-[audprc_audcodec](i2s.md) | [audprc](../hal/audprc.md) and [audcodec](../hal/audcodec.md)          | 
-[I2S Audio Device](i2s.md) | [I2S](../hal/i2s.md)          | 
-[USBD Device](usbd.md)   | [USBC](../hal/pcd.md)             | 
-[SDIO Device](sdio.md)   |                             |
-[EPIC Driver](epic.md)       |  [EPIC](/hal/epic.md) | 
+| Device Drivers                             | Corresponding HAL                                         |
+| ------------------------------------------ | --------------------------------------------------------- |
+| [UART Device](uart.md)                     | [UART](/hal/uart.md)                                      |
+| [PIN Device](gpio.md)                      | [GPIO](/hal/gpio.md)                                      |
+| [ADC Device](adc.md)                       | [ADC](/hal/adc.md)                                        |
+| [HWTIMER Device](timer.md)                 | [GPT](/hal/gpt.md)                                        |
+| [I2C Device](i2c.md)                       | [I2C](/hal/i2c.md)                                        |
+| [PWM Device](pwm.md)                       | [GPT](/hal/gpt.md)                                        |
+| [RTC Device](rtc.md)                       | [RTC](/hal/rtc.md)                                        |
+| [SPI Device](spi.md)                       | [SPI](/hal/spi.md)                                        |
+| [Watchdog Device][watchdog]                | [WDT](/hal/wdt.md)                                        |
+| [audprc_audcodec](audprc_audcodec.md)      | [audprc](/hal/audprc.md) and [audcodec](/hal/audcodec.md) |
+| [I2S Audio Device](i2s.md)                 | [I2S](/hal/i2s.md)                                        |
+| [USBD Device](usbd.md)                     | [USBC](/hal/pcd.md)                                       |
+| [SDIO Device](sdio.md)                     |                                                           |
+| [Graphics Rendering Driver Layer](epic.md) | [EPIC](/hal/epic.md)                                      |
 
 ```{toctree}
 :hidden:
@@ -41,7 +44,8 @@ i2c.md
 pwm.md
 rtc.md
 spi.md
-audio.md
+audprc_audcodec.md
+i2s.md
 usbd.md
 sdio.md
 spi_flash.md
@@ -51,23 +55,28 @@ epic.md
 
 
 ### Configuration
-Run `menuconfig`, then enter the `On-chip Peripheral RTOS Drivers` menu to configure the peripherals to be used. After selecting a device in menuconfig, it means that the corresponding device will be registered during system initialization, and the application can use the `rt_device_find` interface to obtain the device pointer by device name. For unregistered devices, `rt_device_find` will return a NULL pointer. For example, after selecting the UART1 device, the application can use `rt_device_find("uart1")` to obtain the device pointer.
+Run `menuconfig` and navigate to the `On-chip Peripheral RTOS Drivers` menu to
+configure the required peripherals. Selecting a device in menuconfig ensures it
+is registered during system initialization. Once registered, applications can
+retrieve the device pointer by name using the `rt_device_find` interface. If a
+device is not registered, `rt_device_find` returns a null pointer. For example,
+after enabling the UART1 device, the application can obtain its pointer using
+`rt_device_find("uart1")`.
 
 ```{note}
-If running `menuconfig` in the project directory, you need to add `--board=<board_name>` to specify the board being used. Refer to the instructions in [](/app_development/create_application.md). The modified configuration is saved in `proj.conf`.
+When running `menuconfig` from the project directory, use the `--board=<board_name>` option to specify the target board, as described in [](/app_development/create_application.md). The modified configuration is saved to `proj.conf`.</board_name>
 ```
+
 
 
 ## Board-Level Peripherals
 
-- [Display Device](lcd.md)
-- [Touch Device](touch.md)
-
+- [Display Devices](lcd.md)
+- [Touch Devices](touch.md)
 
 ```{toctree}
 :hidden:
 
 lcd.md
 touch.md
-
 ```

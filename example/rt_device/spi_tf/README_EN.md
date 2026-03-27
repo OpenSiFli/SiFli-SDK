@@ -1,16 +1,21 @@
 # SD Card File System Performance Test Example
+(For an overall overview of the examples and their usage, please refer to the
+`README.md` file in the parent "examples" directory.)
 
-(For an overall overview of the examples and their usage, please refer to the `README.md` file in the parent "examples" directory.)
-
-This example demonstrates how to perform file system performance testing on SD cards via SPI interface on the SF32LB52x platform. The example implements real-time speed monitoring, buffer optimization, and detailed performance analysis functionality.
+This example demonstrates how to perform file system performance testing on SD
+cards via SPI interface on the SF32LB52x platform. The example implements
+real-time speed monitoring, buffer optimization, and detailed performance
+analysis functionality.
+- **RT-Thread File System**: Using DFS (Device File System) framework for file
+  operations - [API
+  Reference](https://www.rt-thread.org/document/site/programming-manual/filesystem/filesystem/)
+- **SPI Driver**: Communication with SD card through SPI bus - [API
+  Reference](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/drivers/spi.html)
+- **FAT File System**: Using ELM FAT file system for data storage
+- **HAL Layer Interface**: Using Hardware Abstraction Layer for low-level
+  hardware control
 
 This example utilizes the following features of SiFli-SDK:
-- **RT-Thread File System**: Using DFS (Device File System) framework for file operations - [API Reference](https://www.rt-thread.org/document/site/programming-manual/filesystem/filesystem/)
-- **SPI Driver**: Communication with SD card through SPI bus - [API Reference](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/drivers/spi.html)
-- **FAT File System**: Using ELM FAT file system for data storage
-- **HAL Layer Interface**: Using Hardware Abstraction Layer for low-level hardware control
-
-Based on this example, the following applications can be created:
 - Data logger applications (such as sensor data storage)
 - Multimedia file storage systems
 - Embedded database applications
@@ -19,7 +24,10 @@ Based on this example, the following applications can be created:
 
 ## Usage
 
-The following subsections provide only absolutely necessary information. For complete steps on configuring SiFli-SDK and using it to build and run projects, please refer to [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html).
+The following subsections provide only absolutely necessary information. For
+complete steps on configuring SiFli-SDK and using it to build and run projects,
+please refer to [SiFli-SDK Quick
+Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html).
 
 ## Supported Development Boards
 
@@ -39,116 +47,118 @@ This example has been verified to run on the following development boards:
    - Uses SPI1 bus (already connected on board)
 
 **Hardware Connection Description**:
-| SD Card Pin | Function | Dev Board Pin |
-|-------------|----------|---------------|
+| SD Card Pin | Function    | Dev Board Pin   |
+| ----------- | ----------- | --------------- |
 | CS          | Chip Select | Auto-configured |
-| MOSI        | Data Input | SPI1_MOSI |
-| MISO        | Data Output | SPI1_MISO |
-| CLK         | Clock | SPI1_CLK |
-| VDD         | Power | 3.3V |
-| GND         | Ground | GND |
+| MOSI        | Data Input  | SPI1_MOSI       |
+| MISO        | Data Output | SPI1_MISO       |
+| CLK         | Clock       | SPI1_CLK        |
+| VDD         | Power       | 3.3V            |
+| GND         | Ground      | GND             |
 
 ### Software Requirements
 
 - RT-Thread operating system (integrated in SDK)
-- Serial terminal software (such as PuTTY, SecureCRT, etc., for viewing output and inputting commands)
+- Serial terminal software (such as PuTTY, SecureCRT, etc., for viewing output
+  and inputting commands)
 
 ## Example Output
 
-If you see the following console output, the example should be running correctly:
+If you see the following console output, the example should be running
+correctly:
 
 ```
 SFBL
-Serial:c2,Chip:4,Package:4,Rev:7  Reason:00000000
+Serial: c2, Chip: 4, Package: 4, Rev: 7  Reason: 00000000
 
-[I/drv.adc] Get ADC configure fail
+[I/drv.adc] ADC configuration failed
 
 
  \ | /
 - SiFli Corporation
  / | \     build on Jul 18 2025, 2.4.0 build 00000000
  2020 - 2022 Copyright by SiFli team
-mount /dev sucess
-[BUS]spi1 probe sdcard...
-[MSD] 1006 [err] wait ready timeout!
+/dev mounted successfully
+[BUS] SPI1 probing SD card...
+[MSD] 1006 [err] Wait ready timeout!
 
-[MSD] 1006 [info] SD card goto IDLE mode OK!
+[MSD] 1006 [info] SD card entered IDLE mode successfully!
 
-[MSD] 1007 [info] CMD8 response : 0x01 0xF0 0x00 0x01 0xAA
+[MSD] 1007 [info] CMD8 response: 0x01 0xF0 0x00 0x01 0xAA
 
-[MSD] 1008 [info] Ver2.00 or later or SDHC or SDXC memory card!
+[MSD] 1008 [info] Ver 2.00+ or SDHC/SDXC memory card detected
 
 [MSD] 1009 SD_V2: READ_OCR
-[MSD] 1009 response:1,0,ff,80
-[MSD] 1010 [info] OCR is 0x00FF8000
+[MSD] 1009 response: 1, 0, ff, 80
+[MSD] 1010 [info] OCR: 0x00FF8000
 
-[MSD] 1041 SD_V2 again: READ_OCR
-[MSD] 1041 [info] OCR 2nd read is 0xC0FF8000
+[MSD] 1041 SD_V2 retry: READ_OCR
+[MSD] 1041 [info] OCR 2nd read: 0xC0FF8000
 
-[MSD] 1042 [info] It is SD2.0 SDHC Card!!!
+[MSD] 1042 [info] SD 2.0 SDHC card detected
 
 [MSD] 1044 [info] CSD Version 2.0
 
-[MSD] 1044 [info] TRAN_SPEED: 0x32, 10Mbit/s.
+[MSD] 1044 [info] TRAN_SPEED: 0x32, 10 Mbit/s
 
-[MSD] 1045 [info] CSD : C_SIZE : 60719
+[MSD] 1045 [info] CSD: C_SIZE: 60719
 
-[MSD] 1045 [info] card capacity : 29.64 Gbyte
+[MSD] 1045 [info] Card capacity: 29.64 GB
 
-[MSD] 1046 [info] sector_count : 62177280
+[MSD] 1046 [info] Sector count: 62177280
 
-[SD]msd init ok
-find sd0 ok ! 2000d1ac
+[SD] MSD initialization successful
+Found sd0: 2000d1ac
 [I/drv.rtc] PSCLR=0x80000100 DivAI=128 DivAF=0 B=256
-[I/drv.rtc] RTC use LXT RTC_CR=00000001
+[I/drv.rtc] RTC using LXT, RTC_CR=00000001
 
-[I/drv.rtc] Init RTC, wake = 0
+[I/drv.rtc] Initializing RTC, wake = 0
 
-[I/drv.audprc] init 00 ADC_PATH_CFG0 0x606
+[I/drv.audprc] Init 00 ADC_PATH_CFG0 0x606
 
-[I/drv.audprc] HAL_AUDPRC_Init res 0
+[I/drv.audprc] HAL_AUDPRC_Init result: 0
 
-[I/drv.audcodec] HAL_AUDCODEC_Init res 0
+[I/drv.audcodec] HAL_AUDCODEC_Init result: 0
 
-[I/TOUCH] Regist touch screen driver, probe=120260f5 
-call par CFG1(3313)
+[I/TOUCH] Registering touch screen driver, probe=120260f5 
+Calling par CFG1 (3313)
 
 fc 9, xtal 2000, pll 2095
 
-call par CFG1(3313)
+Calling par CFG1 (3313)
 
 fc 7, xtal 2000, pll 1676
 
-fal_mtd_msd_device_create dev:sd0 part:root offset:0x0, size:0xfa000
-fal_mtd_msd_device_create dev:sd0 part:misc offset:0xfa000, size:0xfa000
-mount fs on flash to root success
-mount fs on flash to FS_MSIC success
+fal_mtd_msd_device_create dev: sd0, part: root, offset: 0x0, size: 0xfa000
+fal_mtd_msd_device_create dev: sd0, part: misc, offset: 0xfa000, size: 0xfa000
+Flash filesystem mounted to root successfully
+Flash filesystem mounted to FS_MSIC successfully
 
 ========== SD Card File System Performance Test ==========
-SF32LB52x SD Card Test Program
-Tick Per Second: 1000
+SF32LB52x SD Card Test Utility
+Ticks Per Second: 1000
 Optimal Buffer Size: 64 KB
 SD Operation Interval: 5 ms
 
-Use 'help' to see available commands
+Type 'help' for a list of available commands
 Quick commands:
-  fs_write /test.dat 16         - Test write speed (16MB)
-  fs_read /test.dat 16          - Test read speed (16MB)
-  sd_optimize                   - Check SD configuration
-  buffer_optimize               - Test different buffer sizes
-  fs_speed_test 32              - Complete speed test (32MB)
+  fs_write /test.dat 16         - Test write speed (16 MB)
+  fs_read /test.dat 16          - Test read speed (16 MB)
+  sd_optimize                   - Verify SD configuration
+  buffer_optimize               - Evaluate different buffer sizes
+  fs_speed_test 32              - Comprehensive speed test (32 MB)
 =========================================================
 
-msh />
+msh /&gt;
 ```
 
-At this point, users need to input commands through the serial terminal to interact with the example. For example, input `fs_write /test.dat 16` to test the speed of writing a 16MB file.
-
+At this point, users need to input commands through the serial terminal to
+interact with the example. For example, input `fs_write /test.dat 16` to test
+the speed of writing a 16MB file.
 ### Usage of Commands in Quick Commands
-
 #### fs_write /test.dat <...>
-Enter a number in the <...> position to test the speed of writing a file of that size (in MB). For example:
-`fs_write /test.dat 32`
+Enter a number in the <...> position to test the speed of writing a file of that
+size (in MB). For example: `fs_write /test.dat 32`
 ```
 ========== Write Speed Test ==========
 File: /test.dat
@@ -170,12 +180,10 @@ Total bytes: 33554432 (32 MB)
 Total time: 28.16 seconds
 Average speed: 1.14 MB/s
 ------------------------------
-
 ```
-
 #### fs_read /test.dat <...>
-Enter a number in the <...> position to test the speed of reading a file of that size (in MB). For example:
-`fs_read /test.dat 8`
+Enter a number in the <...> position to test the speed of reading a file of that
+size (in MB). For example: `fs_read /test.dat 8`
 ```
 ========== Read Speed Test ==========
 File: /test.dat
@@ -191,14 +199,14 @@ Buffer: 64 KB
 [00:06] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 7.5/8.0 MB (93.8%)
 
 ----- Read Test Results -----
-Total bytes: 8388608 (8 MB)
-Total time: 6.67 seconds
-Average speed: 1.20 MB/s
+Total data: 8,388,608 bytes (8 MB)
+Elapsed time: 6.67 seconds
+Average throughput: 1.20 MB/s
 -----------------------------
 ```
-
 #### sd_optimize
-This is a command to check SD configuration. It will list the main parameters of the environment where this example is running, with the following effect:
+This is a command to check SD configuration. It will list the main parameters of
+the environment where this example is running, with the following effect:
 ```
 ========== SD Card Configuration ==========
 SD Card Type: SDHC
@@ -221,18 +229,18 @@ SPI Configuration:
 Buffer Address: 0x60000000
 Buffer Size: 64 KB
 ===========================================
-
 ```
-
 #### buffer_optimize
-This is an option to test different buffer sizes. It can test read and write speeds at 4KB-512KB respectively, display the optimal results, and provide parameter modification suggestions, with the following effect:
+This is an option to test different buffer sizes. It can test read and write
+speeds at 4KB-512KB respectively, display the optimal results, and provide
+parameter modification suggestions, with the following effect:
 ```
 ========== Buffer Size Optimization Test ==========
-Testing with proper SD card rest intervals...
-Each test uses isolated files and adequate rest time.
+Executing tests with standardized SD card cooldown periods...
+Each iteration utilizes isolated files and adequate idle time.
 ====================================================
 [1/8] Testing 4 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_4k_0.dat)...
     Write: 0.92 MB/s [NEW BEST]
   Read test...
@@ -240,7 +248,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 0.92 MB/s, Read 1.13 MB/s
 
 [2/8] Testing 8 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_8k_1.dat)...
     Write: 1.04 MB/s [NEW BEST]
   Read test...
@@ -248,7 +256,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.04 MB/s, Read 1.16 MB/s
 
 [3/8] Testing 16 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_16k_2.dat)...
     Write: 1.10 MB/s [NEW BEST]
   Read test...
@@ -256,7 +264,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.10 MB/s, Read 1.19 MB/s
 
 [4/8] Testing 32 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_32k_3.dat)...
     Write: 1.14 MB/s [NEW BEST]
   Read test...
@@ -264,7 +272,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.14 MB/s, Read 1.20 MB/s
 
 [5/8] Testing 64 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_64k_4.dat)...
     Write: 1.14 MB/s
   Read test...
@@ -272,7 +280,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.14 MB/s, Read 1.20 MB/s
 
 [6/8] Testing 128 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_128k_5.dat)...
     Write: 1.14 MB/s [NEW BEST]
   Read test...
@@ -280,7 +288,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.14 MB/s, Read 1.20 MB/s
 
 [7/8] Testing 256 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_256k_6.dat)...
     Write: 1.14 MB/s
   Read test...
@@ -288,7 +296,7 @@ Each test uses isolated files and adequate rest time.
   Summary: Write 1.14 MB/s, Read 1.20 MB/s
 
 [8/8] Testing 512 KB buffer:
-  SD card resting (3 seconds)...
+  SD card cooldown (3 seconds)...
   Write test (/buftest_512k_7.dat)...
     Write: 1.15 MB/s [NEW BEST]
   Read test...
@@ -297,18 +305,18 @@ Each test uses isolated files and adequate rest time.
 
 
 ========== Optimization Results ==========
-Best Write: 512 KB buffer -> 1.15 MB/s
-Best Read:  512 KB buffer -> 1.21 MB/s
+Optimal Write: 512 KB buffer -&gt; 1.15 MB/s
+Optimal Read:  512 KB buffer -&gt; 1.21 MB/s
 Current buffer: 64 KB
 
 Recommendations:
-Recommended buffer size: 512 KB
-Consider updating OPTIMAL_BUFFER_SIZE to 512 KB
+Suggested buffer size: 512 KB
+Consider updating 'OPTIMAL_BUFFER_SIZE' to 512 KB.
 ==========================================
 ```
-
 #### fs_speed_test <...>
-Comprehensive test command. Enter a number in the <...> position to determine the test file size (MB) and perform a complete speed test. For example:
+Comprehensive test command. Enter a number in the <...> position to determine
+the test file size (MB) and perform a complete speed test. For example:
 ```
 ========== Enhanced Speed Test ==========
 File: /speed_test.dat, Size: 8 MB
@@ -345,7 +353,7 @@ Buffer: 64 KB
 ====================================
 
 [00:01] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 1.3/8.0 MB (15.6%)
-[00:02] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 2.5/8.0 MB (31.3%)
+[00:02] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 2.5/31.3 MB (31.3%)
 [00:03] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 3.8/8.0 MB (46.9%)
 [00:04] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 5.0/8.0 MB (62.5%)
 [00:05] Read: 1.20 MB/s (Avg: 1.20 MB/s) - 6.3/8.0 MB (78.1%)
@@ -359,6 +367,21 @@ Average speed: 1.20 MB/s
 
 ========== Test Complete ==========
 ```
+
+### Performance test for U-disk mounting via USB transmission
+
+The performance of this example, with USB transmission enabled and the file
+system mounted as a U-disk in the test environment, is as follows:
+
+#### Write Performance
+- Test Conditions: Write 200 MB (204,800 KB) of data
+- Duration: 6 min 53 sec (413 sec)
+- Average Write Speed: Approx. 495 KB/s
+
+#### Read Performance
+- Test Conditions: Read 200 MB (204,800 KB) of data
+- Duration: 6 min 01 sec (361 sec)
+- Average Read Speed: Approx. 567 KB/s
 
 ## Example Analysis
 
@@ -428,7 +451,7 @@ Error: the flash device name (sd0) is not found.
 #### 2. File System Mount Failure
 **Error Message**:
 ```
-mount fs on flash to root fail
+Failed to mount flash file system to root.
 ```
 **Solution**:
 - Check if SD card format is FAT32
@@ -443,11 +466,11 @@ mount fs on flash to root fail
 **Solution**:
 1. Run buffer optimization:
    ```
-   msh />buffer_optimize
+   msh /&gt;buffer_optimize
    ```
 2. Check SD card configuration:
    ```
-   msh />sd_optimize
+   msh /&gt;sd_optimize
    ```
 3. Replace with higher speed class SD card (recommend Class 10 or UHS-I)
 
@@ -460,30 +483,33 @@ mount fs on flash to root fail
 
 ### Debugging Tips
 
-1. **Enable Verbose Logging**
-   Define in `spi_msd.c`:
+1. **Enable Verbose Logging** Define in `spi_msd.c`:
    ```c
    #define MSD_TRACE
    ```
 
 2. **Monitor Memory Usage**
    ```
-   msh />free
+   msh /&gt;free
    ```
 
 3. **View Thread Status**
    ```
-   msh />list_thread
+   msh /&gt;list_thread
    ```
 
-If you have any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
+If you have any technical questions, please submit an
+[issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
 
 ## Reference Documentation
 
-- [RT-Thread File System Documentation](https://www.rt-thread.org/document/site/programming-manual/filesystem/filesystem/)
-- [SiFli SDK SPI Driver Documentation](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/drivers/spi.html)
+- [RT-Thread File System
+  Documentation](https://www.rt-thread.org/document/site/programming-manual/filesystem/filesystem/)
+- [SiFli SDK SPI Driver
+  Documentation](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/drivers/spi.html)
 - [FAT File System Specification](http://elm-chan.org/fsw/ff/00index_e.html)
-- [SD Card SPI Mode Protocol Specification](https://www.sdcard.org/downloads/pls/)
+- [SD Card SPI Mode Protocol
+  Specification](https://www.sdcard.org/downloads/pls/)
 
 ## SD Card Performance Test - Quick Command Reference
 
@@ -576,6 +602,7 @@ rm /speed_test.dat
 ls /
 ```
 
+
 ### Tips
 
 - Use `help` to see all commands
@@ -584,10 +611,13 @@ ls /
 
 ### Quick Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| SD not found | Re-insert SD card |
-| Mount failed | Execute `dfs_mkfs elm root` |
-| Low speed | Run `buffer_optimize` |
-| Test hangs | Restart system |
-
+| Issue              | Solution                    |
+| ------------------ | --------------------------- |
+| SD not found       | Re-insert SD card           |
+| Mount failed       | Execute `dfs_mkfs elm root` |
+| Low speed          | Run `buffer_optimize`       |
+| Test hangs         | Restart system              |
+| Throughput too low | Execute `buffer_optimize`   |
+| Low speed          | Run `buffer_optimize`       |
+| Test hangs         | Restart system              |
+| Test hangs         | Restart system              |

@@ -1,68 +1,124 @@
 # FatFs NAND Example
+Source path: example/storage/fatfs/nand
+
 ## Usage Guide
-This example demonstrates FatFs file system functionality using FAT format. Common file commands can be called in UART console, such as:
+- sf32lb52-lcd_a128r16
+- sf32lb56-lcd_a128r12n1
+- sf32lb58-lcd_a128r32n1
 
-```
-df               - Disk free
-mountfs          - Mount device to file system
-mkfs             - Format disk with file system
-mkdir            - Create the DIRECTORY.
-pwd              - Print the name of the current working directory.
-cd               - Change the shell working directory.
-rm               - Remove(unlink) the FILE(s).
-cat              - Concatenate FILE(s)
-mv               - Rename SOURCE to DEST.
-cp               - Copy SOURCE to DEST.
-ls               - List information about the FILEs.
-
-```
-  
-### File System Packaging
-
-The default compilation script does not download file system partition image files, so if the mount fails during the first program run, it will automatically format the partition. For specific implementation, see the `mnt_init` function in `main.c`. The SDK also provides functionality to package files in specified directories and generate file system image files. You can uncomment the following code in `SConstruct`. This code packages files in the disk directory during compilation and generates the `fs_root.bin` file in the build directory. If the partition table in `ptab.json` defines a partition with `img` attribute as `fs_root`, the download script will simultaneously download that bin file.
-      
-```
-# fs_bin=FileSystemBuild( "../disk", env)
-# AddCustomImg("fs_root",bin=[fs_bin])
-```
 ## Example Usage Instructions
+This example demonstrates the file system capabilities of FatFs using the FAT
+format. Standard file system commands can be executed via the UART console,
+including:
+
+```
+df               - Display free disk space
+mountfs          - Mount a device to the file system
+mkfs             - Format a disk with a file system
+mkdir            - Create a directory
+pwd              - Print the name of the current working directory
+cd               - Change the shell working directory
+rm               - Remove (unlink) files
+cat              - Concatenate and display file content
+mv               - Rename SOURCE to DEST
+cp               - Copy SOURCE to DEST
+ls               - List information about files
+```
 ### Hardware Requirements
-1. To run the example, you need to have a development board that supports this example
-2. A USB data cable capable of data transmission
+The example includes a file system performance benchmark, which can be initiated
+using the `fs_test` command:
+- To run the example, you need to have a development board that supports this
+  example
+- A USB data cable capable of data transmission
+- The benchmark evaluates both write and read speeds.
+
+Expected test results:
+```c
+TX:fs_test
+Creating test file with 1024 KB data...
+Written 0 KB...
+Written 100 KB...
+Written 200 KB...
+Written 300 KB...
+Written 400 KB...
+Written 500 KB...
+Written 600 KB...
+Written 700 KB...
+Written 800 KB...
+Written 900 KB...
+Written 1000 KB...
+Write test completed
+Write Speed: 1721799 bytes/sec (1681.44 KB/s)
+Write Ops/sec: 1681 ops/sec
+Reading test file...
+Read 0 KB...
+Read 100 KB...
+Read 200 KB...
+Read 300 KB...
+Read 400 KB...
+Read 500 KB...
+Read 600 KB...
+Read 700 KB...
+Read 800 KB...
+Read 900 KB...
+Read 1000 KB...
+Read test completed
+Read Speed: 5518821 bytes/sec (5389.47 KB/s)
+Read Ops/sec: 5389 ops/sec
+```
+
+### menuconfig Configuration
+
+![alt text]{1} 2. Use device virtual file system
+
+```
+//Execute command
+ menuconfig --board=em-lb561
+```
+## Project Description
+### Hardware Requirements
+1. Prerequisites for running the routine include a supported development board
+and 2. a USB data cable capable of data transmission.
 ### menuconfig Configuration
 ```
- //Execute command
+// Execute command
  menuconfig --board=em-lb561
-```  
-1. First, you need to enable MTD Dhara Nand Flash device in menuconfig
+```
+1. Enable the MTD Dhara Nand Flash device in menuconfig.
 
-![alt text](assets/file_system_1.png)
-2. Use device virtual file system
+![alt text](assets/file_system_1.png) 2. Enable the Device Virtual File System
+(DFS).
 
-![alt text](assets/file_system_2.png)
-3. Select HAL Assert type
+![alt text](assets/file_system_2.png) 3. Select the HAL Assert type.
 
 ![alt text](assets/file_system_3.png)
 
-## Project Description
-- Compilation method: Enter project directory and execute command `scons --board=<board_name> -j8`, where board_name is the board name. For example, to compile eh-lb561 board, the complete command is `scons --board=eh-lb561 -j8`. The compiled image file is stored in HCPU's build_<board_name> directory. For common project usage, refer to <<General Project Build Method>>
-- Download method: Enter project directory and execute command `build_<board_name>_hcpu\download.bat(uart_download.bat)`, where board_name is the board name. If download has uart prefix, it uses serial port for program burning; without it, it uses jlink burning (depending on whether the board model supports jlink burning). For example, compiling eh-lb561 board, the complete command is `build_en-lb561_hcpu\download.bat`
-
 ## Example Output Results Display
-The following results show the log after the example runs on the development board. If you cannot see these logs, it means the example did not run successfully as expected and requires troubleshooting.
+- Send ls through serial port to view files in root directory.
+- Input mkdir test1 to create test1 folder (directory).
+
+## Example Output Results
+The following log shows the output of the example running on the development
+board. If these logs do not appear, the example failed to run as expected and
+troubleshooting is required.
 ```
-mount fs on flash root success//Indicates successful file system mounting
+Filesystem successfully mounted on flash root.
 ```
-1. Send ls through serial port to view files in root directory.
+1. Execute `ls` via the serial terminal to list the files in the root directory.
 
-2. Input mkdir test1 to create test1 folder (directory).
+2. Enter `mkdir test1` to create a new directory named `test1`.
 
-3. Input cd+directory name to go to XXX directory, input pwd to check if current working path is in the cd directory.
+3. Use `cd` followed by the directory name to navigate to the specified path.
+Execute `pwd` to verify that the current working directory has updated
+correctly.
 
-4. You can create mkdir test2 again in this working directory, use ls to check if creation was successful in this directory.
-![alt text](assets/file_system_log_1.png)
+4. You may create another directory within this path using `mkdir test2`. Run
+`ls` to confirm the directory was created successfully. ![alt
+text](assets/file_system_log_1.png)
 ### Troubleshooting
-If the log does not show expected log and phenomena, troubleshooting can be done from the following aspects:
-* Whether hardware connection is normal
-* Check if USB cable has data transmission capability
-* Whether the above menu is configured correctly (especially board flash model)
+If the expected logs or behavior do not appear, please troubleshoot the
+following areas:
+* Verify that the hardware connections are secure and correct.
+* Ensure the USB cable supports data transfer.
+* Verify that the menu configuration is correct (specifically the Flash model
+  for the board).

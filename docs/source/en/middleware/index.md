@@ -12,7 +12,7 @@ pm.md
 share_preference.md
 button.md
 gui_app_framework.md
-watch_complication.md
+watch_complications.md
 file_system.md
 logger.md
 dfu_service/index.md

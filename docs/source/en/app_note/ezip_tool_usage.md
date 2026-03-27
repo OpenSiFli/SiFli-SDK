@@ -1,94 +1,103 @@
+# EZIP Image Conversion Tool User Guide
 
-# EZIP Image Conversion Tool Usage
-
-## 1. Tool Description
+## 1. Tool Overview
 
 Path: _$SDK_ROOT/tools/png2ezip/ezip.exe_
 
-Purpose: Converts PNG images to either EZIP format, PIXEL format binary files, or LVGL format C files. The first 4 bytes of the binary file are the file header, followed by EZIP or PIXEL formatted data.  
-The header format is as follows (little-endian):
+Purpose: Converts PNG images into EZIP or PIXEL format binary files, or
+LVGL-compatible C source files. For binary files, the first 4 bytes constitute
+the file header, followed by the EZIP or PIXEL data. The file header format
+(little-endian) is as follows:
 
 ### File Header Format
 
-| [31:21]  | [20:10]  | [9:5]      | [4:0]      |
-|----------|----------|------------|------------|
-| Image Height | Image Width | Reserved | Format  |
+| [31:21]      | [20:10]     | [9:5]    | [4:0]  |
+| ------------ | ----------- | -------- | ------ |
+| Image Height | Image Width | Reserved | Format |
 
-### Format Values
+### Format Value
 
-| Format | Meaning                           |
-|--------|-----------------------------------|
-| 1      | EZIP format without ALPHA         |
-| 2      | EZIP format with ALPHA            |
-| 4      | PIXEL format without ALPHA        |
-| 5      | PIXEL format with ALPHA           |
+| Format | Description                 |
+| ------ | --------------------------- |
+| 1      | EZIP (without Alpha)        |
+| 2      | EZIP (with Alpha)           |
+| 4      | Pixel formats without alpha |
+| 5      | Pixel formats with alpha    |
 
-PIXEL format without ALPHA supports RGB565 and RGB888, while PIXEL format with ALPHA supports ARGB565 and ARGB888. The detailed format is as follows (all little-endian).  
-The tool automatically generates the corresponding format based on whether the original PNG file includes an alpha channel. If the source image does not contain alpha, the resulting format will not contain alpha either.
+
+Pixel formats without alpha include RGB565 and RGB888, while pixel formats with
+alpha include ARGB1555 and ARGB8888. Detailed formats (all little-endian) are
+shown below. During conversion, the tool automatically selects the appropriate
+format based on whether the source PNG file contains an alpha channel; if the
+source image lacks alpha, the generated format will also exclude alpha.
 
 ### RGB565
-| [15:11] | [10:5]  | [4:0]    |
-|---------|---------|----------|
-| Red     | Green   | Blue     |
+| [15:11] | [10:5] | [4:0] |
+| ------- | ------ | ----- |
+| Red     | Green  | Blue  |
 
 ### RGB888
-| [23:16] | [15:8]  | [7:0]    |
-|---------|---------|----------|
-| Red     | Green   | Blue     |
+| [23:16] | [15:8] | [7:0] |
+| ------- | ------ | ----- |
+| Red     | Green  | Blue  |
 
 ### ARGB565
-| [23:16] | [15:11] | [10:5]  | [4:0]    |
-|---------|---------|---------|----------|
-| Alpha   | Red     | Green   | Blue     |
+| [23:16] | [15:11] | [10:5] | [4:0] |
+| ------- | ------- | ------ | ----- |
+| Alpha   | Red     | Green  | Blue  |
 
-### ARGB888
-| [31:24] | [23:16] | [15:8]  | [7:0]    |
-|---------|---------|---------|----------|
-| Alpha   | Red     | Green   | Blue     |
 
-## 2. Usage Instructions
+### ARGB8888
+| [31:24] | [23:16] | [15:8] | [7:0] |
+| ------- | ------- | ------ | ----- |
+| Alpha   | Red     | Green  | Blue  |
 
-### Generate PIXEL Format Binary File
 
-- Generate RGB565 or ARGB565:
+## 2. Usage
+
+### Generate PIXEL format binary files
+
+- Generate RGB565 or ARGB1555
 ```
 ezip -convert png_filename.png -rgb565 -binfile 1
 ```
 
-- Generate RGB888 or ARGB888:
+- Generate RGB888 or ARGB888
 ```
 ezip -convert png_filename.png -rgb888 -binfile 1
 ```
 
-After completion, the file _png_filename.bin_ will be generated in the tool directory.
+Upon completion, the file _png_filename.bin_ is generated in the tool directory.
 
-### Generate EZIP Format Binary File
 
-- Generate an EZIP file compressed with RGB565 or ARGB565:
+### Generate EZIP format binary files
+
+- Generate an EZIP file compressed from RGB565 or ARGB565
 ```
 ezip -convert png_filename.png -rgb565 -binfile 2
 ```
 
-- Generate an EZIP file compressed with RGB888 or ARGB888:
+- Generate an EZIP file compressed from RGB888 or ARGB888
 ```
 ezip -convert png_filename.png -rgb888 -binfile 2
 ```
 
-After completion, the file _png_filename.bin_ will be generated in the tool directory.
+Upon completion, the file _png_filename.bin_ is generated in the tool directory.
 
-### Generate PIXEL Format LVGL C File
+### Generate LVGL C files in PIXEL format
 
-- Generate RGB565 or ARGB565 format:
+- Generate RGB565 or ARGB565 format
 ```
 ezip -convert png_filename.png -rgb565 -cfile 1 -section ROM3_IMG
 ```
 
-- Generate RGB888 or ARGB888 format:
+- Generate RGB888 or ARGB888
 ```
 ezip -convert png_filename.png -rgb888 -cfile 1 -section ROM3_IMG
 ```
 
-After completion, the file _png_filename.c_ will be generated in the tool directory, and the section name will be _.ROM3_IMG.png_filename_, for example:
+Upon completion, the file _png_filename.c_ is generated in the tool directory
+with the specified section name _.ROM3_IMG.png_filename_, for example:
 
 ```
 #ifndef LV_ATTRIBUTE_MEM_ALIGN
@@ -107,19 +116,20 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMG_eZIP_RGBARGB565A uint8_t png_filen
 }
 ```
 
-### Generate EZIP Format LVGL C File
+### Generate LVGL C files in EZIP format
 
-- Generate an EZIP format C file compressed with RGB565 or ARGB565:
+- Generate an EZIP format C file compressed from RGB565 or ARGB565
 ```
 ezip -convert png_filename.png -rgb565 -cfile 2 -section ROM3_IMG
 ```
 
-- Generate an EZIP format C file compressed with RGB888 or ARGB888:
+- Generate a C file in EZIP format by compressing RGB888 or ARGB888 data.
 ```
 ezip -convert png_filename.png -rgb888 -cfile 2 -section ROM3_IMG
 ```
 
-After completion, the file _png_filename.c_ will be generated in the tool directory, and the section name will be _.ROM3_IMG.png_filename_, for example:
+Upon completion, the file `png_filename.c` is generated in the tool directory,
+with the specified section name `.ROM3_IMG.png_filename`. For example:
 
 ```
 #ifndef LV_ATTRIBUTE_MEM_ALIGN
@@ -131,19 +141,24 @@ SECTION(".ROM3_IMG.png_filename")
 ALIGN(4)
 const LV_ATTRIBUTE_MEM_ALIGN uint8_t png_filename_map[] = { 
 ...
-}
 ```
 
-### Generate GZIP BIN File for Hardware EZIP Decompression
-
-- For example, to compress the file _file.bin_ in the same directory, use the following command:
+### Generate a GZIP BIN file for hardware EZIP decompression.
+- To compress `file.bin` in the same directory, use the following command:
 ```
 -gzip file.bin -length -noheader
 ```
+The command generates `file.bin.gz` in the tool directory. The first 4 bytes of
+this file represent the original data length. When performing hardware EZIP
+decompression (refer to `example/hal/ezip` for GZIP decompression), these 4
+bytes should not be passed as input parameters; instead, use this length to
+allocate the output buffer. The data following the 4-byte length header is the
+GZIP-compressed payload, which serves as the input for the hardware EZIP engine.
 
-After the operation, the file _file.bin.gz_ will be generated in the tool directory.  
-The first 4 bytes of this file represent the length of the original data. When performing hardware EZIP decompression (refer to example/hal/ezip for GZIP decompression), the length will be used to allocate the output buffer, and the decompressed data will be used directly as input for hardware EZIP.
-
-After running the gzip command, the decompressed data must be completely passed as input to the hardware EZIP. Therefore, if there is a large amount of data to decompress, the input and output buffers may not be enough.  
-It is recommended to first split the data into chunks, for example, by splitting the original file into 10KB parts, compressing each chunk separately. Then, during decompression, process each chunk sequentially.
+The compressed data from a single GZIP run must be passed in its entirety to the
+hardware EZIP input parameters during decompression. Consequently, when
+decompressing large datasets, the required input and output buffers may exceed
+available memory. It is recommended to partition the data first—for example, by
+splitting the original file into 10 KB blocks—compressing each block
+independently, and decompressing them sequentially to restore the data.
 

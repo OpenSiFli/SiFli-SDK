@@ -1,6 +1,5 @@
 # UART Example
 Source code path: example/hal/uart
-
 ## Supported Platforms
 Examples can run on the following development boards:
 * sf32lb52-nano series
@@ -9,22 +8,30 @@ Examples can run on the following development boards:
 * sf32lb56-lcd series
 
 ## Overview
-* Operate UART hal functions using RX DMA method, operate UART2 to verify its serial port transmission and reception capabilities
-* Note: After the development board resets, if uart2 prints logs consistent with the image below, it indicates success
-* Note: If the computer-side serial port is closed, this serial port will not print logs
-
+* Operate UART hal functions using RX DMA method, operate UART2 to verify its
+  serial port transmission and reception capabilities
+* Note: After the development board resets, if uart2 prints logs consistent with
+  the image below, it indicates success
+* Note: If the computer-side serial port is closed, this serial port will not
+  print logs
 ## Example Usage
 ### Compilation and Programming
-For detailed steps on compilation and download, please refer to the relevant introduction in [](/quickstart/get-started.md).
+For detailed steps on compilation and download, please refer to the relevant
+introduction in [](/quickstart/get-started.md).
 
-Confirm that rtconfig.h cannot contain the following two macros, otherwise the rt-thread system driver will also initialize the RT system uart once, causing uart redefinition:
+Confirm that rtconfig.h cannot contain the following two macros, otherwise the
+rt-thread system driver will also initialize the RT system uart once, causing
+uart redefinition:
 ```c
 #define CONFIG_BSP_USING_UART 1
 #define CONFIG_RT_USING_SERIAL is set 1
 ```
 ![alt text](assets/define_erro.png)
 
-Note: Directly modifying macros in rtconfig.h will still be ineffective. We need to enable it through the menuconfig command as follows. Enter the following command in the programming interface (board=board model):
+
+Note: Directly modifying macros in rtconfig.h will still be ineffective. We need
+to enable it through the menuconfig command as follows. Enter the following
+command in the programming interface (board=board model):
 
 ````{note}
 This example redirected printf to serial port transmission, but to avoid activating unnecessary semihosting code during Keil compilation, `proj.conf` is configured to use microlib:
@@ -33,76 +40,92 @@ CONFIG_USING_MICROLIB=y
 ```
 ````
 
+
 ```
 menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 ![alt text](assets/common.png)
 
-The resource selection in the menu is for rt-thread system driver usage. Here we are using hal, so uncheck the resources you want to use to prevent redefinition (press D+Enter to save after checking or unchecking):
-![alt text](assets/menuconfig1.png)
-![alt text](assets/menuconfig2.png)
+The resource selection in the menu is for rt-thread system driver usage. Here we
+are using hal, so uncheck the resources you want to use to prevent redefinition
+(press D+Enter to save after checking or unchecking): ![alt
+text](assets/menuconfig1.png) ![alt text](assets/menuconfig2.png)
 
-Switch to the example project directory and run the scons command to execute compilation: (board=board model)
+Switch to the example project directory and run the scons command to execute
+compilation: (board=board model)
 ```
 scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as prompted for download:
+Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as
+prompted for download:
 
 ```
 build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
-Uart Download
+UART Download
 
-please input the serial port num:5
+Please input the serial port number: 5
 ```
 
 ### Hardware Connection
-Physical position refers to the pin header position corresponding to the pins on the board
-|Board Name  | UART       | TX(Physical Position)     | RX(Physical Position)   |    
-|--------|------------|---------------|-------------------|
-|525    | UART2     | PAD_PA27（8）    | PAD_PA20（10）    |   
-|587  | UART2     | PAD_PA28 (CONN2 5)  |PAD_PA29 (CONN2 3)  |
-|56  | UART2     | PAD_PA37 (38)   |PAD_PA36 (40)  |
+Physical position refers to the pin header position corresponding to the pins on
+the board
+| Board Name | UART  | TX(Physical Position) | RX(Physical Position) |
+| ---------- | ----- | --------------------- | --------------------- |
+| 525        | UART2 | PAD_PA27（8）           | PAD_PA20（10）          |
+| 587        | UART2 | PAD_PA28 (CONN2 5)    | PAD_PA29 (CONN2 3)    |
+| 56         | UART2 | PAD_PA37 (38)         | PAD_PA36 (40)         |
+| 56         | UART2 | PAD_PA37 (38)         | PAD_PA36 (40)         |
 
-* PA27 is software-configured as UART2's TX, connected to the computer's USB-to-serial RX
-* PA20 is software-configured as UART2's RX, connected to the computer's USB-to-serial TX
+
+* PA27 is software-configured as UART2's TX, connected to the computer's
+  USB-to-serial RX
+* PA20 is software-configured as UART2's RX, connected to the computer's
+  USB-to-serial TX
 * GND is connected to the USB-to-serial GND, as shown below:
 
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 
+
+
 #### Example Output Results Display:
-* Log output:
-  Log ends with uart2 sending:
+* Log output: Log ends with uart2 sending:
   ```
-  Start uart demo!
-  uart2 hal demo!
-  uart2
-  uart demo end!
+  Initialising UART demo...
+  UART2 HAL demo...
+  UART2
+  UART demo completed.
   ```
-* Send `abc` to uart2, receive `abc` characters, newline character, carriage return character, total 5 character ASCII codes, print the following content:
+* Send `abc` to uart2, receive `abc` characters, newline character, carriage
+  return character, total 5 character ASCII codes, print the following content:
     ```
     TX:abc
-    rev:abc
+    RX:abc
     ```
 
 #### Example Output Results Display:
 ![alt text](assets/uart_log.png)
 
-The `rev: ` at the end of the log is the characters received from the computer's USB-to-serial TX:
+
+The `rev: ` at the end of the log is the characters received from the computer's
+USB-to-serial TX:
 ```
-Start uart demo!
-uart2 hal demo!
-uart2
-uart demo end!
+Initialising UART demo...
+UART2 HAL demo...
+UART2
+UART demo completed.
 TX:abc
-rev:abc
+RX:abc
 ```
 
 #### UART2 Configuration Process
-* Note that different board types may have different corresponding DMAC1_CHX_IRQHandler
-* Configure corresponding Uart2 and RX DMA interrupts, refer to the definitions within the `BSP_USING_UART2` macro and `UART2_RX_DMA_INSTANCE` macro in `dma_config.h` and `uart_config.h`:
+* Note that different board types may have different corresponding
+  DMAC1_CHX_IRQHandler
+* Configure corresponding Uart2 and RX DMA interrupts, refer to the definitions
+  within the `BSP_USING_UART2` macro and `UART2_RX_DMA_INSTANCE` macro in
+  `dma_config.h` and `uart_config.h`:
 
 ```c
 #if defined(BSP_USING_BOARD_EM_LB525XXX)
@@ -125,6 +148,9 @@ rev:abc
 #define UART_RX_DMA_IRQ_HANDLER UART2_DMA_RX_IRQHandler
 ```
 
+
+
+
 * Set corresponding IO ports for Uart2:
 ```c
 #if defined(BSP_USING_BOARD_EM_LB525XXX)
@@ -140,23 +166,24 @@ HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA37, USART2_TXD, PIN_PULLUP, 1);
 #endif
 ```
-
-**Note**: 
-1. Except for 55x chips, can be configured to any IO with PA*_I2C_UART function to output UART2 waveform (to query pin multiplexing table, search for corresponding board type pin multiplexing in project path files such as: bf0_pin_const.c)
-2. The last parameter of HAL_PIN_Set is for hcpu/lcpu selection, 1: select hcpu, 0: select lcpu
-3. Hcpu's PA port cannot be configured as Lcpu's uart peripheral, such as uart5, uart6 output
-
+**Note**:
+1. Except for 55x chips, can be configured to any IO with PA*_I2C_UART function
+   to output UART2 waveform (to query pin multiplexing table, search for
+   corresponding board type pin multiplexing in project path files such as:
+   bf0_pin_const.c)
+2.  The last parameter of HAL_PIN_Set is for hcpu/lcpu selection, 1: select
+    hcpu, 0: select lcpu
+3.  Hcpu's PA port cannot be configured as Lcpu's uart peripheral, such as
+    uart5, uart6 output
 * Enable corresponding uart2 clock source:
 ```c
-    /* 2, open uart2 clock source  */
+/** 2. Enable UART2 clock source **/
     HAL_RCC_EnableModule(RCC_MOD_USART2);
 ```
-
 * UART2 baud rate setting, example baud rate is 1000000:
 ```c
-    UartHandle.Init.BaudRate   = 1000000;
+UartHandle.Init.BaudRate   = 1000000;
 ```
-
 * UART2 DMA configuration:
 ```c
 // Start RX DMA
@@ -182,7 +209,6 @@ HAL_NVIC_EnableIRQ(UART_RX_DMA_IRQ);
     HAL_NVIC_EnableIRQ(UART_INTERRUPT);/* Enable uart2 interrupt */
 }
 ```
-
 * Use state to represent current DMA reception progress:
 ```c
 typedef enum {
@@ -193,7 +219,6 @@ typedef enum {
 // Current reception state
 ReceiveState currentState = STATE_UNFULL;
 ```
-
 * Half-full, full, uart idle processing:
 ```c
 In the void UART_IRQ_HANDLER(void) function, after uart idle, judge the current reception state to execute half-full or full or idle processing
@@ -251,10 +276,10 @@ void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
 //Full
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    
+
    if(huart->Instance == hwp_usart2)
     {       
-        
+
         // Implement full processing logic, such as writing middle to last data to FIFO or preliminary processing
         uint16_t fullLength = BUFFER_SIZE;
 
@@ -267,28 +292,29 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 
 * UART2 send data:
 ```c
-    /* Send data from uart2 through printf */
+/* Send data from uart2 through printf */
     printf("uart2 hal demo!\n");
      /* Send data from uart2 through HAL_UART_Transmit interface */
     uint8_t ptr[] = {'u','a','r','t','2','\n'};
     int len = 6 ;
     HAL_UART_Transmit(&UartHandle, ptr, len, 0xFFFF);
 ```
-
 ## Exception Diagnosis
 * UART2 no waveform output:
-1. Check step by step according to the configuration process to see if all configurations are successful
-2. Check hardware connections, including whether uart2 output level matches computer uart level
+1. Check step by step according to the configuration process to see if all
+   configurations are successful
+2. Check hardware connections, including whether uart2 output level matches
+   computer uart level
 3. Whether there is redefinition in menuconfig
 
 ## Reference Documents
 * EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx
-* DS0052-SF32LB52x-芯片技术规格书 V0p3.pdf
-* DS0058-SF32LB58x-芯片技术规格书 V1p8.pdf
+* DS0052-SF32LB52x-Datasheet V0p3.pdf
+* DS0058-SF32LB58x-Datasheet V1p8.pdf
 
 ## Update History
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |10/2024 |Initial version |
-|0.0.2 |12/2024 |2.0  |
-| | | |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 10/2024 | Initial version |
+| 0.0.2   | 12/2024 | 2.0             |
+|         |         |                 |

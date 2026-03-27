@@ -1,7 +1,8 @@
 # AES
 
-SIFLI has hardware implementation of AES encryption/decryption. It provides high performance on AES functions and is used in bootloader and DFU to decrypt received images.
-It supports:<br>
+SIFLI has hardware implementation of AES encryption/decryption. It provides high
+performance on AES functions and is used in bootloader and DFU to decrypt
+received images. It supports:<br>
 - Encryption and decryption. <br>
 - AES and SM4 algorithms. <br>
 - 128, 192 or 256 AES key length. <br>
@@ -17,9 +18,8 @@ The input and output memory used by AES cannot be ITCM RAM or Retention RAM, ple
 Please refer to the following code as an example:
 
 ```c
-
-ALIGN(4)                        // Make sure g_key and g_nounce_counter 4bytes aligned
-static uint8_t g_key[32] =		// Key is defined by user, if use 256 AES length, it need to be 32 bytes
+ALIGN(4)                        // Ensure 4-byte alignment for g_key and g_nounce_counter
+static uint8_t g_key[32] =		// User-defined key; 32 bytes required for AES-256
 {
     0x3D, 0xA5, 0xA4, 0x98, 0x6E, 0x90, 0xA7, 0x90,
     0x1D, 0x97, 0x69, 0xAA, 0xF0, 0xDF, 0x32, 0xE4,
@@ -35,26 +35,27 @@ static uint8_t g_nounce_counter[16]=
 uint8_t input_data[BUFFER_SIZE];
 uint8_t output_data[BUFFER_SIZE];
 
-// Get input_data , this is not described in this code pieces.
+// Input data acquisition is omitted in this code snippet.
 
 // Encryption
 HAL_AES_init(g_key, 32, g_nounce_counter, AES_MODE_CTR);
-HAL_AES_run_IT(true, input_data, output_data, BUFFER_SIZE);     // Run Async, interrupt will generate interrupt when done
+HAL_AES_run_IT(true, input_data, output_data, BUFFER_SIZE);     // Asynchronous execution; triggers an interrupt upon completion
 
 rt_thread_delay(1000);		
 
 // Decryption
-HAL_AES_init(g_key, 32, g_nounce_counter, AES_MODE_CTR);        // Run Sync
-HAL_AES_run(false, input_data, output_data, BUFFER_SIZE);       // Function will block until Decryption finish.
+HAL_AES_init(g_key, 32, g_nounce_counter, AES_MODE_CTR);        // Synchronous execution
+HAL_AES_run(false, input_data, output_data, BUFFER_SIZE);       // Blocking call; returns after decryption completes
 
 ....
 
 void AES_IRQHandler(void)
 {
-   printf("AES function finished");
+   printf("AES operation complete");
    HAL_AES_IRQHandler();
 }
-
 ```
 ## API Reference
-[](#hal-aes)
+[]
+
+

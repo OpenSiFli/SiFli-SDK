@@ -141,17 +141,17 @@ The second‑stage bootloader does not load PMU calibration parameters; it only 
 
 ### ResetHandler
  ```{only} SF32LB52X
-The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb52x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
-```
+ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb52x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
+ ```
  ```{only} SF32LB55X
-The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb55x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
-```
+ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb55x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
+ ```
  ```{only} SF32LB56X
-The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb56x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
-```
+ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb56x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
+ ```
  ```{only} SF32LB58X
-The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
-```
+ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
+ ```
 ```{image} ../../assets/ResetHandler.png
 :alt: reset_handler_flow
 :name: reset_handler_flow
@@ -177,7 +177,11 @@ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Te
 ```
 
 ### rt_hw_board_init
-`rt_hw_board_init` performs low‑level hardware initialization such as clock and IO configuration, PSRAM and NOR Flash initialization, heap and serial console initialization. `rt_components_board_init` is an application‑defined initialization hook and calls different functions depending on the application configuration.
+`rt_hw_board_init` performs low‑level hardware initialization such as clock and
+IO configuration, PSRAM and NOR Flash initialization, heap and serial console
+initialization. `rt_components_board_init` is an application‑defined
+initialization hook and calls different functions depending on the application
+configuration.
 
 ```{image} ../../assets/rt_hw_board_init.png
 :alt: rt_hw_board_init
@@ -187,10 +191,20 @@ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Te
 
 #### HAL_Init
 
-`HAL_Init` completes HAL initialization: it loads PMU calibration parameters, updates clock and IO settings, and initializes PSRAM and NOR Flash (according to the new clock configuration). In the diagram, green functions are board‑level driver functions with board‑specific implementations (`HAL_PreInit`, `BSP_IO_Init`, `BSP_PIN_Init`, `BSP_Power_Up`, etc.). Gray functions are virtual hooks implemented by the application (or not), independent of the board, so different applications on the same board can customize behavior (e.g., different IO configurations). Horizontally, the flow shows nested calls inside functions (e.g., `HAL_PreInit` calls clock‑configuration helpers; `HAL_MspInit` calls `BSP_IO_Init`). Vertically, it shows serially executed functions (e.g., after `HAL_PreInit` finishes, `HAL_PostMspInit` runs).
+`HAL_Init` completes HAL initialization: it loads PMU calibration parameters,
+updates clock and IO settings, and initializes PSRAM and NOR Flash (according to
+the new clock configuration). In the diagram, green functions are board‑level
+driver functions with board‑specific implementations (`HAL_PreInit`,
+`BSP_IO_Init`, `BSP_PIN_Init`, `BSP_Power_Up`, etc.). Gray functions are virtual
+hooks implemented by the application (or not), independent of the board, so
+different applications on the same board can customize behavior (e.g., different
+IO configurations). Horizontally, the flow shows nested calls inside functions
+(e.g., `HAL_PreInit` calls clock‑configuration helpers; `HAL_MspInit` calls
+`BSP_IO_Init`). Vertically, it shows serially executed functions (e.g., after
+`HAL_PreInit` finishes, `HAL_PostMspInit` runs).
 
 
-```{image} ../../assets/hal_init_english.png
+```{image} ../../assets/hal_init.png
 :alt: hal_init_flow
 :name: hal_init_flow
 ```
@@ -219,7 +233,6 @@ Loaded PMU calibration registers include:
 * HXT\_CR1\_CBANK\_SEL (added in Xiaomi branch; previously loaded in the rt_component_board_init stage). The calibration‑loading code may run from Flash or PSRAM.
 
 The details of the PMU parameters initialized by HAL_PMU_Init can be found in the HAL_PMU_Init function in drivers/hal/bf0_hal_pmu.c.
-
 ```
 
 ```{only} SF32LB55X
@@ -230,7 +243,6 @@ Config Clock adjusts:
 * If external XT32K is used, switch RTC to XT32K
 * Set system clock to 240 MHz (DLL1)
 * Set DLL2 to 96 MHz
-
 ```
 ```{only} SF32LB56X or SF32LB58X
 Config Clock adjusts:
@@ -244,7 +256,12 @@ Config Clock adjusts:
 
 ### rt_application_init
 
-`rt_application_init` creates the main thread with entry `main_thread_entry`. After thread scheduling is enabled (i.e., after `rt_system_scheduler_start`), the main thread is scheduled and enters `main_thread_entry`, first calling `rt_components_init` to initialize components, then calling `main` (implemented by the application). User code starts from `main`. For example, the `rt_driver` sample's main function is in `example/rt_driver/src/main.c`.
+`rt_application_init` creates the main thread with entry `main_thread_entry`.
+After thread scheduling is enabled (i.e., after `rt_system_scheduler_start`),
+the main thread is scheduled and enters `main_thread_entry`, first calling
+`rt_components_init` to initialize components, then calling `main` (implemented
+by the application). User code starts from `main`. For example, the `rt_driver`
+sample's main function is in `example/rt_driver/src/main.c`.
 
 
 ```{image} ../../assets/main_thread_entry.png
@@ -265,31 +282,33 @@ Each board needs to implement the following board‑level driver functions. Refe
 ```{only} SF32LB58X
 Each board needs to implement the following board‑level driver functions. Refer to files under `customer/boards/ec-lb58x`.
 ```
-| **Function** | **Required** | **Description** |
-| --- | --- | --- |
-| HAL\_PreInit | YES | Recommend referencing a board with similar hardware form |
-| BSP\_Power\_Up | NO | Called after cold boot and wake‑up |
-| BSP\_IO\_Power\_Down | NO | Called before sleep |
-| BSP\_LCD\_Reset | NO |  |
-| BSP\_LCD\_PowerUp | NO | Called when powering the display on |
-| BSP\_LCD\_PowerDown | NO | Called when powering the display off |
-| BSP\_TP\_Reset | NO |  |
-| BSP\_TP\_PowerUp | NO | Called when powering touch on |
-| BSP\_TP\_PowerDown | NO | Called when powering touch off |
-| HAL\_MspInit | NO | Called by `HAL_PreInit`; virtual default calls `BSP_IO_Init` |
-| HAL\_PostMspInit | NO |  |
-| BSP\_IO\_Init | NO | Called by `HAL_MspInit` by default |
-| BSP\_PIN\_Init | NO | Called by `BSP_IO_Init`; IO configuration function |
-|  |  |  |
+| **Function**         | **Required** | **Description**                                              |
+| -------------------- | ------------ | ------------------------------------------------------------ |
+| HAL\_PreInit         | YES          | Recommend referencing a board with similar hardware form     |
+| BSP\_Power\_Up       | NO           | Called after cold boot and wake‑up                           |
+| BSP\_IO\_Power\_Down | NO           | Called before sleep                                          |
+| BSP\_LCD\_Reset      | NO           |                                                              |
+| BSP\_LCD\_PowerUp    | NO           | Called when powering the display on                          |
+| BSP\_LCD\_PowerDown  | NO           | Called when powering the display off                         |
+| BSP\_TP\_Reset       | NO           |                                                              |
+| BSP\_TP\_PowerUp     | NO           | Called when powering touch on                                |
+| BSP_TP_PowerDown     | NO           | Called when powering touch off                               |
+| HAL_MspInit          | NO           | Called by `HAL_PreInit`; virtual default calls `BSP_IO_Init` |
+| HAL_PostMspInit      | NO           |                                                              |
+| BSP_IO_Init          | NO           | Called by `HAL_MspInit` by default                           |
+| BSP_PIN_Init         | NO           | Called by `BSP_IO_Init`; IO configuration function           |
+|                      |              |                                                              |
 
 
 ## Application‑defined Driver Interfaces
 
-If different applications on the same board need different `HAL_MspInit` behavior, you can implement `HAL_MspInit` under the application directory; otherwise, it can reside under the board directory.
+If different applications on the same board need different `HAL_MspInit`
+behavior, you can implement `HAL_MspInit` under the application directory;
+otherwise, it can reside under the board directory.
 
-| **Function** | **Required** | **Description** |
-| --- | --- | --- |
-| HAL\_MspInit | NO |  |
-| HAL\_PostMspInit | NO |  |
+| **Function**    | **Required** | **Description** |
+| --------------- | ------------ | --------------- |
+| HAL_MspInit     | NO           |                 |
+| HAL_PostMspInit | NO           |                 |
 
 

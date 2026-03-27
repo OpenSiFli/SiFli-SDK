@@ -1,55 +1,63 @@
-
 # Creating a Board
-
-The fastest way to create a new board is to modify an existing board with similar hardware configuration (refer to [](../supported_boards/index.md) to find supported boards). In this example, we will create a new board based on the `sf32lb52-lcd_n16r8` (i.e., `sf32lb52-devkit-lcd`) board. The new board uses the SF32LB525 chip and has an external NOR Flash, so starting with the `sf32lb52-lcd_n16r8` board is a good choice.
+The fastest way to create a new board is to modify an existing board with
+similar hardware configuration (refer to [](../supported_boards/index.md) to
+find supported boards). In this example, we will create a new board based on the
+`sf32lb52-lcd_n16r8` (i.e., `sf32lb52-devkit-lcd`) board. The new board uses the
+SF32LB525 chip and has an external NOR Flash, so starting with the
+`sf32lb52-lcd_n16r8` board is a good choice.
 
 The steps are as follows:
+1. Create a folder `testboard_525` under the `boards` directory and copy the
+   files from `sf32lb52-lcd_n16r8` to `testboard_525`.
+1. Create a folder `testboard_525_base` under the `boards` directory and copy
+   the files from `sf32lb52-lcd_base` to `testboard_525_base`.
+1. Modify `testboard_525/SConscript`, changing the macro names in locations 1
+   and 2 to the new board's name, and change the SConscript file path referenced
+   in location 3 to `testboard_525_base`.
+    ```{image} ../../assets/create_board_sconscript.png
 
-1. Create a folder `testboard_525` under the `boards` directory and copy the files from `sf32lb52-lcd_n16r8` to `testboard_525`.
+    ```
+   ![Alt text]{1}`
+    ```{image} ../../assets/create_board_sconscript_new.png
 
-2. Create a folder `testboard_525_base` under the `boards` directory and copy the files from `sf32lb52-lcd_base` to `testboard_525_base`.
+    ```
 
-3. Modify `testboard_525/SConscript`, changing the macro names in locations 1 and 2 to the new board's name, and change the SConscript file path referenced in location 3 to `testboard_525_base`.
-
-    ![Alt text](../../assets/create_board_sconscript.png)`
-
-    The modified code looks like this:
-
-    ![Alt text](../../assets/create_board_sconscript_new.png)
-
-4. Modify the board macros in `testboard_525/hcpu/Kconfig.board` and `testboard_525/lcpu/Kconfig.board` to match the names from the previous step. The modified code is as follows:
+1. Modify the board macros in `testboard_525/hcpu/Kconfig.board` and
+   `testboard_525/lcpu/Kconfig.board` to match the names from the previous step.
+   The modified code is as follows:
     ```{code-block} kconfig
-    :caption:   hcpu/Kconfig.board
-    
+    :caption: hcpu/Kconfig.board
+
     config BSP_USING_BOARD_TESTBOARD_525
         bool
         select SOC_SF32LB52X
         select BF0_HCPU
         default y
-    
+
     rsource "../Kconfig.board"
     ```
 
     ```{code-block} kconfig
-    :caption:    lcpu/Kconfig.board
-    
+    :caption: lcpu/Kconfig.board
+
     config BSP_USING_BOARD_TESTBOARD_525
         bool
         select SOC_SF32LB52X
         select BF0_LCPU
         default y
-    
+
     rsource "../Kconfig.board"
     ```
-
-5. Modify `testboad_525/Kconfig.board` to reference the `Kconfig.board` from `testboard_525_base`:
+1. Modify `testboad_525/Kconfig.board` to reference the `Kconfig.board` from
+   `testboard_525_base`:
     ```kconfig
     source "$SIFLI_SDK/customer/boards/testboard_525_base/Kconfig.board"
     ```
-
-6. At this point, a new board has been created. You can switch to `hello_world/rtt/project` and run the following command to compile using the new board:
+1. At this point, a new board has been created. You can switch to
+   `hello_world/rtt/project` and run the following command to compile using the
+   new board:
     ```none
-    > scons --board=testboard_525 -j8
+    &gt; scons --board=testboard_525 -j8
     scons: Reading SConscript files ...
     Board: testboard_525_hcpu
     ========
@@ -81,7 +89,6 @@ The steps are as follows:
     ```
 
 ## Board Directory Structure
-
 The directory structure for the board is as follows:
 
 ```{code-block} none
@@ -121,42 +128,58 @@ The directory structure for the board is as follows:
         SConscript
 ```
 
-The `testboard_525_base` directory is separated to improve code reuse. A single board might have several variants (e.g., using different chips), and by referencing `testboard_525_base`, multiple boards can be created without duplicating modifications. If there are no variants for the board, the files in `testboard_525_base` can be merged directly into `testboard_525` by adjusting the file references.
+The `testboard_525_base` directory is separated to improve code reuse. A single
+board might have several variants (e.g., using different chips), and by
+referencing `testboard_525_base`, multiple boards can be created without
+duplicating modifications. If there are no variants for the board, the files in
+`testboard_525_base` can be merged directly into `testboard_525` by adjusting
+the file references.
 
 ## Modify Board Configuration
-
 The board configuration includes several aspects:
-
-1. Hardware connections are defined in files such as `bsp_pinmux.c`, `board.conf`, and `Kconfig.board`.
-    - `board.conf` stores options configurable via `menuconfig`, such as the serial port used for the console. To modify, run `menuconfig` in the directory where `board.conf` is located and press {kbd}`D` to save the minimal configuration.
-    - `Kconfig.board` stores options not visible in `menuconfig`, such as pin assignments for touch interrupts, PWM device numbers for backlight, etc.
+1. Hardware connections are defined in files such as `bsp_pinmux.c`,
+   `board.conf`, and `Kconfig.board`.
+    - `board.conf` stores options configurable via `menuconfig`, such as the
+      serial port used for the console. To modify, run `menuconfig` in the
+      directory where `board.conf` is located and press {kbd}`D` to save the
+      minimal configuration.
+    - `Kconfig.board` stores options not visible in `menuconfig`, such as pin
+      assignments for touch interrupts, PWM device numbers for backlight, etc.
         ```kconfig
         config ASIC
             bool 
             default y 
-        
+
         config TOUCH_IRQ_PIN
             int
             default 26
-        
+
         config LCD_PWM_BACKLIGHT_INTERFACE_NAME
             string
             default "pwm3"
-        
+
         config LCD_PWM_BACKLIGHT_CHANEL_NUM
             int
             default 4
-        
+
         config LCD_BACKLIGHT_CONTROL_PIN
             int
             default 1
-        
+
         config RGBLED_CONTROL_PIN
             int
-            default 32  
+            default 32
         ```
-    - Files like `bsp_pinmux.c` configure pin functions and pull-up/down properties through functions such as `BSP_PIN_Init` and the `HAL_PIN_Set` interface.
+    - Files like `bsp_pinmux.c` configure pin functions and pull-up/down
+      properties through functions such as `BSP_PIN_Init` and the `HAL_PIN_Set`
+      interface.
+1. Memory partition table (`ptab.json`): This file describes the memory
+   partitioning information, including NOR Flash, NAND Flash, PSRAM, internal
+   SRAM, SD cards, etc. During compilation, `ptab.json` generates a `ptab.h`
+   file in the build directory, which defines macros like `_START_ADDR`,
+   `_OFFSET`, and `_SIZE` for each partition. These macros can be used in the
+   code to access partition information. For the partition table syntax, please
+   refer to [](/middleware/partition_table.md).
 
-2. Memory partition table (`ptab.json`): This file describes the memory partitioning information, including NOR Flash, NAND Flash, PSRAM, internal SRAM, SD cards, etc. During compilation, `ptab.json` generates a `ptab.h` file in the build directory, which defines macros like `_START_ADDR`, `_OFFSET`, and `_SIZE` for each partition. These macros can be used in the code to access partition information. For the partition table syntax, please refer to [](/middleware/partition_table.md).
-
-For more details about how to use board please refer to [](build_and_configuration.md).
+For more details about how to use board please refer to
+[](build_and_configuration.md).

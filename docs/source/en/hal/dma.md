@@ -1,18 +1,30 @@
 # DMA
 
-DMA has 2 instances, one in HCPU and one in LCPU, both supporting memory-to-memory, memory-to-peripheral, peripheral-to-memory, and peripheral-to-peripheral transfers.
+
+DMA has 2 instances, one in HCPU and one in LCPU, both supporting
+memory-to-memory, memory-to-peripheral, peripheral-to-memory, and
+peripheral-to-peripheral transfers.
+
 
 ## Main Features
  - 8 independent configurable channels
- - Each channel's DMA request can select 1 from 16 hardware requests, or be triggered by software
- - Each channel supports 4 priority levels, with same priority resolved by channel number
- - Supports memory-to-memory, memory-to-peripheral, peripheral-to-memory, peripheral-to-peripheral transfers
- - Source and destination addresses independently support single byte/double byte/4-byte access, and both can independently select whether address auto-increment
- - Supports circular buffer mode, automatically restarts after single transfer completion
- - Each channel supports 3 event flags - transfer complete, half transfer, transfer error, each can independently generate interrupt requests
- - Single configuration maximum transfer unit count is 65536, each unit is single byte/double byte/4-byte transfer according to different configurations
+ - Each channel's DMA request can select 1 from 16 hardware requests, or be
+   triggered by software
+ - Each channel supports 4 priority levels, with same priority resolved by
+   channel number
+ - Supports memory-to-memory, memory-to-peripheral, peripheral-to-memory,
+   peripheral-to-peripheral transfers
+ - Source and destination addresses independently support single byte/double
+   byte/4-byte access, and both can independently select whether address
+   auto-increment
+ - Supports circular buffer mode, automatically restarts after single transfer
+   completion
+ - Each channel supports 3 event flags - transfer complete, half transfer,
+   transfer error, each can independently generate interrupt requests
+ - Single configuration maximum transfer unit count is 65536, each unit is
+   single byte/double byte/4-byte transfer according to different configurations
 ```{only} SF32LB55X or SF32LB56X or SF32LB58X
- - Single configuration transfer address range is limited within 1M bytes, i.e., during transfer process, source and destination addresses cannot cross 1M byte boundary (address bit31-bit20 cannot change)
+- Single configuration transfer address range is limited within 1M bytes, i.e., during transfer process, source and destination addresses cannot cross 1M byte boundary (address bit31-bit20 cannot change)
 ```
 
 ## DMAC Corresponding Peripheral Request ID
@@ -294,19 +306,46 @@ DMA has 2 instances, one in HCPU and one in LCPU, both supporting memory-to-memo
 ```
 
 ## DMA Example 1
-Memory-to-memory 4-byte transfer 4096 bytes.
-```c
-
     DMA_HandleTypeDef hdma;
+        HAL_StatusTypeDef err;
+
+        uint32_t SrcAddress = 0x10000000;
+        uint32_t DstAddress = 0x20000000;
+        uint32_t Counts     = 1024;  //Transfer unit is word, so Counts= 4096 / 4
+
+        /* Init DMA configure*/
+        hdma.Instance                 = DMA1_Channel6;
+        hdma.Init.Request             = 0;                     //Request id is useless while memory to memory, just set to 0
+        hdma.Init.Direction           = DMA_MEMORY_TO_MEMORY;
+        hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+        hdma.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
+        hdma.Init.PeriphInc           = DMA_PINC_ENABLE;
+        hdma.Init.MemInc              = DMA_MINC_ENABLE;
+        hdma.Init.Mode                = DMA_NORMAL;
+        hdma.Init.Priority            = DMA_PRIORITY_MEDIUM;
+
+        hdma.XferHalfCpltCallback = DMA_Xfer_Half_Callback_Func;
+        hdma.XferCpltCallback     = DMA_Xfer_Complete_Callback_Func;
+        hdma.XferErrorCallback    = DMA_Xfer_Error_Callback_Func;
+
+        err = HAL_DMA_Init(&hdma);
+        if (err != HAL_OK)
+            return err;
+
+        err = HAL_DMA_Start_IT(hadc->DMA_Handle, SrcAddress, DstAddress, Counts);
+        if (err != HAL_OK)
+            return err;
+```c
+DMA_HandleTypeDef hdma;
     HAL_StatusTypeDef err;
 
     uint32_t SrcAddress = 0x10000000;
     uint32_t DstAddress = 0x20000000;
-    uint32_t Counts     = 1024;  //Transfer unit is word, so Counts= 4096 / 4
-    
-    /* Init DMA configure*/
+    uint32_t Counts     = 1024;  // Transfer unit is word, so Counts = 4096 / 4
+
+    /* Initialize DMA configuration */
     hdma.Instance                 = DMA1_Channel6;
-    hdma.Init.Request             = 0;                     //Request id is useless while memory to memory, just set to 0
+    hdma.Init.Request             = 0;                     // Request ID is ignored for memory-to-memory transfers; set to 0.
     hdma.Init.Direction           = DMA_MEMORY_TO_MEMORY;
     hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
     hdma.Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
@@ -319,27 +358,26 @@ Memory-to-memory 4-byte transfer 4096 bytes.
     hdma.XferCpltCallback     = DMA_Xfer_Complete_Callback_Func;
     hdma.XferErrorCallback    = DMA_Xfer_Error_Callback_Func;
 
-    err = HAL_DMA_Init(&hdma);
+    err = HAL_DMA_Init(&amp;hdma);
     if (err != HAL_OK)
         return err;
 
-    err = HAL_DMA_Start_IT(hadc->DMA_Handle, SrcAddress, DstAddress, Counts);
+    err = HAL_DMA_Start_IT(hadc-&gt;DMA_Handle, SrcAddress, DstAddress, Counts);
     if (err != HAL_OK)
         return err;
-
 ```
+
 
 ## DMA Example 2
 ADC module-to-memory 4-byte transfer 4096 bytes.
 ```c
-
-    DMA_HandleTypeDef hdma;
+DMA_HandleTypeDef hdma;
     HAL_StatusTypeDef err;
 
     uint32_t SrcAddress = 0x10000000;
     uint32_t DstAddress = 0x20000000;
     uint32_t Counts     = 1024;  //Transfer unit is word, so Counts= 4096 / 4
-    
+
     /* Init DMA configure*/
     hdma.Instance                 = DMA1_Channel6;
     hdma.Init.Request             = DMA_REQUEST_12;
@@ -362,20 +400,20 @@ ADC module-to-memory 4-byte transfer 4096 bytes.
     err = HAL_DMA_Start_IT(hadc->DMA_Handle, SrcAddress, DstAddress, Counts);
     if (err != HAL_OK)
         return err;
-
 ```
+
+
 
 ## DMA Example 3
 Memory-to-FLASH1 module 1-byte transfer 4096 bytes.
 ```c
-
-    DMA_HandleTypeDef hdma;
+DMA_HandleTypeDef hdma;
     HAL_StatusTypeDef err;
 
     uint32_t SrcAddress = 0x20000000;
     uint32_t DstAddress = hflash->Instance->DR;
     uint32_t Counts = 4096;  //Transfer unit is byte, so Counts= 4096 / 1
-    
+
     /* Init DMA configure*/
     hdma.Instance                 = DMA1_Channel6;
     hdma.Init.Request             = DMA_REQUEST_0;
@@ -398,8 +436,8 @@ Memory-to-FLASH1 module 1-byte transfer 4096 bytes.
     err = HAL_DMA_Start_IT(hadc->DMA_Handle, SrcAddress, DstAddress, Counts);
     if (err != HAL_OK)
         return err;
-
 ```
 
 ## API Reference
-[](../api/hal/crc.md)
+[]
+

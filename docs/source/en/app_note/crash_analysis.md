@@ -1,13 +1,16 @@
-
 # Crash Analysis Guide
 
 ## 1. Introduction
 
-The SDK integrates tools for analyzing crash issues caused by assertions or hardfaults. To facilitate memory leak analysis, enable "Enable memory trace" under `RTOS->RT-Thread Kernel->Memory Management`.
+The SDK integrates tools for analyzing crash issues caused by assertions or
+hardfaults. To facilitate memory leak analysis, enable "Enable memory trace"
+under `RTOS->RT-Thread Kernel->Memory Management`.
 
 ![](../../assets/crash_analysis_mem_trace.png)
 
-Below is the log information printed when an ASSERT occurs, showing the function and line number where the ASSERT happened, along with thread, message queue, and heap information.
+Below is the log information printed when an ASSERT occurs, showing the function
+and line number where the ASSERT happened, along with thread, message queue, and
+heap information.
 ```
 16:21:48:257        Assertion failed at function:wait_power_on_anim_done, line number:32 ,(RT_EOK == err)
 16:21:48:258        ===================
@@ -112,8 +115,13 @@ Below is the log information printed when an ASSERT occurs, showing the function
 16:21:48:321        fatal error on thread: app_watch
 ```
 
-When a hardfault occurs, the following information is printed, and finally the type of hardfault is printed, such as busfault, mem manage fault, etc.,
-The following example shows a crash due to mem manage fault. `DACCVIOL SCB->MMAR: 00000000` indicates that the MPU found an illegal access to address 0, and the instruction address of the access is recorded by the pc register, which is 0x100c6426
+
+When a hardfault occurs, the following information is printed, and finally the
+type of hardfault is printed, such as busfault, mem manage fault, etc., The
+following example shows a crash due to mem manage fault. `DACCVIOL SCB->MMAR:
+00000000` indicates that the MPU found an illegal access to address 0, and the
+instruction address of the access is recorded by the pc register, which is
+0x100c6426
 
 ```
 00:48:26:197         sp: 0x200a00d8
@@ -229,68 +237,349 @@ The following example shows a crash due to mem manage fault. `DACCVIOL SCB->MMAR
 00:48:26:544        app_image_psram_memh 1100000    801444        430952
 00:48:26:546        FPU active!
 00:48:26:550        mem manage fault:
-00:48:26:553        SCB_CFSR_MFSR:0x82 DACCVIOL SCB->MMAR:00000000
+00:48:26:553        SCB_CFSR_MFSR:0x82 DACCVIOL SCB-&gt;MMAR:00000000
 ```
 
-## 2. Preparation Work
-For ASSERT type crashes, the log provides a rough idea of where the issue occurred. However, for hardfaults or more complex crashes, this information may not be enough, and additional tools are needed. One method is to use a debugger to attach to the target device to inspect global variables and memory (if it's a hardfault, after attaching, you need to modify the registers with the printed SP/LR/PC to view the function call stack. For ASSERT, the function call stack can be seen without modifying the registers). However, this approach locks the target device and isn't ideal for multi-person analysis. The SDK provides the `crash_dump_analyser` tool to save and restore the crash context, enabling developers to analyze the problem on a PC without connecting to the target device.
 
-Required tools:
+## 2. Preparation Work
+For ASSERT type crashes, the log provides a rough idea of where the issue
+occurred. However, for hardfaults or more complex crashes, this information may
+not be enough, and additional tools are needed. One method is to use a debugger
+to attach to the target device to inspect global variables and memory (if it's a
+hardfault, after attaching, you need to modify the registers with the printed
+SP/LR/PC to view the function call stack. For ASSERT, the function call stack
+can be seen without modifying the registers). However, this approach locks the
+target device and isn't ideal for multi-person analysis. The SDK provides the
+`crash_dump_analyser` tool to save and restore the crash context, enabling
+developers to analyze the problem on a PC without connecting to the target
+device.
 - JLink debugger and JLink software package
-- `_SDK_ROOT/tools/crash_dump_analyser/script_`: Scripts to save and restore the context
-- `_SDK_ROOT/tools/crash_dump_analyser/simarm/t32marm.exe_`: Trace32 software tool to execute the recovery script
+- `_SDK_ROOT/tools/crash_dump_analyser/script_`: Scripts to save and restore the
+  context
+- `_SDK_ROOT/tools/crash_dump_analyser/simarm/t32marm.exe_`: Trace32 software
+  tool to execute the recovery script
+- Sifli_Trace Tool: This tool includes a crash dump utility. You can download
+  the latest version here: (Download:
+  [Sifli_Trace](https://wiki.sifli.com/tools/index.html))
 
 ## 3. Saving the Context
-### 3.1 Save Context Using BAT Script
 
-#### 3.1.1 Accessing the chip's saved data via UART (currently only supports 52x and 56x)
-- Open _SifliUsartServer.exe_ and click Connect. Use DBGUART to simulate Jlink (only a serial connection is required on the hardware side)
-![](/assets/UsartServer.png)
-- Opening the _save_ram_55x.bat_ window will invoke Jlink.exe and fill the SERVER address in _SifliUsartServer.exe_ into the Identifier.
-![](/assets/Jlink_command.png)
+```{only} SF32LB52X 
+#### 3.1.1 Method 1: Using SifliUsartServer
+Use _SifliUsartServer.exe_ + _save_ram_uart_52x.bat_ + J-Link Software Package.
 
-#### 3.1.2 Access the chip's saved data through Jlink
-For the 55x chip, follow these steps:
-- Connect the JLink emulator to the target board
-- Double-click to execute the _tools/crash_dump_analyser/script/save_ram_55x.bat_ script to read data from the target board.
-- You can also do this in the command line. For example, in watch_demp, call _SDK_ROOT/tools/crash_dump_analyser/script/save_ram_55x.bat_,_$SDK_ROOT/example/watch_demo/project/eh-lb555/build_ from the SDK root directory to put the generated file into _SDK_ROOT/example/watch_demo/project/eh-lb555/build_
-
-**Possible reasons for the failure of preserving the scene**：
-- The selected method of preserving the scene does not match the executed script.
-
-```Using the UART hardware connection method or the Jlink hardware connection method to save the on-site data can all be achieved by calling JLink.exe and then executing the corresponding Jlink commands. You can compare the contents of the files named save_ram_55x.bat, sf32lb55x.jlink, and sf32lb52x.jlink to view the differences. "ip" indicates using the ip simulation method of SifliUsartServer.exe to save the on-site data, while "usb" indicates using the uab connection method to save the on-site data with the JLink emulator. Before saving the on-site data, you can first confirm the Jlink file and Jlink commands called in the executed bat file to prevent failure in saving the on-site data due to mismatch between the commands and the actual saving method.```
-![](/assets/dump_command.png)
-
-- Has the crash program been initiated on both the primary and secondary cores
-
-```In most cases, the secondary core is not activated. For example, in sf32lb55x.jlink, there is the line "w4 0x4004f000 1 // Switch to LCPU". However, if the program does not start the secondary core, the saved state will be lost and the operation will fail. Therefore, we need to comment out the commands issued to the secondary core to ensure the normal operation of the script.```
-![](/assets/dump_select.png)
-
-After success, the following files will be generated (depending on the content of the corresponding sf32lb55x.jlink):
-- _hcpu_ram.bin_: 1Mbyte of HCPU RAM data
-- _psram.bin_: 32Mbyte of PSRAM data
-- _ret_ram.bin_: 64Kbyte of retention RAM data
-- _hcpu_itcm.bin_: 16Kbyte of retention RAM data
-- _epic_reg.bin_: EPIC register
-- _ezip_reg.bin_: EZIP register
-- _dsi_host_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _gpio1_reg.bin_: GPIO1 register
-- _gpio2_reg.bin_: GPIO2 register
-- _lcpu_ram.bin_: 224Kbyte of LCPU RAM data
-- _lcpu_dtcm.bin_: 16Kbyte LCPU DTCM data
+- _SifliUsartServer.exe_ is located in the Sifli_Trace tool package folder.
 
 
-### 3.2 Save the scene using the AssertDumpUart tool
-This tool directly connects to the debug UART port and then executes the corresponding JLink script to save the context, without needing to simulate JLink using _SifliUsartServer.exe_.
-For example, with the 52x chip:
-- Open _\$SDK_ROOT/tools/crash_dump_analyser/script/AssertDumpUart.exe_.
-- Set the corresponding JLink script, chip model, serial port number, baud rate, and serial device (Note: It refers to the MCU's USART device, usually UART1 for HCPU and UART4 for LCPU).
-- Click export to save the context.
+![](../../assets/Sifli_Trace.png)
+
+- Launch _SifliUsartServer.exe_ and click **Connect**. (Hardware requirement: A serial connection only.)
+
+
+![](../../assets/UsartServer52.png)
+
+- Run _save_ram_uart_52x.bat_; this will invoke JLink.exe.
+
+
+![](../../assets/save_ram_uart_52.png)
+
+![](../../assets/Jlink_command52.png)
+
+- Once confirmed, wait for the window to close. The exported .bin files will be available in the _script_ folder.
+
+
+![](../../assets/downp_bin.png)
+
+- Underlying Logic: Executing _save_ram_uart_52x.bat_ triggers a command that calls JLink.exe with parameters `-ip 127.0.0.1:19025` (the SERVER address in _SifliUsartServer.exe_) to execute sf32lb52x_uart.jlink. The execution logs are saved to _script/log.txt_. The specific command is as follows:
+
+
+![](../../assets/save_ram_52bat.png)
+
+- The `.jlink` file contains the `IP` server connection (linked to the SifliUsartServer.exe serial service) and specific commands for exporting the crash dump .bin files. These can be adjusted based on actual requirements.
+
+
+![](../../assets/52x_jlink.png)
+
+#### 3.1.2 Method 2: Using AssertDumpUart
+- _AssertDumpUart.exe_ is located in the Sifli_Trace tool package folder.
+
+
+![](../../assets/AssertDumpUart.png)
+
+- The software executes export commands by invoking J-Link files via the IP service. Select the serial port as follows: UART1 for the HCPU core and UART4 for the LCPU core. Ensure the .jlink file matches the chip's PSRAM size, otherwise the psram.bin export will fail.
+
 
 ![](../../assets/crash_analysis_AssertDumpUsart.png)
+
+- You may inspect the .jlink file contents and modify the export commands as needed.
+
+
+![](../../assets/AssertDumpUart52.png)
+
+- After clicking Export, a folder containing the .bin files and a command interaction log (_log.txt_) will be generated in the specified save path.
+
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+```{only} SF32LB55X 
+
+
+### 3.1 Capturing Memory via J-Link SWD
+#### 3.1.1 Method 1: Using .bat Scripts to Invoke .jlink Files
+Requirements: Hardware J-Link debugger + _save_ram_55x.bat_ + J-Link Software Package.
+- Connect the J-Link debugger to the board's SWD pins.
+- Double-click _save_ram_55x.bat_ to execute the script.
+
+
+![](../../assets/save_ram_55x.png)
+
+- Wait for the command-line window to close. The exported .bin files will be located in the _script_ folder.
+
+
+![](../../assets/sf32lb55x_jlink.png)
+
+![](../../assets/downp_bin.png)
+
+- Underlying Logic: Running _save_ram_55x.bat_ (or _save_ram_56x.bat_) invokes the _sf32lb55x.jlink_ command and outputs logs to _script/log.txt_. The specific command is shown below:
+
+
+![](../../assets/save_ram_55bat.png)
+
+- The `.jlink` file contains configurations for the J-Link debugger and specific commands for exporting memory to .bin files, which can be modified for specific use cases.
+
+
+![](../../assets/sf32lb55x.png)
+
+
+#### 3.1.2 Method 2: Using AssertDumpUart
+
+- _AssertDumpUart.exe_ is located in the Sifli_Trace tool package folder.
+
+
+![](../../assets/AssertDumpUart.png)
+
+- The utility detects connected J-Link debuggers and executes the export via a J-Link file. Select **JLINK** as the connection method and ensure the debugger ID is detected. Choose a .jlink file that matches the chip's PSRAM capacity to avoid failures during psram.bin export.
+
+
+![](../../assets/crash_analysis_AssertDumpUsart55_jlink.png)
+
+- You can verify and modify the export commands by reviewing the .jlink file content.
+
+
+![](../../assets/AssertDumpUart55.png)
+
+- Clicking Export will generate a folder at the destination containing the memory bins and an interaction log (_log.txt_).
+
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+
+
+```{only} SF32LB56X 
+### 3.1 Capturing Memory via UART
+#### 3.1.1 Method 1: Using SifliUsartServer
+- Use _SifliUsartServer.exe_ + _save_ram_uart_56x.bat_ + J-Link Software Package.
+
+- _SifliUsartServer.exe_ is located in the Sifli_Trace tool package folder.
+
+
+![](../../assets/Sifli_Trace.png)
+
+- Note: The 56-series hardware exposes two serial ports. By default, UART1 corresponds to the HCPU (High-performance CPU) and UART4 corresponds to the LCPU (Low-power CPU). You can identify the LCPU port by shorting **BOOT MODE** and resetting the device to enter Boot mode (refer to the SWD diagram for pin locations: [jlink-swd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd)). The port displaying logs is UART4.
+
+- As shown below, COM78 represents the LCPU, which implies COM79 is the HCPU.
+
+
+![](../../assets/LCPU_COM.png)
+
+- Launch _SifliUsartServer.exe_ and click **Connect**. (Requires only serial wiring.)
+
+
+![](../../assets/UsartServer56.png)
+
+- Running _save_ram_uart_56x.bat_ invokes JLink.exe with the parameter `-ip 127.0.0.1:19025` (the SERVER address specified in _SifliUsartServer.exe_).
+
+
+![](../../assets/save_ram_56.png)
+
+![](../../assets/Jlink_command56.png)
+
+- Wait for the command window to close. Exported .bin files will appear in the _script_ folder.
+
+
+![](../../assets/downp_bin.png)
+
+- Underlying Logic: Executing _save_ram_uart_56x.bat_ sends a command to JLink.exe to run _sf32lb56x_uart.jlink_, logging the output to _script/log.txt_. The command is as follows:
+
+
+![](../../assets/save_ram_uart_56bat.png)
+
+- The `.jlink` file contains the `IP` service connection (linked to the SifliUsartServer.exe serial service) and the specific memory dump commands. Customize these as needed.
+
+
+![](../../assets/sf32lb56x_uart.png)
+
+#### 3.1.2 Method 2: Using AssertDumpUart
+- _AssertDumpUart.exe_ is located in the Sifli_Trace tool package folder.
+
+
+![](../../assets/AssertDumpUart.png)
+
+- This utility invokes J-Link export commands via the IP service. Select UART1 for HCPU and UART4 for LCPU. Match the .jlink file to the chip's PSRAM size to prevent export errors.
+
+
+![](../../assets/crash_analysis_AssertDumpUsart56.png)
+
+- Review or modify the export commands within the .jlink file contents.
+
+
+![](../../assets/AssertDumpUart52.png)
+
+- Once exported, the destination folder will contain the collected .bin files and the communication log (_log.txt_).
+
+
+![](../../assets/AssertDumpUart52bin.png)
+
+
+### 3.2 Capturing Memory via J-Link SWD
+#### 3.2.1 Method 1: Using .bat Scripts to Invoke .jlink Files
+- Requirements: J-Link debugger + _save_ram_56x.bat_ + J-Link Software Package.
+- Connect the J-Link debugger to the SWD pins: [jlink-swd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd)
+- Run _save_ram_56x.bat_ by double-clicking it.
+- After the window closes, verify the .bin files in the _script_ folder.
+
+
+![](../../assets/downp_bin.png)
+
+- Underlying Logic: _save_ram_56x.bat_ executes the _sf32lb56x.jlink_ command script and logs details to _script/log.txt_. Command detail:
+
+
+![](../../assets/save_ram_56bat.png)
+
+- The `.jlink` file specifies debugger settings and memory dump commands, which can be customized.
+
+
+![](../../assets/sf32lb56x.png)
+
+
+#### 3.2.2 Method 2: Using AssertDumpUart
+
+- _AssertDumpUart.exe_ is located in the Sifli_Trace tool package folder.
+
+
+![](../../assets/AssertDumpUart.png)
+
+- Connect the J-Link debugger to the SWD pins: [jlink-swd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd)
+- The tool detects the J-Link debugger and executes commands via the J-Link file. Ensure **JLINK** is selected, the debugger serial number is identified, and the J-Link script matches the PSRAM capacity.
+
+
+![](../../assets/crash_analysis_AssertDumpUsart56_jlink.png)
+
+- Inspect and adjust the export commands in the J-Link file as needed.
+
+![](../../assets/AssertDumpUart56.png)
+
+- Clicking Export generates a folder containing the memory bins and an interaction log (_log.txt_).
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+
+```{only} SF32LB58X 
+
+
+### 3.1 Capturing Memory via J-Link SWD
+#### 3.1.1 Method 1: Using .bat Scripts to Invoke .jlink Files
+
+Requirements: J-Link debugger + _save_ram_58x.bat_ + J-Link Software Package.
+
+- Connect the J-Link debugger to the SWD pins: [jlink-swd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html#jlink-swd)
+- Execute _save_ram_58x.bat_.
+
+
+![](../../assets/save_ram_58x.png)
+
+- Wait for completion. The .bin files will be generated in the _script_ folder.
+
+
+![](../../assets/sf32lb58x_jlink.png)
+
+![](../../assets/downp_bin.png)
+
+Underlying Logic: _save_ram_58x.bat_ invokes _sf32lb58x.jlink_ and logs the output to _script/log.txt_. Command detail:
+
+
+![](../../assets/save_ram_58bat.png)
+
+The `.jlink` file defines the debugger connection and memory dump commands, adjustable as needed.
+
+
+![](../../assets/sf32lb58x.png)
+
+
+#### 3.2.2 Method 2: Using AssertDumpUart
+
+_AssertDumpUart.exe_ is found in the Sifli_Trace folder.
+
+
+![](../../assets/AssertDumpUart.png)
+
+- Connect the J-Link debugger to the SWD pins: [jlink-swd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html#jlink-swd)
+- The tool detects the J-Link debugger and runs commands via a J-Link script. Choose **JLINK** mode, verify the debugger ID, and ensure the script matches the PSRAM size to avoid export errors.
+
+
+![](../../assets/crash_analysis_AssertDumpUsart58_jlink.png)
+
+- Review or modify the export commands within the .jlink file.
+
+
+![](../../assets/AssertDumpUart58.png)
+
+- Upon export, the .bin files and communication logs (_log.txt_) are stored in a new folder at the specified path.
+
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+**Potential reasons for memory capture failure**:
+- Mismatch between selected capture method and executed script.
+
+```Both UART-based and J-Link-based memory capture mechanisms work by calling
+JLink.exe to execute specific commands. You can verify consistency by comparing
+the contents of save_ram_xxx.bat and the invoked sf32lbxxx.jlink file. The "IP"
+parameter indicates memory capture via an IP service (used for serial/UART
+methods), while "USB" indicates a physical J-Link debugger connection (used for
+J-Link SWD methods). Before starting the capture, confirm that the J-Link script
+and its commands match the actual hardware connection method to prevent
+execution failures``` ![](../../assets/dump_command.png)
+
+- Whether both the HCPU and LCPU were active at the time of the crash.
+
+```In many standard routines, the LCPU (small core) is not initialized. For
+example, if sf32lb55x.jlink contains the command w4 0x4004f000 1 (Switch to
+LCPU) but the LCPU was never started by the application, the memory capture will
+fail. In such cases, the LCPU-related commands must be commented out to ensure
+the script executes correctly``` ![](../../assets/dump_select.png)
+
+
+Upon success, the following files will be generated (subject to the contents of
+the sf32lbxxx.jlink script):
+- _hcpu_ram.bin_: 1 MB of HCPU RAM data.
+- _psram.bin_: 32 MB of PSRAM data.
+- _ret_ram.bin_: 64 KB of retention RAM data.
+- _hcpu_itcm.bin_: 16 KB of ITCM RAM data.
+- _epic_reg.bin_: EPIC registers.
+- _ezip_reg.bin_: EZIP registers.
+- _dsi_host_reg.bin_: DSI Host registers
+- _dsi_phy_reg.bin_: DSI PHY registers
+- _dsi_phy_reg.bin_: DSI PHY registers
+- _dsi_phy_reg.bin_: DSI PHY registers
+- _gpio1_reg.bin_: GPIO1 registers
+- _gpio2_reg.bin_: GPIO2 registers
+- _lcpu_ram.bin_: 224 KB LCPU RAM data
+- _lcpu_dtcm.bin_: 16 KB LCPU DTCM data
 
 ## 4. Restoring Context
 ### 4.1 Restoring HCPU Context
@@ -298,9 +587,13 @@ For example, with the 52x chip:
 
 ![](../../assets/crash_analysis_default_view.png)
 
+
 #### Click the HA button (HCPU assertion)
-- Select the current chip and set the path where the exported bin files are located (ensure the path does not end with a slash), and manually place the AXF file to view the HCPU crash context.
-- If some bins are missing (e.g., if some dumps don't have PSRAM), you can uncheck those.
+- Select the current chip and set the path where the exported bin files are
+  located (ensure the path does not end with a slash), and manually place the
+  AXF file to view the HCPU crash context.
+- If some bins are missing (e.g., if some dumps don't have PSRAM), you can
+  uncheck those.
 
 ![](../../assets/crash_analysis_load_hcpu_assertion_ui.png)
 
@@ -311,100 +604,129 @@ Once loaded successfully, the following crash context information is displayed:
 
 You can switch between different windows from the Window menu.
 
-If the window is accidentally closed, you can also enter the command below "B::" to run the wake-up process.
+If the window is accidentally closed, you can also enter the command below "B::"
+to run the wake-up process.
 
-For example: From the information in the following picture, we can see the heapAllocation window, whose full name is _B::AREA.view heapAllocation_. We can input this command to open the corresponding window, or we can directly input _AREA.view heapAllocation_.
+For example: From the information in the following picture, we can see the
+heapAllocation window, whose full name is _B::AREA.view heapAllocation_. We can
+input this command to open the corresponding window, or we can directly input
+_AREA.view heapAllocation_.
 
 ![](../../assets/crash_analysis_hcpu_window_select.png)
 
 `B::v.f /l /c `The window is the function call stack of the crash site.
 
-The heapAllocation window displays the allocation status of all heap pools in the system, including the system heap and memheap_pool:
+The heapAllocation window displays the allocation status of all heap pools in
+the system, including the system heap and memheap_pool:
 - system heap: Pool used by `rt_malloc` and `lv_mem_alloc`.
-- Various memheap_pools: Pools created with `rt_memheap_init`, allocation, and release are handled by `rt_memheap_alloc` and `rt_memheap_free`.
+- Various memheap_pools: Pools created with `rt_memheap_init`, allocation, and
+  release are handled by `rt_memheap_alloc` and `rt_memheap_free`.
 
 The fields in the allocation information list represent:
-- BLOCK_ADDR: The starting address of the allocated memory block, including the management item.
-- BLOCK_SIZE: The size of the allocated memory, excluding the length of the management item.
+- BLOCK_ADDR: The starting address of the allocated memory block, including the
+  management item.
+- BLOCK_SIZE: The size of the allocated memory, excluding the length of the
+  management item.
 - USED: Whether it is allocated, 1 means allocated, 0 means not allocated.
 - TICK: The time when the allocation occurred, in OS ticks (1 ms).
 - RETURN ADDR: The address of the caller.
 
 #### Handling Missing Crash Stack
-After completing the previous 3 steps, sometimes the crash scene stack will not be displayed, possibly because the dump content was not saved or was saved incorrectly. You can try the following methods:
-- 1. Load the scene stack from Jlink halt log information
-  The HR (HCPU Registers) button is used to restore CPU registers that did not reach the exception handler.
-  After clicking the button, select the exported _log.txt_ file, which will fill the 16 HCPU registers back into Trace32.
+After completing the previous 3 steps, sometimes the crash scene stack will not
+be displayed, possibly because the dump content was not saved or was saved
+incorrectly. You can try the following methods:
+- 1. Load the scene stack from Jlink halt log information The HR (HCPU
+     Registers) button is used to restore CPU registers that did not reach the
+     exception handler. After clicking the button, select the exported _log.txt_
+     file, which will fill the 16 HCPU registers back into Trace32.
 
-![](../../assets/crash_analysis_toolsbar_HR.png)
-
-
-- 2. From the 16 registers printed in the log, refill them into the register window of trace32
-
-![](../../assets/crash_analysis_restore_registers_from_log.png)
-
+- 2. From the 16 registers printed in the log, refill them into the register
+     window of trace32
 
 - 3. For gcc compilation, you can try modifying PC to be the same value as r14
-![](/assets/crash_analysis_toolsbar_HR2.png)
+     ![](/assets/crash_analysis_toolsbar_HR2.png)
+
 ### 4.2 Restoring LCPU Context
 
-Restoring LCPU context is similar to HCPU, but first, you need to copy the required files (lcpu.axf and rom_axf files) to the script directory.
+Restoring LCPU context is similar to HCPU, but first, you need to copy the
+required files (lcpu.axf and rom_axf files) to the script directory.
 
-![](../../assets/add4.png)
-
-The required file paths are as shown below, choose the correct `rom_axf` file for your model. The lcpu file depends on whether it was compiled with Keil or GCC.
+![]{1}
 #### Important Notes:
-- LCPU files compiled with Keil have an `.axf` extension, while those compiled with GCC have an `.elf` extension. Make sure to distinguish between them.
-- When choosing the `rom_axf` file, ensure you select the correct one based on the board model.
+-  LCPU files compiled with Keil have an `.axf` extension, while those compiled
+   with GCC have an `.elf` extension. Make sure to distinguish between them.
+-  When choosing the `rom_axf` file, ensure you select the correct one based on
+   the board model.
 
-![](../../assets/add2.png)
-![](../../assets/add3.png)
+![](../../assets/add1.png) ![]{2}
 
-Next, open Trace32 and select the LA button. In the pop-up window, configure as shown below:
 
-![Trace32 Configuration](../../assets/add1.png)
 
 ## 5. Common Trace32 Commands
 
-In addition to the windows that are already opened, you can use the View menu to open new windows, as shown below:
+In addition to the windows that are already opened, you can use the View menu to
+open new windows, as shown below:
 - Registers: View the CPU registers.
 - Dump: View data at a specific address.
 - List Source: View the assembly code.
 - Watch: View variables.
 
-![View Menu in Trace32](../../assets/crash_analysis_cmd_view.png)
+![](../../assets/crash_analysis_cmd_view.png)
 
-The variable window supports wildcards. For example, input `*error*rea*` and press Enter. It will suggest `error_reason`, which can then be selected and added to the watch window.
 
-![Watch Window](../../assets/crash_analysis_cmd_watch.png)
+The variable window supports wildcards. For example, input `*error*rea*` and
+press Enter. It will suggest `error_reason`, which can then be selected and
+added to the watch window.
 
-![Watch Window 2](../../assets/crash_analysis_cmd_watch2.png)
+![](../../assets/crash_analysis_cmd_watch.png)
 
-You can also type commands in the command window below (commands are case-insensitive) to open debugging windows.
+![](../../assets/crash_analysis_cmd_watch2.png)
 
-![Input Command in Trace32](../../assets/crash_analysis_cmd_input.png)
+You can also type commands in the command window below (commands are
+case-insensitive) to open debugging windows.
+
+![](../../assets/crash_analysis_cmd_input.png)
+
 
 Examples:
 - `V.W`: Open the watch window.
-- `D.DUMP address`: View data at a specified address, for example, `D.DUMP 20000000` will show data starting at address `0x20000000`.
-- `L address/symbol`: View assembly at a specified address, for example, `L 1011D888` will open the assembly window showing code starting at `0x1011D888`. `L rt_thread_stack_restore` will show the assembly code for the `rt_thread_stack_restore` function.
+- `D.DUMP address`: View data at a specified address, for example, `D.DUMP
+  20000000` will show data starting at address `0x20000000`.
+- `L address/symbol`: View assembly at a specified address, for example, `L
+  1011D888` will open the assembly window showing code starting at `0x1011D888`.
+  `L rt_thread_stack_restore` will show the assembly code for the
+  `rt_thread_stack_restore` function.
 
 ## 6. HEAP Analysis Example
 
-The image below shows a scenario where heap memory leak is detected. The callstack window shows the function call stack for the assertion, and the heapAllocation window's system heap list shows the memory blocks allocated by `rt_malloc`. The `RETURN ADDR` shows the function name that called `rt_malloc`, and `TICK` shows the `rt_tick_get` time at the time of allocation.
+The image below shows a scenario where heap memory leak is detected. The
+callstack window shows the function call stack for the assertion, and the
+heapAllocation window's system heap list shows the memory blocks allocated by
+`rt_malloc`. The `RETURN ADDR` shows the function name that called `rt_malloc`,
+and `TICK` shows the `rt_tick_get` time at the time of allocation.
 
-![Heap Callstack](../../assets/crash_analysis_heap_callstack.png)
+![](../../assets/crash_analysis_heap_callstack.png)
 
-![Heap Detail](../../assets/crash_analysis_heap_detail.png)
+![](../../assets/crash_analysis_heap_detail.png)
 
-The structure of a system heap memory management item is shown below. The first `uint16` is a special word `0x1EA0`, which is the value for all memory management items. If this value is not `0x1EA0`, the item has been illegally modified. The second `uint16` is a `used` flag: 1 means allocated, and 0 means not allocated. If values other than 0 or 1 appear, it indicates illegal modification, which could also lead to memory allocation failures.
 
-![Heap Structure](../../assets/crash_analysis_heap_struct.png)
+The structure of a system heap memory management item is shown below. The first
+`uint16` is a special word `0x1EA0`, which is the value for all memory
+management items. If this value is not `0x1EA0`, the item has been illegally
+modified. The second `uint16` is a `used` flag: 1 means allocated, and 0 means
+not allocated. If values other than 0 or 1 appear, it indicates illegal
+modification, which could also lead to memory allocation failures.
 
-For example, in the HEAP window, the first row with an address of `0x200A27EC` shows a memory block allocated by the `rt_serial_open` function at the instruction address `0x1011B5FB`. The memory size allocated is 4108 bytes. According to the `struct heap_mem` structure, the system heap management item length is 28 bytes. Therefore, the memory address used by the caller is 28 bytes offset from the starting address of the memory block. 
+![](../../assets/crash_analysis_heap_struct.png)
 
-In the example, the function `_lv_ll_ins_head` allocated 88 bytes of memory. The starting address of the memory block is `0x200B08E0`. In the variable view window, you can check this variable by using `(lv_obj_t*)(0x200B08E0+28)`. From the LVGL code, we can see that the size of `lv_obj_t` is 88 bytes (plus 8 bytes for the LVGL list link item after `lv_obj_t`). The function address `signal_cb` is shown in the command line window. You can enter the command `L 100DC9A1` to open the disassembly window and see the assembly code for that address, confirming the function is `lv_img_signal`, indicating that the `lv_img` control allocated the memory.
 
-When memory leaks occur, you can use the allocation address and time to analyze where memory was allocated but not freed.
+For example, in the HEAP window, the first row with an address of `0x200A27EC`
+shows a memory block allocated by the `rt_serial_open` function at the
+instruction address `0x1011B5FB`. The memory size allocated is 4108 bytes.
+According to the `struct heap_mem` structure, the system heap management item
+length is 28 bytes. Therefore, the memory address used by the caller is 28 bytes
+offset from the starting address of the memory block.
 
-![Heap Analysis Example](../../assets/crash_analysis_heap_example.png)
+![](../../assets/crash_analysis_heap_example.png)
+
+

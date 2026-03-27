@@ -1,9 +1,11 @@
-
 # Configuration Storage
 
 ## Introduction
 
-Configuration Storage (`Shared Preferences`) is a lightweight storage interface on the Android platform. It is a key-value style database suitable for storing small amounts of application data (such as configuration information) and shared configuration information between applications.
+Configuration Storage (`Shared Preferences`) is a lightweight storage interface
+on the Android platform. It is a key-value style database suitable for storing
+small amounts of application data (such as configuration information) and shared
+configuration information between applications.
 
 - Built-in semaphore, thread-safe
 - Does not support interrupt calls
@@ -11,10 +13,12 @@ Configuration Storage (`Shared Preferences`) is a lightweight storage interface 
 
 ## Enable the Module
 
-The configuration menu path in `menuconfig` is: `SiFli Middleware -> Enable share preference`
+The configuration menu path in `menuconfig` is: `SiFli Middleware -> Enable
+share preference`
 
 ## Usage
-Below is an example of the alarm application obtaining and storing the alarm list:
+Below is an example of the alarm application obtaining and storing the alarm
+list:
 
 ```c
 typedef struct{
@@ -57,6 +61,8 @@ void app_alarm_main(int argc, char **argv)
     res = share_prefs_close(pref);
 }
 ```
+
+
 
 ## API Reference
 [share_prefs.h](middleware-share_prefs)

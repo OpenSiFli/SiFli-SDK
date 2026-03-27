@@ -1,8 +1,12 @@
 # Partition Table Syntax Version 1.0
 
-The partition table description file `ptab.json` is a text file in JSON format. It follows standard JSON syntax and can be edited with any text editor.
-The partition table uses a list to define all memory devices used in the system, such as `flash2`, `psram1`, etc.
-In version 1.0 of the partition table, there is no dedicated property to specify the version number. Alternatively, a special list element (referred to as the header element) may be used with a `version` property set to `1`, as shown below:
+The partition table description file `ptab.json` is a text file in JSON format.
+It follows standard JSON syntax and can be edited with any text editor. The
+partition table uses a list to define all memory devices used in the system,
+such as `flash2`, `psram1`, etc. In version 1.0 of the partition table, there is
+no dedicated property to specify the version number. Alternatively, a special
+list element (referred to as the header element) may be used with a `version`
+property set to `1`, as shown below:
 
 ```json
 [
@@ -17,27 +21,33 @@ In version 1.0 of the partition table, there is no dedicated property to specify
         "base": "0x60000000", 
         "regions": []
     }    
-]    
+]
 ```
 
-Each element in the list (excluding the header) corresponds to a memory block. For example, in the following example, there are memories such as `flash5`, `psram1`, `flash4`, and `hpsys_ram`. Each memory has the following properties:
+Each element in the list (excluding the header) corresponds to a memory block.
+For example, in the following example, there are memories such as `flash5`,
+`psram1`, `flash4`, and `hpsys_ram`. Each memory has the following properties:
+- `mem`: The name of the memory.
+- `base`: The base address of the memory, in hexadecimal. Must be correct.
+- `regions`: The list of partitions within the memory.
 
-* `mem`: The name of the memory.
-* `base`: The base address of the memory, in hexadecimal. Must be correct.
-* `regions`: The list of partitions within the memory.
+`regions` defines the partitions within the memory. Each partition has the
+following properties:
+- `offset`: The offset in bytes (hexadecimal).
+- `max_size`: The size in bytes (hexadecimal).
+- `tags`: A list of tags. Each tag is used to generate corresponding macros
+  representing the partition’s size and starting address. For example, a tag
+  `FLASH_BOOT_LOADER` generates `FLASH_BOOT_LOADER_START_ADDR`,
+  `FLASH_BOOT_LOADER_OFFSET`, and `FLASH_BOOT_LOADER_SIZE` macros. `START_ADDR`
+  is `base + offset`, `OFFSET` equals the `offset` value, and `SIZE` equals the
+  `max_size` value.
+- `ftab`: Flash table entry information (optional).
+- `img`: The name of the image file stored in this partition, used to generate
+  flashing scripts (optional).
+- `exec`: The name of the program that runs on this partition (optional).
+- `custom`: A custom macro dictionary (optional).
 
-`regions` defines the partitions within the memory. Each partition has the following properties:
-
-* `offset`: The offset in bytes (hexadecimal).
-* `max_size`: The size in bytes (hexadecimal).
-* `tags`: A list of tags. Each tag is used to generate corresponding macros representing the partition’s size and starting address. For example, a tag `FLASH_BOOT_LOADER` generates `FLASH_BOOT_LOADER_START_ADDR`, `FLASH_BOOT_LOADER_OFFSET`, and `FLASH_BOOT_LOADER_SIZE` macros. `START_ADDR` is `base + offset`, `OFFSET` equals the `offset` value, and `SIZE` equals the `max_size` value.
-* `ftab`: Flash table entry information (optional).
-* `img`: The name of the image file stored in this partition, used to generate flashing scripts (optional).
-* `exec`: The name of the program that runs on this partition (optional).
-* `custom`: A custom macro dictionary (optional).
-
-
-````{dropdown} ptab.json Example
+````{dropdown} ptab.json示例
 ```json
 [
     {
@@ -154,12 +164,22 @@ Each element in the list (excluding the header) corresponds to a memory block. F
 ## Property Details
 
 ### ftab
+The `ftab` property defines parameters for a flash table entry, generating the
+flash table description file `ftab.c` for compilation. The flash table affects
+program startup, so `ftab` must be filled correctly. `ftab` includes the
+following properties:
+- `name`: Program name. `bootloader` means the secondary bootloader, `main`
+  means the main program, and `dfu` means the DFU program. These are reserved
+  system names and should not be used arbitrarily. Other names can be defined
+  freely by the user, e.g., `acpu_region1` can represent an ACPU code partition.
+- `address`: A list of address types. If the partition stores a program image,
+  use `"base"`. If the program runs directly from the memory region, use
+  `"xip"`. If both (i.e., the program executes in place, XIP), specify both
+  `"base"` and `"xip"`.
 
-The `ftab` property defines parameters for a flash table entry, generating the flash table description file `ftab.c` for compilation. The flash table affects program startup, so `ftab` must be filled correctly. `ftab` includes the following properties:
-- `name`: Program name. `bootloader` means the secondary bootloader, `main` means the main program, and `dfu` means the DFU program. These are reserved system names and should not be used arbitrarily. Other names can be defined freely by the user, e.g., `acpu_region1` can represent an ACPU code partition.
-- `address`: A list of address types. If the partition stores a program image, use `"base"`. If the program runs directly from the memory region, use `"xip"`. If both (i.e., the program executes in place, XIP), specify both `"base"` and `"xip"`.
-
-Below is an example describing `bootloader` stored in flash5, with the address range `0x1C020000`~`0x1C03FFFF`. The secondary bootloader code also runs directly from flash5 (XIP).
+Below is an example describing `bootloader` stored in flash5, with the address
+range `0x1C020000`~`0x1C03FFFF`. The secondary bootloader code also runs
+directly from flash5 (XIP).
 
 ```json
 {
@@ -183,17 +203,24 @@ Below is an example describing `bootloader` stored in flash5, with the address r
             "exec": "bootloader"
         }
     ]
-}, 
+},
 ```
 
-Programs that are not reserved system programs (`name` is not `main`, `bootloader`, or `dfu`) use the following flash table entries to describe stored image info in sequence:
+Programs that are not reserved system programs (`name` is not `main`,
+`bootloader`, or `dfu`) use the following flash table entries to describe stored
+image info in sequence:
 - DFU_FLASH_HCPU_EXT2: 11
 - DFU_FLASH_LCPU_EXT1: 12
 - DFU_FLASH_LCPU_EXT2: 13
 
-For example, the following `ptab.json` snippet defines `acpu_region1` using flash4 offset `0x00300000` as the ACPU program’s base address and hpsys_ram offset `0x00200000` as the XIP address. The generated `ftab.c` file uses `DFU_FLASH_HCPU_EXT2` to describe the image storage and execution addresses, with `length` determined by the program image file (example: 0x7d4 bytes) that is specified by `img` property (see [](#img) for details)
+For example, the following `ptab.json` snippet defines `acpu_region1` using
+flash4 offset `0x00300000` as the ACPU program’s base address and hpsys_ram
+offset `0x00200000` as the XIP address. The generated `ftab.c` file uses
+`DFU_FLASH_HCPU_EXT2` to describe the image storage and execution addresses,
+with `length` determined by the program image file (example: 0x7d4 bytes) that
+is specified by `img` property (see [](#img) for details)
 
-````{dropdown} acpu_region1 Example
+````{dropdown} acpu_region1示例代码
 ```json
 {
     "mem": "flash4", 
@@ -268,22 +295,28 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_RESERVED)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_SINGLE)] = {.length = 0xFFFFFFFF},
-    .running_imgs[CORE_HCPU] = (struct image_header_enc *) &sec_config.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)],
+    .running_imgs[CORE_HCPU] = (struct image_header_enc *) &amp;sec_config.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)],
     .running_imgs[CORE_LCPU] = (struct image_header_enc *)0xFFFFFFFF,
-    .running_imgs[CORE_BL] = (struct image_header_enc *) &sec_config.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)],
+    .running_imgs[CORE_BL] = (struct image_header_enc *) &amp;sec_config.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)],
     .running_imgs[CORE_BOOT] = (struct image_header_enc *)0xFFFFFFFF,
 };
 ```
 
-The following diagram shows how the storage and execution addresses for the ACPU program in `ftab.c` are extracted from `ptab.json`.
+
+The following diagram shows how the storage and execution addresses for the ACPU
+program in `ftab.c` are extracted from `ptab.json`.
+
 
 ![](../../assets/partition_table/ptab_ftab.png)
 
+
 ### img
 
-The `img` property specifies the program image file stored in a partition. The flashing script uses this to determine the flash address. If the `ftab` `base` and `xip` addresses are the same, `img` is unnecessary because the hex file already contains the address info for flashing.
+The `img` property specifies the program image file stored in a partition. The
+flashing script uses this to determine the flash address. If the `ftab` `base`
+and `xip` addresses are the same, `img` is unnecessary because the hex file
+already contains the address info for flashing.
 
-Example:
 
 ```json
 {
@@ -336,16 +369,14 @@ Example:
             "exec": "main"
         }
     ]
-}, 
+},
 ```
 
-The specified image name must match the binary generated by the project. If only one binary is generated, you can omit the `.bin` extension and name it simply `main`, `bootloader`, or `lcpu`. If there are multiple files, use the format `proj_name:binary_name`. For example, if `acpu` is added as a sub-project, its binaries `ER_IROM1.bin` and `ER_IROM2.bin` can be specified as `acpu:ER_IROM1.bin` and `acpu:ER_IROM2.bin`.
-
 ### exec
-
-The `exec` property specifies the name of the executable program stored in a partition. It allows the same linker script to be reused for building the main and sub-programs like bootloader, DFU, and main. For example, `CODE_START_ADDR` is specified by `ptab.h` based on the partition.
-
-When building the bootloader:
+The `exec` property specifies the name of the executable program stored in a
+partition. It allows the same linker script to be reused for building the main
+and sub-programs like bootloader, DFU, and main. For example, `CODE_START_ADDR`
+is specified by `ptab.h` based on the partition.
 
 ```c
 #undef  FLASH_BOOT_LOADER_START_ADDR
@@ -358,7 +389,7 @@ When building the bootloader:
 #define CODE_SIZE (FLASH_BOOT_LOADER_SIZE)
 ```
 
-When building the main program:
+When building the bootloader:
 
 ```c
 #undef  HCPU_FLASH_CODE_START_ADDR
@@ -376,8 +407,8 @@ Note: For PSRAM partitions, CBUS and SBUS are two address spaces. For example, C
 ```
 
 ### custom
-
-The `custom` property allows adding custom macros to `ptab.h`. The value must be a dictionary. For example:
+The `custom` property allows adding custom macros to `ptab.h`. The value must be
+a dictionary. For example:
 
 ```json
 "custom": {
@@ -386,8 +417,6 @@ The `custom` property allows adding custom macros to `ptab.h`. The value must be
     "PSRAM_BL_MPI": 2
 }
 ```
-
-Generates:
 
 ```c
 #define PSRAM_BL_MODE  (3)
@@ -404,14 +433,15 @@ Note: Dictionary values must be integers.
 
 ### CODE, Resource binary separation
 
-Taking 'example\multimedia\lvgl\watch\project\sf32lb52-lcd_n16r8_ccpu' as an example, under this project configuration,  will generate 3 binary files:  
-+ ER_IROM1.bin：CODE  
-+ ER_IROM2.bin：Image Resources  
-+ ER_IROM3.bin：Font Resources    
+Taking 'example\multimedia\lvgl\watch\project\sf32lb52-lcd_n16r8_ccpu' as an
+example, under this project configuration, will generate 3 binary files:
++ ER_IROM1.bin：CODE
++ ER_IROM2.bin：Image Resources
++ ER_IROM3.bin：Font Resources
 
 Key configurations：
 1. partition configuration(ptab.json)
-    ![ptab_config](../../assets/partition_table/ptab_config.png)
+   ![ptab_config](../../assets/partition_table/ptab_config.png)
 2. link script configuration(.sct or .lds)
 
     + link.sct
@@ -454,23 +484,24 @@ Key configurations：
         *(.ROM1_IMG)
         *(.ROM3_IMG*.*)
         *(.ROM3_IMG*)
-    } > ROM2
+    } &gt; ROM2
 
     /* Font/ER_IROM3 */
     .rom3 :
     {
         *lvsf_font_*(.rodata*)
         *(.SECTION_TTF*.*)
-    } > ROM3
+    } &gt; ROM3
     ```
 
 ### Add custom binary
 
-For example, it is necessary to add a binary to store the `RO data` of 'xxx.c' and download it independently.
-Refer to [ CODE, Resource binary separation](#code-resource-binary-separation), complete step by step：  
-1. Add a new partition(ptab.json)：  
+For example, it is necessary to add a binary to store the `RO data` of 'xxx.c'
+and download it independently. Refer to [ CODE, Resource binary
+separation](#code资源binary分离), complete step by step：
+1. Add a new partition(ptab.json)：
     ```c
-        {
+    {
             "offset": "0x00420000", 
             "max_size": "0x00200000", 
             "tags": [
@@ -495,9 +526,10 @@ Refer to [ CODE, Resource binary separation](#code-resource-binary-separation), 
             "img": "main:ER_IROM4.bin"
         },
     ```
-2. link script configuration(.sct or.lds)：  
-    Add a new region to store `xxx.o  (+RO)` data.（rules can be modified as needed）：  
-    + link.sct  
+2. link script configuration(.sct or.lds)：\
+   Add a new region to store `xxx.o (+RO)` data.（rules can be modified as
+   needed）：
+    + link.sct
 
         ```c
         LR_IROM3 HCPU_FLASH2_FONT_START_ADDR HCPU_FLASH2_FONT_SIZE  {  ; load region size_region
@@ -507,13 +539,13 @@ Refer to [ CODE, Resource binary separation](#code-resource-binary-separation), 
             }
         }
 
-        ; IROM4, specify which part data will store here
+        ; IROM4: Specify storage location for specific data partitions
         LR_IROM4 HCPU_FUNC_START_ADDR HCPU_FUNC_SIZE  {  ; load region size_region
             ER_IROM4 HCPU_FUNC_START_ADDR HCPU_FUNC_SIZE  {  ; RW data
             xxx.o  (+RO)
             }
         }
-        ```  
+        ```
      + link.lds
         ```c
         ... ...
@@ -525,7 +557,7 @@ Refer to [ CODE, Resource binary separation](#code-resource-binary-separation), 
         __ROM4_SIZE = HCPU_FUNC_SIZE;
 
         /*
-        *-------------------- <<< end of configuration section >>> -------------------
+        *-------------------- &lt;&lt;&lt; end of configuration section &gt;&gt;&gt; -------------------
         */
         MEMORY
         {
@@ -539,30 +571,31 @@ Refer to [ CODE, Resource binary separation](#code-resource-binary-separation), 
         {
             *lvsf_font_*(.rodata*)
             *(.SECTION_TTF*.*)
-        } > ROM3
+        } &gt; ROM3
 
-        /* ROM4 , specify which part data will store here */
+        /* ROM4; specify the data to be stored in this section */
         .rom4 :
         {
             *xxx.o(.rodata*)
-        } > ROM4
+        } &gt; ROM4
         ```
 
 ### Add custom img
 
-For example, adding a partition for downloading pre packaged binary files (such as third-party or other pre packaged ones)：  
+For example, adding a partition for downloading pre packaged binary files (such
+as third-party or other pre packaged ones)：
 1. partition configuration(ptab.json)
     ```c
-            {
+    {
                 "offset": "0x00640000", 
                 "max_size": "0x00400000", 
                 "img": "ext_bin", 
                 "tags": [
                     "EXT_BIN"
                 ]
-            }, 
+            },
     ```
-2. `AddCustomImg`(Sconstruct of this project)  
+2. `AddCustomImg`(Sconstruct of this project)
 
     ```c
     # Add custom image bin. `bin` specifies the path of the target binary.
@@ -571,4 +604,5 @@ For example, adding a partition for downloading pre packaged binary files (such 
     # Generate download .bat script
     GenDownloadScript(env)
     ```
-Compile and you can see that it already includes the newly added custom img binary in download script.
+   Compile and you can see that it already includes the newly added custom img
+   binary in download script.

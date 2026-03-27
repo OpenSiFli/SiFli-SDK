@@ -7,58 +7,73 @@ Source code path: example/misc/button
 + sf32lb58-lcd series
 
 ## Overview
-The button library uses pin devices to detect various button actions. It uses one timer to handle debouncing, and another timer to detect long press actions.
+The button library uses pin devices to detect various button actions. It uses
+one timer to handle debouncing, and another timer to detect long press actions.
 
 It supports the following operations:
 - Press: Button is pressed
 - Release: Button is released
-- Long Press: Button is pressed and held for the time specified by `BUTTON_ADV_ACTION_CHECK_DELAY`
-- Click: Button is pressed and released without triggering a long press action in between
+- Long Press: Button is pressed and held for the time specified by
+  `BUTTON_ADV_ACTION_CHECK_DELAY`
+- Click: Button is pressed and released without triggering a long press action
+  in between
 
-Users can register handlers for each button to be notified when any action occurs. Button active state is configurable.
+Users can register handlers for each button to be notified when any action
+occurs. Button active state is configurable.
 
 ## Example Usage
+
 ### Compilation and Programming
 
-Switch to the example project directory and run the scons command to execute compilation (board=board type):
+Switch to the example project directory and run the scons command to execute
+compilation (board=board type):
 ```
 scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as prompted for download:
+Run `build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat`, select the port as
+prompted for download:
 
 ```
 build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 
-Uart Download
+UART Download
 
-please input the serial port num:5
+Please input the serial port number: 5
 ```
 
-Confirm that rtconfig.h contains the following two macros.
-The maximum number of supported buttons and long press action detection threshold are configured by the following macros:
+Confirm that rtconfig.h contains the following two macros. The maximum number of
+supported buttons and long press action detection threshold are configured by
+the following macros:
 ```c
 #define BUTTON_MAX_NUM 2
 #define BUTTON_ADV_ACTION_CHECK_DELAY 3000
 ```
-They can be configured under `SiFli Middleware->Enable button library`. You can enter by typing `menuconfig` in the compilation interface:
-![alt text](assets/button_menu.png)
+They can be configured under `SiFli Middleware->Enable button library`. You can
+enter by typing `menuconfig` in the compilation interface: ![alt
+text](assets/button_menu.png)
+
+
+
+
+
 
 ## Using the Button Library
-In the following example, it first initializes the button, i.e., binds the button with the pin device and registers button action handlers. Then enables button detection, i.e., enables pin IRQ.
+In the following example, it first initializes the button, i.e., binds the
+button with the pin device and registers button action handlers. Then enables
+button detection, i.e., enables pin IRQ.
 
 ### Hardware Connection
-* Note: 587 pins are divided into groups A and B, group B pin numbers need to add 96
+* Note: 587 pins are divided into groups A and B, group B pin numbers need to
+  add 96
 
 54+96->150\
 56+96->152\
 
-button52
-![button52](./assets/button_Schematic_52.png)
-button587
-![button587](./assets/button_Schematic_587.png)
-button56
+button52 ![button52](./assets/button_Schematic_52.png) button587
+![button587](./assets/button_Schematic_587.png) button56
 ![button587](./assets/button_Schematic_56.png)
+
 
 #### Button Configuration Process
 ```c
@@ -68,15 +83,15 @@ static void button_event_handler(int32_t pin, button_action_t action)
 }
 
 
-// Initialization button
+// Initialize button
     button_cfg_t cfg;
 
     cfg.pin = BSP_KEY1_PIN;
     cfg.active_state = BUTTON_ACTIVE_HIGH;
     cfg.mode = PIN_MODE_INPUT;
     cfg.button_handler = button_event_handler;
-    int32_t id = button_init(&cfg);
-    RT_ASSERT(id >= 0);
+    int32_t id = button_init(&amp;cfg);
+    RT_ASSERT(id &gt;= 0);
     RT_ASSERT(SF_EOK == button_enable(id));
 
 
@@ -84,13 +99,18 @@ static void button_event_handler(int32_t pin, button_action_t action)
     cfg.active_state = BUTTON_ACTIVE_HIGH;
     cfg.mode = PIN_MODE_INPUT;
     cfg.button_handler = button_event_handler;
-    id = button_init(&cfg);
-    RT_ASSERT(id >= 0);
+    id = button_init(&amp;cfg);
+    RT_ASSERT(id &gt;= 0);
     RT_ASSERT(SF_EOK == button_enable(id));
 ```
-* Pay attention The pin numbers of `BSP_KEY1_PIN` and `BSP_KEY2_PIN` are derived from the `board.conf` configuration used during compilation, such as `sf32lb52-lcd_n16r8`. We can view this information in the file `sf32lb52-lcd_n16r8/hcpu/board.conf`.
+*  Pay attention The pin numbers of `BSP_KEY1_PIN` and `BSP_KEY2_PIN` are
+   derived from the `board.conf` configuration used during compilation, such as
+   `sf32lb52-lcd_n16r8`. We can view this information in the file
+   `sf32lb52-lcd_n16r8/hcpu/board.conf`.
 
 #### Button Pin Parameter Modification
+![Serial](./assets/button_Serial_print.png)
+* Log output:
 
 ```c
 #if defined(BSP_USING_BOARD_EM_LB525XXX)
@@ -102,39 +122,30 @@ static void button_event_handler(int32_t pin, button_action_t action)
 #endif
 ```
 
-#### Example Output Results Display:
-![Serial](./assets/button_Serial_print.png)
-* Log output:
-
+* Definitions of actions for states 0, 1, 2, and 3:
 ```c
-button:34,0
-button:34,3
-button:34,1
-button:11,0
-button:11,3
-button:11,1
-```
-
-* Meaning of actions represented by states 0,1,2,3:
-```c
-    action:
+action:
     BUTTON_PRESSED  = 0,    Indicates that a button is pressed
     BUTTON_RELEASED = 1,    Indicates that a button is released
     BUTTON_LONG_PRESSED = 2, Indicates that a button is long released
     BUTTON_CLICKED  = 3,     Indicates that a button is clicked
 ```
-
-**Note**: 
-1. Interrupt handling functions can be viewed in startup_bf0_hcpu.S
-2. The last parameter of HAL_PIN_Set is for hcpu/lcpu selection, 1: select hcpu, 0: select lcpu
+**Note**:
+1. The interrupt service routines (ISRs) can be found in startup_bf0_hcpu.S.
+2.  The last parameter of HAL_PIN_Set selects between HCPU and LCPU (1: HCPU, 0:
+    LCPU).
 
 ## Exception Diagnosis
-If button press does not produce expected print results, troubleshooting can be performed from the following aspects:
+If button press does not produce expected print results, troubleshooting can be
+performed from the following aspects:
 * Whether hardware connections are normal
 * Whether pin configuration (especially pin mode configuration) is correct
 
 ## Update History
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |10/2024 |Initial version |
-|0.0.2 |12/2024 |2.0 |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 10/2024 | Initial version |
+| 0.0.2   | 12/2024 | 2.0             |
+```
+
+```
