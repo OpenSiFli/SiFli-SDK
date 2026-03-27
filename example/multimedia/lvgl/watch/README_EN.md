@@ -1,61 +1,111 @@
 # Watch Interface
 
 Using LVGL v8, the included interfaces are:
-- Honeycomb main menu
-- Watch face
-- Cube left-right rotation (not supported on SF32lb55x series chips)
-```{note}
-- Not supported on 520-hdk
-```
 
-# Watch Interface
-
-Source Code Path: example/multimedia/lvgl/watch
-This is a smartwatch interface example implemented based on LVGL v8, featuring various interactive interfaces and font configuration capabilities. It demonstrates how to use the LVGL graphics library component of SiFli-SDK to build user interfaces for embedded devices.
-Developers can use this example as a foundation to build UI interfaces for various smart wearable devices such as sports watches and health monitoring devices.
+## Usage
 
 ## Supported Boards
 
-This example can run on the following development boards:
-+ sf32lb52-lcd series
-+ sf32lb56-lcd series
-+ sf32lb58-lcd series
-+ sf32lb52-lchspi-ulp
+This example can be executed on the following development boards:
+- SF32LB52-LCD Series
+- sf32lb56-lcd series
+- sf32lb58-lcd series
+- sf32lb52-lchspi-ulp
+
 ```{note}
-- Not supported on 520-hdk
+- 520-HDK is not supported
 ```
 
 ### Hardware Requirements
 
-- SiFli development board with LCD display support
+- SiFli development boards with LCD support
 
-## Specifying Fonts
+## 1. Specifying Fonts
 
-Refer to `src/resource/fonts/SConscript`. By adding the `FREETYPE_FONT_NAME` macro definition in CPPDEFINES, you can register the corresponding TTF font to LVGL
-```python
-CPPDEFINES += ["FREETYPE_FONT_NAME={}".format(font_name)]
-```
-If `font_name` is `DroidSansFallback`, it is equivalent to adding the following macro definition
+For example, if `font_name` is set to `DroidSansFallback`, it is equivalent to
+adding the following macro definition:
 ```c
 #define FREETYPE_FONT_NAME   DroidSansFallback
 ```
-During compilation, it will search for font files with `.ttf` suffix in the `freetype` subdirectory and convert them to C files for compilation
+
+During compilation, the system searches the `freetype` subdirectory for font
+files with the `.ttf` extension and converts them into C files for inclusion in
+the build process:
 ```python
 objs = Glob('freetype/{}.ttf'.format(font_name))
 objs = Env.FontFile(objs)
 ```
-Macros like `FREETYPE_TINY_FONT_FULL` are defined in `Kconfig.proj` in the project directory, similar to the following:
+
+Once compilation is complete, the TTF file is converted into a C file located in
+the `build_xxx_hcpu/src/resource/fonts/freetype` directory with the filename
+`{font_name}.c`. This C file invokes a font registration macro to register the
+font with LVGL, making it available for use:
+```c
+LVSF_FREETYPE_FONT_REGISTER(tiny55_full)
+```
+
+Macros such as `FREETYPE_TINY_FONT_FULL` are defined in the `Kconfig.proj` file
+within the project directory as follows:
 ```kconfig
 config FREETYPE_TINY_FONT_FULL
     bool
     default y
 ```
 
-## Example Output
+## 2. Complete `src/resource/fonts/SConscript` Example (supporting multiple custom fonts)
 
-After successful execution, the development board screen will display the watch main interface, including a honeycomb menu and watch face display. You can switch between different interfaces via touch or buttons.
+```python
+CPPDEFINES = []
 
-## Reference Documentation
+font_name = ''  # Default font option, defined in [Kconfig.proj] under the project directory.
+font_name2 = 'SourceHanSansCN_Normal'  # Custom TTF font filename. Place the file in the `src/resource/fonts/freetype` directory.
 
-- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+if GetDepend('FREETYPE_TINY_FONT_FULL'):
+    font_name = 'tiny55_full'
+elif GetDepend('FREETYPE_TINY_FONT_LITE'):
+    font_name = 'tiny55_lite'
+elif GetDepend('FREETYPE_HANSANS_FONT'):
+    font_name = 'SourceHanSansCN_Normal'
+elif GetDepend('FREETYPE_ARIAL_FONT'):
+    font_name = 'arial'
+else:
+    font_name = 'DroidSansFallback'
+
+objs = Glob('freetype/{}.ttf'.format(font_name))
+objs = Env.FontFile(objs)
+
+objs2 = Glob('freetype/{}.ttf'.format(font_name2))  # Locate the custom font file.
+objs += Env.FontFile(objs2)  # Convert the custom TTF file to a C source file.
+```
+
+## Function Usage
+```c
+// Interface for using the default configured font (font_name)
+void lv_ext_set_local_font(lv_obj_t *obj, uint16_t size, lv_color_t color)
+
+// Interface for using a custom font by specifying the registered font name
+void lv_ext_set_font_local_by_name(lv_obj_t *obj, uint16_t size, lv_color_t color, char *fontname)
+```
+## Troubleshooting
+When multiple fonts are used, the total size of the TTF files may exceed the
+pre-allocated memory capacity. If a compilation error such as the one shown
+below occurs, you must increase the `max_size` for `"tags":
+["HCPU_FLASH2_FONT"]` in `project/xxx_hcpu/ptab.json`. Note that when adjusting
+this size, ensure that the addresses of adjacent segments remain contiguous and
+consider the maximum memory capacity supported by the specific development
+board.
+```
+region 'ROM' overflowed by 7880732 bytes
+```
+## Sample Output
+
+Upon successful execution, the development board's screen will display the main
+smartwatch interface, including a honeycomb menu and watch face. Users can
+navigate between different interfaces via touch or physical buttons.
+
+## References
+
+- [SiFli-SDK Quick Start
+  Guided](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
 - [LVGL Official Documentation](https://docs.lvgl.io/8.3/)
+
