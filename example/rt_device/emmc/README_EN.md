@@ -1,7 +1,8 @@
 # eMMC/SD Card Example
 Source code path: example/rt_device/emmc
 ## Overview
-The example demonstrates creating partitions on eMMC or SD card, mounting elm file system on partitions, and performing various file system operations
+The example demonstrates creating partitions on eMMC or SD card, mounting elm
+file system on partitions, and performing various file system operations
 ## Supported Platforms
 * sf32lb56-lcd_a128r12n1
 * sf32lb56-lcd_n16r12n1
@@ -27,15 +28,13 @@ ls               - List information about the FILEs.//List all file information
 ```
 menuconfig --board=56devkit_lcd(board= followed by board name)
 ```
-1. Enable SDIO
-![alt text](assets/sdio.png)
+1. Enable SDIO ![alt text](assets/sdio.png)
 
-2. Note that SF32LB56X has two SDMMC controller IPs: SDMMC1 (SDHCI IP) and SDMMC2 (SDIO IP). If eMMC is connected to SDMMC2, the configuration needs to be changed to BSP_USING_SD_LINE.
-![alt text](assets/image1.png)
+2. Note that SF32LB56X has two SDMMC controller IPs: SDMMC1 (SDHCI IP) and
+   SDMMC2 (SDIO IP). If eMMC is connected to SDMMC2, the configuration needs to
+   be changed to BSP_USING_SD_LINE. ![alt text](assets/image1.png)
 
-3. Enable and configure SD device
-![alt text](assets/sd.png)
-
+3. Enable and configure SD device ![alt text](assets/sd.png)
 
 ### Compilation and Flashing
 Follow these steps to complete compilation and flashing.
@@ -46,29 +45,37 @@ build_56_board_lcd_hcpu\download.bat(uart_download.bat)//Can flash through jlink
 
 ## Experimental Results
 
-1. Successful mount log (If you see the output log contains the items framed in the picture, it means mount is successful)
-![alt text](assets/log2.png)
+1. Successful mount log (the presence of the highlighted text in the output log
+indicates a successful mount). ![alt text](assets/log2.png)
 
-2. Perform file creation operations. First input ls to view existing files or directories in the file system, then use mkdir XXX to create, cd to the created directory, use echo command to create text and write content, then use cat command to view the created file content, finally use pwd command to view the current working path
-![alt text](assets/log1.png)
+2. Creating a file: First, execute `ls` to view existing files or directories in
+the filesystem. Use `mkdir ` to create a new directory, then `cd` into it. Use
+the `echo` command to create a text file and write content to it. Verify the
+content using `cat`, and finally, use `pwd` to check the current working
+directory. ![alt text](assets/log1.png)
 
 
 ## Results that could not be completed as expected (log)
 ![alt text](assets/log3.png)
 
 ## Failure reasons and solutions
-1. If the log shows the following, first check if TF card is inserted, then check if SD in the above menuconfig is enabled, you can refer to the above menuconfig operation configuration
+If the expected log does not appear, you can troubleshoot from the following
+aspects:
 ```
 rt_mmcsd_blk_device_create find [sd0] fail !!!
 ```
 
-2. If the log shows the following, please check if TF card is inserted
+2. If the log displays the following, please check whether the TF card is
+properly inserted:
 ```
 [E/DFS] Device (root) was not found
 [E/DFS] Device (misc) was not found
 ```
-If the expected log does not appear, you can troubleshoot from the following aspects:
+If the expected log output does not appear, troubleshoot using the following
+steps:
+* If the log shows the following, first check if TF card is inserted, then check
+  if SD in the above menuconfig is enabled, you can refer to the above
+  menuconfig operation configuration
+* If the log shows the following, please check if TF card is inserted
 * Whether hardware connection is normal
 * Check if USB interface is loose
-* Check if USB cable has data transmission capability
-* Whether TF card is usable
