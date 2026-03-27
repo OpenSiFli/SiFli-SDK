@@ -1,9 +1,8 @@
-# ADC Example
 
+# ADC Example
 ```{toctree}
 :titlesonly:
 :glob:
 
 */*
-
 ```
