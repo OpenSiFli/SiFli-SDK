@@ -3,66 +3,72 @@
 Source path: example/rt_device/pdm
 
 ## Supported Platforms
-<!-- Which boards and chip platforms are supported -->
-+ sf32lb52-nano
-+ sf32lb52-lcd series
-+ sf32lb56-lcd series
-+ sf32lb58-lcd series
-* eh-lb525
+<!-- 支持哪些板子和芯片平台 -->
+* sf32lb52-nano
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 ## Overview
-<!-- Example introduction -->
+<!-- 例程简介 -->
 This example demonstrates PDM recording, including:
 + Recording via PDM, PCM data saved to Flash (raw write).
 + Read recorded data and playback.
 
-
 ## Example Usage
-<!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
-For rt_device examples, you also need to list the configuration switches used by this example, such as PWM example using PWM1, which needs to be enabled in the onchip menu -->
+<!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
+对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 
 ### Hardware Requirements
 Before running this example, you need to prepare:
-+ One development board supported by this example ([Supported platforms](quick_start)).
++ One development board supported by this example ([Supported
+  platforms](quick_start)).
 + PDM
 + Speaker.
 
 ### menuconfig Configuration
 
-1. Enable PDM (using PDM1 here)
-![PDM](./assets/mc_pdm_enable.png)
-![PDM1](./assets/mc_pdm1_enable.png)
-2. Enable AUDIO CODEC and AUDIO PROC:
-![AUDIO CODEC & PROC](./assets/mc_audcodec_audprc.png)
-3. Enable AUDIO(`AUDIO`):
-![AUDIO](./assets/mc_audio.png)
+1. Enable PDM (using PDM1 here) ![PDM](./assets/mc_pdm_enable.png)
+   ![PDM1](./assets/mc_pdm1_enable.png)
+2. Enable AUDIO CODEC and AUDIO PROC: ![AUDIO CODEC &
+   PROC](./assets/mc_audcodec_audprc.png)
+3. Enable AUDIO(`AUDIO`): ![AUDIO](./assets/mc_audio.png)
 4. Enable AUDIO MANAGER.(`AUDIO_USING_MANAGER`)
-![AUDIO_USING_MANAGER](./assets/mc_audio_manager.png)
+   ![AUDIO_USING_MANAGER](./assets/mc_audio_manager.png)
 
 ```{tip}
 Configurations 3 and 4 are for playing recorded files. In this example, recording playback uses Audio manager interface.
-```  
+```
 
 ### Hardware Connection\PIN CONFIG
-|Development Board  | PDM       | PDM1_CLK    | PDM1_DATA   |   Power Supply | GND | SEL(left/right channel selection) |
-|--------|------------|---------------|-------------------|---|---|---|
-|SF32LB52_DevKit-LCD    | PDM1     | PAD_PA22/PAD_PA07    | PAD_PA23/PAD_PA08 |   3.3V | GND | GND/3.3V |
+| Development Board   | PDM  | PDM1_CLK          | PDM1_DATA         | Power Supply | GND | SEL(left/right channel selection) |
+| ------------------- | ---- | ----------------- | ----------------- | ------------ | --- | --------------------------------- |
+| SF32LB52_DevKit-LCD | PDM1 | PAD_PA22/PAD_PA07 | PAD_PA23/PAD_PA08 | 3.3V         | GND | GND/3.3V                          |
+| SF32LB52_LCD        | PDM1 | PAD_PA22/PAD_PA07 | PAD_PA23/PAD_PA08 | 3.3V         | GND | GND/3.3V                          |
+| SF32LB56-LCD        | PDM1 | PAD_PA69          | PAD_PA20          | 3.3V         | GND | GND/3.3V                          |
+| SF32LB58-LCD        | PDM2 | PAD_PA23          | PAD_PA18          | 3.3V         | GND | GND/3.3V                          |
+* For detailed pin definitions, refer to
+  [sf32lb52-nano](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-Nano.html)
+  [sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
+  [sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
+  [sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html).
 
 ```{tip}
 + When there are two PDM channels, SEL is used to distinguish left and right channels.
 + When there is one PDM channel, SEL can be left floating.
 ```
 
-Taking `SF32LB52_DevKit-LCD` as an example, using `PA07/PA08` as `PDM1_CLK/PDM1_DATA`, pin configuration is as follows:
+Taking `SF32LB52_DevKit-LCD` as an example, using `PA07/PA08` as
+`PDM1_CLK/PDM1_DATA`, pin configuration is as follows:
 ```C
-    /* PIN CONFIG */
+/* * PIN CONFIG * */
 #ifdef SOC_SF32LB52X
-#if !defined(BSP_USING_LCD) && defined(BSP_USING_PDM1)
+#if !defined(BSP_USING_LCD) &amp;&amp; defined(BSP_USING_PDM1)
     HAL_PIN_Set(PAD_PA07, PDM1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA08, PDM1_DATA, PIN_PULLDOWN, 1);
 #endif
 #endif
-````
+```
 ![SF32LB52_DevKit-LCD PDM connection](./assets/pdm_hw.png)
 
 ```{warning}
@@ -75,42 +81,49 @@ For other form factors, you need to refer to the specification to select pins.
 
 
 ### Compilation and Programming
-Switch to the example project directory and run the scons command to execute compilation:
+Switch to the example project directory and run the scons command to execute
+compilation:
 ```c
-> scons --board=sf32lb52-lcd_n16r8 -j32
+&gt; scons --board=sf32lb52-lcd_n16r8 -j32
 ```
-Switch to the example `project/build_xx` directory and run `uart_download.bat`, select the port as prompted to download:
+Switch to the example `project/build_xx` directory and run `uart_download.bat`,
+select the port as prompted to download:
 ```c
 $ ./uart_download.bat
 
-     Uart Download
+     UART Download
 
-please input the serial port num:5
+Please input the serial port number: 5
 ```
-For detailed steps on compilation and downloading, please refer to the relevant introduction in [Quick Start](quick_start).
+For detailed steps on compilation and downloading, please refer to the relevant
+introduction in [Quick Start](quick_start).
 
 ## Expected Results
-<!-- Explain the example running results, such as which LEDs will light up, what logs will be printed, so that users can judge whether the example is running normally. The running results can be explained step by step combined with the code -->
+<!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
 This example operates recording and playback through FINSH commands:
-1. Start recording command: `pdm open [channel selection] [depth] [sampling rate]`  
-For example:
-+ `pdm open 1 16 16000`  
-Means configure for left channel, 16-bit, 16k sampling rate recording.
-+ `pdm open 2 16 16000`  
-Means configure for dual channel (stereo), 16-bit, 16k sampling rate recording.
+1. Start recording command: `pdm open [channel selection] [depth] [sampling
+   rate]`\
+   For example:
++ `pdm open 1 16 16000`\
+  Means configure for left channel, 16-bit, 16k sampling rate recording.
++ `pdm open 2 16 16000`\
+  Means configure for dual channel (stereo), 16-bit, 16k sampling rate
+  recording.
 
 2. End recording command: `pdm stop`
-+ `pdm stop`  
-Means end recording.
++ `pdm stop`\
+  Means end recording.
 
-3. Playback recording command: `pdm play [channel count] [depth] [sampling rate]`  
-For example:
-+ `pdm play 1 16 16000`  
-Means playback mono, 16k sampling rate, 16-bit recorded data.
-+ `pdm play 2 16 16000`  
-Means playback dual channel, 16k sampling rate, 16-bit recorded data.
+3. Playback recording command: `pdm play [channel count] [depth] [sampling
+   rate]`\
+   For example:
++ `pdm play 1 16 16000`\
+  Means playback mono, 16k sampling rate, 16-bit recorded data.
++ `pdm play 2 16 16000`\
+  Means playback dual channel, 16k sampling rate, 16-bit recorded data.
 
-After executing recording and then playback, normal recording and playback can be achieved.  
+After executing recording and then playback, normal recording and playback can
+be achieved.
 
 Serial port log output reference:
 ```c
@@ -188,11 +201,11 @@ Serial port log output reference:
 
 
 ## Reference Documentation
-<!-- For rt_device examples, the RT-Thread official website documentation provides more detailed explanations, you can add webpage links here, for example, refer to RT-Thread's [RTC documentation](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
+<!-- 对于rt_device的示例，rt-thread官网文档提供的较详细说明，可以在这里添加网页链接，例如，参考RT-Thread的[RTC文档](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
 
 ## Update Log
-|Version |Date   |Release Notes |
-|:---|:---|:---|
-|0.0.1 |12/2024 |Initial version |
-| | | |
-| | | |
+| Version | Date    | Release Notes   |
+| ------- | ------- | --------------- |
+| 0.0.1   | 12/2024 | Initial version |
+|         |         |                 |
+|         |         |                 |
