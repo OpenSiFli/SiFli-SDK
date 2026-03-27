@@ -15,14 +15,18 @@ This example demonstrates the following basic FFT operations:
 
 ## Usage
 
-The following sections provide only absolutely necessary information. For complete steps on configuring SiFli-SDK and building/running projects, please refer to the [SiFli-SDK Quick Start Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
+The following sections provide only absolutely necessary information. For
+complete steps on configuring SiFli-SDK and building/running projects, please
+refer to the [SiFli-SDK Quick Start
+Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
 
 ### Hardware Requirements
-This example requires no special hardware configuration. Simply connect the development board to your computer via USB.
+This example requires no special hardware configuration. Simply connect the
+development board to your computer via USB.
 
-## Example Output
+### Expected Results
 
-Under normal circumstances, you will see the following output:
+The expected output is as follows:
 
 ```log
 =========================================
@@ -80,16 +84,16 @@ Inverse FFT completed successfully
 =========================================
 ```
 
+## Example Output
+
+Under normal circumstances, you will see the following output:
+
 ## Troubleshooting
-
-For any technical questions, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
-
-## Reference Documentation
 
 - [SiFli-SDK Official Documentation](https://docs.sifli.com/)
 
-## Update History
-| Version | Date    | Release Notes |
-|:--------|:--------|:--------------|
-| 1.0.0   | 6/2025  | Initial version |
-|         |         |               |
+## Reference Documentation
+| Version | Date      | Release Notes   |
+| ------- | --------- | --------------- |
+| 1.0.0   | June 2025 | Initial release |
+|         |           |                 |
