@@ -183,7 +183,7 @@ static LCD_DrvTypeDef drv_lcd;
     #endif /* BSP_LCDC_USING_DPI */
 
     #if defined(SF32LB52X)
-        #define IS_DMA_FRIENDLY_SRAM(addr)    HCPU_IS_SRAM_ADDR(addr)
+        #define IS_DMA_FRIENDLY_SRAM(addr)    ((((addr) >= HPSYS_RAM0_BASE) && ((addr) < HPSYS_RAM1_BASE)) ? false : HCPU_IS_SRAM_ADDR(addr))
     #else
         #define IS_DMA_FRIENDLY_SRAM(addr)    ((((addr) >= HPSYS_RETM_BASE) && ((addr) < HPSYS_RETM_END)) ? false : HCPU_IS_SRAM_ADDR(addr))
     #endif
