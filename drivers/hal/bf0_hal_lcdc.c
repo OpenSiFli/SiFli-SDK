@@ -7,7 +7,7 @@
 #include <string.h>
 #include "bf0_hal.h"
 
-//extern void rt_kprintf(const char *fmt, ...);
+extern void rt_kprintf(const char *fmt, ...);
 
 #define LCDC_LOG(...)   //do{rt_kprintf(__VA_ARGS__);rt_kprintf("\r\n");}while(0)
 
@@ -3163,9 +3163,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *
 #define PTC_BTIM_UPDATE      PTC_HCPU_BTIM2_UPDATE
 #define PTC_btim   hwp_btim2
 #define BTIM_RCC_MOD  RCC_MOD_BTIM2
-#ifdef SF32LB58X
-#define  p_DMACH0  DMA1_Channel7
-#define PTC_DMACH0_TC PTC_HCPU_DMAC1_DONE7
+#if 1 //def SF32LB58X
+// #define  p_DMACH0  DMA1_Channel7
+// #define PTC_DMACH0_TC PTC_HCPU_DMAC1_DONE7
+#define  p_DMACH0  DMA1_Channel5
+#define PTC_DMACH0_TC PTC_HCPU_DMAC1_DONE5
 #else
 static DMA_HandleTypeDef hdma_ptc_ch0 = {0};
 static DMA_Channel_TypeDef *p_DMACH0 = NULL;
@@ -3229,6 +3231,31 @@ static uint8_t PTC_DMACH0_TC = 0xFF;
 #define lcdc_single_wd ((1 << LCD_IF_LCD_SINGLE_TYPE_Pos)|(1 << LCD_IF_LCD_SINGLE_WR_TRIG_Pos) |(0 << LCD_IF_LCD_SINGLE_RD_TRIG_Pos))
 #define lcdc_single_rr ((0 << LCD_IF_LCD_SINGLE_TYPE_Pos)|(0 << LCD_IF_LCD_SINGLE_WR_TRIG_Pos) |(1 << LCD_IF_LCD_SINGLE_RD_TRIG_Pos))
 
+static void DMA_channel_init(void)
+{
+    #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+
+    /*Dynamic allocation of DMA channels*/
+    memset(&hdma_ptc_ch0, 0, sizeof(hdma_ptc_ch0));
+
+    hdma_ptc_ch0.Instance = DMA1_Channel5;
+    HAL_DMA_Init(&hdma_ptc_ch0);
+    if (HAL_DMA_AllocChannel(&hdma_ptc_ch0) != HAL_OK)
+    {
+        HAL_LCDC_ASSERT(0); //DMA channel allocation failed
+    }
+
+
+    p_DMACH0 = hdma_ptc_ch0.Instance;
+    uint32_t channel_num = (hdma_ptc_ch0.ChannelIndex >> 2) + 1;
+    PTC_DMACH0_TC = PTC_HCPU_DMAC1_DONE1 + (channel_num - 1);
+    /*DMA channel init end*/
+
+#else
+    p_DMACH0 = DMA1_Channel5;
+    PTC_DMACH0_TC = PTC_HCPU_DMAC1_DONE5;
+#endif /*DMA_SUPPORT_DYN_CHANNEL_ALLOC*/
+}
 
 static void SPI_AUX_RST_HW_FSM(void)
 {
@@ -3278,11 +3305,19 @@ static void SPI_AUX_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
     HAL_RCC_EnableModule(BTIM_RCC_MOD);
     HAL_RCC_EnableModule(RCC_MOD_PTC1);
 
+#ifdef SF32LB58X
+
+#else
+  DMA_channel_init();
+#endif /* SF32LB58X */
+ 
     SPI_AUX_RST_HW_FSM();
 
     //Set canvas area as 1-line at roi.y0
     lcdc->Instance->CANVAS_TL_POS = (lcdc->roi.x0 << LCD_IF_CANVAS_TL_POS_X0_Pos) | (lcdc->roi.y0 << LCD_IF_CANVAS_TL_POS_Y0_Pos);
     lcdc->Instance->CANVAS_BR_POS = (lcdc->roi.x1 << LCD_IF_CANVAS_BR_POS_X1_Pos) | (lcdc->roi.y0 << LCD_IF_CANVAS_BR_POS_Y1_Pos);
+    
+    MODIFY_REG(lcdc->Instance->SPI_IF_CONF, LCD_IF_SPI_IF_CONF_WR_LEN_Msk, (4 - 1) << LCD_IF_SPI_IF_CONF_WR_LEN_Pos); //Set command length to 4 bytes
 
 ///////////////////////////////////
 // init btim/dmac/busmon         //
@@ -3774,28 +3809,7 @@ static void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 #ifdef SF32LB58X
 
 #else
-#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-
-    /*Dynamic allocation of DMA channels*/
-    memset(&hdma_ptc_ch0, 0, sizeof(hdma_ptc_ch0));
-
-    hdma_ptc_ch0.Instance = DMA1_Channel5;
-    HAL_DMA_Init(&hdma_ptc_ch0);
-    if (HAL_DMA_AllocChannel(&hdma_ptc_ch0) != HAL_OK)
-    {
-        HAL_LCDC_ASSERT(0); //DMA channel allocation failed
-    }
-
-
-    p_DMACH0 = hdma_ptc_ch0.Instance;
-    uint32_t channel_num = (hdma_ptc_ch0.ChannelIndex >> 2) + 1;
-    PTC_DMACH0_TC = PTC_HCPU_DMAC1_DONE1 + (channel_num - 1);
-    /*DMA channel init end*/
-
-#else
-    p_DMACH0 = DMA1_Channel5;
-    PTC_DMACH0_TC = PTC_HCPU_DMAC1_DONE5;
-#endif /*DMA_SUPPORT_DYN_CHANNEL_ALLOC*/
+DMA_channel_init();
 
 #endif /* SF32LB58X */
 
