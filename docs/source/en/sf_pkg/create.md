@@ -46,7 +46,7 @@ sdk.py sf-pkg users
 Switch active user:
 
 ```bash
-sdk.py sf-pkg use --name <namespace>
+sdk.py sf-pkg use --name <namespace></namespace>
 ```
 
 Show current active user:
@@ -79,13 +79,13 @@ After preparing the driver folder, navigate to that directory in the terminal
 and execute:
 
 ```bash
-sdk.py sf-pkg new --name <package_name>
+sdk.py sf-pkg new --name <package_name></package_name>
 ```
 
 By default, this uses the active user. To temporarily select another user:
 
 ```bash
-sdk.py sf-pkg --user <namespace> new --name <package_name>
+sdk.py sf-pkg --user <namespace> new --name <package_name></package_name></namespace>
 ```
 
 Optional parameters:
@@ -98,7 +98,7 @@ Optional parameters:
 Example (with version and author information):
 
 ```bash
-sdk.py sf-pkg new --name <package_name> --version 1.0.0 --author yourname
+sdk.py sf-pkg new --name <package_name> --version 1.0.0 --author yourname</package_name>
 ```
 
 Upon successful execution, a `conanfile.py` file will be generated. For detailed
@@ -239,29 +239,36 @@ website:
 ![Package on Server](./assert/pkg_in_website.png)
 
 
-## 作为组织使用
+## Using as an Organization
 
-组织用于对多个用户共同维护的组件包进行统一管理，是面向团队和企业级使用场景的核心功能。
+Organizations are designed for centralized management of component packages
+maintained by multiple users. This is a core feature for team and
+enterprise-level use cases.
 
-组织可包含多个成员，不同成员可共享同一组织下的组件包与发布流程。
+An organization can include multiple members, allowing them to share access to
+component packages and release workflows within that organization.
 
-作为组织和作为个人使用时，大多数步骤均相同，只有令牌的获取方式和命名空间的不同。
+Usage workflows for organizations and individuals are largely identical,
+differing only in the method of token acquisition and the workspace namespace.
 
-### 创建组织令牌
+### Creating an Organization Token
 
-1. 打开<https://packages.sifli.com/zh>，使用 GitHub 账号登录。
-2. 登陆后进入组织管理。
-3. 找到想要管理的组织，点击管理
-4. 在组织管理申请访问令牌（Token），并妥善保存，后续用于 `sdk.py sf-pkg login` 命令。
+1. Open <https://packages.sifli.com/zh> and sign in with your GitHub account.
+2. After logging in, navigate to Organization Management.
+3. Locate the target organization and click Manage.
+4. Request an access token in the Organization Management section. Securely
+   store this token for use with the `sdk.py sf-pkg login` command.
 
-![进入组织管理](./assert/enter_org.png) ![管理组织](./assert/check_org.png)
-![创建token](./assert/create_org_token.png) ![获取token](./assert/get_org_token.png)
+![Access Organization Management](./assert/enter_org.png) ![Manage
+Organization](./assert/check_org.png) ![Create
+Token](./assert/create_org_token.png) ![Acquire
+Token](./assert/get_org_token.png)
 
 ```{note}
-组织 token 和个人 token 可以同时保存在本地，可通过 `sf-pkg use` 或 `sf-pkg --user` 在不同命名空间间切换。
+Organization and personal tokens can coexist locally. You can switch between namespaces using `sf-pkg use` or the `sf-pkg --user` flag.
 ```
 
-### 有关命名空间的说明
+### Namespace Description
 
 1. When logging in as an organization, the namespace corresponds to the
    organization name. Therefore, use the following command to log in via the
