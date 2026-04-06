@@ -335,6 +335,7 @@ SHELL_CLASSES = {
     'nu': UnixShell,
     'pwsh.exe': PowerShell,
     'pwsh': PowerShell,
+    'PowerShell.exe': PowerShell, 
     'powershell.exe': PowerShell,
     'powershell': PowerShell,
     'cmd.exe': WinCmd,
