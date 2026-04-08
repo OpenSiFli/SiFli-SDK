@@ -21,23 +21,23 @@ offset, the driver layer typically represents a GPIO pin (including GPIOA,
 GPIOB, and PBR supported by certain series) using a single numerical ID. The
 following method is used to assign IDs to GPIOs and PBRs at the driver layer:
 
-| Pin      | Pin ID | Description     |
-| -------- | ------ | --------------- |
-| GPIOA_00 | 0      | `GET_PIN(1, 0)` |
-| GPIOA_01 | 1      | `GET_PIN(1, 1)` |
-| GPIOA_02 | 2      | `GET_PIN(1, 2)` |
-| ...      | ...    |                 |
-| GPIOB_00 | 96     | `GET_PIN(2, 0)` |
-| GPIOB_01 | 97     | `GET_PIN(2, 1)` |
-| GPIOB_02 | 98     | `GET_PIN(2, 2)` |
-| ...      | ...    |                 |
-| PBR0     | 160    | `GET_PIN(0, 0)` |
-| PBR1     | 161    | `GET_PIN(0, 1)` |
-| ...      | ...    | 依系列不同，范围见下方说明   |
+| Pin      | Pin ID | Description                                                        |
+| -------- | ------ | ------------------------------------------------------------------ |
+| GPIOA_00 | 0      | `GET_PIN(1, 0)`                                                    |
+| GPIOA_01 | 1      | `GET_PIN(1, 1)`                                                    |
+| GPIOA_02 | 2      | `GET_PIN(1, 2)`                                                    |
+| ...      | ...    |                                                                    |
+| GPIOB_00 | 96     | `GET_PIN(2, 0)`                                                    |
+| GPIOB_01 | 97     | `GET_PIN(2, 1)`                                                    |
+| GPIOB_02 | 98     | `GET_PIN(2, 2)`                                                    |
+| ...      | ...    |                                                                    |
+| PBR0     | 160    | `GET_PIN(0, 0)`                                                    |
+| PBR1     | 161    | `GET_PIN(0, 1)`                                                    |
+| ...      | ...    | The range varies by series; see the description below for details. |
 
-举例说明：
- - GPIOB03脚，pin id为 99
- - GPIOA03脚，pin id为 3
+Examples:
+ - GPIOB03: Pin ID is 99
+ - GPIOA03: Pin ID is 3
 
 ```{note}
 Pin numbers can also be retrieved via macro definitions.
