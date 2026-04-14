@@ -9,8 +9,11 @@
 ## 支持的开发板
 
 此示例可在以下开发板上运行：
-- sf32lb52-lcd_n16r8
+- sf32lb52-lcd系列
+- sf32lb56-lcd系列
+- sf32lb58-lcd系列
 - sf32lb52-lchspi-ulp
+
 ```{note}
 - 不支持520-hdk
 ```

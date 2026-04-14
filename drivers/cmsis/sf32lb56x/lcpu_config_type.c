@@ -67,6 +67,15 @@ uint8_t LCPU_CONFIG_set(uint8_t *base_addr, uint8_t conifg_type, uint8_t *value,
         }
         break;
     }
+    case HAL_LCPU_CONFIG_IS_SOFT_CVSD_ROM:
+    {
+        if (length == LCPU_CONFIG_IS_SOFT_CVSD_ROM_LENGTH)
+        {
+            memcpy(base_addr + LCPU_CONFIG_IS_SOFT_CVSD_ROM_OFFSET, value, length);
+            ret = 0;
+        }
+        break;
+    }
     default:
         break;
     }
@@ -131,6 +140,15 @@ uint8_t LCPU_CONFIG_get(uint8_t *base_addr, uint8_t config_type, uint8_t *value,
         {
             *((uint32_t *)value) = 0xe8091ad7;
             memcpy(value + 4, base_addr + LCPU_CONFIG_BATTERY_A_ROM_OFFSET, 8);
+            ret = 0;
+        }
+        break;
+    }
+    case HAL_LCPU_CONFIG_IS_SOFT_CVSD_ROM:
+    {
+        if (*length == LCPU_CONFIG_IS_SOFT_CVSD_ROM_LENGTH)
+        {
+            memcpy(value, base_addr + LCPU_CONFIG_IS_SOFT_CVSD_ROM_OFFSET, LCPU_CONFIG_IS_SOFT_CVSD_ROM_LENGTH);
             ret = 0;
         }
         break;

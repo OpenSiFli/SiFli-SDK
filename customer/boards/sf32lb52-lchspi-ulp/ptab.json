@@ -41,9 +41,33 @@
                 }, 
                 "img": "main",
                 "exec": "main"
-            }, 
+            },
+                        {
+                "offset": "0x00820000",
+                "max_size": "0x00060000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "img": "dfu",
+                "exec": "dfu",
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "base",
+                        "xip"
+                    ]
+                }
+            },
             {
-                "offset": "0x00820000", 
+                "offset": "0x00880000",
+                "max_size": "0x00120000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+ 
+            {
+                "offset": "0x009A0000", 
                 "max_size": "0x00400000", 
                 "img": "fs_root", 
                 "tags": [
@@ -51,14 +75,14 @@
                 ]
             }, 
             {
-                "offset": "0x00C20000", 
+                "offset": "0x00DA0000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_DFU_REGION"
                 ]
             }, 
             {
-                "offset": "0x00C24000", 
+                "offset": "0x00DA4000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_BLE_REGION"

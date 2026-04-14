@@ -19,6 +19,8 @@
 #define CONFIG_USB_DFS_MOUNT_POINT "/"
 #endif
 
+typedef rt_size_t rt_ssize_t;
+
 static rt_err_t rt_udisk_init(rt_device_t dev)
 {
     struct usbh_msc *msc_class = (struct usbh_msc *)dev->user_data;
@@ -38,7 +40,7 @@ static rt_ssize_t rt_udisk_read(rt_device_t dev, rt_off_t pos, void *buffer,
     rt_uint8_t *align_buf;
 
     align_buf = (rt_uint8_t *)buffer;
-#ifdef CONFIG_USB_DCACHE_ENABLE
+
     if ((uint32_t)buffer & (CONFIG_USB_ALIGN_SIZE - 1)) {
         align_buf = rt_malloc_align(size * msc_class->blocksize, CONFIG_USB_ALIGN_SIZE);
         if (!align_buf) {
@@ -47,18 +49,18 @@ static rt_ssize_t rt_udisk_read(rt_device_t dev, rt_off_t pos, void *buffer,
         }
     } else {
     }
-#endif
+
     ret = usbh_msc_scsi_read10(msc_class, pos, (uint8_t *)align_buf, size);
     if (ret < 0) {
         rt_kprintf("usb mass_storage read failed\n");
         return 0;
     }
-#ifdef CONFIG_USB_DCACHE_ENABLE
+
     if ((uint32_t)buffer & (CONFIG_USB_ALIGN_SIZE - 1)) {
         usb_memcpy(buffer, align_buf, size * msc_class->blocksize);
         rt_free_align(align_buf);
     }
-#endif
+
     return size;
 }
 
@@ -70,7 +72,7 @@ static rt_ssize_t rt_udisk_write(rt_device_t dev, rt_off_t pos, const void *buff
     rt_uint8_t *align_buf;
 
     align_buf = (rt_uint8_t *)buffer;
-#ifdef CONFIG_USB_DCACHE_ENABLE
+
     if ((uint32_t)buffer & (CONFIG_USB_ALIGN_SIZE - 1)) {
         align_buf = rt_malloc_align(size * msc_class->blocksize, CONFIG_USB_ALIGN_SIZE);
         if (!align_buf) {
@@ -80,17 +82,16 @@ static rt_ssize_t rt_udisk_write(rt_device_t dev, rt_off_t pos, const void *buff
 
         usb_memcpy(align_buf, buffer, size * msc_class->blocksize);
     }
-#endif
+
     ret = usbh_msc_scsi_write10(msc_class, pos, (uint8_t *)align_buf, size);
     if (ret < 0) {
         rt_kprintf("usb mass_storage write failed\n");
         return 0;
     }
-#ifdef CONFIG_USB_DCACHE_ENABLE
+
     if ((uint32_t)buffer & (CONFIG_USB_ALIGN_SIZE - 1)) {
         rt_free_align(align_buf);
     }
-#endif
 
     return size;
 }
@@ -127,6 +128,11 @@ const static struct rt_device_ops udisk_device_ops = {
 };
 #endif
 
+__WEAK void mount_udisk_hook(struct usbh_msc *msc_class, const char *dev_name, const char *mount_point)
+{
+    /* user can implement this hook to do something when udisk is mounted */
+}
+
 static void usbh_msc_thread(CONFIG_USB_OSAL_THREAD_SET_ARGV)
 {
     struct usbh_msc *msc_class = (struct usbh_msc *)CONFIG_USB_OSAL_THREAD_GET_ARGV;
@@ -140,11 +146,16 @@ static void usbh_msc_thread(CONFIG_USB_OSAL_THREAD_SET_ARGV)
     ret = dfs_mount(name, mount_point, "elm", 0, 0);
     if (ret == 0) {
         rt_kprintf("udisk: %s mount successfully\n", name);
+        mount_udisk_hook(msc_class, name, mount_point);
     } else {
         rt_kprintf("udisk: %s mount failed, ret = %d\n", name, ret);
     }
 
-    usb_osal_thread_delete(NULL);
+    /* NOTE: usb_osal_thread_delete(NULL) causes system crash for unknown reason.
+     * Simply returning from the thread function also achieves thread self-deletion,
+     * so we skip the explicit delete call here.
+     */
+    // usb_osal_thread_delete(NULL);
 }
 
 void usbh_msc_run(struct usbh_msc *msc_class)

@@ -22,16 +22,16 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static lv_obj_t *add_list_button(lv_obj_t *parent, uint32_t track_id);
-static void btn_click_event_cb(lv_event_t *e);
-static void list_delete_event_cb(lv_event_t *e);
+static lv_obj_t * add_list_button(lv_obj_t * parent, uint32_t track_id);
+static void btn_click_event_cb(lv_event_t * e);
+static void list_delete_event_cb(lv_event_t * e);
 
 /**********************
  *  STATIC VARIABLES
  **********************/
-static lv_obj_t *list;
-static const lv_font_t *font_small;
-static const lv_font_t *font_medium;
+static lv_obj_t * list;
+static const lv_font_t * font_small;
+static const lv_font_t * font_medium;
 static lv_style_t style_scrollbar;
 static lv_style_t style_btn;
 static lv_style_t style_button_pr;
@@ -51,7 +51,7 @@ LV_IMAGE_DECLARE(img_lv_demo_music_btn_list_pause);
  *   GLOBAL FUNCTIONS
  **********************/
 
-lv_obj_t *lv_demo_music_list_create(lv_obj_t *parent)
+lv_obj_t * lv_demo_music_list_create(lv_obj_t * parent)
 {
     font_small = LV_FONT_DEFAULT;
     font_medium = LV_FONT_DEFAULT;
@@ -138,8 +138,7 @@ lv_obj_t *lv_demo_music_list_create(lv_obj_t *parent)
     lv_obj_set_flex_flow(list, LV_FLEX_FLOW_COLUMN);
 
     uint32_t track_id;
-    for (track_id = 0; lv_demo_music_get_title(track_id); track_id++)
-    {
+    for(track_id = 0; lv_demo_music_get_title(track_id); track_id++) {
         add_list_button(list,  track_id);
     }
 
@@ -154,17 +153,15 @@ lv_obj_t *lv_demo_music_list_create(lv_obj_t *parent)
 
 void lv_demo_music_list_button_check(uint32_t track_id, bool state)
 {
-    lv_obj_t *btn = lv_obj_get_child(list, track_id);
-    lv_obj_t *icon = lv_obj_get_child(btn, 0);
+    lv_obj_t * btn = lv_obj_get_child(list, track_id);
+    lv_obj_t * icon = lv_obj_get_child(btn, 0);
 
-    if (state)
-    {
+    if(state) {
         lv_obj_add_state(btn, LV_STATE_CHECKED);
         lv_image_set_src(icon, &img_lv_demo_music_btn_list_pause);
         lv_obj_scroll_to_view(btn, LV_ANIM_ON);
     }
-    else
-    {
+    else {
         lv_obj_remove_state(btn, LV_STATE_CHECKED);
         lv_image_set_src(icon, &img_lv_demo_music_btn_list_play);
     }
@@ -174,15 +171,15 @@ void lv_demo_music_list_button_check(uint32_t track_id, bool state)
  *   STATIC FUNCTIONS
  **********************/
 
-static lv_obj_t *add_list_button(lv_obj_t *parent, uint32_t track_id)
+static lv_obj_t * add_list_button(lv_obj_t * parent, uint32_t track_id)
 {
     uint32_t t = lv_demo_music_get_track_length(track_id);
     char time[32];
     lv_snprintf(time, sizeof(time), "%"LV_PRIu32":%02"LV_PRIu32, t / 60, t % 60);
-    const char *title = lv_demo_music_get_title(track_id);
-    const char *artist = lv_demo_music_get_artist(track_id);
+    const char * title = lv_demo_music_get_title(track_id);
+    const char * artist = lv_demo_music_get_artist(track_id);
 
-    lv_obj_t *btn = lv_obj_create(parent);
+    lv_obj_t * btn = lv_obj_create(parent);
     lv_obj_remove_style_all(btn);
 #if LV_DEMO_MUSIC_LARGE
     lv_obj_set_size(btn, lv_pct(100), 110);
@@ -196,32 +193,31 @@ static lv_obj_t *add_list_button(lv_obj_t *parent, uint32_t track_id)
     lv_obj_add_style(btn, &style_button_dis, LV_STATE_DISABLED);
     lv_obj_add_event_cb(btn, btn_click_event_cb, LV_EVENT_CLICKED, NULL);
 
-    if (track_id >= 3)
-    {
+    if(track_id >= 3) {
         lv_obj_add_state(btn, LV_STATE_DISABLED);
     }
 
-    lv_obj_t *icon = lv_image_create(btn);
+    lv_obj_t * icon = lv_image_create(btn);
     lv_image_set_src(icon, &img_lv_demo_music_btn_list_play);
     lv_obj_set_grid_cell(icon, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, 0, 2);
 
-    lv_obj_t *title_label = lv_label_create(btn);
+    lv_obj_t * title_label = lv_label_create(btn);
     lv_label_set_text(title_label, title);
     lv_obj_set_grid_cell(title_label, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_add_style(title_label, &style_title, 0);
 
-    lv_obj_t *artist_label = lv_label_create(btn);
+    lv_obj_t * artist_label = lv_label_create(btn);
     lv_label_set_text(artist_label, artist);
     lv_obj_add_style(artist_label, &style_artist, 0);
     lv_obj_set_grid_cell(artist_label, LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
 
-    lv_obj_t *time_label = lv_label_create(btn);
+    lv_obj_t * time_label = lv_label_create(btn);
     lv_label_set_text(time_label, time);
     lv_obj_add_style(time_label, &style_time, 0);
     lv_obj_set_grid_cell(time_label, LV_GRID_ALIGN_END, 2, 1, LV_GRID_ALIGN_CENTER, 0, 2);
 
     LV_IMAGE_DECLARE(img_lv_demo_music_list_border);
-    lv_obj_t *border = lv_image_create(btn);
+    lv_obj_t * border = lv_image_create(btn);
     lv_image_set_src(border, &img_lv_demo_music_list_border);
     lv_image_set_inner_align(border, LV_IMAGE_ALIGN_TILE);
     lv_obj_set_width(border, lv_pct(120));
@@ -231,21 +227,20 @@ static lv_obj_t *add_list_button(lv_obj_t *parent, uint32_t track_id)
     return btn;
 }
 
-static void btn_click_event_cb(lv_event_t *e)
+static void btn_click_event_cb(lv_event_t * e)
 {
-    lv_obj_t *btn = lv_event_get_target(e);
+    lv_obj_t * btn = lv_event_get_target(e);
 
     uint32_t idx = lv_obj_get_index(btn);
 
     lv_demo_music_play(idx);
 }
 
-static void list_delete_event_cb(lv_event_t *e)
+static void list_delete_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
 
-    if (code == LV_EVENT_DELETE)
-    {
+    if(code == LV_EVENT_DELETE) {
         lv_style_reset(&style_scrollbar);
         lv_style_reset(&style_btn);
         lv_style_reset(&style_button_pr);

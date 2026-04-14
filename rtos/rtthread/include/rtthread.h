@@ -213,8 +213,15 @@ void rt_schedule(void);
 void rt_schedule_insert_thread(struct rt_thread *thread);
 void rt_schedule_remove_thread(struct rt_thread *thread);
 
+#ifndef RT_SCHEDULER_LOCK_DEBUG
 void rt_enter_critical(void);
 void rt_exit_critical(void);
+#else
+void rt_enter_critical_debug(const char *file, uint32_t line);
+void rt_exit_critical_debug(const char *file, uint32_t line);
+#define rt_enter_critical() rt_enter_critical_debug(__FILE__, __LINE__)
+#define rt_exit_critical() rt_exit_critical_debug(__FILE__, __LINE__)
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
 rt_uint16_t rt_critical_level(void);
 
 #ifdef RT_USING_HOOK
@@ -289,9 +296,44 @@ void rt_memory_info(rt_uint32_t *total,
                     rt_uint32_t *used,
                     rt_uint32_t *max_used);
 
+/**
+ * @brief Get free space of heap memory if RT_MEM_STATS is enabled, otherwise return total size of heap memory.
+ *
+ *
+ * @return free space of heap memory if RT_MEM_STATS is enabled, otherwise return total size of heap memory
+ */
+rt_uint32_t rt_mem_available_size(void);
+
 rt_err_t rt_mem_backup(rt_uint8_t *buf, rt_uint32_t max_size, rt_uint32_t *used_size, rt_compressor_cb_t compressor_cb);
 rt_err_t rt_mem_restore(void *instance, rt_uint8_t *buf, rt_uint32_t size, rt_compressor_cb_t decompressor_cb);
 rt_uint32_t rt_mem_base(void);
+rt_uint8_t rt_mem_is_sysheap(void *ptr);
+
+
+/**
+ * @brief dump memory callback type
+ *
+ * @param addr the starting address of the memory to dump
+ * @param size the size of the memory to dump
+ * @param user_data user data
+ * @param actual_size pointer to the actual size of the dumped memory, including header size
+ *
+ * @return size of dumped data excluding any header, to including header size, use actual_size
+ */
+typedef rt_uint32_t (*rt_mem_dump_cb_t)(rt_uint32_t addr, rt_uint32_t size, void *user_data, rt_uint32_t *actual_size);
+
+
+/**
+ * @brief dump small heap memory
+ *
+ * @param dump_cb the callback function to dump memory, it will be called multiple times until all memory is dumped
+ * @param user_data user data, it will be passed to dump_cb when called
+ * @param dump_size pointer to the size of the dumped memory, excluding header size
+ * @param actual_size pointer to the actual size of the dumped memory, including header size
+ *
+ * @return RT_EOK on success, RT_EFULL if the dump buffer is full, other error code on failure
+ */
+rt_err_t rt_mem_dump(rt_mem_dump_cb_t dump_cb, void *user_data, rt_uint32_t *dump_size, rt_uint32_t *actual_size);
 
 
 #ifdef RT_USING_SLAB
@@ -322,6 +364,20 @@ void *rt_memheap_calloc(struct rt_memheap *heap, rt_size_t count, rt_size_t size
 rt_err_t rt_memheap_backup(struct rt_memheap *heap, rt_uint8_t *buf,
                            rt_uint32_t max_size, rt_uint32_t *used_size);
 rt_err_t rt_memheap_restore(void *instance, rt_uint8_t *buf, rt_uint32_t size, rt_compressor_cb_t decompressor_cb);
+
+/**
+ * @brief dump memheap
+ *
+ * @param heap the memheap to dump
+ * @param dump_cb the callback function to dump memory, it will be called multiple times until all memory is dumped
+ * @param user_data user data, it will be passed to dump_cb when called
+ * @param dump_size pointer to the size of the dumped memory, excluding header size
+ * @param actual_size pointer to the actual size of the dumped memory, including header size
+ *
+ * @return RT_EOK on success, RT_EFULL if the dump buffer is full, other error code on failure
+ */
+rt_err_t rt_memheap_dump(struct rt_memheap *heap, rt_mem_dump_cb_t dump_cb, void *user_data, rt_uint32_t *dump_size, rt_uint32_t *actual_size);
+
 
 
 #ifdef RT_USING_MEMHEAP_AS_HEAP
@@ -498,6 +554,11 @@ void rt_interrupt_leave(void);
  */
 rt_uint8_t rt_interrupt_get_nest(void);
 
+/*
+ * clear the interrupt nest, this function is only used by core dump
+ */
+void rt_interrupt_nest_clear(void);
+
 #ifdef RT_USING_HOOK
 void rt_interrupt_enter_sethook(void (*hook)(void));
 void rt_interrupt_leave_sethook(void (*hook)(void));
@@ -572,6 +633,8 @@ const char *rt_get_version(void);
 
 void rt_show_sys_info(void);
 
+void rt_coredump_info_dump(rt_mem_dump_cb_t dump_cb);
+
 #ifdef RT_DEBUG
 extern void (*rt_assert_hook)(const char *ex, const char *func, rt_size_t line);
 void rt_assert_set_hook(void (*hook)(const char *ex, const char *func, rt_size_t line));
@@ -581,6 +644,12 @@ void rt_assert_set_hook_rom(void (*hook)(const char *ex, const char *func, rt_si
 #ifdef __CODE_CHECKER__
 RT_NO_RETURN
 #endif /* __CODE_CHECKER__ */
+
+#if defined (ASSERT_OPTIMIZE_1)
+extern void rt_assert_func(void);
+#elif defined (ASSERT_OPTIMIZE_2)  || defined (LCPU_MEM_OPTIMIZE)
+extern void rt_assert_func(const char *func, rt_size_t line);
+#endif /* ASSERT_OPTIMIZE_1 */
 void rt_assert_handler(const char *ex, const char *func, rt_size_t line);
 #endif /* RT_DEBUG */
 

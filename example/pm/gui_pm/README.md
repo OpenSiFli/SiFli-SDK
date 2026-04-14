@@ -1,5 +1,7 @@
 # GUI_PM 低功耗示例说明
 
+源码路径: example/pm/gui_pm
+
 ## 支持的平台
 例程可以运行在以下开发板
 * sf32lb52-lchspi-ulp

@@ -4,43 +4,43 @@
 static const int32_t obj_width = 90;
 static const int32_t obj_height = 70;
 
-static void set_width(lv_anim_t *var, int32_t v)
+static void set_width(lv_anim_t * var, int32_t v)
 {
-    lv_obj_set_width(var->var, v);
+    lv_obj_set_width((lv_obj_t *) var->var, v);
 }
 
-static void set_height(lv_anim_t *var, int32_t v)
+static void set_height(lv_anim_t * var, int32_t v)
 {
-    lv_obj_set_height(var->var, v);
+    lv_obj_set_height((lv_obj_t *) var->var, v);
 }
 
-static void set_slider_value(lv_anim_t *var, int32_t v)
+static void set_slider_value(lv_anim_t * var, int32_t v)
 {
-    lv_slider_set_value(var->var, v, LV_ANIM_OFF);
+    lv_slider_set_value((lv_obj_t *) var->var, v, LV_ANIM_OFF);
 }
 
-static void btn_start_event_handler(lv_event_t *e)
+static void btn_start_event_handler(lv_event_t * e)
 {
-    lv_obj_t *btn = lv_event_get_current_target_obj(e);
-    lv_anim_timeline_t *anim_timeline = lv_event_get_user_data(e);
+    lv_obj_t * btn = lv_event_get_current_target_obj(e);
+    lv_anim_timeline_t * anim_timeline = (lv_anim_timeline_t *) lv_event_get_user_data(e);
 
     bool reverse = lv_obj_has_state(btn, LV_STATE_CHECKED);
     lv_anim_timeline_set_reverse(anim_timeline, reverse);
     lv_anim_timeline_start(anim_timeline);
 }
 
-static void btn_pause_event_handler(lv_event_t *e)
+static void btn_pause_event_handler(lv_event_t * e)
 {
-    lv_anim_timeline_t *anim_timeline = lv_event_get_user_data(e);
+    lv_anim_timeline_t * anim_timeline = (lv_anim_timeline_t *) lv_event_get_user_data(e);
     lv_anim_timeline_pause(anim_timeline);
 }
 
-static void slider_prg_event_handler(lv_event_t *e)
+static void slider_prg_event_handler(lv_event_t * e)
 {
-    lv_obj_t *slider = lv_event_get_current_target_obj(e);
-    lv_anim_timeline_t *anim_timeline = lv_event_get_user_data(e);
+    lv_obj_t * slider = lv_event_get_current_target_obj(e);
+    lv_anim_timeline_t * anim_timeline = (lv_anim_timeline_t *) lv_event_get_user_data(e);
     int32_t progress = lv_slider_get_value(slider);
-    lv_anim_timeline_set_progress(anim_timeline, progress);
+    lv_anim_timeline_set_progress(anim_timeline, (uint16_t) progress);
 }
 
 /**
@@ -49,50 +49,50 @@ static void slider_prg_event_handler(lv_event_t *e)
 void lv_example_anim_timeline_1(void)
 {
     /* Create anim timeline */
-    lv_anim_timeline_t *anim_timeline = lv_anim_timeline_create();
+    lv_anim_timeline_t * anim_timeline = lv_anim_timeline_create();
 
-    lv_obj_t *par = lv_screen_active();
+    lv_obj_t * par = lv_screen_active();
     lv_obj_set_flex_flow(par, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(par, LV_FLEX_ALIGN_SPACE_AROUND, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     /* create btn_start */
-    lv_obj_t *btn_start = lv_button_create(par);
+    lv_obj_t * btn_start = lv_button_create(par);
     lv_obj_add_event_cb(btn_start, btn_start_event_handler, LV_EVENT_VALUE_CHANGED, anim_timeline);
     lv_obj_add_flag(btn_start, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_obj_add_flag(btn_start, LV_OBJ_FLAG_CHECKABLE);
     lv_obj_align(btn_start, LV_ALIGN_TOP_MID, -100, 20);
 
-    lv_obj_t *label_start = lv_label_create(btn_start);
+    lv_obj_t * label_start = lv_label_create(btn_start);
     lv_label_set_text(label_start, "Start");
     lv_obj_center(label_start);
 
     /* create btn_pause */
-    lv_obj_t *btn_pause = lv_button_create(par);
+    lv_obj_t * btn_pause = lv_button_create(par);
     lv_obj_add_event_cb(btn_pause, btn_pause_event_handler, LV_EVENT_CLICKED, anim_timeline);
     lv_obj_add_flag(btn_pause, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_obj_align(btn_pause, LV_ALIGN_TOP_MID, 100, 20);
 
-    lv_obj_t *label_pause = lv_label_create(btn_pause);
+    lv_obj_t * label_pause = lv_label_create(btn_pause);
     lv_label_set_text(label_pause, "Pause");
     lv_obj_center(label_pause);
 
     /* create slider_prg */
-    lv_obj_t *slider_prg = lv_slider_create(par);
+    lv_obj_t * slider_prg = lv_slider_create(par);
     lv_obj_add_event_cb(slider_prg, slider_prg_event_handler, LV_EVENT_VALUE_CHANGED, anim_timeline);
     lv_obj_add_flag(slider_prg, LV_OBJ_FLAG_IGNORE_LAYOUT);
     lv_obj_align(slider_prg, LV_ALIGN_BOTTOM_MID, 0, -20);
     lv_slider_set_range(slider_prg, 0, LV_ANIM_TIMELINE_PROGRESS_MAX);
 
     /* create 3 objects */
-    lv_obj_t *obj1 = lv_obj_create(par);
+    lv_obj_t * obj1 = lv_obj_create(par);
     lv_obj_set_size(obj1, obj_width, obj_height);
     lv_obj_set_scrollbar_mode(obj1, LV_SCROLLBAR_MODE_OFF);
 
-    lv_obj_t *obj2 = lv_obj_create(par);
+    lv_obj_t * obj2 = lv_obj_create(par);
     lv_obj_set_size(obj2, obj_width, obj_height);
     lv_obj_set_scrollbar_mode(obj2, LV_SCROLLBAR_MODE_OFF);
 
-    lv_obj_t *obj3 = lv_obj_create(par);
+    lv_obj_t * obj3 = lv_obj_create(par);
     lv_obj_set_size(obj3, obj_width, obj_height);
     lv_obj_set_scrollbar_mode(obj3, LV_SCROLLBAR_MODE_OFF);
 

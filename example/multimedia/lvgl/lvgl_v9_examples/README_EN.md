@@ -22,8 +22,11 @@ Note: If you are not using VS2017, for example VS2022, when loading the project,
 Source path: SiFli-SDK\example\multimedia\lvgl\lvgl_v9_examples
 ### Supported Platforms
 The example can run on the following development boards
-* sf32lb52-lchspi-ulp
-* sf32lb52-lcd_n16r8
++ sf32lb52-lchspi-ulp
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+
 
 ### Overview
 * Mount the file system by inserting an SD card, then read .jpg format images from it and display them on the screen

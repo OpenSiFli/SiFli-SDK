@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -121,8 +121,6 @@ static void audio_debug_out_i2sr()
     LOG_I("TX_DMA_ENTRY = 0X%x\n", hi2s->TX_DMA_ENTRY);
     LOG_I("RX_DMA_ENTRY = 0X%x\n", hi2s->RX_DMA_ENTRY);
     LOG_I("DMA_MASK = 0X%x\n\n", hi2s->DMA_MASK);
-
-
     LOG_I("AUDIO_RX_LRCK_DIV = 0X%x\n", hi2s->AUDIO_RX_LRCK_DIV);
     LOG_I("AUDIO_RX_BCLK_DIV = 0X%x\n", hi2s->AUDIO_RX_BCLK_DIV);
     LOG_I("AUDIO_RX_SERIAL_TIMING = 0X%x\n", hi2s->AUDIO_RX_SERIAL_TIMING);
@@ -374,6 +372,9 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
 {
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     HAL_StatusTypeDef res = HAL_OK;
+
+    RT_ASSERT((uint32_t)aud->tx_buf >= 0x20000000 && (uint32_t)aud->tx_buf < 0x60000000); //must in sram
+    RT_ASSERT((uint32_t)aud->rx_buf >= 0x20000000 && (uint32_t)aud->rx_buf < 0x60000000); //must in sram
 
     if ((aud->hi2s.State == HAL_I2S_STATE_RESET) || (aud->hi2s.State == HAL_I2S_STATE_READY))
     {
@@ -1064,4 +1065,3 @@ FINSH_FUNCTION_EXPORT_ALIAS(cmd_mic, __cmd_mic, Test mic driver);
 /// @} bsp_sample
 
 #endif  /* BSP_ENABLE_I2S_MIC */
-

@@ -17,6 +17,15 @@
 #include "boot_flash.h"
 #include "sifli_bbm.h"
 
+#ifdef SD_BL_MODE
+    #ifdef BOOT_DEVICE_SDMMC1
+        #include "sd_emmc_drv.h"
+    #endif
+    #ifdef BOOT_DEVICE_SDMMC2
+        #include "sd2_emmc_drv.h"
+    #endif
+#endif
+
 QSPI_FLASH_CTX_T spi_flash_handle[FLASH_MAX_INSTANCE];
 DMA_HandleTypeDef spi_flash_dma_handle[FLASH_MAX_INSTANCE];
 flash_read_func g_flash_read;
@@ -120,18 +129,17 @@ static uint32_t init_mpi3(int nand)
 }
 
 #ifdef SD_BL_MODE
-/*****************************SD functions*************************************/
-#include "sd_emmc_drv.h"
-// todo, as jlink driver, SD1 base used 0xa0000000, and backup sd2 for 0x64000000 as flash 3
-#define BOOT_SD_MEM_BASE        (0Xa0000000)
-#define BOOT_SD_MEM_OFFSET      (0X1000)
 
-static uint8_t sd_cache[512];
+#if defined(BOOT_DEVICE_SDMMC1)
+/***************************** SDMMC1 HCI path *************************************/
+#define BOOT_SD1_MEM_BASE        SDMMC1_MEM_BASE
+#define BOOT_SD1_MEM_OFFSET      (0X1000)
+
+static uint8_t sd1_cache[512];
 
 static int read_sdemmc(uint32_t addr, const int8_t *buf, uint32_t size)
 {
-    // TODO: Add SD read.
-    uint32_t offset = addr - BOOT_SD_MEM_BASE;
+    uint32_t offset = addr - BOOT_SD1_MEM_BASE;
     uint32_t remain = size;
     uint8_t *data = (uint8_t *)buf;
 
@@ -144,8 +152,8 @@ static int read_sdemmc(uint32_t addr, const int8_t *buf, uint32_t size)
     }
     if (remain > 0)
     {
-        sd_read_data(offset, sd_cache, 512);
-        memcpy(data, sd_cache, remain);
+        sd_read_data(offset, sd1_cache, 512);
+        memcpy(data, sd1_cache, remain);
     }
     return size;
 }
@@ -172,11 +180,64 @@ uint32_t init_sdnand()
     res = sdmmc_init();
     if (res != 0)
     {
+
         HAL_ASSERT(0);
     }
     g_flash_read = read_sdemmc;
-    return BOOT_SD_MEM_BASE + BOOT_SD_MEM_OFFSET;
+    return BOOT_SD1_MEM_BASE + BOOT_SD1_MEM_OFFSET;
 }
+
+#elif defined(BOOT_DEVICE_SDMMC2)
+/***************************** SDMMC2 SDIO eMMC path *************************************/
+#define BOOT_SD2_MEM_BASE        SDMMC2_MEM_BASE
+#define BOOT_SD2_MEM_OFFSET      (0X1000)
+static uint8_t sd2_cache[512];
+
+static int read_sdemmc2(uint32_t addr, const int8_t *buf, uint32_t size)
+{
+    uint32_t offset = addr - BOOT_SD2_MEM_BASE;
+    uint32_t remain = size;
+    uint8_t *data = (uint8_t *)buf;
+
+    while (remain >= 512)
+    {
+        emmc2_read_data(offset, data, 512);
+        remain -= 512;
+        offset += 512;
+        data += 512;
+    }
+    if (remain > 0)
+    {
+        emmc2_read_data(offset, sd2_cache, 512);
+        memcpy(data, sd2_cache, remain);
+    }
+    return size;
+}
+
+uint32_t init_sdemmc2()
+{
+    //HAL_sw_breakpoint();
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SDMMC, RCC_CLK_FLASH_DLL2);
+    HAL_RCC_HCPU_enable2(HPSYS_RCC_ENR2_SDMMC2, 1);
+
+    board_pinmux_sd2();
+
+    board_sd2_power_on();
+
+    int res = sdio2_emmc_init();
+    if (res != 0)
+    {
+        HAL_ASSERT(0);
+    }
+
+    g_flash_read = read_sdemmc2;
+    return BOOT_SD2_MEM_BASE + BOOT_SD2_MEM_OFFSET;
+}
+
+#else
+#error "Select one of BOOT_DEVICE_SDMMC1 or BOOT_DEVICE_SDMMC2 when SD_BL_MODE is enabled"
+#endif
+
 #endif
 
 /******************************************************************************/
@@ -206,7 +267,11 @@ void dfu_flash_init()
     init_mpi3(BOOT_FROM_NAND());
     boot_handle = (FLASH_HandleTypeDef *)&spi_flash_handle[2].handle;
 #else
-//    init_sdnand();
+#if defined(BOOT_DEVICE_SDMMC1)
+    init_sdnand();
+#elif defined(BOOT_DEVICE_SDMMC2)
+    init_sdemmc2();
+#endif
     boot_handle = NULL;
 #endif
 }

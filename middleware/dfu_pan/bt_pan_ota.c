@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include <webclient.h>
 #include <cJSON.h>
@@ -11,6 +17,7 @@
 #include "bt_pan_ota.h"
 #include "dfu_pan_ui.h"
 #include "dfu_pan_macro.h"
+#include "dfu_pan_flash.h"
 
 #define OTA_WORKER_THREAD_STACK_SIZE 8192
 static struct rt_thread ota_worker_thread;
@@ -18,8 +25,8 @@ static struct rt_thread ota_worker_thread;
 bt_app_t_ota g_bt_app_env_ota;
 static struct firmware_file_info s_temp_firmware_files[MAX_FIRMWARE_FILES];
 
-#define PAN_OTA_HEADER_BUFSZ 1536
-#define OTA_RECV_BUFF_SIZE 1536
+#define PAN_OTA_HEADER_BUFSZ 2048
+#define OTA_RECV_BUFF_SIZE 2048
 
 // Definitions related to CRC32 checksum
 #define CRC32_POLY 0xEDB88320
@@ -68,9 +75,9 @@ static void exist_sniff_mode(void)
 {
     rt_kprintf("exit sniff mode\n");
     bt_interface_exit_sniff_mode(
-        (unsigned char *)&g_bt_app_env_ota.bd_addr); // exit sniff mode
+        &g_bt_app_env_ota.bd_addr); // exit sniff mode
     bt_interface_wr_link_policy_setting(
-        (unsigned char *)&g_bt_app_env_ota.bd_addr,
+        &g_bt_app_env_ota.bd_addr,
         BT_NOTIFY_LINK_POLICY_ROLE_SWITCH); // close role switch
 }
 
@@ -166,7 +173,7 @@ int dfu_pan_set_update_flags(void)
     struct firmware_file_info temp_version_list[MAX_FIRMWARE_FILES];
     int data_size = sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES;
 
-    int read_result = rt_flash_read(FIRMWARE_INFO_BASE_ADDR,
+    int read_result = dfu_pan_read(FIRMWARE_INFO_BASE_ADDR,
                                     (uint8_t *)temp_version_list, data_size);
     if (read_result != data_size)
     {
@@ -190,21 +197,19 @@ int dfu_pan_set_update_flags(void)
     }
 
     // Erase the Flash area
-    int erase_alignment = rt_flash_get_erase_alignment(FIRMWARE_INFO_BASE_ADDR);
-    int aligned_size =
-        ((data_size + erase_alignment - 1) / erase_alignment) * erase_alignment;
-
-    if (rt_flash_erase(FIRMWARE_INFO_BASE_ADDR, aligned_size) != RT_EOK)
+    // Use dfu_pan_erase which handles NAND/NOR automatically
+    if (dfu_pan_erase(FIRMWARE_INFO_BASE_ADDR, data_size) != RT_EOK)
     {
         LOG_E("Failed to erase flash at 0x%08X", FIRMWARE_INFO_BASE_ADDR);
         return -1;
     }
 
     // Write version information with update flags to flash
-    if (rt_flash_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_list,
-                       data_size) != data_size)
+    int write_result = dfu_pan_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_list,
+                                     data_size);
+    if (write_result < 0)
     {
-        LOG_E("Failed to write version info to flash");
+        LOG_E("Failed to write version info to flash, result=%d", write_result);
         return -1;
     }
 
@@ -223,7 +228,7 @@ int dfu_pan_get_firmware_file_info(
 
     uint32_t addr =
         FIRMWARE_INFO_BASE_ADDR + index * sizeof(struct firmware_file_info);
-    int result = rt_flash_read(addr, (uint8_t *)firmware_file_info,
+    int result = dfu_pan_read(addr, (uint8_t *)firmware_file_info,
                                sizeof(struct firmware_file_info));
 
     if (result != sizeof(struct firmware_file_info))
@@ -245,15 +250,25 @@ void dfu_pan_clear_files(void)
     // Initialize the entire array to 0 and clear all version information.
     memset(temp_version_files, 0, sizeof(temp_version_files));
 
-    int erase_alignment = rt_flash_get_erase_alignment(FIRMWARE_INFO_BASE_ADDR);
-    int aligned_size =
-        ((sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES +
-          erase_alignment - 1) /
-         erase_alignment) *
-        erase_alignment;
-    rt_flash_erase(FIRMWARE_INFO_BASE_ADDR, aligned_size);
-    rt_flash_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
-                   sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES);
+    // Use dfu_pan_erase which handles NAND/NOR automatically
+    int data_size = sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES;
+    
+    // Erase flash
+    if (dfu_pan_erase(FIRMWARE_INFO_BASE_ADDR, data_size) != RT_EOK)
+    {
+        LOG_E("Failed to erase firmware info flash at 0x%08X\n", FIRMWARE_INFO_BASE_ADDR);
+        return;
+    }
+    
+    // Write cleared firmware info
+    int write_result = dfu_pan_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
+                                     sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES);
+    
+    if (write_result < 0)
+    {
+        LOG_E("Failed to write cleared firmware info to flash, result=%d\n", write_result);
+        return;
+    }
 
     LOG_I("firmware cleared successfully.\n");
 }
@@ -273,6 +288,9 @@ int dfu_pan_query_latest_version(const char *server_url,
     int ret = 0;
 
     LOG_I("dfu_pan_query_latest_version\n");
+    
+    // Initialize flash write cache
+    dfu_pan_cache_init();
 
     if (server_url == NULL)
     {
@@ -560,15 +578,10 @@ int dfu_pan_query_latest_version(const char *server_url,
             }
 
             // Write to Flash
-            int erase_alignment =
-                rt_flash_get_erase_alignment(FIRMWARE_INFO_BASE_ADDR);
+
             int data_size =
                 sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES;
-            int aligned_size =
-                ((data_size + erase_alignment - 1) / erase_alignment) *
-                erase_alignment;
-
-            if (rt_flash_erase(FIRMWARE_INFO_BASE_ADDR, aligned_size) != RT_EOK)
+            if (dfu_pan_erase(FIRMWARE_INFO_BASE_ADDR, data_size) != RT_EOK)
             {
                 LOG_E("Failed to erase flash at 0x%08X",
                       FIRMWARE_INFO_BASE_ADDR);
@@ -577,11 +590,12 @@ int dfu_pan_query_latest_version(const char *server_url,
                 goto __exit;
             }
 
-            if (rt_flash_write(FIRMWARE_INFO_BASE_ADDR,
-                               (uint8_t *)s_temp_firmware_files,
-                               data_size) != data_size)
+            int write_result = dfu_pan_write(FIRMWARE_INFO_BASE_ADDR,
+                                            (uint8_t *)s_temp_firmware_files,
+                                            data_size);
+            if (write_result < 0)
             {
-                LOG_E("Failed to write firmware info to flash");
+                LOG_E("Failed to write firmware info to flash, result=%d", write_result);
                 cJSON_Delete(root);
                 ret = -1;
                 goto __exit;
@@ -614,6 +628,9 @@ int dfu_pan_query_latest_version(const char *server_url,
     }
 
 __exit:
+    // Deinitialize flash write cache
+    dfu_pan_cache_deinit();
+    
     if (session)
     {
         LOCK_TCPIP_CORE();
@@ -655,6 +672,9 @@ int dfu_pan_download_firmware(struct firmware_file_info *firmware_file_info,
         ret = -1;
         goto __exit;
     }
+    
+    // Initialize NAND flash write cache
+    dfu_pan_cache_init();
 
     // Process each firmware file
     for (int i = 0; i < file_count; i++)
@@ -690,14 +710,8 @@ int dfu_pan_download_firmware(struct firmware_file_info *firmware_file_info,
               firmware_file_info[i].name, firmware_file_info[i].addr,
               firmware_file_info[i].region_size);
 
-        int erase_alignment =
-            rt_flash_get_erase_alignment(firmware_file_info[i].addr);
-        int aligned_size =
-            ((firmware_file_info[i].region_size + erase_alignment - 1) /
-             erase_alignment) *
-            erase_alignment;
-
-        if (rt_flash_erase(firmware_file_info[i].addr, aligned_size) != RT_EOK)
+        // Use dfu_pan_erase which handles NAND/NOR automatically
+        if (dfu_pan_erase(firmware_file_info[i].addr, firmware_file_info[i].region_size) != RT_EOK)
         {
             LOG_E("Failed to erase flash for %s at 0x%08X\n",
                   firmware_file_info[i].name, firmware_file_info[i].addr);
@@ -751,8 +765,9 @@ int dfu_pan_download_firmware(struct firmware_file_info *firmware_file_info,
             }
 
             // Write data to flash immediately after reading
-            if (rt_flash_write(firmware_file_info[i].addr + data_written,
-                               (uint8_t *)buffer, bytes_read) != bytes_read)
+            int write_result = dfu_pan_write(firmware_file_info[i].addr + data_written,
+                                            (uint8_t *)buffer, bytes_read);
+            if (write_result < 0)
             {
                 LOG_E("Failed to write firmware data to flash for %s\n",
                       firmware_file_info[i].name);
@@ -792,6 +807,14 @@ int dfu_pan_download_firmware(struct firmware_file_info *firmware_file_info,
         LOG_I("Successfully wrote firmware %s to flash, %d bytes\n",
               firmware_file_info[i].name, data_written);
 
+        // Flush any remaining data in NAND flash write cache before CRC verification
+        if (dfu_pan_flush_cache() != RT_EOK)
+        {
+            LOG_E("Failed to flush NAND flash write cache before CRC verification\n");
+            ret = -1;
+            goto __exit;
+        }
+
         // Verify data integrity by calculating CRC if needed
         LOG_I("Verifying CRC for %s...\n", firmware_file_info[i].name);
         uint8_t *verify_buffer = rt_malloc(OTA_RECV_BUFF_SIZE);
@@ -808,7 +831,7 @@ int dfu_pan_download_firmware(struct firmware_file_info *firmware_file_info,
                                        ? OTA_RECV_BUFF_SIZE
                                        : verify_remaining;
 
-                if (rt_flash_read(firmware_file_info[i].addr + verify_offset,
+                if (dfu_pan_read(firmware_file_info[i].addr + verify_offset,
                                   verify_buffer, verify_chunk) != verify_chunk)
                 {
                     LOG_E("Failed to read flash for CRC verification\n");
@@ -864,6 +887,19 @@ __exit:
         UNLOCK_TCPIP_CORE();
     }
 
+    // Flush any remaining data in NAND flash write cache
+    if (dfu_pan_flush_cache() != RT_EOK)
+    {
+        LOG_E("Failed to flush NAND flash write cache\n");
+        if (ret == 0) // Only set error if no previous error
+        {
+            ret = -1;
+        }
+    }
+    
+    // Deinitialize NAND flash write cache
+    dfu_pan_cache_deinit();
+    
     if (buffer)
     {
         rt_free(buffer);
@@ -949,28 +985,22 @@ void dfu_pan_test_update_flags(void)
     }
 
     // Write to flash memory
-    int erase_alignment = rt_flash_get_erase_alignment(FIRMWARE_INFO_BASE_ADDR);
-    int aligned_size =
-        ((sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES +
-          erase_alignment - 1) /
-         erase_alignment) *
-        erase_alignment;
-
-    if (rt_flash_erase(FIRMWARE_INFO_BASE_ADDR, aligned_size) != RT_EOK)
+    int data_size = sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES;
+    
+    // Use dfu_pan_erase which handles NAND/NOR automatically
+    if (dfu_pan_erase(FIRMWARE_INFO_BASE_ADDR, data_size) != RT_EOK)
     {
         LOG_E("Failed to erase flash at 0x%08X", FIRMWARE_INFO_BASE_ADDR);
         return;
     }
 
     int write_result =
-        rt_flash_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
+        dfu_pan_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
                        sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES);
 
-    if (write_result != sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES)
+    if (write_result < 0)
     {
-        LOG_E("Failed to write to flash. Expected: %d, Actual: %d",
-              sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES,
-              write_result);
+        LOG_E("Failed to write to flash. Result: %d", write_result);
         return;
     }
     LOG_I("All flags set to 1 successfully.\n");
@@ -1011,22 +1041,22 @@ void dfu_pan_test_update_flags(void)
         LOG_I("  Setting entry %d needs_update = 0", i);
     }
 
-    // Write to flash memory
-    if (rt_flash_erase(FIRMWARE_INFO_BASE_ADDR, aligned_size) != RT_EOK)
+    // Write to flash memory (reuse existing data_size variable)
+    
+    // Use dfu_pan_erase which handles NAND/NOR automatically
+    if (dfu_pan_erase(FIRMWARE_INFO_BASE_ADDR, data_size) != RT_EOK)
     {
         LOG_E("Failed to erase flash at 0x%08X", FIRMWARE_INFO_BASE_ADDR);
         return;
     }
 
-    write_result =
-        rt_flash_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
-                       sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES);
+    write_result = 
+        dfu_pan_write(FIRMWARE_INFO_BASE_ADDR, (uint8_t *)temp_version_files,
+                       data_size);
 
-    if (write_result != sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES)
+    if (write_result < 0)
     {
-        LOG_E("Failed to write to flash. Expected: %d, Actual: %d",
-              sizeof(struct firmware_file_info) * MAX_FIRMWARE_FILES,
-              write_result);
+        LOG_E("Failed to write to flash. Result: %d", write_result);
         return;
     }
     LOG_I("All flags cleared to 0 successfully.\n");
@@ -1234,3 +1264,4 @@ __exit:
 
     return ret;
 }
+ 

@@ -9,7 +9,6 @@
  */
 
 #include "board.h"
-
 void SystemClock_Config(void)
 {
 #if 0
@@ -61,4 +60,14 @@ void SystemClock_Config(void)
         Error_Handler();
     }
 #endif
+}
+
+void boot_sd1_power_on(void)
+{
+    BSP_SD_PowerUp();
+}
+
+void boot_sd2_power_on(void)
+{
+    BSP_SD2_PowerUp();
 }

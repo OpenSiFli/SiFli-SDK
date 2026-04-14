@@ -29,11 +29,12 @@ typedef struct
 {
     rt_bool_t full;
     rt_uint32_t wr_offset;
-    rt_uint8_t buf[ULOG_RAM_BE_BUF_SIZE];
+    rt_uint32_t buf_size;
+    rt_uint8_t *buf;
 } ulog_ram_be_buf_t;
 
 void *ulog_ram_be_buf_get(rt_uint32_t *size);
-
+void ulog_ram_buf_init(rt_bool_t realloc, rt_uint32_t size);
 #ifdef __cplusplus
 }
 #endif

@@ -9,6 +9,10 @@ Source code path: example/bt/music_source
 + eh-lb563
 + eh-lb567
 + eh-lb58x
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+
 
 ## Overview
 <!-- Example introduction -->

@@ -252,10 +252,15 @@ int ff_socket_nonblock(int socket, int enable)
     return ioctlsocket(socket, FIONBIO, &param);
 #else
 #if USING_NETWORK_POLL
+    int flags = fcntl(socket, F_GETFL, 0);
+
+    if (flags < 0)
+        return flags;
+
     if (enable)
-        return fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) | O_NONBLOCK);
+        return fcntl(socket, F_SETFL, flags | O_NONBLOCK);
     else
-        return fcntl(socket, F_SETFL, fcntl(socket, F_GETFL) & ~O_NONBLOCK);
+        return fcntl(socket, F_SETFL, flags & ~O_NONBLOCK);
 #else
     return 0; //sifli added, not using poll for fast download speed
 #endif

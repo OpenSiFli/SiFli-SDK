@@ -172,17 +172,12 @@ rt_err_t dlmodule_load_shared_object(struct rt_dlmodule *module, void *module_pt
     {
         /* allocate module space */
         module->mem_space = dlm_malloc(module_size);
+        rt_kprintf("%s: line %d %p %d\n", __func__, __LINE__, module->mem_space, module_size);
         RT_ASSERT(module->mem_space);
-        //rt_kprintf("%s: line %d %p %d\n", __func__, __LINE__, module->mem_space, module_size);
         if (module->mem_space == RT_NULL)
         {
             rt_kprintf("Module: allocate space failed.\n");
             return -RT_ENOMEM;
-        }
-        if (DL_OPEN == module_mode)
-        {
-            rt_kprintf("dlmodule_load_shared_object: invalid %s, %p, %d\n", module->parent.name, module->mem_space, module_size);
-            dlm_cache_invalid(module->mem_space, module_size);
         }
         module->exec_mem_space = module->mem_space;
         /* zero all space */
@@ -351,8 +346,10 @@ rt_err_t dlmodule_load_shared_object(struct rt_dlmodule *module, void *module_pt
 
     if (DL_OPEN == module_mode)
     {
-        rt_kprintf("dlmodule_load_shared_object: clean %s, %p, %d\n", module->parent.name, module->mem_space, module_size);
-        dlm_cache_clean(module->mem_space, module_size);
+#ifdef PSRAM_CACHE_WB
+        mpu_dcache_clean(module->mem_space, module_size);
+#endif /* PSRAM_CACHE_WB */
+        mpu_icache_invalidate(module->mem_space, module_size);
     }
 
     return RT_EOK;
@@ -397,18 +394,13 @@ rt_err_t dlmodule_load_relocated_object(struct rt_dlmodule *module, void *module
 
     /* allocate module space */
     module->mem_space = dlm_malloc(module_size);
+    rt_kprintf("%s:dlm_malloc %d\n", __func__, module_size);
     if (module->mem_space == RT_NULL)
     {
         rt_kprintf("Module: allocate space failed.\n");
         return -RT_ERROR;
     }
     module->mem_size = module_size;
-
-    if (DL_OPEN == module_mode)
-    {
-        rt_kprintf("dlmodule_load_relocated_object: invalid %s, %p, %d", module->parent.name, module->mem_space, module_size);
-        dlm_cache_invalid(module->mem_space, module_size);
-    }
 
     /* zero all space */
     ptr = module->mem_space;
@@ -570,8 +562,10 @@ rt_err_t dlmodule_load_relocated_object(struct rt_dlmodule *module, void *module
 
     if (DL_OPEN == module_mode)
     {
-        rt_kprintf("dlmodule_load_relocated_object: clean %s, %p, %d", module->parent.name, module->mem_space, module_size);
-        dlm_cache_clean(module->mem_space, module_size);
+#ifdef PSRAM_CACHE_WB
+        mpu_dcache_clean(module->mem_space, module_size);
+#endif /* PSRAM_CACHE_WB */
+        mpu_icache_invalidate(module->mem_space, module_size);
     }
 
 

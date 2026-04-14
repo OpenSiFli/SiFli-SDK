@@ -1,0 +1,69 @@
+# LVGL v8 Multanim 示例
+
+源码路径: `SiFli-SDK/example/multimedia/lvgl/lvgl_v8_multanim`
+
+## 概述
+
+本例程用于演示 `lvsf_multanim` 控件的多种过渡动画效果。
+## 支持的开发板
+
+<!-- 支持哪些板子和芯片平台 -->
+- sf32lb52-lcd_n16r8
+- sf32lb52-lchspi-ulp
+
+## 硬件需求
+
+运行该例程前，需要准备：
++ 一块本例程支持的开发板（[支持的平台](quick_start)）。
++ 屏幕。
+
+工程编译及下载：
+支持的板子
+- 55x之后的板子，比如58x，56x, 52x的
+
+板子工程在project目录下可以通过指定board来编译适应相对board的工程，
+- 比如想编译可以在HDK 563上运行的工程，执行scons --board=eh-lb563即可生成工程
+- 下载可以通过build目录下的download.bat进行，比如同样想烧录上一步生成的563工程，可以执行.\build_eh-lb563\download.bat来通过jlink下载
+- 特别说明下，对于SF32LB52x/SF32LB56x系列会生成额外的uart_download.bat。可以执行该脚本并输入下载UART的端口号执行下载
+
+## 模拟器配置
+
+模拟器工程在simulator目录下，
+- 使用 scons 进行编译，SiFli-SDK/msvc_setup.bat文件需要相应修改，和本机MSVC配置对应
+- 也可以使用 scons --target=vs2017 生成 MSVC工程 project.vcxproj, 使用Visual Studio 进行编译。
+    注：如果不是使用VS2017, 例如 VS2022, 加载工程的时候，会提示升级MSVC SDK, 升级后就可以使用了。
+
+
+
+
+
+## 运行说明
+
+
+示例启动后会创建一个主动画区域，并在底部生成控制按钮，可切换以下动画类型：
+
+- `Zoom`
+- `3D`
+- `Switch`
+- `Turn`
+- `Scale`
+- `Fade`
+- `Open`
+- `Roll`
+- `Book`
+- `Shuttle`
+- `Shutter`
+
+其中部分效果依赖 GPU 或 VGLite 能力，具体是否可用由编译配置和板级能力决定。
+
+- 例程启动后会自动进入 `lv_example_multanim()`
+- 屏幕上半部分为动画显示区域
+- 底部按钮用于切换不同的过渡动画
+- 标签区域会显示当前动画类型及关键参数
+
+## 异常诊断
+
+如有任何技术疑问，请在GitHub上提出 [issue](https://github.com/OpenSiFli/SiFli-SDK/issues)
+
+## 参考文档
+- [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)

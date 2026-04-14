@@ -14,6 +14,7 @@
 
 #include "audio_pipe.h"
 
+#if AUDIO_PIPE_SUSPEND_RESUME
 static void _rt_pipe_resume_writer(struct rt_audio_pipe *pipe)
 {
     if (!rt_list_isempty(&pipe->suspended_write_list))
@@ -33,7 +34,7 @@ static void _rt_pipe_resume_writer(struct rt_audio_pipe *pipe)
         rt_schedule();
     }
 }
-
+#endif
 static rt_size_t rt_pipe_read(rt_device_t dev,
                               rt_off_t    pos,
                               void       *buffer,
@@ -48,20 +49,25 @@ static rt_size_t rt_pipe_read(rt_device_t dev,
     RT_ASSERT(pipe != RT_NULL);
     RT_ASSERT(size <= RT_UINT16_MAX); /*Max ring buffer size is 0xFFFF */
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     if (!(pipe->flag & RT_PIPE_FLAG_BLOCK_RD))
+#endif
     {
         level = rt_hw_interrupt_disable();
         read_nbytes = rt_ringbuffer_get(&(pipe->ringbuffer), buffer, size);
 
+#if AUDIO_PIPE_SUSPEND_RESUME
         /* if the ringbuffer is empty, there won't be any writer waiting */
         if (read_nbytes)
             _rt_pipe_resume_writer(pipe);
+#endif
 
         rt_hw_interrupt_enable(level);
 
         return read_nbytes;
     }
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     thread = rt_thread_self();
 
     /* current context checking */
@@ -91,8 +97,10 @@ static rt_size_t rt_pipe_read(rt_device_t dev,
     while (read_nbytes == 0);
 
     return read_nbytes;
+#endif
 }
 
+#if AUDIO_PIPE_SUSPEND_RESUME
 static void _rt_pipe_resume_reader(struct rt_audio_pipe *pipe)
 {
     if (pipe->parent.rx_indicate)
@@ -116,6 +124,7 @@ static void _rt_pipe_resume_reader(struct rt_audio_pipe *pipe)
         rt_schedule();
     }
 }
+#endif
 
 static uint8_t g_pipe_full_cnt = 0;
 static rt_size_t rt_pipe_write(rt_device_t dev,
@@ -132,8 +141,10 @@ static rt_size_t rt_pipe_write(rt_device_t dev,
     RT_ASSERT(pipe != RT_NULL);
     RT_ASSERT(size <= RT_UINT16_MAX); /*Max ring buffer size is 0xFFFF */
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     if ((pipe->flag & RT_PIPE_FLAG_FORCE_WR) ||
             !(pipe->flag & RT_PIPE_FLAG_BLOCK_WR))
+#endif
     {
         level = rt_hw_interrupt_disable();
 
@@ -144,20 +155,25 @@ static rt_size_t rt_pipe_write(rt_device_t dev,
                 rt_kprintf("--audio pipe full\n");
         }
 
+#if AUDIO_PIPE_SUSPEND_RESUME
         if (pipe->flag & RT_PIPE_FLAG_FORCE_WR)
             write_nbytes = rt_ringbuffer_put_force(&(pipe->ringbuffer),
                                                    buffer, size);
         else
+#endif
             write_nbytes = rt_ringbuffer_put(&(pipe->ringbuffer),
                                              buffer, size);
 
+#if AUDIO_PIPE_SUSPEND_RESUME
         _rt_pipe_resume_reader(pipe);
+#endif
 
         rt_hw_interrupt_enable(level);
 
         return write_nbytes;
     }
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     thread = rt_thread_self();
 
     /* current context checking */
@@ -188,7 +204,9 @@ static rt_size_t rt_pipe_write(rt_device_t dev,
     while (write_nbytes == 0);
 
     return write_nbytes;
+#endif
 }
+
 
 static rt_err_t rt_pipe_control(rt_device_t dev, int cmd, void *args)
 {
@@ -235,14 +253,20 @@ __ROM_USED rt_err_t rt_audio_pipe_init(struct rt_audio_pipe *pipe,
     RT_ASSERT(buf);
     RT_ASSERT(size <= RT_UINT16_MAX); /*Max ring buffer size is 0xFFFF */
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     /* initialize suspended list */
     rt_list_init(&pipe->suspended_read_list);
     rt_list_init(&pipe->suspended_write_list);
+#else
+    flag = 0;
+#endif
 
     /* initialize ring buffer */
     rt_ringbuffer_init(&pipe->ringbuffer, buf, size);
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     pipe->flag = flag;
+#endif
 
     /* create pipe */
     pipe->parent.type    = RT_Device_Class_Pipe;

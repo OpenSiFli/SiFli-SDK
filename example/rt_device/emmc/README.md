@@ -27,10 +27,13 @@ ls               - List information about the FILEs.//列出所有文件信息
 ```
 menuconfig --board=56devkit_lcd(board=后面跟着的是板子名称)
 ```
-1、打开SDIO
+1. 打开SDIO
 ![alt text](assets/sdio.png)
 
-2、使能和配置sd device
+2. 需要注意的是，56有两个 SDMMC 控制器 IP：SDMMC1（SDHCI IP）和 SDMMC2（SDIO IP）。如果 eMMC 连接到的是 SDMMC2，就需要将配置更改为 BSP_USING_SD_LINE。
+![alt text](assets/image1.png)
+
+3. 使能和配置sd device
 ![alt text](assets/sd.png)
 
 

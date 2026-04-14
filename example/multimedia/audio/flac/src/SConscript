@@ -1,0 +1,15 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('*.c')
+
+CPPPATH = []
+CPPPATH += [os.path.join(cwd, '../../../../../external/flac-1.5.0/include')]
+CPPPATH += [os.path.join(cwd, '../../../../../external/flac-1.5.0/src/libFLAC/include')]
+CPPPATH += [os.path.join(cwd, '../../../../../external/flac-1.5.0')]
+
+group = DefineGroup('Applications', src, depend=[''], CPPPATH=CPPPATH)
+Return('group')
+

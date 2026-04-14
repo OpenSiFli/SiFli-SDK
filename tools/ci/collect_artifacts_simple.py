@@ -1,20 +1,110 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
 # -*- coding: utf-8 -*-
 
 import os
 import sys
 import shutil
 import time
+import argparse
 from pathlib import Path
 import glob
 
 
 class SimpleArtifactsCollector:
-    def __init__(self):
-        self.merged_dir = Path('merged_artifacts')
+    def __init__(self, output_dir='merged_artifacts', failed_only=False):
+        self.merged_dir = Path(output_dir)
+        self.failed_only = failed_only
+        self.job_status_map = self._load_job_status_map()
         
         # 确保根目录存在
         self.merged_dir.mkdir(parents=True, exist_ok=True)
+
+    def _parse_status_file(self, status_file):
+        """解析Job状态文件"""
+        metadata = {}
+
+        with open(status_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                metadata[key] = value
+
+        return metadata
+
+    def _infer_status_from_log(self, job_name):
+        """在状态文件缺失时，从日志尾部推断Job状态"""
+        log_path = Path('ci_build_logs') / f'{job_name}.log'
+        if not log_path.exists():
+            return 'unknown'
+
+        with open(log_path, 'rb') as f:
+            f.seek(max(0, log_path.stat().st_size - 4096))
+            tail = f.read().decode('utf-8', errors='ignore')
+
+        if '构建失败' in tail or '❌' in tail:
+            return 'failed'
+        if '构建成功' in tail or '✅' in tail:
+            return 'success'
+        return 'unknown'
+
+    def _load_job_status_map(self):
+        """加载所有Job状态"""
+        status_map = {}
+
+        for status_file in glob.glob('job_status/*.env'):
+            status_path = Path(status_file)
+            job_name = status_path.stem
+            metadata = self._parse_status_file(status_path)
+            status = metadata.get('JOB_STATUS', '').strip().lower() or self._infer_status_from_log(job_name)
+
+            status_map[job_name] = {
+                'status': status,
+                'metadata': metadata,
+                'path': status_path,
+            }
+
+        return status_map
+
+    def _get_job_status(self, job_name):
+        """获取Job状态，优先使用状态文件，缺失时回退到日志推断"""
+        status_info = self.job_status_map.get(job_name)
+        if status_info:
+            return status_info['status']
+        return self._infer_status_from_log(job_name)
+
+    def _should_collect_job(self, job_name):
+        """判断当前Job是否应该被收集"""
+        if not self.failed_only:
+            return True
+        return self._get_job_status(job_name) == 'failed'
+
+    def _ensure_job_entry(self, collected_jobs, job_name):
+        """确保Job统计项存在"""
+        if job_name not in collected_jobs:
+            collected_jobs[job_name] = {
+                'logs': 0,
+                'artifacts': 0,
+                'status': self._get_job_status(job_name)
+            }
+        return collected_jobs[job_name]
+
+    def _copy_status_file(self, job_name):
+        """复制Job状态文件到合并目录"""
+        status_info = self.job_status_map.get(job_name)
+        if not status_info:
+            return
+
+        job_dir = self.merged_dir / job_name
+        status_subdir = job_dir / 'job_status'
+        status_subdir.mkdir(parents=True, exist_ok=True)
+
+        dest_file = status_subdir / status_info['path'].name
+        if not dest_file.exists():
+            shutil.copy2(status_info['path'], dest_file)
     
     def collect_local_artifacts(self):
         collected_jobs = {}
@@ -27,6 +117,9 @@ class SimpleArtifactsCollector:
         for log_file in log_files:
             log_path = Path(log_file)
             job_name = log_path.stem  # 去掉.log后缀
+
+            if not self._should_collect_job(job_name):
+                continue
             
             # 为每个job创建目录
             job_dir = self.merged_dir / job_name
@@ -41,9 +134,9 @@ class SimpleArtifactsCollector:
             shutil.copy2(log_file, dest_file)
             print(f"  📄 复制: {job_name}/ci_build_logs/{log_path.name}")
             
-            if job_name not in collected_jobs:
-                collected_jobs[job_name] = {'logs': 0, 'artifacts': 0}
-            collected_jobs[job_name]['logs'] += 1
+            self._copy_status_file(job_name)
+            job_stats = self._ensure_job_entry(collected_jobs, job_name)
+            job_stats['logs'] += 1
         
         # 收集artifacts目录中的文件
         artifacts_base = Path('artifacts')
@@ -51,6 +144,9 @@ class SimpleArtifactsCollector:
             for job_artifacts_dir in artifacts_base.iterdir():
                 if job_artifacts_dir.is_dir():
                     job_name = job_artifacts_dir.name
+
+                    if not self._should_collect_job(job_name):
+                        continue
                     
                     # 为每个job创建目录
                     job_dir = self.merged_dir / job_name
@@ -67,12 +163,20 @@ class SimpleArtifactsCollector:
                     shutil.copytree(job_artifacts_dir, dest_job_artifacts)
                     
                     # 统计文件数量
-                    file_count = len(list(dest_job_artifacts.rglob('*')))
+                    artifact_files = [f for f in dest_job_artifacts.rglob('*') if f.is_file()]
+                    file_count = len(artifact_files)
                     print(f"  📦 复制: {job_name}/artifacts/{job_name}/ ({file_count} 个文件)")
                     
-                    if job_name not in collected_jobs:
-                        collected_jobs[job_name] = {'logs': 0, 'artifacts': 0}
-                    collected_jobs[job_name]['artifacts'] = file_count
+                    self._copy_status_file(job_name)
+                    job_stats = self._ensure_job_entry(collected_jobs, job_name)
+                    job_stats['artifacts'] = file_count
+
+        # 补齐只有状态文件但没有日志/产物的Job
+        for job_name in sorted(self.job_status_map.keys()):
+            if not self._should_collect_job(job_name):
+                continue
+            self._ensure_job_entry(collected_jobs, job_name)
+            self._copy_status_file(job_name)
         
         return collected_jobs
     
@@ -83,7 +187,8 @@ class SimpleArtifactsCollector:
         total_artifacts = sum(job['artifacts'] for job in collected_jobs.values())
         
         with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("SDK构建汇总报告\n")
+            report_title = "SDK失败构建汇总报告" if self.failed_only else "SDK构建汇总报告"
+            f.write(f"{report_title}\n")
             f.write("=" * 50 + "\n")
             f.write(f"Pipeline ID: {os.getenv('CI_PIPELINE_ID', 'N/A')}\n")
             f.write(f"项目ID: {os.getenv('CI_PROJECT_ID', 'N/A')}\n")
@@ -98,6 +203,7 @@ class SimpleArtifactsCollector:
             f.write("-" * 50 + "\n")
             for job_name, stats in sorted(collected_jobs.items()):
                 f.write(f"{job_name}:\n")
+                f.write(f"  - 状态: {stats.get('status', 'unknown')}\n")
                 f.write(f"  - 日志文件: {stats['logs']} 个\n")
                 f.write(f"  - 构建产物: {stats['artifacts']} 个\n")
                 
@@ -138,6 +244,7 @@ class SimpleArtifactsCollector:
             "generated_at": time.strftime('%Y-%m-%d %H:%M:%S'),
             "pipeline_id": os.getenv('CI_PIPELINE_ID', 'N/A'),
             "project_id": os.getenv('CI_PROJECT_ID', 'N/A'),
+            "merge_strategy": "failed_only" if self.failed_only else "all",
             "jobs": {}
         }
         
@@ -146,8 +253,9 @@ class SimpleArtifactsCollector:
             job_dir = self.merged_dir / job_name
             if not job_dir.exists():
                 continue
-                
+            
             job_index = {
+                "status": collected_jobs[job_name].get('status', 'unknown'),
                 "logs": [],
                 "artifacts": []
             }
@@ -186,8 +294,14 @@ class SimpleArtifactsCollector:
         # 显示当前目录结构（用于调试）
         print("📁 当前目录结构:")
         for item in sorted(Path('.').rglob('*')):
-            if item.is_file() and any(str(item).startswith(prefix) for prefix in ['ci_build_logs', 'artifacts']):
+            if item.is_file() and any(str(item).startswith(prefix) for prefix in ['ci_build_logs', 'artifacts', 'job_status']):
                 print(f"  {item}")
+
+        print(f"📌 发现 {len(self.job_status_map)} 个Job状态文件")
+        if self.failed_only:
+            print("🚨 当前运行模式: 仅收集失败Job")
+        else:
+            print("📦 当前运行模式: 收集全部Job")
         
         # 收集本地artifacts并保持原始目录结构
         collected_jobs = self.collect_local_artifacts()
@@ -206,8 +320,9 @@ class SimpleArtifactsCollector:
         # 显示合并后的目录结构
         print(f"\n📁 合并后的artifacts结构:")
         for job_dir in sorted(self.merged_dir.iterdir()):
-            if job_dir.is_dir() and job_dir.name not in ['build_summary.txt', 'file_index.json']:
-                print(f"  📂 {job_dir.name}/")
+            if job_dir.is_dir():
+                job_status = collected_jobs.get(job_dir.name, {}).get('status', 'unknown')
+                print(f"  📂 {job_dir.name}/ [{job_status}]")
                 
                 # 显示ci_build_logs目录
                 logs_dir = job_dir / 'ci_build_logs'
@@ -234,7 +349,12 @@ class SimpleArtifactsCollector:
 
 def main():
     try:
-        collector = SimpleArtifactsCollector()
+        parser = argparse.ArgumentParser(description='收集本地构建artifacts')
+        parser.add_argument('--failed-only', action='store_true', help='仅收集失败Job的artifacts')
+        parser.add_argument('--output-dir', default='merged_artifacts', help='输出目录')
+        args = parser.parse_args()
+
+        collector = SimpleArtifactsCollector(output_dir=args.output_dir, failed_only=args.failed_only)
         collector.collect_artifacts()
         print("\n🎉 Artifacts收集成功完成！")
     except Exception as e:

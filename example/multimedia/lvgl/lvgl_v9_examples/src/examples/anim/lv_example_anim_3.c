@@ -10,27 +10,26 @@
 
 #define CHART_POINTS_NUM 256
 
-struct
-{
-    lv_obj_t *anim_obj;
-    lv_obj_t *chart;
-    lv_chart_series_t *ser1;
-    lv_obj_t *p1_slider;
-    lv_obj_t *p1_label;
-    lv_obj_t *p2_slider;
-    lv_obj_t *p2_label;
-    lv_obj_t *run_btn;
-    uint16_t p1;
-    uint16_t p2;
+struct {
+    lv_obj_t * anim_obj;
+    lv_obj_t * chart;
+    lv_chart_series_t * ser1;
+    lv_obj_t * p1_slider;
+    lv_obj_t * p1_label;
+    lv_obj_t * p2_slider;
+    lv_obj_t * p2_label;
+    lv_obj_t * run_btn;
+    int32_t p1;
+    int32_t p2;
     lv_anim_t a;
 } ginfo;
 
-static int32_t anim_path_bezier3_cb(const lv_anim_t *a);
+static int32_t anim_path_bezier3_cb(const lv_anim_t * a);
 static void refer_chart_cubic_bezier(void);
-static void run_button_event_handler(lv_event_t *e);
-static void slider_event_cb(lv_event_t *e);
-static void page_obj_init(lv_obj_t *par);
-static void anim_x_cb(void *var, int32_t v);
+static void run_button_event_handler(lv_event_t * e);
+static void slider_event_cb(lv_event_t * e);
+static void page_obj_init(lv_obj_t * par);
+static void anim_x_cb(void * var, int32_t v);
 
 /**
  * create an animation
@@ -41,7 +40,7 @@ void lv_example_anim_3(void)
     static int32_t row_dsc[] = {30, 10, 10, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
 
     /*Create a container with grid*/
-    lv_obj_t *cont = lv_obj_create(lv_screen_active());
+    lv_obj_t * cont = lv_obj_create(lv_screen_active());
     lv_obj_set_style_pad_all(cont, 2, LV_PART_MAIN);
     lv_obj_set_style_pad_column(cont, 10, LV_PART_MAIN);
     lv_obj_set_style_pad_row(cont, 10, LV_PART_MAIN);
@@ -63,9 +62,9 @@ void lv_example_anim_3(void)
     refer_chart_cubic_bezier();
 }
 
-static int32_t anim_path_bezier3_cb(const lv_anim_t *a)
+static int32_t anim_path_bezier3_cb(const lv_anim_t * a)
 {
-    uint32_t t = lv_map(a->act_time, 0, a->duration, 0, 1024);
+    int32_t t = lv_map(a->act_time, 0, a->duration, 0, 1024);
     int32_t step = lv_bezier3(t, 0, ginfo.p1, ginfo.p2, 1024);
     int32_t new_value;
     new_value = step * (a->end_value - a->start_value);
@@ -76,43 +75,39 @@ static int32_t anim_path_bezier3_cb(const lv_anim_t *a)
 
 static void refer_chart_cubic_bezier(void)
 {
-    for (uint16_t i = 0; i <= CHART_POINTS_NUM; i ++)
-    {
-        uint32_t t = i * (1024 / CHART_POINTS_NUM);
+    for(uint16_t i = 0; i <= CHART_POINTS_NUM; i ++) {
+        int32_t t = i * (1024 / CHART_POINTS_NUM);
         int32_t step = lv_bezier3(t, 0, ginfo.p1, ginfo.p2, 1024);
-        lv_chart_set_value_by_id2(ginfo.chart, ginfo.ser1, i, t, step);
+        lv_chart_set_series_value_by_id2(ginfo.chart, ginfo.ser1, i, t, step);
     }
     lv_chart_refresh(ginfo.chart);
 }
 
-static void anim_x_cb(void *var, int32_t v)
+static void anim_x_cb(void * var, int32_t v)
 {
-    lv_obj_set_style_translate_x(var, v, LV_PART_MAIN);
+    lv_obj_set_style_translate_x((lv_obj_t *)var, v, LV_PART_MAIN);
 }
 
-static void run_button_event_handler(lv_event_t *e)
+static void run_button_event_handler(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED)
-    {
+    if(code == LV_EVENT_CLICKED) {
         lv_anim_start(&ginfo.a);
     }
 }
 
-static void slider_event_cb(lv_event_t *e)
+static void slider_event_cb(lv_event_t * e)
 {
     char buf[16];
-    lv_obj_t *label;
-    lv_obj_t *slider = lv_event_get_target(e);
+    lv_obj_t * label;
+    lv_obj_t * slider = lv_event_get_target_obj(e);
 
-    if (slider == ginfo.p1_slider)
-    {
+    if(slider == ginfo.p1_slider) {
         label = ginfo.p1_label;
         ginfo.p1 = lv_slider_get_value(slider);
         lv_snprintf(buf, sizeof(buf), "p1:%d", ginfo.p1);
     }
-    else
-    {
+    else {
         label = ginfo.p2_label;
         ginfo.p2 = lv_slider_get_value(slider);
         lv_snprintf(buf, sizeof(buf), "p2:%d", ginfo.p2);
@@ -122,7 +117,7 @@ static void slider_event_cb(lv_event_t *e)
     refer_chart_cubic_bezier();
 }
 
-static void page_obj_init(lv_obj_t *par)
+static void page_obj_init(lv_obj_t * par)
 {
     ginfo.anim_obj = lv_obj_create(par);
     lv_obj_set_size(ginfo.anim_obj, 30, 30);
@@ -151,7 +146,7 @@ static void page_obj_init(lv_obj_t *par)
 
     ginfo.run_btn = lv_button_create(par);
     lv_obj_add_event_cb(ginfo.run_btn, run_button_event_handler, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *btn_label = lv_label_create(ginfo.run_btn);
+    lv_obj_t * btn_label = lv_label_create(ginfo.run_btn);
     lv_label_set_text(btn_label, LV_SYMBOL_PLAY);
     lv_obj_center(btn_label);
     lv_obj_set_grid_cell(ginfo.run_btn, LV_GRID_ALIGN_STRETCH, 2, 1, LV_GRID_ALIGN_STRETCH, 1, 2);
@@ -161,8 +156,8 @@ static void page_obj_init(lv_obj_t *par)
     lv_obj_set_style_size(ginfo.chart, 0, 0, LV_PART_INDICATOR);
     lv_chart_set_type(ginfo.chart, LV_CHART_TYPE_SCATTER);
     ginfo.ser1 = lv_chart_add_series(ginfo.chart, lv_palette_main(LV_PALETTE_RED), LV_CHART_AXIS_PRIMARY_Y);
-    lv_chart_set_range(ginfo.chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1024);
-    lv_chart_set_range(ginfo.chart, LV_CHART_AXIS_PRIMARY_X, 0, 1024);
+    lv_chart_set_axis_range(ginfo.chart, LV_CHART_AXIS_PRIMARY_Y, 0, 1024);
+    lv_chart_set_axis_range(ginfo.chart, LV_CHART_AXIS_PRIMARY_X, 0, 1024);
     lv_chart_set_point_count(ginfo.chart, CHART_POINTS_NUM);
     lv_obj_set_grid_cell(ginfo.chart, LV_GRID_ALIGN_STRETCH, 0, 3, LV_GRID_ALIGN_STRETCH, 3, 1);
 }

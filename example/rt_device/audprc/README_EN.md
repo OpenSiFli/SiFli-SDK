@@ -5,7 +5,9 @@ Source code path: example/rt_device/audprc
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
 + eh-lb525
-+ sf32lb52-lcd_n16r8
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 + ec-lb587
 
 ## Overview

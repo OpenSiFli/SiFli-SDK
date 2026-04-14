@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __CHARGE_H__
 #define __CHARGE_H__
 
@@ -8,11 +14,20 @@
 extern "C" {
 #endif
 
+#ifdef CHARGE_FULL_VOLTAGE
+#define CHARGE_DEFAULT_FULL_VOLTAGE CHARGE_FULL_VOLTAGE
+#else
 #define CHARGE_DEFAULT_FULL_VOLTAGE (4200)     /*mv*/
+#endif
 #define CHARGE_DEFAULT_REP_VOLTAGE  (CHARGE_DEFAULT_FULL_VOLTAGE - 135 )     /*mv*/
 #define CHARGE_DEFAULT_VBAT_HIGH_VOLTAGE (4800)     /*mv*/
 #define CHARGE_CC_CURRENT_LEVEL0   (65)
 #define CHARGE_CC_CURRENT_LEVEL1   (300)
+#ifdef CHARGE_EOC_CC
+#define CHARGE_DEFAULT_EOC_CC       CHARGE_EOC_CC
+#else
+#define CHARGE_DEFAULT_EOC_CC       (10)
+#endif
 
 
 typedef enum
@@ -21,9 +36,7 @@ typedef enum
     RT_CHARGE_GET_STATUS,
     RT_CHARGE_GET_FULL_STATUS,
     RT_CHARGE_GET_DETECT_STATUS,
-#if 0 //  defined(CHARGE_MONITOR_TEMP_CONFIG)    
     RT_CHARGE_GET_CORE_TEMPERATURE,
-#endif
     RT_CHARGE_FORCE_ENABLE_CHARGING,
     RT_CHARGE_FORCE_SUSPEND_CHARGING,
     RT_CHARGE_FORCE_RESUME_CHARGING,
@@ -74,7 +87,6 @@ typedef struct rt_charge_device
 } rt_charge_device_t;
 
 
-
 /**
 * @brief enable charge
 * @param[in] enable 0:disable 1:enable
@@ -108,8 +120,8 @@ rt_charge_err_t rt_charge_get_full_status(uint8_t *state);
 * @param[out] temp
 * @return function execution result @see rt_charge_err_t
 */
-#if 0 // defined(CHARGE_MONITOR_TEMP_CONFIG)
-    rt_charge_err_t rt_charge_get_core_temp(int *temp);
+#if defined(CHARGE_MONITOR_TEMP_CONFIG)
+rt_charge_err_t rt_charge_get_core_temp(int *temp);
 #endif
 
 /**

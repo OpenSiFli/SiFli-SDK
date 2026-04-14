@@ -3987,10 +3987,10 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
             //level 0 : edr tx 0dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV;
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x0 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x3 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x70;
 
-            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x33333333;
+            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x22222222;
 
             hwp_bt_rfc->RBB_REG2 &= ~BT_RFC_RBB_REG2_BRF_RVGA_GC_LV;
             hwp_bt_rfc->RBB_REG2 |= 0x10 << BT_RFC_RBB_REG2_BRF_RVGA_GC_LV_Pos;
@@ -4876,9 +4876,9 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
     hwp_bt_phy->TX_DPSK_CFG3   = 0x5050505E;
 
     if (bt_is_in_BQB_mode())
-        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775433;
+        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775432;
     else
-        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775433;
+        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775432;
     //hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x66666666;
 
 
@@ -5201,7 +5201,7 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.1.9_3039";
+char *g_rf_ful_ver = "1.2.0_3415";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;

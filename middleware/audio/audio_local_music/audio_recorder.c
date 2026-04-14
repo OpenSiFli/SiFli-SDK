@@ -18,7 +18,7 @@
 #define DBG_TAG           "recorder"
 #define DBG_LVL           LOG_LVL_INFO
 #include "log.h"
-#ifndef SOLUTION_WATCH
+#ifndef SOLUTION
 
 typedef enum file_format
 {

@@ -1,4 +1,5 @@
 # jpeg硬件解码示例程序
+源码路径：example/jpeg_dec
 ```{warning}
 未验证
 ```

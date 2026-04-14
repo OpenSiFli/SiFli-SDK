@@ -165,6 +165,17 @@ void board_pinmux_sd1()
     HAL_PIN_Set(PAD_PB05, TWI_DIO, PIN_PULLUP, 0);
 }
 
+void board_pinmux_sd2()
+{
+    HAL_PIN_Set(PAD_PA08, SD2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA09, SD2_CMD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA10, SD2_DIO0, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA11, SD2_DIO1, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA06, SD2_DIO2, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA07, SD2_DIO3, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA05, GPIO_A5, PIN_NOPULL, 1);   // SDMMC2 reset
+}
+
 
 void board_pinmux_uart(int qfn)
 {
@@ -241,6 +252,12 @@ void board_sd1_power_on()
     data = RD_REG(EUROPA_PMIC_REG_BASE + EUROPA_PMIC_1V8_LVSW100_5);
     data |= (1 << 5);
     WR_REG((EUROPA_PMIC_REG_BASE + EUROPA_PMIC_1V8_LVSW100_5), data);
+}
+
+void board_sd2_power_on()
+{
+    // Call board-specific SD2 power on implementation
+    BSP_SD2_PowerUp();
 }
 
 

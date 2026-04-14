@@ -82,6 +82,11 @@ int audio_server_set_public_speaker_mute(uint8_t is_mute)
 {
     return 0;
 }
+int audio_server_set_private_volume(audio_type_t audio_type, uint8_t volume)
+{
+    return 0;
+}
+
 audio_client_t audio_open(audio_type_t audio_type, audio_rwflag_t rwflag, audio_parameter_t *paramter, audio_server_callback_func callback, void *callback_userdata)
 {
     WAVEFORMATEX wfx; /* look this up in your documentation */
@@ -279,3 +284,7 @@ int audio_close(audio_client_t handle)
     return 0;
 }
 
+int audio_device_is_a2dp_sink()
+{
+    return 0;
+}

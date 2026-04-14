@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include <rtdevice.h>
 #include "nand.h"
@@ -579,6 +584,7 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
     static bool cache_init;
     uint32_t i;
     dhara_meta_cache_t *cache;
+    rt_bool_t ecc_corrected;
 
     rt_enter_critical();
 
@@ -643,7 +649,6 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
 
     if (length < dev->page_size)
     {
-        //buf = rt_malloc(dev->page_size);
         buf = n->meta_buf;
         RT_ASSERT(buf);
     }
@@ -652,16 +657,8 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
         buf = data;
     }
 
-
-
-
-#if 0
-    rt_err = rt_mtd_nand_read(dev, p, (rt_uint8_t *)buf, dev->page_size, NULL, 0);
-#else
     buf = data;
-    // rt_err = rt_mtd_nand_read(dev, p, (rt_uint8_t *)data, length, NULL, offset);
-    rt_err = rt_mtd_nand_read_with_offset(dev, p, offset, (rt_uint8_t *)data, length, NULL, (rt_uint32_t)NULL);
-#endif
+    rt_err = rt_mtd_nand_read_with_offset2(dev, p, offset, (rt_uint8_t *)data, length, NULL, (rt_uint32_t)NULL, &ecc_corrected);
 
     if ((RT_EOK == rt_err) && ((offset + length) <= dev->page_size))
     {
@@ -670,6 +667,10 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
             rt_memcpy(data, buf + offset, length);
         }
         ret = 0;
+        if (err && (RT_TRUE == ecc_corrected))
+        {
+            *err = DHARA_E_ECC_CORRECTED;
+        }
     }
     else
     {
@@ -688,12 +689,6 @@ int dhara_nand_read(const struct dhara_nand *n, dhara_page_t p, size_t offset, s
     }
 
     //LOG_HEX("dhara_read", 8, (uint8_t *)buf, 2048);
-
-    if (buf != data)
-    {
-        // rt_free(buf);
-    }
-
     //rt_kprintf("read_res:%d\n", ret);
 
     return ret;

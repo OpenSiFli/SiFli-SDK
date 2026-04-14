@@ -10,6 +10,9 @@ This example can run on the following development boards:
 * eh-lb561
 * eh-lb563
 * eh-ss6500
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 **Note:** Generally, examples run on the chip's HCPU. If you want to run the example on LCPU, you can use "eh-lb563_lcpu".
 

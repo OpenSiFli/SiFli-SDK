@@ -13,6 +13,9 @@ This example implements a smartwatch interface using LVGL v9, including the foll
 The following sections provide only absolutely necessary information. For complete steps on configuring SiFli-SDK and using it to build and run projects, please refer to the [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html).
 
 ### Supported Development Boards
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 ```{note}
 - 520-hdk is not supported
 ```

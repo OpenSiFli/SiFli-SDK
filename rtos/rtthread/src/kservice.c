@@ -552,6 +552,10 @@ RTM_EXPORT(rt_strdup);
 #ifndef SIFLI_VERSION
     #define SIFLI_VERSION 0
 #endif
+#ifdef SOLUTION
+    #include "build_info.h"
+    #define SIFLI_BUILD SOLUTION_BUILD
+#endif
 #ifndef SIFLI_BUILD
     #define SIFLI_BUILD "Unknown"
 #endif
@@ -683,6 +687,16 @@ __ROM_USED void rt_show_sys_info(void)
 #endif
 #endif
 
+#if defined (RT_USING_DFS)
+    if (rt_interrupt_get_nest())
+    {
+        return;
+    }
+    extern void ls(const char *name);
+    ls("/");
+    extern int df(const char *name);
+    df("/");
+#endif /* RT_USING_DFS */
 #endif
 }
 
@@ -1912,7 +1926,7 @@ void log_pause(rt_bool_t pause)
     }
     if (pause)
     {
-        rt_kprintf("log paused\n");
+        //rt_kprintf("log paused\n");
     }
     log_paused = pause;
 #if defined(RT_USING_ULOG)
@@ -1921,7 +1935,7 @@ void log_pause(rt_bool_t pause)
 
     if (!pause)
     {
-        rt_kprintf("log resumed\n");
+        //rt_kprintf("log resumed\n");
     }
 }
 
@@ -2060,6 +2074,23 @@ RT_WEAK void rt_hw_fatal_error(void)
 
 }
 #endif
+#if defined (ASSERT_OPTIMIZE_1)
+__ROM_USED void rt_assert_func(void)
+{
+#ifdef _MSC_VER
+    rt_assert_handler("ASSERT",  NULL, (uint32_t) _ReturnAddress());
+#else
+    rt_assert_handler("ASSERT",  NULL, (uint32_t) __builtin_return_address(0));
+#endif
+}
+RTM_EXPORT(rt_assert_func);
+#elif defined (ASSERT_OPTIMIZE_2) || defined (LCPU_MEM_OPTIMIZE)
+__ROM_USED void rt_assert_func(const char *func, rt_size_t line)
+{
+    rt_assert_handler("ASSERT",  func, line);
+}
+RTM_EXPORT(rt_assert_func);
+#endif /* ASSERT_OPTIMIZE_1 */
 
 /**
  * The RT_ASSERT function.
@@ -2111,7 +2142,10 @@ __ROM_USED void rt_assert_handler(const char *ex_string, const char *func, rt_si
             ulog_flush();
 #endif
 
-            rt_kprintf("Assertion failed at function:%s, line number:%d ,(%s)\n", func, line, ex_string);
+            if (func)
+                rt_kprintf("Assertion failed at function:%s, line number:%d ,(%s)\n", func, line, ex_string);
+            else
+                rt_kprintf("Assertion failed at address: 0x%08x\n", line);
             rt_kprintf("Previous ISR enable %x\n", level);
 
             rt_show_sys_info();

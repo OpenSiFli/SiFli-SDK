@@ -623,8 +623,9 @@ static void BSP_CFG_CALIB_PMU(FACTORY_CFG_VBK_LDO_T *cfg)
     MODIFY_REG(hwp_pmuc->HPSYS_LDO, PMUC_HPSYS_LDO_VREF_Msk, cfg->hp_ldo << PMUC_HPSYS_LDO_VREF_Pos);
     MODIFY_REG(hwp_pmuc->LPSYS_LDO, PMUC_LPSYS_LDO_VREF_Msk, cfg->lp_ldo << PMUC_LPSYS_LDO_VREF_Pos);
     MODIFY_REG(hwp_pmuc->VRET_CR, PMUC_VRET_CR_TRIM_Msk, cfg->vret << PMUC_VRET_CR_TRIM_Pos);
-
+#ifdef SOC_BF0_HCPU
     HAL_PMU_SaveCalData(cfg);
+#endif /* SOC_BF0_HCPU */
 }
 
 #else // 52x?

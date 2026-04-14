@@ -54,6 +54,12 @@ typedef enum
 
 /* Exported macros -----------------------------------------------------------*/
 
+#define HAL_MEM_TYPE_NOR_FLASH       0U
+#define HAL_MEM_TYPE_NAND_FLASH      1U
+#define HAL_MEM_TYPE_SDMMC_STORAGE   2U
+#define HAL_MEM_TYPE_PSRAM           3U
+#define HAL_MEM_TYPE_UNKNOWN         0xFFU
+
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 
 #define HAL_MAX_DELAY      0xFFFFFFFFU

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef GUI_APP_FWK2_H
 #define GUI_APP_FWK2_H
 
@@ -90,6 +96,14 @@ void gui_app_self_exit(void);
     @retval    FALSE - if app is paused, or not even started, TRUE if app is active.
  */
 bool gui_app_is_actived(char *id);
+
+/**
+    @brief     check whether the app's page is active(or running)
+    @param[in] app_id Identification of application
+    @param[in] pg_id Identification of page
+    @retval    FALSE - if app/page is paused, or not even started, TRUE if page is active.
+ */
+bool gui_page_is_actived(const char *app_id, const char *pg_id);
 
 /**
     @brief     check whether the subpage is present in cur app
@@ -190,6 +204,12 @@ int gui_app_set_page_userdata(const char *pg_id, void *usr_data);
  * @return NULL if no data
  */
 void *gui_app_this_page_userdata(void);
+
+/**
+ * @brief Get current subpage's customize memory pointer
+ * @return NULL if no data
+ */
+void *gui_app_this_page_memory(void);
 
 
 /**

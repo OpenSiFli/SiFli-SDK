@@ -75,6 +75,29 @@ __ROM_USED const static struct rt_device_ops wdt_ops =
     rt_watchdog_control,
 };
 #endif
+#if defined(RT_USING_PM) && defined(SOC_BF0_HCPU)
+rt_timer_t iwdt_timer = NULL;
+static void rt_watchdog_sleep_timeout(void *parameter)
+{
+    uint32_t status = rt_hw_watchdog_get_status();
+    if (0 != status)
+    {
+        rt_hw_watchdog_pet();
+    }
+    return;
+}
+
+
+int rt_hw_watchdog_timer_init(void)
+{
+    iwdt_timer = rt_timer_create("iwdt_sleep", rt_watchdog_sleep_timeout, RT_NULL,
+                                 rt_tick_from_millisecond((IWDT_SLEEP_TIMEOUT - 10) * 1000), RT_TIMER_FLAG_PERIODIC);
+    rt_timer_start(iwdt_timer);
+    return 0;
+}
+
+INIT_ENV_EXPORT(rt_hw_watchdog_timer_init);
+#endif
 
 /**
  * This function register a watchdog device
@@ -124,7 +147,16 @@ __ROM_USED void rt_hw_watchdog_pet(void)
 __ROM_USED void rt_hw_watchdog_hook(int enable)
 {
     if (enable)
+    {
         rt_thread_idle_sethook(rt_hw_watchdog_pet);
+#if defined(RT_USING_PM) && defined(SOC_BF0_HCPU)
+        if (iwdt_timer)
+        {
+            rt_timer_stop(iwdt_timer);
+            rt_timer_start(iwdt_timer);
+        }
+#endif
+    }
     else
         rt_thread_idle_delhook(rt_hw_watchdog_pet);
 }
@@ -149,6 +181,12 @@ __ROM_USED void rt_hw_watchdog_init(void)
 __ROM_USED void rt_hw_watchdog_deinit(void)
 {
     rt_device_control(wdt_dev, RT_DEVICE_CTRL_WDT_STOP, NULL);
+#if defined(RT_USING_PM) && defined(SOC_BF0_HCPU)
+    if (iwdt_timer)
+    {
+        rt_timer_stop(iwdt_timer);
+    }
+#endif
 }
 
 __ROM_USED uint32_t rt_hw_watchdog_get_status(void)

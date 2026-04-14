@@ -391,6 +391,9 @@ if GetDepend(['SOLUTION_RES_BUILT_IN']):
     CPPDEFINES += ['CONFIG_NAND_PROTOCOL']
     src += ['./libavformat/nand.c']
 
+CPPDEFINES += ['CONFIG_RAM_PROTOCOL']
+src += ['./libavformat/ram.c']
+
 #demo
 #src += ['./api-h264-test.c']
 #src += ['./doc/examples/demuxing_decoding.c']

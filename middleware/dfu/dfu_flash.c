@@ -15,6 +15,7 @@
 #include "drv_flash.h"
 #include "dfu_internal.h"
 #include "os_adaptor.h"
+#include "fal.h"
 
 #include "mem_map.h"
 
@@ -26,6 +27,24 @@
 #ifndef OTA_NOR_LCPU_ROM_PATCH_SIZE
     #define OTA_NOR_LCPU_ROM_PATCH_SIZE 0
 #endif
+
+typedef struct
+{
+    rt_device_t device;
+    uint32_t logic_addr;
+    struct rt_mutex sdio_mutex;
+} dfu_flash_env_t;
+
+static dfu_flash_env_t g_dfu_flash_env = {0};
+static dfu_flash_env_t *dfu_flash_get_env()
+{
+    return &g_dfu_flash_env;
+}
+
+#define cache_max_blks  8
+#define cache_blk_size 512
+ALIGN(32) static rt_uint8_t  blk_cache_buf[cache_blk_size * cache_max_blks];
+ALIGN(32) static rt_uint8_t  sdio_cache_buf[cache_blk_size];
 
 uint32_t image_offset = 0;
 
@@ -327,10 +346,72 @@ uint8_t is_addr_in_flash(uint32_t addr)
     return is_in_flash;
 }
 
+static int8_t dfu_get_flash_type_by_part_table(uint32_t addr)
+{
+    dfu_flash_env_t *env = dfu_flash_get_env();
+    const struct fal_flash_dev *fal_dev;
+    const struct fal_partition *fal_table;
+
+    int8_t ret = -1;
+    uint32_t start_addr;
+    uint32_t end_addr;
+
+    size_t fal_table_len;
+
+    fal_table = fal_get_partition_table(&fal_table_len);
+    for (int i = 0; i < fal_table_len; i++)
+    {
+        fal_dev = fal_flash_device_find(fal_table[i].flash_name);
+
+        if (fal_dev != NULL)
+        {
+            //LOG_I("device flag, %s, %d, addr 0x%x, offset 0x%x, len 0x%x ", fal_table[i].name, fal_dev->nand_flag, fal_dev->addr, fal_table[i].offset, fal_table[i].len);
+            start_addr = fal_dev->addr + fal_table[i].offset;
+            end_addr = fal_dev->addr + fal_table[i].offset + fal_table[i].len;
+
+            //LOG_I("start_addr 0x%x, end_addr 0x%x, addr 0x%x", start_addr, end_addr, addr);
+            if (addr >= start_addr && addr <= end_addr)
+            {
+                if (fal_dev->nand_flag == 2)
+                {
+#ifdef RT_USING_DEVICE
+                    env->device = rt_device_find(fal_table[i].name);
+#endif
+                    env->logic_addr = start_addr;
+                    ret = DFU_FLASH_TYPE_EMMC;
+                }
+                else if (fal_dev->nand_flag == 1)
+                {
+                    ret = DFU_FLASH_TYPE_NAND;
+                }
+                else if (fal_dev->nand_flag == 0)
+                {
+                    ret = DFU_FLASH_TYPE_NOR;
+                }
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
 int8_t dfu_get_flash_type(uint32_t dest)
 {
     uint8_t flash_type;
     FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(dest);
+    dfu_flash_env_t *env = dfu_flash_get_env();
+
+    int type_ret = dfu_get_flash_type_by_part_table(dest);
+    if (type_ret == -1)
+    {
+        LOG_W("dfu_get_flash_type: get flash type by fal part table failed 0x%x", dest);
+    }
+    else
+    {
+        return type_ret;
+    }
+
     if (fhandle != NULL)
     {
         // nand flash
@@ -342,15 +423,17 @@ int8_t dfu_get_flash_type(uint32_t dest)
         fhandle = Addr2Handle(dest);
         if (fhandle == NULL)
         {
-            if ((dest & DFU_EMMC_ADDR_RANGE_FLAG) == DFU_EMMC_ADDR_RANGE)
-            {
-                flash_type = DFU_FLASH_TYPE_EMMC;
-            }
-            else
-            {
-                LOG_I("invalid addr 0x%x", dest);
-                return -3;
-            }
+            // if ((dest & DFU_EMMC_ADDR_RANGE_FLAG) == DFU_EMMC_ADDR_RANGE)
+            // {
+            //     flash_type = DFU_FLASH_TYPE_EMMC;
+            // }
+            // else
+            // {
+
+            // }
+
+            LOG_I("invalid addr 0x%x", dest);
+            return -3;
         }
         else
         {
@@ -360,6 +443,154 @@ int8_t dfu_get_flash_type(uint32_t dest)
 
     return flash_type;
 }
+
+
+#ifdef RT_USING_DEVICE
+static int dfu_sdio_read(uint32_t addr, uint8_t *buf, int size)
+{
+    dfu_flash_env_t *env = dfu_flash_get_env();
+
+    uint32_t pos = (addr - env->logic_addr) / cache_blk_size;
+    uint32_t pos_offset = (addr - env->logic_addr) % cache_blk_size;
+    uint32_t req_size;
+    int offset,  remain, fill;
+
+    if (!buf || !size)    return 0;
+
+    if (addr < env->logic_addr)
+    {
+        LOG_W("addr %x < logic_addr %x", addr, env->logic_addr);
+        return -1;
+    }
+
+    rt_device_t dev = env->device;    // get block device
+    if (dev == NULL)
+    {
+        LOG_E("device is NULL");
+        return -1;
+    }
+
+    offset = 0;
+    fill = 0;
+    remain = size;
+
+    if (rt_object_get_type(&env->sdio_mutex.parent.parent) != RT_Object_Class_Mutex)
+    {
+        rt_mutex_init(&env->sdio_mutex, "sdio_mutex", RT_IPC_FLAG_FIFO);
+    }
+
+    rt_mutex_take(&env->sdio_mutex, RT_WAITING_FOREVER);
+    rt_err_t ret = rt_device_open(dev, RT_DEVICE_FLAG_RDWR);
+    if (RT_EOK != ret)
+    {
+        LOG_W("device open fail %d", ret);
+        return -1;
+    }
+    if (pos_offset) // not page aligned
+    {
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        if (remain >= cache_blk_size - pos_offset)
+            fill += (cache_blk_size - pos_offset);
+        else
+            fill = remain;
+        memcpy(buf, sdio_cache_buf + pos_offset, fill);
+        remain -= fill;
+        offset += fill;
+        pos += 1;
+    }
+
+    if (remain >= cache_blk_size)
+    {
+        uint32_t req_blk = remain / cache_blk_size;
+        fill = (req_blk << 9);
+        rt_device_read(dev, pos, buf + offset, req_blk);
+        remain -= fill;
+        offset += fill;
+        pos += req_blk;
+    }
+
+    if (remain > 0)
+    {
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        memcpy(buf + offset, sdio_cache_buf, remain);
+        offset += remain;
+    }
+    rt_device_close(dev);
+    rt_mutex_release(&env->sdio_mutex);
+
+    return offset;
+}
+
+static int dfu_sdio_write(uint32_t addr, uint8_t *buf, int size)
+{
+    dfu_flash_env_t *env = dfu_flash_get_env();
+
+    uint32_t pos = (addr - env->logic_addr) / cache_blk_size;
+    uint32_t pos_offset = (addr - env->logic_addr) % cache_blk_size;
+    uint32_t req_size;
+    int offset = 0, remain = 0, fill = 0;
+
+    if (!buf || !size)    return 0;
+
+    if (addr < env->logic_addr)
+    {
+        LOG_I("addr %x < logic_addr %x", addr, env->logic_addr);
+        return -1;
+    }
+
+    rt_device_t dev = env->device;    // get block device
+    if (dev == NULL)
+    {
+        LOG_E("device is NULL");
+        return -1;
+    }
+
+    if (rt_object_get_type(&env->sdio_mutex.parent.parent) != RT_Object_Class_Mutex)
+    {
+        rt_mutex_init(&env->sdio_mutex, "sdio_mutex", RT_IPC_FLAG_FIFO);
+    }
+    rt_mutex_take(&env->sdio_mutex, RT_WAITING_FOREVER);
+    rt_err_t ret = rt_device_open(dev, RT_DEVICE_FLAG_RDWR);
+    RT_ASSERT(RT_EOK == ret);
+    remain = size;
+    if (pos_offset)
+    {
+        rt_memset(sdio_cache_buf, 0, cache_blk_size);
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        if ((remain + pos_offset) >= cache_blk_size)
+            fill = cache_blk_size - pos_offset;
+        else
+            fill = remain;
+        rt_memcpy(sdio_cache_buf + pos_offset, buf, fill);
+        rt_device_write(dev, pos, sdio_cache_buf, 1);
+        remain -= fill;
+        pos += 1;
+        buf += fill;
+        offset += fill;
+    }
+    if (remain >= cache_blk_size)
+    {
+        uint32_t req_blk = remain / cache_blk_size;
+        rt_device_write(dev, pos, buf, req_blk);
+        pos += req_blk;
+        buf += (req_blk << 9);
+        remain -= (req_blk << 9);
+        offset += (req_blk << 9);
+    }
+    if (remain > 0)
+    {
+        rt_memset(sdio_cache_buf, 0, cache_blk_size);
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        rt_memcpy(sdio_cache_buf, buf, remain);
+        rt_device_write(dev, pos, sdio_cache_buf, 1);
+        offset += remain;
+    }
+    rt_device_close(dev);
+    rt_mutex_release(&env->sdio_mutex);
+
+    return offset;
+}
+#endif
 
 int dfu_flash_read(uint32_t addr, uint8_t *data, int size)
 {
@@ -377,7 +608,11 @@ int dfu_flash_read(uint32_t addr, uint8_t *data, int size)
     }
     else if (flash_type == DFU_FLASH_TYPE_EMMC)
     {
-        // TODO: implementation emmc read
+#ifdef RT_USING_DEVICE
+        rd_size = dfu_sdio_read(addr, data, size);
+#else
+        rd_szie = 0;
+#endif
     }
     else
     {
@@ -416,7 +651,11 @@ int dfu_flash_write(uint32_t addr, uint8_t *data, int size)
 #endif
     else if (flash_type == DFU_FLASH_TYPE_EMMC)
     {
-        // TODO: implementation emmc write
+#ifdef RT_USING_DEVICE
+        wr_size = dfu_sdio_write(addr, data, size);
+#elif
+        wr_size = 0;
+#endif
     }
     else
     {

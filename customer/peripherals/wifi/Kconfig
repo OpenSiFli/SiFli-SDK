@@ -11,4 +11,29 @@ menuconfig BSP_WIFI_SWT6621
         config WIFI_POWER_PIN
             int "SWT6621 POWER pin number"
             default 53
+        config SKW_BOOT_MODE_RAM
+            bool "wifi firmware load mode ram"
+            default y  
+        if !SKW_BOOT_MODE_RAM           
+            config WIFI_DRAM_PATH
+                string "WIFI fwk dram path"
+                default "wifi/boot/SWT6621S_DRAM_SDIO.bin"
+            config WIFI_IRAM_PATH
+                string "WIFI fwk Iram path"
+                default "wifi/boot/SWT6621S_IRAM_SDIO.bin"
+            config WIFI_CALIBRATION_PATH
+                string "WIFI fwk Iram path"
+                default "wifi/calibration/SWT6621S_SEEKWAVE_R00000.bin"
+        endif
+        config SKW_WIFI_DEBUG
+            bool "wifi debug file enable"
+            default n
+        if SKW_WIFI_DEBUG
+            config WIFI_DEBUG_PATH
+                string "wifi debug file path"
+                default "wifi/debug"
+        endif
+        config WIFI_SDIO_NUM
+            int "SWT6621 SDIO port number, 0-SDHCI1; 1-SDHCI2; 2-SDIO"
+            default 0
     endif

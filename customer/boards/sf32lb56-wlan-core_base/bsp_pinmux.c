@@ -1,46 +1,7 @@
-/**
-  ******************************************************************************
-  * @file   bsp_pinmux.c
-  * @author Sifli software development team
-  ******************************************************************************
-*/
-/**
- * @attention
- * Copyright (c) 2019 - 2022,  Sifli Technology
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
  *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Sifli integrated circuit
- *    in a product or a software update for such product, must reproduce the above
- *    copyright notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the name of Sifli nor the names of its contributors may be used to endorse
- *    or promote products derived from this software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Sifli integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY SIFLI TECHNOLOGY "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL SIFLI TECHNOLOGY OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
+ * SPDX-License-Identifier: Apache-2.0
  */
 #include "bsp_board.h"
 
@@ -101,8 +62,10 @@ void BSP_PIN_Init(void)
 
     HAL_PIN_Set(PAD_PA00, WLAN_ACTIVE, PIN_PULLDOWN, 1);
 
-    HAL_PIN_Set(PAD_PA48, I2C1_SCL, PIN_PULLDOWN, 1);              // CTP_I2C_SCL
-    HAL_PIN_Set(PAD_PA49, I2C1_SDA,  PIN_PULLDOWN, 1);             // CTP_I2C_SDA
+    HAL_PIN_Set(PAD_PA48, I2C1_SCL, PIN_PULLUP, 1);              // CTP_I2C_SCL
+    HAL_PIN_Set(PAD_PA49, I2C1_SDA,  PIN_PULLUP, 1);             // CTP_I2C_SDA
+
+    HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);           /*output mode wake up wifi*/
 
     HAL_PIN_Set(PAD_PA03, USART1_TXD,  PIN_PULLUP, 1);             // CAN1_TXD
     HAL_PIN_Set(PAD_PA04, USART1_RXD,  PIN_PULLUP, 1);             // CAN1_RXD
@@ -127,8 +90,10 @@ void BSP_PIN_Init(void)
         HAL_PIN_Set(PAD_PA12, SD1_DIO2, PIN_PULLUP, 1);
         HAL_PIN_Set(PAD_PA20, SD1_DIO3, PIN_PULLUP, 1);
     }
-    HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_NOPULL, 1);           /*output mode wake up wifi*/
+
     HAL_PIN_Set(PAD_PA05, GPIO_A5, PIN_PULLDOWN, 1);           /*input mode wifi wake up mcu*/
+
+
 #endif
 
 
@@ -141,15 +106,14 @@ void BSP_PIN_Init(void)
 
     // PAD_PA13-PA47 for LCDs, following is default QSPI selection
     {
-        HAL_PIN_Set(PAD_PA31, GPIO_A31, PIN_NOPULL, 1);         // LCD_VIO_EN
-        HAL_PIN_Set(PAD_PA33, LCDC1_SPI_TE, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA33, LCDC1_SPI_TE, PIN_NOPULL, 1);
         HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_PULLUP, 1);         // LCD backlight PWM
-        HAL_PIN_Set(PAD_PA36, LCDC1_SPI_CS, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA37, LCDC1_SPI_CLK, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA38, LCDC1_SPI_DIO0, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA39, LCDC1_SPI_DIO1, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA40, LCDC1_SPI_DIO2, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA41, LCDC1_SPI_DIO3, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA36, LCDC1_SPI_CS, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA37, LCDC1_SPI_CLK, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA38, LCDC1_SPI_DIO0, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA39, LCDC1_SPI_DIO1, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA40, LCDC1_SPI_DIO2, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA41, LCDC1_SPI_DIO3, PIN_NOPULL, 1);
         HAL_PIN_Set(PAD_PA47, GPIO_A47, PIN_PULLDOWN, 1);       // LCDC1 VDD_EN
     }
 
@@ -161,7 +125,7 @@ void BSP_PIN_Init(void)
 
     // PAD_PA57-PA78 for GPIO
     HAL_PIN_Set(PAD_PA52, GPIO_A52, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_PA53, GPIO_A53, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA53, GPIO_A53, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA54, GPIO_A54, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA55, GPIO_A55, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA56, GPIO_A56, PIN_PULLDOWN, 1);
@@ -187,6 +151,11 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA76, GPIO_A76, PIN_PULLUP, 1);     // WLAN_INT
     HAL_PIN_Set(PAD_PA77, GPIO_A77, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA78, GPIO_A78, PIN_PULLDOWN, 1);
+    if (PM_STANDBY_BOOT != SystemPowerOnModeGet())
+    {
+        /* Force PBR0 always output 1 for PWR_REQ function */
+        HAL_PBR0_FORCE1_ENABLE();
+    }
 
 #endif
     //B0-B12 GPIO
@@ -219,11 +188,6 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PB20, GPIO_B20, PIN_PULLDOWN, 0);
     HAL_PIN_Set(PAD_PB21, GPIO_B21, PIN_PULLDOWN, 0);
     HAL_PIN_Set(PAD_PB22, GPIO_B22, PIN_PULLDOWN, 0);       // LCD_PWR_EN
-#if defined(LCD_USING_PWM_AS_BACKLIGHT)
-    HAL_PIN_Set(PAD_PA50, GPTIM2_CH4, PIN_NOPULL, 1);   // LCDC1_BL_PWM_CTRL, LCD backlight PWM
-#else
-    HAL_PIN_Set(PAD_PA50, GPIO_A50, PIN_NOPULL, 1);     // LCDC1_BL_PWM_CTRL, LCD backlight PWM
-#endif
     HAL_PIN_Set(PAD_PB24, GPIO_B24, PIN_PULLDOWN, 0);
     HAL_PIN_Set(PAD_PB25, GPIO_B25, PIN_PULLDOWN, 0);
     HAL_PIN_Set(PAD_PB26, GPIO_B26, PIN_PULLDOWN, 0);

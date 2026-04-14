@@ -9,7 +9,7 @@ void lv_example_monkey_1(void)
     config.type = LV_INDEV_TYPE_POINTER;
     config.period_range.min = 10;
     config.period_range.max = 100;
-    lv_monkey_t *monkey = lv_monkey_create(&config);
+    lv_monkey_t * monkey = lv_monkey_create(&config);
 
     /*Start monkey test*/
     lv_monkey_set_enable(monkey, true);

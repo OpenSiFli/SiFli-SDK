@@ -173,6 +173,12 @@ struct rt_pm_notify
     #define rt_pm_release(sleep_mode)  rt_pm_release_debug((sleep_mode), __FILE__, __LINE__)
 #endif
 
+/**
+ * @brief Get the current run mode of the power management system.
+ *
+ * @return Current run mode (one of the PM_RUN_MODE_* values).
+ */
+rt_uint8_t rt_pm_run_mode_get(void);
 int rt_pm_run_enter(uint8_t run_mode);
 rt_uint8_t rt_pm_sleep_mode_state_get(uint8_t sleep_mode);
 

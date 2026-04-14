@@ -4,9 +4,13 @@
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ sf32lb52-lcd_n16r8
 + sf32lb52-lchspi-ulp
-+ sf32lb52-nano_n16r16
++ sf32lb52-nano系列
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
+
+
 ## 概述
 <!-- 例程简介 -->
 1. 本例程演示了本平台如何实现基于BLE的语音对讲功能。

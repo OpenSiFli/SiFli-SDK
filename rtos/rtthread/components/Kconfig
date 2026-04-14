@@ -16,7 +16,8 @@ if RT_USING_COMPONENTS_INIT
         config RT_MAIN_THREAD_PRIORITY
             int "Set main thread priority" 
             default 4  if RT_THREAD_PRIORITY_8
-            default 10  if RT_THREAD_PRIORITY_32
+            default 10  if RT_THREAD_PRIORITY_32 && !SOC_BF0_HCPU
+            default 6  if RT_THREAD_PRIORITY_32 && SOC_BF0_HCPU
             default 85  if RT_THREAD_PRIORITY_256
     endif
 endif

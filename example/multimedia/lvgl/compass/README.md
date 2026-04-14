@@ -1,4 +1,5 @@
 # 电子罗盘示例
+源码路径：example/multimedia/lvgl/compass
 使用LVGL v8(后续会有v9版本)做的，显示了圆形罗盘表盘、随着朝向转动的指针，以及显示当前朝向和角度
 ## 支持的平台
 + sf32lb52-lchspi-ulp

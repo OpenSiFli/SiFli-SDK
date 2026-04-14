@@ -4,9 +4,9 @@ Source path: example/ble/basc
 
 ## Supported Platforms
 The example can run on the following development boards:
-* sf32lb52-lcd_n16r8
-* sf32lb56-lcd-a128r12n1\sf32lb56-lcd_n16r12n1
-* sf32lb58-lcd-n16r64n4\sf32lb58-lcd_a128r32n1_dsi
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 ## Overview
 * This is an application example based on the Sifli BLE protocol stack that can read the microcontroller's battery level value. It includes the following functions: creation and registration of custom GATT services, BLE advertising (for Bluetooth connection), data read/write and notification mechanisms, and BASC functionality.

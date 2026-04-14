@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef LVSF_H
 #define LVSF_H
 
@@ -23,12 +28,6 @@ extern "C" {
 #endif
 
 #include "lvsf_perf.h"
-
-// For script generation as lv obj member.
-void lv_obj_set_local_font(lv_obj_t *obj, uint16_t size, lv_color_t color);
-void lv_obj_set_page_glue(lv_obj_t *obj, bool glue);
-lv_coord_t lv_get_ver_max();
-lv_coord_t lv_get_hor_max();
 
 #include "gui_app_fwk2.h"
 
@@ -87,4 +86,3 @@ typedef struct tag_named_img_var
 #endif
 
 #endif /*LVSF_UTILS_H*/
-

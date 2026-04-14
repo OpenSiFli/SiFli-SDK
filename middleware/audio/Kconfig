@@ -30,6 +30,11 @@ config AUDIO_LOCAL_MUSIC
     depends on (AUDIO_USING_AUDPROC && AUDIO && AUDIO_USING_MANAGER && BF0_HCPU)
     select PKG_USING_LIBHELIX
     default n
+config AUDIO_MP3_RINGBUFF_SUPPORT
+    bool "Enable MP3 ring buffer support"
+    depends on AUDIO_LOCAL_MUSIC
+    default n
+
 config AUDIO_BT_AUDIO
     bool "Enable BT audio"
     depends on (AUDIO_USING_AUDPROC && AUDIO)
@@ -60,6 +65,11 @@ choice
         bool "I2S"
 endchoice
 
+config PKG_USING_I2S_MODEM
+    bool "support i2s modem"
+        depends on (AUDIO_USING_AUDPROC && AUDIO)
+    default n
+
 config MICBIAS_USING_AS_PDM_POWER
     bool "hardware: MICBIAS pin using as pdm power"
         depends on (AUDIO_RX_USING_PDM && AUDIO)
@@ -74,10 +84,6 @@ config AUDIO_FREQSHIFT
         depends on AUDIO
     default n
  
-config PKG_USING_ANYKA
-    bool "Enable anyka anyblue1090 real-time speech enhancement processing"
-        depends on AUDIO
-    default n
 config PKG_USING_AUDIO_TEST_API
     bool "mic speaker test api"
         depends on AUDIO

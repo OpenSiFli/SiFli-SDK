@@ -20,6 +20,8 @@ ipc_queue.md
 gauss.md
 security.md
 multimedia.md
+audio_server.md
+video.md
 partition_table.md
 battery_calculator.md
 ```

@@ -16,6 +16,7 @@ LOCAL &name3
 LOCAL &name4
 LOCAL &name5
 LOCAL &name6
+LOCAL &name7
 LOCAL &sel1
 LOCAL &sel2
 LOCAL &sel3
@@ -25,6 +26,7 @@ LOCAL &sel7
 LOCAL &addr1
 LOCAL &addr2
 LOCAL &addr3
+LOCAL &addr7
 LOCAL &devsel
 
 &sel1=0
@@ -60,11 +62,13 @@ BOARD.LB55X: CHOOSEBOX "LB55X"
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
         DIALOG.Enable CB7
         DIALOG.Enable FEDIT7
         DIALOG.Set TADDR1 "0x20100000"
         DIALOG.Set TADDR2 "0x200fc000"
         DIALOG.Set TADDR7 "0x12000000"
+        DIALOG.Set TADDR3 "0xfc000"
     )
     POS 16. 0. 10. 1.
 BOARD.LB58X: CHOOSEBOX "LB58X"
@@ -76,10 +80,12 @@ BOARD.LB58X: CHOOSEBOX "LB58X"
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
         DIALOG.Disable CB7
         DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
         DIALOG.Set TADDR2 "0x203fc000"
+        DIALOG.Set TADDR3 "0x3fc000"
     )
     POS 27. 0. 10. 1.
 BOARD.LB56X: CHOOSEBOX "LB56X"
@@ -91,10 +97,12 @@ BOARD.LB56X: CHOOSEBOX "LB56X"
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
         DIALOG.Disable CB7
         DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
         DIALOG.Set TADDR2 "0x203fc000"
+        DIALOG.Set TADDR3 "0x3fc000"
     )
     POS 38. 0. 10. 1.
 BOARD.LB52X: CHOOSEBOX "LB52X"
@@ -106,6 +114,7 @@ BOARD.LB52X: CHOOSEBOX "LB52X"
         DIALOG.Set CB2 FALSE()
         DIALOG.Disable CB2
         DIALOG.Disable FEDIT2
+        DIALOG.Set CB7 FALSE()
         DIALOG.Disable CB7
         DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
@@ -231,7 +240,7 @@ CB6: CHECKBOX "load lcpu rom patch axf"
     POS 32. 17. 15. 1.
 FEDIT6: EDIT "lcpu_rom_patch.axf" ""
 
-POS 5. 19. 26. 1.
+POS 5. 19. 15. 1.
 CB7: CHECKBOX "load lcpu_psram.bin"
     (
         IF DIALOG.BOOLEAN(CB7)
@@ -266,8 +275,12 @@ IF &devsel==0
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
+        DIALOG.Enable CB7
+        DIALOG.Enable FEDIT7
         DIALOG.Set TADDR1 "0x20100000"
         DIALOG.Set TADDR2 "0x200fc000"
+        DIALOG.Set TADDR3 "0xfc000"
 )
 ELSE IF &devsel==1
 (
@@ -278,8 +291,12 @@ ELSE IF &devsel==1
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
+        DIALOG.Disable CB7
+        DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
         DIALOG.Set TADDR2 "0x203fc000"
+        DIALOG.Set TADDR3 "0x3fc000"
 )
 ELSE &devsel==2
 (
@@ -290,8 +307,12 @@ ELSE &devsel==2
         DIALOG.Set CB2 TRUE()
         DIALOG.Enable CB2
         DIALOG.Enable FEDIT2
+        DIALOG.Set CB7 FALSE()
+        DIALOG.Disable CB7
+        DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
         DIALOG.Set TADDR2 "0x203fc000"
+        DIALOG.Set TADDR3 "0x3fc000"
 )
 ELSE
 (
@@ -302,6 +323,8 @@ ELSE
         DIALOG.Set CB2 FALSE()
         DIALOG.Disable CB2
         DIALOG.Disable FEDIT2
+        DIALOG.Disable CB7
+        DIALOG.Disable FEDIT7
         DIALOG.Set TADDR1 "0x20400000"
         DIALOG.Set TADDR2 "0x203fc000"
 )
@@ -394,6 +417,12 @@ IF &sel3==1
     D.LOAD.B &folder\&name3 &addr3
 )
 
+; LCPU PSRAM
+IF &sel7==1
+(
+    D.LOAD.B &folder\&name7 &addr7
+)
+
 ; LCPU AXF
 IF &sel4==1
 (
@@ -412,11 +441,6 @@ IF &sel6==1
     D.LOAD.ELF &folder\&name6 /NOCLEAR
 )
 
-; LCPU PSRAM
-IF &sel6==1
-(
-    D.LOAD.B &folder\&name7 &addr7
-)
 
 
 winpos 0% 0% 100% 50%

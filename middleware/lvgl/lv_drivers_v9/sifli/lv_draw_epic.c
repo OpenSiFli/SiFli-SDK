@@ -89,7 +89,7 @@ void lv_draw_epic_init(void)
 
 #if LV_USE_OS
         draw_epic_unit->base_unit.wait_for_finish_cb = wait_for_finish;
-        lv_thread_init(&draw_epic_unit->thread, LV_THREAD_PRIO_HIGHEST, render_thread_cb, 4 * 1024, draw_epic_unit);
+        lv_thread_init(&draw_epic_unit->thread, "EPIC", LV_THREAD_PRIO_HIGHEST, render_thread_cb, 4 * 1024, draw_epic_unit);
 #endif
 
         draw_epic_unit->p_sw_unit = draw_epic_unit->base_unit.next;
@@ -173,6 +173,20 @@ static int32_t evaluate(lv_draw_unit_t *draw_unit, lv_draw_task_t *t)
         if ((LV_GRADIENT_MAX_STOPS > 2) && (draw_dsc->grad.dir != (lv_grad_dir_t)LV_GRAD_DIR_NONE))
             return 0;
 
+        if (draw_dsc->grad.dir != LV_GRAD_DIR_NONE)
+        {
+            lv_layer_t *target_layer = t->target_layer;
+            if (target_layer)
+            {
+                lv_color_format_t dest_cf = target_layer->color_format;
+                uint32_t epic_cf = lv_img_2_epic_cf(dest_cf);
+                if (!EPIC_SUPPROT_OUT_FORMAT(epic_cf))
+                {
+                    return 0;
+                }
+            }
+        }
+
         if (t->preference_score > 70)
         {
             t->preference_score = 70;
@@ -193,12 +207,24 @@ static int32_t evaluate(lv_draw_unit_t *draw_unit, lv_draw_task_t *t)
 #endif
 #ifdef EPIC_SUPPORT_A8
     case LV_DRAW_TASK_TYPE_LABEL:
-        if (t->preference_score > 95)
-        {
+    {
+        const lv_draw_label_dsc_t *label_dsc = (const lv_draw_label_dsc_t *)t->draw_dsc;
+        
+        #if LV_USE_FREETYPE && LV_USE_VECTOR_GRAPHIC && LV_USE_THORVG
+        lv_font_glyph_dsc_t glyph_dsc;
+        if (label_dsc->font && 
+            lv_font_get_glyph_dsc(label_dsc->font, &glyph_dsc, label_dsc->text[0], '\0') &&
+            glyph_dsc.format == LV_FONT_GLYPH_FORMAT_VECTOR) {
+            return 0; // No vector font processing.
+        }
+        #endif
+        
+        if (t->preference_score > 95) {
             t->preference_score = 95;
             t->preferred_draw_unit_id = DRAW_UNIT_ID_EPIC;
         }
         return 1;
+    }
 #endif /*EPIC_SUPPORT_A8*/
 
     case LV_DRAW_TASK_TYPE_BORDER:
@@ -319,7 +345,7 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
         /* Fake unsupported tasks as ready. */
         if (t->preferred_draw_unit_id != DRAW_UNIT_ID_EPIC)
         {
-            t->state = LV_DRAW_TASK_STATE_READY;
+            t->state = LV_DRAW_TASK_STATE_FINISHED;
 
             /* Request a new dispatching as it can get a new task. */
             lv_draw_dispatch_request();
@@ -333,8 +359,6 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
         return LV_DRAW_UNIT_IDLE;
 
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
-    draw_epic_unit->base_unit.target_layer = layer;
-    draw_epic_unit->base_unit.clip_area = &t->clip_area;
     draw_epic_unit->task_act = t;
 
 #if LV_USE_OS
@@ -344,7 +368,7 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
 #else
     execute_drawing(draw_epic_unit);
 
-    draw_epic_unit->task_act->state = LV_DRAW_TASK_STATE_READY;
+    draw_epic_unit->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
     draw_epic_unit->task_act = NULL;
 
     /* The draw unit is free now. Request a new dispatching as it can get a new task. */
@@ -357,7 +381,6 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
 static void execute_drawing(lv_draw_epic_unit_t *u)
 {
     lv_draw_task_t *t = u->task_act;
-    lv_draw_unit_t *draw_unit = (lv_draw_unit_t *) u;
 
     int ret = (int)drv_epic_wait_done();
     if (ret > 0)
@@ -368,39 +391,39 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
 
     LV_EPIC_LOG("_epic_execute_drawing %d ", t->type);
     lv_epic_print_area_info("src_area", &t->area);
-    lv_epic_print_layer_info(draw_unit);
+    lv_epic_print_layer_info(t);
 
     switch (t->type)
     {
 
     case LV_DRAW_TASK_TYPE_FILL: /*0*/
-        lv_draw_epic_fill(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_fill(t, t->draw_dsc, &t->area);
         break;
     case LV_DRAW_TASK_TYPE_BORDER:/*1*/
-        lv_draw_epic_border(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_border(t, t->draw_dsc, &t->area);
         break;
 
 
     case LV_DRAW_TASK_TYPE_LABEL:/*4*/
-        lv_draw_epic_label(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_label(t, t->draw_dsc, &t->area);
         break;
 
     case LV_DRAW_TASK_TYPE_IMAGE: /*5*/
-        lv_draw_epic_img(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_img(t, t->draw_dsc, &t->area);
         break;
     case LV_DRAW_TASK_TYPE_LAYER: /*6*/
-        lv_draw_epic_layer(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_layer(t, t->draw_dsc, &t->area);
         break;
 #if 0
 
 
     case LV_DRAW_TASK_TYPE_LINE:/*7*/
-        lv_draw_epic_line(draw_unit, t->draw_dsc);
+        lv_draw_epic_line(t, t->draw_dsc);
         break;
 
 #endif
     case LV_DRAW_TASK_TYPE_ARC:/*8*/
-        lv_draw_epic_arc(draw_unit, t->draw_dsc, &t->area);
+        lv_draw_epic_arc(t, t->draw_dsc, &t->area);
         break;
     default:
         break;
@@ -413,15 +436,9 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
     if (t->type != LV_DRAW_TASK_TYPE_LAYER)
     {
         lv_area_t draw_area;
-        if (!lv_area_intersect(&draw_area, &t->area, u->base_unit.clip_area)) return;
+        if (!lv_area_intersect(&draw_area, &t->area, t->clip_area)) return;
 
-        int32_t idx = 0;
-        lv_draw_unit_t *draw_unit_tmp = _draw_info.unit_head;
-        while (draw_unit_tmp != (lv_draw_unit_t *)u)
-        {
-            draw_unit_tmp = draw_unit_tmp->next;
-            idx++;
-        }
+        int32_t idx = t->draw_unit->idx;
         lv_draw_rect_dsc_t rect_dsc;
         lv_draw_rect_dsc_init(&rect_dsc);
         rect_dsc.bg_color = lv_palette_main(idx % LV_PALETTE_LAST);
@@ -429,7 +446,7 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
         rect_dsc.bg_opa = LV_OPA_10;
         rect_dsc.border_opa = LV_OPA_80;
         rect_dsc.border_width = 1;
-        lv_draw_epic_fill((lv_draw_unit_t *)u, &rect_dsc, &draw_area);
+        lv_draw_epic_fill(t, &rect_dsc, &draw_area);
 
         lv_point_t txt_size;
         lv_text_get_size(&txt_size, "W", LV_FONT_DEFAULT, 0, 0, 100, LV_TEXT_FLAG_NONE);
@@ -442,7 +459,7 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
 
         lv_draw_rect_dsc_init(&rect_dsc);
         rect_dsc.bg_color = lv_color_white();
-        lv_draw_epic_fill((lv_draw_unit_t *)u, &rect_dsc, &txt_area);
+        lv_draw_epic_fill(t, &rect_dsc, &txt_area);
 
         char buf[8];
         lv_snprintf(buf, sizeof(buf), "%d", idx);
@@ -450,7 +467,7 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
         lv_draw_label_dsc_init(&label_dsc);
         label_dsc.color = lv_color_black();
         label_dsc.text = buf;
-        lv_draw_epic_label((lv_draw_unit_t *)u, &label_dsc, &txt_area);
+        lv_draw_epic_label(t, &label_dsc, &txt_area);
     }
 #endif
 }
@@ -493,7 +510,7 @@ static void render_thread_cb(void *ptr)
         execute_drawing(u);
 
         /* Signal the ready state to dispatcher. */
-        u->task_act->state = LV_DRAW_TASK_STATE_READY;
+        u->task_act->state = LV_DRAW_TASK_STATE_FINISHED;
 
         /* Cleanup. */
         u->task_act = NULL;

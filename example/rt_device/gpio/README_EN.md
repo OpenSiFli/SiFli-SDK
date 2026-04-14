@@ -3,9 +3,9 @@ Source code path: example\rt_device\gpio
 
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd_n16r8
-* sf32lb56-lcd_n16r12n1
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 ## Example Overview
 * Configure GPIO output, input interrupt operation, demonstrate GPIO HAL functions

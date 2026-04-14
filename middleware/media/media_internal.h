@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef MEDIA_INTERNAL_H
 #define MEDIA_INTERNAL_H
 #include "sifli_resample.h"
@@ -45,11 +51,11 @@ enum
 #define network_decode_task_prio  RT_THREAD_PRIORITY_MIDDLE
 #else
 #define __IO    volatile
-#define audio_dec_task_prio (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_HIGHER)
-#define video_dec_task_prio (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_LOWWER)
+#define audio_dec_task_prio (RT_THREAD_PRIORITY_MIDDLE/* + RT_THREAD_PRIORITY_HIGHER*/)
+#define video_dec_task_prio (RT_THREAD_PRIORITY_MIDDLE/* + RT_THREAD_PRIORITY_LOWWER*/)
 
 #define audio_video_dec_task_prio RT_THREAD_PRIORITY_MIDDLE
-#define av_read_pkt_task_prio     (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_LOWWER + RT_THREAD_PRIORITY_LOWWER)
+#define av_read_pkt_task_prio     (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_LOWWER/* + RT_THREAD_PRIORITY_LOWWER*/)
 
 #define network_read_task_prio    (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_HIGHER + RT_THREAD_PRIORITY_HIGHER)
 #define network_decode_task_prio  (RT_THREAD_PRIORITY_MIDDLE + RT_THREAD_PRIORITY_LOWWER)
@@ -131,6 +137,10 @@ typedef struct
 typedef struct ffmpeg_decoder_tag
 {
     uint32_t                magic;
+    char                    read_name[RT_NAME_MAX];
+    char                    audio_name[RT_NAME_MAX];
+    char                    video_name[RT_NAME_MAX];
+    char                    ezip_aud_name[RT_NAME_MAX];
     uint32_t                user_data;
     uint32_t                last_video_get_tick;
     // File information
@@ -154,6 +164,7 @@ typedef struct ffmpeg_decoder_tag
     uint32_t                frame_index;
     uint32_t                last_seconds;
     uint32_t                seek_to_second;
+    uint32_t                audio_played_ms;
     uint32_t                period;
     uint32_t                width;
     uint32_t                height;
@@ -189,22 +200,26 @@ typedef struct ffmpeg_decoder_tag
     uint8_t                *avio_ctx_buffer;
     uint32_t                avio_ctx_buffer_size;
 
-    //only invalid if is_nand == 1
-    uint8_t                 *src_in_nand_address;
-    uint32_t                src_in_nand_len;
+    //only invalid if is_nand == 1 or is_ram == 1
+    uint8_t                 *src_in_nand_address; //nand or ram address
+    uint32_t                src_in_nand_len;      //nand or ram len
 
     ffmpeg_config_t         cfg;
     int                     ezip_fd;
     ezip_media_t            ezip_header;
     sifli_resample_t       *resample;
     uint8_t                *audio_stereo;
+    uint16_t                instance_id;   /* unique player instance sequence */
     uint8_t                 is_sifli_ezip_memdia;
     uint8_t                 is_nand;
+    uint8_t                 is_ram;
     uint8_t                 is_network_file;
     uint8_t                 is_paused;    //paused by user
     uint8_t                 is_suspended; //suspended by other audio application
+    uint8_t                 is_wait_for_resume;
     uint8_t                 seeking_state; //1--start, 2--time ok, need I frame, 0--end
     uint8_t                 is_closing;   //aysnc closing
+    uint8_t                 is_wait_video_full;
     sifli_gpu_fmt_t         gpu_pic_fmt;
 } ffmpeg_decoder_t;
 
@@ -218,6 +233,7 @@ void ezip_audio_cache_deinit(ffmpeg_handle thiz);
 ezip_audio_packet_t *ezip_audio_read_packet(ffmpeg_handle thiz, uint32_t size, uint32_t paddings);
 void ezip_audio_decode(ffmpeg_handle thiz, audio_server_callback_func callback, void *mp3parser);
 int ezip_flash_read(ffmpeg_handle thiz, void *buf, int len);
+int ezip_ram_read(ffmpeg_handle thiz, void *buf, int len);
 
 #ifdef __cplusplus
 }

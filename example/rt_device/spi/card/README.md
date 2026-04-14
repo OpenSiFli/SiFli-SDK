@@ -1,5 +1,5 @@
 # 使用SPI通过CMD指令读取TF卡ID
-源码路径：example\rt_device\spi
+源码路径：example/rt_device/spi/card
 ## 支持平台
 * sf32lb52-lcd_n16r8
 

@@ -1,6 +1,6 @@
 # BT/BLE  uart收发HCI示例
 
-源码路径：example/bt/HCI_over_uart/src
+源码路径：example/bt/HCI_over_uart
 
 
 ## 支持的平台

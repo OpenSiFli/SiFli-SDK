@@ -4,8 +4,10 @@ Source code path: example/multimedia/audio/local_music
 
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ sf32lb52-lcd_n16r8
 + eh-lb525
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 ## Overview
 <!-- Example introduction -->

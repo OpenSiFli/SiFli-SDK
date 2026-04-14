@@ -5,7 +5,7 @@
 ### 需要安装的软件
 1. Sifli env和SiFli SDK(从微盘下载)。
 2. Keil V5.32或以上，armcc V6版本或以上。
-3. Segger Jlink，V6.80a版本或以上。
+3. Segger Jlink，V7.62版本或以上。
    [Jlink下载地址](https://www.segger.com/downloads/jlink/JLink_Windows.exe)
 4. 代码编辑软件vscode或者source insight。
 5. 串口日志查看工具，使用sdk自带的sifliTrace或者sscom。
@@ -42,16 +42,36 @@
 安装完Keil后将arm的路径加入Windows环境变量PATH，如： _C:\Keil_v5\ARM\ARMCLANG\bin_ 。
 
 ### 安装JLink
-Jlink需要安装新版v6.80a，双击安装包 _JLink_Windows_V680a.exe_ ，安装路径选择默认路径，将JLink的路径加入Windows环境变量PATH，
+为了使用 J-Link Device Support Kit(DSK) 方式安装思澈 Open Flashloader，请安装 JLink V7.62 或以上版本，并将JLink的路径加入Windows环境变量PATH，
 如：_C:\Program Files (x86)\SEGGER\JLink_ 。
-将 _$SDK_ROOT\tools\flash\jlink_drv\sf32lbxx_ 目录下的所有elf文件都拷贝到JLink安装目录下的 _Devices\SiFli_ 目录中，SiFli目录要手动创建，
-拷贝完成后如下图所示。<br>
-添加jlink驱动到Jlink安装目录 ![](../../assets/JLink_drv_1.png)
 
-将jlink_drv目录下 _JLinkDevices.xml_ 中有关SiFli的内容合并到JLink安装目录下的 _JlinkDevices.xml_ 中。![](../../assets/JLink_drv_2.png)
+SDK中的 _tools/flash/jlink_drv_ 是一个完整的J-Link DSK包，目录根下的 _JLinkDevices.xml_ 用于描述设备和flash bank，各子目录中的elf文件是对应的Open Flashloader algorithm。
 
+在当前用户目录下创建如下目录：
+_C:\Users\\<USER>\\AppData\\Roaming\\SEGGER\\JLinkDevices\\SiFli_
 
-修改JlinkDevice文件 ![](../../assets/JLink_drv_3.png)
+```{note}
+_AppData_ 是 Windows 的隐藏目录。如果资源管理器中看不到该目录，请先开启“显示隐藏的项目”，或者直接在地址栏输入上述完整路径。
+```
+
+然后将 _tools/flash/jlink_drv_ 目录内容整体拷贝到该目录，拷贝完成后的结构类似如下：
+```text
+SiFli/
+  JLinkDevices.xml
+  sf32lb52x/
+  sf32lb52x_nand/
+  sf32lb52x_sd/
+  sf32lb55x/
+  sf32lb56x/
+  sf32lb58x/
+  ...
+```
+
+```{note}
+1. J-Link V7.62 起会递归扫描 _JLinkDevices_ 目录下的所有 `*.xml` 文件，因此不需要再修改J-Link安装目录下的 _JLinkDevices.xml_ 。
+2. XML中的loader路径相对 _tools/flash/jlink_drv/JLinkDevices.xml_ 解析，因此必须整体复制该目录，不能只单独拷贝 `.elf` 文件。
+3. 如果复制DSK包之前J-Link Commander、J-Flash或IDE已经打开，请在复制后重新启动这些工具。
+```
 
 ### 配置系统环境变量
 在系统环境变量的PATH变量中添加如图几个路径，实际路径需要本机工具与代码路径一致。

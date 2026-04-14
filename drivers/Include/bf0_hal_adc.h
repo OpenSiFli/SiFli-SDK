@@ -14,6 +14,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "bf0_hal_def.h"
+#include "bf0_sys_cfg.h"
+#include "bf0_hal_lcpu_config.h"
 #include "gpadc.h"
 /** @addtogroup BF0_HAL_Driver
   * @{
@@ -145,6 +147,67 @@ typedef struct
 
     __IO uint32_t                 ErrorCode;              /*!< ADC Error code */
 } ADC_HandleTypeDef;
+
+/**
+  * @brief  ADC calibration configuration structure definition
+  * @note   Used for two-point calibration
+  */
+typedef struct
+{
+    uint32_t reg_value1;          /*!< Register value at calibration point 1 */
+    uint32_t reg_value2;          /*!< Register value at calibration point 2 */
+    uint32_t voltage1_mv;         /*!< Actual voltage at point 1 in mV */
+    uint32_t voltage2_mv;         /*!< Actual voltage at point 2 in mV */
+    uint8_t  range_mode;          /*!< Range mode: 0 for big range (X3), 1 for small range (X1) */
+} HAL_ADC_CalibConfigTypeDef;
+
+/**
+  * @brief  ADC calibration runtime context definition
+  */
+typedef struct
+{
+    float    offset;              /*!< Register value offset vs 0V */
+    float    ratio;               /*!< Voltage (mV) per register bit, scaled by ADC_RATIO_ACCURATE */
+    uint32_t threshold_reg;       /*!< Register value for max supported voltage */
+    uint8_t  range_mode;          /*!< Range mode: 0 for big range (X3), 1 for small range (X1) */
+    float    vbat_factor;         /*!< Battery voltage correction factor */
+    uint8_t  ldovref_sel;          /*!< LDO Vref selection value */
+    uint8_t  flags;               /*!< Bit0: ldovref_valid, Bit1: has_factory_calib */
+} HAL_ADC_CalibContextTypeDef;
+
+/**
+  * @brief  ADC factory calibration information (decoded, for logging/diagnostics)
+  * @note   This structure represents the factory OTP calibration points and related
+  *         parameters after decoding chip-specific encoding (e.g. bit15 flag).
+  */
+typedef struct
+{
+    uint32_t voltage1_mv;         /*!< Calibration voltage at point 1 in mV */
+    uint32_t reg_value1;          /*!< ADC register value at point 1 */
+    uint32_t voltage2_mv;         /*!< Calibration voltage at point 2 in mV */
+    uint32_t reg_value2;          /*!< ADC register value at point 2 */
+    uint16_t vbat_reg;            /*!< Factory VBAT reference register value (SF32LB52X only) */
+    uint16_t vbat_mv;             /*!< Factory VBAT reference voltage in mV (SF32LB52X only) */
+    uint8_t  ldovref_flag;        /*!< LDO Vref calibrated flag (SF32LB52X only) */
+    uint8_t  ldovref_sel;         /*!< LDO Vref selection value (SF32LB52X only) */
+    uint8_t  range_mode;          /*!< Range mode: 0 for big range (X3), 1 for small range (X1) */
+} HAL_ADC_CalibFactoryInfoTypeDef;
+
+/* ctx->flags bit definitions */
+#define HAL_ADC_CALIB_CTX_F_LDOVREF_VALID   (1u << 0)
+#define HAL_ADC_CALIB_CTX_F_FACTORY_VALID  (1u << 1)
+
+typedef enum
+{
+    HAL_ADC_CALIB_SOURCE_BSP = 0,
+    HAL_ADC_CALIB_SOURCE_LCPU = 1,
+} HAL_ADC_CalibSource;
+
+typedef enum
+{
+    HAL_ADC_CALIB_F_INIT  = (1u << 0),  /*!< Init ctx with defaults */
+    HAL_ADC_CALIB_F_APPLY = (1u << 1),  /*!< Apply HW side-effects */
+} HAL_ADC_CalibFlags;
 /**
   * @}
   */
@@ -155,6 +218,56 @@ typedef struct
 
 /** @defgroup ADC_Exported_Constants ADC Exported Constants
   * @{
+  */
+
+/** @defgroup ADC_Calibration_Constants ADC Calibration Constants
+  * @{
+  */
+#define ADC_RATIO_ACCURATE          (1000)    /*!< Ratio accuracy multiplier */
+
+/*!< Standard calibration voltages */
+#define ADC_BIG_RANGE_VOL1          (1000)    /*!< Big range calibration voltage 1: 1000mV */
+#define ADC_BIG_RANGE_VOL2          (2500)    /*!< Big range calibration voltage 2: 2500mV */
+#define ADC_SML_RANGE_VOL1          (300)     /*!< Small range calibration voltage 1: 300mV */
+#define ADC_SML_RANGE_VOL2          (800)     /*!< Small range calibration voltage 2: 800mV */
+
+/*!< Max supported voltage */
+#define ADC_MAX_VOLTAGE_MV_1100     (1100)    /*!< Max voltage 1.1V (for A0) */
+#define ADC_MAX_VOLTAGE_MV_3300     (3300)    /*!< Max voltage 3.3V (for RPO) */
+
+/*!< Default calibration parameters for different chip series */
+#ifdef SF32LB55X
+#define ADC_DEFAULT_OFFSET          (199.0f)  /*!< Default offset for SF32LB55X */
+#define ADC_DEFAULT_RATIO           (3930.0f) /*!< Default ratio for SF32LB55X */
+#define ADC_DEFAULT_RANGE_MODE      (0)       /*!< Default range mode: big range (X3) */
+#define ADC_DEFAULT_MAX_VOLTAGE_MV  ADC_MAX_VOLTAGE_MV_1100
+#elif defined(SF32LB56X)
+#define ADC_DEFAULT_OFFSET          (822.0f)  /*!< Default offset for SF32LB56X */
+#define ADC_DEFAULT_RATIO           (1068.0f) /*!< Default ratio for SF32LB56X */
+#define ADC_DEFAULT_RANGE_MODE      (1)       /*!< Default range mode: small range (X1) */
+#define ADC_DEFAULT_MAX_VOLTAGE_MV  ADC_MAX_VOLTAGE_MV_3300
+#elif defined(SF32LB52X)
+#define ADC_DEFAULT_OFFSET          (822.0f)  /*!< Default offset for SF32LB52X */
+#define ADC_DEFAULT_RATIO           (1068.0f) /*!< Default ratio for SF32LB52X */
+#define ADC_DEFAULT_RANGE_MODE      (1)       /*!< Default range mode: small range (X1) */
+#define ADC_DEFAULT_MAX_VOLTAGE_MV  ADC_MAX_VOLTAGE_MV_3300
+#else
+#define ADC_DEFAULT_OFFSET          (822.0f)  /*!< Default offset */
+#define ADC_DEFAULT_RATIO           (1068.0f) /*!< Default ratio */
+#define ADC_DEFAULT_RANGE_MODE      (1)       /*!< Default range mode: small range (X1) */
+#define ADC_DEFAULT_MAX_VOLTAGE_MV  ADC_MAX_VOLTAGE_MV_3300
+#endif
+#define ADC_DEFAULT_VBAT_FACTOR    (2.01f)   /*!< Default battery voltage factor */
+
+#ifndef HAL_ADC_USE_FLOAT
+#define HAL_ADC_USE_FLOAT          (1u)
+#endif
+
+#ifndef HAL_ADC_DEBUG
+#define HAL_ADC_DEBUG              (0u)
+#endif
+/**
+  * @}
   */
 
 /** @defgroup ADC_Error_Code ADC Error Code
@@ -861,6 +974,84 @@ HAL_StatusTypeDef       HAL_ADC_ConfigChannel(ADC_HandleTypeDef *hadc, ADC_Chann
   * @retval actual work frequency, 0 if fail.
   */
 uint32_t HAL_ADC_SetFreq(ADC_HandleTypeDef *hadc, uint32_t freq);
+
+/*******************************************************************************
+ *                          SiFli ADC Calibration Functions
+ *  These functions provide ADC calibration support for SiFli chip series.
+ *  - HAL_ADC_CalibInit: Initialize calibration context with defaults
+ *  - HAL_ADC_CalibLoad: Load factory calibration and update context
+ *  - HAL_ADC_CalibSetCustom: Apply custom two-point calibration
+ *  - HAL_ADC_CalibApply: Apply calibration to hardware (optional)
+ *  - HAL_ADC_RegToVoltage: Convert register value to voltage (fixed-point)
+ *  - HAL_ADC_RegToVoltageFloat: Convert register value to voltage (float, optional)
+ ******************************************************************************/
+
+/**
+  * @brief Initialize ADC calibration context with default parameters.
+  * @param context Pointer to calibration context.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef HAL_ADC_CalibInit(HAL_ADC_CalibContextTypeDef *context);
+
+/**
+  * @brief Load factory calibration and update calibration context.
+  * @param hadc ADC handle, can be NULL if hardware apply is not needed.
+  * @param context Pointer to calibration context.
+  * @param source Calibration source.
+  * @param flags Bitmask of HAL_ADC_CalibFlags.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef HAL_ADC_CalibLoad(ADC_HandleTypeDef *hadc,
+                                    HAL_ADC_CalibContextTypeDef *context,
+                                    HAL_ADC_CalibSource source,
+                                    uint32_t flags);
+
+/**
+  * @brief Get decoded factory calibration information from OTP/config.
+  * @param source Calibration source.
+  * @param info Output factory calibration information.
+  * @retval HAL status.
+  * @note This API is intended for logging/diagnostics. It does not modify ADC hardware.
+  */
+HAL_StatusTypeDef HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CalibSource source,
+                                              HAL_ADC_CalibFactoryInfoTypeDef *info);
+
+/**
+  * @brief Apply custom two-point calibration.
+  * @param context Pointer to calibration context.
+  * @param config Calibration configuration with two calibration points.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef HAL_ADC_CalibSetCustom(HAL_ADC_CalibContextTypeDef *context,
+                                         const HAL_ADC_CalibConfigTypeDef *config);
+
+/**
+  * @brief Apply calibration context to ADC hardware settings.
+  * @param hadc ADC handle.
+  * @param context Pointer to calibration context.
+  * @retval HAL status.
+  */
+HAL_StatusTypeDef HAL_ADC_CalibApply(ADC_HandleTypeDef *hadc, const HAL_ADC_CalibContextTypeDef *context);
+
+/**
+  * @brief Convert ADC register value to voltage in mV by calibration context.
+  * @param reg_value ADC register value.
+  * @param context Pointer to calibration context.
+  * @retval Voltage in mV.
+  */
+int32_t HAL_ADC_RegToVoltage(uint32_t reg_value, const HAL_ADC_CalibContextTypeDef *context);
+
+#if HAL_ADC_USE_FLOAT
+/**
+  * @brief Convert ADC register value to voltage in mV by calibration context (float version).
+  * @param reg_value ADC register value.
+  * @param context Pointer to calibration context.
+  * @retval Voltage in mV (float).
+  */
+float HAL_ADC_RegToVoltageFloat(float reg_value, const HAL_ADC_CalibContextTypeDef *context);
+#endif
+
+/** @} end of SiFli_ADC_Calibration_Functions */
 
 
 /**

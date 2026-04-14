@@ -1,0 +1,7 @@
+config PKG_USING_LIBOGG
+    bool "libogg - Ogg bitstream library"
+    default n
+    help
+        libogg is the bitstream and framing library for the Ogg project.
+        It provides functions for encoding and decoding ogg packets and
+        pages. Used by Ogg Vorbis, Theora, and other codecs.

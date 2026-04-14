@@ -120,6 +120,8 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
    bf0_hal_cortex.o (+RO)
 #endif /* BSP_QSPI2_DUAL_MODE */
 
+    *.o  (nor_cfg_db)
+
 #endif
    
   }

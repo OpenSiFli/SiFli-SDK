@@ -2,10 +2,10 @@
 
 #if LV_USE_ROLLER && LV_DRAW_SW_COMPLEX && LV_BUILD_EXAMPLES && 1
 
-static void generate_mask(lv_draw_buf_t *mask)
+static void generate_mask(lv_draw_buf_t * mask)
 {
     /*Create a "8 bit alpha" canvas and clear it*/
-    lv_obj_t *canvas = lv_canvas_create(lv_screen_active());
+    lv_obj_t * canvas = lv_canvas_create(lv_screen_active());
     lv_canvas_set_draw_buf(canvas, mask);
     lv_canvas_fill_bg(canvas, lv_color_white(), LV_OPA_TRANSP);
 
@@ -49,7 +49,7 @@ void lv_example_roller_3(void)
     lv_style_set_border_width(&style, 0);
     lv_style_set_radius(&style, 0);
 
-    lv_obj_t *roller1 = lv_roller_create(lv_screen_active());
+    lv_obj_t * roller1 = lv_roller_create(lv_screen_active());
     lv_obj_add_style(roller1, &style, 0);
     lv_obj_set_style_bg_opa(roller1, LV_OPA_50, LV_PART_SELECTED);
 

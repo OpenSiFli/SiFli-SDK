@@ -645,8 +645,15 @@ int32_t button_init(button_cfg_t *cfg)
                   rt_tick_from_millisecond(BUTTON_ADV_ACTION_CHECK_DELAY), RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
 
 #ifdef BUTTON_SERVICE_ENABLED
-    rt_snprintf(btn_service_name, sizeof(btn_service_name), "btn%d", button_id);
-    button->service_handle = datas_register(btn_service_name, &button_service_cb);
+    if (!cfg->name)
+    {
+        rt_snprintf(btn_service_name, sizeof(btn_service_name), "btn%d", button_id);
+        button->service_handle = datas_register(btn_service_name, &button_service_cb);
+    }
+    else
+    {
+        button->service_handle = datas_register(cfg->name, &button_service_cb);
+    }
 #endif /* BUTTON_SERVICE_ENABLED */
 
     rt_pin_mode(cfg->pin, cfg->mode);

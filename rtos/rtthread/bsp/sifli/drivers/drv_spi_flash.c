@@ -6,6 +6,9 @@
 
 #include "board.h"
 
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    #include "drv_switch_mpi2_sdio.h"
+#endif
 /** @addtogroup bsp_driver Driver IO
   * @{
   */
@@ -476,6 +479,7 @@ __HAL_ROM_USED int rt_flash_read_id(uint32_t addr)
 __HAL_ROM_USED int rt_flash_read(uint32_t addr, uint8_t *buf, int size)
 {
     FLASH_HandleTypeDef *hflash = Addr2Handle(addr);
+    int cnt = 0;
     if (hflash == NULL || size == 0)
         return 0;
 
@@ -483,7 +487,16 @@ __HAL_ROM_USED int rt_flash_read(uint32_t addr, uint8_t *buf, int size)
     if (hflash->isNand)
         return rt_nand_read(addr, buf, size);
     else
-        return rt_nor_read_rom(hflash, addr, buf, size);
+    {
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+        rt_switch_mpi2_lock();
+#endif
+        cnt = rt_nor_read_rom(hflash, addr, buf, size);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+        rt_switch_mpi2_unlock();
+#endif
+        return cnt;
+    }
 }
 
 __HAL_ROM_USED int rt_flash_write(uint32_t addr, const uint8_t *buf, int size)
@@ -520,7 +533,13 @@ __HAL_ROM_USED int rt_flash_write(uint32_t addr, const uint8_t *buf, int size)
     if (to_val > 0)
         HAL_FLASH_SET_WDT(hflash, 0);
 #endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
     cnt = rt_nor_write_rom(hflash, addr, tbuf, size);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
+#endif
 #ifdef EN_FLASH_WDT
     if (to_val > 0)
         HAL_FLASH_SET_WDT(hflash, to_val);
@@ -552,7 +571,13 @@ __HAL_ROM_USED int rt_flash_erase(uint32_t addr, int size)
     if (to_val > 0)
         HAL_FLASH_SET_WDT(hflash, 0);
 #endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
     ret = rt_nor_erase_rom(hflash, addr, size);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
+#endif
     ret = (ret == 0) ? RT_EOK : RT_ERROR;
 #ifdef EN_FLASH_WDT
     if (to_val > 0)

@@ -1,11 +1,13 @@
 # USB_VCOM示例
+源码路径：example/rt_device/usb/usb_vcom
 ## 概述
 例程展示了USB作为device设备的虚拟串口功能，可以在pc上以串口方式访问USB设备。
 
 ## 支持的开发板
 例程可以运行在以下开发板.<br>
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 **注意：** 一般而言，例程都是运行芯片的HCPU，"eh-lb563" 等效于"eh-lb563_hcpu"，如果想在LCPU运行例程，可以使用"eh-lb563_lcpu"。目前USB功能暂时只支持在HCPU上运行。
 

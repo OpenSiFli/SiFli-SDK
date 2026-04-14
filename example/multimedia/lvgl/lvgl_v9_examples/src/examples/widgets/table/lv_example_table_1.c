@@ -1,47 +1,39 @@
 #include "../../lv_examples.h"
 #if LV_USE_TABLE && LV_BUILD_EXAMPLES
 
-static void draw_event_cb(lv_event_t *e)
+static void draw_event_cb(lv_event_t * e)
 {
-    lv_draw_task_t *draw_task = lv_event_get_draw_task(e);
-    lv_draw_dsc_base_t *base_dsc = lv_draw_task_get_draw_dsc(draw_task);
+    lv_draw_task_t * draw_task = lv_event_get_draw_task(e);
+    lv_draw_dsc_base_t * base_dsc = (lv_draw_dsc_base_t *)lv_draw_task_get_draw_dsc(draw_task);
     /*If the cells are drawn...*/
-    if (base_dsc->part == LV_PART_ITEMS)
-    {
+    if(base_dsc->part == LV_PART_ITEMS) {
         uint32_t row = base_dsc->id1;
         uint32_t col = base_dsc->id2;
 
         /*Make the texts in the first cell center aligned*/
-        if (row == 0)
-        {
-            lv_draw_label_dsc_t *label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
-            if (label_draw_dsc)
-            {
+        if(row == 0) {
+            lv_draw_label_dsc_t * label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
+            if(label_draw_dsc) {
                 label_draw_dsc->align = LV_TEXT_ALIGN_CENTER;
             }
-            lv_draw_fill_dsc_t *fill_draw_dsc = lv_draw_task_get_fill_dsc(draw_task);
-            if (fill_draw_dsc)
-            {
+            lv_draw_fill_dsc_t * fill_draw_dsc = lv_draw_task_get_fill_dsc(draw_task);
+            if(fill_draw_dsc) {
                 fill_draw_dsc->color = lv_color_mix(lv_palette_main(LV_PALETTE_BLUE), fill_draw_dsc->color, LV_OPA_20);
                 fill_draw_dsc->opa = LV_OPA_COVER;
             }
         }
         /*In the first column align the texts to the right*/
-        else if (col == 0)
-        {
-            lv_draw_label_dsc_t *label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
-            if (label_draw_dsc)
-            {
+        else if(col == 0) {
+            lv_draw_label_dsc_t * label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
+            if(label_draw_dsc) {
                 label_draw_dsc->align = LV_TEXT_ALIGN_RIGHT;
             }
         }
 
         /*Make every 2nd row grayish*/
-        if ((row != 0 && row % 2) == 0)
-        {
-            lv_draw_fill_dsc_t *fill_draw_dsc = lv_draw_task_get_fill_dsc(draw_task);
-            if (fill_draw_dsc)
-            {
+        if((row != 0 && row % 2) == 0) {
+            lv_draw_fill_dsc_t * fill_draw_dsc = lv_draw_task_get_fill_dsc(draw_task);
+            if(fill_draw_dsc) {
                 fill_draw_dsc->color = lv_color_mix(lv_palette_main(LV_PALETTE_GREY), fill_draw_dsc->color, LV_OPA_10);
                 fill_draw_dsc->opa = LV_OPA_COVER;
             }
@@ -51,7 +43,7 @@ static void draw_event_cb(lv_event_t *e)
 
 void lv_example_table_1(void)
 {
-    lv_obj_t *table = lv_table_create(lv_screen_active());
+    lv_obj_t * table = lv_table_create(lv_screen_active());
 
     /*Fill the first column*/
     lv_table_set_cell_value(table, 0, 0, "Name");

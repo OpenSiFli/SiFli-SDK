@@ -71,6 +71,19 @@ uint32_t lv_snapshot_buf_size_needed(lv_obj_t * obj, lv_img_cf_t cf);
  */
 lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * dsc, void * buf, uint32_t buff_size);
 
+bool lv_snapshot_obj_to_dsc(lv_obj_t * obj, lv_area_t * area, lv_img_dsc_t * dsc);
+bool lv_snapshot_obj_to_dsc_scale(lv_obj_t * obj, lv_area_t * area, lv_img_dsc_t * dsc);
+
+/**
+ * Take snapshot of an object and create an lv_img_t instance attached to the given parent.
+ *
+ * @param parent parent object where the image widget will be created
+ * @param obj    object to snapshot
+ * @param area   area of the object to snapshot
+ * @param cf     color format of the output image
+ * @return       pointer to the created image widget, or NULL on failure
+ */
+lv_obj_t * lv_snapshot_obj_to_img(lv_obj_t * parent, lv_obj_t * obj, lv_area_t * area, lv_img_cf_t cf);
 
 lv_res_t lv_refr_dump_buf_to_img_now(lv_img_dsc_t *img_dsc);
 

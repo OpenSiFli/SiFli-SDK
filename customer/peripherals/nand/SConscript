@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = ["nand_cfg.c"]
+
+if GetDepend("NAND_HYF4GQ4UTACAE_ENABLED"):
+    src += ["hyf4gq4utacae.c"]
+
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['CUSTOM_NAND_ENABLED'], CPPPATH = CPPPATH)
+
+Return('group')

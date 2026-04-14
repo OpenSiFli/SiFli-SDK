@@ -59,10 +59,24 @@ struct rt_mmcsd_host_ops
     void (*set_iocfg)(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *io_cfg);
     rt_int32_t (*get_card_status)(struct rt_mmcsd_host *host);
     void (*enable_sdio_irq)(struct rt_mmcsd_host *host, rt_int32_t en);
+    /**
+     * @brief Get the current SDIO IRQ enable status.
+     * @param host  Pointer to the MMCSD host controller.
+     * @return      Current IRQ enable status: 1 = IRQ disabled, 0 = IRQ enabled.
+     */
+    rt_uint32_t (*get_irq_enable_status)(struct rt_mmcsd_host *host);
+    /**
+     * @brief Set the SDIO IRQ enable status.
+     *        Typically used to re-apply a status previously saved via get_irq_enable_status().
+     * @param host  Pointer to the MMCSD host controller.
+     * @param ret   IRQ enable status to set: 1 = disable IRQ, 0 = enable IRQ.
+     */
+    void (*set_irq_enable_status)(struct rt_mmcsd_host *host, rt_uint32_t ret);
 };
 
 struct rt_mmcsd_host
 {
+    char name[RT_NAME_MAX];
     struct rt_mmcsd_card *card;
     const struct rt_mmcsd_host_ops *ops;
     rt_uint32_t  freq_min;

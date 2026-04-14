@@ -326,6 +326,10 @@
 #define FFMPEG_NAND_URL_FMT "nand://addr=0x%x&len=0x%x"
 #endif
 
+#ifndef FFMPEG_RAM_URL_FMT
+#define FFMPEG_RAM_URL_FMT "ram://addr=0x%x&len=0x%x"
+#endif
+
 struct AVFormatContext;
 
 struct AVDeviceInfoList;

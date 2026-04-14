@@ -1,4 +1,5 @@
 # LVGL演示
+源码路径：example/multimedia/lvgl/lvgl_v8_demos/src/lv_demos
 
 ## 将示例添加到您的项目中
 1. 克隆lvgl后，可以在'demos'文件夹中找到演示。

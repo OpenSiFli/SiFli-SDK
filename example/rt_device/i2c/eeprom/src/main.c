@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -59,6 +64,9 @@ unsigned char EEPROM_init(void)
 #elif defined(SF32LB58X)
     HAL_PIN_Set(PAD_PB28, I2C6_SCL, PIN_PULLUP, 0); // i2c io select
     HAL_PIN_Set(PAD_PB29, I2C6_SDA, PIN_PULLUP, 0);
+#elif defined (SF32LB56X)
+    HAL_PIN_Set(PAD_PA20, I2C3_SCL, PIN_PULLUP, 1); // i2c io select
+    HAL_PIN_Set(PAD_PA12, I2C3_SDA, PIN_PULLUP, 1);
 #endif
 
     // 2. i2c init
@@ -67,6 +75,8 @@ unsigned char EEPROM_init(void)
     i2c_bus = rt_i2c_bus_device_find("i2c2");
 #elif defined(SF32LB58X)
     i2c_bus = rt_i2c_bus_device_find("i2c6");
+#elif defined (SF32LB56X)
+    i2c_bus = rt_i2c_bus_device_find("i2c3");
 #endif
 
     rt_kprintf("i2c_bus:0x%x\n", i2c_bus);
@@ -76,6 +86,8 @@ unsigned char EEPROM_init(void)
         rt_kprintf("Find i2c bus device I2C2\n");
 #elif defined(SF32LB58X)
         rt_kprintf("Find i2c bus device I2C6\n");
+#elif defined (SF32LB56X)
+        rt_kprintf("Find i2c bus device I2C3\n");
 #endif
         // open rt_device i2c2
         rt_device_open((rt_device_t)i2c_bus, RT_DEVICE_FLAG_RDWR);
@@ -96,6 +108,8 @@ unsigned char EEPROM_init(void)
         LOG_E("Can not found i2c bus I2C2, init fail\n");
 #elif defined(SF32LB58X)
         LOG_E("Can not found i2c bus I2C6, init fail\n");
+#elif defined (SF32LB56X)
+        LOG_E("Can not found i2c bus I2C3, init fail\n");
 #endif
         return -1;
     }

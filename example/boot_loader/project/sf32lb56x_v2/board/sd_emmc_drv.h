@@ -1,5 +1,11 @@
-#ifndef SDMMC_TST_DRV_H
-#define SDMMC_TST_DRV_H
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef SD_EMMC_DRV_H
+#define SD_EMMC_DRV_H
 
 
 #include "stdint.h"

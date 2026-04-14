@@ -58,7 +58,7 @@ static void get_rounded_area(int16_t angle, int32_t radius, uint8_t thickness, l
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_epic_arc(lv_draw_unit_t *draw_unit, const lv_draw_arc_dsc_t *dsc, const lv_area_t *coords)
+void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, const lv_area_t *coords)
 {
     if (dsc->opa <= LV_OPA_MIN) return;
     if (dsc->width == 0) return;
@@ -69,7 +69,7 @@ void lv_draw_epic_arc(lv_draw_unit_t *draw_unit, const lv_draw_arc_dsc_t *dsc, c
 
     lv_area_t area_out = *coords;
     lv_area_t clipped_area;
-    if (!lv_area_intersect(&clipped_area, &area_out, draw_unit->clip_area)) return;
+    if (!lv_area_intersect(&clipped_area, &area_out, &draw_task->clip_area)) return;
 
     /*Draw a full ring*/
     if (dsc->img_src == NULL &&
@@ -82,7 +82,7 @@ void lv_draw_epic_arc(lv_draw_unit_t *draw_unit, const lv_draw_arc_dsc_t *dsc, c
         cir_dsc.width = width;
         cir_dsc.radius = LV_RADIUS_CIRCLE;
         cir_dsc.side = LV_BORDER_SIDE_FULL;
-        lv_draw_sw_border(draw_unit, &cir_dsc, &area_out);
+        lv_draw_sw_border(draw_task, &cir_dsc, &area_out);
         return;
     }
 
@@ -342,7 +342,7 @@ void lv_draw_epic_arc(lv_draw_unit_t *draw_unit, const lv_draw_arc_dsc_t *dsc, c
             }
         }
 
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
 
         blend_area.y1 ++;
         blend_area.y2 ++;

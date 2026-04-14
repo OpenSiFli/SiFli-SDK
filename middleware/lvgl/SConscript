@@ -20,8 +20,11 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
     #    src += ['lvgl_input_agent.c']
     src += ['lvsf_perf.c']
     src += ['lvsf_perf_v9.c']
-
+    src += ['app_mem.c']
+    
     objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+    # Add multiple languages
+    objs = objs + SConscript(os.path.join('lv_ext_resouce', 'SConscript'))
 
     if GetDepend('PKG_USING_LITTLEVGL2RTT'):
         

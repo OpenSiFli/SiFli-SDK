@@ -26,6 +26,7 @@
 #ifdef USING_CONTEXT_BACKUP
     #include "context_backup.h"
 #endif /* USING_CONTEXT_BACKUP */
+#include "module_record.h"
 
 #ifdef PM_METRICS_USE_COLLECTOR
     #include "metrics_collector.h"
@@ -218,9 +219,12 @@ typedef struct
 
 typedef struct
 {
-    bool ui_active;
-    bool audio_active;
-    bool rftest_active;
+    /** active mask
+     *
+     * enum value of pm_scenario_name_t corresponds to one bit,
+     * e.g. if UI is active, bit0 is 1, if audio is active, bit1 is 1
+     */
+    uint32_t active;
 } pm_scenario_ctx_t;
 
 #if defined(CONTEXT_BACKUP_COMPRESSION_ENABLED) && defined(BSP_USING_PSRAM)
@@ -295,7 +299,7 @@ RT_WEAK const pm_policy_t pm_policy[] =
 #endif /* SOC_BF0_HCPU */
 #elif defined(PM_DEEP_ENABLE)
 #ifdef SOC_BF0_HCPU
-    {100, PM_SLEEP_MODE_DEEP},
+    {30, PM_SLEEP_MODE_DEEP},
 #else
     {10, PM_SLEEP_MODE_DEEP},
 #endif /* SOC_BF0_HCPU */
@@ -319,6 +323,9 @@ PM_NON_RETENTION_SECTION_BEGIN
 /** wakeup source */
 __ROM_USED uint32_t g_wakeup_src;
 
+#if defined(SOC_BF0_HCPU)
+    __ROM_USED uint32_t g_pwron_wakeup_src;
+#endif
 /** power on mode */
 __ROM_USED pm_power_on_mode_t g_pwron_mode;
 PM_NON_RETENTION_SECTION_END
@@ -418,6 +425,19 @@ __WEAK void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
 
 __WEAK void BSP_Power_Up(bool is_deep_sleep)
 {
+}
+__WEAK void BSP_Standby_PowerDown()
+{
+
+}
+__WEAK void BSP_Hibernate_PowerDown()
+{
+
+}
+
+__WEAK void BSP_Standby_PowerOn()
+{
+
 }
 
 L1_RET_CODE_SECT(soc_power_down, __WEAK void soc_power_down(void))
@@ -592,6 +612,7 @@ void rt_application_init_power_on_mode(void)
                 /* cold boot, do nothing */;
             }
             g_wakeup_src = pmu_wakeup_src;
+            g_pwron_wakeup_src = pmu_wakeup_src;
         }
     }
 }
@@ -862,11 +883,18 @@ uint32_t pm_get_wakeup_src(void)
     return g_wakeup_src;
 }
 
+#ifdef SOC_BF0_HCPU
+uint32_t pm_get_pwron_wakeup_src(void)
+{
+    return g_pwron_wakeup_src;
+}
+#endif
+
 uint32_t pm_get_power_mode(void)
 {
     return g_power_mode;
 }
-#ifdef BSP_USING_CHARGER
+#if defined(BSP_USING_CHARGER) && !defined(CHARGE_USING_SIFLI)
 /*for charger int wakeup*/
 int pm_get_charger_pin_wakeup(void)
 {
@@ -996,6 +1024,7 @@ __WEAK int32_t sifli_deep_handler(void)
 #endif /* BSP_USING_NOR_FLASH3 */
 
 #ifdef SF32LB52X
+    sifli_record_module(RECORD_PM_DEEP_IO_DOWN);
     BSP_IO_Power_Down(CORE_ID_HCPU, false);
 #endif
     NVIC_EnableIRQ(AON_IRQn);
@@ -1046,7 +1075,6 @@ __WEAK int32_t sifli_deep_handler(void)
 #endif // SF32LB52X    
 
     //HAL_HPAON_ENABLE_PAD();
-    HAL_HPAON_SET_HP_ACTIVE();
     HAL_HPAON_CLEAR_POWER_MODE();
 
     if (0 != dll1_freq)
@@ -1057,14 +1085,19 @@ __WEAK int32_t sifli_deep_handler(void)
         }
     }
 
+    sifli_record_module(RECORD_PM_DEEP_ENABLE_DLL1);
     HAL_RCC_HCPU_EnableDLL1(dll1_freq);
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, clk_src);
+    sifli_record_module(RECORD_PM_DEEP_ENABLE_DLL2);
     HAL_RCC_HCPU_EnableDLL2(dll2_freq);
     HAL_Delay_us(0);
 
 #ifdef SF32LB52X
+    sifli_record_module(RECORD_PM_DEEP_IO_UP);
     BSP_Power_Up(false);
 #endif // SF32LB52X    
+    /* ensure flash/psram is ready when LCPU see HCPU has been awake */
+    HAL_HPAON_SET_HP_ACTIVE();
 
 #ifndef SF32LB52X
     HAL_HPAON_WakeCore(CORE_ID_LCPU);
@@ -1850,7 +1883,7 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
 
     HAL_StatusTypeDef status;
     rt_base_t level;
-
+    sifli_record_module(RECORD_PM_SCENARIO_START);
     level = rt_hw_interrupt_disable();
 
 #ifdef PM_METRICS_ENABLED
@@ -1883,12 +1916,14 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
     {
     case PM_RUN_MODE_HIGH_SPEED:
     {
+        sifli_record_module(RECORD_PM_SCENARIO_HIGH_SPEED_CLK_CONFIG);
         status = HAL_RCC_HCPU_ConfigHCLK(240);
         RT_ASSERT(HAL_OK == status);
         status = HAL_RCC_HCPU_EnableDLL2(288000000);
         RT_ASSERT(HAL_OK == status);
 
 #ifdef BSP_USING_PSRAM1
+        sifli_record_module(RECORD_PM_SCENARIO_HIGH_SPEED_PSRAM_INIT);
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_DLL2);
         BSP_SetFlash1DIV(2);
         rt_psram_init();
@@ -1909,6 +1944,7 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
 #endif /* BSP_USING_NOR_FLASH2 || BSP_USING_NAND_FLASH2 */
 
 #ifdef BSP_USING_NOR_FLASH2
+        sifli_record_module(RECORD_PM_SCENARIO_HIGH_SPEED_FLASH_INIT);
         BSP_Flash_hw2_init();
         //hwp_mpi2->PSCLR = 5;
 #endif /* BSP_USING_NOR_FLASH2 */
@@ -1920,6 +1956,10 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         }
 #endif /* BSP_USING_NAND_FLASH2 */
 
+#if defined(BSP_USING_SD_LINE) && defined(SF32LB52X)
+        void rthw_sdio_update_clk(void);
+        rthw_sdio_update_clk();
+#endif /* BSP_USING_SD_LINE && SF32LB52X */
         break;
     }
     case PM_RUN_MODE_NORMAL_SPEED:
@@ -1973,6 +2013,7 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
     }
     case PM_RUN_MODE_MEDIUM_SPEED:
     {
+        sifli_record_module(RECORD_PM_SCENARIO_MEDIUM_SPEED_CLK_CONFIG);
         /* switch to sysclk before disabling DLL2 as clock must be present when switching MPI clock */
 #ifdef BSP_USING_PSRAM1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_SYSCLK);
@@ -2001,6 +2042,7 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
 #endif /* BSP_USING_NOR_FLASH1 */
 
 #ifdef BSP_USING_NOR_FLASH2
+        sifli_record_module(RECORD_PM_SCENARIO_MEDIUM_SPEED_FLASH_INIT);
         BSP_SetFlash2DIV(1);
 #ifdef BSP_QSPI2_DUAL_MODE
         BSP_SetFlashExtDiv(1);
@@ -2015,7 +2057,10 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         rt_nand_update_clk(RCC_CLK_MOD_FLASH2, 1);
 #endif /* BSP_USING_NAND_FLASH2 */
 
-
+#if defined(BSP_USING_SD_LINE) && defined(SF32LB52X)
+        void rthw_sdio_update_clk(void);
+        rthw_sdio_update_clk();
+#endif /* BSP_USING_SD_LINE && SF32LB52X */
         break;
     }
     case PM_RUN_MODE_LOW_SPEED:
@@ -2970,29 +3015,48 @@ INIT_COMPONENT_EXPORT(low_power_init);
 
 rt_err_t pm_scenario_start(pm_scenario_name_t scenario)
 {
+    uint32_t mask = 0;
     rt_enter_critical();
-
-    if (PM_SCENARIO_UI == scenario)
-    {
-        pm_scenario_ctx.ui_active = true;
-    }
-    else if (PM_SCENARIO_AUDIO == scenario)
-    {
-        pm_scenario_ctx.audio_active = true;
-    }
-    else if (PM_SCENARIO_RFTEST == scenario)
-    {
-        pm_scenario_ctx.rftest_active = true;
-    }
+    mask = (1 << scenario);
+    pm_scenario_ctx.active |= mask;
     rt_exit_critical();
 
-    if (pm_scenario_ctx.ui_active || pm_scenario_ctx.audio_active || pm_scenario_ctx.rftest_active)
+
+
+    if (pm_scenario_ctx.active)
     {
+#if defined(BSP_USING_SPI_NAND) || defined(RT_USING_SDIO)
+        rt_bool_t lock = RT_FALSE;
+        rt_uint8_t run_mode = rt_pm_run_mode_get();
+        if ((run_mode != PM_RUN_MODE_HIGH_SPEED) && (PM_RUN_MODE_HIGH_SPEED < run_mode))
+        {
+            lock = RT_TRUE;
+#ifdef BSP_USING_SPI_NAND
+            rt_nand_lock();
+#endif
+#ifdef RT_USING_SDIO
+            rt_mmcsd_lock();
+#endif
+        }
+
+#endif
         rt_pm_run_enter(PM_RUN_MODE_HIGH_SPEED);
+#if defined(BSP_USING_SPI_NAND) || defined(RT_USING_SDIO)
+        if (lock)
+        {
+#ifdef BSP_USING_SPI_NAND
+            rt_nand_unlock();
+#endif
+#ifdef RT_USING_SDIO
+            rt_mmcsd_unlock();
+#endif
+        }
+#endif
+
     }
 
 #if !defined(SF32LB55X)
-    if (pm_scenario_ctx.audio_active)
+    if (pm_scenario_ctx.active & (1 << PM_SCENARIO_AUDIO))
     {
         /* if audio is active, downscale to 48MHz  */
         HAL_RCC_HCPU_SetDeepWFIDiv(1, 0, 1);
@@ -3008,30 +3072,19 @@ rt_err_t pm_scenario_start(pm_scenario_name_t scenario)
 
 rt_err_t pm_scenario_stop(pm_scenario_name_t scenario)
 {
+    uint32_t mask = 0;
     rt_enter_critical();
-
-    if (PM_SCENARIO_UI == scenario)
-    {
-        pm_scenario_ctx.ui_active = false;
-    }
-    else if (PM_SCENARIO_AUDIO == scenario)
-    {
-        pm_scenario_ctx.audio_active = false;
-    }
-    else if (PM_SCENARIO_RFTEST == scenario)
-    {
-        pm_scenario_ctx.rftest_active = false;
-    }
-
+    mask = (1 << scenario);
+    pm_scenario_ctx.active &= (~mask);
     rt_exit_critical();
 
-    if (!(pm_scenario_ctx.ui_active || pm_scenario_ctx.audio_active || pm_scenario_ctx.rftest_active))
+    if (!pm_scenario_ctx.active)
     {
         rt_pm_run_enter(PM_RUN_MODE_MEDIUM_SPEED);
     }
 
 #if !defined(SF32LB55X)
-    if (!pm_scenario_ctx.audio_active)
+    if (!(pm_scenario_ctx.active & (1 << PM_SCENARIO_AUDIO)))
     {
 #ifndef SF32LB52X
         HAL_RCC_HCPU_SetDeepWFIDiv(48, 0, 1);

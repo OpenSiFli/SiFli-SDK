@@ -350,7 +350,7 @@ typedef struct
 #define GPT_OCMODE_INACTIVE                 (GPT_CCMR1_OC1M_1)
 #define GPT_OCMODE_TOGGLE                   (GPT_CCMR1_OC1M_0 | GPT_CCMR1_OC1M_1)
 #define GPT_OCMODE_PWM1                     (GPT_CCMR1_OC1M_1 | GPT_CCMR1_OC1M_2)
-#define GPT_OCMODE_PWM2                     (GPT_CCMR1_OC1M)
+#define GPT_OCMODE_PWM2                     (GPT_CCMR1_OC1M_0 | GPT_CCMR1_OC1M_1 | GPT_CCMR1_OC1M_2)
 #define GPT_OCMODE_FORCED_ACTIVE            (GPT_CCMR1_OC1M_0 | GPT_CCMR1_OC1M_2)
 #define GPT_OCMODE_FORCED_INACTIVE          (GPT_CCMR1_OC1M_2)
 
@@ -707,10 +707,10 @@ typedef struct
   * @{
   */
 #define GPT_SLAVEMODE_DISABLE              0x00000000U
-#define GPT_SLAVEMODE_RESET                0x00000004U
-#define GPT_SLAVEMODE_GATED                0x00000005U
-#define GPT_SLAVEMODE_TRIGGER              0x00000006U
-#define GPT_SLAVEMODE_EXTERNAL1            0x00000007U
+#define GPT_SLAVEMODE_RESET                (0x4U << GPT_SMCR_SMS_Pos)
+#define GPT_SLAVEMODE_GATED                (0x5U << GPT_SMCR_SMS_Pos)
+#define GPT_SLAVEMODE_TRIGGER              (0x6U << GPT_SMCR_SMS_Pos)
+#define GPT_SLAVEMODE_EXTERNAL1            (0x7U << GPT_SMCR_SMS_Pos)
 /**
   * @}
   */
@@ -2740,6 +2740,30 @@ void GPT_CCxChannelCmd(GPT_TypeDef *TIMx, uint32_t Channel, uint32_t ChannelStat
 #define GPT_SR_BIF_Pos            (7U)
 #define GPT_SR_BIF_Msk            (0x1U << GPT_SR_BIF_Pos)                     /*!< 0x00000080 */
 #define GPT_SR_BIF                GPT_SR_BIF_Msk                               /*!<Break interrupt Flag               */
+
+#define GPT_BDTR_BKE_Pos          (12U)
+#define GPT_BDTR_BKE_Msk          (0x1U << GPT_BDTR_BKE_Pos)                   /*!< 0x00001000 */
+#define GPT_BDTR_BKE              GPT_BDTR_BKE_Msk                             /*!<Break enable */
+#define GPT_BDTR_BKP_Pos          (13U)
+#define GPT_BDTR_BKP_Msk          (0x1U << GPT_BDTR_BKP_Pos)                   /*!< 0x00002000 */
+#define GPT_BDTR_BKP              GPT_BDTR_BKP_Msk                             /*!<Break Polarity */
+#define GPT_BDTR_AOE_Pos          (14U)
+#define GPT_BDTR_AOE_Msk          (0x1U << GPT_BDTR_AOE_Pos)                   /*!< 0x00004000 */
+#define GPT_BDTR_AOE              GPT_BDTR_AOE_Msk                             /*!<Automatic Output enable */
+#define GPT_BDTR_MOE_Pos          (15U)
+#define GPT_BDTR_MOE_Msk          (0x1U << GPT_BDTR_MOE_Pos)                   /*!< 0x00008000 */
+#define GPT_BDTR_MOE              GPT_BDTR_MOE_Msk                             /*!<Main Output enable */
+#define GPT_BDTR_OSSI_Pos         (30U)
+#define GPT_BDTR_OSSI_Msk         (0x1U << GPT_BDTR_OSSI_Pos)                  /*!< 0x40000000 */
+#define GPT_BDTR_OSSI             GPT_BDTR_OSSI_Msk                            /*!<Off-State Selection for Idle mode */
+#define GPT_BDTR_OSSR_Pos         (31U)
+#define GPT_BDTR_OSSR_Msk         (0x1U << GPT_BDTR_OSSR_Pos)                  /*!< 0x80000000 */
+#define GPT_BDTR_OSSR             GPT_BDTR_OSSR_Msk                            /*!<Off-State Selection for Run mode */
+#define GPT_BDTR_LOCK_Pos         (30U)
+#define GPT_BDTR_LOCK_Msk         (0x3U << GPT_BDTR_LOCK_Pos)                  /*!< NOTE: LOCK moved to AF1 register in SiFli */
+#define GPT_BDTR_LOCK             GPT_BDTR_LOCK_Msk
+#define GPT_BDTR_LOCK_0           (0x1U << GPT_BDTR_LOCK_Pos)
+#define GPT_BDTR_LOCK_1           (0x2U << GPT_BDTR_LOCK_Pos)
 
 #define GPT_SMCR_ETPS_0           (0x1U << GPT_SMCR_ETPS_Pos)                  /*!< 0x00001000 */
 #define GPT_SMCR_ETPS_1           (0x2U << GPT_SMCR_ETPS_Pos)                  /*!< 0x00002000 */

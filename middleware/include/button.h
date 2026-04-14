@@ -58,6 +58,7 @@ typedef struct
                                                   or PIN_MODE_INPUT_PULLDOWN */
     button_handler_t       button_handler;   /**< Handler to be called when button is pushed. */
     uint16_t               debounce_time;    /**< debounce time in millisecond  */
+    const char            *name;
 } button_cfg_t;
 
 #ifdef BUTTON_SERVICE_ENABLED

@@ -247,6 +247,21 @@ HAL_StatusTypeDef HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_TYPE_T type, uint8_t *valu
 */
 void HAL_LCPU_CONFIG_InitContext(void);
 
+/**
+ * @brief Query whether LCPU crashes
+ * @return HAL_OK if LCPU crashes, HAL_BUSY: no crash happens
+ */
+HAL_StatusTypeDef HAL_LCPU_ASSERT_INFO_get(void);
+
+/**
+ * @brief LCPU update flag to indicate crash happens, HCPU can query this flag by HAL_LCPU_ASSERT_INFO_get
+ */
+void HAL_LCPU_ASSERT_INFO_set(void);
+
+/**
+ * @brief clear LCPU crash flag
+ */
+void HAL_LCPU_ASSERT_INFO_clear(void);
 
 
 /**

@@ -1,4 +1,5 @@
 # GPU渲染列表模式示例程序
+源码路径：example/rt_device/gpu/render_list_mode
 ```{warning}
 未验证
 ```

@@ -22,23 +22,13 @@ def create_env(proj_path = None):
     # Set default compile options
     SifliEnv(proj_path)
 
-    if rtconfig.CHIP != "SF32LB55X":
-        CPPDEFINES = ['ee_printf=custom_printf']
-    else:
-        CPPDEFINES = []    
-
-    env = Environment(tools = ['mingw'],
-        AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
-        CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
-        AR = rtconfig.AR, ARFLAGS = '-rc',
-        CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
-        LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS, CPPDEFINES = CPPDEFINES)
-    env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
-    return env
-
-def build(env):
+def build():
     # prepare building environment
-    objs = PrepareBuilding(env)
+    objs = PrepareBuilding(None)
+    env = GetCurrentEnv()
+
+    if rtconfig.CHIP != "SF32LB55X":
+        env.AppendUnique(CPPDEFINES = ['ee_printf=custom_printf'])
 
     TARGET = os.path.join(env['build_dir'], rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT)
     # make a building

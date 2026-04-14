@@ -10,6 +10,7 @@
 
 #include <rtthread.h>
 #include <string.h>
+#include "mem_map.h"
 
 #ifndef SD_BOOT
     #ifdef RT_USING_DFS
@@ -27,14 +28,26 @@
 #endif /* RT_SDIO_DEBUG */
 #include <rtdbg.h>
 
+// TODO: support multiple mmcsd host
+#ifdef BSP_USING_SDMMC1
+    #define SDMMC_LOGIC_ADDR SDMMC1_MEM_BASE
+    #define SDMMC_DEV_NAME "sd0"
+#elif defined(BSP_USING_SDMMC2)
+    #define SDMMC_LOGIC_ADDR SDMMC2_MEM_BASE
+    #define SDMMC_DEV_NAME "sd1"
+#endif /* BSP_USING_SDMMC1 */
+
 static rt_list_t blk_devices = RT_LIST_OBJECT_INIT(blk_devices);
 
 #define cache_max_blks  8
 #define cache_blk_size 512
 ALIGN(32) static rt_uint8_t  blk_cache_buf[cache_blk_size * cache_max_blks];
+ALIGN(32) static rt_uint8_t  sdio_cache_buf[cache_blk_size];
+static struct rt_mutex  sdio_mutex;
 
 #define BLK_MIN(a, b) ((a) < (b) ? (a) : (b))
-#define BLK_REQ_ADDR_UNALIGNED(X)    ((rt_uint32_t)(X) & (sizeof(rt_uint32_t) - 1))
+#define BLK_REQ_ADDR_UNALIGNED(X) \
+    ( (((rt_uint32_t)(X)) & (sizeof(rt_uint32_t) - 1)) || HPSYS_RAM_IN_ITCM((rt_ubase_t)(X)) )
 #define BLK_BUF_ACCROSS_512K_BOUNDARY(addr,size) ((addr&0xFFF80000)!=((addr+size)&0xFFF80000))
 
 struct mmcsd_blk_device
@@ -50,6 +63,18 @@ struct mmcsd_blk_device
 #ifndef RT_MMCSD_MAX_PARTITION
     #define RT_MMCSD_MAX_PARTITION 16
 #endif
+
+
+void  rt_mmcsd_lock(void)
+{
+    if (sdio_mutex.parent.parent.name[0])
+        rt_mutex_take(&sdio_mutex, RT_WAITING_FOREVER);
+}
+void  rt_mmcsd_unlock(void)
+{
+    if (sdio_mutex.parent.parent.name[0])
+        rt_mutex_release(&sdio_mutex);
+}
 
 rt_int32_t mmcsd_num_wr_blocks(struct rt_mmcsd_card *card)
 {
@@ -110,6 +135,18 @@ rt_int32_t mmcsd_num_wr_blocks(struct rt_mmcsd_card *card)
         return -RT_ERROR;
 
     return blocks;
+}
+uint32_t mmcsd_irq_get_state(struct rt_mmcsd_host *host)
+{
+    if (host->ops->get_irq_enable_status)
+        return host->ops->get_irq_enable_status(host);
+    else
+        return 0;
+}
+void mmcsd_irq_disable(struct rt_mmcsd_host *host, uint32_t res)
+{
+    if (host->ops->set_irq_enable_status)
+        host->ops->set_irq_enable_status(host, res);
 }
 
 static rt_err_t rt_mmcsd_req_blk(struct rt_mmcsd_card *card,
@@ -242,6 +279,18 @@ static rt_err_t rt_mmcsd_control(rt_device_t dev, int cmd, void *args)
     default:
         break;
     }
+
+    return RT_EOK;
+}
+
+uint32_t rt_mmcsd_irq_disable(void)
+{
+    rt_device_t dev = rt_device_find(SDMMC_DEV_NAME); //TODO: support multiple mmcsd host
+    if (dev != RT_NULL)
+    {
+        struct mmcsd_blk_device *blk_dev = (struct mmcsd_blk_device *)dev->user_data;
+        mmcsd_irq_disable(blk_dev->card->host, 1);
+    }
     return RT_EOK;
 }
 
@@ -265,7 +314,7 @@ static rt_size_t rt_mmcsd_read(rt_device_t dev,
         rt_set_errno(-EINVAL);
         return 0;
     }
-
+    rt_mutex_take(&sdio_mutex, RT_WAITING_FOREVER);
     rt_sem_take(part->lock, RT_WAITING_FOREVER);
     addr_unaligned = BLK_REQ_ADDR_UNALIGNED(rd_ptr);
     //rt_kprintf("rt_mmcsd_read size:%d max_req_size:%d\n",size,blk_dev->max_req_size);
@@ -313,6 +362,8 @@ static rt_size_t rt_mmcsd_read(rt_device_t dev,
         rd_ptr = (void *)((rt_uint8_t *)rd_ptr + (req_size << 9));
         remain_size -= req_size;
     }
+
+    rt_mutex_release(&sdio_mutex);
     rt_sem_release(part->lock);
 
     /* the length of reading must align to SECTOR SIZE */
@@ -343,13 +394,13 @@ static rt_size_t rt_mmcsd_write(rt_device_t dev,
         rt_set_errno(-EINVAL);
         return 0;
     }
-
+    rt_mutex_take(&sdio_mutex, RT_WAITING_FOREVER);
     rt_sem_take(part->lock, RT_WAITING_FOREVER);
     addr_unaligned = BLK_REQ_ADDR_UNALIGNED(buffer);
 
     while (remain_size)
     {
-        if (addr_unaligned)
+        if (addr_unaligned || mmcsd_irq_get_state(blk_dev->card->host))
         {
             req_size = (remain_size > cache_max_blks) ? cache_max_blks : remain_size;
             rt_memcpy(blk_cache_buf, wr_ptr, req_size * 512);
@@ -366,6 +417,7 @@ static rt_size_t rt_mmcsd_write(rt_device_t dev,
         wr_ptr = (void *)((rt_uint8_t *)wr_ptr + (req_size << 9));
         remain_size -= req_size;
     }
+    rt_mutex_release(&sdio_mutex);
     rt_sem_release(part->lock);
 
     /* the length of reading must align to SECTOR SIZE */
@@ -415,6 +467,126 @@ const static struct rt_device_ops mmcsd_blk_ops =
     rt_mmcsd_control
 };
 #endif
+
+//TODO: support multiple mmcsd host, address larger than 4GB
+int rt_sdio_read(uint32_t addr, uint8_t *buf, int size)
+{
+    uint32_t pos = (addr - SDMMC_LOGIC_ADDR) / cache_blk_size;
+    uint32_t pos_offset = (addr - SDMMC_LOGIC_ADDR) % cache_blk_size;
+    uint32_t req_size;
+    int offset,  remain, fill;
+
+    //rt_kprintf("rt_sdio_read:addr %x buf:%p size:%d\n", addr, buf, size);
+    if (!buf || !size)    return 0;
+
+    if (addr < SDMMC_LOGIC_ADDR)
+    {
+        RT_ASSERT(0);
+    }
+
+    rt_device_t dev = rt_device_find(SDMMC_DEV_NAME);    // get block device
+    RT_ASSERT(dev);
+
+    offset = 0;
+    fill = 0;
+    remain = size;
+
+    rt_mutex_take(&sdio_mutex, RT_WAITING_FOREVER);
+    rt_err_t ret = rt_device_open(dev, RT_DEVICE_FLAG_RDWR);
+    RT_ASSERT(RT_EOK == ret);
+    if (pos_offset) // not page aligned
+    {
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        if (remain >= cache_blk_size - pos_offset)
+            fill += (cache_blk_size - pos_offset);
+        else
+            fill = remain;
+        memcpy(buf, sdio_cache_buf + pos_offset, fill);
+        remain -= fill;
+        offset += fill;
+        pos += 1;
+    }
+
+    if (remain >= cache_blk_size)
+    {
+        uint32_t req_blk = remain / cache_blk_size;
+        fill = (req_blk << 9);
+        rt_device_read(dev, pos, buf + offset, req_blk);
+        remain -= fill;
+        offset += fill;
+        pos += req_blk;
+    }
+
+    if (remain > 0)
+    {
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        memcpy(buf + offset, sdio_cache_buf, remain);
+        offset += remain;
+    }
+    rt_device_close(dev);
+    rt_mutex_release(&sdio_mutex);
+
+    return offset;
+}
+
+int rt_sdio_write(uint32_t addr, uint8_t *buf, int size)
+{
+    uint32_t pos = (addr - SDMMC_LOGIC_ADDR) / cache_blk_size;
+    uint32_t pos_offset = (addr - SDMMC_LOGIC_ADDR) % cache_blk_size;
+    uint32_t req_size;
+    int offset = 0, remain = 0, fill = 0;
+
+    //rt_kprintf("rt_sdio_read:addr %x buf:%p size:%d\n", addr, buf, size);
+    if (!buf || !size)    return 0;
+
+    if (addr < SDMMC_LOGIC_ADDR)
+    {
+        RT_ASSERT(0);
+    }
+
+    rt_device_t dev = rt_device_find(SDMMC_DEV_NAME);    // get block device
+    RT_ASSERT(dev);
+    rt_mutex_take(&sdio_mutex, RT_WAITING_FOREVER);
+    rt_err_t ret = rt_device_open(dev, RT_DEVICE_FLAG_RDWR);
+    RT_ASSERT(RT_EOK == ret);
+    remain = size;
+    if (pos_offset)
+    {
+        rt_memset(sdio_cache_buf, 0, cache_blk_size);
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        if ((remain + pos_offset) >= cache_blk_size)
+            fill = cache_blk_size - pos_offset;
+        else
+            fill = remain;
+        rt_memcpy(sdio_cache_buf + pos_offset, buf, fill);
+        rt_device_write(dev, pos, sdio_cache_buf, 1);
+        remain -= fill;
+        pos += 1;
+        buf += fill;
+        offset += fill;
+    }
+    if (remain >= cache_blk_size)
+    {
+        uint32_t req_blk = remain / cache_blk_size;
+        rt_device_write(dev, pos, buf, req_blk);
+        pos += req_blk;
+        buf += (req_blk << 9);
+        remain -= (req_blk << 9);
+        offset += (req_blk << 9);
+    }
+    if (remain > 0)
+    {
+        rt_memset(sdio_cache_buf, 0, cache_blk_size);
+        rt_device_read(dev, pos, sdio_cache_buf, 1);
+        rt_memcpy(sdio_cache_buf, buf, remain);
+        rt_device_write(dev, pos, sdio_cache_buf, 1);
+        offset += remain;
+    }
+    rt_device_close(dev);
+    rt_mutex_release(&sdio_mutex);
+
+    return offset;
+}
 
 #if defined(SD_BOOT) || !defined(RT_USING_DFS)
 
@@ -534,10 +706,12 @@ rt_int32_t rt_mmcsd_blk_probe(struct rt_mmcsd_card *card)
                                             (card->host->max_blk_count *
                                              card->host->max_blk_size) >> 9);
 
+            if (0 == sdio_mutex.parent.parent.name[0])
+                rt_mutex_init(&sdio_mutex, "sdio_mutex", RT_IPC_FLAG_FIFO);
             /* get the first partition */
 #if !defined(CFG_FACTORY_DEBUG)
             status = dfs_filesystem_get_partition(&blk_dev->part, sector, i);
-            if (status == RT_EOK)
+            if (0)
             {
                 rt_snprintf(dname, 4, "sd%d",  i);
                 rt_snprintf(sname, 8, "sem_sd%d",  i);
@@ -602,7 +776,7 @@ rt_int32_t rt_mmcsd_blk_probe(struct rt_mmcsd_card *card)
                     blk_dev->geometry.sector_count =
                         card->card_capacity * (1024 / 512);
 
-                    rt_err = rt_device_register(&blk_dev->dev, "sd0",
+                    rt_err = rt_device_register(&blk_dev->dev, card->host->name,
                                                 RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_REMOVABLE | RT_DEVICE_FLAG_STANDALONE);
                     RT_ASSERT(RT_EOK == rt_err); //Device name exist?
                     rt_list_insert_after(&blk_devices, &blk_dev->list);

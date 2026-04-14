@@ -1,13 +1,13 @@
 # RGBLED示例
 
-源码路径：example/rt_device/rgbled
+源码路径：example/rt_device/rgb_led
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ sf32lb52-nano
-+ sf32lb52-lcd
-+ sf32lb56-lcd
-+ sf32lb58-lcd
++ sf32lb52-nano系列
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
 ## 概述
 <!-- 例程简介 -->
 本例程演示基于rt-device（使用rt-thread）的rgbled驱动，包含：

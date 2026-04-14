@@ -1,0 +1,11 @@
+import os
+from building import *
+
+cwd = GetCurrentDir() # get current dir path
+
+# Add source code
+src = Glob('*.c')
+inc = [cwd]
+group = DefineGroup('local_music', src, depend = ['AUDIO_LOCAL_MUSIC'], CPPPATH = inc)
+
+Return('group')

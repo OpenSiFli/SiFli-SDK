@@ -28,7 +28,7 @@
  *  STATIC PROTOTYPES
  **********************/
 
-static void _draw_epic_letter(lv_draw_unit_t *draw_unit, lv_draw_glyph_dsc_t *glyph_draw_dsc,
+static void _draw_epic_letter(lv_draw_task_t *draw_task, lv_draw_glyph_dsc_t *glyph_draw_dsc,
                               lv_draw_fill_dsc_t *fill_draw_dsc, const lv_area_t *fill_area);
 
 /**********************
@@ -47,12 +47,12 @@ static void _draw_epic_letter(lv_draw_unit_t *draw_unit, lv_draw_glyph_dsc_t *gl
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_epic_label(lv_draw_unit_t *draw_unit, const lv_draw_label_dsc_t *dsc,
+void lv_draw_epic_label(lv_draw_task_t *draw_task, const lv_draw_label_dsc_t *dsc,
                         const lv_area_t *coords)
 {
     if (dsc->opa <= LV_OPA_MIN) return;
 
-    lv_draw_label_iterate_characters(draw_unit, dsc, coords, _draw_epic_letter);
+    lv_draw_label_iterate_characters(draw_task, dsc, coords, _draw_epic_letter);
 
     drv_epic_cont_blend_reset();
 }
@@ -239,94 +239,171 @@ void print_letter_map(uint32_t letter, const uint8_t *map_p, uint16_t box_w, uin
 #endif /*ENABLE_PRINT_LETTER_MAP*/
 /**********************
  *   STATIC FUNCTIONS
- **********************/
-
-static void _draw_epic_letter(lv_draw_unit_t *draw_unit, lv_draw_glyph_dsc_t *glyph_draw_dsc,
+ **********************/static void _draw_epic_letter(lv_draw_task_t *draw_task, lv_draw_glyph_dsc_t *glyph_draw_dsc,
                               lv_draw_fill_dsc_t *fill_draw_dsc, const lv_area_t *fill_area)
 {
     if (glyph_draw_dsc)
     {
-        if (glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_NONE)
+        switch (glyph_draw_dsc->format)
         {
+            case LV_FONT_GLYPH_FORMAT_NONE: {
 #if LV_USE_FONT_PLACEHOLDER
-            /* Draw a placeholder rectangle*/
-            lv_draw_border_dsc_t border_draw_dsc;
-            lv_draw_border_dsc_init(&border_draw_dsc);
-            border_draw_dsc.opa = glyph_draw_dsc->opa;
-            border_draw_dsc.color = glyph_draw_dsc->color;
-            border_draw_dsc.width = 1;
-            lv_draw_epic_border(draw_unit, &border_draw_dsc, glyph_draw_dsc->bg_coords);
+                if (glyph_draw_dsc->bg_coords == NULL) break;
+                lv_draw_border_dsc_t border_draw_dsc;
+                lv_draw_border_dsc_init(&border_draw_dsc);
+                border_draw_dsc.opa = glyph_draw_dsc->opa;
+                border_draw_dsc.color = glyph_draw_dsc->color;
+                border_draw_dsc.width = 1;
+                lv_draw_epic_border(draw_task, &border_draw_dsc, glyph_draw_dsc->bg_coords);
 #endif
-        }
-        else if ((glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_A8)
-                 || (glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_A4)
-                 || (glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_A2)
-                 || (glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_A1))
-        {
-            /*Do not draw transparent things*/
-            if (glyph_draw_dsc->opa <= LV_OPA_MIN)
-                return;
+            }
+            break;
 
-            EPIC_LayerConfigTypeDef input_layers[2];
-            EPIC_LayerConfigTypeDef output_canvas;
+            case LV_FONT_GLYPH_FORMAT_A1:
+            case LV_FONT_GLYPH_FORMAT_A2:
+            case LV_FONT_GLYPH_FORMAT_A3:
+            case LV_FONT_GLYPH_FORMAT_A4:
+            case LV_FONT_GLYPH_FORMAT_A8:
+            case LV_FONT_GLYPH_FORMAT_IMAGE: {
+                if (glyph_draw_dsc->rotation % 3600 == 0 && glyph_draw_dsc->format != LV_FONT_GLYPH_FORMAT_IMAGE) {
+                    /*Do not draw transparent things*/
+                    if (glyph_draw_dsc->opa <= LV_OPA_MIN)
+                        return;
 
+                    if (glyph_draw_dsc->g == NULL || glyph_draw_dsc->letter_coords == NULL) {
+                        LV_EPIC_LOG("ERROR: glyph meta or letter coords is NULL");
+                        return;
+                    }
 
-            uint8_t input_layer_cnt = 2;
-            lv_draw_buf_t *draw_buf = glyph_draw_dsc->glyph_data;
+                    uint32_t glyph_width = lv_area_get_width(glyph_draw_dsc->letter_coords);
+                    uint32_t glyph_height = lv_area_get_height(glyph_draw_dsc->letter_coords);
+                    if (glyph_width == 0 || glyph_height == 0) {
+                        LV_EPIC_LOG("ERROR: glyph width/height is zero");
+                        return;
+                    }
 
-            LV_EPIC_LOG("glyph_draw_dsc->bitmap %p, color=%u  \r\n", draw_buf->data, lv_color_to_u32(glyph_draw_dsc->color));
-            lv_epic_print_area_info("bitmap", glyph_draw_dsc->letter_coords);
+                    lv_draw_buf_t *draw_buf = NULL;
+                    const void *static_bitmap = NULL;
+                    uint32_t mask_stride = 0;
+
+                    if (lv_font_has_static_bitmap(glyph_draw_dsc->g->resolved_font) &&
+                        glyph_draw_dsc->g->format == LV_FONT_GLYPH_FORMAT_A8) {
+                        glyph_draw_dsc->g->req_raw_bitmap = 1;
+                        static_bitmap = lv_font_get_glyph_static_bitmap(glyph_draw_dsc->g);
+                        mask_stride = glyph_draw_dsc->g->stride;
+                        if (static_bitmap == NULL) {
+                            LV_EPIC_LOG("ERROR: failed to get static glyph bitmap");
+                            return;
+                        }
+                        LV_EPIC_LOG("Use static glyph bitmap: addr=%p, stride=%u", static_bitmap, mask_stride);
+                    }
+                    else {
+                        if (glyph_draw_dsc->_draw_buf == NULL) {
+                            glyph_draw_dsc->_draw_buf = lv_draw_buf_create(glyph_width, glyph_height, LV_COLOR_FORMAT_A8, 0);
+                        }
+                        if (glyph_draw_dsc->_draw_buf == NULL) {
+                            LV_EPIC_LOG("ERROR: failed to create draw buf");
+                            return;
+                        }
+                        glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(glyph_draw_dsc->g, glyph_draw_dsc->_draw_buf);
+                        if (glyph_draw_dsc->glyph_data == NULL) {
+                            LV_EPIC_LOG("ERROR: failed to get glyph bitmap");
+                            if (glyph_draw_dsc->_draw_buf) lv_draw_buf_destroy(glyph_draw_dsc->_draw_buf);
+                            glyph_draw_dsc->_draw_buf = NULL;
+                            return;
+                        }
+                        draw_buf = (lv_draw_buf_t *)glyph_draw_dsc->glyph_data;
+                        mask_stride = draw_buf->header.stride;
+                    }
+
+                    EPIC_LayerConfigTypeDef input_layers[2];
+                    EPIC_LayerConfigTypeDef output_canvas;
+                    uint8_t input_layer_cnt = 2;
+
+                    if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_task, glyph_draw_dsc->letter_coords)) {
+                        if (glyph_draw_dsc->_draw_buf) {
+                            lv_draw_buf_destroy(glyph_draw_dsc->_draw_buf);
+                            glyph_draw_dsc->_draw_buf = NULL;
+                        }
+                        return;
+                    }
+
+                    HAL_EPIC_LayerConfigInit(&input_layers[1]);
+                    input_layers[1].alpha = glyph_draw_dsc->opa;
+                    input_layers[1].x_offset = glyph_draw_dsc->letter_coords->x1;
+                    input_layers[1].y_offset = glyph_draw_dsc->letter_coords->y1;
+                    input_layers[1].data = (uint8_t *)(static_bitmap ? static_bitmap : draw_buf->data);
+                    input_layers[1].color_en = true;
+                    input_layers[1].color_r = glyph_draw_dsc->color.red;
+                    input_layers[1].color_g = glyph_draw_dsc->color.green;
+                    input_layers[1].color_b = glyph_draw_dsc->color.blue;
+                    input_layers[1].ax_mode = ALPHA_BLEND_RGBCOLOR;
+                    input_layers[1].width = glyph_width;
+                    input_layers[1].height = glyph_height;
+                    input_layers[1].color_mode = EPIC_INPUT_A8;
+                    input_layers[1].total_width = mask_stride;
+
+                    LV_EPIC_LOG("glyph_draw_dsc->bitmap %p, color=%u, w=%u, h=%u, stride=%u",
+                               input_layers[1].data, lv_color_to_u32(glyph_draw_dsc->color),
+                               glyph_width, glyph_height, mask_stride);
+                    lv_epic_print_area_info("bitmap", glyph_draw_dsc->letter_coords);
 
 #ifdef ENABLE_PRINT_LETTER_MAP
-            print_letter_map('c', draw_buf->data,
-                             lv_area_get_width(glyph_draw_dsc->letter_coords),
-                             lv_area_get_height(glyph_draw_dsc->letter_coords),
-                             FT_BPP);
-#endif /*ENABLE_PRINT_LETTER_MAP*/
-            if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_unit, glyph_draw_dsc->letter_coords))
-                return;/*Fully clipped, nothing to do*/
-
-
-            /*Setup fg layer*/
-            HAL_EPIC_LayerConfigInit(&input_layers[1]);
-
-            input_layers[1].alpha = glyph_draw_dsc->opa;
-            input_layers[1].x_offset = glyph_draw_dsc->letter_coords->x1;
-            input_layers[1].y_offset = glyph_draw_dsc->letter_coords->y1;
-
-
-            input_layers[1].data = (uint8_t *)draw_buf->data;
-            input_layers[1].color_en = true;
-            input_layers[1].color_r = glyph_draw_dsc->color.red;
-            input_layers[1].color_g = glyph_draw_dsc->color.green;
-            input_layers[1].color_b = glyph_draw_dsc->color.blue;
-            input_layers[1].ax_mode = ALPHA_BLEND_RGBCOLOR;
-            input_layers[1].width = lv_area_get_width(glyph_draw_dsc->letter_coords);
-            input_layers[1].height = lv_area_get_height(glyph_draw_dsc->letter_coords);
-            input_layers[1].color_mode = EPIC_INPUT_A8;
-            input_layers[1].total_width = input_layers[1].width;
-
-            int ret = drv_epic_cont_blend(input_layers, input_layer_cnt, &output_canvas);
-            LV_ASSERT(0 == ret);
-        }
-        else if (glyph_draw_dsc->format == LV_FONT_GLYPH_FORMAT_IMAGE)
-        {
-#if LV_USE_IMGFONT
-            lv_draw_img_dsc_t img_dsc;
-            lv_draw_img_dsc_init(&img_dsc);
-            img_dsc.rotation = 0;
-            img_dsc.scale_x = LV_SCALE_NONE;
-            img_dsc.scale_y = LV_SCALE_NONE;
-            img_dsc.opa = glyph_draw_dsc->opa;
-            img_dsc.src = glyph_draw_dsc->glyph_data;
-            lv_draw_epic_img(draw_unit, &img_dsc, glyph_draw_dsc->letter_coords);
+                    print_letter_map('c', input_layers[1].data, glyph_width, glyph_height, FT_BPP);
 #endif
+
+                    int ret = drv_epic_cont_blend(input_layers, input_layer_cnt, &output_canvas);
+                    LV_ASSERT(0 == ret);
+
+                    if (glyph_draw_dsc->_draw_buf) {
+                        lv_draw_buf_destroy(glyph_draw_dsc->_draw_buf);
+                        glyph_draw_dsc->_draw_buf = NULL;
+                    }
+                }
+                else {
+                    glyph_draw_dsc->glyph_data = lv_font_get_glyph_bitmap(glyph_draw_dsc->g, glyph_draw_dsc->_draw_buf);
+                    if (glyph_draw_dsc->glyph_data == NULL) {
+                        LV_EPIC_LOG("ERROR: failed to get glyph bitmap for rotation/image");
+                        if (glyph_draw_dsc->_draw_buf) {
+                            lv_draw_buf_destroy(glyph_draw_dsc->_draw_buf);
+                            glyph_draw_dsc->_draw_buf = NULL;
+                        }
+                        break;
+                    }
+                    
+                    lv_draw_image_dsc_t img_dsc;
+                    lv_draw_image_dsc_init(&img_dsc);
+                    img_dsc.rotation = glyph_draw_dsc->rotation;
+                    img_dsc.scale_x = LV_SCALE_NONE;
+                    img_dsc.scale_y = LV_SCALE_NONE;
+                    img_dsc.opa = glyph_draw_dsc->opa;
+                    img_dsc.src = glyph_draw_dsc->glyph_data;
+                    img_dsc.recolor = glyph_draw_dsc->color;
+                    img_dsc.pivot = (lv_point_t) {
+                        .x = glyph_draw_dsc->pivot.x,
+                        .y = glyph_draw_dsc->g ? (glyph_draw_dsc->g->box_h + glyph_draw_dsc->g->ofs_y) : 0
+                    };
+
+                    lv_draw_epic_img(draw_task, &img_dsc, glyph_draw_dsc->letter_coords);
+
+                    if (glyph_draw_dsc->_draw_buf) {
+                        lv_draw_buf_destroy(glyph_draw_dsc->_draw_buf);
+                        glyph_draw_dsc->_draw_buf = NULL;
+                    }
+                }
+                break;
+            }
+            break;
+
+            default:
+                LV_EPIC_LOG("WARNING: unsupported glyph format %d", glyph_draw_dsc->format);
+                break;
         }
     }
 
     if (fill_draw_dsc && fill_area)
     {
-        lv_draw_epic_fill(draw_unit, fill_draw_dsc, fill_area);
+        lv_draw_epic_fill(draw_task, fill_draw_dsc, fill_area);
     }
 }
 

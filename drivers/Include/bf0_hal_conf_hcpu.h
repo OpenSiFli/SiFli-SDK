@@ -81,6 +81,7 @@ extern "C" {
 #endif /* SF32LB58X */
 
 #if defined(SF32LB56X) || defined(SF32LB58X)
+#define HAL_CAN_MODULE_ENABLED
 #define HAL_AUDCODEC_MODULE_ENABLED
 #define HAL_AUDPRC_MODULE_ENABLED
 #define HAL_FACC_MODULE_ENABLED

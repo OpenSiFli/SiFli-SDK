@@ -11,10 +11,10 @@ void lv_example_monkey_2(void)
     config.period_range.max = 500;
     config.input_range.min = -5;
     config.input_range.max = 5;
-    lv_monkey_t *monkey = lv_monkey_create(&config);
+    lv_monkey_t * monkey = lv_monkey_create(&config);
 
     /*Set the default group*/
-    lv_group_t *group = lv_group_create();
+    lv_group_t * group = lv_group_create();
     lv_indev_set_group(lv_monkey_get_indev(monkey), group);
     lv_group_set_default(group);
 

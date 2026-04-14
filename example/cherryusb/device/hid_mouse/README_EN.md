@@ -1,4 +1,4 @@
-# usb_audio_class_example
+# USB Mouse Example
 
 Source code path: example\cherryusb\device\hid_mouse
 

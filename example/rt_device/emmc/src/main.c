@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -27,13 +33,21 @@
 uint8_t mnt_test = 0;
 int mnt_init(void)
 {
-    uint16_t sdhci_time = 100;
-    while (sdhci_time --)
+    uint16_t wait_ticks = 400; /* 8s: 400 * 20ms */
+    rt_device_t sd_dev = RT_NULL;
+
+    rt_kprintf("wait sd0 device ready...\n");
+    while (wait_ticks--)
     {
-        rt_thread_mdelay(30);
-        uint8_t mmcsd_get_stat(void);
-        if (mmcsd_get_stat()) break;
+        rt_thread_mdelay(20);
+        sd_dev = rt_device_find("sd0");
+        if (sd_dev)
+        {
+            rt_kprintf("sd0 device ready\n");
+            break;
+        }
     }
+
     rt_mmcsd_blk_device_create("sd0", FS_CODE, FS_CODE_OFFSET >> 9, FS_CODE_LEN >> 9);
     rt_mmcsd_blk_device_create("sd0", FS_ROOT, FS_ROOT_OFFSET >> 9, FS_ROOT_LEN >> 9);
     rt_mmcsd_blk_device_create("sd0", FS_MSIC, FS_MSIC_OFFSET >> 9, FS_MSIC_LEN >> 9);
@@ -250,4 +264,3 @@ int main(void)
     }
     return 0;
 }
-

@@ -25,6 +25,11 @@
     static uint32_t g_ave_cycle;
 #endif // (defined(SF32LB58X) || defined(SF32LB56X)) && defined(SOC_BF0_LCPU)
 
+__weak void HAL_LRC_Delay(uint32_t Delay)
+{
+    HAL_Delay(Delay);
+}
+
 __HAL_ROM_USED uint32_t HAL_RC_CAL_get_reference_cycle_on_48M(void)
 {
 #if 1 //ndef SF32LB52X HAL_LCPU_CONFIG_LPCYCLE_CURR  rom patch used
@@ -218,7 +223,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
 
 #ifdef SF32LB52X
     HAL_HPAON_WakeCore(CORE_ID_LCPU);
-    HAL_Delay(5);
+    HAL_LRC_Delay(5);
 #endif
     {
         uint32_t rcc_reg, div, div1, div2, try_times, delta = 0;
@@ -236,7 +241,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
                 /* wait until HXT48 ready */
             }
         }
-        HAL_Delay(10);
+        HAL_LRC_Delay(10);
         // switch system clock to HXT48
         HAL_RCC_LCPU_ClockSelect(RCC_CLK_MOD_SYS, 1);
 
@@ -260,7 +265,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
             hwp_bt_mac->RCCAL_CTRL &= ~BT_MAC_RCCAL_CTRL_RCCAL_LENGTH;
             hwp_bt_mac->RCCAL_CTRL |= (lp_cycle << BT_MAC_RCCAL_CTRL_RCCAL_LENGTH_Pos);
             hwp_bt_mac->RCCAL_CTRL |= (0x1 << BT_MAC_RCCAL_CTRL_RCCAL_START_Pos);
-            HAL_Delay(1);
+            HAL_LRC_Delay(1);
             while (!(hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_DONE_Msk));
             cur = (hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_RESULT_Msk);
 
@@ -682,7 +687,7 @@ __HAL_ROM_USED int HAL_RC_CALget_curr_cycle_on_48M(uint8_t lp_cycle, uint32_t *c
         hwp_bt_mac->RCCAL_CTRL &= ~BT_MAC_RCCAL_CTRL_RCCAL_LENGTH;
         hwp_bt_mac->RCCAL_CTRL |= (lp_cycle << BT_MAC_RCCAL_CTRL_RCCAL_LENGTH_Pos);
         hwp_bt_mac->RCCAL_CTRL |= (0x1 << BT_MAC_RCCAL_CTRL_RCCAL_START_Pos);
-        HAL_Delay(1);
+        HAL_LRC_Delay(1);
         while (!(hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_DONE_Msk));
         cur = (hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_RESULT_Msk);
 
@@ -870,7 +875,7 @@ __HAL_ROM_USED int HAL_RC_CAL_update_reference_cycle_on_48M_ex(uint8_t lp_cycle,
             hwp_bt_mac->RCCAL_CTRL &= ~BT_MAC_RCCAL_CTRL_RCCAL_LENGTH;
             hwp_bt_mac->RCCAL_CTRL |= (lp_cycle << BT_MAC_RCCAL_CTRL_RCCAL_LENGTH_Pos);
             hwp_bt_mac->RCCAL_CTRL |= (0x1 << BT_MAC_RCCAL_CTRL_RCCAL_START_Pos);
-            HAL_Delay(1);
+            HAL_LRC_Delay(1);
             while (!(hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_DONE_Msk));
             cur = (hwp_bt_mac->RCCAL_RESULT & BT_MAC_RCCAL_RESULT_RCCAL_RESULT_Msk);
 

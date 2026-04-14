@@ -24,6 +24,7 @@
 *
 *****************************************************************************/
 
+
 #ifndef _vg_lite_option_h_
 #define _vg_lite_option_h_
 
@@ -47,6 +48,13 @@ extern "C" {
 #endif
 
 /*
+ * Backup command buffer by user
+*/
+#ifndef gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+    #define gcdVG_ENABLE_COMMAND_BUFFER_CACHE            0
+#endif
+
+/*
  * Power management, only support Linux and RTOS
 */
 #ifndef gcdVG_ENABLE_POWER_MANAGEMENT
@@ -57,7 +65,7 @@ extern "C" {
  * when set to 1, vg_lite_hal_trace can use to print message
 */
 #ifndef gcdVG_ENABLE_DEBUG
-    #define gcdVG_ENABLE_DEBUG                           0
+    #define gcdVG_ENABLE_DEBUG                           1
 #endif
 
 /*
@@ -71,7 +79,7 @@ extern "C" {
  * when gpu hang, set 1 to open gpu reset function
 */
 #ifndef gcdVG_ENABLE_GPU_RESET
-    #define gcdVG_ENABLE_GPU_RESET                       1
+    #define gcdVG_ENABLE_GPU_RESET                       0
 #endif
 
 /*
@@ -79,6 +87,28 @@ extern "C" {
 */
 #ifndef gcdVG_ENABLE_AUTO_CLOCK_GATING
     #define gcdVG_ENABLE_AUTO_CLOCK_GATING               0
+#endif
+
+/*
+ * Set 1 to open dump debug register
+*/
+#ifndef gcdVG_DUMP_DEBUG_REGISTER
+    #define gcdVG_DUMP_DEBUG_REGISTER                    0
+#endif
+
+/*
+ * For zephyr system
+ * Set gcdVG_ENABLE_DELAY_RESUME to 1 to open delay resume feature.
+*/
+#ifndef gcdVG_ENABLE_DELAY_RESUME
+    #define gcdVG_ENABLE_DELAY_RESUME                    0
+#endif
+
+/*
+ * Set 1 to record GPU hardware running time.
+*/
+#ifndef gcdVG_RECORD_HARDWARE_RUNNING_TIME
+    #define gcdVG_RECORD_HARDWARE_RUNNING_TIME           0
 #endif
 
 #ifdef __cplusplus

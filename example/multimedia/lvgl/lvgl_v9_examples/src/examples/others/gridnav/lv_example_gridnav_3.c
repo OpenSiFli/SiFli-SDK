@@ -1,16 +1,14 @@
 #include "../../lv_examples.h"
 #if LV_USE_GRIDNAV && LV_USE_FLEX && LV_BUILD_EXAMPLES
 
-static void cont_sub_event_cb(lv_event_t *e)
+static void cont_sub_event_cb(lv_event_t * e)
 {
     uint32_t k = lv_event_get_key(e);
-    lv_obj_t *obj = lv_event_get_target(e);
-    if (k == LV_KEY_ENTER)
-    {
+    lv_obj_t * obj = lv_event_get_target_obj(e);
+    if(k == LV_KEY_ENTER) {
         lv_group_focus_obj(obj);
     }
-    else if (k == LV_KEY_ESC)
-    {
+    else if(k == LV_KEY_ESC) {
         lv_group_focus_next(lv_obj_get_group(obj));
     }
 
@@ -24,8 +22,8 @@ void lv_example_gridnav_3(void)
     /*It's assumed that the default group is set and
      *there is a keyboard indev*/
 
-    lv_obj_t *cont_main = lv_obj_create(lv_screen_active());
-    lv_gridnav_add(cont_main, LV_GRIDNAV_CTRL_ROLLOVER | LV_GRIDNAV_CTRL_SCROLL_FIRST);
+    lv_obj_t * cont_main = lv_obj_create(lv_screen_active());
+    lv_gridnav_add(cont_main, (lv_gridnav_ctrl_t)(LV_GRIDNAV_CTRL_ROLLOVER | LV_GRIDNAV_CTRL_SCROLL_FIRST));
 
     /*Only the container needs to be in a group*/
     lv_group_add_obj(lv_group_get_default(), cont_main);
@@ -35,8 +33,8 @@ void lv_example_gridnav_3(void)
     lv_obj_set_style_bg_color(cont_main, lv_palette_lighten(LV_PALETTE_BLUE, 5), LV_STATE_FOCUSED);
     lv_obj_set_size(cont_main, lv_pct(80), LV_SIZE_CONTENT);
 
-    lv_obj_t *btn;
-    lv_obj_t *label;
+    lv_obj_t * btn;
+    lv_obj_t * label;
 
     btn = lv_button_create(cont_main);
     lv_group_remove_obj(btn);
@@ -49,7 +47,7 @@ void lv_example_gridnav_3(void)
     lv_label_set_text(label, "Button 2");
 
     /*Create another container with long text to show how LV_GRIDNAV_CTRL_SCROLL_FIRST works*/
-    lv_obj_t *cont_sub1 = lv_obj_create(cont_main);
+    lv_obj_t * cont_sub1 = lv_obj_create(cont_main);
     lv_obj_set_size(cont_sub1, lv_pct(100), 100);
 
     label = lv_label_create(cont_sub1);
@@ -68,7 +66,7 @@ void lv_example_gridnav_3(void)
                       "Hello world!");
 
     /*Create a third container that can be focused with ENTER and contains another grid nav*/
-    lv_obj_t *cont_sub2 = lv_obj_create(cont_main);
+    lv_obj_t * cont_sub2 = lv_obj_create(cont_main);
     lv_gridnav_add(cont_sub2, LV_GRIDNAV_CTRL_ROLLOVER);
     /*Only the container needs to be in a group*/
     lv_group_add_obj(lv_group_get_default(), cont_sub2);

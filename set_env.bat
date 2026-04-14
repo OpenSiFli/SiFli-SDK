@@ -4,6 +4,7 @@
 set SIFLI_SDK=%~dp0
 set SIFLI_SDK_PATH=%~dp0
 set PKGS_DIR=%PKGS_ROOT%
+set CONAN_HOME=%ENV_ROOT%\tools\conan
 
 set "ver_check=1.1.3"
 if not defined ENV_VER (
@@ -35,7 +36,7 @@ if defined REG_KEIL_PATH (
 if "%1"=="gcc" goto :SET_GCC
 if "%1"=="iar" goto :SET_IAR
 if "%1"=="keil" goto :CHECK
-if "%1"==""    goto :CHECK
+if "%1"==""    goto :SET_GCC
 
 echo Unsupported toolchain: %1.
 echo Supported toolchain: keil, iar, gcc.
@@ -72,6 +73,7 @@ set PATH=%PYTHONHOME%;%PATH%
 set PATH=%PYTHONPATH%;%PATH%
 set PATH=%SCONS%;%PATH%
 set PATH=%ENV_ROOT%\tools\qemu\qemu32;%PATH%
+set PATH=%ENV_ROOT%\tools\cmake\bin;%PATH%
 
 set PYTHONPATH= %PYTHONPATH%;%SIFLI_SDK%tools\build;%SIFLI_SDK%tools\build\default;
 set SIFLI_SDK=%SIFLI_SDK:\=/%

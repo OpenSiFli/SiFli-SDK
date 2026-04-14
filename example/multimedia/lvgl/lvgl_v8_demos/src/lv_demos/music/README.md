@@ -1,4 +1,5 @@
 # 音乐播放器演示
+源码路径：example/multimedia/lvgl/lvgl_v8_demos/src/lv_demos/music
 
 ## 概述
 音乐播放器演示显示了可以在LVGL上创建的现代智能手机样用户界面。它在480x272或272x480分辨率的显示器上效果最佳。

@@ -286,19 +286,36 @@ static int read_sdnand(uint32_t addr, const int8_t *buf, uint32_t size)
     uint32_t offset = addr - SDNAND_MEM_ADDR;
     uint32_t remain = size;
     uint8_t *data = (uint8_t *)buf;
-
-    while (remain >= 512)
+    int block_size = 8 * 1024; // 8KB
+    while (remain >= block_size)
     {
-        sd_read_data(offset, data, 512);
-        remain -= 512;
-        offset += 512;
-        data += 512;
+        int r = sd_read_multi(offset, data, block_size);
+        if (r != block_size) return 0;
+
+        remain -= block_size;
+        offset += block_size;
+        data   += block_size;
     }
+
+    uint32_t full_blocks_bytes = (remain / 512) * 512;
+    if (full_blocks_bytes / 512 > 1)
+    {
+
+        int r = sd_read_multi(offset, data, full_blocks_bytes);
+        if (r != (int)full_blocks_bytes) return 0;
+
+        remain -= full_blocks_bytes;
+        offset += full_blocks_bytes;
+        data   += full_blocks_bytes;
+    }
+
     if (remain > 0)
     {
-        sd_read_data(offset, sd_cache, 512);
+        if (sd_read_data(offset, sd_cache, 512) != 512) return 0;
         memcpy(data, sd_cache, remain);
+        remain = 0;
     }
+
     return size;
 }
 

@@ -205,6 +205,11 @@
     #undef LV_USE_STDLIB_STRING
     #define LV_USE_STDLIB_STRING    LV_STDLIB_CLIB
 
+    #if defined(__CC_ARM) || defined(__ARMCC_VERSION)
+        #undef LV_USE_STDLIB_STRING
+        #define LV_USE_STDLIB_STRING    LV_STDLIB_RTTHREAD
+    #endif
+
     #undef LV_USE_STDLIB_SPRINTF
     #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_CLIB
 
@@ -320,8 +325,8 @@
         #define lv_label_set_text_sel_end lv_label_set_text_selection_end
         #define lv_image_get_size_mode(obj) 0
         #define lv_image_set_size_mode(obj,mode)
-        #define lv_label_get_recolor(obj) 1
-        #define lv_label_set_recolor(obj,en)
+        // #define lv_label_get_recolor(obj) 1
+        // #define lv_label_set_recolor(obj,en)
         #define lv_indev_drv_t lv_indev_t
     #endif /* 0 */
 

@@ -3,14 +3,16 @@ from building import *
 
 # get current dir path
 cwd = GetCurrentDir()
+reg_fwk = os.path.join(cwd, 'reg_fwk')
 
 # init src and inc vars
 src = []
-inc = [cwd]
+inc = [cwd, reg_fwk]
 
 
 # add driver basic code
 src = src + Glob('./*.c')
+src = src + Glob('./reg_fwk/*.c')
 
 if GetDepend("DISABLE_LVGL_V8") and GetDepend("DISABLE_LVGL_V9"):
     src = src + Glob('./lvgl_v7/*.c')

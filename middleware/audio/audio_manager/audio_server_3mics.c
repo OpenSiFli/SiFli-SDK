@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -42,11 +42,12 @@
 #define DBG_LVL          LOG_LVL_INFO
 #include "log.h"
 
+
 #include "bf0_hal_audprc.h"
 #include "drv_audprc.h"
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
     #include "app_comm.h"
-#endif /* SOLUTION_WATCH */
+#endif /* SOLUTION */
 
 #define PDM_DEVICE_NAME                     "pdm1"
 #define PRIVATE_DEFAULT_VOLUME              10
@@ -144,6 +145,8 @@ enum
 #define AUDIO_SPEAKER_NAME      "audprc"
 #define AUDIO_PRC_CODEC_NAME    "audcodec"
 
+
+
 /* -------------------------------------config------------------------------------------------------*/
 
 #define TYPE_TO_MIX_BIT(type)   (1<<(type))
@@ -161,6 +164,7 @@ enum
 #define NOTIFY_MIX_WITH         (AUDIO_BT_VOICE_BIT | AUDIO_LOCAL_RING_BIT | AUDIO_ALARM_BIT | AUDIO_LOCAL_MUSIC_BIT | AUDIO_BT_MUSIC_BIT)
 #define LOCAL_MUSIC_MIX_WITH    (AUDIO_LOCAL_RING_BIT | AUDIO_ALARM_BIT | AUDIO_NOTIFY_BIT)
 #define BT_MUSIC_MIX_WITH       (AUDIO_LOCAL_RING_BIT | AUDIO_ALARM_BIT | AUDIO_NOTIFY_BIT)
+
 
 struct audio_client_base_t
 {
@@ -228,7 +232,7 @@ typedef struct
     rt_slist_t          command_slist;
     rt_list_t           suspend_list;
     audio_client_t      client;
-    uint8_t             volume;//0~15
+    uint8_t             volume;//0~AUDIO_MAX_VOLUME
     uint8_t             private_volume[AUDIO_TYPE_NUMBER];
     uint8_t             is_need_3a;
     uint8_t             is_bt_music_working;
@@ -278,9 +282,10 @@ static uint8_t audio_server_stack[AUDIO_SERVER_STACK_SIZE];
 static uint8_t bt_downvoice_stack[2048];
 static struct rt_thread audio_server_tid;
 static struct rt_thread bt_downvoice_tid;
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
     static uint8_t ped_dog_timer;
-#endif /* SOLUTION_WATCH */
+#endif /* SOLUTION */
+
 
 /* dump debug control*/
 
@@ -323,10 +328,12 @@ uint32_t g_mic_last2_int_cycle[2];
 uint32_t g_pdm_last2_int_cycle[2];
 uint32_t g_tx_last2_int_cycle[2];
 
+
 /*------------------local function------*/
 static rt_err_t speaker_tx_done(rt_device_t dev, void *buffer);
 static rt_err_t mic_rx_ind(rt_device_t dev, rt_size_t size);
 static rt_err_t pdm_rx_ind(rt_device_t dev, rt_size_t size);
+
 
 RT_WEAK rt_err_t pm_scenario_start(pm_scenario_name_t scenario)
 {
@@ -451,7 +458,7 @@ static void inline speaker_update_volume(audio_device_speaker_t *my, int16_t spf
 
             if (is_down_max_volume())
             {
-                volx2 = eq_get_tel_volumex2(15);
+                volx2 = eq_get_tel_volumex2(AUDIO_MAX_VOLUME);
             }
 
             if (volx2 == MUTE_UNDER_MIN_VOLUME)
@@ -478,12 +485,12 @@ static void inline speaker_update_volume(audio_device_speaker_t *my, int16_t spf
         return;
     }
 
-    if (vol == 15)
+    if (vol == AUDIO_MAX_VOLUME)
     {
         if (audio_type == AUDIO_TYPE_BT_VOICE)
-            decrease_level = eq_get_decrease_level(1, eq_get_tel_volumex2(15));
+            decrease_level = eq_get_decrease_level(1, eq_get_tel_volumex2(AUDIO_MAX_VOLUME));
         else
-            decrease_level = eq_get_decrease_level(1, eq_get_music_volumex2(15));
+            decrease_level = eq_get_decrease_level(1, eq_get_music_volumex2(AUDIO_MAX_VOLUME));
 
         if (decrease_level == 0)
             return;
@@ -529,6 +536,7 @@ static void inline speaker_update_volume(audio_device_speaker_t *my, int16_t spf
     }
 }
 
+
 static inline void process_speaker_tx(audio_server_t *server, audio_device_speaker_t *my)
 {
     uint8_t chan_hw, tx_empty_cnt = 0;
@@ -539,13 +547,13 @@ static inline void process_speaker_tx(audio_server_t *server, audio_device_speak
         LOG_I("invlide tx event");
         return;
     }
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
     ped_dog_timer++;
     if (0 == ped_dog_timer)
     {
         app_watchdog_pet();
     }
-#endif /* SOLUTION_WATCH */
+#endif /* SOLUTION */
 
     datanum = rt_ringbuffer_data_len(server->p_ring_buf);
     getnum = 0;
@@ -672,6 +680,7 @@ static inline void process_3mics_rx(audio_server_t *server, audio_device_speaker
     }
 #endif
 
+
     rt_size_t readlen = CODEC_DATA_UNIT_LEN;
     rt_size_t len;
 
@@ -743,6 +752,7 @@ static inline void process_pdm_rx(audio_server_t *server, audio_device_speaker_t
             server->client->callback(as_callback_cmd_data_coming, server->client->user_data, (uint32_t)&data);
     }
 }
+
 
 static uint8_t threshold_last;
 extern void pll_freq_grade_set(uint8_t gr);
@@ -921,6 +931,7 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
         }
     }
 #endif
+
 
     // 2. prepare hardware memory
     if (client->rw_flag != AUDIO_TX)
@@ -1420,6 +1431,7 @@ static void audio_device_close(audio_server_t *server)
         ctrl->device.close(ctrl->device.user_data);
     }
 
+
     ctrl->is_busy = 0;
     server->p_device_current = NULL;
     LOG_I("audio_device_close out");
@@ -1532,6 +1544,7 @@ Exit:
     LOG_I("audio_client_start out");
     rt_event_send(client->api_event, (1 << 1));
 }
+
 
 static audio_client_t get_highest_priority_handle_in_suspend(audio_server_t *server)
 {
@@ -1844,6 +1857,8 @@ static rt_err_t speaker_tx_done(rt_device_t dev, void *buffer)
     return RT_EOK;
 }
 
+
+
 static rt_err_t mic_rx_ind(rt_device_t dev, rt_size_t size)
 {
     //in inturrupt
@@ -2033,6 +2048,7 @@ AUDIO_API int audio_hfp_uplink_write(audio_client_t handle, uint8_t *data, uint3
         LOG_I("audio_write is suspend %d", handle->audio_type);
         return -1;
     }
+
 
     msbc_encode_process(data, data_len);
 
@@ -2339,6 +2355,7 @@ AUDIO_API int audio_write(audio_client_t handle, uint8_t *data, uint32_t data_le
         return -1;
     }
 
+
     if (rt_ringbuffer_space_len(&handle->ring_buf) < data_len)
     {
         handle->debug_full++;
@@ -2528,8 +2545,8 @@ int audio_server_select_private_audio_device(audio_type_t audio_type, audio_devi
 int audio_server_set_public_volume(uint8_t volume)
 {
     LOG_I("public volume=%d", volume);
-    if (volume > 15)
-        volume = 15;
+    if (volume > AUDIO_MAX_VOLUME)
+        volume = AUDIO_MAX_VOLUME;
     if (g_server.is_server_inited)
     {
         g_server.volume = volume;
@@ -2540,8 +2557,8 @@ int audio_server_set_public_volume(uint8_t volume)
 int audio_server_set_private_volume(audio_type_t audio_type, uint8_t volume)
 {
     LOG_I("private volume[%d]=%d", audio_type, volume);
-    if (volume > 15)
-        volume = 15;
+    if (volume > AUDIO_MAX_VOLUME)
+        volume = AUDIO_MAX_VOLUME;
     if (g_server.is_server_inited && audio_type < AUDIO_TYPE_NUMBER)
     {
         g_server.private_volume[audio_type] = volume;
@@ -2588,77 +2605,9 @@ uint8_t audio_server_get_public_mic_mute(void)
 
 uint8_t a2dp_set_speaker_volume(uint8_t volume)
 {
-    uint8_t new_vol;
     audio_server_t *server = get_server();
-
-    if (volume == 0)
-    {
-        new_vol = 0;
-    }
-    else if (volume == 0x7F)
-    {
-        new_vol = 15;
-    }
-    else if (volume < 9)
-    {
-        new_vol = 1;
-    }
-    else if (volume < 17)
-    {
-        new_vol = 2;
-    }
-    else if (volume < 26)
-    {
-        new_vol = 3;
-    }
-    else if (volume < 35)
-    {
-        new_vol = 4;
-    }
-    else if (volume < 44)
-    {
-        new_vol = 5;
-    }
-    else if (volume < 53)
-    {
-        new_vol = 6;
-    }
-    else if (volume < 62)
-    {
-        new_vol = 7;
-    }
-    else if (volume < 71)
-    {
-        new_vol = 8;
-    }
-    else if (volume < 80)
-    {
-        new_vol = 9;
-    }
-    else if (volume < 88)
-    {
-        new_vol = 10;
-    }
-    else if (volume < 97)
-    {
-        new_vol = 11;
-    }
-    else if (volume < 105)
-    {
-        new_vol = 12;
-    }
-    else if (volume < 113)
-    {
-        new_vol = 13;
-    }
-    else //if (volume < 121)
-    {
-        new_vol = 14;
-    }
-
-    LOG_I("a2dp set speaker volume: %d-->%d\n", volume, new_vol);
-    server->private_volume[AUDIO_TYPE_BT_MUSIC] = new_vol;
-    return new_vol;
+    server->private_volume[AUDIO_TYPE_BT_MUSIC] = volume;
+    return volume;
 }
 
 /*
@@ -2675,9 +2624,10 @@ void set_speaker_volume(uint8_t volume)
     else
     {
         new_vol = volume;
-        if (new_vol > 15)
-            new_vol = 15;
+        if (new_vol > AUDIO_MAX_VOLUME)
+            new_vol = AUDIO_MAX_VOLUME;
     }
+
 
     LOG_I("set speaker volume: %d-->%d\n", volume, new_vol);
     g_server.private_volume[AUDIO_TYPE_BT_VOICE] = new_vol;
@@ -2737,6 +2687,7 @@ static rt_err_t uart_tx_done(rt_device_t dev, void *buffer)
 
     return RT_EOK;
 }
+
 
 static void audio_data_start(uint32_t dump_num, bool log)
 {
@@ -3036,6 +2987,7 @@ int audio_data_cmd(int argc, char **argv)
 
 MSH_CMD_EXPORT_ALIAS(audio_data_cmd, audio_data, audio_data);
 #endif
+
 
 #endif // SOC_BF0_HCPU
 

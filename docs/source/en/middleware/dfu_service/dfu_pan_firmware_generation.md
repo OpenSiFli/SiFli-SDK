@@ -2,23 +2,37 @@
 
 ## 1. Overview
 
-DFU_PAN is an OTA firmware upgrade middleware based on Bluetooth PAN network. It enables devices to connect to OTA servers via Bluetooth network, download and update firmware. The entire process includes device registration, version checking, firmware downloading, and update steps.
+DFU_PAN is an OTA firmware upgrade middleware based on Bluetooth PAN network, which allows devices to connect to OTA servers via Bluetooth network, download and update firmware. The entire process includes device registration, version checking, firmware downloading and updating steps.
 
+To use the DFU_PAN feature, add the examplele/dfu_pan sub-project and combine with middleware/dfu_pan middleware
+
+1. Add to main program project/proj.conf file to enable DFU_PAN function
+```
+CONFIG_USING_DFU_PAN=y
+```
+
+2. Need to add sub-project syntax under main project's project/SConstruct file: 
+```
+AddDFU_PAN(SIFLI_SDK)
+```
+Location is usually below DoBuilding(TARGET, objs)
+
+Refer to example/bt/pan_ota example for using DFU_PAN
 ## 2. Workflow Overview
 
 ```
-1. Device Startup → 2. Device Registration → 3. Version Check → 4. Set Update Flag → 5. Reboot to Enter OTA Mode
+1. Device Startup → 2. Device Registration → 3. Version Check → 4. Set Update Flag → 5. Reboot to OTA Mode 
      ↓
-6. DFU_PAN Program Execution → 7. Firmware Download → 8. Firmware Verification → 9. Reboot to Enter Normal Mode
+6. DFU_PAN Program Runs → 7. Download Firmware → 8. Verify Firmware → 9. Reboot to Normal Mode
 ```
 
 ## 3. Detailed Usage Steps
 
 ### 3.1 Device Registration Process
 
-Devices need to register with the OTA server during the first connection to allow the server to identify the device and record device information.
+When connecting for the first time, the device needs to register with the OTA server so the server can identify the device and record device information.
 
-**Implementation**: dfu_pan provides a registration interface, and the application needs to prepare device information (optional parameters can be omitted).
+**Implementation**: dfu_pan provides a registration interface, applications need to prepare device information, optional parameters can be omitted
 
 ```c
 // Device registration request parameters structure
@@ -43,12 +57,12 @@ typedef struct {
    - Current version number
    - OTA version number
    - Chip ID (unique ID generated using SHA256)
-- ota_server_url: https://xxx.xxx.com
+- ota_server_url：https://xxx.xxx.com
 
 2. Call `dfu_pan_register_device(ota_server_url, &reg_params)`
-- The API for POST request inside dfu_pan_register_device: https://xxx.xxx.com/register
+- dfu_pan_register_device internal POST request API：https://xxx.xxx.com/register
 
-Example:
+Example：
 ```c
 // Construct registration parameters
 device_register_params_t reg_params = {0};
@@ -65,28 +79,31 @@ int result = dfu_pan_register_device("https://xxx.xxx.com", &reg_params);
 json:
 ```json
 {
-      "mac": "required", 
-      "model": "required",
-      "solution": "required",
-      "version": "required",
-      "ota_version": "required",
-      "screen_width": "optional",
-      "screen_height": "optional",
-      "flash_type": "optional",
-      "chip_id": "required"
+      "mac": "Required", 
+      "model": "Required",
+      "solution": "Required",
+      "version": "Required",
+      "ota_version": "Required",
+      "screen_width": "Optional",
+      "screen_height": "Optional",
+      "flash_type": "Optional",
+      "chip_id": "Required"
     }
+
 ```
 
-**Note**: The `solution` and `model` fields should preferably be consistent with the folder structure. For example, if the folder structure is `"https://xxx.xxx.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=%s&version=latest"`
 
+**Note**: The `solution`, `model` fields should preferably match the folder names, such as folder structure `"https://xxx.xxx.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=%s&version=latest"`
 ### 3.2 Version Check Process
 
-After successful registration, the device can query the server for new firmware versions.
+After successful registration, the device can query the server for new firmware versions.　
+
+
 
 **Process**:
-1. Build the query URL containing the device's chip_id and current version
-2. Call `dfu_pan_query_latest_version()` to query the latest version
-3. If a new version is available, save the firmware information to Flash
+1. Build query URL containing the device's chip_id and current version
+2. Call `dfu_pan_query_latest_version()` to check for latest version
+3. If there is a new version, save firmware information to Flash
 
 ```c
 // Build query URL
@@ -96,14 +113,14 @@ char* dynamic_ota_url = build_ota_query_url(chip_id);
 int result = dfu_pan_query_latest_version(dynamic_ota_url, VERSION, 
                                        latest_version, sizeof(latest_version));
 ```
-`build_ota_query_url` needs to be implemented on the application side to construct the URL.
-Example:
+Where `build_ota_query_url` needs to be implemented by the application side for building the URL,
+Example：
 ```c
-dynamic_ota_url: "https://xxx.xxx.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=%s&version=latest"
-// SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp is based on the server file deployment hierarchy
+dynamic_ota_url ："https://xxx.xxx.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=%s&version=latest"
+//where SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp is based on server file deployment hierarchy
 ```
 
-**Note**: dfu_pan_query_latest_version() will obtain the JSON data returned by the server and write the firmware structure to the Flash address for direct download later. The JSON is as follows, where v1.3.9.bin is a placeholder file that needs to be placed together with the firmware files and have the same name as the current folder.
+**Note**: dfu_pan_query_latest_version() retrieves JSON data returned from the server and writes the firmware structure to flash address for direct download later, JSON as follows, where v1.3.9.bin is a placeholder file that needs to be placed with firmware files and match the current folder name
 ```json
 {
   "result": 200,
@@ -177,15 +194,14 @@ struct firmware_file_info {
     uint32_t magic;        // Magic number
 };
 ```
+### 3.3 Setting Update Flag
 
-### 3.3 Set Update Flag
-
-When a new version is detected, an update flag needs to be set to enter OTA mode at the next startup.
+When a new version is detected, the update flag needs to be set so that the device enters OTA mode on next boot.
 
 **Process**:
-1. The user clicks the "Update" button on the UI or triggers the update operation at a specific location
-2. Call `dfu_pan_set_update_flags()` to set the update flag
-3. System reboot
+1. User clicks "Update" button on UI, or at specific trigger update operation location
+2. Call `dfu_pan_set_update_flags()` to set update flag
+3. System reboots
 
 ```c
 // Set update flag
@@ -194,11 +210,11 @@ if (dfu_pan_set_update_flags() != 0) {
     return;
 }
 
-// Reboot the system, and the bootloader will enter the OTA download program by judging the magic number and update flag bit
+// Reboot system, bootloader checks magic number and update flag to enter OTA download program
 HAL_PMU_Reboot();
 ```
 ```c 
-// dfu_pan_set_update_flags will set `magic` and `needs_update` in `firmware_file_info` respectively
+// Where `dfu_pan_set_update_flags` sets the [magic], `needs_update` in `firmware_file_info` respectively
 // Magic number definitions
 #define FIRMWARE_INFO_MAGIC                                                    \
     0x64667500 // ASCII value of "dfu", ensuring 4-byte alignment
@@ -209,15 +225,14 @@ HAL_PMU_Reboot();
 
     needs_update = 1
 ```
+### 3.4 Boot Check for Update Flag
 
-### 3.4 Bootloader Check Update Flag
-
-After the system reboots, the bootloader will check for the update flag.
+After system reboot, the bootloader checks for update flags.
 
 **Process**:
-1. Check the firmware information stored in Flash
-2. Verify the magic number and update flag
-3. If an update is required and the OTA program is valid, jump to the OTA program
+1. Check firmware information stored in Flash
+2. Verify magic number and update flag
+3. If update is needed and OTA program is valid, jump to OTA program
 
 ```c
 // Check update flag
@@ -240,7 +255,7 @@ for (int i = 0; i < MAX_FIRMWARE_FILES; i++) {
     }
 }
 
-// If update is needed and OTA program is valid, jump
+// Jump if update needed and OTA program valid
 if (needs_update && is_ota_program_valid(DFU_PAN_LOADER_START_ADDR)) {
     run_img(DFU_PAN_LOADER_START_ADDR);  // Jump to OTA program
 }
@@ -248,14 +263,14 @@ if (needs_update && is_ota_program_valid(DFU_PAN_LOADER_START_ADDR)) {
 
 ### 3.5 DFU_PAN Program Executes Firmware Download
 
-After entering OTA mode, the DFU_PAN program will automatically connect to the network and download the firmware.
+After entering OTA mode, the DFU_PAN program automatically connects to the network and downloads firmware.
 
 **Process**:
-1. Initialize Bluetooth and connect to the PAN network
+1. Initialize Bluetooth and connect to PAN network
 2. Automatically check network connection status
 3. Read firmware information from Flash
 4. Call `dfu_pan_download_firmware()` to download firmware
-5. Clear the update flag and reboot after successful download
+5. Clear update flag and reboot after download completes
 
 ```c
 // Read firmware information
@@ -273,19 +288,19 @@ for (int i = 0; i < MAX_FIRMWARE_FILES; i++) {
 int ret = dfu_pan_download_firmware(firmware_files, file_count);
 if (ret == 0) {
     dfu_pan_clear_files();  // Clear update flag
-    HAL_PMU_Reboot();       // Reboot to enter normal mode
+    HAL_PMU_Reboot();       // Reboot to normal mode
 }
 ```
 
 ### 3.6 Firmware Download and Verification Process
 
 **Process**:
-1. Traverse all firmware files that need to be updated
+1. Iterate through all firmware files that need updating
 2. For each file:
-   - Erase the target Flash region
+   - Erase target Flash area
    - Download firmware via HTTP GET request
    - Write to Flash in chunks
-   - Display download progress
+   - Show download progress
    - Calculate and verify CRC32 checksum
 
 ```c
@@ -316,9 +331,10 @@ for (int i = 0; i < file_count; i++) {
 }
 ```
 
-## 4. CRC32 Checksum Algorithm Description
 
-The DFU_PAN OTA upgrade process uses the CRC32 checksum algorithm to ensure the integrity of firmware data. The algorithm implementation is consistent with the standard CRC32 (IEEE 802.3), and the specific logic is as follows:
+## 4. CRC32 Check Algorithm Description
+
+The DFU_PAN OTA upgrade process uses the CRC32 check algorithm to ensure firmware data integrity. The implementation is consistent with standard CRC32 (IEEE 802.3), with the specific logic as follows:
 
 ### 4.1 CRC32 Algorithm Parameters
 
@@ -378,16 +394,16 @@ static uint32_t calculate_crc32(const uint8_t *data, size_t length, uint32_t crc
 
 ### 4.3 Algorithm Workflow
 
-1. **Table Initialization**: Initialize the 256-entry CRC32 lookup table on the first call
-2. **Initial Value Processing**: XOR the initial CRC value with 0xFFFFFFFF
+1. **Table Initialization**: Initialize 256-item CRC32 lookup table on first call
+2. **Initial Value Processing**: XOR initial CRC value with 0xFFFFFFFF
 3. **Data Processing**: For each byte of input data:
    - Calculate index: `(current CRC value ^ byte value) & 0xFF`
    - Update CRC: `(current CRC value >> 8) ^ crc32_table[index]`
-4. **Final Value Processing**: XOR the result with 0xFFFFFFFF to get the final CRC32 value
+4. **Final Value Processing**: XOR result with 0xFFFFFFFF to get final CRC32 value
 
 ### 4.4 Application in Firmware Verification
 
-After the firmware download is completed, the system performs CRC32 verification to confirm firmware integrity:
+After firmware download completes, the system performs CRC32 verification to check firmware integrity:
 
 ```c
 // Read downloaded firmware data from Flash
@@ -406,7 +422,7 @@ while (verify_remaining > 0)
     if (rt_flash_read(firmware_file_info[i].addr + verify_offset,
                       verify_buffer, verify_chunk) != verify_chunk)
     {
-        // Read failure handling
+        // Handle read failure
         rt_free(verify_buffer);
         return -1;
     }
@@ -428,9 +444,64 @@ if (calculated_crc != firmware_file_info[i].crc32)
 
 ### 4.5 Notes
 
-1. **Consistency Requirement**: The CRC32 value generated by the server must use the same algorithm and parameters
-2. **Data Integrity**: The entire firmware file must be completely downloaded before CRC verification can be performed
-3. **Error Handling**: The update process should be terminated and an error reported when CRC verification fails
-4. **Performance Optimization**: Use the lookup table method to improve calculation efficiency and avoid bitwise operations for each calculation
+1. **Consistency Requirements**: Server-side generated CRC32 values must use the same algorithm and parameters
+2. **Data Integrity**: Entire firmware file must be completely downloaded before performing CRC check
+3. **Error Handling**: CRC verification failures should terminate update process and report error
+4. **Performance Optimization**: Use lookup table method to improve calculation efficiency, avoiding bit operations on each calculation
 
-Through the above CRC32 verification mechanism, DFU_PAN can effectively ensure the integrity and correctness of firmware data during the OTA upgrade process, preventing firmware corruption caused by transmission errors.
+Through the above CRC32 verification mechanism, DFU_PAN can effectively ensure the integrity and correctness of firmware data during OTA upgrade processes, preventing firmware damage caused by transmission errors.
+
+## 5. Firmware Package Deployment
+Firmware package deployment refers to uploading firmware packages to the server for devices to download and install.
+
+Example 1: Deploying OTA upgrade packages for Xiaozhi as an example:
+1. Create a directory and upload firmware packages to that directory:
+**Note**: The server address below is for internal use only
+https://ota.sifli.com/browser/ is the file deployment homepage, to create a directory just fill the address bar with the directory structure to be created, the last level directory name needs to be the version number such as v1.1
+
+
+![](../../../assets/dfu_pan2.png)
+
+
+2. Upload bin file firmware packages, make sure to upload a bin file with the same name as the version directory, such as v1.1.bin in the figure, this bin file serves as a placeholder reflecting the current version, generally projects have version number iterations, so the deployed placeholder bin file needs to be higher than the current project version, upload a maximum of 3 actual functional firmwares, firmware names can start with letters
+
+
+![](../../../assets/dfu_pan4.png)
+
+3. Fill in firmware information, after uploading files click extra information on the right side of each file to fill in, click save after completion, you can query firmware starting address and firmware size information according to the ptab.json used by your own program
+
+
+Fill in firmware starting address
+![](../../../assets/dfu_pan5.png)
+Fill in firmware region allocation size
+![](../../../assets/dfu_pan3.png)
+
+4. After clicking save, click extra information again to check if the crc32 value was generated
+
+
+![](../../../assets/dfu_pan5.png)
+
+You can also check whether data can be successfully responded to according to the response address: https://ota.sifli.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=123&version=latest
+
+**Note**
+The chip_id in the address should be filled with the device ID, this is only for verifying whether the response is successful, you can fill in any string of numbers, version is filled with latest to get the latest firmware information
+
+Example 2: example/pan_ota example
+1. Create a directory (directory corresponds to specific code access address), fill the address bar with directory structure `https://ota.sifli.com/browser/example/pan_ota/SF32LB52_LCD_N16R8_TFT_CO5300/sf32lb52-lcd-n16r8/v1.1` and upload firmware packages to that directory:
+![](../../../assets/pan_ota1.png)
+
+2. Fill in firmware information, after uploading files click extra information on the right side of each file to fill in, click save after completion, you can query firmware starting address and firmware size information according to the ptab.json used by your own program
+
+Fill in firmware starting address
+![](../../../assets/pan_ota2.png)
+
+Fill in firmware region allocation size
+![](../../../assets/pan_ota3.png)
+
+3. After clicking save, click extra information again to check if the crc32 value was generated
+![](../../../assets/pan_ota4.png)
+
+You can also check whether data can be successfully responded to according to the response address: https://ota.sifli.com/v2/example/pan_ota/SF32LB52_LCD_N16R8_TFT_CO5300/sf32lb52-lcd-n16r8?chip_id=123&version=latest
+
+
+![](../../../assets/pan_ota5.png)

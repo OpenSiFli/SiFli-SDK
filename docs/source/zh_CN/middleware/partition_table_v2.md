@@ -25,10 +25,11 @@
 `regions`定义了memory中有哪些分区，每个分区有如下属性：
 - `offset`：偏移，字节单位，十六进制
 - `max_size`：大小，字节单位，十六进制
-- `tags`：标签列表，列表中的名称用于生成相应的宏定义，用于表示分区大小和起始地址，比如tag为`FLASH_BOOT_LOADER`，生成的头文件会定义`FLASH_BOOT_LOADER_START_ADDR`、`FLASH_BOOT_LOADER_OFFSET`和`FLASH_BOOT_LOADER_SIZE`三个宏, `START_ADDR`由`base`加上`offset`的属性值得到，`OFFSET`等于`offset`属性值，`SIZE`等于`max_size`属性值
+- `tags`：可选，标签列表，列表中的名称用于生成相应的宏定义，用于表示分区大小和起始地址，比如tag为`FLASH_BOOT_LOADER`，生成的头文件会定义`FLASH_BOOT_LOADER_START_ADDR`、`FLASH_BOOT_LOADER_OFFSET`和`FLASH_BOOT_LOADER_SIZE`三个宏, `START_ADDR`由`base`加上`offset`的属性值得到，`OFFSET`等于`offset`属性值，`SIZE`等于`max_size`属性值
 - `name`：分区名称
-- `type`：分区类型
-- `custom`：自定义宏字典，可选
+- `type`：可选，分区类型
+- `core`: 可选，当分区类型为`app_exec`时，表示运行该分区代码的内核，可用的名称有`hcpu`、`lcpu`和`acpu`
+- `custom`：可选，自定义宏字典
 
 
 ````{dropdown} ptab.json示例

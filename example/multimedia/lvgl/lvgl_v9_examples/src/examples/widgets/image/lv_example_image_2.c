@@ -1,11 +1,11 @@
 #include "../../lv_examples.h"
 #if LV_USE_IMAGE && LV_USE_SLIDER && LV_BUILD_EXAMPLES
 
-static lv_obj_t *create_slider(lv_color_t color);
-static void slider_event_cb(lv_event_t *e);
+static lv_obj_t * create_slider(lv_color_t color);
+static void slider_event_cb(lv_event_t * e);
 
-static lv_obj_t *red_slider, * green_slider, * blue_slider, * intense_slider;
-static lv_obj_t *img1;
+static lv_obj_t * red_slider, * green_slider, * blue_slider, * intense_slider;
+static lv_obj_t * img1;
 
 /**
  * Demonstrate runtime image re-coloring
@@ -37,21 +37,22 @@ void lv_example_image_2(void)
     lv_obj_send_event(intense_slider, LV_EVENT_VALUE_CHANGED, NULL);
 }
 
-static void slider_event_cb(lv_event_t *e)
+static void slider_event_cb(lv_event_t * e)
 {
     LV_UNUSED(e);
 
     /*Recolor the image based on the sliders' values*/
-    lv_color_t color  = lv_color_make(lv_slider_get_value(red_slider), lv_slider_get_value(green_slider),
-                                      lv_slider_get_value(blue_slider));
-    lv_opa_t intense = lv_slider_get_value(intense_slider);
+    lv_color_t color  = lv_color_make((uint8_t)lv_slider_get_value(red_slider),
+                                      (uint8_t)lv_slider_get_value(green_slider),
+                                      (uint8_t)lv_slider_get_value(blue_slider));
+    lv_opa_t intense = (lv_opa_t)lv_slider_get_value(intense_slider);
     lv_obj_set_style_image_recolor_opa(img1, intense, 0);
     lv_obj_set_style_image_recolor(img1, color, 0);
 }
 
-static lv_obj_t *create_slider(lv_color_t color)
+static lv_obj_t * create_slider(lv_color_t color)
 {
-    lv_obj_t *slider = lv_slider_create(lv_screen_active());
+    lv_obj_t * slider = lv_slider_create(lv_screen_active());
     lv_slider_set_range(slider, 0, 255);
     lv_obj_set_size(slider, 10, 200);
     lv_obj_set_style_bg_color(slider, color, LV_PART_KNOB);

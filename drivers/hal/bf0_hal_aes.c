@@ -99,6 +99,7 @@ static void HAL_AES_run_help(uint8_t enc, uint8_t *in_data, uint8_t *out_data, i
         hwp_aes_acc-> AES_SETTING &= ~(enc << AES_ACC_AES_SETTING_AES_OP_MODE_Pos);
 
     mpu_dcache_clean((void *)in_data, size);
+    mpu_dcache_clean((void *)out_data, size);
     hwp_aes_acc-> COMMAND |= AES_ACC_COMMAND_START;
 }
 
@@ -120,6 +121,7 @@ __HAL_ROM_USED HAL_StatusTypeDef  HAL_AES_run_IT(uint8_t enc, uint8_t *in_data, 
     {
         hwp_aes_acc->IRQ = hwp_aes_acc->IRQ;                // Clear all pending IRQ state
         hwp_aes_acc->SETTING = (AES_ACC_SETTING_DONE_IRQ_MASK | AES_ACC_SETTING_BUS_ERR_IRQ_MASK | AES_ACC_SETTING_SETUP_ERR_IRQ_MASK);
+        NVIC_EnableIRQ(AES_IRQn);
         HAL_AES_run_help(enc, in_data, out_data, size);
     }
     return status;

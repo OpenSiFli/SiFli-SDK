@@ -447,28 +447,39 @@ const audprc_src_table_t src_table[] =
 };
 
 
-const AUDPRC_CLK_CONFIG_TYPE   audprc_clk_cfg_tb[9] =
+const AUDPRC_CLK_CONFIG_TYPE   audprc_clk_cfg_tb_pll[9] =
 {
-#if ALL_CLK_USING_PLL
     {48000, 1,  1000},
     {32000, 1,  1500},
     {24000, 1,  2000},
     {16000, 1,  3000},
     {12000, 1,  4000},
     { 8000, 1,  6000},
-#else
+    {44100, 1,  1000},
+    {22050, 1,  2000},
+    {11025, 1,  4000},
+};
+const AUDPRC_CLK_CONFIG_TYPE   audprc_clk_cfg_tb_xtal[9] =
+{
     {48000, 0,  1000},
     {32000, 0,  1500},
     {24000, 0,  2000},
     {16000, 0,  3000},
     {12000, 0,  4000},
     { 8000, 0,  6000},
-#endif
     {44100, 1,  1000},
     {22050, 1,  2000},
     {11025, 1,  4000},
 };
+
 static uint8_t g_rx_stop;
+static uint8_t use_pll_all;
+static dual_adc_rx_callback rx_callback;
+
+void audprc_clock_set(uint8_t use_pll)
+{
+    use_pll_all = use_pll;
+}
 
 AUDPRC_HandleTypeDef *get_audprc_handle()
 {
@@ -661,14 +672,18 @@ static rt_err_t bf0_audprc_src(struct rt_audio_device *audio, uint16_t source, u
     struct bf0_audio_prc *audprc = (struct bf0_audio_prc *) audio;
     AUDPRC_HandleTypeDef *haudprc = (AUDPRC_HandleTypeDef *) & (audprc->audprc);
     int length = sizeof(src_table) / (sizeof(audprc_src_table_t));
-
+    const AUDPRC_CLK_CONFIG_TYPE *clk = &audprc_clk_cfg_tb_xtal[0];
+    if (use_pll_all)
+    {
+        clk = &audprc_clk_cfg_tb_pll[0];
+    }
     for (i = 0; i < 9; i++)
     {
-        if (dest == audprc_clk_cfg_tb[i].samplerate)
+        if (dest == clk[i].samplerate)
         {
-            haudprc->Init.adc_div = audprc_clk_cfg_tb[i].clk_div;
-            haudprc->Init.dac_div = audprc_clk_cfg_tb[i].clk_div;
-            haudprc->Init.clk_sel = audprc_clk_cfg_tb[i].clk_src_sel;
+            haudprc->Init.adc_div = clk[i].clk_div;
+            haudprc->Init.dac_div = clk[i].clk_div;
+            haudprc->Init.clk_sel = clk[i].clk_src_sel;
             break;
         }
     }
@@ -1099,6 +1114,8 @@ static rt_err_t bf0_audio_init(struct rt_audio_device *audio)
     struct bf0_audio_prc *audprc = (struct bf0_audio_prc *) audio;
     AUDPRC_HandleTypeDef *haudprc = (AUDPRC_HandleTypeDef *) & (audprc->audprc);
 
+    rx_callback = NULL;
+
     HAL_RCC_EnableModule(RCC_MOD_AUDPRC);
 
     // init dma handle and request, other parameters configure in HAL driver
@@ -1307,7 +1324,7 @@ static rt_err_t bf0_audio_shutdown(struct rt_audio_device *audio)
         haudprc->buf[HAL_AUDPRC_TX_OUT_CH1] = NULL;
     }
 #endif
-
+    rx_callback = NULL;
     return RT_EOK;
 }
 
@@ -1880,8 +1897,6 @@ void HAL_AUDPRC_TxHalfCpltCallback(AUDPRC_HandleTypeDef *haprc, int cid)
     }
 }
 
-typedef void (*dual_adc_rx_callback)(uint8_t channel_id, uint8_t *data, rt_size_t len);
-static dual_adc_rx_callback rx_callback = NULL;
 void rt_device_set_dual_rx_indicate(dual_adc_rx_callback func)
 {
     rx_callback = func;
@@ -2013,7 +2028,7 @@ void bf0_audprc_set_rx_channel(uint8_t chan)
     h_aud_prc.rx_instanc = chan;
 }
 
-void bf0_audprc_device_write(rt_device_t dev, rt_off_t    pos, const void *buffer, rt_size_t   size) /*para is same to rt_device_write*/
+void bf0_audprc_device_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size) /*para is same to rt_device_write*/
 //(struct rt_audio_device *audio, const void *writeBuf, void *readBuf, rt_size_t size)
 {
     struct rt_audio_device *audio = (struct rt_audio_device *)dev;
@@ -2923,491 +2938,6 @@ int32_t bf0_audprc_start_eq(uint8_t is_start)
     return 0;
 }
 
-
-#endif
-
-
-//#define DRV_TEST
-#if defined(DRV_TEST) || defined (APP_BSP_TEST)
-
-#include "string.h"
-#include "drv_flash.h"
-
-
-/****
- * if define use flash, i2s rx data save to flash and tx load from flash, use jlink to check memory
- * if node define use flash, default use psram memory, save/load with psram, use jlink to savebin/loadbin
-**/
-#define SAVE_WAVE_TO_FLASH
-#define AUD_SAVE_MEM_BASE           (0x1c180000)
-
-#define AUD_LOAD_MEM_BASE           (0x1c180000)
-
-#define AUDIO_BUF_SIZE 1024
-#define AUD_TEST_FLEN       (0x7E000)
-
-static rt_device_t dev_i2s;
-static rt_device_t dev_aprc;
-static uint8_t g_pipe_data[AUDIO_BUF_SIZE];
-static uint8_t tx_pipe_data[AUDIO_BUF_SIZE];
-
-static rt_thread_t rx_tid;
-static rt_thread_t tx_tid;
-static rt_event_t g_rx_ev;
-static rt_event_t g_tx_ev;
-static uint8_t *buf_flag = NULL;
-
-static char *mic_buf = (char *)AUD_SAVE_MEM_BASE;
-static char *audio_mem_buf = (char *)AUD_LOAD_MEM_BASE;
-static int aud_flen = 0;
-
-static int aptest_save(char *dst, uint8_t *src, uint32_t size)
-{
-    uint32_t addr = (uint32_t)dst;
-    int res = 0;
-#ifdef SAVE_WAVE_TO_FLASH
-    // for flash , use flash write
-    res = rt_flash_write(addr, src, size);
-#else
-    // for psram , use memcpy
-    memcpy(dst, src, size);
-    res = size;
-#endif
-    return res;
-}
-
-static void aptest_init_buf(char *buf, int data, uint32_t size)
-{
-    uint32_t addr = (uint32_t)buf;
-#ifdef SAVE_WAVE_TO_FLASH
-    // for flash, use erase
-    rt_flash_erase(addr, size);
-#else
-    // for psram
-    memset(buf, data, size);
-#endif
-    return;
-}
-
-typedef struct
-{
-    uint8_t riff[4];
-    uint32_t lenth;
-    uint8_t wave[4];
-    uint8_t fmt[4];
-    uint32_t size1;
-    uint16_t fmt_tag;
-    uint16_t channel;
-    uint32_t sampleRate;
-    uint32_t bytePerSec;
-    uint16_t blockAlign;
-    uint16_t bitPerSample;
-    uint8_t data[4];
-    uint32_t size2;
-} AUD_WAV_HDR_T;
-
-static void aptest_fill_header(uint32_t sr)
-{
-    AUD_WAV_HDR_T hdr;
-
-    hdr.riff[0] = 'R';
-    hdr.riff[1] = 'I';
-    hdr.riff[2] = 'F';
-    hdr.riff[3] = 'F';
-    hdr.lenth = AUD_TEST_FLEN + 36;
-    hdr.wave[0] = 'W';
-    hdr.wave[1] = 'A';
-    hdr.wave[2] = 'V';
-    hdr.wave[3] = 'E';
-    hdr.fmt[0] = 'f';
-    hdr.fmt[1] = 'm';
-    hdr.fmt[2] = 't';
-    hdr.fmt[3] = ' ';
-    hdr.size1 = 16;
-    hdr.fmt_tag = 1;
-    hdr.channel = 1;
-    hdr.sampleRate = sr;
-    //hdr.bytePerSec = 32000;
-    hdr.blockAlign = 2;
-    hdr.bitPerSample = 16;
-    hdr.bytePerSec = hdr.sampleRate * hdr.channel * hdr.bitPerSample / 8;
-    hdr.data[0] = 'd';
-    hdr.data[1] = 'a';
-    hdr.data[2] = 't';
-    hdr.data[3] = 'a';
-    hdr.size2 = AUD_TEST_FLEN; //;    // record data lenght
-    LOG_I("save wav hdr sampel rate %d\n", hdr.sampleRate);
-
-    aptest_init_buf(mic_buf, 0, 0x80000);
-    aptest_save(mic_buf, (uint8_t *)&hdr, 44);
-    aud_flen = 0;
-    mic_buf += 44;
-}
-
-void bf0_ap_tx_entry(void *param)
-{
-    rt_uint32_t evt, size, cnt;
-    struct bf0_audio_prc *haprc = (struct bf0_audio_prc *)param;
-
-    cnt = 0;
-    // read header if wave file include wav header
-    memcpy(tx_pipe_data, audio_mem_buf + cnt, 44);
-    cnt += 44;
-
-    // read data
-    memcpy(tx_pipe_data, audio_mem_buf + cnt, AUDIO_BUF_SIZE);
-    cnt += AUDIO_BUF_SIZE;
-
-    // for test only use tx ch0
-    //memcpy(haprc->audprc.buf[HAL_AUDPRC_TX_CH0], tx_pipe_data, AUDIO_BUF_SIZE);
-    rt_device_write(dev_aprc, 0, tx_pipe_data, AUDIO_BUF_SIZE);
-    size = AUDIO_BUF_SIZE / 2;
-
-    g_tx_ev = rt_event_create("audio_tx_evt", RT_IPC_FLAG_FIFO);
-    rt_kprintf("bf0_audio_tx_entry started, wait event\n");
-    while (1)
-    {
-        size = AUD_TEST_FLEN - cnt > (AUDIO_BUF_SIZE / 2) ? (AUDIO_BUF_SIZE / 2) : AUD_TEST_FLEN - cnt;
-        // read data
-        memcpy(tx_pipe_data, audio_mem_buf + cnt, size);
-        cnt += size;
-        if (cnt >= AUD_TEST_FLEN)
-            cnt = 44; // 0; // to data header
-
-        // wait dma done to fill to buffer
-        rt_event_recv(g_tx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        if (buf_flag != NULL)
-        {
-            //memcpy(buf_flag, tx_pipe_data, size);
-            rt_device_write(dev_aprc, 0, tx_pipe_data, size);
-        }
-        LOG_I("filled %d\n", cnt);
-    }
-}
-
-
-void bf0_a_rx_entry(void *param)
-{
-    rt_uint32_t evt;
-    int size;
-
-    g_rx_ev = rt_event_create("audio_evt", RT_IPC_FLAG_FIFO);
-    rt_kprintf("bf0_audio_rx_entry started, wait event\n");
-    while (1)
-    {
-        rt_event_recv(g_rx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        while (1)
-        {
-            rt_size_t len;
-            len = rt_device_read(dev_aprc, 0, g_pipe_data, AUDIO_BUF_SIZE);
-            LOG_I("Got Audio size=%d\n", len);
-            if (len != AUDIO_BUF_SIZE / 2)
-            {
-                //LOG_I("Got Audio size=%d\n", len);
-                //LOG_HEX("g_pipe_data", 10, g_pipe_data, len > 16 ? 16 : len);
-            }
-
-            if (aud_flen + len <= AUD_TEST_FLEN)
-            {
-                aptest_save(mic_buf, g_pipe_data, len);
-                mic_buf += len;
-                aud_flen += len;
-            }
-
-            if (len == AUDIO_BUF_SIZE)
-                break;
-        }
-    }
-}
-
-static rt_err_t ap_rx_ind(rt_device_t dev, rt_size_t size)
-{
-    LOG_I("audio_rx_ind %d\n", size);
-    rt_event_send(g_rx_ev, 1);
-    return RT_EOK;
-}
-
-rt_err_t ap_tx_done(rt_device_t dev, void *buffer)
-{
-    LOG_I("audio_tx_done \n");
-    buf_flag = (uint8_t *)buffer;
-    rt_event_send(g_tx_ev, 1);
-    return RT_EOK;
-}
-
-
-/**
-* @brief  Audio commands.
-* This function provide 'audio' command to shell(FINSH) .
-* The commands supported:
-*   - audio open
-
-      Open microphone and speaker device
-
-    - audio config [sample rate]
-
-      Configure microphone catpure sample rate
-
-    - audio start rx
-
-      Audio start capture, it will start \ref bf0_audio_rx_entry thread.
-
-    - audio start tx
-
-      Audio start replay, it will start \ref bf0_audio_tx_entry thread.
-
-    - audio stop rx
-
-      Audio stop capture
-
-   - audio stop tx
-
-      Audio stop replay
-* @retval RT_EOK
-*/
-int cmd_aprc(int argc, char *argv[])
-{
-    if (argc > 1)
-    {
-        if (strcmp(argv[1], "open") == 0)
-        {
-            if (dev_aprc == NULL)
-            {
-                dev_aprc = rt_device_find("audprc");
-                if (dev_aprc)
-                {
-                    rt_device_open(dev_aprc, RT_DEVICE_FLAG_RDWR);
-                    LOG_I("audio prc opened\n");
-                }
-                else
-                {
-                    LOG_E("Could not find audio prc device\n");
-                    return -RT_ERROR;
-                }
-            }
-            if (dev_i2s == NULL)
-            {
-                dev_i2s = rt_device_find("i2s2");
-                if (dev_i2s)
-                {
-                    rt_device_open(dev_i2s, RT_DEVICE_FLAG_RDWR);
-                    LOG_I("I2S opened\n");
-                }
-                else
-                {
-                    LOG_E("Could not find i2s device\n");
-                    return -RT_ERROR;
-                }
-            }
-        }
-        if (strcmp(argv[1], "config") == 0)
-        {
-            if (dev_aprc)
-            {
-                uint32_t inf = 1;
-                struct rt_audio_caps caps;
-                if (strcmp(argv[2], "rx") == 0)
-                {
-                    // set i2s rx external interface
-                    inf = 1;
-                    rt_device_control(dev_i2s, AUDIO_CTL_SETINPUT, (void *)inf);
-#if 0
-                    // configure i2s sample rate
-                    caps.main_type = AUDIO_TYPE_INPUT;
-                    caps.sub_type = AUDIO_DSP_SAMPLERATE;
-                    caps.udata.value = 16000;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-
-                    // configure i2s track, for i2s external interface, it should alway be stereo?
-                    caps.main_type = AUDIO_TYPE_INPUT;
-                    caps.sub_type = AUDIO_DSP_CHANNELS;
-                    caps.udata.value = 2;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-#endif
-                    caps.main_type = AUDIO_TYPE_INPUT;      // for I2S2, configure RX will configure RX+TX
-                    caps.sub_type = AUDIO_DSP_PARAM;
-                    caps.udata.config.channels   = 2;
-                    caps.udata.config.samplerate = 16000; //8000, 16000
-                    caps.udata.config.samplefmt = 16; //16 or 32
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-                    LOG_I("Config audio parameter: channel %d, samplerate %d, bitwidth %d\n", caps.udata.config.channels,
-                          caps.udata.config.samplerate, caps.udata.config.samplefmt);
-
-                    // set aud prc source from external interface
-                    inf = AUDPRC_RX_FROM_I2S;
-                    rt_device_control(dev_aprc, AUDIO_CTL_SETINPUT, (void *)inf);
-
-                    caps.main_type = AUDIO_TYPE_INPUT;
-                    caps.sub_type = 0;  // for rx channel 0
-                    //caps.udata.value = AUDPRC_RX_FROM_I2S;
-                    caps.udata.config.channels = 1;
-                    caps.udata.config.samplefmt = 16;
-                    caps.udata.config.samplerate = 16000;
-                    rt_device_control(dev_aprc, AUDIO_CTL_CONFIGURE, &caps);
-
-                    //inf = AUDPRC_RX_FROM_I2S;
-                    //rt_device_control(dev_aprc, AUDIO_CTL_SETINPUT, (void *)inf);
-                }
-                else if (strcmp(argv[2], "tx") == 0)
-                {
-                    // configure i2s interface
-                    inf = 1;
-                    rt_device_control(dev_i2s, AUDIO_CTL_SETOUTPUT, (void *)inf);
-
-                    // configure i2s sample rate
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = AUDIO_DSP_SAMPLERATE;
-                    caps.udata.value = 16000;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-
-                    // configure i2s track, for i2s external interface, it should alway be stereo?
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = AUDIO_DSP_CHANNELS;
-                    caps.udata.value = 2;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-
-                    // configure audprc interface
-                    inf = AUDPRC_TX_TO_I2S;
-                    rt_device_control(dev_aprc, AUDIO_CTL_SETOUTPUT, (void *)inf);
-
-                    // configure data source format
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = 0;  // tx channel 0
-                    //caps.udata.value = AUDPRC_TX_TO_I2S;
-                    caps.udata.config.channels = 1;
-                    caps.udata.config.samplefmt = 16;
-                    caps.udata.config.samplerate = 16000;
-                    // tx channel use ch0 fix for test
-                    rt_device_control(dev_aprc, AUDIO_CTL_CONFIGURE, &caps);
-                }
-                else if (strcmp(argv[2], "src") == 0)
-                {
-                    int src_sr, dst_sr, chn;
-                    struct rt_audio_sr_convert cfg;
-                    src_sr = 16000; // same with pcm data
-                    dst_sr = 48000; // output to i2s
-                    chn = 2;    // same to pcm data
-
-                    cfg.channel = chn;
-                    cfg.source_sr = src_sr;
-                    cfg.dest_sr = dst_sr;
-
-                    // configure i2s interface
-                    inf = 1;
-                    rt_device_control(dev_i2s, AUDIO_CTL_SETOUTPUT, (void *)inf);
-
-                    // configure i2s sample rate
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = AUDIO_DSP_SAMPLERATE;
-                    caps.udata.value = dst_sr;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-
-                    // configure i2s track, for i2s external interface, it should alway be stereo?
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = AUDIO_DSP_CHANNELS;
-                    caps.udata.value = chn;
-                    rt_device_control(dev_i2s, AUDIO_CTL_CONFIGURE, &caps);
-
-                    // configure audprc interface
-                    inf = AUDPRC_TX_TO_I2S;
-                    rt_device_control(dev_aprc, AUDIO_CTL_SETOUTPUT, (void *)inf);
-
-                    // config src
-                    //bf0_audprc_src((struct rt_audio_device *)dev_aprc, src_sr, dst_sr, 0);
-                    rt_device_control(dev_aprc, AUDIO_CTL_OUTPUTSRC, (void *)(&cfg));
-
-                    // configure data source format
-                    caps.main_type = AUDIO_TYPE_OUTPUT;
-                    caps.sub_type = 0;  // tx channel 0
-                    //caps.udata.value = AUDPRC_TX_TO_I2S;
-                    caps.udata.config.channels = chn;
-                    caps.udata.config.samplefmt = 16;
-                    caps.udata.config.samplerate = 16000;
-                    // tx channel use ch0 fix for test
-                    rt_device_control(dev_aprc, AUDIO_CTL_CONFIGURE, &caps);
-                }
-                else
-                {
-                    LOG_E("Error parameters\n");
-                    return RT_ERROR;
-                }
-
-                LOG_I("Config AUD PRC with I2S interface %d\n", inf);
-            }
-        }
-        if (strcmp(argv[1], "start") == 0)
-        {
-            if (dev_aprc)
-            {
-                int stream = 0;
-                if (strcmp(argv[2], "tx") == 0)
-                {
-                    stream = AUDIO_STREAM_REPLAY;
-                    // start replay thread
-                    tx_tid = rt_thread_create("tx_th", bf0_ap_tx_entry, dev_aprc, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    if (tx_tid == NULL)
-                    {
-                        LOG_E("Create tx thread fail\n");
-                        return RT_ERROR;
-                    }
-                    rt_thread_startup(tx_tid);
-                    rt_device_set_tx_complete(dev_aprc, ap_tx_done);
-                    rt_device_control(dev_i2s, AUDIO_CTL_START, &stream);
-                    stream |= ((1 << HAL_AUDPRC_TX_CH0) << 8);
-                    rt_device_control(dev_aprc, AUDIO_CTL_START, &stream);
-                }
-                if (strcmp(argv[2], "rx") == 0)
-                {
-                    stream = AUDIO_STREAM_RECORD;
-                    struct rt_audio_caps caps;
-                    caps.main_type = AUDIO_TYPE_INPUT;
-                    caps.sub_type = AUDIO_DSP_SAMPLERATE;
-                    rt_device_control(dev_i2s, AUDIO_CTL_GETCAPS, &caps);
-                    aptest_fill_header(caps.udata.value);   //
-                    // start record thread
-                    rx_tid = rt_thread_create("aud_th", bf0_a_rx_entry, dev_aprc, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    if (rx_tid == NULL)
-                    {
-                        LOG_E("Create rx thread fail\n");
-                        return RT_ERROR;
-                    }
-                    rt_thread_startup(rx_tid);
-                    rt_device_set_rx_indicate(dev_aprc, ap_rx_ind);
-                    rt_device_control(dev_i2s, AUDIO_CTL_START, &stream);
-                    stream |= ((1 << HAL_AUDPRC_RX_CH0) << 8);
-                    rt_device_control(dev_aprc, AUDIO_CTL_START, &stream);
-                }
-            }
-        }
-        if (strcmp(argv[1], "stop") == 0)
-        {
-            if (dev_aprc)
-            {
-                int stream = 0;
-                if (strcmp(argv[2], "tx") == 0)
-                {
-                    stream = AUDIO_STREAM_REPLAY;
-                    rt_device_control(dev_aprc, AUDIO_CTL_STOP, &stream);
-                    rt_device_control(dev_i2s, AUDIO_CTL_STOP, &stream);
-                }
-                if (strcmp(argv[2], "rx") == 0)
-                {
-                    stream = AUDIO_STREAM_RECORD;
-                    rt_device_control(dev_aprc, AUDIO_CTL_STOP, &stream);
-                    rt_device_control(dev_i2s, AUDIO_CTL_STOP, &stream);
-                }
-            }
-        }
-        if (strcmp(argv[1], "reg") == 0)
-        {
-            ADPRC_DUMP_REG();
-        }
-    }
-    return RT_EOK;
-}
-FINSH_FUNCTION_EXPORT_ALIAS(cmd_aprc, __cmd_aprc, Test audioPrc driver);
-MSH_CMD_EXPORT(cmd_aprc, audio_prc);
-
-#endif  //DRV_TEST
+#endif //RT_USING_FINSH
 
 #endif  //BSP_ENABLE_AUD_PRC

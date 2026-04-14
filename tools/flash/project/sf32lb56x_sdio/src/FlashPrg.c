@@ -1,13 +1,8 @@
-/*********************************************************************
-*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
-*                        The Embedded Experts                        *
-*                           www.segger.com                           *
-**********************************************************************
-----------------------------------------------------------------------
-File    : FlashPrg.c
-Purpose : Implementation of RAMCode template
---------  END-OF-HEADER  ---------------------------------------------
-*/
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <bf0_hal.h>
 #include <string.h>
@@ -15,6 +10,7 @@ Purpose : Implementation of RAMCode template
 #include <drv_io.h>
 #include "flash_table.h"
 #include "SdioOS.h"
+#include "flashdrv_version.h"
 
 #define ECC_OFFSET   (8)
 #define ECC_SIZE     (8)
@@ -33,7 +29,7 @@ typedef enum
 #define JLINK_FUNC_PROGRAM      (2)
 #define JLINK_FUNC_VERIFY_READ  (3)
 
-#define DEBUG_JLINK         1
+#define DEBUG_JLINK         0
 #define DEFAULT_TRACE       1
 
 
@@ -156,8 +152,9 @@ uint8_t *htoa(uint8_t *p, uint32_t d)
 */
 
 
-#include "sdmmc_tst_drv.h"
-extern uint8_t sdmmc_emmc();
+#include "sdmmc_drv.h"
+extern uint8_t sdmmc1_memory_init(void);
+extern uint8_t sdmmc2_memory_init(void);
 int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
 extern int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len);
 
@@ -165,13 +162,32 @@ extern int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len);
 int rt_hw_sd1_init()
 {
     int res = 0;
+
+#ifdef JLINK_SDIO_1    
     sd1_handle.Instance = (uint32_t)SDIO1;
     sd1_handle.ErrorCode = 0;
     sd1_handle.Init.flags &= ~(SDHCI_USE_ADMA | SDHCI_USE_SDMA | SDHCI_REQ_USE_DMA);
 
     //hal_sdhci_reset(&sd1_handle, SDHCI_RESET_ALL);
 
-    res = sdmmc_emmc();
+    res = sdmmc1_memory_init();
+#if (DEBUG_JLINK+DEFAULT_TRACE)
+    uint8_t hex[16];
+    debug_print("Init : sd1 res -");
+    debug_print((char *)htoa(hex, res));
+    debug_print("\r\n");
+#endif
+#endif /* JLINK_SDIO_1 */
+
+    return res;
+}
+
+int rt_hw_sd2_init()
+{
+    int res = 0;
+
+#if defined(JLINK_SDIO_2) || defined(JLINK_SDEMMC_2)
+    res = sdmmc2_memory_init();
 #if (DEBUG_JLINK+DEFAULT_TRACE)
     uint8_t hex[16];
     debug_print("Init : sd1 res -");
@@ -179,12 +195,7 @@ int rt_hw_sd1_init()
     debug_print("\r\n");
 #endif
 
-    return res;
-}
-
-int rt_hw_sd2_init()
-{
-    HAL_StatusTypeDef res = HAL_ERROR;
+#endif /* JLINK_SDIO_2 || JLINK_SDEMMC_2 */
 
     return res;
 }
@@ -274,11 +285,38 @@ __attribute__((used)) int Init(uint32_t Addr, uint32_t Freq, uint32_t Func)
 
     HAL_MspInit();
 
-    //sysFreq = HAL_RCC_GetSysCLKFreq(CORE_ID_HCPU);
-    //if (sysFreq / 1000000 < 90)
+#if (DEBUG_JLINK+DEFAULT_TRACE)
+
+    uint32_t v1,v2,v3;
+
+    debug_print("Build data: ");
+    debug_print(__DATE__);
+    debug_print("\n");
+    uint8_t data[16];
+    v1 = FLASH_JLINK_VERSION >> 24;
+    v2 = (FLASH_JLINK_VERSION & 0xff0000)>>16;
+    v3 = FLASH_JLINK_VERSION & 0xffff;
+    
+    debug_print("SDK Version: ");
+    debug_print((char *)htoa(data, v1));
+    debug_print(".");
+    debug_print((char *)htoa(data, v2));
+    debug_print(".");
+    debug_print((char *)htoa(data, v3));
+    debug_print("\n");
+
+    debug_print("Init : Msp\n");    	
+#endif   	
+	
+    sysFreq = HAL_RCC_GetSysCLKFreq(CORE_ID_HCPU);
+    if (sysFreq / 1000000 < 90)
     {
         init_clock();
     }
+		
+#if (DEBUG_JLINK+DEFAULT_TRACE)
+    debug_print("Init : Clock\n");    
+#endif        		
 
     rt_hw_sd_init();
 
@@ -796,4 +834,4 @@ uint32_t SEGGER_OPEN_CalcCRC(uint32_t crcs, uint32_t Addr, uint32_t NumBytes, ui
 #endif
 
 
-/**************************** End of file ***************************/
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

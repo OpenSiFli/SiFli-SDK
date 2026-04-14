@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "bsp_board.h"
 
 
@@ -38,6 +43,7 @@ void BSP_Power_Up(bool is_deep_sleep)
         HAL_PIN_Set(PAD_PA30, GPIO_A30, PIN_NOPULL, 1);
         BSP_GPIO_Set(21, 0, 1);//sdio mode
         BSP_GPIO_Set(30, 1, 1);//wifi power on
+        BSP_GPIO_Set(29, 1, 1);//wifi chip en
     }
 }
 

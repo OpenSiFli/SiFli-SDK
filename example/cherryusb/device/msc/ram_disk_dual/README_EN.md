@@ -1,4 +1,4 @@
-# usb_audio_class_example
+# USB Mass Storage Device Example (RAM DISK Dual LUN)
 
 Source Path: example\cherryusb\device\ram_disk_dual
 

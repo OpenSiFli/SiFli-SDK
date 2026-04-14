@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "usbh_core.h"
@@ -11,7 +17,7 @@ int main(void)
 {
     rt_kprintf("cherryusb host demo!\n");
 
-    usbh_initialize(0, (uintptr_t)USBC_BASE);
+    usbh_initialize(0, (uintptr_t)USBC_BASE, RT_NULL);
 
     while (1)
     {
@@ -19,4 +25,3 @@ int main(void)
     }
     return 0;
 }
-

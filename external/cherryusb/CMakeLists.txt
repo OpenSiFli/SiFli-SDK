@@ -10,6 +10,7 @@ if(BL_SDK_BASE)
     set(CONFIG_CHERRYUSB_DEVICE_MSC 1)
     set(CONFIG_CHERRYUSB_DEVICE_AUDIO 1)
     set(CONFIG_CHERRYUSB_DEVICE_VIDEO 1)
+    set(CONFIG_CHERRYUSB_DEVICE_GAMEPAD 1)
 
     set(CONFIG_CHERRYUSB_HOST_CDC_ACM 1)
     set(CONFIG_CHERRYUSB_HOST_CDC_ECM 1)
@@ -26,6 +27,7 @@ if(BL_SDK_BASE)
     set(CONFIG_CHERRYUSB_HOST_CP210X 1)
     set(CONFIG_CHERRYUSB_HOST_FTDI 1)
     set(CONFIG_CHERRYUSB_HOST_PL2303 1)
+    set(CONFIG_CHERRYUSB_HOST_GSM 1)
 
     set(CONFIG_CHERRYUSB_DEVICE_BL 1)
     set(CONFIG_CHERRYUSB_HOST_EHCI_BL 1)
@@ -56,7 +58,6 @@ elseif(ESP_PLATFORM)
        OR CONFIG_CHERRYUSB_HOST_CDC_NCM
        OR CONFIG_CHERRYUSB_HOST_ASIX
        OR CONFIG_CHERRYUSB_HOST_RTL8152
-       OR CONFIG_CHERRYUSB_HOST_BL616
     )
         idf_component_get_property(lwip lwip COMPONENT_LIB)
         target_compile_definitions(${lwip} PRIVATE "-DPBUF_POOL_BUFSIZE=1600")
@@ -64,6 +65,14 @@ elseif(ESP_PLATFORM)
 
     idf_component_get_property(freertos_include freertos ORIG_INCLUDE_PATH)
 
+    if(CONFIG_CHERRYUSB_HOST_MSC)
+        list(APPEND cherryusb_srcs ${CMAKE_CURRENT_LIST_DIR}/platform/idf/usbh_fatfs.c)
+    endif()
+
+    set(priv_req esp_mm esp_netif esp_timer fatfs)
+    if(${IDF_VERSION_MAJOR} LESS 6)
+        list(APPEND priv_req usb)
+    endif()
     idf_component_register(
         SRCS
         ${cherryusb_srcs}
@@ -71,7 +80,7 @@ elseif(ESP_PLATFORM)
         ${cherryusb_incs}
         ${freertos_include}
         PRIV_REQUIRES
-        usb esp_mm esp_netif esp_timer
+        ${priv_req}
         LDFRAGMENTS
         ${ldfragments}
     )
@@ -81,7 +90,7 @@ elseif(ESP_PLATFORM)
 
         # 强制链接器不删除符号
         if(CONFIG_CHERRYUSB_HOST_CDC_ACM)
-            target_link_libraries(${COMPONENT_LIB} INTERFACE "-u cdc_acm_class_info")
+            target_link_libraries(${COMPONENT_LIB} INTERFACE "-u cdc_acm_none_class_info")
             target_link_libraries(${COMPONENT_LIB} INTERFACE "-u cdc_data_class_info")
         endif()
         if(CONFIG_CHERRYUSB_HOST_HID)
@@ -132,6 +141,9 @@ elseif(ESP_PLATFORM)
         if(CONFIG_CHERRYUSB_HOST_PL2303)
             target_link_libraries(${COMPONENT_LIB} INTERFACE "-u pl2303_class_info")
         endif()
+        if(CONFIG_CHERRYUSB_HOST_GSM)
+            target_link_libraries(${COMPONENT_LIB} INTERFACE "-u gsm_class_info")
+        endif()
     endif()
 
     if(CONFIG_CHERRYUSB)
@@ -171,6 +183,7 @@ elseif(HPM_SDK_BASE)
     set(CONFIG_CHERRYUSB_DEVICE_MSC 1)
     set(CONFIG_CHERRYUSB_DEVICE_AUDIO 1)
     set(CONFIG_CHERRYUSB_DEVICE_VIDEO 1)
+    set(CONFIG_CHERRYUSB_DEVICE_GAMEPAD 1)
 
     set(CONFIG_CHERRYUSB_HOST_CDC_ACM 1)
     set(CONFIG_CHERRYUSB_HOST_CDC_ECM 1)
@@ -187,7 +200,7 @@ elseif(HPM_SDK_BASE)
     set(CONFIG_CHERRYUSB_HOST_CP210X 1)
     set(CONFIG_CHERRYUSB_HOST_FTDI 1)
     set(CONFIG_CHERRYUSB_HOST_PL2303 1)
-    set(CONFIG_CHERRYUSB_HOST_BL616 1)
+    set(CONFIG_CHERRYUSB_HOST_GSM 1)
 
     set(CONFIG_CHERRYUSB_DEVICE_HPM 1)
     set(CONFIG_CHERRYUSB_HOST_EHCI_HPM 1)

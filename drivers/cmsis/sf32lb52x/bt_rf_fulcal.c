@@ -723,21 +723,34 @@ static CONST uint16_t txoff_cmd[] =
     //VCO3G_EN/EDR_VCO_FLT_EN
     RD(0X0), AND(13), AND(7), WR(0X0), // 48
     //EDR_FBDV_RSTB
-    RD(0X14), OR(7), WR(0X14),
-    //EDR PFDCP_EN
-    RD(0X1C), AND(19), WR(0X1C), // 54
+    RD(0X14), OR(7), WR(0X14),//51
+    //EDR PFDCP_EN ICP_SET 1->4/3
+    RD(0X1C), AND(19), //53
+#if defined(ENABLE_RF_ATE)
+    OR(12), // 54-ATE
+#else
+    AND(11), OR(13), // 55-NOATE
+#endif
+
+    WR(0X1C), // 55-ATE 56-NOATE
     //EDR FBDV_EN/MOD_STG/SDM_CLK_SEL
-    RD(0X14), AND(12), OR(5), AND(4), OR(3), WR(0X14),
+    RD(0X14), AND(12), OR(5), AND(4), OR(3), WR(0X14),// 61-ATE 62-NOATE
     //ACAL_VH_SEL=3/ACAL_VL_SEL=1
-    RD(0X4), AND(2), AND(6), WR(0X4), // 64
+    RD(0X4), AND(2), AND(6), WR(0X4), // 65-ATE 66-NOATE
     //LDO_RBB
-    RD(0X48), AND(13), WR(0X48),
+    RD(0X48), AND(13), WR(0X48), // 68-ATE 69-NOATE
     //EDR VCO3G_EN/EDR_VCO5G_EN
-    RD(0X00), AND(13), WR(0X24), // 70
+    //RD(0X00), AND(13), WR(0X24), // 71-ATE 72-NOATE
     //VDDPSW/ RFBG_EN/ LO_IARY_EN /LODISTEDR_EN
-    RD(0x10), AND(0), AND(16), AND(17), AND(18), WR(0x10), //76
+    RD(0x10), AND(0), AND(16), AND(17), AND(18), WR(0x10), //74-ATE 75-NOATE
     // END should be put in odd
-    END, //77
+#if defined(ENABLE_RF_ATE)
+    END, //75-ATE
+#else
+    END, END, //77-NOATE
+
+#endif
+
 };
 
 
@@ -868,32 +881,32 @@ static CONST uint16_t bt_txoff_cmd[] =
     //LDO_RBB
     RD(0X48), AND(13), WR(0X48),
     //EDR VCO3G_EN/EDR_VCO5G_EN
-    RD(0X00), AND(13), WR(0X24), // 68-ATE, 69-NOATE
+    //RD(0X00), AND(13), WR(0X24), // 68-ATE, 69-NOATE
     //VDDPSW/ RFBG_EN/ LO_IARY_EN /LODISTEDR_EN
-    RD(0x10), AND(0), AND(16), AND(17), AND(18), WR(0x10), //74-ATE, 75-NOATE
+    RD(0x10), AND(0), AND(16), AND(17), AND(18), WR(0x10), //71-ATE, 72-NOATE
 
     //redundant cmd to fix control change while txoff
     //VCO5G_EN & VCO_FLT_EN
-    RD(0X0), AND(12), AND(7), WR(0X0), // 78-ATE, 79-NOATE
+    RD(0X0), AND(12), AND(7), WR(0X0), // 75-ATE, 76-NOATE
     //FBDV_EN
     RD(0X14), AND(12),
     //FBDV_RSTB
-    OR(7), WR(0X14), // 82-ATE, 83-NOATE
+    OR(7), WR(0X14), // 79-ATE, 80-NOATE
 
     // PFDCP_EN
     RD(0X1C), AND(19), WR(0x1C),
 
     //PA_BUF_PU & PA_OUT_PU & TRF_SIG_EN
-    RD(0X34), AND(22), AND(16), AND(21), WR(0x34), // 90-ATE, 91-NOATE
+    RD(0X34), AND(22), AND(16), AND(21), WR(0x34), // 87-ATE, 88-NOATE
 
     //TRF_EDR_IARRAY_EN
     //RD(0X3C), AND(20), WR(0x3C), // 93-ATE, 94-NOATE
     // END should be put in odd
 #if defined(ENABLE_RF_ATE)
-    END, //91-ATE
+    END, //88-ATE
+    END, //89-ATE
 #else
-    END, //92-NOATE
-    END, //93-NOATE
+    END, //89-NOATE
 #endif
 };
 #endif
@@ -1466,9 +1479,15 @@ uint32_t bt_rfc_init()
     txoff_cmd[i++] = WR(0x14) ;
 
 
-    //EDR PFDCP_EN
+    //EDR PFDCP_EN ICP_SET=1->4/3
     txoff_cmd[i++] = RD(0x1C) ;
     txoff_cmd[i++] = AND(19) ;
+#if defined(ENABLE_RF_ATE)
+    txoff_cmd[i++] = OR(12) ;
+#else
+    txoff_cmd[i++] = AND(11) ;
+    txoff_cmd[i++] = OR(13) ;
+#endif
     txoff_cmd[i++] = WR(0x1C) ;
 
     //EDR FBDV_EN/MOD_STG/SDM_CLK_SEL
@@ -1491,9 +1510,9 @@ uint32_t bt_rfc_init()
     txoff_cmd[i++] = WR(0x48) ;
 
     //EDR VCO3G_EN/EDR_VCO5G_EN
-    txoff_cmd[i++] = RD(0x0) ;
-    txoff_cmd[i++] = AND(13) ;
-    txoff_cmd[i++] = WR(0x24) ;
+    //txoff_cmd[i++] = RD(0x0) ;
+    //txoff_cmd[i++] = AND(13) ;
+    //txoff_cmd[i++] = WR(0x24) ;
 
     //VDDPSW/ RFBG_EN/ LO_IARY_EN /LODISTEDR_EN
     //txoff_cmd[i++] = RD( 0x10 ) ;
@@ -1801,9 +1820,9 @@ uint32_t bt_rfc_init()
     bt_txoff_cmd[i++] = WR(0x48) ;
 
     //EDR VCO3G_EN/EDR_VCO5G_EN
-    bt_txoff_cmd[i++] = RD(0x0) ;
-    bt_txoff_cmd[i++] = AND(13) ;
-    bt_txoff_cmd[i++] = WR(0x24) ;
+    //bt_txoff_cmd[i++] = RD(0x0) ;
+    //bt_txoff_cmd[i++] = AND(13) ;
+    //bt_txoff_cmd[i++] = WR(0x24) ;
 
     //VDDPSW/ RFBG_EN/ LO_IARY_EN /LODISTEDR_EN
     //bt_txoff_cmd[i++] = RD( 0x10 ) ;
@@ -2121,8 +2140,9 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     //RF_PRINTF("begin LO fcal\n");
     fcal_cnt    = 0x80;
     fcal_cnt_fs = 0x80;
-    hwp_bt_rfc->FBDV_REG1 &= ~(BT_RFC_FBDV_REG1_BRF_FBDV_MOD_STG_LV);
+    hwp_bt_rfc->FBDV_REG1 &= ~(BT_RFC_FBDV_REG1_BRF_FBDV_MOD_STG_LV | BT_RFC_FBDV_REG1_BRF_FBDV_LDO_VREF_LV);
     hwp_bt_rfc->FBDV_REG1 |= BT_RFC_FBDV_REG1_BRF_FBDV_EN_LV | BT_RFC_FBDV_REG1_BRF_SDM_CLK_SEL_LV |
+                             (0xc << BT_RFC_FBDV_REG1_BRF_FBDV_LDO_VREF_LV_Pos) |
                              (2 << BT_RFC_FBDV_REG1_BRF_FBDV_MOD_STG_LV_Pos);
     hwp_bt_rfc->VCO_REG2  |= BT_RFC_VCO_REG2_BRF_VCO_FKCAL_EN_LV;
     hwp_bt_rfc->FBDV_REG2 &= ~BT_RFC_FBDV_REG2_BRF_FKCAL_CNT_DIVN_LV ;
@@ -5275,7 +5295,7 @@ void bt_rf_opt_cal(void)
     hwp_bt_phy->TX_GAUSSFLT_CFG1 &= ~(BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_2_Msk | BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_1_Msk | BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_BR_Msk);
     hwp_bt_phy->TX_GAUSSFLT_CFG1 |= 0xF7 << BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_2_Pos;
     hwp_bt_phy->TX_GAUSSFLT_CFG1 |= 0xFD << BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_1_Pos;
-    hwp_bt_phy->TX_GAUSSFLT_CFG1 |= 0xAA << BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_BR_Pos;
+    hwp_bt_phy->TX_GAUSSFLT_CFG1 |= 0xA1 << BT_PHY_TX_GAUSSFLT_CFG1_POLAR_GAUSS_GAIN_BR_Pos;
 
     hwp_bt_phy->TX_GAUSSFLT_CFG2 &= ~(BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_BR_Msk | BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_1_Msk | BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_2_Msk);
     hwp_bt_phy->TX_GAUSSFLT_CFG2 |= (0xAE  << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_BR_Pos) |
@@ -5391,7 +5411,7 @@ void bt_rf_cal(void)
     bt_rf_opt_cal();
 
     //store driver version in register
-    hwp_bt_rfc->RSVD_REG2 = 0x00060000 ;
+    hwp_bt_rfc->RSVD_REG2 = 0x26020000 ;
 #if BR_BQB_COCHANNEL_CASE
     hwp_bt_phy->DEMOD_CFG8 &= ~(BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Msk | BT_PHY_DEMOD_CFG8_BR_MU_DC_Msk | BT_PHY_DEMOD_CFG8_BR_MU_ERR_Msk);
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Pos) | (0x02 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos) | (0x60 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
@@ -5415,7 +5435,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.0_3082";
+char *g_rf_ful_ver = "1.2.1_3469";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;

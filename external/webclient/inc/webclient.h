@@ -141,6 +141,18 @@ struct webclient_session
 /* create webclient session and set header response size */
 struct webclient_session *webclient_session_create(size_t header_sz);
 
+/**
+ * connect to http server.
+ *
+ * @param session webclient session
+ * @param URI the input server URI address
+ *
+ * @return <0: connect failed or other error
+ *         =0: connect success
+ */
+int webclient_connect(struct webclient_session *session, const char *URI);
+
+
 /* send HTTP GET request */
 int webclient_get(struct webclient_session *session, const char *URI);
 
@@ -154,7 +166,10 @@ int *webclient_register_shard_position_function(struct webclient_session *sessio
 /* send HTTP POST request */
 int webclient_post(struct webclient_session *session, const char *URI, const void *post_data, size_t data_len);
 
-/* close and release wenclient session */
+/* close session socket, free host and request url */
+int webclient_clean(struct webclient_session *session);
+
+/* close and release webclient session */
 int webclient_close(struct webclient_session *session);
 
 int webclient_set_timeout(struct webclient_session *session, int millisecond);

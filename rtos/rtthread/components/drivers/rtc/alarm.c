@@ -14,7 +14,11 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 #include <sys/time.h>
-#include "llt_mem.h"
+#if defined (LLT_MEMHEAP_CUSTOM)
+    #include "app_mem.h"
+#else
+    #include "llt_mem.h"
+#endif /* LLT_MEMHEAP_CUSTOM */
 #include "mem_section.h"
 
 #define RT_RTC_YEARS_MAX         137
@@ -23,6 +27,13 @@
 #define RT_ALARM_STATE_INITED   0x02
 #define RT_ALARM_STATE_START    0x01
 #define RT_ALARM_STATE_STOP     0x00
+
+#define ALARM_DEBUG   0
+#if ALARM_DEBUG
+    #define ALARM_DBG(...)     rt_kprintf("[ALM]:"),rt_kprintf(__VA_ARGS__)
+#else
+    #define ALARM_DBG(...)
+#endif
 
 #if (defined(RT_USING_RTC) && defined(RT_USING_ALARM))
 static struct rt_alarm_container _container;
@@ -74,6 +85,7 @@ static rt_err_t alarm_set(struct rt_alarm *alarm)
     wkalarm.tm_hour = alarm->wktime.tm_hour;
 
     ret = rt_device_control(device, RT_DEVICE_CTRL_RTC_SET_ALARM, &wkalarm);
+    ALARM_DBG("%s tm_hour %d tm_min %d tm_sec %d ret %d\n", __func__, wkalarm.tm_hour, wkalarm.tm_min, wkalarm.tm_sec, ret);
     if ((ret == RT_EOK) && wkalarm.enable)
     {
         ret = rt_device_control(device, RT_DEVICE_CTRL_RTC_GET_ALARM, &wkalarm);
@@ -291,7 +303,11 @@ static void alarm_update(rt_uint32_t event)
         else
         {
             if (_container.current != RT_NULL)
+            {
                 alarm_set(_container.current);
+                if (!(_container.current->flag & RT_ALARM_STATE_START))
+                    _container.current = RT_NULL;
+            }
         }
     }
     rt_mutex_release(&_container.mutex);
@@ -349,7 +365,8 @@ static rt_err_t alarm_setup(rt_alarm_t alarm, struct tm *wktime)
     *setup = *wktime;
     timestamp = time(RT_NULL);
     gmtime_r(&timestamp, &now);
-
+    ALARM_DBG("%s setup: %d-%d-%d now: %d-%d-%d flag %d\n", __func__, setup->tm_hour, setup->tm_min, setup->tm_sec,
+              now.tm_hour, now.tm_min, now.tm_sec, alarm->flag & 0xFF00);
     /* if these are a "don't care" value,we set them to now*/
     if ((setup->tm_sec > 59) || (setup->tm_sec < 0))
         setup->tm_sec = now.tm_sec;
@@ -486,7 +503,7 @@ static rt_err_t alarm_setup(rt_alarm_t alarm, struct tm *wktime)
     /* set initialized state */
     alarm->flag |= RT_ALARM_STATE_INITED;
     ret = RT_EOK;
-
+    ALARM_DBG("%s setup: %d-%d-%d flag %d\n", __func__, setup->tm_hour, setup->tm_min, setup->tm_sec, alarm->flag);
 _exit:
 
     return (ret);
@@ -566,7 +583,7 @@ __ROM_USED rt_err_t rt_alarm_start(rt_alarm_t alarm)
         gmtime_r(&timestamp, &now);
 
         alarm->flag |= RT_ALARM_STATE_START;
-
+        ALARM_DBG("%s current 0x%x\n", __func__, _container.current);
         /* set alarm */
         if (_container.current == RT_NULL)
         {
@@ -577,7 +594,7 @@ __ROM_USED rt_err_t rt_alarm_start(rt_alarm_t alarm)
             sec_now = alarm_mkdaysec(&now);
             sec_old = alarm_mkdaysec(&_container.current->wktime);
             sec_new = alarm_mkdaysec(&alarm->wktime);
-
+            ALARM_DBG("%s sec_now %d sec_old %d sec_new %d\n", __func__, sec_now, sec_old, sec_new);
             if ((sec_new < sec_old) && (sec_new > sec_now))
             {
                 ret = alarm_set(alarm);
@@ -601,6 +618,7 @@ __ROM_USED rt_err_t rt_alarm_start(rt_alarm_t alarm)
         {
             _container.current = alarm;
         }
+        ALARM_DBG("%s ret %d 0x%x\n", __func__, ret, _container.current);
     }
 
 _exit:
@@ -617,7 +635,7 @@ _exit:
 __ROM_USED rt_err_t rt_alarm_stop(rt_alarm_t alarm)
 {
     rt_err_t ret = RT_EOK;
-
+    ALARM_DBG("%s alarm 0x%x current 0x%x\n", __func__, alarm, _container.current);
     if (alarm == RT_NULL)
         return (RT_ERROR);
     rt_mutex_take(&_container.mutex, RT_WAITING_FOREVER);
@@ -649,7 +667,7 @@ _exit:
 __ROM_USED rt_err_t rt_alarm_delete(rt_alarm_t alarm)
 {
     rt_err_t ret = RT_EOK;
-
+    ALARM_DBG("%s alarm 0x%x current 0x%x\n", __func__, alarm, _container.current);
     if (alarm == RT_NULL)
         return RT_ERROR;
     rt_mutex_take(&_container.mutex, RT_WAITING_FOREVER);
@@ -694,7 +712,7 @@ __ROM_USED rt_alarm_t rt_alarm_create(rt_alarm_callback_t callback, struct rt_al
     rt_mutex_take(&_container.mutex, RT_WAITING_FOREVER);
     rt_list_insert_after(&_container.head, &alarm->list);
     rt_mutex_release(&_container.mutex);
-
+    ALARM_DBG("%s alarm 0x%x current 0x%x\n", __func__, alarm, _container.current);
     return (alarm);
 }
 
@@ -705,7 +723,7 @@ static void rt_alarmsvc_thread_init(void *param)
 {
     rt_uint32_t recv;
 
-    _container.current = RT_NULL;
+    ALARM_DBG("%s current 0x%x\n", __func__, _container.current);
 
     while (1)
     {
@@ -753,9 +771,9 @@ static rt_uint8_t get_alarm_flag_index(rt_uint32_t alarm_flag)
     return 0;
 }
 
-rt_list_t get_rt_alarm_list(void)
+rt_list_t *get_rt_alarm_list(void)
 {
-    return _container.head;
+    return &_container.head;
 }
 
 __ROM_USED void rt_alarm_dump(void)
@@ -764,18 +782,20 @@ __ROM_USED void rt_alarm_dump(void)
     rt_alarm_t alarm;
     rt_uint8_t index = 0;
 
-    rt_kprintf("| id | YYYY-MM-DD hh:mm:ss | week | flag | en |\n");
-    rt_kprintf("+----+---------------------+------+------+----+\n");
+    rt_kprintf("| id | YYYY-MM-DD hh:mm:ss | week | flag | en | handle |\n");
+    rt_kprintf("+----+---------------------+------+------+----+--------+\n");
     for (next = _container.head.next; next != &_container.head; next = next->next)
     {
         alarm = rt_list_entry(next, struct rt_alarm, list);
         rt_uint8_t flag_index = get_alarm_flag_index(alarm->flag);
-        rt_kprintf("| %2d | %04d-%02d-%02d %02d:%02d:%02d |  %2d  |  %2s  | %2d |\n",
+        rt_kprintf("| %2d | %04d-%02d-%02d %02d:%02d:%02d |  %2d  |  %2s  | %2d |%08x|\n",
                    index++, alarm->wktime.tm_year + 1900, alarm->wktime.tm_mon + 1, alarm->wktime.tm_mday,
                    alarm->wktime.tm_hour, alarm->wktime.tm_min, alarm->wktime.tm_sec,
-                   alarm->wktime.tm_wday, _alarm_flag_tbl[flag_index].name, alarm->flag & RT_ALARM_STATE_START);
+                   alarm->wktime.tm_wday, _alarm_flag_tbl[flag_index].name, alarm->flag & RT_ALARM_STATE_START, (rt_uint32_t)alarm);
     }
-    rt_kprintf("+----+---------------------+------+------+----+\n");
+    rt_kprintf("+----+---------------------+------+------+----+--------+\n");
+    rt_kprintf("current alarm: %08x\n", (rt_uint32_t)_container.current);
+    rt_kprintf("+----+---------------------+------+------+----+--------+\n");
 }
 
 FINSH_FUNCTION_EXPORT_ALIAS(rt_alarm_dump, __cmd_alarm_dump, dump alarm info);
@@ -793,7 +813,7 @@ __ROM_USED int rt_alarm_system_init(void)
     rt_list_init(&_container.head);
     rt_event_init(&_container.event, "alarmsvc", RT_IPC_FLAG_FIFO);
     rt_mutex_init(&_container.mutex, "alarmsvc", RT_IPC_FLAG_FIFO);
-
+    _container.current = RT_NULL;
 
     result = RT_EOK;
 #if defined(RT_USING_HEAP) && !defined(RT_USING_STATIC_STACK)

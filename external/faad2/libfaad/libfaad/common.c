@@ -172,7 +172,7 @@ int8_t can_decode_ot(const uint8_t object_type)
     return -1;
 }
 
-void *faad_malloc(size_t size)
+__attribute__((weak)) void *faad_malloc(size_t size)
 {
 #if 0 // defined(_WIN32) && !defined(_WIN32_WCE)
     return _aligned_malloc(size, 16);
@@ -182,7 +182,7 @@ void *faad_malloc(size_t size)
 }
 
 /* common free function */
-void faad_free(void *b)
+__attribute__((weak)) void faad_free(void *b)
 {
 #if 0 // defined(_WIN32) && !defined(_WIN32_WCE)
     _aligned_free(b);

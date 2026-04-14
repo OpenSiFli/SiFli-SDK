@@ -78,20 +78,14 @@ enum
     DL_INSTALL
 };
 
-#if defined(SOLUTION_WATCH) || defined(RT_MODULE_MEM_CUSTOM)
+#if defined(SOLUTION) || defined(RT_MODULE_MEM_CUSTOM)
     #include "app_mem.h"
-    #define dlm_malloc(x) app_cache_alloc(x, IMAGE_CACHE_PSRAM)
+    #define dlm_malloc(x) app_cache_alloc(x, CACHE_PSRAM)
     #define dlm_free      app_cache_free
-    #define dlm_cache_invalid app_mem_invalid_icache
-    #define dlm_cache_clean app_mem_flush_cache
-    //#define dlm_malloc app_malloc
-    //#define dlm_free   app_free
 #else
     #define dlm_malloc rt_malloc
     #define dlm_free   rt_free
-    #define dlm_cache_invalid(addr, size)
-    #define dlm_cache_clean(addr, size)
-#endif
+#endif /* SOLUTION || RT_MODULE_MEM_CUSTOM */
 
 struct rt_dlmodule *dlmodule_create(void);
 rt_err_t dlmodule_destroy(struct rt_dlmodule *module);
@@ -124,6 +118,10 @@ void *dlmodule_get_res_mng(struct rt_dlmodule *module);
 
 void dlmodule_set_res_mng(struct rt_dlmodule *module, void *res_mng);
 
+#ifdef PSRAM_CACHE_WB
+    extern int mpu_dcache_clean(void *data, uint32_t size);
+#endif
+extern int mpu_icache_invalidate(void *data, uint32_t size);
 
 #endif
 

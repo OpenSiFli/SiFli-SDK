@@ -5,7 +5,7 @@ src   = []
 CPPPATH = []
 cwd   = GetCurrentDir()
 
-if GetDepend('USING_ACPU_CTRL_FWK') and GetDepend('SOC_SF32LB58X'):
+if GetDepend('USING_ACPU_CTRL_FWK'):
     src += ['acpu_ctrl.c']
 
 CPPPATH += [cwd+'/../include']    

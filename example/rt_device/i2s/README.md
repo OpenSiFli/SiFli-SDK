@@ -4,8 +4,10 @@
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ eh-lb525
-+ sf32lb52-lcd_n16r8
++ sf32lb52-nano系列
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
 
 ## 概述
 <!-- 例程简介 -->
@@ -16,6 +18,8 @@
 + 开发板A：
     - 通过i2s接受开发板A的数据。
     - speaker播放。
+
+* 注意：由于sf32lb58-lcd板子比较特殊，使用I2S只能作为master，所以需要使用到sf32lb52-lcd、sf32lb56-lcd作为slave进行测试，master设备录音，通过I2S发送给slave进行播放。
 
 ## 例程的使用
 <!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
@@ -60,7 +64,7 @@
 #endif
 ```
 
-如需使用其他型号开发板，需要更改pinmux配置，这里以56x 为例：
+如需使用其他型号开发板，需要更改pinmux配置，这里以56x和58x为例：
 ```c
 #ifdef SOC_SF32LB56X
     HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
@@ -68,6 +72,14 @@
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
+
+#elif defined(SOC_SF32LB58X)
+    HAL_PIN_Set(PAD_PA84, I2S2_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA91, I2S2_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA86, I2S2_SDI, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA82, I2S2_SDO, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA90, I2S2_MCLK, PIN_NOPULL, 1);
+
 #endif
 ```
 
@@ -80,11 +92,16 @@ I2S1_SDI|--|I2S1_SDO
 I2S1_SDO|--|I2S1_SDI
 I2S1_MCLK|--|I2S1_MCLK
 
+由于`sf32lb58-lcd`比较特殊所以这里接线的话需要58作为A（master）,`sf32lb52-lcd`作为B（slave）进行连线
+
 不确定管脚定位的可以参考下图：
 SF32LB52x_DevKit_40p图片：
 ![AUDIO CODEC & PROC](./assets/52x.png)
 SF32LB56x_DevKit_40p图片：
 ![AUDIO CODEC & PROC](./assets/56x.png)
+
+[SF32LB58x_DevKit引脚定义图](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+
 ```{warning}
 `SF32LB52_DevKit-LCD`上：  
 + `PA02 ~ PA06`当有配置LCD时会被使用，需要注意冲突（需关闭LCD：`BSP_USING_LCD = n BSP_USING_LCDC = n`）。  

@@ -15,6 +15,9 @@
     #include "rtdevice.h"
 #endif /* BSP_USING_PM */
 
+#ifdef BSP_USING_PC_SIMULATOR
+    #warning "Included by " __FILE__
+#endif
 /**
  ****************************************************************************************
 * @addtogroup pm Power Management
@@ -79,6 +82,8 @@ typedef enum
 {
     PM_SCENARIO_UI,
     PM_SCENARIO_AUDIO,
+    PM_SCENARIO_BLE,
+    PM_SCENARIO_APP,
     PM_SCENARIO_RFTEST,
 } pm_scenario_name_t;
 
@@ -153,26 +158,26 @@ typedef enum
 
 /* non-retention bss section definition macro */
 #if defined(__CC_ARM)
-    #define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(arm section zidata=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
-    #define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(arm section zidata))
+#define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(arm section zidata=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
+#define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(arm section zidata))
 
 #elif defined(__CLANG_ARM)
-    #define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(clang section bss=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
-    #define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(clang section bss=""))
+#define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(clang section bss=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
+#define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(clang section bss=""))
 #elif defined(__GNUC__)
-    #define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(clang section bss=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
-    #define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(clang section bss=""))
+#define PM_NON_RETENTION_SECTION_BEGIN    _Pragma(STRINGIFY(clang section bss=STRINGIFY(PM_NON_RETENTION_SECTION_NAME)))
+#define PM_NON_RETENTION_SECTION_END      _Pragma(STRINGIFY(clang section bss=""))
 #endif
 
 /// Sleep ticks
 extern rt_uint32_t g_sleep_tick;
 
 #ifdef SOC_BF0_HCPU
-    extern void pm_shutdown(void);
-    #ifdef BSP_USING_CHARGER
-        /* for charger int wakeup*/
-        extern int pm_get_charger_pin_wakeup(void);
-    #endif
+extern void pm_shutdown(void);
+#ifdef BSP_USING_CHARGER
+/* for charger int wakeup*/
+extern int pm_get_charger_pin_wakeup(void);
+#endif
 #endif
 
 /**
@@ -196,6 +201,15 @@ void aon_irq_handler_hook(uint32_t wsr);
  */
 uint32_t pm_get_wakeup_src(void);
 
+#ifdef SOC_BF0_HCPU
+/**
+* @brief get poweron wakeup source for non-cold boot
+*
+* @retval wakeup source, the value is same as hwp_pmuc->WSR
+*/
+uint32_t pm_get_pwron_wakeup_src(void);
+#endif
+
 /**
  * @brief get last low power mode
  *
@@ -204,14 +218,14 @@ uint32_t pm_get_wakeup_src(void);
 uint32_t pm_get_power_mode(void);
 
 #ifdef BSP_USING_PM
-    /**
-    * @brief Enable pin wakeup
-    *
-    * @param pin pin number, range: 0~5, 0 means H/LPAON_WAKEUP_SRC_PIN0, etc.
-    * @param mode pin wakeup mode
-    * @retval status
-    */
-    rt_err_t pm_enable_pin_wakeup(uint8_t pin, AON_PinModeTypeDef mode);
+/**
+* @brief Enable pin wakeup
+*
+* @param pin pin number, range: 0~5, 0 means H/LPAON_WAKEUP_SRC_PIN0, etc.
+* @param mode pin wakeup mode
+* @retval status
+*/
+rt_err_t pm_enable_pin_wakeup(uint8_t pin, AON_PinModeTypeDef mode);
 #endif
 
 /**
@@ -270,15 +284,15 @@ rt_err_t pm_scenario_start(pm_scenario_name_t scenario);
 rt_err_t pm_scenario_stop(pm_scenario_name_t scenario);
 
 #ifdef BSP_USING_PM
-    /**
-    * @brief weak pm_run function for frequency change
-    *
-    *  @param[in] pm   pm
-    *  @param[in] mode run mode, e.g. PM_RUN_MODE_HIGH_SPEED
-    *
-    * @return void
-    */
-    void sifli_pm_run(struct rt_pm *pm, uint8_t mode);
+/**
+* @brief weak pm_run function for frequency change
+*
+*  @param[in] pm   pm
+*  @param[in] mode run mode, e.g. PM_RUN_MODE_HIGH_SPEED
+*
+* @return void
+*/
+void sifli_pm_run(struct rt_pm *pm, uint8_t mode);
 #endif /* BSP_USING_PM */
 
 /**

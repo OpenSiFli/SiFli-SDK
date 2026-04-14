@@ -1,11 +1,15 @@
-# Using SF-PKG in Your Project
+# Using SiFli Package Registry in Your Project
 
-The following steps explain how to install and use SF-PKG dependencies in an existing project.
+The following steps explain how to install and use SiFli Package Registry dependencies in an existing project.
 
-## Initialize Dependencies (sf-pkg-init)
+```{note}
+Some screenshots on this page were captured with the old CLI format. If a screenshot differs from the text, follow the current `sdk.py sf-pkg ...` commands in the document.
+```
+
+## Initialize Dependencies (sf-pkg init)
 
 ```bash
-sdk.py sf-pkg-init
+sdk.py sf-pkg init
 ```
 
 Upon successful execution, a `conanfile.py` file will be generated in the `project` directory.
@@ -35,21 +39,23 @@ The format for each dependency is `<package_name>/<version>@<username>`.
 If you are unsure about the package name or version, you can search for it:
 
 ```bash
-sdk.py sf-pkg-search <package_name>
+sdk.py sf-pkg search <package_name>
 ```
 
 Example:
 
 ```bash
-sdk.py sf-pkg-search sht30
+sdk.py sf-pkg search sht30
 ```
+You can also search directly on the official website of the SiFli Package Registry: Click here to visit [SiFli Package Registry](https://packages.sifli.com/)
 
-## Install Dependencies (sf-pkg-install)
+
+## Install Dependencies (sf-pkg install)
 
 Execute the following command in the `project` directory of your project:
 
 ```bash
-sdk.py sf-pkg-install
+sdk.py sf-pkg install
 ```
 
 ![Install Dependencies](./assert/sf-pkg-install.png)

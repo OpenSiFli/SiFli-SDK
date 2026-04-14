@@ -278,6 +278,11 @@ extern "C" {
 #define SDMMC2_DMA_INSTANCE            DMA1_Channel3
 #define SDMMC2_DMA_IRQ                 DMAC1_CH3_IRQn
 
+#define SPI1_DMA_RX_IRQHandler       DMAC1_CH3_IRQHandler
+#define SPI1_RX_DMA_IRQ_PRIO         0
+#define SPI1_RX_DMA_INSTANCE         DMA1_Channel3
+#define SPI1_RX_DMA_IRQ              DMAC1_CH3_IRQn
+
 /* DMA1 channel4  */
 //PDM1 L
 #define PDM1_L_DMA_IRQHandler           DMAC1_CH4_IRQHandler
@@ -289,6 +294,11 @@ extern "C" {
 #define I2S_TX_DMA_IRQ_PRIO                     0
 #define I2S_TX_DMA_INSTANCE                DMA1_Channel4
 #define I2S_TX_DMA_IRQ                     DMAC1_CH4_IRQn
+
+#define SPI1_DMA_TX_IRQHandler       DMAC1_CH4_IRQHandler
+#define SPI1_TX_DMA_IRQ_PRIO         0
+#define SPI1_TX_DMA_INSTANCE         DMA1_Channel4
+#define SPI1_TX_DMA_IRQ              DMAC1_CH4_IRQn
 
 /* DMA1 channel5 */
 #define UART1_DMA_TX_IRQHandler          DMAC1_CH5_IRQHandler

@@ -2525,8 +2525,6 @@ static void decode_flush(AVCodecContext *avctx)
 }
 
 #ifdef USING_JPEG_DEC
-#include "jpeg_dec.h"
-
 av_cold int ff_mjpeg_hwdecode_init(AVCodecContext *avctx)
 {
     MJpegDecodeContext *s = avctx->priv_data;

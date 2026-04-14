@@ -1,5 +1,7 @@
-# USB复合设备示例项目
+# USB 复合设备示例
+
 源码路径：example\cherryusb\device\cdc_hid_msc
+
 ## 支持的开发板
 - SF32LB52_LCD_N16R8
 
@@ -69,11 +71,11 @@ Features:
 - HID: Virtual Keyboard
 ```
 3、从USB虚拟出来的串口发送消息会进行回显，同时物理UART将打印消息长度。
-例：从USB虚拟串口发送“SiFli”，此时会在打开了物理UART所在COM口的串口助手中看到
+例：从USB虚拟串口发送“SiFli”，此时会在打开了物理UART所在COM口的串口助手中看到（包含换行符的长度）
 ```
-CDC actual out len:5
+CDC actual out len:7
 
-CDC actual in len:5
+CDC actual in len:7
 ```
 同时，在打开了USB虚拟串口的串口助手中看到相同的文本被发送回来
 ```

@@ -11,8 +11,7 @@
 
 static const
 LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMG_PNG_DEMO
-uint8_t img_png_demo_map[] =
-{
+uint8_t img_png_demo_map[] = {
 
     0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
     0x00, 0x00, 0x00, 0xa0, 0x00, 0x00, 0x00, 0x78, 0x08, 0x06, 0x00, 0x00, 0x00, 0x75, 0xa2, 0xf9,
@@ -1305,14 +1304,15 @@ uint8_t img_png_demo_map[] =
 
 };
 
-const lv_image_dsc_t img_png_demo =
-{
-    .header.magic = LV_IMAGE_HEADER_MAGIC,
-    .header.cf = LV_COLOR_FORMAT_RAW_ALPHA,
-    .header.flags = 0,
-    .header.w = 160,
-    .header.h = 120,
-    .header.stride = 0,
+const lv_image_dsc_t img_png_demo = {
+    .header = {
+        .magic = LV_IMAGE_HEADER_MAGIC,
+        .cf = LV_COLOR_FORMAT_RAW_ALPHA,
+        .flags = 0,
+        .w = 160,
+        .h = 120,
+        .stride = 0,
+    },
     .data_size = sizeof(img_png_demo_map),
     .data = img_png_demo_map,
 };

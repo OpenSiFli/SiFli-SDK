@@ -85,6 +85,14 @@ typedef enum
     DRV_EPIC_INVALID = 0xFFFF,      //Invalid
 } drv_epic_op_type_t;
 
+typedef enum
+{
+    DRV_EPIC_ROT_NONE = 0,
+    DRV_EPIC_ROT_90,
+    DRV_EPIC_ROT_180,
+    DRV_EPIC_ROT_270
+} drv_epic_rotate_t;
+
 typedef struct
 {
     const uint8_t *data;
@@ -265,6 +273,9 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op);
 rt_err_t drv_epic_render_msg_commit(EPIC_MsgTypeDef *p_msg);
 
 rt_err_t drv_epic_render_trav(drv_epic_render_list_t list, drv_epic_render_trav_cb cb, void *usr_data);
+
+rt_err_t drv_epic_set_rotation(drv_epic_rotate_t rotate);
+drv_epic_rotate_t drv_epic_get_rotation(void);
 #endif /* DRV_EPIC_NEW_API */
 
 EPIC_HandleTypeDef *drv_get_epic_handle(void);

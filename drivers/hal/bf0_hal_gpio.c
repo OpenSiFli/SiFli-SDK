@@ -79,7 +79,7 @@
 
 #define SET_OPEN_DRAIN_FLAG(gpiox,mask) do{ \
         gpiox->DOR  &= ~(mask); \
-        gpiox->ITCR |= (mask);  \
+        gpiox->ITCR = (mask);  \
         gpiox->IPSR |= (mask);  \
         gpiox->IPCR |= (mask);  \
 }while(0)
@@ -92,14 +92,14 @@
 #endif
 
 #ifndef SF32LB55X
-#define DISABLE_ISR(gpiox,mask)  do{(gpiox)->IECR |= (mask); \
-                                        (gpiox)->IECR_EXT |= (mask); \
+#define DISABLE_ISR(gpiox,mask)  do{(gpiox)->IECR = (mask); \
+                                        (gpiox)->IECR_EXT = (mask); \
                                         WAIT_ISR_DISABLED(); /*Wait IER/IER_EXT deactive*/ \
                                         (gpiox)->ISR = (mask); \
                                         (gpiox)->ISR_EXT = (mask); \
                                         }while(0)
 #else
-#define DISABLE_ISR(gpiox,mask)  do{(gpiox)->IECR |= (mask); \
+#define DISABLE_ISR(gpiox,mask)  do{(gpiox)->IECR = (mask); \
                                         WAIT_ISR_DISABLED();  /*Wait IER deactive*/\
                                          (gpiox)->ISR = (mask); \
                                         }while(0)
@@ -210,7 +210,7 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
 
         if (GPIO_Init->Mode == GPIO_MODE_IT_RISING)
         {
-            gpiox->ITSR |= (1UL << offset);
+            gpiox->ITSR = (1UL << offset);
 #ifndef SF32LB55X
             gpiox->IPHSR = (1UL << offset);
             gpiox->IPLCR = (1UL << offset);
@@ -222,7 +222,7 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
         }
         else if (GPIO_Init->Mode == GPIO_MODE_IT_FALLING)
         {
-            gpiox->ITSR |= (1UL << offset);
+            gpiox->ITSR = (1UL << offset);
 #ifndef SF32LB55X
             gpiox->IPHCR = (1UL << offset);
             gpiox->IPLSR = (1UL << offset);
@@ -233,7 +233,7 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
         }
         else if (GPIO_Init->Mode == GPIO_MODE_IT_RISING_FALLING)
         {
-            gpiox->ITSR |= (1UL << offset);
+            gpiox->ITSR = (1UL << offset);
 #ifndef SF32LB55X
             gpiox->IPHSR = (1UL << offset);
             gpiox->IPLSR = (1UL << offset);
@@ -244,7 +244,7 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
         }
         else if (GPIO_Init->Mode == GPIO_MODE_IT_HIGH_LEVEL)
         {
-            gpiox->ITCR |= (1UL << offset);
+            gpiox->ITCR = (1UL << offset);
 #ifndef SF32LB55X
             gpiox->IPHSR = (1UL << offset);
             gpiox->IPLCR = (1UL << offset);
@@ -255,7 +255,7 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
         }
         else if (GPIO_Init->Mode == GPIO_MODE_IT_LOW_LEVEL)
         {
-            gpiox->ITCR |= (1UL << offset);
+            gpiox->ITCR = (1UL << offset);
 #ifndef SF32LB55X
             gpiox->IPHCR = (1UL << offset);
             gpiox->IPLSR = (1UL << offset);
@@ -268,14 +268,14 @@ __HAL_ROM_USED void HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_In
 #ifndef SF32LB55X
         if (IS_CURRENT_SYS_GPIO(hgpio))
         {
-            gpiox->IESR |= (1 << offset);
+            gpiox->IESR = (1 << offset);
         }
         else
         {
-            gpiox->IESR_EXT |= (1 << offset);
+            gpiox->IESR_EXT = (1 << offset);
         }
 #else
-        gpiox->IESR |= (1 << offset);
+        gpiox->IESR = (1 << offset);
 #endif /* SF32LB55X */
 
     }
@@ -301,7 +301,7 @@ __HAL_ROM_USED void HAL_GPIO_DeInit(GPIO_TypeDef *hgpio, uint32_t GPIO_Pin)
         return;
     }
 
-    gpiox->DOECR |= (1UL << offset);
+    gpiox->DOECR = (1UL << offset);
     DISABLE_ISR(gpiox, (1UL << offset));
     CLEAR_OPEN_DRAIN_FLAG(gpiox, (1UL << offset));
 }
@@ -403,11 +403,11 @@ __HAL_ROM_USED void HAL_GPIO_WritePin(GPIO_TypeDef *hgpio, uint16_t GPIO_Pin, GP
     {
         if (PinState == GPIO_PIN_RESET)
         {
-            gpiox->DOESR |= (1UL << offset);
+            gpiox->DOESR = (1UL << offset);
         }
         else
         {
-            gpiox->DOECR |= (1UL << offset);
+            gpiox->DOECR = (1UL << offset);
         }
     }
     else

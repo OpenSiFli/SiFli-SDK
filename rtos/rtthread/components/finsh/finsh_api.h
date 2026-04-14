@@ -11,8 +11,8 @@
 #define FINSH_API_H__
 
 #if defined(_MSC_VER)
-#pragma section("FSymTab$f",read)
-#pragma section("VSymTab",read)
+    #pragma section("FSymTab$f",read)
+    #pragma section("VSymTab",read)
 #endif
 
 typedef long (*syscall_func)(void);
@@ -20,27 +20,27 @@ typedef long (*syscall_func)(void);
 /* system call table */
 struct finsh_syscall
 {
-    const char*     name;       /* the name of system call */
+    const char     *name;       /* the name of system call */
 #if defined(FINSH_USING_DESCRIPTION) && defined(FINSH_USING_SYMTAB)
-    const char*     desc;       /* description of system call */
+    const char     *desc;       /* description of system call */
 #endif
     syscall_func func;      /* the function address of system call */
 };
 extern struct finsh_syscall *_syscall_table_begin, *_syscall_table_end;
 
 /* find out system call, which should be implemented in user program */
-struct finsh_syscall* finsh_syscall_lookup(const char* name);
+struct finsh_syscall *finsh_syscall_lookup(const char *name);
 
 #ifdef FINSH_USING_SYMTAB
 
 #ifdef __TI_COMPILER_VERSION__
-#define __TI_FINSH_EXPORT_FUNCTION(f)  PRAGMA(DATA_SECTION(f,"FSymTab"))
-#define __TI_FINSH_EXPORT_VAR(v)       PRAGMA(DATA_SECTION(v,"VSymTab"))
+    #define __TI_FINSH_EXPORT_FUNCTION(f)  PRAGMA(DATA_SECTION(f,"FSymTab"))
+    #define __TI_FINSH_EXPORT_VAR(v)       PRAGMA(DATA_SECTION(v,"VSymTab"))
 #endif
 
-    #ifdef FINSH_USING_DESCRIPTION
-        #ifdef _MSC_VER
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
+#ifdef FINSH_USING_DESCRIPTION
+#ifdef _MSC_VER
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
                 const char __fsym_##cmd##_name[] = #cmd;            \
                 const char __fsym_##cmd##_desc[] = #desc;           \
                 __declspec(allocate("FSymTab$f"))                   \
@@ -50,9 +50,9 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     __fsym_##cmd##_desc,    \
                     (syscall_func)&name     \
                 };
-            #pragma comment(linker, "/merge:FSymTab=mytext")
+#pragma comment(linker, "/merge:FSymTab=mytext")
 
-            #define FINSH_VAR_EXPORT(name, type, desc)              \
+#define FINSH_VAR_EXPORT(name, type, desc)              \
                 const char __vsym_##name##_name[] = #name;          \
                 const char __vsym_##name##_desc[] = #desc;          \
                 __declspec(allocate("VSymTab"))                     \
@@ -64,8 +64,8 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name            \
                 };
 
-        #elif defined(__TI_COMPILER_VERSION__)
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
+#elif defined(__TI_COMPILER_VERSION__)
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
                 __TI_FINSH_EXPORT_FUNCTION(__fsym_##cmd);           \
                 const char __fsym_##cmd##_name[] = #cmd;            \
                 const char __fsym_##cmd##_desc[] = #desc;           \
@@ -76,7 +76,7 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (syscall_func)&name     \
                 };
 
-            #define FINSH_VAR_EXPORT(name, type, desc)              \
+#define FINSH_VAR_EXPORT(name, type, desc)              \
                 __TI_FINSH_EXPORT_VAR(__vsym_##name);               \
                 const char __vsym_##name##_name[] = #name;          \
                 const char __vsym_##name##_desc[] = #desc;          \
@@ -88,8 +88,8 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name            \
                 };
 
-        #else
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)                      \
+#else
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)                      \
                 const char __fsym_##cmd##_name[] SECTION(".rodata.name") = #cmd;    \
                 const char __fsym_##cmd##_desc[] SECTION(".rodata.name") = #desc;   \
                 RT_USED const struct finsh_syscall __fsym_##cmd SECTION("FSymTab")= \
@@ -99,7 +99,7 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (syscall_func)&name     \
                 };
 
-            #define FINSH_VAR_EXPORT(name, type, desc)                              \
+#define FINSH_VAR_EXPORT(name, type, desc)                              \
                 const char __vsym_##name##_name[] SECTION(".rodata.name") = #name;  \
                 const char __vsym_##name##_desc[] SECTION(".rodata.name") = #desc;  \
                 RT_USED const struct finsh_sysvar __vsym_##name SECTION("VSymTab")= \
@@ -110,10 +110,10 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name            \
                 };
 
-        #endif
-    #else
-        #ifdef _MSC_VER
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
+#endif
+#else
+#ifdef _MSC_VER
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
                 const char __fsym_##cmd##_name[] = #cmd;            \
                 __declspec(allocate("FSymTab$f"))                   \
                 const struct finsh_syscall __fsym_##cmd =           \
@@ -121,9 +121,9 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     __fsym_##cmd##_name,    \
                     (syscall_func)&name     \
                 };
-            #pragma comment(linker, "/merge:FSymTab=mytext")
+#pragma comment(linker, "/merge:FSymTab=mytext")
 
-            #define FINSH_VAR_EXPORT(name, type, desc)              \
+#define FINSH_VAR_EXPORT(name, type, desc)              \
                 const char __vsym_##name##_name[] = #name;          \
                 __declspec(allocate("VSymTab")) const struct finsh_sysvar __vsym_##name = \
                 {                                                                         \
@@ -132,8 +132,8 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name                                                          \
                 };
 
-        #elif defined(__TI_COMPILER_VERSION__)
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
+#elif defined(__TI_COMPILER_VERSION__)
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)      \
                 __TI_FINSH_EXPORT_FUNCTION(__fsym_##cmd);           \
                 const char __fsym_##cmd##_name[] = #cmd;            \
                 const struct finsh_syscall __fsym_##cmd =           \
@@ -142,7 +142,7 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (syscall_func)&name     \
                 };
 
-            #define FINSH_VAR_EXPORT(name, type, desc)              \
+#define FINSH_VAR_EXPORT(name, type, desc)              \
                 __TI_FINSH_EXPORT_VAR(__vsym_##name);               \
                 const char __vsym_##name##_name[] = #name;          \
                 const struct finsh_sysvar __vsym_##name =           \
@@ -152,8 +152,8 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name                                    \
                 };
 
-        #else
-            #define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)                      \
+#else
+#define FINSH_FUNCTION_EXPORT_CMD(name, cmd, desc)                      \
                 const char __fsym_##cmd##_name[] = #cmd;                            \
                 RT_USED const struct finsh_syscall __fsym_##cmd SECTION("FSymTab")= \
                 {                                                                   \
@@ -161,7 +161,7 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (syscall_func)&name                                             \
                 };
 
-            #define FINSH_VAR_EXPORT(name, type, desc)                              \
+#define FINSH_VAR_EXPORT(name, type, desc)                              \
                 const char __vsym_##name##_name[] = #name;                          \
                 RT_USED const struct finsh_sysvar __vsym_##name SECTION("VSymTab")= \
                 {                                                                   \
@@ -170,8 +170,8 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
                     (void*)&name                                                    \
                 };
 
-        #endif
-    #endif /* end of FINSH_USING_DESCRIPTION */
+#endif
+#endif /* end of FINSH_USING_DESCRIPTION */
 #endif /* end of FINSH_USING_SYMTAB */
 
 /**
@@ -205,14 +205,24 @@ struct finsh_syscall* finsh_syscall_lookup(const char* name);
  * @param command the name of command.
  * @param desc the description of command, which will show in help.
  */
-#ifdef FINSH_USING_MSH
+#if defined (FINSH_USING_MSH)
+#if !defined (MSH_CMD_SLIM)
 #define MSH_CMD_EXPORT(command, desc)   \
     FINSH_FUNCTION_EXPORT_CMD(command, __cmd_##command, desc)
 #define MSH_CMD_EXPORT_ALIAS(command, alias, desc)  \
     FINSH_FUNCTION_EXPORT_ALIAS(command, __cmd_##alias, desc)
-#else
+#endif
+#define MSH_CMD_EXPORT_REL(command, alias, desc)  \
+    FINSH_FUNCTION_EXPORT_ALIAS(command, __cmd_##alias, desc)
+#endif
+#ifndef MSH_CMD_EXPORT
 #define MSH_CMD_EXPORT(command, desc)
+#endif
+#ifndef MSH_CMD_EXPORT_ALIAS
 #define MSH_CMD_EXPORT_ALIAS(command, alias, desc)
+#endif
+#ifndef MSH_CMD_EXPORT_REL
+    #define MSH_CMD_EXPORT_REL(command, alias, desc)
 #endif
 
 #endif

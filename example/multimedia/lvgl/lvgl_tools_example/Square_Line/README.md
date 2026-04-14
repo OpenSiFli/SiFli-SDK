@@ -1,4 +1,5 @@
 # SquareLine示例（RT-Thread）
+源码路径：example/multimedia/lvgl/lvgl_tools_example/Square_Line
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

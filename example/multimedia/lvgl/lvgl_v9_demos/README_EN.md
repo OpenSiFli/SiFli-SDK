@@ -13,9 +13,10 @@ This example demonstrates the official LVGL V9 demo applications. You can use me
 ## Supported Development Boards
 
 <!-- Which boards and chip platforms are supported -->
-- Boards after 55x series, such as 58x, 56x, 52x
-- SF32LB52x series
-- SF32LB56x series
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+
 
 ## Hardware Requirements
 

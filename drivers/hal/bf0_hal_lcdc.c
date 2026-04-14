@@ -607,7 +607,7 @@ static HAL_StatusTypeDef SetOutFormat(LCDC_HandleTypeDef *lcdc, HAL_LCDC_PixelFo
         break;
 
 #ifndef SF32LB55X
-    case LCDC_PIXEL_FORMAT_RGB565_SWAP:
+    case LCDC_PIXEL_FORMAT_BGR565_SWAP:
         reg_v |= (0 << LCD_IF_LCD_CONF_AHB_FORMAT_Pos)                // AHB LCD/RAM
                  | (1 << LCD_IF_LCD_CONF_DPI_LCD_FORMAT_Pos)           // DPI LCD
                  | (1 << LCD_IF_LCD_CONF_SPI_LCD_FORMAT_Pos)           // SPI LCD
@@ -1559,7 +1559,8 @@ static HAL_StatusTypeDef _SendLayerData(LCDC_HandleTypeDef *lcdc, LCDC_AsyncMode
         lcdc->Instance->SETTING |= LCD_IF_SETTING_JDI_PARL_INTR_MASK | LCD_IF_SETTING_EOF_MASK;
         //Pull up rst
         lcdc->Instance->JDI_PAR_CTRL |= LCD_IF_JDI_PAR_CTRL_XRST;
-        HAL_Delay_us(35);
+        if (jdi_cfg->customer_timing_en) HAL_Delay_us(jdi_cfg->VST_dly_us);
+        else HAL_Delay_us(35);
         lcdc->Instance->JDI_PAR_CTRL |=  LCD_IF_JDI_PAR_CTRL_ENABLE; //send data
         HAL_Delay_us(1); //Wait digital start send data
 
@@ -1764,7 +1765,7 @@ static void LCDC_TransErrCallback(LCDC_HandleTypeDef *lcdc, HAL_StatusTypeDef er
 static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc)
 {
     uint32_t lcdc_clk_Hz = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-    uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
+    // uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
     JDI_LCD_CFG *jdi_cfg = &(lcdc->Init.cfg.jdi);
 
     uint32_t max_col, max_line;
@@ -1779,9 +1780,18 @@ static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc)
     uint32_t hck_dly_tk = hck_tk / 2;
 
     uint32_t vck_tk     = hck_tk * max_col;
-    uint32_t vst_tk     = vck_tk;
-    uint32_t vck_dly_tk = vck_tk / 2;
+    uint32_t vst_tk, vck_dly_tk;
 
+    if (jdi_cfg->customer_timing_en)
+    {
+        vst_tk     = lcdc_clk_Hz * jdi_cfg->VST_width_0p1us / 10000000;
+        vck_dly_tk = lcdc_clk_Hz * jdi_cfg->VCK_dly_0p1us / 10000000;
+    }
+    else
+    {
+        vst_tk     = vck_tk;
+        vck_dly_tk = vck_tk / 2;
+    }
 
     HAL_LCDC_ASSERT(hst_tk <= GET_REG_VAL(LCD_IF_JDI_PAR_CONF4_HST_WIDTH_Msk, LCD_IF_JDI_PAR_CONF4_HST_WIDTH_Msk, LCD_IF_JDI_PAR_CONF4_HST_WIDTH_Pos));
     HAL_LCDC_ASSERT(hck_tk <= GET_REG_VAL(LCD_IF_JDI_PAR_CONF4_HCK_WIDTH_Msk, LCD_IF_JDI_PAR_CONF4_HCK_WIDTH_Msk, LCD_IF_JDI_PAR_CONF4_HCK_WIDTH_Pos));

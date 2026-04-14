@@ -159,7 +159,7 @@ int board_boot_from(void)
 {
     uint32_t pid = (hwp_hpsys_cfg->IDR & HPSYS_CFG_IDR_PID_Msk) >> HPSYS_CFG_IDR_PID_Pos;
     int r;
-
+    hwp_pmuc->CR &= ~PMUC_CR_PIN_RET;
     pid &= 7;
     if (BOOT_SIP_NONE == pid)
         board_pinmux_mpi1_none();
@@ -171,7 +171,6 @@ int board_boot_from(void)
     else
 #ifdef CFG_BOOTROM
     {
-        hwp_pmuc->CR &= ~PMUC_CR_PIN_RET;
         HAL_Delay_us(100);
 
         // Use external PIN(DIO1,DIO3) to detect NOR/NAND/SD-NAND

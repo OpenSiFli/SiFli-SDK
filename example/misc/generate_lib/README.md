@@ -1,4 +1,5 @@
 # 生成Lib例程
+源码路径：example/misc/generate_lib
 
 ## 支持的平台和编译环境
 <!-- 支持哪些板子和芯片平台 -->

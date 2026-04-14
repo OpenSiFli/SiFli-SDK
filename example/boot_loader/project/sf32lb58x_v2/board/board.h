@@ -13,6 +13,7 @@
 
 #include <rtconfig.h>
 #include <register.h>
+#include "drv_io.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,6 +49,8 @@ extern int __bss_end;
 
 void SystemClock_Config(void);
 
+void boot_sd1_power_on(void);
+void boot_sd2_power_on(void);
 #ifdef __cplusplus
 }
 #endif

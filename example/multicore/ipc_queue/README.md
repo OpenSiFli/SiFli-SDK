@@ -13,6 +13,8 @@ IPC Queue示例展示了如何在SiFli-SDK中使用跨核队列（IPC Queue）�
 - ec-lb587
 - eh-lb561
 - eh-lb563
+- sf32lb56-lcd系列
+- sf32lb58-lcd系列
 
 ### 硬件需求
 本示例无需特殊硬件，可直接在支持的开发板上运行。

@@ -102,8 +102,13 @@ Radial gradient as background
   :language: c
 
 Gradients for button background
------------------------------
+-------------------------------
 
 .. lv_example:: styles/lv_example_style_18
   :language: c
 
+Test between recolor style or full background modal
+---------------------------------------------------
+
+.. lv_example:: styles/lv_example_style_19
+  :language: c

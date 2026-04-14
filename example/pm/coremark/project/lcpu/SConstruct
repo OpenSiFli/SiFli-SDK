@@ -5,5 +5,5 @@ from building import *
 
 PrepareEnv()
 
-env = SConstruct.create_env()
-SConstruct.build(env)
+SConstruct.create_env()
+SConstruct.build()

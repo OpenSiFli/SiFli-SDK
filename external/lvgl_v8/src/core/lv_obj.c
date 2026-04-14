@@ -425,6 +425,18 @@ static void lv_obj_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
     obj->flags |= LV_OBJ_FLAG_SCROLL_WITH_ARROW;
     if(parent) obj->flags |= LV_OBJ_FLAG_GESTURE_BUBBLE;
 
+#if LV_USE_OBJ_REALIGN
+    obj->realign.align = LV_ALIGN_CENTER;
+    obj->realign.xofs = 0;
+    obj->realign.yofs = 0;
+    obj->realign.base = NULL;
+    _lv_ll_init(&(obj->realign.realign_obj_ll), sizeof(lv_realign_obj_t));
+#endif
+
+    /* The default setting is asynchronous rendering mode, 
+       it will only take effect when the obj is created as the an screen. */
+    obj->render_async = 1;
+
     LV_TRACE_OBJ_CREATE("finished");
 }
 
@@ -442,6 +454,9 @@ static void lv_obj_destructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
     /*Remove the animations from this object*/
     lv_anim_del(obj, NULL);
 
+#if LV_USE_OBJ_REALIGN
+    lv_obj_realign_remove_all(obj);
+#endif
     /*Delete from the group*/
     lv_group_t * group = lv_obj_get_group(obj);
     if(group) lv_group_remove_obj(obj);
@@ -828,6 +843,14 @@ static void lv_obj_event(const lv_obj_class_t * class_p, lv_event_t * e)
             lv_obj_t * child = obj->spec_attr->children[i];
             lv_obj_mark_layout_as_dirty(child);
         }
+        
+#if LV_USE_OBJ_REALIGN
+        lv_realign_obj_t *realign_obj;
+        _LV_LL_READ((const lv_ll_t *)&obj->realign.realign_obj_ll, realign_obj)
+        {
+            lv_obj_realign(realign_obj->obj);
+        }
+#endif
     }
     else if(code == LV_EVENT_CHILD_CHANGED) {
         lv_coord_t w = lv_obj_get_style_width(obj, LV_PART_MAIN);
@@ -946,3 +969,11 @@ static bool obj_valid_child(const lv_obj_t * parent, const lv_obj_t * obj_to_fin
     }
     return false;
 }
+
+void lv_obj_set_render_async(lv_obj_t *obj, uint16_t async)
+{
+    LV_ASSERT_OBJ(obj, MY_CLASS);
+
+    obj->render_async = async;
+}
+

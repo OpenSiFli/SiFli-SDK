@@ -1,3 +1,12 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+
+
+
 /* Includes ------------------------------------------------------------------*/
 #include <rtthread.h>
 #include "bf0_hal.h"
@@ -75,6 +84,9 @@ static void mpu_clear_region(void)
         ARM_MPU_ClrRegion(i);
     }
 }
+
+//!use default
+#if 0
 void mpu_config(void)
 {
 //#if defined (__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
@@ -155,6 +167,7 @@ void mpu_config(void)
 //#endif
 
 }
+#endif
 
 #if 1
 void HAL_PostMspInit(void)

@@ -1,4 +1,4 @@
-# host_hid_example
+# USB HID 主机示例
 
 源码路径：example\cherryusb\host\hid
 

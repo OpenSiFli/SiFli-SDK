@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*********************
  *      INCLUDES
  *********************/
@@ -320,6 +326,28 @@ bool gui_app_is_actived(char *id)
     return ret;
 }
 
+bool gui_page_is_actived(const char *app_id, const char *pg_id)
+{
+    bool ret;
+
+    rt_enter_critical();
+    gui_runing_app_t *p_app = app_schedule_get_active();
+    subpage_node_t *p_page = gui_app_page_get_actived();
+
+    if (p_app && p_page)
+    {
+        ret = (0 == strcmp(p_app->id, app_id) && 0 == strcmp(p_page->name, pg_id)) ? RT_TRUE : RT_FALSE;
+    }
+    else
+    {
+        ret = RT_FALSE;
+    }
+
+    rt_exit_critical();
+
+    return ret;
+}
+
 bool gui_app_is_page_present(char *id)
 {
     bool ret;
@@ -557,6 +585,17 @@ void *gui_app_this_page_userdata(void)
         return p_page->user_data;
     else
         return NULL;
+}
+
+
+
+void *gui_app_this_page_memory(void)
+{
+    /*
+     * The current SDK app framework does not maintain per-page private memory yet.
+     * Keep this compatibility entry so reg_fwk users can adopt the newer API shape.
+     */
+    return NULL;
 }
 
 

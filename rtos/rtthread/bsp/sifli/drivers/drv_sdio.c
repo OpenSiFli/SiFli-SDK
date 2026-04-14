@@ -7,7 +7,9 @@
 #include "board.h"
 #include "drv_sdio.h"
 #include "drv_config.h"
-
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    #include "drv_switch_mpi2_sdio.h"
+#endif
 /** @addtogroup bsp_driver Driver IO
   * @{
   */
@@ -36,10 +38,13 @@
     #error "SDIO_USING_DMA must be defined,the DMA function of sdio must be enabled"
 #endif
 int rt_hw_sdio_init(void);
-
+int rthw_sdio_irq_process(struct rt_mmcsd_host *host);
 static struct sifli_sdio_config sdio_config = SDIO_BUS_CONFIG;
 static struct sifli_sdio_class sdio_obj;
 static struct rt_mmcsd_host *sdio_host;
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    static uint8_t sdio_card_inserted = 0; // 0: not inserted, 1: inserted
+#endif /* SD_INSERT_DETECT_PIN */
 #ifdef RT_USING_PM
     static struct rt_device rt_sdio_device;
 #endif /* RT_USING_PM */
@@ -73,6 +78,9 @@ struct rthw_sdio
 ALIGN(SDIO_ALIGN_LEN)
 //static rt_uint8_t cache_buf[SDIO_BUFF_SIZE];
 HAL_RETM_BSS_SECT(cache_buf, static rt_uint8_t cache_buf[SDIO_BUFF_SIZE]);
+
+/* irq state, 0: enabled, 1: disabled */
+static rt_uint32_t sdio_irq_state = 0;
 
 static rt_uint32_t sifli_sdio_clk_get(SD_TypeDef *hw_sdio)
 {
@@ -204,6 +212,16 @@ void rt_hw_sdio_timeout_handle(void)
     recov_sdio_reg();
 }
 
+void rthw_set_irq_enable_status(struct rt_mmcsd_host *host, rt_uint32_t res)
+{
+    sdio_irq_state = res;
+}
+
+rt_uint32_t rthw_get_irq_enable_status(struct rt_mmcsd_host *host)
+{
+    return sdio_irq_state;
+}
+
 /**
     * @brief  Wait SDIO command/data completion and process status/response.
     * @param  sdio  rthw_sdio context
@@ -218,18 +236,30 @@ void rt_hw_sdio_timeout_handle(void)
     */
 static int rthw_sdio_wait_completed(struct rthw_sdio *sdio)
 {
-    rt_uint32_t status, rci;
+    rt_uint32_t status = 0, rci;
     struct rt_mmcsd_cmd *cmd = sdio->pkg->cmd;
     struct rt_mmcsd_data *data = cmd->data;
     SD_TypeDef *hw_sdio = sdio->sdio_des.hw_sdio;
-
-    if (rt_event_recv(&sdio->event, 0xffffffff, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
-                      rt_tick_from_millisecond(5000), &status) != RT_EOK)
+    if (rthw_get_irq_enable_status(RT_NULL))
     {
-        LOG_E("wait %d completed timeout 0x%08x,arg 0x%08x\n", cmd->cmd_code, HAL_SDMMC_GET_STA(hw_sdio), cmd->arg);
-        cmd->err = -RT_ETIMEOUT;
-        rt_hw_sdio_timeout_handle();
-        return 0;
+        while (1)
+        {
+            status = rthw_sdio_irq_process(sdio_host);
+            if (status) break;
+            for (int i = 0; i < 10000; i
+                    ++) {;}
+        }
+    }
+    else
+    {
+        if (rt_event_recv(&sdio->event, 0xffffffff, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
+                          rt_tick_from_millisecond(500), &status) != RT_EOK)
+        {
+            LOG_E("wait %d completed timeout 0x%08x,arg 0x%08x\n", cmd->cmd_code, HAL_SDMMC_GET_STA(hw_sdio), cmd->arg);
+            cmd->err = -RT_ETIMEOUT;
+            rt_hw_sdio_timeout_handle();
+            return 0;
+        }
     }
 
     if (sdio->pkg == RT_NULL)
@@ -691,7 +721,9 @@ static void rthw_sdio_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *r
     struct sdio_pkg pkg;
     struct rthw_sdio *sdio = host->private_data;
     struct rt_mmcsd_data *data;
-
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_sdio_lock();
+#endif
     RTHW_SDIO_LOCK(sdio);
 
     if (req->cmd != RT_NULL)
@@ -738,6 +770,9 @@ static void rthw_sdio_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *r
     RTHW_SDIO_UNLOCK(sdio);
 
     mmcsd_req_complete(sdio->host);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_sdio_unlock();
+#endif
 }
 
 static int rthw_sdio_set_clk(struct rt_mmcsd_host *host, uint32_t clk)
@@ -779,9 +814,13 @@ static int rthw_sdio_set_clk(struct rt_mmcsd_host *host, uint32_t clk)
     return 0;
 }
 
-void sdio_update_clk(void)
+void rthw_sdio_update_clk(void)
 {
-    rthw_sdio_set_clk(sdio_host, SDIO_MAX_FREQ);
+    rt_uint32_t clk = HAL_RCC_GetHCLKFreq(CORE_ID_HCPU);
+    HAL_SDMMC_CLK_SET((SD_TypeDef *)SDCARD_INSTANCE, 1, 0);
+    HAL_Delay(1);
+    rt_uint32_t sdio_clk = clk >= 240000000 ? SDIO_MAX_FREQ : 24000000;
+    rthw_sdio_set_clk(sdio_host, sdio_clk);
 }
 
 /**
@@ -795,7 +834,9 @@ static void rthw_sdio_iocfg(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *
     rt_uint32_t clk = io_cfg->clock;
     struct rthw_sdio *sdio = (struct rthw_sdio *)host->private_data;
     SD_TypeDef *hw_sdio = sdio->sdio_des.hw_sdio;
-
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_sdio_lock();
+#endif
     LOG_D("clk:%d width:%s%s%s power:%s%s%s",
           clk,
           io_cfg->bus_width == MMCSD_BUS_WIDTH_8 ? "8" : "",
@@ -832,6 +873,9 @@ static void rthw_sdio_iocfg(struct rt_mmcsd_host *host, struct rt_mmcsd_io_cfg *
     }
 
     RTHW_SDIO_UNLOCK(sdio);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_sdio_unlock();
+#endif
 }
 
 /**
@@ -881,7 +925,7 @@ static rt_int32_t rthw_sd_delect(struct rt_mmcsd_host *host)
   * @param  host  rt_mmcsd_host
   * @retval None
   */
-void rthw_sdio_irq_process(struct rt_mmcsd_host *host)
+int rthw_sdio_irq_process(struct rt_mmcsd_host *host)
 {
     int complete = 0;
     struct rthw_sdio *sdio = host->private_data;
@@ -979,8 +1023,11 @@ void rthw_sdio_irq_process(struct rt_mmcsd_host *host)
         rt_uint32_t mask = HAL_SDMMC_GET_IRQ_MASK(hw_sdio);
         mask &= ~HW_SDIO_ERRORS;
         HAL_SDMMC_SET_IRQ_MASK(hw_sdio, mask);
+        if (rthw_get_irq_enable_status(RT_NULL))
+            return intstatus;
         rt_event_send(&sdio->event, intstatus);
     }
+    return 0;
 }
 
 static const struct rt_mmcsd_host_ops ops =
@@ -989,6 +1036,8 @@ static const struct rt_mmcsd_host_ops ops =
     rthw_sdio_iocfg,
     rthw_sd_delect,
     rthw_sdio_irq_update,
+    rthw_get_irq_enable_status,
+    rthw_set_irq_enable_status,
 };
 
 /**
@@ -1035,6 +1084,8 @@ struct rt_mmcsd_host *sdio_host_create(struct sifli_sdio_des *sdio_des)
     rt_mutex_init(&sdio->mutex, "sdio", RT_IPC_FLAG_FIFO);
 
     /* set host defautl attributes */
+    rt_strncpy(host->name, sdio_config.name, sizeof(host->name) - 1);
+    host->name[RT_NAME_MAX - 1] = '\0';
     host->ops = &ops;
     host->freq_min = SDIO_MIN_FREQ;
     host->freq_max = SDIO_MAX_FREQ; //SDIO_MAX_FREQ; // ??
@@ -1057,9 +1108,29 @@ struct rt_mmcsd_host *sdio_host_create(struct sifli_sdio_des *sdio_des)
     sdio->part_offset = 0;
 
     rthw_sdio_irq_update(host, 1);
-
-    /* ready to change */
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    rt_pin_mode(SD_INSERT_DETECT_PIN, PIN_MODE_INPUT);
+    int card_state = rt_pin_read(SD_INSERT_DETECT_PIN);
+    rt_thread_mdelay(10);
+    if (card_state == rt_pin_read(SD_INSERT_DETECT_PIN))
+    {
+        if (card_state)
+        {
+            rt_kprintf("[SD] no card (pin %d), skip drv_sdio\n", SD_INSERT_DETECT_PIN);
+            sdio_card_inserted = 0;
+            return RT_EOK;
+        }
+        else
+        {
+            sdio_card_inserted = 1;
+            mmcsd_change(host);
+        }
+    }
+#else
     mmcsd_change(host);
+#endif /* SD_INSERT_DETECT_PIN */
+    /* ready to change */
+
 
     return host;
 }
@@ -1419,6 +1490,8 @@ static void rt_sdio_register_rt_device(void)
 int rt_hw_sdio_init(void)
 {
     struct sifli_sdio_des sdio_des;
+    rt_uint8_t priority = RT_MMCSD_THREAD_PREORITY;
+
 #ifdef SF32LB52X
     HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
 #else
@@ -1451,6 +1524,35 @@ int rt_hw_sdio_init(void)
 #else
     LOG_I("SDIO USING POLLING MODE !\n");
 #endif
+#ifdef RT_USING_PM
+    // if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
+    {
+#ifdef PM_STANDBY_ENABLE
+        rt_sdio_register_rt_device();
+#endif
+        rt_pm_request(PM_SLEEP_MODE_IDLE);
+        rt_pm_hw_device_start();
+        uint32_t time_out = 3000;
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+        if (!sdio_card_inserted)
+            time_out = 1;
+#endif
+        while (time_out--)
+        {
+            rt_thread_mdelay(1);
+            uint8_t mmcsd_get_stat(void);
+            if (mmcsd_get_stat()) break;
+        }
+        rt_pm_release(PM_SLEEP_MODE_IDLE);
+        rt_pm_hw_device_stop();
+
+    }
+#endif /* RT_USING_PM */
+
+    if (mmcsd_get_thread())
+    {
+        rt_thread_control(mmcsd_get_thread(), RT_THREAD_CTRL_CHANGE_PRIORITY, &priority);
+    }
 
     return 0;
 }
@@ -1569,6 +1671,364 @@ FINSH_FUNCTION_EXPORT_ALIAS(cmd_sdcard, __cmd_sdcard, Test hw sdcard);
 
 #endif  // DRV_SDIO_TEST 
 
+#if 0
+static uint32_t sdemmc_cache[128];
+static uint8_t  wire_mode = 1;    //0 for 1-wire mode, 1 for 4-wire mode
+uint8_t sd1_wait_cmd();
+#define SD_SUCCESS 0
+#define SD_TIMEOUT 1
+#define SD_CRCERR  2
+#define SD_BLOCK_SIZE 512
+#define SDIO_WR_ARG(F,A,D) (0x80000000 | (F<<28) | (A<<9) | D)
+#define SDIO_RD_ARG(F,A) ((F<<28) | (A<<9))
+
+
+uint8_t sd1_send_cmd(uint8_t cmd_idx, uint32_t cmd_arg)
+{
+    uint32_t ccr;
+    uint8_t has_rsp;
+    uint8_t long_rsp;
+
+    hwp_sdmmc1->CAR = cmd_arg;
+    switch (cmd_idx)
+    {
+    case  2:
+    case  9:
+    case 10:
+        has_rsp = 1;
+        long_rsp = 1;
+        break;
+    case  0:
+    case  4:
+    case 15:
+        has_rsp = 0;
+        long_rsp = 0;
+        break;
+    default:
+        has_rsp = 1;
+        long_rsp = 0;
+        break;
+    }
+    ccr = (cmd_idx << SD_CCR_CMD_INDEX_Pos);
+    if (has_rsp)
+        ccr |= SD_CCR_CMD_HAS_RSP;
+    if (long_rsp)
+        ccr |= SD_CCR_CMD_LONG_RSP;
+    ccr |= SD_CCR_CMD_TX_EN | SD_CCR_CMD_START;
+    hwp_sdmmc1->CCR = ccr;
+    return sd1_wait_cmd();
+}
+
+uint8_t sd1_send_acmd(uint8_t cmd_idx, uint32_t cmd_arg, uint16_t rca)
+{
+    uint32_t ccr;
+    uint8_t cmd_result;
+
+    cmd_result = sd1_send_cmd(55, (uint32_t)rca << 16);
+    if (cmd_result != SD_SUCCESS)
+        return cmd_result;
+    hwp_sdmmc1->CAR = cmd_arg;
+    ccr = (cmd_idx << SD_CCR_CMD_INDEX_Pos) | SD_CCR_CMD_HAS_RSP;
+    ccr |= SD_CCR_CMD_TX_EN | SD_CCR_CMD_START;
+    hwp_sdmmc1->CCR = ccr;
+    cmd_result = sd1_wait_cmd();
+    if ((cmd_result == SD_CRCERR) && (cmd_idx == 41))   //no CRC check for R3
+    {
+        hwp_sdmmc1->SR = SD_SR_CMD_RSP_CRC; //clear crc error status
+        cmd_result = SD_SUCCESS;
+    }
+    return cmd_result;
+}
+
+uint8_t sd1_wait_cmd()
+{
+    while ((hwp_sdmmc1->SR & (SD_SR_CMD_DONE | SD_SR_CMD_TIMEOUT)) == 0);
+    hwp_sdmmc1->SR = SD_SR_CMD_DONE; //clear cmd done status
+    if (hwp_sdmmc1->SR & SD_SR_CMD_TIMEOUT)
+        return SD_TIMEOUT;
+    if (hwp_sdmmc1->SR & SD_SR_CMD_RSP_CRC)
+        return SD_CRCERR;
+    return SD_SUCCESS;
+}
+
+void sd1_get_rsp(uint8_t *rsp_idx, uint32_t *rsp_arg1, uint32_t *rsp_arg2, uint32_t *rsp_arg3, uint32_t *rsp_arg4)
+{
+    *rsp_idx = hwp_sdmmc1->RIR;
+    *rsp_arg1 = hwp_sdmmc1->RAR1;
+    *rsp_arg2 = hwp_sdmmc1->RAR2;
+    *rsp_arg3 = hwp_sdmmc1->RAR3;
+    *rsp_arg4 = hwp_sdmmc1->RAR4;
+}
+
+uint8_t sd1_identify(uint16_t *rca)
+{
+    uint8_t  cmd_result;
+    uint32_t cmd_arg;
+    uint8_t  rsp_idx;
+    uint32_t rsp_arg1, rsp_arg2, rsp_arg3, rsp_arg4;
+
+    //step 1, CMD8
+    cmd_arg = 0x000001aa; //VHS=1
+    cmd_result = sd1_send_cmd(8, cmd_arg); //CMD8
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    //step 2, ACMD41
+    cmd_result = sd1_send_acmd(41, 0, 0); //CMD55+ACMD41
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    //step 3, CMD2
+    cmd_result = sd1_send_cmd(2, 0); //CMD2
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    //step 4, CMD3
+    cmd_result = sd1_send_cmd(3, 0); //CMD3
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    sd1_get_rsp(&rsp_idx, &rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+    *rca = rsp_arg1 >> 16;
+    return SD_SUCCESS;
+}
+
+void sd1_write(uint8_t wire_mode, uint8_t block_num)
+{
+    uint32_t dcr;
+    hwp_sdmmc1->DLR = (SD_BLOCK_SIZE * block_num) - 1;
+    dcr = ((SD_BLOCK_SIZE - 1) << SD_DCR_BLOCK_SIZE_Pos);
+    dcr |= (wire_mode << SD_DCR_WIRE_MODE_Pos);
+    dcr |= SD_DCR_TRAN_DATA_EN | SD_DCR_DATA_START;
+    hwp_sdmmc1->DCR = dcr;
+}
+
+uint8_t sd1_wait_write()
+{
+    while ((hwp_sdmmc1->SR & SD_SR_DATA_DONE) == 0);
+    hwp_sdmmc1->SR = SD_SR_DATA_DONE; //clear cmd done status
+    if (hwp_sdmmc1->SR & SD_SR_DATA_TIMEOUT)
+        return SD_TIMEOUT;
+    return SD_SUCCESS;
+}
+
+void sd1_read(uint8_t wire_mode, uint8_t block_num)
+{
+    uint32_t dcr;
+    hwp_sdmmc1->DLR = (SD_BLOCK_SIZE * block_num) - 1;
+    dcr = ((SD_BLOCK_SIZE - 1) << SD_DCR_BLOCK_SIZE_Pos);
+    dcr |= (wire_mode << SD_DCR_WIRE_MODE_Pos) | SD_DCR_R_WN;
+    dcr |= SD_DCR_TRAN_DATA_EN | SD_DCR_DATA_START;
+    hwp_sdmmc1->DCR = dcr;
+}
+
+uint8_t sd1_wait_read()
+{
+    while ((hwp_sdmmc1->SR & SD_SR_DATA_DONE) == 0);
+    hwp_sdmmc1->SR = SD_SR_DATA_DONE; //clear cmd done status
+    if (hwp_sdmmc1->SR & SD_SR_DATA_TIMEOUT)
+        return SD_TIMEOUT;
+    if (hwp_sdmmc1->SR & SD_SR_DATA_CRC)
+        return SD_CRCERR;
+    return SD_SUCCESS;
+}
+
+uint8_t sd1_iowrite(uint8_t func, uint32_t addr, uint8_t data)
+{
+    uint8_t  cmd_result;
+    uint32_t cmd_arg;
+
+    cmd_arg = SDIO_WR_ARG(func, addr, data);
+    cmd_result = sd1_send_cmd(52, cmd_arg);
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    return SD_SUCCESS;
+}
+
+uint8_t sd1_ioread(uint8_t func, uint32_t addr, uint8_t *data)
+{
+    uint8_t  cmd_result;
+    uint32_t cmd_arg;
+    uint8_t  rsp_idx;
+    uint32_t rsp_arg1, rsp_arg2, rsp_arg3, rsp_arg4;
+
+    cmd_arg = SDIO_RD_ARG(func, addr);
+    cmd_result = sd1_send_cmd(52, cmd_arg);
+    if (cmd_result != SD_SUCCESS) return cmd_result;
+    sd1_get_rsp(&rsp_idx, &rsp_arg1, &rsp_arg2, &rsp_arg3, &rsp_arg4);
+    *data = (uint8_t)rsp_arg1;
+    return SD_SUCCESS;
+}
+
+int sdio_emmc_init()
+{
+    int i;
+    uint8_t  rsp_idx;
+    uint32_t rsp_arg[4];
+    uint8_t  cmd_result;
+    uint32_t cmd_arg;
+    uint8_t  ccs;
+    uint16_t rca;
+    uint32_t cid[4];
+    uint32_t *buf;
+
+    //initialize sdmmc host
+    HAL_RCC_ResetModule(RCC_MOD_SDMMC1);
+    hwp_hpsys_cfg->SYSCR |= HPSYS_CFG_SYSCR_SDNAND;
+    hwp_sdmmc1->CLKCR = 0x1 << SD_CLKCR_DIV_Pos; //also clear sd_stop_clk
+    hwp_sdmmc1->CDR = 0; //no card detect
+
+    hwp_sdmmc1->CLKCR = 359 << SD_CLKCR_DIV_Pos; //144M/360=400k
+    hwp_sdmmc1->CLKCR |= SD_CLKCR_VOID_FIFO_ERROR;
+    hwp_sdmmc1->IER = 0; //mask sdmmc interrupt
+    hwp_sdmmc1->TOR = 0x00249f00; //
+    HAL_SDMMC_POWER_SET((SD_TypeDef *)SDMMC1_BASE, HW_SDIO_POWER_UP);
+
+    // add a delay after clock set, at least 74 SD clock
+    // need wait more than 200ms for 400khz
+    HAL_Delay_us(500);
+    rca = 0x0;
+
+    //initialize sd card
+    cmd_result = sd1_send_cmd(0, 0); //CMD0
+
+    //set sd_req and wait for sd_busy before access sd in normal mode
+    hwp_sdmmc1->CASR = SD_CASR_SD_REQ;
+    while ((hwp_sdmmc1->CASR & SD_CASR_SD_BUSY) == 0);
+
+    hwp_sdmmc1->CDR |= SD_CDR_CMD_OD;   // SET TO Open Drain mode
+
+    //start card identification
+    // CMD1
+    do
+    {
+        cmd_arg = 0x40000080;
+        cmd_result = sd1_send_cmd(1, cmd_arg); //CMD1
+
+        sd1_get_rsp(&rsp_idx, &rsp_arg[0], &rsp_arg[1], &rsp_arg[2], &rsp_arg[3]);
+
+        HAL_Delay_us(20);
+    }
+    while (!(rsp_arg[0] & 0x80000000));
+
+    //CMD2
+    HAL_Delay_us(20);
+    cmd_arg = 0x0;
+    cmd_result = sd1_send_cmd(2, cmd_arg); //CMD2
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 1;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 2;
+    }
+    sd1_get_rsp(&rsp_idx, &cid[3], &cid[2], &cid[1], &cid[0]);
+
+    //CMD3
+    HAL_Delay_us(20);
+    rca = 1;
+    cmd_arg = 0x10000;
+    cmd_result = sd1_send_cmd(3, cmd_arg); //CMD3
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 3;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 4;
+    }
+    sd1_get_rsp(&rsp_idx, &rsp_arg[0], &rsp_arg[1], &rsp_arg[2], &rsp_arg[3]);
+    if (rsp_idx != 0x3)
+    {
+        return 5;
+    }
+
+    // card identification done, switch mode
+    hwp_sdmmc1->CDR &= ~SD_CDR_CMD_OD;  // recover to push pull mode
+
+    HAL_Delay_us(20);
+    cmd_arg = rca << 16;
+    //cmd_arg = 0x10000;
+    cmd_result = sd1_send_cmd(9, cmd_arg); //CMD9
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 6;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 7;
+    }
+    sd1_get_rsp(&rsp_idx, &rsp_arg[0], &rsp_arg[1], &rsp_arg[2], &rsp_arg[3]);
+
+
+    //start card transfer
+    //CMD7 (SELECT_CARD)
+    HAL_Delay_us(20);
+    cmd_arg = (uint32_t)rca << 16;
+    cmd_result = sd1_send_cmd(7, cmd_arg);
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 8;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 9;
+    }
+    sd1_get_rsp(&rsp_idx, &rsp_arg[0], &rsp_arg[1], &rsp_arg[2], &rsp_arg[3]);
+    if (rsp_idx != 7)
+    {
+        return 10;
+    }
+
+    //CMD8 EXT_CSD
+    hwp_sdmmc1->SR = 0xffffffff; //clear sdmmc interrupts
+    sd1_read(0, 1); //1 wire mode,1 blocks
+    cmd_arg = 0;
+    cmd_result = sd1_send_cmd(8, cmd_arg);
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 11;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 12;
+    }
+    sd1_get_rsp(&rsp_idx, &rsp_arg[0], &rsp_arg[1], &rsp_arg[2], &rsp_arg[3]);
+    if (rsp_idx != 8)
+    {
+        return 13;
+    }
+    rthw_sdio_update_clk();
+    hwp_sdmmc1->CLKCR |= SD_CLKCR_VOID_FIFO_ERROR;
+    hwp_sdmmc1->TOR = 0x00249f00; // set timeout
+    //hwp_sdmmc1->CDR = SD_CDR_ITIMING_SEL | (0 << SD_CDR_ITIMING_Pos);
+    HAL_Delay_us(1000);
+
+    //CMD6
+    hwp_sdmmc1->SR = 0xffffffff; //clear sdmmc interrupts
+    HAL_Delay_us(20);
+    uint32_t cmd6_index = 183;  // swtich line
+    uint32_t cmd6_value = 1;
+    cmd_arg = 0x03000000 | (cmd6_index << 16) | (cmd6_value << 8);
+    cmd_arg = cmd_arg | 1;
+    cmd_result = sd1_send_cmd(6, cmd_arg); //
+    if (cmd_result == SD_TIMEOUT)
+    {
+        return 15;
+    }
+    else if (cmd_result == SD_CRCERR)
+    {
+        return 16;
+    }
+    hwp_sdmmc1->PCR = 0x03;
+    HAL_Delay_us(200);//delay
+    return 0;
+
+}
+void test_emmc_power_down(void)
+{
+    uint32_t open_time = HAL_GTIMER_READ();
+
+    uint32_t res = sdio_emmc_init();
+    uint32_t end_time = HAL_GTIMER_READ();
+    float test_time = ((end_time - open_time) / HAL_LPTIM_GetFreq()) * 1000;
+    rt_kprintf("%s %d return %d test_time=%.4lfms\n", __func__, __LINE__, res, test_time);
+}
+MSH_CMD_EXPORT(test_emmc_power_down, test_emmc_power_down);
+
+#endif /*  if 0 */
 #endif
 
 /// @} drv_sdio

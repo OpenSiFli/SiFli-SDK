@@ -32,6 +32,15 @@
 #define DBG_LVL    DBG_INFO
 #include <rtdbg.h>
 
+#if defined (SYS_HEAP_IN_PSRAM)
+    #undef rt_malloc
+    #undef rt_free
+    extern void *app_sram_alloc(rt_size_t size);
+    extern void app_sram_free(void *ptr);
+    #define rt_malloc(x)    app_sram_alloc(x)
+    #define rt_free(x)      app_sram_free(x)
+#endif /* SYS_HEAP_IN_PSRAM */
+
 #ifdef RT_USING_POSIX
 #include <dfs_posix.h>
 #include <dfs_poll.h>
@@ -966,7 +975,12 @@ static rt_err_t rt_serial_control(struct rt_device *dev,
                     struct rt_serial_tx_dma *tx_dma = serial->serial_tx;
                     if (tx_dma && tx_dma->data_queue.queue)
                     {
+#if defined (SYS_HEAP_IN_PSRAM)
+                        extern void app_free(void *p);
+                        app_free(tx_dma->data_queue.queue);
+#else
                         rt_free(tx_dma->data_queue.queue);
+#endif
                     }
                 }
 #endif /* RT_SERIAL_USING_DMA */

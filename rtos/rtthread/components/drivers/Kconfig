@@ -186,6 +186,12 @@ config RT_USING_RTC
                 config RTC_NTP_SYNC_PERIOD
                     int "NTP auto sync period(second)"
                     default 3600
+		config RTC_NTP_RETRY_SYNC_DELAY
+                    int "NTP sync fail retry delay time(second) network connect"
+                    default 30
+		config RTC_NTP_RETRY_TIMES
+                    int "NTP sync fail retry times"
+                    default 5
            endif
     endif
 
@@ -301,6 +307,10 @@ config RT_USING_WDT
     depends on RT_USING_WDT
     int "Watch Dog timeout"
     default 30
+    config IWDT_SLEEP_TIMEOUT
+    depends on RT_USING_WDT
+    int "Watch Dog sleep timeout"
+    default 300	
 
 config RT_USING_AUDIO
     bool "Using Audio device drivers"

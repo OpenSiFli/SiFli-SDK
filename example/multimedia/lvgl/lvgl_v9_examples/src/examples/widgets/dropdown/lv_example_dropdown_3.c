@@ -1,9 +1,9 @@
 #include "../../lv_examples.h"
 #if LV_USE_DROPDOWN && LV_BUILD_EXAMPLES
 
-static void event_cb(lv_event_t *e)
+static void event_cb(lv_event_t * e)
 {
-    lv_obj_t *dropdown = lv_event_get_target(e);
+    lv_obj_t * dropdown = lv_event_get_target_obj(e);
     char buf[64];
     lv_dropdown_get_selected_str(dropdown, buf, sizeof(buf));
     LV_LOG_USER("'%s' is selected", buf);
@@ -15,7 +15,7 @@ static void event_cb(lv_event_t *e)
 void lv_example_dropdown_3(void)
 {
     /*Create a drop down list*/
-    lv_obj_t *dropdown = lv_dropdown_create(lv_screen_active());
+    lv_obj_t * dropdown = lv_dropdown_create(lv_screen_active());
     lv_obj_align(dropdown, LV_ALIGN_TOP_LEFT, 10, 10);
     lv_dropdown_set_options(dropdown, "New project\n"
                             "New file\n"

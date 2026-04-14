@@ -96,6 +96,8 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
    *.o                (.text.rt_memset)
    drv_common.o       (.text.HAL_Delay_us)
    drv_common.o       (.text.rt_hw_us_delay)
+
+   *.o  (nor_cfg_db)
  
     
    *.o(.bss.bf0_psram_handle)

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <rtthread.h>
 #include "media_dec.h"
 #include "media_internal.h"
@@ -5,6 +11,8 @@
     #include "dfs_file.h"
     #include "dfs_posix.h"
 #endif
+
+
 #define DBG_TAG           "media_dec"
 //#define DBG_LVL           LOG_LVL_INFO
 #define _MODULE_NAME_ "h264"
@@ -309,10 +317,13 @@ int ezip_video_decode(ffmpeg_handle thiz,        uint32_t size, uint32_t padding
 
     rt_hw_interrupt_enable(level);
 
+#if __DEBUG__
     if (is_drop)
     {
         LOG_I("ezip video drop");
     }
+#endif
+
     if (empty)
     {
         ezip_video_packet_t *pkt = rt_container_of(empty, ezip_video_packet_t, snode);
@@ -327,6 +338,10 @@ int ezip_video_decode(ffmpeg_handle thiz,        uint32_t size, uint32_t padding
         if (thiz->is_nand)
         {
             ezip_flash_read(thiz, pkt->buffer, size);
+        }
+        else if (thiz->is_ram)
+        {
+            ezip_ram_read(thiz, pkt->buffer, size);
         }
         else
         {

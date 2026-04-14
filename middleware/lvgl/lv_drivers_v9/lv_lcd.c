@@ -11,6 +11,7 @@
 #include "bf0_pm.h"
 #include "section.h"
 #include "mem_section.h"
+#include <string.h>
 #ifdef RT_USING_DFS
     #include <dfs_posix.h>
 #endif
@@ -48,6 +49,7 @@
     #error "Not supported on v9 now!"
 #endif
 
+
 #define LCD_FLUSH_EXP_MS   (5000)//Include LCD reset time
 
 #ifdef FRAME_BUFFER_IN_PSRAM
@@ -72,7 +74,7 @@ extern void perf_monitor(lv_display_t *disp_drv, uint32_t time, uint32_t px);
 
 static rt_device_t device;
 static struct rt_device_graphic_info info;
-static struct rt_semaphore lcd_sema;
+struct rt_semaphore lcd_sema;
 
 static lv_display_t *lcd_flushing_disp_drv = NULL;
 static lv_display_t *disp;
@@ -253,19 +255,19 @@ static void wait_flush_done(lv_display_t *disp_drv)
 #ifdef BSP_USING_LCD_FRAMEBUFFER
 static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
 {
+    LV_UNUSED(fb_desc);
     lv_display_t *p_disp = lcd_flushing_disp_drv;
     lcd_flushing_disp_drv = NULL;
-
     rt_err_t err;
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
-
-    /* Inform the graphics library that you are ready with the flushing*/
     p_disp->flushing = 0;
 }
 #else
 static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
 {
+    LV_UNUSED(dev);
+    LV_UNUSED(buffer);
     lv_display_t *p_disp = lcd_flushing_disp_drv;
     lcd_flushing_disp_drv = NULL;
     debug_lcd_flush_end();
@@ -273,8 +275,6 @@ static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
     rt_err_t err;
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
-
-    /* Inform the graphics library that you are ready with the flushing*/
     p_disp->flushing = 0;
 
     return RT_EOK;
@@ -309,6 +309,7 @@ uint8_t drv_gpu_is_cached_ram(uint32_t start, uint32_t len)
 
 static void lcd_flush(lv_display_t *disp_drv, const lv_area_t *refresh_area, uint8_t *color_p)
 {
+    // Regular LCD refresh mode
     const lv_area_t *p_buf_area = &disp_drv->layer_head->buf_area;
 
     LCD_AreaDef clip_area =   //Buf clip area
@@ -448,6 +449,7 @@ void lv_lcd_init(const char *name)
                      &buf1_1, sizeof(buf1_1));
 
     rt_sem_init(&lcd_sema, "lv_lcd", 1, RT_IPC_FLAG_FIFO);
+
 #if defined(LV_FB_TWO_NOT_SCREEN_SIZE)||defined(LV_FB_TWO_SCREEN_SIZE)
     static lv_draw_buf_t draw_buf2;
 
@@ -465,6 +467,7 @@ void lv_lcd_init(const char *name)
 #else
     lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_PARTIAL);
 #endif /* LV_FB_ONE_SCREEN_SIZE ||  LV_FB_TWO_SCREEN_SIZE*/
+
 
     uint32_t align_size = (info.draw_align != 0) ? info.draw_align : 1;
     int32_t offset_x = 0;
@@ -514,4 +517,3 @@ bool lv_refreshing_done(void)
 
     return true;
 }
-

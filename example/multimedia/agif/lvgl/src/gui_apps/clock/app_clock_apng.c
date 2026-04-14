@@ -1,9 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include <rtthread.h>
 #include <rtdevice.h>
 #include "littlevgl2rtt.h"
 #include "lvgl.h"
 #include "gui_app_fwk.h"
-
+#include "lvsf.h"
 #include "app_clock_main.h"
 #include "app_mem.h"
 #include "log.h"

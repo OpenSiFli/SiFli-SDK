@@ -596,7 +596,7 @@ static void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t a
                           const lv_area_t *output_coords, lv_opa_t opa, lv_color_t ax_color,
                           lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom,
                           lv_img_cf_t mask_cf, const lv_opa_t *mask_map, const lv_area_t *mask_coords,
-                          uint8_t type)
+                          uint8_t type, lv_coord_t dst_z, lv_point_t *viewpoint)
 {
     RT_ASSERT(RT_NULL != pivot);
 
@@ -644,9 +644,18 @@ static void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t a
     p_fg_layer->transform_cfg.pivot_z = pivot_z;
     p_fg_layer->transform_cfg.z_offset = src_z;
 
-    p_fg_layer->transform_cfg.vp_x_offset = p_fg_layer->transform_cfg.pivot_x;
-    p_fg_layer->transform_cfg.vp_y_offset = p_fg_layer->transform_cfg.pivot_y;
-    p_fg_layer->transform_cfg.dst_z_offset = p_fg_layer->transform_cfg.z_offset;
+    if (!viewpoint)
+    {
+        p_fg_layer->transform_cfg.vp_x_offset = p_fg_layer->transform_cfg.pivot_x;
+        p_fg_layer->transform_cfg.vp_y_offset = p_fg_layer->transform_cfg.pivot_y;
+        p_fg_layer->transform_cfg.dst_z_offset = dst_z;
+    }
+    else
+    {
+        p_fg_layer->transform_cfg.vp_x_offset = viewpoint->x;
+        p_fg_layer->transform_cfg.vp_y_offset = viewpoint->y;
+        p_fg_layer->transform_cfg.dst_z_offset = dst_z;
+    }
 
 
     LV_AREA_TO_EPIC_AREA(&o->clip_area, &res);
@@ -662,7 +671,7 @@ void img_rotate_adv1(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
 {
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
-                  0, NULL, NULL, 1);
+                  0, NULL, NULL, 1, src_z, NULL);
 }
 
 void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
@@ -672,7 +681,7 @@ void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
 {
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
-                  0, NULL, NULL, 2);
+                  0, NULL, NULL, 2, src_z, NULL);
 }
 
 void img_rotate_adv2_vp(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
@@ -681,7 +690,10 @@ void img_rotate_adv2_vp(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t ang
                         lv_point_t *pivot, lv_coord_t pivot_z, lv_coord_t src_z, uint16_t src_zoom,
                         lv_coord_t dst_z, lv_point_t *viewpoint, lv_area_t *src_new_area)
 {
-
+    LV_UNUSED(src_new_area);
+    img_transform(dest, src, angle, p_src_coords, p_dst_coords,
+                  p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
+                  0, NULL, NULL, 2, dst_z, viewpoint);
 }
 
 

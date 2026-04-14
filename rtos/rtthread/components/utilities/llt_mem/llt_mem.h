@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * @file llt_mem.h
  *
@@ -12,6 +18,7 @@ extern "C" {
 
 #include <rtthread.h>
 
+#ifndef LLT_MEMHEAP_CUSTOM
 
 #if defined(RT_USING_LONG_LIFETIME_MEMHEAP)
 
@@ -28,6 +35,7 @@ extern struct rt_memheap llt_mem_heap;
 #define LLT_MEM_CALLOC(count, size) rt_memheap_calloc(LLT_MEM_HEAP, count, size)
 
 #else
+
 #define LLT_MEM_ALLOC(size) rt_malloc(size)
 
 #define LLT_MEM_REALLOC(ptr, newsize) rt_realloc(ptr, newsize)
@@ -37,6 +45,8 @@ extern struct rt_memheap llt_mem_heap;
 #define LLT_MEM_CALLOC(count, size) rt_calloc(count, size)
 
 #endif /* RT_USING_LONG_LIFETIME_MEMHEAP */
+
+#endif /* LLT_MEMHEAP_CUSTOM */
 
 
 #ifdef __cplusplus

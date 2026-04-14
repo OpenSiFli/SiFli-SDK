@@ -37,7 +37,7 @@
              {
                 "offset": "0x00000000", 
                 "max_size": "0x00400000",
-                "tags": [""]
+                "tags": []
              } 
         ]
     },
@@ -49,7 +49,7 @@
             {
                 "offset": "0x00000000", 
                 "max_size": "0x00600000", 
-                "tags": [""],
+                "tags": [],
                 "ftab": {
                     "name": "main", 
                     "address": [

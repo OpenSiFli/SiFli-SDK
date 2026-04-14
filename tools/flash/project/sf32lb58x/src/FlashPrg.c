@@ -9,6 +9,12 @@ Purpose : Implementation of RAMCode template
 --------  END-OF-HEADER  ---------------------------------------------
 */
 
+/*
+ * SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <bf0_hal.h>
 #include <string.h>
 #include <stdio.h>
@@ -396,10 +402,10 @@ void init_clock()
     HAL_RCC_LCPU_SetDiv(1, 1, 3);
 
     HAL_RCC_HCPU_EnableDLL2(240000000);
-		if (CHIP_IS_585()) {
-				HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);			  
-				BSP_SetFlash1DIV(4);
-		}		
+    if (CHIP_IS_585()) {
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);			  
+        BSP_SetFlash1DIV(4);
+    }		
     BSP_SetFlash3DIV(4);    // src 240, div 4, output 60m
     BSP_SetFlash4DIV(4);
     BSP_SetFlash5DIV(2);

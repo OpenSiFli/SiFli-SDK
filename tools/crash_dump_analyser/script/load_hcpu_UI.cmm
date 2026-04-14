@@ -69,6 +69,7 @@ BOARD.LB58X: CHOOSEBOX "LB58X"
         DIALOG.Set CB3 TRUE()
         DIALOG.Enable CB3
         DIALOG.Enable FEDIT3
+        DIALOG.Set TADDR3 "0x62000000"
         DIALOG.Set CB4 TRUE()
         DIALOG.Enable CB4
         DIALOG.Enable FEDIT4
@@ -83,6 +84,7 @@ BOARD.LB56X: CHOOSEBOX "LB56X"
         DIALOG.Set CB3 TRUE()
         DIALOG.Enable CB3
         DIALOG.Enable FEDIT3
+        DIALOG.Set TADDR3 "0x60800000"
         DIALOG.Set CB4 FALSE()
         DIALOG.Disable CB4
         DIALOG.Disable FEDIT4
@@ -248,6 +250,7 @@ ELSE IF &devsel==1
     DIALOG.Set CB3 TRUE()
     DIALOG.Enable CB3
     DIALOG.Enable FEDIT3
+    DIALOG.Set TADDR3 "0x62000000"
     DIALOG.Set CB4 TRUE()
     DIALOG.Enable CB4
     DIALOG.Enable FEDIT4
@@ -261,6 +264,7 @@ ELSE IF &devsel==2
     DIALOG.Set CB3 TRUE()
     DIALOG.Enable CB3
     DIALOG.Enable FEDIT3
+    DIALOG.Set TADDR3 "0x60800000"
     DIALOG.Set CB4 FALSE()
     DIALOG.Disable CB4
     DIALOG.Disable FEDIT4

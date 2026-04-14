@@ -348,6 +348,7 @@ const struct fal_partition *fal_partition_find(const char *name)
         }
     }
 
+    rt_kprintf("%s: can't find partition!!! %s\n", __func__, name);
     return NULL;
 }
 

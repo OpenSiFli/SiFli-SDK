@@ -2,9 +2,10 @@
 Source code path: example/rt_device/i2c/eeprom
 ## Supported Platforms
 The example can run on the following development boards:
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-
+* sf32lb52-nano
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 ## Overview
 * Under RT-Thread operating system, demonstrate the usage of I2C through read and write operations on EEPROM chip AT24CO8SC module
 
@@ -16,12 +17,16 @@ Connect SDA and SCK of AT24CO8SC according to the following table based on the d
 
 |Development Board    |SDA Pin|SDA Pin Name|SCL Pin|SCL Pin Name|
 |:---     |:---    |:---     |:---   |:---      |
-|sf32lb52-lcd_n16r8 |3       |PA42     |5      |PA41      |
-|sf32lb58-lcd_n16r64n4 |3       |PB29     |       |PB28      |
+|sf32lb52-nano |3        |PA42     |5      |PA41      |
+|sf32lb52-lcd |3          |PA42     |5      |PA41      |
+|sf32lb56-lcd |3          |PA12     |5      |PA20      |
+|sf32lb58-lcd |3       |PB29     |       |PB28      |
 
 * For more detailed pin definitions, please refer to\
-`[sf32lb52-lcd_n16r8]()`\
-`[sf32lb58-lcd_n16r64n4]()`
+[sf32lb52-nano](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-Nano.html)
+[sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
+[sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
+[sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
 
 * AT24C08SC
 ![alt text](assets/at24c08sc.png)

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "charge.h"
 #include "rtthread.h"
 #include "bf0_hal.h"
@@ -137,21 +143,21 @@ rt_err_t sifli_charge_control(rt_charge_device_t *charge, int cmd, void *args)
 
     case RT_CHARGE_SET_TARGET_VOLT:
     {
-        uint32_t *volt = (uint32_t *)volt;
+        uint32_t *volt = (uint32_t *)args;
         HAL_PMU_ChgConfigTargetVolt(&sifli_charge_handle, *volt);
     }
     break;
 
     case RT_CHARGE_SET_REPVOLT:
     {
-        uint32_t *volt = (uint32_t *)volt;
+        uint32_t *volt = (uint32_t *)args;
         HAL_PMU_ChgConfigRepVolt(&sifli_charge_handle, *volt);
     }
     break;
 
     case RT_CHARGE_SET_OVER_VOLT:
     {
-        uint32_t *volt = (uint32_t *)volt;
+        uint32_t *volt = (uint32_t *)args;
         HAL_PMU_ChgConfigVbatHighVolt(&sifli_charge_handle, *volt);
     }
     break;
@@ -294,6 +300,7 @@ void sifli_charge_init(void)
     HAL_PMU_ChgConfigRepVolt(&sifli_charge_handle, CHARGE_DEFAULT_REP_VOLTAGE);
     HAL_PMU_ChgConfigVbatHighVolt(&sifli_charge_handle, CHARGE_DEFAULT_VBAT_HIGH_VOLTAGE);
     HAL_PMU_ChgConfigCcCurrent(&sifli_charge_handle, CHARGE_CC_CURRENT_LEVEL0);
+    HAL_PMU_ChgConfigEocCc(&sifli_charge_handle, CHARGE_DEFAULT_EOC_CC);
 #if defined(CHARGE_MONITOR_TEMP_CONFIG)
     HAL_TSEN_Init(&TsenHandle);
 #endif
@@ -439,8 +446,6 @@ static int charger(int argc, char *argv[])
     }
     else if (0 == strcmp("list_cal", cmd))
     {
-        uint32_t enable;
-
         if (argc < 2)
         {
             goto __EXIT;
@@ -459,8 +464,6 @@ static int charger(int argc, char *argv[])
     }
     else if (0 == strcmp("suspend", cmd))
     {
-        uint32_t enable;
-
         if (argc < 2)
         {
             goto __EXIT;
@@ -470,14 +473,12 @@ static int charger(int argc, char *argv[])
     }
     else if (0 == strcmp("resume", cmd))
     {
-        uint32_t enable;
-
         if (argc < 2)
         {
             goto __EXIT;
         }
         HAL_PMU_ChgResumeForceCharging(&sifli_charge_handle);
-        LOG_I("resume", enable);
+        LOG_I("resume");
     }
     else if (0 == strcmp("hw_state", cmd))
     {

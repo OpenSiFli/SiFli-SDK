@@ -1,0 +1,14 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+entries = os.listdir(cwd)
+
+for entry in entries:
+    path = os.path.join(cwd, entry)
+    if os.path.isfile(os.path.join(path, 'SConscript')):
+        objs = objs + SConscript(os.path.join(entry, 'SConscript'))
+
+Return('objs')

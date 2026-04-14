@@ -7,24 +7,22 @@
     #define my_PRIprecise LV_PRId32
 #endif
 
-static lv_obj_t *scale;
-static lv_obj_t *minute_hand;
-static lv_obj_t *hour_hand;
+static lv_obj_t * scale;
+static lv_obj_t * minute_hand;
+static lv_obj_t * hour_hand;
 static lv_point_precise_t minute_hand_points[2];
 static int32_t hour;
 static int32_t minute;
 
-static void timer_cb(lv_timer_t *timer)
+static void timer_cb(lv_timer_t * timer)
 {
     LV_UNUSED(timer);
 
     minute++;
-    if (minute > 59)
-    {
+    if(minute > 59) {
         minute = 0;
         hour++;
-        if (hour > 11)
-        {
+        if(hour > 11) {
             hour = 0;
         }
     }
@@ -70,7 +68,7 @@ void lv_example_scale_6(void)
     lv_scale_set_total_tick_count(scale, 61);
     lv_scale_set_major_tick_every(scale, 5);
 
-    static const char *hour_ticks[] = {"12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", NULL};
+    static const char * hour_ticks[] = {"12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", NULL};
     lv_scale_set_text_src(scale, hour_ticks);
 
     static lv_style_t indicator_style;
@@ -121,7 +119,7 @@ void lv_example_scale_6(void)
 
     hour = 11;
     minute = 5;
-    lv_timer_t *timer = lv_timer_create(timer_cb, 250, NULL);
+    lv_timer_t * timer = lv_timer_create(timer_cb, 250, NULL);
     lv_timer_ready(timer);
 }
 

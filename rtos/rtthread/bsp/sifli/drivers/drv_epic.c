@@ -233,6 +233,7 @@ typedef struct
     struct rt_thread task;
     rt_mq_t  mq;
     uint8_t task_idle; //1: task is idle, 0: task is busy
+    drv_epic_rotate_t rotated;
 
 #endif /* DRV_EPIC_NEW_API */
 
@@ -5498,6 +5499,14 @@ drv_epic_operation *drv_epic_alloc_op(drv_epic_render_buf *p_buf)
 }
 
 
+static inline void merge_op_overwrite_keep_list(drv_epic_operation *dst, const drv_epic_operation *src)
+{
+    rt_list_t list = dst->list;
+
+    memcpy(dst, src, sizeof(drv_epic_operation));
+    dst->list = list;
+}
+
 rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 {
     priv_render_list_t *rl = get_rl_from_stack();
@@ -5516,7 +5525,8 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
     {
         if (rl->src_list_len > 0)
         {
-            drv_epic_operation *prev_op = rt_list_tail_entry(&rl->src_list, drv_epic_operation, list);
+            RT_ASSERT(op->list.prev != &rl->src_list);
+            drv_epic_operation *prev_op = rt_list_entry(op->list.prev, drv_epic_operation, list);
             drv_epic_operation *curr_op = op;
 
             if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (prev_op->desc.fill.opa >= OPA_MAX) && (NULL == prev_op->mask.data)
@@ -5540,7 +5550,7 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
                         op->desc.blend.g = prev_op->desc.fill.g;
                         op->desc.blend.b = prev_op->desc.fill.b;
 
-                        memcpy(prev_op, op, sizeof(drv_epic_operation));
+                        merge_op_overwrite_keep_list(prev_op, op);
                         rl->src_list_len--;
                     }
                     else
@@ -5555,8 +5565,16 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                     op->clip_area = prev_area;
 
-                    memcpy(prev_op, op, sizeof(drv_epic_operation));
+                    merge_op_overwrite_keep_list(prev_op, op);
+
+                    // After merging, remove the current operation from the linked list.
+                    rt_list_remove(&op->list);
+                    // Release the memory used by the current operation
+                    epic_free(op);
+                    //  At the same time, reduce   src_list_len ï¼?src_list_alloc_len
                     rl->src_list_len--;
+                    rl->src_list_alloc_len--;
+
                 }
             }
             else if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (DRV_EPIC_DRAW_FILL == curr_op->op))
@@ -5574,8 +5592,14 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                         if (curr_op->desc.fill.opa >= OPA_MAX)
                         {
-                            memcpy(prev_op, curr_op, sizeof(drv_epic_operation)); //Overwrite previous
+                            merge_op_overwrite_keep_list(prev_op, curr_op); //Overwrite previous
+                            // After merging, remove the current operation from the linked list.
+                            rt_list_remove(&op->list);
+                            // Release the memory used by the current operation
+                            epic_free(op);
+                            // At the same time, reduce   src_list_len ï¼?src_list_alloc_len
                             rl->src_list_len--;
+                            rl->src_list_alloc_len--;
                         }
                         else if (prev_op->desc.fill.opa >= OPA_MAX)
                         {
@@ -5610,8 +5634,15 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
                             prev_op->desc.fill.opa = curr_op->desc.fill.opa;
 
                             prev_op->clip_area = curr_op->clip_area;//Overwrite
-
+                            
+                            // After merging, remove the current operation from the linked list.
+                            rt_list_remove(&op->list);
+                            // Release the memory used by the current operation
+                            epic_free(op);
+                            // At the same time, reduce   src_list_len ï¼?src_list_alloc_len
                             rl->src_list_len--;
+                            rl->src_list_alloc_len--;
+                            
                         }
                         else if (HAL_EPIC_AreaIsIn(&curr_op->clip_area, &prev_op->clip_area)) //Same area
                         {
@@ -5749,6 +5780,17 @@ rt_err_t drv_epic_render_trav(drv_epic_render_list_t list, drv_epic_render_trav_
     return RT_EOK;
 }
 
+rt_err_t drv_epic_set_rotation(drv_epic_rotate_t rotate)
+{
+    drv_epic.rotated = rotate;
+    return RT_EOK;
+}
+
+drv_epic_rotate_t drv_epic_get_rotation(void)
+{
+    return drv_epic.rotated;
+}
+
 #endif /*DRV_EPIC_NEW_API*/
 
 bool drv_epic_is_busy(void)
@@ -5794,11 +5836,15 @@ int drv_epic_init(void)
         drv_epic.mq = rt_mq_create("drv_epic", sizeof(EPIC_MsgTypeDef), 4, RT_IPC_FLAG_FIFO);
         RT_ASSERT(drv_epic.mq);
 
+#if defined(DRV_EPIC_TASK_PRIORITY_CUSTOM) && defined(DRV_EPIC_TASK_PRIORITY)
+        uint16_t priority = DRV_EPIC_TASK_PRIORITY;
+#else
         uint16_t priority = RT_THREAD_PRIORITY_HIGH + RT_THREAD_PRIORITY_LOWWER;
+#endif
 #ifdef SOLUTION
         priority = RT_THREAD_PRIORITY_HIGH - 3;
 #endif
-
+        // LOG_I("DRV_EPIC_TASK_PRIORITY: %d\n",priority);
         rt_err_t ret = rt_thread_init(&drv_epic.task, "epic_task", epic_task, &drv_epic, drv_epic_stack, sizeof(drv_epic_stack),
                                       priority, RT_THREAD_TICK_DEFAULT);
 

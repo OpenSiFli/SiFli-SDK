@@ -1,4 +1,4 @@
-# USB Composite Device Example Project
+# USB Composite Device Example
 
 Source code path: example\cherryusb\device\cdc_hid_msc
 
@@ -68,10 +68,10 @@ Features:
 ```
 
 3. Messages sent from the USB virtual serial port will be echoed back, while the physical UART will print the message length.
-Example: Sending "SiFli" from the USB virtual serial port will display the following in the serial assistant opened on the physical UART COM port:
+Example: Sending "SiFli" from the USB virtual serial port will display the following in the serial assistant opened on the physical UART COM port（The length including line breaks）:
 ```
-CDC actual out len:5
-CDC actual in len:5
+CDC actual out len:7
+CDC actual in len:7
 ```
 Meanwhile, the same text is sent back in the serial assistant opened on the USB virtual serial port:
 ```

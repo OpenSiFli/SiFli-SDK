@@ -2,8 +2,10 @@
 Source code path: example/hal/pwm
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-nano
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 ## Overview
 * Contains examples of GPtimer outputting PWM through IO ports
 * Contains examples of using Atimer to output complementary PWM through IO
@@ -44,14 +46,16 @@ msh />
 Physical position refers to the actual pin position on the board's header
 |Board Name  | PWM       | CHX     |   Pin (Physical Position)  |
 |--------|------------|--------|---------|
-|525    | GPTIM2     | CH1    |    PA09 (37)     |
-|587  | GPTIM1     | CH2  |      PA51    (CONN2 28)    |
+|sf32lb52-nano    | GPTIM2     | CH1    |    PA09 (manually routed from back side)     |
+|sf32lb52-lcd   | GPTIM2     | CH1    |    PA09 (37)     |
+|sf32lb56-lcd    | GPTIM2     | CH1    |    PA36 (40)     |
+|sf32lb58-lcd  | GPTIM1     | CH2  |      PA51    (CONN2 28)    |
 ```c
     #define PAD_PA_09 PAD_PA09 /* 52 series default PA09 output (physical position 37) */
     HAL_PIN_Set(PAD_PA_09, cfg->pad_func, PIN_PULLUP, 1);/*Configure PA09 as GPTIM2_CH1 function*/
 
 
-    #define PAD_PA_51 PAD_PA51/* 587 series default PA51 output (physical position CONN2 28) */
+    #define PAD_PA_51 PAD_PA51/* 58 series default PA51 output (physical position CONN2 28) */
     HAL_PIN_Set(PAD_PA_51, cfg->pad_func, PIN_PULLUP, 1);/*Configure PA51 as GPTIM1_CH2 function*/
 ```
 **Note**: 

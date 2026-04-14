@@ -36,7 +36,7 @@ git version 2.47.0.windows.1
 
 ### Terminal Setup
 
-SiFli-SDK script installation only supports `powershell`, and we recommend using `PowerShell 7` version. For specific installation procedures, please refer to the Microsoft documentation [PowerShell Installation](https://learn.microsoft.com/zh-cn/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5).
+SiFli-SDK script installation only supports `powershell`.
 
 For terminal choice, we recommend using [Windows Terminal](https://aka.ms/terminal). Users can also choose other terminals, such as the integrated terminal that comes with VSCode. However, Windows Terminal is more recommended. Note that in some newer Windows 10/11 versions, Windows Terminal is already pre-installed.
 
@@ -46,17 +46,6 @@ To open `PowerShell`, you can use the following methods:
 - Press Win + R key combination to open the Run window, type `powershell`, then click OK.
 
 If you are using Windows Terminal, you can directly open PowerShell in the terminal. To open the terminal, you can press the Win key or click the Windows icon in the lower left corner, type `terminal`, then click to open Windows Terminal.
-
-````{warning}
-Note that if you are using PowerShell 5, running the install script in Windows Terminal may result in errors, prompting that `PowerShell.exe` is not supported. In this case, please upgrade to PowerShell 7 or use the PowerShell native terminal (the one with blue background after opening).
-
-To check PowerShell version, you can use the following command:
-
-```powershell
-$PSVersionTable.PSVersion
-```
-
-````
 
 If you encounter the error message 
 `Cannot load file C:\OpenSiFli\SiFli-SDK\export.ps1 because running scripts is disabled on this system.` in the subsequent script running steps, or if you have never heard of or run `.ps1` scripts before, please open PowerShell terminal in **administrator mode** and run the following command:

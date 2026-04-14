@@ -1,6 +1,6 @@
 # JDI Power Consumption Test Example
 
-Source code path: example/pm_jdi
+Source code path: example/pm/jdi
 
 ### Supported Development Boards
 This example can run on the following development boards:

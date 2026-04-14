@@ -8,6 +8,9 @@
 + eh-lb52x
 + eh-lb56x
 + eh-lb58x
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
 
 ## 概述
 <!-- 例程简介 -->
@@ -54,6 +57,14 @@
 5. 本例程增加了autoconnect 自动回连的flag，可以输入finsh 命令进行开启： pan_cmd set_retry_flag 1 /输入命令进行关闭：pan_cmd set_retry_flag 0
 6. 本例程增加了autoconnect 自动回连的次数，可以输入finsh 命令进行设置最大回连次数： pan_cmd set_retry_time 5（次数）
 7. 确保手机已经打开网络共享，手机断开pan之后，如果想要自动回连，可以输入finsh命令：pan_cmd autoconnect
+
+## 注意事项
+- 获取天气失败，需要先确认本地蓝牙MAC地址OUI有效性：MAC地址的前三个字节（OUI部分）必须是IEEE已分配的有效值。未经授权的OUI使用可能导致网络问题，可以手动修改地址。
+- 获取地址命令格式：nvds get_mac(非法地址：xxxxxx52FD11)
+- 设置蓝牙mac命令格式：nvds update addr 6 xxxxxxYYYYYY(YYYYYY:字节反序后的OUI（必须反序）)(xxxxxx:用户自定义的后3字节)(有效地址：xxxxxx52FD5C)
+- eg:合法OUI E8:6A:64 → 反序后 646AE8
+- CONFIG_NVDS_AUTO_UPDATE_MAC_ADDRESS 开启会覆盖手动修改地址(nvds update addr 6 xxxxxxYYYYYY)的操作
+- 当设备重启后执行 “nvds get_mac” 命令发现 MAC 地址未按预期修改：确认“CONFIG_NVDS_AUTO_UPDATE_MAC_ADDRESS”是否开启，关闭该宏后重新编译固件并烧录，再尝试手动设置 MAC 地址。
 
 ### 硬件需求
 运行该例程前，需要准备：
@@ -121,7 +132,6 @@ please input the serial port num:5
 1. 如果遇到所选芯片类型没有配置OTA的ptab.json导致编译不过，可以按如下关闭DFU功能:
 ![dfu_sub](./assets/dfu_sub.png)
 ![dfu](./assets/dfu.png)
-
 
 ## 参考文档
 <!-- 对于rt_device的示例，rt-thread官网文档提供的较详细说明，可以在这里添加网页链接，例如，参考RT-Thread的[RTC文档](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->

@@ -99,7 +99,7 @@ rt_charge_err_t rt_charge_get_hw_status(rt_charge_hw_state_t *state)
 }
 
 
-#if 0//  defined(CHARGE_MONITOR_TEMP_CONFIG)
+#if defined(CHARGE_MONITOR_TEMP_CONFIG)
 rt_charge_err_t rt_charge_get_core_temp(int *temp)
 {
     return rt_device_control(g_charge, RT_CHARGE_GET_CORE_TEMPERATURE, temp);

@@ -7,8 +7,7 @@
 void lv_example_button_3(void)
 {
     /*Properties to transition*/
-    static lv_style_prop_t props[] =
-    {
+    static lv_style_prop_t props[] = {
         LV_STYLE_TRANSFORM_WIDTH, LV_STYLE_TRANSFORM_HEIGHT, LV_STYLE_TEXT_LETTER_SPACE, 0
     };
 
@@ -35,12 +34,12 @@ void lv_example_button_3(void)
     lv_style_set_text_letter_space(&style_pr, 10);
     lv_style_set_transition(&style_pr, &transition_dsc_pr);
 
-    lv_obj_t *btn1 = lv_button_create(lv_screen_active());
+    lv_obj_t * btn1 = lv_button_create(lv_screen_active());
     lv_obj_align(btn1, LV_ALIGN_CENTER, 0, -80);
     lv_obj_add_style(btn1, &style_pr, LV_STATE_PRESSED);
     lv_obj_add_style(btn1, &style_def, 0);
 
-    lv_obj_t *label = lv_label_create(btn1);
+    lv_obj_t * label = lv_label_create(btn1);
     lv_label_set_text(label, "Gum");
 }
 #endif

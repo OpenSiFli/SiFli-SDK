@@ -1,13 +1,12 @@
 #include "../../lv_examples.h"
 #if LV_USE_LIST && LV_BUILD_EXAMPLES
-static lv_obj_t *list1;
+static lv_obj_t * list1;
 
-static void event_handler(lv_event_t *e)
+static void event_handler(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *obj = lv_event_get_target(e);
-    if (code == LV_EVENT_CLICKED)
-    {
+    lv_obj_t * obj = lv_event_get_target_obj(e);
+    if(code == LV_EVENT_CLICKED) {
         LV_UNUSED(obj);
         LV_LOG_USER("Clicked: %s", lv_list_get_button_text(list1, obj));
     }
@@ -20,7 +19,7 @@ void lv_example_list_1(void)
     lv_obj_center(list1);
 
     /*Add buttons to the list*/
-    lv_obj_t *btn;
+    lv_obj_t * btn;
     lv_list_add_text(list1, "File");
     btn = lv_list_add_button(list1, LV_SYMBOL_FILE, "New");
     lv_obj_add_event_cb(btn, event_handler, LV_EVENT_CLICKED, NULL);

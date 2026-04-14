@@ -221,6 +221,16 @@ SECTIONS
     KEEP(*(SORT(.bt_sifli_reg*)))
     __bt_sifli_reg_end__ = .;
 
+    . = ALIGN(4);
+    __nand_cfg_db_start__ = .;
+    KEEP(*(.nand_cfg_db))
+    __nand_cfg_db_end__ = .;
+
+    . = ALIGN(4);
+    __nor_cfg_db_start__ = .;
+    KEEP(*(.nor_cfg_db))
+    __nor_cfg_db_end__ = .;
+
     KEEP(*(.eh_frame*))
     _etext = ABSOLUTE(.);
   } > ROM 

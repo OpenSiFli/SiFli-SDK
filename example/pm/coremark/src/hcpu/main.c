@@ -343,14 +343,14 @@ int shutdown(int argc, char *argv[])
         HAL_PMU_DisableXTAL32();
 #endif /* SF32LB56X */
 
-#ifdef BSP_USING_BOARD_SF32LB52_CORE_N16R16
+#if defined(BSP_USING_BOARD_SF32LB52_CORE_N16R16) || defined(BSP_USING_BOARD_SF32LB52_CORE_N4)
         FLASH_HandleTypeDef *flash_handle;
         flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
         HAL_FLASH_DEEP_PWRDOWN(flash_handle);
         HAL_Delay_us(3);
+        /*Keep the pins of the MPI in place to prevent flash abnormalities.*/
         hwp_pmuc->CR |= PMUC_CR_PIN_RET;
-#endif /* BSP_USING_BOARD_SF32LB52_CORE_N16R16 */
-
+#endif /* defined(BSP_USING_BOARD_SF32LB52_CORE_N16R16) || defined(BSP_USING_BOARD_SF32LB52_CORE_N4)*/
         HAL_PMU_EnterHibernate();
 
         /* while loop until system is down */
@@ -390,13 +390,14 @@ int shutdown(int argc, char *argv[])
 #else
 #endif
         rt_hw_interrupt_disable();
-#ifdef BSP_USING_BOARD_SF32LB52_CORE_N16R16
+#if defined(BSP_USING_BOARD_SF32LB52_CORE_N16R16) || defined(BSP_USING_BOARD_SF32LB52_CORE_N4)
         FLASH_HandleTypeDef *flash_handle;
         flash_handle = (FLASH_HandleTypeDef *)rt_flash_get_handle_by_addr(MPI2_MEM_BASE);
         HAL_FLASH_DEEP_PWRDOWN(flash_handle);
         HAL_Delay_us(3);
+        /*Keep the pins of the MPI in place to prevent flash abnormalities.*/
         hwp_pmuc->CR |= PMUC_CR_PIN_RET;
-#endif /* BSP_USING_BOARD_SF32LB52_CORE_N16R16 */
+#endif /* defined(BSP_USING_BOARD_SF32LB52_CORE_N16R16) || defined(BSP_USING_BOARD_SF32LB52_CORE_N4)*/
         /* Enter shutdown mode, system can be woken up by KEY1 */
         HAL_PMU_EnterShutdown();
         /* while loop until system is down */
@@ -781,19 +782,19 @@ int main(void)
 #elif defined(SF32LB56X)
 #if defined(BSP_USING_BOARD_EC_LB563XXX)
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 51);
+#elif defined(BSP_USING_BOARD_SF32LB56_WLAN_CORE_A128R12N1) || defined(BSP_USING_BOARD_SF32LB56_WLAN_CORE_N16R12N1)
+    pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 52);
 #else
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio2, 34);
-#endif /* BSP_USING_BOARD_EC_LB563XXX */
+#endif  /* SF32LB56X */
 #elif defined(SF32LB52X)
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 24);
 #else
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 64);
 #endif
-
     RT_ASSERT(pin >= 0);
     status = HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_PIN0 + pin, AON_PIN_MODE_LOW);
     RT_ASSERT(HAL_OK == status);
-
 #ifdef SF32LB52X
     h2l_ipc_init();
     rt_pm_request(PM_SLEEP_MODE_IDLE);

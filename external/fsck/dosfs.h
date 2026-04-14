@@ -33,6 +33,7 @@
 #define DOSFS_H
 
 #include <stdint.h>
+#include <sys/types.h>
 #include "sys_queue.h"
 #include "endian.h"
 
@@ -59,9 +60,9 @@ int port_open(const char *file, int flags, ...);
 int port_close(int d);
 int port_lseek(int fd, int offset, int whence);
 
-#define off_t int
+// #define off_t int
 
-#define ssize_t uint32_t
+// #define ssize_t uint32_t
 
 ssize_t
 pwrite(int fd, const void* buf, size_t nbyte, off_t offset);

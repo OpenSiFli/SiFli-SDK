@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -80,8 +85,8 @@ void tc_vglite_linear_grad(int argc, char **argv)
 {
     vg_lite_filter_t filter;
     vg_lite_linear_gradient_t grad;
-    uint32_t ramps[] = {0xff000000, 0xffff0000, 0xff00ff00, 0xff0000ff, 0xffffffff};
-    uint32_t stops[] = {0, 66, 122, 200, 255};
+    vg_lite_uint32_t ramps[] = {0xff000000, 0xffff0000, 0xff00ff00, 0xff0000ff, 0xffffffff};
+    vg_lite_uint32_t stops[] = {0, 66, 122, 200, 255};
     vg_lite_matrix_t *matGrad;
     vg_lite_matrix_t matPath;
     int fcount = 0;

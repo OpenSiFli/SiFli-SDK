@@ -214,10 +214,6 @@ in voltage and temperature.  */
 #include "bf0_hal_sdadc.h"
 #endif /* HAL_SDADC_MODULE_ENABLED */
 
-#ifdef HAL_CAN_MODULE_ENABLED
-#include "bf0_hal_can.h"
-#endif /* HAL_CAN_MODULE_ENABLED */
-
 #ifdef HAL_CEC_MODULE_ENABLED
 #include "bf0_hal_cec.h"
 #endif /* HAL_CEC_MODULE_ENABLED */

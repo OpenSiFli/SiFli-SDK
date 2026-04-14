@@ -21,7 +21,10 @@
 #include "secboot.h"
 #include "../dfu/dfu_protocol.h"
 
-// Target is retention memory 0x20000, 0x20000000 is temp before retention memory ready
+#ifdef SD_BL_MODE
+    #include "sd_emmc_drv.h"
+#endif /* SD_BL_MODE */
+
 #define HCPU_RAM_RETENTION_ADDR 0x20000000
 #define REG_LOCK_PASSWORD       "66776677"
 
@@ -45,6 +48,7 @@ extern int BSP_Flash_hw1_init();
 extern int BSP_Flash_hw3_init();
 extern int BSP_Flash_hw4_init();
 extern void flash_set_dual_mode(uint8_t id, uint8_t dual);
+extern void mbedtls_aes_lib_init(void);
 
 static UART_HandleTypeDef uart_handle;
 static QSPI_FLASH_CTX_T spi_nand_handle;
@@ -114,7 +118,6 @@ static void boot_uart_init(void)
     uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
     if (HAL_UART_Init(&uart_handle) != HAL_OK)
     {
-
     }
 }
 
@@ -216,7 +219,6 @@ static void boot_disable_aes(uint32_t addr)
     HAL_FLASH_ENABLE_AES(fhandle, 0);
 }
 
-
 static int boot_nand_init()
 {
     qspi_configure_t flash_cfg; // = FLASH3_CONFIG;
@@ -291,7 +293,6 @@ static int boot_nand_init()
     return 0;
 }
 
-
 int port_read_page(int blk, int page, int offset, uint8_t *buff, uint32_t size, uint8_t *spare, uint32_t spare_len)
 {
     int res;
@@ -332,11 +333,17 @@ static int read_nand(uint32_t addr, const int8_t *buf, uint32_t size)
     uint32_t fill, offset;
 
     cnt = 0;
-    offset = addr >= spi_nand_handle.handle.base ? addr - spi_nand_handle.handle.base : addr;
+    offset = addr >= spi_nand_handle.handle.base
+             ? addr - spi_nand_handle.handle.base
+             : addr;
     while (size > 0)
     {
         fill = size > nand_pagesize ? nand_pagesize : size;
-        if (bbm_read_page(offset / nand_blksize, (offset / nand_pagesize) & (nand_blksize / nand_pagesize - 1), offset & (nand_pagesize - 1), (uint8_t *)(buf + cnt), fill, NULL, 0) != fill)
+        if (bbm_read_page(offset / nand_blksize,
+                          (offset / nand_pagesize) &
+                          (nand_blksize / nand_pagesize - 1),
+                          offset & (nand_pagesize - 1), (uint8_t *)(buf + cnt),
+                          fill, NULL, 0) != fill)
             break;
         cnt += fill;
         size -= fill;
@@ -353,7 +360,7 @@ static int read_nor(uint32_t addr, const int8_t *buf, uint32_t size)
 
 static int write_nor(uint32_t addr, const int8_t *buf, uint32_t size)
 {
-    return BSP_Nor_write(addr, buf, size);
+    return BSP_Nor_write(addr, (const uint8_t *)buf, size);
 }
 
 static int erase_nor(uint32_t addr, uint32_t size)
@@ -366,7 +373,7 @@ static void init_mpi5(void)
     BSP_SetFlash5DIV(2);
     int res = BSP_Flash_hw5_init();
     if (res != 1)
-        //return;
+        // return;
         HAL_ASSERT(0);
 
     mpi5_flash_reader = read_nor;
@@ -408,7 +415,7 @@ static int boot_flash_init(boot_flash_t flash)
         init_func = boot_nand_init;
         flash_reader = read_nand;
 #endif /* BSP_USING_NOR_FLASH3 */
-#endif /* BSP_ENABLE_MPI3 */
+#endif     /* BSP_ENABLE_MPI3 */
     }
     else if (flash == BOOT_FLASH4)
     {
@@ -419,8 +426,8 @@ static int boot_flash_init(boot_flash_t flash)
 #else
         init_func = boot_nand_init;
         flash_reader = read_nand;
-#endif  /* BSP_USING_NOR_FLASH4 */
-#endif /* BSP_ENABLE_MPI4 */
+#endif /* BSP_USING_NOR_FLASH4 */
+#endif     /* BSP_ENABLE_MPI4 */
     }
     else
     {
@@ -428,7 +435,7 @@ static int boot_flash_init(boot_flash_t flash)
     }
 
     // Enable flash with single mode
-    //flash_set_dual_mode(id, 0);
+    // flash_set_dual_mode(id, 0);
     flash_en = init_func();
 
     // Enable failed
@@ -451,10 +458,9 @@ uint32_t boot_enable_flash(void)
 {
     uint32_t addr = BOOT_INVALID_ADDR;
     int ret;
-#if  (defined (BSP_USING_SPI_FLASH))
+#if (defined(BSP_USING_SPI_FLASH))
     do
     {
-        int flash_en;
         /* init divider for bootloader */
         if (CHIP_IS_585())
             BSP_SetFlash1DIV(6);
@@ -688,7 +694,6 @@ static void select_boot()
             hcpu_des = DFU_DES_RUNNING_ON_HCPU1;
             HAL_Set_backup(RTC_BACKUP_NAND_OTA_DES, hcpu_des);
         }
-
     }
     else if (sec_config_cache.running_imgs[CORE_HCPU] == &(flash_config->imgs[hcpu2_img_idx]))
     {
@@ -741,12 +746,8 @@ static void select_boot()
     }
 }
 
-void boot_images_main()
+void boot_config_clock(void)
 {
-    int i;
-    int flash_en;
-    uint32_t start_addr;
-
 #ifdef CODE_IN_RAM
     boot_mpu_img((uint8_t *)(HPSYS_RAM0_BASE + 0x20000));
 #endif
@@ -763,7 +764,6 @@ void boot_images_main()
 
     HAL_PMU_EnableDLL(1);
 
-#if defined (BSP_USING_PSRAM)
     dwtIpInit();
     /* wait until 2ms elapse to ensure flash LDO is stable before flash access
      * default clock is 24MHz, maybe slower than 24MHz at startup stage
@@ -775,8 +775,9 @@ void boot_images_main()
 
     HAL_RCC_HCPU_EnableDLL1(240000000);
     /* set hdiv again to make HCLK run on 240MHz actually
-     * Although the default hdiv registe value is 1, hardware would use 2 as the default hdiv.
-     * After write the hdiv register, hardware would use the updated value.
+     * Although the default hdiv registe value is 1, hardware would use 2 as the
+     * default hdiv. After write the hdiv register, hardware would use the
+     * updated value.
      */
     HAL_RCC_HCPU_SetDiv(1, 2, 5);
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, RCC_SYSCLK_DLL1);
@@ -793,7 +794,6 @@ void boot_images_main()
     {
     }
 
-
     if (CHIP_IS_583() || CHIP_IS_585())
     {
         HAL_RCC_HCPU_EnableDLL2(240000000);
@@ -807,25 +807,144 @@ void boot_images_main()
 
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH2, RCC_CLK_FLASH_DLL2);
+
+    HAL_Delay_us(0);
+}
+
+void boot_psram_init(void)
+{
+#if defined(BSP_USING_PSRAM)
     config_psram_pinmux();
     bsp_psramc_init();
-#endif
-    HAL_Delay_us(0);
+#endif /* BSP_USING_PSRAM */
+}
 
-    start_addr = boot_enable_flash();
-    // Enable failed just back to bootloader loop.
-    if (start_addr == BOOT_INVALID_ADDR)
-        return;
+#ifdef SD_BL_MODE
+/*****************************************************************************
+ * SD/eMMC boot support
+ *****************************************************************************/
 
+static uint8_t sd_cache[512];
+static uint32_t sdmmc_mem_base;
+
+static int read_sd_emmc(uint32_t addr, const int8_t *buf, uint32_t size)
+{
+    HAL_ASSERT(sdmmc_mem_base);
+
+    uint32_t offset = addr - sdmmc_mem_base;
+    uint32_t remain = size;
+    uint8_t *data = (uint8_t *)buf;
+
+    while (remain >= 512)
     {
-        extern void mbedtls_aes_lib_init(void);
-        mbedtls_aes_lib_init();
+        sd_read_data(offset, data, 512);
+        remain -= 512;
+        offset += 512;
+        data += 512;
+    }
+    if (remain > 0)
+    {
+        sd_read_data(offset, sd_cache, 512);
+        memcpy(data, sd_cache, remain);
+    }
+    return size;
+}
+
+#if defined(BOOT_DEVICE_SDMMC1)
+/*****************************************************************************
+ * SDMMC1 path
+ *****************************************************************************/
+#define BOOT_SD1_MEM_BASE        SDMMC1_MEM_BASE
+#define BOOT_SD1_MEM_OFFSET (0x1000)
+
+static uint32_t boot_enable_sd(void)
+{
+    int res;
+
+    sdmmc_mem_base = BOOT_SD1_MEM_BASE;
+
+    /* Select SDMMC clock source */
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SDMMC, RCC_CLK_FLASH_DLL2);
+    /* Enable SDMMC1 clock */
+    HAL_RCC_HCPU_enable2(HPSYS_RCC_ENR2_SDMMC1, 1);
+
+    /* Power on eMMC */
+    boot_sd1_power_on();
+
+    /* Initialize eMMC controller and card */
+    res = sdmmc_init(SDMMC1_BASE);
+    if (res != 0)
+    {
+        printf("eMMC init failed: %d\r\n", res);
+        return BOOT_INVALID_ADDR;
     }
 
-    boot_disable_aes(start_addr);
-    /* init AES_ACC as normal mode */
-    __HAL_SYSCFG_CLEAR_SECURITY();
+    /* Set flash reader for DFU */
+    dfu_flash_reader = read_sd_emmc;
+    boot_set_flash_read_func(read_sd_emmc);
 
+    printf("eMMC boot via SD1 ready\r\n");
+    return BOOT_SD1_MEM_BASE + BOOT_SD1_MEM_OFFSET;
+}
+
+
+#elif defined(BOOT_DEVICE_SDMMC2)
+/*****************************************************************************
+ * SDMMC2 path
+ *****************************************************************************/
+#define BOOT_SD2_MEM_BASE        SDMMC2_MEM_BASE
+#define BOOT_SD2_MEM_OFFSET (0x1000)
+
+static uint32_t boot_enable_sd2(void)
+{
+    int res;
+    sdmmc_mem_base = BOOT_SD2_MEM_BASE;
+
+    /* Select SDMMC clock source */
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SDMMC, RCC_CLK_FLASH_DLL2);
+    /* Enable SDMMC2 clock */
+    HAL_RCC_HCPU_enable2(HPSYS_RCC_ENR2_SDMMC2, 1);
+
+    /* Power on eMMC via SD2 */
+    boot_sd2_power_on();
+
+    /* Initialize eMMC controller and card via SDMMC2 */
+    res = sdmmc_init(SDMMC2_BASE);
+    if (res != 0)
+    {
+        printf("eMMC SD2 init failed: %d\r\n", res);
+        return BOOT_INVALID_ADDR;
+    }
+
+    /* Set flash reader for DFU */
+    dfu_flash_reader = read_sd_emmc;
+    boot_set_flash_read_func(read_sd_emmc);
+
+    printf("eMMC boot via SD2 ready\r\n");
+    return BOOT_SD2_MEM_BASE + BOOT_SD2_MEM_OFFSET;
+}
+
+#endif /* BOOT_DEVICE_SDMMC1 / BOOT_DEVICE_SDMMC2 */
+#endif /* SD_BL_MODE */
+
+uint32_t boot_device_init(void)
+{
+    uint32_t start_addr = 0;
+
+#ifdef SD_BL_MODE
+#if defined(BOOT_DEVICE_SDMMC2)
+    start_addr = boot_enable_sd2();
+#else
+    start_addr = boot_enable_sd();
+#endif
+#else
+    start_addr = boot_enable_flash();
+#endif /* SD_BL_MODE */
+    return start_addr;
+}
+
+void boot_images_help(void)
+{
     dfu_install_info info;
     dfu_install_info info_ext;
     if (dfu_flash_reader != NULL)
@@ -883,10 +1002,33 @@ void boot_images_main()
     }
 }
 
+void boot_images_main()
+{
+    uint32_t start_addr;
+
+    printf("boot_images_main\r\n");
+
+    boot_config_clock();
+
+    boot_psram_init();
+
+    start_addr = boot_device_init();
+    // Enable failed just back to bootloader loop.
+    if (start_addr == BOOT_INVALID_ADDR)
+    {
+        return;
+    }
+
+    mbedtls_aes_lib_init();
+    boot_disable_aes(start_addr);
+    /* init AES_ACC as normal mode */
+    __HAL_SYSCFG_CLEAR_SECURITY();
+    boot_images_help();
+}
 
 static void boot_flash_power_on(void)
 {
-#define V58_PIN   (58U)
+#define V58_PIN (58U)
     uint8_t pin = V58_PIN;
 
 #if 0
@@ -899,7 +1041,6 @@ static void boot_flash_power_on(void)
     HAL_GPIO_Init(hwp_gpio1, &gpio_config);
     HAL_GPIO_WritePin(hwp_gpio1, 39, GPIO_PIN_SET);
 #endif
-
 
     /* enable V43 */
     pin = 43 - 32;
@@ -926,7 +1067,6 @@ static void boot_flash_power_on(void)
 
 #endif /* SOC_BF0_HCPU */
 
-
     dwtIpInit();
     /* wait until 2ms elapse to ensure flash LDO is stable before flash access
      * default clock is 24MHz, maybe slower than 24MHz at startup stage
@@ -943,7 +1083,6 @@ static void boot_flash_power_on(void)
     HAL_QSPI_SET_RXDELAY(1, 0, 2);
 #endif
 }
-
 
 static void boot_efuse_init(void)
 {
@@ -969,8 +1108,6 @@ void hw_preinit0(void)
     boot_flash_power_on();
 }
 
-
-
 int regop_lock_check(char *passwd, uint32_t len)
 {
     int ret = -1;
@@ -979,12 +1116,11 @@ int regop_lock_check(char *passwd, uint32_t len)
     return ret;
 }
 
-
 int main(void)
 {
     int count = 1;
 
-    //g_sec_config = (struct sec_configuration *)boot_enable_flash();
+    // g_sec_config = (struct sec_configuration *)boot_enable_flash();
 #if 0
     rt_flash_set_alias(FLASH_START, FLASH_START, 0, 0);
     g_sec_config = (struct sec_configuration *)FLASH_START;
@@ -1007,4 +1143,3 @@ int main(void)
 
     return 0;
 }
-

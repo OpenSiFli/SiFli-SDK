@@ -1,4 +1,4 @@
-# CDC ACM USB-to-Serial Device Example
+# USB CDC ACM Example
 
 This example demonstrates how to implement a CDC ACM (Communication Device Class - Abstract Control Model) device using the CherryUSB stack, which emulates a USB interface as a serial port device. The device can be recognized by the host as a virtual serial port (COM port) and supports bidirectional data transmission.
 

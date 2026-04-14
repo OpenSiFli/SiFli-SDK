@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * @file lvsf_img_decoder.c
  *
@@ -133,6 +139,8 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
             memcpy(&p_decoded->header, &dsc->header, sizeof(p_decoded->header));
             p_decoded->data = (uint8_t *)img_dsc->data;
             p_decoded->data_size = img_dsc->data_size;
+            p_decoded->unaligned_data = (uint8_t *)img_dsc->data;
+            p_decoded->handlers = lv_draw_buf_get_handlers();
             dsc->decoded = p_decoded;
             ret = LV_RESULT_OK;
         }

@@ -1,4 +1,5 @@
 # 键盘和编码器演示
+源码路径：example/multimedia/lvgl/lvgl_v9_demos/src/lv_demos/keypad_encoder
 
 ## 概述
 

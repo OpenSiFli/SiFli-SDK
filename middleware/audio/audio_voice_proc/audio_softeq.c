@@ -1,6 +1,10 @@
-﻿// freqshift.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-#include <stdio.h>
+﻿/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+﻿#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

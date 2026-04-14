@@ -1,7 +1,7 @@
 # peripheral_with_ota Example Description and SDK DFU Integration
 
 ## Supported Platforms
-52x, 56x and 58x chips
+All platforms
 
 ## Overview
 <!-- Example introduction -->

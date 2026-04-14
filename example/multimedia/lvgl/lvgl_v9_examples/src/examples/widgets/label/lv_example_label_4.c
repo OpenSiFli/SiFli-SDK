@@ -5,10 +5,10 @@
 #define MASK_WIDTH 150
 #define MASK_HEIGHT 60
 
-static void generate_mask(lv_draw_buf_t *mask, int32_t w, int32_t h, const char *txt)
+static void generate_mask(lv_draw_buf_t * mask, int32_t w, int32_t h, const char * txt)
 {
     /*Create a "8 bit alpha" canvas and clear it*/
-    lv_obj_t *canvas = lv_canvas_create(lv_screen_active());
+    lv_obj_t * canvas = lv_canvas_create(lv_screen_active());
     lv_canvas_set_draw_buf(canvas, mask);
     lv_canvas_fill_bg(canvas, lv_color_black(), LV_OPA_TRANSP);
 
@@ -43,7 +43,7 @@ void lv_example_label_4(void)
 
     /* Create an object from where the text will be masked out.
      * Now it's a rectangle with a gradient but it could be an image too*/
-    lv_obj_t *grad = lv_obj_create(lv_screen_active());
+    lv_obj_t * grad = lv_obj_create(lv_screen_active());
     lv_obj_set_size(grad, MASK_WIDTH, MASK_HEIGHT);
     lv_obj_center(grad);
     lv_obj_set_style_bg_color(grad, lv_color_hex(0xff0000), 0);

@@ -1,6 +1,6 @@
 # JDI功耗测试示例
 
-源码路径: example/pm_jdi
+源码路径: example/pm/jdi
 
 ### 支持的开发板
 此示例可在以下开发板上运行：

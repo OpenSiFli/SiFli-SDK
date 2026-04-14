@@ -1,0 +1,19 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+
+CPPPATH = [cwd]
+lib = [GroupLibName('gui_widgets')]
+libpath = [cwd]
+
+group = DefineGroup(
+    'gui_widgets',
+    src,
+    depend=['PKG_USING_LITTLEVGL2RTT'],
+    LIBS=lib,
+    LIBPATH=libpath,
+    CPPPATH=CPPPATH
+)
+
+Return('group')

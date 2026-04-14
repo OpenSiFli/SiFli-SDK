@@ -30,6 +30,8 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
    *.o (.l1_non_ret_rodata_*)
    *.o            (.text.HAL_Delay_us)
    *.o            (.text.HAL_Delay_us_)   
+
+   *.o  (nor_cfg_db)
   }  
 
 #ifdef BSP_USING_PSRAM

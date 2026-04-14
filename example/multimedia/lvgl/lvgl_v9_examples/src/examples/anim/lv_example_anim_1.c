@@ -1,18 +1,17 @@
 #include "../lv_examples.h"
 #if LV_BUILD_EXAMPLES && LV_USE_SWITCH
 
-static void anim_x_cb(void *var, int32_t v)
+static void anim_x_cb(void * var, int32_t v)
 {
-    lv_obj_set_x(var, v);
+    lv_obj_set_x((lv_obj_t *) var, v);
 }
 
-static void sw_event_cb(lv_event_t *e)
+static void sw_event_cb(lv_event_t * e)
 {
-    lv_obj_t *sw = lv_event_get_target(e);
-    lv_obj_t *label = lv_event_get_user_data(e);
+    lv_obj_t * sw = lv_event_get_target_obj(e);
+    lv_obj_t * label = (lv_obj_t *) lv_event_get_user_data(e);
 
-    if (lv_obj_has_state(sw, LV_STATE_CHECKED))
-    {
+    if(lv_obj_has_state(sw, LV_STATE_CHECKED)) {
         lv_anim_t a;
         lv_anim_init(&a);
         lv_anim_set_var(&a, label);
@@ -22,8 +21,7 @@ static void sw_event_cb(lv_event_t *e)
         lv_anim_set_path_cb(&a, lv_anim_path_overshoot);
         lv_anim_start(&a);
     }
-    else
-    {
+    else {
         lv_anim_t a;
         lv_anim_init(&a);
         lv_anim_set_var(&a, label);
@@ -41,11 +39,11 @@ static void sw_event_cb(lv_event_t *e)
  */
 void lv_example_anim_1(void)
 {
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_obj_t * label = lv_label_create(lv_screen_active());
     lv_label_set_text(label, "Hello animations!");
     lv_obj_set_pos(label, 100, 10);
 
-    lv_obj_t *sw = lv_switch_create(lv_screen_active());
+    lv_obj_t * sw = lv_switch_create(lv_screen_active());
     lv_obj_center(sw);
     lv_obj_add_state(sw, LV_STATE_CHECKED);
     lv_obj_add_event_cb(sw, sw_event_cb, LV_EVENT_VALUE_CHANGED, label);

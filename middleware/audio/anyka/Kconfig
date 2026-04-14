@@ -1,0 +1,9 @@
+config PKG_USING_ANYKA
+    bool "Enable anyka anyblue1090 real-time speech enhancement processing"
+    default n
+
+config ANYKA_RUN_IN_ACPU
+    bool "anyka lib run in acpu"
+        depends on PKG_USING_ANYKA
+    default n 
+

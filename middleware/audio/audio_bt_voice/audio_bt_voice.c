@@ -1142,6 +1142,8 @@ void msbc_close()
         audio_mem_free(p_uplink_pool);
         p_msbc_env->send_enable = 0;
         p_msbc_env->sn_cnt = 0;
+        rt_ringbuffer_reset(&uplink_ring);
+        rt_ringbuffer_reset(pt_mic2bt_rbf);
         LOG_I("msbc packet: total %d rx error %d, decode error %d", p_msbc_env->total_packet, p_msbc_env->error_packet, p_msbc_env->decode_err);
     }
     LOG_I("msbc_close");

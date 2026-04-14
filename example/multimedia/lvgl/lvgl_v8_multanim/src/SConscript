@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+group = DefineGroup('LVGL_EXAMPLE', src,
+                    depend=['PKG_USING_LITTLEVGL2RTT'],
+                    CPPPATH=[cwd])
+Return('group')

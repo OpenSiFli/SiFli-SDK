@@ -1,4 +1,4 @@
-# usb_audio_class_example
+# USB Microphone Example
 
 Source path: example\cherryusb\device\audio_v1_mic
 

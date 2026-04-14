@@ -109,6 +109,11 @@ HAL_StatusTypeDef HAL_LCPU_CONFIG_get_type(HAL_LCPU_CONFIG_TYPE_T type, uint8_t 
     case HAL_LCPU_CONFIG_BATTERY_CALIBRATION:
         *config_type = HAL_LCPU_CONFIG_BATTERY_CALIBRATION_ROM;
         break;
+#ifdef SF32LB56X
+    case HAL_LCPU_CONFIG_SOFT_CVSD:
+        *config_type = HAL_LCPU_CONFIG_IS_SOFT_CVSD_ROM;
+        break;
+#endif
     default:
         *config_type  = HAL_LCPU_CONFIG_MAX;
     }
@@ -134,6 +139,11 @@ HAL_StatusTypeDef HAL_LCPU_CONFIG_get_type(HAL_LCPU_CONFIG_TYPE_T type, uint8_t 
     case HAL_LCPU_CONFIG_BATTERY_CALIBRATION:
         *config_type = HAL_LCPU_CONFIG_BATTERY_CALIBRATION_ROM;
         break;
+#ifdef SF32LB56X
+    case HAL_LCPU_CONFIG_SOFT_CVSD:
+        *config_type = HAL_LCPU_CONFIG_IS_SOFT_CVSD_ROM;
+        break;
+#endif
     default:
         *config_type  = HAL_LCPU_CONFIG_MAX;
     }

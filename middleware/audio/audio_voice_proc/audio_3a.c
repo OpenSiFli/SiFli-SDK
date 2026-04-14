@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020-2021 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -33,7 +33,7 @@
     #include "webrtc/modules/audio_processing/ramp_out/ramp_out.h"
 #endif
 
-#if defined(RT_USING_BT) && defined(SOLUTION_WATCH)
+#if defined(RT_USING_BT) && defined(SOLUTION)
     #include "bt_connect.h"
 #endif
 
@@ -857,7 +857,7 @@ RT_WEAK void hfp_opened_for_xiaozhi(uint32_t samplerate)
 void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc)
 {
     audio_3a_t *thiz = &g_audio_3a_env;
-#if defined(SOLUTION_WATCH) && defined(RT_USING_BT)
+#if defined(SOLUTION) && defined(RT_USING_BT)
     bool talk_with_abox = false;
 
     if (BT_DEV_CLS_AUDIO_BOX ==  bt_connect_get_peer_type())

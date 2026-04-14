@@ -1,4 +1,5 @@
 # EPIC 例程程序
+源码路径：example/rt_device/gpu/single_mode
 EPIC(ePicasso)，是我们自研的图形引擎，它是专为 2D/2.5D 图像处理设计的硬件加速模块，主要用于分担 CPU 在图像运算中的负载，提升图像处理效率。
 
 ## 概述

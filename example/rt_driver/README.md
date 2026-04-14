@@ -1,4 +1,5 @@
 # 屏幕模组调试程序
+源码路径：example/rt_driver
 
 ## 概述
 这是基于rt-thread的rt driver驱动框架的屏幕刷新显示，以及触控的数据读取打印程序。

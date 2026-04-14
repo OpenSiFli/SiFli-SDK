@@ -338,6 +338,14 @@ mc_err_t mc_save_metrics(void *metrics, bool freed)
     return mc_save_metrics_ex(&mc_ctx.default_db, metrics, freed);
 }
 
+mc_db_t *mc_get_metrics_db(void)
+{
+#ifndef MC_CLIENT_ENABLED
+    return &mc_ctx.default_db;
+#else
+    return NULL;
+#endif
+}
 
 mc_err_t mc_free_metrics(void *metrics)
 {
@@ -357,7 +365,7 @@ mc_err_t mc_free_metrics(void *metrics)
 mc_err_t mc_flush(void)
 {
     mc_err_t err = MC_OK;
-
+#ifndef MC_CLIENT_ENABLED
     mc_enter_critical();
     if (mc_ctx.default_db.db)
     {
@@ -365,7 +373,7 @@ mc_err_t mc_flush(void)
         mc_ctx.err_code = err;
     }
     mc_exit_critical();
-
+#endif /* MC_CLIENT_ENABLED */
     return err;
 }
 MSH_CMD_EXPORT(mc_flush, mc_flush);
@@ -373,13 +381,29 @@ MSH_CMD_EXPORT(mc_flush, mc_flush);
 mc_err_t mc_close(void)
 {
     mc_err_t err = MC_OK;
-
+    mc_collector_mng_t *mng;
     mc_enter_critical();
+#ifndef MC_CLIENT_ENABLED
     if (mc_ctx.default_db.db)
     {
         err = mc_backend_close(mc_ctx.default_db.db);
         mc_ctx.default_db.db = NULL;
         mc_ctx.err_code = err;
+    }
+#endif /* MC_CLIENT_ENABLED */
+#ifdef MC_CLIENT_ENABLED
+    if (!mc_ctx.init)
+    {
+        mc_exit_critical();
+        return MC_ERROR;
+    }
+#endif
+    /* STOP timer*/
+    for (int i = 0; i < MC_PERIOD_MAX; i++)
+    {
+        mng = &mc_ctx.mng[i];
+        if (mng->num >  0)
+            rt_timer_stop(&mng->timer);
     }
     mc_exit_critical();
 
@@ -390,8 +414,8 @@ MSH_CMD_EXPORT(mc_close, mc_close);
 
 mc_err_t mc_flush_ex(mc_db_t *db)
 {
-    mc_err_t err;
-
+    mc_err_t err = MC_OK;
+#ifndef MC_CLIENT_ENABLED
     if (!db)
     {
         return MC_ERROR;
@@ -401,7 +425,7 @@ mc_err_t mc_flush_ex(mc_db_t *db)
     err = mc_backend_flush(db->db);
     mc_ctx.err_code = err;
     mc_exit_critical();
-
+#endif /* MC_CLIENT_ENABLED */
     return err;
 }
 
@@ -657,11 +681,27 @@ static void mc_handle_msg(mc_mq_msg_t *msg)
         mc_ctx.err_code = err;
     }
     mc_exit_critical();
-    RT_ASSERT(MC_OK == err);
+    if (MC_OK != err) LOG_W("mc_handle_msg write fail !!!!");
     if (msg->freed)
     {
         rt_free(msg->data);
     }
+}
+
+void mc_backend_direct_write(mc_db_t *db, uint16_t id, void *data, uint16_t size)
+{
+    mc_mq_msg_t msg;
+    mc_metrics_hdr_t *header;
+    void *metrics;
+    metrics = mc_alloc_metrics(id, size);
+    RT_ASSERT(metrics);
+    rt_memcpy(metrics, data, size);
+    header = (mc_metrics_hdr_t *)((uint32_t)metrics - sizeof(mc_metrics_hdr_t));
+    msg.db = db;
+    msg.data = (mc_metrics_t *)header;
+    msg.freed = true;
+    mc_handle_msg(&msg);
+    mc_flush();
 }
 
 static void mc_thread_entry(void *param)

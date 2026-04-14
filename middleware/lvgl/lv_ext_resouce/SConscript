@@ -1,0 +1,18 @@
+import os
+from building import * 
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd]
+inc = inc + [os.path.join(cwd, '..')]
+
+
+# add driver basic code
+src = src + Glob('./*.c')
+
+# add group to IDE project
+objs = DefineGroup('lv_ext_resouce', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
+Return('objs')

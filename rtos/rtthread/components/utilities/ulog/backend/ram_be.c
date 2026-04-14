@@ -12,6 +12,7 @@
 #include "rtdevice.h"
 #include <ulog.h>
 #include "ram_be.h"
+#include "mem_section.h"
 
 #ifdef ULOG_BACKEND_USING_RAM
 
@@ -57,12 +58,27 @@ static struct ulog_backend ulog_ram_be;
     static struct rt_device ulog_ram_be_pm_device;
 #endif /* RT_USING_PM */
 
+L2_CACHE_RET_BSS_SECT_BEGIN(ulog_be_ram_buf)
 /** wr_offset used by dectect whether ram_buf is corrupted after sleep */
-static rt_uint32_t ulog_be_ram_buf_wr_offset;
+static rt_uint32_t ulog_be_ram_buf_wr_offset L2_CACHE_RET_BSS_SECT(ulog_be_ram_buf) L2_CACHE_RET_BSS_SECT(ulog_be_ram_buf);
+static ulog_ram_be_buf_t ulog_be_ram_buf L2_CACHE_RET_BSS_SECT(ulog_be_ram_buf) L2_CACHE_RET_BSS_SECT(ulog_be_ram_buf);
+L2_CACHE_RET_BSS_SECT_END
 
-SECTION_ZIDATA_BEGIN(.l1_non_ret_bss_ulog_be_ram_buf)
-static ulog_ram_be_buf_t ulog_be_ram_buf;
-SECTION_ZIDATA_END
+RT_WEAK void *ulog_ram_mem_malloc(uint32_t size)
+{
+    void *ptr = rt_malloc(size);
+    RT_ASSERT(ptr);
+    return ptr;
+}
+RT_WEAK void ulog_ram_mem_free(void *ptr)
+{
+    rt_free(ptr);
+}
+
+RT_WEAK void *ulog_ram_mem_realloc(void *ptr, rt_size_t size)
+{
+    return rt_realloc(ptr, size);
+}
 
 
 __ROM_USED void ulog_ram_backend_output(struct ulog_backend *backend, rt_uint32_t level, const char *tag, rt_bool_t is_raw,
@@ -73,9 +89,9 @@ __ROM_USED void ulog_ram_backend_output(struct ulog_backend *backend, rt_uint32_
     rt_uint32_t wr_offset;
 
     /* truncate log if len is larger than buf size */
-    if (len > ULOG_RAM_BE_BUF_SIZE)
+    if (len > ulog_be_ram_buf.buf_size)
     {
-        wr_len = ULOG_RAM_BE_BUF_SIZE;
+        wr_len = ulog_be_ram_buf.buf_size;
         rd_offset = len - wr_len;
     }
     else
@@ -84,19 +100,19 @@ __ROM_USED void ulog_ram_backend_output(struct ulog_backend *backend, rt_uint32_
         rd_offset = 0;
     }
     wr_offset = ulog_be_ram_buf.wr_offset;
-    RT_ASSERT(wr_offset < ULOG_RAM_BE_BUF_SIZE);
-    if ((wr_len + wr_offset) >= ULOG_RAM_BE_BUF_SIZE)
+    RT_ASSERT(wr_offset < ulog_be_ram_buf.buf_size);
+    if ((wr_len + wr_offset) >= ulog_be_ram_buf.buf_size)
     {
         rt_memcpy((void *)&ulog_be_ram_buf.buf[wr_offset], (void *)(log + rd_offset),
-                  ULOG_RAM_BE_BUF_SIZE - wr_offset);
-        rd_offset += ULOG_RAM_BE_BUF_SIZE - wr_offset;
-        wr_len -= (ULOG_RAM_BE_BUF_SIZE - wr_offset);
+                  ulog_be_ram_buf.buf_size - wr_offset);
+        rd_offset += ulog_be_ram_buf.buf_size - wr_offset;
+        wr_len -= (ulog_be_ram_buf.buf_size - wr_offset);
         wr_offset = 0;
         ulog_be_ram_buf.full = RT_TRUE;
     }
     if (wr_len > 0)
     {
-        RT_ASSERT((wr_offset + wr_len) < ULOG_RAM_BE_BUF_SIZE);
+        RT_ASSERT((wr_offset + wr_len) < ulog_be_ram_buf.buf_size);
         rt_memcpy((void *)&ulog_be_ram_buf.buf[wr_offset], (void *)(log + rd_offset),
                   wr_len);
         wr_offset += wr_len;
@@ -105,13 +121,33 @@ __ROM_USED void ulog_ram_backend_output(struct ulog_backend *backend, rt_uint32_
     ulog_be_ram_buf.wr_offset = wr_offset;
 }
 
+void ulog_ram_buf_init(rt_bool_t realloc, rt_uint32_t size)
+{
+    extern void log_pause(rt_bool_t pause);
+    log_pause(1);
+    if (realloc)
+    {
+        ulog_be_ram_buf.buf = ulog_ram_mem_realloc(ulog_be_ram_buf.buf, size);
+    }
+    else
+    {
+        ulog_be_ram_buf.buf = ulog_ram_mem_malloc(size);
+    }
+    RT_ASSERT(ulog_be_ram_buf.buf);
+    ulog_be_ram_buf.buf_size = size;
+    rt_memset(ulog_be_ram_buf.buf, 0, size);
+    ulog_be_ram_buf.wr_offset = 0;
+    ulog_be_ram_buf.full = RT_FALSE;
+    log_pause(0);
+    return;
+}
+
 __ROM_USED int ulog_ram_backend_init(void)
 {
     ulog_init();
 
     ulog_ram_be.output = ulog_ram_backend_output;
-    ulog_be_ram_buf.wr_offset = 0;
-    ulog_be_ram_buf.full = RT_FALSE;
+    ulog_ram_buf_init(RT_FALSE, ULOG_RAM_BE_BUF_SIZE);
     ulog_backend_register(&ulog_ram_be, "ram", RT_TRUE);
 
     return 0;

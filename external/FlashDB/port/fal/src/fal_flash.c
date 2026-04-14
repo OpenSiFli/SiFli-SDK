@@ -29,6 +29,12 @@ static const struct fal_flash_dev *const device_table[] =
 #if defined(BSP_ENABLE_QSPI4)&&(BSP_QSPI4_MODE<2)
     &nor_flash4,
 #endif
+#if defined(BSP_USING_SDMMC1) || defined(RT_USING_SPI_MSD)
+    &fal_sdmmc1,
+#endif /* BSP_USING_SDMMC1 || RT_USING_SPI_MSD */
+#if defined(BSP_USING_SDMMC2)
+    &fal_sdmmc2,
+#endif /* BSP_USING_SDMMC2 */    
 };
 #else
 

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 /*********************
  *      INCLUDES
  *********************/
@@ -7,11 +12,12 @@
 #ifndef _WIN32
     #include "drv_lcd.h"
 #endif
+#include "lvsf.h"
 #include "gui_app_fwk.h"
 #include "lv_ex_data.h"
 #include "app_mem.h"
 #include "log.h"
-#include "lv_freetype.h"
+#include "lvsf/lv_freetype.h"
 
 
 

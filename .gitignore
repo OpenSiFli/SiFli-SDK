@@ -4,6 +4,7 @@
 *.scvd
 *.old
 *.uvoptx
+*.uvguix.*
 /**/build_*/
 /**/build/
 /**/*.pyc
@@ -18,3 +19,13 @@ _*/
 # Allow tracking everything under tools/build
 !tools/build/
 !tools/build/**
+# Ignore something under tools/crash_dump_analyser
+tools/crash_dump_analyser/script/*.bin
+tools/crash_dump_analyser/script/*.axf
+tools/crash_dump_analyser/script/*.elf
+tools/crash_dump_analyser/script/*.txt
+tools/crash_dump_analyser/simarm/
+tools/flash/**/flashdrv_version.h
+# Ignore build folder of mkfatimg
+tools/mkfatimg/mkfatimg/Release/
+tools/mkfatimg/mkfatimg_nand/Release/

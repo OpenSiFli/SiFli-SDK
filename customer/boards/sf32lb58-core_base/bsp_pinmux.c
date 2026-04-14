@@ -30,7 +30,7 @@ void BSP_sd2_pinmux_config()
     HAL_PIN_Set(PAD_PA70, SD2_CMD,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA75, SD2_DIO1, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA76, SD2_DIO0, PIN_PULLUP, 1);
-    HAL_PIN_Set(PAD_PA77, SD2_CLK,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA77, SD2_CLK,  PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA79, SD2_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA81, SD2_DIO3, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA68, GPIO_A68, PIN_NOPULL, 1);     // SD1 card detect pin
@@ -239,6 +239,11 @@ void BSP_PIN_Init(void)
 
     HAL_PIN_Set(PAD_PA72, GPIO_A72, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA71, GPIO_A71, PIN_NOPULL, 1);
+
+    HAL_PIN_Set(PAD_PA73, GPIO_A73, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA69, GPIO_A69, PIN_NOPULL, 1);         /*output mode wake up wifi*/
+    HAL_PIN_Set(PAD_PA68, GPIO_A68, PIN_PULLDOWN, 1);       /*input mode wifi wake up mcu*/
+    HAL_PIN_Set(PAD_PA85, GPIO_A85, PIN_PULLUP, 1);         /*input mode wifi wake up mcu*/
 
     /*SDHCI1 config*/
 #ifdef BSP_USING_SDHCI1

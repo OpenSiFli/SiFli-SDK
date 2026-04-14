@@ -4,7 +4,9 @@ Source code path: example/hal/hwtimer0
 
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ sf32lb52-lcd_n16r8
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 
 ## Overview

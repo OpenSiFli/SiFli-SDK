@@ -13,6 +13,8 @@
 #define FLASH2_BASE_ADDR  (0x64000000)
 #define FLASH3_BASE_ADDR  (0x68000000)
 #define FLASH4_BASE_ADDR  (0x6C000000)
+#define SDMMC1_MEM_BASE   (0x68000000)
+#define SDMMC2_MEM_BASE   (0xA0000000)
 
 void rt_hw_board_init(void);
 rt_uint8_t *rt_hw_sram_init(void);

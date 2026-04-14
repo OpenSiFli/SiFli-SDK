@@ -18,6 +18,16 @@ extern "C" {
 
 #  ifdef __NuttX__
 #    include <nuttx/config.h>
+/*
+ * Make sure version number in Kconfig file is correctly set.
+ * Mismatch can happen when user manually copy lvgl/Kconfig file to their project, like what NuttX does.
+ */
+#    include "../lv_version.h"
+
+#    if CONFIG_LVGL_VERSION_MAJOR != LVGL_VERSION_MAJOR || CONFIG_LVGL_VERSION_MINOR != LVGL_VERSION_MINOR \
+        || CONFIG_LVGL_VERSION_PATCH != LVGL_VERSION_PATCH
+#        warning "Version mismatch between Kconfig and lvgl/lv_version.h"
+#    endif
 #  elif defined(__RTTHREAD__)
 #    define LV_CONF_INCLUDE_SIMPLE
 #    include <lv_rt_thread_conf.h>
@@ -74,6 +84,30 @@ extern "C" {
 #endif
 
 /*******************
+ * LV_USE_OS
+ *******************/
+
+#ifdef CONFIG_LV_OS_NONE
+#  define CONFIG_LV_USE_OS LV_OS_NONE
+#elif defined(CONFIG_LV_OS_PTHREAD)
+#  define CONFIG_LV_USE_OS LV_OS_PTHREAD
+#elif defined(CONFIG_LV_OS_FREERTOS)
+#  define CONFIG_LV_USE_OS LV_OS_FREERTOS
+#elif defined(CONFIG_LV_OS_CMSIS_RTOS2)
+#  define CONFIG_LV_USE_OS LV_OS_CMSIS_RTOS2
+#elif defined (CONFIG_LV_OS_RTTHREAD)
+#  define CONFIG_LV_USE_OS LV_OS_RTTHREAD
+#elif defined (CONFIG_LV_OS_WINDOWS)
+#  define CONFIG_LV_USE_OS LV_OS_WINDOWS
+#elif defined (CONFIG_LV_OS_MQX)
+#  define CONFIG_LV_USE_OS LV_OS_MQX
+#elif defined (CONFIG_LV_OS_SDL2)
+#  define CONFIG_LV_USE_OS LV_OS_SDL2
+#elif defined (CONFIG_LV_OS_CUSTOM)
+#  define CONFIG_LV_USE_OS LV_OS_CUSTOM
+#endif
+
+/*******************
  * LV_MEM_SIZE
  *******************/
 
@@ -115,7 +149,7 @@ extern "C" {
 
 #ifdef CONFIG_LV_MEM_MONITOR_ALIGN_TOP_LEFT
 #  define CONFIG_LV_USE_MEM_MONITOR_POS LV_ALIGN_TOP_LEFT
-#elif defined(CONFIG_LV_USE_MEM_MONITOR_ALIGN_TOP_MID)
+#elif defined(CONFIG_LV_MEM_MONITOR_ALIGN_TOP_MID)
 #  define CONFIG_LV_USE_MEM_MONITOR_POS LV_ALIGN_TOP_MID
 #elif defined(CONFIG_LV_MEM_MONITOR_ALIGN_TOP_RIGHT)
 #  define CONFIG_LV_USE_MEM_MONITOR_POS LV_ALIGN_TOP_RIGHT
@@ -139,83 +173,69 @@ extern "C" {
 
 /**
  * NOTE: In Kconfig instead of `LV_DEFAULT_FONT`
- *       `LV_FONT_DEFAULT_<font_name>` is defined
+ *       `CONFIG_LV_FONT_DEFAULT_<font_name>` is defined
  *       hence the large selection with if-s
  */
 
 /*------------------
  * DEFAULT FONT
  *-----------------*/
-#ifdef LV_FONT_DEFAULT_MONTSERRAT_8
+#ifdef CONFIG_LV_FONT_DEFAULT_MONTSERRAT_8
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_8
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_10)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_10)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_10
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_12)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_12)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_12
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_14)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_14
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_16)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_16)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_16
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_18)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_18)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_18
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_20)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_20)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_20
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_22)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_22)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_22
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_24)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_24)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_24
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_26)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_26)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_26
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_28)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_28)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_28
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_30)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_30)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_30
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_32)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_32)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_32
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_34)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_34)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_34
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_36)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_36)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_36
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_38)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_38)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_38
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_40)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_40)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_40
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_42)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_42)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_42
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_44)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_44)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_44
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_46)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_46)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_46
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_48)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_48)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_48
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_12_SUBPX)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_12_SUBPX)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_12_subpx
-#elif defined(LV_FONT_DEFAULT_MONTSERRAT_28_COMPRESSED)
+#elif defined(CONFIG_LV_FONT_DEFAULT_MONTSERRAT_28_COMPRESSED)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_montserrat_28_compressed
-#elif defined(LV_FONT_DEFAULT_DEJAVU_16_PERSIAN_HEBREW)
+#elif defined(CONFIG_LV_FONT_DEFAULT_DEJAVU_16_PERSIAN_HEBREW)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_dejavu_16_persian_hebrew
-#elif defined(LV_FONT_DEFAULT_SIMSUN_14_CJK)
-#  define CONFIG_LV_FONT_DEFAULT &lv_font_simsun_14_cjk
-#elif defined(LV_FONT_DEFAULT_SIMSUN_16_CJK)
-#  define CONFIG_LV_FONT_DEFAULT &lv_font_simsun_16_cjk
-#elif defined(LV_FONT_DEFAULT_UNSCII_8)
+#elif defined(CONFIG_LV_FONT_SOURCE_HAN_SANS_SC_14_CJK)
+#  define CONFIG_LV_FONT_DEFAULT &lv_font_source_han_sans_sc_14_cjk
+#elif defined(CONFIG_LV_FONT_SOURCE_HAN_SANS_SC_16_CJK)
+#  define CONFIG_LV_FONT_DEFAULT &lv_font_source_han_sans_sc_16_cjk
+#elif defined(CONFIG_LV_FONT_DEFAULT_UNSCII_8)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_unscii_8
-#elif defined(LV_FONT_DEFAULT_UNSCII_16)
+#elif defined(CONFIG_LV_FONT_DEFAULT_UNSCII_16)
 #  define CONFIG_LV_FONT_DEFAULT &lv_font_unscii_16
-#elif defined(LV_FONT_DEFAULT_SIMYOU_30_CH)
-#  define CONFIG_LV_FONT_DEFAULT &lv_font_simyou_30_ch
-#elif defined(LV_FONT_DEFAULT_UBUNTU_12)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_12
-#elif defined(LV_FONT_DEFAULT_UBUNTU_14)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_14
-#elif defined(LV_FONT_DEFAULT_UBUNTU_16)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_16
-#elif defined(LV_FONT_DEFAULT_UBUNTU_18)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_18
-#elif defined(LV_FONT_DEFAULT_UBUNTU_20)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_20
-#elif defined(LV_FONT_DEFAULT_UBUNTU_24)
-#  define CONFIG_LV_FONT_DEFAULT lv_font_ubuntu_24
 #endif
 
 /*------------------
@@ -252,6 +272,18 @@ extern "C" {
 #endif
 
 /*------------------
+ * WAYLAND
+ *-----------------*/
+
+#ifdef CONFIG_LV_WAYLAND_RENDER_MODE_PARTIAL
+#  define CONFIG_LV_WAYLAND_RENDER_MODE LV_DISPLAY_RENDER_MODE_PARTIAL
+#elif defined(CONFIG_LV_WAYLAND_RENDER_MODE_DIRECT)
+#  define CONFIG_LV_WAYLAND_RENDER_MODE LV_DISPLAY_RENDER_MODE_DIRECT
+#elif defined(CONFIG_LV_WAYLAND_RENDER_MODE_FULL)
+#  define CONFIG_LV_WAYLAND_RENDER_MODE_FULL LV_DISPLAY_RENDER_MODE_FULL
+#endif
+
+/*------------------
  * LINUX FBDEV
  *-----------------*/
 
@@ -261,6 +293,15 @@ extern "C" {
 #  define CONFIG_LV_LINUX_FBDEV_RENDER_MODE LV_DISPLAY_RENDER_MODE_DIRECT
 #elif defined(CONFIG_LV_LINUX_FBDEV_RENDER_MODE_FULL)
 #  define CONFIG_LV_LINUX_FBDEV_RENDER_MODE LV_DISPLAY_RENDER_MODE_FULL
+#endif
+
+
+#ifdef CONFIG_LV_USE_CALENDAR
+#  ifdef CONFIG_LV_CALENDAR_WEEK_STARTS_MONDAY
+#    define CONFIG_LV_CALENDAR_DEFAULT_DAY_NAMES { CONFIG_LV_MONDAY_STR , CONFIG_LV_TUESDAY_STR, CONFIG_LV_WEDNESDAY_STR, CONFIG_LV_THURSDAY_STR, CONFIG_LV_FRIDAY_STR, CONFIG_LV_SATURDAY_STR, CONFIG_LV_SUNDAY_STR }
+#  else
+#    define CONFIG_LV_CALENDAR_DEFAULT_DAY_NAMES { CONFIG_LV_SUNDAY_STR, CONFIG_LV_MONDAY_STR , CONFIG_LV_TUESDAY_STR, CONFIG_LV_WEDNESDAY_STR, CONFIG_LV_THURSDAY_STR, CONFIG_LV_FRIDAY_STR, CONFIG_LV_SATURDAY_STR }
+#  endif
 #endif
 
 #ifdef __cplusplus

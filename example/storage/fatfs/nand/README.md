@@ -1,4 +1,12 @@
 # FatFs NAND 示例
+源码路径：example/storage/fatfs/nand
+
+## 支持的开发板
+- sf32lb52-lcd_a128r16
+- sf32lb56-lcd_a128r12n1
+- sf32lb58-lcd_a128r32n1
+
+
 ## 使用指南
 本示例演示FatFs的文件系统功能，文件系统采用FAT格式，在UART console可以调用常用的文件命令，如:
 

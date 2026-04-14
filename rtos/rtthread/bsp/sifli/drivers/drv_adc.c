@@ -55,54 +55,11 @@ struct sifli_adc
     struct rt_adc_device sifli_adc_device;
 };
 
-//MAX support voltage, for A0, voltage = 1.1v, for RPO, voltage = 3.3v
-#define ADC_MAX_VOLTAGE_MV_1100     (1100)
-#define ADC_MAX_VOLTAGE_MV_3300     (3300)
-
+static struct sifli_adc sifli_adc_obj[sizeof(adc_config) / sizeof(adc_config[0])];
 
 #define ADC_SW_AVRA_CNT         (22)
 
-// Standard voltage from ATE , it should not changed !!!
-#define ADC_BIG_RANGE_VOL1           (1000)
-#define ADC_BIG_RANGE_VOL2           (2500)
-#define ADC_SML_RANGE_VOL1           (300)
-#define ADC_SML_RANGE_VOL2           (800)
-
-
-#define ADC_RATIO_ACCURATE          (1000)
-
-static struct sifli_adc sifli_adc_obj[sizeof(adc_config) / sizeof(adc_config[0])];
-
-#ifdef SF32LB55X
-    // default value, they should be over write by calibrate
-    // it should be register value offset vs 0 v value.
-    static float adc_vol_offset = 199.0;
-    // mv per bit, if accuracy not enough, change to 0.1 mv or 0.01 mv later
-    static float adc_vol_ratio = 3930.0; // 4296; //6 * ADC_RATIO_ACCURATE; //600; //6;
-    static int adc_range = 0;   /* flag for ATE calibration voltage range,
-    *  0 for big range (1.0v/2.5v)
-    *  1 for small range () */
-    static uint32_t adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_1100;
-#elif defined(SF32LB56X)
-    // it should be register value offset vs 0 v value.
-    static float adc_vol_offset = 822.0;
-    // 0.001 mv per bit
-    static float adc_vol_ratio = 1068.0; //
-    static int adc_range = 1;
-    static uint32_t adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_3300;
-#else
-    // it should be register value offset vs 0 v value.
-    static float adc_vol_offset = 822.0;
-    // 0.001 mv per bit,
-    static float adc_vol_ratio = 1068.0; //
-    static int adc_range = 1;
-    static uint32_t adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_3300;
-#endif
-
-static float adc_vbat_factor = 2.01;
-
-// register data for max supported voltage, for A0, voltage = 1.1v, for RPO, voltage = 3.3v
-static uint32_t adc_thd_reg;
+static HAL_ADC_CalibContextTypeDef g_adc_calib_ctx;
 
 static struct rt_semaphore         gpadc_lock;
 #ifdef BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
@@ -351,99 +308,6 @@ void GPADC_DMA_IRQHandler(void)
 }
 #endif
 #endif
-/**
-* @brief  Get voltage by register value.
-* @param[in]  value register value.
-* @retval voltage in mv.
-*/
-int sifli_adc_get_mv(uint32_t value)
-{
-    int offset, ratio;
-    // get offset
-    offset = adc_vol_offset;
-    // get ratio, adc_vol_ratio calculate by calibration voltage
-    if (adc_range == 0) // calibration with big range, app use small rage, need div 3
-        ratio = adc_vol_ratio / 3;
-    else // calibration and app all use small rage
-        ratio = adc_vol_ratio;
-
-    return ((int)value - offset) * ratio / ADC_RATIO_ACCURATE;
-}
-
-/**
-* @brief  Get voltage by register value.
-* @param[in]  value register value.
-* @retval voltage based on mv.
-*/
-float sifli_adc_get_float_mv(float value)
-{
-    float offset, ratio;
-    // get offset
-    offset = adc_vol_offset;
-    // get ratio, adc_vol_ratio calculate by calibration voltage
-    if (adc_range == 0) // calibration with big range, app use small rage, need div 3
-        ratio = adc_vol_ratio / 3;
-    else // calibration and app all use small rage
-        ratio = adc_vol_ratio;
-
-    return (value - offset) * ratio / ADC_RATIO_ACCURATE;
-}
-
-/**
-* @brief  Get voltage offset and ratio.
-* @param[in]  value1 register value 1.
-* @param[in]  value2 register value 2.
-* @param[in]  vol1  voltage 1 in mv.
-* @param[in]  vol2  voltage 2 in mv.
-* @param[out]  offset, reg value offset vs 0v value.
-* @param[out]  ratio, voltage (mv)per bit, ratio with 100 based or 0.01 mv, 1 base for 1 mv
-* @retval offset.
-*/
-int sifli_adc_calibration(uint32_t value1, uint32_t value2,
-                          uint32_t vol1, uint32_t vol2, float *offset, float *ratio)
-{
-    float gap1, gap2;
-    uint32_t reg_max;
-
-    if (offset == NULL || ratio == NULL)
-        return 0;
-
-    if (value1 == 0 || value2 == 0)
-        return 0;
-
-    gap1 = value1 > value2 ? value1 - value2 : value2 - value1; // register value gap
-    gap2 = vol1 > vol2 ? vol1 - vol2 : vol2 - vol1; // voltage gap -- mv
-
-    if (gap1 != 0)
-    {
-        *ratio = gap2 * ADC_RATIO_ACCURATE / gap1; // gap2 * 10 for 0.1mv, gap2 * 100 for 0.01mv
-        adc_vol_ratio = *ratio;
-    }
-    else //
-        return 0;
-
-    *offset = value1 - vol1 * ADC_RATIO_ACCURATE / adc_vol_ratio;
-    adc_vol_offset = *offset;
-
-    // get register value for max voltage
-    adc_thd_reg = adc_max_vol_mv * ADC_RATIO_ACCURATE / adc_vol_ratio + adc_vol_offset;
-    reg_max = GPADC_ADC_RDATA0_SLOT0_RDATA >> GPADC_ADC_RDATA0_SLOT0_RDATA_Pos;
-    if (adc_thd_reg >= (reg_max - 3))
-        adc_thd_reg = reg_max - 3;
-
-    return adc_vol_offset;
-}
-
-static void sifli_adc_vbat_fact_calib(uint32_t voltage, uint32_t reg)
-{
-    float vol_from_reg;
-
-    // get voltage calculate by register data
-    vol_from_reg = (reg - adc_vol_offset) * adc_vol_ratio / ADC_RATIO_ACCURATE;
-    adc_vbat_factor = (float)voltage / vol_from_reg;
-}
-
-
 static rt_err_t sifli_adc_enabled(struct rt_adc_device *device, rt_uint32_t channel, rt_bool_t enabled)
 {
     ADC_HandleTypeDef *sifli_adc_handler = device->parent.user_data;
@@ -578,7 +442,7 @@ static rt_err_t sifli_get_adc_value(struct rt_adc_device *device, rt_uint32_t ch
         data[i] = (rt_uint32_t)HAL_ADC_GetValue(sifli_adc_handler, channel);
         //rt_kprintf("ch[%d]count[%d] adc raw = %d;\n", channel, i,  data[i]);
 
-        if (data[i] >= adc_thd_reg)
+        if (data[i] >= g_adc_calib_ctx.threshold_reg)
         {
             HAL_ADC_Stop(sifli_adc_handler);
             LOG_E("ADC input voltage too large, register value %d\n", data[i]);
@@ -635,14 +499,14 @@ static rt_err_t sifli_get_adc_value(struct rt_adc_device *device, rt_uint32_t ch
 
 
 #ifndef SF32LB52X   // TODO: remove macro check after 52x ADC calibration work
-    float fval = sifli_adc_get_float_mv(fave) * 10; // mv to 0.1mv based
+    float fval = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx) * 10; // mv to 0.1mv based
     *value = (rt_uint32_t)fval;
 #else
     //*value = (rt_uint32_t)fave;
-    float fval = sifli_adc_get_float_mv(fave) * 10; // mv to 0.1mv based
+    float fval = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx) * 10; // mv to 0.1mv based
     *value = (rt_uint32_t)fval;
     if (channel == 7)   // for 52x, channel fix used for vbat with 1/2 update(need calibrate)
-        *value = (rt_uint32_t)(fval * adc_vbat_factor);
+        *value = (rt_uint32_t)(fval * g_adc_calib_ctx.vbat_factor);
 #endif
     //LOG_I("ADC vol %d , reg %f, max %d, min %d\n", *value, fave, data[ADC_SW_AVRA_CNT - 1], data[0]);
 #ifdef BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
@@ -768,15 +632,15 @@ static rt_err_t sifli_adc_control(struct rt_adc_device *device, rt_uint32_t cmd,
 
     /* get ADC value */
     data = (rt_uint32_t)HAL_ADC_GetValue(sifli_adc_handler, channel);
-    if (data >= adc_thd_reg)
+    if (data >= g_adc_calib_ctx.threshold_reg)
     {
-        data = adc_thd_reg - 1; // if more than adc_the_reg, use adc_the_reg -1; to avoid adc key miss press
+        data = g_adc_calib_ctx.threshold_reg - 1; // if more than adc_the_reg, use adc_the_reg -1; to avoid adc key miss press
     }
 
     HAL_ADC_Stop(sifli_adc_handler);
 #endif
 
-    read_arg->value = (rt_uint32_t)(sifli_adc_get_float_mv((float)data) * 10);   // based on 0.1 mv for more accurate
+    read_arg->value = (rt_uint32_t)(HAL_ADC_RegToVoltageFloat((float)data, &g_adc_calib_ctx) * 10);   // based on 0.1 mv for more accurate
     rt_kprintf("adc control origin data %d, Voltage %d\n", data, read_arg->value);
 
     r = rt_sem_release(&gpadc_lock);
@@ -897,8 +761,6 @@ static int sifli_adc_init(void)
                 ADC_ENABLE_TIMER_TRIGER(&sifli_adc_obj[i].ADC_Handler);
             }
 #endif
-            //adc_vol_offset = HAL_ADC_Get_Offset(&sifli_adc_obj[i].ADC_Handler);
-            //LOG_I("ADC OFFSET = %d\n",adc_vol_offset);
             /* register ADC device */
             if (rt_hw_adc_register(&sifli_adc_obj[i].sifli_adc_device, name_buf, &sifli_adc_ops, &sifli_adc_obj[i].ADC_Handler) == RT_EOK)
             {
@@ -912,79 +774,14 @@ static int sifli_adc_init(void)
         }
     }
     rt_sem_init(&gpadc_lock, "gpadc", 1, RT_IPC_FLAG_FIFO);
-
-    // set default adc thd to register max value
-    adc_thd_reg = GPADC_ADC_RDATA0_SLOT0_RDATA >> GPADC_ADC_RDATA0_SLOT0_RDATA_Pos;
-
-
-    FACTORY_CFG_ADC_T cfg;
-    int len = sizeof(FACTORY_CFG_ADC_T);
-    rt_memset((uint8_t *)&cfg, 0, len);
-    if (BSP_CONFIG_get(FACTORY_CFG_ID_ADC, (uint8_t *)&cfg, len))  // TODO: configure read ADC parameters method after ATE confirm
+    if (HAL_ADC_CalibLoad(ADC_Handler_gpadc1,
+                          &g_adc_calib_ctx,
+                          HAL_ADC_CALIB_SOURCE_BSP,
+                          HAL_ADC_CALIB_F_INIT | HAL_ADC_CALIB_F_APPLY) != HAL_OK)
     {
-        float off, rat;
-        uint32_t vol1, vol2;
-        if (cfg.vol10 == 0 || cfg.vol25 == 0) // not valid paramter
-        {
-            //LOG_I("Get GPADC configure invalid : %d, %d\n", cfg.vol10, cfg.vol25);
-        }
-        else
-        {
-#ifndef SF32LB55X
-            cfg.vol10 &= 0x7fff;
-            cfg.vol25 &= 0x7fff;
-            vol1 = cfg.low_mv;
-            vol2 = cfg.high_mv;
-            adc_range = 1;
-            adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_3300;
-#else
-            if ((cfg.vol10 & (1 << 15)) && (cfg.vol25 & (1 << 15))) // small range, use X1 mode
-            {
-                cfg.vol10 &= 0x7fff;
-                cfg.vol25 &= 0x7fff;
-                vol1 = ADC_SML_RANGE_VOL1;
-                vol2 = ADC_SML_RANGE_VOL2;
-                adc_range = 1;
-                adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_1100;
-            }
-            else // big range , use X3 mode for A0
-            {
-                vol1 = ADC_BIG_RANGE_VOL1;
-                vol2 = ADC_BIG_RANGE_VOL2;
-                adc_range = 0;
-                adc_max_vol_mv = ADC_MAX_VOLTAGE_MV_3300;
-            }
-#endif
-            sifli_adc_calibration(cfg.vol10, cfg.vol25, vol1, vol2, &off, &rat);
-#ifdef SF32LB52X
-            sifli_adc_vbat_fact_calib(cfg.vbat_mv, cfg.vbat_reg);
-
-            if (SF32LB52X_LETTER_SERIES())
-            {
-#if defined(hwp_gpadc1)
-                if (ADC_Handler_gpadc1)
-                {
-                    if (cfg.ldovref_flag)
-                    {
-                        __HAL_ADC_SET_LDO_REF_SEL(ADC_Handler_gpadc1, cfg.ldovref_sel);
-                    }
-
-                }
-#endif
-            }
-#endif
-            //LOG_I("\nGPADC :vol10: %d mv, %d; vol25: %d mv reg %d; offset %f, ratio %f, max reg %d;\n",
-            //      vol1, cfg.vol10, vol2, cfg.vol25,  off, rat, adc_thd_reg);
-            //LOG_I("\n vbat_mv: %d mv, %d; ldoref_flag = %d, ldoref_sel = %d;\n",
-            //      cfg.vbat_mv, cfg.vbat_reg, cfg.ldovref_flag, cfg.ldovref_sel);
-
-        }
+        LOG_I("Get ADC configure fail, use default calibration\n");
     }
-    else
-    {
-        LOG_I("Get ADC configure fail\n");
-    }
-//#endif
+
     return result;
 }
 INIT_BOARD_EXPORT(sifli_adc_init);
@@ -1045,17 +842,24 @@ static _GPADC_TEST_PIN_CHN_T pincfg;
 
 static int adc_manual_cal(int reg1000, int reg2500)
 {
-    float off, rat;
-    int res = 0;
-    res = sifli_adc_calibration((uint32_t)reg1000, (uint32_t)reg2500, 1000, 2500, &off, &rat);
-    if (res != 0)
-    {
-        rt_kprintf("Calib offset %f, rat %f\n", off, rat);
-    }
-    else
-        rt_kprintf("calib fail\n");
+    HAL_StatusTypeDef status;
+    HAL_ADC_CalibConfigTypeDef config;
 
-    return res;
+    config.reg_value1 = (uint32_t)reg1000;
+    config.reg_value2 = (uint32_t)reg2500;
+    config.voltage1_mv = 1000;
+    config.voltage2_mv = 2500;
+    config.range_mode = g_adc_calib_ctx.range_mode;
+
+    status = HAL_ADC_CalibSetCustom(&g_adc_calib_ctx, &config);
+    if (status == HAL_OK)
+    {
+        rt_kprintf("Calib offset %f, rat %f\n", g_adc_calib_ctx.offset, g_adc_calib_ctx.ratio);
+        return (int)g_adc_calib_ctx.offset;
+    }
+
+    rt_kprintf("calib fail\n");
+    return 0;
 }
 
 static int adc_calib_func(int loop)
@@ -1206,8 +1010,8 @@ static int adc_calib_func(int loop)
 
     ave = data[loop / 2];
     fave = (float)total / (loop - 2);
-    float volt = sifli_adc_get_float_mv(fave);
-    int v2 = sifli_adc_get_mv(ave);
+    float volt = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx);
+    int v2 = HAL_ADC_RegToVoltage(ave, &g_adc_calib_ctx);
     if (mid_value == 0)
     {
         //volt = volt * (1000 + 470) / 1000;
@@ -1252,7 +1056,7 @@ static int adc_calib_func(int loop)
 
     ave = total / loop;
     fave = (float)total / loop;
-    float volt = sifli_adc_get_float_mv(fave);
+    float volt = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx);
     volt = volt * (1000 + 220) / 220;
     rt_kprintf("AVERAGE %d, %.6f, voltage %.6f mv\n", ave, fave, volt);
 #endif
@@ -1377,9 +1181,9 @@ int cmd_gpadc(int argc, char *argv[])
     }
     else if (strcmp(argv[1], "-list") == 0)
     {
-        LOG_I("Offset = %f, ratio = %f\n", adc_vol_offset, adc_vol_ratio);
+        LOG_I("Offset = %f, ratio = %f\n", g_adc_calib_ctx.offset, g_adc_calib_ctx.ratio);
 #ifdef SF32LB52X
-        LOG_I("vbat factor = %f\n", adc_vbat_factor);
+        LOG_I("vbat factor = %f\n", g_adc_calib_ctx.vbat_factor);
 #endif
     }
     else if (strcmp(argv[1], "-list2") == 0)
@@ -1410,7 +1214,7 @@ int cmd_gpadc(int argc, char *argv[])
             rt_device_open(dev, RT_DEVICE_FLAG_RDONLY);
             res = rt_device_read(dev, chnl, &value, 1);
             LOG_I("Read ADC channel %d : %d, res = %d \n", chnl, value, res);
-            int vol = sifli_adc_get_mv(value);
+            int vol = HAL_ADC_RegToVoltage(value, &g_adc_calib_ctx);
             LOG_I("Calculate votage %d mv\n", vol);
         }
         else
@@ -1606,4 +1410,3 @@ FINSH_FUNCTION_EXPORT_ALIAS(cmd_gpadc, __cmd_gpadc, Test gpadc driver);
 /// @} bsp_driver
 
 /// @} file
-

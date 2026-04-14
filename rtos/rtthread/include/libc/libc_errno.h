@@ -18,7 +18,7 @@
 #include <errno.h>
 #endif
 
-#if defined(__CC_ARM)
+#if defined(__CC_ARM) || defined(__CLANG_ARM)
 /*
 defined in armcc/errno.h
 

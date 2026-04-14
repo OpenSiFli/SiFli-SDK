@@ -12,15 +12,21 @@
 #ifndef _FDB_DEF_H_
 #define _FDB_DEF_H_
 
+#ifdef FDB_USING_NATIVE_ASSERT
+#include <assert.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <fdb_cfg.h>
+#include "stdint.h"
+#include "stdbool.h"
 
 /* software version number */
-#define FDB_SW_VERSION                 "2.0.0"
-#define FDB_SW_VERSION_NUM             0x20000
+#define FDB_SW_VERSION                 "2.1.1"
+#define FDB_SW_VERSION_NUM             0x20101
 
 /* the KV max name length must less then it */
 #ifndef FDB_KV_NAME_MAX
@@ -34,7 +40,7 @@ extern "C" {
 
 /* the sector cache table size, it will improve KV save speed when using cache */
 #ifndef FDB_SECTOR_CACHE_TABLE_SIZE
-#define FDB_SECTOR_CACHE_TABLE_SIZE    8
+#define FDB_SECTOR_CACHE_TABLE_SIZE    64
 #endif
 
 
@@ -51,6 +57,11 @@ extern "C" {
 #define FDB_USING_FILE_MODE
 #endif
 
+/* the file cache table size, it will improve GC speed in file mode when using cache */
+#ifndef FDB_FILE_CACHE_TABLE_SIZE
+#define FDB_FILE_CACHE_TABLE_SIZE    2
+#endif
+
 #ifndef FDB_WRITE_GRAN
 #define FDB_WRITE_GRAN 1
 #endif
@@ -63,22 +74,22 @@ extern "C" {
 #define FDB_LOG_PREFIX2()              FDB_PRINT(" ")
 #define FDB_LOG_PREFIX()               FDB_LOG_PREFIX1();FDB_LOG_PREFIX2()
 
-extern uint8_t kvdb_log;
 #ifdef FDB_DEBUG_ENABLE
 #define FDB_DEBUG(...)  \
-if(kvdb_log) {FDB_LOG_PREFIX();FDB_PRINT("(%s:%d) ", __FILE__, __LINE__);FDB_PRINT(__VA_ARGS__);}
+    {FDB_LOG_PREFIX();FDB_PRINT("(%s:%d) ", __FILE__, __LINE__);FDB_PRINT(__VA_ARGS__);}
+/* routine print function. Must be implement by user. */
+#define FDB_INFO(...)
+    {FDB_LOG_PREFIX();FDB_PRINT(__VA_ARGS__);}
 #else
 #define FDB_DEBUG(...)
+#define FDB_INFO(...) 
 #endif
-/* routine print function. Must be implement by user. */
-#define FDB_INFO(...)  \
-if(kvdb_log) {FDB_LOG_PREFIX();FDB_PRINT(__VA_ARGS__);}
 /* assert for developer. */
 #define FDB_ASSERT(EXPR)                                                      \
 if (!(EXPR))                                                                  \
 {                                                                             \
     FDB_DEBUG("(%s) has assert failed at %s.\n", #EXPR, __func__);        \
-    while (1);                                                                \
+    RT_ASSERT(0);                                                             \
 }
 
 #define FDB_KVDB_CTRL_SET_SEC_SIZE     0x00             /**< set sector size control command, this change MUST before database initialization */
@@ -117,10 +128,6 @@ struct fdb_default_kv_node {
 struct fdb_default_kv {
     struct fdb_default_kv_node *kvs;
     size_t num;
-#if (FDB_KV_CACHE_TABLE_SIZE == 1)    
-    void *kv_cache_pool;
-    uint32_t kv_cache_pool_size;
-#endif /* (FDB_KV_CACHE_TABLE_SIZE == 1) */  
 };
 
 /* error code */
@@ -260,13 +267,6 @@ struct kv_cache_node {
 };
 typedef struct kv_cache_node *kv_cache_node_t;
 
-struct sector_cache_node {
-    uint32_t addr;                               /**< sector start address */
-    uint32_t empty_addr;                         /**< sector empty address */
-};
-typedef struct sector_cache_node *sector_cache_node_t;
-
-
 struct sector_hdr_cache_node {
     uint32_t addr;
     uint32_t combined;
@@ -297,11 +297,12 @@ struct fdb_db {
     bool file_mode;                              /**< is file mode, default is false */
     bool not_formatable;                         /**< is can NOT be formated mode, default is false */
 #ifdef FDB_USING_FILE_MODE
+    uint32_t cur_file_sec[FDB_FILE_CACHE_TABLE_SIZE];/**< last operate sector address  */
 #if defined(FDB_USING_FILE_POSIX_MODE)
-    int cur_file;                                /**< current file object */
+    int cur_file[FDB_FILE_CACHE_TABLE_SIZE];     /**< current file object */
 #elif defined(FDB_USING_FILE_LIBC_MODE)
-    FILE *cur_file;                              /**< current file object */
-#endif
+    FILE *cur_file[FDB_FILE_CACHE_TABLE_SIZE];   /**< current file object */
+#endif /* FDB_USING_FILE_MODE */
     uint32_t cur_sec;                            /**< current operate sector address  */
 #endif
     void (*lock)(fdb_db_t db);                   /**< lock the database operate */
@@ -331,11 +332,21 @@ struct fdb_kvdb {
     /* KV cache table size */
     uint32_t              kv_cache_table_size;
 
+#if (FDB_KV_CACHE_TABLE_SIZE > 1)
     /* sector cache table, it caching the sector info which status is current using */
-    struct sector_cache_node sector_cache_table[FDB_SECTOR_CACHE_TABLE_SIZE];
+    struct kvdb_sec_info sector_cache_table[FDB_SECTOR_CACHE_TABLE_SIZE];
+#else
+	struct kvdb_sec_info *sector_cache_table;
+#endif
+    uint32_t              sector_cache_table_size;
 
 #ifdef FDB_USING_FILE_MODE
+#if (FDB_KV_CACHE_TABLE_SIZE > 1)
     struct sector_hdr_cache_node sector_hdr_cache_table[FDB_SECTOR_HDR_CACHE_TABLE_SIZE];
+#else
+	struct sector_hdr_cache_node *sector_hdr_cache_table;
+#endif
+    uint32_t              sector_hdr_cache_table_size;
 #endif /* FDB_USING_FILE_MODE */
     
 #endif /* FDB_KV_USING_CACHE */

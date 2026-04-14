@@ -1,0 +1,1 @@
+source "$SIFLI_SDK/customer/boards/sf32lb58-lcd_base/Kconfig.board"

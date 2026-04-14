@@ -184,32 +184,6 @@ config RT_USING_ULOG
             help
                 The low level output using flashdb TSDB.
 				
-        config SAVE_ASSERT_CONTEXT_IN_FLASH
-            bool "Enable save assert context in flash."
-            default n
-            help
-                Save assert context in flash.
-            if SAVE_ASSERT_CONTEXT_IN_FLASH
-                config SAVE_HCPU_STATIC_CONTEXT
-                    bool "Enable save hcpu static data in flash."
-                    default y
-                config SAVE_HCPU_HEAP_CONTEXT
-                    bool "Enable save hcpu heap in flash."
-                    default y
-                config SAVE_HCPU_STACK_CONTEXT
-                    bool "Enable save hcpu stack in flash."
-                    default y
-                config SAVE_IPREG_CONTEXT
-                    bool "Enable save ip register in flash."
-                    default y	
-                config SAVE_LCPU_STATIC_CONTEXT
-                    bool "Enable save lcpu sram data in flash."
-                    default y
-                config SAVE_LCPU_DTCM_CONTEXT
-                    bool "Enable save lcpu dtcm data in flash."
-                    default y
-            endif
-
         config ULOG_BACKEND_USING_RAM
             bool "Enable RAM buffer backend."
             default n
@@ -252,9 +226,14 @@ config RT_USING_LONG_LIFETIME_MEMHEAP
     select RT_USING_MEMHEAP
     
     if RT_USING_LONG_LIFETIME_MEMHEAP
-        config LLT_MEMHEAP_SIZE
-            int "Long Lifetime Memheap Size"
-            default 2048
+        config LLT_MEMHEAP_CUSTOM
+            bool "The API is implemented by user"
+            default n
+        if !LLT_MEMHEAP_CUSTOM
+            config LLT_MEMHEAP_SIZE
+                int "Long Lifetime Memheap Size"
+                default 2048
+        endif     
     endif
 
 endmenu

@@ -1,11 +1,12 @@
 license:
-  main: apache-2.0
+  main: Apache-2.0
   additional: 
     - MIT
+    - BSD-2-Clause
+    - BSD-3-Clause
   report_invalid: true
   report_unknown: true
   report_missing: true
-  category: Permissive
 copyright:
   check: true
 exclude:
@@ -18,10 +19,57 @@ exclude:
     - cfg
     - config
     - bat
+    - md
   special_file:
     - SConscript
     - SConstruct
+    - ChangeLog
     - Kconfig
     - rtconfig.h
+    - "*ffmpeg/config.h"
+    - rtconfig.py
+    - proj.conf
+    - SConstruct.py
+    - conanfile.py
   langs:
     - HTML
+extensions:
+  - path:
+      "external/ffmpeg"
+    license:
+      - LGPL-2.1-only
+      - LGPL-2.1-or-later
+      - LGPL-3.0-only
+      - LGPL-3.0-or-later
+  - path:
+      "external/faad2"
+    license:
+      - GPL-2.0-only
+      - GPL-2.0-or-later
+  - path:
+      "tools/build"
+    license:
+      - GPL-2.0-only
+      - GPL-2.0-or-later
+  - path:
+      - "filesystems/dhara/dhara"
+      - "external/lvgl_v8"
+      - "external/lvgl_v9"
+      - "external/tinymp3"
+      - "example/multimedia/lvgl/lvgl_v9_examples"
+      - "example/multimedia/lvgl/lvgl_v9_demos"
+      - "external/cherryusb"
+      - "tools/mkfatimg/mkfatimg"
+    ignore_license: true
+    ignore_copyright: true
+  - path:
+      "external/freetype"
+    license:
+      - FTL
+  - path:
+      "external/libhelix-mp3"
+    license:
+      - RCSL-1.2
+      - RPSL-1.0
+
+

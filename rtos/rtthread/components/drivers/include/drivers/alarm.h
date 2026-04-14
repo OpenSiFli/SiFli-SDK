@@ -75,6 +75,6 @@ rt_err_t rt_alarm_start(rt_alarm_t alarm);
 rt_err_t rt_alarm_stop(rt_alarm_t alarm);
 int rt_alarm_system_init(void);
 
-rt_list_t get_rt_alarm_list(void);
+rt_list_t *get_rt_alarm_list(void);
 
 #endif /* __ALARM_H__ */

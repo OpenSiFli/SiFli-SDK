@@ -35,6 +35,10 @@
 #include "../draw/sifli_epic/lv_gpu_sifli_epic.h"
 #endif /* LV_USE_GPU_SIFLI_EPIC */
 
+#ifdef BSP_USING_EPIC
+#include "drv_epic.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -563,6 +567,27 @@ void lv_disp_set_rotation(lv_disp_t * disp, lv_disp_rot_t rotation)
 
     disp->driver->rotated = rotation;
     lv_disp_drv_update(disp, disp->driver);
+
+#ifdef DRV_EPIC_NEW_API
+    switch(rotation)
+    {
+        case LV_DISP_ROT_90:
+            drv_epic_set_rotation(DRV_EPIC_ROT_270);
+            break;
+        case LV_DISP_ROT_180:
+            drv_epic_set_rotation(DRV_EPIC_ROT_180);
+            break;
+        case LV_DISP_ROT_270:
+            drv_epic_set_rotation(DRV_EPIC_ROT_90);
+            break;
+        case LV_DISP_ROT_NONE:
+            drv_epic_set_rotation(DRV_EPIC_ROT_NONE);
+            break;
+        default:
+            RT_ASSERT(0);
+            break;
+    }
+#endif
 }
 
 /**

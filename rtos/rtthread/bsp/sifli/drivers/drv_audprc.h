@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,11 @@
 #include <drv_common.h>
 
 #define MUTE_UNDER_MIN_VOLUME  (-256)
+
+typedef void (*dual_adc_rx_callback)(uint8_t channel_id, uint8_t *data, rt_size_t len);
+void rt_device_set_dual_rx_indicate(dual_adc_rx_callback func);
+
+#define rt_device_set_audprc_dma_rx_callback(callback) rt_device_set_dual_rx_indicate(callback)
 
 int rt_bf0_audio_prc_init(void);
 uint8_t bf0_audprc_get_tx_rbf_en();
@@ -34,6 +39,8 @@ void bf0_audprc_eq_enable_offline(uint8_t is_enable);
 void bf0_audprc_stop();
 void mic_gain_decrease(int8_t db);
 int Set_mic_gain(int8_t value);
+void audprc_clock_set(uint8_t is_use_pll);
+void audcodec_clock_set(uint8_t use_pll);
 
 #endif
 

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "dfu_pan_ui.h"
 #include "bt_pan_ota.h"
 #include "littlevgl2rtt.h"

@@ -146,7 +146,7 @@ void ft_bitmap_to_bpp_register(ft_bitmap_to_bpp_func func, int bpp)
       goto BadGlyph;
 
     {
-      FT_Int        temp;
+      //FT_Int        temp;
       FT_GlyphSlot  slot   = face->glyph;
       FT_Bitmap*    bitmap = &slot->bitmap;
       FT_Pos        xadvance, yadvance; /* FT_GlyphSlot->advance.{x|y} */
@@ -171,26 +171,26 @@ void ft_bitmap_to_bpp_register(ft_bitmap_to_bpp_func func, int bpp)
       xadvance = ( slot->advance.x + 32 ) >> 6;
       yadvance = ( slot->advance.y + 32 ) >> 6;
 
-      if ( !CHECK_BYTE( bitmap->rows  )     ||
+      if (0)/*!CHECK_BYTE( bitmap->rows  )     ||
            !CHECK_BYTE( bitmap->width )     ||
            !CHECK_SHRT( bitmap->pitch )     ||
            !CHECK_CHAR( slot->bitmap_left ) ||
            !CHECK_CHAR( slot->bitmap_top  ) ||
            !CHECK_CHAR( xadvance )          ||
-           !CHECK_CHAR( yadvance )          )
+           !CHECK_CHAR( yadvance )          ) */
       {
         FT_TRACE2(( "ftc_snode_load:"
                     " glyph too large for small bitmap cache\n"));
         goto BadGlyph;
       }
 
-      sbit->width     = (FT_Byte)bitmap->width;
-      sbit->height    = (FT_Byte)bitmap->rows;
+      sbit->width     = (FT_UShort)bitmap->width;
+      sbit->height    = (FT_UShort)bitmap->rows;
       sbit->pitch     = (FT_Short)bitmap->pitch;
-      sbit->left      = (FT_Char)slot->bitmap_left;
-      sbit->top       = (FT_Char)slot->bitmap_top;
-      sbit->xadvance  = (FT_Char)xadvance;
-      sbit->yadvance  = (FT_Char)yadvance;
+      sbit->left      = (FT_Short)slot->bitmap_left;
+      sbit->top       = (FT_Short)slot->bitmap_top;
+      sbit->xadvance  = (FT_Short)xadvance;
+      sbit->yadvance  = (FT_Short)yadvance;
       sbit->format    = (FT_Byte)bitmap->pixel_mode;
       sbit->max_grays = (FT_Byte)(bitmap->num_grays - 1);	  
 	  

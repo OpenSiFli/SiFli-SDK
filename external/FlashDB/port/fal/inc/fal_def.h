@@ -13,6 +13,12 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#ifdef FDB_USING_NATIVE_ASSERT
+#include <assert.h>
+#endif
+#ifdef PKG_USING_FLASHDB
+#include "fdb_def.h"
+#endif
 
 #define FAL_SW_VERSION                 "0.5.99"
 
@@ -58,6 +64,7 @@
 #endif
 
 #if FAL_DEBUG
+#ifndef FDB_USING_NATIVE_ASSERT
 #ifdef assert
 #undef assert
 #endif
@@ -67,6 +74,7 @@ if (!(EXPR))                                                                   \
     FAL_PRINTF("(%s) has assert failed at %s.\n", #EXPR, __func__ );        \
     while (1);                                                                 \
 }
+#endif
 
 /* debug level log */
 #ifdef  log_d
@@ -77,10 +85,12 @@ if (!(EXPR))                                                                   \
 
 #else
 
+#ifndef FDB_USING_NATIVE_ASSERT
 #ifdef assert
 #undef assert
 #endif
 #define assert(EXPR)                   ((void)0);
+#endif
 
 /* debug level log */
 #ifdef  log_d
@@ -130,7 +140,7 @@ struct fal_flash_dev
        1(nor flash)/ 8(stm32f2/f4)/ 32(stm32f1)/ 64(stm32l4)
        0 will not take effect. */
     size_t write_gran;
-    uint8_t nand_flag;
+    uint8_t nand_flag;  /* 0:nor 1:nand 2:emmc */
 };
 typedef struct fal_flash_dev *fal_flash_dev_t;
 
@@ -145,11 +155,13 @@ struct fal_partition
     char name[FAL_DEV_NAME_MAX];
     /* flash device name for partition */
     char flash_name[FAL_DEV_NAME_MAX];
-
+#if defined (SOLUTION)
+    uint8_t reset;
+    char path_name[FAL_DEV_NAME_MAX * 2 - 1];
+#endif
     /* partition offset address on flash device */
     long offset;
     size_t len;
-
     uint32_t reserved;
 };
 typedef struct fal_partition *fal_partition_t;

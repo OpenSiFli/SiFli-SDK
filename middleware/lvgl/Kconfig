@@ -114,6 +114,19 @@ menu "SiFli extend"
             int "vertical pixels"
             depends on !LV_RES_AUTO
             default 272
+        config MEDIA_CACHE_SIZE
+            int "Media cache size"
+            default 4000000
+            help
+                Size of the dedicated memory heap used by ffmpeg_alloc().
 
+                When this value is greater than 0, FFmpeg allocations use an
+                independent media heap reserved in app memory.
 
+                When this value is 0, ffmpeg_alloc() falls back to the
+                app_anim_mem_alloc() path and shares memory with the animation/image
+                allocation pool.
+
+                This setting directly affects the memory space available to FFmpeg
+                decoding and whether FFmpeg memory is isolated from other app pools.
     endmenu

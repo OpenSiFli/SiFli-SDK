@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <audio_server.h>
 #include "bap_broadcast_src_api.h"
 #include "lc3.h"
@@ -5,8 +11,9 @@
 #define BLE_AUDIO_API
 #define BEL_SRC_THREAD_NAME     "BleSrcPcm"
 
-#define BAP_SRC_USING_10MS_TIMER        1
-#define BAP_SRC_AUDIO_CACHE_SIZE        (960 * 2) //2 mono frame
+#define BAP_SRC_USING_10MS_TIMER        0
+#define BAP_SRC_AUDIO_CACHE_SIZE        (SPEAKER_10MS_DMA_SIZE * 4) /*4 mono frame */
+//#define BAP_SRC_AUDIO_CACHE_SIZE        (32000)
 #define LC3_ENCODER_STACK_SIZE          (4 * 4096)
 #define LC3_ENCODER_PRIORITY            10
 static rt_timer_t  g_timer;
@@ -113,11 +120,10 @@ static int freq_hz;
 static int frame_duration_us;
 static int frames_per_sdu;
 static int octets_per_frame;
-static device_open_parameter_t g_device_param;
+static uint8_t g_tx_channels;
 static audio_device_input_callback g_callback;
 
-static int g_a2dp_opened;
-static int g_is_callingback;
+
 static uint32_t time_cnt;
 static struct bt_le_ext_adv *adv;
 
@@ -217,6 +223,8 @@ static void init_lc3_thread(void *arg1)
     rt_timer_start(g_timer);
     //extern void hal_timer_start();
     //hal_timer_start(10000);
+#else
+    audio_register_10ms_tx_dma_callback(send_timeout_handler, NULL);
 #endif
     ret = bt_audio_codec_cfg_get_freq(codec_cfg);
     if (ret > 0)
@@ -278,7 +286,7 @@ static void init_lc3_thread(void *arg1)
             printk("ERROR: Failed to setup LC3 encoder - wrong parameters?\n");
         }
     }
-
+    printk("wait start\n");
     rt_event_recv(g_run_event, BAP_EVENT_THREAD_START, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, NULL);
 
     uint32_t cache_read_len, readed;
@@ -286,11 +294,11 @@ static void init_lc3_thread(void *arg1)
     cache_read_len = lc3_frame_samples(frame_duration_us, freq_hz) * sizeof(int16_t);
     RT_ASSERT(cache_read_len <= sizeof(send_pcm_data));
 
-    if (g_device_param.tx_channels == 2)
+    if (g_tx_channels == 2)
     {
         cache_read_len <<= 1;
     }
-    printk("\r\nch=%d %d size_before_encode\n", g_device_param.tx_channels, cache_read_len);
+    printk("\r\nch=%d %d size_before_encode\n", g_tx_channels, cache_read_len);
     while (!stopping)
     {
         rt_uint32_t evt;
@@ -320,26 +328,26 @@ static void init_lc3_thread(void *arg1)
         readed = -1;
         rt_enter_critical();
 
-        if (0 == g_a2dp_opened)
-        {
-            memset(send_pcm_data, 0, sizeof(send_pcm_data));
-            readed = 0;
-        }
-        else if (rt_ringbuffer_data_len(g_device_param.device_rb) < cache_read_len)
+        if (rt_ringbuffer_data_len(&rb_cache) < cache_read_len)
         {
             memset(send_pcm_data, 0, sizeof(send_pcm_data));
             readed = 0;
         }
         else
         {
-            readed = rt_ringbuffer_get(g_device_param.device_rb, (uint8_t *)send_pcm_data, cache_read_len);
+            readed = rt_ringbuffer_get(&rb_cache, (uint8_t *)send_pcm_data, cache_read_len);
         }
 
         rt_exit_critical();
 
         if (readed == 0)
         {
-            rt_kprintf("--no audio, send zero pcm\r\n");
+            static uint8_t debug_ble = 0;
+            if (debug_ble == 0)
+            {
+                printk("--no audio, send zero pcm\r\n");
+            }
+            debug_ble++;
         }
         else
         {
@@ -353,26 +361,11 @@ static void init_lc3_thread(void *arg1)
         {
             //printk("send a stream t=%d\n", rt_tick_get());
             if (1 == ARRAY_SIZE(streams))
-                ret = send_data(&streams[i], 1, (g_device_param.tx_channels == 2)); //send right channel
+                ret = send_data(&streams[i], 1, (g_tx_channels == 2));
             else
-                ret = send_data(&streams[i], i, (g_device_param.tx_channels == 2));
+                ret = send_data(&streams[i], i, (g_tx_channels == 2));
             if (ret != 0)
                 k_sem_give(&lc3_encoder_sem);
-        }
-        g_is_callingback = 0;
-        rt_enter_critical();
-        if (g_a2dp_opened)
-        {
-            if (rt_ringbuffer_data_len(g_device_param.device_rb) <= rt_ringbuffer_get_size(g_device_param.device_rb) / 2)
-            {
-                g_is_callingback = 1;
-            }
-        }
-        rt_exit_critical();
-        if (g_is_callingback && g_callback)
-        {
-            g_callback(as_callback_cmd_cache_half_empty, NULL, 0);
-            g_is_callingback = 0;
         }
     }
 
@@ -469,66 +462,10 @@ static int setup_broadcast_source(struct bt_bap_broadcast_source **source)
     return 0;
 }
 
-static int ble_audio_open(void *user_data, audio_device_input_callback callback)
-{
-    rt_kprintf("%s\r\n", __FUNCTION__);
-    device_open_parameter_t *p = user_data;
-    RT_ASSERT(p);
-    g_callback = callback;
-    memcpy(&g_device_param, p, sizeof(g_device_param));
-    g_a2dp_opened = 1;
-    rt_event_send(g_run_event, BAP_EVENT_THREAD_START);
-
-    return 0;
-}
-
-static uint8_t is_closed()
-{
-    uint8_t done = 0;
-    rt_enter_critical();
-    if (!g_is_callingback)
-    {
-        g_a2dp_opened = 0;
-        g_callback = NULL;
-        done = 1;
-    }
-    rt_exit_critical();
-    return done;
-}
-static int ble_audio_close(void *user_data)
-{
-    rt_kprintf("%s\r\n", __FUNCTION__);
-    while (1)
-    {
-        if (is_closed())
-            break;
-        rt_thread_mdelay(5);
-        rt_kprintf("%s wait callback done\r\n", __FUNCTION__);
-    }
-    rt_kprintf("%s exit\r\n", __FUNCTION__);
-    return 0;
-}
-static uint32_t ble_audio_output(void *user_data, struct rt_ringbuffer *rb)
-{
-    return 0;
-}
-static int ble_audio_ioctl(void *user_data, int cmd, void *val)
-{
-    return 0;
-}
-
-static const struct audio_device ble_audio_device =
-{
-    .open = ble_audio_open,
-    .close = ble_audio_close,
-    .user_data = NULL,
-    .output = ble_audio_output,
-    .ioctl = ble_audio_ioctl,
-};
-
 BLE_AUDIO_API int bap_broadcast_src_start()
 {
     int err = 0;
+
     if (strlen(CONFIG_BROADCAST_CODE) > BT_AUDIO_BROADCAST_CODE_SIZE)
     {
         RT_ASSERT(0);
@@ -543,8 +480,12 @@ BLE_AUDIO_API int bap_broadcast_src_start()
 
     busy = 1;
 
-    if (g_a2dp_opened)
+    {
+        printk("send thread start\n");
         rt_event_send(g_run_event, BAP_EVENT_THREAD_START);
+    }
+
+    audio_server_seup_ble_bap_src(1);
 
     rt_thread_t encode_thread = rt_thread_create(BEL_SRC_THREAD_NAME, init_lc3_thread, NULL, LC3_ENCODER_STACK_SIZE, LC3_ENCODER_PRIORITY, RT_THREAD_TICK_DEFAULT);
     RT_ASSERT(encode_thread);
@@ -687,8 +628,12 @@ BLE_AUDIO_API int bap_broadcast_src_start()
 BLE_AUDIO_API void bap_broadcast_src_stop()
 {
     int err = 0;
+
+    audio_server_seup_ble_bap_src(0);
+
     if (!busy)
         return;
+
     printk("Stopping broadcast source\n");
 
     rt_event_send(g_run_event, BAP_EVENT_THREAD_EXIT);
@@ -751,27 +696,35 @@ BLE_AUDIO_API void bap_broadcast_src_stop()
     k_sem_reset(&lc3_encoder_sem);
     k_sem_reset(&sem_started);
     k_sem_reset(&lc3_encoder_sem);
+    rt_event_control(g_run_event, RT_IPC_CMD_RESET, NULL);
     busy = 0;
 }
 
-void notify_dma_done_to_a2dp()
+BLE_AUDIO_API void ble_src_send(uint8_t *data, uint32_t len)
 {
+    if (!busy)
+        return;
+
+    RT_ASSERT(SPEAKER_10MS_DMA_SIZE == len);
+    uint32_t space = rt_ringbuffer_space_len(&rb_cache);
+    if (rt_ringbuffer_space_len(&rb_cache) < len)
+    {
+        printk("ble src cache full space=%d\n", space);
+    }
+    rt_ringbuffer_put(&rb_cache, data, len);
 }
+
+BLE_AUDIO_API uint8_t bap_broadcast_src_is_busy(void)
+{
+    return busy;
+}
+
 static int bap_broadcast_src_init(void)
 {
+    g_tx_channels = 1;
     g_run_event = rt_event_create("bap_run", RT_IPC_FLAG_FIFO);
     RT_ASSERT(g_run_event);
     rt_ringbuffer_init(&rb_cache, rb_cache_pool, BAP_SRC_AUDIO_CACHE_SIZE);
-    int ret = audio_server_register_audio_device(AUDIO_DEVICE_BLE_BAP_SINK, &ble_audio_device);
-    RT_ASSERT(!ret);
-
-    audio_server_select_public_audio_device(AUDIO_DEVICE_BLE_BAP_SINK);
-
-#if BAP_SRC_USING_10MS_TIMER
-    audio_server_seup_ble_bap_src(&rb_cache, NULL);
-#else
-    audio_server_seup_ble_bap_src(&rb_cache, send_timeout_handler);
-#endif
     return 0;
 }
 INIT_PRE_APP_EXPORT(bap_broadcast_src_init);

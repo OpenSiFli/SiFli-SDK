@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('src/*.c')
+path = [cwd + '/include', cwd + '/src']
+
+group = DefineGroup('libogg', src, depend = ['PKG_USING_LIBOGG'], CPPPATH = path)
+
+Return('group')

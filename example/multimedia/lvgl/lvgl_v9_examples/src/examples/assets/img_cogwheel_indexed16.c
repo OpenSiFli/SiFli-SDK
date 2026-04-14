@@ -10,8 +10,7 @@
     #define LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16
 #endif
 
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16 uint8_t img_cogwheel_indexed16_map[] =
-{
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16 uint8_t img_cogwheel_indexed16_map[] = {
     0x00, 0x00, 0x00, 0x00,   /*Color of index 0*/
     0x6c, 0x5e, 0x4a, 0xff,   /*Color of index 1*/
     0x72, 0x64, 0x50, 0xff,   /*Color of index 2*/
@@ -131,14 +130,15 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_IMG_COGWHEEL_INDEXED16 uint8_t i
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
-const lv_image_dsc_t img_cogwheel_indexed16 =
-{
-    .header.w = 100,
-    .header.h = 100,
-    .header.stride = 50,
-    .header.cf = LV_COLOR_FORMAT_I4,
-    .data = img_cogwheel_indexed16_map,
+const lv_image_dsc_t img_cogwheel_indexed16 = {
+    .header = {
+        .cf = LV_COLOR_FORMAT_I4,
+        .w = 100,
+        .h = 100,
+        .stride = 50,
+    },
     .data_size = sizeof(img_cogwheel_indexed16_map),
+    .data = img_cogwheel_indexed16_map,
 };
 
 #endif /* LV_BUILD_EXAMPLES */

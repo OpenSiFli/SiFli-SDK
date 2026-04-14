@@ -24,6 +24,14 @@
 
 为安装所需软件，SiFli 提供了以下方法，可根据需要选择其中之一。
 
+#### 通过VSCode插件安装（推荐）
+
+参考安装文档：[CodeKit-Doc](https://docs.sifli.com/projects/codekit/get-started/)
+
+插件下载：点击跳转[SiFli-SDK-CodeKit](https://marketplace.visualstudio.com/items?itemName=SiFli.SiFli-SDK-CodeKit)
+
+或者者在VSCode中搜索“SiFli-SDK-CodeKit”插件进行安装。
+
 #### 手动安装
 
 参考手动安装：[手动安装](install/index.md)

@@ -189,6 +189,7 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
                 g_bt_app_env.bd_addr = info->mac;
                 pan_conn = 1;
             }
+            break;
         }
         case BT_NOTIFY_COMMON_KEY_MISSING:
         {

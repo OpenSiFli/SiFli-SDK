@@ -3,5 +3,13 @@ menu "Encoder(Wheel)"
 config ENCODER_USING_DK05E01TF412
     bool "DK05E01T"
     default n
+    if ENCODER_USING_DK05E01TF412
+        config ENCODE_INPUT_PIN_A
+            int "Encode Input Pin A"
+            default 45
+        config ENCODE_INPUT_PIN_B
+            int "Encode Input Pin B"
+            default 41
+    endif
 
 endmenu

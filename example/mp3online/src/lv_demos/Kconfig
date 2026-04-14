@@ -1,0 +1,32 @@
+menu "LVGL V8 Demos"   
+
+config LV_USE_DEMO
+     bool "Enable LVGL Demos"
+     default n
+
+if LV_USE_DEMO
+
+config LV_USE_DEMO_MUSIC
+    bool "Music player demo"
+
+
+if LV_USE_DEMO_MUSIC
+    choice 
+        prompt "select LCD type"
+        default LV_DEMO_MUSIC_SQUARE
+        config LV_DEMO_MUSIC_SQUARE
+            bool "Square"
+        config LV_DEMO_MUSIC_ROUND
+            bool "Round"
+    endchoice
+    config LV_DEMO_MUSIC_LANDSCAPE 
+        depends on LV_DEMO_MUSIC_SQUARE
+        bool "Landscape UI"
+    config LV_DEMO_MUSIC_LARGE 
+        bool "Music large fonts"
+    config LV_DEMO_MUSIC_AUTO_PLAY 
+        bool "Music auto play"
+endif
+endif
+
+endmenu

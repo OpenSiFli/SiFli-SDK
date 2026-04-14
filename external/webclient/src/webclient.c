@@ -380,7 +380,7 @@ static int webclient_open_tls(struct webclient_session *session, const char *URI
  * @return <0: connect failed or other error
  *         =0: connect success
  */
-static int webclient_connect(struct webclient_session *session, const char *URI)
+int webclient_connect(struct webclient_session *session, const char *URI)
 {
     int rc = WEBCLIENT_OK;
     int socket_handle;
@@ -908,8 +908,6 @@ struct webclient_session *webclient_session_create(size_t header_sz)
 
     return session;
 }
-
-static int webclient_clean(struct webclient_session *session);
 
 /**
  *  send GET request to http server and get response header.
@@ -1521,7 +1519,7 @@ int webclient_write(struct webclient_session *session, const void *buffer, size_
 }
 
 /* close session socket, free host and request url */
-static int webclient_clean(struct webclient_session *session)
+int webclient_clean(struct webclient_session *session)
 {
 #ifdef WEBCLIENT_USING_MBED_TLS
     if (session->tls_session)

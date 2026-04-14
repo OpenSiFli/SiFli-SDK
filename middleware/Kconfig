@@ -25,7 +25,7 @@ menu "Sifli middleware"
         bool "Cell Transform Algo"
         default n
 
-    source "$SIFLI_SDK/middleware/core_dump/Kconfig"
+    source "$SIFLI_SDK/middleware/coredump/Kconfig"
 
     config USING_GAUSS_BLUR
         bool "Gauss Blurring Library"
@@ -485,6 +485,7 @@ menu "Sifli middleware"
     source "$SIFLI_SDK/middleware/file_logger/Kconfig"
 
     source "$SIFLI_SDK/middleware/audio/Kconfig"
+    source "$SIFLI_SDK/middleware/audio/anyka/Kconfig"
     config USING_PARTITION_TABLE
         bool "Use partition table to manage all memory layout"
         default y if KCONFIG_V2

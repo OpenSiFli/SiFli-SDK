@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,11 +24,6 @@ extern "C" {
 #include "sdio_config.h"
 #include "flash_config.h"
 #include "audio_config.h"
-#if BT_BAP_BROADCAST_SINK
-#define ALL_CLK_USING_PLL   1
-#else
-#define ALL_CLK_USING_PLL   0
-#endif
 
 enum PLL_SET_GRADE
 {
@@ -45,4 +40,3 @@ enum PLL_SET_GRADE
 #endif
 
 #endif
-

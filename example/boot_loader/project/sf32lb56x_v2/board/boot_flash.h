@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef __BOOT_FLASH__
 #define __BOOT_FLASH__
 
@@ -52,6 +57,8 @@ void BSP_SetFlash5DIV(uint16_t div);
 
 uint8_t is_addr_in_flash(uint32_t addr);
 
+uint32_t init_sdnand(void);
+uint32_t init_sdemmc2(void);
 
 extern FLASH_HandleTypeDef *boot_handle;
 extern uint32_t g_config_addr;
@@ -61,3 +68,5 @@ extern uint32_t g_config_addr;
 #endif
 
 #endif /* __BOARD_H__ */
+
+

@@ -93,3 +93,21 @@ menuconfig BSP_USING_VBAT
             int "Impedance between GND to ADC PIN"
             default 1000
     endif 
+
+menuconfig SD_BL_MODE
+    bool "Use SD_BL_MODE"
+    default n
+    if SD_BL_MODE
+        choice BOOT_DEVICE
+            prompt "Select SD boot device"
+            default BOOT_DEVICE_SDMMC2
+
+        config BOOT_DEVICE_SDMMC1
+            bool "SDMMC1"
+
+        config BOOT_DEVICE_SDMMC2
+            bool "SDMMC2"
+
+        endchoice
+
+    endif

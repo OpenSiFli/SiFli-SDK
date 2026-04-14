@@ -43,8 +43,109 @@ int mnt_init(void)
     return RT_EOK;
 }
 INIT_ENV_EXPORT(mnt_init);
+
+#elif defined(BSP_USING_SDIO) || defined(BSP_USING_SDMMC1) || defined(BSP_USING_SDMMC2)
+
+#include "fal.h"
+#include "drivers/mmcsd_core.h"
+#include <dfs_fs.h>
+
+static int app_emmc_partition_init(void)
+{
+    size_t len;
+    uint32_t i;
+    const struct fal_partition *partition;
+    const struct fal_flash_dev *fal_flash = NULL;
+    const char *sd_dev_name = NULL;
+    rt_device_t sd_dev = RT_NULL;
+
+    partition = fal_get_partition_table(&len);
+
+    /* 查找是否有 eMMC 分区 sd0*/
+    for (i = 0; i < len; i++)
+    {
+        if ((fal_flash = fal_flash_device_find(partition[i].flash_name)) == NULL)
+            continue;
+        if (fal_flash->nand_flag == 2)
+        {
+            sd_dev_name = partition[i].flash_name;
+            break;
+        }
+    }
+
+    if (sd_dev_name == NULL)
+        return 0; /* 没有 eMMC 分区 */
+
+    /* 等待 sd 设备就绪，最多等 8 秒 */
+    uint16_t wait_ticks = 400;
+    rt_kprintf("app: wait %s device ready...\n", sd_dev_name);
+    while (wait_ticks--)
+    {
+        rt_thread_mdelay(20);
+        sd_dev = rt_device_find(sd_dev_name);
+        if (sd_dev)
+        {
+            rt_kprintf("app: %s device ready\n", sd_dev_name);
+            break;
+        }
+    }
+
+    if (!sd_dev)
+    {
+        rt_kprintf("app: %s not found, emmc partition init failed!\n", sd_dev_name);
+        return -1;
+    }
+
+    // /* 创建 eMMC 分区设备 */
+    // for (i = 0; i < len; i++)
+    // {
+    //     if ((fal_flash = fal_flash_device_find(partition[i].flash_name)) == NULL)
+    //         continue;
+    //     if (fal_flash->nand_flag == 2)
+    //     {
+    //         rt_mmcsd_blk_device_create(partition[i].flash_name, partition[i].name,
+    //                                    partition[i].offset >> 9, partition[i].len >> 9);
+    //     }
+    // }
+
+#ifdef PKG_FDB_USING_FILE_POSIX_MODE
+    {
+        const char *part_name = "fs_root";
+        const char *mount_path = "/";
+
+        if (rt_device_find(part_name) != RT_NULL)
+        {
+            /* 尝试挂载到根目录 */
+            if (dfs_mount(part_name, mount_path, "elm", 0, 0) != 0)
+            {
+                /* 挂载失败，先格式化再挂载 */
+                rt_kprintf("app: format %s and mount to %s\n", part_name, mount_path);
+                dfs_mkfs("elm", part_name);
+                if (dfs_mount(part_name, mount_path, "elm", 0, 0) != 0)
+                {
+                    rt_kprintf("app: mount %s to %s failed!\n", part_name, mount_path);
+                }
+                else
+                {
+                    rt_kprintf("app: mount %s to %s OK\n", part_name, mount_path);
+                }
+            }
+            else
+            {
+                rt_kprintf("app: mount %s to %s OK\n", part_name, mount_path);
+            }
+        }
+        else
+        {
+
+        }
+    }
 #endif
 
+    return 0;
+}
+INIT_ENV_EXPORT(app_emmc_partition_init);
+#endif
 
 void SystemClock_Config(void)
 {

@@ -281,7 +281,7 @@ typedef enum
   * @param value source value
   * @retval true if success
   */
-#ifndef IS_ALIGNED  
+#ifndef IS_ALIGNED
 #define IS_ALIGNED(align, value)            (((value) & ((align)-1))==0)
 #endif
 
@@ -704,7 +704,7 @@ int HAL_QSPI_READ_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr, uint8_t *buf, 
  * @param  addr security regiseter address
  * @retval lock bits, 0xff if fail.
 */
-uint8_t HAL_QSPI_GET_OTP_LB(FLASH_HandleTypeDef *hflash, uint32_t addr);
+uint8_t HAL_QSPI_GET_OTP_LB(FLASH_HandleTypeDef *hflash);
 
 /**
  * @brief  Enable NAND OTP operation, include read/write.

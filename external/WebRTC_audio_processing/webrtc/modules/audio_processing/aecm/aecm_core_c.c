@@ -22,8 +22,8 @@
 #include "webrtc/system_wrappers/include/cpu_features_wrapper.h"
 #include "webrtc/typedefs.h"
 #include "webrtc_mem.h"
-#ifdef SOLUTION_WATCH
-#include "bt_connect.h"
+#if defined(__has_include) && __has_include("bt_connect.h")
+    #include "bt_connect.h"
 #endif
 
 // Square root of Hanning window in Q14.
@@ -488,7 +488,7 @@ int WebRtcAecm_ProcessBlock(AecmCore *aecm,
     int j;
     int16_t nearabs;
     int16_t nearPeak = 0; 
-#ifdef SOLUTION_WATCH
+#if defined(__has_include) && __has_include("bt_connect.h")
     if (BT_DEV_CLS_AUDIO_BOX == bt_connect_get_peer_type())
     {
         for (i = 0; i < 64; i++)
@@ -652,13 +652,14 @@ int WebRtcAecm_ProcessBlock(AecmCore *aecm,
                 }
             }
         }
-#ifdef SOLUTION_WATCH
+#if defined(__has_include) && __has_include("bt_connect.h")
         //whistle elimination
         if (whistleDet && (BT_DEV_CLS_AUDIO_BOX == bt_connect_get_peer_type()))
         {
             hnl[i] = 0;
         }
 #endif
+
         if (hnl[i])
         {
             numPosCoef++;

@@ -119,25 +119,33 @@ def get_sifli_sdk_env() -> Dict[str,str]:
 
     return sifli_sdk_env
 
+def normalize_shell_name(shell: str) -> str:
+    shell_name = str(shell).strip().lstrip('-')
+    return shell_name.replace('\\', '/').rsplit('/', 1)[-1].lower()
+
 
 @status_message('Identifying shell', rv_on_ok=True)
 def detect_shell(args: Any) -> str:
     import psutil
 
     if args.shell != 'detect':
-        debug(f'Shell explicitly stated: "{args.shell}"')
+        debug(f'Shell explicitly stated: "{args.shell}", normalized: "{normalize_shell_name(str(args.shell))}"')
         return str(args.shell)
 
     current_pid = os.getpid()
     detected_shell_name = ''
     while True:
         parent_pid = psutil.Process(current_pid).ppid()
+        if parent_pid <= 0 or parent_pid == current_pid:
+            break
         parent = psutil.Process(parent_pid)
         parent_cmdline = parent.cmdline()
-        parent_exe = parent_cmdline[0].lstrip('-')
-        parent_name = os.path.basename(parent_exe)
-        debug(f'Parent: pid: {parent_pid}, cmdline: {parent_cmdline}, exe: {parent_exe}, name: {parent_name}')
-        if not parent_name.lower().startswith('python'):
+        parent_source = parent.exe() or (parent_cmdline[0] if parent_cmdline else parent.name())
+
+        parent_name = str(parent_source).strip().lstrip('-').replace('\\', '/').rsplit('/', 1)[-1]
+        normalized_parent_name = parent_name.lower()
+        debug(f'Parent: pid: {parent_pid}, cmdline: {parent_cmdline}, name: {parent_name}, normalized: {normalized_parent_name}')
+        if normalized_parent_name and not normalized_parent_name.startswith('python'):
             detected_shell_name = parent_name
             break
         current_pid = parent_pid
@@ -190,12 +198,13 @@ def main() -> None:
     deactivate_cmd = get_deactivate_cmd()
     new_sifli_sdk_env = get_sifli_sdk_env()
     detected_shell = detect_shell(conf.ARGS)
+    normalized_shell = normalize_shell_name(detected_shell)
     print_uninstall_msg()
 
-    if detected_shell not in SHELL_CLASSES:
+    if normalized_shell not in SHELL_CLASSES:
         die(f'"{detected_shell}" shell is not among the supported options: "{SUPPORTED_SHELLS}"')
 
-    shell = SHELL_CLASSES[detected_shell](detected_shell, deactivate_cmd, new_sifli_sdk_env)
+    shell = SHELL_CLASSES[normalized_shell](detected_shell, deactivate_cmd, new_sifli_sdk_env)
 
     if conf.ARGS.export:
         shell.export()

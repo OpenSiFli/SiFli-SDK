@@ -71,7 +71,7 @@ WHILE &block_addr<VAR.Value(heap_end)
    ;&block_size=VAR.Value(((struct heap_mem *)&block_addr)->next)-&block_pos
    ;&block_size=&block_size&0x7FFFFFFF
 
-   &used_flag=VAR.Value(((struct heap_mem *)&block_addr)->used)
+   &used_flag=VAR.Value((((struct heap_mem *)&block_addr)->used)&1)
    
    &user_addr=VAR.Value(((struct heap_mem *)&block_addr)+1)
 
@@ -109,8 +109,9 @@ WHILE &block_addr<VAR.Value(heap_end)
       &user_size=VAR.Value(((struct heap_mem *)&block_addr)->size)
    )
 
-   &block_size=VAR.Value(((uint32_t)(((struct heap_mem *)&block_addr)->next)) + ((uint32_t)heap_ptr) - ((uint32_t)&block_addr))
-   &print_block_addr=FORMAT.String("&block_addr(&user_addr)   &used_flag  &block_size ", 40., ' ')   
+   &block_size=VAR.Value(((uint32_t)(((struct heap_mem *)&block_addr)->next)) - ((uint32_t)&block_addr))
+   &block_size1=FORMAT.DecimalU(10., &block_size)
+   &print_block_addr=FORMAT.String("&block_addr(&user_addr)   &used_flag  &block_size1 ", 40., ' ')   
 
    
    PRINT "&print_block_addr" "&tick" "&ret_addr" "&ret_addr2"  "&lv_mem_size"
@@ -127,7 +128,7 @@ WHILE &block_addr<VAR.Value(heap_end)
 	)
    )
 
-   &block_addr=VAR.Value(heap_ptr)+VAR.Value(((struct heap_mem *)&block_addr)->next)
+   &block_addr=VAR.Value(((struct heap_mem *)&block_addr)->next)
 ) 
 
 enddo

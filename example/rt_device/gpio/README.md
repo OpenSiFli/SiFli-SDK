@@ -3,9 +3,10 @@
 
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-lcd_n16r8
-* sf32lb56-lcd_n16r12n1
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-nano系列
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 ## 示例概述
 * 配置GPIO输出，输入中断操作，进行GPIO HAL函数演示
@@ -19,9 +20,10 @@
 
 |开发板    |OUT管脚 |OUT管脚名称|IN管脚 |IN管脚名称 |
 |:---     |:---    |:---      |:---   |:---      |
-|sf32lb52-lcd_n16r8 |5       |PA41      |3      |PA42      |
-|sf32lb56-lcd_n16r12n1 |5       |PA20      |3      |PA12        |
-|sf32lb58-lcd_n16r64n4 |5       |PB28      |3      |PB29      |
+|sf32lb52-nano |5        |PA41      |3      |PA42        |
+|sf32lb52-lcd |5       |PA41      |3      |PA42      |
+|sf32lb56-lcd |5       |PA20      |3      |PA12      |
+|sf32lb58-lcd |5       |PB28      |3      |PB29      |
 
 * 更详细的引脚定义请参考\
 `[sf32lb52-lcd_n16r8]()`\

@@ -1,4 +1,4 @@
-﻿#include "../lv_examples.h"
+#include "../lv_examples.h"
 #if LV_BUILD_EXAMPLES
 
 #if LV_USE_DRAW_SW_COMPLEX_GRADIENTS
@@ -8,8 +8,7 @@
  */
 void lv_example_style_18(void)
 {
-    static const lv_color_t grad_colors[2] =
-    {
+    static const lv_color_t grad_colors[2] = {
         LV_COLOR_MAKE(0x26, 0xa0, 0xda),
         LV_COLOR_MAKE(0x31, 0x47, 0x55),
     };
@@ -19,7 +18,7 @@ void lv_example_style_18(void)
     static lv_grad_dsc_t linear_gradient_dsc;     /*NOTE: the gradient descriptor must be static or global variable!*/
 
     lv_style_init(&style_with_linear_gradient_bg);
-    lv_gradient_init_stops(&linear_gradient_dsc, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
+    lv_grad_init_stops(&linear_gradient_dsc, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
     lv_grad_linear_init(&linear_gradient_dsc, lv_pct(0), lv_pct(0), lv_pct(20), lv_pct(100), LV_GRAD_EXTEND_REFLECT);
     lv_style_set_bg_grad(&style_with_linear_gradient_bg, &linear_gradient_dsc);
     lv_style_set_bg_opa(&style_with_linear_gradient_bg, LV_OPA_COVER);
@@ -29,15 +28,15 @@ void lv_example_style_18(void)
     static lv_grad_dsc_t radial_gradient_dsc;     /*NOTE: the gradient descriptor must be static or global variable!*/
 
     lv_style_init(&style_with_radial_gradient_bg);
-    lv_gradient_init_stops(&radial_gradient_dsc, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
+    lv_grad_init_stops(&radial_gradient_dsc, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
     lv_grad_radial_init(&radial_gradient_dsc, lv_pct(30), lv_pct(30), lv_pct(100), lv_pct(100), LV_GRAD_EXTEND_REFLECT);
     lv_style_set_bg_grad(&style_with_radial_gradient_bg, &radial_gradient_dsc);
     lv_style_set_bg_opa(&style_with_radial_gradient_bg, LV_OPA_COVER);
 
     /*Create buttons with different gradient styles*/
 
-    lv_obj_t *btn;
-    lv_obj_t *label;
+    lv_obj_t * btn;
+    lv_obj_t * label;
 
     /*Simple horizontal gradient*/
     btn = lv_button_create(lv_screen_active());
@@ -88,10 +87,10 @@ void lv_example_style_18(void)
 
 void lv_example_style_18(void)
 {
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_obj_t * label = lv_label_create(lv_screen_active());
     lv_obj_set_width(label, LV_PCT(80));
     lv_label_set_text(label, "LV_USE_DRAW_SW_COMPLEX_GRADIENTS is not enabled");
-    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
     lv_obj_center(label);
 }
 

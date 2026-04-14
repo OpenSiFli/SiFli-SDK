@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "rtconfig.h"
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
 #include "audio_mem.h"
 #endif
 
@@ -68,7 +68,7 @@ static OPUS_INLINE void *do_opus_alloc (size_t size, const char *file, int line)
     return p;
 #else
 
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
     p = audio_mem_malloc(size);
 
 #else
@@ -109,7 +109,7 @@ static OPUS_INLINE void opus_free (void *ptr)
     }
     return;
 #else
-#ifdef SOLUTION_WATCH
+#ifdef SOLUTION
     return audio_mem_free(ptr);
 #else
     opus_heap_free(ptr);

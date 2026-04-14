@@ -33,6 +33,8 @@ extern void st_dword (BYTE* ptr, DWORD val);	/* Store a 4-byte word in little-en
 BYTE *RamDisk;		/* Poiter to the RAM disk */
 DWORD RamDiskSize;	/* Size of RAM disk in unit of sector */
 
+int FF_MIN_SS;
+int reserved_size;
 
 static FATFS FatFs;
 static FIL DstFile;
@@ -41,7 +43,7 @@ static WIN32_FIND_DATAW Fd;
 static char SrcPathA[512], DstPath[512];
 static BYTE Buff[8192];
 static UINT Dirs, Files;
-
+static int remaining_size;
 
 
 int maketree (void)
@@ -50,6 +52,7 @@ int maketree (void)
 	int slen, dlen, rv = 0;
 	DWORD br;
 	UINT bw;
+    DWORD file_size;
 	int unicodeLen;
 	int len;
 
@@ -96,7 +99,7 @@ int maketree (void)
 					Dirs++;
 				}
 			} else {	/* The item is a file */
-				wprintf(L"%s\n", SrcPath);
+				//wprintf(L"%s\n", SrcPath);
 
 				if ((SrcFile = CreateFileW(SrcFilePath, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0)) == INVALID_HANDLE_VALUE) 
 				{	/* Open source file */
@@ -112,11 +115,17 @@ int maketree (void)
 					if (br == 0) break;
 					f_write(&DstFile, Buff, (UINT)br, &bw);
 				} while (br == bw);
+                file_size = GetFileSize(SrcFile, NULL);
 				CloseHandle(SrcFile);
 				f_close(&DstFile);
 				if (br && br != bw) {
-					printf("Failed to write file.\n"); break;
+					printf("Failed to write file:%s.\n", DstPath); break;
 				}
+                if (remaining_size >= file_size)
+                {
+                    //printf("remaining:%d,%d\n", remaining_size, file_size);
+                    remaining_size -= file_size;
+                }
 				Files++;
 			}
 			free(SrcFilePath);
@@ -204,9 +213,6 @@ int calc_dir_size(void)
 	return total_size;
 }
 
-
-int FF_MIN_SS;
-
 int main (int argc, char* argv[])
 {
 	UINT csz;
@@ -216,20 +222,40 @@ int main (int argc, char* argv[])
 	int ai = 1, truncation = 0;
 	const char *outfile;
 	int total_size;
+	DWORD free_clust, free_sect, total_sect;
+	FATFS *fs;
 
-	/* Initialize parameters */
-	if (argc >= 2 && *argv[ai] == '-') {
+	/* the first argument is program name */
+	argc--;
+	/* Initialize option parameters */
+	while (argc >= 1 && *argv[ai] == '-') {
 		if (!strcmp(argv[ai], "-t")) {
 			truncation = 1;
 			ai++;
 			argc--;
-		} else {
+        }
+		else if (!strcmp(argv[ai], "-rsv")) {
+			if (argc < 2) {
+				argc = 0;
+				break;
+			}
+			reserved_size = atoi(argv[ai + 1]) * 1024;
+			if (reserved_size <= 0) {
+				argc = 0;
+				break;
+			}
+			ai += 2;
+			argc -= 2;
+		}
+        else {
 			argc = 0;
 		}
 	}
+
 	if (argc < 3) {
-		printf("usage: mkfatimg [-t] <source node> <output image> <image size> [<cluster size>]\n"
+		printf("usage: mkfatimg [-t] [-rsv rsv_sapce_size] <source node> <output image> <image size> [<cluster size>]\n"
 				"    -t: Truncate unused area for read only volume.\n"
+			    "    -rsv: reserved space size in KiB\n"
 				"    <source node>: Source node as root of output image\n"
 				"    <output image>: FAT volume image file\n"
 				"    <image size>: Size of output image in unit of KiB\n"
@@ -242,7 +268,7 @@ int main (int argc, char* argv[])
 	total_size = calc_dir_size();
 	RamDiskSize = atoi(argv[ai++]);
 	
-	csz = (argc >= 5) ? atoi(argv[ai++]) : 512;
+	csz = (argc >= 4) ? atoi(argv[ai++]) : 512;
 	FF_MIN_SS = csz;
 
 	if (0 == RamDiskSize)
@@ -251,7 +277,8 @@ int main (int argc, char* argv[])
 	}
 	
 
-	printf("disksize:%d,%d\n", RamDiskSize,total_size);
+	printf("disksize:%d  filesize:%d\n", RamDiskSize * FF_MIN_SS, total_size);
+	printf("File Size Total: %.2f KB\n", (float)total_size / 1024);
 
 	Dirs = 0;
 	Files = 0;
@@ -263,9 +290,31 @@ int main (int argc, char* argv[])
 		return 2;
 	}
 
+	remaining_size = total_size;
+
 	/* Copy source directory tree into the FAT volume */
 	f_mount(&FatFs, "", 0);
-	if (!maketree()) return 3;
+	if (!maketree())
+	{
+		printf("Not packed: %.2f KB\n", (float)remaining_size / 1024);
+		if (FR_OK == f_getfree("0:", &free_clust, &fs))
+		{
+			printf("Disk Total: %d KB, Free: %d KB\n", (fs->n_fatent - 2) * fs->csize * FF_MIN_SS / 1024,
+				free_clust * fs->csize * FF_MIN_SS / 1024);
+		}
+		return 3;
+	}
+
+	if (FR_OK == f_getfree("0:", &free_clust, &fs))
+	{
+		printf("Disk Total: %d KB, Free: %d KB\n", (fs->n_fatent - 2) * fs->csize * FF_MIN_SS / 1024, 
+			   free_clust * fs->csize * FF_MIN_SS / 1024);
+		if ((free_clust * fs->csize * FF_MIN_SS) < reserved_size)
+		{
+			printf("Pack error: free size is less than reserved size: %d KB \n", reserved_size / 1024);
+			return 4;
+		}
+	}
 	if (!Files) { printf("No file in the source directory."); return 3; }
 	szvol = ld_word(RamDisk + BPB_TotSec16);
 	if (!szvol) szvol = ld_dword(RamDisk + BPB_TotSec32);

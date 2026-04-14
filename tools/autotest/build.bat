@@ -9,10 +9,8 @@ set TOOLS_ROOT=%cd%/tools
 
 call %ENV_ROOT%\tools\ConEmu\ConEmu\CmdInit.cmd
 
-set RTT_EXEC_PATH=C:\GNU MCU Eclipse\ARM Embedded GCC\8.2.1-1.2-20190119-1237\bin
-set RTT_CC=gcc
 dir
-call set_env.bat
+call set_env.bat gcc
 cd %1
 
 date /t && time /t
@@ -24,8 +22,6 @@ if exist resources (
     cd ..
 )
 
-set RTT_EXEC_PATH=C:/Keil_v5
-set RTT_CC=keil
 if "%2"=="" goto :BUILD_WITHOUT_ARG
 if "%2"=="--coremark" goto :BUILD_COREMARK
 if "%2"=="--resolution" goto :GEN_RESOURCE

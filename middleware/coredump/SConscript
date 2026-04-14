@@ -1,0 +1,20 @@
+import os
+from building import *
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = ['coredump.c']
+
+if (GetDepend('COREDUMP_BACKEND_FILE') and GetDepend('COREDUMP_MINIDUMP_ENABLED')) or GetDepend('COREDUMP_BACKEND_PARTITION'):
+    src += ['coredump_backend_partition.c']
+
+if GetDepend('COREDUMP_BACKEND_FILE'):
+    src += ['coredump_backend_file.c']
+
+inc = [cwd]
+
+# add group to IDE project
+objs = DefineGroup('middleware', src, depend = ['USING_COREDUMP'], CPPPATH = inc)
+Return('objs')

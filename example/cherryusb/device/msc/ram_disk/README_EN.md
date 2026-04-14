@@ -1,5 +1,4 @@
-
-# usb_audio_class_example
+# USB Mass Storage Device Example (RAM DISK)
 
 Source Path: example\cherryusb\device\ram_disk
 

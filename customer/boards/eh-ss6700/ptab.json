@@ -8,7 +8,8 @@
                 "offset": "0x00000000", 
                 "max_size": "0x00200000", 
                 "name": "main",
-                "type": ["app_img", "app_exec"]
+                "type": ["app_img", "app_exec"],
+                "tags": ["HCPU_FLASH_CODE"]
             }, 
             {
                 "offset": "0x00200000", 

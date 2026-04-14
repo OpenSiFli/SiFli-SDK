@@ -1,9 +1,12 @@
 # FinSH
+源码路径：example/system/finsh
 
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
+
 
 ## 概述
 * FinSH 是 RT-Thread 的命令行组件（shell），提供一套供用户在命令行调用的操作接口，主要用于调试或查看系统信息。除了 FinSH 自带的命令，FinSH 还也提供了多个宏接口来导出自定义命令，导出的命令可以直接在 FinSH 中执行。

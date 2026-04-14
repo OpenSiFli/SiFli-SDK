@@ -2,8 +2,10 @@
 源码路径:example/hal/rtc
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-+ sf32lb52-lcd_n16r8
-+ sf32lb58-lcd_n16r64n4
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
+
 ## 概述
 <!-- 例程简介 -->
 本例程演示HAL层RTC的使用，包含：

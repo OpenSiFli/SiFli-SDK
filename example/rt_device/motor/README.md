@@ -2,7 +2,7 @@
 
 [English](README_EN.md) | [中文](README.md)
 
-源码路径: example/motor
+源码路径：example/rt_device/motor
 
 ## 概述
 本示例展示了在 RT-Thread 上驱动并控制一对直流减速电机的完整流程。包含：

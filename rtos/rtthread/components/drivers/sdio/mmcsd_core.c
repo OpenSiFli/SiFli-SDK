@@ -78,9 +78,14 @@ void mmcsd_send_request(struct rt_mmcsd_host *host, struct rt_mmcsd_req *req)
                 req->stop->mrq = req;
             }
         }
+        /* serialize accesses to the host to avoid concurrent requests
+         * which may overwrite host->cmd / host->data in the controller
+         */
+        mmcsd_host_lock(host);
         host->ops->request(host, req);
 
         rt_sem_take(&host->sem_ack, RT_WAITING_FOREVER);
+        mmcsd_host_unlock(host);
 
     }
     while (req->cmd->err && (req->cmd->retries > 0));
@@ -735,6 +740,7 @@ struct rt_mmcsd_host *mmcsd_alloc_host(void)
 
     rt_memset(host, 0, sizeof(struct rt_mmcsd_host));
 
+    rt_strncpy(host->name, "sd0", sizeof(host->name) - 1);
     host->max_seg_size = 65535;
     host->max_dma_segs = 1;
     host->max_blk_size = 512;
@@ -751,6 +757,15 @@ void mmcsd_free_host(struct rt_mmcsd_host *host)
     rt_mutex_detach(&host->bus_lock);
     rt_sem_detach(&host->sem_ack);
     rt_free(host);
+}
+#ifdef GUI_THREAD_TEMP_PRIO
+    #define RT_MMCSD_THREAD_INIT_PREORITY   GUI_THREAD_TEMP_PRIO
+#else
+    #define RT_MMCSD_THREAD_INIT_PREORITY   RT_THREAD_PRIORITY_HIGH - 3
+#endif
+rt_thread_t mmcsd_get_thread(void)
+{
+    return mmcsd_detect_thread.name[0] ? &mmcsd_detect_thread : NULL;
 }
 
 int rt_mmcsd_core_init(void)
@@ -769,7 +784,7 @@ int rt_mmcsd_core_init(void)
                      RT_IPC_FLAG_FIFO);
     RT_ASSERT(ret == RT_EOK);
     ret = rt_thread_init(&mmcsd_detect_thread, "mmcsd_detect", mmcsd_detect, RT_NULL,
-                         &mmcsd_stack[0], RT_MMCSD_STACK_SIZE, RT_MMCSD_THREAD_PREORITY, 20);
+                         &mmcsd_stack[0], RT_MMCSD_STACK_SIZE, RT_MMCSD_THREAD_INIT_PREORITY, 20);
     if (ret == RT_EOK)
     {
         rt_thread_startup(&mmcsd_detect_thread);

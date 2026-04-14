@@ -354,7 +354,7 @@ uint8_t bt_voice_msbc_decode(uint8_t sco_idx)
         pbss_t.dst_len = 240;
         pbss_t.pdst = &pt_data->out_data[0];
 
-        bts2_msbc_decode(&pbss_t);
+        bts2_msbc_decode_ext(&pbss_t, sco_idx);
         if (240 != pbss_t.dst_len_used)
         {
             g711plc_dofe(pt_plc, (short *)(&pt_data->out_data[0]));
@@ -419,7 +419,7 @@ uint8_t bt_voice_msbc_encode(uint8_t *fifo, uint16_t fifo_size)
     pbss_t.src_len = 240;
     pbss_t.dst_len = 57;
     pbss_t.pdst = p_data;
-    bts2_msbc_encode(&pbss_t);
+    bts2_msbc_encode_ext(&pbss_t, 0);
     if ((240 != pbss_t.src_len_used) || (pbss_t.dst_len_used != 57))
     {
         LOG_W("3a_w msbc encode err src_len_use=%d,dst_len_use=%d\n", pbss_t.src_len_used, pbss_t.dst_len_used);
@@ -727,8 +727,8 @@ void bt_voice_open(uint32_t samplerate)
         RT_ASSERT(pt_bt_voice);
         pt_bt_voice->sco_ipc = &g_sco_ipc;
 
-        defresize = bts2_msbc_decode_cfg();
-        enfresize = bts2_msbc_encode_cfg();
+        defresize = bts2_msbc_decode_cfg_ext(0);
+        enfresize = bts2_msbc_encode_cfg_ext(0);
 
         for (i = 0; i < BT_SCO_MAX_NUM; i++)
         {
@@ -775,8 +775,8 @@ void bt_voice_close()
 #endif
         }
         audio_mem_free(pt_bt_voice->p_uplink_pool);
-        bts2_msbc_encode_completed();
-        bts2_msbc_decode_completed();
+        bts2_msbc_encode_completed_ext(0);
+        bts2_msbc_decode_completed_ext(0);
         audio_mem_free(pt_bt_voice);
         pt_bt_voice = NULL;
     }

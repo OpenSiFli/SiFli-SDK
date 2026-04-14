@@ -1,0 +1,121 @@
+[
+    {"version": "2"},
+    {
+        "mem":    "psram1", 
+        "base":   "0x60000000",
+        "regions":   [
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00400000", 
+                "name": "main",
+                "type": ["app_exec"]
+            },
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00080000",
+                "tags": [],
+                "name": "dfu",
+                "type": ["app_exec"]
+            },
+            {
+                "offset": "0x00400000", 
+                "max_size": "0x00C00000", 
+                "tags": [
+                    "PSRAM_DATA"
+                ]
+            }
+        ]
+    },
+    {
+        "mem":    "psram2", 
+        "base":   "0x62000000",
+        "regions": 
+        [
+            {"offset": "0x00000000", "max_size": "0x01000000", "tags": ["PSRAM_DATA2"]}
+        ]
+    },
+    {
+        "mem":    "emmc", 
+        "base":   "0x68000000",
+        "regions": 
+        [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00001000", 
+                "tags": [
+                    "MBR"
+                ]
+            },
+            {
+                "offset": "0x00001000", 
+                "max_size": "0x00400000", 
+                "name": "main",
+                "type": ["app_img"]
+            },
+            {
+                "offset": "0x00401000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_DFU_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x00405000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_BLE_REGION"
+                ]
+            },
+            {
+                "offset": "0x00501000",
+                "max_size": "0x00020000",
+                "tags": [
+                    "DFU_INFO_REGION"
+                ]
+            },
+            {
+                "offset": "0x00601000",
+                "max_size": "0x00080000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "name": "dfu",
+                "type": ["app_img"]
+            },
+            {
+                "offset": "0x00801000",
+                "max_size": "0x00360000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {"offset": "0x00B61000", "max_size": "0x00CA0000", "name": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
+            {"offset": "0x01801000", "max_size": "0x00100000", "tags": ["FLASH_PART12", "FS_EX"]},
+            {
+                "offset": "0x01901000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_LOAD_REGION1"], 
+                "name": "acpu", 
+                "type": ["app_img"]
+            }
+         ]
+    },
+    {
+        "mem":    "hpsys_ram", 
+        "base":   "0x20000000",
+        "regions": 
+        [
+            { 
+                "offset": "0x00200000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_REGION1_SBUS"],
+                "name": "acpu",
+                "type": ["app_exec"],
+                "core": "acpu"
+            },
+            {
+                "offset": "0x0027C000", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "ACPU_CMD_BUF"
+                ]
+            }
+        ]
+    }
+]

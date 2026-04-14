@@ -9,6 +9,9 @@
 + eh-lb563
 + eh-lb567
 + eh-lb58x
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
 
 ## 概述
 <!-- 例程简介 -->

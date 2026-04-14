@@ -63,20 +63,26 @@ HAL_RETM_BSS_SECT(pmu_cal_data, static PMU_CalDataTypeDef pmu_cal_data);
 
 static inline int16_t PMU_RoundF_I16(float val)
 {
-	if (val < 0.0f) {
-		return (int16_t)(val - 0.5f);
-	} else {
-		return (int16_t)(val + 0.5f);
-	}
+    if (val < 0.0f)
+    {
+        return (int16_t)(val - 0.5f);
+    }
+    else
+    {
+        return (int16_t)(val + 0.5f);
+    }
 }
 
 static inline uint16_t PMU_RoundF_U16(float val)
 {
-	if (val < 0.0f) {
-		return 0U;
-	} else {
-		return (uint16_t)(val + 0.5f);
-	}
+    if (val < 0.0f)
+    {
+        return 0U;
+    }
+    else
+    {
+        return (uint16_t)(val + 0.5f);
+    }
 }
 
 #ifdef PMUC_CR_PIN0_SEL
@@ -228,7 +234,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
 
     /* configure default delays in boot options when not set */
     uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
-    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U)
+    {
         HAL_Set_backup(RTC_BACKUP_BOOTOPT,
                        (bootopt |
                         RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |
@@ -279,7 +286,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_RC10Kconfig(void)
 
     /* configure default delays in boot options when not set */
     uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
-    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U)
+    {
         HAL_Set_backup(RTC_BACKUP_BOOTOPT,
                        (bootopt |
                         RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |
@@ -364,6 +372,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_EnableXTAL32(void)
 {
     uint32_t val = hwp_pmuc->LXT_CR;
     hwp_pmuc->LXT_CR &= ~(PMUC_LXT_CR_EN | PMUC_LXT_CR_RSN);     // Disable LXT
+
 
 #ifdef BPS_V33_HAL
     //HAL_Delay_us(0);
@@ -600,7 +609,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_EnableBuck2(void)
 
     /* configure default delays in boot options when not set */
     uint32_t bootopt = HAL_Get_backup(RTC_BACKUP_BOOTOPT);
-    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U) {
+    if ((bootopt & (RTC_BACKUP_BOOTOPT_PD_DELAY_Msk | RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)) == 0U)
+    {
         HAL_Set_backup(RTC_BACKUP_BOOTOPT,
                        (bootopt |
                         RTC_BACKUP_BOOTOPT_PD_DELAY_MS(5) |

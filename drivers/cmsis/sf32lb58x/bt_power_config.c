@@ -135,7 +135,7 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
             hwp_bt_phy->TX_DPSK_CFG1 |= 0x48 << BT_PHY_TX_DPSK_CFG1_TX_DPSK_GAIN_FRC_Pos;
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Msk;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x08 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x05 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x44444444;
             break;
@@ -150,7 +150,7 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
             hwp_bt_phy->TX_DPSK_CFG1 |= 0x44 << BT_PHY_TX_DPSK_CFG1_TX_DPSK_GAIN_FRC_Pos;
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Msk;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x0E << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x0A << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x55555555;
             break;
@@ -164,9 +164,9 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
             hwp_bt_phy->TX_DPSK_CFG1 |= 0x50 << BT_PHY_TX_DPSK_CFG1_TX_DPSK_GAIN_FRC_Pos;
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Msk;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x12 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x10 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
-            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xAAAAAAAA;
+            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x66666666;
             break;
         }
         default:
@@ -185,9 +185,9 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
             hwp_bt_phy->TX_IF_MOD_CFG2 |= (0x55 << BT_PHY_TX_IF_MOD_CFG2_TX_MOD_GAIN_BLE_FRC_Pos) | (0x55 << BT_PHY_TX_IF_MOD_CFG2_TX_MOD_GAIN_BR_FRC_Pos);
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Msk;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x12 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x10 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
-            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xAAAAAAAA;
+            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x66666666;
             break;
         }
         case 16:
@@ -295,6 +295,20 @@ static uint8_t edr_rf_power_set(int8_t txpwr)
 uint8_t btdm_rf_power_set(uint8_t type, int8_t txpwr)
 {
     uint8_t ret = 0;
+
+    if (txpwr > 10)
+    {
+        hwp_bt_phy->TX_GAUSSFLT_CFG &= ~(BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_2_Msk | BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_1_Msk);
+        hwp_bt_phy->TX_GAUSSFLT_CFG |= 0x100 << BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_2_Pos;
+        hwp_bt_phy->TX_GAUSSFLT_CFG |= 0x100 << BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_1_Pos;
+    }
+    else
+    {
+        hwp_bt_phy->TX_GAUSSFLT_CFG &= ~(BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_2_Msk | BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_1_Msk);
+        hwp_bt_phy->TX_GAUSSFLT_CFG |= 0xF7 << BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_2_Pos;
+        hwp_bt_phy->TX_GAUSSFLT_CFG |= 0xFD << BT_PHY_TX_GAUSSFLT_CFG_GAUSS_GAIN_1_Pos;
+    }
+
     //if (type == 0)
     {
         ret = blebr_rf_power_set(txpwr);

@@ -7,9 +7,15 @@ cwd = GetCurrentDir()
 CPPPATH = [cwd]
 libpath = [cwd]
 libs = []
-if GetDepend('PKG_USING_ANYKA') and GetDepend('BF0_HCPU'):
+group = []
+
+if GetDepend('PKG_USING_ANYKA') and not GetDepend('ANYKA_RUN_IN_ACPU'):
+    libs = ['libakaudiofilter', 'm']
+    group = DefineGroup('anyka', src, depend=['BF0_HCPU'], CPPPATH=CPPPATH, LIBS=libs, LIBPATH=libpath)
+
+elif GetDepend('PKG_USING_ANYKA') and GetDepend('ANYKA_RUN_IN_ACPU'):
     src = Glob('*.c')
-    libs = ['libakaudiofilter']
-group = DefineGroup('audio', src,depend = ['PKG_USING_ANYKA'],CPPPATH = CPPPATH, LIBS=libs, LIBPATH=libpath)
+    libs = ['libakaudiofilter', 'm']
+    group = DefineGroup('anyka', src, depend=['BF0_ACPU'], CPPPATH=CPPPATH, LIBS=libs, LIBPATH=libpath)
 
 Return('group')

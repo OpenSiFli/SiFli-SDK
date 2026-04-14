@@ -3,15 +3,14 @@
 
 #define ITEM_CNT 200
 
-static void draw_event_cb(lv_event_t *e)
+static void draw_event_cb(lv_event_t * e)
 {
-    lv_obj_t *obj = lv_event_get_target(e);
+    lv_obj_t * obj = lv_event_get_target_obj(e);
 
-    lv_draw_task_t *draw_task = lv_event_get_draw_task(e);
-    lv_draw_dsc_base_t *base_dsc = lv_draw_task_get_draw_dsc(draw_task);
+    lv_draw_task_t * draw_task = lv_event_get_draw_task(e);
+    lv_draw_dsc_base_t * base_dsc = (lv_draw_dsc_base_t *)lv_draw_task_get_draw_dsc(draw_task);
     /*If the cells are drawn...*/
-    if (base_dsc->part == LV_PART_ITEMS && lv_draw_task_get_type(draw_task) == LV_DRAW_TASK_TYPE_FILL)
-    {
+    if(base_dsc->part == LV_PART_ITEMS && lv_draw_task_get_type(draw_task) == LV_DRAW_TASK_TYPE_FILL) {
         /*Draw the background*/
         bool chk = lv_table_has_cell_ctrl(obj, base_dsc->id1, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
         lv_draw_rect_dsc_t rect_dsc;
@@ -36,27 +35,25 @@ static void draw_event_cb(lv_event_t *e)
         knob_area.x2 = 18;
         knob_area.y1 = 0;
         knob_area.y2 = 18;
-        if (chk)
-        {
+        if(chk) {
             lv_area_align(&sw_area, &knob_area, LV_ALIGN_RIGHT_MID, -3, 0);
         }
-        else
-        {
+        else {
             lv_area_align(&sw_area, &knob_area, LV_ALIGN_LEFT_MID, 3, 0);
         }
         lv_draw_rect(base_dsc->layer, &rect_dsc, &knob_area);
     }
 }
 
-static void change_event_cb(lv_event_t *e)
+static void change_event_cb(lv_event_t * e)
 {
-    lv_obj_t *obj = lv_event_get_target(e);
+    lv_obj_t * obj = lv_event_get_target_obj(e);
     uint32_t col;
     uint32_t row;
     lv_table_get_selected_cell(obj, &row, &col);
     bool chk = lv_table_has_cell_ctrl(obj, row, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
-    if (chk) lv_table_clear_cell_ctrl(obj, row, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
-    else lv_table_add_cell_ctrl(obj, row, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
+    if(chk) lv_table_clear_cell_ctrl(obj, row, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
+    else lv_table_set_cell_ctrl(obj, row, 0, LV_TABLE_CELL_CTRL_CUSTOM_1);
 }
 
 /**
@@ -70,7 +67,7 @@ void lv_example_table_2(void)
 
     uint32_t t = lv_tick_get();
 
-    lv_obj_t *table = lv_table_create(lv_screen_active());
+    lv_obj_t * table = lv_table_create(lv_screen_active());
 
     /*Set a smaller height to the table. It'll make it scrollable*/
     lv_obj_set_size(table, LV_SIZE_CONTENT, 200);
@@ -83,9 +80,8 @@ void lv_example_table_2(void)
     lv_obj_remove_style(table, NULL, LV_PART_ITEMS | LV_STATE_PRESSED);
 
     uint32_t i;
-    for (i = 0; i < ITEM_CNT; i++)
-    {
-        lv_table_set_cell_value_fmt(table, i, 0, "Item %"LV_PRIu32, i + 1);
+    for(i = 0; i < ITEM_CNT; i++) {
+        lv_table_set_cell_value_fmt(table, i, 0, "Item %" LV_PRIu32, i + 1);
     }
 
     lv_obj_align(table, LV_ALIGN_CENTER, 0, -20);
@@ -102,8 +98,8 @@ void lv_example_table_2(void)
 
     uint32_t elaps = lv_tick_elaps(t);
 
-    lv_obj_t *label = lv_label_create(lv_screen_active());
-    lv_label_set_text_fmt(label, "%"LV_PRIu32" items were created in %"LV_PRIu32" ms\n"
+    lv_obj_t * label = lv_label_create(lv_screen_active());
+    lv_label_set_text_fmt(label, "%" LV_PRIu32" items were created in %" LV_PRIu32" ms\n"
                           "using %zu bytes of memory",
                           (uint32_t)ITEM_CNT, elaps, mem_used);
 

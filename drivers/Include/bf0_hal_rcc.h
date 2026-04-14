@@ -819,6 +819,16 @@ void HAL_RCC_HCPU_DeepWFIClockSelect(bool sys_clk, uint32_t sys_clk_src);
 
 #endif /* SF32LB55X */
 
+#ifdef HPSYS_RCC_CFGR_TICKDIV_Msk
+
+/**
+ * @brief  Set tick clock source divider for HCPU.
+ * @param  div divider (1..63)
+ */
+void HAL_RCC_HCPU_SetTickDiv(uint8_t div);
+
+#endif /* HPSYS_RCC_CFGR_TICKDIV_Msk */
+
 #if defined(SF32LB56X)
 void HAL_RCC_Reset_DMAC2_and_MPI5();
 #endif

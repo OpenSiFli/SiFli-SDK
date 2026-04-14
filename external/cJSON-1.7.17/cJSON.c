@@ -1269,6 +1269,15 @@ CJSON_PUBLIC(char *) cJSON_PrintUnformatted(const cJSON *item)
     return (char*)print(item, false, &global_hooks);
 }
 
+CJSON_PUBLIC(void) cJSON_DeleteChar(char *buffer)
+{
+    if(buffer)
+    {
+        global_hooks.deallocate((unsigned char *)buffer);
+        buffer = NULL;
+    }
+}
+
 CJSON_PUBLIC(char *) cJSON_PrintBuffered(const cJSON *item, int prebuffer, cJSON_bool fmt)
 {
     printbuffer p = { 0, 0, 0, 0, 0, 0, { 0, 0, 0 } };

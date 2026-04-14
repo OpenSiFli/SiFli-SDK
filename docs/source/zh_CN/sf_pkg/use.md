@@ -1,11 +1,15 @@
-# 在工程中使用 SF-PKG
+# 在工程中使用 SiFli 组件注册表
 
-以下步骤说明如何在现有工程中安装和使用 SF-PKG 依赖。
+以下步骤说明如何在现有工程中安装和使用 SiFli 组件注册表 依赖。
 
-## 初始化依赖（sf-pkg-init）
+```{note}
+当前页面中的部分截图仍来自旧版命令界面；若截图中的命令格式与正文不同，请以当前 `sdk.py sf-pkg ...` 命令为准。
+```
+
+## 初始化依赖（sf-pkg init）
 
 ```bash
-sdk.py sf-pkg-init
+sdk.py sf-pkg init
 ```
 
 执行成功后，会在 `project` 目录下生成 `conanfile.py` 文件：
@@ -18,6 +22,7 @@ requires = (
         # "core-lib/1.0.0",
     )
 ```
+
 在这里代表了什么都没有添加任何依赖包。我们可以手动添加需要的包，例如添加一个 SHT30 传感器驱动包：
 
 ```python
@@ -33,21 +38,23 @@ requires = (
 如果不确定包名或版本号，可以搜索：
 
 ```bash
-sdk.py sf-pkg-search <package_name>
+sdk.py sf-pkg search <package_name>
 ```
 
 示例：
 
 ```bash
-sdk.py sf-pkg-search sht30
+sdk.py sf-pkg search sht30
 ```
+也可以直接在组件注册表官网进行搜索：点此访问 [SiFli组件注册表](https://packages.sifli.com/)
 
-## 安装依赖（sf-pkg-install）
+
+## 安装依赖（sf-pkg install）
 
 在工程的 `project` 目录下执行：
 
 ```bash
-sdk.py sf-pkg-install
+sdk.py sf-pkg install
 ```
 
 ![安装依赖](./assert/sf-pkg-install.png)

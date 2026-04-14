@@ -24,8 +24,15 @@
 *
 *****************************************************************************/
 
+
 #ifndef _vg_lite_kernel_h_
 #define _vg_lite_kernel_h_
+
+#include "vg_lite_option.h"
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+#define CACHE_COMMAND_BUFFER_SIZE            1 << 20 
+#endif
 
 /* Interrupt IDs from GPU. */
 #define EVENT_UNEXPECTED_MESH  0x80000000
@@ -34,11 +41,17 @@
 #define EVENT_CMD_SWITCH       0x10000000
 #define EVENT_MCU_BAD_WRITE    0x08000000
 #define EVENT_END              0
+#define EVENT_FRAME_END        1
 
 #define MAX_CONTIGUOUS_SIZE 0x04000000
 
 #define VG_LITE_INFINITE    0xFFFFFFFF
+
+#if gcFEATURE_VG_SINGLE_COMMAND_BUFFER
+#define CMDBUF_COUNT        1
+#else
 #define CMDBUF_COUNT        2
+#endif
 
 #define VG_LITE_ALIGN(number, alignment)    \
         (((number) + ((alignment) - 1)) & ~((alignment) - 1))
@@ -178,6 +191,21 @@ typedef enum vg_lite_kernel_command
 
     /* Export memory */
     VG_LITE_EXPORT_MEMORY,
+
+    /* Record GPU hardware running time */
+    VG_LITE_RECORD_RUNNING_TIME,
+
+    /* Set delay resume state */
+    VG_LITE_SET_DELAY_RESUME,
+
+    /* Query delay resume state */
+    VG_LITE_QUERY_DELAY_RESUME,
+
+    /* Set GPU clock state */
+    VG_LITE_SET_GPU_CLOCK_STATE,
+
+    /* Excute command backed up by user */
+    VG_LITE_EXECUTE_BACKUP_COMMAND,
 }
 vg_lite_kernel_command_t;
 
@@ -224,6 +252,16 @@ typedef struct vg_lite_kernel_context {
     uint32_t                  power_context_capacity;
 }
 vg_lite_kernel_context_t;
+
+typedef struct frame_buffer_command {
+    void                     *handle;
+    void                     *command_buffer_logical;
+    void                     *command_buffer_klogical;
+    uint32_t                  command_buffer_physical;
+    uint32_t                  command_buffer_size;
+    uint32_t                  offset;
+}
+frame_buffer_command_t;
 
 typedef struct capabilities
 {
@@ -286,6 +324,15 @@ typedef struct vg_lite_kernel_initialize
 
     /* Width and height of tessellation buffer. */
     uint32_t tess_w_h;
+
+    /* Logical address of fb command buffer. */
+    void* fb_command_buffer;
+
+    /* Fb command buffer size. */
+    uint32_t fb_command_buffer_size;
+
+    /* GPU address of fb command buffer. */
+    uint32_t fb_command_buffer_gpu;
 }
 vg_lite_kernel_initialize_t;
 
@@ -383,6 +430,7 @@ typedef struct vg_lite_kernel_reset
 {
     /* Context to reset. */
     vg_lite_kernel_context_t * context;
+    uint32_t delay_resume_flag;
 }
 vg_lite_kernel_reset_t;
 
@@ -493,6 +541,13 @@ typedef struct vg_lite_kernel_mem
 }
 vg_lite_kernel_mem_t;
 
+typedef struct vg_lite_kernel_cmdcache
+{
+    uint32_t physical;
+    uint32_t size;
+}
+vg_lite_kernel_cmdcache_t;
+
 typedef struct vg_lite_kernel_map_memory
 {
     /* Number of bytes to map. */
@@ -528,7 +583,33 @@ typedef struct vg_lite_kernel_export_memory
 }
 vg_lite_kernel_export_memory_t;
 
+typedef struct vg_lite_kernel_hardware_running_time
+{
+    unsigned long run_time;
+    int32_t hertz;
+}
+vg_lite_kernel_hardware_running_time_t;
+
+typedef struct vg_lite_kernel_delay_resume
+{
+    uint32_t set_delay_resume;
+    uint32_t query_delay_resume;
+}
+vg_lite_kernel_delay_resume_t;
+
+typedef struct vg_lite_kernel_gpu_clock_state
+{
+    uint32_t state;
+}
+vg_lite_kernel_gpu_clock_state_t;
+
 vg_lite_error_t vg_lite_kernel(vg_lite_kernel_command_t command, void * data);
+
+vg_lite_error_t record_running_time(void);
+
+extern uint32_t init_buffer[12];
+extern uint32_t is_init;
+extern size_t physical_address;
 
 #ifdef __cplusplus
 }

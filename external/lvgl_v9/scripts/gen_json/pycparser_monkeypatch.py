@@ -16,12 +16,8 @@ except ImportError:
 from pycparser.c_generator import CGenerator
 from collections import OrderedDict
 
-import doc_builder  # NOQA
 
 generator = CGenerator()
-
-doc_builder.EMIT_WARNINGS = False
-# doc_builder.DOXYGEN_OUTPUT = False
 
 
 BASIC_TYPES = [
@@ -575,7 +571,7 @@ class FileAST(c_ast.FileAST):
         super().__init__(*args, **kwargs)
         self._parent = None
 
-    def setup_docs(self, temp_directory):  # NOQA
+    def setup_docs(self, no_docstrings, lvgl_src_dir, intermediate_dir, doxyfile_src_file, silent=False):  # NOQA
         global get_enum_item_docs
         global get_enum_docs
         global get_func_docs
@@ -586,17 +582,58 @@ class FileAST(c_ast.FileAST):
         global get_macro_docs
         global get_macros
 
-        docs = doc_builder.XMLSearch(temp_directory)
+        if no_docstrings:
 
-        get_enum_item_docs = docs.get_enum_item
-        get_enum_docs = docs.get_enum
-        get_func_docs = docs.get_function
-        get_var_docs = docs.get_variable
-        get_union_docs = docs.get_union
-        get_struct_docs = docs.get_structure
-        get_typedef_docs = docs.get_typedef
-        get_macro_docs = docs.get_macro
-        get_macros = docs.get_macros
+            def dummy_list():
+                return []
+
+            def dummy_doc(_):
+                return None
+
+            get_enum_item_docs = dummy_doc
+            get_enum_docs = dummy_doc
+            get_func_docs = dummy_doc
+            get_var_docs = dummy_doc
+            get_union_docs = dummy_doc
+            get_struct_docs = dummy_doc
+            get_typedef_docs = dummy_doc
+            get_macro_docs = dummy_doc
+            get_macros = dummy_list
+
+        else:
+            import doxygen_xml  # NoQA
+
+            doxygen_xml.EMIT_WARNINGS = False
+            # doxygen_xml.DOXYGEN_OUTPUT = False
+
+            # Instantiating a doxygen_xml.DoxygenXml object:
+            # - runs Doxygen in `temp_directory`
+            # - loads XML into `doxygen_xml.index` as a `xml.etree.ElementTree`
+            # - builds these dictionaries as direct children of `doxygen_xml`:
+            #   = doxygen_xml.defines     dictionary of doxygen_xml.DEFINE objects
+            #   = doxygen_xml.enums       dictionary of doxygen_xml.ENUM objects
+            #   = doxygen_xml.variables   dictionary of doxygen_xml.VARIABLE objects
+            #   = doxygen_xml.namespaces  dictionary of doxygen_xml.NAMESPACE objects
+            #   = doxygen_xml.structures  dictionary of doxygen_xml.STRUCT objects
+            #   = doxygen_xml.typedefs    dictionary of doxygen_xml.TYPEDEF objects
+            #   = doxygen_xml.functions   dictionary of doxygen_xml.FUNCTION objects
+            #   = doxygen_xml.groups      dictionary of doxygen_xml.GROUP objects
+            #   = doxygen_xml.files       dictionary of doxygen_xml.FILE objects
+            #   = doxygen_xml.classes     dictionary of doxygen_xml.CLASS objects
+            doxygen_xml = doxygen_xml.DoxygenXml(lvgl_src_dir,
+                                                 intermediate_dir,
+                                                 doxyfile_src_file,
+                                                 silent_mode=True)
+
+            get_enum_item_docs = doxygen_xml.get_enum_item
+            get_enum_docs = doxygen_xml.get_enum
+            get_func_docs = doxygen_xml.get_function
+            get_var_docs = doxygen_xml.get_variable
+            get_union_docs = doxygen_xml.get_union
+            get_struct_docs = doxygen_xml.get_structure
+            get_typedef_docs = doxygen_xml.get_typedef
+            get_macro_docs = doxygen_xml.get_macro
+            get_macros = doxygen_xml.get_macros
 
     @property
     def name(self):

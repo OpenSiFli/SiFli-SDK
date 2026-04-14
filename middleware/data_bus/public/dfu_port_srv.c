@@ -160,10 +160,14 @@ int ble_dfu_protocol_svc_event_handler(uint16_t event_id, uint8_t *data, uint16_
 void dfu_port_svc_disconnect()
 {
     dfu_port_svc_env_t *env = dfu_port_svc_get_env();
+#ifdef ZBT
+    bt_conn_disconnect(ble_get_default_connect(), BT_HCI_ERR_LOCALHOST_TERM_CONN);
+#else
     ble_gap_disconnect_t conn;
     conn.conn_idx = env->conn_idx;
     conn.reason = 0x16;
     ble_gap_disconnect(&conn);
+#endif
 }
 
 void dfu_port_svc_set_reboot_after_disconnect()

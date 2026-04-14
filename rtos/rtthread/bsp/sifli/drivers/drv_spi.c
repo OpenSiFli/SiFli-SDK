@@ -119,6 +119,377 @@ static uint32_t get_index_by_bus_handle(struct rt_spi_bus *bus)
     return UINT32_MAX;
 }
 
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+static rt_err_t spi_apply_rx_dma_mode(struct sifli_spi *spi_drv, rt_uint32_t mode)
+{
+    if (!(spi_drv->spi_dma_flag & SPI_USING_RX_DMA_FLAG))
+    {
+        return -RT_EINVAL;
+    }
+
+    spi_drv->dma.handle_rx.Init.Mode = mode;
+    if (HAL_DMA_Init(&spi_drv->dma.handle_rx) != HAL_OK)
+    {
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+
+static rt_err_t spi_apply_tx_dma_mode(struct sifli_spi *spi_drv, rt_uint32_t mode)
+{
+    if (!(spi_drv->spi_dma_flag & SPI_USING_TX_DMA_FLAG))
+    {
+        return -RT_EINVAL;
+    }
+
+    spi_drv->dma.handle_tx.Init.Mode = mode;
+    if (HAL_DMA_Init(&spi_drv->dma.handle_tx) != HAL_OK)
+    {
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+static rt_uint8_t spi_get_message_dir(const struct rt_spi_message *message)
+{
+    if ((message->send_buf != RT_NULL) && (message->recv_buf != RT_NULL))
+    {
+        return RT_SPI_DMA_CIRCULAR_DIR_TXRX;
+    }
+
+    if (message->recv_buf != RT_NULL)
+    {
+        return RT_SPI_DMA_CIRCULAR_DIR_RX;
+    }
+
+    if (message->send_buf != RT_NULL)
+    {
+        return RT_SPI_DMA_CIRCULAR_DIR_TX;
+    }
+
+    return RT_SPI_DMA_CIRCULAR_DIR_NONE;
+}
+
+static rt_bool_t spi_is_circular_active(struct sifli_spi *spi_drv)
+{
+    if (spi_drv == RT_NULL)
+    {
+        return RT_FALSE;
+    }
+
+    return (spi_drv->circular.active == 1U) ? RT_TRUE : RT_FALSE;
+}
+
+static void spi_reset_circular_runtime(struct sifli_spi *spi_drv)
+{
+    spi_drv->circular.device = RT_NULL;
+    spi_drv->circular.active = 0U;
+    spi_drv->circular.cs_held = 0U;
+#ifdef RT_USING_PM
+    spi_drv->circular.pm_active = 0U;
+#endif
+    spi_drv->circular.size = 0U;
+    spi_drv->circular.rx_start = RT_NULL;
+    spi_drv->circular.rx_half = RT_NULL;
+    spi_drv->circular.tx_start = RT_NULL;
+    spi_drv->circular.tx_half = RT_NULL;
+}
+
+static rt_err_t spi_restore_dma_mode(struct sifli_spi *spi_drv)
+{
+    rt_err_t result;
+
+    if (spi_drv->spi_dma_flag & SPI_USING_RX_DMA_FLAG)
+    {
+        result = spi_apply_rx_dma_mode(spi_drv, DMA_NORMAL);
+        if (result != RT_EOK)
+        {
+            return result;
+        }
+    }
+
+    if (spi_drv->spi_dma_flag & SPI_USING_TX_DMA_FLAG)
+    {
+        result = spi_apply_tx_dma_mode(spi_drv, DMA_NORMAL);
+        if (result != RT_EOK)
+        {
+            return result;
+        }
+    }
+
+    return RT_EOK;
+}
+
+static void spi_circular_rx_notify(struct sifli_spi *spi_drv, rt_size_t offset)
+{
+    rt_device_t dev;
+
+    if ((spi_drv == RT_NULL) || (spi_drv->circular.device == RT_NULL))
+    {
+        return;
+    }
+
+    dev = &spi_drv->circular.device->parent;
+    if (dev->rx_indicate != RT_NULL)
+    {
+        dev->rx_indicate(dev, offset);
+    }
+}
+
+static void spi_circular_tx_notify(struct sifli_spi *spi_drv, void *buffer)
+{
+    rt_device_t dev;
+
+    if ((spi_drv == RT_NULL) || (spi_drv->circular.device == RT_NULL))
+    {
+        return;
+    }
+
+    dev = &spi_drv->circular.device->parent;
+    if (dev->tx_complete != RT_NULL)
+    {
+        dev->tx_complete(dev, buffer);
+    }
+}
+
+static rt_err_t spi_stop_circular_transfer(struct rt_spi_device *device, struct sifli_spi *spi_drv)
+{
+    struct rt_spi_device *active_device;
+    SPI_HandleTypeDef *hspi;
+    rt_err_t result;
+
+    if (spi_drv == RT_NULL)
+    {
+        return -RT_EINVAL;
+    }
+
+    if (!spi_is_circular_active(spi_drv))
+    {
+        return RT_EOK;
+    }
+
+    active_device = spi_drv->circular.device;
+    if ((device != RT_NULL) && (active_device != RT_NULL) && (device != active_device))
+    {
+        return -RT_EBUSY;
+    }
+
+    hspi = &spi_drv->handle;
+    HAL_SPI_DMAStop(hspi);
+    __HAL_UNLOCK(hspi);
+
+    if (hspi->hdmarx != RT_NULL)
+    {
+        hspi->hdmarx->XferHalfCpltCallback = RT_NULL;
+        hspi->hdmarx->XferCpltCallback = RT_NULL;
+        hspi->hdmarx->XferErrorCallback = RT_NULL;
+        hspi->hdmarx->XferAbortCallback = RT_NULL;
+    }
+
+    if (hspi->hdmatx != RT_NULL)
+    {
+        hspi->hdmatx->XferHalfCpltCallback = RT_NULL;
+        hspi->hdmatx->XferCpltCallback = RT_NULL;
+        hspi->hdmatx->XferErrorCallback = RT_NULL;
+        hspi->hdmatx->XferAbortCallback = RT_NULL;
+    }
+
+#ifdef USR_CONTROL_CS
+    if (spi_drv->circular.cs_held)
+    {
+        __HAL_SPI_RELEASE_CS(hspi);
+    }
+#endif
+
+    result = spi_restore_dma_mode(spi_drv);
+
+#ifdef RT_USING_PM
+    if (spi_drv->circular.pm_active)
+    {
+        rt_pm_hw_device_stop();
+        rt_pm_release(PM_SLEEP_MODE_IDLE);
+    }
+#endif
+
+    spi_reset_circular_runtime(spi_drv);
+
+    return result;
+}
+
+static rt_err_t spi_start_circular_transfer(struct rt_spi_device *device,
+                                            struct sifli_spi *spi_drv,
+                                            struct rt_spi_message *message,
+                                            rt_bool_t sw_cs)
+{
+    SPI_HandleTypeDef *hspi;
+    rt_uint8_t direction;
+    rt_err_t result;
+    HAL_StatusTypeDef state;
+
+    if ((device == RT_NULL) || (spi_drv == RT_NULL) || (message == RT_NULL))
+    {
+        return -RT_EINVAL;
+    }
+
+    direction = spi_get_message_dir(message);
+    if ((direction == RT_SPI_DMA_CIRCULAR_DIR_NONE)
+            || ((direction & spi_drv->circular.direction) != direction))
+    {
+        return -RT_EINVAL;
+    }
+
+    if (!spi_drv->circular.enabled || spi_is_circular_active(spi_drv))
+    {
+        return -RT_EBUSY;
+    }
+
+    if ((message->length <= 128U) || ((message->length & 1U) != 0U) || (message->length > 0xFFFFU))
+    {
+        return -RT_EINVAL;
+    }
+
+    if ((direction & RT_SPI_DMA_CIRCULAR_DIR_RX) && !(device->parent.open_flag & RT_DEVICE_FLAG_DMA_RX))
+    {
+        return -RT_EINVAL;
+    }
+
+    if ((direction & RT_SPI_DMA_CIRCULAR_DIR_TX) && !(device->parent.open_flag & RT_DEVICE_FLAG_DMA_TX))
+    {
+        return -RT_EINVAL;
+    }
+
+    hspi = &spi_drv->handle;
+    if ((direction & RT_SPI_DMA_CIRCULAR_DIR_RX) && (hspi->hdmarx == RT_NULL))
+    {
+        return -RT_EINVAL;
+    }
+
+    if ((direction & RT_SPI_DMA_CIRCULAR_DIR_TX) && (hspi->hdmatx == RT_NULL))
+    {
+        return -RT_EINVAL;
+    }
+
+    if (direction & RT_SPI_DMA_CIRCULAR_DIR_RX)
+    {
+        mpu_dcache_invalidate(message->recv_buf, (uint32_t)message->length);
+        result = spi_apply_rx_dma_mode(spi_drv, DMA_CIRCULAR);
+        if (result != RT_EOK)
+        {
+            return result;
+        }
+    }
+
+    if (direction & RT_SPI_DMA_CIRCULAR_DIR_TX)
+    {
+        mpu_dcache_clean((void *)message->send_buf, (uint32_t)message->length);
+        result = spi_apply_tx_dma_mode(spi_drv, DMA_CIRCULAR);
+        if (result != RT_EOK)
+        {
+            if (direction & RT_SPI_DMA_CIRCULAR_DIR_RX)
+            {
+                spi_restore_dma_mode(spi_drv);
+            }
+            return result;
+        }
+    }
+
+    spi_reset_circular_runtime(spi_drv);
+    spi_drv->circular.device = device;
+    spi_drv->circular.active = 1U;
+    spi_drv->circular.cs_held = (sw_cs && (message->cs_take == 1U)) ? 1U : 0U;
+#ifdef RT_USING_PM
+    spi_drv->circular.pm_active = 1U;
+#endif
+    spi_drv->circular.size = message->length;
+
+    if (direction & RT_SPI_DMA_CIRCULAR_DIR_RX)
+    {
+        spi_drv->circular.rx_start = (rt_uint8_t *)message->recv_buf;
+        spi_drv->circular.rx_half = spi_drv->circular.rx_start + (message->length / 2U);
+    }
+
+    if (direction & RT_SPI_DMA_CIRCULAR_DIR_TX)
+    {
+        spi_drv->circular.tx_start = (rt_uint8_t *)message->send_buf;
+        spi_drv->circular.tx_half = spi_drv->circular.tx_start + (message->length / 2U);
+    }
+
+    switch (direction)
+    {
+    case RT_SPI_DMA_CIRCULAR_DIR_RX:
+        state = HAL_SPI_Receive_DMA(hspi, (uint8_t *)message->recv_buf, (uint16_t)message->length);
+        break;
+
+    case RT_SPI_DMA_CIRCULAR_DIR_TX:
+        state = HAL_SPI_Transmit_DMA(hspi, (uint8_t *)message->send_buf, (uint16_t)message->length);
+        break;
+
+    case RT_SPI_DMA_CIRCULAR_DIR_TXRX:
+        state = HAL_SPI_TransmitReceive_DMA(hspi,
+                                            (uint8_t *)message->send_buf,
+                                            (uint8_t *)message->recv_buf,
+                                            (uint16_t)message->length);
+        break;
+
+    default:
+        state = HAL_ERROR;
+        break;
+    }
+
+    if (state != HAL_OK)
+    {
+        spi_reset_circular_runtime(spi_drv);
+        spi_restore_dma_mode(spi_drv);
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+#endif
+
+#if defined(BSP_USING_SPI_CAMERA)
+void camera_rx_ind(uint8_t *p);
+static void camera_dma_error_callback(DMA_HandleTypeDef *hdma);
+
+static rt_bool_t spi_is_camera_active(struct sifli_spi *spi_drv)
+{
+    if (spi_drv == RT_NULL)
+    {
+        return RT_FALSE;
+    }
+
+    return (spi_drv->camera.active == 1U) ? RT_TRUE : RT_FALSE;
+}
+
+static void spi_reset_camera_runtime(struct sifli_spi *spi_drv)
+{
+    spi_drv->camera.active = 0U;
+    spi_drv->camera.size = 0U;
+    spi_drv->camera.rx_start = RT_NULL;
+    spi_drv->camera.rx_half = RT_NULL;
+}
+
+static void spi_camera_notify(struct sifli_spi *spi_drv, rt_bool_t full)
+{
+    rt_uint8_t *buffer;
+
+    if (!spi_is_camera_active(spi_drv))
+    {
+        return;
+    }
+
+    buffer = full ? spi_drv->camera.rx_half : spi_drv->camera.rx_start;
+    if (buffer != RT_NULL)
+    {
+        camera_rx_ind(buffer);
+    }
+}
+#endif
+
 /**
 * @brief  Spi initial.
 * @param[in]  spi_drv: spi driver handler structure.
@@ -262,14 +633,13 @@ static rt_err_t sifli_spi_init(struct rt_spi_device *device, struct sifli_spi *s
             spi_drv->dma.handle_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
             spi_drv->dma.handle_rx.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
         }
+        spi_drv->dma.handle_rx.Init.Mode = DMA_NORMAL;
 #ifdef BSP_USING_SPI_CAMERA
-        // <add for spi camera start: circular  RX DMA
         if (!strcmp(device->parent.parent.name, "camera"))
         {
             LOG_D("spi dma rx circular\n");
             spi_drv->dma.handle_rx.Init.Mode = DMA_CIRCULAR;
         }
-        // add for spi camera end>
 #endif
         HAL_DMA_Init(&spi_drv->dma.handle_rx);
 
@@ -321,12 +691,13 @@ static rt_err_t sifli_spi_init(struct rt_spi_device *device, struct sifli_spi *s
 #define USR_CONTROL_CS      // cs high/low control by cs_take/cs_release flag
 static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *message)
 {
-    HAL_StatusTypeDef state;
+    HAL_StatusTypeDef state = HAL_OK;
     rt_size_t message_length, already_send_length;
     rt_uint16_t send_length;
     rt_uint8_t *recv_buf;
     const rt_uint8_t *send_buf;
     rt_err_t rt_err_v;
+    rt_bool_t started_circular = RT_FALSE;
 
     RT_ASSERT(device != RT_NULL);
     RT_ASSERT(device->bus != RT_NULL);
@@ -336,6 +707,15 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
     struct sifli_spi *spi_drv =  rt_container_of(device->bus, struct sifli_spi, spi_bus);
     SPI_HandleTypeDef *spi_handle = &spi_drv->handle;
     bool sw_cs = (SPI_FRAME_FORMAT_SSP != spi_handle->Init.FrameFormat);
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        LOG_E("%s circular dma is active", spi_drv->config->bus_name);
+        return 0;
+    }
+#endif
+
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
@@ -358,6 +738,26 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
           spi_drv->config->bus_name,
           (uint32_t)message->send_buf,
           (uint32_t)message->recv_buf, message->length);
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if ((message->length > 0U) && spi_drv->circular.enabled)
+    {
+        rt_uint8_t direction = spi_get_message_dir(message);
+
+        if ((direction != RT_SPI_DMA_CIRCULAR_DIR_NONE)
+                && ((direction & spi_drv->circular.direction) == direction))
+        {
+            if (spi_start_circular_transfer(device, spi_drv, message, sw_cs) != RT_EOK)
+            {
+                LOG_E("%s circular dma start failed", spi_drv->config->bus_name);
+                state = HAL_ERROR;
+                goto __exit;
+            }
+            started_circular = RT_TRUE;
+            goto __exit;
+        }
+    }
+#endif
 
     message_length = message->length;
     recv_buf = message->recv_buf;
@@ -490,9 +890,10 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
 
     }
 
+__exit:
 #ifdef USR_CONTROL_CS
     // cs_release == 1 need manual release
-    if (message->cs_release == 1  && sw_cs)
+    if (!started_circular && (message->cs_release == 1)  && sw_cs)
     {
         LOG_D("Transfer exit : take %d, release %d\n", message->cs_take, message->cs_release);
         __HAL_SPI_RELEASE_CS(spi_handle);
@@ -500,8 +901,11 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
 #endif
 
 #ifdef RT_USING_PM
-    rt_pm_hw_device_stop();
-    rt_pm_release(PM_SLEEP_MODE_IDLE);
+    if (!started_circular)
+    {
+        rt_pm_hw_device_stop();
+        rt_pm_release(PM_SLEEP_MODE_IDLE);
+    }
 #endif  /* RT_USING_PM */
 
     return (HAL_OK == state) ? message->length : 0;
@@ -520,6 +924,14 @@ static rt_err_t spi_configure(struct rt_spi_device *device,
     RT_ASSERT(configuration != RT_NULL);
 
     struct sifli_spi *spi_drv =  rt_container_of(device->bus, struct sifli_spi, spi_bus);
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        return -RT_EBUSY;
+    }
+#endif
+
     spi_drv->cfg = configuration;
 
     return sifli_spi_init(device, spi_drv, configuration);
@@ -528,7 +940,6 @@ static rt_err_t spi_configure(struct rt_spi_device *device,
 static rt_err_t spi_control(struct rt_spi_device *device, int cmd, void *arg)
 {
     RT_ASSERT(device != RT_NULL);
-    RT_ASSERT(arg != RT_NULL);
 
     struct sifli_spi *spi_drv =  rt_container_of(device->bus, struct sifli_spi, spi_bus);
 
@@ -576,6 +987,46 @@ static rt_err_t spi_control(struct rt_spi_device *device, int cmd, void *arg)
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
         break;
 
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    case RT_SPI_CTRL_CONFIG_DMA_CIRCULAR:
+    {
+        struct rt_spi_dma_circular_config *config;
+
+        if (arg == RT_NULL)
+        {
+            return -RT_EINVAL;
+        }
+
+        if (spi_is_circular_active(spi_drv))
+        {
+            return -RT_EBUSY;
+        }
+
+        config = (struct rt_spi_dma_circular_config *)arg;
+        if (config->enable)
+        {
+            if ((config->direction & RT_SPI_DMA_CIRCULAR_DIR_TXRX) == 0U)
+            {
+                return -RT_EINVAL;
+            }
+
+            spi_drv->circular.enabled = 1U;
+            spi_drv->circular.direction = config->direction & RT_SPI_DMA_CIRCULAR_DIR_TXRX;
+        }
+        else
+        {
+            spi_drv->circular.enabled = 0U;
+            spi_drv->circular.direction = RT_SPI_DMA_CIRCULAR_DIR_NONE;
+        }
+
+        spi_reset_circular_runtime(spi_drv);
+        break;
+    }
+
+    case RT_SPI_CTRL_STOP_DMA_CIRCULAR:
+        return spi_stop_circular_transfer(device, spi_drv);
+#endif
+
     case RT_DEVICE_CTRL_CONFIG:
         if (arg == (void *) RT_DEVICE_FLAG_DMA_RX)
         {
@@ -610,6 +1061,11 @@ __ROM_USED int rt_hw_spi_bus_init(struct sifli_spi *objs, struct sifli_spi_confi
         objs[i].spi_bus.parent.user_data = &cfg[i];
         objs[i].handle.Instance = cfg[i].Instance;
         objs[i].cfg = &default_cfg[i];
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+        objs[i].circular.enabled = 0U;
+        objs[i].circular.direction = RT_SPI_DMA_CIRCULAR_DIR_NONE;
+        spi_reset_circular_runtime(&objs[i]);
+#endif
 
         if (objs[i].spi_dma_flag & SPI_USING_RX_DMA_FLAG)
         {
@@ -728,14 +1184,6 @@ static void SPIx_IRQHandler(uint32_t index)
 
     HAL_SPI_IRQHandler(handle);
 
-#ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-    if ((HAL_SPI_STATE_BUSY != handle->State) && (HAL_SPI_STATE_BUSY_TX != handle->State)
-            && (HAL_SPI_STATE_BUSY_RX != handle->State) && (HAL_SPI_STATE_BUSY_TX_RX != handle->State))
-    {
-        rt_sem_release(spi_bus_obj[index].spi_sema);
-    }
-#endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
-
     /* leave interrupt */
     rt_interrupt_leave();
 }
@@ -746,10 +1194,27 @@ enum
     SPI_DMA_RX
 };
 
-#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        if (spi_drv->circular.tx_half != RT_NULL)
+        {
+            spi_circular_tx_notify(spi_drv, spi_drv->circular.tx_half);
+        }
+        return;
+    }
+#endif
 
     rt_sem_release(spi_drv->spi_sema);
 }
@@ -758,6 +1223,25 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
 
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        spi_camera_notify(spi_drv, RT_TRUE);
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        if (spi_drv->circular.rx_half != RT_NULL)
+        {
+            spi_circular_rx_notify(spi_drv, spi_drv->circular.size / 2U);
+        }
+        return;
+    }
+#endif
+
     rt_sem_release(spi_drv->spi_sema);
 }
 
@@ -765,17 +1249,132 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
 
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        spi_camera_notify(spi_drv, RT_TRUE);
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        if (spi_drv->circular.rx_half != RT_NULL)
+        {
+            spi_circular_rx_notify(spi_drv, spi_drv->circular.size / 2U);
+        }
+        if (spi_drv->circular.tx_half != RT_NULL)
+        {
+            spi_circular_tx_notify(spi_drv, spi_drv->circular.tx_half);
+        }
+        return;
+    }
+#endif
+
     rt_sem_release(spi_drv->spi_sema);
+}
+
+void HAL_SPI_TxHalfCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv) && (spi_drv->circular.tx_start != RT_NULL))
+    {
+        spi_circular_tx_notify(spi_drv, spi_drv->circular.tx_start);
+        return;
+    }
+#endif
+
+    UNUSED(spi_drv);
+}
+
+void HAL_SPI_RxHalfCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        spi_camera_notify(spi_drv, RT_FALSE);
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv) && (spi_drv->circular.rx_start != RT_NULL))
+    {
+        spi_circular_rx_notify(spi_drv, 0U);
+        return;
+    }
+#endif
+
+    UNUSED(spi_drv);
+}
+
+void HAL_SPI_TxRxHalfCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        spi_camera_notify(spi_drv, RT_FALSE);
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        if (spi_drv->circular.rx_start != RT_NULL)
+        {
+            spi_circular_rx_notify(spi_drv, 0U);
+        }
+        if (spi_drv->circular.tx_start != RT_NULL)
+        {
+            spi_circular_tx_notify(spi_drv, spi_drv->circular.tx_start);
+        }
+        return;
+    }
+#endif
+
+    UNUSED(spi_drv);
 }
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
 
+#if defined(BSP_USING_SPI_CAMERA)
+    if (spi_is_camera_active(spi_drv))
+    {
+        camera_dma_error_callback(hspi->hdmarx);
+        return;
+    }
+#endif
+
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
+    {
+        LOG_E("spi circular dma err");
+        LOG_E("%s errcode=%x", spi_drv->config->bus_name, HAL_SPI_GetError(hspi));
+        return;
+    }
+#endif
+
     rt_sem_release(spi_drv->spi_sema);
 }
-#else
 
+#ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 static void SPIx_DMA_IRQHandler(uint32_t index, uint32_t trx)
 {
     SPI_HandleTypeDef *handle;
@@ -792,16 +1391,6 @@ static void SPIx_DMA_IRQHandler(uint32_t index, uint32_t trx)
     else if (SPI_DMA_RX == trx)
     {
         HAL_DMA_IRQHandler(handle->hdmarx);
-    }
-
-    if ((HAL_SPI_STATE_BUSY != handle->State) && (HAL_SPI_STATE_BUSY_TX != handle->State)
-            && (HAL_SPI_STATE_BUSY_RX != handle->State) && (HAL_SPI_STATE_BUSY_TX_RX != handle->State))
-    {
-        if (((SPI_DMA_TX == trx) && handle->hdmatx->XferCpltCallback)
-                || ((SPI_DMA_RX == trx) && handle->hdmarx->XferCpltCallback))
-        {
-            rt_sem_release(spi_bus_obj[index].spi_sema);
-        }
     }
 
     /* leave interrupt */
@@ -1004,22 +1593,10 @@ int rt_hw_spi_init(void)
 INIT_BOARD_EXPORT(rt_hw_spi_init);
 
 #ifdef BSP_USING_SPI_CAMERA
-static uint8_t *g_camera_dma_buffer_start;
-static uint8_t *g_camera_dma_buffer_half;
-
 __weak void camera_rx_ind(uint8_t *p)
 {
     /* Prevent unused argument(s) compilation warning */
     UNUSED(p);
-}
-static void camera_receive_half_dma(struct __DMA_HandleTypeDef *hdma)
-{
-    camera_rx_ind(g_camera_dma_buffer_start);
-}
-
-static void camera_dma_receive_callback(struct __DMA_HandleTypeDef *hdma)
-{
-    camera_rx_ind(g_camera_dma_buffer_half);
 }
 static void camera_dma_error_callback(DMA_HandleTypeDef *hdma)
 {
@@ -1082,84 +1659,65 @@ static void camera_dma_error_callback(DMA_HandleTypeDef *hdma)
 
 void camera_stop_dma(SPI_HandleTypeDef *hspi)
 {
-    if (hspi)
+    struct sifli_spi *spi_drv;
+
+    if (hspi == RT_NULL)
     {
-        HAL_SPI_DMAStop(hspi);
-        /* Process Unlocked */
-        __HAL_UNLOCK(hspi);
+        return;
     }
+
+    spi_drv = rt_container_of(hspi, struct sifli_spi, handle);
+
+    HAL_SPI_DMAStop(hspi);
+    __HAL_UNLOCK(hspi);
+    if (HAL_SPI_DMASetMode(hspi, DMA_NORMAL, DMA_CIRCULAR) != HAL_OK)
+    {
+        LOG_E("camera restore dma mode failed");
+    }
+
+    spi_reset_camera_runtime(spi_drv);
 }
 
 //size must be power of 2
 int camera_start_dma(SPI_HandleTypeDef *hspi, uint8_t *buffer, uint32_t size)
 {
+    struct sifli_spi *spi_drv;
+    HAL_StatusTypeDef status;
+
     rt_kprintf("dma buffer=0x%x\n", buffer);
 
-    /*
-        set CS pilldown
-        HAL_PIN_Set(PAD_PB13, SPI3_CLK, PIN_PULLDOWN, 0);             // SPI3 (GSensor)
-        HAL_PIN_Set(PAD_PB13, SPI3_CLK, PIN_PULLDOWN, 0);             // SPI3 (GSensor)
-    */
-    g_camera_dma_buffer_start = buffer;
-    g_camera_dma_buffer_half = buffer + size / 2;
-
-    HAL_ASSERT(g_camera_dma_buffer_start);
-    HAL_ASSERT((size > 128) && ((size & 1) == 0));
-
-    /* check rx dma handle */
+    HAL_ASSERT(hspi != RT_NULL);
+    HAL_ASSERT(buffer != RT_NULL);
+    HAL_ASSERT((size > 128U) && ((size & 1U) == 0U));
+    HAL_ASSERT(size <= 0xFFFFU);
     HAL_ASSERT(IS_SPI_DMA_HANDLE(hspi->hdmarx));
 
-    /* Start DMA transfer */
+    spi_drv = rt_container_of(hspi, struct sifli_spi, handle);
 
-    /* Process Locked */
-    __HAL_LOCK(hspi);
-
-    rt_kprintf("camera dma lock ok\n");
-
-    __HAL_SPI_DISABLE_IT(hspi, (SPI_IT_TXE | SPI_IT_RXNE | SPI_IT_ERR));
-
-    /* Set BIDIOE=0 to enable receive mode in 1-line bidirectional SPI */
-    if (hspi->Init.Direction == SPI_DIRECTION_1LINE)
+#if defined(BSP_USING_SPI_DMA_CIRCULAR)
+    if (spi_is_circular_active(spi_drv))
     {
-        SPI_1LINE_RX(hspi);
+        return -RT_EBUSY;
+    }
+#endif
+
+    if (spi_is_camera_active(spi_drv))
+    {
+        return -RT_EBUSY;
     }
 
-    /*Init field not used in handle to zero */
-    hspi->RxISR       = NULL;
-    hspi->TxISR       = NULL;
-    hspi->TxXferSize  = 0U;
-    hspi->TxXferCount = 0U;
-    hspi->pRxBuffPtr  = (uint8_t *)buffer;
-    hspi->RxXferSize  = size;
-    hspi->RxXferCount = size;
-    /* Set the SPI RxDMA Half transfer complete callback */
-    hspi->hdmarx->XferHalfCpltCallback = camera_receive_half_dma;
+    spi_reset_camera_runtime(spi_drv);
+    spi_drv->camera.active = 1U;
+    spi_drv->camera.size = size;
+    spi_drv->camera.rx_start = buffer;
+    spi_drv->camera.rx_half = buffer + (size / 2U);
 
-    /* Set the SPI Rx DMA transfer complete callback */
-    hspi->hdmarx->XferCpltCallback = camera_dma_receive_callback;
-
-    /* Set the DMA error callback */
-    hspi->hdmarx->XferErrorCallback = camera_dma_error_callback;
-
-    /* Set the DMA AbortCpltCallback */
-    hspi->hdmarx->XferAbortCallback = NULL;
-
-    __HAL_SPI_ENABLE_IT(hspi, (SPI_IT_RXNE));
-    hspi->Instance->FIFO_CTRL |= SPI_FIFO_CTRL_RSRE;
-    hspi->Instance->FIFO_CTRL &= ~SPI_FIFO_CTRL_TSRE;
-
-    /* Enable the Rx DMA Stream/Channel  */
-    HAL_DMA_Start_IT(hspi->hdmarx, (uint32_t)&hspi->Instance->DATA, (uint32_t)buffer, size);
-
-    /* Check if the SPI is already enabled */
-    if ((hspi->Instance->TOP_CTRL & SPI_TOP_CTRL_SSE) != SPI_TOP_CTRL_SSE)
+    status = HAL_SPI_Receive_DMA_Circular(hspi, buffer, (uint16_t)size);
+    if (status != HAL_OK)
     {
-        /* Enable SPI peripheral */
-        __HAL_SPI_ENABLE(hspi);
+        spi_reset_camera_runtime(spi_drv);
+        return -RT_ERROR;
     }
-
-    /* Enable the SPI Error Interrupt Bit */
-    __HAL_SPI_ENABLE_IT(hspi, (SPI_IT_ERR));
 
     return 0;
 }
@@ -1457,4 +2015,3 @@ FINSH_FUNCTION_EXPORT_ALIAS(cmd_spitest, __cmd_spitest, Test hw spi);
 /// @} drv_spi
 /// @} bsp_driver
 /// @} file
-

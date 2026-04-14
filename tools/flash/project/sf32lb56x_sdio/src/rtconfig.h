@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef RT_CONFIG_H__
 #define RT_CONFIG_H__
 
@@ -16,21 +22,7 @@
 #define BSP_USING_MPI 1
 #define BSP_USING_QSPI 1
 #define BSP_USING_SPI_FLASH 1
-#define BSP_ENABLE_MPI3 1
-#define BSP_ENABLE_QSPI3 1
-#define BSP_MPI3_MODE_1 1
-#define BSP_QSPI3_MODE 1
-#define BSP_QSPI3_USING_DMA 1
-#define BSP_USING_NAND_FLASH3 1
-#define BSP_QSPI3_MEM_SIZE 128
-#define BSP_QSPI3_CHIP_ID 0
-#define BSP_ENABLE_QSPI5 1
-#define BSP_QSPI5_USING_DMA 1
-#define BSP_QSPI5_MODE_0 1
-#define BSP_QSPI5_MODE 0
-#define BSP_USING_NOR_FLASH5 1
-#define BSP_QSPI5_MEM_SIZE 1
-#define BSP_QSPI5_CHIP_ID 0
+
 
 /* Select board peripherals */
 
@@ -56,3 +48,5 @@
 #define RT_ERROR 1
 
 #endif
+
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

@@ -568,7 +568,7 @@
  * names (read, write & close). (only used if you use sockets.c)
  */
 #ifndef LWIP_POSIX_SOCKETS_IO_NAMES
-    #define LWIP_POSIX_SOCKETS_IO_NAMES     0
+    #define LWIP_POSIX_SOCKETS_IO_NAMES     1
 #endif
 
 /**
@@ -691,5 +691,17 @@
 #if !defined LWIP_NUM_NETIF_CLIENT_DATA || defined __DOXYGEN__
     #define LWIP_NUM_NETIF_CLIENT_DATA      2
 #endif
+
+/**
+ * LWIP_SOCKET_OFFSET==n: Increases the file descriptor number created by LwIP with n.
+ * This can be useful when there are multiple APIs which create file descriptors.
+ * When they all start with a different offset and you won't make them overlap you can
+ * re implement read/write/close/ioctl/fnctl to send the requested action to the right
+ * library (sharing select will need more work though).
+ */
+#if !defined LWIP_SOCKET_OFFSET || defined __DOXYGEN__
+    #define LWIP_SOCKET_OFFSET              3
+#endif
+
 
 #endif /* __LWIPOPTS_H__ */

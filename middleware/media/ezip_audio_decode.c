@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <rtthread.h>
 
 #include "media_dec.h"
@@ -115,6 +121,10 @@ ezip_audio_packet_t *ezip_audio_read_packet(ffmpeg_handle thiz, uint32_t size, u
     {
         len = ezip_flash_read(thiz, p->buf, size);
     }
+    if (thiz->is_ram)
+    {
+        len = ezip_ram_read(thiz, p->buf, size);
+    }
     else
     {
         len = read(thiz->ezip_fd, p->buf, size);
@@ -229,7 +239,7 @@ void ezip_audio_decode(ffmpeg_handle thiz, audio_server_callback_func callback, 
                 thiz->audio_data = (uint16_t *)thiz->cfg.mem_malloc(thiz->audio_data_size);
                 RT_ASSERT(thiz->audio_data != NULL);
             }
-            if (thiz->audio_handle == NULL)
+            if (thiz->audio_handle == NULL && !thiz->is_wait_for_resume)
             {
                 audio_parameter_t arg = {0};
                 arg.write_bits_per_sample = 16;
@@ -311,7 +321,7 @@ void ezip_audio_decode(ffmpeg_handle thiz, audio_server_callback_func callback, 
                 }
             }
 #endif
-            while (0 == audio_write(thiz->audio_handle, write_ptr, write_bytes))
+            while (!thiz->is_wait_for_resume && 0 == audio_write(thiz->audio_handle, write_ptr, write_bytes))
             {
                 uint32_t    evt = 0;
                 uint32_t    wait_ticks = rt_tick_from_millisecond(thiz->audio_data_period);
@@ -419,7 +429,7 @@ void ezip_audio_decode(ffmpeg_handle thiz, audio_server_callback_func callback, 
                 }
             }
 #endif
-            while (0 == audio_write(thiz->audio_handle, write_ptr, write_bytes))
+            while (!thiz->is_wait_for_resume && 0 == audio_write(thiz->audio_handle, write_ptr, write_bytes))
             {
                 uint32_t    evt = 0;
                 uint32_t    wait_ticks = rt_tick_from_millisecond(thiz->audio_data_period);

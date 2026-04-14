@@ -2,9 +2,10 @@
 源码路径：example\rt_device\uart
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-nano_a128n16
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-nano系列
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 ## 概述
 * 在RT-Thread操作系统下采用RX DMA方式，操作UART2检验其串口的收发能力
 * 注意开发板复位之后uart2打印log同下方图片内容一致即为发送成功,验证uart2接收能力使用的是默认串口打印log来验证其接收内容的准确性

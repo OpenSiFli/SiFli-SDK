@@ -1,4 +1,5 @@
 # BLE/BT功耗测试
+源码路径：example/pm/bt
 ## 介绍：
 BLE/BT功耗测试例程（LCPU主频为24MHz）。BLE可测试广播与连接模式的功耗，BT可测试Scan和Sniff模式的功耗。
 唤醒PIN在不同开发板上会有所不同，对应关系如下

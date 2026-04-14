@@ -28,7 +28,24 @@
 
 static rt_int16_t rt_scheduler_lock_nest;
 extern volatile rt_uint8_t rt_interrupt_nest;
+#ifdef RT_SCHEDULER_LOCK_DEBUG
+typedef struct
+{
+    const char *file;
+    uint32_t line_num;
+} scheduler_lock_hist_item;
 
+#define SCHEDULER_LOCK_HIST_LEN  (64)
+
+typedef struct
+{
+    uint32_t idx;
+    scheduler_lock_hist_item items[SCHEDULER_LOCK_HIST_LEN];
+} scheduler_lock_hist_t;
+
+scheduler_lock_hist_t _scheduler_lock_hist;
+
+#endif /* SCHEDULER_LOCK_DEBUG */
 __ROM_USED rt_list_t rt_thread_priority_table[RT_THREAD_PRIORITY_MAX];
 __ROM_USED struct rt_thread *rt_current_thread;
 
@@ -375,10 +392,17 @@ __ROM_USED void rt_schedule_remove_thread(struct rt_thread *thread)
 /**
  * This function will lock the thread scheduler.
  */
-__ROM_USED void rt_enter_critical(void)
+#ifndef RT_SCHEDULER_LOCK_DEBUG
+    __ROM_USED void rt_enter_critical(void)
+#else
+    __ROM_USED void rt_enter_critical_debug(const char *file, uint32_t line)
+#endif
 {
     register rt_base_t level;
-
+#ifdef RT_SCHEDULER_LOCK_DEBUG
+    uint32_t i;
+    uint8_t duplicate_num;
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
     /* disable interrupt */
     level = rt_hw_interrupt_disable();
 
@@ -387,23 +411,66 @@ __ROM_USED void rt_enter_critical(void)
      * enough and does not check here
      */
     rt_scheduler_lock_nest ++;
-
+#ifdef RT_SCHEDULER_LOCK_DEBUG
+    if (_scheduler_lock_hist.idx < SCHEDULER_LOCK_HIST_LEN)
+    {
+        duplicate_num = 0;
+        for (i = 0; i < _scheduler_lock_hist.idx; i++)
+        {
+            if ((_scheduler_lock_hist.items[i].file == file) && (_scheduler_lock_hist.items[i].line_num == line))
+            {
+                duplicate_num++;
+            }
+        }
+        RT_ASSERT(duplicate_num < 5);
+        _scheduler_lock_hist.items[_scheduler_lock_hist.idx].file = file;
+        _scheduler_lock_hist.items[_scheduler_lock_hist.idx].line_num = line;
+        _scheduler_lock_hist.idx++;
+    }
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
     /* enable interrupt */
     rt_hw_interrupt_enable(level);
 }
-RTM_EXPORT(rt_enter_critical);
+#ifndef RT_SCHEDULER_LOCK_DEBUG
+    RTM_EXPORT(rt_enter_critical);
+#else
+    RTM_EXPORT(rt_enter_critical_debug);
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
 
 /**
  * This function will unlock the thread scheduler.
  */
-__ROM_USED void rt_exit_critical(void)
+#ifndef RT_SCHEDULER_LOCK_DEBUG
+    __ROM_USED void rt_exit_critical(void)
+#else
+    __ROM_USED void rt_exit_critical_debug(const char *file, uint32_t line)
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
 {
     register rt_base_t level;
-
+#ifdef RT_SCHEDULER_LOCK_DEBUG
+    uint32_t i;
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
     /* disable interrupt */
     level = rt_hw_interrupt_disable();
 
     rt_scheduler_lock_nest --;
+#ifdef RT_SCHEDULER_LOCK_DEBUG
+    RT_ASSERT(_scheduler_lock_hist.idx <= SCHEDULER_LOCK_HIST_LEN);
+    for (i = 0; i < _scheduler_lock_hist.idx; i++)
+    {
+        if (_scheduler_lock_hist.items[i].file == file)
+        {
+            break;
+        }
+    }
+    if (i < _scheduler_lock_hist.idx)
+    {
+        /* remove the matched request and replace by last one */
+        _scheduler_lock_hist.items[i].file = _scheduler_lock_hist.items[_scheduler_lock_hist.idx - 1].file;
+        _scheduler_lock_hist.items[i].line_num = _scheduler_lock_hist.items[_scheduler_lock_hist.idx - 1].line_num;
+        _scheduler_lock_hist.idx--;
+    }
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
     if (rt_scheduler_lock_nest <= 0)
     {
         rt_scheduler_lock_nest = 0;
@@ -422,8 +489,11 @@ __ROM_USED void rt_exit_critical(void)
         rt_hw_interrupt_enable(level);
     }
 }
-RTM_EXPORT(rt_exit_critical);
-
+#ifndef RT_SCHEDULER_LOCK_DEBUG
+    RTM_EXPORT(rt_exit_critical);
+#else
+    RTM_EXPORT(rt_exit_critical_debug);
+#endif /* RT_SCHEDULER_LOCK_DEBUG */
 /**
  * Get the scheduler lock level
  *

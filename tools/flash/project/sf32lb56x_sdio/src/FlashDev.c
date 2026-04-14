@@ -1,13 +1,8 @@
-/*********************************************************************
-*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
-*                        The Embedded Experts                        *
-*                           www.segger.com                           *
-**********************************************************************
-----------------------------------------------------------------------
-File    : FlashDev.c
-Purpose : Flash device description Template
---------  END-OF-HEADER  ---------------------------------------------
-*/
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "SdioOS.h"
 
@@ -17,10 +12,10 @@ Purpose : Flash device description Template
     #define SDIO_NAME  "SF32LB56X External SDIO1"
     #define SDIO_BASE  0xa0000000
     #define SDIO_SIZE  0x40000000
-#elif defined(JLINK_SDIO_2)
+#elif defined(JLINK_SDIO_2) || defined(JLINK_SDEMMC_2)
     #define SDIO_NAME  "SF32LB56X External SDIO2"
     #define SDIO_BASE  0x64000000
-    #define SDIO_SIZE  0x3800000
+    #define SDIO_SIZE  0x3C000000
 #endif
 
 struct FlashDevice const FlashDevice __attribute__((section("DevDscr"), used)) =
@@ -43,3 +38,5 @@ struct FlashDevice const FlashDevice __attribute__((section("DevDscr"), used)) =
     0xFFFFFFFF, 0xFFFFFFFF,    // Indicates the end of the flash sector layout. Must be present.
 };
 #endif  //#ifdef JLINK
+
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

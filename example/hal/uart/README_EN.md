@@ -3,10 +3,10 @@ Source code path: example/hal/uart
 
 ## Supported Platforms
 Examples can run on the following development boards:
-* sf32lb52-nano_a128n16
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* sf32lb56-lcd_n16r12n1
+* sf32lb52-nano series
+* sf32lb52-lcd series
+* sf32lb58-lcd series
+* sf32lb56-lcd series
 
 ## Overview
 * Operate UART hal functions using RX DMA method, operate UART2 to verify its serial port transmission and reception capabilities

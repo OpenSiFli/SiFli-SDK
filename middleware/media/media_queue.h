@@ -1,6 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef _MEDIA_QUEUE_H_
 #define _MEDIA_QUEUE_H_
-
 
 #include <rtthread.h>
 #include <stdlib.h>

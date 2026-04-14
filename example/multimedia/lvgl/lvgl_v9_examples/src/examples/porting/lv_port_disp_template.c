@@ -1,5 +1,5 @@
 /**
- * @file lv_port_disp_templ.c
+ * @file lv_port_disp_template.c
  *
  */
 
@@ -36,7 +36,7 @@
  **********************/
 static void disp_init(void);
 
-static void disp_flush(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map);
+static void disp_flush(lv_display_t * disp, const lv_area_t * area, uint8_t * px_map);
 
 /**********************
  *  STATIC VARIABLES
@@ -60,7 +60,7 @@ void lv_port_disp_init(void)
     /*------------------------------------
      * Create a display and set a flush_cb
      * -----------------------------------*/
-    lv_display_t *disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
+    lv_display_t * disp = lv_display_create(MY_DISP_HOR_RES, MY_DISP_VER_RES);
     lv_display_set_flush_cb(disp, disp_flush);
 
     /* Example 1
@@ -121,18 +121,15 @@ void disp_disable_update(void)
  *`px_map` contains the rendered image as raw pixel map and it should be copied to `area` on the display.
  *You can use DMA or any hardware acceleration to do this operation in the background but
  *'lv_display_flush_ready()' has to be called when it's finished.*/
-static void disp_flush(lv_display_t *disp_drv, const lv_area_t *area, uint8_t *px_map)
+static void disp_flush(lv_display_t * disp_drv, const lv_area_t * area, uint8_t * px_map)
 {
-    if (disp_flush_enabled)
-    {
+    if(disp_flush_enabled) {
         /*The most simple case (but also the slowest) to put all pixels to the screen one-by-one*/
 
         int32_t x;
         int32_t y;
-        for (y = area->y1; y <= area->y2; y++)
-        {
-            for (x = area->x1; x <= area->x2; x++)
-            {
+        for(y = area->y1; y <= area->y2; y++) {
+            for(x = area->x1; x <= area->x2; x++) {
                 /*Put a pixel to the display. For example:*/
                 /*put_px(x, y, *px_map)*/
                 px_map++;

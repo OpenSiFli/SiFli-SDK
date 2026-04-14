@@ -148,6 +148,24 @@ typedef enum {
  */
 extern const lv_obj_class_t lv_obj_class;
 
+#if LV_USE_OBJ_REALIGN
+typedef struct
+{
+	struct _lv_obj_t *obj;
+}lv_realign_obj_t;
+
+typedef struct
+{
+    const struct _lv_obj_t *base;
+    lv_coord_t xofs;
+    lv_coord_t yofs;
+    lv_align_t align;
+    uint8_t auto_realign : 1;
+    uint8_t realign_obj_en : 1;		/**< has been set to a realign obj*/
+    lv_ll_t realign_obj_ll;       	/**< Linked list to store other objects who set auto realign to this objects*/
+} lv_realign_t;
+#endif
+
 /**
  * Special, rarely used attributes.
  * They are allocated automatically if any elements is set.
@@ -188,6 +206,14 @@ typedef struct _lv_obj_t {
     uint16_t style_cnt  : 6;
     uint16_t h_layout   : 1;
     uint16_t w_layout   : 1;
+    uint16_t render_async   : 1;
+
+    void* tool_ext_attr;
+    void* tool_user_data;
+    
+#if LV_USE_OBJ_REALIGN
+    lv_realign_t realign;       /**< Information about the last call to ::lv_obj_align. */
+#endif
 } lv_obj_t;
 
 
@@ -201,7 +227,7 @@ typedef struct _lv_obj_t {
  */
 void lv_init(void);
 
-#if LV_ENABLE_GC || !LV_MEM_CUSTOM
+#if (defined(LV_ENABLE_GC) || !defined(LV_MEM_CUSTOM)) && !defined(PY_GEN)
 
 /**
  * Deinit the 'lv' library
@@ -379,6 +405,15 @@ static inline lv_coord_t lv_obj_dpx(const lv_obj_t * obj, lv_coord_t n)
 {
     return _LV_DPX_CALC(lv_disp_get_dpi(lv_obj_get_disp(obj)), n);
 }
+
+/**
+ * Set the obj and all its child controls to use either asynchronous or synchronous rendering mode.
+ * Note: This only takes effect on the current screen for now.
+ * @param obj       pointer to an object
+ * @param async     1¡êoasynchronous render, 0: synchronous render mode
+ */
+void lv_obj_set_render_async(lv_obj_t *obj, uint16_t async);
+
 
 /**********************
  *      MACROS

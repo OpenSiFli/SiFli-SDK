@@ -419,6 +419,8 @@ static void app_wakeup(void)
 #if defined(SOC_SF32LB56X)
 #if defined(BSP_USING_BOARD_EC_LB563XXX)
     HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN6; //PA51
+#elif defined(BSP_USING_BOARD_SF32LB56_WLAN_CORE_A128R12N1) || defined(BSP_USING_BOARD_SF32LB56_WLAN_CORE_N16R12N1)
+    HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN7; //PA52
 #else
     HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN2; //PB34
 #endif /* BSP_USING_BOARD_EC_LB563XXX */

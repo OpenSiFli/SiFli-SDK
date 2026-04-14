@@ -2,8 +2,10 @@
 
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
+
 
 ## Overview
 * FinSH is RT-Thread's command line component (shell), providing a set of operational interfaces for users to call from the command line, mainly used for debugging or viewing system information. In addition to FinSH's built-in commands, FinSH also provides multiple macro interfaces to export custom commands, and exported commands can be executed directly in FinSH.

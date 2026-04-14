@@ -5,8 +5,6 @@ on:
     branches:
       - main
       - 'release/*'
-    paths:
-      - 'docs/**'
     tags:
       - '*'
   workflow_dispatch:  # 允许手动触发
@@ -73,24 +71,26 @@ jobs:
       - name: Upload zh_CN documentation for ${{ matrix.variant }} to COS
         uses: OpenSiFli/SiFliMirrorSync@v1
         with:
+          working_directory: ./docs/build/zh_CN/${{ matrix.variant }}/html
           secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
           secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
           region: ${{ secrets.COS_DOCS_REGION }}
           bucket: ${{ secrets.COS_DOCS_BUCKET }}
           prefix: projects/sdk/${{ steps.determine-version.outputs.VERSION }}/sf32lb${{ matrix.variant }}/
-          artifacts: docs/build/zh_CN/${{ matrix.variant }}/html/
+          artifacts: ./
           delete_remote: true
 
       # Upload English documents to COS
       - name: Upload en documentation for ${{ matrix.variant }} to COS
         uses: OpenSiFli/SiFliMirrorSync@v1
         with:
+          working_directory: ./docs/build/en/${{ matrix.variant }}/html
           secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
           secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
           region: ${{ secrets.COS_DOCS_REGION }}
           bucket: ${{ secrets.COS_DOCS_BUCKET }}
           prefix: projects/sdk/${{ steps.determine-version.outputs.VERSION }}/en/sf32lb${{ matrix.variant }}/
-          artifacts: docs/build/en/${{ matrix.variant }}/html/
+          artifacts: ./
           delete_remote: true
 
       - name: Upload ${{ matrix.variant }} documentation artifact
@@ -128,7 +128,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Upload version.json and refresh the CDN
+      # Upload version.json and purge CDN cache
       - name: Upload version.json and purge CDN cache
         uses: OpenSiFli/SiFliMirrorSync@v1
         with:
@@ -136,7 +136,8 @@ jobs:
           secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
           region: ${{ secrets.COS_DOCS_REGION }}
           bucket: ${{ secrets.COS_DOCS_BUCKET }}
+          working_directory: ./docs
           prefix: projects/sdk/
-          artifacts: docs/version.json
+          artifacts: version.json
           delete_remote: false
           flush_url: https://docs.sifli.com/projects/sdk/

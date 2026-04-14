@@ -1,0 +1,18 @@
+from building import *
+import os
+
+cwd = GetCurrentDir()
+objs = []
+
+root_src = Glob('*.c')
+if root_src:
+    objs.extend(DefineGroup('lvgl_v8_multlist_src',
+                            root_src,
+                            depend=['PKG_USING_LITTLEVGL2RTT'],
+                            CPPPATH=[cwd]))
+
+objs.extend(SConscript(os.path.join(cwd, 'multlist', 'SConscript'),
+                       variant_dir='multlist',
+                       duplicate=0))
+
+Return('objs')

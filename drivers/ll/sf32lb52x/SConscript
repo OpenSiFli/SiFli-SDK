@@ -1,0 +1,9 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+inc = [cwd]
+
+group = DefineGroup('BF0_LL', src, depend = ['SOC_SF32LB52X'], CPPPATH = inc)
+
+Return('group')

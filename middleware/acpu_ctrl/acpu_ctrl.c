@@ -12,6 +12,9 @@
 #include "ipc_queue.h"
 #include <string.h>
 #include "acpu_ctrl.h"
+#if defined(ANYKA_RUN_IN_ACPU) && defined(SOC_BF0_ACPU)
+    #include "audio_3a_anyka.h"
+#endif
 
 //#ifndef SOC_BF0_ACPU
 //#define LOG_TAG      "mw.acpu"
@@ -304,6 +307,35 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         ACPU_ASSERT(0);
 #endif
         acpu_send_result(NULL, 0);
+        break;
+    }
+#endif
+#if ANYKA_RUN_IN_ACPU
+    case ACPU_TASK_audio_3a_open:
+    {
+        acpu_audio_3a_open_parameter_t *arg  = (acpu_audio_3a_open_parameter_t *)param;
+        int ret = acpu_audio_3a_open(arg);
+        acpu_send_result(0, ret);
+        break;
+    }
+    case ACPU_TASK_audio_3a_uplink:
+    {
+        acpu_audio_3a_uplink_parameter_t *arg  = (acpu_audio_3a_uplink_parameter_t *)param;
+        acpu_audio_3a_uplink(arg);
+        acpu_send_result(0, 0);
+        break;
+    }
+    case ACPU_TASK_audio_3a_downlink:
+    {
+        acpu_audio_3a_downlink_parameter_t *arg  = (acpu_audio_3a_downlink_parameter_t *)param;
+        acpu_audio_3a_downlink(arg);
+        acpu_send_result(0, 0);
+        break;
+    }
+    case ACPU_TASK_audio_3a_close:
+    {
+        acpu_audio_3a_close();
+        acpu_send_result(0, 0);
         break;
     }
 #endif

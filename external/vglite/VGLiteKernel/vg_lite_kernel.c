@@ -24,11 +24,11 @@
 *
 *****************************************************************************/
 
+
 #include "vg_lite_platform.h"
 #include "vg_lite_kernel.h"
 #include "vg_lite_hal.h"
 #include "vg_lite_hw.h"
-#include "../VGLite/vg_lite_options.h"
 #if defined(__linux__) && !defined(EMULATOR)
 #include <linux/sched.h>
 /*#include <asm/uaccess.h>*/
@@ -37,6 +37,22 @@
 #include <linux/kernel.h>
 #include <linux/pm.h>
 #include <linux/suspend.h>
+#endif
+
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+
+#ifdef __linux__
+#include <linux/jiffies.h>
+unsigned long start_time, end_time, timming_flag = 0;
+unsigned long period_time, total_time = 0;
+
+#else
+#include <sys/time.h>
+struct timeval start_time, end_time;
+unsigned long period_time, total_time = 0;
+unsigned long timming_flag = 0;
+#endif
+
 #endif
 
 #define FLEXA_TIMEOUT_STATE                 BIT(21)
@@ -51,15 +67,25 @@
 
 static vg_lite_kernel_context_t global_power_context = {0};
 static uint32_t *power_context_klogical = NULL;
-static uint32_t state_map_table[4096] = {
-    [0 ... 4095] = -1
-};
+static uint32_t state_map_table[4096];
 static uint32_t backup_command_buffer_physical;
 static void *backup_command_buffer_klogical;
 static uint32_t backup_command_buffer_size;
+uint32_t init_buffer[12];
+uint32_t is_init;
+size_t physical_address;
+#endif
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+static frame_buffer_command_t fb_command_backup = { 0 }; 
 #endif
 
 static int s_reference = 0;
+
+#if gcdVG_ENABLE_DELAY_RESUME
+static int delay_resume = 0;
+#endif
+
 #if gcdVG_ENABLE_GPU_RESET
 static uint32_t gpu_reset_count = 0;
 #endif
@@ -98,7 +124,7 @@ static vg_lite_error_t restore_init_command(uint32_t physical, uint32_t size)
 
     return error;
 }
-
+#if gcdVG_ENABLE_GPU_RESET && gcdVG_ENABLE_BACKUP_COMMAND
 static vg_lite_error_t execute_command(uint32_t physical, uint32_t size, vg_lite_gpu_reset_type_t reset_type)
 {
     vg_lite_kernel_wait_t wait;
@@ -118,6 +144,7 @@ static vg_lite_error_t execute_command(uint32_t physical, uint32_t size, vg_lite
 
     return error;
 }
+#endif
 
 static uint32_t push_command(uint32_t command, uint32_t data, uint32_t index)
 {
@@ -152,10 +179,15 @@ static vg_lite_error_t backup_power_context_buffer(uint32_t *command_buffer_klog
     for (index = 0; index < size; index++) {
         command = command_buffer_klogical[index];
 
-        if ((command & 0xFFFF0000) == 0x30010000) {
+        if (((command & 0xFFFF0000) == 0x30010000) && ((index % 2) == 0)) {
             data = command_buffer_klogical[index+1];
             address = command & 0x0000FFFF;
             context_index = state_map_table[address];
+            if((address < 0) || (address > 4095))
+            {
+                vg_lite_kernel_print("Index out of bounds, wrong address and data 0x%08X 0x%08X\n", command , data);
+                return VG_LITE_INVALID_ARGUMENT;
+            }
             if (-1 != context_index) {
                 power_context_klogical[context_index + 1] = data;
             } else {
@@ -196,6 +228,11 @@ static void gpu(int enable)
         vg_lite_hal_poke(VG_LITE_HW_CLOCK_CONTROL, value.data);
         vg_lite_hal_delay(5);
 
+#if gcdVG_DUMP_DEBUG_REGISTER
+        value.control.debug_registers = 0;
+        vg_lite_hal_poke(VG_LITE_HW_CLOCK_CONTROL, value.data);
+#endif
+
         /* Perform a soft reset. */
         soft_reset();
         do {
@@ -210,9 +247,16 @@ static void gpu(int enable)
         vg_lite_hal_poke(VG_LITE_POWER_CONTROL, data);
         vg_lite_hal_delay(1);
 
-#if gcFEATURE_VG_CLOCK_GATING
+#if !gcFEATURE_VG_CLOCK_GATING_TS_MODULE_DISABLE
         data = vg_lite_hal_peek(VG_LITE_POWER_MODULE_CONTROL);
         data |= 0x800;
+        vg_lite_hal_poke(VG_LITE_POWER_MODULE_CONTROL, data);
+        vg_lite_hal_delay(1);
+#endif
+
+#if !gcFEATURE_VG_CLOCK_GATING_VG_MODULE_DISABLE
+        data = vg_lite_hal_peek(VG_LITE_POWER_MODULE_CONTROL);
+        data |= 0x100;
         vg_lite_hal_poke(VG_LITE_POWER_MODULE_CONTROL, data);
         vg_lite_hal_delay(1);
 #endif
@@ -262,6 +306,11 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
     vg_lite_error_t error = VG_LITE_SUCCESS;
     vg_lite_kernel_context_t * context;
     vg_lite_uint32_t flags = 0, i;
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+    vg_lite_kernel_terminate_t fb_terminate;
+#endif
+
 #if gcdVG_ENABLE_BACKUP_COMMAND
     vg_lite_uint32_t index;
 #endif
@@ -307,6 +356,7 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
     context->tess_buffer            = NULL;
     context->tessbuf_logical    = NULL;
     context->tessbuf_physical   = 0;
+
 #if gcdVG_ENABLE_BACKUP_COMMAND
     global_power_context.power_context_logical = NULL;
     global_power_context.power_context_klogical = NULL;
@@ -315,6 +365,15 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
     global_power_context.power_context_capacity = 32 << 10;
     global_power_context.power_context_size = 0;
 #endif
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+    fb_command_backup.handle = NULL;
+    fb_command_backup.command_buffer_logical = NULL;
+    fb_command_backup.command_buffer_klogical = NULL;
+    fb_command_backup.command_buffer_physical = 0;
+    fb_command_backup.command_buffer_size = CACHE_COMMAND_BUFFER_SIZE;
+#endif
+
     /* Increment reference counter. */
     if (s_reference++ == 0) {
         /* Initialize the SOC. */
@@ -329,7 +388,7 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
 
     /* Allocate the command buffer. */
     if (data->command_buffer_size) {
-        for (i = 0; i < 2; i ++)
+        for (i = 0; i < CMDBUF_COUNT; i ++)
         {
             /* Allocate the memory. */
             error = vg_lite_kernel_vidmem_allocate(&data->command_buffer_size,
@@ -414,6 +473,35 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
         global_power_context.power_context_size = index * 4;
     }
 #endif
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+    if (fb_command_backup.command_buffer_size) {
+        error = vg_lite_kernel_vidmem_allocate(&fb_command_backup.command_buffer_size,
+                                               flags,
+                                               VG_LITE_POOL_RESERVED_MEMORY1,
+                                               &fb_command_backup.command_buffer_logical,
+                                               &fb_command_backup.command_buffer_klogical,
+                                               &fb_command_backup.command_buffer_physical,
+                                               &fb_command_backup.handle);
+        if (error != VG_LITE_SUCCESS) {
+            vg_lite_kernel_context_t fb_context;
+            fb_context.command_buffer[0] = fb_command_backup.handle;
+            fb_context.command_buffer_logical[0] = fb_command_backup.command_buffer_logical;
+            fb_context.command_buffer_klogical[0] = fb_command_backup.command_buffer_klogical;
+            fb_context.command_buffer_physical[0] = fb_command_backup.command_buffer_physical;
+
+            /* Free any allocated memory. */
+            fb_terminate.context = &fb_context;
+            do_terminate(&fb_terminate);
+            ONERROR(error);
+        }
+
+        data->fb_command_buffer = fb_command_backup.command_buffer_logical;
+        data->fb_command_buffer_gpu = fb_command_backup.command_buffer_physical;
+        data->fb_command_buffer_size = fb_command_backup.command_buffer_size;
+    }
+#endif
+
     /* Allocate the tessellation buffer. */
     if ((data->tess_width > 0) && (data->tess_height > 0)) 
     {
@@ -461,9 +549,9 @@ static vg_lite_error_t init_vglite(vg_lite_kernel_initialize_t * data)
                 data->capabilities.cap.tiled = 0x2;
             }
 
-            vg_countbuffer_size = height * 3;
-            vg_countbuffer_size = VG_LITE_ALIGN(vg_countbuffer_size, 64);
-            total_size = height * 128;
+            vg_countbuffer_size = (height + 13) / 14;
+            vg_countbuffer_size = vg_countbuffer_size * 64;
+            total_size = height * 128 + vg_countbuffer_size;
             if (total_size < MIN_TS_SIZE)
                 total_size = MIN_TS_SIZE;
             ts_buffer_size = total_size - vg_countbuffer_size;
@@ -558,11 +646,13 @@ static vg_lite_error_t terminate_vglite(vg_lite_kernel_terminate_t * data)
         context->command_buffer[0] = NULL;
     }
 
+#if !gcFEATURE_VG_SINGLE_COMMAND_BUFFER
     if (context->command_buffer[1]) {
         /* Free the command buffer. */
         vg_lite_kernel_vidmem_free(context->command_buffer[1]);
         context->command_buffer[1] = NULL;
     }
+#endif
 
 #if gcdVG_ENABLE_BACKUP_COMMAND
     if (global_power_context.power_context) {
@@ -571,6 +661,15 @@ static vg_lite_error_t terminate_vglite(vg_lite_kernel_terminate_t * data)
         global_power_context.power_context = NULL;
     }
 #endif
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+    if (fb_command_backup.handle) {
+        /* Free the backup command buffer. */
+        vg_lite_kernel_vidmem_free(fb_command_backup.handle);
+        fb_command_backup.handle = NULL;
+    }
+#endif
+
     if (context->tess_buffer) {
         /* Free the tessellation buffer. */
         vg_lite_kernel_vidmem_free(context->tess_buffer);
@@ -677,8 +776,6 @@ static vg_lite_error_t do_submit(vg_lite_kernel_submit_t * data)
         return VG_LITE_NO_CONTEXT;
     }
 #endif
-
-
     /* Perform a memory barrier. */
     vg_lite_hal_barrier();
 
@@ -691,18 +788,19 @@ static vg_lite_error_t do_submit(vg_lite_kernel_submit_t * data)
     backup_command_buffer_size = data->command_size;
 #endif
 
-#if 0
-    int i = 0;
-    rt_kprintf("cmd_buf:%d,%d\n", data->command_size, (data->command_size + 7) / 8);
-
-    for(i=0;i < (data->command_size + 3) / 4; i++)
-    {
-        if(i % 4 == 0)
-            rt_kprintf("\r\n");
-        rt_kprintf("0x%08x ",((uint32_t*)(physical + offset))[i]);
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+#ifdef __linux__
+    if(!timming_flag){
+        start_time = jiffies;
+        timming_flag = 1;
+    }
+#else
+    if(!timming_flag){
+        gettimeofday(&start_time, NULL);
+        timming_flag = 1;
     }
 #endif
-
+#endif
 
     /* set gpu to busy state  */
     vg_lite_set_gpu_execute_state(VG_LITE_GPU_RUN);
@@ -722,19 +820,53 @@ static void dump_last_frame(void)
     uint32_t i = 0;
     uint32_t data = 0;
 
-    vg_lite_kernel_print("the last submit command before hang:\n");
-    for (i = 0; i < size / 4; i+=4) {
-        vg_lite_kernel_print("0x%08X 0x%08X", ptr[i], ptr[i+1]);
-        if ((i + 2) <= (size / 4 - 1))
-#if defined(__linux__)
-            vg_lite_kernel_print(KERN_CONT " 0x%08X 0x%08X\n", ptr[i+2], ptr[i+3]);
-#else
-            vg_lite_kernel_print(" 0x%08X 0x%08X\n", ptr[i+2], ptr[i+3]);
-#endif
+    vg_lite_kernel_print("This is init command buffer:\n");
+    vg_lite_kernel_print("@[%s 0x%08X 0x00000088\n", "command", physical_address);
+    vg_lite_kernel_print("  0x30010A35 0x%08X 0x30010AC8 0x%08X\n", init_buffer[0], init_buffer[1]);
+    vg_lite_kernel_print("  0x30010ACB 0x%08X 0x30010ACC 0x%08X\n", init_buffer[2], init_buffer[3]);
+    vg_lite_kernel_print("  0x30010A90 0x%08X 0x30010A91 0x%08X\n", init_buffer[4], init_buffer[5]);
+    vg_lite_kernel_print("  0x30010A92 0x%08X 0x30010A93 0x%08X\n", init_buffer[6], init_buffer[7]);
+    vg_lite_kernel_print("  0x30010A94 0x%08X 0x30010A95 0x%08X\n", init_buffer[8], init_buffer[9]);
+    vg_lite_kernel_print("  0x30010A96 0x%08X 0x30010A97 0x%08X\n", init_buffer[10], init_buffer[11]);
+    vg_lite_kernel_print("  0x30010A00 0x00000001 0x30010A1B 0x00000011\n");
+    vg_lite_kernel_print("  0x10000007 0x00000000 0x20000007 0x00000000\n");
+    vg_lite_kernel_print("  0x00000000 0x00000000\n");
+    vg_lite_kernel_print("] -- %s\n", "command");
+
+    if (is_init == 1)
+    {
+        vg_lite_kernel_print("the last submit command is init command.\n");
     }
+    else
+    {
+        vg_lite_kernel_print("the last submit command before hang:\n");
+        vg_lite_kernel_print( "@[%s 0x%08X 0x%08X\n", "command", backup_command_buffer_klogical, size);
+        for (i = 0; i < size; i += 4) {
+            vg_lite_kernel_print("  0x%08X 0x%08X 0x%08X 0x%08X\n", ptr[i], ptr[i + 1], ptr[i + 2], ptr[i + 3]);
+        }
+        if (size % 16)
+        {
+            int j = size % 16 / 4;
+            switch (j)
+            {
+            case 1:
+                vg_lite_kernel_print("  0x%08X\n", ptr[(size - size % 16) / 4]);
+                break;
+            case 2:
+                vg_lite_kernel_print("  0x%08X 0x%08X\n", ptr[(size - size % 16) / 4], ptr[(size - size % 16) / 4 + 1]);
+                break;
+            case 3:
+                vg_lite_kernel_print("  0x%08X 0x%08X 0x%08X\n", ptr[(size - size % 16) / 4], ptr[(size - size % 16) / 4 + 1], ptr[(size - size % 16) / 4 + 2]);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    vg_lite_kernel_print("] -- %s\n", "command");
 
     data = vg_lite_hal_peek(VG_LITE_HW_IDLE);
-    vg_lite_kernel_print("vg idle reg = 0x%08X\n", data);
+    vg_lite_kernel_print("vgidle reg = 0x%08X\n", data);
 }
 #endif
 
@@ -744,8 +876,118 @@ static vg_lite_error_t do_wait(vg_lite_kernel_wait_t * data)
     vg_lite_error_t error = VG_LITE_SUCCESS;
 #endif
     /* Wait for interrupt. */
+#if gcdVG_DUMP_DEBUG_REGISTER
+    if (!vg_lite_hal_wait_interrupt(5000, data->event_mask, &data->event_got)) {
+         /* Timeout. */
+        unsigned int debug;
+        unsigned int iter;
+
+        debug = vg_lite_hal_peek(VG_LITE_HW_IDLE);
+        vg_lite_kernel_print("idle = 0x%x\n",debug);
+
+        debug = vg_lite_hal_peek(VG_LITE_HW_CLOCK_CONTROL);
+        vg_lite_kernel_print("QAHiClockControl = 0x%x\n", debug);
+        
+        for(iter =0; iter < 16 ; iter ++) 
+        {   
+             vg_lite_hal_poke(0x470, iter);
+             debug = vg_lite_hal_peek(0x448);
+             vg_lite_kernel_print("0x448[%d] = 0x%x\n", iter, debug);
+        }     
+        for(iter =0; iter < 16 ; iter ++) 
+        {   
+             vg_lite_hal_poke(0x470, iter<<8);
+             debug = vg_lite_hal_peek(0x44C);
+             vg_lite_kernel_print("0x44c[%d] = 0x%x\n", iter, debug);
+        }
+        for(iter =0; iter < 28 ; iter ++) 
+        {   
+             vg_lite_hal_poke(0x470, iter<<16);
+             debug = vg_lite_hal_peek(0x450);
+             vg_lite_kernel_print("0x450[%d] = 0x%x\n", iter, debug);
+        }   
+        for (iter = 0; iter < 31; iter++)
+        {
+            vg_lite_hal_poke(0x470, iter<<24);
+            debug = vg_lite_hal_peek(0x454);
+            vg_lite_kernel_print("0x454[%d] = 0x%x\n", iter, debug);
+        }
+        for (iter = 128; iter < 133; iter++)
+        {
+            vg_lite_hal_poke(0x470, iter<<24);
+            debug = vg_lite_hal_peek(0x454);
+            vg_lite_kernel_print("0x454[%d] = 0x%x\n", iter, debug);
+        }
+        for (iter = 0; iter < 21; iter++)
+        {
+            vg_lite_hal_poke(0x474, iter);
+            debug = vg_lite_hal_peek(0x458);
+            vg_lite_kernel_print("0x458[%d] = 0x%x\n", iter, debug);
+        }
+        for (iter = 0; iter < 62; iter++)
+        {
+            vg_lite_hal_poke(0x474, iter<<8);
+            debug = vg_lite_hal_peek(0x45C);
+            vg_lite_kernel_print("0x45C[%d] = 0x%x\n", iter, debug);
+        }
+        for (iter = 0; iter < 16; iter++)
+        {
+            vg_lite_hal_poke(0x474, iter<<16);
+            debug = vg_lite_hal_peek(0x460);
+            vg_lite_kernel_print("0x460[%d] = 0x%x\n", iter, debug);
+        }
+        for (iter = 0x40; iter <= 0x60; iter+=4)
+        {
+            debug = vg_lite_hal_peek(iter);
+            vg_lite_kernel_print("0x%x = 0x%x\n", iter, debug);
+        }
+
+        debug = vg_lite_hal_peek(0x438);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x438, debug);
+        debug = vg_lite_hal_peek(0x43C);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x43C, debug);
+        debug = vg_lite_hal_peek(0x440);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x440, debug);
+        debug = vg_lite_hal_peek(0x444);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x444, debug);
+        debug = vg_lite_hal_peek(0x500);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x500, debug);
+        debug = vg_lite_hal_peek(0x504);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x504, debug);
+        debug = vg_lite_hal_peek(0x508);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x508, debug);
+        debug = vg_lite_hal_peek(0x10);
+        vg_lite_kernel_print("0x%x = 0x%x\n", 0x10, debug);
+
+        for (iter = 0x14; iter <= 0x34; iter += 4)
+        {
+            debug = vg_lite_hal_peek(iter);
+            vg_lite_kernel_print("0x%x = 0x%08x\n", iter, debug);
+        }
+
+        debug = vg_lite_hal_peek(0x98);
+        vg_lite_kernel_print("0x%x = 0x%08x\n", 0x98, debug);
+        debug = vg_lite_hal_peek(0xA4);
+        vg_lite_kernel_print("0x%x = 0x%08x\n", 0xA4, debug);
+        debug = vg_lite_hal_peek(0xA8);
+        vg_lite_kernel_print("0x%x = 0x%08x\n", 0xA8, debug);
+        debug = vg_lite_hal_peek(0xE8);
+        vg_lite_kernel_print("0x%x = 0x%08x\n", 0xE8, debug); 
+#if gcdVG_ENABLE_DUMP_COMMAND && gcdVG_ENABLE_BACKUP_COMMAND
+        dump_last_frame();
+#endif
+        return VG_LITE_TIMEOUT;
+    }
+#else
     if (!vg_lite_hal_wait_interrupt(data->timeout_ms, data->event_mask, &data->event_got)) {
         /* Timeout. */
+        unsigned int debug;
+        debug = vg_lite_hal_peek(VG_LITE_HW_IDLE);
+        if(!VG_LITE_KERNEL_IS_GPU_IDLE()){
+            vg_lite_kernel_print("GPU hang.\n");
+            vg_lite_kernel_print("GPU idle register = 0x%x\n", debug);
+        }
+
 #if gcdVG_ENABLE_DUMP_COMMAND && gcdVG_ENABLE_BACKUP_COMMAND
         dump_last_frame();
 #endif
@@ -775,6 +1017,7 @@ static vg_lite_error_t do_wait(vg_lite_kernel_wait_t * data)
 #endif
         return VG_LITE_TIMEOUT;
     }
+#endif
 
 #if gcFEATURE_VG_FLEXA
     if (data->event_got & FLEXA_TIMEOUT_STATE)
@@ -836,8 +1079,15 @@ static vg_lite_error_t restore_gpu_state(void)
 }
 #endif
 
-static vg_lite_error_t do_reset(void)
+static vg_lite_error_t do_reset(vg_lite_kernel_reset_t* data)
 {
+#if gcdVG_ENABLE_DELAY_RESUME
+    if(data->delay_resume_flag == 1)
+    {
+        /* If delay resume is enabled, power and clock should be turned on first.*/
+        vg_lite_hal_initialize();
+    }
+#endif
     /* reset and enable the GPU interrupt */
     gpu(1);
 
@@ -950,6 +1200,57 @@ static vg_lite_error_t do_query_mem(vg_lite_kernel_mem_t * data)
     return error;
 }
 
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+static vg_lite_error_t do_execute_backup_command(vg_lite_kernel_cmdcache_t* data)
+{
+    vg_lite_kernel_wait_t wait;
+    vg_lite_error_t error = VG_LITE_SUCCESS;
+
+    vg_lite_set_gpu_execute_state(VG_LITE_GPU_RUN);
+    wait.timeout_ms = 5000;
+    wait.event_mask = (uint32_t)~0;
+    wait.reset_type = RESTORE_ALL_COMMAND;
+
+    /* submit command to GPU. */
+    vg_lite_hal_barrier();
+    vg_lite_hal_poke(VG_LITE_HW_CMDBUF_ADDRESS, data->physical);
+    vg_lite_hal_poke(VG_LITE_HW_CMDBUF_SIZE, (data->size + 7) / 8);
+
+    error = do_wait(&wait);
+    return error;
+}
+#endif
+
+#if gcdVG_ENABLE_DELAY_RESUME
+static vg_lite_error_t set_delay_resume(vg_lite_kernel_delay_resume_t* data)
+{
+    delay_resume = data->set_delay_resume;
+
+    return VG_LITE_SUCCESS;
+}
+
+static int do_query_delay_resume(void)
+{
+    if (delay_resume == 1) 
+    {
+        /* Reset delay resume to 0 after query*/
+        delay_resume = 0; 
+        return 1;
+    }
+    else
+        return 0;
+}
+
+static int set_gpu_clock_state(vg_lite_kernel_gpu_clock_state_t* gpu_state)
+{
+#ifdef __ZEPHYR__
+    vg_lite_gpu_execute_state_t state = gpu_state->state;
+    vg_lite_set_gpu_clock_state(state);
+#endif
+    return VG_LITE_SUCCESS;
+}
+#endif
+
 static vg_lite_error_t do_map_memory(vg_lite_kernel_map_memory_t * data)
 {
     vg_lite_error_t error = VG_LITE_SUCCESS;
@@ -979,6 +1280,46 @@ static vg_lite_error_t do_export_memory(vg_lite_kernel_export_memory_t * data)
     vg_lite_error_t error = VG_LITE_SUCCESS;
 
     error = vg_lite_hal_memory_export(&data->fd); 
+
+    return error;
+}
+
+static vg_lite_error_t do_get_running_time(vg_lite_kernel_hardware_running_time_t * data)
+{
+    vg_lite_error_t error = VG_LITE_SUCCESS;
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+#ifdef __linux__
+    data->run_time = total_time;
+    data->hertz = HZ;
+#else
+    data->run_time = total_time;
+    data->hertz = 1e6;
+#endif
+#endif
+    return error;
+}
+
+vg_lite_error_t record_running_time(void)
+{
+    vg_lite_error_t error = VG_LITE_SUCCESS;
+
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+
+#ifdef __linux__
+    end_time = jiffies;
+    period_time = end_time - start_time;
+    total_time += period_time;
+    timming_flag = 0;
+#else
+    gettimeofday(&end_time, NULL);
+    period_time = (end_time.tv_sec - start_time.tv_sec)*1e6 + end_time.tv_usec - start_time.tv_usec;
+    total_time += period_time;
+    timming_flag = 0;
+    //printk("GPU hardware running period time: %f s\n", (float)period_time/1e-6);
+    //printk("GPU hardware running total time: %f s\n", (float)total_time/1e-6);
+#endif
+
+#endif
 
     return error;
 }
@@ -1030,7 +1371,7 @@ vg_lite_error_t vg_lite_kernel(vg_lite_kernel_command_t command, void * data)
 
         case VG_LITE_RESET:
             /* Reset the GPU. */
-            return do_reset();
+            return do_reset(data);
             
         case VG_LITE_DEBUG:
             /* Perform debugging features. */
@@ -1086,6 +1427,25 @@ vg_lite_error_t vg_lite_kernel(vg_lite_kernel_command_t command, void * data)
 
         case VG_LITE_EXPORT_MEMORY:
             return do_export_memory(data);
+
+        case VG_LITE_RECORD_RUNNING_TIME:
+            return do_get_running_time(data);
+
+#if gcdVG_ENABLE_DELAY_RESUME
+        case VG_LITE_SET_DELAY_RESUME:
+            return set_delay_resume(data);
+
+        case VG_LITE_QUERY_DELAY_RESUME:
+            return do_query_delay_resume();
+        
+        case VG_LITE_SET_GPU_CLOCK_STATE:
+            return set_gpu_clock_state(data);
+#endif
+
+#if gcdVG_ENABLE_COMMAND_BUFFER_CACHE
+        case VG_LITE_EXECUTE_BACKUP_COMMAND:
+            return do_execute_backup_command(data);
+#endif
 
         default:
             break;

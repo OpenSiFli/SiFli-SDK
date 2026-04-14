@@ -1,4 +1,5 @@
 # 屏幕模组压力测试程序
+源码路径：example/lcd_stress_test
 ```{warning}
 未验证
 ```

@@ -6,6 +6,12 @@ config RT_USING_FINSH
 
 if RT_USING_FINSH
 
+config MSH_CMD_SLIM
+    bool "A subset of msh commands is effective"
+    default n
+    help
+        In order to save code space, if enabled, only msh commands defined by `MSH_CMD_EXPORT_REL` take effect, others are ignored
+
 config FINSH_THREAD_NAME
     string "The finsh thread name"
     default "tshell"

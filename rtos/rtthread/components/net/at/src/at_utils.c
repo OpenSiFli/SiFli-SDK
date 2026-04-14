@@ -57,7 +57,7 @@ void at_print_raw_cmd(const char *name, const char *buf, rt_size_t size)
     }
 }
 
-rt_weak rt_size_t at_utils_send(rt_device_t dev,
+RT_WEAK rt_size_t at_utils_send(rt_device_t dev,
                                 rt_off_t    pos,
                                 const void *buffer,
                                 rt_size_t   size)

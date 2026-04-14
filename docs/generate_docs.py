@@ -1,9 +1,13 @@
+# SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+
 import subprocess
 import argparse
 import os
 import shutil
 from copy_example_doc import ExampleDocCopier
 from copy_board_doc import BoardDocCopier
+from copy_tool_doc import ToolDocCopier
 
 def run_command(command, cwd=None):
     print(f"Run command: {command}")
@@ -100,7 +104,12 @@ def main(chip, lang):
     board_copier = BoardDocCopier(lang)
     board_copier.copy_board_docs("../", f"source/{lang}/supported_boards")
 
-    # Step 4: Build HTML documentation
+    # Step 4: Copy tool documents
+    print("Copying tool documents...")
+    tool_copier = ToolDocCopier(lang)
+    tool_copier.copy_tool_docs("../tools", f"source/{lang}/tools")
+
+    # Step 5: Build HTML documentation
     copy_templates(chip, lang)
     make_html(chip, lang)
 

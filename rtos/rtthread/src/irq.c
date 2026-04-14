@@ -114,7 +114,13 @@ __ROM_USED rt_uint8_t rt_interrupt_get_nest(void)
 {
     return rt_interrupt_nest;
 }
+
+__ROM_USED void rt_interrupt_nest_clear(void)
+{
+    rt_interrupt_nest = 0;
+}
 RTM_EXPORT(rt_interrupt_get_nest);
+RTM_EXPORT(rt_interrupt_nest_clear);
 
 RTM_EXPORT(rt_hw_interrupt_disable);
 RTM_EXPORT(rt_hw_interrupt_enable);

@@ -22,7 +22,7 @@ void lv_example_tjpgd_2(void)
  */
 void lv_example_tjpgd_1(void)
 {
-    lv_obj_t *wp;
+    lv_obj_t * wp;
 
     wp = lv_image_create(lv_screen_active());
     /* Assuming a File system is attached to letter 'A'

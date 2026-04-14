@@ -13,9 +13,6 @@ if GetDepend('ULOG_BACKEND_USING_TSDB'):
 if GetDepend('ULOG_BACKEND_USING_RAM'):
     src += ['backend/ram_be.c']
 
-if GetDepend('SAVE_ASSERT_CONTEXT_IN_FLASH'):
-    src += ['backend/assert_context_be.c']
-
 if GetDepend('ULOG_USING_SYSLOG'):
     path +=  [cwd + '/syslog']
     src  += Glob('syslog/*.c')

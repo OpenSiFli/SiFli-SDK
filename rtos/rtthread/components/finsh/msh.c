@@ -374,7 +374,7 @@ static int _msh_exec_lwp(char *cmd, rt_size_t length)
 }
 #endif
 
-__ROM_USED int msh_exec(char *cmd, rt_size_t length)
+__ROM_USED int _msh_exec(char *cmd, rt_size_t length)
 {
     int cmd_ret;
 
@@ -431,6 +431,38 @@ __ROM_USED int msh_exec(char *cmd, rt_size_t length)
     }
     rt_kprintf("%s: command not found.\n", cmd);
     return -1;
+}
+
+#ifdef SOLUTION /* optimize FINSH_STACK_SIZE to 1024 */
+typedef struct
+{
+    char      *cmd;
+    rt_size_t length;
+} msh_cmd_t;
+
+static void process_msg(void *parameter)
+{
+    msh_cmd_t *p_cmd = (msh_cmd_t *) parameter;
+    _msh_exec(p_cmd->cmd, p_cmd->length);
+    rt_free(p_cmd);
+    rt_thread_exit();
+}
+#endif
+
+__ROM_USED int msh_exec(char *cmd, rt_size_t length)
+{
+#ifdef SOLUTION
+    msh_cmd_t *p_cmd = rt_malloc(sizeof(msh_cmd_t) + strlen(cmd) + 1);
+    RT_ASSERT(cmd);
+    p_cmd->cmd = (char *)(p_cmd + 1);
+    strcpy(p_cmd->cmd, cmd);
+    p_cmd->length = length;
+    rt_thread_t thread = rt_thread_create("temp_thread", process_msg, p_cmd, 4096, FINSH_THREAD_PRIORITY - 3, 20);
+    rt_thread_startup(thread);
+    return 0;
+#else
+    return _msh_exec(cmd, length);
+#endif
 }
 
 static int str_common(const char *str1, const char *str2)

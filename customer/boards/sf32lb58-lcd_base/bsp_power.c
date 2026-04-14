@@ -1,7 +1,14 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "bsp_board.h"
 
 #define SD1_RESET_PIN       (49)
 #define SD1_EN_PIN          (80)
+#define SD1_VDD_PIN         (74)
 
 void BSP_GPIO_Set(int pin, int val, int is_porta)
 {
@@ -53,6 +60,23 @@ void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
 #endif
 }
 
+void sd1_pinmux_config()
+{
+    HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA41, SD1_DIO0, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA30, SD1_DIO1, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA36, SD1_DIO2, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA40, SD1_DIO3, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA38, SD1_DIO4, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA37, SD1_DIO5, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA35, SD1_DIO6, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA33, SD1_DIO7, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA34, SD1_CMD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA49, GPIO_A49, PIN_PULLUP, 1);     // SD1 RESET, need set 0 first?
+    HAL_PIN_Set(PAD_PA80, GPIO_A80, PIN_PULLUP, 1);     // SD1 EN
+}
+
+
 void BSP_SD_PowerUp(void)
 {
 #ifdef PMIC_CTRL_ENABLE
@@ -62,12 +86,34 @@ void BSP_SD_PowerUp(void)
 
     BSP_GPIO_Set(SD1_EN_PIN, 1, 1);
     BSP_GPIO_Set(SD1_RESET_PIN, 1, 1);
+    BSP_GPIO_Set(SD1_VDD_PIN, 1, 1);
+    sd1_pinmux_config();
 }
 
 void BSP_SD_PowerDown(void)
 {
     BSP_GPIO_Set(SD1_EN_PIN, 0, 1);
     BSP_GPIO_Set(SD1_RESET_PIN, 0, 1);
+    BSP_GPIO_Set(SD1_VDD_PIN, 0, 1);
 }
 
+void sd2_pinmux_config()
+{
+    HAL_PIN_Set(PAD_PA70, SD2_CMD,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA75, SD2_DIO1, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA76, SD2_DIO0, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA77, SD2_CLK,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA79, SD2_DIO2, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA81, SD2_DIO3, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA58, GPIO_A58, PIN_NOPULL, 1);     // SD1 card detect pin
+}
 
+void BSP_SD2_PowerUp(void)
+{
+    sd2_pinmux_config();
+}
+
+void BSP_SD2_PowerDown(void)
+{
+
+}

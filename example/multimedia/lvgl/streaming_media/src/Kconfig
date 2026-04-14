@@ -4,6 +4,4 @@ if RT_USING_DFS
     bool "Enable shared file system between windows"
     default n
 endif
-config MEDIA_CACHE_SIZE
-    int "Media cache size"
-    default 4000000
+

@@ -24,6 +24,10 @@ extern "C" {
 
 #define AT_CMD_NAME_LEN                16
 
+#ifndef AT_CMD_MAX_LEN
+#define AT_CMD_MAX_LEN                 128
+#endif
+
 #ifndef AT_SERVER_RECV_BUFF_LEN
 #define AT_SERVER_RECV_BUFF_LEN        256
 #endif
@@ -146,12 +150,21 @@ struct at_urc_table
 };
 typedef struct at_urc *at_urc_table_t;
 
+typedef struct
+{
+    int cmd;
+    const char *cmd_prefix;
+    const char *end_prefix;
+    uint32_t tick;      /*timeout tick uint ms*/
+    int (*response_handle)(at_response_t resp, void *args);
+} at_client_cmd_t;
 struct at_client
 {
     rt_device_t device;
 
     at_status_t status;
     char end_sign;
+    const char *end_str;
 
     char *send_buf;
     /* The maximum supported send cmd length */
@@ -175,6 +188,8 @@ struct at_client
     struct at_urc_table *urc_table;
     rt_size_t urc_table_size;
     const struct at_urc *urc;
+    const at_client_cmd_t *cmd_table;
+    rt_size_t cmd_size;
 
     rt_thread_t parser;
 };
@@ -217,8 +232,27 @@ rt_size_t at_client_obj_recv(at_client_t client, char *buf, rt_size_t size, rt_i
 /* set AT client a line end sign */
 void at_obj_set_end_sign(at_client_t client, char ch);
 
+
+/**
+ *  AT client set end str.
+ *
+ * @param client current AT client object
+ * @param str the end str
+ */
+void at_obj_set_end_str(at_client_t client, const char *str);
+
+
 /* Set URC(Unsolicited Result Code) table */
 int at_obj_set_urc_table(at_client_t client, const struct at_urc *table, rt_size_t size);
+
+/**
+ * set cmd control table
+ *
+ * @param client current AT client object
+ * @param table cmd table
+ * @param size table size
+ */
+int at_obj_set_cmd_table(at_client_t client, const at_client_cmd_t *cmd_table, rt_size_t table_sz);
 
 /* AT client send commands to AT server and waiter response */
 int at_obj_exec_cmd(at_client_t client, at_response_t resp, const char *cmd_expr, ...);
@@ -233,6 +267,20 @@ const char *at_resp_get_line(at_response_t resp, rt_size_t resp_line);
 const char *at_resp_get_line_by_kw(at_response_t resp, const char *keyword);
 int at_resp_parse_line_args(at_response_t resp, rt_size_t resp_line, const char *resp_expr, ...);
 int at_resp_parse_line_args_by_kw(at_response_t resp, const char *keyword, const char *resp_expr, ...);
+/**
+ * at client cmd control
+ *
+ * @param client current AT client object
+ * @param cmd control cmd
+ * @param line_num the number of setting response lines
+ *         = 0: the response data will auto return when received 'OK' or 'ERROR' or end_str
+ *        != 0: the response data will return when received setting lines number data
+ * @param param cmd param
+ * @param size param size
+ * @param args resp args
+ *
+ */
+int at_client_cmd_control(at_client_t client, int cmd, rt_size_t line_num, const char *param, rt_size_t size, void *args);
 
 /* ========================== single AT client function ============================ */
 

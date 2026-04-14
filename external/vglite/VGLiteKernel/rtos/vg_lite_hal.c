@@ -24,6 +24,7 @@
 *
 *****************************************************************************/
 
+
 #include "board.h"
 #include "vg_lite_platform.h"
 #include "vg_lite_kernel.h"
@@ -150,6 +151,7 @@ struct vg_lite_device {
     uint32_t physical[VG_SYSTEM_RESERVE_COUNT];
     uint32_t size[VG_SYSTEM_RESERVE_COUNT];
     struct memory_heap heap[VG_SYSTEM_RESERVE_COUNT];
+    unsigned int irq_line;
     int irq_enabled;
     volatile uint32_t int_flags;
 #if _BAREMETAL
@@ -338,7 +340,7 @@ vg_lite_error_t vg_lite_hal_allocate_contiguous(unsigned long size, vg_lite_vidm
     /* Align the size to 64 bytes. */
     aligned_size = (size + 63) & ~63;
 
-    //rt_kprintf("[%d]free:%d,%d\n", pool, device->heap[pool].free, size);
+    rt_kprintf("[%d]free:%d,%d\n", pool, device->heap[pool].free, size);
 
     /* Check if there is enough free memory available. */
     if (aligned_size > device->heap[pool].free) {
@@ -534,7 +536,16 @@ void vg_lite_IRQHandler(void)
         if (device->int_queue) {
             os_sem_release(device->int_queue);
         }
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+        record_running_time();
+#endif
     }
+#if 0
+    if(flags = VGLITE_EVENT_FRAME_END){
+    /* A callback function can be added here to inform that gpu is idle. */
+        (*callback)();
+    }
+#endif
 }
 
 int32_t vg_lite_hal_wait_interrupt(uint32_t timeout, uint32_t mask, uint32_t * value)
@@ -607,6 +618,52 @@ vg_lite_error_t vg_lite_hal_operation_cache(void *handle, vg_lite_cache_op_t cac
     return VG_LITE_SUCCESS;
 }
 
+#ifdef __XILINX_BSP__
+static void isr_routine(void)
+{
+    uint32_t flags = 0;
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+    flags = vg_lite_hal_peek(VG_LITE_INTR_STATUS);
+
+    if (flags) {
+        /* Combine with current interrupt flags. */
+        device->int_flags |= flags;
+
+        /* Wake up any waiters. */
+        if(device->int_queue){
+            xSemaphoreGiveFromISR(device->int_queue, &xHigherPriorityTaskWoken);
+            if(xHigherPriorityTaskWoken != pdFALSE )
+            {
+                portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+            }
+        }
+#if gcdVG_RECORD_HARDWARE_RUNNING_TIME
+        record_running_time();
+#endif
+    }
+}
+#endif
+
+static vg_lite_error_t setup_isr(void)
+{
+#ifdef __XILINX_BSP__
+    vg_lite_error_t error = VG_LITE_SUCCESS;
+    TaskHandle_t task_handle;
+    BaseType_t ret;
+
+    ret = xPortInstallInterruptHandler(device->irq_line, (XInterruptHandler)isr_routine, (void *)device);
+    if (ret == pdPASS) {
+        vPortEnableInterrupt(device->irq_line);
+    } else {
+        return VG_LITE_GENERIC_IO;
+    }
+
+#else
+    return VG_LITE_SUCCESS;
+#endif
+}
+
 static void vg_lite_exit(void)
 {
     heap_node_t *pos;
@@ -631,6 +688,10 @@ static void vg_lite_exit(void)
             }
         }
 
+#if !_BAREMETAL 
+        os_sem_delete(device->int_queue);
+#endif
+
         /* Free up the device structure. */
         vg_lite_hal_free(device);
     }
@@ -649,8 +710,16 @@ static int vg_lite_init(void)
     /* Zero out the enture structure. */
     _memset(device, 0, sizeof(struct vg_lite_device));
 
+    // for (i = 0; i< VG_SYSTEM_RESERVE_COUNT; i++) {
+    //     gpuMemBase[i]      = param->gpu_mem_base[i];
+    //     contiguousMem[i]   = param->contiguous_mem_base[i];
+    //     heap_size[i]       = param->contiguous_mem_size[i];
+    // }
+    
+
     /* Setup register memory. **********************************************/
     device->register_base = registerMemBase;
+    device->irq_line = 61;
 
     
     /* Initialize contiguous memory. ***************************************/
@@ -694,6 +763,7 @@ static int vg_lite_init(void)
     int_queue = os_sem_create("vglite", 0);
     device->int_queue = int_queue;
     device->int_flags = 0;
+    setup_isr();
 #endif
     /* Success. */
     return 0;

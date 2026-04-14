@@ -1,4 +1,11 @@
 # RPMsg-Lite Example
+### Supported Development Boards
+This example can run on the following development boards:
+- eh-lb551
+- eh-lb555
+- sf32lb56-lcd series
+- sf32lb58-lcd series
+
 ## Overview
 This example demonstrates the basic usage of the RPMsg-Lite component.
 

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * @file llt_mem.c
  *
@@ -13,8 +19,7 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-#if defined(RT_USING_LONG_LIFETIME_MEMHEAP)
-
+#if defined(RT_USING_LONG_LIFETIME_MEMHEAP) && !defined (LLT_MEMHEAP_CUSTOM)
 ALIGN(4) static rt_uint8_t llt_mem_pool[LLT_MEMHEAP_SIZE];
 struct rt_memheap llt_mem_heap;
 
@@ -25,6 +30,5 @@ int llt_mem_init(void)
     return 0;
 }
 INIT_COMPONENT_EXPORT(llt_mem_init);
-
-#endif /* RT_USING_LONG_LIFETIME_MEMHEAP */
+#endif /* RT_USING_LONG_LIFETIME_MEMHEAP && !LLT_MEMHEAP_CUSTOM*/
 

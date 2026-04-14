@@ -10,8 +10,7 @@
 #ifndef LV_ATTRIBUTE_IMAGE_1F617
     #define LV_ATTRIBUTE_IMAGE_1F617
 #endif
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_1F617 uint8_t emoji_F617_map[] =
-{
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_1F617 uint8_t emoji_F617_map[] = {
 #if LV_COLOR_DEPTH == 1 || LV_COLOR_DEPTH == 8
     /*Pixel format: Red: 3 bit, Green: 3 bit, Blue: 2 bit*/
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xd1,
@@ -239,18 +238,19 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_IMAGE_1F617 uint8_t emoji_F617_map[] =
 #endif
 };
 
-const lv_image_dsc_t emoji_F617 =
-{
-    .header.cf = LV_COLOR_FORMAT_NATIVE,
-    .header.w = 72,
-    .header.h = 72,
+const lv_image_dsc_t emoji_F617 = {
+    .header = {
+        .cf = LV_COLOR_FORMAT_NATIVE,
+        .w = 72,
+        .h = 72,
 #if LV_COLOR_DEPTH == 1 || LV_COLOR_DEPTH == 8
-    .header.stride = 72,
+        .stride = 72,
 #elif LV_COLOR_DEPTH == 16
-    .header.stride = 144,
+        .stride = 144,
 #elif LV_COLOR_DEPTH == 32
-    .header.stride = 288,
+        .stride = 288,
 #endif
-    .data = emoji_F617_map,
+    },
     .data_size = sizeof(emoji_F617_map),
+    .data = emoji_F617_map,
 };

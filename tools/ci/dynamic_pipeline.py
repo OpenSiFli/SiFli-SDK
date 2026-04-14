@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
 # -*- coding: utf-8 -*-
 import os
 import sys
@@ -13,7 +15,7 @@ class DynamicPipelineGenerator:
         self.config_file = config_file
         self.config = self._load_config()
         self.pipeline_config = {
-            'stages': ['build', 'collect'],
+            'stages': ['build', 'collect', 'merge'],
             'variables': {
                 'GIT_SUBMODULE_STRATEGY': 'recursive',
                 'COMPILER': 'gcc',
@@ -60,7 +62,11 @@ class DynamicPipelineGenerator:
                 'bash tools/ci/build_job.sh'
             ],
             'artifacts': {
-                'paths': [f'ci_build_logs/{log_name}.log', f'artifacts/{log_name}/'],
+                'paths': [
+                    f'ci_build_logs/{log_name}.log',
+                    f'artifacts/{log_name}/',
+                    f'job_status/{log_name}.env'
+                ],
                 'expire_in': '1 day',
                 'when': 'always'
             },
@@ -72,38 +78,56 @@ class DynamicPipelineGenerator:
         return job_name, job_config
     
     def _create_collect_job(self, build_job_names):
-        """创建收集artifacts的Job - 使用分层策略避免needs限制"""
-        MAX_NEEDS_PER_JOB = 50  # GitLab CI的needs限制
+        """创建收集artifacts的Job - 使用分层策略控制单个收集Job规模"""
+        MAX_GROUP_SIZE = 50
         
         collect_jobs = {}
         
-        if len(build_job_names) <= MAX_NEEDS_PER_JOB:
+        if len(build_job_names) <= MAX_GROUP_SIZE:
             # 如果job数量不超过限制，直接创建单个收集job
             collect_jobs['collect_all_artifacts'] = {
                 'stage': 'collect',
                 'tags': ['build'],
                 'script': [
                     'echo "🔍 开始收集所有构建artifacts..."',
-                    'python3 tools/ci/collect_artifacts_simple.py',
+                    'python3 tools/ci/collect_artifacts_simple.py --output-dir merged_artifacts',
                 ],
                 'artifacts': {
                     'paths': ['merged_artifacts/'],
                     'expire_in': '1 week',
                     'when': 'always'
                 },
-                'needs': [{'job': job_name, 'artifacts': True} for job_name in build_job_names],
+                'dependencies': build_job_names,
                 'rules': [
                     {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
                 ]
             }
+
+            collect_jobs['collect_failed_artifacts'] = {
+                'stage': 'collect',
+                'tags': ['build'],
+                'script': [
+                    'echo "🔍 开始收集失败Job的构建artifacts..."',
+                    'python3 tools/ci/collect_artifacts_simple.py --failed-only --output-dir failed_merged_artifacts',
+                ],
+                'artifacts': {
+                    'paths': ['failed_merged_artifacts/'],
+                    'expire_in': '1 week',
+                    'when': 'always'
+                },
+                'dependencies': build_job_names,
+                'rules': [
+                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'on_failure'}
+                ]
+            }
         else:
             # 如果job数量超过限制，使用分层收集策略
-            print(f"⚠️  构建job数量({len(build_job_names)})超过GitLab CI needs限制({MAX_NEEDS_PER_JOB})，使用分层收集策略")
+            print(f"⚠️  构建job数量({len(build_job_names)})超过单个收集Job建议规模({MAX_GROUP_SIZE})，使用分层收集策略")
             
             # 将构建job分组
             job_groups = []
-            for i in range(0, len(build_job_names), MAX_NEEDS_PER_JOB):
-                group = build_job_names[i:i + MAX_NEEDS_PER_JOB]
+            for i in range(0, len(build_job_names), MAX_GROUP_SIZE):
+                group = build_job_names[i:i + MAX_GROUP_SIZE]
                 job_groups.append(group)
             
             intermediate_jobs = []
@@ -118,9 +142,7 @@ class DynamicPipelineGenerator:
                     'tags': ['build'],
                     'script': [
                         f'echo "🔍 收集第{group_idx + 1}组artifacts (共{len(job_groups)}组)..."',
-                        f'mkdir -p group_{group_idx + 1}_artifacts',
-                        'python3 tools/ci/collect_artifacts_simple.py',
-                        f'mv merged_artifacts group_{group_idx + 1}_artifacts/',
+                        f'python3 tools/ci/collect_artifacts_simple.py --output-dir group_{group_idx + 1}_artifacts/merged_artifacts',
                         f'echo "✅ 第{group_idx + 1}组收集完成"'
                     ],
                     'artifacts': {
@@ -128,7 +150,7 @@ class DynamicPipelineGenerator:
                         'expire_in': '1 day',
                         'when': 'always'
                     },
-                    'needs': [{'job': job_name, 'artifacts': True} for job_name in job_group],
+                    'dependencies': job_group,
                     'rules': [
                         {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
                     ]
@@ -136,12 +158,11 @@ class DynamicPipelineGenerator:
             
             # 创建最终合并job
             collect_jobs['merge_all_artifacts'] = {
-                'stage': 'collect',
+                'stage': 'merge',
                 'tags': ['build'],
                 'script': [
                     'echo "🔄 合并所有组的artifacts..."',
-                    'mkdir -p final_merged_artifacts',
-                    'python3 tools/ci/merge_group_artifacts.py',
+                    'python3 tools/ci/merge_group_artifacts.py --output-dir final_merged_artifacts',
                 ],
                 'artifacts': {
                     'paths': [
@@ -150,9 +171,29 @@ class DynamicPipelineGenerator:
                     'expire_in': '1 week',
                     'when': 'always'
                 },
-                'needs': [{'job': job_name, 'artifacts': True} for job_name in intermediate_jobs],
+                'dependencies': intermediate_jobs,
                 'rules': [
                     {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
+                ]
+            }
+
+            collect_jobs['merge_failed_artifacts'] = {
+                'stage': 'merge',
+                'tags': ['build'],
+                'script': [
+                    'echo "🔄 合并失败Job的artifacts..."',
+                    'python3 tools/ci/merge_group_artifacts.py --failed-only --output-dir failed_merged_artifacts',
+                ],
+                'artifacts': {
+                    'paths': [
+                        'failed_merged_artifacts/'
+                    ],
+                    'expire_in': '1 week',
+                    'when': 'always'
+                },
+                'dependencies': intermediate_jobs,
+                'rules': [
+                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'on_failure'}
                 ]
             }
         

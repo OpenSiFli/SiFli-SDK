@@ -2,15 +2,10 @@
 源码路径：example/hal/pwm
 ## 支持的平台
 例程可以运行在以下开发板.
-<<<<<<< HEAD   (0ee186 [opt][swt6621] Add library files for swt6621s)
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-=======
 * sf32lb52-nano
-* sf32lb52-lcd
-* sf32lb56-lcd
-* sf32lb58-lcd
->>>>>>> CHANGE (9b7f9b [bug][example][hal_pwm] Resolved the compilation errors and )
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 ## 概述
 * 包含了GPtimer通过IO口输出PWM的示例
 * 包含了采用Atimer通过IO输出互补PWM的示例
@@ -51,15 +46,10 @@ msh />
 物理位置指管脚在板子上实际引出的排针位置
 |版型名称  | PWM       | CHX     |   引脚(物理位置)  |
 |--------|------------|--------|---------|
-<<<<<<< HEAD   (0ee186 [opt][swt6621] Add library files for swt6621s)
-|525    | GPTIM2     | CH1    |    PA09 （37）     |
-|587  | GPTIM1     | CH2  |      PA51    （CONN2 28）    |
-=======
 |sf32lb52-nano    | GPTIM2     | CH1    |    PA09 （在板子背面需要手动引出）|
 |sf32lb52-lcd   | GPTIM2     | CH1    |    PA09 （37）     |
 |sf32lb56-lcd    | GPTIM2     | CH1    |    PA36 （40）     |
 |sf32lb58-lcd  | GPTIM1     | CH2  |      PA51    （CONN2 28）    |
->>>>>>> CHANGE (9b7f9b [bug][example][hal_pwm] Resolved the compilation errors and )
 ```c
     #define PAD_PA_09 PAD_PA09 /* 52系列默认PA09输出(物理位置37) */
     HAL_PIN_Set(PAD_PA_09, cfg->pad_func, PIN_PULLUP, 1);/*PA09配置为GPTIM2_CH1功能*/
@@ -127,15 +117,10 @@ atimer pwm demo end!
 物理位置指管脚对应在板子上的引脚排针位置
 |版型名称  | pwm       | 输出Channel1     | 输出Channel2   |    
 |--------|------------|---------------|-------------------|
-<<<<<<< HEAD   (0ee186 [opt][swt6621] Add library files for swt6621s)
-|525    | ATIM1     | PAD_PA00（物理位置32）,PAD_PA02（物理位置36）   | PAD_PA03（物理位置40）,PAD_PA03（物理位置38）    |   
-|587  | ATIM2     | PAD_PA84（conn2 21）,PAD_PA86（conn2 24） |PAD_PA90（conn2 27）,PAD_PA91（conn2 26）  |
-=======
 |sf32lb52-nano    | ATIM1     | PAD_PA00,PAD_PA02(物理位置在板子背面需要手动飞线引出)   | PAD_PA03,PAD_PA032(物理位置在板子背面需要手动飞线引出)    |  
 |sf32lb52-lcd    | ATIM1     | PAD_PA00（物理位置32）,PAD_PA02（物理位置36）   | PAD_PA03（物理位置40）,PAD_PA03（物理位置38）    | 
 |sf32lb56-lcd    | ATIM1     | PAD_PA24,PAD_PA25（PA24对应模组55，PA25对应模组51，需要从模组飞线）   | PAD_PA29,PAD_PA30（PA29对应模组23，PA25对应模组49，需要从模组飞线 ）    |
 |sf32lb58-lcd  | ATIM2     | PAD_PA84（conn2 21）,PAD_PA86（conn2 24） |PAD_PA90（conn2 27）,PAD_PA91（conn2 26）  |
->>>>>>> CHANGE (9b7f9b [bug][example][hal_pwm] Resolved the compilation errors and )
 * 52系列：PA00,PA02输出Channel1互补PWM波形,PA03,PA04输出Channel2互补PWM波形:
 * 52系列：PA23,PA24输出Channel1互补PWM波形,PA29,PA30输出Channel2互补PWM波形:
 * 587系列：PA84,PA86输出Channel1互补PWM波形,PA90,PA91输出Channel2互补PWM波形:

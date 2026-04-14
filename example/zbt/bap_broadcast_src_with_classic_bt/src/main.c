@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "bap_broadcast_src_api.h"
 
 /********* classis bt section start *****/
@@ -221,7 +227,7 @@ __ROM_USED void music(int argc, char **argv)
         {
             bd_addr_t mac;
             bt_addr_convert_from_string_to_general(argv[2], &mac);
-            bt_interface_conn_ext((unsigned char *)&mac, BT_PROFILE_A2DP);
+            bt_interface_conn_ext((void *)&mac, BT_PROFILE_A2DP);
         }
     }
 }

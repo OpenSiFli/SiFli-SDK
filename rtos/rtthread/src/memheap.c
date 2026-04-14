@@ -24,6 +24,7 @@
 
 #ifdef RT_USING_MEMHEAP
 
+#ifndef RT_USING_MEMHEAP2
 #define RT_MEMHEAP_BACKUP_OPT
 
 /* dynamic pool magic and mask */
@@ -259,8 +260,21 @@ __ROM_USED void *rt_memheap_alloc(struct rt_memheap *heap, rt_size_t size)
     RT_ASSERT(heap != RT_NULL);
     RT_ASSERT(rt_object_get_type(&heap->parent) == RT_Object_Class_MemHeap);
 
-    /* align allocated size */
-    size = RT_ALIGN(size, RT_ALIGN_SIZE);
+#if defined (SOLUTION)
+    /* align allocated size. Fix cache line bug when using DMA */
+    if (0 == rt_memcmp(heap->parent.name, "psram_memheap", sizeof("psram_memheap")) ||
+            0 == rt_memcmp(heap->parent.name, "heap", sizeof("heap")))
+    {
+        size = RT_ALIGN(size + sizeof(struct rt_memheap_item), 32);
+        size -= sizeof(struct rt_memheap_item);
+    }
+    else
+#endif
+    {
+        /* align allocated size */
+        size = RT_ALIGN(size, RT_ALIGN_SIZE);
+    }
+
     if (size < RT_MEMHEAP_MINIALLOC)
         size = RT_MEMHEAP_MINIALLOC;
 
@@ -990,6 +1004,74 @@ __ROM_USED rt_err_t rt_memheap_restore(void *instance, rt_uint8_t *buf, rt_uint3
     return RT_EOK;
 }
 
+rt_err_t rt_memheap_dump(struct rt_memheap *heap, rt_mem_dump_cb_t dump_cb, void *user_data, rt_uint32_t *dump_size, rt_uint32_t *actual_size)
+{
+    rt_uint32_t copy_size;
+    rt_uint32_t ret_size;
+#ifdef RT_MEMHEAP_BACKUP_OPT
+    struct rt_memheap_item *next;
+    rt_uint32_t total_actual_size;
+#endif /* RT_MEMHEAP_BACKUP_OPT */
+
+    if (!heap || !dump_cb)
+    {
+        return RT_ERROR;
+    }
+
+#ifndef RT_MEMHEAP_BACKUP_OPT
+    copy_size = rt_memheap_used_size(heap);
+    ret_size = dump_cb((void *)heap->start_addr, copy_size, user_data, actual_size);
+    if (dump_size)
+    {
+        *dump_size = ret_size;
+    }
+    if (ret_size < copy_size)
+    {
+        return RT_EFULL;
+    }
+#else
+    next = heap->block_list;
+    total_actual_size = 0;
+    if (dump_size)
+    {
+        *dump_size = 0;
+    }
+    while (next < RT_MEMHEAP_TAILER(heap))
+    {
+        if (RT_MEMHEAP_IS_USED(next))
+        {
+            /* copy header and data */
+            copy_size = (rt_uint32_t)next->next - (rt_uint32_t)next;
+        }
+        else
+        {
+            /* only copy header */
+            copy_size = RT_MEMHEAP_SIZE;
+        }
+
+        ret_size = dump_cb((rt_uint32_t)next, copy_size, user_data, actual_size);
+        if (actual_size)
+        {
+            total_actual_size += *actual_size;
+            *actual_size = total_actual_size;
+        }
+        if (dump_size)
+        {
+            *dump_size += ret_size;
+        }
+        if (ret_size < copy_size)
+        {
+            return RT_EFULL;
+        }
+        next = next->next;
+    }
+
+#endif
+
+    return RT_EOK;
+}
+
+
 #ifndef SOC_BF0_LCPU
 rt_size_t rt_heapmem_size(void *rmem)
 {
@@ -1124,6 +1206,15 @@ __ROM_USED void *rt_realloc(void *rmem, rt_size_t newsize)
         }
     }
 
+    if (new_ptr != RT_NULL)
+    {
+#ifdef RT_USING_MEMTRACE
+        struct rt_memheap_item *header_ptr;
+        header_ptr    = (struct rt_memheap_item *)((rt_uint8_t *)new_ptr - RT_MEMHEAP_SIZE);
+        header_ptr->ret_addr = MEMHEAP_RET_ADDR;
+#endif /* RT_USING_MEMTRACE */
+    }
+
     return new_ptr;
 }
 RTM_EXPORT(rt_realloc);
@@ -1139,6 +1230,11 @@ __ROM_USED void *rt_calloc(rt_size_t count, rt_size_t size)
     {
         /* clean memory */
         rt_memset(ptr, 0, total_size);
+#ifdef RT_USING_MEMTRACE
+        struct rt_memheap_item *header_ptr;
+        header_ptr    = (struct rt_memheap_item *)((rt_uint8_t *)ptr - RT_MEMHEAP_SIZE);
+        header_ptr->ret_addr = MEMHEAP_RET_ADDR;
+#endif /* RT_USING_MEMTRACE */
     }
 
     return ptr;
@@ -1199,6 +1295,28 @@ rt_err_t rt_memheap_remove_from_sys(struct rt_memheap *heap)
     return RT_EOK;
 }
 
+__ROM_USED rt_uint32_t rt_mem_available_size(void)
+{
+    return _heap.available_size;
+}
+
+__ROM_USED rt_uint32_t rt_mem_header_size(void)
+{
+    return sizeof(struct rt_memheap_item);
+}
+
+__ROM_USED rt_uint8_t rt_mem_is_sysheap(void *ptr)
+{
+    return ((void *) _heap.start_addr <= ptr && ptr < (void *) _heap.start_addr + _heap.pool_size) ? 1 : 0;
+}
+__ROM_USED rt_uint32_t rt_mem_ret_addr_offset(void)
+{
+#ifdef RT_USING_MEMTRACE
+    return sizeof(struct rt_memheap_item) - (unsigned long)(&((struct rt_memheap_item *)0)->ret_addr);
+#else
+    return 0;
+#endif
+}
 #ifdef RT_USING_FINSH
 #include <finsh.h>
 
@@ -1220,4 +1338,5 @@ rt_uint32_t used_sram_size(void)
 }
 #endif
 
-#endif
+#endif /* RT_USING_MEMHEAP2 */
+#endif /* RT_USING_MEMHEAP */

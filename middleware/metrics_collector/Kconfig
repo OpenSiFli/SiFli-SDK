@@ -6,6 +6,10 @@ menuconfig USING_METRICS_COLLECTOR
         int "Collector Period Speedup Factor for test purpose, e.g. 2: 2x faster, 3: 3x faster"
         default 1
         
+        config MC_MAX_DATA_LEN
+        int "Max data length for one metrics item"
+        default 512
+        
         config MC_CLIENT_ENABLED
         bool "Client without direct storage access"
         default n
@@ -17,7 +21,7 @@ menuconfig USING_METRICS_COLLECTOR
         if !MC_CLIENT_ENABLED
             config MC_DEFAULT_DB_SIZE
                 int "Default DB Size in byte"
-                default 2048
+                default 65536
             
             config MC_AUTO_INIT_DISABLED
                 bool "Disable auto init"
@@ -25,7 +29,7 @@ menuconfig USING_METRICS_COLLECTOR
 
             choice
                 prompt "Select Backend"
-                default MC_BACKEND_USING_TSDB
+                default MC_BACKEND_USING_FILE
 
                 config MC_BACKEND_USING_TSDB
                     bool "Use TSDB"

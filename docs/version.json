@@ -5,6 +5,14 @@
         "type": "branch"
     },
     {
+        "version": "v2.4.6",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
+        "version": "v2.4.5",
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
+    },
+    {
         "version": "v2.4.4",
         "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"]
     },

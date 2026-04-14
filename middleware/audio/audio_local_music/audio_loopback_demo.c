@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +22,7 @@
 
 #define MIC_RECORD_FILE "/music/mic16k.wav"
 //#define MIC_RECORD_FILE "/ramfs/mic16k.pcm"  //using ramfs if mounted ramfs
-#define RECORD_USING_WEBRTC 0
+#define RECORD_USING_WEBRTC 1
 
 #ifndef PKG_USING_WEBRTC
     #undef RECORD_USING_WEBRTC

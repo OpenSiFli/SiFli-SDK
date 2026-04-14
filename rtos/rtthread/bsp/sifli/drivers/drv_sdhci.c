@@ -20,22 +20,23 @@
 #include <drv_log.h>
 #include <stdlib.h>
 
+// TODO： need to be optimized, no need to allocate 2 buffer even if just one host is enabled.
+// As rt_wifi_sdio_init access sdhci1 and sdhci2 statically, it should be modified together
+#define SDHCI_HOST_NUM (2)
+
 /** TODO: lite mode only for controller save/restor registers when sleep, CARD SHOULD NOT power down.
 **      : full initial sequence for sd if lite=0.
 **      : move it to menuconfig if needed
 **/
 #define SDHCI_SLEEP_LITE_MODE       (0)
 
-static struct sdhci_host sdhci_ctx[2];
-//static uint32_t sdhci_irq_flag = 0;
-
-#ifdef RT_USING_PM
-    static struct rt_device rt_sdhci_device[2];
-#endif /* RT_USING_PM */
-
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    static uint8_t sdhci_card_inserted = 0; // 0: not inserted, 1: inserted
+#endif /* SD_INSERT_DETECT_PIN */
 
 static void sdhci_prepare_data(struct sdhci_host *host, struct rt_mmcsd_data *data);
 static void sdhci_finish_data(struct sdhci_host *host);
+static void sdhci_init(struct sdhci_host *host, int soft);
 
 static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd);
 static void sdhci_finish_command(struct sdhci_host *host);
@@ -45,57 +46,70 @@ static void sdhci_data_irq(struct sdhci_host *host, uint32_t intmask);
 static void sdhci_set_ios(struct rt_mmcsd_host *mmc, struct rt_mmcsd_io_cfg *ios);
 static void sdhci_set_ddr(struct sdhci_host *host, unsigned int ddr);
 
+void mmcsd_set_stat(uint8_t stat);
+uint8_t mmcsd_get_stat(void);
+
 #ifdef SDIO_PM_MODE
     static int sdmmc_pm_resume_init(uint8_t id);
     uint32_t sd_send_cmd(uint8_t cmd_idx, uint32_t cmd_arg);
     uint32_t sd_clr_status();
-    SDHCI_HandleTypeDef sdhci_handle;
 #endif
+SDHCI_HandleTypeDef sdhci_handle;
 
 int rt_hw_sdmmc_init(void);
 int rt_sdhci_init_instance(uint8_t id);
 
 struct rt_sdhci_configuration
 {
+    const char *name;
+    uint32_t instance;
     uint32_t max_freq;
     uint32_t irqn;
+    uint32_t rcc_mod;
     uint8_t dma_mode;
     uint8_t card_mode;
 };
 
-static struct rt_sdhci_configuration rt_sdhci_cfg_def[2] =
+SDHCI_HandleTypeDef sdhci_handle;
+/* irq state, 0: enabled, 1: disabled */
+static rt_uint32_t sdio_irq_state = 0;
+
+static struct rt_sdhci_configuration rt_sdhci_cfg_def[SDHCI_HOST_NUM] =
 {
 #ifdef BSP_USING_SDHCI1
     {
-        SD_MAX_FREQ,       //uint32_t max_freq;
-        SDMMC1_IRQn,       //uint32_t irqn;
-        SD_DMA_MODE,    //uint8_t dma_mode;
-        SDIO_CARD_MODE   //uint8_t card_mode;
+        .name = "sd0",
+        .instance = (uint32_t)SDIO1,
+        .max_freq = SD_MAX_FREQ,
+        .irqn = SDMMC1_IRQn,
+        .rcc_mod = RCC_MOD_SDMMC1,
+        .dma_mode = SD_DMA_MODE,
+        .card_mode = SDIO_CARD_MODE
     },
 #else
-    {
-        0,       //uint32_t max_freq;
-        0,       //uint32_t irqn;
-        0,    //uint8_t dma_mode;
-        0   //uint8_t card_mode;
-    },
+    {0},
 #endif  // BSP_USING_SDHCI1
 #ifdef BSP_USING_SDHCI2
     {
-        SD2_MAX_FREQ,       //uint32_t max_freq;
-        SDMMC2_IRQn,       //uint32_t irqn;
-        SD2_DMA_MODE,    //uint8_t dma_mode;
-        SDIO2_CARD_MODE   //uint8_t card_mode;
+        .name = "sd1",
+        .instance = (uint32_t)SDIO2,
+        .max_freq = SD2_MAX_FREQ,
+        .irqn = SDMMC2_IRQn,
+        .rcc_mod = RCC_MOD_SDMMC2,
+        .dma_mode = SD2_DMA_MODE,
+        .card_mode = SDIO2_CARD_MODE
     },
 #else
-    {
-        0,       //uint32_t max_freq;
-        0,       //uint32_t irqn;
-        0,    //uint8_t dma_mode;
-        0   //uint8_t card_mode;
-    },
+    {0},
 #endif  // BSP_USING_SDHCI2
 };
+
+static struct sdhci_host sdhci_ctx[SDHCI_HOST_NUM];
+
+#ifdef RT_USING_PM
+    static struct rt_device rt_sdhci_device[SDHCI_HOST_NUM];
+#endif /* RT_USING_PM */
+
 
 #ifdef RT_USING_PM
 static void sdhci_pm_set_ddr(uint8_t id)
@@ -118,64 +132,33 @@ static void sdhci_pm_set_ddr(uint8_t id)
     }
 }
 
-#define _DUMP_REG_DEBUG         (0)
-#define _SDHCI_DUMP_RCNT        (23)
-static uint32_t sdhci_reg_arr[_SDHCI_DUMP_RCNT];
 static void dump_sdhci_reg(int id)
 {
-    int i;
-    uint32_t *sdhci_base_reg;
-    if (id == 0)
-    {
-        sdhci_base_reg = (uint32_t *)SDMMC1_BASE;
-    }
-    else
-    {
-        sdhci_base_reg = (uint32_t *)SDMMC2_BASE;
-    }
-    for (i = 0; i < _SDHCI_DUMP_RCNT; i++)
-    {
-        sdhci_reg_arr[i] = *sdhci_base_reg++;
-#if _DUMP_REG_DEBUG
-        rt_kprintf("%08x ", sdhci_reg_arr[i]);
-        if ((i + 1) % 8 == 0)
-        {
-            rt_kprintf("\n");
-        }
-        rt_kprintf("\n");
-#endif
-    }
+
 }
 
 static void recov_sdhci_reg(int id)
 {
-    int i;
-    uint32_t *sdhci_base_reg;
     if (id == 0)
-    {
-        sdhci_base_reg = (uint32_t *)SDMMC1_BASE;
-    }
+        sdhci_handle.Instance = (uint32_t)SDIO1;
     else
-    {
-        sdhci_base_reg = (uint32_t *)SDMMC2_BASE;
-    }
-    for (i = 0; i < _SDHCI_DUMP_RCNT; i++)
-    {
-        *sdhci_base_reg = sdhci_reg_arr[i];
-        // read only reg: 0x10, 0x14, 0x18, 0x1c for response
-        // 0x24 for sr, 0x30 for clear sr, w1c;
-        // 0x40 , 0x44, 0x48 for capbility
-        // 0x54 for adma error status
-#if _DUMP_REG_DEBUG
-        rt_kprintf("%08x ", *sdhci_base_reg);
-        if ((i + 1) % 8 == 0)
-        {
-            rt_kprintf("\n");
-        }
-        rt_kprintf("\n");
-#endif
-        sdhci_base_reg++;
-    }
+        sdhci_handle.Instance = (uint32_t)SDIO2;
+    uint8_t ctrl;
+    hal_sdhci_init(&sdhci_handle, 0);
+    hal_sdhci_enable_card_detection(&sdhci_handle);
+    hal_sdhci_set_clk(&sdhci_handle, sdhci_ctx[id].clock, sdhci_ctx[id].max_clk);
+    hal_sdhci_set_power(&sdhci_handle, sdhci_ctx[id].mmc->io_cfg.vdd);
+    if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_4)
+        ctrl = 4;
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_BUS_WIDTH_8)
+        ctrl = 8;
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_4)
+        ctrl = 4;
+    else if (sdhci_ctx[id].mmc->io_cfg.bus_width == MMCSD_DDR_BUS_WIDTH_8)
+        ctrl = 8;
+    else
+        ctrl = 1;
+    hal_sdhci_set_bus_width(&sdhci_handle, ctrl);
     sdhci_pm_set_ddr(id);//this is bug only 56X ddr mode
 }
 #endif
@@ -338,6 +321,12 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct rt_mmcsd_data *da
             {
                 //sdhci_writel(host, host->adma_addr,
                 //             SDHCI_ADMA_ADDRESS);
+#if !defined(SF32LB55X)
+                if (HCPU_IS_MPI_CBUS_ADDR(data->buf))
+                {
+                    data->buf = (void *)HCPU_MPI_SBUS_ADDR((uint32_t)data->buf);
+                }
+#endif
                 hal_sdhic_set_adma_addr(&host->handle, host->adma_addr);
                 LOG_D("ADMA 0x%0x, addr 0x%08x, len %d\n", host->adma_addr, *((uint32_t *)(host->adma_desc + 4)), *((uint16_t *)(host->adma_desc + 2)));
             }
@@ -346,6 +335,12 @@ static void sdhci_prepare_data(struct sdhci_host *host, struct rt_mmcsd_data *da
         {
             LOG_D("sdhci_prepare_data SDMA");
             //sdhci_writel(host, (uint32_t)data->buf,   SDHCI_DMA_ADDRESS);
+
+#if !defined(SF32LB55X)
+
+            data->buf = (void *)HCPU_MPI_SBUS_ADDR(data->buf);
+
+#endif /* !SF32LB55X */
             hal_sdhci_set_dma_addr(&host->handle, (uint32_t)data->buf);
         }
     }
@@ -774,6 +769,15 @@ static void sdhci_set_ddr(struct sdhci_host *host, unsigned int ddr)
     hal_sdhci_set_ddr(&host->handle, ddr);
 }
 
+void sdhci_set_irq_enable_status(struct rt_mmcsd_host *host, rt_uint32_t res)
+{
+    sdio_irq_state = res;
+}
+
+rt_uint32_t sdhci_get_irq_enable_status(struct rt_mmcsd_host *host)
+{
+    return sdio_irq_state;
+}
 /*****************************************************************************\
  *                                                                           *
  * MMC callbacks                                                             *
@@ -946,6 +950,8 @@ static const struct rt_mmcsd_host_ops sdhci_host_ops =
     .set_iocfg  = sdhci_set_ios,
     .get_card_status    = sdhci_get_ro,
     .enable_sdio_irq = sdhci_enable_sdio_irq,
+    .get_irq_enable_status = sdhci_get_irq_enable_status,
+    .set_irq_enable_status = sdhci_set_irq_enable_status,
 };
 
 /**
@@ -1151,13 +1157,6 @@ static void sdhci_data_irq(struct sdhci_host *host, uint32_t intmask)
     }
 }
 
-//static void sdhci_isr(void *handle)
-//{
-//    struct sdhci_host *host = handle;
-//    uint32_t intstatus = sdhci_readl(host, SDHCI_INT_STATUS);
-//    LOG_D("sdhci_isr 0x%x\n",intstatus);
-//    rt_event_send(&host->event, intstatus);
-//}
 
 static int sdhci_irq(void *dev)
 {
@@ -1274,6 +1273,7 @@ static int sdhci_irq(void *dev)
     {
         if ((host->irq_flag & SDHCI_INT_DATA_MASK) != 0)
         {
+            if (sdhci_get_irq_enable_status(RT_NULL)) return 1;
             rt_event_send(&host->event, host->irq_flag);
         }
         else
@@ -1282,7 +1282,10 @@ static int sdhci_irq(void *dev)
         }
     }
     else
+    {
+        if (sdhci_get_irq_enable_status(RT_NULL)) return 1;
         rt_event_send(&host->event, host->irq_flag);
+    }
 
     //rt_event_send(&host->event, flag);
 
@@ -1296,14 +1299,35 @@ static int sdhci_wait_completed(struct sdhci_host *sdio, int flag)
     struct rt_mmcsd_cmd *cmd = sdio->cmd;
     //struct rt_mmcsd_data *data = cmd->data;
     //SDMMC_TypeDef *hw_sdio = (SDMMC_TypeDef *)sdio->ioaddr;
-
-    if (rt_event_recv(&sdio->event, 0xffffffff, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
-                      rt_tick_from_millisecond(5000), &status) != RT_EOK)
+    if (sdhci_get_irq_enable_status(RT_NULL))
     {
-        LOG_E("wait %d completed timeout 0x%08x,arg 0x%08x\n", cmd->cmd_code, hal_sdhci_get_int_value(&sdio->handle), cmd->arg);
-        //LOG_D("Int EN 0x%08x, Mask 0x%08x\n", sdhci_readl(sdio, SDHCI_INT_ENABLE), sdhci_readl(sdio, SDHCI_SIGNAL_ENABLE));
-        cmd->err = -RT_ETIMEOUT;
-        return -1;
+        while (1)
+        {
+            static struct sdhci_host *assert_host = RT_NULL;
+#ifdef BSP_USING_SDHCI1
+            assert_host = &sdhci_ctx[0];
+#elif BSP_USING_SDHCI2
+            assert_host = &sdhci_ctx[1];
+#endif
+            if (sdhci_irq(assert_host))
+            {
+                status = assert_host->irq_flag;
+                break;
+            }
+            for (int i = 0; i < 10000; i
+                    ++) {;}
+        }
+    }
+    else
+    {
+        if (rt_event_recv(&sdio->event, 0xffffffff, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
+                          rt_tick_from_millisecond(5000), &status) != RT_EOK)
+        {
+            LOG_E("wait %d completed timeout 0x%08x,arg 0x%08x\n", cmd->cmd_code, hal_sdhci_get_int_value(&sdio->handle), cmd->arg);
+            //LOG_D("Int EN 0x%08x, Mask 0x%08x\n", sdhci_readl(sdio, SDHCI_INT_ENABLE), sdhci_readl(sdio, SDHCI_SIGNAL_ENABLE));
+            cmd->err = -RT_ETIMEOUT;
+            return -1;
+        }
     }
     LOG_D("sdhci_wait_completed cmd %d:  0x%x, flag 0x%x\n", cmd->cmd_code, status, flag);
 
@@ -1526,6 +1550,8 @@ int sdhci_add_host(struct sdhci_host *host)
     /*
      * Set host parameters.
      */
+    rt_strncpy(mmc->name, host->hw_name, sizeof(mmc->name) - 1);
+    mmc->name[RT_NAME_MAX - 1] = '\0';
     mmc->ops = &sdhci_host_ops;
 
     if (host->ops->get_min_clock)
@@ -1637,33 +1663,37 @@ int sdhci_add_host(struct sdhci_host *host)
 
     hal_sdhci_enable_card_detection(&host->handle);
 
-    // clear buffer before start
-    //sdhci_readl(host, SDHCI_BUFFER);
-
-    // set debug port
-#if 0
-//#define SD_DEBUG_PORT          (1)
-    /* FOR USB DEBUG PORT */
-    {
-        volatile uint32_t *hdbg = (volatile uint32_t *)0x4000001C;
-        *hdbg = 0XFF01FF01;
-        //*hdbg = (0xff << 24) | (1 << 16) | (0xff << 8) | (1 << 0);
-        //hwp_hpsys_rcc->DBGR = (0xff << 24) | (SD_DEBUG_PORT << 16) | (0xff << 8) | (SD_DEBUG_PORT << 0);
-
-        // hpcd->Instance->DBG_OUT_SEL |= ((1 << 15) | (1 << 14) | (1 << 13) | (1 << 12) ;
-
-    }
-#endif
-
-    if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
+    // TODO: disable check condition as solution does, but don't know why
+    //if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
     {
         // enable irq
         //rthw_sdio_irq_update(host, 1);
         rt_event_init(&host->event, "sdhci", RT_IPC_FLAG_FIFO);
         rt_mutex_init(&host->mutex, "sdhci", RT_IPC_FLAG_FIFO);
     }
-    /* ready to change */
-    mmcsd_change(mmc);
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    rt_pin_mode(SD_INSERT_DETECT_PIN, PIN_MODE_INPUT);
+    int card_state = rt_pin_read(SD_INSERT_DETECT_PIN);
+    rt_thread_mdelay(10);
+    if (card_state == rt_pin_read(SD_INSERT_DETECT_PIN))
+    {
+        if (card_state)
+        {
+            rt_kprintf("[SD] no card (pin %d), skip drv_sdio\n", SD_INSERT_DETECT_PIN);
+            sdhci_card_inserted = 0;
+            return RT_EOK;
+        }
+        else
+        {
+            sdhci_card_inserted = 1;
+            mmcsd_change(mmc);/* ready to change */
+        }
+
+    }
+#else
+    mmcsd_change(mmc);/* ready to change */
+#endif /* SD_INSERT_DETECT_PIN */
+
     LOG_I("Add host success\n");
 
     return 0;
@@ -1868,6 +1898,8 @@ static void rt_sdhci_register_rt_device(uint8_t id)
 int rt_sdhci_init_instance(uint8_t id)
 {
     int ret = 0;
+    struct rt_sdhci_configuration *cfg;
+    struct sdhci_host *host_ctx;
 
     LOG_I("rt_hw_sdmmc_init %d begin\n", id + 1);
 
@@ -1883,23 +1915,23 @@ int rt_sdhci_init_instance(uint8_t id)
         return -1;
     }
 
-    memset(&(sdhci_ctx[id].usr_cfg), 0, sizeof(sdhci_user_config_t));
-    HAL_SDHCI_MspInit(&sdhci_ctx[id].handle);
+    cfg = &rt_sdhci_cfg_def[id];
+    host_ctx = &sdhci_ctx[id];
 
-    rt_sdmmc_set_clock(id, rt_sdhci_cfg_def[id].max_freq);
+    memset(&(host_ctx->usr_cfg), 0, sizeof(host_ctx->usr_cfg));
+    HAL_SDHCI_MspInit(&host_ctx->handle);
 
-    rt_sdmmc_set_dma_mode(id, rt_sdhci_cfg_def[id].dma_mode);
+    rt_sdmmc_set_clock(id, cfg->max_freq);
 
-    sdhci_ctx[id].usr_cfg.sdio_mode = rt_sdhci_cfg_def[id].card_mode;
+    rt_sdmmc_set_dma_mode(id, cfg->dma_mode);
 
-    if (id == 0)
-        HAL_RCC_ResetModule(RCC_MOD_SDMMC1);
-    else
-        HAL_RCC_ResetModule(RCC_MOD_SDMMC2);
+    host_ctx->usr_cfg.sdio_mode = cfg->card_mode;
+
+    HAL_RCC_ResetModule(cfg->rcc_mod);
 
     HAL_Delay(20);
 
-    ret = sdhci_add_host(&sdhci_ctx[id]);
+    ret = sdhci_add_host(host_ctx);
     if (ret != 0)
     {
         LOG_E("host create fail with sd%d\n", id + 1);
@@ -1907,8 +1939,23 @@ int rt_sdhci_init_instance(uint8_t id)
     }
 
 
-    HAL_NVIC_SetPriority((IRQn_Type)rt_sdhci_cfg_def[id].irqn, 2, 0);
-    HAL_NVIC_EnableIRQ((IRQn_Type)rt_sdhci_cfg_def[id].irqn);
+    HAL_NVIC_SetPriority((IRQn_Type)cfg->irqn, 2, 0);
+    HAL_NVIC_EnableIRQ((IRQn_Type)cfg->irqn);
+
+#if defined(OTAM_EMMC)
+    uint16_t sdhci_time = 100;
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    if (sdhci_card_inserted == 0)
+        sdhci_time = 1;
+#endif /* SD_INSERT_DETECT_PIN */
+    while (sdhci_time --)
+    {
+        rt_thread_mdelay(30);
+        uint8_t mmcsd_get_stat(void);
+        if (mmcsd_get_stat()) break;
+    }
+
+#endif /* OTAM_EMMC */
 
 #ifdef SDIO_PM_MODE
     if (PM_STANDBY_BOOT != SystemPowerOnModeGet())
@@ -1918,8 +1965,44 @@ int rt_sdhci_init_instance(uint8_t id)
 #endif /* RT_USING_PM */
 
     LOG_I("rt_hw_sdmmc_init %d done\n", id + 1);
+#ifdef RT_USING_PM
+    // if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
+    {
+        rt_pm_request(PM_SLEEP_MODE_IDLE);
+        rt_pm_hw_device_start();
+        uint16_t sdhci_time = 100;
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+        if (sdhci_card_inserted == 0)
+            sdhci_time = 1;
+#endif /* SD_INSERT_DETECT_PIN */
+        while (sdhci_time --)
+        {
+            rt_thread_mdelay(30);
+            uint8_t mmcsd_get_stat(void);
+            if (mmcsd_get_stat()) break;
+        }
 
+        rt_pm_release(PM_SLEEP_MODE_IDLE);
+
+        rt_pm_hw_device_stop();
+    }
+#endif /* RT_USING_PM */
     return 0;
+}
+
+int rt_hw_sdmmc_num_init(uint8_t sdhci_idx)
+{
+    int ret = 0;
+    RT_ASSERT(sdhci_idx < SDHCI_HOST_NUM);
+
+    HAL_RCC_EnableModule(rt_sdhci_cfg_def[sdhci_idx].rcc_mod);
+    sdhci_ctx[sdhci_idx].hw_name = rt_sdhci_cfg_def[sdhci_idx].name;
+    sdhci_ctx[sdhci_idx].ops = &sdhci_ops;
+    sdhci_ctx[sdhci_idx].handle.Instance = (uint32_t)rt_sdhci_cfg_def[sdhci_idx].instance;
+    sdhci_ctx[sdhci_idx].irq_flag = 0;
+    ret = rt_sdhci_init_instance(sdhci_idx);
+
+    return ret;
 }
 
 int rt_hw_sdmmc_init(void)
@@ -1927,70 +2010,92 @@ int rt_hw_sdmmc_init(void)
     int ret = 0;
 
 #ifdef BSP_USING_SDHCI1
-    HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
-    sdhci_ctx[0].hw_name = "sdmmc";
-    sdhci_ctx[0].ops = &sdhci_ops;
-    sdhci_ctx[0].handle.Instance = (uint32_t)SDIO1;
-    sdhci_ctx[0].irq_flag = 0;
-    ret = rt_sdhci_init_instance(0);
+    ret = rt_hw_sdmmc_num_init(0);
 #endif
-
+    mmcsd_set_stat(0);
 #ifdef BSP_USING_SDHCI2
-    HAL_RCC_EnableModule(RCC_MOD_SDMMC2);
-    sdhci_ctx[1].hw_name = "sdmmc2";
-    sdhci_ctx[1].ops = &sdhci_ops;
-    sdhci_ctx[1].handle.Instance = (uint32_t)SDIO2;
-    sdhci_ctx[1].irq_flag = 0;
-    ret = rt_sdhci_init_instance(1);
+    ret = rt_hw_sdmmc_num_init(1);
 #endif
-
+    /*resume MMSCD THREA priority to normal*/
+    rt_uint8_t priority = RT_MMCSD_THREAD_PREORITY;
+    if (mmcsd_get_thread())
+        rt_thread_control(mmcsd_get_thread(), RT_THREAD_CTRL_CHANGE_PRIORITY, &priority);
     return ret;
 }
 
 INIT_DEVICE_EXPORT(rt_hw_sdmmc_init);
 
-int rt_hw_sdmmc_num_init(uint8_t sdhci_num)
-{
-    int ret = 0;
-    switch (sdhci_num)
-    {
-    case 0:
-#ifdef BSP_USING_SDHCI1
-        HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
-        sdhci_ctx[0].hw_name = "sdmmc";
-        sdhci_ctx[0].ops = &sdhci_ops;
-        sdhci_ctx[0].handle.Instance = (uint32_t)SDIO1;
-        sdhci_ctx[0].irq_flag = 0;
-        ret = rt_sdhci_init_instance(0);
-#endif
-        break;
-    case 1:
-#ifdef BSP_USING_SDHCI2
-        HAL_RCC_EnableModule(RCC_MOD_SDMMC2);
-        sdhci_ctx[1].hw_name = "sdmmc2";
-        sdhci_ctx[1].ops = &sdhci_ops;
-        sdhci_ctx[1].handle.Instance = (uint32_t)SDIO2;
-        sdhci_ctx[1].irq_flag = 0;
-        ret = rt_sdhci_init_instance(1);
-#endif
-        break;
-    }
-    return ret;
-}
-
 int rt_hw_sdmmc_deinit(uint8_t id)
 {
-    mmcsd_host_lock(sdhci_ctx[id].mmc);
-    sdio_unregister_card(sdhci_ctx[id].mmc->card);
-    rt_mmcsd_blk_remove(sdhci_ctx[id].mmc->card);
-    rt_free(sdhci_ctx[id].mmc->card);
-    sdhci_ctx[id].mmc->card = RT_NULL;
-    mmcsd_free_host(sdhci_ctx[id].mmc);
-    sdhci_ctx[id].mmc = RT_NULL;
-    if ((sdhci_ctx[id].handle.Init.flags & SDHCI_USE_ADMA) && sdhci_ctx[id].handle.Init.adma_desc)
+    struct sdhci_host *host;
+    struct rt_sdhci_configuration *cfg;
+
+    if (id > 1)
+        return -1;
+
+    host = &sdhci_ctx[id];
+    cfg  = &rt_sdhci_cfg_def[id];
+
+    /* Cleanup card and mmcsd host safely */
+    if (host->mmc)
     {
-        free(sdhci_ctx[id].handle.Init.adma_desc);
+        mmcsd_host_lock(host->mmc);
+        if (host->mmc->card)
+        {
+            sdio_unregister_card(host->mmc->card);
+            rt_mmcsd_blk_remove(host->mmc->card);
+            rt_free(host->mmc->card);
+            host->mmc->card = RT_NULL;
+        }
+
+        /* Detach event/mutex created in sdhci_add_host (when not standby boot) */
+#ifdef RT_USING_PM
+        //if (PM_STANDBY_BOOT != SystemPowerOnModeGet())
+        {
+            rt_event_detach(&host->event);
+            /* Mutex was created with rt_mutex_init (system object): use detach */
+            rt_mutex_detach(&host->mutex);
+        }
+#endif /* RT_USING_PM */
+        mmcsd_host_unlock(host->mmc);
+        mmcsd_free_host(host->mmc);
+        host->mmc = RT_NULL;
     }
+
+    /* Now it is safe to disable IRQ for this host */
+    if (cfg->irqn)
+    {
+        HAL_NVIC_DisableIRQ((IRQn_Type)cfg->irqn);
+    }
+
+    /* Free ADMA descriptor table if allocated */
+    if ((host->handle.Init.flags & SDHCI_USE_ADMA) && host->handle.Init.adma_desc)
+    {
+        free(host->handle.Init.adma_desc);
+        host->handle.Init.adma_desc = RT_NULL;
+        host->adma_addr = 0;
+        host->handle.Init.flags &= ~SDHCI_USE_ADMA;
+    }
+
+    /* Reset and gate clock for this SDMMC instance */
+    HAL_RCC_ResetModule(cfg->rcc_mod);
+    HAL_RCC_DisableModule(cfg->rcc_mod);
+
+#ifdef RT_USING_PM
+    /* If registered as a device for PM control, unregister it to avoid leaks */
+    if (PM_STANDBY_BOOT != SystemPowerOnModeGet())
+    {
+        extern rt_device_t rt_device_find(const char *name);
+        char devname[8] = {0};
+        rt_snprintf(devname, sizeof(devname), "sdhci%d", id);
+        rt_device_t dev = rt_device_find(devname);
+        if (dev)
+        {
+            rt_device_unregister(dev);
+        }
+    }
+#endif /* RT_USING_PM */
+
     return 0;
 }
 
@@ -1998,20 +2103,19 @@ int sdhci_reinit_host(uint8_t host_index)
 {
     struct rt_mmcsd_host *mmc;
     struct sdhci_host *host;
+    struct rt_sdhci_configuration *cfg;
 
     if (host_index > 1)
         return -1;
 
     host = &sdhci_ctx[host_index];
+    cfg = &rt_sdhci_cfg_def[host_index];
     mmc = host->mmc;
 
     if (mmc == NULL)
         return 0;
 
-    if (host_index == 0)
-        HAL_RCC_ResetModule(RCC_MOD_SDMMC1);
-    else
-        HAL_RCC_ResetModule(RCC_MOD_SDMMC2);
+    HAL_RCC_ResetModule(cfg->rcc_mod);
     HAL_Delay(20);
 
     mmcsd_host_lock(sdhci_ctx[host_index].mmc);

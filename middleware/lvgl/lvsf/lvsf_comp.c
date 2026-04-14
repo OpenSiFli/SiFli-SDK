@@ -5,7 +5,7 @@
  */
 
 #include "stdio.h"
-#include "lv_ext_resource_manager.h"
+#include "lvsf.h"
 #if defined SOLUTION_WATCH
     #include "app_mem.h"
 #endif
@@ -313,4 +313,3 @@ void lvsf_canvas_rotate(lv_obj_t *canvas, lv_img_dsc_t *img, int16_t angle, int3
 #endif
     return;
 }
-

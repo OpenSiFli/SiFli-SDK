@@ -2,9 +2,9 @@
 Source code path: example/hal/i2c/eeprom
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd
-* sf32lb58-lcd
-* sf32lb56-lcd
+* sf32lb52-lcd series
+* sf32lb58-lcd series
+* sf32lb56-lcd series
 
 
 ## Overview

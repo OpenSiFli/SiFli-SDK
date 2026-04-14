@@ -3,8 +3,9 @@ Source code path: example\rt_device\uart
 ## Supported Platforms
 The example can run on the following development boards:
 * sf32lb52-nano_a128n16
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 ## Overview
 * Under RT-Thread operating system, use RX DMA mode to operate UART2 to verify its serial port transmission and reception capabilities
 * Note that after development board reset, if uart2 prints log consistent with the image below, it indicates successful transmission. To verify uart2 reception capability, the default serial port print log is used to verify the accuracy of received content

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "mmc56x3.h"
 
 #include <rtthread.h>
@@ -119,9 +125,9 @@ rt_err_t MMC56x3_Init(struct rt_sensor_config *cfg)
 mmc56x3_data_t MMC56x3_ReadData(void)
 {
     mmc56x3_data_t data = {0};
-    uint8_t buffer[8];
-    RT_ASSERT(rt_i2c_mem_read(MMC56x3_bus, MMC56X3_DEFAULT_ADDRESS, MMC56X3_OUT_X_L, 8, buffer, 8) > 0);
-    int32_t x,y,z;
+    uint8_t buffer[9];
+    RT_ASSERT(rt_i2c_mem_read(MMC56x3_bus, MMC56X3_DEFAULT_ADDRESS, MMC56X3_OUT_X_L, 8, buffer, 9) > 0);
+    int32_t x, y, z;
     x = (uint32_t)buffer[0] << 12 | (uint32_t)buffer[1] << 4 |
         (uint32_t)buffer[6] >> 4;
     y = (uint32_t)buffer[2] << 12 | (uint32_t)buffer[3] << 4 |

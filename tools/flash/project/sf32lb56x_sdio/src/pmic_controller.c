@@ -13,6 +13,7 @@
     #include "pmic_service.h"
 #endif
 
+
 #define DRV_DEBUG
 #define LOG_TAG              "drv.pmic"
 //#include <drv_log.h>
@@ -67,6 +68,7 @@
 #define REG_0D_SCLK_PE_MASK     (1<<3)
 #define REG_0D_SCLK_DS_MASK     (1<<5)
 
+
 typedef struct
 {
     int pmic_half_period_us;
@@ -113,6 +115,7 @@ static const pmic_control_map_t g_pmic_control_map[] =
 };
 #endif
 #endif
+
 
 #ifdef DRV_PMIC_TEST
     static int g_debug = 0;
@@ -226,6 +229,7 @@ static void DBG_SDA_INPUT(PMIC_PIN_PARAM_T *pm)
 
 #else
 
+
 #define PA_MAX_PIN_CNT      GPIO1_PIN_NUM
 
 #define LBIT_FIRST          (1)
@@ -247,6 +251,7 @@ static void GPIO_Init(uint16_t gpio, uint32_t mode)
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(hwp_gpio, &GPIO_InitStruct);
 }
+
 
 static void GPIO_Write(uint16_t gpio, uint16_t val)
 {
@@ -363,6 +368,7 @@ static uint32_t PMIC_get_bits(PMIC_PIN_PARAM_T *pm, uint8_t len)
     return data;
 }
 
+
 static void PMIC_Interface_Init(PMIC_PIN_PARAM_T *pm, uint32_t freq, uint16_t scl, uint16_t sda)
 {
     PMIC_init_pins(pm, scl, sda);
@@ -472,6 +478,7 @@ static void PMIC_WriteReg(PMIC_PIN_PARAM_T *pm, uint16_t RegAddr, uint8_t Val)
     PMIC_WAIT(pm);
     return;
 }
+
 
 void BSP_PMIC_Init(int scl, int sda)
 {
@@ -803,5 +810,7 @@ FINSH_FUNCTION_EXPORT_ALIAS(cmd_pmic, __cmd_pmic, Test driver pmic);
 
 #endif //DRV_PMIC_TEST
 
+
 #endif  // PMIC_CTRL_ENABLE
 
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

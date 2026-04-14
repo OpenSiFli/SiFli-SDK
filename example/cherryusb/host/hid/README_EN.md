@@ -1,4 +1,4 @@
-# host_hid_example
+# USB HID Host Example
 
 Source Code Path: example\cherryusb\host\hid
 

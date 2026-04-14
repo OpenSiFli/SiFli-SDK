@@ -1,4 +1,4 @@
-﻿#include "../lv_examples.h"
+#include "../lv_examples.h"
 #if LV_BUILD_EXAMPLES
 
 #if LV_USE_DRAW_SW_COMPLEX_GRADIENTS
@@ -10,8 +10,7 @@
 void lv_example_style_16(void)
 {
 #if LV_GRADIENT_MAX_STOPS >= 8
-    static const lv_color_t grad_colors[8] =
-    {
+    static const lv_color_t grad_colors[8] = {
         LV_COLOR_MAKE(0xe8, 0xe8, 0xe8),
         LV_COLOR_MAKE(0xff, 0xff, 0xff),
         LV_COLOR_MAKE(0xfa, 0xfa, 0xfa),
@@ -22,15 +21,13 @@ void lv_example_style_16(void)
         LV_COLOR_MAKE(0xe8, 0xe8, 0xe8),
     };
 #elif LV_GRADIENT_MAX_STOPS >= 3
-    static const lv_color_t grad_colors[3] =
-    {
+    static const lv_color_t grad_colors[3] = {
         LV_COLOR_MAKE(0xe8, 0xe8, 0xe8),
         LV_COLOR_MAKE(0xff, 0xff, 0xff),
         LV_COLOR_MAKE(0x79, 0x79, 0x79),
     };
 #else
-    static const lv_color_t grad_colors[2] =
-    {
+    static const lv_color_t grad_colors[2] = {
         LV_COLOR_MAKE(0xe8, 0xe8, 0xe8),
         LV_COLOR_MAKE(0x79, 0x79, 0x79),
     };
@@ -50,7 +47,7 @@ void lv_example_style_16(void)
     /*First define a color gradient. In this example we use a gray color map with random values.*/
     static lv_grad_dsc_t grad;
 
-    lv_gradient_init_stops(&grad, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
+    lv_grad_init_stops(&grad, grad_colors, NULL, NULL, sizeof(grad_colors) / sizeof(lv_color_t));
 
     /*Make a conical gradient with the center in the middle of the object*/
 #if LV_GRADIENT_MAX_STOPS >= 8
@@ -65,7 +62,7 @@ void lv_example_style_16(void)
     lv_style_set_bg_grad(&style, &grad);
 
     /*Create an object with the new style*/
-    lv_obj_t *obj = lv_obj_create(lv_screen_active());
+    lv_obj_t * obj = lv_obj_create(lv_screen_active());
     lv_obj_add_style(obj, &style, 0);
     lv_obj_set_size(obj, 200, 200);
     lv_obj_center(obj);
@@ -75,10 +72,10 @@ void lv_example_style_16(void)
 
 void lv_example_style_16(void)
 {
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_obj_t * label = lv_label_create(lv_screen_active());
     lv_obj_set_width(label, LV_PCT(80));
     lv_label_set_text(label, "LV_USE_DRAW_SW_COMPLEX_GRADIENTS is not enabled");
-    lv_label_set_long_mode(label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_label_set_long_mode(label, LV_LABEL_LONG_MODE_SCROLL_CIRCULAR);
     lv_obj_center(label);
 }
 

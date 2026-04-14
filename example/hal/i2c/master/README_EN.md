@@ -2,9 +2,9 @@
 Source code path: example/hal/i2c/master
 ## Supported Platforms
 The example can run on the following development boards:
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* sf32lb56-lcd_n16r12n1
+* sf32lb52-lcd series
+* sf32lb58-lcd series
+* sf32lb56-lcd series
 
 ## Overview
 * This example demonstrates how to use the chip's I2C interface to implement master-slave communication functionality. The code implements I2C Master Mode (EXAMPLE_I2C_MASTER), in this mode:

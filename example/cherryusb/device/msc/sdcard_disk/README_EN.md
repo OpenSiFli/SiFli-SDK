@@ -1,5 +1,4 @@
-
-# usb_audio_class_example
+# USB Mass Storage Device Example (SD Card)
 
 Source Path: example\cherryusb\device\sdcard_disk
 

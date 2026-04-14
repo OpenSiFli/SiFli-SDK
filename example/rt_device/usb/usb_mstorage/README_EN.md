@@ -4,7 +4,10 @@ The example demonstrates USB as a device functioning as a USB flash drive, which
 
 ## Supported Development Boards
 The example can run on the following development boards:
-* sf32lb52-lcd_n16r8
+* sf32lb52-nano
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 
 **Note:** Generally, examples run on the chip's HCPU. "eh-lb563_v2" is equivalent to "eh-lb563_v2_hcpu". If you want to run the example on LCPU, you can use "eh-lb563_v2_lcpu". Currently USB functionality temporarily only supports running on HCPU.
@@ -78,7 +81,7 @@ If there is DHARA functionality (like 525, 563 using external NAND flash chip se
 
 ### Compilation and Programming
 Follow these steps to complete compilation and programming.
-
+The project's NAND or NOR needs to be selected for compilation and burning based on the flash chip model mounted on the board.
 ```
 scons --board=sf32lb52-lcd_n16r8
 

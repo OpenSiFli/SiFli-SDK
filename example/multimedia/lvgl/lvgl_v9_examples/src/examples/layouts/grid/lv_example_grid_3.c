@@ -17,16 +17,15 @@ void lv_example_grid_3(void)
     static int32_t row_dsc[] = {50, LV_GRID_FR(1), 50, LV_GRID_TEMPLATE_LAST};
 
     /*Create a container with grid*/
-    lv_obj_t *cont = lv_obj_create(lv_screen_active());
+    lv_obj_t * cont = lv_obj_create(lv_screen_active());
     lv_obj_set_size(cont, 300, 220);
     lv_obj_center(cont);
     lv_obj_set_grid_dsc_array(cont, col_dsc, row_dsc);
 
-    lv_obj_t *label;
-    lv_obj_t *obj;
-    uint32_t i;
-    for (i = 0; i < 9; i++)
-    {
+    lv_obj_t * label;
+    lv_obj_t * obj;
+    uint8_t i;
+    for(i = 0; i < 9; i++) {
         uint8_t col = i % 3;
         uint8_t row = i / 3;
 

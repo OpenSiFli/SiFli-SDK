@@ -1,5 +1,4 @@
-
-# usb_audio_class_example
+# USB Mass Storage Device Example (EMMC)
 
 Source Path: example\cherryusb\device\emmc_disk
 

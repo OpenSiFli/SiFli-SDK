@@ -12,9 +12,12 @@
 #ifndef __SYS_SELECT_H__
 #define __SYS_SELECT_H__
 
-#include "libc/libc_fdset.h"
+#ifndef RT_USING_NEWLIB
+    #include "libc/libc_fdset.h"
+    #include "time.h"
 
-//int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+    int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+#endif /* RT_USING_NEWLIB */
 
 
 #endif /* __SYS_SELECT_H__ */

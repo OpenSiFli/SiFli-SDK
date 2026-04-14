@@ -1,8 +1,9 @@
 # tsen示例
 源码路径 example/hal/tsen
 ## 支持的平台
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 ## 概述
 用于表示 "Temperature Sensor"（温度传感器）的硬件模块。具体来说，TSEN 是一种集成温度传感器，设计用于测量片上温度，以帮助实现温度监控和温度相关的系统功能。

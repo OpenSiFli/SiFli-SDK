@@ -5,9 +5,7 @@ Source code path: example/ble/periodic_adv
 (Platform_peri_adv)=
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ eh-lb52x
-+ eh-lb56x
-+ eh-lb58x
+All platforms
 
 ## Overview
 <!-- Example introduction -->

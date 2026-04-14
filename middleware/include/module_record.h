@@ -112,6 +112,7 @@ typedef enum
     RECORD_CRASH_SAVE_STACK_1 = 0x0A,
     RECORD_CRASH_SAVE_HCPU_HEAP_1 = 0x0A,
     RECORD_CRASH_SAVE_LOG_1 = 0x0A,
+    RECORD_CRASH_SAVE_ERR = 0x0E,
     RECORD_CRASH_SAVE_END = 0x0F
 } record_crash_save_process_t;
 

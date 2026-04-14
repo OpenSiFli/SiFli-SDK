@@ -58,7 +58,7 @@ const lv_obj_class_t lv_ime_pinyin_class = {
     .group_def      = LV_OBJ_CLASS_GROUP_DEF_TRUE,
     .instance_size  = sizeof(lv_ime_pinyin_t),
     .base_class     = &lv_obj_class,
-    .name = "ime-pinyin",
+    .name = "lv_ime_pinyin",
 };
 
 #if LV_IME_PINYIN_USE_K9_MODE
@@ -707,7 +707,8 @@ static void lv_ime_pinyin_kb_event(lv_event_t * e)
         }
         else if((pinyin_ime->mode == LV_IME_PINYIN_MODE_K26) && ((txt[0] >= 'a' && txt[0] <= 'z') || (txt[0] >= 'A' &&
                                                                                                       txt[0] <= 'Z'))) {
-            lv_strcat(pinyin_ime->input_char, txt);
+            uint16_t len = lv_strlen(pinyin_ime->input_char);
+            lv_snprintf(pinyin_ime->input_char + len, sizeof(pinyin_ime->input_char) - len, "%s", txt);
             pinyin_input_proc(obj);
             pinyin_ime->ta_count++;
         }
@@ -797,6 +798,7 @@ static void pinyin_input_proc(lv_obj_t * obj)
     }
 
     lv_obj_remove_flag(pinyin_ime->cand_panel, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_invalidate(pinyin_ime->cand_panel);
 }
 
 static void pinyin_page_proc(lv_obj_t * obj, uint16_t dir)
@@ -877,8 +879,8 @@ static void init_pinyin_dict(lv_obj_t * obj, const lv_pinyin_dict_t * dict)
         }
         else {
             headletter = dict[i].py[0];
+            pinyin_ime->py_num[letter_calc] = offset_count;
             letter_calc = headletter - 'a';
-            pinyin_ime->py_num[letter_calc - 1] = offset_count;
             offset_sum += offset_count;
             pinyin_ime->py_pos[letter_calc] = offset_sum;
 

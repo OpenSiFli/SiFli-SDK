@@ -351,6 +351,36 @@ void _lv_ll_move_before(lv_ll_t * ll_p, void * n_act, void * n_after)
     if(n_before == NULL) ll_p->head = n_act;
 }
 
+void lv_ll_insert_before(lv_ll_t* ll_p, void* n_act, void* n_after)
+{
+    if (n_act == n_after) return; /*Can't move before itself*/
+
+    void* tmp_node = NULL;
+    _LV_LL_READ(ll_p, tmp_node)
+    {
+        if (n_act == tmp_node)
+        {
+            _lv_ll_move_before(ll_p, n_act, n_after);
+            return;
+        }
+    }
+
+    if (n_act != NULL) {
+        node_set_next(ll_p, n_act, NULL);       /*No next after the new tail*/
+        node_set_prev(ll_p, n_act, ll_p->tail); /*The prev. before new is the old tail*/
+        if (ll_p->tail != NULL) {                /*If there is old tail then the new comes after it*/
+            node_set_next(ll_p, ll_p->tail, n_act);
+        }
+
+        ll_p->tail = n_act;      /*Set the new tail in the dsc.*/
+        if (ll_p->head == NULL) { /*If there is no head (1. node) set the head too*/
+            ll_p->head = n_act;
+        }
+    }
+
+    _lv_ll_move_before(ll_p, n_act, n_after);
+}
+
 /**
  * Check if a linked list is empty
  * @param ll_p pointer to a linked list

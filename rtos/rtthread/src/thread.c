@@ -236,6 +236,9 @@ __ROM_USED rt_err_t rt_thread_init(struct rt_thread *thread,
     RT_ASSERT(thread != RT_NULL);
     RT_ASSERT(stack_start != RT_NULL);
 
+    /* clean memory data of thread*/
+    rt_memset(thread, 0x00, sizeof(struct rt_thread));
+
     /* init thread object */
     rt_object_init((rt_object_t)thread, RT_Object_Class_Thread, name);
 

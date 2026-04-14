@@ -44,22 +44,22 @@ pipeline {
                         '''
                     }
                 } 
-                stage('Copyright Check') {
-                    steps {
-                        bat'''
-                        tools\\autotest\\copyright_check.bat
-                        '''
-                    }
-                } 
             }
         }
-         stage('Archive files') {
+        stage('Copyright Check') {
+            steps {
+                bat'''
+                tools\\autotest\\copyright_check.bat
+                '''
+            }
+        }
+        stage('Archive files') {
              steps {
                  //archiveArtifacts artifacts: 'example\boot_loader\project\butterflmicro\rom\build\bootloader.*', fingerprint: true
                  //archiveArtifacts artifacts: 'example\\boot_loader\\project\\butterflmicro\\rom\\build\\bootloader.*,example\\rom_bin\\lcpu_boot_loader\\lcpu_rom_micro.*,example\\rom_bin\\lcpu_boot_loader\\rom_micro.sym,example\\rom_bin\\lcpu_boot_loader\\rom_micro_internal.sym', fingerprint: true, onlyIfSuccessful: true
                  echo "Archive files success"
             }
-         }
+        }
     }
 }
 

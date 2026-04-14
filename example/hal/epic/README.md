@@ -1,4 +1,5 @@
 # HAL EPIC 示程
+源码路径：example/hal/epic
 EPIC(ePicasso)，是我们自研的图形引擎，它是专为 2D/2.5D 图像处理设计的硬件加速模块，主要用于分担 CPU 在图像运算中的负载，提升图像处理效率。
 ## 概述
 
@@ -8,9 +9,10 @@ EPIC(ePicasso)，是我们自研的图形引擎，它是专为 2D/2.5D 图像处
 
 ## 支持的开发板
 
-- `sf32lb52-lchspi-ulp`
-- `sf32lb52-nano_52j`
-- `sf32lb52-lcd_n16r8`
+- sf32lb52-lchspi-ulp
+- sf32lb52-nano_52j
+- sf32lb56-lcd系列
+- sf32lb58-lcd系列
 
 ---
 

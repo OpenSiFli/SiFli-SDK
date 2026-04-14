@@ -28,7 +28,9 @@ static int read(long base, long offset, uint8_t *buf, size_t size, int nand_flag
 
     //rt_kprintf("addr:%p,%d\n", addr, size);
     if (nand_flag)
-        size = rt_flash_read(addr, buf, size);
+    {
+        size = rt_nand_read(addr, buf, size);
+    }
     else
     {
         /* always call driver to support dual flash */
@@ -39,7 +41,7 @@ static int read(long base, long offset, uint8_t *buf, size_t size, int nand_flag
 }
 
 
-static int write(long base, long offset, const uint8_t *buf, size_t size)
+static int write(long base, long offset, const uint8_t *buf, size_t size, int nand_flag)
 {
     size_t   i;
     uint32_t addr = base + offset;
@@ -47,14 +49,21 @@ static int write(long base, long offset, const uint8_t *buf, size_t size)
     if (addr % 4 != 0)
         ef_err_port_cnt++;
 
+    if (nand_flag)
+    {
+        size = rt_nand_write(addr, buf, size);
+    }
+    else 
+    {
     rt_flash_write(addr, buf, size);
+    }
 
     on_ic_write_cnt++;
     return size;
 }
 
 
-static int erase(long base, long offset, size_t size, int page_size)
+static int erase(long base, long offset, size_t size, int page_size, int nand_flag)
 {
     uint32_t addr = base + offset;
 
@@ -67,7 +76,15 @@ static int erase(long base, long offset, size_t size, int page_size)
     {
         erase_pages++;
     }
+    
+    if (nand_flag)
+    {
+        size = rt_nand_erase(addr, erase_pages * page_size);
+    }
+    else 
+    {
     rt_flash_erase(addr, erase_pages * page_size);
+    }
 
     return size;
 }
@@ -108,12 +125,12 @@ static int read1(long offset, uint8_t *buf, size_t size)
 }
 static int write1( long offset, const uint8_t *buf, size_t size)
 {
-    return write(FAL_DEV.addr, offset, buf, size);
+    return write(FAL_DEV.addr, offset, buf, size, FAL_DEV.nand_flag);
 }
 
 static int erase1( long offset, size_t size)
 {
-    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE);
+    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE, FAL_DEV.nand_flag);
 }
 
 const struct fal_flash_dev FAL_DEV =
@@ -160,12 +177,12 @@ static int read2(long offset, uint8_t *buf, size_t size)
 }
 static int write2( long offset, const uint8_t *buf, size_t size)
 {
-    return write(FAL_DEV.addr, offset, buf, size);
+    return write(FAL_DEV.addr, offset, buf, size, FAL_DEV.nand_flag);
 }
 
 static int erase2( long offset, size_t size)
 {
-    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE);
+    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE, FAL_DEV.nand_flag);
 }
 
 const struct fal_flash_dev FAL_DEV =
@@ -213,12 +230,12 @@ static int read3(long offset, uint8_t *buf, size_t size)
 }
 static int write3( long offset, const uint8_t *buf, size_t size)
 {
-    return write(FAL_DEV.addr, offset, buf, size);
+    return write(FAL_DEV.addr, offset, buf, size, FAL_DEV.nand_flag);
 }
 
 static int erase3( long offset, size_t size)
 {
-    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE);
+    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE, FAL_DEV.nand_flag);
 }
 
 const struct fal_flash_dev FAL_DEV =
@@ -266,12 +283,12 @@ static int read4(long offset, uint8_t *buf, size_t size)
 }
 static int write4( long offset, const uint8_t *buf, size_t size)
 {
-    return write(FAL_DEV.addr, offset, buf, size);
+    return write(FAL_DEV.addr, offset, buf, size, FAL_DEV.nand_flag);
 }
 
 static int erase4( long offset, size_t size)
 {
-    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE);
+    return erase(FAL_DEV.addr, offset, size, PAGE_SIZE, FAL_DEV.nand_flag);
 }
 
 const struct fal_flash_dev FAL_DEV =
@@ -287,3 +304,96 @@ const struct fal_flash_dev FAL_DEV =
 };
 #endif
 
+
+#if defined(BSP_USING_SDMMC1) || defined(RT_USING_SPI_MSD)
+
+#undef FAL_DEV
+#undef FAL_NAME
+#undef FAL_SIZE
+#undef PAGE_SIZE
+#undef SECTOR_SIZE
+#undef NAND_FLAG
+#undef FAL_BASE
+
+#define FAL_NAME    "sd0"
+#define FAL_DEV     fal_sdmmc1
+#define FAL_SIZE    0x100000000
+
+#define PAGE_SIZE       512
+#define SECTOR_SIZE     512
+#define NAND_FLAG       2
+#define FAL_BASE        SDMMC1_MEM_BASE
+
+static int sdmmc1_read(long offset, uint8_t *buf, size_t size)
+{
+    return 0;
+}
+static int sdmmc1_write(long offset, const uint8_t *buf, size_t size)
+{
+    return 0;
+}
+
+static int sdmmc1_erase(long offset, size_t size)
+{
+    return 0;
+}
+
+const struct fal_flash_dev FAL_DEV =
+{
+    .name        = FAL_NAME,
+    .addr        = FAL_BASE,
+    .len         = (FAL_SIZE >> 9),
+    .blk_size    = PAGE_SIZE,
+    .sector_size = SECTOR_SIZE,
+    .nand_flag   = NAND_FLAG,
+    .ops         = {init, sdmmc1_read, sdmmc1_write, sdmmc1_erase},
+    .write_gran  = 32
+};
+#endif /* BSP_USING_SDMMC1 || RT_USING_SPI_MSD */
+
+
+#if defined(BSP_USING_SDMMC2)
+
+#undef FAL_DEV
+#undef FAL_NAME
+#undef FAL_SIZE
+#undef PAGE_SIZE
+#undef SECTOR_SIZE
+#undef NAND_FLAG
+#undef FAL_BASE
+
+#define FAL_NAME    "sd1"
+#define FAL_DEV     fal_sdmmc2
+#define FAL_SIZE    0x100000000
+
+#define PAGE_SIZE       512
+#define SECTOR_SIZE     512
+#define NAND_FLAG       2
+#define FAL_BASE        SDMMC2_MEM_BASE
+
+static int sdmmc2_read(long offset, uint8_t *buf, size_t size)
+{
+    return 0;
+}
+static int sdmmc2_write(long offset, const uint8_t *buf, size_t size)
+{
+    return 0;
+}
+
+static int sdmmc2_erase(long offset, size_t size)
+{
+    return 0;
+}
+
+const struct fal_flash_dev FAL_DEV =
+{
+    .name        = FAL_NAME,
+    .addr        = FAL_BASE,
+    .len         = (FAL_SIZE >> 9),
+    .blk_size    = PAGE_SIZE,
+    .sector_size = SECTOR_SIZE,
+    .nand_flag   = NAND_FLAG,
+    .ops         = {init, sdmmc2_read, sdmmc2_write, sdmmc2_erase},
+    .write_gran  = 32
+};
+#endif /* BSP_USING_SDMMC2 */

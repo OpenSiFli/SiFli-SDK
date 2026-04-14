@@ -340,6 +340,3 @@ uint8_t bt_hop_infinite_tx(uint32_t phy, uint32_t data_len, uint32_t type, int8_
     //HAL_RCC_EnableModule(RCC_MOD_PTC2);
     return ret;
 }
-
-
-/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

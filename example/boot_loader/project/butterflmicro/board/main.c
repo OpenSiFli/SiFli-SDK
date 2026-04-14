@@ -1,13 +1,8 @@
 /*
- * Copyright (c) 2006-2018, RT-Thread Development Team
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
- *
- * Change Logs:
- * Date           Author       Notes
- * 2018-11-06     zylx         first version
  */
-
 #include <rtconfig.h>
 #include <board.h>
 #include <string.h>
@@ -31,17 +26,17 @@ struct sec_configuration *temp_sec_config;
 int is_ota_program_valid(uint32_t ota_addr)
 {
     uint32_t sp_val = 0, pc_val = 0;
-    
+
     // Read the vector table of the OTA program
-    g_flash_read(ota_addr, (const int8_t*)&sp_val, sizeof(uint32_t));
-    g_flash_read(ota_addr + 4, (const int8_t*)&pc_val, sizeof(uint32_t));
-    
+    g_flash_read(ota_addr, (const int8_t *)&sp_val, sizeof(uint32_t));
+    g_flash_read(ota_addr + 4, (const int8_t *)&pc_val, sizeof(uint32_t));
+
     // Simple validation of vector table validity (check if stack pointer is in reasonable range)
     if ((sp_val & 0xFFFF0000) == 0x20000000) // Stack pointer should be in RAM area
     {
         return 1; // OTA program is valid
     }
-    
+
     return 0; // OTA program is invalid
 }
 
@@ -202,9 +197,9 @@ static void select_boot()
     uint32_t hcpu_len = HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE);
     temp_sec_config = &g_temp_sec_config;
 
-    struct sec_configuration *flash_config = (struct sec_configuration *)MPI2_MEM_BASE;
+    struct sec_configuration *flash_config = (struct sec_configuration *)g_config_addr;
     //memcpy((const int8_t *)temp_sec_config, (uint8_t *)MPI5_MEM_BASE, sizeof(struct sec_configuration));
-    g_flash_read(MPI2_MEM_BASE, (const int8_t *)temp_sec_config, sizeof(struct sec_configuration));
+    g_flash_read(g_config_addr, (const int8_t *)temp_sec_config, sizeof(struct sec_configuration));
 
     int hcpu1_img_idx = DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU);
     int hcpu2_img_idx = DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2);
@@ -327,49 +322,42 @@ void boot_images_help()
             dfu_boot_img_in_flash(flash_id);
         }
 #else
-// dfu_pan logical program： 
-        if(DFU_PAN_LOADER_START_ADDR != DFU_PAN_FLASH_UNINIT_32 && DFU_PAN_LOADER_SIZE != DFU_PAN_FLASH_UNINIT_32)
+// dfu_pan logical program：
+        if (DFU_PAN_LOADER_START_ADDR != DFU_PAN_FLASH_UNINIT_32 && DFU_PAN_LOADER_SIZE != DFU_PAN_FLASH_UNINIT_32)
         {
-            
+
             bool needs_update = 0;
-            for (int i = 0; i < MAX_FIRMWARE_FILES; i++) 
+            for (int i = 0; i < MAX_FIRMWARE_FILES; i++)
             {
                 uint32_t needs_update_addr = FIRMWARE_INFO_BASE_ADDR + i * FIRMWARE_INFO_SIZE + NEEDS_UPDATE_OFFSET;
                 uint32_t magic_addr = FIRMWARE_INFO_BASE_ADDR + i * FIRMWARE_INFO_SIZE + NEEDS_MAGIC_OFFSET;
-                uint32_t needs_update_value = 0;
-                 // Check the magic number first.
+                // Check the magic number first.
                 uint32_t magic_value = 0;
-                int magic_result = g_flash_read(magic_addr, (const int8_t*)&magic_value, sizeof(uint32_t));
+                int magic_result = g_flash_read(magic_addr, (const int8_t *)&magic_value, sizeof(uint32_t));
 
                 // Verify whether the magic number is correct.
-                if (magic_result == sizeof(uint32_t) && magic_value == FIRMWARE_MAGIC_DFU_PAN) 
+                if (magic_result == sizeof(uint32_t) && magic_value == FIRMWARE_MAGIC_DFU_PAN)
                 {
-                    
                     uint32_t needs_update_value = 0;
-                    int result = g_flash_read(needs_update_addr, (const int8_t*)&needs_update_value, sizeof(uint32_t));
-                    
-                    if (result == sizeof(uint32_t) && needs_update_value) 
+                    int result = g_flash_read(needs_update_addr, (const int8_t *)&needs_update_value, sizeof(uint32_t));
+
+                    if (result == sizeof(uint32_t) && needs_update_value)
                     {
                         needs_update = 1;
                         break;
                     }
                 }
             }
-            if (needs_update) 
-            {       
-                
-                // Check whether the OTA program is functioning properly
-                if (is_ota_program_valid(DFU_PAN_LOADER_START_ADDR))
-                {
-                    // Directly jump to the OTA program
-                    run_img(DFU_PAN_LOADER_START_ADDR);
-                }
-                else
-                {
-                    
-                }
+            // Check if OTA program is valid
+            if (needs_update && is_ota_program_valid(DFU_PAN_LOADER_START_ADDR))
+            {
+                // Reuse DFU's startup logic
+                // Set running_imgs[CORE_HCPU] to point to DFU's image header
+                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & 
+                    (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
             }
         }
+
 // OTA logical program end
 
         dfu_install_info info = {0};
@@ -441,7 +429,6 @@ void hw_preinit0(void)
     int entry(void)
 #endif
 {
-
     HAL_Delay_us(0);
 
     if (__HAL_SYSCFG_GET_REVID() >= HAL_CHIP_REV_ID_A4)

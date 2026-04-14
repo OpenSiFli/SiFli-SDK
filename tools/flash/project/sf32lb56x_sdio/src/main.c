@@ -1,5 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-/* Includes ------------------------------------------------------------------*/
 #include "bf0_hal.h"
 #include "drv_io.h"
 #include "stdarg.h"
@@ -52,6 +56,7 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     //MODIFY_REG(hwp_qspi2->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
     //MODIFY_REG(hwp_qspi3->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
 
+#ifdef JLINK_SDIO_1    
     HAL_PIN_Set(PAD_PA05, GPIO_A5,  PIN_PULLUP, 1);   // SD1_EN
     
     HAL_PIN_Set(PAD_PA12, SD1_DIO2, PIN_PULLUP, 1);
@@ -68,6 +73,19 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA27, SD1_CMD, PIN_PULLUP, 1);
     
     HAL_PIN_Set(PAD_PA23, GPIO_A23, PIN_PULLUP, 1);    // SD1 Reset
+#endif /* JLINK_SDIO_1 */
+
+
+#if defined(JLINK_SDIO_2) || defined(JLINK_SDEMMC_2)
+
+    HAL_PIN_Set(PAD_PA38, GPIO_A38,  PIN_PULLUP, 1);   // SD2_EN
+    HAL_PIN_Set(PAD_PA06, SD2_DIO2, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA07, SD2_DIO3, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA11, SD2_DIO1, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA10, SD2_DIO0, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA08, SD2_CLK, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA09, SD2_CMD, PIN_PULLUP, 1);
+#endif /* JLINK_SDIO_2 || JLINK_SDEMMC_2 */
 
     HAL_PIN_Set(PAD_PB17, USART4_TXD, PIN_PULLUP, 0);
     HAL_PIN_Set(PAD_PB16, USART4_RXD, PIN_PULLUP, 0);
@@ -202,10 +220,4 @@ pm_power_on_mode_t SystemPowerOnModeGet(void)
     return PM_COLD_BOOT;
 }
 
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

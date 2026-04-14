@@ -23,35 +23,44 @@ menuconfig BSP_USING_CHARGER
             config CHARGER_MEASURE_MODE_SUSPEND    
             bool "chargeing measure vbat adc mode suspend"
             config CHARGER_MEASURE_MODE_CURVE    
-            bool "chargeing measure vbat adc mode CURVE"          
+            bool "chargeing measure vbat adc mode CURVE"
         endchoice          
-    menuconfig CHARGE_PIN_CONFIG
-      bool "chagre pin number config -1:invalid >=0:valid"
-      default y
+        menuconfig CHARGE_PIN_CONFIG
+            bool "chagre pin number config -1:invalid >=0:valid"
+            default y
             if CHARGE_PIN_CONFIG
                 config BSP_CHARGER_INT_PIN
                     int "charge detect pin number"
-					default 143
-		        config BSP_CHARGER_INT_PIN_ACTIVE_HIGH
-		            bool "Detect pin level is high if charge plug in"
-		            default n  
+                    default 143
+                config BSP_CHARGER_INT_PIN_ACTIVE_HIGH
+                    bool "Detect pin level is high if charge plug in"
+                    default n  
                 config BSP_CHARGER_EN_PIN  
                     int "charge Enable pin number"
                     default -1
-	            config BSP_CHARGING_PIN  
-		            int "charging status pin number"
-		            default -1
-		        config BSP_CHARGING_PIN_ACTIVE_HIGH
-		            bool "Charging pin level is high if charge plug in"
-		            default n   
-				config BSP_CHARGE_FULL_PIN  
+                config BSP_CHARGING_PIN  
+                    int "charging status pin number"
+                    default -1
+                config BSP_CHARGING_PIN_ACTIVE_HIGH
+                    bool "Charging pin level is high if charge plug in"
+                    default n   
+                config BSP_CHARGE_FULL_PIN  
                     int "charge full status pin number"
-					default -1
-		        config BSP_CHARGE_FULL_PIN_ACTIVE_HIGH
-		            bool "Charge full pin level is high if charge plug in"
-		            default n
-		    endif
-        menuconfig CHARGE_ADC_CONFIG    
+                    default -1
+                config BSP_CHARGE_FULL_PIN_ACTIVE_HIGH
+                    bool "Charge full pin level is high if charge plug in"
+                    default n
+            endif
+        menuconfig CHARGE_I2C_CONFIG
+            bool "charge i2c config"
+            default n
+            
+            if CHARGE_I2C_CONFIG
+                config BSP_BATTERY_USE_I2C_BUS
+                    string "chagre I2C bus config"
+                    default "i2c2"
+            endif   
+        menuconfig CHARGE_ADC_CONFIG
             bool "charge adc config"
             default y
             
@@ -64,8 +73,35 @@ menuconfig BSP_USING_CHARGER
                     int "battery detect used adc channel"
                     default 1
             endif
+        menuconfig CHARGE_MONITOR_TEMP_CONFIG
+            bool "NTC temp config"
+            default n
             
+            if CHARGE_MONITOR_TEMP_CONFIG
+                config BSP_NTC_TEMP_ADC
+                    string  "ntc used  adc"
+                    default "bat1"
+                    
+                config BSP_NTC_TEMP_ADC_CHANNEL
+                    int "ntc used adc channel"
+                    default 4
+                    
+                choice
+                    prompt "ntc value computing method"
+                    default BSP_NTC_TEMP_METHOD_FORMULA_COMPUTE
+                    
+                    config BSP_NTC_TEMP_METHOD_FORMULA_COMPUTE
+                    bool "formula compute"
+                    
+                    config BSP_NTC_TEMP_METHOD_LOOKUP_TABLE
+                    bool "lookup table"          
+                endchoice
+            endif
         config BSP_USING_CHARGER_DETECT
             bool "Use charger detect"
+            default n
+            
+        config CHARGE_NO_BATTERY
+            bool "charge no battery"
             default n
     endif

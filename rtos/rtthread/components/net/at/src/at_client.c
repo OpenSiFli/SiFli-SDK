@@ -528,6 +528,22 @@ void at_obj_set_end_sign(at_client_t client, char ch)
 }
 
 /**
+ *  AT client set end str.
+ *
+ * @param client current AT client object
+ * @param str the end str
+ */
+void at_obj_set_end_str(at_client_t client, const char *str)
+{
+    if (client == RT_NULL)
+    {
+        LOG_E("input AT Client object is NULL, please create or get AT Client object!");
+        return;
+    }
+    client->end_str = str;
+}
+
+/**
  * set URC(Unsolicited Result Code) table
  *
  * @param client current AT client object
@@ -581,6 +597,148 @@ int at_obj_set_urc_table(at_client_t client, const struct at_urc *urc_table, rt_
 
     return RT_EOK;
 }
+
+
+
+/**
+ * set cmd control table
+ *
+ * @param client current AT client object
+ * @param table cmd table
+ * @param size table size
+ */
+int at_obj_set_cmd_table(at_client_t client, const at_client_cmd_t *cmd_table, rt_size_t table_sz)
+{
+    rt_size_t idx;
+
+    if (client == RT_NULL)
+    {
+        LOG_E("input AT Client object is NULL, please create or get AT Client object!");
+        return -RT_ERROR;
+    }
+
+    if (RT_NULL == cmd_table || 0 == table_sz)
+    {
+        LOG_E("input cmd_table || table_sz is invalid");
+        return -RT_ERROR;
+    }
+    client->cmd_table = cmd_table;
+    client->cmd_size = table_sz;
+    return RT_EOK;
+}
+
+
+static int get_cmd_table_idx(at_client_t client, int cmd, int *idx)
+{
+    if (RT_NULL == client->cmd_table || 0 == client->cmd_size)
+    {
+        LOG_E("no cmd control table");
+        return RT_ERROR;
+    }
+
+    for (int index = 0; index < client->cmd_size; index++)
+    {
+        if (cmd == client->cmd_table[index].cmd)
+        {
+            *idx = index;
+            return RT_EOK;
+        }
+    }
+    LOG_I("not find cmd:%d", cmd);
+    return RT_ERROR;
+}
+
+
+/**
+ * at client cmd control
+ *
+ * @param client current AT client object
+ * @param cmd control cmd
+ * @param line_num the number of setting response lines
+ *         = 0: the response data will auto return when received 'OK' or 'ERROR' or end_str
+ *        != 0: the response data will return when received setting lines number data
+ * @param param cmd param
+ * @param size param size
+ * @param args resp args
+ *
+ */
+int at_client_cmd_control(at_client_t client, int cmd, rt_size_t line_num, const char *param, rt_size_t size, void *args)
+{
+    char at_str[AT_CMD_MAX_LEN] = {0};
+    int result = RT_EOK;
+    int name_len = 0;
+    int cmd_table_idx = 0;
+
+    result = get_cmd_table_idx(client, cmd, &cmd_table_idx);
+    if (RT_EOK != result)
+    {
+        return result;
+    }
+    at_response_t resp = at_create_resp(client->recv_bufsz, line_num, \
+                                        rt_tick_from_millisecond(client->cmd_table[cmd_table_idx].tick));
+    if (RT_NULL == resp)
+    {
+        LOG_E("No memory for response structure!");
+        return RT_ENOMEM;
+    }
+
+    name_len = rt_strlen(client->cmd_table[cmd_table_idx].cmd_prefix);
+    if ((name_len + size) > (AT_CMD_MAX_LEN - 1))
+    {
+        LOG_E("cmd control size out of AT_CMD_MAX_LEN!");
+        return RT_ENOMEM;
+    }
+
+    rt_memcpy(at_str, client->cmd_table[cmd_table_idx].cmd_prefix, name_len);
+    rt_memcpy(at_str + name_len, param, size);
+    at_obj_set_end_str(client, client->cmd_table[cmd_table_idx].end_prefix);
+    result = at_obj_exec_cmd(client, resp, at_str);
+    if (result != RT_EOK && (-RT_ETIMEOUT != result))
+    {
+        LOG_E("send commands failed or return response error:%d!", result);
+        at_delete_resp(resp);
+        return result;
+    }
+
+    if (-RT_ETIMEOUT == result && (client->recv_line_len > 0)) /* resp no \r\n */
+    {
+        if (resp->buf_len + client->recv_line_len < resp->buf_size)
+        {
+            //client->recv_line_buf[client->recv_line_len - 1] = '\0';
+            /* copy response lines, separated by '\0' */
+            rt_memcpy(resp->buf + resp->buf_len, client->recv_line_buf, client->recv_line_len);
+
+            /* update the current response information */
+            resp->buf_len += client->recv_line_len;
+            resp->line_counts++;
+        }
+        else
+        {
+            LOG_E("Read response buffer failed. The Response buffer size is out of buffer size(%d)!", resp->buf_size);
+        }
+        rt_memset(client->recv_line_buf, 0x00, client->recv_bufsz);
+        client->recv_line_len = 0;
+    }
+    else
+    {
+        if (resp->line_counts < 1)
+        {
+            LOG_E("execute command (%d) timeout (%d)!", cmd, resp->timeout);
+            at_delete_resp(resp);
+            return -RT_ETIMEOUT;
+        }
+    }
+    //printf_resp_buf(resp);
+    if (RT_NULL != client->cmd_table[cmd_table_idx].response_handle)
+    {
+        result = client->cmd_table[cmd_table_idx].response_handle(resp, args);
+    }
+
+_exit:
+    at_delete_resp(resp);
+    return result;
+}
+
 
 /**
  * get AT client object by AT device name.

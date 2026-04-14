@@ -19,6 +19,32 @@ scons --board=sf32lb52-lcd_n16r8 --target=mdk5 -s
 需要注意的是，SDK采用多工程编译，应用程序的工程只是主工程，会联动编译相应的子工程，如二级boot、ftab等工程，但使用`--target`仅生成主工程对应的Keil工程，直接使用该工程编译会有问题，只能用于阅读代码
 ```
 
+## 导出代码索引
+
+如果想把当前工程实际使用到的源文件和头文件导出给外部分析工具使用，可以在工程目录下执行：
+
+```shell
+sdk.py export-codebase --board=<board_name>
+```
+
+如果已经通过`sdk.py set-target`保存过目标板，也可以省略`--board`参数：
+
+```shell
+sdk.py export-codebase
+```
+
+该命令内部会调用`scons --target=json`，并在build目录下生成`codebase_index.json`，例如`build_sf32lb52-lcd_n16r8_hcpu/codebase_index.json`。
+
+导出的JSON包含以下顶层字段：
+
+- `system_construction`：当前固定为`scons`
+- `projects`：主工程及其子工程各自的文件列表
+- `all_sources`：所有源文件的合并结果
+- `all_headers`：所有头文件的合并结果
+- `all_files`：所有源文件和头文件的合并结果
+- `all_include_paths`：所有头文件搜索路径的合并结果
+- `all_defines`：所有预处理宏定义的合并结果
+
 除了使用SDK自带的板子配置，还可以使用`--board_search_path`指定一个目录作为第三方板子的搜索路径，这个目录可以在SDK之外，可以是相对路径也可以是绝对路径，当指定了搜索路径后，编译时除了从SDK的板子目录查找板子，还会从这个目录获取板子配置，如果两个目录下有同名的板子，会使用`--board_search_path`指定目录下的板子。例如在app1的project目录下执行如下的编译命令，以相对路径指定板子的搜索路径。
 
 ```shell

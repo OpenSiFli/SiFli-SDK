@@ -3927,7 +3927,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 2 : edr tx 6dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0xC << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x5 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x60;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x44444444;
@@ -3941,7 +3941,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 3 : edr tx 9dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x14 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0xA << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x70;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x55555555;
@@ -3957,10 +3957,10 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 4 : edr tx 13dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x1B << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos; //set PA_BM to 0 to minimize current
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x10 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos; //set PA_BM to 0 to minimize current
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x50;
 
-            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x77777777;
+            hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x66666666;
 
             hwp_bt_rfc->TRF_EDR_REG2 &= ~BT_RFC_TRF_EDR_REG2_BRF_TRF_EDR_PWRMTR_GC_LV;
             //BRF_RVGA_GC_LV=0x10
@@ -4691,17 +4691,17 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
     //edr test 13 dBm: 0x1F
 
 
-    hwp_bt_phy->TX_IF_MOD_CFG4 = 0x8055555E;
-    hwp_bt_phy->TX_IF_MOD_CFG6 = 0x6855555E;
+    hwp_bt_phy->TX_IF_MOD_CFG4 = 0x80805555;
+    hwp_bt_phy->TX_IF_MOD_CFG6 = 0x68685555;
     hwp_bt_phy->TX_IF_MOD_CFG7 = 0x5E5E5E5E;
     hwp_bt_phy->TX_IF_MOD_CFG8 = 0x5050505E;
     hwp_bt_phy->TX_DPSK_CFG2   = 0x5E5E5E5E;
     hwp_bt_phy->TX_DPSK_CFG3   = 0x5050505E;
 
     if (bt_is_in_BQB_mode())
-        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775433;
+        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xFFC65433;
     else
-        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xF8775433;
+        hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0xFFC65433;
     //hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x66666666;
 
 
@@ -4995,7 +4995,8 @@ void bt_rf_cal(void)
 
     bt_rf_opt_cal();
     //HAL_Set_backup(RTC_BACKUP_BT_TXPWR, BLE_TX_POWER_VAL);
-
+    //store driver version in register
+    hwp_bt_rfc->RSVD_REG2 = 0x26030000;
 #if BR_BQB_COCHANNEL_CASE
     hwp_bt_phy->DEMOD_CFG8 &= ~(BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Msk | BT_PHY_DEMOD_CFG8_BR_MU_DC_Msk | BT_PHY_DEMOD_CFG8_BR_MU_ERR_Msk);
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Pos) | (0x02 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos) | (0x60 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
@@ -5004,7 +5005,7 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.0.2.0_3203";
+char *g_rf_ful_ver = "1.0.3.0_3472";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;

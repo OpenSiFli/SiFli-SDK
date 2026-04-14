@@ -10,19 +10,18 @@ void lv_example_grid_1(void)
     static int32_t row_dsc[] = {50, 50, 50, LV_GRID_TEMPLATE_LAST};
 
     /*Create a container with grid*/
-    lv_obj_t *cont = lv_obj_create(lv_screen_active());
+    lv_obj_t * cont = lv_obj_create(lv_screen_active());
     lv_obj_set_style_grid_column_dsc_array(cont, col_dsc, 0);
     lv_obj_set_style_grid_row_dsc_array(cont, row_dsc, 0);
     lv_obj_set_size(cont, 300, 220);
     lv_obj_center(cont);
     lv_obj_set_layout(cont, LV_LAYOUT_GRID);
 
-    lv_obj_t *label;
-    lv_obj_t *obj;
+    lv_obj_t * label;
+    lv_obj_t * obj;
 
-    uint32_t i;
-    for (i = 0; i < 9; i++)
-    {
+    uint8_t i;
+    for(i = 0; i < 9; i++) {
         uint8_t col = i % 3;
         uint8_t row = i / 3;
 

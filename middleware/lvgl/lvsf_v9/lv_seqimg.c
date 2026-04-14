@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * @file lv_seqimg.c
  *
@@ -9,28 +15,23 @@
 #include "lv_image_private.h"
 #include "lv_obj_class_private.h"
 
-
 #define MY_CLASS &lv_seqimg_class
-
 
 typedef struct
 {
-    lv_image_t img;                   // Basic Image Control
-    lv_image_dsc_t **dsc_array;       // Array of images
-    uint16_t size;                  // Array Size
-    lv_timer_t *timer;              // Playback timer
-    uint16_t curr_frame;            // Current frame index
-    uint32_t period;                // Playback interval (ms)
-    bool playing;                   // Is it currently playing?
+    lv_image_t img; // Basic Image Control
+    void **src_array; // Array of image sources (can be either image descriptors or file paths)
+    uint16_t size;       // Array Size
+    lv_timer_t *timer;   // Playback timer
+    uint16_t curr_frame; // Current frame index
+    uint32_t period;     // Playback interval (ms)
+    bool playing;        // Is it currently playing?
 } lv_seqimg_t;
-
 
 static void lv_seqimg_constructor(const lv_obj_class_t *class_p, lv_obj_t *obj);
 static void lv_seqimg_destructor(const lv_obj_class_t *class_p, lv_obj_t *obj);
 
-
-const lv_obj_class_t lv_seqimg_class =
-{
+const lv_obj_class_t lv_seqimg_class = {
     .constructor_cb = lv_seqimg_constructor,
     .destructor_cb = lv_seqimg_destructor,
     .instance_size = sizeof(lv_seqimg_t),
@@ -45,12 +46,12 @@ static void seqimg_timer_cb(lv_timer_t *timer)
     lv_obj_t *obj = (lv_obj_t *)timer->user_data;
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
 
-    ext->curr_frame = (ext->curr_frame + 1) % ext->size;//Each time an index update is triggered
-    if (ext->dsc_array)
+    ext->curr_frame = (ext->curr_frame + 1) %
+                      ext->size; // Each time an index update is triggered
+    if (ext->size > 0)
     {
-        lv_img_set_src(obj, ext->dsc_array[ext->curr_frame]);
+        lv_img_set_src(obj, ext->src_array[ext->curr_frame]);
     }
-
 }
 /*
 initializer
@@ -59,7 +60,7 @@ static void lv_seqimg_constructor(const lv_obj_class_t *class_p, lv_obj_t *obj)
 {
     LV_UNUSED(class_p);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
-    ext->dsc_array = NULL;
+    ext->src_array = NULL;
     ext->size = 0;
     ext->timer = NULL;
     ext->curr_frame = 0;
@@ -78,7 +79,6 @@ static void lv_seqimg_destructor(const lv_obj_class_t *class_p, lv_obj_t *obj)
     }
 }
 
-
 /*
 Create a sequence frame image control
 */
@@ -91,22 +91,47 @@ lv_obj_t *lv_seqimg_create(lv_obj_t *parent)
 
 /*
 Set up an array of pictures
-dsc_array：A new array of frame images (each element is a lv_img_dsc_t description)
-size：The number of frames
+dsc_array：A new array of frame images (each element is a lv_img_dsc_t
+description) size：The number of frames
 
-After the replacement, the frame index is reset to 0 and the first frame is displayed.
+After the replacement, the frame index is reset to 0 and the first frame is
+displayed.
 
 */
-void lv_seqimg_src_array(lv_obj_t *obj, const lv_img_dsc_t **dsc_array, uint16_t size)
+void lv_seqimg_src_array(lv_obj_t *obj, const lv_img_dsc_t **dsc_array,
+                         uint16_t size)
 {
     LV_ASSERT_NULL(obj);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
-    ext->dsc_array = (lv_img_dsc_t **)dsc_array;
+    ext->src_array = (void **)dsc_array;
     ext->size = size;
     ext->curr_frame = 0;
     if (dsc_array && size > 0)
     {
         lv_img_set_src(obj, dsc_array[0]);
+    }
+}
+
+/*
+Set up an array of pictures from file paths
+file_path_array：A new array of frame image file paths
+size：The number of frames
+
+After the replacement, the frame index is reset to 0 and the first frame is
+displayed.
+
+*/
+void lv_seqimg_file_array(lv_obj_t *obj, const char **file_path_array,
+                          uint16_t size)
+{
+    LV_ASSERT_NULL(obj);
+    lv_seqimg_t *ext = (lv_seqimg_t *)obj;
+    ext->src_array = (void **)file_path_array;
+    ext->size = size;
+    ext->curr_frame = 0;
+    if (file_path_array && size > 0)
+    {
+        lv_img_set_src(obj, file_path_array[0]);
     }
 }
 
@@ -124,11 +149,10 @@ void lv_seqimg_select(lv_obj_t *obj, uint16_t index)
     }
 
     ext->curr_frame = index;
-    if (ext->dsc_array)
+    if (ext->size > 0)
     {
-        lv_img_set_src(obj, ext->dsc_array[index]);
+        lv_img_set_src(obj, ext->src_array[index]);
     }
-
 }
 /*
 Start playing
@@ -138,14 +162,21 @@ void lv_seqimg_play(lv_obj_t *obj)
     LV_ASSERT_NULL(obj);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
 
+    rt_kprintf("lv_seqimg_play: size=%d, playing=%d\n", ext->size,
+               ext->playing);
     if (!ext->playing && ext->size > 0)
     {
         if (!ext->timer)
         {
-            ext->timer = lv_timer_create(seqimg_timer_cb, ext->period, obj);//Create a timer binding event to trigger playback
+            rt_kprintf("lv_seqimg_play: creating timer with period %d\n",
+                       ext->period);
+            ext->timer = lv_timer_create(
+                seqimg_timer_cb, ext->period,
+                obj); // Create a timer binding event to trigger playback
         }
         else
         {
+            rt_kprintf("lv_seqimg_play: resuming timer\n");
             lv_timer_resume(ext->timer);
         }
         ext->playing = true;
@@ -160,7 +191,6 @@ void lv_seqimg_play(lv_obj_t *obj)
         {
             LV_LOG_WARN("seqimg: drawing\n");
         }
-
     }
 }
 /*
@@ -190,5 +220,3 @@ void lv_seqimg_set_period(lv_obj_t *obj, uint32_t period)
         lv_timer_set_period(ext->timer, period);
     }
 }
-
-

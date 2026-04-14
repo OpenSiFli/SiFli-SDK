@@ -1,6 +1,11 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef AUDIO_MP3CTRL_H
 #define AUDIO_MP3CTRL_H     1
-
 
 #include <audio_server.h>
 
@@ -36,6 +41,10 @@ typedef struct
 #define MP3CTRL_IOCTRL_LOOP_TIMES           0
 #define MP3CTRL_IOCTRL_CHANGE_FILE          1
 #define MP3CTRL_IOCTRL_THREAD_PRIORITY      2
+#define MP3CTRL_IOCTRL_FADE_OUT_START       3
+#define MP3CTRL_IOCTRL_IS_FADE_OUT_DONE     4
+#define MP3CTRL_IOCTRL_FADE_OUT_STOP        5
+
 /*
 open:
     return NULL if file error
@@ -53,6 +62,22 @@ mp3ctrl_handle mp3ctrl_open(audio_type_t type, const char *filename, audio_serve
 mp3ctrl_handle mp3ctrl_open2(audio_type_t type, const char *filename, audio_server_callback_func callback, void *callback_userdata, audio_device_e only_use_device);
 mp3ctrl_handle mp3ctrl_open_buffer(audio_type_t type, const char *buf, uint32_t buf_len, audio_server_callback_func callback, void *callback_userdata);
 mp3ctrl_handle mp3ctrl_open_buffer2(audio_type_t type, const char *buf, uint32_t buf_len, audio_server_callback_func callback, void *callback_userdata, audio_device_e only_use_device);
+#if AUDIO_MP3_RINGBUFF_SUPPORT
+/**
+ * @brief Open an MP3 control handle backed by a ringbuffer.
+ *
+ * This interface is intended for streaming or incremental feed scenarios,
+ * where the audio data is supplied through the ringbuffer instead of a file.
+ *
+ * @param type Decoder type for the input stream.
+ * @param buf Ringbuffer used to provide stream data.
+ * @param file_len Expected total stream size in bytes.
+ * @param callback Audio server callback function.
+ * @param callback_userdata User context passed back to @p callback.
+ * @return MP3 control handle on success, or NULL on failure.
+ */
+mp3ctrl_handle mp3ctrl_open_ringbuffer(audio_type_t type, struct rt_ringbuffer *buf, uint32_t file_len, audio_server_callback_func callback, void *callback_userdata);
+#endif
 /**
     cmd:
       MP3CTRL_IOCTRL_LOOP_TIMES
@@ -73,7 +98,9 @@ int mp3ctrl_seek(mp3ctrl_handle handle, uint32_t seconds);
 int mp3ctrl_getinfo(const char *filename, mp3_info_t *info);
 int mp3_get_id3_start(const char *filename, mp3_id3_info_t *info);
 void mp3_get_id3_end(mp3_id3_info_t *info);
-
+#ifdef AUDIO_MP3_RINGBUFF_SUPPORT
+int mp3ctrl_get_total_seconds(mp3ctrl_handle handle, uint32_t *total_seconds);
+#endif
 #ifdef __cplusplus
 }
 #endif

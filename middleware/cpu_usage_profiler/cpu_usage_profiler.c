@@ -396,7 +396,11 @@ static void cpu_usage_metrics_collect(void *user_data)
 
     data_len = sizeof(cpu_usage_metrics_t) + thread_num * sizeof(cpu_thread_run_time_t);
     metrics = mc_alloc_metrics(METRICS_MW_CPU_USAGE, data_len);
-    RT_ASSERT(metrics);
+    if (!metrics)
+    {
+        LOG_E("cpu usage metrics alloc failed");
+        return;
+    }
     metrics->idle_run_time = cpu_metrics.idle_run_time;
     metrics->other_run_time = cpu_metrics.other_run_time;
     metrics->thread_num = thread_num;

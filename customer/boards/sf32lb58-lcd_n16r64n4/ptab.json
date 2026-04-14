@@ -42,7 +42,8 @@
                 "offset": "0x00000000", 
                 "max_size": "0x00200000", 
                 "name": "main",
-                "type": ["app_img"]
+                "type": ["app_img"],
+                "tags": ["HCPU_FLASH_CODE"]
             },
             {
                 "offset": "0x00200000", 

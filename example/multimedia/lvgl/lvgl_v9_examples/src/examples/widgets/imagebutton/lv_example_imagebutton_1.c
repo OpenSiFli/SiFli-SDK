@@ -25,7 +25,7 @@ void lv_example_imagebutton_1(void)
     lv_style_set_transform_width(&style_pr, 20);
 
     /*Create an image button*/
-    lv_obj_t *imagebutton1 = lv_imagebutton_create(lv_screen_active());
+    lv_obj_t * imagebutton1 = lv_imagebutton_create(lv_screen_active());
     lv_imagebutton_set_src(imagebutton1, LV_IMAGEBUTTON_STATE_RELEASED, &imagebutton_left, &imagebutton_mid,
                            &imagebutton_right);
     lv_obj_add_style(imagebutton1, &style_def, 0);
@@ -35,7 +35,7 @@ void lv_example_imagebutton_1(void)
     lv_obj_align(imagebutton1, LV_ALIGN_CENTER, 0, 0);
 
     /*Create a label on the image button*/
-    lv_obj_t *label = lv_label_create(imagebutton1);
+    lv_obj_t * label = lv_label_create(imagebutton1);
     lv_label_set_text(label, "Button");
     lv_obj_align(label, LV_ALIGN_CENTER, 0, -4);
 }

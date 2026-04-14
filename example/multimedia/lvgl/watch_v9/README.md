@@ -12,8 +12,12 @@
 下面的小节仅提供绝对必要的信息。有关配置SiFli-SDK及使用其构建和运行项目的完整步骤，请参阅 [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)。
 
 ### 支持的开发板
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
+
 ```{note}
-- 不支持520-hdk
++ 不支持520-hdk
 ```
 
 ## 自定义指定字体

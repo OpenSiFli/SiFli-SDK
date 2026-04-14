@@ -8,6 +8,7 @@ PPIndentWidth: 4
 TabWidth: 4
 SpacesInParentheses: false
 IndentPPDirectives: BeforeHash
+IndentExternBlock: NoIndent
 
 # 禁用自动重排头文件
 SortIncludes: false

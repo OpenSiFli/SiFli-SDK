@@ -37,7 +37,7 @@
 #define CARD_NCR              1
 
 static struct msd_device  _msd_device;
-ALIGN(4)
+ALIGN(32)
 static uint8_t ones_data[512] =
 {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -246,8 +246,8 @@ static rt_err_t _send_cmd(
 )
 {
     struct rt_spi_message message;
-    uint8_t cmd_buffer[8];
-    uint8_t recv_buffer[sizeof(cmd_buffer)];
+    ALIGN(32)  uint8_t cmd_buffer[8];
+    ALIGN(32)  uint8_t recv_buffer[sizeof(cmd_buffer)];
     uint32_t i;
 
     cmd_buffer[0] = DUMMY;
@@ -422,7 +422,7 @@ static rt_err_t _wait_ready(struct rt_spi_device *device)
             return RT_EOK;
         }
 
-        if (rt_tick_timeout(tick_start, rt_tick_from_millisecond(1000)))
+        if (rt_tick_timeout(tick_start, rt_tick_from_millisecond(CARD_WAIT_TOKEN_TIMES)))
         {
             MSD_DEBUG("[err] wait ready timeout!\r\n");
             return RT_ETIMEOUT;
@@ -459,7 +459,7 @@ static rt_err_t _read_block(struct rt_spi_device *device, void *buffer, uint32_t
 
     /* get crc */
     {
-        uint8_t recv_buffer[2];
+        ALIGN(32) uint8_t recv_buffer[2];
 
         /* initial message */
         message.send_buf = ones_data;
@@ -477,7 +477,7 @@ static rt_err_t _read_block(struct rt_spi_device *device, void *buffer, uint32_t
 static rt_err_t _write_block(struct rt_spi_device *device, const void *buffer, uint32_t block_size, uint8_t token)
 {
     struct rt_spi_message message;
-    uint8_t send_buffer[16], recv_buffer[16];
+    ALIGN(32) uint8_t send_buffer[16], recv_buffer[16];
 
     rt_memset(send_buffer, DUMMY, sizeof(send_buffer));
     send_buffer[sizeof(send_buffer) - 1] = token;
@@ -498,7 +498,7 @@ static rt_err_t _write_block(struct rt_spi_device *device, const void *buffer, u
     {
         /* initial message */
         message.send_buf = buffer;
-        message.recv_buf = (void *)buffer;
+        message.recv_buf = (void *)RT_NULL; // no need recv
         message.length = block_size;
         message.cs_take = message.cs_release = 0;
 
@@ -508,7 +508,7 @@ static rt_err_t _write_block(struct rt_spi_device *device, const void *buffer, u
 
     /* put crc and get data response */
     {
-        uint8_t recv_buffer[3];
+        ALIGN(32) uint8_t recv_buffer[3];
         uint8_t response;
 
         /* initial message */
@@ -581,7 +581,7 @@ static inline uint32_t csd_trans_speed_to_hz(uint8_t ts)
 static rt_err_t rt_msd_init(rt_device_t dev)
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32) uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result = RT_EOK;
     rt_tick_t tick_start;
     uint32_t OCR;
@@ -622,7 +622,7 @@ static rt_err_t rt_msd_init(rt_device_t dev)
            In case of SPI mode, CS shall be held to high during 74 clock cycles. */
         if (1)
         {
-            uint8_t send_buffer[200]; /* 100byte > 74 clock */
+            ALIGN(32) uint8_t send_buffer[200]; /* 100byte > 74 clock */
 
             /* initial message */
             memset(send_buffer, DUMMY, sizeof(send_buffer));
@@ -820,7 +820,7 @@ static rt_err_t rt_msd_init(rt_device_t dev)
 
                 /* send dummy clock */
                 {
-                    uint8_t send_buffer[100];
+                    ALIGN(32) uint8_t send_buffer[100];
 
                     /* initial message */
                     memset(send_buffer, DUMMY, sizeof(send_buffer));
@@ -1070,7 +1070,7 @@ static rt_err_t rt_msd_init(rt_device_t dev)
 
     /* read CSD */
     {
-        uint8_t CSD_buffer[MSD_CSD_LEN];
+        ALIGN(32) uint8_t CSD_buffer[MSD_CSD_LEN];
 
         rt_spi_take(msd->spi_device);
         //result = _send_cmd(msd->spi_device, SEND_CSD, 0x00, 0xAF, response_r1, response);
@@ -1320,7 +1320,7 @@ static rt_err_t rt_msd_close(rt_device_t dev)
 static rt_size_t rt_msd_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32) uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result = RT_EOK;
     pos += msd->offset;
     result = MSD_take_owner(msd->spi_device);
@@ -1402,7 +1402,7 @@ _exit:
 static rt_size_t rt_msd_sdhc_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)//4096//8
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32)uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result = RT_EOK;
     pos +=  msd->offset;
 #if 0 //Due to issues with multi block reading, it has been temporarily changed to single block reading
@@ -1515,7 +1515,7 @@ _exit:
 static rt_size_t rt_msd_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size)
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32)uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result;
     pos += msd->offset;
 
@@ -1602,7 +1602,7 @@ static rt_size_t rt_msd_write(rt_device_t dev, rt_off_t pos, const void *buffer,
 
         /* send stop token */
         {
-            uint8_t send_buffer[18];
+            ALIGN(32) uint8_t send_buffer[18];
 
             rt_memset(send_buffer, DUMMY, sizeof(send_buffer));
             send_buffer[sizeof(send_buffer) - 1] = MSD_TOKEN_WRITE_MULTIPLE_STOP;
@@ -1640,7 +1640,7 @@ _exit:
 static rt_size_t rt_msd_sdhc_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size)
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32) uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result;
 
     pos +=  msd->offset;
@@ -1720,7 +1720,7 @@ static rt_size_t rt_msd_sdhc_write(rt_device_t dev, rt_off_t pos, const void *bu
 
         /* send stop token */
         {
-            uint8_t send_buffer[5];
+            ALIGN(32) uint8_t send_buffer[5];
 
             rt_memset(send_buffer, DUMMY, sizeof(send_buffer));
             send_buffer[sizeof(send_buffer) - 1] = MSD_TOKEN_WRITE_MULTIPLE_STOP;
@@ -1755,7 +1755,7 @@ _exit:
 static rt_err_t rt_msd_detection(rt_device_t dev)
 {
     struct msd_device *msd = (struct msd_device *)dev;
-    uint8_t response[MSD_RESPONSE_MAX_LEN];
+    ALIGN(32) uint8_t response[MSD_RESPONSE_MAX_LEN];
     rt_err_t result = RT_EOK;
     rt_tick_t tick_start;
     result = MSD_take_detection(msd->spi_device);
@@ -1855,7 +1855,7 @@ static void _msd_lp_send_dummy(struct rt_spi_device *spi, int bytes)
     spi->bus->ops->xfer(spi, &msg);
 }
 
-static void _msd_wait_ready(struct rt_spi_device *spi)
+static void _msd_wait_ready(struct rt_spi_device *spi, int timeout_ms)
 {
     uint8_t resp = 0x00, ff = 0xFF;
     struct rt_spi_message msg =
@@ -1867,12 +1867,13 @@ static void _msd_wait_ready(struct rt_spi_device *spi)
         .cs_release = 0,
         .next       = RT_NULL,
     };
-
-    do
+    rt_tick_t start = rt_tick_get();
+    while (!rt_tick_timeout(start, rt_tick_from_millisecond(timeout_ms)))
     {
         spi->bus->ops->xfer(spi, &msg);
+        if (resp == 0xFF) return;   /* SD card is free */
+        rt_thread_mdelay(1);
     }
-    while (resp != 0xFF);
 }
 
 static void _msd_idle_enter(void)
@@ -1880,13 +1881,13 @@ static void _msd_idle_enter(void)
     struct msd_device *msd = &_msd_device;
     /*cs low, and wait idle*/
     rt_spi_take(msd->spi_device);
-    _msd_wait_ready(msd->spi_device);
+    _msd_wait_ready(msd->spi_device, 1000);
     /*send 8 dummy, sd will entry standby mode*/
     _msd_lp_send_dummy(msd->spi_device, 8);
     /*cs resume high*/
     rt_spi_release(msd->spi_device);
 }
-#endif
+#endif /* MSD_SPI_FORCE_IDLE */
 rt_err_t msd_init(const char *sd_device_name, const char *spi_device_name)
 {
     rt_err_t result = RT_EOK;

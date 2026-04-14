@@ -4,16 +4,16 @@
 void lv_example_tabview_1(void)
 {
     /*Create a Tab view object*/
-    lv_obj_t *tabview;
+    lv_obj_t * tabview;
     tabview = lv_tabview_create(lv_screen_active());
 
     /*Add 3 tabs (the tabs are page (lv_page) and can be scrolled*/
-    lv_obj_t *tab1 = lv_tabview_add_tab(tabview, "Tab 1");
-    lv_obj_t *tab2 = lv_tabview_add_tab(tabview, "Tab 2");
-    lv_obj_t *tab3 = lv_tabview_add_tab(tabview, "Tab 3");
+    lv_obj_t * tab1 = lv_tabview_add_tab(tabview, "Tab 1");
+    lv_obj_t * tab2 = lv_tabview_add_tab(tabview, "Tab 2");
+    lv_obj_t * tab3 = lv_tabview_add_tab(tabview, "Tab 3");
 
     /*Add content to the tabs*/
-    lv_obj_t *label = lv_label_create(tab1);
+    lv_obj_t * label = lv_label_create(tab1);
     lv_label_set_text(label, "This the first tab\n\n"
                       "If the content\n"
                       "of a tab\n"

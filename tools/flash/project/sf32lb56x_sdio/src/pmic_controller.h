@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+
 /**
 only called when driver init
 */
@@ -27,6 +28,7 @@ void BSP_PMIC_Init(int scl, int sda);
   * @retval no use now
 */
 int BSP_PMIC_Control(uint16_t out_map, int is_enable, bool lvsw1_twi_en);
+
 
 /**
     out_map parameter for BSP_PMIC_Control(out_map， ) and pmic_device_control(uint16_t out_map,)
@@ -51,6 +53,7 @@ int BSP_PMIC_Control(uint16_t out_map, int is_enable, bool lvsw1_twi_en);
 */
 int pmic_device_control(uint16_t out_map, int is_enable, bool lvsw1_twi_en);
 
+
 /*
     following interface is used for detail control for diffrent register,
     some can set to contol by pad_en, not by twi, see register spec,
@@ -74,6 +77,7 @@ typedef enum
 */
 bool pmic_get_status(pmic_status_t which_to_check);
 
+
 typedef enum 
 {
     PMIC_LDO_1,
@@ -91,6 +95,7 @@ typedef enum
   * @retval void
 */
 void pmic_twi_ldo_set(pmic_ldo_set_t ldo, bool is_open, uint8_t vol_steps);
+
 
 typedef enum
 {
@@ -112,12 +117,14 @@ typedef enum
 */
 void pmic_twi_loadsw_set(pmic_loadsw_t sw, bool is_open, bool lvsw1_twi_en);
 
+
 /**
   * @brief buck volate fine tuning, about (6.0mv * steps) ajust
   * @param[in]  steps should <=0x0F
   * @retval void
 */
 void pmic_buck_voltage_fine_tuning(uint8_t steps);
+
 
 /**
   * @brief pmic twi pin setting on chip
@@ -129,5 +136,7 @@ void pmic_twi_pin_set(bool scl_big_current, bool scl_pulldown_enable, bool sda_b
 }
 #endif
 
+
 #endif /* __PMIC_CONTROLLER_H */
 
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

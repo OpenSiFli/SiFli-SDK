@@ -4,6 +4,20 @@
 
 DFU_PAN是一个基于蓝牙PAN网络的OTA固件升级中间件，它允许设备通过蓝牙网络连接到OTA服务器，下载并更新固件。整个流程包括设备注册、版本检查、固件下载和更新等步骤。
 
+想使用DFU_PAN功能需添加examplele/dfu_pan子工程，搭配middleware/dfu_pan中间件实现
+
+1.主程序project/proj.conf文件中添加，使能DFU_PAN功能
+```
+CONFIG_USING_DFU_PAN=y
+```
+
+2.需要在主工程project/SConstruct文件下添加子工程语法： 
+```
+AddDFU_PAN(SIFLI_SDK)
+```
+位置通常是DoBuilding(TARGET, objs)下方
+
+具体可参考example/bt/pan_ota例程使用DFU_PAN
 ## 2. 工作流程总览
 
 ```
@@ -436,4 +450,59 @@ if (calculated_crc != firmware_file_info[i].crc32)
 4. **性能优化**：使用查找表方法提高计算效率，避免每次计算都进行位运算
 
 通过以上 CRC32 校验机制，DFU_PAN 能够有效确保 OTA 升级过程中固件数据的完整性和正确性，防止因传输错误导致的固件损坏。
+
+## 5. 固件包部署
+固件包部署是指将固件包上传到服务器，供设备进行下载和安装。
+
+例1 ： 以小智部署ota升级包为例：
+1. 创建一个目录，将固件包上传到该目录下:
+**注意**：下方服务器地址仅供内部使用
+https://ota.sifli.com/browser/ 为文件部署首页，创建目录只需在地址栏填入相创建的目录结构即可,最后一级目录名需要是version号如v1.1
+
+
+![](../../../assets/dfu_pan2.png)
+
+
+2.上传bin文件固件包，一定要上传一个与version目录同名的bin文件，如图中v1.1.bin，此bin文件起占位符作用反应当前版本，一般项目有版本号迭代，因此部署占位符bin文件需要比项目当前版本更高，最大限度上传3个实际功能固件，固件名称以字母开头即可
+
+
+![](../../../assets/dfu_pan4.png)
+
+3.填写固件信息，上传文件后需要点击每个文件右侧的额外信息进行填写，填写完成后点击保存，可根据自身程序所使用的ptab.json查询固件起始地址和固件大小信息
+
+
+填写固件起始地址
+![](../../../assets/dfu_pan5.png)
+填写固件区域分配大小
+![](../../../assets/dfu_pan3.png)
+
+4.点击保存后，再次点击额外信息进行查看是否生成了crc32值
+
+
+![](../../../assets/dfu_pan5.png)
+
+也可以根据响应地址查看，是否能成功响应数据：https://ota.sifli.com/v2/xiaozhi/SF32LB52_ULP_NOR_TFT_CO5300/sf32lb52-lchspi-ulp?chip_id=123&version=latest
+
+**注意**
+地址中chip_id应该填写设备ID，此处只为验证是否成功响应，可以填一串任意数字，version填写latest是获取最新固件信息
+
+例2 ：example/pan_ota例程
+1. 创建一个目录(目录对应具体代码访问地址)，在网址栏填入目录结构 `https://ota.sifli.com/browser/example/pan_ota/SF32LB52_LCD_N16R8_TFT_CO5300/sf32lb52-lcd-n16r8/v1.1` 将固件包上传到该目录下:
+![](../../../assets/pan_ota1.png)
+
+2. 填写固件信息，上传文件后需要点击每个文件右侧的额外信息进行填写，填写完成后点击保存，可根据自身程序所使用的ptab.json查询固件起始地址和固件大小信息
+
+填写固件起始地址
+![](../../../assets/pan_ota2.png)
+
+填写固件区域分配大小
+![](../../../assets/pan_ota3.png)
+
+3. 点击保存后，再次点击额外信息进行查看是否了crc32值
+![](../../../assets/pan_ota4.png)
+
+也可以根据响应地址查看，是否能成功响应数据：https://ota.sifli.com/v2/example/pan_ota/SF32LB52_LCD_N16R8_TFT_CO5300/sf32lb52-lcd-n16r8?chip_id=123&version=latest
+
+
+![](../../../assets/pan_ota5.png)
 

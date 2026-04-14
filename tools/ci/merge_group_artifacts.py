@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
 # -*- coding: utf-8 -*-
 """
 合并分组artifacts的脚本
@@ -10,18 +12,69 @@ import sys
 import shutil
 import time
 import json
+import argparse
 from pathlib import Path
 import glob
 
 
 class GroupArtifactsMerger:
-    def __init__(self):
-        self.final_dir = Path('final_merged_artifacts')
+    def __init__(self, output_dir='final_merged_artifacts', failed_only=False):
+        self.final_dir = Path(output_dir)
+        self.failed_only = failed_only
         self.final_dir.mkdir(exist_ok=True)
+
+    def _parse_status_file(self, status_file):
+        """解析Job状态文件"""
+        metadata = {}
+
+        with open(status_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                metadata[key] = value
+
+        return metadata
+
+    def _infer_status_from_job_dir(self, job_dir):
+        """在状态文件缺失时，从日志尾部推断Job状态"""
+        logs_dir = job_dir / 'ci_build_logs'
+        if not logs_dir.exists():
+            return 'unknown'
+
+        log_files = sorted(logs_dir.glob('*.log'))
+        if not log_files:
+            return 'unknown'
+
+        log_path = log_files[0]
+        with open(log_path, 'rb') as f:
+            f.seek(max(0, log_path.stat().st_size - 4096))
+            tail = f.read().decode('utf-8', errors='ignore')
+
+        if '构建失败' in tail or '❌' in tail:
+            return 'failed'
+        if '构建成功' in tail or '✅' in tail:
+            return 'success'
+        return 'unknown'
+
+    def _get_job_status(self, job_dir):
+        """获取Job状态"""
+        status_dir = job_dir / 'job_status'
+        if status_dir.exists():
+            status_files = sorted(status_dir.glob('*.env'))
+            if status_files:
+                metadata = self._parse_status_file(status_files[0])
+                status = metadata.get('JOB_STATUS', '').strip().lower()
+                if status:
+                    return status
+
+        return self._infer_status_from_job_dir(job_dir)
     
     def merge_group_artifacts(self):
         """合并所有组的artifacts"""
-        print("🔄 开始合并分组artifacts...")
+        merge_mode = "失败Job" if self.failed_only else "全部Job"
+        print(f"🔄 开始合并分组artifacts，模式: {merge_mode}...")
         
         # 查找所有组artifacts目录
         group_dirs = glob.glob('group_*_artifacts')
@@ -52,6 +105,10 @@ class GroupArtifactsMerger:
             # 复制所有job目录到最终目录
             for job_dir in merged_artifacts_path.iterdir():
                 if job_dir.is_dir() and not job_dir.name.endswith('.txt') and not job_dir.name.endswith('.json'):
+                    job_status = self._get_job_status(job_dir)
+                    if self.failed_only and job_status != 'failed':
+                        continue
+
                     dest_job_dir = self.final_dir / job_dir.name
                     
                     if dest_job_dir.exists():
@@ -63,6 +120,7 @@ class GroupArtifactsMerger:
                     
                     # 统计这个job的文件
                     job_stats = self._count_job_files(dest_job_dir)
+                    job_stats['status'] = job_status
                     merged_jobs[job_dir.name] = job_stats
                     total_jobs += 1
                     total_logs += job_stats['logs']
@@ -102,7 +160,8 @@ class GroupArtifactsMerger:
         report_path = self.final_dir / 'build_summary.txt'
         
         with open(report_path, 'w', encoding='utf-8') as f:
-            f.write("SDK构建最终汇总报告\n")
+            report_title = "SDK失败构建最终汇总报告" if self.failed_only else "SDK构建最终汇总报告"
+            f.write(f"{report_title}\n")
             f.write("=" * 50 + "\n")
             f.write(f"Pipeline ID: {os.getenv('CI_PIPELINE_ID', 'N/A')}\n")
             f.write(f"项目ID: {os.getenv('CI_PROJECT_ID', 'N/A')}\n")
@@ -118,6 +177,7 @@ class GroupArtifactsMerger:
             
             for job_name, stats in sorted(merged_jobs.items()):
                 f.write(f"{job_name}:\n")
+                f.write(f"  - 状态: {stats.get('status', 'unknown')}\n")
                 f.write(f"  - 日志文件: {stats['logs']} 个\n")
                 f.write(f"  - 构建产物: {stats['artifacts']} 个\n")
                 
@@ -158,7 +218,7 @@ class GroupArtifactsMerger:
             "generated_at": time.strftime('%Y-%m-%d %H:%M:%S'),
             "pipeline_id": os.getenv('CI_PIPELINE_ID', 'N/A'),
             "project_id": os.getenv('CI_PROJECT_ID', 'N/A'),
-            "merge_strategy": "group_based",
+            "merge_strategy": "group_based_failed_only" if self.failed_only else "group_based",
             "total_jobs": len(merged_jobs),
             "jobs": {}
         }
@@ -168,8 +228,9 @@ class GroupArtifactsMerger:
             job_dir = self.final_dir / job_name
             if not job_dir.exists():
                 continue
-                
+            
             job_index = {
+                "status": merged_jobs[job_name].get('status', 'unknown'),
                 "logs": [],
                 "artifacts": []
             }
@@ -208,7 +269,12 @@ class GroupArtifactsMerger:
 def main():
     """主函数"""
     try:
-        merger = GroupArtifactsMerger()
+        parser = argparse.ArgumentParser(description='合并分组artifacts')
+        parser.add_argument('--failed-only', action='store_true', help='仅合并失败Job')
+        parser.add_argument('--output-dir', default='final_merged_artifacts', help='输出目录')
+        args = parser.parse_args()
+
+        merger = GroupArtifactsMerger(output_dir=args.output_dir, failed_only=args.failed_only)
         success = merger.merge_group_artifacts()
         
         if success:

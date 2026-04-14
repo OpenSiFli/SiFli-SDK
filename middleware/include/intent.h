@@ -30,6 +30,14 @@ intent_t intent_init(const char *action);
 void intent_deinit(intent_t i);
 
 /**
+ * @brief Reinitialize an intent with a new action
+ * @param i - Intent
+ * @param action - action name
+ * @return pointer to intent
+ */
+intent_t intent_reinit(intent_t i, const char *action);
+
+/**
  * @brief Put a string param into intent
  * @param i - Intent pointer
  * @param name - param name
@@ -91,6 +99,5 @@ void printf_intent(intent_t i);
 }
 #endif
 #endif  /* __INTENT_H__ */
-
 
 

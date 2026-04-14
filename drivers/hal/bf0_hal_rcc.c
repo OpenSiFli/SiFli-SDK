@@ -2393,15 +2393,15 @@ void HAL_RCC_HCPU_SetDeepWFIDiv(int8_t div, int8_t pdiv1, int8_t pdiv2)
     }
     if (pdiv1 >= 0)
     {
-        if (0 == pdiv2)
-        {
-            pdiv2 = 1;//The hardware requirements cannot be zero.
-        }
         mask |= HPSYS_RCC_DWCFGR_PDIV1_Msk;
         reg |= MAKE_REG_VAL(pdiv1, HPSYS_RCC_DWCFGR_PDIV1_Msk, HPSYS_RCC_CFGR_PDIV1_Pos);
     }
     if (pdiv2 >= 0)
     {
+        if (0 == pdiv2)
+        {
+            pdiv2 = 1;//The hardware requirements cannot be zero.
+        }
         mask |= HPSYS_RCC_DWCFGR_PDIV2_Msk;
         reg |= MAKE_REG_VAL(pdiv2, HPSYS_RCC_DWCFGR_PDIV2_Msk, HPSYS_RCC_CFGR_PDIV2_Pos);
     }
@@ -2440,6 +2440,16 @@ __HAL_ROM_USED void HAL_RCC_HCPU_DeepWFIClockSelect(bool sys_clk, uint32_t sys_c
 
 }
 #endif /* SF32LB55X */
+
+#ifdef HPSYS_RCC_CFGR_TICKDIV_Msk
+
+void HAL_RCC_HCPU_SetTickDiv(uint8_t div)
+{
+    MODIFY_REG(hwp_hpsys_rcc->CFGR, HPSYS_RCC_CFGR_TICKDIV_Msk,
+               MAKE_REG_VAL(div, HPSYS_RCC_CFGR_TICKDIV_Msk, HPSYS_RCC_CFGR_TICKDIV_Pos));
+}
+
+#endif /* HPSYS_RCC_CFGR_TICKDIV_Msk */
 
 #if defined(SF32LB56X)
 void HAL_RCC_Reset_DMAC2_and_MPI5()

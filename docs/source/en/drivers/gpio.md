@@ -14,17 +14,21 @@ Corresponding macro switches are as follows:
 ```
 
 ## Getting Pin Numbers (Pin ID)
-Unlike the HAL layer, where GPIOs need to specify the GPIO group and group number, in the driver layer, a numeric ID is used to represent a specific GPIO pin (including GPIOA and GPIOB). Below is the method for pin numbering in the driver layer:
-   GPIO          |      Pin ID     |
------------------| ----------------|
-  GPIOA_00       |        0        |
-  GPIOA_01       |        1        | 
-  GPIOA_02       |        2        | 
-  ...            |...              | 
-  GPIOB_00       |        96       | 
-  GPIOB_01       |        97       | 
-  GPIOB_02       |        98       | 
-  ...            |...              | 
+Unlike the HAL layer, where GPIOs need to specify the GPIO group and group number, the driver layer uses a numeric ID to represent a specific pin (including GPIOA, GPIOB, and PBR on supported series). The numbering method is as follows:
+
+Pin         | Pin ID | Notes
+------------|--------|------
+GPIOA_00    | 0      | `GET_PIN(1, 0)`
+GPIOA_01    | 1      | `GET_PIN(1, 1)`
+GPIOA_02    | 2      | `GET_PIN(1, 2)`
+...         | ...    |
+GPIOB_00    | 96     | `GET_PIN(2, 0)`
+GPIOB_01    | 97     | `GET_PIN(2, 1)`
+GPIOB_02    | 98     | `GET_PIN(2, 2)`
+...         | ...    |
+PBR0        | 160    | `GET_PIN(0, 0)`
+PBR1        | 161    | `GET_PIN(0, 1)`
+...         | ...    | Range depends on series, see note below
 
 Example:
  - GPIOB03 pin, Pin ID is 99
@@ -40,6 +44,17 @@ GET_PIN(port, pin)
 #define LED0_PIN       GET_PIN(1,  3)   //GPIOA_03
 #define LED1_PIN       GET_PIN(2,  9)   //GPIOB_09  
 ```
+
+```{note}
+For PBR pins in the pin device layer, use `GET_PIN(0, pbr_index)`.
+
+Chip Difference Description:
+- SF32LB52 / SF32LB56: support `PBR0~PBR3` (pin id `160~163`)
+- SF32LB58: support `PBR0~PBR5` (pin id `160~165`)
+- SF32LB55: PBR is not supported
+```
+
+
 
 
 ## Example 1 – Interrupt Mode

@@ -175,6 +175,10 @@ menu "On-chip Peripheral RTOS Drivers"
         default n
         select RT_USING_SPI
         if BSP_USING_SPI
+            config BSP_USING_SPI_DMA_CIRCULAR
+                bool "Enable SPI DMA CIRCULAR"
+                default n
+
             config BSP_USING_SPI1
                 bool "Enable SPI1 BUS"
                 default n
@@ -1408,6 +1412,16 @@ menu "On-chip Peripheral RTOS Drivers"
         bool "Enable USB Host"
         select RT_USING_USB_HOST
         default n
+    
+    config BSP_USING_SWITCH_MPI2_SDIO
+        bool "Enable Switch SDIO MPI2"
+        depends on SOC_SF32LB52X
+        default n
+        if BSP_USING_SWITCH_MPI2_SDIO
+            config BSP_SWITCH_MPI2_SDIO_PIN
+                int "switch pin"
+                default -1
+        endif
         
     config BSP_USING_ONCHIP_RTC
         bool "Enable RTC"
@@ -1452,6 +1466,23 @@ menu "On-chip Peripheral RTOS Drivers"
                 1. Can not works on SFLB55X serials
                 2. Asynchronized rendering, must keep the buffers used by the render-list available until rendering is complete.
 
+            config DRV_EPIC_TASK_PRIORITY_CUSTOM
+            bool "Custom EPIC render task priority"
+            depends on DRV_EPIC_NEW_API
+            default n
+            help
+                Enable to override epic_task thread priority by Kconfig.
+                If disabled, epic_task uses RT_THREAD_PRIORITY_HIGH + RT_THREAD_PRIORITY_LOWWER.
+
+            if DRV_EPIC_TASK_PRIORITY_CUSTOM
+                config DRV_EPIC_TASK_PRIORITY
+                int "EPIC render task priority"
+                default 24
+                help
+                    RT-Thread priority value used by epic_task.
+                    Smaller value means higher priority.
+            endif
+
         endif
         config EZIP_PAL_SUPPORT
             bool
@@ -1475,65 +1506,6 @@ menu "On-chip Peripheral RTOS Drivers"
         bool "Enable NN ACC"
         default n
 
-    menuconfig BSP_USING_HWMAILBOX
-        bool "Enable HwMailbox"
-        depends on SOC_SF32LB55X
-        default n
-        select RT_USING_HWMAILBOX
-        if BSP_USING_HWMAILBOX                    
-            config BSP_USING_MB_L2H_CH1
-                bool "Enable Mailbox L2H Channel1"
-                default n
-                help 
-                    Mailbox from LCPU to HCPU, channel 1
-            config BSP_USING_MB_L2H_CH2
-                bool "Enable Mailbox L2H Channel2"
-                default n
-                help 
-                    Mailbox from LCPU to HCPU, channel 2
-            config BSP_USING_MB_H2L_CH1
-                bool "Enable Mailbox H2L Channel1"
-                default n
-                help 
-                    Mailbox from HCPU to LCPU, channel 1
-            config BSP_USING_MB_H2L_CH2
-                bool "Enable Mailbox H2L Channel2"
-                default n
-                help 
-                    Mailbox from HCPU to LCPU, channel 2
-            if BF0_HCPU       
-                config BSP_USING_BIDIR_MB1
-                    bool "Enable Bidirectional Mailbox Channel1"
-                    default n
-                    select BSP_USING_MB_H2L_CH1
-                    select BSP_USING_MB_L2H_CH1
-                    help
-                        Mailbox between HCPU and LCPU, channel 1
-                config BSP_USING_BIDIR_MB3
-                    bool "Enable Bidirectional Mailbox Channel2"
-                    default n
-                    select BSP_USING_MB_H2L_CH2
-                    select BSP_USING_MB_L2H_CH2
-                    help
-                        Mailbox between HCPU and LCPU, channel 2
-            endif
-            if BF0_LCPU
-                config BSP_USING_BIDIR_MB1
-                    bool "Enable Bidirectional Mailbox Channel1"
-                    default n
-                    select BSP_USING_MB_L2H_CH1
-                    select BSP_USING_MB_H2L_CH1
-                    help 
-                        Mailbox between LCPU and HCPU, channel 1
-                config BSP_USING_BIDIR_MB3
-                    bool "Enable Bidirectional Mailbox Channel2"
-                    default n
-                    select BSP_USING_MB_L2H_CH2
-                    select BSP_USING_MB_H2L_CH2
-                    help 
-                        Mailbox between LCPU and HCPU, channel 2    
-            endif
-        endif
     menuconfig BSP_USING_I2S
         bool "Enable I2S audio driver"
         select RT_USING_AUDIO
@@ -1558,72 +1530,92 @@ menu "On-chip Peripheral RTOS Drivers"
         select RT_USING_SDIO
         default n
         depends on BF0_HCPU
-        if BSP_USING_SDIO
-            config BSP_USING_SDHCI
-                bool "Enable SD Host Control Interface"
-                default n
-                depends on !SOC_SF32LB52X
-                if BSP_USING_SDHCI
-                    config SD_MMC_DDR_SUPPORT
-                    bool "MMC card use DDR mode"
-                    default n
-                    config SD_MMC_OLINE_SUPPORT
-                    bool "MMC card support 8 line"
-                    default n
-                    menuconfig BSP_USING_SDHCI1
-                    bool "Enable SDHCI Handle 1"
-                    default n
-                    if BSP_USING_SDHCI1
-                        config SD_MAX_FREQ
-                        int "SD max output frequecy"
-                        default 24000000
-                        config SD_DMA_MODE
-                        int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
-                        default 2
-                        config SDIO_CARD_MODE
-                        int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
-                        default 0
-                    endif
-                    menuconfig BSP_USING_SDHCI2
-                    bool "Enable SDHCI Handle 2"
-                    default n
-                    depends on SOC_SF32LB58X || SOC_SF32LB55X
-                    if BSP_USING_SDHCI2
-                        config SD2_MAX_FREQ
-                        int "SD2 max output frequecy"
-                        default 24000000
-                        config SD2_DMA_MODE
-                        int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
-                        default 2
-                        config SDIO2_CARD_MODE
-                        int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
-                        default 0
-                    endif
-                endif
-            config BSP_USING_SD_LINE
-                bool "Enable Linear SDIO for LITE"
-                default n
-                depends on SOC_SF32LB56X || SOC_SF32LB52X
-                help
-                    Enable Linear SD interface
-            config SDIO_PM_MODE
+    if BSP_USING_SDIO
+        menuconfig BSP_USING_SDMMC1
+            bool "SDMMC1"
+            default n
+            select BSP_USING_SDHCI if SOC_SF32LB55X || SOC_SF32LB58X || SOC_SF32LB56X
+            select BSP_USING_SDHCI1 if SOC_SF32LB55X || SOC_SF32LB58X || SOC_SF32LB56X
+            select BSP_USING_SD_LINE if SOC_SF32LB52X
+            help
+                Enable SDMMC1
+
+        if BSP_USING_SDHCI1 && BSP_USING_SDMMC1
+            config SD_MAX_FREQ
+                int "MAX Output Frequency(Hz)"
+                default 24000000
+            config SD_DMA_MODE
+                int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
+                default 2
+            config SDIO_CARD_MODE
+                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                default 0
+        endif # BSP_USING_SDHCI1
+        
+        menuconfig BSP_USING_SDMMC2
+            bool "SDMMC2"
+            default n
+            select BSP_USING_SDHCI if SOC_SF32LB55X || SOC_SF32LB58X
+            select BSP_USING_SDHCI2 if SOC_SF32LB55X || SOC_SF32LB58X
+            select BSP_USING_SD_LINE if SOC_SF32LB56X
+            depends on !SOC_SF32LB52X
+            help 
+                Enable SDMMC2
+        if BSP_USING_SDHCI2 && BSP_USING_SDMMC2
+            config SD2_MAX_FREQ
+                int "MAX Output Frequency(Hz)"
+                default 24000000
+            config SD2_DMA_MODE
+                int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
+                default 2
+            config SDIO2_CARD_MODE
+                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                default 0
+        endif # BSP_USING_SDHCI2
+
+        config BSP_USING_SDHCI
+            bool
+        config BSP_USING_SDHCI1
+            bool
+        config BSP_USING_SDHCI2
+            bool
+        config BSP_USING_SD_LINE
+            bool
+        menu "Common Option"
+        if BSP_USING_SDHCI
+
+        config SD_MMC_DDR_SUPPORT
+            bool "MMC card use DDR mode"
+            default n
+        config SD_MMC_OLINE_SUPPORT
+            bool "MMC card support 8 line"
+            default n
+
+        endif # BSP_USING_SDHCI
+
+        config SDIO_PM_MODE
             bool "Enable SDIO PM"
             default n
             depends on PM_STANDBY_ENABLE
-            if SDIO_PM_MODE
-                choice
-                    prompt "Select SDIO PM Mode"
-                    default SDIO_POWER_PM_UP
-                    config SDIO_POWER_PM_UP
-                        bool "VCC and VCCQ Don't lose power"
-                    config SDIO_POWER_PM_ALL_DOWN
-                        bool "VCC and VCCQ All power off"
-                    config SDIO_POWER_PM_VCC_DOWN
-                        bool "only close VCC"
-                endchoice
-            endif
 
-        endif
+        if SDIO_PM_MODE
+
+        choice
+            prompt "Select SDIO PM Mode"
+            default SDIO_POWER_PM_UP
+            config SDIO_POWER_PM_UP
+                bool "VCC and VCCQ Don't lose power"
+            config SDIO_POWER_PM_ALL_DOWN
+                bool "VCC and VCCQ All power off"
+            config SDIO_POWER_PM_VCC_DOWN
+                bool "only close VCC"
+        endchoice
+
+        endif # SDIO_PM_MODE
+
+        endmenu # Common Option
+
+    endif # BSP_USING_SDIO
 
     config BSP_USING_PINMUX
         bool "Enable Pin Mux"
@@ -1887,4 +1879,8 @@ menu "On-chip Peripheral RTOS Drivers"
              HAL API is used instead of rt device driver, so module cannot be disabled
         default n
 
+    config BSP_USING_SYS_CFG
+        bool "SYS CFG Module"
+        depends on BF0_LCPU 
+        default n
 endmenu

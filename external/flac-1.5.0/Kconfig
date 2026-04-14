@@ -1,0 +1,4 @@
+config PKG_LIB_FLAC
+    bool "libFLAC (FLAC lossless codec)"
+    default n
+

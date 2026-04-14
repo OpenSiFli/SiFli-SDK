@@ -231,10 +231,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_Init(QSPI_FLASH_CTX_T *ctx, qspi_conf
         hflash->wakeup = spi_nand_get_plane_select_flag(fid, did, mtype);
         hflash->dualFlash = spi_nand_get_big_page_flag(fid, did, mtype);
         hflash->dualFlash |= spi_nand_get_ecc_mode(fid, did, mtype) << 4;
+        hflash->ext_cfg = spi_nand_get_ext_cfg_by_id(fid, did, mtype);
     }
     else
 #endif
+    {
         size = spi_flash_get_size_by_id(fid, did, mtype);
+        hflash->otp_base = spi_flash_get_otp_base(fid, did, mtype);
+        hflash->ext_cfg = spi_nor_get_ext_cfg_by_id(fid, did, mtype);
+        if (hflash->ext_cfg)
+        {
+            hflash->otp_base = ((nor_ext_cfg_t *)(hflash->ext_cfg))->otp_base;
+        }
+    }
 
     if (size != 0)  // use size from table to replace configure size
     {
@@ -557,6 +566,7 @@ __weak int HAL_NAND_GET_ECC_STATUS(FLASH_HandleTypeDef *handle)
     case BIT2_IN_C0_T1:
     case BIT2_IN_C0_T2: // TODO: read 0xf0 or some other reg for ext ecc status if needed
     case BIT2_IN_C0_T3:
+    case BIT2_IN_C0_T4:
         sta &= 0x30;
         break;
     case BIT3_IN_C0_T1:
@@ -751,11 +761,29 @@ __HAL_ROM_USED int HAL_NAND_GET_ECC_RESULT(FLASH_HandleTypeDef *handle)
     if (sta == 0)
         return 0;
 
-    handle->ErrorCode |= 0X8000;
+    handle->ErrorCode |= MPI_ERROR_ECC;
     res = 0;
 
     ecc_res_mode = (NAND_ECC_MODE_T)((handle->dualFlash & NAND_ECC_FULL_RESERVED) >> NAND_ECC_START_POS);
-    res = HAL_NAND_CHECK_ECC(ecc_res_mode, sta, &handle->ErrorCode);
+    if (!handle->ext_cfg)
+    {
+        res = HAL_NAND_CHECK_ECC(ecc_res_mode, sta, &handle->ErrorCode);
+    }
+    else
+    {
+        /* ecc status is saved starting from bit4 */
+        sta >>= 4;
+        HAL_ASSERT(sta < 32);
+        if (((nand_ext_cfg_t *)(handle->ext_cfg))->ecc_err_mask & (1UL << sta))
+        {
+            res = sta;
+        }
+        else
+        {
+            res = 0;
+        }
+        handle->ErrorCode |= sta;
+    }
 
     return res;
 }
@@ -825,7 +853,7 @@ __HAL_ROM_USED int HAL_NAND_READ_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t a
     int res = HAL_NAND_GET_ECC_RESULT(handle);
     if (res != 0)
     {
-        handle->ErrorCode = res | 0x8000;
+        handle->ErrorCode = res | MPI_ERROR_ECC;
         return 0;
     }
 
@@ -956,7 +984,7 @@ __HAL_ROM_USED int HAL_NAND_WRITE_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t 
     int row_addr = 0;
     uint32_t pagesize = 0;
 
-    if (handle == NULL || handle->ctable == NULL || handle->data_buf == NULL)
+    if (handle == NULL || handle->ctable == NULL || handle->data_buf_w == NULL)
     {
         handle->ErrorCode = 1;
         return 0;
@@ -988,17 +1016,17 @@ __HAL_ROM_USED int HAL_NAND_WRITE_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t 
     {
         // copy buffer data and oob data to internal buffer
         if (oob_buf != NULL)
-            memcpy(handle->data_buf + pagesize, oob_buf, olen);
+            memcpy(handle->data_buf_w + pagesize, oob_buf, olen);
         if (buff != NULL)
         {
-            memcpy(handle->data_buf, buff, len);
-            tbuf = (uint32_t *)handle->data_buf;
+            memcpy(handle->data_buf_w, buff, len);
+            tbuf = (uint32_t *)handle->data_buf_w;
             len = pagesize + olen;
         }
         else
         {
             row_addr = pagesize;
-            tbuf = (uint32_t *)(handle->data_buf + pagesize);
+            tbuf = (uint32_t *)(handle->data_buf_w + pagesize);
             len = olen;
         }
         // if olen > 0, data buffer should fill full page
@@ -1385,7 +1413,7 @@ __HAL_ROM_USED int HAL_NAND_MARK_BADBLK(FLASH_HandleTypeDef *handle, uint32_t bl
     int res;
     uint8_t tbuf[4];
 
-    if ((handle == NULL) || (handle->data_buf == NULL))
+    if ((handle == NULL) || (handle->data_buf_w == NULL))
         return HAL_ERROR;
 
     blksize = HAL_NAND_BLOCK_SIZE(handle);
@@ -1421,7 +1449,7 @@ __HAL_ROM_USED int HAL_NAND_GET_BADBLK(FLASH_HandleTypeDef *handle, uint32_t blk
 
     uint32_t blksize;
 
-    if ((handle == NULL) || (handle->data_buf == NULL))
+    if ((handle == NULL) || (handle->data_buf_w == NULL))
         return 0;
 
     blksize = HAL_NAND_BLOCK_SIZE(handle);
@@ -2512,23 +2540,31 @@ __HAL_ROM_USED int HAL_QSPI_ERASE_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr
     uint16_t dlen;
     int res, opbit;
     uint32_t param;
+    uint32_t otp_base;
 
     if (hflash == NULL || hflash->ctable == NULL)
         return -1;
-    if (addr < SPI_FLASH_OTP_BASE || addr > SPI_FLASH_OTP_BASE + (hflash->ctable->mode_reg << 12))
-        return -1;
 
-    srh = HAL_QSPI_GET_OTP_LB(hflash, addr);
+    otp_base = HAL_FLASH_GetOtpBase(hflash);
+    if (!SPI_FLASH_IS_VALID_OTP_ADDR_OFFSET(addr))
+    {
+        return -1;
+    }
+
+    srh = HAL_QSPI_GET_OTP_LB(hflash);
     //rt_kprintf("srh = %d\n", srh);
-    opbit = addr >> 12;
-    if (opbit < 1 || opbit > hflash->ctable->mode_reg)
+    opbit = addr >> SPI_FLASH_OTP_LOG2_PAGE_SIZE;
+    if (!SPI_FLASH_IS_VALID_OTP_PAGE_IDX(opbit))
+    {
         return -1;
-    opbit = 1 << (opbit - 1);
+    }
+    opbit = 1 << (opbit - SPI_FLASH_OTP_PAGE_START_IDX);
     if (opbit & srh) // this security register has been locked, can not erase any more
+    {
         return -2;
-    //rt_kprintf("opbit = %d\n", opbit);
+    }
 
-    addr = addr;
+    addr = addr + otp_base;
     HAL_FLASH_ISSUE_CMD(hflash, SPI_FLASH_CMD_WREN, 0);
 #ifdef QSPI_USE_CMD2
     dlen = 1;
@@ -2562,23 +2598,33 @@ __HAL_ROM_USED int HAL_QSPI_WRITE_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr
     int res, opbit;
     HAL_StatusTypeDef ret;
     uint32_t param;
+    uint32_t otp_base;
 
     if (hflash == NULL || hflash->ctable == NULL)
         return 0;
-    if (addr < SPI_FLASH_OTP_BASE || addr > SPI_FLASH_OTP_BASE + (hflash->ctable->mode_reg << 12))
+
+    otp_base = HAL_FLASH_GetOtpBase(hflash);
+    if (!SPI_FLASH_IS_VALID_OTP_ADDR_OFFSET(addr))
+    {
         return 0;
+    }
 
     if ((addr & 0x3ff) + size   > hflash->ctable->oob_size * 256)
         return 0;
 
-    srh = HAL_QSPI_GET_OTP_LB(hflash, addr);
-    opbit = addr >> 12;
-    if (opbit < 1 || opbit > hflash->ctable->mode_reg)
+    srh = HAL_QSPI_GET_OTP_LB(hflash);
+    opbit = addr >> SPI_FLASH_OTP_LOG2_PAGE_SIZE;
+    if (!SPI_FLASH_IS_VALID_OTP_PAGE_IDX(opbit))
+    {
         return 0;
-    opbit = 1 << (opbit - 1);
+    }
+    opbit = 1 << (opbit - SPI_FLASH_OTP_PAGE_START_IDX);
     if (opbit & srh) // this security register has been locked, can not write any more
+    {
         return 0;
+    }
 
+    addr += otp_base;
     if (hflash->dma != NULL)
     {
         // add pre command process to make FLASH as write mode , to avoid prev read error.

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #ifndef _SD_NAND_DRV_H_
 #define _SD_NAND_DRV_H_
 
@@ -53,6 +58,7 @@ uint8_t sd1_wait_read();
 
 uint8_t sdmmc1_sdnand();
 int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
+int sd_read_multi(uint32_t addr, uint8_t *data, uint32_t len);
 
 int sdio_emmc_init();
 int emmc_read_data(uint32_t addr, uint8_t *data, uint32_t len);

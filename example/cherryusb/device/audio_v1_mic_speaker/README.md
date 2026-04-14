@@ -1,6 +1,6 @@
-# usb_audio_class_example
+# USB 麦克风和扬声器示例
 
-源码路径：example\cherryusb\device\audio_v1_mic
+源码路径：example\cherryusb\device\audio_v1_mic_speaker
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

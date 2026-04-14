@@ -113,7 +113,7 @@ static fdb_err_t dfu_db_init(void)
     path = fal->path_name;
 #endif
     int sec_size = PKG_FLASHDB_ERASE_GRAN;
-    int max_size = 16 * 1024;
+    int max_size = (int)fal->len;
     bool file_mode = true;
     rt_kprintf("dfu_db_init: sector_size %d size %d\n", sec_size, max_size);
     fdb_kvdb_control(p_dfu_db, FDB_KVDB_CTRL_SET_SEC_SIZE, (void *)&sec_size);
@@ -662,6 +662,16 @@ static void dfu_install_flag_update(uint8_t is_installing)
 static uint8_t dfu_package_install(uint8_t type)
 {
     //HAL_sw_breakpoint();
+
+#if defined(BSP_USING_SDIO) || defined(BSP_USING_SDMMC1) || defined(BSP_USING_SDMMC2)
+    if (type == PACKAGE_INSTALL_TYPE_OTA_MANAGER)
+    {
+        // wait for emmc init
+        // TODO: find a better way
+        rt_thread_mdelay(2000);
+    }
+#endif
+
     dfu_ctrl_env_t *env = dfu_ctrl_get_env();
     uint32_t download_base = DFU_DOWNLOAD_REGION_START_ADDR;
     uint8_t install_result = DFU_ERR_GENERAL_ERR;

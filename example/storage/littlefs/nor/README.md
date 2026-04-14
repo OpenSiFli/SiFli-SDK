@@ -1,6 +1,6 @@
 # LittleFs NOR 示例
 
-源码路径：example/storage/littlefs
+源码路径：example/storage/littlefs/nor
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

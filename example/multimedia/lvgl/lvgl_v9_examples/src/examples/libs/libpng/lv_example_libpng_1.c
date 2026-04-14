@@ -9,7 +9,7 @@
 void lv_example_libpng_1(void)
 {
     LV_IMAGE_DECLARE(img_png_demo);
-    lv_obj_t *img;
+    lv_obj_t * img;
 
     img = lv_image_create(lv_screen_active());
     lv_image_set_src(img, &img_png_demo);
@@ -26,7 +26,7 @@ void lv_example_libpng_1(void)
 
 void lv_example_libpng_1(void)
 {
-    lv_obj_t *label = lv_label_create(lv_screen_active());
+    lv_obj_t * label = lv_label_create(lv_screen_active());
     lv_label_set_text(label, "LibPNG is not installed");
     lv_obj_center(label);
 }

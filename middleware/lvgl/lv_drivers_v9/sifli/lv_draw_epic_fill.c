@@ -21,7 +21,7 @@
 
 
 #include "blend/lv_draw_sw_blend_private.h"
-#include "lv_draw_sw_gradient_private.h"
+#include "lv_draw_sw_grad.h"
 
 /*********************
  *      DEFINES
@@ -47,16 +47,16 @@
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_epic_fill(lv_draw_unit_t *draw_unit, const lv_draw_fill_dsc_t *dsc,
+void lv_draw_epic_fill(lv_draw_task_t *draw_task, const lv_draw_fill_dsc_t *dsc,
                        const lv_area_t *coords)
 {
     if (dsc->opa <= (lv_opa_t)LV_OPA_MIN)
         return;
 
-    lv_layer_t *layer = draw_unit->target_layer;
+    lv_layer_t *layer = draw_task->target_layer;
 
     lv_area_t blend_area;
-    if (!lv_area_intersect(&blend_area, coords, draw_unit->clip_area))
+    if (!lv_area_intersect(&blend_area, coords, &draw_task->clip_area))
         return; /*Fully clipped, nothing to do*/
 
     if (!lv_area_intersect(&blend_area, &blend_area, &layer->buf_area))
@@ -76,7 +76,7 @@ void lv_draw_epic_fill(lv_draw_unit_t *draw_unit, const lv_draw_fill_dsc_t *dsc,
         EPIC_LayerConfigTypeDef output_canvas;
 
         int ret;
-        if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_unit, coords))
+        if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_task, coords))
             return;/*Fully clipped, nothing to do*/
 
         output_canvas.color_r = dsc->color.red;
@@ -98,12 +98,15 @@ void lv_draw_epic_fill(lv_draw_unit_t *draw_unit, const lv_draw_fill_dsc_t *dsc,
     }
     else
     {
-
+        uint32_t epic_cf = lv_img_2_epic_cf(dest_cf);
+        
+        LV_ASSERT_MSG(EPIC_SUPPROT_OUT_FORMAT(epic_cf), "EPIC: Color format not supported for gradient fill");
+        
         EPIC_GradCfgTypeDef param;
         HAL_EPIC_FillGradDataInit(&param);
 
         param.start = dest_blend_area_buf;
-        param.color_mode = lv_img_2_epic_cf(dest_cf);
+        param.color_mode = epic_cf;
         param.width = lv_area_get_width(&blend_area);
         param.height = lv_area_get_height(&blend_area);
         param.total_width = lv_area_get_width(&layer->buf_area);

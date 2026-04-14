@@ -17,8 +17,10 @@ Developers can use this example as a foundation to build UI interfaces for vario
 ## Supported Boards
 
 This example can run on the following development boards:
-- sf32lb52-lcd_n16r8
-- sf32lb52-lchspi-ulp
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
++ sf32lb52-lchspi-ulp
 ```{note}
 - Not supported on 520-hdk
 ```

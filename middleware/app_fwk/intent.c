@@ -159,6 +159,16 @@ void intent_deinit(intent_t i)
         rt_free(i);
 }
 
+intent_t intent_reinit(intent_t i, const char *action)
+{
+    if (!i || !action) return NULL;
+    memset(i->content, INTENT_SEPARATER, sizeof(i->content));
+    i->content_len = 0;
+    add_to_intent(i, action);
+
+    return i;
+}
+
 
 int intent_set_string(intent_t i, const char *name, const char *value)
 {
@@ -307,7 +317,6 @@ int intent_runapp(intent_t i)
 
     return err;
 }
-
 
 
 

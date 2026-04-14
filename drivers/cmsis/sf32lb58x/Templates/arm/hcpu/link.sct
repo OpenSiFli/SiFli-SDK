@@ -85,6 +85,8 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
    bf0_hal_pinmux.o   (+RO)
    bf0_pin_const.o    (+RO)
    *.o                (.text.rt_memset)
+
+   *.o  (nor_cfg_db)
     
   }
 

@@ -15,19 +15,7 @@
 #include <rtthread.h>
 #include <rtdevice.h>
 
-//#ifndef RT_PIPE_BUFSZ
-//    #define PIPE_BUFSZ    320
-//#else
-//    #define PIPE_BUFSZ    RT_PIPE_BUFSZ
-//#endif
-
-/* portal device */
-struct rt_audio_portal_device
-{
-    struct rt_device parent;
-    struct rt_device *write_dev;
-    struct rt_device *read_dev;
-};
+#define AUDIO_PIPE_SUSPEND_RESUME 0
 
 enum rt_audio_pipe_flag
 {
@@ -50,14 +38,12 @@ struct rt_audio_pipe
     /* ring buffer in pipe device */
     struct rt_ringbuffer ringbuffer;
 
+#if AUDIO_PIPE_SUSPEND_RESUME
     rt_int32_t flag;
 
-    /* suspended list */
     rt_list_t suspended_read_list;
     rt_list_t suspended_write_list;
-
-    struct rt_audio_portal_device *write_portal;
-    struct rt_audio_portal_device *read_portal;
+#endif
 };
 
 #define PIPE_CTRL_GET_SPACE          0x14            /**< get the remaining size of a pipe device */

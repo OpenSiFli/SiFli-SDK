@@ -4,9 +4,9 @@
 
 ## 支持的平台
 例程可以运行在一下开发板上.
-* sf32lb52-lcd_n16r8
-* sf32lb56-lcd-a128r12n1\sf32lb56-lcd_n16r12n1
-* sf32lb58-lcd-n16r64n4\sf32lb58-lcd_a128r32n1_dsi
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 ## 概述
 * 这是一个基于Sifli BLE协议栈的一个应用程序示例，可以读取到单片机的电量值，其中包含了以下功能：自定义GATT服务的创建和注册、BLE广播（用于蓝牙的连接）、数据读写和通知机制、BASC功能

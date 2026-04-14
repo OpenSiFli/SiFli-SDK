@@ -13,7 +13,7 @@
 #include "lv_demo_music_main.h"
 #include "lv_demo_music_list.h"
 #if LV_DEMO_MUSIC_AUTO_PLAY && LV_USE_PERF_MONITOR
-    #include "../../src/display/lv_display_private.h"
+    #include "../../lvgl_private.h"
 #endif
 
 /*********************
@@ -28,17 +28,16 @@
  *  STATIC PROTOTYPES
  **********************/
 #if LV_DEMO_MUSIC_AUTO_PLAY
-    static void auto_step_cb(lv_timer_t *timer);
+    static void auto_step_cb(lv_timer_t * timer);
 #endif
 
 /**********************
  *  STATIC VARIABLES
  **********************/
-static lv_obj_t *ctrl;
-static lv_obj_t *list;
+static lv_obj_t * ctrl;
+static lv_obj_t * list;
 
-static const char *title_list[] =
-{
+static const char * title_list[] = {
     "Waiting for true love",
     "Need a Better Future",
     "Vibrations",
@@ -55,8 +54,7 @@ static const char *title_list[] =
     "Unknown",
 };
 
-static const char *artist_list[] =
-{
+static const char * artist_list[] = {
     "The John Smith Band",
     "My True Name",
     "Robotics",
@@ -74,8 +72,7 @@ static const char *artist_list[] =
     "Unknown artist",
 };
 
-static const char *genre_list[] =
-{
+static const char * genre_list[] = {
     "Rock - 1997",
     "Drum'n bass - 2016",
     "Psy trance - 2020",
@@ -92,8 +89,7 @@ static const char *genre_list[] =
     "Metal - 2015",
 };
 
-static const uint32_t time_list[] =
-{
+static const uint32_t time_list[] = {
     1 * 60 + 14,
     2 * 60 + 26,
     1 * 60 + 54,
@@ -130,27 +126,27 @@ void lv_demo_music(void)
 #endif
 }
 
-const char *lv_demo_music_get_title(uint32_t track_id)
+const char * lv_demo_music_get_title(uint32_t track_id)
 {
-    if (track_id >= sizeof(title_list) / sizeof(title_list[0])) return NULL;
+    if(track_id >= sizeof(title_list) / sizeof(title_list[0])) return NULL;
     return title_list[track_id];
 }
 
-const char *lv_demo_music_get_artist(uint32_t track_id)
+const char * lv_demo_music_get_artist(uint32_t track_id)
 {
-    if (track_id >= sizeof(artist_list) / sizeof(artist_list[0])) return NULL;
+    if(track_id >= sizeof(artist_list) / sizeof(artist_list[0])) return NULL;
     return artist_list[track_id];
 }
 
-const char *lv_demo_music_get_genre(uint32_t track_id)
+const char * lv_demo_music_get_genre(uint32_t track_id)
 {
-    if (track_id >= sizeof(genre_list) / sizeof(genre_list[0])) return NULL;
+    if(track_id >= sizeof(genre_list) / sizeof(genre_list[0])) return NULL;
     return genre_list[track_id];
 }
 
 uint32_t lv_demo_music_get_track_length(uint32_t track_id)
 {
-    if (track_id >= sizeof(time_list) / sizeof(time_list[0])) return 0;
+    if(track_id >= sizeof(time_list) / sizeof(time_list[0])) return 0;
     return time_list[track_id];
 }
 
@@ -159,102 +155,100 @@ uint32_t lv_demo_music_get_track_length(uint32_t track_id)
  **********************/
 
 #if LV_DEMO_MUSIC_AUTO_PLAY
-static void auto_step_cb(lv_timer_t *t)
+static void auto_step_cb(lv_timer_t * t)
 {
     LV_UNUSED(t);
     static uint32_t state = 0;
 
 #if LV_DEMO_MUSIC_LARGE
-    const lv_font_t *font_small = &lv_font_montserrat_22;
-    const lv_font_t *font_large = &lv_font_montserrat_32;
+    const lv_font_t * font_small = &lv_font_montserrat_22;
+    const lv_font_t * font_large = &lv_font_montserrat_32;
 #else
-    const lv_font_t *font_small = &lv_font_montserrat_12;
-    const lv_font_t *font_large = &lv_font_montserrat_16;
+    const lv_font_t * font_small = &lv_font_montserrat_12;
+    const lv_font_t * font_large = &lv_font_montserrat_16;
 #endif
 
-    switch (state)
-    {
-    case 5:
-        lv_demo_music_album_next(true);
-        break;
+    switch(state) {
+        case 5:
+            lv_demo_music_album_next(true);
+            break;
 
-    case 6:
-        lv_demo_music_album_next(true);
-        break;
-    case 7:
-        lv_demo_music_album_next(true);
-        break;
-    case 8:
-        lv_demo_music_play(0);
-        break;
+        case 6:
+            lv_demo_music_album_next(true);
+            break;
+        case 7:
+            lv_demo_music_album_next(true);
+            break;
+        case 8:
+            lv_demo_music_play(0);
+            break;
 #if LV_DEMO_MUSIC_SQUARE || LV_DEMO_MUSIC_ROUND
-    case 11:
-        lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
-        break;
-    case 13:
-        lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
-        break;
+        case 11:
+            lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
+            break;
+        case 13:
+            lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
+            break;
 #else
-    case 12:
-        lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
-        break;
+        case 12:
+            lv_obj_scroll_by(ctrl, 0, -LV_VER_RES, LV_ANIM_ON);
+            break;
 #endif
-    case 15:
-        lv_obj_scroll_by(list, 0, -300, LV_ANIM_ON);
-        break;
-    case 16:
-        lv_obj_scroll_by(list, 0, 300, LV_ANIM_ON);
-        break;
-    case 18:
-        lv_demo_music_play(1);
-        break;
-    case 19:
-        lv_obj_scroll_by(ctrl, 0, LV_VER_RES, LV_ANIM_ON);
-        break;
+        case 15:
+            lv_obj_scroll_by(list, 0, -300, LV_ANIM_ON);
+            break;
+        case 16:
+            lv_obj_scroll_by(list, 0, 300, LV_ANIM_ON);
+            break;
+        case 18:
+            lv_demo_music_play(1);
+            break;
+        case 19:
+            lv_obj_scroll_by(ctrl, 0, LV_VER_RES, LV_ANIM_ON);
+            break;
 #if LV_DEMO_MUSIC_SQUARE || LV_DEMO_MUSIC_ROUND
-    case 20:
-        lv_obj_scroll_by(ctrl, 0, LV_VER_RES, LV_ANIM_ON);
-        break;
+        case 20:
+            lv_obj_scroll_by(ctrl, 0, LV_VER_RES, LV_ANIM_ON);
+            break;
 #endif
-    case 30:
-        lv_demo_music_play(2);
-        break;
-    case 40:
-    {
-        lv_obj_t *bg = lv_layer_top();
-        lv_obj_set_style_bg_color(bg, lv_color_hex(0x6f8af6), 0);
-        lv_obj_set_style_text_color(bg, lv_color_white(), 0);
-        lv_obj_set_style_bg_opa(bg, LV_OPA_COVER, 0);
-        lv_obj_fade_in(bg, 400, 0);
-        lv_obj_t *dsc = lv_label_create(bg);
-        lv_obj_set_style_text_font(dsc, font_small, 0);
-        lv_label_set_text(dsc, "The average FPS is");
-        lv_obj_align(dsc, LV_ALIGN_TOP_MID, 0, 90);
+        case 30:
+            lv_demo_music_play(2);
+            break;
+        case 40: {
+                lv_obj_t * bg = lv_layer_top();
+                lv_obj_set_style_bg_color(bg, lv_color_hex(0x6f8af6), 0);
+                lv_obj_set_style_text_color(bg, lv_color_white(), 0);
+                lv_obj_set_style_bg_opa(bg, LV_OPA_COVER, 0);
+                lv_obj_fade_in(bg, 400, 0);
+                lv_obj_t * dsc = lv_label_create(bg);
+                lv_obj_set_style_text_font(dsc, font_small, 0);
+                lv_label_set_text(dsc, "The average FPS is");
+                lv_obj_align(dsc, LV_ALIGN_TOP_MID, 0, 90);
 
-        lv_obj_t *num = lv_label_create(bg);
-        lv_obj_set_style_text_font(num, font_large, 0);
+                lv_obj_t * num = lv_label_create(bg);
+                lv_obj_set_style_text_font(num, font_large, 0);
 #if LV_USE_PERF_MONITOR
-        lv_display_t *disp = lv_display_get_default();
-        const lv_sysmon_perf_info_t *info = lv_subject_get_pointer(&disp->perf_sysmon_backend.subject);
-        lv_label_set_text_fmt(num, "%" LV_PRIu32, info->calculated.fps_avg_total);
+                lv_display_t * disp = lv_display_get_default();
+                const lv_sysmon_perf_info_t * info = lv_subject_get_pointer(&disp->perf_sysmon_backend.subject);
+                lv_label_set_text_fmt(num, "%" LV_PRIu32, info->calculated.fps_avg_total);
 #endif
-        lv_obj_align(num, LV_ALIGN_TOP_MID, 0, 120);
+                lv_obj_align(num, LV_ALIGN_TOP_MID, 0, 120);
 
-        lv_obj_t *attr = lv_label_create(bg);
-        lv_obj_set_style_text_align(attr, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(attr, font_small, 0);
+                lv_obj_t * attr = lv_label_create(bg);
+                lv_obj_set_style_text_align(attr, LV_TEXT_ALIGN_CENTER, 0);
+                lv_obj_set_style_text_font(attr, font_small, 0);
 #if LV_DEMO_MUSIC_SQUARE || LV_DEMO_MUSIC_ROUND
-        lv_label_set_text(attr, "Copyright 2020 LVGL Kft.\nwww.lvgl.io | lvgl@lvgl.io");
+                lv_label_set_text(attr, "Copyright 2020 LVGL Kft.\nwww.lvgl.io | lvgl@lvgl.io");
 #else
-        lv_label_set_text(attr, "Copyright 2020 LVGL Kft. | www.lvgl.io | lvgl@lvgl.io");
+                lv_label_set_text(attr, "Copyright 2020 LVGL Kft. | www.lvgl.io | lvgl@lvgl.io");
 #endif
-        lv_obj_align(attr, LV_ALIGN_BOTTOM_MID, 0, -10);
-        break;
-    }
-    case 41:
-        lv_screen_load(lv_obj_create(NULL));
-        lv_demo_music_pause();
-        break;
+                lv_obj_align(attr, LV_ALIGN_BOTTOM_MID, 0, -10);
+                break;
+            }
+        case 41:
+            lv_screen_load(lv_obj_create(NULL));
+            lv_demo_music_pause();
+            break;
     }
     state++;
 }

@@ -25,6 +25,32 @@ scons --board=sf32lb52-lcd_n16r8 --target=mdk5 -s
 It should be noted that the SDK uses multi-project compilation. The application project is the main project, which will trigger the compilation of corresponding sub-projects, such as the secondary bootloader, ftab, and others. However, using `--target` will only generate the Keil project corresponding to the main project. Directly compiling using this project might cause issues, and it can only be used for code review.
 ```
 
+## Export Codebase Index
+
+If you want to export all source files and header files used by the current project for external analysis tools, run the following command in the project directory:
+
+```shell
+sdk.py export-codebase --board=<board_name>
+```
+
+If the target board has already been saved with `sdk.py set-target`, you can omit the `--board` parameter:
+
+```shell
+sdk.py export-codebase
+```
+
+This command internally invokes `scons --target=json` and generates `codebase_index.json` in the build directory, for example `build_sf32lb52-lcd_n16r8_hcpu/codebase_index.json`.
+
+The exported JSON contains the following top-level fields:
+
+- `system_construction`: currently fixed to `scons`
+- `projects`: per-project file lists for the main project and its sub-projects
+- `all_sources`: merged list of all source files
+- `all_headers`: merged list of all header files
+- `all_files`: merged list of all source and header files
+- `all_include_paths`: merged list of include paths
+- `all_defines`: merged list of preprocessor definitions
+
 In addition to using the SDK’s built-in board configurations, you can use `--board_search_path` to specify a directory as a search path for third-party boards. This directory can be outside the SDK, and it can be either a relative or absolute path. When the search path is specified, the compiler will not only look for boards in the SDK’s board directory but will also check this directory for board configurations. If a board with the same name exists in both directories, the board in the `--board_search_path` specified directory will be used. For example, to compile using a relative path for the board search path in the `app1` project directory, you can run the following command:
 
 ```shell

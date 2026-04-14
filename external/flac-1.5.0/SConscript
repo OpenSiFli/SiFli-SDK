@@ -1,0 +1,44 @@
+import os
+from building import *
+Import('rtconfig')
+
+cwd = GetCurrentDir()
+
+src = []
+
+# Core libFLAC sources (portable C only)
+src += [
+    './src/libFLAC/bitmath.c',
+    './src/libFLAC/bitreader.c',
+    './src/libFLAC/bitwriter.c',
+    './src/libFLAC/cpu.c',
+    './src/libFLAC/crc.c',
+    './src/libFLAC/fixed.c',
+    './src/libFLAC/float.c',
+    './src/libFLAC/format.c',
+    './src/libFLAC/lpc.c',
+    './src/libFLAC/md5.c',
+    './src/libFLAC/memory.c',
+    './src/libFLAC/metadata_iterators.c',
+    './src/libFLAC/metadata_object.c',
+    './src/libFLAC/stream_decoder.c',
+    './src/libFLAC/stream_encoder.c',
+    './src/libFLAC/stream_encoder_framing.c',
+    './src/libFLAC/window.c',
+]
+
+CPPPATH = []
+CPPPATH += [cwd]
+CPPPATH += [os.path.join(cwd, 'include')]
+CPPPATH += [os.path.join(cwd, 'src', 'libFLAC', 'include')]
+
+CPPDEFINES = [
+    'HAVE_CONFIG_H',
+    'FLAC__NO_ASM',
+]
+
+LOCAL_CCFLAGS = ''
+
+group = DefineGroup('libflac', src, depend=['PKG_LIB_FLAC'], CPPPATH=CPPPATH, CPPDEFINES=CPPDEFINES, LOCAL_CCFLAGS=LOCAL_CCFLAGS)
+Return('group')
+

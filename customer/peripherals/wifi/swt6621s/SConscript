@@ -17,4 +17,7 @@ group = DefineGroup(
     LIBPATH=libpath,
     CPPPATH=CPPPATH
 )
+# Reserved for compiling source code and testing purposes
+#if GetDepend('BSP_WIFI_SWT6621'):
+#    group = group + SConscript('swt6621sl_lib/SConscript')
 Return('group')

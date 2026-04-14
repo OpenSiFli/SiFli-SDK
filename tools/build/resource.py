@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2019-2026 SiFli
+# SPDX-License-Identifier: Apache-2.0
+
 import codecs
 import glob
 import json
@@ -932,11 +935,24 @@ def PtabAddAddDefaultRegion(mems):
         raise Exception("unknown chip")
 
 
+def PtabGetMemType(mem, base):
+    if "flash" in mem and (base >= 0x10000000) and (base <= 0x1FFFFFFF):
+        return "HAL_MEM_TYPE_NOR_FLASH"
+    elif "flash" in mem and (base >= 0x60000000) and (base <= 0x6FFFFFFF):
+        return "HAL_MEM_TYPE_NAND_FLASH"
+    elif "emmc" in mem:
+        return "HAL_MEM_TYPE_SDMMC_STORAGE"
+    elif "psram" in mem:
+        return "HAL_MEM_TYPE_PSRAM"
+    else:
+        return "HAL_MEM_TYPE_UNKNOWN"
+
 def GenPartitionTableHeaderContentV2(env, mems):
     s =  ''
     PtabAddAddDefaultRegion(mems)
     for mem in mems:
         mem_base = int(mem['base'], 0)
+        mem_type = PtabGetMemType(mem['mem'], mem_base)
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* {} */'.format(mem['mem']))
@@ -952,12 +968,16 @@ def GenPartitionTableHeaderContentV2(env, mems):
                     start_addr_name = '{}_START_ADDR'.format(tag)
                     size_name = '{}_SIZE'.format(tag)
                     offset_name = '{}_OFFSET'.format(tag)
+                    mem_type_name = '{}_MEM_TYPE'.format(tag)
                     s += MakeLine('#undef  {}'.format(start_addr_name))
                     s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, start_addr))
                     s += MakeLine('#undef  {}'.format(size_name))
                     s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                     s += MakeLine('#undef  {}'.format(offset_name))
                     s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, offset))
+                    if "UNKNOWN" not in mem_type: 
+                        s += MakeLine('#undef  {}'.format(mem_type_name))
+                        s += MakeLine('#define {:<50} {}'.format(mem_type_name, mem_type))
 
             if 'custom' in region:
                 for custom in region['custom']:
@@ -1024,6 +1044,7 @@ def GenPartitionTableHeaderContentV1(env, mems):
     s = ''
     for mem in mems:
         mem_base = int(mem['base'], 0)
+        mem_type = PtabGetMemType(mem['mem'], mem_base)
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* {} */'.format(mem['mem']))
@@ -1035,12 +1056,16 @@ def GenPartitionTableHeaderContentV1(env, mems):
                 start_addr_name = '{}_START_ADDR'.format(tag)
                 size_name = '{}_SIZE'.format(tag)
                 offset_name = '{}_OFFSET'.format(tag)
+                mem_type_name = '{}_MEM_TYPE'.format(tag)
                 s += MakeLine('#undef  {}'.format(start_addr_name))
                 s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, start_addr))
                 s += MakeLine('#undef  {}'.format(size_name))
                 s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                 s += MakeLine('#undef  {}'.format(offset_name))
                 s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, offset))
+                if "UNKNOWN" not in mem_type: 
+                    s += MakeLine('#undef  {}'.format(mem_type_name))
+                    s += MakeLine('#define {:<50} {}'.format(mem_type_name, mem_type))
             if 'custom' in region:
                 for custom in region['custom']:
                     s += MakeLine('#undef  {}'.format(custom))

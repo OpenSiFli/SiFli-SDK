@@ -23,6 +23,9 @@
 #include "drv_io.h"
 #include "flash_table.h"
 
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    #include "drv_switch_mpi2_sdio.h"
+#endif
 #ifdef RT_USING_ULOG
     //#define DRV_DEBUG
     #define LOG_TAG                "drv.spi_nand"
@@ -53,6 +56,7 @@ static struct rt_semaphore         nand_lock;
 static int nand_sys_init = 0;
 static uint32_t nand_pagesize = 2048;
 static uint32_t nand_blksize = 0x20000;
+static struct rt_mutex  nand_mutex;
 
 #if ((NAND_BUF_CPY_MODE == 1) && defined(BSP_USING_EXT_DMA))
 extern rt_sem_t ExtDma_sema;
@@ -133,15 +137,25 @@ int rt_nand_read(uint32_t addr, uint8_t *buf, int size)
     remain = size;
     if (taddr & (nand_pagesize - 1)) // not page aligned
     {
+        rt_mutex_take(&nand_mutex, RT_WAITING_FOREVER);
         uint8_t *cach_buf = hflash->data_buf;
         offset = taddr & (nand_pagesize - 1); //
         fill = nand_pagesize - offset;
         fill = fill < remain ? fill : remain;
         taddr &= ~(nand_pagesize - 1);
-        res = rt_nand_read_page(taddr, cach_buf, nand_pagesize, NULL, 0);
-        if (res != nand_pagesize)
-            return 0;
+        if (taddr != (uint32_t) hflash->data_addr)
+        {
+            res = rt_nand_read_page(taddr, cach_buf, nand_pagesize, NULL, 0);
+            if (res != nand_pagesize)
+            {
+                hflash->data_addr = NULL;
+                rt_mutex_release(&nand_mutex);
+                return 0;
+            }
+            hflash->data_addr = (uint8_t *) taddr;
+        }
         memcpy(tbuf, cach_buf + offset, fill);
+        rt_mutex_release(&nand_mutex);
         remain -= fill;
         taddr += nand_pagesize;
         tbuf += fill;
@@ -250,6 +264,9 @@ int rt_nand_read_page(uint32_t addr, uint8_t *data, int size, uint8_t *spare, in
     }
     if (addr >= hflash->base)
         addr -= hflash->base;
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
 #ifdef BSP_USING_BBM
     int blk, page, offset;
 
@@ -293,6 +310,101 @@ int rt_nand_read_page(uint32_t addr, uint8_t *data, int size, uint8_t *spare, in
     }
     if (i == 128)   // read all cc ? status error?
         RT_ASSERT(0);
+#endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
+#endif
+    return res;
+}
+
+int rt_nand_read_page2(uint32_t addr, uint8_t *data, int size, uint8_t *spare, int spare_len, rt_bool_t *ecc_corrected)
+{
+    int res;
+    if (nand_index < 0)
+        return 0;
+
+    FLASH_HandleTypeDef *hflash = &(spi_nand_handle.handle);
+
+    if (hflash == NULL || size > nand_pagesize || hflash->buf_mode == 0)  // only support read 1 page
+    {
+        RT_ASSERT(0);
+        return 0;
+    }
+    if (addr >= hflash->base)
+        addr -= hflash->base;
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
+#ifdef BSP_USING_BBM
+    int blk, page, offset;
+
+    blk = addr / nand_blksize;
+    page = (addr / nand_pagesize) & (nand_blksize / nand_pagesize - 1);
+    offset = addr & (nand_pagesize - 1);
+
+    if (blk >= 8192) // max support 8Gb ? for address error issue
+        RT_ASSERT(0);
+
+    rt_nand_lock();
+    res = bbm_read_page(blk, page, offset, data, size, spare, spare_len);
+    if (ecc_corrected)
+    {
+        if ((res > 0) && (hflash->ErrorCode & MPI_ERROR_ECC))
+        {
+            *ecc_corrected = RT_TRUE;
+        }
+        else
+        {
+            *ecc_corrected = RT_FALSE;
+        }
+    }
+    rt_nand_unlock();
+#else
+
+    //rt_thread_delay(1);
+    rt_nand_lock();
+    SCB_InvalidateDCache_by_Addr((void *)hflash->base, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
+    if (((addr & nand_blksize) != 0) && (hflash->wakeup != 0))
+        SCB_InvalidateDCache_by_Addr((void *)(hflash->base + (1 << 12)), nand_pagesize + SPI_NAND_MAXOOB_SIZE);// TODO: only 2048 page size has plane select issue
+#if (NAND_BUF_CPY_MODE == 1)
+    SCB_InvalidateDCache_by_Addr(data, size);
+#endif
+
+    local_edma_lock();
+    res = HAL_NAND_READ_WITHOOB(hflash, addr, data, size, spare, spare_len);
+    local_edma_unlock();
+
+    if (ecc_corrected)
+    {
+        if ((res > 0) && (hflash->ErrorCode != 0))
+        {
+            *ecc_corrected = RT_TRUE;
+        }
+        else
+        {
+            *ecc_corrected = RT_FALSE;
+        }
+    }
+
+    rt_nand_unlock();
+    if (res <= 0)
+        LOG_E("NAND Read2 error code %d\n", hflash->ErrorCode);
+#endif
+
+#if 0   // debug use, for some case controller sames not work
+    int i;
+    uint8_t *tbuf = data;
+    for (i = 0; i < 128; i++)
+    {
+        if (*tbuf != 0xcc)
+            break;
+        tbuf++;
+    }
+    if (i == 128)   // read all cc ? status error?
+        RT_ASSERT(0);
+#endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
 #endif
     return res;
 }
@@ -344,19 +456,23 @@ int rt_nand_write_page(uint32_t addr, const uint8_t *buf, int size, const uint8_
             }
         }
     }
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
 #ifdef BSP_NAND_CHECK_BEFORE_WRITE
     SCB_InvalidateDCache_by_Addr((void *)hflash->base, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
-    SCB_InvalidateDCache_by_Addr((void *)hflash->data_buf, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
+    SCB_InvalidateDCache_by_Addr((void *)hflash->data_buf_w, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
 
     rt_nand_lock();
+
 #ifdef BSP_USING_BBM
     int blk2, page2;
     blk2 = addr / nand_blksize;
     page2 = (addr / nand_pagesize) & (nand_blksize / nand_pagesize - 1);
 
-    res = bbm_read_page(blk2, page2, 0, hflash->data_buf, nand_pagesize, NULL, 0);
+    res = bbm_read_page(blk2, page2, 0, hflash->data_buf_w, nand_pagesize, NULL, 0);
 #else
-    res = HAL_NAND_READ_WITHOOB(hflash, addr, hflash->data_buf, nand_pagesize, NULL, 0);
+    res = HAL_NAND_READ_WITHOOB(hflash, addr, hflash->data_buf_w, nand_pagesize, NULL, 0);
 #endif  //BSP_USING_BBM
 
     if (res != nand_pagesize)
@@ -368,7 +484,7 @@ int rt_nand_write_page(uint32_t addr, const uint8_t *buf, int size, const uint8_
     else
     {
         int i = 0;
-        uint32_t *chk = (uint32_t *)hflash->data_buf;
+        uint32_t *chk = (uint32_t *)hflash->data_buf_w;
         for (i = 0; i < nand_pagesize / 4; i++)
         {
             if (chk[i] != 0xffffffff)
@@ -391,13 +507,21 @@ int rt_nand_write_page(uint32_t addr, const uint8_t *buf, int size, const uint8_
     rt_nand_unlock();
 #else
     if (hflash == NULL || size > nand_pagesize)  // only support read 1 page
+    {
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+        rt_switch_mpi2_unlock();
+#endif
         return 0;
+    }
 
     rt_nand_lock();
     res = HAL_NAND_WRITE_WITHOOB(hflash, addr, buf, size, spare, spare_len);
     rt_nand_unlock();
     if (res <= 0)
         LOG_E("NAND Write2 fail, error code 0x%x\n", hflash->ErrorCode);
+#endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
 #endif
     return res;
 }
@@ -417,6 +541,9 @@ int rt_nand_erase_block(uint32_t addr)
 
     if (addr >= hflash->base)
         addr -= hflash->base;
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_lock();
+#endif
 #ifdef BSP_USING_BBM
     int blk;
 
@@ -426,7 +553,12 @@ int rt_nand_erase_block(uint32_t addr)
     rt_nand_unlock();
 #else
     if (!IS_ALIGNED(nand_blksize, addr))  // address should be block aligned
+    {
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+        rt_switch_mpi2_unlock();
+#endif
         return -2;
+    }
 
 #ifndef BSP_FORCE_ERASE_NAND
     SCB_InvalidateDCache_by_Addr((void *)hflash->base, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
@@ -437,6 +569,9 @@ int rt_nand_erase_block(uint32_t addr)
     if (bad)   // block is bad, do not erase, or bad mark will be cover
     {
         LOG_E("Blk with address 0x%x is bad, do not erase2\n", addr);
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+        rt_switch_mpi2_unlock();
+#endif
         return -3;
     }
 #endif
@@ -447,6 +582,9 @@ int rt_nand_erase_block(uint32_t addr)
 
     if (res != 0)
         LOG_E("Erase error code 0x%x at pos 0x%x\n", hflash->ErrorCode, addr);
+#endif
+#ifdef BSP_USING_SWITCH_MPI2_SDIO
+    rt_switch_mpi2_unlock();
 #endif
     return res;
 }
@@ -524,11 +662,13 @@ int rt_nand_read_id(uint32_t addr)
 }
 
 #ifdef CFG_BOOTLOADER
-    static uint32_t gnand_cache_buf[(4096 + 128) / 4];
     static uint32_t gbbm_cache_buf[(4096 + 128) / 4];
+    static uint32_t gnand_cache_buf[(4096 + 128) / 4];
+    static uint32_t gnand_cache_buf_w[(4096 + 128) / 4];
 #else
     static uint8_t *gbbm_cache_buf = NULL;
     static uint8_t *gnand_cache_buf = NULL;
+    static uint8_t *gnand_cache_buf_w = NULL;
 #endif  //CFG_BOOTLOADER
 extern uint32_t flash_get_freq(int clk_module, uint16_t clk_div, uint8_t hcpu);
 int rt_nand_init()
@@ -541,6 +681,9 @@ int rt_nand_init()
     memset(&spi_nand_handle, 0, sizeof(QSPI_FLASH_CTX_T));
     nand_index = -1;
     nand_sys_init = 0;
+
+    if (0 == nand_mutex.parent.parent.name[0])
+        rt_mutex_init(&nand_mutex, "nand_mutex", RT_IPC_FLAG_FIFO);
 
 #if defined(BSP_ENABLE_QSPI3) && (BSP_QSPI3_MODE == SPI_MODE_NAND)
     qspi_configure_t flash_cfg3 = FLASH3_CONFIG;
@@ -608,12 +751,14 @@ int rt_nand_init()
         if (gnand_cache_buf == NULL)
             gnand_cache_buf = (uint8_t *)rt_malloc(nand_pagesize + SPI_NAND_MAXOOB_SIZE);
         if (gnand_cache_buf == NULL)
-        {
-            rt_kprintf("Malloc nand cache buffer fail\n");
-            return 0;
-        }
+            goto abnormal;
+        if (gnand_cache_buf_w == NULL)
+            gnand_cache_buf_w = (uint8_t *)rt_malloc(nand_pagesize + SPI_NAND_MAXOOB_SIZE);
+        if (gnand_cache_buf_w == NULL)
+            goto abnormal;
 #endif
         spi_nand_handle.handle.data_buf = (uint8_t *)gnand_cache_buf;
+        spi_nand_handle.handle.data_buf_w = (uint8_t *)gnand_cache_buf_w;
 
         spi_nand_handle.handle.buf_mode = 1;    // default set to buffer mode for nand
         HAL_NAND_CONF_ECC(&spi_nand_handle.handle, 1); // default enable ECC if support !
@@ -623,15 +768,7 @@ int rt_nand_init()
         if (gbbm_cache_buf == NULL)
             gbbm_cache_buf = (uint8_t *)rt_malloc(nand_pagesize + SPI_NAND_MAXOOB_SIZE);
         if (gbbm_cache_buf == NULL)
-        {
-            rt_kprintf("Malloc bbm cache buffer fail\n");
-            if (gnand_cache_buf)
-            {
-                free(gnand_cache_buf);
-                gnand_cache_buf = NULL;
-            }
-            return 0;
-        }
+            goto abnormal;
 #endif
         bbm_register_log((bbm_log_func)rt_kprintf);
         bbm_set_page_size(nand_pagesize);
@@ -648,6 +785,13 @@ int rt_nand_init()
 
     nand_index = -1;
     return 0;
+#ifndef CFG_BOOTLOADER
+abnormal:
+    rt_kprintf("Malloc nand cache buffer fail\n");
+    if (gnand_cache_buf) rt_free(gnand_cache_buf);
+    if (gnand_cache_buf_w) rt_free(gnand_cache_buf_w);
+    return 0;
+#endif
 }
 
 void rt_nand_update_clk(int clk_module, uint16_t clk_div)
@@ -775,6 +919,34 @@ static rt_err_t _nand_readpage_with_offset(struct rt_mtd_nand_device *device,
     return 0;
 }
 
+static rt_err_t _nand_readpage_with_offset2(struct rt_mtd_nand_device *device,
+        rt_off_t page,     rt_uint32_t offset,
+        rt_uint8_t *data, rt_uint32_t data_len,
+        rt_uint8_t *spare, rt_uint32_t spare_len,
+        rt_bool_t *ecc_corrected)
+{
+    uint32_t base = (uint32_t)device->parent.user_data;
+    int res;
+
+    page += device->block_start * device->pages_per_block;
+
+    if (offset + data_len > nand_pagesize)
+    {
+        LOG_I("_nand_readpage_with_offset offset + length over page %d\n", offset + data_len);
+        return RT_MTD_ENOMEM;
+    }
+
+    res = rt_nand_read_page2(base + page * nand_pagesize + offset, data, data_len, spare, spare_len, ecc_corrected);
+    if (res <= 0)
+    {
+        LOG_I("rt_nand_read_page RES %d\n", res);
+        return RT_MTD_ENOMEM;
+    }
+
+    return 0;
+}
+
+
 static rt_err_t _nand_writepage(struct rt_mtd_nand_device *device,
                                 rt_off_t page,
                                 const rt_uint8_t *data, rt_uint32_t data_len,
@@ -836,6 +1008,7 @@ static const struct rt_mtd_nand_driver_ops spi_nand_ops =
     .read_id = _nand_readid,
     .read_page = _nand_readpage,
     .read_page_with_offset = _nand_readpage_with_offset,
+    .read_page_with_offset2 = _nand_readpage_with_offset2,
     .write_page = _nand_writepage,
     .move_page = _nand_movepage,
     .erase_block = _nand_eraseblk,
@@ -945,10 +1118,10 @@ void nand_clear_pattern(void)
 
 void nand_fill_page(uint32_t addr, uint8_t *data)
 {
-    if (spi_nand_handle.handle.data_buf != NULL)
+    if (spi_nand_handle.handle.data_buf_w != NULL)
     {
         nand_set_pattern(addr, NAND_FILL_DATA);
-        memcpy(spi_nand_handle.handle.data_buf, data, nand_pagesize);
+        memcpy(spi_nand_handle.handle.data_buf_w, data, nand_pagesize);
     }
 }
 

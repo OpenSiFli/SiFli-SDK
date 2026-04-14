@@ -13,6 +13,8 @@ RPMsg-Lite是一种轻量级远程处理器消息传递协议，支持跨核间�
 此示例可在以下开发板上运行：
 - eh-lb551
 - eh-lb555
+- sf32lb56-lcd系列
+- sf32lb58-lcd系列
 
 下面的小节仅提供绝对必要的信息。有关配置SiFli-SDK及使用其构建和运行项目的完整步骤，请参阅 [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)。
 

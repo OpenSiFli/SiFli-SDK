@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #include <rtthread.h>
 #include "board.h"
 #include "string.h"
+#include "wheel.h"
 
 
 /* Define -------------------------------------------------------------------*/
@@ -25,6 +26,7 @@ static struct rt_device this_device;
 static int32_t btn_id;
 static int16_t diff;
 rt_timer_t p_timer;
+static uint8_t  flag_wheel_opened = 0;
 
 #ifndef ENCODE_INPUT_PIN_A
     #ifdef BSP_USING_BOARD_EC_LB557XXX
@@ -50,8 +52,8 @@ rt_timer_t p_timer;
     #endif
 #endif
 
-
-#if defined(BSP_USING_BOARD_EH_SS6600XXX) || defined(BSP_USING_BOARD_EC_LB555_WATCH)
+/*Encoce pin in Lcpu*/
+#if (ENCODE_INPUT_PIN_A > GPIO1_PIN_NUM)
 #include "pin_service.h"
 
 static datac_handle_t pin_irq_service = DATA_CLIENT_INVALID_HANDLE;
@@ -61,6 +63,7 @@ static rt_err_t dk05e01t_f412_init(rt_device_t dev)
 {
     rt_err_t ret = RT_EOK;
     diff = 0;
+    flag_wheel_opened = 0;
     LOG_I("dk05e01t_f412_init OK");
     return ret;
 }
@@ -70,7 +73,7 @@ static rt_size_t wheel_read(rt_device_t dev, rt_off_t pos, void *buffer, rt_size
     if ((buffer != NULL) && (size >= 1  && size <= 4) && (diff != 0))
     {
         memcpy(buffer, &diff, size);
-        LOG_I("read=%d", diff);
+        LOG_I("wheel read=%d", diff);
 
         diff = 0;
         return size;
@@ -89,7 +92,7 @@ static int irq_pin_service_callback(data_callback_arg_t *arg)
         RT_ASSERT(sizeof(pin_common_msg_t) == arg->data_len);
         memcpy(&pin_msg, arg->data, arg->data_len);
         RT_ASSERT(pin_msg.id == ENCODE_INPUT_PIN_A);
-        LOG_I("wheel irq_pin_service ntf ind");
+        LOG_D("wheel irq_pin_service ntf ind");
         if (1 == rt_pin_read(ENCODE_INPUT_PIN_A))
         {
             int b = rt_pin_read(ENCODE_INPUT_PIN_B);
@@ -110,7 +113,7 @@ static int irq_pin_service_callback(data_callback_arg_t *arg)
         p_pin_msg->id = ENCODE_INPUT_PIN_A;
 
         ret = datac_send_msg(pin_irq_service, &msg);
-        LOG_I("wheel irq on ret %d", ret);
+        LOG_D("wheel irq on ret %d", ret);
     }
     else if (MSG_SERVICE_SUBSCRIBE_RSP == arg->msg_id)
     {
@@ -188,6 +191,7 @@ static rt_err_t wheel_open(struct rt_device *dev, rt_uint16_t oflag)
     ret = datac_send_msg(pin_irq_service, &msg);
 
     LOG_I("wheel open ret %d", ret);
+    flag_wheel_opened = 1;
     return RT_EOK;
 
 }
@@ -224,6 +228,7 @@ static rt_err_t wheel_close(struct rt_device *dev)
     }
 
     LOG_I("wheel close r=%d", ret);
+    flag_wheel_opened = 0;
 
     return RT_EOK;
 }
@@ -286,6 +291,7 @@ static rt_err_t wheel_open(struct rt_device *dev, rt_uint16_t oflag)
 
 
     LOG_I("wheel open");
+    flag_wheel_opened = 1;
     return RT_EOK;
 
 }
@@ -294,7 +300,7 @@ static rt_err_t wheel_close(struct rt_device *dev)
 {
     rt_pin_irq_enable(ENCODE_INPUT_PIN_A, 0);
 
-
+    flag_wheel_opened = 0;
     LOG_I("wheel close");
 
     return RT_EOK;
@@ -305,32 +311,77 @@ static rt_err_t dk05e01t_f412_init(rt_device_t dev)
 {
     rt_err_t ret = RT_EOK;
 
-
     rt_pin_mode(ENCODE_INPUT_PIN_A, PIN_MODE_INPUT);
     rt_pin_mode(ENCODE_INPUT_PIN_B, PIN_MODE_INPUT);
     rt_pin_attach_irq(ENCODE_INPUT_PIN_A, PIN_IRQ_MODE_RISING, encoder_pin_irq_handler, NULL);
 
-
     diff = 0;
-
-
+    flag_wheel_opened = 0;
     LOG_I("dk05e01t_f412_init OK");
 
     return ret;
 }
-
 #endif
+
+static rt_err_t wheel_control(rt_device_t device, int cmd, void *args)
+{
+    rt_err_t ret = RT_EOK;
+
+    switch (cmd)
+    {
+    case WHEEL_CONTROL_CLOSE_DEVICE:
+    {
+        ret = wheel_close(device);
+    }
+    break;
+
+    case WHEEL_CONTROL_OPEN_DEVICE:
+    {
+        ret = wheel_open(device, 0);
+    }
+    break;
+
+    case WHEEL_CONTROL_GET_STATE:
+    {
+        rt_kprintf("whell_control cmd:%d\n", *(uint8_t *)args);
+        *(uint8_t *)args = flag_wheel_opened;
+    }
+    break;
+
+    default:
+        break;
+    }
+    return ret;
+}
+
+#ifdef RT_USING_DEVICE_OPS
+const static struct rt_device_ops rt_wheel_ops =
+{
+    dk05e01t_f412_init,
+    wheel_open,
+    wheel_close,
+    wheel_read,
+    RT_NULL,
+    wheel_control
+};
+#endif /* RT_USING_DEVICE_OPS */
 
 static int regist_device(void)
 {
 
     memset(&this_device, 0, sizeof(this_device));
-
     this_device.type = RT_Device_Class_Char;
+
+#ifdef RT_USING_DEVICE_OPS
+    this_device->ops         = &rt_sensor_ops;
+
+#else
     this_device.init = dk05e01t_f412_init;
     this_device.read = wheel_read;
     this_device.open = wheel_open;
     this_device.close = wheel_close;
+    this_device.control = wheel_control;
+#endif /* RT_USING_DEVICE_OPS */
 
 
     /* register graphic device driver */

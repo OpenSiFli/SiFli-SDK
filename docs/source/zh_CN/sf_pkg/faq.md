@@ -8,11 +8,11 @@
 
 ## 依赖安装失败怎么办？
 
-1. 检查 `conanfile.txt` 中的包名、版本号、用户名格式是否正确
-2. 使用 `conan search` 命令确认包是否存在
+1. 检查 `conanfile.py` 中的包名、版本号、用户名格式是否正确
+2. 使用 `sdk.py sf-pkg search <包名>` 命令确认包是否存在
 3. 确认已执行 `.\export.ps1`（或 `./export.sh`）初始化环境
 
 ## 如何更新已安装的依赖？
 
-1. 修改 `conanfile.txt` 中的版本号
-2. 重新执行 `sdk.py sf-pkg-install` 命令
+1. 修改 `conanfile.py` 中的版本号
+2. 重新执行 `sdk.py sf-pkg install` 命令

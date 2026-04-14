@@ -1,6 +1,6 @@
 /*
  *  Copyright 2008-2024 NXP
- *  Copyright 2025 SiFli Technologies(Nanjing) Co., Ltd
+ *  Copyright 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  *  SPDX-License-Identifier: BSD-3-Clause
  *
@@ -837,7 +837,7 @@ typedef  struct _Event_Radar_Detected_Info
     u32 detect_count;
     uint8_t reg_domain;    /*1=fcc, 2=etsi, 3=mic*/
     uint8_t main_det_type; /*0=none, 1=pw(chirp), 2=pri(radar)*/
-    t_u16 pw_chirp_type;
+    uint16_t pw_chirp_type;
     uint8_t pw_chirp_idx;
     uint8_t pw_value;
     uint8_t pri_radar_type;
@@ -1342,7 +1342,9 @@ struct wlan_network_security
 };
 
 /** Configuration for Wi-Fi scan */
-#define MAX_CHANNEL_LIST 14
+#ifndef MAX_CHANNEL_LIST
+#define MAX_CHANNEL_LIST 26
+#endif
 /** This structure is used to configure Wi-Fi scan parameters */
 struct wifi_scan_params_t
 {

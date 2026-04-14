@@ -8,11 +8,11 @@
 
 ## What should I do if dependency installation fails?
 
-1. Check if the package name, version number, and username format in `conanfile.txt` are correct
-2. Use the `conan search` command to confirm the package exists
+1. Check if the package name, version number, and username format in `conanfile.py` are correct
+2. Use `sdk.py sf-pkg search <package_name>` to confirm the package exists
 3. Ensure you have executed `.\export.ps1` (or `./export.sh`) to initialize the environment
 
 ## How do I update installed dependencies?
 
-1. Modify the version number in `conanfile.txt`
-2. Re-execute the `sdk.py sf-pkg-install` command
+1. Modify the version number in `conanfile.py`
+2. Re-execute the `sdk.py sf-pkg install` command

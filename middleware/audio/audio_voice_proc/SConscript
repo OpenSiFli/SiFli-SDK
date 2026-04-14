@@ -29,6 +29,6 @@ if GetDepend('AUDIO_FREQSHIFT'):
 if GetDepend('AUDIO_SOFTEQ'):
     src += ['audio_softeq.c']
     
-group = DefineGroup('audio', src,depend = ['AUDIO_USING_AUDPROC'],CPPPATH = CPPPATH)
+group = DefineGroup('audio', src,depend = [''],CPPPATH = CPPPATH)
 
 Return('group')

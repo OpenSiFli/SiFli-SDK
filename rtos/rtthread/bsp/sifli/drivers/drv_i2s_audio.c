@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,19 @@
 
 #include "string.h"
 #include "drv_i2s_audio.h"
+
+#if defined (SYS_HEAP_IN_PSRAM)
+    #undef calloc
+    #undef free
+    #undef malloc
+    extern void *app_sram_alloc(rt_size_t size);
+    extern void *app_sram_calloc(rt_size_t count, rt_size_t size);
+    extern void *app_sram_free(void *ptr);
+    #define  malloc(s)      app_sram_alloc(s)
+    #define  calloc(c, s)   app_sram_calloc(c, s)
+    #define  free(p)        app_sram_free(p)
+#endif
+
 
 #ifdef FPGA
 static int bf0_enable_pll(uint32_t freq, uint8_t type)
@@ -65,12 +78,11 @@ struct bf0_i2s_audio
     uint8_t *rx_buf;
     uint8_t *tx_buf;
     uint8_t *tx_pos;
+    uint16_t tx_buf_size;         /*!< I2S TX buffer size */
 };
 
+static i2s_rx_callback_t rx_callback;
 
-
-ALIGN(4) static uint8_t audio_data[AUDIO_DATA_SIZE];
-ALIGN(4) static uint8_t audio_tx_data[AUDIO_DATA_SIZE];
 #ifdef ASIC
 #ifdef SF32LB55X //xtal
 static CLK_DIV_T  txrx_clk_div[9]  = {{48000, 125, 125,  5}, {44100, 136, 136,  4}, {32000, 185, 190,  5}, {24000, 250, 250, 10}, {22050, 272, 272,  8},
@@ -80,9 +92,16 @@ static CLK_DIV_T  txrx_clk_div[9]  = {{48000, 125, 125,  5}, {44100, 136, 136,  
 //PLL 16k 49.152M  44.1k  45.1584M
 //lrclk_duty_high:PLL/spclk_div/samplerate/2: 64=49.152M/48k/8/2
 //bclk:lrclk_duty_high/32
+#define I2S_USE_DOUBLE_MCLK 0
+#if I2S_USE_DOUBLE_MCLK
+static CLK_DIV_T  txrx_clk_div[9]  = {{48000, 128, 128,  4}, {44100, 128, 128,  4}, {32000, 192, 192,  6}, {24000, 256, 256, 8}, {22050, 256, 256,  8},
+    {16000, 384, 384, 12}, {12000, 512, 512, 16}, {11025, 512, 512, 16}, { 8000, 768, 768, 24}
+};
+#else
 static CLK_DIV_T  txrx_clk_div[9]  = {{48000, 64, 64,  2}, {44100, 64, 64,  2}, {32000, 96, 96,  3}, {24000, 128, 128, 4}, {22050, 128, 128,  4},
     {16000, 192, 192, 6}, {12000, 256, 256, 8}, {11025, 256, 256, 8}, { 8000, 384, 384, 12}
 };
+#endif /* I2S_USE_DOUBLE_MCLK */
 #endif
 #else
 //clk:3.072M  spclk:1  only 16k 8k used
@@ -458,6 +477,9 @@ static rt_err_t bf0_audio_configure(struct rt_audio_device *audio, struct rt_aud
   */
 static rt_err_t bf0_audio_init(struct rt_audio_device *audio)
 {
+    struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
+    aud->tx_buf_size = AUDIO_DATA_SIZE;
+    rx_callback = NULL;
     return RT_EOK;
 }
 
@@ -468,6 +490,9 @@ static rt_err_t bf0_audio_init(struct rt_audio_device *audio)
   */
 static rt_err_t bf0_audio_shutdown(struct rt_audio_device *audio)
 {
+    struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
+    rx_callback = NULL;
+    aud->tx_buf_size = AUDIO_DATA_SIZE;
     return RT_EOK;
 }
 
@@ -534,7 +559,12 @@ static rt_err_t bf0_audio_i2s_start(struct bf0_i2s_audio *aud, int stream)
     //hi2s->Init.src_clk_freq = 12000000;
     // if use pll, set divider and freq as pll setting.
     __HAL_I2S_CLK_PLL(hi2s); //PLL
+#if I2S_USE_DOUBLE_MCLK
+    __HAL_I2S_SET_SPCLK_DIV(hi2s, 4);   // set to 12.288M to i2s (49.152M/4=12.288M)  PLL
+#else
     __HAL_I2S_SET_SPCLK_DIV(hi2s, 8);   // set to 6.144M to i2s   PLL
+#endif
+
 #else
     HAL_RCC_SetModuleFreq(RCC_MOD_I2S_ALL, 12000000);
 #endif
@@ -551,7 +581,10 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     HAL_StatusTypeDef res = HAL_OK;
 
-    RT_ASSERT((uint32_t)&audio_data[0] >= 0x20000000); //must in sram
+    LOG_I("i2s buf size=%d", aud->tx_buf_size);
+    RT_ASSERT((uint32_t)aud->tx_buf >= 0x20000000 && (uint32_t)aud->tx_buf < 0x60000000); //must in sram
+    memset(aud->tx_buf, 0, AUDIO_DATA_SIZE);
+    memset(aud->rx_buf, 0, AUDIO_DATA_SIZE);
 
     if ((aud->hi2s.State == HAL_I2S_STATE_RESET) || (aud->hi2s.State == HAL_I2S_STATE_READY))
     {
@@ -572,7 +605,7 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         {
             __HAL_I2S_TX_INTF_DISABLE(&(aud->hi2s));
 
-            res = HAL_I2S_Transmit_DMA(&(aud->hi2s), aud->tx_buf, AUDIO_DATA_SIZE);
+            res = HAL_I2S_Transmit_DMA(&(aud->hi2s), aud->tx_buf, aud->tx_buf_size);
             if (res != HAL_OK)
             {
                 LOG_E("HAL_I2S_Transmit_DMA fail %d\n", res);
@@ -611,7 +644,7 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         {
             __HAL_I2S_RX_INTF_DISABLE(&(aud->hi2s));
             //rt_thread_delay(600); // wait clock stable to meet outside pll
-            res = HAL_I2S_Receive_DMA(&(aud->hi2s), aud->rx_buf, AUDIO_DATA_SIZE);
+            res = HAL_I2S_Receive_DMA(&(aud->hi2s), aud->rx_buf, aud->tx_buf_size);
             if (res != HAL_OK)
                 return RT_ERROR;
 
@@ -785,6 +818,13 @@ static rt_err_t bf0_audio_control(struct rt_audio_device *audio, int cmd, void *
         //LOG_I("i2s RT_DEVICE_CTRL_RESUME\n");
         break;
     }
+    case AUDIO_CTL_SET_TX_DMA_SIZE:
+    {
+        uint32_t dma_size = (uint32_t)args;
+        aud->tx_buf_size = dma_size * 2;
+        RT_ASSERT(dma_size  <= AUDIO_DATA_SIZE / 2);
+        break;
+    }
     default:
         result = -RT_ERROR;
         break;
@@ -806,7 +846,7 @@ static rt_size_t bf0_audio_trans(struct rt_audio_device *audio, const void *writ
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     HAL_StatusTypeDef res = HAL_OK;
     //LOG_I("bf0_audio_trans");
-    RT_ASSERT(size <= AUDIO_DATA_SIZE / 2);
+    RT_ASSERT(size <= aud->tx_buf_size / 2);
 
     if (writeBuf != NULL)
     {
@@ -859,9 +899,9 @@ int rt_bf0_i2s_audio_init(void)
     for (i = 0; i < sizeof(bf0_i2s_audio_obj) / sizeof(bf0_i2s_audio_obj[0]); i++)
     {
         h_i2s_audio[i].audio_device.ops = (struct rt_audio_ops *)&_g_audio_ops;
-        h_i2s_audio[i].rx_buf = audio_data; // &(audio_data[0]);
-        h_i2s_audio[i].tx_buf = audio_tx_data; //&(audio_data[AUDIO_DATA_SIZE / 2]);
-        h_i2s_audio[i].tx_pos = audio_tx_data; //NULL;
+        h_i2s_audio[i].rx_buf = malloc(AUDIO_DATA_SIZE);
+        h_i2s_audio[i].tx_buf = malloc(AUDIO_DATA_SIZE);
+        h_i2s_audio[i].tx_pos = h_i2s_audio[i].tx_buf;
 
         if (bf0_i2s_audio_obj[i].i2s_handle != NULL)
         {
@@ -1048,6 +1088,12 @@ void I2S3_RX_DMA_IRQHandler(void)
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
 #ifndef BSP_ENABLE_I2S_MIC
+void rt_device_set_i2s_dma_rx_callback(i2s_rx_callback_t callback)
+{
+    rx_callback = callback;
+}
+
+
 /**
   * @brief Rx Transfer half completed callbacks
   * @param  hi2s: pointer to a I2S_HandleTypeDef structure that contains
@@ -1059,9 +1105,16 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
     struct bf0_i2s_audio *haudio = rt_container_of(hi2s, struct bf0_i2s_audio, hi2s);
     struct rt_audio_device *audio = &(haudio->audio_device);
     if (audio != NULL)
-        rt_audio_rx_done(audio, &(audio_data[0]), AUDIO_DATA_SIZE / 2);
-
-    //LOG_I("HAL_I2S_RxHalfCpltCallback\n");
+    {
+        if (rx_callback)
+        {
+            rx_callback(audio->parent.parent.name, haudio->rx_buf, haudio->tx_buf_size / 2);
+        }
+        else
+        {
+            rt_audio_rx_done(audio, haudio->rx_buf, haudio->tx_buf_size / 2);
+        }
+    }
 }
 
 /**
@@ -1076,11 +1129,16 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
     struct rt_audio_device *audio = &(haudio->audio_device);
 
     if (audio != NULL)
-        rt_audio_rx_done(audio, &(audio_data[AUDIO_DATA_SIZE / 2]), AUDIO_DATA_SIZE / 2);
-
-    // start next transmit
-    //HAL_I2S_Receive_DMA(hi2s   , &(audio_data[0]), AUDIO_DATA_SIZE / 4);
-    //LOG_I("HAL_I2S_RxCpltCallback\n");
+    {
+        if (rx_callback)
+        {
+            rx_callback(audio->parent.parent.name, haudio->rx_buf + haudio->tx_buf_size / 2, haudio->tx_buf_size / 2);
+        }
+        else
+        {
+            rt_audio_rx_done(audio, haudio->rx_buf + haudio->tx_buf_size / 2, haudio->tx_buf_size / 2);
+        }
+    }
 }
 #endif
 /**
@@ -1095,8 +1153,8 @@ void HAL_I2S_TxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
     /* Prevent unused argument(s) compilation warning */
     //LOG_I("HAL_I2S_TxHalfCpltCallback\n");
     //LOG_I("HALF: %d\n", haudio->hi2s.hdmatx->Instance->CNDTR);
-    haudio->tx_pos = audio_tx_data;
-    rt_audio_tx_complete(&(haudio->audio_device), audio_tx_data);
+    haudio->tx_pos = haudio->tx_buf;
+    rt_audio_tx_complete(&(haudio->audio_device), haudio->tx_buf);
 }
 
 /**
@@ -1111,10 +1169,8 @@ void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s)
     /* Prevent unused argument(s) compilation warning */
     //LOG_I("HAL_I2S_TxCpltCallback\n");
     //LOG_I("CMPL: %d\n", haudio->hi2s.hdmatx->Instance->CNDTR);
-    haudio->tx_pos = &(audio_tx_data[AUDIO_DATA_SIZE / 2]);
-    rt_audio_tx_complete(&(haudio->audio_device), &(audio_tx_data[AUDIO_DATA_SIZE / 2]));
-    //rt_audio_tx_complete(&(haudio->audio_device), audio_tx_data);
-    //bf0_audio_stop(&(haudio->audio_device), 0);
+    haudio->tx_pos = haudio->tx_buf + haudio->tx_buf_size / 2;
+    rt_audio_tx_complete(&(haudio->audio_device), haudio->tx_buf + haudio->tx_buf_size / 2);
 }
 
 #ifndef BSP_ENABLE_I2S_MIC
@@ -1133,525 +1189,4 @@ void HAL_I2S_ErrorCallback(I2S_HandleTypeDef *hi2s)
 }
 #endif
 
-//#define DRV_TEST
-#if defined(DRV_TEST) || defined (APP_BSP_TEST)
-
-#include "drv_flash.h"
-#include "ipc/ringbuffer.h"
-
-//#define ATEST_LOOPBACK
-
-/****
-To use file system on SDCARD, you need create and mount FS MANUAL!
-Make sure SDCARD insert on your board and detected success, there are LOG for it.
-Then use cmd "mkfs -t elm sd0" to create FS,this step only need once if do not format SDCAR.
-After FS created success, use cmd "mountfs -t elm sd0 /" to mount FS to root.
-File system used, uart do not need any more, 2 choose 1
-**/
-
-#define AUDIO_SAVE2RAM      // save to mem, if not define, save to file
-#define AUDIO_LOADRAM       // load from ram, if not define, load from file
-
-/****
- * if define use flash, i2s rx data save to flash and tx load from flash, use jlink to check memory
- * if node define use flash, default use psram memory, save/load with psram, use jlink to savebin/loadbin
-**/
-//#define SAVE_LOAD_FROM_FLASH
-#define AUD_SAVE_MEM_BASE           (0x1c180000)
-#define AUD_LOAD_MEM_BASE           (0x1c180000)
-
-#define AUDIO_BUF_SIZE  1920
-#define AUDIO_TEST_HNAME        "i2s2"
-#define AUD_TEST_FLEN       (0x7f000)
-
-static rt_device_t g_mic;
-static uint8_t g_pipe_data[AUDIO_BUF_SIZE];
-static uint8_t tx_pipe_data[AUDIO_BUF_SIZE];
-
-static rt_thread_t rx_tid;
-static rt_thread_t tx_tid;
-static rt_event_t g_rx_ev;
-static rt_event_t g_tx_ev;
-static uint8_t *buf_flag = NULL;
-
-static char *mic_buf = (char *)AUD_SAVE_MEM_BASE;
-static char *audio_mem_buf = (char *)AUD_LOAD_MEM_BASE;
-static int aud_flen = 0;
-
-#ifdef ATEST_LOOPBACK
-    static struct rt_ringbuffer atest_rbf;
-    static uint8_t *rbf_pool;
-    static int32_t rbf_length = 0x20000;
-    static int tx_start_flag = 0;
-#endif
-
-static int atest_save(char *dst, uint8_t *src, uint32_t size)
-{
-    uint32_t addr = (uint32_t)dst;
-    int res = 0;
-#ifdef SAVE_LOAD_FROM_FLASH
-    // for flash , use flash write
-    res = rt_flash_write(addr, src, size);
-#else
-    // for psram , use memcpy
-    memcpy(dst, src, size);
-    res = size;
-#endif
-    return res;
-}
-
-static void atest_init_buf(char *buf, int data, uint32_t size)
-{
-    uint32_t addr = (uint32_t)buf;
-#ifdef SAVE_LOAD_FROM_FLASH
-    // for flash, use erase
-    rt_flash_erase(addr, size);
-#else
-    // for psram
-    memset(buf, data, size);
-#endif
-    return;
-}
-
-typedef struct
-{
-    uint8_t riff[4];
-    uint32_t lenth;
-    uint8_t wave[4];
-    uint8_t fmt[4];
-    uint32_t size1;
-    uint16_t fmt_tag;
-    uint16_t channel;
-    uint32_t sampleRate;
-    uint32_t bytePerSec;
-    uint16_t blockAlign;
-    uint16_t bitPerSample;
-    uint8_t data[4];
-    uint32_t size2;
-} AUD_WAV_HDR_T;
-
-static void atest_fill_header(uint32_t sr, uint16_t channel, uint16_t bps)
-{
-    AUD_WAV_HDR_T hdr;
-
-    hdr.riff[0] = 'R';
-    hdr.riff[1] = 'I';
-    hdr.riff[2] = 'F';
-    hdr.riff[3] = 'F';
-    hdr.lenth = AUD_TEST_FLEN + 36;
-    hdr.wave[0] = 'W';
-    hdr.wave[1] = 'A';
-    hdr.wave[2] = 'V';
-    hdr.wave[3] = 'E';
-    hdr.fmt[0] = 'f';
-    hdr.fmt[1] = 'm';
-    hdr.fmt[2] = 't';
-    hdr.fmt[3] = ' ';
-    hdr.size1 = 16;
-    hdr.fmt_tag = 1;
-    hdr.channel = channel;
-    hdr.sampleRate = sr;
-    //hdr.bytePerSec = 32000;
-    hdr.blockAlign = 2;
-    hdr.bitPerSample = bps;
-    hdr.bytePerSec = hdr.sampleRate * hdr.channel * hdr.bitPerSample / 8;
-    hdr.data[0] = 'd';
-    hdr.data[1] = 'a';
-    hdr.data[2] = 't';
-    hdr.data[3] = 'a';
-    hdr.size2 = AUD_TEST_FLEN; //;    // record data lenght
-    LOG_I("Save wav sampleRate %d, bitPerSample %d, channel %d\n", hdr.sampleRate, hdr.bitPerSample, hdr.channel);
-
-    atest_init_buf(mic_buf, 0, 0x80000);
-    atest_save(mic_buf, (uint8_t *)&hdr, 44);
-    aud_flen = 0;
-    mic_buf += 44;
-}
-/**
-* @brief  Audio transmit thread.
-* This is audio process thread. It will send audio data to I2S.
-* @param[in]  param: audio device handleer.
-*/
-void bf0_audio_tx_entry(void *param)
-{
-    rt_uint32_t evt, j, cnt;
-
-    cnt = 0;
-
-#ifndef ATEST_LOOPBACK
-#if 1
-    // read header if wave file include wav header
-    memcpy(tx_pipe_data, audio_mem_buf + cnt, 44);
-    cnt += 44;
-
-    // read data
-    memcpy(tx_pipe_data, audio_mem_buf + cnt, AUDIO_BUF_SIZE);
-    cnt += AUDIO_BUF_SIZE;
-#else
-    if (0)
-    {
-        for (j = 0; j < AUDIO_BUF_SIZE; j++)
-        {
-            tx_pipe_data[j] = (uint8_t)(j & 0xff);
-        }
-    }
-    else
-    {
-        // fill buffer
-        static uint8_t sin1k[] =
-        {
-            00, 0x40, 0x9F, 0x53, 0x83, 0x5A, 0x9F, 0x53, 0x00, 0x40, 0xA3, 0x22, 0x00, 0x00, 0x5D, 0xDD,
-            00, 0xC0, 0x61, 0xAC, 0x7D, 0xA5, 0x61, 0xAC, 0x00, 0xC0, 0x5D, 0xDD, 0x00, 0x00, 0xA3, 0x22,
-        };
-        for (j = 0; j < AUDIO_BUF_SIZE; j++)
-        {
-            tx_pipe_data[j] = sin1k[j % 32];
-        }
-    }
-
-#endif //
-
-    //cnt += AUDIO_BUF_SIZE;
-    //memcpy(audio_tx_data, tx_pipe_data, AUDIO_BUF_SIZE);
-    rt_device_write(g_mic, 0, tx_pipe_data, AUDIO_BUF_SIZE);
-    j = AUDIO_BUF_SIZE / 2;
-#endif
-
-    g_tx_ev = rt_event_create("audio_tx_evt", RT_IPC_FLAG_FIFO);
-    rt_kprintf("bf0_audio_tx_entry started, wait event\n");
-    while (1)
-    {
-#ifndef ATEST_LOOPBACK
-        j = AUD_TEST_FLEN - cnt > (AUDIO_BUF_SIZE / 2) ? (AUDIO_BUF_SIZE / 2) : AUD_TEST_FLEN - cnt;
-        // read data
-        memcpy(tx_pipe_data, audio_mem_buf + cnt, j);
-        cnt += j;
-        if (cnt >= AUD_TEST_FLEN)
-            cnt = 44; // 0; // to data header
-#else
-        cnt = rt_ringbuffer_data_len(&atest_rbf);
-        if (tx_start_flag == 0)
-        {
-            if (cnt < rbf_length / 4)
-            {
-                rt_thread_delay(20);
-                rt_kprintf("buffered data %d\n", cnt);
-                continue;
-            }
-
-            tx_start_flag = 1;
-            rt_kprintf("Start TX !\n");
-        }
-        if (cnt > rbf_length / 8)
-            rt_ringbuffer_get(&atest_rbf, tx_pipe_data, AUDIO_BUF_SIZE / 2);
-        else // under flow
-        {
-            tx_start_flag = 0;
-            rt_kprintf("Stop TX to cache data\n");
-        }
-#endif
-        // wait dma done to fill to buffer
-        rt_event_recv(g_tx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        if (buf_flag != NULL)
-        {
-            //rt_kprintf("Get g_tx_ev\n");
-            //memcpy(buf_flag, tx_pipe_data, j);
-            rt_device_write(g_mic, 0, tx_pipe_data, j);
-            //rt_device_write(dev, 0, buf_flag, j);
-            //buf_flag = NULL;
-        }
-        //LOG_I("filled %d\n", cnt);
-    }
-}
-
-/**
-* @brief  Audio receiving thread.
-* This us audio process thread. It will capture audio data from I2S, and send to transport.
-* @param[in]  param: unused.
-*/
-void bf0_audio_rx_entry(void *param)
-{
-    rt_uint32_t evt;
-    int size;
-
-    g_rx_ev = rt_event_create("audio_evt", RT_IPC_FLAG_FIFO);
-    rt_kprintf("bf0_audio_rx_entry started, wait event\n");
-    while (1)
-    {
-        rt_event_recv(g_rx_ev, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, RT_WAITING_FOREVER, &evt);
-        //LOG_I("Got Audio event 0x%x\n", evt);
-        while (1)
-        {
-            rt_size_t len;
-            len = rt_device_read(g_mic, 0, g_pipe_data, AUDIO_BUF_SIZE);
-            if (len != AUDIO_DATA_SIZE / 2)
-            {
-                //LOG_I("Got Audio size=%d\n", len);
-                //LOG_HEX("g_pipe_data", 10, g_pipe_data, len > 16 ? 16 : len);
-            }
-            //LOG_I("Got Audio size=%d\n", len);
-#if 0
-            {
-                // fill buffer for test
-                int i;
-                static uint8_t sin1k[] =
-                {
-                    00, 0x40, 0x9F, 0x53, 0x83, 0x5A, 0x9F, 0x53, 0x00, 0x40, 0xA3, 0x22, 0x00, 0x00, 0x5D, 0xDD,
-                    00, 0xC0, 0x61, 0xAC, 0x7D, 0xA5, 0x61, 0xAC, 0x00, 0xC0, 0x5D, 0xDD, 0x00, 0x00, 0xA3, 0x22,
-                };
-                for (i = 0; i < len; i++)
-                {
-                    g_pipe_data[i] = sin1k[i % 32];
-                }
-            }
-#endif
-#ifndef ATEST_LOOPBACK
-            if (aud_flen + len <= AUD_TEST_FLEN)
-            {
-                atest_save(mic_buf, g_pipe_data, len);
-                mic_buf += len;
-                aud_flen += len;
-            }
-#else
-            size = rt_ringbuffer_data_len(&atest_rbf);
-            if (size + len <= rbf_length)
-                rt_ringbuffer_put(&atest_rbf, g_pipe_data, len);
-            else
-                rt_kprintf("Rx buffer almost full %d\n", size);
-#endif
-            if (len < AUDIO_BUF_SIZE)
-                break;
-        }
-    }
-}
-
-/**
-* @brief  Audio receiving callback.
-* This callback will send event to receiving thread for further audio precessing.
-* @param[in]  dev: audio device.
-* @param[in]  size: received audio data size.
-* @retval RT_EOK
-*/
-static rt_err_t audio_rx_ind(rt_device_t dev, rt_size_t size)
-{
-    LOG_I("audio_rx_ind %d\n", size);
-    //rt_event_send(g_rx_ev, 1);
-    return RT_EOK;
-}
-
-rt_err_t audio_tx_done(rt_device_t dev, void *buffer)
-{
-    LOG_I("audio_tx_done \n");
-    //buf_flag = (uint8_t *)buffer;
-    //rt_event_send(g_tx_ev, 1);
-    return RT_EOK;
-}
-
-#ifdef ATEST_LOOPBACK
-static int atest_loop_start(void)
-{
-    // 1. malloc buffer,
-    rbf_length = 0x100000;
-    //rbf_pool = malloc(rbf_length);
-    rbf_pool = (uint8_t *)0x60000000;
-    if (rbf_pool == 0)
-    {
-        rt_kprintf("Alloc buffer 0x%x fail\n", rbf_length);
-        return -1;
-    }
-    // 2. create ring buffer
-    rt_ringbuffer_init(&atest_rbf, rbf_pool, rbf_length);
-    // 3. start thread
-
-    return 0;
-}
-
-static void atest_loop_stop(void)
-{
-    // 1. stop thread,
-
-    // 2. destory ring buffer
-
-    // 3. free buffer
-    return;
-}
-#endif
-
-/**
-* @brief  Audio commands.
-* This function provide 'audio' command to shell(FINSH) .
-* The commands supported:
-*   - audio open
-
-      Open microphone and speaker device
-
-    - audio config [sample rate]
-
-      Configure microphone catpure sample rate
-
-    - audio start rx
-
-      Audio start capture, it will start \ref bf0_audio_rx_entry thread.
-
-    - audio start tx
-
-      Audio start replay, it will start \ref bf0_audio_tx_entry thread.
-
-    - audio stop rx
-
-      Audio stop capture
-
-   - audio stop tx
-
-      Audio stop replay
-* @retval RT_EOK
-*/
-int cmd_audio(int argc, char *argv[])
-{
-    if (argc > 1)
-    {
-        if (strcmp(argv[1], "open") == 0)
-        {
-            if (g_mic == NULL)
-            {
-                g_mic = rt_device_find(AUDIO_TEST_HNAME);
-                if (g_mic)
-                {
-                    rt_device_open(g_mic, RT_DEVICE_FLAG_RDWR);
-                    LOG_I("Microphone opened\n");
-                }
-                else
-                {
-                    LOG_E("Could not find audio device\n");
-                    return -RT_ERROR;
-                }
-            }
-        }
-        if (strcmp(argv[1], "config") == 0)
-        {
-            if (g_mic)
-            {
-                struct rt_audio_caps caps;
-                caps.main_type = AUDIO_TYPE_INPUT;      // for I2S2, configure RX will configure RX+TX
-                caps.sub_type = AUDIO_DSP_PARAM;
-                caps.udata.config.channels = atoi(argv[2]);
-                caps.udata.config.samplefmt = atoi(argv[3]);    // depth
-                caps.udata.config.samplerate = atoi(argv[4]);
-                //caps.udata.value = atoi(argv[2]);
-                rt_device_control(g_mic, AUDIO_CTL_CONFIGURE, &caps);
-
-                caps.main_type = AUDIO_TYPE_INPUT;      // for I2S2, configure RX will configure RX+TX
-                caps.sub_type = AUDIO_DSP_MODE;
-                caps.udata.value = 0; // is salve mode setting, 0---master mode; 1--- salve mode
-                rt_device_control(g_mic, AUDIO_CTL_CONFIGURE, &caps);
-            }
-        }
-        if (strcmp(argv[1], "start") == 0)
-        {
-            if (g_mic)
-            {
-                int stream = 0;
-                if (strcmp(argv[2], "tx") == 0)
-                {
-                    stream = AUDIO_STREAM_REPLAY;
-#if 0
-                    // start replay thread
-                    tx_tid = rt_thread_create("tx_th", bf0_audio_tx_entry, g_mic, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    if (tx_tid == NULL)
-                    {
-                        LOG_E("Create tx thread fail\n");
-                        return RT_ERROR;
-                    }
-                    rt_thread_startup(tx_tid);
-#endif
-                    rt_device_set_tx_complete(g_mic, audio_tx_done);
-                    rt_device_control(g_mic, AUDIO_CTL_START, &stream);
-                }
-                if (strcmp(argv[2], "rx") == 0)
-                {
-                    stream = AUDIO_STREAM_RECORD;
-                    struct rt_audio_caps caps;
-                    caps.main_type = AUDIO_TYPE_INPUT;      // for I2S2, configure RX will configure RX+TX
-                    caps.sub_type = AUDIO_DSP_PARAM;
-                    rt_device_control(g_mic, AUDIO_CTL_GETCAPS, &caps);
-#if 0
-                    atest_fill_header(caps.udata.config.samplerate, (uint16_t)caps.udata.config.channels, (uint16_t)caps.udata.config.samplefmt);
-                    // start record thread
-                    rx_tid = rt_thread_create("aud_th", bf0_audio_rx_entry, g_mic, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    if (rx_tid == NULL)
-                    {
-                        LOG_E("Create rx thread fail\n");
-                        return RT_ERROR;
-                    }
-                    rt_thread_startup(rx_tid);
-#endif
-                    rt_device_set_rx_indicate(g_mic, audio_rx_ind);
-                    rt_device_control(g_mic, AUDIO_CTL_START, &stream);
-                }
-#ifdef ATEST_LOOPBACK
-                if (strcmp(argv[2], "loopback") == 0)
-                {
-                    tx_start_flag = 0;
-                    int res = atest_loop_start();
-                    if (res != 0)
-                    {
-                        LOG_E("Start loop test fail\n");
-                        return 0;
-                    }
-                    stream = AUDIO_STREAM_RECORD;
-                    // start record thread
-                    rx_tid = rt_thread_create("aud_th", bf0_audio_rx_entry, g_mic, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    rt_thread_startup(rx_tid);
-                    rt_device_set_rx_indicate(g_mic, audio_rx_ind);
-                    rt_device_control(g_mic, AUDIO_CTL_START, &stream);
-
-                    stream = AUDIO_STREAM_REPLAY;
-                    // start replay thread
-                    tx_tid = rt_thread_create("tx_th", bf0_audio_tx_entry, g_mic, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
-                    rt_thread_startup(tx_tid);
-                    rt_device_set_tx_complete(g_mic, audio_tx_done);
-                    rt_device_control(g_mic, AUDIO_CTL_START, &stream);
-                }
-#endif
-            }
-        }
-        if (strcmp(argv[1], "stop") == 0)
-        {
-            if (g_mic)
-            {
-                int stream = 0;
-                if (strcmp(argv[2], "tx") == 0)
-                {
-                    stream = AUDIO_STREAM_REPLAY;
-                    rt_device_control(g_mic, AUDIO_CTL_STOP, &stream);
-                }
-                if (strcmp(argv[2], "rx") == 0)
-                {
-                    stream = AUDIO_STREAM_RECORD;
-                    rt_device_control(g_mic, AUDIO_CTL_STOP, &stream);
-                }
-
-            }
-        }
-        if (strcmp(argv[1], "tdebug") == 0)
-        {
-            audio_debug_out_i2st();
-            audio_debug_out_txdma();
-        }
-        if (strcmp(argv[1], "rdebug") == 0)
-        {
-            audio_debug_out_i2sr();
-            audio_debug_out_rxdma();
-        }
-    }
-    return RT_EOK;
-}
-FINSH_FUNCTION_EXPORT_ALIAS(cmd_audio, __cmd_audio, Test audio driver);
-
-#endif
-
-/// @} bsp_sample_audio
-/// @} bsp_sample
-
 #endif  /* BSP_USING_I2S */
-

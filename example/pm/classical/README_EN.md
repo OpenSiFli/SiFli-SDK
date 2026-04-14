@@ -1,5 +1,5 @@
 # PM Example
-Source path: example\rt_device\pm
+Source path: example\pm\classical
 ## Supported Platforms
 The example can run on the following development boards.
 * sf32lb56-devkit-lcd_n16r12n1

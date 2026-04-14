@@ -4,8 +4,8 @@
 ### 需要安装的软件列表
 1. Sifli env 和 SiFli SDK (从微盘下载)
 1. Keil V5.32或以上, armcc V6 版本或以上
-   将arm和jlink的路径加入Windows环境变量PATH， 如 _C:\Keil_v5\ARM\ARMCLANG\bin_ 和 _C:\Program Files(x86)\SEGGER\JLink_v672b_ , 有助于一些脚本的使用
-1. Segger Jlink,  V6.72b 版本或以上[Jlink下载地址](https://www.segger.com/downloads/jlink/JLink_Windows.exe)
+   将arm和jlink的路径加入Windows环境变量PATH， 如 _C:\Keil_v5\ARM\ARMCLANG\bin_ 和 _C:\Program Files(x86)\SEGGER\JLink_ , 有助于一些脚本的使用
+1. Segger Jlink,  V7.62 版本或以上[Jlink下载地址](https://www.segger.com/downloads/jlink/JLink_Windows.exe)
 1. Visual Studio 2017或更高版本
 
 ### 需要的硬件
@@ -85,34 +85,21 @@ EVB至少需要烧写2部分：
 
 ### 3.2 用Jlink烧写EVB
 
-Jlink 的版本此处以v672b为例，安装路径 _D:\Software\JLink_v672b_
-#### 添加Jlink Flash烧写驱动
-1. 在Jlink程序目录 _D:\Software\JLink_v672b\Devices_ 目录下新建目录 _SiFli_
-2. 将 _tools/flash/jlink_drv/sf32lb55x_ 下的elf文件拷贝到前面新建的SiFli目录(每个elf对应一个flash的烧写驱动)
-![](../../assets/add_sifli_jlink_device_A0_1.png)
-3. 修改Jlink注册的Device列表，增加前面添加的文件路径，运行参数等,如下图:
-![](../../assets/add_sifli_jlink_device_2.png)
+请使用JLink V7.62或以上版本。
 
-附图中添加的xml内容：
+#### 安装思澈J-Link DSK包
+1. 在当前用户目录下创建 _C:\Users\\<USER>\\AppData\\Roaming\\SEGGER\\JLinkDevices\\SiFli_
+2. 将SDK中的 _tools/flash/jlink_drv_ 目录内容整体拷贝到该目录
+3. 拷贝后的目录应至少包含 _JLinkDevices.xml_ 和 _sf32lb55x_ 等子目录
+
+```{note}
+_AppData_ 是 Windows 的隐藏目录。如果资源管理器中看不到该目录，请先开启“显示隐藏的项目”，或者直接在地址栏输入上述完整路径。
 ```
-  <!--                                    -->
-  <!-- SiFli Z0(Cortex-M33 devices)-->
-  <!--                                    -->
-  <Device>
-    <ChipInfo Vendor="SiFli" Name="SF32LB5XX" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x40000" />
-    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x400000" Loader="Devices/SiFli/SF32LB5XX_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-    <FlashBankInfo Name="External Flash2" BaseAddr="0x18000000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB5XX_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-  </Device>
-  <!--                                    -->
-  <!-- SiFli SF32LB55X(Cortex-M33 devices)-->
-  <!--                                    -->
-  <Device>
-    <ChipInfo Vendor="SiFli" Name="SF32LB55X" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x40000" />
-    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB55X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-    <FlashBankInfo Name="External Flash2" BaseAddr="0x64000000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB55X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-    <FlashBankInfo Name="External Flash3" BaseAddr="0x68000000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB55X_EXT_FLASH3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-    <FlashBankInfo Name="External Flash4" BaseAddr="0x12000000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB55X_EXT_FLASH4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
-  </Device>
+
+```{note}
+1. _tools/flash/jlink_drv_ 是完整的J-Link Device Support Kit(DSK) 包，根目录中的 _JLinkDevices.xml_ 描述设备和flash bank，各子目录中的elf文件是对应的Open Flashloader algorithm。
+2. J-Link V7.62 起会递归扫描 _JLinkDevices_ 目录下的所有 `*.xml` 文件，因此不需要再修改J-Link安装目录中的 _JLinkDevices.xml_ ，也不需要手工将elf文件平铺复制到 _Devices\\SiFli_ 目录。
+3. XML中的loader路径相对 _JLinkDevices.xml_ 解析，因此必须整体复制 _tools/flash/jlink_drv_ 目录内容。
 ```
 
 
@@ -179,4 +166,3 @@ Jlink 的版本此处以v672b为例，安装路径 _D:\Software\JLink_v672b_
 ```{note} 
 EVB开发板插入PC后，PC会枚举四个个串口，其中编号最小的是Boot/LCPU的终端，第二个大的是HCPU的终端，目前建议用户关注HCPU的UART输出。其余两个串口暂时没有分配。
  ```
-

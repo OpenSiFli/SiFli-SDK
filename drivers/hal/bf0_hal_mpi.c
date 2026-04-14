@@ -1447,7 +1447,7 @@ __HAL_ROM_USED int HAL_QSPI_LOCK_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr)
 
     if (hflash == NULL || hflash->ctable == NULL)
         return -1;
-    if (addr < SPI_FLASH_OTP_BASE || addr > SPI_FLASH_OTP_BASE + (hflash->ctable->mode_reg << 12))
+    if (!SPI_FLASH_IS_VALID_OTP_ADDR_OFFSET(addr))
         return -1;
 
     // get LB bits to check if OTP LOCKED (S11 ~ S13)
@@ -1532,14 +1532,23 @@ __HAL_ROM_USED int HAL_QSPI_LOCK_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr)
 #define MPI_MAX_FIFO       (64)
 __HAL_ROM_USED int HAL_QSPI_READ_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr, uint8_t *buf, uint32_t size)
 {
+    uint32_t otp_base;
+    uint32_t *data = (uint32_t *)buf;
+    int remain = size;
+    int dlen = 0;
+    int cnt = 0;
+    int i;
+    uint32_t temp_addr;
+
     if (hflash == NULL || hflash->ctable == NULL)
     {
         //rt_kprintf("Invalid parameter\n");
         return 0;
     }
-    if (addr < SPI_FLASH_OTP_BASE || addr > SPI_FLASH_OTP_BASE + (hflash->ctable->mode_reg << 12))
+    otp_base = HAL_FLASH_GetOtpBase(hflash);
+    if (!SPI_FLASH_IS_VALID_OTP_ADDR_OFFSET(addr))
     {
-        //rt_kprintf("addr 0x%x, range 0x%x\n",SPI_FLASH_OTP_BASE+(hflash->ctable->mode_reg<<12));
+        //rt_kprintf("addr 0x%x, range 0x%x\n",otp_base+(hflash->ctable->mode_reg<<12));
         return 0;
     }
 
@@ -1549,12 +1558,8 @@ __HAL_ROM_USED int HAL_QSPI_READ_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr,
         return 0;
     }
 
-    uint32_t *data = (uint32_t *)buf;
-    int remain = size;
-    int dlen = 0;
-    int cnt = 0;
-    int i;
-    uint32_t temp_addr = addr;
+    addr += otp_base;
+    temp_addr = addr;
     while (remain > 0)
     {
         dlen = remain > MPI_MAX_FIFO ? MPI_MAX_FIFO : remain;
@@ -1570,15 +1575,13 @@ __HAL_ROM_USED int HAL_QSPI_READ_OTP(FLASH_HandleTypeDef *hflash, uint32_t addr,
     return size;
 }
 
-__HAL_ROM_USED uint8_t HAL_QSPI_GET_OTP_LB(FLASH_HandleTypeDef *hflash, uint32_t addr)
+__HAL_ROM_USED uint8_t HAL_QSPI_GET_OTP_LB(FLASH_HandleTypeDef *hflash)
 {
     uint32_t srh;
     uint32_t dlen;
     int res;
 
     if (hflash == NULL || hflash->ctable == NULL)
-        return 0xff;
-    if (addr < SPI_FLASH_OTP_BASE || addr > SPI_FLASH_OTP_BASE + (hflash->ctable->mode_reg << 12))
         return 0xff;
 
     // get LB bits to check if OTP LOCKED (S11 ~ S13)

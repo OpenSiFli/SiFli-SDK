@@ -346,6 +346,32 @@ int dfs_file_lseek(struct dfs_fd *fd, off_t offset)
 
     return result;
 }
+/**
+ * this function will fast seek the offset for specified file descriptor.
+ *
+ * @param fd the file descriptor.
+ * @param enabled function fast seek.
+ *
+ * @return the current position after seek.
+ */
+int dfs_file_enable_fast_seek(struct dfs_fd *fd, uint8_t enable)
+{
+    int result;
+
+    if (fd == NULL)
+        return -EINVAL;
+
+    if (fd->fops->enable_fast_lseek == NULL)
+        return -ENOSYS;
+
+    result = fd->fops->enable_fast_lseek(fd, enable);
+
+    /* update current position */
+    if (result >= 0)
+        fd->pos = result;
+
+    return result;
+}
 
 /**
  * this function will get file information.
@@ -482,7 +508,34 @@ __exit:
     return result;
 }
 
+/**
+ * this function is will cause the regular file referenced by fd
+ * to be truncated to a size of precisely length bytes.
+ *
+ * @param fd the file descriptor.
+ * @param length the length to be truncated.
+ *
+ * @return the status of truncated.
+ */
+int dfs_file_ftruncate(struct dfs_fd *fd, off_t length)
+{
+    int result;
 
+    /* fd is null or not a regular file system fd, or length is invalid */
+    if (fd == NULL || fd->type != FT_REGULAR || length < 0)
+        return -EINVAL;
+
+    if (fd->fops->ioctl == NULL)
+        return -ENOSYS;
+
+    result = fd->fops->ioctl(fd, RT_FIOFTRUNCATE, (void *)&length);
+
+    /* update current size */
+    if (result == 0)
+        fd->size = length;
+
+    return result;
+}
 const char *dfs_file_getext(const char *fn)
 {
     size_t i;
@@ -500,14 +553,12 @@ const char *dfs_file_getext(const char *fn)
     return ""; /*Empty string if no '.' in the file name.*/
 }
 
-#ifdef RT_USING_FINSH
-#include <finsh.h>
 
-static struct dfs_fd fd;
-static struct dirent dirent;
 void ls(const char *pathname)
 {
     struct stat stat;
+    struct dirent dirent;
+    struct dfs_fd fd;
     int length;
     char *fullpath, *path;
 
@@ -547,14 +598,14 @@ void ls(const char *pathname)
 
                 if (dfs_file_stat(fullpath, &stat) == 0)
                 {
-                    rt_kprintf("%-20s", dirent.d_name);
+                    rt_kprintf("%-64s", dirent.d_name);
                     if (S_ISDIR(stat.st_mode))
                     {
                         rt_kprintf("%-25s\n", "<DIR>");
                     }
                     else
                     {
-                        rt_kprintf("%-25lu\n", stat.st_size);
+                        rt_kprintf("%25lu\n", stat.st_size);
                     }
                 }
                 else
@@ -573,7 +624,6 @@ void ls(const char *pathname)
     if (pathname == NULL)
         rt_free(path);
 }
-FINSH_FUNCTION_EXPORT(ls, list directory contents);
 
 void rm(const char *filename)
 {
@@ -582,12 +632,12 @@ void rm(const char *filename)
         rt_kprintf("Delete %s failed\n", filename);
     }
 }
-FINSH_FUNCTION_EXPORT(rm, remove files or directories);
 
 void cat(const char *filename)
 {
     uint32_t length;
     char buffer[81];
+    struct dfs_fd fd;
 
     if (dfs_file_open(&fd, filename, O_RDONLY) < 0)
     {
@@ -609,7 +659,6 @@ void cat(const char *filename)
 
     dfs_file_close(&fd);
 }
-FINSH_FUNCTION_EXPORT(cat, print file);
 
 #define BUF_SZ  4096
 static void copyfile(const char *src, const char *dst)
@@ -617,6 +666,7 @@ static void copyfile(const char *src, const char *dst)
     struct dfs_fd src_fd;
     rt_uint8_t *block_ptr;
     rt_int32_t read_bytes;
+    struct dfs_fd fd;
 
     block_ptr = rt_malloc(BUF_SZ);
     if (block_ptr == NULL)
@@ -633,7 +683,7 @@ static void copyfile(const char *src, const char *dst)
 
         return;
     }
-    if (dfs_file_open(&fd, dst, O_WRONLY | O_CREAT) < 0)
+    if (dfs_file_open(&fd, dst, O_WRONLY | O_CREAT | O_TRUNC) < 0)
     {
         rt_free(block_ptr);
         dfs_file_close(&src_fd);
@@ -739,7 +789,7 @@ static const char *_get_path_lastname(const char *path)
     /* skip the '/' then return */
     return ++ptr;
 }
-void copy(const char *src, const char *dst)
+rt_err_t copy(const char *src, const char *dst)
 {
 #define FLAG_SRC_TYPE      0x03
 #define FLAG_SRC_IS_DIR    0x01
@@ -758,7 +808,7 @@ void copy(const char *src, const char *dst)
     if (dfs_file_stat(src, &stat) < 0)
     {
         rt_kprintf("copy failed, bad %s\n", src);
-        return;
+        return RT_ERROR;
     }
     if (S_ISDIR(stat.st_mode))
         flag |= FLAG_SRC_IS_DIR;
@@ -781,7 +831,7 @@ void copy(const char *src, const char *dst)
     if ((flag & FLAG_SRC_IS_DIR) && (flag & FLAG_DST_IS_FILE))
     {
         rt_kprintf("cp faild, cp dir to file is not permitted!\n");
-        return ;
+        return RT_ERROR;
     }
 
     //3. do copy
@@ -794,7 +844,7 @@ void copy(const char *src, const char *dst)
             if (fdst == NULL)
             {
                 rt_kprintf("out of memory\n");
-                return;
+                return RT_ERROR;
             }
             copyfile(src, fdst);
             rt_free(fdst);
@@ -813,7 +863,7 @@ void copy(const char *src, const char *dst)
             if (fdst == NULL)
             {
                 rt_kprintf("out of memory\n");
-                return;
+                return RT_ERROR;
             }
             mkdir(fdst, 0);
             copydir(src, fdst);
@@ -829,9 +879,173 @@ void copy(const char *src, const char *dst)
             copydir(src, dst);
         }
     }
+    return RT_EOK;
 }
-FINSH_FUNCTION_EXPORT(copy, copy file or dir)
-
+static uint32_t dir_used_size;
+static uint32_t dir_occupy_size;
+static uint32_t dir_file_num;
+enum
+{
+    DIR_DEL,
+    MATCH_DEL,
+    MATCH_LS,
+    DIR_SIZE,
+    DIR_OPEN,
+    DIR_CLOSE,
+};
+extern int open(const char *file, int flags, ...);
+void trav_file(const char *src, uint8_t mode, char *argv)
+{
+    struct dirent dirent;
+    struct stat stat;
+    int length;
+    struct dfs_fd fd;
+    if (dfs_file_open(&fd, src, O_DIRECTORY) >= 0)
+    {
+        do
+        {
+            memset(&dirent, 0, sizeof(struct dirent));
+            length = dfs_file_getdents(&fd, &dirent, sizeof(struct dirent));
+            if (length > 0)
+            {
+                char *src_entry_full = NULL;
+                if (strcmp(dirent.d_name, "..") == 0 || strcmp(dirent.d_name, ".") == 0)
+                    continue;
+                if ((src_entry_full = dfs_normalize_path(src, dirent.d_name)) == NULL)
+                {
+                    rt_kprintf("out of memory!\n");
+                    break;
+                }
+                memset(&stat, 0, sizeof(struct stat));
+                if (dfs_file_stat(src_entry_full, &stat) != 0)
+                {
+                    rt_free(src_entry_full);
+                    rt_kprintf("dfs_file_stat: %s failed\n", dirent.d_name);
+                    continue;
+                }
+                if (S_ISDIR(stat.st_mode))
+                {
+                    trav_file(src_entry_full, mode, argv);
+                }
+                else
+                {
+                    if (DIR_DEL == mode || (MATCH_DEL == mode && strstr(dirent.d_name, argv)))
+                    {
+                        dir_file_num++;
+                        if (dfs_file_unlink(src_entry_full) < 0)
+                            rt_kprintf("Delete file %s failed!!!\n", src_entry_full);
+                    }
+                    else if (MATCH_LS == mode && strstr(dirent.d_name, argv))
+                    {
+                        dir_file_num++;
+                        rt_kprintf("Match file: %-64s size %6d\n", src_entry_full, stat.st_size);
+                    }
+                    else if (DIR_SIZE == mode)
+                    {
+                        dir_file_num++;
+                        dir_used_size += (stat.st_size);
+                        dir_occupy_size += (stat.st_size + 2047) / 2048 * 2048;
+                    }
+                    else if (DIR_OPEN == mode)
+                    {
+                        dir_file_num++;
+                        int fd = open(src_entry_full, O_RDONLY);
+                        if (0 > fd)
+                            rt_kprintf("open file %s failed!!!\n", src_entry_full);
+                    }
+                    else if (DIR_CLOSE == mode)
+                    {
+                        ;
+                    }
+                }
+                rt_free(src_entry_full);
+            }
+        }
+        while (length > 0);
+        dfs_file_close(&fd);
+    }
+    if (DIR_DEL == mode)
+    {
+        if (dfs_file_unlink(src) < 0)
+            rt_kprintf("Delete dir %s failed!!!\n", (src));
+    }
+}
+void dirsize(int argc, char **argv)
+{
+    const char *p = "/";
+    dir_file_num = 0;
+    dir_used_size = 0;
+    dir_occupy_size = 0;
+    if (argc >= 2) p = (const char *) argv[1];
+    rt_kprintf("%s: %d %s\n", __func__, argc, p);
+    trav_file(p, DIR_SIZE, NULL);
+    rt_kprintf("%s(%s): occupy %d used_size %d file_num\n", __func__, (p), dir_occupy_size, dir_used_size, dir_file_num);
+    struct statfs buffer;
+    int result = dfs_statfs(p, &buffer);
+    if (result != 0)
+    {
+        rt_kprintf("dfs_statfs failed.\n");
+        return;
+    }
+    uint32_t cap = ((uint32_t) buffer.f_bsize) * ((uint32_t) buffer.f_blocks);
+    uint32_t free = ((uint32_t) buffer.f_bsize) * ((uint32_t) buffer.f_bfree);
+    rt_kprintf("df(%s): cap %d, free %d, used %d\n", (p), cap, free, cap - free);
+}
+void deldir(int argc, char **argv)
+{
+    dir_file_num = 0;
+    rt_kprintf("%s: %d\n", __func__, argc);
+    if (argc < 2) return;
+    trav_file(argv[1], DIR_DEL, NULL);
+    rt_kprintf("%s: %s, file_num %d\n", __func__, argv[1], dir_file_num);
+}
+void delmatch(int argc, char **argv)
+{
+    dir_file_num = 0;
+    rt_kprintf("%s: %d\n", __func__, argc);
+    if (argc < 3) return;
+    trav_file(argv[1], MATCH_DEL, argv[2]);
+    rt_kprintf("%s: %s, file_num %d\n", __func__, argv[1], dir_file_num);
+}
+void lsmatch(int argc, char **argv)
+{
+    dir_file_num = 0;
+    rt_kprintf("%s: %d\n", __func__, argc);
+    if (argc < 3) return;
+    trav_file(argv[1], MATCH_LS, argv[2]);
+    rt_kprintf("%s: %s, file_num %d\n", __func__, argv[1], dir_file_num);
+}
+void _copydir(int argc, char **argv)
+{
+    dir_file_num = 0;
+    rt_kprintf("%s: %d\n", __func__, argc);
+    if (argc < 3) return;
+    mkdir(argv[2], 0);
+    copydir(argv[1], argv[2]);
+    rt_kprintf("%s: %s, file_num %d\n", __func__, argv[1], dir_file_num);
+}
+void _opendir(int argc, char **argv)
+{
+    dir_file_num = 0;
+    uint32_t tick = rt_tick_get_millisecond();
+    rt_kprintf("%s: %d\n", __func__, argc);
+    if (argc < 2) return;
+    trav_file(argv[1], DIR_OPEN, NULL);
+    rt_kprintf("%s: %s, %d(ms), file_num %d\n", __func__, argv[1], rt_tick_get_millisecond() - tick, dir_file_num);
+}
+#include "rtthread.h"
+#ifdef RT_USING_FINSH
+    #include <finsh.h>
+    FINSH_FUNCTION_EXPORT(ls, list directory contents);
+    FINSH_FUNCTION_EXPORT(rm, remove files or directories);
+    FINSH_FUNCTION_EXPORT(cat, print file);
+    FINSH_FUNCTION_EXPORT(copy, copy file or dir);
+    MSH_CMD_EXPORT_REL(dirsize, dirsize, dirsize dir);
+    MSH_CMD_EXPORT_REL(deldir, deldir, deldir file or dir);
+    MSH_CMD_EXPORT_REL(delmatch, delmatch, delmatch dir match_file);
+    MSH_CMD_EXPORT_REL(lsmatch, lsmatch, lsmatch dir match_file);
+    MSH_CMD_EXPORT_REL(_opendir, opendir, opendir dir);
+    MSH_CMD_EXPORT_REL(_copydir, cpdir, cpdir src dst);
 #endif
 /* @} */
 

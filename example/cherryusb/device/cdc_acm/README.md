@@ -1,4 +1,5 @@
-# CDC ACM USB转串口设备示例
+# USB 通信设备示例（CDC ACM）
+源码路径：example/cherryusb/device/cdc_acm
 
 本示例演示了如何使用CherryUSB栈实现一个CDC ACM（Communication Device Class - Abstract Control Model）设备，将USB接口模拟为串口设备。设备可以被主机识别为虚拟串口（COM口），支持数据的双向传输。
 

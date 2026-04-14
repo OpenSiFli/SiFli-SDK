@@ -67,6 +67,9 @@ void av_register_all(void)
 #if CONFIG_NAND_PROTOCOL
     REGISTER_PROTOCOL(NAND,         nand);
 #endif
+#if CONFIG_RAM_PROTOCOL
+    REGISTER_PROTOCOL(RAM,         ram);
+#endif
     REGISTER_DEMUXER(AVI, avi);
 #if CONFIG_H263_DECODER
     REGISTER_DEMUXER(H263, h263);

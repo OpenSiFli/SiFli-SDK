@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <time.h>
 #if HAVE_GETTIMEOFDAY
-//#include <sys/time.h>
+#include <sys/time.h>
 #endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -76,9 +76,15 @@ int av_gettime_relative_is_monotonic(void)
 int av_usleep(unsigned usec)
 {
 #if HAVE_NANOSLEEP
-   // struct timespec ts = { usec / 1000000, usec % 1000000 * 1000 };
-   // while (nanosleep(&ts, &ts) < 0 && errno == EINTR);
+    // struct timespec ts = { usec / 1000000, usec % 1000000 * 1000 };
+    // while (nanosleep(&ts, &ts) < 0 && errno == EINTR);
+    if (usec < 1000)
+        usec = 1000;
+
+    rt_thread_mdelay(usec/1000);
+
     return 0;
+
 #elif HAVE_USLEEP
     return usleep(usec);
 #elif HAVE_SLEEP

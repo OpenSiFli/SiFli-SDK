@@ -10,6 +10,11 @@ list = os.listdir(cwd)
 CPPPATH = [cwd]
 CPPPATH += [os.path.join(cwd, 'include')]
 
+if GetDepend('BF0_ACPU'):
+    CPPPATH += [cwd + '/anyka',]
+    objs = group = DefineGroup('anyka', src,depend = ['ANYKA_RUN_IN_ACPU'],CPPPATH = CPPPATH)
+    objs = objs + SConscript(os.path.join('anyka', 'SConscript'))
+    Return('objs')
 
 if GetDepend('BF0_HCPU'):
     CPPPATH += [cwd, str(Dir('#'))]

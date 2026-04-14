@@ -1,6 +1,7 @@
 /*
  * WPA Supplicant - Driver event processing
  * Copyright (c) 2003-2019, Jouni Malinen <j@w1.fi>
+ * Copyright 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -815,7 +816,15 @@ static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid, struc
     }
 
     if (mode == NULL)
+    {
+        /*Fix the BUG of 5G AP hotspot connection, so that the AP in the 5G band can be successfully connected*/
+        if (bss->freq >= 5000)
+        {
+            return 1;
+        }
+
         return 0;
+    }
 
     for (i = 0; i < (int)sizeof(scan_ie); i++)
     {
@@ -1507,13 +1516,15 @@ struct wpa_ssid *wpa_scan_res_match(struct wpa_supplicant *wpa_s,
         return NULL;
     }
 
+#if 0
+    /*Here, Access Points (APs) in disabled frequency bands, including 5G APs, will be filtered out*/
     if (disabled_freq(wpa_s, bss->freq))
     {
         if (debug_print)
             wpa_dbg(wpa_s, MSG_DEBUG, "   skip - channel disabled");
         return NULL;
     }
-
+#endif
     for (ssid = group; ssid; ssid = only_first_ssid ? NULL : ssid->pnext)
     {
         if (wpa_scan_res_ok(wpa_s, ssid, match_ssid, match_ssid_len, bss, bssid_ignore_count, debug_print))

@@ -280,8 +280,6 @@ config BSP_USING_RAMLESS_LCD
     def_bool n
 config BSP_LCDC_USING_JDI_PARALLEL
     def_bool n
-config BSP_LCDC_USING_EPD_8BIT
-    def_bool n
 
 # LCD backlight
 config LCD_USING_PWM_AS_BACKLIGHT

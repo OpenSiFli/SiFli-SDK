@@ -22,8 +22,11 @@
 源码路径：SiFli-SDK\example\multimedia\lvgl\lvgl_v8_examples
 ### 支持的平台
 例程可以运行在以下开发板
-* sf32lb52-lchspi-ulp
-* sf32lb52-lcd_n16r8
++ sf32lb52-lchspi-ulp
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
+
 
 
 ### 概述

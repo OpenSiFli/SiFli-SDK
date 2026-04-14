@@ -191,7 +191,7 @@ static void ble_wvt_ble_power_on(void)
     SysTick->CTRL  &= (SysTick_CTRL_TICKINT_Msk   | SysTick_CTRL_ENABLE_Msk);
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_HP_TICK, RCC_CLK_TICK_HXT48);
     HAL_SYSTICK_Config(800000 / RT_TICK_PER_SECOND);
-    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_HCLK_DIV8);
+    HAL_SYSTICK_CLKSourceConfig(SYSTICK_CLKSOURCE_TICK_CLK);
 #endif
 }
 

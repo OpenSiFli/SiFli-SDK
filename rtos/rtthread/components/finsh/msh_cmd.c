@@ -268,9 +268,19 @@ int cmd_mountfs(int argc, char **argv)
     return 0;
 }
 FINSH_FUNCTION_EXPORT_ALIAS(cmd_mountfs, __cmd_mountfs, mount device to file system);
+int cmd_unmountfs(int argc, char **argv)
+{
+    int result = 0;
+    char *type = "elm"; /* use the default file system type as 'fatfs' */
+
+    result = dfs_unmount(argv[1]);
+    return 0;
+}
+FINSH_FUNCTION_EXPORT_ALIAS(cmd_unmountfs, __cmd_unmountfs, unmount device to file system);
+
 
 #ifdef RT_USING_DFS_MNTTABLE
-    FINSH_FUNCTION_EXPORT_ALIAS(dfs_unmount_table, __cmd_unmountfs, unmountfs all device);
+    //FINSH_FUNCTION_EXPORT_ALIAS(dfs_unmount_table, __cmd_unmountfs, unmountfs all device);
 #endif
 
 extern int df(const char *path);

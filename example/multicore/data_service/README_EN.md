@@ -20,6 +20,8 @@ This example can run on the following development boards:
 - ec-lb587
 - eh-lb561
 - eh-lb563
+- sf32lb56-lcd series
+- sf32lb58-lcd series
 
 ### Hardware Requirements
 The supported development boards mentioned above are required; no additional hardware is needed.

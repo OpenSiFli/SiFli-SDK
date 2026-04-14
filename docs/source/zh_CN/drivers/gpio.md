@@ -13,17 +13,21 @@
 ```
 
 ## 获取引脚编号(pin id)
-不同于HAL层指定GPIO需要指定所在GPIO组和组内的编号，在驱动层通常使用一个数字编号来表示某一个GPIO管脚（包括GPIOA和GPIOB），一下是驱动层对所有GPIO编号的方法：
-   GPIO          |      pin id     |
------------------| ----------------|
-  GPIOA_00       |        0        |
-  GPIOA_01       |        1        | 
-  GPIOA_02       |        2        | 
-  ...            |...              | 
-  GPIOB_00       |        96       | 
-  GPIOB_01       |        97       | 
-  GPIOB_02       |        98       | 
-  ...            |...              | 
+不同于HAL层指定GPIO需要指定所在GPIO组和组内的编号，在驱动层通常使用一个数字编号来表示某一个GPIO管脚（包括GPIOA、GPIOB以及部分系列支持的PBR），以下是驱动层对GPIO/PBR编号的方法：
+
+引脚          | pin id | 说明
+--------------|--------|-----
+GPIOA_00      | 0      | `GET_PIN(1, 0)`
+GPIOA_01      | 1      | `GET_PIN(1, 1)`
+GPIOA_02      | 2      | `GET_PIN(1, 2)`
+...           | ...    | 
+GPIOB_00      | 96     | `GET_PIN(2, 0)`
+GPIOB_01      | 97     | `GET_PIN(2, 1)`
+GPIOB_02      | 98     | `GET_PIN(2, 2)`
+...           | ...    | 
+PBR0          | 160    | `GET_PIN(0, 0)`
+PBR1          | 161    | `GET_PIN(0, 1)`
+...           | ...    | 依系列不同，范围见下方说明
 
 举例说明：
  - GPIOB03脚，pin id为 99
@@ -39,6 +43,17 @@ GET_PIN(port, pin)
 #define LED0_PIN       GET_PIN(1,  3)   //GPIOA_03
 #define LED1_PIN       GET_PIN(2,  9)   //GPIOB_09  
 ```
+
+```{note}
+`PBR` 在 pin device 中使用 `port=0`，即 `GET_PIN(0, pbr_index)`。
+
+芯片差异说明：
+- SF32LB52/SF32LB56：支持 `PBR0~PBR3`（pin id `160~163`）
+- SF32LB58：支持 `PBR0~PBR5`（pin id `160~165`）
+- SF32LB55：不支持 PBR
+```
+
+
 
 
 ## 示例1——中断模式

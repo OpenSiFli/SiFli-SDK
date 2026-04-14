@@ -129,12 +129,12 @@ EPIC_ColorDef lv_color_to_epic_color(lv_color_t color, lv_opa_t opa)
 
 uint32_t lv_epic_setup_bg_and_output_layer(EPIC_LayerConfigTypeDef *epic_bg_layer,
         EPIC_LayerConfigTypeDef *epic_output_layer,
-        lv_draw_unit_t *draw_unit, const lv_area_t *coords)
+        lv_draw_task_t *draw_task, const lv_area_t *coords)
 {
-    lv_layer_t *layer = draw_unit->target_layer;
+    lv_layer_t *layer = draw_task->target_layer;
 
     lv_area_t blend_area;
-    if (!lv_area_intersect(&blend_area, coords, draw_unit->clip_area))
+    if (!lv_area_intersect(&blend_area, coords, &draw_task->clip_area))
         return 1; /*Fully clipped, nothing to do*/
 
     lv_color_format_t dest_cf = layer->color_format;
@@ -169,14 +169,14 @@ uint32_t lv_epic_setup_bg_and_output_layer(EPIC_LayerConfigTypeDef *epic_bg_laye
 }
 
 
-void lv_epic_draw_blend(lv_draw_unit_t *draw_unit, const lv_draw_sw_blend_dsc_t *blend_dsc)
+void lv_epic_draw_blend(lv_draw_task_t *draw_task, const lv_draw_sw_blend_dsc_t *blend_dsc)
 {
     /*Do not draw transparent things*/
     if (blend_dsc->opa <= LV_OPA_MIN) return;
     if (blend_dsc->mask_buf && blend_dsc->mask_res == LV_DRAW_SW_MASK_RES_TRANSP) return;
 
     lv_area_t blend_area;
-    if (!lv_area_intersect(&blend_area, blend_dsc->blend_area, draw_unit->clip_area)) return;
+    if (!lv_area_intersect(&blend_area, blend_dsc->blend_area, &draw_task->clip_area)) return;
 
 
     EPIC_LayerConfigTypeDef input_layers[3];
@@ -185,7 +185,7 @@ void lv_epic_draw_blend(lv_draw_unit_t *draw_unit, const lv_draw_sw_blend_dsc_t 
     int ret;
 
 
-    if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_unit, blend_dsc->blend_area))
+    if (lv_epic_setup_bg_and_output_layer(&input_layers[0], &output_canvas, draw_task, blend_dsc->blend_area))
         return;/*Fully clipped, nothing to do*/
 
 
@@ -292,14 +292,14 @@ void lv_epic_print_area_info(const char *prefix, const lv_area_t *p_area)
 {
     LV_EPIC_LOG("%s[%d,%d,%d,%d]", prefix, p_area->x1, p_area->y1, p_area->x2, p_area->y2);
 }
-void lv_epic_print_layer_info(lv_draw_unit_t *draw_unit)
+void lv_epic_print_layer_info(lv_draw_task_t *draw_task)
 {
-    lv_layer_t *layer = draw_unit->target_layer;
+    lv_layer_t *layer = draw_task->target_layer;
     LV_EPIC_LOG("format %d, buf=%p, stride=%u", layer->color_format,
                 layer->draw_buf->data, layer->draw_buf->header.stride);
 
     lv_epic_print_area_info("buf_area", &layer->buf_area);
-    lv_epic_print_area_info("clip_area", draw_unit->clip_area);
+    lv_epic_print_area_info("clip_area", &draw_task->clip_area);
 }
 /**********************
  *   STATIC FUNCTIONS

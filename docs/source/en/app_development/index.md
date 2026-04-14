@@ -8,7 +8,7 @@ create_application
 create_board
 build_and_configuration
 drivers.md
-startup_flow_sf32lb52x
+startup_flow
 
 ```
 

@@ -7,6 +7,10 @@ jobs:
   sync_prs_to_internal_codebase:
     name: GitHub PR to Internal Codebase Sync
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     if: (github.event.label.name == 'PR-Sync-Merge')   ||
         (github.event.label.name == 'PR-Sync-Rebase')  ||
         (github.event.label.name == 'PR-Sync-Update')
@@ -14,11 +18,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Sync approved PRs to internal codebase
-        uses: OpenSiFli/sync-pr-to-gitlab@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLAB_URL: ${{ secrets.GITLAB_URL }}
-          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          GIT_CONFIG_NAME: ${{ secrets.GIT_CONFIG_NAME }}
-          GIT_CONFIG_EMAIL: ${{ secrets.GIT_CONFIG_EMAIL }}
-          GITLAB_NAMESPACE: ${{ secrets.GITLAB_NAMESPACE }}  # This is optional (defaults to 'OpenSiFli' if not present)
+        uses: OpenSiFli/sync-pr-to-gitlab@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          gitlab_url: ${{ secrets.GITLAB_URL }}
+          gitlab_token: ${{ secrets.GITLAB_TOKEN }}
+          git_config_name: ${{ secrets.GIT_CONFIG_NAME }}
+          git_config_email: ${{ secrets.GIT_CONFIG_EMAIL }}
+          gitlab_namespace: ${{ secrets.GITLAB_NAMESPACE }}

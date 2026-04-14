@@ -697,45 +697,52 @@ struct bf0_audio_codec
 #endif
 
 #ifndef SOC_SF32LB52X
-const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config[9] =
+const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config_pll[9] =
 {
-#if ALL_CLK_USING_PLL
     {48000, 1, 10, 0, 0x14D, 1,  5, 4, 2, 20, 20},
     {32000, 1, 10, 1, 0x14D, 1,  5, 4, 2, 20, 20},
     {24000, 1, 20, 0, 0x14D, 1, 10, 2, 2, 10, 10},
     {16000, 1, 10, 2, 0x14D, 1,  5, 4, 2, 20, 20},
     {12000, 1, 40, 0, 0x14D, 1, 20, 2, 1,  5,  5},
     { 8000, 1, 20, 2, 0x14D, 1, 10, 2, 2, 10, 10},
-#else
+    {44100, 1, 10, 0, 0x14D, 1,  5, 4, 2, 20, 20},
+    {22050, 1, 20, 0, 0x14D, 1, 10, 2, 2, 10, 10},
+    {11025, 1, 40, 0, 0x14D, 1, 20, 2, 1,  5,  5},
+};
+const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config_xtal[9] =
+{
     {48000, 0, 10, 0, 0x14D, 0,  5, 4, 2, 20, 20},
     {32000, 0, 10, 1, 0x14D, 0,  5, 4, 2, 20, 20},
     {24000, 0, 20, 0, 0x14D, 0, 10, 2, 2, 10, 10},
     {16000, 0, 10, 2, 0x14D, 0,  5, 4, 2, 20, 20},//{16000, 0, 20, 1, 0x14D, 0, 10, 2, 2, 10, 10},
     {12000, 0, 40, 0, 0x14D, 0, 20, 2, 1,  5,  5},
     { 8000, 0, 20, 2, 0x14D, 0, 10, 2, 2, 10, 10},
-#endif
     {44100, 1, 10, 0, 0x14D, 1,  5, 4, 2, 20, 20},
     {22050, 1, 20, 0, 0x14D, 1, 10, 2, 2, 10, 10},
     {11025, 1, 40, 0, 0x14D, 1, 20, 2, 1,  5,  5},
 };
+
 #else
-const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config[9] =
+const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config_pll[9] =
 {
-#if ALL_CLK_USING_PLL
     {48000, 1, 1, 0, SINC_GAIN, 1,  5, 4, 2, 20, 20, 0},
     {32000, 1, 1, 1, SINC_GAIN, 1,  5, 4, 2, 20, 20, 0},
     {24000, 1, 1, 5, SINC_GAIN, 1, 10, 2, 2, 10, 10, 1},
     {16000, 1, 1, 4, SINC_GAIN, 1,  5, 4, 2, 20, 20, 0},
     {12000, 1, 1, 7, SINC_GAIN, 1, 20, 2, 1,  5,  5, 1},
     { 8000, 1, 1, 8, SINC_GAIN, 1, 10, 2, 2, 10, 10, 1},
-#else
+    {44100, 1, 1, 0, SINC_GAIN, 1,  5, 4, 2, 20, 20, 0},
+    {22050, 1, 1, 5, SINC_GAIN, 1, 10, 2, 2, 10, 10, 1},
+    {11025, 1, 1, 7, SINC_GAIN, 1, 20, 2, 1,  5,  5, 1},
+};
+const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config_xtal[9] =
+{
     {48000, 0, 1, 0, SINC_GAIN, 0,  5, 4, 2, 20, 20, 0},
     {32000, 0, 1, 1, SINC_GAIN, 0,  5, 4, 2, 20, 20, 0},
     {24000, 0, 1, 5, SINC_GAIN, 0, 10, 2, 2, 10, 10, 1},
     {16000, 0, 1, 4, SINC_GAIN, 0,  5, 4, 2, 20, 20, 0},//{16000, 0, 20, 1, 0x14D, 0, 10, 2, 2, 10, 10},
     {12000, 0, 1, 7, SINC_GAIN, 0, 20, 2, 1,  5,  5, 1},
     { 8000, 0, 1, 8, SINC_GAIN, 0, 10, 2, 2, 10, 10, 1},
-#endif
     {44100, 1, 1, 0, SINC_GAIN, 1,  5, 4, 2, 20, 20, 0},
     {22050, 1, 1, 5, SINC_GAIN, 1, 10, 2, 2, 10, 10, 1},
     {11025, 1, 1, 7, SINC_GAIN, 1, 20, 2, 1,  5,  5, 1},
@@ -743,23 +750,26 @@ const AUDCODE_DAC_CLK_CONFIG_TYPE   codec_dac_clk_config[9] =
 
 #endif
 
-const AUDCODE_ADC_CLK_CONFIG_TYPE   codec_adc_clk_config[9] =
+const AUDCODE_ADC_CLK_CONFIG_TYPE   codec_adc_clk_config_pll[9] =
 {
-#if ALL_CLK_USING_PLL
     {48000, 1,  5, 0, 1, 1, 5, 0},
     {32000, 1,  5, 1, 1, 1, 5, 0},
     {24000, 1, 10, 0, 1, 0, 5, 2},
     {16000, 1, 10, 1, 1, 0, 5, 2},
     {12000, 1, 10, 2, 1, 0, 5, 2},
     { 8000, 1, 10, 3, 1, 0, 5, 2},
-#else
+    {44100, 1,  5, 0, 1, 1, 5, 1},
+    {22050, 1,  5, 2, 1, 1, 5, 1},
+    {11025, 1, 10, 2, 1, 0, 5, 3},
+};
+const AUDCODE_ADC_CLK_CONFIG_TYPE   codec_adc_clk_config_xtal[9] =
+{
     {48000, 0,  5, 0, 0, 1, 5, 0},
     {32000, 0,  5, 1, 0, 1, 5, 0},
     {24000, 0, 10, 0, 0, 0, 5, 2},
     {16000, 0, 10, 1, 0, 0, 5, 2},
     {12000, 0, 10, 2, 0, 0, 5, 2},
     { 8000, 0, 10, 3, 0, 0, 5, 2},
-#endif
     {44100, 1,  5, 0, 1, 1, 5, 1},
     {22050, 1,  5, 2, 1, 1, 5, 1},
     {11025, 1, 10, 2, 1, 0, 5, 3},
@@ -767,7 +777,12 @@ const AUDCODE_ADC_CLK_CONFIG_TYPE   codec_adc_clk_config[9] =
 
 
 static struct bf0_audio_codec h_aud_codec;
+static uint8_t use_pll_all;
 
+void audcodec_clock_set(uint8_t use_pll)
+{
+    use_pll_all = use_pll;
+}
 AUDCODEC_HandleTypeDef *get_audcodec_handle()
 {
     return &h_aud_codec.audcodec;
@@ -856,7 +871,6 @@ static rt_err_t bf0_audio_configure(struct rt_audio_device *audio, struct rt_aud
     struct bf0_audio_codec *audcodec = (struct bf0_audio_codec *) audio;
     AUDCODEC_HandleTypeDef *haudcodec = (AUDCODEC_HandleTypeDef *) & (audcodec->audcodec);
 
-
     if (audio == NULL || caps == NULL)
         return RT_ERROR;
 
@@ -865,13 +879,17 @@ static rt_err_t bf0_audio_configure(struct rt_audio_device *audio, struct rt_aud
     case AUDIO_TYPE_INPUT:
     {
         uint8_t i;
-
+        const AUDCODE_ADC_CLK_CONFIG_TYPE *adc_clk = &codec_adc_clk_config_xtal[0];
+        if (use_pll_all)
+        {
+            adc_clk = &codec_adc_clk_config_pll[0];
+        }
         for (i = 0; i < 9; i++)
         {
-            if (caps->udata.config.samplerate == codec_adc_clk_config[i].samplerate)
+            if (caps->udata.config.samplerate == adc_clk[i].samplerate)
             {
                 haudcodec->Init.samplerate_index = i;
-                haudcodec->Init.adc_cfg.adc_clk = (AUDCODE_ADC_CLK_CONFIG_TYPE *)&codec_adc_clk_config[i];
+                haudcodec->Init.adc_cfg.adc_clk = (AUDCODE_ADC_CLK_CONFIG_TYPE *)&adc_clk[i];
                 break;
             }
         }
@@ -907,13 +925,17 @@ static rt_err_t bf0_audio_configure(struct rt_audio_device *audio, struct rt_aud
     case AUDIO_TYPE_OUTPUT:
     {
         uint8_t i;
-
+        const AUDCODE_DAC_CLK_CONFIG_TYPE *dac_clk = &codec_dac_clk_config_xtal[0];
+        if (use_pll_all)
+        {
+            dac_clk = &codec_dac_clk_config_pll[0];
+        }
         for (i = 0; i < 9; i++)
         {
-            if (caps->udata.config.samplerate == codec_dac_clk_config[i].samplerate)
+            if (caps->udata.config.samplerate == dac_clk[i].samplerate)
             {
                 haudcodec->Init.samplerate_index = i;
-                haudcodec->Init.dac_cfg.dac_clk = (AUDCODE_DAC_CLK_CONFIG_TYPE *)&codec_dac_clk_config[i];
+                haudcodec->Init.dac_cfg.dac_clk = (AUDCODE_DAC_CLK_CONFIG_TYPE *)&dac_clk[i];
                 break;
             }
         }
@@ -1176,8 +1198,8 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
     uint8_t rx_dma_num = 0;
     uint8_t tx_dma_num = 0;
 
-    bf0_audio_pll_config(audcodec, &codec_adc_clk_config[haudcodec->Init.samplerate_index],
-                         &codec_dac_clk_config[haudcodec->Init.samplerate_index], stream);
+    bf0_audio_pll_config(audcodec, haudcodec->Init.adc_cfg.adc_clk,
+                         haudcodec->Init.dac_cfg.dac_clk, stream);
 
 
     if (((stream & 0xff) == AUDIO_STREAM_RECORD) || ((stream & 0xff) == AUDIO_STREAM_RXandTX))

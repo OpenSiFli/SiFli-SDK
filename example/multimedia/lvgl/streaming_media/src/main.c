@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include <rtthread.h>
 #include <rtdevice.h>
 #include "stdbool.h"
@@ -10,6 +15,7 @@
 #endif /* _WIN32 */
 #include "dfs_fs.h"
 #include "media_dec.h"
+#include "app_mem.h"
 
 
 void bt_app_init(void);
@@ -18,9 +24,6 @@ void bt_app_init(void);
 
 LV_IMG_DECLARE(clock_simple_bg);
 
-extern void ffmpeg_heap_init(void);
-extern void *ffmpeg_alloc(size_t nbytes);
-extern void ffmpeg_free(void *p);
 extern void lv_ex_data_pool_init(void);
 
 const char *VIDEO_SRC[] =

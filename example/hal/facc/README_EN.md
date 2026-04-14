@@ -4,10 +4,8 @@ Source Code Path: example/hal/facc
 
 ## Supported Platforms
 The example can run on the following development boards:
-* sf32lb56-lcd_n16r12n1
-* sf32lb56-lcd_a128r12n1
-* sf32lb58-lcd_a128r32n1_dsi
-* sf32lb58-lcd_n16r64n4
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 ## Example Overview
 * This example demonstrates how to initialize and use a hardware accelerator module called FACC for performing FIR (Finite Impulse Response) filtering operations, and verifies whether the output results are correct.

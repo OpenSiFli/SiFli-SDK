@@ -191,6 +191,22 @@ config RT_DEBUG_MODULE
     int
     default 1 if RT_DEBUG_MODULE_CONFIG
 
+config RT_SCHEDULER_LOCK_DEBUG
+    bool "Enable Debugging of Schedule lock"
+    default n
+
+
+choice RT_ASSERT_PRINT_TYPE
+    prompt "Assert print info type"
+    default  ASSERT_NORMAL
+    config ASSERT_NORMAL
+        bool "Print assert normal info(maximum space)"
+    config ASSERT_OPTIMIZE_2
+        bool "Print assert info without assert statement(minor space)"
+    config ASSERT_OPTIMIZE_1
+        bool "Print assert info only address(minimum space)"
+endchoice # RT_ASSERT_PRINT_TYPE
+
 endif
 
 menu "Inter-Thread communication"
@@ -233,11 +249,16 @@ menu "Memory Management"
         help
             Using static memory fixed partition
 
-    config RT_USING_MEMHEAP
+    menuconfig RT_USING_MEMHEAP
         bool "Using memory heap object"
         default n
         help
             Using memory heap object to manage dynamic memory heap.
+        if RT_USING_MEMHEAP
+        config RT_USING_MEMHEAP2
+            bool "Using memheap2 implementation"
+            default n
+        endif        
 
     choice
         prompt "Dynamic Memory Management"

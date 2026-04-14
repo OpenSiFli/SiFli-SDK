@@ -189,7 +189,10 @@ pbuf_init_alloced_pbuf(struct pbuf *p, void *payload, u16_t tot_len, u16_t len, 
     p->flags = flags;
     p->ref = 1;
     p->if_idx = NETIF_NO_INDEX;
-    memset(p->payload, 0, p->len);
+    if (p->payload)
+    {
+        memset(p->payload, 0, p->len);
+    }
 }
 
 /**

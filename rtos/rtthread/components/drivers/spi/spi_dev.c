@@ -281,6 +281,12 @@ static rt_err_t _spidev_device_control(rt_device_t dev,
                                        int         cmd,
                                        void       *args)
 {
+    struct rt_spi_device *device;
+
+    device = (struct rt_spi_device *)dev;
+    RT_ASSERT(device != RT_NULL);
+    RT_ASSERT(device->bus != RT_NULL);
+
     switch (cmd)
     {
     case RT_DEVICE_CTRL_SUSPEND:
@@ -298,6 +304,12 @@ static rt_err_t _spidev_device_control(rt_device_t dev,
 #endif
         break;
     }
+    default:
+        if (device->bus->ops->control != RT_NULL)
+        {
+            return device->bus->ops->control(device, cmd, args);
+        }
+        return -RT_ENOSYS;
     }
 
     return RT_EOK;

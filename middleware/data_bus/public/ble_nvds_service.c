@@ -50,9 +50,11 @@
 #ifdef BSP_USING_PSRAM
     #define BLE_NVDS_KVDB_SECT_BEGIN L2_CACHE_RET_BSS_SECT_BEGIN(ble_kvdb)
     #define BLE_NVDS_KVDB_SECT_END L2_CACHE_RET_BSS_SECT_END
+    #define BLE_NVDS_KVDB_SECT(section_name, var)  var L2_CACHE_RET_BSS_SECT(section_name)
 #else
     #define BLE_NVDS_KVDB_SECT_BEGIN L1_NON_RET_BSS_SECT_BEGIN(ble_kvdb)
     #define BLE_NVDS_KVDB_SECT_END   L1_NON_RET_BSS_SECT_END
+    #define BLE_NVDS_KVDB_SECT(section_name, var)  L1_NON_RET_BSS_SECT(section_name, var)
 #endif
 
 typedef struct
@@ -106,9 +108,9 @@ static const uint8_t g_ble_slp_default_lxt32k[] = {0x0D, 0x02, 0xAC, 0x0D, 0x12,
                                                   };
 
 BLE_NVDS_KVDB_SECT_BEGIN
-static struct fdb_kvdb g_ble_db;
+BLE_NVDS_KVDB_SECT(ble_kvdb, static struct fdb_kvdb g_ble_db);
 #if (FDB_KV_CACHE_TABLE_SIZE == 1)
-    static uint32_t g_ble_db_cache[256];
+    BLE_NVDS_KVDB_SECT(ble_kvdb, static uint32_t g_ble_db_cache[256]);
 #endif /* (FDB_KV_CACHE_TABLE_SIZE == 1) */
 BLE_NVDS_KVDB_SECT_END
 

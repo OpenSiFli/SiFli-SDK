@@ -20,6 +20,8 @@
 
 #define DHARA_RADIX_DEPTH   (sizeof(dhara_sector_t) << 3)
 
+static int copy_block(struct dhara_map *m, dhara_page_t p, dhara_error_t *err);
+
 static inline dhara_sector_t d_bit(int depth)
 {
     return ((dhara_sector_t)1) << (DHARA_RADIX_DEPTH - depth - 1);
@@ -227,6 +229,7 @@ int dhara_map_read(struct dhara_map *m, dhara_sector_t s,
     const struct dhara_nand *n = m->journal.nand;
     dhara_error_t my_err;
     dhara_page_t p;
+    int r;
 
     if (dhara_map_find(m, s, &p, &my_err) < 0)
     {
@@ -240,7 +243,13 @@ int dhara_map_read(struct dhara_map *m, dhara_sector_t s,
         return -1;
     }
 
-    return dhara_nand_read(n, p, 0, 1 << n->log2_page_size, data, err);
+    r = dhara_nand_read(n, p, 0, 1 << n->log2_page_size, data, err);
+    if (DHARA_E_ECC_CORRECTED == *err)
+    {
+        r = copy_block(m, p, err);
+    }
+
+    return r;
 }
 
 /* Check the given page. If it's garbage, do nothing. Otherwise, rewrite
@@ -395,6 +404,37 @@ static int prepare_write(struct dhara_map *m, dhara_sector_t dst,
     }
 
     ck_set_count(dhara_journal_cookie(&m->journal), m->count);
+    return 0;
+}
+
+static int copy_block(struct dhara_map *m, dhara_page_t p, dhara_error_t *err)
+{
+    dhara_page_t start = (p >> m->journal.nand->log2_ppb) << m->journal.nand->log2_ppb;
+    dhara_page_t end = start + (1 << m->journal.nand->log2_ppb) - 1;
+    dhara_error_t my_err;
+    dhara_page_t checkpoint_page;
+
+    checkpoint_page = (1 << m->journal.log2_ppc) - 1;
+    for (; start <= end; start++)
+    {
+        if (0 == ((start + 1) & checkpoint_page))
+        {
+            /* no need to copy checkpoint page */
+            continue;
+        }
+
+        /* auto gc for the write to avoid head and tail get too close */
+        if (auto_gc(m, err) < 0)
+            return -1;
+
+        /* copy page to head */
+        if (!raw_gc(m, start, &my_err))
+            continue;
+
+        if (try_recover(m, my_err, err) < 0)
+            return -1;
+    }
+
     return 0;
 }
 

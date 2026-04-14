@@ -31,6 +31,7 @@ extern "C" {
 fdb_err_t fdb_kvdb_init   (fdb_kvdb_t db, const char *name, const char *path, struct fdb_default_kv *default_kv,
         void *user_data);
 void      fdb_kvdb_control(fdb_kvdb_t db, int cmd, void *arg);
+fdb_err_t fdb_kvdb_check(fdb_kvdb_t db);
 fdb_err_t fdb_kvdb_deinit(fdb_kvdb_t db);
 fdb_err_t fdb_tsdb_init   (fdb_tsdb_t db, const char *name, const char *path, fdb_get_time get_time, size_t max_len,
         void *user_data);
@@ -67,6 +68,9 @@ fdb_blob_t fdb_tsl_to_blob     (fdb_tsl_t tsl, fdb_blob_t blob);
 
 /* fdb_utils.c */
 uint32_t   fdb_calc_crc32(uint32_t crc, const void *buf, size_t size);
+fdb_err_t  fdb_kvdb_alloc_cache(fdb_kvdb_t db, uint32_t key_num, uint32_t db_size);
+void       fdb_kvdb_free_cache(fdb_kvdb_t db);
+void       fdb_gc_collect(fdb_kvdb_t db, uint32_t collect_num);
 
 #ifdef __cplusplus
 }

@@ -83,6 +83,8 @@ int ff_network_wait_fd_timeout(int fd, int write, int64_t timeout, AVIOInterrupt
 {
     int ret;
     int64_t wait_start = 0;
+    if (timeout <= 0)
+        timeout = 10000000;
 
     while (1) {
         if (ff_check_interrupt(int_cb))
@@ -95,6 +97,8 @@ int ff_network_wait_fd_timeout(int fd, int write, int64_t timeout, AVIOInterrupt
                 wait_start = av_gettime_relative();
             else if (av_gettime_relative() - wait_start > timeout)
                 return AVERROR(ETIMEDOUT);
+
+            rt_thread_mdelay(2);
         }
     }
 }

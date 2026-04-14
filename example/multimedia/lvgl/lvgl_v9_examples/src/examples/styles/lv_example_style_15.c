@@ -6,8 +6,8 @@
  */
 void lv_example_style_15(void)
 {
-    lv_obj_t *btn;
-    lv_obj_t *label;
+    lv_obj_t * btn;
+    lv_obj_t * label;
 
     /*Normal button*/
     btn = lv_button_create(lv_screen_active());

@@ -2,10 +2,10 @@
 源码路径:example/hal/uart
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-nano_a128n16
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* sf32lb56-lcd_n16r12n1
+* sf32lb52-nano系列
+* sf32lb52-lcd系列
+* sf32lb58-lcd系列
+* sf32lb56-lcd系列
 
 ## 概述
 * 操作UART hal函数采用RX DMA方式,操作UART2检验其串口的收发能力

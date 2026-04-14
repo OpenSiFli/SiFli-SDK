@@ -3,8 +3,9 @@
 Source path: example\rt_device\pwm
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 ## Overview
 * Includes examples of Gtime, Atime using pwm+dma functionality to output PWM waveforms via IO ports
 

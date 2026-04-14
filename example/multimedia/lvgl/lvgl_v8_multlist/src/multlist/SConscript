@@ -1,0 +1,19 @@
+from building import *
+import rtconfig
+import os
+
+Import('SIFLI_SDK')
+
+# get current dir path
+cwd = GetCurrentDir()
+
+# init src and inc vars
+src = []
+inc = [cwd, os.path.join(SIFLI_SDK, 'middleware', 'app_fwk', 'reg_fwk')]
+
+# add LittlevGL common include
+src = src + Glob('*.c')
+
+group = DefineGroup('', src, depend = [''], CPPPATH = inc)
+
+Return('group')

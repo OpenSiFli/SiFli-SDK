@@ -10,8 +10,7 @@
     #define LV_ATTRIBUTE_IMAGE_IMGBTN_MID
 #endif
 
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMGBTN_MID uint8_t imagebutton_mid_map[] =
-{
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMGBTN_MID uint8_t imagebutton_mid_map[] = {
     /*Pixel format:  Blue: 8 bit, Green: 8 bit, Red: 8 bit, Alpha: 8 bit*/
     0x00, 0x38, 0x5f, 0x27, 0x00, 0x38, 0x5f, 0x27, 0x00, 0x38, 0x5f, 0x27, 0x00, 0x38, 0x5f, 0x27, 0x00, 0x38, 0x5f, 0x27,
     0x00, 0x2a, 0x54, 0xff, 0x00, 0x2a, 0x54, 0xff, 0x00, 0x2a, 0x54, 0xff, 0x00, 0x2a, 0x54, 0xff, 0x00, 0x2a, 0x54, 0xff,
@@ -64,14 +63,15 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMGBTN_
     0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x04,
 };
 
-const lv_image_dsc_t imagebutton_mid =
-{
-    .header.w = 5,
-    .header.h = 49,
-    .header.stride = 20,
-    .header.cf = LV_COLOR_FORMAT_ARGB8888,
-    .data = imagebutton_mid_map,
+const lv_image_dsc_t imagebutton_mid = {
+    .header = {
+        .cf = LV_COLOR_FORMAT_ARGB8888,
+        .w = 5,
+        .h = 49,
+        .stride = 20,
+    },
     .data_size = sizeof(imagebutton_mid_map),
+    .data = imagebutton_mid_map,
 };
 
 #endif /* LV_BUILD_EXAMPLES */

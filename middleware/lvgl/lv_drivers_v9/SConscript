@@ -1,21 +1,24 @@
 import os
 from building import * 
 
-# get current dir path
 cwd = GetCurrentDir()
 
-# init src and inc vars
 src = []
 inc = [cwd]
 
+if GetDepend('DRV_EPIC_NEW_API'):
+    inc = inc + [cwd+'/sifli_renderlist']
+    src = src + Glob('sifli_renderlist/*.c')
+else:
+    inc = inc + [cwd+'/sifli']
+    src = src + Glob('sifli/*.c')
+    src = src + Glob('lv_lcd.c')
 
-# add driver basic code
-src = src + Glob('./*.c')
+src = src + Glob('lv_gpu.c')
+src = src + Glob('lv_keypad.c')
+src = src + Glob('lv_touch.c')
+src = src + Glob('lvgl_drv.c')
+src = src + Glob('lvsf_img_decoder.c')
 
-# add sifli folder
-inc = inc + [cwd+'/sifli']
-src = src + Glob('sifli/*.c')
-
-# add group to IDE project
 objs = DefineGroup('lv_drivers', src, depend = [''], CPPPATH = inc)
 Return('objs')

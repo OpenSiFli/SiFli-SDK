@@ -140,11 +140,9 @@ void boot_images_help()
             {
                 extern void board_init_psram();
                 board_init_psram();
-#ifdef SD_BL_MODE
-                extern uint32_t init_sdnand();
-                init_sdnand();
-#endif
+
             }
+
             dfu_boot_img_in_flash(flash_id);
         }
     }

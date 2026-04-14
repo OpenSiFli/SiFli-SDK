@@ -11,8 +11,9 @@ The following sections provide only essential information. For complete steps on
 
 This example can run on the following development boards:
 - eh-lb563
-- SF32LB52x series
-- SF32LB56x series
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 ## Introduction
 This example is used to demonstrate LVGL V8 official examples, using official demo applications.

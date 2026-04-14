@@ -1,0 +1,227 @@
+[
+    {
+        "mem": "flash5", 
+        "base": "0x1C000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00005000", 
+                "tags": [
+                    "FLASH_TABLE"
+                ], 
+                "img": "ftab",
+                "exec": "ftab"
+            },      
+            {
+                "offset": "0x00020000", 
+                "max_size": "0x00020000", 
+                "tags": [
+                    "FLASH_BOOT_LOADER"
+                ], 
+                "ftab": {
+                    "name": "bootloader", 
+                    "address": [
+                        "base", 
+                        "xip"
+                    ]
+                }, 
+                "img": "bootloader",
+                "exec": "bootloader"
+            }
+        ]
+    }, 
+    {
+        "mem":    "psram1", 
+        "base":   "0x60000000",
+        "regions":   [
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00400000", 
+                "tags": [],
+                "ftab": {
+                    "name": "main",
+                    "address": [
+                        "xip"
+                    ]
+               }
+            },
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00080000",
+                "tags": [""],
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "xip"
+                    ]
+               }
+            },
+            {
+                "offset": "0x00400000", 
+                "max_size": "0x01C00000", 
+                "tags": [
+                    "PSRAM_DATA"
+                ]
+            }
+        ]
+    },
+    {
+        "mem":    "psram1_cbus", 
+        "base":   "0x10000000",
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00400000", 
+                "tags": [
+                    "HCPU_PSRAM_CODE"
+                ],
+                "exec": "main"
+            },
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00080000",
+                "tags": [
+                    "DFU_PSRAM_CODE"
+                ],
+                "exec": "dfu"
+            },
+            {
+                "offset": "0x00400000",
+                "max_size": "0x00400000", 
+                "tags": []
+            }
+        ]
+    },    
+    {
+        "mem":    "psram2", 
+        "base":   "0x62000000",
+        "regions": 
+        [
+            {"offset": "0x00000000", "max_size": "0x02000000", "tags": ["PSRAM_DATA2"]}
+        ]
+    },
+    {
+        "mem":    "flash4", 
+        "base":   "0x18000000",
+        "regions": 
+        [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00400000", 
+                "tags": [
+                    "HCPU_FLASH_CODE"
+                ], 
+                "img": "main",
+                "ftab": {
+                    "name": "main",
+                    "address": [
+                        "base"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00400000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_DFU_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x00404000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_BLE_REGION"
+                ]
+            },
+            {
+                "offset": "0x00500000",
+                "max_size": "0x00020000",
+                "tags": [
+                    "DFU_INFO_REGION"
+                ]
+            },
+            {
+                "offset": "0x00600000",
+                "max_size": "0x00080000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "img": "dfu",
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "base"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00800000",
+                "max_size": "0x00200000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {
+                "offset": "0x00A00000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_TST_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x00A04000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "TSDB_TST_REGION"
+                ]
+            }, 
+            {"offset": "0x00A08000", "max_size": "0x00100000", "img": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
+            {"offset": "0x00B08000", "max_size": "0x00100000", "tags": ["FLASH_PART12", "FS_EX"]},
+            {
+                "offset": "0x00E08000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_LOAD_REGION1"], 
+                "img": "acpu", 
+                "ftab": {
+                    "name": "acpu_region1", 
+                    "address": [
+                        "base"
+                    ]
+                }
+            }
+         ]
+    },
+    {
+        "mem":    "hpsys_ram", 
+        "base":   "0x20000000",
+        "regions": 
+        [
+            {"offset": "0x00000000", "max_size": "0x001EB000", "tags": ["HCPU_RAM_DATA"]},
+            {"offset": "0x001EB000", "max_size": "0x00004C00", "tags": ["HCPU_RO_DATA"]},
+            {"offset": "0x001FFC00", "max_size": "0x00000400", "tags": ["HPSYS_MBOX"]},
+            {"offset": "0x001FFC00", "max_size": "0x00000200", "tags": ["HCPU2LCPU_MB_CH2_BUF"]},
+            {"offset": "0x001FFE00", "max_size": "0x00000200", "tags": ["HCPU2LCPU_MB_CH1_BUF"]},
+            { 
+                "offset": "0x00200000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_REGION1_SBUS"],
+                "ftab":
+                {
+                    "name": "acpu_region1",
+                    "address": ["xip"]
+                }                
+            },
+            {
+                "offset": "0x0027C000", 
+                "max_size": "0x00000200", 
+                "tags": [
+                    "ACPU_CMD_BUF"
+                ]
+            }            
+        ]
+    },
+    {
+        "mem":    "acpu_cbus", 
+        "base":   "0x00000000",
+        "regions": 
+        [
+            {"offset": "0x00000000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_REGION1"]}
+        ]
+    }    
+]

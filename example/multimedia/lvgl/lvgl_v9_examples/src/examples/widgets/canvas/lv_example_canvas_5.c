@@ -14,7 +14,7 @@ void lv_example_canvas_5(void)
     LV_DRAW_BUF_INIT_STATIC(draw_buf);
 
     /*Create a canvas and initialize its palette*/
-    lv_obj_t *canvas = lv_canvas_create(lv_screen_active());
+    lv_obj_t * canvas = lv_canvas_create(lv_screen_active());
     lv_canvas_set_draw_buf(canvas, &draw_buf);
     lv_canvas_fill_bg(canvas, lv_color_hex3(0xccc), LV_OPA_COVER);
     lv_obj_center(canvas);

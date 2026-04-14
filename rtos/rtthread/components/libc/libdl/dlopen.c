@@ -16,6 +16,21 @@
 
 #define MODULE_ROOT_DIR     "/modules"
 
+static char *get_module_name(const char *fullpath)
+{
+    const char *p = strrchr(fullpath, '/');
+    if (p)
+        p += 1;
+    else
+        p = fullpath;
+    char *name = dlm_malloc(strlen(p) + 1);
+    if (!name) return NULL;
+    strcpy(name, p);
+    char *ext = strstr(name, ".so");
+    if (ext) ext[0] = 0;
+    return name;
+}
+
 void *dlopen(const char *filename, int flags)
 {
     struct rt_dlmodule *module;
@@ -38,10 +53,13 @@ void *dlopen(const char *filename, int flags)
         fullpath = (char *)filename; /* absolute path, use it directly */
     }
 
+    char *name = get_module_name(fullpath);
+    if (NULL == name) return NULL;
+
     rt_enter_critical();
 
     /* find in module list */
-    module = dlmodule_find(fullpath);
+    module = dlmodule_find(name);
 
     if (module != RT_NULL)
     {
@@ -58,6 +76,7 @@ void *dlopen(const char *filename, int flags)
     {
         dlm_free(fullpath);
     }
+    dlm_free(name);
 
     return (void *)module;
 }

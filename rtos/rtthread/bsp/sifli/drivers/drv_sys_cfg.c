@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,13 +10,19 @@
   * @{
   */
 
-#if defined (BSP_USING_SPI_FLASH) && defined(BF0_HCPU)
+
+#if (defined(BSP_USING_SPI_FLASH) && defined(BF0_HCPU)) || defined(BSP_USING_SYS_CFG)
 #include "drv_flash.h"
 #include "string.h"
 #include "drv_io.h"
 
 #include <stdlib.h>
 #define CFG_NAND_FACTORY_MAGIC 0x53450617
+#if BSP_USING_SDIO||RT_USING_SDIO
+    #define CFG_SD_FACTORY_OFF     0x41000
+    #define CFG_SD_FACTORY_SIZE    0x20000
+    #define CFG_SD_FACTORY_BLOCK   0x400
+#endif
 
 #define CFG_SUPPORT_NAND_OTP        (0)
 
@@ -24,10 +30,16 @@
 #define CFG_IN_FLASH_OTP
 #define CFG_OTP_OFFSET          (0)
 
-extern void rt_flash_lock(uint32_t addr);
-extern void rt_flash_unlock(uint32_t addr);
-extern FLASH_HandleTypeDef *Addr2Handle(uint32_t addr);
-extern void rt_flash_switch_dtr(uint32_t addr, uint8_t dtr_en);
+extern void *BSP_Flash_get_handle(uint32_t addr);
+#if !defined(BSP_USING_SYS_CFG)
+    extern void rt_flash_lock(uint32_t addr);
+    extern void rt_flash_unlock(uint32_t addr);
+    extern void rt_flash_switch_dtr(uint32_t addr, uint8_t dtr_en);
+#else
+    #define rt_flash_lock(addr) 0
+    #define rt_flash_unlock(addr) 0
+    #define rt_flash_switch_dtr(addr,dtr_en) 0
+#endif
 
 #if CFG_SUPPORT_NAND_OTP
     extern void *rt_nand_get_handle(uint32_t addr);
@@ -57,25 +69,7 @@ static int is_onflash_cfg(uint8_t id)
 
 #if defined(CFG_SUPPORT_NON_OTP)
     return 1;
-#endif
-
-    return 0;  //all chip(include SF32LB55X) factory data save in otp
-#if 0
-#ifndef SF32LB55X
-    return 0; // for pro and later version, configure do not save to flash memory
-#endif
-    if ((id == FACTORY_CFG_ID_MAC) ||
-            (id == FACTORY_CFG_ID_SN) ||
-            (id == FACTORY_CFG_ID_LOCALNAME) ||
-            (id == FACTORY_CFG_ID_THIRDFUNC) ||
-            (id == FACTORY_CFG_ID_CTEI) ||
-            ((id >= FACTORY_CFG_ID_ALIPAY_PK) && (id <= FACTORY_CFG_ID_BTNAME)) ||
-            ((id >= FACTORY_CFG_ID_GOMORE) && (id <= FACTORY_CFG_ID_USERK3))
-       )
-    {
-        return 1;
-    }
-
+#else
     return 0;
 #endif
 }
@@ -90,7 +84,7 @@ rt_err_t rt_chip_config_init(void)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     int level = rt_hw_interrupt_disable();
     //rt_flash_lock(cfg_base);
     res = HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
@@ -113,7 +107,7 @@ rt_err_t rt_user_config_init(void)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     int level = rt_hw_interrupt_disable();
     //rt_flash_lock(cfg_base);
     res = HAL_QSPI_ERASE_OTP(fhandle, CFG_USER_OTP_PAGE << 12);
@@ -136,7 +130,7 @@ rt_err_t rt_cust_config_init(void)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     int level = rt_hw_interrupt_disable();
     //rt_flash_lock(cfg_base);
     res = HAL_QSPI_ERASE_OTP(fhandle, CFG_CUST_OTP_PAGE << 12);
@@ -155,7 +149,7 @@ rt_err_t rt_cust_config_init(void)
   */
 rt_err_t rt_flash_config_init(void)
 {
-#if !defined(CFG_SUPPORT_NON_OTP)
+#if !defined(CFG_SUPPORT_NON_OTP) && !defined(BSP_USING_SYS_CFG)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
 
@@ -187,7 +181,7 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
 
     uint32_t cfg_base = BSP_GetOtpBase();
 #if !defined(CFG_SUPPORT_NON_OTP)
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
     {
         if (is_onchip_cfg(id) || is_onflash_cfg(id)) // for ate and flash cfg, do not need check cache
@@ -246,7 +240,7 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
         p = (uint8_t *)cfg_base;
         fac_cfg_size = SYSCFG_FACTORY_SIZE;
     }
-#else
+#elif defined(BSP_USING_NAND_FLASH2)
     FLASH_HandleTypeDef *fhandle  = rt_nand_get_handle(cfg_base);
     if (fhandle == NULL)
     {
@@ -311,6 +305,30 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
     //rt_kprintf("read otp res %d\n", res);
     fac_cfg_size = page_size;
     p = buf;
+#elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
+    buf = malloc(CFG_SD_FACTORY_BLOCK);
+    if (buf == NULL)
+    {
+        rt_kprintf("rt_flash_config_read malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK);
+        return 0;
+    }
+
+    res = rt_sdio_read(FACTORY_DATA_START_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
+    //rt_kprintf("rt_device_read len: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK);
+    if (res != CFG_SD_FACTORY_BLOCK)
+    {
+        rt_kprintf("rt_nand_read_page len error: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK / 512);
+        free(buf);
+        return 0;
+    }
+    if (*(uint32_t *)&buf[0] != CFG_NAND_FACTORY_MAGIC)
+    {
+        rt_kprintf("SD factory magic error 0x%x vs 0x%x\n", *(uint32_t *)&buf[0], CFG_NAND_FACTORY_MAGIC);
+        free(buf);
+        return 0;
+    }
+    fac_cfg_size = CFG_SD_FACTORY_BLOCK - 4;
+    p = &buf[4];
 #endif
     //rt_kprintf("start 0x%x, %d\n",i, p[i]);
 
@@ -384,7 +402,7 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
 #if !defined(CFG_SUPPORT_NON_OTP)
     if (is_onflash_cfg(id) == 0)
     {
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
         if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
         {
             rt_kprintf("configure get flash handle error\n");
@@ -558,7 +576,7 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
         else
             len = 0;
     }
-#else
+#elif defined(BSP_USING_NAND_FLASH2)
 
     FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(cfg_base);
     if (fhandle == NULL)
@@ -724,7 +742,114 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
     {
         free(buf);
     }
+#elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
+    uint8_t *buf;
+    int res = 0;
+    int off = 0;
+    int find = 0;
+    buf = malloc(CFG_SD_FACTORY_BLOCK * 2);
+    if (buf == NULL)
+    {
+        rt_kprintf("rt_flash_config_read malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK * 2);
+        return 0;
+    }
+    memset(&buf[CFG_SD_FACTORY_BLOCK], 0xff, CFG_SD_FACTORY_BLOCK);
+    *(uint32_t *)(&buf[CFG_SD_FACTORY_BLOCK]) = CFG_NAND_FACTORY_MAGIC;
 
+    res = rt_sdio_read(FACTORY_DATA_START_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
+    if (res != CFG_SD_FACTORY_BLOCK)
+    {
+        rt_kprintf("rt_nand_read_page len error: 0x%x vs 0x%x\n", res, 512);
+        free(buf);
+        return 0;
+    }
+    if (*(uint32_t *)(&buf[0]) != CFG_NAND_FACTORY_MAGIC)
+    {
+        //rt_kprintf("SD factory magic error 0x%x vs 0x%x\n", pBuf[0], CFG_NAND_FACTORY_MAGIC);
+        memset(buf, 0xff, CFG_SD_FACTORY_BLOCK);
+        *(uint32_t *)(&buf[0]) = CFG_NAND_FACTORY_MAGIC;
+    }
+
+    //rt_kprintf("read otp res %d\n", res);
+    fac_cfg_size = CFG_SD_FACTORY_BLOCK;
+    i = 4;
+    off = 4;
+    while (buf[i] != FACTORY_CFG_ID_UNINIT)
+    {
+        if ((i + buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+        {
+            break;
+        }
+        if (buf[i] == id)                               // Found config, mark as invalid
+        {
+            if (buf[i + 1] == len && memcmp(data, &buf[i + SYSCFG_FACTORY_HDR_SIZE], len) == 0) //same data, no update
+            {
+                free(buf);
+                return len;
+            }
+            else if (off + len + SYSCFG_FACTORY_HDR_SIZE <= CFG_SD_FACTORY_BLOCK)
+            {
+                buf[CFG_SD_FACTORY_BLOCK + off] = id;
+                off++;
+                buf[CFG_SD_FACTORY_BLOCK + off] = len;
+                off++;
+                memcpy(&buf[CFG_SD_FACTORY_BLOCK + off], data, len);
+                off += len;
+                find = 1;
+            }
+            else
+            {
+                free(buf);
+                return 0;
+            }
+        }
+        else
+        {
+            if (off + buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE <= CFG_SD_FACTORY_BLOCK)
+            {
+                memcpy(&buf[CFG_SD_FACTORY_BLOCK + off], &buf[i], buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);
+                off += buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE;
+            }
+            else
+            {
+                free(buf);
+                return 0;
+            }
+        }
+        i += (buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+    }
+
+    if (find == 0)   //not find, copy data
+    {
+        if (off + len + SYSCFG_FACTORY_HDR_SIZE <= CFG_SD_FACTORY_BLOCK)
+        {
+            buf[CFG_SD_FACTORY_BLOCK + off] = id;
+            off++;
+            buf[CFG_SD_FACTORY_BLOCK + off] = len;
+            off++;
+            memcpy(&buf[CFG_SD_FACTORY_BLOCK + off], data, len);
+            off += len;
+        }
+        else
+        {
+            rt_kprintf("len out of range: 0x%x vs 0x%x\n", off + len + SYSCFG_FACTORY_HDR_SIZE, CFG_SD_FACTORY_BLOCK);
+            free(buf);
+            return 0;
+        }
+    }
+
+    res = rt_sdio_write(FACTORY_DATA_START_ADDR, (uint8_t *)&buf[CFG_SD_FACTORY_BLOCK], CFG_SD_FACTORY_BLOCK);
+    if (res != CFG_SD_FACTORY_BLOCK)
+    {
+        rt_kprintf("sd_write_data(0x%08x) error\n", CFG_SD_FACTORY_OFF + 0x62000000);
+        free(buf);
+        return 0;
+    }
+
+    if (buf)
+    {
+        free(buf);
+    }
 #endif
 
     return len;
@@ -753,7 +878,7 @@ uint8_t rt_user_config_read(uint8_t id, uint8_t *data, uint8_t size)
     if (is_onchip_cfg(id) != 0)
         return 0;
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
     {
         // if flash not enable, fhandle should be null, it may load to cache at initial for user cfg
@@ -844,7 +969,7 @@ uint8_t rt_user_config_write(uint8_t id, uint8_t *data, uint8_t len)
 
     if (is_onchip_cfg(id) == 0)
     {
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
         if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
         {
             rt_kprintf("configure get flash handle error\n");
@@ -990,7 +1115,7 @@ uint8_t rt_cust_config_read(uint8_t id, uint8_t *data, uint8_t size)
     if (is_onchip_cfg(id) != 0)
         return 0;
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
     {
         // if flash not enable, fhandle should be null, it may load to cache at initial for user cfg
@@ -1082,7 +1207,7 @@ uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
 
     if (is_onchip_cfg(id) == 0)
     {
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
         if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
         {
             rt_kprintf("configure get flash handle error\n");
@@ -1217,7 +1342,7 @@ rt_err_t rt_flash_config_lock(uint8_t page)
     uint32_t cfg_base = BSP_GetOtpBase();
 #if !defined(CFG_SUPPORT_NON_OTP)
 #ifdef CFG_IN_FLASH_OTP
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle == NULL || fhandle->ctable == NULL)
         return RT_ERROR;
 
@@ -1501,13 +1626,121 @@ exit:
     return len;
 }
 
+
+#endif
+
+#if defined(BF0_LCPU) && defined(LCPU_MEM_OPT)
+#include "flash_table.h"
+#include "dma_config.h"
+extern void *BSP_Flash_get_handle_by_id(uint8_t id);
+static DMA_HandleTypeDef flash5_dma_handle;
+
+HAL_StatusTypeDef rt_sys_cfg_preinit(void)
+{
+    uint8_t fid, did, mtype;
+    int size = 0;
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    QSPI_FLASH_CTX_T *ctx = (QSPI_FLASH_CTX_T *)BSP_Flash_get_handle_by_id(4);
+    if (ctx == NULL)
+    {
+        return HAL_ERROR;
+    }
+
+    qspi_configure_t flash_cfg5;
+
+    flash_cfg5.base = FLASH5_BASE_ADDR;
+    flash_cfg5.Instance = FLASH5;
+    flash_cfg5.line = 2;
+    flash_cfg5.msize = 1;
+    flash_cfg5.SpiMode = 0;
+
+    ctx->base_addr = FLASH5_BASE_ADDR;
+    ctx->total_size = flash_cfg5.msize * 0x100000;
+    ctx->flash_mode = flash_cfg5.SpiMode;
+    ctx->cache_flag = 2;
+    ctx->dev_id = 0x146085;
+    HAL_QSPI_Init(&ctx->handle, &flash_cfg5);
+
+
+    FLASH_HandleTypeDef *hflash = BSP_Flash_get_handle(cfg_base);
+    if (hflash == NULL)
+    {
+        rt_kprintf("qf preinit fail 1\n");
+        return HAL_ERROR;
+    }
+
+    hflash->ErrorCode = 0;
+    hflash->State = HAL_FLASH_STATE_READY;
+
+    hflash->Mode = 0;
+
+    hflash->Instance->TIMR = 0xFF;
+    hflash->Instance->CIR = 0x50005000;
+    hflash->Instance->ABR1 = 0xFF;
+    hflash->Instance->HRABR = 0xff;
+
+    hflash->isNand =  0;
+    hflash->dma = NULL;
+
+    HAL_FLASH_SET_CLK_rom(hflash, 1);
+    // get dual mode for user image
+    hflash->dualFlash = HAL_FLASH_GET_DUAL_MODE(hflash);
+
+    fid = (uint8_t)ctx->dev_id & 0xff;
+    mtype = (uint8_t)((ctx->dev_id >> 8) & 0xff);
+    did = (uint8_t)((ctx->dev_id >> 16) & 0xff);
+
+
+    hflash->ctable = spi_flash_get_cmd_by_id(fid, did, mtype);
+
+    if (hflash->ctable  == NULL)
+    {
+
+        return HAL_ERROR;
+    }
+
+    size = spi_flash_get_size_by_id(fid, did, mtype);
+    if (size != 0)  // use size from table to replace configure size
+    {
+        hflash->size = size << hflash->dualFlash;
+    }
+
+    // flash_dma5.dma_irq = FLASH5_DMA_IRQ;
+    // flash_dma5.dma_rcc = FLASH5_DMA_RCC;
+    // flash_dma5.Instance = FLASH5_DMA_INSTANCE;
+    // flash_dma5.request = FLASH5_DMA_REQUEST;
+
+    hflash->dma = &flash5_dma_handle;
+    if (hflash->dma != NULL)
+    {
+        hflash->dma->Instance                 = FLASH5_DMA_INSTANCE;
+        hflash->dma->Init.Request             = FLASH5_DMA_REQUEST;
+        hflash->dma->Init.Direction           = DMA_MEMORY_TO_PERIPH;
+        hflash->dma->Init.PeriphInc           = DMA_PINC_DISABLE;
+        hflash->dma->Init.MemInc              = DMA_MINC_ENABLE;
+        //hflash->dma->Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+        hflash->dma->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        //hflash->dma->Init.MemDataAlignment    = DMA_MDATAALIGN_WORD;
+        hflash->dma->Init.MemDataAlignment    = DMA_MDATAALIGN_BYTE;
+        hflash->dma->Init.Mode                = DMA_NORMAL;
+        hflash->dma->Init.Priority            = DMA_PRIORITY_MEDIUM;
+        hflash->dma->Init.BurstSize           = 1;
+        HAL_FLASH_SET_TXSLOT(hflash, hflash->dma->Init.BurstSize);
+    }
+    return HAL_OK;
+}
 #endif
 
 int rt_sys_config_init(void)
 {
     FACTORY_CFG_CRYSTAL_T xtal_cfg;
     FACTORY_CFG_BATTERY_CALI_T battery_cfg;
-
+#if defined(BF0_LCPU)
+#if defined(LCPU_MEM_OPT)
+    HAL_StatusTypeDef ret = rt_sys_cfg_preinit();
+#endif /* LCPU_MEM_OPT */
+#else
     uint8_t res = rt_flash_config_read(FACTORY_CFG_ID_CRYSTAL, (uint8_t *)&xtal_cfg, sizeof(FACTORY_CFG_CRYSTAL_T));
     if ((res > 0) && (xtal_cfg.cbank_sel != 0) && (xtal_cfg.cbank_sel != 0x3ff)) // add xtal invalid data check
     {
@@ -1524,7 +1757,8 @@ int rt_sys_config_init(void)
     {
         BSP_CONFIG_set(FACTORY_CFG_ID_BATTERY, (uint8_t *)&battery_cfg, sizeof(FACTORY_CFG_BATTERY_CALI_T));
     }
-#endif
+#endif /* !SOC_SF32LB52X */
+#endif /* BF0_LCPU */
     return 0;
 }
 INIT_DEVICE_EXPORT(rt_sys_config_init);
@@ -1724,7 +1958,7 @@ int clear_and_overwrite(void)
         btflag = 1;
 
     // erase all otp
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(SYSCFG_FACTORY_ADDRESS);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(SYSCFG_FACTORY_ADDRESS);
     res = HAL_QSPI_ERASE_OTP(fhandle, 1 << 12);
 
     // write adc, vbuck, sdmadc
@@ -1842,7 +2076,7 @@ int cmd_scfg(int argc, char *argv[])
         }
 
         addr = get_flash_base_by_id(id);
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(addr);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(addr);
         buf = malloc(1024);
         if (buf == NULL || fhandle == NULL)
         {
@@ -1878,7 +2112,7 @@ int cmd_scfg(int argc, char *argv[])
         }
 
         addr = get_flash_base_by_id(id);
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(addr);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(addr);
         if (fhandle == NULL)
         {
             rt_kprintf("get flash handle fail\n");
@@ -1901,7 +2135,7 @@ int cmd_scfg(int argc, char *argv[])
         }
 
         addr = get_flash_base_by_id(id);
-        FLASH_HandleTypeDef *fhandle = Addr2Handle(addr);
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(addr);
         if (fhandle == NULL)
         {
             rt_kprintf("get flash handle fail\n");
@@ -1956,6 +2190,12 @@ int cmd_scfg(int argc, char *argv[])
                        res, cfg3.vbuck1, cfg3.vbuck2, cfg3.hp_ldo, cfg3.lp_ldo, cfg3.vret);
         }
         break;
+        case FACTORY_CFG_ID_SN:
+        {
+            uint8_t sn[32] = {"123456"};
+            res = rt_flash_config_write(FACTORY_CFG_ID_SN, (uint8_t *)sn, 32);
+        }
+        break;
         default:
             rt_kprintf("Invalid key %d\n", id);
             rt_kprintf("for ADC input id(4) mv300 mv800, like# spi_flash -cfgw 4 211 985\n");
@@ -1996,6 +2236,15 @@ int cmd_scfg(int argc, char *argv[])
                        res, cfg3.vbuck1, cfg3.vbuck2, cfg3.hp_ldo, cfg3.lp_ldo, cfg3.vret);
         }
         break;
+
+        case FACTORY_CFG_ID_SN:
+        {
+            uint8_t sn[32] = {0};
+            res = rt_flash_config_read(FACTORY_CFG_ID_SN, (uint8_t *)sn, 32);
+            rt_kprintf("Get SN res %d, SN %s\n", res, sn);
+        }
+        break;
+
         default:
             rt_kprintf("Invalid key %d\n", id);
             return 0;

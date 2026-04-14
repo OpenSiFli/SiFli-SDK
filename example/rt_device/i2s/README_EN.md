@@ -4,8 +4,10 @@ Source path: example/rt_device/i2s
 
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ eh-lb525
-+ sf32lb52-lcd_n16r8
++ sf32lb52-nano
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 ## Overview
 <!-- Example introduction -->
@@ -16,6 +18,7 @@ In this example, two development boards are used to demonstrate I2S transmission
 + Development board B:
     - Receive data from development board A via i2s.
     - speaker playback.
+* Due to the special nature of the sf32lb58-lcd board, it can only function as a master when using I2S. Therefore, the sf32lb52-lcd and sf32lb56-lcd boards need to be used as slaves for testing. The master device records audio and sends it to the slaves via I2S for playback.
 
 ## Example Usage
 <!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
@@ -60,7 +63,7 @@ Taking `SF32LB52_DevKit-LCD` as an example, this example uses `PA02 ~ PA06` as I
 #endif
 ```
 
-If you need to use other development board models, you need to change the pinmux configuration. Here is an example for 56x:
+If you need to use other development board models, you need to change the pinmux configuration. Here is an example for 56x and 58x models:
 ```c
 #ifdef SOC_SF32LB56X
     HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
@@ -68,6 +71,13 @@ If you need to use other development board models, you need to change the pinmux
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
+#elif defined(SOC_SF32LB58X)
+    HAL_PIN_Set(PAD_PA84, I2S2_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA91, I2S2_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA86, I2S2_SDI, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA82, I2S2_SDO, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA90, I2S2_MCLK, PIN_NOPULL, 1);
+
 #endif
 ```
 
@@ -80,11 +90,14 @@ I2S1_SDI|--|I2S1_SDO
 I2S1_SDO|--|I2S1_SDI
 I2S1_MCLK|--|I2S1_MCLK
 
+Since `sf32lb58-lcd` is rather special, when connecting the wires here, 58 should be used as A (master), and `sf32lb52-lcd` should be used as B (slave) for the connection.
 If you are unsure about pin positioning, you can refer to the following figures:
 SF32LB52x_DevKit_40p diagram:
 ![AUDIO CODEC & PROC](./assets/52x.png)
 SF32LB56x_DevKit_40p diagram:
 ![AUDIO CODEC & PROC](./assets/56x.png)
+
+[SF32LB58x_DevKitPin Definition Diagram](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
 ```{warning}
 On `SF32LB52_DevKit-LCD`:  
 + `PA02 ~ PA06` will be used when LCD is configured, pay attention to conflicts (need to disable LCD: `BSP_USING_LCD = n BSP_USING_LCDC = n`).  

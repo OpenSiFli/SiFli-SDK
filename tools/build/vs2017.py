@@ -44,7 +44,7 @@ fs_encoding = sys.getfilesystemencoding()
 filter_project = etree.Element('Project', attrib={'ToolsVersion':'15.0'})
 def get_uuid():
     id = uuid.uuid1()  # UUID('3e5526c0-2841-11e3-a376-20cf3048bcb3')
-    idstr = id.get_urn()[9:] #'urn:uuid:3e5526c0-2841-11e3-a376-20cf3048bcb3'[9:]
+    idstr = id.urn[9:] #'urn:uuid:3e5526c0-2841-11e3-a376-20cf3048bcb3'[9:]
     return '{'+idstr+'}'
 
 def VS2017_AddGroup(parent, group_name, files, project_path):
@@ -57,7 +57,7 @@ def VS2017_AddGroup(parent, group_name, files, project_path):
         path = os.path.join(path, name)
 
         ClCompile = SubElement(parent, 'ClCompile')
-        ClCompile.set('Include', path.decode(fs_encoding))
+        ClCompile.set('Include', path)
 
         Filter = SubElement(ClCompile, 'Filter')
         Filter.text='Source Files\\'+group_name
@@ -119,7 +119,7 @@ def VS_add_ItemGroup(parent, file_type, files, project_path):
         path = os.path.join(path, name)
 
         File = SubElement(ItemGroup, item_tag)
-        File.set('Include', path.decode(fs_encoding))
+        File.set('Include', path)
         if file_type == 'C' :
             ObjName = SubElement(File, 'ObjectFileName')
             ObjName.text = ''.join('$(IntDir)'+objpath+'\\')
@@ -137,11 +137,11 @@ def VS_add_HeadFiles(program, elem, project_path):
     for f in utils.source_list:
         path = _make_path_relative(project_path, f)
         File = SubElement(ItemGroup, 'ClInclude')
-        File.set('Include', path.decode(fs_encoding))
+        File.set('Include', path)
 
         # add project.vcxproj.filter
         ClInclude = SubElement(filter_h_ItemGroup, 'ClInclude')
-        ClInclude.set('Include', path.decode(fs_encoding))
+        ClInclude.set('Include', path)
         Filter = SubElement(ClInclude, 'Filter')
         Filter.text='Header Files'
 
@@ -152,7 +152,7 @@ def VS2017Project(target, script, program):
     root = tree.getroot()
     elem = root
     
-    out = file(target, 'wb')
+    out = open(target, 'w')
     out.write('<?xml version="1.0" encoding="UTF-8"?>\r\n')
     
     ProjectFiles = []
@@ -225,15 +225,15 @@ def VS2017Project(target, script, program):
     vcxproj_string = etree.tostring(root, encoding='utf-8')
     root_node=r'<Project DefaultTargets="Build" ToolsVersion="15.0">'
     out.write(r'<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">')
-    out.write(vcxproj_string[len(root_node):])
+    out.write(vcxproj_string[len(root_node):].decode('utf-8'))
     out.close()
 
     xml_indent(filter_project)
     filter_string = etree.tostring(filter_project, encoding='utf-8')
-    out = file('project.vcxproj.filters', 'wb')
+    out = open('project.vcxproj.filters', 'w')
     out.write('<?xml version="1.0" encoding="UTF-8"?>\r\n')
     root_node=r'<Project ToolsVersion="15.0">'
     out.write(r'<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">')
-    out.write(filter_string[len(root_node):])
+    out.write(filter_string[len(root_node):].decode('utf-8'))
     out.close()
 

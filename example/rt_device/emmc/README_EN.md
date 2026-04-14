@@ -30,7 +30,10 @@ menuconfig --board=56devkit_lcd(board= followed by board name)
 1. Enable SDIO
 ![alt text](assets/sdio.png)
 
-2. Enable and configure sd device
+2. Note that SF32LB56X has two SDMMC controller IPs: SDMMC1 (SDHCI IP) and SDMMC2 (SDIO IP). If eMMC is connected to SDMMC2, the configuration needs to be changed to BSP_USING_SD_LINE.
+![alt text](assets/image1.png)
+
+3. Enable and configure SD device
 ![alt text](assets/sd.png)
 
 

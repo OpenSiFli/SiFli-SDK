@@ -73,7 +73,11 @@ static rt_err_t simple_charge_control(rt_charge_device_t *charge, int cmd, void 
         *status = simple_get_detect_status();
     }
     break;
-
+    case RT_CHARGE_SET_CC_CURRENT:
+    {
+        /*This charging chip driver does not support setting the charging current.*/
+    }
+    break;
     default:
         ret = RT_CHARGE_ERROR_UNSUPPORTED;
         break;

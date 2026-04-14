@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+
 # 通用构建脚本 - 处理所有动态生成的构建Job
 
 set -e
@@ -20,12 +23,37 @@ echo "类型: ${PROJECT_TYPE}"
 echo "构建参数: ${BUILD_ARGS}"
 echo "============================================"
 
-# 创建必要目录
-mkdir -p ci_build_logs artifacts
-
 # 获取绝对路径
 ROOT_DIR=$(pwd)
+mkdir -p "${ROOT_DIR}/ci_build_logs" "${ROOT_DIR}/artifacts" "${ROOT_DIR}/job_status"
+
 LOG_FILE="${ROOT_DIR}/ci_build_logs/${LOG_NAME}.log"
+STATUS_DIR="${ROOT_DIR}/job_status"
+STATUS_FILE="${STATUS_DIR}/${LOG_NAME}.env"
+
+write_job_status() {
+    local exit_code="$1"
+    local final_status="success"
+
+    if [ "${exit_code}" -ne 0 ]; then
+        final_status="failed"
+    fi
+
+    mkdir -p "${STATUS_DIR}"
+    {
+        printf 'JOB_STATUS=%s\n' "${final_status}"
+        printf 'LOG_NAME=%s\n' "${LOG_NAME}"
+        printf 'PROJECT_PATH=%s\n' "${PROJECT_PATH}"
+        printf 'BOARD=%s\n' "${BOARD}"
+        printf 'SCONS_BOARD=%s\n' "${SCONS_BOARD}"
+        printf 'PROJECT_TYPE=%s\n' "${PROJECT_TYPE}"
+        printf 'CI_JOB_NAME=%s\n' "${CI_JOB_NAME:-}"
+        printf 'CI_JOB_ID=%s\n' "${CI_JOB_ID:-}"
+        printf 'CI_PIPELINE_ID=%s\n' "${CI_PIPELINE_ID:-}"
+    } > "${STATUS_FILE}"
+}
+
+trap 'write_job_status $?' EXIT
 
 # 切换到项目目录
 cd "${PROJECT_PATH}"

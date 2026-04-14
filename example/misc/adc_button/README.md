@@ -1,4 +1,5 @@
 # GPADC按键
+源码路径：example/misc/adc_button
 
 ## 支持的平台
 * sf32-oed-epd_v11

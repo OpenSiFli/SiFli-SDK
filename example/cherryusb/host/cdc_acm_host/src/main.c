@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /**
  * @file main.c
  * @brief USB CDC ACM Host Demo Application
@@ -12,6 +18,7 @@
 #include "bf0_hal.h"
 #include "usbh_core.h"
 #include "usbh_cdc_acm.h"
+#include "usbh_serial.h"
 
 /** @brief USB CDC ACM device handle */
 static rt_device_t ttyACM0 = RT_NULL;
@@ -62,7 +69,7 @@ int main(void)
     rt_kprintf("cherryusb host demo!\n");
 
     /* Initialize USB host controller */
-    usbh_initialize(0, (uintptr_t)USBC_BASE);
+    usbh_initialize(0, (uintptr_t)USBC_BASE, RT_NULL);
 
     /* Wait for device enumeration */
     rt_thread_mdelay(2000);
@@ -81,7 +88,8 @@ int main(void)
         /* Set receive callback function */
         rt_device_set_rx_indicate(ttyACM0, rx_cb);
         /* Set line state: DTR=1, RTS=0 */
-        usbh_cdc_acm_set_line_state((struct usbh_cdc_acm *)ttyACM0->user_data, 1, 0);
+        usbh_serial_control((struct usbh_serial *)ttyACM0->user_data, USBH_SERIAL_CMD_IOCMBIS,
+                            (void *)USBH_SERIAL_TIOCM_DTR);
     }
 
     /* Main loop */
@@ -91,4 +99,3 @@ int main(void)
     }
     return 0;
 }
-

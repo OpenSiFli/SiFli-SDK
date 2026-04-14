@@ -10,8 +10,7 @@
     #define LV_ATTRIBUTE_IMAGE_IMG_CARET_DOWN
 #endif
 
-const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMG_CARET_DOWN uint8_t img_caret_down_map[] =
-{
+const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMG_CARET_DOWN uint8_t img_caret_down_map[] = {
 #if LV_COLOR_DEPTH == 1 || LV_COLOR_DEPTH == 8
     /*Pixel format: Blue: 2 bit, Green: 3 bit, Red: 3 bit, Alpha 8 bit */
     0x49, 0x00, 0x49, 0x04, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x25, 0x08, 0x49, 0x08, 0x92, 0x00,
@@ -47,14 +46,15 @@ const LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_IMAGE_IMG_CAR
 #endif
 };
 
-const lv_image_dsc_t img_caret_down =
-{
-    .header.w = 13,
-    .header.h = 8,
-    .header.stride = 52,
-    .header.cf = LV_COLOR_FORMAT_ARGB8888,
-    .data = img_caret_down_map,
+const lv_image_dsc_t img_caret_down = {
+    .header = {
+        .cf = LV_COLOR_FORMAT_ARGB8888,
+        .w = 13,
+        .h = 8,
+        .stride = 52,
+    },
     .data_size = sizeof(img_caret_down_map),
+    .data = img_caret_down_map,
 };
 
 #endif /* LV_BUILD_EXAMPLES */

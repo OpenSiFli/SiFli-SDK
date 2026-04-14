@@ -589,8 +589,8 @@ int df(const char *path)
         cap = cap / 1024;
     }
 
-    rt_kprintf("disk free: %d.%d %s [ %d block, %d bytes per block ]\n",
-               (unsigned long)cap, minor, unit_str[unit_index], buffer.f_bfree, buffer.f_bsize);
+    rt_kprintf("disk free: %d.%d %s [ %d block, %d bytes per block ] [total block %d total size %d]\n",
+               (unsigned long)cap, minor, unit_str[unit_index], buffer.f_bfree, buffer.f_bsize, buffer.f_blocks, buffer.f_blocks * buffer.f_bsize);
     return 0;
 }
 FINSH_FUNCTION_EXPORT(df, get disk free);

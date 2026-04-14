@@ -1,4 +1,5 @@
 # nor_flash
+源码路径：example/rt_device/nor_flash
 ## 概述
 nor_flash 用来展示rt-thread 层的NOR FLASH读、写、擦功能接口。
 

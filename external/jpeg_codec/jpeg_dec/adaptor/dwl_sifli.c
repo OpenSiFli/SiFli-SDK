@@ -14,6 +14,10 @@
 #include "dwlthread.h"
 #include "register.h"
 
+#ifdef SOLUTION
+#include "app_mem.h"
+#endif
+
 #define DBG_LEVEL         DBG_ERROR  // DBG_LOG //
 
 #define LOG_TAG                log_tag
@@ -269,7 +273,11 @@ i32 DWLMallocLinear(const void *instance, u32 size, DWLLinearMem_t *info)
 {
     DWLInstance_t *dwlInst = (DWLInstance_t *) instance;
 
+#ifdef SOLUTION
+    info->virtualAddress = app_sram_calloc(size, 1);
+#else
     info->virtualAddress = rt_calloc(size, 1);
+#endif
     DWL_INST_LOG_I(instance, "DWLMallocLinear: %p, size=%8d\n", info->virtualAddress, size);
     if (info->virtualAddress == NULL)
         return DWL_ERROR;
@@ -304,7 +312,13 @@ void DWLFreeLinear(const void *instance, DWLLinearMem_t *info)
     dwlInst->linearAllocCount--;
     DWL_INST_LOG_I(instance, "DWLFreeLinear: not freed %8d bytes in %2d buffers\n",
                    dwlInst->linearTotal, dwlInst->linearAllocCount);
+
+#ifdef SOLUTION
+    app_sram_free(info->virtualAddress);
+#else
     rt_free(info->virtualAddress);
+#endif
+
     info->size = 0;
 }
 

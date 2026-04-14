@@ -146,6 +146,14 @@ void lv_ll_swap(lv_ll_t * ll_p, void * n1_p, void * n2_p);
 void _lv_ll_move_before(lv_ll_t * ll_p, void * n_act, void * n_after);
 
 /**
+ * Insert a node before an other node in the linked list
+ * @param ll_p pointer to a linked list
+ * @param n_act pointer to node to insert
+ * @param n_after pointer to a node which should be after `n_act`
+ */
+void lv_ll_insert_before(lv_ll_t* ll_p, void* n_act, void* n_after);
+
+/**
  * Check if a linked list is empty
  * @param ll_p pointer to a linked list
  * @return true: the linked list is empty; false: not empty
@@ -166,6 +174,8 @@ void _lv_ll_merge_list(lv_ll_t *to, lv_ll_t *from);
 #define _LV_LL_READ(list, i) for(i = _lv_ll_get_head(list); i != NULL; i = _lv_ll_get_next(list, i))
 
 #define _LV_LL_READ_BACK(list, i) for(i = _lv_ll_get_tail(list); i != NULL; i = _lv_ll_get_prev(list, i))
+
+#define _LV_LL_READ_SAFE(list, i, n) for(i = _lv_ll_get_head(list), n = _lv_ll_get_next(list, i); i != NULL; i = n, n = _lv_ll_get_next(list, i))
 
 #ifdef __cplusplus
 } /*extern "C"*/

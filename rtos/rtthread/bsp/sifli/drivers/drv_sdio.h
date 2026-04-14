@@ -149,6 +149,7 @@ struct sifli_sdio_des
 struct sifli_sdio_config
 {
     SDCARD_INSTANCE_TYPE *Instance;
+    const char *name;
     struct dma_config dma_rx, dma_tx;
 };
 

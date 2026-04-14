@@ -708,6 +708,11 @@ static void ble_app_advertising_start(void)
 #ifdef HID_KEYBOARD
 static void key_button_handler(int32_t pin, button_action_t action)
 {
+    static button_action_t last_action = BUTTON_RELEASED; // Filter hardware jitter, avoid mismatched press/release and continuous HID code triggering（To avoid issues with the EH-LB551 board）.
+    if (last_action == action)
+        return;
+    last_action = action;
+
     uint8_t hid_code = key_mapping_table[0].hid_code;
     switch (action)
     {
@@ -730,7 +735,11 @@ static void key_button_init(void)
     {
         .pin = BSP_KEY1_PIN,
         .mode = PIN_MODE_INPUT_PULLUP,
+        #ifdef BSP_KEY1_ACTIVE_HIGH
         .active_state = BUTTON_ACTIVE_HIGH,
+        #else
+        .active_state = BUTTON_ACTIVE_LOW,
+        #endif
         .button_handler = key_button_handler,
     };
     int key_id = button_init(&key_cfg);

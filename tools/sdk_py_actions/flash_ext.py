@@ -1,315 +1,204 @@
 # -*- coding:utf-8 -*-
-#
-# File      : flash_ext.py
-# This file is part of SiFli-SDK
-# Flash management extension for sdk.py
-#
-# Change Logs:
-# Date           Author          Notes
-# 2025-09-22     SiFli           Add flash command for sdk.py
-# 2025-10-20     SiFli           Implement flash download functionality
-#
+# SPDX-FileCopyrightText: 2026 SiFli
+# SPDX-License-Identifier: Apache-2.0
 
-import os
-import sys
-import platform
-import subprocess
+from __future__ import annotations
+
 import json
-from typing import Any, Dict
+import os
+import platform
+from typing import List
+from typing import Optional
 
 import click
-from click.core import Context
-from sdk_py_actions.tools import PropertyDict
+
+from sdk_py_actions.cli.context import SdkContext
+from sdk_py_actions.cli.registry import CommandRegistry
+from sdk_py_actions.errors import EnvironmentError as SdkEnvironmentError
+from sdk_py_actions.errors import UsageError
+
+EXTENSION_ID = "flash"
+EXTENSION_VERSION = "2.1.0"
+EXTENSION_API_VERSION = 2
+MIN_SDK_VERSION = None
 
 
-def find_build_dir(device: str = None) -> str:
-    """Find the build directory in the project.
-    
-    The SiFli SDK build system generates directories with names like:
-    - build_sf32lb56-lcd_a128r12n1_hcpu
-    - build_sf32lb52x-evb_hcpu
-    
-    Args:
-        device: Device/board configuration string (e.g., 'sf32lb56-lcd_a128r12n1_hcpu')
-                Must be the exact, full configuration name. REQUIRED!
-    
-    Returns:
-        Path to the build directory
-    """
-    cwd = os.getcwd()
-    
-    # Device must be specified - no auto-detection to avoid mistakes
-    if not device:
-        raise ValueError("Device (-d/--device) parameter is required. "
-                        "Please specify the exact board/device configuration name.")
-    
-    # Look for exact match: build_<device>
-    build_path = os.path.join(cwd, f'build_{device}')
-    return build_path
+def _resolve_build_dir(sdk_ctx: SdkContext, device: Optional[str]) -> str:
+    project_dir = sdk_ctx.project_dir
+
+    if device:
+        device = device.strip()
+        if not device:
+            raise UsageError("--device cannot be empty")
+
+        if os.path.isabs(device) and os.path.isdir(device):
+            return os.path.realpath(device)
+
+        # backward compatibility: allow either full build dir name or board name
+        direct_path = os.path.realpath(os.path.join(project_dir, device))
+        if os.path.isdir(direct_path):
+            return direct_path
+
+        prefixed_path = os.path.realpath(os.path.join(project_dir, f"build_{device}"))
+        if os.path.isdir(prefixed_path):
+            return prefixed_path
+
+        raise SdkEnvironmentError(
+            f"Cannot find build directory for device '{device}'. "
+            "Please pass a valid build directory path/name or build board name."
+        )
+
+    candidate = os.path.realpath(sdk_ctx.build_dir)
+    if os.path.isdir(candidate):
+        return candidate
+
+    raise SdkEnvironmentError(
+        f'Configured build directory does not exist: "{candidate}". '
+        "Please run build first, use sdk.py set-target to update .project.toml board, "
+        "or pass -B/--build-dir or --device/-d explicitly."
+    )
 
 
 def find_sftool_param(build_dir: str) -> str:
-    """Find sftool_param.json file in build directory."""
-    json_path = os.path.join(build_dir, 'sftool_param.json')
+    json_path = os.path.join(build_dir, "sftool_param.json")
     if not os.path.exists(json_path):
-        raise FileNotFoundError(f"sftool_param.json not found in {build_dir}. Please build the project first.")
+        raise SdkEnvironmentError(f"sftool_param.json not found in {build_dir}. Please build the project first.")
     return json_path
 
 
 def find_download_script(build_dir: str) -> str:
-    """Find download script based on platform."""
-    system = platform.system()
-    
-    if system == 'Windows':
-        script_path = os.path.join(build_dir, 'download.bat')
-    else:  # Linux or macOS
-        script_path = os.path.join(build_dir, 'download.sh')
-    
+    script_name = "download.bat" if platform.system() == "Windows" else "download.sh"
+    script_path = os.path.join(build_dir, script_name)
     if not os.path.exists(script_path):
-        raise FileNotFoundError(f"Download script not found: {script_path}. Please build the project first.")
-    
+        raise SdkEnvironmentError(f"Download script not found: {script_path}. Please build the project first.")
     return script_path
 
 
-def flash_uart(port: str, baud: int, build_dir: str) -> None:
-    """Flash firmware using UART protocol with sftool."""
-    try:
-        # Find sftool_param.json
-        json_path = find_sftool_param(build_dir)
-        
-        # Read sftool configuration
-        with open(json_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-        
-        chip = config.get('chip', '')
-        memory = config.get('memory', 'NOR')
-        write_flash = config.get('write_flash', {})
-        files = write_flash.get('files', [])
-        
-        if not files:
-            print("Error: No files to flash found in sftool_param.json")
-            return
-        
-        # Build sftool command
-        # Format: sftool -p <port> -b <baud> -c <chip> -m <memory> write_flash <files>
-        cmd = ['sftool', '-p', port, '-b', str(baud), '-c', chip, '-m', memory.lower(), 'write_flash']
-        
-        # Add files
-        for file_info in files:
-            file_path = file_info.get('path', '')
-            address = file_info.get('address', None)
-            
-            # Convert relative path to absolute path based on build_dir
-            if not os.path.isabs(file_path):
-                file_path = os.path.join(build_dir, file_path)
-            
-            if not os.path.exists(file_path):
-                print(f"Warning: File not found: {file_path}")
-                continue
-            
-            # Add file to command
-            if address:
-                cmd.append(f'{file_path}@{address}')
-            else:
-                cmd.append(file_path)
-        
-        # Execute sftool command
-        print(f"Executing: {' '.join(cmd)}")
-        print(f"Flashing via UART on port {port} at {baud} baud...")
-        
-        # Change to build directory for execution
-        original_dir = os.getcwd()
-        try:
-            os.chdir(build_dir)
-            result = subprocess.run(cmd, check=True)
-            if result.returncode == 0:
-                print("Flash completed successfully!")
-            else:
-                print(f"Flash failed with return code: {result.returncode}")
-        finally:
-            os.chdir(original_dir)
-            
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-    except json.JSONDecodeError as e:
-        print(f"Error: Failed to parse sftool_param.json: {e}")
-        sys.exit(1)
-    except subprocess.CalledProcessError as e:
-        print(f"Error: Flash operation failed: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+def _normalize_uart_port(port: str) -> str:
+    if platform.system() != "Windows":
+        return port
+
+    port_upper = port.upper()
+    if not port_upper.startswith("COM") and port.isdigit():
+        return f"COM{port}"
+    if port != port_upper and port_upper.startswith("COM"):
+        return port_upper
+    return port
 
 
-def flash_jlink(build_dir: str) -> None:
-    """Flash firmware using JLink protocol."""
-    try:
-        # Find download script
-        script_path = find_download_script(build_dir)
-        
-        print(f"Flashing via JLink using script: {script_path}")
-        
-        # Change to build directory for execution
-        original_dir = os.getcwd()
-        try:
-            os.chdir(build_dir)
-            
-            # Execute download script
-            system = platform.system()
-            if system == 'Windows':
-                # Execute batch file
-                result = subprocess.run([script_path], shell=True, check=True)
-            else:
-                # Execute shell script
-                result = subprocess.run(['bash', script_path], check=True)
-            
-            if result.returncode == 0:
-                print("Flash completed successfully!")
-            else:
-                print(f"Flash failed with return code: {result.returncode}")
-        finally:
-            os.chdir(original_dir)
-            
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-        sys.exit(1)
-    except subprocess.CalledProcessError as e:
-        print(f"Error: Flash operation failed: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+def _collect_flash_files(build_dir: str, files: List[dict]) -> List[str]:
+    flash_args: List[str] = []
+
+    for file_info in files:
+        file_path = file_info.get("path", "")
+        address = file_info.get("address", None)
+        if not file_path:
+            continue
+
+        if not os.path.isabs(file_path):
+            file_path = os.path.join(build_dir, file_path)
+
+        if not os.path.exists(file_path):
+            raise SdkEnvironmentError(f"Flash image file not found: {file_path}")
+
+        flash_args.append(f"{file_path}@{address}" if address else file_path)
+
+    if not flash_args:
+        raise SdkEnvironmentError("No valid files to flash found in sftool_param.json")
+
+    return flash_args
 
 
-def action_extensions(base_actions: Dict, project_path: str) -> Any:
-    """Flash download extension for sdk.py."""
-    
-    def flash_callback(target_name: str, ctx: Context, args: PropertyDict, 
-                      protocol: str = 'uart', 
-                      port: str = None, 
-                      baud: int = 1000000,
-                      device: str = None) -> None:
-        """Flash firmware to device."""
-        
-        # Find build directory based on device
-        try:
-            build_dir = find_build_dir(device)
-        except ValueError as e:
-            print(f"Error: {e}")
-            print("\nAvailable build directories:")
-            import glob
-            builds = glob.glob(os.path.join(os.getcwd(), 'build_*'))
-            if builds:
-                for b in builds:
-                    dir_name = os.path.basename(b)
-                    # Extract device name from build_<device>
-                    device_name = dir_name[6:] if dir_name.startswith('build_') else dir_name
-                    print(f"  - {dir_name}")
-                    print(f"    Use: -d {device_name}")
-            else:
-                print("  (none found - please build the project first)")
-            print("\n Example: sdk.py flash -p COM3 -d sf32lb56-lcd_a128r12n1_hcpu")
-            sys.exit(1)
-        
-        # Show which build directory is being used
-        print(f"Using build directory: {build_dir}")
-        
-        if not os.path.isdir(build_dir):
-            print(f"Error: Build directory not found: {build_dir}")
-            if device:
-                print(f"\nSpecified device: '{device}'")
-                print(f"Expected directory: build_{device}")
-                print("\nAvailable build directories:")
-                import glob
-                builds = glob.glob(os.path.join(os.getcwd(), 'build_*'))
-                if builds:
-                    for b in builds:
-                        dir_name = os.path.basename(b)
-                        # Extract device name from build_<device>
-                        device_name = dir_name[6:] if dir_name.startswith('build_') else dir_name
-                        print(f"  - {dir_name}")
-                        print(f"    Use: -d {device_name}")
-                else:
-                    print("  (none found)")
-                print("\n Tip: Use the full device name with -d parameter")
-                print("   Example: sdk.py flash -p COM3 -d sf32lb56-lcd_a128r12n1_hcpu")
-            else:
-                print("Available build directories:")
-                import glob
-                builds = glob.glob(os.path.join(os.getcwd(), 'build_*'))
-                if builds:
-                    for b in builds:
-                        print(f"  - {os.path.basename(b)}")
-                else:
-                    print("  (none found)")
-            print("\nPlease build the project first.")
-            sys.exit(1)
-        
-        # Validate protocol
-        protocol = protocol.lower()
-        if protocol not in ['uart', 'jlink']:
-            print(f"Error: Invalid protocol '{protocol}'. Must be 'uart' or 'jlink'.")
-            sys.exit(1)
-        
-        # Execute flash based on protocol
-        if protocol == 'uart':
-            # Validate UART parameters
-            if not port:
-                print("Error: Port (-p/--port) is required for UART protocol.")
-                sys.exit(1)
-            
-            # Ensure port format (add COM prefix on Windows if needed)
-            # Support both 'com' and 'COM' formats
-            if platform.system() == 'Windows':
-                port_upper = port.upper()
-                if not port_upper.startswith('COM'):
-                    # User input is a number, add COM prefix
-                    if port.isdigit():
-                        port = f'COM{port}'
-                elif port != port_upper:
-                    # User input is 'comX', convert to 'COMX'
-                    port = port_upper
-            
-            flash_uart(port, baud, build_dir)
-        else:  # jlink
-            flash_jlink(build_dir)
-    
-    flash_actions = {
-        'actions': {
-            'flash': {
-                'callback': flash_callback,
-                'help': 'Flash firmware to device using UART or JLink protocol.',
-                'options': [
-                    {
-                        'names': ['-u', '--protocol'],
-                        'help': 'Download protocol: uart or jlink (default: uart).',
-                        'type': click.Choice(['uart', 'jlink'], case_sensitive=False),
-                        'default': 'uart',
-                    },
-                    {
-                        'names': ['-p', '--port'],
-                        'help': 'Serial port for UART download (e.g., COM3, /dev/ttyUSB0). Required for UART protocol.',
-                        'type': str,
-                        'default': None,
-                    },
-                    {
-                        'names': ['-b', '--baud'],
-                        'help': 'Baud rate for UART download (default: 1000000).',
-                        'type': int,
-                        'default': 1000000,
-                    },
-                    {
-                        'names': ['-d', '--device'],
-                        'help': 'Board/device configuration (e.g., sf32lb56-lcd_a128r12n1_hcpu) to locate build directory. REQUIRED.',
-                        'type': str,
-                        'default': None,
-                        'required': True,
-                    },
-                ],
+def _flash_uart(sdk_ctx: SdkContext, build_dir: str, port: str, baud: int) -> None:
+    json_path = find_sftool_param(build_dir)
+
+    with open(json_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    chip = config.get("chip", "")
+    memory = str(config.get("memory", "NOR")).lower()
+    write_flash = config.get("write_flash", {})
+    files = write_flash.get("files", [])
+
+    if not isinstance(files, list):
+        raise SdkEnvironmentError("Invalid sftool_param.json: write_flash.files must be a list")
+
+    flash_files = _collect_flash_files(build_dir, files)
+    normalized_port = _normalize_uart_port(port)
+
+    cmd = ["sftool", "-p", normalized_port, "-b", str(baud), "-c", chip, "-m", memory, "write_flash"] + flash_files
+    print(f"Using build directory: {build_dir}")
+    print(f"Flashing via UART on port {normalized_port} at {baud} baud...")
+    sdk_ctx.runner.run(cmd, cwd=build_dir)
+    print("Flash completed successfully!")
+
+
+def _flash_jlink(sdk_ctx: SdkContext, build_dir: str) -> None:
+    script_path = find_download_script(build_dir)
+
+    print(f"Using build directory: {build_dir}")
+    print(f"Flashing via JLink using script: {script_path}")
+
+    if platform.system() == "Windows":
+        sdk_ctx.runner.run(["cmd", "/c", script_path], cwd=build_dir)
+    else:
+        sdk_ctx.runner.run(["bash", script_path], cwd=build_dir)
+
+    print("Flash completed successfully!")
+
+
+def flash_callback(
+    sdk_ctx: SdkContext,
+    protocol: str = "uart",
+    port: Optional[str] = None,
+    baud: int = 1000000,
+    device: Optional[str] = None,
+) -> None:
+    selected_protocol = protocol.lower()
+    if selected_protocol == "uart":
+        if not port:
+            raise UsageError("--port/-p is required when protocol is uart")
+        build_dir = _resolve_build_dir(sdk_ctx, device=device)
+        _flash_uart(sdk_ctx, build_dir=build_dir, port=port, baud=baud)
+        return
+
+    if selected_protocol == "jlink":
+        build_dir = _resolve_build_dir(sdk_ctx, device=device)
+        _flash_jlink(sdk_ctx, build_dir=build_dir)
+        return
+
+    raise UsageError(f"Unsupported protocol: {protocol}")
+
+
+def register(registry: CommandRegistry) -> None:
+    registry.command(
+        path="flash",
+        callback=flash_callback,
+        help="Flash firmware to device.",
+        options=[
+            {
+                "names": ["-u", "--protocol"],
+                "help": "Flash protocol. Default is uart.",
+                "type": click.Choice(["uart", "jlink"], case_sensitive=False),
+                "default": "uart",
             },
-        }
-    }
-
-    return flash_actions
+            {
+                "names": ["-p", "--port"],
+                "help": "Serial port for UART flash (e.g. COM3, /dev/ttyUSB0). Required when protocol is uart.",
+                "type": str,
+                "default": None,
+            },
+            {
+                "names": ["-b", "--baud"],
+                "help": "Baud rate for UART flash.",
+                "type": int,
+                "default": 1000000,
+            },
+            {
+                "names": ["-d", "--device"],
+                "help": "Optional board/device name (or build directory name/path). If omitted, use resolved --build-dir.",
+                "type": str,
+                "default": None,
+            },
+        ],
+    )

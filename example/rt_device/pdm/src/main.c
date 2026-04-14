@@ -1,8 +1,15 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
 #include "stdio.h"
 #include "string.h"
+#include "stdlib.h"
 /* user start */
 #include "drv_flash.h"
 #include "audio_server.h"
@@ -28,6 +35,7 @@
 #define RX_THREAD_STACK_SIZE    (2*1024)
 
 #define PDM1_DEVICE_HNAME        "pdm1"
+#define PDM2_DEVICE_HNAME        "pdm2"
 
 
 #undef MIN
@@ -348,7 +356,12 @@ static rt_err_t example_pdm_record_start(rt_uint32_t channels, rt_uint32_t sampl
     rt_kprintf("%s\n", __func__);
     if (g_pdm_device == NULL)
     {
+#if defined (SOC_SF32LB58X)
+        g_pdm_device = rt_device_find(PDM2_DEVICE_HNAME);
+
+#else
         g_pdm_device = rt_device_find(PDM1_DEVICE_HNAME);
+#endif
         if (g_pdm_device)
         {
             rt_device_init(g_pdm_device);
@@ -449,10 +462,29 @@ int main(void)
     rt_kprintf("PDM Record Example.\n");
 
     /* PIN CONFIG */
-#ifdef SOC_SF32LB52X
+#ifdef SF32LB52X
 #if !defined(BSP_USING_LCD) && defined(BSP_USING_PDM1)
     HAL_PIN_Set(PAD_PA07, PDM1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA08, PDM1_DATA, PIN_PULLDOWN, 1);
+
+#else
+#error "Need to confirm PDM pin config."
+#endif
+
+#elif defined(SF32LB56X)
+#if !defined(BSP_USING_LCD) && defined(BSP_USING_PDM1)
+    HAL_PIN_Set(PAD_PA69, PDM1_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA20, PDM1_DATA, PIN_PULLDOWN, 1);
+
+#else
+#error "Need to confirm PDM pin config."
+#endif
+
+#elif defined(SF32LB58X)
+#if !defined(BSP_USING_LCD) && defined(BSP_USING_PDM2)
+    HAL_PIN_Set(PAD_PA25, PDM2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA22, PDM2_DATA, PIN_PULLDOWN, 1);
+
 #else
 #error "Need to confirm PDM pin config."
 #endif

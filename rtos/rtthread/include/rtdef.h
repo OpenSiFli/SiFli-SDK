@@ -234,9 +234,9 @@ struct rt_init_desc
     const char *fn_name;
     const init_fn_t fn;
 };
-#define INIT_EXPORT(fn, level)                                                       \
+#define INIT_EXPORT(fn, level, sublevel)                                                       \
             const char __rti_##fn##_name[] = #fn;                                            \
-            RT_USED const struct rt_init_desc __rt_init_desc_##fn SECTION(".rti_fn." level) = \
+            RT_USED const struct rt_init_desc __rt_init_desc_##fn SECTION(".rti_fn." level sublevel) = \
             { __rti_##fn##_name, fn};
 #else
 #define INIT_EXPORT(fn, level, sublevel)                                                       \
@@ -805,6 +805,45 @@ typedef struct rt_messagequeue *rt_mq_t;
  */
 
 #ifdef RT_USING_MEMHEAP
+#ifdef RT_USING_MEMHEAP2
+struct rt_memheap_item
+{
+    rt_uint32_t magic;             /* magic and used flag */
+    struct rt_memheap *pool_ptr;
+    struct rt_memheap_item *next;  /**< next memheap item */
+    struct rt_memheap_item *prev;  /**< prev memheap item */
+    rt_uint32_t size;              /**< requested memory size excluding header*/
+#ifdef RT_USING_MEMTRACE
+#ifdef RT_MEM_RECORD_THREAD_NAME
+    rt_uint8_t thread[4];   /**< thread name */
+#endif  /* RT_MEM_RECORD_THREAD_NAME */
+    rt_uint32_t ret_addr;
+    rt_tick_t   tick;
+#endif
+#ifdef MEM_ASYN_FREE
+    rt_uint16_t             ref_count_magic;
+    rt_uint16_t             ref_count;
+#endif
+};
+struct rt_memheap
+{
+    struct rt_object        parent;                     /**< inherit from rt_object */
+    rt_bool_t               linked_to_sys_mem;          /**< whether this memheap is linked to sys memheap, true: yes, false: no  */
+    void                   *start_addr;                 /**< pool start address, for compatibility with old implementation, may not aligned */
+    rt_uint8_t             *start;                      /**< pointer to the heap: aligned heap start address,  */
+    struct rt_memheap_item *end;                        /**< the last entry, always unused! */
+    struct rt_memheap_item *free;                       /**< pointer to the lowest free block */
+    struct rt_memheap_item *last_used;                  /**< pointer to the highest used block */
+    struct rt_semaphore     lock;
+    rt_uint32_t             pool_size;                  /**< pool size */
+    rt_uint32_t             available_size;             /**< current available size, header size has been deducted */
+    rt_size_t               mem_size_aligned;           /**< total available size, header size has been deducted */
+    rt_size_t               used_size;                  /**< total memory size having been allocated, including header and padding bytes */
+    rt_size_t               max_used_size;
+    rt_size_t               actual_used_size;           /**< total memory size requested by user, excluding header and padding bytes */
+    rt_size_t               max_actual_used_size;       /**< max actual_used_mem ever happens */
+};
+#else
 /**
  * memory item on the heap
  */
@@ -852,6 +891,7 @@ struct rt_memheap
 
     struct rt_semaphore     lock;                       /**< semaphore lock */
 };
+#endif /* RT_USING_MEMHEAP2 */
 #endif
 
 #ifdef RT_USING_MEMPOOL

@@ -280,6 +280,51 @@ void fd_put(struct dfs_fd *fd)
 }
 
 /**
+ * @brief Duplicates a file descriptor.
+ *
+ * This function duplicates an existing file descriptor (`oldfd`) and returns
+ * a new file descriptor that refers to the same underlying file object.
+ *
+ * @param oldfd The file descriptor to duplicate. It must be a valid file
+ *              descriptor within the range of allocated descriptors.
+ *
+ * @return The new file descriptor if successful, or a negative value
+ *         (e.g., -1) if an error occurs.
+ *
+ * @see sys_dup2()
+ */
+int sys_dup(int oldfd)
+{
+    int newfd = -1;
+    struct dfs_fdtable *fdt = NULL;
+
+    dfs_lock();
+    /* check old fd */
+    fdt = dfs_fdtable_get();
+    if ((oldfd < 0) || (oldfd >= (int) fdt->maxfd))
+    {
+        goto exit;
+    }
+    if (!fdt->fds[oldfd])
+    {
+        goto exit;
+    }
+    /* get a new fd */
+    newfd = fd_alloc(fdt, DFS_FD_OFFSET);
+    if (newfd >= 0)
+    {
+        fdt->fds[newfd] = fdt->fds[oldfd];
+        /* inc ref_count */
+        fdt->fds[newfd]->ref_count++;
+    }
+exit:
+    dfs_unlock();
+    return newfd;
+}
+
+
+
+/**
  * @ingroup Fd
  *
  * This function will return whether this file has been opend.
@@ -562,7 +607,7 @@ int list_fd(void)
 
     return 0;
 }
-MSH_CMD_EXPORT(list_fd, list file descriptor);
+MSH_CMD_EXPORT_REL(list_fd, list_fd, list file descriptor);
 #endif
 /*@}*/
 

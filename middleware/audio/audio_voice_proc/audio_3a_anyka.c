@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2020-2021 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <rtthread.h>
+
 #ifdef SOC_BF0_HCPU
 #include <string.h>
 #include <stdlib.h>
@@ -22,17 +23,11 @@
 #include "log.h"
 #include "audio_server.h"
 
-#include "sdfilter.h"
-#include "sdParamFactory.h"
+#include "audio_3a_anyka.h"
 
-#define ANYKA_FRAME_SIZE    320 //must same as CODEC_DATA_UNIT_LEN in audio_server.c
-
-typedef struct _vad_instance
-{
-    T_U32 vadType;
-    char *name;
-    int32_t ts_active_start; // -1: not start, other: start ts
-} t_vad_instance;
+#if ANYKA_RUN_IN_ACPU
+    #include "acpu_ctrl.h"
+#endif
 
 typedef struct audio_3a_tag
 {
@@ -67,12 +62,6 @@ static struct echo_param_vad vad_param =
 {
 
 };
-
-/*
-    最后算法看到的mic信号比参考信号晚多少个采样,
-    调整g_mic_delay_ref，保证实际测量出来和这个值一致
-*/
-#define DELAY_SAMPLE    10
 
 /*
    需要把参考信号最前面插入多少个采样
@@ -139,7 +128,7 @@ static void audio_3a_module_free(audio_3a_t *env)
     env->rbuf_dwlink_pool = NULL;
     rt_ringbuffer_destroy(env->rbuf_out);
     env->rbuf_out = NULL;
-    audio_mem_free(env->rbuf_dwlink_pool);
+    audio_mem_free(env->mic_far);
     env->mic_far = NULL;
 }
 
@@ -192,7 +181,36 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
     if (thiz->state == 0)
     {
         int ret;
-        T_ECHO_IN_INFO echo_in;
+
+        if (samplerate == 8000)
+        {
+            thiz->samplerate = 8000;
+        }
+        else
+        {
+            thiz->samplerate = 16000;
+        }
+
+        audio_3a_module_init(thiz, thiz->samplerate);
+
+#if ANYKA_RUN_IN_ACPU
+        uint8_t error_code = 1;
+        acpu_audio_3a_open_parameter_t arg;
+        /* acpu can't access hcpu const var if not in psram */
+        arg.const_far = audio_mem_malloc(sizeof(factory_far) + 1);
+        RT_ASSERT(arg.const_far);
+        strcpy(arg.const_far, factory_far);
+        arg.const_near = audio_mem_malloc(sizeof(factory_near) + 1);
+        RT_ASSERT(arg.const_near);
+        strcpy(arg.const_near, factory_near);
+        arg.samplerate = thiz->samplerate;
+
+        SCB_CleanInvalidateDCache();
+        acpu_run_task(ACPU_TASK_audio_3a_open, &arg, sizeof(arg), &error_code);
+        RT_ASSERT(error_code == 0);
+        audio_mem_free(arg.const_far);
+        audio_mem_free(arg.const_near);
+#else
         thiz->ts_far = 0;
         thiz->ts_dac_stream = 0;
         thiz->is_far_putted = 0;
@@ -214,7 +232,11 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         //_SD_Echo_PrintFarPathParamHelp();
 
         // 1. echo init
+        T_ECHO_IN_INFO echo_in;
         memset(&echo_in, 0, sizeof(echo_in));
+        echo_in.m_SampleRate = thiz->samplerate;
+        echo_in.m_hwSampleRate = thiz->samplerate;
+
         echo_in.strVersion = AUDIO_FILTER_VERSION_STRING;
         echo_in.cb_fun.Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)my_malloc;
         echo_in.cb_fun.Free = (MEDIALIB_CALLBACK_FUN_FREE)my_free;
@@ -226,20 +248,8 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         echo_in.m_BitsPerSample = 16;
         echo_in.m_jitterBufLen = 8192; //???
 
-        if (samplerate == 8000)
-        {
-            echo_in.m_SampleRate = 8000;
-            echo_in.m_hwSampleRate = 8000;
-            thiz->samplerate = 8000;
-            audio_3a_module_init(thiz, 8000);
-        }
-        else
-        {
-            echo_in.m_SampleRate = 16000;
-            echo_in.m_hwSampleRate = 16000;
-            thiz->samplerate = 16000;
-            audio_3a_module_init(thiz, 16000);
-        }
+        echo_in.m_SampleRate = thiz->samplerate;
+        echo_in.m_hwSampleRate = thiz->samplerate;
 
         // 2.  open far path
         echo_in.m_pathId = 1;
@@ -285,7 +295,7 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
             RT_ASSERT(ret);
         }
         char *strVal;
-        // 参数列表中也可以包含音频库以外的参数，例如 ai_gain=3 表示 mic 的模拟增益配置为3
+        /* 参数列表中也可以包含音频库以外的参数, 例如 ai_gain=3 表示 mic 的模拟增益配置为3 */
         strVal = SD_ParamFactory_GetValue(thiz->factory_near, "ai_gain");
         if (strVal)
         {
@@ -295,7 +305,7 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         struct echo_param_aec aec_param;
         memset(&aec_param, 0, sizeof(aec_param));
         _SD_Echo_GetAecParam(thiz->p_near, &aec_param);
-
+#endif
         if (is_bt_voice)
             bt_voice_open(samplerate);
     }
@@ -311,12 +321,19 @@ void audio_3a_close()
         if (thiz->is_bt_voice)
             bt_voice_close();
 
+#if ANYKA_RUN_IN_ACPU
+        uint8_t error_code = 1;
+        SCB_CleanInvalidateDCache();
+        acpu_run_task(ACPU_TASK_audio_3a_close, NULL, 0, &error_code);
+        RT_ASSERT(error_code == 0);
+#else
         _SD_Echo_Reset(thiz->p_far);
         _SD_Echo_Close(thiz->p_far);
         _SD_Echo_Reset(thiz->p_near);
         _SD_Echo_Close(thiz->p_near);
         SD_ParamFactory_Destroy(thiz->factory_far);
         SD_ParamFactory_Destroy(thiz->factory_near);
+#endif
     }
 }
 
@@ -369,7 +386,16 @@ void audio_3a_downlink(uint8_t *fifo, uint8_t size)
 
         // todo: change to use HAL_HPAON_READ_GTIMER();
         rt_tick_t tick = rt_tick_get();
-
+#if ANYKA_RUN_IN_ACPU
+        uint8_t error_code = 1;
+        acpu_audio_3a_downlink_parameter_t arg;
+        arg.data_in = data_in;
+        arg.data_out = data_out;
+        arg.tick = tick;
+        SCB_CleanInvalidateDCache();
+        acpu_run_task(ACPU_TASK_audio_3a_downlink, &arg, sizeof(arg), &error_code);
+        RT_ASSERT(error_code == 0);
+#else
         getsize = _SD_Echo_FillFarStream(thiz->p_far, data_in, ANYKA_FRAME_SIZE, tick * 1000, 1);
         //RT_ASSERT(getsize == ANYKA_FRAME_SIZE);
         if (!getsize)
@@ -384,7 +410,7 @@ void audio_3a_downlink(uint8_t *fifo, uint8_t size)
             LOG_I("dac empty");
             continue;
         }
-
+#endif
         audio_dump_data(ADUMP_DOWNLINK_AGC, data_out, ANYKA_FRAME_SIZE);
 
         //put to speaker buffer for playing
@@ -417,7 +443,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
     audio_3a_t *thiz = &g_audio_3a_env;
     int ret;
 
-    int16_t refframe[ANYKA_FRAME_SIZE / 2];
+    uint8_t refframe[ANYKA_FRAME_SIZE];
     uint8_t result[ANYKA_FRAME_SIZE];
 
     RT_ASSERT(fifo_size == ANYKA_FRAME_SIZE);
@@ -444,8 +470,21 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         memcpy(result, fifo, ANYKA_FRAME_SIZE);
         goto skip_3a_up;
     }
+
     // todo: change to use HAL_HPAON_READ_GTIMER();
     uint64_t ts = rt_tick_get() * 1000;
+
+#if ANYKA_RUN_IN_ACPU
+    uint8_t error_code = 1;
+    acpu_audio_3a_uplink_parameter_t arg;
+    arg.refframe = refframe;
+    arg.ts = ts;
+    arg.fifo = fifo;
+    arg.result = result;
+    SCB_CleanInvalidateDCache();
+    acpu_run_task(ACPU_TASK_audio_3a_uplink, &arg, sizeof(arg), &error_code);
+    RT_ASSERT(error_code == 0);
+#else
     ret = _SD_Echo_FillDacLoopback(thiz->p_near, (uint8_t *)refframe, ANYKA_FRAME_SIZE, ts, 1);
 
     //LOG_I("fill dac loopback=%d", ret);
@@ -457,8 +496,9 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
 
     T_AUDIO_FILTER_TS ts_result;
     ret = _SD_Echo_GetResult(thiz->p_near, result, sizeof(result), &ts_result, 1);
-
+    audio_dump_data(ADUMP_RAMP_OUT_OUT, result, ANYKA_FRAME_SIZE);
     //LOG_I("fill adc=%d", ret);
+#endif
 
 skip_3a_up:
 

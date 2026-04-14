@@ -150,7 +150,7 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
             hwp_bt_phy->TX_DPSK_CFG1 |= 0x44 << BT_PHY_TX_DPSK_CFG1_TX_DPSK_GAIN_FRC_Pos;
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Msk;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x0E << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= 0x14 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x55555555;
             break;

@@ -1,4 +1,11 @@
 # FatFs NOR 示例
+源码路径：example/storage/fatfs/nor
+
+## 支持的开发板
+- sf32lb52-lcd_n16r8
+- sf32lb56-lcd_n16r12n1
+- sf32lb58-lcd_n16r32n1
+
 ## 使用指南
 本示例演示FatFs的文件系统功能，文件系统采用FAT格式，在UART console可以调用常用的文件命令，如:
 

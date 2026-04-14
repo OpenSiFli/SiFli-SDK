@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 /*********************
  *      INCLUDES
  *********************/
@@ -11,7 +16,9 @@
 #include "lv_ex_data.h"
 #include "app_mem.h"
 #include "log.h"
-#include "lv_freetype.h"
+#include "lvsf/lv_freetype.h"
+#include "lvsf_input.h"
+#include "lvsf_gesture.h"
 
 #ifdef BSP_USING_PM
     #include "bf0_pm.h"

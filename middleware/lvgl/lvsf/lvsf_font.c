@@ -5,6 +5,7 @@
  */
 
 #include "lv_ext_resource_manager.h"
+#include "lvsf_font.h"
 #ifdef LV_USING_FREETYPE_ENGINE
     #include "lvsf_ft_reg.h"
 #endif

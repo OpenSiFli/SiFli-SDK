@@ -50,6 +50,8 @@ extern void board_pinmux_psram(uint8_t       mpi, uint8_t type);
 extern void board_pinmux_mpi3(int qfn);
 extern void board_pinmux_sd1(void);
 extern void board_sd1_power_on(void);
+extern void board_pinmux_sd2(void);
+extern void board_sd2_power_on(void);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-# usb_audio_class_example
+# USB 鼠标示例
 
 源码路径：example\cherryusb\device\hid_mouse
 

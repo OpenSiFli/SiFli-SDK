@@ -1,10 +1,12 @@
 # PWM_DMA示例
 
-源码路径：example\rt_device\pwm
+源码路径：example/rt_device/pwm/pwm_dma
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
+
 ## 概述
 * 包含了Gtime,Atime使用pwm+dma功能通过IO口输出PWM波形的示例
 

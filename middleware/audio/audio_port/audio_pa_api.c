@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <rtthread.h>
 
 #ifdef SOC_BF0_HCPU
@@ -13,7 +19,7 @@
 #include "drivers/audio.h"
 
 
-#define WAIT_PA_STABLE_TIME_MS      200
+#define WAIT_PA_STABLE_TIME_MS      100
 
 /* some board stop PA has pop noise, need delay some time than close DAC*/
 #define PA_CLOSE_DELAY_MS           10
@@ -85,6 +91,30 @@ void audio_hardware_pa_stop(void)
     }
 
 }
+#elif defined(PA_USING_ANT3825)
+
+#include "sifli_ant3825.h"
+void audio_hardware_pa_init(void)
+{
+    sifli_ant3825_init();
+}
+void audio_hardware_pa_start(uint32_t samplerate, uint32_t reserved)
+{
+    (void)samplerate;
+    (void)reserved;
+    sifli_ant3825_start();
+    rt_thread_mdelay(WAIT_PA_STABLE_TIME_MS);
+}
+void audio_hardware_pa_stop(void)
+{
+    sifli_ant3825_stop();
+    if (PA_CLOSE_DELAY_MS > 0)
+    {
+        rt_thread_mdelay(PA_CLOSE_DELAY_MS);
+    }
+
+}
+
 #else
 
 RT_WEAK void audio_hardware_pa_init()

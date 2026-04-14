@@ -34,6 +34,8 @@
 #include <unistd.h>
 #endif
 
+#define USING_NETWORK_POLL 1
+
 int ff_neterrno(void);
 
 #if HAVE_WINSOCK2_H

@@ -32,7 +32,21 @@ extern "C" {
   * @{
   */
 
-#define SPI_FLASH_OTP_BASE          (0X1000U)
+/** SPI_FLASH OTP default base address
+ *  OTP address is in range [base+start_idx*page_size, base+(start_idx+otp_page_num)*page_size))
+ */
+#define SPI_FLASH_OTP_DEFAULT_BASE      (0X0000U)
+/** SPI_FLASH OTP page start index */
+#define SPI_FLASH_OTP_PAGE_START_IDX    (1U)
+/** SPI_FLASH OTP page size in byte is equal to 2^log2_page_size */
+#define SPI_FLASH_OTP_LOG2_PAGE_SIZE    (12U)
+/** SPI_FLASH OTP page size in byte */
+#define SPI_FLASH_OTP_PAGE_SIZE         (1UL << SPI_FLASH_OTP_LOG2_PAGE_SIZE)
+
+#define SPI_FLASH_IS_VALID_OTP_ADDR_OFFSET(addr)  (((addr) >= (SPI_FLASH_OTP_PAGE_START_IDX << SPI_FLASH_OTP_LOG2_PAGE_SIZE)) && \
+                                                   ((addr) < ((SPI_FLASH_OTP_PAGE_START_IDX + hflash->ctable->mode_reg) << SPI_FLASH_OTP_LOG2_PAGE_SIZE)))
+
+#define SPI_FLASH_IS_VALID_OTP_PAGE_IDX(idx)  (((idx) >= SPI_FLASH_OTP_PAGE_START_IDX) && ((idx) < (SPI_FLASH_OTP_PAGE_START_IDX + hflash->ctable->mode_reg)))
 
 /**
   * @brief  SPI_FLASH configure tyep
@@ -150,6 +164,22 @@ typedef struct
     FLASH_CMD_CFG_T cmd_cfg[SPI_FLASH_CMD_COUNT];  /*!<  command table */
 } SPI_FLASH_FACT_CFG_T;
 
+typedef struct nand_ext_cfg_tag
+{
+    /** ecc uncorrectable error mask. Each bit corresponds to one possible value of ecc status register.
+     * E.g. bit0 corresponds to ecc status value 0, bit1 corresponds to ecc status value 1, and so on.
+     * If bit is set to 1, means the corresponding ecc status value is uncorrectable error.
+     * E.g. if ecc status value 2 means uncorrectable error, then bit2 is set to 1
+     */
+    uint32_t ecc_err_mask;
+} nand_ext_cfg_t;
+
+typedef struct nor_ext_cfg_tag
+{
+    /** OTP base address */
+    uint32_t otp_base;
+} nor_ext_cfg_t;
+
 /**
   * @brief  SPI_FLASH manufactory id
   */
@@ -247,6 +277,11 @@ typedef struct __FLASH_HandleTypeDef
     uint32_t                        reserv1;         /*!< reverved for later use and for alinged  */
     void                           *cs_ctrl;         /*!< cs control function pointer  */
     void                           *lock;
+    uint32_t                        otp_base;        /*!< OTP base address for nor, reserved for nand  */
+    const void                      *ext_cfg;        /*!< pointer to NAND or NOR extended configuration
+                                                      *  NAND: nand_ext_cfg_t
+                                                      *  NOR: nor_ext_cfg_t
+                                                      */
 } FLASH_HandleTypeDef;
 /**
   * @}
@@ -805,6 +840,11 @@ int HAL_FLASH_DEEP_PWRDOWN(FLASH_HandleTypeDef *hflash);
  * @retval 0 if success
 */
 int HAL_FLASH_RELEASE_DPD(FLASH_HandleTypeDef *hflash);
+
+static inline uint32_t HAL_FLASH_GetOtpBase(FLASH_HandleTypeDef *handle)
+{
+    return handle->otp_base;
+}
 
 
 /**

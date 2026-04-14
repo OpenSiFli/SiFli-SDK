@@ -5,6 +5,9 @@ Source code path: example/multimedia/audio/record
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
 + eh-lb525
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 ## Overview
 <!-- Example introduction -->

@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef BLE_AUDIO_SRC_API_H
 #define BLE_AUDIO_SRC_API_H
 
@@ -31,6 +37,7 @@ extern "C" {
 
 int bap_broadcast_src_start();
 void bap_broadcast_src_stop();
+uint8_t bap_broadcast_src_is_busy(void);
 
 #ifdef __cplusplus
 }

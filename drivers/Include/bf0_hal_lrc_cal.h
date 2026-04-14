@@ -73,6 +73,14 @@ int HAL_RC_CAL_SetLPCycle_ex(uint8_t lpcycle);
 
 int HAL_RC_CALget_curr_cycle_on_48M(uint8_t lp_cycle, uint32_t *count);
 
+/**
+ * @brief  Delay function used by LRC calibration
+ *
+ * It's a weak function that can be overridden by user. The default implementation is to call HAL_Delay which uses while loop and would not yield the CPU.
+ *
+ */
+void HAL_LRC_Delay(uint32_t Delay);
+
 
 /**
   *@} LRCCAL_exported_functions

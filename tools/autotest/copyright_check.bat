@@ -52,21 +52,28 @@ echo [INFO] Directories are ready.
 :: STAGE 2: Copy Changed Files
 :: -----------------------------------------------------------------------------
 echo [INFO] Identifying and copying changed files from last commit...
-
+chcp 65001 >nul
+git config --local core.quotepath false
+git config --local i18n.commitencoding utf-8
+git config --local i18n.logoutputencoding utf-8
 for /f "usebackq delims=" %%F in (`
     git diff --name-only --diff-filter=AM HEAD~1 HEAD
 `) do (
-    echo   - Copying "%%F"
-    for %%A in ("%%F") do set "file=%%~fA"
-    for %%A in ("%%F") do set "ABS=%%~dpA"
-    set "REL=!ABS:%ROOT%\=!"
-    if not exist "%SCAN_SOURCE_DIR%\!REL!" (
-        mkdir "%SCAN_SOURCE_DIR%\!REL!"
-    )
-    copy "!file!" "%SCAN_SOURCE_DIR%\!REL!" >nul
-    if errorlevel 1 (
-        echo [ERROR] Failed to copy "!file!". Aborting.
-        exit /b 1
+    if exist "%%F\" (
+        echo   - Skipping submodule "%%F"
+    ) else (
+        echo   - Copying "%%F"
+        for %%A in ("%%F") do set "file=%%~fA"
+        for %%A in ("%%F") do set "ABS=%%~dpA"
+        set "REL=!ABS:%ROOT%\=!"
+        if not exist "%SCAN_SOURCE_DIR%\!REL!" (
+            mkdir "%SCAN_SOURCE_DIR%\!REL!"
+        )
+        copy "!file!" "%SCAN_SOURCE_DIR%\!REL!" >nul
+        if errorlevel 1 (
+            echo [ERROR] Failed to copy "!file!". Aborting.
+            exit /b 1
+        )
     )
 )
 echo [INFO] File copy complete.
@@ -84,7 +91,7 @@ scancode -clipeu ^
   --classify ^
   --summary ^
   --verbose "%SCAN_SOURCE_DIR%" ^
-  --processes 8 ^
+  --processes 2 ^
   --json "%SCANCODE_REPORT_JSON%" ^
   --html "%SCANCODE_REPORT_HTML%"
 

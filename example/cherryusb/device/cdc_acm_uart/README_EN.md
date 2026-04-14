@@ -1,4 +1,4 @@
-# cdc_acm_uart
+# USB to Serial Bridge Example (CDC ACM UART)
 
 A USB CDC ACM to UART bridge driver based on CherryUSB that transparently forwards USB virtual serial port data to physical UART devices.
 

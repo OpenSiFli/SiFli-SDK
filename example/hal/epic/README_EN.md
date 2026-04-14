@@ -10,9 +10,10 @@ This program is a graphics blending example based on **HAL (Hardware Abstraction
 
 ## Supported Development Boards
 
-- `sf32lb52-lchspi-ulp`
-- `sf32lb52-nano_52j`
-- `sf32lb52-lcd_n16r8`
+- sf32lb52-lchspi-ulp
+- sf32lb52-nano_52j
+- sf32lb56-lcd series
+- sf32lb58-lcd series
 
 ---
 

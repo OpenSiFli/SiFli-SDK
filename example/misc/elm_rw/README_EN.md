@@ -4,10 +4,10 @@ This example demonstrates file data read/write operations using ELM, paired with
 
 ## Supported Development Boards
 The example can run on the following development boards.<br>
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* 56_devkit_lcd
-* em-lb586_nand
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+
 
 **Note:** Generally, examples run on the chip's HCPU. "eh-lb563_v2" is equivalent to "eh-lb563_v2_hcpu". If you want to run the example on LCPU, you can use "eh-lb563_v2_lcpu". Currently, USB functionality is temporarily only supported on HCPU.
 

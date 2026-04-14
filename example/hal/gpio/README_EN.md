@@ -3,9 +3,9 @@ Source code path: example/hal/gpio
 
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* sf32lb56-lcd_n16r12n1
+* sf32lb52-lcd series
+* sf32lb58-lcd series
+* sf32lb56-lcd series
 ## Example Overview
 * Configure GPIO output and input interrupt operations to demonstrate GPIO HAL functions
 * Toggle GPIO_out level value every second, input GPIO triggers interrupt on rising and falling edges, printing interrupt information via serial port

@@ -27,6 +27,12 @@
     #ifndef RTC_NTP_SYNC_PERIOD
         #define RTC_NTP_SYNC_PERIOD                      (1L*60L*60L)
     #endif
+    #ifndef RTC_NTP_RETRY_SYNC_DELAY
+        #define RTC_NTP_RETRY_SYNC_DELAY                 (30)
+    #endif
+    #ifndef RTC_NTP_RETRY_TIMES
+        #define RTC_NTP_RETRY_TIMES                      (5)
+    #endif
 #endif /* RTC_SYNC_USING_NTP */
 
 /**
@@ -157,11 +163,22 @@ static void ntp_sync_thread_enrty(void *param)
     extern time_t ntp_sync_to_rtc(const char *host_name);
     /* first sync delay for network connect */
     rt_thread_delay(RTC_NTP_FIRST_SYNC_DELAY * RT_TICK_PER_SECOND);
-
+    uint8_t retry_times = RTC_NTP_RETRY_TIMES;
     while (1)
     {
-        ntp_sync_to_rtc(NULL);
-        rt_thread_delay(RTC_NTP_SYNC_PERIOD * RT_TICK_PER_SECOND);
+        time_t new_time = 0;
+        new_time = ntp_sync_to_rtc(NULL);
+        rt_kprintf("%s new_time %d retry_times %d\n", __func__, new_time, retry_times);
+        if (new_time == 0 && retry_times > 0)
+        {
+            rt_thread_delay(RTC_NTP_RETRY_SYNC_DELAY * RT_TICK_PER_SECOND);
+            retry_times--;
+        }
+        else
+        {
+            retry_times = RTC_NTP_RETRY_TIMES;
+            rt_thread_delay(RTC_NTP_SYNC_PERIOD * RT_TICK_PER_SECOND);
+        }
     }
 }
 
@@ -175,7 +192,7 @@ int rt_rtc_ntp_sync_init(void)
         return 0;
     }
 
-    thread = rt_thread_create("ntp_sync", ntp_sync_thread_enrty, RT_NULL, 1536, RT_THREAD_PRIORITY_LOW, RT_THREAD_TICK_DEFAULT / 5);
+    thread = rt_thread_create("ntp_sync", ntp_sync_thread_enrty, RT_NULL, 2048, RT_THREAD_PRIORITY_LOW, RT_THREAD_TICK_DEFAULT / 5);
     if (thread)
     {
         rt_thread_startup(thread);

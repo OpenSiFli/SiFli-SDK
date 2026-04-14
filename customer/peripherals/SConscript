@@ -14,6 +14,8 @@ if GetDepend(['BSP_USING_RTTHREAD']):
                 objs = objs + SConscript(os.path.join(d, 'SConscript'))
 else:
     objs = objs + SConscript(os.path.join('pmic_controller', 'SConscript'))
+    objs = objs + SConscript(os.path.join('nand', 'SConscript'))
+    objs = objs + SConscript(os.path.join('nor', 'SConscript'))
 
 board_name = GetBoardName()
 if board_name:

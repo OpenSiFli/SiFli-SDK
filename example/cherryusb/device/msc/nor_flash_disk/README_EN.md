@@ -1,5 +1,5 @@
 
-# nor_flash_virtual_disk_example
+# USB Mass Storage Device Example (NOR FLASH)
 
 Source Path: example\cherryusb\device\nor_flash_disk
 

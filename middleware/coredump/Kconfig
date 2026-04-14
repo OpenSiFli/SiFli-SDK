@@ -1,0 +1,91 @@
+menuconfig USING_COREDUMP
+    bool "Core Dump for Offline Debugging"
+    default n
+    help
+         Enable Core Dump for offline debugging.
+
+if USING_COREDUMP
+    choice COREDUMP_BACKEND
+        prompt "Core Dump Backend"
+        default COREDUMP_BACKEND_PARTITION
+        help
+            Select the backend type for core dump data storage except minidump. 
+        config COREDUMP_BACKEND_PARTITION
+            bool "Partition Backend"
+            help 
+                The partition backend stores core dump data in a dedicated flash partition. 
+                It requires FAL module to provide flash partition table.
+        config COREDUMP_BACKEND_FILE
+            bool "File Backend"
+            help
+                The file backend stores core dump data in a file on the filesystem.
+    endchoice
+
+    menu "Core Dump Storage Location"
+    config COREDUMP_PARTITION_NAME
+        string "Core Dump Partition Name"
+        default "coredump"
+        depends on COREDUMP_BACKEND_PARTITION
+    config COREDUMP_FILE_PATH
+        string "Core Dump File Path"
+        default "/coredump"
+        depends on COREDUMP_BACKEND_FILE
+    config COREDUMP_FILE_NAME
+        string "Core Dump File Name"
+        default "coredump.bin"
+        depends on COREDUMP_BACKEND_FILE
+    endmenu
+
+    menu "Core Dump Data to Save"
+    config COREDUMP_HCPU_STATIC_DATA_ENABLED
+        bool "HCPU Static Data"
+        default y
+        help
+            Include HCPU Static Data in Core Dump
+    config COREDUMP_HCPU_HEAP_DATA_ENABLED
+        bool "HCPU Heap Data"
+        default y
+        help
+            Include HCPU Heap Data in Core Dump
+    config COREDUMP_HCPU_STACK_DATA_ENABLED
+        bool "HCPU Stack Data"
+        default y
+        help
+            Include HCPU Stack Data in Core Dump
+    config COREDUMP_REG_DATA_ENABLED
+        bool "Register Data"
+        default y
+        help
+            Include Register Data in Core Dump
+    config COREDUMP_LCPU_SRAM_DATA_ENABLED
+        bool "LCPU SRAM Data"
+        default y
+        help
+            Include LCPU SRAM Data in Core Dump
+    config COREDUMP_LCPU_TCM_DATA_ENABLED
+        bool "LCPU ITCM and DTCM Data"
+        default y
+        help
+            Include LCPU ITCM and DTCM Data in Core Dump
+    endmenu
+    
+    menuconfig COREDUMP_MINIDUMP_ENABLED
+        bool "Enable minidump"
+        default n
+        help
+            Minidump saves minimal coredump data in separate location.
+            It's saved before full coredump and can be used to do quick analysis when full coredump is not available.
+            Minidump always use partition backend and requires a separate partition from full coredump.
+    if COREDUMP_MINIDUMP_ENABLED
+        config COREDUMP_MINIDUMP_PART_NAME
+            string "Minidump Partition Name"
+            default "coredump_min"
+    endif
+
+    config USING_COREDUMP_EXT
+        bool "Enable extended Core Dump function"
+        help
+            Extended Core Dump function coredump_ext() that can be implemented by user
+
+        default n
+endif # USING_COREDUMP

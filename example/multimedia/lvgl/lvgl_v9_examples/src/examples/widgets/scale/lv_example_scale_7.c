@@ -1,20 +1,17 @@
 #include "../../lv_examples.h"
 #if LV_USE_SCALE && LV_BUILD_EXAMPLES
 
-#include "../../../src/lvgl_private.h" //To expose the fields of lv_draw_task_t
+#include "../../../lvgl_private.h" /*To expose the fields of lv_draw_task_t*/
 
-static void draw_event_cb(lv_event_t *e)
+static void draw_event_cb(lv_event_t * e)
 {
-    lv_obj_t *obj = lv_event_get_target(e);
-    lv_draw_task_t *draw_task = lv_event_get_draw_task(e);
-    lv_draw_dsc_base_t *base_dsc = lv_draw_task_get_draw_dsc(draw_task);
-    lv_draw_label_dsc_t *label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
-    if (base_dsc->part == LV_PART_INDICATOR)
-    {
-        if (label_draw_dsc)
-        {
-            const lv_color_t color_idx[7] =
-            {
+    lv_obj_t * obj = lv_event_get_target_obj(e);
+    lv_draw_task_t * draw_task = lv_event_get_draw_task(e);
+    lv_draw_dsc_base_t * base_dsc = (lv_draw_dsc_base_t *)lv_draw_task_get_draw_dsc(draw_task);
+    lv_draw_label_dsc_t * label_draw_dsc = lv_draw_task_get_label_dsc(draw_task);
+    if(base_dsc->part == LV_PART_INDICATOR) {
+        if(label_draw_dsc) {
+            const lv_color_t color_idx[7] = {
                 lv_palette_main(LV_PALETTE_RED),
                 lv_palette_main(LV_PALETTE_ORANGE),
                 lv_palette_main(LV_PALETTE_YELLOW),
@@ -23,16 +20,16 @@ static void draw_event_cb(lv_event_t *e)
                 lv_palette_main(LV_PALETTE_BLUE),
                 lv_palette_main(LV_PALETTE_PURPLE),
             };
-            uint8_t major_tick = lv_scale_get_major_tick_every(obj);
+            uint32_t major_tick = lv_scale_get_major_tick_every(obj);
             label_draw_dsc->color = color_idx[base_dsc->id1 / major_tick];
 
             /*Free the previously allocated text if needed*/
-            if (label_draw_dsc->text_local) lv_free((void *)label_draw_dsc->text);
+            if(label_draw_dsc->text_local) lv_free((void *)label_draw_dsc->text);
 
             /*Malloc the text and set text_local as 1 to make LVGL automatically free the text.
              * (Local texts are malloc'd internally by LVGL. Mimic this behavior here too)*/
             char tmp_buffer[20] = {0}; /* Big enough buffer */
-            lv_snprintf(tmp_buffer, sizeof(tmp_buffer), "%.1f", base_dsc->id2 * 1.0f);
+            lv_snprintf(tmp_buffer, sizeof(tmp_buffer), "%.1f", (double)base_dsc->id2);
             label_draw_dsc->text = lv_strdup(tmp_buffer);
             label_draw_dsc->text_local = 1;
 
@@ -54,7 +51,7 @@ static void draw_event_cb(lv_event_t *e)
  */
 void lv_example_scale_7(void)
 {
-    lv_obj_t *scale = lv_scale_create(lv_screen_active());
+    lv_obj_t * scale = lv_scale_create(lv_screen_active());
     lv_obj_set_size(scale, lv_pct(80), 100);
     lv_scale_set_mode(scale, LV_SCALE_MODE_HORIZONTAL_BOTTOM);
     lv_obj_center(scale);

@@ -4,6 +4,11 @@
 *                           www.segger.com                           *
 **********************************************************************
 */
+/*
+ * SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "stdint.h"
 #define U8  uint8_t
 #define U16 uint16_t
@@ -49,6 +54,7 @@ extern int ProgramPage(U32 Addr, U32 NumBytes, U8 *pSrcBuff);   // Mandatory
 extern int BlankCheck(U32 Addr, U32 NumBytes, U8 BlankData);    // Optional
 extern int EraseChip(void);                                     // Optional
 extern U32 Verify(U32 Addr, U32 NumBytes, U8 *pSrcBuff);        // Optional
+extern void HAL_MspInit(void);
 
 //
 // SEGGER defined functions
@@ -76,9 +82,6 @@ extern int  SEGGER_OPEN_Erase(U32 SectorAddr, U32 SectorIndex, U32 NumSectors); 
 #else
     #define PAGE_SIZE 0x10000
 #endif  //JLINK_FLASH_1
-
-
-
 
 
 

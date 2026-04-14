@@ -2,8 +2,9 @@
 Source code path: example/misc/button
 
 ## Supported Platforms
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
 
 ## Overview
 The button library uses pin devices to detect various button actions. It uses one timer to handle debouncing, and another timer to detect long press actions.

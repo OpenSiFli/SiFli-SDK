@@ -29,3 +29,15 @@ Customize circular scrolling animation
 .. lv_example:: widgets/label/lv_example_label_5
   :language: c
 
+Monospace font
+--------------
+
+.. lv_example:: widgets/label/lv_example_label_6
+  :language: c
+
+Assign a translation tag to a label
+-----------------------------------
+
+.. lv_example:: widgets/label/lv_example_label_7
+  :language: c
+

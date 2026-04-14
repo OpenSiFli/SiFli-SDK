@@ -77,6 +77,11 @@ struct rt_mtd_nand_driver_ops
     rt_err_t (*erase_block)(struct rt_mtd_nand_device *device, rt_uint32_t block);
     rt_err_t (*check_block)(struct rt_mtd_nand_device *device, rt_uint32_t block);
     rt_err_t (*mark_badblock)(struct rt_mtd_nand_device *device, rt_uint32_t block);
+    rt_err_t (*read_page_with_offset2)(struct rt_mtd_nand_device *device,
+                                       rt_off_t page,    rt_uint32_t offset,
+                                       rt_uint8_t *data, rt_uint32_t data_len,
+                                       rt_uint8_t *spare, rt_uint32_t spare_len, rt_bool_t *ecc_corrected);
+
 };
 
 rt_err_t rt_mtd_nand_register_device(const char *name, struct rt_mtd_nand_device *device);
@@ -103,6 +108,17 @@ rt_inline rt_err_t rt_mtd_nand_read_with_offset(
 {
     return device->ops->read_page_with_offset(device, page, offset, data, data_len, spare, spare_len);
 }
+
+rt_inline rt_err_t rt_mtd_nand_read_with_offset2(
+    struct rt_mtd_nand_device *device,
+    rt_off_t page,  rt_uint32_t offset,
+    rt_uint8_t *data, rt_uint32_t data_len,
+    rt_uint8_t *spare, rt_uint32_t spare_len,
+    rt_bool_t *ecc_corrected)
+{
+    return device->ops->read_page_with_offset2(device, page, offset, data, data_len, spare, spare_len, ecc_corrected);
+}
+
 
 rt_inline rt_err_t rt_mtd_nand_write(
     struct rt_mtd_nand_device *device,

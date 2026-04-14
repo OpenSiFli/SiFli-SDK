@@ -4,8 +4,9 @@ The example demonstrates USB as a device functioning as virtual serial port, whi
 
 ## Supported Development Boards
 The example can run on the following development boards:<br>
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
+* sf32lb52-lcd series
+* sf32lb56-lcd series
+* sf32lb58-lcd series
 
 **Note:** Generally, examples run on the chip's HCPU. "eh-lb563" is equivalent to "eh-lb563_hcpu". If you want to run the example on LCPU, you can use "eh-lb563_lcpu". Currently USB functionality temporarily only supports running on HCPU.
 

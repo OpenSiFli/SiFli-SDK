@@ -1,6 +1,6 @@
-# usb_audio_class_example
+# USB 大容量存储设备示例（RAM DISK 双LUN）
 
-源码路径：example\cherryusb\device\ram_disk_dual
+源码路径：example/cherryusb/device/msc/ram_disk_dual
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

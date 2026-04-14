@@ -84,11 +84,17 @@ do                                                                            \
 }                                                                             \
 while (0)
 
-#ifdef LCPU_MEM_OPTIMIZE
+#if defined (ASSERT_OPTIMIZE_1)
 #define RT_ASSERT(EX)                                                         \
 if (!(EX))                                                                    \
 {                                                                             \
-    rt_assert_handler("ASSERT", __FUNCTION__, __LINE__);                           \
+    rt_assert_func();                                                         \
+}
+#elif defined (ASSERT_OPTIMIZE_2) || defined (LCPU_MEM_OPTIMIZE)
+#define RT_ASSERT(EX)                                                         \
+if (!(EX))                                                                    \
+{                                                                             \
+    rt_assert_func(__FUNCTION__, __LINE__);                                   \
 }
 #else
 #define RT_ASSERT(EX)                                                         \
@@ -99,7 +105,12 @@ if (!(EX))                                                                    \
 #endif
 
 /* Macro to check current context */
-#if RT_DEBUG_CONTEXT_CHECK
+/* During WIN32 operation, the Windows thread between rt_enter_critical and
+ * rt_exit_critical is time-sliced. It may be scheduled to another thread
+ * in the middle, causing a detection exception in rt_interrupt_get_nest.
+ * Therefore, RT_DEBUG_NOT_IN_INTERRUPT is disabled.
+ */
+#if RT_DEBUG_CONTEXT_CHECK && !defined(_WIN32)
 #define RT_DEBUG_NOT_IN_INTERRUPT                                             \
 do                                                                            \
 {                                                                             \

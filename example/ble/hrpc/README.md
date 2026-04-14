@@ -4,9 +4,9 @@
 
 ## 支持的平台
 例程可以运行在以下开发板上.
-* sf32lb52-lcd_n16r8
-* sf32lb56-lcd_a128r12n1/sf32lb56-lcd_n16r12n1
-* sf32lb58-lcd_n16r64n4/sf32lb58-lcd_a128r32n1_dsi
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 ## 概述
 * 这是一个基于Sifli BLE协议栈的一个应用程序示例，创建自定义的GATT service，进行BLE的广播、连接，以及连接后基本的GATT数据交互，可以通过蓝牙将hrpc传感器数据通过蓝牙发送到手机，手机也可以进行写入数据,。

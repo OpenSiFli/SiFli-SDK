@@ -2,9 +2,9 @@
 源码路径：example/hal/i2c/eeprom
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-lcd
-* sf32lb58-lcd
-* sf32lb56-lcd
+* sf32lb52-lcd系列
+* sf32lb58-lcd系列
+* sf32lb56-lcd系列
 
 ## 概述
 * 通过对EEPROM芯片AT24CO8SC模块的读写操作进行I2C Hal函数演示

@@ -1,12 +1,12 @@
 # PWM示例
 
-源码路径：example\rt_device\pwm
+源码路径：example/rt_device/pwm/pwm
 ## 支持的平台
 例程可以运行在以下开发板.
 * sf32lb52-nano系列
-* sf32lb52-lcd
-* sf32lb56-lcd
-* sf32lb58-lcd
+* sf32lb52-lcd系列
+* sf32lb56-lcd系列
+* sf32lb58-lcd系列
 
 ## 概述
 * 包含了GPtimer通过IO口输出PWM的示例

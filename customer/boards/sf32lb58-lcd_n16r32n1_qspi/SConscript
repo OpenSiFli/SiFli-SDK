@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_QSPI'], CPPPATH = path)
+
+if GetDepend('BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_QSPI'):
+    group = group + SConscript('../sf32lb58-lcd_base/script/SConscript')
+
+Return('group')

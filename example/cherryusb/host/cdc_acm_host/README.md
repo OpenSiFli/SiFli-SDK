@@ -1,4 +1,5 @@
-# CDC ACM USB Host 主机示例
+# USB CDC ACM 主机示例
+源码路径：example/cherryusb/host/cdc_acm_host
 
 本示例演示了如何使用CherryUSB栈实现一个CDC ACM（Communication Device Class - Abstract Control Model）主机，用于识别和连接USB CDC ACM设备（如虚拟串口设备）。主机可以枚举CDC ACM设备，接收设备发送的数据，并支持数据的双向传输。
 

@@ -122,7 +122,14 @@ HAL_StatusTypeDef HAL_PCD_Init(PCD_HandleTypeDef *hpcd)
     /* , start software connection */
     {
         uint8_t power = hpcd->Instance->power;
-        //power &= ~USB_POWER_HSENAB;
+        if (hpcd->Init.speed == PCD_SPEED_HIGH)
+        {
+            power |= USB_POWER_HSENAB;
+        }
+        else
+        {
+            power &= ~USB_POWER_HSENAB;
+        }
         power |= USB_POWER_SOFTCONN;
         hpcd->Instance->power = power;
     }
@@ -1300,7 +1307,11 @@ setup:
             struct urequest *req = (struct urequest *)p;
             int i;
 
-            HAL_ASSERT(len <= 12 * sizeof(uint32_t));
+
+            if (len > 16 * sizeof(uint32_t))
+            {
+                len = 8;
+            }
             for (i = 0; i < len; i++)
                 *(p + i) = *fifox;
             HAL_DBG_printf("Setup rx:%d", len);
@@ -1309,7 +1320,8 @@ setup:
             {
                 ep0->csr0 = USB_CSR0_P_SVDSETUPEND;
                 while ((ep0->csr0 & USB_CSR0_P_SETUPEND) != 0);
-                hpcd->ackpend = USB_CSR0_P_SVDRXPKTRDY;
+
+                hpcd->ackpend = USB_CSR0_P_SVDRXPKTRDY | USB_CSR0_FLUSHFIFO;
                 if (req->wLength == 0)
                 {
                     if (req->request_type & USB_REQ_TYPE_DIR_IN)
@@ -1319,7 +1331,7 @@ setup:
                 else if (req->request_type & USB_REQ_TYPE_DIR_IN)
                 {
                     ep0_state_change(hpcd, HAL_PCD_EP0_TX);
-                    ep0->csr0 = USB_CSR0_P_SVDRXPKTRDY;
+                    ep0->csr0 = USB_CSR0_P_SVDRXPKTRDY | USB_CSR0_FLUSHFIFO;
                     while ((ep0->csr0 & USB_CSR0_RXPKTRDY) != 0);
                     hpcd->ackpend = 0;
                 }
@@ -1386,6 +1398,9 @@ static int musbd_stage0_irq(PCD_HandleTypeDef *hpcd, uint8_t int_usb)
         default:
             HAL_ASSERT(0);        // Incorrect resume.
         }
+
+        if (int_usb & USB_INTR_SUSPEND)
+            int_usb &= ~USB_INTR_SUSPEND;
     }
 
     if (int_usb & USB_INTR_SESSREQ)
@@ -1403,6 +1418,25 @@ static int musbd_stage0_irq(PCD_HandleTypeDef *hpcd, uint8_t int_usb)
     {
         HAL_ASSERT(0);
         r = 1;
+    }
+
+    if (int_usb & USB_INTR_RESET)
+    {
+        r = 1;
+        switch (hpcd->phy_state)
+        {
+        case OTG_STATE_B_WAIT_ACON:
+        case OTG_STATE_B_PERIPHERALS:
+        case OTG_STATE_B_IDLE:
+            hpcd->phy_state = OTG_STATE_B_PERIPHERALS;
+            ep0_state_change(hpcd, HAL_PCD_EP0_IDLE);
+            HAL_PCD_ResetCallback(hpcd);
+            break;
+        default:
+            HAL_ASSERT(0);
+        }
+        if (int_usb & USB_INTR_SUSPEND)
+            int_usb &= ~USB_INTR_SUSPEND;
     }
 
     if (int_usb & USB_INTR_SUSPEND)
@@ -1436,22 +1470,6 @@ static int musbd_stage0_irq(PCD_HandleTypeDef *hpcd, uint8_t int_usb)
         HAL_PCD_DisconnectCallback(hpcd);
         hpcd->Instance->devctl = USB_DEVCTL_SESSION;
         hpcd->phy_state = OTG_STATE_B_IDLE;
-    }
-    if (int_usb & USB_INTR_RESET)
-    {
-        r = 1;
-        switch (hpcd->phy_state)
-        {
-        case OTG_STATE_B_WAIT_ACON:
-        case OTG_STATE_B_PERIPHERALS:
-        case OTG_STATE_B_IDLE:
-            hpcd->phy_state = OTG_STATE_B_PERIPHERALS;
-            ep0_state_change(hpcd, HAL_PCD_EP0_IDLE);
-            HAL_PCD_ResetCallback(hpcd);
-            break;
-        default:
-            HAL_ASSERT(0);
-        }
     }
 
     return r;
@@ -1551,6 +1569,11 @@ static HAL_StatusTypeDef PCD_EP_ISR_Handler(PCD_HandleTypeDef *hpcd)
                             (0 << USB_DMACTRL_MODE1_SHIFT)    |
                             (ep->num << USB_DMACTRL_ENDPOINT_SHIFT) |
                             (1 << USB_DMACTRL_IRQENABLE_SHIFT);
+            }
+            else
+            {
+                ep->xfer_count = epn->rxcount;
+                HAL_PCD_DataOutStageCallback(hpcd, ep_num);
             }
 #else
             ep->xfer_count = epn->rxcount;

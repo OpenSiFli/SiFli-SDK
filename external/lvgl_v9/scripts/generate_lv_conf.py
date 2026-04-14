@@ -3,6 +3,7 @@
 import os
 import re
 import argparse
+from pathlib import Path
 
 DIR_SCRIPTS = os.path.dirname(__file__)
 REPO_ROOT = os.path.join(DIR_SCRIPTS, "..")
@@ -48,7 +49,8 @@ def get_args():
     if not os.path.exists(args.template):
         fatal(f"Template file not found at {args.template}")
     if not os.path.exists(args.config):
-        fatal(f"User config file not found at {args.config}")
+        print(f"{args.config} not found. Generating it")
+        Path(args.config).touch()
     if not os.path.exists(args.defaults):
         fatal(f"User defaults not found at {args.defaults}")
 
@@ -90,8 +92,8 @@ def generate_config(path_destination: str, path_source: str, defaults: dict):
 
             print(f"Applying: {key} = {value}")
             keys_used.add(key)
-        elif 'Set it to "1" to enable content' in src_line:
-            dst_line = '#if 1 /*Content enable*/'
+        elif 'Set this to "1" to enable content' in src_line:
+            dst_line = '#if 1 /* Enable content */'
         else:
             dst_line = src_line
 
@@ -99,7 +101,7 @@ def generate_config(path_destination: str, path_source: str, defaults: dict):
 
     if len(keys_used) != len(defaults):
         unused_keys = [k for k in defaults.keys() if k not in keys_used]
-        fatal('The following keys are deprecated:\n  ' + '\n  '.join(unused_keys))
+        print('WARNING: The following keys are deprecated:\n  ' + '\n  '.join(unused_keys))
 
     with open(path_destination, 'w', encoding='utf-8') as f_dst:
         for dst_line in dst_lines:

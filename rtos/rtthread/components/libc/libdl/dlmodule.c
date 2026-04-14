@@ -681,27 +681,31 @@ struct rt_dlmodule *dlmodule_load(const char *filename)
         length = lseek(fd, 0, SEEK_END);
         lseek(fd, 0, SEEK_SET);
 
-        if (length == 0) goto __exit;
+        if (length == 0)
+        {
+            rt_kprintf("dlmodule_load: lseek %d failed!\n", length);
+            goto __exit;
+        }
 
         module_ptr = (uint8_t *) dlm_malloc(length);
         if (!module_ptr)
         {
-            rt_kprintf("%s length=%d malloc fail.\n", __func__, length);
+            rt_kprintf("dlmodule_load: dlm_malloc %d failed!\n", length);
             goto __exit;
         }
 
         if (read(fd, module_ptr, length) != length)
         {
-            rt_kprintf("%s length=%d read fail.\n", __func__, length);
+            rt_kprintf("dlmodule_load: read %d failed!\n", length);
             goto __exit;
         }
-
         /* close file and release fd */
         close(fd);
         fd = -1;
     }
     else
     {
+        rt_kprintf("dlmodule_load: open %s failed!\n", filename);
         goto __exit;
     }
 
@@ -722,7 +726,11 @@ struct rt_dlmodule *dlmodule_load(const char *filename)
     }
 
     module = dlmodule_create();
-    if (!module) goto __exit;
+    if (!module)
+    {
+        rt_kprintf("dlmodule_load: dlmodule_create failed!\n");
+        goto __exit;
+    }
 
     /* set the name of module */
     _dlmodule_set_name(module, filename);
@@ -744,13 +752,22 @@ struct rt_dlmodule *dlmodule_load(const char *filename)
     }
 
     /* check return value */
-    if (ret != RT_EOK) goto __exit;
+    if (ret != RT_EOK)
+    {
+        rt_kprintf("dlmodule_load object failed, type %d!\n", elf_module->e_type);
+        goto __exit;
+    }
 
     /* release module data */
     dlm_free(module_ptr);
 
     /* increase module reference count */
     module->nref ++;
+
+#ifdef PSRAM_CACHE_WB
+    mpu_dcache_clean(module->mem_space, module->mem_size);
+#endif /* PSRAM_CACHE_WB */
+    mpu_icache_invalidate(module->mem_space, module->mem_size);
 
     /* set module initialization and cleanup function */
     module->init_func = dlsym(module, "module_init");

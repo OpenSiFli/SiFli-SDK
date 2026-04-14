@@ -8,7 +8,10 @@
 #define __WEBRTC_MEM_H
 
 #include <rtthread.h>
+
+#ifdef AUDIO
 #include "audio_mem.h"
+#endif
 
 #if defined (SYS_HEAP_IN_PSRAM) && defined (AUDIO_MEM_ALLOC)
     #undef malloc

@@ -58,11 +58,11 @@
 #define AUDIO_IN_PACKET ((uint32_t)((AUDIO_FREQ * 2 * IN_CHANNEL_NUM) / 1000))
 
 #define USB_AUDIO_CONFIG_DESC_SIZ                                              \
-  (unsigned long)(9 + AUDIO_AC_DESCRIPTOR_INIT_LEN(1) +                        \
+  (unsigned long)(9 + AUDIO_AC_DESCRIPTOR_LEN(1) +                             \
                   AUDIO_SIZEOF_AC_INPUT_TERMINAL_DESC +                        \
                   AUDIO_SIZEOF_AC_FEATURE_UNIT_DESC(IN_CHANNEL_NUM, 1) +       \
                   AUDIO_SIZEOF_AC_OUTPUT_TERMINAL_DESC +                       \
-                  AUDIO_AS_DESCRIPTOR_INIT_LEN(1))
+                  AUDIO_AS_DESCRIPTOR_LEN(1))
 
 #define AUDIO_AC_SIZ                                                           \
   (AUDIO_SIZEOF_AC_HEADER_DESC(1) + AUDIO_SIZEOF_AC_INPUT_TERMINAL_DESC +      \

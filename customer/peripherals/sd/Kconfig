@@ -1,0 +1,7 @@
+menu "SD Card"
+
+config SD_INSERT_DETECT_PIN
+    int  "SD Card Insert Detect Pin"
+    default -1
+
+endmenu

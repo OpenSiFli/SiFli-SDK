@@ -8,6 +8,10 @@ Source code path: example/bt/music_sink
 + eh-lb52x
 + eh-lb56x
 + eh-lb58x
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+
 
 ## Overview
 <!-- Example introduction -->

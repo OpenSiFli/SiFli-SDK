@@ -1,14 +1,13 @@
 # ELM_RW示例
+源码路径：example/misc/elm_rw
 ## 概述
 例程展示了使用ELM进行文件数据读传输操作，搭配FsrwTool进行可视化文件传输。
 
 ## 支持的开发板
 例程可以运行在以下开发板.<br>
-* sf32lb52-lcd_n16r8
-* sf32lb58-lcd_n16r64n4
-* 56_devkit_lcd
-* em-lb586_nand
-
++ sf32lb52-lcd系列
++ sf32lb56-lcd系列
++ sf32lb58-lcd系列
 
 **注意：** 一般而言，例程都是运行芯片的HCPU，"eh-lb563_v2" 等效于"eh-lb563_v2_hcpu"，如果想在LCPU运行例程，可以使用"eh-lb563_v2_lcpu"。目前USB功能暂时只支持在HCPU上运行。
 

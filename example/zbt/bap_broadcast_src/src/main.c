@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2022-2024 Nordic Semiconductor ASA
+ * Copyright 2023 NXP
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "bap_broadcast_src_api.h"
 #include <audio_server.h>
 #include <audio_mp3ctrl.h>

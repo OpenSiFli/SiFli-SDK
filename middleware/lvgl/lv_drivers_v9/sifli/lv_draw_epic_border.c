@@ -13,6 +13,7 @@
 
 #if LV_USE_DRAW_EPIC
 #include "lv_epic_utils.h"
+#include "../../lvgl_private.h"
 #include "lv_api_map_v8.h"
 
 
@@ -44,10 +45,10 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area, const lv_area_t *inner_area,
+static void draw_border_complex(lv_draw_task_t *draw_task, const lv_area_t *outer_area, const lv_area_t *inner_area,
                                 lv_coord_t rout, lv_coord_t rin, lv_color_t color, lv_opa_t opa);
 
-static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area, const lv_area_t *inner_area,
+static void draw_border_simple(lv_draw_task_t *draw_task, const lv_area_t *outer_area, const lv_area_t *inner_area,
                                lv_color_t color, lv_opa_t opa);
 
 
@@ -63,7 +64,7 @@ static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer
  *   GLOBAL FUNCTIONS
  **********************/
 
-void lv_draw_epic_border(lv_draw_unit_t *draw_unit, const lv_draw_border_dsc_t *dsc, const lv_area_t *coords)
+void lv_draw_epic_border(lv_draw_task_t *draw_task, const lv_draw_border_dsc_t *dsc, const lv_area_t *coords)
 {
     if (dsc->opa <= LV_OPA_MIN) return;
     if (dsc->width == 0) return;
@@ -88,11 +89,11 @@ void lv_draw_epic_border(lv_draw_unit_t *draw_unit, const lv_draw_border_dsc_t *
 
     if (rout == 0 && rin == 0)
     {
-        draw_border_simple(draw_unit, coords, &area_inner, dsc->color, dsc->opa);
+        draw_border_simple(draw_task, coords, &area_inner, dsc->color, dsc->opa);
     }
     else
     {
-        draw_border_complex(draw_unit, coords, &area_inner, rout, rin, dsc->color, dsc->opa);
+        draw_border_complex(draw_task, coords, &area_inner, rout, rin, dsc->color, dsc->opa);
     }
 
 }
@@ -101,14 +102,14 @@ void lv_draw_epic_border(lv_draw_unit_t *draw_unit, const lv_draw_border_dsc_t *
  *   STATIC FUNCTIONS
  **********************/
 
-void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area, const lv_area_t *inner_area,
+void draw_border_complex(lv_draw_task_t *draw_task, const lv_area_t *outer_area, const lv_area_t *inner_area,
                          lv_coord_t rout, lv_coord_t rin, lv_color_t color, lv_opa_t opa)
 {
 #if LV_DRAW_SW_COMPLEX
     /*Get clipped draw area which is the real draw area.
      *It is always the same or inside `coords`*/
     lv_area_t draw_area;
-    if (!lv_area_intersect(&draw_area, outer_area, draw_unit->clip_area)) return;
+    if (!lv_area_intersect(&draw_area, outer_area, &draw_task->clip_area)) return;
     int32_t draw_area_w = lv_area_get_width(&draw_area);
 
     lv_draw_sw_blend_dsc_t blend_dsc;
@@ -171,7 +172,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
         blend_area.x2 = core_area.x2;
         blend_area.y1 = outer_area->y1;
         blend_area.y2 = inner_area->y1 - 1;
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 
     if (bottom_side && split_hor)
@@ -180,7 +181,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
         blend_area.x2 = core_area.x2;
         blend_area.y1 = inner_area->y2 + 1;
         blend_area.y2 = outer_area->y2;
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 
     /*If the border is very thick and the vertical sides overlap horizontally draw a single rectangle*/
@@ -190,7 +191,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
         blend_area.x2 = outer_area->x2;
         blend_area.y1 = core_area.y1;
         blend_area.y2 = core_area.y2;
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
     else
     {
@@ -200,7 +201,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
             blend_area.x2 = inner_area->x1 - 1;
             blend_area.y1 = core_area.y1;
             blend_area.y2 = core_area.y2;
-            lv_epic_draw_blend(draw_unit, &blend_dsc);
+            lv_epic_draw_blend(draw_task, &blend_dsc);
         }
 
         if (right_side)
@@ -209,7 +210,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
             blend_area.x2 = outer_area->x2;
             blend_area.y1 = core_area.y1;
             blend_area.y2 = core_area.y2;
-            lv_epic_draw_blend(draw_unit, &blend_dsc);
+            lv_epic_draw_blend(draw_task, &blend_dsc);
         }
     }
 
@@ -236,14 +237,14 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
             {
                 blend_area.y1 = top_y;
                 blend_area.y2 = top_y;
-                lv_epic_draw_blend(draw_unit, &blend_dsc);
+                lv_epic_draw_blend(draw_task, &blend_dsc);
             }
 
             if (bottom_y <= draw_area.y2)
             {
                 blend_area.y1 = bottom_y;
                 blend_area.y2 = bottom_y;
-                lv_epic_draw_blend(draw_unit, &blend_dsc);
+                lv_epic_draw_blend(draw_task, &blend_dsc);
             }
         }
     }
@@ -264,7 +265,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
 
                     lv_memset(mask_buf, 0xff, blend_w);
                     blend_dsc.mask_res = lv_draw_sw_mask_apply(mask_list, mask_buf, blend_area.x1, h, blend_w);
-                    lv_epic_draw_blend(draw_unit, &blend_dsc);
+                    lv_epic_draw_blend(draw_task, &blend_dsc);
                 }
             }
 
@@ -277,7 +278,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
 
                     lv_memset(mask_buf, 0xff, blend_w);
                     blend_dsc.mask_res = lv_draw_sw_mask_apply(mask_list, mask_buf, blend_area.x1, h, blend_w);
-                    lv_epic_draw_blend(draw_unit, &blend_dsc);
+                    lv_epic_draw_blend(draw_task, &blend_dsc);
                 }
             }
         }
@@ -300,7 +301,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
 
                     lv_memset(mask_buf, 0xff, blend_w);
                     blend_dsc.mask_res = lv_draw_sw_mask_apply(mask_list, mask_buf, blend_area.x1, h, blend_w);
-                    lv_epic_draw_blend(draw_unit, &blend_dsc);
+                    lv_epic_draw_blend(draw_task, &blend_dsc);
                 }
             }
 
@@ -313,7 +314,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
 
                     lv_memset(mask_buf, 0xff, blend_w);
                     blend_dsc.mask_res = lv_draw_sw_mask_apply(mask_list, mask_buf, blend_area.x1, h, blend_w);
-                    lv_epic_draw_blend(draw_unit, &blend_dsc);
+                    lv_epic_draw_blend(draw_task, &blend_dsc);
                 }
             }
         }
@@ -325,7 +326,7 @@ void draw_border_complex(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area,
 
 #endif /*LV_DRAW_SW_COMPLEX*/
 }
-static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer_area, const lv_area_t *inner_area,
+static void draw_border_simple(lv_draw_task_t *draw_task, const lv_area_t *outer_area, const lv_area_t *inner_area,
                                lv_color_t color, lv_opa_t opa)
 {
     lv_area_t a;
@@ -347,7 +348,7 @@ static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer
     a.y2 = inner_area->y1 - 1;
     if (top_side)
     {
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 
     /*Bottom*/
@@ -355,7 +356,7 @@ static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer
     a.y2 = outer_area->y2;
     if (bottom_side)
     {
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 
     /*Left*/
@@ -365,7 +366,7 @@ static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer
     a.y2 = (bottom_side) ? inner_area->y2 : outer_area->y2;
     if (left_side)
     {
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 
     /*Right*/
@@ -373,7 +374,7 @@ static void draw_border_simple(lv_draw_unit_t *draw_unit, const lv_area_t *outer
     a.x2 = outer_area->x2;
     if (right_side)
     {
-        lv_epic_draw_blend(draw_unit, &blend_dsc);
+        lv_epic_draw_blend(draw_task, &blend_dsc);
     }
 }
 

@@ -86,7 +86,7 @@ extern "C" {
 /* card try timeout, unit: ms */
 #define CARD_TRY_TIMES                      3000
 #define CARD_TRY_TIMES_ACMD41               800
-#define CARD_WAIT_TOKEN_TIMES               800
+#define CARD_WAIT_TOKEN_TIMES               (1500 * 2)
 #define MHZ(x)                   ((x##UL) * 1000000UL)
 #define CARD_MAX_HZ              MHZ        (48)   /* "Max": controller physical limit, 48MHz */
 #define CARD_SAFE_HZ             MHZ        (12)   /* "Safe": fallback frequency, 12MHz */

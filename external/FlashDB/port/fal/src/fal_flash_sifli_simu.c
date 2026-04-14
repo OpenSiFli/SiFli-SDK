@@ -13,7 +13,7 @@
 #define PAGE_SIZE     8192
 
 
-static FILE *fp_flash1, *fp_flash2, *fp_flash3, *fp_flash4;
+static FILE *fp_flash1, *fp_flash2, *fp_flash3, *fp_flash4, *fp_sd1, *fp_sd2;
 static uint8_t flash_buf[PAGE_SIZE];
 
 void file_expand(FILE *fp, int size)
@@ -93,6 +93,14 @@ static int init(long base)
             }
         }
     }
+	else if (base == fal_sdmmc1.addr)
+	{
+        /* do nothing */
+	}
+	else if (base == fal_sdmmc2.addr)
+	{
+        /* do nothing */
+	}    
     else
         RT_ASSERT(0);
     return 1;
@@ -118,6 +126,10 @@ FILE *get_fp(long base)
     else if (base == nor_flash3.addr)
     {
         fp = fp_flash3;
+    }
+    else if (base == nor_flash4.addr)
+    {
+        fp = fp_flash4;
     }
     else
     {
@@ -239,6 +251,39 @@ static int erase4(long offset, size_t size)
     return erase(nor_flash4.addr, offset, size);
 }
 
+static int sdmmc1_init(void)
+{
+	return init(fal_sdmmc1.addr);
+}
+static int sdmmc1_read(long offset, uint8_t *buf, size_t size)
+{
+	return 0;
+}
+static int sdmmc1_write(long offset, const uint8_t *buf, size_t size)
+{
+	return 0;
+}
+static int sdmmc1_erase(long offset, size_t size)
+{
+	return 0;
+}
+
+static int sdmmc2_init(void)
+{
+	return init(fal_sdmmc2.addr);
+}
+static int sdmmc2_read(long offset, uint8_t *buf, size_t size)
+{
+	return 0;
+}
+static int sdmmc2_write(long offset, const uint8_t *buf, size_t size)
+{
+	return 0;
+}
+static int sdmmc2_erase(long offset, size_t size)
+{
+	return 0;
+}
 
 const struct fal_flash_dev nor_flash1 =
 {
@@ -281,6 +326,31 @@ const struct fal_flash_dev nor_flash4 =
     .blk_size = 128 * 1024,
     .sector_size = 2048,
     .ops = {init4, read4, write4, erase4},
+    .write_gran = 32
+};
+
+const struct fal_flash_dev fal_sdmmc1 =
+{
+    .name = "sd0",
+    .addr = SDMMC1_MEM_BASE,
+    .len = (0x100000000 >> 9),
+    .blk_size = 512,
+    .sector_size = 512,
+    .nand_flag   = 2,
+    .ops = {sdmmc1_init, sdmmc1_read, sdmmc1_write, sdmmc1_erase},
+    .write_gran = 32
+};
+
+
+const struct fal_flash_dev fal_sdmmc2 =
+{
+    .name = "sd1",
+    .addr = SDMMC2_MEM_BASE,
+    .len = (0x100000000 >> 9),
+    .blk_size = 512,
+    .sector_size = 512,
+    .nand_flag   = 2,
+    .ops = {sdmmc2_init, sdmmc2_read, sdmmc2_write, sdmmc2_erase},
     .write_gran = 32
 };
 

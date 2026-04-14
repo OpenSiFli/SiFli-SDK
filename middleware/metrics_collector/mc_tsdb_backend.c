@@ -85,8 +85,9 @@ void *mc_backend_init(const char *name, uint32_t max_size)
     fdb_tsdb_control(tsdb, FDB_TSDB_CTRL_SET_FILE_MODE, (void *)&file_mode);
     if (0 != access(name, 0) && 0 != mkdir(name, 0))
     {
+        rt_free(tsdb);
         rt_kprintf("create db %s fail\n", name);
-        return -1;
+        return NULL;
     }
 
 #endif /* FDB_USING_FILE_MODE */

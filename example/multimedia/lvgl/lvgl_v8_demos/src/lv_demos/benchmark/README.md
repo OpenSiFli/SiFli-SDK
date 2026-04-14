@@ -1,4 +1,5 @@
 # 基准测试演示
+源码路径：example/multimedia/lvgl/lvgl_v8_demos/src/lv_demos/benchmark
 
 ## 概述
 

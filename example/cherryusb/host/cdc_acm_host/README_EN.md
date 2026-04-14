@@ -1,4 +1,4 @@
-# CDC ACM USB Host Example
+# USB CDC ACM Host Example
 
 This example demonstrates how to implement a CDC ACM (Communication Device Class - Abstract Control Model) host using the CherryUSB stack to identify and connect to USB CDC ACM devices (such as virtual serial port devices). The host can enumerate CDC ACM devices, receive data from devices, and support bidirectional data transfer.
 

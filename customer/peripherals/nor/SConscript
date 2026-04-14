@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = ["nor_cfg.c"]
+
+if GetDepend("NOR_EN25QX128A_ENABLED"):
+    src += ["en25qx128a.c"]
+
+CPPPATH = [cwd]
+group = DefineGroup('Drivers', src, depend = ['CUSTOM_NOR_ENABLED'], CPPPATH = CPPPATH)
+
+Return('group')

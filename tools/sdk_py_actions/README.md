@@ -1,44 +1,46 @@
 # sdk.py extensions
-Python modules (subdirectories and files) in this directory named `[your_extension]_ext` will be loaded as sdk.py extensions.
-If you want to provide extra extensions just provide `;` separated list of directories with extensions in  `SIFLI_SDK_EXTRA_ACTIONS_PATH`. Extensions will be loaded in alphanumeric order.
-Command line arguments parsing and extension mechanism is implemented on top of [Click](https://click.palletsprojects.com/en/5.x/) (versions >=5.0 are supported).
 
-They should define a function `action_extensions(base_actions, project_path)` where:
+Python modules in this directory named `*_ext.py` are auto-loaded as sdk.py extensions.
 
-- base_actions - dictionary with actions that are already available for sdk.py
-- project_path - working dir, may be defaulted to `os.getcwd()`
+## Extension API
 
-This function have to return a dict with 3 possible keys:
+Each extension module must provide:
+
+- `EXTENSION_ID` (string)
+- `EXTENSION_VERSION` (string)
+- `EXTENSION_API_VERSION = 2`
+- `MIN_SDK_VERSION` (string or `None`)
+- `register(registry)` function
+
+Example:
 
 ```python
-{
-    # Additional options that will be available from id
-    "global_options": [{
-        "names": ["--option-name"],
-        "help": "Help for option --option-name.",
-    }],
-    # List of functions that will have access to full app context, and can mangle with arguments
-    "global_action_callbacks": [global_callback],
-    # Additional subcommands for sdk.py
-    "actions": {
-        "subcommand_name": {
-            "callback": subcommand_callback,
-            "help": "Help for subcommand.",
-        },
-    },
-}
+from sdk_py_actions.cli.registry import CommandRegistry
+
+EXTENSION_ID = "demo"
+EXTENSION_VERSION = "1.0.0"
+EXTENSION_API_VERSION = 2
+MIN_SDK_VERSION = None
+
+
+def register(registry: CommandRegistry) -> None:
+    registry.group(path="demo", help="Demo commands")
+    registry.command(
+        path="demo/hello",
+        callback=hello,
+        help="Print hello",
+        options=[{"names": ["--name"], "default": "world"}],
+    )
+
+
+def hello(sdk_ctx, name: str) -> None:
+    print(f"hello {name}")
 ```
 
-It is important to note that due to the static checking mechanism of `click`, the corresponding callback function signature must include parameters of the appropriate types. Otherwise, an error will occur before the callback is executed.
+## External extension path
 
-Where function `global_callback(ctx, global_args, tasks)` accepts 3 arguments:
+Use `SIFLI_SDK_EXTRA_ACTIONS_PATH` to provide extra extension directories.
+Multiple directories should be separated by `;`.
 
-- ctx - [Click context](https://click.palletsprojects.com/en/5.x/api/#context)
-- global_args - dictionary of all available global arguments
-- tasks - list of Task objects
-
-And `subcommand_callback(subcommand_name, ctx, args)` accepts 3 arguments:
-
-- subcommand_name - name of subcommand
-- ctx - [Click context](https://click.palletsprojects.com/en/5.x/api/#context)
-- args - list of command's arguments
+Built-in extension load failures are fatal.
+External extension load failures are warnings by default, and fatal with `--strict-extensions`.

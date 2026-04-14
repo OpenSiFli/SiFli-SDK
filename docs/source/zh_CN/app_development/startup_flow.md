@@ -216,10 +216,12 @@ Config Clock修改的设置包括：
 * PERI\_LDO\_LDO33\_LDO3\_SET\_VOUT
 * AON\_BG\_BUF\_VOS\_POLAR
 * AON\_BG\_BUF\_VOS\_TRIM
-* HXT\_CR1\_CBANK\_SEL
+* HXT\_CR1\_CBANK\_SEL 
 
-加载校准值的代码可能运行在Flash或PSRAM上。
+HAL_PMU_Init初始化的PMU参数详情见 drivers/hal/bf0_hal_pmu.c 中的 HAL_PMU_Init 函数。
+
 ```
+
 ```{only} SF32LB55X
 Config Clock修改的设置包括：
 

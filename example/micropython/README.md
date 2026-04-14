@@ -1,4 +1,5 @@
 # micropython示例
+源码路径：example/micropython
 ```{warning}
 未验证
 ```

@@ -14,6 +14,10 @@
 #include "../misc/lv_anim.h"
 #include "../misc/lv_math.h"
 
+#ifdef DRV_EPIC_NEW_API
+extern bool lv_gpu_is_enabled(void);
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -461,7 +465,6 @@ static void draw_indic(lv_event_t * e)
     lv_opa_t border_opa = draw_rect_dsc.border_opa;
     draw_rect_dsc.border_opa = LV_OPA_TRANSP;
     draw_rect_dsc.shadow_opa = LV_OPA_TRANSP;
-    draw_rect_dsc.radius = bg_radius;
     /*Get the max possible indicator area. The gradient should be applied on this*/
     lv_area_t mask_indic_max_area;
     lv_area_copy(&mask_indic_max_area, &bar_coords);
@@ -478,21 +481,20 @@ static void draw_indic(lv_event_t * e)
         mask_indic_max_area.x2 = mask_indic_max_area.x1 + LV_BAR_SIZE_MIN;
     }
 
-    lv_draw_mask_radius_param_t mask_indic_param;
-    int16_t mask_indic_id = 0;
-
+#ifdef DRV_EPIC_NEW_API
     lv_coord_t ind_radius = lv_obj_get_style_radius(obj, LV_PART_INDICATOR);
-    if (bg_radius && ind_radius <= bg_radius)
-    {
+    if(lv_gpu_is_enabled() && bg_radius && ind_radius <= bg_radius) {
         draw_rect_dsc.radius = bg_radius;
-        const lv_area_t *org_clip = draw_ctx->clip_area;
+        const lv_area_t * org_clip = draw_ctx->clip_area;
         draw_ctx->clip_area = &bar->indic_area;
 
 #if LV_DRAW_COMPLEX
-        /*Create a mask to the current indicator area to see only this part from the whole gradient.*/
+        /*EPIC new API only handles map masks here, so clip to the actual indicator area.*/
+        lv_draw_mask_radius_param_t mask_indic_param;
         lv_draw_mask_radius_init(&mask_indic_param, &mask_indic_max_area, draw_rect_dsc.radius, false);
-        mask_indic_id = lv_draw_mask_add(&mask_indic_param, NULL);
+        int16_t mask_indic_id = lv_draw_mask_add(&mask_indic_param, NULL);
 #endif
+
         lv_draw_rect(draw_ctx, &draw_rect_dsc, &mask_indic_max_area);
         draw_rect_dsc.border_opa = border_opa;
         draw_rect_dsc.shadow_opa = shadow_opa;
@@ -503,24 +505,35 @@ static void draw_indic(lv_event_t * e)
         draw_rect_dsc.shadow_opa = LV_OPA_TRANSP;
         lv_draw_rect(draw_ctx, &draw_rect_dsc, &bar->indic_area);
         draw_ctx->clip_area = org_clip;
-    }
-    else
-    {
-#if LV_DRAW_COMPLEX
-        /*Create a mask to the current indicator area to see only this part from the whole gradient.*/
-        lv_draw_mask_radius_init(&mask_indic_param, &bar->indic_area, draw_rect_dsc.radius, false);
-        mask_indic_id = lv_draw_mask_add(&mask_indic_param, NULL);
-#endif
-        lv_draw_rect(draw_ctx, &draw_rect_dsc, &bar->indic_area);
-        draw_rect_dsc.border_opa = border_opa;
-        draw_rect_dsc.shadow_opa = shadow_opa;
 
-        /*Draw the border*/
-        draw_rect_dsc.bg_opa = LV_OPA_TRANSP;
-        draw_rect_dsc.bg_img_opa = LV_OPA_TRANSP;
-        draw_rect_dsc.shadow_opa = LV_OPA_TRANSP;
-        lv_draw_rect(draw_ctx, &draw_rect_dsc, &bar->indic_area);
+#if LV_DRAW_COMPLEX
+        lv_draw_mask_free_param(&mask_indic_param);
+        lv_draw_mask_free_param(&mask_bg_param);
+        lv_draw_mask_remove_id(mask_indic_id);
+        lv_draw_mask_remove_id(mask_bg_id);
+#endif
+
+        lv_event_send(obj, LV_EVENT_DRAW_PART_END, &part_draw_dsc);
+        return;
     }
+#endif
+
+#if LV_DRAW_COMPLEX
+    /*Create a mask to the current indicator area to see only this part from the whole gradient.*/
+    lv_draw_mask_radius_param_t mask_indic_param;
+    lv_draw_mask_radius_init(&mask_indic_param, &bar->indic_area, draw_rect_dsc.radius, false);
+    int16_t mask_indic_id = lv_draw_mask_add(&mask_indic_param, NULL);
+#endif
+
+    lv_draw_rect(draw_ctx, &draw_rect_dsc, &mask_indic_max_area);
+    draw_rect_dsc.border_opa = border_opa;
+    draw_rect_dsc.shadow_opa = shadow_opa;
+
+    /*Draw the border*/
+    draw_rect_dsc.bg_opa = LV_OPA_TRANSP;
+    draw_rect_dsc.bg_img_opa = LV_OPA_TRANSP;
+    draw_rect_dsc.shadow_opa = LV_OPA_TRANSP;
+    lv_draw_rect(draw_ctx, &draw_rect_dsc, &bar->indic_area);
 
 #if LV_DRAW_COMPLEX
     lv_draw_mask_free_param(&mask_indic_param);

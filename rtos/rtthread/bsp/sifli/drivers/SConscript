@@ -54,15 +54,13 @@ if GetDepend(['BSP_USING_COMP']):
 if GetDepend(['RT_USING_CAN']):
     src += ['drv_can.c']
 
-if GetDepend('BSP_USING_SDRAM'):
-    src += ['drv_sdram.c']
-
 if GetDepend('BSP_USING_ONCHIP_RTC'):
     src += ['drv_rtc.c']
 
 if GetDepend(['BSP_USING_SPI_FLASH']):
     src += ['drv_spi_flash.c']
     src += ['drv_spi_nand.c']
+if GetDepend(['BSP_USING_SPI_FLASH']) or GetDepend(['BSP_USING_SYS_CFG']):    
     src += ['drv_sys_cfg.c']
 
 if GetDepend(['BSP_USING_EXT_DMA']):
@@ -76,9 +74,6 @@ if GetDepend(['BSP_USING_SD_LINE']):
 
 if GetDepend(['BSP_USING_SDHCI']):
     src += ['drv_sdhci.c']
-
-if GetDepend(['BSP_USING_HWMAILBOX']):
-    src += ['drv_mailbox.c']
 
 if GetDepend(['BSP_USING_I2S']):
     src += ['drv_i2s_audio.c']
@@ -139,6 +134,9 @@ if GetDepend(['BSP_USING_HW_AES']):
 
 if GetDepend(['BSP_USING_ENCODER']):
     src += ['drv_encoder.c']
+
+if GetDepend(['BSP_USING_SWITCH_MPI2_SDIO']):
+    src += ['drv_switch_mpi2_sdio.c']
 
 src += ['drv_common.c','drv_dbg.c']
 path =  [cwd]

@@ -1,0 +1,11 @@
+import os
+from building import *
+
+cwd = GetCurrentDir() # get current dir path
+
+# Add source code
+src = Glob('*.c')
+inc = [cwd]
+group = DefineGroup('BT_PAN', src, depend = ['CFG_PAN'], CPPPATH = inc)
+
+Return('group')

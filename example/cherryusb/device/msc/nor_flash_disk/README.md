@@ -1,6 +1,6 @@
-# usb_audio_class_example
+# USB 大容量存储设备示例（NOR FLASH）
 
-源码路径：example\cherryusb\device\nor_flash_disk
+源码路径：example/cherryusb/device/msc/nor_flash_disk
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->

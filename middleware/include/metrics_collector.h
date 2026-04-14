@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 #ifndef MC_MAX_DATA_LEN
-#define MC_MAX_DATA_LEN (256)
+#define MC_MAX_DATA_LEN (512)
 #endif /* MC_MAX_DATA_LEN */
 
 

@@ -218,6 +218,8 @@ int rt_flash_get_pass_id(uint32_t addr);
 */
 int rt_flash_get_uid(uint32_t addr, uint8_t *uid, uint32_t length);
 
+void rt_flash_enable_lock(uint8_t en);
+
 #ifdef BSP_USING_SPI_NAND
 
 /**
@@ -267,6 +269,18 @@ int rt_nand_erase(uint32_t addr, int size);
 int rt_nand_read_page(uint32_t addr, uint8_t *data, int size, uint8_t *spare, int spare_len);
 
 /**
+* @brief  Read nand flash data and return whether correctable ecc error happens.
+* @param[in]  addr, flash address need to read.
+* @param[out] data, output data buffer.
+* @param[in]  size, data size to read.
+* @param[out] spare, buffer to save oob data.
+* @param[in]  spare_len, oob data size to read.
+* @param[out] ecc_corrected whether ecc error is corrected
+* @retval read data size.
+*/
+int rt_nand_read_page2(uint32_t addr, uint8_t *data, int size, uint8_t *spare, int spare_len, rt_bool_t *ecc_corrected);
+
+/**
 * @brief  Write nand flash data.
 * @param[in]  addr, flash address need to write.
 * @param[in]  buf, input data buffer.
@@ -290,6 +304,16 @@ int rt_nand_erase_block(uint32_t addr);
 * @retval NAND MID if success, 0 if fail.
 */
 int rt_nand_read_id(uint32_t addr);
+
+/**
+* @brief  lock nand operation
+*/
+void rt_nand_lock();
+
+/**
+* @brief  unlock nand operation
+*/
+void rt_nand_unlock();
 
 /**
 * @brief  Get nand full valid size (byte).

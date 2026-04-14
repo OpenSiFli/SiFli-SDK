@@ -11,6 +11,9 @@ bf0_ap_hal_msp.c
 main.c
 ''')
 
+if GetDepend('SD_BL_MODE'):
+    src += ['sd_emmc_drv.c', 'sd_emmc_ops.c']
+
 path =  [cwd]
 path += [cwd + '/ports']
 

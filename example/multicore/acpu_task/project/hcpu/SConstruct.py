@@ -16,6 +16,9 @@ def create_env(proj_path = None):
     acpu_proj_name = 'acpu'
     AddChildProj(acpu_proj_name, acpu_proj_path, False, core="ACPU")
     
+    # Add LCPU project
+    AddLCPU(SIFLI_SDK, rtconfig.CHIP)
+
     if proj_path is None:
         AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
     

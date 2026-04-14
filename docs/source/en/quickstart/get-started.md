@@ -24,6 +24,14 @@ To use SiFli-SDK on SF32, please install the following software:
 
 To install the required software, SiFli provides the following methods, you can choose one of them as needed.
 
+#### Install via VSCode Plugin (Recommended)
+
+Refer to the installation documentation: [CodeKit-Doc](https://docs.sifli.com/projects/codekit/get-started/)
+
+Plugin download: Click to jump to [SiFli-SDK-CodeKit](https://marketplace.visualstudio.com/items?itemName=SiFli.SiFli-SDK-CodeKit)
+
+Alternatively, search for the "SiFli-SDK-CodeKit" plugin in VSCode and install it.
+
 #### Manual Installation
 
 Refer to manual installation: [Manual Installation](install/index.md)

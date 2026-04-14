@@ -18,6 +18,8 @@ extern "C" {
 #include "ffmpeg/lv_example_ffmpeg.h"
 #include "freetype/lv_example_freetype.h"
 #include "gif/lv_example_gif.h"
+#include "gltf/lv_example_gltf.h"
+#include "gstreamer/lv_example_gstreamer.h"
 #include "lodepng/lv_example_lodepng.h"
 #include "libpng/lv_example_libpng.h"
 #include "qrcode/lv_example_qrcode.h"
@@ -25,6 +27,7 @@ extern "C" {
 #include "tjpgd/lv_example_tjpgd.h"
 #include "libjpeg_turbo/lv_example_libjpeg_turbo.h"
 #include "tiny_ttf/lv_example_tiny_ttf.h"
+#include "svg/lv_example_svg.h"
 
 /*********************
  *      DEFINES

@@ -1,4 +1,4 @@
-# Multimedia
+# Audio document
 ## Standard
    When developing third-party libraries, avoid directly calling interfaces like audio_open() in the library, as header files and structures may change. Instead, encapsulate an adaptor to invoke multimedia interfaces. After the library is released, some structures in the header files may be modified. Only recompile the adaptor code without recompiling the released library.
 ## 1 Audio
@@ -701,7 +701,7 @@ The EQ parameters are in drv_audprc.c. They should ideally be generated using th
 mic_gain
 pdm_gain (if PDM is configured)
 Sometimes, volume is manually adjusted. Volume testing must meet hardware requirements; the maximum volume should not exceed the speaker's power to avoid damaging it. The maximum volume should be determined through hardware testing to meet power requirements.
-
+```c
 int8_t g_adc_volume = 0; // mic gain
 /*Maximum volume protection for phone calls, unit: 0.5db.
 If the values in g_tel_vol_level[] multiplied by 2 exceed this value, this value will be used as the speaker gain.
@@ -713,15 +713,4 @@ If the values in g_music_vol_level[] multiplied by 2 exceed this value, this val
 */
 int8_t g_music_max_vol = 0;
 int8_t g_music_vol_level[16] = {-55, -34, -32, -30, -28, -26, -24, -22, -20, -17, -14, -11, -10, -8, -6, -4};
-
-## how to dump audio data
-   ......
-
-## Video
-The video uses ffmpeg, so ffmpeg needs to be configured; see exernal/ffmpeg/Kconfig. It encapsulates interfaces for using ffmpeg. To improve playback speed, the MP4 file encoding format needs to be converted using the video tools provided by sifli. 
-
-[GraphicsTool](https://wiki.sifli.com/tools/index.html)
-
-It also supports automatically recognizing videos in sifli's custom ezip format, for which the MP4 file needs to be converted to ezip using the tools provided by sifli.For API reference, see the descriptions in media_dec.h.
-    
-
+```

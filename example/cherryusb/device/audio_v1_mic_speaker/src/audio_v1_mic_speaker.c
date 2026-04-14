@@ -47,15 +47,15 @@
     ((uint32_t)((AUDIO_MIC_FREQ * AUDIO_MIC_FRAME_SIZE_BYTE * 1) / 1000))
 
 #define USB_AUDIO_CONFIG_DESC_SIZ                                              \
-    (unsigned long)(9 + AUDIO_AC_DESCRIPTOR_INIT_LEN(2) +                      \
+    (unsigned long)(9 + AUDIO_AC_DESCRIPTOR_LEN(2) +                           \
                     AUDIO_SIZEOF_AC_INPUT_TERMINAL_DESC +                      \
                     AUDIO_SIZEOF_AC_FEATURE_UNIT_DESC(1, 1) +                  \
                     AUDIO_SIZEOF_AC_OUTPUT_TERMINAL_DESC +                     \
                     AUDIO_SIZEOF_AC_INPUT_TERMINAL_DESC +                      \
                     AUDIO_SIZEOF_AC_FEATURE_UNIT_DESC(1, 1) +                  \
                     AUDIO_SIZEOF_AC_OUTPUT_TERMINAL_DESC +                     \
-                    AUDIO_AS_DESCRIPTOR_INIT_LEN(1) +                          \
-                    AUDIO_AS_DESCRIPTOR_INIT_LEN(1))
+                    AUDIO_AS_DESCRIPTOR_LEN(1) +                               \
+                    AUDIO_AS_DESCRIPTOR_LEN(1))
 
 #define AUDIO_AC_SIZ                                                           \
     (AUDIO_SIZEOF_AC_HEADER_DESC(2) + AUDIO_SIZEOF_AC_INPUT_TERMINAL_DESC +    \

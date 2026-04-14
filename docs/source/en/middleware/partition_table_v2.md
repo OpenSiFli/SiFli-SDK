@@ -27,10 +27,11 @@ Each element in the list (excluding the header) corresponds to a memory block. F
 
 * `offset`: The offset in bytes (hexadecimal).
 * `max_size`: The size in bytes (hexadecimal).
-* `tags`: A list of tags. Each tag is used to generate corresponding macros representing the partition’s size and starting address. For example, a tag `FLASH_BOOT_LOADER` generates `FLASH_BOOT_LOADER_START_ADDR`, `FLASH_BOOT_LOADER_OFFSET`, and `FLASH_BOOT_LOADER_SIZE` macros. `START_ADDR` is `base + offset`, `OFFSET` equals the `offset` value, and `SIZE` equals the `max_size` value.
+* `tags`: Optional. A list of tags. Each tag is used to generate corresponding macros representing the partition’s size and starting address. For example, a tag `FLASH_BOOT_LOADER` generates `FLASH_BOOT_LOADER_START_ADDR`, `FLASH_BOOT_LOADER_OFFSET`, and `FLASH_BOOT_LOADER_SIZE` macros. `START_ADDR` is `base + offset`, `OFFSET` equals the `offset` value, and `SIZE` equals the `max_size` value.
 * `name`: Partition name
-* `type`: Partition type
-* `custom`: A custom macro dictionary (optional).
+* `type`: Optional. Partition type
+* `core`: Optional. When the partition type is `app_exec`, it indicates the core that runs the code in this partition. The available names are `hcpu`, `lcpu`, and `acpu`.
+* `custom`: Optional. A custom macro dictionary
 
 
 ````{dropdown} ptab.json Example

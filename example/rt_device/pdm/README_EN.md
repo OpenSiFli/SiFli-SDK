@@ -4,8 +4,11 @@ Source path: example/rt_device/pdm
 
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ sf32lb52-lcd_n16r8
-+ eh-lb525
++ sf32lb52-nano
++ sf32lb52-lcd series
++ sf32lb56-lcd series
++ sf32lb58-lcd series
+* eh-lb525
 
 ## Overview
 <!-- Example introduction -->

@@ -1,4 +1,5 @@
 # vglite 演示程序
+源码路径：example/vglite
 
 ## 线性渐变+mask
 固定显示一个path内部的线性渐变，执行10帧，间隔2秒。

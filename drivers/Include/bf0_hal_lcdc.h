@@ -144,7 +144,8 @@ typedef enum
     LCDC_PIXEL_FORMAT_A4,
     LCDC_PIXEL_FORMAT_A8,
     LCDC_PIXEL_FORMAT_L8,
-    LCDC_PIXEL_FORMAT_RGB565_SWAP, /*Swap byte: Byte0{R[4:0]G[5:3]}, Byte1{G[2:0]B[4:0]}*/
+    LCDC_PIXEL_FORMAT_RGB565_SWAP, /* Byte0{R[4:0]G[5:3]}, Byte1{G[2:0]B[4:0]}, only for layer format*/
+    LCDC_PIXEL_FORMAT_BGR565_SWAP, /* Byte0{B[4:0]G[5:3]}, Byte1{G[2:0]R[4:0]}, only for LCDC output format*/
 } HAL_LCDC_PixelFormat;
 /**
   * @}
@@ -271,7 +272,16 @@ typedef struct
     uint8_t  hst_pol_invert : 1;  /*HST polarity invert, default is high active*/
     uint8_t  vck_pol_invert : 1;  /*VCK polarity invert, default is high active*/
     uint8_t  vst_pol_invert : 1;  /*VST polarity invert, default is high active*/
-    uint8_t reserved : 3;       /*Reserved bits*/
+    uint8_t  reserved : 3;       /*Reserved bits*/
+
+    /*Enable customer timing and ignore internal default timing:
+       VST_dly_us = 35us, VST_width_0p1us = 'Same as VCK width', VCK_dly_0p1us = 'Half of VCK width'.
+    */
+    uint8_t  customer_timing_en;
+    /*The following parameters are valid when customer_timing_en is 1*/
+    uint16_t VST_dly_us;   /*The delay from XRST rising edge to VST rising edge, in us unit*/
+    uint16_t VST_width_0p1us; /*VST pulse width, in 0.1us unit*/
+    uint16_t VCK_dly_0p1us;   /*The delay from VST rising edge to VCK rising edge, in 0.1us unit*/
 } JDI_LCD_CFG;
 
 

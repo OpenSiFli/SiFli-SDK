@@ -2,8 +2,9 @@
 
 ## Supported Platforms
 The example can run on the following development boards.
-- sf32lb52-lcd_n16r8
-- sf32lb58-lcd_n16r64n4
+- sf32lb52-lcd series
+- sf32lb56-lcd series
+- sf32lb58-lcd series
 
 ## Overview
 - Logging is the output of software runtime status, process, and other information to different media (such as: files, console, display, etc.) for display and storage. It provides reference basis for problem tracing, performance analysis, system monitoring, fault warning, and other functions during software debugging and maintenance.

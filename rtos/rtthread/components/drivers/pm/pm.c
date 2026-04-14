@@ -760,6 +760,10 @@ static void sleep_timeout(void *parameter)
 {
 }
 #endif /* RT_PM_USING_PROGRESSIVE_POLICY */
+__ROM_USED rt_uint8_t rt_pm_run_mode_get(void)
+{
+    return _pm.run_mode;
+}
 
 __ROM_USED int rt_pm_run_enter(uint8_t mode)
 {

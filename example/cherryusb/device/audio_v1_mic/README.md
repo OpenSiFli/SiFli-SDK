@@ -1,4 +1,4 @@
-# usb_audio_class_example
+# USB 麦克风示例
 
 源码路径：example\cherryusb\device\audio_v1_mic
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -156,25 +156,53 @@ FINSH_FUNCTION_EXPORT(audio_mem,       audio mem check);
 MSH_CMD_EXPORT(audio_mem,     audio mem check);
 #endif
 
-#else
-
-#ifndef __WEAK
-    #define __WEAK
-#endif
-
-__WEAK void *audio_mem_malloc(uint32_t size)
+#elif !defined(_WIN32)
+RT_WEAK void *audio_mem_malloc(uint32_t size)
 {
     void *ptr = rt_malloc(size);
     RT_ASSERT(ptr);
     return ptr;
 }
-__WEAK void audio_mem_free(void *ptr)
+RT_WEAK void audio_mem_free(void *ptr)
 {
     rt_free(ptr);
 }
-__WEAK void *audio_mem_calloc(uint32_t count, uint32_t size)
+RT_WEAK void *audio_mem_calloc(uint32_t count, uint32_t size)
 {
     return rt_calloc(count, size);
 }
-#endif
+RT_WEAK void *audio_mem_realloc_do(void *mem_address, unsigned int newsize)
+{
+    void *ptr = NULL;
+#if 1
+    ptr = rt_realloc(mem_address, newsize);
+#else
+    if (!mem_address)
+    {
+        //never come here for audio module
+        if (newsize == 0)
+            newsize++;
 
+        ptr = rt_malloc(newsize);
+    }
+    else if (newsize == 0)
+    {
+        //audio not use this function now, newsize always > 0
+        rt_free(mem_address);
+    }
+    else
+    {
+        ptr = rt_malloc(newsize);
+        if (ptr)
+        {
+            memcpy(ptr, mem_address, newsize); //include rubish data if newsize big than old size
+        }
+        else
+        {
+            rt_free(mem_address);
+        }
+    }
+#endif
+    return ptr;
+}
+#endif

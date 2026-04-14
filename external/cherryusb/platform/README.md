@@ -16,6 +16,7 @@ lwip support with usb host net class(cdc_ecm/cdc_ncm/cdc_rndis/asix/rtl8152/bl61
 
 - rt_device support with usb device msc.
 - DFS support with usb host msc.
+- Hook `mount_udisk_hook()` can be implemented by user; it is called after udisk mount succeeds (dev name and mount point provided).
 - lwip support with usb host net class(cdc_ecm/cdc_ncm/cdc_rndis/asix/rtl8152/bl616_wifi).
 - msh support with lsusb
 - device char support with host cdc_acm/ftdi/ch34x/cp210x/pl2303
