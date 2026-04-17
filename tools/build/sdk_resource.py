@@ -2184,6 +2184,14 @@ def BuildJLinkLoadScript(main_env):
     generate_uart_download_sh(main_env, device, memory, download_list)
     generate_sftool_param(main_env, device, memory, download_file)
 
+def get_baud_rate():
+    baud_rate = os.getenv("SIFLI_DOWNLOAD_BAUD_RATE", "").strip()
+    if baud_rate.isdigit():
+        rate_num = int(baud_rate)
+        if 115200 <= rate_num <= 3000000:
+            return f"-b {rate_num}"
+    return ""
+
 
 def generate_uart_download_bat(main_env, device, memory, download_list, ImgDownUart_PATH):
     uart_comment = '''@echo off
@@ -2211,7 +2219,7 @@ if %errorlevel%==0 (
 cd %CURR_PATH%
 '''.format(ImgDownUart_PATH, main_env['JLINK_DEVICE']))
     else:
-        uart_comment += MakeLine(f"sftool -p COM%input% -c {device} -m {memory.lower()} write_flash {download_list}\n")
+        uart_comment += MakeLine(f"sftool -p COM%input% {get_baud_rate()} -c {device} -m {memory.lower()} write_flash {download_list}\n")
     uart_comment += MakeLine('if "%ENV_ROOT%"=="" pause\n')
     
     uart_f = open(os.path.join(main_env['build_dir'], 'uart_download.bat'), 'w')
@@ -2289,7 +2297,7 @@ echo "$input"
     if os.getenv("LEGACY_ENV"):
         uart_comment += MakeLine('echo "Legacy mode is not supported on Linux/macOS"')
     else:
-        uart_comment += MakeLine(f'sftool -p "$input" -c {device} -m {memory.lower()} write_flash {download_list}\n')
+        uart_comment += MakeLine(f'sftool -p "$input" {get_baud_rate()} -c {device} -m {memory.lower()} write_flash {download_list}\n')
     
     uart_sh_path = os.path.join(main_env['build_dir'], 'uart_download.sh')
     uart_f = open(uart_sh_path, 'w')
