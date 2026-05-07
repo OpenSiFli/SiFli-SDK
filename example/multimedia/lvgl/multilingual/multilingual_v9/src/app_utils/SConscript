@@ -1,0 +1,19 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+src = ['main.c']
+
+if GetDepend('BSP_BLE_SIBLES'):
+    src+=['ble_app.c']
+
+if GetDepend('BSP_BT_APP'):
+    src+=['bt_app.c']
+
+
+CPPPATH = [cwd]
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

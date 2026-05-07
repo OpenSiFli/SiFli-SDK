@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*********************************************************************
 *            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                        The Embedded Experts                        *
@@ -8,6 +14,7 @@ File    : FlashDev.c
 Purpose : Flash device description Template
 --------  END-OF-HEADER  ---------------------------------------------
 */
+
 #include "rtconfig.h"
 #include "FlashOS.h"
 

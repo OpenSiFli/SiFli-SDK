@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
+#if 0
 #include <rtthread.h>
 
 #ifdef SOC_BF0_HCPU
@@ -49,7 +49,7 @@
     #include "app_comm.h"
 #endif /* SOLUTION */
 
-#define PDM_DEVICE_NAME                     "pdm1"
+#define PDM1_DEVICE_NAME                    "pdm1"
 #define PRIVATE_DEFAULT_VOLUME              10
 
 #if defined(PKG_USING_3MICS)
@@ -1105,7 +1105,7 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
                 || ((client->parameter.codec == 0xFF) && (client->parameter.tsco & 0x06)))
         {
             LOG_I("config pdm");
-            my->pdm = rt_device_find(PDM_DEVICE_NAME);
+            my->pdm = rt_device_find(PDM1_DEVICE_NAME);
             if (my->pdm)
             {
                 rt_device_init(my->pdm);
@@ -2990,4 +2990,4 @@ MSH_CMD_EXPORT_ALIAS(audio_data_cmd, audio_data, audio_data);
 
 
 #endif // SOC_BF0_HCPU
-
+#endif //#if 0

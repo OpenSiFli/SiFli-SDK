@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -25,31 +30,11 @@ int BSP_Flash_hw4_init();
 
 int mnt_init(void)
 {
-    void *flash_handle = rt_flash_get_handle_by_addr(FS_REGION_START_ADDR);
-    if (flash_handle)
-    {
-        register_nor_device(FS_REGION_START_ADDR, 0, FS_REGION_SIZE, FS_ROOT);
-    }
-#ifdef RT_USING_MTD_DHARA
-    else
-    {
-        flash_handle = rt_nand_get_handle(FS_REGION_START_ADDR);
-        RT_ASSERT(flash_handle);
-        register_mtd_dhara_device(FS_REGION_START_ADDR, 0, FS_REGION_SIZE, FS_ROOT, 0);
-    }
-#else
-    else
-    {
-        rt_kprintf("RT_USING_MTD_DHARA NOt ON\n");
-        RT_ASSERT(flash_handle);
-    }
-
-#endif
     //FS_REGION_START_ADDR 文件系统的起始地址
     //FS_REGION_SIZE 该文件系统的分区大小
     //FS_ROOT 文件系统名 注：这里必须要有root分区；
     rt_kprintf("0x%x %d\n", FS_REGION_START_ADDR, FS_REGION_SIZE);
-    //register_mtd_device(FS_REGION_START_ADDR, FS_REGION_SIZE, FS_ROOT); //注册一个文件系统的device，后续的读写操作最终都是操作该denvice
+    register_mtd_device(FS_REGION_START_ADDR, FS_REGION_SIZE, FS_ROOT); //注册一个文件系统的device，后续的读写操作最终都是操作该denvice
     //mount文件系统
     //FS_ROOT要mount的device
     // FS_ROOT_PATH, 该文件系统的路径，root分区必须是"/",

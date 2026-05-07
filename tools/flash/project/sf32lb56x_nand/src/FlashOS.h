@@ -20,7 +20,7 @@
 
 #define ONCHIP     (1)             // On-chip Flash Memory
 
-#define MAX_NUM_SECTORS (4096)      // Max. number of sectors, must not be modified.
+#define MAX_NUM_SECTORS (512)      // Max. number of sectors, must not be modified.
 #define ALGO_VERSION    (0x0101)   // Algo version, must not be modified.
 
 struct SECTOR_INFO

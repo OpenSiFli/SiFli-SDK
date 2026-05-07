@@ -6,9 +6,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-# This script helps installing tools required to use the ESP-IDF, and updating PATH
-# to use the installed tools. It can also create a Python virtual environment,
-# and install Python requirements into it.
+# This script helps installing tools required to use SiFli-SDK.
 #  It does not install OS dependencies. It does install tools such as the arm-none-eabi
 #  GCC toolchain.
 #
@@ -22,12 +20,6 @@
 # Usage:
 #
 # * To install the tools, run `sifli_sdk_tools.py install`.
-#
-# * To install the Python environment, run `sifli_sdk_tools.py install-python-env`.
-#
-# * To start using the tools, run `eval "$(sifli_sdk_tools.py export)"` — this will update
-#   the PATH to point to the installed tools and set up other environment variables
-#   needed by the tools.
 import argparse
 import contextlib
 import copy
@@ -53,17 +45,6 @@ from json import JSONEncoder
 from ssl import SSLContext
 from tarfile import TarFile
 from zipfile import ZipFile
-
-# Important notice: Please keep the lines above compatible with old Pythons so it won't fail with ImportError but with
-# a nice message printed by python_version_checker.check()
-try:
-    import python_version_checker
-
-    # check the Python version before it will fail with an exception on syntax or package incompatibility.
-    python_version_checker.check()
-except RuntimeError as e:
-    print(e)
-    raise SystemExit(1)
 
 from typing import IO, Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 from urllib.error import ContentTooShortError
@@ -99,6 +80,12 @@ SIFLI_SDK_PIP_WHEELS_URL = os.environ.get('SIFLI_SDK_PIP_WHEELS_URL', 'https://d
 PYTHON_VENV_DIR_TEMPLATE = 'sifli-sdk{}_py{}_env'
 PYTHON_VER_MAJOR_MINOR = f'{sys.version_info.major}.{sys.version_info.minor}'
 VENV_VER_FILE = 'sifli_sdk_version.txt'
+DISABLED_ENV_ACTIONS = {
+    'export',
+    'install-python-env',
+    'get-install-python-env',
+    'check-python-dependencies',
+}
 
 
 class GlobalVarsStore:
@@ -633,34 +620,22 @@ class SiFliSDKToolDownload(object):
 @functools.total_ordering
 class SiFliSDKToolVersion(object):
     """
-    Used for storing information about version; status (recommended, supported, deprecated)
-    and easy way of comparing different versions. Also allows platform compatibility check
-    and getting right download for given platform, if available.
+    Used for storing information about version and easy way of comparing
+    different versions. Also allows platform compatibility check and getting
+    right download for given platform, if available.
     """
-    STATUS_RECOMMENDED = 'recommended'
-    STATUS_SUPPORTED = 'supported'
-    STATUS_DEPRECATED = 'deprecated'
-
-    STATUS_VALUES = [STATUS_RECOMMENDED, STATUS_SUPPORTED, STATUS_DEPRECATED]
-
-    def __init__(self, version: str, status: str) -> None:
+    def __init__(self, version: str) -> None:
         self.version = version
-        self.status = status
         self.downloads: OrderedDict[str, SiFliSDKToolDownload] = OrderedDict()
         self.latest = False
 
     def __lt__(self, other: 'SiFliSDKToolVersion') -> bool:
-        if self.status != other.status:
-            return self.status > other.status
-        else:
-            assert not (self.status == SiFliSDKToolVersion.STATUS_RECOMMENDED
-                        and other.status == SiFliSDKToolVersion.STATUS_RECOMMENDED)
-            return self.version < other.version
+        return self.version < other.version
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SiFliSDKToolVersion):
             return NotImplemented
-        return self.status == other.status and self.version == other.version
+        return self.version == other.version
 
     def add_download(self, platform_name: str, url: str, size: int, sha256: str, rename_dist: str = '') -> None:
         """
@@ -905,22 +880,19 @@ class SiFliSDKTool(object):
             result.update(v.get_supported_platforms())
         return result
 
-    def get_recommended_version(self) -> Optional[str]:
+    def get_latest_version(self) -> Optional[str]:
         """
-        Get all recommended versions of the tool. If more versions are recommended, highest version is returned.
+        Get the newest version of the tool compatible with the current platform.
         """
-        recommended_versions = [k for k, v in self.versions.items()
-                                if v.status == SiFliSDKToolVersion.STATUS_RECOMMENDED
-                                and v.compatible_with_platform(self._platform)]
-        assert len(recommended_versions) <= 1
-        if recommended_versions:
-            return recommended_versions[0]
+        compatible_versions = [k for k, v in self.versions.items()
+                               if v.compatible_with_platform(self._platform)]
+        if compatible_versions:
+            return sorted(compatible_versions, key=self.versions.get, reverse=True)[0]  # type: ignore
         return None
 
     def get_preferred_installed_version(self) -> Optional[str]:
         """
-        Get the preferred installed version of the tool. Prefer recommended versions, otherwise
-        use the newest installed version compatible with the current platform.
+        Get the newest installed version compatible with the current platform.
         """
         compatible_installed = [k for k in self.versions_installed
                                 if self.versions[k].compatible_with_platform(self._platform)]
@@ -1194,20 +1166,14 @@ class SiFliSDKTool(object):
                 raise RuntimeError('export_vars for override %d of tool %s is not a mapping' % (index, tool_name))
             tool_obj.platform_overrides.append(override)  # type: ignore
 
-        recommended_versions:Dict[str, List[str]] = {}
         for version_dict in versions:  # type: ignore
             version = version_dict.get('name')  # type: ignore
             if not isinstance(version, str):
                 raise RuntimeError(f'version name for tool {tool_name} is not a string')
 
-            version_status = version_dict.get('status')  # type: ignore
-            if not isinstance(version_status, str) and version_status not in SiFliSDKToolVersion.STATUS_VALUES:
-                raise RuntimeError('tool {} version {} status is not one of {}', tool_name, version,
-                                   SiFliSDKToolVersion.STATUS_VALUES)
-
-            version_obj = SiFliSDKToolVersion(version, version_status)
+            version_obj = SiFliSDKToolVersion(version)
             for platform_id, platform_dict in version_dict.items():  # type: ignore
-                if platform_id in ['name', 'status']:
+                if platform_id == 'name':
                     continue
                 try:
                     Platforms.get(platform_id)
@@ -1219,17 +1185,7 @@ class SiFliSDKTool(object):
                                          platform_dict['url'], platform_dict['size'],
                                          platform_dict['sha256'], platform_dict.get('rename_dist', ''))
 
-                if version_status == SiFliSDKToolVersion.STATUS_RECOMMENDED:
-                    if platform_id not in recommended_versions:
-                        recommended_versions[platform_id] = []
-                    recommended_versions[platform_id].append(version)
-
             tool_obj.add_version(version_obj)
-        for platform_id, version_list in recommended_versions.items():
-            if len(version_list) > 1:
-                raise RuntimeError(f'tool {tool_name} for platform {platform_id} has {len(recommended_versions)} recommended versions')
-            if install != SiFliSDKTool.INSTALL_NEVER and len(recommended_versions) == 0:
-                raise RuntimeError(f'required/optional tool {tool_name} for platform {platform_id} has no recommended versions')
 
         tool_obj._update_current_options()
         return tool_obj
@@ -1242,7 +1198,6 @@ class SiFliSDKTool(object):
         for version, version_obj in self.versions.items():
             version_json = {
                 'name': version,
-                'status': version_obj.status
             }
             for platform_id, download in version_obj.downloads.items():
                 if download.rename_dist:
@@ -1862,9 +1817,8 @@ def list_default(args):  # type: ignore
             continue
         versions_sorted = sorted(versions_for_platform.keys(), key=tool.versions.get, reverse=True)  # type: ignore
         for version in versions_sorted:
-            version_obj = tool.versions[version]
-            info('  - {} ({}{})'.format(version, version_obj.status,
-                                        ', installed' if version in tool.versions_installed else ''))
+            installed_suffix = ' (installed)' if version in tool.versions_installed else ''
+            info(f'  - {version}{installed_suffix}')
 
 
 def list_outdated(args):  # type: ignore
@@ -1934,37 +1888,6 @@ def action_check(args):  # type: ignore
 
 
 # The following function is used in process_tool which is a part of the action_export.
-def handle_supported_or_deprecated_version(tool: SiFliSDKTool, tool_name: str) -> None:
-    """
-    Prints info if supported, but not recommended or deprecated version of the tool is used.
-    """
-    version_obj: SiFliSDKToolVersion = tool.versions[tool.version_in_path]  # type: ignore
-    if version_obj.status == SiFliSDKToolVersion.STATUS_SUPPORTED:
-        info(f'Using a supported version of tool {tool_name} found in PATH: {tool.version_in_path}.',
-             f=sys.stderr)
-        info(f'However the recommended version is {tool.get_recommended_version()}.',
-             f=sys.stderr)
-    elif version_obj.status == SiFliSDKToolVersion.STATUS_DEPRECATED:
-        warn(f'using a deprecated version of tool {tool_name} found in PATH: {tool.version_in_path}')
-
-
-def warn_if_not_recommended(tool: SiFliSDKTool, tool_name: str, version_to_use: str) -> None:
-    """
-    Warn if a version other than the recommended one is being used.
-    """
-    version_obj = tool.versions.get(version_to_use)
-    if not version_obj:
-        return
-    recommended_version = tool.get_recommended_version()
-    if version_obj.status == SiFliSDKToolVersion.STATUS_SUPPORTED:
-        info(f'Using a supported version of tool {tool_name}: {version_to_use}.', f=sys.stderr)
-        if recommended_version and recommended_version != version_to_use:
-            info(f'However the recommended version is {recommended_version}.', f=sys.stderr)
-    elif version_obj.status == SiFliSDKToolVersion.STATUS_DEPRECATED:
-        warn(f'using a deprecated version of tool {tool_name}: {version_to_use}')
-
-
-# The following function is used in process_tool which is a part of the action_export.
 def handle_version_to_use(
     tool: SiFliSDKTool,
     tool_name: str,
@@ -1976,7 +1899,6 @@ def handle_version_to_use(
     """
     tool_export_paths = tool.get_export_paths(version_to_use)
     tool_export_vars = tool.get_export_vars(version_to_use)
-    warn_if_not_recommended(tool, tool_name, version_to_use)
     if tool.version_in_path and tool.version_in_path not in tool.versions:
         info(f'Not using an unsupported version of tool {tool.name} found in PATH: {tool.version_in_path}.' + prefer_system_hint, f=sys.stderr)
     return tool_export_paths, tool_export_vars
@@ -2030,7 +1952,6 @@ def process_tool(
     selected_version_to_use = tool.get_preferred_installed_version()
 
     if not tool.is_executable and selected_version_to_use:
-        warn_if_not_recommended(tool, tool_name, selected_version_to_use)
         tool_export_vars = tool.get_export_vars(selected_version_to_use)
         return tool_export_paths, tool_export_vars, tool_found
 
@@ -2050,8 +1971,7 @@ def process_tool(
                 # unsupported version in path
                 pass
         else:
-            # supported/deprecated version in PATH, use it
-            handle_supported_or_deprecated_version(tool, tool_name)
+            # use the version found in PATH
             return tool_export_paths, tool_export_vars, tool_found
 
     if not tool.versions_installed:
@@ -2087,85 +2007,7 @@ def check_python_venv_compatibility(sdk_python_env_path: str, sdk_version: str) 
 
 
 def action_export(args: Any) -> None:
-    """
-    Exports all necessary environment variables and paths needed for tools used.
-    """
-    if args.deactivate:
-        if different_sdk_detected():
-            print_deactivate_statement(args)
-        return
-
-    tools_info = load_tools_info()
-    tools_info = filter_tools_info(SiFliSDKEnv.get_sifli_sdk_env(), tools_info)
-    all_tools_found = True
-    export_vars: Dict[str, str] = {}
-    paths_to_export = []
-
-    self_restart_cmd = f'{sys.executable} {__file__}{(" --tools-json {args.tools_json}") if args.tools_json else ""}'
-    self_restart_cmd = to_shell_specific_paths([self_restart_cmd])[0]
-    prefer_system_hint = '' if SIFLI_SDK_TOOLS_EXPORT_CMD else f' To use it, run \'{self_restart_cmd} export --prefer-system\''
-    install_cmd = to_shell_specific_paths([SIFLI_SDK_TOOLS_INSTALL_CMD])[0] if SIFLI_SDK_TOOLS_INSTALL_CMD else f'{self_restart_cmd} install'
-
-    for name, tool in tools_info.items():
-        if tool.get_install_type() == SiFliSDKTool.INSTALL_NEVER:
-            continue
-        tool_export_paths, tool_export_vars, tool_found = process_tool(tool, name, args, install_cmd, prefer_system_hint)
-        if not tool_found:
-            all_tools_found = False
-        paths_to_export += tool_export_paths
-        export_vars = {**export_vars, **tool_export_vars}
-
-    if not all_tools_found:
-        raise SystemExit(1)
-
-    current_path = os.getenv('PATH')
-    sifli_sdk_python_env_path, sdk_python_export_path, virtualenv_python, _ = get_python_env_path()
-    if os.path.exists(virtualenv_python):
-        sifli_sdk_python_env_path = to_shell_specific_paths([sifli_sdk_python_env_path])[0]
-        if os.getenv('SIFLI_SDK_PYTHON_ENV_PATH') != sifli_sdk_python_env_path:
-            export_vars['SIFLI_SDK_PYTHON_ENV_PATH'] = to_shell_specific_paths([sifli_sdk_python_env_path])[0]
-        if current_path and sdk_python_export_path not in current_path:  # getenv can return None
-            paths_to_export.append(sdk_python_export_path)
-
-    sifli_sdk_version = get_sifli_sdk_version()
-    if os.getenv('SIFLI_SDK_VERSION') != sifli_sdk_version:
-        export_vars['SIFLI_SDK_VERSION'] = sifli_sdk_version
-
-    check_python_venv_compatibility(sifli_sdk_python_env_path, sifli_sdk_version)
-
-    sdk_tools_dir = os.path.join(g.sifli_sdk_path, 'tools')  # type: ignore
-    sdk_tools_dir = to_shell_specific_paths([sdk_tools_dir])[0]
-    if current_path and sdk_tools_dir not in current_path:
-        paths_to_export.append(sdk_tools_dir)
-
-    if sys.platform == 'win32':
-        old_path = '%PATH%'
-        path_sep = ';'
-    else:
-        old_path = '$PATH'
-        path_sep = ':'
-
-    export_format, export_sep = get_export_format_and_separator(args)
-
-    if paths_to_export:
-        export_vars['PATH'] = path_sep.join(to_shell_specific_paths(paths_to_export) + [old_path])
-        # Correct PATH order check for Windows platform
-        # idf-exe has to be before \tools in PATH
-        if sys.platform == 'win32':
-            paths_to_check = rf'{export_vars["PATH"]}{os.environ["PATH"]}'
-            # We are not checking the order of paths in PATH variable
-            # try:
-            #     if paths_to_check.index(r'\tools;') < paths_to_check.index(r'\idf-exe'):
-            #         warn('The PATH is not in correct order (idf-exe should be before esp-idf\\tools)')
-            # except ValueError:
-            #     fatal(f'Both of the directories (..\\sdk-exe\\.. and ..\\tools) has to be in the PATH:\n\n{paths_to_check}\n')
-
-    if export_vars:
-        # if not copy of export_vars is given to function, it brekas the formatting string for 'export_statements'
-        deactivate_file_path = add_variables_to_deactivate_file(args, export_vars.copy())
-        export_vars[ENVState.env_key] = deactivate_file_path
-        export_statements = export_sep.join([export_format.format(k, v) for k, v in export_vars.items()])
-        print(export_statements)
+    _fail_disabled_env_action('export')
 
 
 def get_sifli_sdk_download_url_apply_mirrors(args: Any = None, download_url: str = SIFLI_SDK_DL_URL) -> str:
@@ -2344,9 +2186,10 @@ def action_download(args):  # type: ignore
             fatal(f'unknown version for tool {tool_name}: {tool_version}')
             raise SystemExit(1)
         if tool_version is None:
-            tool_version = tool_obj.get_recommended_version()
-        if tool_version is None:
-            fatal(f'tool {tool_name} not found for {platform} platform')
+            fatal(
+                f'legacy download requires an explicit version for tool {tool_name}. '
+                f'Use {tool_name}@<version> or the profile lock driven install workflow instead.'
+            )
             raise SystemExit(1)
         tool_spec = f'{tool_name}@{tool_version}'
 
@@ -2401,8 +2244,11 @@ def action_install(args):  # type: ignore
             fatal(f'unknown version for tool {tool_name}: {tool_version}')
             raise SystemExit(1)
         if tool_version is None:
-            tool_version = tool_obj.get_recommended_version()
-        assert tool_version is not None
+            fatal(
+                f'legacy install requires an explicit version for tool {tool_name}. '
+                f'Use {tool_name}@<version> or the profile lock driven install workflow instead.'
+            )
+            raise SystemExit(1)
         try:
             tool_obj.find_installed_versions()
         except ToolBinaryError:
@@ -2447,10 +2293,10 @@ def get_wheels_dir() -> Optional[str]:
     if wheels_package_name not in tools_info:
         return None
     wheels_package = tools_info[wheels_package_name]
-    recommended_version = wheels_package.get_recommended_version()
-    if recommended_version is None:
+    latest_version = wheels_package.get_latest_version()
+    if latest_version is None:
         return None
-    wheels_dir = wheels_package.get_path_for_version(recommended_version)
+    wheels_dir = wheels_package.get_path_for_version(latest_version)
     if not os.path.exists(wheels_dir):
         return None
     return wheels_dir
@@ -2571,185 +2417,13 @@ def install_legacy_python_virtualenv(path: str) -> None:
 
 
 def action_install_python_env(args):  # type: ignore
-    """
-    (Re)installs python virtual environment.
-    If Python virtualenv is already installed, checks for errors (missing/corrupted python interpreter, pip...)
-    and reinstalls if needed. Removes current virtualenv before reinstalling.
-    """
-    use_constraints = not args.no_constraints
-    reinstall = args.reinstall
-    sdk_python_env_path, _, virtualenv_python, sdk_version = get_python_env_path()
-
-    nix_store = os.environ.get('NIX_STORE')
-    is_nix = nix_store is not None and sys.base_prefix.startswith(nix_store) and sys.prefix.startswith(nix_store)
-
-    is_virtualenv = not is_nix and (hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix))
-    if is_virtualenv and (not os.path.exists(sdk_python_env_path) or reinstall):
-        fatal('This script was called from a virtual environment, can not create a virtual environment again')
-        raise SystemExit(1)
-
-    if os.path.exists(virtualenv_python):
-        try:
-            subprocess.check_call([virtualenv_python, '--version'], stdout=sys.stdout, stderr=sys.stderr)
-        except (OSError, subprocess.CalledProcessError):
-            # At this point we can reinstall the virtual environment if it is non-functional. This can happen at least
-            # when the Python interpreter which was used to create the virtual environment was removed.
-            reinstall = True
-
-        try:
-            subprocess.check_call([virtualenv_python, '-m', 'pip', '--version'], stdout=sys.stdout, stderr=sys.stderr)
-        except subprocess.CalledProcessError:
-            warn('pip is not available in the existing virtual environment, new virtual environment will be created.')
-            # Reinstallation of the virtual environment could help if pip was installed for the main Python
-            reinstall = True
-
-        if sys.platform != 'win32':
-            try:
-                subprocess.check_call([virtualenv_python, '-c', 'import curses'], stdout=sys.stdout, stderr=sys.stderr)
-            except subprocess.CalledProcessError:
-                warn('curses can not be imported, new virtual environment will be created.')
-                reinstall = True
-
-    if reinstall and os.path.exists(sdk_python_env_path):
-        warn(f'Removing the existing Python environment in {sdk_python_env_path}')
-        shutil.rmtree(sdk_python_env_path)
-
-    if os.path.exists(virtualenv_python):
-        check_python_venv_compatibility(sdk_python_env_path, sdk_version)
-    else:
-        if subprocess.run([sys.executable, '-m', 'venv', '-h'], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
-            # venv available
-            virtualenv_options = ['--clear']  # delete environment if already exists
-
-            info(f'Creating a new Python environment in {sdk_python_env_path}')
-
-            try:
-                environ_sdk_python_env_path = os.environ['SIFLI_SDK_PYTHON_ENV_PATH']
-                correct_env_path = environ_sdk_python_env_path.endswith(PYTHON_VENV_DIR_TEMPLATE.format(sdk_version,
-                                                                                                        PYTHON_VER_MAJOR_MINOR))
-                if not correct_env_path and re.search(PYTHON_VENV_DIR_TEMPLATE.format(r'\d+\.\d+', r'\d+\.\d+'),
-                                                      environ_sdk_python_env_path):
-                    warn(f'SIFLI_SDK_PYTHON_ENV_PATH is set to {environ_sdk_python_env_path} but it does not match '
-                         f'the detected {sdk_version} SiFli-SDK version and/or the used {PYTHON_VER_MAJOR_MINOR} '
-                         'version of Python. If you have not set SIFLI_SDK_PYTHON_ENV_PATH intentionally then it is '
-                         'recommended to re-run this script from a clean shell where an SiFli-SDK environment is '
-                         'not active.')
-
-            except KeyError:
-                # if SIFLI_SDK_PYTHON_ENV_PATH not defined then the above checks can be skipped
-                pass
-
-            subprocess.check_call([sys.executable, '-m', 'venv',
-                                  *virtualenv_options,
-                                  sdk_python_env_path],
-                                  stdout=sys.stdout, stderr=sys.stderr)
-
-            try:
-                with open(os.path.join(sdk_python_env_path, VENV_VER_FILE), 'w', encoding='utf-8') as f:
-                    f.write(sdk_version)
-            except OSError as e:
-                warn(f'The following issue occurred while generating the SiFli-SDK version file in the Python environment: {e}. '
-                     '(Diagnostic information. It can be ignored.)')
-
-        else:
-            # The embeddable Python for Windows doesn't have the built-in venv module
-            install_legacy_python_virtualenv(sdk_python_env_path)
-
-    env_copy = os.environ.copy()
-    if env_copy.get('PIP_USER')  == 'yes':
-        warn('Found PIP_USER="yes" in the environment. Disabling PIP_USER in this shell to install packages into a virtual environment.')
-        env_copy['PIP_USER'] = 'no'
-
-    constraint_file = get_constraints(sdk_version) if use_constraints else None
-
-    info('Upgrading pip...')
-    run_args = [virtualenv_python, '-m', 'pip', 'install', '--upgrade', 'pip']
-    if constraint_file:
-        run_args += ['--constraint', constraint_file]
-    subprocess.check_call(run_args, stdout=sys.stdout, stderr=sys.stderr, env=env_copy)
-
-    info('Upgrading setuptools...')
-    run_args = [virtualenv_python, '-m', 'pip', 'install', '--upgrade', 'setuptools']
-    if constraint_file:
-        run_args += ['--constraint', constraint_file]
-    subprocess.check_call(run_args, stdout=sys.stdout, stderr=sys.stderr, env=env_copy)
-
-    run_args = [virtualenv_python, '-m', 'pip', 'install', '--no-warn-script-location']
-    requirements_file_list = get_requirements(args.features)
-    for requirement_file in requirements_file_list:
-        run_args += ['-r', requirement_file]
-    if constraint_file:
-        run_args += ['--upgrade', '--constraint', constraint_file]
-    if args.extra_wheels_dir:
-        run_args += ['--find-links', args.extra_wheels_dir]
-    if args.no_index:
-        run_args += ['--no-index']
-    if args.extra_wheels_url:
-        run_args += ['--extra-index-url', args.extra_wheels_url]
-
-    wheels_dir = get_wheels_dir()
-    if wheels_dir is not None:
-        run_args += ['--find-links', wheels_dir]
-
-    info('Installing Python packages')
-    if constraint_file:
-        info(f' Constraint file: {constraint_file}')
-    info(' Requirement files:')
-    info(os.linesep.join(f'  - {path}' for path in requirements_file_list))
-    subprocess.check_call(run_args, stdout=sys.stdout, stderr=sys.stderr, env=env_copy)
+    _fail_disabled_env_action('install-python-env')
 
 def action_get_install_python_env(args): # type: ignore
-    sdk_python_env_path, _, virtualenv_python, sdk_version = get_python_env_path()
-    if os.path.exists(virtualenv_python):
-        print(sdk_python_env_path)
-    else:
-        print("Error: Python environment not found")
+    _fail_disabled_env_action('get-install-python-env')
 
 def action_check_python_dependencies(args):  # type: ignore
-    """
-    Checks if all the dependencies (from requirements, constraints...) are installed properly.
-    Raises SystemExit if not.
-    """
-    use_constraints = not args.no_constraints
-    req_paths = get_requirements('')  # no new features -> just detect the existing ones
-
-    _, _, virtualenv_python, sifli_sdk_version = get_python_env_path()
-
-    if not os.path.isfile(virtualenv_python):
-        fatal(f'{virtualenv_python} doesn\'t exist! Please run the install script or "sifli_sdk_tools.py install-python-env" in order to create it')
-        raise SystemExit(1)
-
-    if use_constraints:
-        constr_path = get_constraints(sifli_sdk_version, online=False)  # keep offline for checking
-        info(f'Constraint file: {constr_path}')
-
-    info('Requirement files:')
-    info(os.linesep.join(f' - {path}' for path in req_paths))
-
-    info(f'Python being checked: {virtualenv_python}')
-
-    # The dependency checker will be invoked with virtualenv_python. sifli_sdk_tools.py could have been invoked with a
-    # different one, therefore, importing is not a suitable option.
-    dep_check_cmd = [virtualenv_python,
-                     os.path.join(g.sifli_sdk_path,
-                                  'tools',
-                                  'check_python_dependencies.py')]
-
-    if use_constraints:
-        dep_check_cmd += ['-c', constr_path]
-
-    for req_path in req_paths:
-        dep_check_cmd += ['-r', req_path]
-
-    try:
-        ret = subprocess.run(dep_check_cmd)
-        if ret and ret.returncode:
-            # returncode is a negative number and system exit output is usually expected be positive.
-            raise SystemExit(-ret.returncode)
-    except FileNotFoundError:
-        # Python environment not yet created
-        fatal('Requirements are not satisfied!')
-        raise SystemExit(1)
+    _fail_disabled_env_action('check-python-dependencies')
 
 
 class ChecksumCalculator():
@@ -2839,14 +2513,12 @@ def action_add_version(args: Any) -> None:
                                 [TODO_MESSAGE])
         tools_info[tool_name] = tool_obj
     version = args.version
-    version_status = SiFliSDKToolVersion.STATUS_SUPPORTED
     if args.override and len(tool_obj.versions):
         tool_obj.drop_versions()
-        version_status = SiFliSDKToolVersion.STATUS_RECOMMENDED
     version_obj = tool_obj.versions.get(version)
     if not version_obj:
         info(f'Creating new version {version}')
-        version_obj = SiFliSDKToolVersion(version, version_status)
+        version_obj = SiFliSDKToolVersion(version)
         tool_obj.versions[version] = version_obj
     url_prefix = args.url_prefix or f'https://{TODO_MESSAGE}/'
     filename_prefix = args.dist_filename_prefix if len(args.dist_filename_prefix) else tool_name
@@ -2909,7 +2581,7 @@ def action_uninstall(args: Any) -> None:
     for tool in installed_tools:
         tool_versions = os.listdir(os.path.join(tools_path, tool)) if os.path.isdir(os.path.join(tools_path, tool)) else []
         try:
-            unused_versions = ([x for x in tool_versions if x != tools_info[tool].get_recommended_version()])
+            unused_versions = [x for x in tool_versions if x not in tools_info[tool].versions]
         except KeyError:  # When tool that is not supported by tools_info (tools.json) anymore, remove the whole tool file
             unused_versions = ['']
         if unused_versions:
@@ -2948,22 +2620,16 @@ def action_uninstall(args: Any) -> None:
 
         # Detect used active archives
         for tool_spec in tools_spec:
-            if '@' not in tool_spec:
-                tool_name = tool_spec
-                tool_version = None
+            if '@' in tool_spec:
+                tool_name, _tool_version = tool_spec.split('@', 1)
             else:
-                tool_name, tool_version = tool_spec.split('@', 1)
+                tool_name = tool_spec
             tool_obj = tools_info_for_platform[tool_name]
-            if tool_version is None:
-                tool_version = tool_obj.get_recommended_version()
-            # mypy-checks
-            if tool_version is not None:
-                archive_version = tool_obj.versions[tool_version].get_download_for_platform(CURRENT_PLATFORM)
-            if archive_version is not None:
-                archive_version_url = archive_version.url
-
-            archive = os.path.basename(archive_version_url)
-            used_archives.append(archive)
+            for version_obj in tool_obj.versions.values():
+                archive_version = version_obj.get_download_for_platform(CURRENT_PLATFORM)
+                if archive_version is None:
+                    continue
+                used_archives.append(os.path.basename(archive_version.url))
 
         downloaded_archives = os.listdir(dist_path)
         for archive in downloaded_archives:
@@ -3055,7 +2721,9 @@ More info: {info_url}
             else:
                 raise NotImplementedError()
 
-            version = platform_tool.get_recommended_version()
+            version = platform_tool.get_latest_version()
+            if version is None:
+                continue
             version_obj = platform_tool.versions[version]
             download_obj = version_obj.get_download_for_platform(platform_name)
 
@@ -3109,7 +2777,33 @@ def action_get_tool_supported_versions(args: Any) -> None:
         raise SystemExit(1)
 
 
+def _find_action_name(argv: List[str]) -> Optional[str]:
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg.startswith('-'):
+            if arg in ('--tools-json', '--sifli-sdk-path'):
+                i += 2
+            else:
+                i += 1
+            continue
+        return arg
+    return None
+
+
+def _fail_disabled_env_action(action_name: str) -> None:
+    fatal(
+        f'"{action_name}" is no longer supported in sifli_sdk_tools.py. '
+        'Use "./install.sh" then ". ./export.sh" (or ".\\install.ps1" and ".\\export.ps1").'
+    )
+    raise SystemExit(1)
+
+
 def main(argv: List[str]) -> None:
+    action_name = _find_action_name(argv)
+    if action_name in DISABLED_ENV_ACTIONS:
+        _fail_disabled_env_action(action_name)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--quiet', help='Don\'t output diagnostic messages to stdout/stderr', action='store_true')
@@ -3121,17 +2815,6 @@ def main(argv: List[str]) -> None:
     list_parser = subparsers.add_parser('list', help='List tools and versions available')
     list_parser.add_argument('--outdated', help='Print only outdated installed tools', action='store_true')
     subparsers.add_parser('check', help='Print summary of tools installed or found in PATH')
-    export = subparsers.add_parser('export', help='Output command for setting tool paths, suitable for shell')
-    export.add_argument('--format', choices=[EXPORT_SHELL, EXPORT_KEY_VALUE], default=EXPORT_SHELL,
-                        help=('Format of the output: shell (suitable for printing into shell), '
-                              'or key-value (suitable for parsing by other tools'))
-    export.add_argument('--prefer-system', help=('Normally, if the tool is already present in PATH, '
-                                                 'but has an unsupported version, a version from the tools directory '
-                                                 'will be used instead. If this flag is given, the version in PATH '
-                                                 'will be used.'), action='store_true')
-    export.add_argument('--deactivate', help='Output command for deactivate different SiFli-SDK version, previously set with export', action='store_true')
-    export.add_argument('--unset', help=argparse.SUPPRESS, action='store_true')
-    export.add_argument('--add_paths_extras', help='Add sdk-related path extras for deactivate option')
     install = subparsers.add_parser('install', help='Download and install tools into the tools directory')
     install.add_argument('tools', metavar='TOOL', nargs='*', default=['required'],
                          help=('Tools to install.\n'
@@ -3157,30 +2840,11 @@ def main(argv: List[str]) -> None:
     uninstall.add_argument('--dry-run', help='Print unused tools.', action='store_true')
     uninstall.add_argument('--remove-archives', help='Remove old archive versions and archives from unused tools.', action='store_true')
 
-    no_constraints_default = os.environ.get('SIFLI_SDK_PYTHON_CHECK_CONSTRAINTS', '').lower() in ['0', 'n', 'no']
-
     if SDK_MAINTAINER:
         for subparser in [download, install]:
             subparser.add_argument('--mirror-prefix-map', nargs='*',
                                    help=('Pattern to rewrite download URLs, with source and replacement separated by comma. '
                                          'E.g. http://foo.com,http://test.foo.com'))
-
-    install_python_env = subparsers.add_parser('install-python-env',
-                                               help=('Create Python virtual environment and install the '
-                                                     'required Python packages'))
-    install_python_env.add_argument('--reinstall', help='Discard the previously installed environment',
-                                    action='store_true')
-    install_python_env.add_argument('--extra-wheels-dir', help=('Additional directories with wheels '
-                                                                'to use during installation'))
-    install_python_env.add_argument('--extra-wheels-url', help='Additional URL with wheels', default=SIFLI_SDK_PIP_WHEELS_URL)
-    install_python_env.add_argument('--no-index', help='Work offline without retrieving wheels index')
-    install_python_env.add_argument('--features', default='core', help=('A comma separated list of desired features for installing. '
-                                                                        'It defaults to installing just the core functionality.'))
-    install_python_env.add_argument('--no-constraints', action='store_true', default=no_constraints_default,
-                                    help=('Disable constraint settings. Use with care and only when you want to manage '
-                                          'package versions by yourself. It can be set with the SIFLI_SDK_PYTHON_CHECK_CONSTRAINTS '
-                                          'environment variable.'))
-    get_get_install_python_env = subparsers.add_parser('get-install-python-env', help='Prints the path to the Python environment')
 
     if SDK_MAINTAINER:
         add_version = subparsers.add_parser('add-version', help='Add or update download info for a version')
@@ -3206,13 +2870,6 @@ def main(argv: List[str]) -> None:
                              help='Output file name')
         gen_doc.add_argument('--heading-underline-char', help='Character to use when generating RST sections', default='~')
 
-    check_python_dependencies = subparsers.add_parser('check-python-dependencies',
-                                                      help='Check that all required Python packages are installed.')
-    check_python_dependencies.add_argument('--no-constraints', action='store_true', default=no_constraints_default,
-                                           help='Disable constraint settings. Use with care and only when you want '
-                                                'to manage package versions by yourself. It can be set with the SIFLI_SDK_PYTHON_CHECK_CONSTRAINTS '
-                                                'environment variable.')
-
     if os.environ.get('SIFLI_SDK_TOOLS_VERSION_HELPER'):
         check_tool_supported = subparsers.add_parser('check-tool-supported',
                                                      help='Check that selected tool is compatible with SiFli-SDK. Writes "True"/"False" to stdout in success.')
@@ -3231,9 +2888,6 @@ def main(argv: List[str]) -> None:
     g.quiet = args.quiet
 
     g.non_interactive = args.non_interactive
-
-    if 'unset' in args and args.unset:
-        args.deactivate = True
 
     g.sifli_sdk_path = args.sifli_sdk_path or os.environ.get('SIFLI_SDK_PATH') or os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
     os.environ['SIFLI_SDK_PATH'] = g.sifli_sdk_path

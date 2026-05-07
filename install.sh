@@ -1,48 +1,24 @@
 #!/usr/bin/env bash
 
 set -e
-# set -u
 
 basedir=$(dirname "$0")
 SIFLI_SDK_PATH=$(cd "${basedir}"; pwd -P)
 export SIFLI_SDK_PATH
 
-echo "INFO: Using SIFLI_SDK_PATH '${SIFLI_SDK_PATH}' for installation."
+mirror_china_normalized=$(printf '%s' "${SIFLI_SDK_MIRROR_CHINA:-}" | tr '[:upper:]' '[:lower:]')
+case "${mirror_china_normalized}" in
+    1|true|yes|on)
+        export SIFLI_SDK_GITHUB_ASSETS="https://downloads.sifli.com/github_assets"
+        export SIFLI_SDK_PYPI_DEFAULT_INDEX="https://mirrors.ustc.edu.cn/pypi/simple"
+        export UV_PYTHON_DOWNLOADS_JSON_URL="https://uv.agentsmirror.com/metadata/python-downloads.json"
+        export UV_PYPY_INSTALL_MIRROR="https://uv.agentsmirror.com/pypy"
+        ;;
+esac
 
-echo "Detecting the Python interpreter"
-. "${SIFLI_SDK_PATH}/tools/detect_python.sh"
-
-echo "Checking Python compatibility"
-"${SIFLI_PYTHON}" "${SIFLI_SDK_PATH}/tools/python_version_checker.py"
-
-while getopts ":h" option; do
-    case $option in
-        h)
-            "${SIFLI_PYTHON}" "${SIFLI_SDK_PATH}/tools/install_util.py" print_help sh
-            exit;;
-        \?)
-            ;;
-    esac
-done
-
-FEATURES=$("${SIFLI_PYTHON}" "${SIFLI_SDK_PATH}/tools/install_util.py" extract features "$@")
-
-echo "Installing Python environment and packages"
-"${SIFLI_PYTHON}" "${SIFLI_SDK_PATH}/tools/sifli_sdk_tools.py" install-python-env --features="${FEATURES}"
-
-python_venv_path=$("${SIFLI_PYTHON}" "${SIFLI_SDK_PATH}/tools/sifli_sdk_tools.py" "get-install-python-env")
-
-if [[ "$python_venv_path" == Error* ]]; then
-    echo $python_venv_path
+if ! command -v uv >/dev/null 2>&1; then
+    echo "ERROR: uv was not found in PATH. Please install uv before running install.sh." >&2
     exit 1
 fi
 
-TARGETS=$("${python_venv_path}/bin/python" "${SIFLI_SDK_PATH}/tools/install_util.py" extract targets "$@")
-
-echo "Installing SiFli-SDK tools"
-"${python_venv_path}/bin/python" "${SIFLI_SDK_PATH}/tools/sifli_sdk_tools.py" install --targets="${TARGETS}"
-
-echo "All done! You can now run:"
-echo ""
-echo "  . ${basedir}/export.sh"
-echo ""
+uv run --with rich --with tomli_w --python 3.13.11 --no-project "${SIFLI_SDK_PATH}/tools/sdk_env.py" install "$@"

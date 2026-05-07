@@ -76,8 +76,9 @@ static void audio_3a_module_free(audio_3a_t *env)
 }
 
 
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc)
+void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels)
 {
+    all_mic_channels = 1;
     audio_3a_t *env = &g_audio_3a_env;
     RT_UNUSED(disable_uplink_agc);
     if (env->state == 0)
@@ -250,8 +251,10 @@ skip_3a_up:
     if (env->samplerate == 8000)
     {
         //msbc encode 120 bytes for 8K
+#ifdef AUDIO_BT_AUDIO
         msbc_encode_process(fifo, 120);
         msbc_encode_process(fifo + 120, 120);
+#endif
         if (ref_index == 0)
         {
             ref_index = SOUNDPLUS_FRAME_SIZE / 4;
@@ -265,8 +268,10 @@ skip_3a_up:
     {
         audio_dump_data(ADUMP_RAMP_OUT_OUT, out, SOUNDPLUS_FRAME_SIZE);
         //msbc encode one frame is 240 bytes for 16K samplerate
+#ifdef AUDIO_BT_AUDIO
         msbc_encode_process(fifo, 240);
         msbc_encode_process(fifo + 240, 240);
+#endif
         return;
     }
 }

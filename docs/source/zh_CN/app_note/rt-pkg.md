@@ -5,7 +5,7 @@
 在SDK路径下使用 `.\export.ps1` 配置环境后，切换到需要配置packages的工程目录，使用以下命令进入配置界面：
 
 ```shell
-scons --board=sf32lb52-lcd_n16r8 --menuconfig
+sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 进入配置界面后，选择 `RT-Thread online packages` 来配置相关的软件包。

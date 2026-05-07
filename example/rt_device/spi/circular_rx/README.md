@@ -4,7 +4,7 @@
 ## 支持平台
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
-
+- `sf32lb56-lcd_a128r12n1`
 ## 概述
 该例程用于验证 RT-Thread SPI 驱动中的 DMA 循环模式，支持三种模式：
 - **Master TRX 模式**：全双工收发，适用于 loopback 测试
@@ -30,7 +30,14 @@ CONFIG_BSP_USING_SPI1=y
 CONFIG_BSP_SPI1_TX_USING_DMA=y
 CONFIG_BSP_SPI1_RX_USING_DMA=y
 CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
+
+#56-LCD需要配置为SPI2
+CONFIG_BSP_USING_SPI2=y
+CONFIG_BSP_SPI2_TX_USING_DMA=y
+CONFIG_BSP_SPI2_RX_USING_DMA=y
+CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 ```
+
 
 ## 模式选择
 通过 `SPI_CIRCULAR_DEMO_MODE` 宏选择：
@@ -41,7 +48,7 @@ CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 ## 例程流程
 
 ### Master TRX 模式 (模式 0)
-1. 配置 SPI1 pinmux
+1. 配置 SPI1 pinmux(56为SPI2)
 2. attach/open `spi_circular` 设备
 3. 配置 SPI（Master、Mode0、8bit、20MHz）
 4. 调用 `rt_spi_take_bus()/rt_spi_release_bus()` 触发 DMA handle 链接
@@ -50,14 +57,14 @@ CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 7. 短接 MOSI-MISO 进行 loopback 验证
 
 ### Slave RX 模式 (模式 1)
-1. 配置 SPI1 pinmux
+1. 配置 SPI1 pinmux(56为SPI2)
 2. 配置 SPI 为 Slave 模式
 3. 调用 `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` 配置 `RX`
 4. 调用 `rt_device_read()` 启动循环接收
 5. 连接外部 SPI Master 提供时钟
 
 ### Slave TX 模式 (模式 2)
-1. 配置 SPI1 pinmux
+1. 配置 SPI1 pinmux(56为SPI2)
 2. 配置 SPI 为 Slave 模式
 3. 调用 `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` 配置 `TX`
 4. 调用 `rt_device_write()` 启动循环发送
@@ -77,6 +84,10 @@ CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 |              | PA_20 | di  | SPI_MISO | 10 |
 |              | PA_28 | clk | SPI_CLK  | 5 |
 |              | PA_29 | cs  | SPI_CS   | 3 |
+| sf32lb56-lcd | PA_64 | do  | SPI_MOSI | 19 |
+|              | PA_69 | di  | SPI_MISO | 29 |
+|              | PA_73 | clk | SPI_CLK  | 23 |
+|              | PA_71 | cs  | SPI_CS   | 24 |
 
 sf32lb52-lcd_n16r8硬件原理图参考如下图：
 
@@ -85,6 +96,7 @@ sf32lb52-lcd_n16r8硬件原理图参考如下图：
 短接 SPI1 MOSI 与 MISO：
 - `sf32lb52x`：`PA24(DIO)` ↔ `PA25(DI)`
 - `sf32lb58x`：`PA21(DO)` ↔ `PA20(DI)`
+- `sf32lb56x`：`PA64(DO)` ↔ `PA69(DI)`
 
 ### 方式二：外接 SPI 从设备（Slave 模式）
 按标准 4 线 SPI 连接，需外部 Master 提供时钟。
@@ -167,3 +179,4 @@ static rt_err_t spi_dma_circular_tx_ind(rt_device_t dev, void *buffer)
 | 版本 | 日期 | 说明 |
 |:---|:---|:---|
 | 1.0.0 | 03/2026 | 初始版本，支持 Master TRX / Slave RX / Slave TX 三种模式 |
+| 1.0.1 | 04/2026 | 添加 sf32lb56-lcd 支持 |

@@ -1,0 +1,56 @@
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+project_dir = Dir('#').abspath
+objs = []
+external_pack_version = 'v1.0.4'
+
+# Always reset the exported target list so project/SConstruct never reads
+# stale values from a previous configuration pass.
+Env['EXTERNAL_LANG_PACK_TARGETS'] = []
+
+if GetDepend('LV_EXT_RES_NON_STANDALONE'):
+    builtin_mode, builtin_sources = SConscript(os.path.join(cwd, 'in_lang_packs/SConscript'))
+
+    if builtin_mode == 'xlsx':
+        objs = Env.LangExcel(
+            builtin_sources,
+            DEFAULT_LANG=GetConfigValue('LV_EXT_RES_DEFAULT_LANGUAGE'),
+        )
+    elif builtin_mode == 'json':
+        objs = Env.Lang(
+            builtin_sources,
+            DEFAULT_LANG=GetConfigValue('LV_EXT_RES_DEFAULT_LANGUAGE'),
+        )
+    else:
+        raise RuntimeError('unsupported builtin language source mode: {}'.format(builtin_mode))
+
+    objs = GetLangBuildObject(objs)
+    if GetOption('no_cc'):
+        objs = []
+
+    objs = DefineGroup('resource', objs, depend=['PKG_USING_LITTLEVGL2RTT'], CPPPATH='.')
+
+    external_mode, external_sources = SConscript(os.path.join(cwd, 'ex_lang_packs/SConscript'))
+    installer_dir = os.path.join(project_dir, '..', 'disk', 'ex', 'resource', 'lang', 'installer')
+
+    if GetDepend('RT_USING_DFS_ELMFAT') and external_sources:
+        if external_mode == 'xlsx':
+            Env['EXTERNAL_LANG_PACK_TARGETS'] = Env.ExternalLangPackExcel(
+                external_sources,
+                EXT_LANG_INSTALLER_DIR=installer_dir,
+                EXT_LANG_PACK_VERSION=external_pack_version,
+            )
+        elif external_mode == 'json':
+            Env['EXTERNAL_LANG_PACK_TARGETS'] = Env.ExternalLangPack(
+                external_sources,
+                EXT_LANG_INSTALLER_DIR=installer_dir,
+                EXT_LANG_HEADER=File('lang_pack.h').abspath,
+                EXT_LANG_PACK_VERSION=external_pack_version,
+            )
+        else:
+            raise RuntimeError('unsupported external language source mode: {}'.format(external_mode))
+
+Return('objs')

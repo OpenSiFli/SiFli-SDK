@@ -1,0 +1,40 @@
+[project]
+name = "sifli-sdk-tools-default"
+version = "0.1.0"
+requires-python = "==3.13.11"
+dependencies = [
+  "coverage",
+  "jsonschema",
+  "junit_xml",
+  "python-gitlab",
+  "pyyaml",
+  "SimpleWebSocketServer",
+  "pylint-gitlab",
+  "minio",
+  "prettytable",
+  "setuptools",
+  "packaging",
+  "requests",
+  "click",
+  "pyserial",
+  "cryptography",
+  "pyparsing",
+  "pyelftools",
+  "construct",
+  "rich",
+  "psutil",
+  "scons",
+  "pycryptodome",
+  "tqdm",
+  "tomli_w",
+  "conan",
+  "semantic_version",
+  "json5",
+  "windows-curses; sys_platform == 'win32'",
+  "crccheck",
+  "questionary",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

@@ -148,7 +148,7 @@ lv_obj_t *lv_lvsfcomp_ring(lv_obj_t *comp, int index, int scale, lv_color_t colo
     int height = lv_obj_get_height(comp);
     int line_width;
 
-    LV_DEBUG_ASSERT(index < 3, "Index error", index);
+    LV_DEBUG_ASSERT(index < 3, "Index error %llu", index);
     lv_obj_t *ring = lv_arc_create(comp);
 
     line_width = lv_obj_get_style_line_width(comp, LV_PART_MAIN);
@@ -234,8 +234,8 @@ void lv_lvsfcomp_set_ring(lv_obj_t *comp, int index, int scale)
 {
     lv_lvsfcomp_ext_t *ext = (lv_lvsfcomp_ext_t *)comp;
 
-    LV_DEBUG_ASSERT(index < 3, "Index error", index);
-    LV_DEBUG_ASSERT(ext->ring[index], "Ring is NULL error", ext->ring[index]);
+    LV_DEBUG_ASSERT(index < 3, "Index error %llu", index);
+    LV_DEBUG_ASSERT(ext->ring[index], "Ring is NULL error %llu", ext->ring[index]);
 
     lv_arc_set_value(ext->ring[index], scale);
 }
@@ -249,7 +249,7 @@ void lv_lvsfcomp_set_arc(lv_obj_t *comp, int scale)
 {
     lv_lvsfcomp_ext_t *ext = (lv_lvsfcomp_ext_t *)comp;
 
-    LV_DEBUG_ASSERT(ext->arc, "ARC is NULL error", ext->arc);
+    LV_DEBUG_ASSERT(ext->arc, "ARC is NULL error %llu", ext->arc);
     lv_arc_set_value(ext->arc, scale);
 }
 
@@ -270,4 +270,3 @@ lv_obj_t *lv_lvsfcomp_img(lv_obj_t *comp, const char *img_src)
 }
 
 #endif
-

@@ -209,6 +209,32 @@ const char *lv_ext_str_get(lv_ext_res_mng_t res_mng, uint32_t offset, const char
     return s;
 }
 
+const char *lv_ext_str_get_by_lang_pack(lv_i18n_lang_pack_t lang_pack, uint32_t offset, const char *key)
+{
+    const char *s = NULL;
+    lv_i18n_phrase_t *phrase;
+
+    if (lang_pack && lang_pack->translation)
+    {
+        phrase = (lv_i18n_phrase_t *)((uint32_t)lang_pack->translation + offset);
+
+        if (phrase->singular)
+        {
+            s = phrase->singular;
+        }
+        else
+        {
+            s = key;
+        }
+    }
+    else
+    {
+        s = key;
+    }
+
+    return s;
+}
+
 lv_res_t lv_ext_set_locale(lv_ext_res_mng_t res_mng, const char *locale)
 {
     const lv_i18n_lang_pack_t *new_lang;
@@ -272,6 +298,21 @@ const char *lv_ext_get_locale(void)
     }
 
     return locale;
+}
+
+const lv_i18n_lang_pack_t *lv_ext_get_lang_pack(lv_ext_res_mng_t res_mng)
+{
+    if (!res_mng)
+    {
+        res_mng = &kernel_res_mng;
+    }
+
+    if (res_mng->curr_lang_node)
+    {
+        return res_mng->curr_lang_node->lang_pack;
+    }
+
+    return NULL;
 }
 
 const lv_ll_t *lv_ext_get_lang_pack_list(lv_ext_res_mng_t res_mng)

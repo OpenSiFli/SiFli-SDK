@@ -1,0 +1,60 @@
+import os
+import rtconfig
+
+# Check SDK 
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+# Prepare environment.
+PrepareEnv()
+
+################################## change rtconfig.xxx to customize build ########################################
+
+# Add bootloader project
+AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
+
+# Set default compile options
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+# Prepare building environment
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+
+# Build application.
+DoBuilding(TARGET, objs)
+
+# Add flash table buld.
+AddFTAB(SIFLI_SDK,rtconfig.CHIP)
+
+if GetDepend('RT_USING_DFS_ELMFAT'):
+    disk_root = os.path.join("..", "disk")
+    installer_dir = os.path.join(disk_root, "ex", "resource", "lang", "installer")
+    lang_bin_targets = env.get('EXTERNAL_LANG_PACK_TARGETS', [])
+
+    for path in (
+        disk_root,
+        os.path.join(disk_root, "ex"),
+        os.path.join(disk_root, "ex", "resource"),
+        os.path.join(disk_root, "ex", "resource", "lang"),
+        installer_dir,
+    ):
+        Execute(Mkdir(path))
+
+    # The installer directory is reserved for generated external pack binaries.
+    # Drop stale non-bin artifacts before FileSystemBuild snapshots disk_root.
+    for entry in os.listdir(installer_dir):
+        path = os.path.join(installer_dir, entry)
+        if os.path.isfile(path) and not entry.endswith('.bin'):
+            os.remove(path)
+
+    fs_bin = FileSystemBuild(disk_root, env)
+    if lang_bin_targets:
+        Depends(fs_bin, lang_bin_targets)
+    AddCustomImg("fs_root", bin=[fs_bin])
+
+# Generate download .bat script
+GenDownloadScript(env)

@@ -1,0 +1,14 @@
+from building import *
+
+# Default example path: use the xlsx workbook to generate external .bin packs.
+lang_mode = 'xlsx'
+lang_sources = Glob('xlsx/*.xlsx')
+
+# JSON source mode example.
+# Uncomment the two lines below and comment the xlsx lines above to switch the
+# demo back to the classic json -> .bin external-pack generation path.
+# Keep builtin and external sources on the same key schema.
+# lang_mode = 'json'
+# lang_sources = Glob('json/*.json')
+
+Return('lang_mode', 'lang_sources')

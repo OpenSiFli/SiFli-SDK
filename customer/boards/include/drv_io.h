@@ -122,6 +122,9 @@ uint32_t flash_get_freq(int clk_module, uint16_t clk_div, uint8_t hcpu);
 
 int BSP_Flash_Init(void);
 
+void BSP_Flash4_PowerUp(void);
+void BSP_Flash4_PowerDown(void);
+
 /**
  * @brief SDIO
  */

@@ -32,9 +32,9 @@ AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 
 # Add LCPU project
 if lcpu_path is not None:
-    shutil.copyfile(lcpu_path, "../../src/lcpu_img.c")
+    shutil.copyfile(lcpu_path, "../src/lcpu_img.c")
 else:
-    AddLCPU(SIFLI_SDK,rtconfig.CHIP, "../../src/lcpu_img.c")
+    AddLCPU(SIFLI_SDK,rtconfig.CHIP, "../src/lcpu_img.c")
 
 # Set default compile options
 SifliEnv()

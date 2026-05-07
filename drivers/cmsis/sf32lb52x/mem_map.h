@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -352,6 +352,6 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #ifndef NMI_SEC_SHARE_START_ADDR
     #define NMI_SEC_SHARE_START_ADDR     (PSRAM_BASE + PSRAM_SIZE - NMI_SEC_SHARE_SIZE)
 #endif
+#define HPSYS_RAM_IN_ITCM(addr) 0
 
-#define HPSYS_RAM_IN_ITCM(addr) false
 #endif  /* __MEM_MAP__ */

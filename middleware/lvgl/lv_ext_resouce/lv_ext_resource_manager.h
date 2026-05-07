@@ -123,6 +123,7 @@ lv_label_set_text(label, LV_EXT_STR_GET(foo_string))
 #define LV_EXT_STR_ID_2(key, desc) LV_OFFSET_IN_TYPE(lang_translation_t, key)
 
 const char *lv_ext_str_get(lv_ext_res_mng_t res_mng, uint32_t offset, const char *key);
+const char *lv_ext_str_get_by_lang_pack(lv_i18n_lang_pack_t lang_pack, uint32_t offset, const char *key);
 
 /* get string according to locale setting*/
 #ifdef BUILD_DLMODULE
@@ -137,6 +138,9 @@ const char *lv_ext_str_get(lv_ext_res_mng_t res_mng, uint32_t offset, const char
 #else
     #define LV_EXT_STR_GET_BY_KEY(key, desc) lv_ext_str_get(NULL, LV_EXT_STR_ID_2(key, desc), "Unknown string id")
 #endif
+
+#define LV_EXT_STR_GET_BY_LANGPACK(lang_pack, id) lv_ext_str_get_by_lang_pack(lang_pack, id, "Unknown string id")
+#define LV_EXT_STR_GET_BY_KEY_LANGPACK(lang_pack, id) lv_ext_str_get_by_lang_pack(lang_pack, id, "Unknown string id")
 
 #define LV_EXT_STR_GET_BY_ID(id)     LV_EXT_STR_GET(id)
 
@@ -200,6 +204,8 @@ lv_res_t resource_deinit(void);
 #define LV_EXT_STR_ID_2(key, desc)  desc
 #define LV_EXT_STR_GET(id) id
 #define LV_EXT_STR_GET_BY_KEY(key, desc) desc
+#define LV_EXT_STR_GET_BY_LANGPACK(lang_pack, id) id
+#define LV_EXT_STR_GET_BY_KEY_LANGPACK(lang_pack, id) id
 #define LV_EXT_STR_GET_BY_ID(id)  LV_EXT_STR_GET(id)
 
 #define LV_EXT_LANG_PACK_LIST_ITER_DEF(iter)

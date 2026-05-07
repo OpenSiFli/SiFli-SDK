@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2024-2025 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -269,17 +275,24 @@ __ROM_USED void spp(int argc, char **argv)
         }
         else if (strcmp(argv[1], "search") == 0)
         {
-            bd_addr_t mac;
-            uint8_t uuid_len = 0;
-            bt_addr_convert_from_string_to_general(argv[2], &mac);
-            uuid_len = atoi(argv[3]);
-            uint8_t uuid[16];
-            char *uuid_str = argv[4];
+            if (CFG_MAX_BT_ACL_NUM == bt_cm_get_conn_num())
+            {
+                LOG_I("Already connect a device!!!\n");
+            }
+            else
+            {
+                bd_addr_t mac;
+                uint8_t uuid_len = 0;
+                bt_addr_convert_from_string_to_general(argv[2], &mac);
+                uuid_len = atoi(argv[3]);
+                uint8_t uuid[16];
+                char *uuid_str = argv[4];
 
-            bt_convert_from_string_to_uuid_array(uuid_str, uuid, uuid_len);
+                bt_convert_from_string_to_uuid_array(uuid_str, uuid, uuid_len);
 
-            gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
-            bt_interface_spp_client_sdp_search_req((bt_notify_device_mac_t *)&mac, uuid, uuid_len);
+                gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
+                bt_interface_spp_client_sdp_search_req((bt_notify_device_mac_t *)&mac, uuid, uuid_len);
+            }
         }
         else if (strcmp(argv[1], "connect") == 0)
         {

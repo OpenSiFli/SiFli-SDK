@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020-2021 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -32,7 +32,7 @@
 #else
     #define BT_SCO_MAX_NUM    1
     #define BT_SCO_TX_HAS_HEADER 0
-    #define SOFT_CVSD_ENCODE  0
+    #define SOFT_CVSD_ENCODE  1
 #endif
 
 #define AUDIO_FMT_PCM   0

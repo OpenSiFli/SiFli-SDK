@@ -11,7 +11,6 @@
 #include "board.h"
 #include "vg_lite.h"
 #include "vg_lite_platform.h"
-#include "lv_img_buf.h"
 #include "vg_lite_ex.h"
 
 #ifdef __cplusplus

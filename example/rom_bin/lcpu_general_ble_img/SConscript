@@ -1,7 +1,6 @@
 from building import *
 Import('rtconfig')
 import os
-import resource
 
 cwd = GetCurrentDir()
 env = GetCurrentEnv()

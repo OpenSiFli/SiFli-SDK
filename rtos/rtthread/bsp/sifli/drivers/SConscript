@@ -109,6 +109,8 @@ if GetDepend(['BSP_USING_EPIC']):
     else:
         src += ['drv_epic.c', 'drv_epic_mask.c']
 
+if GetDepend(['USING_VGLITE']):
+        src += ['drv_vglite.c']
 
 if GetDepend(['RT_USING_BT']):
     src += ['drv_bt.c']

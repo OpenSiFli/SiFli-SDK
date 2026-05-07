@@ -1,4 +1,9 @@
-﻿
+/*
+ * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __SOUND_FILTER_H__
 #define __SOUND_FILTER_H__
 
@@ -17,7 +22,7 @@ extern "C" {
 /* @{@name Define audio version*/
 /** Use this to define version string */
 /* 注意：如果结构体有修改，则必须修改中版本号 */
-#define AUDIO_FILTER_VERSION_STRING        "AudioFilter Version V2.02.00"
+#define AUDIO_FILTER_VERSION_STRING        "AudioFilter Version V2.03.09"
 /** @} */
 
 // 最后一个兼容的小版本号

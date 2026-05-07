@@ -116,11 +116,11 @@ static int uuid_string_to_bytes(const char *uuid_str, uint8_t *uuid_bytes)
     //Format: "12345678-1234-1234-1234-123456789abc"
     int result = sscanf(
                      uuid_str,
-                     "%2x%2x%2x%2x-"
-                     "%2x%2x-"
-                     "%2x%2x-"
-                     "%2x%2x-"
-                     "%2x%2x%2x%2x%2x%2x",
+                     "%2hhx%2hhx%2hhx%2hhx-"
+                     "%2hhx%2hhx-"
+                     "%2hhx%2hhx-"
+                     "%2hhx%2hhx-"
+                     "%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
                      &uuid_bytes[0], &uuid_bytes[1], &uuid_bytes[2], &uuid_bytes[3],
                      &uuid_bytes[4], &uuid_bytes[5], &uuid_bytes[6], &uuid_bytes[7],
                      &uuid_bytes[8], &uuid_bytes[9], &uuid_bytes[10], &uuid_bytes[11],

@@ -6,7 +6,7 @@ set SIFLI_SDK_PATH=%~dp0
 set PKGS_DIR=%PKGS_ROOT%
 set CONAN_HOME=%ENV_ROOT%\tools\conan
 
-set "ver_check=1.1.3"
+set "ver_check=1.1.4"
 if not defined ENV_VER (
     echo Please upgrate env to v%ver_check% or greater
     echo set_env FAIL
@@ -22,6 +22,7 @@ set "ver_current_num=%ver_current:.=%"
 REM Compare versions
 if %ver_current_num% LSS %ver_check_num% (
     echo Error: Env version v%ENV_VER% is lower than required v%ver_check%
+    echo Please download latest env from: https://downloads.sifli.com/tools/env/env_latest.zip
     exit /b 1
 )
 

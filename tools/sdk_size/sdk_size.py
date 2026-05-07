@@ -11,22 +11,24 @@ section sizes and physical memory region usage statistics.
 
 Features:
   - Recursive .map file discovery in build directories
-  - Per-region memory usage breakdown with color-coded tables
-  - Section-level detail mode (--detail)
+  - Global merged-region usage table plus per-artifact breakdown
+  - Artifact filtering via --exclude (default: ftab, bootloader)
+  - Section detail mode (-d / --detail): show all sections instead of top-4 + other
   - Rich terminal output with colored tables
   - Plain-text file output (--output)
 
 Usage:
-    python sdk_size.py <path> [--detail] [--output <file>] [--no-color]
+    python sdk_size.py <path> [-d] [-o <file>] [--no-color] [--exclude NAME ...]
 
     <path> can be a build directory (recursively searches for .map files)
     or a single .map file.
 
 Examples:
     python sdk_size.py project/build_sf32lb52-lcd_n16r8_hcpu
-    python sdk_size.py project/build_sf32lb52-lcd_n16r8_hcpu --detail
+    python sdk_size.py project/build_sf32lb52-lcd_n16r8_hcpu -d
     python sdk_size.py project/build_sf32lb52-lcd_n16r8_hcpu/main.map
     python sdk_size.py project/build_sf32lb58-lcd_a128r32n1_a1_dsi_hcpu -o report.txt
+    python sdk_size.py project/build_sf32lb52-lcd_n16r8_hcpu --exclude ftab bootloader dfu
 """
 
 import os
@@ -41,7 +43,6 @@ logger = logging.getLogger(__name__)
 
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 
 
 # ============================================================================
@@ -426,16 +427,15 @@ class MemoryAnalyzer:
     def compute_program_size(self, info: MapFileInfo) -> int:
         """Compute the flash/ROM footprint for a single artifact.
 
-        Finds all sections occupying ROM-type (executable/read-only) regions,
-        then returns (max_LMA + size) - min_LMA, i.e., the contiguous image size.
+        Sums the used span within each ROM region independently to avoid
+        counting gaps between non-contiguous regions (e.g. ROM + ROM2).
         """
         rom_regions = [r for r in info.regions if 'x' in r.attributes]
         if not rom_regions:
             return 0
 
-        # Collect all byte occupancy in ROM regions
-        min_addr = None
-        max_addr = 0
+        # Track (min_addr, max_addr) per region separately
+        region_bounds: dict[str, tuple[int, int]] = {}
 
         for section in info.sections:
             # Determine the flash address for this section
@@ -445,15 +445,13 @@ class MemoryAnalyzer:
             region = self._find_region(rom_regions, flash_addr)
             if region and section.size > 0:
                 end_addr = flash_addr + section.size
-                if min_addr is None or flash_addr < min_addr:
-                    min_addr = flash_addr
-                if end_addr > max_addr:
-                    max_addr = end_addr
+                if region.name in region_bounds:
+                    lo, hi = region_bounds[region.name]
+                    region_bounds[region.name] = (min(lo, flash_addr), max(hi, end_addr))
+                else:
+                    region_bounds[region.name] = (flash_addr, end_addr)
 
-        if min_addr is None:
-            return 0
-
-        return max_addr - min_addr
+        return sum(hi - lo for lo, hi in region_bounds.values())
 
     def compute_total_program_size(self) -> int:
         """Compute the total flash footprint across all artifacts."""
@@ -524,7 +522,11 @@ class ReportGenerator:
 
     # Column widths
     COL_SECTION = 24
-    COL_SIZE = 12
+    COL_SIZE = 16
+
+    # Sections shown individually in default (non-detail) mode.
+    # All other sections are collapsed into "other".
+    PRIMARY_SECTIONS = {'.text', '.rodata', '.data', '.bss'}
 
     def __init__(self, map_infos: list[MapFileInfo], analyzer: MemoryAnalyzer,
                  console: Console):
@@ -535,77 +537,37 @@ class ReportGenerator:
     def generate(self, detail: bool = False):
         """Generate and print the report.
 
+        Outputs one per-artifact table for each artifact, with its binary
+        size printed below. Artifacts listed in --exclude are not shown.
+
         Args:
-            detail: Whether to output detailed per-file analysis.
+            detail: When True, show every individual section instead of
+                    collapsing minor sections into "other".
         """
-        if detail:
-            for info in self.map_infos:
-                self._report_single_map(info)
+        # --- Per-artifact tables ---
+        for info in self.map_infos:
+            self._report_single_map(info, detail=detail)
 
-        # Summary report: single file shows its own summary,
-        # multiple files show a merged global summary.
-        if len(self.map_infos) == 1:
-            self._report_single_summary(self.map_infos[0])
-        else:
-            self._report_global_summary()
-
-    def _report_single_map(self, info: MapFileInfo):
-        """Generate a detailed report for a single artifact (--detail mode)."""
+    def _report_single_map(self, info: MapFileInfo, detail: bool = False):
+        """Print one per-artifact region table followed by its binary size."""
         prog_size = self.analyzer.compute_program_size(info)
         usages = self.analyzer.analyze_single(info)
 
         self.console.print()
+        self._print_rich_table(usages, detail=detail, title=info.name)
         self.console.print(
-            f"[bold cyan]\\[{info.name}] Flash Size: {self._fmt_size(prog_size)}[/]"
+            f"  Binary size: {self._fmt_size(prog_size)}"
         )
-        self.console.print()
-        self._print_rich_table(usages, show_individual_sections=True)
-        self.console.print()
 
-    def _report_single_summary(self, info: MapFileInfo):
-        """Generate a summary report for single-file mode."""
-        prog_size = self.analyzer.compute_program_size(info)
-        usages = self.analyzer.analyze_single(info)
-
-        self.console.print()
-        self.console.print(
-            Panel.fit(
-                f"[bold]Total Flash Size: [cyan]{self._fmt_size(prog_size)}[/cyan][/bold]",
-                title=f"[bold cyan]Memory Usage Summary ({info.name})[/]",
-                border_style="cyan",
-            )
-        )
-        self.console.print()
-        self._print_rich_table(usages, show_individual_sections=True)
-        self._print_note()
-
-    def _report_global_summary(self):
-        """Generate a global summary report (multiple artifacts)."""
-        total_size = self.analyzer.compute_total_program_size()
-        global_usages = self.analyzer.build_global_region_map()
-
-        usages_sorted = [v for _, v in sorted(global_usages.items(),
-                                              key=lambda x: x[1].region.origin)]
-
-        self.console.print()
-        self.console.print(
-            Panel.fit(
-                f"[bold]Total Flash Size: [cyan]{self._fmt_size(total_size)}[/cyan][/bold]",
-                title="[bold cyan]Memory Usage Summary[/]",
-                border_style="cyan",
-            )
-        )
-        self.console.print()
-        self._print_rich_table(usages_sorted, show_individual_sections=False)
-        self._print_note()
-
-    def _print_rich_table(self, usages: list[RegionUsage], *,
-                          show_individual_sections: bool):
+    def _print_rich_table(self, usages: list[RegionUsage], *, detail: bool,
+                           title: str = ""):
         """Print region/section usage table using Rich."""
         table = Table(
+            title=f"[italic white]{title}[/italic white]" if title else None,
+            title_justify="center",
             show_header=True,
-            header_style="bold magenta",
-            border_style="dim",
+            header_style="white",
+            border_style="white",
             pad_edge=True,
         )
         table.add_column("Region / Section", min_width=self.COL_SECTION, no_wrap=True)
@@ -617,7 +579,7 @@ class ReportGenerator:
         for usage in usages:
             region = usage.region
             pct = usage.usage_percent
-            color = "green" if pct < 70 else ("yellow" if pct < 90 else "red")
+            color = "#1eb46a" if pct < 70 else ("#ffff00" if pct < 90 else "#ff0000")
 
             table.add_row(
                 f"[bold {color}]{region.name}[/]",
@@ -627,33 +589,16 @@ class ReportGenerator:
                 f"[{color}]{pct:.1f}%[/]",
             )
 
-            if show_individual_sections:
-                # List each individual section
-                for section in sorted(usage.sections, key=lambda s: s.vma):
-                    lma_mark = " [dim]*[/dim]" if section.has_load_address else ""
-                    table.add_row(
-                        f"  [dim]{section.name}{lma_mark}[/dim]",
-                        f"[dim]{self._fmt_size(section.size)}[/dim]",
-                        "", "", "",
-                    )
-            else:
-                # Show aggregated sections
-                section_agg = self._aggregate_sections(usage.sections)
-                for sec_name, sec_size in section_agg:
-                    table.add_row(
-                        f"  [dim]{sec_name}[/dim]",
-                        f"[dim]{self._fmt_size(sec_size)}[/dim]",
-                        "", "", "",
-                    )
+            # Section sub-rows
+            for sec_name, sec_size in self._aggregate_sections_display(
+                    usage.sections, detail=detail):
+                table.add_row(
+                    f"  {sec_name}",
+                    f"{self._fmt_size(sec_size)}",
+                    "", "", "",
+                )
 
         self.console.print(table)
-
-    def _print_note(self):
-        """Print the footnote about LMA-loaded sections."""
-        self.console.print(
-            "  [yellow]Note: '*' marks sections loaded from Flash to RAM[/yellow]"
-        )
-        self.console.print()
 
     # ------------------------------------------------------------------
     # Helper Methods
@@ -661,24 +606,42 @@ class ReportGenerator:
 
     @staticmethod
     def _fmt_size(size: int) -> str:
-        """Format byte size into a human-readable string."""
-        if size >= 1024 * 1024:
-            return f"{size / (1024 * 1024):.1f} MB"
-        elif size >= 1024:
-            return f"{size / 1024:.1f} KB"
-        else:
-            return f"{size} B"
+        """Format byte size as a plain byte count with thousands separator."""
+        return f"{size:,} B"
 
-    @staticmethod
-    def _aggregate_sections(sections: list[Section]) -> list[tuple[str, int]]:
-        """Aggregate sections with the same name and return sorted by size descending."""
+    @classmethod
+    def _aggregate_sections_display(
+            cls, sections: list[Section], *, detail: bool
+    ) -> list[tuple[str, int]]:
+        """Return section rows to display inside a region.
+
+        detail=False (default):
+            Buckets into PRIMARY_SECTIONS (.text/.rodata/.data/.bss) plus an
+            "other" bucket for everything else.  Empty buckets are omitted.
+            Rows are sorted by size descending.
+
+        detail=True:
+            Returns every individual section name (aggregated across
+            duplicate names) sorted by size descending.
+        """
+        # Accumulate sizes
         agg: dict[str, int] = {}
         for sec in sections:
-            if sec.name in agg:
-                agg[sec.name] += sec.size
-            else:
-                agg[sec.name] = sec.size
-        return sorted(agg.items(), key=lambda x: x[1], reverse=True)
+            agg[sec.name] = agg.get(sec.name, 0) + sec.size
+
+        if detail:
+            return sorted(agg.items(), key=lambda x: x[1], reverse=True)
+
+        # Collapse into primary buckets + "other"
+        buckets: dict[str, int] = {}
+        for name, sz in agg.items():
+            bucket = name if name in cls.PRIMARY_SECTIONS else 'other'
+            buckets[bucket] = buckets.get(bucket, 0) + sz
+
+        # Remove empty buckets, sort by size descending
+        result = [(k, v) for k, v in buckets.items() if v > 0]
+        result.sort(key=lambda x: x[1], reverse=True)
+        return result
 
 
 # ============================================================================
@@ -741,7 +704,7 @@ Examples:
     parser.add_argument(
         '-d', '--detail',
         action='store_true',
-        help='Output detailed analysis for each .map file',
+        help='Show all individual sections instead of collapsing minor ones into "other"',
     )
     parser.add_argument(
         '-o', '--output',
@@ -752,6 +715,14 @@ Examples:
         '--no-color',
         action='store_true',
         help='Disable colored output',
+    )
+    parser.add_argument(
+        '--exclude',
+        nargs='+',
+        default=['ftab', 'bootloader'],
+        metavar='NAME',
+        help='Artifact names to exclude from the report (exact match on .map basename). '
+             'Default: ftab bootloader',
     )
 
     args = parser.parse_args()
@@ -799,9 +770,20 @@ Examples:
         logger.error("No .map files were successfully parsed")
         sys.exit(1)
 
+    # Filter excluded artifacts
+    exclude_set = set(args.exclude) if args.exclude else set()
+    filtered_infos = [i for i in map_infos if i.name not in exclude_set]
+    if not filtered_infos:
+        logger.error(
+            "All .map files were excluded by --exclude filter (%s). "
+            "Nothing to report.", ', '.join(sorted(exclude_set))
+        )
+        sys.exit(1)
+    # (excluded artifacts are silently dropped — no log noise)
+
     # Analyze and generate report
-    analyzer = MemoryAnalyzer(map_infos)
-    report_gen = ReportGenerator(map_infos, analyzer, console)
+    analyzer = MemoryAnalyzer(filtered_infos)
+    report_gen = ReportGenerator(filtered_infos, analyzer, console)
     report_gen.generate(detail=args.detail)
 
     # Clean up file handle if writing to file

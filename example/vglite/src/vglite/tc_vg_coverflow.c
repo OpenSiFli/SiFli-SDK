@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/*
  Resolution: 320 x 480
  Format: VG_LITE_RGB565
  Transformation: Rotate/Scale/Translate
@@ -16,6 +21,7 @@
 #include "vg_lite_util.h"
 #include "tc_vglite.h"
 #include "board.h"
+#include "demo_ctrl.h"
 
 
 /*Porting notes
@@ -474,6 +480,10 @@ int cover_flow()
 
     while (1)
     {
+        if (demo_should_exit())
+        {
+            return 0;
+        }
         // Clear the buffer with white.
         vg_lite_clear(fb, NULL, 0x40404040);
         // vg_lite_finish();
@@ -640,7 +650,7 @@ int cover_flow()
 }
 
 
-static void tc_vglite_coverflow(int argc, char **argv)
+static void tc_vglite_coverflow_entry(void)
 {
     // Initialize vg_lite engine.
     vg_lite_error_t error = VG_LITE_SUCCESS;
@@ -666,6 +676,16 @@ ErrorHandler:
     cleanup();
 }
 
+static void tc_vglite_coverflow(int argc, char **argv)
+{
+    tc_vglite_coverflow_entry();
+}
+
 UTEST_TC_EXPORT(tc_vglite_coverflow, "tc_vglite_1_2", tc_vglite_init, tc_vglite_cleanup, 10);
+
+void tc_vglite_coverflow_entry_public(void)
+{
+    tc_vglite_coverflow_entry();
+}
 
 

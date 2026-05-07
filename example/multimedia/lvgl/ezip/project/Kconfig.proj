@@ -3,3 +3,13 @@ config CUSTOM_MEM_MAP
     bool 
     select custom_mem_map
     default y if !SOC_SIMULATOR
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int "image cache in psram size(standalone)"
+    depends on BSP_USING_PSRAM
+    default 262144
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int
+    depends on !BSP_USING_PSRAM
+    default 0

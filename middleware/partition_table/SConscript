@@ -1,7 +1,7 @@
 from building import *
 Import('rtconfig')
 import os
-import resource
+import sdk_resource
 import logging
 cwd = GetCurrentDir()
 env = GetCurrentEnv()
@@ -38,7 +38,7 @@ if GetDepend('USING_PARTITION_TABLE'):
             env['PARTITION_TABLE'] = src_file
             output_dir = os.path.join(env['BSP_ROOT'], './linker_scripts')    
 
-    resource.GenPartitionTableHeaderFile(src_file, output_dir, 'ptab')
+    sdk_resource.GenPartitionTableHeaderFile(src_file, output_dir, 'ptab')
 
 group = []
     

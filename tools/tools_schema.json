@@ -138,11 +138,6 @@
           "description": "Version name (used as a directory name)",
           "type": "string"
         },
-        "status": {
-            "description": "Determines whether the version is recommended/supported/deprecated",
-            "type": "string",
-            "enum": ["recommended", "supported", "deprecated"]
-        },
         "linux-i686": {
           "$ref": "#/definitions/platformDownloadInfo"
         },

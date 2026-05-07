@@ -1,0 +1,33 @@
+# for module compiling
+import os
+from building import *
+import rtconfig
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+CPPDEFINES = []
+
+if GetDepend('FREETYPE_TINY_FONT_FULL'):
+    font_name = 'tiny55_full'
+elif GetDepend('FREETYPE_TINY_FONT_LITE'):
+    font_name = 'tiny55_lite'
+elif GetDepend('FREETYPE_HANSANS_FONT'):
+    font_name = 'SourceHanSansCN-Normal'
+elif GetDepend('FREETYPE_ARIAL_FONT'):
+    font_name = 'arial'
+else:
+    font_name = 'DroidSansFallback'
+
+CPPDEFINES += ["FREETYPE_FONT_NAME={}".format(font_name)]
+
+objs = Glob('freetype/{}.ttf'.format(font_name))
+
+objs = Env.FontFile(objs)
+
+if GetOption('no_cc'):
+    objs = []
+
+objs = DefineGroup('resource', objs, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPDEFINES = CPPDEFINES)  
+
+Return ('objs')

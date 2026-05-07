@@ -7,6 +7,7 @@
  *      INCLUDES
  *********************/
 #include "littlevgl2rtt.h"
+#include "lvsf.h"
 #include "lv_ext_resource_manager.h"
 #include <rtdevice.h>
 #ifndef _WIN32

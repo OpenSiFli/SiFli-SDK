@@ -57,15 +57,10 @@
 
 #include "bf0_hal_audprc.h"
 #include "drv_audprc.h"
+#include "audio_server_internal.h"
 
-#if defined(AUDIO_RX_USING_I2S) || defined(AUDIO_TX_USING_I2S)
-    #if !BSP_ENABLE_I2S_CODEC
-        #error "should enable BSP_ENABLE_I2S_CODEC"
-    #endif
-#endif
 
 /* ---------------------audio server config start-------------------------- */
-#define PDM_DEVICE_NAME             "pdm1"
 #undef audio_mem_malloc
 #undef audio_mem_free
 #undef audio_mem_calloc
@@ -73,26 +68,6 @@
 #define audio_mem_free      rt_free
 #define audio_mem_calloc    rt_calloc
 
-#define PRIVATE_DEFAULT_VOLUME              10
-
-#ifdef PKG_USING_SOUNDPLUS
-    #define MIC_NOISE_DROP_FRAMES           16
-    #define CODEC_DATA_UNIT_LEN             (480)
-    #define AUDIO_SERVER_STACK_SIZE         (4096)
-#else
-    #define MIC_NOISE_DROP_FRAMES           25
-    #define CODEC_DATA_UNIT_LEN             (320)
-    #define AUDIO_SERVER_STACK_SIZE         (9 * 1024)
-#endif
-
-#if PKG_USING_ANYKA
-    #define DOWNLINK_STACK_SIZE             3000
-#else
-    #define DOWNLINK_STACK_SIZE             2000
-#endif
-
-#define FADE_VOLUME_STEP        4
-#define FADE_INTERVAL_MS        10
 
 #define AUDIO_DATA_CAPTURE_UART
 //#define AUDIO_DATA_CAPTURE_FILE
@@ -114,39 +89,19 @@
 #endif
 
 #if defined (AUDIO_DATA_CAPTURE_UART) && defined (RT_USING_FINSH)
+    /* ---------------------audio server config end -------------------------- */
 
-#define AUDIO_DATA_LEN          CODEC_DATA_UNIT_LEN
+    static audio_data_t *p_audio_dump;
+    static uint32_t     audio_dump_len;
+    static uint32_t     audio_dump_pos;
+    static uint32_t     audio_dump_no[ADUMP_NUM];
+    static rt_timer_t   simu_audio_data_timer;
+    static bool         audio_dump_log = false;
+    static rt_sem_t     audio_dump_sem;
 
-/* ---------------------audio server config end -------------------------- */
-
-typedef struct
-{
-    uint32_t magic;
-    uint16_t type;
-    uint16_t len;
-    uint32_t no;
-    uint8_t  data[AUDIO_DATA_LEN];
-} audio_data_t;
-
-typedef struct
-{
-    void (*func)(void *);
-    void *user_data;
-} audio_10ms_callback_t;
-
-#define AUDIO_DATA_HEADER_LEN   ((uint32_t)(((audio_data_t *) 0)->data))
-
-static audio_data_t *p_audio_dump;
-static uint32_t     audio_dump_len;
-static uint32_t     audio_dump_pos;
-static uint32_t     audio_dump_no[ADUMP_NUM];
-static rt_timer_t   simu_audio_data_timer;
-static bool         audio_dump_log = false;
-static rt_sem_t     audio_dump_sem;
-
-static int  audio_data_write_uart(void);
-static void audio_data_save_buf(uint8_t type, uint8_t *buf, uint32_t size);
-static void audio_data_stop(void);
+    static int  audio_data_write_uart(void);
+    static void audio_data_save_buf(uint8_t type, uint8_t *buf, uint32_t size);
+    static void audio_data_stop(void);
 #endif
 
 static audio_device_e current_audio_device;
@@ -154,13 +109,6 @@ static uint8_t current_play_status;
 static uint8_t g_tws_volume = AUDIO_MAX_VOLUME;
 static uint8_t g_tws_volume_relative;
 #define g_hardware_mix_enable    0 //mix is left + right, make big volume
-
-enum
-{
-    DUMP_NONE,
-    DUMP_BLE,
-    DUMP_UART,
-};
 
 /*------------------   define ----------------------*/
 #define m_max(a, b)  ((a) > (b) ? (a ): (b))
@@ -177,231 +125,9 @@ enum
     #endif
 #endif
 
-#define AUDIO_API
-#define AUDIO_CLIENT_MAGIC   0x66778899
-
-#define  AUDIO_SERVER_EVENT_CMD             (1 << 0)
-#define  AUDIO_SERVER_EVENT_TX_HALF_EMPTY   (1 << 1)
-#define  AUDIO_SERVER_EVENT_RX              (1 << 2)
-#define  AUDIO_SERVER_EVENT_BT_DOWNLINK     (1 << 3)
-#define  AUDIO_SERVER_EVENT_BT_UPLINK       (1 << 4)
-#define  AUDIO_SERVER_EVENT_TX_A2DP_SINK    (1 << 5)
-#define  AUDIO_SERVER_EVENT_TX_HFP          (1 << 6)
-#define  AUDIO_SERVER_EVENT_A2DP_NEXT       (1 << 7) //a2dp to AG
-#define  AUDIO_SERVER_EVENT_A2DP_PREV       (1 << 8) //a2dp to AG
-#define  AUDIO_SERVER_EVENT_A2DP_PAUSE      (1 << 9) //a2dp to AG
-#define  AUDIO_SERVER_EVENT_A2DP_RESUME     (1 << 10)//a2dp to AG
-#define  AUDIO_SERVER_EVENT_DOWN_START      (1 << 11)
-#define  AUDIO_SERVER_EVENT_DOWN_END        (1 << 12)
-#define  AUDIO_SERVER_EVENT_TX_FULL_EMPTY   (1 << 13)
-#define  AUDIO_SERVER_EVENT_TX_I2S1         (1 << 14)
-#define  AUDIO_SERVER_EVENT_TX_I2S2         (1 << 15)
-
-#define AUDIO_SERVER_EVENT_ALL  ( \
-                                AUDIO_SERVER_EVENT_CMD| \
-                                AUDIO_SERVER_EVENT_TX_HALF_EMPTY| \
-                                AUDIO_SERVER_EVENT_TX_FULL_EMPTY| \
-                                AUDIO_SERVER_EVENT_RX| \
-                                AUDIO_SERVER_EVENT_TX_A2DP_SINK| \
-                                AUDIO_SERVER_EVENT_TX_HFP| \
-                                AUDIO_SERVER_EVENT_A2DP_NEXT| \
-                                AUDIO_SERVER_EVENT_A2DP_PREV| \
-                                AUDIO_SERVER_EVENT_A2DP_PAUSE| \
-                                AUDIO_SERVER_EVENT_A2DP_RESUME| \
-                                AUDIO_SERVER_EVENT_TX_I2S1 | \
-                                AUDIO_SERVER_EVENT_TX_I2S2 | \
-                                0 \
-                                )
 
 #define SPEAKER_TX_BUF_SIZE     (32 * 300) //300ms
 
-/* --------------device name config --------------------------- */
-#define AUDIO_SPEAKER_NAME      "audprc"
-#define AUDIO_PRC_CODEC_NAME    "audcodec"
-
-/* -------------------------------------config------------------------------------------------------*/
-
-#define TYPE_TO_MIX_BIT(type)   (1<<(type))
-#define AUDIO_MIX_MASK          ((1<<AUDIO_TYPE_NUMBER) - 1)
-#define AUDIO_BT_VOICE_BIT      TYPE_TO_MIX_BIT(AUDIO_TYPE_BT_VOICE)
-#define AUDIO_BT_MUSIC_BIT      TYPE_TO_MIX_BIT(AUDIO_TYPE_BT_MUSIC)
-#define AUDIO_ALARM_BIT         TYPE_TO_MIX_BIT(AUDIO_TYPE_ALARM)
-#define AUDIO_NOTIFY_BIT        TYPE_TO_MIX_BIT(AUDIO_TYPE_NOTIFY)
-#define AUDIO_LOCAL_MUSIC_BIT   TYPE_TO_MIX_BIT(AUDIO_TYPE_LOCAL_MUSIC)
-#define AUDIO_LOCAL_RING_BIT    TYPE_TO_MIX_BIT(AUDIO_TYPE_LOCAL_RING)
-#define AUDIO_MODEM_VOICE_BIT   TYPE_TO_MIX_BIT(AUDIO_TYPE_MODEM_VOICE)
-#define AUDIO_MIX_ALL           0xFFFF
-
-#define BT_VOICE_MIX_WITH       (0)
-#define LOCAL_RING_MIX_WITH     (AUDIO_MIX_ALL)
-#define ALARM_MIX_WITH          (AUDIO_MIX_ALL)
-#define NOTIFY_MIX_WITH         (AUDIO_MIX_ALL)
-#define LOCAL_MUSIC_MIX_WITH    (AUDIO_MIX_ALL)
-#define MODEM_VOICE_MIX_WITH    0
-#define BT_MUSIC_MIX_WITH       (AUDIO_MIX_ALL)
-#define LOCAL_RECORD_MIX_WITH   (AUDIO_MIX_ALL)
-
-struct audio_client_base_t
-{
-    rt_list_t                   node;
-
-    uint32_t                    magic;
-    rt_tick_t                   fade_out_start_tick;
-    const char                  *name; //only for debug use
-    rt_event_t                  api_event;
-    audio_server_callback_func  callback;
-    void                        *user_data;
-    audio_parameter_t           parameter;
-    struct rt_ringbuffer        ring_buf;
-    uint8_t                     *ring_pool;
-#if SOFTWARE_TX_MIX_ENABLE
-    sifli_resample_t            *resample;
-    int16_t                     resample_dst[TX_DMA_SIZE];
-    uint32_t                    resample_dst_samplerate;
-    uint8_t                     resample_dst_ch;
-#endif
-    audio_rwflag_t              rw_flag;
-    audio_type_t                audio_type;
-    audio_device_e              device_specified;
-    audio_device_e              device_using;
-    fade_state_e                fade_out_state;
-    uint8_t                     fade_out_index;
-    uint8_t                     is_3a_opened;
-    uint8_t                     is_suspended;
-    uint8_t                     is_factory_loopback;
-    uint8_t                     debug_full;
-};
-
-#define OPEN_MAP_TX             (1 << 0)
-#define OPEN_MAP_RX             (1 << 1)
-#define OPEN_MAP_TXRX           (OPEN_MAP_TX|OPEN_MAP_RX)
-
-#define FRAME_DEBUG_MAX         128
-
-typedef struct
-{
-    struct _audio_device_ctrl_t *parent;
-    rt_event_t                  event;
-    rt_device_t                 audprc_dev;
-    rt_device_t                 audcodec_dev;
-    rt_device_t                 pdm;
-    rt_device_t                 i2s;
-    struct rt_ringbuffer        *mic0_rb;
-    struct rt_ringbuffer        *mic1_rb;
-    uint8_t                     *tx_data_tmp;
-    uint8_t                     *rx_data_tmp;
-    uint8_t                     *rx_data_tmp2;
-    uint32_t                    tx_samplerate;
-    uint32_t                    rx_samplerate;
-    int                         last_volume;
-    uint32_t                    tx_dma_size;
-    uint16_t                    rx_drop_cnt;
-    uint8_t                     is_need_3a;
-    uint8_t                     tx_channels;
-    uint8_t                     rx_channels;
-    uint8_t                     opened_map_flag;
-    uint8_t                     rx_ready;
-    uint8_t                     tx_ready;
-    uint8_t                     tx_ref;
-    uint8_t                     rx_ref;
-    uint8_t                     need_pdm_rx;
-    uint8_t                     need_adc_rx;
-    uint8_t                     need_i2s_rx;
-    uint8_t                     tx_empty_occur;
-    uint8_t                     tx_full_occur;
-    uint8_t                     tx_enable;
-    uint8_t                     rx_uplink_send_start;
-    uint8_t                     rx_channel_num;
-    uint8_t                     is_eq_mute_volume;
-    uint8_t                     tx_empty_cnt;
-    uint8_t                     is_wait_rx_start;
-    mics_t                      mic_used;
-    uint8_t                     mic0_got;
-    uint8_t                     mic1_got;
-
-#if DEBUG_FRAME_SYNC
-    uint32_t                    debug_tx_index;
-    uint32_t                    debug_rx_index;
-    uint32_t                    debug_tx_tick[FRAME_DEBUG_MAX];
-    uint32_t                    debug_rx_tick[FRAME_DEBUG_MAX];
-#endif
-
-} audio_device_speaker_t;
-
-typedef struct _audio_device_ctrl_t
-{
-    struct audio_device     device; //must be first member
-    audio_client_t          opening_client;
-    audio_client_t          closing_client;
-    rt_list_t               running_client_list;
-    audio_device_e          device_type;
-    uint32_t                rx_samplerate;
-#if SOFTWARE_TX_MIX_ENABLE
-    uint8_t                 *tx_mixed_pool;
-    struct rt_ringbuffer    tx_mixed_rb;
-#endif
-    uint32_t                tx_mix_dst_samplerate;
-    uint8_t                 tx_mix_dst_channel;
-    uint8_t                 is_tx_need_mix;
-    uint8_t                 is_busy;
-    uint8_t                 tx_count;
-    uint8_t                 rx_count;
-    uint8_t                 is_registerd;
-} audio_device_ctrl_t;
-
-typedef struct
-{
-    audio_server_listener_func  local_music_listener;
-    struct rt_event     event;
-    struct rt_event     down_event;
-    struct rt_mutex     mutex;
-    rt_slist_t          command_slist;
-    rt_list_t           suspend_client_list;
-    uint8_t             volume;//0~AUDIO_MAX_VOLUME
-    uint8_t             private_volume[AUDIO_TYPE_NUMBER];
-    uint8_t             is_bt_3a;
-    uint8_t             is_bt_music_working;
-    uint8_t             is_server_inited;
-    uint8_t             public_is_rx_mute;
-    uint8_t             public_is_tx_mute;
-    uint8_t             is_micbias_using_as_power_on;
-    audio_device_e      private_device[AUDIO_TYPE_NUMBER];
-    audio_device_e      public_device;
-
-    audio_device_ctrl_t devices_ctrl[AUDIO_DEVICE_NUMBER];
-
-    audio_device_speaker_t device_speaker_private;
-#if !MULTI_CLIENTS_AT_WORKING
-    audio_client_t      only_one_client;
-#endif
-} audio_server_t;
-
-typedef enum
-{
-    AUDIO_CMD_OPEN              = 0,
-    AUDIO_CMD_CLOSE             = 1,
-    AUDIO_CMD_PAUSE             = 2,
-    AUDIO_CMD_MUTE              = 3,
-    AUDIO_CMD_DEVICE_PUBLIC     = 4,
-    AUDIO_CMD_DEVICE_PRIVATE    = 5,
-    AUDIO_CMD_RESUME            = 6,
-    AUDIO_CMD_FADE_OUT          = 7,
-    AUDIO_CMD_MICBIAS_ON        = 8,
-    AUDIO_CMD_MICBIAS_OFF       = 9,
-} audio_server_cmd_e;
-
-typedef struct
-{
-    rt_slist_t              snode;
-    audio_client_t          client;
-    audio_server_cmd_e      cmd;
-} audio_server_cmt_t;
-
-typedef struct
-{
-    uint8_t     priority;
-    uint16_t    can_mix_with;
-} audio_mix_policy_t;
 
 /* ---------------global var-------------*/
 static int audio_pm_debug = 0;
@@ -868,6 +594,18 @@ void save_mic_tick()
         my->debug_rx_index = 0;
 }
 #endif
+
+static inline void mix_4_channel(int16_t *dst, int16_t *pdm1, int16_t *pdm2)
+{
+    for (int i = 0; i < PDM_MOMO_FRAME_SIZE / 2; i++)
+    {
+        *dst++ = *pdm1++;
+        *dst++ = *pdm1++;
+        *dst++ = *pdm2++;
+        *dst++ = *pdm2++;
+    }
+}
+
 static inline void process_speaker_rx(audio_server_t *server, audio_device_speaker_t *my)
 {
     audio_client_t client = device_get_rx_in_running(my->parent);
@@ -884,7 +622,7 @@ static inline void process_speaker_rx(audio_server_t *server, audio_device_speak
     }
 #endif
     rt_size_t datasize, putsize, readlen = CODEC_DATA_UNIT_LEN;
-    rt_size_t len;
+    rt_size_t len, len2;
 
     audio_tick_in(AUDIO_UPLINK_TIME);
 
@@ -892,74 +630,123 @@ static inline void process_speaker_rx(audio_server_t *server, audio_device_speak
 #if defined(AUDIO_RX_USING_I2S)
     len = rt_device_read(my->i2s, 0, my->rx_data_tmp, readlen);
 #elif defined(AUDIO_RX_USING_PDM)
-    //two PDM
+    // stereo PDM
     if (my->rx_channels != 1)
     {
         //has right channel, only left channel using single pdm channel
         readlen <<= 1;
     }
-    len = rt_device_read(my->pdm, 0, my->rx_data_tmp, readlen);
+    if (my->pdm1_dev)
+        len = rt_device_read(my->pdm1_dev, 0, my->rx_data_tmp, readlen);
+
+    if (my->pdm2_dev)
+        len2 = rt_device_read(my->pdm2_dev, 0, my->rx_data_tmp2, readlen);
+
 #else
     if (my->mic_used == AUDIO_MIC_ALL)
     {
-        len = rt_ringbuffer_get(my->mic0_rb, my->rx_data_tmp, CODEC_DATA_UNIT_LEN);
-        len = rt_ringbuffer_get(my->mic1_rb, my->rx_data_tmp2, CODEC_DATA_UNIT_LEN);
+        len = rt_ringbuffer_get(my->mic0_rb, my->rx_data_tmp, readlen);
+        len2 = rt_ringbuffer_get(my->mic1_rb, my->rx_data_tmp2, readlen);
     }
     else
     {
         len = rt_device_read(my->audprc_dev, 0, my->rx_data_tmp, readlen);
     }
 #endif
-    if (len != readlen)
+    if (len != readlen && my->mic_used != AUDIO_MIC1_ONLY)
     {
         LOG_I("read error len=%d", len);
         goto Exit;
     }
+    if (len2 != readlen && my->mic_used != AUDIO_MIC0_ONLY)
+    {
+        LOG_I("read error len=%d", len2);
+        goto Exit;
+    }
 
-    LOG_D("mic_rx_ind readlen:%d", len);
     if (my->is_need_3a)
     {
-#ifndef AUDIO_RX_USING_PDM
+#ifdef AUDIO_RX_USING_PDM
+        if (my->rx_drop_cnt < PDM_NOISE_DROP_FRAMES)
+        {
+            my->rx_drop_cnt++;
+            memset(my->rx_data_tmp, 0, readlen);
+        }
+#else
         if (my->rx_drop_cnt < MIC_NOISE_DROP_FRAMES)
         {
             my->rx_drop_cnt++;
             memset(my->rx_data_tmp, 0, readlen);
         }
 #endif
-        audio_3a_uplink(my->rx_data_tmp, readlen, server->public_is_rx_mute, server->is_bt_3a);
+        if (my->all_mic_channels == 1 || my->all_mic_channels == 2)
+        {
+            if (my->mic_used == AUDIO_MIC0_ONLY)
+            {
+                audio_3a_uplink(my->rx_data_tmp, readlen, server->public_is_rx_mute, server->is_bt_3a);
+                if (!server->is_bt_3a && client->callback)
+                {
+                    audio_server_coming_data_t data = {0};
+                    data.data = my->rx_data_tmp;
+                    data.data_len = CODEC_DATA_UNIT_LEN;
+                    client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
+                }
+            }
+            else
+            {
+                audio_3a_uplink(my->rx_data_tmp2, readlen, server->public_is_rx_mute, server->is_bt_3a);
+                if (!server->is_bt_3a && client->callback)
+                {
+                    audio_server_coming_data_t data = {0};
+                    data.data = my->rx_data_tmp2;
+                    data.data_len = CODEC_DATA_UNIT_LEN;
+                    data.reserved = 1;
+                    client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
+                }
+            }
+        }
+        else
+        {
+            RT_ASSERT(my->all_mic_channels == 4);
+#if PKG_USING_ANYKA
+            mix_4_channel((int16_t *)my->mixed_4_channel, (int16_t *)my->rx_data_tmp, (int16_t *)my->rx_data_tmp2);
+            audio_3a_uplink(my->mixed_4_channel, PDM_4MIC_FRAME_SIZE, server->public_is_rx_mute, server->is_bt_3a);
+#else
+            LOG_E("no 4 mic lib");
+            RT_ASSERT(0);
+#endif
+            if (!server->is_bt_3a && client->callback)
+            {
+                audio_server_coming_data_t data = {0};
+                data.data = my->mixed_4_channel;
+                data.data_len = CODEC_DATA_UNIT_LEN;
+                client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
+            }
+        }
     }
-    else
+    else if (my->rx_channels == 1)
     {
         audio_dump_data(ADUMP_PDM_RX, my->rx_data_tmp2, len);
         audio_dump_data(ADUMP_AUDPRC, my->rx_data_tmp, len);
     }
 
-    if (client->is_factory_loopback)
-    {
-        uint8_t gain = client->is_factory_loopback & 0x7F;
-        auido_gain_pcm((int16_t *)my->rx_data_tmp, len, gain);
-        rt_ringbuffer_put(&client->ring_buf, my->rx_data_tmp, len);
-    }
-
-    if (!server->is_bt_3a)
+    if (!my->is_need_3a)
     {
         audio_server_coming_data_t data, data2;
         data.data = my->rx_data_tmp;
         data.data_len = len;
         data.reserved = 0;
         data2.data = my->rx_data_tmp2;
-        data2.data_len = len;
+        data2.data_len = len2;
         data2.reserved = 1;
 
-        if (server->public_is_rx_mute)
-        {
-            memset(my->rx_data_tmp, 0, len);
-            memset(my->rx_data_tmp2, 0, len);
-        }
         if (client->callback)
         {
-            client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
-            if (my->mic_used == AUDIO_MIC_ALL)
+            if (my->mic_used != AUDIO_MIC1_ONLY)
+            {
+                client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
+            }
+            if (my->mic_used != AUDIO_MIC0_ONLY)
             {
                 client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data2);
             }
@@ -1279,42 +1066,74 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
 
 static void config_rx(audio_device_speaker_t *my, audio_client_t client)
 {
+    LOG_I("%s mic=%d", __func__, my->mic_used);
+
 #if defined(AUDIO_RX_USING_PDM)
     //config PDM
     LOG_I("config pdm");
-
-    my->pdm = rt_device_find(PDM_DEVICE_NAME);
-    if (my->pdm)
-    {
-        extern int get_pdm_volume();
+    my->mic0_got = 0;
+    my->mic1_got = 0;
 
 #if MICBIAS_USING_AS_PDM_POWER
-        micbias_power_on_internal();
+    micbias_power_on_internal();
 #endif
+    if (my->mic_used != AUDIO_MIC1_ONLY)
+    {
+        my->pdm1_dev = rt_device_find(PDM1_DEVICE_NAME);
+        RT_ASSERT(my->pdm1_dev);
+    }
+    if (my->mic_used != AUDIO_MIC0_ONLY)
+    {
+        my->pdm2_dev = rt_device_find(PDM2_DEVICE_NAME);
+        RT_ASSERT(my->pdm2_dev);
+    }
 
-        rt_device_init(my->pdm);
-        rt_device_open(my->pdm, RT_DEVICE_FLAG_RDONLY);
-        rt_device_set_rx_indicate(my->pdm, mic_rx_ind);
+    if (my->pdm1_dev)
+    {
+        rt_device_init(my->pdm1_dev);
+        rt_device_open(my->pdm1_dev, RT_DEVICE_FLAG_RDONLY);
+
         struct rt_audio_caps caps;
         caps.main_type = AUDIO_TYPE_INPUT;
         caps.sub_type = AUDIO_DSP_PARAM;
         caps.udata.config.samplefmt = PDM_CHANNEL_DEPTH_16BIT;
         caps.udata.config.samplerate = my->rx_samplerate;
         caps.udata.config.channels = my->rx_channels; /* 1 -- left ony,   2 -- stereo */
-        rt_device_control(my->pdm, AUDIO_CTL_CONFIGURE, &caps);
+        rt_device_control(my->pdm1_dev, AUDIO_CTL_CONFIGURE, &caps);
         int val_db = get_pdm_volume();
-        LOG_I("pdm gain=%d * 0.5db channel=%d", val_db, caps.udata.config.channels);
-        rt_device_control(my->pdm, AUDIO_CTL_SETVOLUME, (void *)val_db);
+        LOG_I("pdm1 gain=%d * 0.5db channel=%d", val_db, caps.udata.config.channels);
+        rt_device_control(my->pdm1_dev, AUDIO_CTL_SETVOLUME, (void *)val_db);
+
+        rt_device_set_rx_indicate(my->pdm1_dev, mic_rx_ind);
         int stream = AUDIO_STREAM_PDM_PRESTART;
-        LOG_I("pdm rx pre start=0x%x", stream);
-        rt_device_control(my->pdm, AUDIO_CTL_START, &stream);
+        LOG_I("pdm1 rx pre start=0x%x", stream);
+        rt_device_control(my->pdm1_dev, AUDIO_CTL_START, &stream);
         my->need_pdm_rx = 1;
     }
-    else
+    if (my->pdm2_dev)
     {
-        RT_ASSERT(0);
+        rt_device_init(my->pdm2_dev);
+        rt_device_open(my->pdm2_dev, RT_DEVICE_FLAG_RDONLY);
+
+        struct rt_audio_caps caps;
+        caps.main_type = AUDIO_TYPE_INPUT;
+        caps.sub_type = AUDIO_DSP_PARAM;
+        caps.udata.config.samplefmt = PDM_CHANNEL_DEPTH_16BIT;
+        caps.udata.config.samplerate = my->rx_samplerate;
+        caps.udata.config.channels = my->rx_channels; /* 1 -- left ony,   2 -- stereo */
+        rt_device_control(my->pdm2_dev, AUDIO_CTL_CONFIGURE, &caps);
+        int val_db = get_pdm_volume();
+        LOG_I("pdm2 gain=%d * 0.5db channel=%d", val_db, caps.udata.config.channels);
+        rt_device_control(my->pdm2_dev, AUDIO_CTL_SETVOLUME, (void *)val_db);
+
+        rt_device_set_rx_indicate(my->pdm2_dev, mic_rx_ind);
+        int stream = AUDIO_STREAM_PDM_PRESTART;
+        LOG_I("pdm2 rx pre start=0x%x", stream);
+        rt_device_control(my->pdm2_dev, AUDIO_CTL_START, &stream);
+        my->need_pdm_rx = 1;
     }
-#elif defined(AUDIO_RX_USING_I2S)
+
+#elif defined(AUDIO_RX_USING_I2S) /* AUDIO_RX_USING_PDM */
     i2s_config(my, 0);
     if (client->audio_type != AUDIO_TYPE_MODEM_VOICE)
     {
@@ -1322,9 +1141,7 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
         rt_device_set_rx_indicate(my->i2s, mic_rx_ind);
     }
     my->need_i2s_rx = 1;
-#else
-    my->mic_used = client->parameter.read_which_mic;
-    LOG_I("config rx--set callback mic=%d", my->mic_used);
+#else /* AUDIO_RX_USING_PDM */
     if (my->mic_used == AUDIO_MIC_ALL)
     {
         my->mic0_got = 0;
@@ -1336,7 +1153,7 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
         rt_device_set_rx_indicate(my->audprc_dev, NULL);
         rt_device_set_dual_rx_indicate(dual_adc_rx_ind);
     }
-    else if (client->audio_type != AUDIO_TYPE_MODEM_VOICE)
+    else if (client->audio_type != AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
     {
         rt_device_set_audprc_dma_rx_callback(NULL);
         rt_device_set_rx_indicate(my->audprc_dev, mic_rx_ind);
@@ -1431,7 +1248,13 @@ static void start_rx(audio_device_speaker_t *my)
     {
         my->need_pdm_rx = 0;
         stream = AUDIO_STREAM_PDM_START;
-        rt_device_control(my->pdm, AUDIO_CTL_START, &stream);
+        rt_base_t level = rt_hw_interrupt_disable();
+        if (my->pdm1_dev)
+            rt_device_control(my->pdm1_dev, AUDIO_CTL_START, &stream);
+        if (my->pdm2_dev)
+            rt_device_control(my->pdm2_dev, AUDIO_CTL_START, &stream);
+        rt_hw_interrupt_enable(level);
+
     }
     if (my->need_i2s_rx)
     {
@@ -1662,7 +1485,42 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
         RT_ASSERT(my->event);
     }
 
-    LOG_I("%s in r=%d t=%d c=0x%p f=%d", __FUNCTION__, my->rx_ref, my->tx_ref, client, client->rw_flag);
+    my->is_need_3a = client->parameter.is_need_3a;
+    my->rx_channels = client->parameter.read_channnel_num;
+    my->rx_samplerate = client->parameter.read_samplerate;
+    my->mic_used = client->parameter.read_which_mic;
+    my->all_mic_channels = client->parameter.read_channnel_num;
+
+#if PKG_USING_ANYKA
+    if (client->audio_type == AUDIO_TYPE_BT_VOICE)
+    {
+        my->is_need_3a = 1;
+#if ANYKA_TWO_MIC
+        my->mic_used = AUDIO_MIC0_ONLY;
+        my->rx_channels = 2;
+        my->all_mic_channels = 2;
+#endif
+    }
+    else
+    {
+        if (my->is_need_3a)
+        {
+            if (my->mic_used == AUDIO_MIC_ALL)
+            {
+                my->all_mic_channels <<= 1;
+                my->rx_channels = 2; //4/*  one pdm hardware interface is stereo */
+            }
+        }
+        else
+        {
+            if (my->mic_used == AUDIO_MIC_ALL)
+            {
+                my->all_mic_channels <<= 1;
+            }
+        }
+    }
+#endif
+    LOG_I("%s in r=%d t=%d c=0x%p f=%d mic=%d mic_ch=%d 3a=%d", __FUNCTION__, my->rx_ref, my->tx_ref, client, client->rw_flag, my->mic_used, my->all_mic_channels, my->is_need_3a);
     if (client->rw_flag & AUDIO_TX)
     {
         if (!my->tx_ref)
@@ -1684,8 +1542,6 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     LOG_I("need init tx=%d rx=%d", need_tx_init, need_rx_init);
 
     client->is_suspended = 0;
-
-    my->is_need_3a = client->parameter.is_need_3a;
 
     if (client->audio_type == AUDIO_TYPE_BT_MUSIC)
     {
@@ -1733,8 +1589,6 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
                 my->rx_samplerate = 16000;
                 LOG_W("warning! no samplerate");
             }
-            audio_3a_open(my->tx_samplerate, (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE), client->parameter.disable_uplink_agc);
-            client->is_3a_opened = 1;
         }
         if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
         {
@@ -1745,12 +1599,22 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     }
     if (need_rx_init)
     {
-        my->rx_channels    = client->parameter.read_channnel_num;
-        my->rx_samplerate  = client->parameter.read_samplerate;
+        if (my->is_need_3a)
+        {
+#if PKG_USING_ANYKA
+            if (my->all_mic_channels == 4)
+            {
+                my->mixed_4_channel = audio_mem_malloc(4 * PDM_MOMO_FRAME_SIZE);
+                RT_ASSERT(my->mixed_4_channel);
+            }
+#endif
+            audio_3a_open(my->rx_samplerate, (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE), client->parameter.disable_uplink_agc, my->all_mic_channels);
+            client->is_3a_opened = 1;
+        }
         RT_ASSERT(!my->rx_data_tmp);
-        my->rx_data_tmp = audio_mem_malloc(CODEC_DATA_UNIT_LEN * 2); //may stereo pmd
+        my->rx_data_tmp = audio_mem_malloc(CODEC_DATA_UNIT_LEN * 2); //maybe stereo channel for PMD
         RT_ASSERT(my->rx_data_tmp);
-        my->rx_data_tmp2 = audio_mem_malloc(CODEC_DATA_UNIT_LEN); //ADC2
+        my->rx_data_tmp2 = audio_mem_malloc(CODEC_DATA_UNIT_LEN * 2); //maybe stereo channel for PMD
         RT_ASSERT(my->rx_data_tmp2);
 
     }
@@ -2011,13 +1875,25 @@ static int audio_device_speaker_close(void *user_data)
         if (my->audprc_dev)
             rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
 
-        if (my->pdm)
-        {
-            rt_device_close(my->pdm);
-            my->pdm = NULL;
 #if MICBIAS_USING_AS_PDM_POWER
+        if (my->pdm1_dev || my->pdm2_dev)
             micbias_power_off_internal();
 #endif
+        if (my->pdm1_dev)
+        {
+            int stream = AUDIO_STREAM_RECORD;
+            rt_device_control(my->pdm1_dev, AUDIO_CTL_STOP, &stream);
+            rt_device_set_rx_indicate(my->pdm1_dev, RT_NULL);
+            rt_device_close(my->pdm1_dev);
+            my->pdm1_dev = NULL;
+        }
+        if (my->pdm2_dev)
+        {
+            int stream = AUDIO_STREAM_RECORD;
+            rt_device_control(my->pdm2_dev, AUDIO_CTL_STOP, &stream);
+            rt_device_set_rx_indicate(my->pdm2_dev, RT_NULL);
+            rt_device_close(my->pdm2_dev);
+            my->pdm2_dev = NULL;
         }
     }
 
@@ -2075,6 +1951,11 @@ static int audio_device_speaker_close(void *user_data)
         my->mic0_rb = NULL;
         my->mic1_rb = NULL;
         my->mic_used = AUDIO_MIC0_ONLY;
+        if (my->mixed_4_channel)
+        {
+            audio_mem_free(my->mixed_4_channel);
+            my->mixed_4_channel = NULL;
+        }
     }
 
     if (my->tx_data_tmp && !my->tx_ref)
@@ -2157,23 +2038,6 @@ static int hfp_device_input_callback(audio_server_callback_cmt_t cmd, const uint
     return 0;
 }
 
-static int i2s1_device_input_callback(audio_server_callback_cmt_t cmd, const uint8_t *buffer, uint32_t size)
-{
-    if (cmd == as_callback_cmd_cache_empty || cmd == as_callback_cmd_cache_half_empty)
-    {
-        rt_event_send(&get_server()->event, AUDIO_SERVER_EVENT_TX_I2S1);
-    }
-    return 0;
-}
-static int i2s2_device_input_callback(audio_server_callback_cmt_t cmd, const uint8_t *buffer, uint32_t size)
-{
-    if (cmd == as_callback_cmd_cache_empty || cmd == as_callback_cmd_cache_half_empty)
-    {
-        rt_event_send(&get_server()->event, AUDIO_SERVER_EVENT_TX_I2S2);
-    }
-    return 0;
-}
-
 static int hardware_device_open(audio_device_ctrl_t *device, audio_client_t client)
 {
     int ret;
@@ -2226,16 +2090,6 @@ static int hardware_device_open(audio_device_ctrl_t *device, audio_client_t clie
         RT_ASSERT(hfp_dev_input_buf);
         hfp_dev_input_buf_offset = 0;
         ret = device->device.open(device->device.user_data, hfp_device_input_callback);
-        break;
-    case AUDIO_DEVICE_PDM1:
-    case AUDIO_DEVICE_PDM2:
-        ret = device->device.open(device->device.user_data, NULL);
-        break;
-    case AUDIO_DEVICE_I2S1:
-        device->device.open(device->device.user_data, i2s1_device_input_callback);
-        break;
-    case AUDIO_DEVICE_I2S2:
-        device->device.open(device->device.user_data, i2s2_device_input_callback);
         break;
     default:
         RT_ASSERT(0);
@@ -2697,9 +2551,12 @@ static void audio_device_close(audio_server_t *server, audio_client_t client)
     {
         LOG_I("resume h=0x%x, n=%s t=%d", suspend1, suspend1->name, suspend1->audio_type);
         rt_list_remove(&suspend1->node);
-        if (suspend1->parameter.is_need_3a)
+        if (suspend1->parameter.is_need_3a && client->device_using == AUDIO_DEVICE_SPEAKER)
         {
-            audio_3a_open(suspend1->parameter.write_samplerate, (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE), suspend1->parameter.disable_uplink_agc);
+            audio_device_speaker_t *my;
+            audio_server_t *server = get_server();
+            my = &server->device_speaker_private;
+            audio_3a_open(suspend1->parameter.write_samplerate, (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE), suspend1->parameter.disable_uplink_agc, my->all_mic_channels);
             suspend1->is_3a_opened = 1;
         }
         audio_device_open(server, suspend1);
@@ -3132,7 +2989,33 @@ static rt_err_t mic_rx_ind(rt_device_t dev, rt_size_t size)
     {
         return RT_EOK;
     }
-    rt_event_send(&g_server.event, AUDIO_SERVER_EVENT_RX);
+
+    audio_device_speaker_t *my;
+    audio_server_t *server = get_server();
+    my = &server->device_speaker_private;
+    if (my->pdm1_dev == dev)
+    {
+        //LOG_I("%s:%d s=%d", __func__, __LINE__, size);
+        RT_ASSERT(my->rx_channels * PDM_MOMO_FRAME_SIZE == size);
+        my->mic0_got = 1;
+    }
+    if (my->pdm2_dev == dev)
+    {
+        //LOG_I("%s:%d s=%d", __func__, __LINE__, size);
+        RT_ASSERT(my->rx_channels * PDM_MOMO_FRAME_SIZE == size);
+        my->mic1_got = 1;
+    }
+
+    if (my->mic_used != AUDIO_MIC_ALL)
+    {
+        rt_event_send(&g_server.event, AUDIO_SERVER_EVENT_RX);
+    }
+    else if (my->mic0_got && my->mic1_got)
+    {
+        my->mic0_got = 0;
+        my->mic1_got = 0;
+        rt_event_send(&g_server.event, AUDIO_SERVER_EVENT_RX);
+    }
     return RT_EOK;
 }
 
@@ -3844,10 +3727,10 @@ static audio_client_t audio_client_init(audio_type_t audio_type, audio_rwflag_t 
     RT_ASSERT(parameter);
     LOG_I("audio_open type=%d d=%d rw=%d tx cache=%d rx cache=%d", audio_type, device, rwflag, parameter->write_cache_size, parameter->read_cache_size);
 
-#ifndef BSP_AUDPRC_RX1_DMA
+#if !defined(BSP_AUDPRC_RX1_DMA) && !defined(BSP_USING_PDM2)
     if (parameter->read_which_mic != AUDIO_MIC0_ONLY)
     {
-        rt_kprintf("should enable CONFIG_BSP_AUDPRC_RX1_DMA=y\n");
+        rt_kprintf("should enable BSP_AUDPRC_RX1_DMA or BSP_USING_PDM2\n");
         RT_ASSERT(0);
         parameter->read_which_mic = AUDIO_MIC0_ONLY;
     }
@@ -4178,11 +4061,7 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
         return -1;
     }
     LOG_D("audio_ioctl: cmd=%d", cmd);
-    if (cmd == AUDIO_IOCTL_FACTORY_LOOPBACK_GAIN)
-    {
-        handle->is_factory_loopback = gain | 0x80;
-    }
-    else if (cmd == AUDIO_IOCTL_FLUSH_TIME_MS)
+    if (cmd == AUDIO_IOCTL_FLUSH_TIME_MS)
     {
         uint32_t *time_ms = (uint32_t *)parameter;
         ret = -1;
@@ -4857,6 +4736,11 @@ static void simu_audio_data_timer_handle(void *param)
 bool audio_data_capture(void)
 {
     return false;
+}
+void audio_dump_data_flush(void)
+{
+    if (is_audio_dump_enable())
+        audio_data_write_uart();
 }
 int audio_data_cmd(int argc, char **argv)
 {

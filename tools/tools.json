@@ -23,7 +23,6 @@
       "versions": [
         {
           "name": "0.1.16",
-          "status": "recommended",
           "macos-arm64": {
             "sha256": "A1AAF0303209FEF402657D2702E30E6D59F2A0DD9C24C9CFD315B9EB485DA94D",
             "size": 3556856,
@@ -62,7 +61,6 @@
         },
         {
           "name": "0.1.12",
-          "status": "supported",
           "macos-arm64": {
             "sha256": "E611523F70893C416D7F2E6B70219F6E9C9E2C6DA16C9408565D09A8FC18350E",
             "size": 3298112,
@@ -101,7 +99,6 @@
         },
         {
           "name": "0.1.10",
-          "status": "supported",
           "macos-arm64": {
             "sha256": "4B05A9E1C4AAD682862141AF3CF22E372514C7D39CD299DF7CECB4E6B3528AB5",
             "size": 3291476,
@@ -140,7 +137,6 @@
         },
         {
           "name": "0.1.7",
-          "status": "supported",
           "macos-arm64": {
             "sha256": "8118579A4F70796D1A9F8BE1C57A5432C0CCEE21BDEE641710AAAFBCA9FAB18A",
             "size": 3225772,
@@ -179,7 +175,6 @@
         },
         {
           "name": "0.1.3",
-          "status": "supported",
           "macos-arm64": {
             "sha256": "DF2637591C9D725870E7D3ACD511B789556A0FE2FD360BA71CA480439475DA57",
             "size": 4045836,
@@ -250,7 +245,6 @@
       "versions": [
         {
           "name": "0.1.1",
-          "status": "recommended",
           "win32": {
             "sha256": "6A3FF0A3F747C2C5FD958FEBFCCA9537767C84A9ED00401140AB5121C9BDA99C",
             "size": 137374,
@@ -340,7 +334,6 @@
             "url": "https://github.com/Kitware/CMake/releases/download/v3.30.2/cmake-3.30.2-macos-universal.tar.gz"
           },
           "name": "3.30.2",
-          "status": "recommended",
           "win32": {
             "sha256": "48bf4b3dc2d668c578e0884cac7878e146b036ca6b5ce4f8b5572f861b004c25",
             "size": 45404613,
@@ -369,7 +362,6 @@
             "url": "https://github.com/Kitware/CMake/releases/download/v3.16.3/cmake-3.16.3-Darwin-x86_64.tar.gz"
           },
           "name": "3.16.3",
-          "status": "supported",
           "win32": {
             "sha256": "4b1370b3252acda0850d26c75e9bc6b8e019daaa7978a19f5d8dc008450d3548",
             "size": 32807681,
@@ -426,7 +418,6 @@
             "url": "https://github.com/OpenSiFli/crosstool-ng/releases/download/14.2.0-20250221/arm-none-eabi-14.2.0-aarch64-apple-darwin.tar.xz"
           },
           "name": "14.2.1",
-          "status": "recommended",
           "win32": {
             "sha256": "6facb152ce431ba9a4517e939ea46f057380f8f1e56b62e8712b3f3b87d994e1",
             "size": 305393359,

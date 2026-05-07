@@ -1,4 +1,8 @@
-
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -7,6 +11,7 @@
 #include <math.h>
 #include <rtthread.h>
 #include "vg_lite.h"
+#include "drv_lcd.h"
 #include "utest.h"
 #include "board.h"
 #include "vg_lite_platform.h"
@@ -28,6 +33,59 @@ static char *tc_vglite_error_type[] =
 
 static rt_device_t lcd_device;
 static void *tc_vglite_buf;
+
+rt_err_t tc_vglite_cleanup(void);
+
+static rt_err_t tc_vglite_wait_lcd_ready(void)
+{
+    const rt_tick_t timeout = rt_tick_from_millisecond(3000);
+    const rt_tick_t start = rt_tick_get();
+    LCD_DrvStatusTypeDef status = LCD_STATUS_NONE;
+    rt_err_t err;
+
+    while ((rt_tick_get() - start) < timeout)
+    {
+        err = rt_device_control(lcd_device, RTGRAPHIC_CTRL_GET_STATE, &status);
+        if (err != RT_EOK)
+        {
+            return err;
+        }
+
+        if ((status == LCD_STATUS_INITIALIZED) || (status == LCD_STATUS_DISPLAY_ON))
+        {
+            return RT_EOK;
+        }
+
+        if ((status == LCD_STATUS_NOT_FIND_LCD) || (status == LCD_STATUS_DISPLAY_TIMEOUT))
+        {
+            rt_kprintf("LCD is not ready, status=%d\n", status);
+            return -RT_ERROR;
+        }
+
+        rt_thread_mdelay(10);
+    }
+
+    rt_device_control(lcd_device, RTGRAPHIC_CTRL_GET_STATE, &status);
+    rt_kprintf("Wait LCD ready timeout, status=%d\n", status);
+    return -RT_ETIMEOUT;
+}
+
+static rt_bool_t tc_vglite_lcd_is_ready(void)
+{
+    LCD_DrvStatusTypeDef status = LCD_STATUS_NONE;
+
+    if (lcd_device == RT_NULL)
+    {
+        return RT_FALSE;
+    }
+
+    if (rt_device_control(lcd_device, RTGRAPHIC_CTRL_GET_STATE, &status) != RT_EOK)
+    {
+        return RT_FALSE;
+    }
+
+    return (status == LCD_STATUS_INITIALIZED) || (status == LCD_STATUS_DISPLAY_ON);
+}
 
 void tc_vg_send_data_to_lcd(uint8_t *data, uint32_t width, uint32_t height, uint16_t color_fmt)
 {
@@ -67,12 +125,52 @@ rt_err_t tc_vglite_init(void)
     rt_err_t err;
     vg_module_parameters_t param;
 
-    lcd_device = rt_device_find("lcd");
-    RT_ASSERT(lcd_device);
+    if (tc_vglite_buf != RT_NULL)
+    {
+        if (tc_vglite_lcd_is_ready())
+        {
+            return RT_EOK;
+        }
 
-    rt_device_open(lcd_device, RT_DEVICE_OFLAG_RDWR);
+        tc_vglite_cleanup();
+    }
 
-    tc_vglite_buf = rt_malloc(TC_VGLITE_MEM_SIZE);
+    if (lcd_device == RT_NULL)
+    {
+        lcd_device = rt_device_find("lcd");
+        RT_ASSERT(lcd_device);
+        err = rt_device_open(lcd_device, RT_DEVICE_OFLAG_RDWR);
+        if (err != RT_EOK)
+        {
+            lcd_device = RT_NULL;
+            return err;
+        }
+    }
+
+    err = tc_vglite_wait_lcd_ready();
+    if (err != RT_EOK)
+    {
+        tc_vglite_cleanup();
+        return err;
+    }
+
+    uint8_t brightness = 100;
+    err = rt_device_control(lcd_device, RTGRAPHIC_CTRL_SET_BRIGHTNESS, &brightness);
+    if (err != RT_EOK)
+    {
+        tc_vglite_cleanup();
+        return err;
+    }
+
+    for (int retry = 0; retry < 3; retry++)
+    {
+        tc_vglite_buf = rt_malloc(TC_VGLITE_MEM_SIZE);
+        if (tc_vglite_buf != RT_NULL)
+        {
+            break;
+        }
+        rt_thread_mdelay(50);
+    }
     RT_ASSERT(tc_vglite_buf);
     memset((void *)&param, 0, sizeof(param));
     param.register_mem_base = V2D_GPU_BASE;
@@ -88,8 +186,11 @@ rt_err_t tc_vglite_cleanup(void)
 {
     vg_module_parameters_t param;
 
-    rt_device_close(lcd_device);
-    lcd_device = NULL;
+    if (lcd_device != RT_NULL)
+    {
+        rt_device_close(lcd_device);
+        lcd_device = NULL;
+    }
 
     if (tc_vglite_buf)
     {
@@ -197,4 +298,3 @@ const char *tc_vglite_get_layout_str(vg_lite_buffer_layout_t layout)
 
     return s;
 }
-

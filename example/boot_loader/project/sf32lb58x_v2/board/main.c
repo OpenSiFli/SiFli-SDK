@@ -470,12 +470,7 @@ uint32_t boot_enable_flash(void)
         BSP_SetFlash4DIV(6);
 
 #if defined(BSP_USING_NOR_FLASH4) || defined(BSP_USING_NAND_FLASH4)
-        HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);
-        HAL_PIN_Set(PAD_PA30, MPI4_CS, PIN_NOPULL, 1);
-        HAL_PIN_Set(PAD_PA40, MPI4_DIO0, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_PA37, MPI4_DIO1, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_PA36, MPI4_DIO2, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA38, MPI4_DIO3, PIN_PULLUP, 1);
+        BSP_Flash4_PowerUp();
 
         if (boot_flash_init(BOOT_FLASH4) != BOOT_INVALID_ADDR)
             addr = boot_get_flash_start_addr(BOOT_FLASH4);

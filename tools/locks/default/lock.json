@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "profile": "default",
+  "python": {
+    "version": "3.13.11",
+    "project_dir": "tools/locks/default",
+    "lock_file": "tools/locks/default/uv.lock"
+  },
+  "defaults": {
+    "targets": [
+      "all"
+    ]
+  },
+  "tools": {
+    "sftool": "0.1.16",
+    "sdk-exe": "0.1.1",
+    "cmake": "3.30.2",
+    "arm-none-eabi-gcc": "14.2.1"
+  },
+  "path_order": [
+    "sdk-exe",
+    "sftool",
+    "cmake",
+    "arm-none-eabi-gcc"
+  ],
+  "conan": {
+    "config_id": "sdk.conan-config.v2.4",
+    "remote_name": "artifactory",
+    "remote_url": "https://jfrog.sifli.com/artifactory/api/conan/conan-local",
+    "home_subdir": "default"
+  }
+}

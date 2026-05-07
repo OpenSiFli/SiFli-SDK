@@ -141,7 +141,7 @@ static void usbh_msc_thread(CONFIG_USB_OSAL_THREAD_SET_ARGV)
     int ret;
 
     snprintf(name, CONFIG_USBHOST_DEV_NAMELEN, DEV_FORMAT, msc_class->sdchar);
-    snprintf(mount_point, CONFIG_USBHOST_DEV_NAMELEN, CONFIG_USB_DFS_MOUNT_POINT, msc_class->sdchar);
+    snprintf(mount_point, CONFIG_USBHOST_DEV_NAMELEN, CONFIG_USB_DFS_MOUNT_POINT);
 
     ret = dfs_mount(name, mount_point, "elm", 0, 0);
     if (ret == 0) {
@@ -192,7 +192,7 @@ void usbh_msc_stop(struct usbh_msc *msc_class)
     char mount_point[CONFIG_USBHOST_DEV_NAMELEN];
 
     snprintf(name, CONFIG_USBHOST_DEV_NAMELEN, DEV_FORMAT, msc_class->sdchar);
-    snprintf(mount_point, CONFIG_USBHOST_DEV_NAMELEN, CONFIG_USB_DFS_MOUNT_POINT, msc_class->sdchar);
+    snprintf(mount_point, CONFIG_USBHOST_DEV_NAMELEN, CONFIG_USB_DFS_MOUNT_POINT);
 
     dfs_unmount(mount_point);
     dev = rt_device_find(name);

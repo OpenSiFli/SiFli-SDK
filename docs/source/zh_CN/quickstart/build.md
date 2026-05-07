@@ -16,7 +16,7 @@
 
 对不同的工程来说，可能有不同的定制化的配置选项。我们使用menuconfig工具来配置工程。打开menuconfig的方法如下：
 
-在工程目录下运行命令`scons --board=<board_name> --menuconfig`，会弹出一个配置界面，可以根据需要修改配置选项。修改完成后，按下`ESC`键两次，选择保存配置并退出。
+在工程目录下运行命令`sdk.py menuconfig --board=<board_name>`，会弹出一个配置界面，可以根据需要修改配置选项。修改完成后，按下`ESC`键两次，选择保存配置并退出。
 
 ```{note}
 `--board`是必选参数，指定要编译的板子名称，可用的板子名称见[](/supported_boards/index.md)，如果未指定将无法正常配置。

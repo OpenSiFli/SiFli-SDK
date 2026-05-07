@@ -88,8 +88,8 @@
                     "DFU_DOWNLOAD_REGION"
                 ]
             },
-            {"offset": "0x00A00000", "max_size": "0x00100000", "name": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
-            {"offset": "0x00B00000", "max_size": "0x00100000", "tags": ["FLASH_PART12", "FS_EX"]},
+            {"offset": "0x00A00000", "max_size": "0x00300000", "name": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
+            {"offset": "0x00D00000", "max_size": "0x00100000", "tags": ["FLASH_PART12", "FS_EX"]},
             {
                 "offset": "0x00E00000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_LOAD_REGION1"], 
                 "name": "acpu", 

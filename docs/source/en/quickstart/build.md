@@ -16,7 +16,7 @@ The compiled files are stored in the `build_<board_name>` directory, which conta
 
 Different projects may have different customized configuration options. We use the menuconfig tool to configure projects. The method to open menuconfig is as follows:
 
-Run the command `scons --board=<board_name> --menuconfig` in the project directory, a configuration interface will pop up, and you can modify configuration options as needed. After modification, press the `ESC` key twice, select save configuration and exit.
+Run the command `sdk.py menuconfig --board=<board_name>` in the project directory, a configuration interface will pop up, and you can modify configuration options as needed. After modification, press the `ESC` key twice, select save configuration and exit.
 
 ```{note}
 `--board` is a required parameter that specifies the board name to be compiled. Available board names can be found in [](/supported_boards/index.md). If not specified, configuration cannot be performed normally.

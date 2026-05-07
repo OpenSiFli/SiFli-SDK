@@ -60,6 +60,11 @@ cert_subs = Template(cert_template)
 # 3. Get the current absolute path
 cwd = GetCurrentDir()
 
+# Check if PKG_USING_MBEDTLS is enabled; if not, skip certificate processing and return empty group
+if not GetDepend(['PKG_USING_MBEDTLS']):
+    group = DefineGroup('mbedtls', [], depend=['PKG_USING_MBEDTLS'])
+    Return('group')
+
 # 4. PEM certificate file path (*.pem or *.cer)
 certs_user_dir = cwd + os.sep + 'certs'
 certs_default_dir = cwd + os.sep + (os.sep).join(['certs', 'default'])

@@ -2558,6 +2558,9 @@
  */
 #define MBEDTLS_SSL_TLS_C
 
+/* Keep peer certificate in memory so fallback flow can inspect cert chain. */
+#define MBEDTLS_SSL_KEEP_PEER_CERTIFICATE
+
 /**
  * \def MBEDTLS_THREADING_C
  *

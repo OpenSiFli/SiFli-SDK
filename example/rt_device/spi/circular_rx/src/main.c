@@ -11,7 +11,11 @@
 #include "drv_spi.h"
 #include <string.h>
 
-#define SPI_BUS_NAME            "spi1"
+#ifdef SF32LB56X
+    #define SPI_BUS_NAME            "spi2"
+#else
+    #define SPI_BUS_NAME            "spi1"
+#endif
 #define SPI_DEVICE_NAME         "spi_circular"
 #define SPI_BAUDRATE_HZ         20000000U
 #define SPI_DMA_BUFFER_SIZE     256U
@@ -24,7 +28,7 @@
  * - 2: Slave TX only mode (requires external Master to provide clock)
  */
 #ifndef SPI_CIRCULAR_DEMO_MODE
-#define SPI_CIRCULAR_DEMO_MODE  0
+    #define SPI_CIRCULAR_DEMO_MODE  0
 #endif
 
 static struct rt_spi_device *g_spi_dev = RT_NULL;
@@ -106,6 +110,11 @@ static void spi_pinmux_init(void)
     HAL_PIN_Set(PAD_PA20, SPI1_DI,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, SPI1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA29, SPI1_CS,  PIN_NOPULL, 1);
+#elif defined(SF32LB56X)
+    HAL_PIN_Set(PAD_PA64, SPI2_DO,  PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA69, SPI2_DI,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA73, SPI2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA71, SPI2_CS,  PIN_NOPULL, 1);
 #else
 #error "Unsupported chip for circular_rx example"
 #endif
@@ -320,8 +329,8 @@ int main(void)
         {
             last_rx_half = g_rx_half_cnt;
             last_rx_full = g_rx_full_cnt;
-            rt_kprintf("RX: half=%lu full=%lu ", 
-                       (unsigned long)last_rx_half, 
+            rt_kprintf("RX: half=%lu full=%lu ",
+                       (unsigned long)last_rx_half,
                        (unsigned long)last_rx_full);
             spi_dump_rx_samples();
         }

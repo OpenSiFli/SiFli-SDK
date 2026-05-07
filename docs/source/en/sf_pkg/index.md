@@ -5,7 +5,7 @@ Similar to [RT-PKG](../app_note/rt-pkg.md), SiFli Package Registry is also a pac
 ## Prerequisites
 
 - Navigate to a valid SDK project directory
-- Execute `.\export.ps1` (Windows) or `./export.sh` (Linux/macOS) to initialize the environment
+- Execute `.\export.ps1` (Windows) or `. ./export.sh` (Linux/macOS) to initialize the environment
 
 ## Quick Reference Command Table
 

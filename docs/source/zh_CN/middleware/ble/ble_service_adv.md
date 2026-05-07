@@ -91,3 +91,20 @@ static void app_advertising_start(void)
 
 
 ```
+
+## 使用技巧
+
+### 参数 is_auto_restart 的影响
+
+| 调用和行为 | 广播状态 |
+|---------|---------|
+| `sibles_advertising_init` → `sibles_advertising_start` | 设备启动广播 |
+| 设备被连接 | 广播自动停止（蓝牙协议规定） |
+| 设备断开连接 | 取决于 is_auto_restart 的值 |
+
+- **is_auto_restart = 1**：设备断开后自动重启广播，直至调用 `sibles_advertising_stop` 停止或被其他设备再次连接。
+- **is_auto_restart = 0**：设备断开后不会自动启动广播，需手动调用 `sibles_advertising_start`（无需重新初始化，除非已调用 `sibles_advertising_delete`）。
+
+**使用建议**：
+- 简单的单连接场景：推荐设置为 1，由系统自动管理广播。
+- 多连接或复杂场景：设置为 0，由用户自行控制广播开关。

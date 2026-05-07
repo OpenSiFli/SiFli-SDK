@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*********************************************************************
 *            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                        The Embedded Experts                        *
@@ -258,6 +264,7 @@ int rt_hw_flash3_init()
 
     flash_cfg3.base = HCPU_MPI_SBUS_ADDR(flash_cfg3.base);
     spi_flash_handle[2].handle.data_buf = (uint8_t *)&nand_buf[0];
+    spi_flash_handle[2].handle.data_buf_w = (uint8_t *)&nand_buf[0];
     // init hardware, set dma, clock
     spi_flash_handle[2].handle.freq = flash_get_freq(RCC_CLK_MOD_FLASH3, div, 1);
     res = HAL_FLASH_Init(&(spi_flash_handle[2]), &flash_cfg3, &spi_flash_dma_handle[2], &flash_dma3,     div);
@@ -299,6 +306,7 @@ int rt_hw_flash4_init()
     flash_cfg4.base = HCPU_MPI_SBUS_ADDR(flash_cfg4.base);
 
     spi_flash_handle[3].handle.data_buf = (uint8_t *)&nand_buf[0];
+    spi_flash_handle[3].handle.data_buf_w = (uint8_t *)&nand_buf[0];
     spi_flash_handle[3].handle.freq = flash_get_freq(RCC_CLK_MOD_FLASH4, div, 1);
 
     // init hardware, set dma, clock

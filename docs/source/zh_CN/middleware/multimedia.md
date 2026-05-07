@@ -94,11 +94,6 @@ typedef enum
     AUDIO_DEVICE_SPEAKER       = 0, //audio output to speaker, input from mic
     AUDIO_DEVICE_A2DP_SINK     = 1, //audio output to tws
     AUDIO_DEVICE_HFP           = 2, //local is AG, audio output to tws HFP
-    AUDIO_DEVICE_I2S1          = 3, //audio output to I2s1
-    AUDIO_DEVICE_I2S2          = 4, //audio output to I2s2
-    AUDIO_DEVICE_PDM1          = 5, //no use now
-    AUDIO_DEVICE_PDM2          = 6, //no use now
-    AUDIO_DEVICE_BLE_BAP_SINK  = 7, //local is ble bap src, output to ble bap sink
     AUDIO_DEVICE_NUMBER             //内部使用，API不可以使用
 } audio_device_e;
 
@@ -112,7 +107,7 @@ audio_client_t audio_open2(audio_type_t audio_type,
   这个函数同audio_open()比就是最后多了个参数fixed_device，
   它表示这个client要固定使用哪个设备播放，不参加输出设备的切换，
   他的输入范围在audio_device_e定义的实体设备，
-  按上面的定义，应该是从AUDIO_DEVICE_SPEAKER到AUDIO_DEVICE_BLE_BAP_SINK，
+  按上面的定义，区间范围是[AUDIO_DEVICE_SPEAKER, AUDIO_DEVICE_NUMBER)，
   目前没有app这样用，可能的用法是使用AUDIO_DEVICE_SPEAKER，
   这样无论是否连上tws耳机，这个client一直固定从speaker输出.
 */

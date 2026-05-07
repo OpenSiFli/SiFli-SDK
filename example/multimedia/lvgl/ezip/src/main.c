@@ -39,7 +39,7 @@ typedef struct img_src_info
 } img_src_info_t;
 
 L2_RET_BSS_SECT_BEGIN(psram_heap_pool)
-static uint8_t psram_heap_pool[4096 * 1024] L2_RET_BSS_SECT(psram_heap_pool);
+static uint8_t psram_heap_pool[3 * 1024 * 1024] L2_RET_BSS_SECT(psram_heap_pool);
 L2_RET_BSS_SECT_END
 static struct rt_memheap psram_memheap;
 static img_src_info_t g_img_src_info;
@@ -383,4 +383,3 @@ int main(void)
     }
     return 0;
 }
-

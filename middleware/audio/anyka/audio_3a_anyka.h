@@ -19,9 +19,11 @@ extern "C" {
 #endif
 
 #define ANYKA_FRAME_SIZE        320 /* must same as CODEC_DATA_UNIT_LEN in audio_server.c */
+#define ANYKA_CACHED_FRMAES     4
 
 /*
-  最后算法看到的mic信号比参考信号晚多少个采样, 调整g_mic_delay_ref，保证实际测量出来和这个值一致
+    The final algorithm determines how many samples the MIC signal lags behind the reference signal,
+    then adjusts the g_mic_delay_ref to ensure the measured value matches this value
 */
 #define DELAY_SAMPLE    10
 
@@ -40,6 +42,8 @@ typedef struct
     T_AUDIO_FILTER_TS   ts_far;
     T_AUDIO_FILTER_TS   ts_dac_stream;
     uint16_t    samplerate;
+    uint8_t     is_bt_voice;
+    uint8_t     all_mic_channels;
 } acpu_audio_3a_open_parameter_t;
 
 typedef struct

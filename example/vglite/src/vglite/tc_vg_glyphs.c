@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/*
  Resolution: 320 x 320
  Format: VG_LITE_RGBA8888
  Transformation: Translate/Scale
@@ -13,6 +18,9 @@
 #include "vg_lite_util.h"
 #include "vladimir_font.h"
 #include "tc_vglite.h"
+#include "demo_ctrl.h"
+
+void tc_vglite_glyphs_entry(void);
 
 #define DEFAULT_SIZE   160;
 static int   fb_width = 224, fb_height = 240;
@@ -79,6 +87,11 @@ static void cleanup(void)
 }
 
 void tc_vglite_glyphs(int argc, char **argv)
+{
+    tc_vglite_glyphs_entry();
+}
+
+void tc_vglite_glyphs_entry(void)
 {
     vg_lite_error_t error = VG_LITE_SUCCESS;
     vg_lite_matrix_t matrix;
@@ -165,7 +178,11 @@ void tc_vglite_glyphs(int argc, char **argv)
     //vg_lite_save_png("plyhs2_1.png", fb);
 
     tc_vg_send_data_to_lcd(fb->memory, fb->width, fb->height, RTGRAPHIC_PIXEL_FORMAT_RGB565);
-    rt_thread_mdelay(5000);
+    if (demo_should_exit()) return;
+    if (!demo_delay_ms(5000))
+    {
+        goto ErrorHandler;
+    }
 
     /*Draw frame 2, scale a character*/
     vg_lite_identity(&matrix);
@@ -193,7 +210,11 @@ void tc_vglite_glyphs(int argc, char **argv)
     //vg_lite_save_png("plyhs2_2.png", fb);
 
     tc_vg_send_data_to_lcd(fb->memory, fb->width, fb->height, RTGRAPHIC_PIXEL_FORMAT_RGB565);
-    rt_thread_mdelay(5000);
+    if (demo_should_exit()) goto ErrorHandler;
+    if (!demo_delay_ms(5000))
+    {
+        goto ErrorHandler;
+    }
 
 ErrorHandler:
     if (path_data)
@@ -206,4 +227,3 @@ ErrorHandler:
 }
 
 UTEST_TC_EXPORT(tc_vglite_glyphs, "tc_vglite_0_1", tc_vglite_init, tc_vglite_cleanup, 10);
-

@@ -4,7 +4,7 @@ Source path: `example/rt_device/spi/circular_rx`
 ## Supported Boards
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
-
+- `sf32lb56-lcd_a128r12n1`
 ## Overview
 This example validates DMA circular mode in the RT-Thread SPI driver and supports three modes:
 - **Master TRX mode**: full-duplex TX/RX, suitable for loopback testing
@@ -30,6 +30,12 @@ CONFIG_BSP_USING_SPI1=y
 CONFIG_BSP_SPI1_TX_USING_DMA=y
 CONFIG_BSP_SPI1_RX_USING_DMA=y
 CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
+
+#56-LCD need to be configured to SPI2
+CONFIG_BSP_USING_SPI2=y
+CONFIG_BSP_SPI2_TX_USING_DMA=y
+CONFIG_BSP_SPI2_RX_USING_DMA=y
+CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 ```
 
 ## Mode Selection
@@ -41,7 +47,7 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 ## Example Flow
 
 ### Master TRX Mode (Mode 0)
-1. Configure SPI1 pinmux
+1. Configure SPI1 pinmux(56 configured to SPI2)
 2. Attach/open the `spi_circular` device
 3. Configure SPI (Master, Mode0, 8bit, 20MHz)
 4. Call `rt_spi_take_bus()/rt_spi_release_bus()` to trigger DMA handle linking
@@ -50,14 +56,14 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 7. Short MOSI and MISO for loopback verification
 
 ### Slave RX Mode (Mode 1)
-1. Configure SPI1 pinmux
+1. Configure SPI1 pinmux(56 configured to SPI2)
 2. Configure SPI as Slave mode
 3. Call `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` with `RX`
 4. Call `rt_device_read()` to start circular receive
 5. Connect an external SPI Master to provide clock
 
 ### Slave TX Mode (Mode 2)
-1. Configure SPI1 pinmux
+1. Configure SPI1 pinmux(56 configured to SPI2)
 2. Configure SPI as Slave mode
 3. Call `rt_device_control(..., RT_SPI_CTRL_CONFIG_DMA_CIRCULAR, ...)` with `TX`
 4. Call `rt_device_write()` to start circular transmit
@@ -77,6 +83,10 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 |              | PA_20 | di  | SPI_MISO | 10 |
 |              | PA_28 | clk | SPI_CLK  | 5 |
 |              | PA_29 | cs  | SPI_CS   | 3 |
+| sf32lb56-lcd | PA_64 | do  | SPI_MOSI | 19 |
+|              | PA_69 | di  | SPI_MISO | 29 |
+|              | PA_73 | clk | SPI_CLK  | 23 |
+|              | PA_71 | cs  | SPI_CS   | 24 |
 
 The hardware schematic of `sf32lb52-lcd_n16r8` is shown below:
 
@@ -85,6 +95,7 @@ The hardware schematic of `sf32lb52-lcd_n16r8` is shown below:
 Short SPI1 MOSI and MISO:
 - `sf32lb52x`: `PA24(DIO)` ↔ `PA25(DI)`
 - `sf32lb58x`: `PA21(DO)` ↔ `PA20(DI)`
+- `sf32lb56x`：`PA64(DO)` ↔ `PA69(DI)`
 
 ### Option 2: External SPI Slave Device (Slave Mode)
 Connect with standard 4-wire SPI. An external Master must provide clock.
@@ -167,3 +178,6 @@ Check:
 | Version | Date | Description |
 |:---|:---|:---|
 | 1.0.0 | 03/2026 | Initial release, supporting Master TRX / Slave RX / Slave TX modes |
+| 1.0.1 | 04/2026 | Add support for sf32lb56-lcd |
+build error reason on 56x is: proj.conf does not configure CONFIG_BSP_USING_SPI_DMA_CIRCULAR
+and example is no support 56x,now add support for 56x,and fix the 'dma_config.h' define for 56x SPI2 DMA

@@ -162,12 +162,13 @@ static HAL_StatusTypeDef utest_adc_calib(void)
                 }
 
 #endif
+                rt_kprintf("\n vbat_mv: %d mv, %d; ldoref_flag = %d, ldoref_sel = %d;\n",
+                           cfg.vbat_mv, cfg.vbat_reg, cfg.ldovref_flag, cfg.ldovref_sel);
+
             }
 #endif
             rt_kprintf("\nGPADC :vol10: %d mv, %d; vol25: %d mv reg %d; offset %f, ratio %f, max reg %d;\n",
                        vol1, cfg.vol10, vol2, cfg.vol25,  off, rat, adc_thd_reg);
-            rt_kprintf("\n vbat_mv: %d mv, %d; ldoref_flag = %d, ldoref_sel = %d;\n",
-                       cfg.vbat_mv, cfg.vbat_reg, cfg.ldovref_flag, cfg.ldovref_sel);
 
         }
         return HAL_OK;

@@ -5,7 +5,7 @@
 ## 使用前准备
 
 - 进入有效的 SDK 工程目录
-- 执行 `.\export.ps1`（Windows）或 `./export.sh`（Linux/macOS）初始化环境
+- 执行 `.\export.ps1`（Windows）或 `. ./export.sh`（Linux/macOS）初始化环境
 
 ## 常用命令速查表
 

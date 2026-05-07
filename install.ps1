@@ -1,45 +1,20 @@
 #!/usr/bin/env pwsh
 
-param(
-    [Switch]$h
-)
-
 $SIFLI_SDK_PATH = $PSScriptRoot
+$env:SIFLI_SDK_PATH = $SIFLI_SDK_PATH
 
-if ($h) {
-    python "$SIFLI_SDK_PATH/tools/install_util.py" print_help ps1
-    Exit
+$mirrorChina = "$env:SIFLI_SDK_MIRROR_CHINA".Trim().ToLowerInvariant()
+if ($mirrorChina -in @("1", "true", "yes", "on")) {
+    $env:SIFLI_SDK_GITHUB_ASSETS = "https://downloads.sifli.com/github_assets"
+    $env:SIFLI_SDK_PYPI_DEFAULT_INDEX = "https://mirrors.ustc.edu.cn/pypi/simple"
+    $env:UV_PYTHON_DOWNLOADS_JSON_URL = "https://uv.agentsmirror.com/metadata/python-downloads.json"
+    $env:UV_PYPY_INSTALL_MIRROR = "https://uv.agentsmirror.com/pypy"
 }
 
-Write-Output "INFO: Using SIFLI_SDK_PATH '$SIFLI_SDK_PATH' for installation."
-
-$FEATURES = (python "$SIFLI_SDK_PATH/tools/install_util.py" extract features "$args")
-
-Write-Output "Setting up Python environment"
-# PowerShell does not propagate variables to new process (spawned python), so we pass detected SIFLI_SDK_PATH as argument
-# to avoid using any previously set SIFLI_SDK_PATH values in the terminal environment.
-
-$proces_py_env = Start-Process -Wait -PassThru -NoNewWindow -FilePath "python" -Args "`"$SIFLI_SDK_PATH/tools/sifli_sdk_tools.py`" --sifli-sdk-path ${SIFLI_SDK_PATH} install-python-env --features=${FEATURES}"
-$exit_code_py_env = $proces_py_env.ExitCode
-if ($exit_code_py_env -ne 0) { exit $exit_code_py_env } # if error
-
-$python_venv_path = (python "$SIFLI_SDK_PATH/tools/sifli_sdk_tools.py" get-install-python-env)
-if ($python_venv_path.StartsWith("Error")) {
-    Write-Host $python_venv_path
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    Write-Error "uv was not found in PATH. Please install uv before running install.ps1."
     exit 1
 }
 
-$python_venv = "$python_venv_path/Scripts/python"
-$TARGETS = & $python_venv "$SIFLI_SDK_PATH/tools/install_util.py" extract targets 
-
-Write-Output "Installing SIFLI-SDK tools"
-# PowerShell does not propagate variables to new process (spawned python), so we pass detected SIFLI_SDK_PATH as argument
-# to avoid using any previously set SIFLI_SDK_PATH values in the terminal environment.
-$proces_tools = Start-Process -Wait -PassThru -NoNewWindow -FilePath "$python_venv" -Args "`"$SIFLI_SDK_PATH/tools/sifli_sdk_tools.py`" --sifli-sdk-path ${SIFLI_SDK_PATH} install --targets=${TARGETS}"
-$exit_code_tools = $proces_tools.ExitCode
-if ($exit_code_tools -ne 0) { exit $exit_code_tools }  # if error
-
-Write-Output "
-All done! You can now run:
-    export.ps1
-"
+& uv run --with rich --with tomli_w --python 3.13.11 --no-project "$SIFLI_SDK_PATH/tools/sdk_env.py" install @args
+exit $LASTEXITCODE

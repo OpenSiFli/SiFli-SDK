@@ -907,7 +907,7 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
 
         if (lv_draw_mask_is_only_map_mask(draw_ctx->clip_area, &mask_param))
         {
-            LV_DEBUG_ASSERT((LV_DRAW_MASK_TYPE_MAP == mask_param.dsc.type), "type:%d", mask_param.dsc.type);
+            LV_DEBUG_ASSERT((LV_DRAW_MASK_TYPE_MAP == mask_param.dsc.type), "type:%llu", mask_param.dsc.type);
 
             mask_coords = mask_param.cfg.coords;
 

@@ -33,8 +33,6 @@ from typing import Tuple
 # sdk.py extensions. Therefore, pyc file generation is turned off:
 sys.dont_write_bytecode = True
 
-import python_version_checker  # noqa: E402
-
 try:
     import click  # noqa: E402
 
@@ -102,58 +100,88 @@ class ExtensionLoadReport:
 PYTHON = sys.executable
 
 
+def _migration_hint() -> str:
+    return (
+        'Run "./install.sh" then ". ./export.sh" '
+        '(or on PowerShell: ".\\install.ps1" then ".\\export.ps1").'
+    )
+
+
+def _is_path_within(path: str, root: str) -> bool:
+    path_candidates = {
+        os.path.normcase(os.path.abspath(path)),
+        os.path.normcase(os.path.realpath(path)),
+    }
+    root_candidates = {
+        os.path.normcase(os.path.abspath(root)),
+        os.path.normcase(os.path.realpath(root)),
+    }
+    for path_candidate in path_candidates:
+        for root_candidate in root_candidates:
+            if path_candidate == root_candidate:
+                return True
+            if path_candidate.startswith(root_candidate + os.sep):
+                return True
+    return False
+
+
+def _python_in_env(python_env_path: str) -> str:
+    subdir = "Scripts" if sys.platform == "win32" else "bin"
+    exe = "python.exe" if sys.platform == "win32" else "python"
+    return os.path.join(python_env_path, subdir, exe)
+
+
 def check_environment() -> List[str]:
     """
-    Verify the environment contains the top-level tools we need to operate.
+    Verify sdk.py is running from an exported SiFli SDK environment.
     """
     checks_output: List[str] = []
     if os.getenv("LEGACY_ENV"):
         return checks_output
 
     detected_sifli_sdk_path = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
-    if "SIFLI_SDK_PATH" in os.environ:
-        set_sifli_sdk_path = os.path.realpath(os.environ["SIFLI_SDK_PATH"])
-        if set_sifli_sdk_path != detected_sifli_sdk_path:
-            print_warning(
-                "WARNING: SIFLI_SDK_PATH environment variable is set to %s but %s path indicates "
-                "SIFLI SDK directory %s. Using the environment variable directory, but results may be unexpected..."
-                % (set_sifli_sdk_path, PROG, detected_sifli_sdk_path)
-            )
-    else:
-        print_warning("Setting SIFLI_SDK_PATH environment variable: %s" % detected_sifli_sdk_path)
-        os.environ["SIFLI_SDK_PATH"] = detected_sifli_sdk_path
-
-    try:
-        python_version_checker.check()
-    except RuntimeError as e:
-        raise SdkEnvironmentError(str(e)) from e
-
-    checks_output.append("Checking Python dependencies...")
-    try:
-        out = subprocess.check_output(
-            [
-                PYTHON,
-                os.path.join(os.environ["SIFLI_SDK_PATH"], "tools", "sifli_sdk_tools.py"),
-                "check-python-dependencies",
-            ],
-            env=os.environ,
+    set_sifli_sdk_path = os.getenv("SIFLI_SDK_PATH")
+    if not set_sifli_sdk_path:
+        raise SdkEnvironmentError(
+            "SIFLI_SDK_PATH is not set. sdk.py requires an exported SDK environment. "
+            + _migration_hint()
         )
-        checks_output.append(out.decode("utf-8", "ignore").strip())
-    except subprocess.CalledProcessError as e:
-        print_warning(e.output.decode("utf-8", "ignore"), stream=sys.stderr)
-        debug_print_sdk_version()
-        raise SdkEnvironmentError("Python dependency check failed") from e
+    resolved_sdk_path = os.path.realpath(set_sifli_sdk_path)
+    if resolved_sdk_path != detected_sifli_sdk_path:
+        raise SdkEnvironmentError(
+            "SIFLI_SDK_PATH points to a different SDK checkout. "
+            f"Expected: {detected_sifli_sdk_path}, got: {resolved_sdk_path}. "
+            + _migration_hint()
+        )
 
-    checks_output.append("Checking used Python interpreter...")
-    try:
-        python_venv_path = os.environ["SIFLI_SDK_PYTHON_ENV_PATH"]
-        if python_venv_path and not sys.executable.startswith(python_venv_path):
-            print_warning(
-                f'WARNING: Python interpreter "{sys.executable}" used to start sdk.py '
-                f'is not from installed venv "{python_venv_path}"'
-            )
-    except KeyError:
-        print_warning("WARNING: The SIFLI_SDK_PYTHON_ENV_PATH is missing in environmental variables!")
+    python_env_path = os.getenv("SIFLI_SDK_PYTHON_ENV_PATH")
+    if not python_env_path:
+        raise SdkEnvironmentError(
+            "SIFLI_SDK_PYTHON_ENV_PATH is not set. sdk.py requires an exported SDK environment. "
+            + _migration_hint()
+        )
+    python_env_path = os.path.realpath(python_env_path)
+    if not os.path.isdir(python_env_path):
+        raise SdkEnvironmentError(
+            f'SIFLI_SDK_PYTHON_ENV_PATH "{python_env_path}" does not exist. '
+            + _migration_hint()
+        )
+
+    expected_python = _python_in_env(python_env_path)
+    if not os.path.isfile(expected_python):
+        raise SdkEnvironmentError(
+            f'Python interpreter "{expected_python}" does not exist in SIFLI_SDK_PYTHON_ENV_PATH. '
+            + _migration_hint()
+        )
+
+    executable_in_env = _is_path_within(sys.executable, python_env_path)
+    prefix_matches_env = os.path.normcase(os.path.realpath(sys.prefix)) == os.path.normcase(python_env_path)
+    if not executable_in_env and not prefix_matches_env:
+        raise SdkEnvironmentError(
+            f'sdk.py is running with "{sys.executable}", which is not from "{python_env_path}". '
+            "Use the SDK environment Python by running export first. "
+            + _migration_hint()
+        )
 
     return checks_output
 

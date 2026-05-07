@@ -1,4 +1,9 @@
 /*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+/*
  Resolution: 320 x 480
  Format: VG_LITE_RGB565
  Transformation: Rotate/Scale/Translate
@@ -15,6 +20,9 @@
 #include "vg_lite_ex.h"
 #include "vg_lite_util.h"
 #include "tc_vglite.h"
+#include "demo_ctrl.h"
+
+void tc_vglite_rotate_entry(void);
 
 #define DEFAULT_SIZE   224.0f;
 
@@ -55,6 +63,11 @@ static void cleanup(void)
 
 void tc_vglite_rotate(int argc, char **argv)
 {
+    tc_vglite_rotate_entry();
+}
+
+void tc_vglite_rotate_entry(void)
+{
     vg_lite_filter_t filter;
     vg_lite_matrix_t matrix;
 
@@ -83,6 +96,10 @@ void tc_vglite_rotate(int argc, char **argv)
     {
         //uint32_t i = 3;
 
+        if (demo_should_exit())
+        {
+            return;
+        }
         rt_kprintf("rot:%d\n", i);
         // Clear the buffer with blue.
         TC_VGLITE_CHECK_ERROR(vg_lite_clear(fb, NULL, 0xFF000000));

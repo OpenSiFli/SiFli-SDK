@@ -197,4 +197,10 @@ void lv_mem_monitor_core(lv_mem_monitor_t * mon_p)
     return;
 }
 
+lv_result_t lv_mem_test_core(void)
+{
+    /*Not supported*/
+    return LV_RESULT_OK;
+}
+
 #endif /* LV_USE_STDLIB_MALLOC == LV_STDLIB_RTTHREAD */

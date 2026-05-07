@@ -559,8 +559,8 @@ static void vg_lite_draw_img_texture_ext(float fov, vg_lite_buffer_t *dst, vg_li
     vg_lite_error_t err = VG_LITE_SUCCESS;
 
     vg_lite_matrix_t mat_proj;
-    lv_coord_t item_w = src->width;
-    lv_coord_t item_h = src->height;
+    float item_w = src->width;
+    float item_h = src->height;
     err = vg_lite_get_texture_map_matrix(fov, item_w, item_h, dst->width, dst->height, quad_proj, &mat_proj);
     if (err != VG_LITE_SUCCESS)
     {
@@ -585,8 +585,8 @@ void vg_lite_draw_img_texture(float fov, vg_lite_buffer_t *dst, vg_lite_buffer_t
 {
     vg_lite_error_t err = VG_LITE_SUCCESS;
     float ref_h = dst->height;
-    lv_coord_t src_w = src->width;
-    lv_coord_t src_h = src->height;
+    float src_w = src->width;
+    float src_h = src->height;
     float w_f = src->width / ref_h;
     float h_f = src->height / ref_h;
 
@@ -608,16 +608,16 @@ void vg_lite_draw_img_texture(float fov, vg_lite_buffer_t *dst, vg_lite_buffer_t
     sum += v[3].x * v[0].y - v[0].x * v[3].y;
     float rate = sum / w_f / h_f / 8.0f;
 
-    if (sram_buf && buf_size > line_size && (LV_ABS(rate) > 0.5f || (line_size * src_h < buf_size)))
+    if (sram_buf && buf_size > line_size && (HAL_ABS(rate) > 0.5f || (line_size * src_h < buf_size)))
     {
         //rt_kprintf("sram sum:%f rate:%f\n",sum,rate);
         for (int32_t ofs_y = 0; ofs_y < src_h; ofs_y += line_max)
         {
-            int32_t next_y = LV_MIN(src_h, ofs_y + line_max);
+            int32_t next_y = HAL_MIN(src_h, ofs_y + line_max);
             float y0 = h_f - ofs_y * h_f * 2.0f / src_h;
             float y1 = h_f - next_y * h_f * 2.0f / src_h;
             vg_lite_quad_t v = { { -w_f, y0, 0}, { -w_f, y1, 0}, { w_f, y1, 0}, { w_f, y0, 0} };
-            lv_coord_t splitpart_h = next_y - ofs_y;
+            float splitpart_h = next_y - ofs_y;
             uint32_t data_size = splitpart_h * line_size;
             uint32_t ofs_size = (ofs_y + 1) * line_size;
             uint8_t *p_buf = (uint8_t *)((uint32_t)src->memory + ofs_size);

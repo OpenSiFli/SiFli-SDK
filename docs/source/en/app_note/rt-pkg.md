@@ -5,7 +5,7 @@
 After configuring the environment using `.\export.ps1` in the SDK path, switch to the project directory where packages need to be configured, and use the following command to enter the configuration interface:
 
 ```shell
-scons --board=sf32lb52-lcd_n16r8 --menuconfig
+sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 ```
 
 After entering the configuration interface, select `RT-Thread online packages` to configure the relevant software packages.

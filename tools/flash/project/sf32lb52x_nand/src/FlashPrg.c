@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*********************************************************************
 *            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                        The Embedded Experts                        *
@@ -215,6 +221,7 @@ int rt_hw_flash2_init()
     uint16_t div = BSP_GetFlash2DIV();
     flash_cfg2.base = HCPU_MPI_SBUS_ADDR(flash_cfg2.base);
     spi_flash_handle[1].handle.data_buf = (uint8_t *)&nand_buf[0];
+    spi_flash_handle[1].handle.data_buf_w = (uint8_t *)&nand_buf[0];
     // todo, update freq when do not use FPGA any more
     //spi_flash_handle[1].handle.freq = flash_get_freq(RCC_CLK_MOD_FLASH2, div, 1);
     spi_flash_handle[1].handle.freq = 120000000 / div;

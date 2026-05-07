@@ -1,10 +1,7 @@
-﻿/**
- * @file sdcommon.h
- * @brief Define the common types for audio libs
+/*
+ * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
- * Copyright (C) 2020 Anyka (Guangzhou) Microelectronics Technology Co., Ltd.
- * @update date 2020-06-11
- * @version 1.0
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #ifndef __SOUND_COMMON_H__
@@ -80,6 +77,15 @@ typedef T_BOOL(*SDLIB_CALLBACK_FUN_MUTEX_GET)(T_pVOID mutex);
 typedef T_BOOL(*SDLIB_CALLBACK_FUN_MUTEX_RELEASE)(T_pVOID mutex);
 typedef T_S32(*SDLIB_CALLBACK_FUN_DUMP_DATA)(T_HANDLE buf, T_S32 size);
 
+// operations for fft driver
+typedef struct sdlib_fftdrv_op
+{
+    T_S32(*fftdrv_Dma_Init)(void);
+    T_S32(*fftdrv_Dma_Deinit)(void);
+    T_S32(*fftdrv_Dma_Start)(T_S16 *inbuf, T_S16 *outbuf);
+    T_S32(*fftdrv_Dma_Stop)(void);
+} T_SDLIB_FFTDRV_OP;
+
 typedef struct sdlib_platform_dependent_list
 {
     // call back functions. compatible with T_AUDIO_CB_FUNS
@@ -96,10 +102,7 @@ typedef struct sdlib_platform_dependent_list
     SDLIB_CALLBACK_FUN_DUMP_DATA                dumpData;
 
     // platform implemented routines
-    T_S32(*fftdrv_Dma_Init)(void);
-    T_S32(*fftdrv_Dma_Deinit)(void);
-    T_S32(*fftdrv_Dma_Start)(T_S16 *inbuf, T_S16 *outbuf);
-    T_S32(*fftdrv_Dma_Stop)(void);
+    const T_SDLIB_FFTDRV_OP                    *fftdrv_op;
 } T_SDLIB_PLATFORM_DEPENDENT_LIST;
 
 T_SDLIB_PLATFORM_DEPENDENT_LIST *_SD_GetPlatformDependentList(T_VOID);

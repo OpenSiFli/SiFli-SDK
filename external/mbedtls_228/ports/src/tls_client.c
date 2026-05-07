@@ -22,6 +22,9 @@
 
 #include <rtthread.h>
 
+#ifndef MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS_GUARD
+#define MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS_GUARD 1
+#endif
 #include "tls_client.h"
 #include "tls_certificate.h"
 

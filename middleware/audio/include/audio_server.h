@@ -136,12 +136,7 @@ typedef enum
     AUDIO_DEVICE_SPEAKER       = 0, //audio output to speaker, or input from mic
     AUDIO_DEVICE_A2DP_SINK     = 1, //audio output to tws
     AUDIO_DEVICE_HFP           = 2, //local is AG, audio output to tws HFP
-    AUDIO_DEVICE_I2S1          = 3, //audio output to
-    AUDIO_DEVICE_I2S2          = 4,
-    AUDIO_DEVICE_PDM1          = 5,
-    AUDIO_DEVICE_PDM2          = 6,
-    AUDIO_DEVICE_BLE_BAP_SINK  = 7,
-    AUDIO_DEVICE_XIAOZHI       = 8,
+    AUDIO_DEVICE_XIAOZHI       = 3,
     AUDIO_DEVICE_NUMBER
 } audio_device_e;
 

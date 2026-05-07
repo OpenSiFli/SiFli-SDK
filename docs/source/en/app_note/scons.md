@@ -48,14 +48,16 @@ For more detailed configuration, refer to [](../app_note/menuconfig.md).
 
 ## 3. Basic Functions of SCons
 
-You can compile the project directly by entering the `scons` command in the Env tool. By default, it uses the ARM CLANG compiler. The SifliSDK root directory contains a _set_env.bat_ file, which sets the compiler directory.
+After exporting the SDK environment in a terminal, run `scons` directly to build the project. The current script environment exports the GCC toolchain by default.
 
-If you want to specify your own compiler, you can modify the commands in _set_env.bat_:
+On Windows, if you need to use Keil/ARMCLANG, record the Keil root and then export the Keil toolchain environment:
 
-```batch
-set RTT_CC = keil
-set RTT_EXEC = C:/Keilv5
+```powershell
+.\install.ps1 --keil C:\Keil_v5
+.\export.ps1 -t keil
 ```
+
+If the SDK environment is already installed, you can run `.\install.ps1 --keil C:\Keil_v5` again to record the Keil path. You do not need to edit `set_env.bat` or the JSON state file manually. To switch back to GCC, run `.\export.ps1 -t gcc` or simply `.\export.ps1`.
 
 Scons command
 This command not only compiles the project but also generates MDK/IAR/VS projects. Adding different parameters will result in different effects.

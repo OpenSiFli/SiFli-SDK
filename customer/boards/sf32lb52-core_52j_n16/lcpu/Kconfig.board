@@ -1,7 +1,0 @@
-config BSP_USING_BOARD_SF32LB52_CORE_52J_N16
-    bool
-    select SOC_SF32LB52X
-    select BF0_LCPU
-    default y
-
-rsource "../Kconfig.board"

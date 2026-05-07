@@ -47,7 +47,27 @@ typedef struct MbedTLSSession
  extern int mbedtls_client_close(MbedTLSSession *session);
  extern int mbedtls_client_context(MbedTLSSession *session);
  extern int mbedtls_client_connect(MbedTLSSession *session);
+ extern int mbedtls_client_connect_with_fallback(MbedTLSSession *session);
  extern int mbedtls_client_read(MbedTLSSession *session, unsigned char *buf , size_t len);
  extern int mbedtls_client_write(MbedTLSSession *session, const unsigned char *buf , size_t len);
+
+/*
+ * Compatibility option:
+ * Redirect calls of mbedtls_client_connect() to the fallback implementation
+ * at compile-time, so upper-layer modules (e.g. webclient) don't need to be
+ * patched to gain dynamic certificate fetching capability.
+ *
+ * This alias is enabled globally by Kconfig option
+ * PKG_USING_MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS.
+ *
+ * Implementation files should define
+ * MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS_GUARD before
+ * including this header to avoid macro expansion on the function definition.
+ */
+#if defined(MBEDTLS_SSL_KEEP_PEER_CERTIFICATE) && \
+    defined(PKG_USING_MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS) && \
+    !defined(MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS_GUARD)
+#define mbedtls_client_connect(session) mbedtls_client_connect_with_fallback(session)
+#endif
 
 #endif

@@ -53,12 +53,16 @@ comment 语句出现在界面的第一行，用于定义一些提示信息。
 
 ## 3. SCons的基本功能
 
-在Env工具中直接输入`scons`命令直接编译项目，默认使用ARM CLANG编译器。SifliSDK根目录有 _set_env.bat_ , 里面会设定编译器目录。
+在已经执行过环境导出的终端中，直接输入 `scons` 命令即可编译项目。当前脚本环境默认导出 GCC 工具链。
 
-如果需要自己制定编译器，可以在修改 _set_env.bat_ 里面的命令指定：
+Windows 下如果需要使用 Keil/ARMCLANG，请先记录 Keil 根目录，然后导出 Keil 工具链环境：
 
-    set RTT_CC = keil
-    set RTT_EXEC = C:/Keilv5
+```powershell
+.\install.ps1 --keil C:\Keil_v5
+.\export.ps1 -t keil
+```
+
+已经安装过 SDK 环境的用户也可以直接重新运行 `.\install.ps1 --keil C:\Keil_v5` 补录 Keil 路径，不需要手动修改 `set_env.bat` 或 JSON 文件。需要切回 GCC 时重新运行 `.\export.ps1 -t gcc`，或直接运行 `.\export.ps1`。
 
 scons命令
 该命令不仅可以完成基本的编译，还可以生成MDK/IAR/VS 工程，在后边增加不同参数可以实现不同效果。
@@ -97,4 +101,3 @@ SCons提供了很多内置函数可以帮助我们快速添加源码程序，利
   - LINKFLAGS=\<more link flags\> 添加链接选项 <br>
   - ASFLAGS=\<more assembly flags\> 添加汇编选项 <br>
     
-

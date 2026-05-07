@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+*/
+
 #include <rtthread.h>
 #include <string.h>
 #include <stdlib.h>
@@ -92,6 +98,26 @@ static inline void stereo2mono(int16_t *stereo, uint32_t samples, int16_t *mono)
         stereo++;
     }
 }
+
+static int ensure_resample_ready(mix_stream_t *s)
+{
+    if (s->samplerate == 48000)
+    {
+        return 0;
+    }
+    if (!s->rb_resampled)
+    {
+        s->rb_resampled = rt_ringbuffer_create(RESAMPLE_RING_SIZE);
+        RT_ASSERT(s->rb_resampled);
+    }
+    if (!s->resample)
+    {
+        s->resample = sifli_resample_open(1, s->samplerate, 48000);
+        RT_ASSERT(s->resample);
+    }
+    return 0;
+}
+
 static void deode_mp3(mix_stream_t *s)
 {
     if (find_sync_in_cache(s) < 0)
@@ -128,12 +154,9 @@ static void deode_mp3(mix_stream_t *s)
             rt_kprintf("mp3 error, not layer3\n");
             return;
         }
-        if (!s->resample && mp3FrameInfo.samprate != 48000)
+        if (mp3FrameInfo.samprate != 48000)
         {
-            s->rb_resampled = rt_ringbuffer_create(RESAMPLE_RING_SIZE);
-            s->resample = sifli_resample_open(1, mp3FrameInfo.samprate, 48000);
-            RT_ASSERT(s->resample);
-            RT_ASSERT(s->rb_resampled);
+            ensure_resample_ready(s);
         }
         bytes = mp3FrameInfo.outputSamps * 2;
         if (mp3FrameInfo.nChans == 2)
@@ -165,8 +188,13 @@ static inline void float2pcm(float *fl, uint32_t samples, int16_t *pcm)
             v = -32768;
         }
         *pcm++ = (int16_t)v;
-        *fl++;
+        fl++;
     }
+}
+
+static inline int16_t pcm_u8_to_s16(uint8_t v)
+{
+    return (int16_t)(((int32_t)v - 128) << 8);
 }
 
 static void decode_wav(mix_stream_t *s)
@@ -178,7 +206,19 @@ static void decode_wav(mix_stream_t *s)
     {
         if (s->is_wav_pcm)
         {
-            r = MP3_ONE_MONO_FRAME_SIZE * 2;
+            if (s->bits == 16)
+            {
+                r = MP3_ONE_MONO_FRAME_SIZE * 2;
+            }
+            else if (s->bits == 8)
+            {
+                r = MP3_ONE_MONO_FRAME_SIZE;
+            }
+            else
+            {
+                rt_kprintf("unsupported wav pcm bits=%d\n", s->bits);
+                return;
+            }
         }
         else
         {
@@ -189,7 +229,19 @@ static void decode_wav(mix_stream_t *s)
     {
         if (s->is_wav_pcm)
         {
-            r = MP3_ONE_MONO_FRAME_SIZE;
+            if (s->bits == 16)
+            {
+                r = MP3_ONE_MONO_FRAME_SIZE;
+            }
+            else if (s->bits == 8)
+            {
+                r = MP3_ONE_MONO_FRAME_SIZE / 2;
+            }
+            else
+            {
+                rt_kprintf("unsupported wav pcm bits=%d\n", s->bits);
+                return;
+            }
         }
         else
         {
@@ -203,6 +255,12 @@ static void decode_wav(mix_stream_t *s)
     {
         return;
     }
+
+    if (s->samplerate != 48000)
+    {
+        ensure_resample_ready(s);
+    }
+
     if (len < r)
     {
         lseek(s->fd, s->tag_len + 0, SEEK_SET);
@@ -212,11 +270,37 @@ static void decode_wav(mix_stream_t *s)
 
     if (s->is_wav_pcm)
     {
-        bytes = r;
-        if (s->ch == 2)
+        if (s->bits == 16)
         {
-            bytes >>= 1;
-            stereo2mono((int16_t *)read_buf, bytes, (int16_t *)read_buf);
+            bytes = r;
+            if (s->ch == 2)
+            {
+                bytes >>= 1;
+                stereo2mono((int16_t *)read_buf, bytes, (int16_t *)read_buf);
+            }
+        }
+        else
+        {
+            uint8_t *src = (uint8_t *)read_buf;
+            int16_t *dst = (int16_t *)read_buf;
+            uint32_t mono_samples = MP3_ONE_MONO_FRAME_SIZE / 2;
+            if (s->ch == 2)
+            {
+                for (uint32_t i = 0; i < mono_samples; i++)
+                {
+                    int16_t l = pcm_u8_to_s16(src[2 * i]);
+                    int16_t rch = pcm_u8_to_s16(src[2 * i + 1]);
+                    dst[i] = (int16_t)(((int32_t)l + (int32_t)rch) / 2);
+                }
+            }
+            else
+            {
+                for (int32_t i = (int32_t)mono_samples - 1; i >= 0; i--)
+                {
+                    dst[i] = pcm_u8_to_s16(src[i]);
+                }
+            }
+            bytes = MP3_ONE_MONO_FRAME_SIZE;
         }
     }
     else
@@ -418,6 +502,7 @@ static int start_stream(mix_player_t *p, mix_cmd_t *cmd)
     }
     rt_ringbuffer_init(&s->decoded_ring, s->ring_pool, sizeof(s->ring_pool));
     rt_kprintf("start %s\n", s->filename);
+    return 0;
 }
 
 static void process_msg(mix_player_t *p, uint8_t is_exit)
@@ -713,7 +798,7 @@ static uint32_t wav_read_header(mix_stream_t *ctrl)
             tag = 0;
             wave_read(ctrl, &tag, 2);
             {
-                rt_kprintf("wave bits=%s\n", tag);
+                rt_kprintf("wave bits=%d\n", tag);
                 ctrl->bits = tag;
             }
 
@@ -776,9 +861,9 @@ void mix_main()
 {
     mix_player_t *p = music_mix_app_start();
     RT_ASSERT(p);
-    music_mix_app_add(p, "/test1.wav");
-    music_mix_app_add(p, "/test2.mp3");
-    music_mix_app_add(p, "/test3.mp3");
+    music_mix_app_add(p, "/1.mp3");
+    music_mix_app_add(p, "/2.mp3");
+    music_mix_app_add(p, "/3.wav");
     for (int i = 0; i < 50; i++)
     {
         rt_thread_mdelay(1000);

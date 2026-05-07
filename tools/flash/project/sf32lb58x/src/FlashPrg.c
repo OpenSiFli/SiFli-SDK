@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 /*********************************************************************
 *            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                        The Embedded Experts                        *
@@ -8,12 +14,6 @@ File    : FlashPrg.c
 Purpose : Implementation of RAMCode template
 --------  END-OF-HEADER  ---------------------------------------------
 */
-
-/*
- * SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
- *
- * SPDX-License-Identifier: Apache-2.0
- */
 
 #include <bf0_hal.h>
 #include <string.h>

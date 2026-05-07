@@ -10,8 +10,11 @@ inc = [cwd]
 inc = inc + [os.path.join(cwd, '..')]
 
 
-# add driver basic code
-src = src + Glob('./*.c')
+# Only build the multilingual/resource-manager implementation when the
+# feature is enabled. The public headers already provide fallback macros for
+# projects that do not select LV_USING_EXT_RESOURCE_MANAGER.
+if GetDepend('LV_USING_EXT_RESOURCE_MANAGER'):
+    src = src + Glob('./*.c')
 
 # add group to IDE project
 objs = DefineGroup('lv_ext_resouce', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)

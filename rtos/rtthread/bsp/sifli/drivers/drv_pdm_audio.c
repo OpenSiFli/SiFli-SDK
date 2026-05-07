@@ -431,6 +431,8 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         }
 
         LOG_I("bf0_audio_init len=%d, hdmarx=%x", hpdm->RxXferSize, hpdm->hdmarx);
+        if (AUDIO_STREAM_PDM_PRESTART == stream)
+            return RT_EOK;
     }
     if (stream == AUDIO_STREAM_RECORD || stream == AUDIO_STREAM_PDM_START)
     {

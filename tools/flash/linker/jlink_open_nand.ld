@@ -1,18 +1,29 @@
 OUTPUT_FORMAT("elf32-littlearm")
 OUTPUT_ARCH(arm)
 
-EXTERN(Init UnInit EraseSector ProgramPage FlashDevice)
-EXTERN(SEGGER_OPEN_Read SEGGER_OPEN_Program SEGGER_OPEN_Erase SEGGER_OPEN_CalcCRC)
+ENTRY(Init)
 
-PHDRS
+_Min_Heap_Size = 0;
+_Min_Stack_Size = 0;
+
+MEMORY
 {
-  loader PT_LOAD FLAGS(7);
+  RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 0x00040000
 }
 
 SECTIONS
 {
-  PrgCode 0x20000000 :
+  PrgCode :
   {
+    . = ALIGN(4);
+    KEEP(*(PrgCode))
+    KEEP(*(PrgCode.*))
+    . = ALIGN(4);
+  } > RAM
+
+  .text :
+  {
+    . = ALIGN(4);
     KEEP(*(.text.Init))
     KEEP(*(.text.UnInit))
     KEEP(*(.text.EraseSector))
@@ -24,38 +35,120 @@ SECTIONS
     KEEP(*(.text.SEGGER_OPEN_Program))
     KEEP(*(.text.SEGGER_OPEN_Erase))
     KEEP(*(.text.SEGGER_OPEN_CalcCRC))
+    *(.text)
     *(.text*)
-    *(.rodata*)
+    *(.*l1_ret_text_*)
     *(.glue_7)
     *(.glue_7t)
-    *(.vfp11_veneer)
-    *(.ARM.extab*)
+    *(.eh_frame)
+    KEEP(*(.init))
+    KEEP(*(.fini))
+    . = ALIGN(4);
+    _etext = .;
+  } > RAM
+
+  .rodata :
+  {
+    . = ALIGN(4);
+    *(.rodata)
+    *(.rodata*)
+    *(.*l1_ret_rodata_*)
+    . = ALIGN(4);
+  } > RAM
+
+  .ARM.extab :
+  {
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } > RAM
+
+  .ARM.exidx :
+  {
+    __exidx_start = .;
     *(.ARM.exidx*)
-  } :loader
+    __exidx_end = .;
+  } > RAM
 
   PrgData :
   {
-    . = ALIGN(8);
-    *(.data*)
-  } :loader
+    . = ALIGN(4);
+    KEEP(*(PrgData))
+    KEEP(*(PrgData.*))
+    . = ALIGN(4);
+  } > RAM
 
-  PrgData (NOLOAD) :
+  .preinit_array :
   {
-    . = ALIGN(8);
+    PROVIDE_HIDDEN(__preinit_array_start = .);
+    KEEP(*(.preinit_array*))
+    PROVIDE_HIDDEN(__preinit_array_end = .);
+  } > RAM
+
+  .init_array :
+  {
+    PROVIDE_HIDDEN(__init_array_start = .);
+    KEEP(*(SORT(.init_array.*)))
+    KEEP(*(.init_array*))
+    PROVIDE_HIDDEN(__init_array_end = .);
+  } > RAM
+
+  .fini_array :
+  {
+    PROVIDE_HIDDEN(__fini_array_start = .);
+    KEEP(*(SORT(.fini_array.*)))
+    KEEP(*(.fini_array*))
+    PROVIDE_HIDDEN(__fini_array_end = .);
+  } > RAM
+
+  .data :
+  {
+    . = ALIGN(4);
+    _sdata = .;
+    *(.data)
+    *(.data*)
+    . = ALIGN(4);
+    _edata = .;
+  } > RAM
+
+  .bss (NOLOAD) :
+  {
+    . = ALIGN(4);
+    _sbss = .;
+    __bss_start__ = _sbss;
+    *(.bss)
     *(.bss*)
     *(COMMON)
-  } :loader
+    . = ALIGN(4);
+    _ebss = .;
+    __bss_end__ = _ebss;
+  } > RAM
 
-  DevDscr 0x20040000 :
+  ._user_heap_stack :
   {
+    . = ALIGN(8);
+    PROVIDE(end = .);
+    PROVIDE(_end = .);
+    . = . + _Min_Heap_Size;
+    . = . + _Min_Stack_Size;
+    . = ALIGN(8);
+  } > RAM
+
+  DevDscr :
+  {
+    . = ALIGN(4);
     KEEP(*(DevDscr))
-  }
+    KEEP(*(DevDscr.*))
+    . = ALIGN(4);
+  } > RAM
 
   /DISCARD/ :
   {
     *(.comment*)
     *(.note*)
-    *(.eh_frame*)
     *(.gnu*)
+  }
+
+  .ARM.attributes 0 :
+  {
+    KEEP(*(.ARM.attributes))
   }
 }

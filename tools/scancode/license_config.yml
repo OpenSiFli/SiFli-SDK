@@ -71,5 +71,12 @@ extensions:
     license:
       - RCSL-1.2
       - RPSL-1.0
+  - path: 
+    - "export.sh"
+    - "export.ps1"
+    - "install.sh"
+    - "install.ps1"
+    ignore_license: true
+    ignore_copyright: true
 
 

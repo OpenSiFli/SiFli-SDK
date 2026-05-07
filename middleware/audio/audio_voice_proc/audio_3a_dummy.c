@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <rtthread.h>
 #ifdef SOC_BF0_HCPU
 #include <string.h>
@@ -40,7 +46,7 @@ void audio_3a_set_bypass(uint8_t is_bypass, uint8_t mic, uint8_t down)
 {
 }
 
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc)
+void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels)
 {
 }
 
@@ -63,6 +69,8 @@ void audio_3a_downlink(uint8_t *fifo, uint8_t size)
 
 void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t is_pdm)
 {
+    if (is_mute)
+        memset(fifo, 0, fifo_size);
 }
 
 void audio_command_process(uint8_t *cmd_1)

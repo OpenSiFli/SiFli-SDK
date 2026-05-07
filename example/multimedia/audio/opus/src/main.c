@@ -292,7 +292,7 @@ static void opus_test(void *p)
     encoder = opus_encoder_create(16000, 1, OPUS_APPLICATION_VOIP, &err);
     rt_kprintf("encoder create=%d\r\n", err);
     RT_ASSERT(encoder);
-#if defined(BSP_USING_ACPU)
+#if defined(USING_ACPU_CTRL_FWK)
     uint8_t error_code = 1;
     opus_encode_ctl_arg_t arg;
     arg.st = encoder;
@@ -318,7 +318,7 @@ static void opus_test(void *p)
     opus_encoder_ctl(encoder, OPUS_SET_MAX_BANDWIDTH(OPUS_BANDWIDTH_WIDEBAND));
     opus_encoder_ctl(encoder, OPUS_SET_BANDWIDTH(OPUS_AUTO));
     opus_encoder_ctl(encoder, OPUS_SET_FORCE_MODE(MODE_SILK_ONLY));
-#endif
+#endif /* USING_ACPU_CTRL_FWK */
     decoder = opus_decoder_create(16000, 1, &err);
     rt_kprintf("decoder create=%d\r\n", err);
     RT_ASSERT(decoder);

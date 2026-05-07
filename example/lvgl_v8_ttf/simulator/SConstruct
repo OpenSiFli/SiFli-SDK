@@ -1,7 +1,6 @@
 import os
 import sys
 import rtconfig
-import resource
 if os.getenv('SIFLI_SDK'):
     SIFLI_SDK = os.getenv('SIFLI_SDK')
 else:
@@ -37,4 +36,3 @@ objs = PrepareBuilding(env)
 
 # make a building
 DoBuilding(TARGET, objs)
-

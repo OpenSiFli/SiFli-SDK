@@ -1,0 +1,88 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y if !SOC_SIMULATOR
+
+config SOLUTION_ALLOC_MEM
+    bool
+    default y
+
+config FREETYPE_TINY_FONT_FULL
+    bool
+    default y
+
+menu "app cache Memory configuration"   
+
+choice
+    prompt "rotation image preferred cache memory"
+    default  ROTATE_MEM_IN_PSRAM
+    config ROTATE_MEM_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM"
+    config ROTATE_MEM_IN_SRAM
+        bool "SRAM"
+endchoice
+
+
+choice
+    prompt "freetype cache memory"
+    default  FREETYPE_CACHE_IN_PSRAM
+    config FREETYPE_CACHE_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM"           
+    config FREETYPE_CACHE_IN_SRAM_STANDALONE
+        bool "SRAM STANDALONE"
+    config FREETYPE_CACHE_IN_SRAM
+        bool "SRAM(Share with system heap)"
+endchoice
+
+
+choice
+    prompt "message preferred cache memory"
+    default  MESSAGE_CACHE_IN_PSRAM
+    config MESSAGE_CACHE_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM"           
+    config MESSAGE_CACHE_IN_SRAM_STANDALONE
+        bool "SRAM STANDALONE"
+    config MESSAGE_CACHE_IN_SRAM
+         bool "SRAM(Share with system heap)"
+endchoice
+
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int "image cache in psram size(standalone)"
+    depends on BSP_USING_PSRAM
+    default 2100000
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int
+    depends on !BSP_USING_PSRAM
+    default 0
+
+config IMAGE_CACHE_IN_SRAM_SIZE
+    int "image cache in sram size(standalone)"
+    default 200000
+
+    
+config FT_CACHE_SIZE
+    int "freetype cache size(bytes)"
+    help 
+        "Maximum freetype cache size(threshold), and define a standalon 
+         array(size equals FT_CACHE_SIZE) if define 
+         FREETYPE_CACHE_IN_PSRAM or FREETYPE_CACHE_IN_SRAM_STANDALONE"
+    default 400000 if FREETYPE_CACHE_IN_PSRAM
+    default 120000 if FREETYPE_CACHE_IN_SRAM_STANDALONE
+    default 100000 if FREETYPE_CACHE_IN_SRAM
+
+
+config MESSAGE_CACHE_SIZE
+    int "message standalon cache size(bytes)"
+    depends on MESSAGE_CACHE_IN_PSRAM || MESSAGE_CACHE_IN_SRAM_STANDALONE
+    default 96000 if MESSAGE_CACHE_IN_PSRAM
+    default 16000 if MESSAGE_CACHE_IN_SRAM_STANDALONE
+
+
+endmenu
+

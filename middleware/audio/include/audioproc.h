@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef AUDIOPROC_H
 #define AUDIOPROC_H
 
@@ -47,31 +53,30 @@ void audio_dump_clear();
 void audio_dump_data(audio_dump_type_t type, uint8_t *fifo, uint32_t size);
 
 #ifdef BT_FINSH
-    void msbc_open(uint32_t samplerate);
-    void msbc_close(void);
-    void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size);
-    uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size);
-    void bt_voice_open(uint32_t samplerate);
-    void bt_voice_close(void);
-    void bt_voice_downlink_process(uint8_t is_ready);
-    void bt_voice_uplink_send(void);
+void msbc_open(uint32_t samplerate);
+void msbc_close(void);
+void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size);
+uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size);
+void bt_voice_open(uint32_t samplerate);
+void bt_voice_close(void);
+void bt_voice_downlink_process(uint8_t is_ready);
+void bt_voice_uplink_send(void);
 #else
-    #define msbc_open(samplerate)
-    #define msbc_close()
-    #define msbc_encode_process(fifo, fifo_size);
-    #define msbc_decode_process(fifo,output,size) 0
-    #define bt_voice_open(samplerate)
-    #define bt_voice_close()
-    #define bt_voice_downlink_process(is_ready)
-    #define bt_voice_uplink_send()
+#define msbc_open(samplerate)
+#define msbc_close()
+#define msbc_encode_process(fifo, fifo_size);
+#define msbc_decode_process(fifo,output,size) 0
+#define bt_voice_open(samplerate)
+#define bt_voice_close()
+#define bt_voice_downlink_process(is_ready)
+#define bt_voice_uplink_send()
 #endif
 
 void speaker_ring_put(uint8_t *fifo, uint16_t fifo_size);
 void audio_3a_downlink(uint8_t *fifo, uint8_t size);
 void audio_3a_save_pdm(uint8_t *fifo, uint16_t size);
-void audio_3a_uplink2(uint8_t *audprc, uint8_t is_mute);
 void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t is_bt_voice);
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc);
+void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels);
 void audio_3a_close();
 void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size);
 void audio_3a_put_pdm(uint8_t *fifo, uint16_t fifo_size);
