@@ -3,6 +3,11 @@
 
 #include "stdint.h"
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SD_SUCCESS 0
 #define SD_TIMEOUT 1
 #define SD_CRCERR  2
@@ -53,4 +58,11 @@ void sd_read(uint8_t wire_mode, uint8_t block_num);
 uint32_t sd_wait_read();
 uint32_t sd_tuning_emmc(uint8_t wire_mode, uint64_t *tuning_err);
 
+uint8_t sdmmc_emmc(void);
+int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
+int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len);
+
+#ifdef __cplusplus
+}
+#endif
 #endif

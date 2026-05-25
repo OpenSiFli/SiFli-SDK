@@ -17,6 +17,7 @@ Purpose : Implementation of RAMCode template
 #include "flash_config.h"
 #include "dma_config.h"
 #include "SdioOS.h"
+#include "flashdrv_version.h"
 //#include "pmic_simp.h"
 
 #define ECC_OFFSET   (8)
@@ -537,11 +538,7 @@ int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len)
     return blk_size;
 }
 #else
-
 #include "sdmmc_tst_drv.h"
-extern uint8_t sdmmc_emmc();
-int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
-extern int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len);
 #endif
 
 int rt_hw_sd1_init()
@@ -622,6 +619,9 @@ void init_clock()
     BSP_PMIC_Control(PMIC_OUT_1V8_LVSW100_5, 1, 1); //LCD_1V8 power
     BSP_PMIC_Control(PMIC_OUT_LDO33_VOUT, 1, 1);    //LCD_3V3 power
 #endif
+
+    /* ensure m_sysclk is init for Keil building with ropi and rwpi */
+    HAL_Delay_us(0);
 }
 
 
@@ -649,19 +649,46 @@ __attribute__((used)) int Init(uint32_t Addr, uint32_t Freq, uint32_t Func)
     SCB_DisableICache();
     SCB_DisableDCache();
 
-    HAL_MspInit();
-
     //sysFreq = HAL_RCC_GetSysCLKFreq(CORE_ID_HCPU);
     //if (sysFreq / 1000000 < 90)
     {
         init_clock();
     }
 
-    rt_hw_sd_init();
+    HAL_MspInit();
 
 
 #if (DEBUG_JLINK+DEFAULT_TRACE)
+    uint32_t v1,v2,v3;
     uint8_t hex[16];
+
+    debug_print("Build data: ");
+    debug_print(__DATE__);
+    debug_print("\n");
+
+    v1 = FLASH_JLINK_VERSION >> 24;
+    v2 = (FLASH_JLINK_VERSION & 0xff0000)>>16;
+    v3 = FLASH_JLINK_VERSION & 0xffff;
+    
+    debug_print("SDK Version: ");
+    debug_print((char *)htoa(hex, v1));
+    debug_print(".");
+    debug_print((char *)htoa(hex, v2));
+    debug_print(".");
+    debug_print((char *)htoa(hex, v3));
+
+    debug_print("\n");
+    debug_print("PMIC OPEN  ");
+
+    debug_print("sysFreq:");
+    debug_print((char *)htoa(hex, sysFreq));	
+    debug_print("\n");
+#endif
+    
+    
+    rt_hw_sd_init();
+
+#if (DEBUG_JLINK+DEFAULT_TRACE)
     debug_print("Init : Addr-");
     debug_print((char *)htoa(hex, Addr));
     debug_print(" Func-");
@@ -721,8 +748,6 @@ __attribute__((used)) int EraseSector(uint32_t SectorAddr)
     debug_print("\r\n");
 #endif
 
-    //int res = HAL_QSPIEX_FLASH_ERASE(Addr2Handle(SectorAddr), SectorAddr, PAGE_SIZE);
-
     return 0;
 }
 
@@ -745,17 +770,87 @@ __attribute__((used)) int EraseSector(uint32_t SectorAddr)
 */
 __attribute__((used)) int ProgramPage(uint32_t DestAddr, uint32_t NumBytes, uint8_t *pSrcBuff)
 {
-    int ret;
+    int ret = -1;
+    int verify = -1;
+    int cnt = 0;
 
 #if DEBUG_JLINK
     uint8_t hex[16];
-    debug_print("Write :");
+    debug_print("ProgramPage: Dst-");
     debug_print((char *)htoa(hex, DestAddr));
+    debug_print(" Len-");
+    debug_print((char *)htoa(hex, (uint32_t)NumBytes));
     debug_print("\r\n");
 #endif
-    //ret = HAL_QSPIEX_FLASH_WRITE(Addr2Handle(DestAddr), DestAddr, pSrcBuff, NumBytes);
 
-    return (ret < NumBytes) ? -1 : 0;
+    {
+        int retry = 3;
+        uint32_t len = NumBytes;
+        uint8_t *src = pSrcBuff;
+        uint32_t dst = DestAddr - SDIO_BASE;
+        ret = 0;
+        cnt = 0;
+        while (len >= 512)
+        {
+            retry = 3;
+            while (retry > 0)
+            {
+                ret = sd_write_data(dst, src, 512);
+                HAL_Delay_us(50);
+                if (ret > 0)
+                    break;
+                retry--;
+            }
+#if DEBUG_JLINK
+            if (retry == 0)
+            {
+                debug_print("write fail at pos ");
+                debug_print((char *)htoa(hex, dst));
+                debug_print("\r\n");
+            }
+#endif
+
+            len -= 512;
+            dst += 512;
+            src += 512;
+            cnt += 512;
+        }
+        if (len > 0)
+        {
+            //sd_read_data(dst, sd_buf, 512);
+            //memcpy(sd_buf, src, len);
+            //ret += sd_write_data(dst, sd_buf, 512);
+            ret = sd_write_data(dst, src, 512);
+            //len -= len;
+            dst += len;
+            src += len;
+            cnt += len;
+        }
+    }
+    if (cnt >= NumBytes)
+    {
+        /*
+        for (int m = 0; m < NumBytes / 0x1000; m++)
+        {
+
+            verify = memcmp((uint8_t *)(pSrcBuff + 0x1000 * m), (uint8_t *)(DestAddr + 0x1000 * m), 0x1000);
+            if (verify != 0)
+            {
+                break;
+            }
+        }*/
+        verify = 0;
+    }
+
+#if DEBUG_JLINK
+    debug_print(" ret-");
+    debug_print((char *)htoa(hex, (uint32_t)ret));
+    debug_print(" verify-");
+    debug_print((char *)htoa(hex, (uint32_t)verify));
+    debug_print("\r\n");
+#endif
+
+    return verify;    
 }
 
 
@@ -777,6 +872,77 @@ __attribute__((used)) int ProgramPage(uint32_t DestAddr, uint32_t NumBytes, uint
 *    != (Addr + NumBytes): *not* O.K. (ideally the fail address is returned)
 *
 */
+#ifndef _USE_PRODUCTLINE
+uint32_t Verify(uint32_t Addr, uint32_t NumBytes, uint8_t *pBuff)
+{
+    uint32_t r = Addr;
+    int ret;
+
+#if DEBUG_JLINK
+    uint8_t hex[16];
+    debug_print("Verify : Addr-");
+    debug_print((char *)htoa(hex, Addr));
+    debug_print(" Size-");
+    debug_print((char *)htoa(hex, NumBytes));
+    debug_print(" Src-");
+    debug_print((char *)htoa(hex, (uint32_t)pBuff));
+    debug_print("\r\n");
+#endif
+    
+    {
+        int retry = 3;
+        uint32_t len = NumBytes;
+        uint32_t src = Addr - SDIO_BASE;
+
+        while (len >= 512)
+        {
+            retry = 3;
+            while (retry > 0)
+            {
+                ret = sd_read_data(src, sd_buf, 512);
+                HAL_Delay_us(50);
+                if (ret > 0)
+                {
+                    break;
+                }
+                retry--;
+            }
+            if (retry == 0)
+            {
+#if DEBUG_JLINK 
+                debug_print("read fail at pos ");
+                debug_print((char *)htoa(hex, src));
+                debug_print("\r\n");
+#endif
+                break;
+            }
+            else if (0 != memcmp(sd_buf, pBuff + NumBytes - len, 512))
+            {
+#if DEBUG_JLINK 
+                debug_print("compare fail at pos ");
+                debug_print((char *)htoa(hex, src));
+                debug_print("\r\n");
+#endif
+                break;
+            }
+
+            src += 512;
+            len -= 512;
+            r += 512;
+        }
+        if ((len > 0) && (len < 512))
+        {
+            ret = sd_read_data(src, sd_buf, 512);
+            if (0 == memcmp(sd_buf, pBuff + NumBytes - len, len))
+            {
+                r += len;
+            }
+        }
+    }
+    
+    return r;
+}
+#endif /* !_USE_PRODUCTLINE */
 
 
 /*********************************************************************
@@ -797,6 +963,23 @@ __attribute__((used)) int ProgramPage(uint32_t DestAddr, uint32_t NumBytes, uint
 *    < 0: Error
 *
 */
+#ifndef _USE_PRODUCTLINE
+int BlankCheck(U32 Addr, U32 NumBytes, U8 BlankData)
+{
+#if DEBUG_JLINK
+    uint8_t hex[16];
+    debug_print("BlankCheck : Addr-");
+    debug_print((char *)htoa(hex, Addr));
+    debug_print(" Size-");
+    debug_print((char *)htoa(hex, NumBytes));
+    debug_print(" BlankData-");
+    debug_print((char *)htoa(hex, (uint32_t)BlankData));
+    debug_print("\r\n");
+#endif
+    
+    return (1);                           // Memory is blank
+}
+#endif /* _USE_PRODUCTLINE */
 
 /*********************************************************************
 *

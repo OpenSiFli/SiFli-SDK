@@ -10,19 +10,6 @@ Purpose : Flash device description Template
 */
 
 #include "SdioOS.h"
-
-#ifdef JLINK
-
-#ifdef JLINK_SDIO_1
-    #define SDIO_NAME  "SF32LB58X External SDIO1"
-    #define SDIO_BASE  0x68000000
-    #define SDIO_SIZE  0x38000000
-#elif defined(JLINK_SDIO_2)
-    #define SDIO_NAME  "SF32LB58X External SDIO2"
-    #define SDIO_BASE  0xa0000000
-    #define SDIO_SIZE  0x40000000
-#endif
-
 struct FlashDevice const FlashDevice __attribute__((section("DevDscr"), used)) =
 {
     ALGO_VERSION,              // Algo version
@@ -30,7 +17,11 @@ struct FlashDevice const FlashDevice __attribute__((section("DevDscr"), used)) =
     ONCHIP,                    // Flash device type
     SDIO_BASE,                // Flash base address
     SDIO_SIZE,                // Total flash device size in Bytes
+#ifdef JLINK
     PAGE_SIZE,                       // Affect the FLASH write action. Page Size (number of bytes that will be passed to ProgramPage(). May be multiple of min alignment in order to reduce overhead for calling ProgramPage multiple times
+#else
+    0x2000,                    // reduce write size due to Keil limitation, otherwise insufficient RAM is reported
+#endif /* JLINK */
     0,                         // Reserved, should be 0
     0x37,                      // Flash erased value
     6000,                       // Program page timeout in ms
@@ -42,4 +33,3 @@ struct FlashDevice const FlashDevice __attribute__((section("DevDscr"), used)) =
     0x000000,         // // 4096 * 4 KB = 4096  KB  Sector Size  4kB (1024 Sectors)
     0xFFFFFFFF, 0xFFFFFFFF,    // Indicates the end of the flash sector layout. Must be present.
 };
-#endif  //#ifdef JLINK

@@ -22,7 +22,7 @@ struct dfs_partition
 };
 int dfs_filesystem_get_partition(struct dfs_partition *part, uint8_t *buf, uint32_t pindex);
 
-uint8_t sdmmc_emmc()
+uint8_t sdmmc_emmc(void)
 {
     uint8_t test_result = TEST_UNFINISHED;
     uint8_t  rsp_idx;

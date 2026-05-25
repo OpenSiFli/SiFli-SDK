@@ -87,57 +87,11 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     //MODIFY_REG(hwp_qspi2->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
     //MODIFY_REG(hwp_qspi3->WDTR, QSPI_WDTR_TIMEOUT_Msk, QSPI_WDTR_TIMEOUT_Msk);
     int8_t idx = -1;
+
+#ifdef SD1_PINMUX_TYPE1
+    idx = 1;
+#endif /* SD1_PINMUX_TYPE1 */
     
-    get_user_sd0_cfg(NULL, &idx, NULL);
-	
-	if(idx <= 0)
-	{
-	    HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1); // SDIO1
-	    HAL_PIN_Set(PAD_PA10, SD1_CMD, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA05, SD1_DIO0, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA04, SD1_DIO1, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA01, SD1_DIO2, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA06, SD1_DIO3, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA07, SD1_DIO4, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA03, SD1_DIO5, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA08, SD1_DIO6, PIN_PULLUP, 1);
-	    HAL_PIN_Set(PAD_PA00, SD1_DIO7, PIN_PULLUP, 1);
-
-	    HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);     // SD1 EN
-	    HAL_PIN_Set(PAD_PA12, GPIO_A12, PIN_PULLUP, 1);     //EMMC_3V3_EN for Keep
-	    HAL_PIN_Set(PAD_PA13, GPIO_A13, PIN_PULLUP, 1);     //EMMC_1V8_EN for Keep
-	    //BSP_GPIO_Set(2, 1, 1);
-	    HAL_PIN_Set(PAD_PA11, GPIO_A11, PIN_PULLUP, 1);     // SD1 RESET, need set 0 first?
-	    //BSP_GPIO_Set(11, 1, 1);
-	}
-	else
-	{
-	    HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1); 
-        HAL_PIN_Set(PAD_PA34, SD1_CMD, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA41, SD1_DIO0, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA30, SD1_DIO1, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA36, SD1_DIO2, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA40, SD1_DIO3, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA38, SD1_DIO4, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA37, SD1_DIO5, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA35, SD1_DIO6, PIN_PULLUP, 1);
-        HAL_PIN_Set(PAD_PA33, SD1_DIO7, PIN_NOPULL, 1);
-
-        HAL_PIN_Set(PAD_PA80, GPIO_A80, PIN_PULLUP, 1);     // SD1 EN
-        //BSP_GPIO_Set(2, 1, 1);
-        HAL_PIN_Set(PAD_PA49, GPIO_A49, PIN_PULLUP, 1);     // SD1 RESET, need set 0 first?
-        //BSP_GPIO_Set(11, 1, 1);
-	}
-    HAL_PIN_Set(PAD_PB37, USART4_TXD, PIN_PULLUP, 0);
-    HAL_PIN_Set(PAD_PB36, USART4_RXD, PIN_PULLUP, 0);
-    HAL_PIN_Set(PAD_PB18, USART5_TXD, PIN_PULLUP, 0);
-    HAL_PIN_Set(PAD_PB17, USART5_RXD, PIN_PULLUP, 0);
-
-
-    BSP_GPIO_Set(SD1_EN_PIN, 1, 1);
-    BSP_GPIO_Set(SD1_RESET_PIN, 1, 1);
-
-
 #if defined(CFG_FACTORY_DEBUG)
     if (user_pmic_cfg() == false)
     {
@@ -153,6 +107,59 @@ static void JLINK_DRV_BSP_PIN_Init(void)
     user_pin_cfg();
 #endif
     
+    get_user_sd0_cfg(NULL, &idx, NULL);
+
+    if(idx <= 0)
+    {
+        HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1); // SDIO1
+        HAL_PIN_Set(PAD_PA10, SD1_CMD, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA05, SD1_DIO0, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA04, SD1_DIO1, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA01, SD1_DIO2, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA06, SD1_DIO3, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA07, SD1_DIO4, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA03, SD1_DIO5, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA08, SD1_DIO6, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA00, SD1_DIO7, PIN_PULLUP, 1);
+
+        HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);     // SD1 EN
+        HAL_PIN_Set(PAD_PA12, GPIO_A12, PIN_PULLUP, 1);     //EMMC_3V3_EN for Keep
+        HAL_PIN_Set(PAD_PA13, GPIO_A13, PIN_PULLUP, 1);     //EMMC_1V8_EN for Keep
+        //BSP_GPIO_Set(2, 1, 1);
+        HAL_PIN_Set(PAD_PA11, GPIO_A11, PIN_PULLUP, 1);     // SD1 RESET, need set 0 first?
+        //BSP_GPIO_Set(11, 1, 1);
+    }
+    else
+    {
+        HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1); 
+        HAL_PIN_Set(PAD_PA34, SD1_CMD, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA41, SD1_DIO0, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA30, SD1_DIO1, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA36, SD1_DIO2, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA40, SD1_DIO3, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA38, SD1_DIO4, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA37, SD1_DIO5, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA35, SD1_DIO6, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA33, SD1_DIO7, PIN_NOPULL, 1);
+
+        HAL_PIN_Set(PAD_PA80, GPIO_A80, PIN_PULLUP, 1);     // SD1 EN
+        //BSP_GPIO_Set(2, 1, 1);
+        HAL_PIN_Set(PAD_PA49, GPIO_A49, PIN_PULLUP, 1);     // SD1 RESET, need set 0 first?
+        //BSP_GPIO_Set(11, 1, 1);
+    }
+
+    HAL_PIN_Set(PAD_PB37, USART4_TXD, PIN_PULLUP, 0);
+    HAL_PIN_Set(PAD_PB36, USART4_RXD, PIN_PULLUP, 0);
+    HAL_PIN_Set(PAD_PB18, USART5_TXD, PIN_PULLUP, 0);
+    HAL_PIN_Set(PAD_PB17, USART5_RXD, PIN_PULLUP, 0);
+
+
+    BSP_GPIO_Set(SD1_EN_PIN, 1, 1);
+    BSP_GPIO_Set(SD1_RESET_PIN, 0, 1);
+    HAL_Delay_us(50000);
+    BSP_GPIO_Set(SD1_RESET_PIN, 1, 1);
+    HAL_Delay_us(50000);
+
     __HAL_WDT_DISABLE();
 
     // delay 6ms to wait for flash power stable
@@ -174,8 +181,6 @@ static void JLINK_DRV_BSP_PIN_Init(void)
 
 void HAL_MspInit(void)
 {
-    JLINK_DRV_BSP_PIN_Init();
-
     /*##-1- Configure the UART peripheral ######################################*/
     /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
     /* UART configured as follows:
@@ -185,6 +190,8 @@ void HAL_MspInit(void)
         - Parity      = ODD parity
         - BaudRate    = 9600 baud
         - Hardware flow control disabled (RTS and CTS signals) */
+
+    memset(&UartHandle, 0, sizeof(UART_HandleTypeDef));
     UartHandle.Instance        = USART4;
     UartHandle.Init.BaudRate   = 1000000;
     UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
@@ -198,7 +205,10 @@ void HAL_MspInit(void)
         /* Initialization Error */
         HAL_ASSERT(0);
     }
-    //debug_print("Init\r\n");
+
+    JLINK_DRV_BSP_PIN_Init();
+    
+    debug_print("MspInit DONE\r\n");
 }
 
 
