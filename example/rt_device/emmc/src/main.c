@@ -105,6 +105,7 @@ INIT_ENV_EXPORT(mnt_init);
 #include "bf0_hal_aon.h"
 
 #define SDIO_TEST_LEN 512
+
 void cmd_fs_write_t(char *path, int num)
 {
     struct dfs_fd fd_test_sd;
@@ -127,7 +128,7 @@ void cmd_fs_write_t(char *path, int num)
     dfs_file_close(&fd_test_sd);
     test_time = ((end_time - open_time) / HAL_LPTIM_GetFreq()) * 1000 * 1000;
     speed_test = write_byt / test_time;
-    rt_kprintf("%s path=%s num=%d MBts testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
+    rt_kprintf("%s path=%s num=%d blocks testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
     rt_free(buff);
 }
 
@@ -161,7 +162,7 @@ void cmd_fs_read_t(char *path, int num)
     dfs_file_close(&fd_read);
     test_time = ((end_time - open_time) / HAL_LPTIM_GetFreq()) * 1000 * 1000;
     speed_test = read_byt / test_time;
-    rt_kprintf("%s  path=%s num=%d MBts testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
+    rt_kprintf("%s  path=%s num=%d blocks testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
     rt_free(buff);
 }
 
@@ -170,65 +171,62 @@ void cmd_fs_read(int argc, char **argv)
     cmd_fs_read_t(argv[1], atoi(argv[2]));
 }
 FINSH_FUNCTION_EXPORT_ALIAS(cmd_fs_read, __cmd_fs_read, test read speed);
-void cmd_fs_read_code_t(char *path, int num)
+
+/* ---- extended commands: convenience wrappers that parse unit strings ---- */
+
+static uint32_t parse_size(const char *str)
 {
-    rt_size_t len = 0;
-    char *buff = rt_malloc(SDIO_TEST_LEN);
-    uint32_t read_num = num;
-    uint32_t read_byt = read_num * SDIO_TEST_LEN * 8;
-    rt_memset(buff, 0, SDIO_TEST_LEN);
-    rt_device_t code_dev = rt_device_find("code");
-    RT_ASSERT(code_dev);
-    rt_err_t ret = rt_device_open(code_dev, RT_DEVICE_FLAG_RDWR);
-    uint32_t open_time = HAL_GTIMER_READ();
-    while (read_num)
+    char *endptr;
+    unsigned long num = strtoul(str, &endptr, 10);
+    if (endptr == str || num == 0)  return 0;
+
+    if (*endptr == '\0')
+        return (uint32_t)num;
+    if (strcmp(endptr, "k") == 0 || strcmp(endptr, "K") == 0)
+        return (uint32_t)(num * 1024);
+    if (strcmp(endptr, "m") == 0 || strcmp(endptr, "M") == 0)
+        return (uint32_t)(num * 1024 * 1024);
+
+    return 0;
+}
+
+static void cmd_fs_write_ex(int argc, char **argv)
+{
+    if (argc < 3)
     {
-        rt_device_read(code_dev, 0, buff, (SDIO_TEST_LEN) >> 9);
-        read_num--;
+        rt_kprintf("Usage: fs_write_ex <path> <total_size>\n");
+        rt_kprintf("  total_size: e.g. 512k 1m 2m 4m 8m\n");
+        rt_kprintf("  e.g. fs_write_ex /1.txt 2m\n");
+        return;
     }
-    uint32_t end_time = HAL_GTIMER_READ();
-    rt_device_close(code_dev);
-    float test_time = ((end_time - open_time) / HAL_LPTIM_GetFreq()) * 1000 * 1000;
-    float speed_test = read_byt / test_time;
-    rt_kprintf("%s path=%s num=%d MBts testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
-    rt_free(buff);
-}
-
-void cmd_fs_read_code(int argc, char **argv)
-{
-    cmd_fs_read_code_t(argv[1], atoi(argv[2]));
-}
-FINSH_FUNCTION_EXPORT_ALIAS(cmd_fs_read_code, __cmd_fs_read_code, test read speed code);
-void cmd_fs_write_code_t(char *path, int num)
-{
-    rt_size_t len = 0;
-    char *buff = rt_malloc(SDIO_TEST_LEN);
-    uint32_t read_num = num;
-    uint32_t read_byt = read_num * SDIO_TEST_LEN * 8;
-    rt_memset(buff, 0x55, SDIO_TEST_LEN);
-    rt_device_t code_dev = rt_device_find("code");
-    RT_ASSERT(code_dev);
-    rt_err_t ret = rt_device_open(code_dev, RT_DEVICE_FLAG_RDWR);
-    uint32_t open_time = HAL_GTIMER_READ();
-    while (read_num)
+    uint32_t total_size = parse_size(argv[2]);
+    if (total_size == 0)
     {
-        rt_device_write(code_dev, 0, buff, (SDIO_TEST_LEN) >> 9);
-        read_num--;
+        rt_kprintf("Invalid total_size\n");
+        return;
     }
-    uint32_t end_time = HAL_GTIMER_READ();
-    rt_device_close(code_dev);
-    float test_time = ((end_time - open_time) / HAL_LPTIM_GetFreq()) * 1000 * 1000;
-    float speed_test = read_byt / test_time;
-    rt_kprintf("%s path=%s num=%d MBts testtime=%.6lfuS,speed_test=%.6lfMb/s\n", __func__, path, num, test_time, speed_test);
-    rt_free(buff);
+    cmd_fs_write_t(argv[1], total_size / SDIO_TEST_LEN);
 }
+FINSH_FUNCTION_EXPORT_ALIAS(cmd_fs_write_ex, __cmd_fs_write_ex, fs_write_ex path total_size);
 
-void cmd_fs_write_code(int argc, char **argv)
+static void cmd_fs_read_ex(int argc, char **argv)
 {
-    cmd_fs_write_code_t(argv[1], atoi(argv[2]));
-
+    if (argc < 3)
+    {
+        rt_kprintf("Usage: fs_read_ex <path> <total_size>\n");
+        rt_kprintf("  total_size: e.g. 512k 1m 2m 4m 8m\n");
+        rt_kprintf("  e.g. fs_read_ex /1.txt 2m\n");
+        return;
+    }
+    uint32_t total_size = parse_size(argv[2]);
+    if (total_size == 0)
+    {
+        rt_kprintf("Invalid total_size\n");
+        return;
+    }
+    cmd_fs_read_t(argv[1], total_size / SDIO_TEST_LEN);
 }
-FINSH_FUNCTION_EXPORT_ALIAS(cmd_fs_write_code, __cmd_fs_write_code, test write speed code);
+FINSH_FUNCTION_EXPORT_ALIAS(cmd_fs_read_ex, __cmd_fs_read_ex, fs_read_ex path total_size);
 
 #endif
 #ifdef RT_USING_PM
@@ -259,6 +257,18 @@ int main(void)
     app_wakeup();
     cmd_fs_write_t("/1.txt", 2);
     test_time_pm();
+#endif
+
+#ifdef SDMMC1_BUS_WIDTH_1_ONLY
+#ifdef SOC_SF32LB56X
+    HAL_PIN_Set_Analog(PAD_PA15, 1);
+    HAL_PIN_Set_Analog(PAD_PA12, 1);
+    HAL_PIN_Set_Analog(PAD_PA20, 1);
+#elif SOC_SF32LB58X
+    HAL_PIN_Set_Analog(PAD_PA79, 1);
+    HAL_PIN_Set_Analog(PAD_PA81, 1);
+    HAL_PIN_Set_Analog(PAD_PA75, 1);
+#endif
 #endif
 
     /* Output a message on console using printf function */

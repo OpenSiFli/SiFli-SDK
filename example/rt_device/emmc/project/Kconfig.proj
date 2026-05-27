@@ -2,4 +2,4 @@
 config CUSTOM_MEM_MAP
     bool 
 	select custom_mem_map
-	default y    
+	default y       
