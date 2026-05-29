@@ -16,7 +16,7 @@ ANCS is a messaging protocol provided by Apple that allows access to all message
 ## Usage Instructions
 <!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
 For rt_device examples, also list the configuration switches used in this example, for example PWM example uses PWM1, need to enable PWM1 in onchip menu -->
-1. The example starts advertising upon boot with the name SIFLI_APP-xx-xx-xx-xx-xx-xx, where xx represents the Bluetooth address of the device. This can be obtained using the finsh command "nvds get_mac".
+1. The example starts advertising upon boot with the name SIFLI_APP-xx-xx-xx-xx-xx-xx, where xx represents the Bluetooth address of the device. This can be obtained using the finsh command "nvds get_mac". Note: This project enables sleep mode by default, and the device will enter sleep shortly after startup. Once in sleep mode, J-Link connection and UART input will be unavailable, while Bluetooth functions normally. If you need to input Finsh commands, pull PA80 low to force the device to stay awake. (For model 557, use PA77 instead.)
 2. Use BLE software (LightBlue, nRF Connect, etc.) on iOS devices (iPhone or iPad) to connect to this device. Note that ANCS requires pairing to complete, so you must accept when the pairing dialog appears on the iOS device.
     2) Higher iOS versions may also show a system notification sharing confirmation dialog in addition to the pairing dialog, which can also be toggled in the iOS Bluetooth settings for the corresponding device.
 3. When messages are received, this example will print them through HCPU logs.
