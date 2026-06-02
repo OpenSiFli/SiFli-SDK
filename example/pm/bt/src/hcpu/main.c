@@ -45,6 +45,22 @@ enum ble_app_att_list
 #define BLE_APP_HIGH_PERFORMANCE_INTERVAL (24)
 #define BLE_APP_TIMEOUT_INTERVAL (5000)
 
+#if defined(SOC_SF32LB52X)
+    #define TX_PWR_RTC_IDX   7
+#else
+    #define TX_PWR_RTC_IDX   12
+#endif
+/* RTC backup format: [31:24]=magic(0xA5) [23:16]=init [15:8]=min [7:0]=max */
+#define TX_PWR_RTC_MAGIC        0xA5UL
+#define TX_PWR_RTC_MAGIC_Pos    24U
+#define TX_PWR_RTC_MAGIC_Msk    (0xFFUL << TX_PWR_RTC_MAGIC_Pos)
+#define TX_PWR_RTC_MAX_Pos      0U
+#define TX_PWR_RTC_MAX_Msk      (0xFFUL << TX_PWR_RTC_MAX_Pos)
+#define TX_PWR_RTC_MIN_Pos      8U
+#define TX_PWR_RTC_MIN_Msk      (0xFFUL << TX_PWR_RTC_MIN_Pos)
+#define TX_PWR_RTC_INIT_Pos     16U
+#define TX_PWR_RTC_INIT_Msk     (0xFFUL << TX_PWR_RTC_INIT_Pos)
+
 typedef struct
 {
     uint8_t is_power_on;
@@ -682,4 +698,65 @@ int ble_config(int argc, char *argv[])
     return 0;
 }
 MSH_CMD_EXPORT(ble_config, "BLE Configure")
+
+
+
+/* ==================== Override drv_common weak TX power getters ====================
+ * bt_rf_get_max/min/init_tx_pwr() call these — we read from RTC backup.
+ * Format: [31:24]=0xA5(magic) [23:16]=init [15:8]=min [7:0]=max
+ */
+int8_t bt_tx_pwr_max_override(void)
+{
+    uint32_t v = HAL_Get_backup(TX_PWR_RTC_IDX);
+    if (GET_REG_VAL2(v, TX_PWR_RTC_MAGIC) == TX_PWR_RTC_MAGIC)
+        return (int8_t)GET_REG_VAL2(v, TX_PWR_RTC_MAX);
+    return BT_TX_POWER_VAL_MAX;
+}
+
+int8_t bt_tx_pwr_min_override(void)
+{
+    uint32_t v = HAL_Get_backup(TX_PWR_RTC_IDX);
+    if (GET_REG_VAL2(v, TX_PWR_RTC_MAGIC) == TX_PWR_RTC_MAGIC)
+        return (int8_t)GET_REG_VAL2(v, TX_PWR_RTC_MIN);
+    return BT_TX_POWER_VAL_MIN;
+}
+
+int8_t bt_tx_pwr_init_override(void)
+{
+    uint32_t v = HAL_Get_backup(TX_PWR_RTC_IDX);
+    if (GET_REG_VAL2(v, TX_PWR_RTC_MAGIC) == TX_PWR_RTC_MAGIC)
+        return (int8_t)GET_REG_VAL2(v, TX_PWR_RTC_INIT);
+    return BT_TX_POWER_VAL_INIT;
+}
+
+/*  ble_tx_pwr_save <power_dbm>: Save TX power to RTC & reboot
+ *    power_dbm: TX power in dBm (0~19), applied as max=min=init
+ */
+int ble_tx_pwr_save(int argc, char *argv[])
+{
+    if (argc < 2)
+    {
+        LOG_I("Usage: ble_tx_pwr_save <power_dbm>");
+        return -1;
+    }
+
+    int8_t pwr = (int8_t)atoi(argv[1]);
+    int8_t max = pwr, min = pwr, init = pwr;
+
+    uint32_t val = (MAKE_REG_VAL2(TX_PWR_RTC_MAGIC,   TX_PWR_RTC_MAGIC) |
+                    MAKE_REG_VAL2((uint8_t)init,      TX_PWR_RTC_INIT)  |
+                    MAKE_REG_VAL2((uint8_t)min,       TX_PWR_RTC_MIN)   |
+                    MAKE_REG_VAL2((uint8_t)max,       TX_PWR_RTC_MAX));
+
+#if defined(SOC_SF32LB52X)
+    HAL_Set_backup(TX_PWR_RTC_IDX, val);   /* 52X: BKP7 */
+#else
+    HAL_Set_backup(TX_PWR_RTC_IDX, val);  /* 56X: BKP12 */
+#endif
+    LOG_I("TX power saved: max=%d min=%d init=%d, rebooting...", max, min, init);
+    drv_reboot();
+
+    return 0;
+}
+MSH_CMD_EXPORT(ble_tx_pwr_save, "Save BLE TX power(max/min/init) to RTC and reboot")
 

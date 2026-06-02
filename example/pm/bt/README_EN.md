@@ -20,7 +20,10 @@ HCPU uses UART1 as Console port, LCPU uses UART4 as Console port.
     3. 'ble_config adv interval_in_ms': Modify broadcast period, where 'interval_in_ms' is the broadcast interval in milliseconds
     4. 'ble_config conn interval_in_ms': Modify connection period, where 'interval_in_ms' is the connection interval in milliseconds,
       command needs to be sent after connecting with phone
-    5. 'btskey': BTS menu control command, can modify BT parameters. After startup, it defaults to BTS main menu. BTS menu is a multi-level menu. You can send 'btskey s' command to display current menu content,
+    5. ble_tx_pwr_save x: Modify RF transmit power, where x denotes the target transmit power value.
+    Example: Set transmit power to 10 via the command: ble_tx_pwr_save 10.
+    A system reboot is automatically triggered to apply the new configuration after modification.
+    6. 'btskey': BTS menu control command, can modify BT parameters. After startup, it defaults to BTS main menu. BTS menu is a multi-level menu. You can send 'btskey s' command to display current menu content,
         then send commands according to menu prompts to enter next level menu or execute certain menu functions. For example, in the main menu, sending the following three commands in sequence can turn on Page Scan and turn off Inquiry Scan
         1) btskey 1
         2) btskey 7

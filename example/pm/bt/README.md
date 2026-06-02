@@ -21,7 +21,8 @@ HCPU使用UART1作为Console端口，LCPU使用UART4作为Console端口。
     3. 'ble_config adv interval_in_ms': 修改广播周期，其中'interval_in_ms'是毫秒为单位的广播间隔
     4. 'ble_config conn interval_in_ms': 修改连接周期，其中'interval_in_ms'是毫秒为单位的连接间隔，
       需要在与手机连接后发送命令
-    5. 'btskey': BTS菜单控制命令，可修改BT参数。开机后默认处于BTS主菜单，BTS菜单为多级菜单，可发送'btskey s'命令显示当前的菜单内容，
+    5. `ble_tx_pwr_save x`:修改发射功率，x是需要修改的发射功率大小，例如改变发射功率为10：`ble_tx_pwr_save 10` 。改完后会自动重启生效。
+    6. 'btskey': BTS菜单控制命令，可修改BT参数。开机后默认处于BTS主菜单，BTS菜单为多级菜单，可发送'btskey s'命令显示当前的菜单内容，
         再根据菜单提示发送命令进入下一级菜单或者执行某个菜单的功能。比如，在主菜单下，依次发送以下三个命令可以打开Page Scan并关闭Inquiry Scan
         1) btskey 1
         2) btskey 7
