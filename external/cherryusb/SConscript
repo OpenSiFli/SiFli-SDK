@@ -313,8 +313,12 @@ if GetDepend(['PKG_CHERRYUSB_HOST']):
         src += Glob('class/cdc/usbh_cdc_ncm.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_VIDEO']):
         src += Glob('class/video/usbh_video.c')
+        LIBPATH += [cwd + '/class/video']
+        LIBS += [GroupLibName("cherryusb_usbh_uvc")]
     if GetDepend(['PKG_CHERRYUSB_HOST_AUDIO']):
         src += Glob('class/audio/usbh_audio.c')
+        LIBPATH += [cwd + '/class/audio']
+        LIBS += [GroupLibName("cherryusb_usbh_uac")]
     if GetDepend(['PKG_CHERRYUSB_HOST_BLUETOOTH']):
         src += Glob('class/wireless/usbh_bluetooth.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_ASIX']):
