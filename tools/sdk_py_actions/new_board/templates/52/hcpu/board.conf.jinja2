@@ -24,7 +24,8 @@ CONFIG_BSP_USING_ADC=y
 {% endif %}{% endif %}# CONFIG_BSP_ENABLE_MPI5 is not set
 CONFIG_BSP_USING_ONCHIP_RTC=y
 CONFIG_BSP_USING_EPIC=y
-{% if use_sdmmc %}CONFIG_BSP_USING_SDIO=y
+{% if use_sdmmc %}CONFIG_CFG_SUPPORT_NON_OTP=y
+CONFIG_BSP_USING_SDIO=y
 {% if use_sdhci1 %}CONFIG_BSP_USING_SDMMC1=y
 {% endif %}{% if use_sdhci2 %}CONFIG_BSP_USING_SDMMC2=y
 {% endif %}{% endif %}CONFIG_BSP_USING_PINMUX=y
