@@ -1900,6 +1900,7 @@ int rt_sdhci_init_instance(uint8_t id)
     int ret = 0;
     struct rt_sdhci_configuration *cfg;
     struct sdhci_host *host_ctx;
+    uint16_t sdhci_time = 100;    
 
     LOG_I("rt_hw_sdmmc_init %d begin\n", id + 1);
 
@@ -1965,28 +1966,27 @@ int rt_sdhci_init_instance(uint8_t id)
 #endif /* RT_USING_PM */
 
     LOG_I("rt_hw_sdmmc_init %d done\n", id + 1);
-#ifdef RT_USING_PM
-    // if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
-    {
-        rt_pm_request(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_start();
-        uint16_t sdhci_time = 100;
+
 #if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
-        if (sdhci_card_inserted == 0)
-            sdhci_time = 1;
+    if (sdhci_card_inserted == 0)
+        sdhci_time = 1;
 #endif /* SD_INSERT_DETECT_PIN */
-        while (sdhci_time --)
-        {
-            rt_thread_mdelay(30);
-            uint8_t mmcsd_get_stat(void);
-            if (mmcsd_get_stat()) break;
-        }
 
-        rt_pm_release(PM_SLEEP_MODE_IDLE);
-
-        rt_pm_hw_device_stop();
-    }
+#ifdef RT_USING_PM
+    rt_pm_request(PM_SLEEP_MODE_IDLE);
+    rt_pm_hw_device_start();
 #endif /* RT_USING_PM */
+    while (sdhci_time --)
+    {
+        rt_thread_mdelay(30);
+        uint8_t mmcsd_get_stat(void);
+        if (mmcsd_get_stat()) break;
+    }
+#ifdef RT_USING_PM
+    rt_pm_release(PM_SLEEP_MODE_IDLE);
+    rt_pm_hw_device_stop();
+#endif /* RT_USING_PM */
+
     return 0;
 }
 
