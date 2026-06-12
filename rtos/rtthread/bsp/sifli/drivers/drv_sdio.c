@@ -1503,6 +1503,7 @@ int rt_hw_sdio_init(void)
 {
     struct sifli_sdio_des sdio_des;
     rt_uint8_t priority = RT_MMCSD_THREAD_PREORITY;
+    uint32_t time_out = 3000;    
 
 #ifdef SF32LB52X
     HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
@@ -1532,29 +1533,30 @@ int rt_hw_sdio_init(void)
 #else
     LOG_I("SDIO USING POLLING MODE !\n");
 #endif
-#ifdef RT_USING_PM
-    // if (PM_STANDBY_BOOT != SystemPowerOnModeGet())  // standby do noct destory event/mutex, can not init again
-    {
-#ifdef PM_STANDBY_ENABLE
-        rt_sdio_register_rt_device();
-#endif
-        rt_pm_request(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_start();
-        uint32_t time_out = 3000;
-#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
-        if (!sdio_card_inserted)
-            time_out = 1;
-#endif
-        while (time_out--)
-        {
-            rt_thread_mdelay(1);
-            uint8_t mmcsd_get_stat(void);
-            if (mmcsd_get_stat()) break;
-        }
-        rt_pm_release(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_stop();
 
+#if defined(SD_INSERT_DETECT_PIN) && (SD_INSERT_DETECT_PIN != -1)
+    if (!sdio_card_inserted)
+        time_out = 1;
+#endif
+
+#ifdef RT_USING_PM
+#ifdef PM_STANDBY_ENABLE
+    rt_sdio_register_rt_device();
+#endif
+    rt_pm_request(PM_SLEEP_MODE_IDLE);
+    rt_pm_hw_device_start();
+#endif /* RT_USING_PM */
+
+    while (time_out--)
+    {
+        rt_thread_mdelay(1);
+        uint8_t mmcsd_get_stat(void);
+        if (mmcsd_get_stat()) break;
     }
+
+#ifdef RT_USING_PM
+    rt_pm_release(PM_SLEEP_MODE_IDLE);
+    rt_pm_hw_device_stop();
 #endif /* RT_USING_PM */
 
     if (mmcsd_get_thread())
