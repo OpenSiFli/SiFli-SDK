@@ -23,6 +23,55 @@ config CUSTOM_MEM_MAP
 
 The partition table description file `ptab.json` is a text file in JSON format. It follows standard JSON syntax and can be edited with any text editor. There are two versions of the partition table syntax: 1.0 and 2.0. The 2.0 version simplifies the syntax compared to 1.0, making it easier to understand and maintain. It is recommended that new projects adopt the 2.0 syntax. For detailed syntax, refer to [](partition_table_v1.md) and [](partition_table_v2.md).
 
+## Dumping ftab.bin
+
+After a project is built, the build directory contains `ftab.bin`, the binary Flash Table generated from the partition table. Use `sdk.py ftab-dump` to inspect this file in a readable form when checking boot addresses, image sizes, XIP addresses, or DFU image flags.
+
+Run the command in an exported SDK environment:
+
+```bash
+source ./export.sh
+```
+
+On Windows PowerShell, run:
+
+```powershell
+./export.ps1
+```
+
+From the project directory, dump the first `build_*/ftab.bin` found under that project:
+
+```bash
+sdk.py ftab-dump
+```
+
+To avoid ambiguity when multiple board build directories exist, pass the file path explicitly:
+
+```bash
+sdk.py ftab-dump --path build_<board_name>/ftab.bin
+```
+
+The default output is a table view. JSON output is also available for scripts:
+
+```bash
+sdk.py ftab-dump --path build_<board_name>/ftab.bin --format json
+```
+
+Options:
+
+| Option | Description |
+|--------|-------------|
+| `-p, --path <path>` | Path to `ftab.bin`. If omitted, `sdk.py` searches for `build_*/ftab.bin` in the current project directory. |
+| `-f, --format <format>` | Output format: `table` or `json`. The default is `table`; use `json` for machine-readable output. |
+
+The table output contains three sections:
+
+| Section | Description |
+|---------|-------------|
+| Partition Table Entries | Flash Table partition entries, including storage base address, partition size, XIP or execution base address, and flags. |
+| Image Description Table | Image metadata used by DFU and boot flows, including image length, block size, flags such as `AUTO` or `COMPRESS`, and whether the entry is valid. |
+| Image Index Table | Running image pointers for each core image slot, such as HCPU, LCPU, bootloader, and boot image. |
+
 ```{toctree}
 :hidden:
 
