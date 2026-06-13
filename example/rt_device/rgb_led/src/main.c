@@ -11,8 +11,6 @@
 #include "string.h"
 #include "drivers/rt_drv_pwm.h"
 
-#define RGB_COLOR   (0x00ff00)
-
 #define RGBLED_NAME    "rgbled"
 
 
@@ -23,7 +21,7 @@ struct rt_color
     uint32_t color;
 };
 
-struct rt_color rgb_color_arry[] =
+static struct rt_color rgb_color_arry[] =
 {
     {"black", 0x000000},
     {"blue", 0x0000ff},
@@ -36,14 +34,14 @@ struct rt_color rgb_color_arry[] =
 };
 
 
-void rgb_led_init()
+static void rgb_led_init()
 {
 #ifdef SF32LB52X
-    HAL_PIN_Set(PAD_PA32, GPTIM2_CH1, PIN_NOPULL, 1);   // RGB LED 52x  pwm3_cc1
+    HAL_PIN_Set(PAD_PA32, GPTIM2_CH1, PIN_NOPULL, 1);   // pwmt2_cc1
 #elif defined SF32LB58X
-    HAL_PIN_Set(PAD_PB39, GPTIM3_CH4, PIN_NOPULL, 0);//58x          pwm4_cc4
+    HAL_PIN_Set(PAD_PB39, GPTIM3_CH4, PIN_NOPULL, 0);   // pwmt3_cc4
 #elif defined SF32LB56X
-    HAL_PIN_Set(PAD_PB09, GPTIM3_CH4, PIN_NOPULL, 0);//566   pwm4_cc4
+    HAL_PIN_Set(PAD_PB09, GPTIM3_CH4, PIN_NOPULL, 0);   // pwmt3_cc4
 #endif
     /*rgbled poweron*/
 #ifdef SF32LB52X
@@ -56,40 +54,13 @@ void rgb_led_init()
     }
 }
 
-void rgb_led_set_color(uint32_t color)
+static void rgb_led_set_color(uint32_t color)
 {
-#ifdef SF32LB52X
-    HAL_PIN_Set(PAD_PA32, GPTIM2_CH1, PIN_NOPULL, 1);   // RGB LED 52x  pwm3_cc1
-#elif defined SF32LB58X
-    HAL_PIN_Set(PAD_PB39, GPTIM3_CH4, PIN_NOPULL, 0);//58x          pwm4_cc4
-#elif defined SF32LB56X
-    HAL_PIN_Set(PAD_PB09, GPTIM3_CH4, PIN_NOPULL, 0);//566
-#endif
     struct rt_rgbled_configuration configuration;
     configuration.color_rgb = color;
     rt_device_control(rgbled_device, PWM_CMD_SET_COLOR, &configuration);
 }
 
-
-void rgb_color_array_display()
-{
-    uint16_t i = 0;
-    rt_kprintf("start display color!\n");
-    while (1)
-    {
-        if (i < sizeof(rgb_color_arry) / sizeof(struct rt_color))
-        {
-            rt_kprintf("-> %s\n", rgb_color_arry[i].color_name);
-            rgb_led_set_color(rgb_color_arry[i].color);
-            rt_thread_mdelay(1000);
-
-        }
-        i++;
-        if (i >= 8)
-            i = 0;
-
-    }
-}
 /**
   * @brief  Main program
   * @param  None
@@ -97,15 +68,18 @@ void rgb_color_array_display()
   */
 int main(void)
 {
-    /* Output a message on console using printf function */
-    rt_kprintf("Hello world!\n");
     rgb_led_init();
-    //rgb_color_auto();
-    rgb_color_array_display();
+
+    rt_kprintf("start display color!\n");
     /* Infinite loop */
     while (1)
     {
-        rt_thread_mdelay(1);
+        for (int i = 0; i < sizeof(rgb_color_arry) / sizeof(rgb_color_arry[0]); i++)
+        {
+            rt_kprintf("-> %s\n", rgb_color_arry[i].color_name);
+            rgb_led_set_color(rgb_color_arry[i].color);
+            rt_thread_mdelay(1000);
+        }
     }
     return 0;
 }
