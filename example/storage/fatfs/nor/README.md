@@ -119,13 +119,17 @@ ls               - List information about the FILEs.
 ```
 mount fs on flash root success//说明文件系统挂载成功
 ```
-1、串口发送ls查看根目录下的文件
+1.串口发送ls查看根目录下的文件
 
-2、输入mkdir test2，创建test2文件夹（目录）
+2.输入mkdir test1，创建test1文件夹（目录）
 
-3、再次输入ls，看test2文件夹（目录）是否创建成功
+3.输入cd test1，进入test1文件夹（目录）
 
-4、输入pwd查看当前工作路径
+4.输入mkdir test2，创建test2文件夹（目录）
+
+5.再次输入ls，看test2文件夹（目录）是否创建成功
+
+6.输入pwd查看当前工作路径
 ![alt text](assets/file_system_log_1.png)
 ### 故障排查
 如果log未能出现预期的log和现象，可以从已下几个方面进行故障排查：
