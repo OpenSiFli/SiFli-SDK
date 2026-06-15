@@ -57,6 +57,22 @@ HAL_RAM_RET_CODE_SECT(HAL_MspInit,  __weak void HAL_MspInit(void))
     BSP_IO_Init();
 }
 
+__weak void BSP_Flash4_PowerUp(void)
+{
+#if defined(SF32LB58X) && defined(BSP_ENABLE_MPI4)
+    HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA30, MPI4_CS, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA40, MPI4_DIO0, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA37, MPI4_DIO1, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA36, MPI4_DIO2, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA38, MPI4_DIO3, PIN_PULLUP, 1);
+#endif /* SF32LB58X && BSP_ENABLE_MPI4 */
+}
+
+__weak void BSP_Flash4_PowerDown(void)
+{
+
+}
 #endif /* BSP_USING_PC_SIMULATOR */
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
