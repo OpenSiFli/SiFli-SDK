@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_SF32LB58_CORE_N16R32N1
+    bool
+    select SOC_SF32LB58X
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"
