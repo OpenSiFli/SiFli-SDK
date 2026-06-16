@@ -1,0 +1,10 @@
+menuconfig PKG_USING_ZLIB
+    bool "Enable ZLIB"
+    default n
+
+if PKG_USING_ZLIB
+    config PKG_USING_MINIZIP
+        bool "Support compress/decompress .zip file"
+        default n
+endif
+

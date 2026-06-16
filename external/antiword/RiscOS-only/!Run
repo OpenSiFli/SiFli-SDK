@@ -1,0 +1,34 @@
+| !Run file for !Antiword
+| (C) Adri van Os 1998-2005
+|
+if "<System$Path>" = "" then Error 0 System resources cannot be found
+if "<Font$Path>" = "" then Error 0 There are no fonts available
+|
+Set      Antiword$Dir  <Obey$Dir>
+IconSprites <Antiword$Dir>.!Sprites
+|
+SetMacro Antiword$Path Choices:Antiword.,<Antiword$Dir>.,<Wimp$ScrapDir>.Antiword.
+|
+SetMacro Antiword$ChoicesFile Antiword:Choices
+if "<Choices$Write>" <> "" then Set Antiword$ChoicesSave <Choices$Write>.Antiword.Choices else Set Antiword$ChoicesSave <Antiword$Dir>.Choices
+|
+SetMacro Antiword$FontNamesFile Antiword:FontNames
+if "<Choices$Write>" <> "" then Set Antiword$FontNamesSave <Choices$Write>.Antiword.FontNames else Set Antiword$FontNamesSave <Antiword$Dir>.FontNames
+|
+Set Antiword$Latin1 <Antiword$Dir>.Resources.Unicode01
+Set Antiword$Latin9 <Antiword$Dir>.Resources.Unicode15
+|
+RMEnsure UtilityModule 3.10 Error You need RISC OS 3.10 or later
+RMEnsure UtilityModule 5.00 RMEnsure CallASWI 0.03 RMLoad System:Modules.CallASWI
+RMEnsure UtilityModule 5.00 RMEnsure CallASWI 0.03 Error You need CallASWI 0.03 or later
+RMEnsure FPEmulator 4.03 RMLoad System:Modules.FPEmulator
+RMEnsure FPEmulator 4.03 Error You need FPEmulator 4.03 or later
+RMEnsure SharedCLibrary 5.17 RMLoad System:Modules.CLib
+RMEnsure SharedCLibrary 5.34 Error You need SharedCLibrary 5.34 or later
+RMEnsure DrawFile 1.43 RMLoad System:Modules.DrawFile
+RMEnsure DrawFile 1.43 Error You need DrawFile 1.43 or later
+|
+if "<File$Type_AE6>" = "" then Set File$Type_AE6 MSWord
+|
+WimpSlot -min 360K -max 360K
+Run <Antiword$Dir>.!RunImage %*0

@@ -1,0 +1,8 @@
+menuconfig PKG_USING_PDFIUM
+    bool "Enable PDFium (PDF rendering/decoding)"
+    default n
+    select RT_USING_CPLUSPLUS
+
+    # PDFium codebase is mostly C++.
+    # If your toolchain/project requires additional C++ runtime settings,
+    # please enable them in RT-Thread "C++ features" menu.
