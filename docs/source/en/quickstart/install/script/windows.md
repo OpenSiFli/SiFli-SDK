@@ -8,6 +8,12 @@ We recommend using the [CodeKit](https://marketplace.visualstudio.com/items?item
 
 Windows users do not need to pre-install system Python for the SDK scripts anymore. The supported workflow uses `uv` to provision the SDK-managed Python runtime on demand.
 
+To install `uv`, run the following command in PowerShell:：
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
 After installing `uv`, run the following command in PowerShell to verify it is available:
 
 ```powershell
@@ -15,7 +21,7 @@ uv --version
 ```
 
 ```{note}
-`uv` is an extremely fast Python package and project management tool written in Rust. For installation instructions, refer to the [official uv documentation](https://docs.astral.sh/uv/getting-started/installation).
+`uv` is an extremely fast Python package and project management tool written in Rust. For more installation instructions, refer to the [official uv documentation](https://docs.astral.sh/uv/getting-started/installation).
 ```
 
 ### Git Environment
