@@ -107,7 +107,17 @@ static rt_err_t _get_string_descriptor(struct udevice *device, ureq_t setup)
 
     if (index == 0xEE)
     {
-        index = USB_STRING_OS_INDEX;
+        /* just need to respond to 0xEE when OS comp id descriptor is present */
+        if ((device->os_comp_id_desc != RT_NULL) &&
+                !rt_list_isempty(&device->os_comp_id_desc->func_desc))
+        {
+            index = USB_STRING_OS_INDEX;
+        }
+        else
+        {
+            rt_usbd_ep0_set_stall(device);
+            return -RT_ERROR;
+        }
     }
 
     if (index > USB_STRING_MAX)
