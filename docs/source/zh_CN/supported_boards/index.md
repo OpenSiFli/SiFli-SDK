@@ -98,6 +98,7 @@ NANO-N16R16  | SF32LB52-NANO_N16R16      |   sf32lb52-nano_n16r16 |
 52-LCD_52D | SF32LB52-DevKit-LCD_52D |   [sf32lb52-lcd_52d](boards/sf32lb52-lcd_52d/doc/index.md)    |
 
 
+
 ```{toctree}
 :titlesonly:
 :glob:
@@ -110,10 +111,17 @@ boards/sf32lb52-lcd_52d/doc/index
 boards/sf32lb52-lcd_n16r8/doc/index
 boards/sf32lb52-lcd_a128r16/doc/index
 boards/sf32lb52-lcd_n16r8_jdi/doc/index
+boards/sf32lb52-nano_n4/doc/index
+boards/sf32lb52-nano_n16r16/doc/index
 boards/sf32lb56-lcd_a128r12n1/doc/index
 boards/sf32lb56-lcd_n16r12n1/doc/index
+boards/sf32lb56-wlan-core_a128r12n1/doc/index
+boards/sf32lb56-wlan-core_n16r12n1/doc/index
+boards/sf32lb58-core_a128r32n1/doc/index
+boards/sf32lb58-core_n16r32n1/doc/index
 boards/sf32lb58-lcd_a128r32n1_dsi/doc/index
 boards/sf32lb58-lcd_a128r32n1_qspi/doc/index
+boards/sf32lb58-lcd_e4r32n1_dsi/doc/index
 boards/sf32lb58-lcd_n16r32n1_dpi/doc/index
 boards/sf32lb58-lcd_n16r32n1_dsi/doc/index
 boards/sf32lb58-lcd_n16r32n1_qspi/doc/index
