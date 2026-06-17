@@ -71,6 +71,10 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA28, GPTIM2_CH1, PIN_PULLUP, 1); // mclk output
 #endif /* BOARD_DVP_PINMAP_0 */
 
+#else /* BSP_USING_DCMI */
+    HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
+    HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
+    HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
 #endif /* BSP_USING_DCMI */
 
 #ifdef BSP_USING_PDM1

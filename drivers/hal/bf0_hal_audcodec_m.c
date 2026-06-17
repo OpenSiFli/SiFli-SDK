@@ -517,6 +517,9 @@ __HAL_ROM_USED void HAL_AUDCODEC_Config_Analog_ADCPath(AUDCODE_ADC_CLK_CONFIG_TY
 {
     HAL_DBG_printf("config Aanlog ADCPath\n");
     // turn on lp adc1 and adc2 analog
+#ifdef AUDCODEC_ADC_ANA_CFG_PSW_EN
+    hwp_audcodec->ADC_ANA_CFG |= AUDCODEC_ADC_ANA_CFG_PSW_EN;
+#endif
     hwp_audcodec->BG_CFG0 &= ~AUDCODEC_BG_CFG0_EN_SMPL;
     hwp_audcodec->ADC_ANA_CFG |= AUDCODEC_ADC_ANA_CFG_MICBIAS_EN;
 #if !defined(SF32LB57X)
@@ -611,6 +614,9 @@ __HAL_ROM_USED void HAL_AUDCODEC_Close_Analog_ADCPath(void)
     hwp_audcodec->ADC1_CFG2 &= ~AUDCODEC_ADC1_CFG2_EN;
     hwp_audcodec->ADC2_CFG2 &= ~AUDCODEC_ADC2_CFG2_EN;
     hwp_audcodec->ADC_ANA_CFG &= ~AUDCODEC_ADC_ANA_CFG_MICBIAS_EN;
+#ifdef AUDCODEC_ADC_ANA_CFG_PSW_EN
+    hwp_audcodec->ADC_ANA_CFG &= ~AUDCODEC_ADC_ANA_CFG_PSW_EN;
+#endif
     HAL_DBG_printf("close Aanlog ADCPath\n");
 
 }
