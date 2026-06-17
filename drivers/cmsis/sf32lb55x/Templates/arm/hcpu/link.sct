@@ -54,6 +54,7 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
     *.o (.nand_cache)
     *.o (.l2_non_ret_data_*)
     *.o (.l2_non_ret_bss_*)
+    *.o (.bss.l2_non_ret_bss_*)
   }
   ScatterAssert((ImageLength(RW_PSRAM1)+ImageLength(RW_PSRAM1_CACHE)+ImageLength(RW_PSRAM_NON_RET)+ImageLength(RW_PSRAM2_CACHE))<PSRAM_DATA_SIZE)
 #endif
