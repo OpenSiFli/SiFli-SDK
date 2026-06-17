@@ -17,24 +17,38 @@ The HAL EPIC module provides an abstract software interface to operate the hardw
 
 
 ## Input/Output Limitations
-| Feature      | Supported Formats                |  55X                     |  58X   |  56X   |  52X   |
-|--------------|----------------------------------|--------------------------|--------|--------|--------|
-| Horizontal Scaling | All color formats supported by the chip | 3.8, shrink by 8x, enlarge by 256x, precision 1/256 | 10.16, shrink by 1024x, enlarge by 65536x, precision 1/65536 | Same as 58X | Same as 58X |
-| Vertical Scaling   | All color formats supported by the chip | Horizontal and vertical scaling factors must be the same | 10.16, shrink by 1024x, enlarge by 65536x, precision 1/65536, <br>horizontal and vertical scaling factors can differ | Same as 58X | Same as 58X |
-| Rotation           | All except EZIP, YUV <br>A4/A8 mask cannot rotate | [0 ~ 3600], unit is 0.1 degree | Same as 55X | Same as 55X | Same as 55X |
-| Horizontal Mirror  | All color formats supported by the chip | Supported | Supported | Supported | Supported |
-| Vertical Mirror    | All except EZIP format | Not supported | Not supported | Not supported | Supported |
-
+### Transformation Features
+| Feature       | Supported Formats                  |  55X                     |  58X   |  56X   |  52X   |
+|----------- |---------------------------|--------------------------|--------|--------|--------|
+|Horizontal Scaling    | All color formats supported by the chip                      |3.8, i.e., reduce 8x, enlarge 256x, precision 1/256    |   10.16, i.e., reduce 1024x, enlarge 65536x, precision 1/65536     |   Same as 58X    |   Same as 58X    |
+|Vertical Scaling    | All color formats supported by the chip                      |Horizontal and vertical scaling ratios are fixed and cannot be configured separately  |   10.16, i.e., reduce 1024x, enlarge 65536x, precision 1/65536,<br>and can be different from horizontal scaling coefficient     |   Same as 58X    |   Same as 58X    |
+|Rotation       | Except EZIP, YUV formats <br>Additionally, A4/A8 cannot rotate when used as mask | [0 ~ 3600], unit is 0.1 degree    |  Same as 55X     |   Same as 55X      |   Same as 55X      |
+|Horizontal Mirror    | All color formats supported by the chip                      |  Supported       |   Supported     |   Supported      |   Supported    |
+|Vertical Mirror    | Except EZIP format                               |   Not supported    |   Not supported    |   Not supported    |   Supported    |
 
 ```{note}
-- Rotation and scaling can be performed simultaneously, supporting the same or any anchor point.
-- Mirroring supports any anchor point, but cannot be combined with rotation or scaling.
-- The union of the foreground, background, and output regions must not exceed 1024*1024 pixels (the foreground refers to the image region after transformation around any anchor point, including the anchor and the original image).
-> For example, after rotating and scaling the foreground image around an anchor point outside the image, the union with the background and output regions must not exceed 1024.
+- Rotation and scaling can be performed simultaneously with the same anchor point, and arbitrary anchor points are supported.
+- Mirroring supports arbitrary anchor points but cannot be performed simultaneously with rotation or scaling.
+```
 
+### Coordinate Range
+| Maximum Output Dimensions per Hardware Blend | 55X         | 58X    |  56X   |  52X    | 57X   |
+|:---                          |:---         |:---    |:---    |:---     |:---   |
+|Scaling/Rotation/Fractional Coordinates/Mirroring | 1024 (including anchor point) |1024    | 512    |512      | 512   |
+|Normal                          | 1024        |1024    | 1024    |1024      | 8192   |
+
+The maximum output range for a single software blend is defined by the macro `EPIC_COORDINATES_MAX` in bf0_hal_epic.h, which takes the maximum dimensions for scaling/rotation and subtracts approximately 10 (a common reduction factor). If the reduction factor is larger, `EPIC_COORDINATES_MAX` needs to be further reduced.
+
+```{note}
+- The maximum output range here refers to the union of the foreground, background, and output regions, where both the height and width must not exceed this range.
+- When the foreground is transformed (scaling/rotation, etc.), the foreground region only includes the area of the transformed image within the output region (on 55X, the anchor point also needs to be included).
+```
+
+For example, on the 55x, when the foreground image is rotated and scaled around an anchor point outside the image, the union of the transformed foreground, background, and output regions must not exceed `EPIC_COORDINATES_MAX`.
 ![EPIC Limitation Explanation](../../assets/epic_limitation.png)
 
-```
+For non-55x chips, transformations can be converted to use the image center as the anchor point, so only MAX_W and MAX_H need to be considered not to exceed `EPIC_COORDINATES_MAX`.
+![EPIC Limitation Explanation](../../assets/epic_limitation_new.png)
 
 ## Supported Color Formats
 | Input Color Format Supported         |  55X   |  58X   |  56X   |  52X   |
