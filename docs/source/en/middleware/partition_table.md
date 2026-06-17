@@ -77,4 +77,5 @@ The table output contains three sections:
 
 partition_table_v1.md
 partition_table_v2.md
+partition_table_v3.md
 ```

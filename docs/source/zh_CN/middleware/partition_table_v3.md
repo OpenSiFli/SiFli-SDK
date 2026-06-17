@@ -1,6 +1,6 @@
-# Partition Table V3 (ptab v3)
+# 分区表语法3.0版本
 
-本文档详细介绍 SiFli SDK 中 ptab v3 分区表格式的设计、使用方法和迁移指南。
+本文详细介绍 SiFli SDK 中 分区表v3(即ptab v3)格式的设计、使用方法和迁移指南。
 
 ## 概述
 
