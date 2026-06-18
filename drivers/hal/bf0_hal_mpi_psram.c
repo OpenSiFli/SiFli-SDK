@@ -119,16 +119,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
 
     int cren = __HAL_MPI_GET_CREN(hflash);
 
+    HAL_FLASH_SET_CLK_rom(hflash, 1);
     hflash->freq = HAL_QSPI_GET_CLK(hflash);
     hflash->freq >>= 1;
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
-
-    //TODO: delay
-    //HAL_FLASH_SET_CLK_rom(hflash, clk_div);
-    HAL_FLASH_SET_CLK_rom(hflash, 1);
 
     cs_min = 6;
 #ifdef FPGA // for fpga
@@ -248,27 +245,28 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     uint8_t dqs_dly;
     uint8_t sck_dly;
     uint8_t fix_lat = 1;
+    int cren;
+    uint32_t freq;
 
     if (hflash == NULL || cfg == NULL)
         return HAL_ERROR;
 
     HAL_QSPI_Init(hflash, cfg);
 
-    int cren = __HAL_MPI_GET_CREN(hflash);
+    cren = __HAL_MPI_GET_CREN(hflash);
 
-    uint32_t freq = HAL_QSPI_GET_CLK(hflash);
+    HAL_FLASH_SET_CLK_rom(hflash, 1);
+    freq = HAL_QSPI_GET_CLK(hflash);
     freq >>= 1;
-
     hflash->freq = freq;
+
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
 #else
     dqs_dly = 0xa;
     sck_dly = 0xa;
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
-    //TODO: delay
-    //HAL_FLASH_SET_CLK_rom(hflash, clk_div);
-    HAL_FLASH_SET_CLK_rom(hflash, 1);
+
 
 #if 0//def SF32LB52X    // disable it by default, only open it when debug needed!
     HPSYS_DvfsModeTypeDef dvfs = HAL_RCC_HCPU_GetCurrentDvfsMode();
@@ -426,8 +424,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_Init(FLASH_HandleTypeDef *hflas
 
     HAL_OPI_PSRAM_Init(hflash, cfg, 1);
 
-    uint32_t freq = HAL_QSPI_GET_CLK(hflash);
-    freq /= 2;
+    uint32_t freq = hflash->freq;
 
     // CR0 with 2 byte, bytes should swap for read/write
     if (freq <= 85 * 1000000)
