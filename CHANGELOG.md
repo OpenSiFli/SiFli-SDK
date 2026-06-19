@@ -1,30 +1,30 @@
 # SiFli SDK Change Log v2.5.0
 
-## Change log since v2.4.0
-
 ## Major Changes
 - Update toolchain install script, use `uv` to manage Python and its dependencies.
 - Add cherryusb as new USB stack, legacy USB stack could still be used, but not recommended for new project.
-- Add sdk.py wrapper command. It supports multiple subcommands, such as `sdk.py menuconfig` to open menuconfig window, `sdk.py build` to trigger build just like what `scons` does. Run `sdk.py --help` for details.
-- Partition Table v3, clearer semantics and enhanced functionality compared to ptab v1/v2, for details please read [ptab v3](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/middleware/partition_table_v3.html).
+- Add sdk.py wrapper command. It supports several subcommands, such as `sdk.py menuconfig` to open menuconfig window, `sdk.py build` to trigger build just like what `scons` does. Run `sdk.py --help` for details.
+- Add Partition Table v3, clearer semantics and enhanced functionality compared to ptab v1/v2, for details please read [ptab v3](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/middleware/partition_table_v3.html).
 - Add `sf-pkg` to support external package management, for details please read [sf-pkg](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/sf_pkg/index.html).
-- Add more boards, e.g. sf32lb56-lcd, sf32lb58-lcd, sf32lb58-core and sf32lb56-wlan-core series boards, all examples support sf32lb56-lcd and sf32lb58-lcd series boards.
+- Add many boards, e.g. sf32lb56-lcd, sf32lb58-lcd, sf32lb58-core and sf32lb56-wlan-core series boards, all examples support sf32lb56-lcd and sf32lb58-lcd series boards.
 - Many examples are added.
 - Audio and video documents are added.
 
 
 ## Upgrade Guide for Breaking Changes
-- Follow [install guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/install/script/index.html) to install `uv` first and then run install script to update toolchain.
-- `CONFIG_BSP_USING_PWMx` is renamed to `CONFIG_BSP_USING_PWMTy`, y=x-1. If old project enables `BSP_USING_PWM2`, `BSP_UISNG_PWMT1` should be enabled now, check 439f8cd5 to learn how `board.conf` is changed. And PWM device name is also changed from `pwmx` to `pwmty`, y=x-1. E.g. if old project uses `pwm2`, `pwmt1` should be used now, check 0b989c54 to learn how example code changes.
-- `tools/flash/jlink_drv/JLinkDevices.xml` now follows syntax supported by J-Link version >= 7.62, if using it directly please upgrade J-Link version.
-- Config `CONFIG_RGB_USING_SK6812MINI_HS_DEV_NAME` type is changed to string (929b8cc0).
+- Follow [install guide](https://docs.sifli.com/projects/sdk/v2.5.0/sf32lb52x/quickstart/install/script/index.html) to install `uv` first and then run install script to update toolchain.
+- New submodule `SiliconSchema` under `tools` directory is added. If you are updating code in an existing repository, make sure to run `git submodule update --init --recursive` to fetch the corresponding submodules.
+- `CONFIG_BSP_USING_PWMx` has been renamed to `CONFIG_BSP_USING_PWMTy`, where y=x-1. For example, if an existing project enables `BSP_USING_PWM2`, it should now enable `BSP_USING_PWMT1`. Refer to commit 439f8cd5 for the corresponding changes in `board.conf`. PWM device names have also been changed from `pwmx` to `pwmty`, where y=x-1. For example, if an existing project uses `pwm2`, it should now use `pwmt1`. Refer to commit 0b989c54 for the corresponding changes.
+- `tools/flash/jlink_drv/JLinkDevices.xml` now follows syntax supported by J-Link version >= 7.62, if using it directly please upgrade J-Link version. You can get old format file from [here](https://github.com/OpenSiFli/SiFli-SDK/blob/59334140a6fec1dd193c33af91c2aaf1b0370218/tools/flash/jlink_drv/JLinkDevices_old_version.xml)
+- The type of config `CONFIG_RGB_USING_SK6812MINI_HS_DEV_NAME` has been changed to string (929b8cc0).
 - Add config `CONFIG_BSP_USING_SDMMC1` and `CONFIG_BSP_USING_SDMMC2`，corresponding to the SD1 and SD2 instances respectively. No need to enable old config `BSP_USING_SDHCI1`, `BSP_USING_SDHCI2` and `BSP_USING_SD_LINE` in `board.conf` or `proj.conf` anymore (b7f20eca).
-- `name` member is added in structure type `button_cfg_t`, it must be set to NULL or valid string pointer when calling button_init (6f0d92c6).
-- Use `sd0` and `sd1` as the device names for the two SD instances, i.e. if SDMMC2 instance is used as interface of TF card, its device name is `sd1` (0e58349f).
-- Recorder device read may return 0, check 82f23ef9 to learn how example is affected
+- A `name` member is added in structure type `button_cfg_t`, it must be set to NULL or valid string pointer when calling button_init (6f0d92c6).
+- Use `sd0` and `sd1` as the device names for the two SD instances. For example, if SD2 instance is used as interface of the TF card, `sd1` should be used as its device name (0e58349f).
+- Recorder device read may return 0, refer to commit 82f23ef9 to see how example is affected
 - SDK v2.4 can coexist with v2.5. If you have previously run the install script under v2.4, you must run the install script again after switching to v2.5 to refresh the environment. After that, you can activate the environment using the export script
 - SiFli-ENV tool needs to be upgraded, download new version from [link](https://downloads.sifli.com/tools/env/env_latest.zip).
 
+## Change log since v2.4.0
 ### Drivers
 #### Fixed
 
