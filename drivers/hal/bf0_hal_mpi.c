@@ -876,6 +876,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_CFG_DTR(FLASH_HandleTypeDef *hflash, ui
         value |= (MPI_MISCR_SCKINV);
     }
     hflash->Instance->MISCR = value;
+#else
+    if (en)
+    {
+        hflash->Instance->MISCR &= ~MPI_MISCR_SCKINV;
+    }
+    else
+    {
+        hflash->Instance->MISCR |= MPI_MISCR_SCKINV;
+    }
 #endif
 
     return HAL_OK;
