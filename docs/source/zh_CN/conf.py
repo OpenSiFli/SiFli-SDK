@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -28,6 +31,11 @@ elif "SF32LB52X" in tags:
 else:
     chip = 'sf32lb52x'
 
+# Algolia DocSearch configuration
+docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
+docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
+docsearch_index_name = f"sdk_{version}_{chip}"
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -43,6 +51,7 @@ extensions = ["breathe",
               "sphinx_design",
               "sphinx_selective_exclude.eager_only",
               "sphinx_selective_exclude.search_auto_exclude",
+              "sphinx_docsearch",
               ]
 
 templates_path = ['_templates']

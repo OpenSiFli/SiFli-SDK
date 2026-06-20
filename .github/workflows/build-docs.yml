@@ -59,12 +59,16 @@ jobs:
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
         run: python generate_docs.py --lang=zh_CN ${{ matrix.variant }}
       
       - name: Build en documentation for ${{ matrix.variant }}
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
         run: python generate_docs.py --lang=en ${{ matrix.variant }}
 
       # Upload Chinese documents to COS
