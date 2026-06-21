@@ -32,9 +32,8 @@ else:
     chip = 'sf32lb52x'
 
 # Algolia DocSearch configuration
-print("app_id:{}".format(os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', 'MP2Q53SJEZ')))
-docsearch_app_id = 'MP2Q53SJEZ'
-docsearch_api_key = 'b577fff77d5100141bb3b415bd8ee47a'
+docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
+docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
 docsearch_index_name = f"sdk_{version}_{chip}"
 
 # -- General configuration ---------------------------------------------------
