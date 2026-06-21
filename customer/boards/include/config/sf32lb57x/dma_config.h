@@ -148,8 +148,12 @@ extern "C" {
 #define SDMMC1_DMA_IRQHandler          DMAC1_CH3_IRQHandler
 #define SDMMC1_DMA_IRQ_PRIO            0
 #define SDMMC1_DMA_INSTANCE            DMA1_Channel3
-#define SDMMC1_DMA_REQUEST             DMA_REQUEST_57
 #define SDMMC1_DMA_IRQ                 DMAC1_CH3_IRQn
+
+#define SDMMC2_DMA_IRQHandler          DMAC1_CH3_IRQHandler
+#define SDMMC2_DMA_IRQ_PRIO            0
+#define SDMMC2_DMA_INSTANCE            DMA1_Channel3
+#define SDMMC2_DMA_IRQ                 DMAC1_CH3_IRQn
 
 #define I2C2_DMA_IRQHandler              DMAC1_CH3_IRQHandler
 #define I2C2_DMA_IRQ_PRIO                0
