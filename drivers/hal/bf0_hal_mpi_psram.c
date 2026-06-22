@@ -119,12 +119,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
 
     int cren = __HAL_MPI_GET_CREN(hflash);
 
+    // enable OPI, it's needed by OPSRAM Calibration
+    HAL_FLASH_ENABLE_OPI(hflash, 1);
+
     HAL_FLASH_SET_CLK_rom(hflash, 1);
     hflash->freq = HAL_QSPI_GET_CLK(hflash);
     hflash->freq >>= 1;
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-    HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
+    if (HAL_OK != HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly))
+    {
+        HAL_ASSERT(0);
+    }
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
 
     cs_min = 6;
@@ -224,8 +230,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
 
     // enable QSPI
     HAL_FLASH_ENABLE_QSPI(hflash, 1);
-    // enable OPI
-    HAL_FLASH_ENABLE_OPI(hflash, 1);
 
     if ((cren == 0) && (AON_PMR_STANDBY != HAL_HPAON_GET_POWER_MODE()))
         HAL_PSRAM_RESET(hflash);
@@ -255,13 +259,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
 
     cren = __HAL_MPI_GET_CREN(hflash);
 
+    // enable OPI, it's needed by OPSRAM Calibration
+    HAL_FLASH_ENABLE_OPI(hflash, 1);
+
     HAL_FLASH_SET_CLK_rom(hflash, 1);
     freq = HAL_QSPI_GET_CLK(hflash);
     freq >>= 1;
     hflash->freq = freq;
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-    HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
+    if (HAL_OK != HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly))
+    {
+        HAL_ASSERT(0);
+    }
 #else
     dqs_dly = 0xa;
     sck_dly = 0xa;
@@ -363,8 +373,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     HAL_FLASH_SET_LEGACY(hflash, 1);
     // enable QSPI
     HAL_FLASH_ENABLE_QSPI(hflash, 1);
-    // enable OPI
-    HAL_FLASH_ENABLE_OPI(hflash, 1);
 
     // do not wake up from sleep and dp not enabled before, reset for first initial
     if ((cren == 0) && (hflash->wakeup == 0))
@@ -1198,6 +1206,7 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
 
     hflash->Instance->CALCR = MPI_CALCR_START;
 
+    HAL_Delay_us_psram(0);
     /* phase 1: search for 0 */
     for (tmp = 0; tmp < 128; tmp++)   // DLY MAX = 127 (TODO: adjust accordingly)
     {
