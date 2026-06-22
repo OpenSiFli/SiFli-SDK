@@ -12,6 +12,12 @@
 #include "drivers/mmcsd_core.h"
 #include "dfs_posix.h"
 
+#if defined (BSP_USING_SDMMC1)
+    #define APP_SD_DEV_NAME "sd0"
+#elif defined(BSP_USING_SDMMC2)
+    #define APP_SD_DEV_NAME "sd1"
+#endif /* BSP_USING_SDMMC1 */
+
 /* User code start from here --------------------------------------------------------*/
 #ifndef FS_REGION_START_ADDR
     #error "Need to define file system start address!"
@@ -36,26 +42,20 @@ int mnt_init(void)
     uint16_t wait_ticks = 400; /* 8s: 400 * 20ms */
     rt_device_t sd_dev = RT_NULL;
 
-    rt_kprintf("wait sd0 device ready...\n");
+    rt_kprintf("wait %s device ready...\n", APP_SD_DEV_NAME);
     while (wait_ticks--)
     {
         rt_thread_mdelay(20);
-        sd_dev = rt_device_find("sd0");
+        sd_dev = rt_device_find(APP_SD_DEV_NAME);
         if (sd_dev)
         {
-            rt_kprintf("sd0 device ready\n");
+            rt_kprintf("%s device ready\n", APP_SD_DEV_NAME);
             break;
         }
     }
-#if defined (BSP_USING_SDMMC1)
-    rt_mmcsd_blk_device_create("sd0", FS_CODE, FS_CODE_OFFSET >> 9, FS_CODE_LEN >> 9);
-    rt_mmcsd_blk_device_create("sd0", FS_ROOT, FS_ROOT_OFFSET >> 9, FS_ROOT_LEN >> 9);
-    rt_mmcsd_blk_device_create("sd0", FS_MSIC, FS_MSIC_OFFSET >> 9, FS_MSIC_LEN >> 9);
-#elif defined (BSP_USING_SDMMC2)
-    rt_mmcsd_blk_device_create("sd1", FS_CODE, FS_CODE_OFFSET >> 9, FS_CODE_LEN >> 9);
-    rt_mmcsd_blk_device_create("sd1", FS_ROOT, FS_ROOT_OFFSET >> 9, FS_ROOT_LEN >> 9);
-    rt_mmcsd_blk_device_create("sd1", FS_MSIC, FS_MSIC_OFFSET >> 9, FS_MSIC_LEN >> 9);
-#endif
+    rt_mmcsd_blk_device_create(APP_SD_DEV_NAME, FS_CODE, FS_CODE_OFFSET >> 9, FS_CODE_LEN >> 9);
+    rt_mmcsd_blk_device_create(APP_SD_DEV_NAME, FS_ROOT, FS_ROOT_OFFSET >> 9, FS_ROOT_LEN >> 9);
+    rt_mmcsd_blk_device_create(APP_SD_DEV_NAME, FS_MSIC, FS_MSIC_OFFSET >> 9, FS_MSIC_LEN >> 9);
 
     if (dfs_mount(FS_ROOT, "/", "elm", 0, 0) == 0) // fs exist
     {
