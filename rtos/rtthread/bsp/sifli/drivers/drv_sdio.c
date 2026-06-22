@@ -1615,6 +1615,7 @@ int rt_hw_sdio_init(void)
 }
 INIT_DEVICE_EXPORT(rt_hw_sdio_init);
 
+#ifdef RT_USING_PM
 static int sdio_pm_device_register(void)
 {
     uint32_t i;
@@ -1625,6 +1626,7 @@ static int sdio_pm_device_register(void)
     }
 }
 INIT_ENV_EXPORT(sdio_pm_device_register);
+#endif /* RT_USING_PM */
 
 //#define DRV_SDIO_TEST
 #ifdef DRV_SDIO_TEST
