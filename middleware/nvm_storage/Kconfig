@@ -1,0 +1,13 @@
+config BSP_USING_NVM_STORAGE
+    bool "NVM TLV schema storage"
+    depends on RT_USING_DFS
+    default n
+    help
+        Provide TLV/schema based serialization for structured NVM data.
+
+config BSP_USING_NVM_STORAGE_DFS_BACKEND
+    bool "NVM DFS file backend"
+    depends on BSP_USING_NVM_STORAGE
+    default n
+    help
+        Provide a DFS file backend for app_nvm_read/app_nvm_write.

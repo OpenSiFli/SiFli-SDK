@@ -267,7 +267,13 @@ typedef struct
     Private Macros
 */
 
-#ifdef SOLUTION
+#if defined(DRV_EPIC_ALLOC_USE_ANIM_HEAP)
+#include "app_mem.h"
+#define epic_malloc          app_anim_alloc
+#define epic_realloc         app_anim_realloc
+#define epic_calloc          app_anim_calloc
+#define epic_free            app_anim_free
+#elif defined(SOLUTION)
 #include "app_mem.h"
 #define epic_malloc          app_malloc
 #define epic_realloc         app_realloc

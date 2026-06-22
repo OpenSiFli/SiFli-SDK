@@ -1,6 +1,6 @@
 /*
  ******************************************************************************
- * @file   app_module.h
+ * @file   dynamic_common.h
  * @author Sifli software development team
  ******************************************************************************
  */
@@ -43,46 +43,38 @@
  *
  */
 
-/*
- * SDK multilingual migration note:
- * The original solution-side app_module.h depends on the complete solution
- * resource-path macro system such as APP_LANG_PATH and APP_CFG_PATH.
- * The SDK does not provide that full path framework yet, so only the
- * multilingual-related subset is enabled for now. The original path mapping is
- * preserved below in a disabled block for later migration.
- */
+#ifndef _DYNAMIC_COMMON_H_
+#define _DYNAMIC_COMMON_H_
 
-#ifndef __APP_MODULE_H_
-#define __APP_MODULE_H_
+#include <stdint.h>
 
-#include "app_lang.h"
-
-#if 0
-/*
- * Original solution-side multilingual path definitions:
- * #define LANG_INSTALLER_PATH APP_LANG_INSTALLER_PATH
- * #define OTA_FILE_LIST_PATH  APP_CFG_PATH
- * #define APP_LANG_INSTALLER_PATH APP_LANG_PATH "installer/"
- */
-#define LANG_INSTALLER_PATH                         APP_LANG_INSTALLER_PATH
-#define OTA_FILE_LIST_PATH                          APP_CFG_PATH
-#define APP_LANG_INSTALLER_PATH                     APP_LANG_PATH               "installer/"
+#if defined (RT_USING_DFS) && defined (RT_USING_MODULE)
+    #include "apm.h"
 #endif
 
-#ifndef APP_LANG_INSTALLER_PATH
-    #define APP_LANG_INSTALLER_PATH "/ex/resource/lang/installer"
+#include "gui_app_fwk.h"
+extern uint8_t dynamic_log;
+
+#define DYN_LOG(fmt, ...) \
+    if (dynamic_log) \
+        rt_kprintf(fmt, ##__VA_ARGS__)
+
+#define DYN_COPY_STR(src, dst)                              \
+        if(src)                                             \
+            app_free((void *)src);                          \
+        char * p = app_malloc(strlen((char *)dst) + 1);     \
+        RT_ASSERT(p);                                       \
+        strcpy(p, (const char *)dst);                       \
+        src = (uint32_t)p;
+
+
+#if !defined(BUILD_DLMODULE)
+    #define DLMOLDULE_GET_VERSION(id) 0
+#else
+    #define DLMOLDULE_GET_VERSION(id) CONCAT_2(id, _version)
 #endif
 
-#ifndef LANG_INSTALLER_PATH
-    #define LANG_INSTALLER_PATH APP_LANG_INSTALLER_PATH
-#endif
+char *dynamic_copy_str(char *dest, const char *src, uint32_t len);
 
-#ifndef MAX_LANG_NAME_LEN
-    #define MAX_LANG_NAME_LEN 32
-#endif
 
-#ifndef GUI_APP_NAME_MAX_LEN
-    #define GUI_APP_NAME_MAX_LEN 32
 #endif
-
-#endif /* __APP_MODULE_H_ */

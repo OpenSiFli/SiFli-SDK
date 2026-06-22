@@ -27,7 +27,7 @@
 static lv_res_t decoder_info(struct _lv_img_decoder_t * decoder, const void * src, lv_img_header_t * header);
 static lv_res_t decoder_open(lv_img_decoder_t * dec, lv_img_decoder_dsc_t * dsc);
 static void decoder_close(lv_img_decoder_t * dec, lv_img_decoder_dsc_t * dsc);
-static void convert_color_depth(uint8_t * img, uint32_t px_cnt);
+static void convert_color_depth(uint8_t * img, uint32_t px_cnt, int color_bit);
 
 /**********************
  *  STATIC VARIABLES
@@ -56,6 +56,10 @@ void lv_png_init(void)
  *   STATIC FUNCTIONS
  **********************/
 
+#ifdef RT_USING_DFS
+#include <dfs_posix.h>
+#endif
+
 /**
  * Get info about a PNG image
  * @param src can be file name or pointer to a C array
@@ -76,7 +80,18 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t * decoder, const void * sr
              * [16..23]: width
              * [24..27]: height
              */
-            uint32_t size[2];
+            uint32_t size[3];
+#ifdef RT_USING_DFS
+            int rn = 0;
+            struct dfs_fd fd;
+            if(0 == dfs_file_open(&fd, src, O_RDONLY)) {
+                uint32_t length = 0;
+                uint32_t offset = lv_img_decoder_get_wf_offset(src, &length);
+                dfs_file_lseek(&fd, offset + 16);
+                rn = dfs_file_read(&fd, size, 12);
+                dfs_file_close(&fd);
+            }
+#else
             lv_fs_file_t f;
             lv_fs_res_t res = lv_fs_open(&f, fn, LV_FS_MODE_RD);
             if(res != LV_FS_RES_OK) return LV_RES_INV;
@@ -84,14 +99,17 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t * decoder, const void * sr
             lv_fs_seek(&f, 16, LV_FS_SEEK_SET);
 
             uint32_t rn;
-            lv_fs_read(&f, &size, 8, &rn);
+            lv_fs_read(&f, &size, 12, &rn);
             lv_fs_close(&f);
+#endif
 
-            if(rn != 8) return LV_RES_INV;
+            if(rn != 12) return LV_RES_INV;
 
             /*Save the data in the header*/
             header->always_zero = 0;
-            header->cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+            uint8_t *p = (uint8_t *)size;
+            int color_bit = (p[9] == 3 ? 32 : (p[9] & 0x04) ? 32 : 24);
+            header->cf = 32 == color_bit ? LV_IMG_CF_TRUE_COLOR_ALPHA : LV_IMG_CF_TRUE_COLOR;
             /*The width and height are stored in Big endian format so convert them to little endian*/
             header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
             header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
@@ -107,9 +125,12 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t * decoder, const void * sr
         if(data_size < sizeof(magic)) return LV_RES_INV;
         if(memcmp(magic, img_dsc->data, sizeof(magic))) return LV_RES_INV;
         header->always_zero = 0;
-        header->cf = img_dsc->header.cf;       /*Save the color format*/
-        header->w = img_dsc->header.w;         /*Save the color width*/
-        header->h = img_dsc->header.h;         /*Save the color height*/
+        uint32_t *size = (uint32_t *)(img_dsc->data + 16);
+        int color_bit = (img_dsc->data[25] == 3 ? 32 : (img_dsc->data[25] & 0x04) ? 32 : 24);
+        header->cf = 32 == color_bit ? LV_IMG_CF_TRUE_COLOR_ALPHA : LV_IMG_CF_TRUE_COLOR;
+        /*The width and height are stored in Big endian format so convert them to little endian*/
+        header->w = (lv_coord_t)((size[0] & 0xff000000) >> 24) + ((size[0] & 0x00ff0000) >> 8);
+        header->h = (lv_coord_t)((size[1] & 0xff000000) >> 24) + ((size[1] & 0x00ff0000) >> 8);
         return LV_RES_OK;
     }
 
@@ -129,7 +150,11 @@ static lv_res_t decoder_open(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * 
     (void) decoder; /*Unused*/
     uint32_t error;                 /*For the return values of PNG decoder functions*/
 
+    dsc->img_data = NULL;
+    dsc->img_data_size = 0;
+
     uint8_t * img_data = NULL;
+    uint32_t start = rt_tick_get_millisecond();
 
     /*If it's a PNG file...*/
     if(dsc->src_type == LV_IMG_SRC_FILE) {
@@ -150,20 +175,31 @@ static lv_res_t decoder_open(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * 
             uint32_t png_width;             /*Will be the width of the decoded image*/
             uint32_t png_height;            /*Will be the width of the decoded image*/
 
-            /*Decode the loaded image in ARGB8888 */
-            error = lodepng_decode32(&img_data, &png_width, &png_height, png_data, png_data_size);
+            int color_bit = (png_data[25] == 3 ? 32 : (png_data[25] & 0x04) ? 32 : 24);
+            if(24 == color_bit) {
+                error = lodepng_decode24(&img_data, (unsigned *)&png_width, (unsigned *)&png_height, png_data, png_data_size);
+            }
+            else {
+                error = lodepng_decode32(&img_data, (unsigned *)&png_width, (unsigned *)&png_height, png_data, png_data_size);
+            }
             lv_mem_free(png_data); /*Free the loaded file*/
             if(error) {
                 if(img_data != NULL) {
                     lv_mem_free(img_data);
                 }
+                dsc->img_data = NULL;
+                dsc->img_data_size = 0;
                 LV_LOG_WARN("error %u: %s\n", error, lodepng_error_text(error));
                 return LV_RES_INV;
             }
 
             /*Convert the image to the system's color depth*/
-            convert_color_depth(img_data,  png_width * png_height);
+            convert_color_depth(img_data,  png_width * png_height, color_bit);
             dsc->img_data = img_data;
+            dsc->img_data_size = png_width * png_height *
+                                 ((32 == color_bit) ? LV_IMG_PX_SIZE_ALPHA_BYTE : (LV_COLOR_SIZE / 8));
+            rt_kprintf("%s: png png_width %d png_height %d %d(ms)\n",
+                       __func__, png_width, png_height, rt_tick_get_millisecond() - start);
             return LV_RES_OK;     /*The image is fully decoded. Return with its pointer*/
         }
     }
@@ -173,20 +209,31 @@ static lv_res_t decoder_open(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * 
         uint32_t png_width;             /*No used, just required by he decoder*/
         uint32_t png_height;            /*No used, just required by he decoder*/
 
-        /*Decode the image in ARGB8888 */
-        error = lodepng_decode32(&img_data, &png_width, &png_height, img_dsc->data, img_dsc->data_size);
+        int color_bit = (img_dsc->data[25] == 3 ? 32 : (img_dsc->data[25] & 0x04) ? 32 : 24);
+        if(24 == color_bit) {
+            error = lodepng_decode24(&img_data, (unsigned *)&png_width, (unsigned *)&png_height,
+                                     img_dsc->data, img_dsc->data_size);
+        }
+        else {
+            error = lodepng_decode32(&img_data, (unsigned *)&png_width, (unsigned *)&png_height,
+                                     img_dsc->data, img_dsc->data_size);
+        }
 
         if(error) {
             if(img_data != NULL) {
                 lv_mem_free(img_data);
             }
+            dsc->img_data = NULL;
+            dsc->img_data_size = 0;
             return LV_RES_INV;
         }
 
         /*Convert the image to the system's color depth*/
-        convert_color_depth(img_data,  png_width * png_height);
+        convert_color_depth(img_data,  png_width * png_height, color_bit);
 
         dsc->img_data = img_data;
+        dsc->img_data_size = png_width * png_height *
+                             ((32 == color_bit) ? LV_IMG_PX_SIZE_ALPHA_BYTE : (LV_COLOR_SIZE / 8));
         return LV_RES_OK;     /*Return with its pointer*/
     }
 
@@ -210,49 +257,102 @@ static void decoder_close(lv_img_decoder_t * decoder, lv_img_decoder_dsc_t * dsc
  * @param img the ARGB888 image
  * @param px_cnt number of pixels in `img`
  */
-static void convert_color_depth(uint8_t * img, uint32_t px_cnt)
+static void convert_color_depth(uint8_t * img, uint32_t px_cnt, int color_bit)
 {
-#if LV_COLOR_DEPTH == 32
-    lv_color32_t * img_argb = (lv_color32_t *)img;
-    lv_color_t c;
-    lv_color_t * img_c = (lv_color_t *) img;
-    uint32_t i;
-    for(i = 0; i < px_cnt; i++) {
-        c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
-        img_c[i].ch.red = c.ch.blue;
-        img_c[i].ch.blue = c.ch.red;
-    }
+    if(32 == color_bit) {
+#if LV_COLOR_DEPTH == 32 || LV_COLOR_DEPTH == 24
+        lv_color32_t * img_argb = (lv_color32_t *)img;
+        lv_color_t c;
+        lv_color32_t * img_c = (lv_color32_t *)img;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
+            img_c[i].ch.red = c.ch.blue;
+            img_c[i].ch.blue = c.ch.red;
+        }
 #elif LV_COLOR_DEPTH == 16
-    lv_color32_t * img_argb = (lv_color32_t *)img;
-    lv_color_t c;
-    uint32_t i;
-    for(i = 0; i < px_cnt; i++) {
-        c = lv_color_make(img_argb[i].ch.blue, img_argb[i].ch.green, img_argb[i].ch.red);
-        img[i * 3 + 2] = img_argb[i].ch.alpha;
-        img[i * 3 + 1] = c.full >> 8;
-        img[i * 3 + 0] = c.full & 0xFF;
-    }
+        lv_color32_t * img_argb = (lv_color32_t *)img;
+        lv_color_t c;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.blue, img_argb[i].ch.green, img_argb[i].ch.red);
+            img[i * 3 + 2] = img_argb[i].ch.alpha;
+            img[i * 3 + 1] = c.full >> 8;
+            img[i * 3 + 0] = c.full & 0xFF;
+        }
 #elif LV_COLOR_DEPTH == 8
-    lv_color32_t * img_argb = (lv_color32_t *)img;
-    lv_color_t c;
-    uint32_t i;
-    for(i = 0; i < px_cnt; i++) {
-        c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
-        img[i * 2 + 1] = img_argb[i].ch.alpha;
-        img[i * 2 + 0] = c.full;
-    }
+        lv_color32_t * img_argb = (lv_color32_t *)img;
+        lv_color_t c;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
+            img[i * 2 + 1] = img_argb[i].ch.alpha;
+            img[i * 2 + 0] = c.full;
+        }
 #elif LV_COLOR_DEPTH == 1
-    lv_color32_t * img_argb = (lv_color32_t *)img;
-    uint8_t b;
-    uint32_t i;
-    for(i = 0; i < px_cnt; i++) {
-        b = img_argb[i].ch.red | img_argb[i].ch.green | img_argb[i].ch.blue;
-        img[i * 2 + 1] = img_argb[i].ch.alpha;
-        img[i * 2 + 0] = b > 128 ? 1 : 0;
-    }
+        lv_color32_t * img_argb = (lv_color32_t *)img;
+        uint8_t b;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            b = img_argb[i].ch.red | img_argb[i].ch.green | img_argb[i].ch.blue;
+            img[i * 2 + 1] = img_argb[i].ch.alpha;
+            img[i * 2 + 0] = b > 128 ? 1 : 0;
+        }
 #endif
+    }
+    else {
+#if LV_COLOR_DEPTH == 32 || LV_COLOR_DEPTH == 24
+        lv_color24_t * img_argb = (lv_color24_t *)img;
+        lv_color24_t c;
+        lv_color24_t * img_c = (lv_color24_t *)img;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
+            img_c[i].ch.red = c.ch.blue;
+            img_c[i].ch.blue = c.ch.red;
+        }
+#elif LV_COLOR_DEPTH == 16
+        lv_color24_t * img_argb = (lv_color24_t *)img;
+        lv_color_t c;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.blue, img_argb[i].ch.green, img_argb[i].ch.red);
+            img[i * 2 + 1] = c.full >> 8;
+            img[i * 2 + 0] = c.full & 0xFF;
+        }
+#elif LV_COLOR_DEPTH == 8
+        lv_color24_t * img_argb = (lv_color24_t *)img;
+        lv_color_t c;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            c = lv_color_make(img_argb[i].ch.red, img_argb[i].ch.green, img_argb[i].ch.blue);
+            img[i * 1 + 0] = c.full;
+        }
+#elif LV_COLOR_DEPTH == 1
+        lv_color24_t * img_argb = (lv_color24_t *)img;
+        uint8_t b;
+        uint32_t i;
+        for(i = 0; i < px_cnt; i++) {
+            b = img_argb[i].ch.red | img_argb[i].ch.green | img_argb[i].ch.blue;
+            img[i * 1 + 0] = b > 128 ? 1 : 0;
+        }
+#endif
+    }
+}
+
+lv_res_t lvsf_png_decoder_info(const void *src, lv_img_header_t *header)
+{
+    return decoder_info(NULL, src, header);
+}
+
+lv_res_t lvsf_png_decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
+{
+    return decoder_open(decoder, dsc);
+}
+
+void lvsf_png_decoder_close(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
+{
+    decoder_close(decoder, dsc);
 }
 
 #endif /*LV_USE_PNG*/
-
-

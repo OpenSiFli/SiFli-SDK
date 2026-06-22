@@ -803,6 +803,9 @@ typedef struct rt_messagequeue *rt_mq_t;
  * memory management
  * heap & partition
  */
+#ifdef MEM_ASYN_FREE
+#define REF_COUNT_MAGIC                   0xaa55
+#endif
 
 #ifdef RT_USING_MEMHEAP
 #ifdef RT_USING_MEMHEAP2
@@ -864,6 +867,10 @@ struct rt_memheap_item
 
     struct rt_memheap_item *next_free;                  /**< next free memheap item */
     struct rt_memheap_item *prev_free;                  /**< prev free memheap item */
+#ifdef MEM_ASYN_FREE
+    rt_uint16_t             ref_count_magic;
+    rt_uint16_t             ref_count;
+#endif
 };
 
 /**

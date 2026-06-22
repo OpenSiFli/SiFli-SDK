@@ -106,6 +106,10 @@
 
 #define LVSF_IMG_CF_JPEG    (LV_IMG_CF_USER_ENCODED_0)
 
+#ifndef LVSF_USING_SJPG
+    #define LVSF_USING_SJPG 1
+#endif
+
 #ifndef LVSF_USING_ENCODER
     #define LVSF_USING_ENCODER 1
 #endif

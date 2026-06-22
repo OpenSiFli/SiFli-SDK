@@ -103,9 +103,6 @@ void lv_img_set_src(lv_obj_t * obj, const void * src)
         return;
     }
 
-    lv_img_header_t header;
-    lv_img_decoder_get_info(src, &header);
-
     /*Save the source*/
     if(src_type == LV_IMG_SRC_VARIABLE) {
         /*If memory was allocated because of the previous `src_type` then free it*/
@@ -124,14 +121,25 @@ void lv_img_set_src(lv_obj_t * obj, const void * src)
             if(img->src_type == LV_IMG_SRC_FILE || img->src_type == LV_IMG_SRC_SYMBOL) {
                 old_src = img->src;
             }
-            char * new_str = lv_mem_alloc(strlen(src) + 1);
+            char * new_str = lv_mem_alloc(strlen(src) + 5);
             LV_ASSERT_MALLOC(new_str);
             if(new_str == NULL) return;
+            memset(new_str, 0, strlen(src) + 5);
             strcpy(new_str, src);
             img->src = new_str;
 
             if(old_src) lv_mem_free((void *)old_src);
         }
+    }
+
+    lv_img_header_t header = {0};
+    if(lv_img_decoder_get_info(img->src, &header) == LV_RES_INV) {
+        if(src_type == LV_IMG_SRC_SYMBOL || src_type == LV_IMG_SRC_FILE) {
+            lv_mem_free((void *)img->src);
+        }
+        img->src      = NULL;
+        img->src_type = LV_IMG_SRC_UNKNOWN;
+        return;
     }
 
     if(src_type == LV_IMG_SRC_SYMBOL) {
@@ -711,6 +719,59 @@ static void draw_img(lv_event_t * e)
             }
         }
     }
+}
+
+void lv_img_free_decoder_src(lv_obj_t *img)
+{
+    typedef struct
+    {
+        lv_img_dsc_t dsc;
+        lv_img_decoder_dsc_t decoder_dsc;
+    } lv_img_decoder_src_t;
+    lv_img_decoder_src_t *old_src;
+
+    if (!img) return;
+
+    old_src = (lv_img_decoder_src_t *)lv_obj_get_user_data(img);
+    if (!old_src) return;
+
+    lv_obj_set_user_data(img, NULL);
+    lv_img_set_src(img, NULL);
+    lv_img_decoder_close(&old_src->decoder_dsc);
+    lv_mem_free(old_src);
+}
+
+void lv_img_set_decoder_src(lv_obj_t *img, const lv_img_dsc_t *src)
+{
+    typedef struct
+    {
+        lv_img_dsc_t dsc;
+        lv_img_decoder_dsc_t decoder_dsc;
+    } lv_img_decoder_src_t;
+    lv_img_decoder_src_t *src_copy;
+    lv_res_t res;
+
+    if (!img || !src) return;
+
+    lv_img_free_decoder_src(img);
+
+    src_copy = lv_mem_alloc(sizeof(lv_img_decoder_src_t));
+    if (!src_copy) return;
+
+    lv_memset_00(src_copy, sizeof(*src_copy));
+    res = lv_img_decoder_open_reuse_anim_buf(&src_copy->decoder_dsc, src, LV_COLOR_WHITE, 0);
+    if (res != LV_RES_OK)
+    {
+        lv_mem_free(src_copy);
+        lv_img_set_src(img, NULL);
+        return;
+    }
+
+    src_copy->dsc.header = src_copy->decoder_dsc.header;
+    src_copy->dsc.data = src_copy->decoder_dsc.img_data;
+    src_copy->dsc.data_size = src_copy->decoder_dsc.img_data_size;
+    lv_obj_set_user_data(img, src_copy);
+    lv_img_set_src(img, &src_copy->dsc);
 }
 
 #endif

@@ -270,6 +270,11 @@ def FontFileBuild(target, source, env):
     FONT2C_PATH = os.path.join(SIFLI_SDK, f"tools/font2c/font2c{env['tool_suffix']}")
     filename = os.path.basename("{}".format(target[0]))
     subprocess.run([FONT2C_PATH, str(source[0])], check=True)
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+    content = content.replace('#include "app_module.h"', '#include "mem_section.h"')
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
     shutil.move(filename, '{}'.format(target[0]))
 
 def ModifyFontTargets(target, source, env):

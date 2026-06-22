@@ -72,6 +72,10 @@ void lv_disp_buf_init3(lv_disp_draw_buf_t *disp_buf, void *buf1, void *buf2, uin
 static rt_device_t device;
 static struct rt_device_graphic_info info;
 static struct rt_semaphore lcd_sema;
+#ifdef DRV_EPIC_NEW_API
+static struct rt_semaphore render_done_sema;
+rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list);
+#endif
 
 static lv_disp_drv_t *lcd_flushing_disp_drv = NULL;
 static lv_disp_drv_t disp_drv;
@@ -97,13 +101,11 @@ FRAME_BUFFER_BSS_SECT_END
 ****************************************************/
 
 #ifdef LCD_FB_USING_NONE
-    #if defined(LV_FB_ONE_SCREEN_SIZE)
-        #define FB_LINE_SIZE FB_ALIGNED_HOR_RES
-        #define FB_TYPE      lv_fb_color_t
+    #define FB_LINE_SIZE FB_ALIGNED_HOR_RES
+    #define FB_TYPE      lv_fb_color_t
 
-        #undef get_draw_buf
-        #define get_draw_buf()  (&buf1_1[0])
-    #endif
+    #undef get_draw_buf
+    #define get_draw_buf()  (&buf1_1[0])
 #else
     #if defined(LCD_FB_USING_ONE_UNCOMPRESSED) || defined(LCD_FB_USING_TWO_UNCOMPRESSED)
         #define FB_LINE_SIZE FB_ALIGNED_HOR_RES
@@ -300,6 +302,7 @@ static void render_start(lv_disp_drv_t *disp_drv)
     }
 }
 
+#if defined(BSP_USING_LCD_FRAMEBUFFER)
 static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
 {
     rt_err_t err;
@@ -307,6 +310,17 @@ static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
     RT_ASSERT(RT_EOK == err);
 
 }
+#else
+static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
+{
+    rt_err_t err;
+    err = rt_sem_release(&lcd_sema);
+    RT_ASSERT(RT_EOK == err);
+    debug_lcd_flush_end();
+    return RT_EOK;
+}
+#endif
+
 #if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
 static void lcd_flush_done_and_switch_buf(lcd_fb_desc_t *fb_desc)
 {
@@ -332,12 +346,33 @@ static void partial_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *
     err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
     RT_ASSERT(RT_EOK == err);
 
+    if (last)
+    {
+        uint32_t async = (uint32_t)usr_data;
+
+        if (!async)
+        {
+            err = rt_sem_release(&render_done_sema);
+            RT_ASSERT(RT_EOK == err);
+        }
+
+        lv_gpu_render_mem_unlock(rl);
+    }
+
+#if defined(BSP_USING_LCD_FRAMEBUFFER)
 #if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
     if (last)
         drv_lcd_fb_write_send(&flush_area, &flush_area, (uint8_t *)p_dst->data, lcd_flush_done_and_switch_buf, last);
     else
 #endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
         drv_lcd_fb_write_send(&flush_area, &flush_area, (uint8_t *)p_dst->data, lcd_flush_done, last);
+#else
+    debug_lcd_flush_start(flush_area.x0, flush_area.y0, flush_area.x1, flush_area.y1);
+    rt_device_set_tx_complete(device, lcd_flush_done);
+    rt_graphix_ops(device)->set_window(flush_area.x0, flush_area.y0, flush_area.x1, flush_area.y1);
+    rt_graphix_ops(device)->draw_rect_async((const char *)p_dst->data, flush_area.x0,
+                                            flush_area.y0, flush_area.x1, flush_area.y1);
+#endif
 }
 
 static void lcd_flush_new_api(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area, lv_color_t *color_p)
@@ -355,12 +390,20 @@ static void lcd_flush_new_api(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area
     }
     else
     {
+        uint32_t async = (uint32_t)lv_scr_act()->render_async;
+
         msg.id = EPIC_MSG_RENDER_DRAW;
         msg.render_list = (drv_epic_render_list_t) rl;
         msg.content.rd.pixel_align = info.draw_align;
         msg.content.rd.partial_done_cb = partial_done_cb;
-        msg.content.rd.usr_data = NULL;
+        msg.content.rd.usr_data = (void *)async;
         drv_epic_render_msg_commit(&msg);
+
+        if (!async)
+        {
+            rt_err_t err = rt_sem_take(&render_done_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
+            RT_ASSERT(RT_EOK == err);
+        }
     }
 
     /* Inform the graphics library that you are ready with the flushing*/
@@ -443,6 +486,17 @@ static void wait_flush_done(lv_disp_drv_t *disp_drv)
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
     rt_err_t err;
     err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
+    if (RT_EOK != err)
+    {
+        lv_disp_draw_buf_t *draw_buf = disp_drv ? disp_drv->draw_buf : NULL;
+        LOG_E("[lv_lcd][wait-timeout] err=%d timeout=%d tick=%u disp=%p flushing_disp=%p draw_buf=%p flushing=%d last=%d",
+              err, LCD_FLUSH_EXP_MS, rt_tick_get(), disp_drv, lcd_flushing_disp_drv, draw_buf,
+              draw_buf ? draw_buf->flushing : -1,
+              draw_buf ? draw_buf->flushing_last : -1);
+#if defined(BSP_USING_LCD_FRAMEBUFFER)
+        drv_lcd_fb_dump_state("lv_lcd_wait_timeout");
+#endif
+    }
     RT_ASSERT(RT_EOK == err);
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
@@ -696,6 +750,9 @@ lv_disp_drv_t *lv_lcd_init(const char *name)
 
     rt_device_control(device, RTGRAPHIC_CTRL_SET_BUF_FORMAT, &cf);
     rt_sem_init(&lcd_sema, "lv_lcd", 1, RT_IPC_FLAG_FIFO);
+#ifdef DRV_EPIC_NEW_API
+    rt_sem_init(&render_done_sema, "lv_rd_done", 0, RT_IPC_FLAG_FIFO);
+#endif
     static lv_disp_draw_buf_t disp_buf;
     lv_disp_drv_init(&disp_drv);
 
@@ -836,4 +893,3 @@ bool lv_refreshing_done(void)
 
     return true;
 }
-

@@ -48,7 +48,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include "app_module.h"
+#include "lvsf_resource.h"
 
 #ifdef __cplusplus
 extern "C" {

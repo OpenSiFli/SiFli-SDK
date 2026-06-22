@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "app_module.h"
+#include "multlist_config.h"
 
 const char *app_get_str_from_id(uint32_t id)
 {

@@ -24,6 +24,7 @@
 
 #if LV_USE_GPU
 #include "drv_epic.h"
+#include "app_mem.h"
 
 
 #define GPU_BLEND_EXP_MS     500
@@ -46,6 +47,51 @@
         (p_epic_area)->y1 = (p_lv_area)->y2;
 
 void my_gpu_wait(lv_draw_ctx_t *draw_ctx);
+
+#define REDER_MEM_LOCK      (1)
+#define REDER_MEM_UNLOCK    (-1)
+
+static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
+{
+    int ref_count = (int)usr_data;
+
+    if (!op) return;
+
+    switch (op->op)
+    {
+    case DRV_EPIC_DRAW_LETTERS:
+        if (op->desc.label.p_letters)
+        {
+            for (uint32_t i = 0; i < op->desc.label.letter_num; i++)
+            {
+                drv_epic_letter_type_t *p_letter = op->desc.label.p_letters + i;
+                if (!p_letter->data) continue;
+                app_mem_set_ref_count((void *)p_letter->data, ref_count, MEM_ASYN_FONT);
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
+static rt_err_t lv_gpu_render_mem_lock(void *ptr, int type)
+{
+    app_mem_set_ref_count(ptr, REDER_MEM_LOCK, type);
+    return RT_EOK;
+}
+
+rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list)
+{
+    rt_err_t ret;
+
+    if (!list) return RT_EOK;
+
+    ret = drv_epic_render_trav(list, lv_gpu_render_trav_cb, (void *)REDER_MEM_UNLOCK);
+    app_mem_free_asyn_node();
+    return ret;
+}
 
 
 bool EPIC_SUPPORTED_CF(lv_img_cf_t cf)
@@ -503,7 +549,6 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
 #else
             LV_ASSERT(0);
 #endif /* EPIC_SUPPORT_MONOCHROME_LAYER&&EPIC_SUPPORT_MASK */
-
         }
 
 
@@ -535,6 +580,8 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
         p_letter->data = src->data;
         LV_AREA_TO_EPIC_AREA(&p_letter->area, src_coords);
     }
+
+    lv_gpu_render_mem_lock((void *)src->data, MEM_ASYN_FONT);
 }
 
 
@@ -1371,21 +1418,39 @@ uint32_t lv_gpu_render_start(lv_disp_drv_t *disp_drv)
 /*
     p_area - the real area of 'rl->dst'
 */
+static void drv_epic_render_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst, void *usr_data, uint32_t last)
+{
+    lv_gpu_render_mem_unlock(rl);
+    if (usr_data)
+    {
+        rt_sem_t sem = (rt_sem_t)usr_data;
+        rt_sem_release(sem);
+    }
+}
+
 void lv_gpu_render_end(lv_disp_drv_t *disp_drv, uint32_t rl, lv_area_t *p_area)
 {
     if (rl != 0)
     {
+        struct rt_semaphore sem;
         EPIC_MsgTypeDef msg;
 
         letter_blend_reset(); //Commit last letter blend if present
+        rt_sem_init(&sem, "snapshot", 0, RT_IPC_FLAG_FIFO);
 
         msg.id = EPIC_MSG_RENDER_TO_BUF;
         msg.render_list = (drv_epic_render_list_t) rl;
         if (!p_area) p_area = disp_drv->draw_ctx->buf_area; //Use buf area if no scaling
         lv_area_to_EPIC_area(p_area, &msg.content.r2b.dst_area);
-        msg.content.r2b.done_cb = NULL;
-        msg.content.r2b.usr_data = NULL;
+        msg.content.r2b.done_cb = drv_epic_render_done_cb;
+        msg.content.r2b.usr_data = (rt_sem_t)&sem;
         drv_epic_render_msg_commit(&msg);
+        if (RT_EOK != rt_sem_take(&sem, 6000))
+        {
+            LOG_I("synchronize snapshot error.\n");
+            RT_ASSERT(NULL);
+        }
+        rt_sem_detach(&sem);
     }
     else//Restore GPU render
     {

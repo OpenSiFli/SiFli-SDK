@@ -4,7 +4,10 @@ cwd = GetCurrentDir()
 src = []
 
 CPPPATH = [cwd]
-lib = [GroupLibName('gui_widgets')]
+if GetDepend('LVSF_SJPG_OUTPUT_YUV420'):
+    lib = [GroupLibName('gui_widgets_yuv420')]
+else:
+    lib = [GroupLibName('gui_widgets_rgb')]
 libpath = [cwd]
 
 group = DefineGroup(

@@ -6,6 +6,17 @@
 #include "../inc/epub.h"
 #include <string.h>
 
+/* Debug log control for libepub module */
+#ifndef LIBEPUB_DEBUG_LOG
+    #define LIBEPUB_DEBUG_LOG 0  /* 0: disable logs, 1: enable logs */
+#endif
+
+#if LIBEPUB_DEBUG_LOG
+    #define LIBEPUB_LOG(...) rt_kprintf(__VA_ARGS__)
+#else
+    #define LIBEPUB_LOG(...) do { } while (0)
+#endif
+
 #ifndef LIBEPUB_USE_APP_MEM
 #define LIBEPUB_USE_APP_MEM
 #endif
@@ -244,7 +255,7 @@ static void epub_dump_zip_read_error(_zip_t *z, struct zip_file *zfile,
     if (z) zip_err = zip_strerror(z);
 
     rt_memory_info(&total, &used, &max_used);
-    rt_kprintf("[reader][zip-read-error] fname=%s fsize=%d read_ret=%d zfile=%p zerr=%d serr=%d file_err=%s zip_err=%s heap=%u/%u max=%u entries=%d\n",
+    LIBEPUB_LOG("[reader][zip-read-error] fname=%s fsize=%d read_ret=%d zfile=%p zerr=%d serr=%d file_err=%s zip_err=%s heap=%u/%u max=%u entries=%d\n",
                fname ? fname : "(null)",
                (int)fsize,
                (int)read_ret,
@@ -263,7 +274,7 @@ static void epub_dump_zip_read_error(_zip_t *z, struct zip_file *zfile,
         zip_stat_init(&zs);
         if (zip_stat(z, fname, ZIP_FL_UNCHANGED, &zs) == 0)
         {
-            rt_kprintf("[reader][zip-read-error] stat name=%s size=%d comp_size=%d comp_method=%d crc=%08x valid=%08x\n",
+            LIBEPUB_LOG("[reader][zip-read-error] stat name=%s size=%d comp_size=%d comp_method=%d crc=%08x valid=%08x\n",
                        zs.name ? zs.name : "(null)",
                        (int)zs.size,
                        (int)zs.comp_size,
@@ -273,7 +284,7 @@ static void epub_dump_zip_read_error(_zip_t *z, struct zip_file *zfile,
         }
         else
         {
-            rt_kprintf("[reader][zip-read-error] stat failed fname=%s zip_err=%s\n",
+            LIBEPUB_LOG("[reader][zip-read-error] stat failed fname=%s zip_err=%s\n",
                        fname,
                        zip_strerror(z));
         }
@@ -352,7 +363,7 @@ char *read_zfile(_zip_t *z, const char *fname, uint32_t *size)
     char *buf = epub_calloc(fsize + 1, sizeof(char));
     if (!buf) 
     {
-        rt_kprintf("read_zfile failed: fname %s size %d\n", fname, fsize + 1);
+        LIBEPUB_LOG("read_zfile failed: fname %s size %d\n", fname, fsize + 1);
         return NULL;
     }
     /* open the file in an instance of the struct zip_file */
@@ -364,7 +375,7 @@ char *read_zfile(_zip_t *z, const char *fname, uint32_t *size)
     {
         if (size) *size = 0;
         epub_free(buf);
-        rt_kprintf("%s: fname %s size %d zfile %p\n", __func__, fname, fsize, zfile);
+        LIBEPUB_LOG("%s: fname %s size %d zfile %p\n", __func__, fname, fsize, zfile);
         epub_dump_zip_read_error(z, zfile, fname, fsize, read_ret);
         RT_ASSERT(0);
         return NULL;
@@ -414,14 +425,14 @@ int epub_init(epub_t *epub, const char* filepath)
     epub->rf_path = NULL;
     if (epub->zipfile)
     {
-        rt_kprintf("[reader][epub-init] path=%s zip=%p entries=%d\n",
+        LIBEPUB_LOG("[reader][epub-init] path=%s zip=%p entries=%d\n",
                    filepath ? filepath : "(null)",
                    epub->zipfile,
                    (int)zip_get_num_entries(epub->zipfile, ZIP_FL_UNCHANGED));
     }
     else
     {
-        rt_kprintf("[reader][epub-init] path=%s zip=%p err=%d\n",
+        LIBEPUB_LOG("[reader][epub-init] path=%s zip=%p err=%d\n",
                    filepath ? filepath : "(null)", epub->zipfile, err);
     }
     return epub->zipfile ? 1 : 0;
@@ -436,14 +447,14 @@ char *get_root_file(epub_t *epub)
     char *cbuf = read_zfile(epub->zipfile, CONTAINER, NULL);
     if (!cbuf)
     {
-        rt_kprintf("[reader][root-file] read container failed epub=%p zip=%p\n",
+        LIBEPUB_LOG("[reader][root-file] read container failed epub=%p zip=%p\n",
                    epub, epub ? epub->zipfile : NULL);
         return NULL;
     }
-    rt_kprintf("[reader][root-file] container head=%.*s\n", 96, cbuf);
+    LIBEPUB_LOG("[reader][root-file] container head=%.*s\n", 96, cbuf);
     /* now get the specified substring */
     epub->rf_path = _parse_data(epub->rf_path, cbuf, '"', ROOT_FILE);
-    rt_kprintf("[reader][root-file] rf=%s\n", epub->rf_path ? epub->rf_path : "(null)");
+    LIBEPUB_LOG("[reader][root-file] rf=%s\n", epub->rf_path ? epub->rf_path : "(null)");
     epub_free(cbuf);
     return epub->rf_path;
 }

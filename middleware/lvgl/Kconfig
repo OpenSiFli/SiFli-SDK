@@ -23,6 +23,15 @@ menu "SiFli extend"
             default y
             depends on SOC_SF32LB57X
 
+        config LVSF_USING_SJPG
+            bool "Use LVSF JPEG/SJPEG decoder"
+            default n
+
+        config LVSF_SJPG_OUTPUT_YUV420
+            bool "Use YUV420 planar output for LVSF JPEG/SJPEG decoder"
+            depends on LVSF_USING_SJPG && !SOC_SF32LB55X && !SOC_SF32LB58X
+            default y
+
         config LV_USING_EXT_RESOURCE_MANAGER
             bool "Enable extended resource manager"
             default n

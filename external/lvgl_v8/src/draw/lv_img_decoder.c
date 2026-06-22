@@ -11,12 +11,19 @@
 #include "../draw/lv_draw_img.h"
 #include "../misc/lv_ll.h"
 #include "../misc/lv_gc.h"
+#include <string.h>
+#ifdef RT_USING_DFS
+#include <dfs_posix.h>
+#endif
 
 /*********************
  *      DEFINES
  *********************/
 #define CF_BUILT_IN_FIRST   LV_IMG_CF_TRUE_COLOR
 #define CF_BUILT_IN_LAST    LV_IMG_CF_RGB565A8
+
+#define ALIGN4_UP(x)    (((x) + 3) & ~3U)
+#define MAGIC_OFFSET    0x5a5a5a5a
 
 /**********************
  *      TYPEDEFS
@@ -37,6 +44,8 @@ static lv_res_t lv_img_decoder_built_in_line_alpha(lv_img_decoder_dsc_t * dsc, l
                                                    lv_coord_t len, uint8_t * buf);
 static lv_res_t lv_img_decoder_built_in_line_indexed(lv_img_decoder_dsc_t * dsc, lv_coord_t x, lv_coord_t y,
                                                      lv_coord_t len, uint8_t * buf);
+static lv_res_t lv_img_decoder_open_internal(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color,
+                                             int32_t frame_id, uint8_t reuse_anim_buf);
 
 /**********************
  *  STATIC VARIABLES
@@ -73,6 +82,72 @@ void _lv_img_decoder_init(void)
     lv_img_decoder_set_close_cb(decoder, lv_img_decoder_built_in_close);
 }
 
+/* To support app tools case, which use app tool to generate app/or wf. */
+lv_res_t lv_img_decoder_get_wf_info(const void *src, lv_img_header_t *header, uint32_t offset)
+{
+#ifdef RT_USING_DFS
+    lv_img_src_t src_type = lv_img_src_get_type(src);
+
+    if(src_type == LV_IMG_SRC_FILE) {
+        struct dfs_fd fd;
+        int ret = dfs_file_open(&fd, src, O_RDONLY);
+        if(ret != 0) {
+            return LV_RES_INV;
+        }
+
+        ret = dfs_file_lseek(&fd, offset);
+        if(ret == -1 || sizeof(*header) != dfs_file_read(&fd, header, sizeof(*header))) {
+            dfs_file_close(&fd);
+            return LV_RES_INV;
+        }
+
+        dfs_file_close(&fd);
+        return LV_RES_OK;
+    }
+#else
+    LV_UNUSED(src);
+    LV_UNUSED(header);
+    LV_UNUSED(offset);
+#endif
+
+    return LV_RES_INV;
+}
+
+/* To support app tools case, which use app tool to generate app/or wf. */
+char *lv_img_decoder_set_wf_offset(const void *src, uint32_t offset, uint32_t length)
+{
+    uint32_t align_4 = ALIGN4_UP(strlen(src) + 1);
+    uint32_t len = align_4 + 4 /*1st: magic*/ + 4 /*2nd: align_4*/ + 4 /*3rd: offset*/ + 4 /*4th: length*/;
+    char *new_str = lv_mem_alloc(len);
+    LV_ASSERT_MALLOC(new_str);
+    if(new_str == NULL) return NULL;
+
+    memset(new_str, 0, len);
+    memcpy(new_str, src, strlen(src) + 1);
+
+    uint32_t *p = (uint32_t *)((uint8_t *)new_str + align_4);
+    *p = MAGIC_OFFSET;
+    *(p + 1) = align_4;
+    *(p + 2) = offset;
+    *(p + 3) = length;
+    return new_str;
+}
+
+/* To support app tools case, which use app tool to generate app/or wf. */
+uint32_t lv_img_decoder_get_wf_offset(const void *src, uint32_t *length)
+{
+    uint32_t offset = 0;
+    uint32_t align_4 = ALIGN4_UP(strlen(src) + 1);
+    uint32_t *p = (uint32_t *)((uint8_t *)src + align_4);
+
+    *length = UINT32_MAX;
+    if(MAGIC_OFFSET == *p && align_4 == *(p + 1)) {
+        offset = *(p + 2);
+        *length = *(p + 3);
+    }
+    return offset;
+}
+
 /**
  * Get information about an image.
  * Try the created image decoder one by one. Once one is able to get info that info will be used.
@@ -106,7 +181,20 @@ lv_res_t lv_img_decoder_get_info(const void * src, lv_img_header_t * header)
 
 lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color, int32_t frame_id)
 {
+    return lv_img_decoder_open_internal(dsc, src, color, frame_id, 0);
+}
+
+lv_res_t lv_img_decoder_open_reuse_anim_buf(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color,
+                                            int32_t frame_id)
+{
+    return lv_img_decoder_open_internal(dsc, src, color, frame_id, 1);
+}
+
+static lv_res_t lv_img_decoder_open_internal(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color,
+                                             int32_t frame_id, uint8_t reuse_anim_buf)
+{
     lv_memset_00(dsc, sizeof(lv_img_decoder_dsc_t));
+    dsc->reuse_anim_buf = reuse_anim_buf;
 
     if(src == NULL) return LV_RES_INV;
     lv_img_src_t src_type = lv_img_src_get_type(src);
@@ -156,6 +244,7 @@ lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t * dsc, const void * src, lv_co
         dsc->img_data  = NULL;
         dsc->user_data = NULL;
         dsc->time_to_open = 0;
+        dsc->reuse_anim_buf = reuse_anim_buf;
     }
 
     if(dsc->src_type == LV_IMG_SRC_FILE)

@@ -395,6 +395,15 @@ menu "On-chip Peripherals"
             help
                 1. Can not works on SFLB55X serials
                 2. Asynchronized rendering, must keep the buffers used by the render-list available until rendering is complete.
+
+            config DRV_EPIC_ALLOC_USE_ANIM_HEAP
+            bool "Use animation heap for EPIC render-list allocations"
+            depends on DRV_EPIC_NEW_API && PKG_USING_LITTLEVGL2RTT
+            default n
+            help
+                Allocate temporary EPIC render-list operations from app_mem's reusable
+                animation heap first, then fall back to the normal app cache path.
+                This is narrower than defining SOLUTION globally.
             
             choice
                 prompt "EPIC Render List API Mode"
@@ -1190,6 +1199,14 @@ menu "On-chip Peripherals"
     config MEMCPY_NON_DMA
         bool 
         depends on !SOC_SIMULATOR
+        default n
+
+    config MEM_ASYN_FREE
+        bool #"mem support async free(esp. for DRV_EPIC_NEW_API)"
+        default y if DRV_EPIC_NEW_API
+
+    config USING_APP_BMEM
+        bool #"app block_mem allocation used"
         default n
     
     menuconfig BSP_USING_PSRAM0

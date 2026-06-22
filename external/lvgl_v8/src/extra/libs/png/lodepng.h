@@ -30,6 +30,7 @@ freely, subject to the following restrictions:
 
 #include "lvgl.h"
 #if LV_USE_PNG
+#undef CRC
 extern const char* LODEPNG_VERSION_STRING;
 
 /*
