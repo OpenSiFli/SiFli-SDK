@@ -52,6 +52,7 @@ void usb_dc_low_level_init(uint8_t busid)
 #ifdef SOC_SF32LB57X
     /* switch to 48MHz */
     hwp_usbc->mode_48m |= 2;
+    hwp_hpsys_cfg->ANAU_CR |= HPSYS_CFG_ANAU_CR_EN_BG;
 #endif /* SOC_SF32LB57X */
 
 #ifdef SOC_SF32LB58X
