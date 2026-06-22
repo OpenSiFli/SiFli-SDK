@@ -1151,27 +1151,6 @@ HAL_StatusTypeDef HAL_MPI_EXIT_LOWP(FLASH_HandleTypeDef *hflash, uint8_t psram_t
 }
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-
-static void HAL_Delay_us_psram(__IO uint32_t us)
-{
-    static uint32_t sysclk_m2;
-
-    if (us == 0 || sysclk_m2 == 0)
-    {
-        sysclk_m2 = HAL_RCC_GetHCLKFreq(CORE_ID_DEFAULT) / 1000000;
-        if (us == 0)
-            return;
-    }
-
-    if (sysclk_m2 > 48)   // DLL has extra cost, Reason to be determined.
-        us -= 1;
-    if (us > 0)          // Extra 1 us for cost of function
-    {
-        volatile uint32_t i = sysclk_m2 * (us - 1) / 5;
-        while (i-- > 0); //need 5 instructions at ARMCC
-    }
-}
-
 #ifdef SF32LB57X
 static int HAL_MPI_PSRAM_CheckMatch(uint32_t dst, uint32_t src, uint32_t msk, uint32_t num)
 {
@@ -1206,12 +1185,12 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
 
     hflash->Instance->CALCR = MPI_CALCR_START;
 
-    HAL_Delay_us_psram(0);
+    HAL_Delay_us(0);
     /* phase 1: search for 0 */
     for (tmp = 0; tmp < 128; tmp++)   // DLY MAX = 127 (TODO: adjust accordingly)
     {
         hflash->Instance->MISCR = (tmp << MPI_MISCR_SCKDLY_Pos);
-        HAL_Delay_us_psram(10);
+        HAL_Delay_us(10);
         if (HAL_MPI_PSRAM_CheckMatch(0, hflash->Instance->CALRR, MPI_CALRR_CSMP_Msk, 5))
         {
             break;
@@ -1223,7 +1202,7 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
     for (dly = tmp + 1; dly < 128; dly++)   // DLY MAX = 127 (TODO: adjust accordingly)
     {
         hflash->Instance->MISCR = (dly << MPI_MISCR_SCKDLY_Pos);
-        HAL_Delay_us_psram(10);
+        HAL_Delay_us(10);
         if (HAL_MPI_PSRAM_CheckMatch(MPI_CALRR_CSMP, hflash->Instance->CALRR, MPI_CALRR_CSMP_Msk, 5))
         {
             find = 1;
@@ -1258,8 +1237,8 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
     hflash->Instance->CALCR |= MPI_CALCR_EN;
     //HAL_Delay_us(0);
     //HAL_Delay_us(20);  // add delay to avoid CDC during cal_done polling
-    HAL_Delay_us_psram(0);
-    HAL_Delay_us_psram(20);
+    HAL_Delay_us(0);
+    HAL_Delay_us(20);
     while (!(hflash->Instance->CALCR & MPI_CALCR_DONE_Msk));
     delay = hflash->Instance->CALCR & MPI_CALCR_DELAY_Msk;
     hflash->Instance->CALCR &= ~MPI_CALCR_EN;
@@ -1288,7 +1267,7 @@ int HAL_MPI_OPSRAM_AUTO_CAL(FLASH_HandleTypeDef *hflash, uint8_t *sck, uint8_t *
     HAL_MPI_SET_DQS_DELAY(hflash, *dqs);
     HAL_MPI_SET_SCK(hflash, *sck, 0);
 
-    HAL_Delay_us_psram(50);
+    HAL_Delay_us(50);
     return 0;
 }
 
