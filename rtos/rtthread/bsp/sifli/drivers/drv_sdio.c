@@ -1407,6 +1407,30 @@ static int sifli_sdio_pm_register(void)
     return 0;
 }
 
+static void rthw_sdio_resume_hw(void)
+{
+    struct rthw_sdio *sdio;
+
+    if (!sdio_host)
+        return;
+    sdio = (struct rthw_sdio *)sdio_host->private_data;
+    if (!sdio)
+        return;
+
+#ifdef SF32LB52X
+    HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
+#else
+    HAL_RCC_EnableModule(RCC_MOD_SDMMC2);
+#endif
+    HAL_SDMMC_INIT(sdio->sdio_des.hw_sdio);
+    HAL_NVIC_SetPriority(SDIO_IRQn, 2, 0);
+    HAL_NVIC_EnableIRQ(SDIO_IRQn);
+
+    if (sdio_host->io_cfg.clock != 0)
+        rthw_sdio_set_clk(sdio_host, sdio_host->io_cfg.clock);
+    HAL_SDMMC_POWER_SET(sdio->sdio_des.hw_sdio, HW_SDIO_POWER_ON);
+}
+
 static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
 {
     rt_err_t result = RT_EOK;
@@ -1416,9 +1440,10 @@ static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
     {
     case RT_DEVICE_CTRL_RESUME:
     {
-
         if (PM_SLEEP_MODE_STANDBY == mode)
-            rt_hw_sdio_init();
+        {
+            rthw_sdio_resume_hw();
+        }
         else
         {
             rthw_sdio_irq_update(sdio_host, 1);
@@ -1430,21 +1455,8 @@ static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
     case RT_DEVICE_CTRL_SUSPEND:
     {
         struct rthw_sdio *sdio = (struct rthw_sdio *)sdio_host->private_data;
-        if ((PM_SLEEP_MODE_STANDBY == mode) && (sdio_host != NULL))
-        {
-            //rt_kprintf("SD suspend\n");
-            mmcsd_host_lock(sdio_host);
-            HAL_SDMMC_CLK_SET(sdio->sdio_des.hw_sdio, 1, 0);
-            rt_mmcsd_blk_remove(sdio_host->card);
-            rt_free(sdio_host->card);
-            if (sdio)
-                rt_free(sdio);
-            sdio_host->card = RT_NULL;
-            mmcsd_free_host(sdio_host);
-            sdio_host = NULL;
-        }
-        else
-            HAL_SDMMC_CLK_SET(sdio->sdio_des.hw_sdio, 1, 0);
+
+        HAL_SDMMC_CLK_SET(sdio->sdio_des.hw_sdio, 1, 0);
 
         break;
     }
@@ -1503,7 +1515,7 @@ int rt_hw_sdio_init(void)
 {
     struct sifli_sdio_des sdio_des;
     rt_uint8_t priority = RT_MMCSD_THREAD_PREORITY;
-    uint32_t time_out = 3000;    
+    uint32_t time_out = 3000;
 
 #ifdef SF32LB52X
     HAL_RCC_EnableModule(RCC_MOD_SDMMC1);
