@@ -968,6 +968,12 @@ drv_epic_operation *drv_epic_alloc_op(drv_epic_render_buf *p_buf)
 rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 {
     priv_render_list_t *rl = get_rl_from_stack();
+    bool curr_op_merged = false;
+    /*Nodes to be deleted during merging: 
+    Keep the new op, delete the old prev_op (where op is the immediate successor of prev_op, 
+    and after deleting prev_op, op naturally connects to the previous node of the original prev_op). Default = op 
+    (for some branches, the content is written to prev_op and the new op is deleted). */
+    drv_epic_operation *merged_op_to_remove = op;
 
     RT_ASSERT(rl);
     RT_ASSERT(0 == (rl->flag & (rl_flag_rendering)));
@@ -981,9 +987,10 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
     if (0xFFFFFFFF != drv_epic.dbg_flag_dis_merge_operations)
     {
-        if (rl->src_list_len > 0)
+        if (rl->src_list_len > 1)
         {
-            drv_epic_operation *prev_op = rt_list_tail_entry(&rl->src_list, drv_epic_operation, list);
+            RT_ASSERT(op->list.prev != &rl->src_list);
+            drv_epic_operation *prev_op = rt_list_entry(op->list.prev, drv_epic_operation, list);
             drv_epic_operation *curr_op = op;
 
             if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (prev_op->desc.fill.opa >= OPA_MAX) && (NULL == prev_op->mask.data)
@@ -1022,8 +1029,9 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                     op->clip_area = prev_area;
 
-                    memcpy(prev_op, op, sizeof(drv_epic_operation));
-                    rl->src_list_len--;
+                    /* Keep op (which already includes image + bg), and remove the old fill prev_op*/
+                    merged_op_to_remove = prev_op;
+                    curr_op_merged = true;
                 }
             }
             else if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (DRV_EPIC_DRAW_FILL == curr_op->op))
@@ -1041,8 +1049,9 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                         if (curr_op->desc.fill.opa >= OPA_MAX)
                         {
-                            memcpy(prev_op, curr_op, sizeof(drv_epic_operation)); //Overwrite previous
-                            rl->src_list_len--;
+                            /* curr(op) completely replaces prev_op: retains op and deletes the old prev_op */
+                            merged_op_to_remove = prev_op;
+                            curr_op_merged = true;
                         }
                         else if (prev_op->desc.fill.opa >= OPA_MAX)
                         {
@@ -1069,16 +1078,10 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                         if (curr_op->desc.fill.opa >= OPA_MAX)
                         {
-                            //print_operation("prev_op",prev_op);
-                            //print_operation("curr_op",curr_op);
-                            prev_op->desc.fill.r = curr_op->desc.fill.r;
-                            prev_op->desc.fill.g = curr_op->desc.fill.g;
-                            prev_op->desc.fill.b = curr_op->desc.fill.b;
-                            prev_op->desc.fill.opa = curr_op->desc.fill.opa;
-
-                            prev_op->clip_area = curr_op->clip_area;//Overwrite
-
-                            rl->src_list_len--;
+                            /* curr(op) is non-transparent and completely covers prev_op: op is already the correct fill,
+                               so just delete the old prev_op. */   
+                            merged_op_to_remove = prev_op;
+                            curr_op_merged = true;
                         }
                         else if (HAL_EPIC_AreaIsIn(&curr_op->clip_area, &prev_op->clip_area)) //Same area
                         {
@@ -1093,6 +1096,17 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
     }
 
 __COMMIT_OPERATION:
+    if (curr_op_merged)
+    {
+        /* Keep the new op and remove the old node "merged_op_to_remove" (usually "prev_op").
+        Op is the immediate successor of "prev_op", and after removing "prev_op", op naturally takes its original position. */
+        rt_list_remove(&merged_op_to_remove->list);
+        rl->src_list_alloc_len--;
+        epic_free(merged_op_to_remove);
+        RT_ASSERT(rl->src_list_len == rl->src_list_alloc_len);
+        return RT_EOK;
+    }
+
     /*Commit operation*/
     rl->src_list_len++;
     return RT_EOK;

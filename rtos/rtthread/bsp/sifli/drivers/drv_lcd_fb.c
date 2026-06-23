@@ -228,12 +228,14 @@ static rt_err_t wait_line_valid(LCD_AreaDef *write_area, int32_t wait_ms)
 {
     rt_err_t err = RT_EOK;
 
-    LCD_FBTypeDef *p_fb = &drv_lcd_fb.fbs[drv_lcd_fb.write_fb_idx];
+    uint16_t wait_fb_idx = drv_lcd_fb.write_fb_idx;
+    uint32_t line_event = (0 == wait_fb_idx) ? EVENT_FB0_LINE_VALID : EVENT_FB1_LINE_VALID;
+    LCD_FBTypeDef *p_fb = &drv_lcd_fb.fbs[wait_fb_idx];
 
     //Wait fb writebale
     while (p_fb->fb.area.y0 + p_fb->fb_valid_y1 < write_area->y1)
     {
-        err = rt_event_recv(&drv_lcd_fb.event, (0 == drv_lcd_fb.write_fb_idx) ? EVENT_FB0_LINE_VALID : EVENT_FB1_LINE_VALID,
+        err = rt_event_recv(&drv_lcd_fb.event, line_event,
                             RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
                             rt_tick_from_millisecond(wait_ms), NULL);
 
@@ -795,7 +797,7 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
     }
 #endif /* HAL_EXTDMA_MODULE_ENABLED */
 #ifdef HAL_EPICTL_ENABLED
-    if (use_epictl)
+    else if (use_epictl)
     {
         EPICTL_DataType cfg;
         HAL_EPICTL_DataInit(&cfg);
