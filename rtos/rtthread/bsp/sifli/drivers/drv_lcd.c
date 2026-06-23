@@ -1008,8 +1008,8 @@ static void lcd_driver_print_error_info(void)
             }
 
 #elif defined(hwp_ptm1)
-            uint32_t *pc = (uint32_t *)hwp_ptm1->PC0;
-            uint32_t val = *pc;
+            uint32_t pc = hwp_ptm1->PC0;
+            uint32_t val = (pc < 0x800) ? (PTM1_CORE0_TCM)[pc] : *((uint32_t *)pc);
             LOG_E("PTM ENTRY=0x%08x, PC=0x%08x, val=0x%08x", drv_lcd.hlcdc.ptc_code, pc, val);
             if (0 == (val & 0xE0000000)) //Wait cmd
             {

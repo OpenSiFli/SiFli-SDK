@@ -1122,7 +1122,11 @@ static bool EPIC_ClipLayerSrcByOutput(
             }
             else
             {
-                input_layer->data += (HAL_ALIGN((tgt_y * algined_total_w + tgt_x) * color_depth, 8) >> 3);
+                //Do not change the data pointer when it's monochrome mode or data pointer is NULL
+                if ((EPIC_COLOR_MONO == input_layer->color_mode) || (NULL == input_layer->data))
+                    ; //Do not clip the monochrome layer or NULL layer.
+                else
+                    input_layer->data += (HAL_ALIGN((tgt_y * algined_total_w + tgt_x) * color_depth, 8) >> 3);
             }
 
         }
