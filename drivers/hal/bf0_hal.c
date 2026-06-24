@@ -377,7 +377,7 @@ __weak uint32_t HAL_GetTick(void)
     BNE     6 cycles
 */
 #define WAIT_US_LOOP_CYCLE 12
-__weak void HAL_Delay_us_(__IO uint32_t us)
+__weak void HAL_Delay_us_(uint32_t us)
 {
     //TODO: replaced by SystemCoreClock?
     static uint32_t sysclk_m;
