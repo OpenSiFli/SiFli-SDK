@@ -356,7 +356,7 @@ void HAL_IncTick(void);
   */
 void HAL_Delay(uint32_t Delay);
 void HAL_Delay_us(uint32_t us);
-void HAL_Delay_us_(__IO uint32_t us);
+void HAL_Delay_us_(uint32_t us);
 
 /**
   * @brief This function provides the function that will copy memory content from source address to destination according to word alignment.
