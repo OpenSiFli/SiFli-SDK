@@ -1426,6 +1426,27 @@ static const struct rt_device_pm_ops sdio_pm_op =
 };
 
 #ifdef PM_STANDBY_ENABLE
+
+static void rthw_sdio_resume_hw(struct rthw_sdio *sdio)
+{
+    if (!sdio || !sdio->cfg || !sdio->host)
+        return;
+
+    /* the controller module clock was gated when HPSYS powered down */
+    HAL_RCC_EnableModule(sdio->cfg->rcc_mod);
+
+    /* re-init controller registers + re-enable its interrupt */
+    HAL_SDMMC_INIT(sdio->des.instance);
+    HAL_NVIC_SetPriority(sdio->cfg->irqn, 2, 0);
+    HAL_NVIC_EnableIRQ(sdio->cfg->irqn);
+
+    /* HAL_SDMMC_INIT leaves the controller at the default low speed; restore the
+     * working clock/power so it matches the still-powered card */
+    if (sdio->host->io_cfg.clock != 0)
+        rthw_sdio_set_clk(sdio, sdio->host->io_cfg.clock);
+    HAL_SDMMC_POWER_SET(sdio->des.instance, HW_SDIO_POWER_ON);
+}
+
 static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
 {
     rt_err_t result = RT_EOK;
@@ -1440,7 +1461,7 @@ static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
 
         if (PM_SLEEP_MODE_STANDBY == mode)
         {
-            rt_hw_sdio_init();
+            rthw_sdio_resume_hw(sdio);
         }
         else
         {
@@ -1453,19 +1474,8 @@ static rt_err_t rt_sdio_control(struct rt_device *dev, int cmd, void *args)
     }
     case RT_DEVICE_CTRL_SUSPEND:
     {
-        if ((PM_SLEEP_MODE_STANDBY == mode) && (sdio->host != NULL))
-        {
-            //rt_kprintf("SD suspend\n");
-            mmcsd_host_lock(sdio->host);
-            HAL_SDMMC_CLK_SET(sdio->des.instance, 1, 0);
-            rt_mmcsd_blk_remove(sdio->host->card);
-            rt_free(sdio->host->card);
-            sdio->host->card = RT_NULL;
-            mmcsd_free_host(sdio->host);
-            sdio->host = NULL;
-        }
-        else
-            HAL_SDMMC_CLK_SET(sdio->des.instance, 1, 0);
+
+        HAL_SDMMC_CLK_SET(sdio->des.instance, 1, 0);
 
         break;
     }
