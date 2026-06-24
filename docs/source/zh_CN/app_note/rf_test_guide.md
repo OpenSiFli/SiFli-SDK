@@ -6,7 +6,7 @@
 
 ## 0. 测试模式总览
 
-根据测试目的、控制方式和应用场景,蓝牙射频测试分为三大类:**蓝牙单项测试**、**蓝牙非信令测试**、**蓝牙信令测试**。SDK 把它们映射到不同的入口:
+根据测试目的、控制方式和应用场景，蓝牙射频测试分为三大类：**蓝牙单项测试**、**蓝牙非信令测试**、**蓝牙信令测试**。SDK 把它们映射到不同的入口：
 
 | 类型 | 用途 | 命令入口 | 触发源 |
 |---|---|---|---|
@@ -15,18 +15,18 @@
 | **BLE 非信令测试** (SIG DTM) | 产线快速测 BLE RF、SIG 认证 DTM 项 | `bt_rftest bletx/blerx` / `ble_enter_dut_mode()` / 标准 HCI(经 `bt_cm uart_dut` 透传) | 本地 HCI 命令 / 综测仪 + PC 通过串口 HCI |
 | **单项测试** | 板级深度 RF 调试、FCC/CE 法规预测试 | `bt_cm uart_dut` + SiFli_RfTool | PC 工具手动逐项 |
 
-**信令 vs 非信令 vs 单项**:
+**信令 vs 非信令 vs 单项**：
 
-- **信令**:仪器与 DUT 建立真实蓝牙链路,按标准协议双向通信。结果权威,认证强制。
-- **非信令**:不建立蓝牙连接,通过特定指令直接控制射频芯片到指定状态(固定信道/功率/持续发收),做快速测量。研发与产线主用。
-- **单项**:工程师通过 PC 工具([SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md))向 DUT 发底层控制指令,精确控制射频行为(单载波、特定调制信号),配频谱仪/功率计逐项分析,以及法规预测试。
+- **信令**：仪器与 DUT 建立真实蓝牙链路，按标准协议双向通信。结果权威，认证强制。
+- **非信令**：不建立蓝牙连接，通过特定指令直接控制射频芯片到指定状态(固定信道/功率/持续发收)，做快速测量。研发与产线主用。
+- **单项**：工程师通过 PC 工具([SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md))向 DUT 发底层控制指令，精确控制射频行为(单载波、特定调制信号)，配频谱仪/功率计逐项分析，以及法规预测试。
 
-**与 BQB 认证的关系**:BR/EDR 的 BQB RF 测试走 BT 信令路径,BLE 的 BQB RF 测试走 SIG DTM(即 BLE 非信令);BT 非信令是思澈私有 vendor 协议,不参与 BQB,只用于研发与产线;单项测试不参与 BQB,常用于 FCC/CE 法规预认证与板级深度调优。
+**与 BQB 认证的关系**：BR/EDR 的 BQB RF 测试走 BT 信令路径，BLE 的 BQB RF 测试走 SIG DTM(即 BLE 非信令);BT 非信令是思澈私有 vendor 协议，不参与 BQB，只用于研发与产线;单项测试不参与 BQB，常用于 FCC/CE 法规预认证与板级深度调优。
 
-思澈平台提供两种测试固件:
+思澈平台提供两种测试固件：
 
-- **rf_test.bin**:思澈内部独立的 RF 测试专用工程编译产物,**未对外开放**,特殊情况下需找 FAE 获取。
-- **User.bin**:**用户基于本 SDK 自行编译出的任意固件**——包括 SDK 自带的例程、客户自己创建的产品工程等,均属于此类。SDK 已把 RF 测试功能集成进协议栈,这类固件默认开机跑用户业务,通过 finsh 命令(`bt_cm dut` / `bt_cm uart_dut` / `bt_rftest`)即可切到测试态,**无需向 FAE 申请**。
+- **rf_test.bin**：思澈内部独立的 RF 测试专用工程编译产物，**未对外开放**，特殊情况下需找 FAE 获取。
+- **User.bin**：**用户基于本 SDK 自行编译出的任意固件**——包括 SDK 自带的例程、客户自己创建的产品工程等，均属于此类。SDK 已把 RF 测试功能集成进协议栈，这类固件默认开机跑用户业务，通过 finsh 命令(`bt_cm dut` / `bt_cm uart_dut` / `bt_rftest`)即可切到测试态，**无需向 FAE 申请**。
 
 本文档以 **User.bin** 为主。
 
@@ -34,45 +34,32 @@
 
 ## 1. 编译配置
 
-### 1.1 三类测试是否需要改配置
+### 1.1 推荐基础工程
 
-SDK 自带的 BT 类例程默认已开 `CONFIG_BT_FINSH` 和 `CONFIG_BSP_BT_CONNECTION_MANAGER`,但 `CONFIG_BT_RF_TEST` 默认**关闭**。三类测试对应的配置门槛不同:
-
-| 测试场景 | 入口命令 | 是否需要改 proj.conf |
-|---|---|---|
-| 信令测试 | `bt_cm dut` / `gap_enb_dut_mode_req()` | **不需要**——BT 例程开箱即用 |
-| 单项测试(SiFli_RfTool 透传) | `bt_cm uart_dut` | **需要** `CONFIG_BT_RF_TEST=y`。命令本身不被该开关控制,缺这个开关也不会报错,但 UART 不会切到 HCI 透传,SiFli_RfTool 收不到任何响应(对应 §14 "`bt_cm uart_dut` 后没任何 HCI 响应"那条) |
-| 非信令测试 | `bt_rftest enter/bttx/btrx/bletx/blerx` | **需要** `CONFIG_BT_RF_TEST=y`。整条 `bt_rftest` 命令完全被该开关控制,不开则 finsh 里根本不存在该命令 |
-
-自建工程,或在 BT 协议栈未启用的工程里做测试,要按下面 §1.3 表逐项核对(`CONFIG_RT_USING_FINSH`、`CONFIG_BSP_BT_CONNECTION_MANAGER`、必要时 `CONFIG_BT_FINSH` / `CONFIG_BT_RF_TEST`)。
-
-### 1.2 推荐基础工程
-
-不想从零搭工程的话,SDK 自带的下列例程可以直接拿来当基础,改动最少:
+推荐以下开箱即用的基础工程：
 
 | 测试场景 | 推荐基础工程 | 改动 |
 |---|---|---|
-| BT 信令测试(BR/EDR DUT 模式) | 任意 `example/bt/` 下的 BT 例程,如 [`example/bt/spp/`](../../../../example/bt/spp/) | 直接编译,无需改 `proj.conf` |
-| BT 非信令 / 单项透传(`bt_cm uart_dut` + SiFli_RfTool) | 同上 | 在 `project/proj.conf` 末尾追加 `CONFIG_BT_RF_TEST=y`,重编 |
-| BLE DTM(`bt_rftest bletx/blerx`) | 同上(BT 例程默认含 BLE controller) | 同上,加 `CONFIG_BT_RF_TEST=y` |
-| 综测仪/PC 脚本直驱标准 HCI(开机即透传,不依赖 finsh 运行时切换) | [`example/bt/HCI_over_uart/`](../../../../example/bt/HCI_over_uart/) | 无需修改 `proj.conf`;但该例程不带 `bt_cm` 命令,也没有 BLE/BT 业务,只走标准 HCI |
+| BT 信令测试(BR/EDR DUT 模式) | 如 [`example/bt/spp/`](../../../../example/bt/spp/) 等未关闭 `BT_RF_TEST` 的 BT 例程 | 直接编译，无需改 `proj.conf` |
+| BT 非信令 / 单项透传(`bt_cm uart_dut` + SiFli_RfTool) | 同上 | 无需改动，直接使用 |
+| BLE DTM(`bt_rftest bletx/blerx`) | 同上(BT 例程默认含 BLE controller) | 无需改动，直接使用 |
+| 综测仪/PC 脚本直驱标准 HCI(开机即透传，不依赖 finsh 运行时切换) | [`example/bt/HCI_over_uart/`](../../../../example/bt/HCI_over_uart/) | 无需修改 `proj.conf`;但该例程不带 `bt_cm` 命令，也没有 BLE/BT 业务，只走标准 HCI |
 
-> 注意:`example/bt/HCI_over_uart/` 与上面三行的机制完全不同——它是**开机即把 UART1 接给 controller**,固件本身不运行业务态,不需要也不能用 `bt_cm uart_dut`。其他三行都基于业务态固件 + 运行时 finsh 命令切换。
 
-### 1.3 Kconfig 开关一览
+### 1.2 Kconfig 开关一览
 
 | 命令 / 功能 | 必需开启的 Kconfig | 代码位置 |
 |---|---|---|
 | `bt_cm` 命令 | `CONFIG_RT_USING_FINSH=y` + `CONFIG_BSP_BT_CONNECTION_MANAGER=y` | `bt_connection_manager.c:1937` |
 | `bt_rftest` 命令 | `CONFIG_RT_USING_FINSH=y` + `CONFIG_BT_RF_TEST=y`(且非 SF32LB55X) | `bf0_bt_common.c:1209` |
-| `bt_cm uart_dut` 内的 **UART 切换部分** | `CONFIG_BT_RF_TEST=y`(命令本身不被此开关控制,只是缺了它就不会调 `uart_ipc_path_change`) | `bt_connection_manager.c:1776` |
+| `bt_cm uart_dut` 内的 **UART 切换部分** | `CONFIG_BT_RF_TEST=y`(命令本身不被此开关控制，只是缺了它就不会调 `uart_ipc_path_change`) | `bt_connection_manager.c:1776` |
 | 第 12.1 节 `<< enb DUT mode` 等 BT app trace | `CONFIG_BT_FINSH=y` | `bt_finsh/bts2_app_generic.c` |
 
-> `BT_FINSH` 是 BT 协议栈调试 trace 总开关(`bts2_app_demo` / `bts2_app_menu` / `bts2_app_generic` 这套),不要把它当成"启用 bt_cm / bt_rftest"的开关。
+> `BT_FINSH` 是 BT 协议栈调试 trace 总开关(`bts2_app_demo` / `bts2_app_menu` / `bts2_app_generic` 这套)，不要把它当成"启用 bt_cm / bt_rftest"的开关。
 
-### 1.4 UART 路径切换的目标设备
+### 1.3 UART 路径切换的目标设备
 
-只对 `bt_cm uart_dut` 及自定义调用 `uart_ipc_path_change()` 的入口有效:
+只对 `bt_cm uart_dut` 及自定义调用 `uart_ipc_path_change()` 的入口有效：
 
 ```
 # 默认就是 IPC_USE_CONSOLE_DEVICE=y, console UART 跑 finsh,切的也是它
@@ -87,7 +74,7 @@ CONFIG_IPC_OWN_DEVICE_NAME="uart2"
 
 ### 2.1 拓扑
 
-DUT、综测仪、PC 控制端三者关系:
+DUT、综测仪、PC 控制端三者关系：
 
 ```{figure} assert/bt_signaling_test.png
 :align: center
@@ -95,14 +82,14 @@ DUT、综测仪、PC 控制端三者关系:
 BT 信令测试拓扑
 ```
 
-综测仪(MT88 系列、CMW 系列等)从空口扮演主设备,通过 LMP 命令驱动 DUT 进入信令测试态;PC 通过串口/GPIB 控制综测仪。DUT 自身只需要在协议栈层置好 DUT 允许位即可。
+综测仪(MT88 系列、CMW 系列等)从空口扮演主设备，通过 LMP 命令驱动 DUT 进入信令测试态;PC 通过串口/GPIB 控制综测仪。DUT 自身只需要在协议栈层置好 DUT 允许位即可。
 
 ### 2.2 如何使用
 
 | 选项 | 调用 |
 |---|---|
 | FinSH | `bt_cm dut`(只置允许位)/ `bt_cm uart_dut`(置允许位 + 切 UART) |
-| API | `gap_enb_dut_mode_req(U16 tid)`,头文件 `gap_api.h` |
+| API | `gap_enb_dut_mode_req(U16 tid)`，头文件 `gap_api.h` |
 
 详细测试方法参见：[思澈SF32LB5xx芯片蓝牙信令测试指南](思澈SF32LB5xx芯片蓝牙信令测试指南.md)。
 
@@ -135,7 +122,7 @@ void enter_bt_signaling_dut(void)
 }
 ```
 
-事件回调里(在你注册的 BT event handler 里):
+事件回调里(在你注册的 BT event handler 里)：
 
 ```c
 case BTS2MU_GAP_ENB_DUT_MODE_CFM:
@@ -151,11 +138,11 @@ case BTS2MU_GAP_ENB_DUT_MODE_CFM:
 
 ### 2.5 注意
 
-- **只有"允许"作用**,不会让设备主动发包。真正发包要等仪器从空口发 LMP_test_control 触发。
-- **HCI 命令通道完全正常**,调完之后还能继续发 HCI Reset、Read BD_Addr、LE DTM 命令。
-- **BLE 完全不受影响**,BLE 控制器照常工作。
-- **退出只能复位**,无逆操作。
-- 调用前必须满足:`sifli_ble_enable()` 完成、`BLE_POWER_ON_IND` 已上来、且当前工作模式包含 BT Classic(双模或 BT-only,即 BT 协议栈已加载)。
+- **只有"允许"作用**，不会让设备主动发包。真正发包要等仪器从空口发 LMP_test_control 触发。
+- **HCI 命令通道完全正常**，调完之后还能继续发 HCI Reset、Read BD_Addr、LE DTM 命令。
+- **BLE 完全不受影响**，BLE 控制器照常工作。
+- **退出只能复位**，无逆操作。
+- 调用前必须满足：`sifli_ble_enable()` 完成、`BLE_POWER_ON_IND` 已上来、且当前工作模式包含 BT Classic(双模或 BT-only，即 BT 协议栈已加载)。
 
 ---
 
@@ -163,7 +150,7 @@ case BTS2MU_GAP_ENB_DUT_MODE_CFM:
 
 ### 3.1 拓扑
 
-非信令测试不与 DUT 建立蓝牙链路,PC 通过串口发 HCI 命令控制 DUT,同时通过串口或 GPIB 控制综测仪:
+非信令测试不与 DUT 建立蓝牙链路，PC 通过串口发 HCI 命令控制 DUT，同时通过串口或 GPIB 控制综测仪：
 
 ```{figure} assert/non_signaling_test.png
 :align: center
@@ -178,7 +165,7 @@ case BTS2MU_GAP_ENB_DUT_MODE_CFM:
 | FinSH | `bt_rftest enter` → `bt_rftest bttx/btrx` → `bt_rftest btstop` → `bt_rftest exit` |
 | API | `bt_enter_no_signal_dut_mode(bt_ns_test_mode_ctrl_cmd_t *)` |
 
-头文件: `bf0_ble_common.h`
+头文件： `bf0_ble_common.h`
 
 ### 3.3 操作码和参数
 
@@ -218,11 +205,11 @@ msh > bt_rftest btstop
 msh > bt_rftest exit            # 退出测试态
 ```
 
-`bt_rftest` 子命令的测试参数(信道、包类型、长度、功率)在 SDK 内部为固定值,如需调整请参考 `SiFli-SDK/middleware/bluetooth/service/common/bf0_bt_common.c` 中 `bt_rftest()` 实现,自定义一组带参子命令。
+`bt_rftest` 子命令的测试参数(信道、包类型、长度、功率)在 SDK 内部为固定值，如需调整请参考 `SiFli-SDK/middleware/bluetooth/service/common/bf0_bt_common.c` 中 `bt_rftest()` 实现，自定义一组带参子命令。
 
 ### 3.5 完整 API 用法示例
 
-> **`bt_enter_no_signal_dut_mode` 是异步的。** 函数内部 `sifli_msg_alloc` + `memcpy` + `sifli_msg_send` 后立即返回 `HL_ERR_NO_ERROR`,真正生效要等 `BT_NS_DUT_RSP` 事件 ack(实现见 `bf0_bt_common.c:793`)。下面 demo 在状态切换之间用事件等待保证顺序;若产线代码必须同步推进,可用一个 `rt_event` / `rt_sem` 在 `BT_NS_DUT_RSP` 回调里释放,或退而求其次用经验延时(典型 100~200ms 即够,但不保证)。
+> **`bt_enter_no_signal_dut_mode` 是异步的。** 函数内部 `sifli_msg_alloc` + `memcpy` + `sifli_msg_send` 后立即返回 `HL_ERR_NO_ERROR`，真正生效要等 `BT_NS_DUT_RSP` 事件 ack(实现见 `bf0_bt_common.c:793`)。下面 demo 在状态切换之间用事件等待保证顺序;若产线代码必须同步推进，可用一个 `rt_event` / `rt_sem` 在 `BT_NS_DUT_RSP` 回调里释放，或退而求其次用经验延时(典型 100~200ms 即够，但不保证)。
 
 ```c
 #include "bf0_ble_common.h"
@@ -283,7 +270,7 @@ void bt_nonsig_stop_and_exit(void)
 
 ### 3.6 收包结果(只 RX 用)
 
-事件 `BT_NS_DUT_RSP` 上来时,对应结构体 `bt_ns_test_mode_ctrl_rsp_t`:
+事件 `BT_NS_DUT_RSP` 上来时，对应结构体 `bt_ns_test_mode_ctrl_rsp_t`：
 
 ```c
 typedef struct {
@@ -293,7 +280,7 @@ typedef struct {
 } bt_ns_test_mode_ctrl_rsp_t;
 ```
 
-或者用更新的同步接口直接拿 PER + RSSI:
+或者用更新的同步接口直接拿 PER + RSSI：
 
 ```c
 extern int8_t bt_ns_rx_start(bt_ns_test_new_rx_para_t *rxpara,
@@ -312,8 +299,8 @@ LOG_I("err_bit=%d total_bit=%d err_pkt=%d total_pkt=%d rssi=%d",
 
 ### 3.7 注意
 
-- **综测仪不识别**这条命令(思澈私有 vendor),要用 **[SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)**。
-- **必须先 ENTER 再 TX/RX,先 STOP 再切 TX/RX,最后 EXIT**。状态机不正确会出错。
+- 要用 **[SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)**。
+- **必须先 ENTER 再 TX/RX，先 STOP 再切 TX/RX，最后 EXIT**。状态机不正确会出错。
 
 ---
 
@@ -321,7 +308,7 @@ LOG_I("err_bit=%d total_bit=%d err_pkt=%d total_pkt=%d rssi=%d",
 
 ### 4.1 拓扑
 
-所有 BLE RF 测试通过 DUT 与综测仪之间的串口传 3 条 HCI 命令(`LE_Transmitter_Test` / `LE_Receiver_Test` / `LE_Test_End`)完成。固件侧只有这一条路径,即 UART 切 HCI 透传:
+所有 BLE RF 测试通过 DUT 与综测仪之间的串口传 3 条 HCI 命令(`LE_Transmitter_Test` / `LE_Receiver_Test` / `LE_Test_End`)完成。固件侧只有这一条路径，即 UART 切 HCI 透传：
 
 ```{figure} assert/ble_signaling_test.png
 :align: center
@@ -329,7 +316,7 @@ LOG_I("err_bit=%d total_bit=%d err_pkt=%d total_pkt=%d rssi=%d",
 BLE DTM 测试拓扑
 ```
 
-DUT 与综测仪通过串口连接,综测仪发 HCI 命令控制 DUT 进入 TX/RX;PC 上的 RF 测试工具同时控制 DUT 与综测仪的收发。
+DUT 与综测仪通过串口连接，综测仪发 HCI 命令控制 DUT 进入 TX/RX；PC 上的 RF 测试工具同时控制 DUT 与综测仪的收发。
 
 ### 4.2 如何使用
 
@@ -339,7 +326,7 @@ DUT 与综测仪通过串口连接,综测仪发 HCI 命令控制 DUT 进入 TX/R
 | API | `ble_enter_dut_mode(ble_dut_mode_t *)` |
 | 标准 HCI(经 UART 透传) | `HCI_LE_Transmitter_Test`(0x201E)/ `HCI_LE_Receiver_Test v2`(0x2033)/ `HCI_LE_Test_End`(0x201F) |
 
-头文件: `bf0_ble_common.h`
+头文件： `bf0_ble_common.h`
 
 ### 4.3 数据结构
 
@@ -364,7 +351,7 @@ enum gap_pkt_pld_type {
 
 ### 4.4 通过 API 直发
 
-> **`bt_enter_no_signal_dut_mode` 与 `ble_enter_dut_mode` 都是异步的**(实现见 `bf0_bt_common.c:769` / `:793`)。两条命令分别投递到 COMMON / GAPM 两个不同任务队列,**不能假设按调用顺序串行完成**。完成事件:
+> **`bt_enter_no_signal_dut_mode` 与 `ble_enter_dut_mode` 都是异步的**(实现见 `bf0_bt_common.c:769` / `:793`)。两条命令分别投递到 COMMON / GAPM 两个不同任务队列，**不能假设按调用顺序串行完成**。完成事件：
 > - ENTER 完成 → `BT_NS_DUT_RSP`(`op == BT_TEST_OP_ENTER_TEST`)
 > - TX 启动完成 → `BLE_DUT_TX_START_CNF`
 > - RX 启动完成 → `BLE_DUT_RX_START_CNF`
@@ -443,7 +430,7 @@ msh > bt_rftest exit
 
 ### 4.6 通过 HCI 透传(综测仪直驱)
 
-如果用 CMW500 这种标准仪器,不调 API,直接发 HCI:
+如果用 CMW500 这种标准仪器，不调 API，直接发 HCI：
 
 ```
 1. msh > bt_cm uart_dut       # 切 UART 为 HCI 透传
@@ -479,17 +466,17 @@ case BLE_DUT_END_IND: {
 
 ### 4.8 注意
 
-- **不需要 `gap_enb_dut_mode_req`**:BLE DTM 是非信令的,不需要置 BT Classic 的"允许"标志。
-- **TX 测试 packet_count 总是 0**(spec 规定),只有 RX 才有意义。
-- BLE 和 BT Classic 共射频,**不能并行**。
+- **不需要 `gap_enb_dut_mode_req`**：BLE DTM 是非信令的，不需要置 BT Classic 的"允许"标志。
+- **TX 测试 packet_count 总是 0**(spec 规定)，只有 RX 才有意义。
+- BLE 和 BT Classic 共射频，**不能并行**。
 
 ---
 
 ## 5. 单项测试 (SiFli_RfTool)
 
-研发阶段 RF 板级调优、法规预测试用。工程师通过 PC 端 **[SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)** 向 DUT 串口发送底层控制指令,精确控制射频行为(单载波、特定调制信号、固定信道/功率),配合频谱仪、功率计等仪器逐项测量。
+研发阶段 RF 板级调优、法规预测试用。工程师通过 PC 端 **[SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)** 向 DUT 串口发送底层控制指令，精确控制射频行为(单载波、特定调制信号、固定信道/功率)，配合频谱仪、功率计等仪器逐项测量。
 
-**工具位置**:`tools/SiFli_RfTool/SiFli_RfTool.exe`,SDK 自带,免安装直运行(Windows),**无需向 FAE 申请**。
+**工具位置**：`tools/SiFli_RfTool/SiFli_RfTool.exe`，可在Windows直接运行。
 
 详细的单项测试步骤详见[思澈SF32LB5xx芯片蓝牙单项测试指南](思澈SF32LB5xx芯片蓝牙单项测试指南.md)。
 ### 5.1 入口
@@ -499,7 +486,7 @@ case BLE_DUT_END_IND: {
 | FinSH | `bt_cm uart_dut`(置 DUT 允许位 + 切 UART 为 HCI 透传) |
 | API | 与第 2 章相同(`gap_enb_dut_mode_req` + `uart_ipc_path_change`) |
 
-固件侧切完后,SiFli_RfTool 通过串口发底层 HCI / vendor 命令逐项控制。固件本身不需要写额外的逻辑,只需要把 UART 路径让出来。
+固件侧切完后，SiFli_RfTool 通过串口发底层 HCI / vendor 命令逐项控制。固件本身不需要写额外的逻辑，只需要把 UART 路径让出来。
 
 ### 5.2 用法
 
@@ -509,7 +496,7 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 
 ## 6. RF 调试串口与波特率
 
-各芯片默认 RF 调试串口与引脚映射(默认波特率 **1000000**):
+各芯片默认 RF 调试串口与引脚映射(默认波特率 **1000000**)：
 
 | 芯片型号 | 接口类型 | 引脚 | UART 通道(TX / RX) | 备注 |
 |---|---|---|---|---|
@@ -522,9 +509,9 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 | SF32LB52x | RF 调试串口 | PA19、PA18 | UART1: TX(PA19) / RX(PA18) | 与软件烧录口共用引脚 |
 | SF32LB58x | RF 调试串口 | PA31、PA32 | UART1: TX(PA31) / RX(PA32) | |
 
-> SF32LB55X 系列由于历史原因,**单载波测试**需切到 UART3。其他芯片所有 RF 测试统一在 UART1。
+> SF32LB55X 系列由于历史原因，**单载波测试**需切到 UART3。其他芯片所有 RF 测试统一在 UART1。
 
-综测仪(MT88 系列、CMW 系列)在 HCI over UART 配置里要匹配此波特率(默认 1Mbps)。如果链路不稳可以降到 921600 / 460800 / 115200,综测仪侧同步降。
+综测仪(MT88 系列、CMW 系列)在 HCI over UART 配置里要匹配此波特率(默认 1Mbps)。如果链路不稳可以降到 921600 / 460800 / 115200，综测仪侧同步降。
 
 ---
 
@@ -532,7 +519,7 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 
 ### 7.1 支持的功率档位
 
-芯片 PA 工艺上稳定输出的几个档位(其他 dBm 值会被内部量化到最近档位):
+芯片 PA 工艺上稳定输出的几个档位(其他 dBm 值会被内部量化到最近档位)：
 
 | 档位 | 备注 |
 |---|---|
@@ -543,7 +530,7 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 | 13 dBm | |
 | 19 dBm | **仅BR&BLE支持19dbm** |
 
-> 软件 API(`pwr_lvl`、Kconfig `BT_TX_POWER_VAL_*`)接受任意整数 dBm,不是档位索引;运行时由 controller 量化到最接近的硬件档。
+> 软件 API(`pwr_lvl`、Kconfig `BT_TX_POWER_VAL_*`)接受任意整数 dBm，不是档位索引;运行时由 controller 量化到最接近的硬件档。
 
 ### 7.2 menuconfig 配置
 
@@ -551,21 +538,21 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 (Top) → SiFli SDK configuration → Board Config → Select BT RF TX power
 ```
 
-Kconfig 字段都是 **`int` 类型,直接填 dBm 整数**(参考 [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103))。新平台(52X/56X/58X)取值范围 0~13 dBm;老平台 BLE 取值范围 -10~10 dBm。
+Kconfig 字段都是 **`int` 类型，直接填 dBm 整数**(参考 [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103))。新平台(52X/56X/58X)取值范围 0~13 dBm;老平台 BLE 取值范围 -10~10 dBm。
 
 | 选项 | 含义 |
 |---|---|
 | Select BLE MAX TX power | BLE 最大发送功率(dBm 整数) |
 | Select MINIMUM TX power | BR/EDR/BLE 最小发送功率(dBm 整数) |
-| Select classic BT MAX TX power | BR/EDR 最大发送功率(dBm 整数);若该值小于 BLE 最大功率,则 BR/EDR 最大功率与 BLE 一致,否则取此值 |
+| Select classic BT MAX TX power | BR/EDR 最大发送功率(dBm 整数);若该值小于 BLE 最大功率，则 BR/EDR 最大功率与 BLE 一致，否则取此值 |
 
-非信令测试 TX 命令的 `pwr_lvl` 字段语义与上面这些 Kconfig 字段一致,**直接的 dBm 数值,不是档位索引**。
+非信令测试 TX 命令的 `pwr_lvl` 字段语义与上面这些 Kconfig 字段一致，**直接的 dBm 数值，不是档位索引**。
 
 ---
 
 ## 8. HCI 命令速查
 
-下面是常用的 BT/BLE RF 测试相关 HCI 命令一览:
+下面是常用的 BT/BLE RF 测试相关 HCI 命令一览：
 
 ```{figure} assert/hci_cmd.png
 :align: center
@@ -573,7 +560,7 @@ Kconfig 字段都是 **`int` 类型,直接填 dBm 整数**(参考 [customer/boar
 HCI 命令集
 ```
 
-部分关键 opcode:
+部分关键 opcode：
 
 | 命令 | OGF/OCF | 完整 opcode (LE) |
 |---|---|---|
@@ -584,13 +571,13 @@ HCI 命令集
 | LE Transmitter Test | 0x08 / 0x001E | `01 1E 20 03 ch len pld` |
 | LE Test End | 0x08 / 0x001F | `01 1F 20 00` |
 
-更详细的命令参数和响应字段参考 [Bluetooth Core Specification](https://www.bluetooth.com/specifications/specs/) Volume 4 Part E (HCI)。SiFli 私有 vendor 命令(BT 非信令测试用)不属于 SIG 标准,封装在第 3 章的 API 内,无需直接拼字节。
+更详细的命令参数和响应字段参考 [Bluetooth Core Specification](https://www.bluetooth.com/specifications/specs/) Volume 4 Part E (HCI)。SiFli 私有 vendor 命令(BT 非信令测试用)不属于 SIG 标准，封装在第 3 章的 API 内，无需直接拼字节。
 
 ---
 
-## 9. 三种测试态共射频,不能并行
+## 9. 三种测试态不能并行
 
-LCPU 只有一套射频前端,任何时刻只能在一种测试态里:
+LCPU 只有一套射频前端，任何时刻只能在一种测试态里：
 
 ```
 正常运行态  ──[gap_enb_dut_mode_req]──→  BT 信令 DUT 准备态
@@ -598,19 +585,19 @@ LCPU 只有一套射频前端,任何时刻只能在一种测试态里:
             ──[ble_enter_dut_mode(TX_START)]──→  BLE DTM 测试态
 ```
 
-**切换原则**:
+**切换原则**：
 
-- 进入任意测试态前,如果之前是其他测试态,必须先 EXIT 退干净
-- BT 信令 DUT 和 BT 非信令互斥,要切先 EXIT
-- BLE DTM 和 BT 非信令互斥(共用 ENTER 状态),要切先 EXIT 再 ENTER
+- 进入任意测试态前，如果之前是其他测试态，必须先 EXIT 退干净
+- BT 信令 DUT 和 BT 非信令互斥，要切先 EXIT
+- BLE DTM 和 BT 非信令互斥(共用 ENTER 状态)，要切先 EXIT 再 ENTER
 
 ---
 
 ## 10. 在产品里自定义测试入口
 
-如果你想在自己的产品里增加"通过私有协议命令触发 RF 测试"的能力(比如产线工位发一条命令模组就进 DUT),可以参考下面两个模板。
+如果你想在自己的产品里增加"通过私有协议命令触发 RF 测试"的能力(比如产线工位发一条命令模组就进 DUT)，可以参考下面两个模板。
 
-**模板 A:置 BT Classic DUT 允许位,UART 不动。退出靠复位。**
+**模板 A：置 BT Classic DUT 允许位，UART 不动。退出靠复位。**
 
 ```c
 void product_enter_bt_signaling_dut(void)
@@ -620,9 +607,9 @@ void product_enter_bt_signaling_dut(void)
 }
 ```
 
-**模板 B:把业务 UART 切成 HCI H4 透传给 CMW500 用。**
+**模板 B：把业务 UART 切成 HCI H4 透传给 CMW500 用。**
 
-调用方运行的线程之后**不能再回主循环访问该 UART**,否则下一次 `rt_device_read(NULL)` 会断言。必须释放 UART + 永久挂起当前线程:
+调用方运行的线程之后**不能再回主循环访问该 UART**，否则下一次 `rt_device_read(NULL)` 会断言。必须释放 UART + 永久挂起当前线程：
 
 ```c
 extern void uart_ipc_path_change(void);
@@ -645,17 +632,17 @@ void product_enter_hci_passthrough(void)
 }
 ```
 
-`my_app_release_uart()` 的实现要做的事:
+`my_app_release_uart()` 的实现要做的事：
 
 - 让你的接收线程感知到"该退出了"(标志位或 sem)
 - `rt_device_set_rx_indicate(dev, RT_NULL)`
 - `rt_device_close(dev)`
 
-发送类 API(产品自己的 `xxx_uart_send`)在被释放后必须有 NULL 检查,否则后续事件上报会触发空指针。
+发送类 API(产品自己的 `xxx_uart_send`)在被释放后必须有 NULL 检查，否则后续事件上报会触发空指针。
 
 ### 10.1 命令 handler 挂在哪
 
-挂载点取决于你产品的命令系统:
+挂载点取决于你产品的命令系统：
 
 | 命令系统 | 挂载方式 |
 |---|---|
@@ -664,18 +651,18 @@ void product_enter_hci_passthrough(void)
 | 二进制私有协议 | 加到 opcode 分发 switch;handler 跑在协议解析线程 |
 | BLE/SPP 远程触发 | 在 GATT write callback 或 SPP data 回调里调 |
 
-**注意 handler 的运行线程上下文**:模板 B 的 `rt_thread_suspend(rt_thread_self())` 挂的是**调用 `uart_ipc_path_change()` 这条指令所在的线程**。如果你的 handler 跑在协议解析线程上(典型场景),挂的就是这条线程,之后该线程上的所有后续处理逻辑都不再运行,这是预期行为。
+**注意 handler 的运行线程上下文**：模板 B 的 `rt_thread_suspend(rt_thread_self())` 挂的是**调用 `uart_ipc_path_change()` 这条指令所在的线程**。如果你的 handler 跑在协议解析线程上(典型场景)，挂的就是这条线程，之后该线程上的所有后续处理逻辑都不再运行，这是预期行为。
 
-如果不希望整个协议处理线程被冻住,可以**派生一个临时一次性线程**专门跑模板 B 的逻辑,在那个临时线程里挂起;但这种做法收益不大,因为切完 UART 后协议解析线程也没活可干了(UART 不归它了),挂哪条都一样。
+如果不希望整个协议处理线程被冻住，可以**派生一个临时一次性线程**专门跑模板 B 的逻辑，在那个临时线程里挂起;但这种做法收益不大，因为切完 UART 后协议解析线程也没活可干了(UART 不归它了)，挂哪条都一样。
 
 ### 10.2 调用前置条件
 
-模板 A/B 都需要 **BT 协议栈已就绪**:
+模板 A/B 都需要 **BT 协议栈已就绪**：
 
-- `sifli_ble_enable()` 已调用,**且** `BLE_POWER_ON_IND` 事件已上来
-- 当前工作模式包含 BT Classic(双模或 BT-only)时,`bt_interface_set_scan_mode(1, 1)` 已生效
+- `sifli_ble_enable()` 已调用，**且** `BLE_POWER_ON_IND` 事件已上来
+- 当前工作模式包含 BT Classic(双模或 BT-only)时，`bt_interface_set_scan_mode(1, 1)` 已生效
 
-如果产品上电流程里这些步骤异步完成,**handler 内必须挡一道**:
+如果产品上电流程里这些步骤异步完成，**handler 内必须挡一道**：
 
 ```c
 extern app_env_t *app_get_env(void);   /* 你产品里维护栈状态的方式 */
@@ -697,53 +684,53 @@ static void product_enter_dut(void)
 
 ## 11. HCI 透传后的数据通路转换
 
-模板 B 调完 `uart_ipc_path_change()` 之后,该 UART 上发生的变化要心里有数,否则容易踩坑:
+模板 B 调完 `uart_ipc_path_change()` 之后，该 UART 上发生的变化要心里有数，否则容易踩坑：
 
 ### 11.1 发生了什么
 
 | 切换前 | 切换后 |
 |---|---|
-| RX 数据由你的协议解析线程消费 | RX 数据由 SDK 的 `fwd2mb` 线程读取,直接送 mailbox 到 LCPU |
+| RX 数据由你的协议解析线程消费 | RX 数据由 SDK 的 `fwd2mb` 线程读取，直接送 mailbox 到 LCPU |
 | TX 由你的协议代码 `rt_device_write` | TX 由 SDK 的 `fwd2uart` 线程从 mailbox 取数据写入 |
 | `rx_indicate` 是你的回调 | `rx_indicate` 被 SDK 替换成 `hci_trans_uart_rx_ind` |
-| log 输出经 ulog → console UART(可能就是这条) | 如果切的是 console UART,`log_pause(true)` 已被调,log 静默 |
+| log 输出经 ulog → console UART(可能就是这条) | 如果切的是 console UART，`log_pause(true)` 已被调，log 静默 |
 | UART 上是文本协议 / 私有协议 | UART 上是 **HCI H4 二进制流** |
 
 ### 11.2 切换后必须避免的事
 
-- **不要再调任何之前的 `xxx_uart_send` / `xxx_uart_send_str`**:即使加了 NULL 检查不崩溃,这些字节如果误写入 UART 也会被 SDK 误当成 HCI command 转发到 LCPU。LCPU 按 H4 帧格式解析后会得到非法 opcode 或非法长度,轻则返回 `Unknown HCI Command (0x01)` / `Invalid HCI Parameters (0x12)`,重则导致后续合法 HCI 命令的字节流被前一个错误帧的 `param_len` 截断,出现命令丢失或响应错位
-- **不要再触发任何 log 打印到这条 UART**:`log_pause(true)` 暂停了 ulog 框架,但如果你绕过 ulog 直接 `rt_kprintf`,字节会泄漏到 HCI 流里污染上位机
-- **不要往这条 UART 再上报事件**:断开/连接事件、心跳等周期性输出必须停掉
+- **不要再调任何之前的 `xxx_uart_send` / `xxx_uart_send_str`**：即使加了 NULL 检查不崩溃，这些字节如果误写入 UART 也会被 SDK 误当成 HCI command 转发到 LCPU。LCPU 按 H4 帧格式解析后会得到非法 opcode 或非法长度，轻则返回 `Unknown HCI Command (0x01)` / `Invalid HCI Parameters (0x12)`，重则导致后续合法 HCI 命令的字节流被前一个错误帧的 `param_len` 截断，出现命令丢失或响应错位
+- **不要再触发任何 log 打印到这条 UART**：`log_pause(true)` 暂停了 ulog 框架，但如果你绕过 ulog 直接 `rt_kprintf`，字节会泄漏到 HCI 流里污染上位机
+- **不要往这条 UART 再上报事件**：断开/连接事件、心跳等周期性输出必须停掉
 
 ### 11.3 切换后能做的事
 
-- **从这条 UART 收 HCI command**(由仪器/PC 脚本发,opcode 编码与第 8 节表一致,`OGF/OCF` 拼为 16-bit 值):
-  - 标准 BLE DTM:`HCI_LE_Transmitter_Test`(`0x08/0x001E`)、`HCI_LE_Receiver_Test v2`(`0x08/0x0033`)、`HCI_LE_Test_End`(`0x08/0x001F`)
-  - 通用 HCI:`HCI_Reset`(`0x03/0x0003`)、`HCI_Read_BD_Addr`(`0x04/0x0009`)等
-  - SiFli 私有 BT 非信令 vendor:见第 3 章
-- **从这条 UART 看 HCI event**:每条 command 应当返回 Command Complete event(type `0x04`,event code `0x0E`)
+- **从这条 UART 收 HCI command**(由仪器/PC 脚本发，opcode 编码与第 8 节表一致，`OGF/OCF` 拼为 16-bit 值)：
+  - 标准 BLE DTM：`HCI_LE_Transmitter_Test`(`0x08/0x001E`)、`HCI_LE_Receiver_Test v2`(`0x08/0x0033`)、`HCI_LE_Test_End`(`0x08/0x001F`)
+  - 通用 HCI：`HCI_Reset`(`0x03/0x0003`)、`HCI_Read_BD_Addr`(`0x04/0x0009`)等
+  - SiFli 私有 BT 非信令 vendor：见第 3 章
+- **从这条 UART 看 HCI event**：每条 command 应当返回 Command Complete event(type `0x04`，event code `0x0E`)
 
 ### 11.4 H4 帧格式速查
 
-发送(host → controller):
+发送(host → controller)：
 
 ```
 | type | opcode_lo | opcode_hi | param_len | params... |
 | 0x01 |  XX       |    XX     |    XX     |   ....    |
 ```
 
-接收(controller → host):
+接收(controller → host)：
 
 ```
 | type | event_code | param_len | params... |
 | 0x04 |    0x0E    |    XX     |   ....    |  ← Command Complete
 ```
 
-opcode 是小端 16 位,例如 `LE_Transmitter_Test` 是 `0x201E`,串行格式 `1E 20`。
+opcode 是小端 16 位，例如 `LE_Transmitter_Test` 是 `0x201E`，串行格式 `1E 20`。
 
 ### 11.5 切回业务态
 
-SDK 提供软逆操作 `uart_ipc_path_revert()`(实现见 `bluetooth_config.c:1634`),可在不复位的情况下还原:
+SDK 提供软逆操作 `uart_ipc_path_revert()`(实现见 `bluetooth_config.c:1634`)，可在不复位的情况下还原：
 
 ```c
 extern void uart_ipc_path_revert(void);
@@ -757,37 +744,37 @@ uart_ipc_path_revert();
 */
 ```
 
-**注意软切回的局限**:
+**注意软切回的局限**：
 
-- `uart_ipc_path_revert` 不会销毁 `f2mb_th` / `f2uart_th` 转发线程,这两条线程持续存在,只是因 `trans_en=0` 不再搬数据
-- 不会调用 `rt_device_close`,UART 设备 ref_cnt 没还原
-- 后续业务代码若要重新接管 UART(`rt_device_open` / 设新 `rx_indicate`),需要确保自身重入逻辑没有依赖"设备此前未被打开"
+- `uart_ipc_path_revert` 不会销毁 `f2mb_th` / `f2uart_th` 转发线程，这两条线程持续存在，只是因 `trans_en=0` 不再搬数据
+- 不会调用 `rt_device_close`，UART 设备 ref_cnt 没还原
+- 后续业务代码若要重新接管 UART(`rt_device_open` / 设新 `rx_indicate`)，需要确保自身重入逻辑没有依赖"设备此前未被打开"
 
-如果产线流程要求"测完 RF 后彻底回到业务态、不留 SDK 后台线程",仍建议走复位路径;`uart_ipc_path_revert` 适合调试/开发时反复切换,不必每次重启硬件。
+如果产线流程要求"测完 RF 后彻底回到业务态、不留 SDK 后台线程"，仍建议走复位路径;`uart_ipc_path_revert` 适合调试/开发时反复切换，不必每次重启硬件。
 
 ---
 
 ## 12. 验证你的实现是否正确
 
-按下面顺序验证,任何一步失败都不要往下走。
+按下面顺序验证
 
 ### 12.1 命令本身能调通
 
-发命令 → 看 console 是否有 `BTS2MU_GAP_ENB_DUT_MODE_CFM` handler 打的这一行(以 BT 信令 DUT 为例):
+发命令 → 看 console 是否有 `BTS2MU_GAP_ENB_DUT_MODE_CFM` handler 打的这一行(以 BT 信令 DUT 为例)：
 
 ```
 D/btapp_ge:  << enb DUT mode : <step_num>
 ```
 
-实现位置:[bts2_app_generic.c:1738-1752](D:/OpenSiFli/SiFli-SDK/middleware/bluetooth/service/bt/bt_finsh/bts2_app_generic.c#L1738-L1752)。`<step_num>` 是步骤计数,具体数字依实现而定,不应当作固定值校验。**判定标准是:出现这条日志,且没有伴随出现 `<< failed to enb DUT mode!`**(后者由 `res != BTS2_SUCC` 触发)。
+实现位置：[bts2_app_generic.c:1738-1752](D:/OpenSiFli/SiFli-SDK/middleware/bluetooth/service/bt/bt_finsh/bts2_app_generic.c#L1738-L1752)。`<step_num>` 是步骤计数，具体数字依实现而定，不应当作固定值校验。**判定标准是：出现这条日志，且没有伴随出现 `<< failed to enb DUT mode!`**(后者由 `res != BTS2_SUCC` 触发)。
 
-**没看到任一条**就是命令没走到 LCPU,往回查 `BLE_POWER_ON_IND` 时序、协议栈是否启动、handler 是否真的执行、`CONFIG_BT_FINSH=y` 是否打开(否则不会有这条 trace)。
+**没看到任一条**就是命令没走到 LCPU，往回查 `BLE_POWER_ON_IND` 时序、协议栈是否启动、handler 是否真的执行、`CONFIG_BT_FINSH=y` 是否打开(否则不会有这条 trace)。
 
 
 
 ### 12.2 scan mode 状态确认
 
-`gap_enb_dut_mode_req` 不会自动开 scan,DUT 是否被仪器搜到取决于 host 此前是否调过 `bt_interface_set_scan_mode(1, 1)` 或 `gap_wr_scan_enb_req(tid, 1, 1)`。读出当前缓存值确认:
+`gap_enb_dut_mode_req` 不会自动开 scan，DUT 是否被仪器搜到取决于 host 此前是否调过 `bt_interface_set_scan_mode(1, 1)` 或 `gap_wr_scan_enb_req(tid, 1, 1)`。读出当前缓存值确认：
 
 ```c
 uint8_t scan = bt_interface_get_current_scan_mode();
@@ -795,47 +782,46 @@ LOG_I("scan mode = %d", scan);
 /* 0 = 都没开;1 = 仅 inquiry;2 = 仅 page;3 = inquiry+page 都开 */
 ```
 
-如果发 DUT 命令前 host 已设过 scan_mode=3,这里期望读到 3;否则按实际 scan 状态返回。读到非 3 就说明你的初始化流程没把 scan 开起来,先补 `bt_interface_set_scan_mode(1, 1)` 再发 DUT 命令。
+如果发 DUT 命令前 host 已设过 scan_mode=3，这里期望读到 3;否则按实际 scan 状态返回。读到非 3 就说明你的初始化流程没把 scan 开起来，先补 `bt_interface_set_scan_mode(1, 1)` 再发 DUT 命令。
 
 ### 12.3 HCI 透传链路验证(模板 B)
 
-切完 UART 后,用 PC 串口工具(切到 hex 模式)发 HCI Reset:
+切完 UART 后，用 PC 串口工具(切到 hex 模式)发 HCI Reset：
 
 ```
 TX: 01 03 0C 00
 RX: 04 0E 04 XX 03 0C 00
 ```
 
-收到回应说明 HCI 透传链路通了。`XX` 是 num_hci_cmd_packets 字段,任意值;关键是开头 `04 0E` (Command Complete event)和末尾 `03 0C 00`(关联到 HCI_Reset opcode + status 0)。
+收到回应说明 HCI 透传链路通了。`XX` 是 num_hci_cmd_packets 字段，任意值;关键是开头 `04 0E` (Command Complete event)和末尾 `03 0C 00`(关联到 HCI_Reset opcode + status 0)。
 
-进一步发 LE Transmitter Test:
+进一步发 LE Transmitter Test：
 
 ```
 TX: 01 1E 20 03 13 25 00      LE_Transmitter_Test ch19, 37B, PRBS9
 RX: 04 0E 04 XX 1E 20 00       Command Complete, status 0
 ```
 
-控制器开始在 ch19 持续发包,此时拿频谱仪或 CMW500 能看到 2440MHz 上有信号。
+控制器开始在 ch19 持续发包，此时拿频谱仪或 CMW500 能看到 2440MHz 上有信号。
 
 ### 12.4 完整 RF 指标验证
 
-接 CMW500(或 R&S CBT、Anritsu MT8852B 等同类),按 SIG DTM 标准跑测试套件,看 TX power、频偏、PER 是否在 spec 范围内。这一步在仪器上完成,不需要你写代码。
+接 CMW500(或 R&S CBT、Anritsu MT8852B 等同类)，按 SIG DTM 标准跑测试套件，看 TX power、频偏、PER 是否在 spec 范围内。这一步在仪器上完成，不需要你写代码。
 
 ---
 
 ## 13. 完整集成流程示例
 
-假设你已有一个 RT-Thread + SiFli SDK 的工程,自己跑一套命令系统(本节通用,不限于 finsh / 自定义协议)。下面给一个完整集成"DUT 测试命令"的步骤,以**模板 A(信令 DUT,UART 不切)** 为例。
+假设你已有一个 RT-Thread + SiFli SDK 的工程，自己跑一套命令系统(本节通用，不限于 finsh / 自定义协议)。下面给一个完整集成"DUT 测试命令"的步骤，以**模板 A(信令 DUT，UART 不切)** 为例。
 
-### Step 1:proj.conf 加配置
+### Step 1：proj.conf 加配置
 
 ```
 CONFIG_BT_FINSH=y
 CONFIG_RT_USING_FINSH=y
-# 模板 A 不需要 CONFIG_BT_RF_TEST=y;模板 B 才需要
 ```
 
-### Step 2:在你的命令处理代码里加 handler
+### Step 2：在你的命令处理代码里加 handler
 
 ```c
 #include "bts2_app_inc.h"     /* 含 gap_api.h */
@@ -864,32 +850,32 @@ static void cmd_dut_handler(...)
 
 `s_dut_armed` 标志位用于阻止重复调用造成 LCPU 状态混乱。
 
-### Step 3:挂载到命令分发
+### Step 3：挂载到命令分发
 
-按你工程的命令系统:
-- finsh:`MSH_CMD_EXPORT(cmd_dut_handler, enter BT signaling DUT mode)`
-- 命令表分发:加一行 `{ "DUT", cmd_dut_handler }`
-- BLE/SPP 远程触发:在收到特定 opcode 时调用
+按你工程的命令系统：
+- finsh：`MSH_CMD_EXPORT(cmd_dut_handler, enter BT signaling DUT mode)`
+- 命令表分发：加一行 `{ "DUT", cmd_dut_handler }`
+- BLE/SPP 远程触发：在收到特定 opcode 时调用
 
-### Step 4:重编重烧 + 上电
+### Step 4：重编重烧 + 上电
 
-确认上电流程跑完,业务命令(任意一条已有命令)能正常响应,以此证明协议栈和命令系统已就绪。
+确认上电流程跑完，业务命令(任意一条已有命令)能正常响应，以此证明协议栈和命令系统已就绪。
 
-### Step 5:发 DUT 命令
+### Step 5：发 DUT 命令
 
-收到 `OK` 响应后立刻看 console 日志,期望看到 12.1 节描述的 `<< enb DUT mode : <step_num>`,且没有伴随 `<< failed to enb DUT mode!`。
+收到 `OK` 响应后立刻看 console 日志，期望看到 12.1 节描述的 `<< enb DUT mode : <step_num>`，且没有伴随 `<< failed to enb DUT mode!`。
 
-### Step 6:接仪器跑测试
+### Step 6：接仪器跑测试
 
-CMW500 配 Bluetooth Signaling 测试模块,DUT Connection 选 BD Address(用 `Read_BD_Addr` 读出来填进去),启动测试套件。仪器自动走 inquiry → page → ACL → LMP_test_control,跑完整 BQB 测试矩阵。
+CMW500 配 Bluetooth Signaling 测试模块，DUT Connection 选 BD Address(用 `Read_BD_Addr` 读出来填进去)，启动测试套件。仪器自动走 inquiry → page → ACL → LMP_test_control，跑完整 BQB 测试矩阵。
 
-### Step 7:退出测试
+### Step 7：退出测试
 
 复位芯片即可。
 
 ---
 
-如果做的是模板 B(HCI 透传),Step 1 还要加 `CONFIG_BT_RF_TEST=y` 和 IPC UART 配置(见第 1 章);Step 2 的 handler 内容换成模板 B 代码 + 实现 `my_app_release_uart()`;Step 5 之后改用 12.3 节的 PC 脚本验证;Step 6 直接接仪器到那条切走的 UART(不需要走 BT Address 流程,仪器直接发 HCI 命令)。
+如果做的是模板 B(HCI 透传)，Step 1 还要加 IPC UART 配置(见第 1 章);Step 2 的 handler 内容换成模板 B 代码 + 实现 `my_app_release_uart()`;Step 5 之后改用 12.3 节的 PC 脚本验证;Step 6 直接接仪器到那条切走的 UART(不需要走 BT Address 流程，仪器直接发 HCI 命令)。
 
 ---
 
@@ -900,12 +886,12 @@ CMW500 配 Bluetooth Signaling 测试模块,DUT Connection 选 BD Address(用 `R
 | 调 `gap_enb_dut_mode_req` 没反应 | 协议栈没起来 | 等 `BLE_POWER_ON_IND` 后再调 |
 | `<< enb DUT mode` 日志没出现 | LCPU 没收到命令 | 检查 mailbox / sifli_msg_send 是否正常 |
 | `bt_rftest enter` 后 `bttx` 报 "please enter test mode first" | 状态机被打乱 | 重新 reset 走流程 |
-| `bt_cm uart_dut` 后没任何 HCI 响应 | `CONFIG_BT_RF_TEST=y` 没开,该命令分支不会调用 `uart_ipc_path_change` | 查 `.config`,确认 `BT_RF_TEST=y`;或绕过 finsh,直接调 `uart_ipc_path_change()` API |
+| `bt_cm uart_dut` 后没任何 HCI 响应 | `CONFIG_BT_RF_TEST=y` 没开，该命令分支不会调用 `uart_ipc_path_change` | 查 `.config`，确认 `BT_RF_TEST=y`;或绕过 finsh，直接调 `uart_ipc_path_change()` API |
 | `uart_ipc_path_change` 后 controller 收不到命令 | UART 还被原协议栈线程占着 | 切之前先 close device + 解绑 rx_indicate |
 | 切完 UART 后 RX 线程断言 `dev != NULL` | 调用线程 return 后回到主循环又访问 device | 调用方必须 `rt_thread_suspend(rt_thread_self())` 永久挂起 |
 | HCI 命令偶尔丢字节 | 1Mbps 在某些 USB-UART 上不稳 | 降到 921600 或 460800 |
 | BLE TX 测试后读 packet_count 是 0 | spec 就是这样 | 只 RX 测试才有 packet_count |
-| 测 BT 非信令时 TX 功率不符合预期 | `pwr_lvl` 是 dBm 整数(典型 0..13),不是档位索引 | 直接填目标 dBm 值,运行时由 controller 量化到 PA 支持的硬件档位(见 §7.1);默认填 10 |
+| 测 BT 非信令时 TX 功率不符合预期 | `pwr_lvl` 是 dBm 整数(典型 0..13)，不是档位索引 | 直接填目标 dBm 值，运行时由 controller 量化到 PA 支持的硬件档位(见 §7.1);默认填 10 |
 
 ---
 
@@ -913,7 +899,7 @@ CMW500 配 Bluetooth Signaling 测试模块,DUT Connection 选 BD Address(用 `R
 
 | 模块 | 文件 |
 |---|---|
-| BT 信令 DUT API | `gap_api.h`(声明),实现在 BT 协议栈 lib(.a)里 |
+| BT 信令 DUT API | `gap_api.h`(声明)，实现在 BT 协议栈 lib(.a)里 |
 | BT 非信令 / BLE DTM API | `bf0_ble_common.h` / `bf0_bt_common.c` |
 | `bt_cm dut` / `bt_cm uart_dut` 实现 | `service/bt/bt_cm/bt_connection_manager.c` 1750–1778 行 |
 | `bt_rftest` 实现 | `service/common/bf0_bt_common.c` 979–1210 行 |
@@ -924,8 +910,8 @@ CMW500 配 Bluetooth Signaling 测试模块,DUT Connection 选 BD Address(用 `R
 
 ## 16. 参考例程与文档
 
-- BT 信令 / 非信令 / 单项 / DTM 测试基础例程:[`example/bt/`](../../../../example/bt/) 下任意 BT 例程,如 [`example/bt/spp/`](../../../../example/bt/spp/)
-- 开机即 HCI 透传例程(综测仪/PC 脚本直驱):[`example/bt/HCI_over_uart/`](../../../../example/bt/HCI_over_uart/)
-- SiFli_RfTool 工具本体:`tools/SiFli_RfTool/SiFli_RfTool.exe`(SDK 自带,免安装)
-- SiFli_RfTool 用户手册: [SiFli_RfTool_UM](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)
-- 单项测试与综测仪操作指南: [思澈 SF32LB5xx 芯片蓝牙单项测试指南](思澈SF32LB5xx芯片蓝牙单项测试指南.md)
+- BT 信令 / 非信令 / 单项 / DTM 测试基础例程：[`example/bt/`](../../../../example/bt/) 下任意 BT 例程，如 [`example/bt/spp/`](../../../../example/bt/spp/)
+- 开机即 HCI 透传例程(综测仪/PC 脚本直驱)：[`example/bt/HCI_over_uart/`](../../../../example/bt/HCI_over_uart/)
+- SiFli_RfTool 工具本体：`tools/SiFli_RfTool/SiFli_RfTool.exe`(SDK 自带，免安装)
+- SiFli_RfTool 用户手册： [SiFli_RfTool_UM](../tools/SiFli_RfTool/SiFli_RfTool_UM.md)
+- 单项测试与综测仪操作指南： [思澈 SF32LB5xx 芯片蓝牙单项测试指南](思澈SF32LB5xx芯片蓝牙单项测试指南.md)
