@@ -1031,7 +1031,7 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
     {
         uint8_t vol_level  = audio_server_get_private_volume(client->audio_type);
         int volumex2 = eq_get_music_volumex2(vol_level);
-        if (my->tx_samplerate == 16000 || my->tx_samplerate == 8000)
+        if (my->tx_samplerate == 16000 || my->tx_samplerate == 8000 || my->is_need_3a)
             volumex2 = eq_get_tel_volumex2(vol_level);
 
         LOG_I("no eq init volume=%d", volumex2);

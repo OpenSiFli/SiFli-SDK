@@ -820,7 +820,7 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
     thiz->is_far_putted = 1;
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     audio_3a_t *thiz = &g_audio_3a_env;
 
@@ -834,7 +834,7 @@ uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
     }
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
     audio_3a_t *thiz = &g_audio_3a_env;
     uint16_t putsize, getsize;

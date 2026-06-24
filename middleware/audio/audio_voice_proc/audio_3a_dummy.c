@@ -58,12 +58,12 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
 {
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     return 0;
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
 }
 

@@ -572,7 +572,6 @@ uint8_t mix_process()
     return 0;
 }
 
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
 void bt_voice_uplink_send()
 {
     //audio_server interface

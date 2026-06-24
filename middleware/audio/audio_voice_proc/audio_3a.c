@@ -449,7 +449,7 @@ int16_t audio_aec_proc(void *aecmInst, aec_input_para_t *pt_input_para, uint16_t
     g_3a_test_cur = audio_get_curr_tick();
 #endif
 
-    if (16000 == samplerate)
+    if (16000 <= samplerate)
     {
         u16_frame_len = 160;
     }
@@ -550,7 +550,7 @@ void audio_agc_proc(void *agcInst, int16_t spframe[160], int16_t outframe[160], 
     g_3a_test_cur = audio_get_curr_tick();
 #endif
 
-    if (16000 == samplerate)
+    if (16000 <= samplerate)
     {
         u16_frame_len = 160;
     }
@@ -593,9 +593,18 @@ void audio_3a_module_init(audio_3a_t *p_3a_env, uint32_t samplerate)
         RT_ASSERT(0);
     }
 #endif
-    g_audio_3a_env.rbuf_out = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 2);
-    g_audio_3a_env.rbuf_far = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 2);
-    g_audio_3a_env.rbuf_dwlink = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 4);
+    if (samplerate == 32000)
+    {
+        g_audio_3a_env.rbuf_out = rt_ringbuffer_create(480 * 2);
+        g_audio_3a_env.rbuf_far = rt_ringbuffer_create(480 * 2);
+        g_audio_3a_env.rbuf_dwlink = rt_ringbuffer_create(480 * 4);
+    }
+    else
+    {
+        g_audio_3a_env.rbuf_out = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 2);
+        g_audio_3a_env.rbuf_far = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 2);
+        g_audio_3a_env.rbuf_dwlink = rt_ringbuffer_create(AUDIO_3A_RINGBUFFER_SIZE * 4);
+    }
     RT_ASSERT(g_audio_3a_env.rbuf_dwlink);
 #ifdef FFT_USING_ONCHIP
     g_fft_env.fft_handle.Instance = hwp_fft1;
@@ -883,7 +892,7 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
     {
         g_audio_3a_env.is_bt_voice = is_bt_voice;
         g_audio_3a_env.disable_uplink_agc = disable_uplink_agc;
-        g_3a_fifo = audio_mem_malloc(240);
+        g_3a_fifo = audio_mem_malloc(480);
         RT_ASSERT(g_3a_fifo);
         LOG_I("3a_w open samplearate=%ld", samplerate);
         if (samplerate == 8000)
@@ -895,8 +904,9 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         else
         {
             g_audio_3a_env.frame_len = 320;
-            g_audio_3a_env.samplerate = 16000;
-            audio_3a_module_init(&g_audio_3a_env, 16000);
+            RT_ASSERT(samplerate == 16000 || samplerate == 32000);
+            g_audio_3a_env.samplerate = samplerate;
+            audio_3a_module_init(&g_audio_3a_env, samplerate);
         }
         g_audio_3a_env.state = 1;
         g_audio_3a_env.is_far_putted = 0;
@@ -969,7 +979,7 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
     }
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     audio_3a_t *p_3a_env = &g_audio_3a_env;
 
@@ -1000,13 +1010,19 @@ void xiaozhi_to_hfp(uint8_t *fifo, uint16_t fifo_size)
         msbc_encode_process(fifo, 120);
 #endif
     }
-    else
+    else if (p_3a_env->samplerate == 16000)
     {
         RT_ASSERT(fifo_size == 240);
 #ifdef AUDIO_BT_AUDIO
         msbc_encode_process(fifo, 240);
 #endif
     }
+#ifdef AUDIO_BT_AUDIO
+    else if (fifo_size == 480)
+    {
+        //lc3_encode_process(fifo, 480);
+    }
+#endif
 }
 
 RT_WEAK int hfp_to_xiaozhi(uint32_t samplerate, uint8_t *data, uint8_t data_len)
@@ -1014,7 +1030,7 @@ RT_WEAK int hfp_to_xiaozhi(uint32_t samplerate, uint8_t *data, uint8_t data_len)
     return 0;
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
     audio_3a_t *p_3a_env = &g_audio_3a_env;
     uint16_t putsize, getsize;
@@ -1124,15 +1140,27 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
             return;
         }
         audio_tick_in(AUDIO_MSBC_ENCODE_TIME);
-        while (rt_ringbuffer_data_len(p_3a_env->rbuf_out) >= 240)
+        uint16_t encode_frame_byte = 240;
+        if (p_3a_env->samplerate == 32000)
         {
-            rt_ringbuffer_get(p_3a_env->rbuf_out, g_3a_fifo, 240);
+            encode_frame_byte = 480;
+        }
+        while (rt_ringbuffer_data_len(p_3a_env->rbuf_out) >= encode_frame_byte)
+        {
+            rt_ringbuffer_get(p_3a_env->rbuf_out, g_3a_fifo, encode_frame_byte);
             if (is_mute)
             {
-                memset(g_3a_fifo, 0, 240);
+                memset(g_3a_fifo, 0, encode_frame_byte);
             }
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(g_3a_fifo, 240);
+            if (p_3a_env->samplerate == 16000)
+            {
+                msbc_encode_process(g_3a_fifo, encode_frame_byte);
+            }
+            else
+            {
+                //lc3_encodde_process(g_3a_fifo, encode_frame_byte);
+            }
 #endif
         }
         audio_tick_out(AUDIO_MSBC_ENCODE_TIME);

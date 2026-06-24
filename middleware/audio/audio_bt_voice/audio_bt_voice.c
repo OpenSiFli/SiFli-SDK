@@ -463,7 +463,6 @@ void bt_voice_uplink_send()
 static uint8_t d_drop_cnt = 0;
 static uint8_t s_packet_cnt = 0;
 static uint8_t size_decode = 0;
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
 void bt_voice_downlink_process(uint8_t is_ready)
 {
     uint8_t need_algo;
@@ -566,7 +565,7 @@ typedef struct bt_sco_data_hdr_tag
 uint8_t g_sco_path_sel = 1;
 static uint8_t s_packet_cnt = 0;
 static uint8_t size_decode = 0;
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
+
 void bt_voice_uplink_send()
 {
     //move to bt_voice_downlink_process
