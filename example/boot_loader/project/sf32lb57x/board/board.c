@@ -160,6 +160,19 @@ static uint8_t board_read_pkgid(void)
 }
 
 #ifdef CFG_BOOTROM
+static uint8_t board_read_ssen(void)
+{
+    uint8_t ssen;
+    int32_t r;
+    const uint32_t *bank0_data;
+
+    bank0_data = sifli_hw_efuse_get_bank0_data();
+    r = HAL_EFUSE_Extract(bank0_data, EFUSE_SSEN_OFFSET, &ssen, EFUSE_SSEN_SIZE);
+    HAL_ASSERT(EFUSE_SSEN_SIZE == r);
+
+    return ssen;
+}
+
 static uint8_t board_get_soc_boot_device(void)
 {
     return GET_REG_VAL2(board_info.pkgid, PKGID_BOOT_DEVICE);
@@ -233,6 +246,22 @@ board_boot_device_type_t board_boot_from(void)
 
     return r;
 }
+
+#ifdef CFG_BOOTROM
+void board_ldo_en_ss_init(void)
+{
+    uint8_t ssen;
+    uint32_t val;
+
+    ssen = board_read_ssen();
+
+    val = MAKE_REG_VAL2(GET_REG_VAL2(ssen, SSEN_LDO18), PMUC_PERI_LDO_LDO18_EN_SS);
+    MODIFY_REG(hwp_pmuc->PERI_LDO, PMUC_PERI_LDO_LDO18_EN_SS_Msk, val);
+
+    val = MAKE_REG_VAL2(GET_REG_VAL2(ssen, SSEN_VDD33_LDO2), PMUC_PERI_LDO_VDD33_LDO2_EN_SS);
+    MODIFY_REG(hwp_pmuc->PERI_LDO, PMUC_PERI_LDO_VDD33_LDO2_EN_SS_Msk, val);
+}
+#endif /* CFG_BOOTROM */
 
 void board_init(void)
 {

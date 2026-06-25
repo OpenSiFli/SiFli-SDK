@@ -599,6 +599,9 @@ static void print_uid(void)
 
     print_boot_info();
 
+    /* init pmcu ldo en ss register according to efuse setting */
+    board_ldo_en_ss_init();
+
     if (!boot_is_bootmode())
     {
         board_init();

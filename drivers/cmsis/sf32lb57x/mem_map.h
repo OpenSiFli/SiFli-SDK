@@ -365,6 +365,10 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 /** UID size  */
 #define EFUSE_UID_SIZE          128
 #define EFUSE_UID_BYTE_SIZE     (EFUSE_UID_SIZE >> 3)
+/** SSEN offset */
+#define EFUSE_SSEN_OFFSET      224
+/** SSEN size */
+#define EFUSE_SSEN_SIZE        2
 /** Package ID offset */
 #define EFUSE_PKGID_OFFSET      228
 /** Package ID size  */
@@ -389,6 +393,24 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #define EFUSE_ROOTKEY_OFFSET          512
 #define EFUSE_ROOTKEY_SIZE            256
 #define EFUSE_ROOTKEY_BYTE_SIZE       (EFUSE_ROOTKEY_SIZE >> 3)
+
+/**
+ * @}
+ */
+
+/*******************************************************************************************
+ * @defgroup SSEN_Definition SSEN Definition
+ * @brief  SSEN Definition
+ * @{
+ *******************************************************************************************/
+/**  SSEN_LDO18 Position */
+#define SSEN_LDO18_Pos        (0U)
+/**  SSEN_LDO18 Mask */
+#define SSEN_LDO18_Msk        (0x1UL << SSEN_LDO18_Pos)
+/**  SSEN_VDD33_LDO2 Position */
+#define SSEN_VDD33_LDO2_Pos   (1U)
+/**  SSEN_VDD33_LDO2 Mask */
+#define SSEN_VDD33_LDO2_Msk   (0x1UL << SSEN_VDD33_LDO2_Pos)
 
 /**
  * @}
