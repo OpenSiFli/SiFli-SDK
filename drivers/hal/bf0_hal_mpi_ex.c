@@ -23,9 +23,30 @@
 #include "flash_table.h"
 
 #define DBG_FOR_FLASH_ID        (0)
+
+#if defined(CFG_FACTORY_DEBUG)
+#undef  DBG_FOR_FLASH_ID
+#define DBG_FOR_FLASH_ID        (1)
+__weak void debug_print(char *str)
+{
+}
+__weak uint8_t *htoa(uint8_t *p, uint32_t d)
+{
+    return p;
+}
+#endif //defined(CFG_FACTORY_DEBUG)
+
 #if DBG_FOR_FLASH_ID
 #define DEBUG_UART_EN       0
 #define DEBUG_JLINK         0
+
+#if defined(CFG_FACTORY_DEBUG)
+    #undef  DEBUG_UART_EN
+    #define DEBUG_UART_EN      (0)
+    #undef  DEBUG_JLINK
+    #define DEBUG_JLINK        (1)
+#endif
+
 #if DEBUG_JLINK
 extern void debug_print(char *str);
 extern uint8_t *htoa(uint8_t *p, uint32_t d);

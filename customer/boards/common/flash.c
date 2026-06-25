@@ -26,7 +26,7 @@ static DMA_HandleTypeDef spi_flash_dma_handle[FLASH_MAX_INSTANCE];
 #ifdef BSP_QSPI2_DUAL_MODE
 QSPI_FLASH_CTX_T flash_ext_handle = {0};
 HAL_RETM_BSS_SECT(gis_ext_flash, static int gis_ext_flash);
-static int g_ext_flash_id = -1;
+int g_ext_flash_id = -1;
 #endif /* BSP_QSPI2_DUAL_MODE */
 
 int8_t Addr2Id(uint32_t addr)

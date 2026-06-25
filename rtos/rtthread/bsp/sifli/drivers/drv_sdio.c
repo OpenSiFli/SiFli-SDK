@@ -111,7 +111,11 @@ static struct rthw_sdio sdio_hw[SDIO_MAX];
 #define RTHW_SDIO_UNLOCK(_sdio) rt_mutex_release(&_sdio->mutex);
 
 ALIGN(SDIO_ALIGN_LEN)
-HAL_RETM_BSS_SECT(cache_buf_pool, static rt_uint8_t cache_buf_pool[SDIO_MAX][SDIO_BUFF_SIZE]);
+#if defined(CFG_FACTORY_DEBUG)
+    HAL_RETM_BSS_SECT(cache_buf_pool, static rt_uint8_t cache_buf_pool[SDIO_MAX][SDIO_BUFF_SIZE / 64]);
+    #esle
+    HAL_RETM_BSS_SECT(cache_buf_pool, static rt_uint8_t cache_buf_pool[SDIO_MAX][SDIO_BUFF_SIZE]);
+#endif
 
 
 static rt_uint32_t sifli_sdio_clk_get(SD_TypeDef *instance)

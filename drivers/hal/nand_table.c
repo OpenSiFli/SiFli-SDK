@@ -616,6 +616,14 @@ FT_CONST FLASH_RDID_TYPE_T *spi_nand_get_rdid(uint8_t fid, uint8_t did, uint8_t 
     if ((fid == FLASH_INVALID_ID) || (fid == FLASH_UNKNOW_ID))
         return NULL;
 
+#if defined(CFG_FACTORY_DEBUG)
+    res = (FLASH_RDID_TYPE_T *)get_user_flash_cfg(1, fid, did, type, flash_type);
+    if (res != NULL)
+    {
+        return res;
+    }
+#endif
+
     for (i = 0; i < NAND_CMD_TABLE_CNT; i++)
     {
         res = nand_cmd_id_pool[i];
@@ -633,11 +641,7 @@ FT_CONST FLASH_RDID_TYPE_T *spi_nand_get_rdid(uint8_t fid, uint8_t did, uint8_t 
 
     if (i == NAND_CMD_TABLE_CNT)
     {
-#if defined(CFG_FACTORY_DEBUG)
-        res = (FLASH_RDID_TYPE_T *)get_user_flash_cfg(1, fid, did, type, flash_type);
-#else
         res = (FT_CONST FLASH_RDID_TYPE_T *)spi_nand_get_user_flash_cfg(fid, did, type, flash_type);
-#endif
     }
     else if (flash_type)
     {

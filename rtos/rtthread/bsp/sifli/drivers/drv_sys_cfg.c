@@ -18,13 +18,18 @@
 
 #include <stdlib.h>
 #define CFG_NAND_FACTORY_MAGIC 0x53450617
-#if BSP_USING_SDIO||RT_USING_SDIO
-    #define CFG_SD_FACTORY_OFF     0x41000
-    #define CFG_SD_FACTORY_SIZE    0x20000
-    #define CFG_SD_FACTORY_BLOCK   0x400
-#endif
-
+#define CFG_SD_FACTORY_OFF     0x41000
+#define CFG_SD_FACTORY_SIZE    0x20000
+#define CFG_SD_FACTORY_BLOCK   0x400
 #define CFG_SUPPORT_NAND_OTP        (0)
+
+#ifdef BSP_USING_SDMMC1
+    #define CFG_SD_FACTORY_ADDR (SDMMC1_MEM_BASE+CFG_SD_FACTORY_OFF)
+#elif defined(BSP_USING_SDMMC2)
+    #define CFG_SD_FACTORY_ADDR (SDMMC2_MEM_BASE+CFG_SD_FACTORY_OFF)
+#else
+    #define CFG_SD_FACTORY_ADDR (SDMMC1_MEM_BASE+CFG_SD_FACTORY_OFF)
+#endif /* BSP_USING_SDMMC1 */
 
 #include "bf0_sys_cfg.h"
 #define CFG_IN_FLASH_OTP
@@ -57,6 +62,12 @@ static int is_onchip_cfg(uint8_t id)
     if (((id >= FACTORY_CFG_ID_ADC) && (id <= FACTORY_CFG_ID_VBUCK)) || (id == FACTORY_CFG_ID_SIPMODE))
         return 1;
 
+#if 0
+    if ((id == FACTORY_CFG_ID_CRYSTAL) || (id == FACTORY_CFG_ID_BATTERY))
+    {
+        return 1;
+    }
+#endif
     return 0;
 }
 
@@ -69,7 +80,25 @@ static int is_onflash_cfg(uint8_t id)
 
 #if defined(CFG_SUPPORT_NON_OTP)
     return 1;
-#else
+#endif
+#if 1
+    return 0;  //all chip(include SF32LB55X) factory data save in otp
+#elif 0
+#ifndef SF32LB55X
+    return 0; // for pro and later version, configure do not save to flash memory
+#endif
+    if ((id == FACTORY_CFG_ID_MAC) ||
+            (id == FACTORY_CFG_ID_SN) ||
+            (id == FACTORY_CFG_ID_LOCALNAME) ||
+            (id == FACTORY_CFG_ID_THIRDFUNC) ||
+            (id == FACTORY_CFG_ID_CTEI) ||
+            ((id >= FACTORY_CFG_ID_ALIPAY_PK) && (id <= FACTORY_CFG_ID_BTNAME)) ||
+            ((id >= FACTORY_CFG_ID_GOMORE) && (id <= FACTORY_CFG_ID_USERK3))
+       )
+    {
+        return 1;
+    }
+
     return 0;
 #endif
 }
@@ -83,16 +112,18 @@ rt_err_t rt_chip_config_init(void)
 #if !defined(CFG_SUPPORT_NON_OTP)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
+    if (cfg_base < 0x60000000)
+    {
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+        int level = rt_hw_interrupt_disable();
+        //rt_flash_lock(cfg_base);
+        res = HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
+        rt_hw_interrupt_enable(level);
+        //rt_flash_unlock(cfg_base);
 
-    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-    int level = rt_hw_interrupt_disable();
-    //rt_flash_lock(cfg_base);
-    res = HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
-    rt_hw_interrupt_enable(level);
-    //rt_flash_unlock(cfg_base);
-
-    if (res == 0)
-        return RT_EOK;
+        if (res == 0)
+            return RT_EOK;
+    }
 #endif
     return RT_ERROR;
 }
@@ -106,16 +137,18 @@ rt_err_t rt_user_config_init(void)
 #if !defined(CFG_SUPPORT_NON_OTP)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
+    if (cfg_base < 0x60000000)
+    {
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+        int level = rt_hw_interrupt_disable();
+        //rt_flash_lock(cfg_base);
+        res = HAL_QSPI_ERASE_OTP(fhandle, CFG_USER_OTP_PAGE << 12);
+        rt_hw_interrupt_enable(level);
+        //rt_flash_unlock(cfg_base);
 
-    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-    int level = rt_hw_interrupt_disable();
-    //rt_flash_lock(cfg_base);
-    res = HAL_QSPI_ERASE_OTP(fhandle, CFG_USER_OTP_PAGE << 12);
-    rt_hw_interrupt_enable(level);
-    //rt_flash_unlock(cfg_base);
-
-    if (res == 0)
-        return RT_EOK;
+        if (res == 0)
+            return RT_EOK;
+    }
 #endif
     return RT_ERROR;
 }
@@ -129,16 +162,18 @@ rt_err_t rt_cust_config_init(void)
 #if !defined(CFG_SUPPORT_NON_OTP)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
+    if (cfg_base < 0x60000000)
+    {
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+        int level = rt_hw_interrupt_disable();
+        //rt_flash_lock(cfg_base);
+        res = HAL_QSPI_ERASE_OTP(fhandle, CFG_CUST_OTP_PAGE << 12);
+        rt_hw_interrupt_enable(level);
+        //rt_flash_unlock(cfg_base);
 
-    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-    int level = rt_hw_interrupt_disable();
-    //rt_flash_lock(cfg_base);
-    res = HAL_QSPI_ERASE_OTP(fhandle, CFG_CUST_OTP_PAGE << 12);
-    rt_hw_interrupt_enable(level);
-    //rt_flash_unlock(cfg_base);
-
-    if (res == 0)
-        return RT_EOK;
+        if (res == 0)
+            return RT_EOK;
+    }
 #endif
     return RT_ERROR;
 }
@@ -152,23 +187,19 @@ rt_err_t rt_flash_config_init(void)
 #if !defined(CFG_SUPPORT_NON_OTP) && !defined(BSP_USING_SYS_CFG)
     int res;
     uint32_t cfg_base = BSP_GetOtpBase();
+    if (cfg_base < 0x60000000)
+    {
+        res = rt_flash_erase(cfg_base, SYSCFG_FACTORY_SIZE);
 
-    res = rt_flash_erase(cfg_base, SYSCFG_FACTORY_SIZE);
-
-    if (res == 0)
-        return RT_EOK;
+        if (res == 0)
+            return RT_EOK;
+    }
 #endif
     return RT_ERROR;
 }
 
-/**
-  * @brief Read factory configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be read.
-  * @param size Max length of data .
-  * @retval length of data read.
-  */
-uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
+#if defined(BSP_USING_SPI_NAND)
+uint8_t rt_flash_config_read_NAND(uint8_t id, uint8_t *data, uint8_t size)
 {
     int i = 0;
     int len = 0;
@@ -180,71 +211,10 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
     uint8_t *buf = NULL;
 
     uint32_t cfg_base = BSP_GetOtpBase();
-#if !defined(CFG_SUPPORT_NON_OTP)
-    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-    if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
-    {
-        if (is_onchip_cfg(id) || is_onflash_cfg(id)) // for ate and flash cfg, do not need check cache
-            return 0;
-
-        // if flash not enable, fhandle should be null, it may load to cache at initial for user cfg
-        p = (uint8_t *)BSP_Get_UserOTP_Cache();
-        if (p != NULL)
-        {
-            retry = 0;
-            fac_cfg_size = 512; //CFG_USER_SIZE;
-            goto cfg_read;
-        }
-        return 0;
-    }
-    buf = malloc(fhandle->ctable->oob_size * 256);
-    if (buf == NULL)
-    {
-        //rt_kprintf("malloc fail\n");
-        return 0;
-    }
-
-    if (is_onchip_cfg(id))  // for onchip config, check flash address again
-        retry = 1;
-    else        // for user configure, check user page + flash address
-        retry = 2;
-
-    if (is_onflash_cfg(id))
-        retry = 0;
-
-    int to_val = HAL_FLASH_GET_WDT_VALUE(fhandle);
-    HAL_FLASH_SET_WDT(fhandle, 0);
-
-    if (retry > 0)  // cfg on otp
-    {
-        rt_flash_lock(cfg_base);
-        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
-        level = rt_hw_interrupt_disable();
-        res = HAL_QSPI_READ_OTP(fhandle, CFG_IN_OTP_PAGE << 12, buf, fhandle->ctable->oob_size * 256);
-        rt_hw_interrupt_enable(level);
-        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-        rt_flash_unlock(cfg_base);
-        if (res == 0)
-        {
-            free(buf);
-            HAL_FLASH_SET_WDT(fhandle, to_val);
-            return 0;
-        }
-
-        //rt_kprintf("read otp res %d\n", res);
-        fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
-        p = buf + CFG_OTP_OFFSET;
-    }
-    else // cfg on flash
-    {
-        p = (uint8_t *)cfg_base;
-        fac_cfg_size = SYSCFG_FACTORY_SIZE;
-    }
-#elif defined(BSP_USING_NAND_FLASH2)
     FLASH_HandleTypeDef *fhandle  = rt_nand_get_handle(cfg_base);
     if (fhandle == NULL)
     {
-        rt_kprintf("rt_flash_config_read addr: 0x%x find handle error\n", cfg_base);
+        rt_kprintf("rt_flash_config_read_NAND addr: 0x%x find handle error\n", cfg_base);
         return 0;
     }
 
@@ -256,7 +226,7 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
     //rt_kprintf("+-+- 0x%x %d -+-+\n", cfg_base, fhandle->ctable->oob_size);
     if (buf == NULL)
     {
-        rt_kprintf("rt_flash_config_read malloc 0x%x fail\n", page_size);
+        rt_kprintf("rt_flash_config_read_NAND malloc 0x%x fail\n", page_size);
         return 0;
     }
 
@@ -266,7 +236,7 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
     res = rt_nand_read_page(cfg_base + block_size * 2, (uint8_t *)buf, page_size, NULL, 0);
     if (res != page_size)
     {
-        rt_kprintf("rt_nand_read_page len error: 0x%x vs 0x%x\n", res, page_size);
+        rt_kprintf("rt_flash_config_read_NAND len error: 0x%x vs 0x%x\n", res, page_size);
         free(buf);
         return 0;
     }
@@ -305,31 +275,6 @@ uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
     //rt_kprintf("read otp res %d\n", res);
     fac_cfg_size = page_size;
     p = buf;
-#elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
-    buf = malloc(CFG_SD_FACTORY_BLOCK);
-    if (buf == NULL)
-    {
-        rt_kprintf("rt_flash_config_read malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK);
-        return 0;
-    }
-
-    res = rt_sdio_read(FACTORY_DATA_START_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
-    //rt_kprintf("rt_device_read len: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK);
-    if (res != CFG_SD_FACTORY_BLOCK)
-    {
-        rt_kprintf("rt_nand_read_page len error: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK / 512);
-        free(buf);
-        return 0;
-    }
-    if (*(uint32_t *)&buf[0] != CFG_NAND_FACTORY_MAGIC)
-    {
-        rt_kprintf("SD factory magic error 0x%x vs 0x%x\n", *(uint32_t *)&buf[0], CFG_NAND_FACTORY_MAGIC);
-        free(buf);
-        return 0;
-    }
-    fac_cfg_size = CFG_SD_FACTORY_BLOCK - 4;
-    p = &buf[4];
-#endif
     //rt_kprintf("start 0x%x, %d\n",i, p[i]);
 
 cfg_read:
@@ -357,27 +302,6 @@ cfg_read:
             len = size;
         memcpy(data, &p[i + SYSCFG_FACTORY_HDR_SIZE], len);
     }
-#if !defined(CFG_SUPPORT_NON_OTP)
-    else if (retry >= 2) // only for user configure on page 1
-    {
-        rt_flash_lock(cfg_base);
-        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
-        level = rt_hw_interrupt_disable();
-        res = HAL_QSPI_READ_OTP(fhandle, CFG_USER_OTP_PAGE << 12, buf, fhandle->ctable->oob_size * 256);
-        rt_hw_interrupt_enable(level);
-        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-        rt_flash_unlock(cfg_base);
-        if (res > 0)
-        {
-            fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
-            p = buf + CFG_OTP_OFFSET;
-            retry--;
-            goto cfg_read;
-        }
-    }
-
-    HAL_FLASH_SET_WDT(fhandle, to_val);
-#endif
 
     if (buf)
         free(buf);
@@ -385,203 +309,18 @@ cfg_read:
     return len;
 }
 
-/**
-  * @brief Write factory configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be written.
-  * @param len length of data .
-  * @retval length of data written.
-  */
-uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
+
+
+uint8_t rt_flash_config_write_NAND(uint8_t id, uint8_t *data, uint8_t len)
 {
     int i = 0;
-    uint8_t temp[2];
     uint32_t fac_cfg_size = 0;
     int level;
     uint32_t cfg_base = BSP_GetOtpBase();
-#if !defined(CFG_SUPPORT_NON_OTP)
-    if (is_onflash_cfg(id) == 0)
-    {
-        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-        if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
-        {
-            rt_kprintf("configure get flash handle error\n");
-            return 0;
-        }
-        uint8_t *buf = malloc(fhandle->ctable->oob_size * 256);
-        if (buf == NULL)
-        {
-            //rt_kprintf("malloc fail\n");
-            return 0;
-        }
-
-        int onchip = is_onchip_cfg(id);
-        int opage = 0;
-        if (onchip)
-            opage = CFG_IN_OTP_PAGE;
-        else
-            opage = CFG_USER_OTP_PAGE;
-
-        int to_val = HAL_FLASH_GET_WDT_VALUE(fhandle);
-        HAL_FLASH_SET_WDT(fhandle, 0);
-        rt_flash_lock(cfg_base);
-        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
-        level = rt_hw_interrupt_disable();
-        int res = HAL_QSPI_READ_OTP(fhandle, opage << 12, buf, fhandle->ctable->oob_size * 256);
-        rt_hw_interrupt_enable(level);
-        rt_flash_unlock(cfg_base);
-        if (res == 0)
-        {
-            rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-            free(buf);
-            HAL_FLASH_SET_WDT(fhandle, to_val);
-            rt_kprintf("read otp error\n");
-            return 0;
-        }
-#if 0
-        for (i = 0; i < fhandle->ctable->oob_size * 256; i++)
-        {
-            if ((i & 7) == 0)
-                rt_kprintf("\n0x%08x: ", i);
-            rt_kprintf("0x%02x ", *(buf + i));
-        }
-#endif
-        fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
-        uint8_t *p = buf + CFG_OTP_OFFSET;
-
-        int update = 0;
-        i = 0;
-        //rt_kprintf("start 0x%x, %d\n",i, p[i]);
-        while (p[i] != FACTORY_CFG_ID_UNINIT)
-        {
-            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
-            {
-                break;
-            }
-            if (p[i] == id)           // Found config
-            {
-                //rt_kprintf("Find id %d, len %d\n", id, p[i+1]);
-                if (p[i + 1] == len) // size is enough, reuse it, or just for same size？
-                {
-                    // remain old len to avoid find config error, but may cause get data error?
-                    memcpy(&p[i + SYSCFG_FACTORY_HDR_SIZE], data, len);
-                    update = 1;
-                    break;
-                }
-                else // mark as invalid
-                {
-                    //p[i] = FACTORY_CFG_ID_INVALID;
-                    update = 2;
-                    break;
-                }
-            }
-            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
-        }
-
-        if (update == 2) // refill cache
-        {
-            uint8_t *cache = malloc(fhandle->ctable->oob_size * 256);
-            if (cache == NULL)
-            {
-                update = 0;
-                len = 0;
-                //free(buf);
-                //return 0;
-            }
-            else
-            {
-                int j = i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE;
-                int len = 0;
-                while (p[j] != FACTORY_CFG_ID_UNINIT)
-                {
-                    if (p[j] != FACTORY_CFG_ID_INVALID)
-                    {
-                        memcpy(cache + len, &p[j], p[j + 1] + SYSCFG_FACTORY_HDR_SIZE);
-                        len += p[j + 1] + SYSCFG_FACTORY_HDR_SIZE;
-                    }
-                    j += (p[j + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
-                }
-                memset(&p[i], 0xff, fac_cfg_size - i);  // configure be backup, reset to invalid data
-                memcpy(&p[i], cache, len);  // fill all configure after this id
-                i = i + len; // jump to last
-                free(cache);
-            }
-        }
-        //rt_kprintf("i = %d, OTP size %d, len %d, id 0x%x\n", i, fac_cfg_size, len, p[i]);
-        if (i < fac_cfg_size &&
-                p[i] == FACTORY_CFG_ID_UNINIT &&
-                i + SYSCFG_FACTORY_HDR_SIZE + len < fac_cfg_size)
-        {
-            p[i] = id;
-            p[i + 1] = len;
-            memcpy(&p[i + SYSCFG_FACTORY_HDR_SIZE], data, len);
-            update = 1;
-            //rt_kprintf("Not find, add new id %d: pos %d: len %d\n", id, i, len);
-        }
-        if (update)
-        {
-            rt_flash_lock(cfg_base);
-            level = rt_hw_interrupt_disable();
-            res = HAL_QSPI_ERASE_OTP(fhandle, opage << 12);
-            res = HAL_QSPI_WRITE_OTP(fhandle, opage << 12, p, fhandle->ctable->oob_size * 256);
-            rt_hw_interrupt_enable(level);
-            rt_flash_unlock(cfg_base);
-            if (res == 0)
-                len = 0;
-#if 0
-            rt_kprintf("Write otp res %d\n", res);
-            for (i = 0; i < fhandle->ctable->oob_size * 256; i++)
-            {
-                if ((i & 7) == 0)
-                    rt_kprintf("\n0x%08x: ", i);
-                rt_kprintf("0x%02x ", *(buf + i));
-            }
-#endif
-        }
-        else
-            len = 0;
-
-        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-        HAL_FLASH_SET_WDT(fhandle, to_val);
-        free(buf);
-    }
-    else
-    {
-        uint8_t *p = (uint8_t *)cfg_base;
-        fac_cfg_size = SYSCFG_FACTORY_SIZE;
-        while (p[i] != FACTORY_CFG_ID_UNINIT)
-        {
-            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
-            {
-                break;
-            }
-            if (p[i] == id)                               // Found config, mark as invalid
-            {
-                temp[0] = FACTORY_CFG_ID_INVALID;
-                temp[1] = p[i + 1];
-                rt_flash_write(cfg_base + i, temp, 2);  // write 2 byte to avoid dual flash error
-            }
-            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
-        }
-
-        if (i < fac_cfg_size &&
-                p[i] == FACTORY_CFG_ID_UNINIT &&
-                i + SYSCFG_FACTORY_HDR_SIZE + len < fac_cfg_size)
-        {
-            temp[0] = id;
-            temp[1] = len;
-            rt_flash_write(cfg_base + i, temp, SYSCFG_FACTORY_HDR_SIZE);
-            rt_flash_write(cfg_base + i + SYSCFG_FACTORY_HDR_SIZE, data, len);
-        }
-        else
-            len = 0;
-    }
-#elif defined(BSP_USING_NAND_FLASH2)
-
     FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(cfg_base);
     if (fhandle == NULL)
     {
-        rt_kprintf("rt_flash_config_read addr: 0x%x find handle error\n", cfg_base);
+        rt_kprintf("rt_flash_config_write_NAND addr: 0x%x find handle error\n", cfg_base);
         return 0;
     }
 
@@ -597,7 +336,7 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
     buf = malloc(page_size * 2);
     if (buf == NULL)
     {
-        rt_kprintf("rt_flash_config_write malloc 0x%x fail\n", page_size * 2);
+        rt_kprintf("rt_flash_config_write_NAND malloc 0x%x fail\n", page_size * 2);
         return 0;
     }
 
@@ -742,24 +481,257 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
     {
         free(buf);
     }
+
+    return len;
+}
+
+uint8_t rt_flash_config_userinfo_clear_NAND()
+{
+    int i = 0;
+    uint32_t fac_cfg_size = 0;
+    int level;
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    FLASH_HandleTypeDef *fhandle = rt_nand_get_handle(cfg_base);
+    if (fhandle == NULL)
+    {
+        rt_kprintf("rt_flash_config_userinfo_clear_NAND addr: 0x%x find handle error\n", cfg_base);
+        return 0;
+    }
+
+    int idx = 1;
+    int off = 0;
+    int find = 0;
+    int res = 0;
+    uint32_t *pBuf;
+    uint8_t *buf;
+    int block_size = HAL_NAND_BLOCK_SIZE(fhandle);
+    int page_size = HAL_NAND_PAGE_SIZE(fhandle);
+
+    buf = malloc(page_size * 2);
+    if (buf == NULL)
+    {
+        rt_kprintf("rt_flash_config_userinfo_clear_NAND malloc 0x%x fail\n", page_size * 2);
+        return 0;
+    }
+
+    for (int mm = 0; mm < 2; mm++)
+    {
+        res = rt_nand_read_page(cfg_base + block_size * 2, (uint8_t *)buf, page_size, NULL, 0);
+        if (res != page_size)
+        {
+            rt_kprintf("rt_nand_read_page ret error: 0x%x vs 0x%x\n", res, page_size);
+            free(buf);
+            return 0;
+        }
+        pBuf = (uint32_t *)buf;
+        if (pBuf[0] == CFG_NAND_FACTORY_MAGIC)
+        {
+            break;
+        }
+    }
+    if (pBuf[0] != CFG_NAND_FACTORY_MAGIC)
+    {
+        //rt_kprintf("NAND factory magic error 0x%x vs 0x%x， need erase block\n", pBuf[0], CFG_NAND_FACTORY_MAGIC);
+        rt_kprintf("user factory data empty\n");
+        free(buf);
+        return 1;
+    }
+    else
+    {
+        memset(buf, 0xff, page_size * 2);
+        //level = rt_hw_interrupt_disable();
+        //rt_flash_lock(cfg_base);
+        for (idx = block_size / page_size - 1; idx > 0; idx--)
+        {
+            res = rt_nand_read_page(cfg_base + block_size * 2 + idx * page_size, (uint8_t *)buf, page_size, NULL, 0);
+            if (res != page_size || buf[0] != 0xff)  //find the last block
+            {
+                break;
+            }
+        }
+        //rt_hw_interrupt_enable(level);
+        //rt_flash_unlock(cfg_base);
+        if (res != page_size)
+        {
+            rt_kprintf("rt_nand_read_page ret error: 0x%x vs 0x%x\n", res, page_size);
+            free(buf);
+            return 0;
+        }
+    }
+
+    //rt_kprintf("read otp res %d\n", res);
+    fac_cfg_size = page_size;
+    while (buf[i] != FACTORY_CFG_ID_UNINIT)
+    {
+        if ((i + buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+        {
+            break;
+        }
+
+        if (buf[i] == FACTORY_CFG_ID_INVALID ||
+                buf[i] == FACTORY_CFG_ID_MAC ||
+                buf[i] == FACTORY_CFG_ID_SN ||
+                buf[i] == FACTORY_CFG_ID_USERFN ||
+                buf[i] == FACTORY_CFG_ID_USERK1 ||
+                buf[i] == FACTORY_CFG_ID_USERK2 ||
+                buf[i] == FACTORY_CFG_ID_USERK3)           // Found config
+        {
+            find = 1;
+        }
+        else
+        {
+            memcpy(&buf[page_size + off], &buf[i], buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);
+            off += buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE;
+        }
+
+        i += (buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+    }
+
+    if (find)
+    {
+        //level = rt_hw_interrupt_disable();
+        if (idx == block_size / page_size - 1) //the last block, erase, use first block
+        {
+            rt_kprintf("not init or 128 page over, rt_nand_erase_block\n");
+            res = rt_nand_erase_block(cfg_base + block_size * 2);
+            if (res != 0)
+            {
+                free(buf);
+                return 0;
+            }
+
+            memset(buf, 0xff, page_size);
+            pBuf[0] = CFG_NAND_FACTORY_MAGIC;
+            res = rt_nand_write_page(cfg_base + block_size * 2, &buf[0], page_size, NULL, 0);
+            if (res != page_size)
+            {
+                rt_kprintf("rt_nand_write_page ret error: 0x%x vs 0x%x\n", res, page_size);
+                free(buf);
+                return 0;
+            }
+            idx = 1;
+        }
+        else if (i != 0 || idx == 0) //use next block
+        {
+            idx += 1;
+        }
+        res = rt_nand_write_page(cfg_base + block_size * 2 + idx * page_size, &buf[page_size], page_size, NULL, 0);
+        if (res != page_size)
+        {
+            rt_kprintf("rt_nand_write_page ret error 0x%x vs 0x%x\n", res, page_size);
+            free(buf);
+            return 0;
+        }
+
+    }
+    if (buf)
+    {
+        free(buf);
+    }
+
+    return 1;
+}
+
+
+
 #elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
+
+uint8_t rt_flash_config_read_SD(uint8_t id, uint8_t *data, uint8_t size)
+{
+    int i = 0;
+    int len = 0;
+    int retry = 0;
+    uint32_t fac_cfg_size = 0;
+    uint8_t *p;
+    int res;
+    int level;
+    uint8_t *buf = NULL;
+
+
+    buf = malloc(CFG_SD_FACTORY_BLOCK);
+    if (buf == NULL)
+    {
+        rt_kprintf("rt_flash_config_read_SD malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK);
+        return 0;
+    }
+
+    res = rt_sdio_read(CFG_SD_FACTORY_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
+    //rt_kprintf("rt_sdio_read len: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK);
+    if (res != CFG_SD_FACTORY_BLOCK)
+    {
+        rt_kprintf("rt_sdio_read len error: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK / 512);
+        free(buf);
+        return 0;
+    }
+    if (*(uint32_t *)&buf[0] != CFG_NAND_FACTORY_MAGIC)
+    {
+        rt_kprintf("SD factory magic error 0x%x vs 0x%x\n", *(uint32_t *)&buf[0], CFG_NAND_FACTORY_MAGIC);
+        free(buf);
+        return 0;
+    }
+    fac_cfg_size = CFG_SD_FACTORY_BLOCK - 4;
+    p = &buf[4];
+
+    //rt_kprintf("start 0x%x, %d\n",i, p[i]);
+
+cfg_read:
+    i = 0;
+    while (p[i] != FACTORY_CFG_ID_UNINIT)
+    {
+        len = p[i + 1];
+        if ((i + len + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size)   // More than max configuration area?
+        {
+            //rt_kprintf("over range \n");
+            len = 0;
+            break;
+        }
+        if (p[i] == id)                               // Found config
+        {
+            //rt_kprintf("Find id %d, pos %d\n", id, i);
+            break;
+        }
+        i += (len + SYSCFG_FACTORY_HDR_SIZE);       // Next config
+        len = 0;
+    }
+    if (len)                                        // Found config
+    {
+        if (len > size)
+            len = size;
+        memcpy(data, &p[i + SYSCFG_FACTORY_HDR_SIZE], len);
+    }
+
+    if (buf)
+        free(buf);
+
+    return len;
+    return 0;
+
+}
+
+uint8_t rt_flash_config_write_SD(uint8_t id, uint8_t *data, uint8_t len)
+{
+    int i = 0;
+    uint32_t fac_cfg_size = 0;
+    int level;
     uint8_t *buf;
     int res = 0;
     int off = 0;
     int find = 0;
+
     buf = malloc(CFG_SD_FACTORY_BLOCK * 2);
     if (buf == NULL)
     {
-        rt_kprintf("rt_flash_config_read malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK * 2);
+        rt_kprintf("rt_flash_config_write_SD malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK * 2);
         return 0;
     }
     memset(&buf[CFG_SD_FACTORY_BLOCK], 0xff, CFG_SD_FACTORY_BLOCK);
     *(uint32_t *)(&buf[CFG_SD_FACTORY_BLOCK]) = CFG_NAND_FACTORY_MAGIC;
 
-    res = rt_sdio_read(FACTORY_DATA_START_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
+    res = rt_sdio_read(CFG_SD_FACTORY_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
     if (res != CFG_SD_FACTORY_BLOCK)
     {
-        rt_kprintf("rt_nand_read_page len error: 0x%x vs 0x%x\n", res, 512);
+        rt_kprintf("rt_flash_config_write_SD len error: 0x%x vs 0x%x\n", res, 512);
         free(buf);
         return 0;
     }
@@ -838,10 +810,10 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
         }
     }
 
-    res = rt_sdio_write(FACTORY_DATA_START_ADDR, (uint8_t *)&buf[CFG_SD_FACTORY_BLOCK], CFG_SD_FACTORY_BLOCK);
+    res = rt_sdio_write(CFG_SD_FACTORY_ADDR, (uint8_t *)&buf[CFG_SD_FACTORY_BLOCK], CFG_SD_FACTORY_BLOCK);
     if (res != CFG_SD_FACTORY_BLOCK)
     {
-        rt_kprintf("sd_write_data(0x%08x) error\n", CFG_SD_FACTORY_OFF + 0x62000000);
+        rt_kprintf("sd_write_data(0x%08x) error\n", CFG_SD_FACTORY_ADDR);
         free(buf);
         return 0;
     }
@@ -850,23 +822,102 @@ uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
     {
         free(buf);
     }
-#endif
 
     return len;
 }
 
-/**
-  * @brief Read factory user configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be read.
-  * @param size Max length of data .
-  * @retval length of data read.
-  */
-uint8_t rt_user_config_read(uint8_t id, uint8_t *data, uint8_t size)
+uint8_t rt_flash_config_userinfo_clear_SD()
 {
+    int i = 0;
+    uint32_t fac_cfg_size = 0;
+    int level;
+    int idx = 1;
+    int off = 0;
+    int find = 0;
+    int res = 0;
+    uint32_t *pBuf;
+    uint8_t *buf;
+
+    buf = malloc(CFG_SD_FACTORY_BLOCK * 2);
+    if (buf == NULL)
+    {
+        rt_kprintf("rt_flash_config_userinfo_clear_SD malloc 0x%x fail\n", CFG_SD_FACTORY_BLOCK * 2);
+        return 0;
+    }
+    pBuf = (uint32_t *)buf;
+    memset(buf, 0xff, CFG_SD_FACTORY_BLOCK * 2);
+
+    res = rt_sdio_read(CFG_SD_FACTORY_ADDR, (uint8_t *)buf, CFG_SD_FACTORY_BLOCK);
+    if (res != CFG_SD_FACTORY_BLOCK)
+    {
+        rt_kprintf("rt_sdio_read len error: 0x%x vs 0x%x\n", res, CFG_SD_FACTORY_BLOCK / 512);
+        free(buf);
+        return 0;
+    }
+
+    if (pBuf[0] != CFG_NAND_FACTORY_MAGIC)
+    {
+        rt_kprintf("user factory data empty\n");
+        free(buf);
+        return 1;
+    }
+
+    //rt_kprintf("read otp res %d\n", res);
+    fac_cfg_size = CFG_SD_FACTORY_BLOCK - 4;
+    memcpy(&buf[CFG_SD_FACTORY_BLOCK], &buf[0], 4); //magic
+    i = 4;
+    while (buf[i] != FACTORY_CFG_ID_UNINIT)
+    {
+        if ((i + buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+        {
+            break;
+        }
+
+        if (buf[i] == FACTORY_CFG_ID_INVALID ||
+                buf[i] == FACTORY_CFG_ID_MAC ||
+                buf[i] == FACTORY_CFG_ID_SN ||
+                buf[i] == FACTORY_CFG_ID_USERFN ||
+                buf[i] == FACTORY_CFG_ID_USERK1 ||
+                buf[i] == FACTORY_CFG_ID_USERK2 ||
+                buf[i] == FACTORY_CFG_ID_USERK3)           // Found config
+        {
+            find = 1;
+        }
+        else
+        {
+            memcpy(&buf[CFG_SD_FACTORY_BLOCK + off], &buf[i], buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);
+            off += buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE;
+        }
+
+        i += (buf[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+    }
+
+    if (find)
+    {
+        res = rt_sdio_write(CFG_SD_FACTORY_ADDR, (uint8_t *)&buf[CFG_SD_FACTORY_BLOCK], CFG_SD_FACTORY_BLOCK);
+        if (res != CFG_SD_FACTORY_BLOCK)
+        {
+            rt_kprintf("sd_write_data(0x%08x) error\n", CFG_SD_FACTORY_ADDR);
+            free(buf);
+            return 0;
+        }
+
+    }
+    if (buf)
+    {
+        free(buf);
+    }
+
+    return 1;
+}
+#endif  //#if defined(BSP_USING_SPI_NAND)
+
 #if !defined(CFG_SUPPORT_NON_OTP)
+uint8_t rt_flash_config_read_NOR(uint8_t id, uint8_t *data, uint8_t size, int8_t opage)
+{
     int i = 0;
     int len = 0;
+    int retry = 0;
     uint32_t fac_cfg_size = 0;
     uint8_t *p;
     int res;
@@ -874,50 +925,84 @@ uint8_t rt_user_config_read(uint8_t id, uint8_t *data, uint8_t size)
     uint8_t *buf = NULL;
 
     uint32_t cfg_base = BSP_GetOtpBase();
-
-    if (is_onchip_cfg(id) != 0)
-        return 0;
-
     FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+
     if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
     {
+        //if (is_onchip_cfg(id) || is_onflash_cfg(id)) // for ate and flash cfg, do not need check cache
+        //      return 0;
+
         // if flash not enable, fhandle should be null, it may load to cache at initial for user cfg
-        p = (uint8_t *)BSP_Get_UserOTP_Cache();
-        if (p != NULL)
+        if (opage == CFG_CUST_OTP_PAGE)
         {
-            fac_cfg_size = 256; //CFG_USER_SIZE;
+            p = (uint8_t *)BSP_Get_CustOTP_Cache();
         }
         else
         {
-            return 0;
+            p = (uint8_t *)BSP_Get_UserOTP_Cache();
         }
+        if (p != NULL)
+        {
+            retry = 0;
+            fac_cfg_size = 256; //512; //CFG_USER_SIZE;
+            goto cfg_read;
+        }
+        return 0;
+    }
+    buf = malloc(fhandle->ctable->oob_size * 256);
+    if (buf == NULL)
+    {
+        //rt_kprintf("malloc fail\n");
+        return 0;
+    }
+
+    if (opage == -1) //not fix opage, check it
+    {
+        opage = CFG_IN_OTP_PAGE;
+        if (is_onchip_cfg(id))  // for onchip config, check onchip page
+            retry = 1;
+        else        // for user configure, check onchip page  + user page
+            retry = 2;
     }
     else
     {
-        buf = malloc(fhandle->ctable->oob_size * 256);
-        if (buf == NULL)
-        {
-            //rt_kprintf("malloc fail\n");
-            return 0;
-        }
+        retry = 1;  //fix opage, only read once
+    }
 
+    if (is_onflash_cfg(id))  //if use nor flash addr, not otp
+        retry = 0;
+
+    int to_val = HAL_FLASH_GET_WDT_VALUE(fhandle);
+    HAL_FLASH_SET_WDT(fhandle, 0);
+
+    if (retry > 0)  // cfg on otp
+    {
         rt_flash_lock(cfg_base);
         rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
         level = rt_hw_interrupt_disable();
-        res = HAL_QSPI_READ_OTP(fhandle, CFG_USER_OTP_PAGE << 12, buf, fhandle->ctable->oob_size * 256);
+        res = HAL_QSPI_READ_OTP(fhandle, opage << 12, buf, fhandle->ctable->oob_size * 256);
         rt_hw_interrupt_enable(level);
         rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
         rt_flash_unlock(cfg_base);
         if (res == 0)
         {
             free(buf);
+            HAL_FLASH_SET_WDT(fhandle, to_val);
             return 0;
         }
-        //rt_kprintf("read otp res %d\n", res);
-        fac_cfg_size = fhandle->ctable->oob_size * 256;
-        p = buf;
-    }
 
+        //rt_kprintf("read otp res %d\n", res);
+        fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
+        p = buf + CFG_OTP_OFFSET;
+    }
+    else // cfg on flash
+    {
+        p = (uint8_t *)cfg_base;
+        fac_cfg_size = SYSCFG_FACTORY_SIZE;
+    }
+    //rt_kprintf("start 0x%x, %d\n",i, p[i]);
+
+cfg_read:
     i = 0;
     while (p[i] != FACTORY_CFG_ID_UNINIT)
     {
@@ -942,32 +1027,41 @@ uint8_t rt_user_config_read(uint8_t id, uint8_t *data, uint8_t size)
             len = size;
         memcpy(data, &p[i + SYSCFG_FACTORY_HDR_SIZE], len);
     }
+    else if (retry >= 2) // only for user configure on page 1
+    {
+        rt_flash_lock(cfg_base);
+        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
+        level = rt_hw_interrupt_disable();
+        opage = CFG_USER_OTP_PAGE;
+        res = HAL_QSPI_READ_OTP(fhandle, opage << 12, buf, fhandle->ctable->oob_size * 256);
+        rt_hw_interrupt_enable(level);
+        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+        rt_flash_unlock(cfg_base);
+        if (res > 0)
+        {
+            fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
+            p = buf + CFG_OTP_OFFSET;
+            retry--;
+            goto cfg_read;
+        }
+    }
+
+    HAL_FLASH_SET_WDT(fhandle, to_val);
 
     if (buf)
         free(buf);
 
     return len;
-#else
-    return rt_flash_config_read(id, data, size);
-#endif
 }
 
-/**
-  * @brief Write factory user configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be written.
-  * @param len length of data .
-  * @retval length of data written.
-  */
-uint8_t rt_user_config_write(uint8_t id, uint8_t *data, uint8_t len)
+uint8_t rt_flash_config_write_NOR(uint8_t id, uint8_t *data, uint8_t len, int8_t opage)
 {
-#if !defined(CFG_SUPPORT_NON_OTP)
     int i = 0;
     uint32_t fac_cfg_size = 0;
     int level;
     uint32_t cfg_base = BSP_GetOtpBase();
 
-    if (is_onchip_cfg(id) == 0)
+    if (is_onflash_cfg(id) == 0)  //use otp
     {
         FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
         if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
@@ -982,246 +1076,16 @@ uint8_t rt_user_config_write(uint8_t id, uint8_t *data, uint8_t len)
             return 0;
         }
 
-        int opage = CFG_USER_OTP_PAGE;
-
-        rt_flash_lock(cfg_base);
-        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
-        level = rt_hw_interrupt_disable();
-        int res = HAL_QSPI_READ_OTP(fhandle, opage << 12, buf, fhandle->ctable->oob_size * 256);
-        rt_hw_interrupt_enable(level);
-        rt_flash_unlock(cfg_base);
-        if (res == 0)
+        if (opage == -1)
         {
-            rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-            free(buf);
-            rt_kprintf("read otp error\n");
-            return 0;
-        }
-
-        fac_cfg_size = fhandle->ctable->oob_size * 256;
-        uint8_t *p = buf;
-
-        int update = 0;
-        i = 0;
-        //rt_kprintf("start 0x%x, %d\n",i, p[i]);
-        while (p[i] != FACTORY_CFG_ID_UNINIT)
-        {
-            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
-            {
-                break;
-            }
-            if (p[i] == id)           // Found config
-            {
-                //rt_kprintf("Find id %d, len %d\n", id, p[i+1]);
-                if (p[i + 1] == len) // size is enough, reuse it, or just for same size？
-                {
-                    // remain old len to avoid find config error, but may cause get data error?
-                    memcpy(&p[i + SYSCFG_FACTORY_HDR_SIZE], data, len);
-                    update = 1;
-                    break;
-                }
-                else // mark as invalid
-                {
-                    //p[i] = FACTORY_CFG_ID_INVALID;
-                    update = 2;
-                    break;
-                }
-            }
-            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
-        }
-
-        if (update == 2) // refill cache
-        {
-            uint8_t *cache = malloc(fhandle->ctable->oob_size * 256);
-            if (cache == NULL)
-            {
-                update = 0;
-                len = 0;
-                //free(buf);
-                //return 0;
-            }
+            if (is_onchip_cfg(id))
+                opage = CFG_IN_OTP_PAGE;
             else
-            {
-                int j = i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE;
-                int len = 0;
-                while (p[j] != FACTORY_CFG_ID_UNINIT)
-                {
-                    if (p[j] != FACTORY_CFG_ID_INVALID)
-                    {
-                        memcpy(cache + len, &p[j], p[j + 1] + SYSCFG_FACTORY_HDR_SIZE);
-                        len += p[j + 1] + SYSCFG_FACTORY_HDR_SIZE;
-                    }
-                    j += (p[j + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
-                }
-                memset(&p[i], 0xff, fac_cfg_size - i);  // configure be backup, reset to invalid data
-                memcpy(&p[i], cache, len);  // fill all configure after this id
-                i = i + len; // jump to last
-                free(cache);
-            }
-        }
-        //rt_kprintf("i = %d, OTP size %d, len %d, id 0x%x\n", i, fac_cfg_size, len, p[i]);
-        if (i < fac_cfg_size &&
-                p[i] == FACTORY_CFG_ID_UNINIT &&
-                i + SYSCFG_FACTORY_HDR_SIZE + len < fac_cfg_size)
-        {
-            p[i] = id;
-            p[i + 1] = len;
-            memcpy(&p[i + SYSCFG_FACTORY_HDR_SIZE], data, len);
-            update = 1;
-            //rt_kprintf("Not find, add new id %d: pos %d: len %d\n", id, i, len);
-        }
-        if (update)
-        {
-            level = rt_hw_interrupt_disable();
-            res = HAL_QSPI_ERASE_OTP(fhandle, opage << 12);
-            res = HAL_QSPI_WRITE_OTP(fhandle, opage << 12, p, fhandle->ctable->oob_size * 256);
-            rt_hw_interrupt_enable(level);
-            if (res == 0)
-                len = 0;
-        }
-        else
-            len = 0;
-
-        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-        free(buf);
-    }
-
-    return len;
-#else
-    return rt_flash_config_write(id, data, len);
-#endif
-}
-
-/**
-  * @brief Read customer configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be read.
-  * @param size Max length of data .
-  * @retval length of data read.
-  */
-uint8_t rt_cust_config_read(uint8_t id, uint8_t *data, uint8_t size)
-{
-#if !defined(CFG_SUPPORT_NON_OTP)
-    int len = 0;
-    int i = 0;
-    uint32_t fac_cfg_size = 0;
-    uint8_t *p;
-    int res;
-    int level;
-    uint8_t *buf = NULL;
-
-    uint32_t cfg_base = BSP_GetOtpBase();
-
-    if (is_onchip_cfg(id) != 0)
-        return 0;
-
-    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-    if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
-    {
-        // if flash not enable, fhandle should be null, it may load to cache at initial for user cfg
-        p = (uint8_t *)BSP_Get_CustOTP_Cache();
-        if (p != NULL)
-        {
-            fac_cfg_size = 256; //CFG_USER_SIZE;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-    else
-    {
-        buf = malloc(fhandle->ctable->oob_size * 256);
-        if (buf == NULL)
-        {
-            //rt_kprintf("malloc fail\n");
-            return 0;
+                opage = CFG_USER_OTP_PAGE;
         }
 
-        rt_flash_lock(cfg_base);
-        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
-        level = rt_hw_interrupt_disable();
-        res = HAL_QSPI_READ_OTP(fhandle, CFG_CUST_OTP_PAGE << 12, buf, fhandle->ctable->oob_size * 256);
-        rt_hw_interrupt_enable(level);
-        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
-        rt_flash_unlock(cfg_base);
-        if (res == 0)
-        {
-            free(buf);
-            return 0;
-        }
-        //rt_kprintf("read otp res %d\n", res);
-        fac_cfg_size = fhandle->ctable->oob_size * 256;
-        p = buf;
-    }
-
-    i = 0;
-    while (p[i] != FACTORY_CFG_ID_UNINIT)
-    {
-        len = p[i + 1];
-        if ((i + len + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size)   // More than max configuration area?
-        {
-            //rt_kprintf("over range \n");
-            len = 0;
-            break;
-        }
-        if (p[i] == id)                               // Found config
-        {
-            //rt_kprintf("Find id %d, pos %d\n", id, i);
-            break;
-        }
-        i += (len + SYSCFG_FACTORY_HDR_SIZE);       // Next config
-        len = 0;
-    }
-    if (len)                                        // Found config
-    {
-        if (len > size)
-            len = size;
-        memcpy(data, &p[i + SYSCFG_FACTORY_HDR_SIZE], len);
-    }
-
-    if (buf)
-        free(buf);
-
-    return len;
-#else
-    return rt_flash_config_read(id, data, size);
-#endif
-
-}
-
-/**
-  * @brief Write customer configuraiton.
-  * @param id  Factory config ID.
-  * @param data  config data to be written.
-  * @param len length of data .
-  * @retval length of data written.
-  */
-uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
-{
-#if !defined(CFG_SUPPORT_NON_OTP)
-    int i = 0;
-    uint32_t fac_cfg_size = 0;
-    int level;
-    uint32_t cfg_base = BSP_GetOtpBase();
-
-    if (is_onchip_cfg(id) == 0)
-    {
-        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
-        if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
-        {
-            rt_kprintf("configure get flash handle error\n");
-            return 0;
-        }
-        uint8_t *buf = malloc(fhandle->ctable->oob_size * 256);
-        if (buf == NULL)
-        {
-            //rt_kprintf("malloc fail\n");
-            return 0;
-        }
-
-        int opage = CFG_CUST_OTP_PAGE;
-
+        int to_val = HAL_FLASH_GET_WDT_VALUE(fhandle);
+        HAL_FLASH_SET_WDT(fhandle, 0);
         rt_flash_lock(cfg_base);
         rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
         level = rt_hw_interrupt_disable();
@@ -1232,12 +1096,20 @@ uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
         {
             rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
             free(buf);
+            HAL_FLASH_SET_WDT(fhandle, to_val);
             rt_kprintf("read otp error\n");
             return 0;
         }
-
-        fac_cfg_size = fhandle->ctable->oob_size * 256;
-        uint8_t *p = buf;
+#if 0
+        for (i = 0; i < fhandle->ctable->oob_size * 256; i++)
+        {
+            if ((i & 7) == 0)
+                rt_kprintf("\n0x%08x: ", i);
+            rt_kprintf("0x%02x ", *(buf + i));
+        }
+#endif
+        fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
+        uint8_t *p = buf + CFG_OTP_OFFSET;
 
         int update = 0;
         i = 0;
@@ -1318,18 +1190,467 @@ uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
             rt_flash_unlock(cfg_base);
             if (res == 0)
                 len = 0;
+#if 0
+            rt_kprintf("Write otp res %d\n", res);
+            for (i = 0; i < fhandle->ctable->oob_size * 256; i++)
+            {
+                if ((i & 7) == 0)
+                    rt_kprintf("\n0x%08x: ", i);
+                rt_kprintf("0x%02x ", *(buf + i));
+            }
+#endif
         }
         else
             len = 0;
 
         rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+        HAL_FLASH_SET_WDT(fhandle, to_val);
         free(buf);
+    }
+    else
+    {
+        uint8_t temp[2];
+        uint8_t *p = (uint8_t *)cfg_base;
+        fac_cfg_size = SYSCFG_FACTORY_SIZE;
+        while (p[i] != FACTORY_CFG_ID_UNINIT)
+        {
+            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+            {
+                break;
+            }
+            if (p[i] == id)                               // Found config, mark as invalid
+            {
+                temp[0] = FACTORY_CFG_ID_INVALID;
+                temp[1] = p[i + 1];
+                rt_flash_write(cfg_base + i, temp, 2);  // write 2 byte to avoid dual flash error
+            }
+            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+        }
+
+        if (i < fac_cfg_size &&
+                p[i] == FACTORY_CFG_ID_UNINIT &&
+                i + SYSCFG_FACTORY_HDR_SIZE + len < fac_cfg_size)
+        {
+            temp[0] = id;
+            temp[1] = len;
+            rt_flash_write(cfg_base + i, temp, SYSCFG_FACTORY_HDR_SIZE);
+            rt_flash_write(cfg_base + i + SYSCFG_FACTORY_HDR_SIZE, data, len);
+        }
+        else
+            len = 0;
     }
 
     return len;
-#else
-    return rt_flash_config_write(id, data, len);
+}
+
+uint8_t rt_flash_config_userinfo_clear_NOR()
+{
+    int i = 0;
+    uint32_t fac_cfg_size = 0;
+    int level;
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    if (is_onflash_cfg(FACTORY_CFG_ID_MAC) == 0)
+    {
+        FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+        if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
+        {
+            rt_kprintf("configure get flash handle error\n");
+            return 0;
+        }
+
+        uint8_t *buf = malloc(fhandle->ctable->oob_size * 256);
+        if (buf == NULL)
+        {
+            //rt_kprintf("malloc fail\n");
+            return 0;
+        }
+
+        uint8_t *cache = malloc(fhandle->ctable->oob_size * 256);
+        if (cache == NULL)
+        {
+            //rt_kprintf("malloc fail\n");
+            free(buf);
+            return 0;
+        }
+        memset(cache, 0xff, fhandle->ctable->oob_size * 256);
+
+        int onchip = is_onchip_cfg(FACTORY_CFG_ID_MAC);
+        int opage = 0;
+        if (onchip)
+            opage = CFG_IN_OTP_PAGE;
+        else
+            opage = CFG_USER_OTP_PAGE;
+
+        int to_val = HAL_FLASH_GET_WDT_VALUE(fhandle);
+        HAL_FLASH_SET_WDT(fhandle, 0);
+        rt_flash_lock(cfg_base);
+        rt_flash_switch_dtr(cfg_base, 0);    // switch to sdr before otp read
+        level = rt_hw_interrupt_disable();
+        int res = HAL_QSPI_READ_OTP(fhandle, opage << 12, buf, fhandle->ctable->oob_size * 256);
+        rt_hw_interrupt_enable(level);
+        rt_flash_unlock(cfg_base);
+        if (res == 0)
+        {
+            rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+            free(buf);
+            free(cache);
+            HAL_FLASH_SET_WDT(fhandle, to_val);
+            rt_kprintf("read otp error\n");
+            return 0;
+        }
+
+        fac_cfg_size = fhandle->ctable->oob_size * 256 - CFG_OTP_OFFSET;
+        uint8_t *p = buf + CFG_OTP_OFFSET;
+        int off = 0;
+        int update = 0;
+        i = 0;
+        //rt_kprintf("start 0x%x, %d\n",i, p[i]);
+        while (p[i] != FACTORY_CFG_ID_UNINIT)
+        {
+            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+            {
+                break;
+            }
+            if (p[i] == FACTORY_CFG_ID_INVALID ||
+                    p[i] == FACTORY_CFG_ID_MAC ||
+                    p[i] == FACTORY_CFG_ID_SN ||
+                    p[i] == FACTORY_CFG_ID_USERFN ||
+                    p[i] == FACTORY_CFG_ID_USERK1 ||
+                    p[i] == FACTORY_CFG_ID_USERK2 ||
+                    p[i] == FACTORY_CFG_ID_USERK3)           // Found config
+            {
+                update = 1;
+            }
+            else
+            {
+                memcpy(&cache[off],   &p[i], p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);
+                off += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);
+            }
+            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+        }
+
+        if (update)
+        {
+            p = cache + CFG_OTP_OFFSET;
+            rt_flash_lock(cfg_base);
+            level = rt_hw_interrupt_disable();
+            res = HAL_QSPI_ERASE_OTP(fhandle, opage << 12);
+            res = HAL_QSPI_WRITE_OTP(fhandle, opage << 12, p, fhandle->ctable->oob_size * 256);
+            rt_hw_interrupt_enable(level);
+            rt_flash_unlock(cfg_base);
+            if (res == 0)
+            {
+                //error
+            }
+        }
+
+        rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+        HAL_FLASH_SET_WDT(fhandle, to_val);
+        free(buf);
+        free(cache);
+    }
+    else
+    {
+        uint8_t temp[2];
+        uint8_t *p = (uint8_t *)cfg_base;
+        fac_cfg_size = SYSCFG_FACTORY_SIZE;
+        while (p[i] != FACTORY_CFG_ID_UNINIT)
+        {
+            if ((i + p[i + 1] + SYSCFG_FACTORY_HDR_SIZE) >= fac_cfg_size) // More than max configuration area?
+            {
+                break;
+            }
+            if (p[i] == FACTORY_CFG_ID_INVALID ||
+                    p[i] == FACTORY_CFG_ID_MAC ||
+                    p[i] == FACTORY_CFG_ID_SN ||
+                    p[i] == FACTORY_CFG_ID_USERFN ||
+                    p[i] == FACTORY_CFG_ID_USERK1 ||
+                    p[i] == FACTORY_CFG_ID_USERK2 ||
+                    p[i] == FACTORY_CFG_ID_USERK3)            // Found config, mark as invalid
+            {
+                temp[0] = FACTORY_CFG_ID_INVALID;
+                temp[1] = p[i + 1];
+                rt_flash_write(cfg_base + i, temp, 2);  // write 2 byte to avoid dual flash error
+            }
+            i += (p[i + 1] + SYSCFG_FACTORY_HDR_SIZE);  // Next config
+        }
+    }
+
+
+    return 1;
+}
 #endif
+
+/**
+  * @brief Read factory configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be read.
+  * @param size Max length of data .
+  * @retval length of data read.
+  */
+uint8_t rt_flash_config_read_opage(uint8_t id, uint8_t *data, uint8_t size, int8_t opage)
+{
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    if (cfg_base < 0x60000000) //NOR OTP
+    {
+#if defined(CFG_SUPPORT_NON_OTP)
+        rt_kprintf("rt_flash_config_read can not get MEM type1 0x%x\n", cfg_base);
+        return 0;
+#else
+        return rt_flash_config_read_NOR(id, data, size, opage);
+#endif
+    }
+    else
+    {
+#if defined(BSP_USING_SPI_NAND)
+        return rt_flash_config_read_NAND(id, data, size);
+#elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
+        return rt_flash_config_read_SD(id, data, size);
+#else
+        rt_kprintf("rt_flash_config_read can not get MEM type2 0x%x\n", cfg_base);
+        return 0;
+#endif
+    }
+
+    return 0;
+}
+
+uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size)
+{
+    return rt_flash_config_read_opage(id, data, size, -1);
+}
+
+/**
+  * @brief Write factory configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be written.
+  * @param len length of data .
+  * @retval length of data written.
+  */
+uint8_t rt_flash_config_write_opage(uint8_t id, uint8_t *data, uint8_t len, int8_t opage)
+{
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    if (cfg_base < 0x60000000)
+    {
+#if defined(CFG_SUPPORT_NON_OTP)
+        rt_kprintf("rt_flash_config_write can not get MEM type1 0x%x\n", cfg_base);
+        return 0;
+#else
+        return rt_flash_config_write_NOR(id, data, len, opage);
+#endif
+    }
+    else
+    {
+#if defined(BSP_USING_SPI_NAND)
+        return rt_flash_config_write_NAND(id, data, len);
+#elif defined(BSP_USING_SDIO)||defined(RT_USING_SDIO)
+        return rt_flash_config_write_SD(id, data, len);
+#else
+        rt_kprintf("rt_flash_config_write can not get MEM type2 0x%x\n", cfg_base);
+        return 0;
+#endif
+    }
+    return 0;
+}
+
+uint8_t rt_flash_config_write(uint8_t id, uint8_t *data, uint8_t len)
+{
+    return rt_flash_config_write_opage(id, data, len, -1);
+}
+/**
+  * @brief clear special factory configuraiton for weike.
+  * @retval length of data written.
+  */
+uint8_t rt_flash_config_userinfo_clear()
+{
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    if (cfg_base < 0x60000000)
+    {
+#if defined(CFG_SUPPORT_NON_OTP)
+        rt_kprintf("rt_flash_config_userinfo_clear can not get MEM type1 0x%x\n", cfg_base);
+        return 0;
+#else
+        return rt_flash_config_userinfo_clear_NOR();
+#endif
+    }
+    else
+    {
+#if BSP_USING_SPI_NAND
+        return rt_flash_config_userinfo_clear_NAND();
+#elif BSP_USING_SDIO||RT_USING_SDIO
+        return rt_flash_config_userinfo_clear_SD();
+#else
+        rt_kprintf("rt_flash_config_userinfo_clear can not get MEM type2 0x%x\n", cfg_base);
+        return 0;
+#endif
+    }
+    return 0;
+}
+
+#if 0  //IDO_6600_ATE_ERR
+extern uint8_t g_ping_data[0x20000];
+extern uint8_t g_pong_data[0x20000];
+extern uint8_t g_otpErrFlag;
+uint8_t BSP_OTP_CFG_ECO()
+{
+    uint32_t fac_cfg_size = 0;
+    int level, res;
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+    if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
+    {
+        rt_kprintf("configure get flash handle error\n");
+        return 0;
+    }
+
+    fac_cfg_size = fhandle->ctable->oob_size * 256;
+    if (fac_cfg_size > 0x1000)
+    {
+        fac_cfg_size = 0x1000;
+    }
+
+    rt_flash_lock(cfg_base);
+    level = rt_hw_interrupt_disable();
+    res = HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
+    res = HAL_QSPI_WRITE_OTP(fhandle, CFG_IN_OTP_PAGE << 12, g_pong_data, fac_cfg_size);
+    rt_hw_interrupt_enable(level);
+    rt_flash_unlock(cfg_base);
+
+
+    rt_kprintf("OTP1 old:\n");
+    for (int j = 0; j < 20; j++)
+    {
+        rt_kprintf("%02x  ", g_ping_data[j]);
+    }
+    rt_kprintf("\n");
+
+    if (res == 0)
+    {
+        rt_kprintf("BSP_OTP_CFG_ECO write error\n");
+    }
+    else
+    {
+        rt_kprintf("OTP1 new:\n");
+        for (int j = 0; j < 14; j++)
+        {
+            rt_kprintf("%02x  ", g_pong_data[j]);
+        }
+        rt_kprintf("\n");
+        rt_kprintf("BSP_OTP_CFG_ECO write success\n");
+    }
+
+    //HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
+    //len = HAL_QSPI_WRITE_OTP(fhandle, CFG_IN_OTP_PAGE << 12, g_pong_data, fac_cfg_size);
+    //HAL_ASSERT(len > 0);
+
+    rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+
+    return 0;
+}
+
+uint8_t BSP_OTP_CFG_DEBUG()
+{
+    uint32_t fac_cfg_size = 0;
+    int level, res;
+    uint8_t data[18] = {0x06, 0x04, 0x04, 0x6b, 0x0c, 0x06,
+                        0x6b, 0x04, 0x04, 0x81, 0x06, 0x83,
+                        0x04, 0x04, 0x9c, 0x81, 0x06, 0x83
+                       };
+    uint32_t cfg_base = BSP_GetOtpBase();
+
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
+    if (fhandle == NULL || fhandle->ctable == NULL || fhandle->ctable->oob_size == 0)
+    {
+        rt_kprintf("configure get flash handle error\n");
+        return 0;
+    }
+
+    rt_flash_lock(cfg_base);
+    level = rt_hw_interrupt_disable();
+    res = HAL_QSPI_ERASE_OTP(fhandle, CFG_IN_OTP_PAGE << 12);
+    res = HAL_QSPI_WRITE_OTP(fhandle, CFG_IN_OTP_PAGE << 12, data, 18);
+    rt_hw_interrupt_enable(level);
+    rt_flash_unlock(cfg_base);
+
+    rt_flash_switch_dtr(cfg_base, 1);    // recover dtr if setting
+
+    return 0;
+}
+#endif
+
+
+
+/**
+  * @brief Read factory user configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be read.
+  * @param size Max length of data .
+  * @retval length of data read.
+  */
+uint8_t rt_user_config_read(uint8_t id, uint8_t *data, uint8_t size)
+{
+    if (is_onchip_cfg(id))  //sys para not in user page
+    {
+        return 0;
+    }
+
+    return rt_flash_config_read_opage(id, data, size, CFG_USER_OTP_PAGE);
+}
+
+/**
+  * @brief Write factory user configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be written.
+  * @param len length of data .
+  * @retval length of data written.
+  */
+uint8_t rt_user_config_write(uint8_t id, uint8_t *data, uint8_t len)
+{
+    if (is_onchip_cfg(id))  //sys para not in user page
+    {
+        return 0;
+    }
+
+    return rt_flash_config_write_opage(id, data, len, CFG_USER_OTP_PAGE);
+}
+
+/**
+  * @brief Read customer configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be read.
+  * @param size Max length of data .
+  * @retval length of data read.
+  */
+uint8_t rt_cust_config_read(uint8_t id, uint8_t *data, uint8_t size)
+{
+    if (is_onchip_cfg(id))  //sys para not in user page
+    {
+        return 0;
+    }
+
+    return rt_flash_config_read_opage(id, data, size, CFG_CUST_OTP_PAGE);
+}
+
+/**
+  * @brief Write customer configuraiton.
+  * @param id  Factory config ID.
+  * @param data  config data to be written.
+  * @param len length of data .
+  * @retval length of data written.
+  */
+uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
+{
+    if (is_onchip_cfg(id))  //sys para not in user page
+    {
+        return 0;
+    }
+
+    return rt_flash_config_write_opage(id, data, len, CFG_CUST_OTP_PAGE);
 }
 
 /**
@@ -1340,6 +1661,7 @@ uint8_t rt_cust_config_write(uint8_t id, uint8_t *data, uint8_t len)
 rt_err_t rt_flash_config_lock(uint8_t page)
 {
     uint32_t cfg_base = BSP_GetOtpBase();
+
 #if !defined(CFG_SUPPORT_NON_OTP)
 #ifdef CFG_IN_FLASH_OTP
     FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
@@ -1387,7 +1709,7 @@ end:
 int rt_syscfg_set_otp_page(uint8_t page_start, uint8_t page_cnt)
 {
     uint32_t cfg_base = BSP_GetOtpBase();
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle != NULL)    // it is nor flash, do not need set otp page info now, need update later?
         return 0;
 
@@ -1419,7 +1741,7 @@ uint8_t rt_factory_cfg_write(uint8_t id, uint8_t *data, uint8_t len)
     if (is_onchip_cfg(id) != 0) // onchip cfg do not use this interface, something wrong
         return 0;
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle != NULL)  // nor flash otp, use old interface
     {
         // TODO: use user cfg or customer cfg? add more interface ?
@@ -1530,7 +1852,7 @@ uint8_t rt_factory_cfg_read(uint8_t id, uint8_t *data, uint8_t len)
     if (is_onchip_cfg(id) != 0) // onchip cfg do not use this interface, something wrong
         return 0;
 
-    FLASH_HandleTypeDef *fhandle = Addr2Handle(cfg_base);
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(cfg_base);
     if (fhandle != NULL)  // nor flash otp, use old interface
     {
         // TODO: use user cfg or customer cfg? add more interface ?

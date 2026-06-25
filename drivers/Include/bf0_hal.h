@@ -187,7 +187,11 @@ extern "C" {
 #define __HAL_SYSCFG_HPBG_VDDPSW_EN()        (hwp_hpsys_cfg->CAU2_CR |= HPSYS_CFG_CAU2_CR_HPBG_VDDPSW_EN)
 #endif  //#ifdef SF32LB55X
 
+#if !defined(CFG_FACTORY_BAUND_8M)
 #define SystemFixClock  48000000
+#else
+#define SystemFixClock  64000000
+#endif
 
 #ifdef ROM_ENABLED
 #define __HAL_ROM_USED __weak
