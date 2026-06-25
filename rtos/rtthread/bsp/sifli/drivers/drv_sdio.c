@@ -1604,6 +1604,8 @@ static int sdiox_init(uint32_t idx)
     rt_pm_hw_device_stop();
 #endif /* RT_USING_PM */
 
+    return 0;
+
 }
 
 int rt_hw_sdio_init(void)
