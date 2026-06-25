@@ -47,6 +47,11 @@ struct sec_configuration *temp_sec_config;
 
 ALIGN(4) struct sec_configuration sec_config_cache;
 
+#ifdef CFG_BOOTROM
+    __attribute__((used))
+    const char *const bootrom_ver = "v1.1";
+#endif /* CFG_BOOTROM */
+
 void boot_ram(void)
 {
     sboot_standby_boot_tbl_t *boot_tbl = (sboot_standby_boot_tbl_t *)hwp_hpsys_aon->RESERVE0;
