@@ -47,12 +47,17 @@ void usbd_musb_delay_ms(uint8_t ms)
 #ifdef PKG_CHERRYUSB_DEVICE
 void usb_dc_low_level_init(uint8_t busid)
 {
+#ifdef SOC_SF32LB57X
+    hwp_hpsys_cfg->ANAU_CR |= HPSYS_CFG_ANAU_CR_EN_BG;
+#endif /* SOC_SF32LB57X */    
+
     HAL_RCC_EnableModule(RCC_MOD_USBC);
 
 #ifdef SOC_SF32LB57X
-    /* switch to 48MHz */
-    hwp_usbc->mode_48m |= 2;
-    hwp_hpsys_cfg->ANAU_CR |= HPSYS_CFG_ANAU_CR_EN_BG;
+    /* Delay 10us to make sure BG and rcc usb clock is ready */
+    HAL_Delay_us(10);
+    /* switch to 48MHz (clk_en=1 and mode_48m=1). mode_48m default value is 1, write 1 again to avoid read back */
+    hwp_usbc->mode_48m = 3;
 #endif /* SOC_SF32LB57X */
 
 #ifdef SOC_SF32LB58X
