@@ -110,7 +110,7 @@ static int audio_pm_debug = 0;
 static int hfp_with_xiaozhi = 0;
 static audio_server_t g_server;
 static uint32_t audio_server_stack[AUDIO_SERVER_STACK_SIZE / 4];
-static uint32_t bt_downvoice_stack[DOWNLINK_STACK_SIZE / 4];
+static uint32_t bt_downvoice_stack[AUDIO_SERVER_STACK_SIZE * 3 / 5 / 4];
 static struct rt_thread audio_server_tid;
 static struct rt_thread bt_downvoice_tid;
 static uint8_t *hfp_dev_input_buf;
@@ -3181,7 +3181,7 @@ static void fade_out(audio_client_t c, uint8_t *data, uint32_t data_len, uint32_
   *         len: data length
   * @retval whether or not need downlink processing algorithm
   */
-uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint8_t len)
+uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint16_t len)
 {
     uint8_t ret = 1;
     rt_size_t putsize;
@@ -3257,7 +3257,7 @@ AUDIO_API int audio_hfp_uplink_write(audio_client_t handle, uint8_t *data, uint3
     }
 
 #ifdef BLUETOOTH
-    msbc_encode_process(data, data_len);
+    bt_voice_encode_process(data, data_len);
 #endif
 
     return data_len;

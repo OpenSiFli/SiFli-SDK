@@ -459,7 +459,7 @@ uint8_t bt_voice_cvsd_encode(uint8_t *fifo, uint16_t fifo_size)
     return 0;
 }
 
-void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size)
+void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
 {
     if (pt_bt_voice->state == 0)
     {

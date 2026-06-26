@@ -317,7 +317,7 @@ void audio_server_register_listener(audio_server_listener_func func, uint32_t wh
   * @param  len: data length
   * @retval whether or not need downlink processing algorithm
   */
-uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint8_t len);
+uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint16_t len);
 /**
   * @brief  write pcm data to uplink cache buffer
   * @param  handle value return by audio_open

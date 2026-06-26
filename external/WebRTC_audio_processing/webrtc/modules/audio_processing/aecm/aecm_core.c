@@ -418,7 +418,7 @@ int WebRtcAecm_InitCore(AecmCore *const aecm, int samplingFreq)
     int32_t tmp32 = PART_LEN1 * PART_LEN1;
     int16_t tmp16 = PART_LEN1;
 
-    if (samplingFreq != 8000 && samplingFreq != 16000)
+    if (samplingFreq != 8000 && samplingFreq != 16000 && samplingFreq != 32000)
     {
         samplingFreq = 8000;
         return -1;

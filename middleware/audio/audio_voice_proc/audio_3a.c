@@ -1007,20 +1007,21 @@ void xiaozhi_to_hfp(uint8_t *fifo, uint16_t fifo_size)
     {
         RT_ASSERT(fifo_size == 120);
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 120);
+        bt_voice_encode_process(fifo, 120);
 #endif
     }
     else if (p_3a_env->samplerate == 16000)
     {
         RT_ASSERT(fifo_size == 240);
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 240);
+        bt_voice_encode_process(fifo, 240);
 #endif
     }
 #ifdef AUDIO_BT_AUDIO
     else if (fifo_size == 480)
     {
         //lc3_encode_process(fifo, 480);
+        bt_voice_encode_process(fifo, 480);
     }
 #endif
 }
@@ -1127,7 +1128,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
                 memset(g_3a_fifo, 0, 120);
             }
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(g_3a_fifo, 120);
+            bt_voice_encode_process(g_3a_fifo, 120);
 #endif
         }
     }
@@ -1153,14 +1154,14 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
                 memset(g_3a_fifo, 0, encode_frame_byte);
             }
 #ifdef AUDIO_BT_AUDIO
-            if (p_3a_env->samplerate == 16000)
-            {
-                msbc_encode_process(g_3a_fifo, encode_frame_byte);
-            }
-            else
-            {
-                //lc3_encodde_process(g_3a_fifo, encode_frame_byte);
-            }
+            // if (p_3a_env->samplerate == 16000)
+            // {
+            bt_voice_encode_process(g_3a_fifo, encode_frame_byte);
+            // }
+            // else
+            // {
+            //     //lc3_encodde_process(g_3a_fifo, encode_frame_byte);
+            // }
 #endif
         }
         audio_tick_out(AUDIO_MSBC_ENCODE_TIME);

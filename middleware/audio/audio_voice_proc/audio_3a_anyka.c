@@ -765,7 +765,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         {
             rt_ringbuffer_get(thiz->rbuf_out, result, 120);
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(result, 120);
+            bt_voice_encode_process(result, 120);
 #endif
         }
     }
@@ -775,7 +775,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         {
             rt_ringbuffer_get(thiz->rbuf_out, result, 240);
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(result, 240);
+            bt_voice_encode_process(result, 240);
 #endif
         }
     }

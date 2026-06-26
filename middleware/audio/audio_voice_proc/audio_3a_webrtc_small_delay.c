@@ -922,7 +922,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
                 memset(far, 0, 120);
             }
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process((uint8_t *)&far[0], 120);
+            bt_voice_encode_process((uint8_t *)&far[0], 120);
 #endif
         }
     }
@@ -937,7 +937,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
                 memset((uint8_t *)&far[0], 0, 240);
             }
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process((uint8_t *)&far[0], 240);
+            bt_voice_encode_process((uint8_t *)&far[0], 240);
 #endif
         }
 

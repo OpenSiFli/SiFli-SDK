@@ -256,8 +256,8 @@ skip_3a_up:
     {
         //msbc encode 120 bytes for 8K
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 120);
-        msbc_encode_process(fifo + 120, 120);
+        bt_voice_encode_process(fifo, 120);
+        bt_voice_encode_process(fifo + 120, 120);
 #endif
         if (ref_index == 0)
         {
@@ -273,8 +273,8 @@ skip_3a_up:
         audio_dump_data(ADUMP_RAMP_OUT_OUT, out, SOUNDPLUS_FRAME_SIZE);
         //msbc encode one frame is 240 bytes for 16K samplerate
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 240);
-        msbc_encode_process(fifo + 240, 240);
+        bt_voice_encode_process(fifo, 240);
+        bt_voice_encode_process(fifo + 240, 240);
 #endif
         return;
     }
