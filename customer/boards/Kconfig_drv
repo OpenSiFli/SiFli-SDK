@@ -856,6 +856,7 @@ menu "On-chip Peripherals"
                         default 4  if SOC_SF32LB575YBBN6
                         default 16 if SOC_SF32LB577VD776
                         default 32 if SOC_SF32LB579V6EN6
+                        default 1  if SOC_SF32LB57BUN3N6
                         default 32
                 endif
 
