@@ -377,54 +377,20 @@ static rt_err_t drv_pwm_control(struct rt_device_pwm *device, int cmd, void *arg
 */
 static rt_err_t bf0_hw_pwm_init(struct bf0_pwm *device)
 {
-#if 0
     rt_err_t result = RT_EOK;
     PWM_HandleTypeDef *tim = RT_NULL;
-    PWM_ClockConfigTypeDef clock_config = {0};
 
     RT_ASSERT(device != RT_NULL);
 
     tim = (PWM_HandleTypeDef *)&device->pwm_handle;
 
-    /* configure the timer to pwm mode */
-    tim->Init.Prescaler = 0;
-    tim->Init.CounterMode = PWM_COUNTERMODE_UP;
-    tim->Init.Period = 0;
-
-    if (HAL_PWM_Base_Init(tim) != HAL_OK)
+    if (HAL_PWM_Init(tim) != HAL_OK)
     {
-        LOG_E("%s time base init failed", device->name);
+        LOG_E("%s init failed", device->name);
         result = -RT_ERROR;
-        goto __exit;
     }
 
-    clock_config.ClockSource = PWM_CLOCKSOURCE_INTERNAL;
-    if (HAL_PWM_ConfigClockSource(tim, &clock_config) != HAL_OK)
-    {
-        LOG_E("%s clock init failed", device->name);
-        result = -RT_ERROR;
-        goto __exit;
-    }
-
-    if (HAL_PWM_PWM_Init(tim) != HAL_OK)
-    {
-        LOG_E("%s pwm init failed", device->name);
-        result = -RT_ERROR;
-        goto __exit;
-    }
-
-    /* pwm pin configuration */
-    //HAL_PWM_MspPostInit(tim);
-
-    /* enable update request source */
-    __HAL_PWM_URS_ENABLE(tim);
-
-__exit:
     return result;
-#endif
-
-
-    return RT_EOK;
 }
 static void bf0_hw_pwm_config_dma(struct bf0_pwm *device)
 {
