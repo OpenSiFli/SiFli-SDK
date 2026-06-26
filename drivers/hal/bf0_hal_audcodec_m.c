@@ -180,7 +180,13 @@ __weak int bf0_enable_pll(uint32_t freq, uint8_t type)// need updata drv_audcode
         hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_VCO;
         hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_ANA;
         hwp_audcodec->PLL_CFG0 &= ~AUDCODEC_PLL_CFG0_ICP_SEL_Msk;
+#ifdef SF32LB52X
         hwp_audcodec->PLL_CFG0 |= (8 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#elif defined(SF32LB57X)
+        hwp_audcodec->PLL_CFG0 |= (3 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#else
+#error "todo"
+#endif
         hwp_audcodec->PLL_CFG2 |= AUDCODEC_PLL_CFG2_EN_DIG;
         hwp_audcodec->PLL_CFG3 |= AUDCODEC_PLL_CFG3_EN_SDM;
         hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG
@@ -461,9 +467,9 @@ void HAL_TURN_ON_PLL()
     hwp_audcodec->PLL_CFG3 |= AUDCODEC_PLL_CFG3_EN_SDM;
     hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG
 #ifdef AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos
-                           | (2 << AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos)
+                              | (2 << AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos)
 #endif
-    ;
+                              ;
 
     hwp_audcodec->PLL_CFG1 = (3 << AUDCODEC_PLL_CFG1_R3_SEL_Pos) |
                              (1 << AUDCODEC_PLL_CFG1_RZ_SEL_Pos) |
