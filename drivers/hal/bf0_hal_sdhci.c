@@ -565,6 +565,22 @@ void hal_sdhci_set_clk(SDHCI_HandleTypeDef *handle, uint32_t clock, uint32_t max
 
 }
 
+void hal_sdhci_clk_ctrl(SDHCI_HandleTypeDef *handle, bool en)
+{
+    uint16_t clk = hal_sdhci_readw(handle, SDHCI_CLOCK_CONTROL);
+
+    if (en)
+    {
+        clk |= SDHCI_CLOCK_CARD_EN;
+    }
+    else
+    {
+        clk &= ~SDHCI_CLOCK_CARD_EN;
+    }
+
+    hal_sdhci_writew(handle, clk, SDHCI_CLOCK_CONTROL);
+}
+
 void hal_sdhci_set_ddr(SDHCI_HandleTypeDef *handle, uint8_t ddr)
 {
     if (ddr == 1)

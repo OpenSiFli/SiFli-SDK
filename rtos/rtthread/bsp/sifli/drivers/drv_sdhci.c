@@ -524,6 +524,8 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
     rt_pm_hw_device_start();
 #endif
 
+    hal_sdhci_clk_ctrl(&host->handle, true);
+
     //ASSERT(host->cmd);
     LOG_D("SDDEBUG: sdhci.c sdhci_send_command \n");
     //printk("send command \n");
@@ -645,6 +647,9 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
     {
         LOG_D("Wait cmd %d fail with %d\n", cmd->cmd_code, res);
     }
+
+    hal_sdhci_clk_ctrl(&host->handle, false);
+
 #ifdef RT_USING_PM
     rt_pm_hw_device_stop();
     rt_pm_release(PM_SLEEP_MODE_IDLE);
@@ -1900,7 +1905,7 @@ int rt_sdhci_init_instance(uint8_t id)
     int ret = 0;
     struct rt_sdhci_configuration *cfg;
     struct sdhci_host *host_ctx;
-    uint16_t sdhci_time = 100;    
+    uint16_t sdhci_time = 100;
 
     LOG_I("rt_hw_sdmmc_init %d begin\n", id + 1);
 
