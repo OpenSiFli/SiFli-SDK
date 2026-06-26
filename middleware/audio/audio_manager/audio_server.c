@@ -2031,7 +2031,7 @@ static int hardware_device_open(audio_device_ctrl_t *device, audio_client_t clie
     {
         if (!device->tx_mixed_pool)
         {
-            uint16_t size = TX_DMA_SIZE * 4;
+            uint16_t size = TX_DMA_SIZE * 16;
 #if TWS_MIX_ENABLE
             if (device->device_type == AUDIO_DEVICE_A2DP_SINK)
             {
