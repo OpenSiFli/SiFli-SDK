@@ -83,6 +83,11 @@ static uint8_t g_mic_chhose; // 0---mic1_left; 1---mic1_right; 2---mic2_left; 3-
 */
 static uint16_t g_mic_delay_ref = 352;
 
+#if defined(AUDIO_TX_USING_I2S)
+    #define MIC_DELAY_REF_16K               600 //宽带实测delay值8左右
+    #define MIC_DELAY_REF_8K                431 //窄带实测delay值8左右
+#endif
+
 static const char factory_far[] =
 {
     "--eqLoad=0"

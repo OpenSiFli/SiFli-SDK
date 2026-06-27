@@ -117,6 +117,8 @@ static uint8_t *hfp_dev_input_buf;
 static uint32_t hfp_dev_input_buf_offset;
 static uint8_t g_ae_log = 0;
 
+
+
 /* dump debug control*/
 
 static audio_dump_ctrl_t audio_dump_debug[ADUMP_NUM];
@@ -460,7 +462,9 @@ static inline void process_speaker_tx(audio_server_t *server, audio_device_speak
         if (my->is_wait_rx_start)
         {
             my->is_wait_rx_start = 0;
+#if !AUDIO_TX_USING_I2S
             start_rx(my);
+#endif
             rt_event_send(my->event, 1);
         }
     }
@@ -1132,6 +1136,7 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
     }
     else if (client->audio_type != AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
     {
+        LOG_I("non modem config rx--set callback");
         rt_device_set_audprc_dma_rx_callback(NULL);
         rt_device_set_rx_indicate(my->audprc_dev, mic_rx_ind);
     }
@@ -1195,7 +1200,9 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
 static void start_rx(audio_device_speaker_t *my)
 {
     int stream;
+#if !AUDIO_TX_USING_I2S
     LOG_I("%s need_adc_rx=%d", __FUNCTION__, my->need_adc_rx);
+#endif
     if (my->need_adc_rx)
     {
         my->need_adc_rx = 0;
@@ -1246,8 +1253,18 @@ static void start_txrx(audio_device_speaker_t *my, bool is_modem)
     my->is_wait_rx_start = 1;
 
 #if defined(AUDIO_TX_USING_I2S)
+    LOG_I("<i2s start>");
+    /* should delete log in driver for aecm fixed delay time between mic and i2s-tx */
+    rt_base_t level = rt_hw_interrupt_disable();
     stream = AUDIO_STREAM_REPLAY;
     rt_device_control(my->i2s, AUDIO_CTL_START, &stream);
+    my->opened_map_flag |= OPEN_MAP_TX;
+    my->tx_ready = 1;
+    start_rx(my);
+    rt_hw_interrupt_enable(level);
+    //wait rx start
+    rt_err_t got = rt_event_recv(my->event, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, 500, NULL) ;
+    LOG_I("last log should be <i2s start> %d", got);
 #else
     // 6. DAC mute
     rt_device_control(my->audcodec_dev, AUDIO_CTL_MUTE, (void *)1);
@@ -1280,7 +1297,6 @@ static void start_txrx(audio_device_speaker_t *my, bool is_modem)
         LOG_I("got rx start %d", got);
     }
 #endif
-    rt_thread_mdelay(10);
 }
 
 static rt_err_t micbias_rx_ind(rt_device_t dev, rt_size_t size)
@@ -1693,6 +1709,13 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     }
     else if (need_tx_init && need_rx_init)
     {
+        if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+        {
+            if (client->parameter.open)
+            {
+                client->parameter.open(client->user_data);
+            }
+        }
         start_txrx(my, client->audio_type == AUDIO_TYPE_MODEM_VOICE);
     }
     // 7. open PA, DAC unmute
@@ -1828,6 +1851,13 @@ static int audio_device_speaker_close(void *user_data)
 
     if (need_tx_deinit || need_rx_deinit)
     {
+        if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+        {
+            if (client->parameter.close)
+            {
+                client->parameter.close(client->user_data);
+            }
+        }
 #ifdef BSP_ENABLE_I2S_CODEC
         if (my->i2s)
         {

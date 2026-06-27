@@ -11,6 +11,7 @@
 extern "C" {
 #endif
 
+int i2s_modem_open2(uint8_t volume);
 int i2s_modem_open(void);
 int i2s_modem_close(void);
 

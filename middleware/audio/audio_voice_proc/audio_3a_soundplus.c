@@ -49,8 +49,12 @@ static audio_3a_t g_audio_3a_env =
     .state  = 0,
     .samplerate = 16000,
 };
-static uint16_t g_mic_delay_ref = 434 ;
+static uint16_t g_mic_delay_ref = 434;
 
+#if defined(AUDIO_TX_USING_I2S)
+    #define MIC_DELAY_REF_16K               600 //宽带实测delay值8左右
+    #define MIC_DELAY_REF_8K                431 //窄带实测delay值8左右
+#endif
 
 static void audio_3a_module_init(audio_3a_t *env, uint32_t samplerate)
 {
