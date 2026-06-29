@@ -344,7 +344,7 @@ Default_Handler:
                 Set_Default_Handler      Interrupt77_IRQHandler     
                 Set_Default_Handler      I2C4_IRQHandler     
                 Set_Default_Handler      SDMMC1_IRQHandler      
-                Set_Default_Handler      ACPU2HCPU_IRQHandler       
+                Set_Default_Handler      HCPU2ACPU_IRQHandler       
                 Set_Default_Handler      SDMMC2_IRQHandler      
                 Set_Default_Handler      PDM1_IRQHandler        
                 Set_Default_Handler      CAN1_IRQHandler    
