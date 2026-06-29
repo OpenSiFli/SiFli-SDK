@@ -8,6 +8,7 @@
     file brief: ACPU controller which runs on HCPU
  */
 #include <rtconfig.h>
+#include <stdlib.h>
 #include <board.h>
 #include "rtthread.h"
 
