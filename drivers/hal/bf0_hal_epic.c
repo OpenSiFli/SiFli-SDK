@@ -4220,7 +4220,7 @@ static void EPIC_InitRamInstance(EPIC_HandleTypeDef *hepic)
 #ifdef EPIC_SUPPORT_GREYSCALE
         hepic->RamInstance->GREY_CONV = 0x07496532;
 #endif /* EPIC_SUPPORT_GREYSCALE */
-        hepic->RamInstance->SETTING |= EPIC_SETTING_AUTO_GATE_EN;
+        // hepic->RamInstance->SETTING |= EPIC_SETTING_AUTO_GATE_EN;
     }
 }
 static void EPIC_WaitValidInstance(EPIC_HandleTypeDef *hepic)
@@ -4324,7 +4324,7 @@ HAL_StatusTypeDef HAL_EPIC_Init(EPIC_HandleTypeDef *epic)
 #ifndef SF32LB55X
     HAL_RCC_EnableModule(RCC_MOD_EPIC);
 #endif /* SF32LB55X */
-    epic->HwInstance->SETTING |= EPIC_SETTING_AUTO_GATE_EN;
+    // epic->HwInstance->SETTING |= EPIC_SETTING_AUTO_GATE_EN;
     epic->coeng_state = 0;
 
     epic->State = HAL_EPIC_STATE_READY;
