@@ -580,7 +580,26 @@ static rt_size_t master_xfer_lcpu_patch_a0(struct rt_i2c_bus_device *bus, struct
     }
     else
     {
-        ret_v = i2c_ops_rom.master_xfer(bus, msgs, num);
+        ret_v = 0;
+        for (rt_uint32_t i = 0; i < num; i++)
+        {
+            if (msgs[i].flags & RT_I2C_RD)
+            {
+                if (bus->parent.open_flag & RT_DEVICE_FLAG_INT_RX)
+                {
+                    hi2c->Instance->IER &= (~(I2C_IER_RFIE | I2C_IER_TEIE));
+                }
+            }
+            else
+            {
+                if (bus->parent.open_flag & RT_DEVICE_FLAG_INT_TX)
+                {
+                    hi2c->Instance->IER &= (~(I2C_IER_TEIE));
+                }
+            }
+            ret_v += i2c_ops_rom.master_xfer(bus, &msgs[i], 1);
+        }
+        // ret_v = i2c_ops_rom.master_xfer(bus, msgs, num);
     }
 
     if (__HAL_I2C_GET_FLAG(hi2c, I2C_SR_UB) == SET) //Fix I2C STOP not finished in ROM
