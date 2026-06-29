@@ -59,7 +59,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_TSEN_DeInit(TSEN_HandleTypeDef *htsen)
         return HAL_ERROR;
 
 #if !defined(TSEN_BGR_EN)
+//TODO: could anau_cr_en_bg be enabled always?
+#ifdef SF32LB52X
     hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_BG);
+#endif /* SF32LB52X */
 #else
     htsen->Instance->ANAU_ANA_TP &= ~TSEN_ANAU_ANA_TP_ANAU_IARY_EN;
     htsen->Instance->BGR &= (~TSEN_BGR_EN);
