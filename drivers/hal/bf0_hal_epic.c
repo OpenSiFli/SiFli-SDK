@@ -5307,7 +5307,11 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendStart(EPIC_HandleTypeDef *hepic,
 
     hepic->api_type = EPIC_API_CONTINUE;
     hepic->State = HAL_EPIC_STATE_BUSY;
+#ifdef SF32LB57X
+    hepic->api_cfg.cont_cfg.epic_layer[CONT_FG_LAYER] = EPIC_LAYER_IDX_1;
+#else
     hepic->api_cfg.cont_cfg.epic_layer[CONT_FG_LAYER] = EPIC_LAYER_IDX_VL;
+#endif
     hepic->api_cfg.cont_cfg.epic_layer[CONT_BG_LAYER] = EPIC_LAYER_IDX_0;
     hepic->api_cfg.cont_cfg.color_format[CONT_FG_LAYER] = EPIC_GetLayerColorFormat(input_layer->color_mode);
     hepic->api_cfg.cont_cfg.color_format[CONT_BG_LAYER] = EPIC_GetLayerColorFormat(output_layer->color_mode);
@@ -5326,10 +5330,14 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendStart(EPIC_HandleTypeDef *hepic,
                     -offset_x, -offset_y);
 
     //FG
+#ifdef SF32LB57X
+    ret_v = EPIC_ContConfigLayer(hepic, CONT_FG_LAYER, input_layer);
+    if (HAL_OK != ret_v) goto __EXIT;
+#else
     ret_v = EPIC_ContConfigVideoLayer(hepic, CONT_FG_LAYER, input_layer);
     if (HAL_OK != ret_v) goto __EXIT;
     EPIC_ContResetVideoLayer(hepic, CONT_FG_LAYER); //Reset transform configurations
-
+#endif
 
     //BG
     ret_v = EPIC_ContConfigLayer(hepic, CONT_BG_LAYER, output_layer);
