@@ -383,7 +383,7 @@ static void i2s(uint8_t argc, char **argv)
     }
     else
     {
-        rt_kprintf("modem_open\n");
+        rt_kprintf("modem_close\n");
         i2s_modem_close();
 #ifdef RT_USING_PM
         rt_pm_release(PM_SLEEP_MODE_IDLE);

@@ -922,9 +922,17 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
     {
         rt_device_set_tx_complete(my->i2s, speaker_tx_done);
     }
+    else
+    {
+        rt_device_set_tx_complete(my->i2s, NULL);
+    }
 #else
-    LOG_I("config tx--set callback dma size=%d", my->tx_dma_size);
-    if (client->audio_type != AUDIO_TYPE_MODEM_VOICE)
+    LOG_I("set tx callback dma size=%d t=%d", my->tx_dma_size, client->audio_type);
+    if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+    {
+        rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
+    }
+    else
     {
         rt_device_set_tx_complete(my->audprc_dev, speaker_tx_done);
     }
@@ -1134,12 +1142,17 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
         rt_device_set_rx_indicate(my->audprc_dev, NULL);
         rt_device_set_dual_rx_indicate(dual_adc_rx_ind);
     }
-    else if (client->audio_type != AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
+    else if (client->audio_type == AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
+    {
+        rt_device_set_rx_indicate(my->audprc_dev, NULL);
+    }
+    else
     {
         LOG_I("non modem config rx--set callback");
         rt_device_set_audprc_dma_rx_callback(NULL);
         rt_device_set_rx_indicate(my->audprc_dev, mic_rx_ind);
     }
+
     //config ADC
     struct rt_audio_caps caps;
     int stream;
@@ -1377,6 +1390,8 @@ static void micbias_power_off_internal()
         rt_device_control(my->audcodec_dev, AUDIO_CTL_STOP, &stream_audcodec);
         rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
         bf0_disable_pll();
+        rt_device_set_rx_indicate(my->audprc_dev, RT_NULL);
+        rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
         rt_device_close(my->audcodec_dev);
         rt_device_close(my->audprc_dev);
         my->audcodec_dev = NULL;
@@ -1866,6 +1881,8 @@ static int audio_device_speaker_close(void *user_data)
             stream = AUDIO_STREAM_RECORD;
             rt_device_control(my->i2s, AUDIO_CTL_STOP, &stream);
             rt_device_control(my->i2s, AUDIO_CTL_SET_TX_DMA_SIZE, (void *)(AUDIO_DATA_SIZE / 2)); /* restore to original size */
+            rt_device_set_rx_indicate(my->i2s, RT_NULL);
+            rt_device_set_tx_complete(my->i2s, RT_NULL);
             rt_device_close(my->i2s);
             my->i2s = NULL;
         }
@@ -1924,6 +1941,8 @@ static int audio_device_speaker_close(void *user_data)
             //rt_device_control(my->audcodec_dev, AUDIO_CTL_STOP, &stream_audcodec);
             //rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
 
+            rt_device_set_rx_indicate(my->audprc_dev, RT_NULL);
+            rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
             bf0_disable_pll();
             rt_device_close(my->audcodec_dev);
             rt_device_close(my->audprc_dev);
@@ -2992,6 +3011,7 @@ static rt_err_t speaker_tx_done(rt_device_t dev, void *buffer)
 static rt_err_t mic_rx_ind(rt_device_t dev, rt_size_t size)
 {
     //in inturrupt
+    //rt_kprintf("-rx done\n");
     if (hfp_with_xiaozhi)
     {
         return RT_EOK;
