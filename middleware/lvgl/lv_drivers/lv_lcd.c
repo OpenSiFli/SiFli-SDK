@@ -486,17 +486,6 @@ static void wait_flush_done(lv_disp_drv_t *disp_drv)
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
     rt_err_t err;
     err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
-    if (RT_EOK != err)
-    {
-        lv_disp_draw_buf_t *draw_buf = disp_drv ? disp_drv->draw_buf : NULL;
-        LOG_E("[lv_lcd][wait-timeout] err=%d timeout=%d tick=%u disp=%p flushing_disp=%p draw_buf=%p flushing=%d last=%d",
-              err, LCD_FLUSH_EXP_MS, rt_tick_get(), disp_drv, lcd_flushing_disp_drv, draw_buf,
-              draw_buf ? draw_buf->flushing : -1,
-              draw_buf ? draw_buf->flushing_last : -1);
-#if defined(BSP_USING_LCD_FRAMEBUFFER)
-        drv_lcd_fb_dump_state("lv_lcd_wait_timeout");
-#endif
-    }
     RT_ASSERT(RT_EOK == err);
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
