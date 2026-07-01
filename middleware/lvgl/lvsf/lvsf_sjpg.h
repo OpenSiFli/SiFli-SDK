@@ -3,9 +3,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
 /**
- * @file lv_sjpg.h
- *
+ * @file lvsf_sjpg.h
+ * SJPG decoder framework header
  */
 
 #ifndef LVSF_SJPEG_H
@@ -41,4 +42,4 @@
 
 #endif /*LVSF_USING_SJPG*/
 
-#endif /* LV_SJPEG_H */
+#endif /* LVSF_SJPEG_H */
