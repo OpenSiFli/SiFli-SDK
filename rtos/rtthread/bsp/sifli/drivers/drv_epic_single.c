@@ -398,6 +398,45 @@ static void epic_abort_callback(EPIC_HandleTypeDef *epic)
 }
 
 
+/* Bilinear interpolation of a single color channel at (x,y) within area */
+static uint8_t grad_interp_ch(uint8_t c00, uint8_t c01, uint8_t c10, uint8_t c11,
+                              int16_t x, int16_t y, const EPIC_AreaTypeDef *area)
+{
+    int32_t w = HAL_EPIC_AreaWidth(area);
+    int32_t h = HAL_EPIC_AreaHeight(area);
+    int32_t x_num = x - area->x0;
+    int32_t y_num = y - area->y0;
+
+    int32_t top = (c00 * (w - x_num) + c01 * x_num) / w;
+    int32_t bot = (c10 * (w - x_num) + c11 * x_num) / w;
+
+    return (uint8_t)((top * (h - y_num) + bot * y_num) / h);
+}
+
+/* Recalculate a corner color at (x,y) based on full-area gradient corners */
+static EPIC_ColorDef grad_interp_color(int16_t x, int16_t y, const EPIC_AreaTypeDef *area)
+{
+    EPIC_ColorDef c;
+    c.ch.alpha = grad_interp_ch(drv_epic.grad_color[0][0].ch.alpha,
+                                drv_epic.grad_color[0][1].ch.alpha,
+                                drv_epic.grad_color[1][0].ch.alpha,
+                                drv_epic.grad_color[1][1].ch.alpha, x, y, area);
+    c.ch.color_r = grad_interp_ch(drv_epic.grad_color[0][0].ch.color_r,
+                                  drv_epic.grad_color[0][1].ch.color_r,
+                                  drv_epic.grad_color[1][0].ch.color_r,
+                                  drv_epic.grad_color[1][1].ch.color_r, x, y, area);
+    c.ch.color_g = grad_interp_ch(drv_epic.grad_color[0][0].ch.color_g,
+                                  drv_epic.grad_color[0][1].ch.color_g,
+                                  drv_epic.grad_color[1][0].ch.color_g,
+                                  drv_epic.grad_color[1][1].ch.color_g, x, y, area);
+    c.ch.color_b = grad_interp_ch(drv_epic.grad_color[0][0].ch.color_b,
+                                  drv_epic.grad_color[0][1].ch.color_b,
+                                  drv_epic.grad_color[1][0].ch.color_b,
+                                  drv_epic.grad_color[1][1].ch.color_b, x, y, area);
+    return c;
+}
+
+
 static HAL_StatusTypeDef epic_split_render_next(uint8_t init)
 {
     EPIC_AreaTypeDef *p_render_area = &drv_epic.split_rd.render_area;
@@ -521,12 +560,18 @@ static HAL_StatusTypeDef epic_split_render_next(uint8_t init)
         param.width = p_dst_layer->width;
         param.height = p_dst_layer->height;
         param.total_width = p_dst_layer->total_width;
-        memcpy(param.color, drv_epic.grad_color, sizeof(param.color));
+
+        /* Recalculate corner colors for current tile position */
+        param.color[0][0] = grad_interp_color(cur_render_area.x0, cur_render_area.y0, p_render_area);
+        param.color[0][1] = grad_interp_color(cur_render_area.x1, cur_render_area.y0, p_render_area);
+        param.color[1][0] = grad_interp_color(cur_render_area.x0, cur_render_area.y1, p_render_area);
+        param.color[1][1] = grad_interp_color(cur_render_area.x1, cur_render_area.y1, p_render_area);
+
         LOG_D("EPIC Fill Grad buf=0x%x, cf=%d, total_w=%d w,h=%d,%d",
               param.start, param.color_mode, param.total_width,
               param.width, param.height);
 
-
+        h_epic->XferCpltCallback = epic_cplt_callback;
         ret = HAL_EPIC_FillGrad_IT(h_epic, &param);
 
     }
