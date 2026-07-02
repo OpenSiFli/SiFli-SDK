@@ -16,6 +16,8 @@ The example can run on the following development boards:
 * sf32lb52-lchspi-ulp
 * sf32lb52-nano_52j
 * sf32lb52-lcd_n16r8
+* SF32LB56 LCD series
+* SF32LB58 LCD series
 
 ## Example Usage
 ### Compilation and Flashing
