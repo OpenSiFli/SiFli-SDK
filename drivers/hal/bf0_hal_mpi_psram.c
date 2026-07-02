@@ -203,6 +203,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
         hflash->ecc_en = 6;  //rdcyc
         hflash->buf_mode = 6;  //wdcyc
     }
+    else if (freq <= 156000000)    // 156M
+    {
+        cs_max = 1235;         // < 4us
+        cshmin = 6;            // 7 cycles of 288M > 18ns
+        trcmin = 19;           // > 60ns
+        hflash->ecc_en = 6;    //rdcyc
+        hflash->buf_mode = 6;  //wdcyc
+    }
     else // 168M
     {
         cs_max = 1330; //1140; //950;
@@ -347,6 +355,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
         cshmin = 5;           // 6 cycles of 288M > 18ns
         trcmin = 17;          // > 60ns
     }
+    else if (freq <= 156000000)    // 156M
+    {
+        cs_max = 1235;        // < 4us
+        cshmin = 6;           // 7 cycles of 288M > 18ns
+        trcmin = 19;          // > 60ns
+    }
     else if (freq <= 168000000)    // 168M
     {
         cs_max = 1330;        // < 4us
@@ -398,7 +412,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
         hflash->ecc_en = 4;  //rdcyc
         hflash->buf_mode = 0;  //wdcyc
     }
-    else if (freq <= 144000000) // 144M
+    else if (freq <= 156000000) // 144M and 156M
     {
         mr0 = (fix_lat << 5) | (5 << 2) | drv_str;
         mr4 = (0 << 7) | (rf << 3);
@@ -418,7 +432,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     // for some case like freq changed, mr should be set even not reset chip
     //if ((cren == 0) && (hflash->wakeup == 0))
     {
+        /* TODO: psram driver doesn't support switch between 168MHz and 24MHz as their write latency is different.
+         * For example, current PSRAM run at 168MHz, write latency is 2, if switching to 24MHz whose write latency is 0,
+         * as hflash->buf_mode has been updated to 0, MR_WRITE below would fail due to write latency mismatch
+         */
+        /* write MR0 first with old write latency */
         HAL_LEGACY_MR_WRITE(hflash, 0, mr0);
+        /* write MR4 to update write lantency */
         HAL_LEGACY_MR_WRITE(hflash, 4, mr4);
     }
 
@@ -634,7 +654,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_MR_WRITE(FLASH_HandleTypeDef *hflash
     if (hflash == NULL)
         return HAL_ERROR;
 
-    HAL_FLASH_MANUAL_CMD(hflash, 1, 7, 0, 0, 0, adsize, 7, 7);
+    /* write dummy cycle may vary for legacy psram */
+    HAL_FLASH_MANUAL_CMD(hflash, 1, 7, hflash->buf_mode, 0, 0, adsize, 7, 7);
 
     HAL_FLASH_WRITE_DLEN(hflash, 4);
     HAL_FLASH_WRITE_WORD(hflash, (uint32_t)value);
