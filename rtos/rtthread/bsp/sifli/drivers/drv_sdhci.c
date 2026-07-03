@@ -1579,7 +1579,21 @@ int sdhci_add_host(struct sdhci_host *host)
     LOG_I("host minclock %d  host maxclock %d  \n", mmc->freq_min, mmc->freq_max);
     mmc->flags = MMCSD_SUP_SDIO_IRQ;
 
-    mmc->flags |= MMCSD_BUSWIDTH_4;
+    /* Per-controller 4-bit mode control (match by instance base address) */
+#ifndef SDMMC1_BUS_WIDTH_1_ONLY
+    if (host->handle.Instance == SDMMC1_BASE)
+    {
+        mmc->flags |= MMCSD_BUSWIDTH_4;
+    }
+#endif /* SDMMC1_BUS_WIDTH_1_ONLY */
+#ifdef SDMMC2_BASE
+#ifndef SDMMC2_BUS_WIDTH_1_ONLY
+    if (host->handle.Instance == SDMMC2_BASE)
+    {
+        mmc->flags |= MMCSD_BUSWIDTH_4;
+    }
+#endif /* SDMMC2_BUS_WIDTH_1_ONLY */
+#endif /* SDMMC2_BASE */
 
     if (caps & SDHCI_CAN_DO_HISPD)
         mmc->flags |= MMCSD_SUP_HIGHSPEED;

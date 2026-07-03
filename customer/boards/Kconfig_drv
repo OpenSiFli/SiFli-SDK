@@ -1658,6 +1658,15 @@ menu "On-chip Peripherals"
             help
                 Enable SDMMC1
 
+        if BSP_USING_SDMMC1
+            config SDMMC1_BUS_WIDTH_1_ONLY
+                bool "Force 1-bit mode (disable 4-bit)"
+                default n
+                help
+                  When enabled, SDMMC1 will only use 1-bit data bus width.
+                  Disable this to allow 4-bit mode if the hardware supports it.
+        endif
+
         if BSP_USING_SDHCI1 && BSP_USING_SDMMC1
             config SD_MAX_FREQ
                 int "MAX Output Frequency(Hz)"
@@ -1679,6 +1688,15 @@ menu "On-chip Peripherals"
             depends on !SOC_SF32LB52X
             help 
                 Enable SDMMC2
+        if BSP_USING_SDMMC2
+            config SDMMC2_BUS_WIDTH_1_ONLY
+                bool "Force 1-bit mode (disable 4-bit)"
+                default n
+                help
+                  When enabled, SDMMC2 will only use 1-bit data bus width.
+                  Disable this to allow 4-bit mode if the hardware supports it.
+        endif
+
         if BSP_USING_SDHCI2 && BSP_USING_SDMMC2
             config SD2_MAX_FREQ
                 int "MAX Output Frequency(Hz)"
@@ -1700,6 +1718,7 @@ menu "On-chip Peripherals"
         config BSP_USING_SD_LINE
             bool
         menu "Common Option"
+
         if BSP_USING_SDHCI
 
         config SD_MMC_DDR_SUPPORT
