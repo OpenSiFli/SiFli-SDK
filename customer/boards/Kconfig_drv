@@ -443,6 +443,24 @@ menu "On-chip Peripherals"
                     Smaller value means higher priority.
             endif
 
+            config ROTATE_BUF_IN_SRAM
+                bool "Enable rotate buffer in SRAM for rotated images"
+                depends on DRV_EPIC_NEW_API
+                default n
+                help
+                    When enabled, rotated image data from PSRAM/Flash will be copied to SRAM
+                    before EPIC processing, which can improve performance for rotated images.
+                    This requires additional SRAM for the rotate buffer.
+
+            config ROTATE_BUF_SIZE
+                int "Rotate buffer size in bytes"
+                depends on ROTATE_BUF_IN_SRAM
+                default 8192
+                help
+                    Size of the rotate buffer in SRAM. Larger buffer can handle larger images
+                    but consumes more SRAM. Recommended values: 4096-16384 bytes.
+                    
+                    
         endif
         config EZIP_PAL_SUPPORT
             bool
