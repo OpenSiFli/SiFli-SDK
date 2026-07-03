@@ -163,7 +163,7 @@ void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 
     HAL_RCC_EnableModule(RCC_MOD_PTM1);
 
-    HAL_RCC_ResetModule(RCC_MOD_PTM1);
+    // HAL_RCC_ResetModule(RCC_MOD_PTM1);
     NVIC_EnableIRQ(PTM_IRQ_NUM);
 
     /*Dynamic allocation of DMA channels*/
@@ -354,12 +354,12 @@ void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 
 
     memcpy(PTM1_CORE0_TCM, core0_tcm_code, sizeof(core0_tcm_code));
-    hwp_ptm1->CER = PTM_CER_RST0;
+    hwp_ptm1->CER |= PTM_CER_RST0;
     hwp_ptm1->CCR0 = (0 << PTM_CCR0_END0_Pos) |
                      (0 << PTM_CCR0_REP_Pos) ; //infinite repetition
 
     //Start!!!
-    hwp_ptm1->CER = PTM_CER_EN0;
+    hwp_ptm1->CER |= PTM_CER_EN0;
 
 }
 
@@ -372,7 +372,7 @@ void DPI_HW_FSM_STOP(LCDC_HandleTypeDef *lcdc)
     // *p_uint32_t = (uint32_t) PTC_PHASE_ADDR(9);//Start it!
 
     // HAL_LCDC_ASSERT(HAL_OK == WAIT_EXECUTE_CODE_DONE(lcdc));
-    hwp_ptm1->CER = PTM_CER_RST0;
+    hwp_ptm1->CER |= PTM_CER_RST0;
 
     NVIC_DisableIRQ(PTM_IRQ_NUM);
 
