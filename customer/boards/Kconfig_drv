@@ -1221,7 +1221,9 @@ menu "On-chip Peripherals"
 
     config MEM_ASYN_FREE
         bool #"mem support async free(esp. for DRV_EPIC_NEW_API)"
+        depends on PKG_USING_LITTLEVGL2RTT
         default y if DRV_EPIC_NEW_API
+        default n
 
     config USING_APP_BMEM
         bool #"app block_mem allocation used"
