@@ -114,11 +114,11 @@ static void DMA_Init(DMA_HandleTypeDef *hdma)
 
     /* Set burst size */
 
-#ifdef DMA_SUPPORT_GPDMA    
+#ifdef DMA_SUPPORT_GPDMA
     if (!hdma->IsGPDMA)
 #else
     if (1)
-#endif /* DMA_SUPPORT_GPDMA */    
+#endif /* DMA_SUPPORT_GPDMA */
     {
         hdma->Instance->CBSR = hdma->Init.BurstSize;
     }
@@ -617,7 +617,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma)
 #else
         hdma->IsGPDMA = 0;
 #endif /* GPDMA1_BASE */
-#endif /* DMA_SUPPORT_GPDMA */        
+#endif /* DMA_SUPPORT_GPDMA */
     }
 #ifdef DMA1_Channel9
     else if (((uint32_t)(hdma->Instance) >= (uint32_t)(DMA1_Channel9))
@@ -634,7 +634,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma)
 #else
         hdma->IsGPDMA = 0;
 #endif /* GPDMA1_BASE */
-#endif /* DMA_SUPPORT_GPDMA */        
+#endif /* DMA_SUPPORT_GPDMA */
     }
 #endif /* DMA1_Channel9 */
     else if (((uint32_t)(hdma->Instance) >= (uint32_t)(DMA2_Channel1))
@@ -1761,7 +1761,7 @@ __HAL_ROM_USED uint32_t HAL_DMA_GetError(DMA_HandleTypeDef *hdma)
   */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_AllocChannel(DMA_HandleTypeDef *hdma)
 {
-  return DMA_AllocChannel(hdma, false);
+    return DMA_AllocChannel(hdma, false);
 }
 
 /**
@@ -2030,6 +2030,7 @@ static void DMA_SetBurstSizeAndFix(DMA_InitTypeDef *Init, uint32_t *CCR)
         burst_size = GET_REG_VAL(Init->MemDataAlignment, DMAC_CCR1_MSIZE_Msk, DMAC_CCR1_MSIZE_Pos);
         burst_size = DMA_GetBurstSize(6, burst_size);
     }
+    *CCR &= ~GPDMA_CCR1_DBURST_Msk;
     *CCR |= MAKE_REG_VAL(burst_size, GPDMA_CCR1_DBURST_Msk, GPDMA_CCR1_DBURST_Pos);
 
     /* set src_burst_size */
@@ -2046,6 +2047,7 @@ static void DMA_SetBurstSizeAndFix(DMA_InitTypeDef *Init, uint32_t *CCR)
         burst_size = GET_REG_VAL(Init->MemDataAlignment, DMAC_CCR1_MSIZE_Msk, DMAC_CCR1_MSIZE_Pos);
         burst_size = DMA_GetBurstSize(6, burst_size);
     }
+    *CCR &= ~GPDMA_CCR1_SBURST_Msk;
     *CCR |= MAKE_REG_VAL(burst_size, GPDMA_CCR1_SBURST_Msk, GPDMA_CCR1_SBURST_Pos);
 }
 #endif /* DMA_SUPPORT_GPDMA */
