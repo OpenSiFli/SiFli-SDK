@@ -72,7 +72,8 @@ void BSP_PIN_Init(void)
 #endif /* BOARD_DVP_PINMAP_0 */
 
 #else /* BSP_USING_DCMI */
-    HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
+    // PA09 has usded for tp INT, can't be used for ADC1N
+    //HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
     HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
     HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
 #endif /* BSP_USING_DCMI */
