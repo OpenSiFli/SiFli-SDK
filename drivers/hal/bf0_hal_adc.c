@@ -513,6 +513,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_PollForConversion(ADC_HandleTypeDef *ha
         {
             if ((Timeout == 0) || ((HAL_GetTick() - tickstart) > Timeout))
             {
+                /* Double check end of conversion flag */
+                if (!HAL_IS_BIT_CLR(hadc->Instance->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IRSR))
+                {
+                    break;
+                }
+
                 /* Update ADC state machine to timeout */
                 SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
 
