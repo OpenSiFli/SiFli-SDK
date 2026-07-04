@@ -11,6 +11,13 @@ void BSP_PIN_Init(void)
 #ifdef SOC_BF0_HCPU
     // HCPU pins
 
+    // codec ADC1
+#ifdef ADC1_DIFFERENTIAL_INPUT
+    HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
+#endif
+    HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
+    HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
+
     // MPI3
 #ifdef SOC_SF32LB573UB776
     HAL_PIN_Set(PAD_SB09, MPI3_CLK, PIN_NOPULL, 1);

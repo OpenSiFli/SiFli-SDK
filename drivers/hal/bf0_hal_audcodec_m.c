@@ -577,8 +577,11 @@ __HAL_ROM_USED void HAL_AUDCODEC_Config_Analog_ADCPath(AUDCODE_ADC_CLK_CONFIG_TY
         hwp_audcodec->PLL_CFG2  |= AUDCODEC_PLL_CFG2_RSTB;
     }
 
+#ifdef ADC1_DIFFERENTIAL_INPUT
+    hwp_audcodec->ADC1_CFG1 |= AUDCODEC_ADC1_CFG1_DIFF_EN;
+#else
     hwp_audcodec->ADC1_CFG1 &= ~AUDCODEC_ADC1_CFG1_DIFF_EN;
-    //hwp_audcodec->ADC1_CFG1 |= AUDCODEC_ADC1_CFG1_DIFF_EN;
+#endif
 #if !defined(SF32LB57X)
     hwp_audcodec->ADC1_CFG1 &= ~AUDCODEC_ADC1_CFG1_DACN_EN;
 #endif

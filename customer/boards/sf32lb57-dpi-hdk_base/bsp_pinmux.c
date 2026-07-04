@@ -11,6 +11,13 @@ void BSP_PIN_Init(void)
 #ifdef SOC_BF0_HCPU
     // HCPU pins
 
+    // codec ADC1
+#ifdef ADC1_DIFFERENTIAL_INPUT
+    HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
+#endif
+    HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
+    HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
+
     // SDIO1
 #ifdef BSP_USING_SDMMC1
 #if !defined(BSP_USING_BOARD_SF32LB57_DPI_HDK_E8R8_QSPI) && !defined(BSP_USING_BOARD_SF32LB57_DPI_HDK_S8R8_QSPI)
@@ -71,11 +78,6 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA28, GPTIM2_CH1, PIN_PULLUP, 1); // mclk output
 #endif /* BOARD_DVP_PINMAP_0 */
 
-#else /* BSP_USING_DCMI */
-    // PA09 has usded for tp INT, can't be used for ADC1N
-    //HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
-    HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
-    HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
 #endif /* BSP_USING_DCMI */
 
 #ifdef BSP_USING_PDM1
