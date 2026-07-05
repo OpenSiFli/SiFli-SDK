@@ -10,6 +10,8 @@
 #include "bf0_hal.h"
 #include "tc_utils.h"
 
+#ifdef HAL_EXTDMA_MODULE_ENABLED
+
 #ifdef SOC_SF32LB52X
     #define EXAMPLE_EXTDMA_COMPRESS_ENABLE 0
 #else
@@ -127,3 +129,4 @@ static void testcase(int argc, char **argv)
 
 UTEST_TC_EXPORT(testcase, "example_extdma", NULL, NULL, 10);
 
+#endif /* HAL_EXTDMA_MODULE_ENABLED */
