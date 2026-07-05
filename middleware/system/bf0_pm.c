@@ -75,9 +75,9 @@ extern void mpu_config(void);
 EXEC_REGION_DEF(ER_IROM1_EX$$RO);
 EXEC_REGION_DEF(RW_IRAM1);
 EXEC_REGION_LOAD_SYM_DEF(ER_IROM1_EX$$RO);
-#ifdef SF32LB57X
+#if defined(SF32LB57X) && defined(PM_STANDBY_ENABLE)
     EXEC_REGION_DEF(RW_IRAM_RET$$RO);
-#endif /* SF32LB57X */
+#endif /* SF32LB57X && PM_STANDBY_ENABLE */
 
 typedef struct
 {
@@ -3139,7 +3139,7 @@ int32_t pm_init_mem_map()
 #endif /* USING_CONTEXT_BACKUP && SOC_BF0_HCPU*/
 
 
-#ifdef SF32LB57X
+#if defined(SF32LB57X) && defined(PM_STANDBY_ENABLE)
 static void pm_standby_boot_tbl_init(void)
 {
 #ifdef USING_SF_CRYPTO
@@ -3163,7 +3163,7 @@ static void pm_standby_boot_tbl_init(void)
     RT_ASSERT(err == SF_CRYPTO_E_OK);
 #endif /* USING_SF_CRYPTO */
 }
-#endif /* SF32LB57X */
+#endif /* SF32LB57X && PM_STANDBY_ENABLE */
 
 __ROM_USED int low_power_init(void)
 {
@@ -3219,9 +3219,9 @@ __ROM_USED int low_power_init(void)
 #endif /* SOC_BF0_LCPU */
 
 
-#if defined(SF32LB57X) && defined(SOC_BF0_HCPU)
+#if defined(SF32LB57X) && defined(SOC_BF0_HCPU) && defined(PM_STANDBY_ENABLE)
     pm_standby_boot_tbl_init();
-#endif /* SF32BL57X && SOC_BF0_HCPU*/
+#endif /* SF32BL57X && SOC_BF0_HCPU && PM_STANDBY_ENABLE */
 
     PM_DEBUG_PIN_INIT();
 
