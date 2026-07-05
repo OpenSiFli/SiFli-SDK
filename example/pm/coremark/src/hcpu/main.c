@@ -59,7 +59,9 @@ static void disable_module1(void)
 #ifdef SF32LB55X
     HAL_RCC_DisableModule(RCC_MOD_PSRAMC);
 #endif /* SF32LB55X */
+#ifdef HAL_EXTDMA_MODULE_ENABLED
     HAL_RCC_DisableModule(RCC_MOD_EXTDMA);
+#endif /* HAL_EXTDMA_MODULE_ENABLED */
 #ifndef SF32LB52X
     HAL_RCC_DisableModule(RCC_MOD_DMAC1);
 #endif /* SF32LB52X */
@@ -73,7 +75,9 @@ static void enable_module1(void)
 #ifdef SF32LB55X
     HAL_RCC_EnableModule(RCC_MOD_PSRAMC);
 #endif /* SF32LB55X */
+#ifdef HAL_EXTDMA_MODULE_ENABLED
     HAL_RCC_EnableModule(RCC_MOD_EXTDMA);
+#endif /* HAL_EXTDMA_MODULE_ENABLED */
     HAL_RCC_EnableModule(RCC_MOD_DMAC1);
 #ifdef SF32LB58X
     HAL_RCC_EnableModule(RCC_MOD_MPI4);
