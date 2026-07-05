@@ -173,7 +173,7 @@ uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
         else
             flash_addr = HCPU_FLASH_CODE_START_ADDR;
         break;
-#ifndef SOC_SF32LB52X
+#if !defined(SOC_SF32LB52X) && !defined(SOC_SF32LB57X)
     case DFU_IMG_ID_LCPU:
     {
         uint32_t hcpu_compress_size = dfu_hcpu_compress_size();
@@ -189,7 +189,7 @@ uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
         else
             flash_addr = LCPU_PATCH_START_ADDR;
         break;
-#endif
+#endif /* !defined(SOC_SF32LB52X) && !defined(SOC_SF32LB57X) */
     case DFU_IMG_ID_FONT:
         if (flag & DFU_FLAG_COMPRESS)
             flash_addr = dfu_backup_addr_font_get();

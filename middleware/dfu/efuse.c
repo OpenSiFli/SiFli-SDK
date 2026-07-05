@@ -75,7 +75,9 @@ int sifli_hw_efuse_read_init(void)
     //HAL_StatusTypeDef ret= HAL_EFUSE_Init();
     //return ret == HAL_OK ? 0 : -1;
     // expected PCLK is 12M and calculate as 18M, while EFUSE_PGM_THPCK_NS (20) , EFUSE_PGM_TCKHP_US  (10), EFUSE_RD_TIM_NS    (500)
+#ifdef EFUSEC_TIMR_THRCK
     hwp_efusec->TIMR = 0x2D08F;
+#endif /* EFUSEC_TIMR_THRCK */
     return 0;
 }
 
