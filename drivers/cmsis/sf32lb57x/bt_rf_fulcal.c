@@ -3781,7 +3781,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     //froce tx on, lock LO
     hwp_bt_mac->DMRADIOCNTL1 |= BT_MAC_DMRADIOCNTL1_FORCE_TX | BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
     //hwp_bt_mac->DMRADIOCNTL1 |= BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
-    _HAL_Delay_us(40);
+    _HAL_Delay_us(80);
 
 
 //    hwp_lpsys_rcc->CSR &= ~LPSYS_RCC_CSR_SEL_SYS;
@@ -5498,6 +5498,7 @@ void bt_rf_cal(void)
     hwp_bt_phy->SFC_CFG1 = 0x94c2100;
 
     //hwp_bt_phy->DEMOD_CFG9 |= BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD;
+    hwp_bt_phy->DEMOD_CFG9 |= (2 << BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD_Pos);
     hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_DC;
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos);
     hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_ERR;
@@ -5543,11 +5544,11 @@ typedef struct
 } bt_rf_tx_pwr_t;
 rf_power_inf_t *rf_power_env;
 uint32_t *rf_power_field_base;
-rf_power_inf_t *rf_get_base_inf(void)
+static rf_power_inf_t *rf_get_base_inf(void)
 {
     return rf_power_env;
 }
-void rf_power_env_init(void)
+static void rf_power_env_init(void)
 {
     rf_power_env = (rf_power_inf_t *)LCPU_RF_CONFIG_START_ADDR;
     memset((uint8_t *)rf_power_env, 0, 0x100);
@@ -5556,7 +5557,7 @@ void rf_power_env_init(void)
     rf_power_env->start_offset = 4;
     rf_power_field_base = (uint32_t *)rf_power_env + rf_power_env->start_offset;
 }
-void rf_power_field_set(uint8_t index, uint32_t value)
+static void rf_power_field_set(uint8_t index, uint32_t value)
 {
     uint32_t *pt_power;
 
@@ -5591,10 +5592,10 @@ bt_rf_tx_pwr_t rf_polar_value_table[] =
     {2, 0x09830001},
     {3, 0x0C0003F4},
 };
-#define BT_RF_PWR_NUM_MAX  6
-uint8_t bt_rf_br_pwr_value[BT_RF_PWR_NUM_MAX];
-uint8_t bt_rf_edr_pwr_value[BT_RF_PWR_NUM_MAX];
-uint8_t bt_rf_ble_pwr_value[BT_RF_PWR_NUM_MAX];
+#define BT_RF_PWR_NUM_MAX  7
+int8_t bt_rf_br_pwr_value[BT_RF_PWR_NUM_MAX];
+int8_t bt_rf_edr_pwr_value[BT_RF_PWR_NUM_MAX];
+int8_t bt_rf_ble_pwr_value[BT_RF_PWR_NUM_MAX];
 uint8_t bt_rf_br_pwr_num = 0;
 uint8_t bt_rf_edr_pwr_num = 0;
 uint8_t bt_rf_ble_pwr_num = 0;
@@ -5607,7 +5608,7 @@ uint8_t bt_rf_ble_pwr_num = 0;
  * @return      the number of tx power value stored in pwr
  *
 */
-__WEAK uint8_t bt_rf_get_br_tx_pwr(uint8_t *pwr, uint8_t max_num)
+__WEAK uint8_t bt_rf_get_br_tx_pwr(int8_t *pwr, uint8_t max_num)
 {
     return 0;
 }
@@ -5620,7 +5621,7 @@ __WEAK uint8_t bt_rf_get_br_tx_pwr(uint8_t *pwr, uint8_t max_num)
  * @return      the number of tx power value stored in pwr
  *
 */
-__WEAK uint8_t bt_rf_get_edr_tx_pwr(uint8_t *pwr, uint8_t max_num)
+__WEAK uint8_t bt_rf_get_edr_tx_pwr(int8_t *pwr, uint8_t max_num)
 {
     return 0;
 }
@@ -5633,13 +5634,13 @@ __WEAK uint8_t bt_rf_get_edr_tx_pwr(uint8_t *pwr, uint8_t max_num)
  * @return      the number of tx power value stored in pwr
  *
 */
-__WEAK uint8_t bt_rf_get_ble_tx_pwr(uint8_t *pwr, uint8_t max_num)
+__WEAK uint8_t bt_rf_get_ble_tx_pwr(int8_t *pwr, uint8_t max_num)
 {
     return 0;
 }
 
 /* return 1 if array is sorted in strictly non-decreasing (ascending) order */
-static int is_sorted_ascending(const uint8_t *arr, uint8_t len)
+static int is_sorted_ascending(const int8_t *arr, uint8_t len)
 {
     uint8_t i;
     if (len <= 1)
@@ -5653,7 +5654,7 @@ static int is_sorted_ascending(const uint8_t *arr, uint8_t len)
 }
 
 /* simple in-place ascending sort for small arrays */
-static void sort_ascending(uint8_t *arr, uint8_t len)
+static void sort_ascending(int8_t *arr, uint8_t len)
 {
     uint8_t i, j, key;
     for (i = 1; i < len; i++)
@@ -5673,7 +5674,7 @@ static void sort_ascending(uint8_t *arr, uint8_t len)
  * Fill `out` with `max_levels` power entries between `min_pwr` and `max_pwr` (inclusive).
  * Adjacent steps are at least 3 dBm where possible. Returns number of entries filled.
  */
-static uint8_t bt_rf_calc_power_levels(int8_t max_pwr, int8_t min_pwr, uint8_t *out, uint8_t max_levels)
+static uint8_t bt_rf_calc_power_levels(int8_t max_pwr, int8_t min_pwr, int8_t *out, uint8_t max_levels)
 {
     uint8_t idx = 0;
     int8_t next;
@@ -5690,7 +5691,7 @@ static uint8_t bt_rf_calc_power_levels(int8_t max_pwr, int8_t min_pwr, uint8_t *
     }
 
     /* first entry is min */
-    out[0] = (uint8_t)min_pwr;
+    out[0] = min_pwr;
     idx = 1;
 
     /* fill middle entries with step of at least 3 until reaching the last slot or max_pwr */
@@ -5699,16 +5700,16 @@ static uint8_t bt_rf_calc_power_levels(int8_t max_pwr, int8_t min_pwr, uint8_t *
         next = (int8_t)out[idx - 1] + 3;
         if ((next < max_pwr) && (next + 3 > max_pwr))
         {
-            out[idx++] = (uint8_t)max_pwr;
+            out[idx++] = max_pwr;
             break;
         }
-        out[idx++] = (uint8_t)next;
+        out[idx++] = next;
     }
 
     return idx;
 }
 
-void bt_rf_get_custom_tx_pwr()
+static void bt_rf_get_custom_tx_pwr()
 {
     bt_rf_br_pwr_num = bt_rf_get_br_tx_pwr(bt_rf_br_pwr_value, BT_RF_PWR_NUM_MAX);
     bt_rf_edr_pwr_num = bt_rf_get_edr_tx_pwr(bt_rf_edr_pwr_value, BT_RF_PWR_NUM_MAX);
@@ -5823,7 +5824,7 @@ void bt_rf_get_custom_tx_pwr()
     }
 
 }
-uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
+static uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
 {
     uint8_t i;
     uint8_t total_levels = sizeof(rf_iq_value_table) / sizeof(bt_rf_tx_pwr_t);
@@ -5837,7 +5838,7 @@ uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
     //default return value for max pwr level if input pwr is larger than all levels in table
     return rf_iq_value_table[total_levels - 1].lvl_para;
 }
-uint32_t bt_rf_polar_get_pwr_level_para(int8_t pwr)
+static uint32_t bt_rf_polar_get_pwr_level_para(int8_t pwr)
 {
     uint8_t i;
     uint8_t total_levels = sizeof(rf_polar_value_table) / sizeof(bt_rf_tx_pwr_t);
@@ -5880,7 +5881,7 @@ void rf_power_config()
     {
         pwr = bt_rf_br_pwr_value[i];
         //all use IQ, todo
-        if (pwr <= 3)
+        if (pwr <= -3)
         {
             powerlevel = bt_rf_polar_get_pwr_level_para(pwr);
         }
@@ -5903,7 +5904,7 @@ void rf_power_config()
     {
         pwr = bt_rf_ble_pwr_value[i];
         //all use IQ, todo
-        if (pwr <= 3)
+        if (pwr <= -3)
         {
             powerlevel = bt_rf_polar_get_pwr_level_para(pwr);
         }
