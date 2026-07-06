@@ -53,7 +53,7 @@ typedef struct
     HAL_LockTypeDef             Lock;       /*!< TSEN locking object      */
     __IO HAL_TSEN_StateTypeDef  State;      /*!< TSEN communication state */
     int8_t                      temperature; /*!< last read temperature*/
-    uint32_t                    pclk;        /*!< PCLK in MHz */
+    uint32_t                    pclk;        /*!< PCLK in Hz */
 } TSEN_HandleTypeDef;
 
 /**
