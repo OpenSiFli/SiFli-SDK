@@ -1057,10 +1057,17 @@ static bool EPIC_ClipLayerSrcByOutput(
                 output_layer_area.y1 = EPIC_RSCALE_INT16(output_layer_area.y1 + ext_y, epic_pitch_y, EPIC_SCALE_1 - 1);
 
                 EPIC_DEBUG_PRINT_AREA_INFO(&output_layer_area, "output_layer_area before scale(base on pivot)");
-
-                ext_x = 0;
-                ext_y = 0;
             }
+            else
+            {
+                output_layer_area.x0 -= ext_x;
+                output_layer_area.x1 += ext_x;
+                output_layer_area.y0 -= ext_y;
+                output_layer_area.y1 += ext_y;
+            }
+
+            ext_x = 0;
+            ext_y = 0;
 
             //Save the visbile area of rotated area
             trans_result->rotated_visible_area = output_layer_area;
