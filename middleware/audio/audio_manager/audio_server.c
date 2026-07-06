@@ -2782,7 +2782,7 @@ inline static void audio_client_start(audio_client_t client)
     audio_pm_debug++;
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     LOG_I("start pm scenario audio");
     pm_scenario_start(PM_SCENARIO_AUDIO);
 
@@ -2885,7 +2885,7 @@ Exit:
 
 #ifdef RT_USING_PM
     audio_pm_debug--;
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     if (audio_type == AUDIO_TYPE_BT_VOICE)
     {
         HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
