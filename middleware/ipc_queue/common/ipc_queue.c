@@ -224,6 +224,8 @@ __ROM_USED int32_t ipc_queue_open(ipc_queue_handle_t handle)
         /* update rd_buf_ptr */
         pool = (uint8_t *)((struct circular_buf *)queue->cfg.tx_buf_addr_alias + 1);
         circular_buf_rd_init(queue->tx_ring_buffer, pool, queue->cfg.tx_buf_size - sizeof(struct circular_buf));
+
+        circular_buf_set_backup(queue->tx_ring_buffer);
     }
     result = ipc_hw_enable_interrupt(&queue->hw_q_handle, queue->cfg.qid, (uint32_t)handle);
 
