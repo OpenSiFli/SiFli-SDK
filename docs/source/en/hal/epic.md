@@ -21,7 +21,7 @@ The HAL EPIC module provides an abstract software interface to operate the hardw
 | Feature       | Supported Formats                  |  55X                     |  58X   |  56X   |  52X   |
 |----------- |---------------------------|--------------------------|--------|--------|--------|
 |Horizontal Scaling    | All color formats supported by the chip                      |3.8, i.e., reduce 8x, enlarge 256x, precision 1/256    |   10.16, i.e., reduce 1024x, enlarge 65536x, precision 1/65536     |   Same as 58X    |   Same as 58X    |
-|Vertical Scaling    | All color formats supported by the chip                      |Horizontal and vertical scaling ratios are fixed and cannot be configured separately  |   10.16, i.e., reduce 1024x, enlarge 65536x, precision 1/65536,<br>and can be different from horizontal scaling coefficient     |   Same as 58X    |   Same as 58X    |
+|Vertical Scaling    | All color formats supported by the chip                      |3.8, i.e., reduce 8x, enlarge 256x, precision 1/256    |   10.16, i.e., reduce 1024x, enlarge 65536x, precision 1/65536       |   Same as 58X    |   Same as 58X    |
 |Rotation       | Except EZIP, YUV formats <br>Additionally, A4/A8 cannot rotate when used as mask | [0 ~ 3600], unit is 0.1 degree    |  Same as 55X     |   Same as 55X      |   Same as 55X      |
 |Horizontal Mirror    | All color formats supported by the chip                      |  Supported       |   Supported     |   Supported      |   Supported    |
 |Vertical Mirror    | Except EZIP format                               |   Not supported    |   Not supported    |   Not supported    |   Supported    |
