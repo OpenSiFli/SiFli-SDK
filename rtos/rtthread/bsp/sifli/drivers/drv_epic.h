@@ -179,7 +179,8 @@ typedef struct
         {
             EPIC_PointTypeDef p1;
             EPIC_PointTypeDef p2;
-
+            EPIC_PointTypeDef *p_points;
+            uint32_t point_cnt;
             uint16_t width;
             int32_t dash_width;
             int32_t dash_gap;

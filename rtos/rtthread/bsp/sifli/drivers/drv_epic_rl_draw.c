@@ -1751,6 +1751,23 @@ static bool visible_after_transformed(EPIC_LayerConfigTypeDef *layer, const EPIC
     HAL_EPIC_AreaMove(&transformed_area, layer->x_offset, layer->y_offset);
     return HAL_EPIC_AreaIntersect(&transformed_area, &transformed_area, p_clip_area);
 }
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+static bool visible_after_matrix_transformed(EPIC_LayerConfigTypeDef *layer, const EPIC_AreaTypeDef *p_clip_area)
+{
+
+    sifli_matrix_3x3_t *p_matrix = layer->transform_cfg.trans_matrix;
+    RT_ASSERT(p_matrix);
+
+    float pos_x = layer->width - 1;
+    float pos_y = layer->height - 1;
+    EPIC_AreaTypeDef transformed_area = {0, 0, pos_x, pos_y};
+    EPIC_GetMatrixTransfromedArea(p_matrix, &transformed_area);
+    HAL_EPIC_AreaMove(&transformed_area, layer->x_offset, layer->y_offset);
+
+    return HAL_EPIC_AreaIntersect(&transformed_area, &transformed_area, p_clip_area);
+
+}
+#endif /* EPIC_SUPPORT_TRANS_MATRIX */
 #endif
 static void render_image(drv_epic_operation *p_operation, EPIC_LayerConfigTypeDef *dst, const EPIC_AreaTypeDef *p_clip_area)
 {
@@ -1831,6 +1848,66 @@ static void render_image(drv_epic_operation *p_operation, EPIC_LayerConfigTypeDe
                 break;
         }
     }
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+    else if (p_operation->desc.blend.layer.transform_cfg.trans_matrix
+             && (!HCPU_IS_SRAM_ADDR(p_operation->desc.blend.layer.data)))
+    {
+        sifli_matrix_3x3_t *p_matrix = p_operation->desc.blend.layer.transform_cfg.trans_matrix;
+        const EPIC_LayerConfigTypeDef *src_layer = &p_operation->desc.blend.layer;
+        EPIC_LayerConfigTypeDef *dst_layer = &input_layers[1];
+        sifli_matrix_3x3_t chunk_matrix;
+        sifli_matrix_3x3_t translate_matrix;
+
+        uint32_t color_bytes = HAL_EPIC_GetColorDepth(src_layer->color_mode) >> 3;
+        uint32_t buf_size = rotate_buf_bytes >> 1;
+        int16_t h = src_layer->height;
+        int16_t y_start = src_layer->y_offset;
+        int16_t y_end = y_start + h;
+        uint32_t size_line = color_bytes * src_layer->total_width;
+        int16_t h_align = buf_size / size_line;
+        RT_ASSERT(h_align > 2);
+        bool pre_show = false;
+        uint8_t rotate_buf_i = 0;
+
+        /* Avoid overwrite when previous blending is still using rotate_buf. */
+        ret = Call_Hal_Api(HAL_API_ALL_STOP, NULL, NULL, NULL);
+        DRV_EPIC_ASSERT(HAL_OK == ret);
+
+        for (int16_t row = y_start; row < y_end; row += h_align - 2)
+        {
+            int16_t rev_line = y_end - row;
+            int16_t row_offset = row - y_start;
+            uint32_t offset = row_offset * size_line;
+
+            dst_layer->height = h_align > rev_line ? rev_line : h_align;
+#if 1
+            dst_layer->y_offset = y_start;
+            memcpy(&chunk_matrix, p_matrix, sizeof(chunk_matrix));
+            sifli_mat_translate_3x3(0.0f, (float)row_offset, &chunk_matrix);
+            dst_layer->transform_cfg.trans_matrix = &chunk_matrix;
+#else
+            dst_layer->y_offset = row;//row_offset + y_start = row
+#endif
+
+            if (visible_after_matrix_transformed(dst_layer, p_clip_area))
+            {
+                pre_show = true;
+                dst_layer->data_size = dst_layer->height * size_line;
+                RT_ASSERT(dst_layer->data_size <= buf_size);
+                dst_layer->data = (0 == rotate_buf_i) ? &gp_drv_epic->rotate_buf[0] : &gp_drv_epic->rotate_buf[rotate_buf_bytes >> 1];
+                rotate_buf_i = !rotate_buf_i;
+
+                memcpy(dst_layer->data, src_layer->data + offset, dst_layer->data_size);
+
+                ret = Call_Hal_Api(api, input_layers, (void *)input_layer_cnt, &output_layer);
+                DRV_EPIC_ASSERT(HAL_OK == ret);
+            }
+            else if (pre_show)
+                break;
+        }
+        dst_layer->transform_cfg.trans_matrix = p_matrix;
+    }
+#endif
     else
 #endif
     {
@@ -2093,9 +2170,17 @@ static rt_err_t render(drv_epic_render_list_t list)
                     break;
 
                 case DRV_EPIC_DRAW_LINE:
+                {
                     render_line(p_operation, dst, &intersect_area);
+                    for (uint32_t i = 0; i < p_operation->desc.line.point_cnt;)
+                    {
+                        drv_epic_operation op = *p_operation;
+                        op.desc.line.p1 = op.desc.line.p_points[i++];
+                        op.desc.line.p2 = op.desc.line.p_points[i++];
+                        render_line(&op, dst, &intersect_area);
+                    }
                     break;
-
+                }
                 case DRV_EPIC_DRAW_BORDER:
                     render_border(p_operation, dst, &intersect_area);
                     break;

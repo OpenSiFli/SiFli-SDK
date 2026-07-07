@@ -285,9 +285,7 @@ static HAL_StatusTypeDef EPIC_ConfigFilling(EPIC_HandleTypeDef *epic, EPIC_Filli
 static HAL_StatusTypeDef EPIC_ConfigGrad(EPIC_HandleTypeDef *epic, EPIC_GradCfgTypeDef *param);
 void EPIC_GetRotatedArea(EPIC_AreaTypeDef *output, uint16_t w, uint16_t h, int16_t angle,
                          const EPIC_PointTypeDef *pivot);
-#ifdef EPIC_SUPPORT_TRANS_MATRIX
-    static void EPIC_GetMatrixTransfromedArea(sifli_matrix_3x3_t *p_matrix, EPIC_AreaTypeDef *p_area);
-#endif /* EPIC_SUPPORT_TRANS_MATRIX */
+
 static void EPIC_TransformVideoLayer_ReplacePivot(EPIC_BlendingDataType *fg,
         EPIC_TransformCfgTypeDef *rot_cfg, EPIC_TransformResultDef *trans_result);
 static void EPIC_GetRotatedArea_Inner(EPIC_AreaTypeDef *output, uint16_t w, uint16_t h, int16_t angle,
@@ -2906,7 +2904,7 @@ static HAL_StatusTypeDef EPIC_TransformVideoLayer(EPIC_TypeDef *epic,
         sifli_matrix_3x3_t mat;
         sifli_identity_3x3(&mat);
         sifli_mat_translate_3x3(new_offset_x, new_offset_y, &mat);
-        sifli_mat_multiply_3x3(&mat, &trans_result->matrix, &trans_result->matrix);
+        sifli_mat_multiply_3x3(&trans_result->matrix, &mat, &trans_result->matrix);
 
         EPIC_DEBUG_PRINT_FLOAT_MATRIX("Matrix for {0,0} image", &trans_result->matrix);
 
@@ -3893,7 +3891,7 @@ static HAL_StatusTypeDef EPIC_ConfigEzipDec(EPIC_HandleTypeDef *epic,
 #endif /* HAL_EZIP_MODULE_ENABLED */
 
 #ifdef EPIC_SUPPORT_TRANS_MATRIX
-static void EPIC_GetMatrixTransfromedArea(sifli_matrix_3x3_t *p_matrix, EPIC_AreaTypeDef *p_area)
+void EPIC_GetMatrixTransfromedArea(sifli_matrix_3x3_t *p_matrix, EPIC_AreaTypeDef *p_area)
 {
     sifli_vertex_2d_t lt = {p_area->x0, p_area->y0};
     sifli_vertex_2d_t rt = {p_area->x1, p_area->y0};
@@ -6730,6 +6728,7 @@ static HAL_StatusTypeDef EPIC_ConfigBlendEx(EPIC_HandleTypeDef *epic,
     if (2 == input_layer_num)
     {
         if ((alpha[1] >= EPIC_LAYER_OPAQUE) && (0 == transform_cfg[1].angle)
+                && (!IS_MATRIX_TRANSFROM(&transform_cfg[1]))
                 && IS_NO_ALPHA_COLOR_MODE(input[1].color_mode)
                 && EPIC_IS_LAYER_A_IN_B(output, &input[1])
            )

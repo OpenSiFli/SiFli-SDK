@@ -28,10 +28,11 @@
 
 
 #define GPU_BLEND_EXP_MS     500
+#define FOV                  40
 
-
-
-
+/*Add line drawing and merging operations*/
+#define LINE_POINTS_CNT_MAX 48                  //Merged Points Count
+static drv_epic_operation *p_line_op = NULL;    //Save the last struct pointer
 
 #ifdef RT_USING_PM
     #define GPU_DEVICE_START()   rt_pm_hw_device_start()
@@ -46,19 +47,45 @@
         (p_epic_area)->x1 = (p_lv_area)->x2; \
         (p_epic_area)->y1 = (p_lv_area)->y2;
 
-void my_gpu_wait(lv_draw_ctx_t *draw_ctx);
+#define LV_AREA_INSERT_EPIC_AREA(p_epic_area, p_lv_area) \
+    (p_epic_area)->x0 = LV_MIN((p_epic_area)->x0, (p_lv_area)->x1); \
+    (p_epic_area)->y0 = LV_MIN((p_epic_area)->y0, (p_lv_area)->y1); \
+    (p_epic_area)->x1 = LV_MAX((p_epic_area)->x1, (p_lv_area)->x2); \
+    (p_epic_area)->y1 = LV_MAX((p_epic_area)->y1, (p_lv_area)->y2);
 
 #define REDER_MEM_LOCK      (1)
 #define REDER_MEM_UNLOCK    (-1)
 
+void my_gpu_wait(lv_draw_ctx_t *draw_ctx);
+
+#ifdef LV_USING_FREETYPE_ENGINE
+    lv_font_t *lvsf_get_glyph_by_lib(const lv_font_t *font, uint32_t u_letter, lv_font_glyph_dsc_t *g);
+#endif
+
 static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
 {
+    if (!op || !usr_data)
+    {
+        LOG_E("%s: parameter[op] %p [usr_data] %p is null.", __func__, op, usr_data);
+        return;
+    }
+
     int ref_count = (int)usr_data;
 
-    if (!op) return;
+    if (op->mask.data)
+        app_mem_set_ref_count((void *)op->mask.data, ref_count, MEM_ASYN_IMG);
 
     switch (op->op)
     {
+    case DRV_EPIC_DRAW_IMAGE:
+        if (op->desc.blend.layer.data)
+            app_mem_set_ref_count((void *)op->desc.blend.layer.data, ref_count, MEM_ASYN_IMG);
+        if ((REDER_MEM_UNLOCK == ref_count) && op->desc.blend.layer.transform_cfg.trans_matrix)
+        {
+            app_free(op->desc.blend.layer.transform_cfg.trans_matrix);
+            op->desc.blend.layer.transform_cfg.trans_matrix = NULL;
+        }
+        break;
     case DRV_EPIC_DRAW_LETTERS:
         if (op->desc.label.p_letters)
         {
@@ -66,11 +93,19 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
             {
                 drv_epic_letter_type_t *p_letter = op->desc.label.p_letters + i;
                 if (!p_letter->data) continue;
-                app_mem_set_ref_count((void *)p_letter->data, ref_count, MEM_ASYN_FONT);
+                app_mem_set_ref_count((uint8_t *)p_letter->data, ref_count, MEM_ASYN_FONT);
             }
         }
         break;
+    case DRV_EPIC_DRAW_LINE:
+        if (op->desc.line.p_points && REDER_MEM_UNLOCK == ref_count)
+        {
+            app_free(op->desc.line.p_points);
+            op->desc.line.p_points = NULL;
+            op->desc.line.point_cnt = 0;
+        }
 
+        break;
     default:
         break;
     }
@@ -93,6 +128,11 @@ rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list)
     return ret;
 }
 
+static rt_err_t lv_gpu_render_commit_op(drv_epic_operation *op)
+{
+    lv_gpu_render_trav_cb(op, (void *)REDER_MEM_LOCK);
+    return drv_epic_commit_op(op);
+}
 
 bool EPIC_SUPPORTED_CF(lv_img_cf_t cf)
 {
@@ -129,6 +169,9 @@ bool EPIC_SUPPORTED_CF(lv_img_cf_t cf)
     case LV_IMG_CF_YUV420_PLANAR:
     case LV_IMG_CF_YUV420_PLANAR2:
 #endif /* EPIC_SUPPORT_YUV */
+#ifdef EPIC_SUPPORT_JPEGD
+    case LV_IMG_CF_JPG:
+#endif
         ret = true;
         break;
 
@@ -216,6 +259,13 @@ uint32_t lv_img_2_epic_cf2(uint32_t cf)
         color_mode = EPIC_INPUT_YUV420_PLANAR;
     }
 #endif /* EPIC_SUPPORT_YUV */
+#ifdef EPIC_SUPPORT_JPEGD
+    else if (LV_IMG_CF_JPG == cf)
+    {
+        color_mode = EPIC_INPUT_JPEG;
+    }
+#endif
+
     else
     {
         rt_kprintf("Unknown format %d\r\n", cf);
@@ -434,6 +484,7 @@ static void setup_fg_layer(EPIC_LayerConfigTypeDef *p_fg_layer,
         uint32_t xres = RT_ALIGN(src->header.w, 2);
         uint32_t yres = RT_ALIGN(src->header.h, 2);
 
+        p_fg_layer->total_width = xres;
         p_fg_layer->yuv.y_buf = p_fg_layer->data;
         p_fg_layer->yuv.u_buf = p_fg_layer->yuv.y_buf + xres * yres;
         p_fg_layer->yuv.v_buf = p_fg_layer->yuv.u_buf + xres * yres / 4;
@@ -443,6 +494,8 @@ static void setup_fg_layer(EPIC_LayerConfigTypeDef *p_fg_layer,
     else if (LV_IMG_CF_YUV420_PLANAR2 == src->header.cf)
     {
         uint8_t **yuv = (uint8_t **)p_fg_layer->data;
+        uint32_t xres = RT_ALIGN(src->header.w, 2);
+        p_fg_layer->total_width = xres;
         p_fg_layer->yuv.y_buf = yuv[0];
         p_fg_layer->yuv.u_buf = yuv[1];
         p_fg_layer->yuv.v_buf = yuv[2];
@@ -477,8 +530,7 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
     lv_area_t clipped_output; //Clip output_coords by src_coords
     lv_color32_t ax_color_u32;
 
-
-
+    p_line_op = NULL;
     RT_ASSERT((RT_NULL != src_coords) && (RT_NULL != dst_coords) && (RT_NULL != output_coords));
 
     if (!_lv_area_intersect(&clipped_output, output_coords, src_coords)) return;
@@ -549,14 +601,13 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
 #else
             LV_ASSERT(0);
 #endif /* EPIC_SUPPORT_MONOCHROME_LAYER&&EPIC_SUPPORT_MASK */
+
+            lv_gpu_render_mem_lock((void *)mask_map, MEM_ASYN_IMG);
         }
 
 
         o->desc.label.p_letters = NULL;
         o->desc.label.letter_num = 0;
-
-
-
         o->desc.label.opa = opa;
         o->desc.label.color_mode = lv_img_2_epic_cf(src);
         if ((LV_IMG_CF_ALPHA_2BIT == src->header.cf)
@@ -580,7 +631,6 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
         p_letter->data = src->data;
         LV_AREA_TO_EPIC_AREA(&p_letter->area, src_coords);
     }
-
     lv_gpu_render_mem_lock((void *)src->data, MEM_ASYN_FONT);
 }
 
@@ -608,7 +658,7 @@ void img_rotate_opa_frac2(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, 
     dst_buf.area.y1 = dst_buf.area.y0 + dest->header.h - 1;
 
     letter_blend_reset();
-
+    p_line_op = NULL;
     drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
     RT_ASSERT(o != NULL);
 
@@ -633,8 +683,7 @@ void img_rotate_opa_frac2(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, 
 
     LV_AREA_TO_EPIC_AREA(&o->clip_area, &res);
     o->desc.blend.use_dest_as_bg = use_dest_as_bg;
-
-    drv_epic_commit_op(o);
+    lv_gpu_render_commit_op(o);
 }
 
 
@@ -662,6 +711,7 @@ static void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t a
     dst_buf.area.y1 = dst_buf.area.y0 + dest->header.h - 1;
 
     letter_blend_reset();
+    p_line_op = NULL;
 
     drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
     RT_ASSERT(o != NULL);
@@ -707,18 +757,192 @@ static void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t a
 
     LV_AREA_TO_EPIC_AREA(&o->clip_area, &res);
     o->desc.blend.use_dest_as_bg = true;;
-
-    drv_epic_commit_op(o);
+    lv_gpu_render_commit_op(o);
 }
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+void gup_set_trans_matrix(const lv_img_dsc_t *dest, const lv_img_dsc_t *src,
+                          const lv_area_t *p_dst_coords,
+                          const lv_area_t *p_draw_area,
+                          sifli_matrix_3x3_t *trans_matrix)
+{
+
+    drv_epic_render_buf dst_buf;
+    dst_buf.cf = lv_img_2_epic_cf2(dest->header.cf);
+    dst_buf.data = (uint8_t *)dest->data;
+    dst_buf.area.x0 = p_dst_coords->x1;
+    dst_buf.area.y0 = p_dst_coords->y1;
+    dst_buf.area.x1 = dst_buf.area.x0 + dest->header.w - 1;
+    dst_buf.area.y1 = dst_buf.area.y0 + dest->header.h - 1;
+
+    letter_blend_reset();
+    p_line_op = NULL;
+
+    drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
+    RT_ASSERT(o != NULL);
+
+    o->op = DRV_EPIC_DRAW_IMAGE;
+    LV_AREA_TO_EPIC_AREA(&o->clip_area, p_draw_area);
+    HAL_EPIC_LayerConfigInit(&o->mask);
+    lv_area_t area = {0, 0, src->header.w - 1, src->header.h - 1};
+
+    lv_point_t pivot = {0, 0};
+    HAL_EPIC_LayerConfigInit(&o->desc.blend.layer);
+    setup_fg_layer(&o->desc.blend.layer,
+                   src, &area,
+                   0, EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE,
+                   &pivot, LV_OPA_COVER, LV_COLOR_CHROMA_KEY,
+                   0, 0);
+    sifli_matrix_3x3_t *p_mat = app_calloc(1, sizeof(sifli_matrix_3x3_t));
+    RT_ASSERT(p_mat);
+    *p_mat = *trans_matrix;
+    o->desc.blend.layer.transform_cfg.trans_matrix = p_mat;
+    o->desc.blend.use_dest_as_bg = EPIC_BLEND_MODE_NORMAL;
+    lv_gpu_render_commit_op(o);
+
+}
+
+void img_rotate_matrix(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
+                       const lv_area_t *p_src_coords,
+                       const lv_area_t *p_dst_coords,
+                       const lv_area_t *p_output_coords,
+                       sifli_matrix_4x4_t *pers_mat, float fov,
+                       lv_area_t *p_target_area)
+{
+    sifli_error_t err = SIFLI_MATRIX_SUCCESS;
+
+    RT_ASSERT((RT_NULL != dest) && (RT_NULL != src) && (RT_NULL != pers_mat));
+    RT_ASSERT((RT_NULL != p_src_coords) && (RT_NULL != p_dst_coords) && (RT_NULL != p_output_coords));
+
+    float src_w = lv_area_get_width(p_src_coords);
+    float src_h = lv_area_get_height(p_src_coords);
+    float dst_w = lv_area_get_width(p_dst_coords);
+    float dst_h = lv_area_get_height(p_dst_coords);
+    if ((src_w <= 0) || (src_h <= 0) || (dst_w <= 0) || (dst_h <= 0)) return;
+    //print_matrix_4x4_ext("pers:\n",pers_mat);
+    float w_norm = src_w / dst_h;
+    float h_norm = src_h / dst_h;
+
+    float ofs_x = (dst_w - p_src_coords->x1 - p_src_coords->x2) / dst_h;
+    float ofs_y = (dst_h - p_src_coords->y1 - p_src_coords->y2) / dst_h;
+    //rt_kprintf("ofs_x:%f ofs_y:%f\n",ofs_x,ofs_y);
+
+    sifli_quad_3d_t quad_3d =
+    {
+        {ofs_x - w_norm, ofs_y + h_norm, 0.0f},
+        {ofs_x - w_norm, ofs_y - h_norm, 0.0f},
+        {ofs_x + w_norm, ofs_y - h_norm, 0.0f},
+        {ofs_x + w_norm, ofs_y + h_norm, 0.0f},
+    };
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        sifli_mat_vertex_multiply_4x4(pers_mat, &quad_3d[i], &quad_3d[i]);
+        //rt_kprintf("3D i:%d [%f %f %f]\n",i,quad_3d[i].x,quad_3d[i].y,quad_3d[i].z);
+    }
+
+    sifli_matrix_3x3_t trans_matrix;
+    //rt_kprintf("src_w:%f src_h:%f dst_w:%f dst_h:%f \n",src_w, src_h, dst_w, dst_h);
+    err = sifli_get_texture_map_matrix(fov, src_w, src_h, dst_w, dst_h, quad_3d, &trans_matrix);
+    //print_matrix_3x3_ext("tran:\n",trans_matrix);
+    if (SIFLI_MATRIX_SUCCESS != err) return;
+
+    lv_area_t target_area = {LV_COORD_MAX, LV_COORD_MAX, LV_COORD_MIN, LV_COORD_MIN};
+    sifli_quad_2d_t quad_2d =
+    {
+        {0.0f, 0.0f},
+        {0.0f, (float)src_h},
+        {(float)src_w, (float)src_h},
+        {(float)src_w, 0.0f},
+    };
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        sifli_mat_vertex_multiply(&trans_matrix, &quad_2d[i].x, &quad_2d[i].y);
+        //rt_kprintf("2D i:%d [%f %f]\n",i,quad_2d[i].x,quad_2d[i].y);
+        target_area.x1 = LV_MIN(target_area.x1, (lv_coord_t)quad_2d[i].x);
+        target_area.y1 = LV_MIN(target_area.y1, (lv_coord_t)quad_2d[i].y);
+        target_area.x2 = LV_MAX(target_area.x2, (lv_coord_t)quad_2d[i].x);
+        target_area.y2 = LV_MAX(target_area.y2, (lv_coord_t)quad_2d[i].y);
+    }
+
+    if (p_target_area)
+    {
+        lv_area_copy(p_target_area, &target_area);
+    }
+    //rt_kprintf("[%d %d %d %d]\n",target_area.x1,target_area.y1,target_area.x2,target_area.y2);
+    lv_area_t draw_area;
+    if (!_lv_area_intersect(&draw_area, &target_area, p_output_coords))
+    {
+        return;
+    }
+    gup_set_trans_matrix(dest, src, p_dst_coords, &draw_area, &trans_matrix);
+}
+
+static void img_rotate_adv2_matrix(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle_x, int16_t angle_y,
+                                   const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords, const lv_area_t *p_output_coords,
+                                   float r, float zoom, lv_point_t *viewpoint)
+{
+
+    float src_w = lv_area_get_width(p_src_coords);
+    float src_h = lv_area_get_height(p_src_coords);
+    float dst_w = lv_area_get_width(p_dst_coords);
+    float dst_h = lv_area_get_height(p_dst_coords);
+    if ((src_w <= 0.0f) || (src_h <= 0.0f) || (dst_w <= 0.0f) || (dst_h <= 0.0f)) return;
+    if (zoom < 0.1f)
+    {
+        rt_kprintf("zoom:%f is too small. reset to 0.1f.\n", zoom);
+        zoom = 0.1f;
+    }
+
+    float scale = sifli_get_perspective_scaling_factor(FOV);
+    float dis = scale / zoom;
+
+    //rt_kprintf("dis:%f r:%f angle:%d\n", dis, r, angle);
+
+    sifli_matrix_4x4_t mat;
+    sifli_identity_4x4(&mat);
+    if (viewpoint)
+    {
+        float angle_x = 90 * (viewpoint->y / (float)dst_h - 0.5f) / 2;
+        sifli_translate_4x4(0, 0, -scale, &mat);
+        sifli_rotate_x(-angle_x, &mat);
+        sifli_translate_4x4(0, 0, scale, &mat);
+    }
+
+    sifli_matrix_4x4_t Rcw;
+    sifli_identity_4x4(&Rcw);
+    Rcw.m[2][3] = -dis;
+    sifli_multiply_4x4(&mat, &Rcw);
+
+    r = r / dst_h * 2.0f;
+
+    sifli_matrix_4x4_t obj_mat;
+    sifli_identity_4x4(&obj_mat);
+    sifli_translate_4x4(0, 0, -r, &obj_mat);
+    sifli_rotate_x((float)angle_x / 10.0f, &obj_mat);
+    sifli_rotate_y((float)angle_y / 10.0f, &obj_mat);
+    sifli_translate_4x4(0, 0, r, &obj_mat);
+    sifli_multiply_4x4(&mat, &obj_mat);
+
+    img_rotate_matrix(dest, src, p_src_coords, p_dst_coords, p_output_coords, &mat, FOV, NULL);
+}
+#endif
 
 void img_rotate_adv1(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                      const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
                      const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
                      lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
 {
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+    (void)opa;
+    (void)ax_color;
+    img_rotate_adv2_matrix(dest, src, -angle, 0, p_src_coords, p_dst_coords,
+                           p_output_coords, LV_ABS(pivot_z - src_z), src_zoom / (float)LV_IMG_ZOOM_NONE, NULL);
+#else
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 1, src_z, NULL);
+#endif
 }
 
 void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
@@ -726,9 +950,17 @@ void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                      const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
                      lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
 {
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+    (void)opa;
+    (void)ax_color;
+    img_rotate_adv2_matrix(dest, src, 0, -angle, p_src_coords, p_dst_coords,
+                           p_output_coords, LV_ABS(pivot_z - src_z), src_zoom / (float)LV_IMG_ZOOM_NONE,
+                           NULL);
+#else
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 2, src_z, NULL);
+#endif
 }
 
 void img_rotate_adv2_vp(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
@@ -738,9 +970,30 @@ void img_rotate_adv2_vp(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t ang
                         lv_coord_t dst_z, lv_point_t *viewpoint, lv_area_t *src_new_area)
 {
     LV_UNUSED(src_new_area);
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+    (void)opa;
+    (void)ax_color;
+    int32_t r = LV_ABS(src_z - pivot_z);
+    float zoom = dst_z / (float)src_z;
+    if (angle > -900 && angle < 900 || src_new_area)
+    {
+        angle = -angle;
+    }
+    else
+    {
+        angle = 1800 - angle;
+        r = -r;
+        zoom = dst_z / (float)(2 * pivot_z - src_z);
+    }
+
+    img_rotate_adv2_matrix(dest, src, 0, angle, p_src_coords, p_dst_coords,
+                           p_output_coords, r, zoom,
+                           viewpoint);
+#else
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 2, dst_z, viewpoint);
+#endif
 }
 
 
@@ -1115,6 +1368,7 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
 #if LV_COLOR_SCREEN_TRANSP && LV_COLOR_DEPTH == 32
     RT_ASSERT(0);//Not supported now.
 #endif
+    lv_color32_t ax_color_u32;
 
     /*Draw bg*/
     if (dsc->bg_opa >= LV_OPA_MIN)
@@ -1126,6 +1380,7 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
         lv_area_copy(&bg_coords, coords);
 
         letter_blend_reset();
+        p_line_op = NULL;
         drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
         RT_ASSERT(o != NULL);
         o->op = DRV_EPIC_DRAW_RECT;
@@ -1141,15 +1396,43 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
         LV_AREA_TO_EPIC_AREA(&o->clip_area, draw_ctx->clip_area);
         LV_AREA_TO_EPIC_AREA(&o->desc.rectangle.area, coords);
         o->desc.rectangle.radius = dsc->radius;
-        lv_color32_t ax_color_u32;
+
         ax_color_u32.full = lv_color_to32(dsc->bg_color);
         ax_color_u32.ch.alpha = dsc->bg_opa;
         o->desc.rectangle.argb8888 = ax_color_u32.full;
-        drv_epic_commit_op(o);
+
+        ax_color_u32.full = lv_color_to32(dsc->bg_grad.stops[0].color);
+        ax_color_u32.ch.alpha = dsc->bg_opa;
+        o->desc.rectangle.grad_color_en = 0;
+        if (LV_GRAD_DIR_VER == dsc->bg_grad.dir)
+        {
+            o->desc.rectangle.grad_color_en = 1;
+            o->desc.rectangle.grad_color.tl = ax_color_u32.full;
+            o->desc.rectangle.grad_color.tr = ax_color_u32.full;
+        }
+        else if (LV_GRAD_DIR_HOR == dsc->bg_grad.dir)
+        {
+            o->desc.rectangle.grad_color_en = 1;
+            o->desc.rectangle.grad_color.tl = ax_color_u32.full;
+            o->desc.rectangle.grad_color.br = ax_color_u32.full;
+        }
+
+        ax_color_u32.full = lv_color_to32(dsc->bg_grad.stops[1].color);
+        ax_color_u32.ch.alpha = dsc->bg_opa;
+
+        if (LV_GRAD_DIR_VER == dsc->bg_grad.dir)
+        {
+            o->desc.rectangle.grad_color.bl = ax_color_u32.full;
+            o->desc.rectangle.grad_color.br = ax_color_u32.full;
+        }
+        else if (LV_GRAD_DIR_HOR == dsc->bg_grad.dir)
+        {
+            o->desc.rectangle.grad_color.tr = ax_color_u32.full;
+            o->desc.rectangle.grad_color.br = ax_color_u32.full;
+        }
+        lv_gpu_render_commit_op(o);
     }
 }
-
-
 
 static void draw_border(lv_draw_ctx_t *draw_ctx,
                         const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
@@ -1163,6 +1446,7 @@ static void draw_border(lv_draw_ctx_t *draw_ctx,
     setup_render_buf(&dst_buf, draw_ctx);
 
     letter_blend_reset();
+    p_line_op = NULL;
     drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
     RT_ASSERT(o != NULL);
     o->op = DRV_EPIC_DRAW_BORDER;
@@ -1188,7 +1472,7 @@ static void draw_border(lv_draw_ctx_t *draw_ctx,
     ax_color_u32.full = lv_color_to32(dsc->border_color);
     ax_color_u32.ch.alpha = dsc->border_opa;
     o->desc.border.argb8888 = ax_color_u32.full;
-    drv_epic_commit_op(o);
+    lv_gpu_render_commit_op(o);
 }
 
 static void draw_rect(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
@@ -1209,6 +1493,7 @@ static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *d
     setup_render_buf(&dst_buf, draw_ctx);
 
     letter_blend_reset();
+    p_line_op = NULL;
     drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
     RT_ASSERT(o != NULL);
 
@@ -1230,7 +1515,7 @@ static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *d
     o->desc.arc.round_start = dsc->rounded;
     o->desc.arc.round_end = dsc->rounded;
 
-    drv_epic_commit_op(o);
+    lv_gpu_render_commit_op(o);
 }
 
 
@@ -1238,32 +1523,72 @@ static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *d
 static void draw_line(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_line_dsc_t *dsc, const lv_point_t *point1,
                       const lv_point_t *point2)
 {
-    drv_epic_render_buf dst_buf;
-    setup_render_buf(&dst_buf, draw_ctx);
     letter_blend_reset();
-    drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
-    RT_ASSERT(o != NULL);
-
-    o->op = DRV_EPIC_DRAW_LINE;
-    LV_AREA_TO_EPIC_AREA(&o->clip_area, draw_ctx->clip_area);
-
 
     lv_color32_t ax_color_u32;
     ax_color_u32.full = lv_color_to32(dsc->color);
     ax_color_u32.ch.alpha = dsc->opa;
-    o->desc.line.argb8888 = ax_color_u32.full;
-    o->desc.line.width = dsc->width;
-    o->desc.line.dash_width = dsc->dash_width;
-    o->desc.line.dash_gap = dsc->dash_gap;
-    o->desc.line.round_start = dsc->round_start;
-    o->desc.line.round_end = dsc->round_end;
-    o->desc.line.raw_end = dsc->raw_end;
-    o->desc.line.p1.x = point1->x;
-    o->desc.line.p1.y = point1->y;
-    o->desc.line.p2.x = point2->x;
-    o->desc.line.p2.y = point2->y;
 
-    drv_epic_commit_op(o);
+    if (p_line_op \
+            && p_line_op->desc.line.argb8888 == ax_color_u32.full \
+            && p_line_op->desc.line.width == dsc->width \
+            && p_line_op->desc.line.dash_width == dsc->dash_width \
+            && p_line_op->desc.line.dash_gap == dsc->dash_gap \
+            && p_line_op->desc.line.round_start == dsc->round_start \
+            && p_line_op->desc.line.round_end == dsc->round_end \
+            && p_line_op->desc.line.raw_end == dsc->raw_end \
+            && p_line_op->desc.line.point_cnt + 2 < LINE_POINTS_CNT_MAX)
+    {
+        if (!p_line_op->desc.line.p_points)
+        {
+            void *p_buf = app_calloc(1, LINE_POINTS_CNT_MAX * sizeof(EPIC_PointTypeDef));
+            RT_ASSERT(p_buf);
+            p_line_op->desc.line.p_points = p_buf;
+            p_line_op->desc.line.point_cnt = 0;
+        }
+
+        int32_t index = p_line_op->desc.line.point_cnt;
+        EPIC_PointTypeDef *p_point = &p_line_op->desc.line.p_points[index];
+        LV_AREA_INSERT_EPIC_AREA(&p_line_op->clip_area, draw_ctx->clip_area);
+
+        p_point->x = point1->x;
+        p_point->y = point1->y;
+        p_point++;
+        p_point->x = point2->x;
+        p_point->y = point2->y;
+        p_line_op->desc.line.point_cnt += 2;
+
+        /*Merge process, return directly*/
+        return ;
+    }
+
+
+    {
+        drv_epic_render_buf dst_buf;
+        setup_render_buf(&dst_buf, draw_ctx);
+        drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
+        RT_ASSERT(o != NULL);
+
+        o->op = DRV_EPIC_DRAW_LINE;
+        LV_AREA_TO_EPIC_AREA(&o->clip_area, draw_ctx->clip_area);
+
+        o->desc.line.argb8888 = ax_color_u32.full;
+        o->desc.line.width = dsc->width;
+        o->desc.line.dash_width = dsc->dash_width;
+        o->desc.line.dash_gap = dsc->dash_gap;
+        o->desc.line.round_start = dsc->round_start;
+        o->desc.line.round_end = dsc->round_end;
+        o->desc.line.raw_end = dsc->raw_end;
+        o->desc.line.p1.x = point1->x;
+        o->desc.line.p1.y = point1->y;
+        o->desc.line.p2.x = point2->x;
+        o->desc.line.p2.y = point2->y;
+        o->desc.line.point_cnt = 0;
+        o->desc.line.p_points = NULL;
+
+        lv_gpu_render_commit_op(o);
+        p_line_op = o;
+    }
 }
 
 
@@ -1312,6 +1637,7 @@ static void draw_polygon(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc
     drv_epic_render_buf dst_buf;
     setup_render_buf(&dst_buf, draw_ctx);
     letter_blend_reset();
+    p_line_op = NULL;
     drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
     RT_ASSERT(o != NULL);
 
@@ -1328,7 +1654,7 @@ static void draw_polygon(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc
         o->desc.polygon.points[i].x = points[i].x;
         o->desc.polygon.points[i].y = points[i].y;
     }
-    drv_epic_commit_op(o);
+    lv_gpu_render_commit_op(o);
 
 }
 
@@ -1337,7 +1663,7 @@ void my_gpu_wait(lv_draw_ctx_t *draw_ctx)
 {
 
     letter_blend_reset();
-
+    p_line_op = NULL;
     // check_gpu_done2();
 
     // /*Call SW renderer's wait callback too*/
@@ -1434,7 +1760,8 @@ void lv_gpu_render_end(lv_disp_drv_t *disp_drv, uint32_t rl, lv_area_t *p_area)
     {
         struct rt_semaphore sem;
         EPIC_MsgTypeDef msg;
-
+        LV_DEBUG_MARK_START(0x200, "sync snapshot");
+        p_line_op = NULL;
         letter_blend_reset(); //Commit last letter blend if present
         rt_sem_init(&sem, "snapshot", 0, RT_IPC_FLAG_FIFO);
 
@@ -1451,12 +1778,12 @@ void lv_gpu_render_end(lv_disp_drv_t *disp_drv, uint32_t rl, lv_area_t *p_area)
             RT_ASSERT(NULL);
         }
         rt_sem_detach(&sem);
+        LV_DEBUG_MARK_STOP(0x200);
     }
     else//Restore GPU render
     {
         draw_ctx_setup_gpu(disp_drv->draw_ctx, true);
     }
-
 }
 
 

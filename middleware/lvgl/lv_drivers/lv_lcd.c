@@ -24,8 +24,9 @@
 #if defined(BSP_USING_LCD_FRAMEBUFFER)
     #include "drv_lcd_fb.h"
 #endif
-
-#include "drv_epic.h"
+#if defined(BSP_USING_EPIC)
+    #include "drv_epic.h"
+#endif
 
 #if (16 != LV_COLOR_DEPTH) && (24 != LV_COLOR_DEPTH) && (32 != LV_COLOR_DEPTH)
     #error "Unsupported color depth"
@@ -73,8 +74,8 @@ static rt_device_t device;
 static struct rt_device_graphic_info info;
 static struct rt_semaphore lcd_sema;
 #ifdef DRV_EPIC_NEW_API
-static struct rt_semaphore render_done_sema;
-rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list);
+    static struct rt_semaphore render_done_sema;
+    rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list);
 #endif
 
 static lv_disp_drv_t *lcd_flushing_disp_drv = NULL;
@@ -85,6 +86,14 @@ static lv_disp_drv_t disp_drv;
 #elif (LV_COLOR_DEPTH == 16)
     typedef lv_color16_t lv_fb_color_t;
 #endif /* LV_COLOR_DEPTH == 24*/
+
+#if defined(DRV_EPIC_NEW_API) && defined(LV_USE_PARTIAL_REFRESH)
+/*
+ * Record the refresh area of the previous frame to facilitate merging the current and previous frame areas in partial refresh mode,
+ * thereby resolving screen tearing issues in double-buffer mode.
+ */
+static lv_area_t prev_refr_area = { 0 };
+#endif
 
 /**************************************************
    1. Defination of LVGL buffer(s) on SRAM
@@ -204,8 +213,8 @@ static void rounder_cb(lv_disp_drv_t *disp_drv, lv_area_t *area)
     area->y1 = RT_ALIGN_DOWN(area->y1, align_size);
     area->y2 = RT_ALIGN(area->y2 + 1, align_size) - 1;
 
-#if defined(FB_CMPR_RATE)
-    /*Extend to whole line if FB compression is enabled.*/
+#if defined(FB_CMPR_RATE) || defined(LV_USE_PARTIAL_REFRESH)
+    /*Extend to whole line if FB compression is enabled or using RAMLESS LCD + dual full-screen framebuffer swapping.*/
     area->x1 = 0;
     area->x2 = LV_HOR_RES_MAX - 1;
 #endif
@@ -280,7 +289,7 @@ static void render_start(lv_disp_drv_t *disp_drv)
         rl = drv_epic_alloc_render_list(&render_buf, &ow_area);
         RT_ASSERT(rl != NULL);
 
-#if 1 //Not supported partial invalid area now
+#if !defined(LV_USE_PARTIAL_REFRESH)
         disp_refr->inv_areas[0].x1 = 0;
         disp_refr->inv_areas[0].y1 = 0;
         disp_refr->inv_areas[0].x2 = LV_HOR_RES_MAX - 1;
@@ -298,6 +307,15 @@ static void render_start(lv_disp_drv_t *disp_drv)
             disp_refr->inv_areas[0].x2 = LV_MAX(disp_refr->inv_areas[0].x2, ow_area.x1);
             disp_refr->inv_areas[0].y2 = LV_MAX(disp_refr->inv_areas[0].y2, ow_area.y1);
         }
+
+        /* Cross-frame union: Union of the previous frame refresh area and the current frame refresh area.*/
+        lv_area_t inv_areas = disp_refr->inv_areas[0];
+        if (HAL_EPIC_AreaIsValid((const EPIC_AreaTypeDef *)&prev_refr_area))
+        {
+            _lv_area_join(&disp_refr->inv_areas[0], &prev_refr_area, &inv_areas);
+        }
+        lv_area_copy(&prev_refr_area, &inv_areas);
+
 #endif
     }
 }
@@ -873,9 +891,12 @@ bool lv_refreshing_done(void)
 {
     bool lcd_drawing;
     rt_device_control(device, RTGRAPHIC_CTRL_GET_BUSY, &lcd_drawing);
-    if (lcd_drawing) return false;
 
-    if (drv_epic_is_busy())
+    if (lcd_drawing
+#if defined(BSP_USING_EPIC)
+            || drv_epic_is_busy()
+#endif
+       )
     {
         return false;
     }
