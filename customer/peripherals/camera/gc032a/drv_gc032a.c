@@ -13,8 +13,7 @@
 #include <rtdevice.h>
 
 #if defined(BSP_USING_GC032A)
-
-#include <dfs_posix.h>
+#include <string.h>
 #include <drv_gc032a.h>
 #include <drv_dcmi.h>
 
