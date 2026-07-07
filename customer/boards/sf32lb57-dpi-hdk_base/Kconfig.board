@@ -73,4 +73,8 @@ config BSP_USING_CAMERA1
     select BSP_USING_GC032A
     default n
 
+config USE_PTM_DVP_8WIRE
+     bool "Use PTM simulated DVP 8wire interface"
+     default n
+
 endmenu
