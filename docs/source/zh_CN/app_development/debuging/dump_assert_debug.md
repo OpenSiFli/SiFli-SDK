@@ -13,6 +13,51 @@
 ![5256dump1](../../../assets/5256_dump.png)
 
 导出成功后，在保存路径下将生成的所有 `*.bin`、`*.txt` 以及编译生成的 `*.axf` 文件放到同一目录，使用 Trace32 进行解析。
+
+也可以使用 SDK 命令行导出兼容 AssertDump 的目录。示例：
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport uart \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+如果需要同时导出 PSRAM，增加 `--include-psram`，或使用 `--psram-size 8MB` 指定 PSRAM 大小。导出过程中会按文件显示进度。输出目录默认生成 Trace32/AssertDump 可直接使用的 `*.bin`、`hcpu.axf`、`log.txt` 和兼容格式 `manifest.json`；SDK/AI 分析使用的完整元数据保存在 `sdk_manifest.json`。
+
+如果使用 SifliUsartServer 加 J-Link 的 IP 方式导出，使用 `--transport jlink --jlink-ip 127.0.0.1:19025`。只导出单个核心时可增加 `--core hcpu` 或 `--core lcpu`。示例：
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport jlink \
+  --jlink-ip 127.0.0.1:19025 \
+  --core hcpu \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+此时 SDK 会保留 `.jlink` 脚本中的 IP 连接方式，不会改成 USB J-Link；`--core hcpu` 会过滤 LCPU/LPSYS 导出项，并移除脚本中的切核命令。
+
+如果需要生成 GDB 可直接读取的现场 ELF，可以在导出后执行：
+
+```bash
+sdk.py crash-dump readcore \
+  --package /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
+  --output /tmp/live-crash/coredump.elf
+```
+
+之后可使用程序 ELF 和现场 ELF 进行离线分析：
+
+```bash
+sdk.py crash-dump analyze \
+  --core /tmp/live-crash/coredump.elf \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
 :::
 
 ## Trace32 恢复与解析
