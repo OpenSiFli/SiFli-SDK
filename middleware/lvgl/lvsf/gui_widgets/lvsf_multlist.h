@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
 #ifndef _LVSF_MULTLIST_H
 #define _LVSF_MULTLIST_H
 
+#include "lvgl.h"
 #include "lvsf_conf_internal.h"
 
 #if LVSF_USE_MULTLIST != 0
@@ -14,11 +15,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*********************
-*      INCLUDES
-*********************/
-#include "lvgl.h"
 
 /*********************
 *      DEFINES
