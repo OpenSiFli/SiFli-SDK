@@ -126,8 +126,22 @@ FRAME_BUFFER_BSS_SECT_END
             #define FB_CMPR_RATE 3
             #define FB_LINE_SIZE CMPR_3_RGB888_COMPRESSED_BYTES(LV_HOR_RES_MAX)
         #elif (LV_COLOR_DEPTH == 16)
-            #define FB_CMPR_RATE 1
-            #define FB_LINE_SIZE CMPR_1_RGB565_COMPRESSED_BYTES(LV_HOR_RES_MAX)
+            #ifndef LV_FB_RGB565_CMPR_RATE
+                #define LV_FB_RGB565_CMPR_RATE 1
+            #endif
+
+            #if (LV_FB_RGB565_CMPR_RATE == 1)
+                #define FB_CMPR_RATE 1
+                #define FB_LINE_SIZE CMPR_1_RGB565_COMPRESSED_BYTES(LV_HOR_RES_MAX)
+            #elif (LV_FB_RGB565_CMPR_RATE == 2)
+                #define FB_CMPR_RATE 2
+                #define FB_LINE_SIZE CMPR_2_RGB565_COMPRESSED_BYTES(LV_HOR_RES_MAX)
+            #elif (LV_FB_RGB565_CMPR_RATE == 3)
+                #define FB_CMPR_RATE 3
+                #define FB_LINE_SIZE CMPR_3_RGB565_COMPRESSED_BYTES(LV_HOR_RES_MAX)
+            #else
+                #error "LV_FB_RGB565_CMPR_RATE must be 1, 2 or 3"
+            #endif
         #endif /* LV_COLOR_DEPTH == 24*/
     #endif /* LCD_FB_USING_ONE_UNCOMPRESSED */
 
@@ -373,7 +387,6 @@ static void partial_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *
             err = rt_sem_release(&render_done_sema);
             RT_ASSERT(RT_EOK == err);
         }
-
         lv_gpu_render_mem_unlock(rl);
     }
 
@@ -675,8 +688,7 @@ uint8_t drv_gpu_is_cached_ram(uint32_t start, uint32_t len)
 */
 void *get_disp_buf(uint32_t size)
 {
-    /*The lvgl draw buffer is compressed in `DRV_EPIC_NEW_API` mode */
-#if defined(DRV_EPIC_NEW_API)&& !defined(FB_CMPR_RATE)
+#if defined(LCD_FB_USING_NONE)
     lv_disp_draw_buf_t *draw_buf = lv_disp_get_draw_buf(lv_disp_get_default());
     uint32_t buf_size = draw_buf->size * LV_COLOR_DEPTH / 8;
     if (buf_size >= size)
@@ -691,12 +703,19 @@ void *get_disp_buf(uint32_t size)
         return (void *) draw_buf->buf1;
     }
 #endif
-#endif
 
-#if !defined(LCD_FB_USING_NONE) && !defined(FB_CMPR_RATE)
+#else
+#if !defined(FB_CMPR_RATE)
     if (size <= sizeof(buf2_1))
-        return (void *) get_draw_buf();
-#endif /* LCD_FB_USING_NONE */
+    {
+#if defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+        return (using_buf == buf2_1) ? buf2_1 : buf2_2;
+#else
+        return buf2_1;
+#endif
+    }
+#endif
+#endif
 
     return NULL;
 }

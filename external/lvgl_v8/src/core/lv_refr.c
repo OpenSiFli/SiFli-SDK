@@ -564,7 +564,26 @@ static int all_joined_area_intersect(lv_area_t *refresh_area, lv_area_t *joined_
 
     return started;
 }
-#if (defined(LV_FB_ONE_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_NOT_SCREEN_SIZE)) && defined(BSP_USING_LCD_FRAMEBUFFER)
+#if defined(BSP_USING_RAMLESS_LCD) || defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED) || defined(LCD_USING_EPD_DPI)
+static void lv_refr_join_area(void)
+{
+    if(disp_refr->inv_p == 0) return;
+
+#if defined(LV_USE_PARTIAL_REFRESH)
+    return;
+#endif
+
+    lv_area_t scr_area;
+    scr_area.x1 = 0;
+    scr_area.y1 = 0;
+    scr_area.x2 = lv_disp_get_hor_res(disp_refr) - 1;
+    scr_area.y2 = lv_disp_get_ver_res(disp_refr) - 1;
+
+    disp_refr->inv_area_joined[0] = 0;
+    disp_refr->inv_areas[0] = scr_area;
+    disp_refr->inv_p = 1;
+}
+#elif (defined(LV_FB_ONE_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_NOT_SCREEN_SIZE)) && defined(BSP_USING_LCD_FRAMEBUFFER)
 static bool get_next_refr_area(const lv_disp_t *disp, lv_area_t *area)
 {
     lv_coord_t update_rows = lv_area_get_height(area);
@@ -1596,4 +1615,3 @@ static void mem_monitor_init(mem_monitor_t * _mem_monitor)
     _mem_monitor->mem_label = NULL;
 }
 #endif
-

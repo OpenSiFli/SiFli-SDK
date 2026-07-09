@@ -243,6 +243,7 @@
     #define LV_USE_PARTIAL_REFRESH  1
 #endif
 
+
 #ifdef DISABLE_LVGL_V8
     // #ifdef RT_USING_HEAP
     //     #define LV_USE_STDLIB_MALLOC    LV_STDLIB_RTTHREAD
