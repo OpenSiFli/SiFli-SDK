@@ -1527,6 +1527,26 @@ menu "On-chip Peripherals"
         depends on SOC_SF32LB58X || SOC_SF32LB55X
         default n
 
+    if BSP_USING_SDADC
+        config BSP_SDADC_USE_TIMER_TRIGGER
+            bool "Enable SDADC timer trigger + interrupt"
+            default n
+            help
+                Use GPTIM3 to periodically trigger SDADC conversions,
+                with interrupt notification.
+
+        if BSP_SDADC_USE_TIMER_TRIGGER
+            config BSP_SDADC_TIMER_PERIOD_MS
+                int "SDADC timer trigger period (ms)"
+                default 100
+        endif
+
+        config BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING
+            bool "Enable SDADC multi-channel scan sampling"
+            default n
+
+    endif
+
     menuconfig BSP_USING_SDIO
         bool "SDIO"
         select RT_USING_SDIO
