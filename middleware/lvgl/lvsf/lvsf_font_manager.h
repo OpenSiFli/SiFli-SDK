@@ -51,7 +51,6 @@ int lvsf_font_set_default(const char *font_name);
 int lvsf_font_set_priority(const char *font_name, uint8_t priority);
 void lvsf_font_clear_cache(const char *font_name);
 void lvsf_font_clear_all_cache(void);
-
 #endif
 
 #ifdef __cplusplus
