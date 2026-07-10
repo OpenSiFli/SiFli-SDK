@@ -708,7 +708,7 @@ int skw_wifi_rf_test(int argc, char **argv)
     sprintf((char *)buf, "%s\r\n", argv[1]);
     send_len = strlen((char *)buf);
 
-    ret = open_sdio_port(0, NULL, NULL);
+    ret = skw_open_sdio_port(0, NULL, NULL);
     rt_kprintf("skw_wifi_rf_open: %d\r\n", ret);
     if (ret != 0)
     {
@@ -753,7 +753,7 @@ int skw_wifi_rf_test(int argc, char **argv)
 
     rt_thread_mdelay(1000);
 
-    close_sdio_port(0);
+    skw_close_sdio_port(0);
 
     rt_kprintf("test done\r\n");
 

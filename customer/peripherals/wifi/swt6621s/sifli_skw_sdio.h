@@ -13,7 +13,7 @@
  * @param id Port identifier.
  * @return 0 on success, non-zero on failure.
  */
-int close_sdio_port(int id);
+int skw_close_sdio_port(int id);
 
 /**
  * @brief Send data through an SDIO port.
@@ -31,7 +31,7 @@ int send_data(int portno, char *buffer, int size);
  * @param data     User context passed to the callback.
  * @return 0 on success, non-zero on failure.
  */
-int open_sdio_port(int id, void *callback, void *data);
+int skw_open_sdio_port(int id, void *callback, void *data);
 
 /**
  * @brief Send WiFi data using scatter-gather list.
