@@ -276,6 +276,7 @@ __WEAK int mpu_dcache_clean(void *data, uint32_t size)
 __WEAK int mpu_dcache_invalidate(void *data, uint32_t size)
 {
     int r = 0;
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
     if (IS_DCACHED_RAM(data))
     {
         if (size > DCACHE_SIZE)
@@ -286,12 +287,14 @@ __WEAK int mpu_dcache_invalidate(void *data, uint32_t size)
         else
             SCB_InvalidateDCache_by_Addr(data, size);
     }
+#endif /* __DCACHE_PRESENT == 1U */
     return r;
 }
 
 __WEAK int mpu_icache_invalidate(void *data, uint32_t size)
 {
     int r = 0;
+#if defined(__ICACHE_PRESENT) && (__ICACHE_PRESENT == 1U)
     if (IS_DCACHED_RAM(data))
     {
         if (size > ICACHE_SIZE)
@@ -302,6 +305,7 @@ __WEAK int mpu_icache_invalidate(void *data, uint32_t size)
         else
             SCB_InvalidateICache_by_Addr(data, size);
     }
+#endif /* __ICACHE_PRESENT == 1U */
     return r;
 }
 
