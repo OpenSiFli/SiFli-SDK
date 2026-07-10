@@ -53,26 +53,13 @@ __ROM_USED void rt_bt_event_notify(bt_notify_t *param)
 
     switch (param->event)
     {
-    case BT_EVENT_CANCEL_PAGE_IND:
     case BT_EVENT_DISCONNECT:
-    {
-        bt_disconnect_info_t info = {0};
-        for (uint8_t i = 0; i < BT_PROFILE_MAX; i++)
-        {
-            if (BT_STATE_CONNECTING == rt_bt_get_connect_state(&bt_obj, i))
-            {
-                info.profile = i;
-                bt_connect_fsm_handle(&bt_obj, BT_EVENT_PROFILE_DISCONNECT, &info);
-            }
-        }
-    }
-    break;
-
     case BT_EVENT_CLOSE_COMPLETE:
     case BT_EVENT_PROFILE_DISCONNECT:
     case BT_EVENT_CONNECT_COMPLETE:
     {
         bt_connect_fsm_handle(&bt_obj, param->event, param->args);
+        bt_profile_channel_fsm_handle(&bt_obj, param->event, param->args);
     }
     break;
 
@@ -138,14 +125,19 @@ int rt_hw_bt_init(const struct rt_bt_ops *ops, rt_uint16_t open_flag)
     bt_obj.call_sem = rt_mutex_create("call_sem", RT_IPC_FLAG_FIFO);
     RT_ASSERT(bt_obj.call_sem);
 
+    bt_obj.wq = rt_workqueue_create("bt_wq", 3072, 12);
+    RT_ASSERT(bt_obj.wq);
 
     bt_obj.fsm.stack_ready = 0;
     bt_obj.fsm.siri_status = 0;
     bt_obj.fsm.clcc_process_status = CALL_CLCC_COMPLETE;
     bt_obj.role = BT_ROLE_SLAVE;
     bt_obj.config.inband_ring = 1;
+    bt_obj.config.is_direct_audio_on = 0;
     bt_obj.call_info.active_idx = BT_INVALID_CALL_IDX;
-
+#ifdef BT_USING_HF
+    bt_call_init(&bt_obj);
+#endif
     result = rt_bt_register(&bt_obj, BT_DEVICE_NAME);
     RT_ASSERT(result == RT_EOK);
 

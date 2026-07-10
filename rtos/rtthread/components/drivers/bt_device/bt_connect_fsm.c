@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 
@@ -96,13 +99,13 @@ static struct state bt_state_connect_error =
 
 static void bt_connect_fsm_enter(void *state_data, struct event *event)
 {
-    LOG_D("%s state:%d event:%x", __func__, (int)state_data, event->type);
+    LOG_D("%s profile:%d state:%d event:%x", __func__, *(bt_profile_t *)event->data, (int)state_data, event->type);
 }
 
 
 static void bt_connect_fsm_exit(void *state_data, struct event *event)
 {
-    LOG_D("%s state:%d event:%x", __func__, (int)state_data, event->type);
+    LOG_D("%s  profile:%d state:%d event:%x", __func__, *(bt_profile_t *)event->data, (int)state_data, event->type);
 }
 
 int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
@@ -115,6 +118,7 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
     {
     case BT_CONTROL_DISCONNECT_EX:
     {
+        connect_event.data = args;
         ret =  statem_handle_event(&dev->fsm.connect_fsm[0][*((bt_profile_t *)args)], &connect_event);
     }
     break;
@@ -124,6 +128,7 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
         bt_disconnect_info_t *info = (bt_disconnect_info_t *)args;
         if (0xFF != info->conn_idx)
         {
+            connect_event.data = &info->profile;
             ret =  statem_handle_event(&dev->fsm.connect_fsm[info->conn_idx][info->profile], &connect_event);
         }
         else
@@ -139,7 +144,10 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
         for (uint8_t index = 0; index < BT_MAX_ACL_NUM; index++)
         {
             for (uint8_t i = 0; i < BT_PROFILE_MAX; i++)
+            {
+                connect_event.data = &i;
                 ret =  statem_handle_event(&dev->fsm.connect_fsm[index][i], &connect_event);
+            }
         }
     }
     break;
@@ -150,7 +158,10 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
         if (0xFF != *idx)
         {
             for (uint8_t i = 0; i < BT_PROFILE_MAX; i++)
+            {
+                connect_event.data = &i;
                 ret =  statem_handle_event(&dev->fsm.connect_fsm[*idx][i], &connect_event);
+            }
         }
         else
         {
@@ -166,7 +177,10 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
         if (0xFF != info->conn_idx)
         {
             for (uint8_t i = 0; i < BT_PROFILE_MAX; i++)
+            {
+                connect_event.data = &i;
                 ret =  statem_handle_event(&dev->fsm.connect_fsm[info->conn_idx][i], &connect_event);
+            }
         }
         else
         {
@@ -182,6 +196,7 @@ int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
 
         if (0xFF != info->conn_idx)
         {
+            connect_event.data = &info->profile;
             ret =  statem_handle_event(&dev->fsm.connect_fsm[info->conn_idx][info->profile], &connect_event);
         }
         else
@@ -203,7 +218,7 @@ int bt_connect_fsm_init(void)
     rt_bt_device_t *bt_device = (rt_bt_device_t *) rt_device_find(BT_DEVICE_NAME);
     if (RT_NULL == bt_device)
     {
-        LOG_E("init bt connect fsm fail\n");
+        LOG_E("init bt connect fsm fail");
         return RT_ERROR;
     }
 

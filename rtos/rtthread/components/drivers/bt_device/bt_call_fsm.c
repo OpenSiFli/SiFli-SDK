@@ -1,11 +1,14 @@
 /*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <rthw.h>
 #include <rtthread.h>
 #include <rtdevice.h>
 
-#if defined(BT_USING_SIFLI)
+#if defined(AUDIO_USING_MANAGER) && defined(BT_FINSH)
     #include "bts2_global.h"
     #include "bts2_app_inc.h"
     #include "hfp_audio_api.h"
@@ -193,7 +196,7 @@ int bt_call_fsm_handle(rt_bt_device_t *dev, uint8_t index, int event_type, void 
     int ret = STATEM_STATE_NOCHANGE;
     struct event connect_event;
     connect_event.type = 0xFF;
-
+    rt_mutex_take(dev->handle_lock, RT_WAITING_FOREVER);
     switch (event_type)
     {
 
@@ -216,12 +219,13 @@ int bt_call_fsm_handle(rt_bt_device_t *dev, uint8_t index, int event_type, void 
 
     if ((BT_INVALID_CALL_IDX != index) && (0xFF != connect_event.type))
     {
-        rt_kprintf("bt_call_fsm_handle idx:%d pre_state:%s cur_state:%s new:%s\n", index,
-                   bt_call_state_to_name((bt_call_state_t)dev->fsm.call_fsm[index].state_previous->data),
-                   bt_call_state_to_name((bt_call_state_t)dev->fsm.call_fsm[index].state_current->data),
-                   bt_call_state_to_name(connect_event.type));
+        LOG_I("idx:%d pre_state:%s cur_state:%s new:%s", index,
+              bt_call_state_to_name((bt_call_state_t)dev->fsm.call_fsm[index].state_previous->data),
+              bt_call_state_to_name((bt_call_state_t)dev->fsm.call_fsm[index].state_current->data),
+              bt_call_state_to_name(connect_event.type));
         ret =  statem_handle_event(&dev->fsm.call_fsm[index], &connect_event);
     }
+    rt_mutex_release(dev->handle_lock);
     return ret ;
 }
 
@@ -234,7 +238,7 @@ int bt_call_fsm_init(void)
         return RT_ERROR;
     }
 
-#if defined(AUDIO_USING_MANAGER)
+#if defined(AUDIO_USING_MANAGER) && defined(BT_FINSH)
     hfp_audio_init();
 #endif
 

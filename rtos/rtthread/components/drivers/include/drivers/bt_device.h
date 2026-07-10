@@ -1,27 +1,34 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef __BT_DEVICE_H__
 #define __BT_DEVICE_H__
 #include <rtthread.h>
 #include <stdint.h>
-#ifdef RT_USING_AT
-    //#ifndef ENABLE_SOLUTON_BT_INTERFACE
-    #include <at.h>
-    //#endif
-#endif
 
 #include "state_machine.h"
-
+#ifdef BT_FINSH
+    #include "bts2_app_interface_type.h"
+#endif
 #ifndef CFG_MAX_BT_BOND_NUM
     #define BT_MAX_ACL_NUM  (1)
 #else
-    #define BT_MAX_ACL_NUM CFG_MAX_BT_BOND_NUM
+    #define BT_MAX_ACL_NUM CFG_MAX_BT_ACL_NUM
 #endif
+
+#define BT_CHANNEL_MAP_BYTES (10)
+#define BT_TOTAL_CHANNELS    (79)
+
 #define BT_INVALID_CONN_INDEX (0xFF)
 
 #define BT_MAX_EVENT_NOTIFY_CB_NUM (8)
 #define BT_MAX_MAC_LEN (6)
 #define BT_DEVICE_FLAG_OPEN (0x010)
 #define BT_MAX_NAME_LEN (60)
-#define BT_MAX_CALL_NUM (2)
+#define BT_MAX_CALL_NUM (3)
 #define BT_INVALID_CALL_IDX (0xFF)
 #define BT_MAX_PHONE_NUMBER_LEN (20)
 
@@ -45,6 +52,7 @@ enum
 typedef enum
 {
     BT_CONTROL_SEARCH_EQUIPMENT = BT_COMMON_TYPE_ID << 8,   /**< control BT device to search other BT device */
+    BT_CONTROL_SEARCH_EQUIPMENT_EX,         /**< control BT device to search other BT device extend*/
     BT_CONTROL_CANCEL_SEARCH,               /**< control BT device to cancel search */
     BT_CONTROL_CONNECT_DEVICE,              /**< control BT device to connect other BT device */
     BT_CONTROL_CONNECT_DEVICE_EX,           /**< control BT device to connect other BT device extend*/
@@ -63,6 +71,8 @@ typedef enum
     BT_CONTROL_SET_SCAN,                    /**< set scan. */
     BT_CONTROL_GET_SCAN,                    /**< get scan. */
     BT_CONTROL_EXIT_SNIFF,
+    BT_CONTROL_DISABLE_SNIFF,
+    BT_CONTROL_SET_COD,
     BT_CONTROL_SWITCH_TO_SOURCE,            /**< control BT device switch to source mode  */
     BT_CONTROL_SWITCH_TO_SINK,              /**< control BT device switch to sink mode  */
     BT_CONTROL_GET_BT_MAC,                  /**< control BT device to get mac */
@@ -117,6 +127,14 @@ typedef enum
     BT_CONTROL_PLAY_POWER_OFF_RING,         /**< control play power off ring */
     BT_CONTROL_SLEEP,                       /**< control bt sleep */
     BT_CONTROL_GET_RMT_NAME,                /**< get remote device name */
+    BT_CONTROL_SET_LINK_POLICY,             /**< control bt device link policy setting */
+    BT_CONTROL_SET_SNIFF_ENABLE,            /**< control bt device sniff enable */
+    BT_CONTROL_DISABLE_AFH_CHANNELS,        /**< control disable afh channles */
+    BT_CONTROL_SET_PINCODE_MODE,            /**< control bt pincode pair enable */
+    BT_CONTROL_INPUT_PINCODE,               /**< control bt input pincode */
+    BT_CONTROL_INPUT_PASSKEY,               /**< control bt input passkey */
+    BT_CONTROL_ACCEPT_CONNECT,              /**< control accept connect */
+    BT_CONTROL_REJECT_CONNECT,              /**< control reject connect */
 } bt_common_cmd_t;
 
 typedef enum
@@ -143,6 +161,7 @@ typedef enum
     BT_EVENT_CLOSE_COMPLETE,            /**< indicate bt is closed. */
     BT_EVENT_RD_LOCAL_NAME,
     BT_EVENT_RD_LOCAL_RSSI,
+    BT_EVENT_ACL_CONNECT_IND,
     BT_EVENT_ACL_OPENED_IND,
     BT_EVENT_PAIR_IND,                  /**< indicate pair result */
     BT_EVENT_CHANGE_BD_ADDR,
@@ -154,6 +173,7 @@ typedef enum
     BT_EVENT_USER_CONFIRM_IND,
 #endif
     BT_EVENT_KEY_OVERLAID,
+    BT_EVENT_SCAN_ENB_CFM,
     BT_EVENT_RMT_NAME,
 } bt_common_event_t;
 
@@ -165,6 +185,7 @@ typedef enum
     BT_CONTROL_DIAL_BACK,                   /**< control BT device back to dial the phone */
     BT_CONTROL_MAKE_CALL,                   /**< control BT device make a phone call */
     BT_CONTROL_SET_INBAND_RING,             /**< control BT device enable/disable inband ring for hf role,default is support inband ring */
+    BT_CONTROL_SET_DIRECT_AUDIO_ON,         /**< control BT device audio on */
     BT_CONTROL_GET_PHONE_NUMBER,            /**< control BT device to get the mobile phone num connected to watch */
     BT_CONTROL_GET_REMOTE_PHONE_NUMER,      /**< control BT device to get the remote mobile phone num  */
     BT_CONTROL_SET_WBS_STATUS,              /**< control sco codec type */
@@ -182,6 +203,7 @@ typedef enum
     BT_CONTROL_SIRI_OFF,                    /**< control bt close siri */
     BT_CONTROL_GET_SIRI_CAPABILITY,         /**< control get siri capability */
 #endif
+    BT_CONTROL_EXTERN_CMD,                  /**< control sned extern AT command */
 } bt_hf_cmd_t;
 
 typedef enum
@@ -202,6 +224,11 @@ typedef enum
     BT_EVENT_VGS_IND,
     BT_EVENT_DTMF_IND,
     BT_EVENT_AT_CMD_CFM_STATUS,
+    BT_EVENT_CALL_RING,                     /**< unused, compatible with previous customers */
+    BT_EVENT_MULTI_CALL_STATUS_IND,         /**< unused, compatible with previous customers */
+    BT_EVENT_CALL_NUMBER,                   /**< unused, compatible with previous customers */
+    BT_EVENT_CALL_3WAY_WAIT_IND,            /**< unused, compatible with previous customers */
+    BT_EVENT_CALL_3WAY_BTRH_IND,            /**< unused, compatible with previous customers */
 } bt_hf_event_t;
 #endif
 
@@ -227,6 +254,7 @@ typedef enum
     BT_EVENT_GET_LOCAL_PHONE_INFO_REQ,
     BT_EVENT_GET_INDICATOR_STATUS_REQ,
     BT_EVENT_GET_ALL_REMOTE_CALL_INFO_REQ,
+    BT_EVENT_AG_BATTERY_UPDATE,
 } bt_ag_event_t;
 #endif
 
@@ -247,6 +275,10 @@ typedef enum
     BT_EVENT_A2DP_START_IND = BT_A2DP_TYPE_ID << 8 | 0x0080,
     BT_EVENT_AVSNK_OPEN_COMPLETE,
     BT_EVENT_AVSNK_CLOSE_COMPLETE,
+    BT_EVENT_A2DP_SUSPEND_IND,
+    BT_EVENT_A2DP_START_CFM,
+    BT_EVENT_A2DP_SUSPEND_CFM,
+    BT_EVENT_A2DP_DATA_IND,
 } bt_a2dp_event_t;
 #endif
 
@@ -255,6 +287,8 @@ typedef enum
 {
     BT_CONTROL_OPEN_AVRCP = BT_AVRCP_TYPE_ID << 8,
     BT_CONTROL_CLOSE_AVRCP,
+    BT_CONTROL_AVRCP_GET_COVER_ART,         /**< AVRCP gets the cover art of the current song */
+#ifndef BT_CONNECT_SUPPORT_MULTI_LINK
     BT_CONTROL_PHONE_PLAY_NEXT,             /**< control play phone next song */
     BT_CONTROL_PHONE_PLAY,                  /**< control play phone current song */
     BT_CONTROL_PHONE_PLAY_SUSPEND,          /**< control suspend play phone song */
@@ -262,11 +296,12 @@ typedef enum
     BT_CONTROL_AVRCP_VOLUME_UP,
     BT_CONTROL_AVRCP_VOLUME_DOWN,
     BT_CONTROL_PHONE_PLAY_PREVIOUS,         /**< control play phone previous song */
-    /*eraphone media*/
-    BT_CONTROL_EARPHONE_PLAY_NEXT,          /**< control play earphone next song */
-    BT_CONTROL_EARPHONE_PLAY,               /**< control play earphone current song */
-    BT_CONTROL_EARPHONE_PLAY_SUSPEND,       /**< control suspend play earphone song */
-    BT_CONTROL_EARPHONE_PLAY_PREVIOUS,      /**< control play earphone previous song */
+#endif
+    BT_CONTROL_AVRCP_PLAY,                  /* AVRCP sets the specified device to playback mode */
+    BT_CONTROL_AVRCP_PAUSE,                 /* AVRCP sets the specified device to pause mode */
+    BT_CONTROL_AVRCP_PREVIOUS,              /* AVRCP sets the specified device to play previous song */
+    BT_CONTROL_AVRCP_NEXT,                  /* AVRCP sets the specified device to play next song */
+    BT_CONTROL_AVRCP_REWIND,                /* AVRCP sets the specified device to rewind song */
 } bt_avrcp_cmd_t;
 
 typedef enum
@@ -278,6 +313,10 @@ typedef enum
     BT_EVENT_SONG_PLAY_PROGRESS,            /**< song playing progress */
     BT_EVENT_MUSIC_PLAY_STATUS_CHANGED,     /**< it means music play status changed. */
     BT_EVENT_AVRCP_VOLUME_CHANGE_RIGISTER,
+    BT_EVENT_AVRCP_SONG_CHANGED,            /**< cell phone song cutting. */
+    BT_EVENT_AVRCP_COVER_ART_DATA,          /**< avrcp cover art data */
+    BT_EVENT_AVRCP_COVER_ART_DATA_ERR,      /**< avrcp cover art data err */
+    BT_EVENT_AVRCP_UPDATE_COVER_ART,        /**< avrcp update cover art */
 } bt_avrcp_event_t;
 #endif
 
@@ -290,6 +329,10 @@ typedef enum
     BT_CONTROL_PHONE_DRAG_UP,               /**< control phone drag up once*/
     BT_CONTROL_PHONE_DRAG_DOWN,             /**< control phone drag down once*/
     BT_CONTROL_PHONE_ONCE_CLICK,            /**< control phone click once*/
+    BT_CONTROL_CONTROLLER_RIGHT,            /**< control remote device right*/
+    BT_CONTROL_CONTROLLER_LEFT,             /**< control remote device left*/
+    BT_CONTROL_CONTROLLER_UP,               /**< control remote device up*/
+    BT_CONTROL_CONTROLLER_DOWN,             /**< control remote device down*/
     BT_CONTROL_PHONE_DOUBLE_CLICK,          /**< control phone double click*/
     BT_CONTROL_PHONE_TAKE_PICTURE,          /**< control phone take a picture*/
     BT_CONTROL_PHONE_VOLUME_UP,             /**< control phone volume up*/
@@ -317,6 +360,7 @@ typedef enum
     BT_EVENT_SPP_DATA_IND,
     BT_EVENT_SPP_DATA_CFM,
     BT_EVENT_SPP_DISCONN_IND,
+    BT_EVENT_SPP_SDP_CFM,
 } bt_spp_event_t;
 #endif
 
@@ -339,18 +383,23 @@ typedef enum
 #ifdef BT_USING_PBAP
 typedef enum
 {
-    BT_CONTROL_PBAP_PULL_PB = BT_PBAP_TYPE_ID << 8,
-    BT_CONTROL_PBAP_SET_PB,
-    BT_CONTROL_PBAP_PULL_VCARD_LIST,
-    BT_CONTROL_PBAP_PULL_VCARD_ENTRY,
-    BT_CONTROL_PBAP_GET_NAME_BY_NUMBER,
+    BT_CONTROL_PBAP_PULL_PB = BT_PBAP_TYPE_ID << 8, // 获取电话薄
+    BT_CONTROL_PBAP_SET_PB,                         // 设置电话薄路径（手机、SIM卡）
+    BT_CONTROL_PBAP_PULL_VCARD_LIST,                // 获取vcard列表
+    BT_CONTROL_PBAP_PULL_VCARD_ENTRY,               // 获取vcard详情
+    BT_CONTROL_PBAP_GET_NAME_BY_NUMBER,             // 获取号码对应的联系人姓名
     BT_CONTROL_PBAP_AUTH_RSP,
 } bt_pbap_cmd_t;
 
 typedef enum
 {
-    BT_EVENT_VCARD_LIST_ITEM_NOTIFY = BT_PBAP_TYPE_ID << 8 | 0x0080,
-    BT_EVENT_VCARD_LIST_CMP,
+    BT_EVENT_VCARD_LIST_ITEM_NOTIFY = BT_PBAP_TYPE_ID << 8 | 0x0080,    // vcard列表项通知事件
+    BT_EVENT_VCARD_LIST_CMP,            // 获取vcard列表完成
+    BT_EVENT_PULL_VCARD_CMP,            // 获取vcard详情完成
+    BT_EVENT_PULL_PB_CMP,               // 获取整个电话薄完成
+    BT_EVENT_SET_PATH_CFM,              // 设置路径完成
+    BT_EVENT_VCARD_ITEM_NOTIFY,         // 单个 vCard 条目到达指示（可能多次触发）
+    BT_EVENT_VCARD_TOTAL_NUM_IND,       // vCard 总数指示
 } bt_pbap_event_t;
 #endif
 
@@ -552,7 +601,6 @@ typedef enum
     BT_PROFILE_A2DP,
     BT_PROFILE_PAN,
     BT_PROFILE_HID,
-    BT_PROFILE_AG,
     BT_PROFILE_SPP,
     BT_PROFILE_BT_GATT,
     BT_PROFILE_PBAP,
@@ -568,11 +616,19 @@ typedef enum
     BT_STATE_MEDIA_ERROR
 } bt_media_state_t;
 
+/// Inquiry parameters
 typedef struct
 {
-    uint8_t status;
-    uint8_t conn_idx;
-} bt_media_play_status_t;
+    /// Device class mask, A device with a specific Class of Device responded to the Inquiry process.
+    /// 0 is used for unlimited class of device
+    uint32_t dev_cls_mask;
+    /// Maxium amount of time specified before the inquiry procedure halted
+    /// with SECOND. 0 is used for unlimited time
+    uint16_t max_timeout;
+    /// Maxium number of responses from the inquiry before the inquiry is halted.
+    /// 0 is used for unlimited number of responses
+    uint8_t max_rsp;
+} bt_start_inquiry_t;
 
 typedef struct
 {
@@ -622,6 +678,12 @@ typedef enum
     BT_PBAP_UNKNOWN_PHONEBOOK
 } pbap_phone_book_t;
 
+typedef struct
+{
+    pbap_phone_book_t phone_book;   // phone book
+    uint16_t total_num;             // total number of vcard in current vacard list
+} pbap_vcard_total_num_t;
+
 #define PBAP_MAX_VCARD_ENTRY_HANDLE_SIZE    42
 #define PBAP_MAX_VCARD_CONTACT_NAME_SIZE    80
 typedef struct
@@ -642,7 +704,7 @@ typedef struct
 {
     pbap_phone_repository_t repos;
     pbap_phone_book_t phone_book;
-    uint8_t max_size;
+    uint16_t max_size;
 } bt_pbap_pb_info;
 
 typedef struct
@@ -657,15 +719,37 @@ typedef struct
     uint8_t password[];
 } bt_pbap_auth_info;
 
+#define BT_PBAP_EVENT_MAX_VCARD_SIZE    20
+///  PABP vcard name result
 typedef struct
 {
+    pbap_phone_book_t phone_book;         // pbap_phone_book_t
+    uint8_t vcard_type;         // vcard type
+    uint8_t vcard_name_len;     // vcard name length
+    uint8_t vcard_number_len;   // vcard number length
+    uint8_t vcard_time_len;     // vcard time length
+    char vcard_name[BT_PBAP_EVENT_MAX_VCARD_SIZE];      // vcard name
+    char vcard_number[BT_PBAP_EVENT_MAX_VCARD_SIZE];    // vcard number
+    char vcard_time[BT_PBAP_EVENT_MAX_VCARD_SIZE];      // vcard time
+} bt_pbap_vcard_item_t;
+
+///  PABP vcard item complete result value
+typedef struct
+{
+    pbap_phone_book_t phone_book;     // pbap_phone_book_t
+    uint8_t res;            // result value
+} bt_pbap_vcard_item_cmpl_t;
+
+typedef struct
+{
+    uint8_t conn_idx;
     uint8_t call_num;
     uint8_t active_idx;//the index of call to be handled currently
     uint8_t ring_type;  /* 1:inband ring 0:local ring */
     bt_call_state_t active_state;
     uint8_t dir[BT_MAX_CALL_NUM];        /*0:outgoing 1:incoming*/
     phone_number_t phone_number[BT_MAX_CALL_NUM];
-#ifdef BT_USING_PBAP
+#ifdef BT_USING_PBAP_NUM_BY_NAME
     pbap_vcard_list_t contacts[BT_MAX_CALL_NUM];
 #endif
 } bt_call_info_t;
@@ -702,6 +786,28 @@ typedef struct
     char addr[BT_MAX_MAC_LEN];
 } bt_mac_t;
 
+typedef struct
+{
+    uint8_t status;
+    uint8_t conn_idx;
+    bt_mac_t mac;
+} bt_media_play_status_t;
+
+typedef struct
+{
+    uint32_t progress;
+    uint8_t conn_idx;
+    bt_mac_t mac;
+} bt_media_play_progress_t;
+
+typedef struct
+{
+    uint8_t *data;
+    uint8_t is_final_packet;
+    uint16_t len;
+    uint16_t total_length;
+    bt_mac_t mac_addr;
+} bt_avrcp_cover_art_data_t;
 
 typedef struct
 {
@@ -728,19 +834,38 @@ typedef struct
     uint8_t conn_idx;
     bt_profile_t profile;
     bt_mac_t mac;         /**< the bt peer mac*/
+    ///  profile channel
+    uint16_t profile_channel;
 } bt_connect_info_t;
 
 typedef struct
 {
+    uint8_t conn_idx;       /**< must be assigned */
+    bt_profile_t profile;
+    bt_mac_t mac;
+} bt_profile_info_t;
+
+typedef struct
+{
     uint8_t inband_ring; /* 1:hf support inband ring tone; 0:hf dont support inband ring tone */
+    uint8_t is_direct_audio_on;
 } bt_config_t;
 
 typedef struct
 {
+    bt_mac_t mac;        // 蓝牙设备MAC地址
+    uint8_t link_type;   // 链路类型（@bt_cm_link_type_t）
+    uint8_t connect;     // 连接状态（0=未连接/空闲，1=已连接）
+} bt_connect_dev_t;
+
+typedef struct
+{
     uint8_t stack_ready;
-    uint8_t sco_link;   /* 0:remote device 1:local device */
+    uint8_t sco_link[BT_MAX_ACL_NUM];   /* 0:remote device 1:local device */
     uint8_t siri_status; /* 0:off 1:on */
     uint8_t clcc_process_status;
+    bt_connect_dev_t connect[BT_MAX_ACL_NUM];
+    uint8_t profile_channel[BT_MAX_ACL_NUM][BT_PROFILE_MAX];
 
     struct state_machine media_fsm[BT_MAX_ACL_NUM];
     struct state_machine device_fsm;
@@ -783,6 +908,7 @@ typedef struct
     int rssi;                   /**< the bt device signal strength unit:dbm */
     uint32_t name_size;         /**< the bt device name size */
     char *bt_name;        /**< the bt device name,utf8 */
+    uint32_t dev_cls;           /**< 0x001f00 audio box */
 } bt_serached_device_info_t;
 
 typedef struct
@@ -814,7 +940,18 @@ typedef struct
     char                name[61];
 } bt_rmt_name_t;
 
+typedef struct
+{
+    bt_mac_t addr;              /**< the bt peer mac*/
+    uint8_t link_role;          /**< the bt link role */
+    uint8_t link_type;          /**< the bt link type */
+} bt_acpt_connect_t;
 
+typedef struct
+{
+    bt_mac_t addr;              /**< the bt peer mac*/
+    uint8_t reason;             /**< the reason for rejection */
+} bt_reject_connect_t;
 
 #pragma pack(push,1)
 typedef struct
@@ -894,7 +1031,6 @@ typedef struct
     uint16_t          character_set_id;  //UTF-8 0x006A; other??
 } bt_mp3_detail_info_t;
 
-
 typedef struct
 {
     mp3_song_name_t song_name;      /**< the song's name */
@@ -948,6 +1084,8 @@ typedef struct
     bt_volume_t volume;
     bt_volume_mode_t mode;
     bt_volume_save save;
+    uint8_t conn_idx;
+    bt_mac_t mac;
 } bt_volume_set_t;
 
 typedef struct
@@ -980,6 +1118,14 @@ typedef struct
 typedef struct
 {
     bt_mac_t peer_addr;         /**< the bt peer mac*/
+    uint8_t *uuid;
+    uint8_t uuid_len;
+    uint8_t res;
+} bt_spp_sdp_cfm_t;
+
+typedef struct
+{
+    bt_mac_t peer_addr;         /**< the bt peer mac*/
     uint8_t srv_chl;
     uint8_t *uuid;
     uint8_t uuid_len;
@@ -992,8 +1138,35 @@ typedef struct
     uint8_t phone_type;
 } bt_call_wait_t;
 
+typedef enum
+{
+    BT_LINK_POLICY_NO_SETTING       = 0x0000,
+    BT_LINK_POLICY_ROLE_SWITCH      = 0x0001,
+    BT_LINK_POLICY_HOLD_MODE        = 0x0002,
+    BT_LINK_POLICY_SNIFF_MODE       = 0x0004,
+    BT_LINK_POLICY_PARK_SETTING     = 0x0008,
+} bt_link_policy_t;
 
+typedef struct
+{
+    bt_mac_t mac;
+    bt_link_policy_t mode;
+} bt_set_link_policy_t;
 
+typedef struct
+{
+    bt_mac_t mac;
+    uint8_t is_accept;
+    uint8_t pincode_len;
+    uint8_t *pincode;
+} bt_input_pincode_t;
+
+typedef struct
+{
+    bt_mac_t mac;
+    uint8_t is_accept;
+    uint32_t passkey;
+} bt_input_passkey_t;
 
 typedef struct
 {
@@ -1061,6 +1234,12 @@ typedef struct
 
 typedef struct
 {
+    uint16_t profile_channel;
+    hfp_phone_num_t phone_num;
+} hfp_local_num_t;
+
+typedef struct
+{
     uint8_t call_idx;
     uint8_t call_dir;
     uint8_t call_status;
@@ -1082,6 +1261,12 @@ typedef struct
 
 typedef struct
 {
+    uint16_t profile_channel;
+    hfp_cind_state_t cind_state;
+} hfp_indicator_info_t;
+
+typedef struct
+{
     uint16_t type;
     uint8_t num_active;
     uint8_t num_held;
@@ -1099,11 +1284,34 @@ typedef struct
 
 typedef struct
 {
+    uint16_t profile_channel;
+    hfp_ind_info_t ind_info;
+} hfp_indicator_status_t;
+
+typedef struct
+{
     uint8_t num_call;
     hfp_phone_calls_info_t *calls;
 } hfp_remote_call_info_t;
 
+typedef struct
+{
+    uint16_t profile_channel;
+    hfp_remote_call_info_t call_info;
+} hfp_local_call_info_t;
+
+typedef struct
+{
+    uint8_t batt_status;  // 1: mean current batt_val 2: device is in charging
+    uint8_t batt_val;
+} hfp_battery_vaule_t;
+
 #endif
+typedef struct
+{
+    uint8_t  count;
+    uint8_t  channel_map[BT_CHANNEL_MAP_BYTES];
+} bt_channel_map_t;
 
 
 typedef void (*bt_notify_cb)(bt_notify_t *param);
@@ -1122,12 +1330,16 @@ typedef struct rt_bt_device
     rt_mutex_t handle_lock;
     rt_mutex_t control_lock;
     rt_mutex_t   call_sem;
-
+    struct rt_workqueue *wq;
+    uint8_t set_audio;
     bt_role_t role;
     bt_fsm_t fsm;
     bt_call_info_t call_info;
     bt_config_t config;
-
+#ifdef BT_FINSH
+    uint8_t active_idx;     // active device index
+    bt_device_sco_conn_para_t sco_para[BT_MAX_ACL_NUM];
+#endif
     const struct rt_bt_ops *ops;
 } rt_bt_device_t;
 
@@ -1148,11 +1360,19 @@ bt_call_info_t *rt_bt_get_call_info(rt_bt_device_t *dev);
 bt_call_state_t rt_bt_get_call_state(rt_bt_device_t *dev);
 rt_err_t rt_bt_register(struct rt_bt_device *dev_handle, const char *name);
 bt_call_state_t rt_bt_get_call_state_by_idx(rt_bt_device_t *dev, uint8_t idx);
-uint8_t rt_bt_get_hfp_sco_link(rt_bt_device_t *dev);
+uint8_t rt_bt_get_sco_link_by_idx(rt_bt_device_t *dev, uint8_t idx);
 
 bt_connect_state_t rt_bt_get_connect_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx, bt_profile_t profile);
+bt_connect_state_t rt_bt_get_previous_connect_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx, bt_profile_t profile);
 bt_acl_state_t rt_bt_get_acl_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx);
 bt_media_state_t rt_bt_get_media_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx);
+
+uint8_t rt_bt_add_connect_dev(rt_bt_device_t *dev, bt_connect_dev_t *conn_dev);
+void rt_bt_delete_connect_by_mac(rt_bt_device_t *dev, bt_mac_t *mac);
+uint8_t rt_bt_get_conn_idx_by_mac(rt_bt_device_t *dev, bt_mac_t *mac);
+bt_connect_dev_t *rt_bt_get_connect_dev_by_idx(rt_bt_device_t *dev, uint8_t idx);
+bt_connect_dev_t *rt_bt_get_connect_dev_by_addr(rt_bt_device_t *dev, bt_mac_t *mac);
+uint8_t rt_bt_get_profile_channel_by_conn_idx(rt_bt_device_t *dev, uint8_t profile, uint8_t profile_channel);
 
 
 #endif
