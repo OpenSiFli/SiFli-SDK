@@ -524,7 +524,9 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
     rt_pm_hw_device_start();
 #endif
 
+#ifdef SDMMC_AUTO_GATE_ENABLED
     hal_sdhci_clk_ctrl(&host->handle, true);
+#endif /* SDMMC_AUTO_GATE_ENABLED */
 
     //ASSERT(host->cmd);
     LOG_D("SDDEBUG: sdhci.c sdhci_send_command \n");
@@ -648,7 +650,9 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
         LOG_D("Wait cmd %d fail with %d\n", cmd->cmd_code, res);
     }
 
+#ifdef SDMMC_AUTO_GATE_ENABLED
     hal_sdhci_clk_ctrl(&host->handle, false);
+#endif /* SDMMC_AUTO_GATE_ENABLED */
 
 #ifdef RT_USING_PM
     rt_pm_hw_device_stop();

@@ -1747,6 +1747,11 @@ menu "On-chip Peripherals"
         config SD_MMC_OLINE_SUPPORT
             bool "MMC card support 8 line"
             default n
+        config SDMMC_AUTO_GATE_ENABLED
+            bool "SDMMC clock is auto gated"
+            default n
+            help
+                If enabled, SDMMC clock is enabled before use and disabled aftere use to save power
 
         endif # BSP_USING_SDHCI
 
