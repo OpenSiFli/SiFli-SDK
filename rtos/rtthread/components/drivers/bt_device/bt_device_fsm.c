@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <rthw.h>
@@ -46,10 +49,11 @@ static struct state bt_state_device_power_on =
         //{BT_CONTROL_CLOSE_DEVICE, NULL, NULL, NULL, &bt_state_device_power_off },
         {BT_CONTROL_SWITCH_ON, NULL, NULL, NULL, &bt_state_device_power_pair },
         {BT_CONTROL_SEARCH_EQUIPMENT, NULL, NULL, NULL, &bt_state_device_search },
+        {BT_CONTROL_SEARCH_EQUIPMENT_EX, NULL, NULL, NULL, &bt_state_device_search },
         {BT_EVENT_CLOSE_COMPLETE, NULL, NULL, NULL, &bt_state_device_power_off },
         {BT_EVENT_DISCONNECT, NULL, NULL, NULL, &bt_state_device_power_pair },
     },
-    .transition_nums = 4,
+    .transition_nums = 5,
     .data = (void *)BT_STATE_POWER_ON,
     .action_entry = &bt_device_fsm_enter,
     .action_exti = &bt_device_fsm_exit,
@@ -64,11 +68,12 @@ static struct state bt_state_device_power_pair =
     {
         //{BT_CONTROL_CLOSE_DEVICE, NULL, NULL, NULL, &bt_state_device_power_off},
         {BT_CONTROL_SEARCH_EQUIPMENT, NULL, NULL, NULL, &bt_state_device_search},
+        {BT_CONTROL_SEARCH_EQUIPMENT_EX, NULL, NULL, NULL, &bt_state_device_search},
         {BT_CONTROL_SWITCH_OFF, NULL, NULL, NULL, &bt_state_device_power_on },
         {BT_EVENT_CLOSE_COMPLETE, NULL, NULL, NULL, &bt_state_device_power_off},
         {BT_EVENT_CONNECT_COMPLETE, NULL, NULL, NULL, &bt_state_device_power_on},
     },
-    .transition_nums = 4,
+    .transition_nums = 5,
     .data = (void *)BT_STATE_PAIR,
     .action_entry = &bt_device_fsm_enter,
     .action_exti = &bt_device_fsm_exit,
@@ -139,6 +144,8 @@ int bt_device_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
     case BT_CONTROL_SWITCH_OFF:
     case BT_CONTROL_CANCEL_SEARCH:
     case BT_CONTROL_SEARCH_EQUIPMENT:
+    case BT_CONTROL_SEARCH_EQUIPMENT_EX:
+    case BT_EVENT_INQ_FINISHED:
     case BT_CONTROL_DEVICE_INIT:
     case BT_EVENT_CLOSE_COMPLETE:
     case BT_EVENT_DISCONNECT:
@@ -163,6 +170,7 @@ int bt_fsm_init(void)
 #ifdef BT_USING_HF
     bt_call_fsm_init();
 #endif
+    bt_profile_channel_fsm_init();
     return BT_EOK;
 }
 

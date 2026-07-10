@@ -1,9 +1,15 @@
 /*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <rthw.h>
 #include <rtthread.h>
 #include <rtdevice.h>
+#include <stdio.h>
+#include <string.h>
+#include "bt_device.h"
 
 #define DBG_TAG    "bt_device"
 //#define DBG_LVL    DBG_INFO
@@ -99,6 +105,7 @@ static bt_err_t _bt_close(struct rt_device *dev)
     bt_handle = (struct rt_bt_device *)dev;
     if (!(dev->open_flag & BT_DEVICE_FLAG_OPEN))
     {
+        LOG_I("bt have already been close");
         return ret;
     }
     //ret = rt_bt_control(dev, BT_CONTROL_CLOSE_DEVICE, RT_NULL);
@@ -120,6 +127,7 @@ static  bt_err_t _bt_open(struct rt_device *dev)
     bt_handle = (struct rt_bt_device *)dev;
     if (dev->open_flag & BT_DEVICE_FLAG_OPEN)
     {
+        LOG_I("bt have already been open");
         return ret;
     }
     ret = bt_handle->ops->control(bt_handle, BT_CONTROL_OPEN_DEVICE, RT_NULL);
@@ -303,6 +311,16 @@ bt_connect_state_t rt_bt_get_connect_state_by_conn_idx(rt_bt_device_t *dev, uint
     return (bt_connect_state_t)dev->fsm.connect_fsm[idx][profile].state_current->data;
 }
 
+bt_connect_state_t rt_bt_get_previous_connect_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx, bt_profile_t profile)
+{
+    RT_ASSERT(dev);
+    if (idx >= BT_MAX_ACL_NUM)
+    {
+        return BT_STATE_CONNECT_ERROR;
+    }
+    return (bt_connect_state_t)dev->fsm.connect_fsm[idx][profile].state_previous->data;
+}
+
 
 bt_acl_state_t rt_bt_get_acl_state_by_conn_idx(rt_bt_device_t *dev, uint8_t idx)
 {
@@ -360,12 +378,103 @@ bt_call_info_t *rt_bt_get_call_info(rt_bt_device_t *dev)
     return call_info;
 }
 
-uint8_t rt_bt_get_hfp_sco_link(rt_bt_device_t *dev)
+uint8_t rt_bt_get_sco_link_by_idx(rt_bt_device_t *dev, uint8_t idx)
 {
     RT_ASSERT(dev);
-    return dev->fsm.sco_link;
+    if (idx >= BT_MAX_ACL_NUM)
+    {
+        return 0;
+    }
+    return dev->fsm.sco_link[idx];
 }
 
+uint8_t rt_bt_add_connect_dev(rt_bt_device_t *dev, bt_connect_dev_t *conn_dev)
+{
+    uint8_t i;
+    for (i = 0; i < BT_MAX_ACL_NUM; i++)
+    {
+        if (dev->fsm.connect[i].connect == 1 && !memcmp(&dev->fsm.connect[i].mac, &conn_dev->mac, sizeof(bt_mac_t)))
+        {
+            return 1;
+        }
+    }
+    for (i = 0; i < BT_MAX_ACL_NUM; i++)
+    {
+        if (dev->fsm.connect[i].connect == 0)
+        {
+            conn_dev->connect = 1;
+            memcpy(&dev->fsm.connect[i], conn_dev, sizeof(bt_connect_dev_t));
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void rt_bt_delete_connect_by_mac(rt_bt_device_t *dev, bt_mac_t *mac)
+{
+    uint8_t i;
+    for (i = 0; i < BT_MAX_ACL_NUM; i ++)
+    {
+        if (!memcmp(&dev->fsm.connect[i].mac, mac, sizeof(bt_mac_t)))
+        {
+            dev->fsm.connect[i].connect = 0;
+            break;
+        }
+    }
+}
+
+uint8_t rt_bt_get_conn_idx_by_mac(rt_bt_device_t *dev, bt_mac_t *mac)
+{
+    RT_ASSERT(dev);
+    bt_mac_t addr = {0};
+    if (!memcmp(mac, &addr, sizeof(bt_mac_t)))
+    {
+        return BT_INVALID_CONN_INDEX;
+    }
+    uint8_t i;
+    for (i = 0; i < BT_MAX_ACL_NUM; i++)
+    {
+        if (!memcmp(&dev->fsm.connect[i].mac, mac, sizeof(bt_mac_t)))
+        {
+            return i;
+        }
+    }
+    return BT_INVALID_CONN_INDEX;
+}
+
+bt_connect_dev_t *rt_bt_get_connect_dev_by_idx(rt_bt_device_t *dev, uint8_t idx)
+{
+    if (idx >= BT_MAX_ACL_NUM)
+    {
+        return NULL;
+    }
+    return &dev->fsm.connect[idx];
+}
+
+bt_connect_dev_t *rt_bt_get_connect_dev_by_addr(rt_bt_device_t *dev, bt_mac_t *mac)
+{
+    uint8_t i;
+    for (i = 0; i < BT_MAX_ACL_NUM; i ++)
+    {
+        if (!memcmp(&dev->fsm.connect[i].mac, mac, sizeof(bt_mac_t)))
+        {
+            return &dev->fsm.connect[i];
+        }
+    }
+    return NULL;
+}
+
+uint8_t rt_bt_get_profile_channel_by_conn_idx(rt_bt_device_t *dev, uint8_t profile, uint8_t profile_channel)
+{
+    for (uint8_t index = 0; index < BT_MAX_ACL_NUM; index++)
+    {
+        if (dev->fsm.profile_channel[index][profile] == profile_channel)
+        {
+            return index;
+        }
+    }
+    return BT_INVALID_CONN_INDEX;
+}
 
 #ifdef RT_USING_DEVICE_OPS
 const static struct rt_device_ops bt_ops =

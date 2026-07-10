@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 
@@ -116,17 +119,16 @@ int bt_media_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
 
     case BT_EVENT_PROFILE_DISCONNECT:
     {
-        uint8_t conn_index = 0;
         bt_disconnect_info_t *info = (bt_disconnect_info_t *) args;
         if (BT_PROFILE_A2DP == info->profile)
         {
             if (0xFF != info->conn_idx)
             {
-                ret = statem_handle_event(&dev->fsm.media_fsm[conn_index], &connect_event);
+                ret = statem_handle_event(&dev->fsm.media_fsm[info->conn_idx], &connect_event);
             }
             else
             {
-                LOG_E("invalid conn index:%x", event_type);
+                LOG_E("%d event, invalid conn index:%x", event_type, info->conn_idx);
             }
         }
     }
@@ -135,9 +137,8 @@ int bt_media_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
 #ifdef BT_USING_AVRCP
     case BT_EVENT_MUSIC_PLAY_STATUS_CHANGED:
     {
-        uint8_t conn_index = 0;
-        bt_media_play_status_t *play_status = (bt_media_play_status_t *)args;
-        if (0x00 == play_status->status)
+        bt_media_play_status_t *play_info = (bt_media_play_status_t *)args;
+        if (0x00 == play_info->status)
         {
             connect_event.type = BT_STATE_MEDIA_PLAY;
         }
@@ -145,8 +146,14 @@ int bt_media_fsm_handle(rt_bt_device_t *dev, int event_type, void *args)
         {
             connect_event.type = BT_STATE_MEDIA_PAUSE;
         }
-        ret = statem_handle_event(&dev->fsm.media_fsm[conn_index], &connect_event);
-
+        if (0xFF != play_info->conn_idx)
+        {
+            ret = statem_handle_event(&dev->fsm.media_fsm[play_info->conn_idx], &connect_event);
+        }
+        else
+        {
+            LOG_E("%d event, invalid conn index:%x", event_type, play_info->conn_idx);
+        }
     }
     break;
 #endif

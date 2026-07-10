@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef _BT_DEVICE_FSM_H_
 #define _BT_DEVICE_FSM_H_
 
@@ -12,6 +18,7 @@ int bt_connect_fsm_init(void);
 int bt_acl_fsm_init(void);
 int bt_media_fsm_init(void);
 int bt_call_fsm_init(void);
+int bt_profile_channel_fsm_init(void);
 
 int bt_connect_fsm_handle(rt_bt_device_t *dev, int event_type, void *args);
 int bt_acl_fsm_handle(rt_bt_device_t *dev, int event_type, void *args);
@@ -22,6 +29,7 @@ uint8_t bt_call_event_hdl(rt_bt_device_t *dev, uint32_t event, void *args);
 char *bt_call_state_to_name(bt_call_state_t state);
 void bt_call_init(rt_bt_device_t *dev);
 uint8_t bt_call_get_state_change(bt_cind_ind_t *cind_data);
+void bt_profile_channel_fsm_handle(rt_bt_device_t *dev, int event_type, void *args);
 
 #ifdef __cplusplus
 }
