@@ -999,6 +999,16 @@ HAL_StatusTypeDef HAL_MPI_PSRAM_ENT_LOWP(FLASH_HandleTypeDef *handle, uint8_t ps
 HAL_StatusTypeDef HAL_MPI_EXIT_LOWP(FLASH_HandleTypeDef *handle, uint8_t psram_type);
 
 /**
+ * @brief  Read size information from PSRAM
+ * @param  handle  MPI handle
+ *
+ * @retuen size in MB
+ * @retval 0 read fails
+ * @retval others size in MB
+ */
+uint32_t HAL_MPI_PSRAM_ReadSize(FLASH_HandleTypeDef *handle);
+
+/**
   * @brief  FLASH controller issue a nop command
   * @param  handle  MPI handle
   * @retval result

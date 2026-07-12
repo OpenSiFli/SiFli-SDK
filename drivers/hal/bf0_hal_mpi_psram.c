@@ -19,6 +19,9 @@
 
 #if defined(HAL_MPI_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
+#define WB_PSRAM_MID        (0X6)
+#define WB_PSRAM_MID32      (0XF)
+
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, uint8_t *dqs);
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
@@ -601,6 +604,36 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_PSRAM_DPD(FLASH_HandleTypeDef *hflash)
     return HAL_OK;
 }
 
+__HAL_ROM_USED uint32_t HAL_XCCELA_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    int mr2;
+    uint32_t size_mb;
+
+    mr2 = HAL_MPI_MR_READ(hflash, 2);
+    switch (mr2 & 7)
+    {
+    case 1:
+        size_mb = 4;
+        break;
+    case 3:
+        size_mb = 8;
+        break;
+    case 5:
+        size_mb = 16;
+        break;
+    case 7:
+        size_mb = 32;
+        break;
+    case 6:
+        size_mb = 64;
+        break;
+    default:
+        size_mb = 0;
+        break;
+    }
+
+    return size_mb;
+}
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
 {
@@ -759,6 +792,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_WAKEUP(FLASH_HandleTypeDef *hf
         return HAL_ERROR;
 
     return HAL_OK;
+}
+
+__HAL_ROM_USED uint32_t HAL_LEGACY_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    return 4;
 }
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
@@ -936,6 +974,43 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_RDPD(FLASH_HandleTypeDef *hflas
     HAL_HYPER_PSRAM_WriteCR(hflash, 1, cr0);
 
     return HAL_OK;
+}
+
+__HAL_ROM_USED uint32_t HAL_HYPER_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    uint16_t id0, id1;
+    uint32_t mid;
+    uint32_t size_mb;
+
+    id0 = HAL_HYPER_PSRAM_ReadID(hflash, 0);
+    id1 = HAL_HYPER_PSRAM_ReadID(hflash, 1);
+    id0 = ((id0 & 0xff) << 8) | ((id0 >> 8) & 0xff);
+    id1 = ((id1 & 0xff) << 8) | ((id1 >> 8) & 0xff);
+
+    mid = id0 & 0xf;
+    if (WB_PSRAM_MID32 == mid) /* WB_PSRAM_MID32 */
+    {
+        size_mb = 4;
+    }
+    else if (mid == 0x6) /* WB_PSRAM_MID */
+    {
+        uint32_t cabc = ((id0 & 0xf0) >> 4) + 1;
+        uint32_t rabc = ((id0 & 0x1f00) >> 8) + 1;
+        int32_t msize = cabc + rabc + 1;
+        size_mb = 1;
+        msize -= 20;
+        while (msize > 0)
+        {
+            size_mb *= 2;
+            msize--;
+        }
+    }
+    else
+    {
+        size_mb = 0;
+    }
+
+    return size_mb;
 }
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
@@ -1170,6 +1245,37 @@ HAL_StatusTypeDef HAL_MPI_EXIT_LOWP(FLASH_HandleTypeDef *hflash, uint8_t psram_t
 
     return HAL_OK;
 }
+
+uint32_t HAL_MPI_PSRAM_ReadSize(FLASH_HandleTypeDef *handle)
+{
+    HAL_StatusTypeDef r;
+    uint32_t size_mb;
+
+    if ((handle == NULL) || (handle->Instance == NULL))
+    {
+        return 0;
+    }
+
+    if (SPI_MODE_LEGPSRAM == handle->isNand)  // legacy
+    {
+        size_mb = HAL_LEGACY_PSRAM_ReadSize(handle);
+    }
+    else if (SPI_MODE_HBPSRAM == handle->isNand)  // hyper bus
+    {
+        size_mb = HAL_HYPER_PSRAM_ReadSize(handle);
+    }
+    else if ((SPI_MODE_OPSRAM == handle->isNand) || (SPI_MODE_HPSRAM == handle->isNand))    // opi/hpi
+    {
+        size_mb = HAL_XCCELA_PSRAM_ReadSize(handle);
+    }
+    else
+    {
+        size_mb = 0;
+    }
+
+    return size_mb;
+}
+
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
 #ifdef SF32LB57X
