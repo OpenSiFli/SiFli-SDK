@@ -326,6 +326,19 @@ menu "On-chip Peripherals"
                     "This value = (n-1)*(button processing callback cycle)"        
         endif
 
+    menuconfig BSP_USING_CAN
+        bool "CAN BUS"
+        default n
+        select RT_USING_CAN
+        if BSP_USING_CAN
+            config BSP_USING_CAN1
+                bool "Enable CAN1 BUS"
+                default n
+            config BSP_USING_CAN2
+                bool "Enable CAN2 BUS"
+                default n
+        endif
+
     config BSP_USING_CMSIS_NN
         bool "CMSIS NN"
         default n
