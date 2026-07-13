@@ -124,7 +124,9 @@ static inline const lv_font_t *LV_EXT_FONT_GET(uint16_t size)
 #include "lvsf_font_manager.h"
 
 void lvsf_font_inital(uint32_t cache_size, bool init);
-void lvsf_font_deinit(void);
+/* Returns -1 when some fonts are still displayed and had to be kept; the
+ * FreeType engine stays initialized in that case. */
+int lvsf_font_deinit(void);
 void lvsf_font_load(uint32_t cache_size);
 void lvsf_font_unload(void);
 extern uint16_t font_pixel_size[];
@@ -136,7 +138,14 @@ lv_font_t *lvsf_get_font_by_name(char *font_name, int size);
 int lvsf_font_set_enable(char *font_name, int enable);
 char *lvsf_font_trav_ex(rt_list_t **list, int ex);
 int lvsf_font_load_ex(char *font_path, uint16_t *size);
-void lvsf_font_unload_ex(char *font_path);
+/* Unload the font(s) registered for font_path. Re-point every style that
+ * selects one of their lv_font_t first, and let the objects that are going
+ * away be gone - one queued with lv_obj_del_async() still counts. A font
+ * that is still displayed is kept and reported instead of being freed.
+ *
+ * Call it from the LVGL thread. Returns 0 when everything matching font_path
+ * is gone, -1 when a font had to be kept. */
+int lvsf_font_unload_ex(char *font_path);
 void lvsf_font_indicated_inital(const char *indicated_font);
 void lvsf_font_set_order(char **font_name, uint16_t font_num);
 void lvsf_font_set_order_reverse(char **font_name, uint16_t font_num);

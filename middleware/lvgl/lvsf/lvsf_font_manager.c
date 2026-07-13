@@ -14,6 +14,18 @@
 #include "lv_freetype.h"
 #include "lvsf_ft_reg.h"
 
+#ifndef LVSF_FONT_MIN_FREE_HEAP
+    #ifdef CONFIG_LVSF_FONT_MIN_FREE_HEAP
+        #define LVSF_FONT_MIN_FREE_HEAP CONFIG_LVSF_FONT_MIN_FREE_HEAP
+    #else
+        #define LVSF_FONT_MIN_FREE_HEAP 0
+    #endif
+#endif
+
+#if !defined(LVSF_FONT_UNLOAD_REF_CHECK) && defined(CONFIG_LVSF_FONT_UNLOAD_REF_CHECK)
+    #define LVSF_FONT_UNLOAD_REF_CHECK 1
+#endif
+
 SECTION_DEF(FONT_SECTION_NAME, font_desc_t);
 
 typedef struct lvsf_font_cache
@@ -43,6 +55,8 @@ static uint8_t g_freetype_inited;
 static uint32_t g_freetype_cache_size;
 static lvsf_font_entry_t *g_builtin_font;
 static lvsf_font_entry_t *g_default_font;
+/* Set by lvsf_font_unload() when a font object could not be freed. */
+static uint8_t g_font_in_use;
 
 static void lvsf_font_list_init(void)
 {
@@ -108,35 +122,202 @@ static void lvsf_font_apply_priority(lvsf_font_entry_t *entry)
     rt_list_insert_before(&g_font_list, &entry->node);
 }
 
-static void lvsf_font_free_runtime(lv_font_t *font)
+#ifdef LVSF_FONT_UNLOAD_REF_CHECK
+static bool lvsf_style_refs_font(const lv_style_t *style, const lv_font_t *font)
 {
-    if (!font) return;
+    lv_style_value_t value;
 
-    lv_freetype_font_deinit(font);
-    rt_free(font);
+    if (!style) return false;
+    if (lv_style_get_prop(style, LV_STYLE_TEXT_FONT, &value) != LV_STYLE_RES_FOUND) return false;
+    return value.ptr == (const void *)font;
 }
 
-static void lvsf_font_entry_clear_cache(lvsf_font_entry_t *entry)
+static bool lvsf_obj_refs_font(const lv_obj_t *obj, const lv_font_t *font)
 {
-    lvsf_font_cache_t *cache;
+    uint32_t i;
+    uint32_t child_cnt;
 
-    while (entry && entry->cache)
+    if (!obj) return false;
+
+    for (i = 0; i < obj->style_cnt; i++)
     {
-        cache = entry->cache;
-        entry->cache = cache->next;
-        lvsf_font_free_runtime(cache->font);
-        rt_free(cache);
+        if (lvsf_style_refs_font(obj->styles[i].style, font)) return true;
+    }
+
+    child_cnt = lv_obj_get_child_cnt(obj);
+    for (i = 0; i < child_cnt; i++)
+    {
+        if (lvsf_obj_refs_font(lv_obj_get_child((lv_obj_t *)obj, i), font)) return true;
+    }
+
+    return false;
+}
+
+/*
+ * A safety net, not a proof: the scan sees the styles attached to an object,
+ * which is where fonts normally live, but not a font kept anywhere else - an
+ * unattached style, a span's own style, a draw descriptor of the application.
+ * Re-pointing every reference before unloading remains the caller's job.
+ *
+ * Reads LVGL objects, so it runs in the LVGL thread like any other LVGL call.
+ */
+/* A theme bakes its fonts into styles of its own, attached to an object only
+ * while a widget of that kind is on screen and out of reach of the object
+ * walk otherwise. The theme holds the same pointers, so ask it directly. */
+static bool lvsf_theme_refs_font(const lv_theme_t *theme, const lv_font_t *font)
+{
+    for (; theme; theme = theme->parent)
+    {
+        if (theme->font_small == font || theme->font_normal == font ||
+                theme->font_large == font || theme->font_subtitle == font ||
+                theme->font_title == font || theme->font_bigl == font)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static bool lvsf_font_is_displayed(const lv_font_t *font)
+{
+    lv_disp_t *disp;
+
+    for (disp = lv_disp_get_next(RT_NULL); disp; disp = lv_disp_get_next(disp))
+    {
+        uint32_t i;
+
+        if (lvsf_theme_refs_font(lv_disp_get_theme(disp), font)) return true;
+
+        /* The two layers are screens as well (lv_disp_drv_register). */
+        for (i = 0; i < disp->screen_cnt; i++)
+        {
+            if (lvsf_obj_refs_font(disp->screens[i], font)) return true;
+        }
+    }
+
+    return false;
+}
+#endif /* LVSF_FONT_UNLOAD_REF_CHECK */
+
+/* Fonts of the manager may use each other as fallback; drop those links before
+ * the target is freed. Fallbacks the application set on its own fonts are out
+ * of reach - re-point them before unloading. */
+static void lvsf_font_detach_fallback(const lv_font_t *font)
+{
+    rt_list_t *pos;
+
+    rt_list_for_each(pos, &g_font_list)
+    {
+        lvsf_font_entry_t *entry = rt_list_entry(pos, lvsf_font_entry_t, node);
+        lvsf_font_cache_t *cache;
+
+        for (cache = entry->cache; cache; cache = cache->next)
+        {
+            if (cache->font && cache->font->fallback == font)
+            {
+                cache->font->fallback = RT_NULL;
+            }
+        }
     }
 }
 
+static bool lvsf_font_free_runtime(lv_font_t *font)
+{
+    if (!font) return true;
+
+#ifdef LVSF_FONT_UNLOAD_REF_CHECK
+    if (lvsf_font_is_displayed(font))
+    {
+        rt_kprintf("[lvsf_font] font %s size=%u still referenced by a live object, kept\n",
+                   font->font_name ? font->font_name : "unknown",
+                   (unsigned int)lvsf_get_size_from_font(font));
+        return false;
+    }
+#endif
+
+    lvsf_font_detach_fallback(font);
+    lv_freetype_font_deinit(font);
+    rt_free(font);
+    return true;
+}
+
+/* Returns true when every font object of the entry could be freed. */
+static bool lvsf_font_entry_clear_cache(lvsf_font_entry_t *entry)
+{
+    lvsf_font_cache_t **pp;
+    bool all_freed = true;
+
+    if (!entry) return true;
+
+    pp = &entry->cache;
+    while (*pp)
+    {
+        lvsf_font_cache_t *cache = *pp;
+
+        if (lvsf_font_free_runtime(cache->font))
+        {
+            *pp = cache->next;
+            rt_free(cache);
+        }
+        else
+        {
+            all_freed = false;
+            pp = &cache->next;
+        }
+    }
+
+    return all_freed;
+}
+
+/* The caller must have unlinked the entry and confirmed that its cache is
+ * empty (lvsf_font_entry_clear_cache() returned true). */
 static void lvsf_font_free_entry(lvsf_font_entry_t *entry)
 {
     if (!entry) return;
 
-    lvsf_font_entry_clear_cache(entry);
     if (entry->name) rt_free(entry->name);
     if (entry->path) rt_free(entry->path);
     rt_free(entry);
+}
+
+/* Detach an entry that is about to be freed from the manager's own pointers. */
+static void lvsf_font_forget_entry(lvsf_font_entry_t *entry)
+{
+    if (g_default_font == entry) g_default_font = g_builtin_font != entry ? g_builtin_font : RT_NULL;
+    if (g_builtin_font == entry) g_builtin_font = RT_NULL;
+    rt_list_remove(&entry->node);
+}
+
+/*
+ * An opened font keeps its index tables resident, and a full CJK font can eat
+ * most of a small heap. Without a floor the font loads fine and the system dies
+ * later on an unrelated allocation. Report the failure here instead, so the
+ * application can fall back to another font.
+ *
+ * Only fonts loaded from the file system are gated: refusing a builtin font
+ * would leave the application with no font at all, and its data lives in flash
+ * anyway.
+ */
+static bool lvsf_font_heap_headroom_ok(const lvsf_font_entry_t *entry)
+{
+#if defined(LVSF_FONT_MIN_FREE_HEAP) && (LVSF_FONT_MIN_FREE_HEAP > 0) && \
+    !defined(FREETYPE_CACHE_IN_SRAM_STANDALONE) && !defined(FREETYPE_CACHE_IN_PSRAM)
+    rt_uint32_t total = 0;
+    rt_uint32_t used = 0;
+    rt_uint32_t max_used = 0;
+
+    if (!entry->external) return true;
+
+    rt_memory_info(&total, &used, &max_used);
+    if (total <= used || (total - used) < (rt_uint32_t)LVSF_FONT_MIN_FREE_HEAP)
+    {
+        return false;
+    }
+#else
+    (void)entry;
+#endif
+    return true;
 }
 
 static int lvsf_font_ensure_freetype(uint32_t cache_size)
@@ -344,6 +525,17 @@ static lv_font_t *lvsf_font_get_or_create(lvsf_font_entry_t *entry, uint16_t siz
         return RT_NULL;
     }
 
+    /* The font is open now: its tables are resident and their cost is visible
+     * in the heap. Give it back if it does not leave the system enough room. */
+    if (!lvsf_font_heap_headroom_ok(entry))
+    {
+        rt_kprintf("[lvsf_font] %s size=%u leaves less than %d bytes of heap, refused\n",
+                   entry->name ? entry->name : "unknown", size, LVSF_FONT_MIN_FREE_HEAP);
+        lv_freetype_font_deinit(font);
+        rt_free(font);
+        return RT_NULL;
+    }
+
     cache = rt_calloc(1, sizeof(*cache));
     RT_ASSERT(cache);
     cache->size = size;
@@ -497,12 +689,20 @@ void lvsf_font_unload(void)
     {
         lvsf_font_entry_t *entry = rt_list_entry(pos, lvsf_font_entry_t, node);
         next = pos->next;
-        lvsf_font_entry_clear_cache(entry);
-        if (entry != g_builtin_font)
+        /* Keep an entry whose font objects are still on screen (its cache
+         * holds them); the caller has to re-point its styles first. */
+        if (!lvsf_font_entry_clear_cache(entry))
         {
-            rt_list_remove(&entry->node);
-            lvsf_font_free_entry(entry);
+            /* The entry stays alive with the fonts that are still displayed,
+             * but must not be picked implicitly any more: this is a teardown. */
+            g_font_in_use = 1;
+            if (entry != g_builtin_font) entry->enabled = 0;
+            continue;
         }
+        if (entry == g_builtin_font) continue;
+
+        lvsf_font_forget_entry(entry);
+        lvsf_font_free_entry(entry);
     }
 
     if (g_builtin_font)
@@ -512,16 +712,27 @@ void lvsf_font_unload(void)
     g_default_font = g_builtin_font;
 }
 
-void lvsf_font_deinit(void)
+/* 0 when every font object is gone, -1 when some are still displayed - the
+ * FreeType library must not be torn down under them. */
+int lvsf_font_deinit(void)
 {
+    g_font_in_use = 0;
     lvsf_font_unload();
+    if (g_font_in_use)
+    {
+        rt_kprintf("[lvsf_font] fonts still in use, keeping the engine alive\n");
+        return -1;
+    }
+
     g_freetype_inited = 0;
+    return 0;
 }
 
 int lvsf_font_load_ex(char *font_path, uint16_t *size)
 {
     lvsf_font_entry_t *entry;
     uint8_t created;
+    uint8_t got_font = 0;
     char *name;
     int i;
 
@@ -539,16 +750,21 @@ int lvsf_font_load_ex(char *font_path, uint16_t *size)
     {
         for (i = 0; size[i]; i++)
         {
-            lvsf_font_get_or_create(entry, size[i]);
+            if (lvsf_font_get_or_create(entry, size[i])) got_font = 1;
         }
     }
-    else if (!lvsf_font_get_or_create(entry, FONT_NORMAL))
+    else if (lvsf_font_get_or_create(entry, FONT_NORMAL))
+    {
+        got_font = 1;
+    }
+
+    if (!got_font)
     {
         /* Roll back only an entry this call registered: a pre-existing
          * entry may own font objects still referenced by live styles. */
-        if (created)
+        if (created && lvsf_font_entry_clear_cache(entry))
         {
-            rt_list_remove(&entry->node);
+            lvsf_font_forget_entry(entry);
             lvsf_font_free_entry(entry);
         }
         return -1;
@@ -656,10 +872,11 @@ int lvsf_font_register_lib(const lv_font_freetype_lib_dsc_t *lib, const char *na
     return 0;
 }
 
-void lvsf_font_unload_ex(char *font_path)
+int lvsf_font_unload_ex(char *font_path)
 {
     rt_list_t *pos;
     rt_list_t *next;
+    int ret = 0;
 
     lvsf_font_register_builtin();
 
@@ -670,9 +887,21 @@ void lvsf_font_unload_ex(char *font_path)
         if (!entry->external) continue;
         if (!lvsf_font_path_matches(entry, font_path)) continue;
 
-        rt_list_remove(&entry->node);
+        /* Font objects still selected by a live style must outlive this call;
+         * keep the whole entry so the application can still reach them. */
+        if (!lvsf_font_entry_clear_cache(entry))
+        {
+            rt_kprintf("[lvsf_font] %s still in use, not unloaded\n",
+                       entry->name ? entry->name : "unknown");
+            ret = -1;
+            continue;
+        }
+
+        lvsf_font_forget_entry(entry);
         lvsf_font_free_entry(entry);
     }
+
+    return ret;
 }
 
 int lvsf_font_set_enable(char *font_name, int enable)

@@ -944,6 +944,11 @@ int lv_freetype_font_init(lv_font_t *font, const char *font_lib_addr, int font_l
         if (error || !face_size)
         {
             rt_kprintf("Error in FTC_Manager_LookupSize: %d\n", error);
+            if (error == FT_Err_Unknown_File_Format)
+            {
+                /* ftmodule.h registers the TrueType driver only. */
+                rt_kprintf("  unsupported outline format: convert CFF/OTF fonts to TrueType\n");
+            }
             freetype_face_source_release(dsc->face_source);
             rt_free(dsc);
             return error ? error : FT_Err_Cannot_Open_Resource;
@@ -1029,7 +1034,7 @@ void lv_freetype_font_deinit(lv_font_t *font)
 
 extern void lvsf_font_inital(uint32_t cache_size, bool init);
 extern uint32_t ft_get_cache_size(void);
-void lvsf_font_deinit(void);
+int lvsf_font_deinit(void);
 
 
 void lv_freetype_open_font(bool init)
@@ -1048,7 +1053,13 @@ void lv_freetype_open_font(bool init)
 void lv_freetype_close_font(void)
 {
     rt_kprintf("lv_freetype_close_font\n");
-    lvsf_font_deinit();
+
+    /* Font objects that are still displayed keep their faces in the cache;
+     * tearing the engine down under them would leave them unusable. */
+    if (lvsf_font_deinit() != 0)
+    {
+        return;
+    }
 
 #if USE_CACHE_MANGER
     if (cache_manager) FTC_Manager_Done(cache_manager);
