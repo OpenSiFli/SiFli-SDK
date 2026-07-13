@@ -211,6 +211,10 @@ extern "C" {
 #define HAL_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif /* HAL_MAX */
 
+#ifndef HAL_CLAMP
+#define HAL_CLAMP(val, min, max) HAL_MIN(HAL_MAX((val), (min)), (max))
+#endif /* HAL_CLAMP */
+
 #ifndef HAL_ABS
 #define HAL_ABS(x) ((x) > 0 ? (x) : (-(x)))
 #endif /* HAL_ABS */
