@@ -78,7 +78,7 @@ static void CAN_PTB_Transmit_IT_Test(void)
     HAL_CAN_ActivateNotification(&hcan, CAN_IT_TX_PTB_EMPTY);
 
     /* Fill PTB and start — CAN controller does the rest */
-    status = HAL_CAN_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
+    status = HAL_CAN_AddPrimaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
     if (status != HAL_OK)
     {
         rt_kprintf("[TX-IT] PTB transmit failed\r\n");
@@ -99,7 +99,7 @@ static void CAN_STB_Transmit_IT_Test(void)
     tx_header.StdId = STB_SEND_ID_0;
     tx_data[0] = 0xAAAA0001;
     tx_data[1] = 0xBBBB0001;
-    status = HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
+    status = HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
     if (status != HAL_OK)
     {
         rt_kprintf("[TX1-IT] STB transmit failed\r\n");
@@ -107,7 +107,7 @@ static void CAN_STB_Transmit_IT_Test(void)
     tx_header.StdId = STB_SEND_ID_1;
     tx_data[0] = 0xAAAA0002;
     tx_data[1] = 0xBBBB0002;
-    status = HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
+    status = HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
     if (status != HAL_OK)
     {
         rt_kprintf("[TX2-IT] STB transmit failed\r\n");
@@ -115,7 +115,7 @@ static void CAN_STB_Transmit_IT_Test(void)
     tx_header.StdId = STB_SEND_ID_2;
     tx_data[0] = 0xAAAA0003;
     tx_data[1] = 0xBBBB0003;
-    status = HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
+    status = HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data);
     if (status != HAL_OK)
     {
         rt_kprintf("[TX3-IT] STB transmit failed\r\n");
@@ -138,7 +138,7 @@ static void CAN_PTB_Send_Test(void)
     tx_header.RTR = CAN_RTR_DATA;
     tx_header.DLC = 8;
 
-    if (HAL_CAN_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
+    if (HAL_CAN_AddPrimaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
     {
         rt_kprintf("PTB send failed\r\n");
         return;
@@ -164,7 +164,7 @@ static void CAN_STB_Send_Test(void)
     tx_header.StdId = STB_SEND_ID_0;
     tx_data[0] = 0xAAAA0001;
     tx_data[1] = 0xBBBB0001;
-    if (HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
+    if (HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
     {
         rt_kprintf("STB queue frame 0 failed\r\n");
         return;
@@ -174,7 +174,7 @@ static void CAN_STB_Send_Test(void)
     tx_header.StdId = STB_SEND_ID_1;
     tx_data[0] = 0xAAAA0002;
     tx_data[1] = 0xBBBB0002;
-    if (HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
+    if (HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
     {
         rt_kprintf("STB queue frame 1 failed\r\n");
         return;
@@ -184,7 +184,7 @@ static void CAN_STB_Send_Test(void)
     tx_header.StdId = STB_SEND_ID_2;
     tx_data[0] = 0xAAAA0003;
     tx_data[1] = 0xBBBB0003;
-    if (HAL_CAN_STB_AddTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
+    if (HAL_CAN_AddSecondaryTxMessage(&hcan, &tx_header, (uint8_t *)tx_data) != HAL_OK)
     {
         rt_kprintf("STB queue frame 2 failed\r\n");
         return;
