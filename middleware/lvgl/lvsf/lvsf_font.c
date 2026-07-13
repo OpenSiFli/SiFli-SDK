@@ -461,10 +461,6 @@ int lv_ext_get_font_full_name(char *font_name, char *full_name, uint16_t full_na
     lv_font_t *font = lvsf_get_font_by_name(font_name, FONT_NORMAL);
     if (!font) return -1;
 
-
-    uint8_t *cn = lv_mem_alloc(full_name_len);
-    uint8_t *en = lv_mem_alloc(full_name_len);
-    RT_ASSERT(cn && en);
     if (font->font_name && 0 < strlen(font->font_name))
     {
         strncpy(full_name, font->font_name, full_name_len - 1);
@@ -473,13 +469,12 @@ int lv_ext_get_font_full_name(char *font_name, char *full_name, uint16_t full_na
     else
     {
         lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)font->user_data;
-        if (!dsc->face->family_name)  return -1;
+        /* dsc->face is released after metrics setup when the FTC cache
+         * manager is active; family name is unavailable then. */
+        if (!dsc || !dsc->face || !dsc->face->family_name)  return -1;
         memset(full_name, 0x00, full_name_len);
         strncpy(full_name, dsc->face->family_name, full_name_len - 1);
     }
-
-    lv_mem_free(cn);
-    lv_mem_free(en);
 
     rt_kprintf("%s: ttf %s full_name %s\n", __func__, font_name, full_name);
 
@@ -555,9 +550,36 @@ void lv_freetype_set_font_size(lv_font_t *font, uint16_t size)
 {
     lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)font->user_data;
 #if !defined (PKG_SCHRIFT)
-    FT_Set_Pixel_Sizes(dsc->face, 0, size);
-    font->line_height = (dsc->face->size->metrics.height >> 6);
-    font->base_line = -(dsc->face->size->metrics.descender >> 6) + 4;  /*Base line measured from the top of line_height*/
+    if (dsc->face)
+    {
+        FT_Set_Pixel_Sizes(dsc->face, 0, size);
+        font->line_height = (dsc->face->size->metrics.height >> 6);
+        font->base_line = -(dsc->face->size->metrics.descender >> 6) + 4;  /*Base line measured from the top of line_height*/
+    }
+#if USE_CACHE_MANGER
+    else
+    {
+        /* dsc->face is released after init under the FTC, so take the metrics
+         * of the new size from the cache to keep them in sync with it. */
+        FTC_Manager mgr = lv_freetype_get_cache_manager();
+        FT_Size face_size = NULL;
+        struct FTC_ScalerRec_ scaler;
+
+        if (mgr && dsc->face_source)
+        {
+            memset(&scaler, 0, sizeof(scaler));
+            scaler.face_id = (FTC_FaceID)dsc->face_source;
+            scaler.width = size;
+            scaler.height = size;
+            scaler.pixel = 1;
+            if (FTC_Manager_LookupSize(mgr, &scaler, &face_size) == 0 && face_size)
+            {
+                font->line_height = (face_size->metrics.height >> 6);
+                font->base_line = -(face_size->metrics.descender >> 6) + 4;
+            }
+        }
+    }
+#endif
 #endif
     dsc->font_size = size;
 }

@@ -86,7 +86,13 @@
         #define LV_DISP_DEF_REFR_PERIOD   PKG_LVGL_DISP_REFR_PERIOD
     #endif
 
-    #if (defined(SF32LB55X)||defined(SF32LB56X)||defined(SF32LB58X))
+    #if defined(FREETYPE_FONT_BPP_8)
+        #define FT_BPP    8
+    #elif defined(FREETYPE_FONT_BPP_4)
+        #define FT_BPP    4
+    #elif defined(FREETYPE_FONT_BPP_2)
+        #define FT_BPP    2
+    #elif (defined(SF32LB55X)||defined(SF32LB56X)||defined(SF32LB58X))
         #define FT_BPP    4
     #else
         #define FT_BPP    2

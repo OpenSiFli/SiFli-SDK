@@ -110,22 +110,9 @@ static void lvsf_font_apply_priority(lvsf_font_entry_t *entry)
 
 static void lvsf_font_free_runtime(lv_font_t *font)
 {
-    lv_freetype_font_fmt_dsc_t *dsc;
-
     if (!font) return;
 
-    dsc = (lv_freetype_font_fmt_dsc_t *)font->user_data;
-    if (dsc)
-    {
-        if (dsc->face)
-        {
-            FT_Done_Face(dsc->face);
-            dsc->face = NULL;
-        }
-        rt_free(dsc);
-        font->user_data = NULL;
-    }
-
+    lv_freetype_font_deinit(font);
     rt_free(font);
 }
 
@@ -162,7 +149,16 @@ static int lvsf_font_ensure_freetype(uint32_t cache_size)
     g_freetype_cache_size = cache_size;
     if (g_freetype_inited) return 0;
 
-    if (lv_freetype_init(8, cache_size) != 0)
+#ifdef PKG_SCHRIFT
+    rt_kprintf("[lvsf_font] freetype init cache=%u faces=%u sizes=schrift\n",
+               cache_size, (uint32_t)LV_FREETYPE_CACHE_FT_FACES);
+    if (lv_freetype_init(LV_FREETYPE_CACHE_FT_FACES, cache_size) != 0)
+#else
+    rt_kprintf("[lvsf_font] freetype init cache=%u faces=%u sizes=%u\n",
+               cache_size, (uint32_t)LV_FREETYPE_CACHE_FT_FACES,
+               (uint32_t)LV_FREETYPE_CACHE_FT_SIZES);
+    if (lv_freetype_init(LV_FREETYPE_CACHE_FT_FACES, LV_FREETYPE_CACHE_FT_SIZES, cache_size) != 0)
+#endif
     {
         return -1;
     }
@@ -276,16 +272,29 @@ static void lvsf_font_register_builtin(void)
 static lvsf_font_entry_t *lvsf_font_create_external(const char *font_path, const char *font_name)
 {
     lvsf_font_entry_t *entry;
+    char *name;
 
     if (!font_path) return RT_NULL;
 
     entry = lvsf_font_find_by_path(font_path);
     if (entry) return entry;
 
+    name = font_name ? lvsf_font_strdup(font_name) : lvsf_font_path_to_name(font_path);
+
+    /* The name is the lookup key, so a second entry under the same name
+     * (Roboto.ttf and Roboto.otf both map to "Roboto") would be unreachable
+     * by every by-name API. */
+    if (lvsf_font_find_by_name(name))
+    {
+        rt_kprintf("[lvsf_font] name collision: %s (from %s)\n", name, font_path);
+        rt_free(name);
+        return RT_NULL;
+    }
+
     entry = rt_calloc(1, sizeof(*entry));
     RT_ASSERT(entry);
     rt_list_init(&entry->node);
-    entry->name = font_name ? lvsf_font_strdup(font_name) : lvsf_font_path_to_name(font_path);
+    entry->name = name;
     entry->path = lvsf_font_strdup(font_path);
     entry->external = 1;
     entry->enabled = 1;
@@ -314,6 +323,12 @@ static lv_font_t *lvsf_font_get_or_create(lvsf_font_entry_t *entry, uint16_t siz
         return RT_NULL;
     }
 
+    rt_kprintf("[lvsf_font] create start name=%s size=%u external=%u src=%s\n",
+               entry->name ? entry->name : "unknown",
+               size,
+               entry->external,
+               entry->external ? (entry->path ? entry->path : "null") : "<mem>");
+
     font = rt_calloc(1, sizeof(*font));
     RT_ASSERT(font);
 
@@ -323,6 +338,8 @@ static lv_font_t *lvsf_font_get_or_create(lvsf_font_entry_t *entry, uint16_t siz
                               size,
                               entry->name) != 0)
     {
+        rt_kprintf("[lvsf_font] create failed name=%s size=%u\n",
+                   entry->name ? entry->name : "unknown", size);
         rt_free(font);
         return RT_NULL;
     }
@@ -333,6 +350,12 @@ static lv_font_t *lvsf_font_get_or_create(lvsf_font_entry_t *entry, uint16_t siz
     cache->font = font;
     cache->next = entry->cache;
     entry->cache = cache;
+
+    rt_kprintf("[lvsf_font] create ok name=%s size=%u font=0x%x dsc=0x%x\n",
+               entry->name ? entry->name : "unknown",
+               size,
+               (uint32_t)font,
+               (uint32_t)font->user_data);
     return font;
 }
 
@@ -368,13 +391,23 @@ lv_font_t *lvsf_get_font_from_size(uint16_t size)
         lvsf_font_entry_t *entry = rt_list_entry(pos, lvsf_font_entry_t, node);
         if (!entry->enabled) continue;
 
-        if (lvsf_font_get_or_create(entry, size))
+        lv_font_t *font = lvsf_font_get_or_create(entry, size);
+        if (font)
         {
-            return lvsf_font_get_or_create(entry, size);
+            return font;
         }
     }
 
-    return lvsf_font_get_or_create(g_default_font ? g_default_font : g_builtin_font, size);
+    /* The loop above already tried every enabled entry; retry the default
+     * font only if it was skipped for being disabled. */
+    {
+        lvsf_font_entry_t *fallback = g_default_font ? g_default_font : g_builtin_font;
+        if (fallback && !fallback->enabled)
+        {
+            return lvsf_font_get_or_create(fallback, size);
+        }
+    }
+    return RT_NULL;
 }
 
 lv_font_t *lvsf_get_font_by_name(char *font_name, int size)
@@ -443,7 +476,13 @@ void lvsf_font_inital(uint32_t cache_size, bool init)
     lvsf_font_load(cache_size);
     for (i = 0; i < sizeof(default_sizes) / sizeof(default_sizes[0]); i++)
     {
-        lvsf_font_get_or_create(g_builtin_font, default_sizes[i]);
+        /* A builtin font may point at a file this product does not ship; one
+         * failed open is enough to know, so do not retry it per size. */
+        if (!lvsf_font_get_or_create(g_builtin_font, default_sizes[i]))
+        {
+            rt_kprintf("[lvsf_font] builtin font unavailable, skip prewarm\n");
+            break;
+        }
     }
 }
 
@@ -482,6 +521,7 @@ void lvsf_font_deinit(void)
 int lvsf_font_load_ex(char *font_path, uint16_t *size)
 {
     lvsf_font_entry_t *entry;
+    uint8_t created;
     char *name;
     int i;
 
@@ -489,6 +529,7 @@ int lvsf_font_load_ex(char *font_path, uint16_t *size)
 
     lvsf_font_register_builtin();
 
+    created = (lvsf_font_find_by_path(font_path) == RT_NULL);
     name = lvsf_font_path_to_name(font_path);
     entry = lvsf_font_create_external(font_path, name);
     rt_free(name);
@@ -503,8 +544,13 @@ int lvsf_font_load_ex(char *font_path, uint16_t *size)
     }
     else if (!lvsf_font_get_or_create(entry, FONT_NORMAL))
     {
-        rt_list_remove(&entry->node);
-        lvsf_font_free_entry(entry);
+        /* Roll back only an entry this call registered: a pre-existing
+         * entry may own font objects still referenced by live styles. */
+        if (created)
+        {
+            rt_list_remove(&entry->node);
+            lvsf_font_free_entry(entry);
+        }
         return -1;
     }
 
@@ -588,8 +634,13 @@ int lvsf_font_register_lib(const lv_font_freetype_lib_dsc_t *lib, const char *na
     }
     else
     {
-        if (entry->name) rt_free(entry->name);
-        if (entry->path) rt_free(entry->path);
+        /* Cached fonts hold raw pointers into entry->name/path, so leak the
+         * old strings rather than free them under a live user. */
+        if (!entry->cache)
+        {
+            if (entry->name) rt_free(entry->name);
+            if (entry->path) rt_free(entry->path);
+        }
         entry->name = lvsf_font_strdup(name);
         entry->path = lib->font_lib_data ? lvsf_font_strdup(lib->font_lib_data) : RT_NULL;
         entry->lib = lib;
