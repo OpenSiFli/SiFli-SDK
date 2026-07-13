@@ -94,6 +94,12 @@ void lv_freetype_font_deinit(lv_font_t *font);
 void lv_freetype_close_font(void);
 void lv_freetype_open_font(bool init);
 
+/* Look up an FT_Size through the cache. Opens the face first: FTC recycles a
+ * size node by freeing its FT_Size before opening the face of the new scaler,
+ * and a face that fails to open there takes the half-freed node down with it.
+ * Use this instead of FTC_Manager_LookupSize. */
+FT_Error lv_freetype_lookup_size(FTC_Scaler scaler, FT_Size *asize);
+
 typedef enum
 {
     FT_CACHE_QUAD_CLEAN,

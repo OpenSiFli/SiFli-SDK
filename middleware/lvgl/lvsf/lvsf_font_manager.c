@@ -519,10 +519,21 @@ static lv_font_t *lvsf_font_get_or_create(lvsf_font_entry_t *entry, uint16_t siz
                               size,
                               entry->name) != 0)
     {
-        rt_kprintf("[lvsf_font] create failed name=%s size=%u\n",
-                   entry->name ? entry->name : "unknown", size);
-        rt_free(font);
-        return RT_NULL;
+        /* The glyph cache may be holding the heap the index tables need, and
+         * it is rebuilt on demand: drop it and give the font one more try. */
+        lv_freetype_clean_cache(FT_CACHE_WHOLE_CLEAN);
+
+        if (lv_freetype_font_init(font,
+                                  entry->external ? entry->path : entry->lib->font_lib_data,
+                                  entry->external ? 0 : entry->lib->font_lib_size,
+                                  size,
+                                  entry->name) != 0)
+        {
+            rt_kprintf("[lvsf_font] create failed name=%s size=%u\n",
+                       entry->name ? entry->name : "unknown", size);
+            rt_free(font);
+            return RT_NULL;
+        }
     }
 
     /* The font is open now: its tables are resident and their cost is visible

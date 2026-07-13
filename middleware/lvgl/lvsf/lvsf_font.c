@@ -542,10 +542,6 @@ uint16_t lvsf_get_size_from_font(lv_font_t *font)
     return dsc->font_size;
 }
 
-#if !defined (PKG_SCHRIFT)
-    extern FTC_Manager lv_freetype_get_cache_manager(void);
-#endif
-
 void lv_freetype_set_font_size(lv_font_t *font, uint16_t size)
 {
     lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)font->user_data;
@@ -557,26 +553,22 @@ void lv_freetype_set_font_size(lv_font_t *font, uint16_t size)
         font->base_line = -(dsc->face->size->metrics.descender >> 6) + 4;  /*Base line measured from the top of line_height*/
     }
 #if USE_CACHE_MANGER
-    else
+    else if (dsc->face_source)
     {
         /* dsc->face is released after init under the FTC, so take the metrics
          * of the new size from the cache to keep them in sync with it. */
-        FTC_Manager mgr = lv_freetype_get_cache_manager();
         FT_Size face_size = NULL;
         struct FTC_ScalerRec_ scaler;
 
-        if (mgr && dsc->face_source)
+        memset(&scaler, 0, sizeof(scaler));
+        scaler.face_id = (FTC_FaceID)dsc->face_source;
+        scaler.width = size;
+        scaler.height = size;
+        scaler.pixel = 1;
+        if (lv_freetype_lookup_size(&scaler, &face_size) == 0 && face_size)
         {
-            memset(&scaler, 0, sizeof(scaler));
-            scaler.face_id = (FTC_FaceID)dsc->face_source;
-            scaler.width = size;
-            scaler.height = size;
-            scaler.pixel = 1;
-            if (FTC_Manager_LookupSize(mgr, &scaler, &face_size) == 0 && face_size)
-            {
-                font->line_height = (face_size->metrics.height >> 6);
-                font->base_line = -(face_size->metrics.descender >> 6) + 4;
-            }
+            font->line_height = (face_size->metrics.height >> 6);
+            font->base_line = -(face_size->metrics.descender >> 6) + 4;
         }
     }
 #endif

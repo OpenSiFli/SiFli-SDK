@@ -591,6 +591,44 @@ static FT_Error  font_Face_Requester(FTC_FaceID  face_id,
 
     return FT_Err_Ok;
 }
+
+/*
+ * Every size lookup goes through here, and every one of them opens the face
+ * first. That order is what keeps FTC out of a state it cannot survive.
+ *
+ * When the size cache is full, FTC recycles its least recently used size node
+ * (ftc_size_node_reset): it frees the node's FT_Size, hands the node the new
+ * face id, and only then opens the face for it. The node stays in the size
+ * list the whole time (ftcmru.c uses FTC_MruNode_Up, not a remove), so it is
+ * still reachable while it holds a freed FT_Size under the new face id. If
+ * opening that face fails, FreeType discards every size node belonging to the
+ * face id it failed on - this one included - and frees the FT_Size a second
+ * time.
+ *
+ * Opening the face here first means the lookup FTC performs inside that window
+ * can only hit the face cache, never re-open, so it cannot fail there. A face
+ * that will not open is reported below instead, before any size node is
+ * touched, which also turns a font file that has gone missing into a clean
+ * failure rather than a fault.
+ */
+static FT_Error freetype_lookup_size(FTC_Scaler scaler, FT_Size *asize)
+{
+    FT_Face face;
+    FT_Error error;
+
+    if (!cache_manager || !scaler || !scaler->face_id) return FT_Err_Invalid_Argument;
+
+    error = FTC_Manager_LookupFace(cache_manager, scaler->face_id, &face);
+    if (error) return error;
+
+    return FTC_Manager_LookupSize(cache_manager, scaler, asize);
+}
+
+FT_Error lv_freetype_lookup_size(FTC_Scaler scaler, FT_Size *asize)
+{
+    return freetype_lookup_size(scaler, asize);
+}
+
 /* The returned glyph belongs to the FTC and is only valid until the next
  * lookup - copy out anything that must survive. */
 static FT_BitmapGlyph freetype_lookup_glyph(lv_freetype_font_fmt_dsc_t *dsc, uint32_t unicode_letter)
@@ -614,7 +652,7 @@ static FT_BitmapGlyph freetype_lookup_glyph(lv_freetype_font_fmt_dsc_t *dsc, uin
     scaler.width = dsc->font_size;
     scaler.height = dsc->font_size;
     scaler.pixel = 1;
-    error = FTC_Manager_LookupSize(cache_manager, &scaler, &face_size);
+    error = freetype_lookup_size(&scaler, &face_size);
     if (error || !face_size || !face_size->face || !face_size->face->charmap)
     {
         return NULL;
@@ -940,10 +978,10 @@ int lv_freetype_font_init(lv_font_t *font, const char *font_lib_addr, int font_l
         scaler.width = font_size;
         scaler.height = font_size;
         scaler.pixel = 1;
-        error = FTC_Manager_LookupSize(cache_manager, &scaler, &face_size);
+        error = freetype_lookup_size(&scaler, &face_size);
         if (error || !face_size)
         {
-            rt_kprintf("Error in FTC_Manager_LookupSize: %d\n", error);
+            rt_kprintf("Error in freetype_lookup_size: %d\n", error);
             if (error == FT_Err_Unknown_File_Format)
             {
                 /* ftmodule.h registers the TrueType driver only. */
@@ -1113,14 +1151,6 @@ void lv_freetype_clean_cache(uint8_t clean_type)
     }
 
 #endif //USE_CACHE_MANGER
-}
-
-
-FTC_Manager lv_freetype_get_cache_manager(void)
-{
-#if USE_CACHE_MANGER
-    return cache_manager;
-#endif
 }
 
 #ifdef RT_USING_FINSH
