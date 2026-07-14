@@ -87,3 +87,4 @@ The repository contains the following branches:
 |---------|------------------|---------------------|-----------|
 | v2.3    | January 21, 2025 |                     | Yes       |
 | v2.4    | June 5, 2025     |                     | Yes       |
+| v2.5    | June 19, 2025    |                     | Yes       |
