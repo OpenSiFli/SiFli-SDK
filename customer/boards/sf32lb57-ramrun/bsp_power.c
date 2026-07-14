@@ -23,8 +23,20 @@ void BSP_GPIO_Set(int pin, int val, int is_porta)
 }
 
 
+__WEAK void BSP_PowerDownCustom(int coreid, bool is_deep_sleep)
+{
+
+}
+
+__WEAK void BSP_PowerUpCustom(bool is_deep_sleep)
+{
+
+}
+
+
 void BSP_Power_Up(bool is_deep_sleep)
 {
+    BSP_PowerUpCustom(is_deep_sleep);
 #ifdef SOC_BF0_HCPU
 
     if (is_deep_sleep)
@@ -47,3 +59,10 @@ void BSP_Power_Up(bool is_deep_sleep)
 }
 
 
+void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
+{
+    BSP_PowerDownCustom(coreid, is_deep_sleep);
+#ifdef SOC_BF0_HCPU
+    // bsp_psram_enter_low_power("psram1");
+#endif  /* SOC_BF0_HCPU */
+}

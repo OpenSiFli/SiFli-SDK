@@ -132,7 +132,7 @@ void HAL_PreInit(void)
     }
 
     HAL_RCC_HCPU_ConfigHCLK(240);
-    HAL_RCC_HCPU_EnableDLL2(288000000);
+    HAL_RCC_HCPU_EnableDLL2(312000000);
 
     // Reset sysclk used by HAL_Delay_us
     HAL_Delay_us(0);
