@@ -2251,6 +2251,7 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
         CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
         CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
         AR = rtconfig.AR, ARFLAGS = '-rc', LIBPATH=['.'],
+        RANLIB = rtconfig.RANLIB,
         LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
             
     proj_env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
@@ -2459,6 +2460,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
                 CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
                 CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
                 AR = rtconfig.AR, ARFLAGS = '-rc',
+                RANLIB = rtconfig.RANLIB,
                 LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
             env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
         else:
@@ -3965,6 +3967,7 @@ def SifliMsvcEnv(cpu):
     rtconfig.CC = rtconfig.PREFIX + 'cl'
     rtconfig.CXX = rtconfig.PREFIX + 'cl'
     rtconfig.AR = rtconfig.PREFIX + 'lib'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = rtconfig.PREFIX + 'link'
        
     rtconfig.AFLAGS = ''
@@ -4007,6 +4010,7 @@ def SifliIarEnv(cpu):
     rtconfig.CXX = 'iccarm'
     rtconfig.AS = 'iasmarm'
     rtconfig.AR = 'iarchive'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = 'ilinkarm'
     rtconfig.TARGET_EXT = 'out'
 
@@ -4138,6 +4142,7 @@ def SifliGccEnv(cpu):
     rtconfig.CC = rtconfig.PREFIX + 'gcc'
     rtconfig.AS = rtconfig.PREFIX + 'gcc'
     rtconfig.AR = rtconfig.PREFIX + 'ar'
+    rtconfig.RANLIB = rtconfig.PREFIX + 'ranlib'
     rtconfig.CXX = rtconfig.PREFIX + 'g++'
     rtconfig.LINK = rtconfig.PREFIX + 'gcc'
     rtconfig.STRIP = rtconfig.PREFIX + 'strip'
@@ -4254,6 +4259,7 @@ def SifliKeilEnv(cpu, BSP_ROOT=''):
     rtconfig.CXX = 'armclang'
     rtconfig.AS = 'armasm'
     rtconfig.AR = 'armar'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = 'armlink'
     rtconfig.TARGET_EXT = 'axf'
     
