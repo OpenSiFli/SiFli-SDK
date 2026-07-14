@@ -1451,6 +1451,15 @@ static void SPIx_IRQHandler(uint32_t index)
 
     HAL_SPI_IRQHandler(handle);
 
+#ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    /* used by LCPU which doesn't enable DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+    if ((HAL_SPI_STATE_BUSY != handle->State) && (HAL_SPI_STATE_BUSY_TX != handle->State)
+            && (HAL_SPI_STATE_BUSY_RX != handle->State) && (HAL_SPI_STATE_BUSY_TX_RX != handle->State))
+    {
+        rt_sem_release(spi_bus_obj[index].spi_sema);
+    }
+#endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+
     /* leave interrupt */
     rt_interrupt_leave();
 }
@@ -1461,6 +1470,7 @@ enum
     SPI_DMA_RX
 };
 
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
@@ -1641,6 +1651,8 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
     rt_sem_release(spi_drv->spi_sema);
 }
 
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 static void SPIx_DMA_IRQHandler(uint32_t index, uint32_t trx)
 {
@@ -1658,6 +1670,17 @@ static void SPIx_DMA_IRQHandler(uint32_t index, uint32_t trx)
     else if (SPI_DMA_RX == trx)
     {
         HAL_DMA_IRQHandler(handle->hdmarx);
+    }
+
+    /* used by LCPU which doesn't enable DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+    if ((HAL_SPI_STATE_BUSY != handle->State) && (HAL_SPI_STATE_BUSY_TX != handle->State)
+            && (HAL_SPI_STATE_BUSY_RX != handle->State) && (HAL_SPI_STATE_BUSY_TX_RX != handle->State))
+    {
+        if (((SPI_DMA_TX == trx) && handle->hdmatx->XferCpltCallback)
+                || ((SPI_DMA_RX == trx) && handle->hdmarx->XferCpltCallback))
+        {
+            rt_sem_release(spi_bus_obj[index].spi_sema);
+        }
     }
 
     /* leave interrupt */
