@@ -17,6 +17,7 @@ menu "SiFli Built-in Components"
     source "$SIFLI_SDK/middleware/barcode128/Kconfig"
     source "$SIFLI_SDK/middleware/battery/Kconfig"
     rsource "bluetooth/Kconfig"
+    source "$SIFLI_SDK/middleware/rt_bt_app_core/Kconfig"
 
     config APP_BSP_TEST
         bool "BSP Test"
