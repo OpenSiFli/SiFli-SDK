@@ -184,7 +184,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc)
 #endif /* GPADC_CALIB_FLOW_VERSION != 1 */
 
         /* Disable all slot at initial */
-        for (i = 0; i < 8; i++)
+        for (i = 0; i <= ADC_CHANNEL_MAX; i++)
             HAL_ADC_EnableSlot(hadc, i, 0);
 
         // set LDOCORE and LDOREF enable
@@ -866,7 +866,7 @@ __HAL_ROM_USED uint32_t HAL_ADC_GetValue(ADC_HandleTypeDef *hadc, uint32_t slot)
     __IO uint32_t *p = &(hadc->Instance->ADC_RDATA0);
 
     /* Check ADC handle */
-    if (hadc == NULL || slot >= 8)
+    if (hadc == NULL || slot > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
@@ -898,7 +898,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Get_All(ADC_HandleTypeDef *hadc, uint32
     if (hadc == NULL || buf == NULL)
         return HAL_ERROR;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i <= ADC_CHANNEL_MAX; i++)
     {
         if (i & 1)
         {
@@ -1022,7 +1022,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef *hadc, 
     __IO uint32_t *p = &(hadc->Instance->ADC_SLOT0_REG);
 
     /* Check ADC handle */
-    if (hadc == NULL || sConfig == NULL || sConfig->Channel >= 8)
+    if (hadc == NULL || sConfig == NULL || sConfig->Channel > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
@@ -1688,7 +1688,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_EnableSlot(ADC_HandleTypeDef *hadc, uin
     __IO uint32_t *p = &(hadc->Instance->ADC_SLOT0_REG);
 
     /* Check ADC handle */
-    if (hadc == NULL || slot >= 8)
+    if (hadc == NULL || slot > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
