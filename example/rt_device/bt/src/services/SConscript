@@ -1,0 +1,16 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+
+if GetDepend('BT_USING_HF'):
+    src += ['bt_srv_hfp.c']
+
+if GetDepend('BT_USING_SPP'):
+    src += ['bt_srv_spp.c']
+
+CPPPATH = [cwd]
+
+group = DefineGroup('bt_services', src, depend = ['RT_USING_BT'], CPPPATH = CPPPATH)
+
+Return('group')
