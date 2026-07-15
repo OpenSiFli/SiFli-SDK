@@ -328,6 +328,24 @@ typedef struct
 #define DMA_REQUEST_61                    61U
 #define DMA_REQUEST_62                    62U
 #define DMA_REQUEST_63                    63U
+#define DMA_REQUEST_64                    64U
+#define DMA_REQUEST_65                    65U
+#define DMA_REQUEST_66                    66U
+#define DMA_REQUEST_67                    67U
+#define DMA_REQUEST_68                    68U
+#define DMA_REQUEST_69                    69U
+#define DMA_REQUEST_70                    70U
+#define DMA_REQUEST_71                    71U
+#define DMA_REQUEST_72                    72U
+#define DMA_REQUEST_73                    73U
+#define DMA_REQUEST_74                    74U
+#define DMA_REQUEST_75                    75U
+#define DMA_REQUEST_76                    76U
+#define DMA_REQUEST_77                    77U
+#define DMA_REQUEST_78                    78U
+#define DMA_REQUEST_79                    79U
+#define DMA_REQUEST_80                    80U
+#define DMA_REQUEST_81                    81U
 #endif /* SF32LB56X || SF32LB52X */
 
 
@@ -1137,7 +1155,7 @@ HAL_StatusTypeDef HAL_DMA_FreeChannel(DMA_HandleTypeDef *hdma);
 
 #if !defined (DMAMUX1)
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-#define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_63)
+#define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_81)
 #else
 #define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_31)
 #endif

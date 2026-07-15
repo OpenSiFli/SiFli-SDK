@@ -95,7 +95,8 @@ extern "C" {
 #define PTM1_IFIFO5_DMA_REQUEST                DMA_REQUEST_77
 #define PTM1_IFIFO6_DMA_REQUEST                DMA_REQUEST_78
 #define PTM1_IFIFO7_DMA_REQUEST                DMA_REQUEST_79
-
+#define PDM2_L_DMA_REQUEST                     DMA_REQUEST_80
+#define PDM2_R_DMA_REQUEST                     DMA_REQUEST_81
 
 /* DMA1 channel1 */
 
@@ -162,7 +163,11 @@ extern "C" {
 #define I2C2_DMA_IRQ                     DMAC1_CH3_IRQn
 #define I2C2_DMA_END_TRIG                GPDMA_TS_I2C2_ATDONE
 
-
+#define PDM2_L_DMA_IRQHandler              DMAC1_CH3_IRQHandler
+#define PDM2_L_DMA_IRQ_PRIO                0
+#define PDM2_L_DMA_INSTANCE                DMA1_Channel3
+#define PDM2_L_DMA_REQUEST                 DMA_REQUEST_80
+#define PDM2_L_DMA_IRQ                     DMAC1_CH3_IRQn
 
 /* DMA1 channel4 */
 #define AUDPRC_TX1_DMA_IRQHandler              DMAC1_CH4_IRQHandler
@@ -262,6 +267,11 @@ extern "C" {
 #define UART3_TX_DMA_REQUEST            DMA_REQUEST_26
 #define UART3_TX_DMA_IRQ                DMAC1_CH7_IRQn
 
+#define PDM2_R_DMA_IRQHandler              DMAC1_CH7_IRQHandler
+#define PDM2_R_DMA_IRQ_PRIO                0
+#define PDM2_R_DMA_INSTANCE                DMA1_Channel7
+#define PDM2_R_DMA_REQUEST                 DMA_REQUEST_81
+#define PDM2_R_DMA_IRQ                     DMAC1_CH7_IRQn
 
 /* DMA1 channel8  */
 //PDM1 R
