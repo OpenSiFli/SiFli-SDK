@@ -9,8 +9,6 @@
 #include "usbh_core.h"
 #include "usbh_serial.h"
 
-typedef rt_size_t rt_ssize_t;
-
 static rt_err_t rt_usbh_serial_open(struct rt_device *dev, rt_uint16_t oflag)
 {
     struct usbh_serial *serial;
