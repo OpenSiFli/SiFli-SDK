@@ -25,7 +25,7 @@ void HAL_MspInit(void)
 #include "bts2_app_inc.h"
 #include "bt_connection_manager.h"
 #include "ulog.h"
-
+#include "bt_hfp_relay_mgr.h"
 #ifdef     AUDIO_USING_MANAGER
     #include "audio_server.h"
 #endif
@@ -111,6 +111,20 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             rt_mb_send(g_bt_app_mb, BT_APP_READY);
         }
         break;
+        case BT_NOTIFY_COMMON_SCO_CONNECTED:
+        {
+            LOG_I("HFP HF audio_connected");
+            bt_notify_device_sco_info_t *sco_info = (bt_notify_device_sco_info_t *)data;
+            bt_hfp_relay_handle_sco_event(event_id, sco_info);
+            break;
+        }
+        case BT_NOTIFY_COMMON_SCO_DISCONNECTED:
+        {
+            LOG_I("HFP HF audio_disconnected");
+            bt_notify_device_sco_info_t *sco_info = (bt_notify_device_sco_info_t *)data;
+            bt_hfp_relay_handle_sco_event(event_id, sco_info);
+            break;
+        }
         default:
             break;
         }
@@ -141,7 +155,7 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
                         bt_send_switch_role(&bd_addr, 0);
                     }
 
-                    bt_interface_conn_to_source_ext((unsigned char *)&profile_info->mac, BT_PROFILE_AVRCP);
+                    bt_interface_conn_to_source_ext((unsigned char *)&profile_info->mac, BT_PROFILE_HFP);
 
                     uint8_t con_idx;
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
@@ -286,7 +300,7 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
                     need_trigger = 0;
                     LOG_I("a2dp transfor data start...");
 #ifdef CFG_AV_SHARING
-                    bt_avsrc_transfor(&transfor_rb);
+                    bt_avsrc_sharing(&transfor_rb);
 #endif
                 }
 
@@ -419,7 +433,24 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             break;
         }
     }
-
+    else if (type == BT_NOTIFY_HFP_HF)
+    {
+        bt_hfp_relay_notify_data_t msg;
+        msg.type = type;
+        msg.event_id = event_id;
+        msg.data_len = data_len;
+        msg.data = data;
+        return bt_hfp_relay_hf_event_handle(&msg);
+    }
+    else if (type == BT_NOTIFY_HFP_AG)
+    {
+        bt_hfp_relay_notify_data_t msg;
+        msg.type = type;
+        msg.event_id = event_id;
+        msg.data_len = data_len;
+        msg.data = data;
+        return bt_hfp_relay_ag_event_handle(&msg);
+    }
     return 0;
 }
 
@@ -478,44 +509,36 @@ int main(void)
 
 
 #if defined(SF32LB52X_58)|| (defined(SF32LB52X) && (defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)))
+
+void lcpu_rom_config_default(void);
 uint16_t g_em_offset[HAL_LCPU_CONFIG_EM_BUF_MAX_NUM] =
 {
-    0x178, 0x178, 0x740, 0x7A0, 0x810, 0x880, 0xA00, 0xBB0, 0xD48,
-    0x133C, 0x13A4, 0x19BC, 0x21BC, 0x21BC, 0x21BC, 0x21BC, 0x21BC, 0x21BC,
-    0x21BC, 0x21BC, 0x263C, 0x265C, 0x2734, 0x2784, 0x28D4, 0x28E8, 0x28FC,
-    0x29EC, 0x29FC, 0x2BBC, 0x2BD8, 0x3BE8, 0x5804, 0x5804, 0x5804
+    0x178, 0x178, 0x740, 0x7A0, 0x848, 0x8B8, 0xB38, 0xCE8, 0xE80, 0x1474, 0x14DC,
+    0x1AF4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x25F4,
+    0x2614, 0x268C, 0x26DC, 0x27FC, 0x2810, 0x2824, 0x2914, 0x2924, 0x29E4, 0x2A00,
+    0x3A10, 0x4E24, 0x5F04,
+
 };
 
 void lcpu_rom_config(void)
 {
-    uint8_t is_config_allowed = 0;
-#ifdef SF32LB52X
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-    if (rev_id >= HAL_CHIP_REV_ID_A4)
-        is_config_allowed = 1;
-#elif defined(SF32LB52X_58)
-    is_config_allowed = 1;
-#endif
-
-    extern void lcpu_rom_config_default(void);
     lcpu_rom_config_default();
+    hal_lcpu_bluetooth_em_config_t em_offset;
+    memcpy((void *)em_offset.em_buf, (void *)g_em_offset, HAL_LCPU_CONFIG_EM_BUF_MAX_NUM * 2);
+    em_offset.is_valid = 1;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_EM_BUF, &em_offset, sizeof(hal_lcpu_bluetooth_em_config_t));
+    hal_lcpu_bluetooth_act_configt_t act_cfg;
+    act_cfg.bt_max_acl = 3;
+    act_cfg.bt_max_sco = 2;
+    act_cfg.ble_max_iso = 0;
+    act_cfg.bit_valid = 1 << 4 | 1 << 1 | 1 << 0;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_ACT_CFG, &act_cfg, sizeof(hal_lcpu_bluetooth_act_configt_t));
 
-    if (is_config_allowed)
-    {
-        hal_lcpu_bluetooth_em_config_t em_offset;
-        memcpy((void *)em_offset.em_buf, (void *)g_em_offset, HAL_LCPU_CONFIG_EM_BUF_MAX_NUM * 2);
-        em_offset.is_valid = 1;
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_EM_BUF, &em_offset, sizeof(hal_lcpu_bluetooth_em_config_t));
-
-        hal_lcpu_bluetooth_act_configt_t act_cfg;
-        act_cfg.ble_max_act = 6;
-        act_cfg.ble_max_iso = 0;
-        act_cfg.ble_max_ral = 3;
-        act_cfg.bt_max_acl = 7;
-        act_cfg.bt_max_sco = 0;
-        act_cfg.bit_valid = CO_BIT(0) | CO_BIT(1) | CO_BIT(2) | CO_BIT(3) | CO_BIT(4);
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_ACT_CFG, &act_cfg, sizeof(hal_lcpu_bluetooth_act_configt_t));
-    }
+    hal_lcpu_bluetooth_rom_config_t config = {0};
+    config.bit_valid |= 1 << 2 | 1 << 13;
+    config.lld_prog_delay = 3;
+    config.sco_cfg = 2;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
 }
 #endif
 

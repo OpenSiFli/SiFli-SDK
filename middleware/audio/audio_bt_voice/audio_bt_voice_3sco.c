@@ -21,7 +21,7 @@
 #include "audio_cvsd.h"
 #include "audio_filter.h"
 
-#ifdef BT_VOICE_RELAY
+#ifdef CFG_BT_VOICE_RELAY
     #include "audio_bt_voice_rely.h"
 #endif
 
@@ -823,7 +823,7 @@ int32_t _hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 {
     LOG_D("_hl_bt_audio_queue_rx_ind");
 
-#ifdef BT_VOICE_RELAY
+#ifdef CFG_BT_VOICE_RELAY
     if (bt_voice_rely_is_ready())
     {
         bt_voice_rely_downlink_process(1);

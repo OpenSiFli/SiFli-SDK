@@ -5,7 +5,7 @@
  */
 #include "audioproc.h"
 
-#ifdef BT_VOICE_RELAY
+#ifdef CFG_BT_VOICE_RELAY
 // #if 1
 #include "bts2_app_inc.h"
 #include "ipc/ringbuffer.h"
@@ -487,7 +487,7 @@ static uint8_t bt_voice_rely_msbc_reencode_to_payload(uint8_t sco_idx, uint8_t *
     pbss_t.pdst = &payload[2];
 
     bts2_msbc_encode_ext(&pbss_t, sco_idx);
-    LOG_W("bt_voice_rely_msbc_reencode: %d sco_idx:%d\n", pt_bt_voice->sn_cnt[sco_idx], sco_idx);
+    // LOG_W("bt_voice_rely_msbc_reencode: %d sco_idx:%d\n", pt_bt_voice->sn_cnt[sco_idx], sco_idx);
     if ((AUDIO_MSBC_BUFFER_LEN != pbss_t.src_len_used) || (57 != pbss_t.dst_len_used))
     {
         LOG_W("3a_w msbc relay encode err src_len_use=%d,dst_len_use=%d\n", pbss_t.src_len_used, pbss_t.dst_len_used);
