@@ -51,21 +51,24 @@ static rt_err_t rt_usbh_serial_close(struct rt_device *dev)
     return RT_EOK;
 }
 
-static rt_ssize_t rt_usbh_serial_read(struct rt_device *dev,
+static rt_size_t rt_usbh_serial_read(struct rt_device *dev,
                                       rt_off_t pos,
                                       void *buffer,
                                       rt_size_t size)
 {
     struct usbh_serial *serial;
+    int ret;
 
     RT_ASSERT(dev != RT_NULL && dev->user_data != RT_NULL);
 
     serial = (struct usbh_serial *)dev->user_data;
 
-    return usbh_serial_read(serial, buffer, size);
+    ret = usbh_serial_read(serial, buffer, size);
+    ret = ret < 0 ? 0 : ret;
+    return (rt_size_t)ret;
 }
 
-static rt_ssize_t rt_usbh_serial_write(struct rt_device *dev,
+static rt_size_t rt_usbh_serial_write(struct rt_device *dev,
                                        rt_off_t pos,
                                        const void *buffer,
                                        rt_size_t size)
@@ -96,7 +99,8 @@ static rt_ssize_t rt_usbh_serial_write(struct rt_device *dev,
         rt_free_align(align_buf);
     }
 
-    return ret;
+    ret = ret < 0 ? 0 : ret;
+    return (rt_size_t)ret;
 }
 
 static rt_err_t rt_usbh_serial_control(struct rt_device *dev,
