@@ -573,10 +573,6 @@ HAL_StatusTypeDef HAL_CAN_AddPrimaryTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHea
 
 HAL_StatusTypeDef HAL_CAN_AddSecondaryTxMessage(CAN_HandleTypeDef *hcan, CAN_TxHeaderTypeDef *pHeader, uint8_t aData[])
 {
-    HAL_CAN_FrameTypeDef frame;
-    uint32_t i;
-    __IO uint32_t *tbuf;
-
     if ((hcan == NULL) || (pHeader == NULL) || (aData == NULL))
     {
         return HAL_ERROR;
@@ -597,11 +593,16 @@ HAL_StatusTypeDef HAL_CAN_AddSecondaryTxMessage(CAN_HandleTypeDef *hcan, CAN_TxH
 
     HAL_CAN_FillFrame(hcan, pHeader, aData);
 
+    /*
+     * TSALL starts transmission of all frames currently in STB.
+     * If TSALL is set before TSNEXT commits the frame, the hardware
+     * sees an empty STB, completes 0-frame transmission, and fires
+     * TSIF — leaving the just-committed frame stuck until the next
+    */
+    hcan->Instance->CR |= CAN_CR_TSNEXT;
+
     /* transmit all */
     hcan->Instance->CR |= CAN_CR_TSALL;
-
-    /* Commit current frame and advance to next STB slot */
-    hcan->Instance->CR |= CAN_CR_TSNEXT;
 
     return HAL_OK;
 }
