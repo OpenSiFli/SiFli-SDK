@@ -5,11 +5,11 @@ The example can run on the following development boards
 - sf32lb52-lcd_n16r8
 
 ## Overview
-* Operating HAL functions for single-channel ADC or DMA six-channel sampling demonstration
+* Use HAL unified calibration interface for single-channel ADC or DMA six-channel sampling demonstration (single-channel mode triggers one conversion by default)
 
 ## Example Usage
 ### Compilation and Programming
-The demonstration code defaults to single-channel ADC sampling demonstration. If you want to run the DMA six-channel demonstration, please enable the macro in `main.c` under the project path:  
+The demonstration code defaults to single-channel ADC sampling (trigger one conversion and print after startup). If you want to run the DMA six-channel demonstration, please enable the macro in `main.c` under the project path:  
 ```c
 #define BSP_GPADC_USING_DMA 1
 ```
@@ -54,7 +54,7 @@ Switch to the example `project/build_xx` directory and run `uart_download.bat`, 
     ADC reg value 3192 voltage 2519.12 mv
     adc demo end!
 ```
-The log prints the value as the raw register value, and Voltage is the converted mV voltage
+The log prints `ADC reg value` as raw register value, `voltage` as voltage (mV) converted by calibration context.
 * DMA six-channel mode log output (PA28 input 2.5V, PA29 connected to GND, other IOs based on board internal voltage):
 ```
    SFBL
@@ -86,7 +86,7 @@ The log prints the value as the raw register value, and Voltage is the converted
    Loop 0 done ===
    adc demo end!
 ```
-The log prints value[0] as the corresponding channel 0 raw register value, and Voltage is the converted mV voltage
+The log prints `ADC reg value[i]` as corresponding channel raw register value, `voltage` as voltage (mV) converted by calibration context.
 
 #### ADC Configuration Flow
 
@@ -139,29 +139,112 @@ The log prints value[0] as the corresponding channel 0 raw register value, and V
 ```
 * ADC Calibration
 1. To improve ADC accuracy, SiFli series chips undergo ADC calibration at the factory (calibration parameters are written to the chip's internal OTP area). Different series have different calibration methods.  
-To ensure ADC accuracy, it needs to be called once every power-on. The following is the calibration function, which reads OTP parameters to calculate the slope `adc_vol_ratio` and offset `adc_vol_offset`:
+To ensure ADC accuracy, call the calibration function once per power-on. Use unified context structure to manage calibration parameters:
 
 ```c
+/* Define calibration context */
+static HAL_ADC_CalibContextTypeDef g_adc_calib_ctx;
+
+/* Load calibration parameters */
 static int utest_adc_calib(void)
-```
-2. After ADC sampling obtains the raw register value, call the function `example_adc_get_float_mv` and calculate the final voltage value based on the calibrated slope `adc_vol_ratio` and offset `adc_vol_offset`.
-3. For 52 series chips, CH8 (Channel 7) is internally connected to Vbat through two equal voltage divider resistors. To get the Vbat value, conversion is needed. To reduce voltage divider resistor errors, the two resistors have been calibrated at the factory:
-```c
-static float adc_vbat_factor = 2.01; /* Calibrate the two voltage divider resistors from 52 chip internal CH8 (Channel 7) to Vbat */
-static void example_adc_vbat_fact_calib(uint32_t voltage, uint32_t reg)
 {
-    float vol_from_reg;
+    HAL_ADC_CalibFactoryInfoTypeDef factory_info;
 
-    // get voltage calculate by register data
-    vol_from_reg = (reg - adc_vol_offset) * adc_vol_ratio / ADC_RATIO_ACCURATE;
-    adc_vbat_factor = (float)voltage / vol_from_reg;
+    /* Load calibration context: init defaults + read factory config */
+    if (HAL_ADC_CalibLoad(NULL,
+                          &g_adc_calib_ctx,
+                          HAL_ADC_CALIB_SOURCE_BSP,
+                          HAL_ADC_CALIB_F_INIT) != HAL_OK)
+    {
+        rt_kprintf("Get ADC configure fail\n");
+        return HAL_ERROR;
+    }
+
+    /* Get factory config info (for log output) */
+    if (HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CALIB_SOURCE_BSP, &factory_info) != HAL_OK)
+    {
+        rt_kprintf("Get ADC configure fail\n");
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
 }
-/* Method to convert CH8 (Channel 7) sampling to Vbat voltage value, refer to code in sifli_get_adc_value function */
-    float fval = sifli_adc_get_float_mv(fave) * 10; // mv to 0.1mv based
-    *value = (rt_uint32_t)fval;
-    if (channel == 7)   // for 52x, channel fix used for vbat with 1/2 update(need calibrate)
-        *value = (rt_uint32_t)(fval * adc_vbat_factor); /* Convert sampled actual ADC voltage to Vbat voltage value*/
 ```
+
+2. After ADC sampling obtains the raw register value, call `HAL_ADC_RegToVoltageFloat` to calculate the final voltage value using calibration context:
+
+```c
+/* Read register value */
+dst = HAL_ADC_GetValue(&hadc, lslot);
+
+/* Convert to voltage (mV) */
+float voltage = HAL_ADC_RegToVoltageFloat((float)dst, &g_adc_calib_ctx);
+```
+
+3. For 52 series chips, Channel 7 is internally connected to Vbat through voltage divider resistors. To get Vbat value, multiply by calibration factor:
+
+```c
+/* VBAT channel special handling */
+if (channel == 7)
+{
+    /* Actual battery voltage = ADC voltage × vbat_factor */
+    voltage *= g_adc_calib_ctx.vbat_factor;
+}
+```
+
+4. Apply calibration parameters to hardware (such as LDO Vref setting):
+
+```c
+/* Apply calibration parameters to hardware */
+HAL_ADC_CalibApply(&hadc, &g_adc_calib_ctx);
+```
+
+## Calibration API Reference
+
+### Data Structures
+
+**HAL_ADC_CalibContextTypeDef** - Calibration context
+```c
+typedef struct 
+{ 
+    float    offset;              /* 0V offset (register value) */
+    float    ratio;               /* Gain/slope (mV/bit × 1000) */
+    uint32_t threshold_reg;       /* Overvoltage threshold (register value) */
+    uint8_t  range_mode;          /* Range mode: 0=big range(X3), 1=small range(X1) */
+    float    vbat_factor;         /* VBAT divider correction factor */
+    uint8_t  ldovref_sel;         /* LDO reference voltage selection */
+    uint8_t  flags;               /* Status flags */
+} HAL_ADC_CalibContextTypeDef;
+```
+
+**HAL_ADC_CalibFactoryInfoTypeDef** - Factory config info
+```c
+typedef struct 
+{ 
+    uint32_t voltage1_mv;         /* Calibration point 1 voltage (mV) */
+    uint32_t reg_value1;          /* Calibration point 1 register value */
+    uint32_t voltage2_mv;         /* Calibration point 2 voltage (mV) */
+    uint32_t reg_value2;          /* Calibration point 2 register value */
+    uint16_t vbat_reg;            /* VBAT reference register value (SF32LB52X only) */
+    uint16_t vbat_mv;             /* VBAT reference voltage (SF32LB52X only) */
+    uint8_t  ldovref_flag;        /* LDO Vref calibrated flag (SF32LB52X only) */
+    uint8_t  ldovref_sel;         /* LDO Vref selection value (SF32LB52X only) */
+    uint8_t  range_mode;          /* Range mode */
+} HAL_ADC_CalibFactoryInfoTypeDef;
+```
+
+### API Functions
+
+| Function | Description |
+|------|------|
+| `HAL_ADC_CalibLoad()` | Load calibration context |
+| `HAL_ADC_CalibInit()` | Initialize context with defaults |
+| `HAL_ADC_CalibApply()` | Apply calibration parameters to hardware |
+| `HAL_ADC_CalibGetFactoryInfo()` | Get factory config info |
+| `HAL_ADC_RegToVoltageFloat()` | Register value to voltage (float) |
+| `HAL_ADC_RegToVoltage()` | Register value to voltage (integer) |
+| `HAL_ADC_CalibSetCustom()` | Set custom calibration parameters |
+
 ## Exception Diagnosis
 * ADC sampled voltage value is incorrect
 1. Check if ADC hardware is connected correctly. ADC sampling channels are fixed IO ports and cannot be arbitrarily assigned. For which IO corresponds to CH0-7, refer to the chip manual.  
@@ -175,9 +258,9 @@ static void example_adc_vbat_fact_calib(uint32_t voltage, uint32_t reg)
   
 ## Reference Documents
 * EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx
-* DS0052-SF32LB52x-芯片技术规格书 V0p3.pdf
+* DS0052-SF32LB52x-Chip Technical Specification V0p3.pdf
 ## Update Log
 |Version |Date   |Release Notes |
 |:---|:---|:---|
 |0.0.1 |10/2024 |Initial version |
-| | | |
+|0.0.2 |03/2025 |Updated to new HAL calibration API |
