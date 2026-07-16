@@ -3,4 +3,4 @@ import argparse
 
 TARGET_NAME = 'lcpu'
 CORE = "LCPU"
-CHIP = 'SF32LB52X'
+CHIP = 'SF32LB57X'
