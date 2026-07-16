@@ -448,41 +448,58 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     return HAL_OK;
 }
 
-
 __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_Init(FLASH_HandleTypeDef *hflash, qspi_configure_t *cfg, uint16_t clk_div)
 {
+    uint32_t freq;
+    uint8_t rlcode;
     uint16_t mr0;
 
     HAL_OPI_PSRAM_Init(hflash, cfg, 1);
 
-    uint32_t freq = hflash->freq;
+    /* Default value */
+    mr0 = 0x8F2F;
 
-    // CR0 with 2 byte, bytes should swap for read/write
+    /* Change value
+     * [3]-LT=0 (variable latency)
+     * [8]=1, [1:0]-BL=00 (128 byte)
+     *
+     */
+    mr0 &= 0xFFF4;
+
+    freq = hflash->freq;
     if (freq <= 85 * 1000000)
     {
-        mr0 = (14 << 12) | 0x078f;
+        rlcode = 0xE;  /* 3 cycle */
     }
     else if (freq <= 104 * 1000000)
     {
-        mr0 = (15 << 12) | 0x078f;
+        rlcode = 0xF;  /* 4 cycle */
     }
-    else if (freq <= 120 * 1000000)
+    else if (freq <= 133 * 1000000)
     {
-        mr0 = (0 << 12) | 0x078f;
+        rlcode = 0x0;  /* 5 cycle */
     }
-    else if (freq <= 144 * 1000000)
+    else if (freq <= 166 * 1000000)
     {
-        mr0 = (1 << 12) | 0x078f;
+        rlcode = 0x1;  /* 6 cycle */
     }
     else // 168M
     {
-        mr0 = (2 << 12) | 0x078f;
+        rlcode = 0x2;  /* 7 cycle */
     }
 
-    HAL_FLASH_ENABLE_HYPER(hflash, 1);
+    /* [7:4]: initial latency*/
+    mr0 = (mr0 & 0xFF0F) | (((uint16_t)rlcode & 0xF) << 4);
 
+    /* CR0 has 2 byte, swap bytes for write */
+    mr0 = ((mr0 & 0xFF00) >> 8) | ((mr0 & 0xFF) << 8);
+
+    HAL_FLASH_ENABLE_HYPER(hflash, 1);
     HAL_HYPER_PSRAM_WriteCR(hflash, 0, mr0);
 
+    /* for HyperRAM, still need to set FIXLAT though fixlatency is disable by PSRAM chip side
+     * because MPI uses this register to control some other logics
+     */
     HAL_MPI_EN_FIXLAT(hflash, 1);
 
     return HAL_OK;

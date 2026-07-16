@@ -766,8 +766,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_SET_X16_MODE(FLASH_HandleTypeDef *hfl
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_EN_FIXLAT(FLASH_HandleTypeDef *hflash, uint8_t fix)
 {
+    /* For SoC (e.g. sf32lb57x ) without register DCR.FIXLAT,
+     *  no need to configure this register and MPI would behave accordig to protocol type
+     */
 #ifdef MPI_DCR_FIXLAT
-//TODO:
+
     if (hflash == NULL)
         return HAL_ERROR;
 
