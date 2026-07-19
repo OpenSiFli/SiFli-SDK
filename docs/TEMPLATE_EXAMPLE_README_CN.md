@@ -49,7 +49,7 @@ _如需任何其他软件，请在此处说明并附上链接。如适用，请�
 _在此处说明需要在 menuconfig 中启用哪些选项，最好附上截图_
 
 ```bash
-scons --board=<board_name> --menuconfig
+sdk.py menuconfig --board=<board_name>
 ```
 
 ## 示例输出
