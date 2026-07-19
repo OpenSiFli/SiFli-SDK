@@ -667,7 +667,6 @@ SECTIONS
 
   .rom3 :
   {
-    *lvsf_font_*(.rodata*)
   } > ROM3
 #endif
 }

@@ -150,7 +150,7 @@ LR_IROM2 {{ hex32(defines['__ROM2_BASE']) }} {{ hex32(defines['__ROM2_SIZE']) }}
 
 LR_IROM3 {{ hex32(defines['__ROM3_BASE']) }} {{ hex32(defines['__ROM3_SIZE']) }}  {  ; load region size_region
   ER_IROM3 {{ hex32(defines['__ROM3_BASE']) }} {{ hex32(defines['__ROM3_SIZE']) }}  {  ; RW data
-   lvsf_font_*.o  (.rodata.*)
+
    }
 }
 
