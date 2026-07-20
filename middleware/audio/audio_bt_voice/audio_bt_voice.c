@@ -755,6 +755,7 @@ void _hcpu_2_lcpu_ipc_audio_notify()
 int32_t _hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 {
     LOG_D("_hl_bt_audio_queue_rx_ind");
+
     bt_rx_event_to_audio_server();
     return 0;
 }

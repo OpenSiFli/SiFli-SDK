@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __RELY_H__
-#define __RELY_H__
+#ifndef __relay_H__
+#define __relay_H__
 
 #include <stdint.h>
 #include <stddef.h>
@@ -18,13 +18,13 @@
 extern "C" {
 #endif
 
-void bt_voice_rely_open(uint16_t sco_hdl, uint32_t samplerate);
-void bt_voice_rely_close(uint16_t sco_hdl);
-void bt_voice_rely_downlink_process(uint8_t is_ready);
-uint8_t bt_voice_rely_is_ready(void);
+void bt_voice_relay_open(uint16_t sco_hdl, uint32_t samplerate);
+void bt_voice_relay_close(uint16_t sco_hdl);
+void bt_voice_relay_downlink_process(uint8_t is_ready);
+uint8_t bt_voice_relay_is_ready(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __RELY_H__ */
+#endif /* __relay_H__ */

@@ -169,7 +169,7 @@ typedef struct bt_voice_tag
 sco_ipc_t  g_sco_ipc;
 bt_voice_t *pt_bt_voice = NULL;
 
-void bt_voice_rely_hcpu_2_lcpu_ipc_audio_notify(void);
+void bt_voice_relay_hcpu_2_lcpu_ipc_audio_notify(void);
 
 #if SOFT_CVSD_ENCODE
 #define BT_CVSD_FRAME_LEN          60
@@ -184,7 +184,7 @@ static void *calloc_buffer(void *src, int size, int n)
     return src;
 }
 
-void bt_voice_rely_cvsd_init(uint8_t cnt)
+void bt_voice_relay_cvsd_init(uint8_t cnt)
 {
     int pow_M_L_factor = 3;
     audio_cvsd_t *pt_cvsd = &(pt_bt_voice->cvsd_env[cnt]);
@@ -216,7 +216,7 @@ void bt_voice_rely_cvsd_init(uint8_t cnt)
     }
 }
 
-void bt_voice_rely_cvsd_deinit(uint8_t cnt)
+void bt_voice_relay_cvsd_deinit(uint8_t cnt)
 {
     audio_cvsd_t *pt_cvsd = &(pt_bt_voice->cvsd_env[cnt]);
 
@@ -269,11 +269,11 @@ void bt_voice_rely_cvsd_deinit(uint8_t cnt)
 //     0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff,
 // };
 
-// unsigned char bt_voice_rely_reverse_byte(unsigned char c)
+// unsigned char bt_voice_relay_reverse_byte(unsigned char c)
 // {
 //     return table[c];
 // }
-unsigned char bt_voice_rely_reverse_byte(unsigned char byte)
+unsigned char bt_voice_relay_reverse_byte(unsigned char byte)
 {
     /* 交换高4位和低4位 */
     byte = ((byte >> 4) & 0x0F) | ((byte & 0x0F) << 4);
@@ -285,7 +285,7 @@ unsigned char bt_voice_rely_reverse_byte(unsigned char byte)
 }
 #endif
 
-static uint8_t bt_voice_rely_chk_datahdr(uint32_t hdr)
+static uint8_t bt_voice_relay_chk_datahdr(uint32_t hdr)
 {
     uint8_t hdr_ok = 0;
     bt_sco_data_hdr *sco_hdr = (bt_sco_data_hdr *)&hdr;
@@ -302,21 +302,21 @@ static uint8_t bt_voice_rely_chk_datahdr(uint32_t hdr)
     return hdr_ok;
 }
 
-static uint8_t bt_voice_rely_sco_get_idx_from_hdl(uint16_t hdl)
+static uint8_t bt_voice_relay_sco_get_idx_from_hdl(uint16_t hdl)
 {
     uint8_t sco_path = (hdl >> 8) - 1;
 
     return sco_path;
 }
 
-static uint8_t bt_voice_rely_sco_get_peer_idx(uint8_t idx)
+static uint8_t bt_voice_relay_sco_get_peer_idx(uint8_t idx)
 {
     return (idx == 0) ? 1 : 0;
 }
 
-static uint16_t bt_voice_rely_sco_get_peer_hdl(uint8_t idx, uint16_t cur_hdl)
+static uint16_t bt_voice_relay_sco_get_peer_hdl(uint8_t idx, uint16_t cur_hdl)
 {
-    uint8_t peer_idx = bt_voice_rely_sco_get_peer_idx(idx);
+    uint8_t peer_idx = bt_voice_relay_sco_get_peer_idx(idx);
 
     if ((peer_idx < BT_SCO_MAX_NUM) && pt_bt_voice->dn_data[peer_idx].is_used)
     {
@@ -331,21 +331,21 @@ static uint16_t bt_voice_rely_sco_get_peer_hdl(uint8_t idx, uint16_t cur_hdl)
     return (uint16_t)(((peer_idx + 1) << 8) | (cur_hdl & 0x00FF));
 }
 
-static uint32_t bt_voice_rely_replace_datahdr_to_peer_sco(uint8_t idx, uint32_t datahdr)
+static uint32_t bt_voice_relay_replace_datahdr_to_peer_sco(uint8_t idx, uint32_t datahdr)
 {
     bt_sco_data_hdr *sco_hdr = (bt_sco_data_hdr *)&datahdr;
 
-    sco_hdr->scohdl = bt_voice_rely_sco_get_peer_hdl(idx, sco_hdr->scohdl);
+    sco_hdr->scohdl = bt_voice_relay_sco_get_peer_hdl(idx, sco_hdr->scohdl);
 
     return datahdr;
 }
 
-static uint32_t bt_voice_rely_make_peer_datahdr(uint8_t idx, uint32_t datahdr)
+static uint32_t bt_voice_relay_make_peer_datahdr(uint8_t idx, uint32_t datahdr)
 {
-    return bt_voice_rely_replace_datahdr_to_peer_sco(idx, datahdr);
+    return bt_voice_relay_replace_datahdr_to_peer_sco(idx, datahdr);
 }
 
-static void bt_voice_rely_sco_get_param(uint8_t idx)
+static void bt_voice_relay_sco_get_param(uint8_t idx)
 {
     struct hci_sync_con_cmp_evt *pt_sco;
 
@@ -356,7 +356,7 @@ static void bt_voice_rely_sco_get_param(uint8_t idx)
     LOG_I("sco open num=%d, mode=%d,tx=%d, rx=%d\n", pt_bt_voice->sco_num, pt_sco->air_mode, pt_sco->tx_pkt_len, pt_sco->rx_pkt_len);
 }
 
-uint8_t bt_voice_rely_cvsd_decode(uint8_t sco_idx)
+uint8_t bt_voice_relay_cvsd_decode(uint8_t sco_idx)
 {
     sco_data_t *pt_data = &pt_bt_voice->dn_data[sco_idx];
     audio_cvsd_t *pt_cvsd = &pt_bt_voice->cvsd_env[sco_idx];
@@ -376,7 +376,7 @@ uint8_t bt_voice_rely_cvsd_decode(uint8_t sco_idx)
         //memcpy(pt_cvsd->bit_buf, &p_sco_data->data[0], BT_CVSD_FRAME_LEN);
         for (int i = 0; i < BT_CVSD_FRAME_LEN; i++)
         {
-            pt_data->in_data[i] = bt_voice_rely_reverse_byte(pt_data->in_data[i]);
+            pt_data->in_data[i] = bt_voice_relay_reverse_byte(pt_data->in_data[i]);
         }
         cvsdDecode(&(pt_cvsd->cvsd_d), (const uint8_t *)(&pt_data->in_data[0]), BT_CVSD_FRAME_LEN, (int16_t *)(pt_cvsd->out_buf_shift));
 
@@ -399,7 +399,7 @@ uint8_t bt_voice_rely_cvsd_decode(uint8_t sco_idx)
     return 0;
 }
 
-static uint8_t bt_voice_rely_msbc_decode(uint8_t sco_idx)
+static uint8_t bt_voice_relay_msbc_decode(uint8_t sco_idx)
 {
     BTS2S_SBC_STREAM  pbss_t;
 
@@ -419,7 +419,7 @@ static uint8_t bt_voice_rely_msbc_decode(uint8_t sco_idx)
         pbss_t.dst_len = 240;
         pbss_t.pdst = &pt_data->out_data[0];
 
-        /* mSBC decoder is configured as instance 0 in bt_voice_rely_common_open(). */
+        /* mSBC decoder is configured as instance 0 in bt_voice_relay_common_open(). */
         bts2_msbc_decode_ext(&pbss_t, sco_idx);
         if (240 != pbss_t.dst_len_used)
         {
@@ -443,7 +443,7 @@ static uint8_t bt_voice_rely_msbc_decode(uint8_t sco_idx)
     return 0;
 }
 
-static void bt_voice_rely_uplink_process(uint8_t *fifo, uint16_t size)
+static void bt_voice_relay_uplink_process(uint8_t *fifo, uint16_t size)
 {
     if (pt_bt_voice->state == 0)
     {
@@ -465,12 +465,12 @@ static void bt_voice_rely_uplink_process(uint8_t *fifo, uint16_t size)
     }
 }
 
-static uint8_t bt_voice_rely_msbc_reencode_to_payload(uint8_t sco_idx, uint8_t *pcm, uint8_t *payload)
+static uint8_t bt_voice_relay_msbc_reencode_to_payload(uint8_t sco_idx, uint8_t *pcm, uint8_t *payload)
 {
     BTS2S_SBC_STREAM  pbss_t;
     uint8_t msbc_sn[4] = {0x08, 0x38, 0xC8, 0xF8};
 
-    /* mSBC codec is configured as instance 0 in bt_voice_rely_common_open(). */
+    /* mSBC codec is configured as instance 0 in bt_voice_relay_common_open(). */
     (void)sco_idx;
 
     memset(payload, 0, AUDIO_BT_VOICE_MSBC_IN_LEN);
@@ -487,7 +487,7 @@ static uint8_t bt_voice_rely_msbc_reencode_to_payload(uint8_t sco_idx, uint8_t *
     pbss_t.pdst = &payload[2];
 
     bts2_msbc_encode_ext(&pbss_t, sco_idx);
-    // LOG_W("bt_voice_rely_msbc_reencode: %d sco_idx:%d\n", pt_bt_voice->sn_cnt[sco_idx], sco_idx);
+    // LOG_W("bt_voice_relay_msbc_reencode: %d sco_idx:%d\n", pt_bt_voice->sn_cnt[sco_idx], sco_idx);
     if ((AUDIO_MSBC_BUFFER_LEN != pbss_t.src_len_used) || (57 != pbss_t.dst_len_used))
     {
         LOG_W("3a_w msbc relay encode err src_len_use=%d,dst_len_use=%d\n", pbss_t.src_len_used, pbss_t.dst_len_used);
@@ -497,7 +497,7 @@ static uint8_t bt_voice_rely_msbc_reencode_to_payload(uint8_t sco_idx, uint8_t *
     return AUDIO_BT_VOICE_MSBC_IN_LEN;
 }
 
-static uint8_t bt_voice_rely_cvsd_reencode_to_payload(uint8_t sco_idx, uint8_t *pcm, uint8_t *payload)
+static uint8_t bt_voice_relay_cvsd_reencode_to_payload(uint8_t sco_idx, uint8_t *pcm, uint8_t *payload)
 {
 #if SOFT_CVSD_ENCODE
     audio_cvsd_t *pt_cvsd = &pt_bt_voice->cvsd_env[sco_idx];
@@ -510,7 +510,7 @@ static uint8_t bt_voice_rely_cvsd_reencode_to_payload(uint8_t sco_idx, uint8_t *
 
     for (int i = 0; i < BT_CVSD_FRAME_LEN; i++)
     {
-        payload[i] = bt_voice_rely_reverse_byte(payload[i]);
+        payload[i] = bt_voice_relay_reverse_byte(payload[i]);
     }
 
     return BT_CVSD_FRAME_LEN;
@@ -521,13 +521,13 @@ static uint8_t bt_voice_rely_cvsd_reencode_to_payload(uint8_t sco_idx, uint8_t *
 #endif
 }
 
-static uint8_t bt_voice_rely_reencode_and_send(uint8_t sco_idx, uint32_t local_datahdr, uint32_t peer_datahdr)
+static uint8_t bt_voice_relay_reencode_and_send(uint8_t sco_idx, uint32_t local_datahdr, uint32_t peer_datahdr)
 {
     rt_uint32_t putnum;
     uint8_t packet[LCPU2HCPU_DATA_HEADER + AUDIO_BT_VOICE_MSBC_IN_LEN];
     sco_data_t *pt_dn_data = &pt_bt_voice->dn_data[sco_idx];
     uint8_t payload_len;
-    uint8_t peer_idx = bt_voice_rely_sco_get_peer_idx(sco_idx);
+    uint8_t peer_idx = bt_voice_relay_sco_get_peer_idx(sco_idx);
     uint8_t  peer_state = pt_bt_voice->sco_state[peer_idx];
 
     if (rt_ringbuffer_space_len(g_sco_ipc.pt_mic2bt_rbf) < sizeof(packet))
@@ -546,11 +546,11 @@ static uint8_t bt_voice_rely_reencode_and_send(uint8_t sco_idx, uint32_t local_d
 
     if (pt_bt_voice->air_mod[peer_idx] == CVSD_MODE)
     {
-        payload_len = bt_voice_rely_cvsd_reencode_to_payload(peer_idx, &pt_dn_data->out_data[0], &packet[LCPU2HCPU_DATA_HEADER]);
+        payload_len = bt_voice_relay_cvsd_reencode_to_payload(peer_idx, &pt_dn_data->out_data[0], &packet[LCPU2HCPU_DATA_HEADER]);
     }
     else
     {
-        payload_len = bt_voice_rely_msbc_reencode_to_payload(peer_idx, &pt_dn_data->out_data[0], &packet[LCPU2HCPU_DATA_HEADER]);
+        payload_len = bt_voice_relay_msbc_reencode_to_payload(peer_idx, &pt_dn_data->out_data[0], &packet[LCPU2HCPU_DATA_HEADER]);
     }
 
     if (payload_len != AUDIO_BT_VOICE_MSBC_IN_LEN)
@@ -570,7 +570,7 @@ static uint8_t bt_voice_rely_reencode_and_send(uint8_t sco_idx, uint32_t local_d
 }
 
 
-void bt_voice_rely_downlink_process(uint8_t is_ready)
+void bt_voice_relay_downlink_process(uint8_t is_ready)
 {
     rt_uint32_t getnum;
     uint8_t size = 64;
@@ -590,7 +590,7 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
             getnum = rt_ringbuffer_get(g_sco_ipc.pt_bt2speaker_rbf, (uint8_t *)&datahdr, 4);
             if (getnum == 4)
             {
-                find_hdr = bt_voice_rely_chk_datahdr(datahdr);
+                find_hdr = bt_voice_relay_chk_datahdr(datahdr);
             }
             else
             {
@@ -601,8 +601,8 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
         if (find_hdr == 1)
         {
             bt_sco_data_hdr *sco_hdr = (bt_sco_data_hdr *)&datahdr;
-            // LOG_I("bt_voice_rely_downlink_process 0x%2x", sco_hdr->scohdl);
-            uint8_t sco_path = bt_voice_rely_sco_get_idx_from_hdl(sco_hdr->scohdl);
+            // LOG_I("bt_voice_relay_downlink_process 0x%2x", sco_hdr->scohdl);
+            uint8_t sco_path = bt_voice_relay_sco_get_idx_from_hdl(sco_hdr->scohdl);
             sco_data_t *pt_dn_data;
 
             uint8_t sco_state = pt_bt_voice->sco_state[sco_path];
@@ -620,7 +620,7 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
 
             if (pt_dn_data->is_used == 0)
             {
-                bt_voice_rely_sco_get_param(sco_path);
+                bt_voice_relay_sco_get_param(sco_path);
                 pt_dn_data->is_used = 1;
             }
 
@@ -629,18 +629,18 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
 
             if (getnum == sco_hdr->length)
             {
-                uint32_t peer_datahdr = bt_voice_rely_make_peer_datahdr(sco_path, datahdr);
+                uint32_t peer_datahdr = bt_voice_relay_make_peer_datahdr(sco_path, datahdr);
 
                 if (pt_bt_voice->air_mod[sco_path] == CVSD_MODE)
                 {
-                    bt_voice_rely_cvsd_decode(sco_path);
+                    bt_voice_relay_cvsd_decode(sco_path);
                 }
                 else
                 {
-                    bt_voice_rely_msbc_decode(sco_path);
+                    bt_voice_relay_msbc_decode(sco_path);
                 }
 
-                bt_voice_rely_reencode_and_send(sco_path, datahdr, peer_datahdr);
+                bt_voice_relay_reencode_and_send(sco_path, datahdr, peer_datahdr);
             }
             else
             {
@@ -655,7 +655,7 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
     }
 }
 
-static uint8_t bt_voice_rely_get_open_sco_count(void)
+static uint8_t bt_voice_relay_get_open_sco_count(void)
 {
     uint8_t i;
     uint8_t count = 0;
@@ -671,7 +671,7 @@ static uint8_t bt_voice_rely_get_open_sco_count(void)
     return count;
 }
 
-static void bt_voice_rely_common_open(void)
+static void bt_voice_relay_common_open(void)
 {
     if (NULL == pt_bt_voice)
     {
@@ -684,25 +684,25 @@ static void bt_voice_rely_common_open(void)
     }
 }
 
-void bt_voice_rely_open_sco(uint8_t sco_idx, uint32_t samplerate)
+void bt_voice_relay_open_sco(uint8_t sco_idx, uint32_t samplerate)
 {
     uint8_t i;
     uint8_t air_mod;
 
     RT_ASSERT(sco_idx < BT_SCO_MAX_NUM);
 
-    bt_voice_rely_common_open();
+    bt_voice_relay_common_open();
 
     air_mod = (samplerate == 8000) ? CVSD_MODE : TRANS_MODE;
 
     if (pt_bt_voice->sco_state[sco_idx])
     {
-        LOG_I("bt_voice_rely_open_sco idx=%d already open, mode=%d,state=%d\n", sco_idx, pt_bt_voice->air_mod[sco_idx], pt_bt_voice->state);
+        LOG_I("bt_voice_relay_open_sco idx=%d already open, mode=%d,state=%d\n", sco_idx, pt_bt_voice->air_mod[sco_idx], pt_bt_voice->state);
         return;
     }
 
 #if SOFT_CVSD_ENCODE
-    bt_voice_rely_cvsd_init(sco_idx);
+    bt_voice_relay_cvsd_init(sco_idx);
 #endif
     if (air_mod == CVSD_MODE)
     {
@@ -720,7 +720,7 @@ void bt_voice_rely_open_sco(uint8_t sco_idx, uint32_t samplerate)
     bts2_msbc_encode_cfg_ext(sco_idx);
 
 
-    LOG_I("bt_voice_rely_open_sco idx=%d,open=%d,mode=%d,state=%d\n", sco_idx, bt_voice_rely_get_open_sco_count(), pt_bt_voice->air_mod[sco_idx], pt_bt_voice->state);
+    LOG_I("bt_voice_relay_open_sco idx=%d,open=%d,mode=%d,state=%d\n", sco_idx, bt_voice_relay_get_open_sco_count(), pt_bt_voice->air_mod[sco_idx], pt_bt_voice->state);
 
     if (0 == pt_bt_voice->state)
     {
@@ -733,20 +733,20 @@ void bt_voice_rely_open_sco(uint8_t sco_idx, uint32_t samplerate)
     }
 }
 
-void bt_voice_rely_open(uint16_t sco_hdl, uint32_t samplerate)
+void bt_voice_relay_open(uint16_t sco_hdl, uint32_t samplerate)
 {
-    uint8_t sco_idx = bt_voice_rely_sco_get_idx_from_hdl(sco_hdl);
+    uint8_t sco_idx = bt_voice_relay_sco_get_idx_from_hdl(sco_hdl);
 
     if (sco_idx >= BT_SCO_MAX_NUM)
     {
-        LOG_I("bt_voice_rely_open invalid sco_hdl=0x%x, idx=%d\n", sco_hdl, sco_idx);
+        LOG_I("bt_voice_relay_open invalid sco_hdl=0x%x, idx=%d\n", sco_hdl, sco_idx);
         return;
     }
 
-    bt_voice_rely_open_sco(sco_idx, samplerate);
+    bt_voice_relay_open_sco(sco_idx, samplerate);
 }
 
-void bt_voice_rely_close_sco(uint8_t sco_idx)
+void bt_voice_relay_close_sco(uint8_t sco_idx)
 {
     if (sco_idx >= BT_SCO_MAX_NUM)
     {
@@ -759,7 +759,7 @@ void bt_voice_rely_close_sco(uint8_t sco_idx)
     }
 
 #if SOFT_CVSD_ENCODE
-    bt_voice_rely_cvsd_deinit(sco_idx);
+    bt_voice_relay_cvsd_deinit(sco_idx);
 #endif
     if (pt_bt_voice->dn_data[sco_idx].is_used && pt_bt_voice->sco_num > 0)
     {
@@ -772,9 +772,9 @@ void bt_voice_rely_close_sco(uint8_t sco_idx)
     pt_bt_voice->up_data.hav_data[sco_idx] = 0;
     pt_bt_voice->sco_state[sco_idx] = 0;
     pt_bt_voice->air_mod[sco_idx] = 0;
-    LOG_I("bt_voice_rely_close_sco idx=%d,open=%d\n", sco_idx, bt_voice_rely_get_open_sco_count());
+    LOG_I("bt_voice_relay_close_sco idx=%d,open=%d\n", sco_idx, bt_voice_relay_get_open_sco_count());
 
-    if (bt_voice_rely_get_open_sco_count() == 0)
+    if (bt_voice_relay_get_open_sco_count() == 0)
     {
         pt_bt_voice->state = 0;
         pt_bt_voice->send_enable = 0;
@@ -782,21 +782,21 @@ void bt_voice_rely_close_sco(uint8_t sco_idx)
     }
 }
 
-void bt_voice_rely_close(uint16_t sco_hdl)
+void bt_voice_relay_close(uint16_t sco_hdl)
 {
     if (pt_bt_voice)
     {
-        uint8_t sco_idx = bt_voice_rely_sco_get_idx_from_hdl(sco_hdl);
+        uint8_t sco_idx = bt_voice_relay_sco_get_idx_from_hdl(sco_hdl);
 
         if (sco_idx >= BT_SCO_MAX_NUM)
         {
             return;
         }
 
-        bt_voice_rely_close_sco(sco_idx);
-        if (bt_voice_rely_get_open_sco_count() == 0)
+        bt_voice_relay_close_sco(sco_idx);
+        if (bt_voice_relay_get_open_sco_count() == 0)
         {
-            bt_voice_rely_hcpu_2_lcpu_ipc_audio_notify();
+            bt_voice_relay_hcpu_2_lcpu_ipc_audio_notify();
             audio_mem_free(pt_bt_voice->p_uplink_pool);
             audio_mem_free(pt_bt_voice);
             pt_bt_voice = NULL;
@@ -804,7 +804,7 @@ void bt_voice_rely_close(uint16_t sco_hdl)
     }
 }
 
-uint8_t bt_voice_rely_is_ready(void)
+uint8_t bt_voice_relay_is_ready(void)
 {
     if (pt_bt_voice)
     {
@@ -813,7 +813,7 @@ uint8_t bt_voice_rely_is_ready(void)
     return 0;
 }
 
-int bt_voice_rely_audiopath_init(void)
+int bt_voice_relay_audiopath_init(void)
 {
     uint16_t ringbuffer_len;
     uint8_t sco_num = BT_SCO_MAX_NUM;
@@ -840,22 +840,22 @@ int bt_voice_rely_audiopath_init(void)
     return 0;
 }
 
-void bt_voice_rely_hcpu_2_lcpu_ipc_audio_notify(void)
+void bt_voice_relay_hcpu_2_lcpu_ipc_audio_notify(void)
 {
-    LOG_I("bt_voice_rely_hcpu_2_lcpu_ipc_audio_notify");
+    LOG_I("bt_voice_relay_hcpu_2_lcpu_ipc_audio_notify");
     ipc_queue_write(sys_hl_bt_audio_queue, NULL, 0, 0);//stop notify
 }
 
 /*every bt packet trigger*/
-// int32_t bt_voice_rely_hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
+// int32_t bt_voice_relay_hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 // {
-//     // LOG_I("bt_voice_rely_hl_bt_audio_queue_rx_ind");
+//     // LOG_I("bt_voice_relay_hl_bt_audio_queue_rx_ind");
 //     // bt_rx_event_to_audio_server();
-//     bt_voice_rely_downlink_process(1);
+//     bt_voice_relay_downlink_process(1);
 //     return 0;
 // }
 
-int bt_voice_rely_init(void)
+int bt_voice_relay_init(void)
 {
     // ipc_queue_cfg_t q_cfg;
 
@@ -864,20 +864,20 @@ int bt_voice_rely_init(void)
     // q_cfg.tx_buf_addr = (uint32_t)NULL;
     // q_cfg.tx_buf_addr_alias = (uint32_t)NULL;
     // q_cfg.rx_buf_addr = (uint32_t)NULL;
-    // q_cfg.rx_ind = bt_voice_rely_hl_bt_audio_queue_rx_ind;
+    // q_cfg.rx_ind = bt_voice_relay_hl_bt_audio_queue_rx_ind;
     // q_cfg.user_data = 0;
 
     // sys_hl_bt_audio_queue = ipc_queue_init(&q_cfg);
-    // LOG_I("bt_voice_rely_init: 0x%2x", sys_hl_bt_audio_queue);
+    // LOG_I("bt_voice_relay_init: 0x%2x", sys_hl_bt_audio_queue);
 
     // RT_ASSERT(IPC_QUEUE_INVALID_HANDLE != sys_hl_bt_audio_queue);
 
     // ipc_queue_open(sys_hl_bt_audio_queue);
 
-    bt_voice_rely_audiopath_init();
+    bt_voice_relay_audiopath_init();
     return 0;
 }
 
-INIT_COMPONENT_EXPORT(bt_voice_rely_init);
+INIT_COMPONENT_EXPORT(bt_voice_relay_init);
 
 #endif

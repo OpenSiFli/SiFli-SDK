@@ -58,7 +58,7 @@
 #include "audio_server_internal.h"
 
 #ifdef CFG_BT_VOICE_RELAY
-    #include "audio_bt_voice_rely.h"
+    #include "audio_bt_voice_relay.h"
 #endif
 /* ---------------------audio server config start-------------------------- */
 #undef audio_mem_malloc
@@ -3649,9 +3649,9 @@ void audio_server_entry()
             if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
 #ifdef CFG_BT_VOICE_RELAY
-                if (bt_voice_rely_is_ready())
+                if (bt_voice_relay_is_ready())
                 {
-                    bt_voice_rely_downlink_process(1);
+                    bt_voice_relay_downlink_process(1);
                 }
                 else
 #endif
@@ -3694,9 +3694,9 @@ void audio_btdownlink_entry()
             if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
 #ifdef CFG_BT_VOICE_RELAY
-                if (bt_voice_rely_is_ready())
+                if (bt_voice_relay_is_ready())
                 {
-                    bt_voice_rely_downlink_process(1);
+                    bt_voice_relay_downlink_process(1);
                 }
                 else
 #endif
