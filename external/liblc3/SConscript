@@ -2,11 +2,14 @@ import os
 from building import *
 
 objs = []
-cwd  = GetCurrentDir()
-list = os.listdir(cwd)
+cwd = GetCurrentDir()
 
-for item in list:
-    if os.path.isfile(os.path.join(cwd, item, 'SConscript')):
-        objs = objs + SConscript(os.path.join(item, 'SConscript'))
+if not GetDepend('ZBT'):
+    items = os.listdir(cwd)
+
+    for item in items:
+        sconscript = os.path.join(cwd, item, 'SConscript')
+        if os.path.isfile(sconscript):
+            objs = objs + SConscript(os.path.join(item, 'SConscript'))
 
 Return('objs')

@@ -1,10 +1,13 @@
 from building import *
 
 cwd = GetCurrentDir()
-src = Glob('*.c')
+src = []
 CPPPATH = [cwd, os.path.join(cwd, '..', 'include')]
 
-if not ('ZBT' in BuildOptions and BuildOptions['ZBT'] != 0):
+group = []
+
+if not GetDepend('ZBT'):
+    src = Glob('*.c')
     group = DefineGroup('google_lc3', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')
