@@ -2623,6 +2623,8 @@ static void hwdecode_flush(AVCodecContext *avctx)
 #endif /*USING_JPEG_DEC*/
 
 #ifdef HAL_JPEGD_MODULE_ENABLED
+#include "drv_epic.h"
+
 av_cold int ff_mjpeg_hwdecode_init(AVCodecContext *avctx)
 {
     MJpegDecodeContext *s = avctx->priv_data;
