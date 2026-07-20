@@ -23,10 +23,6 @@
 #include "audio_bt_voice_lc3swb.h"
 
 
-#ifdef CFG_BT_VOICE_RELAY
-    #include "audio_bt_voice_rely.h"
-#endif
-
 #define DBG_TAG           "audio"
 #define DBG_LVL           AUDIO_DBG_LVL
 #include "log.h"
@@ -759,15 +755,6 @@ void _hcpu_2_lcpu_ipc_audio_notify()
 int32_t _hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 {
     LOG_D("_hl_bt_audio_queue_rx_ind");
-
-#ifdef CFG_BT_VOICE_RELAY
-    if (bt_voice_rely_is_ready())
-    {
-        bt_voice_rely_downlink_process(1);
-        return 0;
-    }
-#endif
-
     bt_rx_event_to_audio_server();
     return 0;
 }

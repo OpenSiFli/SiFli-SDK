@@ -57,7 +57,9 @@
 #include "drv_audprc.h"
 #include "audio_server_internal.h"
 
-
+#ifdef CFG_BT_VOICE_RELAY
+    #include "audio_bt_voice_rely.h"
+#endif
 /* ---------------------audio server config start-------------------------- */
 #undef audio_mem_malloc
 #undef audio_mem_free
@@ -3644,9 +3646,19 @@ void audio_server_entry()
 #endif
             }
 
-            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK) && hfp->tx_count && hfp->is_busy)
+            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
-                bt_voice_downlink_process(1);
+#ifdef CFG_BT_VOICE_RELAY
+                if (bt_voice_rely_is_ready())
+                {
+                    bt_voice_rely_downlink_process(1);
+                }
+                else
+#endif
+                    if (hfp->tx_count && hfp->is_busy)
+                    {
+                        bt_voice_downlink_process(1);
+                    }
             }
         }
     }
@@ -3679,14 +3691,24 @@ void audio_btdownlink_entry()
                 rt_event_send(&get_server()->event, AUDIO_SERVER_EVENT_DOWN_END);
             }
 #ifdef BLUETOOTH
-            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK) && is_started)
+            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
-                audio_tick_in(AUDIO_DNLINK_TIME);
-                bt_voice_uplink_send();
+#ifdef CFG_BT_VOICE_RELAY
+                if (bt_voice_rely_is_ready())
+                {
+                    bt_voice_rely_downlink_process(1);
+                }
+                else
+#endif
+                    if (is_started)
+                    {
+                        audio_tick_in(AUDIO_DNLINK_TIME);
+                        bt_voice_uplink_send();
 
-                bt_voice_downlink_process(server->is_bt_3a);
-                audio_tick_out(AUDIO_DNLINK_TIME);
-                audio_dnlink_time_print();
+                        bt_voice_downlink_process(server->is_bt_3a);
+                        audio_tick_out(AUDIO_DNLINK_TIME);
+                        audio_dnlink_time_print();
+                    }
             }
 #endif
         }

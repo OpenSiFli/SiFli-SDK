@@ -605,7 +605,8 @@ void bt_voice_rely_downlink_process(uint8_t is_ready)
             uint8_t sco_path = bt_voice_rely_sco_get_idx_from_hdl(sco_hdr->scohdl);
             sco_data_t *pt_dn_data;
 
-            if (sco_path >= BT_SCO_MAX_NUM)
+            uint8_t sco_state = pt_bt_voice->sco_state[sco_path];
+            if (sco_path >= BT_SCO_MAX_NUM || !sco_state)
             {
                 LOG_I("invalid sco path %d\n", sco_path);
                 continue;
