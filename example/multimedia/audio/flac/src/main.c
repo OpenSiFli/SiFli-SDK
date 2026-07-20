@@ -42,6 +42,8 @@ static uint32_t flac_stack[FLAC_STACK_SIZE / sizeof(uint32_t)];
 static uint32_t g_record_seconds;
 
 static uint8_t drop_noise_cnt;
+static uint8_t *g_pcm_buf;
+static uint32_t g_pcm_len, g_pcm_cap;
 
 static struct rt_thread flac_play_thread;
 static uint32_t flac_play_stack[FLAC_STACK_SIZE / sizeof(uint32_t)];
@@ -49,16 +51,20 @@ static char g_flac_play_path[128];
 
 static int record_callback(audio_server_callback_cmt_t cmd, void *callback_userdata, uint32_t reserved)
 {
-    int fd = (int)(intptr_t)callback_userdata;
+    (void)callback_userdata;
     if (cmd == as_callback_cmd_data_coming)
     {
+        audio_server_coming_data_t *p = (audio_server_coming_data_t *)reserved;
         if (drop_noise_cnt < 20)
         {
             drop_noise_cnt++;
             return 0;
         }
-        audio_server_coming_data_t *p = (audio_server_coming_data_t *)reserved;
-        write(fd, (uint8_t *)p->data, p->data_len);
+        if (g_pcm_len + p->data_len <= g_pcm_cap)
+        {
+            memcpy(g_pcm_buf + g_pcm_len, p->data, p->data_len);
+            g_pcm_len += p->data_len;
+        }
     }
     return 0;
 }
@@ -77,20 +83,21 @@ static int mic_record_to_file(uint32_t seconds)
     pa.read_cache_size      = 0;
     pa.write_cache_size     = 2048;
     drop_noise_cnt = 0;
-
-    fd = open(MIC_PCM_FILE, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY);
-    if (fd < 0)
+    g_pcm_cap = seconds * 16000 * 2;
+    g_pcm_len = 0;
+    g_pcm_buf = rt_malloc(g_pcm_cap);
+    if (!g_pcm_buf)
     {
-        rt_kprintf("flac: open %s failed\n", MIC_PCM_FILE);
+        rt_kprintf("flac: malloc %u failed\n", g_pcm_cap);
         return -1;
     }
 
     audio_client_t client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa,
-                                       record_callback, (void *)(intptr_t)fd);
+                                       record_callback, NULL);
     if (!client)
     {
         rt_kprintf("flac: audio_open record failed\n");
-        close(fd);
+        rt_free(g_pcm_buf);
         return -1;
     }
 
@@ -102,8 +109,19 @@ static int mic_record_to_file(uint32_t seconds)
     }
 
     audio_close(client);
+
+    fd = open(MIC_PCM_FILE, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY);
+    if (fd < 0)
+    {
+        rt_kprintf("flac: open %s failed\n", MIC_PCM_FILE);
+        rt_free(g_pcm_buf);
+        return -1;
+    }
+    write(fd, g_pcm_buf, g_pcm_len);
     close(fd);
-    rt_kprintf("flac: record done -> %s\n", MIC_PCM_FILE);
+    rt_free(g_pcm_buf);
+    g_pcm_buf = NULL;
+    rt_kprintf("flac: record done -> %s (%u bytes)\n", MIC_PCM_FILE, g_pcm_len);
     return 0;
 }
 
