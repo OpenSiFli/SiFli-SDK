@@ -290,7 +290,7 @@ static void bt_hfp_relay_clcc_timeout(void *parameter)
 {
     if (BT_HFP_RELAY_CLCC_STATUS_START == g_hfp_relay_clcc_process_status)
     {
-        bt_interface_get_remote_ph_num(g_hfp_relay_ctx.hf_channel);
+        bt_interface_get_ph_num_by_id(g_hfp_relay_ctx.hf_channel);
     }
     else
     {
@@ -413,7 +413,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
             ctx->pending_ag_make_call = 1;
-            bt_interface_hf_out_going_call(g_hfp_relay_ctx.hf_channel, at_arg->payload_len, at_arg->payload);
+            bt_interface_hf_out_going_call_by_id(g_hfp_relay_ctx.hf_channel, at_arg->payload_len, at_arg->payload);
         }
         else
         {
@@ -425,7 +425,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
     {
         if (BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel)
         {
-            bt_interface_start_hf_answer_req_send(ctx->hf_channel);
+            bt_interface_start_hf_answer_req_send_by_id(ctx->hf_channel);
         }
         break;
     }
@@ -433,7 +433,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
     {
         if (BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel)
         {
-            bt_interface_handup_call(ctx->hf_channel);
+            bt_interface_handup_call_by_id(ctx->hf_channel);
         }
         break;
     }
@@ -443,7 +443,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         char key = at_arg->payload_len ? at_arg->payload[0] : 0;
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && key)
         {
-            bt_interface_start_dtmf_req_send(ctx->hf_channel, key);
+            bt_interface_start_dtmf_req_send_by_id(ctx->hf_channel, key);
         }
         break;
     }
@@ -452,7 +452,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
-            bt_interface_set_speaker_volume(ctx->hf_channel, at_arg->payload[0]);
+            bt_interface_set_speaker_volume_by_id(ctx->hf_channel, at_arg->payload[0]);
 #if defined(AUDIO_USING_MANAGER)
             audio_server_set_private_volume(AUDIO_TYPE_BT_VOICE, at_arg->payload[0]);
 #endif
@@ -465,7 +465,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) &&
                 (BT_HFP_RELAY_INVALID_CHANNEL != ctx->ag_channel))
         {
-            bt_interface_get_remote_call_status(ctx->hf_channel);
+            bt_interface_get_remote_call_status_by_id(ctx->hf_channel);
         }
         else
         {
@@ -493,7 +493,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if (BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel)
         {
-            bt_interface_get_ph_num(ctx->hf_channel);
+            bt_interface_get_ph_num_by_id(ctx->hf_channel);
         }
         else
         {
@@ -506,7 +506,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
-            bt_interface_hfp_set_extern_cmd(ctx->hf_channel, at_arg->payload, at_arg->payload_len);
+            bt_interface_hfp_set_extern_cmd_by_id(ctx->hf_channel, at_arg->payload, at_arg->payload_len);
             bt_interface_make_call_res(ctx->ag_channel, BTS2_SUCC);
         }
         else
@@ -520,7 +520,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
-            bt_interface_hf_update_battery(ctx->hf_channel, at_arg->payload[0]);
+            bt_interface_hf_update_battery_by_id(ctx->hf_channel, at_arg->payload[0]);
         }
         break;
     }
