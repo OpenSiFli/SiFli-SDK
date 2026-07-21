@@ -66,7 +66,7 @@
         "regions": [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00400000", 
+                "max_size": "0x01000000", 
                 "tags": [
                     "PSRAM_DATA"
                 ]
