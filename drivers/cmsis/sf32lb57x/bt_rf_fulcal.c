@@ -3221,7 +3221,7 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     }
 
     //oslo calibration
-    uint32_t gpadc_cfg, gpadc_ctrl1, gpadc_ctrl2;
+    uint32_t gpadc_cfg1, gpadc_cfg2, gpadc_ctrl1, gpadc_ctrl2;
     uint16_t adc_value;
     uint16_t max_adc_value = 0;
     uint8_t  fc[79];
@@ -3258,7 +3258,8 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_bt_rfc->EDR_CAL_REG1 |= 0x10 << BT_RFC_EDR_CAL_REG1_BRF_OSLO_BM_LV_Pos ;
 
     //save gpadc setting
-    gpadc_cfg   = hwp_gpadc->ADC_CFG_REG1;
+    gpadc_cfg1  = hwp_gpadc->ADC_CFG_REG1;
+    gpadc_cfg2  = hwp_gpadc->ADC_CFG_REG2;
     gpadc_ctrl1 = hwp_gpadc->ADC_CTRL_REG;
     gpadc_ctrl2 = hwp_gpadc->ADC_CTRL_REG2;
 
@@ -3266,20 +3267,17 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_gpadc->ADC_CFG_REG1 |= GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   | \
                                GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         | \
                                GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
-
+    hwp_gpadc->ADC_CFG_REG2  |= GPADC_ADC_CFG_REG2_ANAU_GPADC_LDO_SW_EN;
     hwp_gpadc->ADC_CTRL_REG  &= ~GPADC_ADC_CTRL_REG_DATA_SAMP_DLY;
-    hwp_gpadc->ADC_CTRL_REG  |= 7 << GPADC_ADC_CTRL_REG_DATA_SAMP_DLY_Pos;
+    hwp_gpadc->ADC_CTRL_REG  |= GPADC_ADC_CTRL_REG_UNSIGNED_RSLT | 3 << GPADC_ADC_CTRL_REG_DATA_SAMP_DLY_Pos;
 
     //hwp_gpadc->ADC_CTRL_REG2 &= ~GPADC_ADC_CTRL_REG2_CONV_WIDTH;
     //hwp_gpadc->ADC_CTRL_REG2 |= 252 << GPADC_ADC_CTRL_REG2_CONV_WIDTH_Pos;
     //hwp_gpadc->ADC_CTRL_REG2 &= ~GPADC_ADC_CTRL_REG2_SAMP_WIDTH;
     //hwp_gpadc->ADC_CTRL_REG2 |= 239 << GPADC_ADC_CTRL_REG2_SAMP_WIDTH_Pos;
-    hwp_gpadc->ADC_CTRL_REG2 = (252 << GPADC_ADC_CTRL_REG2_CONV_WIDTH_Pos) | (239 << GPADC_ADC_CTRL_REG2_SAMP_WIDTH_Pos);
+    hwp_gpadc->ADC_CTRL_REG2 = (100 << GPADC_ADC_CTRL_REG2_CONV_WIDTH_Pos) | (95 << GPADC_ADC_CTRL_REG2_SAMP_WIDTH_Pos);
     hwp_gpadc->ADC_SLOT0_REG |= GPADC_ADC_SLOT0_REG_SLOT_EN;
-    hwp_gpadc->ADC_SLOT1_REG &= ~(GPADC_ADC_SLOT1_REG_SLOT_EN | GPADC_ADC_SLOT2_REG_SLOT_EN |
-                                  GPADC_ADC_SLOT3_REG_SLOT_EN | GPADC_ADC_SLOT4_REG_SLOT_EN |
-                                  GPADC_ADC_SLOT5_REG_SLOT_EN | GPADC_ADC_SLOT6_REG_SLOT_EN |
-                                  GPADC_ADC_SLOT7_REG_SLOT_EN);
+//    hwp_gpadc->ADC_SLOT1_REG &= ~GPADC_ADC_SLOT1_REG_SLOT_EN;
 //    hwp_gpadc->ADC_SLOT2_REG &= ~GPADC_ADC_SLOT2_REG_SLOT_EN;
 //    hwp_gpadc->ADC_SLOT3_REG &= ~GPADC_ADC_SLOT3_REG_SLOT_EN;
 //    hwp_gpadc->ADC_SLOT4_REG &= ~GPADC_ADC_SLOT4_REG_SLOT_EN;
@@ -3411,7 +3409,8 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
 
     hwp_bt_rfc->OSLO_REG &= ~BT_RFC_OSLO_REG_BRF_OSLO_FCAL_EN_LV ;
     //restore gpadc setting
-    hwp_gpadc->ADC_CFG_REG1  = gpadc_cfg   ;
+    hwp_gpadc->ADC_CFG_REG1  = gpadc_cfg1   ;
+    hwp_gpadc->ADC_CFG_REG2  = gpadc_cfg2   ;
     hwp_gpadc->ADC_CTRL_REG  = gpadc_ctrl1 ;
     hwp_gpadc->ADC_CTRL_REG2 = gpadc_ctrl2 ;
     //hwp_hpsys_cfg->ANAU_CR &= ~HPSYS_CFG_ANAU_CR_EN_BG;
@@ -3425,29 +3424,19 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
 
     //hwp_bt_rfc->CAL_ADDR_REG2 &= 0xffff;
     //hwp_bt_rfc->CAL_ADDR_REG2 += reg_addr << 16;
-    /*
+
     for (i = 0; i < 79; i++)
     {
         //store bttx cal result
         reg_data = ((idac_tbl_tx_3g[i] << BT_RFC_EDR_CAL_REG1_BRF_EDR_VCO_IDAC_LV_Pos) + (capcode_tbl_tx_3g[i] << BT_RFC_EDR_CAL_REG1_BRF_EDR_VCO_PDX_LV_Pos) + \
                     (fc[i] << BT_RFC_EDR_CAL_REG1_BRF_OSLO_FC_LV_Pos)               + (bm[i] << BT_RFC_EDR_CAL_REG1_BRF_OSLO_BM_LV_Pos)) ;
         reg_data |= 0x6 << BT_RFC_EDR_CAL_REG1_BRF_TRF_EDR_TMXCAP_SEL_LV_Pos ;
-                uint32_t d0,d1,d2;
-
-        d0 = (dpsk_gain[i] >> 1) & 0x1;
-        d0 = d0 << 15;
-        d1 = (dpsk_gain[i] >> 1) & 0x2;
-        d1 = d1 << 18;
-        d2 = (dpsk_gain[i] >> 1) & 0x1c;
-        d2 = d2 << 23;
-        reg_data |= d0 | d1 | d2;
 
         //use 0x44 dig gain for all frequency
         //reg_data |= 1<<19;
         write_memory(reg_addr + BT_RFC_MEM_BASE, reg_data);
         reg_addr += 4;
     }
-    */ //temp commect out
 
     free(idac_tbl);
     free(capcode_tbl);
@@ -4100,6 +4089,10 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
         write_memory(BT_RFC_MEM_BASE + 0x798, 0x00CF00B8);
         write_memory(BT_RFC_MEM_BASE + 0x79C, 0x010400E8);
         write_memory(BT_RFC_MEM_BASE + 0x7a0, 0x01480124);
+
+        //iq tx reg setting
+        hwp_bt_rfc->TBB_REG &= ~BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV;
+        hwp_bt_rfc->TBB_REG |= 0x3 << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos;
 
         hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV;
 
@@ -4958,9 +4951,11 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     hwp_bt_phy->TX_CTRL &= ~BT_PHY_TX_CTRL_MAC_MOD_CTRL_EN;
     hwp_bt_phy->TX_CTRL |= BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR;
     hwp_bt_rfc->TRF_EDR_REG1 &=  ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV;
-    hwp_bt_mac->AESCNTL |= 1 << BT_MAC_AESCNTL_FORCE_IQ_PWR_Pos | 7 << BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL_Pos |
-                           BT_MAC_AESCNTL_FORCE_IQ_ANA_LEVEL | BT_MAC_AESCNTL_FORCE_IQ_PWR_LEVEL ;
-    hwp_bt_phy->TX_DC_CAL_CFG2 = 0x80;
+    hwp_bt_mac->AESCNTL |= (1 << BT_MAC_AESCNTL_FORCE_IQ_PWR_Pos) | (7 << BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL_Pos) |
+                           (BT_MAC_AESCNTL_FORCE_IQ_ANA_LEVEL) | (2 << BT_MAC_AESCNTL_FORCE_IQ_ANA_LEVEL_VAL_Pos) ;
+
+    hwp_bt_phy->TX_DC_CAL_CFG0 |= 0x80 << BT_PHY_TX_DC_CAL_CFG0_TX_DC_CAL_GAIN0_Pos;
+    hwp_bt_rfc->RSVD_REG1 |= 0x2;
 #endif
     HAL_RCC_LCPU_SetDiv(div, -1, -1);
     return reg_addr;
@@ -5431,8 +5426,6 @@ void bt_rf_cal(void)
     hwp_bt_rfc->TRF_EDR_REG1 |= (0xB << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMX_LDO_VREF_SEL_LV_Pos) |
                                 (0x1 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXCAS_SEL_LV_Pos);
 
-    hwp_bt_rfc->TBB_REG &= ~BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV;
-    hwp_bt_rfc->TBB_REG |= 0x3 << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos;
 
     /*
     hwp_bt_rfc->IQ_PWR_REG1_0 = 0xd4000000;
@@ -5497,8 +5490,8 @@ void bt_rf_cal(void)
 
     hwp_bt_phy->SFC_CFG1 = 0x94c2100;
 
-    //hwp_bt_phy->DEMOD_CFG9 |= BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD;
-    hwp_bt_phy->DEMOD_CFG9 |= (2 << BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD_Pos);
+    hwp_bt_phy->DEMOD_CFG9 &= ~BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD;
+    hwp_bt_phy->DEMOD_CFG9 |= 0x2 << BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD_Pos;
     hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_DC;
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos);
     hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_ERR;
@@ -5530,7 +5523,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.1.13_2859";
+char *g_rf_ful_ver = "1.2.0_3580";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;
@@ -5583,6 +5576,7 @@ bt_rf_tx_pwr_t rf_iq_value_table[] =
     {10, 0x2B468001},
     {11, 0x2F870001},
     {12, 0x33C78001},
+    {13, 0x33C78001},
 };
 bt_rf_tx_pwr_t rf_polar_value_table[] =
 {

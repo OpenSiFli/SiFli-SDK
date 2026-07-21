@@ -129,7 +129,20 @@ static uint8_t rf_tx_power_cs_get(int8_t pwr)
 static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
 {
     uint8_t ret = 0;
-    uint8_t power_level = (uint8_t)(pwr + 3);
+    uint8_t power_level;
+
+    if ((pwr >= -3) && (pwr < 13))
+    {
+        power_level = (uint8_t)(pwr + 3);
+    }
+    else if (pwr < -3)
+    {
+        power_level = 0; //min power level
+    }
+    else
+    {
+        power_level = 15; //max power level
+    }
 
 
     if (ret == 0)

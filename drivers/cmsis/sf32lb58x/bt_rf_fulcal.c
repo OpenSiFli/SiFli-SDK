@@ -5064,7 +5064,7 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.0.3.0_3472";
+char *g_rf_ful_ver = "1.1.0_3582";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;

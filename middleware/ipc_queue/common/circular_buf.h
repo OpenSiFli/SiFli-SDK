@@ -26,7 +26,7 @@ extern "C" {
 #define CB_GET_PTR_IDX(ptr_idx_mirror)        (((ptr_idx_mirror) >> CB_PTR_IDX_OFFSET) & CB_PTR_IDX_MASK)
 #define CB_GET_PTR_MIRROR(ptr_idx_mirror)     ((ptr_idx_mirror) & CB_PTR_MIRROR_MASK)
 
-#if defined(SOC_SF32LB58X) && defined(LCPU_CONFIG_V2)
+#if defined(SOC_SF32LB58X) && defined(LCPU_CONFIG_V2) && !defined(BF0_ACPU)
 #define DBG_CIRCULAR_BUFFER
 #endif
 #define DBG_CIRCULAR_MAGIC 0xDBCBE123
