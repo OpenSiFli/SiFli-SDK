@@ -2,7 +2,7 @@
     {"version": "2"},
     {
         "mem": "flash3", 
-        "base": "0x12000000", 
+        "base": "0x14000000", 
         "regions": [
             {
                 "offset": "0x00020000", 
