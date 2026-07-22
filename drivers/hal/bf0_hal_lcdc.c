@@ -81,6 +81,12 @@ static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc);
 
 #define WAIT_LCDC_SINGLE_BUSY(lcdc) while((lcdc)->Instance->LCD_SINGLE & LCD_IF_LCD_SINGLE_LCD_BUSY)
 #define GET_LCDC_SYSID(lcdc) ((LCDC1 == ((lcdc)->Instance))?CORE_ID_HCPU:CORE_ID_LCPU)
+#ifdef hwp_lcdc2
+    #define GET_LCDC_RCC_MOD(lcdc) ((LCDC1 == ((lcdc)->Instance))?RCC_MOD_LCDC1:RCC_MOD_LCDC2)
+#else
+    #define GET_LCDC_RCC_MOD(lcdc) ((LCDC1 == ((lcdc)->Instance))?RCC_MOD_LCDC1:RCC_MOD_INVALID)
+#endif
+
 #define LCDC_DELAY_NS(ns) HAL_Delay_us(((ns)/1000) + 1)
 
 //write single command
@@ -207,16 +213,22 @@ uint8_t HAL_LCDC_GetPixelSize(HAL_LCDC_PixelFormat color_format)
 
 static uint32_t LCDC_GetIntfClkFreq(LCDC_HandleTypeDef *lcdc)
 {
-    uint32_t lcdc_clk;
-
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-
 #ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
-    uint32_t div = (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk) >> LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos;
-    HAL_LCDC_ASSERT(div > 0);
-    return lcdc_clk / div;
+    uint32_t lcdc_clk = HAL_RCC_GetModuleFreq(GET_LCDC_RCC_MOD(lcdc));
+    if (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL)
+    {
+        lcdc_clk = lcdc_clk * 2 / 5;
+    }
+    else
+    {
+        uint32_t div = (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk) >> LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos;
+        HAL_LCDC_ASSERT(div > 0);
+        lcdc_clk = lcdc_clk / div;
+    }
+
+    return lcdc_clk;
 #else
-    return  lcdc_clk;
+    return  HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
 #endif /* LCD_IF_LCD_CONF_INTF_CLK_DIV */
 }
 
@@ -438,7 +450,41 @@ static HAL_StatusTypeDef SelectIntf(LCDC_HandleTypeDef *lcdc, HAL_LCDC_IF_TypeDe
 
     return HAL_OK;
 }
+#ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
+static void LCDC_SetIntfClockDivider(LCDC_HandleTypeDef *lcdc, uint32_t freq)
+{
+    uint32_t lcdc_clk = HAL_RCC_GetModuleFreq(GET_LCDC_RCC_MOD(lcdc));
+    uint32_t intf_div = 1;
+    uint32_t use_div2p5 = 0;
+    uint32_t total_div = (lcdc_clk + (freq - 1)) / freq;
+    LCDC_InitTypeDef *init = &lcdc->Init;
 
+
+    //The minimum divider of the interfaces is 1
+    if ((HAL_LCDC_IS_SPI_IF(init->lcd_itf) && (LCDC_INTF_SPI_DCX_DDR_4DATA != lcdc->Init.lcd_itf)))
+    {
+#define MAX_INTF_DIV (LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk>>LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos)
+        if (total_div <= MAX_INTF_DIV) intf_div = total_div;
+        else if (total_div % 5 == 0) use_div2p5 = 1;
+        else if (total_div % 6 == 0) intf_div = 3;
+        else intf_div = 1;
+    }
+    else //The minimum divider of the interfaces is 2
+    {
+        if (total_div % 5 == 0) use_div2p5 = 1;
+        else if (total_div % 6 == 0) intf_div = 3;
+        else intf_div = 1;
+    }
+
+    MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, intf_div << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
+    if (use_div2p5)
+        lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+    else
+        lcdc->Instance->LCD_CONF &= ~LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+
+    lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV_UPDATE;
+}
+#endif
 
 static HAL_StatusTypeDef SetFreq(LCDC_HandleTypeDef *lcdc, uint32_t freq)
 {
@@ -448,17 +494,15 @@ static HAL_StatusTypeDef SetFreq(LCDC_HandleTypeDef *lcdc, uint32_t freq)
 
     HAL_LCDC_ASSERT(lcdc);
     HAL_LCDC_ASSERT(freq > 0);
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-    //uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
+
 
     init = &lcdc->Init;
     init->freq = freq;
 
 #ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
-    //Set global divider to 1 to acting like previous LCDC.
-    MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, 1 << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
-    lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV_UPDATE;
+    LCDC_SetIntfClockDivider(lcdc, freq);
 #endif /* LCD_IF_LCD_CONF_INTF_CLK_DIV */
+    lcdc_clk = LCDC_GetIntfClkFreq(lcdc);
 
     if (HAL_LCDC_IS_SPI_IF(init->lcd_itf))
     {
@@ -2094,8 +2138,7 @@ static void LCDC_TransErrCallback(LCDC_HandleTypeDef *lcdc, HAL_StatusTypeDef er
 
 static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc)
 {
-    uint32_t lcdc_clk_Hz = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-    // uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
+    uint32_t lcdc_clk_Hz = LCDC_GetIntfClkFreq(lcdc);
     JDI_LCD_CFG *jdi_cfg = &(lcdc->Init.cfg.jdi);
 
     uint32_t max_col, max_line;
@@ -2522,7 +2565,7 @@ static HAL_StatusTypeDef DSI_VideoMode(LCDC_HandleTypeDef *lcdc)
     uint32_t Fpclk;   //DPI pixel clk in MHz
     uint32_t Fpclk_e; //Expected DPI pixel clk which exactly matchs with DSI video(unit: MHz)
     uint32_t Flbclk;  //DSI 1 lane byte clk in MHz
-    uint32_t lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc)) / 1000000;
+    uint32_t lcdc_clk = LCDC_GetIntfClkFreq(lcdc) / 1000000;
     uint32_t DPI_div; //DPI clock divider
 
 
@@ -2610,18 +2653,7 @@ static HAL_StatusTypeDef LCDC_HW_Init(LCDC_HandleTypeDef *lcdc)
     RCC_MODULE_TYPE mod = RCC_MOD_INVALID;
 
     HAL_LCDC_ASSERT(lcdc);
-    if (lcdc->Instance == hwp_lcdc1)
-    {
-        mod = RCC_MOD_LCDC1;
-    }
-    else
-    {
-#ifdef hwp_lcdc2
-        mod = RCC_MOD_LCDC2;
-#else
-        HAL_LCDC_ASSERT(0);
-#endif /* hwp_lcdc2 */
-    }
+    mod = GET_LCDC_RCC_MOD(lcdc);
     HAL_RCC_EnableModule(mod);
     HAL_RCC_ResetModule(mod);
 
@@ -3908,7 +3940,7 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_READ_DATAS_START(LCDC_HandleTypeDef *lcd
 
     HAL_LCDC_ASSERT(lcdc);
     HAL_LCDC_ASSERT(freq > 0);
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
+    lcdc_clk = LCDC_GetIntfClkFreq(lcdc);
 
     uint32_t clk_div;
 
@@ -6219,20 +6251,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_Resume(LCDC_HandleTypeDef *lcdc)
         //Re-initialize LCDC regs(DSI regs too)
         LCDC_InitTypeDef *init;
         RCC_MODULE_TYPE mod = RCC_MOD_INVALID;
-
-        if (lcdc->Instance == hwp_lcdc1)
-        {
-            mod = RCC_MOD_LCDC1;
-        }
-        else
-        {
-#ifdef hwp_lcdc2
-            mod = RCC_MOD_LCDC2;
-#else
-            HAL_LCDC_ASSERT(0);
-#endif /* hwp_lcdc2 */
-        }
-
+        mod = GET_LCDC_RCC_MOD(lcdc);
         HAL_RCC_ResetModule(mod);
 
         init = &lcdc->Init;

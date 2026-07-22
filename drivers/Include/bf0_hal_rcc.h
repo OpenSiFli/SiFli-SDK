@@ -119,6 +119,12 @@ extern "C" {
 #define RCC_CLK_MPI_SD_DLL2         2
 #define RCC_CLK_MPI_SD_DLL3         3
 
+// LCDC clock
+#define RCC_CLK_LCDC_SYSCLK         0
+#define RCC_CLK_LCDC_DLL2           1
+#define RCC_CLK_LCDC_HRC48          2
+#define RCC_CLK_LCDC_DLL3           3
+
 // For All  core
 #define  RCC_CLK_MOD_SYS        0
 
@@ -131,7 +137,9 @@ extern "C" {
 #else
 #define  RCC_CLK_MOD_FLASH1     HPSYS_RCC_CSR_SEL_MPI1_Pos
 #define  RCC_CLK_MOD_FLASH2     HPSYS_RCC_CSR_SEL_MPI2_Pos
+#ifdef HPSYS_RCC_CSR_SEL_MPI3_Pos
 #define  RCC_CLK_MOD_FLASH3     HPSYS_RCC_CSR_SEL_MPI3_Pos
+#endif /*HPSYS_RCC_CSR_SEL_MPI3_Pos*/
 #ifdef HPSYS_RCC_CSR_SEL_MPI4_Pos
 #define  RCC_CLK_MOD_FLASH4     HPSYS_RCC_CSR_SEL_MPI4_Pos
 #endif
@@ -147,7 +155,9 @@ extern "C" {
 #define  RCC_CLK_MOD_PSRAM      RCC_CLK_MOD_PSRAM1
 
 #define  RCC_CLK_MOD_SDMMC      HPSYS_RCC_CSR_SEL_SDMMC_Pos
-
+#ifdef HPSYS_RCC_CSR_SEL_LCDC_Pos
+#define  RCC_CLK_MOD_LCDC       HPSYS_RCC_CSR_SEL_LCDC_Pos
+#endif /* HPSYS_RCC_CSR_SEL_LCDC_Pos */
 #endif
 
 // For LCPU
