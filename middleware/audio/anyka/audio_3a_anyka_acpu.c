@@ -18,9 +18,9 @@ static uint8_t              all_mic_channels;
 static void                 *p_far;
 static void                 *p_near;
 
-
 void *acpu_call_hcpu_malloc(uint32_t size);
 void acpu_call_hcpu_free(void *p);
+
 static T_VOID my_printf(T_pCSTR fmt, ...)
 {
 #if 0
@@ -61,8 +61,13 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
 
     sd_cb = _SD_GetPlatformDependentList();
 
+#ifdef SOC_SF32LB58X
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
     sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
     sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     sd_cb->printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     sd_cb->flushDCache = t4_flush_dcache_range;
 
@@ -75,8 +80,13 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     T_ECHO_IN_INFO echo_in;
     memset(&echo_in, 0, sizeof(echo_in));
     echo_in.strVersion = AUDIO_FILTER_VERSION_STRING;
-    echo_in.cb_fun.Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
-    echo_in.cb_fun.Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#ifdef SOC_SF32LB58X
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     echo_in.cb_fun.Printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     echo_in.cb_fun.flushDCache = t4_flush_dcache_range;
     echo_in.cb_fun.notify = my_notify;
