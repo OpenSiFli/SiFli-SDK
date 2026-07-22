@@ -328,7 +328,7 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         arg.const_far = audio_mem_malloc(sizeof(factory_far) + 1);
         RT_ASSERT(arg.const_far);
         strcpy(arg.const_far, factory_far);
-        arg.const_near = audio_mem_malloc(strlen(factory_near_1mic) + 1);
+        arg.const_near = audio_mem_malloc(strlen(near) + 1);
         RT_ASSERT(arg.const_near);
         strcpy(arg.const_near, near);
         disable_parameter(arg.const_near, is_bt_voice, disable_uplink_agc);
