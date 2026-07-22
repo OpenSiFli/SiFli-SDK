@@ -231,6 +231,15 @@ common_projects:
   - path: example/bt/test_example/project
     boards: *bt_boards
 
+  - path: example/bt/a2dp_sharing/project
+    boards: *bt_boards
+
+  - path: example/bt/hfp_relay/project
+    boards: *bt_boards
+
+  - path: example/bt/music_sink_with_relay/project
+    boards: *bt_boards
+
   - path: example/cherryusb/device/audio_v1_mic/project
     boards: *devkit-boards
 
