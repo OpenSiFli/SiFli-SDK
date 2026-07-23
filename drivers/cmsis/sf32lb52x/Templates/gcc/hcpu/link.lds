@@ -291,6 +291,11 @@ SECTIONS
     __app_font_end__ = .;
 
     . = ALIGN(4);
+    __SerialTranClientExport_start__ = .;
+    KEEP(*(SerialTranClientExport))
+    __SerialTranClientExport_end__ = .;
+
+    . = ALIGN(4);
     __SerialTranExport_start__ = .;
     KEEP(*(SerialTranExport))
     __SerialTranExport_end__ = .;
