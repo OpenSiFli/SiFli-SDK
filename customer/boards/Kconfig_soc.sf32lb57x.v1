@@ -22,6 +22,9 @@ choice SOC_SF32LB57X_PART
     config SOC_SF32LB575YBBN6
         bool "SF32LB575YBBN6"
         select SOC_PACKAGE_QFN80
+    config SOC_SF32LB577UDNN6
+        bool "SF32LB577UDNN6"
+        select SOC_PACKAGE_QFN68
     config SOC_SF32LB577VD776
         bool "SF32LB577VD776"
         select SOC_PACKAGE_BGA112

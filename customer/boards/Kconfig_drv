@@ -686,7 +686,7 @@ menu "On-chip Peripherals"
                 depends on BF0_HCPU && !BF0_ACPU
                 default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
                 default y if SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
-                default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6
+                default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6 || SOC_SF32LB577UDNN6
                 default y if SOC_SF32LB57GYD7N6
                 default n
                 if BSP_ENABLE_MPI1
@@ -699,7 +699,7 @@ menu "On-chip Peripherals"
                         # decided by BSP_PSRAM1_PKG_TYPEx_MPI_MODE in Kconfig_soc.sf32lb57x.common
                         default BSP_MPI1_MODE_5 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
                         default BSP_MPI1_MODE_3 if SOC_SF32LB577VD776 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
-                        default BSP_MPI1_MODE_3 if SOC_SF32LB57GYD7N6
+                        default BSP_MPI1_MODE_3 if SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
                         default BSP_MPI1_MODE_0 if SOC_SF32LB579V6EN6
                         default BSP_MPI1_MODE_0
 
@@ -781,7 +781,7 @@ menu "On-chip Peripherals"
                     config BSP_QSPI1_MEM_SIZE
                         int "MPI1 Mem Size (MB)"
                         default 4  if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
-                        default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6
+                        default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
                         default 8  if SOC_SF32LB579V6EN6 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
                         default 8
                 endif        
