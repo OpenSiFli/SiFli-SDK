@@ -1,6 +1,6 @@
 # BT Music Transfor Example
 
-Source code path: example/bt/a2dp_transfor
+Source code path: example/bt/a2dp_sharing
 
 {#Platform_music_src}
 ## Supported Platforms

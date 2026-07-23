@@ -1,6 +1,6 @@
 # BT music transfor示例
 
-源码路径：example/bt/a2dp_transfor
+源码路径：example/bt/a2dp_sharing
 
 {#Platform_music_src}
 ## 支持的平台
