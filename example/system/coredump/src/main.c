@@ -26,6 +26,12 @@
 
 #define FS_ROOT "root"
 
+#if defined(BSP_USING_SDMMC2)
+    #define APP_SD_DEV_NAME "sd1"
+#elif defined(BSP_USING_SDMMC1)
+    #define APP_SD_DEV_NAME "sd0"
+#endif /* BSP_USING_SDMMC2 */
+
 typedef struct
 {
     uint8_t is_power_on;
@@ -131,9 +137,35 @@ static void ble_app_advertising_start(void)
 
 int mnt_init(void)
 {
+#if defined(BSP_USING_SDIO) && defined(APP_SD_DEV_NAME)
+    /* eMMC/SD board: file system lives on the eMMC, must create a block
+     * device from the FS partition before mounting. */
+    uint16_t wait_ticks = 400; /* 8s: 400 * 20ms */
+    rt_device_t sd_dev = RT_NULL;
+
+    rt_kprintf("wait %s device ready...\n", APP_SD_DEV_NAME);
+    while (wait_ticks--)
+    {
+        rt_thread_mdelay(20);
+        sd_dev = rt_device_find(APP_SD_DEV_NAME);
+        if (sd_dev)
+        {
+            rt_kprintf("%s device ready\n", APP_SD_DEV_NAME);
+            break;
+        }
+    }
+    if (!sd_dev)
+    {
+        rt_kprintf("%s device not ready, skip fs mount\n", APP_SD_DEV_NAME);
+        return RT_EOK;
+    }
+
+    rt_mmcsd_blk_device_create(APP_SD_DEV_NAME, FS_ROOT, FS_REGION_OFFSET >> 9, FS_REGION_SIZE >> 9);
+#else
     // rt_kprintf("FS_REGION_START_ADDR = %p\n", FS_REGION_START_ADDR);
     // rt_kprintf("FS_REGION_SIZE = %p\n", FS_REGION_SIZE);
     register_mtd_device(FS_REGION_START_ADDR, FS_REGION_SIZE, FS_ROOT);
+#endif /* BSP_USING_SDIO && APP_SD_DEV_NAME */
 
     if (dfs_mount(FS_ROOT, "/", "elm", 0, 0) == 0) // fs exist
     {

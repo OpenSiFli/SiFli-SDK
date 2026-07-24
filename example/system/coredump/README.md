@@ -38,8 +38,10 @@ scons --board=sf32lb52-lcd_n16r8
 程序上电后，当发生死机情况时(可手动assert触发死机)会出现如下log表明将死机时的现场数据进行保存
 ![alt text](asserts/assert.png)
 重新复位开发板，打开手机 sifli ble APP。找到名称形如 `COREDUMP-xx-xx-xx-xx-xx-xx`的蓝牙进行连接，再通过手机APP将死机现场数据进行导出即可
+
 ![alt text](asserts/ble.png)
 导出的过程中会有对应大量log出现
 ![alt text](asserts/dump.png)
-最后在手机端会生成一个bin文件，可以将这个文件发送到电脑使用Context2Mem.exe工具转换.bin文件为dump文件http://docs.sifli.cc/test_doc/methods/%E6%95%B4%E6%9C%BAlog%E5%AF%BC%E5%87%BA%E4%B8%8E%E8%BD%AC%E6%8D%A2.html
+
+最后在手机端会生成一个bin文件，可以将这个文件发送到电脑使用Context2Mem.exe工具转换.bin文件为dump文件。Context2Mem.exe工具的路径在`SDK\tools\crash_dump_analyser\script`
 

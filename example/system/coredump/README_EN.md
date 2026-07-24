@@ -1,53 +1,46 @@
-# Coredump Example
-Source path: `example/system/coredump`
+# coredump Example
+Source path: example/system/coredump
 
 ## Overview
-- This example demonstrates how to save crash information. It also supports connecting to a mobile phone over BLE and transferring crash context data. After power-on, the device broadcasts with a name like `COREDUMP-xx-xx-xx-xx-xx-xx`.
+- This example demonstrates the process of saving crash information, and supports connecting to a phone via BLE to transfer the crash-scene data to the phone. After power-on, the device broadcasts a name in the form `COREDUMP-xx-xx-xx-xx-xx-xx`.
 
 ## Supported Platforms
 Verified on the following platforms:
-- `sf32lb52-lcd_n16r8`
-- `sf32lb52-lcd_a128r16`
+- sf32lb52-lcd_n16r8
+- sf32lb52-lcd_a128r16
 
 ## Configuration and menuconfig
-This example supports four mode combinations:
+The example supports four mode combinations:
 1) Partition mode, minidump disabled
 2) Partition mode, minidump enabled
 3) File mode, minidump disabled
 4) File mode, minidump enabled
-
-The default is mode 1 (Partition mode, minidump disabled). You can switch modes using the following settings.
-
-2) Partition mode, minidump enabled
+The default is 1. Partition mode, minidump disabled. You can change the mode with the following configurations:
+2. Partition mode, minidump enabled
 ![alt text](asserts/partition.png)
 ![alt text](asserts/mini_enable.png)
-
-3) File mode, minidump disabled
+3. File mode, minidump disabled
 ![alt text](asserts/file_mode.png)
 ![alt text](asserts/mini_disable.png)
-
-4) File mode, minidump enabled
+4. File mode, minidump enabled
 ![alt text](asserts/file_mode.png)
 ![alt text](asserts/mini_enable.png)
 
 ### Build and Flash
-Using `sf32lb52-lcd_n16r8` as an example, follow these steps to build and flash:
+Taking sf32lb52-lcd_n16r8 as an example, follow the steps below to build and flash.
 ```
 scons --board=sf32lb52-lcd_n16r8
 
 .\build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 ```
 
-## How to Use
-After power-on, when a crash occurs (you can manually trigger a crash with `assert`), logs like the following indicate that crash context data has been saved:
+## Using the Example
+After the program powers on, when a crash occurs (a crash can be triggered manually via assert), a log like the following appears, indicating that the crash-scene data is being saved.
 ![alt text](asserts/assert.png)
+Reset the development board again, open the SiFli BLE app on your phone, find the Bluetooth device with a name in the form `COREDUMP-xx-xx-xx-xx-xx-xx` and connect to it, then export the crash-scene data through the phone app.
 
-Reset the board, then open the SiFli BLE app on your phone. Find and connect to the Bluetooth device named like `COREDUMP-xx-xx-xx-xx-xx-xx`, then export the crash context data in the app:
 ![alt text](asserts/ble.png)
-
-During export, a large amount of corresponding logs will appear:
+During the export process, a large amount of corresponding logs will appear.
 ![alt text](asserts/dump.png)
 
-Finally, a `.bin` file is generated on the phone. Send this file to your PC and use `Context2Mem.exe` to convert the `.bin` file into a dump file:
-http://docs.sifli.cc/test_doc/methods/%E6%95%B4%E6%9C%BAlog%E5%AF%BC%E5%87%BA%E4%B8%8E%E8%BD%AC%E6%8D%A2.html
-
+Finally, a bin file is generated on the phone. You can send this file to a computer and use the Context2Mem.exe tool to convert the .bin file into a dump file. The Context2Mem.exe tool is located at `SDK\tools\crash_dump_analyser\script`.
