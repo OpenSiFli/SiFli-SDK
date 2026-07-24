@@ -536,8 +536,11 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
     if (!_lv_area_intersect(&clipped_output, output_coords, src_coords)) return;
 
     ax_color_u32.full = lv_color_to32(ax_color);
+    uint32_t color_mode = lv_img_2_epic_cf(src);
 
     if ((letter_op != NULL)
+            && (letter_op->desc.label.color_mode == color_mode)
+            && (letter_op->desc.label.opa == opa)
             && (letter_op->desc.label.r == ax_color_u32.ch.red)
             && (letter_op->desc.label.g == ax_color_u32.ch.green)
             && (letter_op->desc.label.b == ax_color_u32.ch.blue))
@@ -609,7 +612,7 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
         o->desc.label.p_letters = NULL;
         o->desc.label.letter_num = 0;
         o->desc.label.opa = opa;
-        o->desc.label.color_mode = lv_img_2_epic_cf(src);
+        o->desc.label.color_mode = color_mode;
         if ((LV_IMG_CF_ALPHA_2BIT == src->header.cf)
                 || (LV_IMG_CF_ALPHA_4BIT == src->header.cf)
                 || (LV_IMG_CF_ALPHA_8BIT == src->header.cf))

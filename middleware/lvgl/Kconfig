@@ -14,20 +14,6 @@ menu "SiFli extend"
                 bool "using Freetype Normal Lib"
         endchoice
 
-        choice
-            prompt "Select Freetype glyph bitmap bpp"
-            depends on LV_USING_FREETYPE_ENGINE
-            default FREETYPE_FONT_BPP_DEFAULT
-            config FREETYPE_FONT_BPP_DEFAULT
-                bool "use SoC default"
-            config FREETYPE_FONT_BPP_2
-                bool "A2 2 bpp"
-            config FREETYPE_FONT_BPP_4
-                bool "A4 4 bpp"
-            config FREETYPE_FONT_BPP_8
-                bool "A8 8 bpp"
-        endchoice
-
         menu "FreeType cache config"
             depends on LV_USING_FREETYPE_ENGINE
 
