@@ -44,37 +44,13 @@ typedef struct
 static rt_list_t app_mem_async_list;
 static struct rt_mutex mem_asyn_mutex;
 
-static bool app_mem_async_ptr_is_ram(const void *ptr)
-{
-    uintptr_t addr = (uintptr_t)ptr;
-
-    if (HCPU_IS_SRAM_ADDR(addr))
-    {
-        return true;
-    }
-
-#ifdef PSRAM_BASE
-    if (addr >= PSRAM_BASE && addr < (PSRAM_BASE + PSRAM_SIZE))
-    {
-        return true;
-    }
-#endif
-
-#ifdef PSRAM2_BASE_ADDR
-    if (addr >= PSRAM2_BASE_ADDR && addr < (PSRAM2_BASE_ADDR + PSRAM2_SIZE))
-    {
-        return true;
-    }
-#endif
-
-    return false;
-}
-
 static struct rt_memheap_item *app_mem_get_async_header(void *ptr)
 {
     struct rt_memheap_item *header;
 
-    if (!ptr || !app_mem_async_ptr_is_ram(ptr))
+    /* Validate the allocator header magic number instead of relying on a fixed address-window 
+    allowlist — SBus remap addresses may fall outside the PSRAM base/size range. */
+    if (!ptr)
     {
         return NULL;
     }
