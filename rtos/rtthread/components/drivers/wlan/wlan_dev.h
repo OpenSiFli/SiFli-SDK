@@ -43,7 +43,9 @@ typedef enum
     RT_WLAN_CMD_SET_COUNTRY,
     RT_WLAN_CMD_GET_COUNTRY,
     RT_WLAN_CMD_SET_MAC,
-    RT_WLAN_CMD_GET_MAC
+    RT_WLAN_CMD_GET_MAC,
+    RT_WLAN_CMD_P2P_GO_START,       /* start P2P GO */
+    RT_WLAN_CMD_P2P_GO_STOP,        /* stop P2P GO */
 } rt_wlan_cmd_t;
 
 typedef enum
@@ -462,6 +464,7 @@ struct rt_ap_info
     rt_bool_t hidden;
     rt_uint16_t channel;
     rt_wlan_security_t security;
+    rt_bool_t is_p2p_go;
 };
 
 struct rt_scan_info
@@ -496,6 +499,9 @@ struct rt_wlan_dev_ops
     rt_err_t (*wlan_get_mac)(struct rt_wlan_device *wlan, rt_uint8_t mac[]);
     int (*wlan_recv)(struct rt_wlan_device *wlan, void *buff, int len);
     int (*wlan_send)(struct rt_wlan_device *wlan, void *buff, int len);
+    rt_err_t (*wlan_p2p_go_start)(struct rt_wlan_device *wlan, struct rt_ap_info *ap_info);
+    rt_err_t (*wlan_p2p_go_stop)(struct rt_wlan_device *wlan);
+
 };
 
 /*
@@ -514,6 +520,8 @@ int rt_wlan_dev_get_rssi(struct rt_wlan_device *device);
  * wlan device ap interface
  */
 rt_err_t rt_wlan_dev_ap_start(struct rt_wlan_device *device, struct rt_wlan_info *info, const char *password, int password_len);
+rt_err_t rt_wlan_dev_p2p_go_start(struct rt_wlan_device *device, struct rt_wlan_info *info, const char *password, int password_len);
+rt_err_t rt_wlan_dev_p2p_go_stop(struct rt_wlan_device *device);
 rt_err_t rt_wlan_dev_ap_stop(struct rt_wlan_device *device);
 rt_err_t rt_wlan_dev_ap_deauth(struct rt_wlan_device *device, rt_uint8_t mac[6]);
 
@@ -576,8 +584,8 @@ rt_err_t rt_wlan_dev_report_data(struct rt_wlan_device *device, void *buff, int 
 /*
  * wlan device register interface
  */
-rt_err_t rt_wlan_dev_register(struct rt_wlan_device *wlan, const char *name, 
-    const struct rt_wlan_dev_ops *ops, rt_uint32_t flag, void *user_data);
+rt_err_t rt_wlan_dev_register(struct rt_wlan_device *wlan, const char *name,
+                              const struct rt_wlan_dev_ops *ops, rt_uint32_t flag, void *user_data);
 
 #ifdef __cplusplus
 }

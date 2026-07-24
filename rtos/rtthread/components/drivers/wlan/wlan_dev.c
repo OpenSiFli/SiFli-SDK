@@ -15,33 +15,33 @@
 
 #define DBG_TAG "WLAN.dev"
 #ifdef RT_WLAN_DEV_DEBUG
-#define DBG_LVL DBG_LOG
+    #define DBG_LVL DBG_LOG
 #else
-#define DBG_LVL DBG_INFO
+    #define DBG_LVL DBG_INFO
 #endif /* RT_WLAN_DEV_DEBUG */
 #include <rtdbg.h>
 
 #ifndef RT_DEVICE
-#define RT_DEVICE(__device) ((rt_device_t)__device)
+    #define RT_DEVICE(__device) ((rt_device_t)__device)
 #endif
 
 #define WLAN_DEV_LOCK(_wlan)      (rt_mutex_take(&(_wlan)->lock, RT_WAITING_FOREVER))
 #define WLAN_DEV_UNLOCK(_wlan)    (rt_mutex_release(&(_wlan)->lock))
 
 #if RT_WLAN_SSID_MAX_LENGTH < 1
-#error "SSID length is too short"
+    #error "SSID length is too short"
 #endif
 
 #if RT_WLAN_BSSID_MAX_LENGTH < 1
-#error "BSSID length is too short"
+    #error "BSSID length is too short"
 #endif
 
 #if RT_WLAN_PASSWORD_MAX_LENGTH < 1
-#error "password length is too short"
+    #error "password length is too short"
 #endif
 
 #if RT_WLAN_DEV_EVENT_NUM < 2
-#error "dev num Too little"
+    #error "dev num Too little"
 #endif
 
 rt_err_t rt_wlan_dev_init(struct rt_wlan_device *device, rt_wlan_mode_t mode)
@@ -153,6 +153,56 @@ rt_err_t rt_wlan_dev_ap_start(struct rt_wlan_device *device, struct rt_wlan_info
     ap_info.security = info->security;
 
     result = rt_device_control(RT_DEVICE(device), RT_WLAN_CMD_SOFTAP, &ap_info);
+    return result;
+}
+
+rt_err_t rt_wlan_dev_p2p_go_start(struct rt_wlan_device *device, struct rt_wlan_info *info, const char *password, int password_len)
+{
+    rt_err_t result = RT_EOK;
+    struct rt_ap_info ap_info;
+
+    if (device == RT_NULL)
+    {
+        return -RT_EIO;
+    }
+    if (info == RT_NULL)
+    {
+        return -RT_ERROR;
+    }
+
+    if ((password_len < 0) || (password_len >= RT_WLAN_PASSWORD_MAX_LENGTH) ||
+            (info->ssid.len >= RT_WLAN_SSID_MAX_LENGTH))
+    {
+        LOG_E("L:%d password or ssid is too long", __LINE__);
+        return -RT_ERROR;
+    }
+
+    rt_memset(&ap_info, 0, sizeof(struct rt_ap_info));
+    rt_memcpy(&ap_info.ssid, &info->ssid, sizeof(rt_wlan_ssid_t));
+    if (password != RT_NULL)
+    {
+        rt_memcpy(ap_info.key.val, password, password_len);
+    }
+    ap_info.key.len = password_len;
+    ap_info.hidden = info->hidden;
+    ap_info.channel = info->channel;
+    ap_info.security = info->security;
+    ap_info.is_p2p_go = RT_TRUE; /* Mark as P2P GO mode */
+
+    result = rt_device_control(RT_DEVICE(device), RT_WLAN_CMD_P2P_GO_START, &ap_info);
+    return result;
+}
+
+rt_err_t rt_wlan_dev_p2p_go_stop(struct rt_wlan_device *device)
+{
+    rt_err_t result = RT_EOK;
+
+    if (device == RT_NULL)
+    {
+        return -RT_EIO;
+    }
+
+    result = rt_device_control(RT_DEVICE(device), RT_WLAN_CMD_P2P_GO_STOP, RT_NULL);
     return result;
 }
 
@@ -740,6 +790,22 @@ static rt_err_t _rt_wlan_dev_control(rt_device_t dev, int cmd, void *args)
         LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, RT_WLAN_CMD_GET_MAC, "RT_WLAN_CMD_GET_MAC");
         if (wlan->ops->wlan_get_mac)
             err = wlan->ops->wlan_get_mac(wlan, mac);
+        break;
+    }
+    case RT_WLAN_CMD_P2P_GO_START:
+    {
+        struct rt_ap_info *ap_info = args;
+
+        LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, RT_WLAN_CMD_P2P_GO_START, "RT_WLAN_CMD_P2P_GO_START");
+        if (wlan->ops->wlan_p2p_go_start)
+            err = wlan->ops->wlan_p2p_go_start(wlan, ap_info);
+        break;
+    }
+    case RT_WLAN_CMD_P2P_GO_STOP:
+    {
+        LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, RT_WLAN_CMD_P2P_GO_STOP, "RT_WLAN_CMD_P2P_GO_STOP");
+        if (wlan->ops->wlan_p2p_go_stop)
+            err = wlan->ops->wlan_p2p_go_stop(wlan);
         break;
     }
     default:
