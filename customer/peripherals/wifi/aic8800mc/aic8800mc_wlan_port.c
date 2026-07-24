@@ -45,7 +45,6 @@ static rt_err_t aic8800mc_wlan_dev_scan(struct rt_wlan_device *wlan, struct rt_s
 {
     struct rwnx_hw *rwnx_hw;
     int ret;
-    rt_kprintf("1111111111111\n");
     if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
     {
         LOG_E("aic8800mc not ready for scan\n");
@@ -115,6 +114,75 @@ static rt_err_t aic8800mc_wlan_dev_softap(struct rt_wlan_device *wlan, struct rt
     LOG_E("aic8800mc softap not supported\n");
     return -RT_ENOSYS;
 }
+
+#ifdef AIC_ENABLE_P2P
+static rt_err_t aic8800mc_wlan_dev_p2p_go_start(struct rt_wlan_device *wlan, struct rt_ap_info *ap_info)
+{
+    struct rwnx_hw *rwnx_hw;
+    int ret;
+    char ssid[RT_WLAN_SSID_MAX_LENGTH + 1] = {0};
+    char password[RT_WLAN_PASSWORD_MAX_LENGTH + 1] = {0};
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for p2p\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    rt_memcpy(ssid, ap_info->ssid.val, ap_info->ssid.len);
+    ssid[ap_info->ssid.len] = '\0';
+
+    if (ap_info->key.len > 0)
+    {
+        rt_memcpy(password, ap_info->key.val, ap_info->key.len);
+        password[ap_info->key.len] = '\0';
+    }
+
+    ret = rwnx_send_fhcustmsg_start_p2p_req(rwnx_hw, ssid, password, 0);
+    if (ret)
+    {
+        LOG_E("p2p go start failed: %d\n", ret);
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+
+static rt_err_t aic8800mc_wlan_dev_p2p_go_stop(struct rt_wlan_device *wlan)
+{
+    struct rwnx_hw *rwnx_hw;
+    int ret;
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for p2p stop\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    ret = rwnx_send_fhcustmsg_stop_p2p_req(rwnx_hw);
+    if (ret)
+    {
+        LOG_E("p2p go stop failed: %d\n", ret);
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+#endif
 
 static rt_err_t aic8800mc_wlan_dev_disconnect(struct rt_wlan_device *wlan)
 {
@@ -282,6 +350,7 @@ static int aic8800mc_wlan_dev_recv(struct rt_wlan_device *wlan, void *buff, int 
 
 void aic8800mc_wlan_rx_data(void *buff, int len)
 {
+    /* single wlan device (wlan0) serves both STA and P2P/AP roles */
     aic8800mc_wlan_dev_recv(&aic8800mc_wlan_dev, buff, len);
 }
 
@@ -321,6 +390,13 @@ static const struct rt_wlan_dev_ops aic8800mc_wlan_ops =
     aic8800mc_wlan_dev_get_mac,
     aic8800mc_wlan_dev_recv,
     aic8800mc_wlan_dev_send,
+#ifdef AIC_ENABLE_P2P
+    aic8800mc_wlan_dev_p2p_go_start,
+    aic8800mc_wlan_dev_p2p_go_stop,
+#else
+    NULL,
+    NULL,
+#endif
 };
 
 void aic8800mc_wlan_report_event(rt_wlan_dev_event_t event, void *buff, int len)
@@ -362,37 +438,39 @@ void aic8800mc_wlan_report_scan_result(struct rt_wlan_info *info)
 int aic8800mc_wlan_init(void)
 {
     rt_err_t ret;
-    rt_memset(&aic8800mc_wlan_dev, 0, sizeof(aic8800mc_wlan_dev));
 
+    /*
+     * Single wlan device (wlan0) serves both STA and P2P/AP roles.
+     * The role is switched at runtime via rt_wlan_set_mode(), so the
+     * device is registered without RT_WLAN_FLAG_STA_ONLY/AP_ONLY.
+     */
+    rt_memset(&aic8800mc_wlan_dev, 0, sizeof(aic8800mc_wlan_dev));
     ret = rt_wlan_dev_register(&aic8800mc_wlan_dev,
                                WLAN_DEV_NAME,
                                &aic8800mc_wlan_ops,
-                               RT_WLAN_FLAG_STA_ONLY,
+                               0,
                                RT_NULL);
     if (ret != RT_EOK)
     {
         LOG_E("wlan dev register failed: %d\n", ret);
         return -1;
     }
-
     LOG_E("aic8800mc wlan device registered: %s\n", WLAN_DEV_NAME);
+
     return 0;
 }
 INIT_PRE_APP_EXPORT(aic8800mc_wlan_init);
 
-// int aic_wifi_device(void)
-// {
-//     rt_err_t rt_err = RT_EOK;
-
-//     rt_err = rt_device_register();
-// }
-// INIT_PRE_APP_EXPORT(aic_wifi_device);
 
 int aic8800mc_wifi_init(void)
 {
     rt_err_t ret;
-
     ret = rt_wlan_set_mode(WLAN_DEV_NAME, RT_WLAN_STATION);
+    if (ret != RT_EOK)
+    {
+        LOG_E("set_mode failed: %d\n", ret);
+        return -1;
+    }
     rt_kprintf("set_mode ret=%d\n", ret);
     return ret;
 }

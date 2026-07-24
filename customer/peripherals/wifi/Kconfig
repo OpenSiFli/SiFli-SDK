@@ -25,7 +25,16 @@ menuconfig WIFI_USING_AIC8800MC
                 config WIFI_INF_TYPE_UART
                     bool "SDIO interface uart"     
             endchoice
-            
+
+            config AIC_ENABLE_P2P
+                bool "Enable WiFi Direct (P2P) support"
+                default n
+                help
+                    The default boot-time mode is STA. To start a P2P GO,
+                    the application must first switch the wlan device to
+                    AP mode:
+                        rt_wlan_set_mode("wlan0", RT_WLAN_AP);
+
         endif
     endif
 

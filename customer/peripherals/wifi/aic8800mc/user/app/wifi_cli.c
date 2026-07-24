@@ -31,6 +31,18 @@
 #include "netdev.h"
 #include "netal_service.h"
 
+#ifdef AIC_ENABLE_P2P
+
+    #include <netdb.h>
+    #include <sys/socket.h>
+    #define P2P_ECHO_SERVER_PORT    8888
+    #define P2P_ECHO_BUF_SIZE       512
+
+#endif
+
+static rt_thread_t g_p2p_echo_tid = RT_NULL;
+
+
 typedef struct _cmd_entry
 {
     char *command;
@@ -447,6 +459,165 @@ static void cmd_wifi_sta_cfg(int argc, char **argv)
     }
 }
 
+// P2P (WiFi Direct) command handlers
+
+#ifdef AIC_ENABLE_P2P
+
+static void cmd_wifi_p2p_start(int argc, char **argv)
+{
+    int ret;
+    char *ssid, *passwd = NULL;
+
+    WIFI_NOT_ON_EXIT();
+
+    if (argc < 2)
+    {
+        DBG_APP_ERR("Usage: wifi_p2p_start SSID <PASSWORD>\n");
+        return;
+    }
+    ssid = argv[1];
+    if (argc > 2)
+        passwd = argv[2];
+
+    DBG_APP_INF("starting P2P GO: ssid=%s\n", ssid);
+    ret = rwnx_send_fhcustmsg_start_p2p_req(CLI_RWNX_HW, ssid, passwd, 0);
+    if (ret)
+    {
+        DBG_APP_ERR("start P2P GO fail: %d\n", ret);
+        return;
+    }
+    DBG_APP_INF("P2P GO starting...\n");
+}
+
+static void cmd_wifi_p2p_stop(int argc, char **argv)
+{
+    int ret;
+
+    WIFI_NOT_ON_EXIT();
+
+    DBG_APP_INF("stopping P2P GO\n");
+    ret = rwnx_send_fhcustmsg_stop_p2p_req(CLI_RWNX_HW);
+    if (ret)
+    {
+        DBG_APP_ERR("stop P2P GO fail: %d\n", ret);
+        return;
+    }
+    DBG_APP_INF("P2P GO stopped\n");
+}
+
+static void cmd_wifi_p2p_auto_go_start(int argc, char **argv)
+{
+    int ret;
+    const char *ssid = "DIRECT-SiFli";
+    const char *passwd = "12345678";
+
+    WIFI_NOT_ON_EXIT();
+
+    if (argc >= 2)
+        ssid = argv[1];
+    if (argc >= 3)
+        passwd = argv[2];
+
+    DBG_APP_INF("auto starting P2P GO: ssid=%s\n", ssid);
+    ret = rwnx_send_fhcustmsg_start_p2p_req(CLI_RWNX_HW, ssid, passwd, 0);
+    if (ret)
+    {
+        DBG_APP_ERR("auto start P2P GO fail: %d\n", ret);
+        return;
+    }
+    DBG_APP_INF("P2P GO auto starting...\n");
+}
+
+static void p2p_echo_server_thread(void *param)
+{
+    int server_fd, client_fd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_addr_len = sizeof(client_addr);
+    char buf[P2P_ECHO_BUF_SIZE];
+    int recv_len;
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0)
+    {
+        DBG_APP_ERR("p2p_echo: socket create failed\n");
+        goto exit;
+    }
+
+    /* allow immediate rebind after close */
+    int opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(P2P_ECHO_SERVER_PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        DBG_APP_ERR("p2p_echo: bind port %d failed\n", P2P_ECHO_SERVER_PORT);
+        closesocket(server_fd);
+        goto exit;
+    }
+
+    if (listen(server_fd, 1) < 0)
+    {
+        DBG_APP_ERR("p2p_echo: listen failed\n");
+        closesocket(server_fd);
+        goto exit;
+    }
+
+    DBG_APP_INF("P2P echo server listening on port %d, connect from phone app\n", P2P_ECHO_SERVER_PORT);
+
+    while (1)
+    {
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+        if (client_fd < 0)
+        {
+            DBG_APP_ERR("p2p_echo: accept failed\n");
+            continue;
+        }
+
+        DBG_APP_INF("P2P echo: client connected\n");
+
+        while (1)
+        {
+            recv_len = recv(client_fd, buf, sizeof(buf) - 1, 0);
+            if (recv_len <= 0)
+            {
+                DBG_APP_INF("P2P echo: client disconnected\n");
+                break;
+            }
+            buf[recv_len] = '\0';
+            DBG_APP_INF("P2P echo recv(%d): %s\n", recv_len, buf);
+
+            /* echo back */
+            send(client_fd, buf, recv_len, 0);
+        }
+        closesocket(client_fd);
+    }
+
+exit:
+    g_p2p_echo_tid = RT_NULL;
+}
+
+static void cmd_p2p_echo_test(int argc, char **argv)
+{
+    (void)argc;
+    (void)argv;
+
+    if (g_p2p_echo_tid)
+    {
+        DBG_APP_INF("P2P echo server already running\n");
+        return;
+    }
+
+    g_p2p_echo_tid = rt_thread_create("p2p_echo", p2p_echo_server_thread, NULL, 4096, RT_THREAD_PRIORITY_MAX - 3, 20);
+    if (g_p2p_echo_tid)
+        rt_thread_startup(g_p2p_echo_tid);
+}
+
+#endif /* AIC_ENABLE_P2P */
+
 #if 0
 static void cmd_http_request(int argc, char **argv)
 {
@@ -492,6 +663,13 @@ static const cmd_entry wifi_cli_cmd_list[] =
     {"ver", cmd_wifi_get_fw_version},
     {"reset", cmd_wifi_reset},
     {"sta_cfg", cmd_wifi_sta_cfg},
+#ifdef AIC_ENABLE_P2P
+    {"wifi_p2p_start", cmd_wifi_p2p_start},
+    {"wifi_p2p_stop", cmd_wifi_p2p_stop},
+    {"wifi_p2p_auto_go", cmd_wifi_p2p_auto_go_start},
+    {"p2p_echo_test", cmd_p2p_echo_test},
+#endif
+
 //    {"http_request", cmd_http_request},
 #if CONFIG_WLAN
     {"wifi_connect_bssid", cmd_wifi_connect_bssid},
@@ -513,17 +691,6 @@ static const cmd_entry wifi_cli_cmd_list[] =
 #endif
 #if defined(CONFIG_ENABLE_WPS_AP) && CONFIG_ENABLE_WPS_AP
     {"wifi_ap_wps", cmd_ap_wps},
-#endif
-#if CONFIG_ENABLE_P2P
-    {"wifi_p2p_start", cmd_wifi_p2p_start},
-    {"wifi_p2p_stop", cmd_wifi_p2p_stop},
-    {"wifi_p2p_auto_go", cmd_wifi_p2p_auto_go_start},
-    {"p2p_listen", cmd_p2p_listen},
-    {"p2p_find", cmd_p2p_find},
-    {"p2p_peers", cmd_p2p_peers},
-    {"p2p_info", cmd_p2p_info},
-    {"p2p_disconnect", cmd_p2p_disconnect},
-    {"p2p_connect", cmd_p2p_connect},
 #endif
 #endif
 #if CONFIG_CONCURRENT_MODE

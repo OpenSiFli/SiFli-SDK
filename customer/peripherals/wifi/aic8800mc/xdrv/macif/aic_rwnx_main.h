@@ -143,4 +143,29 @@ struct fhcustmsg_sta_cfg_cfm
     struct sta_info sta_info[8];
 };
 
+
+// P2P (WiFi Direct) message structures
+
+struct fhcustmsg_start_p2p_req
+{
+    uint8_t band;                      // 0: 2.4G, 1: 5G
+    uint8_t ssid[AP_SSID_BUF_MAX];     // P2P GO SSID (e.g. "DIRECT-xx")
+    uint8_t pw[AP_PSWD_BUF_MAX];       // P2P GO passphrase
+};
+
+// P2P status indication (matches firmware's struct custom_msg_ap_status_cfm format)
+struct fhcustmsg_p2p_status_ind
+{
+    uint8_t  status;                   // 0: P2P GO stopped, 1: P2P GO started
+    uint32_t ip;                       // P2P GO IP address
+    uint32_t gw;                       // Gateway (same as IP in P2P GO mode)
+    uint32_t mask;                     // Subnet mask
+};
+
+// AP/P2P GO client association indication (matches firmware's struct custom_msg_ap_assoc_sta_ind)
+struct fhcustmsg_ap_assoc_sta_ind
+{
+    uint8_t sta_addr[6];               // Client MAC address
+};
+
 #endif /* _AIC_RWNX_MAIN_H_ */
