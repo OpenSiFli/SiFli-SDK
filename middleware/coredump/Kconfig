@@ -79,7 +79,7 @@ if USING_COREDUMP
     if COREDUMP_MINIDUMP_ENABLED
         config COREDUMP_MINIDUMP_PART_NAME
             string "Minidump Partition Name"
-            default "coredump_min"
+            default "mindump"
     endif
 
     config USING_COREDUMP_EXT
