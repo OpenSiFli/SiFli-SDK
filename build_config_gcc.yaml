@@ -107,6 +107,7 @@ after_55x_boards: &after_55x_boards
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
+  - sf32lb57-spi-hdk_n16r4
 
 525_devkit_lcd_boards: &525_devkit_lcd_boards
   - sf32lb52-lcd_n16r8 
@@ -123,6 +124,7 @@ devkit_lcd_boards: &devkit_lcd_boards
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
+  - sf32lb57-spi-hdk_n16r4
 
 devkit-boards: &devkit-boards
   - sf32lb52-lcd_n16r8 
@@ -141,6 +143,7 @@ devkit-boards: &devkit-boards
   - sf32lb58-lcd_a128r32n1_dsi
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-core_n16r32n1
+  - sf32lb57-spi-hdk_n16r4
 
 
 # in alphabetical order
