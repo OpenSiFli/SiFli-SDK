@@ -135,6 +135,9 @@
 0x00008dc1 T bt_isr
 0x00009065 T bt_sco_data_handle_register
 0x0000bd39 T dm_isr
+0x0001d20d T ipc_queue_check_idle_rom
+0x0001d2e1 T ipc_queue_data_ind_rom
+0x0001d651 T ipc_queue_restore_all_rom
 0x0001fda5 T lc_bt_sco_data_recv
 0x00020b85 T lc_get_sco_para_ptr_for3sco
 0x00034a59 T libc_system_init
