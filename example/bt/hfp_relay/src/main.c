@@ -691,7 +691,7 @@ static int bt_hfp_service_notify_event_handle(bt_app_notify_data_t *msg)
             bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
             if ((0xffff != g_hfp_relay_ctx.hf_channel) && (0xffff != g_hfp_relay_ctx.ag_channel))
             {
-                bt_interface_get_remote_call_status(g_hfp_relay_ctx.hf_channel);
+                bt_interface_get_remote_call_status_by_id(g_hfp_relay_ctx.hf_channel);
             }
             else
             {
