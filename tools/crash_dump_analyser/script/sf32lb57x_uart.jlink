@@ -5,7 +5,7 @@ w4 0x40040000 0 //release lcpu in case
 
 w4 0x5000B008 1 //Switch to LCPU and halt it
 Sleep 500
-usb
+ip 127.0.0.1:19025
 H
 
 mem32 E000E100 8
@@ -14,7 +14,7 @@ mem32 E000E300 8
 
 w4 0x5000B008 0 //Switch to HCPU and halt it
 Sleep 500
-usb
+ip 127.0.0.1:19025
 H
 
 mem32 E000E100 8
