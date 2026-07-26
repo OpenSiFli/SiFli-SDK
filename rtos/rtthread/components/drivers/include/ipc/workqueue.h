@@ -93,6 +93,12 @@ struct rt_work
     struct rt_workqueue *workqueue;
 };
 
+/* kept for compatibility */
+struct rt_delayed_work
+{
+    struct rt_work work;
+};
+
 #ifdef RT_USING_HEAP
 /**
  * WorkQueue for DeviceDriver
@@ -108,6 +114,13 @@ rt_err_t rt_workqueue_cancel_work(struct rt_workqueue *queue, struct rt_work *wo
 rt_err_t rt_workqueue_cancel_work_sync(struct rt_workqueue *queue, struct rt_work *work);
 rt_err_t rt_workqueue_cancel_all_work(struct rt_workqueue *queue);
 rt_err_t rt_workqueue_urgent_work(struct rt_workqueue *queue, struct rt_work *work);
+
+/* API mapping for compatibility */
+rt_inline void rt_delayed_work_init(struct rt_delayed_work *delayed_work, void (*work_func)(struct rt_work *work, void *work_data),
+                                    void *work_data)
+{
+    rt_work_init(&delayed_work->work, work_func, work_data);
+}
 
 #ifdef RT_USING_SYSTEM_WORKQUEUE
 struct rt_workqueue *rt_workqueue_sysq(void);
