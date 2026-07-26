@@ -8,6 +8,7 @@
 + sf32lb52-lcd系列
 + sf32lb56-lcd系列
 + sf32lb58-lcd系列
++ sf32lb57-spi-hdk_n16r4
 
 ## 概述
 <!-- 例程简介 -->
@@ -50,11 +51,11 @@
 
 ### 硬件连接\PIN CONFIG
 
-以`SF32LB52_DevKit-LCD`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
+以`SF32LB52_DevKit-LCD`和`sf32lb57-spi_hdk_n16r4`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#ifdef SOC_SF32LB52X
+#if defined(SOC_SF32LB52X) ||defined(SF32LB57X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);
