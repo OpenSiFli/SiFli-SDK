@@ -1,4 +1,4 @@
-# BT music transfor示例
+# BT A2DP Sharing 示例
 
 源码路径：example/bt/a2dp_sharing
 
@@ -15,30 +15,30 @@
 
 ## 概述
 <!-- 例程简介 -->
-本例程演示作为a2dp中继设备，在同时连接手机和耳机的情况下，将手机播放的音乐通过中继设备转发到耳机播放，同时也能将耳机端的音乐控制命令转发给手机实现音乐控制（<span style="color: red;">不包括调音量</span>）。
+本例程演示 A2DP 音乐分享（sharing）功能：设备作为中继在同时连接手机和耳机的情况下，将手机播放的音乐分享到耳机播放，同时也能将耳机端的音乐控制命令转发给手机实现音乐控制（<span style="color: red;">不包括调音量</span>）。
 
 
 ## 例程的使用
 <!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
 对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
-例程开机会默认使能蓝牙，可以接受手机连接或主动发起对耳机的连接
+例程启动后会默认使能蓝牙，可以接受手机连接或主动发起对耳机的连接。
 
 1. 搜索蓝牙设备
-通过命令a2dp_trans inquiry start来搜索耳机类蓝牙设备，该命令只会上报搜到的COD的Major Class为0x000400的设备(Audio device)。
-搜索到的设备会以log “device [%s] searched”和“device COD is [%d], addr is xx:xx:xx:xx:xx:xx”的形式打印。
+通过命令 `a2dp_trans inquiry start` 来搜索耳机类蓝牙设备，该命令只会上报搜到的 COD 的 Major Class 为 0x000400 的设备（Audio device）。
+搜索到的设备会以 log “device [%s] searched” 和 “device COD is [%d], addr is xx:xx:xx:xx:xx:xx” 的形式打印。
 
 2. 连接蓝牙设备
-通过命令a2dp_trans conn [addr]来进行连接，addr将上面搜到设备的地址（xx:xx:xx:xx:xx:xx）打印值复制即可。
+通过命令 `a2dp_trans conn [addr]` 来进行连接，addr 将上面搜到设备的地址（xx:xx:xx:xx:xx:xx）打印值复制即可。
 如果已知晓耳机类蓝牙设备地址，可以不用进行搜索蓝牙设备，直接连接即可。
 
-3. 音乐转发
-1.单独连上手机的情况下播放音乐，中继设备不会出声音。
-2.单独连上耳机的情况下播放音乐，耳机设备不会出声音。
-3.同时连上手机和耳机的情况下播放音乐，耳机设备会出声音，中继设备不会出声音。
-4.已经在转发音乐的情况下，断开耳机，中继设备不会出声音。
-5.已经在转发音乐的情况下，断开手机，耳机设备不会出声音。
-6.已经在转发音乐的情况下，断开耳机后再重新连接上耳机，耳机设备会出声音。
-7.中继设备默认不会回连耳机和手机设备。
+3. 音乐分享
+    1. 单独连上手机的情况下播放音乐，中继设备不会出声音。
+    2. 单独连上耳机的情况下播放音乐，耳机设备不会出声音。
+    3. 同时连上手机和耳机的情况下播放音乐，耳机设备会出声音，中继设备不会出声音。
+    4. 已经在分享音乐的情况下，断开耳机，中继设备不会出声音。
+    5. 已经在分享音乐的情况下，断开手机，耳机设备不会出声音。
+    6. 已经在分享音乐的情况下，断开耳机后再重新连接上耳机，耳机设备会出声音。
+    7. 中继设备默认不会回连耳机和手机设备。
 
 
 ### 硬件需求
@@ -77,12 +77,14 @@
     - 开启：Enable local audio
         - 宏开关：`CONFIG_AUDIO_LOCAL_MUSIC`
         - 作用：使能本地音频功能
-6. 使能蓝牙(`BLUETOOTH`)：
+6. 预置音频文件：将音频文件放入 `\disk\` 目录进行预置下载。
+    - 音频文件位于 `music_source/disk/test.mp3`。
+7. 使能蓝牙(`BLUETOOTH`)：
     - 路径：Sifli middleware → Bluetooth
     - 开启：Enable bluetooth
         - 宏开关：`CONFIG_BLUETOOTH`
         - 作用：使能蓝牙功能
-7. 使能A2DP source和AVRCP：
+8. 使能A2DP source和AVRCP：
     - 路径：Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - 开启：Enable BT finsh（可选）
         - 宏开关：`CONFIG_BT_FINSH`
@@ -96,21 +98,21 @@
     - 开启：Enable A2DP source profile
         - 宏开关：`CONFIG_CFG_AV_SRC`
         - 作用：使能A2DP SOURCE ROLE
-    - 开启：Enable A2DP transfor
-        - 宏开关：`CFG_AV_TRANSFOR`
-        - 作用：使能A2DP转发功能
+    - 开启：Enable A2DP share
+        - 宏开关：`CONFIG_CFG_AV_SHARING`
+        - 作用：使能A2DP音乐分享功能
     - 开启：Enable A2DP sink profile
-        - 宏开关：`Enable A2DP sink profile`
-        - 作用：使能A2DP sink profile
+        - 宏开关：`CONFIG_CFG_AV_SNK`
+        - 作用：使能A2DP SINK ROLE
     - 开启：Enable AVRCP
         - 宏开关：`CONFIG_CFG_AVRCP`
         - 作用：使能AVRCP profile
-8. 使能BT connection manager：
+9. 使能BT connection manager：
     - 路径：Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - 开启：Enable BT connection manager
         - 宏开关：`CONFIG_BSP_BT_CONNECTION_MANAGER`
         - 作用：使用connection manager模块管理bt的连接
-9.  使能NVDS：
+10. 使能NVDS：
     - 路径：Sifli middleware → Bluetooth → Bluetooth service → Common service
     - 开启：Enable NVDS synchronous
         - 宏开关：`CONFIG_BSP_BLE_NVDS_SYNC`
@@ -118,11 +120,11 @@
 
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
-```c
+```bash
 > scons --board=eh-lb525 -j32
 ```
 切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
-```c
+```bash
 $ ./uart_download.bat
 
      Uart Download
@@ -134,8 +136,8 @@ please input the serial port num:5
 ## 例程的预期结果
 <!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
 例程启动后：
-1. 在不连接蓝牙的情况播放内置音乐
-2. 可以搜索耳机类蓝牙设备，并在连接后播放内置音乐
+1. 在不连接蓝牙的情况播放内置音乐。
+2. 可以搜索耳机类蓝牙设备，并在连接后播放内置音乐。
 
 ## 异常诊断
 
@@ -147,5 +149,3 @@ please input the serial port num:5
 |版本 |日期   |发布说明 |
 |:---|:---|:---|
 |0.0.1 |05/2026 |初始版本 |
-| | | |
-| | | |

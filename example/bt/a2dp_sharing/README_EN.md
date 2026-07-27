@@ -1,4 +1,4 @@
-# BT Music Transfor Example
+# BT A2DP Sharing Example
 
 Source code path: example/bt/a2dp_sharing
 
@@ -16,29 +16,29 @@ Source code path: example/bt/a2dp_sharing
 
 ## Overview
 <!-- Example introduction -->
-This example demonstrates that as an a2dp relay device, the music played by the mobile phone can be forwarded to the headset through the relay device under the condition of connecting the mobile phone and the headset at the same time, and the music control command at the headset can also be forwarded to the mobile phone to realize music control(<span style="color: red;">excluding volume adjustment</span>).
+This example demonstrates A2DP music sharing. The device works as a relay that connects to a mobile phone and a headset at the same time. Music played on the phone is shared to the headset through the relay device. Music control commands from the headset are also forwarded back to the phone (<span style="color: red;">volume adjustment is not included</span>).
 
 ## Example Usage
 <!-- Instructions on how to use the example, such as connecting hardware pins to observe waveforms, compilation and flashing can reference related documentation.
 For rt_device examples, you also need to list the configuration switches used in this example, such as PWM example uses PWM1, which needs to be enabled in the onchip menu -->
-The example will enable Bluetooth by default, and can accept the connection of mobile phone or initiate the connection of headphones.
+The example enables Bluetooth by default, and can accept a connection from a phone or actively initiate a connection to a headset.
 
 1. Search for Bluetooth devices:
-Use the command `a2dp_trans inquiry start` to search for headphone-type Bluetooth devices. This command will only report devices with COD Major Class 0x000400 (Audio device).
-Found devices will be printed in the format "device [%s] searched" and "device COD is [%d], addr is xx:xx:xx:xx:xx:xx".
+Use the command `a2dp_trans inquiry start` to search for headset-type Bluetooth devices. This command only reports devices with COD Major Class 0x000400 (Audio device).
+Found devices are printed in the format "device [%s] searched" and "device COD is [%d], addr is xx:xx:xx:xx:xx:xx".
 
 2. Connect to Bluetooth devices:
 Use the command `a2dp_trans conn [addr]` to connect, where addr is the address (xx:xx:xx:xx:xx:xx) of the device found above - simply copy the printed value.
-If you already know the address of a headphone-type Bluetooth device, you can connect directly without searching.
+If you already know the address of a headset-type Bluetooth device, you can connect directly without searching.
 
-3. Music transfor:
-1.Play music when the mobile phone is connected alone, and the relay device will not make sound.
-2.Play music when headphones are connected separately, and the headphones will not make sound.
-3.Play music when the mobile phone and headphones are connected at the same time. The headset device will make sound, but the relay device will not make sound.
-4.When the music is being forwarded, disconnect the earphone, and the relay device will not make sound.
-5.When the mobile phone is disconnected while the music is being forwarded, the earphone device will not make sound.
-6.In the case of forwarding music, disconnect the earphone and then reconnect it, and the earphone device will make sound.
-7.By default, the relay device will not connect headphones and mobile phone devices back.
+3. Music sharing:
+    1. Play music when only the phone is connected: the relay device makes no sound.
+    2. Play music when only the headset is connected: the headset makes no sound.
+    3. Play music when both the phone and the headset are connected: the headset makes sound, and the relay device makes no sound.
+    4. While music is being shared, disconnect the headset: the relay device makes no sound.
+    5. While music is being shared, disconnect the phone: the headset makes no sound.
+    6. While music is being shared, disconnect the headset and then reconnect it: the headset makes sound again.
+    7. By default, the relay device does not reconnect to the headset and the phone.
 
 ### Hardware Requirements
 Before running this example, you need to prepare:
@@ -77,8 +77,8 @@ Before running this example, you need to prepare:
     - Enable: Enable local audio
         - Macro switch: `CONFIG_AUDIO_LOCAL_MUSIC`
         - Description: Enable local audio function
-6. Pre-install audio file by placing it in the following \disk\ directory for pre-installation download:  
-* Audio file is located at music_source/disk/test.mp3
+6. Pre-install the audio file by placing it in the `\disk\` directory for pre-install download.
+    - The audio file is located at `music_source/disk/test.mp3`.
 7. Enable Bluetooth(`BLUETOOTH`):
     - Path: Sifli middleware → Bluetooth
     - Enable: Enable bluetooth
@@ -98,11 +98,11 @@ Before running this example, you need to prepare:
     - Enable: Enable A2DP source profile
         - Macro switch: `CONFIG_CFG_AV_SRC`
         - Description: Enable A2DP SOURCE ROLE
-    - Enable: Enable A2DP transfor
-        - Macro switch: `CFG_AV_TRANSFOR`
-        - Description: Enable A2DP TRANSFOR FUNCTION
-    - Enable: Enable A2DP transfor
-        - Macro switch: `CFG_AV_SNK`
+    - Enable: Enable A2DP share
+        - Macro switch: `CONFIG_CFG_AV_SHARING`
+        - Description: Enable A2DP music sharing function
+    - Enable: Enable A2DP sink profile
+        - Macro switch: `CONFIG_CFG_AV_SNK`
         - Description: Enable A2DP SINK ROLE
     - Enable: Enable AVRCP
         - Macro switch: `CONFIG_CFG_AVRCP`
@@ -120,11 +120,11 @@ Before running this example, you need to prepare:
 
 ### Compilation and Flashing
 Switch to the example project directory and run the scons command to compile:
-```c
+```bash
 > scons --board=eh-lb525 -j32
 ```
 Switch to the example `project/build_xx` directory and run `uart_download.bat`, then select the port as prompted to download:
-```c
+```bash
 $ ./uart_download.bat
 
      Uart Download
@@ -136,8 +136,8 @@ For detailed steps on compilation and downloading, please refer to the related i
 ## Expected Results
 <!-- Explain the example running results, such as which LEDs will light up, which logs will be printed, so users can judge whether the example is running normally. Results can be explained step by step combined with code -->
 After the example starts:
-1. Play built-in music without Bluetooth connection
-2. Can search for headphone-type Bluetooth devices and play built-in music after connection
+1. Play built-in music without a Bluetooth connection.
+2. Can search for headset-type Bluetooth devices and play built-in music after connection.
 
 ## Troubleshooting
 
@@ -148,5 +148,3 @@ After the example starts:
 |Version |Date   |Release Notes |
 |:---|:---|:---|
 |0.0.1 |05/2026 |Initial version |
-| | | |
-| | | |
