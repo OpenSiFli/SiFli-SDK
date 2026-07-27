@@ -370,7 +370,10 @@ class SDKBuilder(object):
             if "common_projects" in self.config:
                 for common_project in self.config['common_projects']:
                     f.write(f"\n{common_project['path']}\n")
+                    exclude_boards = set(common_project.get('exclude_boards', []))
                     for board in common_project['boards']:
+                        if board in exclude_boards:
+                            continue
                         f.write(f"- {board}\n")
             f.write("\n")
             f.write("=" * 50 + "\n")
