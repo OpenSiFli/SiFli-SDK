@@ -1,123 +1,173 @@
-# LVGL v8官方Example
+# LVGL v8 官方示例
+
+源码路径：`example/multimedia/lvgl/lvgl_v8_examples`
+
+## 支持的平台
+
+- `sf32lb52-lchspi-ulp`
+- SF32LB52x LCD 系列开发板
+- SF32LB56x LCD 系列开发板
+- SF32LB58x LCD 系列开发板
+
+以上平台均可运行基础 LVGL 示例。使用 SJPG 示例从 TF 卡读取图片时，开发板还需具备 SPI TF 卡接口，并完成 SPI、TF 卡和文件系统配置。本文以 `sf32lb52-lchspi-ulp` 为例，其他开发板请替换为对应的板名和硬件配置。
+
 ## 介绍
 
-本示例用来测试LVGL V8的API，使用官方提供的example。
-可以替换 src/main.c (模拟器在 simulator/applications/application.c) 里面的lv_example_scroll_1()函数，来测试其他API，
-其他API函数，参考src/examples/lv_examples.h里面的函数定义。
+本工程用于运行和验证 LVGL v8 官方示例。示例源码位于 `src/examples`，可调用的示例函数可参考 `src/examples/lv_examples.h`。
+
+`src/main.c` 默认调用 `lv_example_scroll_1()`，用于演示对象在内容超出可视区域时的横向和纵向滚动效果。
 
 ## 切换不同演示
 
-默认演示的是 `lv_example_scroll_1()`，如需切换到其他演示，需要修改 `src/main.c` 文件中的代码。
-
-打开 `src/main.c`，找到 main 函数中的调用部分：
+打开 `src/main.c`，找到示例函数调用：
 
 ```c
-/* add example code here.
-   example code locates in folder external/lvgl/examples */
 lv_example_scroll_1();
-//lv_example_grid_1();
+// lv_example_grid_1();
 ```
 
-取消注释你想要运行的演示函数，并注释掉其他的即可。例如切换到 `lv_example_grid_1()`：
+注释当前函数并取消注释需要运行的函数。例如，切换到 `lv_example_grid_1()`：
 
 ```c
-/* add example code here.
-   example code locates in folder external/lvgl/examples */
-//lv_example_scroll_1();
+// lv_example_scroll_1();
 lv_example_grid_1();
 ```
 
-修改后重新编译即可看到不同的演示效果。
+修改后重新编译并烧录工程。
 
-## 工程编译及下载：
-板子工程在project目录下可以通过指定board来编译适应相对board的工程，
-- 比如想编译可以在HDK 563上运行的工程，执行scons --board=eh-lb563即可生成工程
-- 下载可以通过build目录下的download.bat进行，比如同样想烧录上一步生成的563工程，可以执行.\build_eh-lb563\download.bat来通过jlink下载
-- 特别说明下，对于SF32LB52x/SF32LB56x系列会生成额外的uart_download.bat。可以执行该脚本并输入下载UART的端口号执行下载
-模拟器工程在simulator目录下，
-- 使用 scons 进行编译，SiFli-SDK/msvc_setup.bat文件需要相应修改，和本机MSVC配置对应
-- 也可以使用 scons --target=vs2017 生成 MSVC工程 project.vcxproj, 使用Visual Studio 进行编译。
+## 编译和烧录
 
-```{note}
-如果不是使用VS2017, 例如 VS2022, 加载工程的时候，会提示升级MSVC SDK, 升级后就可以使用了。
-```
+切换到例程 `project` 目录，运行 SCons 命令进行编译：
 
-##  补充说明--如何使用sjpg
-源码路径：SiFli-SDK\example\multimedia\lvgl\lvgl_v8_examples
-### 支持的平台
-例程可以运行在以下开发板
-+ sf32lb52-lchspi-ulp
-+ sf32lb52-lcd系列
-+ sf32lb56-lcd系列
-+ sf32lb58-lcd系列
-
-
-
-### 概述
-* 通过插入 SD 卡完成文件系统挂载后，读取其中的.sjpg 与.jpg 格式图片并在屏幕上显示
-
-### 硬件需求
-* 黄山派的开发板或者52x系列开发板
-* 一根具有数据传输能力的USB数据线
-* 一张tf卡,一个tf读卡器
-
-### 例程的使用
-#### 编译和烧录
-演示代码默认为显示图片是：``` small_image.sjpg ``` 
-
-切换到例程project目录，运行scons命令执行编译：
-
-```
+```sh
 scons --board=sf32lb52-lchspi-ulp -j8
 ```
 
-执行烧写命令
-```
+执行烧录脚本：
+
+```none
 build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
 ```
 
-按提示选择端口即可进行下载：
+按提示输入串口号：
 
 ```none
 please input the serial port num:5
 ```
 
-#### 例程输出结果展示:
-* 插入SD卡后，挂载文件系统，并读取文件系统中的图片和显示图片log，其中log中会有`mount fs on flash to root success `就说明文件系统挂载成功
+### PC 模拟器
 
-![alt text](assets/log1.png)
+PC 配置位于 `project/pc_hcpu`。先根据本机的 MSVC 安装修改 SDK 根目录下的 `msvc_setup.bat`，再在 `project` 目录执行：
 
-* 可以输入ls 查看文件系统内的图片文件
+```sh
+scons --board=pc_hcpu -j8
+```
 
-![alt text](assets/log2.png)
+编译完成后运行 `build_pc_hcpu/main.exe`。
 
-### 例程效果展示
-![alt text](assets/demo.jpg)
+## 可选示例：使用 SJPG 显示图片
 
-#### 例程的配置流程
-* 默认情况下不开启spi进行对于TF文件系统的挂载，有需要的可以按照如下配置一下
-* 首先可以通过TF读卡器，往tf中写入图片文件，再将tf卡插入板子中
-* 通过`menuconfig`中进行如下配置，具体操作如下
-``` c
+本节说明如何切换到 `lv_example_sjpg_1()`，从 TF 卡文件系统读取并显示 `small_image.sjpg`。该示例不是默认显示内容，需要手动完成以下配置并切换示例函数。
+
+### 硬件需求
+
+- 支持平台中带 SPI TF 卡接口的开发板
+- 一根支持数据传输的 USB 线
+- 一张 TF 卡和一个 TF 读卡器
+
+### 准备图片
+
+将工程中的 `src/examples/libs/sjpg/small_image.sjpg` 复制到 TF 卡文件系统的根目录。示例源码使用以下路径读取图片：
+
+```c
+lv_img_set_src(wp, "A:small_image.sjpg");
+```
+
+### 配置工程
+
+在 `project` 目录执行：
+
+```sh
 sdk.py menuconfig --board=sf32lb52-lchspi-ulp
 ```
-* 开启spi总线
 
-![alt text](assets/V8_SPI.png)
+确认生成的配置包含以下选项：
 
-* 将sd\tf设备挂载在spi总线上
+```ini
+CONFIG_RT_USING_SPI_MSD=y
+CONFIG_RT_USING_DFS_ELMFAT=y
+CONFIG_LV_USE_FS_POSIX=y
+CONFIG_LV_FS_POSIX_LETTER=65
+CONFIG_LV_USE_SJPG=y
+```
 
-![alt text](assets/V8_tf.png)
+`CONFIG_LV_FS_POSIX_LETTER=65` 表示 LVGL 文件系统使用盘符 `A`。
 
-* 配置文件路径
+具体配置项如下：
 
-![alt text](assets/V8_elm.png)
+1. 启用 SPI 总线。
 
-* 开启lvgl的文件系统接口，配置盘符,并且开启解码器
-![alt text](assets/V8_posix.png)
+   ![启用 SPI 总线](assets/V8_SPI.png)
+
+2. 将 SD/TF 设备挂载到 SPI 总线。
+
+   ![配置 TF 卡设备](assets/V8_tf.png)
+
+3. 启用 ELM FAT 文件系统。
+
+   ![配置 ELM FAT 文件系统](assets/V8_elm.png)
+
+4. 启用 LVGL POSIX 文件系统接口和 SJPG 解码器，并将盘符配置为 `A`。
+
+   ![配置 LVGL 文件系统和 SJPG](assets/V8_posix.png)
+
+### 切换示例
+
+修改 `src/main.c`：
+
+```c
+// lv_example_scroll_1();
+lv_example_sjpg_1();
+```
+
+### 编译和烧录
+
+在 `project` 目录执行：
+
+```sh
+scons --board=sf32lb52-lchspi-ulp -j8
+```
+
+使用串口烧录：
+
+```none
+build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
+```
+
+按提示输入串口号：
+
+```none
+please input the serial port num:5
+```
+
+> **注意：** `src/main.c` 在 TF 卡根逻辑区域挂载失败时会调用 `dfs_mkfs()` 自动格式化该区域，可能清除该逻辑区域中的数据。运行示例前请备份 TF 卡中的重要数据，并确认 TF 卡和 SPI 接口工作正常。
+
+### 运行结果
+
+插入 TF 卡后，日志中出现 `mount fs on flash to root success` 表示文件系统挂载成功。
+
+![文件系统挂载日志](assets/log1.png)
+
+在 Finsh 中输入 `ls` 可查看 TF 卡根目录中的图片文件。
+
+![TF 卡文件列表](assets/log2.png)
+
+图片显示效果如下：
+
+![SJPG 示例效果](assets/demo.jpg)
 
 ### 异常诊断
-* 异常log
-![alt text](assets/log3.png)
-如果出现上面情况，可能tf卡存在松动、tf卡不能正常通信、tf卡未插入         
-      
+
+如果出现以下日志，请检查 TF 卡是否插入或松动，以及 TF 卡与 SPI 总线是否可以正常通信。
+
+![异常日志](assets/log3.png)
