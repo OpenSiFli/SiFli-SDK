@@ -3,7 +3,8 @@
 源码路径：example\rt_device\pulse_encoder
 ## 支持的平台
 例程可以运行在以下开发板.
-* sf32lb52-lcd_n16r8
+* sf32lb52 lcd系列
+* sf32lb58 lcd系列
 ## 概述
 * 脉冲编码器能够精确地测量旋转轴的位置。每转动一定角度，编码器就会生成一个脉冲信号。通过计算这些脉冲的数量，可以确定旋转轴的当前位置。
 * GPtimerd的encoder模式让外部脉冲编码器控制定时器的CNT增减示例
@@ -60,6 +61,11 @@ msh />
 |        | GPTIM1_CH1    |PAD_PA82 （CONN2 22）  |
 |        | GPTIM1_CH2    |PAD_PA51 （CONN2 28）  |
 
+#### SF32LB52-DevKit-LCD 硬件点位图
+![](./assets/image3.png)
+
+#### SF32LB58-DevKit-LCD 硬件点位图
+![](./assets/image4.png)
 
 ```c
 //52为例打开多个encoder设备
