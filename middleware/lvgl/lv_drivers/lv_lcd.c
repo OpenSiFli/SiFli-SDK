@@ -26,6 +26,7 @@
 #endif
 #if defined(BSP_USING_EPIC)
     #include "drv_epic.h"
+    #include "drv_epic_private.h"
 #endif
 
 #if (16 != LV_COLOR_DEPTH) && (24 != LV_COLOR_DEPTH) && (32 != LV_COLOR_DEPTH)
@@ -74,6 +75,7 @@ static rt_device_t device;
 static struct rt_device_graphic_info info;
 static struct rt_semaphore lcd_sema;
 #ifdef DRV_EPIC_NEW_API
+    static uint8_t lv_refr_full_buffer_enabled = 0;
     static struct rt_semaphore render_done_sema;
     rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list);
 #endif
@@ -342,6 +344,10 @@ static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
     RT_ASSERT(RT_EOK == err);
 
 }
+static void dummy_lcd_flush_done(lcd_fb_desc_t *fb_desc)
+{
+    (void)fb_desc;
+}
 #else
 static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
 {
@@ -423,7 +429,41 @@ static void lcd_flush_new_api(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area
     {
         uint32_t async = (uint32_t)lv_scr_act()->render_async;
 
-        msg.id = EPIC_MSG_RENDER_DRAW;
+        if (lv_refr_full_buffer_enabled)
+        {
+            msg.id = EPIC_MSG_RENDER_DRAW2;
+            RT_ASSERT(DRV_EPIC_ROT_NONE == drv_epic_get_rotation());
+#ifdef BSP_USING_LCD_FRAMEBUFFER
+            priv_render_list_t *p_rl = (priv_render_list_t *)rl;
+            /*Waitting the draw_buf to be freed:
+                1. Not in render-list msg queue.
+                2. Not flushing LCD
+            */
+            //Waitting for the render task to be idle.
+            while (drv_epic_is_busy())
+            {
+                drv_epic_wait_done();
+                if (drv_epic_is_busy()) rt_thread_mdelay(2); //Let system breath
+            }
+            rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
+            rt_sem_release(&lcd_sema);
+
+            //Get the available buffer when render task is idle.
+            p_rl->dst.data = (uint8_t *)get_draw_buf();
+
+            //Make sure that the buffer is writeable.
+            LCD_AreaDef writeable_area;
+            writeable_area.x0 = 0;
+            writeable_area.y0 = 0;
+            writeable_area.x1 = LV_HOR_RES_MAX - 1;
+            writeable_area.y1 = LV_VER_RES_MAX - 1;
+            drv_lcd_fb_write_send(&writeable_area, &writeable_area, (uint8_t *)p_rl->dst.data, dummy_lcd_flush_done, 0);
+#endif /* BSP_USING_LCD_FRAMEBUFFER */
+        }
+        else
+        {
+            msg.id = EPIC_MSG_RENDER_DRAW;
+        }
         msg.render_list = (drv_epic_render_list_t) rl;
         msg.content.rd.pixel_align = info.draw_align;
         msg.content.rd.partial_done_cb = partial_done_cb;
@@ -922,3 +962,21 @@ bool lv_refreshing_done(void)
 
     return true;
 }
+
+#ifdef DRV_EPIC_NEW_API
+/* Rendering with whole screen sized buffer in some special sceen.*/
+bool lv_refr_enable_full_buffer(bool enable)
+{
+#if defined(LCD_FB_USING_ONE_UNCOMPRESSED) || defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    lv_refr_full_buffer_enabled = enable ? 1 : 0;
+#else
+    lv_refr_full_buffer_enabled = 0;
+#endif
+    return lv_refr_full_buffer_enabled != 0;
+}
+
+bool lv_refr_is_full_buffer_enabled(void)
+{
+    return lv_refr_full_buffer_enabled != 0;
+}
+#endif /*DRV_EPIC_NEW_API*/

@@ -232,6 +232,9 @@ typedef enum
     /*Render and draw results on LCD,
         has NOT effect with render list's dest buffer*/
     EPIC_MSG_RENDER_DRAW,
+    /*Render and save the result in render list's dest buffer
+       then draw the result on LCD*/
+    EPIC_MSG_RENDER_DRAW2,
 } EPIC_MsgIdDef;
 
 typedef void *drv_epic_render_list_t;

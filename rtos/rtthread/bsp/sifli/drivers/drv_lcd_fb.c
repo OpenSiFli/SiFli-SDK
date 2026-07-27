@@ -624,13 +624,6 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
     LOG_D("clip area:"AreaString" src area:"AreaString" src=%p", AreaParams(clip_area), AreaParams(src_area), src);
     LOG_D("src_line_addr=0x%x dst_line_addr=0x%x len=0x%x", src_line_addr, dst_line_addr, len);
 
-    if (src_line_addr == dst_line_addr)
-    {
-        LOG_D("src_line_addr==dst_line_addr skip.");
-        cb();
-        return RT_EOK;
-    }
-
     if (((clip_area->x0 == src_area->x0) && (dst_area->x0 == src_area->x0)
             && (clip_area->x1 == src_area->x1) && (dst_area->x1 == src_area->x1)))
     {
@@ -693,8 +686,11 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
 #endif /* BSP_USE_LCDC2_ON_HPSYS */
 
 
-    if (0)
+    if (src_line_addr == dst_line_addr)
     {
+        LOG_D("src_line_addr==dst_line_addr skip.");
+        cb();
+        err = RT_EOK;
     }
 #ifdef ENABLE_GP_DMA_COPY
     else if (use_gp_dma)
