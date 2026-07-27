@@ -458,7 +458,6 @@ common_projects:
     boards: 
       - sf32lb58-lcd_n16r32n1_qspi
       - sf32lb58-lcd_a128r32n1_qspi
-      - sf32lb57-spi-hdk_n16r4
   
   - path: example/misc/button/project
     boards: *devkit_lcd_boards
