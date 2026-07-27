@@ -132,8 +132,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Upload version.json and purge CDN cache
-      - name: Upload version.json and purge CDN cache
+      # Upload version.json (main branch only)
+      - name: Upload version.json
+        if: github.ref == 'refs/heads/main'
         uses: OpenSiFli/SiFliMirrorSync@v1
         with:
           secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
@@ -144,4 +145,15 @@ jobs:
           prefix: projects/sdk/
           artifacts: version.json
           delete_remote: false
+
+      # Purge CDN cache (all branches/tags)
+      - name: Purge CDN cache
+        uses: OpenSiFli/SiFliMirrorSync@v1
+        with:
+          secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
+          region: ${{ secrets.COS_DOCS_REGION }}
+          bucket: ${{ secrets.COS_DOCS_BUCKET }}
+          working_directory: ./docs
+          prefix: projects/sdk/
           flush_url: https://docs.sifli.com/projects/sdk/
