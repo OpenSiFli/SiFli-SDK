@@ -52,8 +52,22 @@ The software framework is illustrated below:
 |       \---bsp
 |           \---sifli
 |               \---drivers  // RT-Thread device driver adapters
++---skills                   // AI-assisted development skills
++---tests                    // Python unit tests
 \---tools                    // Tools
 ```
+
+## Supported SoC Families
+
+The SDK supports the following SiFli Technologies SoC families:
+
+| SoC Family | Supported since  |
+|------------|------------------|
+| SF32LB52X  | v2.3.0           |
+| SF32LB55X  | v2.3.0           |
+| SF32LB56X  | v2.3.0           |
+| SF32LB57X  | v2.5.1           |
+| SF32LB58X  | v2.3.0           |
 
 ## Versioning Policy
 
