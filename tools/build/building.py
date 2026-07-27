@@ -305,6 +305,10 @@ def ConvertFont(env, source, flags):
 
 def ImgResource(env, source, flags):
     target = []
+    if GetDepend('SOC_SF32LB57X'):
+        if '-winsize' not in flags:
+            flags += ' -winsize 2048 '
+            
     for s in source:
         if '-binfile' in flags:
             # If the -binfile parameter is included, use the binary builder.
