@@ -1,6 +1,6 @@
 ---
 name: sifli-code-review
-description: Review SiFli SDK code changes for coding style compliance, logic correctness, RTOS concurrency safety, unnecessary modifications, and clarity. For example code, also checks structure compliance, proj.conf minimality, and readability. For README docs, checks template compliance, clarity, CN/EN consistency, and scores the document. Supports reviewing local changes, or fetching a specific commit from Gerrit for review.
+description: Review SiFli SDK code changes for coding style compliance, logic correctness, RTOS concurrency safety, unnecessary modifications, and clarity. For example code, also checks structure compliance, proj.conf minimality, and readability. For README docs, checks template compliance, clarity, CN/EN consistency, and scores the document. Supports reviewing local uncommitted changes, a local commit SHA, or fetching a specific commit from Gerrit for review.
 ---
 
 # SiFli SDK Code Review
@@ -9,20 +9,69 @@ Comprehensive code review for SiFli SDK projects covering general code, example 
 
 ## Trigger
 
-When the user says "review下代码", "审阅下代码", "审查下代码", "review this code", "从gerrit拉取", "审查gerrit", or similar phrases, use this skill to perform a structured review of the current changes or a Gerrit commit.
+When the user says "review下代码", "审阅下代码", "审查下代码", "review this code", "从gerrit拉取", "审查gerrit", "review这个commit", "审查这个提交", "审阅这个sha", or similar phrases, use this skill to perform a structured review of the current changes, a local commit, or a Gerrit commit.
 
 ## Step 0: Determine the Review Target
 
 Ask the user to clarify whether the review is for:
 
 1. **Local changes** — uncommitted working tree changes (default if user just says "review下代码")
-2. **Gerrit commit** — a specific commit on Gerrit. The user must provide one of:
+2. **Local commit SHA** — a commit that already exists in the local repository. The user provides a SHA hash (full or short, e.g. `a1b2c3d` or `028f3a59f`).
+3. **Gerrit commit** — a specific commit on Gerrit. The user must provide one of:
    - A Gerrit change URL, e.g. `http://10.21.10.179:8080/c/SiFli-SDK/+/12345` or `ssh://10.21.10.179:29418/SiFli-SDK`
    - A Gerrit change number, e.g. `12345`
    - A `refs/changes/...` refspec
    - A commit SHA (40-char hash)
 
-### Step 0a: Fetch from Gerrit
+> **How to distinguish local SHA vs Gerrit SHA**: If the user provides a SHA hash, first check if it exists locally with `git cat-file -t <sha>`. If it exists locally, treat it as a local commit SHA (option 2). If it does not exist locally, treat it as a Gerrit SHA and attempt to fetch it from Gerrit (option 3).
+
+### Step 0a: Review Local Commit SHA
+
+When the user provides a local SHA to review, use these commands:
+
+**Step 1 — Verify the commit exists locally:**
+```bash
+git cat-file -t <sha>
+```
+Expected output: `commit`. If the command fails, the SHA doesn't exist locally — fall through to the Gerrit fetch flow (Step 0b).
+
+**Step 2 — Determine the diff base:**
+
+The diff shows what the commit introduced. Use the commit's first parent:
+```bash
+git diff <sha>~1..<sha>
+```
+
+If the commit is a merge commit (multiple parents), you may want to use a different base:
+```bash
+# For merge commits, diff against the first parent
+git diff <sha>~1..<sha>
+# Or diff against a specific branch
+git diff <branch>..<sha>
+```
+
+**Step 3 — Check out the commit to read files:**
+```bash
+git checkout <sha>
+```
+
+> **IMPORTANT**: Checking out a detached HEAD will move away from the current branch. After the review is complete, return to the original branch:
+> ```bash
+> git checkout -
+> ```
+
+**Step 4 — Read the commit message:**
+```bash
+git log -1 --format=full <sha>
+```
+
+**Step 5 — Show the diff for analysis:**
+```bash
+git diff <sha>~1..<sha>
+git diff --name-only <sha>~1..<sha>
+```
+
+### Step 0b: Fetch from Gerrit
 
 The Gerrit server is at `ssh://10.21.10.179:29418/SiFli-SDK`. To fetch a change:
 
@@ -78,9 +127,9 @@ git log -1 --format=full FETCH_HEAD
 
 > **IMPORTANT — Always use `FETCH_HEAD` in `git log`**: After `git fetch`, `HEAD` is still your original branch. Running `git log -1` without `FETCH_HEAD` will show the wrong commit message. Even after `git checkout FETCH_HEAD`, using `FETCH_HEAD` is safer — there's no ambiguity about what you're reading.
 
-### Step 0b: Review Local Changes (default)
+### Step 0c: Review Local Changes (default)
 
-If no Gerrit reference is provided, review the current working tree.
+If no Gerrit reference or local SHA is provided, review the current working tree.
 
 First, identify what files are changed:
 
@@ -106,7 +155,7 @@ Classify each changed file into one of four categories:
 >
 > Sub-agents may lack access to `FETCH_HEAD` or the working tree. If they silently fail, the review proceeds with no actual code reading.
 >
-> 1. **For Gerrit commits**: `git checkout FETCH_HEAD`, then read files directly from disk. This also gives accurate line numbers.
+> 1. **For Gerrit commits**: `git checkout FETCH_HEAD`, then read files directly from disk. **For local SHA commits**: `git checkout <sha>`, then read files directly from disk. This also gives accurate line numbers.
 > 2. **For new files or files with >100 lines changed, read the FULL source file** — not just the diff. Diffs lack surrounding context (control flow, callers, variable scope).
 > 3. **Read every line** of substantial files (>50 lines changed). Do not skim — trace control flow through each function, check every condition and error path.
 
@@ -129,6 +178,13 @@ Classify each changed file into one of four categories:
 git diff --name-only && git status -s   # identify files
 git diff                                # read the diff
 ```
+
+**For local commit SHA**:
+```bash
+git diff <sha>~1..<sha>                 # read the diff
+git diff --name-only <sha>~1..<sha>     # identify changed files
+```
+Then checkout the commit (`git checkout <sha>`) and read each changed source file directly from disk with the Read tool.
 
 **For Gerrit changes**:
 ```bash
@@ -388,10 +444,16 @@ Rate the example code from a reader's perspective on:
 - **Structure** — is the code well-organized?
 - **Documentation** — are comments helpful and sufficient?
 
-## Step 5: Commit Message Review (Gerrit commits only)
+## Step 5: Commit Message Review (local SHA and Gerrit commits)
 
-When reviewing a Gerrit commit, also check the commit message. First, read it:
+When reviewing a specific commit (local SHA or Gerrit), also check the commit message. First, read it:
 
+**For local commit SHA:**
+```bash
+git log -1 --format=full <sha>
+```
+
+**For Gerrit commit:**
 ```bash
 git log -1 --format=full FETCH_HEAD
 ```
@@ -514,7 +576,7 @@ Present the review as a structured report:
 [Brief justification on clarity, CN/EN consistency, and English quality]
 ```
 
-**[If Gerrit commit, add:]**
+**[If local SHA or Gerrit commit, add:]**
 
 ```
 ### Commit Message 审查
