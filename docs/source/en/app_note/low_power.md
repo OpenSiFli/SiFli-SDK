@@ -9,6 +9,14 @@ SF32LB58X is a tri‑core chip (dual high‑performance cores + one low‑power 
 ```
 Refer to the low‑power example at `example\pm\classical`.
 
+:::{only} SF32LB56X
+Reference document for power consumption test: [Power Consumption Test Report]（https://docs.sifli.com/projects/rpt5602_sf32lb56x-low-power-measurement-report/latest/zh_CN/index.html）
+:::
+
+:::{only} SF32LB52X
+Reference document for power consumption test: [Power Consumption Test Report]（https://docs.sifli.com/projects/rpt5202_sf32lb52x-low-power-measurement-report/latest/zh_CN/index.html）
+:::
+
 ## 2 Configure Low‑Power Mode
 
 ### 2.1 Enable Low‑Power Mode
