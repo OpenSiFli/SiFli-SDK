@@ -4,7 +4,7 @@ This section describes how to export the crash scene and restore it after a cras
 
 ## Dump Memory Method
 
-:::{only} SF32LB52X or SF32LB56X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X
 
 ### Export Memory Scene
 
@@ -77,8 +77,8 @@ sdk.py crash-dump analyze \
 
 ![alt text](../../../assets/trace32002_en.png)
 
-:::{only} SF32LB52X
-5. If the memory-to-address mapping is established successfully, you can refer to the chip manual's Memory address space to view the scene. If restoration fails, check whether the bin files are valid, or modify the jlink/dump script to add or remove address spaces to dump (e.g., `sf32lb52x_uart.jlink`).
+:::{only} SF32LB52X or SF32LB57X
+5. If the memory-to-address mapping is established successfully, you can refer to the chip manual's Memory address space to view the scene. If restoration fails, check whether the bin files are valid, or modify the jlink/dump script to add or remove address spaces to dump (e.g., `sf32lb52x_uart.jlink` / `sf32lb57x_uart.jlink`).
 :::
 
 :::{only} SF32LB56X

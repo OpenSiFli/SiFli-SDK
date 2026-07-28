@@ -2,7 +2,7 @@
 
 HAL_RCC (Reset and Clock Control) module can control system and peripheral clocks. It can set system or specific IP clocks to use different clocks with different frequencies. It can also issue resets to the system or specific IPs.
 
-SF32LB52X supports dynamic frequency and voltage scaling to reduce power consumption, with corresponding interface `HAL_RCC_HCPU_ConfigHCLK`. This interface selects the appropriate voltage mode based on the frequency to be configured. When the set frequency is higher than 48MHz, DLL1 will automatically be used as the system clock. When the set frequency is lower than or equal to 48MHz, other DLLs except DLL1 need to be disabled before calling this function, and DLL1 will be automatically disabled by the function.
+SF32LB52X and SF32LB57X support dynamic frequency and voltage scaling to reduce power consumption, with corresponding interface `HAL_RCC_HCPU_ConfigHCLK`. This interface selects the appropriate voltage mode based on the frequency to be configured. When the set frequency is higher than 48MHz, DLL1 will automatically be used as the system clock. When the set frequency is lower than or equal to 48MHz, other DLLs except DLL1 need to be disabled before calling this function, and DLL1 will be automatically disabled by the function.
 
 ## Using RCC
 

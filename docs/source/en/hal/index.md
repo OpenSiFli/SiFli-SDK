@@ -22,6 +22,10 @@ The SF32LB56x series has two CPUs: HCPU for high-performance computing and LCPU 
 The SF32LB52x series has two CPUs: HCPU for high-performance computing, and LCPU runs the Bluetooth protocol stack and is not open to applications.
 ```
 
+```{only} SF32LB57X
+The SF32LB57x series has three CPUs: HCPU for high-performance computing, ACPU for audio and graphics processing, and LCPU for executing power-sensitive tasks. Users can run high-performance processing on HCPU, such as graphics display, while implementing low-power functions on LCPU, such as BLE and sensor data processing. This allows HCPU to be shut down when processing low-power tasks, reducing system power consumption.
+```
+
 ```{only} SF32LB58X
 The SF32LB58x series has three CPUs: HCPU for high-performance computing, ACPU can be used for Audio DSP processing, and LCPU for executing power-sensitive tasks. Users can run high-performance processing on HCPU, such as graphics display, while implementing low-power functions on LCPU, such as BLE and sensor data processing. This allows HCPU to be shut down when processing low-power tasks, reducing system power consumption.
 ```

@@ -243,7 +243,7 @@ Required tools:
 
 ## 3. Saving the Context
 
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 ### 3.1 Saving the Context over UART
 
 #### 3.1.1 Method 1: SifliUsartServer
@@ -442,7 +442,7 @@ The generated files depend on the corresponding _sf32lbxxx.jlink_ script and can
 - _lcpu_ram.bin_: LCPU RAM data
 - _lcpu_dtcm.bin_: LCPU DTCM data
 
-```{only} SF32LB52X or SF32LB55X or SF32LB58X
+```{only} SF32LB52X or SF32LB55X or SF32LB58X or SF32LB57X
 ### 3.2 Save an AssertDump-compatible scene using sdk.py
 ```
 

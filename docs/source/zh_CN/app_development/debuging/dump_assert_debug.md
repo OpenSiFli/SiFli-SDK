@@ -4,7 +4,7 @@
 
 ## Dump 内存方法
 
-:::{only} SF32LB52X or SF32LB56X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X
 
 ### 导出内存现场
 
@@ -77,8 +77,8 @@ sdk.py crash-dump analyze \
 
 ![alt text](../../../assets/trace32002.png)
 
-:::{only} SF32LB52X 
-5. 如果内存与地址映射建立成功，可参考芯片手册的 Memory 地址空间查看现场。如果未恢复，请检查 bin 是否有效，或通过修改 jlink/dump 脚本增加或减少需要 dump 的地址空间（例如 `sf32lb52x_uart.jlink`）。
+:::{only} SF32LB52X or SF32LB57X
+5. 如果内存与地址映射建立成功，可参考芯片手册的 Memory 地址空间查看现场。如果未恢复，请检查 bin 是否有效，或通过修改 jlink/dump 脚本增加或减少需要 dump 的地址空间（例如 `sf32lb52x_uart.jlink` / `sf32lb57x_uart.jlink`）。
 :::
 
 :::{only} SF32LB56X

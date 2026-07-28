@@ -1,7 +1,7 @@
 [
     {
         "version": "latest",
-        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB58x", "SF32LB55x"],
+        "supported_chips": ["SF32LB52x", "SF32LB56x", "SF32LB57x", "SF32LB58x", "SF32LB55x"],
         "type": "branch"
     },
     {

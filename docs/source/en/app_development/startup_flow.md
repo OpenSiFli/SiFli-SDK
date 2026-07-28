@@ -16,6 +16,9 @@ MPI2 I/O connects to IO(SB) to access another on‑chip SiP 8‑line pSRAM.
 MPI3 I/O connects to IO(PA) to access external NOR/NAND Flash.
 MPI5 I/O connects to IO(SC) to access the on‑chip SiP 4‑line NOR Flash.
 ```
+```{only} SF32LB57X
+SF32LB57x adopts a tri-core architecture (high-performance big core + low-power small core + coprocessor core) with multiple internal and external memory interfaces. MPI1 and MPI2 are the internal memory interfaces, capable of connecting PSRAM and NOR Flash. MPI3 can connect internal NOR Flash or external memory (NOR/NAND), and SDMMC can connect SD-NAND or SD-eMMC. The application runs on the big core, the ACPU can be used for audio and graphics processing, and the LCPU is suitable for executing power-sensitive tasks.
+```
 ```{only} SF32LB58X
 SF32LB58x uses a tri‑core architecture (high‑performance big core + low‑power small core + coprocessor core) with multiple internal and external memory interfaces. MPI1, MPI2, MPI3 and MPI4 are in HPSYS and can send requests to DMAC1; MPI5 is in LPSYS and can send requests to DMAC3.
 MPI1 I/O connects to IO(SA) to access the on‑chip SiP 8‑line/16‑line pSRAM or 4‑line NOR Flash.
@@ -42,6 +45,12 @@ The application startup on the big core consists of three stages:
 2. Second‑stage Bootloader: Loads the application from Flash and jumps to execute it
 3. Application: User program
 ```
+```{only} SF32LB57X
+The application startup on the big core consists of three stages:
+1. First‑stage Bootloader: Burned in the SF32LB57X internal ROM; loads the second‑stage bootloader from Flash to RAM and jumps to run it
+2. Second‑stage Bootloader: Loads the application from Flash and jumps to execute it
+3. Application: User program
+```
 ```{only} SF32LB58X
 The application startup on the big core consists of three stages:
 1. First‑stage Bootloader: Burned in the SF32LB58X internal ROM; loads the second‑stage bootloader from Flash to RAM and jumps to run it
@@ -51,6 +60,10 @@ The application startup on the big core consists of three stages:
 
 ## First‑stage Bootloader
 ```{only} SF32LB52X
+The first‑stage bootloader is burned in the chip ROM with the interrupt vector table address at 0. After power‑on, the first‑stage bootloader runs first. Depending on the package type, it determines the location of the Flash partition table (internal or external Flash, referred to as the boot Flash below; Flash includes NOR, NAND, SD and eMMC). According to the second‑stage bootloader address indicated by the partition table (must be on the boot Flash), it copies the second‑stage bootloader code to RAM and jumps to run it.
+```
+
+```{only} SF32LB57X
 The first‑stage bootloader is burned in the chip ROM with the interrupt vector table address at 0. After power‑on, the first‑stage bootloader runs first. Depending on the package type, it determines the location of the Flash partition table (internal or external Flash, referred to as the boot Flash below; Flash includes NOR, NAND, SD and eMMC). According to the second‑stage bootloader address indicated by the partition table (must be on the boot Flash), it copies the second‑stage bootloader code to RAM and jumps to run it.
 ```
 
@@ -68,6 +81,10 @@ If booting from NOR Flash, make sure the Flash device is in 3‑byte address mod
 ```
 ````
 
+```{only} SF32LB57X
+During the first‑stage bootloader, the big core runs at the default clock frequency after power‑up and initializes the boot Flash IO configuration.
+```
+
 ```{only} SF32LB55X
 The first‑stage bootloader is burned in the chip ROM with the interrupt vector table address at 0. After power‑on, the first‑stage bootloader runs first, at the default big‑core clock frequency. After basic initialization, it directly loads the user application from Flash1.
 
@@ -80,6 +97,10 @@ During the first‑stage bootloader, the big core runs at the default clock freq
 
 
 ## Second‑stage Bootloader
+
+```{only} SF32LB57X
+The second‑stage bootloader loads the application and jumps to execute it according to the package type and the Flash partition table. Depending on the package type, applications support the following boot modes. Execution modes include XIP (execute directly at a NOR Flash address; code storage address equals execution address) and non‑XIP (copy code from Flash into RAM for execution; the storage address differs from the execution address). Regardless of boot mode, the application and the second‑stage bootloader reside on the same boot Flash; the difference is only how the application code executes:
+```
 
 ```{only} SF32LB52X
 The second‑stage bootloader loads the application and jumps to execute it according to the package type and the Flash partition table. Depending on the package type, applications support the following boot modes. Execution modes include XIP (execute directly at a NOR Flash address; code storage address equals execution address) and non‑XIP (copy code from Flash into RAM for execution; the storage address differs from the execution address). Regardless of boot mode, the application and the second‑stage bootloader reside on the same boot Flash; the difference is only how the application code executes:
@@ -149,6 +170,9 @@ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb55x\Te
  ```{only} SF32LB56X
 The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb56x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
 ```
+ ```{only} SF32LB57X
+The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb57x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
+```
  ```{only} SF32LB58X
 The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Templates\arm\startup_bf0_hcpu.S`). Its flow is shown below. The user `main` function is called by the main thread created in `rt_application_init`. See {ref}`main_thread_entry flow <main_thread_entry_flow>`.
 ```
@@ -167,6 +191,9 @@ The application entry function is `ResetHandler` (in `drivers\cmsis\sf32lb58x\Te
 ```
 ```{only} SF32LB56X
 `SystemInit` (in `drivers/cmsis/sf32lb56x/Templates/system_bf0_ap.c`) runs before variable initialization (therefore do not use variables with initial values during this period, and avoid relying on the zero‑initialized section being 0). It updates the VTOR register to redirect the interrupt vector table, and calls `mpu_config` and `cache_enable` to initialize the MPU and enable Cache. These two functions are weak symbols, so applications can override them.
+```
+```{only} SF32LB57X
+`SystemInit` (in `drivers/cmsis/sf32lb57x/Templates/system_bf0_ap.c`) runs before variable initialization (therefore do not use variables with initial values during this period, and avoid relying on the zero‑initialized section being 0). It updates the VTOR register to redirect the interrupt vector table, and calls `mpu_config` and `cache_enable` to initialize the MPU and enable Cache. These two functions are weak symbols, so applications can override them.
 ```
 ```{only} SF32LB58X
 `SystemInit` (in `drivers/cmsis/sf32lb58x/Templates/system_bf0_ap.c`) runs before variable initialization (therefore do not use variables with initial values during this period, and avoid relying on the zero‑initialized section being 0). It updates the VTOR register to redirect the interrupt vector table, and calls `mpu_config` and `cache_enable` to initialize the MPU and enable Cache. These two functions are weak symbols, so applications can override them.
@@ -222,6 +249,20 @@ The details of the PMU parameters initialized by HAL_PMU_Init can be found in th
 
 ```
 
+```{only} SF32LB57X
+Config Clock adjusts:
+
+* Load PMU calibration values
+* Start GTimer
+* Switch PMU to RC32K
+* If external XT32K is used, switch RTC to XT32K
+* Set system clock to 240 MHz (DLL1)
+* Set DLL2 to 312 MHz
+
+The details of the PMU parameters initialized by HAL_PMU_Init can be found in the HAL_PMU_Init function in drivers/hal/bf0_hal_pmu.c.
+
+```
+
 ```{only} SF32LB55X
 Config Clock adjusts:
 
@@ -261,6 +302,9 @@ Each board needs to implement the following board‑level driver functions. Refe
 ```
 ```{only} SF32LB56X
 Each board needs to implement the following board‑level driver functions. Refer to files under `customer/boards/eh-lb56xu`.
+```
+```{only} SF32LB57X
+Each board needs to implement the following board‑level driver functions. Refer to files under `customer/boards/sf32lb57-dpi-hdk_base`.
 ```
 ```{only} SF32LB58X
 Each board needs to implement the following board‑level driver functions. Refer to files under `customer/boards/ec-lb58x`.

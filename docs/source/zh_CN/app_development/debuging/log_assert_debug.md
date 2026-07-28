@@ -14,7 +14,7 @@
 ```
 :::
 
-:::{only} SF32LB58X or SF32LB56X 
+:::{only} SF32LB58X or SF32LB56X or SF32LB57X 
 如下log表示 HCPU收到了LCPU的crash通知后触发的主动assert，需要查看LCPU的crash原因
 
 ```
@@ -112,7 +112,7 @@ example\pm\coremark\
 
 :::
 
-:::{only} SF32LB58X or SF32LB56X 
+:::{only} SF32LB58X or SF32LB56X or SF32LB57X 
 ### LCPU 没有 log 输出
 如下配置后依然没有打印：
 1. menuconfig → RTOS → RT-Thread Kernel → Kernel Device Object → uart4 配置为 uart4。

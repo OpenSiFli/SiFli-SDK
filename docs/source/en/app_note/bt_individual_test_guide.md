@@ -141,7 +141,7 @@ Figure 4-2
 
 ````
 
-````{only} SF32LB52X or SF32LB56X or SF32LB58X
+````{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 
 ## 2. Test Preparation
 

@@ -77,7 +77,7 @@ Notes:
 3. Loader paths in the XML are resolved relative to `JLinkDevices.xml`, so the entire `tools/flash/jlink_drv` directory contents must be copied together.
 
 ### 3.1 J-Link Connection
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 Open J-Link Commander, type `connect` to connect, and type a question mark to select the SiFli device:
 :::
 :::{only} SF32LB52X
@@ -95,7 +95,7 @@ Select the SWD interface and configure the speed:
 
 ### 3.2 J-Link Usage Issues
 
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 #### How to Print Log Information Using JLINK RTT
 :::
 
@@ -107,7 +107,7 @@ By default, the HCPU log outputs from UART1 and the LCPU log outputs from UART3.
 By default, the HCPU log outputs from UART1 and the LCPU log outputs from UART4. If only UART4 is routed out or UART1 is occupied, you can use menuconfig to switch log output to SWD.
 :::
 
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 How to modify HCPU log output to J-Link SWD:
 1. Navigate to the project directory and open menuconfig.
 

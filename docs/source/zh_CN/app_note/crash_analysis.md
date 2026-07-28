@@ -247,7 +247,7 @@ hardfault发生时会打印如下信息，最后打印hardfault的类型，如�
 
 ## 3. 保存现场 
 
-```{only} SF32LB52X 
+```{only} SF32LB52X or SF32LB57X
 ### 3.1 通过UART访问芯片保存现场
 
 #### 3.1.1 方法1：使用SifliUsartServer软件
@@ -560,7 +560,7 @@ _AssertDumpUart.exe_ 在Sifli_Trace工具包文件夹下
 - _lcpu_ram.bin_: 224Kbyte的LCPU RAM数据
 - _lcpu_dtcm.bin_: 16Kbyte的LCPU DTCM数据
 
-```{only} SF32LB52X or SF32LB55X or SF32LB58X
+```{only} SF32LB52X or SF32LB55X or SF32LB58X or SF32LB57X
 ### 3.2 使用sdk.py命令行导出兼容目录
 ```
 

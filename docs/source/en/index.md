@@ -12,6 +12,10 @@ This document describes how to use the SDK on SF32LB56x chips.
 This document describes how to use the SDK on SF32LB58x chips.
 ```
 
+```{only} SF32LB57X
+This document describes how to use the SDK on SF32LB57x chips.
+```
+
 ```{only} SF32LB52X
 This document describes how to use the SDK on SF32LB52x chips.
 ```

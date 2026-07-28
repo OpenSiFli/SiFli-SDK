@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -17,14 +20,20 @@ author = 'SiFli'
 language = 'en'
 version = os.environ.get('SIFLI_DOC_VERSION', 'latest')
 
+# Algolia DocSearch configuration
+algolia_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
+algolia_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
+
 if "SF32LB55X" in tags:
     chip = 'sf32lb55x'
 elif "SF32LB56X" in tags:
     chip = 'sf32lb56x'
+elif "SF32LB57X" in tags:
+    chip = 'sf32lb57x'
 elif "SF32LB58X" in tags:
-    chip = 'sf32lb58x'  
+    chip = 'sf32lb58x'
 elif "SF32LB52X" in tags:
-    chip = 'sf32lb52x'    
+    chip = 'sf32lb52x'
 else:
     chip = 'sf32lb52x'
 
@@ -67,6 +76,7 @@ html_context = {
     "chips": [
         ("SF32LB52x", "sf32lb52x"),
         ("SF32LB56x", "sf32lb56x"),
+        ("SF32LB57x", "sf32lb57x"),
         ("SF32LB58x", "sf32lb58x"),
         ("SF32LB55x", "sf32lb55x"),
     ],
@@ -179,6 +189,19 @@ if "SF32LB56X" in tags:
     exclude_patterns += []    
     # app_development
     exclude_patterns += ["**/startup_flow_sf32lb52x.md"]
+
+
+if "SF32LB57X" in tags:
+    # HAL
+    exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
+    # Drivers
+    exclude_patterns = ["**/spi_flash.md"]
+    # App note
+    exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
+    # Middlware
+    exclude_patterns += []
+    # Example
+    exclude_patterns += ["example/multicore/**"]
 
 
 if "SF32LB52X" in tags:

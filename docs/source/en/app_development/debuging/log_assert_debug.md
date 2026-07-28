@@ -16,7 +16,7 @@ The following log indicates that HCPU received a crash notification from LCPU an
 ```
 :::
 
-:::{only} SF32LB58X or SF32LB56X
+:::{only} SF32LB58X or SF32LB56X or SF32LB57X
 The following log indicates that HCPU received a crash notification from LCPU and triggered an active assert. You need to investigate the LCPU crash cause.
 
 ```
@@ -116,7 +116,7 @@ Solution: There is a readme.txt file in the corresponding project directory. Ref
 
 :::
 
-:::{only} SF32LB58X or SF32LB56X
+:::{only} SF32LB58X or SF32LB56X or SF32LB57X
 ### LCPU Has No Log Output
 If there is still no output after the following configuration:
 1. menuconfig → RTOS → RT-Thread Kernel → Kernel Device Object → configure uart4 as uart4.

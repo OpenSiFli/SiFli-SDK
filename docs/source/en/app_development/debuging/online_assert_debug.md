@@ -35,7 +35,7 @@ After setting this, the system will halt at that instruction. After connecting J
 ## 2. Ozone Debugging Guide
 Ozone is SEGGER's official full-featured debugger, which is more stable than Keil for crash investigation and multi-core debugging.
 
-````{only} SF32LB55X or SF32LB58X or SF32LB56X
+````{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 J-Link connects to HCPU by default. If debugging HCPU, this step can be skipped.
 If you need to debug LCPU, execute the corresponding batch script in a Windows CMD window, such as `SIFLI-SDK\tools\segger\jlink_lcpu_a0.bat` (55 series), `jlink_lcpu_pro.bat` (58 series), or `jlink_lcpu_56x.bat` (56 series).
 This batch file executes a few low-level commands. You can also enter these two commands directly in the J-Link window to manually switch to LCPU:
@@ -70,7 +70,7 @@ Using the 55 series as an example to demonstrate LCPU step-by-step execution.
 ![55 New Project](../../../assets/ozone003.png)
 :::
 
-:::{only} SF32LB52X or SF32LB56X or SF32LB58X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 ![52 New Project](../../../assets/52_ozone1.png)
 :::
 
@@ -102,7 +102,7 @@ For example, the LCPU axf path for the `watch_demo` project is `\release\example
 ![55 Select Firmware](../../../assets/ozone005.png)
 :::
 
-:::{only} SF32LB52X or SF32LB56X or SF32LB58X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 In Ozone, select File then Open, and find the firmware you want to import.
 
 ![52 Select Firmware 1](../../../assets/52_ozone4.png)
@@ -168,7 +168,7 @@ C:\Program Files\SEGGER\Ozone\JLinkDevices.xml
 C:\Users\yourname\AppData\Roaming\SEGGER\JLinkDevices.xml
 C:\Users\yourname\AppData\Roaming\SEGGER\JLinkDevices\Devices\SF32LB55X****.elf
 ```
-:::{only} SF32LB58X or SF32LB56X or SF32LB55X
+:::{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 **Issue 5: How to Debug LCPU with Ozone**
 
 J-Link connects to HCPU by default for debugging.

@@ -35,7 +35,7 @@ HAL_sw_breakpoint(); // 设置断点
 ## 2. Ozone 调试指南
 Ozone 是 SEGGER 官方推出的全功能调试器，在处理死机排查、多核调试时比 Keil 更加稳定。
 
-````{only} SF32LB55X or SF32LB58X or SF32LB56X
+````{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 J-Link 默认 connect 会连接到 HCPU，如果调试 HCPU，这一步可以跳过。
 如果需要调试 LCPU，可以在 Windows CMD 窗口执行对应的批处理脚本，例如 `SIFLI-SDK\tools\segger\jlink_lcpu_a0.bat`（55 系列）、`jlink_lcpu_pro.bat`（58 系列）或 `jlink_lcpu_56x.bat`（56 系列）。
 执行该批处理实际上是执行了几条底层指令，也可以直接在 J-Link 窗口依次输入这两条命令手动切换到 LCPU：
@@ -70,7 +70,7 @@ exit
 ![55新建项目](../../../assets/ozone003.png)
 :::
 
-:::{only} SF32LB52X or SF32LB56X or SF32LB58X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 ![52新建项目](../../../assets/52_ozone1.png)
 :::
 
@@ -102,7 +102,7 @@ exit
 ![55选择固件](../../../assets/ozone005.png)
 :::
 
-:::{only} SF32LB52X or SF32LB56X or SF32LB58X
+:::{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 Ozone 中选择 file 之后再选择 open 的选项，随后找到自己想导入的固件选择导入。
 
 ![52选择固件1](../../../assets/52_ozone4.png)
@@ -168,7 +168,7 @@ C:\Program Files\SEGGER\Ozone\JLinkDevices.xml
 C:\Users\yourname\AppData\Roaming\SEGGER\JLinkDevices.xml
 C:\Users\yourname\AppData\Roaming\SEGGER\JLinkDevices\Devices\SF32LB55X****.elf
 ```
-:::{only} SF32LB58X or SF32LB56X or SF32LB55X
+:::{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 **问题 5：Ozone 怎么调试 LCPU**
 
 J-Link 默认 connect 会连接到 HCPU，调试 HCPU。

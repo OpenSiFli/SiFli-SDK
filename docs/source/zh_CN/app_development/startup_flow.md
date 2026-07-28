@@ -16,6 +16,9 @@ MPI2 的输入输出连接至IO(SB)，用于访问芯片内合封(SiP)的另一�
 MPI3 的输入输出连接至IO(PA)，用于访问芯片外接的NOR/NAND Flash。
 MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR Flash。
 ```
+```{only} SF32LB57X
+SF32LB57x为三核架构（高性能大核+低功耗小核+协处理核），有内置和外置多个存储接口，MPI1和MPI2为内置存储接口，可接PSRAM与NOR Flash，MPI3可接内置NOR Flash或外置存储（NOR/NAND），SDMMC可接SD-NAND或SD-eMMC。应用程序运行在大核，ACPU可用于音频和图形处理，LCPU适用于执行功耗敏感场景的任务。
+```
 ```{only} SF32LB58X
 SF32LB58x为三核架构（高性能大核+低功耗小核+协处理核），有内置和外置多个存储接口，其中MPI1，MPI2，MPI3和MPI4位于HPSYS，可向DMAC1发送请求；MPI5位于LPSYS，可向DMAC3发送请求。
 MPI1的输入输出连接至IO(SA)，用于访问芯片内合封(SiP)的8线/16线pSRAM或4线NOR Flash。
@@ -42,6 +45,12 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
 2. 二级Bootloader：加载Flash中的应用程序并跳转执行
 3. 应用程序：用户程序
 ```
+```{only} SF32LB57X
+大核上的应用程序启动流程分为三个阶段：
+1. 一级Bootloader：固化在SF32LB57X内部的ROM中，加载Flash中的二级Bootloader到RAM中跳转运行
+2. 二级Bootloader：加载Flash中的应用程序并跳转执行
+3. 应用程序：用户程序
+```
 ```{only} SF32LB58X
 大核上的应用程序启动流程分为三个阶段：
 1. 一级Bootloader：固化在SF32LB58X内部的ROM中，加载Flash中的二级Bootloader到RAM中跳转运行
@@ -51,6 +60,10 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
 
 ## 一级Bootloader
 ```{only} SF32LB52X
+一级Bootloader固化在了芯片的ROM中，其中断向量表地址为0。上电后会首先运行一级Bootloader，根据芯片封装类型，确定Flash分区表的位置（内部或者外部Flash，下文称为启动Flash，Flash包括NOR、NAND、SD和eMMC），根据Flash分区表指示的二级Bootloader地址（必须在启动Flash上），拷贝二级Bootloader代码到RAM中并跳转运行。
+```
+
+```{only} SF32LB57X
 一级Bootloader固化在了芯片的ROM中，其中断向量表地址为0。上电后会首先运行一级Bootloader，根据芯片封装类型，确定Flash分区表的位置（内部或者外部Flash，下文称为启动Flash，Flash包括NOR、NAND、SD和eMMC），根据Flash分区表指示的二级Bootloader地址（必须在启动Flash上），拷贝二级Bootloader代码到RAM中并跳转运行。
 ```
 
@@ -68,6 +81,10 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
 ```
 ````
 
+```{only} SF32LB57X
+一级Bootloader阶段大核以上电默认的时钟频率运行，初始化启动Flash的IO配置。
+```
+
 ```{only} SF32LB55X
 一级Bootloader固化在了芯片的ROM中，其中断向量表地址为0。上电后会首先运行一级Bootloader，一级Bootloader阶段大核以上电默认的时钟频率运行，一级Bootloader完成基础初始化后，直接从Flash1 中加载用户应用程序。
 
@@ -80,6 +97,10 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
 
 
 ## 二级Bootloader
+
+```{only} SF32LB57X
+二级Bootloader根据芯片封装类型以及Flash分区表，加载应用程序并跳转执行。根据芯片封装类型，应用程序分为以下几种启动方式，运行方式分为XIP（直接以NOR Flash地址执行代码，代码的存储地址与执行地址相同）和非XIP（从Flash拷贝代码到RAM中执行，即代码的存储地址与执行地址不同）两种，不论是哪种启动方式，应用程序与二级Bootloader均存放在同一个启动Flash上，区别只是应用程序代码的运行方式不同：
+```
 
 ```{only} SF32LB52X
 二级Bootloader根据芯片封装类型以及Flash分区表，加载应用程序并跳转执行。根据芯片封装类型，应用程序分为以下几种启动方式，运行方式分为XIP（直接以NOR Flash地址执行代码，代码的存储地址与执行地址相同）和非XIP（从Flash拷贝代码到RAM中执行，即代码的存储地址与执行地址不同）两种，不论是哪种启动方式，应用程序与二级Bootloader均存放在同一个启动Flash上，区别只是应用程序代码的运行方式不同：
@@ -149,6 +170,9 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
  ```{only} SF32LB56X
 应用程序的入口函数为`ResetHandler`（位于`drivers\cmsis\sf32lb56x\Templates\arm\startup_bf0_hcpu.S`），其执行流程如下图所示，用户主函数`main`则由`rt_application_init`创建的main线程调用，见{ref}`main_thread_entry流程 <main_thread_entry_flow>`。
 ```
+ ```{only} SF32LB57X
+应用程序的入口函数为`ResetHandler`（位于`drivers\cmsis\sf32lb57x\Templates\arm\startup_bf0_hcpu.S`），其执行流程如下图所示，用户主函数`main`则由`rt_application_init`创建的main线程调用，见{ref}`main_thread_entry流程 <main_thread_entry_flow>`。
+```
  ```{only} SF32LB58X
 应用程序的入口函数为`ResetHandler`（位于`drivers\cmsis\sf32lb58x\Templates\arm\startup_bf0_hcpu.S`），其执行流程如下图所示，用户主函数`main`则由`rt_application_init`创建的main线程调用，见{ref}`main_thread_entry流程 <main_thread_entry_flow>`。
 ```
@@ -167,6 +191,9 @@ MPI5 的输入输出连接至IO(SC)，用于访问芯片内合封(SiP)的4线NOR
 ```
 ```{only} SF32LB56X
 `SystemInit`（在文件`drivers/cmsis/sf32lb56x/Templates/system_bf0_ap.c`里）在变量初始化之前执行（因此这期间不能使用带初值的变量，零段变量也要避免依赖于初值0），更新VTOR寄存器重定向中断向量表，调用`mpu_config`和`cache_enable`初始化MPU并使能Cache，这两个函数为weak函数，应用程序中可以重新实现来替换默认的实现。
+```
+```{only} SF32LB57X
+`SystemInit`（在文件`drivers/cmsis/sf32lb57x/Templates/system_bf0_ap.c`里）在变量初始化之前执行（因此这期间不能使用带初值的变量，零段变量也要避免依赖于初值0），更新VTOR寄存器重定向中断向量表，调用`mpu_config`和`cache_enable`初始化MPU并使能Cache，这两个函数为weak函数，应用程序中可以重新实现来替换默认的实现。
 ```
 ```{only} SF32LB58X
 `SystemInit`（在文件`drivers/cmsis/sf32lb58x/Templates/system_bf0_ap.c`里）在变量初始化之前执行（因此这期间不能使用带初值的变量，零段变量也要避免依赖于初值0），更新VTOR寄存器重定向中断向量表，调用`mpu_config`和`cache_enable`初始化MPU并使能Cache，这两个函数为weak函数，应用程序中可以重新实现来替换默认的实现。
@@ -222,6 +249,20 @@ HAL_PMU_Init初始化的PMU参数详情见 drivers/hal/bf0_hal_pmu.c 中的 HAL_
 
 ```
 
+```{only} SF32LB57X
+Config Clock修改的设置包括：
+
+* 加载PMU校准值
+* 启动GTimer
+* 切换PMU到RC32K
+* 如果使用外置XT32K，则切换RTC到XT32K
+* 配置系统时钟为240MHz(DLL1)
+* 配置DLL2为312MHz
+
+HAL_PMU_Init初始化的PMU参数详情见 drivers/hal/bf0_hal_pmu.c 中的 HAL_PMU_Init 函数。
+
+```
+
 ```{only} SF32LB55X
 Config Clock修改的设置包括：
 
@@ -261,6 +302,9 @@ Config Clock修改的设置包括：
 ```
 ```{only} SF32LB56X
 每块板子需要实现如下板级驱动函数，可参考`customer/boards/eh-lb56xu`目录下的文件，
+```
+```{only} SF32LB57X
+每块板子需要实现如下板级驱动函数，可参考`customer/boards/sf32lb57-dpi-hdk_base`目录下的文件，
 ```
 ```{only} SF32LB58X
 每块板子需要实现如下板级驱动函数，可参考`customer/boards/ec-lb58x`目录下的文件，

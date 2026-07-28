@@ -77,7 +77,7 @@ J-Link 的安装可以去官方自行下载，请使用 JLink V7.62 或以上版
 3. XML 中的 loader 路径相对 `JLinkDevices.xml` 解析，因此必须整体复制 `tools/flash/jlink_drv` 目录内容。
 
 ### 3.1 J-Link 的连接
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 打开 J-Link Commander，输入 `connect` 连接，输入问号选择 SiFli 的 device：
 :::
 :::{only} SF32LB52X
@@ -95,7 +95,7 @@ J-Link 的安装可以去官方自行下载，请使用 JLink V7.62 或以上版
 
 ### 3.2 J-Link 使用相关问题
 
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 #### 如何用 JLINK RTT 打印 log 信息
 :::
 
@@ -107,7 +107,7 @@ J-Link 的安装可以去官方自行下载，请使用 JLink V7.62 或以上版
 目前我们默认软件 HCPU 的 log 是从 UART1  输出；LCPU 的 log 是从 UART4 输出。客户只引出了 UART4 或者 UART1 被占用时，可以采用 menuconfig 改成 SWD 输出 log。
 :::
 
-:::{only} SF32LB55X or SF32LB58X or SF32LB56X
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 J-Link SWD 打印 HCPU 的 log 修改方法：
 1. 进入需要修改的工程目录打开menuconfig
 

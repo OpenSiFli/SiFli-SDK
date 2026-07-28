@@ -4,7 +4,7 @@ HAL PMU提供抽象的软件接口操作硬件PMU(Power Management Unit)模块�
 - 设置芯片的供电参数
 - 设置低功耗时钟参数，
 - 配置芯片进入关机模式并设置唤醒源, 在关机模式下芯片可被PIN和RTC唤醒, 唤醒PIN与GPIO管脚的映射关系与LPSYS睡眠模式的唤醒PIN相同，参见[](aon.md)
-- SF32LB52X支持充电，相关接口为 #HAL_PMU_ChgInit 等
+- SF32LB52X和SF32LB57X支持充电，相关接口为 #HAL_PMU_ChgInit 等
 
 详细的API说明参考[PMU](#hal-pmu)
 
