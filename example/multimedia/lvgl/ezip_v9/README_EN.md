@@ -51,6 +51,8 @@ The default `disk/example.ezip` is flashed into the onboard NOR/NAND root file s
 Default provided image files:
 - LVGL V9: `example.ezip`
 
+> **Note:** The `asset` directory in the project only contains the original images (PNG) used to generate the `.ezip` files. These original images are not used by the code at runtime; the actual files loaded are the `.ezip` files from the `disk` directory or SD card.
+
 To use custom images, you can:
 - Use the sdk/tools/png2ezip/ezip.exe tool to convert PNG images to ezip format
   ```
@@ -62,6 +64,9 @@ To use custom images, you can:
   - `-binfile 2`: Set output to binary file format
   - `-binext .ezip`: Specify output file extension as .ezip, can be customized to an extension up to 20 characters
   - `-lvgl_version`: Specify target LVGL version, supports 8 or 9
+  - `-winsize 2048`: SF32LB57 only. Limit the compression window size to 2048 to meet the SF32LB57 compression-ratio constraint
+
+  > **Note:** `-winsize 2048` is required when generating resources for SF32LB57. Do not add it for other chips.
   
   **Usage Examples**:
   ```
@@ -70,6 +75,9 @@ To use custom images, you can:
   
   # Convert to LVGL V9 format
   ezip -convert images\logo.png -rgb565 -binfile 2 -binext .ezip -lvgl_version 9
+
+  # Convert an LVGL V9 resource for SF32LB57
+  ezip -convert images\logo.png -rgb565 -binfile 2 -binext .ezip -lvgl_version 9 -winsize 2048
   ```
 - Place the image file in the `disk` directory, recompile and flash
 - Or copy the image file to SD card root directory (requires SD card insertion)

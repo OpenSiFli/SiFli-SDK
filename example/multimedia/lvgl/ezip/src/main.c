@@ -402,7 +402,11 @@ int main(void)
     /* Create an image object */
     lv_obj_t *img = lv_img_create(lv_scr_act());
     /* Set initial image source for LVGL V8 */
+#ifdef SOC_SF32LB57X
+    lv_img_set_src(img, "example_57.ezip");
+#else
     lv_img_set_src(img, "example.ezip");
+#endif
     /* Align the image to the center of the screen */
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
 

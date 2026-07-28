@@ -51,6 +51,8 @@ scons --board=sf32lb56-lcd_a128r12n1 -j8
 默认提供的图片文件：
 - LVGL V9: `example.ezip`
 
+> **说明：** 工程目录下的 `asset` 文件夹仅存放用于生成 `.ezip` 的原图（PNG），代码中不会直接使用该目录下的文件，实际加载的是 `disk` 目录或 SD 卡中的 `.ezip` 文件。
+
 如需使用自定义图片，可以：
 - 使用sdk/tools/png2ezip/ezip.exe工具将PNG图片转换为ezip格式
   ```
@@ -62,6 +64,9 @@ scons --board=sf32lb56-lcd_a128r12n1 -j8
   - `-binfile 2`: 设置输出为二进制文件格式
   - `-binext .ezip`: 指定输出文件扩展名为.ezip，可以自定义为不超过20个字符的扩展名
   - `-lvgl_version`: 指定目标LVGL版本，支持8或9
+  - `-winsize 2048`: SF32LB57专用，将压缩窗口大小限制为2048，以满足SF32LB57的压缩率限制
+
+  > **注意：** 为SF32LB57生成资源时必须添加 `-winsize 2048`。其它芯片无需添加该参数。
   
   **使用示例**：
   ```
@@ -70,6 +75,9 @@ scons --board=sf32lb56-lcd_a128r12n1 -j8
   
   # 转换为LVGL V9格式
   ezip -convert images\logo.png -rgb565 -binfile 2 -binext .ezip -lvgl_version 9
+
+  # 为SF32LB57转换LVGL V9资源
+  ezip -convert images\logo.png -rgb565 -binfile 2 -binext .ezip -lvgl_version 9 -winsize 2048
   ```
 - 将图片文件放入`disk`目录，重新编译烧录
 - 或将图片文件复制到SD卡根目录（需要插入SD卡）
