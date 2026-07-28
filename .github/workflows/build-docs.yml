@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        variant: [52x, 56x, 58x, 55x]
+        variant: [52x, 56x, 57x, 58x, 55x]
     outputs:
       version: ${{ steps.determine-version.outputs.VERSION }}
     steps:
@@ -121,6 +121,7 @@ jobs:
           path: |
             docs-52x/
             docs-56x/
+            docs-57x/
             docs-58x/
             docs-55x/
           retention-days: 7
