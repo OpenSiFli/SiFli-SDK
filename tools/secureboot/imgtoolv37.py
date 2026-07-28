@@ -527,6 +527,16 @@ def dfu_packed_bin(img, eimg, session_key, is_enc=True):
 
 
 def dfu_compress_bin(img, eimg):
+    # Remove stale eZIP output files once when entering this function.
+    # Some eZIP versions generate temp_com.bin.gz, while others generate
+    # temp_com.gz.
+    for compressed_file in ("temp_com.bin.gz", "temp_com.gz"):
+        try:
+            if os.path.exists(compressed_file):
+                os.remove(compressed_file)
+        except PermissionError:
+            print("old file exists, please remove it manually")
+
     # 1. Align image to 16 bytes
     data = open(img, "rb").read()
     data = bytearray(data)
@@ -559,7 +569,7 @@ def dfu_compress_bin(img, eimg):
             data2 = zlib.compress(data2, 9)
         elif (FLAGS.com_type == DFU_COMPRESS_TYPE_GZIP):
             temp_file = "temp_com.bin"
-            with open (temp_file, "wb") as fi:
+            with open(temp_file, "wb") as fi:
                 fi.write(data2)
             if FLAGS.ezip_path:
                 ezip_cmd = FLAGS.ezip_path
@@ -574,9 +584,19 @@ def dfu_compress_bin(img, eimg):
             main = f'{ezip_cmd} -gzip {temp_file} -length -noheader'
             print (main)
             r_v = os.system(main)
-            #print (r_v)
-
-            with open (temp_file + ".gz", "r+b") as fo:
+            if r_v != 0:
+                raise RuntimeError("eZIP compression failed with exit code {}".format(r_v))
+            gzip_file = temp_file + ".gz"
+            gzip_file_without_bin = os.path.splitext(temp_file)[0] + ".gz"
+            if os.path.exists(gzip_file):
+                compressed_file = gzip_file
+            elif os.path.exists(gzip_file_without_bin):
+                compressed_file = gzip_file_without_bin
+            else:
+                raise FileNotFoundError(
+                    "eZIP did not generate '{}' or '{}'".format(
+                        gzip_file, gzip_file_without_bin))
+            with open(compressed_file, "rb") as fo:
                 data2 = fo.read()
         '''
         gzip_headerlen = 10 + 13
