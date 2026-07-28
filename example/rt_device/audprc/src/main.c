@@ -469,7 +469,7 @@ static void example_audprc_tx_rx(rt_uint32_t rx_channels, rt_uint32_t rx_sr, rt_
 
     if (g_rx_tx_tid)
     {
-        rt_kprintf("%s failed. Thread has been existed.\n");
+        rt_kprintf("%s failed. Thread has already existed.\n", __func__);
         return;
     }
     g_rx_tx_tid = rt_thread_create("audtx_rx", audprc_rx_tx_entry, NULL, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
