@@ -787,6 +787,8 @@ common_projects:
 
   - path: example/rt_device/gpio/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/gpu/render_list_mode/project
     boards: *devkit_lcd_boards
