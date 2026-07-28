@@ -1,154 +1,150 @@
-# GPADC button
+# GPADC Button
+
+Source path: example/misc/adc_button
 
 ## Supported Platforms
-* sf32-oed-epd_v11
+
+* sf32lb57-spi-hdk_n16r4
 
 ## Overview
-GPADC (General Purpose ADC) button is a technology that realizes multi-key detection through ADC sampling, and its core principle is to use a resistive voltage divider network to convert the state of different keys into different voltage values, and then identify specific key actions through ADC sampling. GPADC keys significantly reduce pin footprint compared to traditional standalone GPIO keys (one ADC pin can support multiple keys), especially for embedded devices with tight pin resources.
-This document describes the GPADC buttons, which can detect the key state through ADC, support two basic operations: click and long-press, and can be mapped to specific operation actions (up, down, select, and exit).
 
-## Explanation of principle and function
-- When a key is pressed, the corresponding resistor branch is turned on with GND, and the voltage of the ADC pin is determined by the resistance of the conduction branch and the pull-up resistor (or series resistor). For example:    
+A GPADC button uses a resistor divider network to convert the state of multiple buttons into distinct voltage levels, then uses a single ADC channel to sample and identify which button was pressed. Compared with the traditional one-GPIO-per-button approach, it saves a significant number of pins: a single ADC channel plus one GPIO interrupt (used for wake-up) can support multiple buttons, making it well suited to pin-constrained scenarios.
 
-When key 1 is pressed, ADC voltage = VCC × (R1 parallel other resistors) / total resistance;    
-When key 2 is pressed, ADC voltage = VCC × (R2 parallel other resistors) / total resistance;    
-When different keys are pressed, the ADC pins produce a unique and distinguishable voltage value.    
+This example demonstrates how to drive GPADC buttons using the SDK's button library. When a button is pressed, the corresponding button number and action type are printed to the serial console.
 
-By properly designing the resistance value, it is possible to ensure that the voltage value range corresponding to each button does not overlap, so that the specific button can be identified by the ADC sample value.    
+## Principle
 
-- This routine mainly implements the following functions:
-1. Initialize the GPADC button hardware and driver configuration;
-2. Recognize two basic key actions: short click and long press;
-3. Mapping into four actions: UP, DOWN, SELECT, and EXIT;
-4. Support business logic processing of custom key actions.
+### Hardware Principle
 
-## Use of routines
-### Compilation and burning
-The hardware mainly uses the development board (SF32-OED-6'-EPD_V1.1)
-#### Program compilation and burning
-Switch to the routine project directory and run the scons command to perform the compilation ('.. 'Add the sf32-oed-epd_v11 storage path for the development board):
+Each button is connected in series with a resistor of a different value, and all of them are tied to the same ADC pin. When different buttons are pressed, the divider ratio differs, so the ADC pin sees a unique and distinguishable voltage:
+
 ```
-scons --board=sf32-oed-epd_v11 --board_search_path=.. -j8 
+Button 1 pressed → ADC voltage = VCC × R1 / (R_pullup + R1)
+Button 2 pressed → ADC voltage = VCC × R2 / (R_pullup + R2)
+...
 ```
-run`build_sf32-oed-epd_hcpu\uart_download.bat`，Follow the prompts to select a port to download：
+
+As long as the resistor values are chosen properly so that the voltage ranges of the buttons do not overlap, the button number can be looked up from the ADC sample value.
+
+![Hardware schematic](assets/adc.png)
+
+### Software Detection Flow
+
+1. Any button press → the shared GPIO generates an edge interrupt
+2. The button library performs debouncing in a software timer (the `timer` thread)
+3. Once debouncing passes, the pin is temporarily switched to analog function and the ADC is read once
+4. The sampled voltage is compared against each button's configured range; a match yields the button index
+5. After the read, the pin is switched back to GPIO, the interrupt is re-enabled, and the application-registered callback is invoked
+
+The voltage comparison logic (`middleware/button/button.c`):
+
+```c
+/* The raw value read back from the ADC is in units of 0.1mV; convert to mV first */
+read_arg.value /= 10;
+for (i = 0; i < adc_btn_group_cfg->num; i++)
+{
+    if ((read_arg.value >= (adc_btn_cfg[i].voltage - adc_btn_cfg[i].volt_range))
+            && (read_arg.value <= (adc_btn_cfg[i].voltage + adc_btn_cfg[i].volt_range)))
+    {
+        break;      /* Match, i is the button index */
+    }
+}
 ```
-build_sf32l-oed-epd_hcpu\uart_download.bat
+
+Therefore the `VOLT` and `RANGE` configuration items are both in units of **mV**, and the match condition is `VOLT - RANGE ≤ measured voltage ≤ VOLT + RANGE`.
+
+## Using the Example
+
+### menuconfig Configuration
+
+```
+sdk.py menuconfig --board=sf32lb57-spi-hdk_n16r4_hcpu
+```
+
+The long-press detection duration is controlled by `BUTTON_ADV_ACTION_CHECK_DELAY` (in ms), configured under `SiFli Middleware -> Enable button library`. This example sets it to 1000, meaning a press held longer than 1 second is treated as a long press.
+
+![menuconfig configuration](assets/menuconfig_action.png)
+
+
+### Build and Flash
+
+Switch to the example's project directory and run the build:
+
+```
+scons --board=sf32lb57-spi-hdk_n16r4_hcpu -j8
+```
+
+Run `build_sf32lb57-spi-hdk_n16r4_hcpu\uart_download.bat` and select the port as prompted to flash:
+
+```
+build_sf32lb57-spi-hdk_n16r4_hcpu\uart_download.bat
 Uart Download
-please input the serial port num: 5  (Fill in the appropriate port number)
-```
-This is only a brief explanation, please check for details[Compile the burning link](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html)
-
-#### menuconfig configuration
-Run the menuconfig command to perform the compilation ('..'Add the sf32-oed-epd_v11 storage path for the development board):
-```
-sdk.py menuconfig --board=sf32-oed-epd_v11 --board_search_path=..
-```
-- If you want to change the time of the long press, you can set it by modifying the macro 'BUTTON_ADV_ACTION_CHECK_DELAY' in Menuconfig. Open the Menuconfig configuration under 'SiFli Middleware->Enable button library'.
-![alt text](assets/menuconfig_action.png)
-#### Configuration process
-- First, check whether the hardware supports the use of GPADC buttons, as shown in the hardware schematic diagram below, mark the voltage range and reference voltage of the GPADC buttons, for example, set the reference voltage under the directory of the board according to the figure below (take the middle value of the voltage range)`CONFIG_ADC_BUTTON_GROUP1_BUTTON1_VOLT=2992`、
-`CONFIG_ADC_BUTTON_GROUP1_BUTTON2_VOLT=2345`, and the amplitude of the voltage range for each ADC button (take half of the voltage range)`CONFIG_ADC_BUTTON_GROUP1_BUTTON1_RANGE=315`、`CONFIG_ADC_BUTTON_GROUP1_BUTTON2_RANGE=245`。
-![alt text](assets/adc.png)
-
-
-## Software design
-1. ADC key event processing function to parse key actions and trigger corresponding callbacks. First, determine whether the key action type is a click or a long press, then determine which button is based on the key index (pin value), and finally trigger the corresponding operation action by calling the global callback function action_cbk, so as to realize the mapping and transmission of key hardware events to business logic.
-```c
-static void adc_button_handler(uint8_t group_idx, int32_t pin, button_action_t action)
-{
-    / Handling click events (short press)
-    if (action == BUTTON_CLICKED) {
-        if (pin == 0) {
-            rt_kprintf("The first key clicks → up\n");
-            if (action_cbk) action_cbk(Action_UP);
-        } else if (pin == 1) {
-            rt_kprintf("The second button clicks → down\n");
-            if (action_cbk) action_cbk(Action_DOWN);
-        }
-    }
-    / Handle long press events
-    else if (action == BUTTON_LONG_PRESSED) {
-        if (pin == 0) {
-            rt_kprintf("Press and hold the first button → to select\n");
-            if (action_cbk) action_cbk(Action_SELECT);
-        } else if (pin == 1) {
-            rt_kprintf("Press and hold the second button → to exit\n");
-            if (action_cbk) action_cbk(Action_EXIT);
-        }
-    }
-}
-```
-2. Create and initialize a key controller, complete the key hardware initialization, and bind the event handling function.
-Create a ButtonControls instance by allocating memory, configure the keystroke pins, activation level, mode, and other parameters, invoke button_init initialize the key driver, bind the ADC key processing function to the corresponding button, enable the key detection function, and save the callback function and key ID to complete the creation and initialization of the button controller.
-```c
-static ButtonControls* button_controls_create(ActionCallback_t on_action)
-{
-    ButtonControls *ctrl = (ButtonControls*)malloc(sizeof(ButtonControls));
-    if (!ctrl) {
-        rt_kprintf("Memory allocation failed\n");
-        return NULL;
-    }
-    int32_t id;
-    button_cfg_t cfg; 
-    // Initialize the key configuration
-    cfg.pin = EPD_KEY_GPADC; 
-    cfg.active_state = BUTTON_ACTIVE_HIGH;
-    cfg.mode = PIN_MODE_INPUT; 
-    cfg.button_handler = dummy_button_event_handler;
-
-    //...
-}
+please input the serial port num: 5
 ```
 
-3. Action processing functions that execute specific business logic based on key actions. As a logical entry point, specific functions can be implemented here according to actual needs.
-```c
-static void handle_action(ActionType action) {
-    switch(action) {
-        case Action_UP:
-            // Add the specific code for the upward action here
-            break;
-        case Action_DOWN:
-            // Add the specific code for the downward action here
-            break;
-        case Action_SELECT:
-            // Add the specific code for the selection action here
-            break;
-        case Action_EXIT:
-            // Add the specific code for the exit action here
-            break;
-        default:
-            break;
-    }
-}
+For details, see the [build and flash documentation](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html).
+
+
+### Adapting to New Hardware
+
+When switching boards, calibrate the voltages as follows:
+
+1. Compute from the schematic, or measure with a multimeter, the ADC pin voltage when each button is pressed
+2. Use the midpoint of the range as `BUTTONx_VOLT`
+3. Use the half-width of the range as `BUTTONx_RANGE`, ensuring that the `[VOLT-RANGE, VOLT+RANGE]` intervals of adjacent buttons do not overlap
+4. Set `GROUP1_MAX_NUM` according to the actual number of buttons, and set `GROUP1_ADC_DEV_CHANNEL` and `BSP_KEY1_PIN` according to the actual wiring
+
+If you are unsure of the measured values, flash a build first. The log line `adc control origin data ... Voltage ...` prints the raw value of each sample (in units of 0.1mV; divide by 10 to get mV), which you can use to work backward to the configuration.
+
+## Example Output
+
+After startup, short-press buttons 1, 2, and 3 in sequence, then long-press button 2:
+
+```
+ADC button ready, 3 keys. Press a key to see the log.
+msh />
+adc control origin data 3712, Voltage 30865
+key 1 pressed
+key 1 clicked
+key 1 released
+adc control origin data 3311, Voltage 26582
+key 2 pressed
+key 2 clicked
+key 2 released
+adc control origin data 2914, Voltage 22342
+key 3 pressed
+key 3 clicked
+key 3 released
+adc control origin data 3309, Voltage 26561
+key 2 pressed
+key 2 long pressed
+key 2 released
 ```
 
-#### Troubleshooting
-|problem|possible cause|	Workaround |
+Log interpretation:
+
+* `adc control origin data` is the raw ADC code value; `Voltage` is in units of 0.1mV
+* Button 1: 30865 × 0.1mV = 3086mV, which falls within 2973 ± 150 = [2823, 3123] → index 0, prints `key 1`
+* Button 2: 26582 × 0.1mV = 2658mV, which falls within 2578 ± 150 = [2428, 2728] → index 1, prints `key 2`
+* Button 3: 22342 × 0.1mV = 2234mV, which falls within 2185 ± 150 = [2035, 2335] → index 2, prints `key 3`
+* Each press samples the ADC only once, before `BUTTON_PRESSED`; the subsequent clicked / long pressed / released events reuse the same button index, so the voltage is not printed repeatedly
+* The short-press sequence is `pressed → clicked → released`; the long-press sequence is `pressed → long pressed → released`
+
+## Troubleshooting
+
+| Problem | Possible Cause | Solution |
 |----|----|----|
-|keys are unresponsive|pin definition error|	Check if the 'EPD_KEY_GPADC' definition is correct |
-|keys not responding |driver not enabled|Confirm that 'RT_USING_BUTTON' and 'USING_ADC_BUTTON' |
-|Key recognition error|	ADC sample value interval overlap|	Adjust the hardware voltage divider resistor to increase the difference in sampling values of different buttons
-|Long press does not trigger |Long press time setting is too long |Reduce the 'BUTTON_ADV_ACTION_CHECK_DELAY' value|
-|Frequent false triggers |Insufficient debrating time|	Increased key debounce time (adjusted in button driver) |
-|initialization failure |insufficient memory|Check the system memory usage and adjust the thread stack size|
+| Assertion at startup that `s_adc_dev` is null in `button_bind_adc_button` | `BSP_USING_ADC1` is not enabled, so the `bat1` device is not registered | Add `CONFIG_BSP_USING_ADC1=y` to `proj.conf` |
+| `button_init failed` | The `BSP_KEY1_PIN` pin number is invalid, or the pin is already used by another button | Check the board-level `CONFIG_BSP_KEY1_PIN` setting |
+| No response to button presses | The interrupt GPIO is misconfigured, or `USING_ADC_BUTTON` is not enabled | Verify `BSP_KEY1_PIN` against the actual wiring and confirm `CONFIG_USING_ADC_BUTTON=y` |
+| Prints `Unknown pin:...` | The measured voltage does not fall within any button's configured range | Re-calibrate `BUTTONx_VOLT` / `RANGE` using the `Voltage` value in the log |
+| A button is recognized as an adjacent button | The button voltage ranges overlap, or `RANGE` is set too large | Reduce `RANGE`, and adjust the hardware divider resistors to widen the difference if necessary |
+| Long press does not trigger | The long-press threshold is too large | Reduce `BUTTON_ADV_ACTION_CHECK_DELAY` |
+| Abnormal ADC channel readings | `GROUP1_ADC_DEV_CHANNEL` does not match the actual wiring | Verify the ADC channel the buttons are connected to on the schematic |
 
-#### Routine output results display:
-You can see the successful initialization of the button controller, as well as the printing effect of the button presses by short and long presses, as well as the current voltage value.
-```
-Button controller initialized successfully, ID:0
-msh />adc control origin data 3194, Voltage 24863
-Second button clicked → Down
-adc control origin data 3853, Voltage 31785
-First button clicked → Up
-adc control origin data 3194, Voltage 24863
-Second button long pressed → Exit
-adc control origin data 3853, Voltage 31785
-First button long pressed → Select
-```
+## Revision History
 
-
-## Update the record
-|version |date |release notes |
+| Version | Date | Release Notes |
 |:---|:---|:---|
-|0.0.1 |08/2025 |initial version |
-``
+| 0.0.2 | 07/2026 | Adapted to sf32lb57-spi-hdk_n16r4; rewrote example and documentation |
+| 0.0.1 | 08/2025 | Initial version |
