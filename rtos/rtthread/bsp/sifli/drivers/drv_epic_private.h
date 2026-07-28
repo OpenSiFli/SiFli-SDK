@@ -16,9 +16,14 @@
 extern "C" {
 #endif
 
+#ifdef DBG_LEVEL
+#undef DBG_LEVEL
 #define  DBG_LEVEL            DBG_INFO  //DBG_LOG //
+#endif
+#ifdef LOG_TAG
 #undef LOG_TAG
 #define LOG_TAG                "drv.epic"
+#endif
 #include "log.h"
 
 #ifndef __DEBUG__

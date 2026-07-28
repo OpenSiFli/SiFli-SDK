@@ -24,6 +24,7 @@ uint32_t drv_lcd_fb_init(const char *lcd_dev_name);
 uint32_t drv_lcd_fb_deinit(void);
 uint32_t drv_lcd_fb_set(lcd_fb_desc_t *fb_desc);
 uint32_t drv_lcd_fb_is_busy(void);
+void drv_lcd_fb_write_send_parallel(uint8_t enable);
 
 //Copy src to fb and send
 rt_err_t drv_lcd_fb_wait_write_done(int32_t wait_ms);
@@ -31,6 +32,7 @@ rt_err_t drv_lcd_fb_write_send(LCD_AreaDef *write_area, LCD_AreaDef *src_area, c
 
 //Wrote to fb directly
 rt_err_t drv_lcd_fb_get_write_area(LCD_AreaDef *write_area, int32_t wait_ms);
+rt_err_t drv_lcd_fb_wait_all_done(uint8_t *p_data, int32_t wait_ms);
 rt_err_t drv_lcd_fb_send(write_fb_cbk cb);
 
 #endif

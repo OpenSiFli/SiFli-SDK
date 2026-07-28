@@ -1055,6 +1055,58 @@ rt_err_t drv_lcd_fb_wait_write_done(int32_t wait_ms)
     }
     return err;
 }
+//Waiting for the 'p_data' buffer not been r/w anymore.
+rt_err_t drv_lcd_fb_wait_all_done(uint8_t *p_data, int32_t wait_ms)
+{
+    rt_err_t err = RT_EOK;
+    uint32_t events1, events2;
+    LCD_FBTypeDef *p_fb = NULL;
+
+    for (uint16_t i = 0; i < drv_lcd_fb.fb_total; i++)
+    {
+        p_fb = &drv_lcd_fb.fbs[i];
+        if (p_data == p_fb->fb.p_data)
+        {
+            if (0 == i)
+            {
+                events1 = EVENT_FB0_LINE_VALID | EVENT_FB0_FLUSH_DONE;
+                events2 = EVENT_FB1_FLUSH_DONE;
+            }
+            else
+            {
+                events1 = EVENT_FB1_LINE_VALID | EVENT_FB1_FLUSH_DONE;
+                events2 = EVENT_FB0_FLUSH_DONE;
+            }
+            err = rt_event_recv(&drv_lcd_fb.event, events1,
+                                RT_EVENT_FLAG_AND,
+                                rt_tick_from_millisecond(wait_ms), NULL);
+
+            if (RT_EOK != err)
+            {
+                //Overwrite anyway
+                LOG_W("Wait fb=%x evt=%x, timeout", p_data, events1);
+            }
+
+#ifdef BSP_USING_RAMLESS_LCD
+            //Make sure the RAMLESS LCD read from another buffer
+            RT_ASSERT(2 == drv_lcd_fb.fb_total);
+            err = rt_event_recv(&drv_lcd_fb.event, events2,
+                                RT_EVENT_FLAG_OR,
+                                rt_tick_from_millisecond(wait_ms), NULL);
+
+            if (RT_EOK != err)
+            {
+                //Overwrite anyway
+                LOG_W("Wait fb=%x evt=%x, timeout", p_data, events2);
+            }
+#endif /*BSP_USING_RAMLESS_LCD*/
+
+            return RT_EOK;
+        }
+    }
+
+    return RT_EINVAL;
+}
 
 rt_err_t drv_lcd_fb_get_write_area(LCD_AreaDef *write_area, int32_t wait_ms)
 {
@@ -1181,6 +1233,11 @@ rt_err_t drv_lcd_fb_write_send(LCD_AreaDef *write_area, LCD_AreaDef *src_area, c
     }
 
     return RT_EOK;
+}
+
+void drv_lcd_fb_write_send_parallel(uint8_t enable)
+{
+    drv_lcd_fb.dma_faster_than_lcdc = enable;
 }
 
 #endif /* BSP_USING_LCD_FRAMEBUFFER */

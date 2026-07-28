@@ -362,12 +362,12 @@ static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
 #if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
 static void lcd_flush_done_and_switch_buf(lcd_fb_desc_t *fb_desc)
 {
+    switch_draw_buf();
+    update_fb();
+
     rt_err_t err;
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
-
-    switch_draw_buf();
-    update_fb();
 }
 #endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
 
@@ -445,19 +445,16 @@ static void lcd_flush_new_api(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area
                 drv_epic_wait_done();
                 if (drv_epic_is_busy()) rt_thread_mdelay(2); //Let system breath
             }
+            //Waiting for the last buffer to start flushing, so we can get the right draw buffer
             rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
             rt_sem_release(&lcd_sema);
 
-            //Get the available buffer when render task is idle.
+            //Get the available buffer
             p_rl->dst.data = (uint8_t *)get_draw_buf();
 
-            //Make sure that the buffer is writeable.
-            LCD_AreaDef writeable_area;
-            writeable_area.x0 = 0;
-            writeable_area.y0 = 0;
-            writeable_area.x1 = LV_HOR_RES_MAX - 1;
-            writeable_area.y1 = LV_VER_RES_MAX - 1;
-            drv_lcd_fb_write_send(&writeable_area, &writeable_area, (uint8_t *)p_rl->dst.data, dummy_lcd_flush_done, 0);
+            //Make sure the buffer has been flushed.
+            rt_err_t err = drv_lcd_fb_wait_all_done((uint8_t *)p_rl->dst.data, LCD_FLUSH_EXP_MS);
+            RT_ASSERT(RT_EOK == err);
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
         }
         else
@@ -969,6 +966,9 @@ bool lv_refr_enable_full_buffer(bool enable)
 {
 #if defined(LCD_FB_USING_ONE_UNCOMPRESSED) || defined(LCD_FB_USING_TWO_UNCOMPRESSED)
     lv_refr_full_buffer_enabled = enable ? 1 : 0;
+#if defined(BSP_USING_LCD_FRAMEBUFFER)&&defined(BSP_USING_RAMLESS_LCD)
+    drv_lcd_fb_write_send_parallel(enable ? 0 : 1);
+#endif /* BSP_USING_LCD_FRAMEBUFFER && BSP_USING_RAMLESS_LCD */
 #else
     lv_refr_full_buffer_enabled = 0;
 #endif
