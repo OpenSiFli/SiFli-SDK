@@ -27,7 +27,11 @@
 
 #define AUDCODEC_DEVICE_NAME "audcodec"
 #define AUDPRC_DEVICE_NAME   "audprc"
-#define I2S_DEVICE_NAME "i2s2"
+#if defined(SF32LB57X)
+    #define I2S_DEVICE_NAME "i2s1"
+#else
+    #define I2S_DEVICE_NAME "i2s2"
+#endif
 
 /* i2s DMA Buffer size is defined in drv_i2s_audio.c {see AUDIO_DATA_SIZE} */
 #define AUDIO_BUF_SIZE  (640)
@@ -822,7 +826,7 @@ static void device_init(void)
 #endif
 
 #ifdef BSP_ENABLE_I2S_CODEC
-    /* find and open "i2s2" */
+    /* Find and open the configured I2S device. */
     g_i2s_dev = rt_device_find(I2S_DEVICE_NAME);
     if (NULL == g_i2s_dev)
     {
