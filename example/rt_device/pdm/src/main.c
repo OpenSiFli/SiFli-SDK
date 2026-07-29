@@ -491,7 +491,7 @@ int main(void)
 #else
 #error "Need to confirm PDM pin config."
 #endif
-#elif defined(BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R4)
+#elif defined(BSP_USING_BOARD_SPI_HDK_LB573UB7N6)
     /* pin is configured by board */
 #else
 #error "Need to confirm PDM pin config."

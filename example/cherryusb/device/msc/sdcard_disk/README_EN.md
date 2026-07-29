@@ -12,7 +12,7 @@ Source path: example/cherryusb/device/msc/sdcard_disk
 + sf32lb58-lcd_n16r32n1_dsi (SDIO/eMMC)
 + sf32lb58-lcd_a128r32n1_qspi (SDIO/eMMC)
 + sf32lb58-lcd_n16r32n1_qspi (SDIO/eMMC)
-+ sf32lb57-spi-hdk_n16r4（SDIO/eMMC 1-line）
++ spi-hdk_lb573ub7n6（SDIO/eMMC 1-line）
 
 ## Overview
 
