@@ -15,13 +15,15 @@
 
 ## 概述
 <!-- 例程简介 -->
-本例程演示 A2DP 音乐分享（sharing）功能：设备作为中继在同时连接手机和耳机的情况下，将手机播放的音乐分享到耳机播放，同时也能将耳机端的音乐控制命令转发给手机实现音乐控制（<span style="color: red;">不包括调音量</span>）。
+本例程演示 A2DP 音乐分享（sharing）和 HFP 通话中继（relay）功能：设备作为中继在同时连接手机和耳机的情况下，将手机播放的音乐分享到耳机播放，同时也能将耳机端的音乐控制命令转发给手机实现音乐控制（<span style="color: red;">不包括调音量</span>）。
+
+同时，本例程支持 HFP HF 和 HFP AG 双角色：设备连接手机时作为 HFP HF，连接蓝牙耳机时作为 HFP AG。当手机和耳机均连接到中继设备后，可以将手机侧的通话状态、来电号码、信号/电量等信息同步给耳机，并将耳机侧发起的拨号、接听、挂断、DTMF、通话音量调节等 HFP 控制请求转发给手机。
 
 
 ## 例程的使用
 <!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
 对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
-例程启动后会默认使能蓝牙，可以接受手机连接或主动发起对耳机的连接。
+例程启动后会默认使能蓝牙，可以接受手机连接或主动发起对耳机的连接。手机侧用于 A2DP sink/HFP HF 连接，耳机侧用于 A2DP source/HFP AG 连接。
 
 1. 搜索蓝牙设备
 通过命令 `a2dp_trans inquiry start` 来搜索耳机类蓝牙设备，该命令只会上报搜到的 COD 的 Major Class 为 0x000400 的设备（Audio device）。
@@ -40,10 +42,18 @@
     6. 已经在分享音乐的情况下，断开耳机后再重新连接上耳机，耳机设备会出声音。
     7. 中继设备默认不会回连耳机和手机设备。
 
+4. HFP 通话中继
+    1. 手机和耳机均连接到中继设备后，手机侧来电、拨号、通话状态变化会同步到耳机侧。
+    2. 耳机侧执行接听、挂断、拨号、发送 DTMF 按键、调节通话音量等操作时，中继设备会将对应 HFP 控制请求转发给手机。
+    3. 手机侧的运营商服务状态、信号强度、电池电量、漫游状态、来电号码、本机号码和当前通话信息等 HFP 指示信息会缓存并回复给耳机。
+    4. 当手机侧 SCO 通话音频建立后，中继设备会尝试建立耳机侧 SCO 音频链路，并通过 `CONFIG_CFG_BT_VOICE_RELAY` 进行通话语音中继；任一侧 SCO 断开后会同步关闭对应语音中继链路。
+    5. 典型连接成功 log 为 “HFP HF connected” 和 “HFP AG connected”；断开时分别打印 “HFP HF disconnected” 和 “HFP AG disconnected”。
+
 
 ### 硬件需求
 运行该例程前，需要准备：
 + 一块本例程支持的开发板（[支持的平台](#Platform_music_src)）。
++ 一个支持 HFP 和 A2DP 的手机。
 + 一个蓝牙耳机。
 
 ### menuconfig配置
@@ -84,7 +94,7 @@
     - 开启：Enable bluetooth
         - 宏开关：`CONFIG_BLUETOOTH`
         - 作用：使能蓝牙功能
-8. 使能A2DP source和AVRCP：
+8. 使能A2DP source、A2DP sink、AVRCP和HFP relay：
     - 路径：Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - 开启：Enable BT finsh（可选）
         - 宏开关：`CONFIG_BT_FINSH`
@@ -107,6 +117,15 @@
     - 开启：Enable AVRCP
         - 宏开关：`CONFIG_CFG_AVRCP`
         - 作用：使能AVRCP profile
+    - 开启：Enable Handsfree HF
+        - 宏开关：`CONFIG_CFG_HFP_HF`
+        - 作用：使能HFP HF角色，用于连接手机侧HFP AG
+    - 开启：Enable Handsfree AG
+        - 宏开关：`CONFIG_CFG_HFP_AG`
+        - 作用：使能HFP AG角色，用于接受耳机侧HFP HF连接
+    - 开启：Enable BT voice relay
+        - 宏开关：`CONFIG_CFG_BT_VOICE_RELAY`
+        - 作用：使能HFP通话语音中继能力
 9. 使能BT connection manager：
     - 路径：Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - 开启：Enable BT connection manager
@@ -138,6 +157,9 @@ please input the serial port num:5
 例程启动后：
 1. 在不连接蓝牙的情况播放内置音乐。
 2. 可以搜索耳机类蓝牙设备，并在连接后播放内置音乐。
+3. 同时连接手机和耳机后，手机播放的音乐可以通过中继设备分享到耳机播放。
+4. 手机和耳机均建立HFP连接后，手机侧通话状态和号码信息可以同步到耳机，耳机侧接听、挂断、拨号、DTMF和通话音量调节等控制可以转发到手机。
+5. HFP连接成功时串口打印 “HFP HF connected” 和 “HFP AG connected”；通话状态变化时会打印 “the remote phone call_status”、“callsetup_status”、“callheld_status”等log。
 
 ## 异常诊断
 

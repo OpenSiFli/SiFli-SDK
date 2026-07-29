@@ -16,12 +16,14 @@ Source code path: example/bt/a2dp_sharing
 
 ## Overview
 <!-- Example introduction -->
-This example demonstrates A2DP music sharing. The device works as a relay that connects to a mobile phone and a headset at the same time. Music played on the phone is shared to the headset through the relay device. Music control commands from the headset are also forwarded back to the phone (<span style="color: red;">volume adjustment is not included</span>).
+This example demonstrates A2DP music sharing and HFP call relay. The device works as a relay that connects to a mobile phone and a headset at the same time. Music played on the phone is shared to the headset through the relay device. Music control commands from the headset are also forwarded back to the phone (<span style="color: red;">volume adjustment is not included</span>).
+
+This example also supports both HFP HF and HFP AG roles. The device acts as an HFP HF when connected to the phone, and acts as an HFP AG when connected to the Bluetooth headset. After both the phone and the headset are connected to the relay device, call status, incoming call number, signal/battery indicators, and other information from the phone side can be synchronized to the headset. HFP control requests from the headset side, such as dialing, answering, hanging up, DTMF, and call volume adjustment, can be forwarded to the phone.
 
 ## Example Usage
 <!-- Instructions on how to use the example, such as connecting hardware pins to observe waveforms, compilation and flashing can reference related documentation.
 For rt_device examples, you also need to list the configuration switches used in this example, such as PWM example uses PWM1, which needs to be enabled in the onchip menu -->
-The example enables Bluetooth by default, and can accept a connection from a phone or actively initiate a connection to a headset.
+The example enables Bluetooth by default, and can accept a connection from a phone or actively initiate a connection to a headset. The phone side is used for A2DP sink/HFP HF connections, and the headset side is used for A2DP source/HFP AG connections.
 
 1. Search for Bluetooth devices:
 Use the command `a2dp_trans inquiry start` to search for headset-type Bluetooth devices. This command only reports devices with COD Major Class 0x000400 (Audio device).
@@ -40,9 +42,17 @@ If you already know the address of a headset-type Bluetooth device, you can conn
     6. While music is being shared, disconnect the headset and then reconnect it: the headset makes sound again.
     7. By default, the relay device does not reconnect to the headset and the phone.
 
+4. HFP call relay:
+    1. After both the phone and the headset are connected to the relay device, incoming call, outgoing call, and call status changes on the phone side are synchronized to the headset side.
+    2. When the headset side performs actions such as answering, hanging up, dialing, sending DTMF keys, or adjusting call volume, the relay device forwards the corresponding HFP control requests to the phone.
+    3. HFP indicator information from the phone side, such as service status, signal strength, battery level, roaming status, incoming call number, local phone number, and current call information, is cached and replied to the headset.
+    4. After the SCO call audio link is established on the phone side, the relay device tries to establish the SCO audio link on the headset side and uses `CONFIG_CFG_BT_VOICE_RELAY` for voice relay. When the SCO link on either side is disconnected, the corresponding voice relay link is closed accordingly.
+    5. Typical logs after successful connection are "HFP HF connected" and "HFP AG connected". When disconnected, "HFP HF disconnected" and "HFP AG disconnected" are printed respectively.
+
 ### Hardware Requirements
 Before running this example, you need to prepare:
 + One development board supported by this example ([Supported Platforms](#Platform_music_src)).
++ A mobile phone that supports HFP and A2DP.
 + A Bluetooth headset.
 
 ### menuconfig Configuration
@@ -84,7 +94,7 @@ Before running this example, you need to prepare:
     - Enable: Enable bluetooth
         - Macro switch: `CONFIG_BLUETOOTH`
         - Description: Enable bluetooth function
-8. Enable A2DP source and AVRCP:
+8. Enable A2DP source, A2DP sink, AVRCP, and HFP relay:
     - Path: Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - Enable: Enable BT finsh (optional)
         - Macro switch: `CONFIG_BT_FINSH`
@@ -107,6 +117,15 @@ Before running this example, you need to prepare:
     - Enable: Enable AVRCP
         - Macro switch: `CONFIG_CFG_AVRCP`
         - Description: Enable AVRCP profile
+    - Enable: Enable Handsfree HF
+        - Macro switch: `CONFIG_CFG_HFP_HF`
+        - Description: Enable the HFP HF role, used to connect to the phone-side HFP AG
+    - Enable: Enable Handsfree AG
+        - Macro switch: `CONFIG_CFG_HFP_AG`
+        - Description: Enable the HFP AG role, used to accept the headset-side HFP HF connection
+    - Enable: Enable BT voice relay
+        - Macro switch: `CONFIG_CFG_BT_VOICE_RELAY`
+        - Description: Enable HFP call voice relay capability
 9. Enable BT connection manager:
     - Path: Sifli middleware → Bluetooth → Bluetooth service → Classic BT service
     - Enable: Enable BT connection manager
@@ -138,6 +157,9 @@ For detailed steps on compilation and downloading, please refer to the related i
 After the example starts:
 1. Play built-in music without a Bluetooth connection.
 2. Can search for headset-type Bluetooth devices and play built-in music after connection.
+3. After both the phone and the headset are connected, music played on the phone can be shared to the headset through the relay device.
+4. After HFP connections are established with both the phone and the headset, call status and number information from the phone side can be synchronized to the headset. Controls from the headset side, such as answering, hanging up, dialing, DTMF, and call volume adjustment, can be forwarded to the phone.
+5. When HFP connections are established, the serial log prints "HFP HF connected" and "HFP AG connected". When the call status changes, logs such as "the remote phone call_status", "callsetup_status", and "callheld_status" are printed.
 
 ## Troubleshooting
 
