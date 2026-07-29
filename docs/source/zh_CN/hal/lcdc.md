@@ -8,18 +8,29 @@ LCDC(LCD Controller) 是为屏提供一个统一的接口，而不需关心具�
   - 图层1 (52x 不支持)
 
 
+## 特殊功能支持
+| 功能                           |  55X   |  58X   |  56X   |  52X   |  57X   |
+|--------------------------------|--------|--------|--------|--------|--------|
+|垂直镜像                        |   N    |   Y    |   Y    |   Y    |   Y    |
+|水平镜像                        |   N    |   Y    |   Y    |   N    |   N    |
+|解压缩压缩图层                   |   N    |   Y    |   Y    |   N    |   N    |
+
+
 ## 支持的物理接口：
-|名称                |  55X   |  58X   |  56X   |  52X   |
-|--------------------|--------|--------|--------|--------|
-|3SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |
-|4SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |
-|QAD-SPI             |   Y    |   Y    |   Y    |   Y    |
-|DSI Command模式     |   Y    |   Y    |   N    |   N    |
-|DSI  Video 模式     |   N    |   Y    |   N    |   N    |
-|AHB 输出到SRAM/PSRAM|   Y    |   Y    |   Y    |   Y    |
-|DBI 8080-8bit       |   Y    |   Y    |   Y    |   Y    |
-|JDI                 |   Y    |   Y    |   Y    |   Y    |
-|DPI                 |   Y    |   Y    |   Y    |   N    |
+|名称                |  55X   |  58X   |  56X   |  52X   |  57X   |
+|--------------------|--------|--------|--------|--------|--------|
+|3SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |   Y    |
+|4SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |   Y    |
+|QAD-SPI             |   Y    |   Y    |   Y    |   Y    |   Y    |
+|QSPI DDR            |   N    |   N    |   Y    |   Y    |   Y    |
+|DSI Command模式     |   Y    |   Y    |   N    |   N    |   N    |
+|DSI  Video 模式     |   N    |   Y    |   N    |   N    |   N    |
+|AHB 输出到SRAM/PSRAM|   Y    |   Y    |   Y    |   Y    |   Y    |
+|DBI 8080-8bit       |   Y    |   Y    |   Y    |   Y    |   Y    |
+|DBI 8080-16bit      |   N    |   N    |   N    |   N    |   Y    |
+|JDI                 |   Y    |   Y    |   Y    |   Y    |   Y    |
+|DPI                 |   Y    |   Y    |   Y    |   N    |   Y    |
+|TCON                |   N    |   N    |   N    |   N    |   Y    |
 
 
 ## 支持的速度：
@@ -239,4 +250,4 @@ void ST7789H2_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBC
 ```
 
 ## API参考
-[](#hal-i2c)
+[](#hal-lcdc)
