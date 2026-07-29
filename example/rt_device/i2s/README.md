@@ -51,7 +51,7 @@
 
 ### 硬件连接\PIN CONFIG
 
-以`SF32LB52_DevKit-LCD`和`sf32lb57-spi_hdk_n16r4`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
+以`SF32LB52_DevKit-LCD`和`SPI-HDK_LB573UB7N6`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
