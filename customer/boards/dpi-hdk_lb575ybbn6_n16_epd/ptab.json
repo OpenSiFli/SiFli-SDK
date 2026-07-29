@@ -57,6 +57,14 @@
                 "tags": [
                     "KVDB_BLE_REGION"
                 ]
+            },
+            {
+                "offset": "0x00CE8000",
+                "max_size": "0x00020000",
+                "name": "wave_table", 
+                "tags": [
+                    "CUSTOM_EPD_WAVE_TABLE"
+                ]
             }
         ]
     }, 
