@@ -757,8 +757,8 @@ CONST static uint16_t bt_txon_cmd[] =
     RD(0x0), OR(15), WR(0x0),
     //PFDCP_EN
     RD(0X1C), OR(20), // 17
-    //ICP_SET=4/3->1
-    //OR(11), AND(13),
+    //ICP_SET=4->1
+    OR(11), AND(13),
     WR(0X1C), // 20
 
     //FBDV_EN/MOD_STG/SDM_CLK_SEL
@@ -863,8 +863,8 @@ CONST static uint16_t bt_txoff_cmd[] =
     RD(0X14), OR(7), AND(8), WR(0X14),
     //PFDCP_LDO_FLT_EN/EDR PFDCP_EN
     RD(0X1C), AND(20), AND(15), // 50
-    //ICP_SET=1->4/3
-    //AND(11), OR(13), // 52-NOATE
+    //ICP_SET=1->4
+    AND(11), OR(13), // 52-NOATE
     WR(0X1C), // 52-ATE, 53-NOATE
 
     //EDR FBDV_EN/MOD_STG/SDM_CLK_SEL
@@ -3693,11 +3693,8 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     //write_memory(0x5008412C, 0x66666666);   //FORCE EDR_TMX_BUF_GC_CFG2
 
     MODIFY_REG(hwp_bt_rfc->PFDCP_REG, BT_RFC_PFDCP_REG_BRF_PFDCP_ICP_SET_LV_Msk,
-#if defined(ENABLE_RF_ATE)
-               (3 << BT_RFC_PFDCP_REG_BRF_PFDCP_ICP_SET_LV_Pos)
-#else
                (4 << BT_RFC_PFDCP_REG_BRF_PFDCP_ICP_SET_LV_Pos)
-#endif
+
               );
 #if 0
     hwp_bt_rfc->PFDCP_REG &= ~BT_RFC_PFDCP_REG_BRF_PFDCP_ICP_SET_LV;
@@ -5160,9 +5157,8 @@ void bt_rf_opt_cal(void)
     //force w2x for 24M ADC, to be deleted
     hwp_bt_rfc->RBB_REG2 |= BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG1_LV | BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG2_LV;
     hwp_bt_rfc->RBB_REG3 |= BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG1_LV | BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG2_LV;
-    hwp_bt_rfc->RBB_REG5 |= BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_1M | BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_BR;
-    hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_CBPF_WX2_STG1_FRC_EN | BT_RFC_MISC_CTRL_REG_CBPF_WX2_STG2_FRC_EN |
-                                 BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG1_FRC_EN | BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG2_FRC_EN;
+    hwp_bt_rfc->RBB_REG5 |= BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_BR;
+    hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG1_FRC_EN | BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG2_FRC_EN;
 
     //enable adc q for all phy
     hwp_bt_phy->RX_CTRL1 |= BT_PHY_RX_CTRL1_ADC_Q_EN_1;
@@ -5365,6 +5361,8 @@ void bt_rf_opt_cal(void)
 extern void rf_power_config();
 void bt_rf_cal(void)
 {
+    //Fix settting before rf cal
+    hwp_pmuc->AON_LDO &= ~PMUC_AON_LDO_VBAT_LDO_EN_SWMODE;
     if (bt_is_in_BQB_mode())
     {
         //hwp_pmuc->HXT_CR1 &= ~PMUC_HXT_CR1_LDO_VREF;
@@ -5523,7 +5521,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.0_3580";
+char *g_rf_ful_ver = "1.2.1_3619";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;

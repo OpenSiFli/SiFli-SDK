@@ -202,7 +202,7 @@ static uint8_t blebr_rf_power_set(int8_t txpwr)
     {
         hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_IQ_PWR;
         hwp_bt_phy->TX_CTRL |= (BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
-        ret = rf_iq_tx_ctrl_force_set(0, rf_blebr_db[i]);
+        ret = rf_iq_tx_ctrl_force_set(0, txpwr);
     }
     return ret;
 }
