@@ -15,7 +15,7 @@ typedef enum
     EPD_DRAW_MODE_PARTIAL = 3,
 } EpdDrawMode;
 
-void epd_wave_table(void);//初始化wave table
+void epd_wave_table(void);// Initialize wave table
 
 uint32_t epd_wave_table_get_frames(int temperature, EpdDrawMode mode);
 
