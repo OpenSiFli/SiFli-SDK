@@ -8,7 +8,7 @@ Source path: example/rt_device/pdm
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
-* sf32lb57-spi-hdk_n16r4
+* spi-hdk_lb573ub7n6
 
 ## Overview
 <!-- Example introduction -->

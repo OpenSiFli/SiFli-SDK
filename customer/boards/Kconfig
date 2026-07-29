@@ -74,15 +74,15 @@ choice
     config BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_QSPI
         depends on SOC_SF32LB57X
         bool "SF32LB57-DPI-HDK_N16R_QSPI"
-    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R4
+    config BSP_USING_BOARD_SPI_HDK_LB573UB7N6
         depends on SOC_SF32LB57X
-        bool "SF32LB57-SPI-HDK_N16R4"
-    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R8
+        bool "SPI-HDK_LB573UB7N6"
+    config BSP_USING_BOARD_SPI_HDK_LB575YBBN6_N16
         depends on SOC_SF32LB57X
-        bool "SF32LB57-SPI-HDK_N16R8"
-    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N32R4
+        bool "SPI-HDK_LB575YBBN6_N16"
+    config BSP_USING_BOARD_SPI_HDK_LB573UB776
         depends on SOC_SF32LB57X
-        bool "SF32LB57-SPI-HDK_N32R4"  
+        bool "SPI-HDK_LB573UB776"
     config BSP_USING_BOARD_EC_LB583XXX
         depends on SOC_SF32LB58X
         bool "SF32LB583XXX EVB"
@@ -262,16 +262,16 @@ if BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_QSPI
     source "$SIFLI_SDK/customer/boards/sf32lb57-dpi-hdk_n16r8_qspi/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R4
-    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n16r4/Kconfig.board"
+if BSP_USING_BOARD_SPI_HDK_LB573UB7N6
+    source "$SIFLI_SDK/customer/boards/spi-hdk_lb573ub7n6/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R8
-    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n16r8/Kconfig.board"
+if BSP_USING_BOARD_SPI_HDK_LB575YBBN6_N16
+    source "$SIFLI_SDK/customer/boards/spi-hdk_lb575ybbn6_n16/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_SF32LB57_SPI_HDK_N32R4
-    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n32r4/Kconfig.board"
+if BSP_USING_BOARD_SPI_HDK_LB573UB776
+    source "$SIFLI_SDK/customer/boards/spi-hdk_lb573ub776/Kconfig.board"
 endif
 
 if BSP_USING_BOARD_EC_LB583XXX || SIFLI_LB583
