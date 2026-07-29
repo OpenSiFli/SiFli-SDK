@@ -49,14 +49,14 @@ void lcd_display_update(uint8_t *buffer)
 
     rt_kprintf("LCD Info: Width=%d, Height=%d, BPP=%d\n", info.width, info.height, info.bits_per_pixel);
     struct rt_device_graphic_ops *ops = rt_graphix_ops(lcd_dev);
-    if (ops && ops->draw_rect_async)
+    if (ops && ops->draw_rect)
     {
         ops->set_window(0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
-        ops->draw_rect_async((const char *)buffer, 0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
+        ops->draw_rect((const char *)buffer, 0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
     }
     else
     {
-        rt_kprintf("draw_rect_async not available!\n");
+        rt_kprintf("draw_rect not available!\n");
     }
 }
 //混叠
@@ -192,7 +192,12 @@ void scale_down_demo(int multiple, int width, int height)
     EPIC_LayerConfigTypeDef input_layers[1];
     HAL_EPIC_LayerConfigInit(&input_layers[0]);
     // 设置EZIP数据源
+#ifdef SF32LB57X
+    // SF32LB57 EZIP 解码窗口限制，使用 -winsize 2048 重新生成数据
+    input_layers[0].data = ezip_img_data_57;
+#else
     input_layers[0].data = ezip_img_data;
+#endif
     input_layers[0].color_mode = EPIC_INPUT_EZIP;
     input_layers[0].width = width;
     input_layers[0].height = height;
