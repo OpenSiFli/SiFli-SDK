@@ -1,25 +1,37 @@
-
 # LCDC
 
-LCDC (LCD Controller) provides a unified interface for displays without needing to concern about specific physical connections like SPI, parallel interface, or other physical connections. Only the physical interface and parameters need to be configured during initialization, and afterwards a unified interface is used.
+LCDC (LCD Controller) provides a unified interface for displays without needing to worry about specific physical connections like SPI, parallel interface, or other physical connections. Only the physical interface and parameters need to be configured during initialization, and afterwards a unified interface is used.
 
 Additionally, it supports layer alpha blending. Layers are as follows (in stacking order):
   - Solid color background
   - Layer 0
   - Layer 1 (52x not supported)
 
+
+## Special Features Support
+| Feature                           |  55X   |  58X   |  56X   |  52X   |  57X   |
+|-----------------------------------|--------|--------|--------|--------|--------|
+| Vertical Mirror                   |   N    |   Y    |   Y    |   Y    |   Y    |
+| Horizontal Mirror                 |   N    |   Y    |   Y    |   N    |   N    |
+| Decompression/Compression Layer   |   N    |   Y    |   Y    |   N    |   N    |
+
+
 ## Supported Physical Interfaces:
-|Name                |  55X   |  58X   |  56X   |  52X   |
-|--------------------|--------|--------|--------|--------|
-|3SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |
-|4SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |
-|QAD-SPI             |   Y    |   Y    |   Y    |   Y    |
-|DSI Command Mode    |   Y    |   Y    |   N    |   N    |
-|DSI Video Mode      |   N    |   Y    |   N    |   N    |
-|AHB output to SRAM/PSRAM|   Y    |   Y    |   Y    |   Y    |
-|DBI 8080-8bit       |   Y    |   Y    |   Y    |   Y    |
-|JDI                 |   Y    |   Y    |   Y    |   Y    |
-|DPI                 |   Y    |   Y    |   Y    |   Y    |
+| Name                |  55X   |  58X   |  56X   |  52X   |  57X   |
+|---------------------|--------|--------|--------|--------|--------|
+| 3SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |   Y    |
+| 4SPI (1/2 data line)|   Y    |   Y    |   Y    |   Y    |   Y    |
+| QAD-SPI             |   Y    |   Y    |   Y    |   Y    |   Y    |
+| QSPI DDR            |   N    |   N    |   Y    |   Y    |   Y    |
+| DSI Command Mode    |   Y    |   Y    |   N    |   N    |   N    |
+| DSI Video Mode      |   N    |   Y    |   N    |   N    |   N    |
+| AHB output to SRAM/PSRAM |   Y    |   Y    |   Y    |   Y    |   Y    |
+| DBI 8080-8bit       |   Y    |   Y    |   Y    |   Y    |   Y    |
+| DBI 8080-16bit      |   N    |   N    |   N    |   N    |   Y    |
+| JDI                 |   Y    |   Y    |   Y    |   Y    |   Y    |
+| DPI                 |   Y    |   Y    |   Y    |   N    |   Y    |
+| TCON                |   N    |   N    |   N    |   N    |   Y    |
+
 
 ## Supported Speeds:
   - SPI (including 3SPI, 4SPI, QAD-SPI) speed = HCLK/divider, where divider is 2~255
@@ -42,14 +54,14 @@ Additionally, it supports layer alpha blending. Layers are as follows (in stacki
   - L8 (55x not supported)
   - RGB565_SWAP (55x not supported)
 
-|        | bit31~bit25 | bit24~bit17 | bit16~bit8 | bit7~bit0 |
-| ------     | ------  | ------     | ------             | ------ |
-| RGB332     |    /    |    /       |      /             |R2~R0G2~G0B1~B0|
-| RGB565     |    /    |    /       | R4~R0G5~G3         | G2~G0B4~B0 |
-| RGB565_SWAP|    /    |    /       | G2~G0B4~B0         | R4~R0G5~G3  |
-| ARGB8565   |    /    | A7 ~ A0    | R4~R0G5~G3         | G2~G0B4~B0 |
-| RGB888     |    /    | R7 ~ R0    | G7 ~ G0            | B7 ~ B0 |
-| ARGB8888   | A7 ~ A0 | R7 ~ R0    | G7 ~ G0            | B7 ~ B0 |
+|             | bit31~bit25 | bit24~bit17 | bit16~bit8          | bit7~bit0          |
+| ----------- | ----------- | ----------- | ------------------- | ------------------ |
+| RGB332      |    /        |    /        |      /              | R2~R0G2~G0B1~B0    |
+| RGB565      |    /        |    /        | R4~R0G5~G3          | G2~G0B4~B0         |
+| RGB565_SWAP |    /        |    /        | G2~G0B4~B0          | R4~R0G5~G3         |
+| ARGB8565    |    /        | A7 ~ A0     | R4~R0G5~G3          | G2~G0B4~B0         |
+| RGB888      |    /        | R7 ~ R0     | G7 ~ G0             | B7 ~ B0            |
+| ARGB8888    | A7 ~ A0     | R7 ~ R0     | G7 ~ G0             | B7 ~ B0            |
 
 ## Other Features
   - Supports specified drawing area, and this area can arbitrarily intersect with the given output buffer area
@@ -57,6 +69,7 @@ Additionally, it supports layer alpha blending. Layers are as follows (in stacki
   - Supports synchronous & asynchronous (interrupt mode) data transmission interfaces
 
 ![Figure 1: LCD output buffer, drawing area (ROI) refresh area on LCD](../../assets/hal_lcdc.png)
+
 
 ## LCDC Usage Example 1
 Driving ST7789H2 display through 4SPI 1data interface
@@ -237,4 +250,4 @@ void ST7789H2_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBC
 ```
 
 ## API Reference
-[](#hal-i2c)
+[](#hal-lcdc)
