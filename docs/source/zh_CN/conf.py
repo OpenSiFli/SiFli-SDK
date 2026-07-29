@@ -34,8 +34,15 @@ else:
     chip = 'sf32lb52x'
 
 # Algolia DocSearch configuration
-docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
-docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
+app_id_var = 'ALGOLIA_DOCSEARCH_APP_ID'
+api_key_var = 'ALGOLIA_DOCSEARCH_SEARCH_API_KEY'
+if version != "latest":
+    var_suffix = f'_{version}'.replace('.', '_').upper()
+    app_id_var = app_id_var + var_suffix
+    api_key_var = api_key_var + var_suffix
+
+docsearch_app_id = os.environ.get(app_id_var, '')
+docsearch_api_key = os.environ.get(api_key_var, '')
 docsearch_index_name = f"sdk_{version}_{chip}"
 
 # -- General configuration ---------------------------------------------------
