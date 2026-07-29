@@ -1,0 +1,17 @@
+# BSP_USING_BOARD_DPI_HDK_LB575YBBN6_N16_DBI
+
+## SoC
+SF32LB575YBBN6
+
+### MPI1
+PSRAM 4MB
+
+### MPI2
+PSRAM 4MB
+
+## External Storage
+### MPI3
+NOR Flash 16MB
+
+## Display
+DBI Display

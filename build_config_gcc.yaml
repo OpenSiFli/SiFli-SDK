@@ -43,9 +43,9 @@ default_boards: &default_boards
   - sf32lb58-lcd_n16r32n1_a1_dsi
   - sf32lb58-lcd_n16r32n1_dpi
   - sf32lb58-core_n16r32n1
-  - sf32lb57-dpi-hdk_n16r8_qspi
-  - sf32lb57-dpi-hdk_n16r8_dpi
-  - sf32lb57-dpi-hdk_n16r8_dbi
+  - dpi-hdk_lb575ybbn6_n16_qspi
+  - dpi-hdk_lb575ybbn6_n16_dpi
+  - dpi-hdk_lb575ybbn6_n16_dbi
   - spi-hdk_lb573ub7n6
 
 default_nand_boards: &default_nand_boards
@@ -75,7 +75,7 @@ bt_boards: &bt_boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
   - sf32lb58-lcd_n16r64n4
-  - sf32lb57-dpi-hdk_n16r8_qspi
+  - dpi-hdk_lb575ybbn6_n16_qspi
   - spi-hdk_lb573ub7n6
 
 multicore_boards: &multicore_boards
@@ -483,7 +483,7 @@ common_projects:
     boards: 
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi
-      - sf32lb57-dpi-hdk_n16r8_qspi
+      - dpi-hdk_lb575ybbn6_n16_qspi
 
   - path: example/multicore/data_service/project/hcpu
     boards: *multicore_boards
@@ -585,7 +585,7 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - sf32lb57-dpi-hdk_n16r8_qspi
+      - dpi-hdk_lb575ybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
 
   - path: example/multimedia/lvgl/lvgl_v9_examples/project
@@ -610,7 +610,7 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - sf32lb57-dpi-hdk_n16r8_qspi
+      - dpi-hdk_lb575ybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
 
   - path: example/multimedia/lvgl/watch/project

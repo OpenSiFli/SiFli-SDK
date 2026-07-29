@@ -50,7 +50,7 @@ Configurations 2 and 3 are used for auxiliary function demonstration in this exa
 
 ### Hardware Connection\PIN CONFIG
 
-Taking `SF32LB52_DevKit-LCD` and `sf32lb57-spi_hdk_n16r4` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
+Taking `SF32LB52_DevKit-LCD` and `SPI-HDK_LB573UB7N6` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
