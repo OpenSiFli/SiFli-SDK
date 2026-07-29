@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -15,8 +20,10 @@
  *   52x select rc32k by default in HAL_Init().
  * 56x/58x:
  *   use rc10k.
+ * 57x:
+ *   use rc32k.
  */
-#if defined(SOC_SF32LB52X)
+#if defined(SOC_SF32LB52X) || defined(SOC_SF32LB57X)
     #define WDT_CLOCK_FREQ LXT_FREQ
 #else
     #if defined(LXT_DISABLE)||defined(SOC_SF32LB55X)
