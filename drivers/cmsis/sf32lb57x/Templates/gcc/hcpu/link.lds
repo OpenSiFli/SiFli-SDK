@@ -43,7 +43,7 @@ __ROM_SIZE = CODE_SIZE;
     <o1> RAM Size (in Bytes) <0x0-0xFFFFFFFF:8>
   </h>
  -----------------------------------------------------------------------------*/
-__RAM_BASE = HPSYS_RAM0_BASE;
+__RAM_BASE = HCPU_RAM_DATA_START_ADDR;
 __RAM_SIZE = HCPU_RAM_DATA_SIZE;
 
 /*--------------------- Stack / Heap Configuration ----------------------------
@@ -61,6 +61,11 @@ __ROM_EX_SIZE = HCPU_RO_DATA_SIZE;
 __PSRAM_BASE = PSRAM_DATA_START_ADDR;
 __PSRAM_SIZE = PSRAM_DATA_SIZE;
 
+#ifdef PSRAM_DATA2_START_ADDR
+__PSRAM2_BASE = PSRAM_DATA2_START_ADDR;
+__PSRAM2_SIZE = PSRAM_DATA2_SIZE;
+#endif
+
 __ROM2_BASE = HCPU_FLASH2_IMG_START_ADDR;
 __ROM2_SIZE = HCPU_FLASH2_IMG_SIZE;
 
@@ -77,6 +82,9 @@ MEMORY
     RAM (rw) : ORIGIN = __RAM_BASE, LENGTH = __RAM_SIZE
     ROM_EX(rw):ORIGIN = __ROM_EX_BASE, LENGTH = __ROM_EX_SIZE
     PSRAM(rw): ORIGIN = __PSRAM_BASE, LENGTH = __PSRAM_SIZE
+#ifdef PSRAM_DATA2_START_ADDR
+    PSRAM2(rw): ORIGIN = __PSRAM2_BASE, LENGTH = __PSRAM2_SIZE
+#endif
     ROM2 (rx): ORIGIN = __ROM2_BASE, LENGTH = __ROM2_SIZE
     ROM3 (rx): ORIGIN = __ROM3_BASE, LENGTH = __ROM3_SIZE
 }
@@ -148,6 +156,8 @@ SECTIONS
   {
     . = ALIGN(4);
     __rw_retm_data_start__ = .;
+    __RW_IRAM_RET$$RO_start__ = .;
+
     * (.*l1_ret_text_*)
     * (.*l1_ret_rodata_*)
 
@@ -197,9 +207,20 @@ SECTIONS
     *bf0_hal_cortex.o (.text* .rodata*)
 #endif /* BSP_QSPI2_DUAL_MODE */
 
+    . = ALIGN(4);
+    __RW_IRAM_RET$$RO_end__ = .;    
+    
+    __nor_cfg_db_start__ = .;
+    KEEP(*(.nor_cfg_db))
+    __nor_cfg_db_end__ = .;
+
+    . = ALIGN(4);
+    __RW_IRAM_RET$$RW_start__ = .;
+
     *.o (.retm_data_*)
 
     . = ALIGN(4);
+    __RW_IRAM_RET$$RW_end__ = .;
     __rw_retm_data_end__ = .;
 
   } > RAM AT > ROM
@@ -282,9 +303,19 @@ SECTIONS
     __app_font_end__ = .;
 
     . = ALIGN(4);
+    __SerialTranClientExport_start__ = .;
+    KEEP(*(SerialTranClientExport))
+    __SerialTranClientExport_end__ = .;
+
+    . = ALIGN(4);
     __SerialTranExport_start__ = .;
     KEEP(*(SerialTranExport))
     __SerialTranExport_end__ = .;
+
+    . = ALIGN(4);
+    __app_subpage_db_start__ = .;
+    KEEP(*(.app_subpage_db))
+    __app_subpage_db_end__ = .;
 
     . = ALIGN(4);
     __sifli_reg_start__ = .;
@@ -306,6 +337,11 @@ SECTIONS
     __usbh_class_info_start__ = .;
     KEEP(*(.usbh_class_info))
     __usbh_class_info_end__ = .;
+
+    . = ALIGN(4);
+    __nand_cfg_db_start__ = .;
+    KEEP(*(.nand_cfg_db))
+    __nand_cfg_db_end__ = .;
 
     KEEP(*(.eh_frame*))
     _etext = ABSOLUTE(.);
@@ -494,6 +530,22 @@ SECTIONS
   __etext2 = ALIGN (4);
 
 #ifdef BSP_USING_PSRAM
+
+#ifdef PSRAM_DATA2_START_ADDR
+  /*
+  * PSRAM2 is for l2 frame buffer only.
+  */
+  .RW_PSRAM2 :
+  {
+    . = ALIGN(4);
+    __rw_psram2_start__ = .;
+    *(.*l2_non_ret_bss_frambuf*)
+    . = ALIGN(4);
+    __rw_psram2_end__ = .;
+
+  } > PSRAM2
+#endif
+
   .RW_PSRAM1 :
   {
     . = ALIGN(4);
@@ -570,7 +622,6 @@ SECTIONS
 
   .rom3 :
   {
-    *lvsf_font_*(.rodata*)
   } > ROM3
 #endif
 }

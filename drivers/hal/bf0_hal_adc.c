@@ -147,12 +147,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc)
                           HAL_ADC_STATE_REG_BUSY,
                           HAL_ADC_STATE_BUSY_INTERNAL);
 
-        /* TODO , Init ADC configure register for analog */
-        //hadc->Instance->ADC_CFG_REG1 = ;
 
         /* Set single channel */
         hadc->Instance->ADC_CFG_REG1 |= GPADC_ADC_CFG_REG1_ANAU_GPADC_SE;
 
+        /* config ADC_CTRL_REG */
         i = hadc->Instance->ADC_CTRL_REG;
         // disable all triger mode by default
         i &= (~(GPADC_ADC_CTRL_REG_GPIO_TRIG_EN | GPADC_ADC_CTRL_REG_TIMER_TRIG_EN | GPADC_ADC_CTRL_REG_INIT_TIME));
@@ -162,12 +161,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc)
 #else
         i |= (8 << GPADC_ADC_CTRL_REG_INIT_TIME_Pos);
 #endif
+
+#ifdef GPADC_ADC_CTRL_REG_UNSIGNED_RSLT
+        /* enable unsigned format */
+        i |= GPADC_ADC_CTRL_REG_UNSIGNED_RSLT;
+#endif /* GPADC_ADC_CTRL_REG_UNSIGNED_RSLT */
+
         hadc->Instance->ADC_CTRL_REG = i;
+
 #if (GPADC_CALIB_FLOW_VERSION != 1)
         __HAL_ADC_SET_SAMPLE_WIDTH(hadc, hadc->Init.sample_width);
         __HAL_ADC_SET_CONV_WIDTH(hadc, hadc->Init.conv_width);
         __HAL_ADC_SET_DATA_DELAY(hadc, hadc->Init.data_samp_delay);
-        // TODO: Add for Range
 #else
         /* Set ADC clock, clk = 12/(div+1) */
         __HAL_ADC_SET_CLOCK_DIV(hadc, hadc->Init.clk_div);
@@ -176,16 +181,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc)
             hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_ATTN3X);
         else //disable 3X mode
             hadc->Instance->ADC_CFG_REG1 &= (~GPADC_ADC_CFG_REG1_ANAU_GPADC_ATTN3X);
-#endif
-
+#endif /* GPADC_CALIB_FLOW_VERSION != 1 */
 
         /* Disable all slot at initial */
-        for (i = 0; i < 8; i++)
+        for (i = 0; i <= ADC_CHANNEL_MAX; i++)
             HAL_ADC_EnableSlot(hadc, i, 0);
 
         // set LDOCORE and LDOREF enable
 #if (GPADC_CALIB_FLOW_VERSION != 1)
-        // TODO:
         uint32_t value;
         value = hadc->Instance->ADC_CFG_REG1;
         // register default setting from hardware sample code
@@ -193,22 +196,38 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc)
         value &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP | GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM | GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18);
 
         if (hadc->Init.avdd_v18_en)
+        {
             value |= (0x8 << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos) | GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18;
+        }
         else
+        {
+            value |= ((2 << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos) | (0x10 << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos));
+        }
+#elif (GPADC_CALIB_FLOW_VERSION == 4)
+        value &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP | GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18);
+
+        if (hadc->Init.avdd_v18_en)
+        {
+            value |= GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18;
+        }
+        else
+        {
+            value |= (2 << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos);
+        }
 #else
         value &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP | GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM);
-#endif
-            value |= ((2 << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos) | (0x10 << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos));
+        value |= ((2 << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos) | (0x10 << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos));
+#endif /* GPADC_CALIB_FLOW_VERSION == 3 */
         hadc->Instance->ADC_CFG_REG1 = value;
 
-#if (GPADC_CALIB_FLOW_VERSION == 3)
+#if (GPADC_CALIB_FLOW_VERSION == 3) || (GPADC_CALIB_FLOW_VERSION == 4)
         hwp_hpsys_cfg->ANAU_CR |= (HPSYS_CFG_ANAU_CR_EN_BG);
-#endif /* (GPADC_CALIB_FLOW_VERSION == 3) */
+#endif /* (GPADC_CALIB_FLOW_VERSION == 3) || (GPADC_CALIB_FLOW_VERSION == 4) */
 
 #else   // (GPADC_CALIB_FLOW_VERSION == 1)
         hwp_tsen->BGR |= TSEN_BGR_EN;
         hwp_tsen->ANAU_ANA_TP |= TSEN_ANAU_ANA_TP_ANAU_IARY_EN;
-#endif
+#endif /* GPADC_CALIB_FLOW_VERSION != 1) */
 
     }
     else
@@ -358,14 +377,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Prepare(ADC_HandleTypeDef *hadc)
 #elif   (GPADC_CALIB_FLOW_VERSION == 2)
     hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #else /* GPADC_CALIB_FLOW_VERSION == 4 */
-    // TODO: FOR 57X
+    hwp_hpsys_cfg->ANAU_CR |= (HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
+    hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
+    hadc->Instance->ADC_CFG_REG2 |= (GPADC_ADC_CFG_REG2_ANAU_GPADC_LDO_SW_EN);
 #endif /* GPADC_CALIB_FLOW_VERSION == 3 */
     ADC_SET_UNMUTE(hadc);
 
 #else   /* (GPADC_CALIB_FLOW_VERSION == 1) */
     // set LDOCORE and LDOREF enable
     hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOCORE_EN | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
-#endif
+#endif /* (GPADC_CALIB_FLOW_VERSION != 1) */
 
     HAL_Delay_us(200);
     hadc->Instance->ADC_CTRL_REG |= (GPADC_ADC_CTRL_REG_FRC_EN_ADC);
@@ -445,10 +466,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Stop(ADC_HandleTypeDef *hadc)
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
     hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
 #elif (GPADC_CALIB_FLOW_VERSION == 2)
-    // TODO
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #else   // (GPADC_CALIB_FLOW_VERSION == 4)
-    // TODO: FOR 57X
+    hadc->Instance->ADC_CFG_REG2 &= ~(GPADC_ADC_CFG_REG2_ANAU_GPADC_LDO_SW_EN);
+    hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
+    hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
 #endif /* (GPADC_CALIB_FLOW_VERSION == 3) */
     ADC_SET_MUTE(hadc);
 
@@ -491,6 +513,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_PollForConversion(ADC_HandleTypeDef *ha
         {
             if ((Timeout == 0) || ((HAL_GetTick() - tickstart) > Timeout))
             {
+                /* Double check end of conversion flag */
+                if (!HAL_IS_BIT_CLR(hadc->Instance->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IRSR))
+                {
+                    break;
+                }
+
                 /* Update ADC state machine to timeout */
                 SET_BIT(hadc->State, HAL_ADC_STATE_TIMEOUT);
 
@@ -538,7 +566,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Start_IT(ADC_HandleTypeDef *hadc)
         __HAL_ADC_ENABLE_IRQ(hadc, GPADC_GPADC_IRQ_GPADC_IMR);
         __HAL_ADC_START_CONV(hadc);
     }
-    
+
     /* Return function status */
     return res;
 }
@@ -591,14 +619,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_DMA_PREPARE(ADC_HandleTypeDef *hadc)
     {
 #if (GPADC_CALIB_FLOW_VERSION != 1)
 #if (GPADC_CALIB_FLOW_VERSION == 3)
-        // TODO
         hwp_hpsys_cfg->ANAU_CR |= (HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
-        //hwp_hpsys_cfg->ANAU_CR |= (HPSYS_CFG_ANAU_CR_EN_BG);
         hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #elif (GPADC_CALIB_FLOW_VERSION == 2)
         hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #else // GPADC_CALIB_FLOW_VERSION == 4
-        // TODO : FOR 57X
+        hwp_hpsys_cfg->ANAU_CR |= (HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
+        hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
+        hadc->Instance->ADC_CFG_REG2 |= (GPADC_ADC_CFG_REG2_ANAU_GPADC_LDO_SW_EN);
 #endif
 
 #else   //(GPADC_CALIB_FLOW_VERSION == 1)
@@ -776,12 +804,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Stop_DMA(ADC_HandleTypeDef *hadc)
 #if (GPADC_CALIB_FLOW_VERSION != 1)
 #if (GPADC_CALIB_FLOW_VERSION == 3)
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
-    //hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_BG);
     hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
 #elif (GPADC_CALIB_FLOW_VERSION == 2)
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #else //(GPADC_CALIB_FLOW_VERSION == 4)
-    // TODO: 57X
+    hadc->Instance->ADC_CFG_REG2 &= ~(GPADC_ADC_CFG_REG2_ANAU_GPADC_LDO_SW_EN);
+    hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
+    hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_VBAT_MON);
+
 #endif
 #else
     hadc->Instance->ADC_CFG_REG1 &= (~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOCORE_EN | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN));
@@ -836,7 +866,7 @@ __HAL_ROM_USED uint32_t HAL_ADC_GetValue(ADC_HandleTypeDef *hadc, uint32_t slot)
     __IO uint32_t *p = &(hadc->Instance->ADC_RDATA0);
 
     /* Check ADC handle */
-    if (hadc == NULL || slot >= 8)
+    if (hadc == NULL || slot > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
@@ -868,7 +898,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_Get_All(ADC_HandleTypeDef *hadc, uint32
     if (hadc == NULL || buf == NULL)
         return HAL_ERROR;
 
-    for (i = 0; i < 8; i++)
+    for (i = 0; i <= ADC_CHANNEL_MAX; i++)
     {
         if (i & 1)
         {
@@ -916,9 +946,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_SetTimer(ADC_HandleTypeDef *hadc, HAL_A
   */
 __HAL_ROM_USED void HAL_ADC_IRQHandler(ADC_HandleTypeDef *hadc)
 {
-    if(__HAL_ADC_GET_FLAG(hadc, GPADC_GPADC_IRQ_GPADC_IRSR))
+    if (__HAL_ADC_GET_FLAG(hadc, GPADC_GPADC_IRQ_GPADC_IRSR))
         HAL_ADC_ConvCpltCallback(hadc);
-    
+
     /* Clear ISR */
     __HAL_ADC_CLEAR_FLAG(hadc, GPADC_GPADC_IRQ_GPADC_ICR);
 
@@ -992,7 +1022,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_ConfigChannel(ADC_HandleTypeDef *hadc, 
     __IO uint32_t *p = &(hadc->Instance->ADC_SLOT0_REG);
 
     /* Check ADC handle */
-    if (hadc == NULL || sConfig == NULL || sConfig->Channel >= 8)
+    if (hadc == NULL || sConfig == NULL || sConfig->Channel > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
@@ -1073,6 +1103,17 @@ __HAL_ROM_USED uint32_t HAL_ADC_SetFreq(ADC_HandleTypeDef *hadc, uint32_t freq)
     min_samp = (std_samp * fpclk + std_freq / 2) / std_freq - data_dly - 1;
     if ((min_conv > max_conv) || (min_samp > max_samp)) // over rage
         HAL_ASSERT(0);
+#elif (GPADC_CALIB_FLOW_VERSION == 4)
+    /* Formula:
+     *   min_conv = 76 * fpclk / 36MHz - 1
+     *   data_dly = 2 * fpclk / 36MHz
+     *   min_samp = 74 * fpclk / 36MHz - data_dly - 1
+     *
+     * For fpclk= 48MHz
+     */
+    min_conv = 100;
+    min_samp = 95;
+    data_dly = 3;
 #else
     min_conv = 24;
     min_samp = 22;
@@ -1130,11 +1171,11 @@ static HAL_StatusTypeDef HAL_ADC_Calibration(const ADC_CalibInputTypeDef *config
     if (config->reg_value1 == 0 || config->reg_value2 == 0)
         return HAL_ERROR;
 
-    gap1 = config->reg_value1 > config->reg_value2 ? 
-           (float)(config->reg_value1 - config->reg_value2) : 
+    gap1 = config->reg_value1 > config->reg_value2 ?
+           (float)(config->reg_value1 - config->reg_value2) :
            (float)(config->reg_value2 - config->reg_value1);
-    gap2 = config->voltage1_mv > config->voltage2_mv ? 
-           (float)(config->voltage1_mv - config->voltage2_mv) : 
+    gap2 = config->voltage1_mv > config->voltage2_mv ?
+           (float)(config->voltage1_mv - config->voltage2_mv) :
            (float)(config->voltage2_mv - config->voltage1_mv);
 
     if (gap1 != 0)
@@ -1146,7 +1187,7 @@ static HAL_StatusTypeDef HAL_ADC_Calibration(const ADC_CalibInputTypeDef *config
         return HAL_ERROR;
     }
 
-    result->offset = (float)config->reg_value1 - 
+    result->offset = (float)config->reg_value1 -
                      (float)config->voltage1_mv * ADC_RATIO_ACCURATE / result->ratio;
 
 #ifdef SF32LB55X
@@ -1156,8 +1197,8 @@ static HAL_StatusTypeDef HAL_ADC_Calibration(const ADC_CalibInputTypeDef *config
     result->max_voltage_mv = ADC_MAX_VOLTAGE_MV_3300;
 #endif
 
-    result->threshold_reg = (uint32_t)(result->max_voltage_mv * ADC_RATIO_ACCURATE / 
-                             result->ratio + result->offset);
+    result->threshold_reg = (uint32_t)(result->max_voltage_mv * ADC_RATIO_ACCURATE /
+                                       result->ratio + result->offset);
 
     reg_max = GPADC_ADC_RDATA0_SLOT0_RDATA >> GPADC_ADC_RDATA0_SLOT0_RDATA_Pos;
     if (result->threshold_reg >= (reg_max - 3))
@@ -1182,8 +1223,8 @@ static HAL_StatusTypeDef HAL_ADC_SetDefaultCalibration(ADC_CalibResultTypeDef *r
     result->ratio = ADC_DEFAULT_RATIO;
     result->max_voltage_mv = ADC_DEFAULT_MAX_VOLTAGE_MV;
 
-    result->threshold_reg = (uint32_t)(result->max_voltage_mv * ADC_RATIO_ACCURATE / 
-                             result->ratio + result->offset);
+    result->threshold_reg = (uint32_t)(result->max_voltage_mv * ADC_RATIO_ACCURATE /
+                                       result->ratio + result->offset);
 
     reg_max = GPADC_ADC_RDATA0_SLOT0_RDATA >> GPADC_ADC_RDATA0_SLOT0_RDATA_Pos;
     if (result->threshold_reg >= (reg_max - 3))
@@ -1230,7 +1271,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_CalibInit(HAL_ADC_CalibContextTypeDef *
   * @retval HAL status.
   */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_CalibSetCustom(HAL_ADC_CalibContextTypeDef *context,
-                                                        const HAL_ADC_CalibConfigTypeDef *config)
+        const HAL_ADC_CalibConfigTypeDef *config)
 {
     ADC_CalibInputTypeDef calib_config;
     ADC_CalibResultTypeDef result;
@@ -1353,7 +1394,7 @@ static HAL_StatusTypeDef HAL_ADC_ApplyFactoryConfigFromBsp(const FACTORY_CFG_ADC
     factory_config.low_mv = 0;
     factory_config.high_mv = 0;
 #endif
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     factory_config.vbat_reg = config->vbat_reg;
     factory_config.vbat_mv = config->vbat_mv;
     factory_config.ldovref_flag = config->ldovref_flag;
@@ -1363,7 +1404,7 @@ static HAL_StatusTypeDef HAL_ADC_ApplyFactoryConfigFromBsp(const FACTORY_CFG_ADC
     factory_config.vbat_mv = 0;
     factory_config.ldovref_flag = 0;
     factory_config.ldovref_sel = 0;
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
     return HAL_ADC_ApplyFactoryConfig(&factory_config, context);
 }
@@ -1446,7 +1487,7 @@ static HAL_StatusTypeDef HAL_ADC_LoadFactoryConfigFromBsp(ADC_FactoryConfigTypeD
     factory_config->low_mv = 0;
     factory_config->high_mv = 0;
 #endif
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     factory_config->vbat_reg = config.vbat_reg;
     factory_config->vbat_mv = config.vbat_mv;
     factory_config->ldovref_flag = config.ldovref_flag;
@@ -1456,7 +1497,7 @@ static HAL_StatusTypeDef HAL_ADC_LoadFactoryConfigFromBsp(ADC_FactoryConfigTypeD
     factory_config->vbat_mv = 0;
     factory_config->ldovref_flag = 0;
     factory_config->ldovref_sel = 0;
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
     return HAL_OK;
 }
@@ -1490,7 +1531,7 @@ static HAL_StatusTypeDef HAL_ADC_LoadFactoryConfigFromLcpu(ADC_FactoryConfigType
 }
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CalibSource source,
-                                                              HAL_ADC_CalibFactoryInfoTypeDef *info)
+        HAL_ADC_CalibFactoryInfoTypeDef *info)
 {
     ADC_FactoryConfigTypeDef factory_config;
     HAL_StatusTypeDef status;
@@ -1498,8 +1539,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CalibSource
     if (info == NULL)
         return HAL_ERROR;
 
-    *info = (HAL_ADC_CalibFactoryInfoTypeDef){0};
-    factory_config = (ADC_FactoryConfigTypeDef){0};
+    *info = (HAL_ADC_CalibFactoryInfoTypeDef)
+    {
+        0
+    };
+    factory_config = (ADC_FactoryConfigTypeDef)
+    {
+        0
+    };
 
     if (source == HAL_ADC_CALIB_SOURCE_BSP)
         status = HAL_ADC_LoadFactoryConfigFromBsp(&factory_config);
@@ -1606,9 +1653,9 @@ __HAL_ROM_USED float HAL_ADC_RegToVoltageFloat(float reg_value, const HAL_ADC_Ca
 #endif
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_CalibLoad(ADC_HandleTypeDef *hadc,
-                                                   HAL_ADC_CalibContextTypeDef *context,
-                                                   HAL_ADC_CalibSource source,
-                                                   uint32_t flags)
+        HAL_ADC_CalibContextTypeDef *context,
+        HAL_ADC_CalibSource source,
+        uint32_t flags)
 {
     HAL_StatusTypeDef status;
 
@@ -1641,7 +1688,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_EnableSlot(ADC_HandleTypeDef *hadc, uin
     __IO uint32_t *p = &(hadc->Instance->ADC_SLOT0_REG);
 
     /* Check ADC handle */
-    if (hadc == NULL || slot >= 8)
+    if (hadc == NULL || slot > ADC_CHANNEL_MAX)
     {
         return HAL_ERROR;
     }
@@ -1689,7 +1736,7 @@ __HAL_ROM_USED int HAL_ADC_Get_Offset(ADC_HandleTypeDef *hadc)
 #elif (GPADC_CALIB_FLOW_VERSION == 2)
     hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #else //(GPADC_CALIB_FLOW_VERSION == 4)
-    // TODO: 57X
+    hadc->Instance->ADC_CFG_REG1 |= (GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #endif
 #else
 
@@ -1717,8 +1764,8 @@ __HAL_ROM_USED int HAL_ADC_Get_Offset(ADC_HandleTypeDef *hadc)
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #elif (GPADC_CALIB_FLOW_VERSION == 2)
     hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG | GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
-#else //(GPADC_CALIB_FLOW_VERSION == 5)
-    // TODO: 57X
+#else //(GPADC_CALIB_FLOW_VERSION == 4)
+    hadc->Instance->ADC_CFG_REG1 &= ~(GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN);
 #endif
 #else
     hadc->Instance->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN;

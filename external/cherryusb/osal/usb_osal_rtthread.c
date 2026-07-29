@@ -25,13 +25,11 @@ usb_osal_thread_t usb_osal_thread_create(const char *name, uint32_t stack_size, 
 
 void usb_osal_thread_delete(usb_osal_thread_t thread)
 {
-    if (thread == NULL) {
-        rt_thread_t self = rt_thread_self();
-        rt_thread_control(self, RT_THREAD_CTRL_CLOSE, RT_NULL);
-        return;
+    if (thread != NULL) {
+        rt_thread_delete((rt_thread_t)thread);
+    } else {
+        rt_thread_exit();
     }
-
-    rt_thread_delete(thread);
 }
 
 void usb_osal_thread_schedule_other(void)
@@ -60,6 +58,11 @@ usb_osal_sem_t usb_osal_sem_create(uint32_t initial_count)
         }
     }
     return sem;
+}
+
+usb_osal_sem_t usb_osal_sem_create_counting(uint32_t max_count)
+{
+    return usb_osal_sem_create(0);
 }
 
 void usb_osal_sem_delete(usb_osal_sem_t sem)

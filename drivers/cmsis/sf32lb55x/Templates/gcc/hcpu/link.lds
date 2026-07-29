@@ -339,6 +339,11 @@ SECTIONS
     __SerialTranExport_end__ = .;
 
     . = ALIGN(4);
+    __app_subpage_db_start__ = .;
+    KEEP(*(.app_subpage_db))
+    __app_subpage_db_end__ = .;
+
+    . = ALIGN(4);
     __sifli_reg_start__ = .;
     KEEP(*(SORT(.sifli_reg*)))
     __sifli_reg_end__ = .;
@@ -638,7 +643,6 @@ SECTIONS
 
   .rom3 :
   {
-    *lvsf_font_*(.rodata*)
   } > ROM3
 #endif
 }

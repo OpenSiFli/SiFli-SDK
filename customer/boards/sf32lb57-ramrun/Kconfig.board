@@ -1,0 +1,5 @@
+config ASIC
+    bool
+    default y
+
+select BOARD_RAMRUN_ENABLED

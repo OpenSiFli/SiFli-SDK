@@ -28,7 +28,6 @@ SiFli系列MCU支持定时器中断来触发多通道同时采样的，可以参
 
 > sdk.py menuconfig --board=sf32lb52-lcd_52d       52d开发板
 
-
 如下图，选择GPADC1,保存并退出menuconfig，查看`rtconfig.h`宏是否生成
 ![alt text](assets/MENUCONFIG_ADC.png)
 * 切换到例程project目录，运行scons命令执行编译：

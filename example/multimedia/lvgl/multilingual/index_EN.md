@@ -1,0 +1,8 @@
+# Multilingual
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+```

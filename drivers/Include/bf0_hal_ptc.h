@@ -13,6 +13,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "bf0_hal_def.h"
+#include "ptm_ins.h"
 /** @addtogroup BF0_HAL_Driver
   * @{
   */

@@ -8,6 +8,7 @@ Source path: example/rt_device/i2s
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
++ sf32lb57-spi-hdk_n16r4
 
 ## Overview
 <!-- Example introduction -->
@@ -49,11 +50,11 @@ Configurations 2 and 3 are used for auxiliary function demonstration in this exa
 
 ### Hardware Connection\PIN CONFIG
 
-Taking `SF32LB52_DevKit-LCD` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
+Taking `SF32LB52_DevKit-LCD` and `sf32lb57-spi_hdk_n16r4` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#ifdef SOC_SF32LB52X
+#if defined(SOC_SF32LB52X} || defined(SF32LB57X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);

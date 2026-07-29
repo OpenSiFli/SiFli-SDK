@@ -154,6 +154,7 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
 
 void acpu_send_result(uint32_t err_code, uint32_t ret_value)
 {
+    SCB_CleanInvalidateDCache();
     acpu_send_result2(p_received_msg, err_code, ret_value);
 }
 

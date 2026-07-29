@@ -30,7 +30,7 @@ typedef struct
     // Mbox thread
     rt_mailbox_t mb_handle;
     // work queue
-    struct rt_delayed_work work;
+    struct rt_work work;
 } app_env_t;
 
 static app_env_t g_app_env;
@@ -222,7 +222,7 @@ int main(void)
 
 #ifdef RT_USING_HEAP
 #ifdef RT_USING_SYSTEM_WORKQUEUE
-    rt_delayed_work_init(&env->work, ble_app_per_adv_update, env);
+    rt_work_init(&env->work, ble_app_per_adv_update, env);
 #endif //RT_USING_SYSTEM_WORKQUEUE
 #endif //RT_USING_HEAP
     while (1)
@@ -316,12 +316,12 @@ int cmd_diss(int argc, char *argv[])
 
                 env->per_adv_len = per_adv_len;
                 LOG_I("per_adv_refresh start");
-                rt_work_submit(&env->work.work, env->per_adv_change_inv);
+                rt_work_submit(&env->work, env->per_adv_change_inv);
             }
             else if (strcmp(argv[2], "stop") == 0)
             {
                 env->per_adv_change_inv = 0;
-                rt_work_cancel(&env->work.work);
+                rt_work_cancel(&env->work);
             }
         }
 #endif //RT_USING_SYSTEM_WORKQUEUE

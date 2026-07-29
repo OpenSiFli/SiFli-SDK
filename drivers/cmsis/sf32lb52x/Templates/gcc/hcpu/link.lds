@@ -291,9 +291,19 @@ SECTIONS
     __app_font_end__ = .;
 
     . = ALIGN(4);
+    __SerialTranClientExport_start__ = .;
+    KEEP(*(SerialTranClientExport))
+    __SerialTranClientExport_end__ = .;
+
+    . = ALIGN(4);
     __SerialTranExport_start__ = .;
     KEEP(*(SerialTranExport))
     __SerialTranExport_end__ = .;
+
+    . = ALIGN(4);
+    __app_subpage_db_start__ = .;
+    KEEP(*(.app_subpage_db))
+    __app_subpage_db_end__ = .;
 
     . = ALIGN(4);
     __sifli_reg_start__ = .;
@@ -585,7 +595,6 @@ SECTIONS
 
   .rom3 :
   {
-    *lvsf_font_*(.rodata*)
   } > ROM3
 #endif
 }

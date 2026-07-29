@@ -28,7 +28,6 @@ SiFli MCUs support timer interrupts to trigger simultaneous multi-channel sampli
 
 > sdk.py menuconfig --board=sf32lb52-lcd_52d       52d development board
 
-
 As shown below, select GPADC1, save and exit `menuconfig`, then check whether the `rtconfig.h` macros were generated.
 ![alt text](assets/MENUCONFIG_ADC.png)
 * Switch to the example project directory and run the `scons` command to build:

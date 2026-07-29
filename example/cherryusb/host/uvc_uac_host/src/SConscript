@@ -1,0 +1,12 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+path = [cwd]
+path += [cwd + '/cherryusb_hostuvcuac']
+# Add source code
+src = Glob('*.c')
+src += Glob('cherryusb_hostuvcuac/*.c')
+group = DefineGroup('Applications', src, CPPPATH = path, depend = [''])
+
+Return('group')

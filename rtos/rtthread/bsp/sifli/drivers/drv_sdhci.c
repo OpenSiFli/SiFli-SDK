@@ -524,6 +524,10 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
     rt_pm_hw_device_start();
 #endif
 
+#ifdef SDMMC_AUTO_GATE_ENABLED
+    hal_sdhci_clk_ctrl(&host->handle, true);
+#endif /* SDMMC_AUTO_GATE_ENABLED */
+
     //ASSERT(host->cmd);
     LOG_D("SDDEBUG: sdhci.c sdhci_send_command \n");
     //printk("send command \n");
@@ -645,6 +649,11 @@ static void sdhci_send_command(struct sdhci_host *host, struct rt_mmcsd_cmd *cmd
     {
         LOG_D("Wait cmd %d fail with %d\n", cmd->cmd_code, res);
     }
+
+#ifdef SDMMC_AUTO_GATE_ENABLED
+    hal_sdhci_clk_ctrl(&host->handle, false);
+#endif /* SDMMC_AUTO_GATE_ENABLED */
+
 #ifdef RT_USING_PM
     rt_pm_hw_device_stop();
     rt_pm_release(PM_SLEEP_MODE_IDLE);
@@ -1574,7 +1583,21 @@ int sdhci_add_host(struct sdhci_host *host)
     LOG_I("host minclock %d  host maxclock %d  \n", mmc->freq_min, mmc->freq_max);
     mmc->flags = MMCSD_SUP_SDIO_IRQ;
 
-    mmc->flags |= MMCSD_BUSWIDTH_4;
+    /* Per-controller 4-bit mode control (match by instance base address) */
+#ifndef SDMMC1_BUS_WIDTH_1_ONLY
+    if (host->handle.Instance == SDMMC1_BASE)
+    {
+        mmc->flags |= MMCSD_BUSWIDTH_4;
+    }
+#endif /* SDMMC1_BUS_WIDTH_1_ONLY */
+#ifdef SDMMC2_BASE
+#ifndef SDMMC2_BUS_WIDTH_1_ONLY
+    if (host->handle.Instance == SDMMC2_BASE)
+    {
+        mmc->flags |= MMCSD_BUSWIDTH_4;
+    }
+#endif /* SDMMC2_BUS_WIDTH_1_ONLY */
+#endif /* SDMMC2_BASE */
 
     if (caps & SDHCI_CAN_DO_HISPD)
         mmc->flags |= MMCSD_SUP_HIGHSPEED;
@@ -1900,7 +1923,7 @@ int rt_sdhci_init_instance(uint8_t id)
     int ret = 0;
     struct rt_sdhci_configuration *cfg;
     struct sdhci_host *host_ctx;
-    uint16_t sdhci_time = 100;    
+    uint16_t sdhci_time = 100;
 
     LOG_I("rt_hw_sdmmc_init %d begin\n", id + 1);
 

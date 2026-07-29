@@ -36,6 +36,8 @@ if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']):
     src += ['bf0_lcpu_init.c']
     src += ['bt_rf_cw_config.c']
     src += ['bt_power_config.c']
+    if not GetDepend(['USE_ATE_MODE']) and not GetDepend('FPGA'):
+        src += ['bt_rf_fulcal.c']
     if not GetDepend(['CFG_FACTORY_DEBUG']):
         src += ['bt_rf_test.c']
     # TODO: need to enanble after ble_rf_fulcal_ad9364 is available

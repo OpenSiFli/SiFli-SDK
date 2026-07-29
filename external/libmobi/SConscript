@@ -1,0 +1,41 @@
+from building import *
+Import('rtconfig')
+
+cwd = GetCurrentDir()
+
+src = [
+    './src/buffer.c',
+    './src/compression.c',
+    './src/debug.c',
+    './src/index.c',
+    './src/memory.c',
+    './src/meta.c',
+    './src/mobi_decode.c',
+    './src/parse_rawml.c',
+    './src/read.c',
+    './src/structure.c',
+    './src/util.c',
+    './src/write.c',
+]
+
+path = [
+    cwd + '/src',
+    cwd + '/../../middleware/lvgl',
+    cwd + '/../../middleware/lvgl/lvsf',
+    cwd + '/../../middleware/sifli_lib/lib',
+    cwd + '/../../external/lvgl_v8',
+    cwd + '/../../external/lvgl_v8/src/extra/libs/png',
+]
+CPPDEFINES = [
+    'MOBI_DEBUG=0',
+    'MOBI_DEBUG_ALLOC=0',
+    'RT_USING_DFS',
+]
+
+LOCAL_CCFLAGS = ''
+if not GetDepend('BSP_USING_PC_SIMULATOR'):
+    LOCAL_CCFLAGS = ' -Wno-error -Wno-#warnings'
+
+group = DefineGroup('libmobi', src, depend = ['PKG_USING_LIBMOBI'], CPPPATH = path, CPPDEFINES = CPPDEFINES, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')

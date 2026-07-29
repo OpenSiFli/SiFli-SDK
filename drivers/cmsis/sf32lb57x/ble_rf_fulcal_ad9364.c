@@ -8,7 +8,6 @@
 #include "ad9361.h"
 #include "spi_tst_drv.h"
 #include "ble_rf_cal.h"
-#include "ptab.h"
 
 
 #define RPL_FREQTAB_OFFSET 0

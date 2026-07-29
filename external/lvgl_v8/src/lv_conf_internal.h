@@ -1150,7 +1150,9 @@
 
 /*Always set a default font*/
 #ifndef LV_FONT_DEFAULT
-    #ifdef CONFIG_LV_FONT_DEFAULT
+    #ifdef LV_USING_FREETYPE_ENGINE
+        #define LV_FONT_DEFAULT (const lv_font_t *) lvsf_get_font_from_size(16)
+    #elif defined(CONFIG_LV_FONT_DEFAULT)
         #define LV_FONT_DEFAULT CONFIG_LV_FONT_DEFAULT
     #else
         #define LV_FONT_DEFAULT &lv_font_montserrat_14

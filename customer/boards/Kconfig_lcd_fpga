@@ -66,10 +66,10 @@ if BSP_USING_LCD
             select LCD_USING_ATK7016
             select BSP_LCDC_USING_DPI
 
-        config LCD_USING_EPD_8BIT_OPM060DA
+        config LCD_USING_EPD_8BIT_OPM060DA_FPGA
             bool "6inch EPD OPM060DA 8bit"
             select LCD_USING_EPD_OPM060DA
-            select BSP_LCDC_USING_EPD_8BIT
+            select BSP_LCDC_USING_DIRECT_EPD
 
         config LCD_USING_FPGA_ED_LB5XSPI19701
             bool "1.97 rect QAD-SPI LCD(ED-LB5xSPI19701)"
@@ -106,7 +106,7 @@ if BSP_USING_LCD
         default 240 if LCD_USING_SQ_TYPE1
         default 240 if LCD_USING_SQ_TYPE2
         default 1024 if LCD_USING_ATK7016
-        default 1032 if LCD_USING_EPD_8BIT_OPM060DA
+        default 1032 if LCD_USING_EPD_8BIT_OPM060DA_FPGA
         default 410 if LCD_USING_FPGA_ED_LB5XSPI19701
         default 410 if LCD_USING_FPGA_ED_LB5XSPI19701_DDR
         
@@ -121,7 +121,7 @@ if BSP_USING_LCD
         default 240 if LCD_USING_SQ_TYPE1
         default 240 if LCD_USING_SQ_TYPE2
         default 600 if LCD_USING_ATK7016
-        default 758 if LCD_USING_EPD_8BIT_OPM060DA
+        default 758 if LCD_USING_EPD_8BIT_OPM060DA_FPGA
         default 494 if LCD_USING_FPGA_ED_LB5XSPI19701
         default 494 if LCD_USING_FPGA_ED_LB5XSPI19701_DDR
         
@@ -136,7 +136,7 @@ if BSP_USING_LCD
         default 226 if LCD_USING_SQ_TYPE1
         default 260 if LCD_USING_SQ_TYPE2
         default 100 if LCD_USING_ATK7016_DPI
-        default 300 if LCD_USING_EPD_8BIT_OPM060DA
+        default 300 if LCD_USING_EPD_8BIT_OPM060DA_FPGA
         default 315 if LCD_USING_FPGA_ED_LB5XSPI19701
         default 315 if LCD_USING_FPGA_ED_LB5XSPI19701_DDR
 

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+
 #include <stdlib.h>
 
 #include "bf0_hal_rcc.h"
@@ -37,7 +38,8 @@ uint8_t bt_is_in_BQB_mode(void);
 int8_t bt_rf_get_max_tx_pwr(void);
 int8_t bt_rf_get_init_tx_pwr(void);
 int8_t bt_rf_get_min_tx_pwr(void);
-
+int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint8_t *pa_bm_cal, uint8_t *dac_lsb_cnt_cal);
+int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel39, uint32_t *tmxcal_sel78);
 
 
 static const uint32_t ref_residual_cnt_tbl_rx_1m[40] =
@@ -3799,8 +3801,54 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
     uint16_t offset_q[9];
     uint32_t rcc_reg, div;
     uint32_t tmxcap_sel[79];
+    uint8_t  tmxcap_efuse_flag = 0;
+
+    //uint8_t tmxbuf_gc[8] = {2, 3, 3, 5, 5, 6, 8, 0xF};
+    uint8_t edr_pa_bm[8] = {3, 5, 0x8, 0x14, 0x1B, 0x1B, 0x1F, 0x1F};
+
+#ifndef ENABLE_RF_ATE
+    uint8_t edr_cal_flag = 0;
+    uint8_t lsb_cnt_cal;
+    uint8_t pa_bm_cal;
 
 
+    bt_rf_get_absolute_pwr_cal(&edr_cal_flag, &pa_bm_cal, &lsb_cnt_cal);
+    if (edr_cal_flag)
+    {
+
+        //rt_kprintf("pa_bm_cal = %d, lsb_cnt_cal = %d\n", pa_bm_cal, lsb_cnt_cal);
+
+        //MODIFY_REG(hwp_bt_rfc->TBB_REG, BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Msk, lsb_cnt_cal << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos);
+        hwp_bt_rfc->TBB_REG &= ~BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV;
+        hwp_bt_rfc->TBB_REG |= lsb_cnt_cal << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos;
+        if (pa_bm_cal == 1)
+        {
+            edr_pa_bm[0] += 1;
+            edr_pa_bm[1] += 2;
+            edr_pa_bm[2] += 2;
+            edr_pa_bm[3] += 2;
+            edr_pa_bm[4] += 4;
+            //edr_pa_bm[5] +=4;
+        }
+        else if (pa_bm_cal == 3)
+        {
+            //edr_pa_bm[0] +=1;
+            edr_pa_bm[1] -= 1;
+            edr_pa_bm[2] -= 2;
+            edr_pa_bm[3] -= 2;
+            edr_pa_bm[4] -= 3;
+            //edr_pa_bm[5] -=3;
+        }
+    }
+#endif //ifndef ENABLE_RF_ATE
+
+    //store edr_pa_bm in rf mem for sdk power cfg
+    data = 0xabcd1234;
+    write_memory(BT_RFC_MEM_BASE + 0x77C, data);
+    data = edr_pa_bm[0] + (edr_pa_bm[1] << 8) + (edr_pa_bm[2] << 16) + (edr_pa_bm[3] << 24);
+    write_memory(BT_RFC_MEM_BASE + 0x780, data);
+    data = edr_pa_bm[4] + (edr_pa_bm[5] << 8) + (edr_pa_bm[6] << 16) + (edr_pa_bm[7] << 24);
+    write_memory(BT_RFC_MEM_BASE + 0x784, data);
     // Change xtal to 24M
     rcc_reg = READ_REG(hwp_lpsys_rcc->CFGR);
     div = (rcc_reg & LPSYS_RCC_CFGR_HDIV1_Msk) >> LPSYS_RCC_CFGR_HDIV1_Pos;
@@ -3987,7 +4035,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
             //level 0 : edr tx 0dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV;
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x3 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x70;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x22222222;
@@ -4001,7 +4049,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 1 : edr tx 3dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x5 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x60;
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x33333333;
 
@@ -4011,7 +4059,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 2 : edr tx 6dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0xC << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x60;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x44444444;
@@ -4025,7 +4073,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 3 : edr tx 9dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x14 << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x70;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x55555555;
@@ -4041,7 +4089,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 4 : edr tx 13dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x1B << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos; //set PA_BM to 0 to minimize current
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos; //set PA_BM to 0 to minimize current
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x50;
 
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x77777777;
@@ -4073,7 +4121,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 6 : gfsk tx 16dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x1f << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x30;
 
@@ -4088,7 +4136,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             //level 7 : gfsk tx 19dBm
             hwp_bt_rfc->TRF_EDR_REG1 &= ~(BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV |  BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV);
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x1F << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos;
 
             hwp_bt_phy->TX_DC_CAL_CFG2 = 0x18;
             hwp_bt_phy->EDR_TMXBUF_GC_CFG2 &= ~BT_PHY_EDR_TMXBUF_GC_CFG2_EDR_TMXBUF_GC_0 ;
@@ -4120,7 +4168,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
             hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV & ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXBUF_IBLD_LV & \
                                         ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_LOBIAS_BM_LV & ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PACAS_BM_LV;
-            hwp_bt_rfc->TRF_EDR_REG1 |= 0x1F << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos | \
+            hwp_bt_rfc->TRF_EDR_REG1 |= edr_pa_bm[i] << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PA_BM_LV_Pos | \
                                         0x2  << BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_PACAS_BM_LV_Pos;
 
             hwp_bt_phy->TX_IF_MOD_CFG2 &=  ~BT_PHY_TX_IF_MOD_CFG2_TX_MOD_GAIN_BR_FRC;
@@ -4583,113 +4631,120 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
 
     uint32_t pwr_ref;
     uint32_t reg_addr = rslt_start_addr;
-    for (i = 0; i < 3; i++)
-    {
-
-
-        hwp_bt_phy->TX_DC_CAL_CFG2 = 0x30;
-        //set rf channel
-        hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_CHANNEL;
-        if (i == 0)
-            hwp_bt_mac->DMRADIOCNTL1 |= 0   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
-        else if (i == 1)
-            hwp_bt_mac->DMRADIOCNTL1 |= 39   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
-        else if (i == 2)
-            hwp_bt_mac->DMRADIOCNTL1 |= 78   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
-        //hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
-        //_HAL_Delay_us(10);
-        //hwp_bt_mac->DMRADIOCNTL1 |= BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
-        mem_data = hwp_bt_rfc->CAL_ADDR_REG2;//addr to be determined
-        mem_data >>= 16;
-        mem_data += BT_RFC_MEM_BASE;
-        if (i == 0) //0 channel
-            mem_data = read_memory(mem_data);
-        else if (i == 1) //39 channel
-            mem_data = read_memory(mem_data + 39 * 4);
-        else if (i == 2) //78 channel
-            mem_data = read_memory(mem_data + 78 * 4);
-        hwp_bt_rfc->EDR_CAL_REG1 = mem_data;
-        hwp_bt_rfc->EDR_PLL_REG5 |=  BT_RFC_EDR_PLL_REG5_BRF_EDR_FBDV_RSTB_LV ;
-        hwp_bt_rfc->EDR_PLL_REG5 &= ~BT_RFC_EDR_PLL_REG5_BRF_EDR_FBDV_RSTB_LV ;
-
-        _HAL_Delay_us(40);//40us
-        hwp_bt_rfc->TXDC_CAL_REG1  = 0x10000000;
-        hwp_bt_rfc->TXDC_CAL_REG2  = 0 ;
-        uint8_t tmxcap_sel_cnt[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-        //go through tmxcap_sel,and store dc_out
-#ifdef ENABLE_RF_ATE
-        for (int l = 0; l < 1; l++)
-        {
-#else
-        for (int l = 0; l < 30; l++)
-        {
+    //hwp_bt_phy->EDR_TMXBUF_GC_CFG2 = 0x55555555;
+#ifndef ENABLE_RF_ATE
+    bt_rf_get_tmxcap_sel_efuse(&tmxcap_efuse_flag, &tmxcap_sel[0], &tmxcap_sel[39], &tmxcap_sel[78]);
 #endif
-            int64_t dc_out_max = 0;
+    if (!tmxcap_efuse_flag)
+    {
+        for (i = 0; i < 3; i++)
+        {
+
+
+            hwp_bt_phy->TX_DC_CAL_CFG2 = 0x30;
+            //set rf channel
+            hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_CHANNEL;
+            if (i == 0)
+                hwp_bt_mac->DMRADIOCNTL1 |= 0   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+            else if (i == 1)
+                hwp_bt_mac->DMRADIOCNTL1 |= 39   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+            else if (i == 2)
+                hwp_bt_mac->DMRADIOCNTL1 |= 78   << BT_MAC_DMRADIOCNTL1_CHANNEL_Pos;
+            //hwp_bt_mac->DMRADIOCNTL1 &= ~BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
+            //_HAL_Delay_us(10);
+            //hwp_bt_mac->DMRADIOCNTL1 |= BT_MAC_DMRADIOCNTL1_FORCE_TX_VAL;
+            mem_data = hwp_bt_rfc->CAL_ADDR_REG2;//addr to be determined
+            mem_data >>= 16;
+            mem_data += BT_RFC_MEM_BASE;
+            if (i == 0) //0 channel
+                mem_data = read_memory(mem_data);
+            else if (i == 1) //39 channel
+                mem_data = read_memory(mem_data + 39 * 4);
+            else if (i == 2) //78 channel
+                mem_data = read_memory(mem_data + 78 * 4);
+            hwp_bt_rfc->EDR_CAL_REG1 = mem_data;
+            hwp_bt_rfc->EDR_PLL_REG5 |=  BT_RFC_EDR_PLL_REG5_BRF_EDR_FBDV_RSTB_LV ;
+            hwp_bt_rfc->EDR_PLL_REG5 &= ~BT_RFC_EDR_PLL_REG5_BRF_EDR_FBDV_RSTB_LV ;
+
+            _HAL_Delay_us(40);//40us
+            hwp_bt_rfc->TXDC_CAL_REG1  = 0x10000000;
+            hwp_bt_rfc->TXDC_CAL_REG2  = 0 ;
+            uint8_t tmxcap_sel_cnt[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            //go through tmxcap_sel,and store dc_out
+#ifdef ENABLE_RF_ATE
+            for (int l = 0; l < 3; l++)
+            {
+#else
+            for (int l = 0; l < 30; l++)
+            {
+#endif
+                int64_t dc_out_max = 0;
+                for (j = 15; j > 2; j--)
+                {
+                    //set coef_0;
+                    data =  j;
+
+                    hwp_bt_rfc->EDR_CAL_REG1  &= ~BT_RFC_EDR_CAL_REG1_BRF_TRF_EDR_TMXCAP_SEL_LV;
+                    hwp_bt_rfc->EDR_CAL_REG1  |= data << BT_RFC_EDR_CAL_REG1_BRF_TRF_EDR_TMXCAP_SEL_LV_Pos;
+
+                    _HAL_Delay_us(2);//40us
+                    //uint32_t mixer_pwr;
+                    hwp_dmac2->CNDTR8 = 512;
+                    while (!(hwp_dmac2->ISR & DMAC_ISR_TCIF8));
+                    hwp_dmac2->IFCR |= DMAC_IFCR_CTCIF8;
+                    mixer_i_sum = 0;
+                    mixer_q_sum = 0;
+                    int phase_index = 0;
+                    for (k = 0; k < 512; k++)
+                    {
+
+                        //int phase_index = 0;
+                        mem_data = read_memory(BT_RFC_TXDC_DMA_ADDR + k * 4);
+                        //adc_data = (int)((mem_data&0x3ff)<<22);
+                        //adc_data = adc_data >> 22;
+                        adc_data = (mem_data & 0x3ff);
+                        /*mixer_cos = cos_table[phase_index];
+                        mixer_sin = sin_table[phase_index];
+                        phase_index = phase_index + 2;
+                        if (phase_index==16)
+                        {
+                          phase_index = 0;
+                        }*/
+                        //mixer_i = adc_data;//*mixer_cos;//s20.19
+                        //mixer_q = adc_data;//*mixer_sin;//s20.19
+                        //mixer_i_sum += mixer_i;
+                        //mixer_q_sum += mixer_q;
+                        mixer_i_sum += adc_data ;
+                    }
+                    //mixer_i_sum = mixer_i_sum/512; //s20.19
+                    //mixer_q_sum = mixer_q_sum/512; //s20.19
+                    //mixer_pwr_i = mixer_i_sum*mixer_i_sum;
+                    //mixer_pwr_q = mixer_q_sum*mixer_q_sum;
+                    //mixer_pwr=mixer_i_sum*mixer_i_sum + mixer_q_sum*mixer_q_sum;  //u32.38
+                    //mixer_pwr = mixer_pwr_i + mixer_pwr_q;
+                    //if(mixer_pwr > 0x7fffff00000000)
+                    //  printf("overflow");
+                    //dc_out[j]=mixer_pwr;
+
+                    //search for max dc_out and coresponding tmxcap_sel
+                    if (dc_out_max < mixer_i_sum)
+                    {
+                        dc_out_max = mixer_i_sum;
+                        tmxcap_sel[i * 39] = data ;
+                        //RF_PRINTF("txm[%d] %d\n",i, tmxcap_sel[i]);
+                    }
+                }
+                tmxcap_sel_cnt[tmxcap_sel[i * 39]] += 1;
+            }
+
+            tmxcap_sel[i * 39] = 15;
             for (j = 15; j > 2; j--)
             {
-                //set coef_0;
-                data =  j;
-
-                hwp_bt_rfc->EDR_CAL_REG1  &= ~BT_RFC_EDR_CAL_REG1_BRF_TRF_EDR_TMXCAP_SEL_LV;
-                hwp_bt_rfc->EDR_CAL_REG1  |= data << BT_RFC_EDR_CAL_REG1_BRF_TRF_EDR_TMXCAP_SEL_LV_Pos;
-
-                _HAL_Delay_us(2);//40us
-                //uint32_t mixer_pwr;
-                hwp_dmac2->CNDTR8 = 512;
-                while (!(hwp_dmac2->ISR & DMAC_ISR_TCIF8));
-                hwp_dmac2->IFCR |= DMAC_IFCR_CTCIF8;
-                mixer_i_sum = 0;
-                mixer_q_sum = 0;
-                int phase_index = 0;
-                for (k = 0; k < 512; k++)
-                {
-
-                    //int phase_index = 0;
-                    mem_data = read_memory(BT_RFC_TXDC_DMA_ADDR + k * 4);
-                    //adc_data = (int)((mem_data&0x3ff)<<22);
-                    //adc_data = adc_data >> 22;
-                    adc_data = (mem_data & 0x3ff);
-                    /*mixer_cos = cos_table[phase_index];
-                    mixer_sin = sin_table[phase_index];
-                    phase_index = phase_index + 2;
-                    if (phase_index==16)
-                    {
-                      phase_index = 0;
-                    }*/
-                    //mixer_i = adc_data;//*mixer_cos;//s20.19
-                    //mixer_q = adc_data;//*mixer_sin;//s20.19
-                    //mixer_i_sum += mixer_i;
-                    //mixer_q_sum += mixer_q;
-                    mixer_i_sum += adc_data ;
-                }
-                //mixer_i_sum = mixer_i_sum/512; //s20.19
-                //mixer_q_sum = mixer_q_sum/512; //s20.19
-                //mixer_pwr_i = mixer_i_sum*mixer_i_sum;
-                //mixer_pwr_q = mixer_q_sum*mixer_q_sum;
-                //mixer_pwr=mixer_i_sum*mixer_i_sum + mixer_q_sum*mixer_q_sum;  //u32.38
-                //mixer_pwr = mixer_pwr_i + mixer_pwr_q;
-                //if(mixer_pwr > 0x7fffff00000000)
-                //  printf("overflow");
-                //dc_out[j]=mixer_pwr;
-
-                //search for max dc_out and coresponding tmxcap_sel
-                if (dc_out_max < mixer_i_sum)
-                {
-                    dc_out_max = mixer_i_sum;
-                    tmxcap_sel[i * 39] = data ;
-                    //RF_PRINTF("txm[%d] %d\n",i, tmxcap_sel[i]);
-                }
+                if (tmxcap_sel_cnt[j] > tmxcap_sel_cnt[tmxcap_sel[i * 39]])
+                    tmxcap_sel[i * 39] = j;
             }
-            tmxcap_sel_cnt[tmxcap_sel[i * 39]] += 1;
-        }
-
-        tmxcap_sel[i * 39] = 15;
-        for (j = 15; j > 2; j--)
-        {
-            if (tmxcap_sel_cnt[j] > tmxcap_sel_cnt[tmxcap_sel[i * 39]])
-                tmxcap_sel[i * 39] = j;
-        }
-    }
+        }//for(i=0;i<3;i++)
+    }//if(!tmxcap_efuse_flag)
 
 #ifdef ENABLE_RF_ATE
     hwp_bt_rfc->RSVD_REG1 = tmxcap_sel[78] + (tmxcap_sel[0] << 4) + (tmxcap_sel[39] << 8);
@@ -5201,9 +5256,58 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.2.0_3415";
+char *g_rf_ful_ver = "1.3.0_3581";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;
     return g_rf_ful_ver;
 }
+
+
+__WEAK int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint8_t *pa_bm_cal, uint8_t *dac_lsb_cnt_cal)
+{
+
+    int efuse_st;
+    uint32_t efuse32[5];
+    uint8_t *efuse_data = (uint8_t *)efuse32;
+    //void rt_kprintf(const char *fmt, ...);
+    efuse_st = HAL_EFUSE_Init();
+    if (efuse_st != 0)
+    {
+        //printf("Efuse init fail!\n");
+        return 1;
+    }
+    efuse_st = HAL_EFUSE_Read(288, efuse_data, 4);
+    *edr_cal_flag = (efuse32[0] & 0x1);
+    *pa_bm_cal = (efuse32[0] & 0x6) >> 1;
+    *dac_lsb_cnt_cal = (efuse32[0] & 0x18) >> 3;
+
+    return 0;
+
+}
+
+__WEAK int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel39, uint32_t *tmxcal_sel78)
+{
+
+    int efuse_st;
+    uint32_t efuse32[5];
+    uint8_t *efuse_data = (uint8_t *)efuse32;
+    //void rt_kprintf(const char *fmt, ...);
+    efuse_st = HAL_EFUSE_Init();
+    if (efuse_st != 0)
+    {
+        //printf("Efuse init fail!\n");
+        return 1;
+    }
+    efuse_st = HAL_EFUSE_Read(288, efuse_data, 4);
+    *tmxcap_sel_efuse_flag = (efuse32[0] & 0x20) >> 5;
+    *tmxcal_sel78 = (efuse32[0] & 0x3C0) >> 6;
+    *tmxcal_sel39 = (efuse32[0] & 0x3C00) >> 10;
+    *tmxcal_sel0 = (efuse32[0] & 0x3C000) >> 14;
+
+    return 0;
+
+}
+
+/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
+

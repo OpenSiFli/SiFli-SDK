@@ -6,6 +6,7 @@ BLE/BT功耗测试例程（LCPU主频为24MHz）。BLE可测试广播与连接�
     - EC-LB58X： 使用PA64
     - EH-LB561/EH-LB563： 使用PB34，对应HDK上的HR_INT
     - EH-ss6500/EH-LB523/EH-LB520： 使用PA24，对应HDK上的GPS_PEN
+    - 57 evb: 使用PA24
 
 当唤醒PIN为低电平时HCPU和LCPU均无法进入低功耗模式，
 此时可以通过HCPU的Console发送命令修改参数，

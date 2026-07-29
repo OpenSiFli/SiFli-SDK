@@ -4,9 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #ifndef _LVSF_ENCODER_H_
+#ifndef _LVSF_ENCODER_H_
 #define _LVSF_ENCODER_H_
 
+#include "lvgl.h"
 #include "lvsf_conf_internal.h"
 
 #if LVSF_USING_ENCODER != 0
@@ -16,9 +17,8 @@ extern "C" {
 #endif
 
 /*********************
- *      INCLUDES
+ *      DEFINES
  *********************/
-#include "lvgl.h"
 
 /*********************
  *      DEFINES

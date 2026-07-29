@@ -1,0 +1,16 @@
+from building import *
+
+objs_ezip = []
+
+objs_ezip += Glob('*.png')
+objs_ezip += Glob('*.gif')
+
+if 16 == GetConfigValue('LV_COLOR_DEPTH'):
+    img_flags = '-rgb565'
+else:
+    img_flags = '-rgb888'
+
+src = Env.ImgResource(objs_ezip, img_flags + ' -section ROM3_IMG -cfile 2 -dpt 1')
+group = DefineGroup('multlist_asset', src, depend=['PKG_USING_LITTLEVGL2RTT'])
+
+Return('group')

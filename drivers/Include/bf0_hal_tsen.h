@@ -53,6 +53,7 @@ typedef struct
     HAL_LockTypeDef             Lock;       /*!< TSEN locking object      */
     __IO HAL_TSEN_StateTypeDef  State;      /*!< TSEN communication state */
     int8_t                      temperature; /*!< last read temperature*/
+    uint32_t                    pclk;        /*!< PCLK in Hz */
 } TSEN_HandleTypeDef;
 
 /**
@@ -102,7 +103,7 @@ HAL_StatusTypeDef HAL_TSEN_DeInit(TSEN_HandleTypeDef *htsen);
 #define HAL_TSEN_Data(htsen) ((((int32_t)(htsen->Instance->TSEN_RDATA))+3000)*749/10100-277)
 
 #define HAL_ERROR_TEMPRATURE    1000                /*<! -1000 means ready error*/
-#define HAL_TSEN_MAX_DELAY      20                  /*<! Max delay for temperature read, 20ms*/
+#define HAL_TSEN_MAX_DELAY      10                  /*<! Max delay for temperature read, 20ms*/
 
 /**
   * @brief  Synchronized Read the current temperature.

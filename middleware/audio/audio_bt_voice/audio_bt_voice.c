@@ -20,6 +20,8 @@
 #include "audio_server.h"
 #include "audio_cvsd.h"
 #include "audio_filter.h"
+#include "audio_bt_voice_lc3swb.h"
+
 
 #define DBG_TAG           "audio"
 #define DBG_LVL           AUDIO_DBG_LVL
@@ -37,11 +39,11 @@
 
 #define AUDIO_FMT_PCM   0
 #define AUDIO_FMT_MSBC  1
+#define AUDIO_FMT_LC3SWB 2
 
 #define SYS_HL_BT_AUDIO_QUEUE    (6)
 
 static ipc_queue_handle_t sys_hl_bt_audio_queue = IPC_QUEUE_INVALID_HANDLE;
-
 
 #define HCPU_LCPU_SHARE_MEM_BASE_ADDR  LCPU_AUDIO_MEM_START_ADDR
 //#define AUDIO_RINGBUFFER_LEN       ((LCPU_HCPU_AUDIO_MEM_SIZE - 0x50 - sizeof(struct hci_sync_con_cmp_evt))/8*4)  //cache data and synchionization
@@ -56,13 +58,15 @@ static uint8_t *p_uplink_pool;
 static struct rt_ringbuffer uplink_ring;
 
 #define LCPU2HCPU_DATA_HEADER           4
-#define AUDIO_BT_VOICE_BUFFER_LEN       248
+#define AUDIO_BT_VOICE_BUFFER_LEN       512
 #define AUDIO_BT_VOICE_PCM_IN_LEN       120
 #define AUDIO_BT_VOICE_MSBC_IN_LEN      60
+#define AUDIO_BT_VOICE_LC3SWB_IN_LEN    AUDIO_BT_VOICE_LC3SWB_FRAME_BYTES
 #define CVSD_MODE                       2
 #define TRANS_MODE                      3
+#define LC3SWB_MODE                     4
 #define AUDIO_MSBC_BUFFER_LEN           240
-#define AUDIO_BT_UPLINK_BUFFER_SIZE     (AUDIO_BT_VOICE_MSBC_IN_LEN * 48)
+#define AUDIO_BT_UPLINK_BUFFER_SIZE     (AUDIO_BT_VOICE_BUFFER_LEN * 6)
 
 struct hci_sync_con_cmp_evt
 {
@@ -71,7 +75,7 @@ struct hci_sync_con_cmp_evt
     ///Connection handle
     uint16_t    conhdl;
     ///BD address
-    uint8_t  addr[6];;
+    uint8_t  addr[6];
     ///Link type
     uint8_t lk_type;
     ///Transmit interval
@@ -84,7 +88,6 @@ struct hci_sync_con_cmp_evt
     uint16_t tx_pkt_len;
     ///Air mode
     uint8_t air_mode;
-
 };
 /*audio parameter,from LCPU temporary, general from HFP*/
 static volatile struct hci_sync_con_cmp_evt *p_sco_para;
@@ -100,6 +103,7 @@ typedef struct audio_msbc_tag
     volatile uint8_t      state;
     uint8_t      sn_cnt;
     uint8_t      trans_flag;
+    uint8_t      audio_fmt_id;
     //struct PLC_State  *msbc_plc_state;
     LowcFE_c          *pcm_plc;
     uint32_t     total_packet;
@@ -111,7 +115,8 @@ typedef struct audio_msbc_tag
 audio_msbc_t g_audio_msbc_env =
 {
     .state  = 0,
-    .sn_cnt = 0
+    .sn_cnt = 0,
+    .audio_fmt_id = 0xff,
 };
 
 #if SOFT_CVSD_ENCODE
@@ -238,25 +243,6 @@ static inline uint8_t input_size()
     }
 }
 
-
-static inline uint8_t input_fmt()
-{
-    if (p_sco_para->air_mode == CVSD_MODE) // CVSD 8K
-    {
-        return AUDIO_FMT_PCM;
-    }
-    return AUDIO_FMT_MSBC;
-}
-
-static inline uint16_t input_samplerate()
-{
-    /* maybe called by HFP, parameter from HFP */
-    if (p_sco_para->air_mode == CVSD_MODE) // CVSD 8K
-    {
-        return 8000;
-    }
-    return 16000;
-}
 void bt_voice_uplink_process(uint8_t *fifo, uint16_t size)
 {
     if (g_audio_msbc_env.state == 0)
@@ -459,14 +445,15 @@ void bt_voice_uplink_send()
 
 static uint8_t d_drop_cnt = 0;
 static uint8_t s_packet_cnt = 0;
-static uint8_t size_decode = 0;
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
+static uint16_t size_decode = 0;
+
 void bt_voice_downlink_process(uint8_t is_ready)
 {
     uint8_t need_algo;
     rt_uint32_t getnum;
     uint8_t size = input_size();
-    uint8_t decode_len;
+    uint16_t decode_len;
+
     if (rt_ringbuffer_data_len(pt_bt2speaker_rbf) < size)
     {
         LOG_I("3a_w pt_bt2speaker_rbf empty");
@@ -493,7 +480,7 @@ void bt_voice_downlink_process(uint8_t is_ready)
                     (g_bt_rx_fifo[s_packet_cnt * size + 1] > 3))
             {
                 LOG_I("3a_w pt_bt2speaker_rbf flush,%d, 0x%x, %d, %d, %d, %d", rt_ringbuffer_data_len(pt_bt2speaker_rbf),
-                      *((uint32_t *)g_bt_rx_fifo), size, input_fmt(), s_packet_cnt, p_sco_para->rx_pkt_len);
+                      *((uint32_t *)g_bt_rx_fifo), size, p_sco_para->air_mode, s_packet_cnt, p_sco_para->rx_pkt_len);
                 s_packet_cnt = 0;
                 while (rt_ringbuffer_data_len(pt_bt2speaker_rbf) > 0)
                 {
@@ -515,8 +502,8 @@ void bt_voice_downlink_process(uint8_t is_ready)
 
         }
 #if !SOFT_CVSD_ENCODE
-        if (((input_fmt() == AUDIO_FMT_PCM) && (size == (AUDIO_BT_VOICE_PCM_IN_LEN / 2 + LCPU2HCPU_DATA_HEADER))) ||
-                ((input_fmt() == AUDIO_FMT_MSBC) && (size == (AUDIO_BT_VOICE_MSBC_IN_LEN / 2 + LCPU2HCPU_DATA_HEADER))))
+        if (((p_msbc_env->audio_fmt_id == AUDIO_FMT_PCM) && (size == (AUDIO_BT_VOICE_PCM_IN_LEN / 2 + LCPU2HCPU_DATA_HEADER))) ||
+                ((p_msbc_env->audio_fmt_id == AUDIO_FMT_MSBC) && (size == (AUDIO_BT_VOICE_MSBC_IN_LEN / 2 + LCPU2HCPU_DATA_HEADER))))
 #else
         if (size == (AUDIO_BT_VOICE_MSBC_IN_LEN / 2 + LCPU2HCPU_DATA_HEADER))
 #endif
@@ -532,10 +519,10 @@ void bt_voice_downlink_process(uint8_t is_ready)
             }
         }
         audio_tick_in(AUDIO_MSBC_DECODE_TIME);
-        decode_len = msbc_decode_process(g_bt_rx_fifo, g_bt_tx_fifo, size);
+        decode_len = bt_voice_decode_process(g_bt_rx_fifo, g_bt_tx_fifo, size);
         audio_tick_out(AUDIO_MSBC_DECODE_TIME);
 
-        need_algo = audio_server_bt_voice_ind(g_bt_tx_fifo, decode_len);
+        need_algo = audio_server_bt_voice_ind(g_bt_rx_fifo, decode_len);
 
         if (decode_len > 0 && is_ready && need_algo)
         {
@@ -563,7 +550,7 @@ typedef struct bt_sco_data_hdr_tag
 uint8_t g_sco_path_sel = 1;
 static uint8_t s_packet_cnt = 0;
 static uint8_t size_decode = 0;
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
+
 void bt_voice_uplink_send()
 {
     //move to bt_voice_downlink_process
@@ -628,8 +615,8 @@ void bt_voice_downlink_process(uint8_t is_ready)
                 //slect one sco path, decode date and send to speaker
                 //if decode other sco path, need multiple decoding environment(for cvsd, need multiple  g_audio_cvsd_env)
                 //the PLC environment also need multiple for other sco path(p_msbc_env->pcm_plc)
-                //the function of msbc_decode_process includes decoding and PLC, support msbc and cvsd
-                decode_len = msbc_decode_process(g_bt_rx_fifo, g_bt_tx_fifo, 64);
+                //the function of bt_voice_decode_process includes decoding and PLC, support msbc and cvsd
+                decode_len = bt_voice_decode_process(g_bt_rx_fifo, g_bt_tx_fifo, 64);
 
                 audio_3a_downlink(g_bt_tx_fifo, decode_len);//downlink webrtc algorithom
                 size_decode = decode_len;
@@ -770,7 +757,6 @@ int32_t _hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
     LOG_D("_hl_bt_audio_queue_rx_ind");
 
     bt_rx_event_to_audio_server();
-
     return 0;
 }
 
@@ -802,9 +788,9 @@ INIT_COMPONENT_EXPORT(bt_voice_init);
 
 
 static uint8_t drop_cnt  = 0;
-uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
+uint16_t bt_voice_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
 {
-    uint8_t out_size = 120;
+    uint16_t out_size = 120;
     audio_msbc_t *p_msbc_env = &g_audio_msbc_env;
     BTS2S_SBC_STREAM  pbss_t;
 
@@ -818,7 +804,6 @@ uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
         {
             LOG_I("msbc closed");
         }
-
         return 0;
     }
 
@@ -827,7 +812,7 @@ uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
 #ifdef AUDIO_MSBC_STATIC_TIME
     g_msbc_test_cur = audio_get_curr_tick();
 #endif
-    if (input_fmt() == AUDIO_FMT_PCM)
+    if (p_msbc_env->audio_fmt_id == AUDIO_FMT_PCM)
     {
         uint8_t packet_status = p_sco_data->packet_status;
 #if !SOFT_CVSD_ENCODE
@@ -895,6 +880,34 @@ uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
             uint32_t *p_sco_sta = (uint32_t *)(HCPU_LCPU_SHARE_MEM_BASE_ADDR + 0x40);
             LOG_W("3a_w cvsd lcpu buf errcnt:0x%x, buf full_empty:0x%x, rx cnt:0x%x\n", *p_sco_sta, *(p_sco_sta + 1), *(p_sco_sta + 2));
 
+        }
+    }
+    else if (p_msbc_env->audio_fmt_id == AUDIO_FMT_LC3SWB)
+    {
+        uint16_t lc3swb_pcm_size = audio_bt_voice_lc3swb_get_pcm_samples() * sizeof(int16_t);
+        uint8_t packet_status = p_sco_data->packet_status;
+
+        if (0 != packet_status)
+        {
+            if (audio_bt_voice_lc3swb_plc((int16_t *)output) != 0)
+            {
+                memset(output, 0, lc3swb_pcm_size);
+            }
+            p_msbc_env->error_packet++;
+        }
+        else if (audio_bt_voice_lc3swb_decode((uint8_t *)p_sco_data->data + 2, AUDIO_BT_VOICE_LC3SWB_IN_LEN, (int16_t *)output) != 0)
+        {
+            if (audio_bt_voice_lc3swb_plc((int16_t *)output) != 0)
+            {
+                memset(output, 0, lc3swb_pcm_size);
+            }
+            p_msbc_env->decode_err++;
+        }
+
+        out_size = lc3swb_pcm_size;
+        if ((p_msbc_env->total_packet & 0xFF) == 0)
+        {
+            LOG_W("3a_w lc3swb totalRxCnt:%d, rx errcnt:%d, decode errcnt:%d\n", p_msbc_env->total_packet, p_msbc_env->error_packet, p_msbc_env->decode_err);
         }
     }
     else //msbc
@@ -985,6 +998,7 @@ uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
 #endif
             }
         }
+
         memcpy(output, msbc_dest_data_plc_in, 240);
         if ((p_msbc_env->total_packet & 0xFF) == 0)
         {
@@ -1024,11 +1038,12 @@ uint8_t msbc_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
 }
 
 
-void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size)
+void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
 {
     audio_msbc_t *p_msbc_env = &g_audio_msbc_env;
     BTS2S_SBC_STREAM  pbss_t;
     uint8_t *p_data = NULL;
+
     if (p_msbc_env->state == 0)
     {
         //LOG_I("msbc closed");
@@ -1037,7 +1052,26 @@ void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size)
 #ifdef AUDIO_MSBC_STATIC_TIME
     g_msbc_test_cur = audio_get_curr_tick();
 #endif
-    if (240 == fifo_size) //msbc,  16000
+    if (fifo_size == (audio_bt_voice_lc3swb_get_pcm_samples() * sizeof(int16_t)))
+    {
+        p_data = g_msbc_fifo;
+        memset(p_data, 0, AUDIO_BT_VOICE_LC3SWB_IN_LEN + 2);
+
+        *p_data++ = 0x1;
+        *p_data++ = msbc_sn[p_msbc_env->sn_cnt++];
+        if (p_msbc_env->sn_cnt == 4)
+        {
+            p_msbc_env->sn_cnt = 0;
+        }
+        if (audio_bt_voice_lc3swb_encode((const int16_t *)fifo, p_data, AUDIO_BT_VOICE_LC3SWB_IN_LEN) != 0)
+        {
+            LOG_W("3a_w lc3swb encode error\n");
+            return;
+        }
+        // LOG_I("bt_voice_encode_process lc3 %d p_data:0x%2x", fifo_size, g_msbc_fifo[1]);
+        bt_voice_uplink_process(g_msbc_fifo, AUDIO_BT_VOICE_LC3SWB_IN_LEN + 2);
+    }
+    else if (240 == fifo_size) //msbc,  16000
     {
         //msbc_encode();
         p_data = g_msbc_fifo;
@@ -1103,13 +1137,21 @@ void msbc_open(uint32_t samplerate)
         rt_ringbuffer_init(&uplink_ring, p_uplink_pool, AUDIO_BT_UPLINK_BUFFER_SIZE);
         p_msbc_env->pcm_plc = audio_mem_malloc(sizeof(LowcFE_c));
         RT_ASSERT(p_msbc_env->pcm_plc);
-        if (samplerate == 8000)
+        if (samplerate == AUDIO_BT_VOICE_LC3SWB_SAMPLE_RATE)
+        {
+            RT_ASSERT(audio_bt_voice_lc3swb_open_default() == 0);
+            p_msbc_env->audio_fmt_id = AUDIO_FMT_LC3SWB;
+            //need lc3 plc
+        }
+        else if (samplerate == 8000)
         {
             cvsd_g711plc_construct(p_msbc_env->pcm_plc);
+            p_msbc_env->audio_fmt_id = AUDIO_FMT_PCM;
         }
-        else
+        else if (samplerate == 16000)
         {
             msbc_g711plc_construct(p_msbc_env->pcm_plc);
+            p_msbc_env->audio_fmt_id = AUDIO_FMT_MSBC;
         }
 
         LOG_I("msbc_open defresize=%d,enfresize=%d, rate=%d\n", defresize, enfresize, samplerate);
@@ -1139,9 +1181,11 @@ void msbc_close()
 #endif
         bts2_msbc_encode_completed();
         bts2_msbc_decode_completed();
+        audio_bt_voice_lc3swb_close();
         audio_mem_free(p_uplink_pool);
         p_msbc_env->send_enable = 0;
         p_msbc_env->sn_cnt = 0;
+        p_msbc_env->audio_fmt_id = 0xff;
         rt_ringbuffer_reset(&uplink_ring);
         rt_ringbuffer_reset(pt_mic2bt_rbf);
         LOG_I("msbc packet: total %d rx error %d, decode error %d", p_msbc_env->total_packet, p_msbc_env->error_packet, p_msbc_env->decode_err);

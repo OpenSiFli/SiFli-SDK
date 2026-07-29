@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -75,9 +75,9 @@ extern void mpu_config(void);
 EXEC_REGION_DEF(ER_IROM1_EX$$RO);
 EXEC_REGION_DEF(RW_IRAM1);
 EXEC_REGION_LOAD_SYM_DEF(ER_IROM1_EX$$RO);
-#ifdef SF32LB57X
+#if defined(SF32LB57X) && defined(PM_STANDBY_ENABLE)
     EXEC_REGION_DEF(RW_IRAM_RET$$RO);
-#endif /* SF32LB57X */
+#endif /* SF32LB57X && PM_STANDBY_ENABLE */
 
 typedef struct
 {
@@ -1024,6 +1024,10 @@ __WEAK int32_t sifli_deep_handler(void)
     uint32_t dll1_freq;
     uint32_t dll2_freq;
     int clk_src;
+#ifdef SF32LB57X
+    uint32_t enr1;
+    uint32_t enr2;
+#endif /* SF32LB57X */
 
     clear_interrupt_setting();
 
@@ -1068,6 +1072,14 @@ __WEAK int32_t sifli_deep_handler(void)
     HAL_HPAON_DISABLE_VHP();
 #endif // SF32LB52X    
 
+#ifdef SF32LB57X
+    /* TODO: disable module to save power  */
+    enr1 = hwp_hpsys_rcc->ENR1;
+    enr2 = hwp_hpsys_rcc->ENR2;
+    hwp_hpsys_rcc->ENR1 = 0;
+    hwp_hpsys_rcc->ENR2 = 0;
+#endif /* SF32LB57X */
+
     HAL_HPAON_CLEAR_HP_ACTIVE();
     /* PAD no need to be disabled and enabled when entering deep sleep2 mode,
      * Otherwise glitch may be introduced and result in error in some board.
@@ -1088,6 +1100,11 @@ __WEAK int32_t sifli_deep_handler(void)
     __NOP();
     __NOP();
     __NOP();
+
+#ifdef SF32LB57X
+    hwp_hpsys_rcc->ENR1 = enr1;
+    hwp_hpsys_rcc->ENR2 = enr2;
+#endif /* SF32LB57X */
 
 #if defined(SF32LB52X) || defined(SF32LB57X)
     HAL_HPAON_ENABLE_PAD();
@@ -1982,12 +1999,18 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         status = HAL_RCC_HCPU_EnableDLL2(288000000);
         RT_ASSERT(HAL_OK == status);
 
-#ifdef BSP_USING_PSRAM1
+#if defined(BSP_USING_PSRAM1) || defined(BSP_USING_PSRAM2)
         sifli_record_module(RECORD_PM_SCENARIO_HIGH_SPEED_PSRAM_INIT);
+#ifdef BSP_USING_PSRAM1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_DLL2);
         BSP_SetFlash1DIV(2);
-        rt_psram_init();
 #endif /* BSP_USING_PSRAM1 */
+#ifdef BSP_USING_PSRAM2
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_PSRAM_DLL2);
+        BSP_SetFlash2DIV(2);
+#endif /* BSP_USING_PSRAM2 */
+        rt_psram_init();
+#endif /* BSP_USING_PSRAM1 || BSP_USING_PSRAM2 */
 
 #ifdef BSP_USING_NOR_FLASH1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);
@@ -2016,10 +2039,24 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         }
 #endif /* BSP_USING_NAND_FLASH2 */
 
-#if defined(BSP_USING_SD_LINE) && defined(SF32LB52X)
-        void rthw_sdio_update_clk(void);
-        rthw_sdio_update_clk();
-#endif /* BSP_USING_SD_LINE && SF32LB52X */
+#if defined(BSP_USING_NOR_FLASH3) || defined(BSP_USING_NAND_FLASH3)
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH3, RCC_CLK_FLASH_DLL2);
+        BSP_SetFlash3DIV(4);
+#endif /* BSP_USING_NOR_FLASH3 || BSP_USING_NAND_FLASH3 */
+
+#ifdef BSP_USING_NOR_FLASH3
+        sifli_record_module(RECORD_PM_SCENARIO_HIGH_SPEED_FLASH_INIT);
+        BSP_Flash_hw3_init();
+        //hwp_mpi3->PSCLR = 5;
+#endif /* BSP_USING_NOR_FLASH3 */
+
+#ifdef BSP_USING_NAND_FLASH3
+        if (pm->run_mode != mode)
+        {
+            rt_nand_update_clk(RCC_CLK_MOD_FLASH3, 5);
+        }
+#endif /* BSP_USING_NAND_FLASH3 */
+
         break;
     }
     case PM_RUN_MODE_NORMAL_SPEED:
@@ -2029,6 +2066,10 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_SYSCLK);
 #endif /* BSP_USING_PSRAM1 */
 
+#ifdef BSP_USING_PSRAM2
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_PSRAM_SYSCLK);
+#endif /* BSP_USING_PSRAM2 */
+
 #ifdef BSP_USING_NOR_FLASH1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH1 */
@@ -2037,17 +2078,27 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH2, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH2 */
 
+#ifdef BSP_USING_NOR_FLASH3
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH3, RCC_CLK_FLASH_SYSCLK);
+#endif /* BSP_USING_NOR_FLASH3 */
+
         HAL_RCC_HCPU_DisableDLL2();
         status = HAL_RCC_HCPU_ConfigHCLK(144);
         RT_ASSERT(HAL_OK == status);
         status = HAL_RCC_HCPU_EnableDLL2(240000000);
         RT_ASSERT(HAL_OK == status);
 
+#if defined(BSP_USING_PSRAM1) || defined(BSP_USING_PSRAM2)
 #ifdef BSP_USING_PSRAM1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_DLL2);
         BSP_SetFlash1DIV(2);
-        rt_psram_init();
 #endif /* BSP_USING_PSRAM1 */
+#ifdef BSP_USING_PSRAM2
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_PSRAM_DLL2);
+        BSP_SetFlash2DIV(2);
+#endif /* BSP_USING_PSRAM2 */
+        rt_psram_init();
+#endif /* BSP_USING_PSRAM1 || BSP_USING_PSRAM2 */
 
 #ifdef BSP_USING_NOR_FLASH1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);
@@ -2069,6 +2120,20 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         rt_nand_update_clk(RCC_CLK_MOD_FLASH2, 4);
 #endif /* BSP_USING_NAND_FLASH2 */
 
+#if defined(BSP_USING_NOR_FLASH3) || defined(BSP_USING_NAND_FLASH3)
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH3, RCC_CLK_FLASH_DLL2);
+        BSP_SetFlash3DIV(4);
+#endif /* BSP_USING_NOR_FLASH3 || BSP_USING_NAND_FLASH3 */
+
+#ifdef BSP_USING_NOR_FLASH3
+        BSP_Flash_hw3_init();
+        //hwp_mpi3->PSCLR = 4;
+#endif /* BSP_USING_NOR_FLASH3 */
+
+#ifdef BSP_USING_NAND_FLASH3
+        rt_nand_update_clk(RCC_CLK_MOD_FLASH3, 4);
+#endif /* BSP_USING_NAND_FLASH3 */
+
         break;
     }
     case PM_RUN_MODE_MEDIUM_SPEED:
@@ -2079,6 +2144,10 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_SYSCLK);
 #endif /* BSP_USING_PSRAM1 */
 
+#ifdef BSP_USING_PSRAM2
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_PSRAM_SYSCLK);
+#endif /* BSP_USING_PSRAM2 */
+
 #ifdef BSP_USING_NOR_FLASH1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH1 */
@@ -2087,14 +2156,23 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH2, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH2 || BSP_USING_NAND_FLASH2 */
 
+#if defined(BSP_USING_NOR_FLASH3) || defined(BSP_USING_NAND_FLASH3)
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH3, RCC_CLK_FLASH_SYSCLK);
+#endif /* BSP_USING_NOR_FLASH3 || BSP_USING_NAND_FLASH3 */
+
         HAL_RCC_HCPU_DisableDLL2();
         status = HAL_RCC_HCPU_ConfigHCLK(48);
         RT_ASSERT(HAL_OK == status);
 
+#if defined(BSP_USING_PSRAM1) || defined(BSP_USING_PSRAM2)
 #ifdef BSP_USING_PSRAM1
-        BSP_SetFlash1DIV(1);
-        rt_psram_init();
+        BSP_SetFlash1DIV(2);
 #endif /* BSP_USING_PSRAM1 */
+#ifdef BSP_USING_PSRAM2
+        BSP_SetFlash2DIV(2);
+#endif /* BSP_USING_PSRAM2 */
+        rt_psram_init();
+#endif /* BSP_USING_PSRAM1 || BSP_USING_PSRAM2 */
 
 #ifdef BSP_USING_NOR_FLASH1
         BSP_SetFlash1DIV(1);
@@ -2117,10 +2195,18 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         rt_nand_update_clk(RCC_CLK_MOD_FLASH2, 1);
 #endif /* BSP_USING_NAND_FLASH2 */
 
-#if defined(BSP_USING_SD_LINE) && defined(SF32LB52X)
-        void rthw_sdio_update_clk(void);
-        rthw_sdio_update_clk();
-#endif /* BSP_USING_SD_LINE && SF32LB52X */
+#ifdef BSP_USING_NOR_FLASH3
+        sifli_record_module(RECORD_PM_SCENARIO_MEDIUM_SPEED_FLASH_INIT);
+        BSP_SetFlash3DIV(1);
+        BSP_Flash_hw3_init();
+        //hwp_mpi3->PSCLR = 1;
+#endif /* BSP_USING_NOR_FLASH3 */
+
+#ifdef BSP_USING_NAND_FLASH3
+        BSP_SetFlash3DIV(1);
+        rt_nand_update_clk(RCC_CLK_MOD_FLASH3, 1);
+#endif /* BSP_USING_NAND_FLASH3 */
+
         break;
     }
     case PM_RUN_MODE_LOW_SPEED:
@@ -2130,6 +2216,10 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_PSRAM_SYSCLK);
 #endif /* BSP_USING_PSRAM1 */
 
+#ifdef BSP_USING_PSRAM2
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_PSRAM_SYSCLK);
+#endif /* BSP_USING_PSRAM2 */
+
 #ifdef BSP_USING_NOR_FLASH1
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH1 */
@@ -2138,14 +2228,23 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH2, RCC_CLK_FLASH_SYSCLK);
 #endif /* BSP_USING_NOR_FLASH2 || BSP_USING_NAND_FLASH2 */
 
+#if defined(BSP_USING_NOR_FLASH3) || defined(BSP_USING_NAND_FLASH3)
+        HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH3, RCC_CLK_FLASH_SYSCLK);
+#endif /* BSP_USING_NOR_FLASH3 || BSP_USING_NAND_FLASH3 */
+
         HAL_RCC_HCPU_DisableDLL2();
         status = HAL_RCC_HCPU_ConfigHCLK(24);
         RT_ASSERT(HAL_OK == status);
 
+#if defined(BSP_USING_PSRAM1) || defined(BSP_USING_PSRAM2)
 #ifdef BSP_USING_PSRAM1
         BSP_SetFlash1DIV(2);
-        rt_psram_init();
 #endif /* BSP_USING_PSRAM1 */
+#ifdef BSP_USING_PSRAM2
+        BSP_SetFlash2DIV(2);
+#endif /* BSP_USING_PSRAM2 */
+        rt_psram_init();
+#endif /* BSP_USING_PSRAM1 || BSP_USING_PSRAM2 */
 
 #ifdef BSP_USING_NOR_FLASH1
         BSP_SetFlash1DIV(2);
@@ -2165,6 +2264,17 @@ L1_RET_CODE_SECT(sifli_pm_run, __WEAK void sifli_pm_run(struct rt_pm *pm, uint8_
         BSP_SetFlash2DIV(2);
         rt_nand_update_clk(RCC_CLK_MOD_FLASH2, 2);
 #endif /* BSP_USING_NAND_FLASH2 */
+
+#ifdef BSP_USING_NOR_FLASH3
+        BSP_SetFlash3DIV(2);
+        BSP_Flash_hw3_init();
+        //hwp_mpi3->PSCLR = 2;
+#endif /* BSP_USING_NOR_FLASH3 */
+
+#ifdef BSP_USING_NAND_FLASH3
+        BSP_SetFlash3DIV(2);
+        rt_nand_update_clk(RCC_CLK_MOD_FLASH3, 2);
+#endif /* BSP_USING_NAND_FLASH3 */
 
         break;
     }
@@ -3029,7 +3139,7 @@ int32_t pm_init_mem_map()
 #endif /* USING_CONTEXT_BACKUP && SOC_BF0_HCPU*/
 
 
-#ifdef SF32LB57X
+#if defined(SF32LB57X) && defined(PM_STANDBY_ENABLE)
 static void pm_standby_boot_tbl_init(void)
 {
 #ifdef USING_SF_CRYPTO
@@ -3053,7 +3163,7 @@ static void pm_standby_boot_tbl_init(void)
     RT_ASSERT(err == SF_CRYPTO_E_OK);
 #endif /* USING_SF_CRYPTO */
 }
-#endif /* SF32LB57X */
+#endif /* SF32LB57X && PM_STANDBY_ENABLE */
 
 __ROM_USED int low_power_init(void)
 {
@@ -3109,9 +3219,9 @@ __ROM_USED int low_power_init(void)
 #endif /* SOC_BF0_LCPU */
 
 
-#if defined(SF32LB57X) && defined(SOC_BF0_HCPU)
+#if defined(SF32LB57X) && defined(SOC_BF0_HCPU) && defined(PM_STANDBY_ENABLE)
     pm_standby_boot_tbl_init();
-#endif /* SF32BL57X && SOC_BF0_HCPU*/
+#endif /* SF32BL57X && SOC_BF0_HCPU && PM_STANDBY_ENABLE */
 
     PM_DEBUG_PIN_INIT();
 

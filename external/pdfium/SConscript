@@ -1,0 +1,236 @@
+import os
+from building import *
+Import('rtconfig')
+
+# Get absolute path of current script directory
+cwd = GetCurrentDir()
+
+
+def _collect_sources(root_dir, exts=(".c", ".cc", ".cpp"), exclude_dirs=None, exclude_files=None):
+    """Recursively collect source files under specified directory via os.walk.
+    
+    Avoids relying on SCons recursive Glob('**') to ensure cross-platform compatibility.
+    Paths are normalized to use forward slashes for SCons compatibility.
+
+    Args:
+        root_dir (str): Root directory path relative to current script
+        exts (tuple): List of file extensions to collect (default: .c, .cc, .cpp)
+        exclude_dirs (set): Set of directory basenames to exclude (default: None)
+        exclude_files (set): Set of filenames to exclude (default: None)
+    
+    Returns:
+        list: Relative paths of collected source files (forward slash separated)
+    """
+    # Initialize exclude directories set (empty by default)
+    if exclude_dirs is None:
+        exclude_dirs = set()
+    else:
+        exclude_dirs = set(exclude_dirs)
+
+    # Initialize exclude files set (empty by default)
+    if exclude_files is None:
+        exclude_files = set()
+    else:
+        exclude_files = set(exclude_files)
+
+    src_list = []
+    abs_root = os.path.join(cwd, root_dir)
+    
+    # Traverse directory tree
+    for dirpath, dirnames, filenames in os.walk(abs_root):
+        # Prune excluded directories (modify dirnames in-place to skip traversal)
+        dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
+
+        # Collect valid source files
+        for filename in filenames:
+            # Skip excluded files
+            if filename in exclude_files:
+                continue
+            
+            # Check file extension
+            file_ext = os.path.splitext(filename)[1].lower()
+            if file_ext in exts:
+                # Get absolute path and convert to relative path
+                abs_path = os.path.join(dirpath, filename)
+                rel_path = os.path.relpath(abs_path, cwd)
+                # Normalize path separators for SCons (use / instead of \)
+                src_list.append(rel_path.replace('\\', '/'))
+    
+    return src_list
+
+
+# Initialize build variables
+src = []
+CPPPATH = []
+CPPDEFINES = []
+LOCAL_CCFLAGS = ''
+
+# Build PDFium only if PKG_USING_PDFIUM is enabled
+if GetDepend('PKG_USING_PDFIUM'):
+    # -------------------------- Source File Selection --------------------------
+    # Collect fpdfsdk sources for rendering-only integration.
+    # Keep JS and all formfill/UI glue out so the selected sources stay link-complete
+    # without pulling V8/form widget dependencies.
+    src += _collect_sources(
+        'fpdfsdk/src',
+        exclude_dirs={'javascript', 'jsapi', 'formfiller', 'pdfwindow', 'fxedit'}
+    )
+
+    # Remove advanced/document-editing and formfill entry points that depend on the
+    # stripped form widget stack.
+    # Keep [`fpdf_ext.cpp`](sdk/external/pdfium/fpdfsdk/src/fpdf_ext.cpp) and
+    # [`fsdk_rendercontext.cpp`](sdk/external/pdfium/fpdfsdk/src/fsdk_rendercontext.cpp)
+    # because [`fpdfview.cpp`](sdk/external/pdfium/fpdfsdk/src/fpdfview.cpp) directly
+    # references [`CheckUnSupportError()`](sdk/external/pdfium/fpdfsdk/src/fpdf_ext.cpp:151)
+    # and [`CRenderContext`](sdk/external/pdfium/fpdfsdk/src/fsdk_rendercontext.cpp:9).
+    exclude_fpdfsdk_files = [
+        'fpdfsdk/src/fpdfformfill.cpp',
+        'fpdfsdk/src/fpdfoom.cpp',
+        'fpdfsdk/src/fpdfsave.cpp',
+        'fpdfsdk/src/fpdfppo.cpp',
+        'fpdfsdk/src/fpdfeditimg.cpp',
+        'fpdfsdk/src/fpdftext.cpp',
+        'fpdfsdk/src/fpdf_dataavail.cpp',
+        'fpdfsdk/src/fpdf_progressive.cpp',
+        'fpdfsdk/src/fpdf_searchex.cpp',
+        'fpdfsdk/src/fpdf_flatten.cpp',
+        'fpdfsdk/src/fpdf_sysfontinfo.cpp',
+        'fpdfsdk/src/fpdf_transformpage.cpp',
+        'fpdfsdk/src/fsdk_actionhandler.cpp',
+        'fpdfsdk/src/fsdk_annothandler.cpp',
+        'fpdfsdk/src/fsdk_baseannot.cpp',
+        'fpdfsdk/src/fsdk_baseform.cpp',
+        'fpdfsdk/src/fsdk_mgr.cpp',
+    ]
+    for file_path in exclude_fpdfsdk_files:
+        if file_path in src:
+            src.remove(file_path)
+
+    # Collect core sources (required for PDF parsing/rendering)
+    # Exclude:
+    #   - apple: macOS-specific code (not used in RT-Thread/embedded)
+    #   - win32: excluded by default, then added back explicitly for PC simulator so
+    #     the Windows rendering backend symbols used by
+    #     [`FPDF_RenderPage()`](sdk/external/pdfium/fpdfsdk/src/fpdfview.cpp:395)
+    #     are actually compiled into the simulator build graph
+    #   - skia: optional raster backend not used by this integration
+    #   - fx_libopenjpeg: collected separately via wrapper sources under
+    #     [`fx_libopenjpeg/src`](sdk/external/pdfium/core/src/fxcodec/fx_libopenjpeg/src)
+    #     to preserve JPXDecode support without directly compiling duplicate upstream
+    #     [`libopenjpeg20/*.c`](sdk/external/pdfium/core/src/fxcodec/fx_libopenjpeg/libopenjpeg20/openjpeg.c)
+    src += _collect_sources('core/src', exclude_dirs={'apple', 'win32', 'skia', 'fx_libopenjpeg'})
+    src += _collect_sources('core/src/fxge/fx_freetype', exclude_dirs={'fxft2.5.01'})
+    src += _collect_sources('core/src/fxcodec/fx_libopenjpeg/src')
+    src = [f for f in src if 'zlib_v128' not in f]
+
+    # Remove source generators / test tools and duplicate third-party copies that are
+    # not runtime PDF rendering code in the simulator build.
+    exclude_core_files = [
+        'core/src/fxcodec/fx_libopenjpeg/src/fx_t1_generate_luts.c',
+    ]
+    for file_path in exclude_core_files:
+        if file_path in src:
+            src.remove(file_path)
+
+    # Remove platform-specific FreeType files (won't compile on Windows/embedded)
+    exclude_freetype_files = [
+        'core/src/fxge/fx_freetype/fxft2.5.01/src/base/ftmac.c',
+    ]
+    for file_path in exclude_freetype_files:
+        if file_path in src:
+            src.remove(file_path)
+
+    # Double insurance: Filter out any remaining direct upstream openjpeg sources.
+    # Keep only the wrapper entry points from
+    # [`fx_libopenjpeg/src`](sdk/external/pdfium/core/src/fxcodec/fx_libopenjpeg/src),
+    # which `#include` the matching upstream implementation units one-for-one.
+    src = [file_path for file_path in src if not file_path.startswith('core/src/fxcodec/fx_libopenjpeg/libopenjpeg20/')]
+
+    # -------------------------- Include Path Configuration --------------------------
+    CPPPATH += [
+        cwd,  # Current directory
+        os.path.join(cwd, 'fpdfsdk', 'include'),  # PDFium SDK headers
+        os.path.join(cwd, 'core', 'include'),      # PDFium core headers
+        os.path.join(cwd, 'third_party'),          # Third-party dependencies
+        os.path.join(cwd, '..', 'zlib'),           # zlib.h for core/src/fx_zlib.h
+    ]
+
+    # -------------------------- Preprocessor Definitions --------------------------
+    # Align with PDFium's default gyp build definitions
+    CPPDEFINES += [
+        'FOXIT_CHROME_BUILD',      # Use Chrome build configuration
+        '_FXFT_VERSION_=2501',     # FreeType version (fxft2.5.01)
+        '_FPDFSDK_LIB',            # Build PDFium as library
+        '_NO_GDIPLUS_',            # Disable GDI+ (for embedded/non-Windows platforms)
+        'PDF_ENABLE_XFA=0',
+        'PDF_ENABLE_V8=0',
+    ]
+
+    # Platform-specific definitions
+    if GetDepend('BSP_USING_PC_SIMULATOR'):
+        # Windows PC simulator configuration
+        # NOMINMAX: Prevent min/max macro conflicts with C++ std::numeric_limits
+        CPPDEFINES += [
+            'NOMINMAX',
+            'WIN32_LEAN_AND_MEAN',  # Minimize Windows header inclusion
+            '_FX_OS_=_FX_WIN32_DESKTOP_',        # Windows desktop OS
+            '_FXM_PLATFORM_=_FXM_PLATFORM_WINDOWS_',  # Windows platform
+        ]
+
+        src += [
+            'core/src/fxge/win32/fx_win32_device.cpp',
+            'core/src/fxge/win32/fx_win32_dib.cpp',
+            'core/src/fxge/win32/fx_win32_gdipext.cpp',
+            'core/src/fxge/win32/fx_win32_print.cpp',
+            'core/src/fxge/win32/fx_win32_dwrite.cpp',
+        ]
+
+        # Keep PDFium self-contained only when the standalone zlib package is not
+        # selected. If PKG_USING_ZLIB is enabled, sdk/external/zlib/SConscript will
+        # add the same implementation units as an independent group; adding them
+        # here as well makes generated Visual Studio projects contain duplicate
+        # ClCompile items such as sdk/external/zlib/adler32.c. When PDFium is
+        # enabled alone, keep these sources here so fx_codec_flate.cpp still links.
+        if not GetDepend('PKG_USING_ZLIB'):
+            src += [
+                '../zlib/adler32.c',
+                '../zlib/compress.c',
+                '../zlib/crc32.c',
+                '../zlib/deflate.c',
+                '../zlib/inffast.c',
+                '../zlib/inflate.c',
+                '../zlib/inftrees.c',
+                '../zlib/trees.c',
+                '../zlib/uncompr.c',
+                '../zlib/zutil.c',
+            ]
+    else:
+        # Embedded RT-Thread configuration
+        # Keep Linux embedded OS codepath, but avoid POSIX file backend selection.
+        # On the arm-none-eabi toolchain, pulling <fcntl.h>/<unistd.h> through the
+        # Linux platform branch breaks in newlib headers, while PDFium's generic CRT
+        # backend remains sufficient for this integration.
+        CPPDEFINES += [
+            '_FX_LINUX_EMBEDDED_=5',       # Embedded Linux identifier
+            '_FX_OS_=_FX_LINUX_EMBEDDED_', # Linux embedded OS
+            '_FXM_PLATFORM_=0',            # Force generic/CRT file backend
+            'CMS_NO_PTHREADS=1',           # Disable LCMS2 pthread path on bare-metal GCC
+        ]
+
+    # Disable -Werror for third-party code (avoid build breaks from warnings)
+    if rtconfig.PLATFORM == 'gcc':
+        LOCAL_CCFLAGS += ' -Wno-error'
+
+# Define PDFium build group (avoid name collision with upstream targets)
+# Group includes sources, include paths, defines and compiler flags
+pdfium_group = DefineGroup(
+    'pdfium', 
+    src, 
+    depend=['PKG_USING_PDFIUM'], 
+    CPPPATH=CPPPATH, 
+    CPPDEFINES=CPPDEFINES, 
+    LOCAL_CCFLAGS=LOCAL_CCFLAGS
+)
+
+# Return build group for SCons
+Return('pdfium_group')

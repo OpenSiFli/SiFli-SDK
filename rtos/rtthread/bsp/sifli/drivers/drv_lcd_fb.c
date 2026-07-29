@@ -228,12 +228,14 @@ static rt_err_t wait_line_valid(LCD_AreaDef *write_area, int32_t wait_ms)
 {
     rt_err_t err = RT_EOK;
 
-    LCD_FBTypeDef *p_fb = &drv_lcd_fb.fbs[drv_lcd_fb.write_fb_idx];
+    uint16_t wait_fb_idx = drv_lcd_fb.write_fb_idx;
+    uint32_t line_event = (0 == wait_fb_idx) ? EVENT_FB0_LINE_VALID : EVENT_FB1_LINE_VALID;
+    LCD_FBTypeDef *p_fb = &drv_lcd_fb.fbs[wait_fb_idx];
 
     //Wait fb writebale
     while (p_fb->fb.area.y0 + p_fb->fb_valid_y1 < write_area->y1)
     {
-        err = rt_event_recv(&drv_lcd_fb.event, (0 == drv_lcd_fb.write_fb_idx) ? EVENT_FB0_LINE_VALID : EVENT_FB1_LINE_VALID,
+        err = rt_event_recv(&drv_lcd_fb.event, line_event,
                             RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR,
                             rt_tick_from_millisecond(wait_ms), NULL);
 
@@ -622,13 +624,6 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
     LOG_D("clip area:"AreaString" src area:"AreaString" src=%p", AreaParams(clip_area), AreaParams(src_area), src);
     LOG_D("src_line_addr=0x%x dst_line_addr=0x%x len=0x%x", src_line_addr, dst_line_addr, len);
 
-    if (src_line_addr == dst_line_addr)
-    {
-        LOG_D("src_line_addr==dst_line_addr skip.");
-        cb();
-        return RT_EOK;
-    }
-
     if (((clip_area->x0 == src_area->x0) && (dst_area->x0 == src_area->x0)
             && (clip_area->x1 == src_area->x1) && (dst_area->x1 == src_area->x1)))
     {
@@ -691,8 +686,11 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
 #endif /* BSP_USE_LCDC2_ON_HPSYS */
 
 
-    if (0)
+    if (src_line_addr == dst_line_addr)
     {
+        LOG_D("src_line_addr==dst_line_addr skip.");
+        cb();
+        err = RT_EOK;
     }
 #ifdef ENABLE_GP_DMA_COPY
     else if (use_gp_dma)
@@ -795,7 +793,7 @@ static rt_err_t write_fb_async(LCD_AreaDef *clip_area, LCD_AreaDef *src_area, co
     }
 #endif /* HAL_EXTDMA_MODULE_ENABLED */
 #ifdef HAL_EPICTL_ENABLED
-    if (use_epictl)
+    else if (use_epictl)
     {
         EPICTL_DataType cfg;
         HAL_EPICTL_DataInit(&cfg);

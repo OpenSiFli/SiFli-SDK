@@ -1,0 +1,22 @@
+import os
+import rtconfig
+
+# Check SDK
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+PrepareEnv()
+
+# Set default compile options
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+
+# prepare building environment
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+# make a building
+DoBuilding(TARGET, objs)

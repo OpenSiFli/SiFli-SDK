@@ -112,6 +112,9 @@ typedef struct _lv_img_decoder_dsc_t {
     /**Type of the source: file or variable. Can be set in `open` function if required*/
     lv_img_src_t src_type;
 
+    /**Reuse animation buffer for large temporary decode cache when the decoder supports it*/
+    uint8_t reuse_anim_buf : 1;
+
     /**Info about the opened image: color format, size, etc. MUST be set in `open` function*/
     lv_img_header_t header;
 
@@ -143,6 +146,14 @@ typedef struct _lv_img_decoder_dsc_t {
  */
 void _lv_img_decoder_init(void);
 
+lv_res_t lv_img_decoder_get_wf_info(const void *src, lv_img_header_t *header, uint32_t offset);
+
+/* To support app tools case, which use app tool to generate app/or wf. */
+char *lv_img_decoder_set_wf_offset(const void *src, uint32_t offset, uint32_t length);
+
+/* To support app tools case, which use app tool to generate app/or wf. */
+uint32_t lv_img_decoder_get_wf_offset(const void *src, uint32_t *length);
+
 /**
  * Get information about an image.
  * Try the created image decoder one by one. Once one is able to get info that info will be used.
@@ -169,6 +180,9 @@ lv_res_t lv_img_decoder_get_info(const void * src, lv_img_header_t * header);
  *         LV_RES_INV: none of the registered image decoders were able to open the image.
  */
 lv_res_t lv_img_decoder_open(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color, int32_t frame_id);
+
+lv_res_t lv_img_decoder_open_reuse_anim_buf(lv_img_decoder_dsc_t * dsc, const void * src, lv_color_t color,
+                                            int32_t frame_id);
 
 /**
  * Read a line from an opened image

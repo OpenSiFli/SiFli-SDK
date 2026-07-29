@@ -1,0 +1,7 @@
+partitions:
+  - op: override
+    name: hcpu_ram_data
+    size: '0x00020000'
+  - op: override
+    name: lpsys_ram
+    size: '0x00008000'

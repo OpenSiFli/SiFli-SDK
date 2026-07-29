@@ -10,144 +10,186 @@
 #include "string.h"
 #include "bf0_hal_can.h"
 
+/* ── Compile-time switch ──────────────────────────────────── */
+/*   0 = polling mode, 1 = interrupt mode                       */
+#define USE_CAN_IT   1
+
 #define CAN1 hwp_can1;
 
 CAN_HandleTypeDef hcan;
 
-/**
-  * @brief  Error handling function
-  * @param  None
-  * @retval None
-  */
+/* ── RX synchronisation semaphore (IT mode) ───────────────── */
+static rt_sem_t can_rx_sem = RT_NULL;
+
+/* ── RX filter IDs (match what can_tx sends) ───────────────── */
+#define RX_FILTER_PTB   0x123   /* PTB frame from TX board       */
+#define RX_FILTER_STB   0x103   /* STB frame 2 from TX board     */
+
+
 static void Error_Handler(void)
 {
     rt_kprintf("Error occurred\r\n");
-    HAL_ASSERT(0);
+    while (1);
 }
 
-/**
-  * @brief  CAN Send test
-  * @param  None
-  * @retval None
-  */
-static void CAN_Send_Test(void)
+#if USE_CAN_IT
+
+/* ================================================================
+ *  IT branch: ISR bridge (pure RX — no send logic)
+ * ================================================================ */
+
+void CAN1_IRQHandler(void)
 {
-    uint32_t tx_data[2] = {0xAABBCCDD, 0xEEFF0011};
-    CAN_TxHeaderTypeDef tx_header;
+    HAL_CAN_IRQHandler(&hcan);
+}
 
-    /* Configure transmission header */
-    tx_header.StdId = 0x234;
-    tx_header.ExtId = 0x00;
-    tx_header.IDE = CAN_ID_STD;//
-    tx_header.RTR = CAN_RTR_DATA;//
-    tx_header.DLC = 8;
-
-    /* Send data */
-    if (HAL_CAN_AddTxMessage(&hcan, &tx_header, tx_data) != HAL_OK)
+void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
+{
+    if (hcan->Instance == hwp_can1)
     {
-        rt_kprintf("Send failed\r\n");
-        return;
-    }
-    else
-    {
-        rt_kprintf("Send successful: ID=0x%03X, Data=", tx_header.StdId);
-        for (int i = 0; i < 2; i++)
-        {
-            rt_kprintf("0x%08X ", tx_data[i]);
-        }
-        rt_kprintf("\r\n");
+        NVIC_EnableIRQ(CAN1_IRQn);
     }
 }
 
+void HAL_CAN_RxMsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+    /* Notify main loop that a new CAN frame has arrived */
+    rt_sem_release(can_rx_sem);
+}
+
+#endif /* USE_CAN_IT */
 
 /**
-  * @brief  CAN receiving function
-  * @param  None
-  * @retval None
+  * @brief  CAN receive test — polling mode (direct hardware read)
   */
 static void CAN_Receive_Test(void)
 {
     CAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
-    uint32_t original_rx_data[2];
 
-    rt_kprintf("Switch to receiving mode and wait for data...\r\n");
-
-    /* Check and receive the data */
     if (HAL_CAN_GetRxMessage(&hcan, &rx_header, rx_data) == HAL_OK)
     {
-        rt_kprintf("Received data: ID=0x%03X, DLC=%d, ", rx_header.StdId, rx_header.DLC);
+        if (rx_header.DLC > 0)
+        {
+            const char *type = (rx_header.StdId == RX_FILTER_PTB) ? "PTB" : "STB";
+            rt_kprintf("[RECV %s] ID=0x%03X, DLC=%d, Data=0x%08X 0x%08X\r\n",
+                       type, rx_header.StdId, rx_header.DLC,
+                       *(uint32_t *)&rx_data[0], *(uint32_t *)&rx_data[4]);
+        }
     }
-    original_rx_data[0] = *(uint32_t *)&rx_data[0];
-    original_rx_data[1] = *(uint32_t *)&rx_data[4];
-    rt_kprintf("Data: 0x%08X, 0x%08X\r\n", original_rx_data[0], original_rx_data[1]);
-
 }
 
 /**
   * @brief  CAN Configuration Function
-  * @param  None
-  * @retval None
   */
 static void CAN_Config(void)
 {
-    /* Initialize parameters */
     hcan.Instance = CAN1;
-    hcan.Init.Prescaler = 0x0b0b;        //Baud rate prescaler,1/48MHz/（11+1）=0.25us。1/(0.25us*10) = 400kbps
+    hcan.Init.Prescaler = 0x0b0b;
 
-    /* Initialize CAN peripheral */
     if (HAL_CAN_Init(&hcan) != HAL_OK)
     {
         rt_kprintf("CAN initialization failed.\n");
         Error_Handler();
     }
 
-    /* Configure CAN filter */
     CAN_FilterTypeDef can_filter_config;
 
-    // Configure standard frame filter (ID=0x123)
-    can_filter_config.FilterId = 0x123;
-    can_filter_config.FilterMask = 0x7FF; // Exact match for standard ID
+    /* Filter 0: PTB frames from TX board (ID=0x123) */
+    can_filter_config.FilterId = RX_FILTER_PTB;
+    can_filter_config.FilterMask = 0x7FF;
     can_filter_config.FilterBank = 0;
     can_filter_config.FilterActivation = ENABLE;
     can_filter_config.IDECheckEnable = ENABLE;
-    can_filter_config.IDEValue = CAN_ID_STD; // Only accept standard frames
-    if (HAL_CAN_ConfigFilter(&hcan, &can_filter_config) != HAL_OK)//Configure filter
+    can_filter_config.IDEValue = CAN_ID_STD;
+
+    if (HAL_CAN_ConfigFilter(&hcan, &can_filter_config) != HAL_OK)
     {
-        rt_kprintf("Failed to configure CAN filter.\n");
+        rt_kprintf("Failed to configure CAN filter 0.\n");
+        Error_Handler();
+    }
+
+    /* Filter 1: STB frame from TX board (ID=0x103) */
+    can_filter_config.FilterId = RX_FILTER_STB;
+    can_filter_config.FilterMask = 0x7FF;
+    can_filter_config.FilterBank = 1;
+    can_filter_config.FilterActivation = ENABLE;
+    can_filter_config.IDECheckEnable = ENABLE;
+    can_filter_config.IDEValue = CAN_ID_STD;
+
+    if (HAL_CAN_ConfigFilter(&hcan, &can_filter_config) != HAL_OK)
+    {
+        rt_kprintf("Failed to configure CAN filter 1.\n");
         Error_Handler();
     }
 }
 
 int main(void)
 {
-    HAL_PIN_Set(PAD_PA03, CAN1_TXD,  PIN_PULLUP, 1);             // CAN1_TXD
-    HAL_PIN_Set(PAD_PA04, CAN1_RXD,  PIN_PULLUP, 1);             // CAN1_RXD
+    HAL_PIN_Set(PAD_PA03, CAN1_TXD,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA04, CAN1_RXD,  PIN_PULLUP, 1);
 
     HAL_RCC_HCPU_enable2(HPSYS_RCC_ENR2_CAN1, 1);
 
     CAN_Config();
 
-    /* Start CAN */
     if (HAL_CAN_Start(&hcan) != HAL_OK)
     {
         rt_kprintf("Failed to start CAN.\n");
         Error_Handler();
     }
 
-    rt_kprintf("CAN 2.0 start test\r\n");
+#if USE_CAN_IT
+    /* Create semaphore for ISR-to-task synchronisation */
+    can_rx_sem = rt_sem_create("can_rx", 0, RT_IPC_FLAG_FIFO);
+    if (can_rx_sem == RT_NULL)
+    {
+        rt_kprintf("Failed to create CAN RX semaphore.\n");
+        Error_Handler();
+    }
 
-    rt_kprintf("This board operates as the receiving end.\r\n");
-    /* Receive test */
-    //CAN_Receive_Test();
-    /* Infinite loop */
+    /* Enable receive interrupt — HAL_CAN_RxMsgPendingCallback fires on each frame */
+    HAL_CAN_ActivateNotification(&hcan, CAN_IT_RX_MSG_PENDING);
+
+    rt_kprintf("CAN IT mode: RX-only board (semaphore + GetRxMessage).\r\n");
+
+    while (1)
+    {
+        /* Wait for ISR to signal that a frame has arrived */
+        if (rt_sem_take(can_rx_sem, RT_WAITING_FOREVER) == RT_EOK)
+        {
+            /* Read frame directly from hardware RBUF */
+            CAN_RxHeaderTypeDef rx_header;
+            uint8_t rx_data[8];
+            while (HAL_CAN_GetRxFifoFillLevel(&hcan) > 0)
+            {
+                if (HAL_CAN_GetRxMessage(&hcan, &rx_header, rx_data) == HAL_OK)
+                {
+                    if (rx_header.DLC > 0)
+                    {
+                        const char *type = (rx_header.StdId == RX_FILTER_PTB) ? "PTB" : "STB";
+                        uint32_t data0, data1;
+                        memcpy(&data0, &rx_data[0], sizeof(data0));
+                        memcpy(&data1, &rx_data[4], sizeof(data1));
+                        rt_kprintf("[RECV %s] ID=0x%03X, DLC=%d, Data=0x%08X 0x%08X\r\n",
+                                   type, rx_header.StdId, rx_header.DLC, data0, data1);
+                    }
+                }
+            }
+
+        }
+    }
+#else
+    rt_kprintf("CAN polling mode: RX-only board.\r\n");
+    rt_kprintf("Filters: PTB=0x%03X, STB=0x%03X\r\n\r\n",
+               RX_FILTER_PTB, RX_FILTER_STB);
+
     while (1)
     {
         CAN_Receive_Test();
-        rt_thread_mdelay(500);
-        CAN_Send_Test();
-        rt_thread_mdelay(500);
+        rt_thread_mdelay(100);
     }
+#endif
 
     return 0;
 }

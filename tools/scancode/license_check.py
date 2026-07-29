@@ -97,7 +97,7 @@ def analyze_file(config_file, scancode_file, scanned_files_dir):
 
 
             if check:
-                matched_rules = [(path, rule) for path, rule in extension_rules if path in orig_path]
+                matched_rules = [(path, rule) for path, rule in extension_rules if path in path_to_check]
                 matched_rule = {}
                 if matched_rules:
                     # Use the longest match to avoid less-specific parent paths winning.

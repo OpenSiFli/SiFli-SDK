@@ -8,12 +8,11 @@
  *      INCLUDES
  *********************/
 
-#include "global.h"
+#include "multlist_config.h"
 #include "demo_multlist.h"
 #include "lvsf_multlist.h"
 #include "lvsf_txtimg.h"
 #define _MODULE_NAME_ "multlist"
-#include "app_module.h"
 
 static lv_obj_t *p_list = NULL;
 static void demo_set_txt_ext(comm_msg_t *msg);

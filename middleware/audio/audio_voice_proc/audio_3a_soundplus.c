@@ -49,8 +49,12 @@ static audio_3a_t g_audio_3a_env =
     .state  = 0,
     .samplerate = 16000,
 };
-static uint16_t g_mic_delay_ref = 434 ;
+static uint16_t g_mic_delay_ref = 434;
 
+#if defined(AUDIO_TX_USING_I2S)
+    #define MIC_DELAY_REF_16K               600 //宽带实测delay值8左右
+    #define MIC_DELAY_REF_8K                431 //窄带实测delay值8左右
+#endif
 
 static void audio_3a_module_init(audio_3a_t *env, uint32_t samplerate)
 {
@@ -124,7 +128,7 @@ void audio_3a_close()
     }
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     audio_3a_t *env = &g_audio_3a_env;
 
@@ -138,7 +142,7 @@ uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
     }
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
     audio_3a_t *env = &g_audio_3a_env;
     uint16_t putsize, getsize;
@@ -252,8 +256,8 @@ skip_3a_up:
     {
         //msbc encode 120 bytes for 8K
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 120);
-        msbc_encode_process(fifo + 120, 120);
+        bt_voice_encode_process(fifo, 120);
+        bt_voice_encode_process(fifo + 120, 120);
 #endif
         if (ref_index == 0)
         {
@@ -269,8 +273,8 @@ skip_3a_up:
         audio_dump_data(ADUMP_RAMP_OUT_OUT, out, SOUNDPLUS_FRAME_SIZE);
         //msbc encode one frame is 240 bytes for 16K samplerate
 #ifdef AUDIO_BT_AUDIO
-        msbc_encode_process(fifo, 240);
-        msbc_encode_process(fifo + 240, 240);
+        bt_voice_encode_process(fifo, 240);
+        bt_voice_encode_process(fifo + 240, 240);
 #endif
         return;
     }

@@ -9,7 +9,15 @@
 #include "utest.h"
 #include "bf0_hal.h"
 
-#if defined(HAL_SPI_MODULE_ENABLED) && !defined(SOC_SF32LB52X)
+#if defined(HAL_SPI_MODULE_ENABLED)
+
+#ifdef SF32LB52X
+    #define TEST_SPI  SPI1
+#elif defined(SF32LB57X)
+    #define TEST_SPI  SPI2
+#else
+    #define TEST_SPI  SPI3
+#endif
 
 /*
     This example demo:
@@ -38,19 +46,6 @@ static rt_err_t utest_tc_cleanup(void)
     return RT_EOK;
 }
 
-static void gpio_set(uint16_t pin)
-{
-    GPIO_InitTypeDef GPIO_InitStruct;
-
-    HAL_PIN_Set(PAD_PB00 + pin, GPIO_B0 + pin, PIN_PULLDOWN, 0);
-    GPIO_InitStruct.Pin = pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(hwp_gpio2, &GPIO_InitStruct);
-
-    HAL_GPIO_WritePin(hwp_gpio2, pin, 1);
-}
-
 static void testcase(int argc, char **argv)
 {
     uint32_t baundRate = 6000000;
@@ -61,18 +56,21 @@ static void testcase(int argc, char **argv)
     //----------------------------------------------
     // 1. pin mux
 
+#if defined(SOC_SF32LB52X)
+#elif defined(SOC_SF32LB57X)
+#else
     HAL_PIN_Set(PAD_PB25, GPIO_B25, PIN_PULLUP, 0);             // SPI3_EN
     HAL_PIN_Set(PAD_PB13, SPI3_CLK, PIN_NOPULL, 0);             // SPI3
     HAL_PIN_Set(PAD_PB16, SPI3_DO, PIN_NOPULL, 0);
     HAL_PIN_Set(PAD_PB19, SPI3_DI, PIN_NOPULL, 0);
     HAL_PIN_Set(PAD_PB23, SPI3_CS, PIN_NOPULL, 0);
-
+#endif
     //gpio_set(30);
 
     //----------------------------------------------
     // 2. spi init
 
-    spi_Handle.Instance = SPI3;
+    spi_Handle.Instance = TEST_SPI;
     spi_Handle.Init.Direction = SPI_DIRECTION_2LINES;
     spi_Handle.Init.Mode = SPI_MODE_MASTER;
     spi_Handle.Init.DataSize = SPI_DATASIZE_16BIT;

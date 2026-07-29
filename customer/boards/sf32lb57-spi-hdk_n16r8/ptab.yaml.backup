@@ -1,0 +1,76 @@
+# ptab v3 - Partition Table
+# Board: sf32lb57-spi-hdk_n16r8
+# Chip: SF32LB575YBBN6
+
+version: 3
+chip: SF32LB575YBBN6
+
+memory:
+  - mpi: mpi3
+    type: nor
+    size: 16MB
+
+partitions:
+  - name: hcpu_flash_code
+    type: app
+    subtype: factory
+    region: mpi3
+    offset: 0x20000
+    size: 7MB
+    core: HCPU
+
+  # DFU application (XIP 执行)
+  - name: dfu_flash_code
+    type: app
+    subtype: dfu
+    region: mpi3
+    offset: 0x720000
+    size: 384KB
+    core: HCPU
+
+  # DFU download region
+  - name: dfu_download_region
+    type: data
+    subtype: raw
+    region: mpi3
+    offset: 0x780000
+    size: 1152KB
+
+  # Filesystem region
+  - name: fs_region
+    type: data
+    subtype: filesystem
+    region: mpi3
+    offset: 0x8A0000
+    size: 4MB
+
+  # KVDB for DFU
+  - name: dfu
+    type: data
+    subtype: flashdb_kv
+    region: mpi3
+    offset: 0xCA0000
+    size: 16KB
+
+  # KVDB for BLE
+  - name: ble
+    type: data
+    subtype: flashdb_kv
+    region: mpi3
+    offset: 0xCA4000
+    size: 16KB
+
+  # PSRAM data region (on SiP mpi1)
+  - name: psram_data
+    type: data
+    subtype: ram
+    region: mpi1
+    offset: 0
+    size: 4MB
+
+  - name: psram_data2
+    type: data
+    subtype: ram
+    region: mpi2
+    offset: 0
+    size: 4MB

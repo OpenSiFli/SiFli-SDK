@@ -1,0 +1,10 @@
+config BSP_USING_BOARD_SF32LB57_SPI_HDK_N32R4
+    bool
+    select SOC_SF32LB57X
+    select SOC_SF32LB573UB7N6
+    select BF0_ACPU
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"
+

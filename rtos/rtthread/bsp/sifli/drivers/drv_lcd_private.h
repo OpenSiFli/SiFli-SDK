@@ -12,7 +12,7 @@
 #define LCD_DRV_AYSNC_WRITE  0x00000001
 #define LCD_DRV_ACTIVED      0x00000002
 
-#if defined(BSP_LCDC_USING_EPD_8BIT)||defined(BSP_LCDC_USING_EPD_16BIT)
+#if defined(BSP_LCDC_USING_DIRECT_EPD)
     #define MAX_LCD_DRAW_TIME  (5000)  /*ms*/
 #else
     #define MAX_LCD_DRAW_TIME  (500)  /*ms*/

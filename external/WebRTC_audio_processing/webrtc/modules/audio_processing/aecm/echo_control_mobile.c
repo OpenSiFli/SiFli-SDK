@@ -154,7 +154,7 @@ int32_t WebRtcAecm_Init(void *aecmInst, int32_t sampFreq)
         return -1;
     }
 
-    if (sampFreq != 8000 && sampFreq != 16000)
+    if (sampFreq != 8000 && sampFreq != 16000 && sampFreq != 32000)
     {
         aecm->lastError = AECM_BAD_PARAMETER_ERROR;
         return -1;

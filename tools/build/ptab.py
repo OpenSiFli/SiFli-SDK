@@ -2495,7 +2495,7 @@ def _add_default_regions_52x(mems):
             elif 'FLASH_BOOT_LOADER' in region_tags and 'app_exec' in region_type:
                 bootloader_exec_found = True
 
-            if region_name == 'bootloader':
+            if region_name == 'bootloader' and 'app_exec' not in region_type:
                 bootloader_data_found = True
             elif 'BOOTLOADER_RAM_DATA' in region_tags:
                 bootloader_data_found = True
@@ -2624,7 +2624,7 @@ def _add_default_regions_57x(mems):
             elif 'FLASH_BOOT_LOADER' in region_tags and 'app_exec' in region_type:
                 bootloader_exec_found = True
 
-            if region_name == 'bootloader':
+            if region_name == 'bootloader' and 'app_exec' not in region_type:
                 bootloader_data_found = True
             elif 'BOOTLOADER_RAM_DATA' in region_tags:
                 bootloader_data_found = True

@@ -45,10 +45,10 @@
     static struct rt_memheap _psram_heap;
 #endif
 
-#if defined(SF32LB52X)||defined(SF32LB57X)
+#if defined(SF32LB52X) || defined(SF32LB57X)
     /* SYSTICK support high precision fixed clock source, such as RC48/XT48*/
     #define SYSTICK_HIGH_PRICISION_FIXED_CLK_SUPPORT
-#endif /* SF32LB52X */
+#endif /* SF32LB52X || SF32LB57X */
 
 #if defined(BSP_PM_FREQ_SCALING) && !defined(SYSTICK_HIGH_PRICISION_FIXED_CLK_SUPPORT)
     #ifdef SOC_BF0_HCPU
@@ -227,12 +227,12 @@ void SysTick_Handler(void)
 #ifdef SOC_BF0_HCPU
     if (HAL_HPAON_IS_LP_ACTIVE() && HAL_HPAON_IS_HP2LP_REQ_ACTIVE())
 #else
-#if defined(SF32LB52X) || defined(SF32LB58X)
+#if defined(SF32LB52X) || defined(SF32LB57X)
 //TODO: LCPU cannot access PMU when HCPU is in sleep
     if (HAL_LPAON_IS_HP_ACTIVE())
 #else
     if (true)
-#endif /* SF32LB52X */
+#endif /* SF32LB52X || SF32LB57X */
 #endif /* SOC_BF0_HCPU */
     {
         new_tick = pm_latch_tick(old_tick + 1, HAL_GTIMER_READ(), HAL_LPTIM_GetFreq(), (void *)1);
@@ -399,19 +399,11 @@ __HAL_ROM_USED float HAL_LPTIM_GetFreq()
 {
     if (HAL_LXT_DISABLED())
     {
-#ifndef SF32LB57X
         uint32_t cycle = HAL_RC_CAL_get_average_cycle_on_48M();
         if (cycle == 0)
             return 9700;
         else
             return (48000000UL / (float)cycle * HAL_RC_CAL_GetLPCycle());
-#else
-        float cycle;
-        uint16_t len = 4;
-        HAL_StatusTypeDef ret = HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_LPCYCLE_CURR, (uint8_t *)&cycle, &len);
-        HAL_ASSERT(ret == HAL_OK);
-        return cycle;
-#endif
     }
     else
     {
@@ -443,18 +435,28 @@ __ROM_USED void rt_hw_console_output(const char *str)
 
 
 #ifndef SF32LB55X
-int8_t bt_rf_get_max_tx_pwr(void)
+/* Weak overridable TX power getters — app can override to customize power at boot */
+__WEAK int8_t bt_tx_pwr_max_override(void)
 {
     return BT_TX_POWER_VAL_MAX;
+}
+__WEAK int8_t bt_tx_pwr_min_override(void)
+{
+    return BT_TX_POWER_VAL_MIN;
+}
+
+int8_t bt_rf_get_max_tx_pwr(void)
+{
+    return bt_tx_pwr_max_override();
 }
 
 int8_t bt_rf_get_min_tx_pwr(void)
 {
-    return BT_TX_POWER_VAL_MIN;
+    return bt_tx_pwr_min_override();
 }
 #endif // !SF32LB55X
 
-int8_t bt_rf_get_init_tx_pwr(void)
+__WEAK int8_t bt_tx_pwr_init_override(void)
 {
     int8_t pwr;
 #ifdef SF32LB55X
@@ -463,6 +465,11 @@ int8_t bt_rf_get_init_tx_pwr(void)
     pwr = BT_TX_POWER_VAL_INIT;
 #endif
     return pwr;
+}
+
+int8_t bt_rf_get_init_tx_pwr(void)
+{
+    return bt_tx_pwr_init_override();
 }
 
 /**
@@ -551,9 +558,9 @@ __ROM_USED void drv_get_lpsys_clk(lpsys_clk_setting_t *clk_setting)
     clk_setting->pclk1 = HAL_RCC_GetPCLKFreq(CORE_ID_LCPU, 1);
     clk_setting->pclk2 = HAL_RCC_GetPCLKFreq(CORE_ID_LCPU, 0);
 
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
-#endif /* SF32LB52X */
+#endif /* SF32LB52X || SF32LB57X */
 }
 
 __ROM_USED void drv_get_blesys_clk(blesys_clk_setting_t *clk_setting)

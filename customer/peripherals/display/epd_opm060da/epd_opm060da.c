@@ -154,6 +154,8 @@ L2_NON_RET_BSS_SECT_END
 L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBCode, uint16_t Xpos0, uint16_t Ypos0, uint16_t Xpos1, uint16_t Ypos1))
 {
     uint32_t total_pixels = LCD_HOR_RES_MAX * LCD_VER_RES_MAX;
+    RT_ASSERT(LCD_HOR_RES_MAX == (Xpos1 - Xpos0 + 1)); //Support only full screen
+    RT_ASSERT(LCD_VER_RES_MAX == (Ypos1 - Ypos0 + 1)); //Support only full screen
     RT_ASSERT((total_pixels % 4) == 0); // 必须是4像素的倍数
 
     //Convert layer data to 4bit gray data
@@ -268,6 +270,8 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
     start_tick = rt_tick_get();
     ori_format = hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format;
 
+    LOG_I("LCD_WriteMultiplePixels %d pixels to %d, %d", (Xpos1 - Xpos0) * (Ypos1 - Ypos0), Xpos0, Ypos0);
+
     CopyToMixedGrayBuffer(hlcdc, RGBCode, Xpos0, Ypos0, Xpos1, Ypos1);
     HAL_LCDC_LayerSetData(hlcdc, HAL_LCDC_LAYER_DEFAULT, (uint8_t *)mixed_framebuffer, Xpos0, Ypos0, Xpos1, Ypos1);
     HAL_LCDC_LayerSetFormat(hlcdc, HAL_LCDC_LAYER_DEFAULT, LCDC_PIXEL_FORMAT_L8);
@@ -277,6 +281,7 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
 
     total_frames = epd_wave_table_get_frames(26/*temperature*/, EPD_DRAW_MODE_AUTO);
     curr_frame = 0;
+    LOG_I("Done. Start to flush total_frames = %d", total_frames);
 
 
     Ori_XferCpltCallback = hlcdc->XferCpltCallback;

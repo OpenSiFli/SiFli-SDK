@@ -21,7 +21,8 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
     src += ['lvsf_perf.c']
     src += ['lvsf_perf_v9.c']
     src += ['app_mem.c']
-    
+    src += ['hash_cache.c']
+
     objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)
     # Add multiple languages
     objs = objs + SConscript(os.path.join('lv_ext_resouce', 'SConscript'))
@@ -49,6 +50,7 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
         
         objs = objs + SConscript(os.path.join('lvgl_extensions', 'SConscript'))
         objs = objs + SConscript(os.path.join('gif_dec', 'SConscript'))
+        objs = objs + SConscript(os.path.join('epub_dec', 'SConscript'))
     Return('objs')
 
 else:

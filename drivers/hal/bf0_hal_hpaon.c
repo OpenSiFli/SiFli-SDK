@@ -135,7 +135,7 @@ __weak const AON_WakeupPinTypeDef HAL_HPAON_WakeupPinMapTbl[] =
     #define HAL_HPAON_WAKEUP_PIN_NUM  (HPSYS_AON_WSR_PIN_NUM)
     #define HAL_HPAON_WAKEUP_PIN_FIRST   (24)
     #define HAL_HPAON_WAKEUP_PIN_LAST    (44)
-#endif /* SF32LB52X */
+#endif /* !SF32LB52X && !SF32LB57X */
 
 #ifdef AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT
     HAL_RETM_BSS_SECT(g_hal_hpaon_lcpu_wakeup_ref_cnt, uint8_t g_hal_hpaon_lcpu_wakeup_ref_cnt);
@@ -153,7 +153,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_WakeCore(uint8_t core_id)
     {
 #if defined(AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT)
         uint32_t mask;
-#endif /* SF32LB52X */
+#endif /* AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT */
         hwp_hpsys_aon->ISSR |= HPSYS_AON_ISSR_HP2LP_REQ;
         /* delay to ensure LCPU see the REQ, need one LP_CLK cycle, see: gitlab#1752,redmine#666, ext-redmine#663
          * double the value for enough margin

@@ -209,6 +209,19 @@ int bsp_psram_auto_calib(char *name, uint8_t *sck, uint8_t *dqs);
  */
 void bsp_psram_wait_idle(char *name);
 
+#ifdef SF32LB57X
+uint8_t bsp_psram_get_mpi_mode(uint32_t mpi_id);
+
+#ifdef BSP_USING_PSRAM1
+int32_t bsp_psram1_pinmux_init(void);
+#endif /* BSP_USING_PSRAM1 */
+
+#ifdef BSP_USING_PSRAM2
+int32_t bsp_psram2_pinmux_init(void);
+#endif /* BSP_USING_PSRAM2 */
+
+#endif /* SF32LB57X */
+
 #else
 
 #define bsp_psramc_init() -1

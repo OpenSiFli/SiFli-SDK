@@ -1,0 +1,7 @@
+| !Boot file for !Antiword
+| (C) Adri van Os 1998-2001
+|
+Set Antiword$Dir <Obey$Dir>
+IconSprites <Antiword$Dir>.!Sprites
+if "<File$Type_AE6>" = "" then Set File$Type_AE6 MSWord
+if "<Alias$@RunType_AE6>"="" then Set Alias$@RunType_AE6 Run <Antiword$Dir>.!Run %%*0

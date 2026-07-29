@@ -116,7 +116,6 @@ static lv_result_t decoder_info(lv_image_decoder_t *decoder, lv_image_decoder_ds
 static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
 {
     LV_UNUSED(decoder);
-    lv_fs_file_t *f = lv_malloc(sizeof(lv_fs_file_t));
     if (dsc->src_type == LV_IMAGE_SRC_VARIABLE)
     {
         const lv_image_dsc_t *img_dsc = dsc->src;
@@ -127,7 +126,6 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
             dsc->decoded = lv_malloc(sizeof(lv_draw_buf_t));
             if (dsc->decoded == NULL)
             {
-                lv_free(f);
                 return LV_RESULT_INVALID;
             }
             lv_draw_buf_t *decoded = (lv_draw_buf_t *)dsc->decoded;
@@ -135,6 +133,8 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
             decoded->header = img_dsc->header;
             decoded->header.flags |= LV_IMAGE_FLAGS_JPEG;
             decoded->data_size = img_dsc->data_size;
+            decoded->unaligned_data = decoded->data;
+            decoded->handlers = lv_draw_buf_get_handlers();
 
             return LV_RESULT_OK;
         }
@@ -144,20 +144,8 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
         const char *fn = dsc->src;
         if ((lv_strcmp(lv_fs_get_ext(fn), "jpg") == 0) || (lv_strcmp(lv_fs_get_ext(fn), "jpeg") == 0))
         {
-            lv_fs_res_t res;
-            res = lv_fs_open(f, fn, LV_FS_MODE_RD);
-            if (res != LV_FS_RES_OK)
-            {
-                lv_free(f);
-                return LV_RESULT_INVALID;
-            }
-            else
-            {
-                //Read the whole file into memory and decode it
-                //TODO: Implement file reading and decoding logic
-
-                return LV_RESULT_INVALID;
-            }
+            //TODO: Implement file reading and decoding logic
+            return LV_RESULT_INVALID;
         }
     }
 

@@ -1,0 +1,55 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+import os
+
+cwd = GetCurrentDir()
+
+# ---- Source files ----------------------------------------------------------
+
+src = []
+
+# Engine — always included when DFU V2 is enabled
+src += [
+    os.path.join('engine', 'dfu_engine.c'),
+    os.path.join('engine', 'dfu_engine_flash.c'),
+]
+
+# API facade — always included
+src += ['dfu_v2.c']
+
+# Core utilities (CRC, flash ops, firmware info) — always included
+src += ['dfu_fwinfo.c']
+src += ['dfu_app.c']
+# Host Mode
+if GetDepend('DFU_V2_USE_HOST_MODE'):
+    src += [
+        os.path.join('mode', 'dfu_mode_host.c'),
+        os.path.join('mode', 'dfu_protocol.c'),
+    ]
+
+# Device Mode
+if GetDepend('DFU_V2_USE_DEVICE_MODE'):
+    src += [os.path.join('mode', 'dfu_mode_device.c')]
+
+# Push Transports (Host Mode)
+if GetDepend('DFU_V2_USE_CDC_TRANSPORT'):
+    src += [os.path.join('transport', 'dfu_transport_cdc.c')]
+
+if GetDepend('DFU_V2_USE_BLE_TRANSPORT'):
+    src += [os.path.join('transport', 'dfu_transport_ble.c')]
+    src += ['dfu_sec.c']
+    
+# Pull Transports (Device Mode)
+if GetDepend('DFU_V2_USE_PAN_TRANSPORT'):
+    src += [os.path.join('transport', 'dfu_transport_pan.c')]
+
+# ---- Include paths ---------------------------------------------------------
+
+CPPPATH = [cwd]
+
+# ---- Define group ----------------------------------------------------------
+
+group = DefineGroup('dfu_v2', src, depend = ['USING_DFU_V2'], CPPPATH = CPPPATH)
+
+Return('group')

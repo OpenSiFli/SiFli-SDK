@@ -1,0 +1,23 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+objs = []
+list = ['common', 'osal', 'xhci', 'xdrv', 'user']
+group = []
+
+if GetDepend('USING_AICXTEK_WIFI'):
+    if GetDepend(['AIC_CFG_VNET_MODE_EN']):
+        list += ['netal']
+
+    for d in list:
+        path = os.path.join(cwd, d)
+        if os.path.isfile(os.path.join(path, 'SConscript')):
+            objs = objs + SConscript(os.path.join(d, 'SConscript'))
+
+    objs = objs + [os.path.join(cwd, 'aic8800mc_wlan_port.c')]
+
+    group = DefineGroup('AICXTEK_WIFI', objs, depend = ['USING_AICXTEK_WIFI'], CPPPATH = [''])
+
+Return('group')

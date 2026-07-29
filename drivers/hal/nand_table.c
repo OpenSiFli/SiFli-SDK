@@ -409,10 +409,10 @@ __weak FT_CONST SPI_FLASH_FACT_CFG_T nand_cmd_table_list[] =
             {0x0F, 0, 1, 0, 0, 0, 0, 1, 1}, /* SPI_FLASH_CMD_RDSR*/
             {0x1F, 1, 1, 0, 0, 0, 0, 1, 1}, /* SPI_FLASH_CMD_WRSR*/
             {0x13, 0, 0, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_PREAD*/
-            {0x03, 0, 1, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_READ*/
-            {0x0b, 0, 1, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_FREAD*/
-            {0x3b, 0, 2, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_DREAD*/
-            {0x6b, 0, 3, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_QREAD*/
+            {0x03, 0, 1, 0, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_READ*/
+            {0x0b, 0, 1, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_FREAD*/
+            {0x3b, 0, 2, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_DREAD*/
+            {0x6b, 0, 3, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_QREAD*/
             {0xbb, 0, 2, 4, 0, 0, 1, 2, 1}, /* SPI_FLASH_CMD_2READ*/
             {0xeb, 0, 3, 4, 0, 0, 1, 3, 1}, /* SPI_FLASH_CMD_4READ*/
             {0x9f, 0, 1, 0, 0, 0, 0, 0, 1}, /* SPI_FLASH_CMD_RDID*/
@@ -523,6 +523,10 @@ FT_CONST FLASH_RDID_TYPE_T nand_cmd_id_pool_type2[] =
     {0xB0, 0x25, 0xB0, 0x20, 0x10000000},   //UM19A1LISW_RDID
     {0xB0, 0x0C, 0xB0, 0x20, 0x4000000},   //UM19A9HISW_RDID
     {0xB0, 0x0D, 0xB0, 0x20, 0x4000000},   //UM19A9LISW_RDID
+    {0xB0, 0x34, 0xB0, 0x2C, 0x20000000},  //UM19B2HISW_RDID
+    {0xB0, 0x35, 0xB0, 0x2C, 0x20000000},  //UM19B2LISW_RDID
+    {0xB0, 0x1C, 0xB0, 0x20, 0x8000000},   //UM19C0HISW_RDID
+    {0xB0, 0x1D, 0xB0, 0x20, 0x8000000},   //UM19C0LISW_RDID
     {FLASH_INVALID_ID, 0, 0, 0, 0},         //last one
 };
 

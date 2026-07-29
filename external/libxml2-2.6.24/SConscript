@@ -1,0 +1,61 @@
+from building import *
+Import('rtconfig')
+
+src   = []
+cwd   = GetCurrentDir()
+
+src += ['SAX.c',
+        'entities.c',
+        'encoding.c',
+        'error.c',
+        'parserInternals.c',
+        'parser.c',
+        'tree.c',
+        'hash.c',
+        'list.c',
+        'xmlIO.c',
+        'xmlmemory.c',
+        'uri.c',
+        'valid.c',
+        'xlink.c',
+        'HTMLparser.c',
+        'HTMLtree.c',
+        'debugXML.c',
+        'xpath.c',
+        'xpointer.c',
+        'xinclude.c',
+        'nanohttp.c',
+        'nanoftp.c',
+        'DOCBparser.c',
+        'catalog.c',
+        'globals.c',
+        'threads.c',
+        'c14n.c',
+        'xmlstring.c',
+        'xmlregexp.c',
+        'xmlschemas.c',
+        'xmlschemastypes.c',
+        'xmlunicode.c',
+        'xmlreader.c',
+        'relaxng.c',
+        'dict.c',
+        'SAX2.c',
+        'xmlwriter.c',
+        'legacy.c',
+        'chvalid.c',
+        'pattern.c',
+        'xmlsave.c',
+        'xmlmodule.c',
+        'schematron.c',
+        ]
+path  = []
+path += [cwd + '/include/']
+CPPDEFINES = ['LIBXML_STATIC']
+if GetDepend('BSP_USING_PC_SIMULATOR'):
+    LOCAL_CCFLAGS = ' -O3'
+else :
+    LOCAL_CCFLAGS = ' -Wno-error -Wno-#warnings -O3'
+# add src and include to group.
+group = DefineGroup('libxml2', src, depend = ['PKG_USING_LIBXML2'], CPPPATH = path, CPPDEFINES = CPPDEFINES,LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')

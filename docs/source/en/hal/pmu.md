@@ -4,7 +4,7 @@ HAL PMU provides abstract software interfaces to operate the hardware PMU (Power
 - Set chip power supply parameters
 - Set low-power clock parameters
 - Configure chip to enter shutdown mode and set wake-up sources. In shutdown mode, the chip can be awakened by PIN and RTC. The mapping relationship between wake-up PINs and GPIO pins is the same as the wake-up PINs in LPSYS sleep mode, see [](aon.md)
-- SF32LB52X supports charging, with related interfaces such as #HAL_PMU_ChgInit
+- SF32LB52X and SF32LB57X support charging, with related interfaces such as #HAL_PMU_ChgInit
 
 For detailed API documentation, refer to [PMU](#hal-pmu)
 

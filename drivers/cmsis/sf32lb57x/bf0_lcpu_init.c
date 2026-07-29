@@ -14,8 +14,9 @@
     #if defined(FPGA)
         extern void bt_rf_cal_9364();
         #define bt_rf_cal() bt_rf_cal_9364()
+    #else
+        extern void bt_rf_cal(void);
     #endif
-    // extern void bt_rf_cal(void);
 #endif
 
 
@@ -49,24 +50,16 @@ void lcpu_rom_config_default(void)
     uint32_t wdt_time = 10;
     uint16_t wdt_clk = 32768;
 
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_XTAL_ENABLED, &is_enable_lxt, 1);
     HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_STATUS, &wdt_staus, 4);
     HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_TIME, &wdt_time, 4);
     HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_CLK_FEQ, &wdt_clk, 2);
     HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_RC_CAL_IN_L, &is_lcpu_rccal, 1);
 
-#if defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)
-    if (rev_id >= HAL_CHIP_REV_ID_A4)
-    {
-        uint32_t tx_queue = HCPU2LCPU_MB_CH1_BUF_START_ADDR;
-        hal_lcpu_bluetooth_rom_config_t config = {0};
-        config.bit_valid |= 1 << 10 | 1 << 6;
-        config.is_fpga = 0;
-        config.default_xtal_enabled = is_enable_lxt;
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_HCPU_TX_QUEUE, &tx_queue, 4);
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
-    }
-#endif // defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)
+
+    hal_lcpu_bluetooth_rom_config_t config = {0};
+    config.bit_valid |= 1 << 6;
+    config.default_xtal_enabled = is_enable_lxt;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
 }
 
 

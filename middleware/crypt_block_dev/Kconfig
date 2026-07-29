@@ -1,0 +1,10 @@
+config USING_CRYPT_BLOCK_DEV
+    bool "Crypt Block Device — transparent AES-encrypted block device"
+    select BSP_USING_HW_AES
+    default n
+    help
+        Wrap any RT_Device_Class_Block device with AES-CTR encryption.
+        All writes are encrypted before reaching the underlying device,
+        all reads are decrypted before returning to the caller.
+
+        Compatible with AES-128/192/256 in CTR modes.

@@ -1824,3 +1824,29 @@ static void decode_and_write(struct broadcast_sink_stream *stream, const void *d
         last_write_tick = rt_tick_get_millisecond();
     }
 }
+
+static void broadcast_code_set(int argc, char **argv)
+{
+    if (argc < 2)
+    {
+        printk("Usage: bcode <broadcast_code>, max 16 bytes\n");
+        return;
+    }
+
+    size_t len = strlen(argv[1]);
+
+    if (len > BT_AUDIO_BROADCAST_CODE_SIZE)
+    {
+        printk("broadcast code too long, max %d bytes\n",
+               BT_AUDIO_BROADCAST_CODE_SIZE);
+        return;
+    }
+
+    memset(sink_broadcast_code, 0, sizeof(sink_broadcast_code));
+    memcpy(sink_broadcast_code, argv[1], len);
+
+    printk("broadcast code set: %s, len=%d\n", argv[1], len);
+
+    k_sem_give(&sem_broadcast_code_received);
+}
+MSH_CMD_EXPORT_ALIAS(broadcast_code_set, bcode, set broadcast code)

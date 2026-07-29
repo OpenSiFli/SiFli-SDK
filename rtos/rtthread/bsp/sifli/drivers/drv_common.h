@@ -89,6 +89,27 @@ uint8_t drv_tp_get_wakeup_check_enable(void);
 void drv_tp_set_wakeup_check_enable(uint8_t is_enalbe);
 void drv_reboot(void);
 
+/**
+ * @brief  Weak function to get the max TX power.
+ *         User code can override this function to provide a custom maximum TX power.
+ * @return max TX power in dBm
+ */
+int8_t bt_tx_pwr_max_override(void);
+
+/**
+ * @brief  Weak function to get the min TX power.
+ *         User code can override this function to provide a custom minimum TX power.
+ * @return min TX power in dBm
+ */
+int8_t bt_tx_pwr_min_override(void);
+
+/**
+ * @brief  Weak function to get the initial TX power.
+ *         User code can override this function to provide a custom initial TX power.
+ * @return initial TX power in dBm
+ */
+int8_t bt_tx_pwr_init_override(void);
+
 void rt_hw_systick_init(void);
 
 #ifdef BSP_USING_BUSMON

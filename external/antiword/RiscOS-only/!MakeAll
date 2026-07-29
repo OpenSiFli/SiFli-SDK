@@ -1,0 +1,12 @@
+| !MakeAll file to build !Antiword
+| (C) 2005 Adri van Os
+|
+Set MakeAll$Dir <Obey$Dir>
+Set StubsG$Dir <Root$Dir>.StubsG
+Set C$Path <GCC$Dir>.clib.
+Set flexlib$Path <StubsG$Dir>.flexlib.
+Dir <MakeAll$Dir>
+CDir <MakeAll$Dir>.o
+WimpSlot -min 4096K
+Run <GnuMake$Dir>.!RunImage -f <MakeAll$Dir>.Makefile32 Startup
+Run <GnuMake$Dir>.!RunImage -f <MakeAll$Dir>.Makefile32 Antiword

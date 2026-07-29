@@ -90,7 +90,7 @@ extern "C" {
 #endif
 
 #ifdef RT_USING_CAN
-#include "drivers/can.h"
+#include "drivers/dev_can.h"
 #endif
 
 #ifdef RT_USING_HWTIMER

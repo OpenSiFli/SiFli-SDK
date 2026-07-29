@@ -17,21 +17,87 @@
 #ifdef RT_USING_PM
 
 #ifdef PM_REQUEST_DEBUG
+typedef enum
+{
+    REC_PM_REQ_IDLE = 0,
+    REC_PM_REL_IDLE,
+    REC_HW_DEV_START,
+    REC_HW_DEV_STOP,
+    REC_TYPE_INVALID
+} rec_type_e;
+
 typedef struct
 {
-    const char *file;
-    uint32_t line_num;
+    uint32_t ret;
+    uint32_t refr_count;
 } pm_request_hist_item;
 
-#define PM_REQUEST_HIST_LEN  (32)
+#define PM_REQUEST_HIST_LEN  (60)
 
 typedef struct
 {
     uint32_t idx;
     pm_request_hist_item items[PM_REQUEST_HIST_LEN];
+    uint32_t rel_idx;
+    pm_request_hist_item rel_items[PM_REQUEST_HIST_LEN];
+    uint32_t dev_idx;
+    pm_request_hist_item dev_items[PM_REQUEST_HIST_LEN];
+    uint32_t dev_stop_idx;
+    pm_request_hist_item dev_stop_items[PM_REQUEST_HIST_LEN];
 } pm_request_hist_t;
 
 pm_request_hist_t _pm_request_hist;
+
+static void record_item(rec_type_e type, uint32_t ret)
+{
+    uint32_t *idx_ptr = NULL;
+    pm_request_hist_item *item_ptr = NULL;
+    uint32_t i;
+
+    if (type >= REC_TYPE_INVALID) return;
+
+    switch (type)
+    {
+    case REC_PM_REQ_IDLE:
+        idx_ptr = &_pm_request_hist.idx;
+        item_ptr = &_pm_request_hist.items[0];
+        break;
+    case REC_PM_REL_IDLE:
+        idx_ptr = &_pm_request_hist.rel_idx;
+        item_ptr = &_pm_request_hist.rel_items[0];
+        break;
+    case REC_HW_DEV_START:
+        idx_ptr = &_pm_request_hist.dev_idx;
+        item_ptr = &_pm_request_hist.dev_items[0];
+        break;
+    case REC_HW_DEV_STOP:
+        idx_ptr = &_pm_request_hist.dev_stop_idx;
+        item_ptr = &_pm_request_hist.dev_stop_items[0];
+        break;
+    default:
+        return;
+    }
+
+    if (*idx_ptr >= PM_REQUEST_HIST_LEN) return;
+
+    for (i = 0; i < *idx_ptr; i++)
+    {
+        if (item_ptr[i].ret == ret)
+        {
+            item_ptr[i].refr_count ++;
+            return;
+        }
+    }
+
+    if (i == *idx_ptr)
+    {
+        item_ptr[*idx_ptr].ret = ret;
+        item_ptr[*idx_ptr].refr_count = 1;
+        (*idx_ptr) ++;
+    }
+}
+
+#define record_pm_req(type) record_item(type, (uint32_t)__builtin_return_address(0))
 
 #endif /* PM_REQUEST_DEBUG */
 
@@ -479,18 +545,10 @@ __ROM_USED void rt_system_power_manager(void)
  *
  * @param parameter the parameter of run mode or sleep mode
  */
-#ifndef PM_REQUEST_DEBUG
-    __ROM_USED void rt_pm_request(uint8_t mode)
-#else
-    __ROM_USED void rt_pm_request_debug(uint8_t mode, const char *file, uint32_t line)
-#endif
+__ROM_USED void rt_pm_request(uint8_t mode)
 {
     rt_base_t level;
     struct rt_pm *pm;
-#ifdef PM_REQUEST_DEBUG
-    uint32_t i;
-    uint8_t duplicate_num;
-#endif /* PM_REQUEST_DEBUG */
 
     if (_pm_init_flag == 0)
         return;
@@ -506,20 +564,9 @@ __ROM_USED void rt_system_power_manager(void)
         RT_ASSERT(0);
 
 #ifdef PM_REQUEST_DEBUG
-    if ((mode == PM_SLEEP_MODE_IDLE) && (_pm_request_hist.idx < PM_REQUEST_HIST_LEN))
+    if (mode == PM_SLEEP_MODE_IDLE)
     {
-        duplicate_num = 0;
-        for (i = 0; i < _pm_request_hist.idx; i++)
-        {
-            if ((_pm_request_hist.items[i].file == file) && (_pm_request_hist.items[i].line_num == line))
-            {
-                duplicate_num++;
-            }
-        }
-        RT_ASSERT(duplicate_num < 3);
-        _pm_request_hist.items[_pm_request_hist.idx].file = file;
-        _pm_request_hist.items[_pm_request_hist.idx].line_num = line;
-        _pm_request_hist.idx++;
+        record_pm_req(REC_PM_REQ_IDLE);
     }
 #endif /* PM_REQUEST_DEBUG */
     rt_hw_interrupt_enable(level);
@@ -532,17 +579,10 @@ __ROM_USED void rt_system_power_manager(void)
  * @param parameter the parameter of run mode or sleep mode
  *
  */
-#ifndef PM_REQUEST_DEBUG
-    __ROM_USED void rt_pm_release(uint8_t mode)
-#else
-    __ROM_USED void rt_pm_release_debug(uint8_t mode, const char *file, uint32_t line)
-#endif /* PM_REQUEST_DEBUG */
+__ROM_USED void rt_pm_release(uint8_t mode)
 {
     rt_ubase_t level;
     struct rt_pm *pm;
-#ifdef PM_REQUEST_DEBUG
-    uint32_t i;
-#endif /* PM_REQUEST_DEBUG */
 
     if (_pm_init_flag == 0)
         return;
@@ -556,21 +596,7 @@ __ROM_USED void rt_system_power_manager(void)
 #ifdef PM_REQUEST_DEBUG
     if (mode == PM_SLEEP_MODE_IDLE)
     {
-        RT_ASSERT(_pm_request_hist.idx <= PM_REQUEST_HIST_LEN);
-        for (i = 0; i < _pm_request_hist.idx; i++)
-        {
-            if (_pm_request_hist.items[i].file == file)
-            {
-                break;
-            }
-        }
-        if (i < _pm_request_hist.idx)
-        {
-            /* remove the matched request and replace by last one */
-            _pm_request_hist.items[i].file = _pm_request_hist.items[_pm_request_hist.idx - 1].file;
-            _pm_request_hist.items[i].line_num = _pm_request_hist.items[_pm_request_hist.idx - 1].line_num;
-            _pm_request_hist.idx--;
-        }
+        record_pm_req(REC_PM_REL_IDLE);
     }
 #endif /* PM_REQUEST_DEBUG */
 
@@ -581,13 +607,6 @@ __ROM_USED void rt_system_power_manager(void)
         RT_ASSERT(0);
 #endif /* PM_REQUEST_DEBUG */
 
-#ifdef PM_REQUEST_DEBUG
-    if ((mode == PM_SLEEP_MODE_IDLE) && (0 == pm->modes[PM_SLEEP_MODE_IDLE]))
-    {
-        /* if file name not match, request may not be cleared, clear forcely */
-        _pm_request_hist.idx = 0;
-    }
-#endif /* PM_REQUEST_DEBUG */
 
     rt_hw_interrupt_enable(level);
 }
@@ -866,6 +885,9 @@ __ROM_USED void rt_pm_hw_device_start(void)
 
     mask = rt_hw_interrupt_disable();
     _pm.act_hw_device_cnt++;
+#ifdef PM_REQUEST_DEBUG
+    record_pm_req(REC_HW_DEV_START);
+#endif
     rt_hw_interrupt_enable(mask);
 }
 
@@ -876,6 +898,9 @@ __ROM_USED void rt_pm_hw_device_stop(void)
     mask = rt_hw_interrupt_disable();
     RT_ASSERT(_pm.act_hw_device_cnt);
     _pm.act_hw_device_cnt--;
+#ifdef PM_REQUEST_DEBUG
+    record_pm_req(REC_HW_DEV_STOP);
+#endif
     rt_hw_interrupt_enable(mask);
 
 }
@@ -956,6 +981,48 @@ static void rt_pm_dump_status(void)
 
     rt_kprintf("pm current sleep mode: %s\n", _pm_sleep_str[pm->sleep_mode]);
     rt_kprintf("pm current run mode:   %s\n", _pm_run_str[pm->run_mode]);
+
+#ifdef PM_REQUEST_DEBUG
+    rt_kprintf("+-----------------------+---------+-------+\n");
+    rt_kprintf("pm request idle list:\n");
+    rt_kprintf("+-----------------------+---------+-------+\n");
+    rt_kprintf("%10s %10s\n", "ret_addr", "count");
+    rt_kprintf("+-----------------------+---------+-------+\n");
+    for (int i = 0; i < _pm_request_hist.idx; i++)
+    {
+        rt_kprintf("0x%08X %10d\n", _pm_request_hist.items[i].ret, _pm_request_hist.items[i].refr_count);
+    }
+
+    rt_kprintf("\n+---------+-----------+\n");
+    rt_kprintf("pm release idle list:\n");
+    rt_kprintf("+---------+-----------+\n");
+    rt_kprintf("%10s %10s\n", "ret_addr", "count");
+    rt_kprintf("+---------+-----------+\n");
+    for (int i = 0; i < _pm_request_hist.rel_idx; i++)
+    {
+        rt_kprintf("0x%08X %10d\n", _pm_request_hist.rel_items[i].ret, _pm_request_hist.rel_items[i].refr_count);
+    }
+
+    rt_kprintf("+---------+-----------+\n");
+    rt_kprintf("hw device start list:\n");
+    rt_kprintf("+---------+-----------+\n");
+    rt_kprintf("%10s %10s\n", "ret_addr", "count");
+    rt_kprintf("+---------+-----------+\n");
+    for (int i = 0; i < _pm_request_hist.dev_idx; i++)
+    {
+        rt_kprintf("0x%08X %10d\n", _pm_request_hist.dev_items[i].ret, _pm_request_hist.dev_items[i].refr_count);
+    }
+
+    rt_kprintf("\n+---------+-----------+\n");
+    rt_kprintf("hw device stop list:\n");
+    rt_kprintf("+---------+-----------+\n");
+    rt_kprintf("%10s %10s\n", "ret_addr", "count");
+    rt_kprintf("+---------+-----------+\n");
+    for (int i = 0; i < _pm_request_hist.dev_stop_idx; i++)
+    {
+        rt_kprintf("0x%08X %10d\n", _pm_request_hist.dev_stop_items[i].ret, _pm_request_hist.dev_stop_items[i].refr_count);
+    }
+#endif
 }
 FINSH_FUNCTION_EXPORT_ALIAS(rt_pm_dump_status, pm_dump, dump power management status);
 MSH_CMD_EXPORT_ALIAS(rt_pm_dump_status, pm_dump, dump power management status);

@@ -89,7 +89,7 @@ static void testcase(int argc, char **argv)
 
     //----------------------------------------------
     //1. pin mux
-#ifdef SOC_SF32LB52X
+#if defined(SOC_SF32LB52X) || defined(SOC_SF32LB57X)
 #define EXAMPLE_I2C I2C2
 #define EXAMPLE_I2C_IRQ I2C2_IRQn
     HAL_PIN_Set(PAD_PA40, I2C2_SCL, PIN_PULLUP, 1);

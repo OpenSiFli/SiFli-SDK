@@ -97,6 +97,7 @@ typedef enum
     as_callback_cmd_play_resume      = 11, //a2dp device to AG, only notify app to chagen UI, app do not resume again
     as_callback_cmd_play_pause       = 12, //a2dp device to AG, only notify app to chage UI, app do not pause again
     as_callback_cmd_10ms_dma         = 13,
+
     as_callback_cmd_user             = 100,
 #ifdef AUDIO_MP3_RINGBUFF_SUPPORT
     as_callback_cmd_user_read        = 101, //notify app to get more data
@@ -104,6 +105,9 @@ typedef enum
 } audio_server_callback_cmt_t;
 
 typedef struct audio_client_base_t *audio_client_t;
+
+typedef int (*user_device_open)(void *user_data);
+typedef int (*user_device_close)(void *user_data);
 
 typedef struct
 {
@@ -126,6 +130,10 @@ typedef struct
     mics_t   read_which_mic;
     uint8_t  read_channnel_num;
     uint8_t  read_bits_per_sample;
+
+    // set these callback if has user device to open with audio_device_e
+    user_device_open  open;
+    user_device_close close;
 } audio_parameter_t;
 
 
@@ -309,7 +317,7 @@ void audio_server_register_listener(audio_server_listener_func func, uint32_t wh
   * @param  len: data length
   * @retval whether or not need downlink processing algorithm
   */
-uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint8_t len);
+uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint16_t len);
 /**
   * @brief  write pcm data to uplink cache buffer
   * @param  handle value return by audio_open

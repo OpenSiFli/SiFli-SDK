@@ -139,6 +139,10 @@ typedef struct
 #define MPI_DCR_PROT_Pos                (4U)
 #define MPI_DCR_PROT_Msk                (0x3UL << MPI_DCR_PROT_Pos)
 #define MPI_DCR_PROT                    MPI_DCR_PROT_Msk
+#define MPI_DCR_PROT_XCCELA             (0 << MPI_DCR_PROT_Pos)
+#define MPI_DCR_PROT_XCCELA_LEGACY      (1 << MPI_DCR_PROT_Pos)
+#define MPI_DCR_PROT_HYPER_BUS          (2 << MPI_DCR_PROT_Pos)
+#define MPI_DCR_PROT_UPSRAM             (3 << MPI_DCR_PROT_Pos)
 #define MPI_DCR_CSLMAX_Pos              (6U)
 #define MPI_DCR_CSLMAX_Msk              (0xFFFUL << MPI_DCR_CSLMAX_Pos)
 #define MPI_DCR_CSLMAX                  MPI_DCR_CSLMAX_Msk

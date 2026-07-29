@@ -131,6 +131,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_RTC_Init(RTC_HandleTypeDef *hrtc, uint32_t 
                 }
             }
         }
+#ifdef HPSYS_CFG_RTC_DR_RSF
+        /* clear sync flag to make sure resync when read TR and DR from hpsys_cfg*/
+        hwp_hpsys_cfg->RTC_DR &= ~HPSYS_CFG_RTC_DR_RSF;
+#endif /* HPSYS_CFG_RTC_DR_RSF */
     }
     return r;
 }
@@ -349,8 +353,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_RTC_GetTime(RTC_HandleTypeDef *hrtc, RTC_Ti
 {
     uint32_t tmpreg = 0U;
 
-    /* Get the TR register */
+#ifdef HPSYS_CFG_RTC_DR_RSF
+    /* read DR to check resync flag */
+    do
+    {
+        tmpreg = hwp_hpsys_cfg->RTC_DR;
+    }
+    while (!(tmpreg & HPSYS_CFG_RTC_DR_RSF));  /* poll resync flag */
+#endif /* HPSYS_CFG_RTC_DR_RSF */
 
+    /* Get the TR register */
 #ifdef SOC_BF0_HCPU  // Use LPSYS_CFG register to get time immediately.
     tmpreg = hwp_hpsys_cfg->RTC_TR;
 #else
@@ -467,17 +479,29 @@ __HAL_ROM_USED void reg_2_date(uint32_t reg, RTC_DateTypeDef *sDate, uint32_t Fo
 __HAL_ROM_USED HAL_StatusTypeDef HAL_RTC_GetDate(RTC_HandleTypeDef *hrtc, RTC_DateTypeDef *sDate, uint32_t Format)
 {
     uint32_t datetmpreg = 0U;
+    uint32_t tmpreg;
 
     /* Get the DR register */
 #ifdef SOC_BF0_HCPU
-    datetmpreg = (uint32_t)(hwp_hpsys_cfg->RTC_DR & RTC_DR_RESERVED_MASK);
-    if (hwp_hpsys_cfg->RTC_DR & RTC_DR_ERR)
+#ifdef HPSYS_CFG_RTC_DR_RSF
+    /* check resync flag */
+    do
+    {
+        tmpreg = hwp_hpsys_cfg->RTC_DR;
+    }
+    while (!(tmpreg & HPSYS_CFG_RTC_DR_RSF));  /* poll resync flag */
+#else
+    tmpreg = hwp_hpsys_cfg->RTC_DR;
+#endif /* HPSYS_CFG_RTC_DR_RSF */
+    datetmpreg = (uint32_t)(tmpreg & RTC_DR_RESERVED_MASK);
+    if (tmpreg & RTC_DR_ERR)
         return HAL_ERROR;
 #else
-    datetmpreg = (uint32_t)(hwp_lpsys_cfg->RTC_DR & RTC_DR_RESERVED_MASK);
-    if (hwp_lpsys_cfg->RTC_DR & RTC_DR_ERR)
+    tmpreg = hwp_lpsys_cfg->RTC_DR;
+    datetmpreg = (uint32_t)(tmpreg & RTC_DR_RESERVED_MASK);
+    if (tmpreg & RTC_DR_ERR)
         return HAL_ERROR;
-#endif
+#endif /* SOC_BF0_HCPU */
 
     /* Fill the structure fields with the read parameters */
     reg_2_date(datetmpreg, sDate, Format);

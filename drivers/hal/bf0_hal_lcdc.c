@@ -6,17 +6,7 @@
 
 #include <string.h>
 #include "bf0_hal.h"
-
-extern void rt_kprintf(const char *fmt, ...);
-
-#define LCDC_LOG(...)   //do{rt_kprintf(__VA_ARGS__);rt_kprintf("\r\n");}while(0)
-
-#define LCDC_LOG_D(...)  //LCDC_LOG(__VA_ARGS__)
-#define LCDC_LOG_I(...)  //LCDC_LOG(__VA_ARGS__)
-#define LCDC_LOG_E(...)  LCDC_LOG(__VA_ARGS__)
-#define LCDC_PRINT_AREA(s,area) //LCDC_LOG("%s: x0y0=%d,%d  x1y1=%d,%d  \n",s,(area)->x0,(area)->y0,(area)->x1,(area)->y1)
-
-#define LCDC_TIMEOUT_SECONDS  1
+#include "bf0_hal_lcdc_private.h"
 
 /** @addtogroup BF0_HAL_Driver
   * @{
@@ -50,11 +40,7 @@ static HAL_StatusTypeDef SendSingleCmd(LCDC_HandleTypeDef *lcdc, uint32_t addr, 
 static HAL_StatusTypeDef WaitBusy(LCDC_HandleTypeDef *lcdc);
 static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc);
 
-#if defined(USE_FULL_ASSERT)||defined(_SIFLI_DOXYGEN_) || defined(USE_LOOP_ASSERT)
-    #define HAL_LCDC_ASSERT  HAL_ASSERT
-#else
-    #define HAL_LCDC_ASSERT(expr) if ((expr)==0) while (1)
-#endif /* USE_FULL_ASSERT */
+
 
 
 
@@ -95,6 +81,12 @@ static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc);
 
 #define WAIT_LCDC_SINGLE_BUSY(lcdc) while((lcdc)->Instance->LCD_SINGLE & LCD_IF_LCD_SINGLE_LCD_BUSY)
 #define GET_LCDC_SYSID(lcdc) ((LCDC1 == ((lcdc)->Instance))?CORE_ID_HCPU:CORE_ID_LCPU)
+#ifdef hwp_lcdc2
+    #define GET_LCDC_RCC_MOD(lcdc) ((LCDC1 == ((lcdc)->Instance))?RCC_MOD_LCDC1:RCC_MOD_LCDC2)
+#else
+    #define GET_LCDC_RCC_MOD(lcdc) ((LCDC1 == ((lcdc)->Instance))?RCC_MOD_LCDC1:RCC_MOD_INVALID)
+#endif
+
 #define LCDC_DELAY_NS(ns) HAL_Delay_us(((ns)/1000) + 1)
 
 //write single command
@@ -184,7 +176,7 @@ __STATIC_INLINE void LCDC_SET_TE(LCDC_HandleTypeDef *lcdc, bool en)
         lcdc->Instance->TE_CONF &= ~LCD_IF_TE_CONF_ENABLE;
 }
 
-static uint8_t HAL_LCDC_GetPixelSize(HAL_LCDC_PixelFormat color_format)
+uint8_t HAL_LCDC_GetPixelSize(HAL_LCDC_PixelFormat color_format)
 {
     uint8_t bytes_per_pixel = 0;
 
@@ -221,16 +213,22 @@ static uint8_t HAL_LCDC_GetPixelSize(HAL_LCDC_PixelFormat color_format)
 
 static uint32_t LCDC_GetIntfClkFreq(LCDC_HandleTypeDef *lcdc)
 {
-    uint32_t lcdc_clk;
-
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-
 #ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
-    uint32_t div = (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk) >> LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos;
-    HAL_LCDC_ASSERT(div > 0);
-    return lcdc_clk / div;
+    uint32_t lcdc_clk = HAL_RCC_GetModuleFreq(GET_LCDC_RCC_MOD(lcdc));
+    if (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL)
+    {
+        lcdc_clk = lcdc_clk * 2 / 5;
+    }
+    else
+    {
+        uint32_t div = (lcdc->Instance->LCD_CONF & LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk) >> LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos;
+        HAL_LCDC_ASSERT(div > 0);
+        lcdc_clk = lcdc_clk / div;
+    }
+
+    return lcdc_clk;
 #else
-    return  lcdc_clk;
+    return  HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
 #endif /* LCD_IF_LCD_CONF_INTF_CLK_DIV */
 }
 
@@ -452,7 +450,41 @@ static HAL_StatusTypeDef SelectIntf(LCDC_HandleTypeDef *lcdc, HAL_LCDC_IF_TypeDe
 
     return HAL_OK;
 }
+#ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
+static void LCDC_SetIntfClockDivider(LCDC_HandleTypeDef *lcdc, uint32_t freq)
+{
+    uint32_t lcdc_clk = HAL_RCC_GetModuleFreq(GET_LCDC_RCC_MOD(lcdc));
+    uint32_t intf_div = 1;
+    uint32_t use_div2p5 = 0;
+    uint32_t total_div = (lcdc_clk + (freq - 1)) / freq;
+    LCDC_InitTypeDef *init = &lcdc->Init;
 
+
+    //The minimum divider of the interfaces is 1
+    if ((HAL_LCDC_IS_SPI_IF(init->lcd_itf) && (LCDC_INTF_SPI_DCX_DDR_4DATA != lcdc->Init.lcd_itf)))
+    {
+#define MAX_INTF_DIV (LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk>>LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos)
+        if (total_div <= MAX_INTF_DIV) intf_div = total_div;
+        else if (total_div % 5 == 0) use_div2p5 = 1;
+        else if (total_div % 6 == 0) intf_div = 3;
+        else intf_div = 1;
+    }
+    else //The minimum divider of the interfaces is 2
+    {
+        if (total_div % 5 == 0) use_div2p5 = 1;
+        else if (total_div % 6 == 0) intf_div = 3;
+        else intf_div = 1;
+    }
+
+    MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, intf_div << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
+    if (use_div2p5)
+        lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+    else
+        lcdc->Instance->LCD_CONF &= ~LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+
+    lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV_UPDATE;
+}
+#endif
 
 static HAL_StatusTypeDef SetFreq(LCDC_HandleTypeDef *lcdc, uint32_t freq)
 {
@@ -462,17 +494,15 @@ static HAL_StatusTypeDef SetFreq(LCDC_HandleTypeDef *lcdc, uint32_t freq)
 
     HAL_LCDC_ASSERT(lcdc);
     HAL_LCDC_ASSERT(freq > 0);
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-    //uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
+
 
     init = &lcdc->Init;
     init->freq = freq;
 
 #ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
-    //Set global divider to 1 to acting like previous LCDC.
-    MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, 1 << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
-    lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV_UPDATE;
+    LCDC_SetIntfClockDivider(lcdc, freq);
 #endif /* LCD_IF_LCD_CONF_INTF_CLK_DIV */
+    lcdc_clk = LCDC_GetIntfClkFreq(lcdc);
 
     if (HAL_LCDC_IS_SPI_IF(init->lcd_itf))
     {
@@ -737,7 +767,7 @@ static HAL_StatusTypeDef SetOutFormat(LCDC_HandleTypeDef *lcdc, HAL_LCDC_PixelFo
                  | (1 << LCD_IF_LCD_CONF_DPI_LCD_FORMAT_Pos)           // DPI LCD
                  | (1 << LCD_IF_LCD_CONF_SPI_LCD_FORMAT_Pos);           // SPI LCD
 
-        if (HAL_LCDC_IS_DBI_IF(lcdc->Init.lcd_itf))
+        if (HAL_LCDC_IS_DBI_8BIT_IF(lcdc->Init.lcd_itf))
         {
             reg_v |= LCD_IF_LCD_CONF_LCD_FORMAT_8BIT_RGB565;           // DBI RGB565 over 8-bit bus
         }
@@ -754,7 +784,7 @@ static HAL_StatusTypeDef SetOutFormat(LCDC_HandleTypeDef *lcdc, HAL_LCDC_PixelFo
                  | (1 << LCD_IF_LCD_CONF_SPI_LCD_FORMAT_Pos)           // SPI LCD
                  | LCD_IF_LCD_CONF_ENDIAN;
 
-        if (HAL_LCDC_IS_DBI_IF(lcdc->Init.lcd_itf))
+        if (HAL_LCDC_IS_DBI_8BIT_IF(lcdc->Init.lcd_itf))
         {
             reg_v |= LCD_IF_LCD_CONF_LCD_FORMAT_8BIT_RGB565;           // DBI RGB565 over 8-bit bus
         }
@@ -770,9 +800,13 @@ static HAL_StatusTypeDef SetOutFormat(LCDC_HandleTypeDef *lcdc, HAL_LCDC_PixelFo
                  | (5 << LCD_IF_LCD_CONF_DPI_LCD_FORMAT_Pos)           // DPI LCD
                  | (2 << LCD_IF_LCD_CONF_SPI_LCD_FORMAT_Pos);           // SPI LCD
 
-        if (HAL_LCDC_IS_DBI_IF(lcdc->Init.lcd_itf))
+        if (HAL_LCDC_IS_DBI_8BIT_IF(lcdc->Init.lcd_itf))
         {
             reg_v |= LCD_IF_LCD_CONF_LCD_FORMAT_RGB888_OVER8BUS;          // DBI
+        }
+        else if (HAL_LCDC_IS_DBI_16BIT_IF(lcdc->Init.lcd_itf))
+        {
+            reg_v |= LCD_IF_LCD_CONF_LCD_FORMAT_RGB888_OVER16BUS;         // DBI
         }
 #ifdef HAL_DSI_MODULE_ENABLED
         else if (HAL_LCDC_IS_DSI_IF(lcdc->Init.lcd_itf))
@@ -1438,21 +1472,14 @@ static HAL_StatusTypeDef LayerUpdate(LCDC_HandleTypeDef *lcdc)
         lcdc->Instance->LINE_BUF1 = (uint32_t) lcdc->sram_line_buf1;
         lcdc->Instance->CANVAS_BG &= ~LCD_IF_CANVAS_BG_LB_BYPASS;
     }
-#ifdef FPGA
-    if (HAL_LCDC_IS_EPD_IF(lcdc->Init.lcd_itf)) // FPGA SRAM is too slow, bypass line buffer for EPD interface
+
+
+    if (HAL_LCDC_IS_EPD_IF(lcdc->Init.lcd_itf)) // bypass line buffer for EPD interface
     {
         lcdc->Instance->CANVAS_BG |= LCD_IF_CANVAS_BG_LB_BYPASS;
     }
-#endif
 #endif /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
 
-
-    /*** 2. setup layer ***/
-#if defined(LCD_IF_COENG_CFG_JPEG_EN)||defined(LCD_IF_COENG_CFG_DECOMP_EN)
-    lcdc->Instance->COENG_CFG = 0; //Clear coeng config first
-#elif defined(LCD_IF_LAYER0_DECOMP_ENABLE)
-    lcdc->Instance->LAYER0_DECOMP = 0; //Clear decomp config first
-#endif /* defined(LCD_IF_COENG_CFG_JPEG_EN)||defined(LCD_IF_COENG_CFG_DECOMP_EN) */
     for (HAL_LCDC_LayerDef layeridx = HAL_LCDC_LAYER_0; layeridx < HAL_LCDC_LAYER_MAX; layeridx++)
     {
 #ifndef SF32LB55X
@@ -1567,7 +1594,7 @@ static HAL_StatusTypeDef LayerUpdate(LCDC_HandleTypeDef *lcdc)
 #endif /* SF32LB58X */
 
 
-        // a.5 setup compressed buffer info
+        // a.5 setup compressed buffer info(Caustion: The ramless LCD still using the layer configuration realtime.)
 #ifdef LCDC_SUPPORTED_COMPRESSED_LAYER
         if (cfg->cmpr_en)
         {
@@ -1593,8 +1620,6 @@ static HAL_StatusTypeDef LayerUpdate(LCDC_HandleTypeDef *lcdc)
 #else /* !LCD_IF_LAYER0_DECOMP_ENABLE*/
 
             {
-                HAL_LCDC_ASSERT(0 == (lcdc->Instance->COENG_CFG & LCD_IF_COENG_CFG_DECOMP_EN)); //Make sure no layer is using decompression
-
                 uint32_t col_size = CMPR_CHUNK_SIZE(data_w);
                 uint32_t chunks = CMPR_CHUNKS(data_w);
                 uint32_t epictl_cf;
@@ -1622,8 +1647,8 @@ static HAL_StatusTypeDef LayerUpdate(LCDC_HandleTypeDef *lcdc)
                                               ;
                 lcdc->Instance->DECOMP_CFG1 = cfg1;
                 lcdc->Instance->DECOMP_CFG2 = cfg0;
-                lcdc->Instance->COENG_CFG |= MAKE_REG_VAL(layeridx, LCD_IF_COENG_CFG_DECOMP_CH_SEL_Msk, LCD_IF_COENG_CFG_DECOMP_CH_SEL_Pos)
-                                             | LCD_IF_COENG_CFG_DECOMP_EN ;
+                lcdc->Instance->COENG_CFG = MAKE_REG_VAL(layeridx, LCD_IF_COENG_CFG_DECOMP_CH_SEL_Msk, LCD_IF_COENG_CFG_DECOMP_CH_SEL_Pos)
+                                            | LCD_IF_COENG_CFG_DECOMP_EN ;
             }
 
 #endif
@@ -2113,8 +2138,7 @@ static void LCDC_TransErrCallback(LCDC_HandleTypeDef *lcdc, HAL_StatusTypeDef er
 
 static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc)
 {
-    uint32_t lcdc_clk_Hz = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
-    // uint32_t lcdc_pclk_Hz = HAL_RCC_GetPCLKFreq(GET_LCDC_SYSID(lcdc), 1);
+    uint32_t lcdc_clk_Hz = LCDC_GetIntfClkFreq(lcdc);
     JDI_LCD_CFG *jdi_cfg = &(lcdc->Init.cfg.jdi);
 
     uint32_t max_col, max_line;
@@ -2541,7 +2565,7 @@ static HAL_StatusTypeDef DSI_VideoMode(LCDC_HandleTypeDef *lcdc)
     uint32_t Fpclk;   //DPI pixel clk in MHz
     uint32_t Fpclk_e; //Expected DPI pixel clk which exactly matchs with DSI video(unit: MHz)
     uint32_t Flbclk;  //DSI 1 lane byte clk in MHz
-    uint32_t lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc)) / 1000000;
+    uint32_t lcdc_clk = LCDC_GetIntfClkFreq(lcdc) / 1000000;
     uint32_t DPI_div; //DPI clock divider
 
 
@@ -2629,18 +2653,7 @@ static HAL_StatusTypeDef LCDC_HW_Init(LCDC_HandleTypeDef *lcdc)
     RCC_MODULE_TYPE mod = RCC_MOD_INVALID;
 
     HAL_LCDC_ASSERT(lcdc);
-    if (lcdc->Instance == hwp_lcdc1)
-    {
-        mod = RCC_MOD_LCDC1;
-    }
-    else
-    {
-#ifdef hwp_lcdc2
-        mod = RCC_MOD_LCDC2;
-#else
-        HAL_LCDC_ASSERT(0);
-#endif /* hwp_lcdc2 */
-    }
+    mod = GET_LCDC_RCC_MOD(lcdc);
     HAL_RCC_EnableModule(mod);
     HAL_RCC_ResetModule(mod);
 
@@ -3509,8 +3522,22 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *
 
 
 #ifdef HAL_RAMLESS_LCD_ENABLED
+#ifdef SF32LB57X
+//SPI_AUX
+extern void SPI_AUX_RST_HW_FSM(void);
+extern void SPI_AUX_HW_FSM_START(LCDC_HandleTypeDef *lcdc);
+extern void SPI_AUX_HW_FSM_STOP(LCDC_HandleTypeDef *lcdc);
+extern HAL_StatusTypeDef RAMLESS_HW_FSM_READ_DATAS_START(LCDC_HandleTypeDef *lcdc, uint32_t freq, uint32_t addr, uint32_t addr_len, uint32_t data_len);
+extern HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_START(LCDC_HandleTypeDef *lcdc, uint32_t addr, uint32_t addr_len, uint8_t *p_data, uint32_t data_len);
+extern HAL_StatusTypeDef RAMLESS_HW_FSM_READ_DATAS_END(LCDC_HandleTypeDef *lcdc, uint8_t *p_data, uint32_t data_len);
+extern HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_END(LCDC_HandleTypeDef *lcdc);
 
-#ifndef SF32LB55X
+//DPI_AUX
+extern void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc);
+extern void DPI_HW_FSM_STOP(LCDC_HandleTypeDef *lcdc);
+extern void DPI_HW_FSM_UPDATE_LAYER_DATA(LCDC_HandleTypeDef *lcdc);
+extern HAL_StatusTypeDef DPI_HW_FSM_UPDATE_LAYER_DATA_DONE(LCDC_HandleTypeDef *lcdc);
+#elif !defined(SF32LB55X)
 #define  p_ptc     hwp_ptc1
 #define  p_lcd     hwp_lcdc1
 #define  PTC_IRQ_NUM     PTC1_IRQn
@@ -3518,9 +3545,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *
 #define PTC_BTIM_UPDATE      PTC_HCPU_BTIM2_UPDATE
 #define PTC_btim   hwp_btim2
 #define BTIM_RCC_MOD  RCC_MOD_BTIM2
-#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-static DMA_HandleTypeDef hdma_ptc_ch0 = {0};
-#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 static DMA_Channel_TypeDef *p_DMACH0 = NULL;
 static uint8_t PTC_DMACH0_TC = 0xFF;
 
@@ -3579,23 +3603,21 @@ static uint8_t PTC_DMACH0_TC = 0xFF;
 
 
 
-static void DMA_channel_init(void)
+static void DMA_channel_init(LCDC_HandleTypeDef *lcdc)
 {
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 
     /*Dynamic allocation of DMA channels*/
-    memset(&hdma_ptc_ch0, 0, sizeof(hdma_ptc_ch0));
-
-    hdma_ptc_ch0.Instance = DMA1_Channel5;
-    HAL_DMA_Init(&hdma_ptc_ch0);
-    if (HAL_DMA_AllocChannel(&hdma_ptc_ch0) != HAL_OK)
+    lcdc->hdma_handle.Instance = DMA1_Channel5;
+    HAL_DMA_Init(&lcdc->hdma_handle);
+    if (HAL_DMA_AllocChannel(&lcdc->hdma_handle) != HAL_OK)
     {
         HAL_LCDC_ASSERT(0); //DMA channel allocation failed
     }
 
 
-    p_DMACH0 = hdma_ptc_ch0.Instance;
-    uint32_t channel_num = (hdma_ptc_ch0.ChannelIndex >> 2) + 1;
+    p_DMACH0 = lcdc->hdma_handle.Instance;
+    uint32_t channel_num = (lcdc->hdma_handle.ChannelIndex >> 2) + 1;
     PTC_DMACH0_TC = PTC_HCPU_DMAC1_DONE1 + (channel_num - 1);
     /*DMA channel init end*/
 
@@ -3661,7 +3683,7 @@ static void SPI_AUX_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
     HAL_RCC_EnableModule(RCC_MOD_PTC1);
 
 
-    DMA_channel_init();
+    DMA_channel_init(lcdc);
 
     SPI_AUX_RST_HW_FSM();
 
@@ -3918,7 +3940,7 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_READ_DATAS_START(LCDC_HandleTypeDef *lcd
 
     HAL_LCDC_ASSERT(lcdc);
     HAL_LCDC_ASSERT(freq > 0);
-    lcdc_clk = HAL_RCC_GetHCLKFreq(GET_LCDC_SYSID(lcdc));
+    lcdc_clk = LCDC_GetIntfClkFreq(lcdc);
 
     uint32_t clk_div;
 
@@ -4189,8 +4211,6 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_END(LCDC_HandleTypeDef *lcdc
 #ifdef LCDC_SUPPORT_DPI
 static void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 {
-#if !defined(SF32LB57X) //Fix me
-
 #ifdef SF32LB56X
     __IO uint32_t *p_VSYNC_PINMUX_REG = &(hwp_pinmux1->PAD_PA42);
     const uint32_t VSYNC_GPIO_ID  =  42;
@@ -4203,7 +4223,7 @@ static void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 
 
 
-    DMA_channel_init();
+    DMA_channel_init(lcdc);
 
 
 
@@ -4562,7 +4582,6 @@ static void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
     word_memcpy((void *) & (hwp_ptc1->TCR1), (void *)PTC_PHASE_ADDR(0), PTC_TABLE_BYTE / 4);
 
     hwp_ptc1->TCR1 |= PTC_TCR1_SWTRIG;
-#endif /* !defined(SF32LB57X)*/
 }
 
 static void DPI_HW_FSM_STOP(LCDC_HandleTypeDef *lcdc)
@@ -4585,16 +4604,16 @@ static void DPI_HW_FSM_STOP(LCDC_HandleTypeDef *lcdc)
 
 #else
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-    memset(&hdma_ptc_ch0, 0, sizeof(hdma_ptc_ch0));
+    memset(&lcdc->hdma_handle, 0, sizeof(lcdc->hdma_handle));
 
     /* Clear the DMAC configuration channel*/
     if (p_DMACH0)
     {
 
 
-        hdma_ptc_ch0.Instance = p_DMACH0;
-        HAL_DMA_DeInit(&hdma_ptc_ch0);
-        if (HAL_DMA_FreeChannel(&hdma_ptc_ch0) != HAL_OK)
+        lcdc->hdma_handle.Instance = p_DMACH0;
+        HAL_DMA_DeInit(&lcdc->hdma_handle);
+        if (HAL_DMA_FreeChannel(&lcdc->hdma_handle) != HAL_OK)
         {
             HAL_LCDC_ASSERT(0); //DMA channel free failed
         }
@@ -4619,9 +4638,6 @@ static void DPI_HW_FSM_UPDATE_LAYER_DATA(LCDC_HandleTypeDef *lcdc)
 
 static HAL_StatusTypeDef DPI_HW_FSM_UPDATE_LAYER_DATA_DONE(LCDC_HandleTypeDef *lcdc)
 {
-#if defined(SF32LB57X)
-    return HAL_OK; //Fix me
-#else
     uint32_t start, end;
     LCDC_LayerCfgTypeDef *cfg = &lcdc->Layer[HAL_LCDC_LAYER_DEFAULT];
     uint32_t bytes_per_pixel, data_w, data_h;
@@ -4643,7 +4659,6 @@ static HAL_StatusTypeDef DPI_HW_FSM_UPDATE_LAYER_DATA_DONE(LCDC_HandleTypeDef *l
     }
 
     return HAL_BUSY;
-#endif
 }
 #endif /* LCDC_SUPPORT_DPI */
 
@@ -5635,10 +5650,11 @@ static void SPI_AUX_FSM_IRQHandler(LCDC_HandleTypeDef *lcdc)
 #ifdef LCDC_SUPPORT_DPI
 static void DPI_AUX_FSM_IRQHandler(LCDC_HandleTypeDef *lcdc)
 {
-//TODO:
 #ifdef hwp_ptc1
-
     hwp_ptc1->IER = 0x00;
+#elif defined(hwp_ptm1)
+    hwp_ptm1->ISR = PTM_ISR_EVT0;
+#endif /* hwp_ptc1 */
 
     //frame done interrupt
     LCDC_LOG_D("frame done!\n");
@@ -5653,7 +5669,7 @@ static void DPI_AUX_FSM_IRQHandler(LCDC_HandleTypeDef *lcdc)
             LCDC_TransCpltCallback(lcdc);
         }
     }
-#endif /* hwp_ptc1 */
+
 
 }
 #endif /* LCDC_SUPPORT_DPI */
@@ -6235,20 +6251,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_Resume(LCDC_HandleTypeDef *lcdc)
         //Re-initialize LCDC regs(DSI regs too)
         LCDC_InitTypeDef *init;
         RCC_MODULE_TYPE mod = RCC_MOD_INVALID;
-
-        if (lcdc->Instance == hwp_lcdc1)
-        {
-            mod = RCC_MOD_LCDC1;
-        }
-        else
-        {
-#ifdef hwp_lcdc2
-            mod = RCC_MOD_LCDC2;
-#else
-            HAL_LCDC_ASSERT(0);
-#endif /* hwp_lcdc2 */
-        }
-
+        mod = GET_LCDC_RCC_MOD(lcdc);
         HAL_RCC_ResetModule(mod);
 
         init = &lcdc->Init;

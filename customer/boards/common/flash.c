@@ -934,6 +934,9 @@ typedef struct
     uint8_t is_qspi;
     uint16_t msize;  /* size in Mbyte */
     uint32_t base_addr;
+#ifdef SF32LB57X
+    int32_t (*init_pinmux)(void);
+#endif /* SF32LB57x */
 } bf0_psram_config_t;
 
 typedef union
@@ -984,6 +987,9 @@ const static bf0_psram_config_t bf0_psram_cfg[] =
         .is_qspi = BSP_QSPI1_MODE,
         .msize = BSP_QSPI1_MEM_SIZE,
         .base_addr = QSPI1_MEM_BASE,
+#ifdef SF32LB57X
+        .init_pinmux = bsp_psram1_pinmux_init,
+#endif /* SF32LB57X */
     },
 #endif /* BSP_USING_PSRAM1 */
 #ifdef BSP_USING_PSRAM2
@@ -993,6 +999,9 @@ const static bf0_psram_config_t bf0_psram_cfg[] =
         .is_qspi = BSP_QSPI2_MODE,
         .msize = BSP_QSPI2_MEM_SIZE,
         .base_addr = QSPI2_MEM_BASE,
+#ifdef SF32LB57X
+        .init_pinmux = bsp_psram2_pinmux_init,
+#endif /* SF32LB57X */
     },
 #endif /* BSP_USING_PSRAM2 */
 };
@@ -1288,6 +1297,7 @@ void bsp_psram_wait_idle(char *name)
 }
 
 #else   // ! SF32LB55X
+
 static uint8_t psram_get_default_type(uint32_t mpi_id)
 {
     uint8_t psram_type = SPI_MODE_NOR;
@@ -1369,6 +1379,8 @@ static uint8_t psram_get_default_type(uint32_t mpi_id)
 #endif
         }
     }
+#elif defined(SF32LB57X)
+    psram_type = bsp_psram_get_mpi_mode(mpi_id);
 #endif
 
     return psram_type;
@@ -1446,6 +1458,12 @@ int bsp_psramc_init(void)
             else
                 handle->wakeup = 0;
 
+#ifdef SF32LB57X
+            if (0 != bf0_psram_cfg[i].init_pinmux())
+            {
+                HAL_ASSERT(0);
+            }
+#endif /* SF32LB57X  */
             HAL_MPI_PSRAM_Init(handle, &qspi_cfg, psram_clk_div[i]);
         }
     }
@@ -1462,20 +1480,23 @@ uint32_t bsp_psram_get_clk(uint32_t addr)
     uint32_t freq;
     uint32_t i;
     uint16_t psram_num;
+    FLASH_HandleTypeDef *handle;
 
     freq = 0;
     psram_num = sizeof(bf0_psram_cfg) / sizeof(bf0_psram_cfg[0]);
+
     for (i = 0; i < psram_num; i++)
     {
         if (bf0_psram_cfg[i].base_addr == addr
                 || (HCPU_MPI_SBUS_ADDR(bf0_psram_cfg[i].base_addr) == HCPU_MPI_SBUS_ADDR(addr)))
         {
 
-            if (bf0_psram_cfg[i].is_qspi)
+            handle = &bf0_psram_handle[i].qspi_handle;
+            if (handle->isNand)
             {
-                freq = HAL_QSPI_GET_CLK(&bf0_psram_handle[i].qspi_handle);
+                freq = HAL_QSPI_GET_CLK(handle);
 
-                if (bf0_psram_cfg[i].is_qspi != SPI_MODE_PSRAM) // for ALL OPI, freq auto div 2
+                if (handle->isNand != SPI_MODE_PSRAM) // for ALL OPI, freq auto div 2
                     freq /= 2;
             }
 
@@ -1494,17 +1515,21 @@ uint32_t bsp_psram_get_clk(uint32_t addr)
  */
 int bsp_psram_update_refresh_rate(char *name, uint32_t value)
 {
+    FLASH_HandleTypeDef *handle;
     int i = psram_name2id(name);
     if (i < 0)
+    {
         return -1;
-
-    if (bf0_psram_cfg[i].is_qspi == SPI_MODE_LEGPSRAM)
-    {
-        HAL_LEGACY_SET_REFRESH(&bf0_psram_handle[i].qspi_handle, value);
     }
-    else if ((bf0_psram_cfg[i].is_qspi == SPI_MODE_HPSRAM) || (bf0_psram_cfg[i].is_qspi == SPI_MODE_OPSRAM))
+
+    handle = &bf0_psram_handle[i].qspi_handle;
+    if (handle->isNand == SPI_MODE_LEGPSRAM)
     {
-        HAL_MPI_SET_REFRESH(&bf0_psram_handle[i].qspi_handle, value);
+        HAL_LEGACY_SET_REFRESH(handle, value);
+    }
+    else if ((handle->isNand == SPI_MODE_HPSRAM) || (handle->isNand == SPI_MODE_OPSRAM))
+    {
+        HAL_MPI_SET_REFRESH(handle, value);
     }
 
     return 0;
@@ -1517,11 +1542,15 @@ int bsp_psram_update_refresh_rate(char *name, uint32_t value)
  */
 int bsp_psram_enter_low_power(char *name)
 {
+    FLASH_HandleTypeDef *handle;
     int i = psram_name2id(name);
     if (i < 0)
+    {
         return -1;
+    }
 
-    HAL_MPI_PSRAM_ENT_LOWP(&bf0_psram_handle[i].qspi_handle, bf0_psram_cfg[i].is_qspi);
+    handle = &bf0_psram_handle[i].qspi_handle;
+    HAL_MPI_PSRAM_ENT_LOWP(handle, handle->isNand);
 
     return 0;
 }
@@ -1533,21 +1562,26 @@ int bsp_psram_enter_low_power(char *name)
  */
 int bsp_psram_deep_power_down(char *name)
 {
+    FLASH_HandleTypeDef *handle;
+
     int i = psram_name2id(name);
     if (i < 0)
+    {
         return -1;
+    }
 
-    if (bf0_psram_cfg[i].is_qspi == SPI_MODE_LEGPSRAM)  // legacy
+    handle = &bf0_psram_handle[i].qspi_handle;
+    if (handle->isNand == SPI_MODE_LEGPSRAM)  // legacy
     {
-        HAL_LEGACY_PSRAM_SLEEP(&bf0_psram_handle[i].qspi_handle);
+        HAL_LEGACY_PSRAM_SLEEP(handle);
     }
-    else if (bf0_psram_cfg[i].is_qspi == SPI_MODE_HBPSRAM)  // hyper bus
+    else if (handle->isNand == SPI_MODE_HBPSRAM)  // hyper bus
     {
-        HAL_HYPER_PSRAM_DPD(&bf0_psram_handle[i].qspi_handle);
+        HAL_HYPER_PSRAM_DPD(handle);
     }
-    else if (bf0_psram_cfg[i].is_qspi != SPI_MODE_PSRAM)    // opi/hpi
+    else if (handle->isNand != SPI_MODE_PSRAM)    // opi/hpi
     {
-        HAL_MPI_PSRAM_DPD(&bf0_psram_handle[i].qspi_handle);
+        HAL_MPI_PSRAM_DPD(handle);
     }
 
     return 0;
@@ -1560,11 +1594,15 @@ int bsp_psram_deep_power_down(char *name)
  */
 int bsp_psram_exit_low_power(char *name)
 {
+    FLASH_HandleTypeDef *handle;
     int i = psram_name2id(name);
     if (i < 0)
+    {
         return -1;
+    }
 
-    HAL_MPI_EXIT_LOWP(&bf0_psram_handle[i].qspi_handle, bf0_psram_cfg[i].is_qspi);
+    handle = &bf0_psram_handle[i].qspi_handle;
+    HAL_MPI_EXIT_LOWP(handle, handle->isNand);
 
     return 0;
 }
@@ -1579,18 +1617,23 @@ int bsp_psram_exit_low_power(char *name)
  */
 int bsp_psram_set_pasr(char *name, uint8_t top, uint8_t deno)
 {
+    FLASH_HandleTypeDef *handle;
     int i = psram_name2id(name);
     if (i < 0)
-        return -1;
-
-    if (bf0_psram_cfg[i].is_qspi == SPI_MODE_LEGPSRAM)
     {
-        HAL_LEGACY_PSRAM_SET_PASR(&bf0_psram_handle[i].qspi_handle, top, deno);
+        return -1;
     }
-    else if ((bf0_psram_cfg[i].is_qspi == SPI_MODE_OPSRAM) || (bf0_psram_cfg[i].is_qspi == SPI_MODE_HPSRAM))
+
+
+    handle = &bf0_psram_handle[i].qspi_handle;
+    if (handle->isNand == SPI_MODE_LEGPSRAM)
+    {
+        HAL_LEGACY_PSRAM_SET_PASR(handle, top, deno);
+    }
+    else if ((handle->isNand == SPI_MODE_OPSRAM) || (handle->isNand == SPI_MODE_HPSRAM))
     {
         // write a empty command to chip to make psram wake up
-        HAL_MPI_PSRAM_SET_PASR(&bf0_psram_handle[i].qspi_handle, top, deno);
+        HAL_MPI_PSRAM_SET_PASR(handle, top, deno);
     }
 
     return 0;
@@ -1609,7 +1652,7 @@ int bsp_psram_auto_calib(char *name, uint8_t *sck, uint8_t *dqs)
     if (i < 0)
         return -1;
 
-#if defined(SF32LB56X) || defined(SF32LB52X)
+#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     HAL_MPI_OPSRAM_AUTO_CAL(&bf0_psram_handle[i].qspi_handle, sck, dqs);
 
     return 0;
@@ -1626,27 +1669,31 @@ void bsp_psram_wait_idle(char *name)
 {
     int i;
     volatile int value;
+    FLASH_HandleTypeDef *handle;
 
     i = psram_name2id(name);
     if (i < 0)
+    {
         return;
+    }
 
-    if (bf0_psram_cfg[i].is_qspi == SPI_MODE_LEGPSRAM)
+    handle = &bf0_psram_handle[i].qspi_handle;
+    if (handle->isNand == SPI_MODE_LEGPSRAM)
     {
-        value = HAL_LEGACY_MR_READ(&bf0_psram_handle[i].qspi_handle, 4);
+        value = HAL_LEGACY_MR_READ(handle, 4);
     }
-    else if (bf0_psram_cfg[i].is_qspi == SPI_MODE_HBPSRAM)
+    else if (handle->isNand == SPI_MODE_HBPSRAM)
     {
-        value = HAL_HYPER_PSRAM_ReadID(&bf0_psram_handle[i].qspi_handle, 0);
+        value = HAL_HYPER_PSRAM_ReadID(handle, 0);
     }
-    else if (bf0_psram_cfg[i].is_qspi == SPI_MODE_PSRAM)
+    else if (handle->isNand == SPI_MODE_PSRAM)
     {
-        HAL_FLASH_MANUAL_CMD(&bf0_psram_handle[i].qspi_handle, 0, 0, 0, 0, 0, 0, 0, 1);
-        HAL_FLASH_SET_CMD(&bf0_psram_handle[i].qspi_handle, 0, 0);
+        HAL_FLASH_MANUAL_CMD(handle, 0, 0, 0, 0, 0, 0, 0, 1);
+        HAL_FLASH_SET_CMD(handle, 0, 0);
     }
     else
     {
-        value = HAL_MPI_MR_READ(&bf0_psram_handle[i].qspi_handle, 4);
+        value = HAL_MPI_MR_READ(handle, 4);
     }
 
 }

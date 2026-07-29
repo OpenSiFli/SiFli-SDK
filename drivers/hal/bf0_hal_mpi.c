@@ -626,6 +626,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_ENABLE_HYPER(FLASH_HandleTypeDef *hfl
     {
         hflash->Instance->DCR &= (~MPI_DCR_HYPER);
     }
+#else
+    if (en)
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, MPI_DCR_PROT_HYPER_BUS);
+    }
+    else
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, 0);
+    }
 #endif /* MPI_DCR_HYPER */
 
     return HAL_OK;
@@ -703,6 +712,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_SET_LEGACY(FLASH_HandleTypeDef *hflas
         hflash->Instance->DCR |= MPI_DCR_XLEGACY;
     else
         hflash->Instance->DCR &= ~MPI_DCR_XLEGACY;
+#else
+    if (en)
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, MPI_DCR_PROT_XCCELA_LEGACY);
+    }
+    else
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, 0);
+    }
 #endif /* MPI_DCR_XLEGACY */
 
     return HAL_OK;
@@ -748,8 +766,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_SET_X16_MODE(FLASH_HandleTypeDef *hfl
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_EN_FIXLAT(FLASH_HandleTypeDef *hflash, uint8_t fix)
 {
+    /* For SoC (e.g. sf32lb57x ) without register DCR.FIXLAT,
+     *  no need to configure this register and MPI would behave accordig to protocol type
+     */
 #ifdef MPI_DCR_FIXLAT
-//TODO:
+
     if (hflash == NULL)
         return HAL_ERROR;
 
@@ -773,6 +794,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_SET_HYPER(FLASH_HandleTypeDef *hflash, 
         hflash->Instance->DCR |= MPI_DCR_HYPER;
     else
         hflash->Instance->DCR &= ~MPI_DCR_HYPER;
+#else
+    if (hyper)
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, MPI_DCR_PROT_HYPER_BUS);
+    }
+    else
+    {
+        MODIFY_REG(hflash->Instance->DCR, MPI_DCR_PROT_Msk, 0);
+    }
 #endif /* MPI_DCR_HYPER */
 
     return HAL_OK;
@@ -849,6 +879,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_CFG_DTR(FLASH_HandleTypeDef *hflash, ui
         value |= (MPI_MISCR_SCKINV);
     }
     hflash->Instance->MISCR = value;
+#else
+    if (en)
+    {
+        hflash->Instance->MISCR &= ~MPI_MISCR_SCKINV;
+    }
+    else
+    {
+        hflash->Instance->MISCR |= MPI_MISCR_SCKINV;
+    }
 #endif
 
     return HAL_OK;

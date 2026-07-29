@@ -35,6 +35,8 @@ extern "C" {
 #define HAL_RAMLESS_LCD_ENABLED
 #ifdef SF32LB55X
 #define RAMLESS_AUTO_REFR_CODE_SIZE_IN_WORD 384
+#elif defined(SF32LB57X)
+#define RAMLESS_AUTO_REFR_CODE_SIZE_IN_WORD 256
 #else
 #define RAMLESS_AUTO_REFR_CODE_SIZE_IN_WORD 512
 #endif /* SF32LB55X */
@@ -91,7 +93,10 @@ extern "C" {
 */
 #ifndef SF32LB52X
 #define LCDC_SUPPORT_DPI
-#ifdef SF32LB58X
+/* LCDC_DPI_MAX_WIDTH: max width of dpi interface direct supported*/
+#if defined(SF32LB57X)
+#define LCDC_DPI_MAX_WIDTH 0
+#elif defined(SF32LB58X)
 #define LCDC_DPI_MAX_WIDTH 1024
 #else
 #define LCDC_DPI_MAX_WIDTH 512
@@ -149,6 +154,8 @@ typedef enum
 {
     LCDC_INTF_DBI_8BIT_A,                   //!< MIPI DBI type A interface(8080 8-bit  Clocked E mode)
     LCDC_INTF_DBI_8BIT_B,                   //!< MIPI DBI type B interface(8080 8-bit)
+    LCDC_INTF_DBI_16BIT_A,
+    LCDC_INTF_DBI_16BIT_B,
     LCDC_INTF_AHB,                   //!< output to AHB buffer (RAM/PSRAM)
 
     LCDC_INTF_SPI_START,
@@ -572,6 +579,9 @@ typedef struct __LCDC_HandleTypeDef
     uint8_t *sram_buf0;
     uint8_t *sram_buf1;
     uint32_t sram_buf_bytes;
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    DMA_HandleTypeDef hdma_handle;
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 #endif /* HAL_RAMLESS_LCD_ENABLED */
 
 #ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
@@ -651,7 +661,9 @@ typedef struct __LCDC_HandleTypeDef
 
 #define HAL_LCDC_IS_SPI_IF(lcd_itf) (((lcd_itf) >= LCDC_INTF_SPI_START) && ((lcd_itf) <= LCDC_INTF_SPI_END))
 #define HAL_LCDC_IS_AHB_IF(lcd_itf) ((lcd_itf) == LCDC_INTF_AHB)
-#define HAL_LCDC_IS_DBI_IF(lcd_itf) (((lcd_itf) == LCDC_INTF_DBI_8BIT_A) || ((lcd_itf) == LCDC_INTF_DBI_8BIT_B))
+#define HAL_LCDC_IS_DBI_8BIT_IF(lcd_itf) (((lcd_itf) == LCDC_INTF_DBI_8BIT_A) || ((lcd_itf) == LCDC_INTF_DBI_8BIT_B))
+#define HAL_LCDC_IS_DBI_16BIT_IF(lcd_itf) (((lcd_itf) == LCDC_INTF_DBI_16BIT_A) || ((lcd_itf) == LCDC_INTF_DBI_16BIT_B))
+#define HAL_LCDC_IS_DBI_IF(lcd_itf) (HAL_LCDC_IS_DBI_8BIT_IF(lcd_itf) || HAL_LCDC_IS_DBI_16BIT_IF(lcd_itf))
 #define HAL_LCDC_IS_DSI_IF(lcd_itf) (((lcd_itf) == LCDC_INTF_DSI) || ((lcd_itf) == LCDC_INTF_DSI_VIDEO))
 #define HAL_LCDC_IS_DSI_CMD_IF(lcd_itf) ((lcd_itf) == LCDC_INTF_DSI)
 #define HAL_LCDC_IS_DSI_VID_IF(lcd_itf) ((lcd_itf) == LCDC_INTF_DSI_VIDEO)

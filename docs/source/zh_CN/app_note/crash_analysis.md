@@ -247,7 +247,7 @@ hardfault发生时会打印如下信息，最后打印hardfault的类型，如�
 
 ## 3. 保存现场 
 
-```{only} SF32LB52X 
+```{only} SF32LB52X or SF32LB57X
 ### 3.1 通过UART访问芯片保存现场
 
 #### 3.1.1 方法1：使用SifliUsartServer软件
@@ -507,7 +507,7 @@ hardfault发生时会打印如下信息，最后打印hardfault的类型，如�
 ![](../../assets/sf32lb58x.png)
 
 
-#### 3.2.2 方法2：使用AssertDumpUart软件
+#### 3.1.2 方法2：使用AssertDumpUart软件
 
 _AssertDumpUart.exe_ 在Sifli_Trace工具包文件夹下
 
@@ -560,6 +560,63 @@ _AssertDumpUart.exe_ 在Sifli_Trace工具包文件夹下
 - _lcpu_ram.bin_: 224Kbyte的LCPU RAM数据
 - _lcpu_dtcm.bin_: 16Kbyte的LCPU DTCM数据
 
+```{only} SF32LB52X or SF32LB55X or SF32LB58X or SF32LB57X
+### 3.2 使用sdk.py命令行导出兼容目录
+```
+
+```{only} SF32LB56X
+### 3.3 使用sdk.py命令行导出兼容目录
+```
+
+在工程目录下编译出对应的ELF/AXF后，可以使用 `sdk.py crash-dump capture-live` 直接导出 Trace32/AssertDump 兼容目录。例如：
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport uart \
+  --probe /dev/ttyUSB0 \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+`--probe` 用于指定 UART DEBUG IP 所在的串口。Linux 下可使用 `/dev/ttyUSB0`，macOS 下通常为 `/dev/cu.*`，请替换为实际设备路径。
+
+如果板子需要导出 PSRAM，增加 `--include-psram`，也可以用 `--psram-size 8MB` 手动指定 PSRAM 脚本。导出过程中会按文件显示进度。
+
+如果使用 SifliUsartServer 加 J-Link 的 IP 方式导出，使用 `--transport jlink --jlink-ip 127.0.0.1:19025`。只导出单个核心时可增加 `--core hcpu` 或 `--core lcpu`。示例：
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport jlink \
+  --jlink-ip 127.0.0.1:19025 \
+  --core hcpu \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+此时 SDK 会保留 `.jlink` 脚本中的 IP 连接方式，不会改成 USB J-Link；`--core hcpu` 会过滤 LCPU/LPSYS 导出项，并移除脚本中的切核命令。
+
+输出目录中会默认包含 Trace32/AssertDump 可直接使用的 `*.bin`、`hcpu.axf`、`log.txt` 和兼容格式 `manifest.json`。SDK/AI 后续分析使用的完整元数据保存在 `sdk_manifest.json`。
+
+如果需要按 GDB core 文件方式分析，先生成现场 ELF：
+
+```bash
+sdk.py crash-dump readcore \
+  --package /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
+  --output /tmp/live-crash/coredump.elf
+```
+
+然后使用现场 ELF 和程序 ELF 进行离线分析：
+
+```bash
+sdk.py crash-dump analyze \
+  --core /tmp/live-crash/coredump.elf \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
 
 
 ## 4. 恢复现场
@@ -683,5 +740,3 @@ signal_cb是函数地址，在窗口最下方的命令行中输入L 100DC9A1命�
 打开反汇编窗口显示该地址对应的汇编代码，可知这个函数是lv_img_signal，所以是lv_img控件申请的内存。当出现内存泄漏时，可以结合申请者地址和申请时间分析哪个地方申请了内存但没有释放。
 
 ![](../../assets/crash_analysis_heap_example.png)
-
-

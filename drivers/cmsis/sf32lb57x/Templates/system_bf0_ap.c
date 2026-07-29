@@ -93,7 +93,7 @@ __WEAK void mpu_config(void)
     rnr = 0;
 
     // XIP Code region
-    rbar = ARM_MPU_RBAR(0x64000000, ARM_MPU_SH_NON, 1, 1, 0); //Non-shareable,RO,any privilege,executable
+    rbar = ARM_MPU_RBAR(0x62000000, ARM_MPU_SH_NON, 1, 1, 0); //Non-shareable,RO,any privilege,executable
     rlar = ARM_MPU_RLAR(0x6FFFFFFF, ATTR_CODE_IDX);
     ARM_MPU_SetRegion(rnr++, rbar, rlar);
 
@@ -178,9 +178,9 @@ __WEAK void mpu_config(void)
     // psram
     rbar = ARM_MPU_RBAR(0x60000000, ARM_MPU_SH_NON, 0, 1, 0); //Non-shareable,RW,any privilege,executable
 #ifdef PSRAM_CACHE_WB
-    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_PSRAM_WB_IDX);
+    rlar = ARM_MPU_RLAR(0x63ffffff, ATTR_PSRAM_WB_IDX);
 #else
-    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_PSRAM_WT_IDX);
+    rlar = ARM_MPU_RLAR(0x63ffffff, ATTR_PSRAM_WT_IDX);
 #endif
 
     ARM_MPU_SetRegion(rnr++, rbar, rlar);
@@ -276,6 +276,7 @@ __WEAK int mpu_dcache_clean(void *data, uint32_t size)
 __WEAK int mpu_dcache_invalidate(void *data, uint32_t size)
 {
     int r = 0;
+#if defined(__DCACHE_PRESENT) && (__DCACHE_PRESENT == 1U)
     if (IS_DCACHED_RAM(data))
     {
         if (size > DCACHE_SIZE)
@@ -286,12 +287,14 @@ __WEAK int mpu_dcache_invalidate(void *data, uint32_t size)
         else
             SCB_InvalidateDCache_by_Addr(data, size);
     }
+#endif /* __DCACHE_PRESENT == 1U */
     return r;
 }
 
 __WEAK int mpu_icache_invalidate(void *data, uint32_t size)
 {
     int r = 0;
+#if defined(__ICACHE_PRESENT) && (__ICACHE_PRESENT == 1U)
     if (IS_DCACHED_RAM(data))
     {
         if (size > ICACHE_SIZE)
@@ -302,6 +305,7 @@ __WEAK int mpu_icache_invalidate(void *data, uint32_t size)
         else
             SCB_InvalidateICache_by_Addr(data, size);
     }
+#endif /* __ICACHE_PRESENT == 1U */
     return r;
 }
 
@@ -312,6 +316,11 @@ __WEAK void cache_enable(void)
 
 }
 
+__WEAK void cache_disable(void)
+{
+    SCB_DisableICache();
+    SCB_DisableDCache();
+}
 
 typedef void (*scatter_load_fun)(uint32_t, uint32_t, uint32_t);
 
@@ -413,7 +422,9 @@ void SystemInit(void)
 
     {
         hw_preinit0();
+        cache_disable();
         mpu_config();
+        cache_enable();
     }
 
     SystemPowerOnModeInit();

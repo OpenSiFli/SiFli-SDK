@@ -146,7 +146,7 @@ typedef enum
     PMU_PERI_LDO3_3V3     = PMUC_PERI_LDO_EN_VDD33_LDO3_Pos,
 } PMU_PeriLdoTypeDef;
 
-#endif /* SF32LB52X */
+#endif /* SF32LB52X || SF32LB57X */
 
 ///@} PMU_Exported_Types
 
@@ -990,7 +990,7 @@ uint8_t HAL_PMU_ChgConfigEocCc(PMU_ChgHandleTypeDef *handle, uint8_t percent);
  */
 HAL_StatusTypeDef HAL_PMU_ConfigPeriLdo(PMU_PeriLdoTypeDef ldo, bool en, bool wait);
 
-#endif /* SF32LB52X */
+#endif /* SF32LB52X || SF32LB57X */
 
 /**
  * @brief Load PMU calibration data to PMU register

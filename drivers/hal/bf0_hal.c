@@ -163,7 +163,7 @@ HAL_StatusTypeDef HAL_Init(void)
 //#ifndef SF32LB52X
         // Except Standby mode, all other boot mode need to re-calibrate RC48
         status = HAL_RCC_CalibrateRC48();
-#if  !defined(TARMAC) && (!defined(SF32LB57X) || !defined(FPGA))
+#if  !defined(TARMAC) && !defined(FPGA)
         //TODO: 57x need to calibrate as 50MHz
         HAL_ASSERT(HAL_OK == status);
 #endif

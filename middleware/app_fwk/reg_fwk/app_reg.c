@@ -60,7 +60,7 @@
     #include "app_tool_comm.h"
 #endif
 
-#include "app_module.h"
+#include "lvsf_resource.h"
 
 #if defined (_MSC_VER)
 #ifndef STR

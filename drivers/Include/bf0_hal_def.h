@@ -345,7 +345,7 @@ extern "C" {
     _FOREACH_FUNC_##N(fn, pad, __VA_ARGS__)
 
 
-#endif /* !WIN32 */    
+#endif /* !WIN32 */
 
 #define HAL_CONCAT_2_(p1, p2)     p1##p2
 
@@ -553,7 +553,13 @@ typedef enum
 #endif /* _MSC_VER */
 
 /** RAM retained rodata section */
-#define HAL_RAM_RET_RODATA_SECT(section_name)            HAL_SECTION(HAL_STRINGIFY(.l1_ret_rodata_##section_name))
+#if  defined(_MSC_VER)
+#define HAL_RAM_RET_RODATA_SECT(section_name, var)        var
+#elif defined(__IAR_SYSTEMS_ICC__)
+#define HAL_RAM_RET_RODATA_SECT(section_name, var)        var HAL_SECTION(HAL_STRINGIFY(.l1_ret_rodata_##section_name))
+#else
+#define HAL_RAM_RET_RODATA_SECT(section_name, var)        HAL_SECTION(HAL_STRINGIFY(.l1_ret_rodata_##section_name)) var
+#endif /* _MSC_VER */
 
 #if defined(__CC_ARM) || defined(__CLANG_ARM)
 #define HAL_RETM_BSS_SECT(section_name, var)             var HAL_SECTION(HAL_STRINGIFY(.bss.retm_bss_##section_name))

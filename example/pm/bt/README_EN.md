@@ -5,6 +5,7 @@ The wake-up PIN varies on different development boards, with the following corre
     - EC-LB58X: Uses PA64
     - EH-LB561/EH-LB563: Uses PB34, corresponding to HR_INT on HDK
     - EH-ss6500/EH-LB523/EH-LB520: Uses PA24, corresponding to GPS_PEN on HDK
+    - 57 evb: Use PA24
 
 When the wake-up PIN is at low level, both HCPU and LCPU cannot enter low power mode.
 At this time, commands can be sent through HCPU Console to modify parameters.

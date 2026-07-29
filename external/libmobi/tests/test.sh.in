@@ -1,0 +1,175 @@
+#!@BASH_PATH@
+# test.sh
+# Copyright (c) 2015 Bartek Fabiszewski
+# http://www.fabiszewski.net
+#
+# This file is part of libmobi.
+# Licensed under LGPL, either version 3, or any later.
+# See <http://www.gnu.org/licenses/>
+
+# Usage: test.sh filename <optional parameters passed to tested tool>
+
+if [[ $# < 1 ]]; then
+    die "Wrong number of input parameters: $#" 1
+fi
+
+if [[ "x@WIN32@" == "xyes" ]]; then
+    testfile="${1//\//\\}"
+    separator=\\
+else
+    testfile="${1}"
+    separator=\/
+fi
+basefile="${testfile##*[/\\]}"
+testfile_md5=
+md5file_markup=
+md5file_rawml=
+shift
+options="$@"
+markup_dir="${basefile%.*}_markup"
+tmp_dir="tmp"
+rawml_file="${basefile%.*}.rawml"
+md5prog="@MD5PROG@"
+mobitool="..${separator}tools${separator}mobitool"
+mobidrm="..${separator}tools${separator}mobidrm"
+pid=
+do_md5=1
+is_encrypted=0
+skip=77
+
+log() {
+    echo
+    echo "[ $1 ]"
+    echo
+}
+
+die() {
+    log "${testfile}: $1"
+    exit $2
+}
+
+[[ -f "${testfile}" ]] || die "Missing sample file: ${testfile}" $skip
+[[ -x "${mobitool}" ]] || die "Missing mobitool" $skip
+
+if [[ "${basefile}" == 'sample-drm'* ]]; then
+    [[ "x@ENCRYPTION_OPT@" == "xyes" ]] || die "Encryption is disabled" $skip
+    
+    is_encrypted=1
+    
+    if [[ "${basefile}" == 'sample-drm_pid'* ]]; then
+        pid=${basefile:14:10}
+        if [[ "${pid}" =~ [^a-zA-Z0-9^] ]]; then
+            log "Ignoring incorrect pid ${pid}"
+        else
+            pid=${pid//^/*}
+            options="${options} -p ${pid}"
+            log "Using pid ${pid}"
+        fi
+    fi
+fi
+
+if [[ -z "${md5prog}" ]]; then
+    do_md5=0
+    log "Missing md5 tool: ${md5prog}, will skip md5 tests"
+else
+    testfile_md5=$(${md5prog} "${testfile//\\/\/}")
+    testfile_md5=${testfile_md5%% *}
+    md5file_markup="@srcdir@${separator}md5${separator}${testfile_md5}_markup.md5"
+    md5file_rawml="@srcdir@${separator}md5${separator}${testfile_md5}_rawml.md5"
+fi
+
+# create tmp dir
+mkdir -p "${tmp_dir}"
+
+# recreate source files
+rm -rf "${tmp_dir}/${markup_dir}"
+log "Running ${mobitool} -o \"${tmp_dir}\" -s ${options} \"${testfile}\""
+${mobitool} -o "${tmp_dir}" -s ${options} "${testfile}" || die "Recreating source failed, mobitool error ($?)" $?
+[[ -d "${tmp_dir}${separator}${markup_dir}" ]] || die "Recreating source failed" 1
+
+# verify checksums
+if [[ "${do_md5}" -eq "1" ]]; then
+    if [[ -f "${md5file_markup}" ]]; then
+        (
+            cd "${tmp_dir}${separator}${markup_dir}" || die "Could not change directory to ${tmp_dir}${separator}${markup_dir}" $?
+            rm -f "..${separator}${testfile_md5}.md5"
+            ${md5prog} * > "..${separator}${testfile_md5}.md5"
+            diff -w "..${separator}${testfile_md5}.md5" "..${separator}..${separator}${md5file_markup}" || die "Wrong md5 checksum in ${markup_dir}" $?
+            rm -f "..${separator}${testfile_md5}.md5"
+        ) || exit $?
+        log "Checksum correct"
+    else
+        log "No checksums file: ${md5file_markup}, skipping md5 test"
+        die "Missing markup checksums file" $skip
+    fi
+fi
+rm -rf "${tmp_dir}${separator}${markup_dir}"
+
+# dump rawml
+rm -f "${tmp_dir}${separator}${rawml_file}"
+log "Running ${mobitool} -o \"${tmp_dir}\" -d ${options} \"${testfile}\""
+${mobitool} -o "${tmp_dir}" -d ${options} "${testfile}" || die "Dumping rawml failed, mobitool error ($?)" $?
+[[ -f "${tmp_dir}${separator}${rawml_file}" ]] || die "Dumping rawml failed" 1
+
+# verify checksum
+if [[ "${do_md5}" -eq "1" ]]; then
+    if [[ -f "${md5file_rawml}" ]]; then
+        md5_1=$(cat ${md5file_rawml})
+        md5_2=$(${md5prog} "${tmp_dir}/${rawml_file}")
+        [[ "${md5_1%% *}" == "${md5_2%% *}" ]] || die "Wrong md5 checksum for ${rawml_file} (${md5_1%% *} != ${md5_2%% *})" 1
+        log "Checksum correct"
+    else
+        log "No checksums file: ${md5file_rawml}, skipping md5 test"
+        die "Missing rawml checksums file" $skip
+    fi
+fi
+rm -f "${tmp_dir}${separator}${rawml_file}"
+
+# test encryption / decryption
+[[ "x@ENCRYPTION_OPT@" == "xyes" ]] || exit 0
+
+if [[ "${is_encrypted}" -eq "1" ]]; then
+    options="-d ${options}"
+    verify_options="-s"
+    suffix=decrypted
+else
+    options="-e -s B001XXXXXXXXXXXX ${options}"
+    verify_options="-s -P B001XXXXXXXXXXXX"
+    suffix=encrypted
+fi
+
+drm_file="${basefile%.*}-${suffix}"
+drm_markup="${drm_file}_markup"
+
+rm -f "${tmp_dir}${separator}${drm_file}."*
+
+log "Running ${mobidrm} -o \"${tmp_dir}\" ${options} \"${testfile}\""
+output="$(${mobidrm} -o "${tmp_dir}" ${options} "${testfile}" 2>&1)"
+status=$?
+echo "${output}"
+
+if [[ "${status}" -ne "0" ]]; then
+    if [[ "${output}" == *"Can't remove DRM from rented documents"* ]]; then
+        log "Exiting with success as rented document should not be processed"
+        exit 0
+    else
+        die "DRM operation failed, mobidrm error (${status})" ${status}
+    fi
+fi
+
+drm_files=()
+
+[[ -f "${tmp_dir}${separator}${drm_file}.mobi" ]] && drm_files+=("${drm_file}.mobi")
+[[ -f "${tmp_dir}${separator}${drm_file}.azw3" ]] && drm_files+=("${drm_file}.azw3")
+
+[[ ${#drm_files[@]} -eq 0 ]] && die "DRM operation failed" 1
+
+# verify
+for drm_file in ${drm_files[@]}; do
+    log "Running ${mobitool} -o \"${tmp_dir}\" ${verify_options} \"${tmp_dir}${separator}${drm_file}\""
+    ${mobitool} -o "${tmp_dir}" ${verify_options} "${tmp_dir}${separator}${drm_file}" || die "DRM operation produced broken file, mobitool error ($?)" $?
+    rm -f "${tmp_dir}${separator}${drm_file}"
+    rm -rf "${tmp_dir}${separator}${drm_markup}"
+done
+
+exit 0

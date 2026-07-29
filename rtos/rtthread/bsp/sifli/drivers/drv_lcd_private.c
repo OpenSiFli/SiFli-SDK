@@ -100,6 +100,19 @@ void PTC1_IRQHandler(void)
     HAL_LCDC_PTC_IRQHandler(lcdc);
     rt_interrupt_leave();
 }
+
+
+void PTM1_CORE0_IRQHandler(void)
+{
+    LCDC_HandleTypeDef *lcdc = NULL;
+    rt_interrupt_enter();
+
+    lcdc =  get_drv_lcd_handler();
+    RT_ASSERT(RT_NULL != lcdc);
+
+    HAL_RAMLESS_LCD_IRQHandler(lcdc);
+    rt_interrupt_leave();
+}
 #endif
 
 

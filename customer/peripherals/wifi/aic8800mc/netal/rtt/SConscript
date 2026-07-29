@@ -1,0 +1,12 @@
+# for module compiling
+import os
+from building import *
+
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+list = os.listdir(cwd)
+
+src = Glob('*.c')
+objs = DefineGroup('wifi', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('objs')

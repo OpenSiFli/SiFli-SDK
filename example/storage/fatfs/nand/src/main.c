@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -16,6 +21,8 @@
 #else
     #define FS_ROOT "root"
 #endif
+
+#define FS_ROOT_NAND "root_n"
 
 #define KBYTE(n) ((n) * 1024)
 
@@ -151,7 +158,9 @@ MSH_CMD_EXPORT_ALIAS(fs_test_cmd, fs_test, Test file system performance);
 
 int mnt_init(void)
 {
-    register_mtd_device(FS_REGION_START_ADDR, FS_REGION_SIZE, FS_ROOT);
+    register_mtd_dhara_device(FS_REGION_START_ADDR - FS_REGION_OFFSET,
+                              FS_REGION_OFFSET, FS_REGION_SIZE,
+                              FS_ROOT, FS_ROOT_NAND);
     if (dfs_mount(FS_ROOT, "/", "elm", 0, 0) == 0) // fs exist
     {
         rt_kprintf("mount fs on flash to root success\n");

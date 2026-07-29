@@ -16,8 +16,10 @@ watch_complication.md
 file_system.md
 logger.md
 dfu_service/index.md
+dfu_v2.md
 ipc_queue.md
 gauss.md
+lvgl_v8/index.md
 security.md
 multimedia.md
 audio_server.md

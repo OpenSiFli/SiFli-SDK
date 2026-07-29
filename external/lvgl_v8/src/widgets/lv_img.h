@@ -230,6 +230,20 @@ lv_img_size_mode_t lv_img_get_size_mode(lv_obj_t * obj);
 /** Use this macro to declare an image in a C file*/
 #define LV_IMG_DECLARE(var_name) extern const lv_img_dsc_t var_name;
 
+/**
+ * Decode an image descriptor and set the decoded buffer as an image object's source.
+ * The decoded buffer is kept until lv_img_free_decoder_src() is called.
+ * @param img       pointer to an image object
+ * @param src       pointer to an image descriptor
+ */
+void lv_img_set_decoder_src(lv_obj_t *img, const lv_img_dsc_t *src);
+
+/**
+ * Free the decoded source memory allocated by lv_img_set_decoder_src().
+ * @param img       pointer to an image object
+ */
+void lv_img_free_decoder_src(lv_obj_t *img);
+
 #endif /*LV_USE_IMG*/
 
 #ifdef __cplusplus

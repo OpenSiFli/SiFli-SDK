@@ -33,9 +33,6 @@ else:
     ezip_img_flags = '-rgb888'
 
 ezip_img_flags = ezip_img_flags + '  -section ROM3_IMG  -lvgl_version 9 '
-#after 52x the winsize need to be decreased to 2048
-if GetDepend('SOC_SF32LB57X'):
-    ezip_img_flags = ezip_img_flags + ' -winsize 2048 '
 
 if GetDepend('EZIP_PAL_SUPPORT'):
     if GetDepend('EZIP_PAL_SUPPORT_1'):

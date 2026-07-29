@@ -326,6 +326,19 @@ menu "On-chip Peripherals"
                     "This value = (n-1)*(button processing callback cycle)"        
         endif
 
+    menuconfig BSP_USING_CAN
+        bool "CAN BUS"
+        default n
+        select RT_USING_CAN
+        if BSP_USING_CAN
+            config BSP_USING_CAN1
+                bool "Enable CAN1 BUS"
+                default n
+            config BSP_USING_CAN2
+                bool "Enable CAN2 BUS"
+                default n
+        endif
+
     config BSP_USING_CMSIS_NN
         bool "CMSIS NN"
         default n
@@ -334,8 +347,8 @@ menu "On-chip Peripherals"
         bool "LPCOMP"
         default n
 
-    config BSP_USING_DCMI
-        bool "Enable DCMI"
+    menuconfig BSP_USING_DCMI
+        bool "DCMI"
         default n
         depends on SOC_SF32LB57X
 
@@ -395,6 +408,15 @@ menu "On-chip Peripherals"
             help
                 1. Can not works on SFLB55X serials
                 2. Asynchronized rendering, must keep the buffers used by the render-list available until rendering is complete.
+
+            config DRV_EPIC_ALLOC_USE_ANIM_HEAP
+            bool "Use animation heap for EPIC render-list allocations"
+            depends on DRV_EPIC_NEW_API && PKG_USING_LITTLEVGL2RTT
+            default n
+            help
+                Allocate temporary EPIC render-list operations from app_mem's reusable
+                animation heap first, then fall back to the normal app cache path.
+                This is narrower than defining SOLUTION globally.
             
             choice
                 prompt "EPIC Render List API Mode"
@@ -434,6 +456,24 @@ menu "On-chip Peripherals"
                     Smaller value means higher priority.
             endif
 
+            config ROTATE_BUF_IN_SRAM
+                bool "Enable rotate buffer in SRAM for rotated images"
+                depends on DRV_EPIC_NEW_API
+                default n
+                help
+                    When enabled, rotated image data from PSRAM/Flash will be copied to SRAM
+                    before EPIC processing, which can improve performance for rotated images.
+                    This requires additional SRAM for the rotate buffer.
+
+            config ROTATE_BUF_SIZE
+                int "Rotate buffer size in bytes"
+                depends on ROTATE_BUF_IN_SRAM
+                default 8192
+                help
+                    Size of the rotate buffer in SRAM. Larger buffer can handle larger images
+                    but consumes more SRAM. Recommended values: 4096-16384 bytes.
+                    
+                    
         endif
         config EZIP_PAL_SUPPORT
             bool
@@ -640,8 +680,14 @@ menu "On-chip Peripherals"
             default y
 
         if BSP_USING_MPI
+            # Remember to update default value definition in Kconfig_soc.sf32lb57x also
             menuconfig BSP_ENABLE_MPI1
                 bool "MPI Controller 1 Enable"
+                depends on BF0_HCPU && !BF0_ACPU
+                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                default y if SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
+                default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6 || SOC_SF32LB577UDNN6
+                default y if SOC_SF32LB57GYD7N6
                 default n
                 if BSP_ENABLE_MPI1
                     config BSP_ENABLE_QSPI1
@@ -649,6 +695,12 @@ menu "On-chip Peripherals"
                         default y
                     choice
                         prompt "MPI Mode"
+                        # Must select a PSRAM MPI mode for PSRAM, the exact PSRAM MPI mode is then 
+                        # decided by BSP_PSRAM1_PKG_TYPEx_MPI_MODE in Kconfig_soc.sf32lb57x.common
+                        default BSP_MPI1_MODE_5 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                        default BSP_MPI1_MODE_3 if SOC_SF32LB577VD776 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
+                        default BSP_MPI1_MODE_3 if SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
+                        default BSP_MPI1_MODE_0 if SOC_SF32LB579V6EN6
                         default BSP_MPI1_MODE_0
 
                         config BSP_MPI1_MODE_0
@@ -728,11 +780,20 @@ menu "On-chip Peripherals"
                     endif
                     config BSP_QSPI1_MEM_SIZE
                         int "MPI1 Mem Size (MB)"
+                        default 4  if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                        default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
+                        default 8  if SOC_SF32LB579V6EN6 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
                         default 8
                 endif        
                     
             menuconfig BSP_ENABLE_MPI2
                 bool "MPI Controller 2 Enable"
+                depends on BF0_HCPU && !BF0_ACPU
+                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                default y if SOC_SF32LB575UC7N6
+                default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6
+                default y if SOC_SF32LB57GYD7N6
+                default y if SOC_SF32LB57BUN3N6
                 default n
                 if BSP_ENABLE_MPI2
                     config BSP_ENABLE_QSPI2
@@ -740,6 +801,10 @@ menu "On-chip Peripherals"
                         default y
                     choice
                         prompt "MPI Mode"
+                        default BSP_MPI2_MODE_0 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776
+                        default BSP_MPI2_MODE_5 if SOC_SF32LB575YBBN6
+                        default BSP_MPI2_MODE_0 if SOC_SF32LB577VD776 
+                        default BSP_MPI2_MODE_3 if SOC_SF32LB579V6EN6
                         default BSP_MPI2_MODE_0
 
                         config BSP_MPI2_MODE_0
@@ -834,11 +899,18 @@ menu "On-chip Peripherals"
                     endif
                     config BSP_QSPI2_MEM_SIZE
                         int "MPI2 Mem Size (MB)"
+                        default 16 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575UC7N6
+                        default 4  if SOC_SF32LB575YBBN6
+                        default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6 
+                        default 32 if SOC_SF32LB579V6EN6
+                        default 1  if SOC_SF32LB57BUN3N6
                         default 32
                 endif
 
             menuconfig BSP_ENABLE_MPI3
                 bool "MPI Controller 3 Enable"
+                depends on BF0_HCPU && !BF0_ACPU
+                default y if SOC_SF32LB573UB776 || SOC_SF32LB577VD776
                 default n
                 if BSP_ENABLE_MPI3
                     config BSP_ENABLE_QSPI3
@@ -846,6 +918,7 @@ menu "On-chip Peripherals"
                         default y
                     choice
                         prompt "MPI Mode"
+                        default BSP_MPI3_MODE_0 if SOC_SF32LB573UB776 || SOC_SF32LB577VD776
                         default BSP_MPI3_MODE_0
 
                         config BSP_MPI3_MODE_0
@@ -925,13 +998,14 @@ menu "On-chip Peripherals"
                     endif
                     config BSP_QSPI3_MEM_SIZE
                         int "MPI3 Mem Size (MB)"
+                        default 16 if SOC_SF32LB573UB776 || SOC_SF32LB577VD776
                         default 32
                 endif
             
             menuconfig BSP_ENABLE_MPI4
                 bool "MPI Controller 4 Enable"
                 default n
-                depends on SOC_SF32LB58X
+                depends on SOC_SF32LB58X && BF0_HCPU && !BF0_ACPU
                 if BSP_ENABLE_MPI4
                     config BSP_ENABLE_QSPI4
                         bool 
@@ -1021,6 +1095,7 @@ menu "On-chip Peripherals"
                 endif
             menuconfig BSP_ENABLE_MPI5
                 bool "MPI Controller 5 Enable"
+                depends on !BF0_ACPU
                 default y if SOC_SF32LB58X
                 default y if SOC_SF32LB56X
                 if BSP_ENABLE_MPI5
@@ -1162,6 +1237,16 @@ menu "On-chip Peripherals"
     config MEMCPY_NON_DMA
         bool 
         depends on !SOC_SIMULATOR
+        default n
+
+    config MEM_ASYN_FREE
+        bool #"mem support async free(esp. for DRV_EPIC_NEW_API)"
+        depends on PKG_USING_LITTLEVGL2RTT
+        default y if DRV_EPIC_NEW_API
+        default n
+
+    config USING_APP_BMEM
+        bool #"app block_mem allocation used"
         default n
     
     menuconfig BSP_USING_PSRAM0
@@ -1613,6 +1698,15 @@ menu "On-chip Peripherals"
             help
                 Enable SDMMC1
 
+        if BSP_USING_SDMMC1
+            config SDMMC1_BUS_WIDTH_1_ONLY
+                bool "Force 1-bit mode (disable 4-bit)"
+                default n
+                help
+                  When enabled, SDMMC1 will only use 1-bit data bus width.
+                  Disable this to allow 4-bit mode if the hardware supports it.
+        endif
+
         if BSP_USING_SDHCI1 && BSP_USING_SDMMC1
             config SD_MAX_FREQ
                 int "MAX Output Frequency(Hz)"
@@ -1634,6 +1728,15 @@ menu "On-chip Peripherals"
             depends on !SOC_SF32LB52X
             help 
                 Enable SDMMC2
+        if BSP_USING_SDMMC2
+            config SDMMC2_BUS_WIDTH_1_ONLY
+                bool "Force 1-bit mode (disable 4-bit)"
+                default n
+                help
+                  When enabled, SDMMC2 will only use 1-bit data bus width.
+                  Disable this to allow 4-bit mode if the hardware supports it.
+        endif
+
         if BSP_USING_SDHCI2 && BSP_USING_SDMMC2
             config SD2_MAX_FREQ
                 int "MAX Output Frequency(Hz)"
@@ -1655,6 +1758,7 @@ menu "On-chip Peripherals"
         config BSP_USING_SD_LINE
             bool
         menu "Common Option"
+
         if BSP_USING_SDHCI
 
         config SD_MMC_DDR_SUPPORT
@@ -1663,6 +1767,11 @@ menu "On-chip Peripherals"
         config SD_MMC_OLINE_SUPPORT
             bool "MMC card support 8 line"
             default n
+        config SDMMC_AUTO_GATE_ENABLED
+            bool "SDMMC clock is auto gated"
+            default n
+            help
+                If enabled, SDMMC clock is enabled before use and disabled aftere use to save power
 
         endif # BSP_USING_SDHCI
 

@@ -296,7 +296,7 @@ int32_t HAL_EFUSE_Write2(uint16_t bit_offset, uint8_t *data, int32_t bit_size)
     return bit_size;
 }
 
-int32_t HAL_EFUSE_Extract(const uint32_t *bank_data, uint16_t bit_offset_in_bank, uint8_t *data, int bit_size)
+HAL_RAM_RET_CODE_SECT(HAL_EFUSE_Extract, int32_t HAL_EFUSE_Extract(const uint32_t *bank_data, uint16_t bit_offset_in_bank, uint8_t *data, int bit_size))
 {
     uint32_t i;
     uint32_t val;
@@ -352,7 +352,7 @@ int32_t HAL_EFUSE_Extract(const uint32_t *bank_data, uint16_t bit_offset_in_bank
     return bit_size;
 }
 
-int32_t HAL_EFUSE_Read2(uint16_t bit_offset, uint8_t *data, int bit_size)
+HAL_RAM_RET_CODE_SECT(HAL_EFUSE_Read2, int32_t HAL_EFUSE_Read2(uint16_t bit_offset, uint8_t *data, int bit_size))
 {
     uint32_t ready = 0;
     uint16_t bank = (bit_offset / HAL_EFUSE_BANK_BIT_SIZE);

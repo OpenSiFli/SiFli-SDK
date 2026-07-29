@@ -11,7 +11,7 @@
 
 ## 概述
 <!-- 例程简介 -->
-本例程演示通过uart1与BT/BLE controller进行HCI收发。
+本例程演示通过uart1，在BT/BLE的host和controller之间进行HCI收发。
 
 
 ## 例程的使用

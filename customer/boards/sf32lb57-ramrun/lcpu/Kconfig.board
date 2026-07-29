@@ -1,0 +1,7 @@
+config BSP_USING_BOARD_SF32LB57_RAMRUN
+    bool
+    select SOC_SF32LB57X
+    select BF0_LCPU
+    default y
+
+rsource "../Kconfig.board"

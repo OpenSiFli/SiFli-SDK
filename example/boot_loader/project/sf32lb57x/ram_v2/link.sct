@@ -17,9 +17,6 @@ LR_IROM1 FLASH_BOOT_LOADER_START_ADDR FLASH_BOOT_LOADER_SIZE {    ; load region 
 #ifdef BSP_USING_JLINK_RTT    
    *.o (Jlink_RTT, +First)
 #endif
-    bf0_hal_mpi_ex.o (.text.*)
-    bf0_hal_mpi.o (.text.*)
-    flash_table.o (.rodata.*)
    .ANY (+RW +ZI)
   }
 }

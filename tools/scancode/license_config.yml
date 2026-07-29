@@ -63,6 +63,13 @@ extensions:
       - "example/multimedia/lvgl/lvgl_v9_examples"
       - "example/multimedia/lvgl/lvgl_v9_demos"
       - "external/cherryusb"
+      - "external/antiword"
+      - "external/zlib"
+      - "external/pdfium"
+      - "external/libzip-1.11.3"
+      - "external/libxml2-2.6.24"
+      - "external/libmobi"
+      - "external/libepub"
       - "tools/mkfatimg/mkfatimg"
       - "rtos/rtthread/components/dfs/filesystems/elmfat"
     ignore_license: true
@@ -83,5 +90,6 @@ extensions:
     - "install.ps1"
     ignore_license: true
     ignore_copyright: true
+
 
 

@@ -630,7 +630,7 @@ typedef struct
 #else
 #define HAL_RTC_LXT_ENABLED()          HAL_PMU_LXT_ENABLED()
 #define HAL_RTC_ENABLE_LXT()
-#endif /* SF32LB52X */
+#endif /* RTC_CR_LPCKSEL */
 
 /**
   * @}

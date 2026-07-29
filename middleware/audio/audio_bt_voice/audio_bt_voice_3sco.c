@@ -455,7 +455,7 @@ uint8_t bt_voice_cvsd_encode(uint8_t *fifo, uint16_t fifo_size)
     return 0;
 }
 
-void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size)
+void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
 {
     if (pt_bt_voice->state == 0)
     {
@@ -568,7 +568,6 @@ uint8_t mix_process()
     return 0;
 }
 
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
 void bt_voice_uplink_send()
 {
     //audio_server interface
@@ -685,7 +684,6 @@ void bt_voice_downlink_process(uint8_t is_ready)
 
             RT_ASSERT(sco_hdr->length == 0x3c);
             getnum = rt_ringbuffer_get(g_sco_ipc.pt_bt2speaker_rbf, &pt_dn_data->in_data[0], sco_hdr->length);//only support 60byte data length
-
 
             if (getnum == sco_hdr->length)
             {

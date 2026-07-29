@@ -8,6 +8,7 @@
     file brief: ACPU controller which runs on HCPU
  */
 #include <rtconfig.h>
+#include <stdlib.h>
 #include <board.h>
 #include "rtthread.h"
 
@@ -106,6 +107,8 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 {
     rt_err_t err;
 
+    SCB_CleanInvalidateDCache();
+
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
 #endif /* RT_USING_PM */
@@ -202,13 +205,12 @@ INIT_PRE_APP_EXPORT(acpu_init);
 void acpu_power_on(void)
 {
     HAL_RCC_ResetACPU();
+    HAL_RCC_EnableModule(RCC_MOD_ACPU);
 #ifdef SF32LB58X
     HAL_RCC_ReleaseACPU();
 #else
     HAL_RCC_ReleaseACPU(APP_ACPU_CODE_START_ADDR);
 #endif /* SF32LB58X */
-
-    HAL_RCC_EnableModule(RCC_MOD_ACPU);
 }
 
 void acpu_power_off(void)

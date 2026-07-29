@@ -13,6 +13,8 @@ if GetDepend('CFG_BOOTLOADER') and not GetDepend('CFG_BOOTROM'):
     CPPDEFINES += ['CFG_BOOTLOADER']
 if not GetDepend('PKG_USING_CHERRYUSB'):
     SrcRemove(src,'cdc_acm_transport.c')
+if not GetDepend('CFG_BOOTROM'):
+    SrcRemove(src,'serial_transport.c')
 
 group = DefineGroup('Drivers', src, depend = [''], CPPPATH = path, CPPDEFINES = CPPDEFINES)
 Return('group')

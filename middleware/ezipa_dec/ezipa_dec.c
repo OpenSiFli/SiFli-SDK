@@ -854,6 +854,10 @@ static int32_t ezipa_render_next_frame(ezipa_obj_t *obj, ezipa_canvas_t *canvas)
     /* update output buffer before rendering the next frame */
     if (0 == obj->next_frame.seq_num)
     {
+        obj->curr_frame.width = obj->header.width;
+        obj->curr_frame.height = obj->header.height;
+        obj->curr_frame.x_offset = 0;
+        obj->curr_frame.y_offset = 0;
         ezipa_init_output_buf(obj);
     }
     else

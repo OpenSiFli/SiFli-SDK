@@ -115,7 +115,6 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-#ifndef FLASH_TABLE_ONLY    
   .vectors :
   {
     _stext = ABSOLUTE(.);  
@@ -144,30 +143,8 @@ SECTIONS
     __HeapLimit = .;
   } > RAM
 
-  .retm_data :
-  {
-    . = ALIGN(4);
-    __rw_retm_data_start__ = .;
-    * (.*l1_ret_text_*)
-    * (.*l1_ret_rodata_*)
-
-    *flash_table.o       (.text* .rodata*) 
-    *bf0_hal_mpi.o       (.text* .rodata*)
-    *bf0_hal_mpi_ex.o    (.text* .rodata*)
-
-    *.o (.retm_data_*)
-
-    . = ALIGN(4);
-    __rw_retm_data_end__ = .;
-
-  } > RAM AT > ROM
-#endif /* !FLASH_TABLE_ONLY */
-
   .text :
   {
-#ifdef FLASH_TABLE_ONLY
-    KEEP(*ftab.o(.text* .rodata*)) 
-#else
     *(.text*)
     *(.rodata*)
 
@@ -246,28 +223,8 @@ SECTIONS
 
     KEEP(*(.eh_frame*))
     _etext = ABSOLUTE(.);
-#endif
   } > ROM 
   
-#ifndef FLASH_TABLE_ONLY      
-  .rom_ex :
-  {
-  
-    . = ALIGN(4);
-    __rw_rom_ex_start__ = .;
-    __ER_IROM1_EX$$RO_start__ = .;
-    __ER_IROM1_EX$$RO_load_start__ = LOADADDR(.rom_ex);
-
-    *(.l1_non_ret_text_*)
-    *(.l1_non_ret_rodata_*)
-
-    . = ALIGN(4);
-    __rw_rom_ex_end__ = .;
-    __ER_IROM1_EX$$RO_end__ = .;
-    __ER_IROM1_EX$$RO_load_end__ = LOADADDR(.rom_ex) + SIZEOF(.rom_ex);
-    
-  } > ROM_EX AT > ROM
-
   /*
    * SG veneers:
    * All SG veneers are placed in the special output section .gnu.sgstubs. Its start address
@@ -300,14 +257,6 @@ SECTIONS
     LONG (ADDR(.data))
     LONG (SIZEOF(.data))
 
-    LONG (LOADADDR(.retm_data))
-    LONG (ADDR(.retm_data))
-    LONG (SIZEOF(.retm_data))
-    
-    LONG (LOADADDR(.rom_ex))
-    LONG (ADDR(.rom_ex))
-    LONG (SIZEOF(.rom_ex))    
-    
     __copy_table_end__ = .;
   } > ROM
   
@@ -321,29 +270,8 @@ SECTIONS
     LONG (__bss_start__)
     LONG (__bss_end__ - __bss_start__)    
 
-    LONG (ADDR(.retm_bss))
-    LONG (SIZEOF(.retm_bss))
-
     __zero_table_end__ = .;
   } > ROM
-
-  .retm_bss :
-  {
-    . = ALIGN(4);
-    __rw_retm_bss_start__ = .;
-    __RW_IRAM_RET$$ZI_start__ = .;
-    * (.bss.retm_bss_*)
- 
-    . = ALIGN(4);
-    __RW_IRAM_RET$$ZI_end__ = .;
-  } > RAM
-
-  .RW_IRAM0 :
-  {
-    *(non_ret)
-    *(.*l1_non_ret_data_*)
-    *(.*l1_non_ret_bss_*)
-  } > RAM 
 
   /**
    * Location counter can end up 2byte aligned with narrow Thumb code but
@@ -414,35 +342,6 @@ SECTIONS
    */
 
   __etext2 = ALIGN (4);
-
-  .RW_PSRAM1 :
-  {
-    . = ALIGN(4);
-    __rw_psram1_start__ = .;
-    *(.*l2_ret_data_*)
-    *(.*l2_ret_bss_*)
-    *(.*l2_cache_ret_data_*)
-    *(.*l2_cache_ret_bss_*)
-    . = ALIGN(4);
-    __rw_psram1_end__ = .;
-
-  } > PSRAM
-
-  .RW_PSRAM_NON_RET :
-  {
-    /* aligned to cache line size */
-    . = ALIGN(32);
-    __RW_PSRAM_NON_RET_start__ = .;
-    *(.nand_cache)
-    *(.*l2_non_ret_data_*)
-    *(.*l2_non_ret_bss_*)
-    *(.*l2_cache_non_ret_data_*)
-    *(.*l2_cache_non_ret_bss_*)
-    . = ALIGN(4);
-    __RW_PSRAM_NON_RET_end__ = .;
-
-  } > PSRAM
-
   
   .bss :
   {
@@ -467,31 +366,9 @@ SECTIONS
    * Remember to add each additional bss section
    * to the .zero.table above to asure proper
    * initialization during startup.
-   */
-/*
-  .bss2 :
-  {
-    . = ALIGN(4);
-    __bss2_start__ = .;
-    *(.bss2)
-    *(.bss2.*)
-    . = ALIGN(4);
-    __bss2_end__ = .;
-  } > RAM2 AT > RAM2
 */
 
   /* Check if data + heap + stack exceeds RAM limit */
   /* ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack") */
   
-  .rom2 :
-  {
-    *(.ROM1_IMG)
-    *(.ROM3_IMG*.*)
-  } > ROM2
-
-  .rom3 :
-  {
-    *lvsf_font_*(.rodata*)
-  } > ROM3
-#endif
 }

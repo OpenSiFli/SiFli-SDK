@@ -4,10 +4,11 @@ from building import *
 # get current dir path
 cwd = GetCurrentDir()
 reg_fwk = os.path.join(cwd, 'reg_fwk')
+dyn_fwk = os.path.join(cwd, 'dyn_fwk')
 
 # init src and inc vars
 src = []
-inc = [cwd, reg_fwk]
+inc = [cwd, reg_fwk, dyn_fwk]
 
 
 # add driver basic code

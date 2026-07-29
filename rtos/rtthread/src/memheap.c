@@ -406,6 +406,10 @@ __ROM_USED void *rt_memheap_alloc(struct rt_memheap *heap, rt_size_t size)
             //    rt_memheap_setname(header_ptr, "NONE");
 
 #endif
+#ifdef MEM_ASYN_FREE
+            header_ptr->ref_count_magic = REF_COUNT_MAGIC;
+            header_ptr->ref_count = 0;
+#endif
 
             if (header_ptr > heap->last_used)
             {
@@ -740,6 +744,16 @@ __ROM_USED void rt_memheap_free(void *ptr)
     new_ptr       = RT_NULL;
     header_ptr    = (struct rt_memheap_item *)
                     ((rt_uint8_t *)ptr - RT_MEMHEAP_SIZE);
+
+#ifdef MEM_ASYN_FREE
+    if (header_ptr->ref_count)
+    {
+        RT_ASSERT(REF_COUNT_MAGIC == header_ptr->ref_count_magic);
+        extern void app_mem_insert_asyn_node(void *ptr, void (*free_fun)(void *));
+        app_mem_insert_asyn_node(ptr, rt_memheap_free);
+        return;
+    }
+#endif
 
     RT_DEBUG_LOG(RT_DEBUG_MEMHEAP, ("free memory: memory[0x%08x], block[0x%08x]\n",
                                     ptr, header_ptr));

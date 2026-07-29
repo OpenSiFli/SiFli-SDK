@@ -8,14 +8,13 @@
  *      INCLUDES
  *********************/
 
-#include "global.h"
+#include "multlist_config.h"
 #include "demo_multlist.h"
 #include "demo_multlist_cards.h"
 #include "lvsf_multlist.h"
 #define ITEM_CNT 10
 
 #define _MODULE_NAME_ "multlist"
-#include "app_module.h"
 
 static lv_obj_t *p_list = NULL;
 static uint32_t flag = 0;

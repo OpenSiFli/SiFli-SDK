@@ -1,0 +1,1 @@
+source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_base/Kconfig.board"

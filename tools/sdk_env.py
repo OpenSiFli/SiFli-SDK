@@ -1900,6 +1900,80 @@ def required_plan_names(plans: Sequence[ToolPlan]) -> List[str]:
     return [plan.name for plan in plans if plan.required]
 
 
+def _try_recover_env_state(
+    config: RuntimeConfig,
+    lock: ProfileLock,
+    plans: Sequence[ToolPlan],
+    resolved_env: ResolvedEnvInstance,
+    targets: List[str],
+) -> Optional[Dict[str, Any]]:
+    """Attempt to recover an environment that exists on disk but was pruned from state."""
+    python_exe = python_executable(resolved_env.python_env_path)
+    if not os.path.exists(python_exe):
+        return None
+    if not os.path.isdir(resolved_env.conan_home):
+        return None
+
+    # Discover Python version from the existing venv
+    try:
+        py_version = subprocess.check_output(
+            [python_exe, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"],
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        ).decode("utf-8").strip()
+    except Exception:
+        return None
+
+    # Discover tool versions from disk
+    tool_state: Dict[str, str] = {}
+    for plan in plans:
+        if plan.required and validate_tool_dir(plan, tool_install_dir(config, plan)):
+            tool_state[plan.name] = plan.version
+
+    installed_state: Dict[str, Any] = {
+        "sdk": {
+            "env_compat_algorithm": ENV_COMPAT_ALGORITHM,
+            "env_compat_sha256": resolved_env.compat_sha,
+        },
+        "locks": {
+            "profile_lock_sha256": file_sha256(lock.path),
+            "uv_lock_sha256": file_sha256(lock.uv_lock_path),
+        },
+        "python": {
+            "version": py_version,
+            "env_path": resolved_env.python_env_path,
+        },
+        "targets": targets,
+        "tools": tool_state,
+        "conan": {
+            "config_id": lock.conan_config_id,
+            "home": resolved_env.conan_home,
+        },
+        "cache_root": config.cache_root,
+        "install_root": config.install_root,
+    }
+
+    # Re-register in state file
+    root = repo_root()
+    state_doc = load_state(config.state_path)
+    envs = state_envs(state_doc)
+    envs[resolved_env.key] = normalize_env_state_doc(installed_state)
+    profile_state = get_profile_state(state_doc, root, lock.profile)
+    profile_state["selected_env_key"] = resolved_env.key
+    git_head = normalize_git_head(current_git_head(root))
+    if git_head is not None:
+        profile_state["last_seen_git_head"] = git_head
+    else:
+        profile_state.pop("last_seen_git_head", None)
+    atomic_write_json(config.state_path, state_doc)
+    log_warn(
+        f"Recovered environment state for profile '{lock.profile}' from disk. "
+        f"Environment at {resolved_env.python_env_path} exists but was missing from state file."
+    )
+
+    return installed_state
+
+
 def validate_resolved_env_instance(
     config: RuntimeConfig,
     lock: ProfileLock,
@@ -1910,7 +1984,10 @@ def validate_resolved_env_instance(
     reasons: List[str] = []
     installed = resolved_env.env_state
     if not isinstance(installed, dict):
-        return ["environment instance is not installed for the current checkout"]
+        targets = list(expected_targets) if expected_targets is not None else list(lock.default_targets)
+        installed = _try_recover_env_state(config, lock, plans, resolved_env, targets)
+        if not isinstance(installed, dict):
+            return ["environment instance is not installed for the current checkout"]
 
     sdk_state = installed.get("sdk") if isinstance(installed.get("sdk"), dict) else {}
     python_state = installed.get("python") if isinstance(installed.get("python"), dict) else {}

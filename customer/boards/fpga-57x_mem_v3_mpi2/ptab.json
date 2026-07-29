@@ -91,16 +91,9 @@
             }, 
             {
                 "offset": "0x0006FC00", 
-                "max_size": "0x0000FE00", 
+                "max_size": "0x0000FC00", 
                 "tags": [
                     "ACPU_RAM_DATA"
-                ]
-            },    
-            {
-                "offset": "0x0007FA00", 
-                "max_size": "0x00000200", 
-                "tags": [
-                    "ACPU_CMD_BUF"
                 ]
             }
         ]

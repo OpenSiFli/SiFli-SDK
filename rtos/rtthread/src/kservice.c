@@ -22,6 +22,10 @@
 #include <rtthread.h>
 #include <rthw.h>
 
+#ifdef RT_USING_SDIO
+    #include <rtdevice.h>
+#endif /* RT_USING_SDIO */
+
 #ifdef RT_USING_MODULE
     #include <dlmodule.h>
 #endif
@@ -2147,6 +2151,10 @@ __ROM_USED void rt_assert_handler(const char *ex_string, const char *func, rt_si
             else
                 rt_kprintf("Assertion failed at address: 0x%08x\n", line);
             rt_kprintf("Previous ISR enable %x\n", level);
+#ifdef RT_USING_SDIO
+            /* inform mmcsd to enter polling mode, so it can work when irq disabled */
+            rt_mmcsd_irq_disable();
+#endif /* RT_USING_SDIO */
 
             rt_show_sys_info();
 

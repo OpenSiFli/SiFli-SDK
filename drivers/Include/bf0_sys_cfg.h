@@ -57,7 +57,7 @@ extern "C" {
 #define CFG_SYS_SIZE            (32)
 #else
 #define CFG_SYS_SIZE            (64)
-#endif // SF32LB52X
+#endif // SF32LB52X || SF32LB57X
 
 
 

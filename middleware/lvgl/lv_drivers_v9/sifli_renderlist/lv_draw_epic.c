@@ -727,15 +727,20 @@ int render_list_submit_main_frame(void)
     }
 
     drv_epic_render_list_t submit_rl = render_list_ctx.frame.active.rl;
+
+    /* Clear pending_submit before async submission to prevent race condition.
+       EPIC may complete and callback release before main thread clears the flag,
+       causing false "release before submit" assertion. Empty/tiny frames are most vulnerable. */
+    render_list_ctx.frame.submit_seq++;
+    if (submit_rl == render_list_ctx.frame.last_created)
+    {
+        render_list_ctx.frame.pending_submit = 0;
+    }
+
     int ret = render_list_submit_internal(submit_rl, &render_list_ctx.frame.active.buf, EPIC_MSG_RENDER_DRAW);
 
     if (ret == 0)
     {
-        render_list_ctx.frame.submit_seq++;
-        if (submit_rl == render_list_ctx.frame.last_created)
-        {
-            render_list_ctx.frame.pending_submit = 0;
-        }
         return 0;
     }
 

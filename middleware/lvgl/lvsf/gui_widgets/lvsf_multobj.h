@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +7,7 @@
 #ifndef LVSF_MULTOBJ_H
 #define LVSF_MULTOBJ_H
 
+#include "lvgl.h"
 #include "lvsf_conf_internal.h"
 
 #if LVSF_USE_MULTOBJ != 0
@@ -14,8 +15,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "lvgl.h"
 
 typedef void(*lv_multobj_label_pos_cb)(lv_obj_t *label, float zoom, lv_coord_t x, lv_coord_t y);
 typedef struct

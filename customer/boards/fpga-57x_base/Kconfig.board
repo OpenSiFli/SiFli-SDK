@@ -1,6 +1,6 @@
 config FPGA
-    bool 
-    default y 
+    bool
+    default y
 
 config TOUCH_IRQ_PIN
     int
@@ -17,3 +17,12 @@ config CAMERA_I2C_DEVICE_NAME
 config EPD_TPS_I2C_DEVICE_NAME
     string
     default "i2c1"
+    
+menu "SF32LB57-SPI-HDK Configuration"
+
+config BSP_USING_CAMERA1
+    bool "Camera 1"
+    select BSP_USING_GC032A
+    default n
+
+endmenu    

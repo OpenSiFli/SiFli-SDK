@@ -102,6 +102,10 @@
 #define QSPI2_MAX_SIZE      (0x2000000)
 #define QSPI3_MAX_SIZE      (0xC000000) // S-BUS max size is 0x3C000000
 
+//================== SDMMC Memory Card ==================
+#define SDMMC1_MEM_BASE     (0x64000000)
+#define SDMMC2_MEM_BASE     (0xA0000000)
+
 
 // Size
 #define FLASH_TABLE_SIZE            (20*1024)
@@ -361,6 +365,10 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 /** UID size  */
 #define EFUSE_UID_SIZE          128
 #define EFUSE_UID_BYTE_SIZE     (EFUSE_UID_SIZE >> 3)
+/** SSEN offset */
+#define EFUSE_SSEN_OFFSET      224
+/** SSEN size */
+#define EFUSE_SSEN_SIZE        2
 /** Package ID offset */
 #define EFUSE_PKGID_OFFSET      228
 /** Package ID size  */
@@ -391,6 +399,24 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
  */
 
 /*******************************************************************************************
+ * @defgroup SSEN_Definition SSEN Definition
+ * @brief  SSEN Definition
+ * @{
+ *******************************************************************************************/
+/**  SSEN_LDO18 Position */
+#define SSEN_LDO18_Pos        (0U)
+/**  SSEN_LDO18 Mask */
+#define SSEN_LDO18_Msk        (0x1UL << SSEN_LDO18_Pos)
+/**  SSEN_VDD33_LDO2 Position */
+#define SSEN_VDD33_LDO2_Pos   (1U)
+/**  SSEN_VDD33_LDO2 Mask */
+#define SSEN_VDD33_LDO2_Msk   (0x1UL << SSEN_VDD33_LDO2_Pos)
+
+/**
+ * @}
+ */
+
+/*******************************************************************************************
  * @defgroup PKGID_Definition Package ID Definition
  * @brief  Package ID Definition
  * @{
@@ -407,6 +433,15 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #define PKGID_LDO33_EN_Pos           (3U)
 /**  LDO33 Enable Mask */
 #define PKGID_LDO33_EN_Msk           (0x1UL << PKGID_LDO33_EN_Pos)
+/**  MPI1 PSRAM Type Position */
+#define PKGID_MPI1_PSRAM_TYPE_Pos    (4U)
+/**  MPI1 PSRAM Type Mask */
+#define PKGID_MPI1_PSRAM_TYPE_Msk    (0x3UL << PKGID_MPI1_PSRAM_TYPE_Pos)
+/**  MPI2 PSRAM Type Position */
+#define PKGID_MPI2_PSRAM_TYPE_Pos    (6U)
+/**  MPI2 PSRAM Type Mask */
+#define PKGID_MPI2_PSRAM_TYPE_Msk    (0x3UL << PKGID_MPI2_PSRAM_TYPE_Pos)
+
 
 /**
  * @}
@@ -426,26 +461,6 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #define PKGID_BOOT_DEVICE_MPI1_TYPE2          2
 /** Boot Device is external storage */
 #define PKGID_BOOT_DEVICE_EXT                 3
-
-/**
- * @}
- */
-
-/*******************************************************************************************
- * @defgroup PKGID_PSRAM_TYPE_Definition Package ID PSRAM Type Definition
- * @brief  Package ID PSRAM Type Definition
- * @{
- *******************************************************************************************/
-/** APS 64Mb PSRAM */
-#define PKGID_PSRAM_APS_64           0
-/** APS 128Mb PSRAM */
-#define PKGID_PSRAM_APS_128          1
-/** APS 32Mb PSRAM */
-#define PKGID_PSRAM_APS_32           2
-/** APS 16Mb PSRAM */
-#define PKGID_PSRAM_APS_16           3
-/** Winbond PSRAM */
-#define PKGID_PSRAM_WINBOND          4
 
 /**
  * @}
@@ -475,9 +490,17 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
     #ifdef SOLUTION_WATCH
         #include "flash_map.h"
     #else
-        #include "custom_mem_map.h"
+        #ifdef __has_include
+            #if __has_include("custom_mem_map.h")
+                #include "custom_mem_map.h"
+            #else
+                #include "ptab.h"
+            #endif
+        #else
+            #include "custom_mem_map.h"
+        #endif
     #endif
 #endif /* CUSTOM_MEM_MAP */
 
-#define HPSYS_RAM_IN_ITCM(addr) false
+#define HPSYS_RAM_IN_ITCM(addr) 0
 #endif  /* __MEM_MAP__ */

@@ -1,0 +1,17 @@
+# BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_DPI
+
+## SoC
+SF32LB575YBBN6
+
+### MPI1
+PSRAM 4MB
+
+### MPI2
+PSRAM 4MB
+
+## External Storage
+### SDMMC1
+SD-NAND
+
+## Display
+QSPI Display

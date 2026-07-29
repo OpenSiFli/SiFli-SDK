@@ -1,0 +1,125 @@
+<DataBase>
+  <!--                                    -->
+  <!-- SiFli (Cortex-M33 devices)-->
+  <!--                                    -->
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB55X" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x800000"  Loader="Devices/SiFli/sf32lb55x/SF32LB55X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash2" BaseAddr="0x64000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb55x/SF32LB55X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x68000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb55x/SF32LB55X_EXT_FLASH3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash4" BaseAddr="0x12000000" MaxSize="0x400000" Loader="Devices/SiFli/sf32lb55x/SF32LB55X_EXT_FLASH4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device> 
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB55X_SD" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x80000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x400000"  Loader="Devices/SiFli/sf32lb55x/SF32LB55X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External SD1" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb55x_sd/SF32LB55X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x2000000"  Loader="Devices/SiFli/sf32lb58x/SF32LB58X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x14000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_EXT_FLASH3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External NAND Flash3" BaseAddr="0x64000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb58x_nand/SF32LB58X_EXT_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash4" BaseAddr="0x18000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_EXT_FLASH4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External NAND Flash4" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x_nand/SF32LB58X_EXT_NAND4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X_NAND" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x64000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x_nand/SF32LB58X_EXT_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External Flash4" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x_nand/SF32LB58X_EXT_NAND4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device> 
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X_NAND_NOBBM" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x64000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x_nand_nobbm/SF32LB58X_EXT_ORG_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External Flash4" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x_nand_nobbm/SF32LB58X_EXT_ORG_NAND4.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External Flash5" BaseAddr="0x1c000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB56X_NAND_NOBBM" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x64000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb56x_nand/SF32LB56X_EXT_ORG_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb56x/SF32LB56X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device> 
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X_SD" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External SDMMC1" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x_sd/SF32LB58X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>  
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X_SD_TYPE1" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External SDMMC1" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/sf32lb58x_sd/SF32LB58X_EXT_SD1_TYPE1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>  
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB56X" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x0400000"  Loader="Devices/SiFli/sf32lb56x/SF32LB56X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash2" BaseAddr="0x10400000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb56x/SF32LB56X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x14000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb56x/SF32LB56X_EXT_FLASH3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb56x/SF32LB56X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB56X_NAND" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x64000000" MaxSize="0x3c000000" Loader="Devices/SiFli/sf32lb56x_nand/SF32LB56X_EXT_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash3" BaseAddr="0xA0000000" MaxSize="0x3c000000" Loader="Devices/SiFli/sf32lb56x_sd/SF32LB56X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb56x/SF32LB56X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="BUTTERFLITE_NAND_FS" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x70000" />
+    <FlashBankInfo Name="External Flash3" BaseAddr="0x14000000" MaxSize="0x4000000" Loader="Devices/SiFli/sf32lb58x_nand/BUTTERFLITE_EXT_NAND3_FS.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>  
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_NOR" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x8000000"  Loader="Devices/SiFli/sf32lb52x/SF32LB52X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="External Flash2" BaseAddr="0x12000000" MaxSize="0x8000000" Loader="Devices/SiFli/sf32lb52x/SF32LB52X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_NAND" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x80000" />
+    <FlashBankInfo Name="External Nand2" BaseAddr="0x62000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb52x_nand/SF32LB52X_EXT_NAND2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_NAND_NOBBM" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x80000" />
+	<FlashBankInfo Name="External Nand2" BaseAddr="0x62000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb52x_nand_nobbm/SF32LB52X_EXT_ORG_NAND2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device> 
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_NAND_BIGBLK" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x80000" />
+    <FlashBankInfo Name="External Nand2" BaseAddr="0x62000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb52x_nand/SF32LB52X_EXT_BIGBLK_NAND2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device> 
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_SD" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External SDNAND1" BaseAddr="0x62000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb52x_sd/SF32LB52X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB52X_EMMC" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External SDMMC1" BaseAddr="0x62000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb52x_sd/SF32LB52X_EXT_EMMC1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_NOR" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x2000000"  Loader="Devices/SiFli/sf32lb57x/SF32LB57X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+    <FlashBankInfo Name="Internal Flash2" BaseAddr="0x12000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb57x/SF32LB57X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  	<FlashBankInfo Name="Internal Flash3" BaseAddr="0x14000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb57x/SF32LB57X_EXT_FLASH3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_NAND" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash3" BaseAddr="0x64000000" MaxSize="0x3c000000" Loader="Devices/SiFli/sf32lb57x_nand/SF32LB57X_EXT_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_NAND_NOBBM" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash3" BaseAddr="0x64000000" MaxSize="0x3c000000" Loader="Devices/SiFli/sf32lb57x_nand/SF32LB57X_EXT_ORG_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_NAND_BIGBLK" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash3" BaseAddr="0x64000000" MaxSize="0x3c000000" Loader="Devices/SiFli/sf32lb57x_nand/SF32LB57X_EXT_BIGBLK_NAND3.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>     
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_SD" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External SDNAND1" BaseAddr="0x64000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb57x_sd/SF32LB57X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB57X_EMMC" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External SDMMC1" BaseAddr="0x64000000" MaxSize="0x3e000000" Loader="Devices/SiFli/sf32lb57x_sd/SF32LB57X_EXT_EMMC1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>
+  <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB60X_NOR" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+    <FlashBankInfo Name="Internal Flash2" BaseAddr="0x12000000" MaxSize="0x2000000" Loader="Devices/SiFli/sf32lb60x/SF32LB60X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>   
+</DataBase>

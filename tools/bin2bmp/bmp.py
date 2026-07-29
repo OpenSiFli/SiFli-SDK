@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: 2019-2026 SiFli
+# SPDX-License-Identifier: Apache-2.0
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -103,6 +105,20 @@ class bmp:
 #| RGB888   |    /        | R7 ~ R0     | G7 ~ G0      | B7 ~ B0     |
 #| ARGB8888 | A7 ~ A0     | R7 ~ R0     | G7 ~ G0      | B7 ~ B0     |
 
+    def yuv_to_rgb(self, Y, U, V):
+        C = int(Y) - 16
+        D = int(U) - 128
+        E = int(V) - 128
+        R = (298 * C + 409 * E + 128) >> 8
+        G = (298 * C - 100 * D - 208 * E + 128) >> 8
+        B = (298 * C + 516 * D + 128) >> 8
+        if R < 0: R = 0
+        elif R > 255: R = 255
+        if G < 0: G = 0
+        elif G > 255: G = 255
+        if B < 0: B = 0
+        elif B > 255: B = 255
+        return R, G, B
 
     def bin_format_depth(self, bin_format):
         bin_format = bin_format.lower()
@@ -113,6 +129,8 @@ class bmp:
         elif bin_format == "a2":
             return 2
         elif bin_format == "rgb565" or bin_format == "bgr565":
+            return 16
+        elif bin_format == "yuyv" or bin_format == "uyvy":
             return 16
         elif bin_format == "rgb888" or bin_format == "argb8565":
             return 24
@@ -167,7 +185,7 @@ class bmp:
 
                     a = a << 4 #To A8
                     if (a > 0):
-                        a = a | 0x0f;
+                        a = a | 0x0f
 
 
                     if (x + 1 == self.w) or (4 == bit_pos):
@@ -188,7 +206,7 @@ class bmp:
 
                     a = a << 6 #To A8
                     if (a > 0):
-                        a = a | 0x3f;
+                        a = a | 0x3f
 
 
                     if (x + 1 == self.w) or (6 == bit_pos):
@@ -243,6 +261,30 @@ class bmp:
                     g = (bin_array[index+2])
                     r = (bin_array[index+3])
                     index=index+4
+                elif bin_format == "yuyv":
+                    y0 = (bin_array[index])
+                    u =  (bin_array[index+1])
+                    y1 = (bin_array[index+2])
+                    v =  (bin_array[index+3])
+
+                    # if x is even, read y0,u,y1,v; if x is odd, use the same u,v as previous pixel, and read y0 for current pixel
+                    if (x % 2) == 0:
+                        r, g, b = self.yuv_to_rgb(y0, u, v)
+                    else:
+                        r, g, b = self.yuv_to_rgb(y1, u, v)
+                        index=index+4
+                elif bin_format == "uyvy":
+                    u = (bin_array[index])
+                    y0 =  (bin_array[index+1])
+                    v = (bin_array[index+2])
+                    y1 =  (bin_array[index+3])
+
+                    # if x is even, read y0,u,y1,v; if x is odd, use the same u,v as previous pixel, and read y0 for current pixel
+                    if (x % 2) == 0:
+                        r, g, b = self.yuv_to_rgb(y0, u, v)
+                    else:
+                        r, g, b = self.yuv_to_rgb(y1, u, v)
+                        index=index+4
                 else:
                     raise ValueError("Unsupported bin format: {}".format(bin_format))
 

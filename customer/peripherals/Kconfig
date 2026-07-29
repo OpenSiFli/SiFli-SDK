@@ -132,6 +132,10 @@ config LCD_USING_SPD2012
     bool
     default n
 
+config LCD_USING_ST7796U
+    bool
+    default n
+
 config LCD_USING_ST7797
     bool
     default n
@@ -283,9 +287,9 @@ config BSP_USING_RAMLESS_LCD
     def_bool n
 config BSP_LCDC_USING_JDI_PARALLEL
     def_bool n
-config BSP_LCDC_USING_EPD_16BIT
+config BSP_LCDC_USING_DIRECT_EPD
     def_bool n
-    
+
 # LCD backlight
 config LCD_USING_PWM_AS_BACKLIGHT
     def_bool n

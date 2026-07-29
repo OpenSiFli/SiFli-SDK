@@ -1,0 +1,152 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef _FHOSTIF_CMD_H_
+#define _FHOSTIF_CMD_H_
+
+
+
+/// Messages related to Custom msg Task(fhostif custom msg)
+enum CUSTOM_MSG_TAG
+{
+    CUSTOM_MSG_CONNECT_REQ = LMAC_FIRST_MSG(TASK_CUSTOM),
+    CUSTOM_MSG_CONNECT_CFM,
+    CUSTOM_MSG_CONNECT_RESULT_CFM,
+    CUSTOM_MSG_CONNECT_IND,
+    CUSTOM_MSG_DISCONNECT_REQ,
+    CUSTOM_MSG_DISCONNECT_CFM,
+    CUSTOM_MSG_DISCONNECT_IND,
+    CUSTOM_MSG_OPEN_BLE_REQ,
+    CUSTOM_MSG_OPEN_BLE_CFM,
+    CUSTOM_MSG_OPEN_BLE_IND,
+    CUSTOM_MSG_CLOSE_BLE_REQ,                               // 10
+    CUSTOM_MSG_CLOSE_BLE_CFM,
+    CUSTOM_MSG_CLOSE_BLE_IND,
+    CUSTOM_MSG_ENTER_SLEEP_REQ,
+    CUSTOM_MSG_ENTER_SLEEP_CFM,
+    CUSTOM_MSG_EXIT_SLEEP_REQ,
+    CUSTOM_MSG_EXIT_SLEEP_CFM,
+    CUSTOM_MSG_SET_MAC_ADDR_REQ,
+    CUSTOM_MSG_GET_MAC_ADDR_REQ,
+    CUSTOM_MSG_GET_MAC_ADDR_CFM,
+    CUSTOM_MSG_GET_WLAN_STATUS_REQ,                         // 20
+    CUSTOM_MSG_GET_WLAN_STATUS_CFM,
+    CUSTOM_MSG_GET_VNET_SETTING_REQ,
+    CUSTOM_MSG_GET_VNET_SETTING_CFM,
+    CUSTOM_MSG_START_AP_REQ,
+    CUSTOM_MSG_START_AP_CFM,
+    CUSTOM_MSG_START_AP_IND,
+    CUSTOM_MSG_ASSOC_AP_IND,
+    CUSTOM_MSG_DISASSOC_AP_IND,
+    CUSTOM_MSG_CHANGE_AP_MODE_REQ,
+    CUSTOM_MSG_CHANGE_AP_MODE_CFM,                          // 30
+    CUSTOM_MSG_STOP_AP_REQ,
+    CUSTOM_MSG_STOP_AP_CFM,
+    CUSTOM_MSG_STOP_AP_IND,
+    CUSTOM_MSG_SCAN_WIFI_REQ,
+    CUSTOM_MSG_SCAN_WIFI_CFM,
+    CUSTOM_MSG_SCAN_WIFI_IND,
+    CUSTOM_MSG_WIFI_FAIL_IND,
+    CUSTOM_MSG_HOST_OTA_REQ,
+    CUSTOM_MSG_HOST_OTA_CFM,
+    CUSTOM_MSG_HOST_KEEP_ALIVE_REQ,                         // 40
+    CUSTOM_MSG_HOST_KEEP_ALIVE_CFM,
+    CUSTOM_MSG_HOST_SET_WLAN_IP_REQ,
+    CUSTOM_MSG_HOST_SET_WLAN_IP_CFM,
+    CUSTOM_MSG_HTTP_REQ,
+    CUSTOM_MSG_HTTP_CFM,
+    CUSTOM_MSG_HTTP_RESP_IND,
+    CUSTOM_MSG_GET_FW_VERSION_REQ,
+    CUSTOM_MSG_GET_FW_VERSION_CFM,
+    CUSTOM_MSG_RESET_REQ,
+    CUSTOM_MSG_RESET_CFM,                                   // 50
+    CUSTOM_MSG_START_P2PGO_REQ,
+    CUSTOM_MSG_START_P2PGO_CFM,
+    CUSTOM_MSG_START_P2PGO_IND,
+    CUSTOM_MSG_STOP_P2PGO_REQ,
+    CUSTOM_MSG_STOP_P2PGO_CFM,
+    CUSTOM_MSG_STOP_P2PGO_IND,
+    CUSTOM_MSG_START_RFTEST_REQ,
+    CUSTOM_MSG_START_RFTEST_CFM,
+    CUSTOM_MSG_HOSTBT_CHANNEL_REQ,
+    CUSTOM_MSG_HOSTBT_CHANNEL_CFM,                          // 60
+    CUSTOM_MSG_HOSTBT_CHANNEL_IND,
+    CUSTOM_MSG_START_HOSTBT_REQ,
+    CUSTOM_MSG_START_HOSTBT_CFM,
+    CUSTOM_MSG_STOP_HOSTBT_REQ,
+    CUSTOM_MSG_STOP_HOSTBT_CFM,
+    CUSTOM_MSG_STA_CFG_REQ,
+    CUSTOM_MSG_STA_CFG_CFM,
+    // User defined message
+    CUSTOM_MSG_FIRST_USER_DEFINED = LMAC_FIRST_MSG(TASK_CUSTOM) + 0x200,
+    // e.g. CUSTOM_MSG_XXX  = CUSTOM_MSG_FIRST_USER_DEFINED,
+
+    CUSTOM_MSG_MAX,
+};
+
+/// OTA_STEP and error code
+enum OTA_STEP
+{
+    OTA_STEP_FLASH_ERASE,
+    OTA_STEP_FR_PKG_WRITE,
+    OTA_STEP_LT_PKG_WRITE,
+    OTA_STEP_HEADER_WRITE,
+    OTA_STEP_LZMA_CHECK,
+    OTA_STEP_FW_HEADER_WRITE,
+    OTA_STEP_FW_LZMA_CHECK,
+};
+
+enum OTA_STEP_STATUS
+{
+    OTA_STEP_FLASH_ERASE_OK,
+    OTA_STEP_FLASH_ERASE_ERR,
+    OTA_STEP_FR_PKG_WRITE_OK,
+    OTA_STEP_FR_PKG_WRITE_ERR,
+    OTA_STEP_LT_PKG_WRITE_OK,
+    OTA_STEP_LT_PKG_WRITE_ERR,
+    OTA_STEP_BIN_FILE_CRC_ERR,
+    OTA_STEP_BIN_VERSION_ERR,
+    OTA_STEP_HEADER_WRITE_OK,
+    OTA_STEP_HEADER_WRITE_ERR,
+    OTA_STEP_LZMA_CRC_CHECK_OK,
+    OTA_STEP_LZMA_CRC_CHECK_ERR,
+};
+
+struct ota_file_info
+{
+    uint32_t file_size;
+    uint32_t file_crc;
+    uint8_t  new_version[16];
+};
+
+struct ota_pkg_info
+{
+    uint32_t flash_addr;
+    uint32_t flash_size;
+    uint8_t  *pkg_buf;
+};
+
+struct fhcustmsg_host_ota_req
+{
+    uint32_t ota_step;
+    union
+    {
+        struct file_info
+        {
+            uint32_t file_size;
+            uint32_t file_crc;
+            uint8_t  new_version[16];
+        } ota_file_info;
+        struct pkg_info
+        {
+            uint32_t flash_addr;
+            uint32_t flash_size;
+            uint8_t  pkg_buf[1024];
+        } ota_pkg_info;
+    } ota_msg;
+};
+
+#endif /* _FHOSTIF_CMD_H_ */

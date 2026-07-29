@@ -43,6 +43,10 @@ default_boards: &default_boards
   - sf32lb58-lcd_n16r32n1_a1_dsi
   - sf32lb58-lcd_n16r32n1_dpi
   - sf32lb58-core_n16r32n1
+  - sf32lb57-dpi-hdk_n16r8_qspi
+  - sf32lb57-dpi-hdk_n16r8_dpi
+  - sf32lb57-dpi-hdk_n16r8_dbi
+  - sf32lb57-spi-hdk_n16r4
 
 default_nand_boards: &default_nand_boards
   - ec-lb567_hcpu
@@ -71,6 +75,8 @@ bt_boards: &bt_boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
   - sf32lb58-lcd_n16r64n4
+  - sf32lb57-dpi-hdk_n16r8_qspi
+  - sf32lb57-spi-hdk_n16r4
 
 multicore_boards: &multicore_boards
   - ec-lb567_hcpu
@@ -101,6 +107,7 @@ after_55x_boards: &after_55x_boards
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
+  - sf32lb57-spi-hdk_n16r4
 
 525_devkit_lcd_boards: &525_devkit_lcd_boards
   - sf32lb52-lcd_n16r8 
@@ -117,6 +124,7 @@ devkit_lcd_boards: &devkit_lcd_boards
   - sf32lb56-lcd_n16r12n1
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
+  - sf32lb57-spi-hdk_n16r4
 
 devkit-boards: &devkit-boards
   - sf32lb52-lcd_n16r8 
@@ -135,6 +143,7 @@ devkit-boards: &devkit-boards
   - sf32lb58-lcd_a128r32n1_dsi
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-core_n16r32n1
+  - sf32lb57-spi-hdk_n16r4
 
 
 # in alphabetical order
@@ -225,6 +234,15 @@ common_projects:
   - path: example/bt/test_example/project
     boards: *bt_boards
 
+  - path: example/bt/a2dp_sharing/project
+    boards: *bt_boards
+
+  - path: example/bt/hfp_relay/project
+    boards: *bt_boards
+
+  - path: example/bt/music_sink_with_relay/project
+    boards: *bt_boards
+
   - path: example/cherryusb/device/audio_v1_mic/project
     boards: *devkit-boards
 
@@ -239,9 +257,13 @@ common_projects:
 
   - path: example/cherryusb/device/cdc_hid_msc/project
     boards: *devkit-boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/cherryusb/device/hid_mouse/project
     boards: *devkit-boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/cherryusb/device/msc/nor_flash_disk/project
     boards: 
@@ -354,6 +376,8 @@ common_projects:
 
   - path: example/hal/gpio/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/hash/project
     boards: 
@@ -368,12 +392,18 @@ common_projects:
   
   - path: example/hal/i2c/eeprom/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/i2c/master/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/i2c/slave/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/nnacc/project
     boards:
@@ -386,24 +416,34 @@ common_projects:
 
   - path: example/hal/pwm/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/rng/project
     boards: *devkit_lcd_boards
 
   - path: example/hal/rtc/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/spi/dma/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/spi/polling/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/tsen/project
     boards: *devkit_lcd_boards
 
   - path: example/hal/uart/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/hal/wdt/iwdt/project
     boards: *devkit_lcd_boards
@@ -443,6 +483,7 @@ common_projects:
     boards: 
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb57-dpi-hdk_n16r8_qspi
 
   - path: example/multicore/data_service/project/hcpu
     boards: *multicore_boards
@@ -544,6 +585,8 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
+      - sf32lb57-dpi-hdk_n16r8_qspi
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/multimedia/lvgl/lvgl_v9_examples/project
     boards: 
@@ -567,6 +610,8 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
+      - sf32lb57-dpi-hdk_n16r8_qspi
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/multimedia/lvgl/watch/project
     boards:
@@ -667,6 +712,8 @@ common_projects:
 
   - path: example/rt_device/gpio/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/gpu/render_list_mode/project
     boards: *devkit_lcd_boards
@@ -676,6 +723,8 @@ common_projects:
 
   - path: example/rt_device/i2c/eeprom/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/i2s/project
     boards: *devkit_lcd_boards
@@ -710,27 +759,37 @@ common_projects:
 
   - path: example/rt_device/pwm/pwm/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/pwm/pwm_dma/project
     boards: *525_devkit_lcd_boards
 
   - path: example/rt_device/rgb_led/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/rtc/project
     boards: *devkit_lcd_boards
 
   - path: example/rt_device/spi/card/project
     boards: *525_devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/spi/circular_rx/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/spi_tf/project
     boards: *525_devkit_lcd_boards
 
   - path: example/rt_device/uart/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+      - sf32lb57-spi-hdk_n16r4
 
   - path: example/rt_device/usb/usb_mstorage/project/nor
     boards: 

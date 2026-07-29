@@ -70,7 +70,12 @@ define them in your own project's source files without needing to change
 lodepng source code. Don't forget to remove "static" if you copypaste them
 from here.*/
 
-#ifdef LODEPNG_COMPILE_ALLOCATORS
+#ifdef SOLUTION
+#include "app_mem.h"
+#define lodepng_malloc(size) app_cache_alloc(size, CACHE_PSRAM)
+#define lodepng_realloc(ptr, new_size) app_cache_realloc(ptr, new_size, CACHE_PSRAM)
+#define lodepng_free(ptr) app_cache_free(ptr)
+#elif defined(LODEPNG_COMPILE_ALLOCATORS)
 static void* lodepng_malloc(size_t size) {
 #ifdef LODEPNG_MAX_ALLOC
   if(size > LODEPNG_MAX_ALLOC) return 0;
@@ -337,10 +342,25 @@ static void lodepng_set32bitInt(unsigned char* buffer, unsigned value) {
 /* / File IO                                                                / */
 /* ////////////////////////////////////////////////////////////////////////// */
 
+#ifdef RT_USING_DFS
+#include <dfs_posix.h>
+#endif
+
 #ifdef LODEPNG_COMPILE_DISK
 
 /* returns negative value on error. This should be pure C compatible, so no fstat. */
 static long lodepng_filesize(const char* filename) {
+#ifdef RT_USING_DFS
+    struct dfs_fd fd;
+    if(0 == dfs_file_open(&fd, filename, O_RDONLY)) {
+        uint32_t length = 0;
+        uint32_t offset = lv_img_decoder_get_wf_offset(filename, &length);
+        if(0 == offset) length = fd.size;
+        dfs_file_close(&fd);
+        return length;
+    }
+    return -1;
+#else
     lv_fs_file_t f;
     lv_fs_res_t res = lv_fs_open(&f, filename, LV_FS_MODE_RD);
     if(res != LV_FS_RES_OK) return -1;
@@ -353,10 +373,22 @@ static long lodepng_filesize(const char* filename) {
     lv_fs_tell(&f, &size);
     lv_fs_close(&f);
     return size;
+#endif
 }
 
 /* load file into buffer that already has the correct allocated size. Returns error code.*/
 static unsigned lodepng_buffer_file(unsigned char* out, size_t size, const char* filename) {
+#ifdef RT_USING_DFS
+    int br = 0;
+    struct dfs_fd fd;
+    if(0 == dfs_file_open(&fd, filename, O_RDONLY)) {
+        uint32_t length = 0;
+        uint32_t offset = lv_img_decoder_get_wf_offset(filename, &length);
+        if(0 < offset) dfs_file_lseek(&fd, offset);
+        br = dfs_file_read(&fd, out, size);
+        dfs_file_close(&fd);
+    }
+#else
     lv_fs_file_t f;
     lv_fs_res_t res = lv_fs_open(&f, filename, LV_FS_MODE_RD);
     if(res != LV_FS_RES_OK) return 78;
@@ -364,8 +396,9 @@ static unsigned lodepng_buffer_file(unsigned char* out, size_t size, const char*
     uint32_t br;
     res = lv_fs_read(&f, out, size, &br);
     if(res != LV_FS_RES_OK) return 78;
-    if (br != size) return 78;
     lv_fs_close(&f);
+#endif
+    if (br != size) return 78;
     return 0;
 }
 
@@ -382,6 +415,15 @@ unsigned lodepng_load_file(unsigned char** out, size_t* outsize, const char* fil
 
 /*write given buffer to the file, overwriting the file, it doesn't append to it.*/
 unsigned lodepng_save_file(const unsigned char* buffer, size_t buffersize, const char* filename) {
+#ifdef RT_USING_DFS
+  struct dfs_fd fd;
+  if(0 == dfs_file_open(&fd, filename, O_CREAT | O_RDWR | O_TRUNC)) {
+    dfs_file_write(&fd, buffer, buffersize);
+    dfs_file_close(&fd);
+    return 0;
+  }
+  return 79;
+#else
   lv_fs_file_t f;
   lv_fs_res_t res = lv_fs_open(&f, filename, LV_FS_MODE_WR);
   if(res != LV_FS_RES_OK) return 79;
@@ -390,6 +432,7 @@ unsigned lodepng_save_file(const unsigned char* buffer, size_t buffersize, const
   res = lv_fs_write(&f, buffer, buffersize, &bw);
   lv_fs_close(&f);
   return 0;
+#endif
 }
 
 #endif /*LODEPNG_COMPILE_DISK*/
@@ -2499,17 +2542,17 @@ const unsigned char* lodepng_chunk_data_const(const unsigned char* chunk) {
 
 unsigned lodepng_chunk_check_crc(const unsigned char* chunk) {
   unsigned length = lodepng_chunk_length(chunk);
-  unsigned CRC = lodepng_read32bitInt(&chunk[length + 8]);
+  unsigned chunk_crc = lodepng_read32bitInt(&chunk[length + 8]);
   /*the CRC is taken of the data and the 4 chunk type letters, not the length*/
   unsigned checksum = lodepng_crc32(&chunk[4], length + 4);
-  if(CRC != checksum) return 1;
+  if(chunk_crc != checksum) return 1;
   else return 0;
 }
 
 void lodepng_chunk_generate_crc(unsigned char* chunk) {
   unsigned length = lodepng_chunk_length(chunk);
-  unsigned CRC = lodepng_crc32(&chunk[4], length + 4);
-  lodepng_set32bitInt(chunk + 8 + length, CRC);
+  unsigned chunk_crc = lodepng_crc32(&chunk[4], length + 4);
+  lodepng_set32bitInt(chunk + 8 + length, chunk_crc);
 }
 
 unsigned char* lodepng_chunk_next(unsigned char* chunk, unsigned char* end) {
@@ -4091,9 +4134,9 @@ unsigned lodepng_inspect(unsigned* w, unsigned* h, LodePNGState* state,
   if(info->interlace_method > 1) CERROR_RETURN_ERROR(state->error, 34);
 
   if(!state->decoder.ignore_crc) {
-    unsigned CRC = lodepng_read32bitInt(&in[29]);
+    unsigned chunk_crc = lodepng_read32bitInt(&in[29]);
     unsigned checksum = lodepng_crc32(&in[12], 17);
-    if(CRC != checksum) {
+    if(chunk_crc != checksum) {
       CERROR_RETURN_ERROR(state->error, 57); /*invalid CRC*/
     }
   }
@@ -4979,6 +5022,7 @@ unsigned lodepng_decode(unsigned char** out, unsigned* w, unsigned* h,
     outsize = lodepng_get_raw_size(*w, *h, &state->info_raw);
     *out = (unsigned char*)lodepng_malloc(outsize);
     if(!(*out)) {
+      rt_kprintf("%s: outsize %d alloc failed!!!\n", __func__, outsize);
       state->error = 83; /*alloc fail*/
     }
     else state->error = lodepng_convert(*out, data, &state->info_raw,

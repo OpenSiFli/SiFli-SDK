@@ -14,8 +14,12 @@ static T_pSD_PARAM_FACTORY  g_factory_near;
 static T_AUDIO_FILTER_TS    ts_far;
 static T_AUDIO_FILTER_TS    ts_dac_stream;
 static uint32_t             samplerate;
+static uint8_t              all_mic_channels;
 static void                 *p_far;
 static void                 *p_near;
+
+void *acpu_call_hcpu_malloc(uint32_t size);
+void acpu_call_hcpu_free(void *p);
 
 static T_VOID my_printf(T_pCSTR fmt, ...)
 {
@@ -26,8 +30,8 @@ static T_VOID my_printf(T_pCSTR fmt, ...)
     va_start(args, fmt);
     n = vsnprintf(str, sizeof(str) - 1, fmt, args);
     va_end(args);
-    print_buffer[128 - 1] = '\0';
-    req_hcpu_run_task(HCPU_TASK_PRINTF, print_buffer, sizeof(print_buffer), NULL);
+    str[128 - 1] = '\0';
+    acpu_printf("%s\n", str);
 #endif
 }
 
@@ -53,11 +57,17 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     ts_far = 0;
     ts_dac_stream = 0;
     samplerate = arg->samplerate;
+    all_mic_channels = arg->all_mic_channels;
 
     sd_cb = _SD_GetPlatformDependentList();
 
+#ifdef SOC_SF32LB58X
     sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
     sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     sd_cb->printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     sd_cb->flushDCache = t4_flush_dcache_range;
 
@@ -70,8 +80,13 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     T_ECHO_IN_INFO echo_in;
     memset(&echo_in, 0, sizeof(echo_in));
     echo_in.strVersion = AUDIO_FILTER_VERSION_STRING;
-    echo_in.cb_fun.Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
-    echo_in.cb_fun.Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#ifdef SOC_SF32LB58X
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     echo_in.cb_fun.Printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     echo_in.cb_fun.flushDCache = t4_flush_dcache_range;
     echo_in.cb_fun.notify = my_notify;
@@ -229,7 +244,7 @@ int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg)
     //acpu_printf("fill dac loopback=%d", ret);
 
     ts += DELAY_SAMPLE * 1000000ULL / samplerate;
-    ret = _SD_Echo_FillAdcStream(p_near, arg->fifo, ANYKA_FRAME_SIZE, ts, 1);
+    ret = _SD_Echo_FillAdcStream(p_near, arg->fifo, ANYKA_FRAME_SIZE * all_mic_channels, ts, 1);
 
     //acpu_printf("fill adc=%d", ret);
     ret = _SD_Echo_GetResult(p_near, arg->result, ANYKA_FRAME_SIZE, &ts_result, 1);

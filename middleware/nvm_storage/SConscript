@@ -1,0 +1,14 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+sdk_include = os.path.abspath(os.path.join(cwd, '..', 'include'))
+
+src = ['nvm_storage.c']
+if GetDepend('BSP_USING_NVM_STORAGE_DFS_BACKEND'):
+    src += ['app_nvm.c']
+inc = [cwd, sdk_include]
+
+group = DefineGroup('nvm_storage', src, depend=['BSP_USING_NVM_STORAGE'], CPPPATH=inc)
+
+Return('group')

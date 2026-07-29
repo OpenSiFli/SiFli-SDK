@@ -48,6 +48,8 @@ void SystemVectorTableRemapping(void);
 
 void cache_enable(void);
 
+void cache_disable(void);
+
 
 #define IS_DCACHED_RAM(addr)  (((uint32_t) addr) >= (PSRAM_BASE))
 #ifdef PSRAM_CACHE_WB

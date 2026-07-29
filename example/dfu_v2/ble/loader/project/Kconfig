@@ -1,0 +1,3 @@
+#Kconfig root for DFU-BLE V2 subprogram.
+source "$SIFLI_SDK/Kconfig.v2"
+rsource "Kconfig.proj"

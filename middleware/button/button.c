@@ -197,12 +197,14 @@ static int8_t button_find_adc_button_id(const adc_button_group_cfg_t *adc_btn_gr
         pad = PAD_PA00 + gpiox_pin;
         func = GPIO_A0 + gpiox_pin;
     }
+#if GPIO2_BASE
     else if (hwp_gpio2 == gpio_instance)
     {
         hcpu = 0;
         pad = PAD_PB00 + GET_GPIOx_PIN(pin);
         func = GPIO_B0 + gpiox_pin;
     }
+#endif /* GPIO2_BASE */
     else
     {
         RT_ASSERT(0);

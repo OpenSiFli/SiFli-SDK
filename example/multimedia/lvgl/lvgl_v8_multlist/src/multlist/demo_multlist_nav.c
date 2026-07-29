@@ -8,10 +8,9 @@
  *      INCLUDES
  *********************/
 
-#include "global.h"
+#include "multlist_config.h"
 
 #define _MODULE_NAME_ "multlist"
-#include "app_module.h"
 
 static void demo_multlist_back_event_cb(lv_event_t *e)
 {

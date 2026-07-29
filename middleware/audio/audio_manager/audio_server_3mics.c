@@ -1997,7 +1997,7 @@ void auido_gain_pcm(int16_t *p, rt_size_t len, uint8_t shift)
   *         len: data length
   * @retval whether or not need downlink processing algorithm
   */
-uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint8_t len)
+uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint16_t len)
 {
     uint8_t ret = 1;
     rt_size_t putsize;
@@ -2050,7 +2050,7 @@ AUDIO_API int audio_hfp_uplink_write(audio_client_t handle, uint8_t *data, uint3
     }
 
 
-    msbc_encode_process(data, data_len);
+    bt_voice_encode_process(data, data_len);
 
     return data_len;
 }

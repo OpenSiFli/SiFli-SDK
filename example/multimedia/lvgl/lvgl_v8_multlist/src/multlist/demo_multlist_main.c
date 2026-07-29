@@ -8,11 +8,10 @@
  *      INCLUDES
  *********************/
 
-#include "global.h"
+#include "multlist_config.h"
 #include "demo_multlist.h"
 
 #define _MODULE_NAME_ "multlist"
-#include "app_module.h"
 
 static lv_obj_t *p_launcher = NULL;
 

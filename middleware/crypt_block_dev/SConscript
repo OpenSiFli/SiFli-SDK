@@ -1,0 +1,14 @@
+import os
+from building import *
+
+src = []
+inc = []
+
+cwd = GetCurrentDir()
+inc += [cwd]
+src += Glob('*.c')
+
+group = DefineGroup('crypt_block_dev', src, depend = ['USING_CRYPT_BLOCK_DEV'], CPPPATH = inc)
+
+Return('group')
+

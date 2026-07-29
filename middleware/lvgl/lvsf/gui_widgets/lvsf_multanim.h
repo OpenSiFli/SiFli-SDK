@@ -7,6 +7,7 @@
 #ifndef _LVSF_MULTANIM_H
 #define _LVSF_MULTANIM_H
 
+#include "lvgl.h"
 #include "lvsf_conf_internal.h"
 
 #if LVSF_USE_MULTANIM != 0
@@ -14,11 +15,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*********************
-*      INCLUDES
-*********************/
-#include "lvgl.h"
 
 /*********************
 *      DEFINES

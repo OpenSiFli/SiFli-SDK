@@ -54,10 +54,7 @@
 #define TI_DWNLY24MS        2
 #define TI_DWNLY48MS        3
 
-#define TPS_WAKEUP 35
-#define TPS_PWRCOM 36
-#define TPS_PWRUP 03
-#define TPS_GOOD 06
+
 
 static struct rt_i2c_bus_device *p_i2c_bus = NULL;
 
@@ -146,46 +143,47 @@ void tps_init(uint16_t vcom_voltage)
     rt_i2c_configure(p_i2c_bus, &configuration);
 
 
-    rt_pin_mode(TPS_WAKEUP, PIN_MODE_OUTPUT);
-    rt_pin_mode(TPS_PWRCOM, PIN_MODE_OUTPUT);
-    rt_pin_mode(TPS_PWRUP, PIN_MODE_OUTPUT);
-    rt_pin_mode(TPS_GOOD, PIN_MODE_INPUT_PULLUP);
+    rt_pin_mode(EPD_TPS_WAKEUP_PIN, PIN_MODE_OUTPUT);
+    rt_pin_mode(EPD_TPS_PWRCOM_PIN, PIN_MODE_OUTPUT);
+    rt_pin_mode(EPD_TPS_PWRUP_PIN, PIN_MODE_OUTPUT);
+#ifdef EPD_TPS_GOOD_PIN
+    rt_pin_mode(EPD_TPS_GOOD_PIN, PIN_MODE_INPUT_PULLUP);
+#endif
 
-
-    rt_pin_write(TPS_WAKEUP, 0);
-    rt_pin_write(TPS_PWRCOM, 0);
-    rt_pin_write(TPS_PWRUP, 0);
+    rt_pin_write(EPD_TPS_WAKEUP_PIN, 0);
+    rt_pin_write(EPD_TPS_PWRCOM_PIN, 0);
+    rt_pin_write(EPD_TPS_PWRUP_PIN, 0);
     rt_thread_mdelay(10);
-    rt_pin_write(TPS_WAKEUP, 1);
+    rt_pin_write(EPD_TPS_WAKEUP_PIN, 1);
     rt_thread_mdelay(10);
     tps_power_sequence_set();
     tps_vposvneg_set();
     tps_vcom_set(vcom_voltage);           //VCOM设置
 
     rt_kprintf("tps_init: vcom=%dmV, \n", vcom_voltage);
-
-    rt_kprintf("tps_good_pin value: %d (1 - good, 0 - bad)\n", rt_pin_read(TPS_GOOD));
-
-    rt_pin_write(TPS_PWRCOM, 0);
-    rt_pin_write(TPS_PWRUP, 0);
+#ifdef EPD_TPS_GOOD_PIN
+    rt_kprintf("tps_good_pin value: %d (1 - good, 0 - bad)\n", rt_pin_read(EPD_TPS_GOOD_PIN));
+#endif
+    rt_pin_write(EPD_TPS_PWRCOM_PIN, 0);
+    rt_pin_write(EPD_TPS_PWRUP_PIN, 0);
 }
 
 
 rt_err_t tps_enter_sleep(void)
 {
     rt_thread_mdelay(10);
-    rt_pin_write(TPS_PWRCOM, 0);
+    rt_pin_write(EPD_TPS_PWRCOM_PIN, 0);
     rt_thread_mdelay(10);
-    rt_pin_write(TPS_PWRUP, 0);
+    rt_pin_write(EPD_TPS_PWRUP_PIN, 0);
 
     return RT_EOK;
 }
 
 rt_err_t tps_exit_sleep(void)
 {
-    rt_pin_write(TPS_PWRUP, 1);
+    rt_pin_write(EPD_TPS_PWRUP_PIN, 1);
     rt_thread_mdelay(50);
-    rt_pin_write(TPS_PWRCOM, 1);
+    rt_pin_write(EPD_TPS_PWRCOM_PIN, 1);
     rt_thread_mdelay(10);
 
     return RT_EOK;

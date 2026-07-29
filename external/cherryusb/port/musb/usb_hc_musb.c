@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2022, sakumisu
- * Copyright (c) 2025, SiFli Technologies(Nanjing) Co., Ltd 
+ * Copyright (c) 2025, SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -165,6 +165,7 @@ struct musb_pipe {
     bool inuse;
     uint32_t xfrd;
     volatile uint8_t ep0_state;
+    volatile uint32_t iso_frame_idx;
     usb_osal_sem_t waitsem;
     struct usbh_urb *urb;
 };
@@ -521,6 +522,87 @@ int musb_intr_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
     return 0;
 }
 
+int musb_iso_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb)
+{
+    uint8_t old_ep_index;
+    uint8_t speed = USB_TXTYPE1_SPEED_FULL;
+    struct usbh_iso_frame_packet *iso_packet;
+    struct musb_pipe *pipe;
+
+    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[chidx];
+    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+    iso_packet->actual_length = 0;
+
+    old_ep_index = musb_get_active_ep(bus);
+    musb_set_active_ep(bus, chidx);
+
+    if (urb->hport->speed == USB_SPEED_HIGH) {
+        speed = USB_TXTYPE1_SPEED_HIGH;
+    } else if (urb->hport->speed == USB_SPEED_FULL) {
+        speed = USB_TXTYPE1_SPEED_FULL;
+    } else if (urb->hport->speed == USB_SPEED_LOW) {
+        speed = USB_TXTYPE1_SPEED_LOW;
+    }
+
+    if (urb->ep->bEndpointAddress & 0x80) {
+#ifndef CONFIG_USB_MUSB_SIFLI
+        if ((8 << HWREGB(USB_BASE + MUSB_RXFIFOSZ_OFFSET)) < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            USB_LOG_ERR("Ep %02x fifo is overflow\r\n", urb->ep->bEndpointAddress);
+            return -USB_ERR_RANGE;
+        }
+#endif
+#ifdef CONFIG_USB_MUSB_WITHOUT_MULTIPOINT
+        HWREGB(USB_BASE + MUSB_FADDR_OFFSET) = (urb->hport->dev_addr & 0x7F);
+        HWREGB(USB_RXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_RXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_RXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_RXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_RXHUBPORT_BASE(chidx)) = 0;
+#else
+        HWREGB(USB_RXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_RXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_RXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_RXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_RXHUBPORT_BASE(chidx)) = 0;
+#endif
+        HWREGB(USB_TXCSRH_BASE(chidx)) &= ~USB_TXCSRH1_MODE;
+        HWREGB(USB_RXCSRL_BASE(chidx)) = USB_RXCSRL1_REQPKT;
+
+        HWREGH(USB_BASE + MUSB_RXIE_OFFSET) |= (1 << chidx);
+    } else {
+#ifndef CONFIG_USB_MUSB_SIFLI
+        if ((8 << HWREGB(USB_BASE + MUSB_TXFIFOSZ_OFFSET)) < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            USB_LOG_ERR("Ep %02x fifo is overflow\r\n", urb->ep->bEndpointAddress);
+            return -USB_ERR_RANGE;
+        }
+#endif
+#ifdef CONFIG_USB_MUSB_WITHOUT_MULTIPOINT
+        HWREGB(USB_BASE + MUSB_FADDR_OFFSET) = (urb->hport->dev_addr & 0x7F);
+        HWREGB(USB_TXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_TXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_TXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+#else
+        HWREGB(USB_TXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_TXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_TXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_TXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_TXHUBPORT_BASE(chidx)) = 0;
+#endif
+
+        if (iso_packet->transfer_buffer_length > USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            iso_packet->transfer_buffer_length = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
+        }
+
+        musb_write_packet(bus, chidx, iso_packet->transfer_buffer, iso_packet->transfer_buffer_length);
+        HWREGB(USB_TXCSRH_BASE(chidx)) |= USB_TXCSRH1_MODE;
+        HWREGB(USB_TXCSRL_BASE(chidx)) = USB_TXCSRL1_TXRDY;
+
+        HWREGH(USB_BASE + MUSB_TXIE_OFFSET) |= (1 << chidx);
+    }
+    musb_set_active_ep(bus, old_ep_index);
+    return 0;
+}
+
 static int usbh_reset_port(struct usbh_bus *bus, const uint8_t port)
 {
 #ifdef CONFIG_USB_MUSB_SIFLI
@@ -649,7 +731,7 @@ static void musb_pipe_free(struct musb_pipe *pipe)
 
     flags = usb_osal_enter_critical_section();
 #if defined(CONFIG_USB_MUSB_SIFLI) && (defined(SF32LB52X) || defined(SF32LB56X))
-    if (pipe->urb && pipe->urb->ep && pipe->urb->hport && pipe->urb->hport->bus && 
+    if (pipe->urb && pipe->urb->ep && pipe->urb->hport && pipe->urb->hport->bus &&
         (USB_GET_ENDPOINT_TYPE(pipe->urb->ep->bmAttributes) != USB_ENDPOINT_TYPE_CONTROL)) {
         sifli_ep_map_free(pipe->urb->hport->bus, pipe->chidx);
     }
@@ -736,6 +818,11 @@ int usb_hc_deinit(struct usbh_bus *bus)
     }
 
     usb_hc_low_level_deinit(bus);
+    return 0;
+}
+
+uint16_t usbh_get_frame_number(struct usbh_bus *bus)
+{
     return 0;
 }
 
@@ -941,9 +1028,12 @@ int usbh_submit_urb(struct usbh_urb *urb)
             }
             break;
         case USB_ENDPOINT_TYPE_ISOCHRONOUS:
-            usb_osal_leave_critical_section(flags);
-            musb_pipe_free(pipe);
-            return -USB_ERR_NOTSUPP;
+            pipe->iso_frame_idx = 0;
+            ret = musb_iso_urb_init(bus, chidx, urb);
+            if (ret < 0) {
+                return ret;
+            }
+            break;
         default:
             break;
     }
@@ -1273,6 +1363,25 @@ void USBH_IRQHandler(uint8_t busid)
                         musb_write_packet(bus, ep_idx, urb->transfer_buffer, MIN(urb->transfer_buffer_length, USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)));
                         HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_TXCSRL1_TXRDY;
                     }
+                } else {
+                    struct usbh_iso_frame_packet *iso_packet;
+                    struct musb_pipe *pipe;
+
+                    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ep_idx];
+                    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+                    iso_packet->errorcode = 0;
+
+                    pipe->iso_frame_idx++;
+
+                    if (pipe->iso_frame_idx == urb->num_of_iso_packets) {
+                        urb->actual_length = 0;
+                        urb->errorcode = 0;
+                        musb_urb_waitup(urb);
+                    } else {
+                        iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+                        musb_write_packet(bus, ep_idx, iso_packet->transfer_buffer, iso_packet->transfer_buffer_length);
+                        HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_TXCSRL1_TXRDY;
+                    }
                 }
             }
         }
@@ -1316,6 +1425,30 @@ void USBH_IRQHandler(uint8_t busid)
 
                     if ((size < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) || (urb->transfer_buffer_length == 0)) {
                         //HWREGH(USB_BASE + MUSB_RXIE_OFFSET) &= ~(1 << ep_idx);
+                        urb->errorcode = 0;
+                        musb_urb_waitup(urb);
+                    } else {
+                        HWREGB(USB_RXCSRL_BASE(ep_idx)) = USB_RXCSRL1_REQPKT;
+                    }
+                } else {
+                    struct usbh_iso_frame_packet *iso_packet;
+                    struct musb_pipe *pipe;
+
+                    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ep_idx];
+                    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+
+                    size = HWREGH(USB_RXCOUNT_BASE(ep_idx));
+
+                    musb_read_packet(bus, ep_idx, iso_packet->transfer_buffer, size);
+
+                    HWREGB(USB_RXCSRL_BASE(ep_idx)) &= ~USB_RXCSRL1_RXRDY;
+
+                    iso_packet->actual_length = size;
+                    iso_packet->errorcode = 0;
+                    pipe->iso_frame_idx++;
+
+                    if (pipe->iso_frame_idx == urb->num_of_iso_packets) {
+                        urb->actual_length = 0;
                         urb->errorcode = 0;
                         musb_urb_waitup(urb);
                     } else {

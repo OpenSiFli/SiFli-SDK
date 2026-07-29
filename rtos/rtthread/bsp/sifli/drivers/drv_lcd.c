@@ -171,7 +171,7 @@ static LCD_DrvTypeDef drv_lcd;
     static uint32_t *ramless_code = NULL;
 #endif /* BSP_USING_RAMLESS_LCD */
 
-#if defined(LCDC_SUPPORT_EXTERNAL_LINEBUF) || (defined(BSP_USING_RAMLESS_LCD) && defined(BSP_LCDC_USING_DPI))
+#if defined(BSP_USING_RAMLESS_LCD) && defined(BSP_LCDC_USING_DPI)
     #if defined(LCDC_SUPPORT_EXTERNAL_LINEBUF)
         //Fixed ARGB8888 format
         #define SRAM_BUF_1LINE (LCD_HOR_RES_MAX * 4)
@@ -186,6 +186,10 @@ static LCD_DrvTypeDef drv_lcd;
 
     static uint32_t *sram_data0 = NULL;
     static uint32_t *sram_data1 = NULL;
+    #ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
+        static uint32_t *unaligned_sram_data0 = NULL;
+        static uint32_t *unaligned_sram_data1 = NULL;
+    #endif /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
 #endif
 
 RETM_BSS_SECT_BEGIN(lcd_idle_status)
@@ -623,10 +627,23 @@ static void copy2buf(uint8_t *dst_buf, const uint8_t *src_buf, uint16_t format, 
 #ifdef SRAM_BUF_1LINE
 static void init_line_buffer(void)
 {
+#ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
+    //Allocate memory with 64 bytes aligned address
+    if (!unaligned_sram_data0) unaligned_sram_data0 = (uint32_t *) malloc_dma_friendly_sram(sizeof(uint32_t) * SRAM_BUF_TOTAL_WORDS + 63);
+    RT_ASSERT(unaligned_sram_data0 != NULL);
+    if (!unaligned_sram_data1) unaligned_sram_data1 = (uint32_t *) malloc_dma_friendly_sram(sizeof(uint32_t) * SRAM_BUF_TOTAL_WORDS + 63);
+    RT_ASSERT(unaligned_sram_data1 != NULL);
+
+    sram_data0 = (uint32_t *)RT_ALIGN((uint32_t)unaligned_sram_data0, 64);
+    sram_data1 = (uint32_t *)RT_ALIGN((uint32_t)unaligned_sram_data1, 64);
+
+#else /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
     if (!sram_data0) sram_data0 = (uint32_t *) malloc_dma_friendly_sram(sizeof(uint32_t) * SRAM_BUF_TOTAL_WORDS);
     RT_ASSERT(sram_data0 != NULL);
     if (!sram_data1) sram_data1 = (uint32_t *) malloc_dma_friendly_sram(sizeof(uint32_t) * SRAM_BUF_TOTAL_WORDS);
     RT_ASSERT(sram_data1 != NULL);
+#endif /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
+
 
     /*
         'sram_data0' & 'sram_data1' are not retention memory,
@@ -645,6 +662,20 @@ static bool check_line_bufer_overwrite(void)
 }
 static void deinit_line_buffer(void)
 {
+#ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
+    if (unaligned_sram_data0)
+    {
+        free_dma_friendly_sram(unaligned_sram_data0);
+        unaligned_sram_data0 = NULL;
+        sram_data0 = NULL;
+    }
+    if (unaligned_sram_data1)
+    {
+        free_dma_friendly_sram(unaligned_sram_data1);
+        unaligned_sram_data1 = NULL;
+        sram_data1 = NULL;
+    }
+#else /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
     if (sram_data0)
     {
         free_dma_friendly_sram(sram_data0);
@@ -655,6 +686,7 @@ static void deinit_line_buffer(void)
         free_dma_friendly_sram(sram_data1);
         sram_data1 = NULL;
     }
+#endif /* LCDC_SUPPORT_EXTERNAL_LINEBUF */
 }
 #endif /*SRAM_BUF_1LINE*/
 
@@ -729,11 +761,11 @@ static rt_err_t lcd_hw_open(void)
 
 #ifdef SRAM_BUF_1LINE
     init_line_buffer();
-#endif /* SRAM_BUF_1LINE */
 #ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
     drv_lcd.hlcdc.sram_line_buf0 = sram_data0;
     drv_lcd.hlcdc.sram_line_buf1 = sram_data1;
-#else /*LCDC_SUPPORT_EXTERNAL_LINEBUF*/
+#endif /*LCDC_SUPPORT_EXTERNAL_LINEBUF*/
+#endif /* SRAM_BUF_1LINE */
 
 #ifdef BSP_USING_RAMLESS_LCD
     if ((drv_lcd.p_drv_ops) && (HAL_LCDC_IS_PTC_AUX_IF(drv_lcd.hlcdc.Init.lcd_itf)))
@@ -748,7 +780,6 @@ static rt_err_t lcd_hw_open(void)
 #endif /* BSP_LCDC_USING_DPI */
     }
 #endif /* BSP_USING_RAMLESS_LCD */
-#endif /*LCDC_SUPPORT_EXTERNAL_LINEBUF*/
 
     LOG_I("HW open done.");
 
@@ -898,15 +929,21 @@ static void lcd_driver_print_error_info(void)
                  );
         }
 #endif /* HAL_DSI_MODULE_ENABLED */
-#ifdef BSP_USING_RAMLESS_LCD
+#if defined(BSP_USING_RAMLESS_LCD)
         if (HAL_LCDC_IS_PTC_AUX_IF(drv_lcd.hlcdc.Init.lcd_itf))
         {
             HAL_Delay(5);
             LOG_E("LCDC CANVAS TL=%x,BR=%x",
                   drv_lcd.hlcdc.Instance->CANVAS_TL_POS,
                   drv_lcd.hlcdc.Instance->CANVAS_BR_POS);
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+            LOG_E("PTC DMA instance=0x%x, ch=%d",
+                  drv_lcd.hlcdc.hdma_handle.Instance,
+                  (drv_lcd.hlcdc.hdma_handle.ChannelIndex >> 2) + 1);
+#endif
 
 #ifdef SOC_BF0_HCPU
+#if defined(hwp_ptc1)
 #ifdef SF32LB55X
             const uint32_t ptc_tab_size = 24;
             const uint32_t ptc_ch_words = 3;
@@ -969,6 +1006,21 @@ static void lcd_driver_print_error_info(void)
                 }
 
             }
+
+#elif defined(hwp_ptm1)
+            uint32_t pc = hwp_ptm1->PC0;
+            uint32_t val = (pc < 0x800) ? (PTM1_CORE0_TCM)[pc] : *((uint32_t *)pc);
+            LOG_E("PTM ENTRY=0x%08x, PC=0x%08x, val=0x%08x", drv_lcd.hlcdc.ptc_code, pc, val);
+            if (0 == (val & 0xE0000000)) //Wait cmd
+            {
+                uint8_t src = (val >> 16) & 0xff;
+                uint16_t delay = val & 0xffff;
+                uint8_t pol = (val >> 24) & 0x1;
+
+                LOG_E("Wait src=%d, delay=0x%x, pol=%d", src, delay, pol);
+            }
+#endif /*hwp_ptc1*/
+
 
 #endif /* SOC_BF0_HCPU */
 
@@ -1574,7 +1626,7 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
             }
         }
 
-#ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF
+#if defined(LCDC_SUPPORT_EXTERNAL_LINEBUF)&&defined(SRAM_BUF_1LINE)
         if (check_line_bufer_overwrite())
         {
             LOG_E("Line buffer overwritten!!");

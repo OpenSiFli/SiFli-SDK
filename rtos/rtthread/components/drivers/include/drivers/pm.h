@@ -163,15 +163,8 @@ struct rt_pm_notify
     void *data;
 };
 
-#ifndef PM_REQUEST_DEBUG
-    void rt_pm_request(uint8_t sleep_mode);
-    void rt_pm_release(uint8_t sleep_mode);
-#else
-    void rt_pm_request_debug(uint8_t sleep_mode, const char *file, uint32_t line);
-    void rt_pm_release_debug(uint8_t sleep_mode, const char *file, uint32_t line);
-    #define rt_pm_request(sleep_mode)  rt_pm_request_debug((sleep_mode), __FILE__, __LINE__)
-    #define rt_pm_release(sleep_mode)  rt_pm_release_debug((sleep_mode), __FILE__, __LINE__)
-#endif
+void rt_pm_request(uint8_t sleep_mode);
+void rt_pm_release(uint8_t sleep_mode);
 
 /**
  * @brief Get the current run mode of the power management system.

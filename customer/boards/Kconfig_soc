@@ -34,7 +34,18 @@ if BF0_HCPU
     config CPU
     string
     default "Cortex-M33"
-endif    
+endif   
+
+config SOC_PACKAGE_QFN68
+    bool
+
+config SOC_PACKAGE_QFN80
+    bool
+
+config SOC_PACKAGE_BGA112
+    bool
+
+rsource "Kconfig_soc.sf32lb57x"
 
 if BF0_LCPU
     config CORE
@@ -177,6 +188,9 @@ if !BSP_USING_PC_SIMULATOR
             endchoice
 
         endif # SD_BL_MODE
+
+        config BOARD_RAMRUN_ENABLED
+            bool
 
     endmenu
 endif

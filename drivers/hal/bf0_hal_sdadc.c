@@ -17,7 +17,8 @@
 
 #ifdef HAL_SDADC_MODULE_ENABLED
 
-
+#define SDADC_VREF_PWR_BASE_REG_VAL     (1923825U)
+#define SDADC_VREF_HALF_REG_VAL         (SDADC_VREF_PWR_BASE_REG_VAL / 2)
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -1038,6 +1039,121 @@ static void SDADC_DMAError(DMA_HandleTypeDef *hdma)
     /* Set ADC error code to DMA error */
     SET_BIT(hadc->ErrorCode, HAL_SDADC_ERROR_DMA);
 
+}
+
+/**
+  * @brief  Convert a raw SDADC register value to voltage (mV); same formula as GADC.
+  * @param  reg_value: raw register value
+  * @param  context:   calibration context (contains offset and ratio)
+  * @retval voltage (mV)
+  */
+__weak float HAL_SDADC_RegToVoltageFloat(float reg_value, const HAL_SDADC_CalibContextTypeDef *context)
+{
+    if (context == NULL)
+        return 0.0f;
+
+    return (reg_value - context->offset) * context->ratio / (float)SDADC_RATIO_ACCURATE;
+}
+
+/**
+  * @brief  Initialize the calibration context with the chip default macro values.
+  */
+static HAL_StatusTypeDef HAL_SDADC_SetDefaultCalibration(HAL_SDADC_CalibContextTypeDef *ctx)
+{
+    if (ctx == NULL)
+        return HAL_ERROR;
+
+    ctx->offset        = SDADC_DEFAULT_OFFSET;
+    ctx->ratio         = SDADC_DEFAULT_RATIO;
+    ctx->threshold_reg = SDADC_THRESHOLD_REG_MAX;
+    ctx->flags         = 0;
+
+    return HAL_OK;
+}
+
+/**
+  * @brief  Two-point calibration.
+  * @param  reg1:   register value of calibration point 1
+  * @param  mv1:    voltage (mV) of calibration point 1
+  * @param  reg2:   register value of calibration point 2
+  * @param  mv2:    voltage (mV) of calibration point 2
+  * @param  result: output calibration result (offset, ratio, threshold_reg)
+  * @retval HAL_OK or HAL_ERROR
+  *
+  * Formula:
+  *   gap_reg = |reg2 - reg1|
+  *   gap_mv  = |mV2  - mV1 |
+  *   ratio   = gap_mv * ACCURATE / gap_reg
+  *   offset  = reg1 - mV1 * ACCURATE / ratio
+  */
+static HAL_StatusTypeDef HAL_SDADC_Calibration(
+    uint32_t reg1, uint32_t mv1,
+    uint32_t reg2, uint32_t mv2,
+    HAL_SDADC_CalibContextTypeDef *result)
+{
+    float gap1, gap2;
+
+    if (result == NULL)
+        return HAL_ERROR;
+
+    gap1 = (float)(reg1 > reg2 ? reg1 - reg2 : reg2 - reg1);
+    gap2 = (float)(mv1  > mv2  ? mv1  - mv2  : mv2  - mv1);
+    if (gap1 < 1.0f)
+        return HAL_ERROR;
+
+    result->ratio  = gap2 * (float)SDADC_RATIO_ACCURATE / gap1;
+    result->offset = (float)reg1 - (float)mv1 * (float)SDADC_RATIO_ACCURATE / result->ratio;
+
+    /* Derive the register threshold corresponding to 3.3V from the computed ratio/offset */
+    result->threshold_reg = (uint32_t)(3300.0f * (float)SDADC_RATIO_ACCURATE /
+                                       result->ratio + result->offset);
+    if (result->threshold_reg >= SDADC_THRESHOLD_REG_MAX)
+        result->threshold_reg = SDADC_THRESHOLD_REG_MAX;
+
+    return HAL_OK;
+}
+
+/**
+  * @brief  Load the SDADC calibration parameters: set defaults first, then try to
+  *         override them with the factory calibration.
+  * @param  context: calibration context to be filled in
+  * @retval HAL_OK:    context is always populated with usable values. When factory
+  *                    calibration is present and valid it is applied and the
+  *                    HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag is set; otherwise the
+  *                    chip default calibration is kept and the flag stays clear.
+  *         HAL_ERROR: invalid argument (context == NULL) only.
+  * @note   Callers should NOT treat a cleared HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag
+  *         as "no data" — the default calibration is still usable.
+  */
+__weak HAL_StatusTypeDef HAL_SDADC_CalibLoad(HAL_SDADC_CalibContextTypeDef *context)
+{
+    HAL_StatusTypeDef status;
+
+    if (context == NULL)
+        return HAL_ERROR;
+
+    /* 1. Set default values */
+    status = HAL_SDADC_SetDefaultCalibration(context);
+    if (status != HAL_OK)
+        return status;
+
+    /* 2. Try to read the factory calibration */
+    HAL_LCPU_CONFIG_SDMADC_T cfg;
+    int len = (int)sizeof(HAL_LCPU_CONFIG_SDMADC_T);
+
+    if (BSP_CONFIG_get(FACTORY_CFG_ID_SDMADC, (uint8_t *)&cfg, len)
+            && cfg.value != 0 && cfg.vol_mv != 0)
+    {
+        if (HAL_SDADC_Calibration(
+                SDADC_VREF_HALF_REG_VAL, 0,
+                cfg.value, cfg.vol_mv,
+                context) == HAL_OK)
+        {
+            context->flags |= HAL_SDADC_CALIB_CTX_F_FACTORY_VALID;
+        }
+    }
+
+    return HAL_OK;
 }
 
 /**

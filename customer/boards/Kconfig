@@ -64,7 +64,25 @@ choice
         bool "SS6700XXX HDK" 
     config BSP_USING_BOARD_FPGA_57X_MEM_V3
         depends on SOC_SF32LB57X
-        bool "FPGA 57x MEM V3"    
+        bool "FPGA 57x MEM V3"   
+    config BSP_USING_BOARD_SF32LB57_RAMRUN
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-RAMRUN"
+    config BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_DBI
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-DPI-HDK_N16R_DBI"
+    config BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_QSPI
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-DPI-HDK_N16R_QSPI"
+    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R4
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-SPI-HDK_N16R4"
+    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R8
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-SPI-HDK_N16R8"
+    config BSP_USING_BOARD_SF32LB57_SPI_HDK_N32R4
+        depends on SOC_SF32LB57X
+        bool "SF32LB57-SPI-HDK_N32R4"  
     config BSP_USING_BOARD_EC_LB583XXX
         depends on SOC_SF32LB58X
         bool "SF32LB583XXX EVB"
@@ -230,6 +248,30 @@ endif
 
 if BSP_USING_BOARD_FPGA_57X_MEM_V3
     source "$SIFLI_SDK/customer/boards/fpga-57x_mem_v3/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_RAMRUN
+    source "$SIFLI_SDK/customer/boards/sf32lb57-ramrun/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_DBI
+    source "$SIFLI_SDK/customer/boards/sf32lb57-dpi-hdk_n16r8_dbi/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_DPI_HDK_N16R8_QSPI
+    source "$SIFLI_SDK/customer/boards/sf32lb57-dpi-hdk_n16r8_qspi/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R4
+    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n16r4/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_SPI_HDK_N16R8
+    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n16r8/Kconfig.board"
+endif
+
+if BSP_USING_BOARD_SF32LB57_SPI_HDK_N32R4
+    source "$SIFLI_SDK/customer/boards/sf32lb57-spi-hdk_n32r4/Kconfig.board"
 endif
 
 if BSP_USING_BOARD_EC_LB583XXX || SIFLI_LB583

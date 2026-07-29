@@ -1,146 +1,254 @@
-# LVGL v9官方Example
+# LVGL v9 官方示例
+
+源码路径：`example/multimedia/lvgl/lvgl_v9_examples`
+
+## 支持的平台
+
+- `sf32lb52-lchspi-ulp`
+- SF32LB52x LCD 系列开发板
+- SF32LB56x LCD 系列开发板
+- SF32LB58x LCD 系列开发板
+
+以上平台均可运行基础 LVGL 示例。使用 TJPGD 示例从 TF 卡读取图片时，开发板还需具备 SPI TF 卡接口，并完成 SPI、TF 卡和文件系统配置。本文以 `sf32lb52-lchspi-ulp` 为例，其他开发板请替换为对应的板名和硬件配置。
+
 ## 介绍
-本示例用来测试LVGL V9的API，使用官方提供的example。
-可以替换 src/main.c (模拟器在 simulator/applications/application.c) 里面的lv_example_scroll_1()函数，来测试其他API，
-其他API函数，参考src/examples/lv_examples.h里面的函数定义。
+
+本工程用于运行和验证 LVGL v9 官方示例。示例源码位于 `src/examples`，可调用的示例函数可参考 `src/examples/lv_examples.h`。
+
+`src/main.c` 默认调用 `lv_example_scroll_1()`，用于演示对象在内容超出可视区域时的横向和纵向滚动效果。
 
 ## 切换不同演示
 
-默认演示的是 `lv_example_scroll_1()`，如需切换到其他演示，需要修改 `src/main.c` 文件中的代码。
-
-打开 `src/main.c`，找到 main 函数中的调用部分：
+打开 `src/main.c`，找到示例函数调用：
 
 ```c
-/*Call examples here*/
 lv_example_scroll_1();
 // lv_example_tiny_ttf_1();
 // lv_example_file_explorer_1();
 // lv_example_tjpgd_1();
 ```
 
-取消注释你想要运行的演示函数，并注释掉其他的即可。例如切换到 `lv_example_tiny_ttf_1()`：
+注释当前函数并取消注释需要运行的函数。例如，切换到 `lv_example_tiny_ttf_1()`：
 
 ```c
-/*Call examples here*/
 // lv_example_scroll_1();
 lv_example_tiny_ttf_1();
 // lv_example_file_explorer_1();
 // lv_example_tjpgd_1();
 ```
 
-修改后重新编译即可看到不同的演示效果。
+修改后重新编译并烧录工程。
 
-## 工程编译及下载：
-板子工程在project目录下可以通过指定board来编译适应相对board的工程，
-- 比如想编译可以在HDK 563上运行的工程，执行scons --board=eh-lb563即可生成工程
-- 下载可以通过build目录下的download.bat进行，比如同样想烧录上一步生成的563工程，可以执行.\build_eh-lb563\download.bat来通过jlink下载
-- 特别说明下，对于SF32LB52x/SF32LB56x系列会生成额外的uart_download.bat。可以执行该脚本并输入下载UART的端口号执行下载
-模拟器工程在simulator目录下，
-- 使用 scons 进行编译，SiFli-SDK/msvc_setup.bat文件需要相应修改，和本机MSVC配置对应
-- 也可以使用 scons --target=vs2017 生成 MSVC工程 project.vcxproj, 使用Visual Studio 进行编译。
+## 编译和烧录
 
-```{note}
-注：如果不是使用VS2017, 例如 VS2022, 加载工程的时候，会提示升级MSVC SDK, 升级后就可以使用了。
-``` 
+切换到例程 `project` 目录，运行 SCons 命令进行编译：
 
-## 如何使用Tjpgd
-源码路径：SiFli-SDK\example\multimedia\lvgl\lvgl_v9_examples
-### 支持的平台
-例程可以运行在以下开发板
-+ sf32lb52-lchspi-ulp
-+ sf32lb52-lcd系列
-+ sf32lb56-lcd系列
-+ sf32lb58-lcd系列
-
-
-
-### 概述
-* 通过插入 SD 卡完成文件系统挂载后，读取其中的.jpg 格式图片并在屏幕上显示
-
-### 硬件需求
-* 黄山派的开发板或者52x系列开发板
-* 一根具有数据传输能力的USB数据线
-* 一张tf卡,一个tf读卡器
-
-### 例程的使用
-#### 编译和烧录
-演示代码默认为显示图片是：``` flower.jpg ``` 
-
-切换到例程project目录，运行scons命令执行编译：
-
-```
+```sh
 scons --board=sf32lb52-lchspi-ulp -j8
 ```
 
-执行烧写命令
-```
+执行烧录脚本：
+
+```none
 build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
 ```
 
-按提示选择端口即可进行下载：
+按提示输入串口号：
 
 ```none
 please input the serial port num:5
 ```
 
-#### 例程输出结果展示:
-* 插入SD卡后，挂载文件系统，并读取文件系统中的图片和显示图片log，其中log中会有`mount fs on flash to root success `就说明文件系统挂载成功
+### PC 模拟器
 
-![alt text](assets/log1.png)
+PC 配置位于 `project/pc_hcpu`。先根据本机的 MSVC 安装修改 SDK 根目录下的 `msvc_setup.bat`，再在 `project` 目录执行：
 
-* 可以输入ls 查看文件系统内的图片文件
+```sh
+scons --board=pc_hcpu -j8
+```
 
-![alt text](assets/log2.png)
+编译完成后运行 `build_pc_hcpu/main.exe`。
 
-### 例程效果展示
-![alt text](assets/demo.jpg)
+## 可选示例：使用 TJPGD 显示 TF 卡中的 JPG 图片
 
-#### 例程的配置流程
-* 默认情况下不开启spi进行对于TF文件系统的挂载，有需要的可以按照如下配置一下
-* 首先可以通过TF读卡器，往tf中写入图片文件，再将tf卡插入板子中
-* 通过`menuconfig`中进行如下配置，具体操作如下
-``` c
+本节说明如何切换到 `lv_example_tjpgd_1()`，从 TF 卡文件系统读取并显示 `flower.jpg`。该示例不是默认显示内容，需要手动完成以下配置并切换示例函数。
+
+### 硬件需求
+
+- 支持平台中带 SPI TF 卡接口的开发板
+- 一根支持数据传输的 USB 线
+- 一张 TF 卡和一个 TF 读卡器
+
+### 准备图片
+
+将工程中的 `src/examples/libs/libjpeg_turbo/flower.jpg` 复制到 TF 卡文件系统的根目录。示例源码使用以下路径读取图片：
+
+```c
+lv_image_set_src(wp, "A:flower.jpg");
+```
+
+### 配置工程
+
+在 `project` 目录执行：
+
+```sh
 sdk.py menuconfig --board=sf32lb52-lchspi-ulp
 ```
-* 开启spi总线
 
-![alt text](assets/V9_SPI.png)
+确认生成的配置包含以下选项：
 
-* 将sd\tf设备挂载在spi总线上
+```ini
+CONFIG_RT_USING_SPI_MSD=y
+CONFIG_RT_USING_DFS_ELMFAT=y
+CONFIG_LV_USE_FS_POSIX=y
+CONFIG_LV_FS_POSIX_LETTER=65
+CONFIG_LV_USE_TJPGD=y
+# CONFIG_LV_USE_FS_MEMFS is not set
+```
 
-![alt text](assets/V9_tf.png)
+`CONFIG_LV_FS_POSIX_LETTER=65` 表示 LVGL 文件系统使用盘符 `A`。运行文件模式的 `lv_example_tjpgd_1()` 时应保持 `LV_USE_FS_MEMFS` 关闭；启用该选项后，源码会切换为后文的内存图片模式。
 
-* 配置文件路径
+具体配置项如下：
 
-![alt text](assets/V9_elm.png)
+1. 启用 SPI 总线。
 
-* 开启lvgl的文件系统接口，配置盘符,并且开启解码器
+   ![启用 SPI 总线](assets/V9_SPI.png)
 
-![alt text](assets/V9_posix.png)
+2. 将 SD/TF 设备挂载到 SPI 总线。
 
-### tjpgd（拓展）
+   ![配置 TF 卡设备](assets/V9_tf.png)
 
-### 概述
-* 通过使用tjpgd解码器进行对LV_IMAGE_SRC_VARIABLE类型进行解码
+3. 启用 ELM FAT 文件系统。
 
-### 图片格式转换
-* 首先需要将.jpg图片转换成RAW数据，转换的工具可以使用eez_studio进行转换，具体操作参考如下
-![alt text](assets/jpg_awitch_RAW.png)
+   ![配置 ELM FAT 文件系统](assets/V9_elm.png)
 
-![alt text](assets/build_raw.png)
+4. 启用 LVGL POSIX 文件系统接口和 TJPGD 解码器，并将盘符配置为 `A`。
 
-![alt text](assets/copy_raw.png)
+   ![配置 LVGL 文件系统和 TJPGD](assets/V9_posix.png)
 
-* 然后将图片数组设置进去，jpegd解码器将根据设置的类型选择相应的解码方式
+### 切换示例
 
-### 配置流程
-* 通过`menuconfig`进行如下配置，具体操作如下：
-开启LV_USE_FS_MEMFS宏
-![alt text](assets/use_fs_memfs.png)
+修改 `src/main.c`：
 
-例程中已经将`img_lvgl_logo.jpg`转换成了RAW数据`ui_image_logo.c`
+```c
+// lv_example_scroll_1();
+lv_example_tjpgd_1();
+```
+
+### 编译和烧录
+
+在 `project` 目录执行：
+
+```sh
+scons --board=sf32lb52-lchspi-ulp -j8
+```
+
+使用串口烧录：
+
+```none
+build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
+```
+
+按提示输入串口号：
+
+```none
+please input the serial port num:5
+```
+
+> **注意：** `src/main.c` 在 TF 卡的根逻辑区域或 `/misc` 逻辑区域挂载失败时会调用 `dfs_mkfs()` 自动格式化相应区域，可能清除其中的数据。运行示例前请备份 TF 卡中的重要数据，并确认 TF 卡和 SPI 接口工作正常。
+
+### 运行结果
+
+插入 TF 卡后，日志中出现 `mount fs on flash to root success` 表示根文件系统挂载成功。
+
+![文件系统挂载日志](assets/log1.png)
+
+在 Finsh 中输入 `ls` 可查看 TF 卡根目录中的图片文件。
+
+![TF 卡文件列表](assets/log2.png)
+
+图片显示效果如下：
+
+![TJPGD 文件示例效果](assets/demo.jpg)
 
 ### 异常诊断
-* 异常log
-![alt text](assets/log3.png)
-如果出现上面情况，可能tf卡存在松动、tf卡不能正常通信、tf卡未插入
+
+如果出现以下日志，请检查 TF 卡是否插入或松动，以及 TF 卡与 SPI 总线是否可以正常通信。
+
+![异常日志](assets/log3.png)
+
+## TJPGD 扩展：显示固件中的 JPG 图片
+
+该模式将 JPG 数据以 `LV_IMAGE_SRC_VARIABLE` 类型编译到固件中，不需要 TF 卡。工程已经提供可直接使用的图片资源：
+
+- 原始图片：`src/examples/libs/tjpgd/img_lvgl_logo.jpg`
+- C 数组：`src/examples/libs/tjpgd/ui_image_logo.c`
+- 图片变量：`img_logo`
+
+### 配置工程
+
+在 `project` 目录打开配置界面：
+
+```sh
+sdk.py menuconfig --board=sf32lb52-lchspi-ulp
+```
+
+在 LVGL v9 的第三方库配置中启用 TJPGD 和 MEMFS，并为 MEMFS 设置盘符 `M`：
+
+```ini
+CONFIG_LV_USE_TJPGD=y
+CONFIG_LV_USE_FS_MEMFS=y
+CONFIG_LV_FS_MEMFS_LETTER=77
+```
+
+![启用 LV_USE_FS_MEMFS](assets/use_fs_memfs.png)
+
+`CONFIG_LV_FS_MEMFS_LETTER=77` 表示 MEMFS 使用盘符 `M`。工程中的 POSIX 文件系统已经使用盘符 `A`，不要为两个文件系统配置相同的盘符。
+
+此模式不需要 TF 卡。如果工程不再使用其他 TF 卡功能，可关闭 `CONFIG_RT_USING_SPI_MSD`，避免执行 `src/main.c` 中的 TF 卡挂载和自动格式化流程。
+
+### 声明并调用内存图片示例
+
+启用 `LV_USE_FS_MEMFS` 后，`src/examples/libs/tjpgd/lv_example_tjpgd_1.c` 会编译 `lv_example_tjpgd_2()`。先在 `src/examples/libs/tjpgd/lv_example_tjpgd.h` 中补充函数声明：
+
+```c
+void lv_example_tjpgd_1(void);
+void lv_example_tjpgd_2(void);
+```
+
+再修改 `src/main.c`，调用内存图片示例：
+
+```c
+// lv_example_scroll_1();
+// lv_example_tjpgd_1();
+lv_example_tjpgd_2();
+```
+
+完成以上修改后，按“编译和烧录”一节重新编译并烧录，即可显示 `ui_image_logo.c` 中的 `img_logo`。
+
+### 替换为自定义图片
+
+1. 使用 EEZ Studio 将 JPG 图片转换为 LVGL C 数组，颜色格式选择 RAW，并记录生成的图片变量名。
+
+   ![在 EEZ Studio 中选择 JPG 图片](assets/jpg_awitch_RAW.png)
+
+   ![将图片转换为 RAW 数据](assets/build_raw.png)
+
+2. 将生成的 `.c` 文件放到 `src/examples/libs/tjpgd` 目录。
+
+   ![复制生成的 C 文件](assets/copy_raw.png)
+
+3. 在 `src/examples/libs/tjpgd/lv_example_tjpgd_1.c` 中，将 `img_logo` 替换为生成的图片变量名：
+
+```c
+LV_IMG_DECLARE(your_image);
+
+void lv_example_tjpgd_2(void)
+{
+    lv_obj_t * wp = lv_image_create(lv_screen_active());
+    lv_image_set_src(wp, &your_image);
+    lv_obj_center(wp);
+}
+```
+
+重新编译并烧录后，示例将显示自定义图片。

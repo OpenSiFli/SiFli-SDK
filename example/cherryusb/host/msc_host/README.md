@@ -67,7 +67,7 @@
 
 - `ls` - 列出当前目录下的文件和文件夹
 - `cat <文件名>` - 显示文件内容
-- `echo "<内容>" > <文件名>` - 将内容写入文件
+- `echo "<内容>" <文件名>` - 将内容写入文件
 - `mkdir <目录名>` - 创建新目录
 - `cd <目录名>` - 切换目录
 - `rm <文件名>` - 删除文件
@@ -77,7 +77,7 @@
 msh />ls                          # 查看根目录
 msh />cd /                        # 进入根目录
 msh />cat README.TXT              # 查看文件内容
-msh />echo "Hello USB" > test.txt  # 创建并写入文件
+msh />echo "Hello USB" test.txt   # 创建并写入文件
 msh />mkdir newfolder             # 创建新文件夹
 ```
 

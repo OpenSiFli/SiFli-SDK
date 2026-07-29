@@ -1,0 +1,15 @@
+import os
+from building import *
+
+objs = []
+cwd = GetCurrentDir()
+
+if not GetDepend('ZBT'):
+    items = os.listdir(cwd)
+
+    for item in items:
+        sconscript = os.path.join(cwd, item, 'SConscript')
+        if os.path.isfile(sconscript):
+            objs = objs + SConscript(os.path.join(item, 'SConscript'))
+
+Return('objs')

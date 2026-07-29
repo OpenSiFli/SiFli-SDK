@@ -83,6 +83,11 @@ static uint8_t g_mic_chhose; // 0---mic1_left; 1---mic1_right; 2---mic2_left; 3-
 */
 static uint16_t g_mic_delay_ref = 352;
 
+#if defined(AUDIO_TX_USING_I2S)
+    #define MIC_DELAY_REF_16K               600 //宽带实测delay值8左右
+    #define MIC_DELAY_REF_8K                431 //窄带实测delay值8左右
+#endif
+
 static const char factory_far[] =
 {
     "--eqLoad=0"
@@ -323,7 +328,7 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         arg.const_far = audio_mem_malloc(sizeof(factory_far) + 1);
         RT_ASSERT(arg.const_far);
         strcpy(arg.const_far, factory_far);
-        arg.const_near = audio_mem_malloc(strlen(factory_near_1mic) + 1);
+        arg.const_near = audio_mem_malloc(strlen(near) + 1);
         RT_ASSERT(arg.const_near);
         strcpy(arg.const_near, near);
         disable_parameter(arg.const_near, is_bt_voice, disable_uplink_agc);
@@ -331,7 +336,6 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         arg.all_mic_channels = all_mic_channels;
         arg.is_bt_voice = is_bt_voice;
 
-        SCB_CleanInvalidateDCache();
         acpu_run_task(ACPU_TASK_audio_3a_open, &arg, sizeof(arg), &error_code);
         RT_ASSERT(error_code == 0);
         audio_mem_free(arg.const_far);
@@ -462,7 +466,6 @@ void audio_3a_close()
 
 #if ANYKA_RUN_IN_ACPU
         uint8_t error_code = 1;
-        SCB_CleanInvalidateDCache();
         acpu_run_task(ACPU_TASK_audio_3a_close, NULL, 0, &error_code);
         RT_ASSERT(error_code == 0);
 #else
@@ -492,7 +495,7 @@ void audio_3a_close()
     }
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     audio_3a_t *env = &g_audio_3a_env;
 
@@ -506,7 +509,7 @@ uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
     }
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
     audio_3a_t *thiz = &g_audio_3a_env;
     uint16_t putsize, getsize;
@@ -547,7 +550,6 @@ void audio_3a_downlink(uint8_t *fifo, uint8_t size)
         arg.data_in = data_in;
         arg.data_out = data_out;
         arg.tick = tick;
-        SCB_CleanInvalidateDCache();
         acpu_run_task(ACPU_TASK_audio_3a_downlink, &arg, sizeof(arg), &error_code);
         RT_ASSERT(error_code == 0);
 #else
@@ -657,7 +659,6 @@ static inline void process_data(audio_3a_t *thiz)
     arg.ts = ts;
     arg.fifo = fifo;
     arg.result = result;
-    SCB_CleanInvalidateDCache();
     acpu_run_task(ACPU_TASK_audio_3a_uplink, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
 #else
@@ -764,7 +765,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         {
             rt_ringbuffer_get(thiz->rbuf_out, result, 120);
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(result, 120);
+            bt_voice_encode_process(result, 120);
 #endif
         }
     }
@@ -774,7 +775,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         {
             rt_ringbuffer_get(thiz->rbuf_out, result, 240);
 #ifdef AUDIO_BT_AUDIO
-            msbc_encode_process(result, 240);
+            bt_voice_encode_process(result, 240);
 #endif
         }
     }

@@ -47,7 +47,7 @@ pipeline {
                 stage('helloworld/rtt') {
                     steps {
                         bat'''
-                        tools\\autotest\\build.bat example\\get-started\\hello_world\\rtt\\project --board fpga-57x_mem_v3
+                        tools\\autotest\\build.bat example\\get-started\\hello_world\\rtt\\project --board sf32lb57-dpi-hdk_n16r8_qspi
                         '''
                     }
                 } 

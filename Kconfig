@@ -16,6 +16,19 @@ choice
         bool "SIMULATOR"
 endchoice
 
+config SOC_PACKAGE_QFN68
+    bool
+
+config SOC_PACKAGE_QFN80
+    bool
+
+config SOC_PACKAGE_BGA112
+    bool
+
+if SOC_SF32LB57X
+source "$SIFLI_SDK/customer/boards/Kconfig_soc.sf32lb57x.v1"
+endif # SOC_SF32LB57X
+
 config BSP_CHIP_ID_COMPATIBLE
     depends on SOC_SF32LB55X
     bool "Support working with different LB55X chip ID"

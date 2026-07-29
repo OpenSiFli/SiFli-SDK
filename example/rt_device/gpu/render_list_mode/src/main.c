@@ -1261,11 +1261,11 @@ int main(void)
 
         case 5:
             draw_fill(&virtual_render_buf);
-        #ifdef EPIC_SUPPORT_JPEGD
+#ifdef EPIC_SUPPORT_JPEGD
             draw_jpg_img(&virtual_render_buf);
-        #else
+#else
             draw_ezip_img(&virtual_render_buf);
-        #endif /* EPIC_SUPPORT_JPEGD */
+#endif /* EPIC_SUPPORT_JPEGD */
             draw_img_buttons(&virtual_render_buf);
             break;
 
@@ -1289,6 +1289,7 @@ int main(void)
 
         /*Start rendering  and show the result on LCD*/
         EPIC_MsgTypeDef msg;
+        memset(&msg, 0, sizeof(msg));
         msg.id = EPIC_MSG_RENDER_DRAW;
         msg.render_list = rl;
         msg.content.rd.area.x0 = 0;

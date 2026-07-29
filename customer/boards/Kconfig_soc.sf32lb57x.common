@@ -1,0 +1,97 @@
+# Note: MPI MODE value is consistent with BSP_QSPIx_MODE
+# Remember to update default value definition in Kconfig_drv also
+# If part number is unknown, fallback to mpi_mode defined by BSP_QSPIx_MODE
+config BSP_PSRAM1_PKG_TYPE0_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 5 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+    default 3 if SOC_SF32LB577VD776 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6 || SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
+    default 0
+
+config BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 1 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+    default 3 if SOC_SF32LB577VD776
+    default 3 if SOC_SF32LB579V6EN6 || SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
+    default 2
+
+config BSP_PSRAM1_PKG_TYPE1_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 6 if SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
+    default 0
+
+config BSP_PSRAM1_PKG_TYPE1_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 2
+
+# Not used yet
+config BSP_PSRAM1_PKG_TYPE2_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 0
+
+config BSP_PSRAM1_PKG_TYPE2_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 2
+
+# Not used yet
+config BSP_PSRAM1_PKG_TYPE3_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 0
+
+config BSP_PSRAM1_PKG_TYPE3_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM1
+    default 2
+
+config BSP_PSRAM2_PKG_TYPE0_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 5 if SOC_SF32LB575YBBN6
+    default 3 if SOC_SF32LB579V6EN6
+    default 0
+
+config BSP_PSRAM2_PKG_TYPE0_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 1 if SOC_SF32LB575YBBN6
+    default 3 if SOC_SF32LB579V6EN6
+    default 2
+
+# Not used yet
+config BSP_PSRAM2_PKG_TYPE1_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 0
+
+config BSP_PSRAM2_PKG_TYPE1_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 2
+
+# Not used yet
+config BSP_PSRAM2_PKG_TYPE2_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 0
+
+config BSP_PSRAM2_PKG_TYPE2_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 2
+
+# Not used yet
+config BSP_PSRAM2_PKG_TYPE3_MPI_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 0
+
+config BSP_PSRAM2_PKG_TYPE3_PINMAP_MODE
+    int 
+    depends on BSP_USING_PSRAM2
+    default 2    

@@ -1,0 +1,80 @@
+config ASIC
+    bool
+    default y
+
+config BSP_SUPPORT_DPI
+    bool
+    default y
+
+config TOUCH_IRQ_PIN
+    int
+    default 6
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwmt1"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 11 if BSP_LCDC_USING_DPI
+    default 11 if BSP_LCDC_USING_DIRECT_EPD
+    default 45 if BSP_LCDC_USING_QADSPI
+    default 20
+    
+config CAMERA_I2C_DEVICE_NAME
+    string
+    default "i2c1"
+
+config EPD_TPS_I2C_DEVICE_NAME
+    string
+    default "i2c1"
+
+config EPD_TPS_WAKEUP_PIN
+    int
+    default 20
+
+config EPD_TPS_PWRCOM_PIN
+    int
+    default 24
+
+config EPD_TPS_PWRUP_PIN
+    int
+    default 26
+
+
+
+
+menu "SF32LB57-SPI-HDK Configuration"
+
+choice 
+    prompt "TP&CAMERA I2C Pinmap"
+    default BOARD_TP_CAMERA_I2C_PINMAP_0
+    config BOARD_TP_CAMERA_I2C_PINMAP_0
+        bool "TP&CAMERA I2C on PA22/PA23"
+    config BOARD_TP_CAMERA_I2C_PINMAP_1
+        bool "TP&CAMERA I2C on PA51/PA57"
+endchoice
+
+choice 
+    prompt "DVP Pinmap"
+    default BOARD_DVP_PINMAP_0
+    config BOARD_DVP_PINMAP_0
+        bool "DVP_VSYNC on PA00"
+    config BOARD_DVP_PINMAP_1
+        bool "TDVP_VSYNC on PA26"
+endchoice
+
+config BSP_USING_CAMERA1
+    bool "Camera 1"
+    select BSP_USING_GC032A
+    default n
+
+config USE_PTM_DVP_8WIRE
+     bool "Use PTM simulated DVP 8wire interface"
+     default n
+
+endmenu

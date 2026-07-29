@@ -58,6 +58,31 @@ void rt_flash_wait_idle(uint32_t addr);
     while (0)
 #endif /* SF32LB52X */
 
+
+#ifdef SF32LB57X
+
+void rt_flash_wait_idle(uint32_t addr);
+
+#define custom_printf(...)                    \
+    do                                        \
+    {                                         \
+        HAL_RCC_EnableModule(RCC_MOD_MPI1);   \
+        HAL_RCC_EnableModule(RCC_MOD_MPI2);   \
+        HAL_RCC_EnableModule(RCC_MOD_MPI3);   \
+        rt_kprintf(__VA_ARGS__);              \
+        rt_flash_wait_idle(MPI3_MEM_BASE);    \
+        rt_flash_wait_idle(MPI2_MEM_BASE);    \
+        rt_flash_wait_idle(MPI1_MEM_BASE);    \
+        HAL_RCC_DisableModule(RCC_MOD_MPI3);  \
+        HAL_RCC_DisableModule(RCC_MOD_MPI2);  \
+        HAL_RCC_DisableModule(RCC_MOD_MPI1);  \
+    }                                         \
+    while (0)
+#endif /* SF32LB57X */
+
+
+
+
 #ifdef __cplusplus
 }
 #endif

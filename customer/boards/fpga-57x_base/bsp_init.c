@@ -126,7 +126,6 @@ void HAL_PreInit(void)
         {
             HAL_PMU_SetWdt((uint32_t)hwp_wdt2);   // Add reboot cause for watchdog2
         }
-
 #endif/* CFG_BOOTLOADER */
         HAL_RCC_LCPU_ClockSelect(RCC_CLK_MOD_LP_PERI, RCC_CLK_PERI_HXT48);
 
@@ -135,6 +134,8 @@ void HAL_PreInit(void)
             LRC_init();
     }
 
+
+    HAL_RCC_HCPU_SetDiv(1, 0, 4);
 
     mpi1_div = 1;   // for OPI Psram driver alway set 1, for QSPI PSRAM depend on this setting, for flash depend on flash request, 2 or 3
     mpi2_div = 2;
@@ -152,44 +153,16 @@ void HAL_PreInit(void)
 #ifdef BSP_USING_NOR_FLASH1
     mpi1_div = 3;
 #endif
-    if (PM_STANDBY_BOOT == SystemPowerOnModeGet())
-    {
-        //TODO: pin device is not restored
-        HAL_HPAON_ENABLE_PAD();
-        /* rt_hw_flash_init cannot be called as data has not been restored at this moment,
-           so rt_sem_init cannot be called */
-#if defined(BSP_USING_NOR_FLASH1)
-        BSP_Flash_hw1_init();
-#endif
-#if defined(BSP_USING_NOR_FLASH2)
-        BSP_Flash_hw2_init();
-#endif
-#if defined(BSP_USING_NOR_FLASH3)
-        BSP_Flash_hw3_init();
-#endif
-    }
-    else
-    {
-#ifdef BSP_USING_RTTHREAD
-        rt_hw_flash_init();
-#else
-        BSP_Flash_Init();
-#endif
 
-    }
+#ifdef BSP_USING_RTTHREAD
+    rt_hw_flash_init();
+#else
+    BSP_Flash_Init();
+#endif /* BSP_USING_RTTHREAD */
 #endif /* BSP_USING_NOR_FLASH1 || BSP_USING_NOR_FLASH2 || BSP_USING_NOR_FLASH3 */
 
 
-    /*
-    For Micro-FPGA:
-      HPSYS:
-            hclk&pclk1 are fixed 48MHz
 
-      LPSYS:
-            hclk is fixed 48MHz, pclk1 should <=24MHz
-    */
-    HAL_RCC_HCPU_SetDiv(1, 0, 5);
-    HAL_RCC_LCPU_SetDiv(2, 1, 3);
 
 #elif defined(SOC_BF0_LCPU)
     HAL_LPAON_EnableXT48();
