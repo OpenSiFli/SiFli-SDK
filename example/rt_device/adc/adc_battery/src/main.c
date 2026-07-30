@@ -22,6 +22,8 @@
     #define ADC_DEV_CHANNEL     1           /* ADC channel 1 */
 #elif defined(SF32LB58X)
     #define ADC_DEV_CHANNEL     2           /* ADC channel 2*/
+#elif defined(SF32LB57X)
+    #define ADC_DEV_CHANNEL     11          /* ADC channel 11, VBAT on 57x */
 #else
     #define ADC_DEV_CHANNEL     7           /* ADC channel 7*/
 #endif

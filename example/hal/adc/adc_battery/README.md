@@ -4,7 +4,9 @@
 例程可以运行在以下开发板
 + sf32lb52-lcd系列
 + sf32lb56-lcd系列
-+ sf32lb58-lcd系列 
++ sf32lb58-lcd系列
++ sf32lb57 系列 
+
 ## 概述
 * 操作Hal函数单路ADC读取电池电压
 
