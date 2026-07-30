@@ -19,6 +19,8 @@
     #define ADC_DEV_CHANNEL     1           /* ADC channel 1 */
 #elif defined(SF32LB58X)
     #define ADC_DEV_CHANNEL     2           /* ADC channel 2  */
+#elif defined(SF32LB57X)
+    #define ADC_DEV_CHANNEL     11          /* ADC channel 11, VBAT on 57x */
 #else
     #define ADC_DEV_CHANNEL     7
 #endif
@@ -59,7 +61,7 @@ static int utest_adc_calib(void)
                factory_info.voltage2_mv, factory_info.reg_value2,
                g_adc_calib_ctx.offset, g_adc_calib_ctx.ratio, g_adc_calib_ctx.threshold_reg);
 
-#ifdef SF32LB52X
+#ifdef ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
     rt_kprintf("\n vbat_mv: %d mv, %d; ldoref_flag = %d, ldoref_sel = %d;\n",
                factory_info.vbat_mv, factory_info.vbat_reg,
                factory_info.ldovref_flag, factory_info.ldovref_sel);
@@ -210,10 +212,10 @@ static float adc_example_read_mv(void)
 
     // Use new unified HAL calibration API to convert register value to voltage
     mv = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx);
-#ifdef SF32LB52X
-    if (ADC_DEV_CHANNEL == 7)
+#ifdef ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+    if (ADC_DEV_CHANNEL == ADC_VBAT_DEDICATED_CHANNEL)
     {
-        // VBAT uses 1/2 divider on 52x, apply vbat_factor to recover actual voltage
+        // VBAT uses 1/2 divider (52x ch7, 57x ch11), apply vbat_factor to recover actual voltage
         mv *= g_adc_calib_ctx.vbat_factor;
     }
 #endif

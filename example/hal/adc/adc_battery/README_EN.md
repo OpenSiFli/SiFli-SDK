@@ -5,7 +5,8 @@ Source code path: example/hal/adc/adc_battery
 This example can run on the following development boards:
 + sf32lb52-lcd series
 + sf32lb56-lcd series
-+ sf32lb58-lcd series 
++ sf32lb58-lcd series
++ sf32lb57 series
 
 ## Overview
 * Uses HAL APIs to read battery voltage through a single ADC channel
