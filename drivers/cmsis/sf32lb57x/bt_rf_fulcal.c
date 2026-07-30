@@ -4938,7 +4938,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     for (i = 0; i < 10; i++)
     {
         data = 0x50005000;
-        write_memory(BT_RFC_MEM_BASE + reg_addr + 27 * 4, data);
+        write_memory(BT_RFC_MEM_BASE + reg_addr + 28 * 4, data);
         reg_addr += 4;
     }
 
@@ -5521,7 +5521,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.1_3619";
+char *g_rf_ful_ver = "1.2.1_3621";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;
