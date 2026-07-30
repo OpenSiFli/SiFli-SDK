@@ -1,3 +1,0 @@
-menuconfig PKG_USING_LIBZIP
-    bool "Enable libzip"
-    default n

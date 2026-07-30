@@ -1,3 +1,0 @@
-menuconfig PKG_USING_ANTIWORD
-    bool "Enable antiword"
-    default n
