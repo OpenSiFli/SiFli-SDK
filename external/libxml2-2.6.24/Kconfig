@@ -1,3 +1,0 @@
-menuconfig PKG_USING_LIBXML2
-    bool "Enable libxml2"
-    default n

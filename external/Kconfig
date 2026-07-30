@@ -34,13 +34,6 @@ source "$SIFLI_SDK/external/cherryusb/Kconfig.rttpkg"
 source "$SIFLI_SDK/external/cwm_lib/Kconfig"
 source "$SIFLI_SDK/external/libogg-1.3.6/Kconfig"
 source "$SIFLI_SDK/external/flac-1.5.0/Kconfig"
-source "$SIFLI_SDK/external/libxml2-2.6.24/Kconfig"
-source "$SIFLI_SDK/external/libzip-1.11.3/Kconfig"
-source "$SIFLI_SDK/external/libepub/Kconfig"
-source "$SIFLI_SDK/external/zlib/Kconfig"
-source "$SIFLI_SDK/external/pdfium/Kconfig"
-source "$SIFLI_SDK/external/libmobi/Kconfig"
-source "$SIFLI_SDK/external/antiword/Kconfig"
 
 config PKG_SCHRIFT
     bool "SCHRIFT Library"
