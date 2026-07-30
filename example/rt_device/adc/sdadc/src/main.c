@@ -101,6 +101,13 @@ static rt_err_t adc_example_init(void)
         return -RT_ERROR;
     }
 
+    r = rt_adc_init((rt_adc_device_t)s_sd_adc_dev);
+    if (r != RT_EOK)
+    {
+        LOG_E("rt_adc_init %s failed: %d", SDADC_DEV_NAME, r);
+        return r;
+    }
+
     /* Configure pinmux and enable each channel (multi-channel: enables the matching slot). */
     for (i = 0; i < SDADC_CH_COUNT; i++)
     {
