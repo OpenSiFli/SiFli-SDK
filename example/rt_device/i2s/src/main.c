@@ -860,14 +860,35 @@ int main(void)
     HAL_PIN_Set(PAD_PA03, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
 #elif defined(SOC_SF32LB56X)
-    /*
-        After investigation, pins PA71 and PA40 are adjacent on the external PCB,
-        which may cause crosstalk between signals. Therefore,
-        the LRCK signal is reassigned to alternative pins
-    */
-    //HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
+/*
+ * TODO: Test setup:
+ *   TX: sf32lb58-lcd_a128r32n1_qspi_hcpu (586 NAND), AUDPRC recording
+ *       followed by I2S2 master TX at 16 kHz/16-bit/mono.
+ *   RX: sf32lb56-lcd_a128r12n1_hcpu (566 NAND A128), I2S1 slave RX
+ *       followed by local AUDPRC playback.
+ *
+ * With BCK on PA40, playback contained periodic clicks while the recorded
+ * audio remained intelligible. Moving BCK to PA73 removed the clicks on
+ * the tested board.
+ *
+ * An initial rollback to acff85404, which only moved LRCK from PA71 to
+ * PA41 while keeping BCK on PA40, also appeared to remove the issue.
+ * However, controlled bisect testing did not establish a reproducible
+ * good/bad boundary: ca6f2ef2c, 2f6275827, and repeated acff85404 tests
+ * all reproduced the clicks. No specific introducing commit was found,
+ * and the relevant I2S HAL, RT-Thread driver, and configuration files
+ * were unchanged across the audited range.
+ *
+ * PA73 is therefore a workaround rather than a confirmed root-cause fix.
+ * Capture BCK, LRCK, and SDO/SDI at both board ends with a logic analyzer
+ * to compare frame and bit integrity. Use an oscilloscope to inspect
+ * voltage levels, rise/fall time, ringing, and setup/hold margin at the
+ * SF32LB56 input. Determine whether the failure is caused by board-level
+ * signal integrity, SF32LB56 input-pad electrical characteristics, or the
+ * I2S RX sampling path.
+ */
     HAL_PIN_Set(PAD_PA41, I2S1_LRCK, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA40, I2S1_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA73, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
