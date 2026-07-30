@@ -9,10 +9,6 @@ on:
       - '*'
   workflow_dispatch:  # 允许手动触发
 
-permissions:
-  contents: read
-  actions: read
-
 jobs:
   build-docs:
     runs-on: ubuntu-22.04
@@ -61,48 +57,22 @@ jobs:
 
       - name: Set dynamic Algolia variables
         id: algolia-vars
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.determine-version.outputs.VERSION }}"
 
-          if [ "$VERSION" = "latest" ]; then
+          # Parse JSON config: { "latest": {...}, "v2.5": {...}, ... }
+          CONFIG="${{ vars.ALGOLIA_DOCSEARCH_VERSIONS }}"
+          APP_ID=$(echo "$CONFIG" | jq -r ".\"$VERSION\".app_id // empty")
+          SEARCH_API_KEY=$(echo "$CONFIG" | jq -r ".\"$VERSION\".search_api_key // empty")
+
+          if [ -z "$APP_ID" ] || [ -z "$SEARCH_API_KEY" ]; then
+            echo "::warning::Algolia config not found for version '${VERSION}', falling back to default"
             APP_ID="${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}"
-            API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
-          else
-            # Convert dots/hyphens to underscores for variable name suffix
-            VAR_SUFFIX=$(echo "$VERSION" | tr '.-' '_' | tr '[:lower:]' '[:upper:]')
-
-            # Debug: check token permissions
-            echo "::group::Debug: Token Permission Check"
-            echo "Trying to list repo variables to verify token access..."
-            gh variable list --repo "${{ github.repository }}" 2>&1 || true
-            echo "::endgroup::"
-
-            fetch_var() {
-              local var_name="ALGOLIA_DOCSEARCH_${1}_${VAR_SUFFIX}"
-              echo "::debug::Looking up variable: ${var_name}"
-              # Show raw output for debugging (remove 2>/dev/null to see errors)
-              gh variable get "$var_name" --repo "${{ github.repository }}" 2>&1 || echo "::debug::gh variable get failed for ${var_name}"
-            }
-
-            APP_ID=$(fetch_var "APP_ID")
-            API_KEY=$(fetch_var "SEARCH_API_KEY")
-
-            echo "::group::Debug: Raw returned values"
-            echo "APP_ID=[${APP_ID}]"
-            echo "API_KEY=[${API_KEY}]"
-            echo "::endgroup::"
-
-            if [ -z "$APP_ID" ] || [ -z "$API_KEY" ]; then
-              echo "::warning::Algolia variables not found for version suffix '${VAR_SUFFIX}', falling back to default"
-              APP_ID="${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}"
-              API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
-            fi
+            SEARCH_API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
           fi
 
           echo "ALGOLIA_DOCSEARCH_APP_ID=${APP_ID}" >> $GITHUB_ENV
-          echo "ALGOLIA_DOCSEARCH_SEARCH_API_KEY=${API_KEY}" >> $GITHUB_ENV
+          echo "ALGOLIA_DOCSEARCH_SEARCH_API_KEY=${SEARCH_API_KEY}" >> $GITHUB_ENV
 
       - name: Build zh_CN documentation for ${{ matrix.variant }}
         working-directory: ./docs
