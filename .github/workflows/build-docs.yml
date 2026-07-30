@@ -55,20 +55,52 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen
 
+      - name: Set dynamic Algolia variables
+        id: algolia-vars
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.determine-version.outputs.VERSION }}"
+
+          if [ "$VERSION" = "latest" ]; then
+            APP_ID="${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}"
+            API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
+          else
+            # Convert dots/hyphens to underscores for variable name suffix
+            VAR_SUFFIX=$(echo "$VERSION" | tr '.-' '_' | tr '[:lower:]' '[:upper:]')
+
+            fetch_var() {
+              local var_name="ALGOLIA_DOCSEARCH_${1}_${VAR_SUFFIX}"
+              gh variable get "$var_name" --repo "${{ github.repository }}" 2>/dev/null || echo ""
+            }
+
+            APP_ID=$(fetch_var "APP_ID")
+            API_KEY=$(fetch_var "SEARCH_API_KEY")
+
+            if [ -z "$APP_ID" ] || [ -z "$API_KEY" ]; then
+              echo "::warning::Algolia variables not found for version suffix '${VAR_SUFFIX}', falling back to default"
+              APP_ID="${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}"
+              API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
+            fi
+          fi
+
+          echo "ALGOLIA_DOCSEARCH_APP_ID=${APP_ID}" >> $GITHUB_ENV
+          echo "ALGOLIA_DOCSEARCH_SEARCH_API_KEY=${API_KEY}" >> $GITHUB_ENV
+
       - name: Build zh_CN documentation for ${{ matrix.variant }}
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
-          ALGOLIA_DOCSEARCH_APP_ID: ${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}
-          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ env.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ env.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
         run: python generate_docs.py --lang=zh_CN ${{ matrix.variant }}
       
       - name: Build en documentation for ${{ matrix.variant }}
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
-          ALGOLIA_DOCSEARCH_APP_ID: ${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}
-          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ env.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ env.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
         run: python generate_docs.py --lang=en ${{ matrix.variant }}
 
       # Upload Chinese documents to COS
