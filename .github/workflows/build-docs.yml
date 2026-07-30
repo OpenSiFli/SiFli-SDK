@@ -57,13 +57,13 @@ jobs:
 
       - name: Set dynamic Algolia variables
         id: algolia-vars
+        env:
+          ALGOLIA_VERSIONS: ${{ vars.ALGOLIA_DOCSEARCH_VERSIONS }}
         run: |
           VERSION="${{ steps.determine-version.outputs.VERSION }}"
 
-          # Parse JSON config: { "latest": {...}, "v2.5": {...}, ... }
-          CONFIG="${{ vars.ALGOLIA_DOCSEARCH_VERSIONS }}"
-          APP_ID=$(echo "$CONFIG" | jq -r ".\"$VERSION\".app_id // empty")
-          SEARCH_API_KEY=$(echo "$CONFIG" | jq -r ".\"$VERSION\".search_api_key // empty")
+          APP_ID=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".app_id // empty")
+          SEARCH_API_KEY=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".search_api_key // empty")
 
           if [ -z "$APP_ID" ] || [ -z "$SEARCH_API_KEY" ]; then
             echo "::warning::Algolia config not found for version '${VERSION}', falling back to default"
