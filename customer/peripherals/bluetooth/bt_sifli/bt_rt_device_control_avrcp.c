@@ -107,9 +107,7 @@ bt_err_t bt_sifli_control_avrcp(struct rt_bt_device *bt_handle, int cmd, void *a
     case BT_CONTROL_AVRCP_GET_COVER_ART:
     {
         //todo:Adapting avrcp multi-connection
-        BTS2S_BD_ADDR dest_addr;
-        bt_addr_convert_to_bts((bd_addr_t *)args, &dest_addr);
-        ret = bt_interface_avrcp_get_cover_art(&dest_addr);
+        ret = bt_interface_avrcp_get_cover_art((bt_notify_device_mac_t *)args);
     }
     break;
 #endif
