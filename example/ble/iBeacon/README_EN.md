@@ -57,7 +57,23 @@ For detailed compilation and download steps, please refer to the [Quick Start Gu
 ## Expected Results
 <!-- Describe the expected results of running the example, such as which LEDs will light up, what logs will be printed, to help users determine if the example is running normally. Results can be explained step by step in conjunction with the code -->
 After the example starts:
-1. It can perform iBeacon advertisement and modify advertisement content.
+1. It can perform iBeacon advertisement, and cannot be connected by a mobile phone.
+
+2. Modify advertisement content: enter `cmd_diss adv_update <UUID> <Major> <Minor> <RSSI_at_1m>` in the serial terminal. All four parameters are mandatory. For example:
+    ```c
+    msh />cmd_diss adv_update 12345678-1234-1234-1234-123456789abc 1 2 -60
+    ```
+    The terminal prints the 16 bytes of the UUID and the parsed values. `update adv 0` indicates the advertising data was updated successfully:
+![alt text](assets/image2.png)
+
+3. Stop advertising: enter `cmd_diss adv_stop` in the serial terminal. The terminal prints the stop reason and the advertising mode (`mode 2` is broadcast mode), and the phone app can no longer discover the device:
+    ```c
+    msh />cmd_diss adv_stop
+    ADV stopped reason 0, mode 2
+    ```
+
+4. Start advertising: enter `cmd_diss adv_start` in the serial terminal. The terminal prints the start result, where `result 0` means success, and the phone app can discover the device again.
+![alt text](assets/image3.png)
 
 
 ## Troubleshooting
