@@ -223,6 +223,8 @@ extern "C" {
 #define MIC_DMA_INSTANCE                DMA1_Channel7
 #define MIC_DMA_REQUEST                 DMA_REQUEST_21
 #define MIC_DMA_IRQ                     DMAC1_CH7_IRQn
+/* I2S2 codec RX uses the DMA channel historically named for MIC. */
+#define I2S2_RX_DMA_IRQHandler          MIC_DMA_RX_IRQHandler
 
 /* DMA1 channel8  */
 //I2S2

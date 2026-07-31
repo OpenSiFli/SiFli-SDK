@@ -333,7 +333,7 @@ static int i2s_open(struct modem_server *thiz)
     rt_device_control(thiz->i2s_dev, AUDIO_CTL_SETOUTPUT, (void *)inter);
 
     rt_base_t level = rt_hw_interrupt_disable();
-    rt_device_set_i2s_dma_rx_callback(i2s_dma_rx);
+    rt_device_set_i2s_dma_rx_callback(thiz->i2s_dev, i2s_dma_rx);
     rt_device_set_audprc_dma_rx_callback(audprc_dma_rx);
     rt_hw_interrupt_enable(level);
 
@@ -355,7 +355,7 @@ static int i2s_close(struct modem_server *thiz)
     if (thiz->i2s_dev)
     {
         rt_base_t level = rt_hw_interrupt_disable();
-        rt_device_set_i2s_dma_rx_callback(NULL);
+        rt_device_set_i2s_dma_rx_callback(thiz->i2s_dev, NULL);
         rt_device_set_audprc_dma_rx_callback(NULL);
         rt_hw_interrupt_enable(level);
 

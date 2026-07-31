@@ -48,6 +48,10 @@ Before running this example, you need to prepare:
 Configurations 2 and 3 are used for auxiliary function demonstration in this example, not necessary for I2S configuration.
 ```  
 
+### DMA Receive Callback API Migration
+
+Replace `rt_device_set_i2s_dma_rx_callback(callback)` with `rt_device_set_i2s_dma_rx_callback(dev, callback)`, where `dev` is the corresponding I2S device. Passing a `NULL` callback clears only that device's callback and does not affect other I2S devices.
+
 ### Hardware Connection\PIN CONFIG
 
 Taking `SF32LB52_DevKit-LCD` and `SPI-HDK_LB573UB7N6` as examples, both boards use `PA02 ~ PA06` as I2S pins. SF32LB52 uses I2S1, while SF32LB57 uses I2S2:

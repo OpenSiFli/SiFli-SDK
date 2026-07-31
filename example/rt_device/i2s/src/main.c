@@ -27,11 +27,7 @@
 
 #define AUDCODEC_DEVICE_NAME "audcodec"
 #define AUDPRC_DEVICE_NAME   "audprc"
-#if defined(SF32LB57X)
-    #define I2S_DEVICE_NAME "i2s1"
-#else
-    #define I2S_DEVICE_NAME "i2s2"
-#endif
+#define I2S_DEVICE_NAME      "i2s2"
 
 /* i2s DMA Buffer size is defined in drv_i2s_audio.c {see AUDIO_DATA_SIZE} */
 #define AUDIO_BUF_SIZE  (640)
@@ -853,12 +849,18 @@ int main(void)
 
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#if defined(SOC_SF32LB52X) || defined(SF32LB57X)
+#if defined(SOC_SF32LB52X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA03, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA06, I2S2_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA05, I2S2_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA04, I2S2_SDI, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA03, I2S2_SDO, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA02, I2S2_MCLK, PIN_NOPULL, 1);
 #elif defined(SOC_SF32LB56X)
 /*
  * TODO: Test setup:

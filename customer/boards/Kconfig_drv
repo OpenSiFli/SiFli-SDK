@@ -482,6 +482,10 @@ menu "On-chip Peripherals"
         select BSP_USING_DMA
         default n
         if BSP_USING_I2S
+            config BSP_ENABLE_I2S1
+                bool "Enable I2S1"
+                depends on SOC_SF32LB57X
+                default n
             config BSP_ENABLE_I2S_MIC
                 bool "Enable I2S1 for Mic"
                 depends on SOC_SF32LB58X || SOC_SF32LB55X

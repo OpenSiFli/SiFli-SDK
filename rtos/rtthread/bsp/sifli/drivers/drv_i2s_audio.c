@@ -26,7 +26,7 @@ void bf0_disable_pll()
 }
 #endif
 
-#if defined(BSP_ENABLE_I2S_CODEC)||defined(BSP_ENABLE_I2S3)||defined(_SIFLI_DOXYGEN_)
+#if defined(BSP_ENABLE_I2S1) || defined(BSP_ENABLE_I2S_CODEC) || defined(BSP_ENABLE_I2S3) || defined(_SIFLI_DOXYGEN_)
 
 //#define DBG_LEVEL                      DBG_LOG
 #define LOG_TAG              "drv.i2s_audio"
@@ -45,7 +45,6 @@ void bf0_disable_pll()
 
 
 
-static i2s_rx_callback_t rx_callback;
 
 #ifdef ASIC
 #ifdef SF32LB55X //xtal
@@ -96,50 +95,67 @@ static CLK_DIV_T  txrx_clk_div[9]  =
 
 static struct i2s_audio_cfg_t bf0_i2s_audio_obj[] =
 {
+#ifdef BSP_ENABLE_I2S1
+    BF0_I2S1_CONFIG,
+#endif /* BSP_ENABLE_I2S1 */
 #ifdef BSP_ENABLE_I2S_CODEC
     BF0_I2S2_CONFIG,
-#endif // BSP_ENABLE_I2S_CODEC
+#endif /* BSP_ENABLE_I2S_CODEC */
 #ifdef BSP_ENABLE_I2S3
     BF0_I2S3_CONFIG,
-#endif // BSP_ENABLE_I2S_CODEC
+#endif /* BSP_ENABLE_I2S3 */
 
 };
 
 static struct bf0_i2s_audio h_i2s_audio[sizeof(bf0_i2s_audio_obj) / sizeof(bf0_i2s_audio_obj[0])];
 
-static void audio_debug_out_i2sr()
+enum
 {
-    I2S_TypeDef *hi2s = h_i2s_audio[0].hi2s.Instance;
-    LOG_D("RX_RE_SAMPLE_CLK_DIV = 0X%08x\n", hi2s->RX_RE_SAMPLE_CLK_DIV);
-    LOG_D("AUDIO_RX_LRCK_DIV = 0X%08x\n", hi2s->AUDIO_RX_LRCK_DIV);
-    LOG_D("AUDIO_RX_BCLK_DIV = 0X%08x\n", hi2s->AUDIO_RX_BCLK_DIV);
-    LOG_D("AUDIO_RX_SERIAL_TIMING = 0X%08x\n", hi2s->AUDIO_RX_SERIAL_TIMING);
-    LOG_D("AUDIO_RX_PCM_DW = 0X%08x\n", hi2s->AUDIO_RX_PCM_DW);
-    LOG_D("RECORD_FORMAT = 0X%08x\n", hi2s->RECORD_FORMAT);
-    LOG_D("RX_CH_SEL = 0X%08x\n", hi2s->RX_CH_SEL);
-    LOG_D("DMA_MASK = 0X%08x\n", hi2s->DMA_MASK);
-    LOG_D("AUDIO_RX_FUNC_EN = 0X%08x\n", hi2s->AUDIO_RX_FUNC_EN);
-    LOG_D("AUDIO_RX_PAUSE = 0X%08x\n", hi2s->AUDIO_RX_PAUSE);
+#ifdef BSP_ENABLE_I2S1
+    I2S1_INDEX,
+#endif
+#ifdef BSP_ENABLE_I2S_CODEC
+    I2S2_INDEX,
+#endif
+#ifdef BSP_ENABLE_I2S3
+    I2S3_INDEX,
+#endif
+    I2S_MAX,
+};
+
+static void audio_debug_out_i2sr(I2S_HandleTypeDef *hi2s)
+{
+    I2S_TypeDef *instance = hi2s->Instance;
+    LOG_D("RX_RE_SAMPLE_CLK_DIV = 0X%08x\n", instance->RX_RE_SAMPLE_CLK_DIV);
+    LOG_D("AUDIO_RX_LRCK_DIV = 0X%08x\n", instance->AUDIO_RX_LRCK_DIV);
+    LOG_D("AUDIO_RX_BCLK_DIV = 0X%08x\n", instance->AUDIO_RX_BCLK_DIV);
+    LOG_D("AUDIO_RX_SERIAL_TIMING = 0X%08x\n", instance->AUDIO_RX_SERIAL_TIMING);
+    LOG_D("AUDIO_RX_PCM_DW = 0X%08x\n", instance->AUDIO_RX_PCM_DW);
+    LOG_D("RECORD_FORMAT = 0X%08x\n", instance->RECORD_FORMAT);
+    LOG_D("RX_CH_SEL = 0X%08x\n", instance->RX_CH_SEL);
+    LOG_D("DMA_MASK = 0X%08x\n", instance->DMA_MASK);
+    LOG_D("AUDIO_RX_FUNC_EN = 0X%08x\n", instance->AUDIO_RX_FUNC_EN);
+    LOG_D("AUDIO_RX_PAUSE = 0X%08x\n", instance->AUDIO_RX_PAUSE);
 
 }
-static void audio_debug_out_i2st()
+static void audio_debug_out_i2st(I2S_HandleTypeDef *hi2s)
 {
-    I2S_TypeDef *hi2s = h_i2s_audio[0].hi2s.Instance;
-    LOG_D("TX_PCM_FORMAT = 0X%08x\n", hi2s->TX_PCM_FORMAT);
-    LOG_D("TX_PCM_SAMPLE_CLK = 0X%08x\n", hi2s->TX_PCM_SAMPLE_CLK);
-    LOG_D("TX_PCM_CH_SEL = 0X%08x\n", hi2s->TX_PCM_CH_SEL);
-    LOG_D("AUDIO_TX_LRCK_DIV = 0X%08x\n", hi2s->AUDIO_TX_LRCK_DIV);
-    LOG_D("AUDIO_TX_BCLK_DIV = 0X%08x\n", hi2s->AUDIO_TX_BCLK_DIV);
-    LOG_D("AUDIO_TX_FORMAT = 0X%08x\n", hi2s->AUDIO_TX_FORMAT);
-    LOG_D("AUDIO_SERIAL_TIMING = 0X%08x\n", hi2s->AUDIO_SERIAL_TIMING);
-    LOG_D("AUDIO_TX_FUNC_EN = 0X%08x\n", hi2s->AUDIO_TX_FUNC_EN);
-    LOG_D("AUDIO_TX_PAUSE = 0X%08x\n", hi2s->AUDIO_TX_PAUSE);
-    LOG_D("DMA_MASK = 0X%08x\n", hi2s->DMA_MASK);
+    I2S_TypeDef *instance = hi2s->Instance;
+    LOG_D("TX_PCM_FORMAT = 0X%08x\n", instance->TX_PCM_FORMAT);
+    LOG_D("TX_PCM_SAMPLE_CLK = 0X%08x\n", instance->TX_PCM_SAMPLE_CLK);
+    LOG_D("TX_PCM_CH_SEL = 0X%08x\n", instance->TX_PCM_CH_SEL);
+    LOG_D("AUDIO_TX_LRCK_DIV = 0X%08x\n", instance->AUDIO_TX_LRCK_DIV);
+    LOG_D("AUDIO_TX_BCLK_DIV = 0X%08x\n", instance->AUDIO_TX_BCLK_DIV);
+    LOG_D("AUDIO_TX_FORMAT = 0X%08x\n", instance->AUDIO_TX_FORMAT);
+    LOG_D("AUDIO_SERIAL_TIMING = 0X%08x\n", instance->AUDIO_SERIAL_TIMING);
+    LOG_D("AUDIO_TX_FUNC_EN = 0X%08x\n", instance->AUDIO_TX_FUNC_EN);
+    LOG_D("AUDIO_TX_PAUSE = 0X%08x\n", instance->AUDIO_TX_PAUSE);
+    LOG_D("DMA_MASK = 0X%08x\n", instance->DMA_MASK);
 }
 
-static void audio_debug_out_txdma()
+static void audio_debug_out_txdma(I2S_HandleTypeDef *hi2s)
 {
-    DMA_Channel_TypeDef *hdma = h_i2s_audio[0].hi2s.hdmatx->Instance;
+    DMA_Channel_TypeDef *hdma = hi2s->hdmatx->Instance;
     LOG_D("TX CCR = 0X%08x\n", hdma->CCR);
     LOG_D("TX CNDTR = 0X%08x\n", hdma->CNDTR);
     LOG_D("TX CPAR = 0X%08x\n", hdma->CPAR);
@@ -147,9 +163,9 @@ static void audio_debug_out_txdma()
     LOG_D("TX CM0AR = 0X%08x\n", hdma->CM0AR);
     LOG_D("TX CBSR = 0X%08x\n", hdma->CBSR);
 }
-static void audio_debug_out_rxdma()
+static void audio_debug_out_rxdma(I2S_HandleTypeDef *hi2s)
 {
-    DMA_Channel_TypeDef *hdma = h_i2s_audio[0].hi2s.hdmarx->Instance;
+    DMA_Channel_TypeDef *hdma = hi2s->hdmarx->Instance;
     LOG_D("RX CCR = 0X%08x\n", hdma->CCR);
     LOG_D("RX CNDTR = 0X%08x\n", hdma->CNDTR);
     LOG_D("RX CPAR = 0X%08x\n", hdma->CPAR);
@@ -623,6 +639,13 @@ static rt_err_t bf0_audio_configure(struct rt_audio_device *audio, struct rt_aud
     return result;
 }
 
+static void bf0_audio_set_rx_callback(struct bf0_i2s_audio *aud, i2s_rx_callback_t callback)
+{
+    rt_base_t level = rt_hw_interrupt_disable();
+    aud->rx_callback = callback;
+    rt_hw_interrupt_enable(level);
+}
+
 /**
   * @brief  Initialize audio device.
   * @param[in]  audio: audio device handle.
@@ -632,7 +655,7 @@ static rt_err_t bf0_audio_init(struct rt_audio_device *audio)
 {
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     aud->tx_buf_size = AUDIO_DATA_SIZE;
-    rx_callback = NULL;
+    bf0_audio_set_rx_callback(aud, NULL);
     return RT_EOK;
 }
 
@@ -644,7 +667,7 @@ static rt_err_t bf0_audio_init(struct rt_audio_device *audio)
 static rt_err_t bf0_audio_shutdown(struct rt_audio_device *audio)
 {
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
-    rx_callback = NULL;
+    bf0_audio_set_rx_callback(aud, NULL);
     aud->tx_buf_size = AUDIO_DATA_SIZE;
     return RT_EOK;
 }
@@ -767,16 +790,12 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
                 return RT_ERROR;
             }
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-#ifdef I2S3_TX_DMA_IRQ
-            HAL_NVIC_EnableIRQ(I2S3_TX_DMA_IRQ);
-#else
-            HAL_NVIC_EnableIRQ(I2S_TX_DMA_IRQ);
-#endif /* I2S3_TX_DMA_IRQ */
+            HAL_NVIC_EnableIRQ(aud->config->tx_dma_irq);
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
             LOG_I("bf0_audio_start enable irq\n");
 
-            audio_debug_out_i2st();
-            audio_debug_out_txdma();
+            audio_debug_out_i2st(&(aud->hi2s));
+            audio_debug_out_txdma(&(aud->hi2s));
         }
     }
     else    //AUDIO_STREAM_RECORD
@@ -805,17 +824,10 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
             if (res != HAL_OK)
                 return RT_ERROR;
 
-            audio_debug_out_i2sr();
-            audio_debug_out_rxdma();
+            audio_debug_out_i2sr(&(aud->hi2s));
+            audio_debug_out_rxdma(&(aud->hi2s));
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-#ifdef MIC_DMA_IRQ
-            HAL_NVIC_EnableIRQ(MIC_DMA_IRQ);
-#elif defined(I2S3_RX_DMA_IRQ)
-            HAL_NVIC_EnableIRQ(I2S3_RX_DMA_IRQ);
-#else
-            HAL_NVIC_EnableIRQ(I2S_RX_DMA_IRQ);
-            LOG_I("bf0_audio_start enable irq %d\n", I2S_RX_DMA_IRQ);
-#endif /* MIC_DMA_IRQ */
+            HAL_NVIC_EnableIRQ(aud->config->dma_irq);
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
             //__HAL_I2S_RX_ENABLE(&(aud->hi2s));
             /* Clear I2S pause bit */
@@ -843,28 +855,18 @@ static rt_err_t bf0_audio_stop(struct rt_audio_device *audio, int stream)
     if (stream == AUDIO_STREAM_REPLAY) // tx
     {
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-#ifdef I2S3_TX_DMA_IRQ
-        HAL_NVIC_DisableIRQ(I2S3_TX_DMA_IRQ);
-#else
-        HAL_NVIC_DisableIRQ(I2S_TX_DMA_IRQ);
-#endif
+        HAL_NVIC_DisableIRQ(aud->config->tx_dma_irq);
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
         ret = HAL_I2S_TX_DMAStop(&(aud->hi2s));
     }
     else // rx
     {
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-#ifdef MIC_DMA_IRQ
-        HAL_NVIC_DisableIRQ(MIC_DMA_IRQ);
-#elif defined(I2S3_RX_DMA_IRQ)
-        HAL_NVIC_DisableIRQ(I2S3_RX_DMA_IRQ);
-#else
-        HAL_NVIC_DisableIRQ(I2S_RX_DMA_IRQ);
-#endif
+        HAL_NVIC_DisableIRQ(aud->config->dma_irq);
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
         ret = HAL_I2S_RX_DMAStop(&(aud->hi2s));
-        audio_debug_out_i2sr();
-        audio_debug_out_rxdma();
+        audio_debug_out_i2sr(&(aud->hi2s));
+        audio_debug_out_rxdma(&(aud->hi2s));
     }
 
     // Deinit I2S
@@ -1036,6 +1038,7 @@ int rt_bf0_i2s_audio_init(void)
     for (i = 0; i < sizeof(bf0_i2s_audio_obj) / sizeof(bf0_i2s_audio_obj[0]); i++)
     {
         h_i2s_audio[i].audio_device.ops = (struct rt_audio_ops *)&_g_audio_ops;
+        h_i2s_audio[i].config = &bf0_i2s_audio_obj[i];
         h_i2s_audio[i].rx_buf = malloc_dma_friendly_sram(AUDIO_DATA_SIZE);
         h_i2s_audio[i].tx_buf = malloc_dma_friendly_sram(AUDIO_DATA_SIZE);
         h_i2s_audio[i].tx_pos = h_i2s_audio[i].tx_buf;
@@ -1154,83 +1157,80 @@ INIT_DEVICE_EXPORT(rt_bf0_i2s_audio_init);
   */
 
 /**
-  * @brief TX DMA interrupt handler.
+  * @brief I2S DMA interrupt handlers.
   */
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
-void I2S_TX_DMA_IRQHandler(void)
+#ifdef BSP_ENABLE_I2S1
+void I2S1_TX_DMA_IRQHandler(void)
 {
-    /* enter interrupt */
+    rt_interrupt_enter();
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S1_INDEX].hi2s.hdmatx);
+    rt_interrupt_leave();
+}
+
+void I2S1_RX_DMA_IRQHandler(void)
+{
+    rt_interrupt_enter();
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S1_INDEX].hi2s.hdmarx);
+    rt_interrupt_leave();
+}
+#endif /* BSP_ENABLE_I2S1 */
+
+#ifdef BSP_ENABLE_I2S_CODEC
+#if !defined(I2S2_TX_DMA_IRQHandler) && defined(I2S_TX_DMA_IRQHandler)
+#define I2S2_TX_DMA_IRQHandler I2S_TX_DMA_IRQHandler
+#endif
+
+void I2S2_TX_DMA_IRQHandler(void)
+{
     rt_interrupt_enter();
 #if defined(SF32LB58X) && defined(SOC_BF0_LCPU)
-    /* clear interrupt */
     MODIFY_REG(hwp_hpsys_cfg->LPIRQ, HPSYS_CFG_LPIRQ_IF0_Msk,
                MAKE_REG_VAL(1, HPSYS_CFG_LPIRQ_IF0_Msk, HPSYS_CFG_LPIRQ_IF0_Pos));
 #endif /* SF32LB58X && SOC_BF0_LCPU */
-
-    //LOG_I("En I2S_TX_DMA_IRQHandler ISR 0x%08x, SRC 0x%08x\n", h_i2s_audio[0].hi2s.hdmatx->DmaBaseAddress->ISR, h_i2s_audio[0].hi2s.hdmatx->Instance->CCR);
-    HAL_DMA_IRQHandler(h_i2s_audio[0].hi2s.hdmatx);
-
-    /* leave interrupt */
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S2_INDEX].hi2s.hdmatx);
     rt_interrupt_leave();
 }
 
-/**
-  * @brief RX DMA interrupt handler.
-  */
-void I2S_RX_DMA_IRQHandler(void)
+#if !defined(I2S2_RX_DMA_IRQHandler) && defined(I2S_RX_DMA_IRQHandler)
+#define I2S2_RX_DMA_IRQHandler I2S_RX_DMA_IRQHandler
+#endif
+
+void I2S2_RX_DMA_IRQHandler(void)
 {
-    /* enter interrupt */
     rt_interrupt_enter();
 #if defined(SF32LB58X) && defined(SOC_BF0_LCPU)
-    /* clear interrupt */
     MODIFY_REG(hwp_hpsys_cfg->LPIRQ, HPSYS_CFG_LPIRQ_IF1_Msk,
                MAKE_REG_VAL(1, HPSYS_CFG_LPIRQ_IF1_Msk, HPSYS_CFG_LPIRQ_IF1_Pos));
 #endif /* SF32LB58X && SOC_BF0_LCPU */
-
-    //LOG_I("En I2S_RX_DMA_IRQHandler\n");
-    HAL_DMA_IRQHandler(h_i2s_audio[0].hi2s.hdmarx);
-
-    /* leave interrupt */
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S2_INDEX].hi2s.hdmarx);
     rt_interrupt_leave();
-
 }
+#endif /* BSP_ENABLE_I2S_CODEC */
 
-/**
-  * @brief I2S3 TX DMA interrupt handler.
-  */
+#ifdef BSP_ENABLE_I2S3
 void I2S3_TX_DMA_IRQHandler(void)
 {
-    /* enter interrupt */
     rt_interrupt_enter();
-
-    //LOG_I("En I2S_TX_DMA_IRQHandler ISR 0x%08x, SRC 0x%08x\n", h_i2s_audio[0].hi2s.hdmatx->DmaBaseAddress->ISR, h_i2s_audio[0].hi2s.hdmatx->Instance->CCR);
-    HAL_DMA_IRQHandler(h_i2s_audio[0].hi2s.hdmatx);
-
-    /* leave interrupt */
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S3_INDEX].hi2s.hdmatx);
     rt_interrupt_leave();
 }
 
-/**
-  * @brief I2S3 RX DMA interrupt handler.
-  */
 void I2S3_RX_DMA_IRQHandler(void)
 {
-    /* enter interrupt */
     rt_interrupt_enter();
-
-    //LOG_I("En I2S_RX_DMA_IRQHandler\n");
-    HAL_DMA_IRQHandler(h_i2s_audio[0].hi2s.hdmarx);
-
-    /* leave interrupt */
+    HAL_DMA_IRQHandler(h_i2s_audio[I2S3_INDEX].hi2s.hdmarx);
     rt_interrupt_leave();
-
 }
+#endif /* BSP_ENABLE_I2S3 */
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
 #ifndef BSP_ENABLE_I2S_MIC
-void rt_device_set_i2s_dma_rx_callback(i2s_rx_callback_t callback)
+void rt_device_set_i2s_dma_rx_callback(rt_device_t dev, i2s_rx_callback_t callback)
 {
-    rx_callback = callback;
+    struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *)dev->user_data;
+
+    bf0_audio_set_rx_callback(aud, callback);
 }
 
 
@@ -1244,6 +1244,7 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef *hi2s)
 {
     struct bf0_i2s_audio *haudio = rt_container_of(hi2s, struct bf0_i2s_audio, hi2s);
     struct rt_audio_device *audio = &(haudio->audio_device);
+    i2s_rx_callback_t rx_callback = haudio->rx_callback;
     if (audio != NULL)
     {
         if (rx_callback)
@@ -1267,6 +1268,7 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef *hi2s)
 {
     struct bf0_i2s_audio *haudio = rt_container_of(hi2s, struct bf0_i2s_audio, hi2s);
     struct rt_audio_device *audio = &(haudio->audio_device);
+    i2s_rx_callback_t rx_callback = haudio->rx_callback;
 
     if (audio != NULL)
     {

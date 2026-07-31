@@ -1128,7 +1128,7 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
     i2s_config(my, 0);
     if (client->audio_type != AUDIO_TYPE_MODEM_VOICE)
     {
-        rt_device_set_i2s_dma_rx_callback(NULL);
+        rt_device_set_i2s_dma_rx_callback(my->i2s, NULL);
         rt_device_set_rx_indicate(my->i2s, mic_rx_ind);
     }
     my->need_i2s_rx = 1;

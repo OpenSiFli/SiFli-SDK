@@ -49,6 +49,10 @@
 配置2、3在本例程中用于辅助功能展示，非I2S必要配置。
 ```  
 
+### DMA 接收回调接口迁移
+
+将 `rt_device_set_i2s_dma_rx_callback(callback)` 改为 `rt_device_set_i2s_dma_rx_callback(dev, callback)`，其中 `dev` 为对应的 I2S 设备。传入 `NULL` 回调只清除该设备的回调，不影响其他 I2S 设备。
+
 ### 硬件连接\PIN CONFIG
 
 以`SF32LB52_DevKit-LCD`和`SPI-HDK_LB573UB7N6`为例，两块开发板均使用`PA02 ~ PA06`作为I2S引脚。其中，SF32LB52使用I2S1，SF32LB57使用I2S2，管脚配置如下：

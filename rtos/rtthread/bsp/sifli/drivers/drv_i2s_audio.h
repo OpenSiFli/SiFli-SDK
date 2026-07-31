@@ -16,6 +16,8 @@
 
 #define AUDIO_DATA_SIZE 640 //480
 
+typedef void (*i2s_rx_callback_t)(char *name, uint8_t *data, rt_size_t len);
+
 
 /**
  * I2S audio config structure definition
@@ -29,6 +31,8 @@ struct i2s_audio_cfg_t
     rt_uint8_t          is_record;          /*!< Audio device type, 1: for recording, 0: for playback*/
     rt_uint8_t          reqdma_tx;        /*!< DMA request type for I2S TX */
     DMA_Channel_TypeDef *hdma_tx;      /*!< DMA device Handle used I2S TX */
+    IRQn_Type            dma_irq;       /*!< DMA interrupt for I2S RX */
+    IRQn_Type            tx_dma_irq;    /*!< DMA interrupt for I2S TX */
 };
 
 /**
@@ -38,10 +42,12 @@ struct bf0_i2s_audio
 {
     struct rt_audio_device audio_device;    /*!< audio device registerd to OS*/
     I2S_HandleTypeDef hi2s;
+    const struct i2s_audio_cfg_t *config;
     uint8_t *rx_buf;
     uint8_t *tx_buf;
     uint8_t *tx_pos;
-    uint16_t tx_buf_size;         /*!< I2S TX buffer size */    
+    uint16_t tx_buf_size;         /*!< I2S TX buffer size */
+    i2s_rx_callback_t rx_callback;
 };
 /**
  * I2S track source structure definition
@@ -120,9 +126,7 @@ typedef enum
 } I2S_VOL_VALUE;
 
 
-typedef void (*i2s_rx_callback_t)(char *name, uint8_t *data, rt_size_t len);
-
-void rt_device_set_i2s_dma_rx_callback(i2s_rx_callback_t callback);
+void rt_device_set_i2s_dma_rx_callback(rt_device_t dev, i2s_rx_callback_t callback);
 
 void bf0_i2s_device_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size); /*para is same to rt_device_write*/
 

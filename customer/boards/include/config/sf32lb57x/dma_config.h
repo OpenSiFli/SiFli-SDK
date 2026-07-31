@@ -217,11 +217,10 @@ extern "C" {
 #define PDM1_L_DMA_REQUEST              DMA_REQUEST_36
 #define PDM1_L_DMA_IRQ                  DMAC1_CH5_IRQn
 
-#define I2S_TX_DMA_IRQHandler              DMAC1_CH5_IRQHandler
-#define I2S_TX_DMA_IRQ_PRIO                0
-#define I2S_TX_DMA_INSTANCE                DMA1_Channel5
-#define I2S_TX_DMA_REQUEST                 DMA_REQUEST_32
-#define I2S_TX_DMA_IRQ                     DMAC1_CH5_IRQn
+#define I2S2_TX_DMA_IRQHandler             DMAC1_CH5_IRQHandler
+#define I2S2_TX_DMA_IRQ_PRIO               0
+#define I2S2_TX_DMA_INSTANCE               DMA1_Channel5
+#define I2S2_TX_DMA_IRQ                    DMAC1_CH5_IRQn
 
 #define SPI2_DMA_RX_IRQHandler         DMAC1_CH5_IRQHandler
 #define SPI2_RX_DMA_IRQ_PRIO           0
@@ -236,6 +235,11 @@ extern "C" {
 #define UART2_TX_DMA_IRQ                 DMAC1_CH5_IRQn
 
 /* DMA1 channel6 */
+#define I2S1_TX_DMA_IRQHandler             DMAC1_CH6_IRQHandler
+#define I2S1_TX_DMA_IRQ_PRIO               0
+#define I2S1_TX_DMA_INSTANCE               DMA1_Channel6
+#define I2S1_TX_DMA_IRQ                    DMAC1_CH6_IRQn
+
 #define UART1_DMA_TX_IRQHandler          DMAC1_CH6_IRQHandler
 #define UART1_TX_DMA_IRQ_PRIO            0
 #define UART1_TX_DMA_INSTANCE            DMA1_Channel6
@@ -256,6 +260,11 @@ extern "C" {
 
 
 /* DMA1 channel7 */
+#define I2S1_RX_DMA_IRQHandler             DMAC1_CH7_IRQHandler
+#define I2S1_RX_DMA_IRQ_PRIO               0
+#define I2S1_RX_DMA_INSTANCE               DMA1_Channel7
+#define I2S1_RX_DMA_IRQ                    DMAC1_CH7_IRQn
+
 #define UART1_DMA_RX_IRQHandler          DMAC1_CH7_IRQHandler
 #define UART1_RX_DMA_IRQ_PRIO            0
 #define UART1_RX_DMA_INSTANCE            DMA1_Channel7
@@ -280,11 +289,10 @@ extern "C" {
 #define PDM1_R_DMA_INSTANCE                DMA1_Channel8
 #define PDM1_R_DMA_REQUEST                 DMA_REQUEST_37
 #define PDM1_R_DMA_IRQ                     DMAC1_CH8_IRQn
-#define I2S_RX_DMA_IRQHandler              DMAC1_CH8_IRQHandler
-#define I2S_RX_DMA_IRQ_PRIO                0
-#define I2S_RX_DMA_INSTANCE                DMA1_Channel8
-#define I2S_RX_DMA_REQUEST                 DMA_REQUEST_33
-#define I2S_RX_DMA_IRQ                     DMAC1_CH8_IRQn
+#define I2S2_RX_DMA_IRQHandler             DMAC1_CH8_IRQHandler
+#define I2S2_RX_DMA_IRQ_PRIO               0
+#define I2S2_RX_DMA_INSTANCE               DMA1_Channel8
+#define I2S2_RX_DMA_IRQ                    DMAC1_CH8_IRQn
 #define SPI2_DMA_TX_IRQHandler         DMAC1_CH8_IRQHandler
 #define SPI2_TX_DMA_IRQ_PRIO           0
 #define SPI2_TX_DMA_INSTANCE           DMA1_Channel8
