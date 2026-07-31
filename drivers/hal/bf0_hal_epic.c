@@ -122,7 +122,7 @@ static void EPIC_DEBUG_PRINT_FLOAT_MATRIX(const char *s, const sifli_matrix_3x3_
                                     || (EPIC_COLOR_A8 == (c)) || (EPIC_COLOR_MONO == (c)))
 #define IS_YUV_COLOR_MODE(c)       (EPIC_COLOR_YUV_FLAG == (EPIC_COLOR_YUV_FLAG&(c)))
 #define IS_NO_ALPHA_COLOR_MODE(c)  ((EPIC_COLOR_RGB565 == (c)) || (EPIC_COLOR_RGB565_SWAP == (c)) || (EPIC_COLOR_RGB888 == (c)) || IS_YUV_COLOR_MODE(c) \
-                                    || (EPIC_COLOR_MONO == (c)) || EPIC_IS_GRAY_COLOR_MODE(c))
+                                    || (EPIC_COLOR_MONO == (c)) || EPIC_IS_GRAY_COLOR_MODE(c) || (EPIC_COLOR_JPEG == (c)))
 #define IS_EZIP_COLOR_MODE(c)       (EPIC_COLOR_EZIP_FLAG == (EPIC_COLOR_EZIP_FLAG&(c)))
 #define IS_JPEG_COLOR_MODE(c)       (EPIC_COLOR_JPEG_FLAG == (EPIC_COLOR_JPEG_FLAG&(c)))
 #define IS_SWAPPED_COLOR_MODE(c)    (EPIC_COLOR_SWAP_FLAG == (EPIC_COLOR_SWAP_FLAG&(c)))
