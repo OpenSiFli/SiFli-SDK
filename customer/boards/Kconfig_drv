@@ -499,6 +499,36 @@ menu "On-chip Peripherals"
                 default n
         endif
 
+    menuconfig BSP_USING_INPUT_CAPTURE
+        bool "Input Capture"
+        default n
+        select RT_USING_INPUT_CAPTURE
+        if BSP_USING_INPUT_CAPTURE
+            config BSP_USING_INPUT_CAPTURE_GPTIM1
+                bool "Enable input capture on GPTIM1 (CH1~CH4)"
+                select RT_USING_RINGBUFFER
+                default n
+            config BSP_USING_INPUT_CAPTURE_GPTIM2
+                bool "Enable input capture on GPTIM2 (CH1~CH4)"
+                select RT_USING_RINGBUFFER
+                default n
+            config BSP_USING_INPUT_CAPTURE_GPTIM3
+                bool "Enable input capture on GPTIM3 (CH1~CH4)"
+                depends on SOC_SF32LB55X || SOC_SF32LB56X || SOC_SF32LB58X
+                select RT_USING_RINGBUFFER
+                default n
+            config BSP_USING_INPUT_CAPTURE_GPTIM4
+                bool "Enable input capture on GPTIM4 (CH1~CH4)"
+                depends on SOC_SF32LB55X || SOC_SF32LB56X || SOC_SF32LB58X
+                select RT_USING_RINGBUFFER
+                default n
+            config BSP_USING_INPUT_CAPTURE_GPTIM5
+                bool "Enable input capture on GPTIM5 (CH1~CH4)"
+                depends on SOC_SF32LB55X || SOC_SF32LB56X || SOC_SF32LB58X
+                select RT_USING_RINGBUFFER
+                default n
+        endif
+
     config BSP_USING_LCDC
         bool "LCDC"
         select RT_USING_LCDC
@@ -1829,7 +1859,7 @@ menu "On-chip Peripherals"
                 bool "Enable LPTIM3"
                 default n    
         endif
-
+        
     menuconfig BSP_USING_UART
         bool "UART"
         default n

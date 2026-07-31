@@ -395,12 +395,7 @@ static void PWMx_DMA_IRQHandler(uint32_t index, uint16_t dma_id)
     /* leave interrupt */
     rt_interrupt_leave();
 }
-#if !defined BSP_USING_TIM
-void HAL_GPT_IC_CaptureCallback(GPT_HandleTypeDef *htim)
-{
-    HAL_GPT_PWM_Stop_DMA(htim, htim->Channel);
-}
-#endif
+
 #endif
 
 #if !defined(BSP_USING_TIM)

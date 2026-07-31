@@ -151,6 +151,8 @@ if GetDepend(['BSP_USING_ENCODER']):
 if GetDepend(['BSP_USING_DCMI']):
     src += ['drv_dcmi.c']
 
+if GetDepend(['BSP_USING_INPUT_CAPTURE']):
+    src += ['drv_inputcapture.c']
 
 if GetDepend(['BSP_USING_SWITCH_MPI2_SDIO']):
     src += ['drv_switch_mpi2_sdio.c']

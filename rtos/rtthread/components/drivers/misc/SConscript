@@ -20,6 +20,9 @@ if GetDepend(['RT_USING_GPS']):
 if GetDepend(['RT_USING_PULSE_ENCODER']):
     src = src + ['rt_drv_encoder.c']   
 
+if GetDepend(['RT_USING_INPUT_CAPTURE']):
+    src = src + ['rt_inputcapture.c']
+
 
 if len(src):
     group = DefineGroup('DeviceDrivers', src, depend = [''], CPPPATH = CPPPATH)
