@@ -56,9 +56,24 @@ please input the serial port num:5
 关于编译、下载的详细步骤，请参考[快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/build.html)的相关介绍。
 
 ## 例程的预期结果
-<!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
 例程启动后：
-1. 能够产生iBeacon广播并能修改广播内容.
+1. 能够产生iBeacon广播，无法被手机连接
+
+2. 修改广播内容：在串口终端输入`cmd_diss adv_update <UUID> <Major> <Minor> <RSSI_at_1m>`，四个参数必须全部填写。例如：
+    ```c
+    msh />cmd_diss adv_update 12345678-1234-1234-1234-123456789abc 1 2 -60
+    ```
+    终端打印UUID的16字节内容以及解析出的数值，`update adv 0`表示广播数据更新成功：
+![alt text](assets/image2.png)
+
+3. 停止广播：在串口终端输入`cmd_diss adv_stop`，终端打印停止广播的原因和广播模式（`mode 2`即广播模式），手机端APP将扫描不到该设备：
+    ```c
+    msh />cmd_diss adv_stop
+    ADV stopped reason 0, mode 2
+    ```
+
+4. 开启广播：在串口终端输入`cmd_diss adv_start`，终端打印开启广播的结果，`result 0`表示成功，手机端APP可再次扫描到该设备。
+![alt text](assets/image3.png)
 
 
 ## 异常诊断
