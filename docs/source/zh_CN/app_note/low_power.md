@@ -11,11 +11,11 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 低功耗开发例程参考 `example\pm\classical`。
 
 :::{only} SF32LB56X
-功耗测试报告参考：[功耗测试报告]（https://docs.sifli.com/projects/rpt5602_sf32lb56x-low-power-measurement-report/latest/zh_CN/index.html）
+功耗测试报告参考：[功耗测试报告](https://docs.sifli.com/projects/rpt5602_sf32lb56x-low-power-measurement-report/latest/zh_CN/index.html)
 :::
 
 :::{only} SF32LB52X
-功耗测试报告参考：[功耗测试报告]（https://docs.sifli.com/projects/rpt5202_sf32lb52x-low-power-measurement-report/latest/zh_CN/index.html）
+功耗测试报告参考：[功耗测试报告](https://docs.sifli.com/projects/rpt5202_sf32lb52x-low-power-measurement-report/latest/zh_CN/index.html)
 :::
 
 ## 2 配置低功耗模式
