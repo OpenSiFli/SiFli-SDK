@@ -844,7 +844,7 @@ __ROM_USED void hfp_cmd(int argc, char **argv)
             bt_start_inquiry_ex_t para;
             para.max_rsp = MAX_DISCOV_RESS;
             para.max_timeout = 60;
-            para.dev_cls_mask = BT_DEVCLS_PHONE | BT_DEVCLS_AUDIO;
+            para.dev_cls_mask = 0;
             bt_interface_start_inquiry_ex(&para);
         }
         else if (strcmp(cmd, "stop_inquiry") == 0)
