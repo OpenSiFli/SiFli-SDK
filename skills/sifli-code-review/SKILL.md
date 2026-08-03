@@ -478,8 +478,28 @@ Describe the change in more detail, e.g. how is the problem fixed, why do you ma
   - `[opt]` — optimization/refinement
   - `[chore]` — chore/maintenance
 - **Module name**: The tag should identify the module being changed, e.g. `[ble]`, `[drv][adc]`, `[hal][gpio]`, `[rtos]`.
-- **One-line description**: After the tags, a concise one-line summary of what the change does. Should clearly state what bug was fixed or what feature was added. Not too vague ("fix bug" is bad; "fix null pointer dereference in audio callback" is good).
 - **Length**: The subject line should generally be under 72 characters (the tags help categorize, so the description part should be brief).
+
+- **One-line description — MUST pass the "git log --oneline" test**:
+  > Ask yourself: *If I read only this title in `git log --oneline` 6 months from now, would I know what changed and why?*
+  >
+  > If the answer is no, flag it as a **问题**.
+
+  The description must state **what was done and to what end**, not merely what the diff shows. It answers "what changed?" for someone scanning history — it does NOT need to explain why (that's the body's job), but it must be specific enough that the reader can decide whether this commit is relevant to their investigation.
+
+  **Anti-patterns — flag these as 问题**:
+
+  | Anti-pattern | Why it fails | Better |
+  |---|---|---|
+  | Describes the mechanism, not the effect | Reader doesn't care HOW you changed code; they care WHAT changed | "Modify function call code" → "Align avrcp cover art call with updated API" |
+  | Generic verb without concrete object | "Fix bug", "Update code", "Optimize" — which bug? what code? | "Fix NULL deref in audio callback" |
+  | Restates the diff literally | "Remove variable X", "Add parameter Y" — diff already shows this | "Simplify avrcp address conversion by using bt_notify_device_mac_t directly" |
+  | Vague module-only reference | "Modify bt_sifli" — what about it? | "Unify AVRCP device address type across all control functions" |
+
+  **Good examples** (specific enough to locate the change in history):
+  - `[bug][ble] Fix NULL pointer dereference in AVRCP volume set callback`
+  - `[opt][hal][gpio] Replace hardcoded pin numbers with Kconfig macros`
+  - `[new][drv][adc] Add support for ADC continuous sampling mode on SF32LB57`
 
 ### 5.2 Detailed Description
 
