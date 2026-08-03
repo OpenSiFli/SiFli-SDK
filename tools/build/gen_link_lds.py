@@ -356,10 +356,11 @@ def _select_exec_addr(mem_type: str, sbus_addr: int, cbus_addr: int, core=None) 
     # Execution address selection:
     # - RAM/NAND: base (SBUS)
     # - NOR/PSRAM: XIP （CBUS）
-    # - ACPU: its own CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for
-    #   ACPU while the HCPU/DFU/SBUS view is 0x20200000).
-    if core and str(core).strip().upper() == 'ACPU':
-        return cbus_addr
+    #
+    # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
+    # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while the
+    # HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made the exec
+    # address unusable for HCPU when ACPU passes that address over.
     return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 
 

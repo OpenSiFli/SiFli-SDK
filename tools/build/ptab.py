@@ -2260,7 +2260,7 @@ def _detect_series():
     return None
 
 
-def convert_to_cbus_addr(addr, offset, core='hcpu', series=None):
+def convert_to_cbus_addr(addr, offset, core=None, series=None):
     """Convert an SBUS address to the CBUS view.
 
     `series` (e.g. 'sf32lb58') may be passed explicitly so the mapping works
@@ -2273,29 +2273,31 @@ def convert_to_cbus_addr(addr, offset, core='hcpu', series=None):
         raise Exception("unknown chip")
     series_l = str(series).strip().lower()
 
+    if core is None:
+        core = 'hcpu'
     if series_l == 'sf32lb55':
         return addr, offset
     if series_l == 'sf32lb56':
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and core and str(core).lower() == "hcpu":
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             return addr - 0x50000000, offset
         return addr, offset
     if series_l == 'sf32lb58':
         cbus_addr = addr
         cbus_offset = offset
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and core and str(core).lower() == "hcpu":
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             cbus_addr -= 0x50000000
-        elif (addr >= 0x20200000) and (addr <= 0x2027FFFF) and core and str(core).lower() == "acpu":
+        elif (addr >= 0x20200000) and (addr <= 0x2027FFFF) and str(core).lower() == "acpu":
             cbus_addr -= 0x20200000
             cbus_offset -= 0x00200000
         return cbus_addr, cbus_offset
     if series_l == 'sf32lb52':
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and core and str(core).lower() == "hcpu":
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             return addr - 0x50000000, offset
         return addr, offset
     if series_l == 'sf32lb57':
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and core and str(core).lower() == "hcpu":
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             return addr - 0x50000000, offset
-        elif (addr >= 0x10000000) and (addr <= 0x1FFFFFFF) and core and (str(core).lower() == "acpu"):
+        elif (addr >= 0x10000000) and (addr <= 0x1FFFFFFF) and (str(core).lower() == "acpu"):
             # ACPU use sbus address
             return addr + 0x50000000, offset
         return addr, offset

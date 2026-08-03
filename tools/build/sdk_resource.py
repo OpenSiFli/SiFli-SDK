@@ -795,13 +795,20 @@ def GenPartitionTableHeaderContentV2(env, mems):
                     offset_name = f'{name_prefix}_OFFSET'
 
                     core =  region.get('core')
-                    cbus_addr, cbus_offset = Convert2CBUSAddr(start_addr, offset, core)
+                    if core and str(core).strip().upper() == 'ACPU':
+                        # ACPU uses the shared SBUS view. Its local CBUS view
+                        # (e.g. 0-based hpsys_ram on SF32LB58) is unusable by
+                        # HCPU when ACPU passes the exec address over.
+                        exec_addr = start_addr
+                        exec_offset = offset
+                    else:
+                        exec_addr, exec_offset = Convert2CBUSAddr(start_addr, offset, core)
                     s += MakeLine('#undef  {}'.format(start_addr_name))
-                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, exec_addr))
                     s += MakeLine('#undef  {}'.format(size_name))
                     s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                     s += MakeLine('#undef  {}'.format(offset_name))
-                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, exec_offset))
 
                     if (base == env['name']):
                         if (not ext) or ('1' == ext):
@@ -822,11 +829,11 @@ def GenPartitionTableHeaderContentV2(env, mems):
                         size_name = f'{name_prefix}_SIZE'
                         offset_name = f'{name_prefix}_OFFSET'                        
                         s += MakeLine('#undef  {}'.format(start_addr_name))
-                        s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, exec_addr))
                         s += MakeLine('#undef  {}'.format(size_name))
                         s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                         s += MakeLine('#undef  {}'.format(offset_name))
-                        s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, exec_offset))
     
     return s               
 
@@ -941,10 +948,13 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         # Execution address selection:
         # - RAM/NAND: base
         # - NOR/PSRAM: XIP
-        # - ACPU: its own CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for
-        #   ACPU while the HCPU/DFU/SBUS view is 0x20200000).
-        if core and str(core).strip().upper() == 'ACPU':
-            return cbus_addr
+        #
+        # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
+        # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while
+        # the HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made
+        # the exec address (ACPU_CODE_REGION<N>_EXEC_START_ADDR) unusable for
+        # HCPU when ACPU passes that address over. The common rule below keeps
+        # the macro valid in every core's view.
         mem_type = _get_region_mem_type(region)
         return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 

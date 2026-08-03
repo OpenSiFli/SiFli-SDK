@@ -11,8 +11,9 @@ Covers the SF32LB58 ACPU CBUS mapping fix:
 - convert_to_cbus_addr() with an explicit `series` (offline-safe).
 - resolve_region_address() returns a 0-based CBUS view for ACPU RAM.
 - GenPartitionTableHeaderContentV3() emits ACPU_CODE_REGION*[_EXEC*] macros
-  using the SBUS view for the download address and the ACPU-local CBUS view
-  for the execution address.
+  using the shared SBUS view for the execution address
+  (ACPU no longer selects its local CBUS view, so addresses ACPU passes to
+  HCPU stay valid in HCPU's view).
 """
 
 from __future__ import annotations
@@ -166,15 +167,16 @@ class PtabV3AcpuHeaderMacroTests(unittest.TestCase):
         # sdk_resource.MakeLine() relies on the module-level indentation state.
         sdk_resource.InitIndentation()
 
-    def test_acpu_exec_macros_use_sbus_and_local_cbus_views(self) -> None:
+    def test_acpu_exec_macros_use_sbus_view(self) -> None:
         ptab_obj = _acpu_v3_ptab()
         body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "acpu"}, ptab_obj)
         macros = _parse_macros(body)
 
-        # Download/DFU view (HCPU/SBUS): 0x20200000
+        # ACPU exec macros use the shared SBUS view (0x20200000), NOT ACPU's
+        # local 0-based CBUS view. ACPU passes ACPU_CODE_REGION<N>_EXEC_START_ADDR
+        # to HCPU, so the address must be valid in HCPU's view.
         self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_SBUS_START_ADDR"), "(0x20200000)")
-        # ACPU-local execution view (CBUS, 0-based): 0x00000000
-        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_START_ADDR"), "(0x00000000)")
+        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_START_ADDR"), "(0x20200000)")
         # Legacy aliases used by ACPU link scripts.
         self.assertEqual(
             macros.get("ACPU_CODE_REGION1_SBUS_START_ADDR"),
