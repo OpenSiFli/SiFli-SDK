@@ -50,16 +50,22 @@ Configurations 2 and 3 are used for auxiliary function demonstration in this exa
 
 ### Hardware Connection\PIN CONFIG
 
-Taking `SF32LB52_DevKit-LCD` and `SPI-HDK_LB573UB7N6` as an example, this example uses `PA02 ~ PA06` as I2S pins, pin configuration is as follows:
+Taking `SF32LB52_DevKit-LCD` and `SPI-HDK_LB573UB7N6` as examples, both boards use `PA02 ~ PA06` as I2S pins. SF32LB52 uses I2S1, while SF32LB57 uses I2S2:
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#if defined(SOC_SF32LB52X} || defined(SF32LB57X)
+#if defined(SOC_SF32LB52X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA03, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA06, I2S2_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA05, I2S2_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA04, I2S2_SDI, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA03, I2S2_SDO, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA02, I2S2_MCLK, PIN_NOPULL, 1);
 #endif
 #endif
 ```
@@ -68,7 +74,7 @@ If you need to use other development board models, you need to change the pinmux
 ```c
 #ifdef SOC_SF32LB56X
     HAL_PIN_Set(PAD_PA41, I2S1_LRCK, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA40, I2S1_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA73, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
@@ -82,14 +88,14 @@ If you need to use other development board models, you need to change the pinmux
 #endif
 ```
 
-Wiring:
+Different chips may use I2S1 or I2S2. Connect the pins by signal function:
 Development board A | -- | Development board B
 --|--|--
-I2S1_LRCK|--|I2S1_LRCK
-I2S1_BCK|--|I2S1_BCK
-I2S1_SDI|--|I2S1_SDO
-I2S1_SDO|--|I2S1_SDI
-I2S1_MCLK|--|I2S1_MCLK
+LRCK|--|LRCK
+BCK|--|BCK
+SDI|--|SDO
+SDO|--|SDI
+MCLK|--|MCLK
 GND |--|GND
 
 Since `sf32lb58-lcd` is rather special, when connecting the wires here, 58 should be used as A (master), and `sf32lb52-lcd` should be used as B (slave) for the connection.
