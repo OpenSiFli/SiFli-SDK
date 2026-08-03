@@ -872,7 +872,7 @@ common_projects:
       - sf32lb52-lcd_a128r16
       - sf32lb52-nano_n16r16
       - sf32lb56-lcd_n16r12n1
-      - sf32lb58-lcd_n16r32n1_qspi  
+      - sf32lb58-lcd_n16r32n1_qspi
 
   - path: example/rt_device/usb/usb_mstorage/project/nand
     boards:
@@ -917,6 +917,7 @@ common_projects:
       - sf32lb52-nano_n16r16
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_n16r32n1_qspi
+      - spi-hdk_lb573ub7n6
 
   - path: example/storage/littlefs/nor/project
     boards:
