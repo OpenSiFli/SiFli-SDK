@@ -795,13 +795,20 @@ def GenPartitionTableHeaderContentV2(env, mems):
                     offset_name = f'{name_prefix}_OFFSET'
 
                     core =  region.get('core')
-                    cbus_addr, cbus_offset = Convert2CBUSAddr(start_addr, offset, core)
+                    if core and str(core).strip().upper() == 'ACPU':
+                        # ACPU uses the shared SBUS view. Its local CBUS view
+                        # (e.g. 0-based hpsys_ram on SF32LB58) is unusable by
+                        # HCPU when ACPU passes the exec address over.
+                        exec_addr = start_addr
+                        exec_offset = offset
+                    else:
+                        exec_addr, exec_offset = Convert2CBUSAddr(start_addr, offset, core)
                     s += MakeLine('#undef  {}'.format(start_addr_name))
-                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, exec_addr))
                     s += MakeLine('#undef  {}'.format(size_name))
                     s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                     s += MakeLine('#undef  {}'.format(offset_name))
-                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+                    s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, exec_offset))
 
                     if (base == env['name']):
                         if (not ext) or ('1' == ext):
@@ -822,11 +829,11 @@ def GenPartitionTableHeaderContentV2(env, mems):
                         size_name = f'{name_prefix}_SIZE'
                         offset_name = f'{name_prefix}_OFFSET'                        
                         s += MakeLine('#undef  {}'.format(start_addr_name))
-                        s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, cbus_addr))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(start_addr_name, exec_addr))
                         s += MakeLine('#undef  {}'.format(size_name))
                         s += MakeLine('#define {:<50} (0x{:08X})'.format(size_name, max_size))
                         s += MakeLine('#undef  {}'.format(offset_name))
-                        s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, cbus_offset))
+                        s += MakeLine('#define {:<50} (0x{:08X})'.format(offset_name, exec_offset))
     
     return s               
 
@@ -878,12 +885,23 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
     - Name macros: <NAME>_MEM_TYPE where memory type is known
     - Alias macros: <ALIAS>_START_ADDR/_SIZE/_OFFSET
     - Alias macros: <ALIAS>_MEM_TYPE where memory type is known
+    - FLASH_BOOT_LOADER_* storage alias emitted for the bootloader partition
     - FS_REGION_* for filesystem-like partitions
     - FAL_PART_TABLE for auto-exported FAL partitions
-    - FLASH_BOOT_LOADER_* from bootloader.exec (execution address)
-    - HCPU_FLASH_CODE_* from HCPU factory app.exec (execution address)
-    - ACPU_CODE_REGION<N>[_SBUS]_* from ACPU factory app.exec
+    - FLASH_BOOT_LOADER_EXEC_* from bootloader.exec (execution address)
+    - HCPU_FLASH_CODE_EXEC_* from HCPU factory app.exec (execution address)
+    - ACPU_CODE_REGION<N>_EXEC[_SBUS]_* from ACPU factory app.exec
     - CODE_START_ADDR/CODE_SIZE for the current env image (best-effort)
+
+    Storage vs execution address: the per-partition pass always emits
+    <NAME>_START_ADDR/_SIZE/_OFFSET from the partition's storage region,
+    and additionally FLASH_BOOT_LOADER_* for the bootloader partition (the
+    legacy name for its flash storage region). The exec-address blocks always
+    emit their macros with a trailing _EXEC suffix (<NAME>_EXEC_START_ADDR/
+    _SIZE/_OFFSET) so they never collide with the storage macros. For
+    backward compatibility, the legacy ACPU_CODE_REGION<N>[_SBUS]_* names
+    are also emitted as references to the _EXEC variants (ACPU link scripts
+    use those names directly).
     """
 
     s = ''
@@ -926,10 +944,17 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             return cbus_addr
         return sbus_addr
 
-    def _select_exec_addr(region, sbus_addr, cbus_addr):
+    def _select_exec_addr(region, sbus_addr, cbus_addr, core=None):
         # Execution address selection:
         # - RAM/NAND: base
         # - NOR/PSRAM: XIP
+        #
+        # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
+        # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while
+        # the HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made
+        # the exec address (ACPU_CODE_REGION<N>_EXEC_START_ADDR) unusable for
+        # HCPU when ACPU passes that address over. The common rule below keeps
+        # the macro valid in every core's view.
         mem_type = _get_region_mem_type(region)
         return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 
@@ -1083,6 +1108,15 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
                 s += _define_u32('{}_OFFSET'.format(a), offset)
                 s += _define_mem_type(a, region_mem_type)
 
+            # FLASH_BOOT_LOADER_* is the legacy name for the bootloader's
+            # flash STORAGE region, so it is emitted here together with the
+            # other storage macros (not as an exec macro).
+            if ptype == 'bootloader':
+                s += _define_u32('FLASH_BOOT_LOADER_START_ADDR', start_addr)
+                s += _define_u32('FLASH_BOOT_LOADER_SIZE', size)
+                s += _define_u32('FLASH_BOOT_LOADER_OFFSET', offset)
+                s += _define_mem_type('FLASH_BOOT_LOADER', region_mem_type)
+
             # FS_REGION_* macros (compat)
             fs_subtypes = ('littlefs', 'fat', 'fatfs', 'flashdb', 'filesystem')
             if ptype == 'data' and subtype in fs_subtypes:
@@ -1117,7 +1151,9 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
                     if isinstance(value, int):
                         s += _define_u32(str(key), value)
 
-    # FLASH_BOOT_LOADER_* macros (execution address, from exec)
+    # FLASH_BOOT_LOADER_EXEC_* macros (execution address, from exec). All
+    # exec macros carry the _EXEC suffix so they never collide with the
+    # storage macros emitted by the per-partition pass.
     if bootloader_partition and isinstance(bootloader_partition.get('exec'), dict):
         exec_def = bootloader_partition['exec']
         exec_region = str(exec_def.get('region', '')).strip()
@@ -1132,17 +1168,21 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
                 bl_size = storage_size
         bl_core = bootloader_partition.get('core')
         exec_sbus, exec_cbus = ptab.resolve_region_address(exec_region, exec_offset, chip_config, core=bl_core)
-        bl_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus)
+        bl_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus, bl_core)
 
+        bl_base = 'FLASH_BOOT_LOADER_EXEC'
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* bootloader exec addr */')
-        s += _define_u32('FLASH_BOOT_LOADER_START_ADDR', bl_exec_addr)
-        s += _define_u32('FLASH_BOOT_LOADER_SIZE', bl_size)
-        s += _define_u32('FLASH_BOOT_LOADER_OFFSET', exec_offset)
-        s += _define_mem_type('FLASH_BOOT_LOADER', _get_region_mem_type(exec_region), clear=True)
+        s += _define_u32('{}_START_ADDR'.format(bl_base), bl_exec_addr)
+        s += _define_u32('{}_SIZE'.format(bl_base), bl_size)
+        s += _define_u32('{}_OFFSET'.format(bl_base), exec_offset)
+        s += _define_mem_type(bl_base, _get_region_mem_type(exec_region), clear=True)
 
-    # HCPU_FLASH_CODE_* macros (execution address, from exec)
+    # HCPU_FLASH_CODE_EXEC_* macros (execution address, from exec). All exec
+    # macros carry the _EXEC suffix so they never collide with the storage
+    # macros emitted by the per-partition pass (the partition is usually named
+    # `hcpu_flash_code`).
     hcpu_factory_partition = factory_by_core.get('HCPU')
     if hcpu_factory_partition and isinstance(hcpu_factory_partition.get('exec'), dict):
         exec_def = hcpu_factory_partition['exec']
@@ -1152,15 +1192,16 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         hcpu_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus)
         hcpu_size = ptab.parse_size(hcpu_factory_partition.get('size', 0))
 
+        hcpu_base = 'HCPU_FLASH_CODE_EXEC'
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* HCPU factory app exec addr */')
-        s += _define_u32('HCPU_FLASH_CODE_START_ADDR', hcpu_exec_addr)
-        s += _define_u32('HCPU_FLASH_CODE_SIZE', hcpu_size)
-        s += _define_u32('HCPU_FLASH_CODE_OFFSET', exec_offset)
-        s += _define_mem_type('HCPU_FLASH_CODE', _get_region_mem_type(exec_region), clear=True)
+        s += _define_u32('{}_START_ADDR'.format(hcpu_base), hcpu_exec_addr)
+        s += _define_u32('{}_SIZE'.format(hcpu_base), hcpu_size)
+        s += _define_u32('{}_OFFSET'.format(hcpu_base), exec_offset)
+        s += _define_mem_type(hcpu_base, _get_region_mem_type(exec_region), clear=True)
 
-    # ACPU_CODE_REGION<N>[_SBUS]_* macros (execution address, from exec).
+    # ACPU_CODE_REGION<N>_EXEC[_SBUS]_* macros (execution address, from exec).
     # v3 keeps the ACPU execution RAM in the app's exec descriptor instead of
     # a separate legacy RAM partition.
     emitted_acpu_code_regions = set()
@@ -1181,19 +1222,37 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         exec_region = str(exec_def.get('region', '')).strip()
         exec_offset = ptab.parse_size(exec_def.get('offset', 0))
         exec_sbus, exec_cbus = ptab.resolve_region_address(exec_region, exec_offset, chip_config, core='ACPU')
-        acpu_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus)
+        acpu_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus, 'ACPU')
         acpu_size = ptab.parse_size(partition.get('size', 0))
 
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* ACPU factory app exec addr */')
-        for base_name in (
+        # ACPU_CODE_REGION<N>_EXEC_SBUS_* uses the SBUS view of the exec
+        # region; ACPU_CODE_REGION<N>_EXEC_* uses the selected execution
+        # address (cbus for NOR/PSRAM, sbus for RAM/NAND). The two can differ.
+        acpu_bases = (
+            ('ACPU_CODE_REGION{}_EXEC_SBUS'.format(region_num), int(exec_sbus)),
+            ('ACPU_CODE_REGION{}_EXEC'.format(region_num), int(acpu_exec_addr)),
+        )
+        for base_name, addr in acpu_bases:
+            s += _define_u32('{}_START_ADDR'.format(base_name), addr)
+            s += _define_u32('{}_SIZE'.format(base_name), acpu_size)
+            s += _define_u32('{}_OFFSET'.format(base_name), exec_offset)
+
+        # Legacy aliases: ACPU link scripts reference
+        # ACPU_CODE_REGION<N>[_SBUS]_START_ADDR/_SIZE/_OFFSET directly.
+        for legacy_base in (
             'ACPU_CODE_REGION{}_SBUS'.format(region_num),
             'ACPU_CODE_REGION{}'.format(region_num),
         ):
-            s += _define_u32('{}_START_ADDR'.format(base_name), acpu_exec_addr)
-            s += _define_u32('{}_SIZE'.format(base_name), acpu_size)
-            s += _define_u32('{}_OFFSET'.format(base_name), exec_offset)
+            if legacy_base.endswith('_SBUS'):
+                exec_base = legacy_base[:-len('_SBUS')] + '_EXEC_SBUS'
+            else:
+                exec_base = legacy_base + '_EXEC'
+            s += _define_ref('{}_START_ADDR'.format(legacy_base), '{}_START_ADDR'.format(exec_base))
+            s += _define_ref('{}_SIZE'.format(legacy_base), '{}_SIZE'.format(exec_base))
+            s += _define_ref('{}_OFFSET'.format(legacy_base), '{}_OFFSET'.format(exec_base))
 
     # CODE_START_ADDR/CODE_SIZE for current image (best-effort)
     env_name = (env.get('name') or '').strip().lower()
@@ -1220,8 +1279,8 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         s += MakeLine('/* code start */')
 
         if code_partition.get('type') == 'bootloader' and isinstance(code_partition.get('exec'), dict):
-            s += _define_ref('CODE_START_ADDR', 'FLASH_BOOT_LOADER_START_ADDR')
-            s += _define_ref('CODE_SIZE', 'FLASH_BOOT_LOADER_SIZE')
+            s += _define_ref('CODE_START_ADDR', 'FLASH_BOOT_LOADER_EXEC_START_ADDR')
+            s += _define_ref('CODE_SIZE', 'FLASH_BOOT_LOADER_EXEC_SIZE')
         else:
             size = ptab.parse_size(code_partition.get('size', 0))
             exec_def = code_partition.get('exec')
@@ -1230,12 +1289,12 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
                 exec_region = str(exec_def.get('region', '')).strip()
                 exec_offset = ptab.parse_size(exec_def.get('offset', 0))
                 exec_sbus, exec_cbus = ptab.resolve_region_address(exec_region, exec_offset, chip_config, core=core)
-                exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus)
+                exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus, core)
             else:
                 region = code_partition.get('region', '')
                 offset = ptab.parse_size(code_partition.get('offset', 0))
                 sbus_addr, cbus_addr = ptab.resolve_region_address(region, offset, chip_config, core=core)
-                exec_addr = _select_exec_addr(region, sbus_addr, cbus_addr)
+                exec_addr = _select_exec_addr(region, sbus_addr, cbus_addr, core)
 
             s += _define_u32('CODE_START_ADDR', exec_addr)
             s += _define_u32('CODE_SIZE', size)
