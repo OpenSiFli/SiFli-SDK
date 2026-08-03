@@ -1,7 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
 #include "stdio.h"
+#include "stdlib.h"
 #include "string.h"
 #include "time.h"
 #include <rtdevice.h>
@@ -110,7 +116,7 @@ static void unlock(fdb_db_t db)
 static int example_kvdb_init(void)
 {
     int ret = -1;
-    fdb_err_t err;
+    fdb_err_t err = FDB_INIT_FAILED;
 
     /* mutex initialization. */
     rt_mutex_init(&g_kvdb_db_mutex, "kvdb_mtx", RT_IPC_FLAG_FIFO);
@@ -150,7 +156,14 @@ static int example_kvdb_init(void)
     }
     while (0);
 
-    rt_kprintf("kvdb init sucess !!!\n");
+    if (ret == 0)
+    {
+        rt_kprintf("kvdb init success !!!\n");
+    }
+    else
+    {
+        rt_kprintf("kvdb init failed (%d) !!!\n", err);
+    }
     return ret;
 }
 
@@ -159,18 +172,31 @@ static int example_kvdb_init(void)
  */
 int flashdb_kvdb_test(int argc, char *argv[])
 {
-    struct fdb_blob blob;
+    struct fdb_blob blob = {0};
     int int_value = 0;
+    fdb_err_t err;
+    size_t read_len;
 
-    if (0 == rt_strncmp("get", argv[1], rt_strlen("get")))
+    if (argc < 2 || argv == NULL || argv[1] == NULL)
     {
-        if (0 == rt_strncmp("int", argv[3], rt_strlen("int")))
+        rt_kprintf("usage: kvdb get|set|del ...\n");
+        return RT_EOK;
+    }
+
+    if (0 == rt_strcmp("get", argv[1]))
+    {
+        if (argc < 4 || argv[2] == NULL || argv[3] == NULL)
+        {
+            rt_kprintf("usage: kvdb get <key> int|str\n");
+            return RT_EOK;
+        }
+
+        if (0 == rt_strcmp("int", argv[3]))
         {
             rt_kprintf("[%s] int\n", argv[2]);
-            /* GET the KV value */
-            fdb_kv_get_blob(p_kvdb_db, argv[2], fdb_blob_make(&blob, &int_value, sizeof(int_value)));
-            /* the blob.saved.len is more than 0 when get the value successful */
-            if (blob.saved.len > 0)
+            read_len = fdb_kv_get_blob(p_kvdb_db, argv[2],
+                                       fdb_blob_make(&blob, &int_value, sizeof(int_value)));
+            if (read_len == sizeof(int_value) && blob.saved.len == sizeof(int_value))
             {
                 rt_kprintf("get the %s value is %d \n", argv[2], int_value);
             }
@@ -178,9 +204,10 @@ int flashdb_kvdb_test(int argc, char *argv[])
             {
                 rt_kprintf("get the %s failed\n", argv[2]);
             }
+            return RT_EOK;
         }
 
-        if (0 == rt_strncmp("str", argv[3], rt_strlen("str")))
+        if (0 == rt_strcmp("str", argv[3]))
         {
             rt_kprintf("[%s] str\n", argv[2]);
             char *return_value;
@@ -198,37 +225,80 @@ int flashdb_kvdb_test(int argc, char *argv[])
             {
                 rt_kprintf("get the %s failed\n", argv[2]);
             }
+            return RT_EOK;
         }
+
+        rt_kprintf("unsupported data type: %s\n", argv[3]);
+        return RT_EOK;
     }
 
-    if (0 == rt_strncmp("set", argv[1], rt_strlen("set")))
+    if (0 == rt_strcmp("set", argv[1]))
     {
-        if (0 == rt_strncmp("int", argv[3], rt_strlen("int")))
+        if (argc < 5 || argv[2] == NULL || argv[3] == NULL || argv[4] == NULL)
+        {
+            rt_kprintf("usage: kvdb set <key> int|str <value>\n");
+            return RT_EOK;
+        }
+
+        if (0 == rt_strcmp("int", argv[3]))
         {
             /* CHANGE the KV value */
             int_value = atoi(argv[4]);
             /* change the KV's value */
-            fdb_kv_set_blob(p_kvdb_db, argv[2], fdb_blob_make(&blob, &int_value, sizeof(int_value)));
-            rt_kprintf("set the %s value to %d\n", argv[2], int_value);
+            err = fdb_kv_set_blob(p_kvdb_db, argv[2],
+                                  fdb_blob_make(&blob, &int_value, sizeof(int_value)));
+            if (err == FDB_NO_ERR)
+            {
+                rt_kprintf("set the %s value to %d\n", argv[2], int_value);
+            }
+            else
+            {
+                rt_kprintf("set the %s failed (%d)\n", argv[2], err);
+            }
+            return RT_EOK;
         }
 
-        if (0 == rt_strncmp("str", argv[3], rt_strlen("str")))
+        if (0 == rt_strcmp("str", argv[3]))
         {
             /* CHANGE the KV value */
-            fdb_kv_set(p_kvdb_db, argv[2], argv[4]);
-            rt_kprintf("set %s value to %s\n", argv[2], argv[4]);
+            err = fdb_kv_set(p_kvdb_db, argv[2], argv[4]);
+            if (err == FDB_NO_ERR)
+            {
+                rt_kprintf("set %s value to %s\n", argv[2], argv[4]);
+            }
+            else
+            {
+                rt_kprintf("set the %s failed (%d)\n", argv[2], err);
+            }
+            return RT_EOK;
         }
+
+        rt_kprintf("unsupported data type: %s\n", argv[3]);
+        return RT_EOK;
     }
 
-    if (0 == rt_strncmp("del", argv[1], rt_strlen("del")))
+    if (0 == rt_strcmp("del", argv[1]))
     {
+        if (argc < 3 || argv[2] == NULL)
         {
-            /* DELETE the KV by name */
-            fdb_kv_del(p_kvdb_db, argv[2]);
+            rt_kprintf("usage: kvdb del <key>\n");
+            return RT_EOK;
+        }
+
+        /* DELETE the KV by name */
+        err = fdb_kv_del(p_kvdb_db, argv[2]);
+        if (err == FDB_NO_ERR)
+        {
             rt_kprintf("delete the %s finish\n", argv[2]);
         }
+        else
+        {
+            rt_kprintf("delete the %s failed (%d)\n", argv[2], err);
+        }
+        return RT_EOK;
     }
 
+    rt_kprintf("unsupported operation: %s\n", argv[1]);
     return RT_EOK;
 }
 
