@@ -231,7 +231,7 @@ int main(void)
         rt_kprintf("[WiFi] Failed to create auto-connect thread!\n");
     }
 
-    /* Main loop */
+    // /* Main loop */
     while (1)
     {
         rt_thread_mdelay(10000);

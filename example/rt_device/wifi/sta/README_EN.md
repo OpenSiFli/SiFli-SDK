@@ -1,5 +1,5 @@
-# Wi-Fi Example
-Source path: example/rt_device/wifi
+# Wi-Fi Station Example
+Source path: example/rt_device/wifi/sta
 
 ## Overview
 

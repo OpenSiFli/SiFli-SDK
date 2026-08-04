@@ -258,6 +258,137 @@ __ROM_USED void weather(int argc, char **argv)
 MSH_CMD_EXPORT(weather, Get Weather)
 
 
+void web_download(int argc, char **argv)
+{
+#define MAX_BUF_SIZE    (2 * TCP_MSS)
+    struct webclient_session *session = RT_NULL;
+    rt_uint8_t *buffer = RT_NULL;
+    int resp_status;
+    int content_length = -1, bytes_read = 0;
+    int content_pos = 0;
+    const int BUFSZ = TCP_WND / 2 > MAX_BUF_SIZE ? MAX_BUF_SIZE : TCP_WND / 2;
+    char *url = RT_NULL;
+    char *save_path = RT_NULL;
+    FILE *fp = RT_NULL;
+
+    if (argc < 2)
+    {
+        rt_kprintf("Usage: web_download <url> [save_path]\n");
+        return;
+    }
+
+    url = argv[1];
+    if (argc >= 3)
+        save_path = argv[2];
+
+    /* create session */
+    session = webclient_session_create(BUFSZ);
+    if (session == RT_NULL)
+    {
+        rt_kprintf("web_download: create session failed\n");
+        return;
+    }
+
+    resp_status = webclient_get(session, url);
+    if (resp_status != 200)
+    {
+        rt_kprintf("web_download: GET request failed, status %d\n", resp_status);
+        goto __exit;
+    }
+
+    /* open file if needed */
+    if (save_path && (save_path[0] != '\0'))
+    {
+        fp = fopen(save_path, "wb");
+        if (fp == RT_NULL)
+        {
+            rt_kprintf("web_download: open file %s failed\n", save_path);
+            /* continue without file, just discard data */
+        }
+    }
+
+    buffer = rt_calloc(1, BUFSZ);
+    if (buffer == RT_NULL)
+    {
+        rt_kprintf("web_download: allocate buffer failed\n");
+        goto __exit;
+    }
+    rt_kprintf("TCP_WND %d, TCP_MSS %d, BUFSZ %d\n", TCP_WND, TCP_MSS, BUFSZ);
+    content_length = webclient_content_length_get(session);
+    /* record start tick for speed calculation */
+    rt_tick_t start_tick = rt_tick_get();
+    int last_percent = -1;
+
+    if (content_length < 0)
+    {
+        /* chunked transfer – no total size available */
+        while ((bytes_read = webclient_read(session, buffer, BUFSZ)) > 0)
+        {
+            content_pos += bytes_read;
+            if (fp)
+                fwrite(buffer, 1, bytes_read, fp);
+            /* print downloaded size */
+            rt_kprintf("web_download: %d bytes downloaded\r", content_pos);
+        }
+    }
+    else
+    {
+        while (content_pos < content_length)
+        {
+            int to_read = (content_length - content_pos) > BUFSZ ? BUFSZ : (content_length - content_pos);
+            bytes_read = webclient_read(session, buffer, to_read);
+            if (bytes_read <= 0)
+                break;
+            content_pos += bytes_read;
+            if (fp)
+                fwrite(buffer, 1, bytes_read, fp);
+            /* calculate percentage and print only when changed
+             * use 64-bit math to avoid overflow when content_pos is large
+             */
+            int percent = 0;
+            if (content_length > 0)
+            {
+                percent = (int)((content_pos * 100LL) / content_length);
+                if (percent > 100)
+                    percent = 100;
+                else if (percent < 0)
+                    percent = 0;
+            }
+            if (percent != last_percent)
+            {
+                /* compute instantaneous rate since start */
+                rt_tick_t now = rt_tick_get();
+                float elapsed = (float)(now - start_tick) / RT_TICK_PER_SECOND;
+                float inst_rate = elapsed > 0 ? ((float)content_pos / elapsed) : 0;
+                float inst_kb = inst_rate / 1024.0f;
+                rt_kprintf("web_download: %d%%, %.2f KB/s\r", percent, inst_kb);
+                last_percent = percent;
+            }
+        }
+    }
+
+    /* calculate duration and speed */
+    {
+        rt_tick_t end_tick = rt_tick_get();
+        rt_tick_t diff = end_tick - start_tick;
+        float sec = (float)diff / RT_TICK_PER_SECOND;
+        float rate = sec > 0 ? (content_pos / sec) : 0;
+        /* convert to KB/s */
+        float rate_kb = rate / 1024.0f;
+        rt_kprintf("\nweb_download: finished, total %d bytes, time %.2fs, %.2f KB/s\n",
+                   content_pos > 0 ? content_pos : 0, sec, rate_kb);
+    }
+
+__exit:
+    if (fp)
+        fclose(fp);
+    if (buffer)
+        rt_free(buffer);
+    if (session)
+        webclient_close(session);
+}
+
+MSH_CMD_EXPORT(web_download, Download file via webclient; argv1: url argv2: save_path(optional));
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
 

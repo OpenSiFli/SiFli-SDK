@@ -1,5 +1,5 @@
-# Wi-Fi 示例
-源码路径：example/rt_device/wifi
+# Wi-Fi Station示例
+源码路径：example/rt_device/wifi/sta
 
 ## 概述
 
