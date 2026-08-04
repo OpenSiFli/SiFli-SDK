@@ -14,7 +14,7 @@
 5.	在dfu.bin中，会把升级包中除了dfu.bin的所有bin，都解压安装到对应区域，安装完成后会再次重启，重启后进入hcpu.bin，升级完成
 
 ## 例程的使用
-1. 本例程的主工程同BLE peripheral，该工程的时候方法可以参照example/ble/peripheral工程
+1. 本例程的主工程同BLE peripheral，该工程的使用方法可以参照example/ble/peripheral工程
 2. 制作升级包的工具img_toolv37.exe在tool/secureboot目录下
 3. 将升级包通过BLE APP下载，或者uart/jlink下载DFU_DOWNLOAD_REGION区域。
 4. 如果使用sifli ble app下载，将自动安装重启，如果是自行下载，需要调用dfu_package_install_set，然后在非55x平台调用HAL_PMU_ReBoot进行重启，55x平台需要调用dfu_bootjump进行跳转
@@ -211,6 +211,21 @@ https://github.com/OpenSiFli/SiFli_OTA_APP_IOS\
 ![app1](./assets/app.jpg)![app2](./assets/app2.jpg)
 ![app3](./assets/app3.jpg)![app2](./assets/app4.jpg)
 
+## 例程的预期结果
+例程启动后：
+1. 可以被手机BLE APP搜到并连接
+2. 可以用 APP 完成升级。是否升级成功可以通过以下步骤来确认：
+
+    a. 先编译并烧录一版固件到板子中，作为升级前的原始固件。
+
+    b. 打开 `src/main.c` 文件，在 `main` 函数开头添加下面这句代码，保存后重新编译（重新编译即可，不要再烧录到板子，否则升级前就会打印该 log）：
+
+    ```c
+    rt_kprintf("Upgrade succeeded\n");
+    ```
+    ![text](./assets/upyes.png)
+
+    c. 用步骤 b 重新编译出的固件制作 HCPU 升级包，通过 APP 完成升级。升级后的固件运行时若串口打印出 "Upgrade succeeded"，即说明升级成功。
 
 ## 异常诊断
 1.   编译时DFU工程提示空间不足

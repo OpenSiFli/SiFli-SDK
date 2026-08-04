@@ -13,7 +13,7 @@ This example demonstrates adding DFU functionality based on a BLE peripheral pro
 5. In dfu.bin, all bins except dfu.bin in the upgrade package will be extracted and installed to the corresponding areas. After installation is complete, it will restart again, enter hcpu.bin after restart, and the upgrade is complete.
 
 ## Example Usage
-1. The main project of this example is the same as BLE peripheral. For usage of this project, please refer to the example/ble/peripheral project.
+1. The main project of this example is identical to BLE peripheral. Please refer to the example/ble/peripheral project for usage instructions.
 2. The tools for creating upgrade packages (ezip.exe, img_toolv37.exe) are in the tool/secureboot directory, and key-related content is in the tool/secureboot/sifli02 directory. Put the above files in the same directory and create the upgrade package according to the package creation section below.
 3. Download the upgrade package through BLE APP, or download to the DFU_DOWNLOAD_REGION area via uart/jlink.
 4. If using Sifli BLE app for download, it will automatically install and restart. If downloading manually, you need to call dfu_offline_install_set_v2, then call HAL_PMU_ReBoot to restart.
@@ -121,6 +121,22 @@ Relevant sections are under "SiFli-SDK OTA (Nor Offline)"
 The operation is shown in the following figures. Search for the board's BLE broadcast, click on the corresponding device, then select nor dfu, and finally select offline. No need to click the start button below
 ![app1](./assets/app.jpg)![app2](./assets/app2.jpg)
 ![app3](./assets/app3.jpg)![app2](./assets/app4.jpg)
+
+## Expected Results
+After the example starts:
+1. It can be discovered and connected by the mobile BLE APP.
+2. The upgrade can be performed via the APP. You can confirm whether the upgrade succeeded through the following steps:
+
+    a. First compile and flash a firmware build to the board as the original firmware before the upgrade.
+
+    b. Open `src/main.c`, add the following line at the beginning of the `main` function, then save and recompile (recompiling is enough — do not flash it to the board again, otherwise the log would be printed before the upgrade):
+
+    ```c
+    rt_kprintf("Upgrade succeeded\n");
+    ```
+    ![text](./assets/upyes.png)
+
+    c. Use the firmware recompiled in step b to build the HCPU upgrade package, then perform the upgrade via the APP. If the upgraded firmware prints "Upgrade succeeded" over the serial port at runtime, the upgrade succeeded.
 
 ## Troubleshooting
 1. DFU project shows insufficient space during compilation
