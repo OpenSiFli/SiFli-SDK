@@ -113,7 +113,7 @@ static struct rthw_sdio sdio_hw[SDIO_MAX];
 ALIGN(SDIO_ALIGN_LEN)
 #if defined(CFG_FACTORY_DEBUG)
     HAL_RETM_BSS_SECT(cache_buf_pool, static rt_uint8_t cache_buf_pool[SDIO_MAX][SDIO_BUFF_SIZE / 64]);
-    #esle
+#else
     HAL_RETM_BSS_SECT(cache_buf_pool, static rt_uint8_t cache_buf_pool[SDIO_MAX][SDIO_BUFF_SIZE]);
 #endif
 
