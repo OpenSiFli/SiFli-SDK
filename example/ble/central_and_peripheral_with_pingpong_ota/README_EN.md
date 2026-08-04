@@ -92,11 +92,23 @@ please input the serial port num:5
 ```
 For detailed steps on compilation and downloading, please refer to the relevant introduction in [Quick Start](/quickstart/get-started.md).
 ## Expected Results
-<!-- Explain the example's running results, such as which LEDs will light up, which logs will be printed, to help users judge whether the example is running normally. Running results can be explained step by step with code -->
-After the example starts:
-1. It can be discovered and connected by the mobile BLE APP, allowing corresponding GATT characteristic read/write operations.
-2. It can search for other BLE devices, connect and search the connected device's GATT database, and perform GATT read/write operations.
-3. It can be upgraded using the APP
+<!-- Describe the expected behavior after running the example, such as which LEDs light up or which logs are printed, so that users can determine whether the example is running properly. The result can be explained step by step together with the code. -->
+After the example starts up:
+1. The board can be discovered and connected by a mobile BLE APP, which can perform GATT characteristic read/write operations.
+2. The board can scan for other BLE devices, connect to them, discover their GATT database, and perform GATT read/write operations.
+3. The upgrade can be performed via the APP. You can confirm whether the upgrade succeeded through the following steps:
+
+    a. First compile and flash a firmware build to the board as the original firmware before the upgrade.
+
+    b. Open `src/main.c`, add the following line at the beginning of the `main` function, then save and recompile (recompiling is enough — do not flash it to the board again, otherwise the log would be printed before the upgrade):
+
+    ```c
+    rt_kprintf("Upgrade succeeded\n");
+    ```
+    ![text](./assets/upyes.png)
+
+    c. Use the firmware recompiled in step b to build the HCPU upgrade package, then perform the upgrade via the APP. If the upgraded firmware prints "Upgrade succeeded" over the serial port at runtime, the upgrade succeeded.
+   
 ## Troubleshooting
 ## Reference Documentation
 <!-- For rt_device examples, RT-Thread official documentation provides detailed explanations. You can add web links here, for example, refer to RT-Thread's [RTC documentation](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->
