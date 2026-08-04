@@ -92,6 +92,7 @@ static void LCD_Init(LCDC_HandleTypeDef *hlcdc)
 
     tps_init(1000); //-1.5V
     tps_exit_sleep();
+    tps_enter_sleep();
 }
 
 
@@ -156,7 +157,7 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
     uint32_t total_pixels = LCD_HOR_RES_MAX * LCD_VER_RES_MAX;
     RT_ASSERT(LCD_HOR_RES_MAX == (Xpos1 - Xpos0 + 1)); //Support only full screen
     RT_ASSERT(LCD_VER_RES_MAX == (Ypos1 - Ypos0 + 1)); //Support only full screen
-    RT_ASSERT((total_pixels % 4) == 0); // 必须是4像素的倍数
+    RT_ASSERT((total_pixels % 4) == 0); // Must be a multiple of 4 pixels
 
     //Convert layer data to 4bit gray data
     if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_MONO)
@@ -165,7 +166,7 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
     }
     else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_A4)
     {
-        uint32_t n = total_pixels / 4; // 每次处理4像素（4字节）
+        uint32_t n = total_pixels / 4; // Process 4 pixels (4 bytes) at a time
         uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
         const uint8_t *p_src = RGBCode;
 
@@ -174,23 +175,23 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
             uint8_t byte0 = *p_src++;
             uint8_t byte1 = *p_src++;
 
-            // 生成4像素的新值
+            // Generate new values for 4 pixels
             uint32_t src_v = ((byte1 << 20) | (byte1 << 16) | (byte0 << 4) | byte0) & 0x0F0F0F0F;
 
-            // 读取原像素，旧像素清零，新像素移入老像素
+            // Read old pixels, clear old pixel nibbles, shift new pixels to old pixel position
             uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
 
-            // 合并新像素
+            // Merge new pixels
             *p_dst++ = dst_v | src_v;
         }
     }
     else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_RGB565)
     {
-        uint32_t n = total_pixels / 4; // 每次处理4像素（4字节）
+        uint32_t n = total_pixels / 4; // Process 4 pixels (4 bytes) at a time
         uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
         const uint16_t *p_src = (const uint16_t *)RGBCode;
 
-        // 计算灰度值
+        // Calculate grayscale value
         // 0.299*R + 0.587*G + 0.114*B
 #define RGB565_TO_GRAY4(rgb)  ( \
         (uint8_t)(( \
@@ -211,13 +212,60 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
             p_src++;
 
 
-            // 生成4像素的新值
+            // Generate new values for 4 pixels
             uint32_t src_v = ((pixel3 << 24) | (pixel2 << 16) | (pixel1 << 8) | pixel0) & 0x0F0F0F0F;
 
-            // 读取原像素，旧像素清零，新像素移入老像素
+            // Read old pixels, clear old pixel nibbles, shift new pixels to old pixel position
             uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
 
-            // 合并新像素
+            // Merge new pixels
+            *p_dst++ = dst_v | src_v;
+        }
+    }
+    else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_RGB888)
+    {
+        uint32_t n = total_pixels / 4; // Process 4 pixels (4 bytes) at a time
+        uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
+        const uint8_t *p_src = (const uint8_t *)RGBCode;
+
+        // Calculate grayscale value
+        // 0.299*R + 0.587*G + 0.114*B
+#define RGB888_TO_GRAY4(r, g, b)  ( \
+        (uint8_t)(( \
+        ((r) * 77 + \
+         (g) * 150 + \
+         (b) * 29) >> 8) >> 4) \
+        )
+
+        while (n--)
+        {
+            uint8_t r0 = *p_src++;
+            uint8_t g0 = *p_src++;
+            uint8_t b0 = *p_src++;
+            uint8_t pixel0 = RGB888_TO_GRAY4(r0, g0, b0);
+
+            uint8_t r1 = *p_src++;
+            uint8_t g1 = *p_src++;
+            uint8_t b1 = *p_src++;
+            uint8_t pixel1 = RGB888_TO_GRAY4(r1, g1, b1);
+
+            uint8_t r2 = *p_src++;
+            uint8_t g2 = *p_src++;
+            uint8_t b2 = *p_src++;
+            uint8_t pixel2 = RGB888_TO_GRAY4(r2, g2, b2);
+
+            uint8_t r3 = *p_src++;
+            uint8_t g3 = *p_src++;
+            uint8_t b3 = *p_src++;
+            uint8_t pixel3 = RGB888_TO_GRAY4(r3, g3, b3);
+
+            // Generate new values for 4 pixels
+            uint32_t src_v = ((pixel3 << 24) | (pixel2 << 16) | (pixel1 << 8) | pixel0) & 0x0F0F0F0F;
+
+            // Read old pixels, clear old pixel nibbles, shift new pixels to old pixel position
+            uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
+
+            // Merge new pixels
             *p_dst++ = dst_v | src_v;
         }
     }
@@ -249,6 +297,7 @@ static uint32_t StartFrame(LCDC_HandleTypeDef *hlcdc, uint32_t frame_idx)
     }
     else
     {
+        tps_enter_sleep();
         return 1; //Done
     }
 }
@@ -286,6 +335,7 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
 
     Ori_XferCpltCallback = hlcdc->XferCpltCallback;
     hlcdc->XferCpltCallback = LCDC_SendLineCpltCbk;
+    tps_exit_sleep();
     StartFrame(hlcdc, 0);
 }
 
