@@ -1584,20 +1584,24 @@ int sdhci_add_host(struct sdhci_host *host)
     mmc->flags = MMCSD_SUP_SDIO_IRQ;
 
     /* Per-controller 4-bit mode control (match by instance base address) */
-#ifndef SDMMC1_BUS_WIDTH_1_ONLY
+#ifdef SDMMC1_BASE
     if (host->handle.Instance == SDMMC1_BASE)
     {
+#ifndef SDMMC1_BUS_WIDTH_1_ONLY
         mmc->flags |= MMCSD_BUSWIDTH_4;
-    }
 #endif /* SDMMC1_BUS_WIDTH_1_ONLY */
+    }
+#endif /* SDMMC1_BASE */
 #ifdef SDMMC2_BASE
-#ifndef SDMMC2_BUS_WIDTH_1_ONLY
     if (host->handle.Instance == SDMMC2_BASE)
     {
+#ifndef SDMMC2_BUS_WIDTH_1_ONLY
         mmc->flags |= MMCSD_BUSWIDTH_4;
-    }
 #endif /* SDMMC2_BUS_WIDTH_1_ONLY */
+    }
 #endif /* SDMMC2_BASE */
+
+    mmc->flags |= (host->usr_cfg.sdio_mode << MMCSD_HOST_TYPE_POS) & MMCSD_HOST_TYPE_MASK;
 
     if (caps & SDHCI_CAN_DO_HISPD)
         mmc->flags |= MMCSD_SUP_HIGHSPEED;

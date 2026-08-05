@@ -227,6 +227,14 @@ int dfs_filesystem_get_partition(struct dfs_partition *part,
 #define MMCSD_HOST_PLUGED       0
 #define MMCSD_HOST_UNPLUGED     1
 
+typedef enum
+{
+    MMCSD_HOST_DETECT_UNKNOWN = 0,
+    MMCSD_HOST_DETECT_SDCARD,
+    MMCSD_HOST_DETECT_EMMC,
+    MMCSD_HOST_DETECT_SDIO,
+} mmcsd_host_detect_mode;
+
 int mmcsd_wait_cd_changed(rt_int32_t timeout);
 void mmcsd_host_lock(struct rt_mmcsd_host *host);
 void mmcsd_host_unlock(struct rt_mmcsd_host *host);

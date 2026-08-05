@@ -108,6 +108,11 @@ struct rt_mmcsd_host
 #define controller_is_spi(host) (host->flags & MMCSD_HOST_IS_SPI)
 #define MMCSD_SUP_SDIO_IRQ  (1 << 4)    /* support signal pending SDIO IRQs */
 #define MMCSD_SUP_HIGHSPEED (1 << 5)    /* support high speed */
+#define MMCSD_HOST_TYPE_POS     (6)
+#define MMCSD_HOST_TYPE_MASK    (3 << MMCSD_HOST_TYPE_POS)
+#define MMCSD_HOST_TYPE_SDCARD  (0 << MMCSD_HOST_TYPE_POS)
+#define MMCSD_HOST_TYPE_EMMC    (1 << MMCSD_HOST_TYPE_POS)
+#define MMCSD_HOST_TYPE_SDIO    (2 << MMCSD_HOST_TYPE_POS)
 
     rt_uint32_t max_seg_size;   /* maximum size of one dma segment */
     rt_uint32_t max_dma_segs;   /* maximum number of dma segments in one request */
