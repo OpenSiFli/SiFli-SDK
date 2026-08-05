@@ -326,6 +326,10 @@ static void pdm(uint8_t argc, char **argv)
         if (total_channels == 2 || total_channels == 4)
         {
             pa.read_channnel_num = 2; // each PDM is stereo
+            if (argc > 5)
+            {
+                pa.enable_mic_ssl = 1;
+            }
         }
         client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, mic_callback, &client);
         return;

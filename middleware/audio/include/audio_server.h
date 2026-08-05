@@ -130,10 +130,12 @@ typedef struct
     mics_t   read_which_mic;
     uint8_t  read_channnel_num;
     uint8_t  read_bits_per_sample;
-
+    uint8_t  enable_mic_ssl;
     // set these callback if has user device to open with audio_device_e
     user_device_open  open;
     user_device_close close;
+
+
 } audio_parameter_t;
 
 

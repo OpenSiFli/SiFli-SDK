@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: 2020-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -10,6 +10,7 @@
 #include "anyka_types.h"
 #include "medialib_global.h"
 
+// Generic helper definitions for shared library support
 #if defined _WIN32 || defined __CYGWIN__
     #define SD_HELPER_DLL_IMPORT __declspec(dllimport)
     #define SD_HELPER_DLL_EXPORT __declspec(dllexport)
@@ -25,6 +26,11 @@
         #define SD_HELPER_DLL_LOCAL
     #endif
 #endif
+
+// Now we use the generic helper definitions above to define SD_API and SD_LOCAL.
+// SD_API is used for the public API symbols. It either DLL imports or DLL exports (or does nothing for static build)
+// SD_LOCAL is used for non-api symbols.
+
 #ifdef SD_DLL // defined if sdlib is compiled as a DLL
     #ifdef SD_BUILD_DLL // defined if we are building the sdlib DLL (instead of using it)
         #define SD_API SD_HELPER_DLL_EXPORT
@@ -36,6 +42,7 @@
     #define SD_API
     #define SD_LOCAL
 #endif // SD_DLL
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -153,6 +160,7 @@ extern SD_API const struct sd_entry_fft c_sd_ak_fftc_asm;
 extern SD_API const struct sd_entry_fft c_sd_ak_fft_c;
 extern SD_API const struct sd_entry_fft c_sd_ak_fft_c_f1;
 extern SD_API const struct sd_entry_fft c_sd_ak_fftc_c;
+
 #ifdef __cplusplus
 }
 #endif

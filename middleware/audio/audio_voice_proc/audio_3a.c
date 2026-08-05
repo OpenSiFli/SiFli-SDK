@@ -858,9 +858,8 @@ RT_WEAK void hfp_opened_for_xiaozhi(uint32_t samplerate)
 {
 }
 
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels)
+void audio_3a_open(audio_3a_input_t *input)
 {
-    all_mic_channels = 1;
     audio_3a_t *thiz = &g_audio_3a_env;
 #if defined(SOLUTION) && defined(RT_USING_BT)
     bool talk_with_abox = false;
@@ -890,12 +889,12 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
           g_ul_agc_compression_gain_db, g_dl_agc_compression_gain_db, g_agc_decay, g_echoMode);
     if (g_audio_3a_env.state == 0)
     {
-        g_audio_3a_env.is_bt_voice = is_bt_voice;
-        g_audio_3a_env.disable_uplink_agc = disable_uplink_agc;
+        g_audio_3a_env.is_bt_voice = input->is_bt_voice;
+        g_audio_3a_env.disable_uplink_agc = input->disable_uplink_agc;
         g_3a_fifo = audio_mem_malloc(480);
         RT_ASSERT(g_3a_fifo);
-        LOG_I("3a_w open samplearate=%ld", samplerate);
-        if (samplerate == 8000)
+        LOG_I("3a_w open samplearate=%ld", input->samplerate);
+        if (input->samplerate == 8000)
         {
             g_audio_3a_env.frame_len = 160;
             g_audio_3a_env.samplerate = 8000;
@@ -904,16 +903,16 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
         else
         {
             g_audio_3a_env.frame_len = 320;
-            RT_ASSERT(samplerate == 16000 || samplerate == 32000);
-            g_audio_3a_env.samplerate = samplerate;
-            audio_3a_module_init(&g_audio_3a_env, samplerate);
+            RT_ASSERT(input->samplerate == 16000 || input->samplerate == 32000);
+            g_audio_3a_env.samplerate = input->samplerate;
+            audio_3a_module_init(&g_audio_3a_env, input->samplerate);
         }
         g_audio_3a_env.state = 1;
         g_audio_3a_env.is_far_putted = 0;
         g_audio_3a_env.is_aecm_mic_putted = 0;
 #ifdef AUDIO_BT_AUDIO
-        if (is_bt_voice)
-            bt_voice_open(samplerate);
+        if (input->is_bt_voice)
+            bt_voice_open(input->samplerate);
 #endif
         hfp_opened_for_xiaozhi(g_audio_3a_env.samplerate);
     }

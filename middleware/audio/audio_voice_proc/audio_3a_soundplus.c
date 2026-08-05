@@ -80,17 +80,17 @@ static void audio_3a_module_free(audio_3a_t *env)
 }
 
 
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels)
+void audio_3a_open(audio_3a_input_t *input)
 {
-    all_mic_channels = 1;
+    input->all_mic_channels = 1;
     audio_3a_t *env = &g_audio_3a_env;
-    RT_UNUSED(disable_uplink_agc);
+    RT_UNUSED(input->disable_uplink_agc);
     if (env->state == 0)
     {
         env->is_far_putted = 0;
-        env->is_bt_voice = is_bt_voice;
-        LOG_I("3a_w open samplearate=%ld", samplerate);
-        if (samplerate == 8000)
+        env->is_bt_voice = input->is_bt_voice;
+        LOG_I("3a_w open samplearate=%ld", input->samplerate);
+        if (input->samplerate == 8000)
         {
             soundplus_init(2);
             soundplus_rx_init(2);
@@ -108,8 +108,8 @@ void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_upl
             env->frame_size = SOUNDPLUS_FRAME_SIZE;
             audio_3a_module_init(env, 16000);
         }
-        if (is_bt_voice)
-            bt_voice_open(samplerate);
+        if (input->is_bt_voice)
+            bt_voice_open(input->samplerate);
     }
 }
 

@@ -1618,7 +1618,13 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
                 RT_ASSERT(my->mixed_4_channel);
             }
 #endif
-            audio_3a_open(my->rx_samplerate, (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE), client->parameter.disable_uplink_agc, my->all_mic_channels);
+            audio_3a_input_t input = {0};
+            input.samplerate = my->rx_samplerate;
+            input.is_bt_voice = (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE);
+            input.disable_uplink_agc = client->parameter.disable_uplink_agc;
+            input.all_mic_channels = my->all_mic_channels;
+            input.enable_mic_ssl = client->parameter.enable_mic_ssl;
+            audio_3a_open(&input);
             client->is_3a_opened = 1;
         }
         RT_ASSERT(!my->rx_data_tmp);
@@ -2584,7 +2590,13 @@ static void audio_device_close(audio_server_t *server, audio_client_t client)
             audio_device_speaker_t *my;
             audio_server_t *server = get_server();
             my = &server->device_speaker_private;
-            audio_3a_open(suspend1->parameter.write_samplerate, (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE), suspend1->parameter.disable_uplink_agc, my->all_mic_channels);
+            audio_3a_input_t input = {0};
+            input.samplerate = suspend1->parameter.write_samplerate;
+            input.is_bt_voice = (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE);
+            input.disable_uplink_agc = suspend1->parameter.disable_uplink_agc;
+            input.all_mic_channels = my->all_mic_channels;
+            input.enable_mic_ssl = suspend1->parameter.enable_mic_ssl;
+            audio_3a_open(&input);
             suspend1->is_3a_opened = 1;
         }
         audio_device_open(server, suspend1);
