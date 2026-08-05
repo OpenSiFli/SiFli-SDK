@@ -1122,13 +1122,19 @@ struct rt_mmcsd_host *sdio_host_create(struct rthw_sdio *sdio)
     // set 1 bit only, config it when 4 bits ready
     host->flags = MMCSD_MUTBLKWRITE | MMCSD_SUP_SDIO_IRQ;
 
-    /* Per-controller 4-bit mode control (match by instance base address) */
+    /* Per-controller card type configuration */
 #ifndef SDMMC1_BUS_WIDTH_1_ONLY
     if ((uint32_t)sdio->des.instance == SDMMC1_BASE)
     {
         host->flags |= MMCSD_BUSWIDTH_4;
     }
 #endif /* SDMMC1_BUS_WIDTH_1_ONLY */
+#ifdef SDIO_CARD_MODE
+    if ((uint32_t)sdio->des.instance == SDMMC1_BASE)
+    {
+        host->flags |= (SDIO_CARD_MODE << MMCSD_HOST_TYPE_POS) & MMCSD_HOST_TYPE_MASK;
+    }
+#endif /* SDIO_CARD_MODE */
 #ifdef SDMMC2_BASE
 #ifndef SDMMC2_BUS_WIDTH_1_ONLY
     if ((uint32_t)sdio->des.instance == SDMMC2_BASE)
@@ -1136,6 +1142,12 @@ struct rt_mmcsd_host *sdio_host_create(struct rthw_sdio *sdio)
         host->flags |= MMCSD_BUSWIDTH_4;
     }
 #endif /* SDMMC2_BUS_WIDTH_1_ONLY */
+#ifdef SDIO2_CARD_MODE
+    if ((uint32_t)sdio->des.instance == SDMMC2_BASE)
+    {
+        host->flags |= (SDIO2_CARD_MODE << MMCSD_HOST_TYPE_POS) & MMCSD_HOST_TYPE_MASK;
+    }
+#endif /* SDIO2_CARD_MODE */
 #endif /* SDMMC2_BASE */
 
     host->max_seg_size = SDIO_BUFF_SIZE;

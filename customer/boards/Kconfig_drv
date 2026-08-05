@@ -1578,6 +1578,10 @@ menu "On-chip Peripherals"
                 help
                   When enabled, SDMMC1 will only use 1-bit data bus width.
                   Disable this to allow 4-bit mode if the hardware supports it.
+            config SDIO_CARD_MODE
+                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                range 0 2
+                default 0
         endif
 
         if BSP_USING_SDHCI1 && BSP_USING_SDMMC1
@@ -1587,9 +1591,6 @@ menu "On-chip Peripherals"
             config SD_DMA_MODE
                 int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
                 default 2
-            config SDIO_CARD_MODE
-                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
-                default 0
         endif # BSP_USING_SDHCI1
         
         menuconfig BSP_USING_SDMMC2
@@ -1608,6 +1609,10 @@ menu "On-chip Peripherals"
                 help
                   When enabled, SDMMC2 will only use 1-bit data bus width.
                   Disable this to allow 4-bit mode if the hardware supports it.
+            config SDIO2_CARD_MODE
+                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
+                range 0 2
+                default 0
         endif
 
         if BSP_USING_SDHCI2 && BSP_USING_SDMMC2
@@ -1617,9 +1622,6 @@ menu "On-chip Peripherals"
             config SD2_DMA_MODE
                 int "DMA mode: 0 --> PIO, 1 --> SDMA, 2 --> ADMA"
                 default 2
-            config SDIO2_CARD_MODE
-                int "SDIO mode: 0 --> SDCARD, 1 --> EMMC, 2 --> SDIO"
-                default 0
         endif # BSP_USING_SDHCI2
 
         config BSP_USING_SDHCI
