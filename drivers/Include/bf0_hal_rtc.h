@@ -614,11 +614,9 @@ typedef struct
 #define HAL_PBR_MAX   (5)
 #elif defined SF32LB56X
 #define HAL_PBR_MAX   (3)
-#elif defined(SF32LB57X)
-#define HAL_PBR_MAX   (1)
 #else
 #define HAL_PBR_MAX   (3)
-#endif
+#endif /* SF32LB58X */
 #endif /* hwp_pbr */
 
 #ifdef RTC_CR_LPCKSEL
