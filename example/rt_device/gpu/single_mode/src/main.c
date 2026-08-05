@@ -194,9 +194,9 @@ void scale_down_demo(int multiple, int width, int height)
     // 设置EZIP数据源
 #ifdef SF32LB57X
     // SF32LB57 EZIP 解码窗口限制，使用 -winsize 2048 重新生成数据
-    input_layers[0].data = ezip_img_data_57;
+    input_layers[0].data = (uint8_t *)ezip_img_data_57;
 #else
-    input_layers[0].data = ezip_img_data;
+    input_layers[0].data = (uint8_t *)ezip_img_data;
 #endif
     input_layers[0].color_mode = EPIC_INPUT_EZIP;
     input_layers[0].width = width;
@@ -285,7 +285,7 @@ void rotate_and_mask_demo()
 
         //mask
         HAL_EPIC_LayerConfigInit(&input_layers[2]);
-        input_layers[2].data = mask_watch_data;
+        input_layers[2].data = (uint8_t *)mask_watch_data;
         input_layers[2].color_mode = EPIC_COLOR_A8;
         input_layers[2].width = 329;
         input_layers[2].height = 330;
@@ -347,7 +347,7 @@ void text_blend_demo(void)
     // 第一个文字图层 (si_text_data)
     EPIC_LayerConfigTypeDef si_text_layer;
     HAL_EPIC_LayerConfigInit(&si_text_layer);
-    si_text_layer.data = si_text_data;
+    si_text_layer.data = (uint8_t *)si_text_data;
     si_text_layer.color_mode = EPIC_COLOR_A4;
     si_text_layer.width = SI_TEXT_WIDTH;
     si_text_layer.height = SI_TEXT_HEIGHT;
@@ -367,7 +367,7 @@ void text_blend_demo(void)
     // 第二个文字图层 (che_text_data)
     EPIC_LayerConfigTypeDef che_text_layer;
     HAL_EPIC_LayerConfigInit(&che_text_layer);
-    che_text_layer.data = che_text_data;
+    che_text_layer.data = (uint8_t *)che_text_data;
     che_text_layer.color_mode = EPIC_COLOR_A4;
     che_text_layer.width = CHE_TEXT_WIDTH;
     che_text_layer.height = CHE_TEXT_HEIGHT;
@@ -457,7 +457,7 @@ void display_single_text(void)
     // 文字图层 (si_test_data)
     EPIC_LayerConfigTypeDef text_layer;
     HAL_EPIC_LayerConfigInit(&text_layer);
-    text_layer.data = si_text_data;
+    text_layer.data = (uint8_t *)si_text_data;
     text_layer.color_mode = EPIC_COLOR_A4;
     text_layer.width = TEXT_WIDTH;
     text_layer.height = TEXT_HEIGHT;
