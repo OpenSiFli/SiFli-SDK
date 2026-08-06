@@ -630,8 +630,9 @@ CONST static uint16_t rxon_cmd[] =
     RD(0X44), OR(3), OR(17), WR(0X44), //84
     // START INCCAL, 0x74: //inccal start
     RD(0X74), OR(29), WR(0X74), //87
-    //WAIT(30), // 68
+    WAIT(9), // 68
     // total cmd num should be even
+    END,
     END, // 88
 };
 
@@ -5457,6 +5458,11 @@ void bt_rf_cal(void)
     hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_7 = 0x59A;
     */
     hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_0 = 0x400;
+
+    /* for 17 dbm tx */
+    hwp_bt_rfc->IQ_PWR_REG1_1 = hwp_bt_rfc->IQ_PWR_REG1_0;
+    hwp_bt_rfc->IQ_PWR_REG2_1 = hwp_bt_rfc->IQ_PWR_REG2_0;
+    hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_1 = 0xC00;
 
     /*diglvl mul factor selected by iq_pwr_lvl*/
     /*
