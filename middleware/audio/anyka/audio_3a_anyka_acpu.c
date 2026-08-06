@@ -80,6 +80,8 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     ts_dac_stream = 0;
     samplerate = arg->samplerate;
     all_mic_channels = arg->all_mic_channels;
+    filter_input = arg->filter_input;
+    filter_buf = arg->filter_buf;
 
     sd_cb = _SD_GetPlatformDependentList();
 
@@ -281,29 +283,40 @@ int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg)
     //acpu_printf("fill adc=%d", ret);
     ret = _SD_Echo_GetResult(p_near, arg->result, ANYKA_FRAME_SIZE, &ts_result, 1);
     //acpu_printf("fill adc=%d", ret);
-    int32_t processlen = _SD_Filter_Control(pfilter, filter_buf);
-    if (processlen > 0)
+    return ret;
+}
+
+int acpu_audio_3a_uplink_ssl(acpu_audio_3a_uplink_parameter_t *arg)
+{
+    if (enable_mic_ssl && arg->do_ssl)
     {
-        if (ssl_out_data->sourcesNumbers > 0)
+        filter_buf->buf_in = arg->ssl_data_in;
+        filter_buf->buf_in_len = arg->ssl_data_in_len;
+        int32_t processlen = _SD_Filter_Control(pfilter, filter_buf);
+        if (processlen > 0)
         {
-            LOG_I("anyka ssl %d sources\n", ssl_out_data->sourcesNumbers);
-            for (int i = 0; i < ssl_out_data->sourcesNumbers; i++)
+            if (ssl_data_out->sourcesNumbers > 0)
             {
-                LOG_I("%d, %d, %d\n",
-                      ssl_out_data->soundSourceDirection[i].azimuth,
-                      ssl_out_data->soundSourceDirection[i].elevation,
-                      ssl_out_data->soundSourceDirection[i].radius);
+                LOG_I("anyka ssl %d sources\n", ssl_data_out->sourcesNumbers);
+                struct sd_param_denc denc_param;
+                T_S32 get = _SD_Echo_GetDencParam(p_near, &denc_param);
+
+                for (int i = 0; i < ssl_data_out->sourcesNumbers; i++)
+                {
+                    LOG_I("%d, %d, %d\n",
+                          ssl_data_out->soundSourceDirection[i].azimuth,
+                          ssl_data_out->soundSourceDirection[i].elevation,
+                          ssl_data_out->soundSourceDirection[i].radius);
+                }
+                denc_param.targetSpherical.azimuth = ssl_data_out->soundSourceDirection[0].azimuth;
+                denc_param.targetSpherical.elevation = ssl_data_out->soundSourceDirection[0].elevation;
+                denc_param.targetSpherical.radius = ssl_data_out->soundSourceDirection[0].radius;
+                denc_param.numInterf = 0;
+
+                _SD_Echo_SetDencParam(p_near, 1, &denc_param);
+
             }
         }
-
-        /* comapre last ssl event with srp_ssl_event ?*/
-        //if (ssl_compare(&g_last_ssl_event, srp_ssl_event))
-        {
-            struct sd_param_denc denc_param;
-            T_S32 get = _SD_Echo_GetDencParam(p_near, &denc_param);
-            T_S32 set = _SD_Echo_SetDencParam(p_near, 1, &denc_param);
-        }
-
-        return 0;
     }
-
+    return ret;
+}

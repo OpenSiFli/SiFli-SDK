@@ -39,6 +39,9 @@
 */
 #define INPUT_THREAD_NAME   "anyka00"
 
+#define SSL_FRAME_SIZE      (256)
+#define SSL_THRESH          AK32Q15(0.03f)
+
 #define INPUT_EVT_DATA      (1 << 0)
 #define INPUT_EVT_EXIT      (1 << 1)
 
@@ -49,6 +52,7 @@ typedef struct audio_3a_tag
     uint8_t     is_far_putted;
     uint8_t     input_frames;
     uint8_t     all_mic_channels;
+    uint8_t     enable_mic_ssl;
     uint16_t    samplerate;
     uint8_t    *rbuf_dwlink_pool;
     uint8_t    *mic_far;
@@ -70,6 +74,7 @@ typedef struct audio_3a_tag
     T_VOID                  *pfilter;
     T_AUDIO_FILTER_INPUT    filter_input;
     T_AUDIO_FILTER_BUF_STRC filter_buf;
+    struct rt_ringbuffer    *ssl_cache;
     uint8_t                 *ssl_data_in;
     uint32_t                ssl_data_in_len;
     uint32_t                ssl_data_in_offset;
@@ -83,7 +88,6 @@ static audio_3a_t g_audio_3a_env =
     .samplerate = 16000,
 };
 
-T_SSL_EVENT g_last_ssl_event;
 
 static uint8_t g_bypass;  /* for factory test */
 static uint8_t g_mic_chhose; // 0---mic1_left; 1---mic1_right; 2---mic2_left; 3---mic2_right
@@ -137,7 +141,7 @@ static const char factory_near_1mic[] =
     " --vol_dB=3dB"
 };
 
-static const char factory_near_2mic[] =
+static char factory_near_2mic[] =
 {
     "--eqLoad=0"
     " --eqmode=user"
@@ -146,19 +150,19 @@ static const char factory_near_2mic[] =
     " --aecEna=1"
     " --tail=512"
     " --farDigiGain=1.0"
-    " --nearDigiGain=1.0"
+    " --nearDigiGain=4.0" // 1.0
     " --farLimit=0.15FS"
     " --farBreakdownThresh=0"
     " --nrEna=1"
     " --noiseSuppressDb=-40"
     " --agcEna=1"
-    " --agcLevel=0.85FS"
-    " --maxGain=4"
+    " --agcLevel=0.96FS" // 0.85
+    " --maxGain=6"      // 4
     " --minGain=0.1"
-    " --nearSensitivity=20"
+    " --nearSensitivity=10" // 20
     " --volLoad=1"
-    " --limit=0.85FS"
-    " --vol_dB=3dB"
+    " --limit=0.96FS"
+    " --vol_dB=12dB"      // 3db
     " --dencLoad=1"
     " --arrayGeometry=\"2, 0 0 0, 0.036 0 0\""
     " --targetSpherical=\"0 1 1\""
@@ -191,6 +195,13 @@ static const char factory_near_4mic[] =
     " --arrayGeometry=\"4, 0.035 0.018 0, 0.035 -0.018 0, -0.035 0.018 0, -0.035 -0.018 0\""
     " --targetSpherical=\"0 1 1\""
     " --interfSphericals=\"3, 1 0 2, 2 0 2, 0 0 2\""
+};
+
+/* Q15 */
+static const int16_t mic_pos_2[4][3] =
+{
+    {0, 0, 0},
+    {AK32Q15(0.036), 0, 0},
 };
 
 /* Q15 */
@@ -235,7 +246,9 @@ static void audio_3a_module_init(audio_3a_input_t *input, audio_3a_t *env)
     rt_ringbuffer_init(&env->rbuf_dwlink, env->rbuf_dwlink_pool, size);
     env->rbuf_out = rt_ringbuffer_create(ANYKA_FRAME_SIZE * 2);
     RT_ASSERT(env->rbuf_out);
-    if (input->enable_mic_ssl)
+    env->pfilter = NULL;
+    env->enable_mic_ssl = input->enable_mic_ssl;
+    if (env->enable_mic_ssl)
     {
         LOG_I("anyka ssl mem init");
         srp_ssl_mem_init(env);
@@ -290,14 +303,17 @@ static void my_dump(T_ECHO_DUMP_ITEM_ID item_id, T_S32 size, T_pCVOID data, T_pC
     anyka_dump_data(item_id, size, data, meta, cb_dump_param, pathId);
 }
 
+//static uint32_t mem_size = 0;
 static T_pVOID my_malloc(T_U32 size)
 {
+    //mem_size += size;
     void *p = audio_mem_malloc(size);
     if (!p)
     {
         LOG_I("anyka malloc(%d) fail\n");
         RT_ASSERT(0);
     }
+    //LOG_I("anyka malloc(%p) size=%d total=%d", p, size, mem_size);
     return p;
 }
 static void my_free(T_pVOID p)
@@ -322,16 +338,13 @@ static int32_t dumpData(void *pBuf, uint32_t size)
 //T_SDLIB_PLATFORM_DEPENDENT_LIST *sd_cb)
 static void srp_ssl_mem_init(audio_3a_t *env)
 {
-
     int32_t i;
-    T_VOID *pfilter = AK_NULL;
 
     char *obuf = NULL;
     int32_t framecnt = 0;
     int32_t processlen;
     memset(&env->filter_input, 0, sizeof(T_AUDIO_FILTER_INPUT));
     memset(&env->filter_buf, 0, sizeof(T_AUDIO_FILTER_BUF_STRC));
-    memset(&g_last_ssl_event, 0, sizeof(g_last_ssl_event));
 
     env->filter_input.strVersion = AUDIO_FILTER_VERSION_STRING;
     env->filter_input.m_info.m_SampleRate = 16000;
@@ -343,10 +356,11 @@ static void srp_ssl_mem_init(audio_3a_t *env)
 
     env->filter_input.m_info.m_Private.m_srp_ssl.dim = 2; /* 2: x/y;  3: x/y/z*/
     env->filter_input.m_info.m_Private.m_srp_ssl.freqMode = 0;
-    env->filter_input.m_info.m_Private.m_srp_ssl.frameSize = ANYKA_FRAME_SIZE;
+    env->filter_input.m_info.m_Private.m_srp_ssl.frameSize = SSL_FRAME_SIZE;
     env->filter_input.m_info.m_Private.m_srp_ssl.soundSpeed = 343;
     env->filter_input.m_info.m_Private.m_srp_ssl.srcNums = 1;
     env->filter_input.m_info.m_Private.m_srp_ssl.numSnap = 10;
+    env->ssl_data_in_offset = 0;
 
     if (0 == env->filter_input.m_info.m_Private.m_srp_ssl.freqMode)
     {
@@ -363,26 +377,55 @@ static void srp_ssl_mem_init(audio_3a_t *env)
 
     env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic = env->filter_input.m_info.m_Channels;
 
-    for (i = 0; i < (int32_t)env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic; i++)
+    if (env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic == 2)
     {
-        env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].x = mic_pos_4[i][0];
-        env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].y = mic_pos_4[i][1];
-        env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].z = mic_pos_4[i][2];
+        for (i = 0; i < (int32_t)env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic; i++)
+        {
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].x = mic_pos_2[i][0];
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].y = mic_pos_2[i][1];
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].z = mic_pos_2[i][2];
+            LOG_I("micsPos[%d].x=%d y=%d z=%d", i, mic_pos_2[i][0], mic_pos_2[i][1], mic_pos_2[i][2]);
+        }
     }
-
-    env->filter_input.m_info.m_Private.m_srp_ssl.thresh = AK32Q15(0.04f);
+    else if (env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic == 4)
+    {
+        for (i = 0; i < (int32_t)env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.numMic; i++)
+        {
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].x = mic_pos_4[i][0];
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].y = mic_pos_4[i][1];
+            env->filter_input.m_info.m_Private.m_srp_ssl.arrayGeometry.micsPos[i].z = mic_pos_4[i][2];
+            LOG_I("micsPos[%d].x=%d y=%d z=%d", i, mic_pos_4[i][0], mic_pos_4[i][1], mic_pos_4[i][2]);
+        }
+    }
+    else
+    {
+        RT_ASSERT(0);
+    }
+    env->filter_input.m_info.m_Private.m_srp_ssl.thresh = SSL_THRESH;
     env->filter_input.m_info.m_Private.m_srp_ssl.level = 3;
-
-
-
 
     env->ssl_data_in_len = env->filter_input.m_info.m_Private.m_srp_ssl.frameSize * env->filter_input.m_info.m_Channels;
     env->ssl_data_in = audio_mem_malloc(env->ssl_data_in_len);
     RT_ASSERT(env->ssl_data_in);
+    uint16_t s;
+    if (ANYKA_FRAME_SIZE < SSL_FRAME_SIZE)
+    {
+        s = (SSL_FRAME_SIZE + ANYKA_FRAME_SIZE) * env->all_mic_channels;
+    }
+    else
+    {
+        s = (ANYKA_FRAME_SIZE * 2 - SSL_FRAME_SIZE) * env->all_mic_channels;
+    }
+
+    env->ssl_cache = rt_ringbuffer_create(s);
+    RT_ASSERT(env->ssl_cache);
 
     env->ssl_data_out_len = sizeof(T_SSL_EVENT);
     env->ssl_data_out = audio_mem_malloc(env->ssl_data_out_len);
     RT_ASSERT(env->ssl_data_out);
+    env->filter_buf.len_in = env->ssl_data_in_len;
+    env->filter_buf.buf_out = env->ssl_data_out;
+    env->filter_buf.len_out = env->ssl_data_out_len;
 }
 
 static void srp_ssl_lib_init(audio_3a_t *env)
@@ -392,6 +435,7 @@ static void srp_ssl_lib_init(audio_3a_t *env)
     if (AK_NULL == env->pfilter)
     {
         LOG_I("anyka ssl fail");
+        RT_ASSERT(0);
     }
     _SD_Filter_SetParam(env->pfilter, &env->filter_input.m_info);
 }
@@ -423,7 +467,7 @@ void audio_3a_open(audio_3a_input_t *input)
 
         thiz->input_evt = rt_event_create("anyka_0", RT_IPC_FLAG_FIFO);
         RT_ASSERT(thiz->input_evt);
-        rt_thread_t tid = rt_thread_create(INPUT_THREAD_NAME, input_thread_entry, thiz, 4096, RT_THREAD_PRIORITY_HIGH + RT_THREAD_PRIORITY_HIGHER, RT_THREAD_TICK_DEFAULT);
+        rt_thread_t tid = rt_thread_create(INPUT_THREAD_NAME, input_thread_entry, thiz, ANYKA_FRAME_SIZE * 6 + 4096, RT_THREAD_PRIORITY_HIGH + RT_THREAD_PRIORITY_HIGHER, RT_THREAD_TICK_DEFAULT);
         RT_ASSERT(tid);
         rt_thread_startup(tid);
 
@@ -448,9 +492,10 @@ void audio_3a_open(audio_3a_input_t *input)
         arg.const_near = audio_mem_malloc(strlen(near) + 1);
         RT_ASSERT(arg.const_near);
         strcpy(arg.const_near, near);
-        disable_parameter(arg.const_near, input->is_bt_voice, input->disable_uplink_agc);
+        //disable_parameter(arg.const_near, input->is_bt_voice, input->disable_uplink_agc);
         arg.samplerate = thiz->samplerate;
         arg.all_mic_channels = input->all_mic_channels;
+        arg.enable_mic_ssl = input->enable_mic_ssl;
         arg.is_bt_voice = input->is_bt_voice;
         arg.ssl_data_out = thiz->ssl_data_out;
         arg.ssl_data_out_len = thiz->ssl_data_out_len;
@@ -548,7 +593,7 @@ void audio_3a_open(audio_3a_input_t *input)
         char *near_new = audio_mem_malloc(strlen(near) + 1);
         RT_ASSERT(near_new);
         strcpy(near_new, near);
-        disable_parameter(near_new, input->is_bt_voice, input->disable_uplink_agc);
+        //disable_parameter(near_new, input->is_bt_voice, input->disable_uplink_agc);
         thiz->factory_near = SD_ParamFactory_Create_ByCmdLine(near_new, strlen(near_new) + 1);
         RT_ASSERT(thiz->factory_near);
         audio_mem_free(near_new);
@@ -623,15 +668,15 @@ void audio_3a_close()
             thiz->pfilter = NULL;
         }
 #endif
-        if (thiz->ssl_data_in)
-        {
-            audio_mem_free(thiz->ssl_data_in);
-            thiz->ssl_data_in = NULL;
-        }
         if (thiz->ssl_data_out)
         {
             audio_mem_free(thiz->ssl_data_out);
             thiz->ssl_data_out = NULL;
+        }
+        if (thiz->ssl_cache)
+        {
+            rt_ringbuffer_destroy(thiz->ssl_cache);
+            thiz->ssl_cache = NULL;
         }
     }
 }
@@ -793,6 +838,11 @@ static inline void process_data(audio_3a_t *thiz)
     // todo: change to use HAL_HPAON_READ_GTIMER();
     uint64_t ts = rt_tick_get() * 1000;
 
+    if (thiz->enable_mic_ssl)
+    {
+        rt_ringbuffer_put(thiz->ssl_cache, fifo, fifo_size);
+    }
+
 #if ANYKA_RUN_IN_ACPU
     uint8_t error_code = 1;
     acpu_audio_3a_uplink_parameter_t arg;
@@ -800,13 +850,31 @@ static inline void process_data(audio_3a_t *thiz)
     arg.ts = ts;
     arg.fifo = fifo;
     arg.result = result;
-    arg.pfilter = thiz->pfilter;
-    arg.filter_input = &thiz->filter_input;
-    arg.filter_buf = thiz->filter_buf;
-    arg.ssl_out_data = thiz->ssl_out_data;
-    arg.ssl_out_data_len = thiz->ssl_out_data_len;
+    arg.ssl_data_in = fifo;
+    arg.ssl_data_in_len = fifo_size;
+    arg.ssl_data_out = thiz->ssl_data_out;
+    arg.ssl_data_out_len = thiz->ssl_data_out_len;
     acpu_run_task(ACPU_TASK_audio_3a_uplink, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
+    rt_ringbuffer_put(thiz->anyka_output, result, ANYKA_FRAME_SIZE);
+    audio_dump_data(ADUMP_RAMP_OUT_OUT, result, ANYKA_FRAME_SIZE);
+    if (thiz->input_frames < ANYKA_CACHED_FRMAES)
+        thiz->input_frames++;
+
+    while (!thiz->is_bt_voice && thiz->enable_mic_ssl
+            && (rt_ringbuffer_data_len(thiz->ssl_cache) >= thiz->ssl_data_in_len))
+    {
+        rt_ringbuffer_get(thiz->ssl_cache, fifo, thiz->ssl_data_in_len);
+        arg.fifo = fifo;
+        arg.result = result;
+        arg.ssl_data_in = fifo;
+        arg.ssl_data_in_len = thiz->ssl_data_in_len;
+        arg.ssl_data_out = thiz->ssl_data_out;
+        arg.ssl_data_out_len = thiz->ssl_data_out_len;
+        error_code = 1;
+        acpu_run_task(ACPU_TASK_audio_3a_uplink_ssl, &arg, sizeof(arg), &error_code);
+        RT_ASSERT(error_code == 0);
+    }
 #else
     ret = _SD_Echo_FillDacLoopback(thiz->p_near, (uint8_t *)refframe, ANYKA_FRAME_SIZE, ts, 1);
 
@@ -820,49 +888,51 @@ static inline void process_data(audio_3a_t *thiz)
     memset(result, 0, ANYKA_FRAME_SIZE);
     ret = _SD_Echo_GetResult(thiz->p_near, result, sizeof(result), &ts_result, 1);
     //LOG_I("fill adc=%d", ret);
-#endif
     rt_ringbuffer_put(thiz->anyka_output, result, ANYKA_FRAME_SIZE);
     audio_dump_data(ADUMP_RAMP_OUT_OUT, result, ANYKA_FRAME_SIZE);
     if (thiz->input_frames < ANYKA_CACHED_FRMAES)
         thiz->input_frames++;
 
-    if (!thiz->is_bt_voice)
+    while (!thiz->is_bt_voice && thiz->enable_mic_ssl
+            && (rt_ringbuffer_data_len(thiz->ssl_cache) >= thiz->ssl_data_in_len))
     {
-        thiz->filter_buf.buf_in = fifo; // thiz->ssl_data_in;
-        thiz->filter_buf.len_in = fifo_size; // thiz->ssl_data_in_len;
+        rt_ringbuffer_get(thiz->ssl_cache, fifo, thiz->ssl_data_in_len);
+        thiz->filter_buf.buf_in = fifo;
+        thiz->filter_buf.len_in = thiz->ssl_data_in_len;
         thiz->filter_buf.buf_out = thiz->ssl_data_out;
         thiz->filter_buf.len_out = thiz->ssl_data_out_len;
-        RT_ASSERT(thiz->pfilter);
-
-#if ANYKA_RUN_IN_ACPU
-#else
+        rt_tick_t start = rt_tick_get();
         int32_t processlen = _SD_Filter_Control(thiz->pfilter, &thiz->filter_buf);
+        rt_tick_t end = rt_tick_get();
+        if (end - start > 2)
+        {
+            LOG_I("anyka _SD_Filter_Control=%d", end - start);
+        }
         if (processlen > 0)
         {
             T_SSL_EVENT *srp_ssl_event = (T_SSL_EVENT *)thiz->ssl_data_out;
             if (srp_ssl_event->sourcesNumbers > 0)
             {
                 LOG_I("anyka ssl %d sources\n", srp_ssl_event->sourcesNumbers);
+                struct sd_param_denc denc_param;
+                T_S32 get = _SD_Echo_GetDencParam(thiz->p_near, &denc_param);
+
                 for (int i = 0; i < srp_ssl_event->sourcesNumbers; i++)
                 {
-                    LOG_I("%d, %d, %d\n",
+                    LOG_I("az=%d, el=%d, ra=%d\n",
                           srp_ssl_event->soundSourceDirection[i].azimuth,
                           srp_ssl_event->soundSourceDirection[i].elevation,
                           srp_ssl_event->soundSourceDirection[i].radius);
                 }
-            }
-
-            /* comapre last ssl event with srp_ssl_event ?*/
-            //if (ssl_compare(&g_last_ssl_event, srp_ssl_event))
-            {
-                struct sd_param_denc denc_param;
-                T_S32 get = _SD_Echo_GetDencParam(thiz->p_near, &denc_param);
-
-                T_S32 set = _SD_Echo_SetDencParam(thiz->p_near, 1, &denc_param);
+                denc_param.targetSpherical.azimuth = srp_ssl_event->soundSourceDirection[0].azimuth;
+                denc_param.targetSpherical.elevation = srp_ssl_event->soundSourceDirection[0].elevation;
+                denc_param.targetSpherical.radius = srp_ssl_event->soundSourceDirection[0].radius;
+                denc_param.numInterf = 0;
+                _SD_Echo_SetDencParam(thiz->p_near, 1, &denc_param);
             }
         }
-#endif
     }
+#endif
 
 }
 
@@ -993,6 +1063,43 @@ void audio_command_process(uint8_t *cmd_1)
 
 }
 
+#if defined(RT_USING_FINSH)
+int near_2mic(int argc, char **argv)
+{
+    if (argc == 1)
+    {
+        LOG_I("near: %s\n", factory_near_2mic);
+        return 0;
+    }
+    char *p;
+    for (int i = 1; i < argc; i++)
+    {
+        if (!strcmp("--nearDigiGain=", argv[i]))
+        {
+            p = strstr(factory_near_2mic, "--nearDigiGain=");
+            memcpy(p, argv[i] + strlen("--nearDigiGain="), 3);
+        }
+        else if (!strcmp("--maxGain=", argv[i]))
+        {
+            p = strstr(factory_near_2mic, "--maxGain=");
+            memcpy(p, argv[i] + strlen("--maxGain="), 1);
+        }
+        else if (!strcmp("--nearSensitivity=", argv[i]))
+        {
+            p = strstr(factory_near_2mic, "--nearSensitivity=");
+            memcpy(p, argv[i] + strlen("--nearSensitivity="), 2);
+        }
+        else if (!strcmp("--vol_dB=", argv[i]))
+        {
+            p = strstr(factory_near_2mic, "--vol_dB=");
+            memcpy(p, argv[i] + strlen("--vol_dB="), 2);
+        }
+    }
+    LOG_I("near: %s\n", factory_near_2mic);
+    return 0;
+}
+MSH_CMD_EXPORT_ALIAS(near_2mic, near_2mic, near_2mic);
+#endif
 
 #endif
 

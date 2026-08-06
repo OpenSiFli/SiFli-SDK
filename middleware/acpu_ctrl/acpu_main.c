@@ -287,6 +287,12 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_send_result(0, 0);
         break;
     }
+    case ACPU_TASK_audio_3a_uplink_ssl:
+    {
+        acpu_audio_3a_uplink_parameter_t *arg  = (acpu_audio_3a_uplink_parameter_t *)param;
+        acpu_audio_3a_uplink_ssl(arg);
+        acpu_send_result(0, 0);
+    }
     case ACPU_TASK_audio_3a_downlink:
     {
         acpu_audio_3a_downlink_parameter_t *arg  = (acpu_audio_3a_downlink_parameter_t *)param;

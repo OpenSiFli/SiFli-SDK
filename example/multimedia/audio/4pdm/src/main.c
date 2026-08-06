@@ -26,6 +26,9 @@
     #error "only support for gcc compiler"
 #endif
 
+extern int get_pdm_volume();
+extern int Set_pdm_gain(int8_t value);
+
 #define SAVE_ANYKA_OUTPUT_BY_DUMP   0
 
 #define PDM_DELAY_SAMPLES       0
@@ -76,6 +79,7 @@ static char pdm_interface[10];
 static int total_channels = 0;
 static int is_raw = 0;
 
+static int old_pmd_volume;
 audio_client_t client = NULL;
 static uint32_t data_raw_len = 0;
 static uint32_t anyka_out_len = 0;
@@ -254,7 +258,7 @@ static int mic_callback(audio_server_callback_cmt_t cmd, void *callback_userdata
         else
         {
 #if !SAVE_ANYKA_OUTPUT_BY_DUMP
-            RT_ASSERT(p->data_len == 320);
+            //RT_ASSERT(p->data_len == 320);
             //LOG_I("anyka pdm %d data comming len=%d", p->reserved, p->data_len);
             wav_save_data(anyka_output, sizeof(anyka_output), p->data, p->data_len, &anyka_out_len);
 #endif
@@ -265,6 +269,7 @@ static int mic_callback(audio_server_callback_cmt_t cmd, void *callback_userdata
 
 static void pdm(uint8_t argc, char **argv)
 {
+    int val = 90;
     char *value = NULL;
     uint32_t samplerate = 16000;
 
@@ -330,15 +335,21 @@ static void pdm(uint8_t argc, char **argv)
             {
                 pa.enable_mic_ssl = 1;
             }
+            if (argc > 6)
+            {
+                val = atoi(argv[6]);
+            }
         }
         client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, mic_callback, &client);
+        old_pmd_volume = get_pdm_volume();
+        Set_pdm_gain(val);
         return;
     }
 
     if (strcmp(argv[1], "close") == 0 && (pdm_status == 1))
     {
         pdm_status = 0;
-
+        Set_pdm_gain(old_pmd_volume);
         audio_close(client);
         client = NULL;
 
