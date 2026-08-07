@@ -42,6 +42,27 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA05, SD2_DIO1, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA00, SD2_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA01, SD2_DIO3, PIN_PULLUP, 1);
+
+#ifdef RT_USING_WIFI
+    HAL_PIN_Set_DS0(PAD_PA00, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA00, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA01, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA01, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA02, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA02, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA03, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA03, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA04, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA04, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA05, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA05, 1, 0);
+#endif
+
 #endif /* BSP_USING_SDMMC2 */
 
 
