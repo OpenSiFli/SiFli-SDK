@@ -1,4 +1,4 @@
-﻿﻿# ACPU执行自定义任务
+﻿# ACPU执行自定义任务
 源码路径: `example/multicore/acpu_task`
 
 ## 用法
