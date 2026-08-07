@@ -89,4 +89,4 @@ if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_U
 ## Reference Documents
 
 - [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
-- [Multi-core Communication Development Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/multicore/index.html)
+- [ACPU Usage Guide](../../app_note/acpu.md)

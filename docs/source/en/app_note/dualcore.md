@@ -18,6 +18,8 @@ The SF32LB55X features a dual-core architecture with two Cortex MStar processors
 For hardware resource details for HCPU and LCPU, please refer to [](../hal/index.md).  
 During user design, it is essential to categorize different tasks based on the capabilities of each core and determine which core will handle which tasks and which hardware modules will be used.
 
+The SF32LB57x/SF32LB58x series add an ACPU core for audio and graphics (or Audio DSP) processing. See the [ACPU Usage Guide](acpu.md) for details.
+
 ## 2. Dual-Core Startup
 
 ### System Boot
