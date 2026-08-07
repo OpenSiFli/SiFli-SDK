@@ -5978,6 +5978,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_Han
 
     hepic->api_type = hepic_s->api_type;
     hepic->api_cfg = hepic_s->api_cfg;
+    hepic->coeng_state = hepic_s->coeng_state;
     hepic->RamInstance_used = 1;
 #ifdef EPIC_SUPPORT_L8
     hepic->RamLTabSize[0] = hepic_s->RamLTabSize[0];
