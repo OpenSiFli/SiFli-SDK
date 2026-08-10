@@ -251,6 +251,10 @@ if RT_USING_LWIP
         bool "Enable hardware checksum"
         default n
 
+    config RT_LWIP_USING_HTTP
+        bool "HTTP server and client supported"
+        default n
+
     config RT_LWIP_USING_PING
         bool "Enable ping features"
         default y
