@@ -1,0 +1,53 @@
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+include_path =[]
+src = []
+
+# Add RTThread dfs.h first to ensure it takes precedence
+import os
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if SIFLI_SDK:
+    rtthread_dfs_path = os.path.join(SIFLI_SDK, 'rtos', 'rtthread', 'components', 'dfs', 'include')
+    include_path = [rtthread_dfs_path]
+
+include_path +=[cwd + '/../host/driver/drv_fhost']
+include_path +=[cwd + '/../host/driver/drv_macif']
+include_path +=[cwd + '/../host/driver/drv_wifi']
+include_path +=[cwd + '/../host/driver/drv_wlan']
+include_path +=[cwd + '/netif']
+include_path +=[cwd + '/rtos']
+include_path +=[cwd + '/wifi']
+include_path +=[cwd + '/fmac']
+include_path +=[cwd + '/hal']
+include_path +=[cwd + '/inc']
+include_path +=[cwd + '/utils/inc']
+include_path +=[cwd + '/inc']
+include_path +=[cwd + '/../config']
+
+src += Glob('netif/*.c')
+src += Glob('rtos/*.c')
+src += Glob('wifi/*.c')
+src += Glob('fmac/*.c')
+src += Glob('hal/*.c')
+src += Glob('utils/src/*.c')
+#SrcRemove(src, ['utils/src/co_list.c'])
+wifi_name = 'aic8800'
+lib_name = 'wlan_' + wifi_name + '_'+ 'sifli'
+LIBS = [lib_name]
+LIBPATH = [cwd + "/../host/"]
+
+LOCAL_CCFLAGS = ''
+#myccflags = (' -w -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-pointer-types -Wno-error=return-mismatch -Wno-incompatible-pointer-types')
+if not GetDepend('BSP_USING_PC_SIMULATOR'):
+    LOCAL_CCFLAGS += ' -w -Wno-error=implicit-function-declaration '
+    LOCAL_CCFLAGS += ' -Wno-error=int-conversion '
+    LOCAL_CCFLAGS += ' -Wno-incompatible-pointer-types'
+    LOCAL_CCFLAGS += ' -Wno-int-conversion'
+    LOCAL_CCFLAGS += ' -Wno-error=return-mismatch'
+group = DefineGroup('aic8800', src, depend = ['AIC_WLAN_AIC8800D40L'], CPPPATH = include_path, LIBS=LIBS, LIBPATH=LIBPATH, LOCAL_CCFLAGS=LOCAL_CCFLAGS)
+
+Return('group')
