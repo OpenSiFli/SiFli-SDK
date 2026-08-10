@@ -1,0 +1,56 @@
+#-----------------------------
+# aic8800 wlan devices local parameter
+#-----------------------------
+
+# wlan0 parameter
+
+menu "Wlan0 Parameter"
+
+    choice
+        prompt "Select AIC8800 MODEL"
+        default CHIP_SELECT_AIC8800D40L
+        config CHIP_SELECT_AIC8800D40L
+            bool "select AIC8800D40L"
+        config CHIP_SELECT_AIC8800DW
+            bool "select AIC8800DW"
+    endchoice
+
+    choice
+        prompt "Select AIC8800 power converter"
+        default CONFIG_AIC8800_VRF_DCDC_MODE
+        config CONFIG_AIC8800_VRF_DCDC_MODE
+            bool "select DCDC mode"
+        config CONFIG_AIC8800_VRF_LDO_MODE
+            bool "select LDO mode"
+    endchoice
+
+    choice
+        prompt "Select AIC8800 work mode"
+        default CONFIG_AIC8800_NORMAL_MODE
+        config CONFIG_AIC8800_NORMAL_MODE
+            bool "select normal mode"
+        config CONFIG_AIC8800_RFTEST_MODE
+            bool "select rftest mode"
+    endchoice
+
+    config CONFIG_AIC8800_BT_SUPPORT
+        bool "enable aic8800 BT support"
+        default n
+
+    config AIC_DEV_AIC8800_BT_RST_GPIO
+        int "aic8800 bt reset gpio"
+        default -1
+
+    config AIC_WIRELESS_PWR_GPIO
+        int "aic8800 wlan0 power on gpio"
+        default -1
+
+    config AIC_DEV_AIC8800_WLAN0_RST_GPIO
+        int "aic8800 wlan0 reset gpio"
+        default -1
+        
+    config AIC_DEV_AIC8800_DEBUG_LOG
+        bool "enable aic8800 debug messages"
+        default y
+
+endmenu

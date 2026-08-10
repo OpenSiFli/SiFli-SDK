@@ -1,0 +1,38 @@
+import os
+Import('rtconfig')
+Import('SIFLI_SDK')
+
+from building import *
+
+cwd = GetCurrentDir()
+list = os.listdir(cwd)
+
+include_path =[]
+src = []
+# Add RTThread dfs.h first to ensure it takes precedence
+# Use absolute path to ensure correct priority
+rtthread_dfs_path = os.path.join(SIFLI_SDK, 'rtos', 'rtthread', 'components', 'dfs', 'include')
+include_path += [rtthread_dfs_path]
+include_path +=[cwd + '/fw']
+include_path +=[cwd + '/macif']
+include_path +=[cwd + '/aicbt_bsp']
+include_path +=[cwd + '/layer_abstract/inc']
+include_path +=[cwd + '/layer_common/inc']
+
+src += Glob('fw/*.c')
+src += Glob('macif/*.c')
+src += Glob('aicbt_bsp/*.c')
+src += Glob('layer_abstract/src/*.c')
+src += Glob('layer_common/src/*.c')
+LOCAL_CCFLAGS = ''
+#myccflags = (' -w -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-pointer-types -Wno-error=return-mismatch -Wno-incompatible-pointer-types')
+if not GetDepend('BSP_USING_PC_SIMULATOR'):
+    LOCAL_CCFLAGS += ' -w -Wno-error=implicit-function-declaration '
+    LOCAL_CCFLAGS += ' -Wno-error=int-conversion '
+    LOCAL_CCFLAGS += ' -Wno-incompatible-pointer-types'
+    LOCAL_CCFLAGS += ' -Wno-int-conversion'
+    LOCAL_CCFLAGS += ' -Wno-error=return-mismatch'
+
+group = DefineGroup('aic8800', src, depend = ['AIC_WLAN_AIC8800D40L'], CPPPATH = include_path, LOCAL_CCFLAGS=LOCAL_CCFLAGS)
+
+Return('group')

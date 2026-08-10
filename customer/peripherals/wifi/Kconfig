@@ -1,4 +1,12 @@
 menu "WiFi"
+menuconfig AIC_WLAN_AIC8800D40L
+    bool "WIFI mod aic8800d40"
+    default n
+    select LPKG_USING_MBEDTLS
+    if AIC_WLAN_AIC8800D40L
+    source "$SIFLI_SDK/customer/peripherals/wifi/aic8800d40/Kconfig"
+    endif
+
 menuconfig WIFI_USING_AIC8800MC
     bool  "AIC8800MC"
     default n

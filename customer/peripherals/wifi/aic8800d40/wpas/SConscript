@@ -1,0 +1,121 @@
+import os
+Import('rtconfig')
+Import('SIFLI_SDK')
+from building import *
+
+cwd = GetCurrentDir()
+
+include_path =[]
+src = []
+
+# Add RTThread dfs.h first to ensure it takes precedence
+import os
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if SIFLI_SDK:
+    rtthread_dfs_path = os.path.join(SIFLI_SDK, 'rtos', 'rtthread', 'components', 'dfs', 'include')
+    include_path = [rtthread_dfs_path]
+
+include_path +=[cwd]
+include_path +=[cwd + '/src/utils']
+include_path +=[cwd + '/src']
+include_path +=[cwd + '/src/crypto']
+include_path +=[cwd + '/src/l2_packet']
+include_path +=[cwd + '/src/rsn_supp']
+include_path +=[cwd + '/src/drivers']
+include_path +=[cwd + '/src/radius']
+include_path +=[cwd + '/src/eap_se']
+
+src += Glob('src/ap/*.c')
+src += Glob('src/common/*.c')
+src += Glob('src/crypto/aes-internal-dec.c')
+src += Glob('src/crypto/aes-internal-enc.c')
+src += Glob('src/crypto/aes-internal.c')
+src += Glob('src/crypto/aes-cbc.c')
+src += Glob('src/crypto/aes-omac1.c')
+src += Glob('src/crypto/aes-unwrap.c')
+src += Glob('src/crypto/aes-wrap.c')
+src += Glob('src/crypto/crypto_mbedtls.c')
+src += Glob('src/crypto/crypto_internal-modexp.c')
+src += Glob('src/crypto/dh_groups.c')
+src += Glob('src/crypto/dh_group5.c')
+src += Glob('src/crypto/md5-internal.c')
+src += Glob('src/crypto/md5.c')
+src += Glob('src/crypto/random.c')
+src += Glob('src/crypto/rc4.c')
+src += Glob('src/crypto/sha1-internal.c')
+src += Glob('src/crypto/sha1-pbkdf2.c')
+src += Glob('src/crypto/sha1-prf.c')
+src += Glob('src/crypto/sha1.c')
+src += Glob('src/crypto/sha256-internal.c')
+src += Glob('src/crypto/sha256-prf.c')
+src += Glob('src/crypto/sha256.c')
+src += Glob('src/crypto/tls_none.c')
+src += Glob('src/drivers/drivers.c')
+src += Glob('src/drivers/driver_common.c')
+src += Glob('src/eapol_auth/*.c')
+src += Glob('src/eapol_supp/*.c')
+src += Glob('src/eap_common/*.c')
+src += Glob('src/eap_server/*.c')
+src += Glob('src/eap_peer/eap.c')
+src += Glob('src/eap_peer/eap_methods.c')
+src += Glob('src/eap_peer/eap_wsc.c')
+src += Glob('src/rsn_supp/preauth.c')
+src += Glob('src/rsn_supp/wpa.c')
+src += Glob('src/rsn_supp/wpa_ie.c')
+src += Glob('src/rsn_supp/pmksa_cache.c')
+src += Glob('src/tls/*.c')
+src += Glob('src/p2p/*.c')
+src += Glob('src/utils/base64.c')
+src += Glob('src/utils/bitfield.c')
+src += Glob('src/utils/common.c')
+src += Glob('src/utils/eloop.c')
+src += Glob('src/utils/ip_addr.c')
+src += Glob('src/utils/uuid.c')
+src += Glob('src/utils/wpabuf.c')
+src += Glob('src/utils/wpa_debug.c')
+src += Glob('src/wps/wps.c')
+src += Glob('src/wps/wps_attr_build.c')
+src += Glob('src/wps/wps_attr_parse.c')
+src += Glob('src/wps/wps_attr_process.c')
+src += Glob('src/wps/wps_common.c')
+src += Glob('src/wps/wps_dev_attr.c')
+src += Glob('src/wps/wps_enrollee.c')
+src += Glob('src/wps/wps_registrar.c')
+src += Glob('src/wpa_supplicant/*.c')
+src += Glob('wpa_supplicant/ap.c')
+src += Glob('wpa_supplicant/blacklist.c')
+src += Glob('wpa_supplicant/bss.c')
+src += Glob('wpa_supplicant/config.c')
+src += Glob('wpa_supplicant/config_none.c')
+src += Glob('wpa_supplicant/ctrl_iface.c')
+src += Glob('wpa_supplicant/ctrl_iface_udp.c')
+src += Glob('wpa_supplicant/eap_register.c')
+src += Glob('wpa_supplicant/events.c')
+src += Glob('wpa_supplicant/notify.c')
+src += Glob('wpa_supplicant/op_classes.c')
+src += Glob('wpa_supplicant/scan.c')
+src += Glob('wpa_supplicant/sta_rrm.c')
+src += Glob('wpa_supplicant/wmm_ac.c')
+src += Glob('wpa_supplicant/gas_query.c')
+src += Glob('wpa_supplicant/offchannel.c')
+src += Glob('wpa_supplicant/p2p_supplicant.c')
+src += Glob('wpa_supplicant/p2p_supplicant_sd.c')
+src += Glob('wpa_supplicant/wifi_display.c')
+src += Glob('wpa_supplicant/wpas_glue.c')
+src += Glob('wpa_supplicant/wpa_supplicant.c')
+src += Glob('wpa_supplicant/wps_supplicant.c')
+src += Glob('wpa_supplicant/sme.c')
+
+#LOCAL_CFLAGS = ' -std=c99 -w'
+LOCAL_CCFLAGS = ''
+#myccflags = (' -w -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-pointer-types -Wno-error=return-mismatch -Wno-incompatible-pointer-types')
+if not GetDepend('BSP_USING_PC_SIMULATOR'):
+    LOCAL_CCFLAGS += ' -w -Wno-error=implicit-function-declaration '
+    LOCAL_CCFLAGS += ' -Wno-error=int-conversion '
+    LOCAL_CCFLAGS += ' -Wno-incompatible-pointer-types'
+    LOCAL_CCFLAGS += ' -Wno-int-conversion'
+    LOCAL_CCFLAGS += ' -Wno-error=return-mismatch'
+
+group = DefineGroup('aic8800_wpas', src, depend = ['AIC_WLAN_AIC8800D40L'], CPPPATH = include_path, LOCAL_CCFLAGS=LOCAL_CCFLAGS)
+
+Return('group')
