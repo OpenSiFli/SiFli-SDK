@@ -855,12 +855,14 @@ __ROM_USED void hfp_cmd(int argc, char **argv)
         {
             bd_addr_t mac;
             bt_addr_convert_from_string_to_general(argv[2], &mac);
+            gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
             bt_interface_conn_ext((unsigned char *)&mac, BT_PROFILE_HFP);
         }
         else if (strcmp(cmd, "hfp_ag_connect") == 0)
         {
             bd_addr_t mac;
             bt_addr_convert_from_string_to_general(argv[2], &mac);
+            gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
             bt_interface_conn_to_source_ext((unsigned char *)&mac, BT_PROFILE_HFP);
         }
         else if (strcmp(cmd, "hfp_disconnect") == 0)
@@ -929,6 +931,38 @@ __ROM_USED void hfp_cmd(int argc, char **argv)
 }
 MSH_CMD_EXPORT(hfp_cmd, hfp_cmd command)
 
+#if defined(SF32LB52X_58)|| (defined(SF32LB52X) && (defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)))
 
+void lcpu_rom_config_default(void);
+uint16_t g_em_offset[HAL_LCPU_CONFIG_EM_BUF_MAX_NUM] =
+{
+    0x178, 0x178, 0x740, 0x7A0, 0x848, 0x8B8, 0xB38, 0xCE8, 0xE80, 0x1474, 0x14DC,
+    0x1AF4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x22F4, 0x25F4,
+    0x2614, 0x268C, 0x26DC, 0x27FC, 0x2810, 0x2824, 0x2914, 0x2924, 0x29E4, 0x2A00,
+    0x3A10, 0x4E24, 0x5F04,
+
+};
+
+void lcpu_rom_config(void)
+{
+    lcpu_rom_config_default();
+    hal_lcpu_bluetooth_em_config_t em_offset;
+    memcpy((void *)em_offset.em_buf, (void *)g_em_offset, HAL_LCPU_CONFIG_EM_BUF_MAX_NUM * 2);
+    em_offset.is_valid = 1;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_EM_BUF, &em_offset, sizeof(hal_lcpu_bluetooth_em_config_t));
+    hal_lcpu_bluetooth_act_configt_t act_cfg;
+    act_cfg.bt_max_acl = 3;
+    act_cfg.bt_max_sco = 2;
+    act_cfg.ble_max_iso = 0;
+    act_cfg.bit_valid = 1 << 4 | 1 << 1 | 1 << 0;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_ACT_CFG, &act_cfg, sizeof(hal_lcpu_bluetooth_act_configt_t));
+
+    hal_lcpu_bluetooth_rom_config_t config = {0};
+    config.bit_valid |= 1 << 2 | 1 << 13;
+    config.lld_prog_delay = 3;
+    config.sco_cfg = 2;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
+}
+#endif
 
 

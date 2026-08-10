@@ -31,6 +31,11 @@ static bt_hfp_relay_context_t g_hfp_relay_ctx =
     },
 };
 
+uint8_t bt_hfp_ag_set_auto_answer_call_default()
+{
+    return 0;
+}
+
 void bt_hfp_relay_mgr_init(void)
 {
     memset(&g_hfp_relay_ctx, 0, sizeof(g_hfp_relay_ctx));
