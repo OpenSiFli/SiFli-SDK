@@ -9,7 +9,6 @@
  *
  *
  */
-#include "rtthread.h"
 #include "lv_seqimg.h"
 #include <stdbool.h>
 
@@ -28,7 +27,6 @@ typedef struct
 
 static void lv_seqimg_constructor(const lv_obj_class_t *class_p, lv_obj_t *obj);
 static void lv_seqimg_destructor(const lv_obj_class_t *class_p, lv_obj_t *obj);
-static void lv_seqimg_invalidate_current(lv_seqimg_t *ext);
 
 const lv_obj_class_t lv_seqimg_class = {
     .constructor_cb = lv_seqimg_constructor,
@@ -47,17 +45,8 @@ static void seqimg_timer_cb(lv_timer_t *timer)
 
     if (!ext->src_array || ext->size <= 1) return;
 
-    lv_seqimg_invalidate_current(ext);
     ext->curr_frame = (ext->curr_frame + 1) % ext->size;
     lv_img_set_src(obj, ext->src_array[ext->curr_frame]);
-}
-
-static void lv_seqimg_invalidate_current(lv_seqimg_t *ext)
-{
-    if (ext->src_array && ext->size > 0 && ext->curr_frame < ext->size)
-    {
-        lv_img_cache_invalidate_src(ext->src_array[ext->curr_frame]);
-    }
 }
 /*
 initializer
@@ -78,7 +67,6 @@ static void lv_seqimg_destructor(const lv_obj_class_t *class_p, lv_obj_t *obj)
 {
     LV_UNUSED(class_p);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
-    lv_seqimg_invalidate_current(ext);
     if (ext->timer)
     {
         lv_timer_del(ext->timer);
@@ -110,7 +98,6 @@ void lv_seqimg_src_array(lv_obj_t *obj, const lv_img_dsc_t **dsc_array,
 {
     LV_ASSERT_NULL(obj);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
-    lv_seqimg_invalidate_current(ext);
     ext->src_array = (void **)dsc_array;
     ext->size = size;
     ext->curr_frame = 0;
@@ -134,7 +121,6 @@ void lv_seqimg_file_array(lv_obj_t *obj, const char **file_path_array,
 {
     LV_ASSERT_NULL(obj);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
-    lv_seqimg_invalidate_current(ext);
     ext->src_array = (void **)file_path_array;
     ext->size = size;
     ext->curr_frame = 0;
@@ -157,7 +143,6 @@ void lv_seqimg_select(lv_obj_t *obj, uint16_t index)
         return;
     }
 
-    lv_seqimg_invalidate_current(ext);
     ext->curr_frame = index;
     lv_img_set_src(obj, ext->src_array[index]);
 }
@@ -169,21 +154,16 @@ void lv_seqimg_play(lv_obj_t *obj)
     LV_ASSERT_NULL(obj);
     lv_seqimg_t *ext = (lv_seqimg_t *)obj;
 
-    rt_kprintf("lv_seqimg_play: size=%d, playing=%d\n", ext->size,
-               ext->playing);
     if (!ext->playing && ext->size > 0)
     {
         if (!ext->timer)
         {
-            rt_kprintf("lv_seqimg_play: creating timer with period %d\n",
-                       ext->period);
             ext->timer = lv_timer_create(
                 seqimg_timer_cb, ext->period,
                 obj); // Create a timer binding event to trigger playback
         }
         else
         {
-            rt_kprintf("lv_seqimg_play: resuming timer\n");
             lv_timer_resume(ext->timer);
         }
         ext->playing = true;
