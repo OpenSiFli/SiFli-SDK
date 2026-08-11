@@ -512,7 +512,7 @@ static void epic_task(void *param)
 
         RT_ASSERT(RT_EOK == err);
 
-        LOG_D("epic_task exec msg%x: [%d].", msg.tick, msg.id);
+        // LOG_D("epic_task exec msg%x: [%d].", msg.tick, msg.id);
 
 
         switch (msg.id)
