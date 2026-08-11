@@ -957,11 +957,11 @@ void lcpu_rom_config(void)
     act_cfg.bit_valid = 1 << 4 | 1 << 1 | 1 << 0;
     HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_ACT_CFG, &act_cfg, sizeof(hal_lcpu_bluetooth_act_configt_t));
 
-    hal_lcpu_bluetooth_rom_config_t config = {0};
-    config.bit_valid |= 1 << 2 | 1 << 13;
-    config.lld_prog_delay = 3;
-    config.sco_cfg = 2;
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
+    // hal_lcpu_bluetooth_rom_config_t config = {0};
+    // config.bit_valid |= 1 << 2 | 1 << 13;
+    // config.lld_prog_delay = 3;
+    // config.sco_cfg = 2;
+    // HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
 }
 #endif
 
