@@ -88,7 +88,11 @@
     #define LWIP_MQTT                   0
 #endif
 
-#define LWIP_HAVE_LOOPIF            0
+#ifdef AIC_WLAN_AIC8800D40L
+    #define LWIP_HAVE_LOOPIF            1
+#else
+    #define LWIP_HAVE_LOOPIF            0
+#endif
 
 #define LWIP_PLATFORM_BYTESWAP      0
 
@@ -499,7 +503,11 @@
 
 #define LWIP_UDPLITE                0
 #define UDP_TTL                     255
-#define DEFAULT_UDP_RECVMBOX_SIZE   1
+#ifdef AIC_WLAN_AIC8800D40L
+    #define DEFAULT_UDP_RECVMBOX_SIZE   32
+#else
+    #define DEFAULT_UDP_RECVMBOX_SIZE   1
+#endif
 
 /* ---------- RAW options ---------- */
 #ifdef RT_LWIP_RAW
@@ -508,8 +516,13 @@
     #define LWIP_RAW                    0
 #endif
 
-#define DEFAULT_RAW_RECVMBOX_SIZE   1
-#define DEFAULT_ACCEPTMBOX_SIZE     10
+#ifdef AIC_WLAN_AIC8800D40L
+    #define DEFAULT_RAW_RECVMBOX_SIZE   32
+    #define DEFAULT_ACCEPTMBOX_SIZE     32
+#else
+    #define DEFAULT_RAW_RECVMBOX_SIZE   1
+    #define DEFAULT_ACCEPTMBOX_SIZE     10
+#endif
 
 /* ---------- Statistics options ---------- */
 #ifdef RT_LWIP_STATS
