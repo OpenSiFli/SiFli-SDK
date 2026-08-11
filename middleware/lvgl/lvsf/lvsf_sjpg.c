@@ -157,7 +157,9 @@ typedef struct
 {
     lvsf_sjpg_io_source_t algo;
     enum io_source_type type;
+#ifndef USING_JPEG_DEC
     int lv_file;
+#endif
     uint8_t *raw_sjpg_data;               //Used when type==SJPEG_IO_SOURCE_C_ARRAY.
     uint32_t raw_sjpg_data_size;          //Num bytes pointed to by raw_sjpg_data.
     uint32_t raw_sjpg_data_next_read_pos; //Used for all types.
@@ -409,6 +411,8 @@ static lv_res_t decoder_info(lv_img_decoder_t *decoder, const void *src, lv_img_
     }
     return LV_RES_INV;
 }
+
+#ifndef USING_JPEG_DEC
 
 #if (3 == JD_FORMAT)
 #if (JD_FORMAT == 3)
@@ -757,6 +761,9 @@ static JRESULT jd_decode_frame(lv_img_decoder_dsc_t *dsc, int sjpeg_req_frame_in
     return JDR_OK;
 
 }
+
+#endif /* !USING_JPEG_DEC */
+
 #ifdef USING_JPEG_DEC
 
 /**
@@ -1655,10 +1662,12 @@ static void decoder_close(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *dsc)
     switch (dsc->src_type)
     {
     case LV_IMG_SRC_FILE:
+#ifndef USING_JPEG_DEC
         if (sjpeg->io.lv_file >= 0)
         {
             close(sjpeg->io.lv_file);
         }
+#endif
         lv_sjpg_cleanup(sjpeg);
         break;
 
