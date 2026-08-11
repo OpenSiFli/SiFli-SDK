@@ -548,6 +548,18 @@ __ROM_USED rt_err_t rt_timer_control(rt_timer_t timer, int cmd, void *arg)
     case RT_TIMER_CTRL_SET_PERIODIC:
         timer->parent.flag |= RT_TIMER_FLAG_PERIODIC;
         break;
+    case RT_TIMER_CTRL_GET_STATE:
+        if (timer->parent.flag & RT_TIMER_FLAG_ACTIVATED)
+        {
+            /*timer is start and run*/
+            *(rt_uint32_t *)arg = RT_TIMER_FLAG_ACTIVATED;
+        }
+        else
+        {
+            /*timer is stop*/
+            *(rt_uint32_t *)arg = RT_TIMER_FLAG_DEACTIVATED;
+        }
+        break;
     }
     rt_hw_interrupt_enable(level);
 
