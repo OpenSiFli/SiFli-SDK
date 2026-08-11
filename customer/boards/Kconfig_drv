@@ -245,6 +245,15 @@ menu "On-chip Peripherals"
         bool "EPIC"
         select RT_USING_EPIC
         default n
+
+        config DRV_EPIC_DEBUG_LOG
+            bool "Enable EPIC driver debug logs"
+            depends on BSP_USING_EPIC
+            default n
+            help
+                Enable LOG_D output in the EPIC driver.
+                The global ULOG output level must also allow Debug logs.
+
         if BSP_USING_EPIC && !SOC_SF32LB55X
             config DRV_EPIC_NEW_API
             bool "Using epic render list API"
