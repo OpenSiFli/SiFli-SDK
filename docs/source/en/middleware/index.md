@@ -6,6 +6,7 @@ The middleware (Middleware) supported by SDK is shown in the following table:
 :titlesonly:
 
 bt_service.md
+bt_app_framework.md
 ble/ble.md
 data_service.md
 pm.md
