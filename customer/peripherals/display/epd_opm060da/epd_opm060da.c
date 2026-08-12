@@ -172,12 +172,96 @@ L2_NON_RET_BSS_SECT(frambuf, ALIGN(4) static uint8_t mixed_framebuffer[EPD_PANEL
 L2_NON_RET_BSS_SECT_END
 
 
+/*
+ * Mixed grey framebuffer on PSRAM:
+ * high 4 bits = old pixel (value currently shown on the panel),
+ * low  4 bits = new pixel (value to be shown after this flush).
+ * - Only the pixels inside [Xpos0..Xpos1] x [Ypos0..Ypos1] are updated:
+ *   the previous low nibble (current on-screen value) is moved to the high
+ *   nibble as the new "old", and the new gray value goes to the low nibble.
+ * - Pixels outside the region are synced to old==new before the region fill,
+ *   so their waveform maps to "do nothing" -> the rest of the panel stays
+ *   still. This also clears the stale high nibble left by a previous partial
+ *   flush, which would otherwise spuriously re-drive those pixels.
+ */
+
+/* Sync old (high nibble) to new (low nibble) for pixels in [x0, x1) of a row. */
+static void MixedGraySyncRange(uint8_t *row, uint16_t x0, uint16_t x1)
+{
+    uint16_t x = x0;
+
+    /* Leading unaligned bytes */
+    while ((x < x1) && (x & 3))
+    {
+        row[x] = (row[x] & 0x0F) | ((row[x] & 0x0F) << 4);
+        x++;
+    }
+
+    /* 4 pixels at a time */
+    for (uint32_t *p = (uint32_t *)(row + x); (x + 4) <= x1; p++, x += 4)
+    {
+        uint32_t v = *p;
+        *p = (v & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    }
+
+    /* Trailing unaligned bytes */
+    while (x < x1)
+    {
+        row[x] = (row[x] & 0x0F) | ((row[x] & 0x0F) << 4);
+        x++;
+    }
+}
+
+/* Sync old (high nibble) to new (low nibble) for the pixels OUTSIDE
+ * [rx0..rx1] x [ry0..ry1] (region in panel coordinates). Pixels inside the
+ * region are rebuilt by the region fill right after, syncing them here
+ * would only be redundant work. */
+static void MixedGraySyncOldOutside(uint16_t rx0, uint16_t ry0, uint16_t rx1, uint16_t ry1)
+{
+    for (uint16_t y = 0; y < EPD_PANEL_VER; y++)
+    {
+        uint8_t *row = &mixed_framebuffer[(uint32_t)y * EPD_PANEL_HOR];
+
+        if ((y < ry0) || (y > ry1))
+        {
+            /* Row fully outside the region */
+            MixedGraySyncRange(row, 0, EPD_PANEL_HOR);
+        }
+        else
+        {
+            MixedGraySyncRange(row, 0, rx0);
+            MixedGraySyncRange(row, rx1 + 1, EPD_PANEL_HOR);
+        }
+    }
+}
+
 L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef *hlcdc, const uint8_t *RGBCode, uint16_t Xpos0, uint16_t Ypos0, uint16_t Xpos1, uint16_t Ypos1))
 {
     uint32_t total_pixels = LCD_HOR_RES_MAX * LCD_VER_RES_MAX;
-    RT_ASSERT(LCD_HOR_RES_MAX == (Xpos1 - Xpos0 + 1)); //Support only full screen
-    RT_ASSERT(LCD_VER_RES_MAX == (Ypos1 - Ypos0 + 1)); //Support only full screen
+    RT_ASSERT(Xpos0 <= Xpos1);
+    RT_ASSERT(Ypos0 <= Ypos1);
+    RT_ASSERT(Xpos1 < LCD_HOR_RES_MAX);
+    RT_ASSERT(Ypos1 < LCD_VER_RES_MAX);
     RT_ASSERT((total_pixels % 4) == 0); // Must be a multiple of 4 pixels
+
+    // Partial update: pixels outside [Xpos0..Xpos1] x [Ypos0..Ypos1] are not
+    // filled, so sync them to old==new first; otherwise the stale high nibble
+    // left by a previous partial flush would make their waveform drive the panel.
+    // Pixels inside the region are skipped here: the region fill below rebuilds
+    // them (including their old nibble), syncing them first is redundant.
+    if ((Xpos1 - Xpos0 + 1) != LCD_HOR_RES_MAX || (Ypos1 - Ypos0 + 1) != LCD_VER_RES_MAX)
+    {
+        if (display_rotation == EPD_ROT_INVERTED_PORTRAIT)
+        {
+            /* LVGL (x, y) -> panel (y, LCD_HOR_RES_MAX - 1 - x) */
+            MixedGraySyncOldOutside(Ypos0, LCD_HOR_RES_MAX - 1 - Xpos1,
+                                    Ypos1, LCD_HOR_RES_MAX - 1 - Xpos0);
+        }
+        else
+        {
+            MixedGraySyncOldOutside(Xpos0, Ypos0, Xpos1, Ypos1);
+        }
+    }
 
     //Convert layer data to 4bit gray data
     if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_MONO)
@@ -186,23 +270,71 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
     }
     else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_A4)
     {
-        uint32_t n = total_pixels / 4; // Process 4 pixels (4 bytes) at a time
-        uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
+        // Region fill: only update pixels inside
+        // [Xpos0..Xpos1] x [Ypos0..Ypos1]. Pixels outside keep old==new
+        // in the mixed framebuffer, so their waveform maps to "do nothing"
+        // -> true partial update (not just a partial waveform with full
+        // screen data).
         const uint8_t *p_src = RGBCode;
-
-        while (n--)
+        uint8_t *p_dst = mixed_framebuffer;
+        if (display_rotation == EPD_ROT_INVERTED_PORTRAIT)
         {
-            uint8_t byte0 = *p_src++;
-            uint8_t byte1 = *p_src++;
+            for (uint16_t x = Xpos0; x <= Xpos1; x++)
+            {
+                for (uint16_t y = Ypos0; y <= Ypos1; y++)
+                {
+                    // Rotate 90 degree CW: source (x, y) -> dest (y, VER-1-x)
+                    uint16_t dst_x = y;
+                    uint16_t dst_y = LCD_HOR_RES_MAX - 1 - x;
 
-            // Generate new values for 4 pixels
-            uint32_t src_v = ((byte1 << 20) | (byte1 << 16) | (byte0 << 4) | byte0) & 0x0F0F0F0F;
+                    // Linear index of the pixel in the packed source
+                    // (A4 stores 2 pixels per byte, region-relative packing)
+                    uint32_t src_index = (y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0);
+                    uint8_t src_byte = RGBCode[src_index >> 1];
+                    uint8_t pixel_val = (src_index & 1) ? ((src_byte >> 4) & 0x0F) : (src_byte & 0x0F);
 
-            // Read old pixels, clear old pixel nibbles, shift new pixels to old pixel position
-            uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
+                    uint32_t dst_index = dst_y * EPD_PANEL_HOR + dst_x;
+                    uint8_t old_val = mixed_framebuffer[dst_index];
 
-            // Merge new pixels
-            *p_dst++ = dst_v | src_v;
+                    // Move previous low nibble (current on-screen value) to
+                    // the high nibble as the new "old", put new gray low.
+                    mixed_framebuffer[dst_index] = ((old_val & 0x0F) << 4) | pixel_val;
+                }
+            }
+        }
+        else
+        {
+            /* 32-bit writes below need 4-pixel alignment */
+            RT_ASSERT(((Xpos1 - Xpos0 + 1) % 4) == 0);
+            RT_ASSERT((Xpos0 % 4) == 0);
+
+            for (uint16_t y = Ypos0; y <= Ypos1; y++)
+            {
+                for (uint16_t x = Xpos0; x < Xpos1; x += 4)
+                {
+                    uint8_t byte0 = RGBCode[((y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0)) / 2];
+                    uint8_t byte1 = RGBCode[((y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0) + 2) / 2];
+
+                    // Generate new values for 4 pixels (A4: 2 pixels/byte)
+                    uint8_t gray0 = (x % 2) ? ((byte0 >> 4) & 0x0F) : (byte0 & 0x0F);
+                    uint8_t gray1 = ((x + 1) % 2) ? ((byte0 >> 4) & 0x0F) : (byte0 & 0x0F);
+                    uint8_t gray2 = ((x + 2) % 2) ? ((byte1 >> 4) & 0x0F) : (byte1 & 0x0F);
+                    uint8_t gray3 = ((x + 3) % 2) ? ((byte1 >> 4) & 0x0F) : (byte1 & 0x0F);
+
+                    // Move the previous low nibble (current on-screen value)
+                    // to the high nibble as the new "old", put new gray low.
+                    uint32_t dst_index = y * EPD_PANEL_HOR + x;
+                    uint32_t old_val = *((uint32_t *)(p_dst + dst_index));
+
+                    uint32_t new_val =
+                        (((old_val >> 0) & 0x0F) << 4)  | gray0 |
+                        (((old_val >> 8) & 0x0F) << 12) | (gray1 << 8) |
+                        (((old_val >> 16) & 0x0F) << 20) | (gray2 << 16) |
+                        (((old_val >> 24) & 0x0F) << 28) | (gray3 << 24);
+
+                    *((uint32_t *)(p_dst + dst_index)) = new_val;
+                }
+            }
         }
     }
     else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_RGB565)
@@ -253,30 +385,37 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
         }
         else
         {
-            uint32_t n = LCD_HOR_RES_MAX * LCD_VER_RES_MAX / 4; // Process 4 pixels at a time (4 bytes)
-            uint32_t *p_dst = (uint32_t *)(mixed_framebuffer);
+            // No rotation: straight mapping. Only fill the requested region
+            // Pixels outside the region are left untouched,
+            // so they keep old==new and their waveform maps to "do nothing".
+            RT_ASSERT(((Xpos1 - Xpos0 + 1) % 4) == 0);
+            RT_ASSERT((Xpos0 % 4) == 0);
+
             const uint16_t *p_src = (const uint16_t *)RGBCode;
+            uint8_t *p_dst = mixed_framebuffer;
 
-            while (n--)
+            for (uint16_t y = Ypos0; y <= Ypos1; y++)
             {
-                uint8_t pixel0 = RGB565_TO_GRAY4(*p_src);
-                p_src++;
-                uint8_t pixel1 = RGB565_TO_GRAY4(*p_src);
-                p_src++;
-                uint8_t pixel2 = RGB565_TO_GRAY4(*p_src);
-                p_src++;
-                uint8_t pixel3 = RGB565_TO_GRAY4(*p_src);
-                p_src++;
+                for (uint16_t x = Xpos0; x < Xpos1; x += 4)
+                {
+                    uint8_t gray0 = RGB565_TO_GRAY4(p_src[(y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0)]);
+                    uint8_t gray1 = RGB565_TO_GRAY4(p_src[(y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0) + 1]);
+                    uint8_t gray2 = RGB565_TO_GRAY4(p_src[(y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0) + 2]);
+                    uint8_t gray3 = RGB565_TO_GRAY4(p_src[(y - Ypos0) * (Xpos1 - Xpos0 + 1) + (x - Xpos0) + 3]);
 
+                    uint32_t dst_index = y * EPD_PANEL_HOR + x;
+                    uint32_t old_val = *((uint32_t *)(p_dst + dst_index));
 
-                // Generate new values for 4 pixels
-                uint32_t src_v = ((pixel3 << 24) | (pixel2 << 16) | (pixel1 << 8) | pixel0) & 0x0F0F0F0F;
+                    // Move the previous low nibble (current on-screen value)
+                    // to the high nibble as the new "old", put new gray low.
+                    uint32_t new_val =
+                        (((old_val >> 0) & 0x0F) << 4)  | gray0 |
+                        (((old_val >> 8) & 0x0F) << 12) | (gray1 << 8) |
+                        (((old_val >> 16) & 0x0F) << 20) | (gray2 << 16) |
+                        (((old_val >> 24) & 0x0F) << 28) | (gray3 << 24);
 
-                // Read original pixels, shift old values to high nibble
-                uint32_t dst_v = (*p_dst & 0x0F0F0F0F) << 4;
-
-                // Merge new pixel values
-                *p_dst++ = dst_v | src_v;
+                    *((uint32_t *)(p_dst + dst_index)) = new_val;
+                }
             }
         }
 
@@ -284,6 +423,9 @@ L1_RET_CODE_SECT(epd_codes, static void CopyToMixedGrayBuffer(LCDC_HandleTypeDef
     }
     else if (hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format == LCDC_PIXEL_FORMAT_RGB888)
     {
+        /* This format only supports full screen update */
+        RT_ASSERT(((Xpos1 - Xpos0 + 1) == LCD_HOR_RES_MAX) && ((Ypos1 - Ypos0 + 1) == LCD_VER_RES_MAX));
+
         uint32_t n = total_pixels / 4; // Process 4 pixels (4 bytes) at a time
         uint32_t *p_dst = (uint32_t *)mixed_framebuffer;
         const uint8_t *p_src = (const uint8_t *)RGBCode;
@@ -379,10 +521,18 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
     start_tick = rt_tick_get();
     ori_format = hlcdc->Layer[HAL_LCDC_LAYER_DEFAULT].data_format;
 
-    LOG_I("LCD_WriteMultiplePixels %d pixels to %d, %d", (Xpos1 - Xpos0) * (Ypos1 - Ypos0), Xpos0, Ypos0);
-
+    LOG_I("LCD_WriteMultiplePixels x0=%d, x1=%d, y0=%d, y1=%d\n", Xpos0, Xpos1 - Xpos0 + 1, Ypos0, Ypos1 - Ypos0 + 1);
+    /*Implement grayscale buffer filling with partial‑fill support*/
     CopyToMixedGrayBuffer(hlcdc, RGBCode, Xpos0, Ypos0, Xpos1, Ypos1);
-    HAL_LCDC_LayerSetData(hlcdc, HAL_LCDC_LAYER_DEFAULT, (uint8_t *)mixed_framebuffer, 0, 0, EPD_PANEL_HOR - 1, EPD_PANEL_VER - 1);
+
+    /* Always send the whole mixed framebuffer: the LCDC fetches layer data
+       linearly from the buffer start using data_area width as line stride,
+       so a partial data_area would fetch misaligned data (and shrink the
+       layer area on the canvas). Partial refresh is achieved by the buffer
+       content itself: pixels outside the region keep old==new and their
+       waveform maps to "do nothing". */
+    HAL_LCDC_LayerSetData(hlcdc, HAL_LCDC_LAYER_DEFAULT, (uint8_t *)mixed_framebuffer,
+                          0, 0, EPD_PANEL_HOR - 1, EPD_PANEL_VER - 1);
     HAL_LCDC_LayerSetFormat(hlcdc, HAL_LCDC_LAYER_DEFAULT, LCDC_PIXEL_FORMAT_L8);
 
     HAL_LCDC_LayerSetLTab(hlcdc, HAL_LCDC_LAYER_DEFAULT, (LCDC_AColorDef *)lut);
