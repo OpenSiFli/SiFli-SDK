@@ -1,6 +1,324 @@
-# SiFli SDK Change Log v2.5.0
+# SiFli SDK Change Log v2.5.1
 
 ## Major Changes
+- Add support of the SF32LB57X chip family, including new boards (sf32lb57-dpi-hdk, sf32lb57-spi-hdk and sf32lb57x-ramrun series), drivers (LCD DPI/DBI/DIRECT_EPD, PSRAM calibration, SDIO single-wire, CAN, etc.), RF driver and 2nd bootloader.
+- Add DFU_V2 middleware, with CDC_DFU, BLE_DFU and PAN_DFU subprograms and examples.
+- Add crypt_block_dev middleware to support encrypted block device.
+- Add rt_bt_app_core middleware for device-framework Bluetooth control.
+- CherryUSB adds UAC/UVC host support and MTP device support.
+- Add `a2dp_sharing` example: share media stream & call voice from phone to earphones
+- Add `hfp_relay` example: relay phone call audio to earphones
+
+## Change log since v2.5.0
+### Drivers
+#### Fixed
+
+- adc: Fix slot and channel greater than 7 is not handled correctly (d140b2ca)
+- adc: Add double check of end of conversion flag when timeout (5c687304)
+- adc: Update gpadc driver for 57x (042a9cc5)
+- aon: Fix wakeup pin query error on 57x (ec4ca8fc)
+- aon: Fix wakeup pin query error for PA24~PA27 on 57x (f70907c0)
+- audprc: Fixed 57x audio resample driver (45ce5297)(1649f373)
+- bbm: Fix data in bad block is not copied successfully (2736bfa2)
+- can: Fix single message is not transmitted (f3209cb9)
+- cherryusb: Fix clock is not enabled on 57x when acting as host (ba079e88)
+- cherryusb: Fix thread freezing when deleting itself (9d64d3ce)
+- cherryusb: Fix type mismatch due to the removal of duplicate rt_ssize_t definition (f7e7ea34)
+- cherryusb: Remove duplicate rt_ssize_t as it's already defined in rtdef.h (5fc26833)
+- cmsis: Align gcc link script used by ptab v3 with link.lds (b46c3204)
+- cmsis: Delete lvsf_font_*.o from section description to avoid including data by mistake (24dfdda1)(924ef6d2)
+- cmsis: Fix 57 lcpu build error as cache line size is not available (3deee689)
+- cmsis: Fix missing default hcpu2acpu_irqHandler on 57x (36e964f5)
+- cmsis: Not use bt_rf_fulcal.c on 57x FPGA board (354e539c)
+- cmsis: Add `.app_subpage_db` section for subpage database in linker (a6aad684)
+- dma: Fix dma channel register is modified by module which doesn't own the channel (d9fffa72)
+- dma: Fix previous DMA S/DBURST setting was not cleared (f4a53814)
+- drv_common: 57x uses the same method to get LPTIM frequency as other chips (661bd173)
+- epic: Fixed EZIP completion race in fast-start path (bf639a86)
+- epic: Fix black lines on rotated images (cb3e9459)
+- epic: Fix several issues with gradient filling in tiled mode (3fcb1496)
+- epic: Abnormal result when blending A2/A4 formats on 57x (4190e803)
+- epic: Fixed YUV blending abnormal (d34630ab)
+- epic: Increase the size of the letter pool (df9964e3)
+- epic/lcdc: Fixed some graphic issues (8fcd42eb)
+- i2c: Fix i2c bug for 55x a2 (ad8125d1)
+- lcd: Fixed DPI LCD errors on 57x (ee32d218)
+- math: Fix CDE is enabled by mistake on 57x (4419c5d5)
+- nand: Fix single-line parameter of type5 (ef7e3c7d)
+- pdm: enable 57x pdm pll (f812ff3a)
+- pinmux: Fix some IO's pinmux mismatch with spec of 58x (4f701857)
+- pmu: Fix hxt48 ready delay time not enough on 57x (b55aec3c)
+- psram: Fix r/w error after PSRAM frequency switching from 156MHz to 24MHz (ef729513)
+- psram: Fix psram init error introduced by 57x change (04aa88f2)
+- psram: Fix PSRAM calibration error on 57x (46e3fcd2)
+- psram: Set protocol register for 57x (03897347)
+- pwm: Fix PWM clock is not enabled on 57x (5e71aeb2)
+- rcc: Fix ACPU doesn't start on 57x (7e9d4a36)
+- rcc: Enable WAIT to avoid ACPU starting automatically after SYSRESETREQ (f4f681a7)
+- rtc: Fix RTC_DR_ERROR check fail and add RSF check on 57x (c62b7485)
+- sdio: Fix missing name field in 57 sdio_config (0caf581c)
+- spi: Fix duplicate spi callback definition on 55 LCPU (07547569)
+- tsen: Fix tsen measurement error on 52x (38030718)
+- usb: Fix USB clock is not enabled in 57 bootrom (b94115b8)
+- usb: Add delay to make sure rcc usb clock is ready on 57x (c03d2c9d)
+- wdt: Update watchdog driver for 57x (6c83d69e)
+- kconfig_drv: Fix MPI1 and MPI2 are enabled by ACPU side (5ad92105)
+- cmsis: Add the missing segment names for the MTP library to link (b046469a)
+- spi: Fix for 3-Wire SPI Receive Failure (3c957535)
+- aon: Fix PA24~PA27 AON pin wakeup not work (53741fe6)
+- sdio: For standby mode, skip SDIO destroy/recreate; only restore hardware on wakeup (83225df3)
+- Kconfig_drv: Set MEM_ASYN_FREE to be dependent on PKG_USING_LITTLEVGL2RTT (bc108fe2)
+- epic: Add "rotation" to the sram switch configuration (e62b74f9)
+
+#### Changed
+
+- adc: Update to support 57x (38e545a8)
+- cache: Add cache macro for 57x (629d6d05)
+- can: Upgrade rt can device driver to v5.2.2 (384ba141)
+- can: Add secondary TX buffer and interrupt mode (3c180bd3)
+- cmsis: Still call cache_enable to enable cache to keep compatibility on 57x (62c0e508)
+- cmsis: Add symbol used by pm in gcc ld for 57x (8f6bb769)
+- drv_common: Update for 57x support (32192b36)
+- epic: Support larger transformed area (54300b46)
+- lcdc: Not overwrite other PTM core setting (6fb08e22)
+- lcdc: Optimize the DPI_AUX timing on 57x (2f85f2b0)
+- mpu: Add space of MPI2 on 57x (bfa145d4)
+- nor: Add DTR support for 57x (ac8f1c3f)
+- pinmux: Add pin function definition for JDI, DPI and EPD on 57x (7c9af0d9)
+- pinmux: Add SPI dedicated pin support on 57x (7e63eb20)
+- pmu: Set VBAT_LDO output voltage to 3.3V on 57x (8e396fdb)
+- pmu: Raise LDO_1V8 voltage on 57x (4590b0d0)
+- psram: Update HyperRAM to support 156MHz on 57x (722b0856)
+- psram: Update calibration for 57x (7cbe2ab4)(c52f5b42)
+- psram: Use psram mode in handle (ca85ff6d)
+- psram: Support dynamic PSRAM type and pinmap detection at runtime for 57x (0b9e4a14)
+- psram: Use HAL_Delay_us to achieve more accurate delay (4f00c071)
+- psram: Raise drive strength of PSRAM pin on 57x (ee0c97c5)
+- sdadc: Move SDADC calibration processing down to the HAL layer (37a145d6)
+- sdadc: Update drv_sdadc (3de41ea1)
+- sdhci: Gated sd clock dynamically to save power (57610ff8)
+- sdhci: Add config to disable sdhci auto clock control by default (15e456af)
+- sdio: Add sd/mmc single-wire support (59e28639)
+- sdio: Add sdmmc2 support on 57x (a339bdde)
+- usb: Enable BG for USB clock in case it's disabled on 57x (f887c17a)
+- hal: Remove volatile from HAL_Delay_us_ declaration (dda51509)
+- lcdc: 57x LCDC supports to switch to DLL2/AUDPLL (ebf20adc)
+- lcdc: DBI 8/16bit LCD works on 57x (91525641)
+- lcdc: DIRECT_EPD mode (LCDC directly drive EPD) works on 57x (46fe563f)
+- pdm: add 57 4mic config (8424f115)
+- lcdc: The 800x480 DPI LCD can works on 57x (f42c3c4e)
+
+#### Added
+- can: Add can adaptor layer implementation (7dbb4b64)
+- can: Add API `HAL_CAN_CalcTiming` to calculate timing setting according to bitrate (f5cee75a)
+- cherryusb: Add cherry usb uac and uvc host support (3be54954)
+- cherryusb: Add cherry USB MTP device support (ce41b225)
+- pinmux: Add sip flash and psram pinmux set API for 57x (02014988)
+- psram: Add API to read psram size from psram chip (b1ba5ccc)
+- nand: Add unim 4Gbit single die config table (ff17cb08)
+
+### Middleware
+#### Fixed
+- audio: Fix the parameter memory size error in the anyka algorithm (1af38a98)(137fdec9)
+- audio: wakeup LCPU when bt voice coming on SF32LB57X (917270d8)
+- audio: Fix i2s modem bug (84bbc393)(2f627582)
+- audio: Fix 57x audcodec pll config (ca6f2ef2)(70785a43)(42572b47)
+- audio: Fix noise for high bitrate mp3 in mix mode (7b292b87)
+- acpu_ctrl: Flush cpu cache for multicore data exchange (fd6a1c3d)
+- button: Fix build error on 57x (74f7cfd9)
+- ezipa: Fix invalid curr_frame parameters for the first frame (d2e839a5)
+- lvgl_v8_ttf: Fix use-after-free when opening a face fails while the size cache is full (0ef21cbf)
+- lvgl: Remove the fixed address range check for PSRAM (f936f1cd)
+- lvgl: RAMLESS LCD will blink when switched to full screen buffer (d1b44929)
+- lvgl_v9: Fixed watch_v9 jpeg decoding error on 57x (8eb7e054)
+- lvgl_v8: When FreeType is enabled, by default `LV_FONT_DEFAULT` will use `lvsf_get_font_from_size(16)` (f7b6d396)
+- lv_drivers: The EPIC letter batch key includes font color mode and opacity to prevent A4/A8 font data from sharing the same drawing operations (e36fadf6)
+- lv_drivers_v9: fix v9 render-list double-buffer switch timing causing scanline stall (6c2fa4c3)
+- lv_drivers_v9: Fix the screen pushing issue of the LCD framebuffer (363c9419)
+- lvsf: Add sequence image widget (dc16df71)
+- lvsf: Update the library file and added the complete circle mask display for lvsf_arcimg (b19f9c1c)
+- lvsf: Modify the macro definitions and standardize them (1f43bc9b)
+- lvsf: Modify lvsf_sjpg.c using dependencies (04310689)
+- lvsf: Update the gui_widgets library file and expose the lvsf_jpg framework for external use (30dc5586)
+- lvgl: Fix local redrawing, no longer force global redrawing under the new_api mode (3ac4b27e)
+- pm: Reconfig psram2 and flash3 when freq scaling on 57x (d5fe3ce7)
+
+#### Changed
+
+- lvgl: lvgl v8 render list support to switch to full screen buffer (e4d87e00)
+- pm: No need to use RW_IRAM_RET region unless STANDBY is used (44e595c4)
+- pm: 57x HCPU also use deepsleep by default (979a02f3)
+- pm: Record rt_pm_request/release for debugging (f9845c1b)
+- audio: Support 32k samplerate hfp voice (58cd061d)
+- audio: Update bt_voice to support sco_relay feature (62920599)
+- lvsf: Update widget lib to support more widgets (7dd4c0df)
+- lvsf: Make font unloading safe and let the font manager refuse fonts that do not fit (81ee58f5)
+- lvsf: Load TTF fonts from the file system with correct glyph lifetime, face caching and thread safety (ef9c3a57)
+- ipc_queue: 58x add HCI IPC buffer data double check (ce997d2c)
+- lvgl: Merge the graphic changes from solution (49fa170d)
+- lwip: Add http server and client support (43c4a89b)
+
+#### Added
+
+- audio: Add lc3codec for hfp service (a01c5ffa)
+- crypt_block_dev: Add crypt block device (9ee8238a)
+- rt_bt_app_core: Add RT-Thread BT application core middleware for device-framework Bluetooth control (78cb3a28)
+- dfu_v2: Add the DFU_V2 middleware (d0ccd60d)
+
+### Bluetooth
+#### Fixed
+
+- bt: Fix 58x BT SCO no sound caused by IPC error (b10bf60e)
+- bt: Fix 52 bt controller ld stop assert (f8e025ea)
+- bt: Fixed BT sleep clock type does not set in 57x (4f74a64c)
+- bt: Resolve HFP service wrong codec ID usage
+- bt: Update RF driver and lcpu patch for 56x and 58x (0fe12633)
+
+#### Changed
+- bt: Update RF driver (bab03f99)
+- bt: Add three weak functions for retrieving transmit power (7c668489)
+- bt: Modify for 56/58 tx power uniformity (2ffdd4a8)
+- ble: Integrate CSRK support into BLE connection manager
+- bt: Optimize A2DP relay processing logic
+- bt_rt_device: Move bt_rt_device code from `middleware/bluetooth` to `customer/peripherals/bluetooth/bt_sifli` (42b62570)
+
+#### Added
+- bt: Add 57x rf driver (4879ba40)(5dc70b02)(ae9c7cea)(0fe12633)
+
+### RTOS
+#### Fixed
+- kservice: Fix secondary crash caused by file operations after eMMC assertion failure (cbe12631)
+
+#### Changed
+- workqueue: Update workqueue to rt-thread v5.x  (33ebc487)
+- workqueue: Add delayed_work APIs to maintain interface compatibility (40d876d8)
+
+### Examples
+#### Fixed
+
+- `lvgl/watch`/`lvgl/watch_v9`: Increase the blank space at the bottom to ensure that the second slider knob is fully displayed (440ac1b4)
+- `hal/iwdt`: Fix SF32LB57X IWDT feed failure and no reset on timeout issue (03350610)
+- `rt_device/i2s`: Fix device lookup on SF32LB57 (caad3355)
+- `rt_device/i2s`: Add support of board sf32lb57-spi-hdk (976450c0)
+- `rt_device/pdm`: Add support of board sf32lb57-spi-hdk (ffeabcf2)
+- `hal/adc`: The ADC routine uses the unified HAL layer ADC calibration interface (1e0fad89)
+- `rt_device/audprc`: Fix crash on repeated loopback start (0c47d495)
+- `pm/coremark`: Fix board 57x crash caused by MPI disabled in custom_printf without subsequent re-enablement (edf14cf2)
+- `cherryusb/device/sdcard_disk`: Add support of board sf32lb57-spi-hdk (ee2e03f4)
+- `get-started/dualcore`: Configure LCPU project based on SoC dependencies (eb6508b7)
+- `storage/fatfs/nand`: Modify registration interface and device mounting (d8e82700)
+- `rt_device/emmc`: Fix sd device name if using SDMMC2 (0a4c0744)
+- `bootloader`: Decrease flash frequency in 2nd bootloader stage on 57x (4bbe146c)
+- `hal/lcd`: Fix compilation errors of the routine under the Keil toolchain (ca641e0c)
+- `ble/multi_connection`: Add lb55x a2/a3 lcpu_img choose (16493889)
+- `rt_device/i2s`: Fix I2S pin configuration in README (45d84bb7)
+- `rt_device/i2s`: Fix LB56 I2S BCK pin assignment (ec2f0a73)
+- `ezip`: Add the required ezip resources for 57 (9383dc44)(11a7db66)
+
+#### Changed
+- `gpu/single_mode`: Add support for the 56 and 58 series chips (fccee897)
+- `rt_device/emmc`: Add sdio single-wire test (8d9bb25e)
+- `multicore/acpu_task`: Reduce heap and stack size for stdlib (64ff8f29)
+- `hal/can`: Add interrupt mode example code (8f56edb4)
+- `pm/coremark`: Add initial support for 57x (0691d1e2)
+- `pm/bt`: Add initial support for 57 test on evb board (0e7f93ac)
+- `lvgl/watch`: The watch example works on sf32lb57-spi-hdk board (9afc01ac)
+- `bootloader`: Update bootloader (52x) for DFU_V2 (44a4fd1c)
+- `bootloader`: Switch PSRAM clock to DLL2 in 57 2nd bootloader (38a62371)
+- `bootloader`: Raise Flash IO drive strength for 57x (d482e5ca)
+- `bootloader`: Boot DFU loader on needs_update trigger on sf32lb57x (ae9a6b3d)
+- `bootloader`: Enable LDO_1V8 if PSRAM is used (ab49c91d)
+- `bootloader`: Update 57x 2nd bootloader used by old style project (80d005c3)
+- `bootloader`: Support dynamic psram type detection on 57x (e00751cd)
+- `hal/lcd`: Update the SConstruct script for the HAL/LCD example project (30ab1cb7)
+- `pm/bt`: Add FinSH commands to dynamically control Bluetooth transmit power (5657232a)
+- `multimedia/audio/flac`: Fix 573 no enough SRAM in flac encode (21a5715c)
+- `multimedia/audio/flac`: fix record operation write to RAM (8868bb55)
+- `hal/adc`: Add SF32LB57 support to ADC example (6abf3077)
+- `misc/adc_button`: Update adc_button example and documents (dd2fdb73)
+- `hal/ezip`: Add support for SF32LB57 (c2ef7f9b)
+- `gpu/single_mode`: Add support for the 57 series (8a826a25)
+- `rt_device/pulse_encoder`: Complete and refine the document (85d8f01c)
+- `ble/central_and_peripheral_with_pingpong_ota`: Improve the expected-results section in OTA-related example docs (b754bba5)
+- `ble/peripheral_with_ota`: Improve the expected-results section in OTA-related example docs (b754bba5)
+- `ble/ibeacon`: Update document and add test result descriptions (195edc2c)
+
+#### Added
+- `sdadc`: Add SDADC sample routines based on HAL and RT (097a11eb)(5f26f656)
+- `lvgl_v8_freetype`: Add the lvgl_v8_freetype example (c12af3bf)
+- `rt_device/crypt_block_dev`: Add example crypt_block_dev (c65187fb)
+- `lvgl_v8`: Add several gui_widgets demonstration examples for the lvgl8 version (0a1f43fa)
+- `cherryusb/host/uvc_uac_host`: Add cherry USB uac and uvc host example (62219917)
+- `cherryusb/device/mtp`: Add cherry USB mtp device example (9b75c17a)
+- `cdc_dfu`: Add the CDC_DFU subproject for DFU_V2 (9c02974a)(d52f8072)
+- `ble_dfu`: Add the BLE_DFU Subprogram for DFU_V2 (fa003492)(a316099c)
+- `pan_dfu`: Add the PAN_DFU Subprogram for DFU_V2 (ec6aadc0)(bd6ec9d5)
+- `bt/hfp_relay`: Add hfp relay example (18d970de)(4748b156)
+- `bt/a2dp_sharing`: Add a2dp sharing example (24ef23e4)(a11b743f)
+- `hal/lcd`: Add HAL LCD based display transmit demo supporting DPI hardware boards (d7b59b2b)
+- `rt_device/bt`: Add HFP example based on bt_device API (e6cb8771)
+
+### Tools
+#### Fixed
+
+- build: Limit the EZIP decoding processing window for generating resources of SF32LB57 to 2048 (b4d5d835)
+- build: Use cross ranlib for gcc static libraries (524f3a5e)
+- ptab: Fix v3 ptab.h storage/exec macro collision and ACPU execution address of ptab v2 (257050f6)
+- sf-pkg: Fix the function of deleting external components (612bd65a)
+- ptab: Fixed default bootload data region is not added on 52x and 57x (7c0b4b40)
+
+#### Changed
+
+- BurnDriverEx: Update to support FLM write (330bf105)
+- ImgDownUart: Update to support 57 (0d3d7331)
+- build: Update building.py for DFU_V2 (625583bf)
+- jlink_drv: Add 57x device (708b4d9b)
+- sdk_env: recover pruned environment state from disk on export (67c65366)
+- sftool: Update sftool to 0.2.5 to support sf32lb57x (50fcf07c)
+- skills: Update sifli-code-review to support local commit review (e69e44ef)
+- uart_download: Update ram_patch_57x_nor to fix download issue (0ba9987b)
+
+#### Added
+- crash_dump: Add crash dump capture and analysis (6c5eed59)
+- crash_dump_analyser: Add uart dump script for 57x (a9c30463)
+- skills: Add two skills for code review and 57 part number add (18fb18c0)
+- svd: Add svd for 57x (2b416767)
+- segger: Add support of 57x (c467f90a)
+
+### BSP
+#### Fixed
+
+- board: Correct the resolution of OPM060DA display (fa118590)
+- board: Fix ACPU config of board sf32lb58-lcd_n16r32n1 (33b8cfa9)
+- camera/gc032a: Fix build error if dfs is not enabled (8d01b617)
+- board: Enable configuration of transmit power value on sf32lb56-wlan-core_n16r12n1 (6c637541)
+
+#### Changed
+- board: Add support of chip SF32LB577UDNN6 (58904fdf)(85a21bee)
+- board: Not enable GC032A in board to avoid build error (c687bd3f)
+- board: Add sf32lb57 part definition (6e62b7f6)
+- peripherals: Move the TP&LCD drivers to their own folders (f88476ae)
+- wifi/swt6621: Modified the name of the switch port interface (b14bab1e)
+- wifi/swt6621: Implement AT command feature (91e2b4ca)
+
+#### Added
+
+- board: Add sf32lb57-dpi-hdk board
+- board: Add sf32lb57-spi-hdk board
+- board: Add sf32lb57x-ramrun board
+- board: Add board sf32lb58-lcd_n16r16n1 using SF32LB583VCC36 (c533834a)
+- camera: Implement the DVP interface with DVP (459b9923)
+- display: Add htm 800x480 DPI LCD option (edb36c58)
+- wifi/aic8800mc: Add AIC8800MC driver (bdb766cf)
+
+### Docs
+#### Added
+- Add DFU V2 middleware documentation (46aff2f2)
+- Add debugging related docs (cbe6cd61)
+- Add the LVGL FreeType middleware document (73efca2c)
+
+## Change log since v2.4.0
+### Major Changes
 - Update toolchain install script, use `uv` to manage Python and its dependencies.
 - Add cherryusb as new USB stack, legacy USB stack could still be used, but not recommended for new project.
 - Add sdk.py wrapper command. It supports several subcommands, such as `sdk.py menuconfig` to open menuconfig window, `sdk.py build` to trigger build just like what `scons` does. Run `sdk.py --help` for details.
@@ -11,7 +329,7 @@
 - Audio and video documents are added.
 
 
-## Upgrade Guide for Breaking Changes
+### Upgrade Guide for Breaking Changes
 - Follow [install guide](https://docs.sifli.com/projects/sdk/v2.5.0/sf32lb52x/quickstart/install/script/index.html) to install `uv` first and then run install script to update toolchain.
 - New submodule `SiliconSchema` under `tools` directory is added. If you are updating code in an existing repository, make sure to run `git submodule update --init --recursive` to fetch the corresponding submodules.
 - `CONFIG_BSP_USING_PWMx` has been renamed to `CONFIG_BSP_USING_PWMTy`, where y=x-1. For example, if an existing project enables `BSP_USING_PWM2`, it should now enable `BSP_USING_PWMT1`. Refer to commit 439f8cd5 for the corresponding changes in `board.conf`. PWM device names have also been changed from `pwmx` to `pwmty`, where y=x-1. For example, if an existing project uses `pwm2`, it should now use `pwmt1`. Refer to commit 0b989c54 for the corresponding changes.
@@ -24,7 +342,8 @@
 - SDK v2.4 can coexist with v2.5. If you have previously run the install script under v2.4, you must run the install script again after switching to v2.5 to refresh the environment. After that, you can activate the environment using the export script
 - SiFli-ENV tool needs to be upgraded, download new version from [link](https://downloads.sifli.com/tools/env/env_latest.zip).
 
-## Change log since v2.4.0
+
+
 ### Drivers
 #### Fixed
 
