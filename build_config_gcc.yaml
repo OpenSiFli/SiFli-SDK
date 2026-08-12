@@ -811,7 +811,7 @@ common_projects:
   - path: example/rt_device/wdt/project
     boards: *devkit_lcd_boards    
 
-  - path: example/rt_device/wifi/project
+  - path: example/rt_device/wifi/sta/project
     boards:
       - sf32lb56-wlan-core_n16r12n1
       - sf32lb56-wlan-core_a128r12n1  
