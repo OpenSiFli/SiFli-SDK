@@ -98,6 +98,60 @@ INIT_ENV_EXPORT(mnt_init);
 #endif
 
 static U8 need_trigger = 0;
+
+static rt_bool_t bt_app_avrcp_is_phone_volume(uint8_t notified_volume)
+{
+    bts2_app_stru *bt_app_data = getApp();
+
+    for (uint8_t idx = 0; idx < CFG_MAX_ACL_CONN_NUM; idx++)
+    {
+        /* the phone link is the one we act as AVRCP CT on */
+        if (bt_app_data->avrcp_inst.conn[idx].role != AVRCP_CT)
+        {
+            continue;
+        }
+
+        if (bt_app_data->avrcp_inst.conn[idx].ab_volume == notified_volume)
+        {
+            return RT_TRUE;
+        }
+    }
+
+    return RT_FALSE;
+}
+
+/* Forward the phone raw volume(0~127) to every connected earphone(A2DP source link) */
+static void bt_app_avrcp_sync_volume_to_earphone(uint8_t raw_volume)
+{
+    bts2s_av_inst_data *inst = bt_av_get_inst_data();
+
+    for (uint8_t con_idx = 0; con_idx < MAX_CONNS; con_idx++)
+    {
+        bt_notify_device_mac_t earphone_mac;
+        bt_err_t ret;
+
+        if (!inst->con[con_idx].in_use || (inst->con[con_idx].cfg != AV_AUDIO_SRC)
+                || (inst->con[con_idx].st < avconned_open))
+        {
+            continue;
+        }
+
+        bt_addr_convert_to_general(&inst->con[con_idx].av_rmt_addr, (bd_addr_t *)&earphone_mac);
+        ret = bt_interface_avrcp_set_absolute_volume_as_tg_role_ext(&earphone_mac, raw_volume);
+        if (ret == BT_EOK)
+        {
+            LOG_I("Volume sync: phone=%d, earphone=%02X:%02X:%02X:%02X:%02X:%02X",
+                  raw_volume,
+                  earphone_mac.addr[0], earphone_mac.addr[1], earphone_mac.addr[2],
+                  earphone_mac.addr[3], earphone_mac.addr[4], earphone_mac.addr[5]);
+        }
+        else
+        {
+            LOG_I("Volume sync failed: ret=%u", ret);
+        }
+    }
+}
+
 static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8_t *data, uint16_t data_len)
 {
     bt_app_t *env = bt_app_get_env();
@@ -339,7 +393,28 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
         {
             LOG_I("AVRCP connected");
             bt_notify_profile_state_info_t *profile_info = (bt_notify_profile_state_info_t *)data;
-            bt_interface_set_avrcp_role_ext(&profile_info->mac, AVRCP_CT);
+            BTS2S_BD_ADDR bd_addr;
+            bts2s_av_inst_data *inst = bt_av_get_inst_data();
+            uint8_t con_idx;
+            uint8_t avrcp_role;
+
+            bt_addr_convert_to_bts((bd_addr_t *)&profile_info->mac, &bd_addr);
+            con_idx = bt_av_get_idx_from_addr(inst, &bd_addr);
+            if (con_idx >= MAX_CONNS)
+            {
+                LOG_I("AVRCP role not set: matching A2DP connection not found");
+                break;
+            }
+
+            avrcp_role = (inst->con[con_idx].cfg == AV_AUDIO_SRC) ? AVRCP_TG : AVRCP_CT;
+            if (bt_interface_set_avrcp_role_ext(&profile_info->mac, avrcp_role) != BT_EOK)
+            {
+                LOG_I("AVRCP role set failed: role=%d", avrcp_role);
+            }
+            else
+            {
+                LOG_I("AVRCP role set : role=%d", avrcp_role);
+            }
         }
         break;
         case BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED:
@@ -361,6 +436,11 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             uint8_t local_vol = bt_interface_avrcp_abs_vol_2_local_vol(*volume, audio_server_get_max_volume());
             audio_server_set_private_volume(AUDIO_TYPE_BT_MUSIC, local_vol);
 #endif
+            /* relay to the earphone only when the volume comes from the phone */
+            if (bt_app_avrcp_is_phone_volume(*volume))
+            {
+                bt_app_avrcp_sync_volume_to_earphone(*volume);
+            }
         }
         break;
         case BT_NOTIFY_AVRCP_PLAY_STATUS:
