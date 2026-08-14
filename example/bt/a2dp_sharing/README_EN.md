@@ -5,12 +5,13 @@ Source code path: example/bt/a2dp_sharing
 {#Platform_music_src}
 ## Supported Platforms
 <!-- Which boards and chip platforms are supported -->
-+ eh-lb525
-+ eh-lb563
-+ eh-lb567
++ eh-lb525，only one earphone can be connected for audio forwarding, and call forwarding is not supported
++ eh-lb563，only one earphone can be connected for audio forwarding, and call forwarding is not supported
++ eh-lb567，only one earphone can be connected for audio forwarding, and call forwarding is not supported
++ eh-lb57x
 + eh-lb58x
 + sf32lb52-lcd series
-+ sf32lb56-lcd series
++ sf32lb56-lcd series，only one earphone can be connected for audio forwarding, and call forwarding is not supported
 + sf32lb58-lcd series
 
 
@@ -23,7 +24,7 @@ This example also supports both HFP HF and HFP AG roles. The device acts as an H
 ## Example Usage
 <!-- Instructions on how to use the example, such as connecting hardware pins to observe waveforms, compilation and flashing can reference related documentation.
 For rt_device examples, you also need to list the configuration switches used in this example, such as PWM example uses PWM1, which needs to be enabled in the onchip menu -->
-The example enables Bluetooth by default, and can accept a connection from a phone or actively initiate a connection to a headset. The phone side is used for A2DP sink/HFP HF connections, and the headset side is used for A2DP source/HFP AG connections.
+The example enables Bluetooth by default,bluetooth name is 'sifli_a2dp_transfor', and can accept a connection from a phone or actively initiate a connection to a headset. The phone side is used for A2DP sink/HFP HF connections, and the headset side is used for A2DP source/HFP AG connections.
 
 1. Search for Bluetooth devices:
 Use the command `a2dp_trans inquiry start` to search for headset-type Bluetooth devices. This command only reports devices with COD Major Class 0x000400 (Audio device).
