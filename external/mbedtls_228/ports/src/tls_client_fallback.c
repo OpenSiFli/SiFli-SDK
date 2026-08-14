@@ -101,11 +101,34 @@ static int mbedtls_client_import_peer_root_ca(MbedTLSSession *session)
     * 3) Import the last certificate in the received chain as a temporary trust
     *    anchor, then reconnect with peer verification again.
     *
+    * Why this works without a pre-shared root CA:
+    * - The TLS protocol requires the server to send its certificate chain in
+    *   the ServerCertificate handshake message regardless of whether the
+    *   client verifies it. Setting authmode=VERIFY_NONE only disables
+    *   verification, it does NOT stop mbedtls from receiving and storing the
+    *   peer certificate chain (as long as MBEDTLS_SSL_KEEP_PEER_CERTIFICATE is
+    *   enabled, which is forced on in ports/inc/tls_config.h).
+    * - We then extract the chain tail via mbedtls_ssl_get_peer_cert() and
+    *   parse it with mbedtls_x509_crt_parse_der() into session->cacert, so the
+    *   subsequent VERIFY_REQUIRED handshake can verify the server chain
+    *   against this freshly imported anchor.
+    *
     * Note:
     * - The last certificate in the received chain is NOT guaranteed to be the
-    *   real root CA. Many TLS servers/platforms do not send the root CA during
-    *   the handshake; therefore, the chain tail is often an intermediate CA.
+    *   real root CA. RFC 5246 allows servers to omit the root CA from the
+    *   handshake (the root is assumed to already exist in the client trust
+    *   store). Therefore the chain tail is often an intermediate CA, not the
+    *   real root CA. Many public servers and most CDNs behave this way.
     * - We intentionally take the chain tail as a pragmatic fallback anchor.
+    *   This is a TOFU (Trust On First Use) style compromise: it makes the
+    *   connection succeed, but it is weaker than shipping the real root CA,
+    *   because any party that can present a self-signed chain tail can be
+    *   accepted. Use only for debugging, internal testing, or when the CA
+    *   chain cannot be obtained in advance. Prefer
+    *   PKG_USING_MBEDTLS_EXTRA_CERT_DIRS for production deployments.
+    * - This is NOT related to the TLS CertificateRequest message (which is
+    *   used in mutual TLS to request a client certificate). It is also NOT
+    *   reading from an OS trust store or downloading a CA from a separate URL.
     */
 int mbedtls_client_connect_with_fallback(MbedTLSSession *session)
 {
