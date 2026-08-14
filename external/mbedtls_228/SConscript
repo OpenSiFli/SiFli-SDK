@@ -115,6 +115,34 @@ for key, value in KCONFIG_ROOT_CA_DICT.items():
         if os.path.exists(path) and os.path.isfile(path):
             ROOT_CA_FILE += [path]
 
+# Collect certificates from user-specified extra search directories.
+# Configured via PKG_USING_MBEDTLS_EXTRA_CERT_DIRS (Kconfig string).
+# Format: ';'-separated paths. Each may be absolute or relative to the
+# mbedtls_228 package root (cwd). Only PEM files whose first line starts
+# with "-----BEGIN CERTIFICATE" are accepted; other files are skipped.
+# Results are deduplicated together with the default/user cert lists below.
+extra_dirs_cfg = GetDepend('PKG_USING_MBEDTLS_EXTRA_CERT_DIRS')
+if extra_dirs_cfg:
+    for raw_entry in str(extra_dirs_cfg).split(';'):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        # Resolve relative paths against the mbedtls_228 package root.
+        if not os.path.isabs(entry):
+            entry = os.path.join(cwd, entry)
+        entry = os.path.normpath(entry)
+        if not os.path.isdir(entry):
+            print("[mbedtls] Warning: extra cert dir not found, skipped:", entry)
+            continue
+        for fname in os.listdir(entry):
+            fpath = os.path.join(entry, fname)
+            if not os.path.isfile(fpath):
+                continue
+            # Only consider PEM-style extensions; content is rechecked below.
+            if not fname.lower().endswith(('.pem', '.cer', '.crt')):
+                continue
+            ROOT_CA_FILE += [fpath]
+
 ROOT_CA_FILE = list(set(ROOT_CA_FILE))
 
 file_content = ""

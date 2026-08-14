@@ -57,6 +57,36 @@ RT-Thread online packages --->
 
 该证书文件中已经包含了大多数 CA 根证书，，参考后边的 **`添加新证书`** 章节。
 
+### 指定额外的证书搜索目录
+
+当证书不便于集中拷贝到 `certs` 目录时（例如多个板型共用同一份代码库、证书由其他子工程维护、或希望直接引用外部路径），可以通过 Kconfig 选项 `PKG_USING_MBEDTLS_EXTRA_CERT_DIRS` 指定额外的搜索目录。
+
+在 menuconfig 中找到该选项，填入分号 `;` 分隔的目录列表。每个条目可以是绝对路径，也可以是相对于 `mbedtls_228` 软件包根目录的相对路径：
+
+```
+RT-Thread online packages --->
+  security packages  --->
+        mbedtls lts version (latest)  --->
+        (certs/my_board;certs/customer_a) Extra CA cert search directories
+```
+
+构建时 SConscript 会遍历每个配置的目录，仅收集 `.pem` / `.cer` / `.crt` 后缀且首行以 `-----BEGIN CERTIFICATE` 开头的文件，与 `certs/default/` 和 `certs/` 的证书列表合并后去重。配置项留空时行为与未引入该选项前完全一致。
+
+详细规则与示例请参考 [`certs/README.md`](../certs/README.md)。
+
+### 动态证书回退（运行时获取对端证书）
+
+启用 Kconfig 选项 `PKG_USING_MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS` 后，`mbedtls_client_connect()` 会在编译期被别名替换为 `mbedtls_client_connect_with_fallback()`，上层调用方（如 webclient）无需任何改动即可获得以下能力：
+
+- 当正常握手因 `MBEDTLS_X509_BADCERT_NOT_TRUSTED` 失败时，自动以 `VERIFY_NONE` 重新握手一次，借此获取服务器在 TLS 握手阶段发送的证书链
+- 取证书链的链尾作为临时信任锚，再次以 `VERIFY_REQUIRED` 重新握手，从而通过验证
+
+**注意事项**：
+
+- 由于 RFC 5246 允许服务器在握手时省略根 CA，链尾证书往往只是中间 CA，并非真正的根 CA。该机制属于 TOFU（Trust On First Use）式的务实折中，安全性弱于预置真实根 CA
+- 仅适用于调试、内部测试或证书链暂时无法预先获取的场景，**不建议**用于对安全性要求高的生产环境
+- 实现细节与安全说明见 [`ports/src/tls_client_fallback.c`](../ports/src/tls_client_fallback.c)
+
 ## 初始化 TLS 会话
 
 ```c
