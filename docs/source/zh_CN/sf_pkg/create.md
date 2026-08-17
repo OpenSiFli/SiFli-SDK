@@ -12,10 +12,10 @@
 2. 登录后进入 **Profile**。
 3. 在个人中心申请访问令牌（Token），并妥善保存，后续用于 `sdk.py sf-pkg login` 命令。
 
-![登录网站](./assert/log_in_to_the_website.png)
-![进入个人中心](./assert/enter_profile.png)
-![创建令牌](./assert/create_token.png)
-![获取令牌](./assert/get_token.png)
+![登录网站](./assets/log_in_to_the_website.png)
+![进入个人中心](./assets/enter_profile.png)
+![创建令牌](./assets/create_token.png)
+![获取令牌](./assets/get_token.png)
 
 ```{note}
 每个用户在每台电脑只需登录一次，登录信息会加密保存在本地，可同时保存多个用户。
@@ -27,7 +27,7 @@
 sdk.py sf-pkg login -u <namespace> -t 获取的 token
 ```
 
-![登录成功](./assert/sdk-pkg-login.png)
+![登录成功](./assets/sdk-pkg-login.png)
 
 ```{warning}
 -u 参数可以在个人资料的命名空间处找到。
@@ -165,7 +165,7 @@ def requirements(self):
 sdk.py sf-pkg build --version 版本号
 ```
 
-![构建包](./assert/sf-pkg-build.png)
+![构建包](./assets/sf-pkg-build.png)
 
 > 版本号建议使用语义化版本号，如 `0.0.1`、`1.0.0` 等。
 
@@ -181,7 +181,7 @@ sdk.py sf-pkg upload --name 包名/版本号@命名空间
 sdk.py sf-pkg --user <namespace> upload --name 包名/版本号@命名空间
 ```
 
-![上传包](./assert/sf-pkg-upload.png)
+![上传包](./assets/sf-pkg-upload.png)
 
 命令格式说明：
 
@@ -213,7 +213,7 @@ sdk.py sf-pkg --user <namespace> upload --name 包名/版本号@命名空间
 
 上传成功后，可在服务器网站上看到已上传的包：
 
-![服务器上的包](./assert/pkg_in_website.png)
+![服务器上的包](./assets/pkg_in_website.png)
 
 
 ## 作为组织使用
@@ -231,10 +231,10 @@ sdk.py sf-pkg --user <namespace> upload --name 包名/版本号@命名空间
 3. 找到想要管理的组织，点击管理
 4. 在组织管理申请访问令牌（Token），并妥善保存，后续用于 `sdk.py sf-pkg login` 命令。
 
-![进入组织管理](./assert/enter_org.png)
-![管理组织](./assert/check_org.png)
-![创建token](./assert/create_org_token.png)
-![获取token](./assert/get_org_token.png)
+![进入组织管理](./assets/enter_org.png)
+![管理组织](./assets/check_org.png)
+![创建token](./assets/create_org_token.png)
+![获取token](./assets/get_org_token.png)
 
 ```{note}
 组织 token 和个人 token 可以同时保存在本地，可通过 `sf-pkg use` 或 `sf-pkg --user` 在不同命名空间间切换。

@@ -40,7 +40,7 @@ Due to manufacturing process variations, there is a deviation between the actual
 - **Accuracy Impact**: The accuracy of external voltage divider resistors directly affects the final measurement accuracy.
 - **Production Line Recommendation**: It is recommended to perform separate calibration of the voltage divider network on the customer's production line to eliminate resistor errors.
 
-![ADC Voltage Divider Resistor Diagram](./assert/adc_resistor.png)
+![ADC Voltage Divider Resistor Diagram](./assets/adc_resistor.png)
 
 ---
 
@@ -56,7 +56,7 @@ Different platforms handle `GPADC_VREF` differently:
 
 > **⚠️ Important Warning**: The ADC power supply must be connected to **AVDD33_ANA**. **Never** apply power directly to the GPADC_VREF pin.
 
-![ADC Analog Power Supply and Reference Voltage](./assert/adc_ana_ref.png)
+![ADC Analog Power Supply and Reference Voltage](./assets/adc_ana_ref.png)
 
 ---
 

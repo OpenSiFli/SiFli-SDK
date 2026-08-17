@@ -76,7 +76,7 @@ CONFIG_IPC_OWN_DEVICE_NAME="uart2"
 
 The relationship between the DUT, the tester, and the PC control host:
 
-```{figure} assert/bt_signaling_test.png
+```{figure} assets/bt_signaling_test.png
 :align: center
 
 BT signaling test topology
@@ -152,7 +152,7 @@ case BTS2MU_GAP_ENB_DUT_MODE_CFM:
 
 Non-signaling testing establishes no Bluetooth link with the DUT; the PC controls the DUT by sending HCI commands over UART, while controlling the tester over UART or GPIB:
 
-```{figure} assert/non_signaling_test.png
+```{figure} assets/non_signaling_test.png
 :align: center
 
 Non-signaling test topology
@@ -310,7 +310,7 @@ LOG_I("err_bit=%d total_bit=%d err_pkt=%d total_pkt=%d rssi=%d",
 
 All BLE RF testing is done by passing three HCI commands (`LE_Transmitter_Test` / `LE_Receiver_Test` / `LE_Test_End`) over the UART between the DUT and the tester. On the firmware side there is only this one path: switching the UART to HCI passthrough:
 
-```{figure} assert/ble_signaling_test.png
+```{figure} assets/ble_signaling_test.png
 :align: center
 
 BLE DTM test topology
@@ -555,7 +555,7 @@ The `pwr_lvl` field of the non-signaling TX command has the same semantics as th
 
 A quick reference of the HCI commands commonly used for BT/BLE RF testing:
 
-```{figure} assert/hci_cmd.png
+```{figure} assets/hci_cmd.png
 :align: center
 
 HCI command set

@@ -18,7 +18,7 @@
 
 BLE 没有官方定义的测试模式，所以需要串口和综测仪连接，一般 BLE 信令测试的拓扑如图 1-1。
 
-```{figure} assert/figure_1-1.jpg
+```{figure} assets/figure_1-1.jpg
 :align: center
 
 图 1-1
@@ -26,7 +26,7 @@ BLE 没有官方定义的测试模式，所以需要串口和综测仪连接，�
 
 BT 信令测试和 BLE 信令测试区别在于，BT 信令测试可以不需要串口连接综测仪，一般 BT 信令测试的拓扑如图 1-2。
 
-```{figure} assert/figure_1-2.jpg
+```{figure} assets/figure_1-2.jpg
 :align: center
 
 图 1-2
@@ -66,7 +66,7 @@ BT 信令测试和 BLE 信令测试区别在于，BT 信令测试可以不需要
 5) 在串口工具上，断开串口连接；
 6) 把连接到电脑上的 USB 线切换到综测仪上（即 DUT 的 UART1 通过 USB 线连接到综测仪）。
 
-```{figure} assert/figure_2-1.png
+```{figure} assets/figure_2-1.png
 :align: center
 
 图 2-1
@@ -79,7 +79,7 @@ BT 信令测试和 BLE 信令测试区别在于，BT 信令测试可以不需要
 3. 用串口工具（如 SiFli_Trace 工具）给 DUT 发送 Finsh 指令 `bt_cm dut`；
 4. 串口工具"字符"显示收到 `Write scan enable success` 的回复表示 DUT 成功进入测试模式，由于 User_bin 会有其他 log，具体回复如图 2-2；
 
-```{figure} assert/figure_2-2.png
+```{figure} assets/figure_2-2.png
 :align: center
 
 图 2-2
@@ -96,25 +96,25 @@ BT 信令测试和 BLE 信令测试区别在于，BT 信令测试可以不需要
 - 进入信令设置界面可以看到 Bluetooth signaling 默认为 OFF 的状态如图 3-3；
 - 此时点击【Bluetooth signaling】再点击按键区的【ON/OFF】打开测试，如图 3-4，仪器基本设置完成。
 
-```{figure} assert/figure_3-1.jpg
+```{figure} assets/figure_3-1.jpg
 :align: center
 
 图 3-1
 ```
 
-```{figure} assert/figure_3-2.jpg
+```{figure} assets/figure_3-2.jpg
 :align: center
 
 图 3-2
 ```
 
-```{figure} assert/figure_3-3.jpg
+```{figure} assets/figure_3-3.jpg
 :align: center
 
 图 3-3
 ```
 
-```{figure} assert/figure_3-4.jpg
+```{figure} assets/figure_3-4.jpg
 :align: center
 
 图 3-4
@@ -126,7 +126,7 @@ BLE 信令测试的拓扑如图 1-1，和综测仪需要通过串口交互。
 
 1) 在 Bluetooth signaling 界面点击【EUT Control】，出现对应界面后根据图 3-5 进行配置；选择 HW Interface 为 `USB to RS232 adapter`，选择 Baud Rate 为 `1000000`，Burst Type 选择 `Low Energy`，此时串口没有插入 Virtual COM port 为灰色；
 
-```{figure} assert/figure_3-5.jpg
+```{figure} assets/figure_3-5.jpg
 :align: center
 
 图 3-5
@@ -136,7 +136,7 @@ BLE 信令测试的拓扑如图 1-1，和综测仪需要通过串口交互。
 
 3) 仪器识别到串口后，点击左下方的【connection check】，3S 左右会有弹窗弹出，显示 `LE comm test passed` 点击 OK，则可进行自动或手动测试，若仪器连接了自动化软件则可以跑自动化测试。
 
-```{figure} assert/figure_3-6.jpg
+```{figure} assets/figure_3-6.jpg
 :align: center
 
 图 3-6
@@ -152,13 +152,13 @@ BT 信令测试的拓扑如图 1-2，BT 信令连接综测仪不需要使用串�
 
 3) 连接成功后可以进行自动化或手动测试，若仪器连接了自动化测试软件可以开始跑自动化。
 
-```{figure} assert/figure_3-7.jpg
+```{figure} assets/figure_3-7.jpg
 :align: center
 
 图 3-7
 ```
 
-```{figure} assert/figure_3-8.jpg
+```{figure} assets/figure_3-8.jpg
 :align: center
 
 图 3-8
@@ -172,7 +172,7 @@ BLE 和 BT 建立信令连接后，手动测试 TX 操作方式一致。
 
 1) DUT 和综测仪完成连接后，在 Bluetooth signaling 界面点击【Bluetooth 1 Multi Eval.】如图 4-1；
 
-```{figure} assert/figure_4-1.jpg
+```{figure} assets/figure_4-1.jpg
 :align: center
 
 图 4-1
@@ -184,19 +184,19 @@ BLE 和 BT 建立信令连接后，手动测试 TX 操作方式一致。
 
 4) 如果需要测试其他参数，如 BLE 测试需修改为 BLE 2M 或 BT 测试修改成 EDR 在屏幕右侧选择【Input Signal】，然后在仪器屏幕底部【Burst Type】选择对应选项即可，若需要修改包类包长等可以在 Bluetooth signaling 界面设置或选择【Input Signal】按钮后在屏幕下方选择对应选项，如图 4-4。
 
-```{figure} assert/figure_4-2.jpg
+```{figure} assets/figure_4-2.jpg
 :align: center
 
 图 4-2
 ```
 
-```{figure} assert/figure_4-3.jpg
+```{figure} assets/figure_4-3.jpg
 :align: center
 
 图 4-3
 ```
 
-```{figure} assert/figure_4-4.jpg
+```{figure} assets/figure_4-4.jpg
 :align: center
 
 图 4-4
@@ -218,31 +218,31 @@ BLE 和 BT 建立信令连接后，手动测试 TX 操作方式一致。如果�
 
 如需测试其他频点或其他类型的接收灵敏度，在对应项中修改即可。
 
-```{figure} assert/figure_5-1.jpg
+```{figure} assets/figure_5-1.jpg
 :align: center
 
 图 5-1
 ```
 
-```{figure} assert/figure_5-2.jpg
+```{figure} assets/figure_5-2.jpg
 :align: center
 
 图 5-2
 ```
 
-```{figure} assert/figure_5-3.jpg
+```{figure} assets/figure_5-3.jpg
 :align: center
 
 图 5-3
 ```
 
-```{figure} assert/figure_5-4.jpg
+```{figure} assets/figure_5-4.jpg
 :align: center
 
 图 5-4
 ```
 
-```{figure} assert/figure_5-5.jpg
+```{figure} assets/figure_5-5.jpg
 :align: center
 
 图 5-5

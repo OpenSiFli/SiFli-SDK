@@ -16,7 +16,7 @@ The main purpose of this document is to help engineers carry out individual Blue
 
 The test topology is shown in Figure 1-1: the DUT connects to the PC over serial, and the RF connects to the comprehensive tester via a coaxial cable.
 
-```{figure} assert/figure_11-1.png
+```{figure} assets/figure_11-1.png
 :align: center
 
 Figure 1-1
@@ -66,7 +66,7 @@ In the [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) tool, as shown i
 - Select the COM port corresponding to the UART1 port and set the baud rate to 1000000
 - Click Connect. Once connected, the status indicator turns green
 
-```{figure} assert/figure_12-1.png
+```{figure} assets/figure_12-1.png
 :align: center
 
 Figure 3-1
@@ -74,7 +74,7 @@ Figure 3-1
 
 - Set the channel, PHY type, etc. needed for the test under Frequency, Data Length, payload, and PHY, as indicated by the red box in Figure 3-2:
 
-```{figure} assert/figure_12-2.png
+```{figure} assets/figure_12-2.png
 :align: center
 
 Figure 3-2
@@ -82,7 +82,7 @@ Figure 3-2
 
 - Click Start TX; when Start TX changes to Stop TX and the indicator on the right turns green, transmission has started successfully. As shown in Figure 3-3, after transmission starts you can see the corresponding parameters on the tester.
 
-```{figure} assert/figure_12-3.png
+```{figure} assets/figure_12-3.png
 :align: center
 
 Figure 3-3
@@ -90,7 +90,7 @@ Figure 3-3
 
 - To test other channels, PHY types, etc., first click Stop TX; when the indicator turns gray, it indicates disconnection, as shown in Figure 3-4:
 
-```{figure} assert/figure_12-4.png
+```{figure} assets/figure_12-4.png
 :align: center
 
 Figure 3-4
@@ -103,7 +103,7 @@ Figure 3-4
 - Select RX and set the Frequency and PHY type
 - Click Start RX; when Start RX changes to Stop RX and the indicator turns green, the device has entered the corresponding RX state, as shown in Figure 3-5.
 
-```{figure} assert/figure_12-5.png
+```{figure} assets/figure_12-5.png
 :align: center
 
 Figure 3-5
@@ -111,7 +111,7 @@ Figure 3-5
 
 - To test other channels, first click Stop RX; the indicator on the right turns gray, stopping the current RX test state, and then change the settings, as shown in Figure 3-6.
 
-```{figure} assert/figure_12-6.png
+```{figure} assets/figure_12-6.png
 :align: center
 
 Figure 3-6
@@ -124,7 +124,7 @@ Figure 3-6
 - In the [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) tool, select the COM port corresponding to UART3 and set the baud rate to 1000000
 - Click Connect; the indicator turns green, as shown in Figure 4-1.
 
-```{figure} assert/figure_12-7.png
+```{figure} assets/figure_12-7.png
 :align: center
 
 Figure 4-1
@@ -133,7 +133,7 @@ Figure 4-1
 - Set the corresponding frequency and power level
 - Click Start TX; the indicator on the right turns green, as shown in Figure 4-2. After about 4 s, you can read the corresponding test values on the tester. (To test at another frequency, first click Stop TX, then change the frequency and power level; after changing them, click Start TX again.)
 
-```{figure} assert/figure_12-8.png
+```{figure} assets/figure_12-8.png
 :align: center
 
 Figure 4-2
@@ -185,7 +185,7 @@ In the [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) tool, as shown i
 - Select BLE non-signaling and the COM port corresponding to UART1, and set the baud rate to 1000000
 - Click Connect. Once connected, the status indicator turns green
 
-```{figure} assert/figure_13-1.jpg
+```{figure} assets/figure_13-1.jpg
 :align: center
 
 Figure 3-1
@@ -195,7 +195,7 @@ Figure 3-1
 - Click Start TX; when the gray dot to the right of the button turns green, transmission has started successfully, and you can see the corresponding parameters on the tester, as shown in Figure 3-2
 - To test other channels, PHY types, etc., first click Stop TX, change the settings, and then click Start TX.
 
-```{figure} assert/figure_13-2.png
+```{figure} assets/figure_13-2.png
 :align: center
 
 Figure 3-2
@@ -211,7 +211,7 @@ In the [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) tool, as shown i
 
 > **Note:** To switch directly from a BLE non-signaling test to a BT non-signaling test, just click "Stop TX" first and then switch the test mode to BT non-signaling; the serial connection does not need to be re-established.
 
-```{figure} assert/figure_13-3.png
+```{figure} assets/figure_13-3.png
 :align: center
 
 Figure 3-3
@@ -221,7 +221,7 @@ Figure 3-3
 - Click Start TX; if the gray dot to the right of the button turns green, transmission has started successfully, and you can then see the corresponding metrics on the tester, as shown in Figure 3-4
 - To test other channels, packet types, etc., first click Stop TX, change the settings, and then click Start TX.
 
-```{figure} assert/figure_13-4.png
+```{figure} assets/figure_13-4.png
 :align: center
 
 Figure 3-4
@@ -233,7 +233,7 @@ Figure 3-4
 - Set the Frequency, type, etc.
 - Click Start RX; if the gray dot to the right of the button turns green, the device has entered the corresponding RX state, as shown in Figure 3-5.
 
-```{figure} assert/figure_13-5.png
+```{figure} assets/figure_13-5.png
 :align: center
 
 Figure 3-5
@@ -258,7 +258,7 @@ Test condition: Cable loss = 0.3 dB
 | 3 | 2.79 | 2.80 |
 | 0 | 0.26 | 0.27 |
 
-```{figure} assert/figure_23-2.png
+```{figure} assets/figure_23-2.png
 :align: center
 
 Figure 3-6 Measured BLE TX power curve
@@ -277,7 +277,7 @@ Figure 3-6 Measured BLE TX power curve
 
 > EDR does not support the 8 dBm level.
 
-```{figure} assert/figure_24-2.png
+```{figure} assets/figure_24-2.png
 :align: center
 
 Figure 3-7 Measured Classic BT TX power curve
@@ -289,7 +289,7 @@ Figure 3-7 Measured Classic BT TX power curve
 - Set the corresponding frequency and power level
 - Click Start TX; when the gray dot to the right of the button turns green, transmission has started successfully, and you can read the corresponding metrics on the tester, as shown in Figure 4-1.
 
-```{figure} assert/figure_13-6.png
+```{figure} assets/figure_13-6.png
 :align: center
 
 Figure 4-1
@@ -311,7 +311,7 @@ The DUT can be tested either conducted via a coaxial cable or radiated (coupled)
 
 After completing the SiFli_RfTool-side TX configuration in §3-§4, the DUT is transmitting an RF signal with the configured parameters (using LB56X / BT non-signaling / ch0 / DH1 / PRBS9 / 0 dBm as an example, as in Figure 5-1).
 
-```{figure} assert/figure_14-2.png
+```{figure} assets/figure_14-2.png
 :align: center
 
 Figure 5-1 Example SiFli_RfTool-side TX configuration
@@ -319,7 +319,7 @@ Figure 5-1 Example SiFli_RfTool-side TX configuration
 
 Configure the tester side for non-signaling reception accordingly: on the Multi Evaluation Configuration screen, set the "Scenario" option to "StandAlone (Non Signaling)" and keep the receive parameters — channel, Packet type, Payload, etc. — consistent with the SiFli_RfTool side, as in Figure 5-2.
 
-```{figure} assert/figure_14-1.jpg
+```{figure} assets/figure_14-1.jpg
 :align: center
 
 Figure 5-2 Tester Non-Signaling configuration screen
@@ -346,7 +346,7 @@ Switch the CMW500 to the RX Measurement screen; the parameters are shown in Figu
 | Pattern Type | PRBS9 |
 | **Repeat Select** | **Single shot** (key: this option must be set for correct statistics) |
 
-```{figure} assert/figure_26-1.png
+```{figure} assets/figure_26-1.png
 :align: center
 
 Figure 5-3 CMW500 BLE Rx instrument configuration
@@ -361,7 +361,7 @@ Steps:
 5. Compute PER: **PER = (n − 1500) / 1500 × 100%** (n is the number of packets the DUT actually received)
 6. Also check the RSSI value in the tool (the theoretical value is about -67 dBm, corresponding to the CMW Tx Level)
 
-```{figure} assert/figure_26-3.png
+```{figure} assets/figure_26-3.png
 :align: center
 
 Figure 5-4 BLE Rx test results display (RSSI, packet count)
@@ -371,7 +371,7 @@ Figure 5-4 BLE Rx test results display (RSSI, packet count)
 
 Classic BT has no standard SIG DTM mode, so the CMW500 transmits by loading a pre-built waveform file through the GPRF Generator. Waveform files include `DH1_UAP00.wv` and the like; the instrument configuration is shown in Figure 5-5.
 
-```{figure} assert/figure_27-1.png
+```{figure} assets/figure_27-1.png
 :align: center
 
 Figure 5-5 GPRF Generator instrument configuration (Classic BT waveform transmission)
@@ -384,7 +384,7 @@ Steps:
 3. Toggle the GPRF Generator OFF → ON on the CMW500 to start transmission, and wait about 5 seconds
 4. Click **Stop RX** in SiFli_RfTool; the tool shows RSSI, packets received, packet errors, packet error rate, bits received, bit errors, and bit error rate (see Figure 5-6)
 
-```{figure} assert/figure_27-2.png
+```{figure} assets/figure_27-2.png
 :align: center
 
 Figure 5-6 Classic BT Rx test results
@@ -396,7 +396,7 @@ Figure 5-6 Classic BT Rx test results
 
 If you don't have a comprehensive tester, you can use a spectrum analyzer to observe some of the DUT's metrics. Set the spectrum analyzer's center frequency to the frequency transmitted by [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md); connect the DUT to the spectrum analyzer via a coaxial cable, and you can see the DUT's output waveform, as in Figure 6-1.
 
-```{figure} assert/figure_15-1.png
+```{figure} assets/figure_15-1.png
 :align: center
 
 Figure 6-1

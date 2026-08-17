@@ -76,7 +76,7 @@ CONFIG_IPC_OWN_DEVICE_NAME="uart2"
 
 DUT、综测仪、PC 控制端三者关系：
 
-```{figure} assert/bt_signaling_test.png
+```{figure} assets/bt_signaling_test.png
 :align: center
 
 BT 信令测试拓扑
@@ -152,7 +152,7 @@ case BTS2MU_GAP_ENB_DUT_MODE_CFM:
 
 非信令测试不与 DUT 建立蓝牙链路，PC 通过串口发 HCI 命令控制 DUT，同时通过串口或 GPIB 控制综测仪：
 
-```{figure} assert/non_signaling_test.png
+```{figure} assets/non_signaling_test.png
 :align: center
 
 非信令测试拓扑
@@ -310,7 +310,7 @@ LOG_I("err_bit=%d total_bit=%d err_pkt=%d total_pkt=%d rssi=%d",
 
 所有 BLE RF 测试通过 DUT 与综测仪之间的串口传 3 条 HCI 命令(`LE_Transmitter_Test` / `LE_Receiver_Test` / `LE_Test_End`)完成。固件侧只有这一条路径，即 UART 切 HCI 透传：
 
-```{figure} assert/ble_signaling_test.png
+```{figure} assets/ble_signaling_test.png
 :align: center
 
 BLE DTM 测试拓扑
@@ -554,7 +554,7 @@ Kconfig 字段都是 **`int` 类型，直接填 dBm 整数**(参考 [customer/bo
 
 下面是常用的 BT/BLE RF 测试相关 HCI 命令一览：
 
-```{figure} assert/hci_cmd.png
+```{figure} assets/hci_cmd.png
 :align: center
 
 HCI 命令集
