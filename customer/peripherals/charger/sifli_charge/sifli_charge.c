@@ -54,8 +54,8 @@ rt_err_t sifli_charge_control(rt_charge_device_t *charge, int cmd, void *args)
     case RT_CHARGE_GET_STATUS:
     {
         uint8_t *status = (uint8_t *)args;
-        *status = HAL_PMU_ChgReadStatus(&sifli_charge_handle, PMU_CHG_IRQ_VBUS_RDY);
-
+        rt_charge_hw_state_t hw_state = HAL_PMU_ChgGetHwState(&sifli_charge_handle);
+        *status = (hw_state & (RT_CHARGE_HW_PRECC | RT_CHARGE_HW_ST_CC | RT_CHARGE_HW_ST_CV)) ? 1 : 0;
     }
     break;
 
