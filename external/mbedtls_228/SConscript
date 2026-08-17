@@ -121,9 +121,9 @@ for key, value in KCONFIG_ROOT_CA_DICT.items():
 # mbedtls_228 package root (cwd). Only PEM files whose first line starts
 # with "-----BEGIN CERTIFICATE" are accepted; other files are skipped.
 # Results are deduplicated together with the default/user cert lists below.
-extra_dirs_cfg = GetDepend('PKG_USING_MBEDTLS_EXTRA_CERT_DIRS')
+extra_dirs_cfg = GetConfigValue('PKG_USING_MBEDTLS_EXTRA_CERT_DIRS').replace('"', '')
 if extra_dirs_cfg:
-    for raw_entry in str(extra_dirs_cfg).split(';'):
+    for raw_entry in extra_dirs_cfg.split(';'):
         entry = raw_entry.strip()
         if not entry:
             continue

@@ -17,7 +17,6 @@
 
     **DER 格式证书** 是二进制文件类型。
 
-
 ## 额外证书搜索目录（可选）
 
 当证书不便于集中拷贝到 `certs` 目录时（例如多个板型共用同一份代码库、证书由其他子工程维护、或希望直接引用外部路径），可以通过 Kconfig 选项 `PKG_USING_MBEDTLS_EXTRA_CERT_DIRS` 指定额外的搜索目录。
@@ -53,7 +52,7 @@ certs/my_board;certs/customer_a
 ### 收集规则
 
 - 构建时 SConscript 会遍历每个配置的目录，仅收集 `.pem` / `.cer` / `.crt` 后缀文件
-- 读取每个文件首行，必须以 `-----BEGIN CERTIFICATE` 开头才被采纳，其他文件会被静默跳过
+- 读取每个文件首行，必须以 `-----BEGIN CERTIFICATE` 开头才被采纳；后缀不符的文件被跳过，内容不符的文件会打印警告后跳过
 - 与 `certs/default/`（受 `PKG_USING_MBEDTLS_USE_ALL_CERTS` 控制）和 `certs/`（受 `PKG_USING_MBEDTLS_USER_CERTS` 控制）的证书列表合并后去重
 - 配置项留空时行为与未引入该选项前完全一致（向后兼容）
 

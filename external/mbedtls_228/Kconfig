@@ -29,7 +29,7 @@ config PKG_USING_MBEDTLS_EXTRA_CERT_DIRS
         mbedtls_228 package root (the folder that contains this Kconfig).
         Only PEM files whose first line starts with
         "-----BEGIN CERTIFICATE" will be collected; other files are
-        silently skipped. Collected certificates are deduplicated with
+        skipped. Collected certificates are deduplicated with
         the built-in default/user certificate lists.
 
         Examples:
