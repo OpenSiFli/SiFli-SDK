@@ -67,18 +67,15 @@ HAL_RETM_BSS_SECT(bsp_psram_info, static bsp_psram_info_t bsp_psram_info[BSP_PSR
 HAL_RAM_RET_CODE_SECT(bsp_psram_init_info, int32_t bsp_psram_init_info(void))
 {
     uint8_t pkgid;
-    int32_t r;
     bsp_psram_info_t *info;
 
     if (sizeof(pkgid) < (EFUSE_PKGID_SIZE >> 3))
     {
         return -1;
     }
-    r = HAL_EFUSE_Read2(EFUSE_PKGID_OFFSET, &pkgid, EFUSE_PKGID_SIZE);
-    if (r < EFUSE_PKGID_SIZE)
-    {
-        return -2;
-    }
+
+    pkgid = GET_REG_VAL2(hwp_hpsys_cfg->IDR, HPSYS_CFG_IDR_PID);
+
 #ifdef BSP_USING_PSRAM1
     info = &bsp_psram_info[BSP_PSRAM1_INDEX];
     info->type = GET_REG_VAL2(pkgid, PKGID_MPI1_PSRAM_TYPE);
@@ -90,6 +87,7 @@ HAL_RAM_RET_CODE_SECT(bsp_psram_init_info, int32_t bsp_psram_init_info(void))
     info->type = GET_REG_VAL2(pkgid, PKGID_MPI2_PSRAM_TYPE);
     info->valid = true;
 #endif /* BSP_USING_PSRAM2 */
+
     return 0;
 }
 
