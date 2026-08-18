@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-In signaling test mode, once the device under test (DUT) has connected to the comprehensive tester, you can run automated tests by controlling the tester with a software tool (for example, using R&S®CMWrun to control a CMW tester), or measure the DUT's metrics by operating the tester manually. This document focuses on how the DUT establishes a signaling connection with the tester and performs TX and RX testing, to help hardware engineers carry out Bluetooth signaling testing on the SF32LB55x/58x/56x/52x series chips, using the CMW500 tester as an example.
+In signaling test mode, once the device under test (DUT) has connected to the comprehensive tester, you can run automated tests by controlling the tester with a software tool (for example, using R&S®CMWrun to control a CMW tester), or measure the DUT's metrics by operating the tester manually. This document focuses on how the DUT establishes a signaling connection with the tester and performs TX and RX testing, to help hardware engineers carry out Bluetooth signaling testing on the SF32LB55x/58x/56x/52x/57x series chips, using the CMW500 tester as an example.
 
 The following resources are required for the test:
 
@@ -48,12 +48,12 @@ The UART1 pins differ between models; the mapping is shown in Table 1:
 
 **Table 1**
 
-| Pin name | SF32LB551 | SF32LB555 & 557 | SF32LB56xU | SF32LB56xV | SF32LB58x | SF32LB52x |
+| Pin name | SF32LB551 | SF32LB555 & 557 | SF32LB56xU | SF32LB56xV | SF32LB58x | SF32LB52x / SF32LB57x |
 |---------|-----------|-----------------|------------|------------|-----------|-----------|
 | UART1 TX | PA17 | PA34 | PA17 | PA34 | PA32 | PA19 |
 | UART1 RX | PA18 | PA30 | PA18 | PA30 | PA31 | PA18 |
 
-> **Note:** SF32LB52x denotes all 52-series parts, SF32LB58x denotes all 58-series parts, SF32LB56xU is the QFN package (e.g. SF32LB563), and SF32LB56xV is the BGA package (e.g. SF32LB567). The pins above are the default pin configuration; in practice, use the specific pins configured for your project.
+> **Note:** SF32LB52x denotes all 52-series parts, SF32LB57x denotes all 57-series parts, SF32LB58x denotes all 58-series parts, SF32LB56xU is the QFN package (e.g. SF32LB563), and SF32LB56xV is the BGA package (e.g. SF32LB567). The pins above are the default pin configuration; in practice, use the specific pins configured for your project.
 
 **Environment setup**: Connect the DUT's UART1 to the PC, used to send the command to enter test mode; connect the RF to the tester via a coaxial cable to test RF performance. (For BLE signaling testing, the serial port must be connected to the tester after entering test mode.)
 

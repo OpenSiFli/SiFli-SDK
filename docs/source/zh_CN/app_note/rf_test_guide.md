@@ -508,6 +508,7 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 | SF32LB567 | RF 调试串口 | PA34、PA30 | UART1: TX(PA34) / RX(PA30) | |
 | SF32LB52x | RF 调试串口 | PA19、PA18 | UART1: TX(PA19) / RX(PA18) | 与软件烧录口共用引脚 |
 | SF32LB58x | RF 调试串口 | PA31、PA32 | UART1: TX(PA31) / RX(PA32) | |
+| SF32LB57x | RF 调试串口 | PA19、PA18 | UART1: TX(PA19) / RX(PA18) | |
 
 > SF32LB55X 系列由于历史原因，**单载波测试**需切到 UART3。其他芯片所有 RF 测试统一在 UART1。
 
@@ -538,7 +539,7 @@ DUT 发 `bt_cm uart_dut` → PC 上打开 SiFli_RfTool → 选串口和波特率
 (Top) → SiFli SDK configuration → Board Config → Select BT RF TX power
 ```
 
-Kconfig 字段都是 **`int` 类型，直接填 dBm 整数**(参考 [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103))。新平台(52X/56X/58X)取值范围 0~13 dBm;老平台 BLE 取值范围 -10~10 dBm。
+Kconfig 字段都是 **`int` 类型，直接填 dBm 整数**(参考 [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103))。新平台(52X/56X/58X/57X)取值范围 0~13 dBm;老平台 BLE 取值范围 -10~10 dBm。
 
 | 选项 | 含义 |
 |---|---|

@@ -155,12 +155,12 @@
 
 不同芯片型号的管脚有所差异，具体对应关系如下：
 
-| 引脚名称 | SF32LB56xU | SF32LB56xV | SF32LB58x | SF32LB52x |
+| 引脚名称 | SF32LB56xU | SF32LB56xV | SF32LB58x | SF32LB52x / SF32LB57x |
 |---------|------------|------------|-----------|-----------|
 | UART1 TX | PA17 | PA34 | PA32 | PA19 |
 | UART1 RX | PA18 | PA30 | PA31 | PA18 |
 
-> **注**：SF32LB52x 为所有 52 系列，SF32LB58x 表示所有 58 系列，SF32LB56xU 为 QFN 封装（如 SF32LB563），SF32LB56xV 为 BGA 封装（如 SF32LB567）。
+> **注**：SF32LB52x 为所有 52 系列，SF32LB57x 为所有 57 系列，SF32LB58x 表示所有 58 系列，SF32LB56xU 为 QFN 封装（如 SF32LB563），SF32LB56xV 为 BGA 封装（如 SF32LB567）。
 
 **环境搭建**：DUT 的 UART1 连接到电脑上，RF 通过同轴线连接到综测仪上，可参考图 1-1。
 

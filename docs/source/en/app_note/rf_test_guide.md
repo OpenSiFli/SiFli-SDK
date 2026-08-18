@@ -509,6 +509,7 @@ Default RF debug UART and pin mapping for each chip (default baud rate **1000000
 | SF32LB567 | RF debug UART | PA34, PA30 | UART1: TX(PA34) / RX(PA30) | |
 | SF32LB52x | RF debug UART | PA19, PA18 | UART1: TX(PA19) / RX(PA18) | Shares pins with the firmware download port |
 | SF32LB58x | RF debug UART | PA31, PA32 | UART1: TX(PA31) / RX(PA32) | |
+| SF32LB57x | RF debug UART | PA19, PA18 | UART1: TX(PA19) / RX(PA18) | |
 
 > For historical reasons, on the SF32LB55X series the **single-carrier test** must use UART3. On all other chips, all RF testing uses UART1.
 
@@ -539,7 +540,7 @@ The power levels the chip PA can output stably (other dBm values are internally 
 (Top) → SiFli SDK configuration → Board Config → Select BT RF TX power
 ```
 
-The Kconfig fields are all **`int` type — enter the dBm value directly as an integer** (see [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103)). On the newer platforms (52X/56X/58X) the range is 0–13 dBm; on the older platforms, BLE ranges from -10 to 10 dBm.
+The Kconfig fields are all **`int` type — enter the dBm value directly as an integer** (see [customer/boards/Kconfig:103+](D:/OpenSiFli/SiFli-SDK/customer/boards/Kconfig#L103)). On the newer platforms (52X/56X/58X/57X) the range is 0–13 dBm; on the older platforms, BLE ranges from -10 to 10 dBm.
 
 | Option | Meaning |
 |---|---|
