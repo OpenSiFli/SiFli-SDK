@@ -158,8 +158,10 @@ typedef enum
 
 typedef struct
 {
+#ifdef PIN_SAVE_PINMUX_INSTANCE_SIZE
     uint32_t pad_regs[PIN_SAVE_PINMUX_INSTANCE_SIZE];
     uint32_t ext_regs[PIN_SAVE_PINMUX_EXT_INSTANCE_SIZE];
+#endif /* PIN_SAVE_PINMUX_INSTANCE_SIZE */
 } PIN_BackupBufTypeDef;
 
 
