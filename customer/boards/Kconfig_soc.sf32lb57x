@@ -13,6 +13,9 @@ config SOC_SF32LB575UC7N6
 config SOC_SF32LB575YBBN6
     bool
     select SOC_PACKAGE_QFN80
+config SOC_SF32LB57EYBBN6    
+    bool
+    select SOC_PACKAGE_QFN80
 config SOC_SF32LB577UDNN6
     bool
     select SOC_PACKAGE_QFN68

@@ -490,7 +490,7 @@ menu "On-chip Peripherals"
                 bool "Enable I2S2 for Codec"
                 default n
             config BSP_ENABLE_I2S3
-                depends on SOC_SF32LB58X || SOC_SF32LB56X	    
+                depends on SOC_SF32LB58X || SOC_SF32LB56X
                 bool "Enable I2S3 for Codec"
                 default n
             config BSP_I2S_CLK_XTAL 
@@ -537,7 +537,7 @@ menu "On-chip Peripherals"
             menuconfig BSP_ENABLE_MPI1
                 bool "MPI Controller 1 Enable"
                 depends on BF0_HCPU && !BF0_ACPU
-                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                 default y if SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
                 default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6 || SOC_SF32LB577UDNN6
                 default y if SOC_SF32LB57GYD7N6
@@ -550,7 +550,7 @@ menu "On-chip Peripherals"
                         prompt "MPI Mode"
                         # Must select a PSRAM MPI mode for PSRAM, the exact PSRAM MPI mode is then 
                         # decided by BSP_PSRAM1_PKG_TYPEx_MPI_MODE in Kconfig_soc.sf32lb57x.common
-                        default BSP_MPI1_MODE_5 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                        default BSP_MPI1_MODE_5 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                         default BSP_MPI1_MODE_3 if SOC_SF32LB577VD776 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
                         default BSP_MPI1_MODE_3 if SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
                         default BSP_MPI1_MODE_0 if SOC_SF32LB579V6EN6
@@ -633,7 +633,7 @@ menu "On-chip Peripherals"
                     endif
                     config BSP_QSPI1_MEM_SIZE
                         int "MPI1 Mem Size (MB)"
-                        default 4  if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                        default 4  if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                         default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6 || SOC_SF32LB577UDNN6
                         default 8  if SOC_SF32LB579V6EN6 || SOC_SF32LB575UCNN6 || SOC_SF32LB575UC7N6
                         default 8
@@ -642,7 +642,7 @@ menu "On-chip Peripherals"
             menuconfig BSP_ENABLE_MPI2
                 bool "MPI Controller 2 Enable"
                 depends on BF0_HCPU && !BF0_ACPU
-                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6
+                default y if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                 default y if SOC_SF32LB575UC7N6
                 default y if SOC_SF32LB577VD776 || SOC_SF32LB579V6EN6
                 default y if SOC_SF32LB57GYD7N6
@@ -655,7 +655,7 @@ menu "On-chip Peripherals"
                     choice
                         prompt "MPI Mode"
                         default BSP_MPI2_MODE_0 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776
-                        default BSP_MPI2_MODE_5 if SOC_SF32LB575YBBN6
+                        default BSP_MPI2_MODE_5 if SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                         default BSP_MPI2_MODE_0 if SOC_SF32LB577VD776 
                         default BSP_MPI2_MODE_3 if SOC_SF32LB579V6EN6
                         default BSP_MPI2_MODE_0
@@ -753,7 +753,7 @@ menu "On-chip Peripherals"
                     config BSP_QSPI2_MEM_SIZE
                         int "MPI2 Mem Size (MB)"
                         default 16 if SOC_SF32LB573UB7N6 || SOC_SF32LB573UB776 || SOC_SF32LB575UC7N6
-                        default 4  if SOC_SF32LB575YBBN6
+                        default 4  if SOC_SF32LB575YBBN6 || SOC_SF32LB57EYBBN6
                         default 16 if SOC_SF32LB577VD776 || SOC_SF32LB57GYD7N6 
                         default 32 if SOC_SF32LB579V6EN6
                         default 1  if SOC_SF32LB57BUN3N6
