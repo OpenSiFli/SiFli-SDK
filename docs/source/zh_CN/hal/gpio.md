@@ -6,6 +6,7 @@ HPSYS和LPSYS各有一个GPIO模块，支持的特性有:
 - 输入模式， 可检测输入电平触发中断，支持高电平、低电平、上升沿、下降沿和双沿检测
 
 HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模块为 `hwp_gpio2` (或称为GPIO_B). 
+** 注意：** SF32LB57X系列LPSYS的硬件没有GPIO模块，不支持GPIO操作.
 
 ```{note}
 如果需要设置GPIO管脚为其他功能，或者更改上下拉驱动能力，请参考pinmux的设置[PINMUX](#hal-pinmux)

@@ -4,7 +4,7 @@
 I2C HAL provides basic APIs for accessing I2C peripheral registers.
 Main features include:
  - Master mode only (I2C Master).
- - Supports up to 6 instances, with 3 on HCPU and 3 on LCPU.
+ - Supports up to 6 instances, with 3 on HCPU and 3 on LCPU. (For the SF32LB57X series, LCPU does not support I2C; all 4 I2C instances are on HCPU)
  - 10-bit and 7-bit address support.
  - DMA/interrupt mode support
  - Memory mode access

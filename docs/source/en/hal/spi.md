@@ -1,6 +1,6 @@
 # SPI
 
-Supports 4 SPI interfaces, with 2 on HCPU (SPI1, SPI2) and 2 on LCPU (SPI3, SPI4).
+Supports 4 SPI interfaces, with 2 on HCPU (SPI1, SPI2) and 2 on LCPU (SPI3, SPI4). (The SF32LB57X series has only 2 SPI interfaces, both on HCPU)
 
 ## Key Features
  - Provides receive-only, transmit-only, and simultaneous transmit-receive modes, with each mode supporting polling, interrupt, and DMA methods

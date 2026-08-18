@@ -7,6 +7,7 @@ HPSYS and LPSYS each have one GPIO module with supported features:
 - Input mode, can detect input level to trigger interrupt, supports high level, low level, rising edge, falling edge and both edge detection
 
 HPSYS hardware GPIO module is `hwp_gpio1` (or called GPIO_A), LPSYS hardware GPIO module is `hwp_gpio2` (or called GPIO_B).
+**Note:** The SF32LB57X series has no GPIO module in LPSYS hardware and does not support GPIO operations.
 
 ```{note}
 If you need to set GPIO pins for other functions, or change pull-up/pull-down drive capability, please refer to pinmux settings [PINMUX](#hal-pinmux)

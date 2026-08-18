@@ -1,7 +1,7 @@
 
 # I2S
 
-I2S HAL provides basic APIs for accessing I2S peripheral registers. SF32LB55X has two instances I2S1/I2S2 (both in HPSYS), SF32LB58X has three instances I2S1/I2S2/I2S3 (I2S1 and I2S2 in HPSYS, I2S3 in LPSYS). 
+I2S HAL provides basic APIs for accessing I2S peripheral registers. SF32LB57X and SF32LB55X have two instances I2S1/I2S2 (both in HPSYS), SF32LB58X has three instances I2S1/I2S2/I2S3 (I2S1 and I2S2 in HPSYS, I2S3 in LPSYS). 
 For I2S1, it only supports RX functionality,
 For I2S2/I2S3, it supports both RX and TX. When using I2S2 RX, its clock comes from its TX, so if using I2S2 as RX, its TX also needs to be enabled to provide the clock.
 SF32LB56X has only one full-featured I2S1, equivalent to I2S2 of SF32LB58X, supporting both RX and TX.

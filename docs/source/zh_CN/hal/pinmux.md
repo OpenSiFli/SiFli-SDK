@@ -2,8 +2,8 @@
 
 HAL PINMUX提供抽象的软件接口操作硬件PINMUX模块，设置pin的功能和上下拉属性等。
 芯片有两个PINMUX实例，HPSYS域的PINMUX1(`hwp_pinmux1`)和LPSYS域的PINMUX2(`hwp_pinmux2`)。
-PINMUX1的pin列表见 `pin_pad_hcpu`, pin可用功能参考 `pin_pad_func_hcpu` ，类似的，PINMUX2的pin列表见 `pin_pad_lcpu` ， pin功能定义
-见 `pin_pad_func_lcpu` 。
+所有pin统一定义在枚举类型 `pin_pad` 中，不再区分HCPU和LCPU；pin可用的功能统一定义在枚举类型 `pin_function` 中。
+SF32LB57X系列的专用管脚支持功能可查阅总表 `pad_fsel_func_tbls`。`pin_function` 同时包含任意引脚功能和专用管脚功能：枚举值在16~255之间的为可任意映射的功能（matrix function，起始值为 `PIN_MATRIX_FUNC_START = 16`），枚举值小于16的为专用管脚功能。
 
 pinmux的功能从56x的芯片开始(不包括55x,58x)任意一个GPIO都可以作为当前系统任意一个I2C/UART/PWM的IO脚。
 
