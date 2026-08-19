@@ -1,33 +1,36 @@
 # 调试和日志
 
-## 1. 硬件接口
-  SF32FB55X采用SWD作为调试接口。用户可以通过配置，来切换选择HCPU或者LCPU。
+## 1. 硬件接口说明
+### SWD 接口
 
-  系统上电默认选择HCPU，如果想要调试LCPU，可以调用SDK的工具 _$SDK_ROOT/tools/segger/jlink_lcpu_a0.bat_ ，将SWD切换到LCPU。
+:::{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
+**SWD 调试接口**：默认连接到 HCPU。
+**切换至 LCPU**：执行 `$SDK_ROOT/tools/segger/jlink_lcpu_series.bat`（这里的jlink_lcpu_series中的series指的是芯片系列，例如55x是a0，58x是pro）或在 J-Link 窗口中输入指令，见后文。
+**切换至 HCPU**：执行 `$SDK_ROOT/tools/segger/jlink_hcpu_series.bat`（这里的jlink_hcpu_series中的series指的是芯片系列，例如55x是a0，58x是pro）。
+**注意事项**：由于 SWD 接口通常复用 PB 端口，调试时需确保 LPSYS 处于 active 或 light sleep 状态；LPSYS 从 Standby 唤醒后，SWD 会自动切换回默认的 HCPU。此外，J-Link 发送 reset 命令并不会改变当前 SWD 连接的 CPU 核心。
+:::
+### 日志接口
 
-  同样，如果目前SWD连接LCPU，可以调用SDK的工具 _$SDK_ROOT/tools/segger/jlink_hcpu_a0.bat_ ，将SWD切换到HCPU。
-  
-  ```{note} 
-    1. 由于SWD使用PB IO，当使用SWD进行调试时，需确保LPSYS处于active或者light sleep状态，无论当前SWD连接至HCPU还是LCPU<br>
-    2. Jlink发送reset命令不会改变SWD当前连接的CPU<br>
-    3. LPSYS从Standby唤醒后， SWD会切换回默认的HCPU<br>
-  ```
-### LCPU日志接口
-  系统ROM在初始化的时候，使用属于LCPU的UART3作为console接口，波特率为1000000bps，用来打印日志或者输入命令。建议这个接口保留给LCPU作为日志接口。<br>
-  
-### HCPU日志接口
-  HCPU的日志接口可以选择UART1/2或者SWD，如果需要选择属于LCPU的UART3/4/5,则需要确保使用时，LCPU属于唤醒状态。
-  
+:::{only} SF32LB52X
+**UART 日志接口**：HCPU 常见板级默认配置从 UART1 输出日志。波特率通常为 1000000 bps。
+:::
+:::{only} SF32LB56X or SF32LB58X or SF32LB57X
+**UART 日志接口**：HCPU 常见板级默认配置从 UART1 输出日志。日志接口可以改为选择 UART1/2 或 SWD，如果需要选择属于LCPU的UART3/4/5，则需要确保使用时，LCPU属于唤醒状态。LCPU 常见板级默认配置从 UART4 输出。波特率通常为 1000000 bps，用来打印日志或者输入命令。建议这个接口保留给LCPU作为日志接口。
+:::
+:::{only} SF32LB55X
+**UART 日志接口**：HCPU 常见板级默认配置从 UART1 输出日志。日志接口可以改为选择 UART1/2 或 SWD，如果需要选择属于LCPU的UART3/4/5，则需要确保使用时，LCPU属于唤醒状态。LCPU 常见板级默认配置从 UART3 输出。波特率通常为 1000000 bps，用来打印日志或者输入命令。建议这个接口保留给LCPU作为日志接口。
+:::
+
 ## 2. 调试方法
   这里主要讲一下常见的Assert或者HardFault的分析方法，以及死机解决办法，这里调试器都是使用的Jlink。
   
 ### 设置断点
 当Jlink连接到HCPU/LCPU的时候，通常系统已经初始化完成，如果需要调试初始化，例如冷启动或者standby睡眠唤醒, 需要将系统停留在尽早的地方。<br>
-建议用户可以修改系统初始化程序， 
+建议用户可以修改系统初始化程序，以下路径中的`sf32lb5xx`表示芯片系列，以58为例可以理解为`sf32lb58x`代入。
  - HCPU<br>
-   _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_hcpu.S_ <br>
+   _$SDK_ROOT/drivers/cmsis/sf32lb5xx/Templates/arm/startup_bf0_hcpu.S_ <br>
  - LCPU<br>
-   _$SDK_ROOT/drivers/cmsis/sf32lb55x/Templates/arm/startup_bf0_lcpu.S_ <br>
+   _$SDK_ROOT/drivers/cmsis/sf32lb5xx/Templates/arm/startup_bf0_lcpu.S_ <br>
 在Reset_Handler中的第一条指令去掉注释 ';', 变为 <br>
   B  . <br>
 这样CPU启动，就会停留在第一条指令，当Jlink连接成功后，可以改变PC寄存器 (+2), 设置所需断点，从而调试初始化过程。
@@ -40,7 +43,7 @@
 ```
 
 ### Assert/HardFault 错误分析
-当错误发生的时候，如果开发板有连接SWD到Jlink工具，可以使用 _$SDK_ROOT/tools/crash_dump_analyser/script/save_ram_a0.bat_ 保存RAM，EPIC寄存器和PSRAM的内容到当前路径，有助于分析死机的原因
+当错误发生的时候，如果开发板有连接SWD到Jlink工具，可以使用 _$SDK_ROOT/tools/crash_dump_analyser/script/save_ram_5xx.bat 保存RAM（`save_ram_5xx.bat`中的`5xx`表示芯片系列，以58为例可以理解为`58x`代入），EPIC寄存器和PSRAM的内容到当前路径，有助于分析死机的原因
 ```{note} 
 需要将jlink的路径加入Windows环境变量PATH， 如 _C:/Program Files (x86)/SEGGER/JLink_v672b_ ，以后可以通过Jlink加载RAM回复死机现场。
 ```
@@ -93,7 +96,6 @@ tmalck   (NULL)   0000 0
 alarmsvc (NULL)   0000 0
 alm_mgr  (NULL)   0000 0
 ulog loc (NULL)   0000 0
-i2c_bus_ (NULL)   0000 0
 i2c_bus_ (NULL)   0000 0
 i2c_bus_ (NULL)   0000 0
 i2c_bus_ (NULL)   0000 0
@@ -206,7 +208,7 @@ UART口的pinmux配置此处不做赘述，详见 [](../hal/uart.md)
 2. 将RT-Thread的默认console口指定到segger这个rt-device上
 ![]../../assets/jlink_trace_config_step2.png)
 
-3. 通过Ozone连接到板子，如果已经指定了ELF文件Ozone将自动寻找RTT_Ctrlb，否则需要自己指定
+3. 通过Ozone连接到板子，如果已经指定了ELF文件Ozone将自动寻找RTT_CtrlBlock，否则需要自己指定
 ![](../../assets/jlink_trace_config_step3.png)
 
 ## 4. 使用总线监视器
