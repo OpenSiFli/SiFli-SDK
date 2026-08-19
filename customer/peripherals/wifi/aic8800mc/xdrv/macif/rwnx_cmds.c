@@ -25,6 +25,7 @@
 #include "aicwf_txrxif.h"
 #include "osal_service.h"
 #include "osal_debug.h"
+#include "fhostif_cmd.h"
 //#define CREATE_TRACE_POINTS
 #include <string.h>
 
@@ -157,20 +158,26 @@ static int cmd_mgr_queue(struct rwnx_cmd_mgr *cmd_mgr, struct rwnx_cmd *cmd)
     {
         int ret;
         rtos_mutex_unlock(cmd_mgr->mutex);
-        ret = rtos_semaphore_wait(cmd->sema, CMD_TX_TIMEOUT);
-        if (ret < 0)
+
+        if (cmd->id == CUSTOM_MSG_SET_MAC_ADDR_REQ)
         {
-            DBG_MACIF_ERR("cmd_mgr sema wait err, ret=%d\n", ret);
-            if (cmd->reqid != DBG_MEM_READ_CFM)
-                aicwf_sdio_fault_handler(p_rwnx_hw->sdiodev);
-//            list_del(&cmd->list);
-//            cmd_mgr->queue_sz--;
+            /*FW does not respond to CFM; the message has been successfully sent and is considered completed.*/
+            cmd->result = 0;
         }
-        else if (ret == 1)
+        else
         {
-            DBG_MACIF_ERR("cmd_mgr sema wait timeout\n");
-//            list_del(&cmd->list);
-//            cmd_mgr->queue_sz--;
+            ret = rtos_semaphore_wait(cmd->sema, CMD_TX_TIMEOUT);
+
+            if (ret < 0)
+            {
+                DBG_MACIF_ERR("cmd_mgr sema wait err, ret=%d\n", ret);
+                if (cmd->reqid != DBG_MEM_READ_CFM)
+                    aicwf_sdio_fault_handler(p_rwnx_hw->sdiodev);
+            }
+            else if (ret == 1)
+            {
+                DBG_MACIF_ERR("cmd_mgr sema wait timeout\n");
+            }
         }
         rtos_mutex_lock(cmd_mgr->mutex, -1);
         list_del(&cmd->list);

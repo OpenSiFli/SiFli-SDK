@@ -1510,7 +1510,7 @@ int rwnx_send_fhcustmsg_set_mac_addr_req(struct rwnx_hw *rwnx_hw, uint8_t *mac_a
     rtos_memcpy(req->mac_addr, mac_addr, 6);
 
     /* Send the message to LMAC FW */
-    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_GET_MAC_ADDR_CFM, NULL);
+    return rwnx_host_send_msg(rwnx_hw, req, 0, CUSTOM_MSG_GET_MAC_ADDR_CFM, NULL);
 }
 
 int rwnx_send_fhcustmsg_get_mac_addr_req(struct rwnx_hw *rwnx_hw, struct fhcustmsg_mac_addr_cfm *cfm)
