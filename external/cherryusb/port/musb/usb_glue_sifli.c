@@ -6,6 +6,7 @@
 #include "usbd_core.h"
 #include "usbh_core.h"
 #include "usb_musb_reg.h"
+#include "usb_musb_dma.h"
 
 #undef USB_POWER_SOFTCONN
 #undef USB_DEVCTL_FSDEV
@@ -229,3 +230,24 @@ void USBC_IRQHandler(void)
     rt_interrupt_leave();
 #endif /* BSP_USING_RTTHREAD */
 }
+
+#ifdef CONFIG_USB_MUSB_DMA
+/* DMA bypasses the CPU cache, so the buffer must be cleaned before a TX DMA
+ * reads it and invalidated after an RX DMA writes it. Buffers outside the
+ * dcached PSRAM window need no cache maintenance. */
+void musb_dma_clean_dcache(uint8_t busid, const void *addr, uint32_t len)
+{
+    (void)busid;
+    if (IS_DCACHED_RAM((uint32_t)addr)) {
+        mpu_dcache_clean((void *)addr, len);
+    }
+}
+
+void musb_dma_invalidate_dcache(uint8_t busid, void *addr, uint32_t len)
+{
+    (void)busid;
+    if (IS_DCACHED_RAM((uint32_t)addr)) {
+        SCB_InvalidateDCache_by_Addr(addr, (int32_t)len);
+    }
+}
+#endif /* CONFIG_USB_MUSB_DMA */

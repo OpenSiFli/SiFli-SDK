@@ -83,6 +83,11 @@ if PKG_USING_CHERRYUSB
                 bool "pusb2"
         endchoice
 
+        config PKG_CHERRYUSB_DEVICE_MUSB_SIFLI_DMA
+            bool "Enable MUSB internal DMA engine (device)"
+            default y
+            depends on PKG_CHERRYUSB_DEVICE_MUSB_SIFLI
+
         config PKG_CHERRYUSB_DEVICE_CDC_ACM
             bool
             prompt "Enable usb cdc acm device"
@@ -336,6 +341,11 @@ if PKG_USING_CHERRYUSB
                 bool "rp2040"
         endchoice
 
+        config PKG_CHERRYUSB_HOST_MUSB_SIFLI_DMA
+            bool "Enable MUSB internal DMA engine (host)"
+            default y
+            depends on PKG_CHERRYUSB_HOST_MUSB_SIFLI
+
         config PKG_CHERRYUSB_HOST_CDC_ACM
             bool
             prompt "Enable usb cdc acm driver"
@@ -510,6 +520,11 @@ if PKG_USING_CHERRYUSB
                 depends on PKG_CHERRYUSB_HOST_CDC_ECM || PKG_CHERRYUSB_HOST_CDC_RNDIS || PKG_CHERRYUSB_HOST_CDC_NCM || PKG_CHERRYUSB_HOST_ASIX || PKG_CHERRYUSB_HOST_RTL8152
         endmenu
     endif
+
+    config CONFIG_USB_MUSB_DMA_MIN_LEN
+        int "MUSB DMA minimum transfer length (bytes)"
+        default 32
+        depends on PKG_CHERRYUSB_DEVICE_MUSB_SIFLI_DMA || PKG_CHERRYUSB_HOST_MUSB_SIFLI_DMA
 
     config PKG_CHERRYUSB_PATH
         string
