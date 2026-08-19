@@ -348,9 +348,6 @@ void musb_control_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb 
     HWREGB(USB_TXHUBPORT_BASE(chidx)) = 0;
 #endif
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
 #ifdef CONFIG_USB_MUSB_SIFLI
     HWREGB(USB_TXINTERVAL_BASE(chidx)) = (urb->hport->speed == USB_SPEED_HIGH) ? 8 : 4;
 #endif
@@ -364,10 +361,6 @@ int musb_bulk_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
 {
     uint8_t old_ep_index;
     uint8_t speed = USB_TXTYPE1_SPEED_FULL;
-
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
 
     old_ep_index = musb_get_active_ep(bus);
     musb_set_active_ep(bus, chidx);
@@ -445,10 +438,6 @@ int musb_intr_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
 {
     uint8_t old_ep_index;
     uint8_t speed = USB_TXTYPE1_SPEED_FULL;
-
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
 
     old_ep_index = musb_get_active_ep(bus);
     musb_set_active_ep(bus, chidx);
@@ -1159,9 +1148,6 @@ void handle_ep0(struct usbh_bus *bus)
             if (urb->transfer_buffer_length) {
                 if (urb->setup->bmRequestType & 0x80) {
                     pipe->ep0_state = USB_EP0_STATE_IN_DATA;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_REQPKT;
                 } else {
                     pipe->ep0_state = USB_EP0_STATE_OUT_DATA;
@@ -1170,9 +1156,6 @@ void handle_ep0(struct usbh_bus *bus)
                         size = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
                     }
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                     musb_write_packet(bus, 0, urb->transfer_buffer, size);
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_TXRDY;
 
@@ -1182,9 +1165,6 @@ void handle_ep0(struct usbh_bus *bus)
                 }
             } else {
                 pipe->ep0_state = USB_EP0_STATE_IN_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_REQPKT | USB_CSRL0_STATUS);
             }
             break;
@@ -1199,14 +1179,8 @@ void handle_ep0(struct usbh_bus *bus)
 
                 if ((size < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) || (urb->transfer_buffer_length == 0)) {
                     pipe->ep0_state = USB_EP0_STATE_OUT_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_TXRDY | USB_CSRL0_STATUS);
                 } else {
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_REQPKT;
                 }
             }
@@ -1218,9 +1192,6 @@ void handle_ep0(struct usbh_bus *bus)
                     size = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
                 }
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                 musb_write_packet(bus, 0, urb->transfer_buffer, size);
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_TXRDY;
 
@@ -1229,9 +1200,6 @@ void handle_ep0(struct usbh_bus *bus)
                 urb->actual_length += size;
             } else {
                 pipe->ep0_state = USB_EP0_STATE_IN_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_REQPKT | USB_CSRL0_STATUS);
             }
             break;

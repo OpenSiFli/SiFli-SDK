@@ -130,6 +130,10 @@ void usb_hc_low_level_init(struct usbh_bus *bus)
     HAL_Delay(1);
     hwp_usbc->swcntl3 = 0x1;                    //set utmi_en for USB2.0
     hwp_usbc->usbcfg = hwp_usbc->usbcfg | 0x40; //enable usb PLL.
+
+    /* delay 2ms to ensure utmi active */
+    HAL_Delay(2);
+
     hwp_usbc->dpbrxdisl = 0xff;
     hwp_usbc->dpbtxdisl = 0xff;
     hwp_usbc->utmicfg25 = hwp_usbc->utmicfg25 | 0xc0;
@@ -203,6 +207,9 @@ void musb_reset_post(void)
     hwp_usbc->utmicfg21 = 0x2f;
     hwp_usbc->swcntl2 = 0x40;
     hwp_usbc->utmicfg0 = 0x00;
+
+    /* disble calibration to work around hw bug causing ZLP transfer fail with calibration enabled */
+    hwp_usbc->swcntl1 = 0x40;
 #endif
 }
 #endif
@@ -218,7 +225,7 @@ void USBC_IRQHandler(void)
 #ifdef PKG_CHERRYUSB_HOST
     USBH_IRQHandler(0);
 #endif
-#ifdef BSP_USING_RTTHREAD    
+#ifdef BSP_USING_RTTHREAD
     rt_interrupt_leave();
-#endif /* BSP_USING_RTTHREAD */    
+#endif /* BSP_USING_RTTHREAD */
 }
