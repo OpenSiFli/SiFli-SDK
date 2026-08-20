@@ -44,122 +44,9 @@ static FTC_Manager cache_manager;
 static FTC_CMapCache cmap_cache;
 static FTC_ImageCache image_cache;
 
-/*
- * Rotating scratch buffers holding the glyph bitmaps handed to the renderer.
- *
- * The bitmap of FTC_ImageCache_Lookup belongs to the cache and may be evicted
- * by any later lookup, while draw_letter blits it through the EPIC GPU
- * asynchronously, so the pointer handed out has to stay valid - and hold the
- * box_w bytes/row layout LVGL expects for A8 - after the callback returns.
- *
- * A slot that was handed out is only recycled once
- * draw_ctx->wait_for_finish() reports the GPU idle.
- */
-#define GLYPH_SNAPSHOT_SLOTS 4
-
-typedef struct
-{
-    uint8_t  *buf;
-    uint32_t  buf_size;
-    bool      handed_out; /* returned to the renderer since the last GPU sync */
-} glyph_snapshot_t;
-
-static glyph_snapshot_t glyph_snapshots[GLYPH_SNAPSHOT_SLOTS];
-static uint8_t glyph_snapshot_next;
-
 /* FTC has no locking of its own, so a flush requested from another thread
  * must run on the rendering thread, between two lookups. */
 static volatile uint8_t g_ftc_flush_pending;
-
-#ifdef DRV_EPIC_NEW_API
-extern void *ft_smalloc(size_t nbytes);
-extern void ft_sfree(void *ptr);
-#else
-static void glyph_snapshot_sync_gpu(void)
-{
-    lv_disp_t *disp = _lv_refr_get_disp_refreshing();
-    int i;
-
-    /* Text can also be rendered outside a display refresh (e.g. canvas);
-     * the GPU queue is global, so any display's wait hook serves. */
-    if (!disp) disp = lv_disp_get_default();
-
-    if (disp && disp->driver && disp->driver->draw_ctx &&
-            disp->driver->draw_ctx->wait_for_finish)
-    {
-        disp->driver->draw_ctx->wait_for_finish(disp->driver->draw_ctx);
-    }
-
-    for (i = 0; i < GLYPH_SNAPSHOT_SLOTS; i++)
-    {
-        glyph_snapshots[i].handed_out = false;
-    }
-}
-#endif
-
-static const uint8_t *glyph_snapshot_store(const FT_Bitmap *bitmap)
-{
-    uint32_t need = (uint32_t)bitmap->width * bitmap->rows;
-    glyph_snapshot_t *s = &glyph_snapshots[glyph_snapshot_next];
-    uint8_t *dst_buf;
-
-    if (need == 0) return NULL;
-
-#ifdef DRV_EPIC_NEW_API
-    /*
-     * The render list holds the glyph pointer until the frame is blitted, so
-     * a buffer cannot be reused within a frame. Give every glyph its own ft
-     * heap block: ft_sfree defers the free while the pipeline still
-     * references it (ref-counted through MEM_ASYN_FONT).
-     */
-    dst_buf = ft_smalloc(need);
-    if (!dst_buf) return NULL;
-    if (s->buf) ft_sfree(s->buf);
-    s->buf = dst_buf;
-    s->buf_size = need;
-#else
-    if (s->handed_out)
-    {
-        glyph_snapshot_sync_gpu();
-    }
-
-    if (s->buf_size < need)
-    {
-        uint8_t *nbuf = rt_realloc(s->buf, need);
-        if (!nbuf) return NULL;
-        s->buf = nbuf;
-        s->buf_size = need;
-    }
-    dst_buf = s->buf;
-#endif
-
-    /* FT gray bitmaps may have pitch != width, and a negative pitch for a
-     * bottom-up layout; LVGL A8 rows are exactly box_w bytes. */
-    {
-        const uint8_t *src = bitmap->buffer;
-        int pitch = bitmap->pitch;
-        uint8_t *dst = dst_buf;
-        unsigned int row;
-
-        if (pitch < 0)
-        {
-            src += (unsigned int)(-pitch) * (bitmap->rows - 1);
-        }
-
-        for (row = 0; row < bitmap->rows; row++)
-        {
-            memcpy(dst, src, bitmap->width);
-            dst += bitmap->width;
-            src += pitch;
-        }
-    }
-
-#ifndef DRV_EPIC_NEW_API
-    s->handed_out = true;
-#endif
-    glyph_snapshot_next = (glyph_snapshot_next + 1) % GLYPH_SNAPSHOT_SLOTS;
-    return dst_buf;
-}
 
 /* Unicode whitespace codepoints that legitimately render to an empty bitmap
  * while still advancing the pen. */
@@ -698,6 +585,10 @@ static FT_BitmapGlyph freetype_lookup_glyph(lv_freetype_font_fmt_dsc_t *dsc, uin
 
 static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next)
 {
+    lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)(font->user_data);
+    if (!dsc) return false;
+    dsc->buf = NULL;
+
     if (unicode_letter < 0x20)
     {
         dsc_out->adv_w = 0;
@@ -711,11 +602,7 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
     }
 
     FT_BitmapGlyph glyph_bitmap;
-    lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)(font->user_data);
-
     (void)unicode_letter_next;
-
-    if (!dsc) return false;
 
     /* Deferred reset_ft, see g_ftc_flush_pending. FTC_Manager_Reset also
      * drops the pinned faces, so a font file replaced on disk is picked up. */
@@ -775,6 +662,13 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
         return false;
     }
 
+    if (dsc_out->box_w && dsc_out->box_h)
+    {
+        RT_ASSERT(glyph_bitmap->bitmap.pitch == (FT_Int)glyph_bitmap->bitmap.width);
+    }
+
+    /* Reuse the FTC bitmap in get_glyph_bitmap_cache_cb(). */
+    dsc->buf = (uint8_t *)glyph_bitmap->bitmap.buffer;
     return true;                /*true: glyph found; false: glyph was not found*/
 }
 
@@ -785,7 +679,6 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
     static const uint8_t *get_glyph_bitmap_cache_cb(const struct _lv_font_t *font, lv_font_glyph_dsc_t *desc, uint32_t unicode_letter, uint8_t *param)
 #endif
 {
-    FT_BitmapGlyph glyph_bitmap;
     lv_freetype_font_fmt_dsc_t *dsc = (lv_freetype_font_fmt_dsc_t *)(font->user_data);
 
 #if 0//def FREETYPE_EXTERN_CACHE_AGAIN
@@ -797,14 +690,7 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
 
     if (!dsc) return NULL;
 
-    /* Cache-hot re-lookup: the matching get_glyph_dsc ran moments ago. */
-    glyph_bitmap = freetype_lookup_glyph(dsc, unicode_letter);
-    if (!glyph_bitmap)
-    {
-        return NULL;
-    }
-
-    return glyph_snapshot_store(&glyph_bitmap->bitmap);
+    return (const uint8_t *)dsc->buf;
 }
 #else
 static bool get_glyph_dsc_cb(const lv_font_t *font, lv_font_glyph_dsc_t *dsc_out, uint32_t unicode_letter, uint32_t unicode_letter_next)
