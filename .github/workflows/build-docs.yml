@@ -64,6 +64,7 @@ jobs:
 
           APP_ID=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".app_id // empty")
           SEARCH_API_KEY=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".search_api_key // empty")
+          AGENT_ID=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".agent_id // empty")
 
           if [ -z "$APP_ID" ] || [ -z "$SEARCH_API_KEY" ]; then
             echo "::warning::Algolia config not found for version '${VERSION}', falling back to default"
@@ -73,6 +74,7 @@ jobs:
 
           echo "ALGOLIA_DOCSEARCH_APP_ID=${APP_ID}" >> $GITHUB_ENV
           echo "ALGOLIA_DOCSEARCH_SEARCH_API_KEY=${SEARCH_API_KEY}" >> $GITHUB_ENV
+          echo "ALGOLIA_DOCSEARCH_AGENT_ID=${AGENT_ID}" >> $GITHUB_ENV
 
       - name: Build zh_CN documentation for ${{ matrix.variant }}
         working-directory: ./docs
@@ -80,6 +82,7 @@ jobs:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
           ALGOLIA_DOCSEARCH_APP_ID: ${{ env.ALGOLIA_DOCSEARCH_APP_ID }}
           ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ env.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
+          ALGOLIA_DOCSEARCH_AGENT_ID: ${{ env.ALGOLIA_DOCSEARCH_AGENT_ID }}
         run: python generate_docs.py --lang=zh_CN ${{ matrix.variant }}
       
       - name: Build en documentation for ${{ matrix.variant }}

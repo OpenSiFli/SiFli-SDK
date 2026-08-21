@@ -7,6 +7,7 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import json
 import os
 
 # -- Project information -----------------------------------------------------
@@ -37,6 +38,11 @@ else:
 docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
 docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
 docsearch_index_name = f"sdk_{version}_{chip}"
+docsearch_agent_id = os.environ.get('ALGOLIA_DOCSEARCH_AGENT_ID', '')
+
+# DocSearch is initialized from ``static/js/algolia-agent-chat.js`` with the
+# v5 JavaScript bundle.  Both the search modal and the optional Sidepanel use
+# this page's single version-and-chip index as an Agent Studio allowlist.
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -53,7 +59,6 @@ extensions = ["breathe",
               "sphinx_design",
               "sphinx_selective_exclude.eager_only",
               "sphinx_selective_exclude.search_auto_exclude",
-              "sphinx_docsearch",
               ]
 
 templates_path = ['_templates']
@@ -68,7 +73,7 @@ numfig = False
 # html_theme = 'sphinx_rtd_theme'
 # html_theme = 'sphinx_book_theme'
 html_theme = 'shibuya'
-html_static_path = ['../_static']
+html_static_path = ['../_static', 'static']
 
 html_context = {
     "versions": [
@@ -117,6 +122,50 @@ html_js_files = [
     'js/feedback.js',
     'js/lightbox.js',
 ]
+
+
+def setup(app):
+    """Configure the v5 DocSearch modal and optional Agent Studio Sidepanel."""
+    docsearch_config = {
+        "appId": docsearch_app_id,
+        "apiKey": docsearch_api_key,
+        # This is an Agent Studio v5 request allowlist.  Each generated page
+        # contains exactly its version-and-chip documentation index.
+        "indices": [docsearch_index_name],
+        "searchParameters": {
+            docsearch_index_name: {},
+        },
+        "agentId": docsearch_agent_id,
+        "variant": "floating",
+        "side": "right",
+        # Agent Studio has no suggested-question index configured for this site.
+        # Enabling it makes both AI entry points request a missing index.
+        "suggestedQuestions": False,
+        "translations": {
+            "header": {
+                "title": "AI 问答",
+            },
+            "newConversationScreen": {
+                "titleText": "有什么可以帮你？",
+                "introductionText": "我会基于当前芯片和版本的 SDK 文档回答问题。",
+            },
+            "promptForm": {
+                "promptPlaceholderText": "请输入关于当前文档的问题...",
+            },
+        },
+        "buttonTranslations": {
+            "buttonAriaLabel": "Open Ask AI Sidepanel",
+        },
+    }
+    docsearch_config_json = json.dumps(docsearch_config, ensure_ascii=False).replace(
+        "</", "<\\/"
+    )
+    app.add_js_file(
+        None,
+        body=f"window.algoliaAgentChatConfig = {docsearch_config_json};",
+        priority=790,
+    )
+    app.add_js_file("js/algolia-agent-chat.js", priority=800, loading_method="defer")
 
 # -- Options for Breathe ----------------------------------------------------
 
@@ -220,4 +269,4 @@ if "SF32LB52X" in tags:
 
 
 exclude_patterns += ["example/52x_mode_test/*", "example/gpadc/*", "example/micropython/*",
-                     "example/hal_example/*", "**/get-started-keil.md"] 
+                     "example/hal_example/*", "**/get-started-keil.md"]
