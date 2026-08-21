@@ -90,6 +90,44 @@ ALIGN(4) uint8_t data_raw[0x300000] L2_RET_BSS_SECT(data2);
 ALIGN(4) uint8_t anyka_output[0x100000] L2_RET_BSS_SECT(data2);
 L2_RET_BSS_SECT_END
 
+#define AUDIO_PSRAM_HEAP_SIZE   (0x200000)
+L2_NON_RET_BSS_SECT_BEGIN(frambuf)
+L2_NON_RET_BSS_SECT(frambuf, ALIGN(4) static uint8_t audio_psram_heap[AUDIO_PSRAM_HEAP_SIZE]);
+L2_NON_RET_BSS_SECT_END
+static struct rt_memheap audio_psram_memheap;
+
+static int audio_psram_memheap_init(void)
+{
+    rt_memheap_init(&audio_psram_memheap, "audio_psram",
+                    (void *)audio_psram_heap, sizeof(audio_psram_heap));
+    return 0;
+}
+INIT_PREV_EXPORT(audio_psram_memheap_init);
+
+void *audio_mem_malloc(uint32_t size)
+{
+    void *ptr = rt_memheap_alloc(&audio_psram_memheap, size);
+    RT_ASSERT(ptr);
+    return ptr;
+}
+
+void audio_mem_free(void *ptr)
+{
+    if (ptr)
+        rt_memheap_free(ptr);
+}
+
+void *audio_mem_calloc(uint32_t count, uint32_t size)
+{
+    void *ptr = rt_memheap_calloc(&audio_psram_memheap, count, size);
+    RT_ASSERT(ptr);
+    return ptr;
+}
+
+void *audio_mem_realloc(void *mem_address, unsigned int newsize)
+{
+    return rt_memheap_realloc(&audio_psram_memheap, mem_address, newsize);
+}
 
 /** Mount file system if using NAND, as BT NVDS is save in file*/
 #if defined(RT_USING_DFS)
