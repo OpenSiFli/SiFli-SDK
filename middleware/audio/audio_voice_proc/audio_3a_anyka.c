@@ -852,8 +852,6 @@ static inline void process_data(audio_3a_t *thiz)
     arg.result = result;
     arg.ssl_data_in = fifo;
     arg.ssl_data_in_len = fifo_size;
-    arg.ssl_data_out = thiz->ssl_data_out;
-    arg.ssl_data_out_len = thiz->ssl_data_out_len;
     acpu_run_task(ACPU_TASK_audio_3a_uplink, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
     rt_ringbuffer_put(thiz->anyka_output, result, ANYKA_FRAME_SIZE);
@@ -869,8 +867,6 @@ static inline void process_data(audio_3a_t *thiz)
         arg.result = result;
         arg.ssl_data_in = fifo;
         arg.ssl_data_in_len = thiz->ssl_data_in_len;
-        arg.ssl_data_out = thiz->ssl_data_out;
-        arg.ssl_data_out_len = thiz->ssl_data_out_len;
         error_code = 1;
         acpu_run_task(ACPU_TASK_audio_3a_uplink_ssl, &arg, sizeof(arg), &error_code);
         RT_ASSERT(error_code == 0);
