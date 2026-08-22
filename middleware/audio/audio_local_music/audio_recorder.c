@@ -193,9 +193,6 @@ static int audio_record_callback(audio_server_callback_cmt_t cmd, void *callback
     {
         audio_server_coming_data_t *p = (audio_server_coming_data_t *)reserved;
 
-        /*audio data alg process, gain dc ramp nr*/
-        auido_gain_pcm((int16_t *)p->data, p->data_len, 4); //pcm data left shift 4 bits
-
         /*put data to pcm ringbuf*/
         if (rt_ringbuffer_space_len(rec->pcm_rbf) > p->data_len)
         {
