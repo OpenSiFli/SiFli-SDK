@@ -460,7 +460,7 @@ static void record(uint8_t argc, char **argv)
 
     while (rt_thread_find("recorder"))
     {
-        LOG_I("wait thread %s exit", recorder);
+        LOG_I("wait recorder thread exit");
         rt_thread_mdelay(100);
     }
     rt_event_delete(rec_event);
