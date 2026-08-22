@@ -15,6 +15,7 @@ exclude:
     - yml
     - yaml
     - html
+    - js
     - rst
     - conf
     - cfg
@@ -90,6 +91,5 @@ extensions:
     - "install.ps1"
     ignore_license: true
     ignore_copyright: true
-
 
 
