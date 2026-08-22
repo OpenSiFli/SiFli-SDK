@@ -54,6 +54,11 @@
         toolName.indexOf('algolia_search_index_') === 0);
   }
 
+  function isResolvedToolOutput(eventType) {
+    return eventType === 'tool-output-available' ||
+      eventType === 'tool-output-error';
+  }
+
   function isAgentCompletionRequest(input) {
     var url = typeof input === 'string' ? input : input && input.url;
     return typeof url === 'string' &&
@@ -65,7 +70,8 @@
     // Algolia search events.  DocSearch v5 then mistakes that completed server
     // tool call for a client tool call and sends a second, invalid request after
     // the answer.  Mark only the documented server search tools as provider
-    // executed while their SSE events pass through to DocSearch.
+    // executed on their resolved-output SSE events before they reach
+    // DocSearch.  Incremental tool-input events do not allow this field.
     if (!agentId || window.__sifliAgentSearchToolShimInstalled ||
         typeof window.fetch !== 'function' ||
         typeof window.TransformStream !== 'function') {
@@ -100,7 +106,7 @@
               serverSearchCallIds[toolCallId] = true;
             }
             if (toolCallId && serverSearchCallIds[toolCallId] &&
-                event.type && event.type.indexOf('tool-') === 0) {
+                isResolvedToolOutput(event.type)) {
               event.providerExecuted = true;
               return 'data: ' + JSON.stringify(event) + suffix;
             }
