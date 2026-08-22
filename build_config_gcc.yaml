@@ -500,7 +500,7 @@ common_projects:
   - path: example/multimedia/agif/lvgl_v9/project
     boards: *devkit_lcd_boards
 
-  - path: example/multimedia/audio/4pdm/project
+  - path: example/multimedia/audio/4pdm/project/hcpu
     boards:
       - sf32lb56-lcd_a128r12n1
 
