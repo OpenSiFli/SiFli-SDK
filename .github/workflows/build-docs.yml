@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        variant: [52x, 56x, 58x, 55x]
+        variant: [52x, 56x, 57x, 58x, 55x]
     outputs:
       version: ${{ steps.determine-version.outputs.VERSION }}
     steps:
@@ -55,16 +55,42 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y doxygen
 
+      - name: Set dynamic Algolia variables
+        id: algolia-vars
+        env:
+          ALGOLIA_VERSIONS: ${{ vars.ALGOLIA_DOCSEARCH_VERSIONS }}
+        run: |
+          VERSION="${{ steps.determine-version.outputs.VERSION }}"
+
+          APP_ID=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".app_id // empty")
+          SEARCH_API_KEY=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".search_api_key // empty")
+          AGENT_ID=$(echo "$ALGOLIA_VERSIONS" | jq -r ".\"$VERSION\".agent_id // empty")
+
+          if [ -z "$APP_ID" ] || [ -z "$SEARCH_API_KEY" ]; then
+            echo "::warning::Algolia config not found for version '${VERSION}', falling back to default"
+            APP_ID="${{ vars.ALGOLIA_DOCSEARCH_APP_ID }}"
+            SEARCH_API_KEY="${{ vars.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}"
+          fi
+
+          echo "ALGOLIA_DOCSEARCH_APP_ID=${APP_ID}" >> $GITHUB_ENV
+          echo "ALGOLIA_DOCSEARCH_SEARCH_API_KEY=${SEARCH_API_KEY}" >> $GITHUB_ENV
+          echo "ALGOLIA_DOCSEARCH_AGENT_ID=${AGENT_ID}" >> $GITHUB_ENV
+
       - name: Build zh_CN documentation for ${{ matrix.variant }}
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ env.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ env.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
+          ALGOLIA_DOCSEARCH_AGENT_ID: ${{ env.ALGOLIA_DOCSEARCH_AGENT_ID }}
         run: python generate_docs.py --lang=zh_CN ${{ matrix.variant }}
       
       - name: Build en documentation for ${{ matrix.variant }}
         working-directory: ./docs
         env:
           SIFLI_DOC_VERSION: ${{ steps.determine-version.outputs.VERSION }}
+          ALGOLIA_DOCSEARCH_APP_ID: ${{ env.ALGOLIA_DOCSEARCH_APP_ID }}
+          ALGOLIA_DOCSEARCH_SEARCH_API_KEY: ${{ env.ALGOLIA_DOCSEARCH_SEARCH_API_KEY }}
         run: python generate_docs.py --lang=en ${{ matrix.variant }}
 
       # Upload Chinese documents to COS
@@ -117,6 +143,7 @@ jobs:
           path: |
             docs-52x/
             docs-56x/
+            docs-57x/
             docs-58x/
             docs-55x/
           retention-days: 7
@@ -128,8 +155,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Upload version.json and purge CDN cache
-      - name: Upload version.json and purge CDN cache
+      # Upload version.json (main branch only)
+      - name: Upload version.json
+        if: github.ref == 'refs/heads/main'
         uses: OpenSiFli/SiFliMirrorSync@v1
         with:
           secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
@@ -140,4 +168,15 @@ jobs:
           prefix: projects/sdk/
           artifacts: version.json
           delete_remote: false
+
+      # Purge CDN cache (all branches/tags)
+      - name: Purge CDN cache
+        uses: OpenSiFli/SiFliMirrorSync@v1
+        with:
+          secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
+          region: ${{ secrets.COS_DOCS_REGION }}
+          bucket: ${{ secrets.COS_DOCS_BUCKET }}
+          working_directory: ./docs
+          prefix: projects/sdk/
           flush_url: https://docs.sifli.com/projects/sdk/

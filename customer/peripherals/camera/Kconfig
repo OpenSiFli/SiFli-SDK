@@ -10,6 +10,8 @@ config BSP_USING_GC032A
     bool "GC032A"
     select BSP_USING_DCMI
     select BSP_USING_I2C
+    select BSP_USING_PWM
+    select BSP_USING_PWMT2
     default n
 
 config BSP_USING_SPI_CAMERA

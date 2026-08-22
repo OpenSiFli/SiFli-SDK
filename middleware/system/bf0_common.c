@@ -900,7 +900,7 @@ static char *cmd_line(int argc, char **argv)
     return r;
 }
 
-#if defined(SOC_BF0_HCPU) && !defined(SOC_BF0_ACPU) && !defined(CFG_BOOTLOADER)
+#if defined(SOC_BF0_HCPU) && !defined(SOC_BF0_ACPU) && !defined(CFG_BOOTLOADER) && !defined(CFG_FACTORY_DEBUG)
 uint8_t lcpu_power_on(void);
 uint8_t lcpu_power_off(void);
 

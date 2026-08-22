@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: 2025-2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import json
 import os
 
 # -- Project information -----------------------------------------------------
@@ -21,12 +25,24 @@ if "SF32LB55X" in tags:
     chip = 'sf32lb55x'
 elif "SF32LB56X" in tags:
     chip = 'sf32lb56x'
+elif "SF32LB57X" in tags:
+    chip = 'sf32lb57x'
 elif "SF32LB58X" in tags:
-    chip = 'sf32lb58x'  
+    chip = 'sf32lb58x'
 elif "SF32LB52X" in tags:
-    chip = 'sf32lb52x'    
+    chip = 'sf32lb52x'
 else:
     chip = 'sf32lb52x'
+
+# Algolia DocSearch configuration
+docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
+docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
+docsearch_index_name = f"sdk_{version}_{chip}"
+docsearch_agent_id = os.environ.get('ALGOLIA_DOCSEARCH_AGENT_ID', '')
+
+# DocSearch is initialized from ``static/js/algolia-agent-chat.js`` with the
+# v5 JavaScript bundle.  Both the search modal and the optional Sidepanel use
+# this page's single version-and-chip index as an Agent Studio allowlist.
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -57,7 +73,7 @@ numfig = False
 # html_theme = 'sphinx_rtd_theme'
 # html_theme = 'sphinx_book_theme'
 html_theme = 'shibuya'
-html_static_path = ['../_static']
+html_static_path = ['../_static', 'static']
 
 html_context = {
     "versions": [
@@ -67,6 +83,7 @@ html_context = {
     "chips": [
         ("SF32LB52x", "sf32lb52x"),
         ("SF32LB56x", "sf32lb56x"),
+        ("SF32LB57x", "sf32lb57x"),
         ("SF32LB58x", "sf32lb58x"),
         ("SF32LB55x", "sf32lb55x"),
     ],
@@ -105,6 +122,50 @@ html_js_files = [
     'js/feedback.js',
     'js/lightbox.js',
 ]
+
+
+def setup(app):
+    """Configure the v5 DocSearch modal and optional Agent Studio Sidepanel."""
+    docsearch_config = {
+        "appId": docsearch_app_id,
+        "apiKey": docsearch_api_key,
+        # This is an Agent Studio v5 request allowlist.  Each generated page
+        # contains exactly its version-and-chip documentation index.
+        "indices": [docsearch_index_name],
+        "searchParameters": {
+            docsearch_index_name: {},
+        },
+        "agentId": docsearch_agent_id,
+        "variant": "floating",
+        "side": "right",
+        # Agent Studio has no suggested-question index configured for this site.
+        # Enabling it makes both AI entry points request a missing index.
+        "suggestedQuestions": False,
+        "translations": {
+            "header": {
+                "title": "AI 问答",
+            },
+            "newConversationScreen": {
+                "titleText": "有什么可以帮你？",
+                "introductionText": "我会基于当前芯片和版本的 SDK 文档回答问题。",
+            },
+            "promptForm": {
+                "promptPlaceholderText": "请输入关于当前文档的问题...",
+            },
+        },
+        "buttonTranslations": {
+            "buttonAriaLabel": "Open Ask AI Sidepanel",
+        },
+    }
+    docsearch_config_json = json.dumps(docsearch_config, ensure_ascii=False).replace(
+        "</", "<\\/"
+    )
+    app.add_js_file(
+        None,
+        body=f"window.algoliaAgentChatConfig = {docsearch_config_json};",
+        priority=790,
+    )
+    app.add_js_file("js/algolia-agent-chat.js", priority=800, loading_method="defer")
 
 # -- Options for Breathe ----------------------------------------------------
 
@@ -181,6 +242,19 @@ if "SF32LB56X" in tags:
     exclude_patterns += ["**/startup_flow_sf32lb52x.md"]
 
 
+if "SF32LB57X" in tags:
+    # HAL
+    exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
+    # Drivers
+    exclude_patterns = ["**/spi_flash.md"]
+    # App note
+    exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
+    # Middlware
+    exclude_patterns += []
+    # Example
+    exclude_patterns += ["example/multicore/**"]
+
+
 if "SF32LB52X" in tags:
     # HAL
     exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
@@ -195,4 +269,4 @@ if "SF32LB52X" in tags:
 
 
 exclude_patterns += ["example/52x_mode_test/*", "example/gpadc/*", "example/micropython/*",
-                     "example/hal_example/*", "**/get-started-keil.md"] 
+                     "example/hal_example/*", "**/get-started-keil.md"]

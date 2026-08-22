@@ -8,6 +8,7 @@
 * sf32lb52-lcd系列
 * sf32lb56-lcd系列
 * sf32lb58-lcd系列
+* spi-hdk_lb573ub7n6
 
 ## 概述
 <!-- 例程简介 -->
@@ -49,6 +50,7 @@
 |SF32LB52_LCD    | PDM1     | PAD_PA22/PAD_PA07    | PAD_PA23/PAD_PA08 |   3.3V | GND | GND/3.3V |
 |SF32LB56-LCD    | PDM1     | PAD_PA69    | PAD_PA20 |   3.3V | GND | GND/3.3V |
 |SF32LB58-LCD    | PDM2     | PAD_PA23    | PAD_PA18 |   3.3V | GND | GND/3.3V |
+|SF32LB57-SPI-HDK_N16R4    | PDM1     | PAD_PA41    | PAD_PA42 |   3.3V | GND | GND/3.3V |
 * 更详细的引脚定义请参考
 [sf32lb52-nano](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-Nano.html)
 [sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)

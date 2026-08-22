@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include <rtthread.h>
 #include <rtdevice.h>
 #include "bf0_hal.h"
@@ -8,6 +14,10 @@
 #include "array.h"
 
 #define BUFFER_SIZE   (LCD_HOR_RES_MAX * LCD_VER_RES_MAX * 2)
+
+#define TEXT_SRC_WIDTH   268
+#define TEXT_DRAW_WIDTH  266
+#define TEXT_DRAW_HEIGHT 266
 
 // 旋转
 
@@ -39,14 +49,14 @@ void lcd_display_update(uint8_t *buffer)
 
     rt_kprintf("LCD Info: Width=%d, Height=%d, BPP=%d\n", info.width, info.height, info.bits_per_pixel);
     struct rt_device_graphic_ops *ops = rt_graphix_ops(lcd_dev);
-    if (ops && ops->draw_rect_async)
+    if (ops && ops->draw_rect)
     {
         ops->set_window(0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
-        ops->draw_rect_async((const char *)buffer, 0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
+        ops->draw_rect((const char *)buffer, 0, 0, LCD_HOR_RES_MAX - 1, LCD_VER_RES_MAX - 1);
     }
     else
     {
-        rt_kprintf("draw_rect_async not available!\n");
+        rt_kprintf("draw_rect not available!\n");
     }
 }
 //混叠
@@ -182,7 +192,12 @@ void scale_down_demo(int multiple, int width, int height)
     EPIC_LayerConfigTypeDef input_layers[1];
     HAL_EPIC_LayerConfigInit(&input_layers[0]);
     // 设置EZIP数据源
-    input_layers[0].data = ezip_img_data;
+#ifdef SF32LB57X
+    // SF32LB57 EZIP 解码窗口限制，使用 -winsize 2048 重新生成数据
+    input_layers[0].data = (uint8_t *)ezip_img_data_57;
+#else
+    input_layers[0].data = (uint8_t *)ezip_img_data;
+#endif
     input_layers[0].color_mode = EPIC_INPUT_EZIP;
     input_layers[0].width = width;
     input_layers[0].height = height;
@@ -270,7 +285,7 @@ void rotate_and_mask_demo()
 
         //mask
         HAL_EPIC_LayerConfigInit(&input_layers[2]);
-        input_layers[2].data = mask_watch_data;
+        input_layers[2].data = (uint8_t *)mask_watch_data;
         input_layers[2].color_mode = EPIC_COLOR_A8;
         input_layers[2].width = 329;
         input_layers[2].height = 330;
@@ -312,15 +327,15 @@ void text_blend_demo(void)
     drv_epic_fill(EPIC_COLOR_RGB565, buffer1, &dst_clear, &clear_area, clear_color, 0, NULL, NULL, NULL);
     drv_epic_fill(EPIC_COLOR_RGB565, buffer2, &dst_clear, &clear_area, clear_color, 0, NULL, NULL, NULL);
 
-    const int SI_TEXT_WIDTH = 266;
-    const int SI_TEXT_HEIGHT = 266;
+    const int SI_TEXT_WIDTH = TEXT_DRAW_WIDTH;
+    const int SI_TEXT_HEIGHT = TEXT_DRAW_HEIGHT;
     const int SI_OFFSET_X = (LCD_HOR_RES_MAX - SI_TEXT_WIDTH) / 2 - 50;  // 稍微左移
-    const int SI_OFFSET_Y = (LCD_HOR_RES_MAX - SI_TEXT_HEIGHT) / 2;
+    const int SI_OFFSET_Y = (LCD_VER_RES_MAX - SI_TEXT_HEIGHT) / 2;
 
-    const int CHE_TEXT_WIDTH = 266;
-    const int CHE_TEXT_HEIGHT = 266;
+    const int CHE_TEXT_WIDTH = TEXT_DRAW_WIDTH;
+    const int CHE_TEXT_HEIGHT = TEXT_DRAW_HEIGHT;
     const int CHE_OFFSET_X = (LCD_HOR_RES_MAX - CHE_TEXT_WIDTH) / 2 + 50;  // 稍微右移
-    const int CHE_OFFSET_Y = (LCD_HOR_RES_MAX - CHE_TEXT_HEIGHT) / 2;
+    const int CHE_OFFSET_Y = (LCD_VER_RES_MAX - CHE_TEXT_HEIGHT) / 2;
 
     EPIC_AreaTypeDef fill_area = {.x0 = 0, .y0 = 0, .x1 = LCD_HOR_RES_MAX - 1, .y1 = LCD_VER_RES_MAX - 1};
     EPIC_AreaTypeDef dst_area = {.x0 = 0, .y0 = 0, .x1 = LCD_HOR_RES_MAX - 1, .y1 = LCD_VER_RES_MAX - 1};
@@ -332,13 +347,13 @@ void text_blend_demo(void)
     // 第一个文字图层 (si_text_data)
     EPIC_LayerConfigTypeDef si_text_layer;
     HAL_EPIC_LayerConfigInit(&si_text_layer);
-    si_text_layer.data = si_text_data;
-    si_text_layer.color_mode = EPIC_COLOR_A2;
+    si_text_layer.data = (uint8_t *)si_text_data;
+    si_text_layer.color_mode = EPIC_COLOR_A4;
     si_text_layer.width = SI_TEXT_WIDTH;
     si_text_layer.height = SI_TEXT_HEIGHT;
     si_text_layer.x_offset = SI_OFFSET_X;
     si_text_layer.y_offset = SI_OFFSET_Y;
-    si_text_layer.total_width = 268;  // A2格式要4像素对齐
+    si_text_layer.total_width = TEXT_SRC_WIDTH;  // A4格式要2像素对齐
     si_text_layer.color_en = true;
     si_text_layer.color_r = 255;
     si_text_layer.color_g = 255;
@@ -352,13 +367,13 @@ void text_blend_demo(void)
     // 第二个文字图层 (che_text_data)
     EPIC_LayerConfigTypeDef che_text_layer;
     HAL_EPIC_LayerConfigInit(&che_text_layer);
-    che_text_layer.data = che_text_data;
-    che_text_layer.color_mode = EPIC_COLOR_A2;
+    che_text_layer.data = (uint8_t *)che_text_data;
+    che_text_layer.color_mode = EPIC_COLOR_A4;
     che_text_layer.width = CHE_TEXT_WIDTH;
     che_text_layer.height = CHE_TEXT_HEIGHT;
     che_text_layer.x_offset = CHE_OFFSET_X;
     che_text_layer.y_offset = CHE_OFFSET_Y;
-    che_text_layer.total_width = 268;  // A2格式要4像素对齐
+    che_text_layer.total_width = TEXT_SRC_WIDTH;  // A4格式要2像素对齐
     che_text_layer.color_en = true;
     che_text_layer.color_r = 255;
     che_text_layer.color_g = 0;
@@ -426,10 +441,10 @@ void display_single_text(void)
     drv_epic_fill(EPIC_COLOR_RGB565, buffer1, &dst_clear, &clear_area, clear_color, 0, NULL, NULL, NULL);
     drv_epic_fill(EPIC_COLOR_RGB565, buffer2, &dst_clear, &clear_area, clear_color, 0, NULL, NULL, NULL);
 
-    const int TEXT_WIDTH = 266;
-    const int TEXT_HEIGHT = 266;
+    const int TEXT_WIDTH = TEXT_DRAW_WIDTH;
+    const int TEXT_HEIGHT = TEXT_DRAW_HEIGHT;
     const int OFFSET_X = (LCD_HOR_RES_MAX - TEXT_WIDTH) / 2;
-    const int OFFSET_Y = (LCD_HOR_RES_MAX - TEXT_HEIGHT) / 2; // 居中显示
+    const int OFFSET_Y = (LCD_VER_RES_MAX - TEXT_HEIGHT) / 2; // 居中显示
 
     // 创建背景图层
     EPIC_AreaTypeDef fill_area = {.x0 = 0, .y0 = 0, .x1 = LCD_HOR_RES_MAX - 1, .y1 = LCD_VER_RES_MAX - 1};
@@ -442,13 +457,13 @@ void display_single_text(void)
     // 文字图层 (si_test_data)
     EPIC_LayerConfigTypeDef text_layer;
     HAL_EPIC_LayerConfigInit(&text_layer);
-    text_layer.data = si_text_data;
-    text_layer.color_mode = EPIC_COLOR_A2;
+    text_layer.data = (uint8_t *)si_text_data;
+    text_layer.color_mode = EPIC_COLOR_A4;
     text_layer.width = TEXT_WIDTH;
     text_layer.height = TEXT_HEIGHT;
     text_layer.x_offset = OFFSET_X;
     text_layer.y_offset = OFFSET_Y;
-    text_layer.total_width = 268;    //A2格式要4像素对齐
+    text_layer.total_width = TEXT_SRC_WIDTH;    //A4格式要2像素对齐
     text_layer.color_en = true;
     text_layer.color_r = 255;
     text_layer.color_g = 255;
@@ -535,6 +550,7 @@ int main(int argc, char *argv[])
         rt_thread_mdelay(1000);
         scale_down_demo(3, 205, 208);
         rt_thread_mdelay(500);
+#ifndef SF32LB55X
         //旋转+遮罩演示
         rotate_and_mask_demo();
         rt_thread_mdelay(500);
@@ -544,6 +560,7 @@ int main(int argc, char *argv[])
         //文字混叠演示
         text_blend_demo();
         rt_thread_mdelay(2000);
+#endif
 
     }
 

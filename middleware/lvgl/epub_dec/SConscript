@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+# init src and inc vars
+src = []
+inc = [cwd]
+lib = []
+
+lib = [GroupLibName('epub_dec')]
+obj = DefineGroup('epub_dec', src, depend = ['PKG_USING_LIBEPUB'], CPPPATH = inc, LIBS=lib, LIBPATH=inc)
+
+Return('obj')

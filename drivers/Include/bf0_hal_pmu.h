@@ -546,7 +546,7 @@ HAL_StatusTypeDef HAL_PMU_SelectWakeupPin(uint8_t pin, uint8_t aon_wakeup_pin);
 /**
  * @brief  Enable pin wakeup for hibernate
  * @param  pin pin number, its range differs from each chips,
-               sf32lb55x: 0~5, others: 0~1
+               sf32lb55x: 0~5, sf32lb57x: 0~13, others: 0~1, i.e. 0~(PMUC_WSR_PIN_NUM-1) see macro PMUC_WSR_PIN_NUM defined in pmuc.h
  * @param  mode pin wakeup mode, 0: high level, 1: low level, 2: positive edge, 3: negative edge
  * @retval status
  */
@@ -554,7 +554,8 @@ HAL_StatusTypeDef HAL_PMU_EnablePinWakeup(uint8_t pin, uint8_t mode);
 
 /**
  * @brief  Disable pin wakeup for hibernate
- * @param  pin pin number, range: 0~5
+ * @param  pin pin number, its range differs from each chips,
+               sf32lb55x: 0~5, sf32lb57x: 0~13, others: 0~1, i.e. 0~(PMUC_WSR_PIN_NUM-1) see macro PMUC_WSR_PIN_NUM defined in pmuc.h
  * @retval status
  */
 HAL_StatusTypeDef HAL_PMU_DisablePinWakeup(uint8_t pin);

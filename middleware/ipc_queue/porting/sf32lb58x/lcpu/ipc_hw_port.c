@@ -73,7 +73,7 @@ static void hcpu2lcpu_notification_callback(MAILBOX_HandleTypeDef *hmailbox, uin
     */
     if (ipc_hw_obj.ch[0].data.act_bitmap & (1UL << q_idx))
     {
-        if (q_idx == 0)  /* the first queue is used by ble, it uses ROM implementation instead */
+        if (q_idx == 6)  /* the bt sco audio queue, it uses ROM implementation instead */
             ipc_queue_data_ind_rom(ipc_hw_obj.ch[0].data.user_data[q_idx]);
         else  /* other queue use RAM implementation */
             ipc_queue_data_ind(ipc_hw_obj.ch[0].data.user_data[q_idx]);

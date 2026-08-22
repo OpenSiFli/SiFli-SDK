@@ -46,7 +46,7 @@ void audio_3a_set_bypass(uint8_t is_bypass, uint8_t mic, uint8_t down)
 {
 }
 
-void audio_3a_open(uint32_t samplerate, uint8_t is_bt_voice, uint8_t disable_uplink_agc, uint8_t all_mic_channels)
+void audio_3a_open(audio_3a_input_t *input)
 {
 }
 
@@ -58,12 +58,12 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
 {
 }
 
-uint8_t audio_3a_dnlink_buf_is_full(uint8_t size)
+uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
 {
     return 0;
 }
 
-void audio_3a_downlink(uint8_t *fifo, uint8_t size)
+void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 {
 }
 

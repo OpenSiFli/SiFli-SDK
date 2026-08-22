@@ -1286,7 +1286,16 @@ static inline int rwnx_fhcustmsg_disconnect_ind(struct rwnx_hw *rwnx_hw,
 
     RWNX_DBG(RWNX_FN_ENTRY_STR);
 
-    DBG_MACIF_INF("disconnect_ind: sta disconnected, st=%d\n", ind->status);
+    /* status: 0 = normal disconnect, non-zero = abnormal (e.g. link loss).
+     * The disconnect flow below must run for both cases. */
+    if (ind->status != WLAN_DISCONNECT)
+    {
+        DBG_MACIF_WRN("disconnect_ind: sta disconnected (abnormal), st=%d\n", ind->status);
+    }
+    else
+    {
+        DBG_MACIF_INF("disconnect_ind: sta disconnected\n");
+    }
     DBG_MACIF_INF("ssid: \'%s\'\n", ind->ussid);
 
 #if defined(CONFIG_VNET_MODE) && !defined(RT_USING_WIFI)
@@ -1307,6 +1316,125 @@ static inline int rwnx_fhcustmsg_disconnect_ind(struct rwnx_hw *rwnx_hw,
     }
 #endif
 #endif
+
+    return 0;
+}
+
+// P2P (WiFi Direct) IND message handlers
+
+static inline int rwnx_fhcustmsg_start_p2pgo_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    struct fhcustmsg_p2p_status_ind *ind = (struct fhcustmsg_p2p_status_ind *)msg->param;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    /* status is a result code: 0 = success (P2P GO started),
+     * non-zero = firmware failed to start the P2P GO.
+     * Skip IP/netif setup when start failed. */
+    if (ind->status == 0)
+    {
+        DBG_MACIF_INF("p2p_ind: P2P GO started status=%d\n", ind->status);
+        DBG_MACIF_INF("ip: %d.%d.%d.%d,  gw: %d.%d.%d.%d,  mk: %d.%d.%d.%d\n",
+                      (ind->ip >> 0) & 0xff, (ind->ip >> 8) & 0xff, (ind->ip >> 16) & 0xff, (ind->ip >> 24) & 0xff,
+                      (ind->gw >> 0) & 0xff, (ind->gw >> 8) & 0xff, (ind->gw >> 16) & 0xff, (ind->gw >> 24) & 0xff,
+                      (ind->mask >> 0) & 0xff, (ind->mask >> 8) & 0xff, (ind->mask >> 16) & 0xff, (ind->mask >> 24) & 0xff);
+
+    }
+    else
+    {
+        DBG_MACIF_WRN("p2p_ind: P2P GO start failed, status=%d\n", ind->status);
+        return -1;
+    }
+
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+#ifdef RT_USING_NETDEV
+    {
+        struct netif *net_if = netif_find("w00");
+        if (net_if)
+        {
+            ip4_addr_t addr_ip, addr_nm, addr_gw;
+            ip4_addr_set_u32(&addr_ip, ind->ip);
+            ip4_addr_set_u32(&addr_nm, ind->mask);
+            ip4_addr_set_u32(&addr_gw, ind->gw);
+            netif_set_addr(net_if, &addr_ip, &addr_nm, &addr_gw);
+            netifapi_netif_set_link_up(net_if);
+        }
+    }
+#endif
+    /* Must configure IP on netif BEFORE reporting connect event,
+     * because the event triggers dhcpd_start which needs the IP already set. */
+    aic8800mc_wlan_report_connect();
+    /* Note: CHANGE_AP_MODE_REQ must NOT be sent from IND handler (Rx context),
+     * as it would deadlock the SDIO bus. It is deferred to the CLI command
+     * handler after P2P GO CFM returns. */
+#endif
+
+    return 0;
+}
+
+static inline int rwnx_fhcustmsg_stop_p2pgo_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    struct fhcustmsg_p2p_status_ind *ind = (struct fhcustmsg_p2p_status_ind *)msg->param;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (ind->status == 0)
+    {
+        DBG_MACIF_WRN("p2p_ind: P2P GO stop , status=%d\n", ind->status);
+    }
+    else
+    {
+        DBG_MACIF_INF("p2p_ind: P2P GO stop failed, status=%d\n", ind->status);
+        return -1;
+    }
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+    aic8800mc_wlan_report_disconnect();
+#ifdef RT_USING_NETDEV
+    {
+        struct netif *net_if = netif_find("w00");
+        if (net_if)
+        {
+            netifapi_netif_set_link_down(net_if);
+        }
+    }
+#endif
+#endif
+
+    return 0;
+}
+
+static inline int rwnx_fhcustmsg_assoc_ap_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    struct fhcustmsg_ap_assoc_sta_ind *ind = (struct fhcustmsg_ap_assoc_sta_ind *)msg->param;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    DBG_MACIF_INF("P2P/AP: STA joined, MAC=%02X:%02X:%02X:%02X:%02X:%02X\n",
+                  ind->sta_addr[0], ind->sta_addr[1], ind->sta_addr[2],
+                  ind->sta_addr[3], ind->sta_addr[4], ind->sta_addr[5]);
+
+    return 0;
+}
+
+static inline int rwnx_fhcustmsg_disassoc_ap_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    struct fhcustmsg_ap_assoc_sta_ind *ind = (struct fhcustmsg_ap_assoc_sta_ind *)msg->param;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    DBG_MACIF_INF("P2P/AP: STA left, MAC=%02X:%02X:%02X:%02X:%02X:%02X\n",
+                  ind->sta_addr[0], ind->sta_addr[1], ind->sta_addr[2],
+                  ind->sta_addr[3], ind->sta_addr[4], ind->sta_addr[5]);
 
     return 0;
 }
@@ -1515,6 +1643,10 @@ static msg_cb_fct cust_msg_hdlrs[MSG_I(CUSTOM_MSG_MAX)] =
     [MSG_I(CUSTOM_MSG_DISCONNECT_IND)]          = rwnx_fhcustmsg_disconnect_ind,
     [MSG_I(CUSTOM_MSG_SCAN_WIFI_IND)]           = rwnx_fhcustmsg_wifi_scan_ind,
 //    [MSG_I(CUSTOM_MSG_HTTP_RESP_IND)]           = rwnx_fhcustmsg_http_resp_ind,
+    [MSG_I(CUSTOM_MSG_START_P2PGO_IND)]         = rwnx_fhcustmsg_start_p2pgo_ind,
+    [MSG_I(CUSTOM_MSG_STOP_P2PGO_IND)]          = rwnx_fhcustmsg_stop_p2pgo_ind,
+    [MSG_I(CUSTOM_MSG_ASSOC_AP_IND)]            = rwnx_fhcustmsg_assoc_ap_ind,
+    [MSG_I(CUSTOM_MSG_DISASSOC_AP_IND)]         = rwnx_fhcustmsg_disassoc_ap_ind,
 };
 
 /**

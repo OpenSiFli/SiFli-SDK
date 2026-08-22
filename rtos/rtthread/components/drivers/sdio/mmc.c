@@ -335,6 +335,15 @@ static int mmc_select_bus_width(struct rt_mmcsd_card *card, rt_uint8_t *ext_csd)
     */
     for (idx = 0; idx < sizeof(bus_widths) / sizeof(rt_uint32_t); idx++)
     {
+        /* Skip widths not supported by the host (follows SD card convention) */
+        if ((bus_widths[idx] == MMCSD_BUS_WIDTH_4) && !(host->flags & MMCSD_BUSWIDTH_4))
+            continue;
+        if ((bus_widths[idx] == MMCSD_BUS_WIDTH_8) && !(host->flags & MMCSD_BUSWIDTH_8))
+            continue;
+        if ((bus_widths[idx] == MMCSD_DDR_BUS_WIDTH_4) && !(host->flags & MMCSD_BUSWIDTH_4))
+            continue;
+        if ((bus_widths[idx] == MMCSD_DDR_BUS_WIDTH_8) && !(host->flags & MMCSD_BUSWIDTH_8))
+            continue;
 
         /* Switch to high speed mode before set ddr mode.
         *  If high speed not support, this mode not support.

@@ -1427,11 +1427,12 @@ __HAL_ROM_USED void HAL_PMU_Init(void)
                MAKE_REG_VAL(6, PMUC_BUCK_CR2_SET_VOUT_L_Msk, PMUC_BUCK_CR2_SET_VOUT_L_Pos));
 
     /* set VBAT_LDO output voltage to default 3.3V */
-#if 0    
+    MODIFY_REG(hwp_pmuc->AON_LDO, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk,
+               MAKE_REG_VAL(0xD, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Pos));
+#if 0
 //TODO:
-    MODIFY_REG(hwp_pmuc->AON_LDO, PMUC_AON_LDO_VBAT_POR_TH_Msk | PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk,
-               MAKE_REG_VAL(0, PMUC_AON_LDO_VBAT_POR_TH_Msk, PMUC_AON_LDO_VBAT_POR_TH_Pos)
-               | MAKE_REG_VAL(6, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Pos));
+    MODIFY_REG(hwp_pmuc->AON_LDO, PMUC_AON_LDO_VBAT_POR_TH_Msk,
+               MAKE_REG_VAL(0, PMUC_AON_LDO_VBAT_POR_TH_Msk, PMUC_AON_LDO_VBAT_POR_TH_Pos));
     /* auto power down if VCC is low */
     hwp_pmuc->WER |= PMUC_WER_LOWBAT;
 #endif

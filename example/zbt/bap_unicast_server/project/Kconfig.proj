@@ -3,3 +3,7 @@ config CUSTOM_MEM_MAP
     bool 
 	select custom_mem_map
 	default y    
+
+config BT_DISABLE_GATT_DB_HASH
+    bool "disable gatt database hash"
+    default y

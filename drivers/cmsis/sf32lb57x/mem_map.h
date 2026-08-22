@@ -365,6 +365,10 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 /** UID size  */
 #define EFUSE_UID_SIZE          128
 #define EFUSE_UID_BYTE_SIZE     (EFUSE_UID_SIZE >> 3)
+/** SSEN offset */
+#define EFUSE_SSEN_OFFSET      224
+/** SSEN size */
+#define EFUSE_SSEN_SIZE        2
 /** Package ID offset */
 #define EFUSE_PKGID_OFFSET      228
 /** Package ID size  */
@@ -389,6 +393,24 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #define EFUSE_ROOTKEY_OFFSET          512
 #define EFUSE_ROOTKEY_SIZE            256
 #define EFUSE_ROOTKEY_BYTE_SIZE       (EFUSE_ROOTKEY_SIZE >> 3)
+
+/**
+ * @}
+ */
+
+/*******************************************************************************************
+ * @defgroup SSEN_Definition SSEN Definition
+ * @brief  SSEN Definition
+ * @{
+ *******************************************************************************************/
+/**  SSEN_LDO18 Position */
+#define SSEN_LDO18_Pos        (0U)
+/**  SSEN_LDO18 Mask */
+#define SSEN_LDO18_Msk        (0x1UL << SSEN_LDO18_Pos)
+/**  SSEN_VDD33_LDO2 Position */
+#define SSEN_VDD33_LDO2_Pos   (1U)
+/**  SSEN_VDD33_LDO2 Mask */
+#define SSEN_VDD33_LDO2_Msk   (0x1UL << SSEN_VDD33_LDO2_Pos)
 
 /**
  * @}
@@ -444,26 +466,6 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
  * @}
  */
 
-/*******************************************************************************************
- * @defgroup PKGID_PSRAM_TYPE_Definition Package ID PSRAM Type Definition
- * @brief  Package ID PSRAM Type Definition
- * @{
- *******************************************************************************************/
-/** APS 64Mb PSRAM */
-#define PKGID_PSRAM_APS_64           0
-/** APS 128Mb PSRAM */
-#define PKGID_PSRAM_APS_128          1
-/** APS 32Mb PSRAM */
-#define PKGID_PSRAM_APS_32           2
-/** APS 16Mb PSRAM */
-#define PKGID_PSRAM_APS_16           3
-/** Winbond PSRAM */
-#define PKGID_PSRAM_WINBOND          4
-
-/**
- * @}
- */
-
 
 //======================================= Customize =======================================
 #define FLASH_PART_NAME(id)       FLASH_PART##id##_NAME
@@ -488,9 +490,17 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
     #ifdef SOLUTION_WATCH
         #include "flash_map.h"
     #else
-        #include "custom_mem_map.h"
+        #ifdef __has_include
+            #if __has_include("custom_mem_map.h")
+                #include "custom_mem_map.h"
+            #else
+                #include "ptab.h"
+            #endif
+        #else
+            #include "custom_mem_map.h"
+        #endif
     #endif
 #endif /* CUSTOM_MEM_MAP */
 
-#define HPSYS_RAM_IN_ITCM(addr) false
+#define HPSYS_RAM_IN_ITCM(addr) 0
 #endif  /* __MEM_MAP__ */

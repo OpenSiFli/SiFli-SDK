@@ -767,21 +767,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_
     {
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
-#ifdef SF32LB57X
-//TODO:
-#else
         if (hspi->Init.Mode == SPI_MODE_MASTER)
         {
             /* config receive-only mode, need stop spi*/
             __HAL_SPI_DISABLE(hspi);
 
-            /*Set Reverve-Only mode, for drive spi clock*/
-            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos)) *Size);
+            /*Set Receive-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL2(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS)) * Size);
             SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
             SPI_RWOT_CYCEL_ENABLE(hspi);
             SPI_RWOT_SET_CYCEL(hspi);
         }
-#endif /* !SF32LB57X */
     }
 
     /* Check if the SPI is already enabled */
@@ -1336,22 +1332,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive_IT(SPI_HandleTypeDef *hspi, uin
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
 
-#ifdef SF32LB57X
-//TODO:
-#else
         if (hspi->Init.Mode == SPI_MODE_MASTER)
         {
             /* config receive-only mode, need stop spi*/
             __HAL_SPI_DISABLE(hspi);
 
-            /*Set Reverve-Only mode, for drive spi clock*/
-            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos)) *Size);
+            /*Set Receive-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL2(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS)) * Size);
             SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
             SPI_RWOT_CYCEL_ENABLE(hspi);
             SPI_RWOT_SET_CYCEL(hspi);
         }
-#endif /* SF32LB57X */
-
     }
 
     /* Enable TXE and ERR interrupt */
@@ -1725,21 +1716,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, ui
     {
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
-#ifdef SF32LB57X
-//TODO:
-#else
         if (hspi->Init.Mode == SPI_MODE_MASTER)
         {
             /* config receive-only mode, need stop spi*/
             __HAL_SPI_DISABLE(hspi);
 
-            /*Set Reverve-Only mode, for drive spi clock*/
-            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos)) *Size);
+            /*Set Receive-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, (1 + GET_REG_VAL2(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS)) * Size);
             SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
             SPI_RWOT_CYCEL_ENABLE(hspi);
             SPI_RWOT_SET_CYCEL(hspi);
         }
-#endif /* SF32LB57X */
     }
 
     if ((hspi->Init.DataSize <= SPI_DATASIZE_8BIT) && (hspi->hdmarx->Init.MemDataAlignment == DMA_MDATAALIGN_HALFWORD))
@@ -3921,19 +3908,18 @@ static HAL_StatusTypeDef SPI_EndRxTransaction(SPI_HandleTypeDef *hspi,  uint32_t
         /* Disable SPI peripheral */
         __HAL_SPI_DISABLE(hspi);
     }
-#ifdef SF32LB57X
-//TODO:
-#else
     if (hspi->Init.Direction == SPI_DIRECTION_1LINE)
     {
         if (hspi->Init.Mode == SPI_MODE_MASTER)
         {
-            /*Disable Reverve-Only mode,Enable Transmit_Receive mode */
-            SPI_RWOT_CYCEL_DISABLE(hspi);
+            /*Disable Receive-Only mode, Enable Transmit_Receive mode */
             SPI_SET_RWOT_TRANSMIT_RECEIVE_MODE(hspi);
+            SPI_RWOT_CYCEL_DISABLE(hspi);
+#ifdef SF32LB57X
+            SPI_RWOT_CLEAR_CYCEL(hspi);
+#endif
         }
     }
-#endif /* SF32LB57X */
     /* Control the BSY flag */
     if (SPI_WaitFlagStateUntilTimeout(hspi, SPI_FLAG_BSY, RESET, Timeout, Tickstart) != HAL_OK)
     {

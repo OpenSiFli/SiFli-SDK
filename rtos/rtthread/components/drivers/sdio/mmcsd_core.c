@@ -43,6 +43,12 @@ static struct rt_mailbox  mmcsd_detect_mb;
 static rt_uint32_t mmcsd_detect_mb_pool[4];
 static struct rt_mailbox mmcsd_hotpluge_mb;
 static rt_uint32_t mmcsd_hotpluge_mb_pool[4];
+static const mmcsd_host_detect_mode mmcsd_fallback_order[] =
+{
+    MMCSD_HOST_DETECT_SDCARD,
+    MMCSD_HOST_DETECT_EMMC,
+    MMCSD_HOST_DETECT_SDIO,
+};
 
 void mmcsd_host_lock(struct rt_mmcsd_host *host)
 {
@@ -632,11 +638,77 @@ void mmcsd_set_stat(uint8_t stat)
     mmcsd_stat = stat;
 }
 
+static mmcsd_host_detect_mode mmcsd_get_detect_mode(struct rt_mmcsd_host *host)
+{
+    switch (host->flags & MMCSD_HOST_TYPE_MASK)
+    {
+    case MMCSD_HOST_TYPE_SDCARD:
+        return MMCSD_HOST_DETECT_SDCARD;
+    case MMCSD_HOST_TYPE_EMMC:
+        return MMCSD_HOST_DETECT_EMMC;
+    case MMCSD_HOST_TYPE_SDIO:
+        return MMCSD_HOST_DETECT_SDIO;
+    default:
+        return MMCSD_HOST_DETECT_UNKNOWN;
+    }
+}
+
+static rt_int32_t mmcsd_detect_mode(struct rt_mmcsd_host *host, mmcsd_host_detect_mode mode)
+{
+    rt_uint32_t ocr;
+    rt_int32_t err = -RT_ERROR;
+
+    switch (mode)
+    {
+    case MMCSD_HOST_DETECT_SDIO:
+        LOG_I("detect SDIO begin");
+        mmcsd_go_idle(host);
+        mmcsd_send_if_cond(host, host->valid_ocr);
+        err = sdio_io_send_op_cond(host, 0, &ocr);
+        if (!err)
+        {
+            if (init_sdio(host, ocr))
+                mmcsd_power_off(host);
+        }
+        break;
+    case MMCSD_HOST_DETECT_SDCARD:
+        LOG_I("detect SD card begin");
+        mmcsd_go_idle(host);
+        mmcsd_send_if_cond(host, host->valid_ocr);
+        err = mmcsd_send_app_op_cond(host, 0, &ocr);
+        if (!err)
+        {
+            if (init_sd(host, ocr))
+                mmcsd_power_off(host);
+            rt_mb_send(&mmcsd_hotpluge_mb, (rt_uint32_t)host);
+        }
+        break;
+    case MMCSD_HOST_DETECT_EMMC:
+        LOG_I("detect EMMC begin");
+        mmcsd_go_idle(host);
+        mmcsd_send_if_cond(host, host->valid_ocr);
+        err = mmc_send_op_cond(host, 0, &ocr);
+        if (!err)
+        {
+            if (init_mmc(host, ocr))
+                mmcsd_power_off(host);
+            rt_mb_send(&mmcsd_hotpluge_mb, (rt_uint32_t)host);
+        }
+        break;
+    default:
+        break;
+    }
+
+    return err;
+}
+
 void mmcsd_detect(void *param)
 {
     struct rt_mmcsd_host *host;
-    rt_uint32_t  ocr;
-    rt_int32_t  err;
+    mmcsd_host_detect_mode preferred;
+    rt_uint32_t i;
+    rt_bool_t detected;
+
     mmcsd_stat = 0;
     while (1)
     {
@@ -644,63 +716,29 @@ void mmcsd_detect(void *param)
         {
             if (host->card == RT_NULL)
             {
+                preferred = mmcsd_get_detect_mode(host);
+                detected = RT_FALSE;
+
                 mmcsd_host_lock(host);
                 mmcsd_power_up(host);
 
-                /*
-                 * detect SDIO
-                 */
-                LOG_I("detect SDIO begin");
-                mmcsd_go_idle(host);
-                mmcsd_send_if_cond(host, host->valid_ocr);
-
-                err = sdio_io_send_op_cond(host, 0, &ocr);
-                if (!err)
+                /* preferred type first; stop once a card of that type responds */
+                if (preferred != MMCSD_HOST_DETECT_UNKNOWN)
                 {
-                    if (init_sdio(host, ocr))
-                        mmcsd_power_off(host);
-                    mmcsd_host_unlock(host);
-                    mmcsd_stat = 1;
-                    continue;
+                    if (!mmcsd_detect_mode(host, preferred))
+                        detected = RT_TRUE;
                 }
 
-                /*
-                 * detect SD card
-                 */
-                LOG_I("detect SD card BEGIN");
-                /* Need reset to idle before new detect */
-                mmcsd_go_idle(host);
-                mmcsd_send_if_cond(host, host->valid_ocr);
-
-                err = mmcsd_send_app_op_cond(host, 0, &ocr);
-                if (!err)
+                /* fall back to the other types if the preferred type did not respond */
+                for (i = 0; !detected && i < sizeof(mmcsd_fallback_order) / sizeof(mmcsd_fallback_order[0]); i++)
                 {
-                    if (init_sd(host, ocr))
-                        mmcsd_power_off(host);
-                    mmcsd_host_unlock(host);
-                    rt_mb_send(&mmcsd_hotpluge_mb, (rt_uint32_t)host);
-                    LOG_I("detect SD card DONE");
-                    mmcsd_stat = 1;
-                    continue;
+                    if (mmcsd_fallback_order[i] == preferred)
+                        continue;
+                    if (!mmcsd_detect_mode(host, mmcsd_fallback_order[i]))
+                        detected = RT_TRUE;
                 }
 
-                /*
-                 * detect mmc card
-                 */
-                LOG_I("detect MMC begin");
-                /* Need reset to idle before new detect */
-                mmcsd_go_idle(host);
-                mmcsd_send_if_cond(host, host->valid_ocr);
-                err = mmc_send_op_cond(host, 0, &ocr);
-                if (!err)
-                {
-                    if (init_mmc(host, ocr))
-                        mmcsd_power_off(host);
-                    mmcsd_host_unlock(host);
-                    rt_mb_send(&mmcsd_hotpluge_mb, (rt_uint32_t)host);
-                    mmcsd_stat = 1;
-                    continue;
-                }
+                mmcsd_stat = 1;
                 mmcsd_host_unlock(host);
             }
             else

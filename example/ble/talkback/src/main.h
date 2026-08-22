@@ -32,7 +32,7 @@ extern "C" {
 
 typedef struct
 {
-    struct rt_delayed_work work;
+    struct rt_work work;
     uint8_t state;
     uint8_t is_stopping;
 } app_send_env_t;
@@ -46,7 +46,7 @@ typedef struct
 
 typedef struct
 {
-    struct rt_delayed_work work;
+    struct rt_work work;
     uint8_t state;
     uint8_t is_scaning;
     uint8_t is_scan_restart;

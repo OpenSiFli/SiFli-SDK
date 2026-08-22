@@ -386,9 +386,32 @@ def remove_callback(sdk_ctx: SdkContext, name: str, remote: bool = False) -> Non
         if not credentials:
             raise AuthError("No available user credentials. Please login first.")
 
-        _user, _token, remote_name = credentials
+        user, token, remote_name = credentials
         sdk_ctx.runner.run(["conan", "remove", name, f"-r={remote_name}", "-c"], cwd=sdk_ctx.project_dir)
         print(f"Package {name} removed from remote repository: {remote_name}")
+
+        try:
+            import requests
+
+            sync_url = "https://packages.sifli.com/api/v1/sync"
+            headers = {
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            }
+
+            print("Syncing removal to public repository...")
+            response = requests.post(sync_url, json={}, headers=headers, timeout=30)
+
+            if response.status_code == 200:
+                print("Removal synced to public repository successfully")
+            else:
+                print_warning(f"WARNING: Sync failed with status code {response.status_code}")
+                print_warning(f"WARNING: Response: {response.text}")
+
+        except ImportError:
+            print_warning("WARNING: requests library not available. Skipping sync to public repository.")
+        except Exception as exc:
+            print_warning(f"WARNING: Failed to sync to public repository: {exc}")
         return
 
     sdk_ctx.runner.run(["conan", "remove", name, "-c"], cwd=sdk_ctx.project_dir)

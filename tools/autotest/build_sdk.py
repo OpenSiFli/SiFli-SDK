@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: 2025-2026 SiFli
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import print_function
 import argparse
 import datetime
@@ -291,7 +295,10 @@ class SDKBuilder(object):
         if "common_projects" in self.config:
             print("Scheduling common projects...")
             for common_project in self.config['common_projects']:
+                exclude_boards = set(common_project.get('exclude_boards', []))
                 for board in common_project['boards']:
+                    if board in exclude_boards:
+                        continue
                     build_tasks.append((common_project['path'], board, None, True))
         
         # 创建线程池执行任务
@@ -363,7 +370,10 @@ class SDKBuilder(object):
             if "common_projects" in self.config:
                 for common_project in self.config['common_projects']:
                     f.write(f"\n{common_project['path']}\n")
+                    exclude_boards = set(common_project.get('exclude_boards', []))
                     for board in common_project['boards']:
+                        if board in exclude_boards:
+                            continue
                         f.write(f"- {board}\n")
             f.write("\n")
             f.write("=" * 50 + "\n")

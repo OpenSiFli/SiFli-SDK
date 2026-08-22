@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" font-family="'Segoe UI',Arial,Helvetica,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#55606e"/>
+    </marker>
+  </defs>
+
+  <!-- Row 1: IDLE -> SESSION -> ERASING -> TRANSFERRING -->
+  <rect x="14" y="34" width="78" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="53" y="60" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">IDLE</text>
+
+  <line x1="92" y1="55" x2="184" y2="55" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="139" y="47" text-anchor="middle" font-size="11" fill="#7a8699">begin session</text>
+
+  <rect x="186" y="34" width="104" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="238" y="60" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">SESSION</text>
+
+  <line x1="290" y1="55" x2="366" y2="55" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="328" y="47" text-anchor="middle" font-size="11" fill="#7a8699">erase</text>
+
+  <rect x="368" y="34" width="104" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="420" y="60" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">ERASING</text>
+
+  <line x1="472" y1="55" x2="550" y2="55" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="552" y="34" width="154" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="629" y="60" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">TRANSFERRING</text>
+
+  <!-- write loop -->
+  <path d="M599,34 C599,10 659,10 659,32" fill="none" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="629" y="11" text-anchor="middle" font-size="11" fill="#7a8699">write loop</text>
+
+  <!-- TRANSFERRING -> VERIFYING -->
+  <path d="M629,76 L629,120 L223,120 L223,166" fill="none" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="426" y="113" text-anchor="middle" font-size="11" fill="#7a8699">verify</text>
+
+  <!-- Row 2: VERIFYING -> COMMITTING -> COMPLETE -->
+  <rect x="168" y="170" width="110" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="223" y="196" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">VERIFYING</text>
+
+  <line x1="278" y1="191" x2="378" y2="191" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="328" y="183" text-anchor="middle" font-size="11" fill="#7a8699">success</text>
+
+  <rect x="380" y="170" width="120" height="42" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="440" y="196" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1f2d3d">COMMITTING</text>
+
+  <line x1="500" y1="191" x2="588" y2="191" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <rect x="590" y="170" width="110" height="42" rx="8" fill="#e8f5e9" stroke="#4caf50" stroke-width="1.5"/>
+  <text x="645" y="196" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#1b5e20">COMPLETE</text>
+
+  <!-- VERIFYING -> ERROR -->
+  <line x1="223" y1="212" x2="223" y2="260" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="243" y="240" font-size="11" fill="#7a8699">failure</text>
+
+  <rect x="168" y="264" width="110" height="42" rx="8" fill="#fdecea" stroke="#d9534f" stroke-width="1.5"/>
+  <text x="223" y="290" text-anchor="middle" font-size="13" font-family="Consolas,Menlo,monospace" fill="#8b1e1e">ERROR</text>
+</svg>

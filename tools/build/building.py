@@ -270,6 +270,11 @@ def FontFileBuild(target, source, env):
     FONT2C_PATH = os.path.join(SIFLI_SDK, f"tools/font2c/font2c{env['tool_suffix']}")
     filename = os.path.basename("{}".format(target[0]))
     subprocess.run([FONT2C_PATH, str(source[0])], check=True)
+    with open(filename, 'r', encoding='utf-8') as f:
+        content = f.read()
+    content = content.replace('#include "app_module.h"', '#include "mem_section.h"')
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
     shutil.move(filename, '{}'.format(target[0]))
 
 def ModifyFontTargets(target, source, env):
@@ -300,6 +305,10 @@ def ConvertFont(env, source, flags):
 
 def ImgResource(env, source, flags):
     target = []
+    if GetDepend('SOC_SF32LB57X'):
+        if '-winsize' not in flags:
+            flags += ' -winsize 2048 '
+            
     for s in source:
         if '-binfile' in flags:
             # If the -binfile parameter is included, use the binary builder.
@@ -2246,6 +2255,7 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
         CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
         CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
         AR = rtconfig.AR, ARFLAGS = '-rc', LIBPATH=['.'],
+        RANLIB = rtconfig.RANLIB,
         LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
             
     proj_env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
@@ -2454,6 +2464,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
                 CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
                 CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
                 AR = rtconfig.AR, ARFLAGS = '-rc',
+                RANLIB = rtconfig.RANLIB,
                 LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
             env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
         else:
@@ -3960,6 +3971,7 @@ def SifliMsvcEnv(cpu):
     rtconfig.CC = rtconfig.PREFIX + 'cl'
     rtconfig.CXX = rtconfig.PREFIX + 'cl'
     rtconfig.AR = rtconfig.PREFIX + 'lib'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = rtconfig.PREFIX + 'link'
        
     rtconfig.AFLAGS = ''
@@ -4002,6 +4014,7 @@ def SifliIarEnv(cpu):
     rtconfig.CXX = 'iccarm'
     rtconfig.AS = 'iasmarm'
     rtconfig.AR = 'iarchive'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = 'ilinkarm'
     rtconfig.TARGET_EXT = 'out'
 
@@ -4133,6 +4146,7 @@ def SifliGccEnv(cpu):
     rtconfig.CC = rtconfig.PREFIX + 'gcc'
     rtconfig.AS = rtconfig.PREFIX + 'gcc'
     rtconfig.AR = rtconfig.PREFIX + 'ar'
+    rtconfig.RANLIB = rtconfig.PREFIX + 'ranlib'
     rtconfig.CXX = rtconfig.PREFIX + 'g++'
     rtconfig.LINK = rtconfig.PREFIX + 'gcc'
     rtconfig.STRIP = rtconfig.PREFIX + 'strip'
@@ -4249,6 +4263,7 @@ def SifliKeilEnv(cpu, BSP_ROOT=''):
     rtconfig.CXX = 'armclang'
     rtconfig.AS = 'armasm'
     rtconfig.AR = 'armar'
+    rtconfig.RANLIB = ''
     rtconfig.LINK = 'armlink'
     rtconfig.TARGET_EXT = 'axf'
     
@@ -4672,6 +4687,24 @@ def AddDFU_PAN(SIFLI_SDK):
     proj_path = None
     proj_name = 'dfu'
     proj_path = os.path.join(SIFLI_SDK, 'example/dfu_pan/project')
+    AddChildProj(proj_name, proj_path, False)
+
+def AddDFU_PAN_V2(SIFLI_SDK):
+    proj_path = None
+    proj_name = 'dfu'
+    proj_path = os.path.join(SIFLI_SDK, 'example/dfu_v2/bt_pan/loader/project')
+    AddChildProj(proj_name, proj_path, False)
+
+def AddDFU_CDC(SIFLI_SDK):
+    proj_path = None
+    proj_name = 'dfu'
+    proj_path = os.path.join(SIFLI_SDK, 'example/dfu_v2/cdc/loader/project')
+    AddChildProj(proj_name, proj_path, False)
+
+def AddDFU_BLE(SIFLI_SDK):
+    proj_path = None
+    proj_name = 'dfu'
+    proj_path = os.path.join(SIFLI_SDK, 'example/dfu_v2/ble/loader/project')
     AddChildProj(proj_name, proj_path, False)
 
 def AddLCPU(SIFLI_SDK, chip,target_file=None):

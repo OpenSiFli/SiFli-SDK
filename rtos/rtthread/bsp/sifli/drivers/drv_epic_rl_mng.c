@@ -518,6 +518,7 @@ static void epic_task(void *param)
         switch (msg.id)
         {
         case EPIC_MSG_RENDER_DRAW:
+        case EPIC_MSG_RENDER_DRAW2:
         {
             drv_epic_render_draw_cfg *p_RenderDrawctx = &msg.content.rd;
             EPIC_AreaTypeDef *p_invalid_area = &p_RenderDrawctx->area;
@@ -534,18 +535,34 @@ static void epic_task(void *param)
             {
                 EPIC_LayerConfigTypeDef *p_dst = &rl->dst;
                 uint32_t color_bytes = HAL_EPIC_GetColorDepth(p_dst->color_mode) >> 3;
+                uint32_t max_row;
 
-                p_dst->width = p_invalid_area->x1 - p_invalid_area->x0 + 1;
-                p_dst->total_width = p_dst->width;
-                uint32_t max_buf = MIN(drv_epic.dbg_render_buf_max, p_drv_epic->buf_bytes);
-                uint32_t max_row = (uint32_t)(max_buf / color_bytes) / p_dst->total_width;
-                max_row = RT_ALIGN_DOWN(max_row, p_RenderDrawctx->pixel_align);
-                DRV_EPIC_ASSERT(max_row > 0);
-                p_dst->height = max_row;
+                if (EPIC_MSG_RENDER_DRAW == msg.id)
+                {
+                    //Replace p_dst with drv_epic.buf1&2
+                    p_dst->width = HAL_EPIC_AreaWidth(p_invalid_area);
+                    p_dst->total_width = p_dst->width;
+                    uint32_t max_buf = MIN(drv_epic.dbg_render_buf_max, p_drv_epic->buf_bytes);
+                    max_row = (uint32_t)(max_buf / color_bytes) / p_dst->total_width;
+                    max_row = RT_ALIGN_DOWN(max_row, p_RenderDrawctx->pixel_align);
+                    DRV_EPIC_ASSERT(max_row > 0);
+                    p_dst->height = max_row;
 
-                p_dst->data_size = color_bytes * p_dst->total_width * p_dst->height;
-                p_dst->x_offset = p_invalid_area->x0;
-                p_dst->data = (uint8_t *)p_drv_epic->cur_buf;
+                    p_dst->data_size = color_bytes * p_dst->total_width * p_dst->height;
+                    p_dst->x_offset = p_invalid_area->x0;
+
+
+                    p_dst->data = (uint8_t *)p_drv_epic->cur_buf;
+                }
+                else
+                {
+                    //Clip the dst layer to the invalid area
+                    HAL_EPIC_LayerSetDataOffset((EPIC_BlendingDataType *)p_dst, p_invalid_area->x0, p_invalid_area->y0);
+                    p_dst->width = HAL_EPIC_AreaWidth(p_invalid_area);
+                    p_dst->height = HAL_EPIC_AreaHeight(p_invalid_area);
+                    p_dst->x_offset = p_invalid_area->x0;
+                    max_row = p_dst->height;
+                }
 
                 render_start(rl);
 
@@ -574,12 +591,15 @@ static void epic_task(void *param)
                             p_drv_epic->rd_usr_cb_total += rt_tick_get_millisecond() - usr_cb_start_ms;
                         }
 
-                        if (p_drv_epic->cur_buf == (uint8_t *)p_drv_epic->buf1)
-                            p_drv_epic->cur_buf = (uint8_t *)p_drv_epic->buf2;
-                        else
-                            p_drv_epic->cur_buf = (uint8_t *)p_drv_epic->buf1;
+                        if (EPIC_MSG_RENDER_DRAW == msg.id)
+                        {
+                            if (p_drv_epic->cur_buf == (uint8_t *)p_drv_epic->buf1)
+                                p_drv_epic->cur_buf = (uint8_t *)p_drv_epic->buf2;
+                            else
+                                p_drv_epic->cur_buf = (uint8_t *)p_drv_epic->buf1;
 
-                        p_dst->data = p_drv_epic->cur_buf;
+                            p_dst->data = p_drv_epic->cur_buf;
+                        }
                     }
                     else
                     {
@@ -816,6 +836,8 @@ drv_epic_render_list_t drv_epic_alloc_render_list(drv_epic_render_buf *p_buf, EP
         HAL_EPIC_LayerConfigInit(&rl_ret->dst);
         rl_ret->dst.data        = p_buf->data;
         rl_ret->dst.color_mode  = p_buf->cf;
+        RT_ASSERT(HAL_EPIC_AreaWidth(&p_buf->area) > 0);
+        RT_ASSERT(HAL_EPIC_AreaHeight(&p_buf->area) > 0);
         rl_ret->dst.width       = HAL_EPIC_AreaWidth(&p_buf->area);
         rl_ret->dst.height      = HAL_EPIC_AreaHeight(&p_buf->area);
         rl_ret->dst.total_width = rl_ret->dst.width;
@@ -968,6 +990,12 @@ drv_epic_operation *drv_epic_alloc_op(drv_epic_render_buf *p_buf)
 rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 {
     priv_render_list_t *rl = get_rl_from_stack();
+    bool curr_op_merged = false;
+    /*Nodes to be deleted during merging:
+    Keep the new op, delete the old prev_op (where op is the immediate successor of prev_op,
+    and after deleting prev_op, op naturally connects to the previous node of the original prev_op). Default = op
+    (for some branches, the content is written to prev_op and the new op is deleted). */
+    drv_epic_operation *merged_op_to_remove = op;
 
     RT_ASSERT(rl);
     RT_ASSERT(0 == (rl->flag & (rl_flag_rendering)));
@@ -981,9 +1009,10 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
     if (0xFFFFFFFF != drv_epic.dbg_flag_dis_merge_operations)
     {
-        if (rl->src_list_len > 0)
+        if (rl->src_list_len > 1)
         {
-            drv_epic_operation *prev_op = rt_list_tail_entry(&rl->src_list, drv_epic_operation, list);
+            RT_ASSERT(op->list.prev != &rl->src_list);
+            drv_epic_operation *prev_op = rt_list_entry(op->list.prev, drv_epic_operation, list);
             drv_epic_operation *curr_op = op;
 
             if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (prev_op->desc.fill.opa >= OPA_MAX) && (NULL == prev_op->mask.data)
@@ -1022,8 +1051,9 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                     op->clip_area = prev_area;
 
-                    memcpy(prev_op, op, sizeof(drv_epic_operation));
-                    rl->src_list_len--;
+                    /* Keep op (which already includes image + bg), and remove the old fill prev_op*/
+                    merged_op_to_remove = prev_op;
+                    curr_op_merged = true;
                 }
             }
             else if ((DRV_EPIC_DRAW_FILL == prev_op->op) && (DRV_EPIC_DRAW_FILL == curr_op->op))
@@ -1041,8 +1071,9 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                         if (curr_op->desc.fill.opa >= OPA_MAX)
                         {
-                            memcpy(prev_op, curr_op, sizeof(drv_epic_operation)); //Overwrite previous
-                            rl->src_list_len--;
+                            /* curr(op) completely replaces prev_op: retains op and deletes the old prev_op */
+                            merged_op_to_remove = prev_op;
+                            curr_op_merged = true;
                         }
                         else if (prev_op->desc.fill.opa >= OPA_MAX)
                         {
@@ -1069,16 +1100,10 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
 
                         if (curr_op->desc.fill.opa >= OPA_MAX)
                         {
-                            //print_operation("prev_op",prev_op);
-                            //print_operation("curr_op",curr_op);
-                            prev_op->desc.fill.r = curr_op->desc.fill.r;
-                            prev_op->desc.fill.g = curr_op->desc.fill.g;
-                            prev_op->desc.fill.b = curr_op->desc.fill.b;
-                            prev_op->desc.fill.opa = curr_op->desc.fill.opa;
-
-                            prev_op->clip_area = curr_op->clip_area;//Overwrite
-
-                            rl->src_list_len--;
+                            /* curr(op) is non-transparent and completely covers prev_op: op is already the correct fill,
+                               so just delete the old prev_op. */
+                            merged_op_to_remove = prev_op;
+                            curr_op_merged = true;
                         }
                         else if (HAL_EPIC_AreaIsIn(&curr_op->clip_area, &prev_op->clip_area)) //Same area
                         {
@@ -1093,6 +1118,17 @@ rt_err_t drv_epic_commit_op(drv_epic_operation *op)
     }
 
 __COMMIT_OPERATION:
+    if (curr_op_merged)
+    {
+        /* Keep the new op and remove the old node "merged_op_to_remove" (usually "prev_op").
+        Op is the immediate successor of "prev_op", and after removing "prev_op", op naturally takes its original position. */
+        rt_list_remove(&merged_op_to_remove->list);
+        rl->src_list_alloc_len--;
+        epic_free(merged_op_to_remove);
+        RT_ASSERT(rl->src_list_len == rl->src_list_alloc_len);
+        return RT_EOK;
+    }
+
     /*Commit operation*/
     rl->src_list_len++;
     return RT_EOK;

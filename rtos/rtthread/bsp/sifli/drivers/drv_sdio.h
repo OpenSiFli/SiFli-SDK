@@ -21,20 +21,6 @@
 #define SDIO_MIN_FREQ        400000
 #define SDIO_ALIGN_LEN       32
 
-#if defined(SOC_SF32LB52X) || defined(SOC_SF32LB57X)
-    #define SDCARD_INSTANCE     SDIO1
-    #define SDIO_AHB_BASE       (HPSYS_MPI_MEM_CBUS_2_SBUS_OFFSET+QSPI2_MEM_BASE)
-    #define SDIO_IRQn           SDMMC1_IRQn
-#else
-    #define SDCARD_INSTANCE     SDIO2
-    #define SDIO_AHB_BASE       (HPSYS_MPI_MEM_CBUS_2_SBUS_OFFSET+QSPI3_MEM_BASE)
-    #define SDIO_IRQn           SDMMC2_IRQn
-#endif
-
-#ifndef SDIO_BASE_ADDRESS
-    #define SDIO_BASE_ADDRESS    (SDCARD_INSTANCE)
-#endif
-
 #ifndef SDIO_CLOCK_FREQ
     #define SDIO_CLOCK_FREQ      (48U * 1000 * 1000)
 #endif
@@ -134,39 +120,19 @@
 
 #define HW_SDIO_DATATIMEOUT                    (0x7F000000U)
 
-typedef rt_err_t (*dma_txconfig)(rt_uint32_t *src, rt_uint32_t *dst, int size);
-typedef rt_err_t (*dma_rxconfig)(rt_uint32_t *src, rt_uint32_t *dst, int size);
-typedef rt_uint32_t (*sdio_clk_get)(SD_TypeDef *hw_sdio);
-
-struct sifli_sdio_des
-{
-    SD_TypeDef *hw_sdio;
-    dma_txconfig txconfig;
-    dma_rxconfig rxconfig;
-    sdio_clk_get clk_get;
-};
-
 struct sifli_sdio_config
 {
     SDCARD_INSTANCE_TYPE *Instance;
     const char *name;
+    uint32_t irqn;
+    uint32_t rcc_mod;
+    uint32_t mem_base;
     struct dma_config dma_rx, dma_tx;
 };
 
-/* sifli sdio dirver class */
-struct sifli_sdio_class
-{
-    struct sifli_sdio_des *des;
-    const struct sifli_sdio_config *cfg;
-    struct rt_mmcsd_host host;
-    struct
-    {
-        DMA_HandleTypeDef handle_rx;
-        DMA_HandleTypeDef handle_tx;
-    } dma;
-};
-
 int rt_sdio_enable_ahb(uint32_t enable_sd_ahb);
+
+int rt_hw_sdio_init(void);
 
 #endif
 

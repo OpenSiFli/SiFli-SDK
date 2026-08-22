@@ -79,20 +79,25 @@ pdm open pdm1 1 anyka
 Indicates configuring PDM1 for mono recording, using Anyka algorithm, output as mono, generating anyka_pdm1_1.wav.  
 pdm open pdm1 2 anyka  
 Indicates configuring PDM1 for stereo recording, using Anyka algorithm, output as mono, generating anyka_pdm1_2.wav.  
+pdm open pdm1 2 anyka SSL 48  
+Indicates configuring PDM1 for stereo recording, using Anyka algorithm, using sound source localization detection, pdm gain is 48(max 90), output as mono.  
+
 pdm open pdm2 1 anyka  
-Indicates configuring PDM2 for mono recording, using Anyka algorithm, output as mono, generating anyka_pdm2_1.wav.  
+Indicates configuring PDM2 for mono recording, using Anyka algorithm, output as mono.  
 pdm open pdm2 2 anyka  
-Indicates configuring PDM2 for stereo recording, using Anyka algorithm, output as mono, generating anyka_pdm2_2.wav.  
+Indicates configuring PDM2 for stereo recording, using Anyka algorithm, output as mono.  
 pdm open pdm12 4 anyka  
-Indicates configuring PDM1/PDM2 each for stereo, using Anyka algorithm, output as mono, generating anyka_4.wav.  
+Indicates configuring PDM1/PDM2 each for stereo, using Anyka algorithm, output as mono.  
+pdm open pdm12 4 anyka SSL 48  
+Indicates configuring PDM1/PDM2 each for stereo, using Anyka algorithm, using sound source localization detection, pdm gain is 48(max 90), output as mono.  
 
 2. Stop recording command: `pdm close`  
   pdm close  
 Indicates stopping the recording.  
 
-3. Playback recording command: `pdm play [filename]`  
+3. Playback recording command: `pdm play`  
 For example:  
-  pdm play anyka_pdm2_2.wav  
+  pdm play  
 
 After recording, executing playback will allow normal recording and playback.  
 

@@ -23,22 +23,35 @@ void BSP_LCD_PowerDown(void)
     BSP_LCD_Reset(0);
 }
 
+static void QSPI_PIN_Set(int pad, pin_function func, int flags, int hcpu)
+{
+    HAL_PIN_Set(pad, func, flags, hcpu);
+#ifdef BSP_LCDC_USING_DDR_QADSPI
+    // Set the pin driver strength to 12mA
+    HAL_PIN_Set_DS0(pad, 1, 1);
+    HAL_PIN_Set_DS1(pad, 1, 1);
+#else
+    // Set the pin driver strength to 8mA
+    HAL_PIN_Set_DS0(pad, 1, 1);
+    HAL_PIN_Set_DS1(pad, 1, 0);
+#endif /* BSP_LCDC_USING_DDR_QADSPI */
+}
 void BSP_LCD_PowerUp(void)
 {
 #ifdef BSP_LCDC_USING_QADSPI
-    HAL_PIN_Set(PAD_PA04, LCDC1_SPI_CLK, PIN_NOPULL, 1);
+
+    QSPI_PIN_Set(PAD_PA04, LCDC1_SPI_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA03, LCDC1_SPI_CS, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA05, LCDC1_SPI_DIO0, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA06, LCDC1_SPI_DIO1, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA07, LCDC1_SPI_DIO2, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA08, LCDC1_SPI_DIO3, PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA05, LCDC1_SPI_DIO0, PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA06, LCDC1_SPI_DIO1, PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA07, LCDC1_SPI_DIO2, PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA08, LCDC1_SPI_DIO3, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, LCDC1_SPI_TE, PIN_NOPULL, 1);
-    // Set the clk pin driver strength to 8mA
-    HAL_PIN_Set_DS0(PAD_PA04, 1, 1);
-    HAL_PIN_Set_DS1(PAD_PA04, 1, 0);
 
     HAL_PIN_Set(PAD_PA01, GPTIM1_CH4, PIN_NOPULL, 1);   // LCDC1_BL_PWM_CTRL, LCD backlight PWM
 #endif /* BSP_LCDC_USING_QADSPI */
+
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_LCDC, RCC_CLK_LCDC_SYSCLK);
 
 }
 

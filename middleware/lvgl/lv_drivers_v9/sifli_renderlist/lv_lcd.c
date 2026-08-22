@@ -223,11 +223,6 @@ static void render_start(lv_event_t *e)
     }
 #endif
 
-#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
-    switch_draw_buf();
-    update_fb();
-#endif
-
     int ret = render_list_create_main_frame(disp);
     LV_UNUSED(ret);
 
@@ -243,10 +238,28 @@ static void wait_flush_done(lv_display_t *disp_drv)
 }
 
 #ifdef BSP_USING_LCD_FRAMEBUFFER
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+/* Set when the LAST partition of a frame is sent, so its flush-completion
+   switches the draw buffer (mirrors the v8 driver): the next frame then renders
+   into the freed buffer instead of the one just sent, avoiding the scanline wait. */
+static volatile uint8_t pending_switch_draw_buf;
+#endif
 static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
 {
     LV_UNUSED(fb_desc);
     rt_err_t err;
+
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    if (pending_switch_draw_buf)
+    {
+        pending_switch_draw_buf = 0;
+        /* Switch BEFORE releasing lcd_sema so the next frame (unblocked from
+           wait_flush_done) renders into the freed back buffer, not the one just sent. */
+        switch_draw_buf();
+        update_fb();
+    }
+#endif
+
     err = rt_sem_release(&lcd_sema);
     RT_ASSERT(RT_EOK == err);
 }
@@ -313,6 +326,12 @@ void main_frame_render_done_callback(drv_epic_render_list_t rl, EPIC_LayerConfig
                 if (device)
                 {
 #ifdef BSP_USING_LCD_FRAMEBUFFER
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+                    /* Last partition: request the draw-buffer switch to happen
+                       when this send completes (in lcd_flush_done). */
+                    if (last)
+                        pending_switch_draw_buf = 1;
+#endif
                     drv_lcd_fb_write_send(&flush_area, &flush_area, (uint8_t *)p_dst->data, lcd_flush_done, last);
 #else
                     debug_lcd_flush_start(flush_area.x0, flush_area.y0, flush_area.x1, flush_area.y1);

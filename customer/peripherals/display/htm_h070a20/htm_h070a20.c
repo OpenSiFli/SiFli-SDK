@@ -40,7 +40,7 @@ static LCDC_InitTypeDef lcdc_int_cfg =
             .DE_polarity   = 0,
             .VS_polarity   = 1,
             .HS_polarity   = 1,
-            .PCLK_force_on = 0,
+            .PCLK_force_on = 1,
 
             .VS_width      = 13,    //VLW
             .HS_width      = 30,   //HLW

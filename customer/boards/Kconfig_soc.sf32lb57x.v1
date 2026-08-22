@@ -13,15 +13,30 @@ choice SOC_SF32LB57X_PART
     config SOC_SF32LB573UB776
         bool "SF32LB573UB776"
         select SOC_PACKAGE_QFN68
+    config SOC_SF32LB575UCNN6
+        bool
+        select SOC_PACKAGE_QFN68
+    config SOC_SF32LB575UC7N6
+        bool
+        select SOC_PACKAGE_QFN68
     config SOC_SF32LB575YBBN6
         bool "SF32LB575YBBN6"
         select SOC_PACKAGE_QFN80
+    config SOC_SF32LB57EYBBN6
+        bool "SF32LB57EYBBN6"
+        select SOC_PACKAGE_QFN80
+    config SOC_SF32LB577UDNN6
+        bool "SF32LB577UDNN6"
+        select SOC_PACKAGE_QFN68
     config SOC_SF32LB577VD776
         bool "SF32LB577VD776"
         select SOC_PACKAGE_BGA112
     config SOC_SF32LB579V6EN6
         bool "SF32LB579V6EN6"
         select SOC_PACKAGE_BGA112
+    config SOC_SF32LB57GYD7N6
+        bool
+        select SOC_PACKAGE_QFN80
     config SOC_SF32LB57BUN3N6
         bool "SF32LB57BUN3N6"
         select SOC_PACKAGE_QFN68

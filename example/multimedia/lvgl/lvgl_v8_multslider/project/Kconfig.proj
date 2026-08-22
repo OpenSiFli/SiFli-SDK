@@ -1,0 +1,30 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool 
+	select custom_mem_map
+	default y if !SOC_SIMULATOR
+    
+config LV_BUILD_EXAMPLES
+    bool 
+    default y
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int "image cache in psram size(standalone)"
+    depends on BSP_USING_PSRAM
+    default 1100000
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int
+    depends on !BSP_USING_PSRAM
+    default 0
+
+config FT_CACHE_SIZE
+    int "freetype cache size(bytes)"
+    help 
+        "Maximum freetype cache size(threshold), and define a standalon 
+         array(size equals FT_CACHE_SIZE) if define 
+         FREETYPE_CACHE_IN_PSRAM or FREETYPE_CACHE_IN_SRAM_STANDALONE"
+    default 400000 if FREETYPE_CACHE_IN_PSRAM
+    default 120000 if FREETYPE_CACHE_IN_SRAM_STANDALONE
+    default 100000 if FREETYPE_CACHE_IN_SRAM
+    default 0

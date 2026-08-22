@@ -21,6 +21,8 @@ extern "C" {
 #include "lv_symbol_def.h"
 #include "../misc/lv_area.h"
 
+
+
 /*********************
  *      DEFINES
  *********************/
@@ -254,6 +256,9 @@ LV_FONT_CUSTOM_DECLARE
  * Just a wrapper around LV_FONT_DEFAULT because it might be more convenient to use a function in some cases
  * @return  pointer to LV_FONT_DEFAULT
  */
+#ifdef LV_USING_FREETYPE_ENGINE
+extern lv_font_t *lvsf_get_font_from_size(uint16_t size);
+#endif
 static inline const lv_font_t * lv_font_default(void)
 {
     return LV_FONT_DEFAULT;

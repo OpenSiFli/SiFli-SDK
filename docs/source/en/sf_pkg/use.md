@@ -58,7 +58,7 @@ Execute the following command in the `project` directory of your project:
 sdk.py sf-pkg install
 ```
 
-![Install Dependencies](./assert/sf-pkg-install.png)
+![Install Dependencies](./assets/sf-pkg-install.png)
 
 After successful installation, an `sf-pkgs` folder will be generated in the `project` directory, containing the installed packages.
 

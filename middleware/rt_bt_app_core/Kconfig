@@ -1,0 +1,20 @@
+menuconfig BT_USING_RT_BT_APP_CORE
+    bool "RT-Thread BT Application Core Framework"
+    depends on BSP_BLE_SIBLES && BT_FINSH
+    default n
+    help
+      Enable the RT-Thread BT application core framework, which provides
+      a plugin-based architecture for BT profile services with automatic
+      event routing, service registration, and unified shell commands.
+
+if BT_USING_RT_BT_APP_CORE
+
+config BT_APP_ENABLE_SHELL_CMD
+    bool "Enable shell command interface (bt <service> <cmd>)"
+    default y
+    help
+      Enable the unified "bt" shell command for controlling BT services.
+      Disable this if you want to use the core framework without shell
+      command support (e.g., in embedded systems without console).
+
+endif

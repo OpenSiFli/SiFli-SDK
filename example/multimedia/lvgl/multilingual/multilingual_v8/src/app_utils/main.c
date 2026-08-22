@@ -15,7 +15,7 @@
 #include "littlevgl2rtt.h"
 #include "app_comm.h"
 #include "app_lang.h"
-#include "app_module.h"
+#include "lvsf_resource.h"
 #include "app_nvm_lang_compat.h"
 #include "lv_ext_resource_manager.h"
 #include "lvsf/lv_ex_data.h"

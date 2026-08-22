@@ -15,6 +15,9 @@ elif GetDepend("SOC_SF32LB56X"):
     src += ["bf0_ap_hal_msp_sf32lb56x.c"]
 elif GetDepend("SOC_SF32LB52X"):
     src += ["bf0_ap_hal_msp_sf32lb52x.c"]
+elif GetDepend("SOC_SF32LB57X"):
+    src += ["bf0_ap_hal_msp_sf32lb57x.c"]
+
 
 path =  [cwd]
 

@@ -143,6 +143,13 @@ rt_err_t rt_wlan_unregister_event_handler(rt_wlan_event_t event);
 void rt_wlan_mgnt_lock(void);
 void rt_wlan_mgnt_unlock(void);
 
+/*
+ * wifi P2P GO interface
+ */
+rt_err_t rt_wlan_p2p_go_start(const char *ssid, const char *password);
+rt_err_t rt_wlan_p2p_go_stop(void);
+rt_bool_t rt_wlan_p2p_go_is_active(void);
+
 #ifdef __cplusplus
 }
 #endif

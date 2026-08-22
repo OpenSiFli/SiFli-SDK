@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 340" font-family="'Segoe UI',Arial,Helvetica,sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#55606e"/>
+    </marker>
+  </defs>
+
+  <!-- Application / Upgrade Subprogram -->
+  <rect x="200" y="18" width="280" height="46" rx="8" fill="#ffffff" stroke="#8a97a8" stroke-width="1.5"/>
+  <text x="340" y="47" text-anchor="middle" font-size="13.5" font-weight="bold" fill="#1f2d3d">Application / Upgrade Subprogram</text>
+
+  <line x1="340" y1="64" x2="340" y2="100" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Mode layer -->
+  <rect x="215" y="104" width="250" height="64" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="340" y="131" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2d3d">Mode layer</text>
+  <text x="340" y="153" text-anchor="middle" font-size="12.5" fill="#445060">Host / Device</text>
+  <text x="478" y="128" font-size="12" fill="#7a8699">decides who initiates and how</text>
+  <text x="478" y="144" font-size="12" fill="#7a8699">an upgrade is organized</text>
+
+  <!-- branch connectors -->
+  <path d="M270,168 L270,204 L180,204 L180,236" fill="none" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <path d="M410,168 L410,204 L500,204 L500,236" fill="none" stroke="#55606e" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="225" y="198" text-anchor="middle" font-size="12" fill="#7a8699">data I/O</text>
+  <text x="452" y="198" text-anchor="middle" font-size="12" fill="#7a8699">calls</text>
+
+  <!-- Transport layer -->
+  <rect x="70" y="240" width="220" height="76" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="180" y="270" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2d3d">Transport layer</text>
+  <text x="180" y="294" text-anchor="middle" font-size="12.5" fill="#445060">BLE / CDC / PAN</text>
+
+  <!-- Engine layer -->
+  <rect x="390" y="240" width="220" height="76" rx="8" fill="#f0f5fb" stroke="#5b7db1" stroke-width="1.5"/>
+  <text x="500" y="270" text-anchor="middle" font-size="14" font-weight="bold" fill="#1f2d3d">Engine layer</text>
+  <text x="500" y="294" text-anchor="middle" font-size="12.5" fill="#445060">verify, flash write, resume</text>
+</svg>

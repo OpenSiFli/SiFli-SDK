@@ -1,0 +1,9 @@
+mainmenu "CDC DFU V2 Example Configuration"
+
+config ENABLE_DFU
+    bool "Enable DFU subprogram"
+    default y
+    help
+      Build and include the DFU subprogram alongside this application.
+
+source "$SIFLI_SDK/Kconfig"

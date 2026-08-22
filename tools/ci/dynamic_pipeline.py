@@ -225,7 +225,10 @@ class DynamicPipelineGenerator:
         if 'common_projects' in self.config:
             for common_project in self.config['common_projects']:
                 project_path = common_project['path']
+                exclude_boards = set(common_project.get('exclude_boards', []))
                 for board in common_project['boards']:
+                    if board in exclude_boards:
+                        continue
                     job_name, job_config = self._create_build_job(project_path, board, is_common=True)
                     jobs[job_name] = job_config
                     job_count += 1

@@ -18,7 +18,37 @@ config PKG_USING_MBEDTLS_USER_CERTS
     depends on PKG_USING_MBEDTLS
     default n
 
+config PKG_USING_MBEDTLS_EXTRA_CERT_DIRS
+    string "Extra CA cert search directories (semicolon separated)"
+    depends on PKG_USING_MBEDTLS
+    default ""
+    help
+        Specify additional directories to search for PEM CA certificates
+        at build time. Multiple directories can be separated by ';'.
+        Each entry may be an absolute path or a path relative to the
+        mbedtls_228 package root (the folder that contains this Kconfig).
+        Only PEM files whose first line starts with
+        "-----BEGIN CERTIFICATE" will be collected; other files are
+        skipped. Collected certificates are deduplicated with
+        the built-in default/user certificate lists.
+
+        Examples:
+          /abs/path/to/my_certs
+          certs/my_board;certs/customer_a
+          /etc/ssl/certs
+
+        Leave empty to keep the legacy behavior (only certs/ and
+        certs/default/ are scanned).
+
 config PKG_USING_MBEDTLS_TLS_CLIENT_CONNECT_FALLBACK_ALIAS
     bool "Enable dynamic cert fallback for mbedtls_client_connect()"
     depends on PKG_USING_MBEDTLS
     default n
+    help
+        When enabled, mbedtls_client_connect() is aliased at compile time
+        to mbedtls_client_connect_with_fallback(). If a normal handshake
+        fails with MBEDTLS_X509_BADCERT_NOT_TRUSTED, the client reconnects
+        once with VERIFY_NONE to capture the peer certificate chain, takes
+        the chain tail as a temporary trust anchor, then reconnects with
+        verification re-enabled. See ports/src/tls_client_fallback.c for
+        details and security notes.

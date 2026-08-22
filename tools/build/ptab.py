@@ -1370,13 +1370,24 @@ def resolve_region_address(
         hpsys = ram_config.get('hpsys', {})
         ram = hpsys.get('ram', {})
         base = _resolve_ram_region_base(ram, 0x20000000)
-        return base + offset, base + offset
+        sbus_addr = base + offset
+        cbus_addr = sbus_addr
+        if series:
+            # CBUS view reuses convert_to_cbus_addr() (series passed explicitly
+            # so it also works offline without Kconfig). On SF32LB58 the ACPU
+            # sees the hpsys RAM from a 0-based CBUS view (0x20200000 <-> 0x0).
+            cbus_addr, _ = convert_to_cbus_addr(sbus_addr, offset, core, series=series)
+        return sbus_addr, cbus_addr
 
     if region == 'lpsys_ram' or region.startswith('lpsys'):
         lpsys = ram_config.get('lpsys', {})
         ram = lpsys.get('ram', {})
         base = _resolve_ram_region_base(ram, 0x20400000)
-        return base + offset, base + offset
+        sbus_addr = base + offset
+        cbus_addr = sbus_addr
+        if series:
+            cbus_addr, _ = convert_to_cbus_addr(sbus_addr, offset, core, series=series)
+        return sbus_addr, cbus_addr
 
     # psram 别名处理：psram{x} 直接映射到 mpi{x}
     # 用于 exec 的地址使用 xip 地址
@@ -2234,32 +2245,59 @@ def _get_config_value(name):
     import building
     return building.GetConfigValue(name)
 
-def convert_to_cbus_addr(addr, offset, core=None):
+def _detect_series():
+    """Detect the chip series from Kconfig build options (build context)."""
     if _get_depend("SOC_SF32LB55X"):
-        return addr, offset
+        return 'sf32lb55'
     if _get_depend("SOC_SF32LB56X"):
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+        return 'sf32lb56'
+    if _get_depend("SOC_SF32LB58X"):
+        return 'sf32lb58'
+    if _get_depend("SOC_SF32LB52X"):
+        return 'sf32lb52'
+    if _get_depend("SOC_SF32LB57X"):
+        return 'sf32lb57'
+    return None
+
+
+def convert_to_cbus_addr(addr, offset, core=None, series=None):
+    """Convert an SBUS address to the CBUS view.
+
+    `series` (e.g. 'sf32lb58') may be passed explicitly so the mapping works
+    in offline/standalone contexts where Kconfig build options are not
+    available; when it is None the series is detected from Kconfig.
+    """
+    if series is None:
+        series = _detect_series()
+    if not series:
+        raise Exception("unknown chip")
+    series_l = str(series).strip().lower()
+
+    if core is None:
+        core = 'hcpu'
+    if series_l == 'sf32lb55':
+        return addr, offset
+    if series_l == 'sf32lb56':
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             return addr - 0x50000000, offset
         return addr, offset
-    if _get_depend("SOC_SF32LB58X"):
+    if series_l == 'sf32lb58':
         cbus_addr = addr
         cbus_offset = offset
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             cbus_addr -= 0x50000000
-        elif (addr >= 0x20000000) and (addr <= 0x2FFFFFFF) and core and core.lower() == "acpu":
+        elif (addr >= 0x20200000) and (addr <= 0x2027FFFF) and str(core).lower() == "acpu":
             cbus_addr -= 0x20200000
-            assert cbus_addr >= 0, "0x{:8X} is not a valid address for ACPU"
             cbus_offset -= 0x00200000
         return cbus_addr, cbus_offset
-    if _get_depend("SOC_SF32LB52X"):
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
+    if series_l == 'sf32lb52':
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
             return addr - 0x50000000, offset
         return addr, offset
-    if _get_depend("SOC_SF32LB57X"):
-        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF):
-            if (core is None) or (core.lower() != "acpu"):
-                return addr - 0x50000000, offset
-        elif (addr >= 0x10000000) and (addr <= 0x1FFFFFFF) and core and (core.lower() == "acpu"):
+    if series_l == 'sf32lb57':
+        if (addr >= 0x60000000) and (addr <= 0x6FFFFFFF) and str(core).lower() == "hcpu":
+            return addr - 0x50000000, offset
+        elif (addr >= 0x10000000) and (addr <= 0x1FFFFFFF) and (str(core).lower() == "acpu"):
             # ACPU use sbus address
             return addr + 0x50000000, offset
         return addr, offset
@@ -2495,7 +2533,7 @@ def _add_default_regions_52x(mems):
             elif 'FLASH_BOOT_LOADER' in region_tags and 'app_exec' in region_type:
                 bootloader_exec_found = True
 
-            if region_name == 'bootloader':
+            if region_name == 'bootloader' and 'app_exec' not in region_type:
                 bootloader_data_found = True
             elif 'BOOTLOADER_RAM_DATA' in region_tags:
                 bootloader_data_found = True
@@ -2624,7 +2662,7 @@ def _add_default_regions_57x(mems):
             elif 'FLASH_BOOT_LOADER' in region_tags and 'app_exec' in region_type:
                 bootloader_exec_found = True
 
-            if region_name == 'bootloader':
+            if region_name == 'bootloader' and 'app_exec' not in region_type:
                 bootloader_data_found = True
             elif 'BOOTLOADER_RAM_DATA' in region_tags:
                 bootloader_data_found = True

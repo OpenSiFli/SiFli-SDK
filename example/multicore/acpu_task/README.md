@@ -1,4 +1,4 @@
-﻿﻿# ACPU执行自定义任务
+﻿# ACPU执行自定义任务
 源码路径: `example/multicore/acpu_task`
 
 ## 用法
@@ -92,5 +92,4 @@ if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_U
 ## 参考文档
 
 - [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
-- [多核通信开发指南](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/multicore/index.html)
-
+- [ACPU 使用指南](../../app_note/acpu.md)

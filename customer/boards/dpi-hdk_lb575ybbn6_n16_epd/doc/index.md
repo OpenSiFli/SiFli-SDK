@@ -1,0 +1,17 @@
+# DPI-HDK_LB575YBBN6_N16_EPD
+
+## SoC
+SF32LB575YBBN6
+
+### MPI1
+PSRAM 4MB
+
+### MPI2
+PSRAM 4MB
+
+## External Storage
+### MPI3
+NOR Flash 16MB
+
+## Display
+ePaper Display

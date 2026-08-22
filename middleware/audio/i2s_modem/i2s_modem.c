@@ -105,9 +105,10 @@ static void modem_entry(void *parameter)
 
             if (evt & MODEM_EVENT_I2S_RX)
             {
-                int16_t debug[160];
-                rt_ringbuffer_get(&thiz->i2s2audprc_rb, (uint8_t *)debug, sizeof(debug));
-                LOG_HEX("i2s rx:\n", 16, debug, sizeof(debug));
+                rt_uint8_t debug[320];
+                rt_uint16_t len = rt_ringbuffer_get(&thiz->i2s2audprc_rb, (uint8_t *)debug, sizeof(debug));
+                rt_kprintf("i2s rx(%d):%02x, %02x, %02x, %02x, %02x, %02x\n", len, \
+                           debug[0], debug[1], debug[2], debug[3], debug[4], debug[5]);
             }
         }
     }
@@ -119,6 +120,10 @@ static void audprc_dma_rx(uint8_t channel_id, uint8_t *data, rt_size_t len)
     struct modem_server *thiz = &modem;
 
     RT_ASSERT(320 == len);
+    /*
+    rt_kprintf("enter audprc rx, chn: %d, len: %d, is_open: %d, dev: %p\n", \
+            channel_id, len, thiz->is_opened, thiz->i2s_dev);
+    */
     if (channel_id > 0)
     {
         return;
@@ -130,6 +135,8 @@ static void audprc_dma_rx(uint8_t channel_id, uint8_t *data, rt_size_t len)
         mono2stereo((int16_t *)data, len / 2, thiz->stereo);
 #if MODEM_I2S_DEBUG
         rt_ringbuffer_put(&thiz->audprc2i2s_rb, (uint8_t *)thiz->stereo, sizeof(thiz->stereo));
+        rt_kprintf("audprc i2s rx(%d):%04x, %04x, %04x, %04x\n", len, \
+                   thiz->stereo[0], thiz->stereo[1], thiz->stereo[2], thiz->stereo[3]);
         rt_event_send(thiz->event, MODEM_EVENT_AUDPRC_RX);
 #else
         bf0_i2s_device_write(thiz->i2s_dev, 0, (uint8_t *)thiz->stereo, sizeof(thiz->stereo));
@@ -147,13 +154,18 @@ static void audprc_dma_rx(uint8_t channel_id, uint8_t *data, rt_size_t len)
 
 int i2s_modem_open(void)
 {
+    return i2s_modem_open2(AUDIO_MAX_VOLUME);
+}
+
+int i2s_modem_open2(uint8_t volume)
+{
     struct modem_server *thiz = &modem;
 
-    //audio_server_set_private_volume(AUDIO_TYPE_MODEM_VOICE, 15);
+    audio_server_set_private_volume(AUDIO_TYPE_MODEM_VOICE, volume);
     if (thiz->is_opened)
     {
-        LOG_E("%s reopen err", __func__);
-        return -2;
+        LOG_E("%s i2s_open again error", __func__);
+        return -1;
     }
 
 #if MODEM_I2S_DEBUG
@@ -165,11 +177,6 @@ int i2s_modem_open(void)
     tid = rt_thread_create("mdmi2st", modem_entry, NULL, 4096, 16, 10);
     rt_thread_startup(tid);
 #endif
-    if (i2s_open(thiz))
-    {
-        LOG_E("%s i2s_open error", __func__);
-        return -2;
-    }
 
     audio_parameter_t pa = {0};
     pa.write_bits_per_sample = 16;
@@ -180,9 +187,10 @@ int i2s_modem_open(void)
     pa.read_samplerate = 16000;
     pa.read_cache_size = 0;
     pa.write_cache_size = 640;
-    thiz->client = audio_open(AUDIO_TYPE_MODEM_VOICE, AUDIO_TXRX, &pa, NULL, NULL);
+    pa.open = (user_device_open)i2s_open;
+    pa.close = (user_device_close)i2s_close;
+    thiz->client = audio_open(AUDIO_TYPE_MODEM_VOICE, AUDIO_TXRX, &pa, NULL, thiz);
     RT_ASSERT(thiz->client);
-    rt_device_set_audprc_dma_rx_callback(audprc_dma_rx);
 
     rt_base_t level = rt_hw_interrupt_disable();
     thiz->is_opened = 1;
@@ -198,13 +206,17 @@ int i2s_modem_close(void)
 {
     struct modem_server *thiz = &modem;
 
+    if (!thiz->is_opened)
+    {
+        return -1;
+    }
+
     rt_base_t level = rt_hw_interrupt_disable();
     thiz->is_opened = 0;
     rt_hw_interrupt_enable(level);
 
-    i2s_close(thiz);
     audio_close(thiz->client);
-    rt_device_set_audprc_dma_rx_callback(NULL);
+
     thiz->client = NULL;
 
 #if MODEM_I2S_DEBUG
@@ -229,13 +241,20 @@ static void i2s_dma_rx(char *name, uint8_t *data, rt_size_t len)
     struct modem_server *thiz = &modem;
 
     RT_ASSERT(MODEM_I2S_DEVICE_CHANNELS * 320 == len);
-
+    /*
+    rt_kprintf("enter i2s dma rx, name: %s, len: %d, is_open: %d, dev: %p\n", \
+            name, len, thiz->is_opened, audio_get_audprc_dev());
+    */
     if (thiz->is_opened && audio_get_audprc_dev())
     {
 #if MODEM_I2S_DEVICE_CHANNELS == 2
         stereo2mono((int16_t *)data, len / 2, thiz->mono);
 #if MODEM_I2S_DEBUG
         rt_ringbuffer_put(&thiz->i2s2audprc_rb, (uint8_t *)thiz->mono, sizeof(thiz->mono));
+        /*
+        rt_kprintf("dma i2s rx(%d):%04x, %04x, %04x, %04x\n", len, \
+                        thiz->mono[0], thiz->mono[1], thiz->mono[2], thiz->mono[3]);
+        */
         rt_event_send(thiz->event, MODEM_EVENT_I2S_RX);
 #else
         bf0_audprc_device_write(audio_get_audprc_dev(), 0, (uint8_t *)thiz->mono, sizeof(thiz->mono));
@@ -263,9 +282,16 @@ static void i2s_modem_start(void)
     }
 }
 
+/*
+    this func is called in audio server when audio_open(AUDIO_TYPE_MODEM_VOICE,)
+*/
 static int i2s_open(struct modem_server *thiz)
 {
     int stream = 0;
+
+    LOG_I("%s:%p", __func__, thiz->i2s_dev);
+
+    RT_ASSERT(thiz == &modem);
 
     thiz->i2s_dev = rt_device_find(MODEM_I2S_DEVICE_NAME);
     if (NULL == thiz->i2s_dev)
@@ -306,18 +332,33 @@ static int i2s_open(struct modem_server *thiz)
     inter = 0;
     rt_device_control(thiz->i2s_dev, AUDIO_CTL_SETOUTPUT, (void *)inter);
 
+    rt_base_t level = rt_hw_interrupt_disable();
     rt_device_set_i2s_dma_rx_callback(i2s_dma_rx);
+    rt_device_set_audprc_dma_rx_callback(audprc_dma_rx);
+    rt_hw_interrupt_enable(level);
 
     i2s_modem_start();
 
     return 0;
 }
 
+/*
+    this func is called in audio server when audio_open(AUDIO_TYPE_MODEM_VOICE,)
+*/
+
 static int i2s_close(struct modem_server *thiz)
 {
-    rt_device_set_i2s_dma_rx_callback(NULL);
+    RT_ASSERT(thiz == &modem);
+
+    LOG_I("%s:%p", __func__, thiz->i2s_dev);
+
     if (thiz->i2s_dev)
     {
+        rt_base_t level = rt_hw_interrupt_disable();
+        rt_device_set_i2s_dma_rx_callback(NULL);
+        rt_device_set_audprc_dma_rx_callback(NULL);
+        rt_hw_interrupt_enable(level);
+
         int stream = AUDIO_STREAM_REPLAY;
         rt_device_control(thiz->i2s_dev, AUDIO_CTL_STOP, &stream);
         stream = AUDIO_STREAM_RECORD;
@@ -325,8 +366,31 @@ static int i2s_close(struct modem_server *thiz)
 
         rt_device_close(thiz->i2s_dev);
         thiz->i2s_dev = NULL;
-        rt_device_set_i2s_dma_rx_callback(NULL);
     }
     return 0;
 }
+
+#if defined(RT_USING_FINSH)
+static void i2s(uint8_t argc, char **argv)
+{
+    if (argv[1][0] == '1')
+    {
+        rt_kprintf("modem_open\n");
+#ifdef RT_USING_PM
+        rt_pm_request(PM_SLEEP_MODE_IDLE);
+#endif
+        i2s_modem_open();
+    }
+    else
+    {
+        rt_kprintf("modem_close\n");
+        i2s_modem_close();
+#ifdef RT_USING_PM
+        rt_pm_release(PM_SLEEP_MODE_IDLE);
+#endif
+    }
+}
+
+MSH_CMD_EXPORT(i2s, i2s commnad);
+#endif
 

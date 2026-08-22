@@ -57,7 +57,7 @@ sdk.py sf-pkg search sht30
 sdk.py sf-pkg install
 ```
 
-![安装依赖](./assert/sf-pkg-install.png)
+![安装依赖](./assets/sf-pkg-install.png)
 
 安装成功后，会在 `project` 目录下生成 `sf-pkgs` 文件夹，其中包含了我们所安装的包。
 

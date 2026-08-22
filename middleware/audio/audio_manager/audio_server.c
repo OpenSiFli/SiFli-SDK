@@ -57,7 +57,9 @@
 #include "drv_audprc.h"
 #include "audio_server_internal.h"
 
-
+#ifdef CFG_BT_VOICE_RELAY
+    #include "audio_bt_voice_relay.h"
+#endif
 /* ---------------------audio server config start-------------------------- */
 #undef audio_mem_malloc
 #undef audio_mem_free
@@ -110,12 +112,14 @@ static int audio_pm_debug = 0;
 static int hfp_with_xiaozhi = 0;
 static audio_server_t g_server;
 static uint32_t audio_server_stack[AUDIO_SERVER_STACK_SIZE / 4];
-static uint32_t bt_downvoice_stack[DOWNLINK_STACK_SIZE / 4];
+static uint32_t bt_downvoice_stack[AUDIO_SERVER_STACK_SIZE * 3 / 5 / 4];
 static struct rt_thread audio_server_tid;
 static struct rt_thread bt_downvoice_tid;
 static uint8_t *hfp_dev_input_buf;
 static uint32_t hfp_dev_input_buf_offset;
 static uint8_t g_ae_log = 0;
+
+
 
 /* dump debug control*/
 
@@ -460,7 +464,9 @@ static inline void process_speaker_tx(audio_server_t *server, audio_device_speak
         if (my->is_wait_rx_start)
         {
             my->is_wait_rx_start = 0;
+#if !AUDIO_TX_USING_I2S
             start_rx(my);
+#endif
             rt_event_send(my->event, 1);
         }
     }
@@ -918,9 +924,17 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
     {
         rt_device_set_tx_complete(my->i2s, speaker_tx_done);
     }
+    else
+    {
+        rt_device_set_tx_complete(my->i2s, NULL);
+    }
 #else
-    LOG_I("config tx--set callback dma size=%d", my->tx_dma_size);
-    if (client->audio_type != AUDIO_TYPE_MODEM_VOICE)
+    LOG_I("set tx callback dma size=%d t=%d", my->tx_dma_size, client->audio_type);
+    if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+    {
+        rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
+    }
+    else
     {
         rt_device_set_tx_complete(my->audprc_dev, speaker_tx_done);
     }
@@ -1031,7 +1045,7 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
     {
         uint8_t vol_level  = audio_server_get_private_volume(client->audio_type);
         int volumex2 = eq_get_music_volumex2(vol_level);
-        if (my->tx_samplerate == 16000 || my->tx_samplerate == 8000)
+        if (my->tx_samplerate == 16000 || my->tx_samplerate == 8000 || my->is_need_3a)
             volumex2 = eq_get_tel_volumex2(vol_level);
 
         LOG_I("no eq init volume=%d", volumex2);
@@ -1130,11 +1144,17 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
         rt_device_set_rx_indicate(my->audprc_dev, NULL);
         rt_device_set_dual_rx_indicate(dual_adc_rx_ind);
     }
-    else if (client->audio_type != AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
+    else if (client->audio_type == AUDIO_TYPE_MODEM_VOICE) /* modem app use callback in app, see i2s_modem.c */
     {
+        rt_device_set_rx_indicate(my->audprc_dev, NULL);
+    }
+    else
+    {
+        LOG_I("non modem config rx--set callback");
         rt_device_set_audprc_dma_rx_callback(NULL);
         rt_device_set_rx_indicate(my->audprc_dev, mic_rx_ind);
     }
+
     //config ADC
     struct rt_audio_caps caps;
     int stream;
@@ -1195,7 +1215,9 @@ static void config_rx(audio_device_speaker_t *my, audio_client_t client)
 static void start_rx(audio_device_speaker_t *my)
 {
     int stream;
+#if !AUDIO_TX_USING_I2S
     LOG_I("%s need_adc_rx=%d", __FUNCTION__, my->need_adc_rx);
+#endif
     if (my->need_adc_rx)
     {
         my->need_adc_rx = 0;
@@ -1246,8 +1268,18 @@ static void start_txrx(audio_device_speaker_t *my, bool is_modem)
     my->is_wait_rx_start = 1;
 
 #if defined(AUDIO_TX_USING_I2S)
+    LOG_I("<i2s start>");
+    /* should delete log in driver for aecm fixed delay time between mic and i2s-tx */
+    rt_base_t level = rt_hw_interrupt_disable();
     stream = AUDIO_STREAM_REPLAY;
     rt_device_control(my->i2s, AUDIO_CTL_START, &stream);
+    my->opened_map_flag |= OPEN_MAP_TX;
+    my->tx_ready = 1;
+    start_rx(my);
+    rt_hw_interrupt_enable(level);
+    //wait rx start
+    rt_err_t got = rt_event_recv(my->event, 1, RT_EVENT_FLAG_OR | RT_EVENT_FLAG_CLEAR, 500, NULL) ;
+    LOG_I("last log should be <i2s start> %d", got);
 #else
     // 6. DAC mute
     rt_device_control(my->audcodec_dev, AUDIO_CTL_MUTE, (void *)1);
@@ -1280,7 +1312,6 @@ static void start_txrx(audio_device_speaker_t *my, bool is_modem)
         LOG_I("got rx start %d", got);
     }
 #endif
-    rt_thread_mdelay(10);
 }
 
 static rt_err_t micbias_rx_ind(rt_device_t dev, rt_size_t size)
@@ -1361,6 +1392,8 @@ static void micbias_power_off_internal()
         rt_device_control(my->audcodec_dev, AUDIO_CTL_STOP, &stream_audcodec);
         rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
         bf0_disable_pll();
+        rt_device_set_rx_indicate(my->audprc_dev, RT_NULL);
+        rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
         rt_device_close(my->audcodec_dev);
         rt_device_close(my->audprc_dev);
         my->audcodec_dev = NULL;
@@ -1585,7 +1618,13 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
                 RT_ASSERT(my->mixed_4_channel);
             }
 #endif
-            audio_3a_open(my->rx_samplerate, (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE), client->parameter.disable_uplink_agc, my->all_mic_channels);
+            audio_3a_input_t input = {0};
+            input.samplerate = my->rx_samplerate;
+            input.is_bt_voice = (uint8_t)(client->audio_type == AUDIO_TYPE_BT_VOICE);
+            input.disable_uplink_agc = client->parameter.disable_uplink_agc;
+            input.all_mic_channels = my->all_mic_channels;
+            input.enable_mic_ssl = client->parameter.enable_mic_ssl;
+            audio_3a_open(&input);
             client->is_3a_opened = 1;
         }
         RT_ASSERT(!my->rx_data_tmp);
@@ -1693,6 +1732,13 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     }
     else if (need_tx_init && need_rx_init)
     {
+        if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+        {
+            if (client->parameter.open)
+            {
+                client->parameter.open(client->user_data);
+            }
+        }
         start_txrx(my, client->audio_type == AUDIO_TYPE_MODEM_VOICE);
     }
     // 7. open PA, DAC unmute
@@ -1828,6 +1874,13 @@ static int audio_device_speaker_close(void *user_data)
 
     if (need_tx_deinit || need_rx_deinit)
     {
+        if (client->audio_type == AUDIO_TYPE_MODEM_VOICE)
+        {
+            if (client->parameter.close)
+            {
+                client->parameter.close(client->user_data);
+            }
+        }
 #ifdef BSP_ENABLE_I2S_CODEC
         if (my->i2s)
         {
@@ -1836,6 +1889,8 @@ static int audio_device_speaker_close(void *user_data)
             stream = AUDIO_STREAM_RECORD;
             rt_device_control(my->i2s, AUDIO_CTL_STOP, &stream);
             rt_device_control(my->i2s, AUDIO_CTL_SET_TX_DMA_SIZE, (void *)(AUDIO_DATA_SIZE / 2)); /* restore to original size */
+            rt_device_set_rx_indicate(my->i2s, RT_NULL);
+            rt_device_set_tx_complete(my->i2s, RT_NULL);
             rt_device_close(my->i2s);
             my->i2s = NULL;
         }
@@ -1894,6 +1949,8 @@ static int audio_device_speaker_close(void *user_data)
             //rt_device_control(my->audcodec_dev, AUDIO_CTL_STOP, &stream_audcodec);
             //rt_device_control(my->audprc_dev, AUDIO_CTL_STOP, &stream_audprc);
 
+            rt_device_set_rx_indicate(my->audprc_dev, RT_NULL);
+            rt_device_set_tx_complete(my->audprc_dev, RT_NULL);
             bf0_disable_pll();
             rt_device_close(my->audcodec_dev);
             rt_device_close(my->audprc_dev);
@@ -2031,7 +2088,7 @@ static int hardware_device_open(audio_device_ctrl_t *device, audio_client_t clie
     {
         if (!device->tx_mixed_pool)
         {
-            uint16_t size = TX_DMA_SIZE * 4;
+            uint16_t size = TX_DMA_SIZE * 16;
 #if TWS_MIX_ENABLE
             if (device->device_type == AUDIO_DEVICE_A2DP_SINK)
             {
@@ -2533,7 +2590,13 @@ static void audio_device_close(audio_server_t *server, audio_client_t client)
             audio_device_speaker_t *my;
             audio_server_t *server = get_server();
             my = &server->device_speaker_private;
-            audio_3a_open(suspend1->parameter.write_samplerate, (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE), suspend1->parameter.disable_uplink_agc, my->all_mic_channels);
+            audio_3a_input_t input = {0};
+            input.samplerate = suspend1->parameter.write_samplerate;
+            input.is_bt_voice = (uint8_t)(suspend1->audio_type == AUDIO_TYPE_BT_VOICE);
+            input.disable_uplink_agc = suspend1->parameter.disable_uplink_agc;
+            input.all_mic_channels = my->all_mic_channels;
+            input.enable_mic_ssl = suspend1->parameter.enable_mic_ssl;
+            audio_3a_open(&input);
             suspend1->is_3a_opened = 1;
         }
         audio_device_open(server, suspend1);
@@ -2733,7 +2796,7 @@ inline static void audio_client_start(audio_client_t client)
     audio_pm_debug++;
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     LOG_I("start pm scenario audio");
     pm_scenario_start(PM_SCENARIO_AUDIO);
 
@@ -2836,7 +2899,7 @@ Exit:
 
 #ifdef RT_USING_PM
     audio_pm_debug--;
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     if (audio_type == AUDIO_TYPE_BT_VOICE)
     {
         HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
@@ -2962,6 +3025,7 @@ static rt_err_t speaker_tx_done(rt_device_t dev, void *buffer)
 static rt_err_t mic_rx_ind(rt_device_t dev, rt_size_t size)
 {
     //in inturrupt
+    //rt_kprintf("-rx done\n");
     if (hfp_with_xiaozhi)
     {
         return RT_EOK;
@@ -3131,7 +3195,7 @@ static void fade_out(audio_client_t c, uint8_t *data, uint32_t data_len, uint32_
   *         len: data length
   * @retval whether or not need downlink processing algorithm
   */
-uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint8_t len)
+uint8_t audio_server_bt_voice_ind(uint8_t *fifo, uint16_t len)
 {
     uint8_t ret = 1;
     rt_size_t putsize;
@@ -3207,7 +3271,7 @@ AUDIO_API int audio_hfp_uplink_write(audio_client_t handle, uint8_t *data, uint3
     }
 
 #ifdef BLUETOOTH
-    msbc_encode_process(data, data_len);
+    bt_voice_encode_process(data, data_len);
 #endif
 
     return data_len;
@@ -3594,9 +3658,19 @@ void audio_server_entry()
 #endif
             }
 
-            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK) && hfp->tx_count && hfp->is_busy)
+            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
-                bt_voice_downlink_process(1);
+#ifdef CFG_BT_VOICE_RELAY
+                if (bt_voice_relay_is_ready())
+                {
+                    bt_voice_relay_downlink_process(1);
+                }
+                else
+#endif
+                    if (hfp->tx_count && hfp->is_busy)
+                    {
+                        bt_voice_downlink_process(1);
+                    }
             }
         }
     }
@@ -3629,14 +3703,24 @@ void audio_btdownlink_entry()
                 rt_event_send(&get_server()->event, AUDIO_SERVER_EVENT_DOWN_END);
             }
 #ifdef BLUETOOTH
-            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK) && is_started)
+            if ((evt & AUDIO_SERVER_EVENT_BT_DOWNLINK))
             {
-                audio_tick_in(AUDIO_DNLINK_TIME);
-                bt_voice_uplink_send();
+#ifdef CFG_BT_VOICE_RELAY
+                if (bt_voice_relay_is_ready())
+                {
+                    bt_voice_relay_downlink_process(1);
+                }
+                else
+#endif
+                    if (is_started)
+                    {
+                        audio_tick_in(AUDIO_DNLINK_TIME);
+                        bt_voice_uplink_send();
 
-                bt_voice_downlink_process(server->is_bt_3a);
-                audio_tick_out(AUDIO_DNLINK_TIME);
-                audio_dnlink_time_print();
+                        bt_voice_downlink_process(server->is_bt_3a);
+                        audio_tick_out(AUDIO_DNLINK_TIME);
+                        audio_dnlink_time_print();
+                    }
             }
 #endif
         }

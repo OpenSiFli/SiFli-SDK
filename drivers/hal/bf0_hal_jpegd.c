@@ -47,7 +47,11 @@
     while (0);
 
 #define LDB_WORD(ptr)       (uint16_t)(((uint16_t)*((uint8_t*)(ptr))<<8)|(uint16_t)*(uint8_t*)((ptr)+1))
-
+/*  This is a timeout value for JPEGD loading header and starting to decode,
+    and it is based on JPEGD clock(SYSCLK).
+    Set this timeout to about 100ms@240MHz for slow memory
+*/
+#define ACT_TIME_OUT_TICKS     (100 * (240000000 / 1000) )
 static HAL_StatusTypeDef HAL_JPEGD_ConfigDecode(JPEGD_HandleTypeDef *hdl, JPEGD_DecodeConfigTypeDef *config)
 {
     uint16_t col_start;
@@ -129,7 +133,7 @@ static HAL_StatusTypeDef HAL_JPEGD_ConfigDecode(JPEGD_HandleTypeDef *hdl, JPEGD_
                                  | MAKE_REG_VAL(row_start, JPEGD_START_POINT_START_ROW_Msk, JPEGD_START_POINT_START_ROW_Pos);
     hdl->Instance->END_POINT = MAKE_REG_VAL(col_end, JPEGD_END_POINT_END_COL_Msk, JPEGD_END_POINT_END_COL_Pos)
                                | MAKE_REG_VAL(row_end, JPEGD_END_POINT_END_ROW_Msk, JPEGD_END_POINT_END_ROW_Pos);
-
+    hdl->Instance->ACT_TIME = ACT_TIME_OUT_TICKS;
     return HAL_OK;
 }
 
@@ -200,7 +204,7 @@ HAL_StatusTypeDef HAL_JPEGD_IRQHandler(JPEGD_HandleTypeDef *hdl)
         //     JPEGD_DISABLE(hdl);
         hdl->State = HAL_JPEGD_STATE_ERROR;
         hdl->ErrorCode = status;
-        HAL_ASSERT(0);
+        // HAL_ASSERT(0); Let upper layer to handle the error
         return HAL_ERROR;
     }
     else

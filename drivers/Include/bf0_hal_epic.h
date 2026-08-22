@@ -993,6 +993,9 @@ void EPIC_TrigoSinCosP1(int16_t angle, int16_t *sin_val, int16_t *cos_val);
 void EPIC_GetTransformedArea(EPIC_AreaTypeDef *output, uint16_t w, uint16_t h, int16_t angle,
                              uint32_t scale_x, uint32_t scale_y,
                              const EPIC_PointTypeDef *pivot);
+#ifdef EPIC_SUPPORT_TRANS_MATRIX
+void EPIC_GetMatrixTransfromedArea(sifli_matrix_3x3_t *p_matrix, EPIC_AreaTypeDef *p_area);
+#endif
 /* -------------------------------
     EPIC Transfer Layer(EPICTL) APIs
  ------------------------------- */

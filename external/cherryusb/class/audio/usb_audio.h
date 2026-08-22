@@ -654,11 +654,27 @@ struct audio_cs_if_ac_selector_unit_descriptor {
     uint8_t bDescriptorSubtype;
     uint8_t bUnitID;
     uint8_t bNrInPins;
-    uint8_t baSourceID[1];
+    uint8_t baSourceID[2];
     uint8_t iSelector;
 } __PACKED;
 
 #define AUDIO_SIZEOF_AC_SELECTOR_UNIT_DESC(bNrInPins) (6 + (bNrInPins))
+
+struct audio_cs_if_ac_mixer_unit_descriptor {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint8_t bDescriptorSubtype;
+    uint8_t bUnitID;
+    uint8_t bNrInPins;
+    uint8_t baSourceID[2];
+    uint8_t bNrChannels;
+    uint16_t wChannelConfig;
+    uint8_t iChannelNames;
+    uint8_t bmControls;
+    uint8_t iMixer;
+} __PACKED;
+
+#define AUDIO_SIZEOF_AC_MIXER_UNIT_DESC(bNrInPins) (11 + (bNrInPins))
 
 struct audio_cs_if_as_general_descriptor {
     uint8_t bLength;
@@ -1318,10 +1334,10 @@ struct audio_v2_control_range3_param_block {
 
 // clang-format on
 
-#define AUDIO_V2_AS_DESCRIPTOR_LEN            (0x09 + 0x09 + 0x10 + 0x06 + 0x07 + 0x08)
+#define AUDIO_V2_AS_DESCRIPTOR_LEN             (0x09 + 0x09 + 0x10 + 0x06 + 0x07 + 0x08)
 #define AUDIO_V2_AS_ALTSETTING0_DESCRIPTOR_LEN (0x09)
-#define AUDIO_V2_AS_ALTSETTING_DESCRIPTOR_LEN (0x09 + 0x10 + 0x06 + 0x07 + 0x08)
-#define AUDIO_V2_AS_FEEDBACK_DESCRIPTOR_LEN   (0x09 + 0x09 + 0x10 + 0x06 + 0x07 + 0x08 + 0x07)
+#define AUDIO_V2_AS_ALTSETTING_DESCRIPTOR_LEN  (0x09 + 0x10 + 0x06 + 0x07 + 0x08)
+#define AUDIO_V2_AS_FEEDBACK_DESCRIPTOR_LEN    (0x09 + 0x09 + 0x10 + 0x06 + 0x07 + 0x08 + 0x07)
 
 #define AUDIO_SAMPLE_FREQ_NUM(num) (uint8_t)(num), (uint8_t)((num >> 8))
 #define AUDIO_SAMPLE_FREQ_3B(frq)  (uint8_t)(frq), (uint8_t)((frq >> 8)), (uint8_t)((frq >> 16))

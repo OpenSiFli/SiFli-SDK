@@ -167,7 +167,6 @@ LR_IROM2 HCPU_FLASH2_IMG_START_ADDR HCPU_FLASH2_IMG_SIZE  {  ; load region size_
 
 LR_IROM3 HCPU_FLASH2_FONT_START_ADDR HCPU_FLASH2_FONT_SIZE  {  ; load region size_region
   ER_IROM3 HCPU_FLASH2_FONT_START_ADDR HCPU_FLASH2_FONT_SIZE  {  ; RW data
-   lvsf_font_*.o  (.rodata.*)
    }
 }
 

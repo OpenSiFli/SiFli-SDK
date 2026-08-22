@@ -32,6 +32,8 @@ def generate_doxygen_xml(board):
         run_command('doxygen Doxyfile_55x.sphinx', cwd=doxygen_dir)
     elif board == '56x':
         run_command('doxygen Doxyfile_56x.sphinx', cwd=doxygen_dir)
+    elif board == '57x':
+        run_command('doxygen Doxyfile_57x.sphinx', cwd=doxygen_dir)
     elif board == '58x':
         run_command('doxygen Doxyfile_58x.sphinx', cwd=doxygen_dir)
 
@@ -41,6 +43,7 @@ def get_build_dir(chip, lang):
         "52x" : "52x",
         "55x" : "55x",
         "56x" : "56x",
+        "57x" : "57x",
         "58x" : "58x",
     }
     return os.path.join('build', lang, dir_mapping[chip])
@@ -62,7 +65,11 @@ def make_html(chip, lang):
         {
             "tag": "SF32LB56X",
         },
-        "58x" : 
+        "57x" :
+        {
+            "tag": "SF32LB57X",
+        },
+        "58x" :
         {
             "tag": "SF32LB58X",
         },
@@ -117,7 +124,7 @@ if __name__ == "__main__":
     global args
 
     parser = argparse.ArgumentParser(description='Generate documentation for specified board.')
-    parser.add_argument('chip', choices=['52x', '55x', '56x', '58x'], help='Specify the chip (52x or 55x or 56x or 58x)')
+    parser.add_argument('chip', choices=['52x', '55x', '56x', '57x', '58x'], help='Specify the chip (52x, 55x, 56x, 57x or 58x)')
     parser.add_argument('--lang', choices=['en', 'zh_CN'], default='zh_CN', help='Specify language(en or zh_CN)')
     parser.add_argument('--cores', type=int, default=1, help='number for cores used by multi-thread building')
     args = parser.parse_args()

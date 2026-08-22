@@ -8,6 +8,7 @@
 + sf32lb52-lcd系列
 + sf32lb56-lcd系列
 + sf32lb58-lcd系列
++ spi-hdk_lb573ub7n6
 
 ## 概述
 <!-- 例程简介 -->
@@ -50,16 +51,22 @@
 
 ### 硬件连接\PIN CONFIG
 
-以`SF32LB52_DevKit-LCD`为例，本例程中使用`PA02 ~ PA06`做I2S 引脚，管脚配置如下：
+以`SF32LB52_DevKit-LCD`和`SPI-HDK_LB573UB7N6`为例，两块开发板均使用`PA02 ~ PA06`作为I2S引脚。其中，SF32LB52使用I2S1，SF32LB57使用I2S2，管脚配置如下：
 ```c
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#ifdef SOC_SF32LB52X
+#if defined(SOC_SF32LB52X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA03, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA06, I2S2_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA05, I2S2_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA04, I2S2_SDI, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA03, I2S2_SDO, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA02, I2S2_MCLK, PIN_NOPULL, 1);
 #endif
 #endif
 ```
@@ -67,8 +74,8 @@
 如需使用其他型号开发板，需要更改pinmux配置，这里以56x和58x为例：
 ```c
 #ifdef SOC_SF32LB56X
-    HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA40, I2S1_BCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA41, I2S1_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA73, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
@@ -83,14 +90,14 @@
 #endif
 ```
 
-接线：
+不同芯片可能使用I2S1或I2S2，请按信号功能对应接线：
 开发板A | -- | 开发板B
 --|--|--
-I2S1_LRCK|--|I2S1_LRCK
-I2S1_BCK|--|I2S1_BCK
-I2S1_SDI|--|I2S1_SDO
-I2S1_SDO|--|I2S1_SDI
-I2S1_MCLK|--|I2S1_MCLK
+LRCK|--|LRCK
+BCK|--|BCK
+SDI|--|SDO
+SDO|--|SDI
+MCLK|--|MCLK
 GND |--|GND
 
 由于`sf32lb58-lcd`比较特殊所以这里接线的话需要58作为A（master）,`sf32lb52-lcd`作为B（slave）进行连线

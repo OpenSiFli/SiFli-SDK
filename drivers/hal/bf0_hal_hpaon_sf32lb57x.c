@@ -37,7 +37,7 @@ __HAL_ROM_USED int8_t HAL_HPAON_QueryWakeupPin(GPIO_TypeDef *gpio, uint16_t gpio
         /* do nothing */
     }
 
-    return -1;
+    return wakeup_pin;
 
 }
 

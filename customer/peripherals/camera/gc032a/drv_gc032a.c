@@ -13,8 +13,7 @@
 #include <rtdevice.h>
 
 #if defined(BSP_USING_GC032A)
-
-#include <dfs_posix.h>
+#include <string.h>
 #include <drv_gc032a.h>
 #include <drv_dcmi.h>
 
@@ -1127,8 +1126,11 @@ static int gc0320_mclk_output(bool enable)
 {
     struct rt_device_pwm *device = RT_NULL;
     int pwm_channel = 1;
+#ifdef USE_PTM_DVP_8WIRE
+    uint32_t period = 84 * 3; // 4MHz
+#else
     uint32_t period = 84; // 12MHz
-
+#endif
     device = (struct rt_device_pwm *)rt_device_find("pwmt2");
     if (!device)
     {

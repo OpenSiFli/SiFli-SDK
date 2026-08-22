@@ -1,0 +1,19 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+
+# Example application entry (main.c). The BT app core framework has been moved
+# to middleware/bluetooth/rt_bt_app_core and is pulled in via the
+# BT_USING_RT_BT_APP_CORE Kconfig option.
+src = ['main.c']
+
+# Service plugins live under services/ and are gated per-service by their
+# BT_USING_XXX macro in services/SConscript.
+objs = []
+CPPPATH = [cwd, os.path.join(cwd, 'services')]
+
+objs += DefineGroup('Applications', src, depend = ['BT_USING_RT_BT_APP_CORE'], CPPPATH = CPPPATH)
+objs += SConscript(os.path.join('services', 'SConscript'))
+
+Return('objs')

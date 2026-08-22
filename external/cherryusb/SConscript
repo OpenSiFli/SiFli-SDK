@@ -77,7 +77,10 @@ if GetDepend(['PKG_CHERRYUSB_DEVICE']):
         src += Glob('port/musb/usb_glue_bk.c')
     if GetDepend(['PKG_CHERRYUSB_DEVICE_MUSB_SIFLI']):
         src += Glob('port/musb/usb_dc_musb.c')
+        src += Glob('port/musb/usb_dma_musb.c')
         src += Glob('port/musb/usb_glue_sifli.c')
+        if GetDepend(['PKG_CHERRYUSB_DEVICE_MUSB_SIFLI_DMA']):
+            CPPDEFINES += ['CONFIG_USB_MUSB_DMA']
     if GetDepend(['PKG_CHERRYUSB_DEVICE_MUSB_CUSTOM']):
         src += Glob('port/musb/usb_dc_musb.c')
     if GetDepend(['PKG_CHERRYUSB_DEVICE_CHIPIDEA_MCX']):
@@ -266,7 +269,10 @@ if GetDepend(['PKG_CHERRYUSB_HOST']):
         src += Glob('port/musb/usb_glue_bk.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_MUSB_SIFLI']):
         src += Glob('port/musb/usb_hc_musb.c')
+        src += Glob('port/musb/usb_dma_musb.c')
         src += Glob('port/musb/usb_glue_sifli.c')
+        if GetDepend(['PKG_CHERRYUSB_HOST_MUSB_SIFLI_DMA']):
+            CPPDEFINES += ['CONFIG_USB_MUSB_DMA']
     if GetDepend(['PKG_CHERRYUSB_HOST_MUSB_CUSTOM']):
         src += Glob('port/musb/usb_hc_musb.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_KINETIS_MCX']):
@@ -313,8 +319,12 @@ if GetDepend(['PKG_CHERRYUSB_HOST']):
         src += Glob('class/cdc/usbh_cdc_ncm.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_VIDEO']):
         src += Glob('class/video/usbh_video.c')
+        LIBPATH += [cwd + '/class/video']
+        LIBS += [GroupLibName("cherryusb_usbh_uvc")]
     if GetDepend(['PKG_CHERRYUSB_HOST_AUDIO']):
         src += Glob('class/audio/usbh_audio.c')
+        LIBPATH += [cwd + '/class/audio']
+        LIBS += [GroupLibName("cherryusb_usbh_uac")]
     if GetDepend(['PKG_CHERRYUSB_HOST_BLUETOOTH']):
         src += Glob('class/wireless/usbh_bluetooth.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_ASIX']):

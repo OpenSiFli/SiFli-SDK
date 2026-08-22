@@ -21,10 +21,6 @@
 #include "audio_cvsd.h"
 #include "audio_filter.h"
 
-#ifdef BT_VOICE_RELAY
-    #include "audio_bt_voice_rely.h"
-#endif
-
 #define DBG_TAG           "audio"
 #define DBG_LVL           AUDIO_DBG_LVL
 #include "log.h"
@@ -459,7 +455,7 @@ uint8_t bt_voice_cvsd_encode(uint8_t *fifo, uint16_t fifo_size)
     return 0;
 }
 
-void msbc_encode_process(uint8_t *fifo, uint16_t fifo_size)
+void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
 {
     if (pt_bt_voice->state == 0)
     {
@@ -572,7 +568,6 @@ uint8_t mix_process()
     return 0;
 }
 
-extern uint8_t audio_3a_dnlink_buf_is_full(uint8_t size);
 void bt_voice_uplink_send()
 {
     //audio_server interface
@@ -823,14 +818,6 @@ void _hcpu_2_lcpu_ipc_audio_notify()
 int32_t _hl_bt_audio_queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 {
     LOG_D("_hl_bt_audio_queue_rx_ind");
-
-#ifdef BT_VOICE_RELAY
-    if (bt_voice_rely_is_ready())
-    {
-        bt_voice_rely_downlink_process(1);
-        return 0;
-    }
-#endif
 
     bt_rx_event_to_audio_server();
 

@@ -151,7 +151,7 @@ uint8_t ble_app_sender_trigger(void)
     if (env->s_env.state == APP_SNED_STATE_IDLE)
     {
         env->s_env.state = APP_SEND_STATE_ADV_PREPARE;
-        rt_work_submit(&env->s_env.work.work, 0);
+        rt_work_submit(&env->s_env.work, 0);
         ret = 0;
     }
     return ret;
@@ -166,7 +166,7 @@ uint8_t ble_app_sender_stop(void)
         env->s_env.is_stopping = 1;
         if (env->s_env.state == APP_SEND_STATE_ADVERTISING)
         {
-            rt_work_submit(&env->s_env.work.work, 0);
+            rt_work_submit(&env->s_env.work, 0);
         }
     }
 
@@ -231,7 +231,7 @@ void ble_app_sender_init(void)
 {
     app_env_t *env = ble_app_get_env();
 
-    rt_delayed_work_init(&env->s_env.work, ble_app_sender_work_handler, env);
+    rt_work_init(&env->s_env.work, ble_app_sender_work_handler, env);
 }
 
 int sender(int argc, char *argv[])

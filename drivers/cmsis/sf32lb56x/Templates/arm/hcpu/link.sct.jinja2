@@ -22,6 +22,7 @@ LR_IROM1 {{ hex32(defines['__ROM_BASE']) }} {{ hex32(defines['__ROM_SIZE']) }}  
 {% if defines.get('PSRAM_DATA2_SIZE', 0) > 0 %}
   RW_PSRAM2 {{ hex32(defines['PSRAM_DATA2_START_ADDR']) }} UNINIT{  ; PSRAM2 is for l2 frame buffer only.
     *.o (.l2_non_ret_bss_frambuf*)
+    *.o (.bss.l2_non_ret_bss_*)
   }
   ScatterAssert((ImageLength(RW_PSRAM2))<{{ hex32(defines['PSRAM_DATA2_SIZE']) }})
 {% endif %}
@@ -128,7 +129,7 @@ LR_IROM2 {{ hex32(defines['__ROM2_BASE']) }} {{ hex32(defines['__ROM2_SIZE']) }}
 
 LR_IROM3 {{ hex32(defines['__ROM3_BASE']) }} {{ hex32(defines['__ROM3_SIZE']) }}  {  ; load region size_region
   ER_IROM3 {{ hex32(defines['__ROM3_BASE']) }} {{ hex32(defines['__ROM3_SIZE']) }}  {  ; RW data
-   lvsf_font_*.o  (.rodata.*)
+
    }
 }
 

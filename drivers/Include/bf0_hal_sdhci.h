@@ -533,6 +533,15 @@ void hal_sdhci_set_clk(SDHCI_HandleTypeDef *handle, uint32_t clock, uint32_t max
 void hal_sdhci_set_ddr(SDHCI_HandleTypeDef *handle, uint8_t ddr);
 
 /**
+  * @brief Enable or disable SD card clock (configure SDHCI_CLOCK_CARD_EN)
+  * @param handle SDHCI handle
+  * @param en true: enable clock, false: disable clock
+  * @retval none
+  */
+void hal_sdhci_clk_ctrl(SDHCI_HandleTypeDef *handle, bool en);
+
+
+/**
   * @}
   */
 

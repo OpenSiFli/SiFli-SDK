@@ -11,7 +11,7 @@
 #include "demo_multlist_cards.h"
 
 #define _MODULE_NAME_ "multlist"
-#include "app_module.h"
+#include "multlist_config.h"
 
 #define DEMO_MULTLIST_LIST_ITEM_EDGE 110
 #define DEMO_MULTLIST_IMAGE_COUNT (sizeof(s_image_src) / sizeof(s_image_src[0]))

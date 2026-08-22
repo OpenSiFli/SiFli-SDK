@@ -7,7 +7,7 @@
 #ifndef LVGL_V8_MULTLIST_DEMO_MULTLIST_CARDS_H
 #define LVGL_V8_MULTLIST_DEMO_MULTLIST_CARDS_H
 
-#include "global.h"
+#include "multlist_config.h"
 
 typedef enum
 {

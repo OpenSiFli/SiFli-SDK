@@ -50,6 +50,10 @@ extern "C" {
 #define FACTORY_CFG_ID_USERK1           27      /*!< User special code  */
 #define FACTORY_CFG_ID_USERK2           28      /*!< User special code  */
 #define FACTORY_CFG_ID_USERK3           29      /*!< User special code  */
+#define FACTORY_CFG_ID_VCOM             30      /*!< User special code  */
+#define FACTORY_CFG_ID_WBF              31      /*!< User special code  */
+#define FACTORY_CFG_ID_VERSION          32      /*!< User special code  */
+#define FACTORY_CFG_ID_FLOWCODE         33      /*!< User special code  */
 #define FACTORY_CFG_ID_UNINIT           0xFF    /*!< Uninitialized ID */
 
 #define CFG_USER_SIZE            (256)

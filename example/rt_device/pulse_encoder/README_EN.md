@@ -3,7 +3,8 @@
 Source path: example\rt_device\pulse_encoder
 ## Supported Platforms
 The example can run on the following development boards.
-* sf32lb58-lcd_n16r64n4
+* sf32lb52 LCD series
+* sf32lb58 LCD series
 ## Overview
 * Pulse encoders can accurately measure the position of rotating shafts. Each rotation by a certain angle generates a pulse signal from the encoder. By counting these pulses, the current position of the rotating shaft can be determined.
 * GPtimer encoder mode example where external pulse encoder controls timer CNT increment/decrement
@@ -58,6 +59,12 @@ msh />
 |        | GPTIM1_CH1    |PAD_PA82 (CONN2 22)  |
 |        | GPTIM1_CH2    |PAD_PA51 (CONN2 28)  |
 
+
+#### SF32LB52-DevKit-LCD Hardware Pinout Diagram
+![](./assets/image3.png)
+
+#### SF32LB58-DevKit-LCD Hardware Pinout Diagram
+![](./assets/image4.png)
 
 ```c
 

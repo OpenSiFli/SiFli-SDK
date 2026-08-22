@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -12,6 +12,7 @@
 #ifndef LVSF_TXTIMG_H
 #define LVSF_TXTIMG_H
 
+#include "lvgl.h"
 #include "lvsf_conf_internal.h"
 
 #if LVSF_USE_TXTIMG != 0
@@ -19,11 +20,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*********************
- *      INCLUDES
- *********************/
-#include "lvgl.h"
 
 /*********************
  *      DEFINES

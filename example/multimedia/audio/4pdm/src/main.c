@@ -26,7 +26,10 @@
     #error "only support for gcc compiler"
 #endif
 
-#define SAVE_ANYKA_OUTPUT_BY_DUMP   1
+extern int get_pdm_volume();
+extern int Set_pdm_gain(int8_t value);
+
+#define SAVE_ANYKA_OUTPUT_BY_DUMP   0
 
 #define PDM_DELAY_SAMPLES       0
 #define PDM_STEREO_DELAY_BYTES (PDM_DELAY_SAMPLES * 2 * 2)
@@ -76,16 +79,55 @@ static char pdm_interface[10];
 static int total_channels = 0;
 static int is_raw = 0;
 
+static int old_pmd_volume;
 audio_client_t client = NULL;
 static uint32_t data_raw_len = 0;
 static uint32_t anyka_out_len = 0;
 static int fd_dump = 0;
 static int fd_output = 0;
 L2_RET_BSS_SECT_BEGIN(data2)
-ALIGN(4) uint8_t data_raw[0x400000] L2_RET_BSS_SECT(data2);
+ALIGN(4) uint8_t data_raw[0x300000] L2_RET_BSS_SECT(data2);
 ALIGN(4) uint8_t anyka_output[0x100000] L2_RET_BSS_SECT(data2);
 L2_RET_BSS_SECT_END
 
+#define AUDIO_PSRAM_HEAP_SIZE   (0x200000)
+L2_NON_RET_BSS_SECT_BEGIN(frambuf)
+L2_NON_RET_BSS_SECT(frambuf, ALIGN(4) static uint8_t audio_psram_heap[AUDIO_PSRAM_HEAP_SIZE]);
+L2_NON_RET_BSS_SECT_END
+static struct rt_memheap audio_psram_memheap;
+
+static int audio_psram_memheap_init(void)
+{
+    rt_memheap_init(&audio_psram_memheap, "audio_psram",
+                    (void *)audio_psram_heap, sizeof(audio_psram_heap));
+    return 0;
+}
+INIT_PREV_EXPORT(audio_psram_memheap_init);
+
+void *audio_mem_malloc(uint32_t size)
+{
+    void *ptr = rt_memheap_alloc(&audio_psram_memheap, size);
+    RT_ASSERT(ptr);
+    return ptr;
+}
+
+void audio_mem_free(void *ptr)
+{
+    if (ptr)
+        rt_memheap_free(ptr);
+}
+
+void *audio_mem_calloc(uint32_t count, uint32_t size)
+{
+    void *ptr = rt_memheap_calloc(&audio_psram_memheap, count, size);
+    RT_ASSERT(ptr);
+    return ptr;
+}
+
+void *audio_mem_realloc(void *mem_address, unsigned int newsize)
+{
+    return rt_memheap_realloc(&audio_psram_memheap, mem_address, newsize);
+}
 
 /** Mount file system if using NAND, as BT NVDS is save in file*/
 #if defined(RT_USING_DFS)
@@ -235,26 +277,26 @@ static int mic_callback(audio_server_callback_cmt_t cmd, void *callback_userdata
             if (total_channels == 4)
             {
                 RT_ASSERT(p->data_len == 640);
-                //LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
+                LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }
             else if (total_channels == 2)
             {
                 RT_ASSERT(p->data_len == 640);
-                //LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
+                LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }
             else
             {
                 RT_ASSERT(p->data_len == 320);
-                //LOG_I("raw pdm %d mono data comming len=%d", p->reserved, p->data_len);
+                LOG_I("raw pdm %d mono data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }
         }
         else
         {
 #if !SAVE_ANYKA_OUTPUT_BY_DUMP
-            RT_ASSERT(p->data_len == 320);
+            //RT_ASSERT(p->data_len == 320);
             //LOG_I("anyka pdm %d data comming len=%d", p->reserved, p->data_len);
             wav_save_data(anyka_output, sizeof(anyka_output), p->data, p->data_len, &anyka_out_len);
 #endif
@@ -265,6 +307,7 @@ static int mic_callback(audio_server_callback_cmt_t cmd, void *callback_userdata
 
 static void pdm(uint8_t argc, char **argv)
 {
+    int val = 90;
     char *value = NULL;
     uint32_t samplerate = 16000;
 
@@ -326,14 +369,27 @@ static void pdm(uint8_t argc, char **argv)
         if (total_channels == 2 || total_channels == 4)
         {
             pa.read_channnel_num = 2; // each PDM is stereo
+            if (argc > 5)
+            {
+                pa.enable_mic_ssl = 1;
+            }
+            if (argc > 6)
+            {
+                val = atoi(argv[6]);
+            }
         }
         client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, mic_callback, &client);
+        old_pmd_volume = get_pdm_volume();
+        Set_pdm_gain(val);
         return;
     }
 
     if (strcmp(argv[1], "close") == 0 && (pdm_status == 1))
     {
         pdm_status = 0;
+        Set_pdm_gain(old_pmd_volume);
+        audio_close(client);
+        client = NULL;
 
         if (is_raw)
         {
@@ -358,7 +414,6 @@ static void pdm(uint8_t argc, char **argv)
             close(fd_output);
         }
         rt_kprintf("PDM closed\r\n");
-        audio_close(client);
     }
 
     if (strcmp(argv[1], "play") == 0 && (pdm_status == 0))
@@ -393,11 +448,19 @@ int main(void)
 {
     rt_kprintf("----4mic Record Example.\n");
 
-    //56x
+#ifdef SF32LB56X
     HAL_PIN_Set(PAD_PA69, PDM1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA64, PDM1_DATA, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA73, PDM2_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA71, PDM2_DATA, PIN_PULLDOWN, 1);
+#endif
+
+#ifdef SF32LB57X
+    HAL_PIN_Set(PAD_PA20, PDM1_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA21, PDM1_DATA, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA52, PDM2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA53, PDM2_DATA, PIN_PULLDOWN, 1);
+#endif
 
     while (1)
     {

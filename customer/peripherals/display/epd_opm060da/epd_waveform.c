@@ -9,6 +9,14 @@
 
 #include "string.h"
 
+#ifdef EPD_WAVEFORM_USE_BIN
+    #include "mem_map.h"
+    #include "epd_waveform_bin_reader.h"
+    #ifndef CUSTOM_EPD_WAVE_TABLE_START_ADDR
+        #error "CUSTOM_EPD_WAVE_TABLE_START_ADDR is not defined!!!"
+    #endif
+#endif
+
 #define PART_DISP_TIMES       10        // After PART_DISP_TIMES-1 partial refreshes, perform a full refresh once
 static int reflesh_times = 0;
 
@@ -82,27 +90,52 @@ static const WaveTableEntry partial_wave_table =
 {0, 100, 12, &yzc085_wave_partial_0_100[0]};
 
 static const uint8_t *p_current_wave_from = NULL;
+#ifdef EPD_WAVEFORM_USE_BIN
+    static uint8_t epd_waveform_bin_inited_ret = 0;
+#endif
 
 void epd_wave_table(void)
 {
+#ifdef EPD_WAVEFORM_USE_BIN
+    epd_waveform_bin_inited_ret = waveform_bin_reader_init(CUSTOM_EPD_WAVE_TABLE_SIZE);
 
+    if (epd_waveform_bin_inited_ret != 0)
+    {
+        rt_kprintf("Failed to initialize custom EPD wave table reader! err=%d\n", epd_waveform_bin_inited_ret);
+    }
+    else
+    {
+        rt_kprintf("EPD wave table BIN init OK, size=%d\n", CUSTOM_EPD_WAVE_TABLE_SIZE);
+    }
+#endif
 }
 
 uint32_t epd_wave_table_get_frames(int temperature, EpdDrawMode mode)
 {
+#ifdef EPD_WAVEFORM_USE_BIN
+    if (epd_waveform_bin_inited_ret == 0)
+    {
+
+        WAVE_TABLE_MODE_T wave_mode = (mode == EPD_DRAW_MODE_PARTIAL) ?
+                                      WAVE_MODE_PARTIAL : WAVE_MODE_FULL;
+        return waveform_bin_reader_get_frames(temperature, wave_mode);
+    }
+#endif
     const WaveTableEntry *wave_table = NULL;
-
-    if (1) //(reflesh_times % PART_DISP_TIMES == 0) //Full refresh always for testing
-        wave_table = &full_wave_table;
-    else
+    if (EPD_DRAW_MODE_PARTIAL == mode)
+    {
         wave_table = &partial_wave_table;
-
+    }
+    else
+    {
+        wave_table = &full_wave_table;
+    }
 
     if (temperature < wave_table->min_temp || temperature >= wave_table->max_temp)
     {
         wave_table = &full_wave_table;
     }
-    p_current_wave_from = (const uint8_t *)&wave_table->wave_table[0][0];
+    p_current_wave_from = (const uint8_t *) &wave_table->wave_table[0][0];
     reflesh_times++;
 
     return wave_table->frame_count;
@@ -110,7 +143,17 @@ uint32_t epd_wave_table_get_frames(int temperature, EpdDrawMode mode)
 
 void epd_wave_table_fill_lut(uint32_t *p_argb8888_lut, uint32_t frame_num)
 {
-
+#ifdef EPD_WAVEFORM_USE_BIN
+    if (epd_waveform_bin_inited_ret == 0)
+    {
+        waveform_bin_reader_fill_lut(p_argb8888_lut, frame_num);
+        // BIN fill_lut puts values at bit[4:3] (for EPIC), but EPD_8BIT + F2_SWAP
+        // hardware reads bit[1:0]. Shift and set alpha to match non-BIN format.
+        for (uint16_t i = 0; i < 256; i++)
+            p_argb8888_lut[i] = (p_argb8888_lut[i] >> 3) | 0xFF000000;
+        return;
+    }
+#endif
     const uint8_t *p_frame_wave = p_current_wave_from + (frame_num * 256);
 
     //Convert the 8-bit waveforms to 32-bit epic LUT values

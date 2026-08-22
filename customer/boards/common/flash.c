@@ -26,7 +26,7 @@ static DMA_HandleTypeDef spi_flash_dma_handle[FLASH_MAX_INSTANCE];
 #ifdef BSP_QSPI2_DUAL_MODE
 QSPI_FLASH_CTX_T flash_ext_handle = {0};
 HAL_RETM_BSS_SECT(gis_ext_flash, static int gis_ext_flash);
-static int g_ext_flash_id = -1;
+int g_ext_flash_id = -1;
 #endif /* BSP_QSPI2_DUAL_MODE */
 
 int8_t Addr2Id(uint32_t addr)
@@ -1652,7 +1652,7 @@ int bsp_psram_auto_calib(char *name, uint8_t *sck, uint8_t *dqs)
     if (i < 0)
         return -1;
 
-#if defined(SF32LB56X) || defined(SF32LB52X)
+#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     HAL_MPI_OPSRAM_AUTO_CAL(&bf0_psram_handle[i].qspi_handle, sck, dqs);
 
     return 0;

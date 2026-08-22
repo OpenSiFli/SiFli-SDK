@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -27,17 +33,29 @@ static EZIP_HandleTypeDef g_ezip_handle = {0};
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t png_data_argb565[] =
 {
+#ifdef SF32LB57X
+#include "../assets/57x_clock_mickey_ezip.dat"
+#else
 #include "../assets/clock_mickey_shoe01_565A_s_ezip.dat"
+#endif
 };
 ALIGN(4)
 const static uint8_t exp_data_argb565[] =
 {
+#ifdef SF32LB57X
+#include "../assets/57x_clock_mickey_pixel.dat"
+#else
 #include "../assets/clock_mickey_shoe01_565A.dat"
+#endif
 };
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t gzip_data[] =
 {
+#ifdef SF32LB57X
+#include "../assets/57x_gzip_input.dat"
+#else
 #include "../assets/gzip_input.dat"
+#endif
 };
 ALIGN(4)
 const static uint8_t exp_data_gzip[] =
@@ -47,7 +65,11 @@ const static uint8_t exp_data_gzip[] =
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t lz4_data[] =
 {
+#ifdef SF32LB57X
+#include "../assets/57x_lz4_input.dat"
+#else
 #include "../assets/lz4_input.dat"
+#endif
 };
 ALIGN(4)
 const static uint8_t exp_data_lz4[] =
@@ -273,11 +295,12 @@ static void example_ezip_ahb_IT(const uint8_t *img, uint16_t color_fmt, uint16_t
 /**
  * @brief Example : LZ4/AHB output mode. Polling mode.
  *
- * @param input       source data.
+ * @param input       source data (compressed stream).
+ * @param input_size  compressed stream length in bytes (set to HW SRC_LEN).
  * @param output_size output size.
  * @param exp_data    expected output data.
  */
-static void example_lz4_ahb(const uint8_t *input, uint32_t output_size, const uint8_t *exp_data)
+static void example_lz4_ahb(const uint8_t *input, uint32_t input_size, uint32_t output_size, const uint8_t *exp_data)
 {
     EZIP_DecodeConfigTypeDef config = {0};
     HAL_StatusTypeDef ret;
@@ -296,6 +319,10 @@ static void example_lz4_ahb(const uint8_t *input, uint32_t output_size, const ui
     config.height = 0;
     config.work_mode = HAL_EZIP_MODE_LZ4;        /* Work mode. See enum EZIP_WorkModeTypeDef. */
     config.output_mode = HAL_EZIP_OUTPUT_AHB;    /* Output mode. See enum EZIP_OutputModeTypeDef. */
+    config.input_data_size = input_size;
+#ifdef HAL_EZIP_MULTI_BLOCK_DECODING_SUPPORTED
+    config.is_last_block = true;                 /* single-shot: whole stream is the last block */
+#endif
 
     /* EZIP decode. */
     ret = HAL_EZIP_Decode(&g_ezip_handle, &config);
@@ -321,13 +348,14 @@ static void example_lz4_ahb(const uint8_t *input, uint32_t output_size, const ui
 /**
  * @brief Example : GZIP/AHB output mode. Polling mode.
  *
- * @param input       source data.
+ * @param input       source data (compressed stream).
+ * @param input_size  compressed stream length in bytes (set to HW SRC_LEN).
  * @param output_size output size.
  * @param exp_data    expected output data.
  */
-static void example_gzip_ahb(const uint8_t *input, uint32_t output_size, const uint8_t *exp_data)
+static void example_gzip_ahb(const uint8_t *input, uint32_t input_size, uint32_t output_size, const uint8_t *exp_data)
 {
-    EZIP_DecodeConfigTypeDef config;
+    EZIP_DecodeConfigTypeDef config = {0};
     HAL_StatusTypeDef ret;
 
     /* WARNING: EZIP's input data and output data must be 4 bytes aligned. */
@@ -344,6 +372,10 @@ static void example_gzip_ahb(const uint8_t *input, uint32_t output_size, const u
     config.height = 0;
     config.work_mode = HAL_EZIP_MODE_GZIP;
     config.output_mode = HAL_EZIP_OUTPUT_AHB;
+    config.input_data_size = input_size;
+#ifdef HAL_EZIP_MULTI_BLOCK_DECODING_SUPPORTED
+    config.is_last_block = true;                 /* single-shot: whole stream is the last block */
+#endif
 
     /* EZIP decode. */
     ret = HAL_EZIP_Decode(&g_ezip_handle, &config);
@@ -400,13 +432,13 @@ int main(void)
     /* WORK MODE:LZ4 OUTPUT:AHB . Polling mode. */
     rt_kprintf("[EZIP]LZ4 AHB (polling mode).\n");
     output_size = *(uint32_t *)lz4_data;  /* First 4 bytes is data size. */
-    example_lz4_ahb(lz4_data + 4, output_size, exp_data_lz4);
+    example_lz4_ahb(lz4_data + 4, sizeof(lz4_data) - 4, output_size, exp_data_lz4);
     rt_kprintf("[EZIP]LZ4 AHB (polling mode)  --- end.\n");
 
     /* WORK MODE:GZIP OUTPUT:AHB . Polling mode. */
     rt_kprintf("[EZIP]GZIP AHB (polling mode).\n");
     output_size = *(uint32_t *)gzip_data;  /* First 4 bytes is data size. */
-    example_gzip_ahb(gzip_data + 4, output_size, exp_data_gzip);
+    example_gzip_ahb(gzip_data + 4, sizeof(gzip_data) - 4, output_size, exp_data_gzip);
     rt_kprintf("[EZIP]GZIP AHB (polling mode)  --- end.\n");
 
     /* Infinite loop */

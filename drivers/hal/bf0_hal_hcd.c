@@ -313,11 +313,20 @@ HAL_StatusTypeDef HAL_HCD_DeInit(HCD_HandleTypeDef *hhcd)
   */
 __weak void  HAL_HCD_MspInit(HCD_HandleTypeDef *hhcd)
 {
+#ifdef SOC_SF32LB57X
+    if (0 == (hwp_hpsys_cfg->ANAU_CR & HPSYS_CFG_ANAU_CR_EN_BG))
+    {
+        hwp_hpsys_cfg->ANAU_CR |= HPSYS_CFG_ANAU_CR_EN_BG;
+    }
+#endif /* SOC_SF32LB57X */
+
     HAL_RCC_EnableModule(RCC_MOD_USBC);
 
 #ifdef SF32LB57X
-    /* switch to 48MHz */
-    hwp_usbc->mode_48m |= 2;
+    /* Delay 10us to make sure BG and rcc usb clock is ready */
+    HAL_Delay_us(10);
+    /* switch to 48MHz (clk_en=1 and mode_48m=1). mode_48m default value is 1, write 1 again to avoid read back */
+    hwp_usbc->mode_48m = 3;
 #endif /* SF32LB57X */
 
 #ifdef SF32LB58X

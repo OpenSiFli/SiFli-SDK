@@ -11,6 +11,13 @@ void BSP_PIN_Init(void)
 #ifdef SOC_BF0_HCPU
     // HCPU pins
 
+    // codec ADC1
+#ifdef ADC1_DIFFERENTIAL_INPUT
+    HAL_PIN_Set_Analog(PAD_PA09, 1); // ADC1N
+#endif
+    HAL_PIN_Set_Analog(PAD_PA55, 1); // ADC1P
+    HAL_PIN_Set_Analog(PAD_PA56, 1); // MICBIAS
+
     // MPI3
 #ifdef SOC_SF32LB573UB776
     HAL_PIN_Set(PAD_SB09, MPI3_CLK, PIN_NOPULL, 1);
@@ -45,7 +52,28 @@ void BSP_PIN_Init(void)
     HAL_PIN_Set(PAD_PA33, SD2_DIO1, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, SD2_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA29, SD2_DIO3, PIN_PULLUP, 1);
+
+#ifdef RT_USING_WIFI
+    HAL_PIN_Set_DS0(PAD_PA28, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA28, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA29, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA29, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA30, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA30, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA31, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA31, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA32, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA32, 1, 0);
+
+    HAL_PIN_Set_DS0(PAD_PA33, 1, 1);
+    HAL_PIN_Set_DS1(PAD_PA33, 1, 0);
 #endif
+
+#endif/* BSP_USING_SDMMC2 */
 
     // TP I2C1
     HAL_PIN_Set(PAD_PA20, I2C1_SDA, PIN_PULLUP, 1);

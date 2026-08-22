@@ -14,8 +14,32 @@ static T_pSD_PARAM_FACTORY  g_factory_near;
 static T_AUDIO_FILTER_TS    ts_far;
 static T_AUDIO_FILTER_TS    ts_dac_stream;
 static uint32_t             samplerate;
+static uint8_t              all_mic_channels;
+static uint8_t              enable_mic_ssl;
 static void                 *p_far;
 static void                 *p_near;
+static void                 *pfilter;
+static T_AUDIO_FILTER_INPUT *filter_input;
+static T_AUDIO_FILTER_BUF_STRC *filter_buf;
+static T_SSL_EVENT          *ssl_data_out;
+static uint32_t             ssl_data_out_len;
+
+
+static void srp_ssl_lib_init()
+{
+    if (!pfilter)
+    {
+        _SD_SrpSSL_login(AK_NULL);
+        pfilter = _SD_Filter_Open(filter_input);
+        if (AK_NULL == pfilter)
+        {
+            acpu_printf("anyka ssl fail\n");
+        }
+        _SD_Filter_SetParam(pfilter, &filter_input->m_info);
+    }
+}
+void *acpu_call_hcpu_malloc(uint32_t size);
+void acpu_call_hcpu_free(void *p);
 
 static T_VOID my_printf(T_pCSTR fmt, ...)
 {
@@ -26,8 +50,8 @@ static T_VOID my_printf(T_pCSTR fmt, ...)
     va_start(args, fmt);
     n = vsnprintf(str, sizeof(str) - 1, fmt, args);
     va_end(args);
-    print_buffer[128 - 1] = '\0';
-    req_hcpu_run_task(HCPU_TASK_PRINTF, print_buffer, sizeof(print_buffer), NULL);
+    str[128 - 1] = '\0';
+    acpu_printf("%s\n", str);
 #endif
 }
 
@@ -49,15 +73,25 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     int result;
     int ret = 0;
     T_SDLIB_PLATFORM_DEPENDENT_LIST *sd_cb;
-
+    pfilter = NULL;
+    ssl_data_out = (T_SSL_EVENT *)arg->ssl_data_out;
+    ssl_data_out_len = arg->ssl_data_out_len;
     ts_far = 0;
     ts_dac_stream = 0;
     samplerate = arg->samplerate;
+    all_mic_channels = arg->all_mic_channels;
+    filter_input = arg->filter_input;
+    filter_buf = arg->filter_buf;
 
     sd_cb = _SD_GetPlatformDependentList();
 
+#ifdef SOC_SF32LB58X
     sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
     sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     sd_cb->printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     sd_cb->flushDCache = t4_flush_dcache_range;
 
@@ -70,8 +104,13 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     T_ECHO_IN_INFO echo_in;
     memset(&echo_in, 0, sizeof(echo_in));
     echo_in.strVersion = AUDIO_FILTER_VERSION_STRING;
-    echo_in.cb_fun.Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
-    echo_in.cb_fun.Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#ifdef SOC_SF32LB58X
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
+#else
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
+#endif
     echo_in.cb_fun.Printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     echo_in.cb_fun.flushDCache = t4_flush_dcache_range;
     echo_in.cb_fun.notify = my_notify;
@@ -132,6 +171,10 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     if (arg->all_mic_channels > 1)
     {
         _SD_Denc_login(AK_NULL);
+        if (enable_mic_ssl)
+        {
+            srp_ssl_lib_init();
+        }
     }
 
     g_factory_near = SD_ParamFactory_Create_ByCmdLine(arg->const_near, strlen(arg->const_near) + 1);
@@ -194,6 +237,12 @@ int acpu_audio_3a_close()
         SD_ParamFactory_Destroy(g_factory_near);
         g_factory_near = NULL;
     }
+
+    if (pfilter)
+    {
+        _SD_Filter_Close(pfilter);
+        pfilter = NULL;
+    }
     return 0;
 }
 
@@ -229,12 +278,45 @@ int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg)
     //acpu_printf("fill dac loopback=%d", ret);
 
     ts += DELAY_SAMPLE * 1000000ULL / samplerate;
-    ret = _SD_Echo_FillAdcStream(p_near, arg->fifo, ANYKA_FRAME_SIZE, ts, 1);
+    ret = _SD_Echo_FillAdcStream(p_near, arg->fifo, ANYKA_FRAME_SIZE * all_mic_channels, ts, 1);
 
     //acpu_printf("fill adc=%d", ret);
     ret = _SD_Echo_GetResult(p_near, arg->result, ANYKA_FRAME_SIZE, &ts_result, 1);
     //acpu_printf("fill adc=%d", ret);
-
-    return 0;
+    return ret;
 }
 
+int acpu_audio_3a_uplink_ssl(acpu_audio_3a_uplink_parameter_t *arg)
+{
+    if (enable_mic_ssl && arg->do_ssl)
+    {
+        filter_buf->buf_in = arg->ssl_data_in;
+        filter_buf->buf_in_len = arg->ssl_data_in_len;
+        int32_t processlen = _SD_Filter_Control(pfilter, filter_buf);
+        if (processlen > 0)
+        {
+            if (ssl_data_out->sourcesNumbers > 0)
+            {
+                LOG_I("anyka ssl %d sources\n", ssl_data_out->sourcesNumbers);
+                struct sd_param_denc denc_param;
+                T_S32 get = _SD_Echo_GetDencParam(p_near, &denc_param);
+
+                for (int i = 0; i < ssl_data_out->sourcesNumbers; i++)
+                {
+                    LOG_I("%d, %d, %d\n",
+                          ssl_data_out->soundSourceDirection[i].azimuth,
+                          ssl_data_out->soundSourceDirection[i].elevation,
+                          ssl_data_out->soundSourceDirection[i].radius);
+                }
+                denc_param.targetSpherical.azimuth = ssl_data_out->soundSourceDirection[0].azimuth;
+                denc_param.targetSpherical.elevation = ssl_data_out->soundSourceDirection[0].elevation;
+                denc_param.targetSpherical.radius = ssl_data_out->soundSourceDirection[0].radius;
+                denc_param.numInterf = 0;
+
+                _SD_Echo_SetDencParam(p_near, 1, &denc_param);
+
+            }
+        }
+    }
+    return ret;
+}

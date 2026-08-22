@@ -331,32 +331,9 @@ static rt_uint32_t sifli_adc_get_channel(rt_uint32_t channel)
 {
     rt_uint32_t sifli_channel = 0;
 
-    switch (channel)
+    if (channel <= ADC_CHANNEL_MAX)
     {
-    case  0:
-        sifli_channel = 0;
-        break;
-    case  1:
-        sifli_channel = 1;
-        break;
-    case  2:
-        sifli_channel = 2;
-        break;
-    case  3:
-        sifli_channel = 3;
-        break;
-    case  4:
-        sifli_channel = 4;
-        break;
-    case  5:
-        sifli_channel = 5;
-        break;
-    case  6:
-        sifli_channel = 6;
-        break;
-    case  7:
-        sifli_channel = 7;
-        break;
+        sifli_channel = channel;
     }
 
     return sifli_channel;
@@ -381,14 +358,14 @@ static rt_err_t sifli_get_adc_value(struct rt_adc_device *device, rt_uint32_t ch
 
     rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
 
-    if (channel <= 7)
+    if (channel <= ADC_CHANNEL_MAX)
     {
         /* set ADC channel */
         ADC_ChanConf.Channel =  sifli_adc_get_channel(channel);
     }
     else
     {
-        LOG_E("ADC channel must be between 0 and 7.");
+        LOG_E("ADC channel must be between 0 and %d.", ADC_CHANNEL_MAX);
         r = rt_sem_release(&gpadc_lock);
         RT_ASSERT(RT_EOK == r);
         return -RT_ERROR;
@@ -459,14 +436,14 @@ static rt_err_t sifli_get_adc_value(struct rt_adc_device *device, rt_uint32_t ch
 
 #ifndef  SF32LB55X
         ADC_SET_MUTE(sifli_adc_handler);
-#if defined(SF32LB52X) || defined(SF32LB57X)
-        if (channel == 7)
+#ifdef ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+        if (ADC_VBAT_DEDICATED_CHANNEL == channel)
             rt_thread_delay(1);
         else
             rt_thread_delay(10);
 #else
         rt_thread_delay(10);
-#endif /* SF32LB52X || SF32LB57X */
+#endif /* ADC_VBAT_DEDICATED_CHANNEL_SUPPORT */
 #else   /* SF32LB55X */
         ADC_CLR_FRC_EN(sifli_adc_handler);
         rt_thread_delay(5);
@@ -497,24 +474,23 @@ static rt_err_t sifli_get_adc_value(struct rt_adc_device *device, rt_uint32_t ch
 
 #endif
 
+    float fval = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx) * 10; // mv to 0.1mv based
+    *value = (rt_uint32_t)fval;
 
-#if !defined(SF32LB52X) && !defined(SF32LB57X)
-    float fval = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx) * 10; // mv to 0.1mv based
-    *value = (rt_uint32_t)fval;
-#else
-    //*value = (rt_uint32_t)fave;
-    float fval = HAL_ADC_RegToVoltageFloat(fave, &g_adc_calib_ctx) * 10; // mv to 0.1mv based
-    *value = (rt_uint32_t)fval;
-    if (channel == 7)   // for 52x, channel fix used for vbat with 1/2 update(need calibrate)
+#ifdef ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+    if (ADC_VBAT_DEDICATED_CHANNEL == channel)   // channel fix used for vbat with 1/2 update(need calibrate)
+    {
         *value = (rt_uint32_t)(fval * g_adc_calib_ctx.vbat_factor);
-#endif /* !SF32LB52X && !SF32LB57X */
+    }
+#endif /* ADC_VBAT_DEDICATED_CHANNEL_SUPPORT */
 
     //LOG_I("ADC vol %d , reg %f, max %d, min %d\n", *value, fave, data[ADC_SW_AVRA_CNT - 1], data[0]);
 #ifdef BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
     rt_kprintf("ch[%d]origin:%d, voltage:%d;\n", channel, adc_origin, *value);
 #else
-    rt_kprintf("ch[%d]voltage=%d;\n", channel, *value);
+    rt_kprintf("ch[%d]voltage=%d;%f\n", channel, *value, fval);
 #endif
+
     r = rt_sem_release(&gpadc_lock);
     RT_ASSERT(RT_EOK == r);
 
@@ -534,16 +510,16 @@ static rt_err_t sifli_op_adc_init(struct rt_adc_device *device)
     status = HAL_ADC_Init(sifli_adc_handler);
     if (HAL_OK == status)
     {
-#if defined(SF32LB52X) || defined(SF32LB57X)
+#if defined(SF32LB52X)
         uint32_t adc_freq = 240000; // use 240k for 52x to meet ATE setting
         HAL_ADC_SetFreq(sifli_adc_handler, adc_freq);
-#endif /* SF32LB52X || SF32LB57X */
+#endif /* SF32LB52X */
 #ifdef BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
         {
             ADC_ChannelConfTypeDef ADC_ChanConf;
 
             /*configure all channels*/
-            uint8_t ch_num = 8;
+            uint8_t ch_num = ADC_CHANNEL_MAX + 1;
 
             rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
             HAL_ADC_Set_MultiMode(sifli_adc_handler, 1);
@@ -598,14 +574,14 @@ static rt_err_t sifli_adc_control(struct rt_adc_device *device, rt_uint32_t cmd,
     rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
 
     channel = read_arg->channel;
-    if (channel <= 7)
+    if (channel <= ADC_CHANNEL_MAX)
     {
         /* set ADC channel */
         ADC_ChanConf.Channel =  sifli_adc_get_channel(channel);
     }
     else
     {
-        LOG_E("ADC channel must be between 0 and 7.");
+        LOG_E("ADC channel must be between 0 and %d.", ADC_CHANNEL_MAX);
         r = rt_sem_release(&gpadc_lock);
         RT_ASSERT(RT_EOK == r);
         return -RT_ERROR;
@@ -726,10 +702,10 @@ static int sifli_adc_init(void)
         }
         else
         {
-#if defined(SF32LB52X) || defined(SF32LB57X)
+#if defined(SF32LB52X)
             uint32_t adc_freq = 240000; // use 240k for 52x to meet ATE setting
             HAL_ADC_SetFreq(&sifli_adc_obj[i].ADC_Handler, adc_freq);
-#endif /* SF32LB52X || SF32LB57X */
+#endif /* SF32LB52X */
 
 
 #ifdef BSP_GPADC_SUPPORT_MULTI_CH_SAMPLING
@@ -738,7 +714,7 @@ static int sifli_adc_init(void)
 
                 /*configure all channels*/
 
-                uint8_t ch_num = 8;
+                uint8_t ch_num = ADC_CHANNEL_MAX + 1;
 
                 rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
                 HAL_ADC_Set_MultiMode(&sifli_adc_obj[i].ADC_Handler, 1);
@@ -787,7 +763,7 @@ static int sifli_adc_init(void)
 }
 INIT_BOARD_EXPORT(sifli_adc_init);
 
-#ifdef RT_USING_PM
+#if defined(RT_USING_PM) && !defined(ADC_FIXED_CLK_FREQ_SUPPORT)
 static int rt_adc_freq_chg(const struct rt_device *device, uint8_t mode)
 {
     uint32_t adc_freq = 240000; // use 240k for 52x to meet ATE setting
@@ -812,7 +788,7 @@ static int sifli_adc_pm_register(void)
 }
 INIT_ENV_EXPORT(sifli_adc_pm_register);
 
-#endif  /* RT_USING_PM */
+#endif  /* RT_USING_PM && !ADC_FIXED_CLK_FREQ_SUPPORT */
 
 
 #ifdef RT_USING_FINSH
@@ -880,8 +856,10 @@ static int adc_calib_func(int loop)
     channel = 5;
 #elif defined (SF32LB58X)
     channel = 3;
-#elif defined (SF32LB52X) || defined(SF32LB57X)
+#elif defined (SF32LB52X)
     channel = 7;
+#elif defined(SF32LB57X)
+    channel = 11;
 #endif
 
     if (loop > 1024)
@@ -1183,9 +1161,9 @@ int cmd_gpadc(int argc, char *argv[])
     else if (strcmp(argv[1], "-list") == 0)
     {
         LOG_I("Offset = %f, ratio = %f\n", g_adc_calib_ctx.offset, g_adc_calib_ctx.ratio);
-#if defined(SF32LB52X) || defined(SF32LB57X)
+#ifdef ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
         LOG_I("vbat factor = %f\n", g_adc_calib_ctx.vbat_factor);
-#endif /* SF32LB52X || SF32LB57X */
+#endif /* ADC_VBAT_DEDICATED_CHANNEL_SUPPORT */
     }
     else if (strcmp(argv[1], "-list2") == 0)
     {

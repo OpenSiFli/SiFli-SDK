@@ -13,7 +13,7 @@
 #include "boot_flash.h"
 #include "secboot.h"
 #include "../dfu/dfu_protocol.h"
-
+#include "../dfu_v2/dfu_macro.h"
 extern flash_read_func g_flash_read;
 extern flash_write_func g_flash_write;
 extern flash_erase_func g_flash_erase;
@@ -322,7 +322,7 @@ void boot_images_help()
             dfu_boot_img_in_flash(flash_id);
         }
 #else
-// dfu_pan logical program：
+// dfu_pan logical program:
         if (DFU_PAN_LOADER_START_ADDR != DFU_PAN_FLASH_UNINIT_32 && DFU_PAN_LOADER_SIZE != DFU_PAN_FLASH_UNINIT_32)
         {
 
@@ -358,6 +358,51 @@ void boot_images_help()
             }
         }
 
+// dfu_v2 logical program:
+        if (DFU_V2_LOADER_START_ADDR != DFU_FLASH_UNINIT_32
+            && DFU_V2_LOADER_SIZE != DFU_FLASH_UNINIT_32)
+        {
+            bool needs_update = 0;
+            for (int i = 0; i < DFU_MAX_FW_FILES; i++)
+            {
+                uint32_t base = DFU_FWINFO_BASE_ADDR
+                                + i * DFU_FWINFO_SIZE;
+
+                // Check the magic number first
+                uint32_t magic_value = 0;
+                int magic_result = g_flash_read(
+                    base + DFU_MAGIC_OFFSET,
+                    (const int8_t *)&magic_value,
+                    sizeof(uint32_t));
+
+                if (magic_result == sizeof(uint32_t)
+                    && magic_value == DFU_FW_MAGIC)
+                {
+                    uint32_t update_value = 0;
+                    int result = g_flash_read(
+                        base + DFU_NEEDS_UPDATE_OFFSET,
+                        (const int8_t *)&update_value,
+                        sizeof(uint32_t));
+
+                    if (result == sizeof(uint32_t) && update_value)
+                    {
+                        needs_update = 1;
+                        break;
+                    }
+                }
+            }
+
+            if (needs_update
+                && is_ota_program_valid(DFU_V2_LOADER_START_ADDR))
+            {
+                sec_config_cache.running_imgs[CORE_HCPU] =
+                    (struct image_header_enc *) &(
+                        ((struct sec_configuration *)
+                            FLASH_TABLE_START_ADDR)
+                        ->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
+            }
+        }
+// dfu_v2 logical program end
 // OTA logical program end
 
         dfu_install_info info = {0};

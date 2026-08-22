@@ -6,8 +6,6 @@ SIFLI_SDK = os.getenv('SIFLI_SDK')
 
 # get current directory
 cwd = GetCurrentDir()
-nmsis_config = SIFLI_SDK+'external/NMSIS'
-nmsis_core = SIFLI_SDK+'external/NMSIS/Core/Include'
 
 try:
     if rtconfig.CORE=='LCPU':
@@ -51,20 +49,20 @@ CPPDEFINES=['SF32LB57X']
 path = [cwd, cwd+'/../Include']
 
 if GetDepend(['BF0_LCPU']):
-    ASFLAGS += ' -I'+SIFLI_SDK+'/external/NMSIS/Core/Include '
+    src += ['Templates/system_bf0_ap.c']
+    if  rtconfig.PLATFORM != 'gcc':
+        ASFLAGS = ' --cpreproc'
     if rtconfig.PLATFORM == 'gcc':
-        src += ['Templates/system_bf0_ap_rv.c']
-        #if GetDepend(['ROM_ATTR']):
-        src += ['Templates/gcc/startup_bf0_lcpu_rom.s']
-        CPPDEFINES += ['RTOS_RTTHREAD']
-        path += [nmsis_config, nmsis_core]
+        if GetDepend(['ROM_ATTR']):
+            src += ['Templates/gcc/startup_bf0_lcpu_rom.S']
+        else:
+            src += ['Templates/gcc/startup_bf0_lcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
-        src += ['Templates/system_bf0_ap.c']
         if GetDepend(['ROM_ATTR']):
             src += ['Templates/arm/startup_bf0_lcpu_rom.S']
         else:
             src += ['Templates/arm/startup_bf0_lcpu.S']
-        path = path + [os.path.join(SIFLI_SDK, 'external/CMSIS/Include')]
+    path = path + [os.path.join(SIFLI_SDK, 'external/CMSIS/Include')]
 elif GetDepend(['BF0_HCPU']):
     src += ['Templates/system_bf0_ap.c']
     if  rtconfig.PLATFORM != 'gcc':

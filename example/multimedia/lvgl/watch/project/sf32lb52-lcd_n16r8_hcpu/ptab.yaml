@@ -45,8 +45,6 @@ partitions:
   core: HCPU
   sections:
   - section: .SECTION_TTF*
-  - object: lvsf_font_*
-    section: .rodata*
 - name: fs_region
   type: data
   subtype: filesystem

@@ -92,6 +92,18 @@
         #define FT_BPP    2
     #endif
 
+    #ifdef LVGL_V9
+        #define LV_IMG_CF_SEQ             0xFF    /* Generate by ezip for directory with __SEQ*/
+        #define LV_IMG_CF_GIF             0xFE    /* Generate by ezip for gif file */
+        #define LV_IMG_CF_264             0xFD    /* Generate by ezip for 264 file */
+        #define LV_IMG_CF_JPG             0xF8    /* Generate by ezip for jpg file */
+    #else
+        #define LV_IMG_CF_SEQ             0x1F    /* Generate by ezip for directory with __SEQ*/
+        #define LV_IMG_CF_GIF             0x1E    /* Generate by ezip for gif file */
+        #define LV_IMG_CF_264             0x1D    /* Generate by ezip for 264 file */
+        #define LV_IMG_CF_JPG             0x18    /* Generate by ezip for jpg file. modify to 0x18 for compatible with lvgl v8.0 (LV_IMG_CF_USER_ENCODED_2) */
+    #endif
+
     #ifndef _MSC_VER
         #define LV_USE_GPU_SIFLI_EPIC 1
 
@@ -220,6 +232,10 @@
         #endif
     #endif /* LCD_FB_USING_AUTO */
 #endif // !BSP_USING_PC_SIMULATOR
+
+#if defined (DRV_EPIC_NEW_API) && (defined(BSP_USING_RAMLESS_LCD) || defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED))
+    #define LV_USE_PARTIAL_REFRESH  1
+#endif
 
 
 #ifdef DISABLE_LVGL_V8

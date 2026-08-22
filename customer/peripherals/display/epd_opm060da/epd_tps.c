@@ -158,7 +158,7 @@ void tps_init(uint16_t vcom_voltage)
     rt_thread_mdelay(10);
     tps_power_sequence_set();
     tps_vposvneg_set();
-    tps_vcom_set(vcom_voltage);           //VCOM设置
+    tps_vcom_set(vcom_voltage);           // VCOM configuration
 
     rt_kprintf("tps_init: vcom=%dmV, \n", vcom_voltage);
 #ifdef EPD_TPS_GOOD_PIN
@@ -171,9 +171,7 @@ void tps_init(uint16_t vcom_voltage)
 
 rt_err_t tps_enter_sleep(void)
 {
-    rt_thread_mdelay(10);
     rt_pin_write(EPD_TPS_PWRCOM_PIN, 0);
-    rt_thread_mdelay(10);
     rt_pin_write(EPD_TPS_PWRUP_PIN, 0);
 
     return RT_EOK;

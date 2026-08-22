@@ -12,10 +12,10 @@ Some screenshots on this page were captured with the old CLI format. If a screen
 2. After logging in, navigate to **Profile**.
 3. In your profile center, apply for an access token (Token) and save it securely. This token will be used for the `sdk.py sf-pkg login` command.
 
-![Log in to the website](./assert/log_in_to_the_website.png)
-![Navigate to Profile](./assert/enter_profile.png)
-![Create Token](./assert/create_token.png)
-![Obtain Token](./assert/get_token.png)
+![Log in to the website](./assets/log_in_to_the_website.png)
+![Navigate to Profile](./assets/enter_profile.png)
+![Create Token](./assets/create_token.png)
+![Obtain Token](./assets/get_token.png)
 
 ```{note}
 Each user only needs to log in once per computer. Credentials are encrypted locally, and multiple users can be stored on the same machine.
@@ -27,7 +27,7 @@ Each user only needs to log in once per computer. Credentials are encrypted loca
 sdk.py sf-pkg login -u <lowercase_GitHub_username> -t <obtained_token>
 ```
 
-![Login Successful](./assert/sdk-pkg-login.png)
+![Login Successful](./assets/sdk-pkg-login.png)
 
 ```{warning}
 The -u parameter must be your lowercase GitHub username! Otherwise, the upload will fail.
@@ -167,7 +167,7 @@ Execute the following command in the driver folder:
 sdk.py sf-pkg build --version <version_number>
 ```
 
-![Build Package](./assert/sf-pkg-build.png)
+![Build Package](./assets/sf-pkg-build.png)
 
 > It is recommended to use semantic versioning for the version number, such as `0.0.1`, `1.0.0`, etc.
 
@@ -183,7 +183,7 @@ By default, this uses the active user. To temporarily select another user:
 sdk.py sf-pkg --user <namespace> upload --name <package_name>/<version>@<namespace>
 ```
 
-![Upload Package](./assert/sf-pkg-upload.png)
+![Upload Package](./assets/sf-pkg-upload.png)
 
 Command format explanation:
 
@@ -215,4 +215,4 @@ Command format explanation:
 
 After a successful upload, you can view the uploaded package on the server website:
 
-![Package on Server](./assert/pkg_in_website.png)
+![Package on Server](./assets/pkg_in_website.png)

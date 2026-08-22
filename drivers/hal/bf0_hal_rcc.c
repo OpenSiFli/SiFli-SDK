@@ -1122,6 +1122,9 @@ __HAL_ROM_USED void HAL_RCC_HCPU_ClockSelect(int clk_module, int src)
 #ifdef   RCC_CLK_MOD_HP_TICK
             || ((int)RCC_CLK_MOD_HP_TICK == clk_module)
 #endif /* RCC_CLK_MOD_HP_TICK */
+#ifdef  RCC_CLK_MOD_LCDC
+            || ((int)RCC_CLK_MOD_LCDC == clk_module)
+#endif /* RCC_CLK_MOD_LCDC */
        )
     {
         mask = 3;
@@ -1151,6 +1154,9 @@ __HAL_ROM_USED int HAL_RCC_HCPU_GetClockSrc(int clk_module)
 #ifdef   RCC_CLK_MOD_HP_TICK
             || ((int)RCC_CLK_MOD_HP_TICK == clk_module)
 #endif /* RCC_CLK_MOD_HP_TICK */
+#ifdef  RCC_CLK_MOD_LCDC
+            || ((int)RCC_CLK_MOD_LCDC == clk_module)
+#endif /* RCC_CLK_MOD_LCDC */
        )
     {
         mask = 3;
@@ -2137,7 +2143,85 @@ __HAL_ROM_USED uint32_t HAL_RCC_GetModuleFreq(RCC_MODULE_TYPE module)
         }
     }
     break;
-#endif
+#endif /*CORE_ID_CURRENT == CORE_ID_HCPU*/
+
+#else /* !SF32LB55X */
+#if (CORE_ID_CURRENT == CORE_ID_HCPU)
+    case RCC_MOD_LCDC1:
+    {
+#ifdef RCC_CLK_MOD_LCDC
+        int src = HAL_RCC_HCPU_GetClockSrc(RCC_CLK_MOD_LCDC);
+        if (RCC_CLK_LCDC_DLL2 == src)
+        {
+            freq = HAL_RCC_HCPU_GetDLL2Freq();
+        }
+        else if (RCC_CLK_LCDC_DLL3 == src)
+        {
+            freq = HAL_RCC_HCPU_GetDLL3Freq();
+        }
+        else if (RCC_CLK_LCDC_HRC48 == src)
+        {
+            freq = 48 * 1000 * 1000;
+        }
+        else
+#endif /*RCC_CLK_MOD_LCDC*/
+        {
+            freq = HAL_RCC_GetSysCLKFreq(CORE_ID_HCPU);
+        }
+    }
+    break;
+#endif /*CORE_ID_CURRENT == CORE_ID_HCPU*/
+
+    case RCC_MOD_MPI1:
+    case RCC_MOD_MPI2:
+#ifdef RCC_CLK_MOD_FLASH3
+    case RCC_MOD_MPI3:
+#endif /* RCC_CLK_MOD_FLASH3 */
+#ifdef RCC_CLK_MOD_FLASH4
+    case RCC_MOD_MPI4:
+#endif /* RCC_CLK_MOD_FLASH4 */
+    {
+        int clk_module, src;
+        if (RCC_MOD_MPI1 == module)
+        {
+            clk_module = RCC_CLK_MOD_FLASH1;
+        }
+        else if (RCC_MOD_MPI2 == module)
+        {
+            clk_module = RCC_CLK_MOD_FLASH2;
+        }
+#ifdef RCC_CLK_MOD_FLASH3
+        else if (RCC_MOD_MPI3 == module)
+        {
+            clk_module = RCC_CLK_MOD_FLASH3;
+        }
+#endif /* RCC_CLK_MOD_FLASH3 */
+#ifdef RCC_CLK_MOD_FLASH4
+        else
+        {
+            clk_module = RCC_CLK_MOD_FLASH4;
+        }
+#endif /* RCC_CLK_MOD_FLASH4 */
+
+        src = HAL_RCC_HCPU_GetClockSrc(clk_module);
+        if (RCC_CLK_SRC_DLL2 == src)
+        {
+            freq = HAL_RCC_HCPU_GetDLL2Freq();
+        }
+        else if (RCC_CLK_SRC_DLL3 == src)
+        {
+            freq = HAL_RCC_HCPU_GetDLL3Freq();
+        }
+        else if (RCC_CLK_SRC_DLL1 == src)
+        {
+            freq = HAL_RCC_HCPU_GetDLL1Freq();
+        }
+        else
+        {
+            freq = HAL_RCC_GetSysCLKFreq(CORE_ID_HCPU);
+        }
+    }
+    break;
 #endif /* SF32LB55X */
     default:
         HAL_ASSERT(0);

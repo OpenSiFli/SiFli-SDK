@@ -14,6 +14,52 @@ menu "SiFli extend"
                 bool "using Freetype Normal Lib"
         endchoice
 
+        menu "FreeType cache config"
+            depends on LV_USING_FREETYPE_ENGINE
+
+            config LV_FREETYPE_CACHE_FT_FACES
+                int "The maximum number of FT_Face(0: use FreeType defaults)"
+                default 0
+
+            config LV_FREETYPE_CACHE_FT_SIZES
+                int "The maximum number of FT_Size(0: use FreeType defaults)"
+                default 0
+        endmenu
+
+        menu "Font manager config"
+            depends on LV_USING_FREETYPE_ENGINE
+
+            config LVSF_FONT_MIN_FREE_HEAP
+                int "Minimum system heap left after creating a font object, in bytes (0: no check)"
+                default 0
+                help
+                  An opened font keeps its index tables resident - the loca and hmtx
+                  tables of a full CJK font alone can take hundreds of KB. Without this
+                  check such a font loads successfully and the system dies later on an
+                  unrelated allocation, far away from the real cause.
+
+                  When set, lvsf_font_get*/lvsf_font_load_ex() refuse to create a font
+                  object that would leave less than this many bytes of system heap, so
+                  the application gets a NULL and can fall back to another font. 32768
+                  is a reasonable starting point for boards with a few hundred KB of
+                  heap. Ignored when FreeType allocates from a dedicated memheap
+                  (FREETYPE_CACHE_IN_SRAM_STANDALONE / FREETYPE_CACHE_IN_PSRAM), which
+                  is bounded by construction.
+
+            config LVSF_FONT_UNLOAD_REF_CHECK
+                bool "Check for live references before freeing a font object"
+                default y
+                help
+                  The font manager hands out raw lv_font_t pointers that applications
+                  store in LVGL styles, so unloading a font that is still displayed is
+                  a use-after-free.
+
+                  With this option lvsf_font_unload*() walks the object tree of every
+                  display first and keeps a font that is still referenced, reporting the
+                  error instead of freeing it. Applications must re-point their styles
+                  to another font before unloading.
+        endmenu
+
         config LV_USE_EZIP
             bool "Use on-the-fly ezip decoder"
             default y
@@ -22,6 +68,15 @@ menu "SiFli extend"
             bool "Use SiFli on-the-fly jpeg decoder"
             default y
             depends on SOC_SF32LB57X
+
+        config LVSF_USING_SJPG
+            bool "Use LVSF JPEG/SJPEG decoder"
+            default n
+
+        config LVSF_SJPG_OUTPUT_YUV420
+            bool "Use YUV420 planar output for LVSF JPEG/SJPEG decoder"
+            depends on LVSF_USING_SJPG && !SOC_SF32LB55X && !SOC_SF32LB58X
+            default y
 
         config LV_USING_EXT_RESOURCE_MANAGER
             bool "Enable extended resource manager"

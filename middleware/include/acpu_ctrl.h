@@ -101,10 +101,11 @@ typedef struct
 #define ACPU_TASK_audio_3a_close         (10)
 #define ACPU_TASK_audio_3a_downlink      (11)
 #define ACPU_TASK_audio_3a_uplink        (12)
-#define ACPU_TASK_read                   (13)
-#define ACPU_TASK_write                  (14)
-#define ACPU_TASK_epic_rl                (15)
-#define ACPU_TASK_COUNT                  (16)
+#define ACPU_TASK_audio_3a_uplink_ssl    (13)
+#define ACPU_TASK_read                   (14)
+#define ACPU_TASK_write                  (15)
+#define ACPU_TASK_epic_rl                (16)
+#define ACPU_TASK_COUNT                  (17)
 
 /** HCPU task name */
 #define HCPU_TASK_INVALID                (0)

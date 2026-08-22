@@ -187,7 +187,11 @@ extern "C" {
 #define __HAL_SYSCFG_HPBG_VDDPSW_EN()        (hwp_hpsys_cfg->CAU2_CR |= HPSYS_CFG_CAU2_CR_HPBG_VDDPSW_EN)
 #endif  //#ifdef SF32LB55X
 
+#if !defined(CFG_FACTORY_BAUND_8M)
 #define SystemFixClock  48000000
+#else
+#define SystemFixClock  64000000
+#endif
 
 #ifdef ROM_ENABLED
 #define __HAL_ROM_USED __weak
@@ -210,6 +214,10 @@ extern "C" {
 #ifndef HAL_MAX
 #define HAL_MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif /* HAL_MAX */
+
+#ifndef HAL_CLAMP
+#define HAL_CLAMP(val, min, max) HAL_MIN(HAL_MAX((val), (min)), (max))
+#endif /* HAL_CLAMP */
 
 #ifndef HAL_ABS
 #define HAL_ABS(x) ((x) > 0 ? (x) : (-(x)))
@@ -356,7 +364,7 @@ void HAL_IncTick(void);
   */
 void HAL_Delay(uint32_t Delay);
 void HAL_Delay_us(uint32_t us);
-void HAL_Delay_us_(__IO uint32_t us);
+void HAL_Delay_us_(uint32_t us);
 
 /**
   * @brief This function provides the function that will copy memory content from source address to destination according to word alignment.

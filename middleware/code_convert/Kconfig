@@ -1,0 +1,6 @@
+config BSP_USING_CODE_CONVERT
+    bool "Character encoding convert utilities"
+    default n
+    help
+        Provide text encoding detection and conversion helpers for GBK,
+        UTF-8, UTF-16LE, UTF-16BE and ASCII text.

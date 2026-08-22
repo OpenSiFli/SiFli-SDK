@@ -8,7 +8,7 @@
 #include "board.h"
 #include "drv_spi.h"
 #include "ads7846.h"
-#include "touch.h"
+#include "drv_touch.h"
 
 /* Define -------------------------------------------------------------------*/
 

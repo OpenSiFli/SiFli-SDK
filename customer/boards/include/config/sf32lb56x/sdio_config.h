@@ -13,10 +13,13 @@
 extern "C" {
 #endif
 
-#define SDIO_BUS_CONFIG                                  \
+#define SDIO2_BUS_CONFIG                                  \
     {                                                    \
         .Instance = SDIO2,                               \
         .name     = "sd1",                               \
+        .irqn = SDMMC2_IRQn,                             \
+        .rcc_mod = RCC_MOD_SDMMC2,                       \
+        .mem_base = SDMMC2_MEM_BASE,                     \
         .dma_rx.dma_irq_prio = SDMMC2_DMA_IRQ_PRIO,      \
         .dma_tx.dma_irq_prio = SDMMC2_DMA_IRQ_PRIO,      \
         .dma_rx.Instance = SDMMC2_DMA_INSTANCE,          \

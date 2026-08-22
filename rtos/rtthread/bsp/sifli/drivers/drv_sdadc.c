@@ -29,52 +29,254 @@ struct sifli_sdadc
 };
 
 static struct sifli_sdadc sifli_sdadc_obj;
-static uint32_t lsdadc_stand_volt = 1000;
-static uint32_t lsdadc_stand_value = 1527884;
+
+static HAL_SDADC_CalibContextTypeDef g_sdadc_calib_ctx;
+static struct rt_semaphore g_sdadc_lock;
+
+#ifdef BSP_SDADC_USE_TIMER_TRIGGER
+
+/* Number of SDADC channels reported to the rx_indicate callback on each
+ * timer-triggered conversion complete interrupt (CHN0..CHN3). */
+#define SDADC_RX_INDICATE_SIZE      (HAL_SDADC_GPIO_CHN3 - HAL_SDADC_GPIO_CHN0 + 1)
+
+static GPT_HandleTypeDef g_sdadc_gptim;
+
+void SDADC_IRQHandler(void)
+{
+    rt_interrupt_enter();
+
+    /* Clear interrupt */
+    sifli_sdadc_obj.SDADC_Handler.Instance->INT_CLR = 1;
+
+    /* Notify waiting thread */
+    if (sifli_sdadc_obj.sifli_sdadc_device.parent.rx_indicate)
+        sifli_sdadc_obj.sifli_sdadc_device.parent.rx_indicate(
+            &sifli_sdadc_obj.sifli_sdadc_device.parent, SDADC_RX_INDICATE_SIZE);
+
+    rt_interrupt_leave();
+}
+
+static void sifli_sdadc_use_gptime_init(void)
+{
+    uint32_t prescaler;
+
+    g_sdadc_gptim.Instance = GPTIM3;
+
+#if defined(SF32LB58X)
+    prescaler = HAL_RCC_GetPCLKFreq(GPTIM3_CORE, 1);
+#else
+    prescaler = HAL_RCC_GetPCLKFreq(0, 1);
+#endif
+    prescaler = prescaler / 1000 - 1;   /* timer_clock = 1 kHz, 1 tick = 1 ms */
+
+    g_sdadc_gptim.Init.Period            = BSP_SDADC_TIMER_PERIOD_MS - 1;  /* unit: ms, timer_clock = 1 kHz */
+    g_sdadc_gptim.Init.Prescaler         = prescaler;
+    g_sdadc_gptim.Init.CounterMode       = GPT_COUNTERMODE_UP;
+    g_sdadc_gptim.Init.RepetitionCounter = 0;
+#if defined(SF32LB58X)
+    g_sdadc_gptim.core = GPTIM3_CORE;
+#endif
+
+    if (HAL_GPT_Base_Init(&g_sdadc_gptim) != HAL_OK)
+    {
+        LOG_E("SDADC GPTIM3 init failed");
+        return;
+    }
+
+    /* Route update event to TRGO (MMS=010) → SDADC hardware trigger input */
+    g_sdadc_gptim.Instance->CR2 &= ~GPT_CR2_MMS;
+    g_sdadc_gptim.Instance->CR2 |= (0x2 << GPT_CR2_MMS_Pos);
+
+    /* Start counter (GPTIM runs forever, SDADC receives trigger via hardware) */
+    g_sdadc_gptim.Instance->CR1 |= GPT_CR1_CEN;
+
+    LOG_I("SDADC GPTIM3: PSC=%lu ARR=%lu period=%lu ms",
+          (uint32_t)(g_sdadc_gptim.Instance->PSC),
+          (uint32_t)(g_sdadc_gptim.Instance->ARR),
+          (uint32_t)BSP_SDADC_TIMER_PERIOD_MS);
+}
+#endif /* BSP_SDADC_USE_TIMER_TRIGGER */
 
 static rt_err_t sifli_sdadc_enabled(struct rt_adc_device *device, rt_uint32_t channel, rt_bool_t enabled)
 {
     SDADC_HandleTypeDef *sifli_adc_handler = device->parent.user_data;
+    rt_err_t r;
 
     RT_ASSERT(device != RT_NULL);
 
-    if (enabled)
+    if (channel < HAL_SDADC_GPIO_CHN0 || channel > HAL_SDADC_GPIO_CHN3)
     {
-        HAL_SDADC_EnableSlot(sifli_adc_handler, channel, 1);
+        LOG_E("SDADC channel must be between %d and %d.", HAL_SDADC_GPIO_CHN0, HAL_SDADC_GPIO_CHN3);
+        return -RT_ERROR;
     }
-    else
+
+    /* Serialize access to the SDADC hardware with sdadc_read_voltage(). */
+    r = rt_sem_take(&g_sdadc_lock, rt_tick_from_millisecond(2000));
+    if (r != RT_EOK)
+        return r;
+
+    HAL_SDADC_EnableSlot(sifli_adc_handler, channel, enabled ? 1 : 0);
+
+    rt_sem_release(&g_sdadc_lock);
+
+    return RT_EOK;
+}
+
+static rt_err_t sdadc_read_voltage(SDADC_HandleTypeDef *sifli_adc_handler, rt_uint32_t channel, rt_uint32_t *value)
+{
+    uint32_t reg_val;
+    rt_err_t r;
+
+    r = rt_sem_take(&g_sdadc_lock, rt_tick_from_millisecond(2000));
+    if (r != RT_EOK)
+        return r;
+
+    /* Reject channels outside the supported GPIO channel range. */
+    if (channel < HAL_SDADC_GPIO_CHN0 || channel > HAL_SDADC_GPIO_CHN3)
     {
-        HAL_SDADC_EnableSlot(sifli_adc_handler, channel, 0);
+        LOG_E("SDADC channel must be between %d and %d.", HAL_SDADC_GPIO_CHN0, HAL_SDADC_GPIO_CHN3);
+        rt_sem_release(&g_sdadc_lock);
+        return -RT_ERROR;
     }
+
+#if defined(BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING)
+
+#ifdef BSP_SDADC_USE_TIMER_TRIGGER
+    reg_val = HAL_SDADC_GetValue(sifli_adc_handler, channel);
+#else
+    /* Software trigger */
+    HAL_SDADC_Start(sifli_adc_handler);
+    if (HAL_SDADC_PollForConversion(sifli_adc_handler, 100) != HAL_OK)
+    {
+        HAL_SDADC_Stop(sifli_adc_handler);
+        rt_sem_release(&g_sdadc_lock);
+        return -RT_ERROR;
+    }
+    HAL_SDADC_Stop(sifli_adc_handler);
+    reg_val = HAL_SDADC_GetValue(sifli_adc_handler, channel);
+#endif /* BSP_SDADC_USE_TIMER_TRIGGER */
+#else
+    /* single-channel path */
+    {
+        SDADC_ChannelConfTypeDef ADC_ChanConf;
+
+        rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
+        ADC_ChanConf.Channel = channel;
+        ADC_ChanConf.pchnl_sel = channel;
+        ADC_ChanConf.nchnl_sel = 0;
+        ADC_ChanConf.shift_num = 2;
+        ADC_ChanConf.slot_en = 1;
+        HAL_SDADC_ConfigChannel(sifli_adc_handler, &ADC_ChanConf);
+
+#ifdef BSP_SDADC_USE_TIMER_TRIGGER
+        reg_val = HAL_SDADC_GetValue(sifli_adc_handler, channel);
+#else
+        HAL_SDADC_Start(sifli_adc_handler);
+
+        if (HAL_SDADC_PollForConversion(sifli_adc_handler, 100) != HAL_OK)
+        {
+            HAL_SDADC_Stop(sifli_adc_handler);
+            rt_sem_release(&g_sdadc_lock);
+            return -RT_ERROR;
+        }
+        HAL_SDADC_Stop(sifli_adc_handler);
+        reg_val = HAL_SDADC_GetValue(sifli_adc_handler, channel);
+#endif /* BSP_SDADC_USE_TIMER_TRIGGER */
+    }
+#endif /* BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING */
+
+    /* Clamp to (threshold_reg - 1). Guard against threshold_reg == 0 (invalid
+     * calibration data) which would otherwise underflow to UINT32_MAX. */
+    if (g_sdadc_calib_ctx.threshold_reg != 0 && reg_val >= g_sdadc_calib_ctx.threshold_reg)
+    {
+        reg_val = g_sdadc_calib_ctx.threshold_reg - 1;
+    }
+
+    /* convert register value to 0.1mV voltage */
+    *value = (rt_uint32_t)(HAL_SDADC_RegToVoltageFloat((float)reg_val, &g_sdadc_calib_ctx) * 10.0f);
+
+    r = rt_sem_release(&g_sdadc_lock);
+    RT_ASSERT(r == RT_EOK);
 
     return RT_EOK;
 }
 
 static rt_err_t sifli_get_sdadc_value(struct rt_adc_device *device, rt_uint32_t channel, rt_uint32_t *value)
 {
-    SDADC_ChannelConfTypeDef ADC_ChanConf;
-    SDADC_HandleTypeDef *sifli_adc_handler = device->parent.user_data;
-
     RT_ASSERT(device != RT_NULL);
     RT_ASSERT(value != RT_NULL);
 
-    rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
+    return sdadc_read_voltage((SDADC_HandleTypeDef *)device->parent.user_data, channel, value);
+}
 
-    ADC_ChanConf.Channel = channel;
-    ADC_ChanConf.pchnl_sel = channel;
-    ADC_ChanConf.nchnl_sel = 0;
-    ADC_ChanConf.shift_num = 2;
-    ADC_ChanConf.slot_en = 1;
-    HAL_SDADC_ConfigChannel(sifli_adc_handler, &ADC_ChanConf);
+static rt_err_t sifli_sdadc_control(struct rt_adc_device *device, rt_uint32_t cmd, void *arg)
+{
+    rt_adc_cmd_read_arg_t *read_arg = (rt_adc_cmd_read_arg_t *)arg;
 
-    /* start SDADC */
-    HAL_SDADC_Start(sifli_adc_handler);
+    RT_ASSERT(device != RT_NULL);
+    RT_ASSERT(RT_ADC_CMD_READ == cmd);
+    RT_ASSERT(read_arg);
 
-    /* Wait for the SDADC to convert */
-    HAL_SDADC_PollForConversion(sifli_adc_handler, 100);
+    return sdadc_read_voltage((SDADC_HandleTypeDef *)device->parent.user_data,
+                              read_arg->channel, &read_arg->value);
+}
 
-    /* get SDADC value */
-    *value = (rt_uint32_t)HAL_SDADC_GetValue(sifli_adc_handler, channel);
+static void sifli_sdadc_config(SDADC_HandleTypeDef *sifli_adc_handler)
+{
+    SDADC_GainConfTypeDef gain;
+    SDADC_AccurateConfTypeDef accu;
+
+    gain.gain_deno = 4;
+    gain.gain_nume = 1;
+    HAL_SDADC_ConfigGain(sifli_adc_handler, &gain);
+
+    accu.chop1_num = 0x9c;
+    accu.chop2_num = 0xc9;
+    accu.chop3_num = 0x1ff;
+    accu.chop_ref_num = 0x9c;
+    accu.sample_num = 0xe0;
+    HAL_SDADC_ConfigAccu(sifli_adc_handler, &accu);
+
+#if defined(BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING)
+    {
+        SDADC_ChannelConfTypeDef ADC_ChanConf;
+
+        for (uint32_t channel = HAL_SDADC_GPIO_CHN0; channel <= HAL_SDADC_GPIO_CHN3; channel++)
+        {
+            rt_memset(&ADC_ChanConf, 0, sizeof(ADC_ChanConf));
+            ADC_ChanConf.Channel = channel;
+            ADC_ChanConf.pchnl_sel = channel;
+            ADC_ChanConf.nchnl_sel = 0;
+            ADC_ChanConf.shift_num = 2;
+            ADC_ChanConf.slot_en = 1;
+            HAL_SDADC_ConfigChannel(sifli_adc_handler, &ADC_ChanConf);
+        }
+    }
+#endif /* BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING */
+}
+
+static rt_err_t sifli_op_sdadc_init(struct rt_adc_device *device)
+{
+    SDADC_HandleTypeDef *sifli_adc_handler = device->parent.user_data;
+
+    if (HAL_SDADC_DeInit(sifli_adc_handler) != HAL_OK)
+        return -RT_ERROR;
+
+    if (HAL_SDADC_Init(sifli_adc_handler) != HAL_OK)
+        return -RT_ERROR;
+
+    sifli_sdadc_config(sifli_adc_handler);
+
+#ifdef BSP_SDADC_USE_TIMER_TRIGGER
+    sifli_sdadc_use_gptime_init();
+
+    HAL_NVIC_SetPriority(SDADC_IRQn, 3, 0);
+    HAL_NVIC_EnableIRQ(SDADC_IRQn);
+
+    HAL_SDADC_SetTimer(sifli_adc_handler, HAL_SDADC_SRC_GPTIM3);
+    SDADC_ENABLE_TIMER_TRIGER(sifli_adc_handler);
+    sifli_adc_handler->Init.src_sel = HAL_SDADC_SRC_TIMER;
+#endif
 
     return RT_EOK;
 }
@@ -83,28 +285,48 @@ static const struct rt_adc_ops sifli_sdadc_ops =
 {
     .enabled = sifli_sdadc_enabled,
     .convert = sifli_get_sdadc_value,
+    .init    = sifli_op_sdadc_init,
+    .control = sifli_sdadc_control,
 };
 
 static int sifli_sdadc_init(void)
 {
     int result = RT_EOK;
-    /* save adc name */
     char name_buf[6] = {'s', 'd', 'a', 'd', 'c', 0};
 
-    sifli_sdadc_obj.SDADC_Handler.Instance = hwp_sdadc; // = sdadc_config[i];
+    rt_sem_init(&g_sdadc_lock, "sdadc", 1, RT_IPC_FLAG_FIFO);
+
+    /* Load calibration */
+    if (HAL_SDADC_CalibLoad(&g_sdadc_calib_ctx) != HAL_OK)
+    {
+        LOG_W("Get SDADC configure fail, use default calibration");
+    }
+
+    sifli_sdadc_obj.SDADC_Handler.Instance = hwp_sdadc;
     sifli_sdadc_obj.SDADC_Handler.DMA_Handle = NULL;
     sifli_sdadc_obj.SDADC_Handler.ErrorCode = 0;
     sifli_sdadc_obj.SDADC_Handler.Lock = HAL_UNLOCKED;
     sifli_sdadc_obj.SDADC_Handler.State = 0;
 
     sifli_sdadc_obj.SDADC_Handler.Init.adc_se = 1;
-    sifli_sdadc_obj.SDADC_Handler.Init.conti_mode = 0;
     sifli_sdadc_obj.SDADC_Handler.Init.diff_sel = 0;
+    sifli_sdadc_obj.SDADC_Handler.Init.en_slot = 0;
+
+#if defined(BSP_SDADC_SUPPORT_MULTI_CH_SAMPLING)
+    sifli_sdadc_obj.SDADC_Handler.Init.conti_mode = 0;
+    sifli_sdadc_obj.SDADC_Handler.Init.dma_en = 0;
+    sifli_sdadc_obj.SDADC_Handler.Init.dsample_mode = 1;
+#else
+    sifli_sdadc_obj.SDADC_Handler.Init.conti_mode = 0;
     sifli_sdadc_obj.SDADC_Handler.Init.dma_en = 0;
     sifli_sdadc_obj.SDADC_Handler.Init.dsample_mode = 0;
-    sifli_sdadc_obj.SDADC_Handler.Init.en_slot = 0;
+#endif
+#ifdef BSP_SDADC_USE_TIMER_TRIGGER
+    sifli_sdadc_obj.SDADC_Handler.Init.src_sel = HAL_SDADC_SRC_TIMER;
+#else
     sifli_sdadc_obj.SDADC_Handler.Init.src_sel = HAL_SDADC_SRC_SW;
-    sifli_sdadc_obj.SDADC_Handler.Init.vref_sel = HAL_SDADC_VERF_INTERNAL; //HAL_SDADC_VREF_POWER;
+#endif
+    sifli_sdadc_obj.SDADC_Handler.Init.vref_sel = HAL_SDADC_VERF_INTERNAL;
 
     if (HAL_SDADC_Init(&sifli_sdadc_obj.SDADC_Handler) != HAL_OK)
     {
@@ -113,19 +335,8 @@ static int sifli_sdadc_init(void)
     }
     else
     {
-        // config gain at initial
-        SDADC_GainConfTypeDef gain;
-        SDADC_AccurateConfTypeDef accu;
-        gain.gain_deno = 4;
-        gain.gain_nume = 1;
-        HAL_SDADC_ConfigGain(&sifli_sdadc_obj.SDADC_Handler, &gain);
+        sifli_sdadc_config(&sifli_sdadc_obj.SDADC_Handler);
 
-        accu.chop1_num = 0x9c;
-        accu.chop2_num = 0xc9;
-        accu.chop3_num = 0x1ff;
-        accu.chop_ref_num = 0x9c;
-        accu.sample_num = 0xe0;
-        HAL_SDADC_ConfigAccu(&sifli_sdadc_obj.SDADC_Handler, &accu);
         /* register SDADC device */
         if (rt_hw_adc_register(&sifli_sdadc_obj.sifli_sdadc_device, name_buf, &sifli_sdadc_ops, &sifli_sdadc_obj.SDADC_Handler) == RT_EOK)
         {
@@ -136,25 +347,6 @@ static int sifli_sdadc_init(void)
             LOG_E("%s register failed", name_buf);
             result = -RT_ERROR;
         }
-//#ifdef BSP_USING_SPI_FLASH
-//#include "drv_flash.h"
-
-        HAL_LCPU_CONFIG_SDMADC_T cfg;
-        int len = (int)sizeof(HAL_LCPU_CONFIG_SDMADC_T);
-        //if (rt_flash_config_read(FACTORY_CFG_ID_SDMADC, (uint8_t *)&cfg, sizeof(FACTORY_CFG_SDMADC_T)) > 0)
-        if (BSP_CONFIG_get(FACTORY_CFG_ID_SDMADC, (uint8_t *)&cfg, len))
-        {
-            lsdadc_stand_value = cfg.value;
-            lsdadc_stand_volt = cfg.vol_mv;
-            LOG_D("SDMADC VOL %d, value %d\n", lsdadc_stand_volt, lsdadc_stand_value);
-        }
-        else
-        {
-            LOG_I("Get SDMADC configure fail\n");
-            //    lsdadc_stand_value = 0;
-            //    lsdadc_stand_volt = 0;
-        }
-//#endif
     }
 
     return result;
@@ -165,22 +357,14 @@ INIT_BOARD_EXPORT(sifli_sdadc_init);
 * This part only for VREF as power supply(3.3)
 *********************************************/
 
-/*voltage 0 v should be half of VREF_SEL_PWR_BASE */
-#define VREF_SEL_PWR_BASE       (1923825)   // from analog
-//#define VREF_SEL_VOL_BASE       (1527884)  // 1 V ADC VALUE
-//#define VREF_SEL_RATIO          (VREF_SEL_VOL_BASE-(VREF_SEL_PWR_BASE/2))
-
 /**
-* @brief  Get SDMADC voltage by register value.
+* @brief  Get SDMADC voltage by register value (uses HAL calibration context).
 * @param[in]  value register value.
 * @retval voltage in mv.
 */
 int sdadc_get_vol(uint32_t value)
 {
-    int vol = 2 * value - VREF_SEL_PWR_BASE;
-    vol = vol * lsdadc_stand_volt / (2 * lsdadc_stand_value - VREF_SEL_PWR_BASE);
-
-    return vol;
+    return (int)HAL_SDADC_RegToVoltageFloat((float)value, &g_sdadc_calib_ctx);
 }
 
 //#define DRV_SDADC_TEST

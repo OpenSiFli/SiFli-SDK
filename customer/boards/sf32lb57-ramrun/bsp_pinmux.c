@@ -6,80 +6,10 @@
 
 #include "bsp_board.h"
 
-#ifdef BSP_USING_PSRAM1
-/* APS 128p*/
-static void board_pinmux_psram_func0()
-{
-    HAL_PIN_Set(PAD_SA01, MPI1_PSRAM_DIO0, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA02, MPI1_PSRAM_DIO1, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA03, MPI1_PSRAM_DIO2, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA04, MPI1_PSRAM_DIO3, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA05, MPI1_PSRAM_DIO4, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA06, MPI1_PSRAM_DIO5, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA07, MPI1_PSRAM_DIO6, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA08, MPI1_PSRAM_DIO7, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA09, MPI1_PSRAM_DQSDM, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA10, MPI1_PSRAM_CLK,  PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_SA11, MPI1_PSRAM_CS,   PIN_NOPULL, 1);
-
-    HAL_PIN_Set_Analog(PAD_SA00, 1);
-    HAL_PIN_Set_Analog(PAD_SA12, 1);
-}
-
-/* APS 1:64p 2:32P, 4:Winbond 32/64/128p*/
-static void board_pinmux_psram_func1_2_4(int func)
-{
-    HAL_PIN_Set(PAD_SA01, MPI1_PSRAM_DIO0, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA02, MPI1_PSRAM_DIO1, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA03, MPI1_PSRAM_DIO2, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA04, MPI1_PSRAM_DIO3, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA08, MPI1_PSRAM_DIO4, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA09, MPI1_PSRAM_DIO5, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA10, MPI1_PSRAM_DIO6, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA11, MPI1_PSRAM_DIO7, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA07, MPI1_PSRAM_CLK,  PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_SA05, MPI1_PSRAM_CS,   PIN_NOPULL, 1);
-
-#ifdef FPGA
-    HAL_PIN_Set(PAD_SA00, MPI1_PSRAM_DM, PIN_PULLDOWN, 1);
-    HAL_PIN_Set(PAD_SA06, MPI1_PSRAM_CLKB, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_SA12, MPI1_PSRAM_DQSDM, PIN_PULLDOWN, 1);
-#else
-    switch (func)
-    {
-    case 1:             // APS 64P XCELLA
-        HAL_PIN_Set(PAD_SA12, MPI1_PSRAM_DQSDM, PIN_PULLDOWN, 1);
-        HAL_PIN_Set_Analog(PAD_SA00, 1);
-        HAL_PIN_Set_Analog(PAD_SA06, 1);
-        break;
-    case 2:             // APS 32P LEGACY
-        HAL_PIN_Set(PAD_SA00, MPI1_PSRAM_DM, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_SA12, MPI1_PSRAM_DQS, PIN_PULLDOWN, 1);
-        HAL_PIN_Set(PAD_SA06, MPI1_PSRAM_CLKB, PIN_NOPULL, 1);
-        break;
-    case 4:             // Winbond 32/64/128p
-        //HAL_PIN_Set(PAD_SA06, MPI1_CLKB, PIN_NOPULL, 1);
-        HAL_PIN_Set(PAD_SA12, MPI1_PSRAM_DQSDM, PIN_NOPULL, 1);
-        HAL_PIN_Set_Analog(PAD_SA00, 1);
-        HAL_PIN_Set_Analog(PAD_SA06, 1);
-        break;
-    }
-#endif
-}
-
-
-
-#endif
-
 void BSP_PIN_Init(void)
 {
 #ifdef SOC_BF0_HCPU
     // HCPU pins
-
-    uint32_t psram_type;
-
-    psram_type = PKGID_PSRAM_APS_64;
-
 
     // MPI3
 #ifdef SOC_SF32LB573UB776

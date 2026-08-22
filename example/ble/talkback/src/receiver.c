@@ -388,7 +388,7 @@ int ble_app_receiver_event_handler(uint16_t event_id, uint8_t *data, uint16_t le
         LOG_I("Start PER_ADV_SYNC result %d", cnf->status);
         if (cnf->status == HL_ERR_NO_ERROR)
         {
-            rt_work_submit(&env->r_env.work.work, DEFAULT_SYNCING_PERIOD * 1000);
+            rt_work_submit(&env->r_env.work, DEFAULT_SYNCING_PERIOD * 1000);
         }
         else
         {
@@ -473,7 +473,7 @@ static void ble_app_per_sync_check(struct rt_work *work, void *work_data)
 void ble_app_receviver_init(void)
 {
     app_env_t *env = ble_app_get_env();
-    rt_delayed_work_init(&env->r_env.work, ble_app_per_sync_check, env);
+    rt_work_init(&env->r_env.work, ble_app_per_sync_check, env);
 
 #ifdef APP_MIC_ALWAYS_ON
     talk_init(AUDIO_TXRX);

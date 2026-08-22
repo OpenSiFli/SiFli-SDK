@@ -929,15 +929,21 @@ static void lcd_driver_print_error_info(void)
                  );
         }
 #endif /* HAL_DSI_MODULE_ENABLED */
-#if defined(BSP_USING_RAMLESS_LCD)&&defined(hwp_ptc1)
+#if defined(BSP_USING_RAMLESS_LCD)
         if (HAL_LCDC_IS_PTC_AUX_IF(drv_lcd.hlcdc.Init.lcd_itf))
         {
             HAL_Delay(5);
             LOG_E("LCDC CANVAS TL=%x,BR=%x",
                   drv_lcd.hlcdc.Instance->CANVAS_TL_POS,
                   drv_lcd.hlcdc.Instance->CANVAS_BR_POS);
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+            LOG_E("PTC DMA instance=0x%x, ch=%d",
+                  drv_lcd.hlcdc.hdma_handle.Instance,
+                  (drv_lcd.hlcdc.hdma_handle.ChannelIndex >> 2) + 1);
+#endif
 
 #ifdef SOC_BF0_HCPU
+#if defined(hwp_ptc1)
 #ifdef SF32LB55X
             const uint32_t ptc_tab_size = 24;
             const uint32_t ptc_ch_words = 3;
@@ -1000,6 +1006,21 @@ static void lcd_driver_print_error_info(void)
                 }
 
             }
+
+#elif defined(hwp_ptm1)
+            uint32_t pc = hwp_ptm1->PC0;
+            uint32_t val = (pc < 0x800) ? (PTM1_CORE0_TCM)[pc] : *((uint32_t *)pc);
+            LOG_E("PTM ENTRY=0x%08x, PC=0x%08x, val=0x%08x", drv_lcd.hlcdc.ptc_code, pc, val);
+            if (0 == (val & 0xE0000000)) //Wait cmd
+            {
+                uint8_t src = (val >> 16) & 0xff;
+                uint16_t delay = val & 0xffff;
+                uint8_t pol = (val >> 24) & 0x1;
+
+                LOG_E("Wait src=%d, delay=0x%x, pol=%d", src, delay, pol);
+            }
+#endif /*hwp_ptc1*/
+
 
 #endif /* SOC_BF0_HCPU */
 

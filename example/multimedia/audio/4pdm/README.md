@@ -88,12 +88,17 @@ pdm open pdm1 1 anyka
 表示，配置为PDM1单声道录音, 使用安凯算法，输出为单声道。  
 pdm open pdm1 2 anyka  
 表示，配置为PDM1双声道录音，使用安凯算法，输出为单声道。  
+pdm open pdm1 2 anyka ssl 48  
+表示，配置为PDM1双声道录音，使用安凯算法，带声源定位(ssl), 麦增益参数为48(最大可以为90), 输出为单声道。  
+
 pdm open pdm2 1 anyka  
 表示，配置为PDM2单声道录音, 使用安凯算法，输出为单声道。  
 pdm open pdm2 2 anyka  
 表示，配置为PDM2双声道录音，使用安凯算法，输出为单声道。  
 pdm open pdm12 4 anyka  
 表示，配置为PDM1/PDM2各自双声道，使用安凯算法处理4mic，输出为单声道。  
+pdm open pdm12 4 anyka ssl 48  
+表示，配置为PDM1/PDM2各自双声道，使用安凯算法，带声源定位(ssl), 麦增益参数为48(最大可以为90), 输出为单声道。  
 
 2. 结束录音命令：`pdm close`  
 pdm close  

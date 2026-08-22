@@ -96,6 +96,9 @@ int rwnx_send_fhcustmsg_reset_req(struct rwnx_hw *rwnx_hw);
 int rwnx_send_fhcustmsg_sta_cfg_req(struct rwnx_hw *rwnx_hw, int op, char *ssid, int enable, struct fhcustmsg_sta_cfg_cfm *cfm);
 //int rwnx_send_fhcustmsg_http_req(struct rwnx_hw *rwnx_hw, char *uri);
 
+int rwnx_send_fhcustmsg_start_p2p_req(struct rwnx_hw *rwnx_hw, const char *ssid, const char *passwd, uint8_t band);
+int rwnx_send_fhcustmsg_stop_p2p_req(struct rwnx_hw *rwnx_hw);
+
 int rwnx_send_msg_tx(struct rwnx_hw *rwnx_hw, lmac_task_id_t dst_id, lmac_msg_id_t msg_id, uint16_t msg_len, void *msg, int reqcfm, lmac_msg_id_t reqid, void *cfm);
 
 #endif /* _RWNX_MSG_TX_H_ */

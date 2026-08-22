@@ -7,7 +7,7 @@
 #include <rtthread.h>
 #include "board.h"
 #include "it7259e.h"
-#include "touch.h"
+#include "drv_touch.h"
 //#include "EventRecorder.h"
 
 /* Define -------------------------------------------------------------------*/

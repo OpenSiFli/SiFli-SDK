@@ -409,10 +409,10 @@ __weak FT_CONST SPI_FLASH_FACT_CFG_T nand_cmd_table_list[] =
             {0x0F, 0, 1, 0, 0, 0, 0, 1, 1}, /* SPI_FLASH_CMD_RDSR*/
             {0x1F, 1, 1, 0, 0, 0, 0, 1, 1}, /* SPI_FLASH_CMD_WRSR*/
             {0x13, 0, 0, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_PREAD*/
-            {0x03, 0, 1, 0, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_READ*/
-            {0x0b, 0, 1, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_FREAD*/
-            {0x3b, 0, 2, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_DREAD*/
-            {0x6b, 0, 3, 8, 0, 0, 2, 1, 1}, /* SPI_FLASH_CMD_QREAD*/
+            {0x03, 0, 1, 0, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_READ*/
+            {0x0b, 0, 1, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_FREAD*/
+            {0x3b, 0, 2, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_DREAD*/
+            {0x6b, 0, 3, 8, 0, 0, 1, 1, 1}, /* SPI_FLASH_CMD_QREAD*/
             {0xbb, 0, 2, 4, 0, 0, 1, 2, 1}, /* SPI_FLASH_CMD_2READ*/
             {0xeb, 0, 3, 4, 0, 0, 1, 3, 1}, /* SPI_FLASH_CMD_4READ*/
             {0x9f, 0, 1, 0, 0, 0, 0, 0, 1}, /* SPI_FLASH_CMD_RDID*/
@@ -616,6 +616,14 @@ FT_CONST FLASH_RDID_TYPE_T *spi_nand_get_rdid(uint8_t fid, uint8_t did, uint8_t 
     if ((fid == FLASH_INVALID_ID) || (fid == FLASH_UNKNOW_ID))
         return NULL;
 
+#if defined(CFG_FACTORY_DEBUG)
+    res = (FLASH_RDID_TYPE_T *)get_user_flash_cfg(1, fid, did, type, flash_type);
+    if (res != NULL)
+    {
+        return res;
+    }
+#endif
+
     for (i = 0; i < NAND_CMD_TABLE_CNT; i++)
     {
         res = nand_cmd_id_pool[i];
@@ -633,11 +641,7 @@ FT_CONST FLASH_RDID_TYPE_T *spi_nand_get_rdid(uint8_t fid, uint8_t did, uint8_t 
 
     if (i == NAND_CMD_TABLE_CNT)
     {
-#if defined(CFG_FACTORY_DEBUG)
-        res = (FLASH_RDID_TYPE_T *)get_user_flash_cfg(1, fid, did, type, flash_type);
-#else
         res = (FT_CONST FLASH_RDID_TYPE_T *)spi_nand_get_user_flash_cfg(fid, did, type, flash_type);
-#endif
     }
     else if (flash_type)
     {

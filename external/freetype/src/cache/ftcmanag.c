@@ -547,9 +547,9 @@
                 manager->num_nodes ));
 #endif
 
-    rt_kprintf("FTC_Manager_Compress, weight = %ld, max = %ld, nodes = %d\n",
-                manager->cur_weight, manager->max_weight,
-                manager->num_nodes);
+    // rt_kprintf("FTC_Manager_Compress, weight = %ld, max = %ld, nodes = %d\n",
+    //             manager->cur_weight, manager->max_weight,
+    //             manager->num_nodes);
 
     if ( manager->cur_weight < manager->max_weight || !first )
       return;
@@ -570,9 +570,9 @@
 
     } while ( node && manager->cur_weight > manager->max_weight * 80 / 100);
     
-    rt_kprintf("FTC_Manager_Compress1, weight = %ld, max = %ld, nodes = %d\n",
-                manager->cur_weight, manager->max_weight,
-                manager->num_nodes);
+    // rt_kprintf("FTC_Manager_Compress1, weight = %ld, max = %ld, nodes = %d\n",
+    //             manager->cur_weight, manager->max_weight,
+    //             manager->num_nodes);
 
   }
 

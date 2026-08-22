@@ -18,19 +18,19 @@
 #include <netif/ethernetif.h>
 #include <lwip/netifapi.h>
 #ifdef LWIP_USING_DHCPD
-#include <dhcp_server.h>
+    #include <dhcp_server.h>
 #endif
 
 #define DBG_TAG "WLAN.lwip"
 #ifdef RT_WLAN_LWIP_DEBUG
-#define DBG_LVL DBG_LOG
+    #define DBG_LVL DBG_LOG
 #else
-#define DBG_LVL DBG_INFO
+    #define DBG_LVL DBG_INFO
 #endif /* RT_WLAN_LWIP_DEBUG */
 #include <rtdbg.h>
 
 #ifndef IPADDR_STRLEN_MAX
-#define IPADDR_STRLEN_MAX    (32)
+    #define IPADDR_STRLEN_MAX    (32)
 #endif
 
 struct lwip_prot_des

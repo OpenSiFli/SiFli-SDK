@@ -1,0 +1,17 @@
+# BSP_USING_BOARD_DPI_HDK_LB575YBBN6_A128_QSPI
+
+## SoC
+SF32LB575YBBN6
+
+### MPI1
+PSRAM 4MB
+
+### MPI2
+PSRAM 4MB
+
+## External Storage
+### MPI3
+NAND Flash 128MB
+
+## Display
+QSPI Display

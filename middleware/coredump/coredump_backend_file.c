@@ -13,7 +13,7 @@
 #include "dfs_posix.h"
 #include "drv_flash.h"
 #if defined(BSP_USING_SDIO)
-    #include "mmcsd_core.h"
+    #include "drivers/mmcsd_core.h"
 #endif /* BSP_USING_SDIO */
 
 
@@ -21,6 +21,7 @@
     (strlen(dir) > 0 && (dir[strlen(dir) - 1] == '/' || dir[strlen(dir) - 1] == '\\') ? \
         dir file : dir "/" file)
 
+#define COREDUMP_FILE_MAX_SIZE  INT32_MAX
 
 typedef struct
 {
@@ -56,6 +57,11 @@ static uint32_t get_free_size(const char *path)
 
 
     free_size = buffer.f_bfree * buffer.f_bsize;
+
+    if (free_size > COREDUMP_FILE_MAX_SIZE)
+    {
+        free_size = COREDUMP_FILE_MAX_SIZE;
+    }
 
 __EXIT:
     return free_size;
@@ -119,9 +125,9 @@ static coredump_err_code_t coredump_backend_file_start(void)
         return COREDUMP_ERR_FILE_CREATE_FAILED;
     }
 
-    //TODO: SDIO is not ready yet
+    /* Disable SDIO interrupt to avoid interference during coredump writing */
 #if defined(BSP_USING_SDIO)
-    // rt_mmcsd_irq_disable();
+    rt_mmcsd_irq_disable();
 #endif /* BSP_USING_SDIO */
 
     rt_flash_enable_lock(0);

@@ -59,7 +59,9 @@ static void disable_module1(void)
 #ifdef SF32LB55X
     HAL_RCC_DisableModule(RCC_MOD_PSRAMC);
 #endif /* SF32LB55X */
+#ifdef HAL_EXTDMA_MODULE_ENABLED
     HAL_RCC_DisableModule(RCC_MOD_EXTDMA);
+#endif /* HAL_EXTDMA_MODULE_ENABLED */
 #ifndef SF32LB52X
     HAL_RCC_DisableModule(RCC_MOD_DMAC1);
 #endif /* SF32LB52X */
@@ -73,7 +75,9 @@ static void enable_module1(void)
 #ifdef SF32LB55X
     HAL_RCC_EnableModule(RCC_MOD_PSRAMC);
 #endif /* SF32LB55X */
+#ifdef HAL_EXTDMA_MODULE_ENABLED
     HAL_RCC_EnableModule(RCC_MOD_EXTDMA);
+#endif /* HAL_EXTDMA_MODULE_ENABLED */
     HAL_RCC_EnableModule(RCC_MOD_DMAC1);
 #ifdef SF32LB58X
     HAL_RCC_EnableModule(RCC_MOD_MPI4);
@@ -92,6 +96,13 @@ static void disable_module2(void)
     rt_flash_wait_idle(MPI1_MEM_BASE);
     HAL_RCC_DisableModule(RCC_MOD_MPI1);
     HAL_RCC_DisableModule(RCC_MOD_MPI2);
+#elif defined(SF32LB57X)
+    rt_flash_wait_idle(MPI3_MEM_BASE);
+    rt_flash_wait_idle(MPI2_MEM_BASE);
+    rt_flash_wait_idle(MPI1_MEM_BASE);
+    HAL_RCC_DisableModule(RCC_MOD_MPI3);
+    HAL_RCC_DisableModule(RCC_MOD_MPI2);
+    HAL_RCC_DisableModule(RCC_MOD_MPI1);
 #endif /* SF32LB58X */
 }
 
@@ -105,6 +116,10 @@ static void enable_module2(void)
 #elif defined(SF32LB52X)
     HAL_RCC_EnableModule(RCC_MOD_MPI1);
     HAL_RCC_EnableModule(RCC_MOD_MPI2);
+#elif defined(SF32LB57X)
+    HAL_RCC_EnableModule(RCC_MOD_MPI1);
+    HAL_RCC_EnableModule(RCC_MOD_MPI2);
+    HAL_RCC_EnableModule(RCC_MOD_MPI3);
 #endif /* SF32LB58X */
 }
 
@@ -798,6 +813,8 @@ int main(void)
 #endif  /* SF32LB56X */
 #elif defined(SF32LB52X)
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 24);
+#elif defined(SF32LB57X)
+    pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 42);
 #else
     pin = HAL_HPAON_QueryWakeupPin(hwp_gpio1, 64);
 #endif

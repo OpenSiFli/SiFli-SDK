@@ -7,6 +7,7 @@ Source code path: example/hal/wdt/iwdt
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
++ sf32lb57 series
 
 ## Overview
 <!-- Example introduction -->

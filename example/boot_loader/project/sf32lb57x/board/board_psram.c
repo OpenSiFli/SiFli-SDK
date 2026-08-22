@@ -10,7 +10,13 @@
 
 void bootloader_switch_clock(int mpi)
 {
-    // HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);
+#ifdef BSP_USING_PSRAM1
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM1, RCC_CLK_FLASH_DLL2);
+#endif /* BSP_USING_PSRAM1 */    
+#ifdef BSP_USING_PSRAM2
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_PSRAM2, RCC_CLK_FLASH_DLL2);
+#endif /* BSP_USING_PSRAM2 */    
+
 }
 
 void board_init_psram()

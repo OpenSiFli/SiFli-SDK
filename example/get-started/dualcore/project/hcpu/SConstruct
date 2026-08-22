@@ -14,13 +14,16 @@ if not SIFLI_SDK:
 AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
 
 # Add LCPU project
-if not GetDepend('SOC_SF32LB52X'):
+if GetDepend('SOC_SF32LB52X'):
+    # use common LCPU project
+    AddLCPU(SIFLI_SDK, rtconfig.CHIP)
+elif GetDepend('SOC_SF32LB57X'):
+    # 57x doesn't need LCPU project to make Bluetooth work
+    pass
+else:
     lcpu_proj_path = '../lcpu'   
     lcpu_proj_name = 'lcpu'
     AddChildProj(lcpu_proj_name, lcpu_proj_path, True, core="LCPU")
-else:
-    # use common LCPU project
-    AddLCPU(SIFLI_SDK, rtconfig.CHIP)
     
 # Set default compile options
 SifliEnv()

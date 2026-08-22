@@ -8,6 +8,12 @@
 
 Windows 脚本主链路不再要求用户预装系统 Python。当前支持的方式是通过 `uv` 按需准备 SDK 管理的 Python 运行时。
 
+在 PowerShell中执行下面的命令安装 `uv`：
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
 安装好 `uv` 后，请在 PowerShell 中执行以下命令确认可用：
 
 ```powershell
@@ -15,7 +21,7 @@ uv --version
 ```
 
 ```{note}
-`uv` 是一个用Rust编写的、速度极快的Python包和项目管理工具。安装方法可以参考 [uv 官方文档](https://docs.astral.sh/uv/getting-started/installation)。
+`uv` 是一个用Rust编写的、速度极快的Python包和项目管理工具。更多安装方法可以参考 [uv 官方文档](https://docs.astral.sh/uv/getting-started/installation)。
 ```
 
 ### Git 环境

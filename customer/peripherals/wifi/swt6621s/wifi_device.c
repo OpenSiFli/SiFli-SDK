@@ -10,6 +10,9 @@
 #include <drivers/mmcsd_card.h>
 #include <drivers/mmcsd_core.h>
 #include <drivers/mmcsd_host.h>
+#include "sifli_skw_sdio.h"
+#define WIFI_AT_LOG 0//Enable/disable AT command logs
+
 #ifdef RT_USING_DFS
     #include "dfs_file.h"
 #endif
@@ -96,6 +99,7 @@ void rt_wifi_sdio_init(void)
         break;
     case WIFI_SDIO_LINE:
 #ifdef BSP_USING_SD_LINE
+
         rt_hw_sdio_init();
 #endif
         break;
@@ -119,7 +123,8 @@ void rt_wifi_sdio_deinit(void)
         break;
     case WIFI_SDIO_LINE:
 #ifdef BSP_USING_SD_LINE
-        rt_hw_sdmmc_deinit();
+        rt_hw_sdio_deinit();
+
 #endif
         break;
     default:
@@ -684,6 +689,77 @@ static int wifi_fwk_file_stat(void)
 #endif
     return ret;
 }
+
+
+int skw_wifi_rf_test(int argc, char **argv)
+{
+    int ret;
+    uint8_t buf[256] = {0};
+    uint8_t rcv_buf[256] = {0};
+    int send_len;
+    int i;
+
+    if (argc < 2)
+    {
+        rt_kprintf("please input rf_cmd\n");
+        return -1;
+    }
+
+    sprintf((char *)buf, "%s\r\n", argv[1]);
+    send_len = strlen((char *)buf);
+
+    ret = skw_open_sdio_port(0, NULL, NULL);
+    rt_kprintf("skw_wifi_rf_open: %d\r\n", ret);
+    if (ret != 0)
+    {
+        rt_kprintf("skw_wifi_rf_open failed, skip test\r\n");
+        return -1;
+    }
+
+    //ret = wifi_send_data(0, (char *)buf, send_len, send_len);
+    ret = send_data(0, buf, send_len);
+    rt_kprintf("rf_cmd:%s send_len: %d ret:%d\n", buf, send_len, ret);
+
+    // Try to receive multiple times
+    for (i = 0; i < 5; i++)
+    {
+        rt_kprintf("Attempt %d to recv_data...\n", i + 1);
+        ret = recv_data(0, rcv_buf, 256);
+        if (ret > 0)
+        {
+            rt_kprintf("recv_data rx_len:%d data:0x%x ", ret, *(uint32_t *)rcv_buf);
+            for (int j = 0; j < ret; j++)
+            {
+                rt_kprintf("%02x ", (unsigned char)rcv_buf[j]);
+            }
+            rt_kprintf("\n");
+            rt_kprintf("String: %s\n", rcv_buf);
+
+            // Check if the command has completed
+            if (rt_strstr((char *)rcv_buf, "NPI_MP INIT DONE") != RT_NULL)
+            {
+                rt_kprintf("Command completed, exiting receive loop\n");
+                break;
+            }
+        }
+        else
+        {
+            rt_kprintf("recv_data returned: %d\n", ret);
+            // No data received, exit loop to avoid blocking
+            break;
+        }
+        rt_thread_mdelay(100);
+    }
+
+    rt_thread_mdelay(1000);
+
+    skw_close_sdio_port(0);
+
+    rt_kprintf("test done\r\n");
+
+    return 0;
+}
+MSH_CMD_EXPORT(skw_wifi_rf_test, send at command through sdio);
 /**
  * @brief WiFi device initialization (application init stage).
  *

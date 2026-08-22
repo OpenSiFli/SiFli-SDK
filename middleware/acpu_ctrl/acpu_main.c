@@ -154,6 +154,7 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
 
 void acpu_send_result(uint32_t err_code, uint32_t ret_value)
 {
+    SCB_CleanInvalidateDCache();
     acpu_send_result2(p_received_msg, err_code, ret_value);
 }
 
@@ -285,6 +286,12 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_audio_3a_uplink(arg);
         acpu_send_result(0, 0);
         break;
+    }
+    case ACPU_TASK_audio_3a_uplink_ssl:
+    {
+        acpu_audio_3a_uplink_parameter_t *arg  = (acpu_audio_3a_uplink_parameter_t *)param;
+        acpu_audio_3a_uplink_ssl(arg);
+        acpu_send_result(0, 0);
     }
     case ACPU_TASK_audio_3a_downlink:
     {

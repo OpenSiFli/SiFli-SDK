@@ -87,6 +87,7 @@ typedef rt_uint32_t                     rt_time_t;      /**< Type for time stamp
 typedef rt_uint32_t                     rt_tick_t;      /**< Type for tick count */
 typedef rt_base_t                       rt_flag_t;      /**< Type for flags */
 typedef rt_ubase_t                      rt_size_t;      /**< Type for size number */
+typedef rt_base_t                       rt_ssize_t;     /**< Used for a count of bytes or an error indication */
 typedef rt_ubase_t                      rt_dev_t;       /**< Type for device */
 typedef rt_base_t                       rt_off_t;       /**< Type for offset */
 
@@ -803,6 +804,9 @@ typedef struct rt_messagequeue *rt_mq_t;
  * memory management
  * heap & partition
  */
+#ifdef MEM_ASYN_FREE
+#define REF_COUNT_MAGIC                   0xaa55
+#endif
 
 #ifdef RT_USING_MEMHEAP
 #ifdef RT_USING_MEMHEAP2
@@ -864,6 +868,10 @@ struct rt_memheap_item
 
     struct rt_memheap_item *next_free;                  /**< next free memheap item */
     struct rt_memheap_item *prev_free;                  /**< prev free memheap item */
+#ifdef MEM_ASYN_FREE
+    rt_uint16_t             ref_count_magic;
+    rt_uint16_t             ref_count;
+#endif
 };
 
 /**

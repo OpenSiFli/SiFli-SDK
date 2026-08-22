@@ -579,6 +579,9 @@ typedef struct __LCDC_HandleTypeDef
     uint8_t *sram_buf0;
     uint8_t *sram_buf1;
     uint32_t sram_buf_bytes;
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    DMA_HandleTypeDef hdma_handle;
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 #endif /* HAL_RAMLESS_LCD_ENABLED */
 
 #ifdef LCDC_SUPPORT_EXTERNAL_LINEBUF

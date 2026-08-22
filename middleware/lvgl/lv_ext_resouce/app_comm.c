@@ -49,10 +49,17 @@
  */
 
 #include "app_comm.h"
+
+#include <sys/stat.h>
+
 #include "app_lang.h"
-#include "app_module.h"
+#include "lvsf_resource.h"
 #include "app_nvm_lang_compat.h"
 #include "log.h"
+
+#ifdef RT_USING_DFS
+#include <dfs_posix.h>
+#endif
 
 #ifdef APP_TOOL_SUPPORT
 #include "app_tool_comm.h"
@@ -116,4 +123,89 @@ void app_locale_lang_update(const char *locale)
 #ifdef APP_TOOL_SUPPORT
     sfat_set_lang_type(locale);
 #endif
+}
+
+char *app_strdup(const char *src)
+{
+    size_t len;
+    char *dst;
+
+    if (!src) return NULL;
+    len = strlen(src) + 1;
+    dst = rt_malloc(len);
+    if (!dst) return NULL;
+    memcpy(dst, src, len);
+    return dst;
+}
+
+int app_get_o_directory(void)
+{
+#ifdef RT_USING_DFS
+    return O_DIRECTORY;
+#else
+    return 0;
+#endif
+}
+
+int app_mkdir(const char *path)
+{
+#ifdef RT_USING_DFS
+    char tmp[256];
+    char *p;
+
+    if (!path || !path[0]) return -RT_ERROR;
+
+    rt_snprintf(tmp, sizeof(tmp), "%s", path);
+    for (p = tmp + 1; *p; p++)
+    {
+        if (*p != '/') continue;
+
+        *p = '\0';
+        if (tmp[0] != '\0') mkdir(tmp, 0);
+        *p = '/';
+    }
+
+    if (mkdir(tmp, 0) == 0 || access(tmp, 0) == 0)
+        return RT_EOK;
+#else
+    LV_UNUSED(path);
+#endif
+
+    return -RT_ERROR;
+}
+
+size_t app_get_file_size(const char *file)
+{
+#ifdef RT_USING_DFS
+    struct stat st;
+
+    if (!file || stat(file, &st) != 0)
+        return 0;
+
+    return st.st_size > 0 ? (size_t)st.st_size : 0;
+#else
+    LV_UNUSED(file);
+    return 0;
+#endif
+}
+
+bool app_file_check_valid(const char *path)
+{
+#ifdef RT_USING_DFS
+    return (path && access(path, 0) == 0);
+#else
+    LV_UNUSED(path);
+    return false;
+#endif
+}
+
+bool app_path_check_valid(const char *path)
+{
+    return app_file_check_valid(path);
+}
+
+lv_res_t lv_async_call_ext(lv_async_cb_t cb, void *user_data, uint32_t delay_ms)
+{
+    LV_UNUSED(delay_ms);
+    return lv_async_call(cb, user_data);
 }

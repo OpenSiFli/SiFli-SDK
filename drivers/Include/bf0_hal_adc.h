@@ -21,6 +21,39 @@ extern "C" {
   * @{
   */
 
+/* Feature list, define supported feature macro  */
+/* GPADC uses fixed clock freq, such as CLK_PERI */
+// #define ADC_FIXED_CLK_FREQ_SUPPORT
+/* A dedicated channel is used to measure VBAT voltage */
+// #define ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+/* Dedicated channel used by VBAT measurement if ADC_VBAT_DEDICATED_CHANNEL_SUPPORT is defiend */
+// #define ADC_VBAT_DEDICATED_CHANNEL 7
+
+#ifdef SF32LB55X
+#define GPADC_CALIB_FLOW_VERSION        1
+#define ADC_CHANNEL_MAX                 7
+#elif defined(SF32LB56X)
+#define GPADC_CALIB_FLOW_VERSION        2
+#define ADC_CHANNEL_MAX                 7
+#elif defined(SF32LB58X)
+#define GPADC_CALIB_FLOW_VERSION        2
+#define ADC_CHANNEL_MAX                 7
+#elif defined(SF32LB52X)
+#define GPADC_CALIB_FLOW_VERSION        3
+#define ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+#define ADC_VBAT_DEDICATED_CHANNEL      7
+#define ADC_CHANNEL_MAX                 7
+#elif defined(SF32LB57X)
+#define GPADC_CALIB_FLOW_VERSION        4
+#define ADC_FIXED_CLK_FREQ_SUPPORT
+#define ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+#define ADC_VBAT_DEDICATED_CHANNEL      11
+#define ADC_CHANNEL_MAX                 11
+#else
+#error "Unsupported chip"
+#endif /* SF32LB55X */
+
+
 /** @addtogroup ADC Analog Digital Converter
   * @{
   */
@@ -1014,7 +1047,7 @@ HAL_StatusTypeDef HAL_ADC_CalibLoad(ADC_HandleTypeDef *hadc,
   * @note This API is intended for logging/diagnostics. It does not modify ADC hardware.
   */
 HAL_StatusTypeDef HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CalibSource source,
-                                              HAL_ADC_CalibFactoryInfoTypeDef *info);
+        HAL_ADC_CalibFactoryInfoTypeDef *info);
 
 /**
   * @brief Apply custom two-point calibration.
@@ -1023,7 +1056,7 @@ HAL_StatusTypeDef HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CalibSource source,
   * @retval HAL status.
   */
 HAL_StatusTypeDef HAL_ADC_CalibSetCustom(HAL_ADC_CalibContextTypeDef *context,
-                                         const HAL_ADC_CalibConfigTypeDef *config);
+        const HAL_ADC_CalibConfigTypeDef *config);
 
 /**
   * @brief Apply calibration context to ADC hardware settings.

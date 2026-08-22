@@ -18,14 +18,19 @@
 
 #define DBG_TAG "WLAN.mgnt"
 #ifdef RT_WLAN_MGNT_DEBUG
-#define DBG_LVL DBG_LOG
+    #define DBG_LVL DBG_LOG
 #else
-#define DBG_LVL DBG_INFO
+    #define DBG_LVL DBG_INFO
 #endif /* RT_WLAN_MGNT_DEBUG */
 #include <rtdbg.h>
 
+/*
+ * P2P GO management variables
+ */
+static rt_bool_t _p2p_go_active = RT_FALSE;
+
 #ifndef RT_WLAN_DEVICE
-#define RT_WLAN_DEVICE(__device) ((struct rt_wlan_device *)__device)
+    #define RT_WLAN_DEVICE(__device) ((struct rt_wlan_device *)__device)
 #endif
 
 #define RT_WLAN_LOG_D(_fmt, ...) LOG_D("L:%d "_fmt"", __LINE__, ##__VA_ARGS__)
@@ -54,7 +59,7 @@
 #define DISCONNECT_RESPONSE_TICK    (2000)
 
 #if RT_WLAN_EBOX_NUM < 1
-#error "event box num Too little"
+    #error "event box num Too little"
 #endif
 
 struct rt_wlan_mgnt_des
@@ -647,7 +652,6 @@ static struct rt_wlan_complete_des *rt_wlan_complete_create(const char *name)
     if (complete == RT_NULL)
     {
         RT_WLAN_LOG_E("complete event create failed");
-        MGNT_UNLOCK();
         return complete;
     }
     rt_event_init(&complete->complete, name, RT_IPC_FLAG_FIFO);
@@ -1886,3 +1890,154 @@ int rt_wlan_init(void)
     return 0;
 }
 INIT_PREV_EXPORT(rt_wlan_init);
+
+
+/*
+ * P2P GO start implementation
+ */
+rt_err_t rt_wlan_p2p_go_start(const char *ssid, const char *password)
+{
+    rt_err_t err = RT_EOK;
+    int ssid_len = 0;
+    struct rt_wlan_info info;
+    struct rt_wlan_complete_des *complete;
+    rt_uint32_t set, recved = 0;
+
+    if (!ssid || !password)
+    {
+        return RT_ERROR;
+    }
+
+    ssid_len = rt_strlen(ssid);
+    if (ssid_len == 0 || ssid_len > RT_WLAN_SSID_MAX_LENGTH)
+    {
+        return RT_ERROR;
+    }
+
+    int password_len = rt_strlen(password);
+    if (password_len < 8 || password_len >= RT_WLAN_PASSWORD_MAX_LENGTH)
+    {
+        return RT_ERROR;
+    }
+
+    if (_ap_is_null())
+    {
+        return RT_ERROR;
+    }
+
+    rt_memset(&info, 0, sizeof(struct rt_wlan_info));
+    rt_memcpy(info.ssid.val, ssid, ssid_len);
+    info.ssid.len = ssid_len;
+    info.security = SECURITY_WPA2_AES_PSK;
+    info.channel = 6; /* Default channel */
+
+    /* Check and set P2P GO active flag under lock to prevent TOCTOU race */
+    MGNT_LOCK();
+    if (_p2p_go_active)
+    {
+        MGNT_UNLOCK();
+        return RT_EOK;
+    }
+    _p2p_go_active = RT_TRUE;
+
+    /* create event wait complete */
+    complete = rt_wlan_complete_create("p2p_go_start");
+    if (complete == RT_NULL)
+    {
+        _p2p_go_active = RT_FALSE;
+        MGNT_UNLOCK();
+        return RT_ENOMEM;
+    }
+
+    /* start P2P GO using device interface */
+    err = rt_wlan_dev_p2p_go_start(AP_DEVICE(), &info, password, password_len);
+    if (err != RT_EOK)
+    {
+        rt_wlan_complete_delete(complete);
+        _p2p_go_active = RT_FALSE;
+        MGNT_UNLOCK();
+        return err;
+    }
+    MGNT_UNLOCK();
+
+    /* Wait for firmware to confirm P2P GO start via CONNECT or CONNECT_FAIL event */
+    set = 1 << RT_WLAN_DEV_EVT_CONNECT;
+    set |= 1 << RT_WLAN_DEV_EVT_CONNECT_FAIL;
+    err = rt_wlan_complete_wait(complete, set, RT_WLAN_START_AP_WAIT_MS, &recved);
+    rt_wlan_complete_delete(complete);
+
+    if (err != RT_EOK)
+    {
+        MGNT_LOCK();
+        _p2p_go_active = RT_FALSE;
+        MGNT_UNLOCK();
+    }
+
+    return err;
+}
+
+/*
+ * P2P GO stop implementation
+ */
+rt_err_t rt_wlan_p2p_go_stop(void)
+{
+    rt_err_t err = RT_EOK;
+    struct rt_wlan_complete_des *complete;
+    rt_uint32_t set, recved = 0;
+
+    if (_ap_is_null())
+    {
+        return RT_ERROR;
+    }
+
+    MGNT_LOCK();
+    if (!_p2p_go_active)
+    {
+        MGNT_UNLOCK();
+        return RT_EOK;
+    }
+    _p2p_go_active = RT_FALSE;
+
+    /* create event wait complete */
+    complete = rt_wlan_complete_create("p2p_go_stop");
+    if (complete == RT_NULL)
+    {
+        _p2p_go_active = RT_TRUE;
+        MGNT_UNLOCK();
+        return RT_ENOMEM;
+    }
+
+    /* stop P2P GO using device interface */
+    err = rt_wlan_dev_p2p_go_stop(AP_DEVICE());
+    if (err != RT_EOK)
+    {
+        rt_wlan_complete_delete(complete);
+        _p2p_go_active = RT_TRUE;
+        MGNT_UNLOCK();
+        return err;
+    }
+
+
+    /* Wait for firmware to confirm P2P GO stop via DISCONNECT event */
+    set = 1 << RT_WLAN_DEV_EVT_DISCONNECT;
+    err = rt_wlan_complete_wait(complete, set, RT_WLAN_START_AP_WAIT_MS, &recved);
+    rt_wlan_complete_delete(complete);
+
+    if (err != RT_EOK)
+    {
+        _p2p_go_active = RT_TRUE;
+        MGNT_UNLOCK();
+        return err;
+    }
+
+    MGNT_UNLOCK();
+    return err;
+}
+
+/*
+ * P2P GO status check
+ */
+rt_bool_t rt_wlan_p2p_go_is_active(void)
+{
+    return _p2p_go_active;
+}

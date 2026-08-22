@@ -1,0 +1,17 @@
+# DPI-HDK_LB575YBBN6_E8_QSPI
+
+## SoC
+SF32LB575YBBN6
+
+### MPI1
+PSRAM 4MB
+
+### MPI2
+PSRAM 4MB
+
+## External Storage
+### SDMMC1
+eMMC
+
+## Display
+QSPI Display

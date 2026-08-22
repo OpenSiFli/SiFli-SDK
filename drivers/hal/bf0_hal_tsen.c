@@ -45,6 +45,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_TSEN_Init(TSEN_HandleTypeDef *htsen)
 #endif
     /* Change TSEN peripheral state */
     htsen->State = HAL_TSEN_STATE_READY;
+    htsen->pclk = 0;
 
     /* Return function status */
     return HAL_OK;
@@ -59,7 +60,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_TSEN_DeInit(TSEN_HandleTypeDef *htsen)
         return HAL_ERROR;
 
 #if !defined(TSEN_BGR_EN)
+//TODO: could anau_cr_en_bg be enabled always?
+#ifdef SF32LB52X
     hwp_hpsys_cfg->ANAU_CR &= (~HPSYS_CFG_ANAU_CR_EN_BG);
+#endif /* SF32LB52X */
 #else
     htsen->Instance->ANAU_ANA_TP &= ~TSEN_ANAU_ANA_TP_ANAU_IARY_EN;
     htsen->Instance->BGR &= (~TSEN_BGR_EN);
@@ -83,14 +87,40 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_TSEN_DeInit(TSEN_HandleTypeDef *htsen)
   */
 static void HAL_TSEN_Enable(TSEN_HandleTypeDef *htsen)
 {
+#if !defined(SF32LB55X) && !defined(SF32LB56X) && !defined(SF32LB58X)
+    uint32_t div;
+    uint32_t pclk;
+#endif /* !SF32LB55X && SF32LB56X && !SF32LB58X*/
+
 #ifndef SF32LB52X
     //TODO: for Micro, need use ADC_BG
     //htsen->Instance->ANAU_ANA_TP |= TSEN_ANAU_ANA_TP_ANAU_IARY_EN;
     //HAL_Delay(1);
 #endif
+
+#if !defined(SF32LB55X) && !defined(SF32LB56X) && !defined(SF32LB58X)
+    pclk = HAL_RCC_GetPCLKFreq(CORE_ID_HCPU, 1);
+    if (pclk != htsen->pclk)
+    {
+        htsen->pclk = pclk;
+        /* target freq: 0.5MHz */
+        div = pclk / 500000;
+        if (div > GET_REG_VAL2(TSEN_TSEN_CTRL_REG_ANAU_TSEN_CLK_DIV, TSEN_TSEN_CTRL_REG_ANAU_TSEN_CLK_DIV))
+        {
+            div = TSEN_TSEN_CTRL_REG_ANAU_TSEN_CLK_DIV;
+        }
+        else
+        {
+            div = MAKE_REG_VAL2(div, TSEN_TSEN_CTRL_REG_ANAU_TSEN_CLK_DIV);
+        }
+        MODIFY_REG(htsen->Instance->TSEN_CTRL_REG, TSEN_TSEN_CTRL_REG_ANAU_TSEN_CLK_DIV_Msk, div);
+    }
+#endif /* !SF32LB55X && SF32LB56X && !SF32LB58X*/
+
     htsen->Instance->TSEN_CTRL_REG &= ~TSEN_TSEN_CTRL_REG_ANAU_TSEN_RSTB;
     htsen->Instance->TSEN_CTRL_REG |=  TSEN_TSEN_CTRL_REG_ANAU_TSEN_EN \
                                        | TSEN_TSEN_CTRL_REG_ANAU_TSEN_PU ;
+    HAL_Delay_us(40);
     htsen->Instance->TSEN_CTRL_REG |= TSEN_TSEN_CTRL_REG_ANAU_TSEN_RSTB;
     HAL_Delay_us(20);
     htsen->Instance->TSEN_CTRL_REG |=  TSEN_TSEN_CTRL_REG_ANAU_TSEN_RUN ;
@@ -164,7 +194,7 @@ __HAL_ROM_USED int HAL_TSEN_Read(TSEN_HandleTypeDef *htsen)
             count++;
             if (count > HAL_TSEN_MAX_DELAY)
             {
-                r = -HAL_ERROR_TEMPRATURE;
+                /* sometimes interrupt is missing due to hw issue, still read the data from register */
                 break;
             }
         }

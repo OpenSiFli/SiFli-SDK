@@ -980,6 +980,7 @@ __EXIT:
 
 void coredump(void)
 {
+    rt_kprintf("[COREDUMP] coredump_start...\n");
     coredump_err_code_t r;
     if (COREDUMP_STATE_IDLE != coredump_ctx.state)
     {
@@ -1026,7 +1027,7 @@ void coredump(void)
 #endif
 
     log_pause(0);
-
+    rt_kprintf("[COREDUMP] coredump_end...\n");
     COREDUMP_RECORD_STEP(RECORD_CRASH_SAVE_END);
 
 __EXIT:
@@ -1286,6 +1287,8 @@ static int coredump_init(void)
         rt_kprintf("Coredump backend init failed for full dump, err code: %d\n", r);
         RT_ASSERT(0);
     }
+
+    rt_kprintf("Coredump backend initialized successfully\n");
 
     coredump_set_mode(COREDUMP_TYPE_FULL);
 

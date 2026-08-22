@@ -15,11 +15,13 @@ PrepareEnv()
 # Add bootloader project
 AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 
-# Add LCPU project
-AddLCPU(SIFLI_SDK,rtconfig.CHIP, "../../src/lcpu_img.c")
-
-# Set default compile options
 SifliEnv()
+if rtconfig.CHIP == 'SF32LB55X' and GetConfigValue('BSP_LB55X_CHIP_ID') < 3:
+    import shutil
+    shutil.copy(os.path.join(SIFLI_SDK, 'example/rom_bin/lcpu_general_ble_img/lcpu_lb555.c'),
+                os.path.normpath(os.path.join(SIFLI_SDK, 'example/ble/multi_connection/src/lcpu_img.c')))
+else:
+    AddLCPU(SIFLI_SDK,rtconfig.CHIP, "../../src/lcpu_img.c")
 
 TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
 

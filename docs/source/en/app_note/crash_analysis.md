@@ -236,61 +236,269 @@ The following example shows a crash due to mem manage fault. `DACCVIOL SCB->MMAR
 For ASSERT type crashes, the log provides a rough idea of where the issue occurred. However, for hardfaults or more complex crashes, this information may not be enough, and additional tools are needed. One method is to use a debugger to attach to the target device to inspect global variables and memory (if it's a hardfault, after attaching, you need to modify the registers with the printed SP/LR/PC to view the function call stack. For ASSERT, the function call stack can be seen without modifying the registers). However, this approach locks the target device and isn't ideal for multi-person analysis. The SDK provides the `crash_dump_analyser` tool to save and restore the crash context, enabling developers to analyze the problem on a PC without connecting to the target device.
 
 Required tools:
-- JLink debugger and JLink software package
+- J-Link debugger and software package. For installation details, see [J-Link](https://wiki.sifli.com/faq/tools/jlink.html).
 - `_SDK_ROOT/tools/crash_dump_analyser/script_`: Scripts to save and restore the context
-- `_SDK_ROOT/tools/crash_dump_analyser/simarm/t32marm.exe_`: Trace32 software tool to execute the recovery script
+- `_SDK_ROOT/tools/crash_dump_analyser/simarm/t32marm.exe_`: Trace32 software tool to execute the recovery script. For details, see [Trace32](https://wiki.sifli.com/faq/tools/trace32.html).
+- Sifli_Trace: Includes the context-export tools. Download it from [SiFli Tools](https://wiki.sifli.com/tools/index.html).
 
 ## 3. Saving the Context
-### 3.1 Save Context Using BAT Script
 
-#### 3.1.1 Accessing the chip's saved data via UART (currently only supports 52x and 56x)
-- Open _SifliUsartServer.exe_ and click Connect. Use DBGUART to simulate Jlink (only a serial connection is required on the hardware side)
-![](/assets/UsartServer.png)
-- Opening the _save_ram_55x.bat_ window will invoke Jlink.exe and fill the SERVER address in _SifliUsartServer.exe_ into the Identifier.
-![](/assets/Jlink_command.png)
+```{only} SF32LB52X or SF32LB57X
+### 3.1 Saving the Context over UART
 
-#### 3.1.2 Access the chip's saved data through Jlink
-For the 55x chip, follow these steps:
-- Connect the JLink emulator to the target board
-- Double-click to execute the _tools/crash_dump_analyser/script/save_ram_55x.bat_ script to read data from the target board.
-- You can also do this in the command line. For example, in watch_demp, call _SDK_ROOT/tools/crash_dump_analyser/script/save_ram_55x.bat_,_$SDK_ROOT/example/watch_demo/project/eh-lb555/build_ from the SDK root directory to put the generated file into _SDK_ROOT/example/watch_demo/project/eh-lb555/build_
+#### 3.1.1 Method 1: SifliUsartServer
 
-**Possible reasons for the failure of preserving the scene**：
-- The selected method of preserving the scene does not match the executed script.
+Use _SifliUsartServer.exe_, _save_ram_uart_52x.bat_, and the J-Link software package.
 
-```Using the UART hardware connection method or the Jlink hardware connection method to save the on-site data can all be achieved by calling JLink.exe and then executing the corresponding Jlink commands. You can compare the contents of the files named save_ram_55x.bat, sf32lb55x.jlink, and sf32lb52x.jlink to view the differences. "ip" indicates using the ip simulation method of SifliUsartServer.exe to save the on-site data, while "usb" indicates using the uab connection method to save the on-site data with the JLink emulator. Before saving the on-site data, you can first confirm the Jlink file and Jlink commands called in the executed bat file to prevent failure in saving the on-site data due to mismatch between the commands and the actual saving method.```
-![](/assets/dump_command.png)
+- _SifliUsartServer.exe_ is included in the Sifli_Trace package.
+- Open _SifliUsartServer.exe_ and click Connect. Only the serial connection is required on the hardware side.
 
-- Has the crash program been initiated on both the primary and secondary cores
+![](../../assets/Sifli_Trace.png)
+![](../../assets/UsartServer52.png)
 
-```In most cases, the secondary core is not activated. For example, in sf32lb55x.jlink, there is the line "w4 0x4004f000 1 // Switch to LCPU". However, if the program does not start the secondary core, the saved state will be lost and the operation will fail. Therefore, we need to comment out the commands issued to the secondary core to ensure the normal operation of the script.```
-![](/assets/dump_select.png)
+- Run _save_ram_uart_52x.bat_ to invoke JLink.exe. Wait for the command window to close; the exported binary files are written to the script directory.
 
-After success, the following files will be generated (depending on the content of the corresponding sf32lb55x.jlink):
-- _hcpu_ram.bin_: 1Mbyte of HCPU RAM data
-- _psram.bin_: 32Mbyte of PSRAM data
-- _ret_ram.bin_: 64Kbyte of retention RAM data
-- _hcpu_itcm.bin_: 16Kbyte of retention RAM data
-- _epic_reg.bin_: EPIC register
-- _ezip_reg.bin_: EZIP register
-- _dsi_host_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _dsi_phy_reg.bin_: DSI HOST register
-- _gpio1_reg.bin_: GPIO1 register
-- _gpio2_reg.bin_: GPIO2 register
-- _lcpu_ram.bin_: 224Kbyte of LCPU RAM data
-- _lcpu_dtcm.bin_: 16Kbyte LCPU DTCM data
+![](../../assets/save_ram_uart_52.png)
+![](../../assets/Jlink_command52.png)
+![](../../assets/downp_bin.png)
 
+The batch file invokes _sf32lb52x_uart.jlink_ through `-ip 127.0.0.1:19025`, using the server address provided by _SifliUsartServer.exe_, and writes the command log to _script/log.txt_.
 
-### 3.2 Save the scene using the AssertDumpUart tool
-This tool directly connects to the debug UART port and then executes the corresponding JLink script to save the context, without needing to simulate JLink using _SifliUsartServer.exe_.
-For example, with the 52x chip:
-- Open _\$SDK_ROOT/tools/crash_dump_analyser/script/AssertDumpUart.exe_.
-- Set the corresponding JLink script, chip model, serial port number, baud rate, and serial device (Note: It refers to the MCU's USART device, usually UART1 for HCPU and UART4 for LCPU).
-- Click export to save the context.
+![](../../assets/save_ram_52bat.png)
 
+#### 3.1.2 Method 2: AssertDumpUart
+
+- _AssertDumpUart.exe_ is included in the Sifli_Trace package.
+- Select UART1 for HCPU or UART4 for LCPU, and choose the J-Link script that matches the chip's PSRAM configuration. Selecting the wrong script can cause the PSRAM export to fail.
+
+![](../../assets/AssertDumpUart.png)
 ![](../../assets/crash_analysis_AssertDumpUsart.png)
+![](../../assets/AssertDumpUart52.png)
+
+After export, the output directory contains the binary files and the command log in _log.txt_.
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+```{only} SF32LB55X
+<!-- SF32LB55X uses J-Link to save the context by default. -->
+
+### 3.1 Saving the Context over J-Link SWD
+
+#### 3.1.1 Method 1: BAT and J-Link Script
+
+Use a hardware J-Link debugger, _save_ram_55x.bat_, and the J-Link software package.
+
+- Connect the debugger to the target's SWD pins.
+- Run _save_ram_55x.bat_ and wait for the command window to close.
+
+![](../../assets/save_ram_55x.png)
+![](../../assets/sf32lb55x_jlink.png)
+![](../../assets/downp_bin.png)
+
+The batch file invokes _sf32lb55x.jlink_ and writes the command log to _script/log.txt_. The script contains the USB connection and `savebin` commands and can be adjusted when necessary.
+
+![](../../assets/save_ram_55bat.png)
+![](../../assets/sf32lb55x.png)
+
+#### 3.1.2 Method 2: AssertDumpUart with J-Link
+
+- Open _AssertDumpUart.exe_, select JLINK mode, and confirm that the required debugger is detected.
+- Choose the J-Link script that matches the chip's PSRAM configuration. Selecting the wrong script can cause the PSRAM export to fail.
+
+![](../../assets/AssertDumpUart.png)
+![](../../assets/crash_analysis_AssertDumpUsart55_jlink.png)
+![](../../assets/AssertDumpUart55.png)
+
+After export, the output directory contains the binary files and the command log in _log.txt_.
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+```{only} SF32LB56X
+### 3.1 Saving the Context over UART
+
+#### 3.1.1 Method 1: SifliUsartServer
+
+Use _SifliUsartServer.exe_, _save_ram_uart_56x.bat_, and the J-Link software package.
+
+- _SifliUsartServer.exe_ is included in the Sifli_Trace package.
+- SF32LB56 boards expose two debug serial ports: UART1 for HCPU and UART4 for LCPU. To identify UART4, enter boot mode and reset the board; the port that prints the boot log is UART4. For pin information, see [J-Link SWD](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd).
+- Open _SifliUsartServer.exe_ and click Connect, then run _save_ram_uart_56x.bat_. It invokes JLink.exe with `-ip 127.0.0.1:19025`.
+
+![](../../assets/Sifli_Trace.png)
+![](../../assets/UsartServer56.png)
+![](../../assets/save_ram_56.png)
+![](../../assets/Jlink_command56.png)
+
+- Wait for the command window to close; the exported binary files are written to the script directory.
+
+![](../../assets/downp_bin.png)
+
+The batch file invokes _sf32lb56x_uart.jlink_ and writes the command log to _script/log.txt_. The script contains the IP connection and `savebin` commands and can be adjusted when necessary.
+
+![](../../assets/save_ram_uart_56bat.png)
+![](../../assets/sf32lb56x_uart.png)
+
+#### 3.1.2 Method 2: AssertDumpUart
+
+- Select UART1 for HCPU or UART4 for LCPU, and choose the J-Link script that matches the chip's PSRAM configuration.
+
+![](../../assets/AssertDumpUart.png)
+![](../../assets/crash_analysis_AssertDumpUsart56.png)
+![](../../assets/AssertDumpUart52.png)
+
+After export, the output directory contains the binary files and the command log in _log.txt_.
+
+![](../../assets/AssertDumpUart52bin.png)
+
+### 3.2 Saving the Context over J-Link SWD
+
+#### 3.2.1 Method 1: BAT and J-Link Script
+
+- Connect the debugger to the target's [SWD pins](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd).
+- Run _save_ram_56x.bat_ and wait for the command window to close.
+
+![](../../assets/downp_bin.png)
+
+The batch file invokes _sf32lb56x.jlink_ and writes the command log to _script/log.txt_. The script contains the USB connection and `savebin` commands and can be adjusted when necessary.
+
+![](../../assets/save_ram_56bat.png)
+![](../../assets/sf32lb56x.png)
+
+#### 3.2.2 Method 2: AssertDumpUart with J-Link
+
+- Open _AssertDumpUart.exe_, select JLINK mode, and confirm that the required debugger is detected.
+- Connect the debugger to the target's [SWD pins](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html#jlink-swd).
+- Choose the J-Link script that matches the chip's PSRAM configuration.
+
+![](../../assets/AssertDumpUart.png)
+![](../../assets/crash_analysis_AssertDumpUsart56_jlink.png)
+![](../../assets/AssertDumpUart56.png)
+
+After export, the output directory contains the binary files and the command log in _log.txt_.
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+```{only} SF32LB58X
+<!-- SF32LB58X uses J-Link to save the context by default. -->
+
+### 3.1 Saving the Context over J-Link SWD
+
+#### 3.1.1 Method 1: BAT and J-Link Script
+
+Use a hardware J-Link debugger, _save_ram_58x.bat_, and the J-Link software package.
+
+- Connect the debugger to the target's [SWD pins](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html#jlink-swd).
+- Run _save_ram_58x.bat_ and wait for the command window to close.
+
+![](../../assets/save_ram_58x.png)
+![](../../assets/sf32lb58x_jlink.png)
+![](../../assets/downp_bin.png)
+
+The batch file invokes _sf32lb58x.jlink_ and writes the command log to _script/log.txt_. The script contains the USB connection and `savebin` commands and can be adjusted when necessary.
+
+![](../../assets/save_ram_58bat.png)
+![](../../assets/sf32lb58x.png)
+
+#### 3.1.2 Method 2: AssertDumpUart with J-Link
+
+- Open _AssertDumpUart.exe_, select JLINK mode, and confirm that the required debugger is detected.
+- Connect the debugger to the target's [SWD pins](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html#jlink-swd).
+- Choose the J-Link script that matches the chip's PSRAM configuration.
+
+![](../../assets/AssertDumpUart.png)
+![](../../assets/crash_analysis_AssertDumpUsart58_jlink.png)
+![](../../assets/AssertDumpUart58.png)
+
+After export, the output directory contains the binary files and the command log in _log.txt_.
+
+![](../../assets/AssertDumpUart52bin.png)
+```
+
+**Possible causes of context-export failure:**
+
+- The selected connection method does not match the J-Link script. Both UART-server and hardware J-Link workflows invoke JLink.exe; `ip` selects the UART-server connection, while `usb` selects the hardware debugger. Check the BAT file and its referenced J-Link script before exporting.
+
+![](../../assets/dump_command.png)
+
+- The script switches to a secondary core that the application did not start. For example, _sf32lb55x.jlink_ contains `w4 0x4004f000 1 //Switch to LCPU`. Comment out secondary-core commands when the application does not use that core.
+
+![](../../assets/dump_select.png)
+
+The generated files depend on the corresponding _sf32lbxxx.jlink_ script and can include:
+
+- _hcpu_ram.bin_: HCPU RAM data
+- _psram.bin_: PSRAM data
+- _ret_ram.bin_: retention RAM data
+- _hcpu_itcm.bin_: HCPU ITCM data
+- _epic_reg.bin_: EPIC registers
+- _ezip_reg.bin_: EZIP registers
+- _dsi_host_reg.bin_: DSI host registers
+- _dsi_phy_reg.bin_: DSI PHY registers
+- _gpio1_reg.bin_: GPIO1 registers
+- _gpio2_reg.bin_: GPIO2 registers
+- _lcpu_ram.bin_: LCPU RAM data
+- _lcpu_dtcm.bin_: LCPU DTCM data
+
+```{only} SF32LB52X or SF32LB55X or SF32LB58X or SF32LB57X
+### 3.2 Save an AssertDump-compatible scene using sdk.py
+```
+
+```{only} SF32LB56X
+### 3.3 Save an AssertDump-compatible scene using sdk.py
+```
+
+After building the project and generating the matching ELF/AXF file, use `sdk.py crash-dump capture-live` to export a Trace32/AssertDump-compatible directory. Example:
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport uart \
+  --probe /dev/ttyUSB0 \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+`--probe` selects the serial port that exposes the UART DEBUG IP. Use the actual device path, such as `/dev/ttyUSB0` on Linux or `/dev/cu.*` on macOS.
+
+To export PSRAM as well, add `--include-psram`, or use `--psram-size 8MB` to select the PSRAM script manually. The command prints per-file export progress.
+
+When using SifliUsartServer with J-Link over IP, use `--transport jlink --jlink-ip 127.0.0.1:19025`. To export a single core only, add `--core hcpu` or `--core lcpu`. Example:
+
+```bash
+sdk.py crash-dump capture-live \
+  --transport jlink \
+  --jlink-ip 127.0.0.1:19025 \
+  --core hcpu \
+  --chip SF32LB52 \
+  --chip-model LB525 \
+  --output /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
+
+The SDK keeps the IP connection in the `.jlink` script instead of rewriting it to USB J-Link. `--core hcpu` filters out LCPU/LPSYS dump items and removes core-switch commands from the generated script.
+
+The output directory contains `*.bin`, `hcpu.axf`, `log.txt`, and an AssertDump-compatible `manifest.json` for Trace32/AssertDump by default. The full SDK/AI metadata is saved as `sdk_manifest.json`.
+
+To use a GDB-compatible core file, first convert the exported package:
+
+```bash
+sdk.py crash-dump readcore \
+  --package /tmp/live-crash \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
+  --output /tmp/live-crash/coredump.elf
+```
+
+Then analyze the captured core ELF with the matching firmware ELF:
+
+```bash
+sdk.py crash-dump analyze \
+  --core /tmp/live-crash/coredump.elf \
+  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
+```
 
 ## 4. Restoring Context
 ### 4.1 Restoring HCPU Context

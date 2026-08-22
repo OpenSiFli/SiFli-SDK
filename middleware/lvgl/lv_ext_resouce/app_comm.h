@@ -50,6 +50,7 @@
 #ifndef _APP_COMM_H_
 #define _APP_COMM_H_
 #include <stdbool.h>
+#include <stddef.h>
 #include "data_service.h"
 #include "string.h"
 #include "service_comm.h"
@@ -333,6 +334,11 @@ bool app_path_check_is_sd(const char *path);
 int app_get_o_directory(void);
 
 /**
+ * @brief Duplicate a C string with RT-Thread heap allocator.
+ */
+char *app_strdup(const char *src);
+
+/**
  * @brief  Delete qjs application(aod/app/wf).
  * @param  id id to delete.
  * @retval 0 : success, others: failed
@@ -474,6 +480,8 @@ bool app_screen_light_adjust_is_timeout(void);
 bool solution_is_builtin_res(void);
 
 size_t app_get_file_size(const char *file);
+
+lv_res_t lv_async_call_ext(lv_async_cb_t cb, void *user_data, uint32_t delay_ms);
 
 /**
  * @brief Get file open mode from string

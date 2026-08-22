@@ -5,6 +5,7 @@
 + sf32lb52-lcd系列
 + sf32lb56-lcd系列
 + sf32lb58-lcd系列 
++ sf32lb57 系列 
 
 ## 概述
 * 在RT-Thread操作系统下，adc单路采样读取vbat电池电压

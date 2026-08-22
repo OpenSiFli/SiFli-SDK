@@ -8,7 +8,7 @@ Source path: example/rt_device/pdm
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
-* eh-lb525
+* spi-hdk_lb573ub7n6
 
 ## Overview
 <!-- Example introduction -->
@@ -46,7 +46,12 @@ Configurations 3 and 4 are for playing recorded files. In this example, recordin
 ### Hardware Connection\PIN CONFIG
 |Development Board  | PDM       | PDM1_CLK    | PDM1_DATA   |   Power Supply | GND | SEL(left/right channel selection) |
 |--------|------------|---------------|-------------------|---|---|---|
-|SF32LB52_DevKit-LCD    | PDM1     | PAD_PA22/PAD_PA07    | PAD_PA23/PAD_PA08 |   3.3V | GND | GND/3.3V |
+|SF32LB52_NANO    | PDM1     | PAD_PA07    | PAD_PA08 |   3.3V | GND | GND/3.3V |
+|SF32LB52_LCD    | PDM1     | PAD_PA22/PAD_PA07    | PAD_PA23/PAD_PA08 |   3.3V | GND | GND/3.3V |
+|SF32LB56-LCD    | PDM1     | PAD_PA69    | PAD_PA20 |   3.3V | GND | GND/3.3V |
+|SF32LB58-LCD    | PDM2     | PAD_PA23    | PAD_PA18 |   3.3V | GND | GND/3.3V |
+|SF32LB57-SPI-HDK_N16R4    | PDM1     | PAD_PA41    | PAD_PA42 |   3.3V | GND | GND/3.3V |
+
 
 ```{tip}
 + When there are two PDM channels, SEL is used to distinguish left and right channels.

@@ -67,7 +67,7 @@ In addition to the auto-running example code, you can also manually operate the 
 
 - `ls` - List files and folders in the current directory
 - `cat <filename>` - Display file content
-- `echo "<content>" > <filename>` - Write content to file
+- `echo "<content>" <filename>` - Write content to file
 - `mkdir <dirname>` - Create new directory
 - `cd <dirname>` - Change directory
 - `rm <filename>` - Delete file
@@ -77,7 +77,7 @@ Example operations:
 msh />ls                          # View root directory
 msh />cd /                        # Enter root directory
 msh />cat README.TXT              # View file content
-msh />echo "Hello USB" > test.txt  # Create and write to file
+msh />echo "Hello USB" test.txt   # Create and write to file
 msh />mkdir newfolder             # Create new folder
 ```
 

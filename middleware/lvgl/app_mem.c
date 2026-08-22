@@ -29,6 +29,44 @@ enum
     PSRAM_HEAP,
 } ;
 
+#ifdef MEM_ASYN_FREE
+#define APP_MEMHEAP_MAGIC 0x1ea01ea0U
+#define APP_MEMHEAP_MASK  0xfffffffeU
+#define APP_MEMHEAP_SIZE  RT_ALIGN(sizeof(struct rt_memheap_item), RT_ALIGN_SIZE)
+
+typedef struct
+{
+    rt_list_t list;
+    void *ptr;
+    void (*free)(void *);
+} mem_async_node_t;
+
+static rt_list_t app_mem_async_list;
+static struct rt_mutex mem_asyn_mutex;
+
+static struct rt_memheap_item *app_mem_get_async_header(void *ptr)
+{
+    struct rt_memheap_item *header;
+
+    /* Validate the allocator header magic number instead of relying on a fixed address-window 
+    allowlist — SBus remap addresses may fall outside the PSRAM base/size range. */
+    if (!ptr)
+    {
+        return NULL;
+    }
+
+    header = (struct rt_memheap_item *)((uint8_t *)ptr - APP_MEMHEAP_SIZE);
+    if (((header->magic & APP_MEMHEAP_MASK) == APP_MEMHEAP_MAGIC) &&
+            (header->ref_count_magic == REF_COUNT_MAGIC))
+    {
+        return header;
+    }
+
+    return NULL;
+}
+
+#endif
+
 
 #ifdef RT_USING_FINSH
 #include <finsh.h>
@@ -46,6 +84,15 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
 /**
     Note: the following MACRO defined in menuconfig.
 */
+
+/*
+ * Backward compatibility: the reusable transition-buffer feature started in
+ * reader project code. Keep accepting the old project-scoped macro while the
+ * SDK migrates to the generic app_mem naming.
+ */
+#if defined(SIFLI_READER_REUSE_TRANS_ANIM_BUF) && !defined(SIFLI_APP_MEM_REUSE_TRANS_ANIM_BUF)
+    #define SIFLI_APP_MEM_REUSE_TRANS_ANIM_BUF
+#endif
 
 /**
     if no pram exists. disable all MARCO relative to PSRAM.
@@ -153,7 +200,13 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
     L2_NON_RET_BSS_SECT_BEGIN(anim_frambuf)
     APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
     L2_NON_RET_BSS_SECT_END
-#elif defined(APP_TRANS_ANIMATION_SCALE)
+#elif defined(APP_TRANS_ANIMATION_SCALE) || defined(SIFLI_APP_MEM_REUSE_TRANS_ANIM_BUF)
+    /*
+     * Keep a pair of frame buffers when app_mem needs to reuse them as large
+     * temporary memheaps. This is independent from UI transition style:
+     * APP_TRANS_ANIMATION_NONE may still be selected while upper layers borrow
+     * these buffers for document/image decode work.
+     */
     L2_NON_RET_BSS_SECT_BEGIN(anim_frambuf)
     APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
     APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_b[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
@@ -196,6 +249,15 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
     struct rt_memheap app_message_memheap;
 #endif
 
+#define APP_ANIM_BUF_BYTES ((size_t)LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8U)
+#define APP_ANIM_RT_MEMHEAP_SIZE RT_ALIGN(sizeof(struct rt_memheap_item), RT_ALIGN_SIZE)
+
+static struct rt_memheap app_anim_buf_memheap[2];
+static void *app_anim_buf_heap_start[2];
+static size_t app_anim_buf_heap_size[2];
+static bool app_anim_buf_heap_enabled;
+static size_t app_anim_buf_alloc_ex_offset;
+
 #if PKG_USING_FFMPEG && (MEDIA_CACHE_SIZE > 0)
 static struct rt_memheap app_ffmpeg_memheap;
 static bool app_ffmpeg_memheap_ready = false;
@@ -212,6 +274,259 @@ static void app_ffmpeg_memheap_init_once(void)
 }
 #endif
 
+static bool app_cache_memheap_ready;
+
+static bool app_anim_ptr_is_local(const void *ptr)
+{
+    uint32_t i;
+
+    if (!app_anim_buf_heap_enabled || !ptr)
+    {
+        return false;
+    }
+
+    for (i = 0; i < 2; i++)
+    {
+        const uint8_t *start = (const uint8_t *)app_anim_buf_heap_start[i];
+        const uint8_t *end;
+
+        if (!start || !app_anim_buf_heap_size[i])
+        {
+            continue;
+        }
+
+        end = start + app_anim_buf_heap_size[i];
+        if ((const uint8_t *)ptr >= start && (const uint8_t *)ptr < end)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static int app_anim_ptr_heap_index(const void *ptr)
+{
+    uint32_t i;
+
+    if (!app_anim_buf_heap_enabled || !ptr)
+    {
+        return -1;
+    }
+
+    for (i = 0; i < 2; i++)
+    {
+        const uint8_t *start = (const uint8_t *)app_anim_buf_heap_start[i];
+        const uint8_t *end;
+
+        if (!start || !app_anim_buf_heap_size[i])
+        {
+            continue;
+        }
+
+        end = start + app_anim_buf_heap_size[i];
+        if ((const uint8_t *)ptr >= start && (const uint8_t *)ptr < end)
+        {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+static uint32_t app_anim_ptr_size(const void *ptr)
+{
+    struct rt_memheap_item *header_ptr;
+
+    if (!ptr)
+    {
+        return 0;
+    }
+
+    header_ptr = (struct rt_memheap_item *)((uint8_t *)ptr - APP_ANIM_RT_MEMHEAP_SIZE);
+    return (uint32_t)((uint8_t *)header_ptr->next - (uint8_t *)header_ptr - APP_ANIM_RT_MEMHEAP_SIZE);
+}
+
+static size_t app_cache_ptr_size(const void *ptr)
+{
+    uint8_t mem_type;
+    uint8_t *raw_ptr;
+    size_t raw_size;
+
+    if (!ptr)
+    {
+        return 0;
+    }
+
+    raw_ptr = ((uint8_t *)ptr) - 4;
+    mem_type = app_get_mem_type((void *)ptr);
+    if (PSRAM_HEAP == mem_type || SRAM_HEAP == mem_type)
+    {
+        raw_size = rt_heapmem_size(raw_ptr);
+    }
+    else
+    {
+        raw_size = rt_mem_size(raw_ptr);
+    }
+
+    return raw_size >= 4 ? raw_size - 4 : 0;
+}
+
+static bool app_anim_heap_has_used(void)
+{
+    uint32_t i;
+
+    for (i = 0; i < 2; i++)
+    {
+        if (app_anim_buf_heap_start[i] && app_anim_buf_memheap[i].actual_used_size)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+static uint32_t app_anim_heap_used_size(void)
+{
+    uint32_t i;
+    uint32_t used = 0;
+
+    for (i = 0; i < 2; i++)
+    {
+        if (app_anim_buf_heap_start[i])
+        {
+            used += app_anim_buf_memheap[i].actual_used_size;
+        }
+    }
+
+    return used;
+}
+
+static void *app_anim_heap_alloc(size_t size)
+{
+    uint32_t i;
+
+    for (i = 0; i < 2; i++)
+    {
+        void *ptr;
+
+        if (!app_anim_buf_heap_start[i])
+        {
+            continue;
+        }
+
+        ptr = rt_memheap_alloc(&app_anim_buf_memheap[i], size);
+        if (ptr)
+        {
+            return ptr;
+        }
+    }
+
+    return NULL;
+}
+
+static void *app_anim_heap_realloc(void *ptr, size_t size)
+{
+    int idx = app_anim_ptr_heap_index(ptr);
+
+    if (idx < 0)
+    {
+        return NULL;
+    }
+
+    return rt_memheap_realloc(&app_anim_buf_memheap[idx], ptr, size);
+}
+
+static void app_anim_heap_free(void *ptr)
+{
+    if (app_anim_ptr_heap_index(ptr) < 0)
+    {
+        return;
+    }
+
+    rt_memheap_free(ptr);
+}
+
+static int app_anim_memheap_enable(void)
+{
+    uint32_t i;
+
+    if (app_anim_buf_heap_enabled)
+    {
+        return 0;
+    }
+
+    for (i = 0; i < 2; i++)
+    {
+        void *buf = app_anim_buf_alloc(APP_ANIM_BUF_BYTES, (uint8_t)i);
+        char heap_name[10];
+
+        if (!buf)
+        {
+            break;
+        }
+
+        rt_snprintf(heap_name, sizeof(heap_name), "anim%u", (unsigned int)i);
+        rt_memheap_init(&app_anim_buf_memheap[i], heap_name, buf, APP_ANIM_BUF_BYTES);
+        app_anim_buf_heap_start[i] = buf;
+        app_anim_buf_heap_size[i] = APP_ANIM_BUF_BYTES;
+    }
+
+    if (!app_anim_buf_heap_start[0])
+    {
+        rt_kprintf("app_anim_buf_set_as_memheap: no animation buffer available\n");
+        return -RT_ERROR;
+    }
+
+    app_anim_buf_heap_enabled = true;
+    rt_kprintf("app_anim_buf_set_as_memheap: enable start0=%p size0=%u start1=%p size1=%u\n",
+               app_anim_buf_heap_start[0],
+               (unsigned int)app_anim_buf_heap_size[0],
+               app_anim_buf_heap_start[1],
+               (unsigned int)app_anim_buf_heap_size[1]);
+    return 0;
+}
+
+static int app_anim_memheap_disable(void)
+{
+    uint32_t i;
+    uint32_t wait_count = 5;
+
+    if (!app_anim_buf_heap_enabled)
+    {
+        rt_kprintf("app_anim_buf_set_as_memheap: animation buffer not initialized\n");
+        return -RT_ERROR;
+    }
+
+    while (app_anim_heap_has_used() && wait_count > 0)
+    {
+        rt_thread_mdelay(LV_DISP_DEF_REFR_PERIOD);
+        wait_count--;
+    }
+
+    if (app_anim_heap_has_used())
+    {
+        rt_kprintf("app_anim_buf_set_as_memheap: disable busy used=%u\n",
+                   (unsigned int)app_anim_heap_used_size());
+        return -RT_EBUSY;
+    }
+
+    for (i = 0; i < 2; i++)
+    {
+        if (app_anim_buf_heap_start[i])
+        {
+            rt_memheap_detach(&app_anim_buf_memheap[i]);
+        }
+        app_anim_buf_heap_start[i] = NULL;
+        app_anim_buf_heap_size[i] = 0;
+    }
+
+    app_anim_buf_heap_enabled = false;
+    rt_kprintf("app_anim_buf_set_as_memheap: disable\n");
+    return 0;
+}
+
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
@@ -219,6 +534,10 @@ static void app_ffmpeg_memheap_init_once(void)
 
 static int app_cahe_memheap_init(void)
 {
+    if (app_cache_memheap_ready)
+    {
+        return 0;
+    }
 
 #if IMAGE_CACHE_IN_PSRAM_SIZE > 0
     rt_memheap_init(&app_image_psram_memheap, "app_image_psram_memheap", (void *)app_image_psram_cache, IMAGE_CACHE_IN_PSRAM_SIZE);
@@ -263,9 +582,19 @@ static int app_cahe_memheap_init(void)
     app_ffmpeg_memheap_init_once();
 #endif
 
+    app_cache_memheap_ready = true;
     return 0;
 }
 INIT_PREV_EXPORT(app_cahe_memheap_init);
+
+int app_memheap_init(void)
+{
+    return app_cahe_memheap_init();
+}
+
+void app_mem_check(void)
+{
+}
 
 
 void *app_cache_alloc(size_t size, image_cache_t cache_type)
@@ -332,6 +661,38 @@ void app_cache_free(void *p)
 #ifdef RT_USING_FINSH
     if (mem_log) rt_kprintf("app_cache_free: p %p. \n", p);
 #endif
+}
+
+void *app_cache_realloc(void *memory, size_t new_size, image_cache_t cache_type)
+{
+    void *new_memory;
+    uint32_t old_size;
+
+    if (!memory)
+    {
+        return app_cache_alloc(new_size, cache_type);
+    }
+
+    if (new_size == 0)
+    {
+        app_cache_free(memory);
+        return NULL;
+    }
+
+    old_size = app_mem_get_size(memory);
+    if (old_size >= new_size)
+    {
+        return memory;
+    }
+
+    new_memory = app_cache_alloc(new_size, cache_type);
+    if (new_memory)
+    {
+        rt_memcpy(new_memory, memory, old_size);
+        app_cache_free(memory);
+    }
+
+    return new_memory;
 }
 
 void *app_message_alloc(size_t size)
@@ -632,14 +993,226 @@ void app_anim_mem_free(void *p)
 
 }
 
+int app_anim_buf_set_as_memheap(uint8_t enable)
+{
+    if (enable)
+    {
+        return app_anim_memheap_enable();
+    }
+
+    return app_anim_memheap_disable();
+}
+
+void *app_anim_alloc(size_t size)
+{
+    void *ptr = NULL;
+
+    if (size == 0)
+    {
+        return NULL;
+    }
+
+    if (app_anim_buf_heap_enabled)
+    {
+        ptr = app_anim_heap_alloc(size);
+    }
+
+    if (!ptr)
+    {
+        ptr = app_cache_alloc(size, CACHE_PSRAM);
+    }
+
+    return ptr;
+}
+
+void *app_anim_realloc(void *ptr, size_t size)
+{
+    void *new_ptr;
+    size_t old_size;
+
+    if (!ptr)
+    {
+        return app_anim_alloc(size);
+    }
+
+    if (size == 0)
+    {
+        app_anim_free(ptr);
+        return NULL;
+    }
+
+    old_size = app_mem_get_size(ptr);
+    if (old_size >= size)
+    {
+        return ptr;
+    }
+
+    if (app_anim_ptr_is_local(ptr) && app_anim_buf_heap_enabled)
+    {
+        new_ptr = app_anim_heap_realloc(ptr, size);
+        if (new_ptr)
+        {
+            return new_ptr;
+        }
+    }
+
+    new_ptr = app_anim_alloc(size);
+    if (new_ptr)
+    {
+        rt_memcpy(new_ptr, ptr, old_size);
+        app_anim_free(ptr);
+    }
+
+    return new_ptr;
+}
+
+void app_anim_free(void *ptr)
+{
+    if (!ptr)
+    {
+        return;
+    }
+
+    if (app_anim_ptr_is_local(ptr))
+    {
+        app_anim_heap_free(ptr);
+    }
+    else
+    {
+        app_cache_free(ptr);
+    }
+}
+
+char *app_anim_strdup(const char *s)
+{
+    char *ptr = NULL;
+
+    if (s)
+    {
+        ptr = app_anim_alloc(strlen(s) + 1);
+        if (ptr)
+        {
+            strcpy(ptr, s);
+        }
+    }
+
+    return ptr;
+}
+
+uint32_t app_mem_get_size(void *ptr)
+{
+    if (!ptr)
+    {
+        return 0;
+    }
+
+    if (app_anim_ptr_is_local(ptr))
+    {
+        return app_anim_ptr_size(ptr);
+    }
+
+    return (uint32_t)app_cache_ptr_size(ptr);
+}
+
+void app_mem_insert_asyn_node(void *ptr, void (*free_fun)(void *))
+{
+#ifdef MEM_ASYN_FREE
+    mem_async_node_t *node;
+
+    if (!ptr || !free_fun)
+    {
+        return;
+    }
+
+    node = lv_mem_alloc(sizeof(mem_async_node_t));
+    RT_ASSERT(node);
+
+    rt_mutex_take(&mem_asyn_mutex, RT_WAITING_FOREVER);
+    node->ptr = ptr;
+    node->free = free_fun;
+    rt_list_insert_before(&app_mem_async_list, &node->list);
+    rt_mutex_release(&mem_asyn_mutex);
+#else
+    (void)ptr;
+    (void)free_fun;
+#endif
+}
+
+void app_mem_free_asyn_node(void)
+{
+#ifdef MEM_ASYN_FREE
+    rt_list_t *pos, *n;
+
+    rt_mutex_take(&mem_asyn_mutex, RT_WAITING_FOREVER);
+    rt_list_for_each_safe(pos, n, (&app_mem_async_list))
+    {
+        mem_async_node_t *node = rt_list_entry(pos, mem_async_node_t, list);
+        struct rt_memheap_item *header = app_mem_get_async_header(node->ptr);
+
+        if (!header || 0 == header->ref_count)
+        {
+            rt_list_remove(pos);
+            node->free(node->ptr);
+            lv_mem_free(node);
+        }
+    }
+    rt_mutex_release(&mem_asyn_mutex);
+#endif
+}
+
+void app_mem_set_ref_count(void *ptr, int ref_count, int type)
+{
+#ifdef MEM_ASYN_FREE
+    struct rt_memheap_item *header;
+    int16_t next_count;
+
+    if (MEM_ASYN_FONT != type)
+    {
+        return;
+    }
+
+    header = app_mem_get_async_header(ptr);
+    if (!header)
+    {
+        return;
+    }
+
+    rt_mutex_take(&mem_asyn_mutex, RT_WAITING_FOREVER);
+    next_count = (int16_t)header->ref_count + ref_count;
+    RT_ASSERT(next_count >= 0);
+    header->ref_count = (rt_uint16_t)next_count;
+    rt_mutex_release(&mem_asyn_mutex);
+#else
+    (void)ptr;
+    (void)ref_count;
+    (void)type;
+#endif
+}
+
+static int mem_asyn_list_init(void)
+{
+#ifdef MEM_ASYN_FREE
+    rt_list_init(&app_mem_async_list);
+    rt_mutex_init(&mem_asyn_mutex, "mem_asyn", RT_IPC_FLAG_FIFO);
+#endif
+    return 0;
+}
+INIT_PREV_EXPORT(mem_asyn_list_init);
+
 
 void *app_anim_buf_alloc(size_t nbytes, uint8_t index)
 {
     void *ptr = NULL;
 
+    if (nbytes == 0 || nbytes > APP_ANIM_BUF_BYTES)
+    {
+        rt_kprintf("app_anim_buf_alloc: invalid size %d max %d\n", nbytes, APP_ANIM_BUF_BYTES);
+        return NULL;
+    }
+
 #ifdef APP_TRANS_ANIMATION_SCALE_NEXT
-    ptr = &app_trans_anim_buf_a;
-#elif defined(APP_TRANS_ANIMATION_SCALE)
+    if (0 == index) ptr = &app_trans_anim_buf_a;
+#elif defined(APP_TRANS_ANIMATION_SCALE) || defined(SIFLI_APP_MEM_REUSE_TRANS_ANIM_BUF)
     if (0 == index) ptr = &app_trans_anim_buf_a;
     if (1 == index) ptr = &app_trans_anim_buf_b;
 #elif defined(APP_TRANS_ANIMATION_OVERWRITE) || defined(APP_TRANS_ANIMATION_NONE)
@@ -650,6 +1223,55 @@ void *app_anim_buf_alloc(size_t nbytes, uint8_t index)
 
     rt_kprintf("app_anim_buf_alloc: %p index %d size %d\n", ptr, index, nbytes);
     return ptr;
+}
+
+void *app_anim_buf_alloc_ex(size_t nbytes, uint8_t first)
+{
+    uint8_t *buf_a;
+    uint8_t *buf_b;
+    size_t offset;
+    size_t total_size;
+
+    if (first)
+    {
+        app_anim_buf_alloc_ex_offset = 0;
+    }
+
+    if (nbytes == 0)
+    {
+        return NULL;
+    }
+
+    buf_a = app_anim_buf_alloc(APP_ANIM_BUF_BYTES, 0);
+    buf_b = app_anim_buf_alloc(APP_ANIM_BUF_BYTES, 1);
+    total_size = APP_ANIM_BUF_BYTES;
+    if (buf_b)
+    {
+        total_size += APP_ANIM_BUF_BYTES;
+    }
+
+    offset = app_anim_buf_alloc_ex_offset;
+    if (offset < APP_ANIM_BUF_BYTES)
+    {
+        if (offset + nbytes <= APP_ANIM_BUF_BYTES)
+        {
+            app_anim_buf_alloc_ex_offset = offset + nbytes;
+            return buf_a + offset;
+        }
+        offset = APP_ANIM_BUF_BYTES;
+    }
+
+    if (!buf_b || offset + nbytes > total_size)
+    {
+        rt_kprintf("app_anim_buf_alloc_ex: size %d offset %d total %d\n",
+                   nbytes,
+                   offset,
+                   total_size);
+        return NULL;
+    }
+
+    app_anim_buf_alloc_ex_offset = offset + nbytes;
+    return buf_b + (offset - APP_ANIM_BUF_BYTES);
 }
 
 void *app_anim_buf_free(void *ptr)

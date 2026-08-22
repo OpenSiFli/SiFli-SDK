@@ -22,7 +22,7 @@ extern "C" {
 /* @{@name Define audio version*/
 /** Use this to define version string */
 /* 注意：如果结构体有修改，则必须修改中版本号 */
-#define AUDIO_FILTER_VERSION_STRING        "AudioFilter Version V2.03.11"
+#define AUDIO_FILTER_VERSION_STRING        "AudioFilter Version V2.03.14"
 /** @} */
 
 // 最后一个兼容的小版本号
@@ -601,7 +601,7 @@ struct sd_param_AICryDetect
     T_S32 modelSize;    // 哭声检测模型的长度. must be 0
 
     T_U32 flag;         // bit[15]: probe flag. when this bit is set, output cry probability in T_AI_CRY_DETECT_EVENT
-    T_S32 thresh;       // reserved, not used
+    T_S32 thresh;       // threshold of signal amplitude. use the form of AK32Q15(x.xx) or SD_dBFS_TO_LEVEL(x.xx) to set it
     T_S32 level;        // 哭声检测的误报灵敏度等级,数值越大,误报越低. 数值范围 [0-5], 0: use default level 0
 };
 
@@ -1141,6 +1141,7 @@ typedef enum _ECHO_EVENT
     ECHO_EVENT_VOICE_ACTIVE_PROBE,  // param points to T_ECHO_VAD_INFO
     ECHO_EVENT_HOWLING_DETECTION,   // param points to T_ECHO_HOWLING_INFO
     ECHO_EVENT_AIDENOISE_NNE_TASK,  // param points to T_FILTER_NNE_TASK_INFO
+    ECHO_EVENT_FLUSH_POP,           // param points to hUser, which is pushed by _SD_Echo_Flush
     ECHO_EVENT_MAX
 } T_ECHO_EVENT;
 
@@ -1356,7 +1357,7 @@ typedef struct
 /**
  * @brief    设置 Echo 库的 debug zones，选择打印信息的类型
  * @param    [in] bit-or of SD_ZONE_ID_XXX.
- *                Default is SD_DEFAULT_DEBUG_ZONES
+ *                Default is SD_ECHO_DEFAULT_DEBUG_ZONES
  * @return   T_VOID
  */
 SD_API T_VOID _SD_Echo_SetDebugZones(T_U32 debugZones);
@@ -1378,7 +1379,8 @@ SD_API T_VOID _SD_Echo_Pair_Paths(T_VOID *hNearPath, T_VOID *hFarPath);
 SD_API T_S32 _SD_Echo_Reset(T_VOID *hEcho);
 
 // 进入 flush 状态，path 内部的所有数据将通过后续 _SD_Echo_GetXxx 调用输出. 在所有数据输出之后，flush 状态自动解除，可以 fill 新数据。
-// hUser: user-specified handle. reserved for future use.
+// hUser: user-specified handle. 在所有内部数据全部输出后，lib 会通过 ECHO_EVENT_FLUSH_POP 事件将之传回给用户。
+//        如果在取走全部数据之前调用了 _SD_Echo_Reset 或 _SD_Echo_Close，此 handle 将丢失。
 //        user should set it to an non-zero value.
 // return AK_TRUE or AK_FALSE
 SD_API T_S32 _SD_Echo_Flush(T_VOID *hEcho, T_HANDLE hUser);
@@ -1460,6 +1462,7 @@ SD_API T_S32 _SD_Echo_GetVadParam(T_VOID *hEcho, struct echo_param_vad *vad_para
 SD_API T_S32 _SD_Echo_GetAgcParam(T_VOID *hEcho, struct echo_param_agc *agc_param);
 SD_API T_S32 _SD_Echo_GetNearEqParam(T_VOID *hEcho, struct sd_param_eq *eq_param);
 SD_API T_S32 _SD_Echo_GetNearVolumeParam(T_VOID *hEcho, struct echo_param_volctrl *vol_param);
+SD_API T_S32 _SD_Echo_GetNearAslcParam(T_VOID *hEcho, struct sd_param_aslc *aslc_param);
 SD_API T_S32 _SD_Echo_GetNearHowlingSuppressParam(T_VOID *hEcho, struct echo_param_howlingSuppress *hs_param);
 SD_API T_S32 _SD_Echo_GetNearJitterBufParam(T_VOID *hEcho, struct sd_param_pcmbuf *pcmbuf_param);
 SD_API T_S32 _SD_Echo_GetDencParam(T_VOID *hEcho, struct sd_param_denc *denc_param);
@@ -1468,12 +1471,15 @@ SD_API T_S32 _SD_Echo_GetFarEqParam(T_VOID *hEcho, struct sd_param_eq *eq_param)
 SD_API T_S32 _SD_Echo_GetFarNrParam(T_VOID *hEcho, struct echo_param_nr *nr_param);
 SD_API T_S32 _SD_Echo_GetFarHowlingSuppressParam(T_VOID *hEcho, struct echo_param_howlingSuppress *hs_param);
 SD_API T_S32 _SD_Echo_GetFarVolumeParam(T_VOID *hEcho, struct echo_param_volctrl *vol_param);
+SD_API T_S32 _SD_Echo_GetFarAslcParam(T_VOID *hEcho, struct sd_param_aslc *aslc_param);
 SD_API T_S32 _SD_Echo_GetFarJitterBufParam(T_VOID *hEcho, struct sd_param_pcmbuf *pcmbuf_param);
 
 /**
  * @brief   加载并配置子模块的参数数据，或卸载该子模块
  * @param   [in] load_module: 加载(1) / 卸载(0) 该子模块
- * @param   [in] xxx_param: 子模块的参数结构体
+ * @param   [in] xxx_param: 子模块的参数结构体。
+ *                          当 load_module=1 时，必须配置 xxx_param
+ *                          当 load_module=0 时，xxx_param 可以为 AK_NULL
  * @retval  AK_TRUE:  命令成功
  *          AK_FALSE: 命令失败
  */
@@ -1485,6 +1491,7 @@ SD_API T_S32 _SD_Echo_SetVadParam(T_VOID *hEcho, T_S32 load_module, struct echo_
 SD_API T_S32 _SD_Echo_SetAgcParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_agc *agc_param);
 SD_API T_S32 _SD_Echo_SetNearEqParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_eq *eq_param);
 SD_API T_S32 _SD_Echo_SetNearVolumeParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_volctrl *vol_param);
+SD_API T_S32 _SD_Echo_SetNearAslcParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_aslc *aslc_param);
 SD_API T_S32 _SD_Echo_SetNearHowlingSuppressParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_howlingSuppress *hs_param);
 SD_API T_S32 _SD_Echo_SetNearJitterBufParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_pcmbuf *pcmbuf_param);
 SD_API T_S32 _SD_Echo_SetDencParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_denc *denc_param);
@@ -1493,6 +1500,7 @@ SD_API T_S32 _SD_Echo_SetFarEqParam(T_VOID *hEcho, T_S32 load_module, struct sd_
 SD_API T_S32 _SD_Echo_SetFarNrParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_nr *nr_param);
 SD_API T_S32 _SD_Echo_SetFarHowlingSuppressParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_howlingSuppress *hs_param);
 SD_API T_S32 _SD_Echo_SetFarVolumeParam(T_VOID *hEcho, T_S32 load_module, struct echo_param_volctrl *vol_param);
+SD_API T_S32 _SD_Echo_SetFarAslcParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_aslc *aslc_param);
 SD_API T_S32 _SD_Echo_SetFarJitterBufParam(T_VOID *hEcho, T_S32 load_module, struct sd_param_pcmbuf *pcmbuf_param);
 
 
@@ -1514,6 +1522,9 @@ SD_API T_S32 _SD_Echo_SetNearPathParam(T_VOID *hEcho, T_pSD_PARAM_FACTORY param_
 SD_API char *_SD_Echo_GetFarPathParamString(T_VOID *hEcho);
 SD_API char *_SD_Echo_GetNearPathParamString(T_VOID *hEcho);
 
+/**
+ * @brief   打印出对 path 有效的参数及使用帮助
+ */
 SD_API void _SD_Echo_PrintFarPathParamHelp(void);
 SD_API void _SD_Echo_PrintNearPathParamHelp(void);
 

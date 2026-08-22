@@ -1,0 +1,104 @@
+# ptab v3 - Partition Table
+# Migrated from: ptab.json
+# Chip: SF32LB58X
+#
+# Auto-generated. Please review and adjust as needed.
+
+version: 3
+chip: SF32LB583VCC36
+memory:
+  - mpi: mpi4
+    type: nor
+    size: 16777216
+partitions:
+  - name: psram_data
+    type: data
+    subtype: ram
+    region: psram1
+    offset: 0x00400000
+    size: 0x00400000
+  - name: psram_data2
+    type: data
+    subtype: ram
+    region: psram2
+    offset: 0x00000000
+    size: 0x00800000
+  - name: hcpu_flash_code
+    type: app
+    subtype: factory
+    region: mpi4
+    offset: 0x00000000
+    size: 0x00400000
+    core: HCPU
+    exec:
+      region: psram1
+      offset: 0x00000000
+  - name: dfu
+    type: data
+    subtype: flashdb_kv
+    region: mpi4
+    offset: 0x00400000
+    size: 0x00004000
+  - name: ble
+    type: data
+    subtype: flashdb_kv
+    region: mpi4
+    offset: 0x00404000
+    size: 0x00004000
+  - name: dfu_info_region
+    type: data
+    subtype: raw
+    region: mpi4
+    offset: 0x00500000
+    size: 0x00020000
+  - name: dfu_flash_code
+    type: app
+    subtype: dfu
+    region: mpi4
+    offset: 0x00600000
+    size: 0x00080000
+    core: HCPU
+    exec:
+      region: psram1
+      offset: '0x00000000'
+  - name: dfu_download_region
+    type: data
+    subtype: raw
+    region: mpi4
+    offset: 0x00800000
+    size: 0x00360000
+  - name: fs_region
+    type: data
+    subtype: filesystem
+    region: mpi4
+    offset: 0x00B60000
+    size: 0x00300000
+    aliases:
+    - FLASH_PART2
+  - name: fs_ex_region
+    type: data
+    subtype: raw
+    region: mpi4
+    offset: 0x00E60000
+    size: 0x00100000
+    aliases:
+    - FLASH_PART12
+    - FS_EX
+  - name: acpu
+    type: app
+    subtype: factory
+    region: mpi4
+    offset: 0x00F60000
+    size: 0x0007C000
+    core: ACPU
+    aliases:
+    - ACPU_CODE_LOAD_REGION1
+    exec:
+      region: hpsys_ram
+      offset: 0x00200000
+  - name: acpu_cmd_buf
+    type: data
+    subtype: ram
+    region: hpsys_ram
+    offset: 0x0027C000
+    size: 0x00000200

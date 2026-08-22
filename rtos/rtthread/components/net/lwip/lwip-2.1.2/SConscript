@@ -258,6 +258,9 @@ if GetDepend(['RT_LWIP_PPP']):
 if GetDepend(['RT_USING_LWIP_IPV6']):
     src += lwipcore6_SRCS
 
+if GetDepend(['RT_LWIP_USING_HTTP']):
+    src += lwiphttp_SRCS
+
 if GetDepend(['RT_LWIP_USING_PING']):
     src += lwipping_SRCS
 
@@ -266,7 +269,7 @@ if GetDepend(['RT_LWIP_USING_MQTT']):
     
 if GetDepend(['RT_LWIP_USING_WEBSOCKET']):
     src += lwipwebsocket_SRCS
-    
+
 if GetDepend(['LWIP_ALTCP_TLS']):
     src += lwipmbedtls_SRCS
     

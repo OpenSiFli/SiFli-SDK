@@ -399,6 +399,16 @@ if BSP_USING_BUILTIN_LCD
             select LCD_USING_EPD_OPM060DA
             select BSP_LCDC_USING_DIRECT_EPD
 
+        if LCD_USING_EPD_8BIT_OPM060DA
+            config EPD_WAVEFORM_USE_BIN
+                bool "Use binary waveform table"
+                default n
+                help
+                    Use pre-compiled binary waveform table (epd_waveform.bin) instead of
+                    source code waveform. This requires the binary file to be flashed to
+                    the wave_table partition.
+        endif
+
         config LCD_USING_YX40018ACT
             bool "3.92 rect DBI-16bit 320x320 TFT (YX40018ACT)"
             select LCD_USING_ST7796U
@@ -554,7 +564,7 @@ if BSP_USING_BUILTIN_LCD
         default 460 if AM200Q460460LK_200_460x460
         default 410 if H0198S005AMT005_V0_195_410x502
         default 128 if LCD_USING_GC9107_128x128_SPI
-        default 1032 if LCD_USING_EPD_8BIT_OPM060DA
+        default 1024 if LCD_USING_EPD_8BIT_OPM060DA
         default 320 if LCD_USING_YX40018ACT
 
 

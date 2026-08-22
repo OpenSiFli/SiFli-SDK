@@ -113,8 +113,19 @@ please input the serial port num:5
 例程启动后：
 1. 可以被手机BLE APP搜到并连接，进行相应的GATT特质值read/write等操作。
 2. 可以搜索其他BLE设备，并连接和搜索连接上设备的GATT database，同时可以进行GATT read/write等操作。
-3. 可以用APP完成升级
+3. 可以用 APP 完成升级。是否升级成功可以通过以下步骤来确认：
 
+    a. 先编译并烧录一版固件到板子中，作为升级前的原始固件。
+
+    b. 打开 `src/main.c` 文件，在 `main` 函数开头添加下面这句代码，保存后重新编译（重新编译即可，不要再烧录到板子，否则升级前就会打印该 log）：
+
+    ```c
+    rt_kprintf("Upgrade succeeded\n");
+    ```
+    ![text](./assets/upyes.png)
+
+    c. 用步骤 b 重新编译出的固件制作 HCPU 升级包，通过 APP 完成升级。升级后的固件运行时若串口打印出 "Upgrade succeeded"，即说明升级成功。
+    
 ## 异常诊断
 
 

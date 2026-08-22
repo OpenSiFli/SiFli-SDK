@@ -51,7 +51,7 @@ _If any additional software is needed, mention it here and include the links. Me
 _Here you need to explain which menuconfig options need to be turned on by the routine, preferably with a screenshot_
 
 ```bash
-scons --board=<board_name> --menuconfig
+sdk.py menuconfig --board=<board_name>
 ```
 
 ## Example Output

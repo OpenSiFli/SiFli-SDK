@@ -1691,6 +1691,64 @@ int rwnx_send_fhcustmsg_http_req(struct rwnx_hw *rwnx_hw, char *uri)
 }
 #endif
 
+int rwnx_send_fhcustmsg_start_p2p_req(struct rwnx_hw *rwnx_hw, const char *ssid, const char *passwd,
+                                      uint8_t band)
+{
+    struct fhcustmsg_start_p2p_req *req;
+    int ssid_len, pw_len;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (ssid == NULL)
+        return -1;
+
+    ssid_len = strlen(ssid);
+    if (ssid_len >= AP_SSID_BUF_MAX)
+        return -2;
+
+    if (passwd == NULL)
+    {
+        pw_len = 0;
+    }
+    else
+    {
+        pw_len = strlen(passwd);
+        if (pw_len >= AP_PSWD_BUF_MAX)
+            return -3;
+    }
+
+    /* Build the message */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_START_P2PGO_REQ, TASK_DBG, DRV_TASK_ID,
+                          sizeof(struct fhcustmsg_start_p2p_req));
+    if (!req)
+        return -12;//ENOMEM;
+
+    req->band = band;
+    strcpy((char *)req->ssid, ssid);
+    if (passwd && pw_len > 0)
+        strcpy((char *)req->pw, passwd);
+    else
+        req->pw[0] = '\0';
+
+    /* Send the message to LMAC FW, use CUSTOM_MSG_START_P2PGO_CFM as confirm */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_START_P2PGO_CFM, NULL);
+}
+
+int rwnx_send_fhcustmsg_stop_p2p_req(struct rwnx_hw *rwnx_hw)
+{
+    void *req;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    /* Build the message */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_STOP_P2PGO_REQ, TASK_DBG, DRV_TASK_ID, 1);
+    if (!req)
+        return -12;//ENOMEM;
+
+    /* Send the message to LMAC FW, use CUSTOM_MSG_STOP_P2PGO_CFM as confirm */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_STOP_P2PGO_CFM, NULL);
+}
+
 int rwnx_send_msg_tx(struct rwnx_hw *rwnx_hw, lmac_task_id_t dst_id, lmac_msg_id_t msg_id, uint16_t msg_len, void *msg, int reqcfm, lmac_msg_id_t reqid, void *cfm)
 {
     int ret = 0;
@@ -1738,4 +1796,3 @@ int rwnx_send_rftest_req(struct rwnx_hw *rwnx_hw, u32_l cmd, u32_l argc, u8_l *a
     /* Send the DBG_RFTEST_CMD_REQ message to LMAC FW */
     return rwnx_host_send_msg(rwnx_hw, mem_rftest_cmd_req, 1, DBG_RFTEST_CMD_CFM, cfm);
 }
-

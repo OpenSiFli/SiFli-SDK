@@ -27,7 +27,11 @@
 
 #define AUDCODEC_DEVICE_NAME "audcodec"
 #define AUDPRC_DEVICE_NAME   "audprc"
-#define I2S_DEVICE_NAME "i2s2"
+#if defined(SF32LB57X)
+    #define I2S_DEVICE_NAME "i2s1"
+#else
+    #define I2S_DEVICE_NAME "i2s2"
+#endif
 
 /* i2s DMA Buffer size is defined in drv_i2s_audio.c {see AUDIO_DATA_SIZE} */
 #define AUDIO_BUF_SIZE  (640)
@@ -822,7 +826,7 @@ static void device_init(void)
 #endif
 
 #ifdef BSP_ENABLE_I2S_CODEC
-    /* find and open "i2s2" */
+    /* Find and open the configured I2S device. */
     g_i2s_dev = rt_device_find(I2S_DEVICE_NAME);
     if (NULL == g_i2s_dev)
     {
@@ -849,15 +853,42 @@ int main(void)
 
     /* PIN CONFIG */
 #ifdef BSP_ENABLE_I2S_CODEC
-#ifdef SOC_SF32LB52X
+#if defined(SOC_SF32LB52X) || defined(SF32LB57X)
     HAL_PIN_Set(PAD_PA06, I2S1_LRCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA05, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA04, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA03, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA02, I2S1_MCLK, PIN_NOPULL, 1);
 #elif defined(SOC_SF32LB56X)
-    HAL_PIN_Set(PAD_PA71, I2S1_LRCK, PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA40, I2S1_BCK, PIN_NOPULL, 1);
+/*
+ * TODO: Test setup:
+ *   TX: sf32lb58-lcd_a128r32n1_qspi_hcpu (586 NAND), AUDPRC recording
+ *       followed by I2S2 master TX at 16 kHz/16-bit/mono.
+ *   RX: sf32lb56-lcd_a128r12n1_hcpu (566 NAND A128), I2S1 slave RX
+ *       followed by local AUDPRC playback.
+ *
+ * With BCK on PA40, playback contained periodic clicks while the recorded
+ * audio remained intelligible. Moving BCK to PA73 removed the clicks on
+ * the tested board.
+ *
+ * An initial rollback to acff85404, which only moved LRCK from PA71 to
+ * PA41 while keeping BCK on PA40, also appeared to remove the issue.
+ * However, controlled bisect testing did not establish a reproducible
+ * good/bad boundary: ca6f2ef2c, 2f6275827, and repeated acff85404 tests
+ * all reproduced the clicks. No specific introducing commit was found,
+ * and the relevant I2S HAL, RT-Thread driver, and configuration files
+ * were unchanged across the audited range.
+ *
+ * PA73 is therefore a workaround rather than a confirmed root-cause fix.
+ * Capture BCK, LRCK, and SDO/SDI at both board ends with a logic analyzer
+ * to compare frame and bit integrity. Use an oscilloscope to inspect
+ * voltage levels, rise/fall time, ringing, and setup/hold margin at the
+ * SF32LB56 input. Determine whether the failure is caused by board-level
+ * signal integrity, SF32LB56 input-pad electrical characteristics, or the
+ * I2S RX sampling path.
+ */
+    HAL_PIN_Set(PAD_PA41, I2S1_LRCK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA73, I2S1_BCK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA38, I2S1_SDI, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA39, I2S1_SDO, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA37, I2S1_MCLK, PIN_NOPULL, 1);
@@ -874,8 +905,8 @@ int main(void)
 #error "Need to confirm I2S pin config."
 #endif
 
-    device_init();
 
+    device_init();
     /* Infinite loop */
     while (1)
     {

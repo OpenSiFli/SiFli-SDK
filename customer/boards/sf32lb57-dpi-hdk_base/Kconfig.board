@@ -68,4 +68,13 @@ choice
         bool "TDVP_VSYNC on PA26"
 endchoice
 
+config BSP_USING_CAMERA1
+    bool "Camera 1"
+    select BSP_USING_GC032A
+    default n
+
+config USE_PTM_DVP_8WIRE
+     bool "Use PTM simulated DVP 8wire interface"
+     default n
+
 endmenu

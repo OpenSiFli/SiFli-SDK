@@ -2,7 +2,19 @@ from building import *
 
 cwd = GetCurrentDir()
 src = Glob('*.c')
-CPPPATH = [cwd + '/../common', cwd]
-group = DefineGroup('Drivers', src, depend = ['LCD_USING_EPD_OPM060DA'], CPPPATH = CPPPATH)
+CPPPATH = [cwd + '/../common', cwd, cwd + '/waveform']
+
+lib = []
+if GetDepend('EPD_WAVEFORM_USE_BIN'):
+    wave_dir = cwd + '/waveform'
+    if os.path.isfile(os.path.join(wave_dir, 'epd_waveform_bin_reader_rvds.lib')) or os.path.isfile(os.path.join(wave_dir, 'libepd_waveform_bin_reader_gcc.a')):
+        lib = [GroupLibName("epd_waveform_bin_reader")]
+        LIBPATH = [wave_dir]
+    else:
+        LIBPATH = []
+else:
+    LIBPATH = []
+
+group = DefineGroup('Drivers', src, depend = ['LCD_USING_EPD_OPM060DA'], CPPPATH = CPPPATH, LIBS=lib, LIBPATH=LIBPATH)
 
 Return('group')

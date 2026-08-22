@@ -36,7 +36,11 @@ extern "C" {
 #define HAL_EZIP_MULTI_BLOCK_DECODING_SUPPORTED
 #endif /* EZIP_EZIP_PARA_LAST */
 
-
+#if defined(SF32LB55X) || defined(SF32LB58X) || defined(SF32LB56X) || defined(SF32LB52X)
+#define EZIP_WIN_SIZE  0x2000
+#else
+#define EZIP_WIN_SIZE  0x800
+#endif
 /**
  * @brief  HAL EZIP State structures definition
  */

@@ -19,6 +19,9 @@
 
 #if defined(HAL_MPI_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
+#define WB_PSRAM_MID        (0X6)
+#define WB_PSRAM_MID32      (0XF)
+
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
     static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, uint8_t *dqs);
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
@@ -119,16 +122,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
 
     int cren = __HAL_MPI_GET_CREN(hflash);
 
+    // enable OPI, it's needed by OPSRAM Calibration
+    HAL_FLASH_ENABLE_OPI(hflash, 1);
+
+    HAL_FLASH_SET_CLK_rom(hflash, 1);
     hflash->freq = HAL_QSPI_GET_CLK(hflash);
     hflash->freq >>= 1;
 
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-    HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
+    if (HAL_OK != HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly))
+    {
+        HAL_ASSERT(0);
+    }
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
-
-    //TODO: delay
-    //HAL_FLASH_SET_CLK_rom(hflash, clk_div);
-    HAL_FLASH_SET_CLK_rom(hflash, 1);
 
     cs_min = 6;
 #ifdef FPGA // for fpga
@@ -200,6 +206,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
         hflash->ecc_en = 6;  //rdcyc
         hflash->buf_mode = 6;  //wdcyc
     }
+    else if (freq <= 156000000)    // 156M
+    {
+        cs_max = 1235;         // < 4us
+        cshmin = 6;            // 7 cycles of 288M > 18ns
+        trcmin = 19;           // > 60ns
+        hflash->ecc_en = 6;    //rdcyc
+        hflash->buf_mode = 6;  //wdcyc
+    }
     else // 168M
     {
         cs_max = 1330; //1140; //950;
@@ -227,8 +241,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_OPI_PSRAM_Init(FLASH_HandleTypeDef *hflash,
 
     // enable QSPI
     HAL_FLASH_ENABLE_QSPI(hflash, 1);
-    // enable OPI
-    HAL_FLASH_ENABLE_OPI(hflash, 1);
 
     if ((cren == 0) && (AON_PMR_STANDBY != HAL_HPAON_GET_POWER_MODE()))
         HAL_PSRAM_RESET(hflash);
@@ -248,27 +260,34 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     uint8_t dqs_dly;
     uint8_t sck_dly;
     uint8_t fix_lat = 1;
+    int cren;
+    uint32_t freq;
 
     if (hflash == NULL || cfg == NULL)
         return HAL_ERROR;
 
     HAL_QSPI_Init(hflash, cfg);
 
-    int cren = __HAL_MPI_GET_CREN(hflash);
+    cren = __HAL_MPI_GET_CREN(hflash);
 
-    uint32_t freq = HAL_QSPI_GET_CLK(hflash);
+    // enable OPI, it's needed by OPSRAM Calibration
+    HAL_FLASH_ENABLE_OPI(hflash, 1);
+
+    HAL_FLASH_SET_CLK_rom(hflash, 1);
+    freq = HAL_QSPI_GET_CLK(hflash);
     freq >>= 1;
-
     hflash->freq = freq;
+
 #if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-    HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly);
+    if (HAL_OK != HAL_MPI_OPSRAM_CAL_DELAY(hflash, &sck_dly, &dqs_dly))
+    {
+        HAL_ASSERT(0);
+    }
 #else
     dqs_dly = 0xa;
     sck_dly = 0xa;
 #endif /* SF32LB56X || SF32LB52X || SF32LB57X */
-    //TODO: delay
-    //HAL_FLASH_SET_CLK_rom(hflash, clk_div);
-    HAL_FLASH_SET_CLK_rom(hflash, 1);
+
 
 #if 0//def SF32LB52X    // disable it by default, only open it when debug needed!
     HPSYS_DvfsModeTypeDef dvfs = HAL_RCC_HCPU_GetCurrentDvfsMode();
@@ -339,6 +358,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
         cshmin = 5;           // 6 cycles of 288M > 18ns
         trcmin = 17;          // > 60ns
     }
+    else if (freq <= 156000000)    // 156M
+    {
+        cs_max = 1235;        // < 4us
+        cshmin = 6;           // 7 cycles of 288M > 18ns
+        trcmin = 19;          // > 60ns
+    }
     else if (freq <= 168000000)    // 168M
     {
         cs_max = 1330;        // < 4us
@@ -365,8 +390,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     HAL_FLASH_SET_LEGACY(hflash, 1);
     // enable QSPI
     HAL_FLASH_ENABLE_QSPI(hflash, 1);
-    // enable OPI
-    HAL_FLASH_ENABLE_OPI(hflash, 1);
 
     // do not wake up from sleep and dp not enabled before, reset for first initial
     if ((cren == 0) && (hflash->wakeup == 0))
@@ -392,7 +415,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
         hflash->ecc_en = 4;  //rdcyc
         hflash->buf_mode = 0;  //wdcyc
     }
-    else if (freq <= 144000000) // 144M
+    else if (freq <= 156000000) // 144M and 156M
     {
         mr0 = (fix_lat << 5) | (5 << 2) | drv_str;
         mr4 = (0 << 7) | (rf << 3);
@@ -412,49 +435,71 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_Init(FLASH_HandleTypeDef *hfla
     // for some case like freq changed, mr should be set even not reset chip
     //if ((cren == 0) && (hflash->wakeup == 0))
     {
+        /* TODO: psram driver doesn't support switch between 168MHz and 24MHz as their write latency is different.
+         * For example, current PSRAM run at 168MHz, write latency is 2, if switching to 24MHz whose write latency is 0,
+         * as hflash->buf_mode has been updated to 0, MR_WRITE below would fail due to write latency mismatch
+         */
+        /* write MR0 first with old write latency */
         HAL_LEGACY_MR_WRITE(hflash, 0, mr0);
+        /* write MR4 to update write lantency */
         HAL_LEGACY_MR_WRITE(hflash, 4, mr4);
     }
 
     return HAL_OK;
 }
 
-
 __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_Init(FLASH_HandleTypeDef *hflash, qspi_configure_t *cfg, uint16_t clk_div)
 {
+    uint32_t freq;
+    uint8_t rlcode;
     uint16_t mr0;
 
     HAL_OPI_PSRAM_Init(hflash, cfg, 1);
 
-    uint32_t freq = HAL_QSPI_GET_CLK(hflash);
-    freq /= 2;
+    /* Default value */
+    mr0 = 0x8F2F;
 
-    // CR0 with 2 byte, bytes should swap for read/write
+    /* Change value
+     * [3]-LT=0 (variable latency)
+     * [8]=1, [1:0]-BL=00 (128 byte)
+     *
+     */
+    mr0 &= 0xFFF4;
+
+    freq = hflash->freq;
     if (freq <= 85 * 1000000)
     {
-        mr0 = (14 << 12) | 0x078f;
+        rlcode = 0xE;  /* 3 cycle */
     }
     else if (freq <= 104 * 1000000)
     {
-        mr0 = (15 << 12) | 0x078f;
+        rlcode = 0xF;  /* 4 cycle */
     }
-    else if (freq <= 120 * 1000000)
+    else if (freq <= 133 * 1000000)
     {
-        mr0 = (0 << 12) | 0x078f;
+        rlcode = 0x0;  /* 5 cycle */
     }
-    else if (freq <= 144 * 1000000)
+    else if (freq <= 166 * 1000000)
     {
-        mr0 = (1 << 12) | 0x078f;
+        rlcode = 0x1;  /* 6 cycle */
     }
     else // 168M
     {
-        mr0 = (2 << 12) | 0x078f;
+        rlcode = 0x2;  /* 7 cycle */
     }
 
-    HAL_FLASH_ENABLE_HYPER(hflash, 1);
+    /* [7:4]: initial latency*/
+    mr0 = (mr0 & 0xFF0F) | (((uint16_t)rlcode & 0xF) << 4);
 
+    /* CR0 has 2 byte, swap bytes for write */
+    mr0 = ((mr0 & 0xFF00) >> 8) | ((mr0 & 0xFF) << 8);
+
+    HAL_FLASH_ENABLE_HYPER(hflash, 1);
     HAL_HYPER_PSRAM_WriteCR(hflash, 0, mr0);
 
+    /* for HyperRAM, still need to set FIXLAT though fixlatency is disable by PSRAM chip side
+     * because MPI uses this register to control some other logics
+     */
     HAL_MPI_EN_FIXLAT(hflash, 1);
 
     return HAL_OK;
@@ -576,6 +621,36 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_PSRAM_DPD(FLASH_HandleTypeDef *hflash)
     return HAL_OK;
 }
 
+__HAL_ROM_USED uint32_t HAL_XCCELA_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    int mr2;
+    uint32_t size_mb;
+
+    mr2 = HAL_MPI_MR_READ(hflash, 2);
+    switch (mr2 & 7)
+    {
+    case 1:
+        size_mb = 4;
+        break;
+    case 3:
+        size_mb = 8;
+        break;
+    case 5:
+        size_mb = 16;
+        break;
+    case 7:
+        size_mb = 32;
+        break;
+    case 6:
+        size_mb = 64;
+        break;
+    default:
+        size_mb = 0;
+        break;
+    }
+
+    return size_mb;
+}
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MPI_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
 {
@@ -629,7 +704,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_MR_WRITE(FLASH_HandleTypeDef *hflash
     if (hflash == NULL)
         return HAL_ERROR;
 
-    HAL_FLASH_MANUAL_CMD(hflash, 1, 7, 0, 0, 0, adsize, 7, 7);
+    /* write dummy cycle may vary for legacy psram */
+    HAL_FLASH_MANUAL_CMD(hflash, 1, 7, hflash->buf_mode, 0, 0, adsize, 7, 7);
 
     HAL_FLASH_WRITE_DLEN(hflash, 4);
     HAL_FLASH_WRITE_WORD(hflash, (uint32_t)value);
@@ -733,6 +809,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_WAKEUP(FLASH_HandleTypeDef *hf
         return HAL_ERROR;
 
     return HAL_OK;
+}
+
+__HAL_ROM_USED uint32_t HAL_LEGACY_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    return 4;
 }
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LEGACY_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
@@ -910,6 +991,43 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_RDPD(FLASH_HandleTypeDef *hflas
     HAL_HYPER_PSRAM_WriteCR(hflash, 1, cr0);
 
     return HAL_OK;
+}
+
+__HAL_ROM_USED uint32_t HAL_HYPER_PSRAM_ReadSize(FLASH_HandleTypeDef *hflash)
+{
+    uint16_t id0, id1;
+    uint32_t mid;
+    uint32_t size_mb;
+
+    id0 = HAL_HYPER_PSRAM_ReadID(hflash, 0);
+    id1 = HAL_HYPER_PSRAM_ReadID(hflash, 1);
+    id0 = ((id0 & 0xff) << 8) | ((id0 >> 8) & 0xff);
+    id1 = ((id1 & 0xff) << 8) | ((id1 >> 8) & 0xff);
+
+    mid = id0 & 0xf;
+    if (WB_PSRAM_MID32 == mid) /* WB_PSRAM_MID32 */
+    {
+        size_mb = 4;
+    }
+    else if (mid == 0x6) /* WB_PSRAM_MID */
+    {
+        uint32_t cabc = ((id0 & 0xf0) >> 4) + 1;
+        uint32_t rabc = ((id0 & 0x1f00) >> 8) + 1;
+        int32_t msize = cabc + rabc + 1;
+        size_mb = 1;
+        msize -= 20;
+        while (msize > 0)
+        {
+            size_mb *= 2;
+            msize--;
+        }
+    }
+    else
+    {
+        size_mb = 0;
+    }
+
+    return size_mb;
 }
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_HYPER_PSRAM_SET_PASR(FLASH_HandleTypeDef *hflash, uint8_t top, uint8_t deno)
@@ -1145,28 +1263,38 @@ HAL_StatusTypeDef HAL_MPI_EXIT_LOWP(FLASH_HandleTypeDef *hflash, uint8_t psram_t
     return HAL_OK;
 }
 
-#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-
-static void HAL_Delay_us_psram(__IO uint32_t us)
+uint32_t HAL_MPI_PSRAM_ReadSize(FLASH_HandleTypeDef *handle)
 {
-    static uint32_t sysclk_m2;
+    HAL_StatusTypeDef r;
+    uint32_t size_mb;
 
-    if (us == 0 || sysclk_m2 == 0)
+    if ((handle == NULL) || (handle->Instance == NULL))
     {
-        sysclk_m2 = HAL_RCC_GetHCLKFreq(CORE_ID_DEFAULT) / 1000000;
-        if (us == 0)
-            return;
+        return 0;
     }
 
-    if (sysclk_m2 > 48)   // DLL has extra cost, Reason to be determined.
-        us -= 1;
-    if (us > 0)          // Extra 1 us for cost of function
+    if (SPI_MODE_LEGPSRAM == handle->isNand)  // legacy
     {
-        volatile uint32_t i = sysclk_m2 * (us - 1) / 5;
-        while (i-- > 0); //need 5 instructions at ARMCC
+        size_mb = HAL_LEGACY_PSRAM_ReadSize(handle);
     }
+    else if (SPI_MODE_HBPSRAM == handle->isNand)  // hyper bus
+    {
+        size_mb = HAL_HYPER_PSRAM_ReadSize(handle);
+    }
+    else if ((SPI_MODE_OPSRAM == handle->isNand) || (SPI_MODE_HPSRAM == handle->isNand))    // opi/hpi
+    {
+        size_mb = HAL_XCCELA_PSRAM_ReadSize(handle);
+    }
+    else
+    {
+        size_mb = 0;
+    }
+
+    return size_mb;
 }
 
+
+#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
 #ifdef SF32LB57X
 static int HAL_MPI_PSRAM_CheckMatch(uint32_t dst, uint32_t src, uint32_t msk, uint32_t num)
 {
@@ -1201,11 +1329,12 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
 
     hflash->Instance->CALCR = MPI_CALCR_START;
 
+    HAL_Delay_us(0);
     /* phase 1: search for 0 */
     for (tmp = 0; tmp < 128; tmp++)   // DLY MAX = 127 (TODO: adjust accordingly)
     {
         hflash->Instance->MISCR = (tmp << MPI_MISCR_SCKDLY_Pos);
-        HAL_Delay_us_psram(10);
+        HAL_Delay_us(10);
         if (HAL_MPI_PSRAM_CheckMatch(0, hflash->Instance->CALRR, MPI_CALRR_CSMP_Msk, 5))
         {
             break;
@@ -1217,7 +1346,7 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
     for (dly = tmp + 1; dly < 128; dly++)   // DLY MAX = 127 (TODO: adjust accordingly)
     {
         hflash->Instance->MISCR = (dly << MPI_MISCR_SCKDLY_Pos);
-        HAL_Delay_us_psram(10);
+        HAL_Delay_us(10);
         if (HAL_MPI_PSRAM_CheckMatch(MPI_CALRR_CSMP, hflash->Instance->CALRR, MPI_CALRR_CSMP_Msk, 5))
         {
             find = 1;
@@ -1252,8 +1381,8 @@ static int HAL_MPI_OPSRAM_CAL_DELAY(FLASH_HandleTypeDef *hflash, uint8_t *sck, u
     hflash->Instance->CALCR |= MPI_CALCR_EN;
     //HAL_Delay_us(0);
     //HAL_Delay_us(20);  // add delay to avoid CDC during cal_done polling
-    HAL_Delay_us_psram(0);
-    HAL_Delay_us_psram(20);
+    HAL_Delay_us(0);
+    HAL_Delay_us(20);
     while (!(hflash->Instance->CALCR & MPI_CALCR_DONE_Msk));
     delay = hflash->Instance->CALCR & MPI_CALCR_DELAY_Msk;
     hflash->Instance->CALCR &= ~MPI_CALCR_EN;
@@ -1282,7 +1411,7 @@ int HAL_MPI_OPSRAM_AUTO_CAL(FLASH_HandleTypeDef *hflash, uint8_t *sck, uint8_t *
     HAL_MPI_SET_DQS_DELAY(hflash, *dqs);
     HAL_MPI_SET_SCK(hflash, *sck, 0);
 
-    HAL_Delay_us_psram(50);
+    HAL_Delay_us(50);
     return 0;
 }
 

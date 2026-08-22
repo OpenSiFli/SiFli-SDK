@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+
 import os
 import sys
 import re
@@ -30,8 +33,8 @@ def gen_lcpu_img(src,dest,rom=False):
         fpout=open(dest,"w+")    
     fpout.write("#include <stdint.h>\n")
     fpout.write("#include <string.h>\n")
-    fpout.write("#include \"mem_map.h\"\n")
     fpout.write("#include \"rtconfig.h\"\n")
+    fpout.write("#include \"mem_map.h\"\n")
     fpout.write("#include \"register.h\"\n\n")
     if (rom==True):
         fpout.write("#undef HCPU_LCPU_CODE_START_ADDR \n")        

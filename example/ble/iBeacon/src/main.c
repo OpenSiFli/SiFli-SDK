@@ -52,7 +52,7 @@ typedef struct
     // Mbox thread
     rt_mailbox_t mb_handle;
     // work queue
-    struct rt_delayed_work work;
+    struct rt_work work;
 
     sifli_ibeacon_t ibeacon_data;
 } app_env_t;

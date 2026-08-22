@@ -30,7 +30,7 @@ sdk.py menuconfig --board=56devkit_lcd(board=后面跟着的是板子名称)
 1. 打开SDIO
 ![alt text](assets/sdio.png)
 
-2. 需要注意的是，56有两个 SDMMC 控制器 IP：SDMMC1（SDHCI IP）和 SDMMC2（SDIO IP）。如果 eMMC 连接到的是 SDMMC2，就需要将配置更改为 BSP_USING_SD_LINE。
+2. 如果需要切换到单线模式，需要开启 SDMMC1_BUS_WIDTH_1_ONLY / SDMMC2_BUS_WIDTH_1_ONLY（工程默认不开，4线模式工作）
 ![alt text](assets/image1.png)
 
 3. 使能和配置sd device
@@ -51,6 +51,52 @@ build_56_board_lcd_hcpu\download.bat(uart_download.bat)//可以通过jlink和串
 
 2、进行创建文件的操作，首先输入ls查看文件系统中原有的文件或目录，在使用mkdir XXX进行创建，cd到创建好的目录下，进行echo命令出创建文本，并且写入内容，在使用cat命令查看创建好的文件内容，最后使用pwd命令查看一下当前的工作路径
 ![alt text](assets/log1.png)
+
+## 读写速率测试
+
+例程提供了 4 个命令用于测试 eMMC/SD 卡的读写速率，输出单位为 Mb/s
+
+### 基础命令（固定 512 字节块）
+
+| 命令 | 用法示例 | 说明 |
+|------|---------|------|
+| `fs_write` | `fs_write /1.txt 4096` | 向文件写入 4096 个 512B 块（2MB），测文件系统写入速度 |
+| `fs_read` | `fs_read /1.txt 4096` | 从文件读取 4096 个 512B 块（2MB），测文件系统读取速度 |
+
+参数 `num` 为 512B 块的数量，总数据量 = num × 512B。例如 `fs_write /1.txt 2048` 写入 1MB，`fs_write /1.txt 4096` 写入 2MB。
+
+### 扩展命令（推荐使用）
+
+| 命令 | 用法示例 | 说明 |
+|------|---------|------|
+| `fs_write_ex` | `fs_write_ex /1.txt 2m` | 写入指定大小的数据，测文件系统写入速度 |
+| `fs_read_ex` | `fs_read_ex /1.txt 2m` | 读取指定大小的数据，测文件系统读取速度 |
+
+扩展命令内部自动换算为 512B 块数后委托基础命令执行，提供更友好的单位参数。
+
+#### 参数说明
+
+- `total_size`：支持 `k`/`K`（KB）和 `m`/`M`（MB）单位，如 `512k` `1m` `2m` `4m` `8m`
+
+#### 典型测速流程
+
+```
+fs_write_ex /1.txt 2m      ← 先写入 2MB 测试数据
+fs_read_ex  /1.txt 2m      ← 再读取 2MB，测读取速度
+
+```
+
+#### 输出示例
+* 读写测速结果
+```
+07-10 15:26:59:328 TX:fs_write_ex /6.txt 2M 
+07-10 15:27:02:279    cmd_fs_write_t path=/6.txt num=4096 blocks testtime=2718475.250000uS,speed_test=6.171554Mb/s
+07-10 15:27:02:290    msh />msh />
+07-10 15:28:14:246 TX:fs_read_ex /6.txt 2M 
+07-10 15:28:14:748    cmd_fs_read_t  path=/6.txt num=4096 blocks testtime=496185.312500uS,speed_test=33.812401Mb/s
+07-10 15:28:14:757    msh />msh />
+
+```
 
 
 ## 未能按预期完成的结果（log）

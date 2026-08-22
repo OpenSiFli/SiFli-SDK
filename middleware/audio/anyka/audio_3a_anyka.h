@@ -44,6 +44,11 @@ typedef struct
     uint16_t    samplerate;
     uint8_t     is_bt_voice;
     uint8_t     all_mic_channels;
+    uint8_t     enable_mic_ssl;
+    T_AUDIO_FILTER_INPUT    *filter_input;
+    T_AUDIO_FILTER_BUF_STRC *filter_buf;
+    uint8_t     *ssl_data_out;
+    uint32_t    ssl_data_out_len;
 } acpu_audio_3a_open_parameter_t;
 
 typedef struct
@@ -62,10 +67,14 @@ typedef struct
     T_AUDIO_FILTER_TS   ts_far;
     T_AUDIO_FILTER_TS   ts_dac_stream;
     uint16_t    samplerate;
+    /* SSL */
+    uint8_t     *ssl_data_in;
+    uint8_t     ssl_data_in_len;
 } acpu_audio_3a_uplink_parameter_t;
 
 int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg);
 int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg);
+int acpu_audio_3a_uplink_ssl(acpu_audio_3a_uplink_parameter_t *arg);
 int acpu_audio_3a_downlink(acpu_audio_3a_downlink_parameter_t *arg);
 int acpu_audio_3a_close();
 

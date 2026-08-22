@@ -18,7 +18,7 @@ The following resources are required for the test:
 
 BLE has no officially defined test mode, so a serial connection to the tester is required. A typical BLE signaling test topology is shown in Figure 1-1.
 
-```{figure} assert/figure_1-1.jpg
+```{figure} assets/figure_1-1.jpg
 :align: center
 
 Figure 1-1
@@ -26,7 +26,7 @@ Figure 1-1
 
 The difference between BT signaling testing and BLE signaling testing is that BT signaling testing does not require a serial connection to the tester. A typical BT signaling test topology is shown in Figure 1-2.
 
-```{figure} assert/figure_1-2.jpg
+```{figure} assets/figure_1-2.jpg
 :align: center
 
 Figure 1-2
@@ -66,7 +66,7 @@ The UART1 pins differ between models; the mapping is shown in Table 1:
 5) In the serial tool, disconnect the serial connection;
 6) Move the USB cable from the PC to the tester (i.e. connect the DUT's UART1 to the tester via the USB cable).
 
-```{figure} assert/figure_2-1.png
+```{figure} assets/figure_2-1.png
 :align: center
 
 Figure 2-1
@@ -79,7 +79,7 @@ Figure 2-1
 3. Use a serial tool (e.g. the SiFli_Trace tool) to send the Finsh command `bt_cm dut` to the DUT;
 4. With the serial tool in "character" (ASCII) display, receiving the reply `Write scan enable success` indicates the DUT has successfully entered test mode. Because User_bin produces other logs as well, the actual reply looks like Figure 2-2;
 
-```{figure} assert/figure_2-2.png
+```{figure} assets/figure_2-2.png
 :align: center
 
 Figure 2-2
@@ -96,25 +96,25 @@ Figure 2-2
 - On the signaling setup screen, Bluetooth signaling is OFF by default (Figure 3-3);
 - Now click **Bluetooth signaling** and then press **ON/OFF** on the key panel to turn the test on (Figure 3-4); the basic instrument setup is complete.
 
-```{figure} assert/figure_3-1.jpg
+```{figure} assets/figure_3-1.jpg
 :align: center
 
 Figure 3-1
 ```
 
-```{figure} assert/figure_3-2.jpg
+```{figure} assets/figure_3-2.jpg
 :align: center
 
 Figure 3-2
 ```
 
-```{figure} assert/figure_3-3.jpg
+```{figure} assets/figure_3-3.jpg
 :align: center
 
 Figure 3-3
 ```
 
-```{figure} assert/figure_3-4.jpg
+```{figure} assets/figure_3-4.jpg
 :align: center
 
 Figure 3-4
@@ -126,7 +126,7 @@ The BLE signaling test topology is shown in Figure 1-1; interaction with the tes
 
 1) On the Bluetooth signaling screen, click **EUT Control**; in the screen that appears, configure as in Figure 3-5: set HW Interface to `USB to RS232 adapter`, Baud Rate to `1000000`, and Burst Type to `Low Energy`. At this point, with no serial port plugged in, the Virtual COM port field is grayed out;
 
-```{figure} assert/figure_3-5.jpg
+```{figure} assets/figure_3-5.jpg
 :align: center
 
 Figure 3-5
@@ -136,7 +136,7 @@ Figure 3-5
 
 3) After the instrument recognizes the serial port, click **connection check** at the bottom left; after about 3 s a pop-up appears showing `LE comm test passed`. Click OK, and you can then run automated or manual tests; if the instrument is connected to automation software, you can run automated tests.
 
-```{figure} assert/figure_3-6.jpg
+```{figure} assets/figure_3-6.jpg
 :align: center
 
 Figure 3-6
@@ -152,13 +152,13 @@ The BT signaling test topology is shown in Figure 1-2; a BT signaling connection
 
 3) After connecting successfully, you can run automated or manual tests; if the instrument is connected to automation test software, you can start the automation.
 
-```{figure} assert/figure_3-7.jpg
+```{figure} assets/figure_3-7.jpg
 :align: center
 
 Figure 3-7
 ```
 
-```{figure} assert/figure_3-8.jpg
+```{figure} assets/figure_3-8.jpg
 :align: center
 
 Figure 3-8
@@ -172,7 +172,7 @@ After a BLE or BT signaling connection is established, the manual TX test proced
 
 1) After the DUT and the tester are connected, on the Bluetooth signaling screen click **Bluetooth 1 Multi Eval.** (Figure 4-1);
 
-```{figure} assert/figure_4-1.jpg
+```{figure} assets/figure_4-1.jpg
 :align: center
 
 Figure 4-1
@@ -184,19 +184,19 @@ Figure 4-1
 
 4) To test other parameters — for example, switching a BLE test to BLE 2M or a BT test to EDR — select **Input Signal** on the right side of the screen, then choose the corresponding option under **Burst Type** at the bottom of the instrument screen. To change the packet type, packet length, etc., set them on the Bluetooth signaling screen, or click the **Input Signal** button and choose the corresponding options at the bottom of the screen, as shown in Figure 4-4.
 
-```{figure} assert/figure_4-2.jpg
+```{figure} assets/figure_4-2.jpg
 :align: center
 
 Figure 4-2
 ```
 
-```{figure} assert/figure_4-3.jpg
+```{figure} assets/figure_4-3.jpg
 :align: center
 
 Figure 4-3
 ```
 
-```{figure} assert/figure_4-4.jpg
+```{figure} assets/figure_4-4.jpg
 :align: center
 
 Figure 4-4
@@ -218,31 +218,31 @@ After a BLE or BT signaling connection is established, the manual RX test proced
 
 To test the receiver sensitivity at other frequencies or of other types, simply change the corresponding settings.
 
-```{figure} assert/figure_5-1.jpg
+```{figure} assets/figure_5-1.jpg
 :align: center
 
 Figure 5-1
 ```
 
-```{figure} assert/figure_5-2.jpg
+```{figure} assets/figure_5-2.jpg
 :align: center
 
 Figure 5-2
 ```
 
-```{figure} assert/figure_5-3.jpg
+```{figure} assets/figure_5-3.jpg
 :align: center
 
 Figure 5-3
 ```
 
-```{figure} assert/figure_5-4.jpg
+```{figure} assets/figure_5-4.jpg
 :align: center
 
 Figure 5-4
 ```
 
-```{figure} assert/figure_5-5.jpg
+```{figure} assets/figure_5-5.jpg
 :align: center
 
 Figure 5-5

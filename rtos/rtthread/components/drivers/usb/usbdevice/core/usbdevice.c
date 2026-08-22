@@ -3,7 +3,7 @@
  * COPYRIGHT (C) 2008 - 2018, RT-Thread Development Team
  *
  * SPDX-License-Identifier: Apache-2.0
- * 
+ *
  * Change Logs:
  * Date           Author       Notes
  * 2012-10-02     Yi Qiu       first version
@@ -18,7 +18,7 @@
 #define USB_DEVICE_CONTROLLER_NAME      "usbd"
 
 #ifdef RT_USB_DEVICE_COMPOSITE
-const static char* ustring[] =
+const static char *ustring[] =
 {
     "Language",
     "RT-Thread Team.",
@@ -62,7 +62,7 @@ static struct usb_qualifier_descriptor dev_qualifier =
 };
 #endif
 
-struct usb_os_comp_id_descriptor usb_comp_id_desc = 
+struct usb_os_comp_id_descriptor usb_comp_id_desc =
 {
     //head section
     {
@@ -70,11 +70,11 @@ struct usb_os_comp_id_descriptor usb_comp_id_desc =
         0x0100,
         0x04,
         USB_DYNAMIC,
-        {0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+        {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
 };
 
-struct usb_os_function_comp_id_descriptor sifusb_func_comp_id_desc = 
+struct usb_os_function_comp_id_descriptor sifusb_func_comp_id_desc =
 {
     .bFirstInterfaceNumber = USB_DYNAMIC,
     .reserved1          = 0x01,
@@ -94,13 +94,13 @@ INIT_BOARD_EXPORT(rt_usbd_class_list_init);
 rt_err_t rt_usbd_class_register(udclass_t udclass)
 {
 #ifndef RT_USB_DEVICE_COMPOSITE
-    if(!rt_list_isempty(&class_list))
+    if (!rt_list_isempty(&class_list))
     {
         rt_kprintf("[D/USBD] If you want to use usb composite device please define RT_USB_DEVICE_COMPOSITE\n");
         return RT_ERROR;
     }
 #endif
-    rt_list_insert_before(&class_list,&udclass->list);
+    rt_list_insert_before(&class_list, &udclass->list);
     return RT_EOK;
 }
 
@@ -113,7 +113,7 @@ rt_err_t rt_usb_device_init(void)
     rt_list_t *i;
     udclass_t udclass;
 
-    if(rt_list_isempty(&class_list))
+    if (rt_list_isempty(&class_list))
     {
         rt_kprintf("[D/USBD] No class register on usb device\n");
         return RT_ERROR;
@@ -125,7 +125,7 @@ rt_err_t rt_usb_device_init(void)
     udevice = rt_usbd_device_new();
 
     udc = rt_device_find(USB_DEVICE_CONTROLLER_NAME);
-    if(udc == RT_NULL)
+    if (udc == RT_NULL)
     {
         rt_kprintf("can't find usb device controller %s\n", USB_DEVICE_CONTROLLER_NAME);
         return -RT_ERROR;
@@ -138,9 +138,12 @@ rt_err_t rt_usb_device_init(void)
     cfg = rt_usbd_config_new();
 
     rt_usbd_device_set_os_comp_id_desc(udevice, &usb_comp_id_desc);
-    rt_usbd_os_comp_id_desc_add_os_func_comp_id_desc(&usb_comp_id_desc, &sifusb_func_comp_id_desc);
+    /* According to test, cdc acm has no need to add os comp id descriptor,
+     * don't know why it's added before for cdc acm (you can check history of rt-thread repo in VDI)
+     */
+    // rt_usbd_os_comp_id_desc_add_os_func_comp_id_desc(&usb_comp_id_desc, &sifusb_func_comp_id_desc);
 
-    for(i = class_list.next; i!= &class_list; i = i->next)
+    for (i = class_list.next; i != &class_list; i = i->next)
     {
         /* get a class creater */
         udclass = rt_list_entry(i, struct udclass, list);
@@ -153,7 +156,7 @@ rt_err_t rt_usb_device_init(void)
 #ifdef RT_USB_DEVICE_COMPOSITE
     rt_usbd_device_set_descriptor(udevice, &compsit_desc);
     rt_usbd_device_set_string(udevice, ustring);
-    if(udevice->dcd->device_is_hs)
+    if (udevice->dcd->device_is_hs)
     {
         rt_usbd_device_set_qualifier(udevice, &dev_qualifier);
     }

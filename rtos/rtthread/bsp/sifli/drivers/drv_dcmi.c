@@ -83,6 +83,48 @@ void DCMI_DMA_IRQHandler(void)
 }
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
+#ifdef USE_PTM_DVP_8WIRE
+
+
+void start_dvp_ptm(void)
+{
+    uint32_t core_code[] =
+    {
+        PTM_SET(PTM_Y, PTM_ZERO, OP_ADD, 0), /* clear Y */
+        PTM_WAIT(WAIT_IN10, 1, 0), /* wait vsync neg edge */
+        PTM_WAIT(WAIT_IN10, 0, 0),
+        PTM_WAIT(WAIT_IN8, 0, 0), /* wait clk pos edge */
+        PTM_WAIT(WAIT_IN8, 1, 0),
+        PTM_JMP(4, PTM_IN10, JMP_EQCH, PTM_ALL1, 0), /* if vsync high, finish current frame */
+        PTM_JMP(-3, PTM_IN9, JMP_EQCH, PTM_ZERO, 0), /* if hsync low, wait for next line */
+        PTM_IO(IO_PULL8, IO_NOP, IO_NOP, 0), /* sample 8 bits */
+        PTM_JMP(-5, PTM_ZERO, JMP_EQ, PTM_ZERO, 0), /* to next clk */
+        PTM_SET(PTM_X, PTM_X, OP_ADD, 1),
+    };
+    //Disable USB output
+    hwp_hpsys_cfg->USBCR &= ~(HPSYS_CFG_USBCR_DM_PD | HPSYS_CFG_USBCR_DP_EN | HPSYS_CFG_USBCR_USB_EN);
+
+    HAL_RCC_EnableModule(RCC_MOD_PTM1);
+    memcpy(PTM1_CORE1_TCM, core_code, sizeof(core_code));
+
+    hwp_ptm1->CER |= PTM_CER_RST1;
+    hwp_ptm1->CCR1 = ((sizeof(core_code) / 4 - 1) << PTM_CCR1_END0_Pos) |
+                     (0  << PTM_CCR1_PSC_Pos)  |
+                     (255 << PTM_CCR1_REP_Pos); //repeat 1
+    hwp_ptm1->ICR1 = (0 << PTM_ICR1_IBLOCK_Pos) | //no block when IFIFO full
+                     (1 << PTM_ICR1_IRSH_Pos)   | //right shift
+                     (1 << PTM_ICR1_IAUTO_Pos)  | //enable IFIFO auto push from Y
+                     (1 << PTM_ICR1_IFIFO_Pos)  | //enable IFIFO
+                     (0 << PTM_ICR1_IBASE_Pos);   //input CHx offset
+
+    hwp_ptm1->CER |= PTM_CER_EN1;
+}
+
+void stop_dvp_ptm(void)
+{
+    hwp_ptm1->CER |= PTM_CER_RST1;
+}
+#endif
 static void rt_hw_dcmi_dma_init(rt_device_t dev)
 {
     struct rt_dcmi_device *dcmi = (struct rt_dcmi_device *)dev;
@@ -100,7 +142,12 @@ static void rt_hw_dcmi_dma_init(rt_device_t dev)
     dcmi->hdma.Init.Priority            = DMA_PRIORITY_HIGH;
     dcmi->hdma.Init.Mode                = DMA_CIRCULAR;//DMA_CIRCULAR;DMA_NORMAL
     dcmi->hdma.Init.BurstSize           = 0x3; //burst 16 words
-
+#ifdef USE_PTM_DVP_8WIRE
+    dcmi->hdma.Init.Request             = DMA_REQUEST_73;
+    dcmi->hdma.Init.PeriphInc           = DMA_PINC_DISABLE;
+    dcmi->hdma.Init.Priority            = DMA_PRIORITY_HIGH;
+    dcmi->hdma.Init.BurstSize   = 0;
+#endif
 
     HAL_DMA_Init(&dcmi->hdma);
     __HAL_LINKDMA(&dcmi->handle, DMA_Handle, dcmi->hdma);
@@ -125,7 +172,11 @@ void rt_hw_dcmi_dma_start(rt_device_t dev)
 
 
     //__HAL_DCMI_DMA_NUM(&dcmi->handle, 0x10);//carry words num of one dma request
+#ifndef USE_PTM_DVP_8WIRE
     HAL_StatusTypeDef status = HAL_DMA_Start_IT(&dcmi->hdma, (rt_uint32_t)&dcmi->handle.Instance->DR, (rt_uint32_t)dcmi->frame_buffer, (rt_uint32_t)(dcmi->buffer_size >> 2));
+#else
+    HAL_StatusTypeDef status = HAL_DMA_Start_IT(&dcmi->hdma, (rt_uint32_t)&hwp_ptm1->IFIFO1, (rt_uint32_t)dcmi->frame_buffer, (rt_uint32_t)(dcmi->buffer_size >> 2));
+#endif /* USE_PTM_DVP_8WIRE */
     RT_ASSERT(status == HAL_OK);
 }
 
@@ -342,10 +393,16 @@ static rt_err_t rt_dcmi_start(rt_device_t dev)
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
 #endif  /* RT_USING_PM */
+
+#ifdef USE_PTM_DVP_8WIRE
+    rt_hw_dcmi_dma_start(dev);
+    start_dvp_ptm();
+#else
     dcmi->handle.Instance->CR |= (DCMI_CR_RSTB_Msk);
     while ((dcmi->handle.Instance->CR & DCMI_CR_RSTB_S_Msk) == 0);
     rt_hw_dcmi_dma_start(dev);
     __HAL_DCMI_CAPTURE_START(&dcmi->handle);
+#endif
     LOG_I("rt_dcmi_start done");
     return RT_EOK;
 }
@@ -354,9 +411,13 @@ static rt_err_t rt_dcmi_stop(rt_device_t dev)
 {
     struct rt_dcmi_device *dcmi = (struct rt_dcmi_device *)dev;
     RT_ASSERT(dev != RT_NULL);
-
+#ifdef USE_PTM_DVP_8WIRE
+    HAL_DMA_Abort_IT(&dcmi->hdma);
+    stop_dvp_ptm();
+#else
     __HAL_DCMI_CAPTURE_STOP(&dcmi->handle);
     HAL_DMA_Abort_IT(&dcmi->hdma);
+#endif
 #ifdef RT_USING_PM
     rt_pm_release(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_stop();

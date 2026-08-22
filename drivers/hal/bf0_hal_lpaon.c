@@ -210,7 +210,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPAON_EnableWakeupSrc(LPAON_WakeupSrcTypeDe
         HAL_LPAON_CLEAR_WSR(wer_en);
 
 #ifdef hwp_pbr
-        if ((src >= LPAON_WAKEUP_SRC_PBR_PIN_FIRST) && (src <= LPAON_WAKEUP_SRC_PIN_LAST))
+        /* On 52x, there's no separate PBR pin like 56x and 58x, PBR0~PBR3 share the pad with PA24~PA27
+         * and AON pin wakeup detection is done by PBR module. IE of PBR pin is disabled by default, so need to
+         * enable IE if AON pin wakeup is enabled.
+         */
+        if ((src >= LPAON_WAKEUP_SRC_PBR_PIN_FIRST) && (src <= LPAON_WAKEUP_SRC_PBR_PIN_LAST))
         {
             HAL_PBR_ConfigMode((src - LPAON_WAKEUP_SRC_PBR_PIN_FIRST), false);
         }

@@ -559,18 +559,18 @@ bool boot_device_init(void)
         else
         {
 #if defined(CFG_BOOTROM)
-            printf("ROM:invalid ftab magic\n");
+            printf("ROM:invalid ftab magic from device:%d\n", board_boot_device);
 #else
-            printf("BL:invalid ftab magic\n");
+            printf("BL:invalid ftab magic from device:%d\n", board_boot_device);
 #endif /* CFG_BOOTROM */
         }
     }
     else
     {
 #if defined(CFG_BOOTROM)
-        printf("ROM:boot device init fail\n");
+        printf("ROM:boot device init fail from :%d\n", board_boot_device);
 #else
-        printf("BL:boot device init fail\n");
+        printf("BL:boot device init fail from:%d\n", board_boot_device);
 #endif /* CFG_BOOTROM */
     }
 

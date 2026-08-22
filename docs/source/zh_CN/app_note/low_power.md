@@ -10,6 +10,14 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 ```
 低功耗开发例程参考 `example\pm\classical`。
 
+:::{only} SF32LB56X
+功耗测试报告参考：[功耗测试报告](https://docs.sifli.com/projects/rpt5602_sf32lb56x-low-power-measurement-report/latest/zh_CN/index.html)
+:::
+
+:::{only} SF32LB52X
+功耗测试报告参考：[功耗测试报告](https://docs.sifli.com/projects/rpt5202_sf32lb52x-low-power-measurement-report/latest/zh_CN/index.html)
+:::
+
 ## 2 配置低功耗模式
 
 ### 2.1 打开低功耗模式
@@ -48,7 +56,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  debug 配置菜单  
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 在 工程目录下运行 `sdk.py menuconfig` 打开软件配置菜单：
 
 1. 使能低功耗功能(`Enable Low power support`)：
@@ -61,7 +69,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图 enable Low Power 配置菜单
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 2. 选择低功耗模式(`Enable Standby Mode`)：
     - 路径：RTOS → RT-Thread Components → Device Drivers → Using Power Management device drivers → Select PM Mode
     - 选择：Enable Standby Mode
@@ -72,7 +80,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  Standby Sleep 配置菜单   
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 3. 开启低功耗调试开关，打开后会输出低功耗相关日志 (非必选，开启后会有低功耗日志打印，会占用时间，对功耗有影响) (`Enable PM Debug`)
     - 路径：Sifli middleware → Enable Low power support -> Enable PM Debug
         - 选择：Enable PM Debug
@@ -83,7 +91,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  debug 配置菜单  
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 - 注意：如果 LCPU 打开了 STANDBY 模式，那么 HCPU 也必须打开 STANDBY 模式。
 ```
 4) 配置好后，确认工程配置文件 `rtconfig.h` 内已包含下面的定义：
@@ -94,7 +102,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 #define BSP_USING_PM 1          // 启动 PM 模块
 #define BSP_PM_DEBUG 1          // 打印 PM[S], PM[W] 的日志(非必选)
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 ```c
 #define RT_USING_PM 1           // 启动 PM 模块
 #define PM_STANDBY_ENABLE 1     // STANDBY 休眠模式
@@ -153,7 +161,7 @@ HAL_PMU_EnablePinWakeup(5, AON_PIN_MODE_NEG_EDGE); // 55x PB48 #WKUP_PIN5
 rt_kprintf("CR:0x%x,WER:0x%x\n", hwp_pmuc->CR, hwp_pmuc->WER);
 ```
 
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 55 系列之后 MCU：允许同时存在两个唤醒源 PIN0 和 PIN1，每个唤醒源可指定到任意 HCPU/LCPU 唤醒 PIN；具体参见用户手册 PMUC CR 寄存器配置。
 ```c
 // 58x/56x/52x 配置方法:
@@ -178,7 +186,7 @@ CPU进入浅睡(light)，CPU 停在 WFI 指令,系统中高速时钟关闭，CPU
 可以由低功耗定时器(LPTIM)，RTC，BLE MAC(LCPU Only)，Mailbox(其他CPU)，或者pin唤醒。唤醒时间30us-100us。
 唤醒之后继续在WFI之后的指令运行。
 ```
-```{only} SF32LB56X or SF32LB55X or SF32LB58X 
+```{only} SF32LB56X or SF32LB55X or SF32LB58X or SF32LB57X 
 - `PM_SLEEP_MODE_LIGHT`:
 CPU进入浅睡(light)，CPU 停在 WFI 指令,系统中高速时钟关闭，CPU相关的外围设备停止工作,但是不掉电，系统切换到32K时钟。
 可以由低功耗定时器(LPTIM)，RTC，BLE MAC(LCPU Only)，Mailbox(其他CPU)，或者特定的唤醒pin来唤醒。唤醒时间30us-100us。
@@ -1028,7 +1036,7 @@ HAL_RAM_RET_CODE_SECT(BSP_PowerUpCustom, void BSP_PowerUpCustom(bool is_deep_sle
 ```{only} SF32LB55X
 管脚配置代码位于开发板的 `pinmux.c` 与 `drv_io.c`。需依据 IO 定义与硬件实现 `BSP_PIN_Init`、`BSP_Power_Up`、`BSP_IO_Power_Down` 等接口。
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB52X
+```{only} SF32LB58X or SF32LB56X or SF32LB57X or SF32LB52X
 管脚配置代码位于开发板的 `pinmux.c` 与 `bsp_power.c`。需依据 IO 定义与硬件实现 `BSP_PIN_Init`、`BSP_Power_Up`、`BSP_IO_Power_Down` 等接口。
 ```
 #### 5.2.1 工作状态管脚设置
@@ -1050,7 +1058,7 @@ HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_NOPULL, 1);
 ```{only} SF32LB55X
 在 `drv_io.c`中可实现以下虚函数，用于进出睡眠时动态切换管脚设置：
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB52X
+```{only} SF32LB58X or SF32LB56X or SF32LB57X or SF32LB52X
 在 `bsp_power.c`中可实现以下虚函数，用于进出睡眠时动态切换管脚设置：
 ```
 表 5‑2：睡眠状态的管脚设置 API
@@ -1119,7 +1127,7 @@ Hibernate 唤醒：按下唤醒 PIN 后唤醒。可用 `PM_HIBERNATE_BOOT == Sys
 ```{only} SF32LB55X
 - 55 系列：Hibernate 下唤醒 PIN 均为浮空输入，为防止浮空漏电需外部上下拉；
 ```
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 - 58/56/52 系列：Hibernate 下 PMU 侧提供上下拉（`hwp_rtc->PAWK1R/PAWK2R`），建议 `HAL_PIN_Set` 配置；
 - `hwp_pmuc->WKUP_CNT` 可配置外部信号持续时间门限（限 58/56/52 系列）。
 ```
@@ -1163,7 +1171,7 @@ HAL_PMU_EnterHibernate();
 ```{only} SF32LB55X
 - 55 系列 MCU：每个唤醒 pin 可单独使能，仅需 `HAL_PMU_EnablePinWakeup` 即可；
 ```
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 - 58/56/52 系列：同时仅允许 2 个唤醒源 `pin0/pin1`，需用 `HAL_PMU_SelectWakeupPin` 指定映射；
 ```
 ```{only} SF32LB52X

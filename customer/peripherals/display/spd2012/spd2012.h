@@ -12,7 +12,6 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
-#include "../common/lcd.h"
 #include "rtconfig.h"
 /** @addtogroup BSP
   * @{

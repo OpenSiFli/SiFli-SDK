@@ -69,7 +69,7 @@ Automatic: On startup the program records 10 seconds from the microphone, encode
 Manual commands:
 - `opus` — record 10 seconds to /mic16k.pcm, then encode/decode and play
 - `opus /mic16k.pcm` — read PCM from the specified file, then encode/decode and play
-- `opus xxxxx` — if the file does not exist, record and loopback in real time for 10 seconds (record and play simultaneously)
+- `opus xxxxx` — if the file does not exist, record and loopback in real time for 10 seconds (record and play simultaneously, Keep the speaker and mic separated, otherwise there will be feedback. You can put the speaker close to your ears to cover it.)
 
 ## Troubleshooting
 

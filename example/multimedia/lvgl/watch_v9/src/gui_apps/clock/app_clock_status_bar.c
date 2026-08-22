@@ -306,6 +306,8 @@ static void control_panel_content_init(lv_obj_t *par)
     lv_obj_t *redraw_interval_slider, *clock_step_ms_slider;
     lv_obj_t *label1, *label2;
 
+    lv_obj_set_style_pad_bottom(par, PX_5mm, LV_PART_MAIN | LV_STATE_DEFAULT);
+
 #ifdef ENABLE_GRADIENT_LABEL
     label1 = gradient_label(par, "Functioooooooooooooooons");
 #else
@@ -443,6 +445,7 @@ void app_clock_main_status_bar_init(lv_obj_t *par, lv_obj_t *clock_tileview)
     tileview = lv_tileview_create(par);
     app_clock_main_status_bar = tileview;
     lv_obj_add_flag(tileview, LV_OBJ_FLAG_SCROLL_ONE);
+    lv_obj_clear_flag(tileview, LV_OBJ_FLAG_SCROLL_ELASTIC);
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_bg_opa(tileview, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
 

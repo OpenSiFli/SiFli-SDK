@@ -1,0 +1,156 @@
+menuconfig RT_USING_BT
+    bool "BT Device"
+    default n
+    if RT_USING_BT
+        choice
+            prompt "Bluetooth Device"
+            default BT_USING_SIFLI
+
+            config BT_USING_SIFLI
+                bool "SiFli Bluetooth"
+
+            config BT_USING_FR508X
+                bool "FR508X"
+                select RT_USING_AT
+                select AT_USING_CLIENT
+
+            config BT_USING_BT_5376A2
+                bool "5376A2"
+                select RT_USING_AT
+                select AT_USING_CLIENT
+        endchoice
+        config BT_DEVICE_NAME
+            string "bt device name"
+            default "bt_device"
+        if !BT_USING_SIFLI
+            config BT_UART_NAME
+                string "bt uart name"
+                default "uart1"
+                
+            config BT_UART_BAUD
+                int "bt uart baud"
+                default 921600
+            
+                
+            config BT_RECV_BUFF_LEN
+                int "bt recv buff size"
+                default 512
+                
+            menuconfig BT_PIN_CONFIG
+                bool "bt pin number config -1:invalid >=0:valid"
+                default y
+                if BT_PIN_CONFIG
+                    config MCU_WAKEUP_BT_PIN
+                        int "mcu wakeup bt pin number"
+                        default 121
+                        
+                    config MCU_RESET_BT_PIN
+                        int "mcu reset bt pin number"
+                        default -1
+                        
+                    config BT_LEVEL_SHIFT_PIN
+                        int "bt level shift pin number"
+                        default -1
+                        
+                    config BT_POWER_PIN
+                        int "bt power pin number"
+                        default 104
+                        
+                    config BT_WAKEUP_MCU_PIN
+                        int "bt wakeup mcu pin number"
+                        default -1
+                        
+                    config BT_SPK_PA_EN_PIN
+                        int "bt spk pa en pin number"
+                        default -1
+                endif
+            
+            config BT_USING_DTMF
+                bool "bt using dtmf"
+                default n
+                
+            config BT_USING_MIC_MUTE
+                bool "bt using mic mute"
+                default n
+                
+            config BT_USING_LOCAL_MEDIA_EX
+                bool "bt using local media ex function"
+                default n
+                
+            config BT_USING_SIRI
+                bool "bt using siri function"
+                default n
+                                    
+            config BT_USING_USB
+                bool "bt using usb function"
+                default n
+                
+            config BT_USING_FLASH_DB
+                bool "bt using flash db storage related settings"
+                default n
+                
+            config BT_USING_LINK_BACK
+                bool "bt using service control link back to BT"
+                default n
+                
+            config RT_US_BT_DEBUG
+                bool "open bt debug switch"
+                select AT_PRINT_RAW_CMD
+                default y
+
+            config BT_SHARING_LOG_UART
+                bool "bt client sharing log uart"
+                default n
+
+            config BT_USING_DEVICE_TYPE
+                bool "bt connect device type"
+                default n
+        endif
+        if BT_USING_SIFLI
+            config BT_USING_HF
+                bool "bt using hf"
+                default y
+                
+            config BT_USING_A2DP
+                bool "bt using a2dp"
+                default y
+                
+            config BT_USING_SPP
+                bool "bt using spp"
+                default n
+                
+            config BT_USING_DTMF
+                bool "bt using dtmf"
+                default n
+                
+            config BT_USING_MIC_MUTE
+                bool "bt using mic mute"
+                default n
+
+            config BT_USING_SIRI
+                depends on BT_USING_HF
+                bool "bt using siri function"
+                default n
+                
+            config BT_USING_AVRCP
+                bool "bt using avrcp"
+                default n
+
+            config BT_USING_HID
+                bool "bt using hid"
+                default n
+                
+            config BT_USING_AG
+                bool "bt using HFP AG"
+                default n
+                
+            config BT_USING_GATT
+                bool "bt using gatt"
+                default n
+                
+            config BT_USING_PBAP
+                depends on BT_USING_HF
+                bool "bt using pbap"
+                default n
+        endif
+    endif

@@ -1,0 +1,46 @@
+import os
+import rtconfig
+import shutil
+
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+PrepareEnv()
+
+AddOption('--lcpu',
+  dest='lcpu',
+  nargs=1, type='string',
+  action='store',
+  metavar='DIR',
+  help='lcpu image path')
+
+lcpu_path = GetOption('lcpu')
+
+# Add bootloader project
+AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
+
+# Add LCPU project
+if lcpu_path is not None:
+    shutil.copyfile(lcpu_path, "../src/lcpu_img.c")
+else:
+    AddLCPU(SIFLI_SDK, rtconfig.CHIP, "../src/lcpu_img.c")
+
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+DoBuilding(TARGET, objs)
+
+# Add DFU_CDC OTA
+AddDFU_CDC(SIFLI_SDK)
+
+
+# Add flash table
+AddFTAB(SIFLI_SDK, rtconfig.CHIP)
+
+GenDownloadScript(env)

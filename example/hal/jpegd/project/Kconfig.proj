@@ -1,0 +1,13 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool
+    select custom_mem_map
+    default y
+
+config JPEGD_USING_LCD
+    bool "Display decoded image on LCD"
+    depends on BSP_USING_LCD
+    default n
+    help
+        Convert the JPEGD planar YUV420 output to RGB565 and display the
+        100x100 image in the center of the LCD.

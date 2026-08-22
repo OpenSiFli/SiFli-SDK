@@ -1,58 +1,61 @@
-# ADC_battery Example
-Source path: example/hal/adc/adc_battery
+# ADC Battery Example
+Source code path: example/hal/adc/adc_battery
+
 ## Supported Platforms
 This example can run on the following development boards:
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
++ sf32lb57 series
+
 ## Overview
 * Uses HAL APIs to read battery voltage through a single ADC channel
 
 ## Usage
 ### Build and Flash
-The demo code defaults to single-channel ADC sampling.
+The demo code defaults to single ADC sampling (triggers one conversion after startup and prints the result)
 
-Go to the example project directory and run the following SCons command to build:
+Navigate to the example project directory and run the scons command to build:
 
 ```
 scons --board=sf32lb52-lcd_n16r8 -j8
 ```
 
-Run the flashing command:
+Execute the flash command:
 ```
 build_sf32lb52-lcd_n16r8_hcpu\uart_download.bat
 ```
 
-Select the serial port as prompted to download the firmware:
+Select the port as prompted to start downloading:
 
 ```none
 please input the serial port num:5
 ```
 
-#### Output Example
-The measured voltage value is printed once per second.
+#### Example Output:
+Prints the voltage reading every second in a loop
 
-* Comparison of logs before and after connecting the battery
+* Comparison of voltage logs before and after connecting the battery
 
 ![alt text](assets/before_after.png)
 
-* The measurement pin locations for 58_lcd and 56_lcd are:
+* Measurement pin locations for 58_lcd and 56_lcd:
 
-Measurement point for 58:
+58 measurement point:
 
 ![58](assets/58.png)
 
-Measurement point for 56:
+56 measurement point:
 
 ![56](assets/56.png)
 
 #### ADC Configuration Flow
 
-* Set the ADC channel that corresponds to the battery Vbat input. Adjust this according to your board platform. The 52-series example uses channel 7.
+* Set the channel corresponding to the battery Vbat interface according to your board platform. This example uses channel 7 for SF32LB52
 
 ![alt text](assets/1.png)
 
-* Enable the ADC device in menuconfig
+* Enable ADC device in menuconfig
 
 ```
 sdk.py menuconfig --board=sf32lb52-lcd_n16r8
@@ -60,59 +63,144 @@ sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 
 ![alt text](assets/2.png)
 
-* Set the ADC channel pin you want to measure to analog input mode (except channel 7 on the 52-series platform)
+* Set the ADC channel pin to analog input mode (for non-52 platform channel 7)
 
 ![alt text](assets/pin.png)
 
-**Note:**
-* Enable the corresponding ADC clock source. It is already enabled in the default code, so this step is not mandatory.
+**Note**: 
+* Enable the corresponding ADC clock source (enabled by default in code, not mandatory)
 ```c
 /* 2, open adc clock source  */
 HAL_RCC_EnableModule(RCC_MOD_GPADC);
 ```
 
-* ADC calibration
-1. To improve ADC accuracy, SiFli chips are factory-calibrated and the calibration parameters are stored in the OTP area. The calibration method differs across chip families.  
-    To ensure ADC accuracy, this calibration routine should be called once after each power-on. The function below reads the OTP parameters and computes the slope `adc_vol_ratio` and offset `adc_vol_offset`.
+* ADC Calibration
+1. To improve ADC accuracy, all SiFli series chips are factory-calibrated (calibration parameters written to the chip's OTP area). Different series may have different calibration methods.  
+To ensure ADC accuracy, the calibration function must be called once after each power-up. Use a unified context structure to manage calibration parameters:
 
 ```c
+/* Define calibration context */
+static HAL_ADC_CalibContextTypeDef g_adc_calib_ctx;
+
+/* Load calibration parameters */
 static int utest_adc_calib(void)
-```
-2. After obtaining the raw register value, call `example_adc_get_float_mv` to calculate the final voltage using the calibrated slope `adc_vol_ratio` and offset `adc_vol_offset`.
-3. On the 52-series chip, CH8 (Channel 7) is internally connected to Vbat through two equal divider resistors. To obtain the Vbat value, conversion is required. To reduce the error introduced by the divider resistors, the two resistors are factory-calibrated.
-```c
-static float adc_vbat_factor = 2.01; /* Calibration factor for the two internal divider resistors from CH8 (Channel 7) to Vbat on 52-series chips */
-static void example_adc_vbat_fact_calib(uint32_t voltage, uint32_t reg)
 {
-    float vol_from_reg;
+    HAL_ADC_CalibFactoryInfoTypeDef factory_info;
 
-    // Calculate voltage from the register value
-    vol_from_reg = (reg - adc_vol_offset) * adc_vol_ratio / ADC_RATIO_ACCURATE;
-    adc_vbat_factor = (float)voltage / vol_from_reg;
+    /* Load calibration context: initialize defaults + read factory configuration */
+    if (HAL_ADC_CalibLoad(NULL,
+                          &g_adc_calib_ctx,
+                          HAL_ADC_CALIB_SOURCE_BSP,
+                          HAL_ADC_CALIB_F_INIT) != HAL_OK)
+    {
+        rt_kprintf("Get ADC configure fail\n");
+        return HAL_ERROR;
+    }
+
+    /* Get factory configuration info (for logging) */
+    if (HAL_ADC_CalibGetFactoryInfo(HAL_ADC_CALIB_SOURCE_BSP, &factory_info) != HAL_OK)
+    {
+        rt_kprintf("Get ADC configure fail\n");
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
 }
-/* Convert the sampled CH8 (Channel 7) value to Vbat voltage, see the code in sifli_get_adc_value */
-    float fval = sifli_adc_get_float_mv(fave) * 10; // mv to 0.1mv based
-    *value = (rt_uint32_t)fval;
-    if (channel == 7)   // for 52x, this channel is fixed for Vbat with a 1/2 divider (calibration required)
-        *value = (rt_uint32_t)(fval * adc_vbat_factor); /* Convert the sampled ADC voltage to Vbat voltage */
 ```
+
+2. After obtaining the raw register value from ADC, call the function `HAL_ADC_RegToVoltageFloat` to calculate the final voltage value based on the calibration context:
+
+```c
+/* Read register value */
+dst = HAL_ADC_GetValue(&hadc, lslot);
+
+/* Convert to voltage (mV) */
+float voltage = HAL_ADC_RegToVoltageFloat((float)dst, &g_adc_calib_ctx);
+```
+
+3. For SF32LB52 series chips, Channel 7 is internally connected to Vbat through voltage divider resistors. To obtain the Vbat value, multiply by the calibration factor:
+
+```c
+/* Special handling for VBAT channel */
+if (channel == 7)
+{
+    /* Actual battery voltage = ADC voltage × vbat_factor */
+    voltage *= g_adc_calib_ctx.vbat_factor;
+}
+```
+
+4. Apply calibration parameters to hardware (e.g., LDO Vref settings):
+
+```c
+/* Apply calibration parameters to hardware */
+HAL_ADC_CalibApply(&hadc, &g_adc_calib_ctx);
+```
+
+## Calibration API Reference
+
+### Data Structures
+
+**HAL_ADC_CalibContextTypeDef** - Calibration context
+```c
+typedef struct 
+{ 
+    float    offset;              /* 0V offset (register value) */
+    float    ratio;               /* Gain/slope (mV/bit × 1000) */
+    uint32_t threshold_reg;       /* Overvoltage threshold (register value) */
+    uint8_t  range_mode;          /* Range mode: 0=large range(X3), 1=small range(X1) */
+    float    vbat_factor;         /* VBAT voltage divider correction factor */
+    uint8_t  ldovref_sel;         /* LDO reference voltage selection value */
+    uint8_t  flags;               /* Status flags */
+} HAL_ADC_CalibContextTypeDef;
+```
+
+**HAL_ADC_CalibFactoryInfoTypeDef** - Factory configuration info
+```c
+typedef struct 
+{ 
+    uint32_t voltage1_mv;         /* Calibration point 1 voltage (mV) */
+    uint32_t reg_value1;          /* Calibration point 1 register value */
+    uint32_t voltage2_mv;         /* Calibration point 2 voltage (mV) */
+    uint32_t reg_value2;          /* Calibration point 2 register value */
+    uint16_t vbat_reg;            /* VBAT reference register value (SF32LB52X only) */
+    uint16_t vbat_mv;             /* VBAT reference voltage (SF32LB52X only) */
+    uint8_t  ldovref_flag;        /* LDO Vref calibrated flag (SF32LB52X only) */
+    uint8_t  ldovref_sel;         /* LDO Vref selection value (SF32LB52X only) */
+    uint8_t  range_mode;          /* Range mode */
+} HAL_ADC_CalibFactoryInfoTypeDef;
+```
+
+### API Functions
+
+| Function | Description |
+|------|------|
+| `HAL_ADC_CalibLoad()` | Load calibration context |
+| `HAL_ADC_CalibInit()` | Initialize context to default values |
+| `HAL_ADC_CalibApply()` | Apply calibration parameters to hardware |
+| `HAL_ADC_CalibGetFactoryInfo()` | Get factory configuration info |
+| `HAL_ADC_RegToVoltageFloat()` | Convert register value to voltage (float) |
+| `HAL_ADC_RegToVoltage()` | Convert register value to voltage (integer) |
+| `HAL_ADC_CalibSetCustom()` | Set custom calibration parameters |
+
 ## Troubleshooting
-* The sampled ADC voltage is incorrect
-1. Check whether the ADC hardware connections are correct. ADC channels map to fixed IO pins and cannot be assigned arbitrarily. Refer to the chip manual for the CH0-CH7 mapping.  
-2. The ADC input range is 0V to the reference voltage (3.3V by default on the 52-series). Do not exceed the input range.  
-3. Use a debugging tool such as Ozone or LightWork. After starting ADC sampling, connect online and inspect the corresponding register configuration against the chip manual.
-* ADC accuracy is insufficient
-1. Verify that the ADC calibration parameters are being obtained and applied.
-2. Check whether the divider resistors meet the required accuracy.
-3. Verify that the ADC reference voltage is stable and does not have excessive ripple (see the ADC reference section in the chip manual).
+* Incorrect ADC voltage readings
+1. Check if ADC hardware is connected correctly. ADC sampling channels are fixed to specific IO pins and cannot be arbitrarily assigned. Refer to the chip manual for CH0-7 IO mapping  
+2. ADC input voltage range is 0V - reference voltage (default 3.3V for SF32LB52), do not exceed the input range  
+3. Use debugging tools like Ozone or LightWork to connect online after starting ADC sampling, and check the corresponding register configuration status against the chip manual
+* Insufficient ADC accuracy
+1. Check if ADC calibration parameters are obtained and used
+2. Check if voltage divider resistor accuracy meets requirements
+3. Check if ADC reference voltage is stable and has excessive ripple (refer to chip manual for ADC voltage reference) 
 
   
-## References
+## Reference Documents
 * EH-SF32LB52X_Pin_config_V1.3.0_20231110.xlsx
-* DS0052-SF32LB52x Chip Technical Specification V0p3.pdf
+* DS0052-SF32LB52x-Chip Technical Specification V0p3.pdf
+
 ## Revision History
-| Version | Date | Notes |
+|Version |Date   |Release Notes |
 |:---|:---|:---|
 |0.0.1 |10/2024 |Initial version |
-|0.0.2 |05/2026 |Added notes for 56 and 58 |
+|0.0.2 |03/2025 |Updated to new HAL calibration API |
+|0.0.3 |05/2026 |Added descriptions for 56 and 58 series |
 | | | |

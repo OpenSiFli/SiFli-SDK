@@ -129,74 +129,28 @@ static uint8_t rf_tx_power_cs_get(int8_t pwr)
 static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
 {
     uint8_t ret = 0;
-    uint8_t power_level = 0;
-    if (is_edr)
-    {
+    uint8_t power_level;
 
-        switch (pwr)
-        {
-        case 0:
-        {
-            power_level = 0;
-            break;
-        }
-        case 3:
-        {
-            power_level = 1;
-            break;
-        }
-        case 6:
-        {
-            power_level = 2;
-            break;
-        }
-        case 10:
-        {
-            power_level = 3;
-            break;
-        }
-        case 13:
-        {
-            power_level = 4;
-            break;
-        }
-        default:
-            ret = 1;
-            break;
-        }
+    if ((pwr >= -3) && (pwr < 13))
+    {
+        power_level = (uint8_t)(pwr + 3);
     }
-    else if (pwr >= 13)
+    else if (pwr < -3)
     {
-        switch (pwr)
-        {
-        case 13:
-        {
-            power_level = 4;//5;
-            break;
-        }
-        case 16:
-        {
-            power_level = 6;
-            break;
-        }
-        case 19:
-        {
-            power_level = 7;
-            break;
-        }
-        default:
-            ret = 2;
-            break;
-
-        }
+        power_level = 0; //min power level
     }
     else
-        ret = 3;
+    {
+        power_level = 15; //max power level
+    }
+
 
     if (ret == 0)
     {
         hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL;
         hwp_bt_mac->AESCNTL |= power_level << BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL_Pos;
+        hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_IQ_PWR;
+        hwp_bt_mac->AESCNTL |= 1 << BT_MAC_AESCNTL_FORCE_IQ_PWR_Pos;
     }
     else
     {
@@ -220,7 +174,7 @@ static uint8_t blebr_rf_power_set(int8_t txpwr)
             break;
     }
     //rt_kprintf("set txpwr %d, actully pwr %d\r\n", txpwr, rf_blebr_db[i]);
-
+#if 0
     if (rf_blebr_db[i] <= 10)
     {
         hwp_bt_phy->TX_CTRL &= ~(BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
@@ -244,10 +198,11 @@ static uint8_t blebr_rf_power_set(int8_t txpwr)
         }
     }
     else
+#endif
     {
         hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_IQ_PWR;
         hwp_bt_phy->TX_CTRL |= (BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
-        ret = rf_iq_tx_ctrl_force_set(0, rf_blebr_db[i]);
+        ret = rf_iq_tx_ctrl_force_set(0, txpwr);
     }
     return ret;
 }

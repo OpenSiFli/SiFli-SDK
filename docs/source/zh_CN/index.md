@@ -12,6 +12,10 @@ SiFli-SDK是基于RT-Thread定制开发的一套软件开发框架，使用它�
 本文档说明如何在SF32LB58x芯片上使用SDK。
 ```
 
+```{only} SF32LB57X
+本文档说明如何在SF32LB57x芯片上使用SDK。
+```
+
 ```{only} SF32LB52X
 本文档说明如何在SF32LB52x芯片上使用SDK。
 ```

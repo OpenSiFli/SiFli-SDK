@@ -352,10 +352,15 @@ def _select_start_addr(mem_type: str, sbus_addr: int, cbus_addr: int) -> int:
     return cbus_addr if mem_type == 'nor' else sbus_addr
 
 
-def _select_exec_addr(mem_type: str, sbus_addr: int, cbus_addr: int) -> int:
+def _select_exec_addr(mem_type: str, sbus_addr: int, cbus_addr: int, core=None) -> int:
     # Execution address selection:
     # - RAM/NAND: base (SBUS)
-    # - NOR/PSRAM: XIP (CBUS)
+    # - NOR/PSRAM: XIP （CBUS）
+    #
+    # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
+    # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while the
+    # HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made the exec
+    # address unusable for HCPU when ACPU passes that address over.
     return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 
 
@@ -666,13 +671,13 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
             exec_offset = ptab_module.parse_size(exec_def.get('offset', 0))
             exec_sbus, exec_cbus = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=core)
             exec_mem_type = _get_region_mem_type(exec_region, chip_config)
-            rom_base = _select_exec_addr(exec_mem_type, exec_sbus, exec_cbus)
+            rom_base = _select_exec_addr(exec_mem_type, exec_sbus, exec_cbus, core)
         else:
             region = code_p.get('region', '')
             offset = ptab_module.parse_size(code_p.get('offset', 0))
             exec_sbus, exec_cbus = ptab_module.resolve_region_address(region, offset, chip_config, core=core)
             mem_type = _get_region_mem_type(region, chip_config)
-            rom_base = _select_exec_addr(mem_type, exec_sbus, exec_cbus)
+            rom_base = _select_exec_addr(mem_type, exec_sbus, exec_cbus, core)
         rom_size = size
 
     # Pick RAM region for current build

@@ -1,12 +1,13 @@
 /*
  * Copyright (c) 2022, sakumisu
- * Copyright (c) 2025, SiFli Technologies(Nanjing) Co., Ltd 
+ * Copyright (c) 2025, SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "usbh_core.h"
 #include "usbh_hub.h"
 #include "usb_musb_reg.h"
+#include "usb_musb_dma.h"
 
 #define HWREG(x) \
     (*((volatile uint32_t *)(x)))
@@ -165,8 +166,14 @@ struct musb_pipe {
     bool inuse;
     uint32_t xfrd;
     volatile uint8_t ep0_state;
+    volatile uint32_t iso_frame_idx;
     usb_osal_sem_t waitsem;
     struct usbh_urb *urb;
+#ifdef CONFIG_USB_MUSB_DMA
+    uint8_t dma_active; /* 1 = a DMA transfer is in flight on this pipe */
+    uint8_t dma_multi;  /* 1 = DMA programmed in multi-packet mode */
+    uint16_t dma_count; /* byte count programmed into the DMA channel */
+#endif
 };
 
 struct musb_hcd {
@@ -347,9 +354,6 @@ void musb_control_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb 
     HWREGB(USB_TXHUBPORT_BASE(chidx)) = 0;
 #endif
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
 #ifdef CONFIG_USB_MUSB_SIFLI
     HWREGB(USB_TXINTERVAL_BASE(chidx)) = (urb->hport->speed == USB_SPEED_HIGH) ? 8 : 4;
 #endif
@@ -363,10 +367,6 @@ int musb_bulk_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
 {
     uint8_t old_ep_index;
     uint8_t speed = USB_TXTYPE1_SPEED_FULL;
-
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
 
     old_ep_index = musb_get_active_ep(bus);
     musb_set_active_ep(bus, chidx);
@@ -424,6 +424,38 @@ int musb_bulk_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
         HWREGB(USB_TXINTERVAL_BASE(chidx)) = 0;
         HWREGB(USB_TXHUBADDR_BASE(chidx)) = 0;
         HWREGB(USB_TXHUBPORT_BASE(chidx)) = 0;
+#endif
+
+#ifdef CONFIG_USB_MUSB_DMA
+        /* Host bulk OUT (writing to the device): hand the whole transfer to the
+         * internal MUSB DMA engine when possible; everything else keeps PIO.
+         * EP0 control stays on PIO. */
+        if (musb_dma_can_use(buffer, buflen) && !musb_dma_ch_is_active(chidx)) {
+            struct musb_pipe *pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[chidx];
+
+            musb_dma_clean_dcache(bus->hcd.hcd_id, buffer, buflen);
+            HWREGB(USB_TXCSRH_BASE(chidx)) |= USB_TXCSRH1_MODE;
+            pipe->dma_count = buflen;
+            if (buflen > USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+                /* Multi-packet: AUTOSET sends every full packet as DMA fills the
+                 * FIFO. TX interrupts fire once per packet; the last one (after
+                 * the DMA is done and the FIFO drains) completes the URB. */
+                musb_dma_program_tx(USB_BASE, chidx, chidx, buffer, buflen, 1);
+                HWREGB(USB_TXCSRH_BASE(chidx)) |= (USB_TXCSRH1_DMAEN | USB_TXCSRH1_AUTOSET);
+                pipe->dma_active = 1;
+                pipe->dma_multi = 1;
+            } else {
+                /* Single-packet: DMA fills the FIFO, the DMAINTR handler kicks
+                 * TXPKTRDY, and the TX interrupt completes the packet. */
+                musb_dma_program_tx(USB_BASE, chidx, chidx, buffer, buflen, 0);
+                HWREGB(USB_TXCSRH_BASE(chidx)) |= USB_TXCSRH1_DMAEN;
+                pipe->dma_active = 1;
+                pipe->dma_multi = 0;
+            }
+            HWREGH(USB_BASE + MUSB_TXIE_OFFSET) |= (1 << chidx);
+            musb_set_active_ep(bus, old_ep_index);
+            return 0;
+        }
 #endif
 
         if (buflen > USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
@@ -445,10 +477,6 @@ int musb_intr_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
     uint8_t old_ep_index;
     uint8_t speed = USB_TXTYPE1_SPEED_FULL;
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
-
     old_ep_index = musb_get_active_ep(bus);
     musb_set_active_ep(bus, chidx);
 
@@ -512,6 +540,87 @@ int musb_intr_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb
         }
 
         musb_write_packet(bus, chidx, buffer, buflen);
+        HWREGB(USB_TXCSRH_BASE(chidx)) |= USB_TXCSRH1_MODE;
+        HWREGB(USB_TXCSRL_BASE(chidx)) = USB_TXCSRL1_TXRDY;
+
+        HWREGH(USB_BASE + MUSB_TXIE_OFFSET) |= (1 << chidx);
+    }
+    musb_set_active_ep(bus, old_ep_index);
+    return 0;
+}
+
+int musb_iso_urb_init(struct usbh_bus *bus, uint8_t chidx, struct usbh_urb *urb)
+{
+    uint8_t old_ep_index;
+    uint8_t speed = USB_TXTYPE1_SPEED_FULL;
+    struct usbh_iso_frame_packet *iso_packet;
+    struct musb_pipe *pipe;
+
+    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[chidx];
+    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+    iso_packet->actual_length = 0;
+
+    old_ep_index = musb_get_active_ep(bus);
+    musb_set_active_ep(bus, chidx);
+
+    if (urb->hport->speed == USB_SPEED_HIGH) {
+        speed = USB_TXTYPE1_SPEED_HIGH;
+    } else if (urb->hport->speed == USB_SPEED_FULL) {
+        speed = USB_TXTYPE1_SPEED_FULL;
+    } else if (urb->hport->speed == USB_SPEED_LOW) {
+        speed = USB_TXTYPE1_SPEED_LOW;
+    }
+
+    if (urb->ep->bEndpointAddress & 0x80) {
+#ifndef CONFIG_USB_MUSB_SIFLI
+        if ((8 << HWREGB(USB_BASE + MUSB_RXFIFOSZ_OFFSET)) < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            USB_LOG_ERR("Ep %02x fifo is overflow\r\n", urb->ep->bEndpointAddress);
+            return -USB_ERR_RANGE;
+        }
+#endif
+#ifdef CONFIG_USB_MUSB_WITHOUT_MULTIPOINT
+        HWREGB(USB_BASE + MUSB_FADDR_OFFSET) = (urb->hport->dev_addr & 0x7F);
+        HWREGB(USB_RXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_RXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_RXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_RXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_RXHUBPORT_BASE(chidx)) = 0;
+#else
+        HWREGB(USB_RXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_RXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_RXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_RXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_RXHUBPORT_BASE(chidx)) = 0;
+#endif
+        HWREGB(USB_TXCSRH_BASE(chidx)) &= ~USB_TXCSRH1_MODE;
+        HWREGB(USB_RXCSRL_BASE(chidx)) = USB_RXCSRL1_REQPKT;
+
+        HWREGH(USB_BASE + MUSB_RXIE_OFFSET) |= (1 << chidx);
+    } else {
+#ifndef CONFIG_USB_MUSB_SIFLI
+        if ((8 << HWREGB(USB_BASE + MUSB_TXFIFOSZ_OFFSET)) < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            USB_LOG_ERR("Ep %02x fifo is overflow\r\n", urb->ep->bEndpointAddress);
+            return -USB_ERR_RANGE;
+        }
+#endif
+#ifdef CONFIG_USB_MUSB_WITHOUT_MULTIPOINT
+        HWREGB(USB_BASE + MUSB_FADDR_OFFSET) = (urb->hport->dev_addr & 0x7F);
+        HWREGB(USB_TXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_TXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_TXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+#else
+        HWREGB(USB_TXADDR_BASE(chidx)) = urb->hport->dev_addr;
+        HWREGB(USB_TXTYPE_BASE(chidx)) = (urb->ep->bEndpointAddress & 0x0f) | speed | USB_TXTYPE1_PROTO_ISOC;
+        HWREGB(USB_TXINTERVAL_BASE(chidx)) = urb->ep->bInterval;
+        HWREGB(USB_TXHUBADDR_BASE(chidx)) = 0;
+        HWREGB(USB_TXHUBPORT_BASE(chidx)) = 0;
+#endif
+
+        if (iso_packet->transfer_buffer_length > USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+            iso_packet->transfer_buffer_length = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
+        }
+
+        musb_write_packet(bus, chidx, iso_packet->transfer_buffer, iso_packet->transfer_buffer_length);
         HWREGB(USB_TXCSRH_BASE(chidx)) |= USB_TXCSRH1_MODE;
         HWREGB(USB_TXCSRL_BASE(chidx)) = USB_TXCSRL1_TXRDY;
 
@@ -649,9 +758,17 @@ static void musb_pipe_free(struct musb_pipe *pipe)
 
     flags = usb_osal_enter_critical_section();
 #if defined(CONFIG_USB_MUSB_SIFLI) && (defined(SF32LB52X) || defined(SF32LB56X))
-    if (pipe->urb && pipe->urb->ep && pipe->urb->hport && pipe->urb->hport->bus && 
+    if (pipe->urb && pipe->urb->ep && pipe->urb->hport && pipe->urb->hport->bus &&
         (USB_GET_ENDPOINT_TYPE(pipe->urb->ep->bmAttributes) != USB_ENDPOINT_TYPE_CONTROL)) {
         sifli_ep_map_free(pipe->urb->hport->bus, pipe->chidx);
+    }
+#endif
+#ifdef CONFIG_USB_MUSB_DMA
+    /* Abort any in-flight DMA on this pipe before the URB is dropped. */
+    if (pipe->urb && pipe->urb->hport && pipe->urb->hport->bus) {
+        musb_dma_ch_free(pipe->urb->hport->bus->hcd.reg_base, pipe->chidx);
+        pipe->dma_active = 0;
+        pipe->dma_multi = 0;
     }
 #endif
     if (pipe->urb) {
@@ -736,6 +853,11 @@ int usb_hc_deinit(struct usbh_bus *bus)
     }
 
     usb_hc_low_level_deinit(bus);
+    return 0;
+}
+
+uint16_t usbh_get_frame_number(struct usbh_bus *bus)
+{
     return 0;
 }
 
@@ -941,9 +1063,12 @@ int usbh_submit_urb(struct usbh_urb *urb)
             }
             break;
         case USB_ENDPOINT_TYPE_ISOCHRONOUS:
-            usb_osal_leave_critical_section(flags);
-            musb_pipe_free(pipe);
-            return -USB_ERR_NOTSUPP;
+            pipe->iso_frame_idx = 0;
+            ret = musb_iso_urb_init(bus, chidx, urb);
+            if (ret < 0) {
+                return ret;
+            }
+            break;
         default:
             break;
     }
@@ -995,6 +1120,13 @@ int usbh_kill_urb(struct usbh_urb *urb)
     }
 
     musb_fifo_flush(bus, (urb->ep->bEndpointAddress & 0x80) | pipe->chidx);
+
+#ifdef CONFIG_USB_MUSB_DMA
+    /* Abort any in-flight DMA and release the channel. */
+    musb_dma_ch_free(USB_BASE, pipe->chidx);
+    pipe->dma_active = 0;
+    pipe->dma_multi = 0;
+#endif
 
     if (urb->timeout) {
         usb_osal_sem_give(pipe->waitsem);
@@ -1069,9 +1201,6 @@ void handle_ep0(struct usbh_bus *bus)
             if (urb->transfer_buffer_length) {
                 if (urb->setup->bmRequestType & 0x80) {
                     pipe->ep0_state = USB_EP0_STATE_IN_DATA;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_REQPKT;
                 } else {
                     pipe->ep0_state = USB_EP0_STATE_OUT_DATA;
@@ -1080,9 +1209,6 @@ void handle_ep0(struct usbh_bus *bus)
                         size = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
                     }
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                     musb_write_packet(bus, 0, urb->transfer_buffer, size);
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_TXRDY;
 
@@ -1092,9 +1218,6 @@ void handle_ep0(struct usbh_bus *bus)
                 }
             } else {
                 pipe->ep0_state = USB_EP0_STATE_IN_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_REQPKT | USB_CSRL0_STATUS);
             }
             break;
@@ -1109,14 +1232,8 @@ void handle_ep0(struct usbh_bus *bus)
 
                 if ((size < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) || (urb->transfer_buffer_length == 0)) {
                     pipe->ep0_state = USB_EP0_STATE_OUT_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_TXRDY | USB_CSRL0_STATUS);
                 } else {
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                    HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                     HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_REQPKT;
                 }
             }
@@ -1128,9 +1245,6 @@ void handle_ep0(struct usbh_bus *bus)
                     size = USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize);
                 }
 
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x40;
-#endif
                 musb_write_packet(bus, 0, urb->transfer_buffer, size);
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_CSRL0_TXRDY;
 
@@ -1139,9 +1253,6 @@ void handle_ep0(struct usbh_bus *bus)
                 urb->actual_length += size;
             } else {
                 pipe->ep0_state = USB_EP0_STATE_IN_STATUS;
-#if defined(CONFIG_USB_MUSB_SIFLI) && defined(SF32LB58X)
-                HWREGB(USB_BASE + MUSB_SIFLI_SWCNTL1_OFFSET) = 0x00;
-#endif
                 HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_REQPKT | USB_CSRL0_STATUS);
             }
             break;
@@ -1172,6 +1283,9 @@ void USBH_IRQHandler(uint8_t busid)
     uint8_t old_ep_idx;
     struct usbh_bus *bus;
     uint32_t size;
+#ifdef CONFIG_USB_MUSB_DMA
+    uint32_t dmaintr;
+#endif
 
     bus = &g_usbhost_bus[busid];
 
@@ -1223,6 +1337,76 @@ void USBH_IRQHandler(uint8_t busid)
     if (is & USB_IS_BABBLE) {
     }
 
+#ifdef CONFIG_USB_MUSB_DMA
+    /* DMA completion is reported through DMAINTR (bit n = channel n). Handle it
+     * before the TXIS/RXIS loops so a transfer is never double-completed. */
+    dmaintr = musb_dma_read_intr(USB_BASE);
+    if (dmaintr & USB_DMA_CH_MASK) {
+        uint32_t dma_done;
+        uint32_t err_map;
+        uint32_t ch;
+
+        dma_done = musb_dma_irq_process(USB_BASE, dmaintr, &err_map);
+
+        for (ch = 1; ch < CONFIG_USB_MUSB_DMA_CH_NUM; ch++) {
+            if (dma_done & (1u << ch)) {
+                pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ch];
+                urb = pipe->urb;
+                musb_dma_ch_free(USB_BASE, ch);
+                if (urb && pipe->dma_active) {
+                    if (pipe->dma_multi) {
+                        /* TX multi-packet: DMA has finished filling the FIFO.
+                         * Keep dma_active so the TXIS loop can still recognize
+                         * this pipe; the last packet's TX interrupt completes
+                         * the URB and frees the pipe. */
+                        if (pipe->dma_count % USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) {
+                            /* The last packet is a short packet; kick the send
+                             * now. */
+                            musb_set_active_ep(bus, ch);
+                            HWREGB(USB_TXCSRL_BASE(ch)) = USB_TXCSRL1_TXRDY;
+                        }
+                    } else if (urb->ep->bEndpointAddress & 0x80) {
+                        /* Host RX (device IN): the packet was DMA'd into the
+                         * transfer buffer. */
+                        /* The packet is out of the FIFO; disable the DMA request
+                         * so the next packet starts clean (PIO or a fresh DMA). */
+                        HWREGB(USB_RXCSRH_BASE(ch)) &= ~USB_RXCSRH1_DMAEN;
+                        urb->transfer_buffer += pipe->dma_count;
+                        urb->transfer_buffer_length -= pipe->dma_count;
+                        urb->actual_length += pipe->dma_count;
+                        pipe->dma_active = 0;
+                        HWREGB(USB_RXCSRL_BASE(ch)) &= ~(USB_RXCSRL1_RXRDY);
+                        if ((pipe->dma_count < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) ||
+                            (urb->transfer_buffer_length == 0)) {
+                            urb->errorcode = 0;
+                            musb_urb_waitup(urb);
+                        } else {
+                            HWREGB(USB_RXCSRL_BASE(ch)) = USB_RXCSRL1_REQPKT;
+                        }
+                    } else {
+                        /* TX single packet: kick the send, the TX interrupt
+                         * completes the packet. */
+                        pipe->dma_active = 0;
+                        musb_set_active_ep(bus, ch);
+                        HWREGB(USB_TXCSRL_BASE(ch)) = USB_TXCSRL1_TXRDY;
+                    }
+                }
+            }
+            if (err_map & (1u << ch)) {
+                /* Bus error: release the channel and fail the URB. */
+                pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ch];
+                urb = pipe->urb;
+                musb_dma_ch_free(USB_BASE, ch);
+                if (urb) {
+                    pipe->dma_active = 0;
+                    urb->errorcode = -USB_ERR_IO;
+                    musb_urb_waitup(urb);
+                }
+            }
+        }
+    }
+#endif
+
     txis &= HWREGH(USB_BASE + MUSB_TXIE_OFFSET);
     /* Handle EP0 interrupt */
     if (txis & USB_TXIE_EP0) {
@@ -1238,6 +1422,26 @@ void USBH_IRQHandler(uint8_t busid)
             pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ep_idx];
             urb = pipe->urb;
             musb_set_active_ep(bus, ep_idx);
+
+#ifdef CONFIG_USB_MUSB_DMA
+            /* Multi-packet DMA TX raises one TX interrupt per packet. Once the
+             * DMA is done (channel freed by the DMAINTR handler), a TX interrupt
+             * with the FIFO empty means the last packet has been sent: complete
+             * the URB. Any other TX interrupt (DMA still running, or more
+             * packets still in the FIFO) is ignored. */
+            if (pipe->dma_active && pipe->dma_multi) {
+                if (urb && !musb_dma_ch_is_active(ep_idx) &&
+                    !(HWREGB(USB_TXCSRL_BASE(ep_idx)) & USB_TXCSRL1_TXRDY)) {
+                    pipe->dma_active = 0;
+                    pipe->dma_multi = 0;
+                    urb->actual_length += urb->transfer_buffer_length;
+                    urb->transfer_buffer_length = 0;
+                    urb->errorcode = 0;
+                    musb_urb_waitup(urb);
+                }
+                continue;
+            }
+#endif
 
             ep_csrl_status = HWREGB(USB_TXCSRL_BASE(ep_idx));
 
@@ -1273,6 +1477,25 @@ void USBH_IRQHandler(uint8_t busid)
                         musb_write_packet(bus, ep_idx, urb->transfer_buffer, MIN(urb->transfer_buffer_length, USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)));
                         HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_TXCSRL1_TXRDY;
                     }
+                } else {
+                    struct usbh_iso_frame_packet *iso_packet;
+                    struct musb_pipe *pipe;
+
+                    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ep_idx];
+                    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+                    iso_packet->errorcode = 0;
+
+                    pipe->iso_frame_idx++;
+
+                    if (pipe->iso_frame_idx == urb->num_of_iso_packets) {
+                        urb->actual_length = 0;
+                        urb->errorcode = 0;
+                        musb_urb_waitup(urb);
+                    } else {
+                        iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+                        musb_write_packet(bus, ep_idx, iso_packet->transfer_buffer, iso_packet->transfer_buffer_length);
+                        HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_TXCSRL1_TXRDY;
+                    }
                 }
             }
         }
@@ -1306,16 +1529,63 @@ void USBH_IRQHandler(uint8_t busid)
                 if (USB_GET_ENDPOINT_TYPE(urb->ep->bmAttributes) != USB_ENDPOINT_TYPE_ISOCHRONOUS) {
                     size = HWREGH(USB_RXCOUNT_BASE(ep_idx));
 
-                    musb_read_packet(bus, ep_idx, urb->transfer_buffer, size);
+#ifdef CONFIG_USB_MUSB_DMA
+                    /* DMA the packet out of the FIFO when the requirements are met;
+                     * the hardware auto-clears RXPKTRDY as DMA reads the FIFO, and
+                     * DMAINTR reports completion. Everything else stays on PIO. */
+                    if (musb_dma_can_use(urb->transfer_buffer, size) &&
+                        !musb_dma_ch_is_active(ep_idx)) {
+                        pipe->dma_count = size;
+                        musb_dma_invalidate_dcache(bus->hcd.hcd_id, urb->transfer_buffer, size);
+                        musb_dma_program_rx(USB_BASE, ep_idx, ep_idx, urb->transfer_buffer, size);
+                        /* Enable the FIFO DMA request so the channel unloads the
+                         * packet; the hardware auto-clears RXPKTRDY. */
+                        HWREGB(USB_RXCSRH_BASE(ep_idx)) |= USB_RXCSRH1_DMAEN;
+                        pipe->dma_active = 1;
+                        pipe->dma_multi = 0;
+                    } else
+#endif
+                    {
+#ifdef CONFIG_USB_MUSB_DMA
+                        /* No DMA for this packet: make sure the FIFO DMA request
+                         * is off so RXPKTRDY can only be cleared by PIO. */
+                        HWREGB(USB_RXCSRH_BASE(ep_idx)) &= ~USB_RXCSRH1_DMAEN;
+#endif
+                        musb_read_packet(bus, ep_idx, urb->transfer_buffer, size);
+
+                        HWREGB(USB_RXCSRL_BASE(ep_idx)) &= ~USB_RXCSRL1_RXRDY;
+
+                        urb->transfer_buffer += size;
+                        urb->transfer_buffer_length -= size;
+                        urb->actual_length += size;
+
+                        if ((size < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) || (urb->transfer_buffer_length == 0)) {
+                            //HWREGH(USB_BASE + MUSB_RXIE_OFFSET) &= ~(1 << ep_idx);
+                            urb->errorcode = 0;
+                            musb_urb_waitup(urb);
+                        } else {
+                            HWREGB(USB_RXCSRL_BASE(ep_idx)) = USB_RXCSRL1_REQPKT;
+                        }
+                    }
+                } else {
+                    struct usbh_iso_frame_packet *iso_packet;
+                    struct musb_pipe *pipe;
+
+                    pipe = &g_musb_hcd[bus->hcd.hcd_id].pipe_pool[ep_idx];
+                    iso_packet = &urb->iso_packet[pipe->iso_frame_idx];
+
+                    size = HWREGH(USB_RXCOUNT_BASE(ep_idx));
+
+                    musb_read_packet(bus, ep_idx, iso_packet->transfer_buffer, size);
 
                     HWREGB(USB_RXCSRL_BASE(ep_idx)) &= ~USB_RXCSRL1_RXRDY;
 
-                    urb->transfer_buffer += size;
-                    urb->transfer_buffer_length -= size;
-                    urb->actual_length += size;
+                    iso_packet->actual_length = size;
+                    iso_packet->errorcode = 0;
+                    pipe->iso_frame_idx++;
 
-                    if ((size < USB_GET_MAXPACKETSIZE(urb->ep->wMaxPacketSize)) || (urb->transfer_buffer_length == 0)) {
-                        //HWREGH(USB_BASE + MUSB_RXIE_OFFSET) &= ~(1 << ep_idx);
+                    if (pipe->iso_frame_idx == urb->num_of_iso_packets) {
+                        urb->actual_length = 0;
                         urb->errorcode = 0;
                         musb_urb_waitup(urb);
                     } else {

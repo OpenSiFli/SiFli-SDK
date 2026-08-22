@@ -47,6 +47,11 @@ struct sec_configuration *temp_sec_config;
 
 ALIGN(4) struct sec_configuration sec_config_cache;
 
+#ifdef CFG_BOOTROM
+    __attribute__((used))
+    const char *const bootrom_ver = "v1.1";
+#endif /* CFG_BOOTROM */
+
 void boot_ram(void)
 {
     sboot_standby_boot_tbl_t *boot_tbl = (sboot_standby_boot_tbl_t *)hwp_hpsys_aon->RESERVE0;
@@ -261,6 +266,24 @@ void boot_images_help()
         }
 
         select_boot();
+
+#ifdef DFU_LOADER_START_ADDR
+        /* UART-DFU trigger (at_app AT+OTA): needs_update=1 at the DFU_LOADER
+         * trailer (end - 0x2000, field offset 288) -> boot the DFU loader image
+         * (LCPU slot) instead of main. Compiled only for boards whose ptab
+         * defines a DFU_LOADER partition. */
+        if (DFU_LOADER_START_ADDR != FLASH_UNINIT_32 &&
+            DFU_LOADER_SIZE != FLASH_UNINIT_32)
+        {
+            uint32_t dfu_needs_update = 0;
+            g_flash_read(DFU_LOADER_START_ADDR + DFU_LOADER_SIZE - 0x2000 + 288,
+                         (const int8_t *)&dfu_needs_update, sizeof(dfu_needs_update));
+            if (dfu_needs_update == 1)
+            {
+                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
+            }
+        }
+#endif
 
         if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
         {
@@ -575,6 +598,9 @@ static void print_uid(void)
     HAL_Delay_us(0);
 
     print_boot_info();
+
+    /* init pmcu ldo en ss register according to efuse setting */
+    board_ldo_en_ss_init();
 
     if (!boot_is_bootmode())
     {

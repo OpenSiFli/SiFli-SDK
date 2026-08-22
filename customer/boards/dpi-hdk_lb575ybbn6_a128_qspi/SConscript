@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('./*.c')
+
+path =  [cwd, 
+         os.path.join(cwd, '../include')]
+
+group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_DPI_HDK_LB575YBBN6_A128_QSPI'], CPPPATH = path)
+
+if GetDepend('BSP_USING_BOARD_DPI_HDK_LB575YBBN6_A128_QSPI'):
+    group = group + SConscript('../sf32lb57-dpi-hdk_base/SConscript.base')
+
+Return('group')

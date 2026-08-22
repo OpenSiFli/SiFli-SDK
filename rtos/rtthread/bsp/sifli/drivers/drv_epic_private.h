@@ -16,8 +16,19 @@
 extern "C" {
 #endif
 
-#define  DBG_LEVEL            DBG_INFO  //DBG_LOG //
-#define LOG_TAG                "drv.epic"
+#ifdef DBG_LEVEL
+    #undef DBG_LEVEL
+#endif
+#ifdef DRV_EPIC_DEBUG_LOG
+    #define DBG_LEVEL             DBG_LOG
+#else
+    #define DBG_LEVEL             DBG_INFO
+#endif
+
+#ifdef LOG_TAG
+    #undef LOG_TAG
+#endif
+#define LOG_TAG                   "drv.epic"
 #include "log.h"
 
 #ifndef __DEBUG__
@@ -55,7 +66,7 @@ extern "C" {
 #ifdef DRV_EPIC_NEW_API
 
 #define render_list_pool_max    2
-#define letter_pool_max         512//800
+#define letter_pool_max         800//800
 #define mask_buf_max_bytes      (16*1024)
 #define mask_buf2_max_bytes     1600
 #if defined(ROTATE_BUF_SIZE) && defined(ROTATE_BUF_IN_SRAM)
@@ -267,7 +278,13 @@ typedef struct
     Private Macros
 */
 
-#ifdef SOLUTION
+#if defined(DRV_EPIC_ALLOC_USE_ANIM_HEAP)
+#include "app_mem.h"
+#define epic_malloc          app_anim_alloc
+#define epic_realloc         app_anim_realloc
+#define epic_calloc          app_anim_calloc
+#define epic_free            app_anim_free
+#elif defined(SOLUTION)
 #include "app_mem.h"
 #define epic_malloc          app_malloc
 #define epic_realloc         app_realloc

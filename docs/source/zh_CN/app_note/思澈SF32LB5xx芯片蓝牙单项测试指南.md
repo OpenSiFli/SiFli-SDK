@@ -16,7 +16,7 @@
 
 测试拓扑如图 1-1 所示，DUT 和电脑通过串口连接，RF 通过同轴线和综测仪相连。
 
-```{figure} assert/figure_11-1.png
+```{figure} assets/figure_11-1.png
 :align: center
 
 图 1-1
@@ -66,7 +66,7 @@
 - 选择与 UART1 口对应的 COM 口，波特率设成 1000000
 - 点击连接。连接成功后，状态指示灯会变为绿色
 
-```{figure} assert/figure_12-1.png
+```{figure} assets/figure_12-1.png
 :align: center
 
 图 3-1
@@ -74,7 +74,7 @@
 
 - 在 Frequency、Data Length、payload、PHY 中设置测试所需的信道、PHY 类型等，如图 3-2 红色框所示：
 
-```{figure} assert/figure_12-2.png
+```{figure} assets/figure_12-2.png
 :align: center
 
 图 3-2
@@ -82,7 +82,7 @@
 
 - 点击 Start TX，Start TX 变成 Stop TX，且右边的指示灯变成绿色，则表示发射成功。如图 3-3 所示，发送成功后可在综测仪上看到对应参数。
 
-```{figure} assert/figure_12-3.png
+```{figure} assets/figure_12-3.png
 :align: center
 
 图 3-3
@@ -90,7 +90,7 @@
 
 - 如果要测试其他信道、PHY 类型等，须先点击 Stop TX，指示灯变成灰色后表示断开，如图 3-4：
 
-```{figure} assert/figure_12-4.png
+```{figure} assets/figure_12-4.png
 :align: center
 
 图 3-4
@@ -103,7 +103,7 @@
 - 选择 RX，设置 Frequency，PHY 类型
 - 点击 Start RX，Start RX 变成 Stop RX，且指示灯变成绿色，表示进入对应 RX 状态，如图 3-5。
 
-```{figure} assert/figure_12-5.png
+```{figure} assets/figure_12-5.png
 :align: center
 
 图 3-5
@@ -111,7 +111,7 @@
 
 - 如果测试其他信道，需先点击 Stop RX，右侧指示灯变成灰色，停止当前 RX 测试状态，再去设置，如图 3-6。
 
-```{figure} assert/figure_12-6.png
+```{figure} assets/figure_12-6.png
 :align: center
 
 图 3-6
@@ -124,7 +124,7 @@
 - 在 [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) 工具上，选择 UART3 对应的 COM 端口，波特率设成 1000000
 - 点击连接，指示灯变成绿色，如图 4-1。
 
-```{figure} assert/figure_12-7.png
+```{figure} assets/figure_12-7.png
 :align: center
 
 图 4-1
@@ -133,7 +133,7 @@
 - 设置对应频率和功率等级
 - 点击 Start TX，右侧指示灯变成绿色，如图 4-2。4s 左右后，可在综测仪上看对应测试值。（切换其他频率测试时，先点击 Stop TX，再修改频率和功率等级，修改完频率和功率后，再点击 Start TX 即可。）
 
-```{figure} assert/figure_12-8.png
+```{figure} assets/figure_12-8.png
 :align: center
 
 图 4-2
@@ -141,7 +141,7 @@
 
 ````
 
-````{only} SF32LB52X or SF32LB56X or SF32LB58X
+````{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 
 ## 2. 测试准备
 
@@ -185,7 +185,7 @@
 - 选择 BLE 非信令以及 UART1 对应的 COM 端口，波特率设成 1000000
 - 点击连接。连接成功后，状态指示灯会变为绿色
 
-```{figure} assert/figure_13-1.jpg
+```{figure} assets/figure_13-1.jpg
 :align: center
 
 图 3-1
@@ -195,7 +195,7 @@
 - 点击 Start TX，按钮右侧灰色点变成绿色点，则表示发射成功，可在综测仪上看到对应参数，如图 3-2
 - 如果要测试其他信道、PHY 类型等，须先点击 Stop TX，更改设置后再点击 Start TX。
 
-```{figure} assert/figure_13-2.png
+```{figure} assets/figure_13-2.png
 :align: center
 
 图 3-2
@@ -211,7 +211,7 @@
 
 > **注**：如果直接从 BLE 非信令测试转到 BT 非信令测试，只需要先点击"Stop TX"，再选择切换测试模式为 BT 非信令即可，串口连接无需再次连接。
 
-```{figure} assert/figure_13-3.png
+```{figure} assets/figure_13-3.png
 :align: center
 
 图 3-3
@@ -221,7 +221,7 @@
 - 点击 Start TX，如按钮右侧灰色点变成绿色点，则表示发射成功，此时可在综测仪上看到对应指标参数，如图 3-4
 - 如果要测试其他信道、Packet 类型等，须先点击 Stop TX，更改设置后再点击 Start TX。
 
-```{figure} assert/figure_13-4.png
+```{figure} assets/figure_13-4.png
 :align: center
 
 图 3-4
@@ -233,7 +233,7 @@
 - 设置 Frequency 类型等
 - 点击 Start RX，如按钮右侧灰色点变成绿色点，则表示进入对应 RX 状态，如图 3-5。
 
-```{figure} assert/figure_13-5.png
+```{figure} assets/figure_13-5.png
 :align: center
 
 图 3-5
@@ -258,7 +258,7 @@
 | 3 | 2.79 | 2.80 |
 | 0 | 0.26 | 0.27 |
 
-```{figure} assert/figure_23-2.png
+```{figure} assets/figure_23-2.png
 :align: center
 
 图 3-6 BLE TX power 实测曲线
@@ -277,7 +277,7 @@
 
 > EDR 不支持 8 dBm 档位。
 
-```{figure} assert/figure_24-2.png
+```{figure} assets/figure_24-2.png
 :align: center
 
 图 3-7 Classic BT TX power 实测曲线
@@ -289,7 +289,7 @@
 - 设置对应频率和功率等级
 - 点击 Start TX，按钮右侧灰色点变成绿色点，表示发送成功，可在综测仪上看对应指标参数，如图 4-1。
 
-```{figure} assert/figure_13-6.png
+```{figure} assets/figure_13-6.png
 :align: center
 
 图 4-1
@@ -311,7 +311,7 @@ DUT 可通过同轴线测试传导或者空口测试耦合数据，耦合数据�
 
 完成 §3-§4 的 SiFli_RfTool 端 TX 配置后，DUT 已按设定参数发射 RF 信号（以 LB56X / BT 非信令 / ch0 / DH1 / PRBS9 / 0 dBm 为例，如图 5-1）。
 
-```{figure} assert/figure_14-2.png
+```{figure} assets/figure_14-2.png
 :align: center
 
 图 5-1 SiFli_RfTool 端 TX 配置示例
@@ -319,7 +319,7 @@ DUT 可通过同轴线测试传导或者空口测试耦合数据，耦合数据�
 
 综测仪侧据此配置非信令接收：在 Multi Evaluation Configuration 界面把 "Scenario" 选项设为 "StandAlone (Non Signaling)"，并把信道、Packet type、Payload 等接收参数与 SiFli_RfTool 端保持一致，如图 5-2。
 
-```{figure} assert/figure_14-1.jpg
+```{figure} assets/figure_14-1.jpg
 :align: center
 
 图 5-2 综测仪 Non-Signaling 配置界面
@@ -346,7 +346,7 @@ CMW500 切到 RX Measurement 界面，参数如图 5-3：
 | Pattern Type | PRBS9 |
 | **Repeat Select** | **Single shot**（关键：必须设此选项才能正确统计） |
 
-```{figure} assert/figure_26-1.png
+```{figure} assets/figure_26-1.png
 :align: center
 
 图 5-3 CMW500 BLE Rx 仪表配置
@@ -361,7 +361,7 @@ CMW500 切到 RX Measurement 界面，参数如图 5-3：
 5. 计算 PER：**PER = (n − 1500) / 1500 × 100%**（n 为 DUT 实际收到的包数）
 6. 同时查看工具上的 RSSI 值（理论值约 -67 dBm，对应 CMW Tx Level）
 
-```{figure} assert/figure_26-3.png
+```{figure} assets/figure_26-3.png
 :align: center
 
 图 5-4 BLE Rx 测试结果显示（RSSI、收包数）
@@ -371,7 +371,7 @@ CMW500 切到 RX Measurement 界面，参数如图 5-3：
 
 Classic BT 没有 SIG DTM 标准模式，CMW500 通过 GPRF Generator 加载预制波形文件发射。波形文件如 `DH1_UAP00.wv` 等，仪表配置如图 5-5。
 
-```{figure} assert/figure_27-1.png
+```{figure} assets/figure_27-1.png
 :align: center
 
 图 5-5 GPRF Generator 仪表配置（Classic BT 波形发射）
@@ -384,7 +384,7 @@ Classic BT 没有 SIG DTM 标准模式，CMW500 通过 GPRF Generator 加载预�
 3. 在 CMW500 上把 GPRF Generator 切 OFF → ON 启动发射，等待约 5 秒
 4. 在 SiFli_RfTool 上点击 **Stop RX**，工具显示 RSSI、收到包数、误包数、误包率、收到 bit 数、误 bit 数、误比特率（参考图 5-6）
 
-```{figure} assert/figure_27-2.png
+```{figure} assets/figure_27-2.png
 :align: center
 
 图 5-6 Classic BT Rx 测试结果
@@ -396,7 +396,7 @@ Classic BT 没有 SIG DTM 标准模式，CMW500 通过 GPRF Generator 加载预�
 
 若没有综测仪也可以使用频谱仪观测 DUT 的部分指标参数，频谱仪频率需根据 [SiFli_RfTool](../tools/SiFli_RfTool/SiFli_RfTool_UM.md) 发送的频率进行配置中心频率，DUT 通过同轴线连接到频谱仪上就可以看到 DUT 的输出波形，如图 6-1。
 
-```{figure} assert/figure_15-1.png
+```{figure} assets/figure_15-1.png
 :align: center
 
 图 6-1

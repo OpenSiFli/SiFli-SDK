@@ -9,6 +9,14 @@ SF32LB58X is a tri‑core chip (dual high‑performance cores + one low‑power 
 ```
 Refer to the low‑power example at `example\pm\classical`.
 
+:::{only} SF32LB56X
+Reference document for power consumption test: [Power Consumption Test Report](https://docs.sifli.com/projects/rpt5602_sf32lb56x-low-power-measurement-report/latest/zh_CN/index.html)
+:::
+
+:::{only} SF32LB52X
+Reference document for power consumption test: [Power Consumption Test Report](https://docs.sifli.com/projects/rpt5202_sf32lb52x-low-power-measurement-report/latest/zh_CN/index.html)
+:::
+
 ## 2 Configure Low‑Power Mode
 
 ### 2.1 Enable Low‑Power Mode
@@ -47,7 +55,7 @@ Figure: Deep Sleep configuration menu
 :align: center
 Figure: PM debug configuration menu
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 Run `sdk.py menuconfig` in the project directory to open the configuration menu:
 
 1. Enable low‑power support (`Enable Low power support`):
@@ -60,7 +68,7 @@ Run `sdk.py menuconfig` in the project directory to open the configuration menu:
 :align: center
 Figure: Enable Low Power configuration menu
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 2. Select low‑power mode (`Enable Standby Mode`):
     - Path: RTOS → RT‑Thread Components → Device Drivers → Using Power Management device drivers → Select PM Mode
     - Select: Enable Standby Mode
@@ -71,7 +79,7 @@ Figure: Enable Low Power configuration menu
 :align: center
 Figure: Standby Sleep configuration menu
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 3. Enable PM debug to print low‑power logs (optional; printing logs consumes time and affects power) (`Enable PM Debug`):
     - Path: Sifli middleware → Enable Low power support → Enable PM Debug
         - Select: Enable PM Debug
@@ -82,7 +90,7 @@ Figure: Standby Sleep configuration menu
 :align: center
 Figure: PM debug configuration menu
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 - Note: If LCPU enables STANDBY mode, HCPU must also enable STANDBY mode.
 ```
 4) After configuration, verify `rtconfig.h` includes the following:
@@ -93,7 +101,7 @@ Figure: PM debug configuration menu
 #define BSP_USING_PM 1          // Enable PM module
 #define BSP_PM_DEBUG 1          // Print PM[S], PM[W] logs (optional)
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
 ```c
 #define RT_USING_PM 1           // Enable PM module
 #define PM_STANDBY_ENABLE 1     // Use STANDBY sleep mode
@@ -152,7 +160,7 @@ HAL_PMU_EnablePinWakeup(5, AON_PIN_MODE_NEG_EDGE); // 55x PB48 #WKUP_PIN5
 rt_kprintf("CR:0x%x,WER:0x%x\n", hwp_pmuc->CR, hwp_pmuc->WER);
 ```
 
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 Post‑55 series MCUs: Allow two wake‑up sources PIN0 and PIN1 at the same time; each source can map to any HCPU/LCPU wake pin. See PMUC CR register in the User Manual.
 ```c
 // 58x/56x/52x configuration:
@@ -177,7 +185,7 @@ CPU enters light sleep (WFI). High‑speed clocks are turned off. CPU‑related 
 Wake‑up sources: LPTIM, RTC, BLE MAC (LCPU Only), Mailbox (other CPU), or pin. Wake‑up latency: 30–100 µs.
 Execution resumes at the instruction after WFI.
 ```
-```{only} SF32LB56X or SF32LB55X or SF32LB58X 
+```{only} SF32LB56X or SF32LB55X or SF32LB58X or SF32LB57X 
 - `PM_SLEEP_MODE_LIGHT`:
 CPU enters light sleep (WFI). High‑speed clocks are turned off. CPU‑related peripherals stop but remain powered. The system clock switches to 32K.
 Wake‑up sources: LPTIM, RTC, BLE MAC (LCPU Only), Mailbox (other CPU), or specific wake‑up pins. Wake‑up latency: 30–100 µs.
@@ -1026,7 +1034,7 @@ Note: When running XIP from NOR flash, code controlling NOR sleep/wake must be p
 ```{only} SF32LB55X
 Pin configuration code resides in the board’s `pinmux.c` and `drv_io.c`. Implement `BSP_PIN_Init`, `BSP_Power_Up`, `BSP_IO_Power_Down` per IO definitions and hardware.
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB52X
+```{only} SF32LB58X or SF32LB56X or SF32LB57X or SF32LB52X
 Pin configuration code resides in the board’s `pinmux.c` and `bsp_power.c`. Implement `BSP_PIN_Init`, `BSP_Power_Up`, `BSP_IO_Power_Down` per IO definitions and hardware.
 ```
 #### 5.2.1 Pin Configuration in Active State
@@ -1048,7 +1056,7 @@ HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_NOPULL, 1);
 ```{only} SF32LB55X
 In `drv_io.c`, implement the following virtual functions to dynamically switch pin settings when entering/exiting sleep:
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB52X
+```{only} SF32LB58X or SF32LB56X or SF32LB57X or SF32LB52X
 In `bsp_power.c`, implement the following virtual functions to dynamically switch pin settings when entering/exiting sleep:
 ```
 Table 5‑2: Pin Configuration APIs for Sleep State
@@ -1117,7 +1125,7 @@ Before entering Hibernate:
 ```{only} SF32LB55X
 - 55 series: Wake‑up pins are floating inputs in Hibernate; external pull‑ups/downs are required to avoid leakage.
 ```
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 - 58/56/52 series: PMU provides pull‑up/down in Hibernate (`hwp_rtc->PAWK1R/PAWK2R`); configure via `HAL_PIN_Set`.
 - `hwp_pmuc->WKUP_CNT` sets external signal duration thresholds (58/56/52 series only).
 ```
@@ -1161,7 +1169,7 @@ Notes:
 ```{only} SF32LB55X
 - 55 series MCU: Each wake‑up pin can be enabled individually with `HAL_PMU_EnablePinWakeup`.
 ```
-```{only} SF32LB52X or SF32LB56X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 - 58/56/52 series: Only two wake‑up sources (`pin0/pin1`) are allowed at the same time; map via `HAL_PMU_SelectWakeupPin`.
 ```
 ```{only} SF32LB52X

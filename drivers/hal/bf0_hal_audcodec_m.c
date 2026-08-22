@@ -180,10 +180,21 @@ __weak int bf0_enable_pll(uint32_t freq, uint8_t type)// need updata drv_audcode
         hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_VCO;
         hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_ANA;
         hwp_audcodec->PLL_CFG0 &= ~AUDCODEC_PLL_CFG0_ICP_SEL_Msk;
+#ifdef SF32LB52X
         hwp_audcodec->PLL_CFG0 |= (8 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#elif defined(SF32LB57X)
+        hwp_audcodec->PLL_CFG0 |= (3 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#else
+#error "todo"
+#endif
         hwp_audcodec->PLL_CFG2 |= AUDCODEC_PLL_CFG2_EN_DIG;
         hwp_audcodec->PLL_CFG3 |= AUDCODEC_PLL_CFG3_EN_SDM;
-        hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG;
+        hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG
+#ifdef AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos
+                                  | (2 << AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos)
+#endif
+                                  ;
+
         hwp_audcodec->PLL_CFG1 = (3 << AUDCODEC_PLL_CFG1_R3_SEL_Pos) |
                                  (1 << AUDCODEC_PLL_CFG1_RZ_SEL_Pos) |
                                  (3 << AUDCODEC_PLL_CFG1_C2_SEL_Pos) |
@@ -445,10 +456,21 @@ void HAL_TURN_ON_PLL()
     hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_VCO;
     hwp_audcodec->PLL_CFG0 |= AUDCODEC_PLL_CFG0_EN_ANA;
     hwp_audcodec->PLL_CFG0 &= ~AUDCODEC_PLL_CFG0_ICP_SEL_Msk;
+#ifdef SF32LB52X
     hwp_audcodec->PLL_CFG0 |= (8 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#elif defined(SF32LB57X)
+    hwp_audcodec->PLL_CFG0 |= (3 << AUDCODEC_PLL_CFG0_ICP_SEL_Pos);
+#else
+#error "todo"
+#endif
     hwp_audcodec->PLL_CFG2 |= AUDCODEC_PLL_CFG2_EN_DIG;
     hwp_audcodec->PLL_CFG3 |= AUDCODEC_PLL_CFG3_EN_SDM;
-    hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG;
+    hwp_audcodec->PLL_CFG4 |= AUDCODEC_PLL_CFG4_EN_CLK_DIG
+#ifdef AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos
+                              | (2 << AUDCODEC_PLL_CFG4_DIVB_CLK_DIG_Pos)
+#endif
+                              ;
+
     hwp_audcodec->PLL_CFG1 = (3 << AUDCODEC_PLL_CFG1_R3_SEL_Pos) |
                              (1 << AUDCODEC_PLL_CFG1_RZ_SEL_Pos) |
                              (3 << AUDCODEC_PLL_CFG1_C2_SEL_Pos) |
@@ -517,6 +539,9 @@ __HAL_ROM_USED void HAL_AUDCODEC_Config_Analog_ADCPath(AUDCODE_ADC_CLK_CONFIG_TY
 {
     HAL_DBG_printf("config Aanlog ADCPath\n");
     // turn on lp adc1 and adc2 analog
+#ifdef AUDCODEC_ADC_ANA_CFG_PSW_EN
+    hwp_audcodec->ADC_ANA_CFG |= AUDCODEC_ADC_ANA_CFG_PSW_EN;
+#endif
     hwp_audcodec->BG_CFG0 &= ~AUDCODEC_BG_CFG0_EN_SMPL;
     hwp_audcodec->ADC_ANA_CFG |= AUDCODEC_ADC_ANA_CFG_MICBIAS_EN;
 #if !defined(SF32LB57X)
@@ -552,8 +577,11 @@ __HAL_ROM_USED void HAL_AUDCODEC_Config_Analog_ADCPath(AUDCODE_ADC_CLK_CONFIG_TY
         hwp_audcodec->PLL_CFG2  |= AUDCODEC_PLL_CFG2_RSTB;
     }
 
+#ifdef ADC1_DIFFERENTIAL_INPUT
+    hwp_audcodec->ADC1_CFG1 |= AUDCODEC_ADC1_CFG1_DIFF_EN;
+#else
     hwp_audcodec->ADC1_CFG1 &= ~AUDCODEC_ADC1_CFG1_DIFF_EN;
-    //hwp_audcodec->ADC1_CFG1 |= AUDCODEC_ADC1_CFG1_DIFF_EN;
+#endif
 #if !defined(SF32LB57X)
     hwp_audcodec->ADC1_CFG1 &= ~AUDCODEC_ADC1_CFG1_DACN_EN;
 #endif
@@ -611,6 +639,9 @@ __HAL_ROM_USED void HAL_AUDCODEC_Close_Analog_ADCPath(void)
     hwp_audcodec->ADC1_CFG2 &= ~AUDCODEC_ADC1_CFG2_EN;
     hwp_audcodec->ADC2_CFG2 &= ~AUDCODEC_ADC2_CFG2_EN;
     hwp_audcodec->ADC_ANA_CFG &= ~AUDCODEC_ADC_ANA_CFG_MICBIAS_EN;
+#ifdef AUDCODEC_ADC_ANA_CFG_PSW_EN
+    hwp_audcodec->ADC_ANA_CFG &= ~AUDCODEC_ADC_ANA_CFG_PSW_EN;
+#endif
     HAL_DBG_printf("close Aanlog ADCPath\n");
 
 }

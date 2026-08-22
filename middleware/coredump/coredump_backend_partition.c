@@ -13,7 +13,7 @@
 #include "drv_flash.h"
 #include "fal.h"
 #if defined(BSP_USING_SDIO)
-    #include "mmcsd_core.h"
+    #include "drivers/mmcsd_core.h"
 #endif /* BSP_USING_SDIO */
 
 #define COREDUMP_CACHE_BUF_SIZE (4096)
@@ -245,6 +245,17 @@ static coredump_err_code_t coredump_backend_partition_init(coredump_type_t cored
     {
         return COREDUMP_ERR_BACKEND_NOT_READY;
     }
+
+    /* Open device for SDMMC */
+    if (fal_dev->nand_flag == 2)
+    {
+        rt_err_t ret = rt_device_open(ctx->device, RT_DEVICE_OFLAG_RDWR);
+        if (ret != RT_EOK)
+        {
+            rt_kprintf("Failed to open device %s, ret=%d\n", fal_part->name, ret);
+            return COREDUMP_ERR_BACKEND_NOT_READY;
+        }
+    }
 #ifdef BSP_USING_SPI_FLASH
     if (0 == fal_dev->nand_flag)
     {
@@ -312,9 +323,9 @@ static coredump_err_code_t coredump_backend_partition_start(void)
         }
     }
 
-// TODO: SDIO is not ready yet
+/* Disable SDIO interrupt to avoid interference during coredump writing */
 #if defined(BSP_USING_SDIO)
-    // rt_mmcsd_irq_disable();
+    rt_mmcsd_irq_disable();
 #endif /* BSP_USING_SDIO */
 
     rt_flash_enable_lock(0);

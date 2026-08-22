@@ -45,6 +45,7 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
     *.o (.nand_cache)
     *.o (.l2_non_ret_data_*)
     *.o (.l2_non_ret_bss_*)
+    *.o (.bss.l2_non_ret_bss_*)
   }
   ScatterAssert((ImageLength(RW_PSRAM_MPI2))<=PSRAM_DATA2_SIZE)
 #endif
@@ -145,7 +146,6 @@ LR_IROM1 CODE_START_ADDR CODE_SIZE  {    ; load region size_region
 
 LR_IROM3 HCPU_FLASH2_FONT_START_ADDR HCPU_FLASH2_FONT_SIZE  {  ; load region size_region
   ER_IROM3 HCPU_FLASH2_FONT_START_ADDR HCPU_FLASH2_FONT_SIZE  {  ; RW data
-   ;lvsf_font_*.o  (.rodata.*)
    }
 }
 

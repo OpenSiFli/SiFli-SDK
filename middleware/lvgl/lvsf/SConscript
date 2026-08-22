@@ -30,6 +30,9 @@ if not GetDepend('LVSF_USING_SWITCHANIM'):
     SrcRemove(src, 'lvsf_switchanim.c')
     SrcRemove(src, 'lvsf_switchanim_com.c')
 
+if not GetDepend('LVSF_USING_SJPG'):
+    SrcRemove(src, 'lvsf_sjpg.c')
+
 LOCAL_CCFLAGS = ''
 
 group.extend(DefineGroup('LV_SF', src, depend=['PKG_USING_LITTLEVGL2RTT'], CPPPATH=inc, LOCAL_CCFLAGS=LOCAL_CCFLAGS))

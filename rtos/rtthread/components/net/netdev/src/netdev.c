@@ -1335,6 +1335,13 @@ int netdev_cmd_ping(char *target_name, char *netdev_name, rt_uint32_t times, rt_
     min_time = 0xFFFFFFFF;
     for (index = 0; index < times; index++)
     {
+        netdev = netdev_name != RT_NULL ? netdev_get_by_name(netdev_name) : netdev_default;
+        if (netdev == RT_NULL)
+        {
+            rt_kprintf("ping: network interface device removed.\n");
+            return -RT_ERROR;
+        }
+
         int delay_tick = 0;
         rt_tick_t start_tick = 0;
 

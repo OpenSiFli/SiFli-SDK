@@ -67,18 +67,15 @@ HAL_RETM_BSS_SECT(bsp_psram_info, static bsp_psram_info_t bsp_psram_info[BSP_PSR
 HAL_RAM_RET_CODE_SECT(bsp_psram_init_info, int32_t bsp_psram_init_info(void))
 {
     uint8_t pkgid;
-    int32_t r;
     bsp_psram_info_t *info;
 
     if (sizeof(pkgid) < (EFUSE_PKGID_SIZE >> 3))
     {
         return -1;
     }
-    r = HAL_EFUSE_Read2(EFUSE_PKGID_OFFSET, &pkgid, EFUSE_PKGID_SIZE);
-    if (r < EFUSE_PKGID_SIZE)
-    {
-        return -2;
-    }
+
+    pkgid = GET_REG_VAL2(hwp_hpsys_cfg->IDR, HPSYS_CFG_IDR_PID);
+
 #ifdef BSP_USING_PSRAM1
     info = &bsp_psram_info[BSP_PSRAM1_INDEX];
     info->type = GET_REG_VAL2(pkgid, PKGID_MPI1_PSRAM_TYPE);
@@ -90,6 +87,7 @@ HAL_RAM_RET_CODE_SECT(bsp_psram_init_info, int32_t bsp_psram_init_info(void))
     info->type = GET_REG_VAL2(pkgid, PKGID_MPI2_PSRAM_TYPE);
     info->valid = true;
 #endif /* BSP_USING_PSRAM2 */
+
     return 0;
 }
 
@@ -140,6 +138,7 @@ HAL_RAM_RET_CODE_SECT(bsp_psram1_pinmux_init, int32_t bsp_psram1_pinmux_init(voi
     int32_t ret = 0;
     bsp_psram_info_t *info;
     uint8_t pinmap_mode;
+    uint32_t i;
 
     info = &bsp_psram_info[BSP_PSRAM1_INDEX];
     if (!info->valid)
@@ -199,6 +198,13 @@ HAL_RAM_RET_CODE_SECT(bsp_psram1_pinmux_init, int32_t bsp_psram1_pinmux_init(voi
     {
         ret  = -1;
     }
+    /* DS1=0, DS0=1 (8mA drive) */
+    for (i = 0; i < (PAD_SA12 - PAD_SA00 + 1); i++)
+    {
+        HAL_PIN_Set_DS0(PAD_SA00 + i, 1, 1);
+        HAL_PIN_Set_DS1(PAD_SA00 + i, 1, 0);
+    }
+
 
 __EXIT:
     return ret;
@@ -211,6 +217,7 @@ HAL_RAM_RET_CODE_SECT(bsp_psram2_pinmux_init, int32_t bsp_psram2_pinmux_init(voi
     int32_t ret = 0;
     bsp_psram_info_t *info;
     uint8_t pinmap_mode;
+    uint32_t i;
 
     info = &bsp_psram_info[BSP_PSRAM2_INDEX];
     if (!info->valid)
@@ -269,6 +276,13 @@ HAL_RAM_RET_CODE_SECT(bsp_psram2_pinmux_init, int32_t bsp_psram2_pinmux_init(voi
     else
     {
         ret  = -1;
+    }
+
+    /* DS1=0, DS0=1 (8mA drive) */
+    for (i = 0; i < (PAD_SB12 - PAD_SB00 + 1); i++)
+    {
+        HAL_PIN_Set_DS0(PAD_SB00 + i, 1, 1);
+        HAL_PIN_Set_DS1(PAD_SB00 + i, 1, 0);
     }
 
 __EXIT:

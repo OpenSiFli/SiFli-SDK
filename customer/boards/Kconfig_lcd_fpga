@@ -106,7 +106,7 @@ if BSP_USING_LCD
         default 240 if LCD_USING_SQ_TYPE1
         default 240 if LCD_USING_SQ_TYPE2
         default 1024 if LCD_USING_ATK7016
-        default 1032 if LCD_USING_EPD_8BIT_OPM060DA_FPGA
+        default 1024 if LCD_USING_EPD_8BIT_OPM060DA_FPGA
         default 410 if LCD_USING_FPGA_ED_LB5XSPI19701
         default 410 if LCD_USING_FPGA_ED_LB5XSPI19701_DDR
         

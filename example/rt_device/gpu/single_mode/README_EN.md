@@ -15,7 +15,10 @@ This program is a graphics blending example based on RT-Thread operating system 
 The example can run on the following development boards:
 * sf32lb52-lchspi-ulp
 * sf32lb52-nano_52j
-* sf32lb52-lcd_n16r8
+* sf32lb52 LCD series
+* SF32LB56 LCD series
+* SF32LB58 LCD series
+* SF32LB57 series
 
 ## Example Usage
 ### Compilation and Flashing
@@ -100,3 +103,4 @@ So how do we both want to set the fill area position and accurately crop 'extrac
 * On 52x, there are only 2 normal layers + 1 mask layer, and the number of configured normal layers cannot be too many
 * The pixel alignment standard is: A2 format 4-pixel alignment, A4 format 2-pixel alignment, A8 format no alignment operation required. When the displayed effect does not meet expectations, check whether total_width meets the alignment requirements
 * If the image display is incorrect and found to be skewed, you can check whether the passed width is consistent with the actual image width. If it's smaller than the actual width, the vertical lines will skew to the right, and if it's larger than the actual width, they will skew to the left
+* If abnormalities such as screen blackout occur during image rendering, the root cause may be the byte alignment requirement imposed by EPIC on the address of image data.

@@ -205,11 +205,59 @@ typedef struct
 #define HAL_SDADC_ERROR_OVR         (0x02U)   /*!< Overrun error                                         */
 #define HAL_SDADC_ERROR_DMA         (0x04U)   /*!< DMA transfer error                                    */
 
+/** @defgroup SDADC_Calibration_Constants SDADC Calibration Constants
+  * @{
+  */
+#define SDADC_RATIO_ACCURATE          (1000)
+
+#define SDADC_DEFAULT_OFFSET      (962943.0f)
+#define SDADC_DEFAULT_RATIO       (8.52f)
+
+#define SDADC_THRESHOLD_REG_MAX   (0xFFFFFCU)
+
+/*!< Calibration context flags */
+#define HAL_SDADC_CALIB_CTX_F_FACTORY_VALID   (0x01U)   /*!< Factory calibration was applied (else defaults) */
+
 /**
   * @}
   */
 
+/**
+  * @brief  SDADC calibration context — same pattern as GADC's HAL_ADC_CalibContextTypeDef.
+  */
+typedef struct
+{
+    float    offset;              /*!< Register value at 0V input */
+    float    ratio;               /*!< mV per register count, scaled by SDADC_RATIO_ACCURATE */
+    uint32_t threshold_reg;       /*!< Register value for max supported voltage */
+    uint8_t  flags;               /*!< Status flags, see HAL_SDADC_CALIB_CTX_F_* */
+} HAL_SDADC_CalibContextTypeDef;
 
+/** @defgroup SDADC_Exported_Functions_Group5 Calibration Functions
+  * @{
+  */
+
+/**
+  * @brief  Convert SDADC register value to voltage in mV.
+  * @param  reg_value: raw register value
+  * @param  context:   calibration context
+  * @retval Voltage in mV (float).
+  */
+float HAL_SDADC_RegToVoltageFloat(float reg_value, const HAL_SDADC_CalibContextTypeDef *context);
+
+/**
+  * @brief  Load SDADC calibration: defaults → factory override if available.
+  * @param  context: calibration context to populate
+  * @retval HAL_OK: context is always populated with usable values (factory when
+  *         available, otherwise chip defaults). Inspect the
+  *         HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag to know which was applied.
+  *         HAL_ERROR is only returned for invalid arguments.
+  */
+HAL_StatusTypeDef HAL_SDADC_CalibLoad(HAL_SDADC_CalibContextTypeDef *context);
+
+/**
+  * @}
+  */
 
 /**
   * @}

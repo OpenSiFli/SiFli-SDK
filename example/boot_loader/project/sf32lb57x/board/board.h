@@ -58,6 +58,9 @@ extern board_boot_device_type_t board_boot_device;
 board_boot_device_type_t board_boot_from(void);
 void board_init_psram(void);
 void board_init(void);
+#ifdef CFG_BOOTROM
+void board_ldo_en_ss_init(void);
+#endif /* CFG_BOOTROM */
 
 extern void board_pinmux_uart(void);
 extern void board_pinmux_mpi1_type1(void);

@@ -1,125 +1,189 @@
-# LVGL v8 Official Example
+# LVGL v8 Official Examples
+
+Source path: `example/multimedia/lvgl/lvgl_v8_examples`
+
+## Supported Platforms
+
+- `sf32lb52-lchspi-ulp`
+- SF32LB52x LCD development boards
+- SF32LB56x LCD development boards
+- SF32LB58x LCD development boards
+
+All platforms listed above can run the standard LVGL examples. The SJPG example additionally
+requires a board with an SPI-connected TF card slot and the corresponding SPI bus, TF card
+device, and file-system configuration. The instructions below use `sf32lb52-lchspi-ulp`;
+select the appropriate board name and hardware settings when using another board.
 
 ## Introduction
-This example is used to test LVGL V8 APIs using officially provided examples.
-You can replace the lv_example_scroll_1() function in src/main.c (simulator in simulator/applications/application.c) to test other APIs.
-Other API functions can be referenced in the src/examples/lv_examples.h header file.
 
-## Switching Different Demos
+This project builds and runs the official LVGL v8 examples. The example sources are under
+`src/examples`, and `src/examples/lv_examples.h` provides the available example functions.
 
-By default, the demo runs `lv_example_scroll_1()`. To switch to other demos, modify the `src/main.c` file.
+By default, `src/main.c` calls `lv_example_scroll_1()`. This example demonstrates horizontal
+and vertical scrolling when child content extends beyond the visible area.
 
-Open `src/main.c` and find the demo call in the main function:
+## Switching Examples
+
+Open `src/main.c` and locate the example calls:
 
 ```c
-/* add example code here.
-   example code locates in folder external/lvgl/examples */
 lv_example_scroll_1();
-//lv_example_grid_1();
+// lv_example_grid_1();
 ```
 
-Uncomment the demo you want to run and comment out the others. For example, to switch to `lv_example_grid_1()`:
+Comment out the current example and uncomment the one to run. For example, to select
+`lv_example_grid_1()`:
 
 ```c
-/* add example code here.
-   example code locates in folder external/lvgl/examples */
-//lv_example_scroll_1();
+// lv_example_scroll_1();
 lv_example_grid_1();
 ```
 
-Recompile after making changes to see the different demo effect.
+Rebuild and flash the project after changing the example.
 
-## Project Compilation and Download:
-Board projects in the project directory can be compiled for specific boards by specifying the board parameter:
-- To compile a project that can run on HDK 563, execute scons --board=eh-lb563 to generate the project
-- Download can be performed through download.bat in the build directory. For example, to flash the 563 project generated in the previous step, execute .\build_eh-lb563\download.bat to download via J-Link
-- Special note: For SF32LB52x/SF32LB56x series, an additional uart_download.bat will be generated. You can execute this script and enter the download UART port number to perform the download
-Simulator project is in the simulator directory:
-- Compile using scons. The SiFli-SDK/msvc_setup.bat file needs to be modified accordingly to match the local MSVC configuration
-- You can also use scons --target=vs2017 to generate the MSVC project project.vcxproj and compile using Visual Studio.
+## Build and Flash
 
-```{note}
-If using VS2022 or other versions besides VS2017, you will be prompted to upgrade the MSVC SDK when loading the project. After upgrading, it can be used normally.
-```
+Change to the example's `project` directory and run the SCons build:
 
-## Supplementary Instructions - How to Use sjpg
-Source Code Path: SiFli-SDK\example\multimedia\lvgl\lvgl_v8_examples
-
-### Supported Platforms
-This example can run on the following development boards:
-+ sf32lb52-lchspi-ulp
-+ sf32lb52-lcd series
-+ sf32lb56-lcd series
-+ sf32lb58-lcd series
-
-
-
-### Overview
-* After inserting an SD card to complete file system mounting, read and display .sjpg and .jpg format images from it
-
-### Hardware Requirements
-* Huangshan development board or 52x series development board
-* A USB data cable with data transfer capability
-* A TF card and a TF card reader
-
-### Example Usage
-
-#### Compilation and Flashing
-The default display image in the demo code is: ``` small_image.sjpg ```
-
-Switch to the example project directory and run the scons command to compile:
-
-```
+```sh
 scons --board=sf32lb52-lchspi-ulp -j8
 ```
 
-Execute the flashing command:
-```
+Run the UART flashing script:
+
+```none
 build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
 ```
 
-Select the port as prompted to download:
+Enter the serial port number when prompted:
 
 ```none
 please input the serial port num:5
 ```
 
-#### Example Output Result Display:
-* After inserting the SD card, mount the file system and read/display images from the file system. The log containing `mount fs on flash to root success` indicates successful file system mounting
+### PC Simulator
 
-![alt text](assets/log1.png)
+The PC configuration is under `project/pc_hcpu`. First update `msvc_setup.bat` in the SDK root
+to match the local MSVC installation, then run the following command from `project`:
 
-* You can input 'ls' to view image files in the file system
+```sh
+scons --board=pc_hcpu -j8
+```
 
-![alt text](assets/log2.png)
+When the build completes, run `build_pc_hcpu/main.exe`.
 
-### Example Effect Display
-![alt text](assets/demo.jpg)
+## Optional Example: Display an SJPG Image
 
-#### Example Configuration Process
-* By default, SPI is not enabled for TF file system mounting. If needed, configure as follows:
-* First, use a TF card reader to write image files to the TF card, then insert the TF card into the board
-* Configure through `menuconfig` as follows:
-``` c
+This section switches the project to `lv_example_sjpg_1()`, which loads and displays
+`small_image.sjpg` from a TF card. This is not the default example, so configure the required
+features and select the example function as described below.
+
+### Hardware Requirements
+
+- A supported board with an SPI-connected TF card interface
+- A USB cable that supports data transfer
+- A TF card and a card reader
+
+### Preparing the Image
+
+Copy `src/examples/libs/sjpg/small_image.sjpg` to the root of the TF card file system. The
+example opens the image from the following path:
+
+```c
+lv_img_set_src(wp, "A:small_image.sjpg");
+```
+
+### Configuring the Project
+
+Run the following command from `project`:
+
+```sh
 sdk.py menuconfig --board=sf32lb52-lchspi-ulp
 ```
-* Enable SPI bus
 
-![alt text](assets/V8_SPI.png)
+Confirm that the resulting configuration contains:
 
-* Mount SD\TF device on SPI bus
+```ini
+CONFIG_RT_USING_SPI_MSD=y
+CONFIG_RT_USING_DFS_ELMFAT=y
+CONFIG_LV_USE_FS_POSIX=y
+CONFIG_LV_FS_POSIX_LETTER=65
+CONFIG_LV_USE_SJPG=y
+```
 
-![alt text](assets/V8_tf.png)
+`CONFIG_LV_FS_POSIX_LETTER=65` assigns drive letter `A` to the LVGL file-system driver.
 
-* Configure file path
+Configure the options as follows:
 
-![alt text](assets/V8_elm.png)
+1. Enable the SPI bus.
 
-* Enable LVGL file system interface, configure drive letter, and enable decoder
+   ![Enable the SPI bus](assets/V8_SPI.png)
 
-![alt text](assets/V8_posix.png)
+2. Configure the TF card device on the SPI bus.
+
+   ![Configure the TF card device](assets/V8_tf.png)
+
+3. Enable the ELM FAT file system.
+
+   ![Configure the ELM FAT file system](assets/V8_elm.png)
+
+4. Enable the LVGL POSIX file-system interface and SJPG decoder, then set the drive letter to
+   `A`.
+
+   ![Configure the LVGL file system and SJPG decoder](assets/V8_posix.png)
+
+### Switching the Example
+
+Update `src/main.c`:
+
+```c
+// lv_example_scroll_1();
+lv_example_sjpg_1();
+```
+
+### Building and Flashing
+
+Run the following command from `project`:
+
+```sh
+scons --board=sf32lb52-lchspi-ulp -j8
+```
+
+To flash over UART, run:
+
+```none
+build_sf32lb52-lchspi-ulp_hcpu\uart_download.bat
+```
+
+Enter the serial port number when prompted:
+
+```none
+please input the serial port num:5
+```
+
+> **Warning:** If mounting the TF card's root file-system region fails, `src/main.c` calls
+> `dfs_mkfs()` and formats that region automatically. This may erase data in the region. Back
+> up important data before running the example, and verify that the TF card and SPI interface
+> are working correctly.
+
+### Expected Output
+
+After inserting the TF card, the log message `mount fs on flash to root success` indicates
+that the file system was mounted successfully.
+
+![File-system mount log](assets/log1.png)
+
+At the Finsh prompt, run `ls` to list the image files in the TF card root directory.
+
+![TF card file list](assets/log2.png)
+
+The displayed image should look like this:
+
+![SJPG example output](assets/demo.jpg)
 
 ### Troubleshooting
-* Abnormal log
-![alt text](assets/log3.png)
-If the above situation occurs, the TF card may be loose, unable to communicate properly, or not inserted
+
+If the following log appears, check that the TF card is inserted securely and can communicate
+over the SPI bus.
+
+![Error log](assets/log3.png)

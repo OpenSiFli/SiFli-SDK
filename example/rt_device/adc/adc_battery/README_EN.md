@@ -5,6 +5,7 @@ The example can run on the following development board series.
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
++ sf32lb57 series
 
 ## Overview
 * Under the RT-Thread operating system, this example uses single-channel ADC sampling to read the VBAT battery voltage.
