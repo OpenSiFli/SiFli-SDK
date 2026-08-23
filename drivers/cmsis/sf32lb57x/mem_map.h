@@ -390,6 +390,9 @@ start_addr  0x0x20400000           0x20406000          0x20408000      0x2040E00
 #define EFUSE_BANK2_PGMDIS_OFFSET     250
 #define EFUSE_BANK2_PGMDIS_SIZE       2
 
+#define EFUSE_ATE_DATA_OFFSET         256
+#define EFUSE_ATE_DATA_SIZE           256
+
 #define EFUSE_ROOTKEY_OFFSET          512
 #define EFUSE_ROOTKEY_SIZE            256
 #define EFUSE_ROOTKEY_BYTE_SIZE       (EFUSE_ROOTKEY_SIZE >> 3)

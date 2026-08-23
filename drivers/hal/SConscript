@@ -13,6 +13,10 @@ if not GetDepend('SOC_SF32LB57X'):
     SrcRemove(src, 'bf0_hal_lpaon_sf32lb57x.c')
     SrcRemove(src, 'bf0_hal_pmu_sf32lb57x.c')
     SrcRemove(src, 'bf0_hal_pinmux_sf32lb57x.c')
+    SrcRemove(src, 'bf0_sys_cfg_sf32lb57x.c')
+
+if not GetDepend('SOC_SF32LB52X'):
+    SrcRemove(src, 'bf0_sys_cfg_sf32lb52x.c')
 
 if GetDepend('SOC_SF32LB55X'):
     SrcRemove(src, 'bf0_hal_mpi.c')
