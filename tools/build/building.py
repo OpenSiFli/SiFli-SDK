@@ -4121,7 +4121,7 @@ def GetMarch():
             march = 'armv8-m.main+dsp+fp+cdecp1'
     elif GetDepend('SOC_SF32LB57X'):  
         if GetDepend("BF0_LCPU"):
-            march = 'armv8-m.main'
+            march = 'armv8-m.main+dsp'
         else:
             march = 'armv8-m.main+dsp+fp+cdecp1'
     else:
