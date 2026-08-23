@@ -85,7 +85,7 @@ if PKG_USING_CHERRYUSB
 
         config PKG_CHERRYUSB_DEVICE_MUSB_SIFLI_DMA
             bool "Enable MUSB internal DMA engine (device)"
-            default y
+            default n
             depends on PKG_CHERRYUSB_DEVICE_MUSB_SIFLI
 
         config PKG_CHERRYUSB_DEVICE_CDC_ACM
@@ -343,7 +343,7 @@ if PKG_USING_CHERRYUSB
 
         config PKG_CHERRYUSB_HOST_MUSB_SIFLI_DMA
             bool "Enable MUSB internal DMA engine (host)"
-            default y
+            default n
             depends on PKG_CHERRYUSB_HOST_MUSB_SIFLI
 
         config PKG_CHERRYUSB_HOST_CDC_ACM
