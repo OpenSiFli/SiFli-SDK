@@ -1751,13 +1751,13 @@ int rt_sys_config_init(void)
             HAL_PMU_SET_HXT_CBANK(xtal_cfg.cbank_sel);
         }
     }
-#if !defined(SOC_SF32LB52X)
+#if !defined(SF32LB52X) && !defined(SF32LB57X)
     res = rt_flash_config_read(FACTORY_CFG_ID_BATTERY, (uint8_t *)&battery_cfg, sizeof(FACTORY_CFG_BATTERY_CALI_T));
     if (res > 0)
     {
         BSP_CONFIG_set(FACTORY_CFG_ID_BATTERY, (uint8_t *)&battery_cfg, sizeof(FACTORY_CFG_BATTERY_CALI_T));
     }
-#endif /* !SOC_SF32LB52X */
+#endif /* !SF32LB52X && !SF32LB57X*/
 #endif /* BF0_LCPU */
     return 0;
 }
