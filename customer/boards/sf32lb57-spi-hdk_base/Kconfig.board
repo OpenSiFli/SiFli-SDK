@@ -20,14 +20,15 @@ config LCD_BACKLIGHT_CONTROL_PIN
     
 config CAMERA_I2C_DEVICE_NAME
     string
-    default "i2c2"
+    default "i2c1"
 
 menu "SF32LB57-SPI-HDK Configuration"
 
 if SOC_PACKAGE_QFN68
 choice 
     prompt "PDM Pinmap"
-    default BOARD_PDM_PINMAP_0
+    default BOARD_PDM_PINMAP_0 if !BSP_USING_DCMI
+    default BOARD_PDM_PINMAP_1 if BSP_USING_DCMI
     config BOARD_PDM_PINMAP_0
         bool "PDM1 on PA41/PA42, PDM2 on PA43/PA44"
     config BOARD_PDM_PINMAP_1
