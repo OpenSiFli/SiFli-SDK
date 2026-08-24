@@ -2478,6 +2478,11 @@ __weak void HAL_RCC_MspInit(void)
 
 void HAL_RCC_Init(void)
 {
+#ifdef SF32LB57X
+    /* Enable to improvee bluetooth power consumption */
+    hwp_hpsys_rcc->DBGR |= HPSYS_RCC_DBGR_SYSCLK_SWLP;
+#endif /* SF32LB57X */
+
 #ifdef SOC_BF0_HCPU
     HAL_RCC_DisableModule(RCC_MOD_EPIC);
     HAL_RCC_DisableModule(RCC_MOD_EZIP);
