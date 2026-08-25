@@ -65,7 +65,7 @@ Purpose : Global types etc & general purpose utility functions
 #define SEGGER_H
 
 #include <stdarg.h>
-#include "..\Config\Global_type.h"         // Type definitions: U8, U16, U32, I8, I16, I32
+#include "../Config/Global_type.h"         // Type definitions: U8, U16, U32, I8, I16, I32
 
 #if defined(__cplusplus)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
