@@ -107,6 +107,10 @@
 - lcdc: DIRECT_EPD mode (LCDC directly drive EPD) works on 57x (46fe563f)
 - pdm: add 57 4mic config (8424f115)
 - lcdc: The 800x480 DPI LCD can works on 57x (f42c3c4e)
+- sdio: Select MMCSD detection by configured card type (41327fdb)
+- epic: Add DRV_EPIC_DEBUG_LOG to control EPIC driver debug output (31920f9a)
+- epic: Optimize JPEG blending performance in some cases (7c89eb19)
+- ezip: Add 'EZIP_WIN_SIZE' macro (97b0b2dd)
 
 #### Added
 - can: Add can adaptor layer implementation (7dbb4b64)
@@ -142,6 +146,10 @@
 - lvsf: Update the gui_widgets library file and expose the lvsf_jpg framework for external use (30dc5586)
 - lvgl: Fix local redrawing, no longer force global redrawing under the new_api mode (3ac4b27e)
 - pm: Reconfig psram2 and flash3 when freq scaling on 57x (d5fe3ce7)
+- audio: Fix crash in record command caused by invalid log format (12e2a86f)
+- lvsf: Prevent SJPG cleanup from closing console fd (7bec9ece)
+- lvsf: Remove global image cache invalidation during frame switching and clean up (60eed78c)
+- net: Fix crash caused by dangling pointer when performing ping network operation (080fb400)
 
 #### Changed
 
@@ -157,6 +165,7 @@
 - ipc_queue: 58x add HCI IPC buffer data double check (ce997d2c)
 - lvgl: Merge the graphic changes from solution (49fa170d)
 - lwip: Add http server and client support (43c4a89b)
+- coredump: Add eMMC support for the coredump feature (2c0134e6)
 
 #### Added
 
@@ -164,6 +173,7 @@
 - crypt_block_dev: Add crypt block device (9ee8238a)
 - rt_bt_app_core: Add RT-Thread BT application core middleware for device-framework Bluetooth control (78cb3a28)
 - dfu_v2: Add the DFU_V2 middleware (d0ccd60d)
+- mbedtls_228: Support configurable CA certificate search directories (a38f3644)(890c60cd)
 
 ### Bluetooth
 #### Fixed
@@ -173,6 +183,8 @@
 - bt: Fixed BT sleep clock type does not set in 57x (4f74a64c)
 - bt: Resolve HFP service wrong codec ID usage
 - bt: Update RF driver and lcpu patch for 56x and 58x (0fe12633)
+- bt: Update 56 LCPU patch to only send 2-DH-1 packet after role switch (aaf6883e)
+- ble: Allow adv data to be updated when BLE adv is turned off (66588455)
 
 #### Changed
 - bt: Update RF driver (bab03f99)
@@ -181,9 +193,14 @@
 - ble: Integrate CSRK support into BLE connection manager
 - bt: Optimize A2DP relay processing logic
 - bt_rt_device: Move bt_rt_device code from `middleware/bluetooth` to `customer/peripherals/bluetooth/bt_sifli` (42b62570)
+- bt: Add link key save type (a53fbc4f)
+- ble: Improve ctkd and gatt over br/edr (afc16f54)
+- ble: Add sibles write node cache for gatt notify (a2f6ca10)
 
 #### Added
 - bt: Add 57x rf driver (4879ba40)(5dc70b02)(ae9c7cea)(0fe12633)
+- ble: Add ble csrk support (f4706792)
+- ble: Add an API allowing the controller to filter out specific ad data from advertising in advance (4d081f8f)
 
 ### RTOS
 #### Fixed
@@ -257,6 +274,7 @@
 - `bt/a2dp_sharing`: Add a2dp sharing example (24ef23e4)(a11b743f)
 - `hal/lcd`: Add HAL LCD based display transmit demo supporting DPI hardware boards (d7b59b2b)
 - `rt_device/bt`: Add HFP example based on bt_device API (e6cb8771)
+- `hal/jpegd`: Add HAL jpeg decoder example for 57x (ce67c330)
 
 ### Tools
 #### Fixed
@@ -292,6 +310,9 @@
 - board: Fix ACPU config of board sf32lb58-lcd_n16r32n1 (33b8cfa9)
 - camera/gc032a: Fix build error if dfs is not enabled (8d01b617)
 - board: Enable configuration of transmit power value on sf32lb56-wlan-core_n16r12n1 (6c637541)
+- board: Disable unused MPI3 and point dfu/ble FAL partitions to flash2 on dpi-hdk_lb57gyd7n6_epd (a9a7fe7c)
+- board: Add wave_table partition and EPD adapter board power supply for 57X EPD board (1b3ff474)
+- board: Improve driving capability for SDIO-related IOs on 57x (2d15c36f)
 
 #### Changed
 - board: Add support of chip SF32LB577UDNN6 (58904fdf)(85a21bee)
@@ -300,6 +321,9 @@
 - peripherals: Move the TP&LCD drivers to their own folders (f88476ae)
 - wifi/swt6621: Modified the name of the switch port interface (b14bab1e)
 - wifi/swt6621: Implement AT command feature (91e2b4ca)
+- board: Configure SDMMC card types for supported boards (283c159e)
+- display: Add logic for using library wave table and screen rotation (593b0bf6)
+- display: Optimize EPD driver on 57x (f2a80fe1)
 
 #### Added
 
@@ -619,6 +643,8 @@
 - ipc_queue: Updated to make it compatible with Zephyr compilation (e2799892)
 - lvgl_v9: Add initial render_list adaption for lvgl v9 (674a50fd)
 - audio: Close i2s device (d32b61d2)
+- segger_systemview: Change backslash to forward slash to fix compile error on macOS and Linux (f79e54d8)
+- lvsf: Remove glyph snapshot copy, reuse FTC bitmap directly to improve performance (c8f20176)
 
 
 #### Changed
