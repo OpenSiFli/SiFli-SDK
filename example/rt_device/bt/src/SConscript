@@ -3,9 +3,9 @@ from building import *
 
 cwd = GetCurrentDir()
 
-# Example application entry (main.c). The BT app core framework has been moved
-# to middleware/bluetooth/rt_bt_app_core and is pulled in via the
-# BT_USING_RT_BT_APP_CORE Kconfig option.
+# Example application entry (main.c). The BT app framework has been moved
+# to middleware/rt_bt_app and is pulled in via the
+# BT_USING_RT_BT_APP Kconfig option.
 src = ['main.c']
 
 # Service plugins live under services/ and are gated per-service by their
@@ -13,7 +13,7 @@ src = ['main.c']
 objs = []
 CPPPATH = [cwd, os.path.join(cwd, 'services')]
 
-objs += DefineGroup('Applications', src, depend = ['BT_USING_RT_BT_APP_CORE'], CPPPATH = CPPPATH)
+objs += DefineGroup('Applications', src, depend = ['BT_USING_RT_BT_APP'], CPPPATH = CPPPATH)
 objs += SConscript(os.path.join('services', 'SConscript'))
 
 Return('objs')

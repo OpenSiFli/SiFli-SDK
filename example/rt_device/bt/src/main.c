@@ -61,7 +61,7 @@ int main(void)
 {
     LOG_I("RT-Thread device-framework BT example");
 
-    if (rt_bt_app_core_init() != RT_EOK)
+    if (rt_bt_app_init() != RT_EOK)
     {
         /* BT init failed; keep the system running so other components work. */
         LOG_E("BT core init failed, example halted");

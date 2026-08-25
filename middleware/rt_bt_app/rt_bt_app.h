@@ -141,20 +141,16 @@ rt_bool_t rt_bt_app_is_stack_ready(void);
  */
 rt_err_t rt_bt_app_register_service(rt_bt_service_t *svc);
 
-/* ---------------------------------------------------------------------------
- * Core lifecycle (called by main.c)
- * ------------------------------------------------------------------------- */
-
 /**
- * @brief   Initialize the core: create the event thread/queue, find and open
- *          "bt_device", and register the event callback.
+ * @brief   Initialize the core: create the event message queue and the service
+ *          thread, find "bt_device", and register the event callback.
  *
  * Must be called before sifli_ble_enable(). Registered services are automatically
  * included (they self-register through INIT_APP_EXPORT before main runs).
  *
  * @return  RT_EOK on success, or a negative errno on failure.
  */
-rt_err_t rt_bt_app_core_init(void);
+rt_err_t rt_bt_app_init(void);
 
 /**
  * @brief   Iterate over the registered services (for shell commands).

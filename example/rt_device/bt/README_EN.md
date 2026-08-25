@@ -6,7 +6,7 @@ This example demonstrates how to drive the SiFli Bluetooth subsystem entirely th
 
 SiFli SDK registers Bluetooth as an RT-Thread miscellaneous device named `bt_device`. This device is special in that it only implements the `control()` operation. Opening, closing, registering event callbacks, querying status, and performing actions for each profile are all done through `rt_device_control` with different `BT_CONTROL_*` command codes. Asynchronous results are reported through a registered `bt_notify_cb` callback as `BT_EVENT_*` events.
 
-On this basis, the Bluetooth application is organized as a multi-service "core + plugins" framework: the core has been extracted into an independent middleware component, `rt_bt_app_core` (located in `middleware/rt_bt_app_core/`), which can be reused by any project. Adding a new Bluetooth profile (HFP, SPP, etc.) only requires adding one `.c` file and one configuration option on the application side, without modifying the core or other services.
+On this basis, the Bluetooth application is organized as a multi-service "core + plugins" framework: the core has been extracted into an independent middleware component, `rt_bt_app` (located in `middleware/rt_bt_app/`), which can be reused by any project. Adding a new Bluetooth profile (HFP, SPP, etc.) only requires adding one `.c` file and one configuration option on the application side, without modifying the core or other services.
 
 ## Supported Platforms
 + sf32lb52 series
@@ -18,11 +18,11 @@ On this basis, the Bluetooth application is organized as a multi-service "core +
 The core framework is an independent middleware component. The example project keeps only the entry point and the service plugins for each profile:
 
 ```text
-middleware/rt_bt_app_core/       [core framework, independent reusable middleware component]
+middleware/rt_bt_app/       [core framework, independent reusable middleware component]
 ├── rt_bt_app.h              framework contract: service descriptor / command table / registration macros / interfaces
-├── rt_bt_app_core.c         device management, event thread and queue, built-in common event handling, service registry
+├── rt_bt_app.c              device management, event thread and queue, built-in common event handling, service registry
 ├── rt_bt_app_cmd.c          command router for all services
-├── Kconfig                  BT_USING_RT_BT_APP_CORE and its sub-options
+├── Kconfig                  BT_USING_RT_BT_APP and its sub-options
 └── SConscript
 
 example/rt_device/bt/
@@ -36,7 +36,7 @@ example/rt_device/bt/
 └── README.md
 ```
 
-- **Core**: middleware component `rt_bt_app_core` (`rt_bt_app_core.c` / `rt_bt_app_cmd.c`). It holds the `bt_device` handle, runs the event service thread, deep-copies events before routing them to the appropriate service by the high byte of the event code, handles common events internally (stack ready / inquiry / connection / disconnection), and provides the top-level `bt` shell command. **The core does not need to change when adding a new profile.**
+- **Core**: middleware component `rt_bt_app` (`rt_bt_app.c` / `rt_bt_app_cmd.c`). It holds the `bt_device` handle, runs the event service thread, deep-copies events before routing them to the appropriate service by the high byte of the event code, handles common events internally (stack ready / inquiry / connection / disconnection), and provides the top-level `bt` shell command. **The core does not need to change when adding a new profile.**
 - **Service**: `services/bt_srv_xxx.c`. Each profile has one file, and each file is a self-registering service that provides three things: a command table, an event handler, and an optional event deep-copy hook.
 
 ---
@@ -95,10 +95,10 @@ You can copy `bt_srv_spp.c` as a starting skeleton.
 
 ## 4. Configuration and Dependencies
 
-The core framework is controlled by the Kconfig option `BT_USING_RT_BT_APP_CORE` and depends on `BSP_BLE_SIBLES` and `BT_FINSH`. This example's `proj.conf` already enables:
+The core framework is controlled by the Kconfig option `BT_USING_RT_BT_APP` and depends on `BSP_BLE_SIBLES` and `BT_FINSH`. This example's `proj.conf` already enables:
 
 ```text
-CONFIG_BT_USING_RT_BT_APP_CORE=y   # enable the core framework component
+CONFIG_BT_USING_RT_BT_APP=y   # enable the core framework component
 CONFIG_BT_APP_ENABLE_SHELL_CMD=y   # enable the "bt" shell command (optional)
 ```
 

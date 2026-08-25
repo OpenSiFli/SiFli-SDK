@@ -6,7 +6,7 @@
 
 SiFli SDK 会把蓝牙注册成一个 RT-Thread 的 Miscellaneous 设备（设备名 `"bt_device"`）。这个设备比较特殊：它只实现了 `control()` 操作。打开、关闭、注册事件回调、状态查询、以及各个 profile 的动作，全部通过 `rt_device_control` 加不同的 `BT_CONTROL_*` 命令码来完成；异步结果则通过一个注册进去的 `bt_notify_cb` 回调以 `BT_EVENT_*` 事件的形式上报。
 
-在此基础上，蓝牙应用被组织成一个**「核心 + 插件」的多服务框架**：核心已下沉为独立的中间件组件 `rt_bt_app_core`（位于 `middleware/rt_bt_app_core/`），可被任意工程复用；新增一个蓝牙 profile（HFP、SPP……）只需在应用侧新增一个 `.c` 文件和配置开关，无需改动核心或其它服务。
+在此基础上，蓝牙应用被组织成一个**「核心 + 插件」的多服务框架**：核心已下沉为独立的中间件组件 `rt_bt_app`（位于 `middleware/rt_bt_app/`），可被任意工程复用；新增一个蓝牙 profile（HFP、SPP……）只需在应用侧新增一个 `.c` 文件和配置开关，无需改动核心或其它服务。
 
 
 ## 支持的平台
@@ -19,11 +19,11 @@ SiFli SDK 会把蓝牙注册成一个 RT-Thread 的 Miscellaneous 设备（设�
 核心框架是一个独立的中间件组件，示例工程只保留入口和各 profile 的服务插件：
 
 ```
-middleware/rt_bt_app_core/       【核心框架，独立中间件组件，可复用】
+middleware/rt_bt_app/       【核心框架，独立中间件组件，可复用】
 ├── rt_bt_app.h              框架契约：服务描述符 / 命令表 / 注册宏 / 接口
-├── rt_bt_app_core.c         设备管理、事件线程与队列、通用事件内置处理、服务注册表
+├── rt_bt_app.c               设备管理、事件线程与队列、通用事件内置处理、服务注册表
 ├── rt_bt_app_cmd.c          路由到各服务的命令表
-├── Kconfig                  BT_USING_RT_BT_APP_CORE 及其子选项
+├── Kconfig                  BT_USING_RT_BT_APP 及其子选项
 └── SConscript
 
 example/rt_device/bt/
@@ -37,7 +37,7 @@ example/rt_device/bt/
 └── README.md
 ```
 
-- **核心（core）**：中间件组件 `rt_bt_app_core`（`rt_bt_app_core.c` / `rt_bt_app_cmd.c`）。持有 `bt_device` 句柄、运行事件服务线程、把事件深拷贝后按「事件码高字节」路由给对应服务、内置处理通用事件（栈就绪 / 搜索 / 连接 / 断开），并提供顶层 `bt` shell 命令。**新增 profile 时核心不需要改动。**
+- **核心（core）**：中间件组件 `rt_bt_app`（`rt_bt_app.c` / `rt_bt_app_cmd.c`）。持有 `bt_device` 句柄、运行事件服务线程、把事件深拷贝后按「事件码高字节」路由给对应服务、内置处理通用事件（栈就绪 / 搜索 / 连接 / 断开），并提供顶层 `bt` shell 命令。**新增 profile 时核心不需要改动。**
 - **服务（service）**：`services/bt_srv_xxx.c`。每个 profile 一个文件，是一个自注册服务，提供三样东西：命令表、事件处理函数、（可选的）事件深拷贝钩子。
 
 ---
@@ -97,10 +97,10 @@ bt <service> <cmd> [args]   执行某个子命令
 
 ## 四、配置与依赖
 
-核心框架由 Kconfig 选项 `BT_USING_RT_BT_APP_CORE` 控制，依赖 `BSP_BLE_SIBLES` 与 `BT_FINSH`。本示例的 `proj.conf` 已开启：
+核心框架由 Kconfig 选项 `BT_USING_RT_BT_APP` 控制，依赖 `BSP_BLE_SIBLES` 与 `BT_FINSH`。本示例的 `proj.conf` 已开启：
 
 ```
-CONFIG_BT_USING_RT_BT_APP_CORE=y   # 使能核心框架组件
+CONFIG_BT_USING_RT_BT_APP=y   # 使能核心框架组件
 CONFIG_BT_APP_ENABLE_SHELL_CMD=y   # 使能 "bt" shell 命令（可选）
 ```
 

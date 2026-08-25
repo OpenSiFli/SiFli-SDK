@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = []
+CPPPATH = [cwd]
+
+if GetDepend('BT_USING_RT_BT_APP'):
+    src += ['rt_bt_app.c']
+
+    if GetDepend('BT_APP_ENABLE_SHELL_CMD'):
+        src += ['rt_bt_app_cmd.c']
+
+group = DefineGroup('rt_bt_app', src, depend = ['BT_USING_RT_BT_APP'], CPPPATH = CPPPATH)
+
+Return('group')

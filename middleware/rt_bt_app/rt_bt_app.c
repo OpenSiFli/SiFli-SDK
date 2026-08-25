@@ -7,7 +7,7 @@
 #include <string.h>
 #include "rt_bt_app.h"
 
-#define DBG_TAG "rt_bt_app.core"
+#define DBG_TAG "rt_bt_app"
 #define DBG_LVL DBG_INFO
 #include <rtdbg.h>
 
@@ -371,11 +371,11 @@ static void bt_app_event_callback(bt_notify_t *param)
  * Core initialization
  * ------------------------------------------------------------------------- */
 
-rt_err_t rt_bt_app_core_init(void)
+rt_err_t rt_bt_app_init(void)
 {
     rt_err_t ret;
 
-    LOG_I("initializing RT-Thread BT app core");
+    LOG_I("initializing RT-Thread BT app");
 
     /* Create the event queue. */
     s_evt_queue = rt_mq_create("bt_evt", sizeof(bt_app_evt_msg_t *),

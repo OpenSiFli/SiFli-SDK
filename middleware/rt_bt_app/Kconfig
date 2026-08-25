@@ -1,5 +1,5 @@
-menuconfig BT_USING_RT_BT_APP_CORE
-    bool "RT-Thread BT Application Core Framework"
+menuconfig BT_USING_RT_BT_APP
+    bool "RT-Thread BT Application Framework"
     depends on BSP_BLE_SIBLES && BT_FINSH
     default n
     help
@@ -7,7 +7,7 @@ menuconfig BT_USING_RT_BT_APP_CORE
       a plugin-based architecture for BT profile services with automatic
       event routing, service registration, and unified shell commands.
 
-if BT_USING_RT_BT_APP_CORE
+if BT_USING_RT_BT_APP
 
 config BT_APP_ENABLE_SHELL_CMD
     bool "Enable shell command interface (bt <service> <cmd>)"
