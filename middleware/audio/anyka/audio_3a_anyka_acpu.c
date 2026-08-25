@@ -24,6 +24,7 @@ static T_AUDIO_FILTER_BUF_STRC *filter_buf;
 static T_SSL_EVENT          *ssl_data_out;
 static uint32_t             ssl_data_out_len;
 
+void acpu_printf(const char *fmt, ...);
 
 static void srp_ssl_lib_init()
 {
@@ -288,32 +289,33 @@ int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg)
 
 int acpu_audio_3a_uplink_ssl(acpu_audio_3a_uplink_parameter_t *arg)
 {
-    if (enable_mic_ssl && arg->do_ssl)
+    int ret;
+    if (enable_mic_ssl)
     {
         filter_buf->buf_in = arg->ssl_data_in;
-        filter_buf->buf_in_len = arg->ssl_data_in_len;
+        filter_buf->len_in = arg->ssl_data_in_len;
         int32_t processlen = _SD_Filter_Control(pfilter, filter_buf);
         if (processlen > 0)
         {
             if (ssl_data_out->sourcesNumbers > 0)
             {
-                LOG_I("anyka ssl %d sources\n", ssl_data_out->sourcesNumbers);
+                acpu_printf("anyka ssl %d sources\n", ssl_data_out->sourcesNumbers);
                 struct sd_param_denc denc_param;
                 T_S32 get = _SD_Echo_GetDencParam(p_near, &denc_param);
 
                 for (int i = 0; i < ssl_data_out->sourcesNumbers; i++)
                 {
-                    LOG_I("%d, %d, %d\n",
-                          ssl_data_out->soundSourceDirection[i].azimuth,
-                          ssl_data_out->soundSourceDirection[i].elevation,
-                          ssl_data_out->soundSourceDirection[i].radius);
+                    acpu_printf("%d, %d, %d\n",
+                                ssl_data_out->soundSourceDirection[i].azimuth,
+                                ssl_data_out->soundSourceDirection[i].elevation,
+                                ssl_data_out->soundSourceDirection[i].radius);
                 }
                 denc_param.targetSpherical.azimuth = ssl_data_out->soundSourceDirection[0].azimuth;
                 denc_param.targetSpherical.elevation = ssl_data_out->soundSourceDirection[0].elevation;
                 denc_param.targetSpherical.radius = ssl_data_out->soundSourceDirection[0].radius;
                 denc_param.numInterf = 0;
 
-                _SD_Echo_SetDencParam(p_near, 1, &denc_param);
+                ret = _SD_Echo_SetDencParam(p_near, 1, &denc_param);
 
             }
         }
