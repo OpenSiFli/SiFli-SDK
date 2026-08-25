@@ -245,6 +245,14 @@
     #endif
 #endif
 
+#ifndef LVSF_USE_TXTANIM
+    #ifdef CONFIG_LVSF_USE_TXTANIM
+        #define LVSF_USE_TXTANIM CONFIG_LVSF_USE_TXTANIM
+    #else
+        #define LVSF_USE_TXTANIM 1
+    #endif
+#endif
+
 /*********** Migrated gui_widgets (2026-06) — expose their guarded headers ***********/
 /* These widgets are compiled into the prebuilt gui_widgets lib; defining their
  * guard macros here makes the public header APIs visible to apps/examples. */

@@ -101,6 +101,11 @@ void lv_txtimg_ins_txt(lv_obj_t *txtimg, const char *text);
  */
 int32_t lv_txtimg_set_txt_line(lv_obj_t *txtimg, const char *text);
 
+bool lv_txtimg_set_txt_line_justify(lv_obj_t *txtimg, const char *text,
+                                    uint32_t len, lv_font_t *font,
+                                    lv_coord_t x0, lv_coord_t target_w,
+                                    lv_coord_t line_h, lv_color_t color);
+
 /**
  * For some languages that do not support converting bitmap to A8 format, a camera interface needs to be used to take a picture of the text and position it as an image
  * @param txtimg  The instance for txtimg.
