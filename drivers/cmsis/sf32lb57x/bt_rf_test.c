@@ -112,7 +112,7 @@ bt_nosignal_result_t g_nosignal_result =
     .stop_en  = 0,
 };
 
-
+extern uint8_t  is_afh_test;
 void dm_irq_clear(uint32_t dm_irq);
 
 #if BT_BER_DEBUG_EN
@@ -162,6 +162,11 @@ uint8_t ble_irq_handler(void)
         //rt_kprintf("dm err:0x%x, err2:0x%x irq:0x%x debug:0x%x\n", err, err2, irq_stat, debug);
         extern void bt_nosignal_evt_send(void);
         bt_nosignal_evt_send();
+    }
+    else if ((irq_stat & BT_MAC_ACTFIFOSTAT_ENDACTINTSTAT) && (is_afh_test))
+    {
+        extern void bt_et_update();
+        bt_et_update();
     }
 
     return ret;
@@ -675,7 +680,7 @@ static int8_t bt_nosignal_rx_proc(void)
     uint16_t len;
     uint32_t dataptr;
     uint32_t *rxdata;
-    int8_t rssi;
+    int8_t rssi = -128;
 
     if (g_nosignal_result.irq_cnt & 0x1)
     {
@@ -746,9 +751,10 @@ static int8_t bt_nosignal_rx_proc(void)
                 rt_free(rxdata);
             }
         }
+
+        rssi = (int8_t)(rxchass & 0xFF);
     }
 
-    rssi = (int8_t)(rxchass & 0xFF);
 
     return rssi;
 }

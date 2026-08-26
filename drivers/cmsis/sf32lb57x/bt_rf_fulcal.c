@@ -4705,7 +4705,7 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
             }
         }
 #ifdef ENABLE_RF_ATE
-        hwp_bt_rfc->RSVD_REG1 = tmxcap_sel[78] + (tmxcap_sel[0] << 4) + (tmxcap_sel[39] << 8);
+        hwp_bt_rfc->RSVD_REG2 = (tmxcap_sel[78] + (tmxcap_sel[0] << 4) + (tmxcap_sel[39] << 8)) << 16; //TODO
 #endif
     }//if(!tmxcap_efuse_flag)
 #else
@@ -5155,12 +5155,13 @@ void bt_rf_opt_cal(void)
     hwp_bt_rfc->RRF_REG |= (0xC << BT_RFC_RRF_REG_BRF_RRF_LDO_VREF_SEL_LV_Pos) |
                            (0x6 << BT_RFC_RRF_REG_BRF_LNA_BM_LV_Pos);
 
-    //force w2x for 24M ADC, to be deleted
-    hwp_bt_rfc->RBB_REG2 |= BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG1_LV | BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG2_LV;
-    hwp_bt_rfc->RBB_REG3 |= BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG1_LV | BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG2_LV;
-    hwp_bt_rfc->RBB_REG5 |= BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_BR;
-    hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG1_FRC_EN | BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG2_FRC_EN;
-
+    //force w2x for 24M ADC, to be deleted, only for VersionA chip
+    /*
+        hwp_bt_rfc->RBB_REG2 |= BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG1_LV | BT_RFC_RBB_REG2_BRF_CBPF_W2X_STG2_LV;
+        hwp_bt_rfc->RBB_REG3 |= BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG1_LV | BT_RFC_RBB_REG3_BRF_RVGA_W2X_STG2_LV;
+        hwp_bt_rfc->RBB_REG5 |= BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_BR;
+        hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG1_FRC_EN | BT_RFC_MISC_CTRL_REG_RVGA_WX2_STG2_FRC_EN;
+    */
     //enable adc q for all phy
     hwp_bt_phy->RX_CTRL1 |= BT_PHY_RX_CTRL1_ADC_Q_EN_1;
     hwp_bt_phy->RX_CTRL2 |= BT_PHY_RX_CTRL2_ADC_Q_EN_FRC_EN;
@@ -5351,6 +5352,58 @@ void bt_rf_opt_cal(void)
     hwp_bt_phy->AGC_CFG4 &=     ~BT_PHY_AGC_CFG4_VGA_GAIN_INDEX_STEP;
     hwp_bt_phy->AGC_CFG4 |=     0x3 << BT_PHY_AGC_CFG4_VGA_GAIN_INDEX_STEP_Pos;
 
+    hwp_bt_phy->AGC_CFG13 &=    ~(BT_PHY_AGC_CFG13_CBPF_GAIN_INDEX_INIT_SF |
+                                  BT_PHY_AGC_CFG13_VGA_GAIN_INDEX_INIT_SF);
+    hwp_bt_phy->AGC_CFG13 |=        2 << BT_PHY_AGC_CFG13_CBPF_GAIN_INDEX_INIT_SF_Pos;
+
+    //agc setting for version-B, compatible with version-A as it takes no effect in version-A
+    //it's OK that ATE will overwrite this reg. No impact on ATE results
+    //CBPF_GAIN_INDEX_INIT_SF_BLE=0, Rx_CNT_THD1_1_BLE=0x3FF, Rx_CNT_THD1_2_BLE=0x3FF
+    hwp_bt_rfc->RSVD_REG1 = 0xF0FFFF00 ;
+
+    hwp_bt_phy->SFC_CFG1 &= ~(BT_PHY_SFC_CFG1_RX_CNT_THD1_1 | BT_PHY_SFC_CFG1_RX_CNT_THD0_1);
+    hwp_bt_phy->SFC_CFG1 |= BT_PHY_SFC_CFG1_SF_AGC_FREEZE_ENABLE | BT_PHY_SFC_CFG1_MIXER1_ENABLE |
+                            (0x10 << BT_PHY_SFC_CFG1_RX_CNT_THD0_1_Pos) | (0x20 << BT_PHY_SFC_CFG1_RX_CNT_THD1_1_Pos) ;
+    //hwp_bt_phy->SFC_CFG2 &= ~(BT_PHY_SFC_CFG2_RX_CNT_THD0_2);
+    hwp_bt_phy->SFC_CFG2  = (0x20 << BT_PHY_SFC_CFG2_RX_CNT_THD0_2_Pos) |
+                            (0x40 << BT_PHY_SFC_CFG2_RX_CNT_THD1_2_Pos) ;
+
+
+    hwp_bt_phy->DEMOD_CFG9 &= ~BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD;
+    hwp_bt_phy->DEMOD_CFG9 |= 0x2 << BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD_Pos;
+    hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_DC;
+    hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos);
+    hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_ERR;
+    hwp_bt_phy->DEMOD_CFG8 |= (0x120 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
+
+    //MIXER1
+    hwp_bt_phy->MIXER1_CFG1 = 0x2A8F5C29;
+    hwp_bt_phy->MIXER1_CFG2 = 0x20000000;
+    hwp_bt_phy->MIXER1_CFG3 = 0x35555555;
+
+    //RAMPUP
+    hwp_bt_phy->TX_PA_CFG &= ~(BT_PHY_TX_PA_CFG_PA_CTRL_DOWN_TIMESTEP |
+                               BT_PHY_TX_PA_CFG_PA_CTRL_UP_TIMESTEP |
+                               BT_PHY_TX_PA_CFG_PA_RAMP_FORCE);
+
+    hwp_bt_phy->TX_PA_CFG |= (0x2 << BT_PHY_TX_PA_CFG_PA_CTRL_DOWN_TIMESTEP_Pos) |
+                             (0x2 << BT_PHY_TX_PA_CFG_PA_CTRL_UP_TIMESTEP_Pos) |
+                             (0x3 << BT_PHY_TX_PA_CFG_PA_RAMP_FORCE_Pos);
+
+    //BLE1M MASH OFFSET
+    hwp_bt_phy->TX_HFP_CFG2 &= ~BT_PHY_TX_HFP_CFG2_MASH_OFFSET_1;
+    hwp_bt_phy->TX_HFP_CFG2 |= 0x5 << BT_PHY_TX_HFP_CFG2_MASH_OFFSET_1_Pos;
+
+    //optimize adc clk harmonic freq sensitivity
+    hwp_bt_rfc->VCO_REG1 |= BT_RFC_VCO_REG1_BRF_VCO_FLT_SEL_LV;
+    hwp_pmuc->HXT_CR2    |= PMUC_HXT_CR2_ACBUF_RSEL;
+    hwp_bt_rfc->ADC_REG  &= ~BT_RFC_ADC_REG_BRF_SEL_LDOVREF_ADC_LV;
+    hwp_bt_rfc->ADC_REG  |= 0x8 << BT_RFC_ADC_REG_BRF_SEL_LDOVREF_ADC_LV_Pos;
+
+    //
+    hwp_bt_phy->RSSI_CFG1 &= ~BT_PHY_RSSI_CFG1_RSSI_OFFSET;
+    hwp_bt_phy->RSSI_CFG1 |= 0xC << BT_PHY_RSSI_CFG1_RSSI_OFFSET_Pos;
+
     //hwp_bt_mac->AESCNTL |= 1 << BT_MAC_AESCNTL_FORCE_IQ_PWR_Pos | 4 << BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL_Pos;
 #endif
 
@@ -5392,10 +5445,10 @@ void bt_rf_cal(void)
     hwp_bt_rfc->TRF_REG1 = 0x345FB603;
     //hwp_bt_rfc->TRF_REG1 = 0x345FB403;
     hwp_bt_rfc->TRF_REG2 = 0x77F;
-    hwp_bt_phy->TX_PA_CFG = 0x1D;
+    //hwp_bt_phy->TX_PA_CFG = 0x1D;
 
     hwp_bt_mac->RWDMCNTL |= BT_MAC_RWDMCNTL_MASTER2_CLK_FORCE_ON;
-    hwp_bt_mac->AESCNTL |= 0x2FC;
+    //hwp_bt_mac->AESCNTL |= 0x2FC;
 
     //hwp_bt_rfc->RBB_REG5 &= ~BT_RFC_RBB_REG5_BRF_CBPF_CAPMAN_LV;
     //hwp_bt_rfc->RBB_REG5 |= (0x10 << BT_RFC_RBB_REG5_BRF_CBPF_CAPMAN_LV_Pos);
@@ -5405,6 +5458,7 @@ void bt_rf_cal(void)
     hwp_bt_rfc->RBB_REG4 = 0x55555;
 
     hwp_bt_phy->AGC_CTRL |= BT_PHY_AGC_CTRL_AGC_MODE;
+    hwp_bt_phy->AGC_CFG1 |= BT_PHY_AGC_CFG1_AGC_MODE_BT;
 
     hwp_bt_phy->RX_CTRL1 &= ~BT_PHY_RX_CTRL1_BT_OP_MODE;
     hwp_bt_phy->RX_CTRL1 |= (0x1 << BT_PHY_RX_CTRL1_BT_OP_MODE_Pos);
@@ -5464,6 +5518,16 @@ void bt_rf_cal(void)
     hwp_bt_rfc->IQ_PWR_REG2_1 = hwp_bt_rfc->IQ_PWR_REG2_0;
     hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_1 = 0xC00;
 
+    /* for 0dbm tx*/
+    hwp_bt_rfc->IQ_PWR_REG1_2 = hwp_bt_rfc->IQ_PWR_REG1_0;
+    hwp_bt_rfc->IQ_PWR_REG2_2 = hwp_bt_rfc->IQ_PWR_REG2_0;
+    hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_2 = 0x400;
+    hwp_bt_rfc->IQ_PWR_REG1_2 &= ~BT_RFC_IQ_PWR_REG1_2_EDR_TMXBUF_GC_GFSK;
+    hwp_bt_rfc->IQ_PWR_REG1_2 |= 0x2 << BT_RFC_IQ_PWR_REG1_2_EDR_TMXBUF_GC_GFSK_Pos;
+    hwp_bt_rfc->IQ_PWR_REG2_2 &= ~(BT_RFC_IQ_PWR_REG2_2_EDR_TMXBUF_GC_DPSK | BT_RFC_IQ_PWR_REG2_0_EDR_LPF_BYPASS);
+    hwp_bt_rfc->IQ_PWR_REG2_2 |= 0x2 << BT_RFC_IQ_PWR_REG2_2_EDR_TMXBUF_GC_DPSK_Pos;
+
+
     /*diglvl mul factor selected by iq_pwr_lvl*/
     /*
     write_memory(BT_RFC_MEM_BASE+0x784,0x011D0141 );
@@ -5484,24 +5548,21 @@ void bt_rf_cal(void)
     write_memory(BT_RFC_MEM_BASE + 0x79C, 0x010400E8);
     write_memory(BT_RFC_MEM_BASE + 0x7a0, 0x01480124);
 
-    //for 24M adc
+    //for 24M adc, only for version-A chip
+    /*
     hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_ADC_CLK_SEL;
     hwp_bt_rfc->MISC_CTRL_REG |= BT_RFC_MISC_CTRL_REG_ADC_CLK_SEL_FRC_EN; //0 : 12m     1: 24m
     hwp_bt_phy->RX_CTRL1 |= BT_PHY_RX_CTRL1_BLE_ADC_24M;
     hwp_bt_phy->RX_CTRL1 |= BT_PHY_RX_CTRL1_BT_ADC_24M;
-
     hwp_bt_phy->MIXER_CFG1 = 0x0;
+        hwp_bt_phy->SFC_CFG1 = 0x94c2100;
+    */
+    hwp_bt_rfc->MISC_CTRL_REG &= ~BT_RFC_MISC_CTRL_REG_ADC_CLK_SEL_FRC_EN;
+    //hwp_bt_phy->SFC_CFG1 = 0x14c2100;
 
-    hwp_bt_phy->SFC_CFG1 = 0x94c2100;
 
-    hwp_bt_phy->DEMOD_CFG9 &= ~BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD;
-    hwp_bt_phy->DEMOD_CFG9 |= 0x2 << BT_PHY_DEMOD_CFG9_BR_DEMOD_METHOD_Pos;
-    hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_DC;
-    hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos);
-    hwp_bt_phy->DEMOD_CFG8 &= ~BT_PHY_DEMOD_CFG8_BR_MU_ERR;
-    hwp_bt_phy->DEMOD_CFG8 |= (0x120 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
     //store driver version in register
-    hwp_bt_rfc->RSVD_REG2 = 0x00060000 ;
+    //hwp_bt_rfc->RSVD_REG2 = 0x00060000 ;
 #if BR_BQB_COCHANNEL_CASE
     hwp_bt_phy->DEMOD_CFG8 &= ~(BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Msk | BT_PHY_DEMOD_CFG8_BR_MU_DC_Msk | BT_PHY_DEMOD_CFG8_BR_MU_ERR_Msk);
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Pos) | (0x02 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos) | (0x60 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
@@ -5527,7 +5588,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.1_3621";
+char *g_rf_ful_ver = "1.2.2_3661";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;
@@ -5581,16 +5642,33 @@ bt_rf_tx_pwr_t rf_iq_value_table[] =
     {11, 0x2F870001},
     {12, 0x33C78001},
     {13, 0x33C78001},
+    {17, 0x47CF9001},
 };
 bt_rf_tx_pwr_t rf_polar_value_table[] =
 {
-    {-2, 0xF80003F8},
-    {0, 0x00000366},
-    {1, 0x05428001},
-    {2, 0x09830001},
-    {3, 0x0C0003F4},
+    {-10, 0xD80001B0},
+    {-9,  0xDC000190},
+    {-8,  0xE00001E0},
+    {-7,  0xE4000200},
+    {-6,  0xE8000210},
+    {-5,  0xEC000240},
+    {-4,  0xF0000270},
+    {-3,  0xF4000280},
+    {-2,  0xF80002F0},
+    {-1,  0xFC000340},
+    {0,   0x00000350},
+    {1,   0x040002B2},
+    {2,   0x080002F2},
+    {3,   0x0C0003B2},
+    {4,   0x100003D2},
+    {5,   0x14000204},
+    {6,   0x180002A4},
+    {7,   0x1C000284},
+    {8,   0x200002E4},
+    {9,   0x240003B4},
+    {10,  0x280003F4},
 };
-#define BT_RF_PWR_NUM_MAX  7
+#define BT_RF_PWR_NUM_MAX  11
 int8_t bt_rf_br_pwr_value[BT_RF_PWR_NUM_MAX];
 int8_t bt_rf_edr_pwr_value[BT_RF_PWR_NUM_MAX];
 int8_t bt_rf_ble_pwr_value[BT_RF_PWR_NUM_MAX];
@@ -5822,7 +5900,7 @@ static void bt_rf_get_custom_tx_pwr()
     }
 
 }
-static uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
+uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
 {
     uint8_t i;
     uint8_t total_levels = sizeof(rf_iq_value_table) / sizeof(bt_rf_tx_pwr_t);
@@ -5836,7 +5914,7 @@ static uint32_t bt_rf_iq_get_pwr_level_para(int8_t pwr)
     //default return value for max pwr level if input pwr is larger than all levels in table
     return rf_iq_value_table[total_levels - 1].lvl_para;
 }
-static uint32_t bt_rf_polar_get_pwr_level_para(int8_t pwr)
+uint32_t bt_rf_polar_get_pwr_level_para(int8_t pwr)
 {
     uint8_t i;
     uint8_t total_levels = sizeof(rf_polar_value_table) / sizeof(bt_rf_tx_pwr_t);
@@ -5878,8 +5956,8 @@ void rf_power_config()
     for (i = 0; i < bt_rf_br_pwr_num; i++)
     {
         pwr = bt_rf_br_pwr_value[i];
-        //all use IQ, todo
-        if (pwr <= -3)
+
+        if (pwr <= 10)
         {
             powerlevel = bt_rf_polar_get_pwr_level_para(pwr);
         }
@@ -5901,8 +5979,8 @@ void rf_power_config()
     for (i = 0; i < bt_rf_ble_pwr_num; i++)
     {
         pwr = bt_rf_ble_pwr_value[i];
-        //all use IQ, todo
-        if (pwr <= -3)
+
+        if (pwr <= 10)
         {
             powerlevel = bt_rf_polar_get_pwr_level_para(pwr);
         }

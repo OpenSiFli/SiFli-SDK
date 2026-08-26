@@ -64,12 +64,13 @@ static void cw_rf_channel_set(uint8_t channel)
 
 static void cw_config_start(uint8_t pa, uint8_t channel)
 {
-#if 0
     HAL_RCC_Reset_and_Halt_LCPU(0);
     //LB52X_MAC_RESET   LB55X_MAC_RESET 0x4000_0000[20] w   0x1 reset MAC
     hwp_lpsys_rcc->RSTR1 |= LPSYS_RCC_RSTR1_MAC;
     HAL_Delay_us(20);
     hwp_lpsys_rcc->RSTR1 &= ~LPSYS_RCC_RSTR1_MAC;
+
+    hwp_bt_mac->RWDMCNTL |= BT_MAC_RWDMCNTL_MASTER2_CLK_FORCE_ON;
 
     //RADIOCNTL1    FORCE_SYNCWORD  0x4009_0074[31] w   0x1 使能syncword的force,避免受干扰误同步
     //RADIOCNTL1    FORCE_NBT_BLE   0x4009_0074[15] w   0x1 使能bt/ble mode选择的force
@@ -97,7 +98,7 @@ static void cw_config_start(uint8_t pa, uint8_t channel)
 
     hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_POLAR_PWR_Pos;
     hwp_bt_mac->AESCNTL |= 0x3D << BT_MAC_AESCNTL_FORCE_POLAR_PWR_VAL_Pos;
-
+#if 0
     //TRF_REG1  BRF_PA_PM_LV    0x4008_2834[2:1]    w   0x0
     //TRF_REG1  BRF_PA_CAS_BP_LV    0x4008_2834[0]  w   0x1
     //TRF_REG1  BRF_TRF_LDO_VREF_SEL_LV 0x4008_28534[20:17] w   0xD
@@ -114,7 +115,7 @@ static void cw_config_start(uint8_t pa, uint8_t channel)
 
     hwp_bt_rfc->TRF_REG2 |= 0x1 << BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Pos;
     hwp_bt_rfc->TRF_REG2 |= 0x1F << BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Pos;
-
+#endif
     //-- TX_CTRL    MAC_PWR_CTRL_EN 0x4008_40EC[2]  w   0x0 使能pwr target的寄存器控制
     //TX_CTRL   MOD_METHOD_BR,MOD_METHOD_BLE    0x4008_40EC[3:2]    w   0x0 设置为polar 发射模式
     hwp_bt_phy->TX_CTRL &= ~BT_PHY_TX_CTRL_MAC_MOD_CTRL_EN;
@@ -135,7 +136,6 @@ static void cw_config_start(uint8_t pa, uint8_t channel)
 
     cw_rf_power_set(pa);
     cw_rf_channel_set(channel);
-#endif
 }
 
 static void cw_config_stop(void)

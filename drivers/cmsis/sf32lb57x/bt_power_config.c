@@ -19,112 +19,6 @@
 static const int8_t rf_blebr_db[] = {0, 4, 10, 13, 16, 19};
 static const int8_t rf_edr_db[] = {0, 3, 6, 10, 13};
 
-static uint8_t rf_tx_power_basic_config(int8_t basic_dbm)
-{
-    uint8_t ret = 0;
-#if 0
-
-    hwp_bt_rfc->TRF_REG1 &= ~BT_RFC_TRF_REG1_BRF_PA_PM_LV_Msk;
-    hwp_bt_rfc->TRF_REG1 &= ~BT_RFC_TRF_REG1_BRF_PA_CAS_BP_LV_Msk;
-
-    hwp_bt_rfc->TRF_REG2 &= ~BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Msk;
-    hwp_bt_rfc->TRF_REG2 &= ~BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Msk;
-#if  !USEED_NEW_PWR_CONFIG
-    switch (basic_dbm)
-    {
-    case 0:
-    {
-        hwp_bt_rfc->TRF_REG1 |= 0x01 << BT_RFC_TRF_REG1_BRF_PA_PM_LV_Pos;
-        hwp_bt_rfc->TRF_REG1 |= 0x01 << BT_RFC_TRF_REG1_BRF_PA_CAS_BP_LV_Pos;
-
-        hwp_bt_rfc->TRF_REG2 |= 0x01 << BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Pos;
-        hwp_bt_rfc->TRF_REG2 |= 0x0 << BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Pos;
-    }
-    break;
-    case 4:
-    {
-        hwp_bt_rfc->TRF_REG1 |= 0x00 << BT_RFC_TRF_REG1_BRF_PA_PM_LV_Pos;
-        hwp_bt_rfc->TRF_REG1 |= 0x01 << BT_RFC_TRF_REG1_BRF_PA_CAS_BP_LV_Pos;
-
-        hwp_bt_rfc->TRF_REG2 |= 0x1F << BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Pos;
-        hwp_bt_rfc->TRF_REG2 |= 0x01 << BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Pos;
-    }
-    break;
-    case 10:
-    {
-        hwp_bt_rfc->TRF_REG1 |= 0x02 << BT_RFC_TRF_REG1_BRF_PA_PM_LV_Pos;
-        hwp_bt_rfc->TRF_REG1 |= 0x00 << BT_RFC_TRF_REG1_BRF_PA_CAS_BP_LV_Pos;
-
-        hwp_bt_rfc->TRF_REG2 |= 0x1F << BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Pos;
-        hwp_bt_rfc->TRF_REG2 |= 0x01 << BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Pos;
-    }
-    break;
-    default:
-        ret = 1;
-
-    }
-#else
-    hwp_bt_rfc->TRF_REG1 |= 0x02 << BT_RFC_TRF_REG1_BRF_PA_PM_LV_Pos;
-    hwp_bt_rfc->TRF_REG1 |= 0x00 << BT_RFC_TRF_REG1_BRF_PA_CAS_BP_LV_Pos;
-
-    hwp_bt_rfc->TRF_REG2 |= 0x1F << BT_RFC_TRF_REG2_BRF_PA_UNIT_SEL_LV_Pos;//0x7
-    hwp_bt_rfc->TRF_REG2 |= 0x01 << BT_RFC_TRF_REG2_BRF_PA_MCAP_LV_Pos;
-#endif
-#endif
-    return ret;
-}
-
-static uint8_t rf_tx_power_cs_get(int8_t pwr)
-{
-#if  !USEED_NEW_PWR_CONFIG
-    // Just handle 0,3,6,10
-    uint8_t cs_val = 0x3E;
-    if (pwr == 3)
-        cs_val = 0x34;
-    else if (pwr == 6)
-        cs_val = 0x24;
-#else
-    uint8_t cs_val = 0xFF;
-    switch (pwr)
-    {
-    case 0:
-    {
-        cs_val = 0x15;
-    }
-    break;
-    case 3:
-    {
-        cs_val = 0x1a;
-    }
-    break;
-    case 6:
-    {
-        cs_val = 0x28;
-    }
-    break;
-    case 8:
-    {
-        cs_val = 0x2e;
-    }
-    break;
-    case 9:
-    {
-        cs_val = 0x34;
-    }
-    break;
-    case 10:
-    {
-        cs_val = 0x3e;
-    }
-    break;
-        //default:
-        //    while(1);
-
-    }
-#endif
-    return cs_val;
-
-}
 
 static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
 {
@@ -160,42 +54,29 @@ static uint8_t rf_iq_tx_ctrl_force_set(uint8_t is_edr, int8_t pwr)
 
 }
 
-
+extern uint32_t bt_rf_polar_get_pwr_level_para(int8_t pwr);
 static uint8_t blebr_rf_power_set(int8_t txpwr)
 {
     uint8_t ret = 0;
     hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_POLAR_PWR; // Force dedicated value
 
-    uint32_t i, max = sizeof(rf_blebr_db) / sizeof(rf_blebr_db[0]);
+    uint32_t lvl_para;
+    uint8_t  level_val, pwr_val;
 
-    for (i = 0; i < max - 1; i++)
-    {
-        if (rf_blebr_db[i] >= txpwr)
-            break;
-    }
     //rt_kprintf("set txpwr %d, actully pwr %d\r\n", txpwr, rf_blebr_db[i]);
-#if 0
-    if (rf_blebr_db[i] <= 10)
+#if 1
+    if (txpwr <= 10)
     {
-        hwp_bt_phy->TX_CTRL &= ~(BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
-        ret = rf_tx_power_basic_config(rf_blebr_db[i]);
-        if (0 == ret)
-        {
-            uint8_t pwr_lvl = rf_tx_power_cs_get(txpwr);
-            if (0xFF != pwr_lvl)
-            {
-                hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_POLAR_PWR_VAL;
-                hwp_bt_mac->AESCNTL |= pwr_lvl << BT_MAC_AESCNTL_FORCE_POLAR_PWR_VAL_Pos;
-            }
-            else
-            {
-                ret = 12;
-            }
-        }
-        else
-        {
-            ret = 11;
-        }
+        lvl_para = bt_rf_polar_get_pwr_level_para(txpwr);
+        level_val = (uint8_t)(lvl_para & 0xE) >> 1;
+        pwr_val = (uint8_t)((lvl_para >> 4) & 0xFF);
+        hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_POLAR_PWR_VAL;
+        hwp_bt_mac->AESCNTL |= pwr_val << BT_MAC_AESCNTL_FORCE_POLAR_PWR_VAL_Pos;
+        //hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_POLAR_PWR;
+        //hwp_bt_mac->AESCNTL |= 1 << BT_MAC_AESCNTL_FORCE_POLAR_PWR_Pos;
+        hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_POLAR_LEVEL_VAL;
+        hwp_bt_mac->AESCNTL |= level_val << BT_MAC_AESCNTL_FORCE_POLAR_LEVEL_VAL_Pos;
+        hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_POLAR_LEVEL;
     }
     else
 #endif
@@ -211,7 +92,7 @@ static uint8_t edr_rf_power_set(int8_t txpwr)
 {
     uint8_t ret = 0;
     hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_IQ_PWR; // Force dedicated value
-
+#if 0
     uint32_t i, max = sizeof(rf_edr_db) / sizeof(rf_edr_db[0]);
 
     for (i = 0; i < max - 1; i++)
@@ -223,6 +104,9 @@ static uint8_t edr_rf_power_set(int8_t txpwr)
     //rt_kprintf("set txpwr %d, actully pwr %d\r\n", txpwr, rf_edr_db[i]);
 
     ret = rf_iq_tx_ctrl_force_set(1, rf_edr_db[i]);
+#else
+    ret = rf_iq_tx_ctrl_force_set(1, txpwr);
+#endif
     return ret;
 }
 
