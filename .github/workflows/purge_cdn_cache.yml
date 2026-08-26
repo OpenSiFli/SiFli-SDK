@@ -1,0 +1,28 @@
+name: Purge CDN Cache
+
+on:
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      flush_url:
+        description: 'CDN cache flush URL(s). Multiple URLs can be separated by commas.'
+        required: false
+        default: 'https://docs.sifli.com/projects/sdk/'
+        type: string
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Purge CDN cache
+      - name: Purge CDN cache
+        uses: OpenSiFli/SiFliMirrorSync@v1
+        with:
+          secret_id: ${{ secrets.COS_DOCS_SECRET_ID }}
+          secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
+          region: ${{ secrets.COS_DOCS_REGION }}
+          bucket: ${{ secrets.COS_DOCS_BUCKET }}
+          prefix: ''
+          flush_url: ${{ inputs.flush_url }}
