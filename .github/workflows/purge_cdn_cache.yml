@@ -24,5 +24,5 @@ jobs:
           secret_key: ${{ secrets.COS_DOCS_SECRET_KEY }}
           region: ${{ secrets.COS_DOCS_REGION }}
           bucket: ${{ secrets.COS_DOCS_BUCKET }}
-          prefix: ''
+          prefix: not_used
           flush_url: ${{ inputs.flush_url }}
