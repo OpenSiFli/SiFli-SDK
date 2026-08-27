@@ -58,7 +58,9 @@ typedef enum
     AON_PIN_MODE_LOW,    /**< low level to trigger pin wakeup */
     AON_PIN_MODE_POS_EDGE,  /**< postive edge to trigger pin wakeup */
     AON_PIN_MODE_NEG_EDGE,  /**< negative edge to trigger pin wakeup */
+#if !defined(SF32LB57X)
     AON_PIN_MODE_DOUBLE_EDGE,  /**< positive or negative edge to trigger pin wakeup */
+#endif
 } AON_PinModeTypeDef;
 
 
