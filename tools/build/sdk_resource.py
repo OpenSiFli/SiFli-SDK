@@ -799,8 +799,7 @@ def GenPartitionTableHeaderContentV2(env, mems):
                         # ACPU uses the shared SBUS view. Its local CBUS view
                         # (e.g. 0-based hpsys_ram on SF32LB58) is unusable by
                         # HCPU when ACPU passes the exec address over.
-                        exec_addr = start_addr
-                        exec_offset = offset
+                        exec_addr, exec_offset = Convert2SBUSAddr(start_addr, offset)
                     else:
                         exec_addr, exec_offset = Convert2CBUSAddr(start_addr, offset, core)
                     s += MakeLine('#undef  {}'.format(start_addr_name))
