@@ -1024,10 +1024,6 @@ __WEAK int32_t sifli_deep_handler(void)
     uint32_t dll1_freq;
     uint32_t dll2_freq;
     int clk_src;
-#ifdef SF32LB57X
-    uint32_t enr1;
-    uint32_t enr2;
-#endif /* SF32LB57X */
 
     clear_interrupt_setting();
 
@@ -1072,14 +1068,6 @@ __WEAK int32_t sifli_deep_handler(void)
     HAL_HPAON_DISABLE_VHP();
 #endif // SF32LB52X    
 
-#ifdef SF32LB57X
-    /* TODO: disable module to save power  */
-    enr1 = hwp_hpsys_rcc->ENR1;
-    enr2 = hwp_hpsys_rcc->ENR2;
-    hwp_hpsys_rcc->ENR1 = 0;
-    hwp_hpsys_rcc->ENR2 = 0;
-#endif /* SF32LB57X */
-
     HAL_HPAON_CLEAR_HP_ACTIVE();
     /* PAD no need to be disabled and enabled when entering deep sleep2 mode,
      * Otherwise glitch may be introduced and result in error in some board.
@@ -1100,11 +1088,6 @@ __WEAK int32_t sifli_deep_handler(void)
     __NOP();
     __NOP();
     __NOP();
-
-#ifdef SF32LB57X
-    hwp_hpsys_rcc->ENR1 = enr1;
-    hwp_hpsys_rcc->ENR2 = enr2;
-#endif /* SF32LB57X */
 
 #if defined(SF32LB52X) || defined(SF32LB57X)
     HAL_HPAON_ENABLE_PAD();
