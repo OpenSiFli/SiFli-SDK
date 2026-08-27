@@ -41,7 +41,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_EnablePinWakeup(uint8_t pin, uint8_t mo
     uint32_t pos;
     uint32_t val;
 
-    if ((pin >= PMU_WAKEUP_PIN_NUM) || (mode > 4))
+    if ((pin >= PMU_WAKEUP_PIN_NUM) || (mode > 3))
     {
         return HAL_ERROR;
     }
