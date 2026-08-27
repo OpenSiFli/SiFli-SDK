@@ -9,7 +9,7 @@
   var agentId = config.agentId;
   var indices = config.indices;
 
-  if (!appId || !apiKey || !Array.isArray(indices) || indices.length !== 1) {
+  if (!appId || !apiKey || !Array.isArray(indices) || indices.length === 0) {
     return;
   }
 
@@ -243,8 +243,8 @@
 
         if (agentId) {
           // This enables the Ask AI item inside the normal DocSearch modal.
-          // The v5 request is constrained to the one index compiled into the
-          // current documentation page.
+          // The v5 request can search every chip index for the current SDK
+          // version; the current page's Agent decides the default chip.
           searchConfig.askAi = {
             agentId: agentId,
             indices: indices,

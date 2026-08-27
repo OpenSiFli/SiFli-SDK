@@ -37,12 +37,32 @@ else:
 # Algolia DocSearch configuration
 docsearch_app_id = os.environ.get('ALGOLIA_DOCSEARCH_APP_ID', '')
 docsearch_api_key = os.environ.get('ALGOLIA_DOCSEARCH_SEARCH_API_KEY', '')
-docsearch_index_name = f"sdk_{version}_{chip}"
-docsearch_agent_id = os.environ.get('ALGOLIA_DOCSEARCH_AGENT_ID', '')
+docsearch_chips = (
+    'sf32lb52x',
+    'sf32lb55x',
+    'sf32lb56x',
+    'sf32lb57x',
+    'sf32lb58x',
+)
+docsearch_index_names = [f"sdk_{version}_{docsearch_chip}" for docsearch_chip in docsearch_chips]
+
+docsearch_agent_ids_json = os.environ.get('ALGOLIA_DOCSEARCH_AGENT_IDS', '').strip()
+if docsearch_agent_ids_json:
+    try:
+        docsearch_agent_ids = json.loads(docsearch_agent_ids_json)
+    except json.JSONDecodeError as error:
+        raise RuntimeError('ALGOLIA_DOCSEARCH_AGENT_IDS must be a JSON object') from error
+else:
+    docsearch_agent_ids = {}
+
+if not isinstance(docsearch_agent_ids, dict):
+    raise RuntimeError('ALGOLIA_DOCSEARCH_AGENT_IDS must be a JSON object')
+
+docsearch_agent_id = docsearch_agent_ids.get(chip, '')
 
 # DocSearch is initialized from ``static/js/algolia-agent-chat.js`` with the
-# v5 JavaScript bundle.  Both the search modal and the optional Sidepanel use
-# this page's single version-and-chip index as an Agent Studio allowlist.
+# v5 JavaScript bundle.  Every page selects the Agent for its current chip,
+# while the Agent can search every chip index for the current SDK version.
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -132,11 +152,12 @@ def setup(app):
     docsearch_config = {
         "appId": docsearch_app_id,
         "apiKey": docsearch_api_key,
-        # This is an Agent Studio v5 request allowlist.  Each generated page
-        # contains exactly its version-and-chip documentation index.
-        "indices": [docsearch_index_name],
+        # This is an Agent Studio v5 request allowlist. It contains every
+        # supported chip for the current SDK version so explicit cross-chip
+        # questions remain searchable.
+        "indices": docsearch_index_names,
         "searchParameters": {
-            docsearch_index_name: {},
+            docsearch_index_name: {} for docsearch_index_name in docsearch_index_names
         },
         "agentId": docsearch_agent_id,
         "variant": "floating",
