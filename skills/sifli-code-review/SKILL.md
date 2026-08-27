@@ -234,6 +234,7 @@ Check against the project's `.clang-format` (Allman brace style, 4-space indent)
 - Are RT-Thread IPC calls used correctly (message queues, mailboxes, events)?
 - Are calls to non-reentrant functions (e.g., `malloc`, `printf`) safe in the context they're called from?
 - Check for potential deadlocks: consistent lock ordering, no nested locks that could invert.
+- Passing a pointer to a local variable into any API whose name contains `async` (e.g. RT-Thread control codes ending in `_ASYNC`, such as `RTGRAPHIC_CTRL_GET_BRIGHTNESS_ASYNC`). The driver writes back through that pointer after the call returns; by then the calling function has returned and the stack frame is gone, so the writeback is use-after-scope (intermittent corruption, stack stomping, HardFault). 
 
 ### 2.4 Unnecessary Changes
 
