@@ -297,6 +297,9 @@ void board_init(void)
         HAL_PIN_CompileTimeSet(MPI_POWER_PAD, MPI_POWER_PAD_FUNC, PIN_NOPULL, 1);
         HAL_Delay_us(delay * 1000);
     }
+#else
+    // TODO: NON_OTP needs rework
+    BSP_System_Config();
 #endif /* CFG_BOOTROM */
 }
 

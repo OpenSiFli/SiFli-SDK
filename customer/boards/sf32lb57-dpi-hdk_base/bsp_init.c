@@ -89,6 +89,8 @@ void HAL_PreInit(void)
         // Halt LCPU first to avoid LCPU in running state
         HAL_HPAON_WakeCore(CORE_ID_LCPU);
         HAL_RCC_Reset_and_Halt_LCPU(1);
+        // get system configure from EFUSE
+        BSP_System_Config();
         HAL_HPAON_StartGTimer();
         HAL_PMU_EnableRC32K(1);
         HAL_PMU_LpCLockSelect(PMU_LPCLK_RC32);
