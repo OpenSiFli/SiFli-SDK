@@ -175,6 +175,7 @@ typedef struct
 
 
 HAL_LCDC_PixelFormat rt_lcd_format_to_hal_lcd_format(uint16_t rt_color_format);
+uint16_t hal_lcd_format_to_rt_lcd_format(HAL_LCDC_PixelFormat hal_color_format);
 rt_err_t rt_lcd_layer_control(LCD_DrvTypeDef *p_drv_lcd, int cmd, void *args);
 
 #endif /* __DRV_LCD_PRIVATE_H__ */
