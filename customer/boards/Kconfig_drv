@@ -1132,7 +1132,7 @@ menu "On-chip Peripherals"
         bool "PSRAM Cache Write Back Enabled"
         select MEMCPY_NON_DMA if PSRAM_CACHE_WB
         depends on !SOC_SIMULATOR && BSP_USING_PSRAM
-        default n 
+        default y
 
     menuconfig BSP_USING_PWM
         bool "PWM"
