@@ -150,7 +150,7 @@ if !BSP_USING_PC_SIMULATOR
         endchoice
 
         config CFG_SUPPORT_NON_OTP
-            depends on SOC_SF32LB52X
+            depends on SOC_SF32LB52X || SOC_SF32LB57X
             bool "Factory data can be stored on platforms without OTP"
             default n
         
