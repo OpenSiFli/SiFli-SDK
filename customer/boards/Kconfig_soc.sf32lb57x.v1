@@ -7,6 +7,9 @@ choice SOC_SF32LB57X_PART
         help
           Users need to manually configure the MPI mode for each MPI, 
           as the kconfig cannot identify the corresponding MPI mode from the part number.
+    config SOC_SF32LB573UB766
+        bool "SF32LB573UB766"
+        select SOC_PACKAGE_QFN68
     config SOC_SF32LB573UB7N6
         bool "SF32LB573UB7N6"
         select SOC_PACKAGE_QFN68
