@@ -331,10 +331,6 @@ common_projects:
   - path: example/get-started/hello_world/rtt/project
     boards: *default_boards
 
-  - path: example/get-started/hello_world/rtt/project
-    boards:
-      - fpga-57x_mem_v3
-
   - path: example/hal/adc/adc_battery/project
     boards: *devkit_lcd_boards
 
