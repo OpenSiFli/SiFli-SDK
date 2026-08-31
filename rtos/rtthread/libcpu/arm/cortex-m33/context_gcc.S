@@ -128,6 +128,14 @@ PendSV_Handler:
     LDR r0, [r0]
     STR r1, [r0]                /* update from thread stack pointer */
 
+#if 0 //For debug purpose
+    PUSH    {r2, lr}
+    LDR     r1, =rt_interrupt_to_thread
+    LDR     r1, [r1]
+    BL rt_thread_switch_examine /* Call rt_thread_switch_examine(*rt_interrupt_from_thread, *rt_interrupt_to_thread)*/
+    POP     {r2, lr}
+#endif
+
 switch_to_thread:
     LDR r1, =rt_interrupt_to_thread
     LDR r1, [r1]
@@ -304,6 +312,61 @@ _mm_update_done:
     POP     {LR}
 
     ORR     lr, lr, #0x04
+    BX      lr
+
+
+.global DebugMon_Handler
+.type DebugMon_Handler, %function    
+DebugMon_Handler:
+    /* get current context */
+    MRS     r0, msp                 /* get fault context from handler. */
+    TST     lr, #0x04               /* if(!EXC_RETURN[2]) */
+    BEQ     _dbg_get_sp_done
+    MRS     r0, psp                 /* get fault context from thread. */
+_dbg_get_sp_done:
+
+    STMFD   r0!, {r4 - r11}         /* push r4 - r11 register */
+    MRS     r4, psplim              /* r4 = psplim  */
+    STMFD   r0!, {r4}               /* push psplim  */  
+#if defined (__VFP_FP__) && !defined(__SOFTFP__)
+    STMFD   r0!, {lr}               /* push dummy for flag */
+#endif
+    STMFD   r0!, {lr}               /* push exec_return register */
+
+    TST     lr, #0x04               /* if(!EXC_RETURN[2]) */
+    BEQ     _dbg_update_msp
+    MSR     psp, r0                 /* update stack pointer to PSP. */
+    B       _dbg_update_done
+_dbg_update_msp:
+    MSR     msp, r0                 /* update stack pointer to MSP. */
+_dbg_update_done:
+
+    PUSH    {LR}
+    BL      rt_dwt_exception_handler
+    POP     {LR}
+
+    /* Restore r4-r11 and unwind the manually-pushed frame before returning */
+    TST     lr, #0x04               /* if(!EXC_RETURN[2]) */
+    BEQ     _dbg_restore_msp
+    MRS     r0, psp                 /* reload thread stack pointer. */
+    B       _dbg_reload_done
+_dbg_restore_msp:
+    MRS     r0, msp                 /* reload handler stack pointer. */
+_dbg_reload_done:
+    LDMFD   r0!, {r3}               /* pop and discard exc_return */
+#if defined (__VFP_FP__) && !defined(__SOFTFP__)
+    LDMFD   r0!, {r3}               /* pop and discard FPU flag */
+#endif
+    LDMFD   r0!, {r3}               /* pop and discard psplim */
+    LDMFD   r0!, {r4 - r11}         /* restore r4 - r11 */
+    TST     lr, #0x04               /* if(!EXC_RETURN[2]) */
+    BEQ     _dbg_save_msp
+    MSR     psp, r0                 /* update stack pointer to PSP. */
+    B       _dbg_save_done
+_dbg_save_msp:
+    MSR     msp, r0                 /* update stack pointer to MSP. */
+_dbg_save_done:
+
     BX      lr
 
 

@@ -89,6 +89,7 @@ _reswitch
     BX      LR
     ENDP
 
+    IMPORT rt_thread_switch_examine
 ; r0 --> switch from thread stack
 ; r1 --> switch to thread stack
 ; psr, pc, lr, r12, r3, r2, r1, r0 are pushed into [from] stack
@@ -109,9 +110,9 @@ PendSV_Handler   PROC
     BL      rt_hw_cfg_pendsv_pri
     MOV     r1, #0x00
     STR     r1, [r0]
-    PUSH    {lr}
+    PUSH    {r2, lr}
     BL      PendSv_DBG_Trigger 
-    POP     {lr}
+    POP     {r2, lr}
     B       pendsv_exit 
     ENDIF
 
@@ -152,6 +153,13 @@ thread_switch_next
 
     LDR     r0, [r0]
     STR     r1, [r0]                ; update from thread stack pointer
+
+    ; For debug purpose
+    ; PUSH    {r2, lr}
+    ; LDR     r1, =rt_interrupt_to_thread
+    ; LDR     r1, [r1]
+    ; BL      rt_thread_switch_examine /* Call rt_thread_switch_examine(*rt_interrupt_from_thread, *rt_interrupt_to_thread)*/
+    ; POP     {r2, lr}
 
 switch_to_thread
     LDR     r1, =rt_interrupt_to_thread
@@ -323,6 +331,54 @@ MemManage_Handler    PROC
     POP     {lr}
 
     ORR     lr, lr, #0x04
+    BX      lr
+    ENDP
+
+
+
+    IMPORT rt_dwt_exception_handler
+    EXPORT DebugMon_Handler
+DebugMon_Handler    PROC
+
+    ; get current context
+    TST     lr, #0x04               ; if(!EXC_RETURN[2])
+    ITE     EQ
+    MRSEQ   r0, msp                 ; [2]=0 ==> Z=1, get fault context from handler.
+    MRSNE   r0, psp                 ; [2]=1 ==> Z=0, get fault context from thread.
+
+    STMFD   r0!, {r4 - r11}         ; push r4 - r11 register
+    MRS     r4, psplim              ; r4 = psplim
+    STMFD   r0!, {r4}               ; push psplim    
+    IF      {FPU} != "SoftVFP"
+    STMFD   r0!, {lr}               ; push dummy for flag
+    ENDIF
+    STMFD   r0!, {lr}               ; push exec_return register
+
+    TST     lr, #0x04               ; if(!EXC_RETURN[2])
+    ITE     EQ
+    MSREQ   msp, r0                 ; [2]=0 ==> Z=1, update stack pointer to MSP.
+    MSRNE   psp, r0                 ; [2]=1 ==> Z=0, update stack pointer to PSP.
+
+    PUSH    {lr}
+    BL      rt_dwt_exception_handler
+    POP     {lr}
+
+    ; Restore r4-r11 and unwind the manually-pushed frame before returning,
+    TST     lr, #0x04               ; if(!EXC_RETURN[2])
+    ITE     EQ
+    MRSEQ   r0, msp                 ; [2]=0 ==> Z=1, reload handler stack pointer.
+    MRSNE   r0, psp                 ; [2]=1 ==> Z=0, reload thread stack pointer.
+    LDMFD   r0!, {r3}               ; pop and discard exc_return
+    IF      {FPU} != "SoftVFP"
+    LDMFD   r0!, {r3}               ; pop and discard FPU flag
+    ENDIF
+    LDMFD   r0!, {r3}               ; pop and discard psplim
+    LDMFD   r0!, {r4 - r11}         ; restore r4 - r11
+    TST     lr, #0x04               ; if(!EXC_RETURN[2])
+    ITE     EQ
+    MSREQ   msp, r0                 ; [2]=0 ==> Z=1, update stack pointer to MSP.
+    MSRNE   psp, r0                 ; [2]=1 ==> Z=0, update stack pointer to PSP.
+
     BX      lr
     ENDP
 

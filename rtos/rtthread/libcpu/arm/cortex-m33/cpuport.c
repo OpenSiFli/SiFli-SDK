@@ -115,6 +115,8 @@ struct stack_frame_fpu
 {
     rt_uint32_t flag;
 
+    rt_uint32_t psplim;
+
     /* r4 ~ r11 register */
     rt_uint32_t r4;
     rt_uint32_t r5;
@@ -672,6 +674,106 @@ void rt_coredump_info_dump(rt_mem_dump_cb_t dump_cb)
     dump_cb((uint32_t)&saved_stack_pointer, sizeof(saved_stack_pointer), RT_NULL, RT_NULL);
     dump_cb((uint32_t)&error_reason, sizeof(error_reason), RT_NULL, RT_NULL);
     dump_cb((uint32_t)&saved_scb_reg, sizeof(saved_scb_reg), RT_NULL, RT_NULL);
+}
+
+static void dwt_wp_set(uint32_t addr)
+{
+    //Enable DWT global
+    if (0 == HAL_DBG_DWT_IsInit()) HAL_DBG_DWT_Init();
+
+    HAL_DBG_DWT_Trigger(addr, 2);
+    //Enable debug monitor exception
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_MON_EN_Msk;
+}
+
+static void dwt_wp_clr(void)
+{
+    HAL_DBG_DWT_RstTrigger();
+}
+
+__ROM_USED void rt_dwt_exception_handler(struct exception_info *exception_info)
+{
+    uint32_t *MONITOR_ADDR = (uint32_t *)HAL_DBG_DWT_GetTriggerAddr();
+
+    if (0 == (*MONITOR_ADDR))
+    {
+        rt_kprintf("DWT MONITOR_ADDR=%x, val=%x \n", MONITOR_ADDR, *MONITOR_ADDR);
+
+        //Print the stack frame information
+        {
+            struct exception_stack_frame *exception_stack = &exception_info->stack_frame.exception_stack_frame;
+            struct stack_frame *context = &exception_info->stack_frame;
+
+            rt_kprintf(" sp: 0x%08x\n", (uint32_t)((struct exception_stack_frame_fpu *)&exception_info->stack_frame.exception_stack_frame + 1));
+
+            rt_kprintf("psr: 0x%08x\n", context->exception_stack_frame.psr);
+
+            rt_kprintf("r00: 0x%08x\n", context->exception_stack_frame.r0);
+            rt_kprintf("r01: 0x%08x\n", context->exception_stack_frame.r1);
+            rt_kprintf("r02: 0x%08x\n", context->exception_stack_frame.r2);
+            rt_kprintf("r03: 0x%08x\n", context->exception_stack_frame.r3);
+            rt_kprintf("r04: 0x%08x\n", context->r4);
+            rt_kprintf("r05: 0x%08x\n", context->r5);
+            rt_kprintf("r06: 0x%08x\n", context->r6);
+            rt_kprintf("r07: 0x%08x\n", context->r7);
+            rt_kprintf("r08: 0x%08x\n", context->r8);
+            rt_kprintf("r09: 0x%08x\n", context->r9);
+            rt_kprintf("r10: 0x%08x\n", context->r10);
+            rt_kprintf("r11: 0x%08x\n", context->r11);
+            rt_kprintf("r12: 0x%08x\n", context->exception_stack_frame.r12);
+            rt_kprintf(" lr: 0x%08x\n", context->exception_stack_frame.lr);
+            rt_kprintf(" pc: 0x%08x\n", context->exception_stack_frame.pc);
+
+            if (exception_info->exc_return & (1 << 2))
+            {
+                rt_kprintf("on thread: %s\r\n\r\n", rt_thread_self()->name);
+            }
+            else
+            {
+                rt_kprintf("on handler\r\n\r\n");
+            }
+            rt_kprintf("=====================\n");
+            rt_kprintf("PSP: 0x%p, MSP: 0x%p\n", __get_PSP(), __get_MSP());
+
+        }
+
+
+        while (1);
+    }
+    else
+    {
+        //The trigger should be cleared, otherwise it will trigger again and again.
+        HAL_DBG_DWT_RstTrigger();
+        HAL_DBG_DWT_Trigger(((uint32_t)MONITOR_ADDR), 2);
+    }
+}
+
+void rt_thread_switch_examine(rt_uint32_t *p_from_sp, rt_uint32_t *p_to_sp)
+{
+    /*
+        This is an example of using DWT to monitor the LR register
+        of the stack frame during a context switch.
+        It will run into an while(1) in 'rt_dwt_exception_handler' when the LR register becomes 0.
+    */
+    if (p_from_sp != p_to_sp)
+    {
+        struct stack_frame_fpu *stack_f = (struct stack_frame_fpu *)*p_from_sp;
+        if (1 == stack_f->flag) //It is a float stack frame
+        {
+            dwt_wp_clr();
+            dwt_wp_set((uint32_t) & (stack_f->exception_stack_frame.lr));
+        }
+        else
+        {
+            struct stack_frame *stack = (struct stack_frame *)stack_f;
+            dwt_wp_clr();
+            dwt_wp_set((uint32_t) & (stack->exception_stack_frame.lr));
+        }
+    }
+    else
+    {
+        dwt_wp_clr();
+    }
 }
 
 #ifdef RT_USING_CPU_FFS
