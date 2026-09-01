@@ -108,4 +108,15 @@ __weak int _open(const char *path, int flags, int mode)
 
 #endif /* !__CLANG_ARM && __GNUC__ && !RT_USING_LIBC */
 
+
+__weak void BSP_CAMERA_PowerUp(void)
+{
+    // Default implementation - can be overridden by board-specific implementation
+}
+
+__weak void BSP_CAMERA_PowerDown(void)
+{
+    // Default implementation - can be overridden by board-specific implementation
+}
+
 #endif /* BSP_USING_PC_SIMULATOR */

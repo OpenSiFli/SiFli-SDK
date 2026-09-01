@@ -16,6 +16,7 @@
 #include <string.h>
 #include <drv_gc032a.h>
 #include <drv_dcmi.h>
+#include "drv_io.h"
 
 #define DRV_DEBUG
 #define LOG_TAG     "drv.gc032a"
@@ -1017,11 +1018,11 @@ void gc032a_8bit_dvp_drv(void)
 
     /*Gain*/
     write_reg(i2c_bus, 0xfe, 0x00);
-    write_reg(i2c_bus, 0x70, 0x50);
+    write_reg(i2c_bus, 0x70, 0xf0);
 
     /*AEC*/
     write_reg(i2c_bus, 0xfe, 0x00);
-    write_reg(i2c_bus, 0x4f, 0x00);
+    write_reg(i2c_bus, 0x4f, 0x00); //0x00 - AEC Disable, 0x01 - AEC enable
     write_reg(i2c_bus, 0xfe, 0x01);
     write_reg(i2c_bus, 0x0d, 0x00); //08 add 20170110
     write_reg(i2c_bus, 0x12, 0x09);
@@ -1129,7 +1130,7 @@ static int gc0320_mclk_output(bool enable)
 #ifdef USE_PTM_DVP_8WIRE
     uint32_t period = 84 * 3; // 4MHz
 #else
-    uint32_t period = 84; // 12MHz
+    uint32_t period = 42; // 24MHz
 #endif
     device = (struct rt_device_pwm *)rt_device_find("pwmt2");
     if (!device)
@@ -1157,6 +1158,7 @@ int rt_gc032a_init(uint8_t interface)
     rt_device_t dcmi_dev = RT_NULL;
 
     LOG_I("rt_gc032a_init");
+    BSP_CAMERA_PowerUp();
     i2c_bus = rt_i2c_bus_device_find(I2C_NAME);
     if (i2c_bus == RT_NULL)
     {
@@ -1198,6 +1200,7 @@ int rt_gc032a_init(uint8_t interface)
 
 int rt_gc032a_deinit(void)
 {
+    BSP_CAMERA_PowerDown();
     gc0320_mclk_output(false);
     return RT_EOK;
 }

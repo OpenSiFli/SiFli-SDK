@@ -136,6 +136,12 @@ void BSP_SD2_PowerUp(void);
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 
 /**
+ * @brief Camera
+ */
+void BSP_CAMERA_PowerUp(void);
+void BSP_CAMERA_PowerDown(void);
+
+/**
  * @brief PSRAM
  */
 

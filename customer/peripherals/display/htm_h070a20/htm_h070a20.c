@@ -164,25 +164,7 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
 
 static void LCD_SetColorMode(LCDC_HandleTypeDef *hlcdc, uint16_t color_mode)
 {
-    uint8_t   parameter[2];
 
-
-    switch (color_mode)
-    {
-    case RTGRAPHIC_PIXEL_FORMAT_RGB565:
-        lcdc_int_cfg.color_mode = LCDC_PIXEL_FORMAT_RGB565;
-        break;
-
-    case RTGRAPHIC_PIXEL_FORMAT_RGB888:
-        lcdc_int_cfg.color_mode = LCDC_PIXEL_FORMAT_RGB888;
-        break;
-
-    default:
-        return; //unsupport
-        break;
-    }
-
-    HAL_LCDC_SetOutFormat(hlcdc, lcdc_int_cfg.color_mode);
 }
 
 static void LCD_SetBrightness(LCDC_HandleTypeDef *hlcdc, uint8_t br)
