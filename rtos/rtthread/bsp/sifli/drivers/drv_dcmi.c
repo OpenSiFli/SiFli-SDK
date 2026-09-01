@@ -101,8 +101,6 @@ void start_dvp_ptm(void)
         PTM_JMP(-5, PTM_ZERO, JMP_EQ, PTM_ZERO, 0), /* to next clk */
         PTM_SET(PTM_X, PTM_X, OP_ADD, 1),
     };
-    //Disable USB output
-    hwp_hpsys_cfg->USBCR &= ~(HPSYS_CFG_USBCR_DM_PD | HPSYS_CFG_USBCR_DP_EN | HPSYS_CFG_USBCR_USB_EN);
 
     HAL_RCC_EnableModule(RCC_MOD_PTM1);
     memcpy(PTM1_CORE1_TCM, core_code, sizeof(core_code));

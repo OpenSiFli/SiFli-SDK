@@ -59,3 +59,15 @@ void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
     // bsp_psram_enter_low_power("psram1");
 #endif  /* SOC_BF0_HCPU */
 }
+
+
+void BSP_CAMERA_PowerUp(void)
+{
+    //Disable the USB output, because the camera is using the same pin as the USB output
+    hwp_hpsys_cfg->USBCR &= ~(HPSYS_CFG_USBCR_DM_PD | HPSYS_CFG_USBCR_DP_EN | HPSYS_CFG_USBCR_USB_EN);
+}
+
+void BSP_CAMERA_PowerDown(void)
+{
+
+}
