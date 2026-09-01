@@ -92,14 +92,25 @@ typedef enum
 
 #elif defined(SF32LB57X)
 
-/** MPI pinmap mode for SiP memory */
+/** MPI pinmap mode (bonding type) for SiP memory */
 typedef enum
 {
     PIN_MPI_PINMAP_MODE_INVALID = 0,
+    /* bonding type 1 used by SiP PSRAM */
     PIN_MPI_PINMAP_MODE_1 = 1,
+    /* bonding type 2 used by SiP PSRAM */
     PIN_MPI_PINMAP_MODE_2 = 2,
+    /* bonding type 3 used by SiP PSRAM */
     PIN_MPI_PINMAP_MODE_3 = 3,
+    /* bonding type 4 used by SiP NOR Flash
+     * for MPI2 and MPI3 NOR Flash (i.e. SipFlash2 and SipFlash3), no need to select bonding type,
+     * because the pinmux is fixed and not configurable
+     */
     PIN_MPI_PINMAP_MODE_4 = 4,
+    /* bonding type 5 used by SiP NOR Flash
+     * for MPI2 and MPI3 NOR Flash (i.e. SipFlash2 and SipFlash3), no need to select bonding type,
+     * because the pinmux is fixed and not configurable
+     */
     PIN_MPI_PINMAP_MODE_5 = 5,
 } PIN_MpiPinmapMode;
 
