@@ -96,7 +96,11 @@ extern "C" {
 #define NAND_BUF_CPY_MODE       (NAND_CACHE_USE_MEMCPY)
 #endif
 #else
+#ifdef BSP_USING_EXT_DMA
+#define NAND_BUF_CPY_MODE       (NAND_CACHE_USE_EXTDMA)
+#else
 #define NAND_BUF_CPY_MODE       (NAND_CACHE_USE_MEMCPY)
+#endif
 #endif
 
 /**

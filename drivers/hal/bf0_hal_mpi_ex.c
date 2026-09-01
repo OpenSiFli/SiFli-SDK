@@ -847,7 +847,7 @@ __HAL_ROM_USED int HAL_NAND_READ_PAGE(FLASH_HandleTypeDef *handle, uint32_t addr
 __HAL_ROM_USED int HAL_NAND_READ_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t addr,
         uint8_t *dbuff, uint32_t dlen, uint8_t *oob_buf, uint32_t olen)
 {
-    int busy, oip_cnt;
+    int res;
     uint32_t pagesize;
     uint32_t offset; //
     //HAL_StatusTypeDef ret;
@@ -875,34 +875,27 @@ __HAL_ROM_USED int HAL_NAND_READ_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t a
 
     // load page to cache, page read with block+page address, support 3 bytes address for larger than 1Gb chips
     HAL_FLASH_ISSUE_CMD(handle, SPI_FLASH_CMD_PREAD, (addr / pagesize) & 0xffffff);
-    HAL_Delay_us_(20);
+    HAL_Delay_us_(60);
 
-    // check busy
+    // check busy and ECC status in a single register access
     HAL_FLASH_WRITE_DLEN(handle, 1);
-
-    oip_cnt = 0;
-    do
+    HAL_FLASH_ISSUE_CMD(handle, SPI_FLASH_CMD_RDSR, handle->ctable->status_reg);
+    HAL_Delay_us_(1);
+    uint32_t sr = HAL_FLASH_READ32(handle);
+    if (sr & 0x1) /* still busy, retry once */
     {
-        HAL_Delay_us_(5);
+        HAL_Delay_us_(20);
         HAL_FLASH_ISSUE_CMD(handle, SPI_FLASH_CMD_RDSR, handle->ctable->status_reg);
-        busy = HAL_FLASH_READ32(handle) & 0x1;
-        if (busy == 0)
-            oip_cnt++;
-#ifdef HYF_SPECIAL_SUPPORT
-        if (oip_cnt >= 2)   // only HYF request oip twice
-            break;
-#else
-        if (oip_cnt >= 1)   // only HYF request oip twice
-            break;
-#endif
+        sr = HAL_FLASH_READ32(handle);
     }
-    while (1);
-
-    int res = HAL_NAND_GET_ECC_RESULT(handle);
-    if (res != 0)
+    if (handle->ecc_en && handle->ctable->ecc_sta_mask)
     {
-        handle->ErrorCode = res | MPI_ERROR_ECC;
-        return 0;
+        uint32_t ecc = sr & handle->ctable->ecc_sta_mask;
+        if (ecc)
+        {
+            handle->ErrorCode = ecc | MPI_ERROR_ECC;
+            return 0;
+        }
     }
 
     // use AHB read
