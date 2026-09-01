@@ -1,0 +1,8 @@
+import os
+from building import *
+
+# Add source code
+src = Glob('*.c')
+group = DefineGroup('Applications', src, depend = [''])
+
+Return('group')
