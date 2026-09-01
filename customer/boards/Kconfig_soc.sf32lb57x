@@ -28,6 +28,9 @@ config SOC_SF32LB577VD776
 config SOC_SF32LB579V6EN6
     bool
     select SOC_PACKAGE_BGA112
+config SOC_SF32LB57GVD776
+    bool
+    select SOC_PACKAGE_BGA112
 config SOC_SF32LB57GYD7N6
     bool
     select SOC_PACKAGE_QFN80
