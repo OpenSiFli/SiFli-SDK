@@ -52,7 +52,7 @@ typedef struct
     __IO uint32_t MEM4;
     __IO uint32_t GPIO31_0;
     __IO uint32_t GPIO63_32;
-    __IO uint32_t GPIO95_64;
+    __IO uint32_t RSVD;
     __IO uint32_t RSVD1;
     __IO uint32_t TCR0;
 } PTC_TypeDef;
@@ -541,20 +541,6 @@ typedef struct
 #define PTC_GPIO63_32_SELD_Pos          (24U)
 #define PTC_GPIO63_32_SELD_Msk          (0x1FUL << PTC_GPIO63_32_SELD_Pos)
 #define PTC_GPIO63_32_SELD              PTC_GPIO63_32_SELD_Msk
-
-/***************** Bit definition for PTC_GPIO95_64 register ******************/
-#define PTC_GPIO95_64_SELA_Pos          (0U)
-#define PTC_GPIO95_64_SELA_Msk          (0x1FUL << PTC_GPIO95_64_SELA_Pos)
-#define PTC_GPIO95_64_SELA              PTC_GPIO95_64_SELA_Msk
-#define PTC_GPIO95_64_SELB_Pos          (8U)
-#define PTC_GPIO95_64_SELB_Msk          (0x1FUL << PTC_GPIO95_64_SELB_Pos)
-#define PTC_GPIO95_64_SELB              PTC_GPIO95_64_SELB_Msk
-#define PTC_GPIO95_64_SELC_Pos          (16U)
-#define PTC_GPIO95_64_SELC_Msk          (0x1FUL << PTC_GPIO95_64_SELC_Pos)
-#define PTC_GPIO95_64_SELC              PTC_GPIO95_64_SELC_Msk
-#define PTC_GPIO95_64_SELD_Pos          (24U)
-#define PTC_GPIO95_64_SELD_Msk          (0x1FUL << PTC_GPIO95_64_SELD_Pos)
-#define PTC_GPIO95_64_SELD              PTC_GPIO95_64_SELD_Msk
 
 /******************** Bit definition for PTC_TCR0 register ********************/
 #define PTC_TCR0_REP_Pos                (0U)
