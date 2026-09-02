@@ -2228,8 +2228,8 @@ static rt_err_t render_list(priv_render_list_t *rl)
 
     rt_err_t ret;
 
-    /* If both the width and height do not exceed the maximum values, render directly. */
-    if (rl->dst.width <= EPIC_COORDINATES_MAX && rl->dst.height <= EPIC_COORDINATES_MAX)
+    /* If the width do not exceed the maximum values, render directly. */
+    if (rl->dst.width <= EPIC_COORDINATES_MAX)
     {
         return render((drv_epic_render_list_t)rl);
     }
@@ -2241,34 +2241,25 @@ static rt_err_t render_list(priv_render_list_t *rl)
            the data will be restored, and these data will be used for subsequent operations.*/
         EPIC_LayerConfigTypeDef dst = rl->dst;
 
-        /* Calculate the maximum value of rows/columns */
+        /* Calculate the maximum value of columns */
         int16_t max_columns = rl->dst.x_offset + rl->dst.width - 1;
-        int16_t max_rows = rl->dst.y_offset + rl->dst.height - 1;
 
-        /* Vertical block rendering */
-        for (int16_t start_rows = dst.y_offset; start_rows <= max_rows; start_rows += EPIC_COORDINATES_MAX)
+        render_area.y0 = dst.y_offset;
+        render_area.y1 = dst.y_offset + dst.height - 1;
+
+        /* Horizontal block rendering */
+        for (int16_t start_columns = dst.x_offset; start_columns <= max_columns; start_columns += EPIC_COORDINATES_MAX)
         {
-            render_area.y0 = start_rows;
+            render_area.x0 = start_columns;
 
-            if (start_rows + EPIC_COORDINATES_MAX - 1 >= max_rows)
-                render_area.y1 = max_rows;
+            if (start_columns + EPIC_COORDINATES_MAX - 1 >= max_columns)
+                render_area.x1 = max_columns;
             else
-                render_area.y1 = start_rows + EPIC_COORDINATES_MAX - 1;
+                render_area.x1 = start_columns + EPIC_COORDINATES_MAX - 1;
 
-            /* Horizontal block rendering */
-            for (int16_t start_columns = dst.x_offset; start_columns <= max_columns; start_columns += EPIC_COORDINATES_MAX)
-            {
-                render_area.x0 = start_columns;
+            clip_layer_to_area((EPIC_BlendingDataType *)&rl->dst, (const uint8_t *)dst.data, dst.x_offset, dst.y_offset, &render_area);
 
-                if (start_columns + EPIC_COORDINATES_MAX - 1 >= max_columns)
-                    render_area.x1 = max_columns;
-                else
-                    render_area.x1 = start_columns + EPIC_COORDINATES_MAX - 1;
-
-                clip_layer_to_area((EPIC_BlendingDataType *)&rl->dst, (const uint8_t *)dst.data, dst.x_offset, dst.y_offset, &render_area);
-
-                ret = render((drv_epic_render_list_t)rl);
-            }
+            ret = render((drv_epic_render_list_t)rl);
         }
         rl->dst = dst;
     }

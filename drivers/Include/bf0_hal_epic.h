@@ -215,7 +215,7 @@ extern "C" {
 #define EPIC_INPUT_SCALE_NONE 1024
 
 /*
- EPIC input/output maximum coordinates
+  * @brief  EPIC maximum output width
 */
 #if defined(SF32LB52X)||defined(SF32LB57X)
 #define EPIC_COORDINATES_MAX 505
