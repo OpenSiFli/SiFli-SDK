@@ -1519,11 +1519,16 @@ typedef struct
 #ifndef SF32LB55X
     uint16_t    Delay;      /*!< Delay before triggered     */
     uint8_t     Tripol;     /*!< Select trigger polarity  */
-#endif // SF32LB58X
+    uint8_t     RepEn;
+    uint8_t     RepTrig;
+    uint8_t     RepIRQ;
+    uint16_t    Pen;
+#endif // SF32LB55X
     uint8_t     Operation;  /*!< Task operation */
     uint8_t     Channel;    /*!< PTC Channel*/
     uint8_t     State;      /*!< State for PTC   */
     uint8_t     Sel;        /*!< Select trigger source  */
+    uint8_t     Trigger_Pin;/*!< Select rigger pin*/
 } PTC_InitTypeDef;
 
 typedef struct
