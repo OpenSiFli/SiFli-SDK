@@ -6,7 +6,7 @@
 
 SiFli SDK 会把蓝牙注册成一个 RT-Thread 的 Miscellaneous 设备（设备名 `"bt_device"`）。这个设备比较特殊：它只实现了 `control()` 操作。打开、关闭、注册事件回调、状态查询、以及各个 profile 的动作，全部通过 `rt_device_control` 加不同的 `BT_CONTROL_*` 命令码来完成；异步结果则通过一个注册进去的 `bt_notify_cb` 回调以 `BT_EVENT_*` 事件的形式上报。
 
-在此基础上，蓝牙应用被组织成一个**「核心 + 插件」的多服务框架**：核心已下沉为独立的中间件组件 `rt_bt_app`（位于 `middleware/rt_bt_app/`），可被任意工程复用；新增一个蓝牙 profile（HFP、SPP……）只需在应用侧新增一个 `.c` 文件和配置开关，无需改动核心或其它服务。
+在此基础上，蓝牙应用被组织成一个 **「核心 + 插件」的多服务框架**：核心已下沉为独立的中间件组件 `rt_bt_app`（位于 `middleware/rt_bt_app/`），可被任意工程复用；新增一个蓝牙 profile（HFP、SPP……）只需在应用侧新增一个 `.c` 文件和配置开关，无需改动核心或其它服务。
 
 
 ## 支持的平台
