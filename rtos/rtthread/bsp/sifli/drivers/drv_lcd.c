@@ -286,22 +286,27 @@ static char *lcd_msg_to_name(LCD_MsgIdDef msg)
 #define EVENT_TO_NAME_CASE(msg) case msg: return #msg
     switch (msg)
     {
+        //async msg
         EVENT_TO_NAME_CASE(LCD_MSG_OPEN);
-        EVENT_TO_NAME_CASE(LCD_MSG_CLOSE);
-        EVENT_TO_NAME_CASE(LCD_MSG_SET_MODE);
-        EVENT_TO_NAME_CASE(LCD_MSG_CTRL_SET_LCD_PRESENT);
-        EVENT_TO_NAME_CASE(LCD_MSG_CTRL_ASSERT_IF_DRAWTIMEOUT);
         EVENT_TO_NAME_CASE(LCD_MSG_POWER_ON);
-        EVENT_TO_NAME_CASE(LCD_MSG_POWER_OFF);
         EVENT_TO_NAME_CASE(LCD_MSG_DRAW_RECT_ASYNC);
         EVENT_TO_NAME_CASE(LCD_MSG_DRAW_COMP_RECT_ASYNC);
-        EVENT_TO_NAME_CASE(LCD_MSG_SET_BRIGHTNESS);
+        EVENT_TO_NAME_CASE(LCD_MSG_SET_NEXT_TE);
+        EVENT_TO_NAME_CASE(LCD_MSG_GET_BRIGHTNESS_ASYNC);
+        EVENT_TO_NAME_CASE(LCD_MSG_FLUSH_RECT_ASYNC);
 
+        //sync msg
+        EVENT_TO_NAME_CASE(LCD_MSG_CONTROL);
+        EVENT_TO_NAME_CASE(LCD_MSG_CLOSE);
+        EVENT_TO_NAME_CASE(LCD_MSG_POWER_OFF);
+        EVENT_TO_NAME_CASE(LCD_MSG_SET_MODE);
         EVENT_TO_NAME_CASE(LCD_MSG_DRAW_RECT);
         EVENT_TO_NAME_CASE(LCD_MSG_SET_WINDOW);
         EVENT_TO_NAME_CASE(LCD_MSG_SET_PIXEL);
         EVENT_TO_NAME_CASE(LCD_MSG_GET_PIXEL);
-
+        EVENT_TO_NAME_CASE(LCD_MSG_SET_BRIGHTNESS);
+        EVENT_TO_NAME_CASE(LCD_MSG_CTRL_SET_LCD_PRESENT);
+        EVENT_TO_NAME_CASE(LCD_MSG_CTRL_ASSERT_IF_DRAWTIMEOUT);
     default:
         return "UNKNOW";
     }
@@ -1250,6 +1255,7 @@ static rt_err_t api_lcd_control(rt_device_t dev, int cmd, void *args)
         msg.content.ctrl_ctx.dev = dev;
         msg.content.ctrl_ctx.cmd = cmd;
         msg.content.ctrl_ctx.args = args;
+        LOG_D("lcd control cmd: %d", cmd);
         break;
     }
 
