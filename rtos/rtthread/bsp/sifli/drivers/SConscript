@@ -27,6 +27,8 @@ if GetDepend(['BSP_USING_RGBLED']):
     src += ['drv_rgbled.c']
 if GetDepend(['RT_USING_SPI']):
     src += ['drv_spi.c']
+if GetDepend('BSP_ENABLE_SPI_I2S_SLAVE_RX'):
+    src += ['drv_spi_i2s_slave_rx.c']
 
 if GetDepend(['RT_USING_QSPI']):
     src += ['drv_qspi.c'] 

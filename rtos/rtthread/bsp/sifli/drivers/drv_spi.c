@@ -1472,6 +1472,31 @@ enum
 
 /* BSP_USING_SPI_CAMERA and BSP_USING_SPI_DMA_CIRCULAR cannot be enabled by 55x LCPU side due to duplicate HAL_SPI_RxCpltCallback definition */
 #if defined(DMA_SUPPORT_DYN_CHANNEL_ALLOC) || defined(BSP_USING_SPI_CAMERA) || defined(BSP_USING_SPI_DMA_CIRCULAR)
+
+/* Default implementations of the I2S slave Rx hooks (see drv_spi.h).
+ * They are overridden by drv_spi_i2s_slave_rx.c when that driver is built.
+ */
+__weak rt_bool_t bsp_i2s_slave_rx_owns(SPI_HandleTypeDef *hspi)
+{
+    UNUSED(hspi);
+    return RT_FALSE;
+}
+
+__weak void bsp_i2s_slave_rx_cplt(SPI_HandleTypeDef *hspi)
+{
+    UNUSED(hspi);
+}
+
+__weak void bsp_i2s_slave_rx_half_cplt(SPI_HandleTypeDef *hspi)
+{
+    UNUSED(hspi);
+}
+
+__weak void bsp_i2s_slave_rx_err(SPI_HandleTypeDef *hspi)
+{
+    UNUSED(hspi);
+}
+
 void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
@@ -1499,7 +1524,15 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+    struct sifli_spi *spi_drv;
+
+    if (bsp_i2s_slave_rx_owns(hspi))
+    {
+        bsp_i2s_slave_rx_cplt(hspi);
+        return;
+    }
+
+    spi_drv = rt_container_of(hspi, struct sifli_spi, handle);
 
 #if defined(BSP_USING_SPI_CAMERA)
     if (spi_is_camera_active(spi_drv))
@@ -1577,7 +1610,15 @@ void HAL_SPI_TxHalfCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_RxHalfCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+    struct sifli_spi *spi_drv;
+
+    if (bsp_i2s_slave_rx_owns(hspi))
+    {
+        bsp_i2s_slave_rx_half_cplt(hspi);
+        return;
+    }
+
+    spi_drv = rt_container_of(hspi, struct sifli_spi, handle);
 
 #if defined(BSP_USING_SPI_CAMERA)
     if (spi_is_camera_active(spi_drv))
@@ -1630,7 +1671,15 @@ void HAL_SPI_TxRxHalfCpltCallback(SPI_HandleTypeDef *hspi)
 
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 {
-    struct sifli_spi *spi_drv =  rt_container_of(hspi, struct sifli_spi, handle);
+    struct sifli_spi *spi_drv;
+
+    if (bsp_i2s_slave_rx_owns(hspi))
+    {
+        bsp_i2s_slave_rx_err(hspi);
+        return;
+    }
+
+    spi_drv = rt_container_of(hspi, struct sifli_spi, handle);
 
 #if defined(BSP_USING_SPI_CAMERA)
     if (spi_is_camera_active(spi_drv))

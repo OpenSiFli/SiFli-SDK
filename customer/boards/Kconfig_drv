@@ -1760,6 +1760,47 @@ menu "On-chip Peripherals"
                 default n
         endif
 
+
+    menuconfig BSP_ENABLE_SPI_I2S_SLAVE_RX
+        bool "SPI Emulated I2S Slave RX"
+        depends on !SOC_SF32LB55X
+        default n
+        help
+            Enable SPI emulated I2S Slave RX, which can receive stereo audio data (16bit width format of each channel) from external I2S master device.
+            The audio data will be received by SPI and PTC peripheral, PTC channel1~channel3 are used. Only HPSYS SPI is supported
+    if BSP_ENABLE_SPI_I2S_SLAVE_RX
+        config BSP_I2S_SLAVE_RX_NAME
+        string "I2S Slave RX Name"
+        default "mic_s"
+            
+        config BSP_SPI_I2S_SLAVE_RX_BUF_SIZE
+            int "I2S Slave RX Buffer Size (Bytes)"
+            default 640
+            help
+                The buffer size of I2S Slave RX, the buffer is used to store the received audio data.
+                The buffer size must be a multiple of 4 and less than CFG_AUDIO_RECORD_PIPE_SIZE*2. 
+                CFG_AUDIO_RECORD_PIPE_SIZE is defined in rtos/rtthread/components/drivers/include/drivers/audio.h
+
+        config BSP_SPI_I2S_SLAVE_RX_CS_PIN
+            int "SPI CS Pin"
+            default 30
+            help
+                The pin number of SPI CS pin, the pin number is the same as the pin number used by RT-Thread pin device
+                For example, if you want to use PA30 as SPI CS pin, then the pin number is 30
+
+        choice BSP_SPI_I2S_SLAVE_RX_SPI_SELECT
+            prompt "SPI Instance"
+            default BSP_SPI_I2S_SLAVE_RX_USE_SPI1 
+            config BSP_SPI_I2S_SLAVE_RX_USE_SPI1
+                depends on !BSP_USING_SPI1
+                bool "SPI1"
+            config BSP_SPI_I2S_SLAVE_RX_USE_SPI2
+                depends on !BSP_USING_SPI2
+                bool "SPI2"
+        endchoice						
+    endif
+
+
     config BSP_USING_SYS_CFG
         bool "SYS CFG Module"
         depends on BF0_LCPU 

@@ -326,6 +326,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Init(SPI_HandleTypeDef *hspi)
     {
         hspi->Instance->TRIWIRE_CTRL &= ~SPI_TRIWIRE_CTRL_SPI_TRI_WIRE_EN;
         hspi->Instance->TOP_CTRL &= ~SPI_TOP_CTRL_TTE;
+        if (hspi->Init.Direction == SPI_DIRECTION_2LINES_RXONLY)
+        {
+            // TODO: why?
+            hspi->Instance->TRIWIRE_CTRL |= SPI_TRIWIRE_CTRL_SSP_WORK_WIDTH_DYN_CHANGE;
+        }
 #ifdef SPI_CLK_CTRL_SPI_DI_SEL
         hspi->Instance->CLK_CTRL &= ~SPI_CLK_CTRL_SPI_DI_SEL;
 #endif /* SPI_CLK_CTRL_SPI_DI_SEL */
@@ -808,6 +813,28 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_
                 /* read the received data */
                 (* (uint8_t *)pData) = *(__IO uint8_t *)&hspi->Instance->DATA;
                 pData += sizeof(uint8_t);
+                hspi->RxXferCount--;
+            }
+            else
+            {
+                /* Timeout management */
+                if ((Timeout == 0U) || ((Timeout != HAL_MAX_DELAY) && ((HAL_GetTick() - tickstart) >=  Timeout)))
+                {
+                    errorcode = HAL_TIMEOUT;
+                    goto error;
+                }
+            }
+        }
+    }
+    else if (hspi->Init.DataSize == SPI_DATASIZE_32BIT)
+    {
+        while (hspi->RxXferCount > 0U)
+        {
+            /* Check the RXNE flag */
+            if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE))
+            {
+                *((uint32_t *)pData) = hspi->Instance->DATA;
+                pData += sizeof(uint32_t);
                 hspi->RxXferCount--;
             }
             else

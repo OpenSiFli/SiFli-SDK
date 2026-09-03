@@ -96,6 +96,7 @@ typedef struct
 } HPSYS_PINMUX_TypeDef;
 
 #define HPSYS_PAD_NUM    (84)
+#define HPSYS_PAD_PA_NUM (58)
 
 /************* Bit definition for HPSYS_PINMUX_PAD_SA00 register **************/
 #define HPSYS_PINMUX_PAD_SA00_FSEL_Pos  (0U)
