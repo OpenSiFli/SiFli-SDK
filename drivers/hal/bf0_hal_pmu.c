@@ -1339,6 +1339,7 @@ HAL_RAM_RET_CODE_SECT(HAL_PMU_ConfigPeriLdo, HAL_StatusTypeDef HAL_PMU_ConfigPer
 
 #endif /* SF32LB52X || SF32LB57X */
 
+#ifndef SF32LB57X
 __HAL_ROM_USED void HAL_PMU_Init(void)
 {
 #ifdef SF32LB56X
@@ -1409,43 +1410,6 @@ __HAL_ROM_USED void HAL_PMU_Init(void)
     /* XT48 ready flag is set after waiting for 2ms, default 1ms is not enough, assume PMU always uses RC32K */
     MODIFY_REG(hwp_pmuc->HXT_CR3, PMUC_HXT_CR3_DLY_Msk, MAKE_REG_VAL(0x3F, PMUC_HXT_CR3_DLY_Msk, PMUC_HXT_CR3_DLY_Pos));
 
-#elif defined(SF32LB57X)
-    MODIFY_REG(hwp_pmuc->VRET_CR, PMUC_VRET_CR_VBIT_Msk,
-               MAKE_REG_VAL(1, PMUC_VRET_CR_VBIT_Msk, PMUC_VRET_CR_VBIT_Pos));
-
-    hwp_pmuc->BUCK_CR2 |= PMUC_BUCK_CR2_H2M_EN | PMUC_BUCK_CR2_M2L_EN
-                          | PMUC_BUCK_CR2_H2L_EN | PMUC_BUCK_CR2_L2M_EN;
-
-    /* speedup restore procedure */
-    /* make sure buck is ready */
-    MODIFY_REG(hwp_pmuc->BUCK_CR2, PMUC_BUCK_CR2_M2H_CNT_Msk | PMUC_BUCK_CR2_L2M_CNT_Msk | PMUC_BUCK_CR2_L2H_CNT_Msk,
-               MAKE_REG_VAL(7, PMUC_BUCK_CR2_M2H_CNT_Msk, PMUC_BUCK_CR2_M2H_CNT_Pos)
-               | MAKE_REG_VAL(7, PMUC_BUCK_CR2_L2M_CNT_Msk, PMUC_BUCK_CR2_L2M_CNT_Pos)
-               | MAKE_REG_VAL(7, PMUC_BUCK_CR2_L2H_CNT_Msk, PMUC_BUCK_CR2_L2H_CNT_Pos));
-
-    MODIFY_REG(hwp_pmuc->BUCK_CR2, PMUC_BUCK_CR2_SET_VOUT_L_Msk,
-               MAKE_REG_VAL(6, PMUC_BUCK_CR2_SET_VOUT_L_Msk, PMUC_BUCK_CR2_SET_VOUT_L_Pos));
-
-    /* set VBAT_LDO output voltage to default 3.3V */
-    MODIFY_REG(hwp_pmuc->AON_LDO, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk,
-               MAKE_REG_VAL(0xD, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Msk, PMUC_AON_LDO_VBAT_LDO_SET_VOUT_Pos));
-#if 0
-//TODO:
-    MODIFY_REG(hwp_pmuc->AON_LDO, PMUC_AON_LDO_VBAT_POR_TH_Msk,
-               MAKE_REG_VAL(0, PMUC_AON_LDO_VBAT_POR_TH_Msk, PMUC_AON_LDO_VBAT_POR_TH_Pos));
-    /* auto power down if VCC is low */
-    hwp_pmuc->WER |= PMUC_WER_LOWBAT;
-#endif
-
-    /* speedup restore procedure */
-    MODIFY_REG(hwp_pmuc->HPSYS_LDO, PMUC_HPSYS_LDO_DLY_Msk, MAKE_REG_VAL(1, PMUC_HPSYS_LDO_DLY_Msk, PMUC_HPSYS_LDO_DLY_Pos));
-    MODIFY_REG(hwp_pmuc->LPSYS_LDO, PMUC_LPSYS_LDO_DLY_Msk, MAKE_REG_VAL(1, PMUC_LPSYS_LDO_DLY_Msk, PMUC_LPSYS_LDO_DLY_Pos));
-    MODIFY_REG(hwp_pmuc->HPSYS_SWR, PMUC_HPSYS_SWR_DLY_Msk, MAKE_REG_VAL(3, PMUC_HPSYS_SWR_DLY_Msk, PMUC_HPSYS_SWR_DLY_Pos));
-    MODIFY_REG(hwp_pmuc->LPSYS_SWR, PMUC_LPSYS_SWR_DLY_Msk, MAKE_REG_VAL(3, PMUC_LPSYS_SWR_DLY_Msk, PMUC_LPSYS_SWR_DLY_Pos));
-
-    /* XT48 ready flag is set after waiting for 2ms, default 1ms is not enough, assume PMU always uses RC32K */
-    MODIFY_REG(hwp_pmuc->HXT_CR3, PMUC_HXT_CR3_DLY_Msk, MAKE_REG_VAL(0x3F, PMUC_HXT_CR3_DLY_Msk, PMUC_HXT_CR3_DLY_Pos));
-
 #else
     /* XT48 ready flag is set after waiting for 2ms*/
     if (HAL_PMU_LXT_ENABLED())
@@ -1467,6 +1431,8 @@ __HAL_ROM_USED void HAL_PMU_Init(void)
     hwp_hpsys_aon->ACR |= HPSYS_AON_ACR_EXTPWR_REQ;
 #endif /* SF32LB58X */
 }
+
+#endif /* !SF32LB57X */
 
 #if defined(SF32LB52X) && defined(SOC_BF0_HCPU)
 void HAL_PMU_LoadCalData(void)

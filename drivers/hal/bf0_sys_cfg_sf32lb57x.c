@@ -147,10 +147,11 @@ int BSP_CONFIG_get(int type, uint8_t *buf, int length)
 
             cfg->vdd33_ldo2_vout = (data[2] & 0xf0) >> 4;
             cfg->vdd33_ldo3_vout = data[3] & 0xf;
-            cfg->aon_vos_trim = (data[3] & 0x70) >> 4;
-            cfg->aon_vos_polar = (data[3] & 0x80) >> 7;
+            cfg->aon_vos_trim = (data[13] & 7);
+            cfg->aon_vos_polar = (data[13] >> 3) & 1;
 
             cfg->ldo18_vref_sel = data[2] & 0xf;
+            cfg->vbat_ldo_set_vout = (data[3] >> 4) & 0xF;
 
             if (cfg->hpsys_ldo_vout == 0 || cfg->hpsys_ldo_vout2 == 0)
                 ret = 0;

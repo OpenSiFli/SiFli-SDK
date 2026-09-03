@@ -119,6 +119,9 @@ typedef struct
     uint8_t buck_vos_polar2;
     uint8_t hpsys_ldo_vout2;      // buck = 1.35v
     uint8_t lpsys_ldo_vout2;
+#ifdef SF32LB57X
+    uint8_t vbat_ldo_set_vout;
+#endif /* SF32LB57X */
 #endif
 } FACTORY_CFG_VBK_LDO_T;
 
