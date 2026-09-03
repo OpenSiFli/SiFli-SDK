@@ -720,6 +720,25 @@ static rt_err_t lcd_hw_open(void)
 
     if (drv_lcd.p_drv_ops)
     {
+        /*
+            The graphic device draw APIs (set_pixel/draw_rect/draw_rect_async)
+            carry no pixel format: by the RT-Thread graphic device contract the
+            caller's buffer uses the format reported by RTGRAPHIC_CTRL_GET_INFO,
+            which is the LCD's configured colour mode. Program the LCDC layer
+            with that format here.
+
+            Without this the layer format keeps the value HAL_LCDC_Init() leaves
+            it at, LCDC_PIXEL_FORMAT_MONO(0), for every LCD driver that does not
+            call HAL_LCDC_LayerSetFormat() itself, and the first draw_rect()
+            asserts in HAL_LCDC_GetPixelSize(). SF_GRAPHIC_CTRL_LCDC_FLUSH still
+            overrides the layer format on every flush.
+        */
+        const LCDC_InitTypeDef *lcd_cfg = drv_lcd.p_drv_ops->p_init_cfg;
+
+        drv_lcd.buf_format = hal_lcd_format_to_rt_lcd_format(lcd_cfg->color_mode);
+        HAL_LCDC_LayerSetFormat(&drv_lcd.hlcdc, drv_lcd.select_layer,
+                                lcd_cfg->color_mode);
+
         enable_low_power(&drv_lcd);
 
 #ifdef DRV_LCD_USE_LCDC1
