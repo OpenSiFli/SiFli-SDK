@@ -581,6 +581,7 @@ void bf0_audprc_stop()
 }
 
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+#ifdef BSP_AUDPRC_TX0_DMA
 void AUDPRC_TX0_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -593,7 +594,9 @@ void AUDPRC_TX0_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX0_DMA */
 
+#ifdef BSP_AUDPRC_TX1_DMA
 void AUDPRC_TX1_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -606,7 +609,9 @@ void AUDPRC_TX1_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX1_DMA */
 
+#ifdef BSP_AUDPRC_TX2_DMA
 void AUDPRC_TX2_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -619,7 +624,9 @@ void AUDPRC_TX2_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX2_DMA */
 
+#ifdef BSP_AUDPRC_TX3_DMA
 void AUDPRC_TX3_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -632,7 +639,9 @@ void AUDPRC_TX3_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX3_DMA */
 
+#ifdef BSP_AUDPRC_RX0_DMA
 void AUDPRC_RX0_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -645,7 +654,9 @@ void AUDPRC_RX0_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_RX0_DMA */
 
+#ifdef BSP_AUDPRC_RX1_DMA
 void AUDPRC_RX1_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -658,7 +669,9 @@ void AUDPRC_RX1_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_RX1_DMA */
 
+#ifdef BSP_AUDPRC_TX_OUT0_DMA
 void AUDPRC_TX_OUT0_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -671,7 +684,9 @@ void AUDPRC_TX_OUT0_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX_OUT0_DMA */
 
+#ifdef BSP_AUDPRC_TX_OUT1_DMA
 void AUDPRC_TX_OUT1_DMA_IRQHandler(void)
 {
     /* enter interrupt */
@@ -684,6 +699,7 @@ void AUDPRC_TX_OUT1_DMA_IRQHandler(void)
     /* leave interrupt */
     rt_interrupt_leave();
 }
+#endif /* BSP_AUDPRC_TX_OUT1_DMA */
 #endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
 static void bf0_adc_dac_path_cfg_init(AUDPRC_HandleTypeDef *haudprc)
