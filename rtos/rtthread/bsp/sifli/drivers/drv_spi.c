@@ -1963,7 +1963,7 @@ void camera_stop_dma(SPI_HandleTypeDef *hspi)
 
     HAL_SPI_DMAStop(hspi);
     __HAL_UNLOCK(hspi);
-    if (HAL_SPI_DMASetMode(hspi, DMA_NORMAL, DMA_CIRCULAR) != HAL_OK)
+    if (HAL_SPI_DMASetMode(hspi, DMA_NORMAL, DMA_NORMAL) != HAL_OK)
     {
         LOG_E("camera restore dma mode failed");
     }
