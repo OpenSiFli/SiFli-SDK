@@ -345,6 +345,8 @@ HAL_StatusTypeDef HAL_JPEGD_DecodeFast_IT(JPEGD_HandleTypeDef *hdl)
     memcpy((void *)&hdl->Instance->BUF_ADDR, (const void *)&hdl->RamInstance->BUF_ADDR,
            ((uint32_t)&hdl->Instance->INT_STA) - ((uint32_t)&hdl->Instance->BUF_ADDR));
 
+    hdl->Instance->ACT_TIME = ACT_TIME_OUT_TICKS;
+
     hdl->Instance->JPEGD_EN = JPEGD_JPEGD_EN_JPEGD_EN;
 
     status = HAL_OK;
