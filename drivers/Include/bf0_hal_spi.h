@@ -221,6 +221,7 @@ typedef struct
 #define SPI_DATASIZE_14BIT              (MAKE_REG_VAL(13, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos))
 #define SPI_DATASIZE_15BIT              (MAKE_REG_VAL(14, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos))
 #define SPI_DATASIZE_16BIT              (MAKE_REG_VAL(15, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos))
+#define SPI_DATASIZE_32BIT              (MAKE_REG_VAL(31, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos))
 /**
   * @} SPI_Data_Size
   */
@@ -759,7 +760,8 @@ UNUSED(tmpreg_ovr);                            \
 #define IS_SPI_DIRECTION_2LINES_OR_1LINE(MODE) (((MODE) == SPI_DIRECTION_2LINES) || \
                                                 ((MODE) == SPI_DIRECTION_1LINE))
 
-#define IS_SPI_DATASIZE(DATASIZE) (((DATASIZE) == SPI_DATASIZE_16BIT) || \
+#define IS_SPI_DATASIZE(DATASIZE) (((DATASIZE) == SPI_DATASIZE_32BIT) || \
+                                   ((DATASIZE) == SPI_DATASIZE_16BIT) || \
                                    ((DATASIZE) == SPI_DATASIZE_15BIT) || \
                                    ((DATASIZE) == SPI_DATASIZE_14BIT) || \
                                    ((DATASIZE) == SPI_DATASIZE_13BIT) || \

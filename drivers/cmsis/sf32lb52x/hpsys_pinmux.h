@@ -69,7 +69,8 @@ typedef struct
     __IO uint32_t PAD_PA44;
 } HPSYS_PINMUX_TypeDef;
 
-#define HPSYS_PAD_NUM    (58)
+#define HPSYS_PAD_NUM      (58)
+#define HPSYS_PAD_PA_NUM   (45)
 
 /************* Bit definition for HPSYS_PINMUX_PAD_SA00 register **************/
 #define HPSYS_PINMUX_PAD_SA00_FSEL_Pos  (0U)
