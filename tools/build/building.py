@@ -3114,57 +3114,62 @@ def GetCustomMemMapSrc(bsp_root, build_dir, chip, board):
     return None
 
 
-def InitBuild(bsp_root, build_dir, board):
+def ResolveBoardConfig(bsp_root, build_dir, board):
+    """Resolve board.conf + proj.conf into build_dir without compiling.
+
+    Shared by the scons ``InitBuild`` and the sf-pkg CLI board config
+    generation so the kconfig tree assembly is not duplicated. Writes
+    build_dir/{Kconfig, .config, rtconfig.h, kconfiglist}.
+    """
     import rtconfig
 
     if not os.path.exists(build_dir):
-       os.makedirs(build_dir)
+        os.makedirs(build_dir)
 
     # create Kconfig
     s = ''
     s += 'source "$SIFLI_SDK/Kconfig.v2"\n'
     s += 'source "$SIFLI_SDK/customer/boards/Kconfig.v2"\n'
-    path1, board_path = GetBoardPath(board)
+    _path1, board_path = GetBoardPath(board)
     board_path += "/Kconfig.board"
     s += 'source "{}"\n'.format(board_path)
-    if not bsp_root:
-        bsp_root = Dir('#').abspath
 
-    # create .config and rtconfig.h    
     # kconfiglib doesn't recognize backslash
-    bsp_root = bsp_root.replace('\\', '/')
+    bsp_root = os.path.abspath(bsp_root).replace('\\', '/')
     s += 'osource "{}/sf-pkgs/Kconfig.conandeps"\n'.format(bsp_root)
     s += 'source "{}/Kconfig.proj"'.format(bsp_root)
-    f = open(os.path.join(build_dir, 'Kconfig'), 'w')
-    try:
+    with open(os.path.join(build_dir, 'Kconfig'), 'w', encoding='utf-8') as f:
         f.write(s)
-    finally:
-        f.close()
 
     SIFLI_SDK = os.getenv('SIFLI_SDK')
     KCONFIG_PATH = os.path.join(SIFLI_SDK, "tools/kconfig/kconfig.py")
 
-
     board_path = board_path.replace("$SIFLI_SDK", SIFLI_SDK)
-    board_path = os.path.dirname(board_path)   
-    
-    # Use command line bconf 
-    board_conf=GetOption('bconf')
-    if board_conf=='board.conf':
+    board_conf_dir = os.path.dirname(board_path)
+
+    # Use command line bconf (defaults to board.conf)
+    board_conf = 'board.conf'
+    try:
+        option_conf = GetOption('bconf')
+        if option_conf:
+            board_conf = option_conf
+    except Exception:
+        pass
+    if board_conf == 'board.conf':
         try:
             import proj
-            if hasattr(proj,'BCONF'):
-                board_conf=proj.BCONF
-        except:
+            if hasattr(proj, 'BCONF'):
+                board_conf = proj.BCONF
+        except Exception:
             pass
-    
-    if not os.path.isfile(os.path.join(board_path,board_conf)):
-        logging.debug(os.path.join(board_path,board_conf)+ ' does not exist, use board.conf')
-        board_conf=os.path.join(board_path, 'board.conf')
+    if not os.path.isabs(board_conf):
+        board_conf_path = os.path.join(board_conf_dir, board_conf)
     else:
-        board_conf=os.path.join(board_path, board_conf)
-    conf_list = [ board_conf, 
-                 os.path.join(bsp_root, 'proj.conf')]
+        board_conf_path = board_conf
+    if not os.path.isfile(board_conf_path):
+        logging.debug(board_conf_path + ' does not exist, use board.conf')
+        board_conf_path = os.path.join(board_conf_dir, 'board.conf')
+    conf_list = [board_conf_path, os.path.join(bsp_root, 'proj.conf')]
 
     # Add chip specific config
     proj_chip_conf = os.path.join(bsp_root, rtconfig.CHIP.lower() + '/' + 'proj.conf')
@@ -3172,23 +3177,26 @@ def InitBuild(bsp_root, build_dir, board):
         conf_list += [proj_chip_conf]
 
     # Add board specific config
-    proj_board_conf = os.path.join(bsp_root, board + '/' + 'proj.conf')             
+    proj_board_conf = os.path.join(bsp_root, board + '/' + 'proj.conf')
     if os.path.exists(proj_board_conf):
         conf_list += [proj_board_conf]
 
-    # Remove rtconfig.h to avoid read error as the file is in encrypted state and cannot be read correctly in some environment
-    # if os.path.isfile(os.path.join(build_dir, "rtconfig.h")):
-    #    os.remove(os.path.join(build_dir, "rtconfig.h"))
-
-    if (is_verbose()):
-        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', '--verbose', os.path.join(build_dir, 'Kconfig'),
-                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"), 
-                         os.path.join(build_dir, "kconfiglist")] + conf_list)
-    else:
-        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', os.path.join(build_dir, 'Kconfig'),
-                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"),
-                         os.path.join(build_dir, "kconfiglist")] + conf_list)
+    cmd = ['python', KCONFIG_PATH, '--handwritten-input-configs']
+    if is_verbose():
+        cmd.append('--verbose')
+    cmd += [os.path.join(build_dir, 'Kconfig'), os.path.join(build_dir, '.config'),
+            os.path.join(build_dir, 'rtconfig.h'), os.path.join(build_dir, 'kconfiglist')]
+    retcode = subprocess.call(cmd + conf_list)
     assert retcode == 0, "Fail to generate .config and rtconfig.h"
+
+
+def InitBuild(bsp_root, build_dir, board):
+    import rtconfig
+
+    if not bsp_root:
+        bsp_root = Dir('#').abspath
+
+    ResolveBoardConfig(bsp_root, build_dir, board)
 
     if os.path.isfile('rtconfig_project.h'):
         shutil.copy('rtconfig_project.h', os.path.join(build_dir, "rtconfig_project.h"))
@@ -4497,7 +4505,58 @@ def IsInitBuild():
     if GetOption("init_build"):
         return True
     else:
-        return False    
+        return False
+
+
+_sf_pkg_deps_mod = None
+
+
+def _load_sf_pkg_deps():
+    """Lazily import sdk_py_actions.sf_pkg_deps (tools has to be on sys.path)."""
+    global _sf_pkg_deps_mod
+    if _sf_pkg_deps_mod is not None:
+        return _sf_pkg_deps_mod
+    sdk_root = os.environ.get('SIFLI_SDK')
+    mod = None
+    if sdk_root:
+        tools = os.path.abspath(os.path.join(sdk_root, 'tools'))
+        if tools not in sys.path:
+            sys.path.insert(0, tools)
+        try:
+            import sdk_py_actions.sf_pkg_deps as mod
+        except Exception as exc:
+            logging.debug("Failed to import sdk_py_actions.sf_pkg_deps: %s", exc)
+            mod = None
+    _sf_pkg_deps_mod = mod
+    return mod
+
+
+def EnsureSfPkgDepsForBoard(build_dir, project_root=None):
+    """Auto install external component deps required by modules enabled in the
+    current board config (project opts in via a root sf-pkg.yaml).
+
+    project_root is the project directory holding the sf-pkg.yaml/sf-pkgs to
+    manage.  For the main project it defaults to Dir('#').  Child projects
+    must pass their own BSP root, because Dir('#') points at the main project.
+    build_dir is where the resolved config (kconfiglist/.config) lives; for a
+    child it is nested under the parent output dir.
+
+    Returns True when a (re)install happened; the caller must then regenerate
+    the board config with InitBuild so symbols exposed by the installed package
+    Kconfigs are visible to the modules that ``select`` them.
+    """
+    mod = _load_sf_pkg_deps()
+    if mod is None:
+        return False
+    if GetOption('no_sf_pkg'):
+        os.environ.setdefault('SIFLI_SF_PKG_OFFLINE', '1')
+    if project_root is None:
+        project_root = os.path.abspath(str(Dir('#')))
+    else:
+        project_root = os.path.abspath(project_root)
+    if not os.path.isabs(build_dir):
+        build_dir = os.path.join(project_root, os.path.normpath(build_dir))
+    return mod.ensure_board_deps(project_root, build_dir)
 
 
 def PrepareEnv(board=None):
@@ -4529,7 +4588,12 @@ def PrepareEnv(board=None):
                     dest = 'verbose',
                     action = 'store_true',
                     default = False,
-                    help = 'print verbose information during build')                    
+                    help = 'print verbose information during build')
+        AddOption('--no-sf-pkg',
+                    dest = 'no_sf_pkg',
+                    action = 'store_true',
+                    default = False,
+                    help = 'do not auto install sf-pkg external components')
     except:
         pass
 
@@ -4553,6 +4617,15 @@ def PrepareEnv(board=None):
         # construct BuildOptions
         BuildOptions = {}
         BuildOptionUpdate(BuildOptions, None)
+
+        # Install external components required by modules enabled in this
+        # board config, then re-resolve the config so Kconfig symbols exposed
+        # by the freshly installed packages are visible (modules may select
+        # them to pull the package source into the build).
+        if EnsureSfPkgDepsForBoard(rtconfig.OUTPUT_DIR):
+            InitBuild(None, rtconfig.OUTPUT_DIR, board)
+            BuildOptions = {}
+            BuildOptionUpdate(BuildOptions, None)
             
 
 def _IsPcSimulatorBuild():
@@ -4748,6 +4821,13 @@ def SifliEnv(BSP_Root = None):
     if board and (BSP_Root != None): # main project has called InitBuild in PrepareEnv
         logging.debug("Init build {} for output: {}".format(board, rtconfig.OUTPUT_DIR))
         InitBuild(BSP_Root, rtconfig.OUTPUT_DIR, board)
+        # Child projects also auto install their sf-pkg external components.
+        # A child config dir is nested under the parent output dir, and the
+        # child's own BSP root must be used (not Dir('#') which is the main
+        # project). Re-resolve config when an install happened so package
+        # Kconfig symbols selected by the child's modules become visible.
+        if EnsureSfPkgDepsForBoard(os.path.abspath(rtconfig.OUTPUT_DIR), BSP_Root):
+            InitBuild(BSP_Root, rtconfig.OUTPUT_DIR, board)
     elif board is None:
         if not os.path.exists(rtconfig.OUTPUT_DIR):
             logging.debug("create output dir {} first for old fashion build".format(rtconfig.OUTPUT_DIR))
