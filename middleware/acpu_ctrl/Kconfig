@@ -1,10 +1,21 @@
 menuconfig USING_ACPU_CTRL_FWK
     bool "ACPU Control Framework"
     select USING_IPC_QUEUE
+    select RT_USING_MUTEX
     select BSP_USING_ACPU
     default n
 if USING_ACPU_CTRL_FWK
     config ACPU_CALLER_ENABLED
         bool "Enable Caller"
         default y if BF0_HCPU
+    if ACPU_CALLER_ENABLED
+        config ACPU2HCPU_CALL_MBOX_SIZE
+            int "ACPU to HCPU call mailbox size"
+            range 2 64
+            default 8
+            help
+                Number of pending ACPU-to-HCPU calls that can be queued for
+                the HCPU caller thread. It must not be smaller than the number
+                of ACPU threads that can make HCPU calls concurrently.
+    endif
 endif

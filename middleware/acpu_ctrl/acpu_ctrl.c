@@ -22,6 +22,42 @@
 #include "acpu_ctrl_private.h"
 #include "bf0_mbox_common.h"
 static struct rt_semaphore acpu_task_done_sema;
+static struct rt_mutex s_ha_ipc_tx_mutex;
+
+static int acpu_ctrl_tx_lock_init(void)
+{
+    rt_err_t err;
+
+    err = rt_mutex_init(&s_ha_ipc_tx_mutex, "ha_tx", RT_IPC_FLAG_PRIO);
+    RT_ASSERT(RT_EOK == err);
+
+    return err;
+}
+INIT_PREV_EXPORT(acpu_ctrl_tx_lock_init);
+
+static size_t ha_ipc_queue_write(const void *buffer, size_t size, uint32_t timeout)
+{
+    rt_err_t err;
+    size_t wr_size;
+
+    err = rt_mutex_take(&s_ha_ipc_tx_mutex, RT_WAITING_FOREVER);
+    if (RT_EOK != err)
+    {
+        RT_ASSERT(RT_EOK == err);
+        return 0;
+    }
+
+    wr_size = ipc_queue_write(sys_get_ha_ipc_queue(), buffer, size, timeout);
+
+    err = rt_mutex_release(&s_ha_ipc_tx_mutex);
+    if (RT_EOK != err)
+    {
+        RT_ASSERT(RT_EOK == err);
+        return 0;
+    }
+
+    return wr_size;
+}
 
 #ifdef ACPU_CALLER_ENABLED
 static rt_mailbox_t g_call_mb;
@@ -64,7 +100,7 @@ static void acpu_caller_entry(void *parameter)
             p_msg->is_rsp = 1;
             p_msg->ret_error_code = 0;
 
-            size_t wr_size = ipc_queue_write(sys_get_ha_ipc_queue(), &p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
+            size_t wr_size = ha_ipc_queue_write(&p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
             RT_ASSERT(wr_size == sizeof(acpu_ctrl_ipc_msg_t *));
 
             p_msg = NULL;
@@ -75,30 +111,68 @@ static void acpu_caller_entry(void *parameter)
 
 static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 {
-    acpu_ctrl_ipc_msg_t *p_msg;
-    size_t rd_size = ipc_queue_read(handle, &p_msg, sizeof(acpu_ctrl_ipc_msg_t *));
-    RT_ASSERT(rd_size == sizeof(acpu_ctrl_ipc_msg_t *));
-    RT_ASSERT(p_msg);
+    const size_t msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
+    size_t remaining = size;
 
-    if (p_msg->is_rsp)
+    if ((remaining % msg_size) != 0U)
     {
-        if (p_msg->ret_error_code == ACPU_ERR_OK)
+        rt_kprintf("ACPU->HCPU IPC invalid RX size: handle=%d size=%u\n",
+                   (int)handle, (unsigned int)size);
+        RT_ASSERT(0);
+        return -RT_EINVAL;
+    }
+
+    while (remaining >= msg_size)
+    {
+        acpu_ctrl_ipc_msg_t *p_msg = RT_NULL;
+        size_t rd_size;
+
+        rd_size = ipc_queue_read(handle, &p_msg, msg_size);
+        if ((rd_size != msg_size) || (p_msg == RT_NULL))
         {
-            if (p_msg->sema) rt_sem_release(p_msg->sema);
-        }
-        else if (p_msg->ret_error_code == ACPU_ERR_ASSERT)
-        {
-            rt_kprintf("acpu assert:%s\n", p_msg->ret_value);
+            rt_kprintf("ACPU->HCPU IPC RX failed: handle=%d size=%u remaining=%u read=%u\n",
+                       (int)handle,
+                       (unsigned int)size,
+                       (unsigned int)remaining,
+                       (unsigned int)rd_size);
             RT_ASSERT(0);
+            return -RT_ERROR;
         }
-    }
+
+        if (p_msg->is_rsp)
+        {
+            if (p_msg->ret_error_code == ACPU_ERR_OK)
+            {
+                if (p_msg->sema)
+                {
+                    rt_err_t err = rt_sem_release(p_msg->sema);
+                    if (RT_EOK != err)
+                    {
+                        RT_ASSERT(RT_EOK == err);
+                        return -RT_ERROR;
+                    }
+                }
+            }
+            else if (p_msg->ret_error_code == ACPU_ERR_ASSERT)
+            {
+                rt_kprintf("acpu assert:%s\n", p_msg->ret_value);
+                RT_ASSERT(0);
+            }
+        }
 #ifdef ACPU_CALLER_ENABLED
-    else
-    {
-        rt_err_t err = rt_mb_send(g_call_mb, (rt_uint32_t)p_msg);
-        RT_ASSERT(err == RT_EOK);
-    }
+        else
+        {
+            rt_err_t err = rt_mb_send(g_call_mb, (rt_uint32_t)p_msg);
+            if (RT_EOK != err)
+            {
+                RT_ASSERT(RT_EOK == err);
+                return -RT_ERROR;
+            }
+        }
 #endif /* ACPU_CALLER_ENABLED */
+
+        remaining -= msg_size;
+    }
 
     return 0;
 }
@@ -134,7 +208,7 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
     msg.ret_value = 0;
 
     msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
-    wr_size = ipc_queue_write(sys_get_ha_ipc_queue(), &p_msg, msg_size, 1000);
+    wr_size = ha_ipc_queue_write(&p_msg, msg_size, 1000);
     RT_ASSERT(wr_size == msg_size);
 
 
@@ -180,7 +254,8 @@ RT_WEAK int acpu_init(void)
     RT_ASSERT(0 == r);
 
 #ifdef ACPU_CALLER_ENABLED
-    g_call_mb = rt_mb_create("acpu_call_mb", 1, RT_IPC_FLAG_FIFO);
+    g_call_mb = rt_mb_create("acpu_call_mb", ACPU2HCPU_CALL_MBOX_SIZE,
+                             RT_IPC_FLAG_FIFO);
     RT_ASSERT(g_call_mb);
 
     rt_thread_t tid = rt_thread_create("acpu",
