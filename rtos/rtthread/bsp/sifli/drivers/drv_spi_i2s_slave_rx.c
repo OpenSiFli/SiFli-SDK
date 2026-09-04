@@ -562,6 +562,7 @@ int rt_bf0_i2s_rx_init(void)
     spi_i2s_slave_rx_obj.audio_device.ops = (struct rt_audio_ops *)&s_slave_rx_ops;
     spi_i2s_slave_rx_obj.buf_pool   = slave_rx_data;
     spi_i2s_slave_rx_obj.buf_size   = BSP_SPI_I2S_SLAVE_RX_BUF_WORD_SIZE;
+    spi_i2s_slave_rx_obj.ReadSize   = (BSP_SPI_I2S_SLAVE_RX_BUF_SIZE >> 1);
     spi_i2s_slave_rx_obj.cfg        = &bf0_i2s_slave_rx_cfg;
 
     RT_ASSERT(bf0_i2s_slave_rx_cfg.spi_instance && bf0_i2s_slave_rx_cfg.ptc_instance);
@@ -687,6 +688,7 @@ static void i2s_slave_rx_cplt_impl(SPI_HandleTypeDef *hspi)
     }
 
     read_buffer = (uint8_t *)(mic->buf_pool + BSP_SPI_I2S_SLAVE_RX_HALF_BUF_WORD_SIZE);
+    mic->ReadBuffer = read_buffer;
 
     if (audio != NULL)
         rt_audio_rx_done(audio, read_buffer, BSP_SPI_I2S_SLAVE_RX_HALF_BUF_WORD_SIZE * sizeof(uint32_t));
@@ -718,6 +720,7 @@ static void i2s_slave_rx_half_cplt_impl(SPI_HandleTypeDef *hspi)
     }
 
     read_buffer = (uint8_t *)mic->buf_pool;
+    mic->ReadBuffer = read_buffer;
 
     if (audio != NULL)
         rt_audio_rx_done(audio, read_buffer, BSP_SPI_I2S_SLAVE_RX_HALF_BUF_WORD_SIZE * sizeof(uint32_t));

@@ -9,6 +9,11 @@
 
 #include "rtdevice.h"
 
+/* 32bit each sample, Number of samples per report, i.e. half size of the rx buffer
+ * report is triggered when buffer is half full or full.
+ */
+#define SLAVE_MIC_SAMPLES       ((BSP_SPI_I2S_SLAVE_RX_BUF_SIZE >> 1) >> 2)
+
 struct spi_i2s_audio_cfg_t
 {
     SPI_TypeDef *spi_instance;         /*!< SPI device Handle used by this driver */
@@ -33,6 +38,13 @@ struct bf0_spi_i2s_slave_rx
 
     struct spi_i2s_audio_cfg_t *cfg;
     uint32_t ptc_trigger_pin_pad_val_bak;
+
+    /** ReadBuffer size in byte
+     *
+     * ReadSize and ReadBuffer are used by upper layer instead of driver itself. Keep them for compatibility.
+     */
+    uint32_t ReadSize;
+    uint8_t *ReadBuffer;
 };
 
 #endif /* _DRV_SPI_I2S_SLAVE_RX_H_ */
