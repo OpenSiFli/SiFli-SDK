@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from typing import Any
 from typing import Dict
@@ -26,6 +27,10 @@ from sdk_py_actions.sf_pkg_auth import normalize_user
 from sdk_py_actions.sf_pkg_auth import resolve_credentials
 from sdk_py_actions.sf_pkg_auth import set_active_user
 from sdk_py_actions.sf_pkg_auth import upsert_user
+from sdk_py_actions.sf_pkg_deps import SfPkgError
+from sdk_py_actions.sf_pkg_deps import detect_mode
+from sdk_py_actions.sf_pkg_deps import ensure_board_config
+from sdk_py_actions.sf_pkg_deps import ensure_board_deps
 from sdk_py_actions.tools import print_warning
 
 EXTENSION_ID = "sf-pkg"
@@ -259,27 +264,109 @@ def _ensure_public_remote(sdk_ctx: SdkContext) -> str:
     return SF_PKG_PUBLIC_REMOTE_NAME
 
 
+_ROOT_MANIFEST_TEMPLATE = """\
+# ------------------------------------------------------------------
+# Project level external components (sf-pkg).
+# Each entry is <package>/<version>@<namespace>, e.g.
+#   - sht30/0.0.4@caisong123
+# SDK built-in modules may additionally declare their own components in a
+# local sf-pkg.yaml next to their Kconfig; those are merged here at install
+# time (see docs: sf_pkg/module_deps).
+# ------------------------------------------------------------------
+#
+# ------------------------------------------------------------------
+# Module manifest reference (NOT used at this project root).
+# A SDK module that needs external components only while it participates
+# in the build carries its own `sf-pkg.yaml` NEXT TO ITS Kconfig, e.g.
+# middleware/<module>/sf-pkg.yaml:
+#
+#   enable:            # module participates when ANY symbol below is 'y'
+#     - <MODULE_ENABLE_SYMBOL>
+#   requires:
+#     - <package>/<version>@<namespace>
+#   support_sdk_version: "^2.4"   # optional
+#
+# `enable` entries are Kconfig symbol names as defined in Kconfig (no
+# CONFIG_ prefix guessing). The field is honored in module manifests only
+# and never in this file.
+# ------------------------------------------------------------------
+
+requires:
+
+# Optional: SDK version range this project supports (npm semver, e.g. ^2.4).
+# support_sdk_version: "^2.4"
+"""
+
+
 def init_callback(sdk_ctx: SdkContext) -> None:
-    result = sdk_ctx.runner.run(["conan", "new", "sf-pkg-project"], cwd=sdk_ctx.project_dir, check=False)
-    if result.returncode != 0:
-        raise CommandExecutionError("Failed to create dependency file")
-    print("You can now add dependent packages in conanfile.py")
+    path = os.path.join(sdk_ctx.project_dir, "sf-pkg.yaml")
+    if os.path.isfile(path):
+        print(f"sf-pkg.yaml already exists: {path}")
+        return
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(_ROOT_MANIFEST_TEMPLATE)
+    print("Created sf-pkg.yaml. Add dependent packages under 'requires':")
+    print("  - <package>/<version>@<namespace>")
+    legacy = os.path.join(sdk_ctx.project_dir, "conanfile.py")
+    if os.path.isfile(legacy):
+        print_warning(
+            "NOTE: a conanfile.py also exists; sf-pkg.yaml takes precedence. "
+            "Remove it to avoid confusion (advanced-mode users keep only the "
+            "conanfile.py)."
+        )
 
 
-def install_callback(sdk_ctx: SdkContext) -> None:
-    remote_name = _ensure_public_remote(sdk_ctx)
-    sdk_ctx.runner.run(
-        [
-            "conan",
-            "install",
-            ".",
-            "--output-folder=sf-pkgs",
-            "--deployer=full_deploy",
-            "--envs-generation=false",
-            f"-r={remote_name}",
-        ],
-        cwd=sdk_ctx.project_dir,
-    )
+def install_callback(
+    sdk_ctx: SdkContext,
+    board: Optional[str] = None,
+    board_search_path: Optional[str] = None,
+) -> None:
+    project_dir = sdk_ctx.project_dir
+    mode = detect_mode(project_dir)
+
+    if board_search_path:
+        os.environ["SIFLI_SDK_BOARD_SEARCH_PATH"] = os.path.abspath(
+            board_search_path
+        )
+
+    # Advanced mode: a hand-written conanfile.py is installed directly (legacy
+    # behavior, no module aggregation).
+    if mode == "advanced":
+        remote_name = _ensure_public_remote(sdk_ctx)
+        sdk_ctx.runner.run(
+            [
+                "conan",
+                "install",
+                ".",
+                "--output-folder=sf-pkgs",
+                "--deployer=full_deploy",
+                "--envs-generation=false",
+                f"-r={remote_name}",
+            ],
+            cwd=project_dir,
+        )
+        print("Packages installed successfully")
+        return
+
+    if mode == "none":
+        raise UsageError(
+            "No sf-pkg.yaml found in this project. Run 'sdk.py sf-pkg init' "
+            "first, or keep a conanfile.py for advanced mode."
+        )
+
+    build_dir = None
+    if board:
+        # Non-interactively resolve board.conf + proj.conf into
+        # <project>/build_<board>/ so install --board works without a prior
+        # compilation.
+        try:
+            build_dir = ensure_board_config(project_dir, board)
+        except SfPkgError as exc:
+            raise UsageError(str(exc))
+    try:
+        ensure_board_deps(project_dir, build_dir)
+    except SfPkgError as exc:
+        raise CommandExecutionError(str(exc))
     print("Packages installed successfully")
 
 
@@ -560,7 +647,25 @@ def register(registry: CommandRegistry) -> None:
     )
 
     registry.command(path="sf-pkg/init", callback=init_callback, help="Initialize project dependencies.")
-    registry.command(path="sf-pkg/install", callback=install_callback, help="Install SiFli-SDK packages.")
+    registry.command(
+        path="sf-pkg/install",
+        callback=install_callback,
+        help="Install SiFli-SDK packages.",
+        options=[
+            {
+                "names": ["--board"],
+                "help": "Board whose resolved config decides which modules "
+                        "participate (merge their components too).",
+                "default": None,
+            },
+            {
+                "names": ["--board-search-path"],
+                "help": "Extra board search path (in addition to the SDK "
+                        "customer/boards), same as scons --board_search_path.",
+                "default": None,
+            },
+        ],
+    )
 
     registry.command(
         path="sf-pkg/new",

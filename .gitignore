@@ -29,3 +29,6 @@ tools/flash/**/flashdrv_version.h
 # Ignore build folder of mkfatimg
 tools/mkfatimg/mkfatimg/Release/
 tools/mkfatimg/mkfatimg_nand/Release/
+# sf-pkg generated artifacts (aggregated conanfile/fingerprint and deployed components)
+.sf-pkg/
+sf-pkgs/
