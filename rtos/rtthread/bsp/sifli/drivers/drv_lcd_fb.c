@@ -65,6 +65,9 @@ typedef struct
 {
     lcd_fb_desc_t  fb;     /*Framebuffer description*/
     LCD_AreaDef fb_clip;    /*LCD recieve area, origin is LCD's TL*/
+    /* 1 = submitted to LCDC and reading by LCDC
+       0 = not submitted to LCDC and not reading by LCDC
+    */
     uint8_t  fb_flushing_lcd;
     uint8_t  ready;   /*The FB is ready to flush LCD*/
     int32_t fb_valid_y1; /*Writeable lines are [0 ~ fb_height-1], and -1 means no writeable line.*/
@@ -294,7 +297,7 @@ static void SystemView_mark_stop(uint32_t id)
 
 static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
 {
-    rt_err_t err;
+    rt_err_t err = RT_EOK;
 
     drv_lcd_fb.dbg_flush_rsp++;
 
@@ -309,13 +312,45 @@ static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
     DRV_LCD_FB_ASSERT(1 == p_fb->ready);
     DRV_LCD_FB_ASSERT(1 == p_fb->fb_flushing_lcd);
     p_fb->ready = 0;
-    p_fb->fb_flushing_lcd = 0;
     p_fb->fb_flush_start_y = INT32_MIN;
-    set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
     Enable_LineCpltCbk = 0;
+
+#ifdef BSP_USING_RAMLESS_LCD
+    /*
+     * For RAMLESS LCD, the current fb 'drv_lcd_fb.flush_fb_idx' is always the one
+     * being read by the LCDC/PTM.
+     * So, release the other buffer now.
+     */
+    {
+        int16_t other_idx = (int16_t)drv_lcd_fb.flush_fb_idx ^ 1;
+
+        if ((other_idx < (int16_t)drv_lcd_fb.fb_total) &&
+                drv_lcd_fb.fbs[other_idx].fb_flushing_lcd)
+        {
+            LCD_FBTypeDef *p_release_fb = &drv_lcd_fb.fbs[other_idx];
+
+            p_release_fb->fb_flushing_lcd = 0;
+            p_release_fb->fb_valid_y1 = p_release_fb->fb.area.y1
+                                        - p_release_fb->fb.area.y0;
+
+            uint32_t line_event  = (0 == other_idx)
+                                   ? EVENT_FB0_LINE_VALID
+                                   : EVENT_FB1_LINE_VALID;
+            uint32_t flush_event = (0 == other_idx)
+                                   ? EVENT_FB0_FLUSH_DONE
+                                   : EVENT_FB1_FLUSH_DONE;
+
+            err = rt_event_send(&drv_lcd_fb.event, line_event | flush_event);
+            DRV_LCD_FB_ASSERT(RT_EOK == err);
+        }
+    }
+#else
+    p_fb->fb_flushing_lcd = 0;
+    set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
 
     err = rt_event_send(&drv_lcd_fb.event,
                         (0 == drv_lcd_fb.flush_fb_idx) ? EVENT_FB0_FLUSH_DONE : EVENT_FB1_FLUSH_DONE);
+#endif /* BSP_USING_RAMLESS_LCD */
 
     rt_hw_interrupt_enable(level);
 
@@ -346,6 +381,7 @@ static rt_err_t fb_flush_start(void)
     }
 
     //Find the valid framebuffer
+    uint16_t start_idx = drv_lcd_fb.flush_fb_idx;
     LCD_FBTypeDef *p_fb = &drv_lcd_fb.fbs[drv_lcd_fb.flush_fb_idx];
     if (0 == p_fb->ready)
     {
@@ -355,6 +391,11 @@ static rt_err_t fb_flush_start(void)
 
         if (0 == p_fb->ready)
         {
+            /* Neither FB is ready. flush_fb_idx was tentatively advanced above;
+             * restore it so it never points at a buffer that was NOT actually
+             * submitted to the LCDC (otherwise flush_fb_idx would lie about the
+             * in-flight FB). The next call re-scans from the real position. */
+            drv_lcd_fb.flush_fb_idx = start_idx;
             rt_hw_interrupt_enable(level);
             LOG_D("Both framebuffers are not ready");
             return RT_EEMPTY;
@@ -1064,20 +1105,6 @@ rt_err_t drv_lcd_fb_wait_all_done(uint8_t *p_data, int32_t wait_ms)
                 //Overwrite anyway
                 LOG_W("Wait fb=%x evt=%x, timeout", p_data, events1);
             }
-
-#ifdef BSP_USING_RAMLESS_LCD
-            //Make sure the RAMLESS LCD read from another buffer
-            RT_ASSERT(2 == drv_lcd_fb.fb_total);
-            err = rt_event_recv(&drv_lcd_fb.event, events2,
-                                RT_EVENT_FLAG_OR,
-                                rt_tick_from_millisecond(wait_ms), NULL);
-
-            if (RT_EOK != err)
-            {
-                //Overwrite anyway
-                LOG_W("Wait fb=%x evt=%x, timeout", p_data, events2);
-            }
-#endif /*BSP_USING_RAMLESS_LCD*/
 
             return RT_EOK;
         }
