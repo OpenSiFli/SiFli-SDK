@@ -18,6 +18,9 @@ extern "C" {
 
 #define AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT
 
+/* HCPU and LCPU sleep independently, waking LCPU is required when HCPU sends message to LCPU */
+#define AON_LCPU_INDEPENDENT_SLEEP_SUPPORT
+
 /** @brief hpsys wakeup source */
 typedef enum
 {
