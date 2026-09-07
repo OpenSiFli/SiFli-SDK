@@ -71,6 +71,9 @@ elif GetDepend('BSP_USING_LOOP_ASSERT'):
 else:
     pass
 
+if GetDepend('USE_ATE_MODE'):
+    CPPDEFINES += ['HAL_USE_ATE_MODE']
+
 if rtconfig.CROSS_TOOL == 'gcc':
     # rtconfig.LFLAGS in SifliGccEnv uses list
     LINKFLAGS = []
