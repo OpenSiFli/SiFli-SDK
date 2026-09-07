@@ -2434,6 +2434,108 @@ __HAL_ROM_USED void HAL_PIN_SetFlash3(void)
     HAL_PIN_Set(PAD_PA11, MPI3_DIO3, PIN_PULLUP, 1);
 }
 
+
+void HAL_PIN_SetSipPsram1(PIN_MpiPinmapMode pinmap_mode)
+{
+    if (PIN_MPI_PINMAP_MODE_1 == pinmap_mode) /* legacy */
+    {
+        HAL_PIN_Set(PAD_SA00, MPI1_DM,   PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA01, MPI1_DIO0, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA02, MPI1_DIO1, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA03, MPI1_DIO2, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA04, MPI1_DIO3, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA05, MPI1_CS,   PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA06, MPI1_CLKB, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA07, MPI1_CLK,  PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA08, MPI1_DIO4, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA09, MPI1_DIO5, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA10, MPI1_DIO6, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA11, MPI1_DIO7, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA12, MPI1_DQS,  PIN_PULLDOWN, 1);
+    }
+    else if (PIN_MPI_PINMAP_MODE_2 == pinmap_mode) /* xccela */
+    {
+        HAL_PIN_Set(PAD_SA01, MPI1_DIO0, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA02, MPI1_DIO1, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA03, MPI1_DIO2, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA04, MPI1_DIO3, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA08, MPI1_DIO4, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA09, MPI1_DIO5, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA10, MPI1_DIO6, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA11, MPI1_DIO7, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA07, MPI1_CLK,  PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA06, MPI1_CS,   PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA12, MPI1_DQSDM, PIN_PULLDOWN, 1);
+
+        HAL_PIN_Set_Analog(PAD_SA00, 1);
+        HAL_PIN_Set_Analog(PAD_SA05, 1);
+    }
+    else if (PIN_MPI_PINMAP_MODE_3 == pinmap_mode) /* hyperbus */
+    {
+        HAL_PIN_Set(PAD_SA01, MPI1_DIO0,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA02, MPI1_DIO1,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA03, MPI1_DIO2,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA04, MPI1_DIO3,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA05, MPI1_CS,    PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA06, MPI1_CLKB,  PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA07, MPI1_CLK,   PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SA08, MPI1_DIO4,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA09, MPI1_DIO5,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA10, MPI1_DIO6,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA11, MPI1_DIO7,  PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SA12, MPI1_DQSDM, PIN_PULLDOWN, 1);
+
+        HAL_PIN_Set_Analog(PAD_SA00, 1);
+    }
+    else
+    {
+        HAL_ASSERT(0);
+    }
+}
+
+
+void HAL_PIN_SetSipPsram2(PIN_MpiPinmapMode pinmap_mode)
+{
+    if (PIN_MPI_PINMAP_MODE_1 == pinmap_mode) /* legacy */
+    {
+        HAL_PIN_Set(PAD_SB00, MPI2_DM,   PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB01, MPI2_DIO0, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB02, MPI2_DIO1, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB03, MPI2_DIO2, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB04, MPI2_DIO3, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB05, MPI2_CS,   PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SB06, MPI2_CLKB, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SB07, MPI2_CLK,  PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SB08, MPI2_DIO4, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB09, MPI2_DIO5, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB10, MPI2_DIO6, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB11, MPI2_DIO7, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB12, MPI2_DQS,  PIN_PULLDOWN, 1);
+    }
+    else if (PIN_MPI_PINMAP_MODE_2 == pinmap_mode) /* xccela */
+    {
+        HAL_PIN_Set(PAD_SB01, MPI2_DIO0, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB02, MPI2_DIO1, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB03, MPI2_DIO2, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB04, MPI2_DIO3, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB08, MPI2_DIO4, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB09, MPI2_DIO5, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB10, MPI2_DIO6, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB11, MPI2_DIO7, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_SB07, MPI2_CLK,  PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SB06, MPI2_CS,   PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_SB12, MPI2_DQSDM, PIN_PULLDOWN, 1);
+
+        HAL_PIN_Set_Analog(PAD_SB00, 1);
+        HAL_PIN_Set_Analog(PAD_SB05, 1);
+    }
+    else
+    {
+        HAL_ASSERT(0);
+    }
+}
+
+
 #elif defined(SF32LB52X)
 __HAL_ROM_USED void HAL_PIN_Set_Dual_flash2(void)
 {

@@ -87,6 +87,12 @@ typedef enum
 typedef enum
 {
     PIN_MPI_PIMMAP_MODE_INVALID = 0,
+    /* MPI1: Legacy OPI PSRAM, MPI2: Legacy OPI PSRAM */
+    PIN_MPI_PINMAP_MODE_1 = 1,
+    /* MPI1: Xccela OPI PSRAM, MPI2: Xccela OPI PSRAM */
+    PIN_MPI_PINMAP_MODE_2 = 2,
+    /* MPI1: HyperBus OPI PSRAM, MPI2: not used */
+    PIN_MPI_PINMAP_MODE_3 = 3,
 } PIN_MpiPinmapMode;
 
 
