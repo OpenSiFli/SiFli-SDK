@@ -20,6 +20,9 @@ extern "C" {
 /* Reference count is used by HAL_HPAON_WakeCore and HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST */
 #define AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT
 
+/* HCPU and LCPU sleep independently, waking LCPU is required when HCPU sends message to LCPU */
+#define AON_LCPU_INDEPENDENT_SLEEP_SUPPORT
+
 #define HPAON_WAKEUP_PIN_PART0_FIRST  (33)
 #define HPAON_WAKEUP_PIN_PART0_LAST   (42)
 #define HPAON_WAKEUP_PIN_PART0_SIZE   (HPAON_WAKEUP_PIN_PART0_LAST - HPAON_WAKEUP_PIN_PART0_FIRST + 1)

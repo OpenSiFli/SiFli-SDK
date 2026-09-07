@@ -25,6 +25,9 @@ extern "C" {
 //#define AON_PMUC_WSR_PIN_COMBINED_SUPPORT
 /* Reference count is used by HAL_HPAON_WakeCore and HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST */
 //#define AON_LCPU_ACTIVE_REQUEST_REF_COUNT_SUPPORT
+/* HCPU and LCPU sleep independently, waking LCPU is required when HCPU sends message to LCPU,
+ * on the contrary LCPU is always active while HCPU is active */
+//#define AON_LCPU_INDEPENDENT_SLEEP_SUPPORT
 
 
 #ifdef SF32LB55X
