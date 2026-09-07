@@ -75,7 +75,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PTC_Enable(PTC_HandleTypeDef *hptc, int ena
             hptc->Instance->GPIO63_32 = (hptc->Init.Trigger_Pin - 32) << PTC_GPIO63_32_SELA_Pos;
         }
 #ifdef PTC_GPIO95_64_SELA_Pos
-        else if ((hptc->Init.Trigger_Pin < 95) && (hptc->Init.Sel == PTC_HCPU_PA95_64_A))
+        else if ((hptc->Init.Trigger_Pin < 96) && (hptc->Init.Sel == PTC_HCPU_PA95_64_A))
         {
             hptc->Instance->GPIO95_64 = (hptc->Init.Trigger_Pin - 64) << PTC_GPIO95_64_SELA_Pos;
         }
