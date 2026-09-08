@@ -714,10 +714,10 @@ void bt_voice_relay_open_sco(uint8_t sco_idx, uint32_t samplerate)
         msbc_g711plc_construct(&(pt_bt_voice->pcm_plc[sco_idx]));
     }
 
-    pt_bt_voice->air_mod[sco_idx] = air_mod;
-    pt_bt_voice->sco_state[sco_idx] = 1;
     bts2_msbc_decode_cfg_ext(sco_idx);
     bts2_msbc_encode_cfg_ext(sco_idx);
+    pt_bt_voice->air_mod[sco_idx] = air_mod;
+    pt_bt_voice->sco_state[sco_idx] = 1;
 
 
     LOG_I("bt_voice_relay_open_sco idx=%d,open=%d,mode=%d,state=%d\n", sco_idx, bt_voice_relay_get_open_sco_count(), pt_bt_voice->air_mod[sco_idx], pt_bt_voice->state);
