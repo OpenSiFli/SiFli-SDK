@@ -60,5 +60,5 @@ msh />Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
 No specific troubleshooting information available. For any issues, please submit an [issue](https://github.com/OpenSiFli/SiFli-SDK/issues) on GitHub.
 
 ## Reference Documentation
-- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
-- [SiFli-SDK Development Guide](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/development/index.html)
+- [SiFli-SDK Quick Start](https://docs.sifli.com/projects/sdk/latest/en/sf32lb52x/quickstart/index.html)
+- [SiFli-SDK Development Guide](https://docs.sifli.com/projects/sdk/latest/en/sf32lb52x/app_development/index.html)

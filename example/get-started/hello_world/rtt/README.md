@@ -62,4 +62,4 @@ msh />Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
 
 ## 参考文档
 - [SiFli-SDK 快速入门](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/quickstart/index.html)
-- [SiFli-SDK 开发指南](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/development/index.html)
+- [SiFli-SDK 开发指南](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/app_development/index.html)

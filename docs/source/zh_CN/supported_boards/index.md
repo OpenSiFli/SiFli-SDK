@@ -93,7 +93,7 @@
 6500-HDK     | EH-SF32LB52X(6500)        |   eh-lb6500   | 
 NANO-N4      | SF32LB52-NANO_N4          |   sf32lb52-nano_n4 | 
 NANO-N16R16  | SF32LB52-NANO_N16R16      |   sf32lb52-nano_n16r16 | 
-黄山派(LCHSPI-ULP)     | SF32LB52-LCHSPI-ULP         |   sf32lb52-lchspi-ulp    |
+黄山派(LCHSPI-ULP)     | SF32LB52-LCHSPI-ULP         |   [sf32lb52-lchspi-ulp](boards/sf32lb52-lchspi-ulp/doc/index.md)    |
 52-LCD_N16R8 | SF32LB52-DevKit-LCD_N16R8 |   [sf32lb52-lcd_n16r8](boards/sf32lb52-lcd_n16r8/doc/index.md)    |
 52-LCD_52D | SF32LB52-DevKit-LCD_52D |   [sf32lb52-lcd_52d](boards/sf32lb52-lcd_52d/doc/index.md)    |
 
@@ -113,6 +113,7 @@ boards/sf32lb52-lcd_a128r16/doc/index
 boards/sf32lb52-lcd_n16r8_jdi/doc/index
 boards/sf32lb52-nano_n4/doc/index
 boards/sf32lb52-nano_n16r16/doc/index
+boards/sf32lb52-lchspi-ulp/doc/index
 boards/sf32lb56-lcd_a128r12n1/doc/index
 boards/sf32lb56-lcd_n16r12n1/doc/index
 boards/sf32lb56-wlan-core_a128r12n1/doc/index

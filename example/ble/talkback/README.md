@@ -34,10 +34,10 @@
 + 音频输入输出设备（麦克风和扬声器）。
 
 ### 硬件连接
-根据开发版指南连接麦克风和扬声器。
-[sf32lb52-lcd_n16r8](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/supported_boards/boards/sf32lb52-lcd_n16r8/doc/index.html#)
-[sf32lb52-nano_n16r16](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/supported_boards/boards/sf32lb52-nano_n16r16/doc/index.html#)
-[sf32lb52-lchspi-ulp](https://docs.sifli.com/projects/sdk/latest/sf32lb52x/supported_boards/boards/sf32lb52-lchspi-ulp/doc/index.html#)
+根据开发版指南连接麦克风和扬声器：
+- [sf32lb52-lcd_n16r8](/supported_boards/boards/sf32lb52-lcd_n16r8/doc/index.md)
+- [sf32lb52-nano_n16r16](/supported_boards/boards/sf32lb52-nano_n16r16/doc/index.md)
+- [sf32lb52-lchspi-ulp](/supported_boards/boards/sf32lb52-lchspi-ulp/doc/index.md)
 
 
 ### menuconfig配置
