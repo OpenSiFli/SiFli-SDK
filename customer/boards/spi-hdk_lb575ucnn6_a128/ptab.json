@@ -78,7 +78,14 @@
             },
             {
                 "offset": "0x00300000", 
-                "max_size": "0x00100000", 
+                "max_size": "0x00040000",
+                "name": "acpu",
+                "core": "acpu",
+                "type": ["app_exec"]
+            },            
+            {
+                "offset": "0x00340000", 
+                "max_size": "0x000C0000", 
                 "tags": [
                     "PSRAM_DATA"
                 ]
