@@ -49,8 +49,8 @@ uint8_t bt_is_in_BQB_mode(void);
 int8_t bt_rf_get_max_tx_pwr(void);
 int8_t bt_rf_get_init_tx_pwr(void);
 int8_t bt_rf_get_min_tx_pwr(void);
-int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint8_t *pa_bm_cal, uint8_t *dac_lsb_cnt_cal);
-int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel78);
+int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint16_t *gain_factor2, uint16_t *gain_factor1);
+int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel39, uint32_t *tmxcal_sel78);
 uint8_t rt_flash_config_read(uint8_t id, uint8_t *data, uint8_t size);
 int8_t bt_rf_is_golden_unit();
 
@@ -611,15 +611,15 @@ CONST static uint16_t rxon_cmd[] =
     RD(0X58), OR(26), WR(0X58), //46
     WAIT(15), //47 wait 10us for lo lock
     // LDO11_EN & LNA_SHUNTSW
-    RD(0X44), OR(22), AND(6), WR(0X44), //51
+    //RD(0X44), OR(22), AND(6), WR(0X44), //51
     // ADC_EN: if disable adc-1, change to 22
     RD(0X60), OR(21), OR(20), WR(0X60), //55
     //LDO_RBB
-    RD(0X48), OR(13), WR(0X48),  // 58
+    //RD(0X48), OR(13), WR(0X48),  // 58
     // PA_TX_RX
     RD(0X34), AND(9), WR(0X34), //61
-    // EN_IARRAY & EN_OSDAC
-    RD(0X58), OR(5), OR(6), OR(7), WR(0X58), //66
+    // EN_IARRAY
+    RD(0X58), OR(5), WR(0X58), //66
     // EN_CBPF & EN_RVGA
     RD(0X4C), OR(27), OR(6), OR(7), WR(0X4C), //71
     //EN_PKDET
@@ -632,7 +632,6 @@ CONST static uint16_t rxon_cmd[] =
     RD(0X74), OR(29), WR(0X74), //87
     WAIT(9), // 68
     // total cmd num should be even
-    END,
     END, // 88
 };
 
@@ -657,7 +656,7 @@ CONST static uint16_t rxoff_cmd[] =
     //PA_TX_RX
     RD(0X34), OR(9), WR(0X34),
     //EN_IARRAY & EN_OSDAC& EN_ADC_LDO_FLT
-    RD(0X58), AND(5), AND(6), AND(7), AND(26), WR(0X58), // 40
+    RD(0X58), AND(5), AND(26), WR(0X58), // 40
     // EN_CBPF & EN_RVGA
     RD(0X4C), AND(27), AND(6), AND(7), WR(0X4C),
     // EN_PKDET
@@ -3565,43 +3564,6 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     uint8_t tmxbuf_gc[8] = {2, 3, 3, 5, 5, 6, 8, 0xF};
     uint8_t edr_pa_bm[8] = {5, 5, 0xE, 0xA, 0x1B, 0x1F, 0x1F, 0x1F};
 
-    //#ifndef ENABLE_RF_ATE//read edr power cal result
-#if defined(ABS_EDR_CAL)
-    uint8_t edr_cal_flag = 0;
-    uint8_t lsb_cnt_cal;
-    uint8_t pa_bm_cal;
-
-
-    bt_rf_get_absolute_pwr_cal(&edr_cal_flag, &pa_bm_cal, &lsb_cnt_cal);
-    if (edr_cal_flag)
-    {
-
-        //rt_kprintf("pa_bm_cal = %d, lsb_cnt_cal = %d\n", pa_bm_cal, lsb_cnt_cal);
-
-        MODIFY_REG(hwp_bt_rfc->TBB_REG, BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Msk, lsb_cnt_cal << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos);
-        //hwp_bt_rfc->TBB_REG &= ~BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV;
-        //hwp_bt_rfc->TBB_REG |= lsb_cnt_cal << BT_RFC_TBB_REG_BRF_DAC_LSB_CNT_LV_Pos;
-        if (pa_bm_cal == 1)
-        {
-            edr_pa_bm[0] += 1;
-            edr_pa_bm[1] += 2;
-            edr_pa_bm[2] += 2;
-            edr_pa_bm[3] += 2;
-            edr_pa_bm[4] += 4;
-            //edr_pa_bm[5] +=4;
-        }
-        else if (pa_bm_cal == 3)
-        {
-            //edr_pa_bm[0] +=1;
-            edr_pa_bm[1] -= 1;
-            edr_pa_bm[2] -= 2;
-            edr_pa_bm[3] -= 2;
-            edr_pa_bm[4] -= 3;
-            //edr_pa_bm[5] -=3;
-        }
-    }
-#endif //EDR_CAL_IN_EFUSE
-
     // Change xtal to 24M
     rcc_reg = READ_REG(hwp_lpsys_rcc->CFGR);
     div = (rcc_reg & LPSYS_RCC_CFGR_HDIV1_Msk) >> LPSYS_RCC_CFGR_HDIV1_Pos;
@@ -4588,11 +4550,8 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr, uint8_t cal_power_enable)
     uint32_t pwr_ref;
     uint32_t reg_addr = rslt_start_addr;
 //#ifdef TMXCAP_SEL_EFUSE
-    if (bt_rf_is_golden_unit())
-    {
-        //rt_kprintf("is golden unit\n")
-        bt_rf_get_tmxcap_sel_efuse(&tmxcap_efuse_flag, &tmxcap_sel[0], &tmxcap_sel[78]);
-    }
+
+    bt_rf_get_tmxcap_sel_efuse(&tmxcap_efuse_flag, &tmxcap_sel[0], &tmxcap_sel[39], &tmxcap_sel[78]);
 //#endif
 #ifndef GOLDEN_UNIT
     if (!tmxcap_efuse_flag)
@@ -5009,45 +4968,46 @@ __WEAK int8_t bt_rf_get_min_tx_pwr(void)
 {
     return 0;
 }
-__WEAK int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint8_t *pa_bm_cal, uint8_t *dac_lsb_cnt_cal)
+__WEAK int8_t bt_rf_get_absolute_pwr_cal(uint8_t *edr_cal_flag, uint16_t *gain_factor2, uint16_t *gain_factor1)
 {
 
     int efuse_st;
     uint32_t efuse32[5];
     uint8_t *efuse_data = (uint8_t *)efuse32;
     //void rt_kprintf(const char *fmt, ...);
-    //efuse_st = HAL_EFUSE_Init();
+    efuse_st = HAL_EFUSE_Init();
     if (efuse_st != 0)
     {
         //printf("Efuse init fail!\n");
         return 1;
     }
-    //efuse_st = HAL_EFUSE_Read(256,efuse_data,20);
-    *edr_cal_flag = (efuse_data[15] & 0x20) >> 5;
-    *pa_bm_cal = (efuse_data[15] & 0xc0) >> 6;
-    *dac_lsb_cnt_cal = efuse_data[16] & 0x3;
+    efuse_st = HAL_EFUSE_Read(256, efuse_data, 20);
+    *edr_cal_flag = (efuse32[4] & 0x100) >> 8;
+    *gain_factor1 = ((efuse32[4] & 0x7FE00) >> 9) ;
+    *gain_factor2 = (efuse32[4] & 0x1FF80000) >> 19;
 
     return 0;
 
 }
 
-__WEAK int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel78)
+__WEAK int8_t bt_rf_get_tmxcap_sel_efuse(uint8_t *tmxcap_sel_efuse_flag, uint32_t *tmxcal_sel0, uint32_t *tmxcal_sel39, uint32_t *tmxcal_sel78)
 {
 
     int efuse_st;
     uint32_t efuse32[5];
     uint8_t *efuse_data = (uint8_t *)efuse32;
     //void rt_kprintf(const char *fmt, ...);
-    //efuse_st = HAL_EFUSE_Init();
+    efuse_st = HAL_EFUSE_Init();
     if (efuse_st != 0)
     {
         //printf("Efuse init fail!\n");
         return 1;
     }
-    //efuse_st = HAL_EFUSE_Read(256,efuse_data,20);
-    *tmxcap_sel_efuse_flag = (efuse_data[16] & 0x4) >> 2;
-    *tmxcal_sel78 = (efuse_data[16] & 0x78) >> 3;
-    *tmxcal_sel0 = ((efuse_data[16] & 0x80) >> 7) | ((efuse_data[17] & 0x7) << 1);
+    efuse_st = HAL_EFUSE_Read(256, efuse_data, 20);
+    *tmxcap_sel_efuse_flag = (efuse_data[19] & 0x20) >> 5;
+    *tmxcal_sel78 = (efuse_data[15] & 0xF0) >> 4;
+    *tmxcal_sel39 = (efuse_data[16] & 0xF);
+    *tmxcal_sel0 = ((efuse_data[16] & 0xF0) >> 4) ;
 
     return 0;
 
@@ -5146,6 +5106,7 @@ void bt_rf_opt_cal(void)
     hwp_bt_rfc->RBB_REG4 |= (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH1I_LV_Pos) | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH1Q_LV_Pos)
                             | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH2I_LV_Pos) | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH2Q_LV_Pos);
 
+    hwp_bt_rfc->RBB_REG5 |= BT_RFC_RBB_REG5_BRF_CBPF_W2X_CMFB_LV_BR;
     hwp_bt_rfc->RBB_REG6 &= ~(BT_RFC_RBB_REG6_BRF_CBPF_BW_LV_BR | BT_RFC_RBB_REG6_BRF_CBPF_W2X_STG1_LV_BR | BT_RFC_RBB_REG6_BRF_CBPF_W2X_STG2_LV_BR);
     hwp_bt_rfc->RBB_REG6 |= 0x1 << BT_RFC_RBB_REG6_BRF_CBPF_BW_LV_BR_Pos |
                             0x1 << BT_RFC_RBB_REG6_BRF_CBPF_W2X_STG1_LV_BR_Pos |
@@ -5354,7 +5315,8 @@ void bt_rf_opt_cal(void)
 
     hwp_bt_phy->AGC_CFG13 &=    ~(BT_PHY_AGC_CFG13_CBPF_GAIN_INDEX_INIT_SF |
                                   BT_PHY_AGC_CFG13_VGA_GAIN_INDEX_INIT_SF);
-    hwp_bt_phy->AGC_CFG13 |=        2 << BT_PHY_AGC_CFG13_CBPF_GAIN_INDEX_INIT_SF_Pos;
+    hwp_bt_phy->AGC_CFG13 |= (6 << BT_PHY_AGC_CFG13_VGA_GAIN_INDEX_INIT_SF_Pos) |
+                             (1 << BT_PHY_AGC_CFG13_CBPF_GAIN_INDEX_INIT_SF_Pos);
 
     //agc setting for version-B, compatible with version-A as it takes no effect in version-A
     //it's OK that ATE will overwrite this reg. No impact on ATE results
@@ -5398,7 +5360,7 @@ void bt_rf_opt_cal(void)
     hwp_bt_rfc->VCO_REG1 |= BT_RFC_VCO_REG1_BRF_VCO_FLT_SEL_LV;
     hwp_pmuc->HXT_CR2    |= PMUC_HXT_CR2_ACBUF_RSEL;
     hwp_bt_rfc->ADC_REG  &= ~BT_RFC_ADC_REG_BRF_SEL_LDOVREF_ADC_LV;
-    hwp_bt_rfc->ADC_REG  |= 0x8 << BT_RFC_ADC_REG_BRF_SEL_LDOVREF_ADC_LV_Pos;
+    hwp_bt_rfc->ADC_REG  |= 0x9 << BT_RFC_ADC_REG_BRF_SEL_LDOVREF_ADC_LV_Pos;
 
     //
     hwp_bt_phy->RSSI_CFG1 &= ~BT_PHY_RSSI_CFG1_RSSI_OFFSET;
@@ -5527,7 +5489,20 @@ void bt_rf_cal(void)
     hwp_bt_rfc->IQ_PWR_REG2_2 &= ~(BT_RFC_IQ_PWR_REG2_2_EDR_TMXBUF_GC_DPSK | BT_RFC_IQ_PWR_REG2_0_EDR_LPF_BYPASS);
     hwp_bt_rfc->IQ_PWR_REG2_2 |= 0x2 << BT_RFC_IQ_PWR_REG2_2_EDR_TMXBUF_GC_DPSK_Pos;
 
+    //#ifndef ENABLE_RF_ATE//read edr power cal result
+#if defined(ABS_EDR_CAL)
+    uint8_t edr_cal_flag = 0;
+    uint16_t gain_factor2;
+    uint16_t gain_factor1;
 
+
+    bt_rf_get_absolute_pwr_cal(&edr_cal_flag, &gain_factor2, &gain_factor1);
+    if (edr_cal_flag)
+    {
+        hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_0 = 0x400 * gain_factor1 / 256;
+        hwp_bt_rfc->TMXBUF_GC_CP_FACTOR_2 = 0x400 * gain_factor2 / 256;
+    }
+#endif
     /*diglvl mul factor selected by iq_pwr_lvl*/
     /*
     write_memory(BT_RFC_MEM_BASE+0x784,0x011D0141 );
@@ -5588,7 +5563,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.2_3661";
+char *g_rf_ful_ver = "1.2.3_3674";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;
