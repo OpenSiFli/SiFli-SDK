@@ -94,6 +94,8 @@ int rwnx_send_fhcustmsg_host_ota_req(struct rwnx_hw *rwnx_hw, uint32_t step, voi
 int rwnx_send_fhcustmsg_get_fw_version_req(struct rwnx_hw *rwnx_hw, struct fhcustmsg_get_fw_version_cfm *cfm);
 int rwnx_send_fhcustmsg_reset_req(struct rwnx_hw *rwnx_hw);
 int rwnx_send_fhcustmsg_sta_cfg_req(struct rwnx_hw *rwnx_hw, int op, char *ssid, int enable, struct fhcustmsg_sta_cfg_cfm *cfm);
+int rwnx_send_fhcustmsg_set_sn_req(struct rwnx_hw *rwnx_hw, const uint8_t *sn, struct fhcustmsg_set_sn_cfm *cfm);
+int rwnx_send_fhcustmsg_get_sn_req(struct rwnx_hw *rwnx_hw, struct fhcustmsg_get_sn_cfm *cfm);
 //int rwnx_send_fhcustmsg_http_req(struct rwnx_hw *rwnx_hw, char *uri);
 
 int rwnx_send_fhcustmsg_start_p2p_req(struct rwnx_hw *rwnx_hw, const char *ssid, const char *passwd, uint8_t band);

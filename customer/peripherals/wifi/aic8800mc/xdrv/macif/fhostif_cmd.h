@@ -7,7 +7,10 @@
 #ifndef _FHOSTIF_CMD_H_
 #define _FHOSTIF_CMD_H_
 
-
+/// SN length in bytes, keep in sync with firmware side (aic8800-sdk wifi/hostif/fhostif_cmd.h)
+#ifndef SN_LEN
+    #define SN_LEN      32
+#endif
 
 /// Messages related to Custom msg Task(fhostif custom msg)
 enum CUSTOM_MSG_TAG
@@ -78,8 +81,10 @@ enum CUSTOM_MSG_TAG
     CUSTOM_MSG_START_HOSTBT_CFM,
     CUSTOM_MSG_STOP_HOSTBT_REQ,
     CUSTOM_MSG_STOP_HOSTBT_CFM,
-    CUSTOM_MSG_STA_CFG_REQ,
-    CUSTOM_MSG_STA_CFG_CFM,
+    CUSTOM_MSG_SET_SN_REQ,
+    CUSTOM_MSG_SET_SN_CFM,
+    CUSTOM_MSG_GET_SN_REQ,
+    CUSTOM_MSG_GET_SN_CFM,
     // User defined message
     CUSTOM_MSG_FIRST_USER_DEFINED = LMAC_FIRST_MSG(TASK_CUSTOM) + 0x200,
     // e.g. CUSTOM_MSG_XXX  = CUSTOM_MSG_FIRST_USER_DEFINED,

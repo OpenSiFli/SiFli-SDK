@@ -1657,6 +1657,49 @@ int rwnx_send_fhcustmsg_sta_cfg_req(struct rwnx_hw *rwnx_hw, int op, char *ssid,
     return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_STA_CFG_CFM, cfm);
 }
 
+/*
+ * sn must point to a buffer of at least SN_LEN bytes: the whole fixed-size
+ * payload is copied into the request (callers zero-pad shorter SN values).
+ */
+int rwnx_send_fhcustmsg_set_sn_req(struct rwnx_hw *rwnx_hw, const uint8_t *sn, struct fhcustmsg_set_sn_cfm *cfm)
+{
+    struct fhcustmsg_set_sn_req *req;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (sn == NULL || cfm == NULL)
+        return -1;
+
+    /* Build the message */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_SET_SN_REQ, TASK_DBG, DRV_TASK_ID,
+                          sizeof(struct fhcustmsg_set_sn_req));
+    if (!req)
+        return -12;//ENOMEM;
+
+    rtos_memcpy(req->sn, sn, SN_LEN);
+
+    /* Send the message to LMAC FW */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_SET_SN_CFM, cfm);
+}
+
+int rwnx_send_fhcustmsg_get_sn_req(struct rwnx_hw *rwnx_hw, struct fhcustmsg_get_sn_cfm *cfm)
+{
+    void *req;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (cfm == NULL)
+        return -1;
+
+    /* Build the message (REQ carries no payload) */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_GET_SN_REQ, TASK_DBG, DRV_TASK_ID, 1);
+    if (!req)
+        return -12;//ENOMEM;
+
+    /* Send the message to LMAC FW */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_GET_SN_CFM, cfm);
+}
+
 #if 0
 int rwnx_send_fhcustmsg_http_req(struct rwnx_hw *rwnx_hw, char *uri)
 {

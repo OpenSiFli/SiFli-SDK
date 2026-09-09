@@ -143,6 +143,28 @@ struct fhcustmsg_sta_cfg_cfm
     struct sta_info sta_info[8];
 };
 
+// SN (serial number) written to the WiFi chip's user-data flash sector.
+// SN_LEN must match the firmware side (aic8800-sdk wifi/hostif/fhostif_cmd.h).
+#ifndef SN_LEN
+    #define SN_LEN      32
+#endif
+struct fhcustmsg_set_sn_req
+{
+    uint8_t sn[SN_LEN];
+};
+
+struct fhcustmsg_set_sn_cfm
+{
+    int8_t status;
+};
+
+// Read SN: the REQ carries no payload; the CFM returns the SN that the WiFi chip
+// read back from its user-data flash sector.
+struct fhcustmsg_get_sn_cfm
+{
+    int8_t status;
+    uint8_t sn[SN_LEN];
+};
 
 // P2P (WiFi Direct) message structures
 

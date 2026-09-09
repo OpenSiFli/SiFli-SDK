@@ -19,6 +19,8 @@
  */
 
 #include <rtthread.h>
+#include <wlan_dev.h>
+#include <wlan_mgnt.h>
 #include "wifi_cli.h"
 #include "wifi_if.h"
 #include "osal_debug.h"
@@ -462,6 +464,47 @@ static void cmd_wifi_sta_cfg(int argc, char **argv)
     }
 }
 
+static void cmd_wifi_set_sn(int argc, char **argv)
+{
+    int len, ret;
+
+    WIFI_NOT_ON_EXIT();
+
+    if (argc != 2)
+    {
+        DBG_APP_ERR("Usage: setsn <SN>\n");
+        return;
+    }
+
+    len = strlen(argv[1]);
+    if (len <= 0 || len > RT_WLAN_SN_MAX_LENGTH)
+    {
+        DBG_APP_ERR("SN length %d out of range (1~%d)\n", len, RT_WLAN_SN_MAX_LENGTH);
+        return;
+    }
+
+    ret = rt_wlan_set_sn((rt_uint8_t *)argv[1], len);
+    DBG_APP_INF("set sn result %d\n", ret);
+}
+
+static void cmd_wifi_get_sn(int argc, char **argv)
+{
+    rt_uint8_t sn[RT_WLAN_SN_MAX_LENGTH + 1] = {0};
+    rt_uint8_t sn_len = sizeof(sn);     /* in: buffer capacity, out: SN length read */
+    int ret;
+
+    WIFI_NOT_ON_EXIT();
+
+    ret = rt_wlan_get_sn(sn, &sn_len);
+    if (ret != RT_EOK)
+    {
+        DBG_APP_ERR("rt_wlan_get_sn fail: %d\n", ret);
+        return;
+    }
+
+    DBG_APP_INF("get sn result %d, sn=%.*s\n", ret, sn_len, sn);
+}
+
 // P2P (WiFi Direct) command handlers
 
 #ifdef AIC_ENABLE_P2P
@@ -730,6 +773,8 @@ static const cmd_entry wifi_cli_cmd_list[] =
     {"ver", cmd_wifi_get_fw_version},
     {"reset", cmd_wifi_reset},
     {"sta_cfg", cmd_wifi_sta_cfg},
+    {"setsn", cmd_wifi_set_sn},
+    {"getsn", cmd_wifi_get_sn},
 #ifdef AIC_ENABLE_P2P
     {"wifi_p2p_start", cmd_wifi_p2p_start},
     {"wifi_p2p_stop", cmd_wifi_p2p_stop},

@@ -23,6 +23,10 @@
 #define WLAN_DEV_NAME "wlan0"
 extern struct rwnx_plat *g_rwnx_plat;
 
+#if SN_LEN != RT_WLAN_SN_MAX_LENGTH
+    #error "SN_LEN must be equal to RT_WLAN_SN_MAX_LENGTH"
+#endif
+
 static struct rt_wlan_device aic8800mc_wlan_dev;
 static rt_wlan_mode_t aic8800mc_wlan_mode = RT_WLAN_NONE;
 
@@ -408,6 +412,86 @@ static rt_err_t aic8800mc_wlan_dev_get_mac(struct rt_wlan_device *wlan, rt_uint8
     return RT_EOK;
 }
 
+static rt_err_t aic8800mc_wlan_dev_set_sn(struct rt_wlan_device *wlan, const rt_uint8_t *sn, rt_uint8_t sn_len)
+{
+    struct rwnx_hw *rwnx_hw;
+    struct fhcustmsg_set_sn_cfm cfm;
+    uint8_t sn_buf[SN_LEN] = {0};
+    int ret;
+
+    if (sn == RT_NULL || sn_len == 0 || sn_len > SN_LEN)
+    {
+        LOG_E("invalid sn param, len=%d\n", sn_len);
+        return -RT_ERROR;
+    }
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for set sn\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    /* pad with zeros so no 0xFF residue from the erased flash sector is written */
+    rt_memcpy(sn_buf, sn, sn_len);
+
+    ret = rwnx_send_fhcustmsg_set_sn_req(rwnx_hw, sn_buf, &cfm);
+    if (ret || cfm.status != 0)
+    {
+        LOG_E("set sn req failed: %d, status=%d\n", ret, cfm.status);
+        return -RT_ERROR;
+    }
+
+    return RT_EOK;
+}
+
+static rt_err_t aic8800mc_wlan_dev_get_sn(struct rt_wlan_device *wlan, rt_uint8_t *sn, rt_uint8_t *sn_len)
+{
+    struct rwnx_hw *rwnx_hw;
+    struct fhcustmsg_get_sn_cfm cfm;
+    uint8_t capacity;
+    int ret;
+
+    if (sn == RT_NULL || sn_len == RT_NULL || *sn_len == 0)
+    {
+        LOG_E("invalid sn param\n");
+        return -RT_ERROR;
+    }
+
+    /* *sn_len is the capacity of sn on input, and the number of bytes filled on output */
+    capacity = (*sn_len < SN_LEN) ? *sn_len : SN_LEN;
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for get sn\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    ret = rwnx_send_fhcustmsg_get_sn_req(rwnx_hw, &cfm);
+    if (ret || cfm.status != 0)
+    {
+        LOG_E("get sn req failed: %d, status=%d\n", ret, cfm.status);
+        return -RT_ERROR;
+    }
+
+    rt_memcpy(sn, cfm.sn, capacity);
+    *sn_len = capacity;
+    return RT_EOK;
+}
+
 static int aic8800mc_wlan_dev_recv(struct rt_wlan_device *wlan, void *buff, int len)
 {
     return rt_wlan_dev_report_data(wlan, buff, len);
@@ -462,6 +546,8 @@ static const struct rt_wlan_dev_ops aic8800mc_wlan_ops =
     NULL,
     NULL,
 #endif
+    aic8800mc_wlan_dev_set_sn,
+    aic8800mc_wlan_dev_get_sn,
 };
 
 void aic8800mc_wlan_report_event(rt_wlan_dev_event_t event, void *buff, int len)
