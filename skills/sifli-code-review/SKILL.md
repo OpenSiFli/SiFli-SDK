@@ -55,10 +55,7 @@ git diff <branch>..<sha>
 git checkout <sha>
 ```
 
-> **IMPORTANT**: Checking out a detached HEAD will move away from the current branch. After the review is complete, return to the original branch:
-> ```bash
-> git checkout -
-> ```
+> **IMPORTANT — STAY on the reviewed commit after the review (do NOT revert)**: Checking out a detached HEAD moves away from the current branch, but **keep the checkout once the review is done — do NOT `git checkout -` back to the original branch**. The user wants to browse the code against the report, so the working tree must remain at the reviewed commit so the line numbers quoted in the report match the code on disk. Record the original branch name (`git branch --show-current`) before checking out, and only switch back later if the user explicitly asks (`git checkout <original-branch>`).
 
 **Step 4 — Read the commit message:**
 ```bash
@@ -126,6 +123,8 @@ git log -1 --format=full FETCH_HEAD
 ```
 
 > **IMPORTANT — Always use `FETCH_HEAD` in `git log`**: After `git fetch`, `HEAD` is still your original branch. Running `git log -1` without `FETCH_HEAD` will show the wrong commit message. Even after `git checkout FETCH_HEAD`, using `FETCH_HEAD` is safer — there's no ambiguity about what you're reading.
+
+> **IMPORTANT — STAY on the reviewed commit after the review (do NOT revert)**: Same rule as Step 0a — after `git checkout FETCH_HEAD` and completing the review, **remain on the reviewed commit** so the user can keep browsing the code against the report. Do not `git checkout -` back to the original branch unless the user explicitly asks.
 
 ### Step 0c: Review Local Changes (default)
 
