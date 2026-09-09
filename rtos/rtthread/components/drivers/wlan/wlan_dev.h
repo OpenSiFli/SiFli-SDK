@@ -46,6 +46,8 @@ typedef enum
     RT_WLAN_CMD_GET_MAC,
     RT_WLAN_CMD_P2P_GO_START,       /* start P2P GO */
     RT_WLAN_CMD_P2P_GO_STOP,        /* stop P2P GO */
+    RT_WLAN_CMD_SET_SN,             /* set device SN */
+    RT_WLAN_CMD_GET_SN,             /* get device SN */
 } rt_wlan_cmd_t;
 
 typedef enum
@@ -86,6 +88,10 @@ typedef enum
 
 #ifndef RT_WLAN_PASSWORD_MAX_LENGTH
 #define RT_WLAN_PASSWORD_MAX_LENGTH   (32)   /* PASSWORD MAX LEN*/
+#endif
+
+#ifndef RT_WLAN_SN_MAX_LENGTH
+#define RT_WLAN_SN_MAX_LENGTH  (32)   /* SN MAX LEN */
 #endif
 
 #ifndef RT_WLAN_DEV_EVENT_NUM
@@ -467,6 +473,12 @@ struct rt_ap_info
     rt_bool_t is_p2p_go;
 };
 
+struct rt_wlan_sn_info
+{
+    rt_uint8_t sn[RT_WLAN_SN_MAX_LENGTH];
+    rt_uint8_t len;     /* set: SN length; get: capacity of sn on input, length read on output */
+};
+
 struct rt_scan_info
 {
     rt_wlan_ssid_t ssid;
@@ -501,6 +513,8 @@ struct rt_wlan_dev_ops
     int (*wlan_send)(struct rt_wlan_device *wlan, void *buff, int len);
     rt_err_t (*wlan_p2p_go_start)(struct rt_wlan_device *wlan, struct rt_ap_info *ap_info);
     rt_err_t (*wlan_p2p_go_stop)(struct rt_wlan_device *wlan);
+    rt_err_t (*wlan_set_sn)(struct rt_wlan_device *wlan, const rt_uint8_t *sn, rt_uint8_t sn_len);
+    rt_err_t (*wlan_get_sn)(struct rt_wlan_device *wlan, rt_uint8_t *sn, rt_uint8_t *sn_len);
 
 };
 
@@ -522,6 +536,34 @@ int rt_wlan_dev_get_rssi(struct rt_wlan_device *device);
 rt_err_t rt_wlan_dev_ap_start(struct rt_wlan_device *device, struct rt_wlan_info *info, const char *password, int password_len);
 rt_err_t rt_wlan_dev_p2p_go_start(struct rt_wlan_device *device, struct rt_wlan_info *info, const char *password, int password_len);
 rt_err_t rt_wlan_dev_p2p_go_stop(struct rt_wlan_device *device);
+
+/**
+ * @brief Set the serial number (SN) of the wlan device.
+ *
+ * @param device the wlan device
+ * @param sn buffer holding the SN to write
+ * @param sn_len length of the SN in bytes (1 to RT_WLAN_SN_MAX_LENGTH)
+ *
+ * @return RT_EOK on success, -RT_EIO if device is NULL, -RT_ERROR on invalid arguments,
+ *         -RT_ENOSYS if the driver does not implement SN support, otherwise the error
+ *         code returned by the driver.
+ */
+rt_err_t rt_wlan_dev_set_sn(struct rt_wlan_device *device, const rt_uint8_t *sn, rt_uint8_t sn_len);
+
+/**
+ * @brief Get the serial number (SN) of the wlan device.
+ *
+ * @param device the wlan device
+ * @param sn buffer receiving the SN
+ * @param sn_len input: capacity of the sn buffer in bytes (must be greater than 0,
+ *               values above RT_WLAN_SN_MAX_LENGTH are clamped);
+ *               output: number of bytes actually read, never exceeds the given capacity
+ *
+ * @return RT_EOK on success, -RT_EIO if device is NULL, -RT_ERROR on invalid arguments or if
+ *         the driver reports a length exceeding the given capacity, -RT_ENOSYS if the driver
+ *         does not implement SN support, otherwise the error code returned by the driver.
+ */
+rt_err_t rt_wlan_dev_get_sn(struct rt_wlan_device *device, rt_uint8_t *sn, rt_uint8_t *sn_len);
 rt_err_t rt_wlan_dev_ap_stop(struct rt_wlan_device *device);
 rt_err_t rt_wlan_dev_ap_deauth(struct rt_wlan_device *device, rt_uint8_t mac[6]);
 

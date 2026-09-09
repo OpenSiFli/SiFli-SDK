@@ -1212,6 +1212,68 @@ rt_err_t rt_wlan_get_mac(rt_uint8_t mac[6])
     return err;
 }
 
+rt_err_t rt_wlan_set_sn(const rt_uint8_t *sn, rt_uint8_t sn_len)
+{
+    rt_err_t err = RT_EOK;
+    struct rt_wlan_device *wlan_dev = RT_NULL;
+
+    if (sn == RT_NULL || sn_len == 0 || sn_len > RT_WLAN_SN_MAX_LENGTH)
+    {
+        RT_WLAN_LOG_E("set SN param invalid, len=%d", sn_len);
+        return -RT_ERROR;
+    }
+    RT_WLAN_LOG_D("%s is run len: %d", __FUNCTION__, sn_len);
+
+    MGNT_LOCK();
+    /* SN is role independent: prefer the STA device, fall back to the AP one */
+    wlan_dev = (STA_DEVICE() != RT_NULL) ? STA_DEVICE() : AP_DEVICE();
+    if (wlan_dev == RT_NULL)
+    {
+        MGNT_UNLOCK();
+        return -RT_EIO;
+    }
+    err = rt_wlan_dev_set_sn(wlan_dev, sn, sn_len);
+    if (err != RT_EOK)
+    {
+        RT_WLAN_LOG_E("set device SN fail");
+        MGNT_UNLOCK();
+        return err;
+    }
+    MGNT_UNLOCK();
+    return err;
+}
+
+rt_err_t rt_wlan_get_sn(rt_uint8_t *sn, rt_uint8_t *sn_len)
+{
+    rt_err_t err = RT_EOK;
+    struct rt_wlan_device *wlan_dev = RT_NULL;
+
+    if (sn == RT_NULL || sn_len == RT_NULL || *sn_len == 0)
+    {
+        RT_WLAN_LOG_E("get SN param invalid");
+        return -RT_ERROR;
+    }
+
+    MGNT_LOCK();
+    /* SN is role independent: prefer the STA device, fall back to the AP one */
+    wlan_dev = (STA_DEVICE() != RT_NULL) ? STA_DEVICE() : AP_DEVICE();
+    if (wlan_dev == RT_NULL)
+    {
+        MGNT_UNLOCK();
+        return -RT_EIO;
+    }
+    err = rt_wlan_dev_get_sn(wlan_dev, sn, sn_len);
+    if (err != RT_EOK)
+    {
+        RT_WLAN_LOG_E("get device SN fail");
+        MGNT_UNLOCK();
+        return err;
+    }
+    RT_WLAN_LOG_D("%s is run len: %d", __FUNCTION__, *sn_len);
+    MGNT_UNLOCK();
+    return err;
+}
+
 rt_err_t rt_wlan_get_info(struct rt_wlan_info *info)
 {
     if (_sta_is_null())

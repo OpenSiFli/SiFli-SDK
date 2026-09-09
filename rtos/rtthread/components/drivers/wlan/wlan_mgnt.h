@@ -89,6 +89,38 @@ rt_bool_t rt_wlan_is_connected(void);
 rt_bool_t rt_wlan_is_ready(void);
 rt_err_t rt_wlan_set_mac(rt_uint8_t *mac);
 rt_err_t rt_wlan_get_mac(rt_uint8_t *mac);
+
+/**
+ * @brief Set the serial number (SN) of the WLAN device.
+ *
+ * The SN is a raw byte string and is not guaranteed to be NUL terminated,
+ * so do not treat it as a C string.
+ *
+ * @param sn buffer holding the SN to write
+ * @param sn_len length of the SN in bytes (1 to RT_WLAN_SN_MAX_LENGTH)
+ *
+ * @return RT_EOK on success, -RT_ERROR on invalid arguments, -RT_EIO if no WLAN
+ *         device is registered, -RT_ENOSYS if the driver does not implement SN
+ *         support, otherwise the error code returned by the driver.
+ */
+rt_err_t rt_wlan_set_sn(const rt_uint8_t *sn, rt_uint8_t sn_len);
+
+/**
+ * @brief Get the serial number (SN) of the WLAN device.
+ *
+ * The SN is a raw byte string and is not guaranteed to be NUL terminated,
+ * so do not treat it as a C string.
+ *
+ * @param sn buffer receiving the SN
+ * @param sn_len input: capacity of the sn buffer in bytes (must be greater than 0,
+ *               values above RT_WLAN_SN_MAX_LENGTH are clamped);
+ *               output: number of bytes actually read, never exceeds the given capacity
+ *
+ * @return RT_EOK on success, -RT_ERROR on invalid arguments, -RT_EIO if no WLAN
+ *         device is registered, -RT_ENOSYS if the driver does not implement SN
+ *         support, otherwise the error code returned by the driver.
+ */
+rt_err_t rt_wlan_get_sn(rt_uint8_t *sn, rt_uint8_t *sn_len);
 rt_err_t rt_wlan_get_info(struct rt_wlan_info *info);
 int rt_wlan_get_rssi(void);
 

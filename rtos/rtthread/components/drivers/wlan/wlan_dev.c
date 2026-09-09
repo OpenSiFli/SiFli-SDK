@@ -206,6 +206,66 @@ rt_err_t rt_wlan_dev_p2p_go_stop(struct rt_wlan_device *device)
     return result;
 }
 
+rt_err_t rt_wlan_dev_set_sn(struct rt_wlan_device *device, const rt_uint8_t *sn, rt_uint8_t sn_len)
+{
+    rt_err_t result = RT_EOK;
+    struct rt_wlan_sn_info sn_info;
+
+    if (device == RT_NULL)
+    {
+        return -RT_EIO;
+    }
+    if (sn == RT_NULL || sn_len == 0 || sn_len > RT_WLAN_SN_MAX_LENGTH)
+    {
+        return -RT_ERROR;
+    }
+
+    rt_memset(&sn_info, 0, sizeof(struct rt_wlan_sn_info));
+    rt_memcpy(sn_info.sn, sn, sn_len);
+    sn_info.len = sn_len;
+
+    result = rt_device_control(RT_DEVICE(device), RT_WLAN_CMD_SET_SN, &sn_info);
+    return result;
+}
+
+rt_err_t rt_wlan_dev_get_sn(struct rt_wlan_device *device, rt_uint8_t *sn, rt_uint8_t *sn_len)
+{
+    rt_err_t result = RT_EOK;
+    struct rt_wlan_sn_info sn_info;
+    rt_uint8_t capacity;
+
+    if (device == RT_NULL)
+    {
+        return -RT_EIO;
+    }
+    if (sn == RT_NULL || sn_len == RT_NULL || *sn_len == 0)
+    {
+        return -RT_ERROR;
+    }
+
+    /* the caller declares how much room it has: never write beyond that */
+    capacity = (*sn_len < RT_WLAN_SN_MAX_LENGTH) ? *sn_len : RT_WLAN_SN_MAX_LENGTH;
+
+    rt_memset(&sn_info, 0, sizeof(struct rt_wlan_sn_info));
+    sn_info.len = capacity;
+
+    result = rt_device_control(RT_DEVICE(device), RT_WLAN_CMD_GET_SN, &sn_info);
+    if (result != RT_EOK)
+    {
+        return result;
+    }
+
+    /* do not trust the length reported by the driver */
+    if (sn_info.len > capacity)
+    {
+        return -RT_ERROR;
+    }
+
+    rt_memcpy(sn, sn_info.sn, sn_info.len);
+    *sn_len = sn_info.len;
+    return RT_EOK;
+}
+
 rt_err_t rt_wlan_dev_ap_stop(struct rt_wlan_device *device)
 {
     rt_err_t result = RT_EOK;
@@ -808,6 +868,28 @@ static rt_err_t _rt_wlan_dev_control(rt_device_t dev, int cmd, void *args)
             err = wlan->ops->wlan_p2p_go_stop(wlan);
         break;
     }
+    case RT_WLAN_CMD_SET_SN:
+    {
+        struct rt_wlan_sn_info *sn_info = args;
+
+        LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, RT_WLAN_CMD_SET_SN, "RT_WLAN_CMD_SET_SN");
+        if (wlan->ops->wlan_set_sn)
+            err = wlan->ops->wlan_set_sn(wlan, sn_info->sn, sn_info->len);
+        else
+            err = -RT_ENOSYS;
+        break;
+    }
+    case RT_WLAN_CMD_GET_SN:
+    {
+        struct rt_wlan_sn_info *sn_info = args;
+
+        LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, RT_WLAN_CMD_GET_SN, "RT_WLAN_CMD_GET_SN");
+        if (wlan->ops->wlan_get_sn)
+            err = wlan->ops->wlan_get_sn(wlan, sn_info->sn, &sn_info->len);
+        else
+            err = -RT_ENOSYS;
+        break;
+    }
     default:
         LOG_D("%s %d cmd[%d]:%s  run......", __FUNCTION__, __LINE__, -1, "UNKUOWN");
         break;
@@ -841,7 +923,7 @@ rt_err_t rt_wlan_dev_register(struct rt_wlan_device *wlan, const char *name, con
     }
 
     rt_memset(wlan, 0, sizeof(struct rt_wlan_device));
-    
+
 #ifdef RT_USING_DEVICE_OPS
     wlan->device.ops = &wlan_ops;
 #else
