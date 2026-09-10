@@ -24,7 +24,7 @@
     #define HAL_PINMUX_EXT_ENABLED
 #endif /* SF32LB56X || SF32LB52X */
 
-#ifdef HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
+#ifdef HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
 static inline void PIN_UpdateFselAndPUPD(__IO uint32_t *pin, uint32_t fsel, uint32_t pupd)
 {
     uint32_t val;
@@ -40,7 +40,7 @@ static inline void PIN_UpdateFselAndPUPD(__IO uint32_t *pin, uint32_t fsel, uint
     */
     *pin = val | fsel | pupd | HPSYS_PINMUX_PAD_PA00_IE_Msk;
 }
-#endif /* HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION */
+#endif /* HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
   * @brief  Get pin base.
@@ -1138,7 +1138,7 @@ static void HAL_PIN_SetAonPE(int pad, int flags, int hcpu)
 
 
 
-#ifndef HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
+#ifndef HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
 __weak int HAL_PIN_Func2Idx(int pad, pin_function func, int hcpu)
 {
     int i;
@@ -1148,13 +1148,6 @@ __weak int HAL_PIN_Func2Idx(int pad, pin_function func, int hcpu)
     {
         pad -= PIN_PAD_UNDEF_L;
     }
-
-#ifdef HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
-    if ((func >= PIN_ARBITRARY_FUNC_START) && (func < HPSYS_PINMUX_PAD_SA00_FSEL_Msk))
-    {
-        return func;
-    }
-#endif /* HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION */
 
     if (hcpu)
     {
@@ -1366,7 +1359,7 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
         return -1;
     }
 
-    if ((func >= PIN_ARBITRARY_FUNC_START) && (func < HPSYS_PINMUX_PAD_SA00_FSEL_Msk))
+    if ((func >= PIN_MATRIX_FUNC_START) && (func < HPSYS_PINMUX_PAD_SA00_FSEL_Msk))
     {
         fsel = func;
     }
@@ -1375,7 +1368,7 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
         if (idx < sizeof(pad_fsel_func_tbls) / sizeof(pad_fsel_func_tbls[0]))
         {
             fsel_func_tbl = pad_fsel_func_tbls[idx];
-            for (i = 0; i < PIN_ARBITRARY_FUNC_START; i++)
+            for (i = 0; i < PIN_MATRIX_FUNC_START; i++)
             {
                 if (PIN_FUNC_UNDEF == fsel_func_tbl[i].function)
                 {
@@ -1402,7 +1395,7 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
 
     return r;
 }
-#endif /* !HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION */
+#endif /* !HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
   * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
@@ -1518,7 +1511,7 @@ __HAL_ROM_USED int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hc
   * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
   * @retval -1 if invalid, else function idx(>= 0)
   */
-#ifndef HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
+#ifndef HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
 __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p_mode, int hcpu)
 {
     volatile uint32_t *pin;
@@ -1702,12 +1695,12 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
 
     if (p_func)
     {
-        if (fsel < PIN_ARBITRARY_FUNC_START)
+        if (fsel < PIN_MATRIX_FUNC_START)
         {
             if (idx < sizeof(pad_fsel_func_tbls) / sizeof(pad_fsel_func_tbls[0]))
             {
                 fsel_func_tbl = pad_fsel_func_tbls[idx];
-                for (i = 0; i < PIN_ARBITRARY_FUNC_START; i++)
+                for (i = 0; i < PIN_MATRIX_FUNC_START; i++)
                 {
                     if (PIN_FUNC_UNDEF == fsel_func_tbl[i].function)
                     {
@@ -1728,7 +1721,7 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
         }
         else
         {
-            /* it's arbitrary function, fsel could be used as pin_function directly */
+            /* it's matrix function, fsel could be used as pin_function directly */
             *p_func = fsel;
         }
     }
@@ -1736,7 +1729,7 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
     return r;
 }
 
-#endif /* !HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION */
+#endif /* !HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
   * @brief  Set pin DS0.

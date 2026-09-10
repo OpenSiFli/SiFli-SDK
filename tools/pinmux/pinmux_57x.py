@@ -179,14 +179,14 @@ def pinmux_parse_c(excel_file):
     print(
 """\
 \t/****************************************************************************
-\t * Arbitrary pin function part
-\t * Function in the PIN_ARBITRARY_FUNC_LIST could be assigned to any pad
+\t * Matrix pin function part
+\t * Function in the PIN_MATRIX_FUNC_LIST could be assigned to any pad
 \t *****************************************************************************/
 
 \t/* Function name is like: PAD_PA00_I2C1_SCL*/\
 """)
     for i in range(58):
-        print('\tFOREACH_FUNC(PIN_ARBITRARY_PINMUX_ENUM_DEF, PA{:02d}, PIN_ARBITRARY_FUNC_LIST),'.format(i))
+        print('\tFOREACH_FUNC(PIN_MATRIX_PINMUX_ENUM_DEF, PA{:02d}, PIN_MATRIX_FUNC_LIST),'.format(i))
     
     print('} pin_function2;')    
 
