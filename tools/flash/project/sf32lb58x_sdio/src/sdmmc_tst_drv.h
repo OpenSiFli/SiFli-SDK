@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2019-2022 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef SDMMC_TST_DRV_H
 #define SDMMC_TST_DRV_H
 
@@ -58,6 +64,10 @@ uint32_t sd_wait_write();
 void sd_read(uint8_t wire_mode, uint8_t block_num);
 uint32_t sd_wait_read();
 uint32_t sd_tuning_emmc(uint8_t wire_mode, uint64_t *tuning_err);
+
+uint8_t sdmmc_emmc(void);
+int sd_read_data(uint32_t addr, uint8_t *data, uint32_t len);
+int sd_write_data(uint32_t addr, uint8_t *data, uint32_t len);
 
 #ifdef __cplusplus
 }
