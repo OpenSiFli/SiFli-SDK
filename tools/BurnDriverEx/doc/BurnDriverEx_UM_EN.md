@@ -4,11 +4,11 @@
 ## 1. Overview
 
 BurnDriverEx (also known as UartBurnEx) is an in-house tool developed by SiFli Technology. Its primary function is to modify flash programming drivers — controlling GPIO pin output levels and adding support for new flash chips.\
-Tool path: `tools/UartBurnEx`
+Tool path: `tools/BurnDriverEx`
 
 ## 2. Environment Setup
 
-UartBurnEx requires no installation and runs directly on Windows (XP / 7 / 10 / 11 …).
+BurnDriverEx requires no installation and runs directly on Windows (XP / 7 / 10 / 11 …).
 
 ## 3. Features
 

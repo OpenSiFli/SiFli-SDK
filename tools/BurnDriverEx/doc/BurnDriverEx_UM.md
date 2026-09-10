@@ -4,7 +4,7 @@
 ## 1. 概述
 
 BurnDriverEx（也称UartBurnEx） 是思澈公司自研工具，主要功能是修改烧录驱动，用来控制PIN脚输出电平、添加新FLASH等。\
-工具路径：`tools/UartBurnEx`
+工具路径：`tools/BurnDriverEx`
 
 ## 2. 环境配置
 
