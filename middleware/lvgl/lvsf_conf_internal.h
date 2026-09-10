@@ -237,6 +237,14 @@
     #endif
 #endif
 
+#ifndef LVSF_USE_TXTANIM
+    #ifdef CONFIG_LVSF_USE_TXTANIM
+        #define LVSF_USE_TXTANIM CONFIG_LVSF_USE_TXTANIM
+    #else
+        #define LVSF_USE_TXTANIM 1
+    #endif
+#endif
+
 #ifndef LVSF_USE_TXTIMG
     #ifdef CONFIG_LVSF_USE_TXTIMG
         #define LVSF_USE_TXTIMG CONFIG_LVSF_USE_TXTIMG
@@ -321,6 +329,14 @@
     #endif
 #endif
 
+#ifndef LVSF_USING_ARCTEXT
+    #ifdef CONFIG_LVSF_USING_ARCTEXT
+        #define LVSF_USING_ARCTEXT CONFIG_LVSF_USING_ARCTEXT
+    #else
+        #define LVSF_USING_ARCTEXT 1
+    #endif
+#endif
+
 #ifndef LVSF_USE_ARCIMG
     #ifdef CONFIG_LVSF_USE_ARCIMG
         #define LVSF_USE_ARCIMG CONFIG_LVSF_USE_ARCIMG
@@ -342,6 +358,14 @@
         #define LVSF_USE_MULTSLIDER CONFIG_LVSF_USE_MULTSLIDER
     #else
         #define LVSF_USE_MULTSLIDER 1
+    #endif
+#endif
+
+#ifndef LVSF_USE_IMGPROG
+    #ifdef CONFIG_LVSF_USE_IMGPROG
+        #define LVSF_USE_IMGPROG CONFIG_LVSF_USE_IMGPROG
+    #else
+        #define LVSF_USE_IMGPROG 1
     #endif
 #endif
 

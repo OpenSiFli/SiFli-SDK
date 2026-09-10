@@ -78,6 +78,8 @@ The main menu currently contains the following sub-functions:
 - `vertical animation`
 - `Intercom list`
 
+The `vertical list` page displays an image scrollbar on the right. Its indicator follows the list position and uses the default image resources provided by the SDK.
+
 ### Design Logic Framework
 
 The overall design of this example can be understood as a three-layer structure: application framework layer, page layer, and resource layer.

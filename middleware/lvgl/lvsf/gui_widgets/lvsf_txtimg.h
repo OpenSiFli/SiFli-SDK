@@ -60,6 +60,8 @@ typedef struct
     lv_coord_t txt_w;
     lv_coord_t line_w;
     lv_coord_t zoom;
+    lv_coord_t pivot_x;
+    lv_coord_t pivot_y;
     lv_coord_t w;
     lv_coord_t offset_x;
     lv_txtimg_flg_t flg;
@@ -102,6 +104,22 @@ void lv_txtimg_ins_txt(lv_obj_t *txtimg, const char *text);
 int32_t lv_txtimg_set_txt_line(lv_obj_t *txtimg, const char *text);
 
 /**
+ * Append a text line with spacing expanded to the requested width.
+ * @param txtimg The txtimg instance.
+ * @param text UTF-8 text to append.
+ * @param len Number of text bytes to use.
+ * @param font Font used to draw the line.
+ * @param x0 Horizontal start position in pixels.
+ * @param target_w Width available for the text in pixels.
+ * @param line_h Reserved line-height argument; the font height is used.
+ * @param color Text color.
+ * @return true if a line was appended; false if justification was not applied.
+ */
+bool lv_txtimg_set_txt_line_justify(lv_obj_t *txtimg, const char *text, uint32_t len,
+                                   lv_font_t *font, lv_coord_t x0, lv_coord_t target_w,
+                                   lv_coord_t line_h, lv_color_t color);
+
+/**
  * For some languages that do not support converting bitmap to A8 format, a camera interface needs to be used to take a picture of the text and position it as an image
  * @param txtimg  The instance for txtimg.
  * @param text the string to set.
@@ -115,6 +133,14 @@ int32_t lv_txtimg_snapshot_txt_line(lv_obj_t *txtimg, const char *text);
  * @return
  */
 void lv_txtimg_set_zoom(lv_obj_t *txtimg, lv_coord_t zoom);
+
+/**
+ * Set the zoom pivot in the text image coordinate system.
+ * @param txtimg The txtimg instance.
+ * @param pivot_x Horizontal pivot coordinate, or LV_COORD_MAX for the default.
+ * @param pivot_y Vertical pivot coordinate, or LV_COORD_MAX for the default.
+ */
+void lv_txtimg_set_pivot(lv_obj_t *txtimg, lv_coord_t pivot_x, lv_coord_t pivot_y);
 
 /**
  * refresh set the txtimg of size to txt area.

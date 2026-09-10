@@ -17,6 +17,21 @@ extern "C" {
 
 #include "app_reg.h"
 
+#if defined(_MSC_VER)
+/* The simulator descriptor starts with a magic flag before the application name. */
+#undef BUILTIN_APP_EXPORT
+#define BUILTIN_APP_EXPORT(name, icon, id, entry, n)                            \
+    SECTION_ITEM_REGISTER(BuiltinApp##n##Tab, RT_USED static const builtin_app_desc_t CONCAT_2(__builtinapp, n)) = \
+    {                                                                           \
+        MSC_APP_STRUCT_MAGIC_HEAD,                                              \
+        name,                                                                   \
+        icon,                                                                   \
+        id,                                                                     \
+        (gui_app_entry_func_ptr_t)entry,                                         \
+        GUI_APP_BUILTIN                                                         \
+    }
+#endif
+
 typedef struct
 {
     char *data;
