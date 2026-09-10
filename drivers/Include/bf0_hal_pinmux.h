@@ -15,9 +15,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 #include "bf0_pin_const.h"
 
-#if defined(PIN_ARBITRARY_FUNC_LIST)
-#define HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
-#endif /* PIN_ARBITRARY_FUNC_LIST */
+#if defined(PIN_MATRIX_FUNC_LIST)
+#define HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
+#endif /* PIN_MATRIX_FUNC_LIST */
 
 /** @addtogroup BF0_HAL_Driver
   * @{
@@ -202,7 +202,7 @@ void HAL_PIN_Select(int pad, int func, int hcpu);
 int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu);
 
 
-#ifdef HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION
+#ifdef HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
 /**
  * @brief  Set pin function defined at compile time
  *
@@ -232,7 +232,7 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu);
  * @retval 0  success
  */
 int HAL_PIN_Set2(pin_function2 func, int flags);
-#endif /* HAL_PINMUX_SUPPORT_ARBITRARY_FUNCTION */
+#endif /* HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
   * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
