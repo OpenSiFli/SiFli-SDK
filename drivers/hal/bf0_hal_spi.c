@@ -292,6 +292,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Init(SPI_HandleTypeDef *hspi)
         //hspi->Instance->TOP_CTRL2 &= ~SPI_TOP_CTRL2_FRM_TRI_WIRE_EN;
     }
 
+    /* invert RX sampling clock to gain margin when sampling slave
+       data at high SCK rate (48M undivided) / weak drive strength case.
+       Only needed in this case, otherwise keep default sampling phase. */
+    if ((SPI_MODE_MASTER == hspi->Init.Mode) && (1 == hspi->Init.BaudRatePrescaler))
+    {
+        SET_BIT(hspi->Instance->TOP_CTRL2, SPI_TOP_CTRL2_INV_RX_CLK);
+    }
+
 #else /*!SPI_FRM_HDR_DATA_HDR_DATA*/
 
     /*for 56x, need enable clock first, then set div.*/
@@ -1991,6 +1999,9 @@ static uint32_t SPI_ConfigDmaXferTask(SPI_HandleTypeDef *hspi, SPI_RtxRequestTyp
     }
     reg_data->top_ctrl2 |= MAKE_REG_VAL(__HAL_SPI_FRM_DAT_SIZE_BIT(hspi, Request->Size), SPI_TOP_CTRL2_SSPRWOTCCM_Msk, SPI_TOP_CTRL2_SSPRWOTCCM_Pos);
     reg_data->top_ctrl2 |= SPI_TOP_CTRL2_SET_RWOT_CYCLE | SPI_TOP_CTRL2_FRM_START;
+    /* keep RX sampling clock inversion configured in HAL_SPI_Init, as this
+       register value is written back to TOP_CTRL2 by DMA for every frame */
+    reg_data->top_ctrl2 |= (hspi->Instance->TOP_CTRL2 & SPI_TOP_CTRL2_INV_RX_CLK);
 
     reg_data->frm_hdr_data = Request->pData[0] + ((uint32_t)Request->pData[1] << 8)
                              + ((uint32_t)Request->pData[2] << 16) + ((uint32_t)Request->pData[3] << 24);
