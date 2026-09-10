@@ -1,0 +1,27 @@
+
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src += ['stretch.c']
+inc += [cwd]
+
+
+#aac player demo
+#SrcRemove(src, './demo.c')
+#src += Glob('./demo_cmd.c')
+
+LOCAL_CCFLAGS = ''
+LOCAL_CCFLAGS += ' -DARM'
+
+group = DefineGroup('audio_strech', src, depend = ['PKG_USING_AUDIO_STRETCH'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

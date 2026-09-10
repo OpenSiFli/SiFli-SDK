@@ -1,0 +1,4 @@
+config PKG_USING_AUDIO_STRETCH
+    bool "Enable audio strech"
+    default n
+    depends on AUDIO

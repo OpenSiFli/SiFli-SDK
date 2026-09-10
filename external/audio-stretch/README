@@ -1,0 +1,133 @@
+////////////////////////////////////////////////////////////////////////////
+//                        **** AUDIO-STRETCH ****                         //
+//                      Time Domain Harmonic Scaler                       //
+//                    Copyright (c) 2022 David Bryant                     //
+//                          All Rights Reserved.                          //
+//      Distributed under the BSD Software License (see license.txt)      //
+////////////////////////////////////////////////////////////////////////////
+
+New Python wrapper for audio-stretch: https://github.com/twardoch/audiostretchy
+
+From Wikipedia, the free encyclopedia:
+
+    Time-domain harmonic scaling (TDHS) is a method for time-scale
+    modification of speech (or other audio signals), allowing the apparent
+    rate of speech articulation to be changed without affecting the
+    pitch-contour and the time-evolution of the formant structure. TDHS
+    differs from other time-scale modification algorithms in that
+    time-scaling operations are performed in the time domain (not the
+    frequency domain).
+
+This project is an implementation of a TDHS library and a command-line demo
+program to utilize it with standard WAV files. The command-line program
+also incorporates silence detection so that can be handled differently.
+
+There are two effects possible with TDHS and the audio-stretch demo. The
+first is the more obvious mentioned above of changing the duration (or
+speed) of a speech (or other audio) sample without modifying its pitch.
+The other effect is similar, but after applying the duration change we
+change the sampling rate in a complimentary manner to restore the original
+duration and timing, which then results in the pitch being altered.
+
+So when a ratio is supplied to the audio-stretch program, the default
+operation is for the total duration of the audio file to be scaled by
+exactly that ratio (0.5X to 2.0X), with the pitches remaining constant.
+If the option to scale the sample-rate proportionally is specified (-s)
+then the total duration and timing of the audio file will be preserved,
+but the pitches will be scaled by the specified ratio instead. This is
+useful for creating a "helium voice" effect and lots of other fun stuff.
+
+Note that unless ratios of exactly 0.5 or 2.0 are used with the -s option,
+non-standard sampling rates will probably result. Many programs will still
+properly play these files, and audio editing programs will likely import
+them correctly (by resampling), but it is possible that some applications
+will barf on them. They can also be resampled to a standard rate using
+an audio resampling tool I wrote that's also available here on GitHub:
+
+https://github.com/dbry/audio-resampler
+
+There's an option to cycle through the full possible ratio range in a
+sinusoidal pattern, starting at 1.0, and either going up (-c) or down
+(-cc) first. In this case any specified ratio is ignored (except if the
+-s option is also specified to scale the sampling rate). The total period
+is fixed at 2π seconds, at which point the output will again be exactly
+aligned with the input.
+
+                *** Version 0.4 Enhancements ***
+
+For version 0.4 two useful features were added. First, the ability to
+cascade two instances of the stretcher was added. This is enabled by
+including the flag STRETCH_DUAL_FLAG when initializing the stretcher
+and allows double the stretch ratio of the regular code (i.e., now 0.25X
+to 4.00X). Note that the audio quality degrades some when slowed beyond
+2X, and generally voice becomes unintelligible when sped faster than 2X,
+however these values may still be useful for some applications, and
+specifically the very high speed values are useful for silence gaps
+(see the next feature).
+
+The other feature added is the ability to detect silence gaps in the
+audio and apply a different (likely lower) stretch ratio to these areas.
+This is currently not performed in the library itself, but in the demo
+command-line program where it is highly configurable, but it should be
+relatively easy to copy the functionality into another application. If
+I get requests for it, I will consider moving it into the library.
+
+There is a script to build the demo app on Linux (build.sh), and this also
+allows building the app to test for UB (undefined behavior) and ASAN (bad
+addressing). Also, some artificial test signals (both mono and stereo) and
+a script (test.sh) for running them at various ratios has been added.
+
+The current "help" display from the demo app:
+
+ AUDIO-STRETCH  Time Domain Harmonic Scaling Demo  Version 0.4
+ Copyright (c) 2022 David Bryant. All Rights Reserved.
+
+ Usage:     AUDIO-STRETCH [-options] infile.wav outfile.wav
+
+ Options:  -r<n.n> = stretch ratio (0.25 to 4.0, default = 1.0)
+           -g<n.n> = gap/silence stretch ratio (if different)
+           -u<n>   = upper freq period limit (default = 333 Hz)
+           -l<n>   = lower freq period limit (default = 55 Hz)
+           -b<n>   = audio buffer/window length (ms, default = 25)
+           -t<n>   = gap/silence threshold (dB re FS, default = -40)
+           -c      = cycle through all ratios, starting higher
+           -cc     = cycle through all ratios, starting lower
+           -d      = force dual instance even for shallow ratios
+           -s      = scale rate to preserve duration (not pitch)
+           -f      = fast pitch detection (default >= 32 kHz)
+           -n      = normal pitch detection (default < 32 kHz)
+           -q      = quiet mode (display errors only)
+           -v      = verbose (display lots of info)
+           -y      = overwrite outfile if it exists
+
+ Web:      Visit www.github.com/dbry/audio-stretch for latest version
+
+Notes:
+
+1. The program will handle only mono or stereo files in the WAV format. In
+   case of stereo, the two channels shouldn't be independent. The
+   audio must be 16-bit PCM and the acceptable sampling rates are from 8,000
+   to 48,000 Hz. Any additional RIFF info in the WAV file will be discarded.
+   The command-line program is only for little-endian architectures.
+
+2. For stereo files, the pitch detection is done on a mono conversion of the
+   audio, but the scaling transformation is done on the independent channels.
+   If it is desired to have completely independent processing this can only
+   be done with two mono files. Note that this is not a limitation of the
+   library but of the demo utility (the library has no problem with multiple
+   contexts).
+
+3. This technique (TDHS) is ideal for speech signals, but can also be used
+   for homophonic musical instruments. As the sound becomes increasingly
+   polyphonic, however, the quality and effectiveness will decrease. Also,
+   the period frequency limits provided by default are optimized for speech;
+   adjusting these may be required for best quality with non-speech audio.
+
+4. The vast majority of the time required for TDHS is in the pitch detection,
+   and so this library implements two versions. The first is the standard
+   one that includes every sample and pitch period, and the second is an
+   optimized one that uses pairs of samples and only even pitch periods.
+   This second version is about 4X faster than the standard version, but
+   provides virtually the same quality. It is used by default for files with
+   sample rates of 32 kHz or higher, but its use can be forced on or off
+   from the command-line (see options above).
