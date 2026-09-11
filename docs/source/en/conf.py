@@ -150,7 +150,7 @@ if "SF32LB55X" in tags:
     # HAL
     exclude_patterns = ["**/audcodec.md", "**/audprc.md", "**/atim.md", "**/facc.md", "**/fft.md", "**/hash.md", "**/mpi.md"]
     # Drivers
-    exclude_patterns = ["**/spi_flash_52x.md"]
+    exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
     exclude_patterns += ["**/quick_start_52x_56x.md"]
     # Middlware
@@ -165,7 +165,7 @@ if "SF32LB58X" in tags:
     # HAL
     exclude_patterns = ["**/hash.md", "**/psram.md", "**/qspi.md"]
     # Drivers
-    exclude_patterns = ["**/spi_flash_52x.md"]
+    exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
     exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
     # Middlware
@@ -180,7 +180,7 @@ if "SF32LB56X" in tags:
     # HAL
     exclude_patterns = ["**/dsi.md", "**/psram.md", "**/qspi.md"]
     # Drivers
-    exclude_patterns = ["**/spi_flash_52x.md"]
+    exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
     exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
     # Middlware
@@ -195,7 +195,7 @@ if "SF32LB57X" in tags:
     # HAL
     exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
     # Drivers
-    exclude_patterns = ["**/spi_flash.md"]
+    exclude_patterns += ["**/spi_flash.md"]
     # App note
     exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
     # Middlware
@@ -208,7 +208,7 @@ if "SF32LB52X" in tags:
     # HAL
     exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
     # Drivers
-    exclude_patterns = ["**/spi_flash.md"]
+    exclude_patterns += ["**/spi_flash.md"]
     # App note
     exclude_patterns += ["**/quick_start_55x.md", "**/memory_usage.md", "**/dualcore.md"]
     # Middlware
