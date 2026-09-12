@@ -479,6 +479,20 @@ typedef enum
             while (0)
 
 #ifdef PMUC_PRCR1_PA0
+/**
+ * @brief  Set retention of the specified pad
+ *
+ * @param[in] pad pad to be retained
+ *
+ * @retval HAL_OK
+ * @retval HAL_ERROR pad is not a retainable pad
+ *
+ * @note   PAD_PA00 ~ PAD_PA31 are set one by one in PRSR1, the remaining PA pads
+ *         are set one by one in PRSR2. All PAD_SA00 ~ PAD_SA12 share one bit of
+ *         PRSR2, so retaining any of them retains all SA pads together, and all
+ *         PAD_SB00 ~ PAD_SB12 behave in the same way. Any other pad, such as
+ *         PIN_PAD_UNDEF_H, is not retainable.
+ */
 __STATIC_INLINE HAL_StatusTypeDef HAL_PMU_SetPadRetention(pin_pad pad)
 {
     uint16_t offset;
@@ -489,7 +503,19 @@ __STATIC_INLINE HAL_StatusTypeDef HAL_PMU_SetPadRetention(pin_pad pad)
         offset = pad - PAD_PA00;
         prsr = &hwp_pmuc->PRSR1;
     }
-    else if (pad < PIN_PAD_MAX_H)
+    else if ((pad >= PAD_SA00) && (pad <= PAD_SA12))
+    {
+        /* all SA pads are retained together */
+        offset = PMUC_PRSR2_SA_Pos;
+        prsr = &hwp_pmuc->PRSR2;
+    }
+    else if ((pad >= PAD_SB00) && (pad <= PAD_SB12))
+    {
+        /* all SB pads are retained together */
+        offset = PMUC_PRSR2_SB_Pos;
+        prsr = &hwp_pmuc->PRSR2;
+    }
+    else if ((pad >= PAD_PA32) && (pad < PIN_PAD_MAX_H))
     {
         offset = pad - PAD_PA32;
         prsr = &hwp_pmuc->PRSR2;
@@ -504,6 +530,20 @@ __STATIC_INLINE HAL_StatusTypeDef HAL_PMU_SetPadRetention(pin_pad pad)
     return HAL_OK;
 }
 
+/**
+ * @brief  Clear retention of the specified pad
+ *
+ * @param[in] pad pad whose retention is to be released
+ *
+ * @retval HAL_OK
+ * @retval HAL_ERROR pad is not a retainable pad
+ *
+ * @note   PAD_PA00 ~ PAD_PA31 are cleared one by one in PRCR1, the remaining PA
+ *         pads are cleared one by one in PRCR2. All PAD_SA00 ~ PAD_SA12 share
+ *         one bit of PRCR2, so releasing any of them releases all SA pads
+ *         together, and all PAD_SB00 ~ PAD_SB12 behave in the same way. Any
+ *         other pad, such as PIN_PAD_UNDEF_H, is not retainable.
+ */
 __STATIC_INLINE HAL_StatusTypeDef HAL_PMU_ClearPadRetention(pin_pad pad)
 {
     uint16_t offset;
@@ -514,7 +554,19 @@ __STATIC_INLINE HAL_StatusTypeDef HAL_PMU_ClearPadRetention(pin_pad pad)
         offset = pad - PAD_PA00;
         prcr = &hwp_pmuc->PRCR1;
     }
-    else if (pad < PIN_PAD_MAX_H)
+    else if ((pad >= PAD_SA00) && (pad <= PAD_SA12))
+    {
+        /* all SA pads are released together */
+        offset = PMUC_PRCR2_SA_Pos;
+        prcr = &hwp_pmuc->PRCR2;
+    }
+    else if ((pad >= PAD_SB00) && (pad <= PAD_SB12))
+    {
+        /* all SB pads are released together */
+        offset = PMUC_PRCR2_SB_Pos;
+        prcr = &hwp_pmuc->PRCR2;
+    }
+    else if ((pad >= PAD_PA32) && (pad < PIN_PAD_MAX_H))
     {
         offset = pad - PAD_PA32;
         prcr = &hwp_pmuc->PRCR2;
