@@ -31,23 +31,30 @@ extern "C" {
 
 #ifdef SF32LB55X
 #define GPADC_CALIB_FLOW_VERSION        1
+/** Highest valid ADC channel index, 8 channels: channel 0 ~ 7 */
 #define ADC_CHANNEL_MAX                 7
 #elif defined(SF32LB56X)
 #define GPADC_CALIB_FLOW_VERSION        2
+/** Highest valid ADC channel index, 8 channels: channel 0 ~ 7 */
 #define ADC_CHANNEL_MAX                 7
 #elif defined(SF32LB58X)
 #define GPADC_CALIB_FLOW_VERSION        2
+/** Highest valid ADC channel index, 8 channels: channel 0 ~ 7 */
 #define ADC_CHANNEL_MAX                 7
 #elif defined(SF32LB52X)
 #define GPADC_CALIB_FLOW_VERSION        3
 #define ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+/** Channel fixed for VBAT measurement, not used as a general ADC input */
 #define ADC_VBAT_DEDICATED_CHANNEL      7
+/** Highest valid ADC channel index, 8 channels: channel 0 ~ 7 */
 #define ADC_CHANNEL_MAX                 7
 #elif defined(SF32LB57X)
 #define GPADC_CALIB_FLOW_VERSION        4
 #define ADC_FIXED_CLK_FREQ_SUPPORT
 #define ADC_VBAT_DEDICATED_CHANNEL_SUPPORT
+/** Channel fixed for VBAT measurement, not used as a general ADC input */
 #define ADC_VBAT_DEDICATED_CHANNEL      11
+/** Highest valid ADC channel index, 12 channels: channel 0 ~ 11 */
 #define ADC_CHANNEL_MAX                 11
 #else
 #error "Unsupported chip"
@@ -126,11 +133,11 @@ typedef struct
   */
 typedef struct
 {
-    uint8_t Channel;                /* channel index, 0 ~ 7 */
+    uint8_t Channel;                /* channel index, 0 ~ ADC_CHANNEL_MAX */
     uint8_t acc_num;                 /* Set to 0 if disable slot*/
     uint8_t acc_en;                 /* Not used for current version */
-    uint8_t nchnl_sel;           /* channel index, 0 ~ 7 , do not used if set single channel*/
-    uint8_t pchnl_sel;          /* channel index, 0 ~ 7 */
+    uint8_t nchnl_sel;           /* channel index, 0 ~ ADC_CHANNEL_MAX , do not used if set single channel*/
+    uint8_t pchnl_sel;          /* channel index, 0 ~ ADC_CHANNEL_MAX */
     uint8_t slot_en;            /* Set to 1 if enanble slot*/
 } ADC_ChannelConfTypeDef;
 
@@ -339,8 +346,8 @@ typedef enum
   * @{
   */
 /*       warned of change of setting choices with assert check.               */
-#define ADC_SCAN_DIRECTION_FORWARD        (0x00000001U)        /*!< Scan direction forward: from channel 0 to channel 7 */
-#define ADC_SCAN_DIRECTION_BACKWARD       (0x00000002U)        /*!< Scan direction backward: from channel 7 to channel 0 */
+#define ADC_SCAN_DIRECTION_FORWARD        (0x00000001U)        /*!< Scan direction forward: from channel 0 to channel ADC_CHANNEL_MAX */
+#define ADC_SCAN_DIRECTION_BACKWARD       (0x00000002U)        /*!< Scan direction backward: from channel ADC_CHANNEL_MAX to channel 0 */
 
 #define ADC_SCAN_ENABLE         ADC_SCAN_DIRECTION_FORWARD       /* For compatibility with other sifli devices */
 

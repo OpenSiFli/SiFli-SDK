@@ -2,12 +2,19 @@
 
 ADC HAL provides basic APIs for accessing ADC peripheral registers.
 Main features include:
- - Support up to 8 ADC channels.
  - 10-bit data (A0), 12-bit data (PRO).
  - DMA support.
 
+:::{only} SF32LB58X or SF32LB56X or SF32LB52X or SF32LB55X
+ - Support up to 8 ADC channels (Channel 0 ~ 7), where **Channel 7** is fixed for battery voltage detection on the `SF32LB52x` series (VBAT input after resistor divider).
+:::
+
+:::{only} SF32LB57X
+ - Support up to 12 ADC channels (Channel 0 ~ 11), where **Channel 11** is fixed for battery voltage detection (VBAT input after resistor divider).
+:::
+
 ## Using ADC HAL Driver
-ADC supports 8 channels, with each bit change corresponding to approximately 1 millivolt, requiring individual calibration for each chip.
+Each bit change corresponds to approximately 1 millivolt, requiring individual calibration for each chip.
 Test range: 0~ 1.1V on A0, 0 ~ 3.3V on PRO.
 
 Example of using ADC HAL in polling mode:
