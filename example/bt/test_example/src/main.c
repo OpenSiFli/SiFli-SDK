@@ -482,7 +482,7 @@ static void app_wakeup(void)
 #elif defined(SOC_SF32LB58X)
     HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN6;
 #elif defined(SOC_SF32LB52X)
-    HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN8;
+    HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN0; //PA24
 #else
     HPAON_WakeupSrcTypeDef src = pin + HPAON_WAKEUP_SRC_PIN12;
 #endif

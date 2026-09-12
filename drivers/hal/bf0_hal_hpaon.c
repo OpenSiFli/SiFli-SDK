@@ -235,6 +235,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_EnableWakeupSrc(HPAON_WakeupSrcTypeDe
 
     if ((src >= HPAON_WAKEUP_SRC_PIN0) && (src <= HPAON_WAKEUP_SRC_PIN_LAST))
     {
+#if defined(SF32LB52X)
+        /* PIN4 ~ PIN9 (PA28 ~ PA33) can't be used as wakeup sources */
+        if ((src >= (HPAON_WAKEUP_SRC_PIN0 + HAL_AON_WAKEUP_PIN_INVALID_IDX_FIRST))
+                && (src <= (HPAON_WAKEUP_SRC_PIN0 + HAL_AON_WAKEUP_PIN_INVALID_IDX_LAST)))
+        {
+            return HAL_ERROR;
+        }
+#endif /* SF32LB52X */
+
         wer_en = (HPSYS_AON_WER_PIN0 << (src - HPAON_WAKEUP_SRC_PIN0));
 
         /* workaround: clear pin status as it could be set before WER is set to 1 */
@@ -265,7 +274,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_EnableWakeupSrc(HPAON_WakeupSrcTypeDe
             /* do nothing */
         }
 #endif
-        else if (src >= HPAON_WAKEUP_SRC_PIN8)
+        /* PIN8 is the split point, use arithmetic as HPAON_WAKEUP_SRC_PIN8 doesn't
+           exist on 52X where PIN4 ~ PIN9 are reserved */
+        else if (src >= (HPAON_WAKEUP_SRC_PIN0 + 8))
         {
             src -= 8;
             cr = &hwp_hpsys_aon->CR2;
@@ -326,6 +337,12 @@ __HAL_ROM_USED int8_t HAL_HPAON_QueryWakeupPin(GPIO_TypeDef *gpio, uint16_t gpio
 {
     int8_t wakeup_pin = -1;
 
+    /* PA28 ~ PA33 can't be used as wakeup sources */
+    if ((gpio_pin >= HAL_AON_WAKEUP_PIN_INVALID_FIRST) && (gpio_pin <= HAL_AON_WAKEUP_PIN_INVALID_LAST))
+    {
+        return wakeup_pin;
+    }
+
     if ((gpio == hwp_gpio1) && (gpio_pin >= HAL_HPAON_WAKEUP_PIN_FIRST) && (gpio_pin <= HAL_HPAON_WAKEUP_PIN_LAST))
     {
         wakeup_pin = gpio_pin - HAL_HPAON_WAKEUP_PIN_FIRST;
@@ -345,6 +362,12 @@ __HAL_ROM_USED GPIO_TypeDef *HAL_HPAON_QueryWakeupGpioPin(uint8_t wakeup_pin, ui
     }
 
     if (wakeup_pin >= HAL_HPAON_WAKEUP_PIN_NUM)
+    {
+        return NULL;
+    }
+
+    /* PIN4 ~ PIN9 (PA28 ~ PA33) can't be used as wakeup sources */
+    if ((wakeup_pin >= HAL_AON_WAKEUP_PIN_INVALID_IDX_FIRST) && (wakeup_pin <= HAL_AON_WAKEUP_PIN_INVALID_IDX_LAST))
     {
         return NULL;
     }
@@ -412,6 +435,15 @@ __HAL_ROM_USED  HAL_StatusTypeDef HAL_HPAON_GetWakeupPinMode(uint8_t wakeup_pin,
         return HAL_ERROR;
 
     }
+
+#if defined(SF32LB52X)
+    /* PIN4 ~ PIN9 (PA28 ~ PA33) can't be used as wakeup sources */
+    if ((wakeup_pin >= HAL_AON_WAKEUP_PIN_INVALID_IDX_FIRST)
+            && (wakeup_pin <= HAL_AON_WAKEUP_PIN_INVALID_IDX_LAST))
+    {
+        return HAL_ERROR;
+    }
+#endif /* SF32LB52X */
 
 #ifdef SF32LB55X
     cr = &hwp_hpsys_aon->CR;

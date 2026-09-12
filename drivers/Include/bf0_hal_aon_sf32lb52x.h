@@ -21,6 +21,13 @@ extern "C" {
 /* HCPU and LCPU sleep independently, waking LCPU is required when HCPU sends message to LCPU */
 #define AON_LCPU_INDEPENDENT_SLEEP_SUPPORT
 
+/* PA28 ~ PA33 are shared with ADC on 52X, their AON wakeup function is removed,
+   so they can't be used as wakeup sources */
+#define HAL_AON_WAKEUP_PIN_INVALID_FIRST       (28)
+#define HAL_AON_WAKEUP_PIN_INVALID_LAST        (33)
+#define HAL_AON_WAKEUP_PIN_INVALID_IDX_FIRST   (4)
+#define HAL_AON_WAKEUP_PIN_INVALID_IDX_LAST    (9)
+
 /** @brief hpsys wakeup source */
 typedef enum
 {
@@ -38,13 +45,10 @@ typedef enum
     HPAON_WAKEUP_SRC_PIN1 = 17,  /**< PIN1 wakeup source  */
     HPAON_WAKEUP_SRC_PIN2,       /**< PIN2 wakeup source  */
     HPAON_WAKEUP_SRC_PIN3,       /**< PIN3 wakeup source  */
-    HPAON_WAKEUP_SRC_PIN4,
-    HPAON_WAKEUP_SRC_PIN5,
-    HPAON_WAKEUP_SRC_PIN6,
-    HPAON_WAKEUP_SRC_PIN7,
-    HPAON_WAKEUP_SRC_PIN8,
-    HPAON_WAKEUP_SRC_PIN9,
-    HPAON_WAKEUP_SRC_PIN10,
+    /* PIN4 ~ PIN9 (PA28 ~ PA33) are shared with ADC, they can't be used as
+       wakeup sources. Their enum values are reserved to keep the value of
+       the following wakeup sources unchanged */
+    HPAON_WAKEUP_SRC_PIN10 = 26, /**< PIN10 wakeup source  */
     HPAON_WAKEUP_SRC_PIN11,
     HPAON_WAKEUP_SRC_PIN12,
     HPAON_WAKEUP_SRC_PIN13,
@@ -78,13 +82,10 @@ typedef enum
     LPAON_WAKEUP_SRC_PIN1,          /**< PIN1 wakeup source */
     LPAON_WAKEUP_SRC_PIN2,          /**< PIN2 wakeup source */
     LPAON_WAKEUP_SRC_PIN3,          /**< PIN3 wakeup source */
-    LPAON_WAKEUP_SRC_PIN4,          /**< PIN4 wakeup source */
-    LPAON_WAKEUP_SRC_PIN5,          /**< PIN5 wakeup source */
-    LPAON_WAKEUP_SRC_PIN6,
-    LPAON_WAKEUP_SRC_PIN7,
-    LPAON_WAKEUP_SRC_PIN8,
-    LPAON_WAKEUP_SRC_PIN9,
-    LPAON_WAKEUP_SRC_PIN10,
+    /* PIN4 ~ PIN9 (PA28 ~ PA33) are shared with ADC, they can't be used as
+       wakeup sources. Their enum values are reserved to keep the value of
+       the following wakeup sources unchanged */
+    LPAON_WAKEUP_SRC_PIN10 = 26,    /**< PIN10 wakeup source */
     LPAON_WAKEUP_SRC_PIN11,
     LPAON_WAKEUP_SRC_PIN12,
     LPAON_WAKEUP_SRC_PIN13,
