@@ -90,7 +90,7 @@ Wakeup PIN       | GPIO           |
 
 ### SF32LB52X
 
-HPSYS和LPSYS各自支持21个唤醒PIN，并且映射到相同的GPIO管脚上，所以SDK中 `HAL_LPAON_QueryWakeupPin()` /
+HPSYS和LPSYS各自支持15个唤醒PIN，并且映射到相同的GPIO管脚上，所以SDK中 `HAL_LPAON_QueryWakeupPin()` /
 `HAL_LPAON_QueryWakeupGpioPin()` 直接复用HPSYS的实现。
 
 - HPSYS唤醒源：`HPAON_WAKEUP_SRC_RTC`、`HPAON_WAKEUP_SRC_LPTIM1`、`HPAON_WAKEUP_SRC_PMUC`、`HPAON_WAKEUP_SRC_GPIO1`、
