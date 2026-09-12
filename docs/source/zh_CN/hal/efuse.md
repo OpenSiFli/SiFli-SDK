@@ -2,8 +2,16 @@
 
 `EFUSE HAL` 驱动程序提供高级 API 来编程和读取 efuse。
 主要功能包括：
-- 4个bank，每个bank有256bits。 
+- 每个bank有256bits。
 - bank 需要一个一个编程，多个bank 可以同时读取，但HAL 只支持每次读取一个bank。
+
+:::{only} SF32LB58X or SF32LB56X or SF32LB52X or SF32LB55X
+ - 支持 4 个 bank。
+:::
+
+:::{only} SF32LB57X
+ - 支持 3 个 bank。
+:::
 
 ## 使用 EFUSE HAL 驱动程序 
 首先，只调用一次`HAL_EFUSE_Init`来初始化 efuse。 应在设置 sysclk/hclk/pclk 后调用它。 如果更新了 sysclk/hclk/pclk，则需要再次调用 `HAL_EFUSE_Init`来更新相关的时间寄存器。
