@@ -2,8 +2,16 @@
 
 `EFUSE HAL` driver provides high-level APIs to program and read efuse.
 Main features include:
-- 4 banks, each bank has 256 bits. 
+- Each bank has 256 bits.
 - Banks need to be programmed one by one, multiple banks can be read simultaneously, but HAL only supports reading one bank at a time.
+
+:::{only} SF32LB58X or SF32LB56X or SF32LB52X or SF32LB55X
+ - Support 4 banks.
+:::
+
+:::{only} SF32LB57X
+ - Support 3 banks.
+:::
 
 ## Using EFUSE HAL Driver
 First, call `HAL_EFUSE_Init` only once to initialize efuse. It should be called after setting sysclk/hclk/pclk. If sysclk/hclk/pclk are updated, `HAL_EFUSE_Init` needs to be called again to update related time registers.
