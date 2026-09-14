@@ -72,7 +72,7 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
 
     int ref_count = (int)usr_data;
 
-    if (op->mask.data)
+    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image))
         app_mem_set_ref_count((void *)op->mask.data, ref_count, MEM_ASYN_IMG);
 
     switch (op->op)
@@ -103,6 +103,14 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
             app_free(op->desc.line.p_points);
             op->desc.line.p_points = NULL;
             op->desc.line.point_cnt = 0;
+        }
+
+        break;
+    case DRV_EPIC_DRAW_ARC:
+        if (op->desc.arc.image && REDER_MEM_UNLOCK == ref_count)
+        {
+            app_free(op->desc.arc.image);
+            op->desc.arc.image = NULL;
         }
 
         break;
@@ -1488,10 +1496,122 @@ static void draw_rect(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t 
 }
 
 
+/**
+ * Prepare the image source layer for an image arc operation.
+ *
+ * Decodes the image from dsc->img_src via the LVGL image cache, validates
+ * the color format, centers the image on the arc center, copies the decoded
+ * pixel data into a persistent buffer, and configures an EPIC layer descriptor
+ * for the foreground image. If LV_DRAW_COMPLEX is enabled and parent masks
+ * are active, also computes the parent coverage mask and configures the
+ * parent mask layer.
+ *
+ * @param draw_ctx  Pointer to the LVGL draw context
+ * @param dsc       Pointer to the arc draw descriptor containing img_src
+ * @param center    Pointer to the arc center point
+ * @param parent    Output parent mask layer descriptor (used when LV_DRAW_COMPLEX is active)
+ * @return          Pointer to the configured EPIC image layer, or NULL on failure
+ */
+static EPIC_LayerConfigTypeDef *arc_image_prepare(lv_draw_ctx_t *draw_ctx,
+        const lv_draw_arc_dsc_t *dsc, const lv_point_t *center, EPIC_LayerConfigTypeDef *parent)
+{
+    if (dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
+            lv_img_src_get_type(dsc->img_src) == LV_IMG_SRC_SYMBOL) return NULL;
+    _lv_img_cache_entry_t *cache = _lv_img_cache_open(dsc->img_src, lv_color_black(), 0);
+    if (!cache) return NULL;
+    lv_img_decoder_dsc_t *decoded = &cache->dec_dsc;
+    EPIC_LayerConfigTypeDef *image = NULL;
+    if (decoded->error_msg || !decoded->img_data || !decoded->img_data_size ||
+            !decoded->header.w || !decoded->header.h) goto done;
+    switch (decoded->header.cf)
+    {
+    case LV_IMG_CF_TRUE_COLOR:
+    case LV_IMG_CF_TRUE_COLOR_ALPHA:
+    case LV_IMG_CF_RAW:
+    case LV_IMG_CF_RAW_ALPHA:
+    case LV_IMG_CF_RGB565:
+    case LV_IMG_CF_RGB888:
+    case LV_IMG_CF_RGBA5658:
+    case LV_IMG_CF_RGBA8888:
+        break;
+    default:
+        goto done;
+    }
+    int32_t left = (int32_t)center->x - (int32_t)decoded->header.w / 2;
+    int32_t top = (int32_t)center->y - (int32_t)decoded->header.h / 2;
+    if (left < LV_COORD_MIN || top < LV_COORD_MIN ||
+            left + decoded->header.w - 1 > LV_COORD_MAX ||
+            top + decoded->header.h - 1 > LV_COORD_MAX) goto done;
+    lv_area_t area = {left, top, 0, 0};
+    area.x2 = area.x1 + decoded->header.w - 1;
+    area.y2 = area.y1 + decoded->header.h - 1;
+    lv_area_t mask_area;
+    if (!_lv_area_intersect(&mask_area, &area, draw_ctx->clip_area) ||
+            !_lv_area_intersect(&mask_area, &mask_area, draw_ctx->buf_area)) goto done;
+    size_t mask_size = 0;
+#if LV_DRAW_COMPLEX
+    if (lv_draw_mask_get_cnt())
+        mask_size = (size_t)lv_area_get_width(&mask_area) * lv_area_get_height(&mask_area);
+#endif
+    size_t source_size = decoded->img_data_size;
+    if (!EPIC_SUPPORTED_CF(decoded->header.cf)) goto done;
+    if (decoded->header.cf != LV_IMG_CF_RAW && decoded->header.cf != LV_IMG_CF_RAW_ALPHA &&
+            source_size < lv_img_buf_get_img_size(decoded->header.w, decoded->header.h, decoded->header.cf))
+        goto done;
+    if (mask_size > SIZE_MAX - sizeof(*image)) goto done;
+    image = app_malloc(sizeof(*image) + mask_size);
+    if (!image) goto done;
+    lv_img_dsc_t source = {0};
+    source.header = decoded->header;
+    source.data = decoded->img_data;
+    source.data_size = source_size;
+    lv_point_t pivot = {0, 0};
+    HAL_EPIC_LayerConfigInit(image);
+    setup_fg_layer(image, &source, &area, 0, EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE,
+                   &pivot, dsc->opa, dsc->color, 0, 0);
+#if LV_DRAW_COMPLEX
+    if (mask_size)
+    {
+        uint8_t *coverage = (uint8_t *)(image + 1);
+        int32_t width = lv_area_get_width(&mask_area);
+        memset(coverage, 255, mask_size);
+        for (int32_t row = 0; row < lv_area_get_height(&mask_area); row++)
+        {
+            uint8_t *line = coverage + row * width;
+            if (lv_draw_mask_apply(line, mask_area.x1, mask_area.y1 + row, width) == LV_DRAW_MASK_RES_TRANSP)
+                memset(line, 0, width);
+        }
+        setup_mask_layer(parent, LV_IMG_CF_ALPHA_8BIT, coverage, &mask_area);
+    }
+#endif
+done:
+    my_draw_cleanup(cache);
+    return image;
+}
+
 static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *dsc, const lv_point_t *center,
                      uint16_t radius,  uint16_t start_angle, uint16_t end_angle)
 
 {
+    EPIC_LayerConfigTypeDef *image = NULL;
+    EPIC_LayerConfigTypeDef parent;
+    HAL_EPIC_LayerConfigInit(&parent);
+    if (dsc->img_src)
+    {
+        if (dsc->opa <= LV_OPA_MIN || !dsc->width || !radius || start_angle == end_angle) return;
+        if ((int32_t)center->x - radius < LV_COORD_MIN || (int32_t)center->y - radius < LV_COORD_MIN ||
+                (int32_t)center->x + radius - 1 > LV_COORD_MAX || (int32_t)center->y + radius - 1 > LV_COORD_MAX)
+        {
+            LV_LOG_WARN("arc image coordinates out of range");
+            return;
+        }
+        image = arc_image_prepare(draw_ctx, dsc, center, &parent);
+        if (!image)
+        {
+            LV_LOG_WARN("arc image unavailable or unsupported");
+            return;
+        }
+    }
     drv_epic_render_buf dst_buf;
     setup_render_buf(&dst_buf, draw_ctx);
 
@@ -1501,6 +1621,8 @@ static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *d
     RT_ASSERT(o != NULL);
 
     o->op = DRV_EPIC_DRAW_ARC;
+    o->desc.arc.image = image;
+    o->mask = parent;
     LV_AREA_TO_EPIC_AREA(&o->clip_area, draw_ctx->clip_area);
 
     o->desc.arc.center_x = center->x;

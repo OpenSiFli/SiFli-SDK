@@ -422,10 +422,17 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 }
 #ifdef DRV_EPIC_NEW_API
 #include "drv_epic.h"
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+#include "drv_vglite.h"
+#include "drv_epic_arc_vglite.h"
+#endif
 extern rt_err_t drv_epic_render_list(void *p_drv_epic, void *list);
 extern rt_err_t drv_epic_render_list_scale(void *p_drv_epic, void *list, void *p_scaled_area);
 static void epic_rl_task_entry(void *parameter)
 {
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+    bool vglite_opened = false;
+#endif
     rt_kprintf("epic_rl_task_entry start\n");
 
     while (1)
@@ -440,6 +447,36 @@ static void epic_rl_task_entry(void *parameter)
                 rt_err_t ret;
                 //acpu_printf("epic_rl_task_entry: 0x%x, 0x%x\n", arg->p_drv_epic, arg->p_render_list);
 
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+                if (arg->p_render_list == NULL)
+                {
+                    ret = RT_EOK;
+                    if (vglite_opened)
+                    {
+                        ret = drv_epic_arc_vglite_idle() ? drv_vglite_close() : -RT_ERROR;
+                        if (ret == RT_EOK)
+                        {
+                            HAL_NVIC_DisableIRQ(V2D_GPU_IRQn);
+                            vglite_opened = false;
+                        }
+                    }
+                    acpu_send_result2(p_msg, 0, ret);
+                    continue;
+                }
+                if (!vglite_opened)
+                {
+                    HAL_NVIC_SetPriority(V2D_GPU_IRQn, 3, 0);
+                    HAL_NVIC_EnableIRQ(V2D_GPU_IRQn);
+                    ret = drv_vglite_open();
+                    if (ret != RT_EOK)
+                    {
+                        HAL_NVIC_DisableIRQ(V2D_GPU_IRQn);
+                        acpu_send_result2(p_msg, 0, ret);
+                        continue;
+                    }
+                    vglite_opened = true;
+                }
+#endif
                 if (arg->p_scaled_area == NULL)
                     ret = drv_epic_render_list(arg->p_drv_epic, arg->p_render_list);
                 else
@@ -504,4 +541,3 @@ int main(void)
     return RT_EOK;
 }
 #endif /* SOC_BF0_ACPU */
-

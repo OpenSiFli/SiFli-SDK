@@ -14,10 +14,16 @@
 #endif
 
 #include "drv_epic_private.h"
+#if defined(DRV_EPIC_ARC_MASK_VGLITE) && defined(DRV_EPIC_NEW_API_DUAL_CORE_HCPU)
+#include "acpu_ctrl.h"
+#endif
 
 
 #ifdef USING_VGLITE
     #include "drv_vglite.h"
+#endif
+#if defined(DRV_EPIC_ARC_MASK_VGLITE) && !defined(DRV_EPIC_NEW_API_DUAL_CORE_HCPU)
+    #include "drv_epic_arc_vglite.h"
 #endif
 
 
@@ -143,6 +149,14 @@ void drv_gpu_close(void)
         RT_ASSERT(NULL != gp_drv_epic);
         drv_gpu_check_done(GPU_BLEND_EXP_MS);
         RT_ASSERT(epic->State != HAL_EPIC_STATE_BUSY);
+#if defined(DRV_EPIC_ARC_MASK_VGLITE) && defined(DRV_EPIC_NEW_API_DUAL_CORE_HCPU)
+        epic_rl_arg_t arg = {gp_drv_epic, NULL, NULL};
+        rt_err_t ret = rt_sem_take(&gp_drv_epic->render_sema, RT_WAITING_FOREVER);
+        RT_ASSERT(ret == RT_EOK);
+        ret = (rt_err_t)acpu_run_task(ACPU_TASK_epic_rl, &arg, sizeof(arg), NULL);
+        rt_sem_release(&gp_drv_epic->render_sema);
+        if (ret != RT_EOK) LOG_E("ACPU VGLite close failed: %d", ret);
+#endif
 #ifdef HAL_EZIP_MODULE_ENABLED
         if (epic->hezip)
         {
@@ -169,6 +183,9 @@ void drv_gpu_close(void)
 #endif
 
 #ifdef USING_VGLITE
+#if defined(DRV_EPIC_ARC_MASK_VGLITE) && !defined(DRV_EPIC_NEW_API_DUAL_CORE_HCPU)
+    if (drv_epic_arc_vglite_idle())
+#endif
     drv_vglite_close();
 #endif
 
