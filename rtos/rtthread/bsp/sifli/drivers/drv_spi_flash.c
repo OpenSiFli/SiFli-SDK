@@ -517,7 +517,7 @@ __HAL_ROM_USED int rt_flash_write(uint32_t addr, const uint8_t *buf, int size)
     // And source buffer should not across 1MB border for DMA limit
     // so check source buffer
     if (IS_SAME_FLASH_ADDR(buf, addr) || IS_SPI_NONDMA_RAM_ADDR(buf)
-            || (IS_DMA_ACCROSS_1M_BOUNDARY((uint32_t)buf, size)))
+            || (IS_DMA_ACROSS_1M_BOUNDARY((uint32_t)buf, size)))
     {
         locbuf = (uint8_t *)malloc(size);
         if (locbuf == NULL)

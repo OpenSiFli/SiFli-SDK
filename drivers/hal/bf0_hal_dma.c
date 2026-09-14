@@ -524,7 +524,7 @@ static uint32_t DMA_CalcTransCounts(DMA_HandleTypeDef *hdma, uint32_t SrcAddress
     {
         trans_bytes = trans_counts << hdma->SrcWidth;
         HAL_ASSERT(trans_bytes < DMA_1M_LEN);
-        if (IS_DMA_ACCROSS_1M_BOUNDARY(SrcAddress, trans_bytes))
+        if (IS_DMA_ACROSS_1M_BOUNDARY(SrcAddress, trans_bytes))
         {
             HAL_ASSERT(DMA_CIRCULAR != hdma->Init.Mode);
             trans_counts = (trans_bytes - ((SrcAddress + trans_bytes) & DMA_1M_BOUNDARY_MASK)) >> hdma->SrcWidth;
@@ -535,7 +535,7 @@ static uint32_t DMA_CalcTransCounts(DMA_HandleTypeDef *hdma, uint32_t SrcAddress
     {
         trans_bytes = trans_counts << hdma->DstWidth;
         HAL_ASSERT(trans_bytes < DMA_1M_LEN);
-        if (IS_DMA_ACCROSS_1M_BOUNDARY(DstAddress, trans_bytes))
+        if (IS_DMA_ACROSS_1M_BOUNDARY(DstAddress, trans_bytes))
         {
             HAL_ASSERT(DMA_CIRCULAR != hdma->Init.Mode);
             trans_counts = (trans_bytes - ((DstAddress + trans_bytes) & DMA_1M_BOUNDARY_MASK)) >> hdma->DstWidth;
@@ -2036,15 +2036,15 @@ static void DMA_SetConfig(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t
         switch (hdma->Init.Direction)
         {
         case DMA_MEMORY_TO_PERIPH:
-            if (IS_DMA_ACCROSS_1M_BOUNDARY(SrcAddress, (Counts << src_width)))
+            if (IS_DMA_ACROSS_1M_BOUNDARY(SrcAddress, (Counts << src_width)))
                 accross_1M = 1;
             break;
         case DMA_PERIPH_TO_MEMORY:
-            if (IS_DMA_ACCROSS_1M_BOUNDARY(DstAddress, (Counts << dst_width)))
+            if (IS_DMA_ACROSS_1M_BOUNDARY(DstAddress, (Counts << dst_width)))
                 accross_1M = 1;
             break;
         case DMA_MEMORY_TO_MEMORY:
-            if (IS_DMA_ACCROSS_1M_BOUNDARY(SrcAddress, (Counts << src_width)) || IS_DMA_ACCROSS_1M_BOUNDARY(DstAddress, (Counts << dst_width)))
+            if (IS_DMA_ACROSS_1M_BOUNDARY(SrcAddress, (Counts << src_width)) || IS_DMA_ACROSS_1M_BOUNDARY(DstAddress, (Counts << dst_width)))
                 accross_1M = 1;
             break;
         default:

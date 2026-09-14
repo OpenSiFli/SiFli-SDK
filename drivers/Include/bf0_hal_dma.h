@@ -1188,7 +1188,7 @@ HAL_StatusTypeDef HAL_DMA_FreeChannel(DMA_HandleTypeDef *hdma);
 
 #define DMA_1M_BOUNDARY_MASK      (0x000FFFFFUL)
 #define DMA_1M_LEN                (0x00100000UL)
-#define IS_DMA_ACCROSS_1M_BOUNDARY(addr,size) ((addr&(~DMA_1M_BOUNDARY_MASK))!=((addr+size-1)&(~DMA_1M_BOUNDARY_MASK)))
+#define IS_DMA_ACROSS_1M_BOUNDARY(addr,size) ((addr&(~DMA_1M_BOUNDARY_MASK))!=((addr+size-1)&(~DMA_1M_BOUNDARY_MASK)))
 
 /**
   * @}

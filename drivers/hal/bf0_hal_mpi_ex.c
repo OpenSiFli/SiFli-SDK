@@ -1085,7 +1085,7 @@ __HAL_ROM_USED int HAL_NAND_WRITE_WITHOOB(FLASH_HandleTypeDef *handle, uint32_t 
         row_addr |= (1 << 12);
 
 #ifndef PSRAM_CACHE_WB
-    if (!IS_DMA_ACCROSS_1M_BOUNDARY((uint32_t)tbuf, len)) // buffer not across MB range for DMA issue
+    if (!IS_DMA_ACROSS_1M_BOUNDARY((uint32_t)tbuf, len)) // buffer not across MB range for DMA issue
     {
         ret = HAL_FLASH_DMA_START(handle, (char *)tbuf, 1, len);
         if (ret != HAL_OK)
