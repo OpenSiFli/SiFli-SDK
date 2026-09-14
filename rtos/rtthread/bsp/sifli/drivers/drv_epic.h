@@ -14,6 +14,26 @@
 
 #define DRV_EPIC_POLYGON_POINT_MAX 16
 #define mono_layer_addr HPSYS_RAM1_BASE  //Any accessable address for mono layer, SRAM is better
+
+/* Arc image tiling dimensions.
+ * The image arc is rendered in horizontal/vertical tiles to limit per-block
+ * memory usage and fit within EPIC mask layer constraints. Values come from
+ * Kconfig (ARC_IMG_TILE_WIDTH/HEIGHT), with compile-time fallback defaults. */
+#ifndef ARC_IMG_TILE_WIDTH
+#ifdef CONFIG_ARC_IMG_TILE_WIDTH
+#define ARC_IMG_TILE_WIDTH   CONFIG_ARC_IMG_TILE_WIDTH
+#else
+#define ARC_IMG_TILE_WIDTH   64
+#endif
+#endif
+#ifndef ARC_IMG_TILE_HEIGHT
+#ifdef CONFIG_ARC_IMG_TILE_HEIGHT
+#define ARC_IMG_TILE_HEIGHT  CONFIG_ARC_IMG_TILE_HEIGHT
+#else
+#define ARC_IMG_TILE_HEIGHT  16
+#endif
+#endif
+
 typedef void (*drv_epic_cplt_cbk)(EPIC_HandleTypeDef *);
 
 #ifndef DRV_EPIC_NEW_API
@@ -161,6 +181,7 @@ typedef struct
             uint8_t round_end;
 
             uint32_t argb8888;
+            EPIC_LayerConfigTypeDef *image;
         } arc;
         struct
         {
@@ -376,4 +397,3 @@ rt_err_t drv_epic_copy(const uint8_t *src, uint8_t *dst,
                        drv_epic_cplt_cbk cbk);
 
 #endif /* __DRV_EPIC_H__ */
-

@@ -122,6 +122,9 @@ static void render_lock_flash(drv_epic_render_list_t list)
         if (o->op == DRV_EPIC_DRAW_IMAGE)
             add_flash_addr((uint32_t)o->desc.blend.layer.data);
 
+        if (o->op == DRV_EPIC_DRAW_ARC && o->desc.arc.image)
+            add_flash_addr((uint32_t)o->desc.arc.image->data);
+
         if (o->op == DRV_EPIC_DRAW_LETTERS)
         {
             //Assume that all letters are in the same flash

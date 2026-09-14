@@ -749,7 +749,7 @@ static rt_err_t lcd_hw_open(void)
     }
 #endif /* HAL_DSI_MODULE_ENABLED */
 
-#ifdef HAL_V2D_GPU_MODULE_ENABLED
+#if defined(HAL_V2D_GPU_MODULE_ENABLED) && !defined(DRV_EPIC_NEW_API_DUAL_CORE_HCPU)
     HAL_NVIC_SetPriority(V2D_GPU_IRQn, 3, 0);
     HAL_NVIC_EnableIRQ(V2D_GPU_IRQn);
 #endif
@@ -3291,4 +3291,3 @@ static rt_err_t lcd_ctrl(int argc, char **argv)
 }
 MSH_CMD_EXPORT(lcd_ctrl, lcd control);
 #endif /* RT_USING_FINSH */
-

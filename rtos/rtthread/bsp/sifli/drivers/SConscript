@@ -125,7 +125,9 @@ if GetDepend(['BSP_USING_EPIC']):
                     src += ['drv_epic_single.c']
 
 if GetDepend(['USING_VGLITE']):
-        src += ['drv_vglite.c']
+    src += ['drv_vglite.c']
+    if GetDepend(['DRV_EPIC_ARC_MASK_VGLITE']) and not GetDepend(['DRV_EPIC_NEW_API_DUAL_CORE_HCPU']):
+        src += ['drv_epic_arc_vglite.c']
 
 
 #if GetDepend(['ENABLE_SOLUTON_BT_INTERFACE']):
