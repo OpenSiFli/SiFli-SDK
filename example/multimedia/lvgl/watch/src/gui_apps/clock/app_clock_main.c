@@ -623,9 +623,18 @@ static void on_pause(void)
 
     rt_list_for_each(pos, (&p_app_clock_main->list))
     {
-        app_clock_desc_t *clk_desc;
-        clk_desc = rt_list_entry(pos, app_clock_desc_t, node);
-        app_clock_change_state(clk_desc, STATE_DEINIT);
+	if (i != last_active_clock) {
+		app_clock_desc_t *clk_desc;
+		clk_desc = rt_list_entry(pos, app_clock_desc_t, node);
+
+		if (i != last_active_clock)
+			app_clock_change_state(clk_desc, STATE_DEINIT);
+		else
+			app_clock_change_state(clk_desc, STATE_PAUSED);
+
+		i++;
+	}
+	i++;
     }
 }
 
