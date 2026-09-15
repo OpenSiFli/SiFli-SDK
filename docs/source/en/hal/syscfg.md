@@ -9,7 +9,7 @@ The SYSCFG (SYStem ConFiG) module is used to configure system functions, includi
     #include "bf0_hal.h"
     
     ...
-    printf("Boot mode is in %d mode\n", __HAL_SYSCFG_GET_BOOT_MODE()?"uart loop":"normal");
+    printf("Boot mode is in %s mode\n", __HAL_SYSCFG_GET_BOOT_MODE()?"bootrom":"normal");
     
     // Following code is A0 only
     {
