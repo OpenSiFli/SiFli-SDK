@@ -13,6 +13,17 @@
 
 #define DEV_FORMAT "/dev/rndis"
 
+#ifdef USBHOST_RNDIS_NO_NETIF
+/* Default weak implementation: drop the frame. The hook contract (call
+ * context, buffer lifetime, parameters) is documented at the declaration in
+ * usbh_rndis.h. */
+__WEAK void usbh_rndis_on_raw_rx(uint8_t *buf, uint32_t len)
+{
+    (void)buf;
+    (void)len;
+}
+#endif
+
 USB_NOCACHE_RAM_SECTION USB_MEM_ALIGNX uint8_t g_rndis_buf[512];
 
 #define CONFIG_USBHOST_RNDIS_ETH_MAX_FRAME_SIZE 1514
@@ -222,6 +233,13 @@ int usbh_rndis_get_connect_status(struct usbh_rndis *rndis_class)
         rndis_class->connect_status = false;
     }
     return 0;
+}
+
+/* Returns the cached link state maintained by the RNDIS rx thread (cleared on
+ * disconnect). It is a poll target, not a live query to the device. */
+int usbh_rndis_is_link_up(void)
+{
+    return g_rndis_class.connect_status ? 1 : 0;
 }
 
 int usbh_rndis_keepalive(struct usbh_rndis *rndis_class)
@@ -510,7 +528,12 @@ find_class:
                 if (pmsg->MessageType == REMOTE_NDIS_PACKET_MSG) {
                     uint8_t *buf = (uint8_t *)(g_rndis_rx_buffer + pmg_offset + sizeof(rndis_generic_msg_t) + pmsg->DataOffset);
 
+#ifdef USBHOST_RNDIS_NO_NETIF
+                    /* USB-BT bridge: consume the frame before it enters lwIP */
+                    usbh_rndis_on_raw_rx(buf, pmsg->DataLength);
+#else
                     usbh_rndis_eth_input(buf, pmsg->DataLength);
+#endif
                     pmg_offset += pmsg->MessageLength;
                     g_rndis_rx_length -= pmsg->MessageLength;
 
