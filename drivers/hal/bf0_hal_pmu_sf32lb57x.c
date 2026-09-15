@@ -254,12 +254,14 @@ HAL_RAM_RET_CODE_SECT(HAL_PMU_ConfigPeriLdo, HAL_StatusTypeDef HAL_PMU_ConfigPer
 
     val = val << (ldo - PMU_PERI_LDO_1V8);
 
+#ifndef HAL_USE_ATE_MODE
     if ((PMU_PERI_LDO_1V8 == ldo) && !pmu_cal_data.init)
     {
         /* raise LDO_1V8 voltage in case no calibration data is available */
         mask |= PMUC_PERI_LDO_LDO18_VREF_SEL_Msk;
         val |= MAKE_REG_VAL2(0xE, PMUC_PERI_LDO_LDO18_VREF_SEL);
     }
+#endif /* !HAL_USE_ATE_MODE */
 
     MODIFY_REG(hwp_pmuc->PERI_LDO, mask, val);
 
