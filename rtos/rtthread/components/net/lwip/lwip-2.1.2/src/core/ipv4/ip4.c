@@ -57,6 +57,11 @@
 #include "lwip/stats.h"
 #include "lwip/prot/iana.h"
 
+/* SiFli local addition: integrate the lwIP-NAT module */
+#ifdef LWIP_USING_NAT
+    #include "ipv4_nat.h"
+#endif
+
 #include <string.h>
 
 #ifdef LWIP_HOOK_FILENAME
@@ -373,6 +378,15 @@ ip4_forward(struct pbuf *p, struct ip_hdr *iphdr, struct netif *inp)
     MIB2_STATS_INC(mib2.ipforwdatagrams);
     IP_STATS_INC(ip.xmit);
 
+    /* SiFli local addition: run NAT before forwarding (ip_nat_out returns 1 = packet consumed by NAT) */
+#ifdef LWIP_USING_NAT
+    if (ip_nat_out(p))
+    {
+        PERF_STOP("ip4_forward");
+        return;
+    }
+#endif
+
     PERF_STOP("ip4_forward");
     /* don't fragment if interface has mtu set to 0 [loopif] */
     if (netif->mtu && (p->tot_len > netif->mtu))
@@ -553,6 +567,14 @@ ip4_input(struct pbuf *p, struct netif *inp)
             MIB2_STATS_INC(mib2.ipinhdrerrors);
             return ERR_OK;
         }
+    }
+#endif
+
+    /* SiFli local addition: run NAT on the inbound packet (ip_nat_input returns 1 = packet consumed) */
+#ifdef LWIP_USING_NAT
+    if (ip_nat_input(p))
+    {
+        return ERR_OK;
     }
 #endif
 
