@@ -281,6 +281,16 @@ if RT_USING_LWIP
         depends on LWIP_ALTCP
         default n
         
+    config RT_LWIP_IP_FORWARD
+        bool "Enable IPv4 forwarding"
+        default n
+
+    config LWIP_USING_NAT
+        bool "Enable lwIP NAT"
+        depends on RT_USING_LWIP212
+        select RT_LWIP_IP_FORWARD
+        default n
+
     config LWIP_USING_DHCPD
         bool "Enable DHCP server"
         default n
