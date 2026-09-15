@@ -91,6 +91,13 @@ void   tcpip_callbackmsg_delete(struct tcpip_callback_msg *msg);
 err_t  tcpip_callbackmsg_trycallback(struct tcpip_callback_msg *msg);
 err_t  tcpip_callbackmsg_trycallback_fromisr(struct tcpip_callback_msg *msg);
 
+/**
+ * Check whether the tcpip thread mailbox is valid.
+ *
+ * @return non-zero if the tcpip thread mailbox is valid, zero otherwise
+ */
+int    tcpip_sys_mbox_valid(void);
+
 /* free pbufs or heap memory from another context without blocking */
 err_t  pbuf_free_callback(struct pbuf *p);
 err_t  mem_free_callback(void *m);
