@@ -84,6 +84,10 @@ void usbh_lwip_eth_input_common(struct netif *netif, uint8_t *buf, uint32_t len)
     err_t err;
     struct pbuf *p;
 
+    if (netif == NULL) {
+        return;
+    }
+
     p = pbuf_alloc(PBUF_RAW, len, type);
     if (p != NULL) {
 #if LWIP_TCPIP_CORE_LOCKING_INPUT
@@ -244,8 +248,10 @@ void usbh_rndis_run(struct usbh_rndis *rndis_class)
     g_rndis_dev.eth_tx = rt_usbh_rndis_eth_tx;
     g_rndis_dev.parent.user_data = rndis_class;
 
+#ifndef USBHOST_RNDIS_NO_NETIF
     eth_device_init(&g_rndis_dev, "u2");
     eth_device_linkchange(&g_rndis_dev, RT_TRUE);
+#endif
 
     usb_osal_thread_create("usbh_rndis_rx", 2048, CONFIG_USBHOST_PSC_PRIO + 1, usbh_rndis_rx_thread, NULL);
     //timer_init(rndis_class);
@@ -255,7 +261,9 @@ void usbh_rndis_stop(struct usbh_rndis *rndis_class)
 {
     (void)rndis_class;
 
+#ifndef USBHOST_RNDIS_NO_NETIF
     eth_device_deinit(&g_rndis_dev);
+#endif
     // rt_timer_stop(keep_timer);
     // rt_timer_delete(keep_timer);
 }
