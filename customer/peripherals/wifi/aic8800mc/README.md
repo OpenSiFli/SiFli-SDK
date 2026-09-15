@@ -1,7 +1,7 @@
 # AIC8800MC Wi-Fi 使用说明
 
 ## 准备工作
-该固件是基于aic8800mc-sdk 6.6.3.0版本编译的，SHA：`256e2923bbf32483f394c5f9e5dc2f275a733ba3` ，[aic8800mc-sdk](http://git.aicsemi.com/AICSemi/aic8800-sdk)
+该固件是基于aic8800mc-sdk 6.6.3.0版本编译的，SHA：`d8e1e82ab5c6f5d8069b6184848f5d99d80bf764` ，[aic8800mc-sdk](git@gitlab.sifli.com:sw/aic8800-sdk.git)
 wifi固件位置：aic8800mc\host_wb_aic8800mc.bin
 
 执行烧入wifi固件前需要先保持wifi模组的供电正常，否则会导致进入boot失败。
@@ -54,10 +54,19 @@ f 3
 * wifi_test connect [ssid] [password]：进行wifi连接操作
 * ping [ip]/[dns] ：ping测试，验证网络是否正常
 * weather ：查询天气，验证get http请求是否正常
+* wifi_test wifi_ap_start [ssid] [password]：启动SoftAP，将wlan0切换为AP模式并创建热点（AIC8800MC仅支持2.4G频段）
+* wifi_test wifi_ap_stop：停止SoftAP
 
 wifi芯片固件调试命令（通过wifi串口发送）
 * wifi_on <1/0>：wifi开关控制
 * scan <1/0>：wifi扫描
 * connect <1/0> [ssid] [password]：wifi连接
 * disconnect：wifi断开连接
+
+## SoftAP功能说明
+* SoftAP基于RT-Thread WLAN框架实现：wlan0设备支持STA/AP双角色，运行时切换（开机默认STA模式）
+* 启动AP前需先执行`wifi_test wifi_on`完成wifi初始化
+* `wifi_test wifi_ap_start`会等待wifi固件上报AP启动成功，再将固件分配的IP地址、子网掩码、网关配置到wlan0网卡
+* 工程使能`LWIP_USING_DHCPD`后，AP启动时自动开启DHCP服务器，为接入的设备分配IP
+* 手机或电脑连接热点后，可通过`ping`等命令验证网络是否正常
 

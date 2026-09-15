@@ -111,8 +111,49 @@ static rt_err_t aic8800mc_wlan_dev_join(struct rt_wlan_device *wlan, struct rt_s
 
 static rt_err_t aic8800mc_wlan_dev_softap(struct rt_wlan_device *wlan, struct rt_ap_info *ap_info)
 {
-    LOG_E("aic8800mc softap not supported\n");
-    return -RT_ENOSYS;
+    struct rwnx_hw *rwnx_hw;
+    int ret;
+    char ssid[RT_WLAN_SSID_MAX_LENGTH + 1] = {0};
+    char password[RT_WLAN_PASSWORD_MAX_LENGTH + 1] = {0};
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for softap\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    if (ap_info->ssid.len == 0)
+    {
+        LOG_E("softap ssid is empty\n");
+        return -RT_ERROR;
+    }
+
+    rt_memcpy(ssid, ap_info->ssid.val, ap_info->ssid.len);
+    ssid[ap_info->ssid.len] = '\0';
+
+    if (ap_info->key.len > 0)
+    {
+        rt_memcpy(password, ap_info->key.val, ap_info->key.len);
+        password[ap_info->key.len] = '\0';
+    }
+
+    /* AIC8800MC is 2.4G only, so band is always 0. */
+    ret = rwnx_send_fhcustmsg_start_ap_req(rwnx_hw, ssid, password, 0);
+    if (ret)
+    {
+        LOG_E("softap start failed: %d\n", ret);
+        return -RT_ERROR;
+    }
+
+    LOG_I("softap starting, SSID: %s\n", ssid);
+    return RT_EOK;
 }
 
 #ifdef AIC_ENABLE_P2P
@@ -215,7 +256,31 @@ static rt_err_t aic8800mc_wlan_dev_disconnect(struct rt_wlan_device *wlan)
 
 static rt_err_t aic8800mc_wlan_dev_ap_stop(struct rt_wlan_device *wlan)
 {
-    return -RT_ENOSYS;
+    struct rwnx_hw *rwnx_hw;
+    int ret;
+
+    if (g_rwnx_plat == RT_NULL || g_rwnx_plat->sdiodev == RT_NULL)
+    {
+        LOG_E("aic8800mc not ready for ap stop\n");
+        return -RT_ERROR;
+    }
+
+    rwnx_hw = g_rwnx_plat->sdiodev->rwnx_hw;
+    if (rwnx_hw == RT_NULL)
+    {
+        LOG_E("rwnx_hw is NULL\n");
+        return -RT_ERROR;
+    }
+
+    ret = rwnx_send_fhcustmsg_stop_ap_req(rwnx_hw);
+    if (ret)
+    {
+        LOG_E("ap stop failed: %d\n", ret);
+        return -RT_ERROR;
+    }
+
+    LOG_I("softap stopping\n");
+    return RT_EOK;
 }
 
 static rt_err_t aic8800mc_wlan_dev_ap_deauth(struct rt_wlan_device *wlan, rt_uint8_t mac[])
@@ -433,6 +498,41 @@ void aic8800mc_wlan_report_scan_result(struct rt_wlan_info *info)
     wlan_buff.data = info;
     wlan_buff.len = sizeof(struct rt_wlan_info);
     rt_wlan_dev_indicate_event_handle(&aic8800mc_wlan_dev, RT_WLAN_DEV_EVT_SCAN_REPORT, &wlan_buff);
+}
+
+void aic8800mc_wlan_report_ap_start(void)
+{
+    aic8800mc_wlan_report_event(RT_WLAN_DEV_EVT_AP_START, RT_NULL, 0);
+}
+
+void aic8800mc_wlan_report_ap_stop(void)
+{
+    aic8800mc_wlan_report_event(RT_WLAN_DEV_EVT_AP_STOP, RT_NULL, 0);
+}
+
+void aic8800mc_wlan_report_ap_assoc(rt_uint8_t mac[])
+{
+    struct rt_wlan_info info;
+
+    if (mac == RT_NULL)
+        return;
+
+    /* wlan_mgnt uses info.bssid as the STA MAC in AP mode */
+    rt_memset(&info, 0, sizeof(info));
+    rt_memcpy(info.bssid, mac, 6);
+    aic8800mc_wlan_report_event(RT_WLAN_DEV_EVT_AP_ASSOCIATED, &info, sizeof(info));
+}
+
+void aic8800mc_wlan_report_ap_disassoc(rt_uint8_t mac[])
+{
+    struct rt_wlan_info info;
+
+    if (mac == RT_NULL)
+        return;
+
+    rt_memset(&info, 0, sizeof(info));
+    rt_memcpy(info.bssid, mac, 6);
+    aic8800mc_wlan_report_event(RT_WLAN_DEV_EVT_AP_DISASSOCIATED, &info, sizeof(info));
 }
 
 int aic8800mc_wlan_init(void)

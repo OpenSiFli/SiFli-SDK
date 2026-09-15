@@ -168,4 +168,28 @@ struct fhcustmsg_ap_assoc_sta_ind
     uint8_t sta_addr[6];               // Client MAC address
 };
 
+// AP status (matches firmware's enum AP_STATUS)
+enum AP_STATUS
+{
+    AIC_AP_START,                      // AIC AP is START
+    AIC_AP_CLOSE,                      // AIC AP is CLOSE
+};
+
+// softap start request (matches firmware's struct custom_msg_start_ap_req)
+struct fhcustmsg_start_ap_req
+{
+    uint8_t band;                      // 0: 2.4G, 1: 5G
+    uint8_t ssid[AP_SSID_BUF_MAX];
+    uint8_t pw[AP_PSWD_BUF_MAX];
+};
+
+// softap start indication (matches firmware's struct custom_msg_ap_status_cfm)
+struct fhcustmsg_ap_status_ind
+{
+    uint8_t  status;                   // AP_STATUS: AIC_AP_START / AIC_AP_CLOSE
+    uint32_t ip;                       // AP IP address
+    uint32_t gw;                       // Gateway (same as IP in softap mode)
+    uint32_t mask;                     // Subnet mask
+};
+
 #endif /* _AIC_RWNX_MAIN_H_ */
