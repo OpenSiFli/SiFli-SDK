@@ -57,7 +57,7 @@ extern "C" {
   * @{
   */
 #define SYSCFG_BOOT_NORMAL         0U       /*!< Normal boot */
-#define SYSCFG_BOOT_UART           1U       /*!< Boot with UART loop for DFU */
+#define SYSCFG_BOOT_ROM            1U       /*!< Stay in bootrom for firmware update */
 /**
   * @} SYSCFG_BootMode
   */
@@ -86,9 +86,17 @@ extern "C" {
 /** @brief  Get Current boot mode.
   * @retval The boot mode as configured by user
   *           @arg @ref SYSCFG_BOOT_NORMAL
-  *           @arg @ref SYSCFG_BOOT_UART
+  *           @arg @ref SYSCFG_BOOT_ROM
   */
 #define __HAL_SYSCFG_GET_BOOT_MODE()        (hwp_hpsys_cfg->BMR&HPSYS_CFG_BMR_BOOT_MODE_Msk)
+
+/** @brief  Set boot mode.
+ * @param  mode The boot mode to set
+ *           @arg @ref SYSCFG_BOOT_NORMAL
+ *           @arg @ref SYSCFG_BOOT_ROM
+ */
+#define __HAL_SYSCFG_SET_BOOT_MODE(mode)    (MODIFY_REG(hwp_hpsys_cfg->BMR, HPSYS_CFG_BMR_BOOT_MODE_Msk, MAKE_REG_VAL2(mode, HPSYS_CFG_BMR_BOOT_MODE)))
+
 
 /** @brief  Set SWD interface.
   * @param  COREID core id for SWD

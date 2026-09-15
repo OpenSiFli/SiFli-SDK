@@ -23,6 +23,11 @@ extern "C" {
   * @{
   */
 
+#ifdef SF32LB57X
+/** bootmode is persisted by system reset (initiated by sysreset req) */
+#define HAL_CORTEX_BOOTMODE_PERSISTENCE_SUPPORT
+#endif /* SF32LB57X */
+
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup CORTEX_Exported_Types CORTEX Exported Types
   * @{
@@ -305,10 +310,29 @@ void HAL_NVIC_EnableIRQ(IRQn_Type IRQn);
 void HAL_NVIC_DisableIRQ(IRQn_Type IRQn);
 
 /**
-  * @brief  Initiate a system reset request to reset the MCU.
-  * @retval None
-  */
+ * @brief  Initiate a system reset request to reset the MCU.
+ *
+ *         SYSRESETREQ is used to reset the MCU. Reset scope varies between chips. Refer to chip spec for specific reset behavior.
+ * @retval None
+ */
 void HAL_NVIC_SystemReset(void);
+
+/**
+ * @brief  Initiate a system reset request to reset the MCU, and select the boot
+ *         mode used by the next startup.
+ *
+ * @note   Only chips with HAL_CORTEX_BOOTMODE_PERSISTENCE_SUPPORT keep the boot
+ *         mode across SYSRESETREQ. On other chips boot_mode is ignored and this
+ *         function behaves the same as HAL_NVIC_SystemReset().
+ *
+ *         SYSRESETREQ is used to reset the MCU. Reset scope varies between chips.
+ *         Refer to chip spec for specific reset behavior.
+ *
+ * @param  boot_mode Boot mode for the next startup.
+ *         @arg @ref SYSCFG_BOOT_NORMAL : boot into the user application.
+ *         @arg @ref SYSCFG_BOOT_ROM    : stay in the bootrom for firmware update.
+ */
+void HAL_NVIC_SystemResetEx(uint32_t boot_mode);
 
 /**
   * @brief  Initialize the System Timer with interrupt enabled and start the System Tick Timer (SysTick):
