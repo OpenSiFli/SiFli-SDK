@@ -44,6 +44,34 @@ extern "C" {
  * @} PIN_flags
  */
 
+/** @defgroup PIN_driving_strength PIN driving strength
+ * @brief Pin output driving capability.
+ *
+ * @note  DS1 and DS0 form the 2-bit driving strength field, DS1 is the low bit
+ *        and DS0 the high bit. The capability of each level is defined by the
+ *        chip datasheet and the definitions below must be kept consistent
+ *        with it.
+ *
+ *        | Level | DS0 | DS1 | Capability |
+ *        |-------|-----|-----|------------|
+ *        |   0   |  0  |  0  | 2mA        |
+ *        |   1   |  0  |  1  | 4mA        |
+ *        |   2   |  1  |  0  | 8mA        |
+ *        |   3   |  1  |  1  | 12mA       |
+ * @{
+ */
+typedef enum
+{
+    PIN_DS_2MA  = 0,        /*!< DS0 = 0, DS1 = 0 */
+    PIN_DS_4MA  = 1,        /*!< DS0 = 0, DS1 = 1 */
+    PIN_DS_8MA  = 2,        /*!< DS0 = 1, DS1 = 0 */
+    PIN_DS_12MA = 3,        /*!< DS0 = 1, DS1 = 1 */
+} PIN_DrivingStrengthTypeDef;
+
+/**
+  * @}
+  */
+
 #ifdef SF32LB58X
 
 #define SFPIN_MPI_PIN_HPSRAM         (0)     // USED FOR HPI PSRAM
@@ -286,6 +314,23 @@ int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set);
  * @retval -1 if invalid, otherwise 0
  */
 int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set);
+
+/**
+ * @brief  Set pin driving capability.
+ *
+ *         Wrapper of HAL_PIN_Set_DS0() and HAL_PIN_Set_DS1(), so that the four
+ *         driving strength levels can be selected by name instead of by the raw
+ *         DS0/DS1 bit pair. Prefer this over calling the two functions directly.
+ *
+ * @param  pad physical pin, #pin_pad
+ * @param  ds driving capability, see PIN_DrivingStrengthTypeDef
+ *           @arg @ref PIN_DS_2MA
+ *           @arg @ref PIN_DS_4MA
+ *           @arg @ref PIN_DS_8MA
+ *           @arg @ref PIN_DS_12MA
+ * @retval HAL_OK if success, HAL_ERROR if pad is invalid
+ */
+HAL_StatusTypeDef HAL_PIN_SetDS(int pad, PIN_DrivingStrengthTypeDef ds);
 
 /**
  * @brief  Set pin mode
