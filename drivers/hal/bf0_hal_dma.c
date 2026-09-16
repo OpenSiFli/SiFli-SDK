@@ -359,6 +359,9 @@ static HAL_StatusTypeDef DMA_AllocChannel(DMA_HandleTypeDef *hdma, bool init)
                 hdma->Instance = base + i;
                 /* update channelIndex to make it consistent with instance */
                 hdma->ChannelIndex = (i << 2);
+#ifdef DMA_SUPPORT_GPDMA
+                hdma->OrgChannelIndex = i;
+#endif /* DMA_SUPPORT_GPDMA */
                 r = HAL_OK;
                 break;
             }
