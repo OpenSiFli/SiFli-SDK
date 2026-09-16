@@ -146,6 +146,22 @@ html_js_files = [
     'js/lightbox.js',
 ]
 
+html_js_files.append((
+    "https://knowledge.sifli.com/weknora-widget.js",
+    {
+        "defer": "defer",
+        "data-channel": "f7b67891-ade5-4788-93d2-47768cea06f6",
+        "data-token": "em_O-0xDo4XuuwhKNPo2BQjvft6DeScadZXtJLKcv2Ro0Y",
+        "data-position": "bottom-right",
+        "data-title": "SiFli SDK AI 助手",
+        "data-primary-color": "#2563eb",
+    },
+))
+
+html_js_files.append((
+    "js/weknora-context.js",
+    {"defer": "defer"},
+))
 
 def setup(app):
     """Configure the v5 DocSearch modal and optional Agent Studio Sidepanel."""
