@@ -23,6 +23,9 @@ const static obj2nameTypedef obj2name_array[] =
 {
 
     {"obj", &lv_obj_class},
+#if LV_USE_LABEL
+    {"label", &lv_label_class},
+#endif
 #if LV_USE_BTN
     {"btn", &lv_btn_class},
 #endif
