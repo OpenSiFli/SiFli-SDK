@@ -131,8 +131,11 @@ set_image A:/example.ezip file
 # 从SD卡加载（LVGL V8）
 set_image /sdcard/image.ezip dsc sram
 
-# 从SD卡加载（LVGL V9，注意需要 A: 前缀）
-set_image A:/sdcard/image.ezip dsc sram
+# 从SD卡预先加载到内存（LVGL V9 不需要A: 前缀）
+set_image /sdcard/image.ezip dsc sram
+
+# 从SD卡直接加载（LVGL V9 注意需要 A: 前缀）
+set_image A:/sdcard/image.ezip file
 ```
 
 ## API说明

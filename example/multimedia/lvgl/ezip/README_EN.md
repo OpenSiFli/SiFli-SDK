@@ -131,8 +131,11 @@ set_image A:/example.ezip file
 # Load from SD card (LVGL V8)
 set_image /sdcard/image.ezip dsc sram
 
-# Load from SD card (LVGL V9, note the A: prefix required)
-set_image A:/sdcard/image.ezip dsc sram
+# Preload from the SD card to the sram (LVGL V9, note: A: prefix is not required)
+set_image /sdcard/image.ezip dsc sram
+
+# Load from SD card (LVGL V9, note: A: prefix required)
+set_image A:/sdcard/image.ezip dsc file
 ```
 
 ## API Reference
