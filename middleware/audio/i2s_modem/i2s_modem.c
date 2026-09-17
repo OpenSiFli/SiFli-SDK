@@ -53,6 +53,7 @@ struct modem_server
     int16_t         mono[160];
     uint8_t         is_opened;
     uint8_t         exit;
+    uint8_t         drop_count;
 
 #if MODEM_I2S_DEBUG
     rt_event_t event;
@@ -129,6 +130,12 @@ static void audprc_dma_rx(uint8_t channel_id, uint8_t *data, rt_size_t len)
         return;
     }
 
+    if (thiz->drop_count < 20)
+    {
+        thiz->drop_count++;
+        return;
+    }
+
     if (thiz->is_opened && thiz->i2s_dev)
     {
 #if MODEM_I2S_DEVICE_CHANNELS == 2
@@ -167,6 +174,8 @@ int i2s_modem_open2(uint8_t volume)
         LOG_E("%s i2s_open again error", __func__);
         return -1;
     }
+
+    thiz->drop_count = 0;
 
 #if MODEM_I2S_DEBUG
     thiz->exit = 0;

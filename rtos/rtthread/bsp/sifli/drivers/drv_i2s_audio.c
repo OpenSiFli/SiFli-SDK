@@ -761,8 +761,6 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
 
     LOG_I("i2s buf size=%d", aud->tx_buf_size);
     RT_ASSERT((uint32_t)aud->tx_buf >= 0x20000000 && (uint32_t)aud->tx_buf < 0x60000000); //must in sram
-    memset(aud->tx_buf, 0, AUDIO_DATA_SIZE);
-    memset(aud->rx_buf, 0, AUDIO_DATA_SIZE);
 
     if ((aud->hi2s.State == HAL_I2S_STATE_RESET) || (aud->hi2s.State == HAL_I2S_STATE_READY))
     {
@@ -783,6 +781,7 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         {
             __HAL_I2S_TX_INTF_DISABLE(&(aud->hi2s));
 
+            memset(aud->tx_buf, 0, AUDIO_DATA_SIZE);
             res = HAL_I2S_Transmit_DMA(&(aud->hi2s), aud->tx_buf, aud->tx_buf_size);
             if (res != HAL_OK)
             {
@@ -820,6 +819,7 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         {
             __HAL_I2S_RX_INTF_DISABLE(&(aud->hi2s));
             //rt_thread_delay(600); // wait clock stable to meet outside pll
+            memset(aud->rx_buf, 0, AUDIO_DATA_SIZE);
             res = HAL_I2S_Receive_DMA(&(aud->hi2s), aud->rx_buf, aud->tx_buf_size);
             if (res != HAL_OK)
                 return RT_ERROR;
@@ -1178,7 +1178,7 @@ void I2S1_RX_DMA_IRQHandler(void)
 
 #ifdef BSP_ENABLE_I2S_CODEC
 #if !defined(I2S2_TX_DMA_IRQHandler) && defined(I2S_TX_DMA_IRQHandler)
-#define I2S2_TX_DMA_IRQHandler I2S_TX_DMA_IRQHandler
+    #define I2S2_TX_DMA_IRQHandler I2S_TX_DMA_IRQHandler
 #endif
 
 void I2S2_TX_DMA_IRQHandler(void)
@@ -1193,7 +1193,7 @@ void I2S2_TX_DMA_IRQHandler(void)
 }
 
 #if !defined(I2S2_RX_DMA_IRQHandler) && defined(I2S_RX_DMA_IRQHandler)
-#define I2S2_RX_DMA_IRQHandler I2S_RX_DMA_IRQHandler
+    #define I2S2_RX_DMA_IRQHandler I2S_RX_DMA_IRQHandler
 #endif
 
 void I2S2_RX_DMA_IRQHandler(void)
