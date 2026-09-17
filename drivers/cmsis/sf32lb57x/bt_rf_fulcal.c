@@ -5325,7 +5325,7 @@ void bt_rf_opt_cal(void)
 
     hwp_bt_phy->SFC_CFG1 &= ~(BT_PHY_SFC_CFG1_RX_CNT_THD1_1 | BT_PHY_SFC_CFG1_RX_CNT_THD0_1);
     hwp_bt_phy->SFC_CFG1 |= BT_PHY_SFC_CFG1_SF_AGC_FREEZE_ENABLE | BT_PHY_SFC_CFG1_MIXER1_ENABLE |
-                            (0x10 << BT_PHY_SFC_CFG1_RX_CNT_THD0_1_Pos) | (0x20 << BT_PHY_SFC_CFG1_RX_CNT_THD1_1_Pos) ;
+                            (0xB << BT_PHY_SFC_CFG1_RX_CNT_THD0_1_Pos) | (0x1B << BT_PHY_SFC_CFG1_RX_CNT_THD1_1_Pos) ;
     //hwp_bt_phy->SFC_CFG2 &= ~(BT_PHY_SFC_CFG2_RX_CNT_THD0_2);
     hwp_bt_phy->SFC_CFG2  = (0x20 << BT_PHY_SFC_CFG2_RX_CNT_THD0_2_Pos) |
                             (0x40 << BT_PHY_SFC_CFG2_RX_CNT_THD1_2_Pos) ;
@@ -5366,6 +5366,7 @@ void bt_rf_opt_cal(void)
     hwp_bt_phy->RSSI_CFG1 &= ~BT_PHY_RSSI_CFG1_RSSI_OFFSET;
     hwp_bt_phy->RSSI_CFG1 |= 0xC << BT_PHY_RSSI_CFG1_RSSI_OFFSET_Pos;
 
+    hwp_bt_phy->BLE_LPF_BYPASS1 = 0xFEFF;
     //hwp_bt_mac->AESCNTL |= 1 << BT_MAC_AESCNTL_FORCE_IQ_PWR_Pos | 4 << BT_MAC_AESCNTL_FORCE_IQ_PWR_VAL_Pos;
 #endif
 
@@ -5563,7 +5564,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.2.3_3674";
+char *g_rf_ful_ver = "1.2.4_3688";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;
