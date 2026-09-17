@@ -41,10 +41,10 @@ extern "C" {
 #define  PIN_PULLDOWN      (HPSYS_PINMUX_PAD_PA00_PE)                  /*!< Pull-down activation                */
 
 /**
- * @} PIN_flags
+ * @}
  */
 
-/** @defgroup PIN_driving_strength PIN driving strength
+/**
  * @brief Pin output driving capability.
  *
  * @note  DS1 and DS0 form the 2-bit driving strength field, DS1 is the low bit
@@ -58,19 +58,14 @@ extern "C" {
  *        |   1   |  0  |  1  | 4mA        |
  *        |   2   |  1  |  0  | 8mA        |
  *        |   3   |  1  |  1  | 12mA       |
- * @{
  */
 typedef enum
 {
-    PIN_DS_2MA  = 0,        /*!< DS0 = 0, DS1 = 0 */
-    PIN_DS_4MA  = 1,        /*!< DS0 = 0, DS1 = 1 */
-    PIN_DS_8MA  = 2,        /*!< DS0 = 1, DS1 = 0 */
-    PIN_DS_12MA = 3,        /*!< DS0 = 1, DS1 = 1 */
+    PIN_DS_2MA  = 0,        /*!< 2mA,  DS0 = 0, DS1 = 0 */
+    PIN_DS_4MA  = 1,        /*!< 4mA,  DS0 = 0, DS1 = 1 */
+    PIN_DS_8MA  = 2,        /*!< 8mA,  DS0 = 1, DS1 = 0 */
+    PIN_DS_12MA = 3,        /*!< 12mA, DS0 = 1, DS1 = 1 */
 } PIN_DrivingStrengthTypeDef;
-
-/**
-  * @}
-  */
 
 #ifdef SF32LB58X
 
