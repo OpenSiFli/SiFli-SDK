@@ -210,20 +210,6 @@
     document.addEventListener('input', queueFocusRestore, true);
   }
 
-  function ensureSidepanelRoot() {
-    var root = document.getElementById('sifli-docsearch-sidepanel-root');
-    if (root) {
-      return root;
-    }
-
-    root = document.createElement('div');
-    root.id = 'sifli-docsearch-sidepanel-root';
-    root.style.position = 'relative';
-    root.style.zIndex = '9999';
-    document.body.appendChild(root);
-    return root;
-  }
-
   function initSearchModal() {
     if (!document.getElementById('docsearch')) {
       return;
@@ -260,50 +246,13 @@
       });
   }
 
-  function initSidepanel() {
-    if (!agentId) {
-      return;
-    }
-
-    injectStylesheet('https://cdn.jsdelivr.net/npm/@docsearch/css@5.0.3/dist/sidepanel.css');
-    var root = ensureSidepanelRoot();
-    loadScript(
-      'https://cdn.jsdelivr.net/npm/@docsearch/sidepanel-js@5.0.3',
-      function () { return typeof window.docsearchSidepanel === 'function'; }
-    )
-      .then(function () {
-        window.docsearchSidepanel({
-          container: root,
-          appId: appId,
-          apiKey: apiKey,
-          agentId: agentId,
-          indices: indices,
-          searchParameters: config.searchParameters,
-          button: {
-            variant: config.variant || 'floating',
-            translations: config.buttonTranslations,
-          },
-          panel: {
-            variant: config.variant || 'floating',
-            side: config.side || 'right',
-            suggestedQuestions: config.suggestedQuestions === true,
-            translations: config.translations,
-          },
-        });
-      })
-      .catch(function (error) {
-        console.error('[DocSearch v5] sidepanel initialization failed:', error);
-      });
-  }
-
   function init() {
     // @docsearch/js@5's default UMD entry includes both keyword search and
-    // its in-modal Ask AI experience. The CSS is shared with the Sidepanel.
+    // its in-modal Ask AI experience.
     installAgentStudioSearchToolCompatibilityShim();
     installTopSearchFocusGuard();
     injectStylesheet('https://cdn.jsdelivr.net/npm/@docsearch/css@5.0.3/dist/style.css');
     initSearchModal();
-    initSidepanel();
   }
 
   if (document.readyState === 'loading') {

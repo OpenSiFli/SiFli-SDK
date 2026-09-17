@@ -164,7 +164,7 @@ html_js_files.append((
 ))
 
 def setup(app):
-    """Configure the v5 DocSearch modal and optional Agent Studio Sidepanel."""
+    """Configure the v5 DocSearch modal and its optional Ask AI action."""
     docsearch_config = {
         "appId": docsearch_app_id,
         "apiKey": docsearch_api_key,
@@ -176,26 +176,9 @@ def setup(app):
             docsearch_index_name: {} for docsearch_index_name in docsearch_index_names
         },
         "agentId": docsearch_agent_id,
-        "variant": "floating",
-        "side": "right",
         # Agent Studio has no suggested-question index configured for this site.
-        # Enabling it makes both AI entry points request a missing index.
+        # Enabling it makes Ask AI request a missing index.
         "suggestedQuestions": False,
-        "translations": {
-            "header": {
-                "title": "AI 问答",
-            },
-            "newConversationScreen": {
-                "titleText": "有什么可以帮你？",
-                "introductionText": "我会基于当前芯片和版本的 SDK 文档回答问题。",
-            },
-            "promptForm": {
-                "promptPlaceholderText": "请输入关于当前文档的问题...",
-            },
-        },
-        "buttonTranslations": {
-            "buttonAriaLabel": "Open Ask AI Sidepanel",
-        },
     }
     docsearch_config_json = json.dumps(docsearch_config, ensure_ascii=False).replace(
         "</", "<\\/"
