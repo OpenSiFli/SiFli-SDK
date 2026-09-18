@@ -125,18 +125,11 @@ void app_locale_lang_update(const char *locale)
 #endif
 }
 
-char *app_strdup(const char *src)
-{
-    size_t len;
-    char *dst;
-
-    if (!src) return NULL;
-    len = strlen(src) + 1;
-    dst = rt_malloc(len);
-    if (!dst) return NULL;
-    memcpy(dst, src, len);
-    return dst;
-}
+/*
+ * app_strdup() is implemented in middleware/lvgl/app_mem.c, it allocates from
+ * the application memory pools, so release the returned string with app_free().
+ * Keeping the declaration in app_comm.h only avoids a duplicate definition here.
+ */
 
 int app_get_o_directory(void)
 {

@@ -35,7 +35,8 @@ typedef enum
 {
     IMAGE_CACHE_HEAP,
     IMAGE_CACHE_SRAM,
-    IMAGE_CACHE_PSRAM
+    IMAGE_CACHE_PSRAM,
+    IMAGE_CACHE_MSG,                      /**< Apply memory block in msg heap.              */
 } image_cache_t;
 
 #ifndef CACHE_HEAP
@@ -50,6 +51,16 @@ typedef enum
 #define CACHE_PSRAM IMAGE_CACHE_PSRAM
 #endif
 
+#ifndef CACHE_MSG
+#define CACHE_MSG IMAGE_CACHE_MSG
+#endif
+
+typedef enum
+{
+    FIX_MODE_NONE,
+    FIX_MODE_REUSE_ANIM_BUF,
+} svg_mem_mode_t;
+
 
 /**
 @brief apply cache mem for solution applicaiton.
@@ -60,13 +71,21 @@ typedef enum
 void *app_cache_alloc(size_t size, image_cache_t cache_type);
 
 /**
-@brief re-apply cache mem for solution applicaiton.
+@brief re-apply cache mem and preserve the original memory domain.
 @param[in] Original memory
 @param[in] new_size New size of cache mem
-@param[in] cache_type Cache type of cache mem be applied
 @retval Pointer of the successsful applicaiton.
 */
-void *app_cache_realloc(void *memory, size_t new_size, image_cache_t cache_type);
+void *app_cache_realloc(void *memory, size_t new_size);
+
+/**
+@brief re-apply cache mem using an explicit memory domain.
+@param[in] memory Original memory
+@param[in] new_size New size of cache mem
+@param[in] cache_type Cache type used when a new block is required
+@retval Pointer of the successful allocation.
+*/
+void *app_cache_realloc_ex(void *memory, size_t new_size, image_cache_t cache_type);
 
 /**
 @brief free cache mem which successsful apply by app_cache_alloc.
@@ -74,38 +93,24 @@ void *app_cache_realloc(void *memory, size_t new_size, image_cache_t cache_type)
 */
 void app_cache_free(void *p);
 
-static inline void *app_cache_calloc(size_t nmemb, size_t size, image_cache_t cache_type)
-{
-    size_t total = nmemb * size;
-    void *ptr = app_cache_alloc(total, cache_type);
+/**
+@brief allocate zeroed cache mem.
+@param[in] nmemb Number of objects
+@param[in] size Size of each object
+@param[in] cache_type Cache type
+@retval Pointer to allocated zeroed memory, or NULL on failure.
+*/
+void *app_cache_calloc(size_t nmemb, size_t size, image_cache_t cache_type);
 
-    if (ptr != RT_NULL)
-    {
-        rt_memset(ptr, 0, total);
-    }
+void *app_malloc(uint32_t size);
 
-    return ptr;
-}
+void *app_calloc(uint32_t count, uint32_t size);
 
-static inline void *app_malloc(size_t size)
-{
-    return rt_malloc(size);
-}
+char *app_strdup(const char *src);
 
-static inline void *app_calloc(size_t nmemb, size_t size)
-{
-    return rt_calloc(nmemb, size);
-}
+void *app_realloc(void *memory, uint32_t new_size);
 
-static inline void *app_realloc(void *memory, size_t new_size)
-{
-    return rt_realloc(memory, new_size);
-}
-
-static inline void app_free(void *p)
-{
-    rt_free(p);
-}
+void app_free(void *p);
 
 
 /**
@@ -214,22 +219,36 @@ uint32_t app_mem_get_size(void *ptr);
 int app_memheap_init(void);
 
 /**
+@brief get the total size of app memheap (PSRAM heap).
+*/
+uint32_t app_memheap_get_size(void);
+
+/**
 @brief check app memory status. Reserved for SOLUTION finsh hook.
 */
 void app_mem_check(void);
 
-static inline void *app_anim_calloc(size_t nmemb, size_t size)
-{
-    size_t total = nmemb * size;
-    void *ptr = app_anim_alloc(total);
+/**
+@brief allocate memory from SRAM cache heap.
+*/
+void *app_sram_alloc(rt_size_t size);
 
-    if (ptr != RT_NULL)
-    {
-        rt_memset(ptr, 0, total);
-    }
+/**
+@brief allocate zeroed memory from SRAM cache heap.
+*/
+void *app_sram_calloc(rt_size_t count, rt_size_t size);
 
-    return ptr;
-}
+/**
+@brief reallocate memory from SRAM cache heap.
+*/
+void *app_sram_realloc(void *ptr, rt_size_t newsize);
+
+/**
+@brief free memory allocated by app_sram_alloc/calloc/realloc.
+*/
+void app_sram_free(void *ptr);
+
+void *app_anim_calloc(uint32_t count, uint32_t size);
 
 /**
 @brief get a sapshot buffer, which size equal to screen size. the buffer only valid when PSRAM exist
@@ -289,20 +308,78 @@ void       *app_anim_buf_alloc_ex(size_t nbytes, uint8_t index);
 */
 void       *app_anim_buf_free(void *ptr);
 
+/**
+@brief SVG fixed-block memory configuration.
+*/
+void        app_svg_memheap_config(svg_mem_mode_t mode, size_t max_num, size_t fixed_size);
+void       *app_svg_alloc(size_t nbytes);
+void        app_svg_free(void *ptr);
 
 #if LV_USE_TINY_TTF
 /**
 @brief allocate/free tiny ttf draw buffer memory from the tiny heap
 */
 void *app_tiny_ttf_mem_alloc(size_t size);
-void app_tiny_ttf_mem_free(void *buf);
+void *app_tiny_ttf_mem_free(void *buf);
 #endif
+
+#ifdef LV_USING_FREETYPE_ENGINE
+/**
+@brief get the allocated size of freetype cache.
+*/
+uint32_t ft_cache_alloc_size(void);
+
+/**
+@brief allocate memory for hindi shaper.
+*/
+void *hindi_shaper_malloc(size_t size);
+
+/**
+@brief free memory allocated by hindi_shaper_malloc.
+*/
+void hindi_shaper_free(void *ptr);
+#endif
+
+/**
+@brief allocate memory for QuickJS engine.
+*/
+void *qjs_alloc(size_t nbytes);
+
+/**
+@brief free memory allocated by qjs_alloc.
+*/
+void qjs_free(void *ptr);
+
+/**
+@brief reallocate memory for QuickJS engine.
+*/
+void *qjs_realloc(void *ptr, size_t nbytes);
+
+/**
+@brief allocate memory for ulog ram backend.
+*/
+void *ulog_ram_mem_malloc(uint32_t size);
+
+/**
+@brief free memory allocated by ulog_ram_mem_malloc.
+*/
+void ulog_ram_mem_free(void *ptr);
+
+/**
+@brief reallocate memory for ulog ram backend.
+*/
+void *ulog_ram_mem_realloc(void *ptr, rt_size_t size);
 
 #if PKG_USING_FFMPEG
 /**
 @brief initialize ffmpeg memory heap
 */
 void ffmpeg_heap_init(void);
+
+/**
+@brief enable or disable animation buffer path for ffmpeg.
+*/
+void ffmpeg_enable_anim_buf(uint8_t en);
 
 /**
 @brief allocate memory from ffmpeg heap with alignment support for EPIC (>64K)
@@ -345,6 +422,11 @@ void audio_mem_free(void *ptr);
 @retval pointer to zeroed allocated memory
 */
 void *audio_mem_calloc(uint32_t count, uint32_t size);
+
+/**
+@brief reallocate audio memory (uses rt_realloc).
+*/
+void *audio_mem_realloc(void *mem_address, unsigned int newsize);
 #endif
 
 
@@ -557,6 +639,54 @@ typedef enum
 #endif
 #endif
 
+
+#define FORCE_REUSE_ANIM_BUF        0x00010000
+
+/**
+ * @brief  Check if p is in the sysheap.
+ */
+#ifndef app_mem_is_sysheap
+#define app_mem_is_sysheap(p)       rt_mem_is_sysheap(p)
+#endif
+
+/**
+ * @brief  Check if p is in the memheap(heap).
+ */
+#ifndef app_mem_is_in_memheap
+#define app_mem_is_in_memheap(heap, ptr) ((heap)->start_addr <= (void *)(ptr) && (uint8_t *)(ptr) < (uint8_t *)(heap)->start_addr + (heap)->pool_size)
+#endif
+
+#if defined(USING_BLOCK_MEM)
+    #define app_mem_is_bmem(p)      mem_is_bmem(p)
+#else
+    #define app_mem_is_bmem(p)      0
+#endif
+
+#if defined(RT_USING_MEMHEAP_AS_HEAP) || defined(APP_USING_TLSF_MEM)
+    #define sys_heap_get_ie(p, ie) (((struct rt_memheap_item *)((uint32_t)(p) - sizeof(struct rt_memheap_item)))->ie)
+#else
+    #define sys_heap_get_ie(p, ie) (((struct heap_mem *)((uint32_t)(p) - sizeof(struct heap_mem)))->ie)
+#endif
+
+#ifndef MEM_SET_HEADER_IE
+#define MEM_SET_HEADER_IE(p, ie, x)                                                                                 \
+        if (p)                                                                                                      \
+        {                                                                                                           \
+            if (app_mem_is_bmem(p))                                                                                 \
+                ((bmem_item_t *)((uint32_t)(p) - sizeof(bmem_item_t)))->ie = (uint32_t)(x);                        \
+            else if (app_mem_is_sysheap(p))                                                                         \
+                sys_heap_get_ie(p, ie) = (rt_uint32_t)(x);                                                         \
+            else                                                                                                    \
+                ((struct rt_memheap_item *)((uint32_t)(p) - sizeof(struct rt_memheap_item)))->ie = (uint32_t)(x);   \
+        }
+#endif
+
+#ifndef MEM_GET_HEADER_IE
+#define MEM_GET_HEADER_IE(p, ie)                                                                                    \
+        (app_mem_is_bmem(p) ? ((bmem_item_t *)((uint32_t)(p) - sizeof(bmem_item_t)))->ie :                          \
+        app_mem_is_sysheap(p) ? sys_heap_get_ie(p, ie) :                                                            \
+        ((struct rt_memheap_item *)((uint32_t)(p) - sizeof(struct rt_memheap_item)))->ie)
+#endif
 
 #ifdef __cplusplus
 } /* extern "C" */

@@ -279,12 +279,17 @@ typedef struct
 */
 
 #if defined(DRV_EPIC_ALLOC_USE_ANIM_HEAP)
+/* Temporary buffers come from app_mem's reusable animation heap. */
 #include "app_mem.h"
 #define epic_malloc          app_anim_alloc
 #define epic_realloc         app_anim_realloc
 #define epic_calloc          app_anim_calloc
 #define epic_free            app_anim_free
-#elif defined(SOLUTION)
+#elif defined(PKG_USING_LITTLEVGL2RTT)
+/*
+* Use the application allocator of app_mem: a request is served from the
+ * registered block memory pool first and falls back to the system heap.
+ */
 #include "app_mem.h"
 #define epic_malloc          app_malloc
 #define epic_realloc         app_realloc

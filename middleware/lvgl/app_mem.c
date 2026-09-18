@@ -13,8 +13,36 @@
  *      INCLUDES
  *********************/
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include "app_mem.h"
+
+#if IMAGE_CACHE_IN_PSRAM_SIZE > 0
+    /*
+     * Reclaim the decoded image memory when the PSRAM cache heap is running low.
+     *
+     * LVGL v8: lv_img_cache_clean()/MAX_IMG_CACHE_SIZE come with the upgraded
+     *          LVGL, the LVGL shipped in this SDK only has
+     *          lv_img_cache_invalidate_src(), which closes all the cached images.
+     * LVGL v9: lv_img_cache.h does not exist any more, app_mem.h already includes
+     *          lv_image_cache.h and lv_conf_sifli.h maps
+     *          lv_img_cache_invalidate_src() onto lv_image_cache_drop(), where a
+     *          NULL source drops all the cached images.
+     */
+    #if !defined(DISABLE_LVGL_V8)
+        #include "lv_img_cache.h"
+    #endif
+
+    #if defined(MAX_IMG_CACHE_SIZE)
+        #define app_img_cache_clean()   lv_img_cache_clean(MAX_IMG_CACHE_SIZE)
+    #else
+        #define app_img_cache_clean()   lv_img_cache_invalidate_src(NULL)
+    #endif
+#endif
+
+#ifdef USING_BLOCK_MEM
+    #include "app_bmem.h"
+#endif
 
 #ifndef WIN32
     #include "register.h"
@@ -219,12 +247,6 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
     /* Non-GUI_APP_FRAMEWORK projects don't need transition buffers. */
 #endif /* APP_TRANS_ANIMATION_SCALE_NEXT */
 
-#if PKG_USING_FFMPEG && (MEDIA_CACHE_SIZE > 0)
-    APP_L2_RET_BSS_SECT_BEGIN(app_ffmpeg_ret_cache)
-    APP_L2_RET_BSS_SECT(app_ffmpeg_ret_cache, ALIGN(4) static uint8_t app_ffmpeg_cache[MEDIA_CACHE_SIZE]);
-    APP_L2_RET_BSS_SECT_END
-#endif
-
 #if IMAGE_CACHE_IN_PSRAM_SIZE > 0
     struct rt_memheap app_image_psram_memheap;
 #endif
@@ -257,22 +279,6 @@ static void *app_anim_buf_heap_start[2];
 static size_t app_anim_buf_heap_size[2];
 static bool app_anim_buf_heap_enabled;
 static size_t app_anim_buf_alloc_ex_offset;
-
-#if PKG_USING_FFMPEG && (MEDIA_CACHE_SIZE > 0)
-static struct rt_memheap app_ffmpeg_memheap;
-static bool app_ffmpeg_memheap_ready = false;
-
-static void app_ffmpeg_memheap_init_once(void)
-{
-    if (app_ffmpeg_memheap_ready)
-    {
-        return;
-    }
-
-    rt_memheap_init(&app_ffmpeg_memheap, "ffmpeg_memheap", (void *)app_ffmpeg_cache, MEDIA_CACHE_SIZE);
-    app_ffmpeg_memheap_ready = true;
-}
-#endif
 
 static bool app_cache_memheap_ready;
 
@@ -532,10 +538,6 @@ static int app_anim_memheap_disable(void)
  **********************/
 
 
-#ifdef USING_BLOCK_MEM
-#include "app_bmem.h"
-#endif
-
 static int app_cahe_memheap_init(void)
 {
     if (app_cache_memheap_ready)
@@ -582,17 +584,38 @@ static int app_cahe_memheap_init(void)
     rt_memheap_init(&app_qjs_memheap, "app_qjs_memheap", (void *)app_qjs_cache, QUICKJS_PSRAM_SIZE);
 #endif
 
-#if PKG_USING_FFMPEG && (MEDIA_CACHE_SIZE > 0)
-    app_ffmpeg_memheap_init_once();
-#endif
-
-#ifdef USING_BLOCK_MEM
+#if defined(USING_BLOCK_MEM)
     bmem_init();
 #endif
+
     app_cache_memheap_ready = true;
     return 0;
 }
 INIT_PREV_EXPORT(app_cahe_memheap_init);
+
+void *app_sram_alloc(rt_size_t size)
+{
+    void *p = app_cache_alloc(size, IMAGE_CACHE_SRAM);
+    return p;
+}
+
+void *app_sram_calloc(rt_size_t count, rt_size_t size)
+{
+    void *p = app_cache_alloc(count * size, IMAGE_CACHE_SRAM);
+    if (p)
+        rt_memset(p, 0, count * size);
+    return p;
+}
+
+void *app_sram_realloc(void *ptr, rt_size_t newsize)
+{
+    return app_cache_realloc_ex(ptr, newsize, IMAGE_CACHE_SRAM);
+}
+
+void app_sram_free(void *ptr)
+{
+    app_cache_free(ptr);
+}
 
 int app_memheap_init(void)
 {
@@ -602,6 +625,294 @@ int app_memheap_init(void)
 void app_mem_check(void)
 {
 }
+
+/**
+ * @brief  Allocate mem sequentially from sys_heap/psram_memheap.
+ * @param  size Size of the memory to allocate in bytes
+ * @retval pointer Pointer of allocated memory.
+ */
+void *app_malloc(uint32_t size)
+{
+    SIMULATOR_MEM_LEAKAGE_MALLOC(LEAK_APP, size);
+
+    void *ret = NULL;
+
+    if (0 == size)
+        return NULL;
+
+#if defined(USING_BLOCK_MEM)
+    ret = bmem_alloc(size);
+#endif
+
+    if (!ret)
+        ret = rt_malloc(size);
+
+#if !defined(APP_USING_TLSF_MEM) && (IMAGE_CACHE_IN_PSRAM_SIZE > 0)
+    if (!ret && IMAGE_CACHE_IN_PSRAM_SIZE > 0)
+        ret = rt_memheap_alloc(&app_image_psram_memheap, size);
+#endif
+
+    if (!ret)
+        rt_kprintf("%s: fail!!! %d\n", __func__, size);
+
+    RET_ADDR_TRACE(ret);
+    return ret;
+}
+
+/**
+ * @brief  Allocate mem sequentially from sys_heap/psram_memheap.
+ *         The allocated memory is filled with bytes of value zero
+ * @param  count Number of objects to allocate.
+ * @param  size Size of the objects to allocate.
+ * @retval pointer Pointer of allocated memory.
+ */
+void *app_calloc(uint32_t count, uint32_t size)
+{
+    if (size != 0 && count > UINT32_MAX / size)
+    {
+        return NULL;
+    }
+
+    SIMULATOR_MEM_LEAKAGE_CALLOC(LEAK_APP, count, size);
+
+    void *p = app_malloc(count * size);
+    if (p) rt_memset(p, 0, count * size);
+    RET_ADDR_TRACE(p);
+    return p;
+}
+
+char *app_strdup(const char *src)
+{
+    if (!src)
+    {
+        return NULL;
+    }
+
+    size_t len = strlen(src) + 1;
+    char *dst = app_malloc((uint32_t)len);
+    if (dst)
+    {
+        memcpy(dst, src, len);
+    }
+
+    return dst;
+}
+
+/**
+ * @brief  Reallocate mem sequentially from sys_heap/psram_memheap.
+ *         Reallocate a memory with a new size. The old content will be kept
+ * @param  ptr pointer to an allocated memory.
+ * @param  new_size the desired new size in byte
+ * @retval pointer Pointer of allocated memory.
+ */
+void *app_realloc(void *ptr, uint32_t new_size)
+{
+    SIMULATOR_MEM_LEAKAGE_REALLOC(LEAK_APP, ptr, new_size);
+
+    void *ret = NULL;
+    if (0 < new_size)
+    {
+        if (!ptr)
+        {
+            ret = app_malloc(new_size);
+            goto end;
+        }
+        if (new_size < app_mem_get_size(ptr))
+            return ptr;
+        ret = app_malloc(new_size);
+        if (ret)
+            app_memcpy(ret, ptr, app_mem_get_size(ptr));
+    }
+
+    if (ptr && (ret || 0 == new_size)) app_free(ptr);
+end:
+    RET_ADDR_TRACE(ret);
+    return ret;
+}
+
+/**
+ * @brief  This function will release the previously allocated memory block by
+ *         app_malloc/app_calloc/app_realloc.
+ * @param  p the address of memory which will be released.
+ */
+void app_free(void *p)
+{
+    SIMULATOR_MEM_LEAKAGE_FREE(LEAK_APP, p);
+
+    if (p)
+    {
+#if defined(USING_BLOCK_MEM)
+        if (0 == bmem_free(p))
+            return;
+#endif
+        if (app_mem_is_sysheap(p))
+            rt_free(p);
+        else
+            rt_memheap_free(p);
+    }
+}
+
+/**
+ * @brief  Get the total size of app memheap (PSRAM heap).
+ */
+uint32_t app_memheap_get_size(void)
+{
+#if IMAGE_CACHE_IN_PSRAM_SIZE > 0
+    return IMAGE_CACHE_IN_PSRAM_SIZE;
+#elif defined(SOLUTION) && defined(PSRAM_CACHE_SIZE) && PSRAM_CACHE_SIZE > 0
+    /*
+     * The legacy solution configuration uses PSRAM_CACHE_SIZE=1 to request
+     * an automatically sized PSRAM-backed system heap. The SDK allocator
+     * uses that system heap directly, so expose its capacity to the image
+     * cache instead of treating the sentinel value as one byte.
+     */
+    rt_uint32_t total = 0;
+    rt_uint32_t used = 0;
+    rt_uint32_t max_used = 0;
+    rt_memory_info(&total, &used, &max_used);
+    return total;
+#else
+    return 0;
+#endif
+}
+
+/**
+ * @brief  Allocate mem for anim, zero-filled.
+ * @param  count Number of objects to allocate.
+ * @param  size Size of the objects to allocate.
+ * @retval pointer Pointer of allocated memory.
+ */
+void *app_anim_calloc(uint32_t count, uint32_t size)
+{
+    void *ret = app_anim_alloc(count * size);
+    if (ret)
+        rt_memset(ret, 0, count * size);
+    return ret;
+}
+
+/*--------------------------------------fixed mem (for svg) begin--------------------------------------*/
+
+/**
+ * The following interfaces are designed exclusively for single-threaded use and must not be utilized across multiple threads.
+ * Furthermore, each invocation of app_svg_memheap_config, followed by app_svg_alloc, and another app_svg_alloc,
+ * forms an inseparable and complete cycle. These function calls must not be interleaved with any other calls to this interface suite.
+ */
+
+typedef enum
+{
+    SVG_MEM_DYN,
+    SVG_MEM_FIXED_STATIC,
+    SVG_MEM_FIXED_ALLOCED
+} svg_mem_type_t;
+
+typedef struct
+{
+    void               *heap;
+    svg_mem_mode_t      mode;
+    uint32_t            fixed_size;
+    uint32_t            idx;
+    uint32_t            max_cnt;
+    uint32_t            max_idx;
+} svg_mem_t;
+
+static svg_mem_t app_svg_mem;
+
+/**
+ * @brief  Configuration fix mem before app_svg_alloc.
+ * @param  mode Whether to reuse anim_buf
+ * @param  max_num MAX number of the memory to allocate
+ * @param  fixed_size Fixed block length
+ */
+void app_svg_memheap_config(svg_mem_mode_t mode, size_t max_num, size_t fixed_size)
+{
+    uint32_t heap_size = (fixed_size + 4) * max_num;
+
+    RT_ASSERT(0 == app_svg_mem.idx);
+    app_svg_mem.fixed_size = fixed_size;
+    app_svg_mem.mode = mode;
+    app_svg_mem.max_cnt = max_num;
+    app_svg_mem.max_idx = 0;
+    app_svg_mem.heap = app_cache_alloc(heap_size, CACHE_SRAM);
+    RT_ASSERT(app_svg_mem.heap);
+}
+
+/**
+ * @brief  Allocate fixed mem sequentially.
+ * @param  nbytes Size of the memory to allocate in bytes
+ * @retval pointer Pointer of allocated memory.
+ */
+void *app_svg_alloc(size_t nbytes)
+{
+    uint32_t *p = NULL;
+    svg_mem_type_t type = SVG_MEM_DYN;
+
+    if (nbytes == app_svg_mem.fixed_size)
+    {
+        if (app_svg_mem.idx + 1 < app_svg_mem.max_cnt)
+        {
+            p = (uint32_t *)((uint8_t *) app_svg_mem.heap + app_svg_mem.idx * (app_svg_mem.fixed_size + 4));
+            type = SVG_MEM_FIXED_STATIC;
+        }
+        else
+        {
+            p = (uint32_t *)app_cache_alloc(nbytes + 4, CACHE_SRAM);
+            RT_ASSERT(p);
+            if (!p)
+            {
+                return NULL;
+            }
+            type = SVG_MEM_FIXED_ALLOCED;
+        }
+
+        p[0] = (type << 30) + app_svg_mem.idx;
+        app_svg_mem.idx++;
+        app_svg_mem.max_idx++;
+    }
+    else
+    {
+        p = (uint32_t *)app_cache_alloc(nbytes + 4, CACHE_PSRAM);
+        RT_ASSERT(p);
+        if (!p)
+        {
+            return NULL;
+        }
+        p[0] = type << 30;
+    }
+    return (void *)((uint8_t *)p + 4);
+}
+
+/**
+ * @brief  This function will release the previously allocated memory block by app_svg_alloc.
+ * @param  ptr the address of memory which will be released.
+ */
+void app_svg_free(void *ptr)
+{
+    if (!ptr)
+    {
+        return;
+    }
+
+    uint32_t *p = (uint32_t *)((uint8_t *)ptr - 4);
+    svg_mem_type_t type = p[0] >> 30;
+
+    RT_ASSERT(app_svg_mem.max_idx >= (p[0] & 0x3fffffff));
+    if (SVG_MEM_FIXED_ALLOCED == type || SVG_MEM_DYN == type)
+    {
+        app_cache_free(p);
+    }
+
+    if (SVG_MEM_DYN != type)
+    {
+        app_svg_mem.idx--;
+        if (0 == app_svg_mem.idx)
+        {
+            app_cache_free(app_svg_mem.heap);
+            app_svg_mem.heap = NULL;
+        }
+    }
+}
+
+/*--------------------------------------fixed mem (for svg) end--------------------------------------*/
 
 
 void *app_cache_alloc(size_t size, image_cache_t cache_type)
@@ -629,6 +940,20 @@ void *app_cache_alloc(size_t size, image_cache_t cache_type)
         p = (uint8_t *)rt_memheap_alloc(&app_image_psram_memheap, size);
         if (p)((uint32_t *) p)[0] = PSRAM_HEAP;
     }
+
+#if defined(RT_USING_DFS)
+    /* Clean image cache to reclaim PSRAM when allocation fails or available memory is low. */
+    if (p && app_image_psram_memheap.available_size < 150 * 1024)
+    {
+        app_img_cache_clean();
+    }
+    if (!p)
+    {
+        app_img_cache_clean();
+        p = (uint8_t *)rt_memheap_alloc(&app_image_psram_memheap, size);
+        if (p)((uint32_t *) p)[0] = PSRAM_HEAP;
+    }
+#endif
 #endif
 
     if (!p)
@@ -653,6 +978,11 @@ void *app_cache_alloc(size_t size, image_cache_t cache_type)
 
 void app_cache_free(void *p)
 {
+    if (!p)
+    {
+        return;
+    }
+
     uint8_t *temp_p = p;
 
     temp_p -= 4;
@@ -670,7 +1000,7 @@ void app_cache_free(void *p)
 #endif
 }
 
-void *app_cache_realloc(void *memory, size_t new_size, image_cache_t cache_type)
+void *app_cache_realloc_ex(void *memory, size_t new_size, image_cache_t cache_type)
 {
     void *new_memory;
     uint32_t old_size;
@@ -700,6 +1030,18 @@ void *app_cache_realloc(void *memory, size_t new_size, image_cache_t cache_type)
     }
 
     return new_memory;
+}
+
+void *app_cache_realloc(void *memory, size_t new_size)
+{
+    image_cache_t cache_type = CACHE_PSRAM;
+
+    if (memory && app_get_mem_type(memory) == SRAM_HEAP)
+    {
+        cache_type = CACHE_SRAM;
+    }
+
+    return app_cache_realloc_ex(memory, new_size, cache_type);
 }
 
 void *app_message_alloc(size_t size)
@@ -737,6 +1079,11 @@ void *app_message_alloc(size_t size)
 
 void app_message_free(void *p)
 {
+    if (!p)
+    {
+        return;
+    }
+
     uint8_t *temp_p = p;
 
     temp_p -= 4;
@@ -845,15 +1192,30 @@ lv_img_dsc_t *app_cache_copy_alloc(const void *copy, image_cache_t cache_type)
 
     if (NULL == copy) return NULL;
 
+#ifdef SOLUTION
+    lv_img_t *img = (lv_img_t *)copy;
+    if (img->src_type != LV_IMG_SRC_VARIABLE || img->src == NULL) return NULL;
+    img_dsc_temp = *(lv_img_dsc_t *)img->src;
+#else
     img_dsc_temp = *(lv_img_dsc_t *) copy;
+#endif
 
     dsc = app_cache_img_alloc(img_dsc_temp.header.w, img_dsc_temp.header.h, img_dsc_temp.header.cf, img_dsc_temp.data_size, cache_type);
 
     RT_ASSERT(dsc);
     RT_ASSERT(img_dsc_temp.data);
+    if (!dsc || !img_dsc_temp.data)
+    {
+        app_cache_img_free(dsc);
+        return NULL;
+    }
     if (img_dsc_temp.data_size != dsc->data_size)
         rt_kprintf("warnning: app_cache_img_alloc diff size, cache %d, copy->data_size %d", dsc->data_size, img_dsc_temp.data_size);
     memcpy((uint8_t *)dsc->data, (uint8_t *)img_dsc_temp.data, dsc->data_size);
+
+#ifdef SOLUTION
+    lv_img_set_src((lv_obj_t *)copy, dsc);
+#endif
 
     return dsc;
 }
@@ -1325,7 +1687,77 @@ char *app_snapshot_get_buf(void)
 
 #endif
 
-#if FT_CACHE_SIZE > 0
+void *app_cache_calloc(size_t nmemb, size_t size, image_cache_t cache_type)
+{
+    if (size != 0 && nmemb > SIZE_MAX / size)
+    {
+        return NULL;
+    }
+
+    size_t total = nmemb * size;
+    void *ptr = app_cache_alloc(total, cache_type);
+
+    if (ptr != RT_NULL)
+    {
+        rt_memset(ptr, 0, total);
+    }
+
+    return ptr;
+}
+
+void *ulog_ram_mem_malloc(uint32_t size)
+{
+#if defined(ULOG_BACKEND_USING_RAM) && defined(BSP_USING_PSRAM)
+    return app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+#else
+    return NULL;
+#endif
+}
+
+void ulog_ram_mem_free(void *ptr)
+{
+    if (ptr) app_cache_free(ptr);
+}
+
+void *ulog_ram_mem_realloc(void *ptr, rt_size_t size)
+{
+#if defined(ULOG_BACKEND_USING_RAM) && defined(BSP_USING_PSRAM)
+    return app_cache_realloc_ex(ptr, size, IMAGE_CACHE_PSRAM);
+#else
+    return NULL;
+#endif
+}
+
+void *qjs_alloc(size_t nbytes)
+{
+#ifdef QUICKJS_PSRAM_SIZE
+    extern struct rt_memheap app_qjs_memheap;
+    return rt_memheap_alloc(&app_qjs_memheap, nbytes);
+#else
+    return app_cache_alloc(nbytes, IMAGE_CACHE_PSRAM);
+#endif
+}
+
+void qjs_free(void *ptr)
+{
+#ifdef QUICKJS_PSRAM_SIZE
+    rt_memheap_free(ptr);
+#else
+    app_cache_free(ptr);
+#endif
+}
+
+void *qjs_realloc(void *ptr, size_t nbytes)
+{
+#ifdef QUICKJS_PSRAM_SIZE
+    extern struct rt_memheap app_qjs_memheap;
+    return rt_memheap_realloc(&app_qjs_memheap, ptr, nbytes);
+#else
+    return app_cache_realloc_ex(ptr, nbytes, IMAGE_CACHE_PSRAM);
+#endif
+}
+
+#ifdef LV_USING_FREETYPE_ENGINE
 #ifndef FREETYPE_CACHE_IN_SRAM
 void ft_get_mem_info(uint32_t *available_size, uint32_t *memheap_size, uint32_t *act_cache_size)
 {
@@ -1364,130 +1796,90 @@ uint32_t app_mem_get_ft_cache_size(void)
 
 
 #if PKG_USING_FFMPEG
-typedef struct _ffmpeg_mem_header
-{
-    uint32_t magic;
-    uint32_t offset;//Offset between 'ffmpeg_alloc' returned value and 'app_anim_mem_(re)alloc' returned value
-    uint32_t size;
-} ffmpeg_mem_header;
-//Assumed that > 64K memory area used by EPIC
-#define ALIGN64_SIZE_THRESHOLD 65536
-#define FFMPEG_MEM_HEADER sizeof(ffmpeg_mem_header)
-#define FFMPEG_MEM_MAGIC  0xFF3E63E3
-#ifndef MIN
-    #define MIN(x,y) (((x)<(y))?(x):(y))
-#endif
+static uint8_t ffmpeg_anim_buf_en = 0;
 
 void ffmpeg_heap_init(void)
 {
-#if MEDIA_CACHE_SIZE > 0
-    app_ffmpeg_memheap_init_once();
-#else
     /* app_mem heaps are initialized during app_cahe_memheap_init(). */
-#endif
+}
+
+void ffmpeg_enable_anim_buf(uint8_t en)
+{
+    ffmpeg_anim_buf_en = en;
 }
 
 void *ffmpeg_alloc(size_t nbytes)
 {
-    uint8_t *p;
-    ffmpeg_mem_header *header_p;
-
-#if MEDIA_CACHE_SIZE > 0
-    app_ffmpeg_memheap_init_once();
-#endif
-
-    if (nbytes > ALIGN64_SIZE_THRESHOLD)
-    {
-        size_t header_size = 63 + FFMPEG_MEM_HEADER;
-#if MEDIA_CACHE_SIZE > 0
-        p = (uint8_t *)rt_memheap_alloc(&app_ffmpeg_memheap, nbytes + header_size);
-#else
-        p = app_anim_mem_alloc(nbytes + header_size, 1);
-#endif
-        if (!p) return NULL;
-
-        header_p = (ffmpeg_mem_header *)(RT_ALIGN_DOWN((uint32_t)(p + header_size), 64) - FFMPEG_MEM_HEADER);
-
-        RT_ASSERT(((uint32_t)header_p) >= ((uint32_t)p));
-    }
+    if (ffmpeg_anim_buf_en)
+        return app_anim_alloc(nbytes);
     else
-    {
-#if MEDIA_CACHE_SIZE > 0
-        p = (uint8_t *)rt_memheap_alloc(&app_ffmpeg_memheap, nbytes + FFMPEG_MEM_HEADER);
-#else
-        p = app_anim_mem_alloc(nbytes + FFMPEG_MEM_HEADER, 1);
-#endif
-        if (!p) return NULL;
-
-        header_p = (ffmpeg_mem_header *) p;
-    }
-
-
-    header_p->magic = FFMPEG_MEM_MAGIC;
-    header_p->offset = ((uint32_t)header_p) + sizeof(ffmpeg_mem_header) - ((uint32_t)p);
-    header_p->size = nbytes;
-
-    return (uint8_t *)(header_p + 1);
+        return app_cache_calloc(1, nbytes, CACHE_PSRAM);
 }
 
 void ffmpeg_free(void *p)
 {
     if (!p) return;
 
-    ffmpeg_mem_header *header_p = ((ffmpeg_mem_header *)p) - 1;
-
-    RT_ASSERT(FFMPEG_MEM_MAGIC == header_p->magic);
-#if MEDIA_CACHE_SIZE > 0
-    rt_memheap_free(((uint8_t *)p) - header_p->offset);
-#else
-    app_anim_mem_free(((uint8_t *)p) - header_p->offset);
-#endif
+    if (ffmpeg_anim_buf_en)
+        app_anim_free(p);
+    else
+        app_cache_free(p);
 }
 
 void *ffmpeg_realloc(void *p, size_t new_size)
 {
-    if (!p) return ffmpeg_alloc(new_size);
+    if (ffmpeg_anim_buf_en)
+    {
+        if (!p)
+            return app_anim_calloc(1, new_size);
+        if (!new_size)
+        {
+            app_anim_free(p);
+            return NULL;
+        }
+        return app_anim_realloc(p, new_size);
+    }
+
+    if (!p)
+        return app_cache_calloc(1, new_size, CACHE_PSRAM);
     if (!new_size)
     {
-        ffmpeg_free(p);
+        app_cache_free(p);
         return NULL;
     }
-
-    uint8_t *new_p = ffmpeg_alloc(new_size);
-    if (new_p)
-    {
-        ffmpeg_mem_header *header_p = ((ffmpeg_mem_header *)p) - 1;
-        RT_ASSERT(FFMPEG_MEM_MAGIC == header_p->magic);
-        memcpy(new_p, p, MIN(new_size, header_p->size));
-        ffmpeg_free(p);
-    }
-
-    return new_p;
+    return app_cache_realloc_ex(p, new_size, CACHE_PSRAM);
 }
 
 void *audio_mem_malloc(uint32_t size)
 {
-    void *ptr = ffmpeg_alloc(size);
+    void *ptr = app_malloc(size);
     RT_ASSERT(ptr);
     return ptr;
 }
 
 void audio_mem_free(void *ptr)
 {
-    ffmpeg_free(ptr);
+    app_free(ptr);
 }
 
 void *audio_mem_calloc(uint32_t count, uint32_t size)
 {
-    void *ptr = ffmpeg_alloc(count * size);
-    RT_ASSERT(ptr);
-    memset(ptr, 0, count * size);
+    void *ptr = NULL;
+    ptr = audio_mem_malloc(count * size);
+    if (ptr)
+        memset(ptr, 0, count * size);
     return ptr;
 }
 
 void *audio_mem_recalloc(void *p, size_t new_size)
 {
-    return ffmpeg_realloc(p, new_size);
+    return app_realloc(p, new_size);
+}
+
+void *audio_mem_realloc(void *mem_address, unsigned int newsize)
+{
+    void *ptr = app_realloc(mem_address, newsize);
+    return ptr;
 }
 
 #endif
@@ -1518,6 +1910,11 @@ uint32_t app_mem_get_ft_cache_avail_size(void)
 {
 
     return FT_CACHE_SIZE - app_ft_memheap.available_size;
+}
+
+uint32_t ft_cache_alloc_size(void)
+{
+    return app_ft_memheap.pool_size - app_ft_memheap.available_size;
 }
 #else
 uint32_t ft_alloc_size = 0;
@@ -1581,7 +1978,31 @@ uint32_t app_mem_get_ft_cache_avail_size(void)
     rt_memory_info(&total_size, NULL, NULL);
     return total_size - ft_alloc_size;
 }
+uint32_t ft_cache_alloc_size(void)
+{
+    return ft_alloc_size;
+}
 #endif
+
+void *hindi_shaper_malloc(size_t size)
+{
+#if defined(BSP_USING_PSRAM) || defined(BSP_USING_PC_SIMULATOR)
+    void *ptr = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+#else
+    void *ptr = rt_malloc(size);
+#endif
+    RT_ASSERT(ptr);
+    return ptr;
+}
+
+void hindi_shaper_free(void *ptr)
+{
+#if defined(BSP_USING_PSRAM) || defined(BSP_USING_PC_SIMULATOR)
+    app_cache_free(ptr);
+#else
+    rt_free(ptr);
+#endif
+}
 #endif
 
 #if LV_USE_TINY_TTF
@@ -1594,13 +2015,14 @@ void * app_tiny_ttf_mem_alloc(size_t size)
 #endif
 }
 
-void app_tiny_ttf_mem_free(void *buf)
+void *app_tiny_ttf_mem_free(void *buf)
 {
 #if defined(TINY_TTF_CACHE_IN_SRAM_STANDALONE) || defined(TINY_TTF_CACHE_IN_PSRAM)
     rt_memheap_free(buf);
 #else
     rt_free(buf);
 #endif
+    return NULL;
 }
 #endif
 
