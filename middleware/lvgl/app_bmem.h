@@ -76,6 +76,7 @@ struct struct_bmem_t
 #ifdef USING_BMEM_MAGIC
     uint16_t                 magic;         /**< Magic, means freed por allocated   */
     uint16_t                 size;          /**< Allocated size                     */
+    uint16_t                 units;         /**< Allocated or free run unit count   */
 #endif
 #ifdef USING_BMEM_TRACE
     uint32_t                 ret_addr;      /**< Return addr                        */
@@ -96,19 +97,40 @@ struct struct_bmem_t
  */
 typedef struct struct_bmem_t bmem_item_t;
 
+typedef struct
+{
+    uint16_t            magic;
+    uint16_t            units;
+} bmem_footer_t;
+
 /**
  * @brief  Used to store information for each type of block memory.
  */
+#ifndef BMEM_MAX_ALLOC_SIZE
+    #define BMEM_MAX_ALLOC_SIZE     512
+#endif
+
+/*
+ * Capacity of free run bin array and bitmap. The effective bin count of each
+ * node is calculated once in bmem_load() from its actual BMEM_REGISTER unit size:
+ *   ceil((sizeof(bmem_item_t) + BMEM_MAX_ALLOC_SIZE + sizeof(bmem_footer_t)) / node->size) + 1
+ * The last effective bin is an overflow bin for larger merged free runs.
+ */
+#define BMEM_RUN_BIN_NUM     32
+
 typedef struct bmem_node
 {
     const char              *name;          /**< The name of block memory           */
     uint32_t                 size;          /**< The size of every block memory     */
-    uint32_t                 num;           /**< The number of block memory         */
+    uint32_t                 num;           /**< The number of block memory units   */
+    uint16_t                 bin_num;       /**< The number of run bins for this node */
     uint8_t                 *header_ptr;    /**< The header pointer of block memory */
     uint8_t                 *tailer_ptr;    /**< The tailer pointer of block memory */
     bmem_item_t             *free_header;   /**< The free pointer header            */
-    int32_t                  act_used_num;  /**< The current acture used number     */
-    int32_t                  max_used_num;  /**< The maxium used number             */
+    bmem_item_t             *free_bins[BMEM_RUN_BIN_NUM]; /**< Free run bins by size multiplier */
+    uint32_t                 free_bin_map;  /**< Non-empty free run bin bitmap      */
+    int32_t                  act_used_num;  /**< The current used unit number       */
+    int32_t                  max_used_num;  /**< The maximum used unit number       */
 }
 bmem_node_t;
 
@@ -119,7 +141,7 @@ typedef struct
 {
     const char              *name;          /**< The name of block memory           */
     uint32_t                 size;          /**< The size of every block memory     */
-    uint32_t                 num;           /**< The number of block memory         */
+    uint32_t                 num;           /**< The number of block memory units   */
     uint8_t                 *ptr;           /**< The pointer of block memory        */
 }
 bmem_desc_t;
@@ -127,21 +149,21 @@ bmem_desc_t;
 
 #define BMEM_SECTION_NAME   bmem
 
-#define ALIGN_SIZE_4(x)             ((x) / 4 * 4)
-#define BMEM_SIZE_WITH_HEADER(size) (sizeof(bmem_item_t) + ALIGN_SIZE_4(size))
-#define BMEM_NUM(total, size)       ALIGN_SIZE_4(total / BMEM_SIZE_WITH_HEADER(size))
+#define ALIGN_SIZE_4(x)             (((x) + 3) / 4 * 4)
+#define BMEM_UNIT_SIZE(size)        ALIGN_SIZE_4(size)
+#define BMEM_UNIT_NUM(total, size)  ((total) / BMEM_UNIT_SIZE(size))
 
 #define BMEM_REGISTER_INT(bname, bsize, total_size) \
-        static uint8_t CONCAT_2(CONCAT_2(BMEM_SECTION_NAME, _), bsize)[BMEM_NUM(total_size, bsize) * BMEM_SIZE_WITH_HEADER(bsize)] L2_CACHE_RET_BSS_SECT(psram_ret_cache);  \
+        static uint8_t CONCAT_2(CONCAT_2(BMEM_SECTION_NAME, _), bsize)[BMEM_UNIT_NUM(total_size, bsize) * BMEM_UNIT_SIZE(bsize)] L2_CACHE_RET_BSS_SECT(psram_ret_cache);  \
         SECTION_ITEM_REGISTER(BMEM_SECTION_NAME, static const bmem_desc_t CONCAT_2(CONCAT_2(CONCAT_2(bname, _), bsize), _var)) =     \
         {                                                                                                                            \
             .name  = "bmem_" #bsize,                                                                                                 \
-            .size   = ALIGN_SIZE_4(bsize),                                                                                           \
-            .num  = BMEM_NUM(total_size, bsize),                                                                                     \
+            .size   = BMEM_UNIT_SIZE(bsize),                                                                                         \
+            .num  = BMEM_UNIT_NUM(total_size, bsize),                                                                                \
             .ptr = &CONCAT_2(CONCAT_2(bname, _),bsize)[0],                                                                           \
         }
 
-#define  BMEM_REGISTER(bsize, num) BMEM_REGISTER_INT(BMEM_SECTION_NAME, bsize, num * (sizeof(bmem_item_t) +  bsize))
+#define  BMEM_REGISTER(bsize, num) BMEM_REGISTER_INT(BMEM_SECTION_NAME, bsize, num * BMEM_UNIT_SIZE(bsize))
 
 /**
  * @brief  Allocate block_mem from block_memheap, which is registered by BMEM_REGISTER.
@@ -159,6 +181,14 @@ void    *bmem_alloc(uint32_t size);
  * @param  p the address of memory which will be released.
  */
 int      bmem_free(void *p);
+
+/**
+ * @brief  Reserve one block-memory run before copying data backed up by bmem_backup.
+ *         Call bmem_restore first, then copy the backed-up bytes to addr.
+ * @param  addr Original block-memory item header address.
+ * @param  size Backed up size in bytes.
+ */
+int      bmem_restore(uint32_t addr, uint32_t size);
 
 /**
  * @brief  Initialize block memory mutex and load block memheap from BMEM_REGISTER.
