@@ -532,6 +532,10 @@ static int app_anim_memheap_disable(void)
  **********************/
 
 
+#ifdef USING_BLOCK_MEM
+#include "app_bmem.h"
+#endif
+
 static int app_cahe_memheap_init(void)
 {
     if (app_cache_memheap_ready)
@@ -582,6 +586,9 @@ static int app_cahe_memheap_init(void)
     app_ffmpeg_memheap_init_once();
 #endif
 
+#ifdef USING_BLOCK_MEM
+    bmem_init();
+#endif
     app_cache_memheap_ready = true;
     return 0;
 }

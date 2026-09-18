@@ -1,4 +1,14 @@
 menu "SiFli extend"
+        config USING_BLOCK_MEM
+            bool "Enable application block memory allocator"
+            default n
+
+        config BMEM_MAX_ALLOC_SIZE
+            int "Maximum block memory allocation size"
+            depends on USING_BLOCK_MEM
+            range 1 65535
+            default 512
+
         config LV_USING_FREETYPE_ENGINE
         bool "Enable freetype font engine"
         select PKG_FREETYPE
