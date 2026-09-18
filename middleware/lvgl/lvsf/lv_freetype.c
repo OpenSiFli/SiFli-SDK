@@ -43,6 +43,47 @@ static uint16_t g_cache_max_font_size = FONT_SUBTITLE;
 static FTC_Manager cache_manager;
 static FTC_CMapCache cmap_cache;
 static FTC_ImageCache image_cache;
+/* L1 single-glyph cache: stores metrics + bitmap pointer of the most recent
+ * lookup. Optimized for the dsc->bitmap back-to-back call pattern inside
+ * draw_letter(). The bitmap pointer points into the FTC-managed buffer, so it
+ * is invalidated before any new FTC query (see last_glyph.font_dsc = NULL). */
+static struct
+{
+    const lv_freetype_font_fmt_dsc_t *font_dsc; /* cache key: owning font dsc */
+    const void *face_source;                    /* cache key: font face source  */
+    uint32_t font_size;                         /* cache key: pixel size        */
+    uint32_t letter;                            /* cache key: unicode codepoint */
+    lv_font_glyph_dsc_t glyph;                  /* cached glyph metrics         */
+    uint8_t *bitmap;                            /* cached bitmap ptr (FTC buf)  */
+} last_glyph;
+
+/* L2 metrics-only cache entry: stores glyph metrics (adv_w, box_w/h, ofs_x/y,
+ * bpp) but NOT the bitmap pointer. Safe against FTC eviction because metrics
+ * are plain values copied out of the glyph. Bitmap is fetched lazily in
+ * get_glyph_bitmap_cache_cb() on L2 hit. */
+typedef struct
+{
+    const lv_freetype_font_fmt_dsc_t *font_dsc; /* cache key: owning font dsc */
+    const void *face_source;                    /* cache key: font face source  */
+    uint32_t font_size;                         /* cache key: pixel size        */
+    uint32_t letter;                            /* cache key: unicode codepoint */
+    lv_font_glyph_dsc_t glyph;                  /* cached glyph metrics only    */
+} freetype_glyph_metrics_t;
+
+/* 64-slot hash cache (L2). 64 is a power of two so hash % 64 is hash & 0x3F.
+ * Each entry is ~50 bytes, total ~3.2 KB — enough to cover the characters
+ * visible on a single screen. */
+static freetype_glyph_metrics_t glyph_metrics[64];
+
+/* Hash a (dsc, letter) pair into one of the 64 L2 slots.
+ * Mix in letter bits, font size, and face pointer bits so that different
+ * fonts/sizes do not collide on the same slot unnecessarily. */
+static freetype_glyph_metrics_t *freetype_metrics_slot(const lv_freetype_font_fmt_dsc_t *dsc,
+                                                     uint32_t letter)
+{
+    uint32_t hash = letter ^ (letter >> 6) ^ dsc->font_size ^ (uint32_t)((uintptr_t)dsc->face_source >> 4);
+    return &glyph_metrics[hash % (sizeof(glyph_metrics) / sizeof(glyph_metrics[0]))];
+}
 
 /* FTC has no locking of its own, so a flush requested from another thread
  * must run on the rendering thread, between two lookups. */
@@ -425,6 +466,8 @@ static freetype_face_source_t *freetype_face_source_acquire(const char *font_lib
 static void freetype_face_source_release(freetype_face_source_t *src)
 {
     freetype_face_source_t **pp;
+    last_glyph.font_dsc = NULL;
+    memset(glyph_metrics, 0, sizeof(glyph_metrics));
 
     if (!src) return;
     if (--src->ref_count > 0) return;
@@ -500,6 +543,8 @@ static FT_Error  font_Face_Requester(FTC_FaceID  face_id,
  */
 static FT_Error freetype_lookup_size(FTC_Scaler scaler, FT_Size *asize)
 {
+    last_glyph.font_dsc = NULL;
+    memset(glyph_metrics, 0, sizeof(glyph_metrics));
     FT_Face face;
     FT_Error error;
 
@@ -526,26 +571,24 @@ static FT_BitmapGlyph freetype_lookup_glyph(lv_freetype_font_fmt_dsc_t *dsc, uin
     uint32_t max_box;
     FT_BitmapGlyph glyph_bitmap;
     FT_Face face;
-    FT_Size face_size = NULL;
-    struct FTC_ScalerRec_ scaler;
     FTC_ImageTypeRec desc_type;
     FTC_FaceID face_id = (FTC_FaceID)dsc->face_source;
     FT_Glyph image_glyph = NULL;
 
-    if (!face_id) return NULL;
+    /* Any FTC query below may evict a glyph from the image cache, which would
+     * invalidate last_glyph.bitmap. Drop L1 first to avoid a dangling pointer. */
+    last_glyph.font_dsc = NULL;
+    if (!cache_manager || !face_id) return NULL;
 
-    memset(&scaler, 0, sizeof(scaler));
-    scaler.face_id = face_id;
-    scaler.width = dsc->font_size;
-    scaler.height = dsc->font_size;
-    scaler.pixel = 1;
-    error = freetype_lookup_size(&scaler, &face_size);
-    if (error || !face_size || !face_size->face || !face_size->face->charmap)
+    /* Look up the FT_Face directly. This replaces the old two-step
+     * freetype_lookup_size() + face_size->face path: FTC_ImageCache_Lookup
+     * below resolves the size itself, so pre-looking-up the size was redundant. */
+    error = FTC_Manager_LookupFace(cache_manager, face_id, &face);
+    if (error || !face || !face->charmap)
     {
         return NULL;
     }
 
-    face = face_size->face;
     desc_type.face_id = face_id;
     /* FT_LOAD_NO_BITMAP: embedded bitmap strikes are typically 1bpp MONO
      * (pitch = width/8); everything downstream assumes 8bpp gray rows. */
@@ -608,8 +651,32 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
      * drops the pinned faces, so a font file replaced on disk is picked up. */
     if (g_ftc_flush_pending)
     {
+        last_glyph.font_dsc = NULL;           /* invalidate L1 */
+        memset(glyph_metrics, 0, sizeof(glyph_metrics)); /* invalidate L2 */
         g_ftc_flush_pending = 0;
         FTC_Manager_Reset(cache_manager);
+    }
+
+    /* L1 hit: same font, size, and letter as the last lookup.
+     * Return cached metrics AND bitmap pointer — skips FTC entirely. */
+    if (last_glyph.font_dsc == dsc && last_glyph.face_source == dsc->face_source &&
+            last_glyph.font_size == dsc->font_size && last_glyph.letter == unicode_letter)
+    {
+        *dsc_out = last_glyph.glyph;
+        dsc->buf = last_glyph.bitmap;
+        return true;
+    }
+    last_glyph.font_dsc = NULL; /* L1 miss: mark it invalid before FTC lookup */
+
+    /* L2 hit: metrics found in the 64-slot hash cache.
+     * Return metrics only; dsc->buf stays NULL so that the bitmap is fetched
+     * lazily in get_glyph_bitmap_cache_cb(). */
+    freetype_glyph_metrics_t *metrics = freetype_metrics_slot(dsc, unicode_letter);
+    if (metrics->font_dsc == dsc && metrics->face_source == dsc->face_source &&
+            metrics->font_size == dsc->font_size && metrics->letter == unicode_letter)
+    {
+        *dsc_out = metrics->glyph;
+        return true;
     }
 
 #if 0//def FREETYPE_EXTERN_CACHE_AGAIN
@@ -669,6 +736,23 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
 
     /* Reuse the FTC bitmap in get_glyph_bitmap_cache_cb(). */
     dsc->buf = (uint8_t *)glyph_bitmap->bitmap.buffer;
+
+    /* Populate L1: store metrics + bitmap pointer for the next back-to-back
+     * get_glyph_bitmap_cache_cb() call on the same glyph. */
+    last_glyph.font_dsc = dsc;
+    last_glyph.face_source = dsc->face_source;
+    last_glyph.font_size = dsc->font_size;
+    last_glyph.letter = unicode_letter;
+    last_glyph.glyph = *dsc_out;
+    last_glyph.bitmap = dsc->buf;
+
+    /* Populate L2: store metrics only (no bitmap pointer — FTC may evict it).
+     * On L2 hit the bitmap is re-fetched lazily in get_glyph_bitmap_cache_cb(). */
+    metrics->font_dsc = dsc;
+    metrics->face_source = dsc->face_source;
+    metrics->font_size = dsc->font_size;
+    metrics->letter = unicode_letter;
+    metrics->glyph = *dsc_out;
     return true;                /*true: glyph found; false: glyph was not found*/
 }
 
@@ -689,6 +773,16 @@ static bool get_glyph_dsc_cache_cb(const lv_font_t *font, lv_font_glyph_dsc_t *d
 #endif
 
     if (!dsc) return NULL;
+
+    /* Lazy bitmap load: on an L2-hit path dsc->buf is NULL (metrics-only cache).
+     * Fetch the bitmap from FTC now — this only happens when the caller actually
+     * needs pixels, not for layout/width queries that call get_glyph_dsc alone. */
+    if (!dsc->buf && unicode_letter >= 0x20)
+    {
+        FT_BitmapGlyph glyph_bitmap = freetype_lookup_glyph(dsc, unicode_letter);
+        if (!glyph_bitmap) return NULL;
+        dsc->buf = (uint8_t *)glyph_bitmap->bitmap.buffer;
+    }
 
     return (const uint8_t *)dsc->buf;
 }
@@ -987,6 +1081,8 @@ void lv_freetype_close_font(void)
 
 #if USE_CACHE_MANGER
     if (cache_manager) FTC_Manager_Done(cache_manager);
+    last_glyph.font_dsc = NULL;
+    memset(glyph_metrics, 0, sizeof(glyph_metrics));
     cache_manager = NULL;
 #endif
 
@@ -1021,6 +1117,8 @@ void lv_freetype_clean_cache(uint8_t clean_type)
 
     //rt_kprintf("ft_clean: %d\n", clean_type);
 #if USE_CACHE_MANGER
+    last_glyph.font_dsc = NULL;
+    memset(glyph_metrics, 0, sizeof(glyph_metrics));
     //extern void list_mem();
     //list_mem();
     if (FT_CACHE_QUAD_CLEAN ==  clean_type)
