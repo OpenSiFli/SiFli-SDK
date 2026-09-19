@@ -46,6 +46,12 @@ choice SOC_SF32LB57X_PART
     config SOC_SF32LB57BUN3N6
         bool "SF32LB57BUN3N6"
         select SOC_PACKAGE_QFN68
+    config SOC_SF32BPRTUN3N6
+        bool "SF32BPRTUN3N6"
+        select SOC_PACKAGE_QFN68
+    config SOC_SF32BPRTYB3N6
+        bool "SF32BPRTYB3N6"
+        select SOC_PACKAGE_QFN80
 endchoice
 
 rsource "Kconfig_soc.sf32lb57x.common"
