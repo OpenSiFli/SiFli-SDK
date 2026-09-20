@@ -68,18 +68,18 @@ choice
     config BSP_USING_BOARD_SF32LB57_RAMRUN
         depends on SOC_SF32LB57X
         bool "SF32LB57-RAMRUN"
-    config BSP_USING_BOARD_DPI_HDK_LB575YBBN6_N16_DBI
+    config BSP_USING_BOARD_DPI_HDK_LB57EYBBN6_N16_DBI
         depends on SOC_SF32LB57X
-        bool "DPI-HDK_LB575YBBN6_N16_DBI"
-    config BSP_USING_BOARD_DPI_HDK_LB575YBBN6_N16_QSPI
+        bool "DPI-HDK_LB57EYBBN6_N16_DBI"
+    config BSP_USING_BOARD_DPI_HDK_LB57EYBBN6_N16_QSPI
         depends on SOC_SF32LB57X
-        bool "DPI-HDK_LB575YBBN6_N16_QSPI"
+        bool "DPI-HDK_LB57EYBBN6_N16_QSPI"
     config BSP_USING_BOARD_SPI_HDK_LB573UB7N6
         depends on SOC_SF32LB57X
         bool "SPI-HDK_LB573UB7N6"
-    config BSP_USING_BOARD_SPI_HDK_LB575YBBN6_N16
+    config BSP_USING_BOARD_SPI_HDK_LB57EYBBN6_N16
         depends on SOC_SF32LB57X
-        bool "SPI-HDK_LB575YBBN6_N16"
+        bool "SPI-HDK_LB57EYBBN6_N16"
     config BSP_USING_BOARD_SPI_HDK_LB573UB776
         depends on SOC_SF32LB57X
         bool "SPI-HDK_LB573UB776"
@@ -254,20 +254,20 @@ if BSP_USING_BOARD_SF32LB57_RAMRUN
     source "$SIFLI_SDK/customer/boards/sf32lb57-ramrun/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_DPI_HDK_LB575YBBN6_N16_DBI
-    source "$SIFLI_SDK/customer/boards/dpi-hdk_lb575ybbn6_n16_dbi/Kconfig.board"
+if BSP_USING_BOARD_DPI_HDK_LB57EYBBN6_N16_DBI
+    source "$SIFLI_SDK/customer/boards/dpi-hdk_lb57eybbn6_n16_dbi/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_DPI_HDK_LB575YBBN6_N16_QSPI
-    source "$SIFLI_SDK/customer/boards/dpi-hdk_lb575ybbn6_n16_qspi/Kconfig.board"
+if BSP_USING_BOARD_DPI_HDK_LB57EYBBN6_N16_QSPI
+    source "$SIFLI_SDK/customer/boards/dpi-hdk_lb57eybbn6_n16_qspi/Kconfig.board"
 endif
 
 if BSP_USING_BOARD_SPI_HDK_LB573UB7N6
     source "$SIFLI_SDK/customer/boards/spi-hdk_lb573ub7n6/Kconfig.board"
 endif
 
-if BSP_USING_BOARD_SPI_HDK_LB575YBBN6_N16
-    source "$SIFLI_SDK/customer/boards/spi-hdk_lb575ybbn6_n16/Kconfig.board"
+if BSP_USING_BOARD_SPI_HDK_LB57EYBBN6_N16
+    source "$SIFLI_SDK/customer/boards/spi-hdk_lb57eybbn6_n16/Kconfig.board"
 endif
 
 if BSP_USING_BOARD_SPI_HDK_LB573UB776
