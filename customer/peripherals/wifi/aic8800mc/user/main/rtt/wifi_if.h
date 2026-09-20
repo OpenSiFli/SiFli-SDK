@@ -29,5 +29,12 @@ int wifi_if_sdio_resume(void);
 
 void wifi_open(void);
 void wifi_close(void);
+void wifi_if_power_on(void);
+void wifi_if_power_off(void);
+
+/* Standalone re-detection: re-enumerate the SDIO card (callable on cold boot or after OTA). */
+int wifi_if_sdio_detect(void);
+/* Start timer-based detection polling: call wifi_if_sdio_detect() periodically until the card is found or timeout. */
+void wifi_if_sdio_detect_poll_start(void);
 
 #endif /* _WIFI_IF_H_ */

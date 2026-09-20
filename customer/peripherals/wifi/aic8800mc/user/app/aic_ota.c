@@ -101,14 +101,42 @@ static uint32_t aic_crc32(const uint8_t *p, size_t len)
 }
 #endif
 
-int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len, const char *new_version)
+int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
+                 const char *new_version, int mode)
 {
     int ret;
-    struct ota_file_info info;
+    struct ota_file_info info = {0,};
     struct ota_pkg_info pkg;
     struct fhcustmsg_host_ota_cfm cfm;
     uint32_t off;
     uint32_t step = OTA_STEP_FLASH_ERASE;
+    uint32_t expect_status;
+    /* LZMA packages carry a 4KB image_header, so the whole package is written
+       from the upgrade area start; non-LZMA raw images skip the header area and
+       are written to the image body start address. */
+    uint32_t img_addr = (AIC_OTA_MODE_LZMA == mode) ? UPGRADE_START_ADDR : UPGRADE_IMAGE_ADDR;
+
+    if ((AIC_OTA_MODE_NORMAL != mode) && (AIC_OTA_MODE_LZMA != mode))
+    {
+        DBG_APP_ERR("invalid ota mode: %d\n", mode);
+        return -1;
+    }
+
+    /* Validate the version before touching the flash: in NORMAL mode it is
+       copied into the 16-byte image_header.version field at the last step, and
+       failing there would leave the upgrade area already erased. In LZMA mode
+       the version comes from the header carried by the package itself. */
+    if ((AIC_OTA_MODE_LZMA != mode) && (NULL == new_version))
+    {
+        DBG_APP_ERR("new version is NULL\n");
+        return -1;
+    }
+
+    if ((AIC_OTA_MODE_LZMA != mode) && (strlen(new_version) >= sizeof(info.new_version)))
+    {
+        DBG_APP_ERR("new version too long: %s\n", new_version);
+        return -1;
+    }
 
     uint32_t crc32 = aic_crc32(file_addr, file_len);
     info.file_size = file_len;
@@ -125,7 +153,7 @@ int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
     if (OTA_STEP_FLASH_ERASE_OK != cfm.status)
     {
         DBG_APP_ERR("fhcustmsg_host_ota_req step: %d, fail %d\n", step, cfm.status);
-        return cfm.status;
+        return -1;
     }
 
     for (off = 0; off < file_len; off += OTA_PKG_SIZE)
@@ -141,7 +169,7 @@ int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
             pkg.flash_size = file_len - off;
         }
         pkg.pkg_buf = file_addr + off;
-        pkg.flash_addr = UPGRADE_IMAGE_ADDR + off;
+        pkg.flash_addr = img_addr + off;
 
         DBG_APP_VRB("fhcustmsg_host_ota_req step: %d, off %d\n", step, off);
 
@@ -155,14 +183,24 @@ int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
         if (OTA_STEP_FR_PKG_WRITE_OK != cfm.status && OTA_STEP_LT_PKG_WRITE_OK != cfm.status)
         {
             DBG_APP_ERR("fhcustmsg_host_ota_req step: %d, fail %d\n", step, cfm.status);
-            return cfm.status;
+            return -1;
         }
     }
 
-    step = OTA_STEP_HEADER_WRITE;
-    memcpy(info.new_version, new_version, strlen(new_version) + 1);
+    if (AIC_OTA_MODE_LZMA == mode)
+    {
+        /* The package carries its own image_header; firmware only recomputes the whole-package CRC and compares the version inside */
+        step = OTA_STEP_LZMA_CHECK;
+        expect_status = OTA_STEP_LZMA_CRC_CHECK_OK;
+    }
+    else
+    {
+        step = OTA_STEP_HEADER_WRITE;
+        memcpy(info.new_version, new_version, strlen(new_version) + 1);
+        expect_status = OTA_STEP_HEADER_WRITE_OK;
+        DBG_APP_INF("fhcustmsg_host_ota_req new-version is %s\n", new_version);
+    }
     DBG_APP_VRB("fhcustmsg_host_ota_req step: %d, file-size %d, crc32 %x\n", step, info.file_size, info.file_crc);
-    DBG_APP_INF("fhcustmsg_host_ota_req new-version is %s\n", new_version);
 
     ret = rwnx_send_fhcustmsg_host_ota_req(rwnx_hw, step, &info, &cfm);
     if (ret)
@@ -171,10 +209,14 @@ int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
         return -5;
     }
 
-    if (OTA_STEP_HEADER_WRITE_OK != cfm.status)
+    if (expect_status != cfm.status)
     {
         DBG_APP_ERR("fhcustmsg_host_ota_req step: %d, fail %d\n", step, cfm.status);
-        return cfm.status;
+        if (OTA_STEP_BIN_VERSION_ERR == cfm.status)
+        {
+            DBG_APP_ERR("upgrade-image version is not newer than current\n");
+        }
+        return -1;
     }
 
     return 0;
@@ -183,15 +225,17 @@ int aic_host_ota(struct rwnx_hw *rwnx_hw, uint8_t *file_addr, uint32_t file_len,
 int test_aic_crc(uint8_t *file_addr, uint32_t file_len)
 {
     uint32_t crc32_once = aic_crc32(file_addr, file_len);
-    uint32_t crc32 = 0;
+    /* fdb_calc_crc32() performs the init/final xor on every call, so its result
+       cannot be chained across chunks. Undo both xors to keep a raw running
+       value, which matches aic_crc32(addr, len, ~0UL) on the firmware side. */
+    uint32_t crc32 = 0xFFFFFFFF;
     uint32_t off;
 
     for (off = 0; off < file_len; off += OTA_PKG_SIZE)
     {
         size_t left = (file_len - off >= OTA_PKG_SIZE) ? OTA_PKG_SIZE : file_len - off;
-        crc32 = fdb_calc_crc32(crc32, file_addr + off, left);
+        crc32 = fdb_calc_crc32(crc32 ^ 0xFFFFFFFF, file_addr + off, left) ^ 0xFFFFFFFF;
     }
-    crc32 = ~crc32;
 
     DBG_APP_INF("test_aic_crc: crc32 %x, crc32 %x\n", crc32_once, crc32);
     return 0;
