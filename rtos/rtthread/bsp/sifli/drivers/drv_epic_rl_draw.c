@@ -2400,11 +2400,19 @@ static rt_err_t render_list(priv_render_list_t *rl)
             {
                 render_area.x0 = start_columns;
 
-            ret = render((drv_epic_render_list_t)rl);
-            if (ret != RT_EOK && ret != RT_EEMPTY) break;
+                if (start_columns + EPIC_COORDINATES_MAX - 1 >= max_columns)
+                    render_area.x1 = max_columns;
+                else
+                    render_area.x1 = start_columns + EPIC_COORDINATES_MAX - 1;
+
+                clip_layer_to_area((EPIC_BlendingDataType *)&rl->dst,
+                                   (const uint8_t *)dst.data, dst.x_offset, dst.y_offset, &render_area);
+
+                ret = render((drv_epic_render_list_t)rl);
+                if (ret != RT_EOK && ret != RT_EEMPTY) break;
+            }
         }
         rl->dst = dst;
-        }
     }
 
     __DEBUG_RENDER_LIST_END__;
