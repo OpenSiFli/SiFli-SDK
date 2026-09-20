@@ -731,10 +731,6 @@ static int sifli_ep_map_alloc(struct usbh_bus *bus, uint8_t ep_num, bool is_in)
         return ep_num;
     }
 
-    if (ep_num < 1U || ep_num > 7U) {
-        return -USB_ERR_RANGE;
-    }
-
     struct musb_hcd *hcd = &g_musb_hcd[bus->hcd.hcd_id];
     uint8_t map_base = is_in ? 0 : MUSB_IN_SLOT_NUM;
     uint8_t ch_base = is_in ? 1 : (1 + MUSB_IN_SLOT_NUM);
