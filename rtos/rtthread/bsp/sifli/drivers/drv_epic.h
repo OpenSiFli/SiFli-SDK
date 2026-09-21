@@ -133,6 +133,14 @@ typedef struct
     uint32_t br; //Bottom-right
 } rect_vertex_color_t;
 
+/* Optional rectangle image. The producer owns this descriptor and its buffers
+ * until the render list completes. Image coordinates are the first tile origin. */
+typedef struct
+{
+    EPIC_LayerConfigTypeDef layer;
+    uint8_t tiled;
+} drv_epic_rect_image_t;
+
 typedef struct
 {
     drv_epic_op_type_t  op;
@@ -195,6 +203,7 @@ typedef struct
 
             uint32_t argb8888;
             rect_vertex_color_t grad_color;
+            drv_epic_rect_image_t *bg_image;
         } rectangle;
         struct
         {

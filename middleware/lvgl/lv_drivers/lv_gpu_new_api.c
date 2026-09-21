@@ -72,11 +72,22 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
 
     int ref_count = (int)usr_data;
 
-    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image))
+    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image) &&
+            !(op->op == DRV_EPIC_DRAW_RECT && op->desc.rectangle.bg_image))
         app_mem_set_ref_count((void *)op->mask.data, ref_count, MEM_ASYN_IMG);
 
     switch (op->op)
     {
+    case DRV_EPIC_DRAW_RECT:
+        if (op->desc.rectangle.bg_image && op->desc.rectangle.bg_image->layer.data)
+            app_mem_set_ref_count((void *)op->desc.rectangle.bg_image->layer.data, ref_count, MEM_ASYN_IMG);
+        if (op->desc.rectangle.bg_image && REDER_MEM_UNLOCK == ref_count)
+        {
+            app_cache_free(op->desc.rectangle.bg_image);
+            op->desc.rectangle.bg_image = NULL;
+            op->mask.data = NULL;
+        }
+        break;
     case DRV_EPIC_DRAW_IMAGE:
         if (op->desc.blend.layer.data)
             app_mem_set_ref_count((void *)op->desc.blend.layer.data, ref_count, MEM_ASYN_IMG);
@@ -1374,15 +1385,122 @@ static void draw_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *ds
     LV_ASSERT(0);
 }
 
+/* Decode the rectangle background image and configure the EPIC foreground
+ * layer.  If a parent mask is active, snapshot it into A8 so the driver
+ * can clip the entire RECT operation without touching the LVGL mask stack.
+ * The mask data is owned by the image allocation and exposed through op->mask. */
+static drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
+        const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords, EPIC_LayerConfigTypeDef *mask)
+{
+    HAL_EPIC_LayerConfigInit(mask);
+    if (!dsc->bg_img_src || dsc->bg_img_opa <= LV_OPA_MIN ||
+            lv_img_src_get_type(dsc->bg_img_src) == LV_IMG_SRC_SYMBOL) return NULL;
+    if (dsc->blend_mode != LV_BLEND_MODE_NORMAL)
+    {
+        LV_LOG_WARN("Background image blend mode unsupported");
+        return NULL;
+    }
+    /* Clip to the visible part of the frame buffer. */
+    lv_area_t clip;
+    if (!_lv_area_intersect(&clip, coords, draw_ctx->clip_area) ||
+            !_lv_area_intersect(&clip, &clip, draw_ctx->buf_area)) return NULL;
+
+    _lv_img_cache_entry_t *cache = _lv_img_cache_open(dsc->bg_img_src, dsc->bg_img_recolor, 0);
+    if (!cache)
+    {
+        LV_LOG_WARN("Couldn't open the background image");
+        return NULL;
+    }
+    lv_img_decoder_dsc_t *decoded = &cache->dec_dsc;
+    drv_epic_rect_image_t *image = NULL;
+    if (decoded->error_msg || !decoded->img_data || !decoded->img_data_size ||
+            !decoded->header.w || !decoded->header.h || !EPIC_SUPPORTED_CF(decoded->header.cf)) goto done;
+    switch (decoded->header.cf)
+    {
+    case LV_IMG_CF_TRUE_COLOR:
+    case LV_IMG_CF_TRUE_COLOR_ALPHA:
+    case LV_IMG_CF_TRUE_COLOR_CHROMA_KEYED:
+    case LV_IMG_CF_RGB565:
+    case LV_IMG_CF_RGB888:
+    case LV_IMG_CF_RGBA5658:
+    case LV_IMG_CF_RGBA8888:
+    case LV_IMG_CF_ALPHA_2BIT:
+    case LV_IMG_CF_ALPHA_4BIT:
+    case LV_IMG_CF_ALPHA_8BIT:
+    case LV_IMG_CF_RAW:
+    case LV_IMG_CF_RAW_ALPHA:
+        break;
+    default:
+        goto done;
+    }
+    if (decoded->header.cf != LV_IMG_CF_RAW && decoded->header.cf != LV_IMG_CF_RAW_ALPHA &&
+            decoded->img_data_size < lv_img_buf_get_img_size(decoded->header.w, decoded->header.h,
+                                                            decoded->header.cf)) goto done;
+
+    /* Tiled images start at the top-left; otherwise center them. */
+    int32_t left = coords->x1;
+    int32_t top = coords->y1;
+    if (!dsc->bg_img_tiled)
+    {
+        left += lv_area_get_width(coords) / 2 - decoded->header.w / 2;
+        top += lv_area_get_height(coords) / 2 - decoded->header.h / 2;
+    }
+    if (left < LV_COORD_MIN || top < LV_COORD_MIN ||
+            left + decoded->header.w - 1 > LV_COORD_MAX ||
+            top + decoded->header.h - 1 > LV_COORD_MAX) goto done;
+    lv_area_t area = {left, top, left + decoded->header.w - 1, top + decoded->header.h - 1};
+    lv_area_t image_clip;
+    if (!dsc->bg_img_tiled && !_lv_area_intersect(&image_clip, &clip, &area)) goto done;
+    size_t mask_size = 0;
+#if LV_DRAW_COMPLEX
+    if (lv_draw_mask_get_cnt())
+        mask_size = (size_t)lv_area_get_width(&clip) * lv_area_get_height(&clip);
+#endif
+    if (mask_size > SIZE_MAX - sizeof(*image)) goto done;
+    image = app_cache_alloc(sizeof(*image) + mask_size, IMAGE_CACHE_PSRAM);
+    if (!image) goto done;
+    lv_img_dsc_t source = {0};
+    source.header = decoded->header;
+    source.data = decoded->img_data;
+    source.data_size = decoded->img_data_size;
+    lv_point_t pivot = {0, 0};
+    HAL_EPIC_LayerConfigInit(&image->layer);
+    image->tiled = dsc->bg_img_tiled;
+    setup_fg_layer(&image->layer, &source, &area, 0, EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE,
+                   &pivot, dsc->bg_img_opa, dsc->bg_img_recolor, 0, 0);
+#if LV_DRAW_COMPLEX
+    /* Snapshot the active LVGL masks into A8 for the driver. */
+    if (mask_size)
+    {
+        uint8_t *coverage = (uint8_t *)(image + 1);
+        int32_t width = lv_area_get_width(&clip);
+        memset(coverage, 255, mask_size);
+        for (int32_t row = 0; row < lv_area_get_height(&clip); row++)
+        {
+            uint8_t *line = coverage + row * width;
+            if (lv_draw_mask_apply(line, clip.x1, clip.y1 + row, width) == LV_DRAW_MASK_RES_TRANSP)
+                memset(line, 0, width);
+        }
+        setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, coverage, &clip);
+    }
+#endif
+done:
+    my_draw_cleanup(cache);
+    if (!image) LV_LOG_WARN("Background image unavailable or unsupported");
+    return image;
+}
+
 static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
 {
 #if LV_COLOR_SCREEN_TRANSP && LV_COLOR_DEPTH == 32
     RT_ASSERT(0);//Not supported now.
 #endif
     lv_color32_t ax_color_u32;
+    EPIC_LayerConfigTypeDef image_mask;
+    drv_epic_rect_image_t *image = bg_image_prepare(draw_ctx, dsc, coords, &image_mask);
 
     /*Draw bg*/
-    if (dsc->bg_opa >= LV_OPA_MIN)
+    if (dsc->bg_opa >= LV_OPA_MIN || image)
     {
         drv_epic_render_buf dst_buf;
         setup_render_buf(&dst_buf, draw_ctx);
@@ -1395,10 +1513,15 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
         drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
         RT_ASSERT(o != NULL);
         o->op = DRV_EPIC_DRAW_RECT;
+        o->desc.rectangle.bg_image = image;
 
         lv_draw_mask_map_param_t mask_param;
         HAL_EPIC_LayerConfigInit(&o->mask);
-        if (lv_draw_mask_is_only_map_mask(&bg_coords, &mask_param))
+        if (image)
+        {
+            o->mask = image_mask;
+        }
+        else if (lv_draw_mask_is_only_map_mask(&bg_coords, &mask_param))
         {
             LV_ASSERT(LV_DRAW_MASK_TYPE_MAP == mask_param.dsc.type);
             setup_mask_layer(&o->mask, LV_IMG_CF_ALPHA_8BIT, mask_param.cfg.map, &mask_param.cfg.coords);
