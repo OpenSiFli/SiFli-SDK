@@ -81,6 +81,9 @@ static int dfu_decompress(dfu_image_header_int_t *header, uint8_t *dfu_key, uint
         config.height = 0;
         config.work_mode = HAL_EZIP_MODE_GZIP;
         config.output_mode = HAL_EZIP_OUTPUT_AHB;
+#ifdef HAL_EZIP_MULTI_BLOCK_DECODING_SUPPORTED
+        config.is_last_block = true;
+#endif
 #ifndef hwp_ezip
 #define hwp_ezip hwp_ezip1
 #endif
