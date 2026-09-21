@@ -140,6 +140,8 @@ typedef struct
     uint32_t argb8888;
     rect_vertex_color_t *p_grad_color;
     const EPIC_AreaTypeDef *p_rect_area;
+    const EPIC_LayerConfigTypeDef *image;
+    uint32_t fill_bg; /* Rectangle color and image share the geometry mask. */
 } draw_rect_dsc_t;
 #endif /*DRV_EPIC_NEW_API*/
 
