@@ -768,7 +768,13 @@ static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc
             buf[offset + 0] = *cache++;
             offset += 4;
         }
-
+#elif  LV_COLOR_DEPTH == 24
+        for(int i = 0; i < len; i++) {
+            buf[offset + 2] = *cache++;
+            buf[offset + 1] = *cache++;
+            buf[offset + 0] = *cache++;
+            offset += 3;
+        }
 #elif  LV_COLOR_DEPTH == 16
 
         for(int i = 0; i < len; i++) {
@@ -832,6 +838,13 @@ static lv_res_t decoder_read_line(lv_img_decoder_t * decoder, lv_img_decoder_dsc
             buf[offset + 1] = *cache++;
             buf[offset + 0] = *cache++;
             offset += 4;
+        }
+#elif  LV_COLOR_DEPTH == 24
+        for(int i = 0; i < len; i++) {
+            buf[offset + 2] = *cache++;
+            buf[offset + 1] = *cache++;
+            buf[offset + 0] = *cache++;
+            offset += 3;
         }
 #elif  LV_COLOR_DEPTH == 16
 
