@@ -199,4 +199,6 @@ menu "SiFli extend"
 
                 This setting directly affects the memory space available to FFmpeg
                 decoding and whether FFmpeg memory is isolated from other app pools.
+
+        source "$SIFLI_SDK/middleware/lvgl/Kconfig_mem"
     endmenu
