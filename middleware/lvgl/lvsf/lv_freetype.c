@@ -973,7 +973,12 @@ int lv_freetype_font_init(lv_font_t *font, const char *font_lib_addr, int font_l
         }
 
         font->line_height = (face_size->metrics.height >> 6);
-        font->base_line = -(face_size->metrics.descender >> 6) + 4;  /*Base line measured from the top of line_height*/
+        /* Base line = |descender| per the official LVGL standard (aligned with the PC/customer
+         * simulator); no extra +4 is added. If the TTF's declared descender is too small, the
+         * descenders of g/j/p/q/y on the last line may exceed the clip edge and lose pixels at
+         * the bottom. Do not compensate globally here (it shifts all text upward); instead leave
+         * bottom space in the app via pad_bottom / a taller widget for the last line. */
+        font->base_line = -(face_size->metrics.descender >> 6);
     }
     else
 #endif
@@ -1005,7 +1010,12 @@ int lv_freetype_font_init(lv_font_t *font, const char *font_lib_addr, int font_l
         }
 
         font->line_height = (dsc->face->size->metrics.height >> 6);
-        font->base_line = -(dsc->face->size->metrics.descender >> 6) + 4;  /*Base line measured from the top of line_height*/
+        /* Base line = |descender| per the official LVGL standard (aligned with the PC/customer
+         * simulator); no extra +4 is added. If the TTF's declared descender is too small, the
+         * descenders of g/j/p/q/y on the last line may exceed the clip edge and lose pixels at
+         * the bottom. Do not compensate globally here (it shifts all text upward); instead leave
+         * bottom space in the app via pad_bottom / a taller widget for the last line. */
+        font->base_line = -(dsc->face->size->metrics.descender >> 6);
     }
 
 #if USE_CACHE_MANGER
