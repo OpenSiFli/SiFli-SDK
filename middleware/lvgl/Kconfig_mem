@@ -1,0 +1,100 @@
+# Application cache memory configuration.
+#
+# All cache pools here default to "off": either the size is 0, or the location
+# choice defaults to sharing the system heap, which reserves no static buffer and
+# no memheap at all -- only FREETYPE_CACHE_IN_PSRAM / *_IN_SRAM_STANDALONE (and
+# the message / tiny ttf equivalents) create a dedicated array in app_mem.c.
+#
+# A project that wants a dedicated pool enables it in its own proj.conf, together
+# with the size it needs, for example:
+#
+#     CONFIG_MESSAGE_CACHE_IN_PSRAM=y
+#     CONFIG_MESSAGE_CACHE_SIZE=96000
+#
+# The size defaults below are bound to the location choice on purpose: enabling a
+# pool can then never end up with a zero sized (or missing) pool.
+menu "app cache Memory configuration"
+
+choice
+    prompt "rotation image preferred cache memory"
+    default ROTATE_MEM_IN_SRAM
+    config ROTATE_MEM_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM"
+    config ROTATE_MEM_IN_SRAM
+        bool "SRAM"
+endchoice
+
+if LV_USING_FREETYPE_ENGINE
+
+choice
+    prompt "freetype cache memory"
+    default FREETYPE_CACHE_IN_SRAM
+    config FREETYPE_CACHE_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM (dedicated pool)"
+    config FREETYPE_CACHE_IN_SRAM_STANDALONE
+        bool "SRAM (dedicated pool)"
+    config FREETYPE_CACHE_IN_SRAM
+        bool "SRAM (share with system heap)"
+endchoice
+
+config FT_CACHE_SIZE
+    int "freetype cache size(bytes)"
+    default 400000 if FREETYPE_CACHE_IN_PSRAM
+    default 120000 if FREETYPE_CACHE_IN_SRAM_STANDALONE
+    default 0
+
+endif
+
+choice
+    prompt "message preferred cache memory"
+    default MESSAGE_CACHE_IN_SRAM
+    config MESSAGE_CACHE_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM (dedicated pool)"
+    config MESSAGE_CACHE_IN_SRAM_STANDALONE
+        bool "SRAM (dedicated pool)"
+    config MESSAGE_CACHE_IN_SRAM
+        bool "SRAM (share with system heap)"
+endchoice
+
+config MESSAGE_CACHE_SIZE
+    int "message cache size(bytes)"
+    default 96000 if MESSAGE_CACHE_IN_PSRAM
+    default 16000 if MESSAGE_CACHE_IN_SRAM_STANDALONE
+    default 0
+
+choice
+    prompt "tiny ttf cache memory"
+    default TINY_TTF_CACHE_IN_SRAM
+    config TINY_TTF_CACHE_IN_PSRAM
+        depends on BSP_USING_PSRAM
+        bool "PSRAM (dedicated pool)"
+    config TINY_TTF_CACHE_IN_SRAM_STANDALONE
+        bool "SRAM (dedicated pool)"
+    config TINY_TTF_CACHE_IN_SRAM
+        bool "SRAM (share with system heap)"
+endchoice
+
+config TINY_TTF_CACHE_SIZE
+    int "tiny ttf cache size(bytes)"
+    default 120000 if TINY_TTF_CACHE_IN_PSRAM
+    default 80000 if TINY_TTF_CACHE_IN_SRAM_STANDALONE
+    default 0
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int "image cache in psram size(standalone)"
+    depends on BSP_USING_PSRAM
+    default 0
+
+config IMAGE_CACHE_IN_PSRAM_SIZE
+    int
+    depends on !BSP_USING_PSRAM
+    default 0
+
+config IMAGE_CACHE_IN_SRAM_SIZE
+    int "image cache in sram size(standalone)"
+    default 0
+
+endmenu
