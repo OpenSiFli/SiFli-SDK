@@ -815,10 +815,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
         //TODO: error
     }
 
+    mask = HAL_DisableInterrupt();
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
     /* Do not DeInit a channel that is not owned by this handle */
     if (!DMA_IsChannelOwner(hdma))
     {
+        HAL_EnableInterrupt(mask);
         /* Not return HAL_ERROR as some module calls HAL_DMA_DeInit when it's not the owner */
         return HAL_OK;
     }
@@ -833,7 +835,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
     /* Clear all flags */
     hdma->DmaBaseAddress->IFCR = (DMA_ISR_GIF1 << (hdma->ChannelIndex & 0x1cU));
 
-    mask = HAL_DisableInterrupt();
     /* Reset DMA channel selection register */
     if ((hdma->ChannelIndex >> 2) <= 3)
     {
@@ -846,11 +847,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
         index = (index - 4) & 3;
         hdma->DmaBaseAddress->CSELR2 &= ~(DMA_CSELR_C1S << (index * DMAC_CSELR1_C2S_Pos));
     }
-    HAL_EnableInterrupt(mask);
 
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
     DMA_FreeChannel(hdma);
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+
+    HAL_EnableInterrupt(mask);
 
     /* Clean callbacks */
     hdma->XferCpltCallback = NULL;
@@ -1241,6 +1243,9 @@ __EXIT:
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma)
 {
     HAL_StatusTypeDef status = HAL_OK;
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    uint32_t mask;
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
     /* Check the DMA peripheral handle */
     if (NULL == hdma)
@@ -1249,9 +1254,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma)
     }
 
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    mask = HAL_DisableInterrupt();
     /* Do not DeInit a channel that is not owned by this handle */
     if (!DMA_IsChannelOwner(hdma))
     {
+        HAL_EnableInterrupt(mask);
         return HAL_ERROR;
     }
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
@@ -1268,6 +1275,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma)
 
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
     DMA_FreeChannel(hdma);
+    HAL_EnableInterrupt(mask);
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
     /* Change the DMA state */
@@ -1288,6 +1296,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma)
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma)
 {
     HAL_StatusTypeDef status = HAL_OK;
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    uint32_t mask;
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
     if (HAL_DMA_STATE_BUSY != hdma->State)
     {
@@ -1299,9 +1310,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma)
     else
     {
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+        mask = HAL_DisableInterrupt();
         /* Do not DeInit a channel that is not owned by this handle */
         if (!DMA_IsChannelOwner(hdma))
         {
+            HAL_EnableInterrupt(mask);
             return HAL_ERROR;
         }
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
@@ -1320,6 +1333,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma)
 
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
         DMA_FreeChannel(hdma);
+        HAL_EnableInterrupt(mask);
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
         /* Change the DMA state */
