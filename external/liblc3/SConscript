@@ -4,7 +4,7 @@ from building import *
 objs = []
 cwd = GetCurrentDir()
 
-if not GetDepend('ZBT'):
+if GetDepend('LC3_CODEC_ENABLE') and not GetDepend('ZBT'):
     items = os.listdir(cwd)
 
     for item in items:

@@ -3,7 +3,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#ifdef SOC_BF0_HCPU
+
+#include "rtconfig.h"
+
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
 
 #include <string.h>
 
