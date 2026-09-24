@@ -355,6 +355,8 @@ static HAL_StatusTypeDef DMA_AllocChannel(DMA_HandleTypeDef *hdma, bool init)
             if (!pool[i].is_busy)
             {
                 pool[i].is_busy = true;
+                init = init && (pool[i].handle != hdma);
+                pool[i].handle = hdma;
                 irq_type += i;
                 hdma->Instance = base + i;
                 /* update channelIndex to make it consistent with instance */
@@ -371,6 +373,8 @@ static HAL_StatusTypeDef DMA_AllocChannel(DMA_HandleTypeDef *hdma, bool init)
     {
         i = old_index;
         pool[i].is_busy = true;
+        init = init && (pool[i].handle != hdma);
+        pool[i].handle = hdma;
         irq_type += i;
         r = HAL_OK;
     }
@@ -378,12 +382,11 @@ static HAL_StatusTypeDef DMA_AllocChannel(DMA_HandleTypeDef *hdma, bool init)
 
     if (HAL_OK == r)
     {
-        if (init && (pool[i].handle != hdma))
+        if (init)
         {
             /* owner changes, update config and register */
             DMA_Init(hdma);
         }
-        pool[i].handle = hdma;
         NVIC_SetPriority(irq_type, hdma->Init.IrqPrio);
         HAL_NVIC_EnableIRQ(irq_type);
     }
