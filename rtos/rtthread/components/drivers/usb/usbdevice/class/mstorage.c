@@ -624,10 +624,18 @@ static rt_err_t _ep_in_handler(ufunction_t func, rt_size_t size)
         data->csw_response.data_reside -= data->ep_in->request.size;
         data->count -= data->ep_in->request.size / data->geometry.bytes_per_sector;
         data->block += data->ep_in->request.size / data->geometry.bytes_per_sector;
+        RT_DEBUG_LOG(RT_DEBUG_USB, ("\nread size %d block 0x%x oount 0x%x\n",
+                                    data->ep_in->request.size, data->block, data->count));
         if (data->count > 0 && data->csw_response.data_reside > 0)
         {
-            /*Process the remaining data*/
-            if (rt_device_read(data->disk, data->block, data->ep_in->buffer, 1) == 0)
+            rt_uint32_t max_sectors = MSTORAGE_BUFF_MAX_SIZE / data->geometry.bytes_per_sector;
+            rt_uint32_t remain_sectors_by_reside = data->csw_response.data_reside / data->geometry.bytes_per_sector;
+            rt_uint32_t sectors_to_read = data->count;
+            if (sectors_to_read > max_sectors) sectors_to_read = max_sectors;
+            if (sectors_to_read > remain_sectors_by_reside) sectors_to_read = remain_sectors_by_reside;
+            if (sectors_to_read == 0) sectors_to_read = 1;
+
+            if (rt_device_read(data->disk, data->block, data->ep_in->buffer, sectors_to_read) == 0)
             {
                 rt_kprintf("disk read error\n");
                 rt_usbd_ep_set_stall(func->device, data->ep_in);
@@ -635,7 +643,7 @@ static rt_err_t _ep_in_handler(ufunction_t func, rt_size_t size)
             }
 
             data->ep_in->request.buffer = data->ep_in->buffer;
-            data->ep_in->request.size = data->geometry.bytes_per_sector;
+            data->ep_in->request.size = sectors_to_read * data->geometry.bytes_per_sector;
             data->ep_in->request.req_type = UIO_REQUEST_WRITE;
             rt_usbd_io_request(func->device, data->ep_in, &data->ep_in->request);
         }
@@ -860,12 +868,12 @@ static rt_err_t _ep_out_handler(ufunction_t func, rt_size_t size)
                                     size, data->block, data->size));
         if (data->csw_response.data_reside != 0)
         {
-            /*Process the remaining data*/
+            data->block += size / data->geometry.bytes_per_sector;
             data->ep_out->request.buffer = data->ep_out->buffer;
-            data->ep_out->request.size = data->geometry.bytes_per_sector;
+            data->ep_out->request.size = (data->csw_response.data_reside > MSTORAGE_BUFF_MAX_SIZE) ?
+                                         MSTORAGE_BUFF_MAX_SIZE : data->csw_response.data_reside;
             data->ep_out->request.req_type = UIO_REQUEST_READ_FULL;
             rt_usbd_io_request(func->device, data->ep_out, &data->ep_out->request);
-            data->block ++;
         }
         else
         {
