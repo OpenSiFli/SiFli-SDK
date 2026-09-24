@@ -1430,6 +1430,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma
         /* Clear the transfer complete flag */
         hdma->DmaBaseAddress->IFCR = (DMA_FLAG_TC1 << (hdma->ChannelIndex & 0x1cU));
 
+#ifdef DMA_LINK_LIST_SUPPORT
+        if (hdma->IsGPDMA)
+        {
+            /* Clear linklist complete flag as it's set also when normal dma completes*/
+            ((GPDMA_TypeDef *)(hdma->DmaBaseAddress))->LIFCR = (GPDMA_LISR_LCIF1 << hdma->OrgChannelIndex);
+        }
+#endif /* DMA_LINK_LIST_SUPPORT */
+
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
         if (0 == hdma->LeftCounts)
         {
@@ -1545,7 +1553,13 @@ __HAL_ROM_USED void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma)
     uint32_t flag_it = hdma->DmaBaseAddress->ISR;
     uint32_t source_it = hdma->Instance->CCR;
 #ifdef DMA_LINK_LIST_SUPPORT
-    uint32_t lisr_flag = ((GPDMA_TypeDef *)(hdma->DmaBaseAddress))->LISR;
+    uint32_t lisr_flag = 0;
+
+    /* LISR is implemented on GPDMA channel only */
+    if (hdma->IsGPDMA)
+    {
+        lisr_flag = ((GPDMA_TypeDef *)(hdma->DmaBaseAddress))->LISR;
+    }
 #endif /* DMA_LINK_LIST_SUPPORT */
 
     /* Half Transfer Complete Interrupt management ******************************/
@@ -1576,8 +1590,11 @@ __HAL_ROM_USED void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma)
         /* Clear the transfer complete flag */
         hdma->DmaBaseAddress->IFCR = (DMA_ISR_TCIF1 << (hdma->ChannelIndex & 0x1cU));
 #ifdef DMA_LINK_LIST_SUPPORT
-        /* Clear linklist complete flag as it's set also when normal dma completes*/
-        ((GPDMA_TypeDef *)(hdma->DmaBaseAddress))->LIFCR = (GPDMA_LISR_LCIF1 << hdma->OrgChannelIndex);
+        if (hdma->IsGPDMA)
+        {
+            /* Clear linklist complete flag as it's set also when normal dma completes*/
+            ((GPDMA_TypeDef *)(hdma->DmaBaseAddress))->LIFCR = (GPDMA_LISR_LCIF1 << hdma->OrgChannelIndex);
+        }
 #endif /* DMA_LINK_LIST_SUPPORT */
 
         if ((hdma->Instance->CCR & DMA_CCR_CIRC) == 0U)
