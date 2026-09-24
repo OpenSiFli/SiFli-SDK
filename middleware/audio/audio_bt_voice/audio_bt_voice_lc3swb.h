@@ -6,12 +6,15 @@
 
 #ifndef AUDIO_BT_VOICE_LC3SWB_H
 #define AUDIO_BT_VOICE_LC3SWB_H
+#include "rtconfig.h"
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 #define AUDIO_BT_VOICE_LC3SWB_SAMPLE_RATE     32000
 #define AUDIO_BT_VOICE_LC3SWB_FRAME_US        7500
@@ -29,5 +32,5 @@ uint16_t audio_bt_voice_lc3swb_get_frame_bytes(void);
 #ifdef __cplusplus
 }
 #endif
-
+#endif
 #endif

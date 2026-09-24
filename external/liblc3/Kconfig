@@ -1,0 +1,5 @@
+config LC3_CODEC_ENABLE
+    bool "Enable LC3 codec"
+    default n
+    help
+      Enable the LC3 codec.
