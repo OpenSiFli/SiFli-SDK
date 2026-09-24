@@ -89,6 +89,8 @@ __WEAK void mpu_config(void)
     ARM_MPU_SetMemAttr(ATTR_CODE_IDX, ATTR_CODE);
     ARM_MPU_SetMemAttr(ATTR_RAM_IDX, ATTR_RAM);
     ARM_MPU_SetMemAttr(ATTR_DEVICE_IDX, ATTR_DEVICE);
+    ARM_MPU_SetMemAttr(ATTR_PSRAM_WB_IDX, ATTR_PSRAM_WB);
+    ARM_MPU_SetMemAttr(ATTR_PSRAM_WT_IDX, ATTR_PSRAM_WT);
 
     rnr = 0;
 
