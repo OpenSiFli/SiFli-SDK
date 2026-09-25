@@ -1,0 +1,37 @@
+if SOC_SF32LB573UB776
+configdefault BSP_ENABLE_MPI1
+    default y
+
+choice BSP_MPI1_MODE_CHOICE
+    default BSP_MPI1_MODE_5
+endchoice
+
+configdefault BSP_QSPI1_MEM_SIZE
+    default 4
+
+configdefault BSP_ENABLE_MPI2
+    default y
+
+choice BSP_MPI2_MODE_CHOICE
+    default BSP_MPI2_MODE_0
+endchoice
+
+configdefault BSP_QSPI2_MEM_SIZE
+    default 16
+
+configdefault BSP_ENABLE_MPI3
+    default y
+
+choice BSP_MPI3_MODE_CHOICE
+    default BSP_MPI3_MODE_0
+endchoice
+
+configdefault BSP_QSPI3_MEM_SIZE
+    default 16
+
+configdefault BSP_PSRAM1_PKG_TYPE0_MPI_MODE
+    default 5
+
+configdefault BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE
+    default 1
+endif
