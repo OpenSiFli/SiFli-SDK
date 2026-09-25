@@ -1,0 +1,27 @@
+if SOC_SF32LB579V6EN6
+configdefault BSP_ENABLE_MPI1
+    default y
+
+choice BSP_MPI1_MODE_CHOICE
+    default BSP_MPI1_MODE_0
+endchoice
+
+configdefault BSP_QSPI1_MEM_SIZE
+    default 8
+
+configdefault BSP_ENABLE_MPI2
+    default y
+
+choice BSP_MPI2_MODE_CHOICE
+    default BSP_MPI2_MODE_3
+endchoice
+
+configdefault BSP_QSPI2_MEM_SIZE
+    default 32
+
+configdefault BSP_PSRAM2_PKG_TYPE0_MPI_MODE
+    default 3
+
+configdefault BSP_PSRAM2_PKG_TYPE0_PINMAP_MODE
+    default 3
+endif
