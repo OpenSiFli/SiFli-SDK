@@ -1108,6 +1108,8 @@ class Kconfig(object):
 
         # Do various menu tree post-processing
         self._finalize_node(self.top_node, self.y)
+        for s in self.syms.values():
+            self._finalize_sym(s)
 
         self.unique_defined_syms = _ordered_unique(self.defined_syms)
         self.unique_choices = _ordered_unique(self.choices)
@@ -2332,6 +2334,7 @@ class Kconfig(object):
         sym.kconfig = self
         sym.name = name
         sym.is_constant = False
+        sym.configdefaults = []
         sym.rev_dep = sym.weak_rev_dep = sym.direct_dep = self.n
 
         if self._parsing_kconfigs:
@@ -2351,6 +2354,7 @@ class Kconfig(object):
         sym.kconfig = self
         sym.name = name
         sym.is_constant = True
+        sym.configdefaults = []
         sym.rev_dep = sym.weak_rev_dep = sym.direct_dep = self.n
 
         if self._parsing_kconfigs:
@@ -2940,7 +2944,7 @@ class Kconfig(object):
         while self._next_line():
             t0 = self._tokens[0]
 
-            if t0 is _T_CONFIG or t0 is _T_MENUCONFIG:
+            if t0 in [_T_CONFIG, _T_MENUCONFIG, _T_CONFIGDEFAULT]:
                 # The tokenizer allocates Symbol objects for us
                 sym = self._tokens[1]
 
@@ -2955,7 +2959,8 @@ class Kconfig(object):
                 node = MenuNode()
                 node.kconfig = self
                 node.item = sym
-                node.is_menuconfig = (t0 is _T_MENUCONFIG)
+                node.is_menuconfig = t0 is _T_MENUCONFIG
+                node.is_configdefault = t0 is _T_CONFIGDEFAULT
                 node.prompt = node.help = node.list = None
                 node.parent = parent
                 node.filename = self.filename
@@ -2965,6 +2970,14 @@ class Kconfig(object):
                 sym.nodes.append(node)
 
                 self._parse_props(node)
+
+                if node.is_configdefault:
+                    if (node.prompt or
+                            node.dep != self.y or
+                            len(node.ranges) > 0 or
+                            len(node.selects) > 0 or
+                            len(node.implies) > 0):
+                        self._parse_error("configdefault can only contain `default`")
 
                 if node.is_menuconfig and not node.prompt:
                     self._warn("the menuconfig symbol {} has no prompt"
@@ -3578,6 +3591,23 @@ class Kconfig(object):
     # Post-parsing menu tree processing, including dependency propagation and
     # implicit submenu creation
     #
+    def _finalize_sym(self, sym):
+        # Finalizes symbol definitions
+        #
+        #  - Applies configdefault node defaults to final symbols
+        #
+        # sym:
+        #   The symbol to finalize.
+
+        inserted = 0
+        for (idx, defaults) in sym.configdefaults:
+            for d in defaults:
+                # Add the defaults to the node, with the requirement that
+                # direct dependencies are respected. The original order
+                # of the default statements between nodes is preserved.
+                default = (d[0], self._make_and(sym.direct_dep, d[1]))
+                sym.defaults.insert(inserted + idx, default)
+                inserted += 1
 
     def _finalize_node(self, node, visible_if):
         # Finalizes a menu node and its children:
@@ -3723,6 +3753,14 @@ class Kconfig(object):
         # order.
 
         sym = node.item
+
+        if node.is_configdefault:
+            # Store any defaults for later application after the complete tree
+            # is known. The current length of of the default array is stored so
+            # the configdefaults can be inserted in the order they originally
+            # appeared.
+            sym.configdefaults.append((len(sym.defaults), node.defaults))
+            return
 
         # See the Symbol class docstring
         sym.direct_dep = self._make_or(sym.direct_dep, node.dep)
@@ -4276,6 +4314,7 @@ class Symbol(object):
         "_write_to_conf",
         "choice",
         "defaults",
+        "configdefaults",
         "direct_dep",
         "env_var",
         "implies",
@@ -5642,6 +5681,7 @@ class MenuNode(object):
         "help",
         "include_path",
         "is_menuconfig",
+        "is_configdefault",
         "item",
         "kconfig",
         "linenr",
@@ -5843,8 +5883,13 @@ class MenuNode(object):
         sc = self.item
 
         if sc.__class__ is Symbol:
-            lines = [("menuconfig " if self.is_menuconfig else "config ")
-                     + sc.name]
+            if self.is_menuconfig:
+                t = "menuconfig "
+            elif self.is_configdefault:
+                t = "configdefault "
+            else:
+                t = "config "
+            lines = [t + sc.name]
         else:
             lines = ["choice " + sc.name if sc.name else "choice"]
 
@@ -6876,6 +6921,7 @@ except AttributeError:
     _T_CLOSE_PAREN,
     _T_COMMENT,
     _T_CONFIG,
+    _T_CONFIGDEFAULT,
     _T_DEFAULT,
     _T_DEFCONFIG_LIST,
     _T_DEF_BOOL,
@@ -6919,7 +6965,7 @@ except AttributeError:
     _T_TRISTATE,
     _T_UNEQUAL,
     _T_VISIBLE,
-) = range(1, 51)
+) = range(1, 52)
 
 # Keyword to token map, with the get() method assigned directly as a small
 # optimization
@@ -6931,6 +6977,7 @@ _get_keyword = {
     "choice":         _T_CHOICE,
     "comment":        _T_COMMENT,
     "config":         _T_CONFIG,
+    "configdefault":  _T_CONFIGDEFAULT,
     "def_bool":       _T_DEF_BOOL,
     "def_hex":        _T_DEF_HEX,
     "def_int":        _T_DEF_INT,
