@@ -3113,6 +3113,23 @@ int32_t pm_init_mem_map()
     backup_region->start_addr = (uint32_t)EXEC_REGION_START_ADDR(ER_ITCM$$RW);
     backup_region->len = (uint32_t)EXEC_REGION_END_ADDR(ER_ITCM$$ZI) - (uint32_t)EXEC_REGION_START_ADDR(ER_ITCM$$RW);
 #endif /* PM_ITCM_NOT_BACKUP && !PM_ITCM_NOT_BACKUP */
+#ifdef SF32LB58X
+    backup_region++;
+    if (HEAP_END > HPSYS_RAM6_BASE)
+    {
+        backup_region->start_addr = (uint32_t)HEAP_END;
+    }
+    else
+    {
+        backup_region->start_addr = (uint32_t)HPSYS_RAM6_BASE;
+    }
+    /* backup RAM used by ACPU */
+    if ((HPSYS_RAM9_BASE + HPSYS_RAM9_SIZE) > backup_region->start_addr)
+    {
+        param.backup_region_num++;
+        backup_region->len = (uint32_t)((HPSYS_RAM9_BASE + HPSYS_RAM9_SIZE) - backup_region->start_addr);
+    }
+#endif /* SF32LB58X */
     err = cb_init(&param);
     RT_ASSERT(RT_EOK == err);
 #endif
