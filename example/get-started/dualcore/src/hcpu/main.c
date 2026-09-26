@@ -66,9 +66,9 @@ typedef struct
     } data;
     rt_timer_t time_handle;
     rt_mailbox_t mb_handle;
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     rt_timer_t rc10k_time_handle;
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
 } app_env_t;
 
@@ -455,7 +455,7 @@ int mnt_init(void)
 INIT_ENV_EXPORT(mnt_init);
 #endif
 
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
 void rc10k_timeout_handler(void *parameter)
 {
     app_env_t *env = ble_app_get_env();
@@ -468,7 +468,7 @@ void rc10k_timeout_handler(void *parameter)
         rt_timer_stop(env->rc10k_time_handle);
     }
 }
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
 int main(void)
 {
@@ -479,11 +479,11 @@ int main(void)
     sifli_ble_enable();
     env->time_handle  = rt_timer_create("app", app_timeout_handler,  NULL,
                                         rt_tick_from_millisecond(BLE_APP_TIMEOUT_INTERVAL), RT_TIMER_FLAG_SOFT_TIMER);
-#ifdef SF32LB52X
+#if defined(SF32LB52X) || defined(SF32LB57X)
     env->rc10k_time_handle  = rt_timer_create("rc10", rc10k_timeout_handler,  NULL,
                               rt_tick_from_millisecond(15 * 1000), RT_TIMER_FLAG_PERIODIC | RT_TIMER_FLAG_SOFT_TIMER); // 15s
     rt_timer_start(env->rc10k_time_handle);
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
     while (1)
     {
