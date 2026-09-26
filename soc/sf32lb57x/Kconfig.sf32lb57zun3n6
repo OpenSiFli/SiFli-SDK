@@ -1,0 +1,11 @@
+if SOC_SF32LB57ZUN3N6
+configdefault BSP_ENABLE_MPI2
+    default y
+
+choice BSP_MPI2_MODE_CHOICE
+    default BSP_MPI2_MODE_0
+endchoice
+
+configdefault BSP_QSPI2_MEM_SIZE
+    default 1
+endif
