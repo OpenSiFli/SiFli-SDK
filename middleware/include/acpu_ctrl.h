@@ -105,13 +105,19 @@ typedef struct
 #define ACPU_TASK_read                   (14)
 #define ACPU_TASK_write                  (15)
 #define ACPU_TASK_epic_rl                (16)
-#define ACPU_TASK_COUNT                  (17)
+#define ACPU_TASK_webrtc_open            (17)
+#define ACPU_TASK_webrtc_close           (18)
+#define ACPU_TASK_webrtc_uplink          (19)
+#define ACPU_TASK_webrtc_downlink        (20)
+#define ACPU_TASK_webrtc_farput          (21)
+#define ACPU_TASK_COUNT                  (21)
 
 /** HCPU task name */
 #define HCPU_TASK_INVALID                (0)
 #define HCPU_TASK_MALLOC                 (1)
 #define HCPU_TASK_FREE                   (2)
-#define HCPU_TASK_PRINTF                 (3)
+#define HCPU_TASK_REALLOC                (3)
+#define HCPU_TASK_PRINTF                 (4)
 
 
 /** Power on ACPU, no need to be called by user

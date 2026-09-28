@@ -11,7 +11,7 @@ if GetDepend('USING_ACPU_CTRL_FWK'):
     else:
         src += ['acpu_ctrl.c']
 
-CPPPATH += [cwd+'/../include']    
+CPPPATH += [cwd+'/../include']
 
 # add src and include to group.
 group = DefineGroup('middleware', src, depend = [],CPPPATH = CPPPATH)

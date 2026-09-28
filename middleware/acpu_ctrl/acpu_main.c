@@ -26,6 +26,9 @@
 #if defined(ANYKA_RUN_IN_ACPU)
     #include "audio_3a_anyka.h"
 #endif
+#if defined(WEBRTC_RUN_IN_ACPU)
+    #include "audio_3a_webrtc.h"
+#endif
 
 static rt_mailbox_t g_call_mb;
 static acpu_ctrl_ipc_msg_t *p_received_msg;
@@ -127,6 +130,21 @@ void *acpu_call_hcpu_malloc(uint32_t size)
 void acpu_call_hcpu_free(void *p)
 {
     req_hcpu_run_task(HCPU_TASK_FREE, p, sizeof(p), NULL);
+}
+
+void *acpu_call_hcpu_calloc(uint32_t count, uint32_t size)
+{
+    uint32_t cs = count * size;
+    void *p = acpu_call_hcpu_malloc(cs);
+    if (p)
+    {
+        memset(p, 0, cs);
+    }
+    return p;
+}
+void *acpu_call_hcpu_realloc(void *address, uint32_t newsize)
+{
+    return req_hcpu_run_task(HCPU_TASK_REALLOC, address, newsize, NULL);
 }
 
 void acpu_printf(const char *fmt, ...)
@@ -317,6 +335,7 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_audio_3a_uplink_parameter_t *arg  = (acpu_audio_3a_uplink_parameter_t *)param;
         acpu_audio_3a_uplink_ssl(arg);
         acpu_send_result(0, 0);
+        break;
     }
     case ACPU_TASK_audio_3a_downlink:
     {
@@ -332,12 +351,44 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         break;
     }
 #endif
+#if WEBRTC_RUN_IN_ACPU
+    case ACPU_TASK_webrtc_open:
+    {
+        acpu_webrtc_open_parameter_t *arg = (acpu_webrtc_open_parameter_t *)param;
+        int ret = acpu_webrtc_open(arg->thiz, arg->samplerate);
+        acpu_send_result((uint32_t)ret, 0);
+        break;
+    }
+    case ACPU_TASK_webrtc_downlink:
+    {
+        acpu_webrtc_downlink_parameter_t *arg = (acpu_webrtc_downlink_parameter_t *)param;
+        int ret = acpu_webrtc_downlink(arg->thiz->agcInst, arg->in, arg->out, arg->samplerate);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
+    case ACPU_TASK_webrtc_uplink:
+    {
+        acpu_webrtc_uplink_parameter_t *arg = (acpu_webrtc_uplink_parameter_t *)param;
+        int ret = acpu_webrtc_uplink(arg, arg->outframe, arg->outframe2, arg->ans1_disabled, arg->aecm_enable, arg->uplink_agc_enable);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
+    case ACPU_TASK_webrtc_farput:
+    {
+        acpu_webrtc_farput_parameter_t *arg = (acpu_webrtc_farput_parameter_t *)param;
+        int ret = acpu_webrtc_farput(arg->aecm, (uint8_t *)arg->data, arg->data_len);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
+
+#endif
     default:
     {
         //here will come sometimes
         //ACPU_ASSERT(0);
         acpu_printf("acpu: unknown task id %d\n", task_name);
         acpu_send_result(0, (uint32_t)"unknown task");
+        break;
     }
     }
 }
@@ -423,8 +474,8 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 #ifdef DRV_EPIC_NEW_API
 #include "drv_epic.h"
 #ifdef DRV_EPIC_ARC_MASK_VGLITE
-#include "drv_vglite.h"
-#include "drv_epic_arc_vglite.h"
+    #include "drv_vglite.h"
+    #include "drv_epic_arc_vglite.h"
 #endif
 extern rt_err_t drv_epic_render_list(void *p_drv_epic, void *list);
 extern rt_err_t drv_epic_render_list_scale(void *p_drv_epic, void *list, void *p_scaled_area);

@@ -79,6 +79,7 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     ssl_data_out_len = arg->ssl_data_out_len;
     ts_far = 0;
     ts_dac_stream = 0;
+    enable_mic_ssl = arg->enable_mic_ssl;
     samplerate = arg->samplerate;
     all_mic_channels = arg->all_mic_channels;
     filter_input = arg->filter_input;
@@ -105,13 +106,6 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
     T_ECHO_IN_INFO echo_in;
     memset(&echo_in, 0, sizeof(echo_in));
     echo_in.strVersion = AUDIO_FILTER_VERSION_STRING;
-#ifdef SOC_SF32LB58X
-    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
-    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
-#else
-    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
-    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
-#endif
     echo_in.cb_fun.Printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     echo_in.cb_fun.flushDCache = t4_flush_dcache_range;
     echo_in.cb_fun.notify = my_notify;
@@ -276,14 +270,14 @@ int acpu_audio_3a_uplink(acpu_audio_3a_uplink_parameter_t *arg)
 
     ret = _SD_Echo_FillDacLoopback(p_near, arg->refframe, ANYKA_FRAME_SIZE, ts, 1);
 
-    //acpu_printf("fill dac loopback=%d", ret);
+    //acpu_printf("fill dac loopback=%d\n", ret);
 
     ts += DELAY_SAMPLE * 1000000ULL / samplerate;
     ret = _SD_Echo_FillAdcStream(p_near, arg->fifo, ANYKA_FRAME_SIZE * all_mic_channels, ts, 1);
 
     //acpu_printf("fill adc=%d", ret);
     ret = _SD_Echo_GetResult(p_near, arg->result, ANYKA_FRAME_SIZE, &ts_result, 1);
-    //acpu_printf("fill adc=%d", ret);
+    //acpu_printf("fill adc=%d\n", ret);
     return ret;
 }
 

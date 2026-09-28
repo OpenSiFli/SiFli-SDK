@@ -4,6 +4,10 @@ menuconfig PKG_USING_WEBRTC
      default n
 
 if PKG_USING_WEBRTC
+    config WEBRTC_RUN_IN_ACPU
+    bool "webrtc run in acpu"
+    default n 
+
     choice
         prompt "Select noise suppression Type"
         default WEBRTC_ANS_FIX

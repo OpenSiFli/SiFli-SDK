@@ -3562,6 +3562,14 @@ static void avrcp_process(audio_client_t c1, audio_client_t c2, rt_uint32_t evt)
     }
 }
 
+#if WEBRTC_RUN_IN_ACPU
+void notify_server_call_acpu_far_put(void)
+{
+    audio_server_t *server = get_server();
+    rt_event_send(&server->event, AUDIO_SERVER_EVENT_ACPU_FAR_PUT);
+}
+#endif
+
 void audio_server_entry()
 {
     rt_uint32_t  evt;
@@ -3600,6 +3608,13 @@ void audio_server_entry()
                 continue;
             }
 
+#if WEBRTC_RUN_IN_ACPU
+            if (evt & AUDIO_SERVER_EVENT_ACPU_FAR_PUT)
+            {
+                extern void audio_3a_far_put_by_apcu(void);
+                audio_3a_far_put_by_apcu();
+            }
+#endif
             if ((evt & (AUDIO_SERVER_EVENT_TX_HALF_EMPTY | AUDIO_SERVER_EVENT_TX_FULL_EMPTY))
                     && speaker->tx_count)
             {

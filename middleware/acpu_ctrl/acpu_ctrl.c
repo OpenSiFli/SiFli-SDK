@@ -61,6 +61,10 @@ static size_t ha_ipc_queue_write(const void *buffer, size_t size, uint32_t timeo
 
 #ifdef ACPU_CALLER_ENABLED
 static rt_mailbox_t g_call_mb;
+extern void *audio_mem_malloc(uint32_t size);
+extern void audio_mem_free(void *ptr);
+extern void *audio_mem_calloc(uint32_t count, uint32_t size);
+extern void *audio_mem_realloc(void *mem_address, unsigned int newsize);
 
 /*
     notice: can not call acpu function in acpu_caller_entry()
@@ -84,9 +88,22 @@ static void acpu_caller_entry(void *parameter)
                 }
                 p_msg->ret_value = (uint32_t)p;
             }
+            else if (p_msg->task_id == HCPU_TASK_REALLOC)
+            {
+                void *addr = p_msg->task_param;
+                uint32_t size = p_msg->task_param_size;
+                void *p = realloc(addr, size);
+                if (!p)
+                {
+                    rt_kprintf("realloc %d\n", size);
+                    RT_ASSERT(0);
+                }
+                p_msg->ret_value = (uint32_t)p;
+            }
             else if (p_msg->task_id == HCPU_TASK_FREE)
             {
                 free((void *)p_msg->task_param);
+                p_msg->ret_value = 0;
             }
             else if (p_msg->task_id == HCPU_TASK_PRINTF)
             {
