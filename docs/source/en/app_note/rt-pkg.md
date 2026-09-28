@@ -10,7 +10,7 @@ sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 
 After entering the configuration interface, select `RT-Thread online packages` to configure the relevant software packages.
 
-**Note**: When using for the first time, you need to execute `sdk.py rt-pkg-upgrade` to download and update the software package configuration.
+**Note**: When using for the first time, you need to execute `sdk.py rt-pkg upgrade` to download and update the software package configuration.
 
 ![](../../assets/rt_pkg_option_packages.png)
 
@@ -19,7 +19,7 @@ After entering the configuration interface, select `RT-Thread online packages` t
 ### View Help Information
 
 ```shell
-sdk.py --help
+sdk.py rt-pkg --help
 ```
 
 This command can query the usage instructions for rt-pkg related commands.
@@ -31,7 +31,7 @@ This command can query the usage instructions for rt-pkg related commands.
 ### List Configured Packages
 
 ```shell
-sdk.py rt-pkg-list
+sdk.py rt-pkg list
 ```
 
 After adding new packages in `menuconfig`, use this command to output the packages that have been added.
@@ -51,7 +51,7 @@ Using this command, you can see the packages that have been added along with the
 ### Update Package Configuration
 
 ```shell
-sdk.py rt-pkg-update
+sdk.py rt-pkg update
 ```
 
 After adding new packages in `menuconfig`, use this command to download the corresponding packages.
@@ -66,7 +66,7 @@ After adding new packages in `menuconfig`, use this command to download the corr
 ### Print Environment Variables
 
 ```shell
-sdk.py rt-pkg-printenv
+sdk.py rt-pkg printenv
 ```
 
 This command can print environment variables for inspection.
@@ -76,7 +76,7 @@ This command can print environment variables for inspection.
 ### Upgrade Packages
 
 ```shell
-sdk.py rt-pkg-upgrade
+sdk.py rt-pkg upgrade
 ```
 
 Use this command to upgrade already configured packages. When using rt-pkg for the first time, you need to use this command to configure the packages.
@@ -86,7 +86,7 @@ Use this command to upgrade already configured packages. When using rt-pkg for t
 ### Upgrade Python Modules
 
 ```shell
-sdk.py rt-pkg-upgrade-modules
+sdk.py rt-pkg upgrade-modules
 ```
 
 Use this command to upgrade Python module objects 
@@ -94,13 +94,13 @@ Use this command to upgrade Python module objects
 ### Create New Package
 
 ```shell
-sdk.py rt-pkg-wizard
+sdk.py rt-pkg wizard
 ```
 
 Use this command to create new packages using the wizard.
 
 ## Usage Process Recommendations
-1. First use `sdk.py --help` to view available commands
-2. Use `sdk.py rt-pkg-list` to check current configuration
+1. First use `sdk.py rt-pkg --help` to view available commands
+2. Use `sdk.py rt-pkg list` to check current configuration
 3. Configure required packages through menuconfig
-4. Use `sdk.py rt-pkg-update` to update configuration
+4. Use `sdk.py rt-pkg update` to update configuration (On first use, run `sdk.py rt-pkg upgrade` to obtain the package configuration database.)
