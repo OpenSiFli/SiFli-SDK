@@ -32,6 +32,7 @@ typedef struct _lv_draw_epic_unit_t
     lv_draw_task_t *task_act;
 #if LV_USE_OS
     lv_thread_sync_t sync;
+    lv_thread_sync_t sync_idle;
     lv_thread_t thread;
     volatile bool inited;
     volatile bool exit_status;
@@ -46,7 +47,7 @@ typedef struct _lv_draw_epic_unit_t
 
 /*
  * Dispatch a task to the EPIC unit.
- * Return 1 if task was dispatched, 0 otherwise (task not supported).
+ * Return 1 if a task was dispatched, 0 if busy, or LV_DRAW_UNIT_IDLE if idle.
  */
 static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer);
 
@@ -88,6 +89,9 @@ void lv_draw_epic_init(void)
         drv_gpu_open();
 
 #if LV_USE_OS
+        lv_result_t res = lv_thread_sync_init(&draw_epic_unit->sync_idle);
+        LV_ASSERT(res == LV_RESULT_OK);
+        lv_thread_sync_signal(&draw_epic_unit->sync_idle);
         draw_epic_unit->base_unit.wait_for_finish_cb = wait_for_finish;
         lv_thread_init(&draw_epic_unit->thread, "EPIC", LV_THREAD_PRIO_HIGHEST, render_thread_cb, 4 * 1024, draw_epic_unit);
 #endif
@@ -305,6 +309,12 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
 {
     lv_draw_epic_unit_t *draw_epic_unit = (lv_draw_epic_unit_t *) draw_unit;
 
+    /* A running task is busy even when no dependent task can be dispatched. */
+    if (draw_epic_unit->task_act)
+    {
+        return 0;
+    }
+
     /* Try to get an ready to draw. */
     lv_draw_task_t *t = lv_draw_get_next_available_task(layer, NULL, DRAW_UNIT_ID_EPIC);
 
@@ -324,12 +334,6 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
             t->preferred_draw_unit_id = DRAW_UNIT_ID_EPIC; //Restore preferred id to EPIC.
         }
         return ret;
-    }
-#else
-    /*Return immediately if it's busy with draw task*/
-    if (draw_epic_unit->task_act)
-    {
-        return 0;
     }
 #endif /* 0 */
 
@@ -357,6 +361,10 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
     if (buf == NULL)
         return LV_DRAW_UNIT_IDLE;
 
+#if LV_USE_OS
+    /* Hold the idle token until the complete draw task has finished. */
+    lv_thread_sync_wait(&draw_epic_unit->sync_idle);
+#endif
     t->state = LV_DRAW_TASK_STATE_IN_PROGRESS;
     draw_epic_unit->task_act = t;
 
@@ -476,8 +484,10 @@ static int32_t wait_for_finish(lv_draw_unit_t *draw_unit)
 {
     lv_draw_epic_unit_t *draw_epic_unit = (lv_draw_epic_unit_t *) draw_unit;
 
-
+    /* The render thread may still be preparing work while the GPU is idle. */
+    lv_thread_sync_wait(&draw_epic_unit->sync_idle);
     drv_epic_wait_done();
+    lv_thread_sync_signal(&draw_epic_unit->sync_idle);
 
     return 1;
 }
@@ -514,12 +524,15 @@ static void render_thread_cb(void *ptr)
         /* Cleanup. */
         u->task_act = NULL;
 
+        lv_thread_sync_signal(&u->sync_idle);
+
         /* The draw unit is free now. Request a new dispatching as it can get a new task. */
         lv_draw_dispatch_request();
     }
 
     u->inited = false;
     lv_thread_sync_delete(&u->sync);
+    lv_thread_sync_delete(&u->sync_idle);
     LV_LOG_INFO("Exit EPIC draw thread.");
 }
 #endif
