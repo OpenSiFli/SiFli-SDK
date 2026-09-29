@@ -34,7 +34,7 @@ config FINSH_USING_DESCRIPTION
 
 config FINSH_ECHO_DISABLE_DEFAULT
     bool "Disable the echo mode in default"
-    default y if SOC_SF32LB52X || SOC_SF32LB56X
+    default y if SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB57X
     default n
     
 config FINSH_THREAD_PRIORITY
