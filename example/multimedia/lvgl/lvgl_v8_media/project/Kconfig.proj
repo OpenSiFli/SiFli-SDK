@@ -10,29 +10,6 @@ config SOLUTION_ALLOC_MEM
 
 menu "app cache Memory configuration"
 
-choice
-    prompt "rotation image preferred cache memory"
-    default  ROTATE_MEM_IN_PSRAM
-    config ROTATE_MEM_IN_PSRAM
-        depends on BSP_USING_PSRAM
-        bool "PSRAM"
-    config ROTATE_MEM_IN_SRAM
-        bool "SRAM"
-endchoice
-
-
-choice
-    prompt "message preferred cache memory"
-    default  MESSAGE_CACHE_IN_PSRAM
-    config MESSAGE_CACHE_IN_PSRAM
-        depends on BSP_USING_PSRAM
-        bool "PSRAM"
-    config MESSAGE_CACHE_IN_SRAM_STANDALONE
-        bool "SRAM STANDALONE"
-    config MESSAGE_CACHE_IN_SRAM
-         bool "SRAM(Share with system heap)"
-endchoice
-
 
 config IMAGE_CACHE_IN_PSRAM_SIZE
     int "image cache in psram size(standalone)"
