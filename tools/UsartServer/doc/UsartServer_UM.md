@@ -3,7 +3,7 @@
 
 ## 1. 概述
 
-UsartServer 是思澈公司自研工具，是基于芯片内置的 DEBUG IP 进行调试的配套工具，思澈公司量产的SF32LB52X和SF32LB56X系列芯片内置有DEBUG IP，可以通过串口进行调试。\
+UsartServer 是思澈公司自研工具，是基于芯片内置的 DEBUG IP 进行调试的配套工具，思澈公司量产的SF32LB52、SF32LB56和SF32LB57系列芯片内置有DEBUG IP，可以通过串口进行调试。\
 工具路径：`tools/UsartServer`
 
 ## 2. 环境配置
