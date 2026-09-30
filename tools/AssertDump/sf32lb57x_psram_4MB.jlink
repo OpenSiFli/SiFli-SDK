@@ -47,4 +47,6 @@ savebin rf.bin 0x40082800 0x10c
 savebin rf_mem.bin 0x40082000 0x200
 savebin phy.bin 0x40084000 0x250
 
+savebin psram.bin    0x60000000 0x400000
+
 exit
