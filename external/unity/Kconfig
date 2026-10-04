@@ -1,0 +1,10 @@
+
+config RT_USING_UNITY
+    bool "Unity C unit test framework"
+    default n
+    help
+        Enable the Unity C unit-test framework (ThrowTheSwitch.org, MIT).
+        It is linked into on-device test binaries that run the SDK's unit
+        tests on the target. Enable this only for test projects under
+        example/test/; production firmware should leave it off.
+
