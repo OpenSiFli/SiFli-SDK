@@ -491,6 +491,13 @@ __ROM_USED size_t circular_buf_putchar_force(struct circular_buf *cb, const uint
         }
     }
 
+    /* Store the advanced write pointer, as circular_buf_putchar does. Without
+     * it the byte written above is in the buffer but not accounted for: the
+     * oldest byte has been dropped and the newest not counted, so a forced put
+     * into a full buffer *shrinks* it by one instead of keeping it at
+     * capacity -- which is what this function's own comment promises. */
+    cb->write_idx_mirror = CB_MAKE_PTR_IDX_MIRROR(wr_idx, wr_mirror);
+
     return 1;
 }
 
