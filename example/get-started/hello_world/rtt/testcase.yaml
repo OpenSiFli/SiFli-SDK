@@ -1,0 +1,19 @@
+# The device prints, the host decides: this example carries no test code, only
+# a list of expectations.
+#
+# Entries are matched in order against one shared cursor, so they are listed in
+# the order the device prints them. Each entry is a regex -- these three are
+# plain substrings on purpose, since the boot banner contains regex
+# metacharacters (the ASCII art around it does not appear here).
+tests:
+  - id: hello_world.console
+    description: Boot banner, the example's greeting, and the msh prompt.
+    harness: console
+    type: functional
+    tags: [smoke]
+    timeout: 60
+    harness_config:
+      record:
+        - "- SiFli Corporation"
+        - "Hello world!"
+        - "msh />"

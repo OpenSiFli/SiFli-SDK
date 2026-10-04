@@ -3,14 +3,14 @@
 > 设计背景、分层模型与决策记录见仓库内 `tools/sdk_test/DESIGN.md`（不随文档站发布）。
 > 本文只讲**怎么用**。
 
-> **本文配套的框架在树内，但暂时没有一个可以照着跑的示例。**
-> 本文多处拿 `example/test/unit_test/`、`example/test/{cmock_unit,hal_mock}/`、
-> `example/get-started/hello_world/` 的 `testcase.yaml` 举例——**这些工程不在本次提交里**，
-> 各自另有批次；第 4 节讲的 QEMU 载体（`customer/boards/qemu_*`、
-> `rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`）
-> 同样不在。框架本身可用（`tools/sdk_test/` + `tools/lab_agent/` 都在），
-> 只是要**先写一个 `testcase.yaml` 和一份 binding** 才有东西可跑。
-> 各批的完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
+> **可以照着跑的示例现在有了**：`example/test/unit_test/`（板上 Unity 单测）与
+> `example/get-started/hello_world/`（console 与 pytest 两个 harness）。
+>
+> 仍**不在本次提交里**的：第 4 节的 QEMU 载体（`customer/boards/qemu_*`、
+> `rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`），
+> 以及第 7.1 节的 CMock 打桩（`external/cmock/`、`middleware/test_fwk/mocks/`、
+> `example/test/{cmock_unit,hal_mock}/`）——提到这两节的地方各自另有批次。
+> 完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
 
 ---
 
@@ -38,9 +38,9 @@
 
 ## 2. 快速上手（不需要硬件）
 
-> **本节假设树里有 `testcase.yaml`。** 本次提交里一个都没有——示例用例工程都不在内
-> （见开头说明），所以下面的 `list` 会返回空、`plan` 会报找不到用例。
-> 想立刻试，先照**第 5 节**写一个最简单的 `testcase.yaml` 和一份 binding，再回来看这里。
+> **本节可以直接照着敲。** 树内有 `example/get-started/hello_world/`（console 与 pytest）
+> 和 `example/test/unit_test/`（板上 Unity 单测）两个示例用例工程可列、可规划。
+> 只有 `example/qemu/` 随 QEMU 载体在另一批，所以 `-T example` 会少它那一条。
 
 ```bash
 ./export.ps1                      # Windows；Linux/macOS 用 source ./export.sh

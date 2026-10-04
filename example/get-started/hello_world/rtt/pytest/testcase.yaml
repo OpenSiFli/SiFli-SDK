@@ -1,0 +1,26 @@
+# The same firmware as the `console` case one directory up, checked by a Python
+# program instead of a list of regexes.
+#
+# `harness: pytest` is the escape hatch: the test directory ships its own suite
+# and drives the device through the `dut` fixture. Reach for it when the check
+# needs control flow -- a question and its answer, two boards talking, an
+# instrument, a retry -- because none of that is expressible as `record:`.
+#
+# Prefer `console` when a linear set of expectations will do: it needs no
+# dependencies and says the same thing in three lines of YAML.
+#
+# `project_dir` points back at the sibling project, so this case builds and
+# flashes exactly the same image the `console` case does. Two suites, one
+# firmware: the lowest-cost way to add a richer check to an existing example.
+tests:
+  - id: hello_world.pytest
+    description: Drive the hello_world shell from Python and assert on the replies.
+    harness: pytest
+    type: functional
+    tags: [pytest]
+    # Generous: this covers the build, the flash, the reset and the boot.
+    timeout: 180
+    project_dir: ../project
+    harness_config:
+      # The suite lives beside this file.
+      pytest_root: .

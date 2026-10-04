@@ -1,0 +1,36 @@
+# The bare-metal twin of the `rtt` case one directory up, and deliberately a
+# much thinner check: with no RT-Thread there is no boot banner and no shell
+# prompt, so the application's own greeting is the only thing this firmware
+# says. One expectation is not laziness here -- it is the whole output.
+#
+# That the string is the *only* one is not read off main.c. The built image was
+# searched for the candidates the rtt case anchors on, in **both** ASCII and
+# UTF-16 -- some strings in this SDK are stored wide, which an ASCII-only search
+# silently misses:
+#
+#     output/main.bin   "Hello world" -> 1     "SiFli Corporation" -> 0
+#                                              "msh"               -> 0
+#                                              "RT-Thread"         -> 0
+#
+# and the board agreed. The captured console was exactly these two lines, so
+# the single expectation is not a thin test -- there is nothing else to assert:
+#
+#     SFBL
+#     Hello world!
+#
+# The rtt case's other anchors (`- SiFli Corporation` above all) belong to
+# RT-Thread's startup, which this firmware does not link; the rest of that
+# capture is its own BSP init. Anchoring on any of it here would test the
+# board's storage rather than this application.
+#
+# Nothing here names a platform: the lab's boards choose, via the binding.
+tests:
+  - id: hello_world.noos
+    description: The bare-metal example's greeting -- the only line it prints.
+    harness: console
+    type: functional
+    tags: [smoke]
+    timeout: 60
+    harness_config:
+      record:
+        - "Hello world!"
