@@ -1,0 +1,15 @@
+from building import *
+
+cwd = GetCurrentDir()
+src = Glob('*.c')
+
+path = [cwd, cwd + '/include']
+
+# UNITY_INCLUDE_CONFIG_H makes Unity pull in unity_config.h. DefineGroup()
+# appends CPPDEFINES to the one shared environment, so the define reaches
+# external/unity/unity.c as well -- which is the point: the output contract
+# has to be fixed for the framework itself, not only for the test sources.
+group = DefineGroup('test_fwk', src, depend=['USING_TEST_FWK'], CPPPATH=path,
+                    CPPDEFINES=['UNITY_INCLUDE_CONFIG_H'])
+
+Return('group')

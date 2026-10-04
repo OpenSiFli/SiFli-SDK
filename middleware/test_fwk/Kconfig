@@ -1,0 +1,12 @@
+menuconfig USING_TEST_FWK
+    bool "On-device unit test framework (Unity) glue"
+    default n
+    help
+        Enable the on-device glue around the vendored Unity 2.7.0 C unit
+        test framework: the Unity output configuration (unity_config.h) and
+        the suite registry/runner that exports the msh commands unity_run
+        and unity_list.
+
+        A test project also needs RT_USING_UNITY for the framework itself.
+        Production firmware should leave both off; this is meant for the
+        projects under example/test/.
