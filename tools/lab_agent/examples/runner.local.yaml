@@ -1,0 +1,128 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
+# Lab Agent runner config -- a TEMPLATE. Copy it next to the machine it
+# describes and edit; do not commit a real one with real COM ports.
+#
+#   python tools/lab_agent/runner.py --config tools/lab_agent/examples/runner.local.yaml
+#   python tools/lab_agent/runner.py -c <this file> --check    # validate
+#   python tools/lab_agent/runner.py -c <this file> --list     # show testbeds
+#
+# This file describes ONE machine and the testbeds plugged into it. The SDK-side
+# binding file (tools/sdk_test/examples/binding.local.yaml) describes the same
+# objects from the test author's point of view; both are parsed by the same code,
+# so a testbed here and a testbed there are the same shape.
+#
+# The rule the whole design rests on: a test case names capabilities, never
+# ports. Physical detail belongs here, owned by whoever owns the hardware.
+
+# Machine-wide settings. All optional.
+runner:
+  name: local
+  host: 127.0.0.1          # localhost only: this API has no authentication
+  port: 8760
+  console_poll: 0.2        # seconds a console read waits between polls
+  max_buffer: 4194304      # console transcript retained per testbed, in chars
+  jlink_timeout: 60.0      # per J-Link invocation
+  # jlink_exe: C:\Program Files\SEGGER\JLink\JLink.exe   # if not on PATH
+
+testbed:
+  # ---------------------------------------------------------------- 52x board
+  - id: sf32lb52-lcd_n16r8_01
+    platform: sf32lb52-lcd_n16r8        # must match customer/boards/<name>
+    runner: local
+
+    # The console. Baud defaults to 1000000 (the SDK console's rate), so it can
+    # normally be omitted -- it is spelled out here to make the default visible.
+    console:
+      port: COM13
+      baud: 1000000
+
+    # Capabilities gate `depends_on:` in a testcase; connections below gate
+    # `harness_config.fixture:`. A test is only scheduled on a testbed that
+    # offers everything it asks for.
+
+    # Fixtures physically wired to this board. Two testbeds offering the same
+    # fixture are interchangeable by contract: whichever one a test lands on,
+    # the result must be identical.
+    connections:
+      - fixture: spi_nor_flash_py25q128:spi1
+        default: true
+        pinmap:
+          - {pin: PA00, signal: CS}
+          - {pin: PA01, signal: CLK}
+      - fixture: i2c_sensor_bmp280:i2c0
+        pinmap:
+          - {pin: PB03, signal: SCL}
+          - {pin: PB04, signal: SDA}
+
+    # -- Everything below is Lab-Agent-owned. The SDK side parses the file but
+    #    deliberately ignores these blocks; it has no business knowing which
+    #    probe is plugged in.
+
+    # `device` is optional: when omitted it is read from the board's own
+    # rtconfig.py (customer/boards/<platform>/hcpu/rtconfig.py -> JLINK_DEVICE),
+    # so a board that gains a new device name does not also need this file edited.
+    jlink:
+      # device: SF32LB52X_NOR
+      serial: "59605049"                 # -SelectEmuBySN, for multi-probe labs
+      speed: 4000
+      # wdt_script: tools/segger/halt_all_cpu_and_disable_all_wdt_56x.jlink
+      #   ^ Run before reset on boards whose watchdog would otherwise reboot the
+      #     DUT mid-test. See tools/segger/ for the per-family scripts.
+
+    flash:
+      method: jlink    # jlink  = program through the probe, replaying the
+                       #          build's own build_<board>/download.jlink
+                       # sftool = UART download; needs the board in download
+                       #          mode AND the console closed (same port)
+
+    reset:
+      method: jlink    # jlink  = reset through the probe, before the test runs.
+                       #
+                       # manual = there is no probe, and the board is booted by
+                       #          whatever else is around: a UART download ends
+                       #          by running the new image, and opening the
+                       #          console can reset the board again. The runner
+                       #          still prints a prompt naming this testbed so
+                       #          an operator can press the button if the boot
+                       #          log never shows up; its window is the
+                       #          testcase's own timeout.
+                       #
+                       #   - run from a terminal, the runner stops once the
+                       #     console is open and asks an operator to press the
+                       #     button and then Enter. That gate is what makes a
+                       #     harness which *writes* to the device safe here:
+                       #     by the time it speaks, the boot is behind us.
+                       #     Answering "n" skips the test rather than failing
+                       #     it. `--no-confirm`, or no terminal at all (CI),
+                       #     skips the gate -- and then unity is refused before
+                       #     anything is flashed, because it sends its run
+                       #     command as its very first action and the boot that
+                       #     follows would wipe it.
+                       #   - pytest needs no gate: the harness writes nothing
+                       #     itself, and a suite that reads before it writes is
+                       #     fine either way.
+                       #   - the press is a fallback, not a step: a run
+                       #     routinely passes without one, because the download
+                       #     already booted the board.
+                       #   - so a pass does not prove anyone pressed anything.
+                       #   - jlink.wdt_script cannot run, so a watchdog is left
+                       #     armed.
+                       #   - a press that lands after this test releases the
+                       #     testbed emits its boot log into the next test's
+                       #     console.
+
+  # ---------------------------------------------------------------- 56x board
+  - id: eh-lb563_01
+    platform: eh-lb563
+    runner: local
+    console:
+      port: COM30
+    connections:
+      - fixture: spi_nand_flash
+        default: true
+    jlink:
+      serial: "63640316"
+    flash:
+      method: jlink
