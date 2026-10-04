@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -192,9 +193,23 @@ def describe_plan(
         echo("Nothing to run.")
         return EXIT_OK
 
-    echo(f"{len(planned)} test(s) would run:")
+    # One line per run. A test that names several platforms produces several,
+    # and reporting "3 test(s)" for five runs on five boards would under-report
+    # precisely what a dry run is read for: how many boards this occupies.
+    runs_of: Dict[str, int] = {}
     for item in planned:
-        echo(f"  {item.id}")
+        runs_of[item.id] = runs_of.get(item.id, 0) + 1
+    if len(runs_of) == len(planned):
+        echo(f"{len(planned)} test(s) would run:")
+    else:
+        echo(f"{len(runs_of)} test(s) would run, {len(planned)} run(s) in all:")
+
+    seen: Dict[str, int] = {}
+    for item in planned:
+        seen[item.id] = seen.get(item.id, 0) + 1
+        total = runs_of[item.id]
+        mark = f"  [{seen[item.id]}/{total}]" if total > 1 else ""
+        echo(f"  {item.id}{mark}")
         echo(f"    platform:   {item.platform} ({item.backend})")
         echo(f"    project:    {item.project_dir}")
         echo(f"    build dir:  {item.build_dir}")

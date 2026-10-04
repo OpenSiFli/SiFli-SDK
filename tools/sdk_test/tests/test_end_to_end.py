@@ -681,6 +681,94 @@ testbed:
 """
 
 
+class TestPlanListsEveryRun(EndToEndCase):
+    """A dry run lists runs, not test cases.
+
+    A case that names two platforms runs twice, on two boards. Reporting it once
+    under-reported the work by exactly the factor a dry run is read for before
+    anything is built: how many boards it takes, and therefore how long.
+    """
+
+    def two_board_binding(self):
+        return self.write(
+            "binding-two.yaml",
+            """
+            runner:
+              name: e2e
+              console_poll: 0.005
+
+            testbed:
+              - id: tb_01
+                platform: sf32lb52-lcd_n16r8
+                console: {port: COM13}
+              - id: tb_02
+                platform: eh-lb563
+                console: {port: COM30}
+            """,
+        )
+
+    def test_a_case_naming_two_platforms_gets_two_runs(self):
+        suite = self.make_project(
+            testcase_yaml="""
+            tests:
+              - id: hello.console
+                harness: console
+                integration_platforms: [sf32lb52-lcd_n16r8, eh-lb563]
+                harness_config:
+                  record: ["Hello world!"]
+            """,
+            suffix="hello",
+        )
+        planned = self.runner(suite, binding=self.two_board_binding()).plan()
+
+        # Both runs, in the order the test case named them, and both under the
+        # one id -- which is what the summary groups and counts by.
+        self.assertEqual(
+            [item.platform for item in planned],
+            ["sf32lb52-lcd_n16r8", "eh-lb563"],
+        )
+        # Both under the one id -- which is what the summary groups and counts by.
+        self.assertEqual(len({item.id for item in planned}), 1)
+
+    def test_a_case_naming_none_still_gets_exactly_one_run(self):
+        # The lab decides, and it decides one answer: a bench with twenty boards
+        # must not turn a single test into twenty runs.
+        suite = self.make_project(
+            testcase_yaml="""
+            tests:
+              - id: hello.console
+                harness: console
+                harness_config:
+                  record: ["Hello world!"]
+            """,
+            suffix="hello",
+        )
+        planned = self.runner(suite, binding=self.two_board_binding()).plan()
+
+        self.assertEqual(len(planned), 1)
+        self.assertEqual(planned[0].platform, "sf32lb52-lcd_n16r8")
+
+    def test_a_platform_forced_on_the_command_line_replaces_the_case_s_own(self):
+        # `--platform` wins over `integration_platforms`, which is what makes
+        # "run everything on this board" expressible without editing cases.
+        suite = self.make_project(
+            testcase_yaml="""
+            tests:
+              - id: hello.console
+                harness: console
+                integration_platforms: [eh-lb563]
+                harness_config:
+                  record: ["Hello world!"]
+            """,
+            suffix="hello",
+        )
+        planned = self.runner(
+            suite, binding=self.two_board_binding(), platform="sf32lb52-lcd_n16r8"
+        ).plan()
+
+        self.assertEqual([item.platform for item in planned], ["sf32lb52-lcd_n16r8"])
+
+
 class EndToEndManualResetCase(EndToEndCase):
     """The board has no probe: an operator presses the reset button.
 

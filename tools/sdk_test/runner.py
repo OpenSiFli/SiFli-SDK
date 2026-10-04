@@ -491,11 +491,12 @@ class TestRunner:
         )
 
     def plan_one(self, instance: TestInstance) -> PlannedRun:
-        """The single run for an instance, or raise explaining why it cannot run.
+        """The first run for an instance, or raise explaining why it cannot run.
 
-        What ``sdk.py test plan`` wants: one line per test, and anything that
-        cannot run saying so loudly. :meth:`plan_instance` is the general form,
-        used where a test may legitimately have more than one run.
+        A convenience for callers that want one run and no more. Note that a
+        test naming several ``integration_platforms`` has more than one, and
+        this hides them -- :meth:`plan` returns them all, and that is what a
+        dry run must use.
         """
         planned, filtered = self.plan_instance(instance)
         if planned:
@@ -505,14 +506,27 @@ class TestRunner:
         raise BackendError(f'"{instance.id}": nothing to run')
 
     def plan(self) -> List[PlannedRun]:
-        """Resolve every selected instance to a concrete run.
+        """Resolve every selected instance to the runs it would produce.
 
-        Strict: the first unresolvable test raises. That is the right behaviour
-        for a dry run, whose whole purpose is to tell a human what is wrong
-        before anything is built or flashed. :meth:`run` deliberately does not
-        use this -- there, one mis-configured test must not stop the rest.
+        One entry per run, not per test case: an instance that names several
+        platforms contributes several. Listing only the first under-reported
+        the work by exactly the factor that matters most before a run starts --
+        how many boards it occupies, and therefore how long it takes.
+
+        Still strict: the first unresolvable test raises. That is the right
+        behaviour for a dry run, whose whole purpose is to tell a human what is
+        wrong before anything is built or flashed. :meth:`run` deliberately does
+        not use this -- there, one mis-configured test must not stop the rest.
         """
-        return [self.plan_one(instance) for instance in self.instances()]
+        runs: List[PlannedRun] = []
+        for instance in self.instances():
+            planned, filtered = self.plan_instance(instance)
+            if not planned:
+                if filtered:
+                    raise BackendError(f'"{instance.id}": {filtered[0].reason}')
+                raise BackendError(f'"{instance.id}": nothing to run')
+            runs.extend(planned)
+        return runs
 
     # -- running -------------------------------------------------------------
 

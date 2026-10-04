@@ -194,6 +194,61 @@ class TestListingNeedsNoHardware(SdkTestCase):
         # And it should say plainly that no hardware is involved.
         self.assertIn("no Lab Agent needed", text)
 
+    def test_plan_lists_every_run_of_a_multi_platform_case(self):
+        # Two platforms, two runs. The header has to say so, or a dry run
+        # under-reports how many boards the run will occupy -- which is the one
+        # thing someone reads it for before starting.
+        self.write(
+            "example/multi/testcase.yaml",
+            """
+            tests:
+              - id: multi
+                harness: console
+                integration_platforms: [qemu_cortex_m33, qemu_sf32lb52x]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/multi/project/SConstruct", "# project\n")
+        self.write("example/multi/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        code = cli.describe_plan(
+            os.path.join(self.root, "example", "multi"), echo=lines.append
+        )
+        text = "\n".join(lines)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        # One test case, two runs -- and the count says both numbers rather than
+        # picking one of them.
+        self.assertIn("1 test(s) would run, 2 run(s) in all:", text)
+        self.assertIn("[1/2]", text)
+        self.assertIn("[2/2]", text)
+
+    def test_plan_keeps_the_single_run_header_when_there_is_only_one_per_case(self):
+        self.write(
+            "example/single/testcase.yaml",
+            """
+            tests:
+              - id: single
+                harness: console
+                integration_platforms: [qemu_cortex_m33]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/single/project/SConstruct", "# project\n")
+        self.write("example/single/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        cli.describe_plan(
+            os.path.join(self.root, "example", "single"), echo=lines.append
+        )
+        text = "\n".join(lines)
+
+        self.assertIn("1 test(s) would run:", text)
+        self.assertNotIn("[1/1]", text)
+
     def test_plan_reports_nothing_to_do_rather_than_failing(self):
         empty = self.mkdir("empty2")
         lines = []
