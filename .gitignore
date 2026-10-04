@@ -7,6 +7,8 @@
 *.uvguix.*
 /**/build_*/
 /**/build/
+# `sdk.py test run` artifacts: per-instance device.log/handler.log and the reports
+/test-out/
 /**/*.pyc
 .sconsign.dblite
 .DS_Store

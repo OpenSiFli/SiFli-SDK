@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sifli.com/schemas/testcase.schema.json",
+  "title": "SiFli SDK testcase.yaml",
+  "description": "One or more test cases attached to an example or application directory. The vocabulary follows Zephyr's Twister so that a testcase.yaml reads the same way to anyone who knows Twister; the field set is deliberately restricted to what this framework actually honours.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tests"],
+  "properties": {
+    "common": {
+      "description": "Defaults merged into every entry of `tests`; per-test keys win.",
+      "$ref": "#/$defs/testEntry"
+    },
+    "tests": {
+      "description": "Either a list of entries each carrying `id`, or a mapping keyed by test id.",
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/testEntryWithId" }
+        },
+        {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "description": "An empty entry (`name:`) declares a test with no options.",
+            "oneOf": [
+              { "$ref": "#/$defs/testEntry" },
+              { "type": "null" }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "stringList": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "fixtureRef": {
+      "description": "A capability, written `name` or `name:param`. Lists mean 'all of these'.",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "param": { "type": ["string", "number"] },
+            "fixture": { "type": "string", "minLength": 1 }
+          }
+        },
+        { "type": "array", "minItems": 1 }
+      ]
+    },
+    "dutSpec": {
+      "description": "One DUT beyond the primary one; see the multi-device design section.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "platform_allow": { "$ref": "#/$defs/stringList" },
+        "fixture": { "$ref": "#/$defs/fixtureRef" }
+      }
+    },
+    "recordEntry": {
+      "description": "A console expectation. A bare string is shorthand for {regex: <string>}.",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "regex": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "enum": ["one_line", "multi_line"] },
+            "ordered": { "type": "boolean" },
+            "repeat": { "type": "integer", "minimum": 1 },
+            "separator": { "type": "string" }
+          },
+          "required": ["regex"]
+        }
+      ]
+    },
+    "harnessConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fixture": { "$ref": "#/$defs/fixtureRef" },
+        "record": {
+          "oneOf": [
+            { "$ref": "#/$defs/recordEntry" },
+            { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/recordEntry" } }
+          ]
+        },
+        "cmd": {
+          "description": "Device-side command the host sends to start the run (default depends on the harness).",
+          "type": "string"
+        },
+        "suite": {
+          "description": "Which test suite to ask the device for, if the harness supports selection.",
+          "type": "string"
+        },
+        "pytest_root": { "type": "string" },
+        "pytest_args": { "$ref": "#/$defs/stringList" },
+        "dut_fixture": { "type": "string" },
+        "pytest_dut_client": { "type": "boolean" }
+      }
+    },
+    "testEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "tags": { "$ref": "#/$defs/stringList" },
+        "type": { "type": "string", "enum": ["unit", "integration", "functional"] },
+        "harness": { "type": "string", "enum": ["console", "unity", "shell", "pytest"] },
+        "harness_config": { "$ref": "#/$defs/harnessConfig" },
+        "timeout": { "type": "integer", "minimum": 1 },
+        "platform_allow": { "$ref": "#/$defs/stringList" },
+        "platform_exclude": { "$ref": "#/$defs/stringList" },
+        "integration_platforms": { "$ref": "#/$defs/stringList" },
+        "depends_on": { "$ref": "#/$defs/stringList" },
+        "extra_args": { "$ref": "#/$defs/stringList" },
+        "min_flash": { "type": "integer", "minimum": 0 },
+        "min_ram": { "type": "integer", "minimum": 0 },
+        "slow": { "type": "boolean" },
+        "build_only": { "type": "boolean" },
+        "skip": { "type": "boolean" },
+        "project_dir": {
+          "description": "Directory containing the SConstruct to build, relative to the testcase file. Defaults to the testcase directory, or its `project` subdirectory.",
+          "type": "string"
+        },
+        "dut": { "type": "array", "items": { "$ref": "#/$defs/dutSpec" } },
+        "dut_client": { "type": "array", "items": { "$ref": "#/$defs/dutSpec" } }
+      }
+    },
+    "testEntryWithId": {
+      "allOf": [
+        { "$ref": "#/$defs/testEntry" },
+        { "required": ["id"] }
+      ]
+    }
+  }
+}

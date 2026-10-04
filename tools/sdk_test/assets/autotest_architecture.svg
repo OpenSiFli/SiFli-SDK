@@ -1,0 +1,256 @@
+<!--
+  SiFli SDK 自动化测试框架 —— 文档内嵌版架构图。
+
+  与 autotest_architecture.html 是同一份内容的两种形式，没有生成关系：
+  本文件给 Sphinx 当图片用，那个是给人直接打开看的。改内容时两边都要改。
+
+  没有写死的颜色：所有图形元素只引用内嵌 style 块里的 token，
+  明暗两套主题各自完整定义，所以文档切主题时这张图跟着走。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img"
+     aria-label="SiFli SDK 自动化测试框架架构图">
+  <title>SiFli SDK 自动化测试框架架构</title>
+  <desc>SDK 侧（无硬件绑定）经三种执行后端连接到真板卡或本机仿真载体；真板卡由 Lab Agent 持有。</desc>
+
+  <style>
+    /* Tokens live on the root so both themes are complete sets; every mark below
+       references a token, never a literal, and the dark block only redefines the
+       tokens. Sphinx serves this through an img element, where an SVG's own style
+       block still applies and the media query follows the reader's OS setting. */
+    svg {
+      --ground:      #ffffff;
+      --panel:       #f7f9fc;
+      --rule:        #cfd8e3;
+      --rule-soft:   #dde5ee;
+      --chip:        #ffffff;
+      --chip-line:   #b9c6d6;
+      --ink:         #1c2733;
+      --ink-2:       #35414d;
+      --ink-muted:   #62707f;
+      --arrow:       #7a8797;
+
+      --board-fill:  #eef7ef;
+      --board-line:  #2f8f4e;
+      --board-ink:   #1f6b39;
+      --qemu-fill:   #eef4fb;
+      --qemu-line:   #2f6fb3;
+      --qemu-ink:    #1f4e80;
+      --stub-fill:   #f5f6f8;
+      --stub-line:   #9aa4b1;
+      --stub-ink:    #5c6673;
+      --agent-fill:  #fdf6ec;
+      --agent-line:  #c98a2e;
+      --agent-ink:   #8a5b12;
+      --agent-2:     #a8721f;
+      --danger:      #b3541e;
+      --on-solid:    #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --ground:     #10151b;
+        --panel:      #16222f;
+        --rule:       #2c3846;
+        --rule-soft:  #232e3a;
+        --chip:       #171e26;
+        --chip-line:  #34404e;
+        --ink:        #e8eef4;
+        --ink-2:      #c2cedb;
+        --ink-muted:  #8d9bab;
+        --arrow:      #6b7887;
+
+        --board-fill: #152419;
+        --board-line: #5cbe7c;
+        --board-ink:  #7fd09a;
+        --qemu-fill:  #16222f;
+        --qemu-line:  #6aa6e0;
+        --qemu-ink:   #8fc0ec;
+        --stub-fill:  #1b2028;
+        --stub-line:  #7b8794;
+        --stub-ink:   #a8b2bd;
+        --agent-fill: #241a12;
+        --agent-line: #e0955c;
+        --agent-ink:  #e6b184;
+        --agent-2:    #d9a273;
+        --danger:     #e0955c;
+        --on-solid:   #10151b;
+      }
+    }
+
+    .ground  { fill: var(--ground); }
+    .title   { font-size: 21px; font-weight: 600; fill: var(--ink); }
+    .sub     { font-size: 13px; fill: var(--ink-muted); }
+    .h       { font-size: 15px; font-weight: 600; fill: var(--ink); }
+    .t       { font-size: 13px; fill: var(--ink-2); }
+    .mono    { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace; font-size: 12.5px; fill: var(--ink-2); }
+    .tiny    { font-size: 11.5px; fill: var(--ink-muted); }
+    .badge   { font-size: 11.5px; font-weight: 600; fill: var(--on-solid); }
+    .lane    { font-size: 12px; fill: var(--arrow); letter-spacing: .04em; }
+
+    .panel   { fill: var(--panel); stroke: var(--rule); }
+    .chip    { fill: var(--chip); stroke: var(--chip-line); }
+    .inner   { fill: var(--chip); stroke: var(--rule-soft); }
+    .accent  { fill: var(--qemu-fill); stroke: var(--qemu-line); }
+
+    .board   { fill: var(--board-fill); stroke: var(--board-line); }
+    .qemu    { fill: var(--qemu-fill);  stroke: var(--qemu-line); }
+    .stub    { fill: var(--stub-fill);  stroke: var(--stub-line); }
+    .agent   { fill: var(--agent-fill); stroke: var(--agent-line); }
+
+    .pill-done { fill: var(--board-line); }
+    .pill-qemu { fill: var(--qemu-line); }
+    .pill-stub { fill: var(--stub-line); }
+
+    .s-board { fill: var(--board-ink); }
+    .s-qemu  { fill: var(--qemu-ink); }
+    .s-stub  { fill: var(--stub-ink); }
+    .s-agent { fill: var(--agent-ink); }
+    .s-agent2{ fill: var(--agent-2); }
+    .s-danger{ fill: var(--danger); }
+    .s-accent{ fill: var(--qemu-line); }
+    .s-ok    { fill: var(--board-line); }
+
+    .link    { stroke: var(--arrow); stroke-width: 1.6; fill: none; }
+    .link-hi { stroke: var(--agent-line); stroke-width: 1.8; fill: none; }
+    .marker  { fill: var(--arrow); }
+  </style>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" class="marker"/>
+    </marker>
+  </defs>
+
+  <rect class="ground" width="1200" height="900"/>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', sans-serif">
+    <text class="title" x="40" y="42">SiFli SDK 自动化测试框架</text>
+    <text class="sub"   x="40" y="64">用例只声明能力；物理现实（端口／探针／mux）只出现在 Lab Agent 的 binding 里</text>
+  </g>
+
+  <!-- ══ SDK 侧 ══════════════════════════════════════════════════════════ -->
+  <rect class="panel" x="40" y="86" width="1120" height="286" rx="10"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text class="h" x="62" y="114">SDK 侧</text>
+    <text class="mono s-accent" x="130" y="114">tools/sdk_test/</text>
+    <text class="tiny" x="272" y="114">不绑定硬件 · 不依赖 sdk_py_actions</text>
+
+    <rect class="chip" x="62" y="132" width="150" height="42" rx="6"/>
+    <text class="t" x="137" y="158" text-anchor="middle">testcase.yaml</text>
+
+    <rect class="chip" x="252" y="132" width="132" height="42" rx="6"/>
+    <text class="t" x="318" y="158" text-anchor="middle">discovery</text>
+
+    <rect class="chip" x="424" y="132" width="150" height="42" rx="6"/>
+    <text class="t" x="499" y="158" text-anchor="middle">TestInstance[]</text>
+
+    <rect class="accent" x="614" y="132" width="132" height="42" rx="6"/>
+    <text class="t s-qemu" x="680" y="158" text-anchor="middle">能力匹配</text>
+
+    <rect class="chip" x="986" y="132" width="152" height="42" rx="6"/>
+    <text class="t" x="1062" y="158" text-anchor="middle">binding.yaml</text>
+
+    <path class="link" d="M212 153 H246" marker-end="url(#arrow)"/>
+    <path class="link" d="M384 153 H418" marker-end="url(#arrow)"/>
+    <path class="link" d="M574 153 H608" marker-end="url(#arrow)"/>
+    <path class="link" d="M980 153 H752" marker-end="url(#arrow)"/>
+    <text class="tiny" x="866" y="146" text-anchor="middle">fixture / capability</text>
+
+    <rect class="inner" x="62" y="190" width="1076" height="118" rx="8"/>
+    <text class="h" x="80" y="212">runner.py 编排</text>
+    <g class="mono">
+      <text x="80" y="234"><tspan class="s-accent">1. plan </tspan>选平台 / 找工程目录 / 定 build_&lt;board&gt;_hcpu</text>
+      <text x="80" y="253"><tspan class="s-accent">2. build</tspan> scons --board=&lt;board&gt; -j&lt;n&gt;      <tspan class="tiny">构建函数由 CLI 注入，库不认识 scons</tspan></text>
+      <text x="80" y="272"><tspan class="s-accent">3. open </tspan>backend.open() → Session{console}   <tspan class="tiny">无硬件时不需要 Lab Agent</tspan></text>
+      <text x="80" y="291"><tspan class="s-accent">4. run  </tspan>harness.run(instance, console, timeout)</text>
+      <text x="700" y="272"><tspan class="s-accent">5. close</tspan> backend.close()</text>
+      <text x="700" y="291"><tspan class="tiny">在 finally 里——崩了也要把硬件还回去</tspan></text>
+    </g>
+
+    <text class="tiny" x="80" y="336">harness</text>
+    <rect class="board" x="140" y="322" width="88" height="22" rx="11"/>
+    <text class="badge s-board" x="184" y="337" text-anchor="middle">console</text>
+    <rect class="board" x="236" y="322" width="76" height="22" rx="11"/>
+    <text class="badge s-board" x="274" y="337" text-anchor="middle">unity</text>
+    <rect class="board" x="320" y="322" width="80" height="22" rx="11"/>
+    <text class="badge s-board" x="360" y="337" text-anchor="middle">pytest</text>
+    <rect class="stub" x="408" y="322" width="76" height="22" rx="11"/>
+    <text class="badge s-stub" x="446" y="337" text-anchor="middle">shell</text>
+    <text class="tiny" x="492" y="337">shell 会明确 raise，不静默空转</text>
+
+    <text class="tiny" x="80" y="362">report</text>
+    <text class="mono" x="140" y="362">JUnit XML（CI 收 artifact）+ 终端汇总</text>
+  </g>
+
+  <!-- ══ backends ════════════════════════════════════════════════════════ -->
+  <path class="link" d="M600 372 V 404" marker-end="url(#arrow)"/>
+  <text class="lane" x="612" y="392">backends/ · 按平台名自动选</text>
+
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <!-- board -->
+    <rect class="board" x="40" y="404" width="360" height="196" rx="10"/>
+    <text class="h s-board" x="62" y="432">board</text>
+    <text class="tiny" x="122" y="432">Tier A · 真板卡</text>
+    <rect class="pill-done" x="300" y="416" width="78" height="21" rx="10.5"/>
+    <text class="badge" x="339" y="431" text-anchor="middle">已完成</text>
+    <text class="t" x="62" y="464">经 Lab Agent 拿硬件，一次一个测试程序</text>
+    <text class="t" x="62" y="488">申请 → 烧录 → 开串口 → 复位</text>
+    <text class="t s-danger" x="62" y="512">顺序是关键：先开串口再复位</text>
+    <text class="t s-danger" x="62" y="530">否则启动日志与串口打开竞争</text>
+    <text class="mono" x="62" y="566">sftool（1 Mbaud）/ J-Link</text>
+    <text class="tiny" x="62" y="586">结果上报走串口 console，所以必须真 HAL</text>
+
+    <!-- qemu -->
+    <rect class="qemu" x="420" y="404" width="360" height="196" rx="10"/>
+    <text class="h s-qemu" x="442" y="432">qemu</text>
+    <text class="tiny" x="502" y="432">Tier B · 无硬件载体</text>
+    <rect class="pill-qemu" x="680" y="416" width="78" height="21" rx="10.5"/>
+    <text class="badge" x="719" y="431" text-anchor="middle">已完成</text>
+    <text class="t" x="442" y="464">本机跑 qemu-system-arm（mps2-an505）</text>
+    <text class="t" x="442" y="488">控制台＝模拟 UART0，无需 Lab Agent</text>
+    <text class="t s-ok" x="442" y="512">可跑 harness: unity / pytest</text>
+    <text class="t s-ok" x="442" y="530">板上的单测能不加改动搬过来</text>
+    <text class="mono" x="442" y="566">BSP_USING_QEMU → 整树跳过 drivers/</text>
+    <text class="tiny" x="442" y="586">故 CMock 的 mock 可以是符号的唯一定义</text>
+
+    <!-- pc_sim -->
+    <rect class="stub" x="800" y="404" width="360" height="196" rx="10"/>
+    <text class="h s-stub" x="822" y="432">pc_sim</text>
+    <text class="tiny" x="888" y="432">Tier B · 无硬件载体</text>
+    <rect class="pill-stub" x="1060" y="416" width="78" height="21" rx="10.5"/>
+    <text class="badge" x="1099" y="431" text-anchor="middle">未实现</text>
+    <text class="t" x="822" y="464">customer/boards/pc，MSVC，只能 Windows</text>
+    <text class="t" x="822" y="488">同样整树跳过 drivers/</text>
+    <text class="t s-stub" x="822" y="512">后端只有接口，抛 NotImplementedError</text>
+    <text class="mono" x="822" y="566">--board=pc</text>
+    <text class="tiny" x="822" y="586">liblc3 缺 stdalign.h 导致编不过，已修</text>
+  </g>
+
+  <!-- ══ Lab Agent ═══════════════════════════════════════════════════════ -->
+  <path class="link-hi" d="M220 600 V 634" marker-end="url(#arrow)"/>
+  <text class="lane s-agent2" x="232" y="622">本机 HTTP（stdlib urllib）</text>
+
+  <rect class="agent" x="40" y="634" width="1120" height="150" rx="10"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text class="h s-agent" x="62" y="662">Lab Agent</text>
+    <text class="mono s-agent2" x="152" y="662">tools/lab_agent/</text>
+    <text class="tiny" x="280" y="662">机器侧 · 持有真实硬件</text>
+
+    <text class="t" x="62" y="692">独占占用 testbed —— 两个测试程序共用一块板子产生的现象看起来像固件 bug，事后极难诊断</text>
+    <text class="t" x="62" y="716">transport：serial（1 Mbaud · 游标读，不在 HTTP 上做流） · jlink（复位／烧录） · sftool</text>
+    <text class="t s-danger" x="62" y="740">relay（电源／mux 带外控制）只有接口，会抛 RelayNotAvailable —— 静默 no-op 比失败更糟</text>
+    <text class="mono" x="62" y="766">--config runner.local.yaml  ·  --check  ·  --list</text>
+  </g>
+
+  <path class="link" d="M220 784 V 812" marker-end="url(#arrow)"/>
+  <text class="mono" x="238" y="804">sftool / J-Link</text>
+
+  <rect class="chip" x="40" y="820" width="360" height="52" rx="8"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif">
+    <text class="h" x="62" y="852">真实板卡</text>
+    <text class="tiny" x="130" y="852">跑 Unity 单测或 msh；</text>
+    <text class="tiny" x="130" y="866">控制台固定 uart1 @ 1000000</text>
+    <text class="tiny" x="800" y="852" text-anchor="end">设计文档 autotest.md · 使用手册 autotest_guide.md</text>
+  </g>
+</svg>

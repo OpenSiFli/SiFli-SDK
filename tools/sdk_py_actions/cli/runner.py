@@ -25,6 +25,8 @@ class CommandRunner:
         check: bool = True,
         capture_output: bool = False,
         text: bool = True,
+        encoding: Optional[str] = None,
+        errors: Optional[str] = None,
         timeout: Optional[float] = None,
         retries: int = 0,
     ) -> subprocess.CompletedProcess:
@@ -44,6 +46,8 @@ class CommandRunner:
                     check=check,
                     capture_output=capture_output,
                     text=text,
+                    encoding=encoding,
+                    errors=errors,
                     timeout=timeout,
                 )
             except FileNotFoundError as exc:

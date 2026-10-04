@@ -33,6 +33,11 @@ dependencies = [
   "windows-curses; sys_platform == 'win32'",
   "crccheck",
   "questionary",
+  # Needed only by test cases that declare `harness: pytest`. The `console` and
+  # `unity` harnesses -- and the test framework's own self-tests -- are pure
+  # standard library, so this is not required to use the framework, only to run
+  # a suite that brings its own Python.
+  "pytest",
 ]
 
 [build-system]

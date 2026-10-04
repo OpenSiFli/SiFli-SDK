@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
+# Hardware map -- a TEMPLATE. Copy it next to the lab it describes and edit.
+#
+#   sdk.py test list-fixtures --binding tools/sdk_test/examples/binding.local.yaml
+#   sdk.py test run -T example/get-started/hello_world \
+#       --binding tools/sdk_test/examples/binding.local.yaml
+#
+# This file is the ONLY place in the framework that mentions physical reality:
+# ports, probes, pinmaps, mux channels. Test cases never see it. That separation
+# is the whole point -- a test states what it needs, and whoever owns the
+# hardware says which board provides it.
+#
+# It states what is *wired to* a board, never what a board can do. That second
+# fact belongs to the board: customer/boards/<board>/<core>/features.yaml, which
+# is what a testcase's `depends_on:` is checked against. Writing it here as well
+# is what let the two disagree, so the key is rejected rather than ignored.
+#
+# It is the same schema as the Lab Agent's runner config, parsed by the same
+# code. The SDK side reads what it needs to choose a platform; the blocks it has
+# no business knowing (`jlink:`, `flash:`) are preserved untouched and read by
+# the agent. See tools/lab_agent/examples/runner.local.yaml.
+#
+# Two testbeds offering the same fixture are INTERCHANGEABLE by contract: a test
+# that lands on either must produce the same result. If that is not true of a
+# board pair, they do not offer the same fixture.
+
+testbed:
+  - id: sf32lb52-lcd_n16r8_01
+    platform: sf32lb52-lcd_n16r8        # must match customer/boards/<name>
+    runner: local                       # which Lab Agent holds this testbed
+
+    console:
+      port: COM13
+      # baud defaults to 1000000, the SDK console's rate; spelled out here so
+      # the default is visible.
+
+    # Gates `harness_config.fixture:` in a testcase.
+    connections:
+      - fixture: spi_nor_flash:spi1
+        default: true
+        pinmap:
+          - {pin: PA00, signal: CS}
+          - {pin: PA01, signal: CLK}
+      - fixture: i2c_sensor
+        pinmap:
+          - {pin: PB03, signal: SCL}
+          - {pin: PB04, signal: SDA}
+
+  - id: eh-lb563_01
+    platform: eh-lb563
+    runner: local
+    console:
+      port: COM30
+    connections:
+      - fixture: spi_nand_flash
+        default: true

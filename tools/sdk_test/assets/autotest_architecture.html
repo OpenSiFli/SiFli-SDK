@@ -1,0 +1,529 @@
+<!--
+  SiFli SDK 自动化测试框架 —— 独立可浏览版架构图。
+
+  与 autotest_architecture.svg 是同一份内容的两种形式，没有生成关系：
+  SVG 给文档内嵌（Sphinx 里当图片用），本文件给人直接打开看。
+  改内容时两边都要改。
+
+  单独一个文件、无外部依赖，双击即可在浏览器打开。
+-->
+<title>自动化测试框架架构</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+  :root {
+    --ground:      #fbfcfd;
+    --surface:     #ffffff;
+    --surface-2:   #f4f7fa;
+    --ink:         #16202b;
+    --ink-2:       #3c4a58;
+    --ink-muted:   #5d6b7a;
+    --rule:        #d7dee6;
+    --rule-soft:   #e7ecf1;
+
+    --sdk:         #2f6fb3;
+    --sdk-tint:    #eef4fb;
+    --done:        #2f8f4e;
+    --done-tint:   #edf7f0;
+    --stub:        #8b95a1;
+    --stub-tint:   #f4f5f7;
+    --warn:        #a8551f;
+    --warn-tint:   #fdf5ee;
+
+    --shadow:      0 1px 2px rgba(22, 32, 43, .05), 0 8px 24px -12px rgba(22, 32, 43, .16);
+    --radius:      10px;
+    --gap:         14px;
+    --measure:     68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:    #10151b;
+      --surface:   #171e26;
+      --surface-2: #1d2630;
+      --ink:       #e8eef4;
+      --ink-2:     #c2cedb;
+      --ink-muted: #8d9bab;
+      --rule:      #2c3846;
+      --rule-soft: #232e3a;
+
+      --sdk:       #6aa6e0;
+      --sdk-tint:  #16222f;
+      --done:      #5cbe7c;
+      --done-tint: #152419;
+      --stub:      #7b8794;
+      --stub-tint: #1b2028;
+      --warn:      #e0955c;
+      --warn-tint: #241a12;
+
+      --shadow:    0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #10151b;
+    --surface:     #171e26;
+    --surface-2:   #1d2630;
+    --ink:         #e8eef4;
+    --ink-2:       #c2cedb;
+    --ink-muted:   #8d9bab;
+    --rule:        #2c3846;
+    --rule-soft:   #232e3a;
+
+    --sdk:         #6aa6e0;
+    --sdk-tint:    #16222f;
+    --done:        #5cbe7c;
+    --done-tint:   #152419;
+    --stub:        #7b8794;
+    --stub-tint:   #1b2028;
+    --warn:        #e0955c;
+    --warn-tint:   #241a12;
+
+    --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 48px 72px;
+    padding-inline: 20px;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: 15px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1100px; margin-inline: auto; display: flex; flex-direction: column; gap: 34px; }
+
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; font-size: .88em; }
+
+  code {
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 4px;
+    padding: .1em .38em;
+    color: var(--ink-2);
+  }
+
+  /* ── header ─────────────────────────────────────────────────────────── */
+  header { display: flex; flex-direction: column; gap: 12px; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--sdk);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(27px, 4.2vw, 38px);
+    font-weight: 600;
+    letter-spacing: -.018em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .lede { margin: 0; max-width: var(--measure); color: var(--ink-2); font-size: 16px; }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 30px;
+    padding-top: 4px;
+    font-size: 13.5px;
+    color: var(--ink-muted);
+  }
+  .facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ── section heading ────────────────────────────────────────────────── */
+  .sec { display: flex; flex-direction: column; gap: 14px; }
+
+  h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  h2::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+
+  /* ── panels ─────────────────────────────────────────────────────────── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+  }
+
+  .panel--sdk  { background: var(--sdk-tint);  border-color: color-mix(in oklab, var(--sdk) 34%, var(--rule)); }
+  .panel--agent{ background: var(--warn-tint); border-color: color-mix(in oklab, var(--warn) 34%, var(--rule)); }
+
+  .panel-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .panel-head .name { font-size: 16px; font-weight: 600; }
+  .panel-head .path { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--ink-muted); }
+  .panel-head .tag  { font-size: 12.5px; color: var(--ink-muted); margin-left: auto; }
+
+  /* ── pipeline ───────────────────────────────────────────────────────── */
+  .pipe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 20px; }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  .step--key { border-color: var(--sdk); color: var(--sdk); font-weight: 500; }
+
+  .arrow { color: var(--ink-muted); font-size: 14px; line-height: 1; }
+  .arrow--back { margin-left: auto; }
+  .arrow-note { font-size: 12px; color: var(--ink-muted); }
+
+  /* ── runner steps ───────────────────────────────────────────────────── */
+  .runner {
+    background: var(--surface);
+    border: 1px solid var(--rule-soft);
+    border-radius: 8px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .rstep { display: grid; grid-template-columns: 62px 1fr; gap: 14px; align-items: baseline; font-size: 13.5px; }
+  .rstep .n { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--sdk); font-weight: 500; }
+  .rstep .d { color: var(--ink-2); }
+  .rstep .d code { background: transparent; border: 0; padding: 0; color: var(--ink); }
+  .rstep .why { color: var(--ink-muted); font-size: 12.5px; }
+
+  /* ── pills ──────────────────────────────────────────────────────────── */
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 18px; }
+  .pills .label { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); margin-right: 4px; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pill--done { background: var(--done-tint); color: var(--done); border-color: color-mix(in oklab, var(--done) 40%, transparent); }
+  .pill--stub { background: var(--stub-tint); color: var(--stub); border-color: var(--rule); }
+
+  /* ── backends ───────────────────────────────────────────────────────── */
+  .backends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--gap); }
+
+  .be {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--stub);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+  .be--done { border-left-color: var(--done); }
+  .be--stub { border-left-style: dashed; background: var(--stub-tint); box-shadow: none; }
+
+  .be-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .be-top .n { font-family: "IBM Plex Mono", monospace; font-size: 14.5px; font-weight: 500; }
+  .be-top .tier { font-size: 12px; color: var(--ink-muted); }
+  .be-top .pill { margin-left: auto; }
+
+  .be ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .be li { font-size: 13.5px; color: var(--ink-2); padding-left: 15px; position: relative; }
+  .be li::before { content: ""; position: absolute; left: 0; top: .62em; width: 5px; height: 1px; background: var(--ink-muted); }
+  .be li.key { color: var(--ink); }
+
+  .be-foot {
+    margin-top: auto;
+    padding-top: 11px;
+    border-top: 1px solid var(--rule-soft);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--ink-muted);
+  }
+
+  /* ── caveats / notes ────────────────────────────────────────────────── */
+  .notes { display: flex; flex-direction: column; gap: 10px; }
+
+  .note {
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 15px 18px;
+    display: grid;
+    grid-template-columns: 3px 1fr;
+    gap: 16px;
+  }
+  .note .bar { background: var(--rule); border-radius: 2px; }
+  .note--warn .bar { background: var(--warn); }
+  .note--done .bar { background: var(--done); }
+
+  .note h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+  .note p  { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: var(--measure); }
+  .note p + p { margin-top: 6px; }
+
+  /* ── commands ───────────────────────────────────────────────────────── */
+  pre {
+    margin: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--rule-soft);
+    border-radius: 8px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--ink-2);
+  }
+  pre .c { color: var(--ink-muted); }
+  pre .k { color: var(--sdk); }
+
+  footer { font-size: 12.5px; color: var(--ink-muted); border-top: 1px solid var(--rule); padding-top: 18px; }
+
+  @media (max-width: 560px) {
+    body { padding-block: 32px 48px; }
+    .panel { padding: 18px 16px; }
+    .arrow--back { margin-left: 0; }
+    .rstep { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">SiFli SDK · tools/sdk_test</div>
+    <h1>自动化测试框架架构</h1>
+    <p class="lede">
+      用例只声明<strong>能力</strong>；端口、探针序列号、mux 通道这些物理现实，
+      只出现在 Lab Agent 那侧的 binding 文件里。所以同一套用例换个载体照样跑。
+    </p>
+    <div class="facts">
+      <span><b>282</b> + <b>105</b> 框架自测（不需要硬件）</span>
+      <span><b>3</b>/4 harness 已实现</span>
+      <span><b>2</b>/3 执行后端已实现</span>
+      <span>真板卡 <b>+</b> QEMU 两条载体路线</span>
+    </div>
+  </header>
+
+  <!-- ── SDK 侧 ────────────────────────────────────────────────────── -->
+  <section class="sec">
+    <h2>SDK 侧</h2>
+    <div class="panel panel--sdk">
+      <div class="panel-head">
+        <span class="name">测试编排</span>
+        <span class="path">tools/sdk_test/</span>
+        <span class="tag">不绑定硬件 · 不依赖 sdk_py_actions</span>
+      </div>
+
+      <div class="pipe">
+        <span class="step">testcase.yaml</span>
+        <span class="arrow">→</span>
+        <span class="step">discovery</span>
+        <span class="arrow">→</span>
+        <span class="step">TestInstance[]</span>
+        <span class="arrow">→</span>
+        <span class="step step--key">能力匹配</span>
+        <span class="arrow arrow--back">←</span>
+        <span class="step">binding.yaml</span>
+      </div>
+      <div class="pipe" style="margin-top:-12px">
+        <span class="arrow-note">用例只声明能力</span>
+        <span class="arrow-note" style="margin-left:auto">fixture / capability · 硬件团队维护</span>
+      </div>
+
+      <div class="runner">
+        <div class="rstep"><span class="n">1 · plan</span>
+          <span class="d">选平台 / 找工程目录 / 定 <code>build_&lt;board&gt;_hcpu</code></span></div>
+        <div class="rstep"><span class="n">2 · build</span>
+          <span class="d"><code>scons --board=&lt;board&gt; -j&lt;n&gt;</code>
+            <span class="why">— 构建函数由 CLI 注入，库不认识 scons</span></span></div>
+        <div class="rstep"><span class="n">3 · open</span>
+          <span class="d"><code>backend.open()</code> → Session{console}
+            <span class="why">— 无硬件的平台不需要 Lab Agent</span></span></div>
+        <div class="rstep"><span class="n">4 · run</span>
+          <span class="d"><code>harness.run(instance, console, timeout)</code></span></div>
+        <div class="rstep"><span class="n">5 · close</span>
+          <span class="d"><code>backend.close()</code>
+            <span class="why">— 放在 finally 里：崩了也要把硬件还回去</span></span></div>
+      </div>
+
+      <div class="pills">
+        <span class="label">harness</span>
+        <span class="pill pill--done">console</span>
+        <span class="pill pill--done">unity</span>
+        <span class="pill pill--done">pytest</span>
+        <span class="pill pill--stub">shell</span>
+        <span class="arrow-note">shell 会明确 raise，不静默空转</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── backends ──────────────────────────────────────────────────── -->
+  <section class="sec">
+    <h2>执行后端 · 按平台名自动选</h2>
+    <div class="backends">
+
+      <div class="be be--done">
+        <div class="be-top">
+          <span class="n">board</span>
+          <span class="tier">Tier A</span>
+          <span class="pill pill--done">已完成</span>
+        </div>
+        <ul>
+          <li class="key">真板卡，经 Lab Agent 拿硬件</li>
+          <li>申请 → 烧录 → 开串口 → 复位</li>
+          <li class="key">顺序是关键：先开串口再复位</li>
+          <li>否则启动日志与串口打开竞争，<br>断言 banner 的用例会偶发失败</li>
+        </ul>
+        <div class="be-foot">sftool（1 Mbaud）/ J-Link</div>
+      </div>
+
+      <div class="be be--done">
+        <div class="be-top">
+          <span class="n">qemu</span>
+          <span class="tier">Tier B · 无硬件</span>
+          <span class="pill pill--done">已完成</span>
+        </div>
+        <ul>
+          <li class="key">本机跑 qemu-system-arm（mps2-an505）</li>
+          <li>控制台＝模拟 UART0，不需要 Lab Agent</li>
+          <li class="key">能跑 harness: unity / pytest</li>
+          <li>板上的单测不加改动就能搬过来</li>
+        </ul>
+        <div class="be-foot">BSP_USING_QEMU → 整树跳过 drivers/</div>
+      </div>
+
+      <div class="be be--stub">
+        <div class="be-top">
+          <span class="n">pc_sim</span>
+          <span class="tier">Tier B · 无硬件</span>
+          <span class="pill pill--stub">未实现</span>
+        </div>
+        <ul>
+          <li><code>customer/boards/pc</code>，MSVC，只能 Windows</li>
+          <li>同样整树跳过 <code>drivers/</code></li>
+          <li>后端只有接口，抛 <code>NotImplementedError</code></li>
+        </ul>
+        <div class="be-foot">--board=pc</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Lab Agent ─────────────────────────────────────────────────── -->
+  <section class="sec">
+    <h2>机器侧</h2>
+    <div class="panel panel--agent">
+      <div class="panel-head">
+        <span class="name">Lab Agent</span>
+        <span class="path">tools/lab_agent/</span>
+        <span class="tag">持有真实硬件 · 本机 HTTP</span>
+      </div>
+      <div class="runner" style="background:transparent;border-color:color-mix(in oklab, var(--warn) 25%, var(--rule))">
+        <div class="rstep"><span class="n">占用</span>
+          <span class="d">独占 testbed，一次只发放一个
+            <span class="why">— 两个测试程序共用一块板子产生的现象看起来像固件 bug，事后极难诊断</span></span></div>
+        <div class="rstep"><span class="n">传输</span>
+          <span class="d">serial（1 Mbaud · 游标读，不在 HTTP 上做流） · jlink（复位／烧录） · sftool</span></div>
+        <div class="rstep"><span class="n">带外</span>
+          <span class="d">relay 电源／mux <span class="why">— 只有接口，会抛 RelayNotAvailable。
+            静默 no-op 会让用例"通过"却从未真正断电，比失败更糟</span></span></div>
+      </div>
+      <div class="pills">
+        <span class="label">启动</span>
+        <span class="mono" style="font-size:12.5px;color:var(--ink-muted)">
+          --config runner.local.yaml &nbsp;·&nbsp; --check &nbsp;·&nbsp; --list
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── commands ──────────────────────────────────────────────────── -->
+  <section class="sec">
+    <h2>跑起来</h2>
+    <pre><span class="c"># 不需要硬件、不需要 Lab Agent</span>
+<span class="k">sdk.py test run -T example/qemu</span>                                  <span class="c"># console harness</span>
+<span class="k">sdk.py test run -T example/test/unit_test --no-build \
+    -t unit_test.cjson_qemu</span>                                     <span class="c"># 板上那套 Unity 单测</span>
+
+<span class="c"># 框架自测</span>
+python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"
+python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"</pre>
+  </section>
+
+  <!-- ── caveats ───────────────────────────────────────────────────── -->
+  <section class="sec">
+    <h2>尚未收敛</h2>
+    <div class="notes">
+
+      <div class="note note--warn">
+        <div class="bar"></div>
+        <div>
+          <h3>QEMU 控制台没有走中断</h3>
+          <p>已实测：使能 UART 接收中断、把所有向量都指向探针、放开全部 32 条 NVIC 线，
+            <strong>没有任何设备中断产生</strong>。控制台是轮询的，所以别拿它验证中断相关行为。</p>
+        </div>
+      </div>
+
+      <div class="note note--warn">
+        <div class="bar"></div>
+        <div>
+          <h3>lz4 的 boundaries 断言失败</h3>
+          <p>第一次真正被执行到。它期望 <code>LZ4_decompress_safe(..., dstCapacity=4)</code>
+            在解出 1024 字节时返回负值，实测返回 <strong>+1024</strong>。
+            LZ4 头文件的契约明说这种情况要返回负的错误码。未定论是测试写错还是这份 lz4
+            的容量检查有缺口——没有为了让套件变绿而弱化断言。</p>
+        </div>
+      </div>
+
+      <div class="note note--warn">
+        <div class="bar"></div>
+        <div>
+          <h3>打桩用例未交付</h3>
+          <p>CMock 基建（源码、生成配置、示例 mock、Ruby）都就位了，缺的是用例本身。
+            目标要选<strong>中间件级</strong>函数而不是 HAL 函数：两个非板卡载体都没有芯片，
+            <code>bf0_hal_*.h</code> 依赖只有芯片才有的头文件，编不过。</p>
+        </div>
+      </div>
+
+      <div class="note note--done">
+        <div class="bar"></div>
+        <div>
+          <h3>真板卡端到端未在硬件上跑过</h3>
+          <p>代码路径就绪、有端到端自测覆盖（真 Lab Agent + 伪造设备），但没上过真板子。
+            QEMU 那条链路已经实测通过。</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    设计文档 <span class="mono">docs/source/zh_CN/app_note/autotest.md</span> ·
+    使用手册 <span class="mono">autotest_guide.md</span> ·
+    实现说明 <span class="mono">tools/sdk_test/README.md</span>
+  </footer>
+
+</div>

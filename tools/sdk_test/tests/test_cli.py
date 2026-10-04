@@ -1,0 +1,242 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+"""Tests for the ``sdk.py test`` command layer.
+
+Two things are pinned here that are easy to get wrong and expensive to miss:
+
+* the **exit code** of a failing run. Reporting success for a failed test run is
+  the one failure this framework must never have -- CI would go green on a
+  broken build -- and the obvious implementation (raising
+  ``click.exceptions.Exit``) silently stopped working on click 8.3.
+* that ``list``/``plan`` stay usable without any hardware, which is what makes
+  them safe to wire into a pipeline.
+"""
+
+from __future__ import annotations
+
+import os
+import unittest
+
+from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
+
+from sdk_test import cli
+from sdk_test.errors import SdkTestError
+
+
+class TestExitCodes(SdkTestCase):
+    """The contract: 0 all passed, 1 something failed, 2 the request was unusable."""
+
+    def test_the_codes_are_what_the_documentation_says(self):
+        self.assertEqual(cli.EXIT_OK, 0)
+        self.assertEqual(cli.EXIT_FAILURES, 1)
+        self.assertEqual(cli.EXIT_USAGE, 2)
+
+    def test_a_failing_run_returns_the_failure_code(self):
+        summary = _summary_with_failure()
+        self.assertFalse(summary.ok)
+        # Mirrors run_tests' final decision.
+        self.assertEqual(
+            cli.EXIT_OK if summary.ok else cli.EXIT_FAILURES, cli.EXIT_FAILURES
+        )
+
+
+def _summary_with_failure():
+    from sdk_test.report import FAILED
+    from sdk_test.report import RunSummary
+    from sdk_test.report import TestResult
+
+    summary = RunSummary()
+    summary.add(TestResult(id="a/b", status=FAILED, message="nope"))
+    return summary
+
+
+class TestGuardTurnsCodesIntoProcessStatus(SdkTestCase):
+    """``test_ext._guard`` is where a library return code becomes an exit status.
+
+    It raises ``FatalError(exit_code=...)`` rather than ``click.exceptions.Exit``
+    on purpose. Raising ``Exit`` from a command callback is the natural way to
+    carry a status out of click, and it worked on older click -- but click 8.3
+    swallows it under ``standalone_mode=False``, and the process then exits 0.
+    """
+
+    def setUp(self):
+        super().setUp()
+        try:
+            from sdk_py_actions import test_ext
+        except ImportError as exc:  # pragma: no cover - environment problem
+            self.skipTest(f"sdk_py_actions is not importable: {exc}")
+        self.test_ext = test_ext
+
+    def test_a_failure_code_becomes_a_fatal_error_carrying_it(self):
+        from sdk_py_actions.errors import FatalError
+
+        @self.test_ext._guard
+        def callback(sdk_ctx, **kwargs):
+            return cli.EXIT_FAILURES
+
+        with self.assertRaises(FatalError) as caught:
+            callback(None)
+        self.assertEqual(caught.exception.exit_code, cli.EXIT_FAILURES)
+
+    def test_success_is_returned_rather_than_raised(self):
+        @self.test_ext._guard
+        def callback(sdk_ctx, **kwargs):
+            return cli.EXIT_OK
+
+        self.assertEqual(callback(None), cli.EXIT_OK)
+
+    def test_the_failure_message_says_what_happened(self):
+        # "tests failed" is a result, not a fault, so the wording must not read
+        # like an internal error.
+        from sdk_py_actions.errors import FatalError
+
+        @self.test_ext._guard
+        def callback(sdk_ctx, **kwargs):
+            return cli.EXIT_FAILURES
+
+        with self.assertRaises(FatalError) as caught:
+            callback(None)
+        self.assertIn("test", str(caught.exception).lower())
+
+    def test_library_errors_become_cli_errors(self):
+        from sdk_py_actions.errors import FatalError
+
+        @self.test_ext._guard
+        def callback(sdk_ctx, **kwargs):
+            raise SdkTestError("something specific went wrong")
+
+        with self.assertRaises(FatalError) as caught:
+            callback(None)
+        self.assertIn("something specific went wrong", str(caught.exception))
+
+
+class TestListingNeedsNoHardware(SdkTestCase):
+    """``list`` and ``plan`` must work with no Lab Agent and no board."""
+
+    def setUp(self):
+        super().setUp()
+        self.suite = self.write(
+            "example/demo/testcase.yaml",
+            """
+            tests:
+              - id: alpha
+                description: first case
+                harness: console
+                tags: [smoke]
+                timeout: 42
+                harness_config:
+                  record: ["hello"]
+              - id: beta
+                harness: unity
+                skip: true
+            """,
+        )
+        self.write("example/demo/project/SConstruct", "# project\n")
+        self.write("example/demo/project/proj.conf", "CONFIG_X=y\n")
+        self.suite_root = os.path.join(self.root, "example", "demo")
+
+    def test_list_prints_every_case(self):
+        lines = []
+        code = cli.list_tests(self.suite_root, echo=lines.append)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        text = "\n".join(lines)
+        self.assertIn("alpha", text)
+        self.assertIn("beta", text)
+
+    def test_list_marks_a_skipped_case(self):
+        lines = []
+        cli.list_tests(self.suite_root, echo=lines.append)
+        self.assertIn("skip", "\n".join(lines))
+
+    def test_list_as_json_is_machine_readable(self):
+        import json
+
+        lines = []
+        cli.list_tests(self.suite_root, as_json=True, echo=lines.append)
+        payload = json.loads("\n".join(lines))
+
+        by_id = {entry["id"]: entry for entry in payload}
+        self.assertEqual(by_id["alpha"]["timeout"], 42)
+        self.assertEqual(by_id["alpha"]["tags"], ["smoke"])
+        self.assertTrue(by_id["beta"]["skip"])
+
+    def test_list_reports_an_empty_tree_without_failing(self):
+        empty = self.mkdir("empty")
+        lines = []
+        self.assertEqual(cli.list_tests(empty, echo=lines.append), cli.EXIT_OK)
+        self.assertIn("No test cases found", "\n".join(lines))
+
+    def test_plan_resolves_a_case_with_no_binding_at_all(self):
+        # integration_platforms lets a case name its carrier directly, which is
+        # how the QEMU cases run without a hardware map.
+        self.write(
+            "example/solo/testcase.yaml",
+            """
+            tests:
+              - id: solo
+                harness: console
+                integration_platforms: [qemu_cortex_m33]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/solo/project/SConstruct", "# project\n")
+        self.write("example/solo/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        code = cli.describe_plan(os.path.join(self.root, "example", "solo"), echo=lines.append)
+        text = "\n".join(lines)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("qemu_cortex_m33", text)
+        self.assertIn("(qemu)", text)
+        # And it should say plainly that no hardware is involved.
+        self.assertIn("no Lab Agent needed", text)
+
+    def test_plan_reports_nothing_to_do_rather_than_failing(self):
+        empty = self.mkdir("empty2")
+        lines = []
+        self.assertEqual(cli.describe_plan(empty, echo=lines.append), cli.EXIT_OK)
+        self.assertIn("Nothing to run", "\n".join(lines))
+
+    def test_list_fixtures_without_a_binding_says_so(self):
+        lines = []
+        code = cli.list_fixtures(binding=None, echo=lines.append)
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("No --binding", "\n".join(lines))
+
+    def test_list_fixtures_describes_a_binding(self):
+        binding = self.write(
+            "binding.yaml",
+            """
+            testbed:
+              - id: tb_01
+                platform: board_a
+                console: {port: COM7}
+                connections:
+                  - fixture: flash:spi1
+            """,
+        )
+        lines = []
+        code = cli.list_fixtures(binding=binding, echo=lines.append)
+        text = "\n".join(lines)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("tb_01", text)
+        self.assertIn("COM7", text)
+        self.assertIn("flash:spi1", text)
+
+    def test_environment_report_lists_harnesses_and_backends(self):
+        lines = []
+        cli.describe_environment(echo=lines.append)
+        text = "\n".join(lines)
+        self.assertIn("console", text)
+        self.assertIn("unity", text)
+        self.assertIn("pytest", text)
+        self.assertIn("board", text)
+        self.assertIn("qemu", text)
+
+
+if __name__ == "__main__":
+    unittest.main()
