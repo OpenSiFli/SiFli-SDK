@@ -184,6 +184,34 @@ sdk.py test run  -T example/get-started/hello_world --binding my-binding.yaml
 
 退出码：`0` 全过，`1` 有用例失败，`2` 请求本身不可用。
 
+### 手动跑：只指定平台，不要 binding
+
+**绝大多数手动执行属于这一类**——"随便挑块空闲的板，把这批用例跑一遍"。这时
+`--binding` 是多余的，用 `-p/--platform` 就行：
+
+```bash
+sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:8760
+```
+
+不用 binding 也能跑，因为**分配是 agent 做的**：SDK 侧调 `allocate` 时
+`testbed_id` 本来就传 `None`，由 agent 在候选里挑一块空闲的。所以有没有 binding，
+**分配路径完全相同**——binding 的作用纯粹是 SDK 侧的**提前过滤**。
+
+代价是少了三道**在构建之前**的检查，它们都会推迟到申请硬件那一刻：
+
+| 少了什么 | 后果 |
+|---|---|
+| fixture 匹配 | 用例要的 fixture 没人提供，会在 `allocate` 时报错，而不是在 `plan` 阶段 |
+| binding ↔ `features.yaml` 的矛盾检查 | "有 flash 接在 spi1，但板子没声明 spi" 这类问题不会提前报出来 |
+| 平台过滤② | 用例声明要什么，`-p` 直接覆盖（见下） |
+
+**`-p` 会覆盖用例自己的 `integration_platforms`**——选项优先。所以整棵树会被拉到
+你指定的那块平台上跑，包括那些本来钉死在别的平台上的用例。这正是"我就要在这块板上
+跑一遍"想要的行为，但它绕过了用例自己的声明，看到跨平台的用例被拉过来时别意外。
+
+**想跑多个平台**：现在命令行只能给一个 `-p`。让整棵树在两个平台上各跑一遍，得在
+用例里写 `integration_platforms:`，或者跑两次。
+
 常用参数：
 
 | 参数 | 作用 |

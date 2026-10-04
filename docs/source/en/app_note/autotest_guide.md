@@ -187,6 +187,37 @@ sdk.py test run  -T example/get-started/hello_world --binding my-binding.yaml
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
+### Running by hand: name a platform, skip the binding
+
+**Most manual runs are this kind** — "grab a free board and run this batch". The `--binding`
+is superfluous then; `-p/--platform` is enough:
+
+```bash
+sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:8760
+```
+
+It works without a binding because **allocation is the agent's job**: when the SDK side calls
+`allocate`, it passes `testbed_id=None` anyway and lets the agent pick a free candidate. So the
+allocation path is *identical* with or without a binding — what a binding adds is an **early
+filter** on the SDK side.
+
+The price is three checks that then happen *before the build* no longer happen at all, and are
+deferred to the moment hardware is requested:
+
+| What is lost | Consequence |
+|---|---|
+| fixture matching | a case needing a fixture nobody offers fails at `allocate`, not at `plan` |
+| the binding ↔ `features.yaml` contradiction check | "there is a flash on spi1 but the board declares no spi" is no longer caught early |
+| platform filter, phase two | whatever a case declares is overridden by `-p` (below) |
+
+**`-p` overrides a case's own `integration_platforms`** — the flag wins. The whole tree is
+pulled onto the platform you name, including cases pinned to a different one. That is exactly
+what "run everything on this board" wants, but it does bypass the cases' own declarations, so
+do not be surprised when a cross-platform case turns up.
+
+**To run on several platforms**: the command line takes only one `-p` today. Running the whole
+tree on two platforms means naming them in the cases' `integration_platforms:`, or running twice.
+
 Common flags:
 
 | Flag | What it does |
