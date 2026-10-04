@@ -73,6 +73,7 @@ extensions:
       - "external/libepub"
       - "tools/mkfatimg/mkfatimg"
       - "rtos/rtthread/components/dfs/filesystems/elmfat"
+      - "middleware/test_fwk/mocks"
     ignore_license: true
     ignore_copyright: true
   - path:

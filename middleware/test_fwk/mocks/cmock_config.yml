@@ -1,0 +1,49 @@
+# CMock configuration for the SiFli SDK's generated mocks.
+#
+#   ruby external/cmock/lib/cmock.rb -o middleware/test_fwk/mocks/cmock_config.yml <header>
+#
+# See README.md in this directory for the full workflow and for which headers
+# are worth mocking on which carrier.
+:cmock:
+  :mock_prefix: mock_
+  :mock_path: .
+  :enforce_strict_ordering: true
+  :fail_on_unexpected_calls: true
+  :treat_externs: :exclude
+  :treat_inlines: :exclude
+
+  # The mock needs Unity, and needs to pull in the real header for its types.
+  :includes:
+    - bf0_hal.h
+  :includes_c_pre_header:
+    - "unity.h"
+
+  :plugins:
+    - :ignore
+    - :callback
+
+  # Debug-only helpers that the real headers turn into no-op MACROS when their
+  # DBG_* switch is off:
+  #
+  #     #ifdef DBG_CIRCULAR_BUFFER
+  #     void circular_buf_log(...);
+  #     #else
+  #     #define circular_buf_log(cb,idx,data,len)
+  #     #endif
+  #
+  # CMock sees the declaration and emits a function; the consuming build then
+  # sees the macro and expands the mock's own definition, which is a syntax
+  # error. Stripping them is correct rather than a workaround: they are not part
+  # of the interface under test, and the SDK's own callers already compile them
+  # away.
+  #
+  # The patterns must cover the WHOLE declaration: CMock removes the matched
+  # text only, so matching just the name leaves a dangling parameter list behind.
+  :strippables:
+    - 'void circular_buf_log\([^)]*\)[^;]*;'
+    - 'void circular_buf_set_backup\([^)]*\)[^;]*;'
+    - 'void circular_buf_validate\([^)]*\)[^;]*;'
+    # Declared in ipc_hw.h but *defined* in ipc_queue.c, which this project
+    # compiles as the module under test. Mocking it would define the same symbol
+    # twice, and the linker says so rather than picking one.
+    - 'void ipc_queue_data_ind\([^)]*\)[^;]*;'

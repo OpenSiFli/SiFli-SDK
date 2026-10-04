@@ -8,8 +8,7 @@
 >
 > 仍**不在本次提交里**的：第 4 节的 QEMU 载体（`customer/boards/qemu_*`、
 > `rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`），
-> 以及第 7.1 节的 CMock 打桩（`external/cmock/`、`middleware/test_fwk/mocks/`、
-> `example/test/{cmock_unit,hal_mock}/`）——提到这两节的地方各自另有批次。
+> 以及第 7.1 节 CMock 的**两个示例工程**（下一笔）。提到这两节的地方各自另有批次。
 > 完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
 
 ---
@@ -542,9 +541,9 @@ CONFIG_USING_TEST_FWK=y
 
 ### 7.1 打桩：CMock
 
-> **本节的内容在另一批提交里**：`external/cmock/`、`middleware/test_fwk/mocks/`
-> 和下面这两个工程都不在本次提交里，而它们依赖的 `BSP_USING_QEMU`（第 4 节）
-> 同样不在。本节讲的是做法，暂时没有可抄的现成工程。
+> CMock 本身与 `mock_*.c/h` 生成物**已随本次提交入库**；下面这两个工程见下一笔。
+> 而它们依赖的 `BSP_USING_QEMU`（第 4 节）也不在这批里，所以这些命令暂时跑不起来
+> ——要等 QEMU 载体跟上。
 
 要测的分支在台架上复现不出来时（"擦除失败""写超时""ID 不匹配"），把那个依赖换成
 CMock 生成的 mock。两个现成工程可以抄：

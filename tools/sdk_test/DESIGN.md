@@ -29,7 +29,7 @@
 > | 不在本次提交里 | 内容 |
 > |---|---|
 > | QEMU 载体 | `customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`，以及它要求的构建侧改动（`BSP_USING_QEMU`/`SOC_QEMU` 两个 Kconfig 符号、`tools/build/building.py`、`cpuport.c` 的 `bf0_hal_hlp.h`） |
-> | CMock 打桩（需求 3） | `external/cmock/`、`middleware/test_fwk/mocks/`、`example/test/{cmock_unit,hal_mock}/` |
+> | CMock 打桩（需求 3） | 库（`external/cmock/`）与 mock 生成物（`middleware/test_fwk/mocks/`）已随本提交入库；两个示例工程见下一笔 |
 >
 > 下文凡提到这些的地方，请按这个边界读：**`backends/qemu.py` 这个后端本身在本次提交里，
 > 它要驱动的那个载体不在**。而 QEMU 这条路线本身的做法尚未定型，本文对它的描述是设计意图，
