@@ -441,6 +441,22 @@ class TestAutorunIsUnityOnly(SdkTestCase):
 
         self.assertIn("autorun", str(caught.exception))
 
+    def test_a_unity_case_may_not_describe_a_command_it_will_not_send(self):
+        # `cmd` and `prompt` are for the path where the firmware waits for one.
+        # Under autorun they are read by nothing, so writing them says something
+        # the run will not do.
+        with self.assertRaises(HarnessError) as caught:
+            unity.require_no_send_keys({"autorun": True, "cmd": "unity_run"})
+        self.assertIn("cmd", str(caught.exception))
+
+        with self.assertRaises(HarnessError) as caught:
+            unity.require_no_send_keys({"autorun": True, "prompt": "msh />"})
+        self.assertIn("prompt", str(caught.exception))
+
+    def test_those_keys_are_fine_when_the_firmware_waits_for_a_command(self):
+        unity.require_no_send_keys({"cmd": "unity_run", "prompt": "msh />"})
+        unity.require_no_send_keys({"autorun": True, "suite": "lz4"})
+
 
 if __name__ == "__main__":
     unittest.main()

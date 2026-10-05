@@ -317,6 +317,25 @@ def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
     return verdict
 
 
+def require_no_send_keys(config: dict) -> None:
+    """``autorun`` and the keys describing a command are mutually exclusive.
+
+    ``cmd`` and ``prompt`` exist to get a command into a board that is waiting
+    for one. With ``autorun`` the firmware has already reported everything by the
+    time the host could speak, so neither is read -- and a key that is not read
+    is refused rather than ignored, here as everywhere else in this framework.
+    """
+    if not config.get(AUTORUN_KEY):
+        return
+    for key in ("cmd", "prompt"):
+        if key in config:
+            raise HarnessError(
+                f"harness_config.{key} is not used with harness_config.autorun: "
+                "the firmware reports by itself, so nothing is sent. Remove it, "
+                "or drop autorun to go back to sending a command."
+            )
+
+
 def run(
     instance: "TestInstance",
     console: "ConsoleLike",
@@ -342,6 +361,7 @@ def run(
     require_record_free(instance.harness_config)
     config = instance.harness_config
     autorun = bool(config.get(AUTORUN_KEY))
+    require_no_send_keys(config)
 
     if not autorun:
         prompt = str(config.get("prompt") or DEFAULT_PROMPT)

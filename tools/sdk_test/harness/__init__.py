@@ -121,7 +121,10 @@ def implemented_harnesses() -> List[str]:
 #: one must refuse it rather than ignore it: accepting a key that does nothing
 #: teaches that writing it did something. ``unity`` already applies this rule to
 #: ``record`` from the other side; this is the same rule, same direction.
-UNITY_ONLY_KEYS = ("autorun",)
+#:
+#: ``suite`` is in the list although it reads as generic: it is how a unity case
+#: claims its own results, and no other harness has results to claim.
+UNITY_ONLY_KEYS = ("autorun", "cmd", "prompt", "suite")
 
 
 def reject_foreign_keys(name: str, harness_config: dict) -> None:
