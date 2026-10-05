@@ -168,6 +168,99 @@ class PlanInstanceTest(SdkTestCase):
         self.assertIn("--platform", str(caught.exception))
 
 
+class PlanWithFilteredTest(SdkTestCase):
+    """What the whole-tree plan calls an error, and what it calls an answer.
+
+    ``--platform`` asks for one board. A case whose own gate turns that board
+    away is not a mistake -- it is simply not that board's work -- so it comes
+    back as a filtered pair to be reported. Without ``--platform`` the case's
+    own platforms are the only ones considered, so a case that refuses all of
+    them is a case contradicting itself, and that still raises.
+    """
+
+    def suite(self, tests_yaml: str) -> str:
+        self.write("testcase.yaml", tests_yaml)
+        self.write("project/SConstruct", "# project\n")
+        self.write("project/proj.conf", "CONFIG_X=y\n")
+        return self.root
+
+    def test_a_gated_case_is_an_answer_when_the_command_line_named_the_platform(self):
+        suite = self.suite("""
+            tests:
+              - id: only_a
+                harness: console
+                platform_allow: [board_a]
+                integration_platforms: [board_a]
+                harness_config:
+                  record: ["x"]
+        """)
+        runner = make_runner(testsuite_root=suite, platform="board_b")
+
+        planned, turned_away = runner.plan_with_filtered()
+
+        self.assertEqual([], planned)
+        self.assertEqual(1, len(turned_away))
+        self.assertEqual("only_a", turned_away[0].id)
+        self.assertEqual("board_b", turned_away[0].platform)
+        self.assertIn("not allowed", turned_away[0].reason)
+        # And the wrapper callers that only want runs does not raise over it.
+        self.assertEqual([], runner.plan())
+
+    def test_a_case_that_refuses_every_platform_it_names_still_raises(self):
+        # No `--platform`, so the case's own list is all there is: refusing all
+        # of it is self-contradiction, and the wording is the one it always had.
+        suite = self.suite("""
+            tests:
+              - id: self_contradicting
+                harness: console
+                platform_exclude: [board_a]
+                integration_platforms: [board_a]
+                harness_config:
+                  record: ["x"]
+        """)
+        runner = make_runner(testsuite_root=suite)
+
+        with self.assertRaises(BackendError) as caught:
+            runner.plan()
+        self.assertIn("self_contradicting", str(caught.exception))
+        self.assertIn("not allowed", str(caught.exception))
+
+        with self.assertRaises(BackendError):
+            runner.plan_with_filtered()
+
+    def test_a_case_naming_no_platform_still_raises(self):
+        suite = self.suite("""
+            tests:
+              - id: nowhere
+                harness: console
+                harness_config:
+                  record: ["x"]
+        """)
+        with self.assertRaises(BackendError) as caught:
+            make_runner(testsuite_root=suite).plan()
+        self.assertIn("integration_platforms", str(caught.exception))
+
+    def test_a_multi_platform_case_keeps_its_runs_and_reports_the_gated_one(self):
+        # The gated platform does not take the case's other runs down with it:
+        # this half is a run, that half is an answer.
+        suite = self.suite("""
+            tests:
+              - id: two_of_three
+                harness: console
+                platform_exclude: [board_c]
+                integration_platforms: [board_a, board_c]
+                harness_config:
+                  record: ["x"]
+        """)
+        runner = make_runner(testsuite_root=suite)
+
+        planned, turned_away = runner.plan_with_filtered()
+
+        self.assertEqual(["board_a"], [run.platform for run in planned])
+        self.assertEqual(["board_c"], [item.platform for item in turned_away])
+        self.assertIn("not allowed", turned_away[0].reason)
+
+
 class RunReportsFilteredTest(SdkTestCase):
     """The end of the pipeline: a filtered pair must appear in the summary."""
 

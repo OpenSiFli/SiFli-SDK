@@ -428,6 +428,40 @@ class TestRunner:
             raise BackendError(f'"{instance.id}": {filtered[0].reason}')
         raise BackendError(f'"{instance.id}": nothing to run')
 
+    def plan_with_filtered(self) -> Tuple[List[PlannedRun], List[FilteredRun]]:
+        """Every run the selection would produce, and every pair it turns away.
+
+        Both halves, because a dry run that answers "what runs" while hiding
+        "what does not, and why" leaves the reader guessing whether a case was
+        dropped on purpose.
+
+        A pair the case's own gate turns away is an answer and not an error
+        when ``--platform`` named the platform it was turned away from: the
+        operator asked for one board, and this case is simply not that board's
+        work. With no ``--platform`` the only platforms considered are the ones
+        the case itself named, so a case turned away from *all* of them
+        contradicts itself -- and that, like a case naming no platform at all,
+        still raises.
+
+        Which half is which is decided here rather than left to the caller:
+        the caller's job is to print an answer, and :meth:`plan` is a thin
+        wrapper for callers that only want the runs.
+        """
+        runs: List[PlannedRun] = []
+        turned_away: List[FilteredRun] = []
+        for instance in self.instances():
+            planned, filtered = self.plan_instance(instance)
+            turned_away.extend(filtered)
+            if planned:
+                runs.extend(planned)
+                continue
+            if not filtered:
+                raise BackendError(f'"{instance.id}": nothing to run')
+            if self.options.platform:
+                continue
+            raise BackendError(f'"{instance.id}": {filtered[0].reason}')
+        return runs, turned_away
+
     def plan(self) -> List[PlannedRun]:
         """Resolve every selected instance to the runs it would produce.
 
@@ -436,19 +470,16 @@ class TestRunner:
         the work by exactly the factor that matters most before a run starts --
         how many boards it occupies, and therefore how long it takes.
 
-        Still strict: the first unresolvable test raises. That is the right
-        behaviour for a dry run, whose whole purpose is to tell a human what is
-        wrong before anything is built or flashed. :meth:`run` deliberately does
-        not use this -- there, one mis-configured test must not stop the rest.
+        Still strict where strictness is warranted: the first genuinely
+        unresolvable test raises, which is the right behaviour for a dry run
+        whose whole purpose is to tell a human what is wrong before anything is
+        built or flashed. A case that ``--platform`` named and the case's own
+        gate refused is not one of those -- it is not this board's work, and
+        :meth:`plan_with_filtered` hands it back to be reported instead of
+        raised. :meth:`run` deliberately does not use either of them -- there,
+        one mis-configured test must not stop the rest.
         """
-        runs: List[PlannedRun] = []
-        for instance in self.instances():
-            planned, filtered = self.plan_instance(instance)
-            if not planned:
-                if filtered:
-                    raise BackendError(f'"{instance.id}": {filtered[0].reason}')
-                raise BackendError(f'"{instance.id}": nothing to run')
-            runs.extend(planned)
+        runs, _turned_away = self.plan_with_filtered()
         return runs
 
     # -- running -------------------------------------------------------------

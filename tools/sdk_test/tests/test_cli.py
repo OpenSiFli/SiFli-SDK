@@ -255,6 +255,77 @@ class TestListingNeedsNoHardware(SdkTestCase):
         self.assertEqual(cli.describe_plan(empty, echo=lines.append), cli.EXIT_OK)
         self.assertIn("Nothing to run", "\n".join(lines))
 
+    def test_plan_shows_the_case_the_named_platform_turns_away(self):
+        # `-p` asks for one board; a case whose own gate refuses that board is
+        # not an error, and a dry run that hid it would leave the reader
+        # guessing whether the case was dropped on purpose.
+        self.write(
+            "example/gated/testcase.yaml",
+            """
+            tests:
+              - id: gated.board
+                harness: console
+                harness_config:
+                  record: ["x"]
+              - id: gated.qemu
+                harness: console
+                platform_allow: [qemu_cortex_m33]
+                integration_platforms: [qemu_cortex_m33]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/gated/project/SConstruct", "# project\n")
+        self.write("example/gated/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        code = cli.describe_plan(
+            os.path.join(self.root, "example", "gated"),
+            platform="sf32lb52-lcd_a128r16",
+            echo=lines.append,
+        )
+        text = "\n".join(lines)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("gated.board", text)
+        self.assertIn("gated.qemu", text)
+        self.assertIn("turned away", text)
+        self.assertIn("not allowed", text)
+        # The turned-away pairs come after the runs, not instead of them.
+        self.assertLess(text.index("sf32lb52-lcd_a128r16 (board)"),
+                        text.index("turned away"))
+
+    def test_plan_says_a_turned_away_tree_is_not_an_empty_one(self):
+        # Cases were selected and every one of them was refused: saying only
+        # "Nothing to run." would read as an empty tree.
+        self.write(
+            "example/qonly/testcase.yaml",
+            """
+            tests:
+              - id: only.qemu
+                harness: console
+                platform_allow: [qemu_cortex_m33]
+                integration_platforms: [qemu_cortex_m33]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/qonly/project/SConstruct", "# project\n")
+        self.write("example/qonly/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        code = cli.describe_plan(
+            os.path.join(self.root, "example", "qonly"),
+            platform="sf32lb52-lcd_a128r16",
+            echo=lines.append,
+        )
+        text = "\n".join(lines)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("only.qemu", text)
+        self.assertIn("turned away", text)
+        self.assertIn("not allowed", text)
+
     def test_environment_report_lists_harnesses_and_backends(self):
         lines = []
         cli.describe_environment(echo=lines.append)

@@ -19,6 +19,14 @@ tests:
     harness: unity
     tags: [unit, qemu]
     timeout: 120
+    # Two fields, two jobs, and both are needed. integration_platforms is where
+    # this case goes when nothing names a platform -- it is a default, and
+    # `-p <board>` replaces it outright, which is how a case called "qemu" once
+    # ran on real hardware. platform_allow is the hard gate that stops that: it
+    # applies even when `-p` names a board, so the case can only ever run under
+    # QEMU. Drop the first and the case is unplannable with no `-p`; drop the
+    # second and `-p` drags it onto a bench.
+    platform_allow: [qemu_cortex_m33]
     integration_platforms: [qemu_cortex_m33]
     harness_config:
       autorun: true

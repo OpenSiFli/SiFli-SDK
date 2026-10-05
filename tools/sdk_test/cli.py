@@ -128,36 +128,53 @@ def describe_plan(
             backend=backend,
         )
     )
-    planned = runner.plan()
+    planned, turned_away = runner.plan_with_filtered()
 
-    if not planned:
+    if not planned and not turned_away:
         echo("Nothing to run.")
         return EXIT_OK
 
-    # One line per run. A test that names several platforms produces several,
-    # and reporting "3 test(s)" for five runs on five boards would under-report
-    # precisely what a dry run is read for: how many boards this occupies.
-    runs_of: Dict[str, int] = {}
-    for item in planned:
-        runs_of[item.id] = runs_of.get(item.id, 0) + 1
-    if len(runs_of) == len(planned):
-        echo(f"{len(planned)} test(s) would run:")
-    else:
-        echo(f"{len(runs_of)} test(s) would run, {len(planned)} run(s) in all:")
+    if planned:
+        # One line per run. A test that names several platforms produces several,
+        # and reporting "3 test(s)" for five runs on five boards would under-report
+        # precisely what a dry run is read for: how many boards this occupies.
+        runs_of: Dict[str, int] = {}
+        for item in planned:
+            runs_of[item.id] = runs_of.get(item.id, 0) + 1
+        if len(runs_of) == len(planned):
+            echo(f"{len(planned)} test(s) would run:")
+        else:
+            echo(f"{len(runs_of)} test(s) would run, {len(planned)} run(s) in all:")
 
-    seen: Dict[str, int] = {}
-    for item in planned:
-        seen[item.id] = seen.get(item.id, 0) + 1
-        total = runs_of[item.id]
-        mark = f"  [{seen[item.id]}/{total}]" if total > 1 else ""
-        echo(f"  {item.id}{mark}")
-        echo(f"    platform:   {item.platform} ({item.backend})")
-        echo(f"    project:    {item.project_dir}")
-        echo(f"    build dir:  {item.build_dir}")
-        if item.out_dir:
-            echo(f"    logs:       {item.out_dir}")
-        if is_host_platform(item.platform):
-            echo("    note:       no Lab Agent needed for this platform")
+        seen: Dict[str, int] = {}
+        for item in planned:
+            seen[item.id] = seen.get(item.id, 0) + 1
+            total = runs_of[item.id]
+            mark = f"  [{seen[item.id]}/{total}]" if total > 1 else ""
+            echo(f"  {item.id}{mark}")
+            echo(f"    platform:   {item.platform} ({item.backend})")
+            echo(f"    project:    {item.project_dir}")
+            echo(f"    build dir:  {item.build_dir}")
+            if item.out_dir:
+                echo(f"    logs:       {item.out_dir}")
+            if is_host_platform(item.platform):
+                echo("    note:       no Lab Agent needed for this platform")
+    else:
+        # Cases were selected and every one of them was turned away, so the
+        # reason is the whole answer here. "Nothing to run." alone would read
+        # as an empty tree, which is the one thing this is not.
+        echo(f"Nothing to run. All {len(turned_away)} (test, platform) pair(s) were "
+             f"turned away:")
+
+    # The pairs a run would leave out, with why. Reported rather than dropped:
+    # a case that silently does not run is the worst thing a dry run can do,
+    # and "not for this board" is an answer -- not the error it used to be.
+    if planned and turned_away:
+        echo(f"{len(turned_away)} (test, platform) pair(s) turned away:")
+    for item in turned_away:
+        echo(f"  {item.id}")
+        echo(f"    platform:   {item.platform}")
+        echo(f"    reason:     {item.reason}")
     return EXIT_OK
 
 
