@@ -10,3 +10,21 @@ menuconfig USING_TEST_FWK
         A test project also needs RT_USING_UNITY for the framework itself.
         Production firmware should leave both off; this is meant for the
         projects under example/test/.
+
+config TEST_FWK_AUTORUN
+    bool "Run every registered Unity case once at boot"
+    default n
+    depends on USING_TEST_FWK
+    help
+        Have a test project call sifli_unity_autorun() from main(), so a
+        flashed board runs every suite before anyone could have sent a
+        command, and the host only has to read.
+
+        There is no reliable moment to send one instead: unity_run only works
+        once the shell is up, and nothing announces that dependably. A command
+        that lands early is simply lost, and the run then reports a missing
+        Unity summary, which reads as a firmware fault.
+
+        The shell is unaffected: main() still falls through to its loop, so
+        unity_run keeps working for hands-on work. Set this to n in proj.conf
+        to get a board that waits for a command instead.

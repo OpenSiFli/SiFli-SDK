@@ -186,6 +186,17 @@ void sifli_unity_list(void)
     }
 }
 
+void sifli_unity_autorun(void)
+{
+    /*
+     * The generated rtconfig.h defines Kconfig names verbatim, without a
+     * CONFIG_ prefix -- RT_USING_FINSH, not CONFIG_RT_USING_FINSH.
+     */
+#ifdef TEST_FWK_AUTORUN
+    sifli_unity_run(RT_NULL);
+#endif
+}
+
 #ifdef RT_USING_FINSH
 static void unity_run(int argc, char **argv)
 {

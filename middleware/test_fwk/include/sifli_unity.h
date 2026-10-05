@@ -72,6 +72,16 @@ int sifli_unity_run(const char *filter);
 void sifli_unity_list(void);
 
 /**
+ * Run every registered case, if this build asked for that.
+ *
+ * A no-op unless ``TEST_FWK_AUTORUN`` is set, so a project's ``main()``
+ * can call it unconditionally and leave the decision next to the Kconfig it
+ * belongs to. Running the cases is all it does: the shell stays usable, so
+ * ``unity_run`` still selects a subset by hand afterwards.
+ */
+void sifli_unity_autorun(void);
+
+/**
  * @}
  */
 

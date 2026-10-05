@@ -6,6 +6,8 @@
 
 #include <rtthread.h>
 
+#include "sifli_unity.h"
+
 /*
  * The case registry used to be in this file. It is generated now, from the test
  * sources this project compiles, by tools/build/test_registry.py -- see the
@@ -19,10 +21,16 @@
  */
 int main(void)
 {
-    /* The host drives the run over the shell; nothing happens here on its own. */
     rt_kprintf("\nSiFli SDK unit tests (Unity)\n");
     rt_kprintf("  unity_list                  list the registered cases\n");
     rt_kprintf("  unity_run [suite|case|suite.case]\n");
+
+    /*
+     * Report every suite now if the build asked for it (TEST_FWK_AUTORUN),
+     * so the host only has to read the console. A no-op otherwise, and the loop
+     * below keeps the shell usable for hands-on work either way.
+     */
+    sifli_unity_autorun();
 
     /* Infinite loop */
     while (1)
