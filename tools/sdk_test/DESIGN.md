@@ -477,7 +477,7 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 3. ⬜ **真板卡端到端（需求 2）**：`sdk.py test run -T example/get-started/hello_world -p <platform>`。
    代码路径已就绪、有端到端自测覆盖（真 Lab Agent + 伪造设备），但**没有在真实板卡上跑过**。
 4. ✅ **无硬件端到端（QEMU）**：`sdk.py test run -T example/qemu` 通过；
-   板上那套 Unity 单测也能整个搬过来跑：`-t unit_test.cjson_qemu` 通过。
+   板上那套 Unity 单测也能整个搬过来跑：`-t unit_test.qemu` 通过。
 5. ✅ **反例必须失败**：期望串写成 `Hello worldXYZ!` 时判定为 FAIL；
    Unity 的空转（`0 Tests` + `OK`）被拒；乱序的启动日志被拒。
    （这一条是这套框架最容易做假的地方，单测里钉死了。）

@@ -466,7 +466,7 @@
     <pre><span class="c"># 不需要硬件、不需要 Lab Agent</span>
 <span class="k">sdk.py test run -T example/qemu</span>                                  <span class="c"># console harness</span>
 <span class="k">sdk.py test run -T example/test/unit_test --no-build \
-    -t unit_test.cjson_qemu</span>                                     <span class="c"># 板上那套 Unity 单测</span>
+    -t unit_test.qemu</span>                                     <span class="c"># 板上那套 Unity 单测</span>
 
 <span class="c"># 框架自测</span>
 python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"

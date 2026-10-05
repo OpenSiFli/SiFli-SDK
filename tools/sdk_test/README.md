@@ -149,19 +149,22 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
 2. **`harness: shell`** 仍是设计态（会明确 raise，不会静默空转）。
 
 3. **`backends/pc_sim.py`** 是 stub，抛 `NotImplementedError`。
-   **`backends/qemu.py` 已实现**：`customer/boards/qemu_cortex_m33` 已并入本分支，
-   不需要 Lab Agent，能跑 `console` 和 `unity`。命令：
+   **`backends/qemu.py` 已实现**，能跑 `console` 和 `unity`，不需要 Lab Agent——
+   但**它要驱动的载体不在本分支**（`customer/boards/qemu_*`、`drivers_qemu/`、
+   `tools/qemu/`、`example/qemu/`，见 `DESIGN.md` 开头的范围说明），所以下面这两条
+   现在跑不起来，等载体落地：
 
    ```bash
    sdk.py test run -T example/qemu
-   sdk.py test run -T example/test/unit_test --no-build -t unit_test.cjson_qemu
+   sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
    ```
 
-   所以 Tier B 的载体不再是"只能 Windows"。几个坑（都是静默失败）写在
+   载体落地后 Tier B 就不再是"只能 Windows"。几个坑（都是静默失败）写在
    `backends/qemu.py` 的注释里：命令要逐字符限速、行结尾要 CRLF、
    会话要等设备启动完再交接。
 
-4. **需求 4（多设备）** schema 与插件接口已支持，实际调度未实现。
+4. **需求 4（多设备）** 未实现。原来为它预留的 `dut` / `dut_client` 字段已从 schema
+   删掉（理由是没人读），设计仍留在 `DESIGN.md` 的需求 4 那节与文末的 TODO 里。
 
 5. **requirements 的说明是假的（本次修正了自己的那份）。**
    `install.* --enable-<feature>` 这个机制**已经在 commit 8259175ea 里被移除**，
