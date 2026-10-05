@@ -243,8 +243,8 @@ class TestMuxValidation(SdkTestCase):
 
 
 class TestRunnerOwnedKeys(SdkTestCase):
-    """The binding file is shared with the Lab Agent, so keys the SDK side does
-    not interpret must survive parsing instead of being dropped."""
+    """The binding file is shared with the Lab Agent, so keys parsing leaves
+    alone must survive it instead of being dropped."""
 
     def test_unknown_keys_are_preserved_for_the_runner(self):
         testbeds = binding.parse_binding(

@@ -14,8 +14,8 @@
 四种 harness 中的三种 / JUnit 上报 / `sdk.py test` 入口）。
 **Tier B（CMock 打桩）尚未实现** —— 见文末"未完成"。
 
-框架自测：`tools/sdk_test/tests/` **239 个用例全绿**，`tools/lab_agent/tests/` **105 个用例全绿**，
-都不需要硬件。
+框架自测：`tools/sdk_test/tests/` 与 `tools/lab_agent/tests/` **全绿**，都不需要硬件。
+（不写具体数字——它每加一个用例就过期一次，跑一遍比读一行准。）
 
 ---
 
