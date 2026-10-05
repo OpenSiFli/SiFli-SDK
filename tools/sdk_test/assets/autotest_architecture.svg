@@ -224,7 +224,6 @@
     <text class="t" x="822" y="488">同样整树跳过 drivers/</text>
     <text class="t s-stub" x="822" y="512">后端只有接口，抛 NotImplementedError</text>
     <text class="mono" x="822" y="566">--board=pc</text>
-    <text class="tiny" x="822" y="586">liblc3 缺 stdalign.h 导致编不过，已修</text>
   </g>
 
   <!-- ══ Lab Agent ═══════════════════════════════════════════════════════ -->
