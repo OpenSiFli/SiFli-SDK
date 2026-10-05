@@ -335,35 +335,45 @@ class TestBedRuntime:
         return options
 
     def reset_mode(self) -> str:
-        """How this board is reset: ``jlink`` (the default) or ``manual``.
+        """How this board is reset: ``jlink`` (the default), ``auto`` or ``manual``.
 
-        ``manual`` is for a board with no probe attached. The framework cannot
-        reset it, so a person presses the button, and the mode is reported to
-        the caller (see :meth:`describe`) rather than assumed -- only this side
-        knows which of the two actually happened.
+        ``jlink`` drives the probe. The other two touch nothing, and differ in
+        what they promise: ``auto`` says the boot happens regardless of us -- a
+        UART download ends by running the new image, and opening the console can
+        reset the board again -- while ``manual`` says nothing guarantees it and
+        a person may have to press the button. Only the second needs an operator
+        standing by, and only the second leaves a harness that writes to the
+        device racing a boot that could wipe its command.
+
+        The mode is reported to the caller (see :meth:`describe`) rather than
+        assumed -- only this side knows which of the three actually happened.
 
         Validated here, lazily, and deliberately not in :meth:`describe`: a typo
         in the config must fail the run that needs a reset, not ``GET
         /testbeds``, whose caller would report it as an unreachable agent.
         """
         method = str(self._reset_options().get("method", "jlink")).lower()
-        if method not in ("jlink", "manual"):
+        if method not in ("jlink", "auto", "manual"):
             raise TestbedError(
                 f'testbed "{self.testbed.id}": unknown reset method "{method}" '
-                '(use "jlink" or "manual")'
+                '(use "jlink", "auto" or "manual")'
             )
         return method
 
     def reset(self) -> str:
         """Reset the board out-of-band and leave it running.
 
-        In ``manual`` mode this returns without touching the probe: the board
-        has none, and an operator is expected to press its reset button. That is
-        a deliberate no-op rather than a silent failure -- the mode is already
-        known to the caller from the allocation, which is what lets it prompt
-        for the button instead of waiting on a reset that will never come.
+        Only ``jlink`` does anything here. The other two return without touching
+        the probe, for opposite reasons: in ``manual`` mode the board has no
+        probe and an operator is expected to press the reset button, while in
+        ``auto`` mode there is nothing to do at all -- the boot that follows the
+        download, or the console being opened, is the reset.
+
+        Both are deliberate no-ops rather than silent failures: the mode is
+        already known to the caller from the allocation, which is what lets it
+        prompt for the button in the one case and stay quiet in the other.
         """
-        if self.reset_mode() == "manual":
+        if self.reset_mode() in ("auto", "manual"):
             return ""
         options = self._jlink_options()
         return self.jlink().reset(extra_script=options.get("wdt_script"))

@@ -330,13 +330,27 @@ testbed:
       method: manual
 """
 
+#: The same probe-less bench, but with the boot guaranteed by the download
+#: rather than left to whoever is standing there. Same no-op, opposite promise.
+AUTO_YAML = """
+testbed:
+  - id: tb
+    platform: b
+    console: {port: COM1}
+    reset:
+      method: auto
+"""
+
 
 class TestResetMode(LabTestCase):
-    """A board with no probe: a person presses the button instead.
+    """The two modes that never touch a probe -- and why they are two.
 
-    The tests that matter here are the ones that would let a manual testbed
-    quietly look like a probed one -- the probe must never be built, and the
-    mode must reach the caller that has to prompt for the button.
+    Both leave the reset to somebody else, but they promise different things,
+    and only that difference decides whether an operator is asked and whether a
+    harness that writes to the device may run at all. The tests that matter are
+    the ones that would let either quietly look like a probed bench: the probe
+    must never be built, and the mode must reach the caller that has to tell
+    them apart.
     """
 
     def test_manual_reset_does_not_touch_the_probe(self):
@@ -348,6 +362,18 @@ class TestResetMode(LabTestCase):
 
     def test_manual_reset_survives_the_prepare_preamble(self):
         manager = self.make_manager(MANUAL_YAML)
+        manager.get("tb").prepare()
+        self.assertEqual(manager.probes, {})
+
+    def test_auto_reset_does_not_touch_the_probe(self):
+        manager = self.make_manager(AUTO_YAML)
+        self.assertEqual(manager.get("tb").reset(), "")
+        self.assertEqual(manager.probes, {})
+
+    def test_auto_reset_survives_the_prepare_preamble(self):
+        # The regression guard in the other direction: `prepare` must not start
+        # resetting a bench just because the mode it does not drive changed.
+        manager = self.make_manager(AUTO_YAML)
         manager.get("tb").prepare()
         self.assertEqual(manager.probes, {})
 
@@ -389,6 +415,12 @@ class TestResetMode(LabTestCase):
     def test_describe_reports_the_mode(self):
         manager = self.make_manager(MANUAL_YAML)
         self.assertEqual(manager.get("tb").describe()["reset"], "manual")
+
+    def test_describe_reports_auto_too(self):
+        # It has to reach the caller: `auto` and `manual` are the same no-op on
+        # this side and opposite behaviour on the other.
+        manager = self.make_manager(AUTO_YAML)
+        self.assertEqual(manager.get("tb").describe()["reset"], "auto")
 
     def test_describe_reports_a_typo_instead_of_failing(self):
         # describe() feeds GET /testbeds and the allocation. A typo must not
@@ -436,6 +468,19 @@ class TestNeedsJlink(LabTestCase):
                 platform: b
                 console: {port: COM1}
                 reset: {method: manual}
+                flash: {method: sftool}
+            """
+        )
+        self.assertFalse(manager.get("tb").needs_jlink())
+
+    def test_an_auto_reset_over_uart_needs_no_probe(self):
+        manager = self.make_manager(
+            """
+            testbed:
+              - id: tb
+                platform: b
+                console: {port: COM1}
+                reset: {method: auto}
                 flash: {method: sftool}
             """
         )

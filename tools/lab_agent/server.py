@@ -236,14 +236,16 @@ class _Handler(BaseHTTPRequestHandler):
                 return 405, {"error": "POST only"}
             mode = runtime.reset_mode()
             runtime.reset()
-            # `reset` says whether *this call* reset the board. In manual mode
-            # nothing was done and the operator is still expected to press the
-            # button, so claiming `true` would be the kind of confident-wrong
-            # answer this codebase refuses elsewhere (see RelayNotAvailable).
+            # `reset` says whether *this call* reset the board. Only `jlink`
+            # does: under `manual` nothing was done and the operator is still
+            # expected to press the button, and under `auto` the boot is the
+            # download's rather than ours. Either way, claiming `true` would be
+            # the kind of confident-wrong answer this codebase refuses
+            # elsewhere (see RelayNotAvailable).
             return 200, {
                 "testbed_id": testbed_id,
                 "mode": mode,
-                "reset": mode != "manual",
+                "reset": mode == "jlink",
             }
 
         if name == "flash":

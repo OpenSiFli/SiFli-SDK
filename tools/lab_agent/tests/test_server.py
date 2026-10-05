@@ -272,6 +272,51 @@ class TestManualResetOverHttp(ServerTestCase):
         self.assertEqual(self.manager.probes, {})
 
 
+#: The same probe-less board, but the download boots it, so nobody has to be
+#: standing by. The mode is the difference; the wiring is identical.
+AUTO_CONFIG = """
+runner:
+  name: test-runner
+  host: 127.0.0.1
+  port: 0
+  console_poll: 0.01
+
+testbed:
+  - id: tb_auto
+    platform: sf32lb52-lcd_a128r16
+    console: {port: COM1}
+    flash: {method: sftool}
+    reset: {method: auto}
+"""
+
+
+class TestAutoResetOverHttp(ServerTestCase):
+    """``auto`` reaches the caller, and is not confused with a real reset."""
+
+    config_yaml = AUTO_CONFIG
+
+    def test_the_allocation_carries_the_reset_mode(self):
+        status, payload = self.request("POST", "/allocate", {})
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["reset"], "auto")
+
+    def test_the_listing_reports_the_mode(self):
+        status, payload = self.request("GET", "/testbeds")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["testbeds"][0]["reset"], "auto")
+
+    def test_reset_reports_that_it_did_not_reset_anything(self):
+        # The same confident wrong answer would be available here, and it is
+        # the tempting one: `auto` is not `manual`, so the old test for it
+        # (`mode != "manual"`) said the board had been reset when the call was
+        # a deliberate no-op -- the boot was the download's, not ours.
+        status, payload = self.request("POST", "/testbed/tb_auto/reset")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["mode"], "auto")
+        self.assertFalse(payload["reset"])
+        self.assertEqual(self.manager.probes, {})
+
+
 class TestMalformedRequests(ServerTestCase):
     def test_a_body_that_is_not_json_is_reported(self):
         request = urllib.request.Request(
