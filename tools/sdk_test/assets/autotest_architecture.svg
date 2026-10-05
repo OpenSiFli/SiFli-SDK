@@ -251,6 +251,6 @@
     <text class="h" x="62" y="852">真实板卡</text>
     <text class="tiny" x="130" y="852">跑 Unity 单测或 msh；</text>
     <text class="tiny" x="130" y="866">控制台固定 uart1 @ 1000000</text>
-    <text class="tiny" x="800" y="852" text-anchor="end">设计文档 autotest.md · 使用手册 autotest_guide.md</text>
+    <text class="tiny" x="800" y="852" text-anchor="end">设计文档 tools/sdk_test/DESIGN.md · 使用手册 autotest_guide.md</text>
   </g>
 </svg>
