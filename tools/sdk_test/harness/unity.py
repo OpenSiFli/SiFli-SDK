@@ -136,6 +136,19 @@ class UnityCase:
     def ignored(self) -> bool:
         return self.status in ("IGNORE", "IGNORED")
 
+    @property
+    def label(self) -> str:
+        """How the case should be named: ``suite.case``.
+
+        Unity case names repeat across suites -- both cjson and lz4 have a
+        ``boundaries`` -- so a bare name does not identify one, and a message
+        that says "1 of 9 failed: boundaries" leaves the reader to guess which.
+        ``file`` holds the suite here, because the runner sets it from the suite
+        name; ``suite.case`` is also the filter ``unity_run`` accepts, so the
+        report and the device agree on how a case is spelled.
+        """
+        return f"{self.file}.{self.name}" if self.file else self.name
+
 
 @dataclass
 class UnityResult:
@@ -211,7 +224,7 @@ def parse_unity_output(text: str) -> UnityResult:
         return result
 
     if failures > 0:
-        names = ", ".join(case.name for case in result.failed_cases) or "unknown"
+        names = ", ".join(case.label for case in result.failed_cases) or "unknown"
         result.detail = (
             f"{failures} of {tests} Unity test(s) failed: {names}"
         )
@@ -303,10 +316,9 @@ def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
         return verdict
 
     if verdict.failures:
-        names = ", ".join(case.name for case in own if case.status == "FAIL")
+        names = ", ".join(case.label for case in own if case.status == "FAIL")
         verdict.detail = (
-            f"{verdict.failures} of {verdict.tests} Unity test(s) failed in "
-            f"{suite}: {names}"
+            f"{verdict.failures} of {verdict.tests} Unity test(s) failed: {names}"
         )
         return verdict
 

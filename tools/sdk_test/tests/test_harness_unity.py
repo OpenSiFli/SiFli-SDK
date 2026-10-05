@@ -19,8 +19,8 @@ from sdk_test.harness import unity
 PASSING = """\
 Unity test run 1 of 1
 -----------------------
-test/test_lz4.c:42:test_roundtrip:PASS
-test/test_lz4.c:58:test_bounds:PASS
+lz4:42:test_roundtrip:PASS
+lz4:58:test_bounds:PASS
 
 -----------------------
 2 Tests 0 Failures 0 Ignored
@@ -28,8 +28,8 @@ OK
 """
 
 FAILING = """\
-test/test_lz4.c:42:test_roundtrip:PASS
-test/test_lz4.c:58:test_bounds:FAIL:Expected 1 Was 2
+lz4:42:test_roundtrip:PASS
+lz4:58:test_bounds:FAIL:Expected 1 Was 2
 
 -----------------------
 2 Tests 1 Failures 0 Ignored
@@ -43,7 +43,7 @@ class TestPassingRun(SdkTestCase):
         self.assertTrue(result.passed, result.detail)
         self.assertEqual((result.tests, result.failures, result.ignored), (2, 0, 0))
         self.assertEqual([case.name for case in result.cases], ["test_roundtrip", "test_bounds"])
-        self.assertEqual(result.cases[0].file, "test/test_lz4.c")
+        self.assertEqual(result.cases[0].file, "lz4")
         self.assertEqual(result.cases[0].line, 42)
         self.assertTrue(result.summary_seen)
         self.assertEqual(result.verdict_seen, "OK")
@@ -86,7 +86,9 @@ class TestFailures(SdkTestCase):
         result = unity.parse_unity_output(FAILING)
         self.assertFalse(result.passed)
         self.assertIn("1 of 2", result.detail)
-        self.assertIn("test_bounds", result.detail)
+        # Qualified, because the bare name does not identify a case: cjson has a
+        # `boundaries` too.
+        self.assertIn("lz4.test_bounds", result.detail)
 
     def test_a_fail_case_message_is_captured(self):
         result = unity.parse_unity_output(FAILING)
@@ -121,8 +123,8 @@ class TestLineEndings(SdkTestCase):
     """
 
     CRLF = (
-        "test/test_lz4.c:42:test_roundtrip:PASS\r\n"
-        "test/test_lz4.c:58:test_bounds:PASS\r\n"
+        "lz4:42:test_roundtrip:PASS\r\n"
+        "lz4:58:test_bounds:PASS\r\n"
         "\r\n2 Tests 0 Failures 0 Ignored\r\nOK\r\n"
     )
 
@@ -371,7 +373,7 @@ class TestAutorunPerSuite(SdkTestCase):
         )
 
         self.assertFalse(outcome.passed)
-        self.assertIn("malformed", outcome.detail)
+        self.assertIn("cjson.malformed", outcome.detail)
         self.assertEqual(
             [case.name for case in outcome.cases], ["parse_and_read", "malformed"]
         )
