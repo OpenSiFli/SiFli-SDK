@@ -9,10 +9,15 @@ import unittest
 from _support import CONFIG_YAML  # noqa: F401  (also fixes sys.path)
 from _support import LabTestCase
 
+from sdk_test.model import Connection
+from sdk_test.model import FixtureRef
+from sdk_test.model import TestBed
+
 from lab_agent.config import RunnerSettings
 from lab_agent.config import find_jlink
 from lab_agent.config import load_runner_config
 from lab_agent.config import parse_runner_config
+from lab_agent.config import rule_out_contradictions
 from lab_agent.errors import ConfigError
 
 
@@ -153,6 +158,81 @@ class TestFindJlink(LabTestCase):
     def test_an_explicit_existing_path_wins(self):
         path = self.write("tools/jlink.exe", "")
         self.assertEqual(find_jlink(path), path)
+
+
+class TestContradictionCheck(LabTestCase):
+    """A lab wired to a bus the board does not declare is refused.
+
+    The two files are in hand only here: the wiring is this machine's, and
+    ``features.yaml`` belongs to the board, in the SDK checkout the agent runs
+    from. Refusing at load time means ``--check``, ``--list`` and startup all
+    catch it, rather than a test failing to schedule later on for a reason
+    nothing in the report can show.
+    """
+
+    def declare(self, platform: str, features: str) -> str:
+        return self.write(
+            f"customer/boards/{platform}/hcpu/features.yaml",
+            f"features: {features}\n",
+        )
+
+    def a_testbed(self, platform: str, bus: str) -> TestBed:
+        return TestBed(
+            id="tb_01",
+            platform=platform,
+            connections=[Connection(FixtureRef("spi_nor_flash", bus))],
+        )
+
+    def test_a_connection_to_an_undeclared_bus_is_refused(self):
+        self.declare("board_a", "[i2c0]")
+        with self.assertRaises(ConfigError) as caught:
+            rule_out_contradictions(
+                [self.a_testbed("board_a", "spi1")], "cfg.yaml", root=self.root
+            )
+        message = str(caught.exception)
+        self.assertIn("spi1", message)
+        self.assertIn("board_a", message)
+
+    def test_a_declared_bus_is_fine(self):
+        self.declare("board_a", "[spi1, i2c0]")
+        rule_out_contradictions(
+            [self.a_testbed("board_a", "spi1")], "cfg.yaml", root=self.root
+        )
+
+    def test_an_empty_declaration_contradicts_a_connection(self):
+        # An empty declaration is a claim -- "this board has no bus at all" --
+        # and a claim can disagree. A missing file is silence, and cannot.
+        self.declare("board_a", "[]")
+        with self.assertRaises(ConfigError):
+            rule_out_contradictions(
+                [self.a_testbed("board_a", "spi1")], "cfg.yaml", root=self.root
+            )
+
+    def test_a_board_with_no_declaration_says_nothing_to_contradict(self):
+        rule_out_contradictions(
+            [self.a_testbed("board_a", "spi1")], "cfg.yaml", root=self.root
+        )
+
+    def test_the_config_loader_runs_the_check(self):
+        # The point of the wiring: a config that is internally consistent but
+        # contradicts the board is refused where the config is loaded, not later
+        # when some test fails to schedule.
+        self.declare("board_a", "[i2c0]")
+        with self.assertRaises(ConfigError) as caught:
+            parse_runner_config(
+                {
+                    "testbed": [
+                        {
+                            "id": "tb_01",
+                            "platform": "board_a",
+                            "connections": [{"fixture": "spi_nor_flash:spi1"}],
+                        }
+                    ]
+                },
+                source="cfg.yaml",
+                sdk_root=self.root,
+            )
+        self.assertIn("spi1", str(caught.exception))
 
 
 if __name__ == "__main__":

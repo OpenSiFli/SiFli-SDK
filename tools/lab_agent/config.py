@@ -26,7 +26,10 @@ from typing import List
 from typing import Optional
 
 from sdk_test.binding import parse_binding
+from sdk_test.fixtures import wiring_problems
 from sdk_test.model import TestBed
+from sdk_test.platforms import REPOSITORY_ROOT
+from sdk_test.platforms import declared_features
 
 from .errors import ConfigError
 
@@ -152,14 +155,50 @@ class RunnerConfig:
         return warnings
 
 
-def parse_runner_config(data: Any, source: str = "<memory>", path: Optional[str] = None) -> RunnerConfig:
-    """Parse an already-loaded runner config document."""
+def rule_out_contradictions(
+    testbeds: List[TestBed], source: str, root: str = REPOSITORY_ROOT
+) -> None:
+    """Refuse a lab whose wiring contradicts a board's own declaration.
+
+    The two files meet here and nowhere else: the wiring is this machine's, and
+    the declaration belongs to the board, in the SDK checkout this agent runs
+    from. A connection to ``spi1`` on a board that declares no ``spi`` instance
+    means one of the two is wrong, and left alone it surfaces as a test that
+    never gets scheduled, for a reason nothing in the report can show.
+
+    A board with *no* declaration is not a contradiction: a missing file is
+    silence, while an empty one is a claim, and only a claim can disagree.
+    """
+    for testbed in testbeds:
+        features = declared_features(testbed.platform, root)
+        if features is None:
+            continue
+        problems = wiring_problems([testbed], features)
+        if problems:
+            raise ConfigError(f"{source}: " + "; ".join(problems))
+
+
+def parse_runner_config(
+    data: Any,
+    source: str = "<memory>",
+    path: Optional[str] = None,
+    sdk_root: Optional[str] = None,
+) -> RunnerConfig:
+    """Parse an already-loaded runner config document.
+
+    ``sdk_root`` is where the boards' own declarations are looked for, for the
+    contradiction check below. It defaults to the checkout this agent runs from,
+    which is the one holding the boards it drives.
+    """
     if not isinstance(data, dict):
         raise ConfigError(f"{source}: top level must be a mapping")
 
     settings = RunnerSettings.from_mapping(data.get("runner"))
     # Duplicate testbed ids are already rejected by the shared binding parser.
     testbeds = parse_binding(data, source=source)
+    # Then the wiring is held against the boards' own declarations, which is the
+    # only place both files are in hand at once.
+    rule_out_contradictions(testbeds, source, sdk_root or REPOSITORY_ROOT)
     return RunnerConfig(settings=settings, testbeds=testbeds, path=path)
 
 

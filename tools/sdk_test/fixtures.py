@@ -167,9 +167,11 @@ def wiring_problems(testbeds: Iterable[TestBed],
     A connection to ``spi1`` is a claim that the board has ``spi1``. When the
     platform's declaration does not back the claim, one of the two files is
     wrong, and the failure it would otherwise cause is a test that will not
-    schedule for a reason nobody can read out of the report. Checked wherever
-    both files happen to be in hand, which is the only place this can be seen at
-    all.
+    schedule for a reason nobody can read out of the report.
+
+    Called by the Lab Agent when it loads its runner config -- the one place both
+    files are in hand, now that the wiring is the agent's and the declaration is
+    the board's.
     """
     available = list(features)
     problems: List[str] = []
