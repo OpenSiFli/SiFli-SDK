@@ -178,28 +178,23 @@ python tools/lab_agent/runner.py -c my-runner.yaml --list      # see which testb
 python tools/lab_agent/runner.py -c my-runner.yaml             # start the service
 ```
 
-**Terminal B** — run the test cases:
+**Terminal B** — run the test cases. **The only two things you state are which platform to run on, and where
+the agent is**:
 
 ```bash
-sdk.py test plan -T example/get-started/hello_world --binding my-binding.yaml   # look at the plan first
-sdk.py test run  -T example/get-started/hello_world --binding my-binding.yaml
+sdk.py test plan -T example -p sf32lb52-lcd_a128r16     # look at the plan first (no hardware touched)
+sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # the agent allocates a free board
 ```
+
+`--agent-url` already defaults to `http://127.0.0.1:8760`, so it can be omitted while the agent is on the
+same machine as you.
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
-### Running by hand: name a platform, skip the binding
-
-**Most manual runs are this kind** — "grab a free board and run this batch". The `--binding`
-is superfluous then; `-p/--platform` is enough:
-
-```bash
-sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:8760
-```
-
-It works without a binding because **allocation is the agent's job**: when the SDK side calls
-`allocate`, it passes `testbed_id=None` anyway and lets the agent pick a free candidate. So the
-allocation path is *identical* with or without a binding — what a binding adds is an **early
-filter** on the SDK side.
+**Why no binding is needed**: allocation is the agent's job — when the SDK side calls `allocate`, it passes
+`testbed_id=None` anyway and lets the agent pick a free candidate. So the allocation path is *identical*
+with or without a binding; a binding is only an **early filter** on the SDK side (that file belongs to the
+hardware team, see section 8).
 
 The price is three checks that then happen *before the build* no longer happen at all, and are
 deferred to the moment hardware is requested:
@@ -237,8 +232,8 @@ Common flags:
 | `--report-suffix` | Appended to the report filename to tell builds apart in CI (→ `sifli_ci123.xml`) |
 | `--report` | **Compatibility alias**: pins the JUnit directory and filename (the extension is stripped, and the JSON lands under the same stem). Reports are produced by default now, so you normally do not need it |
 | `--fail-fast` | Stop at the first failure (by default the run continues; nightly needs the full picture more) |
-| `--no-confirm` | Never stop to ask mid-run. It only affects boards with manual reset (see section 8), and it also disables `unity` — that harness needs someone to confirm the board has booted |
-| `--confirm-reset` | The other way round: do not stop to ask, but **declare the board ready**. On a manual-reset board this is what lets `unity` run (unattended); mutually exclusive with `--no-confirm` |
+| `--no-confirm` | Never stop to ask mid-run. It only affects boards with manual reset (see section 8). It also disables the harnesses that write before they read, that is, **`unity` without `autorun`**; `console`, `pytest` and unity with autorun are all unaffected |
+| `--confirm-reset` | The other way round: do not stop to ask, but **declare the board ready**. On a manual-reset board this is what carries an unattended run past that boot confirmation; mutually exclusive with `--no-confirm` |
 
 ---
 
@@ -256,16 +251,19 @@ no binding file, no wiring.
 
 ```bash
 sdk.py test run -T example/qemu                      # console harness
-sdk.py test run -T example/test/unit_test --no-build -t unit_test.cjson_qemu
+sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
 ```
 
-The second one runs **the on-board Unity unit tests** (the cJSON suite), just on a different carrier.
+The second one runs **the on-board Unity unit tests** (the three suites in the same image), just on a different carrier.
 The test case declares where it runs:
 
 ```yaml
-  - id: unit_test.cjson_qemu
+  - id: unit_test.qemu
     harness: unity
+    timeout: 120
     integration_platforms: [qemu_cortex_m33]   # with this, no binding is needed
+    harness_config:
+      autorun: true
 ```
 
 You need QEMU installed locally; when it is not on PATH, point at it with `SIFLI_QEMU_EXE`
@@ -334,7 +332,6 @@ tests:
   - id: my_case
     description: one sentence on what this case verifies
     harness: console          # console | unity | pytest (shell not implemented)
-    type: functional          # unit | integration | functional
     tags: [smoke]
     timeout: 60
     harness_config:
@@ -343,6 +340,30 @@ tests:
 
 The full set of fields is defined by `tools/sdk_test/schema/testcase.schema.json`, which is **the single source of truth**:
 a wrong field name is rejected outright rather than silently ignored.
+
+**Both ways of writing it are supported.** `tests:` can be a list (each entry carrying its own `id`), or a
+mapping (**the key is the id**):
+
+```yaml
+tests:
+  my_case:                   # the key is the id, no separate id: line needed
+    harness: console
+    harness_config:
+      record: ["Hello world!"]
+  my_other_case: ~           # an empty entry = id only, everything else takes the default
+```
+
+**There is also a top-level `common:`**: a set of values written there merges into **every** entry of
+`tests:`, and **each entry's own key of the same name wins**:
+
+```yaml
+common:
+  tags: [smoke]
+  timeout: 60
+tests:
+  - id: my_case              # inherits the tags and timeout above
+    harness: console
+```
 
 Other usable fields: `platform_allow` / `platform_exclude` / `integration_platforms` /
 `depends_on` (matches the instance types declared in the board's `features.yaml`, see section 8) / `extra_args` (passed through to scons) /
@@ -357,9 +378,8 @@ Other usable fields: `platform_allow` / `platform_exclude` / `integration_platfo
 | `platform_allow` / `platform_exclude` | Work; they still apply when `--platform` is given explicitly. |
 | `extra_args` | Works, but what it is passed through to is the **scons build**, not the run. |
 | `build_only` / `skip` | Work. `skip` is decided **before the build**, so it saves you a build. |
-| `min_flash` / `min_ram` / `slow` / `type` | **Inert**: the schema accepts them and they are parsed into the model, but no code reads them. Writing them has no effect. |
+| `min_flash` / `min_ram` / `slow` / `type` / `dut` / `dut_client` | **Removed**: the schema no longer accepts them, so writing one is rejected outright. They used to be parsed and read by nothing. Why they went, and what they were for (resource limits, marking slow cases, multi-device), is recorded in the TODO section of `tools/sdk_test/DESIGN.md`. |
 | `harness: shell` | Legal in the schema but **not implemented**; selecting it raises an error rather than passing silently. |
-| `dut` / `dut_client` | Parsed into the model, not yet consumed by the `runner`; multi-device currently has to be orchestrated by the `pytest` harness itself. |
 
 ### `project_dir`: the test case and the project are not at the same level
 
@@ -402,84 +422,137 @@ To point elsewhere, write `project_dir` (relative to the testcase file):
 
 ### `unity` — Unity runs on the board, the host parses its own summary
 
+A test case looks like this:
+
 ```yaml
-  - id: unit_test.lz4
+  - id: unit_test.board
     harness: unity
     timeout: 120
     harness_config:
-      suite: lz4          # optional; without it, unity_run with no arguments
-
-      prompt: "msh />"    # optional; default msh />. Waiting for it is what gates
-                          # the send. Yours replaces it -- it does not add to it.
-      # cmd: unity_run    # optional; default unity_run. What gets sent.
+      autorun: true       # the firmware runs every suite itself at power-on; the host only reads the port
+      # suite: lz4        # optional. Write it and you claim only lz4's results, see below
 ```
 
-The two fields divide the work and fix the order: **`prompt` answers when it is safe to send, `cmd` answers
-what gets sent**. `prompt` **replaces** rather than adds: write your own pattern and `msh />` is no longer
-waited for — it is not "the default first, then yours". To accept several markers, alternate them in one
-regex, e.g. `prompt: "msh />|READY"`, which means "either one opens the gate" — again not one after the
-other. `cmd` replaces in the same way.
+**One test case = one build + one flash + one boot.** The project calls `sifli_unity_autorun()` once in
+`main()` (`CONFIG_TEST_FWK_AUTORUN`, already turned on in the test project's `proj.conf`), so the board runs
+**every** suite in the registry at power-on, prints all the results into one transcript, and the host just
+reads the serial port — **you send no command, and you do not have to worry about what moment to send it at**.
 
-The host waits for `prompt` to match on the console output, and only then writes `cmd` out; it then parses
-Unity's output contract:
-`<file>:<line>:<case>:PASS|FAIL`, `<n> Tests <n> Failures <n> Ignored`, `OK|FAIL`.
+**So do not split entries by suite.** Which suites an image contains is a **build fact**: `src/SConscript`
+has already scanned the `test_*.c` actually compiled into `unity_suites_gen.json`. Listing them again here
+would write one fact in two places; and splitting them into several entries only turns into several more
+flashes and several more boots.
 
-Waiting for `prompt` before sending is load-bearing, not a safety net. On a board with no probe, the console is opened while
-**the download has just finished writing and the board is still booting**; sending the command out at that moment means the board never receives it,
-and the symptom is `no Unity summary line found` after the timeout is exhausted — **which looks like broken firmware**.
+#### When several test cases share one image: `suite` claims results
 
-The two defaults are a matched pair rather than two arbitrary names: `cmd` sends `unity_run` by default, and
-that is an **msh command**, which can only run if msh is already up; so `prompt` waits for `msh />` by default,
-which is exactly that precondition — **assuming nothing beyond what sending an msh command already assumed**.
-For a bare-metal firmware, or a different shell, point `prompt` at the readiness marker the firmware itself prints.
+One autorun writes the results of **all** suites into a single transcript, so a test case may have to
+declare **who** it is:
 
-Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide — otherwise a new heuristic
-would invent a new kind of failure, misjudging firmware with a different prompt as broken.
+```yaml
+      suite: lz4          # optional. Write it and you claim only lz4's results
+```
+
+The host dispatches by the suite name in the result line `<suite>:<line>:<case>:PASS|FAIL`. A test case that
+does not write `suite` is responsible for the whole transcript — **which is how it is written when a project
+has one test case** (see the real-hardware example below).
+
+Two things to remember:
+
+- **Not a single result appeared for your own suite → failure.** A transcript has only one summary line
+  (`<n> Tests <n> Failures <n> Ignored` — one `UnityBegin`/`UnityEnd` around the whole loop, so that line
+  belongs to the **firmware**, not to any single suite). Handing the firmware's overall `OK` to a suite that
+  ran nothing is a green light that proves nothing.
+- **Another suite failing does not affect you.** That is the actual shape on real hardware: in one
+  transcript cjson and circular_buf come out PASS and lz4 comes out FAIL, independent of each other.
+
+**Two gates against a no-op run**: no summary line seen → failure; the summary says 0 test cases → failure.
+(The latter is the most dangerous false green: linking Unity but registering no test case at all prints a clean `OK`.)
+
+> **Why the host is not made to send `unity_run`**: there is no reliable moment to send it — the boot banner
+> is printed once, and before the prompt; and the prompt's text in turn follows the build configuration.
+> Send the command too early and it is lost, and the symptom is `no Unity summary line found`, which looks
+> like broken firmware. Handing the decision to the firmware makes that timing problem go away. For the full
+> argument, see `tools/sdk_test/DESIGN.md`.
+
+#### `prompt` / `cmd` are needed only when the firmware waits for a command
+
+Turn `CONFIG_TEST_FWK_AUTORUN` off (set it to `n` in `proj.conf`) and the board stops at the shell waiting
+for a command; only then does the host need those two fields. Running a single suite by hand goes that way
+too: flash once, then type `unity_run lz4`.
+
+```yaml
+    harness_config:
+      prompt: "msh />"    # optional; default msh />. Wait for it to appear in the console
+                          # output before sending the command; writing your own string
+                          # replaces it, it does not add to it
+      # cmd: unity_run    # optional; default unity_run. The command itself, sent once the wait is over
+```
+
+`prompt` answers **when it is safe to send**, `cmd` answers **what gets sent**. Both are **replacing**:
+write your own string and the default is no longer used — it is not "the default first, then yours". To
+accept several markers, alternate them in one regex, e.g. `prompt: "msh />|READY"`, which means "either one
+opens the gate" — again not one after the other.
+
+Waiting for `prompt` is load-bearing, not a safety net: on a manual-reset board, the console is opened
+while **the download has just finished writing and the board is still booting**, and sending the command
+out at that moment means the board never receives it. The two defaults are a matched pair — `cmd` sends
+`unity_run` by default, and that is an **msh command**, which can only run if msh is already up; so
+`prompt` waits for `msh />` by default, which is exactly that precondition. For a different shell, point
+`prompt` at the readiness marker the firmware itself prints.
+
+Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide.
 
 **Two gates against a no-op run**: no summary line seen → failure; the summary says 0 test cases → failure.
 (The latter is the most dangerous false green: linking Unity but registering no test case at all prints a clean `OK`.)
 
 `harness: unity` does not accept `record` — the verdict belongs to Unity, and forcing one in raises an error telling you to use `console` instead.
+`autorun` is in turn unity-only: `console` and `pytest` never read it, and receiving it raises an error.
 
 #### How to run it on real hardware
 
-`example/test/unit_test/` is a ready-made project: four test cases in one `testcase.yaml`, sharing one firmware.
-Three of them can run on real hardware; `unit_test.cjson_qemu` is pinned to QEMU:
+`example/test/unit_test/` is a ready-made project. One `testcase.yaml` holds **two test cases** — one for real
+hardware, one pinned to QEMU — sharing one firmware, and that firmware contains three suites (lz4, cjson,
+circular_buf).
+
+**One test case = one build + one flash + one boot**, and every suite in the image runs within that one boot.
+So do not split entries by suite: splitting would mean three flashes and three boots.
 
 ```powershell
 # Dry run: confirm what gets planned first (no hardware touched)
-sdk.py test plan -T example/test/unit_test -t unit_test.lz4 -b <binding.yaml>
+sdk.py test plan -T example/test/unit_test -t unit_test.board -b <binding.yaml>
 
-# Real hardware: a manual-reset board needs --confirm-reset, otherwise unity is refused before flashing
-sdk.py test run  -T example/test/unit_test `
-    -t unit_test.lz4 -t unit_test.cjson -t unit_test.circular_buf `
+# Real hardware. A manual-reset board needs --confirm-reset — that is the declaration that
+# "the boot has already been arranged": autorun's results start from the first byte the board
+# boots, so that boot has to happen after the serial port is open, or nobody sees the transcript.
+sdk.py test run  -T example/test/unit_test -t unit_test.board `
     -b <binding.yaml> --confirm-reset
 ```
 
-**Watch the scope of `-T`**: a bare `-T example/test/unit_test` also selects `unit_test.cjson_qemu`,
-and since that one declares `integration_platforms: [qemu_cortex_m33]` — a platform this lab does not have —
+**The `unit_test.qemu` one is pinned to `qemu_cortex_m33`**, a platform this lab does not have, so
 `test plan` **aborts as a whole** (it is strict), while `test run` records it as an ERROR and carries on.
-So either pick the three with `-t`, or accept one ERROR.
+So pick the real-hardware one with `-t unit_test.board`.
 
-**With all three passing it looks like this**:
+**With it passing it looks like this** (one test case, nine cases):
 
 ```
-=================== unit_test  (3 test(s): 3 passed) ====================
-[PASS ] unit_test.circular_buf on sf32lb52-lcd_a128r16_01  (23.4s)
-[PASS ] unit_test.cjson on sf32lb52-lcd_a128r16_01  (18.6s)
-[PASS ] unit_test.lz4 on sf32lb52-lcd_a128r16_01  (18.6s)
+=================== unit_test  (1 test(s): 1 passed) ====================
+[PASS ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)
 ```
 
-> As of this document it is actually **2 passed / 1 failed**: the `boundaries` case in `unit_test.lz4` is not closed yet,
-> see risk 9 in `tools/sdk_test/DESIGN.md`. The above is the shape when everything is green.
+> As of this document it is actually **1 failed**: `lz4.boundaries` is not closed yet, see
+> risk 9 in `tools/sdk_test/DESIGN.md`. The above is the shape when everything is green.
 
 On failure the terminal gives you **which sub-case** went red directly, with no digging through logs — **the one below is the actual current output**:
 
 ```
-[FAIL ] unit_test.lz4 on sf32lb52-lcd_a128r16_01  (18.6s)  at run
-        1 of 3 Unity test(s) failed: boundaries
+[FAIL ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)  at run
+        1 of 9 Unity test(s) failed: boundaries
         FAIL  boundaries (lz4:129): Expected 1024 to be less than 0
 ```
+
+In the report each case is identified as **`suite.case`** (for example `lz4.boundaries`): case names repeat
+across suites (cjson and lz4 both have `boundaries`), and without the suite there is no telling them apart
+— which is also exactly the filter syntax `unity_run` accepts.
 
 ### `pytest` — the test case directory brings its own Python; use it when you need control flow
 
@@ -628,7 +701,12 @@ why the link-time closure is only 2 symbols), see `middleware/test_fwk/mocks/REA
 
 ---
 
-## 8. The binding File: Describing a Lab
+## 8. The binding File: Describing a Lab (the hardware team's)
+
+**This file is usually not one you write.** It describes which boards are plugged into that machine, with
+their serial ports and wiring — that is the job of whoever maintains the lab. A user only needs to know two
+things: that it exists, and that **the `platform` names in it have to match what `-p` is given**; if you
+would rather not touch it, just run with `-p` (see section 3).
 
 ```yaml
 testbed:
@@ -677,6 +755,36 @@ The Lab Agent's own settings (probe serial numbers, flashing method) are written
     reset:
       method: jlink               # jlink (probe, default) | manual (a person presses the reset button)
 ```
+
+### 8.1 Field Quick Reference
+
+**If you are the one writing this file (you are the hardware team, say), only two things must be right**:
+`id` and `platform`. The rest is either the agent's own, or makes no difference to behaviour when read — the
+table marks which, so copying it will not go wrong.
+
+**A user's only correspondence is one line**: the name you give to `-p` has to equal some testbed's
+`platform`.
+
+| Key | Who reads it | Notes |
+|---|---|---|
+| `testbed[].id` | both | The identifier within this run; it is what `test plan` shows. It must not repeat within one file |
+| `testbed[].platform` | **SDK side** | **Decides whether a test case can land on this board.** Must be named the same as `customer/boards/<name>`; without the core suffix is fine, it gets completed to `_hcpu` |
+| `testbed[].console` | **agent** | `{port, baud}`. `baud` defaults to 1000000 (the SDK console is fixed at 1 Mbaud). The SDK side only displays it in `sdk.py test list-fixtures` |
+| `testbed[].connections[].fixture` | SDK side | **Only consulted when a test case writes `harness_config.fixture`**. Write `name`, or `name:param` (`spi_nor_flash:spi2`) to anchor it exactly |
+| `testbed[].connections[].pinmap` | none | Records how the wiring is done (which pin is CS/CLK). **No code consumes it yet**; writing it is for the hardware team to check the wiring against |
+| `testbed[].connections[].mux` | SDK side (validation only) | Of the form `mux_01.channel.3`; used only to check that the mux it references really is declared under `muxes:` |
+| `testbed[].muxes[]` | SDK side (`id` only) | Declares out-of-band switches (a relay and the like). Only `id` is read (for `connections[].mux` to reference); `type` / `channel_num` / `runner` are read by no code yet, and are kept for the fixture driver that will drive a relay later |
+| `testbed[].runner` | agent (reporting only) | Which Lab Agent holds this testbed. It is reported in `/testbeds`, **but takes no part in the allocation decision** |
+| `testbed[].jlink` / `flash` / `reset` | **agent only** | Probe, flashing, reset. The SDK side only parses them, never interprets them — **so a probe serial number appearing in the binding is not a mistake**; the two sides share one file |
+| `runner:` (top level) | **agent only** | Machine-level settings (listen address, poll interval, buffer cap, probe path). **Written in a file you pass to `-b`, it is ignored** |
+
+> **One file, two uses**: `sdk.py test run --binding <f>` reads only the `testbed:` part;
+> `python tools/lab_agent/runner.py -c <f>` reads both. So one file can serve both as a user's binding and
+> as that machine's runner config — as long as it carries a top-level `runner:` and those agent-private
+> keys. **Do not commit real COM ports.**
+
+The sub-keys of `jlink:` / `flash:` / `reset:` are in the annotated template
+`tools/lab_agent/examples/runner.local.yaml` — that one is written for people to copy from.
 
 ### Manual reset (`reset.method: manual`)
 
@@ -729,24 +837,22 @@ Giving `--no-confirm` together with `--confirm-reset` is an outright error — o
 
 #### Why `unity` can run on this board
 
-`unity_run` is an **msh command**; send it too early and the shell does not exist yet, so the command is lost — the symptom is
-`no Unity summary line found` after the timeout is exhausted, **which looks like broken firmware**.
+**Because it no longer writes a command.** With `autorun` off, `unity_run` is only valid once the shell is
+up, and sending it too early loses it — the symptom is `no Unity summary line found` after the timeout is
+exhausted, **which looks like broken firmware**. With autorun the firmware prints the results itself and the
+host only reads, so that timing problem no longer exists.
 
-So the `unity` harness **waits for the shell prompt first** (default `msh />`) before sending the command.
+**What actually has to be guarded against on this board is something else**: an autorun's results start from
+**the first byte the board boots**, so that boot must happen **after the serial port is open**. The console
+is opened only once flashing has finished, and opening the serial port tends to drive DTR/RTS and reset the
+board once more — the boot log is usually already sitting in the buffer. That "press reset if needed, then
+Enter" confirmation is the fallback kept for exactly this.
 
-**Why not "wait for the serial port to go quiet"**: we tried it, and it does not work. The board is also quiet before it has started booting,
-and at that moment the console has just been opened and the boot triggered by the download has not arrived yet — "silence" was taken for
-"finished talking", and the command was lost just the same. **What is needed is a positive signal, not the absence of one.**
-
-When the prompt is already in the buffer (a probe reset, QEMU) this step passes immediately, at zero cost.
-
-```yaml
-      prompt: "msh />"    # optional; default msh />. Yours replaces it, it does
-                          # not get waited for in addition.
-```
-
-Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide — otherwise a new heuristic
-would invent a new kind of failure, misjudging firmware with a different prompt as broken.
+(With `autorun` off and back on the send-a-command path, the host first waits for the shell prompt in the
+console output (default `msh />`) — that is the positive signal for "is it safe to send?". **Not "wait for
+the serial port to go quiet"**: the board is also quiet before it has started booting, we tried it,
+"silence" was taken for "finished talking", and the command was lost just the same. Not finding the prompt
+is not a failure: the command is sent anyway and the existing checks decide.)
 
 #### Three things to watch
 

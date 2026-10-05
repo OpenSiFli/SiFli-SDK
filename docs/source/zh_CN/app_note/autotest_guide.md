@@ -175,27 +175,20 @@ python tools/lab_agent/runner.py -c my-runner.yaml --list      # 看识别到哪
 python tools/lab_agent/runner.py -c my-runner.yaml             # 起服务
 ```
 
-**终端 B** —— 跑用例：
+**终端 B** —— 跑用例。**你只要说清"跑在哪个平台上"，以及 agent 在哪**：
 
 ```bash
-sdk.py test plan -T example/get-started/hello_world --binding my-binding.yaml   # 先看计划
-sdk.py test run  -T example/get-started/hello_world --binding my-binding.yaml
+sdk.py test plan -T example -p sf32lb52-lcd_a128r16     # 先看计划（不碰硬件）
+sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # 由 agent 分配一块空闲的板
 ```
+
+`--agent-url` 默认就是 `http://127.0.0.1:8760`，agent 和你在同一台机器上时可以省。
 
 退出码：`0` 全过，`1` 有用例失败，`2` 请求本身不可用。
 
-### 手动跑：只指定平台，不要 binding
-
-**绝大多数手动执行属于这一类**——"随便挑块空闲的板，把这批用例跑一遍"。这时
-`--binding` 是多余的，用 `-p/--platform` 就行：
-
-```bash
-sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:8760
-```
-
-不用 binding 也能跑，因为**分配是 agent 做的**：SDK 侧调 `allocate` 时
-`testbed_id` 本来就传 `None`，由 agent 在候选里挑一块空闲的。所以有没有 binding，
-**分配路径完全相同**——binding 的作用纯粹是 SDK 侧的**提前过滤**。
+**为什么不需要 binding**：分配是 agent 做的——SDK 侧调 `allocate` 时 `testbed_id`
+本来就传 `None`，由 agent 在候选里挑一块空闲的。所以给不给 binding，**分配路径完全
+相同**，binding 只是 SDK 侧的**提前过滤**（那个文件属于硬件团队，见第 8 节）。
 
 代价是少了三道**在构建之前**的检查，它们都会推迟到申请硬件那一刻：
 
@@ -231,8 +224,8 @@ sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:
 | `--report-suffix` | 加到报告文件名后，CI 里区分 build 号（→ `sifli_ci123.xml`） |
 | `--report` | **兼容别名**：钉住 JUnit 的目录与文件名（会剥掉扩展名，JSON 落在同主干下）。现在报告默认就产出，一般不需要它 |
 | `--fail-fast` | 首个失败即停（默认继续跑完，nightly 更需要全景） |
-| `--no-confirm` | 中途不再停下来问。只影响手动复位的板子（见第 8 节），且会连带禁用 `unity`——那个 harness 需要有人确认板子已经起来 |
-| `--confirm-reset` | 反过来：不停下来问，但**声明板子已就绪**。手动复位的板子上用它才能跑 `unity`（无人值守时），与 `--no-confirm` 互斥 |
+| `--no-confirm` | 中途不再停下来问。只影响手动复位的板子（见第 8 节）。会连带禁掉"先写后读"的 harness，也就是**没开 `autorun` 的 `unity`**；`console`、`pytest`，以及开了自动运行的 unity，都不受影响 |
+| `--confirm-reset` | 反过来：不停下来问，但**声明板子已就绪**。手动复位的板子在无人值守时靠它越过那道启动确认，与 `--no-confirm` 互斥 |
 
 ---
 
@@ -249,16 +242,19 @@ sdk.py test run -T example -p sf32lb52-lcd_a128r16 --agent-url http://127.0.0.1:
 
 ```bash
 sdk.py test run -T example/qemu                      # console harness
-sdk.py test run -T example/test/unit_test --no-build -t unit_test.cjson_qemu
+sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
 ```
 
-后一条跑的是**板上那套 Unity 单测**（cJSON suite），只是换了载体。
+后一条跑的是**板上那套 Unity 单测**（同一个镜像里的三个 suite），只是换了载体。
 用例自己声明跑在哪：
 
 ```yaml
-  - id: unit_test.cjson_qemu
+  - id: unit_test.qemu
     harness: unity
+    timeout: 120
     integration_platforms: [qemu_cortex_m33]   # 有它就不需要 binding
+    harness_config:
+      autorun: true
 ```
 
 需要本机装了 QEMU；不在 PATH 上时用 `SIFLI_QEMU_EXE` 指过去
@@ -327,7 +323,6 @@ tests:
   - id: my_case
     description: 一句话说明这个用例验什么
     harness: console          # console | unity | pytest（shell 未实现）
-    type: functional          # unit | integration | functional
     tags: [smoke]
     timeout: 60
     harness_config:
@@ -336,6 +331,29 @@ tests:
 
 字段全集以 `tools/sdk_test/schema/testcase.schema.json` 为准，**它是唯一真源**：
 写错字段名会被直接拒绝，不会静默忽略。
+
+**两种写法都支持。** `tests:` 可以是列表（每条自带 `id`），也可以是映射（**键就是 id**）：
+
+```yaml
+tests:
+  my_case:                   # 键即 id，不必再写一行 id:
+    harness: console
+    harness_config:
+      record: ["Hello world!"]
+  my_other_case: ~           # 空条目 = 只有 id，其余全走默认
+```
+
+**顶层还有 `common:`**：写在那里的一组值会合并进 `tests:` 的**每一条**，
+而**每条自己的同名键优先**：
+
+```yaml
+common:
+  tags: [smoke]
+  timeout: 60
+tests:
+  - id: my_case              # 继承上面的 tags 和 timeout
+    harness: console
+```
 
 其它可用字段：`platform_allow` / `platform_exclude` / `integration_platforms` /
 `depends_on`（匹配板子 `features.yaml` 声明的实例类型，见第 8 节）/ `extra_args`（透传给 scons）/
@@ -350,9 +368,8 @@ tests:
 | `platform_allow` / `platform_exclude` | 生效；显式给了 `--platform` 时也仍然生效。 |
 | `extra_args` | 生效，但透传给的是 **scons 构建**，不是运行。 |
 | `build_only` / `skip` | 生效。`skip` 在**构建之前**判断，所以能省掉一次构建。 |
-| `min_flash` / `min_ram` / `slow` / `type` | **惰性**：schema 接受、解析进模型，但没有代码读它们。写了不会生效。 |
+| `min_flash` / `min_ram` / `slow` / `type` / `dut` / `dut_client` | **已移除**：schema 不再接受，写了会被直接拒绝。它们曾经是"被解析、但没有代码读"的字段。删掉的理由、以及它们原本要做什么（资源上限、慢用例标记、多设备），记在 `tools/sdk_test/DESIGN.md` 的 TODO 一节 |
 | `harness: shell` | schema 合法但**未实现**，选中会报错，不会静默通过。 |
-| `dut` / `dut_client` | 解析进模型，`runner` 尚未消费；多设备目前要走 `pytest` harness 自己编排。 |
 
 ### `project_dir`：testcase 与工程不在同一层
 
@@ -395,84 +412,129 @@ tests:
 
 ### `unity` —— 板上跑 Unity，宿主解析它自己的汇总
 
+一条用例就长这样：
+
 ```yaml
-  - id: unit_test.lz4
+  - id: unit_test.board
     harness: unity
     timeout: 120
     harness_config:
-      suite: lz4          # 可省；省了就是 unity_run（不带参数）
+      autorun: true       # 固件上电自己把所有 suite 跑完，宿主只读串口
+      # suite: lz4        # 可省。写了就只认领 lz4 的结果，见下
+```
 
+**一条用例 = 一次构建 + 一次烧录 + 一次启动。** 工程在 `main()` 里调了一次
+`sifli_unity_autorun()`（`CONFIG_TEST_FWK_AUTORUN`，测试工程的 `proj.conf` 里已经
+打开），所以板子一上电就把注册表里**每个** suite 跑一遍，结果全打在同一份转录里，
+宿主只读串口——**你不用发任何命令，也不用操心发在什么时刻**。
+
+**所以不要按 suite 拆条目。** 一个镜像里有哪几个 suite 是**构建事实**：
+`src/SConscript` 已经把实际编译的 `test_*.c` 扫成了 `unity_suites_gen.json`。在这里
+再列一遍就是同一个事实写两处；而拆成多条只会变成多烧几次、多启动几次。
+
+#### 多条用例共用一个镜像时：`suite` 用来认领
+
+一次自动运行把**所有** suite 的结果打进同一份转录，所以一条用例可能要声明自己是
+**谁**：
+
+```yaml
+      suite: lz4          # 可省。写了就只认领 lz4 的结果
+```
+
+宿主按结果行 `<suite>:<line>:<case>:PASS|FAIL` 里那段 suite 名分派。不写 `suite`
+的用例对整份转录负责——**一个工程一条用例时就是这么写的**（真板例子见下）。
+
+两条要记住的：
+
+- **自己那个 suite 一条结果都没出现 → 失败。** 一份转录只有一行汇总
+  （`<n> Tests <n> Failures <n> Ignored`——一把 `UnityBegin`/`UnityEnd` 包住整个
+  循环，所以那一行属于**固件**，不属于任何单个 suite）。把固件那句整体 `OK` 交给
+  一个什么都没跑的 suite，就是一个什么都证明不了的绿灯。
+- **别的 suite 失败了不影响自己。** 真板上的实际形态就是这样：同一份转录里
+  cjson 和 circular_buf 判 PASS、lz4 判 FAIL，互不牵连。
+
+**两道防"空转"的闸**：没看到汇总行 → 失败；汇总说 0 个用例 → 失败。
+（后者是最危险的假绿：链接了 Unity 但一个用例都没注册，会打印干净的 `OK`。）
+
+> **为什么不让宿主发 `unity_run`**：没有可靠的时刻可发——启动 banner 只打印一次、
+> 且在提示符之前；提示符的文本又跟着构建设置走。命令发早了就丢，症状是报
+> `no Unity summary line found`，看起来像固件坏了。把决定交给固件，这个时机问题就
+> 不存在了。完整论证见 `tools/sdk_test/DESIGN.md`。
+
+#### 固件等命令时才需要 `prompt` / `cmd`
+
+把 `CONFIG_TEST_FWK_AUTORUN` 关掉（`proj.conf` 里改成 `n`），板子就停在 shell 等
+命令，宿主才需要那两个字段。手动单跑某个 suite 走的也是这条路：烧一次，然后敲
+`unity_run lz4`。
+
+```yaml
+    harness_config:
       prompt: "msh />"    # 可省，默认 msh />。发命令前先在串口输出里等它出现；
                           # 写自己的字符串是替换它，不是叠加
       # cmd: unity_run    # 可省，默认 unity_run。等到之后要发出去的命令本身
 ```
 
-两个字段的分工和先后：**`prompt` 回答什么时候可以发，`cmd` 回答发什么**。
+`prompt` 回答**什么时候可以发**，`cmd` 回答**发什么**。两者都是**替换**语义：写了
+自己的字符串，默认值就不再被用——不是"先等默认的、再等你写的"。要同时接受多个
+标志，把正则或起来，例如 `prompt: "msh />|READY"`，语义是"出现任意一个就放行"，
+也不是按先后。
 
-`prompt` 是**替换**，不是叠加：写了自己的字符串，`msh />` 就不再被等——它不是
-"先等默认的、再等你写的"。要同时接受多个标志，用一个正则把它们或起来，例如
-`prompt: "msh />|READY"`，语义是"出现任意一个就放行"，也不是按先后。`cmd` 同理。
+`prompt` 这一步是承重的，不是保险：在手动复位的板子上，console 是在**下载刚写完、
+板子还在启动**的时候就打开的，此时把命令发出去，板子根本收不到。两个默认值是配套
+的——`cmd` 默认发 `unity_run`，而它是一条 **msh 命令**，能执行的前提就是 msh 已经在
+跑；所以 `prompt` 默认等 `msh />`，等的正是这个前提。换成别的 shell，就把 `prompt`
+改成固件自己打印的就绪标志。
 
-宿主先在串口输出里等 `prompt` 匹配上，匹配到才把 `cmd` 写出去，再解析 Unity 的
-输出契约：`<file>:<line>:<case>:PASS|FAIL`、
-`<n> Tests <n> Failures <n> Ignored`、`OK|FAIL`。
-
-先等 `prompt` 再发，这一步是承重的，不是保险。在没有探针的板子上，console 是在
-**下载刚写完、板子还在启动**的时候就打开的；此时把命令发出去，板子根本收不到，
-而症状是耗完超时后报 `no Unity summary line found`——**看起来像固件坏了**。
-
-两个默认值是配套的，不是各自随便取的：`cmd` 默认发 `unity_run`，而它是一条
-**msh 命令**，能被执行的前提就是 msh 已经在跑；所以 `prompt` 默认等 `msh />`，
-等的正是这个前提——**没有比发一条 msh 命令本身多假设任何东西**。换成裸机固件、
-或别的 shell，就把 `prompt` 改成固件自己打印的就绪标志。
-
-等不到提示符**不算失败**：命令照发，由原有的检查去判——否则就会凭一个新启发式
-造出一种新的失败，把提示符不同的固件误判成坏的。
-
-**两道防"空转"的闸**：没看到汇总行 → 失败；汇总说 0 个用例 → 失败。
-（后者是最危险的假绿：链接了 Unity 但一个用例都没注册，会打印干净的 `OK`。）
+等不到提示符**不算失败**：命令照发，由原有的检查去判。
 
 `harness: unity` 不接受 `record`——判定权归 Unity，硬要写会报错并提示改用 `console`。
+`autorun` 反过来是 unity 专属：`console` 和 `pytest` 从不读它，收到会报错。
 
 #### 怎么在真板上跑
 
-`example/test/unit_test/` 是现成的工程，一个 `testcase.yaml` 里四条用例、共用一份
-固件。其中三条能在真板上跑，`unit_test.cjson_qemu` 钉死在 QEMU 上：
+`example/test/unit_test/` 是现成的工程。一个 `testcase.yaml` **两条用例**——一条跑
+真板、一条钉在 QEMU 上——共用同一份固件，而那份固件里有三个 suite（lz4、cjson、
+circular_buf）。
+
+**一条用例 = 一次构建 + 一次烧录 + 一次启动**，整个镜像的 suite 都在这一次里跑完。
+所以不按 suite 拆条目：拆了就是三次烧录、三次启动。
 
 ```powershell
 # 干跑：先确认规划出什么（不碰硬件）
-sdk.py test plan -T example/test/unit_test -t unit_test.lz4 -b <binding.yaml>
+sdk.py test plan -T example/test/unit_test -t unit_test.board -b <binding.yaml>
 
-# 真板：手动复位的板子要 --confirm-reset，否则 unity 在烧录前就被拒
-sdk.py test run  -T example/test/unit_test `
-    -t unit_test.lz4 -t unit_test.cjson -t unit_test.circular_buf `
+# 真板。手动复位的板子要 --confirm-reset —— 那是"启动已经安排好了"的声明：
+# 自动运行的结果从板子启动的第一个字节就开始了，所以那次启动必须发生在串口
+# 打开之后，否则那份转录没人看见。
+sdk.py test run  -T example/test/unit_test -t unit_test.board `
     -b <binding.yaml> --confirm-reset
 ```
 
-**注意 `-T` 的范围**：直接 `-T example/test/unit_test` 会把 `unit_test.cjson_qemu`
-也选进来，而它声明了 `integration_platforms: [qemu_cortex_m33]`——这个 lab 没有
-QEMU 平台，于是 `test plan` 会**整体中止**（它是严格的），`test run` 则把它记为
-ERROR 后继续。所以要么用 `-t` 挑出三条，要么接受一条 ERROR。
+**`unit_test.qemu` 那条钉在 `qemu_cortex_m33` 上**，这个 lab 没有 QEMU 平台，于是
+`test plan` 会**整体中止**（它是严格的），`test run` 则把它记为 ERROR 后继续。所以
+用 `-t unit_test.board` 挑出真板那条。
 
-**三条都通过时长这样**：
+**通过时长这样**（一条用例，九个 case）：
 
 ```
-=================== unit_test  (3 test(s): 3 passed) ====================
-[PASS ] unit_test.circular_buf on sf32lb52-lcd_a128r16_01  (23.4s)
-[PASS ] unit_test.cjson on sf32lb52-lcd_a128r16_01  (18.6s)
-[PASS ] unit_test.lz4 on sf32lb52-lcd_a128r16_01  (18.6s)
+=================== unit_test  (1 test(s): 1 passed) ====================
+[PASS ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)
 ```
 
-> 截至本文，实际是 **2 passed / 1 failed**：`unit_test.lz4` 的 `boundaries` 还没结案，
-> 见 `tools/sdk_test/DESIGN.md` 风险 9。上面是全绿时的形态。
+> 截至本文，实际是 **1 failed**：`lz4.boundaries` 还没结案，见
+> `tools/sdk_test/DESIGN.md` 风险 9。上面是全绿时的形态。
 
 失败时终端直接给出**哪条子用例**红了，不用翻日志——**下面这条是当前的真实输出**：
 
 ```
-[FAIL ] unit_test.lz4 on sf32lb52-lcd_a128r16_01  (18.6s)  at run
-        1 of 3 Unity test(s) failed: boundaries
+[FAIL ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)  at run
+        1 of 9 Unity test(s) failed: boundaries
         FAIL  boundaries (lz4:129): Expected 1024 to be less than 0
 ```
+
+报告里每条 case 的标识是 **`suite.case`**（例如 `lz4.boundaries`）：case 名在 suite
+之间会重复（cjson 和 lz4 都有 `boundaries`），不带 suite 就没法区分——这也正是
+`unity_run` 接受的过滤语法。
 
 ### `pytest` —— 用例目录自带 Python，需要控制流时用它
 
@@ -621,7 +683,11 @@ sdk.py test run -T example/test/hal_mock
 
 ---
 
-## 8. binding 文件：描述一个 lab
+## 8. binding 文件：描述一个 lab（硬件团队的）
+
+**这个文件通常不是你写的。** 它描述那台机器上插了哪些板、各自的串口和接线——那是
+维护实验室的人的活。使用者只需要知道两件事：它的存在，以及**里面 `platform` 的名字
+要和 `-p` 给的一致**；不想碰它，就用 `-p` 直接跑（见第 3 节）。
 
 ```yaml
 testbed:
@@ -670,6 +736,36 @@ Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文�
     reset:
       method: jlink               # jlink（探针，默认）| manual（人按复位键）
 ```
+
+### 8.1 字段速查
+
+**如果你就是要写这个文件（比如你就是硬件团队），必须写对的只有两个**：`id` 和
+`platform`。其余要么是 agent 自己的，要么读了也不影响行为——表里都标了，照着抄不会
+写错。
+
+**使用者的对应关系只有一条**：你 `-p` 给的那个名字，要等于某个 testbed 的
+`platform`。
+
+| 键 | 谁读 | 说明 |
+|---|---|---|
+| `testbed[].id` | 两边 | 本次运行里的标识，`test plan` 显示的就是它。同一个文件里不能重复 |
+| `testbed[].platform` | **SDK 侧** | **决定这条用例能不能落在这块板**。必须与 `customer/boards/<name>` 同名；不带核后缀即可，会补成 `_hcpu` |
+| `testbed[].console` | **agent** | `{port, baud}`。`baud` 默认 1000000（SDK console 固定 1 Mbaud）。SDK 侧只在 `sdk.py test list-fixtures` 里显示它 |
+| `testbed[].connections[].fixture` | SDK 侧 | **只当用例写了 `harness_config.fixture` 时才会被查**。写 `name`，或 `name:param`（`spi_nor_flash:spi2`）精确锚定 |
+| `testbed[].connections[].pinmap` | 无 | 记录怎么接的线（哪个脚是 CS/CLK）。**目前没有代码消费**，写它是给硬件团队对线用的 |
+| `testbed[].connections[].mux` | SDK 侧（仅校验） | 形如 `mux_01.channel.3`；只用于检查它引用的 mux 确实在 `muxes:` 里声明过 |
+| `testbed[].muxes[]` | SDK 侧（仅 `id`） | 带外开关（relay 等）的声明。只有 `id` 被读（供 `connections[].mux` 引用）；`type` / `channel_num` / `runner` 目前没有代码读，留给以后驱动 relay 的 fixture driver |
+| `testbed[].runner` | agent（仅上报） | 这个 testbed 由哪台 Lab Agent 持有。会在 `/testbeds` 里报出去，**但不参与分配决策** |
+| `testbed[].jlink` / `flash` / `reset` | **只有 agent** | 探针、烧录、复位。SDK 侧只解析不解释——**所以 binding 里出现探针序列号不是失误**，两边共用一个文件 |
+| `runner:`（顶层） | **只有 agent** | 机器级设置（监听地址、轮询间隔、缓冲上限、探针路径）。**写在给 `-b` 用的文件里会被忽略** |
+
+> **一份文件两个用途**：`sdk.py test run --binding <f>` 只读 `testbed:` 那部分；
+> `python tools/lab_agent/runner.py -c <f>` 两边都读。所以同一份文件既能当使用者的
+> binding、也能当那台机器的 runner 配置——只要它带上顶层 `runner:` 和那些 agent
+> 私有键。**真实的 COM 口不要提交进仓库。**
+
+`jlink:` / `flash:` / `reset:` 各有哪些子键，见带注释的模板
+`tools/lab_agent/examples/runner.local.yaml`——那份就是给人照着抄的。
 
 ### 手动复位（`reset.method: manual`）
 
@@ -722,23 +818,19 @@ waiting for the board to boot; press its RESET button if nothing appears (60s)
 
 #### `unity` 为什么能在这块板上跑
 
-`unity_run` 是一条 **msh 命令**，发早了 shell 还不存在，命令就丢了——症状是耗完
-超时后报 `no Unity summary line found`，**看起来像固件坏了**。
+**因为它不写命令了。** 没开 `autorun` 时，`unity_run` 只在 shell 起来之后才有效，
+发早了就丢——症状是耗完超时后报 `no Unity summary line found`，**看起来像固件坏了**。
+自动运行之后固件自己把结果打完，宿主只读，这个时机问题就不存在了。
 
-所以 `unity` harness 在发命令**之前先等 shell 提示符**（默认 `msh />`）。
+**这块板上真正要防的是另一件事**：自动运行的结果从**板子启动的第一个字节**就开始，
+所以那次启动必须发生在**串口打开之后**。console 是烧录完成后才打开的，而打开串口时
+的 DTR/RTS 往往会把板子再复位一次——启动日志通常早就躺在缓冲里了。那道"需要的话按
+复位，然后回车"的确认就是为这件事留的兜底。
 
-**为什么不是"等串口安静"**：我们试过，不行。板子还没开始启动时也是安静的，那时
-console 刚打开、下载引发的启动还没到——"静默"被当成了"已经说完"，命令照样发丢。
-**需要的是正向信号，不是没有信号。**
-
-提示符早就在缓冲里时（探针复位、QEMU）这一步立即通过，零代价。
-
-```yaml
-      prompt: "msh />"    # 可省，默认 msh />。写了就只等它，不叠加
-```
-
-等不到提示符**不算失败**：命令照发，由原有的检查去判——否则就会凭一个新启发式
-造出一种新的失败，把提示符不同的固件误判成坏的。
+（关掉 `autorun`、回到发命令那条路时，宿主会先在串口输出里等 shell 提示符
+（默认 `msh />`）——那是"可以发了吗"的正向信号。**不是"等串口安静"**：板子还没开始
+启动时也是安静的，我们试过，"静默"被当成"已经说完"，命令照样发丢。等不到提示符
+不算失败，命令照发，由原有的检查去判。）
 
 #### 三条要注意的
 

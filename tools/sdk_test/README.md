@@ -26,7 +26,7 @@
 | `tools/sdk_test/` | SDK 侧（无硬件绑定）：发现、匹配、编排、上报 |
 | `tools/lab_agent/` | 机器侧：持有真实硬件，通过本机 HTTP 发放 testbed |
 | `tools/sdk_py_actions/test_ext.py` | `sdk.py test` 命令入口（薄转发） |
-| `middleware/test_fwk/` | 板上胶水：Unity 配置 + `unity_run`/`unity_list` MSH 命令 |
+| `middleware/test_fwk/` | 板上胶水：Unity 配置 + 自动运行（`sifli_unity_autorun()`，`TEST_FWK_AUTORUN`）+ `unity_run`/`unity_list` MSH 命令 |
 | `external/unity/` | Unity 2.7.0（已裁剪，仅保留编译所需） |
 | `external/cmock/` | CMock 2.7.0（**故意不接入构建**，见 `NOTES.md`） |
 | `example/test/unit_test/` | 板上 Unity 单测工程（lz4 / cJSON / circular_buf） |
