@@ -424,7 +424,7 @@ def _suite_to_dict(result: TestResult) -> Dict[str, Any]:
 
     suite["testcases"] = [
         {
-            "identifier": case.name,
+            "identifier": _case_identifier(case),
             "status": case.status,
             "reason": case.message,
             "file": case.file,
@@ -433,6 +433,25 @@ def _suite_to_dict(result: TestResult) -> Dict[str, Any]:
         for case in result.cases
     ]
     return suite
+
+
+def _case_identifier(case: CaseResult) -> str:
+    """A case's name, qualified by the group it came from when it has one.
+
+    The bare name is not unique: Unity case names repeat across suites -- both
+    cjson and lz4 have a ``boundaries`` -- and one instance emits one row per
+    case, so two suites sharing a name collide in the report and in the JUnit
+    XML. Qualifying it is what stops a passing ``boundaries`` and a failing one
+    from being the same row.
+
+    ``suite.case`` is how this framework already spells a fully-qualified case:
+    it is the filter ``unity_run`` accepts, and the runner puts the suite in
+    ``file`` (``UnitySetTestFile(tc->suite)``), so the report says it the same
+    way rather than inventing a second convention.
+    """
+    if case.file:
+        return f"{case.file}.{case.name}"
+    return case.name
 
 
 def dict_to_xml(

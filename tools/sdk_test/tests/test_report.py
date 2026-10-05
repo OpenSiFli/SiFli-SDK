@@ -224,15 +224,15 @@ class TestJunitXml(SdkTestCase):
                 message="1 of 3 Unity test(s) failed",
                 platform="qemu_sf32lb52x",
                 cases=[
-                    report.CaseResult("test_roundtrip", report.PASSED),
+                    report.CaseResult("test_roundtrip", report.PASSED, file="lz4"),
                     report.CaseResult(
                         "test_bounds",
                         report.FAILED,
                         message="expected -1, got 1024",
-                        file="test/test_lz4.c",
+                        file="lz4",
                         line=58,
                     ),
-                    report.CaseResult("test_slow", report.SKIPPED),
+                    report.CaseResult("test_slow", report.SKIPPED, file="lz4"),
                 ],
             )
         )
@@ -240,14 +240,14 @@ class TestJunitXml(SdkTestCase):
         cases = root.findall("testcase")
 
         self.assertEqual([c.get("name") for c in cases],
-                         ["test_roundtrip", "test_bounds", "test_slow"])
+                         ["lz4.test_roundtrip", "lz4.test_bounds", "lz4.test_slow"])
         # Every case belongs to its instance, so that is the classname.
         self.assertEqual({c.get("classname") for c in cases}, {"unit_test.lz4"})
         self.assertEqual({c.get("platform") for c in cases}, {"qemu_sf32lb52x"})
 
         failure = cases[1].find("failure")
         self.assertIn("expected -1, got 1024", failure.get("message"))
-        self.assertIn("test/test_lz4.c:58", failure.text)
+        self.assertIn("lz4:58", failure.text)
         # The instance-level reason rides along: it says how many siblings failed.
         self.assertIn("1 of 3 Unity test(s) failed", failure.text)
 
@@ -255,6 +255,41 @@ class TestJunitXml(SdkTestCase):
         # particular not its sibling's failure reason, which is what it once got.
         self.assertEqual(len(cases[0]), 0)
         self.assertIsNotNone(cases[2].find("skipped"))
+
+    def test_two_suites_sharing_a_case_name_stay_apart(self):
+        # Both cjson and lz4 have a `boundaries`, and one instance emits one row
+        # per case, so an unqualified name would merge a pass and a failure into
+        # one row -- in the report and in the XML. The board produced exactly
+        # this pair, which is how it was found.
+        summary = report.RunSummary(started_at=0.0)
+        summary.add(
+            report.TestResult(
+                "unit_test.board",
+                report.FAILED,
+                cases=[
+                    report.CaseResult("boundaries", report.PASSED, file="cjson", line=6),
+                    report.CaseResult(
+                        "boundaries",
+                        report.FAILED,
+                        message="Expected 1024 to be less than 0",
+                        file="lz4",
+                        line=129,
+                    ),
+                ],
+            )
+        )
+        root = self.write_and_parse(summary)
+        cases = root.findall("testcase")
+
+        self.assertEqual(
+            [case.get("name") for case in cases],
+            ["cjson.boundaries", "lz4.boundaries"],
+        )
+        self.assertEqual({c.get("classname") for c in cases}, {"unit_test.board"})
+        # And the failure is attached to the lz4 one, so a consumer keying on
+        # the name cannot attribute it to the suite that passed.
+        self.assertIsNone(cases[0].find("failure"))
+        self.assertIsNotNone(cases[1].find("failure"))
 
     def test_the_counts_describe_what_was_emitted_not_the_instances(self):
         # One instance, three cases: the header must say 3/1/0/1, not 1/1/0/0.
