@@ -7,11 +7,11 @@ with no lab, no build and no serial port:
 
     can this test run on this platform at all?
 
-The second question -- *which* board of that platform, wired how -- is the
-binding's, and lives in :mod:`sdk_test.fixtures`. Keeping the two apart is what
-makes ``sdk.py test plan`` able to say what is wrong before anything is built:
-what a board offers is a property of the board and the build, not of the bench it
-happens to sit on.
+The second question -- *which* board of that platform, wired how -- belongs to
+the Lab Agent, which owns the hardware; it is not asked on this side at all.
+Answering only the first is what makes ``sdk.py test plan`` able to say what is
+wrong before anything is built: what a board offers is a property of the board
+and the build, not of the bench it happens to sit on.
 
 A platform states the **instances** it has; a test states the **type** it needs::
 

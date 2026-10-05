@@ -3,9 +3,9 @@
 """End-to-end tests for the whole SDK-side chain, with no hardware.
 
 A real :class:`~lab_agent.server.LabAgentServer` runs on an ephemeral port with a
-faked console and probe; the SDK side discovers a real ``testcase.yaml``, reads a
-real binding file, allocates, opens the console, runs the harness and writes a
-real JUnit report. Only the two physical boundaries are faked.
+faked console and probe; the SDK side discovers a real ``testcase.yaml``, names a
+platform, allocates a board from the agent, opens the console, runs the harness
+and writes a real JUnit report. Only the two physical boundaries are faked.
 
 This is the test that would have caught every integration bug found while
 building the two halves, because it exercises the actual JSON contract between
@@ -121,15 +121,24 @@ class FakeProbe:
 
 
 class EndToEndCase(SdkTestCase):
-    """Builds a suite tree, a binding, and a live agent with a faked device."""
+    """Builds a suite tree and a live agent with a faked device.
+
+    The platform is named on this side, as a user's `-p` would name it; the
+    agent then picks the board that answers it out of the lab it was given.
+    """
 
     #: Transcript the faked device emits unprompted (the boot log).
     boot = BOOT_LOG
     #: Transcript it emits only after being asked to run Unity.
     response = ""
 
+    #: The platform the suite is built for. Allocation is the agent's job, so
+    #: this is all the SDK side says; which board answers it is not the runner's
+    #: to choose. Overridden where a bench serves different hardware.
+    platform = "sf32lb52-lcd_n16r8"
+
     #: The lab the agent serves. Override in a subclass to describe a different
-    #: bench -- it is used as both the binding and the runner config.
+    #: bench.
     testbeds_yaml = """
     runner:
       name: e2e
@@ -148,9 +157,6 @@ class EndToEndCase(SdkTestCase):
         super().setUp()
         self.transports = {}
         self.probes = {}
-        self.binding_path = self.write(
-            "binding.local.yaml", self.testbeds_yaml
-        )
         self._start_agent()
         self.addCleanup(self.server.stop)
 
@@ -207,7 +213,7 @@ class EndToEndCase(SdkTestCase):
     def runner(self, suite_root, echo=None, confirm=None, build_fn=None, **overrides):
         options = RunOptions(
             testsuite_root=suite_root,
-            binding=self.binding_path,
+            platform=self.platform,
             agent_url=self.server.url,
             build=False,
             # Kept short so a deliberately-failing test does not pad the suite.
@@ -595,7 +601,9 @@ class TestPlanIsHonest(EndToEndCase):
         # The build system always records a core suffix, even when the platform
         # name has none -- so the directory is build_<board>_hcpu.
         self.assertTrue(item.build_dir.endswith("build_sf32lb52-lcd_n16r8_hcpu"))
-        self.assertEqual(item.testbed.id, "tb_01")
+        # And no board is named: the agent chooses one from its own lab when the
+        # hardware is asked for, so a plan has nothing to say about which.
+        self.assertFalse(hasattr(item, "testbed"))
 
     def test_a_testcase_beside_its_project_is_found_by_convention(self):
         # testcase.yaml next to SConstruct, with no project/ subdirectory.
@@ -689,24 +697,6 @@ class TestPlanListsEveryRun(EndToEndCase):
     anything is built: how many boards it takes, and therefore how long.
     """
 
-    def two_board_binding(self):
-        return self.write(
-            "binding-two.yaml",
-            """
-            runner:
-              name: e2e
-              console_poll: 0.005
-
-            testbed:
-              - id: tb_01
-                platform: sf32lb52-lcd_n16r8
-                console: {port: COM13}
-              - id: tb_02
-                platform: eh-lb563
-                console: {port: COM30}
-            """,
-        )
-
     def test_a_case_naming_two_platforms_gets_two_runs(self):
         suite = self.make_project(
             testcase_yaml="""
@@ -719,7 +709,9 @@ class TestPlanListsEveryRun(EndToEndCase):
             """,
             suffix="hello",
         )
-        planned = self.runner(suite, binding=self.two_board_binding()).plan()
+        # Named no platform on the command line (``platform=None``), so the
+        # case's own two are what is planned.
+        planned = self.runner(suite, platform=None).plan()
 
         # Both runs, in the order the test case named them, and both under the
         # one id -- which is what the summary groups and counts by.
@@ -730,9 +722,10 @@ class TestPlanListsEveryRun(EndToEndCase):
         # Both under the one id -- which is what the summary groups and counts by.
         self.assertEqual(len({item.id for item in planned}), 1)
 
-    def test_a_case_naming_none_still_gets_exactly_one_run(self):
-        # The lab decides, and it decides one answer: a bench with twenty boards
-        # must not turn a single test into twenty runs.
+    def test_a_case_naming_none_is_refused_rather_than_guessed_at(self):
+        # Without a platform named on the command line or in the case there is
+        # nothing to build for. The SDK side holds no inventory of the lab to
+        # choose one from any more, so this is a usage error, and it says so.
         suite = self.make_project(
             testcase_yaml="""
             tests:
@@ -743,10 +736,13 @@ class TestPlanListsEveryRun(EndToEndCase):
             """,
             suffix="hello",
         )
-        planned = self.runner(suite, binding=self.two_board_binding()).plan()
+        from sdk_test.errors import BackendError
 
-        self.assertEqual(len(planned), 1)
-        self.assertEqual(planned[0].platform, "sf32lb52-lcd_n16r8")
+        with self.assertRaises(BackendError) as caught:
+            self.runner(suite, platform=None).plan()
+        message = str(caught.exception)
+        self.assertIn("integration_platforms", message)
+        self.assertIn("--platform", message)
 
     def test_a_platform_forced_on_the_command_line_replaces_the_case_s_own(self):
         # `--platform` wins over `integration_platforms`, which is what makes
@@ -763,7 +759,7 @@ class TestPlanListsEveryRun(EndToEndCase):
             suffix="hello",
         )
         planned = self.runner(
-            suite, binding=self.two_board_binding(), platform="sf32lb52-lcd_n16r8"
+            suite, platform="sf32lb52-lcd_n16r8"
         ).plan()
 
         self.assertEqual([item.platform for item in planned], ["sf32lb52-lcd_n16r8"])
@@ -778,6 +774,7 @@ class EndToEndManualResetCase(EndToEndCase):
     """
 
     testbeds_yaml = MANUAL_RESET_BENCH
+    platform = "sf32lb52-lcd_a128r16"
     #: What the faked device answers a `unity_run` with, so the unity cases
     #: below have a reply to find. The console cases never send that command,
     #: so it stays silent for them.
@@ -841,6 +838,7 @@ class EndToEndConfirmedManualResetCase(EndToEndCase):
     """
 
     testbeds_yaml = MANUAL_RESET_BENCH
+    platform = "sf32lb52-lcd_a128r16"
     #: What the faked device answers a `unity_run` with. Set here rather than
     #: inherited -- this class is standalone on purpose (see above), and
     #: without it the unity case below fails for want of a reply.

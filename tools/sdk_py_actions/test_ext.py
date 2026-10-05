@@ -172,13 +172,6 @@ _TAG_OPTION = {
     "default": None,
 }
 
-_BINDING_OPTION = {
-    "names": ["-b", "--binding"],
-    "help": "Hardware-map file describing this lab's testbeds.",
-    "type": str,
-    "default": None,
-}
-
 _NO_CONFIRM_OPTION = {
     "names": ["--no-confirm"],
     "is_flag": True,
@@ -298,15 +291,6 @@ def test_list_callback(
 
 
 @_guard
-def test_list_fixtures_callback(
-    sdk_ctx: SdkContext,
-    binding: Optional[str] = None,
-    agent_url: Optional[str] = None,
-) -> int:
-    return sdk_test_cli.list_fixtures(binding=binding, agent_url=agent_url)
-
-
-@_guard
 def test_info_callback(sdk_ctx: SdkContext) -> int:
     return sdk_test_cli.describe_environment()
 
@@ -317,7 +301,6 @@ def test_plan_callback(
     testsuite_root: Optional[str] = None,
     testcase: Optional[List[str]] = None,
     tag: Optional[List[str]] = None,
-    binding: Optional[str] = None,
     platform: Optional[str] = None,
     backend: Optional[str] = None,
 ) -> int:
@@ -325,7 +308,6 @@ def test_plan_callback(
         _suite_root(testsuite_root),
         testcase_ids=testcase,
         tags=tag,
-        binding=binding,
         platform=platform,
         backend=backend,
     )
@@ -337,7 +319,6 @@ def test_run_callback(
     testsuite_root: Optional[str] = None,
     testcase: Optional[List[str]] = None,
     tag: Optional[List[str]] = None,
-    binding: Optional[str] = None,
     platform: Optional[str] = None,
     backend: Optional[str] = None,
     agent_url: str = "http://127.0.0.1:8760",
@@ -358,7 +339,6 @@ def test_run_callback(
         testsuite_root=_suite_root(testsuite_root),
         testcase_ids=list(testcase or []),
         tags=list(tag or []),
-        binding=binding,
         agent_url=agent_url,
         platform=platform,
         backend=backend,
@@ -410,32 +390,19 @@ def register(registry: CommandRegistry) -> None:
     )
 
     registry.command(
-        path="test/list-fixtures",
-        callback=test_list_fixtures_callback,
-        help="Show the testbeds and fixtures a binding file describes.",
-        options=[
-            _BINDING_OPTION,
-            {
-                "names": ["-a", "--agent-url"],
-                "help": "Also ask a running Lab Agent which testbeds are free.",
-                "type": str,
-                "default": None,
-            },
-        ],
-    )
-
-    registry.command(
         path="test/plan",
         callback=test_plan_callback,
-        help="Show what a run would do (platform, project, testbed) without doing it.",
+        help="Show the plan (platform, project, build dir) without running it.",
         options=[
             _SUITE_ROOT_OPTION,
             _TESTCASE_OPTION,
             _TAG_OPTION,
-            _BINDING_OPTION,
             {
                 "names": ["-p", "--platform"],
-                "help": "Board name to build for. Defaults to the binding's choice.",
+                "help": (
+                    "Board name to build for. Needed unless every test case "
+                    "names its own integration_platforms."
+                ),
                 "type": str,
                 "default": None,
             },
@@ -456,12 +423,14 @@ def register(registry: CommandRegistry) -> None:
             _SUITE_ROOT_OPTION,
             _TESTCASE_OPTION,
             _TAG_OPTION,
-            _BINDING_OPTION,
             _NO_CONFIRM_OPTION,
             _CONFIRM_RESET_OPTION,
             {
                 "names": ["-p", "--platform"],
-                "help": "Board name to build for. Defaults to the binding's choice.",
+                "help": (
+                    "Board name to build for. Needed unless every test case "
+                    "names its own integration_platforms."
+                ),
                 "type": str,
                 "default": None,
             },

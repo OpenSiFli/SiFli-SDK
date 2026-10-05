@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
 # SPDX-License-Identifier: Apache-2.0
-"""Tests for the two-phase plan in ``sdk_test.runner``.
+"""Tests for planning in ``sdk_test.runner``.
 
-Phase one asks whether a platform can host the test at all, from platform
-metadata alone; phase two asks which board of it, from the binding. The tests
-care most about the seam between them, because that is where a decision can go
-missing: a test that is silently not scheduled is worse than one that fails.
+Planning asks whether a platform can host the test at all, from platform
+metadata alone. Which *board* of that platform will run it is no longer decided
+here -- the Lab Agent allocates from its own configuration when hardware is
+requested -- so the tests care about the seam that is left: a test that is
+silently not scheduled is worse than one that fails, and that is what the
+filtered half of a plan exists to prevent.
 """
 
 from __future__ import annotations
@@ -22,10 +24,7 @@ from sdk_test.errors import BackendError
 from sdk_test.errors import DiscoveryError
 from sdk_test.errors import PlatformError
 from sdk_test.harness.unity import registered_suites
-from sdk_test.model import Connection
-from sdk_test.model import FixtureRef
 from sdk_test.model import TestInstance
-from sdk_test.model import TestBed
 from sdk_test.report import SKIPPED
 from sdk_test.runner import PlannedRun
 from sdk_test.runner import RunOptions
@@ -63,11 +62,6 @@ def make_instance(test_id="t", **kwargs):
         testcase_dir="/suite/dir",
         tests_key=test_id,
         **kwargs)
-
-
-def make_testbed(testbed_id, platform):
-    return TestBed(id=testbed_id, platform=platform,
-                   connections=[Connection(fixture=FixtureRef("flash", "spi1"))])
 
 
 class PlannedPlatformsTest(unittest.TestCase):
@@ -152,26 +146,26 @@ class PlanInstanceTest(SdkTestCase):
         self.assertIn("spi", filtered[0].reason)
         self.assertEqual("t", filtered[0].id)
 
-    def test_the_lab_decides_one_run_not_one_per_board_it_owns(self):
-        # A bench with twenty boards must not turn one test into twenty runs;
-        # naming several platforms in the testcase is how a test asks for that.
+    def test_a_run_names_a_platform_and_no_board(self):
+        # Which board of the platform answers the run is the agent's business,
+        # decided when hardware is requested -- so a plan entry carries no
+        # testbed and the SDK side keeps no copy of the lab's inventory.
         runner = make_runner()
-        runner._testbeds = [make_testbed("tb_01", "board_a"),
-                            make_testbed("tb_02", "board_b")]
-        instance = make_instance()
+        instance = make_instance(integration_platforms=[EMPTY_CARRIER])
         with mock.patch("sdk_test.runner.find_project_dir", return_value="/p"):
-            planned, filtered = runner.plan_instance(instance)
+            planned, _filtered = runner.plan_instance(instance)
         self.assertEqual(1, len(planned))
-        self.assertEqual("board_a", planned[0].platform)
-        self.assertEqual("tb_01", planned[0].testbed.id)
-        self.assertEqual([], filtered)
+        self.assertEqual(EMPTY_CARRIER, planned[0].platform)
+        self.assertFalse(hasattr(planned[0], "testbed"))
 
-    def test_with_no_platform_and_no_lab_the_error_says_both_ways_out(self):
+    def test_a_test_that_names_no_platform_is_refused_with_both_ways_out(self):
+        # Nothing on this side can choose for it any more: naming the platform
+        # is the user's job, and the case's own declaration is the other way.
         runner = make_runner()
         with self.assertRaises(BackendError) as caught:
             runner.plan_instance(make_instance())
         self.assertIn("integration_platforms", str(caught.exception))
-        self.assertIn("--binding", str(caught.exception))
+        self.assertIn("--platform", str(caught.exception))
 
 
 class RunReportsFilteredTest(SdkTestCase):

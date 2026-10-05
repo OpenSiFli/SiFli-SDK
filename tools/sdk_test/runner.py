@@ -35,23 +35,15 @@ from .agent_client import LabAgentClient
 from .backends import create_backend
 from .backends import is_host_platform
 from .backends import select_backend_name
-from .binding import load_binding
 from .discovery import discover
 from .errors import BackendError
-from .errors import BindingError
 from .errors import BuildError
 from .errors import DiscoveryError
-from .errors import MatchError
 from .errors import SdkTestError
-from .fixtures import explain_no_match
-from .fixtures import select_testbeds
-from .fixtures import wiring_problems
 from .harness import RunContext
 from .harness import run as run_harness
 from .harness import unity
 from .model import TestInstance
-from .model import TestBed
-from .platforms import declared_features
 from .platforms import load_platform_features
 from .platforms import unsatisfied
 from .report import ERROR
@@ -158,7 +150,6 @@ class RunOptions:
     testsuite_root: str
     testcase_ids: List[str] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
-    binding: Optional[str] = None
     agent_url: str = "http://127.0.0.1:8760"
     platform: Optional[str] = None
     backend: Optional[str] = None
@@ -191,7 +182,13 @@ class RunOptions:
 
 @dataclass
 class PlannedRun:
-    """One test instance resolved to a concrete place to run it."""
+    """One test instance resolved to a concrete place to run it.
+
+    A run names a platform and nothing finer. Which *board* of that platform
+    answers it is the Lab Agent's to choose -- at the moment hardware is
+    requested, from its own configuration -- so the plan has no testbed to name
+    and the runner learns the board's id from the session it opens.
+    """
 
     instance: TestInstance
     platform: str
@@ -201,7 +198,6 @@ class PlannedRun:
     #: The board name the build system uses, which carries a core suffix even
     #: when the platform name does not. See :func:`canonical_board_name`.
     board: str = ""
-    testbed: Optional[TestBed] = None
     #: Where this instance's log files go; computed at plan time so ``test plan``
     #: can show it before anything runs.
     out_dir: str = ""
@@ -251,7 +247,6 @@ class TestRunner:
         #: the norm in CI, and not an error, only a thinner guarantee.
         self._confirm = confirm
         self._client: Optional[LabAgentClient] = None
-        self._testbeds: Optional[List[TestBed]] = None
         # Resolved once, here, because three call sites need this path: taking
         # the timestamp at each would drop the instance logs and the run log
         # into different directories whenever a run straddles a second.
@@ -290,15 +285,6 @@ class TestRunner:
         # A `skip` marker is a decision about the tree, not about hardware, so
         # it is applied here where `list` can show it too.
         return found
-
-    def binding_testbeds(self) -> List[TestBed]:
-        """Load the binding file, once."""
-        if self._testbeds is None:
-            if not self.options.binding:
-                self._testbeds = []
-            else:
-                self._testbeds = load_binding(self.options.binding)
-        return self._testbeds
 
     def planned_platforms(self, instance: TestInstance) -> List[str]:
         """The platforms the test itself names, if it names any.
@@ -346,41 +332,7 @@ class TestRunner:
                     f"(it declares: {declared})")
         return None
 
-    def resolve_testbed(self, instance: TestInstance,
-                        platform: str) -> Optional[TestBed]:
-        """Phase two: which board of that platform. ``None`` means "any".
-
-        A binding is a lab's inventory, not a requirement. Without one the
-        backend allocates from whatever the Lab Agent holds, so ``None`` is a
-        complete answer -- and the only possible one for a carrier with no bench,
-        QEMU above all.
-        """
-        testbeds = self.binding_testbeds()
-        if not testbeds:
-            return None
-
-        on_platform = [testbed for testbed in testbeds
-                       if testbed.platform == platform]
-        candidates = select_testbeds(instance, testbeds, platform=platform)
-        if not candidates:
-            raise MatchError(explain_no_match(instance, on_platform))
-
-        # Both files are in hand here, which is the only place a contradiction
-        # between them can be seen: a testbed wired to `spi1` on a board whose
-        # own declaration has no spi instance. Silence would turn that into a
-        # test that will not schedule for a reason the report cannot show.
-        features = declared_features(platform)
-        if features is not None:
-            problems = wiring_problems(on_platform, features)
-            if problems:
-                raise BindingError(
-                    f'"{instance.id}": the binding contradicts {platform}\'s '
-                    f"feature declaration: " + "; ".join(problems)
-                )
-        return candidates[0]
-
-    def make_planned_run(self, instance: TestInstance, platform: str,
-                         testbed: Optional[TestBed] = None) -> PlannedRun:
+    def make_planned_run(self, instance: TestInstance, platform: str) -> PlannedRun:
         """Everything needed to build and open one (instance, platform) pair."""
         instance.platform = platform
         project_dir = find_project_dir(instance)
@@ -392,7 +344,6 @@ class TestRunner:
             project_dir=project_dir,
             build_dir=os.path.join(project_dir, f"build_{board}"),
             board=board,
-            testbed=testbed,
             out_dir=report.instance_log_dir(self._run_dir, platform, instance.id),
         )
         self.check_registry(planned)
@@ -430,14 +381,6 @@ class TestRunner:
             f"drifted apart."
         )
 
-    def binding_platforms(self) -> List[str]:
-        """Every platform the lab offers, in binding order, without repeats."""
-        platforms: List[str] = []
-        for testbed in self.binding_testbeds():
-            if testbed.platform not in platforms:
-                platforms.append(testbed.platform)
-        return platforms
-
     def plan_instance(self, instance: TestInstance
                       ) -> Tuple[List[PlannedRun], List[FilteredRun]]:
         """Resolve one instance: the runs it has, and the pairs it does not.
@@ -445,50 +388,30 @@ class TestRunner:
         Both halves are returned rather than one being raised, because "this
         test does not belong on that board" is information the caller reports,
         not an error that stops a suite.
+
+        A run is (instance, platform, backend, build dir). Which *board* of that
+        platform will host it is not decided here and cannot be: the SDK side
+        holds no inventory of the lab, and the agent allocates from its own when
+        hardware is requested. Naming no platform is therefore unplannable, and
+        is refused by name rather than guessed at.
         """
         wanted = self.planned_platforms(instance)
-        if wanted:
-            planned: List[PlannedRun] = []
-            filtered: List[FilteredRun] = []
-            for platform in wanted:
-                reason = self.filter_reason(instance, platform)
-                if reason:
-                    filtered.append(FilteredRun(instance, platform, reason))
-                    continue
-                planned.append(self.make_planned_run(
-                    instance, platform,
-                    self.resolve_testbed(instance, platform)))
-            return planned, filtered
-
-        # The test names no platform, so the lab decides -- and it decides *one*
-        # answer, not one run per board it happens to own. A bench with twenty
-        # boards must not turn a single test into twenty runs; naming several
-        # platforms in the testcase is how a test asks for several runs.
-        candidates = self.binding_platforms()
-        if not candidates:
+        if not wanted:
             raise BackendError(
                 f'"{instance.id}": no platform. Name one with '
-                f'"integration_platforms" or --platform, or pass --binding so '
-                f"the lab's boards can choose for it."
+                f'"integration_platforms" in the testcase or --platform on the '
+                f"command line."
             )
 
-        reasons: List[str] = []
-        for platform in candidates:
+        planned: List[PlannedRun] = []
+        filtered: List[FilteredRun] = []
+        for platform in wanted:
             reason = self.filter_reason(instance, platform)
             if reason:
-                reasons.append(f"  - {reason}")
+                filtered.append(FilteredRun(instance, platform, reason))
                 continue
-            try:
-                testbed = self.resolve_testbed(instance, platform)
-            except MatchError as exc:
-                reasons.append(f"  - {platform}: {exc}")
-                continue
-            return [self.make_planned_run(instance, platform, testbed)], []
-
-        raise BackendError(
-            f'"{instance.id}": no platform of this lab can run it:\n'
-            + "\n".join(reasons)
-        )
+            planned.append(self.make_planned_run(instance, platform))
+        return planned, filtered
 
     def plan_one(self, instance: TestInstance) -> PlannedRun:
         """The first run for an instance, or raise explaining why it cannot run.
@@ -612,7 +535,6 @@ class TestRunner:
         result = TestResult(
             id=instance.id,
             status=PASSED,
-            testbed_id=planned.testbed.id if planned.testbed else None,
             platform=planned.platform,
         )
 

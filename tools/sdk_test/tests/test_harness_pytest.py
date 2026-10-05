@@ -223,8 +223,8 @@ class PytestAgainstFakeAgentMixin:
     BOOT = " | / - RT - Thread\r\nmsh />"
     UNITY = "\r\ntest/a.c:1:roundtrip:PASS\r\n\r\n1 Tests 0 Failures 0 Ignored\r\nOK\r\n"
 
-    #: The lab the agent serves, and the binding the runner reads -- one
-    #: document for both, as in the field: the SDK side ignores `runner:`.
+    #: The lab the agent serves. The platform below is the one the run names,
+    #: as a user's `-p` would name it; the agent picks the board that answers it.
     LAB_YAML = """
     runner: {name: pytest-e2e, console_poll: 0.005}
     testbed:
@@ -232,6 +232,10 @@ class PytestAgainstFakeAgentMixin:
         platform: sf32lb52-lcd_n16r8
         console: {port: COM13}
     """
+
+    #: The platform the suite is built for. Allocation is the agent's job, so
+    #: this is all the SDK side says.
+    PLATFORM = "sf32lb52-lcd_n16r8"
 
     def setUp(self):
         super().setUp()
@@ -250,8 +254,6 @@ class PytestAgainstFakeAgentMixin:
         self.server = LabAgentServer(manager)
         self.server.start_background()
         self.addCleanup(self.server.stop)
-
-        self.binding = self.write("binding.yaml", self.LAB_YAML)
 
     #: How much the faked console hands over per read; see FakeTransport.
     chunk = 1
@@ -287,7 +289,7 @@ class PytestAgainstFakeAgentMixin:
 
         options = RunOptions(
             testsuite_root=self.make_case(suite_body),
-            binding=self.binding,
+            platform=self.PLATFORM,
             agent_url=self.server.url,
             build=False,
             python_exe=sys.executable,

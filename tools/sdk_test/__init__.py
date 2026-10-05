@@ -3,9 +3,10 @@
 """SDK-side automated test platform for the SiFli SDK.
 
 This package is the hardware-agnostic half of the test framework described in
-``SDK自动化测试.docx``: it discovers ``testcase.yaml`` files, matches them against
-testbeds described by a binding file, drives the build/flash/run sequence through
-a Lab Agent runner, and reports results.
+``SDK自动化测试.docx``: it discovers ``testcase.yaml`` files, checks them against
+the platform's own declaration of what it offers, drives the build/flash/run
+sequence through a Lab Agent -- which owns the hardware, and allocates a board
+when one is asked for -- and reports results.
 
 Nothing in this package knows a real serial port or debugger id; those live in the
 binding file consumed by :mod:`lab_agent`.

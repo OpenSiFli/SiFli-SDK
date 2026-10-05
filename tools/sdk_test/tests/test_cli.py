@@ -167,9 +167,9 @@ class TestListingNeedsNoHardware(SdkTestCase):
         self.assertEqual(cli.list_tests(empty, echo=lines.append), cli.EXIT_OK)
         self.assertIn("No test cases found", "\n".join(lines))
 
-    def test_plan_resolves_a_case_with_no_binding_at_all(self):
+    def test_plan_resolves_a_case_that_names_its_own_platform(self):
         # integration_platforms lets a case name its carrier directly, which is
-        # how the QEMU cases run without a hardware map.
+        # how the QEMU cases run with no hardware and no Lab Agent at all.
         self.write(
             "example/solo/testcase.yaml",
             """
@@ -254,33 +254,6 @@ class TestListingNeedsNoHardware(SdkTestCase):
         lines = []
         self.assertEqual(cli.describe_plan(empty, echo=lines.append), cli.EXIT_OK)
         self.assertIn("Nothing to run", "\n".join(lines))
-
-    def test_list_fixtures_without_a_binding_says_so(self):
-        lines = []
-        code = cli.list_fixtures(binding=None, echo=lines.append)
-        self.assertEqual(code, cli.EXIT_OK)
-        self.assertIn("No --binding", "\n".join(lines))
-
-    def test_list_fixtures_describes_a_binding(self):
-        binding = self.write(
-            "binding.yaml",
-            """
-            testbed:
-              - id: tb_01
-                platform: board_a
-                console: {port: COM7}
-                connections:
-                  - fixture: flash:spi1
-            """,
-        )
-        lines = []
-        code = cli.list_fixtures(binding=binding, echo=lines.append)
-        text = "\n".join(lines)
-
-        self.assertEqual(code, cli.EXIT_OK)
-        self.assertIn("tb_01", text)
-        self.assertIn("COM7", text)
-        self.assertIn("flash:spi1", text)
 
     def test_environment_report_lists_harnesses_and_backends(self):
         lines = []

@@ -22,9 +22,7 @@ from typing import Optional
 from .backends import backend_names
 from .backends import is_host_platform
 from .backends import select_backend_name
-from .binding import load_binding
 from .discovery import discover
-from .errors import SdkTestError
 from .harness import IMPLEMENTED_HARNESSES
 from .harness import SUPPORTED_HARNESSES
 from .runner import RunOptions
@@ -106,82 +104,26 @@ def list_tests(
     return EXIT_OK
 
 
-def list_fixtures(
-    binding: Optional[str] = None,
-    agent_url: Optional[str] = None,
-    echo: Optional[Echo] = None,
-) -> int:
-    """``sdk.py test list-fixtures`` -- what can this lab run right now.
-
-    Reads the binding alone when no agent is reachable, and augments it with
-    live allocation state when one is. A test author needs both: which fixtures
-    are wired, and whether the hardware is free.
-
-    What a board *can do* is not here. That is the board's own declaration --
-    ``sdk.py test list`` reads it through ``depends_on`` -- and reading it out of
-    a binding as well is what let the two disagree.
-    """
-    echo = echo or print
-
-    if not binding:
-        echo("No --binding given, so there is no hardware to describe.")
-        echo("Test cases can still be listed with `sdk.py test list`.")
-        return EXIT_OK
-
-    testbeds = load_binding(binding)
-    if not testbeds:
-        echo(f"{binding}: no testbeds defined.")
-        return EXIT_OK
-
-    live = {}
-    if agent_url:
-        from .agent_client import LabAgentClient
-
-        try:
-            live = {item["id"]: item for item in LabAgentClient(agent_url).testbeds()}
-        except SdkTestError as exc:
-            echo(f"Note: could not reach the Lab Agent ({exc}); showing the binding only.")
-
-    echo(f"{len(testbeds)} testbed(s) from {binding}:")
-    for testbed in testbeds:
-        status = ""
-        if testbed.id in live:
-            status = " [busy]" if live[testbed.id].get("busy") else " [free]"
-        echo(f"  {testbed.id}  ({testbed.platform}){status}")
-        console = (
-            f"{testbed.console.port} @ {testbed.console.baud}"
-            if testbed.console
-            else "none"
-        )
-        echo(f"    console:      {console}")
-        echo(
-            "    fixtures:     "
-            + (", ".join(fixture.spec for fixture in testbed.fixtures) or "none")
-        )
-
-    fixtures = sorted({fixture.spec for testbed in testbeds for fixture in testbed.fixtures})
-    echo("")
-    echo(f"Fixtures offered: {', '.join(fixtures) or 'none'}")
-    return EXIT_OK
-
-
 def describe_plan(
     testsuite_root: str,
     testcase_ids: Optional[List[str]] = None,
     tags: Optional[List[str]] = None,
-    binding: Optional[str] = None,
     platform: Optional[str] = None,
     backend: Optional[str] = None,
     echo: Optional[Echo] = None,
 ) -> int:
-    """Show what a run would do, without doing it."""
+    """Show what a run would do, without doing it.
+
+    The plan names a platform, not a board: which board of that platform will
+    host a run is the Lab Agent's to choose, from its own configuration, at the
+    moment hardware is requested.
+    """
     echo = echo or print
     runner = TestRunner(
         RunOptions(
             testsuite_root=testsuite_root,
             testcase_ids=list(testcase_ids or []),
             tags=list(tags or []),
-            binding=binding,
             platform=platform,
             backend=backend,
         )
@@ -214,8 +156,6 @@ def describe_plan(
         echo(f"    build dir:  {item.build_dir}")
         if item.out_dir:
             echo(f"    logs:       {item.out_dir}")
-        if item.testbed:
-            echo(f"    testbed:    {item.testbed.id}")
         if is_host_platform(item.platform):
             echo("    note:       no Lab Agent needed for this platform")
     return EXIT_OK
@@ -268,7 +208,6 @@ def describe_environment(echo: Optional[Echo] = None) -> int:
 __all__ = [
     "describe_environment",
     "describe_plan",
-    "list_fixtures",
     "list_tests",
     "run_tests",
     "select_backend_name",
