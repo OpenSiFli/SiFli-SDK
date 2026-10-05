@@ -74,8 +74,17 @@ class JLinkTransport:
         ]
         return command
 
-    def _run_script(self, lines: List[str], what: str) -> str:
-        """Write ``lines`` to a temporary script, run it, return its output."""
+    def _run_script(
+        self, lines: List[str], what: str, cwd: Optional[str] = None
+    ) -> str:
+        """Write ``lines`` to a temporary script, run it, return its output.
+
+        ``cwd`` is where the probe is run from, which matters as soon as the
+        script names a file relatively: the script itself lands in the system
+        temp directory, so a relative path in it resolves against the working
+        directory and not against anything this transport chose. See
+        :meth:`flash`.
+        """
         handle = tempfile.NamedTemporaryFile(
             "w", suffix=".jlink", delete=False, encoding="ascii", newline="\n"
         )
@@ -89,6 +98,7 @@ class JLinkTransport:
                     capture_output=True,
                     text=True,
                     timeout=self.timeout,
+                    cwd=cwd,
                     check=False,
                 )
             except FileNotFoundError as exc:
@@ -142,7 +152,13 @@ class JLinkTransport:
         return self._run_script(lines, f"script {os.path.basename(path)}")
 
     def flash(self, build_dir: str) -> str:
-        """Program every image named in ``<build_dir>/download.jlink``."""
+        """Program every image named in ``<build_dir>/download.jlink``.
+
+        Run from ``build_dir``, because that is what the paths in the script are
+        relative to and nothing else here is. The build's own launcher does the
+        same thing the hard way -- ``download.bat`` resolves its own directory
+        into ``WORK_PATH`` and ``cd``-s there before starting the probe.
+        """
         script = os.path.join(build_dir, "download.jlink")
         if not os.path.isfile(script):
             raise TransportError(
@@ -158,14 +174,16 @@ class JLinkTransport:
         # `h` halts before programming; the trailing reset makes the new image
         # actually run, which is what the test then observes on the console.
         lines = _preamble(self.speed) + ["h"] + loads + ["r", "g", "exit"]
-        return self._run_script(lines, "flash")
+        return self._run_script(lines, "flash", cwd=build_dir)
 
 
 def load_lines_from_download_script(path: str) -> List[str]:
     """Extract the ``loadbin``/``loadfile`` lines from a generated script.
 
-    Loading is done relative to the script's own directory, which is what the
-    build's ``download.bat`` relies on when it ``cd``-s into the build directory.
+    The paths in them are relative to the build directory, which is why
+    :meth:`JLinkTransport.flash` runs the probe from there. They are returned
+    verbatim: rewriting them would be a second way of saying where the images
+    are, and the one place that must not disagree with the build.
     """
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as handle:

@@ -10,11 +10,15 @@ must be caught before the probe is invoked rather than during it.
 from __future__ import annotations
 
 import json
+import subprocess
 import unittest
+from unittest import mock
 
 from _support import LabTestCase
 
 from lab_agent.errors import TransportError
+from lab_agent.transport import jlink as jlink_module
+from lab_agent.transport.jlink import JLinkTransport
 from lab_agent.transport.jlink import load_lines_from_download_script
 from lab_agent.transport.sftool import build_flash_arguments
 from lab_agent.transport.sftool import normalize_uart_port
@@ -147,6 +151,52 @@ class TestSftoolParam(LabTestCase):
         self.write("build_x/sftool_param.json", "{not json")
         with self.assertRaises(TransportError):
             read_sftool_param(self.mkdir("build_x"))
+
+
+class TestFlashRunsInTheBuildDirectory(LabTestCase):
+    """The probe is run from the build directory, because the script needs it to be.
+
+    A generated ``download.jlink`` names its images relatively -- the real one
+    this board's build produced says ``loadbin output\\main.bin 0x620A0000`` --
+    and the build's own launcher resolves that by ``cd``-ing into the build
+    directory first. This transport writes its script to the system temp
+    directory instead, so without a cwd those paths are resolved against
+    wherever the agent happened to be started: the flash fails, or it finds
+    some other file that happens to sit at that relative path.
+    """
+
+    def flash_with_a_faked_probe(self, build_dir: str) -> dict:
+        """Run ``flash``; return what the probe was told and the script it read."""
+        seen: dict = {}
+
+        def fake_run(command, **kwargs):
+            script_path = command[command.index("-CommandFile") + 1]
+            # Read it here: the transport deletes it as soon as this returns.
+            with open(script_path, "r", encoding="ascii") as handle:
+                seen["script"] = handle.read()
+            seen["kwargs"] = kwargs
+            return subprocess.CompletedProcess(command, 0, "ok", "")
+
+        with mock.patch.object(jlink_module.subprocess, "run", fake_run):
+            JLinkTransport(device="SF32LB52X", jlink_exe="JLinkExe").flash(build_dir)
+        return seen
+
+    def a_build_directory(self) -> str:
+        build = self.mkdir("build_x")
+        self.write("build_x/download.jlink", DOWNLOAD_JLINK)
+        return build
+
+    def test_the_probe_runs_from_the_build_directory(self):
+        build = self.a_build_directory()
+        self.assertEqual(self.flash_with_a_faked_probe(build)["kwargs"]["cwd"], build)
+
+    def test_the_load_paths_are_left_relative(self):
+        # Verbatim, because `cwd` is what makes them resolvable. Rewriting them
+        # into absolute paths would be a second statement of where the images
+        # are, and it would tie a package to the directory it was built in.
+        seen = self.flash_with_a_faked_probe(self.a_build_directory())
+        self.assertIn("loadbin ER_IROM1.bin 0x12000000", seen["script"])
+        self.assertIn("loadfile main.hex", seen["script"])
 
 
 class TestPortNormalization(LabTestCase):
