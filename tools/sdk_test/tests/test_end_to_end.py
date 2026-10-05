@@ -832,6 +832,65 @@ class EndToEndManualResetCase(EndToEndCase):
         self.assertNotIn("tb_manual", self.probes)
 
 
+#: The manual bench with the one word that changes everything: nothing resets the
+#: board, and nothing needs to. The boot is the download's, and the lab says so
+#: once instead of every caller vouching for it per run.
+AUTO_RESET_BENCH = """
+runner:
+  name: e2e
+  console_poll: 0.005
+
+testbed:
+  - id: tb_auto
+    platform: sf32lb52-lcd_a128r16
+    console:
+      port: COM8
+    reset:
+      method: auto
+"""
+
+
+class EndToEndAutoResetCase(EndToEndCase):
+    """A bench whose boot is guaranteed, declared where the wiring is known.
+
+    The difference from the manual bench is one word in the lab's own config,
+    and that word used to have to be typed on the command line: a caller
+    promised the board was already up. A promise about the wiring belongs to
+    whoever wired it, and it is the same promise on every run.
+    """
+
+    testbeds_yaml = AUTO_RESET_BENCH
+    platform = "sf32lb52-lcd_a128r16"
+    response = UNITY_LOG
+
+    def test_nothing_is_said_about_a_reset_nobody_performed(self):
+        # `jlink` prints nothing either: the `[reset]` line is addressed to an
+        # operator, and there is none to address here.
+        lines = []
+        summary = self.runner(self.harness_case(), echo=lines.append).run()
+
+        self.assertEqual(summary.passed, 1)
+        self.assertEqual(
+            [line for line in lines if line.startswith("[reset]")], []
+        )
+
+    def test_the_probe_downloads_but_never_resets(self):
+        self.runner(self.harness_case()).run()
+
+        probe = self.probes["tb_auto"]
+        self.assertEqual(len(probe.flashed), 1)
+        self.assertEqual(probe.resets, [])
+
+    def test_a_harness_that_writes_runs_with_nobody_vouching_for_the_boot(self):
+        # The point of the mode. This exact run is refused on the manual bench
+        # before anything is flashed; here it needs no operator, no
+        # confirmation and no flag -- only the lab saying its boot is its own.
+        summary = self.runner(self.harness_case("unity")).run()
+
+        result = summary.results[0]
+        self.assertEqual(result.status, PASSED, result.message)
+
+
 class EndToEndConfirmedManualResetCase(EndToEndCase):
     """The same probe-less bench, but with a terminal on the other end.
 

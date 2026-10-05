@@ -610,7 +610,7 @@ class TestRunner:
                 planned.platform,
                 build_dir=planned.build_dir,
                 holder=self._holder(),
-                confirm_reset=self._confirm is not None,
+                will_confirm_boot=self._confirm is not None,
             )
             result.testbed_id = session.testbed_id or result.testbed_id
             result.platform = session.platform or result.platform

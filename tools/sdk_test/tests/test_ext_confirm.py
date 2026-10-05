@@ -7,9 +7,9 @@ knows only whether it was handed a way to ask an operator. That makes this
 choice -- which callback, or none -- the whole of the feature, including whether
 a harness that writes to the device is allowed on a board nothing can reset.
 
-Checked here rather than through the runner because these flags are the
-user-facing surface: ``--confirm-reset`` and ``--no-confirm`` are one word apart
-and mean opposite things.
+Checked here rather than through the runner because ``--no-confirm`` is
+user-facing and easy to read backwards: it supplies *no* answer, which is what
+gets a writing harness refused, rather than the answer "no".
 """
 
 from __future__ import annotations
@@ -25,7 +25,6 @@ _TOOLS_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if _TOOLS_DIR not in sys.path:
     sys.path.insert(0, _TOOLS_DIR)
 
-from sdk_py_actions.errors import UsageError  # noqa: E402
 from sdk_py_actions.test_ext import _confirm_for  # noqa: E402
 from sdk_py_actions.test_ext import _make_confirm  # noqa: E402
 
@@ -60,42 +59,22 @@ class StdinTestCase(SdkTestCase):
 
 
 class TestConfirmFor(StdinTestCase):
-    def test_confirm_reset_answers_without_reading_stdin(self):
-        # No `answer()` is set, so if this touched stdin the test would hang
-        # rather than pass quietly.
-        lines = []
-        confirm = _confirm_for(
-            no_confirm=False, confirm_reset=True, echo=lines.append
-        )
+    """Two states: somebody to ask, or nobody.
 
-        self.assertIsNotNone(confirm)
-        self.assertTrue(confirm("press RESET, then Enter"))
-        # The question it would have asked is still echoed, so the log records
-        # what was taken on trust instead of showing a decision from nowhere.
-        self.assertIn("press RESET", lines[0])
-        self.assertIn("assumed", lines[1])
+    There is deliberately no third one that answers without asking. ``auto``
+    reset says the same thing where it belongs -- in the lab's runner config --
+    and it says it to the side that does the resetting.
+    """
 
     def test_no_confirm_yields_no_answer(self):
         # Not "an answer of no": the difference is what keeps a writing harness
         # off a board nothing can reset.
-        self.assertIsNone(
-            _confirm_for(no_confirm=True, confirm_reset=False, echo=lambda _m: None)
-        )
+        self.assertIsNone(_confirm_for(no_confirm=True, echo=lambda _m: None))
 
-    def test_the_two_flags_together_are_refused(self):
-        # One says the boot is arranged, the other says there is nobody to
-        # arrange it. Quietly picking a winner would decide whether unity runs
-        # on a coin toss.
-        with self.assertRaises(UsageError) as caught:
-            _confirm_for(no_confirm=True, confirm_reset=True, echo=lambda _m: None)
-        self.assertIn("contradict", str(caught.exception))
-
-    def test_neither_flag_asks(self):
+    def test_nothing_given_asks(self):
         sys.stdin = _Stdin(tty=True)
         self.answer("y")
-        confirm = _confirm_for(
-            no_confirm=False, confirm_reset=False, echo=lambda _m: None
-        )
+        confirm = _confirm_for(no_confirm=False, echo=lambda _m: None)
         self.assertIsNotNone(confirm)
         self.assertTrue(confirm("press RESET"))
 

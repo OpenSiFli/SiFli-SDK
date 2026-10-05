@@ -35,7 +35,6 @@ if _TOOLS_DIR not in sys.path:
 from sdk_py_actions.cli.context import SdkContext  # noqa: E402
 from sdk_py_actions.cli.registry import CommandRegistry  # noqa: E402
 from sdk_py_actions.errors import FatalError  # noqa: E402
-from sdk_py_actions.errors import UsageError  # noqa: E402
 
 from sdk_test import cli as sdk_test_cli  # noqa: E402
 from sdk_test.backends import backend_names  # noqa: E402
@@ -184,60 +183,28 @@ _NO_CONFIRM_OPTION = {
 }
 
 
-_CONFIRM_RESET_OPTION = {
-    "names": ["--confirm-reset"],
-    "is_flag": True,
-    "default": False,
-    "help": (
-        "Do not stop to ask: the board's boot is already arranged (its download "
-        "boots it, or an operator is standing by). Without this, a board nothing "
-        "can reset may only be driven by a harness that never writes -- unity is "
-        "refused -- and the confirmation is offered only on a terminal."
-    ),
-}
-
-
-def _assume_booted(echo: Callable[[str], None]) -> Callable[[str], bool]:
-    """The ``--confirm-reset`` answer: say what is being assumed, then agree.
-
-    It echoes the question the runner would have asked rather than swallowing
-    it, so the log still records *what* was taken on trust.
-    """
-
-    def assume(message: str) -> bool:
-        echo(message)
-        echo("  boot assumed (--confirm-reset)")
-        return True
-
-    return assume
-
-
 def _confirm_for(
     no_confirm: bool,
-    confirm_reset: bool,
     echo: Callable[[str], None],
 ) -> Optional[Callable[[str], bool]]:
     """Which answer the runner gets about a board an operator has to boot.
 
-    Three states, and they really are three:
+    Two states, and the difference between them is the whole feature:
 
-    * **nothing given** -- ask, when there is a terminal to ask on. The only one
-      of the three that both stops and knows the answer.
+    * **nothing given** -- ask, when there is a terminal to ask on.
     * **``--no-confirm``** -- nobody to ask, therefore no answer, therefore a
       harness that writes to the device is refused rather than left to race a
       boot that may wipe its command.
-    * **``--confirm-reset``** -- an answer without asking. The caller states the
-      board is up; nothing is verified, so the promise is theirs to keep.
+
+    There used to be a third, ``--confirm-reset``, which answered yes without
+    asking. It was removed rather than kept: "the boot is already arranged" is
+    a fact about the bench, and the bench's owner already has a place to state
+    it -- ``reset.method: auto`` in the lab's runner config. Declaring it per
+    invocation meant every caller had to know the wiring, and a flag cannot be
+    read by the side that actually does.
     """
-    if no_confirm and confirm_reset:
-        raise UsageError(
-            "--confirm-reset and --no-confirm contradict each other: one says "
-            "the boot is arranged, the other says there is nobody to arrange it."
-        )
     if no_confirm:
         return None
-    if confirm_reset:
-        return _assume_booted(echo)
     return _make_confirm(echo)
 
 
@@ -333,7 +300,6 @@ def test_run_callback(
     inline_logs: bool = False,
     fail_fast: bool = False,
     no_confirm: bool = False,
-    confirm_reset: bool = False,
 ) -> int:
     options = RunOptions(
         testsuite_root=_suite_root(testsuite_root),
@@ -359,7 +325,7 @@ def test_run_callback(
     return sdk_test_cli.run_tests(
         options,
         build_fn=_make_build_fn(sdk_ctx),
-        confirm=_confirm_for(no_confirm, confirm_reset, print),
+        confirm=_confirm_for(no_confirm, print),
     )
 
 
@@ -424,7 +390,6 @@ def register(registry: CommandRegistry) -> None:
             _TESTCASE_OPTION,
             _TAG_OPTION,
             _NO_CONFIRM_OPTION,
-            _CONFIRM_RESET_OPTION,
             {
                 "names": ["-p", "--platform"],
                 "help": (

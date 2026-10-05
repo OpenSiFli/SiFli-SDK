@@ -123,7 +123,7 @@ class BoardBackend(Backend):
         platform: str,
         build_dir: Optional[str] = None,
         holder: Optional[str] = None,
-        confirm_reset: bool = False,
+        will_confirm_boot: bool = False,
     ) -> BoardSession:
         fixtures = [fixture.spec for fixture in instance.fixtures]
 
@@ -139,6 +139,12 @@ class BoardBackend(Backend):
         # the testbed over. Read here rather than after the reset, because the
         # one thing that makes a manual reset unusable is a property of the
         # testcase -- known now, and expensive to discover after a flash.
+        #
+        # Only ``manual`` reaches the gate below. ``auto`` is the same probe-less
+        # bench carrying the opposite promise -- its boot is the download's --
+        # so it needs no gate and no prompt, and asking the caller to vouch for
+        # it per run was always the wrong place for a fact the lab's own config
+        # already states.
         manual_reset = str(allocation.get("reset", "jlink")).lower() == "manual"
         # A harness that writes before it reads is the one a hand-booted board
         # cannot be gated by. `autorun` takes unity out of that set: the firmware
@@ -149,8 +155,8 @@ class BoardBackend(Backend):
             if (
                 manual_reset
                 and instance.harness == "unity"
-                and not confirm_reset
                 and not autorun
+                and not will_confirm_boot
             ):
                 # Named explicitly rather than "anything but console": the
                 # unity harness writes its run command as its very first
@@ -161,6 +167,13 @@ class BoardBackend(Backend):
                 # failure it produces ("no Unity summary line found") reads
                 # like a firmware fault. `autorun` removes the premise rather
                 # than gating it: nothing is sent, so nothing can be lost.
+                #
+                # So there are two exits where the caller stands -- an operator
+                # who will press the button, or the firmware reporting by itself
+                # -- and one where the lab owner does: declaring the bench
+                # `auto`, which says the download's own boot is reliable. That
+                # last one is a fact about their wiring, and it is the same
+                # every run, which is why it is not an argument to this call.
                 raise BackendError(
                     f'"{instance.id}": testbed {testbed_id} is booted by hand, '
                     "and the unity harness sends its run command before it "
@@ -171,9 +184,10 @@ class BoardBackend(Backend):
                     "harness_config.autorun, so the firmware reports by itself "
                     "and there is no command to lose, or run it from a terminal "
                     "where the runner stops and an operator confirms the boot, "
-                    "or pass --confirm-reset when the boot is already arranged. "
-                    "The console harness, and any pytest suite that reads "
-                    "before it writes, need neither."
+                    "or declare this testbed's reset method as 'auto' in the "
+                    "lab's runner config, if the download's own boot is what "
+                    "resets it. The console harness, and any pytest suite that "
+                    "reads before it writes, need none of the three."
                 )
 
             console = self.client.console_for(testbed_id)

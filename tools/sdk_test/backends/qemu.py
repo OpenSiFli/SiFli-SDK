@@ -426,7 +426,7 @@ class QemuBackend(Backend):
         holder: Optional[str] = None,
         # Accepted and ignored: the emulator boots itself, so there is never a
         # boot for an operator to confirm.
-        confirm_reset: bool = False,
+        will_confirm_boot: bool = False,
     ) -> QemuSession:
         if not build_dir:
             raise BackendError(
