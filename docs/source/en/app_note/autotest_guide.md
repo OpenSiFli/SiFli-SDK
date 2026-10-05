@@ -20,12 +20,12 @@
 ```
 +-- SDK side (tools/sdk_test/, not bound to hardware) ---------------------+
 | testcase.yaml -> discovery -> matching -> build -> run -> logs + report  |
-| binding.yaml (hardware mapping) -> testbed list                          |
+| (instance, platform) pairs -> the Lab Agent                              |
 +--------------------------------------------------------------------------+
                                    | local HTTP
                                    v
                   +--------------------------------+
-                  | Lab Agent (machine side)       |  owns the boards: serial / probe / relay
+                  | Lab Agent (machine side)       |  holds the binding and the boards: serial / probe / relay
                   | tools/lab_agent/               |  hands out one testbed at a time
                   +--------------------------------+
                                    |
@@ -54,12 +54,9 @@ sdk.py test list -T example
 sdk.py test list -T example --json          # for CI to generate a matrix
 sdk.py test info                            # which harnesses / backends this build supports
 
-# See what hardware a lab has
-sdk.py test list-fixtures --binding tools/sdk_test/examples/binding.local.yaml
-
 # Dry run: work out the plan only, no build, no flashing
 sdk.py test plan -T example/get-started/hello_world \
-    --binding tools/sdk_test/examples/binding.local.yaml
+    -p sf32lb52-lcd_a128r16
 ```
 
 Run the framework's own tests (no hardware needed, and no Lab Agent either):
@@ -191,13 +188,14 @@ same machine as you.
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
-**Why no binding is needed**: allocation is the agent's job — when the SDK side calls `allocate`, it passes
-`testbed_id=None` anyway and lets the agent pick a free candidate. So the allocation path is *identical*
-with or without a binding; a binding is only an **early filter** on the SDK side (that file belongs to the
-hardware team, see section 8).
+**The SDK holds no inventory of the lab.** A run is (instance, platform, backend, build dir) and nothing
+finer: which *board* of that platform will host it is not decided here and cannot be, because the agent
+allocates from its own configuration at the moment hardware is requested. So naming a platform is the
+whole of what you say — the hardware map never enters this side at all (it belongs to the hardware team,
+see section 8).
 
-The price is three checks that then happen *before the build* no longer happen at all, and are
-deferred to the moment hardware is requested:
+Three checks that used to happen *before the build* are now deferred to the moment hardware is
+requested:
 
 | What is lost | Consequence |
 |---|---|
@@ -220,8 +218,7 @@ Common flags:
 | `-T/--testsuite-root` | The directory to search recursively for `testcase.yaml` (default: the SDK's `example/`) |
 | `-t/--testcase` | Run only the given id (repeatable). Both the full id and just the tests key are supported |
 | `--tag` | Select by tag (union) |
-| `-b/--binding` | The hardware mapping file |
-| `-p/--platform` | Name a board; without it the binding decides |
+| `-p/--platform` | Name a board to build for; needed unless every test case names its own `integration_platforms` |
 | `--no-build` | Skip the build and use what is already in `build_<board>/` |
 | `-j/--jobs` | Number of parallel build jobs |
 | `--timeout` | Override the timeout of every test case |
@@ -480,6 +477,10 @@ Turn `CONFIG_TEST_FWK_AUTORUN` off (set it to `n` in `proj.conf`) and the board 
 for a command; only then does the host need those two fields. Running a single suite by hand goes that way
 too: flash once, then type `unity_run lz4`.
 
+**The reverse holds too**: writing `cmd` or `prompt` alongside `autorun: true` is **refused outright** —
+that path does not read those two keys, and a key that has no effect is an error in this framework, never
+silently ignored.
+
 ```yaml
     harness_config:
       prompt: "msh />"    # optional; default msh />. Wait for it to appear in the console
@@ -519,13 +520,13 @@ So do not split entries by suite: splitting would mean three flashes and three b
 
 ```powershell
 # Dry run: confirm what gets planned first (no hardware touched)
-sdk.py test plan -T example/test/unit_test -t unit_test.board -b <binding.yaml>
+sdk.py test plan -T example/test/unit_test -t unit_test.board -p sf32lb52-lcd_a128r16
 
 # Real hardware. A manual-reset board needs --confirm-reset — that is the declaration that
 # "the boot has already been arranged": autorun's results start from the first byte the board
 # boots, so that boot has to happen after the serial port is open, or nobody sees the transcript.
 sdk.py test run  -T example/test/unit_test -t unit_test.board `
-    -b <binding.yaml> --confirm-reset
+    -p sf32lb52-lcd_a128r16 --confirm-reset
 ```
 
 **The `unit_test.qemu` one is pinned to `qemu_cortex_m33`**, a platform this lab does not have, so
@@ -743,7 +744,7 @@ Both axes use the same rule — because which bus has what attached to it is the
 If two boards do not satisfy that, they should not declare the same fixture.
 
 The Lab Agent's own settings (probe serial numbers, flashing method) are written in this file too;
-`tools/sdk_test` only parses the parts it needs and keeps the rest as-is:
+the agent reads all of it, and no part of it reaches the SDK side:
 
 ```yaml
     jlink:
@@ -767,21 +768,20 @@ table marks which, so copying it will not go wrong.
 
 | Key | Who reads it | Notes |
 |---|---|---|
-| `testbed[].id` | both | The identifier within this run; it is what `test plan` shows. It must not repeat within one file |
-| `testbed[].platform` | **SDK side** | **Decides whether a test case can land on this board.** Must be named the same as `customer/boards/<name>`; without the core suffix is fine, it gets completed to `_hcpu` |
-| `testbed[].console` | **agent** | `{port, baud}`. `baud` defaults to 1000000 (the SDK console is fixed at 1 Mbaud). The SDK side only displays it in `sdk.py test list-fixtures` |
-| `testbed[].connections[].fixture` | SDK side | **Only consulted when a test case writes `harness_config.fixture`**. Write `name`, or `name:param` (`spi_nor_flash:spi2`) to anchor it exactly |
+| `testbed[].id` | agent | The testbed's identifier within this run. It must not repeat within one file |
+| `testbed[].platform` | **agent** | **Decides whether a test case can land on this board.** Must be named the same as `customer/boards/<name>`; without the core suffix is fine, it gets completed to `_hcpu` |
+| `testbed[].console` | **agent** | `{port, baud}`. `baud` defaults to 1000000 (the SDK console is fixed at 1 Mbaud) |
+| `testbed[].connections[].fixture` | agent | **Only consulted when a test case writes `harness_config.fixture`**. Write `name`, or `name:param` (`spi_nor_flash:spi2`) to anchor it exactly |
 | `testbed[].connections[].pinmap` | none | Records how the wiring is done (which pin is CS/CLK). **No code consumes it yet**; writing it is for the hardware team to check the wiring against |
-| `testbed[].connections[].mux` | SDK side (validation only) | Of the form `mux_01.channel.3`; used only to check that the mux it references really is declared under `muxes:` |
-| `testbed[].muxes[]` | SDK side (`id` only) | Declares out-of-band switches (a relay and the like). Only `id` is read (for `connections[].mux` to reference); `type` / `channel_num` / `runner` are read by no code yet, and are kept for the fixture driver that will drive a relay later |
+| `testbed[].connections[].mux` | agent (validation only) | Of the form `mux_01.channel.3`; used only to check that the mux it references really is declared under `muxes:` |
+| `testbed[].muxes[]` | agent (`id` only) | Declares out-of-band switches (a relay and the like). Only `id` is read (for `connections[].mux` to reference); `type` / `channel_num` / `runner` are read by no code yet, and are kept for the fixture driver that will drive a relay later |
 | `testbed[].runner` | agent (reporting only) | Which Lab Agent holds this testbed. It is reported in `/testbeds`, **but takes no part in the allocation decision** |
-| `testbed[].jlink` / `flash` / `reset` | **agent only** | Probe, flashing, reset. The SDK side only parses them, never interprets them — **so a probe serial number appearing in the binding is not a mistake**; the two sides share one file |
-| `runner:` (top level) | **agent only** | Machine-level settings (listen address, poll interval, buffer cap, probe path). **Written in a file you pass to `-b`, it is ignored** |
+| `testbed[].jlink` / `flash` / `reset` | **agent only** | Probe, flashing, reset. The SDK side never sees this file — **so a probe serial number in it is not a mistake**; it is the agent's own configuration |
+| `runner:` (top level) | **agent only** | Machine-level settings (listen address, poll interval, buffer cap, probe path). **The SDK side never reads them** |
 
-> **One file, two uses**: `sdk.py test run --binding <f>` reads only the `testbed:` part;
-> `python tools/lab_agent/runner.py -c <f>` reads both. So one file can serve both as a user's binding and
-> as that machine's runner config — as long as it carries a top-level `runner:` and those agent-private
-> keys. **Do not commit real COM ports.**
+> **One file, one reader**: `python tools/lab_agent/runner.py -c <f>` reads all of it — both the `testbed:`
+> part and the machine-level `runner:` block. So one file serves as both the lab's hardware map and that
+> machine's runner config. **Do not commit real COM ports.**
 
 The sub-keys of `jlink:` / `flash:` / `reset:` are in the annotated template
 `tools/lab_agent/examples/runner.local.yaml` — that one is written for people to copy from.
@@ -863,7 +863,7 @@ is not a failure: the command is sent anyway and the existing checks decide.)
 - **Pressing late pollutes the next test case**: press after the previous case has `release`d and the boot log lands in the buffer
   the next case has just opened — a probe reset does not have this problem.
 
-Templates: `tools/sdk_test/examples/binding.local.yaml` (the SDK side)
+Templates: `tools/sdk_test/examples/binding.local.yaml` (the hardware map)
 and `tools/lab_agent/examples/runner.local.yaml` (the machine side, with an extra global `runner:` block).
 **Do not commit real COM ports.**
 
@@ -881,7 +881,7 @@ Logs still get a directory per run (artifact globs are recursive, so they are un
 ```yaml
 test:
   script:
-    - sdk.py test run -T example -b $BINDING --outdir test-out --report-dir test-out/reports
+    - sdk.py test run -T example -p $PLATFORM --outdir test-out --report-dir test-out/reports
   artifacts:
     when: always
     reports:
@@ -938,7 +938,8 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 **Troubleshooting**
 
 - `Cannot reach the Lab Agent` → terminal A was not started, or `--agent-url` is wrong.
-- `every testbed matching the request is busy` → somebody is holding it; `sdk.py test list-fixtures -a <url>` shows who.
+- `every testbed matching the request is busy` → somebody is holding it; the Lab Agent's own
+  `python tools/lab_agent/runner.py -c <cfg> --list` marks which testbeds are busy.
 - `missing fixture(s) [...] (testbed offers: ...)` → this lab does not have what the test case needs;
   both sides are listed in the message, so compare them directly.
 - A build failure is recorded as an ERROR for that test case and does **not** abort the whole round — so one round shows you every problem at once.

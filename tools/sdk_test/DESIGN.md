@@ -42,7 +42,7 @@
 |---|---|
 | SDK 侧 `tools/sdk_test/`：发现 / binding / 能力匹配 / 编排 / 报告上报 | ✅ 完成，**350 个自测全绿** |
 | Lab Agent `tools/lab_agent/`：独占占用 / 串口 / 探针 / 烧录 | ✅ 完成，**105 个自测全绿**，不需要硬件 |
-| `sdk.py test` 入口（list / list-fixtures / plan / run / info） | ✅ 完成 |
+| `sdk.py test` 入口（list / plan / run / info） | ✅ 完成 |
 | harness `console` / `unity` / `pytest` | ✅ 完成（`pytest` 由设计态提前到本期） |
 | harness `shell` | ⬜ 仍会明确 raise |
 | 板上 Unity：`external/unity` + `middleware/test_fwk` | ✅ 在本次提交里；单元测试用例工程见另一批 |
@@ -175,7 +175,7 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 
 | 文件 | 职责 |
 |---|---|
-| `cli.py` + `tools/sdk_py_actions/test_ext.py` | 注册 `sdk.py test`（`CommandRegistry`，路径 `test`/`test/run`/`test/list`/`test/list-fixtures`）。`test_ext.py` 只转发。 |
+| `cli.py` + `tools/sdk_py_actions/test_ext.py` | 注册 `sdk.py test`（`CommandRegistry`，路径 `test`/`test/run`/`test/list`）。`test_ext.py` 只转发。 |
 | `discovery.py` | 从 `-T/--testsuite-root` 递归找 `testcase.yaml`，按 `common:` + `tests:` 展开为 `TestInstance`，ID = 相对路径 + tests 键（twister 规则）。 |
 | `schema/testcase.schema.json` | jsonschema 校验。字段对齐 twister：`tags / type / depends_on / platform_allow / platform_exclude / integration_platforms / extra_args / extra_configs / filter / build_only / timeout / harness / harness_config / min_flash / min_ram / slow / skip`；多设备另加 `dut:` / `dut_client:`。 |
 | `model.py` | `TestInstance` / `TestBed` / `FixtureRef` / `RunnerConfig` 数据类。 |
@@ -474,7 +474,7 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
    （写成 stdlib `unittest` 而非 pytest：默认 SDK python 环境里没有 pytest，
    而这套自测必须开箱即用；两者兼容。）
 2. ✅ **用例发现**：`sdk.py test list -T example` 列出 ID 与 harness；`--json` 给 CI 生成矩阵用。
-3. ⬜ **真板卡端到端（需求 2）**：`sdk.py test run -T example/get-started/hello_world --binding <bind>`。
+3. ⬜ **真板卡端到端（需求 2）**：`sdk.py test run -T example/get-started/hello_world -p <platform>`。
    代码路径已就绪、有端到端自测覆盖（真 Lab Agent + 伪造设备），但**没有在真实板卡上跑过**。
 4. ✅ **无硬件端到端（QEMU）**：`sdk.py test run -T example/qemu` 通过；
    板上那套 Unity 单测也能整个搬过来跑：`-t unit_test.cjson_qemu` 通过。

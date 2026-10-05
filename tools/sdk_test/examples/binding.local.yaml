@@ -3,9 +3,8 @@
 #
 # Hardware map -- a TEMPLATE. Copy it next to the lab it describes and edit.
 #
-#   sdk.py test list-fixtures --binding tools/sdk_test/examples/binding.local.yaml
-#   sdk.py test run -T example/get-started/hello_world \
-#       --binding tools/sdk_test/examples/binding.local.yaml
+#   python tools/lab_agent/runner.py -c tools/sdk_test/examples/binding.local.yaml --check
+#   python tools/lab_agent/runner.py -c tools/sdk_test/examples/binding.local.yaml --list
 #
 # This file is the ONLY place in the framework that mentions physical reality:
 # ports, probes, pinmaps, mux channels. Test cases never see it. That separation
@@ -18,9 +17,9 @@
 # is what let the two disagree, so the key is rejected rather than ignored.
 #
 # It is the same schema as the Lab Agent's runner config, parsed by the same
-# code. The SDK side reads what it needs to choose a platform; the blocks it has
-# no business knowing (`jlink:`, `flash:`) are preserved untouched and read by
-# the agent. See tools/lab_agent/examples/runner.local.yaml.
+# code: the agent reads the whole file, and nothing in it reaches the SDK side.
+# The `jlink:` / `flash:` / `reset:` blocks are the agent's own. See
+# tools/lab_agent/examples/runner.local.yaml for the full template.
 #
 # Two testbeds offering the same fixture are INTERCHANGEABLE by contract: a test
 # that lands on either must produce the same result. If that is not true of a

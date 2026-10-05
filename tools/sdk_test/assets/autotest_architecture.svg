@@ -149,13 +149,13 @@
     <text class="t s-qemu" x="680" y="158" text-anchor="middle">能力匹配</text>
 
     <rect class="chip" x="986" y="132" width="152" height="42" rx="6"/>
-    <text class="t" x="1062" y="158" text-anchor="middle">binding.yaml</text>
+    <text class="t" x="1062" y="158" text-anchor="middle">features.yaml</text>
 
     <path class="link" d="M212 153 H246" marker-end="url(#arrow)"/>
     <path class="link" d="M384 153 H418" marker-end="url(#arrow)"/>
     <path class="link" d="M574 153 H608" marker-end="url(#arrow)"/>
     <path class="link" d="M980 153 H752" marker-end="url(#arrow)"/>
-    <text class="tiny" x="866" y="146" text-anchor="middle">fixture / capability</text>
+    <text class="tiny" x="866" y="146" text-anchor="middle">板子自己的声明</text>
 
     <rect class="inner" x="62" y="190" width="1076" height="118" rx="8"/>
     <text class="h" x="80" y="212">runner.py 编排</text>

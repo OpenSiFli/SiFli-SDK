@@ -54,7 +54,6 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 sdk.py test list -T example
 sdk.py test list -T example --json          # 给 CI 生成矩阵用
 sdk.py test info                            # 本 build 支持哪些 harness / backend
-sdk.py test list-fixtures --binding tools/sdk_test/examples/binding.local.yaml
 ```
 
 ### 3. 端到端（需要真实硬件）
@@ -66,8 +65,8 @@ python tools/lab_agent/runner.py -c <cfg> --check     # 只校验配置
 python tools/lab_agent/runner.py -c <cfg> --list      # 只列出 testbed
 
 # 终端 B：跑用例
-sdk.py test plan -T example/get-started/hello_world --binding <bind.yaml>   # 先干跑看计划
-sdk.py test run  -T example/get-started/hello_world --binding <bind.yaml>
+sdk.py test plan -T example/get-started/hello_world -p <platform>   # 先干跑看计划
+sdk.py test run  -T example/get-started/hello_world -p <platform>
 ```
 
 `test run` 退出码：`0` 全过，`1` 有用例失败，`2` 请求本身不可用。

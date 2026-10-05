@@ -18,12 +18,12 @@
 ```
 +-- SDK 侧（tools/sdk_test/，不绑定硬件） ---------------------------+
 | testcase.yaml -> 发现 -> 匹配 -> 构建 -> 执行 -> 日志 + 报告       |
-| binding.yaml（硬件映射）-> testbed 列表                            |
+| （用例，平台）-> 交给 Lab Agent                                    |
 +--------------------------------------------------------------------+
                                    | 本机 HTTP
                                    v
                   +--------------------------------+
-                  | Lab Agent（机器侧）            |  持有板子：串口 / 探针 / 继电器
+                  | Lab Agent（机器侧）            |  持有 binding 与板子：串口 / 探针 / 继电器
                   | tools/lab_agent/               |  一次只发放一个 testbed
                   +--------------------------------+
                                    |
@@ -51,12 +51,9 @@ sdk.py test list -T example
 sdk.py test list -T example --json          # CI 生成矩阵用
 sdk.py test info                            # 本 build 支持哪些 harness / backend
 
-# 看某个 lab 有哪些硬件
-sdk.py test list-fixtures --binding tools/sdk_test/examples/binding.local.yaml
-
 # 干跑：只算计划，不构建、不烧录
 sdk.py test plan -T example/get-started/hello_world \
-    --binding tools/sdk_test/examples/binding.local.yaml
+    -p sf32lb52-lcd_a128r16
 ```
 
 跑框架自己的测试（不需要硬件，也不需要 Lab Agent）：
@@ -186,11 +183,12 @@ sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # 由 agent 分配一块
 
 退出码：`0` 全过，`1` 有用例失败，`2` 请求本身不可用。
 
-**为什么不需要 binding**：分配是 agent 做的——SDK 侧调 `allocate` 时 `testbed_id`
-本来就传 `None`，由 agent 在候选里挑一块空闲的。所以给不给 binding，**分配路径完全
-相同**，binding 只是 SDK 侧的**提前过滤**（那个文件属于硬件团队，见第 8 节）。
+**SDK 侧手里根本没有这个 lab 的清单。** 一次运行就是 (用例, 平台, 后端, 构建目录)，
+再细没有了：具体落到那个平台的**哪块板**，这里既不决定、也决定不了——申请硬件那一刻
+由 agent 从自己的配置里分配。所以你只要说清平台；硬件映射根本不进这一侧（那个文件
+属于硬件团队，见第 8 节）。
 
-代价是少了三道**在构建之前**的检查，它们都会推迟到申请硬件那一刻：
+本来在**构建之前**做的三道检查，现在都推迟到申请硬件那一刻：
 
 | 少了什么 | 后果 |
 |---|---|
@@ -212,8 +210,7 @@ sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # 由 agent 分配一块
 | `-T/--testsuite-root` | 从哪个目录递归找 `testcase.yaml`（默认 SDK 的 `example/`） |
 | `-t/--testcase` | 只跑指定 id（可重复）。支持全 id，也支持只写 tests 键 |
 | `--tag` | 按 tag 选（并集） |
-| `-b/--binding` | 硬件映射文件 |
-| `-p/--platform` | 指定板名；不给则由 binding 决定 |
+| `-p/--platform` | 指定要构建的板名；除非每条用例都自己写了 `integration_platforms`，否则必须给 |
 | `--no-build` | 跳过构建，直接用 `build_<board>/` 里现成的 |
 | `-j/--jobs` | 并行构建任务数 |
 | `--timeout` | 覆盖所有用例的超时 |
@@ -467,6 +464,9 @@ tests:
 命令，宿主才需要那两个字段。手动单跑某个 suite 走的也是这条路：烧一次，然后敲
 `unity_run lz4`。
 
+**反过来也成立**：`autorun: true` 时再写 `cmd` 或 `prompt` 会被**当面拒收**——那条
+路根本不读这两个键，而写了不生效的键在本框架里一律报错，不静默忽略。
+
 ```yaml
     harness_config:
       prompt: "msh />"    # 可省，默认 msh />。发命令前先在串口输出里等它出现；
@@ -501,13 +501,13 @@ circular_buf）。
 
 ```powershell
 # 干跑：先确认规划出什么（不碰硬件）
-sdk.py test plan -T example/test/unit_test -t unit_test.board -b <binding.yaml>
+sdk.py test plan -T example/test/unit_test -t unit_test.board -p sf32lb52-lcd_a128r16
 
 # 真板。手动复位的板子要 --confirm-reset —— 那是"启动已经安排好了"的声明：
 # 自动运行的结果从板子启动的第一个字节就开始了，所以那次启动必须发生在串口
 # 打开之后，否则那份转录没人看见。
 sdk.py test run  -T example/test/unit_test -t unit_test.board `
-    -b <binding.yaml> --confirm-reset
+    -p sf32lb52-lcd_a128r16 --confirm-reset
 ```
 
 **`unit_test.qemu` 那条钉在 `qemu_cortex_m33` 上**，这个 lab 没有 QEMU 平台，于是
@@ -724,7 +724,7 @@ testbed:
 如果两块板不满足这一点，它们就不该声明同一个 fixture。
 
 Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文件里，
-`tools/sdk_test` 只解析它需要的部分、其余原样保留：
+整个文件都由 agent 读，没有哪一部分流到 SDK 侧：
 
 ```yaml
     jlink:
@@ -748,21 +748,20 @@ Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文�
 
 | 键 | 谁读 | 说明 |
 |---|---|---|
-| `testbed[].id` | 两边 | 本次运行里的标识，`test plan` 显示的就是它。同一个文件里不能重复 |
-| `testbed[].platform` | **SDK 侧** | **决定这条用例能不能落在这块板**。必须与 `customer/boards/<name>` 同名；不带核后缀即可，会补成 `_hcpu` |
-| `testbed[].console` | **agent** | `{port, baud}`。`baud` 默认 1000000（SDK console 固定 1 Mbaud）。SDK 侧只在 `sdk.py test list-fixtures` 里显示它 |
-| `testbed[].connections[].fixture` | SDK 侧 | **只当用例写了 `harness_config.fixture` 时才会被查**。写 `name`，或 `name:param`（`spi_nor_flash:spi2`）精确锚定 |
+| `testbed[].id` | agent | 这个 testbed 在本次运行里的标识。同一个文件里不能重复 |
+| `testbed[].platform` | **agent** | **决定这条用例能不能落在这块板**。必须与 `customer/boards/<name>` 同名；不带核后缀即可，会补成 `_hcpu` |
+| `testbed[].console` | **agent** | `{port, baud}`。`baud` 默认 1000000（SDK console 固定 1 Mbaud） |
+| `testbed[].connections[].fixture` | agent | **只当用例写了 `harness_config.fixture` 时才会被查**。写 `name`，或 `name:param`（`spi_nor_flash:spi2`）精确锚定 |
 | `testbed[].connections[].pinmap` | 无 | 记录怎么接的线（哪个脚是 CS/CLK）。**目前没有代码消费**，写它是给硬件团队对线用的 |
-| `testbed[].connections[].mux` | SDK 侧（仅校验） | 形如 `mux_01.channel.3`；只用于检查它引用的 mux 确实在 `muxes:` 里声明过 |
-| `testbed[].muxes[]` | SDK 侧（仅 `id`） | 带外开关（relay 等）的声明。只有 `id` 被读（供 `connections[].mux` 引用）；`type` / `channel_num` / `runner` 目前没有代码读，留给以后驱动 relay 的 fixture driver |
+| `testbed[].connections[].mux` | agent（仅校验） | 形如 `mux_01.channel.3`；只用于检查它引用的 mux 确实在 `muxes:` 里声明过 |
+| `testbed[].muxes[]` | agent（仅 `id`） | 带外开关（relay 等）的声明。只有 `id` 被读（供 `connections[].mux` 引用）；`type` / `channel_num` / `runner` 目前没有代码读，留给以后驱动 relay 的 fixture driver |
 | `testbed[].runner` | agent（仅上报） | 这个 testbed 由哪台 Lab Agent 持有。会在 `/testbeds` 里报出去，**但不参与分配决策** |
-| `testbed[].jlink` / `flash` / `reset` | **只有 agent** | 探针、烧录、复位。SDK 侧只解析不解释——**所以 binding 里出现探针序列号不是失误**，两边共用一个文件 |
-| `runner:`（顶层） | **只有 agent** | 机器级设置（监听地址、轮询间隔、缓冲上限、探针路径）。**写在给 `-b` 用的文件里会被忽略** |
+| `testbed[].jlink` / `flash` / `reset` | **只有 agent** | 探针、烧录、复位。SDK 侧根本看不到这个文件——**所以 binding 里出现探针序列号不是失误**，它就是 agent 自己的配置 |
+| `runner:`（顶层） | **只有 agent** | 机器级设置（监听地址、轮询间隔、缓冲上限、探针路径）。**SDK 侧从不读它们** |
 
-> **一份文件两个用途**：`sdk.py test run --binding <f>` 只读 `testbed:` 那部分；
-> `python tools/lab_agent/runner.py -c <f>` 两边都读。所以同一份文件既能当使用者的
-> binding、也能当那台机器的 runner 配置——只要它带上顶层 `runner:` 和那些 agent
-> 私有键。**真实的 COM 口不要提交进仓库。**
+> **一份文件一个读者**：`python tools/lab_agent/runner.py -c <f>` 读它的全部——
+> `testbed:` 那部分和机器级的 `runner:` 块都读。所以同一份文件既是这个 lab 的硬件
+> 映射、也是那台机器的 runner 配置。**真实的 COM 口不要提交进仓库。**
 
 `jlink:` / `flash:` / `reset:` 各有哪些子键，见带注释的模板
 `tools/lab_agent/examples/runner.local.yaml`——那份就是给人照着抄的。
@@ -841,7 +840,7 @@ waiting for the board to boot; press its RESET button if nothing appears (60s)
 - **按晚了会污染下一个用例**：在上一个用例 `release` 之后才按，启动日志会落在
   下一个用例刚打开的缓冲里——探针复位不会有这个问题。
 
-模板：`tools/sdk_test/examples/binding.local.yaml`（SDK 侧）
+模板：`tools/sdk_test/examples/binding.local.yaml`（硬件映射）
 和 `tools/lab_agent/examples/runner.local.yaml`（机器侧，多了 `runner:` 全局块）。
 **真实的 COM 口不要提交。**
 
@@ -859,7 +858,7 @@ waiting for the board to boot; press its RESET button if nothing appears (60s)
 ```yaml
 test:
   script:
-    - sdk.py test run -T example -b $BINDING --outdir test-out --report-dir test-out/reports
+    - sdk.py test run -T example -p $PLATFORM --outdir test-out --report-dir test-out/reports
   artifacts:
     when: always
     reports:
@@ -916,7 +915,8 @@ test:
 **排错**
 
 - `Cannot reach the Lab Agent` → 终端 A 没起，或 `--agent-url` 不对。
-- `every testbed matching the request is busy` → 有人占着；`sdk.py test list-fixtures -a <url>` 看谁占的。
+- `every testbed matching the request is busy` → 有人占着；Lab Agent 自己的
+  `python tools/lab_agent/runner.py -c <cfg> --list` 会标出哪些 testbed 正忙。
 - `missing fixture(s) [...] (testbed offers: ...)` → 用例要的能力这个 lab 没有，
   信息里两侧都列了，直接对。
 - 构建失败被记为该用例的 ERROR，**不会**中断整轮——所以一轮跑完能一次看到所有问题。
