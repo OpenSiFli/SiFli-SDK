@@ -19,6 +19,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from . import report
 from .backends import backend_names
 from .backends import is_host_platform
 from .backends import select_backend_name
@@ -163,18 +164,14 @@ def describe_plan(
         # Cases were selected and every one of them was turned away, so the
         # reason is the whole answer here. "Nothing to run." alone would read
         # as an empty tree, which is the one thing this is not.
-        echo(f"Nothing to run. All {len(turned_away)} (test, platform) pair(s) were "
-             f"turned away:")
+        echo(report.format_turned_away(turned_away, nothing_planned=True))
 
     # The pairs a run would leave out, with why. Reported rather than dropped:
     # a case that silently does not run is the worst thing a dry run can do,
     # and "not for this board" is an answer -- not the error it used to be.
+    # Without a run of its own the block above has already said all of this.
     if planned and turned_away:
-        echo(f"{len(turned_away)} (test, platform) pair(s) turned away:")
-    for item in turned_away:
-        echo(f"  {item.id}")
-        echo(f"    platform:   {item.platform}")
-        echo(f"    reason:     {item.reason}")
+        echo(report.format_turned_away(turned_away))
     return EXIT_OK
 
 

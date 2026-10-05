@@ -295,6 +295,44 @@ class TestListingNeedsNoHardware(SdkTestCase):
         self.assertLess(text.index("sf32lb52-lcd_a128r16 (board)"),
                         text.index("turned away"))
 
+    def test_plan_prints_the_turned_away_block_verbatim(self):
+        # The block is now shared with the run manifest, so its wording is the
+        # one both print. Asserted literally rather than by keyword: a change to
+        # it silently changes what `test run` says at its opening too.
+        self.write(
+            "example/verbatim/testcase.yaml",
+            """
+            tests:
+              - id: verbatim.board
+                harness: console
+                harness_config:
+                  record: ["x"]
+              - id: verbatim.qemu
+                harness: console
+                platform_allow: [qemu_cortex_m33]
+                harness_config:
+                  record: ["x"]
+            """,
+        )
+        self.write("example/verbatim/project/SConstruct", "# project\n")
+        self.write("example/verbatim/project/proj.conf", "CONFIG_X=y\n")
+
+        lines = []
+        cli.describe_plan(
+            os.path.join(self.root, "example", "verbatim"),
+            platform="sf32lb52-lcd_a128r16",
+            echo=lines.append,
+        )
+
+        # The block is echoed as one string, the way the run manifest is.
+        self.assertEqual(lines[-1].splitlines(), [
+            "1 (test, platform) pair(s) turned away:",
+            "  verbatim.qemu",
+            "    platform:   sf32lb52-lcd_a128r16",
+            "    reason:     platform sf32lb52-lcd_a128r16 not allowed "
+            "(allow=['qemu_cortex_m33'], exclude=none)",
+        ])
+
     def test_plan_says_a_turned_away_tree_is_not_an_empty_one(self):
         # Cases were selected and every one of them was refused: saying only
         # "Nothing to run." would read as an empty tree.

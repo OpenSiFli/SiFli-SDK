@@ -756,13 +756,53 @@ def _tally(results: List[TestResult]) -> str:
     return f"{len(results)} test(s): " + ", ".join(counted or ["none"])
 
 
-def format_manifest(entries: List[tuple]) -> str:
-    """The list of tests about to run, numbered, one per line.
+def format_turned_away(pairs: List[Any], nothing_planned: bool = False) -> str:
+    """The (test, platform) pairs a plan leaves out, and why.
+
+    A filtered pair is an answer rather than a failure -- the test is fine, the
+    platform is fine, they are not a match -- and it is reported rather than
+    dropped, because a case that silently does not run is the worst thing a plan
+    can produce.
+
+    Both places that print a plan print this block, one because it says what
+    will *not* happen before hardware is touched (:func:`format_manifest`) and
+    one because that is all a dry run has to say (``cli.describe_plan``). Shared
+    so the two cannot drift into spelling the same refusal two ways -- which is
+    exactly how the opening manifest came to account for fewer tests than the
+    closing summary did.
+
+    ``pairs`` are objects with ``id``, ``platform`` and ``reason``
+    (``runner.FilteredRun``); duck-typed for the same reason the manifest is.
+    ``nothing_planned`` changes the header to the one that says the block is the
+    whole answer, for a selection every one of whose pairs was refused.
+    """
+    if nothing_planned:
+        lines = [
+            f"Nothing to run. All {len(pairs)} (test, platform) pair(s) were "
+            f"turned away:"
+        ]
+    else:
+        lines = [f"{len(pairs)} (test, platform) pair(s) turned away:"]
+    for pair in pairs:
+        lines.append(f"  {pair.id}")
+        lines.append(f"    platform:   {pair.platform}")
+        lines.append(f"    reason:     {pair.reason}")
+    return "\n".join(lines)
+
+
+def format_manifest(entries: List[tuple],
+                    turned_away: Optional[List[Any]] = None) -> str:
+    """The list of tests about to run, numbered, one per line, and what was not.
 
     Printed before anything is built, because the question a long run raises is
     "how many are left", and neither the closing summary nor the per-test lines
     answer it while the run is still going. ``entries`` are
     ``(index, total, id, platform, harness)``.
+
+    ``turned_away`` are the pairs planning refused, appended after the runs. The
+    closing summary counts them -- a filtered pair is recorded as a skipped
+    result -- so a manifest that named only the runs announced a smaller set
+    than the run went on to report.
     """
     lines = [f"[plan]  {entries[0][1]} test(s) to run:"]
     width = max(len(str(entry[2])) for entry in entries)
@@ -771,6 +811,8 @@ def format_manifest(entries: List[tuple]) -> str:
             f"        {index:>{len(str(total))}}/{total}  "
             f"{str(test_id):<{width}}  ({platform}, {harness})"
         )
+    if turned_away:
+        lines.append(format_turned_away(list(turned_away)))
     return "\n".join(lines)
 
 

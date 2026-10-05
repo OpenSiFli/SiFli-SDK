@@ -815,12 +815,26 @@ class TestRunner:
             plan.append((instance, planned_runs, filtered, None, started))
 
         scheduled = [(instance, run) for instance, runs, _, _, _ in plan for run in runs]
+        # The pairs planning refused, handed to the manifest so the opening
+        # block accounts for them. They are results too -- recorded below as
+        # skips, and counted by the closing summary -- so a manifest that named
+        # only the runs announced a smaller set than the run went on to report.
+        turned_away = [
+            record for _instance, _runs, filtered, _error, _started in plan
+            for record in filtered
+        ]
         if scheduled:
             self._echo(report.format_manifest([
                 (index, len(scheduled), run.instance.id, run.platform,
                  run.instance.harness)
                 for index, (_instance, run) in enumerate(scheduled, start=1)
-            ]))
+            ], turned_away))
+        elif turned_away:
+            # Every selected pair was refused, so there is no runs block to
+            # append to -- but the opening still has to account for what the
+            # closing summary will call a skipped test, and this is the block
+            # `test plan` prints for the same plan.
+            self._echo(report.format_turned_away(turned_away, nothing_planned=True))
 
         total = len(scheduled)
         done = 0

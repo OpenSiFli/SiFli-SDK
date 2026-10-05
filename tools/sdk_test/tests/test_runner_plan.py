@@ -285,6 +285,37 @@ class RunReportsFilteredTest(SdkTestCase):
         # belong here.
         self.assertFalse(result.failed)
 
+    def test_a_plan_with_no_runs_says_what_it_turned_away(self):
+        # Nothing scheduled, so there is no runs block to append to -- and the
+        # opening must still account for the pair the closing summary counts as
+        # a skipped test, in the words `test plan` uses for the same plan.
+        self.write("testcase.yaml", f"""
+            tests:
+              - id: needs_a_bus
+                harness: unity
+                integration_platforms: [{EMPTY_CARRIER}]
+                depends_on: [spi]
+        """)
+        lines = []
+
+        summary = TestRunner(
+            RunOptions(
+                testsuite_root=self.root, build=False, out_dir=_SCRATCH.name
+            ),
+            echo=lines.append,
+        ).run()
+
+        text = "\n".join(lines)
+        self.assertEqual(1, summary.total)
+        self.assertIn(
+            "Nothing to run. All 1 (test, platform) pair(s) were turned away:", text
+        )
+        self.assertIn("needs_a_bus", text)
+        self.assertIn("spi", text)
+        # The runs block never appeared, so nothing claims a test is about to be
+        # built and run.
+        self.assertNotIn("test(s) to run", text)
+
 
 class RegistryCheckTest(SdkTestCase):
     """The plan refuses a Unity suite the firmware does not have.

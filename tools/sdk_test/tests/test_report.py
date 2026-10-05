@@ -12,12 +12,23 @@ from __future__ import annotations
 import json
 import os
 import time
+import types
 import unittest
 import xml.etree.ElementTree as ElementTree
 
 from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 
 from sdk_test import report
+
+
+def _pair(test_id: str, platform: str, reason: str):
+    """A stand-in for ``runner.FilteredRun``: what the formatter reads off one.
+
+    A namespace rather than the real class on purpose. ``report.py`` duck-types
+    the pair, and importing the runner here would make this test fail over the
+    runner's shape instead of the formatter's.
+    """
+    return types.SimpleNamespace(id=test_id, platform=platform, reason=reason)
 
 
 def make_summary():
@@ -111,6 +122,51 @@ class TestManifest(SdkTestCase):
         self.assertIn("a/hello.console", lines[1])
         self.assertIn("(sf32lb52-lcd_n16r8, console)", lines[1])
         self.assertIn("2/2", lines[2])
+
+    def test_a_manifest_without_turned_away_pairs_is_what_it_always_was(self):
+        # Most runs turn nothing away, and they must not grow an empty block --
+        # the closing summary counts nothing extra for them either.
+        entries = [(1, 1, "a/hello.console", "sf32lb52-lcd_n16r8", "console")]
+        self.assertEqual(
+            report.format_manifest(entries), report.format_manifest(entries, [])
+        )
+        self.assertEqual(len(report.format_manifest(entries).splitlines()), 2)
+
+    def test_the_pairs_planning_refused_are_named_after_the_runs(self):
+        # The closing summary counts a turned-away pair -- it is recorded as a
+        # skipped result -- so a manifest naming only the runs announced fewer
+        # tests than the run went on to report.
+        text = report.format_manifest(
+            [
+                (1, 2, "a/hello.console", "sf32lb52-lcd_n16r8", "console"),
+                (2, 2, "a/hello.unity", "sf32lb52-lcd_n16r8", "unity"),
+            ],
+            [
+                _pair("a/hello.unity", "qemu_cortex_m33",
+                      "platform qemu_cortex_m33 not allowed"),
+            ],
+        )
+        lines = text.splitlines()
+        self.assertIn("2 test(s) to run", lines[0])
+        self.assertIn("2/2  a/hello.unity", lines[2])
+        self.assertEqual(lines[3], "1 (test, platform) pair(s) turned away:")
+        self.assertEqual(lines[4], "  a/hello.unity")
+        self.assertEqual(lines[5], "    platform:   qemu_cortex_m33")
+        self.assertEqual(
+            lines[6], "    reason:     platform qemu_cortex_m33 not allowed"
+        )
+
+    def test_a_refused_tree_says_so_instead_of_naming_no_runs(self):
+        # No runs at all, so there is no runs block to append to -- the header
+        # that says the block is the whole answer is the one for this shape.
+        text = report.format_turned_away(
+            [_pair("a/hello.unity", "qemu_cortex_m33", "not allowed")],
+            nothing_planned=True,
+        )
+        self.assertEqual(
+            text.splitlines()[0],
+            "Nothing to run. All 1 (test, platform) pair(s) were turned away:",
+        )
 
 
 class TestRunSummary(SdkTestCase):

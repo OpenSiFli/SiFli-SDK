@@ -1001,6 +1001,41 @@ class TestRunManifest(EndToEndCase):
         rules = [line for line in lines if line.startswith("---")]
         self.assertIn("[1/1]", rules[0])
 
+    def test_the_manifest_accounts_for_the_pair_planning_turns_away(self):
+        # The defect as a user hit it: the opening counted only the runs while
+        # the closing summary counted the refused pair too -- as a skipped
+        # result, which it is -- so a second test appeared at the end that the
+        # opening had never mentioned.
+        suite = self.make_project(
+            testcase_yaml="""
+            tests:
+              - id: hello.console
+                harness: console
+                harness_config:
+                  record: ["Hello world!"]
+              - id: gated.elsewhere
+                harness: console
+                platform_allow: [qemu_cortex_m33]
+                harness_config:
+                  record: ["Hello world!"]
+            """,
+            suffix="mixed",
+        )
+        lines = []
+        summary = self.runner(suite, echo=lines.append).run()
+
+        # One run and one pair turned away, both named in the same block, before
+        # anything was built -- and the summary that follows reports both.
+        manifest = lines[1]
+        self.assertIn("1 test(s) to run", manifest)
+        self.assertIn("1 (test, platform) pair(s) turned away:", manifest)
+        self.assertIn("gated.elsewhere", manifest)
+        self.assertIn("not allowed", manifest)
+        self.assertLess(manifest.index("hello.console"),
+                        manifest.index("turned away"))
+        self.assertEqual(summary.total, 2)
+        self.assertEqual(summary.skipped, 1)
+
 
 class TestBuildLog(EndToEndCase):
     """What the compiler said is filed, not scrolled past.
