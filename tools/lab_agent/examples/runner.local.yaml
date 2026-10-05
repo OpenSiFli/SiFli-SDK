@@ -13,7 +13,7 @@
 # objects from the test author's point of view; both are parsed by the same code,
 # so a testbed here and a testbed there are the same shape.
 #
-# The rule the whole design rests on: a test case names capabilities, never
+# The rule the whole design rests on: a test case names what it needs, never
 # ports. Physical detail belongs here, owned by whoever owns the hardware.
 
 # Machine-wide settings. All optional.
@@ -38,16 +38,16 @@ testbed:
       port: COM13
       baud: 1000000
 
-    # Capabilities gate `depends_on:` in a testcase; connections below gate
-    # `harness_config.fixture:`. A test is only scheduled on a testbed that
-    # offers everything it asks for.
+    # Connections gate `harness_config.fixture:` in a testcase; what the board
+    # *can do* is the board's own declaration, in
+    # `customer/boards/<board>/<core>/features.yaml`. A test is only scheduled
+    # on a testbed that offers everything it asks for.
 
     # Fixtures physically wired to this board. Two testbeds offering the same
     # fixture are interchangeable by contract: whichever one a test lands on,
     # the result must be identical.
     connections:
       - fixture: spi_nor_flash_py25q128:spi1
-        default: true
         pinmap:
           - {pin: PA00, signal: CS}
           - {pin: PA01, signal: CLK}
@@ -121,7 +121,6 @@ testbed:
       port: COM30
     connections:
       - fixture: spi_nand_flash
-        default: true
     jlink:
       serial: "63640316"
     flash:

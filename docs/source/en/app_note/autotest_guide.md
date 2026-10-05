@@ -32,7 +32,7 @@
                               real board
 ```
 
-**The division of labour is one sentence**: a test case declares only its **capabilities** (which fixtures, which peripherals it needs) and never contains a port number, a probe serial number or a mux channel. The physical reality all lives in the binding file on the Lab Agent side.
+**The division of labour is one sentence**: a test case declares only its **needs** (which fixtures, which peripherals it requires) and never contains a port number, a probe serial number or a mux channel. The physical reality all lives in the binding file on the Lab Agent side.
 
 ---
 
@@ -631,7 +631,6 @@ testbed:
       # baud defaults to 1000000, the SDK console's baud rate
     connections:                       # corresponds to the testcase's harness_config.fixture
       - fixture: spi_nor_flash:spi1
-        default: true
         pinmap:
           - {pin: PA00, signal: CS}
 ```
@@ -639,8 +638,7 @@ testbed:
 **What a board can do is not written here.** `depends_on` matches **the board's own declaration** —
 `customer/boards/<board>/<core>/features.yaml`, which says which bus instances this board has
 (`spi1`, `i2c2`; an empty list is a legal declaration too, which is what the QEMU carrier has). The binding only says
-**what is connected to what**. Writing the same fact in two places is exactly how the two come to contradict each other,
-so a `capabilities:` in the binding is now **rejected outright**, naming the file you should change instead.
+**what is connected to what**. Writing the same fact in two places is exactly how the two come to contradict each other.
 
 ```yaml
 # testcase.yaml: what it wants
@@ -793,7 +791,7 @@ without it the report overwrites the file of the same name under `test-out/repor
 
 ```yaml
     harness_config:
-      fixture: audio_sample_16k     # declare the capability only, no path
+      fixture: audio_sample_16k     # declare the need only, no path
 ```
 
 The test does not know the path, so the same test case runs both on a laptop with a cache and in CI against remote storage.
@@ -826,7 +824,7 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 
 - `Cannot reach the Lab Agent` → terminal A was not started, or `--agent-url` is wrong.
 - `every testbed matching the request is busy` → somebody is holding it; `sdk.py test list-fixtures -a <url>` shows who.
-- `missing fixture(s) [...] (testbed offers: ...)` → this lab does not have the capability the test case wants;
+- `missing fixture(s) [...] (testbed offers: ...)` → this lab does not have what the test case needs;
   both sides are listed in the message, so compare them directly.
 - A build failure is recorded as an ERROR for that test case and does **not** abort the whole round — so one round shows you every problem at once.
   **`at build` is that case**: the `stage` field in the terminal and in the artifacts tells you directly which stage failed (`plan`/`build`/`open`/`run`/`close`),

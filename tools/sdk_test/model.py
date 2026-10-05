@@ -59,7 +59,6 @@ class Connection:
     """One fixture wired to a testbed, with the pinmap used to wire it."""
 
     fixture: FixtureRef
-    default: bool = False
     pinmap: List[Dict[str, str]] = field(default_factory=list)
     mux: Optional[str] = None
 

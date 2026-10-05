@@ -43,7 +43,6 @@ class TestLoadFromFile(SdkTestCase):
                   baud: 1000000
                 connections:
                   - fixture: spi_nor_flash_py25q128:spi1
-                    default: true
                     pinmap:
                       - {pin: PA00, signal: CS}
             """,
@@ -57,7 +56,6 @@ class TestLoadFromFile(SdkTestCase):
         self.assertEqual(testbed.console.port, "COM13")
         self.assertEqual(testbed.console.baud, 1000000)
         self.assertEqual([f.spec for f in testbed.fixtures], ["spi_nor_flash_py25q128:spi1"])
-        self.assertTrue(testbed.connections[0].default)
         self.assertEqual(testbed.connections[0].pinmap, [{"pin": "PA00", "signal": "CS"}])
 
     def test_a_missing_file_is_reported(self):
@@ -120,18 +118,6 @@ class TestTestbedValidation(SdkTestCase):
             binding.parse_binding({"testbed": [entry, dict(entry)]}, source="b.yaml")
         self.assertIn("duplicate testbed id", str(caught.exception))
 
-    def test_capabilities_are_refused_with_a_pointer_to_the_board(self):
-        # A binding states what is wired to a board, never what the board can do:
-        # two files stating one fact is what let them disagree. Silently ignoring
-        # the key would leave the stale copy in place to be believed.
-        with self.assertRaises(BindingError) as caught:
-            binding.parse_binding(
-                {"testbed": [{"id": "t", "platform": "p", "capabilities": "spi"}]}
-            )
-        message = str(caught.exception)
-        self.assertIn("features.yaml", message)
-        self.assertIn("depends_on", message)
-
     def test_a_testbed_without_a_console_is_still_loadable(self):
         # A build-only or host-backed testbed has no serial port to name.
         testbeds = binding.parse_binding({"testbed": [{"id": "t", "platform": "p"}]})
@@ -175,13 +161,11 @@ class TestConnectionValidation(SdkTestCase):
         self.assertIn("testbed[0].connections[0]", message)
         self.assertIn("pinmap must be a list", message)
 
-    def test_a_connection_defaults_to_non_default_and_no_pinmap(self):
+    def test_a_connection_without_a_pinmap_gets_an_empty_one(self):
         testbeds = binding.parse_binding(
             {"testbed": [{"id": "t", "platform": "p", "connections": [{"fixture": "f"}]}]}
         )
-        connection = testbeds[0].connections[0]
-        self.assertFalse(connection.default)
-        self.assertEqual(connection.pinmap, [])
+        self.assertEqual(testbeds[0].connections[0].pinmap, [])
 
 
 class TestMuxValidation(SdkTestCase):

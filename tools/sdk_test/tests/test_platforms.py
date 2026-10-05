@@ -123,10 +123,10 @@ class LoadTest(SdkTestCase):
         self.assertIn("features.yaml", str(caught.exception))
 
     def test_an_unknown_key_is_refused_rather_than_ignored(self):
-        self.declare("board_a", "features: [spi1]\ncapabilities: [spi]\n")
+        self.declare("board_a", "features: [spi1]\nbogus: [spi]\n")
         with self.assertRaises(PlatformError) as caught:
             load_platform_features("board_a", root=self.root)
-        self.assertIn("capabilities", str(caught.exception))
+        self.assertIn("bogus", str(caught.exception))
 
     def test_a_non_list_is_refused(self):
         self.declare("board_a", "features: spi1\n")

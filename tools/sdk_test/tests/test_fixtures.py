@@ -206,10 +206,10 @@ class TestExplainNoMatch(SdkTestCase):
         self.assertIn("board_b", message)
 
     def test_depends_on_never_appears_in_the_reason(self):
-        # It used to be able to say "missing capability(ies) ['spi'] (testbed
-        # has: i2c)" while the binding itself declared a flash wired to spi1 --
-        # a contradiction nothing in this layer could resolve, because the two
-        # facts lived in two files that never met.
+        # `depends_on` is the platform's question, answered from the board's own
+        # declaration before a bench is ever chosen. A reason that quoted it
+        # here would be answering a question this layer never asked, and would
+        # read as a fixture mismatch -- which it is not.
         testbeds = [make_testbed("tb_01", fixtures=["flash:spi1"])]
         message = explain_no_match(make_instance(depends_on=["i2s"]), testbeds)
         self.assertNotIn("capabilit", message.lower())

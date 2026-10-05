@@ -9,9 +9,9 @@ with no lab, no build and no serial port:
 
 The second question -- *which* board of that platform, wired how -- is the
 binding's, and lives in :mod:`sdk_test.fixtures`. Keeping the two apart is what
-makes ``sdk.py test plan`` able to say what is wrong before anything is built,
-and it is why a binding file no longer states a platform's capabilities: that is
-a property of the board and the build, not of the bench it happens to sit on.
+makes ``sdk.py test plan`` able to say what is wrong before anything is built:
+what a board offers is a property of the board and the build, not of the bench it
+happens to sit on.
 
 A platform states the **instances** it has; a test states the **type** it needs::
 

@@ -14,9 +14,8 @@ answered from the board's own declaration and lives in
 :mod:`sdk_test.platforms`; nothing here consults it, and nothing there consults a
 binding.
 
-One consequence is worth stating, because it used to be the other way round: a
-binding file **cannot** claim a capability. It says what is wired to a board, and
-the board says what it has. Where the two contradict each other --
+One consequence is worth stating: a binding file says what is wired to a board,
+and the board says what it has. Where the two contradict each other --
 :func:`wiring_problems` -- one of the files is wrong, and that is reported rather
 than left to surface as a test that mysteriously will not schedule.
 """

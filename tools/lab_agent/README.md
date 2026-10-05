@@ -15,7 +15,7 @@ Lab Agent 跑在**插着板子的那台机器**上。它拥有测试用例永远
 两边共用一套 schema（由同一份代码解析），不会各自漂移。
 
 binding 里**不写**板子能力——那是板子自己的声明，同一事实写两处正是它们会互相
-矛盾的来由（binding 里出现 `capabilities:` 会被直接拒绝并指出该改哪个文件）。
+矛盾的来由。
 
 ## 怎么跑
 
@@ -40,7 +40,7 @@ python tools/lab_agent/runner.py -c <cfg> -v
 ```
 GET  /health
 GET  /testbeds
-POST /allocate                     {platform, fixtures, capabilities, testbed_id, holder}
+POST /allocate                     {platform, fixtures, testbed_id, holder}
 POST /release                      {testbed_id, holder}
 POST /testbed/{id}/prepare         {build_dir, reset}
 POST /testbed/{id}/reset

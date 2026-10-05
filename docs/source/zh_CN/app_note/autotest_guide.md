@@ -623,7 +623,6 @@ testbed:
       # baud 默认 1000000，即 SDK console 的波特率
     connections:                       # 对应 testcase 的 harness_config.fixture
       - fixture: spi_nor_flash:spi1
-        default: true
         pinmap:
           - {pin: PA00, signal: CS}
 ```
@@ -631,8 +630,7 @@ testbed:
 **板子能做什么不写在这里。** `depends_on` 匹配的是**板子自己的声明**——
 `customer/boards/<board>/<core>/features.yaml`，那里写这块板有哪些总线实例
 （`spi1`、`i2c2`；空列表也是合法声明，QEMU 载体就是空的）。binding 只说
-**接了什么东西**。同一个事实写两处，正是它们会互相矛盾的来由，所以 binding 里的
-`capabilities:` 现在会被**直接拒绝**并指出该改哪个文件。
+**接了什么东西**。同一个事实写两处，正是它们会互相矛盾的来由。
 
 ```yaml
 # testcase.yaml：要什么

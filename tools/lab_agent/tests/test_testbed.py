@@ -91,14 +91,6 @@ class TestCapabilityMatching(LabTestCase):
         )
         self.assertEqual(runtime.testbed.id, "tb_01")
 
-    def test_capabilities_in_a_request_are_refused(self):
-        # What a platform can do was settled before a testbed was asked for, by
-        # the board's own features.yaml. Accepting the key here would be a second
-        # place to state it, which is what the split exists to prevent.
-        with self.assertRaises(AllocationError) as caught:
-            allocate_request_from_mapping({"capabilities": ["i2c"], "holder": "j"})
-        self.assertIn("features.yaml", str(caught.exception))
-
     def test_a_request_is_matched_on_platform(self):
         manager = self.make_manager()
         runtime = manager.allocate(
@@ -509,9 +501,6 @@ class TestDescribe(LabTestCase):
         self.assertEqual(first["platform"], "sf32lb52-lcd_n16r8")
         self.assertEqual(first["console"], {"port": "COM13", "baud": 1000000})
         self.assertEqual(first["fixtures"], ["spi_nor_flash:spi1", "i2c_sensor"])
-        # Not "capabilities": a board's own declaration is the only place that
-        # lives, and the agent was never the right place to ask.
-        self.assertNotIn("capabilities", first)
         self.assertFalse(first["busy"])
         self.assertIsNone(first["holder"])
         # A control plane must be able to tell a lab that can power-cycle a

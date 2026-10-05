@@ -36,10 +36,12 @@ testbed:
       # baud defaults to 1000000, the SDK console's rate; spelled out here so
       # the default is visible.
 
-    # Gates `harness_config.fixture:` in a testcase.
+    # Gates `harness_config.fixture:` in a testcase. A connection states one
+    # thing: this fixture is wired to this testbed. Two connections naming the
+    # same fixture are an assertion that they are interchangeable, so a test
+    # case that asks for the bare name may land on either.
     connections:
       - fixture: spi_nor_flash:spi1
-        default: true
         pinmap:
           - {pin: PA00, signal: CS}
           - {pin: PA01, signal: CLK}
@@ -55,4 +57,3 @@ testbed:
       port: COM30
     connections:
       - fixture: spi_nand_flash
-        default: true

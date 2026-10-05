@@ -666,13 +666,6 @@ def allocate_request_from_mapping(data: Dict[str, Any]) -> AllocationRequest:
             return [str(item) for item in value]
         raise AllocationError(f'"{key}" must be a string or a list of strings')
 
-    if "capabilities" in data:
-        raise AllocationError(
-            '"capabilities" is no longer part of an allocation request. What a '
-            "platform can do is decided before a testbed is asked for, from the "
-            "board's features.yaml; a request carries `fixtures` only."
-        )
-
     return AllocationRequest(
         platform=data.get("platform"),
         fixtures=string_list("fixtures"),

@@ -24,7 +24,6 @@ Shape (see ``examples/binding.local.yaml``)::
           baud: 1000000
         connections:
           - fixture: spi_nor_flash_py25q128:spi1
-            default: true
             pinmap:
               - {pin: PA00, signal: CS}
             mux: mux_01.channel.3
@@ -33,10 +32,9 @@ Shape (see ``examples/binding.local.yaml``)::
             type: relay
             channel_num: 4
 
-Note the absence of a ``capabilities:`` key, which this file used to carry. What
-a board *can do* is stated once, by the board, in
-``customer/boards/<board>/<core>/features.yaml``; a binding states only what is
-wired to it. Two files stating the same fact is what let them disagree.
+A binding does not state what a board *can do*. That is stated once, by the
+board, in ``customer/boards/<board>/<core>/features.yaml``; a binding states only
+what is wired to it. Two files stating the same fact is what let them disagree.
 """
 
 from __future__ import annotations
@@ -86,7 +84,6 @@ def _parse_connection(value: Any, where: str) -> Connection:
         raise BindingError(f"{where}.pinmap must be a list")
     return Connection(
         fixture=parse_fixture_ref(mapping["fixture"]),
-        default=bool(mapping.get("default", False)),
         pinmap=[dict(entry) for entry in pinmap],
         mux=mapping.get("mux"),
     )
@@ -119,15 +116,6 @@ def _parse_testbed(value: Any, index: int) -> TestBed:
     platform = mapping.get("platform")
     if not platform:
         raise BindingError(f'{where} ("{testbed_id}") needs a "platform" (board name)')
-
-    if "capabilities" in mapping:
-        raise BindingError(
-            f'{where}: "capabilities" is no longer read from a binding. What a '
-            f"board can do is the board's own declaration, in "
-            f"customer/boards/<board>/<core>/features.yaml -- a binding says only "
-            f"what is *wired* to it. Move the entries to that file, or delete "
-            f"them; a test asks for them with `depends_on:`."
-        )
 
     connections = [
         _parse_connection(entry, f"{where}.connections[{position}]")

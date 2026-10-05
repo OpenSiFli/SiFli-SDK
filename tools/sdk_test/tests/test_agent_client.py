@@ -99,9 +99,6 @@ class TestRequestShaping(ClientTestCase):
         self.assertEqual(body["holder"], "job-1")
         # The design's central rule: no physical detail leaves this layer.
         self.assertNotIn("port", body)
-        # Nor does a capability: what a board can do was decided by the platform
-        # before a testbed was ever asked for, so the agent is not told again.
-        self.assertNotIn("capabilities", body)
 
     def test_console_read_encodes_cursor_and_timeout_as_query_parameters(self):
         self.route("/testbed/tb_01/console/read", {"data": "hi", "cursor": 2})
