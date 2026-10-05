@@ -59,6 +59,11 @@ SUMMARY_RE = re.compile(
 #: Unity's final ``OK`` / ``FAIL`` line.
 VERDICT_RE = re.compile(r"^\s*(?P<verdict>OK|FAIL)\s*$", re.MULTILINE)
 
+#: ``harness_config.autorun``: the firmware reports every registered suite by
+#: itself before ``main()`` settles into its loop (``TEST_FWK_AUTORUN``), so
+#: there is no command to send and no prompt worth waiting for.
+AUTORUN_KEY = "autorun"
+
 #: Device-side shell command that starts a run, mirroring ``utest_run``.
 DEFAULT_CMD = "unity_run"
 
@@ -255,42 +260,95 @@ def require_record_free(harness_config: dict) -> None:
         )
 
 
+def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
+    """Narrow an auto-run transcript to one suite, and judge that.
+
+    An auto-running firmware reports every suite in one session, so its summary
+    line describes the firmware rather than any one test case. What a test case
+    owns is the cases whose ``file`` equals its suite -- the runner sets that
+    field from the suite name -- so the transcript attributes itself and no
+    extra bookkeeping is needed to split it.
+
+    A suite that contributed no case has not passed, it has not *run*: the
+    firmware stopped before reaching it, or it is not in this build at all.
+    Handing that test case the firmware's overall ``OK`` would be a green light
+    proving nothing, which is the one false verdict this harness exists to
+    avoid.
+    """
+    own = [case for case in result.cases if case.file == suite]
+    verdict = UnityResult(
+        passed=False,
+        detail="",
+        tests=len(own),
+        failures=sum(1 for case in own if case.status == "FAIL"),
+        ignored=sum(1 for case in own if case.ignored),
+        cases=own,
+        summary_seen=result.summary_seen,
+        verdict_seen=result.verdict_seen,
+    )
+
+    if not result.summary_seen:
+        # Nothing finished, so nothing can be attributed to this suite either;
+        # the parser's own wording ("no Unity summary line found") is the
+        # honest one.
+        verdict.detail = result.detail
+        return verdict
+
+    if not own:
+        seen = ", ".join(sorted({case.file for case in result.cases})) or "none"
+        verdict.detail = (
+            f'suite "{suite}" reported no case: the auto-run did not reach it '
+            f"(the transcript holds cases from: {seen})"
+        )
+        return verdict
+
+    if verdict.failures:
+        names = ", ".join(case.name for case in own if case.status == "FAIL")
+        verdict.detail = (
+            f"{verdict.failures} of {verdict.tests} Unity test(s) failed in "
+            f"{suite}: {names}"
+        )
+        return verdict
+
+    verdict.passed = True
+    verdict.detail = f"{verdict.tests} Unity test(s) passed in {suite}"
+    if verdict.ignored:
+        verdict.detail += f", {verdict.ignored} ignored"
+    return verdict
+
+
 def run(
     instance: "TestInstance",
     console: "ConsoleLike",
     timeout: float,
     poll: float = 0.5,
 ) -> "HarnessOutcome":
-    """Ask the device to run Unity, then read its verdict off the console.
+    """Read Unity's verdict off the console, one of two ways.
 
-    Output already buffered is discarded first. Without that, a session that
-    happens to end with a completed earlier run would satisfy
-    :func:`is_complete` before the device had done anything, and the harness
-    would report the previous verdict — the most plausible way for this harness
-    to produce a confident wrong answer.
+    With ``autorun`` -- what the test projects build -- the firmware reports
+    every suite by itself, so there is nothing to send and no prompt worth
+    waiting for. The console was opened for exactly that boot, so the
+    transcript starts at its first byte and the results are the boot log:
+    discarding anything first would throw away the thing being measured.
+
+    Without it the device waits for a command, and the host has to time that
+    command against a boot it may not be able to trigger -- the problem
+    :func:`_wait_for_prompt` exists for. A test case then owns the whole
+    transcript; with ``autorun`` and a ``suite``, it owns that suite's slice of
+    one, which :func:`verdict_for_suite` works out.
     """
     from . import HarnessOutcome
 
     require_record_free(instance.harness_config)
-    command = start_command(instance.harness_config)
+    config = instance.harness_config
+    autorun = bool(config.get(AUTORUN_KEY))
 
-    # Wait for a shell before addressing one. The console is opened as soon as
-    # the download that booted the board has finished writing, and on a board
-    # nothing can reset -- no probe, so the boot is the download's and nobody
-    # waits for it -- that means the console opens *while the board is still
-    # starting*. A command sent into a booting board is simply lost, and the
-    # run then reports "no Unity summary line found", which points at the
-    # firmware instead of at the timing.
-    #
-    # Not finding the prompt is not itself a failure: the command goes out
-    # anyway and the existing checks judge the run. Inventing a new failure
-    # here would break firmware whose prompt this default does not match, and
-    # those runs already report something true.
-    prompt = str(instance.harness_config.get("prompt") or DEFAULT_PROMPT)
-    _wait_for_prompt(console, prompt, timeout, poll)
+    if not autorun:
+        prompt = str(config.get("prompt") or DEFAULT_PROMPT)
+        _wait_for_prompt(console, prompt, timeout, poll)
 
-    _discard_pending(console)
-    console.write(command + "\r\n")
+        _discard_pending(console)
+        console.write(start_command(config) + "\r\n")
 
     text = ""
     deadline = time.monotonic() + max(0.0, float(timeout))
@@ -303,6 +361,9 @@ def run(
             text += chunk
 
     result = parse_unity_output(text)
+    suite = config.get("suite")
+    if autorun and suite:
+        result = verdict_for_suite(result, str(suite))
     return HarnessOutcome(
         passed=result.passed,
         detail=result.detail,

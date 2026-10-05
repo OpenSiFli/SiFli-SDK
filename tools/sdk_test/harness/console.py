@@ -337,7 +337,9 @@ def run(
     device: the ``console`` harness exists for images that are their own test.
     """
     from . import HarnessOutcome
+    from . import reject_foreign_keys
 
+    reject_foreign_keys("console", instance.harness_config)
     matcher = ConsoleMatcher(parse_record(instance.harness_config.get("record")))
 
     deadline = time.monotonic() + max(0.0, float(timeout))

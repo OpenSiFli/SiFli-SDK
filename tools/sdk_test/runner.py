@@ -555,7 +555,9 @@ class TestRunner:
                 result.stage = report.STAGE_CLOSE
                 result.status = ERROR
 
-    def _confirm_boot(self, session: Any, platform: str, timeout: float) -> bool:
+    def _confirm_boot(
+        self, session: Any, platform: str, timeout: float, instance: TestInstance
+    ) -> bool:
         """Stop and let an operator confirm the board has come up, when we can.
 
         Nothing on this side resets such a board, and nothing on this side can
@@ -563,6 +565,13 @@ class TestRunner:
         can. Stopping here is also what makes a harness that *writes* to the
         device safe on this bench: by the time it speaks, the boot is behind us
         and no further reset is coming.
+
+        An auto-running firmware has already reported by the time this is
+        answered, so the gate stops being about *when* the run starts and is
+        only about the boot landing inside the console's lifetime: those results
+        are on the wire from the first byte, and a boot that happened before the
+        console opened is a boot nobody saw. The prompt says which of the two it
+        is, because "press Enter to run the test" would be a lie in that case.
 
         Returns True when the run should continue, which includes having nobody
         to ask. That case is not silent -- the prompt still says what to do, and
@@ -581,9 +590,15 @@ class TestRunner:
             )
             return True
 
+        action = (
+            "then press Enter. It is already reporting, so what matters is that "
+            "the boot happens while this console is open."
+            if instance.harness_config.get("autorun")
+            else "then press Enter to let the run send its first command."
+        )
         if not self._confirm(
             f"[reset] {name} has no probe. Press the board's RESET button if it "
-            "has not already booted, then press Enter to run the test."
+            f"has not already booted, {action}"
         ):
             self._echo(f"[skip]  {session.testbed_id}: the boot was not confirmed")
             return False
@@ -657,7 +672,7 @@ class TestRunner:
             timeout = float(self.options.timeout or instance.timeout)
 
             if session.manual_reset and not self._confirm_boot(
-                session, result.platform, timeout
+                session, result.platform, timeout, instance
             ):
                 result.status = SKIPPED
                 result.message = "the board's boot was not confirmed by the operator"

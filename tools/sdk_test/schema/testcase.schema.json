@@ -102,6 +102,10 @@
           "description": "A readiness pattern the harness waits for on the console before sending `cmd`. The `unity` harness reads it, defaulting to \"msh />\".",
           "type": "string"
         },
+        "autorun": {
+          "description": "The firmware reports every registered suite by itself at boot, so the harness only reads and sends nothing. The `unity` harness reads it.",
+          "type": "boolean"
+        },
         "suite": {
           "description": "Which test suite to ask the device for, if the harness supports selection.",
           "type": "string"

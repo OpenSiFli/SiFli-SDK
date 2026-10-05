@@ -39,6 +39,27 @@ class TestAllowedKeys(SdkTestCase):
         ):
             self.assertIn(expected, keys)
 
+    def test_the_keys_the_harnesses_read_validate(self):
+        # Read by harness/unity.py. A schema that rejects one makes the guide's
+        # own example invalid before anything is built -- which is what
+        # `prompt` did until it was added here.
+        discovery._validate(
+            {
+                "tests": [
+                    {
+                        "id": "a",
+                        "harness": "unity",
+                        "harness_config": {
+                            "suite": "lz4",
+                            "prompt": "msh />",
+                            "autorun": True,
+                        },
+                    }
+                ]
+            },
+            "testcase.yaml",
+        )
+
 
 class TestListForm(SdkTestCase):
     def test_ids_are_prefixed_with_the_relative_directory(self):

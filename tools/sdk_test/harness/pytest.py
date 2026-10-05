@@ -189,7 +189,9 @@ def run(
     """
     from . import HarnessOutcome
     from . import RunContext as _RunContext
+    from . import reject_foreign_keys
 
+    reject_foreign_keys("pytest", instance.harness_config)
     context = context if context is not None else _RunContext()
     interpreter = context.python_exe or sys.executable
 

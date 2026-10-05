@@ -117,6 +117,23 @@ def implemented_harnesses() -> List[str]:
     return list(IMPLEMENTED_HARNESSES)
 
 
+#: ``harness_config`` keys only ``unity`` reads. A harness that never looks at
+#: one must refuse it rather than ignore it: accepting a key that does nothing
+#: teaches that writing it did something. ``unity`` already applies this rule to
+#: ``record`` from the other side; this is the same rule, same direction.
+UNITY_ONLY_KEYS = ("autorun",)
+
+
+def reject_foreign_keys(name: str, harness_config: dict) -> None:
+    """Refuse ``harness_config`` keys that belong to another harness."""
+    for key in UNITY_ONLY_KEYS:
+        if key in harness_config:
+            raise HarnessError(
+                f'harness "{name}" does not read harness_config.{key}; it '
+                f'belongs to harness "unity"'
+            )
+
+
 def run(
     instance: TestInstance,
     console: ConsoleLike,

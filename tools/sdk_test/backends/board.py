@@ -140,9 +140,18 @@ class BoardBackend(Backend):
         # one thing that makes a manual reset unusable is a property of the
         # testcase -- known now, and expensive to discover after a flash.
         manual_reset = str(allocation.get("reset", "jlink")).lower() == "manual"
+        # A harness that writes before it reads is the one a hand-booted board
+        # cannot be gated by. `autorun` takes unity out of that set: the firmware
+        # reports by itself, so there is no command to lose.
+        autorun = bool(instance.harness_config.get("autorun"))
 
         try:
-            if manual_reset and instance.harness == "unity" and not confirm_reset:
+            if (
+                manual_reset
+                and instance.harness == "unity"
+                and not confirm_reset
+                and not autorun
+            ):
                 # Named explicitly rather than "anything but console": the
                 # unity harness writes its run command as its very first
                 # action, by construction. With something to gate the boot --
@@ -150,18 +159,21 @@ class BoardBackend(Backend):
                 # that stops being a race and unity is as usable here as
                 # anywhere. Without a gate it cannot be made to work, and the
                 # failure it produces ("no Unity summary line found") reads
-                # like a firmware fault.
+                # like a firmware fault. `autorun` removes the premise rather
+                # than gating it: nothing is sent, so nothing can be lost.
                 raise BackendError(
                     f'"{instance.id}": testbed {testbed_id} is booted by hand, '
                     "and the unity harness sends its run command before it "
                     "reads anything. That command does not survive the boot "
                     "which follows, so the run would burn its entire timeout "
                     "and then report a missing Unity summary, which reads as a "
-                    "firmware fault rather than this. Either run it from a "
-                    "terminal, where the runner stops and an operator confirms "
-                    "the boot, or pass --confirm-reset when the boot is already "
-                    "arranged. The console harness, and any pytest suite that "
-                    "reads before it writes, need neither."
+                    "firmware fault rather than this. Either set "
+                    "harness_config.autorun, so the firmware reports by itself "
+                    "and there is no command to lose, or run it from a terminal "
+                    "where the runner stops and an operator confirms the boot, "
+                    "or pass --confirm-reset when the boot is already arranged. "
+                    "The console harness, and any pytest suite that reads "
+                    "before it writes, need neither."
                 )
 
             console = self.client.console_for(testbed_id)

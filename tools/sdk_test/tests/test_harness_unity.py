@@ -305,5 +305,142 @@ class TestRecordIsRejected(SdkTestCase):
         unity.require_record_free({"suite": "lz4"})
 
 
+#: What an auto-running firmware prints, in the shape the board produced it:
+#: every suite in one session, so a single summary covers all of them, and each
+#: case line carries its suite in the ``file`` field -- the runner calls
+#: ``UnitySetTestFile(tc->suite)``, which is what lets a test case claim its own
+#: slice of one transcript without any extra bookkeeping.
+AUTORUN_TRANSCRIPT = """\
+SiFli SDK unit tests (Unity)
+  unity_run [suite|case|suite.case]
+circular_buf:1:fill_and_drain:PASS
+cjson:2:parse_and_read:PASS
+cjson:129:malformed:FAIL:Expected 1 Was 2
+lz4:4:roundtrip:PASS
+
+-----------------------
+4 Tests 1 Failures 0 Ignored
+FAIL
+unity: 4 case(s) selected, 1 failure(s)
+msh />
+"""
+
+
+class TestAutorun(SdkTestCase):
+    """``autorun``: the firmware reports by itself, so the host only reads.
+
+    Nothing is sent, and nothing is discarded -- the boot log *is* the result,
+    so throwing it away as the command path must would discard the measurement.
+    """
+
+    def test_nothing_is_written_and_the_boot_log_is_not_discarded(self):
+        console = FakeConsole(boot=["banner\n", AUTORUN_TRANSCRIPT])
+        outcome = unity.run(an_instance(autorun=True), console, timeout=5.0, poll=0.01)
+
+        self.assertEqual(console.written, [])
+        self.assertFalse(outcome.passed, "the transcript contains a failure")
+        self.assertIn("malformed", outcome.detail)
+        self.assertEqual(len(outcome.cases), 4)
+
+    def test_the_command_path_is_unchanged_when_autorun_is_off(self):
+        console = FakeConsole(
+            boot=["msh />"], reply=["2 Tests 0 Failures 0 Ignored\nOK\n"]
+        )
+        outcome = unity.run(an_instance(), console, timeout=5.0, poll=0.01)
+
+        self.assertTrue(outcome.passed, outcome.detail)
+        self.assertEqual(console.written, ["unity_run\r\n"])
+
+
+class TestAutorunPerSuite(SdkTestCase):
+    """One transcript holds every suite, so a test case owns its own slice."""
+
+    def test_a_passing_suite_passes_although_another_suite_failed(self):
+        console = FakeConsole(boot=[AUTORUN_TRANSCRIPT])
+        outcome = unity.run(
+            an_instance(autorun=True, suite="lz4"), console, timeout=5.0, poll=0.01
+        )
+
+        self.assertTrue(outcome.passed, outcome.detail)
+        self.assertEqual([case.name for case in outcome.cases], ["roundtrip"])
+
+    def test_a_failing_suite_fails_and_names_only_its_own_cases(self):
+        console = FakeConsole(boot=[AUTORUN_TRANSCRIPT])
+        outcome = unity.run(
+            an_instance(autorun=True, suite="cjson"), console, timeout=5.0, poll=0.01
+        )
+
+        self.assertFalse(outcome.passed)
+        self.assertIn("malformed", outcome.detail)
+        self.assertEqual(
+            [case.name for case in outcome.cases], ["parse_and_read", "malformed"]
+        )
+
+    def test_a_suite_that_never_ran_is_a_failure_not_a_pass(self):
+        # The dangerous one. The firmware printed OK, so handing that to a suite
+        # which contributed nothing would be a green light proving nothing.
+        console = FakeConsole(boot=[AUTORUN_TRANSCRIPT])
+        outcome = unity.run(
+            an_instance(autorun=True, suite="hal_mock"), console, timeout=5.0, poll=0.01
+        )
+
+        self.assertFalse(outcome.passed)
+        self.assertIn("did not reach it", outcome.detail)
+        # And it names what the transcript did hold, so the claim is checkable.
+        self.assertIn("lz4", outcome.detail)
+        self.assertEqual(outcome.cases, [])
+
+    def test_a_transcript_that_never_finished_is_reported_as_such(self):
+        console = FakeConsole(boot=["lz4:1:roundtrip:PASS\n"])
+        outcome = unity.run(
+            an_instance(autorun=True, suite="lz4"), console, timeout=0.05, poll=0.001
+        )
+
+        self.assertFalse(outcome.passed)
+        self.assertIn("no Unity summary line found", outcome.detail)
+
+
+class TestAutorunIsUnityOnly(SdkTestCase):
+    """A key another harness never reads is refused, not ignored.
+
+    ``unity`` already refuses ``record`` from the other side; this is the same
+    rule in the same direction. The console and pytest harnesses are exercised
+    here because the instance and console helpers live in this file.
+    """
+
+    def test_the_rule_refuses_the_key_and_names_its_owner(self):
+        from sdk_test.harness import reject_foreign_keys
+
+        with self.assertRaises(HarnessError) as caught:
+            reject_foreign_keys("console", {"autorun": True})
+        self.assertIn("autorun", str(caught.exception))
+        self.assertIn('"unity"', str(caught.exception))
+
+    def test_an_absent_key_is_fine(self):
+        from sdk_test.harness import reject_foreign_keys
+
+        reject_foreign_keys("console", {})
+        reject_foreign_keys("console", {"record": ["hello"]})
+
+    def test_the_console_harness_refuses_it_before_reading_anything(self):
+        from sdk_test.harness import console as console_harness
+
+        console = FakeConsole(boot=["never read"])
+        with self.assertRaises(HarnessError) as caught:
+            console_harness.run(an_instance(autorun=True), console, timeout=0.01)
+
+        self.assertIn("autorun", str(caught.exception))
+        self.assertEqual(console.reads, 0)
+
+    def test_the_pytest_harness_refuses_it_too(self):
+        from sdk_test.harness import pytest as pytest_harness
+
+        console = FakeConsole()
+        with self.assertRaises(HarnessError) as caught:
+            pytest_harness.run(an_instance(autorun=True), console, timeout=0.01)
+
+        self.assertIn("autorun", str(caught.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
