@@ -454,6 +454,19 @@ def _case_identifier(case: CaseResult) -> str:
     return case.name
 
 
+def _case_label(case: "CaseResult") -> str:
+    """A case on one line: its qualified name and the line that decided it.
+
+    The suite belongs in the name because a Unity case name repeats across
+    suites, and repeating it in the parentheses as well would say the same thing
+    twice. What is left there is the line, and for a failure that is the
+    assertion's own -- Unity prints ``__LINE__``, not the line the case was
+    declared on.
+    """
+    name = _case_identifier(case)
+    return f"{name} ({case.line})" if case.line else name
+
+
 def dict_to_xml(
     data: Dict[str, Any],
     *,
@@ -795,10 +808,9 @@ def format_summary(summary: RunSummary, inline_logs: bool = False) -> str:
             for case in result.cases:
                 if case.status not in (FAILED, ERROR):
                     continue
-                where = f" ({case.location})" if case.location else ""
                 detail = f": {case.message}" if case.message else ""
                 lines.append(
-                    f"        {_marker(case.status):5} {case.name}{where}{detail}"
+                    f"        {_marker(case.status):5} {_case_label(case)}{detail}"
                 )
 
             if inline_logs and result.log:

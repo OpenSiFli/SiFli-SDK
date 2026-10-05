@@ -481,24 +481,67 @@ class TestFormatSummary(SdkTestCase):
                 report.FAILED,
                 message="2 of 3 Unity test(s) failed",
                 cases=[
-                    report.CaseResult("test_roundtrip", report.PASSED),
+                    report.CaseResult("test_roundtrip", report.PASSED, file="lz4"),
                     report.CaseResult(
                         "test_bounds",
                         report.FAILED,
                         message="expected -1, got 1024",
-                        file="test/test_lz4.c",
+                        file="lz4",
                         line=58,
                     ),
-                    report.CaseResult("test_slow_path", report.SKIPPED),
+                    report.CaseResult("test_slow_path", report.SKIPPED, file="lz4"),
                 ],
             )
         )
 
         text = report.format_summary(summary)
-        self.assertIn("FAIL  test_bounds (test/test_lz4.c:58): expected -1, got 1024", text)
+        self.assertIn("FAIL  lz4.test_bounds (58): expected -1, got 1024", text)
         # A passing or skipped case is not worth a line on a failure list.
         self.assertNotIn("test_roundtrip", text)
         self.assertNotIn("test_slow_path", text)
+
+
+class TestTheTerminalCaseLine(SdkTestCase):
+    """The line a human reads names the suite, and the assertion that decided it.
+
+    The XML has said ``lz4.boundaries`` since a case name stopped being unique
+    inside one instance; the terminal still said ``boundaries (lz4:129)``, which
+    buries the suite where the assertion line goes and so reads as if the bare
+    name were enough.
+    """
+
+    def test_a_case_line_carries_its_suite_and_the_failing_line(self):
+        summary = report.RunSummary(started_at=0.0)
+        summary.add(
+            report.TestResult(
+                "unit_test.board",
+                report.FAILED,
+                cases=[
+                    report.CaseResult(
+                        "boundaries",
+                        report.FAILED,
+                        message="Expected 1024 to be less than 0",
+                        file="lz4",
+                        line=129,
+                    )
+                ],
+            )
+        )
+        text = report.format_summary(summary)
+
+        self.assertIn("lz4.boundaries (129)", text)
+        self.assertNotIn("(lz4:129)", text)
+
+    def test_a_case_with_no_suite_is_still_labelled(self):
+        summary = report.RunSummary(started_at=0.0)
+        summary.add(
+            report.TestResult(
+                "unit_test.board",
+                report.FAILED,
+                cases=[report.CaseResult("solo", report.FAILED, line=7)],
+            )
+        )
+        self.assertIn("solo (7)", report.format_summary(summary))
 
 
 if __name__ == "__main__":
