@@ -1,54 +1,34 @@
 # Device-side unit tests, parsed from Unity's own output.
 #
-# Unity runs on the target and prints its own verdict; the host only sends
-# "unity_run <suite>" over the serial port and reads what comes back. One
-# entry per suite, because that is the filter unit the on-device runner
-# matches on (middleware/test_fwk/include/sifli_unity.h) -- all three entries
-# are served by the same binary built from this directory.
+# The firmware runs every registered suite once at boot (TEST_FWK_AUTORUN, set
+# in project/proj.conf) and the host reads that transcript. One entry per
+# carrier, not per suite: which suites the image holds is a build fact, and
+# src/SConscript already writes it to unity_suites_gen.json. Listing them again
+# here would be one fact in two places, which is how the two come to disagree --
+# so they come back out of the transcript instead, every result line tagged with
+# the suite the runner gave it.
 #
 # The suites cover pure-logic modules only, so they need no peripheral and no
 # stubbing, and run on any board.
 tests:
-  # The same binary, two carriers. This is the point of the backend split: the
+  # The same image, two carriers. This is the point of the backend split: the
   # QEMU entry differs only in naming its platform directly, and needs no
   # hardware, no Lab Agent and no binding file.
-  - id: unit_test.cjson_qemu
-    description: cJSON suite under QEMU -- the same cases as on a board, with no board.
+  - id: unit_test.qemu
+    description: The unit suites under QEMU -- the same cases as on a board, with no board.
     harness: unity
     type: unit
     tags: [unit, qemu]
     timeout: 120
     integration_platforms: [qemu_cortex_m33]
     harness_config:
-      cmd: unity_run
-      suite: cjson
+      autorun: true
 
-  - id: unit_test.lz4
-    description: LZ4 block round trip, incompressible input, and size boundaries.
+  - id: unit_test.board
+    description: The unit suites on a board from the lab.
     harness: unity
     type: unit
     tags: [unit]
     timeout: 120
     harness_config:
-      cmd: unity_run
-      suite: lz4
-
-  - id: unit_test.cjson
-    description: cJSON parse and value read-back, malformed input, and lookups past the edges.
-    harness: unity
-    type: unit
-    tags: [unit]
-    timeout: 120
-    harness_config:
-      cmd: unity_run
-      suite: cjson
-
-  - id: unit_test.circular_buf
-    description: Ring buffer fill/drain, wraparound, and the full/empty boundaries.
-    harness: unity
-    type: unit
-    tags: [unit]
-    timeout: 120
-    harness_config:
-      cmd: unity_run
-      suite: circular_buf
+      autorun: true
