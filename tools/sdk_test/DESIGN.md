@@ -231,7 +231,7 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | harness | 板上有没有测试代码 | 宿主怎么判 | MVP |
 |---|---|---|---|
 | `console` | 没有 | 正则匹配串口输出；`harness_config.record` 支持 twister 的 `type: one_line\|multi_line`、`ordered`、`repeat`、`separator` | ✅ |
-| `unity` | 有（Unity） | **固件上电自己把每个 suite 跑一遍**（`TEST_FWK_AUTORUN`），宿主只读串口；一份转录含全部 suite，按 `<suite>:<line>:<case>:PASS\|FAIL` 里的 suite 名归属，写了 `suite` 的用例只看自己那几条 | ✅ |
+| `unity` | 有（Unity） | **固件上电自己把每个 suite 跑一遍**（`TEST_FWK_AUTORUN`），宿主只读串口；一份转录含全部 suite，按 `<file>:<line>:<suite.case>:PASS\|FAIL` 里 case 名前那段 suite 名归属，写了 `suite` 的用例只看自己那几条 | ✅ |
 | `shell` | 没有 | 按序下发 `{command, regex, ordered, repeat}` 到 msh | 设计 |
 | `pytest` | 可选 | 用例目录自带 `test_*.py`，拿 `dut` fixture 自由编排（多设备/外部仪器）；解析 Unity 时用 `dut.expect_unity_test_output()` | 设计 |
 

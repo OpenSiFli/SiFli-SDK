@@ -438,7 +438,7 @@ tests:
       suite: lz4          # 可省。写了就只认领 lz4 的结果
 ```
 
-宿主按结果行 `<suite>:<line>:<case>:PASS|FAIL` 里那段 suite 名分派。不写 `suite`
+宿主按结果行 `<file>:<line>:<suite.case>:PASS|FAIL` 里 case 名前那段 suite 名分派。不写 `suite`
 的用例对整份转录负责——**一个工程一条用例时就是这么写的**（真板例子见下）。
 
 两条要记住的：
@@ -528,13 +528,14 @@ sdk.py test run  -T example/test/unit_test -t unit_test.board `
 
 ```
 [FAIL ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)  at run
-        1 of 9 Unity test(s) failed: boundaries
-        FAIL  boundaries (lz4:129): Expected 1024 to be less than 0
+        1 of 9 Unity test(s) failed: lz4.boundaries
+        FAIL  lz4.boundaries (test_lz4.c:129): Expected 1024 to be less than 0
 ```
 
 报告里每条 case 的标识是 **`suite.case`**（例如 `lz4.boundaries`）：case 名在 suite
 之间会重复（cjson 和 lz4 都有 `boundaries`），不带 suite 就没法区分——这也正是
-`unity_run` 接受的过滤语法。
+`unity_run` 接受的过滤语法。括号里是真实源文件和断言触发的那一行，读起来就是
+一个 `file:line` 位置。
 
 ### `pytest` —— 用例目录自带 Python，需要控制流时用它
 

@@ -449,9 +449,9 @@ declare **who** it is:
       suite: lz4          # optional. Write it and you claim only lz4's results
 ```
 
-The host dispatches by the suite name in the result line `<suite>:<line>:<case>:PASS|FAIL`. A test case that
-does not write `suite` is responsible for the whole transcript — **which is how it is written when a project
-has one test case** (see the real-hardware example below).
+The host dispatches by the suite name in the result line `<file>:<line>:<suite.case>:PASS|FAIL`. A test case
+that does not write `suite` is responsible for the whole transcript — **which is how it is written when a
+project has one test case** (see the real-hardware example below).
 
 Two things to remember:
 
@@ -547,13 +547,14 @@ On failure the terminal gives you **which sub-case** went red directly, with no 
 
 ```
 [FAIL ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)  at run
-        1 of 9 Unity test(s) failed: boundaries
-        FAIL  boundaries (lz4:129): Expected 1024 to be less than 0
+        1 of 9 Unity test(s) failed: lz4.boundaries
+        FAIL  lz4.boundaries (test_lz4.c:129): Expected 1024 to be less than 0
 ```
 
 In the report each case is identified as **`suite.case`** (for example `lz4.boundaries`): case names repeat
 across suites (cjson and lz4 both have `boundaries`), and without the suite there is no telling them apart
-— which is also exactly the filter syntax `unity_run` accepts.
+— which is also exactly the filter syntax `unity_run` accepts. The parentheses hold the real source file
+and the line the assertion tripped on, so a failure reads as a plain `file:line` location.
 
 ### `pytest` — the test case directory brings its own Python; use it when you need control flow
 
