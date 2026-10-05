@@ -3,14 +3,15 @@
 """Lab Agent runner configuration.
 
 A runner config describes *one machine*: which testbeds are plugged into it and
-where its server listens. It is parsed by the same code as the SDK-side binding
-file (:func:`sdk_test.binding.parse_binding`), because the two describe the same
-objects and a second schema would only be a chance for them to disagree.
+where its server listens. It is the same schema as a binding (hardware map),
+parsed by the same code (:func:`sdk_test.binding.parse_binding`); the two
+describe the same objects, and a second schema would only be a chance for them
+to disagree.
 
 The runner file adds an optional ``runner:`` block for machine-wide settings; a
-testbed entry may additionally carry ``jlink:`` and ``flash:`` blocks, which the
-SDK side ignores (it has no business knowing about probes) and this file reads
-through :meth:`sdk_test.model.TestBed.runner_option`.
+testbed entry may additionally carry ``jlink:`` and ``flash:`` blocks, which this
+file reads through :meth:`sdk_test.model.TestBed.runner_option`. The Lab Agent
+reads all of it; the SDK side reads none of it.
 """
 
 from __future__ import annotations

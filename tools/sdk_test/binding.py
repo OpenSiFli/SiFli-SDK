@@ -5,7 +5,8 @@
 This is the only file format in the framework that mentions physical reality:
 ports, debugger ids, pinmaps and mux channels. The design doc puts it under the
 hardware team's ownership and keeps it *out* of test cases entirely, so that a
-test only ever states what it needs.
+test only ever states what it needs. The Lab Agent is its only reader in
+production: the SDK side plans (instance, platform) pairs and never loads one.
 
 What it does *not* state is what a board can do. That is the board's own
 declaration, in ``customer/boards/<board>/<core>/features.yaml``, read by

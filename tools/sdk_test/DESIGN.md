@@ -21,7 +21,7 @@
 
 ## 交付状态（as-built，本文其余部分为设计意图）
 
-> **本次提交的范围**：测试框架本身（发现 / binding / 能力匹配 / 编排 / 三种 harness /
+> **本次提交的范围**：测试框架本身（发现 / 能力匹配 / 编排 / 三种 harness /
 > 后端 / 日志与报告）+ Lab Agent + 板上 Unity 运行时 + 用例注册表生成器。
 >
 > **不在内的**，各见另一批：
@@ -40,7 +40,7 @@
 
 | 部分 | 状态 |
 |---|---|
-| SDK 侧 `tools/sdk_test/`：发现 / binding / 能力匹配 / 编排 / 报告上报 | ✅ 完成，**350 个自测全绿** |
+| SDK 侧 `tools/sdk_test/`：发现 / 能力匹配 / 编排 / 报告上报 | ✅ 完成，**350 个自测全绿** |
 | Lab Agent `tools/lab_agent/`：独占占用 / 串口 / 探针 / 烧录 | ✅ 完成，**105 个自测全绿**，不需要硬件 |
 | `sdk.py test` 入口（list / plan / run / info） | ✅ 完成 |
 | harness `console` / `unity` / `pytest` | ✅ 完成（`pytest` 由设计态提前到本期） |
@@ -113,8 +113,8 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 +-- SDK 侧 tools/sdk_test/（不绑定硬件） ------------------------------------------------+
 |                                                                                        |
 | example/**/testcase.yaml -> discovery -> TestInstance[] -> ①平台过滤 <- features.yaml  |
-| 用例只声明要什么              schema 校验     id=路径+tests 键   ②testbed 匹配 <- binding.yaml |
-|                                                                   （硬件团队维护）     |
+| 用例只声明要什么              schema 校验     id=路径+tests 键  ②申请硬件 -> Lab Agent |
+|                                                            （binding 在 agent 侧）     |
 |                               |                                                        |
 |                               v                                                        |
 | runner.py 编排                                                                         |
@@ -163,7 +163,7 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | 这条用例能不能跑在这块**平台**上 | `customer/boards/<board>/<core>/features.yaml`（板子声明它有哪些总线实例） | `depends_on:` |
 | 这块平台上**哪块板、怎么接的线** | binding（硬件团队维护） | `harness_config.fixture:` |
 
-阶段一（平台过滤）不读 binding，阶段二（testbed 匹配）不读 features——所以
+阶段一（平台过滤）在 SDK 侧、不读 binding，阶段二（testbed 匹配）在 agent 侧、不读 features——所以
 "有 flash 接在 spi1，但板子没声明 spi" 这类矛盾不会再静默存在：两处一旦
 同时在手就会报出来（`fixtures.wiring_problems`）。
 
@@ -441,7 +441,7 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 ## MVP 交付边界（原计划只做 Tier A；实际多做了 QEMU 与 pytest harness）
 
 **做**：
-- `tools/sdk_test/`：discovery + binding + 能力匹配 + 两种 harness（console/unity）+ pytest 插件 + 日志与报告（每实例 / run 级 / JSON / JUnit）+ 框架自身单测。
+- `tools/sdk_test/`：discovery + 能力匹配 + 两种 harness（console/unity）+ pytest 插件 + 日志与报告（每实例 / run 级 / JSON / JUnit）+ 框架自身单测。
 - `tools/lab_agent/`：单机 runner（serial expect + J-Link 复位 + sftool 烧录 + testbed 互斥占用）。
 - `external/unity` + `middleware/test_fwk`（unity_config + sifli_unity_runner + SConscript/Kconfig）。
 - 两个测试工程 + 示例 binding/runner 配置 + 一份文档。

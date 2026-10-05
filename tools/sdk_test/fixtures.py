@@ -8,11 +8,11 @@ they are exactly equivalent). A test therefore never names a board or a port,
 only the capabilities it needs.
 
 This is the second of the two questions a test plan asks -- *which* board of the
-platform, wired how -- and it is the lab's question, answered from the binding
-file. The first question, whether the platform can host the test at all, is
-answered from the board's own declaration and lives in
-:mod:`sdk_test.platforms`; nothing here consults it, and nothing there consults a
-binding.
+platform, wired how -- and it is the lab's question, answered by the Lab Agent
+from its own binding at the moment hardware is requested. The first question,
+whether the platform can host the test at all, is answered from the board's own
+declaration and lives in :mod:`sdk_test.platforms`; nothing here consults it, and
+nothing there consults a binding.
 
 One consequence is worth stating: a binding file says what is wired to a board,
 and the board says what it has. Where the two contradict each other --
@@ -91,9 +91,10 @@ def select_testbeds(
 ) -> List[TestBed]:
     """Return every testbed able to host ``instance``.
 
-    Order is the binding file's order, which keeps allocation deterministic and
-    therefore reproducible. An empty result is not an error here; the caller
-    decides whether that is fatal (see :func:`explain_no_match`).
+    The Lab Agent calls this when it allocates. Order is the binding file's
+    order, which keeps allocation deterministic and therefore reproducible. An
+    empty result is not an error here; the caller decides whether that is fatal
+    (see :func:`explain_no_match`).
     """
     selected: List[TestBed] = []
     for testbed in testbeds:

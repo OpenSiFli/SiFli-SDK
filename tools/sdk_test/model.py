@@ -92,12 +92,12 @@ class TestBed:
     connections: List[Connection] = field(default_factory=list)
     muxes: List[Mux] = field(default_factory=list)
     raw: Dict[str, Any] = field(default_factory=dict)
-    """Keys of the binding entry that the SDK side does not interpret.
+    """Keys of the binding entry that parsing leaves untouched.
 
-    The binding file is shared with the Lab Agent, which owns hardware details
-    the SDK side has no business knowing (which J-Link probe, which flash
-    transport). Preserving them here keeps one file format for both sides
-    instead of two schemas that can drift apart.
+    The binding file belongs to the Lab Agent, which owns the hardware details
+    kept here (which J-Link probe, which flash transport). Preserving them keeps
+    one file format for the binding and for the agent's runner config, instead of
+    two schemas that can drift apart.
     """
 
     @property
