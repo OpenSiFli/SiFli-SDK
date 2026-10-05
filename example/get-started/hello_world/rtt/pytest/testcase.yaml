@@ -16,7 +16,6 @@ tests:
   - id: hello_world.pytest
     description: Drive the hello_world shell from Python and assert on the replies.
     harness: pytest
-    type: functional
     tags: [pytest]
     # Generous: this covers the build, the flash, the reset and the boot.
     timeout: 180

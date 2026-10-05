@@ -113,15 +113,6 @@ class TestBed:
 
 
 @dataclass
-class DutSpec:
-    """One extra DUT a multi-device test needs (design-stage, see plan)."""
-
-    platform_allow: List[str] = field(default_factory=list)
-    fixtures: List[FixtureRef] = field(default_factory=list)
-    raw: Dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class TestInstance:
     """One ``tests:`` entry, resolved to a runnable identity."""
 
@@ -139,20 +130,14 @@ class TestInstance:
     integration_platforms: List[str] = field(default_factory=list)
     depends_on: List[str] = field(default_factory=list)
     extra_args: List[str] = field(default_factory=list)
-    min_flash: Optional[int] = None
-    min_ram: Optional[int] = None
-    slow: bool = False
     build_only: bool = False
     skip: bool = False
-    type: Optional[str] = None
     platform: Optional[str] = None
     #: Directory holding the SConstruct to build, relative to the testcase file.
     #: When unset, :mod:`sdk_test.runner` falls back to the convention that the
     #: project is the testcase directory or its ``project`` subdirectory.
     project_dir: Optional[str] = None
     fixtures: List[FixtureRef] = field(default_factory=list)
-    dut: List[DutSpec] = field(default_factory=list)
-    dut_client: List[DutSpec] = field(default_factory=list)
 
     def allows_platform(self, platform: str) -> bool:
         """Platform gating: explicit allow/exclude lists win over everything."""

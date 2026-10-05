@@ -25,7 +25,7 @@ from typing import Sequence
 
 from .errors import DiscoveryError
 from .fixtures import instance_fixtures_from_config
-from .model import DutSpec
+from .model import TestBed
 from .model import TestInstance
 
 TESTCASE_FILENAMES = ("testcase.yaml", "testcase.yml")
@@ -87,27 +87,6 @@ def _validate(raw: Any, path: str) -> None:
     raise DiscoveryError("\n".join(lines))
 
 
-def _parse_dut_specs(value: Any, field: str) -> List[DutSpec]:
-    if value is None:
-        return []
-    if not isinstance(value, list):
-        raise DiscoveryError(f'Field "{field}" must be a list of DUT specifications')
-
-    specs: List[DutSpec] = []
-    for index, item in enumerate(value):
-        if not isinstance(item, dict):
-            raise DiscoveryError(f'Field "{field}[{index}]" must be a mapping')
-        allow = _as_list(item.get("platform_allow"), f"{field}[{index}].platform_allow")
-        specs.append(
-            DutSpec(
-                platform_allow=allow,
-                fixtures=instance_fixtures_from_config(item),
-                raw=dict(item),
-            )
-        )
-    return specs
-
-
 def _build_instance(
     entry: Dict[str, Any],
     tests_key: str,
@@ -138,16 +117,10 @@ def _build_instance(
         ),
         depends_on=_as_list(entry.get("depends_on"), "depends_on"),
         extra_args=_as_list(entry.get("extra_args"), "extra_args"),
-        min_flash=entry.get("min_flash"),
-        min_ram=entry.get("min_ram"),
-        slow=bool(entry.get("slow", False)),
         build_only=bool(entry.get("build_only", False)),
         skip=bool(entry.get("skip", False)),
-        type=entry.get("type"),
         project_dir=entry.get("project_dir"),
         fixtures=instance_fixtures_from_config(harness_config),
-        dut=_parse_dut_specs(entry.get("dut"), "dut"),
-        dut_client=_parse_dut_specs(entry.get("dut_client"), "dut_client"),
     )
     return instance
 

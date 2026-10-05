@@ -28,7 +28,6 @@ tests:
   - id: hello_world.noos
     description: The bare-metal example's greeting -- the only line it prints.
     harness: console
-    type: functional
     tags: [smoke]
     timeout: 60
     harness_config:

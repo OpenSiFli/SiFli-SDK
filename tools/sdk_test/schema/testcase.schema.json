@@ -56,15 +56,6 @@
         { "type": "array", "minItems": 1 }
       ]
     },
-    "dutSpec": {
-      "description": "One DUT beyond the primary one; see the multi-device design section.",
-      "type": "object",
-      "additionalProperties": true,
-      "properties": {
-        "platform_allow": { "$ref": "#/$defs/stringList" },
-        "fixture": { "$ref": "#/$defs/fixtureRef" }
-      }
-    },
     "recordEntry": {
       "description": "A console expectation. A bare string is shorthand for {regex: <string>}.",
       "oneOf": [
@@ -111,9 +102,7 @@
           "type": "string"
         },
         "pytest_root": { "type": "string" },
-        "pytest_args": { "$ref": "#/$defs/stringList" },
-        "dut_fixture": { "type": "string" },
-        "pytest_dut_client": { "type": "boolean" }
+        "pytest_args": { "$ref": "#/$defs/stringList" }
       }
     },
     "testEntry": {
@@ -123,7 +112,6 @@
         "id": { "type": "string", "minLength": 1 },
         "description": { "type": "string" },
         "tags": { "$ref": "#/$defs/stringList" },
-        "type": { "type": "string", "enum": ["unit", "integration", "functional"] },
         "harness": { "type": "string", "enum": ["console", "unity", "shell", "pytest"] },
         "harness_config": { "$ref": "#/$defs/harnessConfig" },
         "timeout": { "type": "integer", "minimum": 1 },
@@ -132,17 +120,12 @@
         "integration_platforms": { "$ref": "#/$defs/stringList" },
         "depends_on": { "$ref": "#/$defs/stringList" },
         "extra_args": { "$ref": "#/$defs/stringList" },
-        "min_flash": { "type": "integer", "minimum": 0 },
-        "min_ram": { "type": "integer", "minimum": 0 },
-        "slow": { "type": "boolean" },
         "build_only": { "type": "boolean" },
         "skip": { "type": "boolean" },
         "project_dir": {
           "description": "Directory containing the SConstruct to build, relative to the testcase file. Defaults to the testcase directory, or its `project` subdirectory.",
           "type": "string"
-        },
-        "dut": { "type": "array", "items": { "$ref": "#/$defs/dutSpec" } },
-        "dut_client": { "type": "array", "items": { "$ref": "#/$defs/dutSpec" } }
+        }
       }
     },
     "testEntryWithId": {

@@ -9,7 +9,6 @@ tests:
   - id: hello_world.console
     description: Boot banner, the example's greeting, and the msh prompt.
     harness: console
-    type: functional
     tags: [smoke]
     timeout: 60
     harness_config:

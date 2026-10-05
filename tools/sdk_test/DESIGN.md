@@ -231,22 +231,35 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | harness | 板上有没有测试代码 | 宿主怎么判 | MVP |
 |---|---|---|---|
 | `console` | 没有 | 正则匹配串口输出；`harness_config.record` 支持 twister 的 `type: one_line\|multi_line`、`ordered`、`repeat`、`separator` | ✅ |
-| `unity` | 有（Unity） | **先等 shell 提示符**，再发 `unity_run`，解析 Unity 汇总（`N Tests M Failures K Ignored` + `OK`/`FAIL`），并逐条映射 `test_<suite>_<case>:PASS` | ✅ |
+| `unity` | 有（Unity） | **固件上电自己把每个 suite 跑一遍**（`TEST_FWK_AUTORUN`），宿主只读串口；一份转录含全部 suite，按 `<suite>:<line>:<case>:PASS\|FAIL` 里的 suite 名归属，写了 `suite` 的用例只看自己那几条 | ✅ |
 | `shell` | 没有 | 按序下发 `{command, regex, ordered, repeat}` 到 msh | 设计 |
 | `pytest` | 可选 | 用例目录自带 `test_*.py`，拿 `dut` fixture 自由编排（多设备/外部仪器）；解析 Unity 时用 `dut.expect_unity_test_output()` | 设计 |
 
-`harness_config` 键名沿用 twister：`fixture`、`record`、`pytest_root`、`pytest_args`、`dut_fixture`、`pytest_dut_client`；`unity` 另有 `prompt`（默认 `msh />`）。
+`harness_config` 键名沿用 twister：`fixture`、`record`、`pytest_root`、`pytest_args`、`dut_fixture`、`pytest_dut_client`；`unity` 另有 `prompt`（默认 `msh />`）、`cmd`、`suite`、`autorun`。
 
-**unity 为什么要先等提示符。** `unity_run` 是一条 msh 命令，发早了 shell 还不存在，
-命令就丢了——症状是耗完超时后报 `no Unity summary line found`，**看起来像固件坏了**。
-在没有探针的板子上这是常态而非例外：console 是在下载刚写完、板子还没开始启动时打开的。
+**unity 为什么不让宿主发命令。** 发命令必须落在正确时刻，而**没有可靠的时刻**：
+`unity_run` 只在 shell 起来之后才有效，可没有任何东西能可靠地宣告那一刻——启动
+banner 由 main 线程打印，且**早于**提示符（提示符是优先级更低的 tshell 线程在 main
+阻塞之后才打的）；提示符的文本还跟着构建设置走（它是 `"msh " + cwd + ">"`，只有开
+`RT_USING_DFS && DFS_USING_WORKDIR` 时才恰好是 `msh />`，否则是 `msh >`）。命令发早
+了就丢，而症状是耗完超时后报 `no Unity summary line found`——**它指向固件，不指向
+时机**。
 
-**为什么不是"等串口安静"**（试过，不行）：板子还没开始启动时也是安静的，于是"静默"
-被当成了"已经说完"，命令照样发丢。**需要的是正向信号，不是没有信号。**
-等提示符也不算额外假设——`unity_run` 本身就是 msh 命令。
+能控制复位也不解决问题：探针只保证"板子会启动"，不保证"shell 起来了"。
 
-等不到提示符**不算失败**，命令照发、由原有检查判：否则就是凭一个新启发式造出一种
-新的失败，把提示符不同的固件误判成坏的。
+所以默认路径是**固件自己跑**（`TEST_FWK_AUTORUN`；`sifli_unity_autorun()` 在 `main()`
+里调一次，跑完仍落回循环，shell 照常可用）。决定由固件做，宿主只读，时机问题从根上
+消失。把它关掉就回到发命令那条路。
+
+**发命令那条路为什么先等提示符**：`unity_run` 是一条 msh 命令，发早了 shell 还不
+存在。**不是"等串口安静"**（试过，不行）：板子还没开始启动时也是安静的，"静默"被
+当成了"已经说完"，命令照样发丢——**需要的是正向信号，不是没有信号**。等提示符不算
+额外假设，因为 `unity_run` 本身就是 msh 命令。等不到提示符**不算失败**，命令照发、
+由原有检查判；否则就是凭一个新启发式造出一种新的失败，把提示符不同的固件误判成坏的。
+
+**`autorun` 下"自己那几条没出现"要判失败**：一份转录只有一行汇总（一把
+`UnityBegin`/`UnityEnd` 包住整个循环），所以汇总属于固件而不属于任何单个 suite；
+把它交给一个什么都没跑的 suite，就是一个什么都证明不了的绿灯。
 
 ---
 
@@ -492,6 +505,22 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 - 载体用**带芯片身份的 QEMU 板**（`qemu_sf32lb52x` 等）。`pc_hcpu` 的路径疑点已排除，但后端仍是 stub。
 
 ---
+
+## TODO：删掉的字段原本要做什么
+
+2026-10 清掉了 `testcase.yaml` 里六个**被解析、但没有任何代码读**的字段。删而不是留，
+因为"schema 接受、写了却不生效"是个陷阱——跟更早删掉的 `default`、`capabilities`
+同一条理由。**它们原本的意图记在这里**，要做的时候照这个加回来：
+
+| 删掉的字段 | 原意 | 加回来时要注意 |
+|---|---|---|
+| `min_flash` / `min_ram` | twister 用它俩在构建后比对镜像大小，放不下就不调度 | 它需要**构建产物**的大小，所以只能放在构建**之后**——阶段一"构建前过滤"那条路够不着它 |
+| `slow` | twister 的 `--slow`：把慢用例排除在常规轮次之外 | 更自然的表达是加一个 `slow` **tag**（`tags` 已经能做筛选），不必再开一个字段 |
+| `type`（`unit`/`integration`/`functional`） | twister 按它分类筛选 | 分类已经有 `tags`，`type` 是第二个没人用的真相来源。真要加就先定清楚它和 `tags` 的分工 |
+| `dut` / `dut_client` | 多设备：一条用例需要第二块板（对端、仪器） | 设计见上面「需求 4」那节；**在那之前，多设备要走 `pytest` harness 自己编排** |
+| `harness_config.dut_fixture` / `pytest_dut_client` | 同上，pytest harness 侧的两个开关 | 与 `dut`/`dut_client` 一起实现 |
+
+指南第 5 节那张"现状"表指向这里。
 
 ## 风险与待确认
 

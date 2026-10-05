@@ -34,8 +34,6 @@ class TestAllowedKeys(SdkTestCase):
             "extra_args",
             "build_only",
             "skip",
-            "dut",
-            "dut_client",
         ):
             self.assertIn(expected, keys)
 
@@ -193,24 +191,6 @@ class TestFixtures(SdkTestCase):
     def test_no_fixtures_declared_yields_an_empty_list(self):
         self.write("unit/testcase.yaml", "tests:\n  - id: plain\n")
         self.assertEqual(discovery.discover(self.root)[0].fixtures, [])
-
-
-class TestDutSpecs(SdkTestCase):
-    def test_dut_entries_are_parsed(self):
-        self.write(
-            "multi/testcase.yaml",
-            """
-            tests:
-              - id: i2c_pair
-                dut:
-                  - platform_allow: sf32lb52-lcd_n16r8
-                    fixture: i2c_peer
-            """,
-        )
-        instance = discovery.discover(self.root)[0]
-        self.assertEqual(len(instance.dut), 1)
-        self.assertEqual(instance.dut[0].platform_allow, ["sf32lb52-lcd_n16r8"])
-        self.assertEqual([f.name for f in instance.dut[0].fixtures], ["i2c_peer"])
 
 
 class TestDiscoveryErrors(SdkTestCase):

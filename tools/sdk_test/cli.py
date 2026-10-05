@@ -76,7 +76,6 @@ def list_tests(
                         "integration_platforms": instance.integration_platforms,
                         "skip": instance.skip,
                         "build_only": instance.build_only,
-                        "type": instance.type,
                         "description": instance.description,
                     }
                     for instance in instances

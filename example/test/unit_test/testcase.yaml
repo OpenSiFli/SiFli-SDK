@@ -17,7 +17,6 @@ tests:
   - id: unit_test.qemu
     description: The unit suites under QEMU -- the same cases as on a board, with no board.
     harness: unity
-    type: unit
     tags: [unit, qemu]
     timeout: 120
     integration_platforms: [qemu_cortex_m33]
@@ -27,7 +26,6 @@ tests:
   - id: unit_test.board
     description: The unit suites on a board from the lab.
     harness: unity
-    type: unit
     tags: [unit]
     timeout: 120
     harness_config:
