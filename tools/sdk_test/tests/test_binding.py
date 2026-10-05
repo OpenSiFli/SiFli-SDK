@@ -29,53 +29,6 @@ MINIMAL = {
 }
 
 
-class TestLoadFromFile(SdkTestCase):
-    def test_a_binding_file_round_trips(self):
-        path = self.write(
-            "binding.local.yaml",
-            """
-            testbed:
-              - id: tb_01
-                platform: sf32lb52-lcd_n16r8
-                runner: local
-                console:
-                  port: COM13
-                  baud: 1000000
-                connections:
-                  - fixture: spi_nor_flash_py25q128:spi1
-                    pinmap:
-                      - {pin: PA00, signal: CS}
-            """,
-        )
-        testbeds = binding.load_binding(path)
-        self.assertEqual(len(testbeds), 1)
-        testbed = testbeds[0]
-        self.assertEqual(testbed.id, "tb_01")
-        self.assertEqual(testbed.platform, "sf32lb52-lcd_n16r8")
-        self.assertEqual(testbed.runner, "local")
-        self.assertEqual(testbed.console.port, "COM13")
-        self.assertEqual(testbed.console.baud, 1000000)
-        self.assertEqual([f.spec for f in testbed.fixtures], ["spi_nor_flash_py25q128:spi1"])
-        self.assertEqual(testbed.connections[0].pinmap, [{"pin": "PA00", "signal": "CS"}])
-
-    def test_a_missing_file_is_reported(self):
-        with self.assertRaises(BindingError) as caught:
-            binding.load_binding(self.root + "/nope.yaml")
-        self.assertIn("not found", str(caught.exception))
-
-    def test_malformed_yaml_is_reported(self):
-        path = self.write("binding.yaml", "testbed: [unclosed\n")
-        with self.assertRaises(BindingError) as caught:
-            binding.load_binding(path)
-        self.assertIn("malformed YAML", str(caught.exception))
-
-    def test_an_empty_file_is_reported(self):
-        path = self.write("binding.yaml", "\n")
-        with self.assertRaises(BindingError) as caught:
-            binding.load_binding(path)
-        self.assertIn("empty", str(caught.exception))
-
-
 class TestTopLevelShapes(SdkTestCase):
     def test_a_bare_list_is_accepted(self):
         testbeds = binding.parse_binding(list(MINIMAL["testbed"]))

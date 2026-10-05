@@ -40,7 +40,6 @@ what is wired to it. Two files stating the same fact is what let them disagree.
 
 from __future__ import annotations
 
-import os
 from typing import Any
 from typing import Dict
 from typing import List
@@ -176,27 +175,3 @@ def parse_binding(data: Any, source: str = "<memory>") -> List[TestBed]:
         seen.add(testbed.id)
 
     return testbeds
-
-
-def load_binding(path: str) -> List[TestBed]:
-    """Load and validate a binding file from disk."""
-    try:
-        import yaml
-    except ImportError as exc:  # pragma: no cover - pyyaml is a core requirement
-        raise BindingError("pyyaml is required to read binding files") from exc
-
-    if not os.path.isfile(path):
-        raise BindingError(f'Binding file not found: "{path}"')
-
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            data = yaml.safe_load(handle)
-    except OSError as exc:
-        raise BindingError(f"Cannot read {path}: {exc}") from exc
-    except yaml.YAMLError as exc:
-        raise BindingError(f"{path}: malformed YAML: {exc}") from exc
-
-    if data is None:
-        raise BindingError(f"{path}: file is empty")
-
-    return parse_binding(data, source=path)
