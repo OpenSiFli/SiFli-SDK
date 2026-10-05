@@ -98,6 +98,10 @@
           "description": "Device-side command the host sends to start the run (default depends on the harness).",
           "type": "string"
         },
+        "prompt": {
+          "description": "A readiness pattern the harness waits for on the console before sending `cmd`. The `unity` harness reads it, defaulting to \"msh />\".",
+          "type": "string"
+        },
         "suite": {
           "description": "Which test suite to ask the device for, if the harness supports selection.",
           "type": "string"

@@ -401,20 +401,30 @@ tests:
     timeout: 120
     harness_config:
       suite: lz4          # 可省；省了就是 unity_run（不带参数）
-      # cmd: unity_run    # 需要改命令名时才写
+
+      prompt: "msh />"    # 可省，默认 msh />。发命令前先在串口输出里等它出现；
+                          # 写自己的字符串是替换它，不是叠加
+      # cmd: unity_run    # 可省，默认 unity_run。等到之后要发出去的命令本身
 ```
 
-宿主**先等 shell 提示符出现**，再发 `unity_run <suite>`，然后解析 Unity 的输出契约：
-`<file>:<line>:<case>:PASS|FAIL`、`<n> Tests <n> Failures <n> Ignored`、`OK|FAIL`。
+两个字段的分工和先后：**`prompt` 回答什么时候可以发，`cmd` 回答发什么**。
 
-那个"先等提示符"是承重的，不是保险。在没有探针的板子上，console 是在
+`prompt` 是**替换**，不是叠加：写了自己的字符串，`msh />` 就不再被等——它不是
+"先等默认的、再等你写的"。要同时接受多个标志，用一个正则把它们或起来，例如
+`prompt: "msh />|READY"`，语义是"出现任意一个就放行"，也不是按先后。`cmd` 同理。
+
+宿主先在串口输出里等 `prompt` 匹配上，匹配到才把 `cmd` 写出去，再解析 Unity 的
+输出契约：`<file>:<line>:<case>:PASS|FAIL`、
+`<n> Tests <n> Failures <n> Ignored`、`OK|FAIL`。
+
+先等 `prompt` 再发，这一步是承重的，不是保险。在没有探针的板子上，console 是在
 **下载刚写完、板子还在启动**的时候就打开的；此时把命令发出去，板子根本收不到，
 而症状是耗完超时后报 `no Unity summary line found`——**看起来像固件坏了**。
 
-```yaml
-      prompt: "msh />"    # 可省。unity_run 本身就是一条 msh 命令，
-                          # 所以等 msh 提示符没有多做任何假设
-```
+两个默认值是配套的，不是各自随便取的：`cmd` 默认发 `unity_run`，而它是一条
+**msh 命令**，能被执行的前提就是 msh 已经在跑；所以 `prompt` 默认等 `msh />`，
+等的正是这个前提——**没有比发一条 msh 命令本身多假设任何东西**。换成裸机固件、
+或别的 shell，就把 `prompt` 改成固件自己打印的就绪标志。
 
 等不到提示符**不算失败**：命令照发，由原有的检查去判——否则就会凭一个新启发式
 造出一种新的失败，把提示符不同的固件误判成坏的。
@@ -724,8 +734,7 @@ console 刚打开、下载引发的启动还没到——"静默"被当成了"已
 提示符早就在缓冲里时（探针复位、QEMU）这一步立即通过，零代价。
 
 ```yaml
-      prompt: "msh />"    # 可省。unity_run 本身就是 msh 命令，
-                          # 等 msh 提示符没有多做任何假设
+      prompt: "msh />"    # 可省，默认 msh />。写了就只等它，不叠加
 ```
 
 等不到提示符**不算失败**：命令照发，由原有的检查去判——否则就会凭一个新启发式

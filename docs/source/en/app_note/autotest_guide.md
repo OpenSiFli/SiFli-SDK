@@ -408,21 +408,30 @@ To point elsewhere, write `project_dir` (relative to the testcase file):
     timeout: 120
     harness_config:
       suite: lz4          # optional; without it, unity_run with no arguments
-      # cmd: unity_run    # write this only when the command name needs changing
+
+      prompt: "msh />"    # optional; default msh />. Waiting for it is what gates
+                          # the send. Yours replaces it -- it does not add to it.
+      # cmd: unity_run    # optional; default unity_run. What gets sent.
 ```
 
-The host **first waits for the shell prompt to appear**, then sends `unity_run <suite>`,
-and then parses Unity's output contract:
+The two fields divide the work and fix the order: **`prompt` answers when it is safe to send, `cmd` answers
+what gets sent**. `prompt` **replaces** rather than adds: write your own pattern and `msh />` is no longer
+waited for — it is not "the default first, then yours". To accept several markers, alternate them in one
+regex, e.g. `prompt: "msh />|READY"`, which means "either one opens the gate" — again not one after the
+other. `cmd` replaces in the same way.
+
+The host waits for `prompt` to match on the console output, and only then writes `cmd` out; it then parses
+Unity's output contract:
 `<file>:<line>:<case>:PASS|FAIL`, `<n> Tests <n> Failures <n> Ignored`, `OK|FAIL`.
 
-That "wait for the prompt first" is load-bearing, not a safety net. On a board with no probe, the console is opened while
+Waiting for `prompt` before sending is load-bearing, not a safety net. On a board with no probe, the console is opened while
 **the download has just finished writing and the board is still booting**; sending the command out at that moment means the board never receives it,
 and the symptom is `no Unity summary line found` after the timeout is exhausted — **which looks like broken firmware**.
 
-```yaml
-      prompt: "msh />"    # optional. unity_run is itself an msh command,
-                          # so waiting for the msh prompt assumes nothing more
-```
+The two defaults are a matched pair rather than two arbitrary names: `cmd` sends `unity_run` by default, and
+that is an **msh command**, which can only run if msh is already up; so `prompt` waits for `msh />` by default,
+which is exactly that precondition — **assuming nothing beyond what sending an msh command already assumed**.
+For a bare-metal firmware, or a different shell, point `prompt` at the readiness marker the firmware itself prints.
 
 Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide — otherwise a new heuristic
 would invent a new kind of failure, misjudging firmware with a different prompt as broken.
@@ -732,8 +741,8 @@ and at that moment the console has just been opened and the boot triggered by th
 When the prompt is already in the buffer (a probe reset, QEMU) this step passes immediately, at zero cost.
 
 ```yaml
-      prompt: "msh />"    # optional. unity_run is itself an msh command,
-                          # so waiting for the msh prompt assumes nothing more
+      prompt: "msh />"    # optional; default msh />. Yours replaces it, it does
+                          # not get waited for in addition.
 ```
 
 Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide — otherwise a new heuristic
