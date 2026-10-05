@@ -96,8 +96,24 @@ class CollectTest(unittest.TestCase):
             suites = test_registry.collect([lz4, cjson])
 
         self.assertEqual(["cjson", "lz4"], list(suites))
-        self.assertEqual(["z"], [short for short, _ in suites["cjson"]])
-        self.assertEqual(["b", "a"], [short for short, _ in suites["lz4"]])
+        self.assertEqual(["z"], [short for short, _, _ in suites["cjson"]])
+        self.assertEqual(["b", "a"], [short for short, _, _ in suites["lz4"]])
+
+    def test_every_case_carries_the_source_it_came_from(self):
+        # The device prints this on Unity's result line, so it has to be the
+        # source file and not, say, the suite or a full path with a drive
+        # colon in it -- the host splits that line on colons.
+        with tempfile.TemporaryDirectory() as directory:
+            lz4 = self.write(directory, "test_lz4.c",
+                             "void test_lz4_b(void)\n{\n}\n")
+            cjson = self.write(directory, "test_cjson.c",
+                               "void test_cjson_z(void)\n{\n}\n")
+
+            suites = test_registry.collect([lz4, cjson])
+
+        self.assertEqual([("b", "test_lz4_b", "test_lz4.c")], suites["lz4"])
+        self.assertEqual([("z", "test_cjson_z", "test_cjson.c")],
+                         suites["cjson"])
 
     def test_a_file_without_cases_contributes_nothing(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -119,24 +135,41 @@ class CollectTest(unittest.TestCase):
 
 class GeneratedSourceTest(unittest.TestCase):
     def test_it_declares_every_case_and_ends_with_the_sentinel(self):
-        suites = {"lz4": [("roundtrip", "test_lz4_roundtrip")]}
+        suites = {"lz4": [("roundtrip", "test_lz4_roundtrip", "test_lz4.c")]}
         source = test_registry.generate_c(suites)
 
         self.assertIn("void test_lz4_roundtrip(void);", source)
-        self.assertIn('{ "lz4", "roundtrip", test_lz4_roundtrip },', source)
+        self.assertIn(
+            '{ "lz4", "roundtrip", test_lz4_roundtrip, "test_lz4.c" },', source)
         self.assertTrue(source.rstrip().endswith("};"))
-        self.assertIn("{ RT_NULL, RT_NULL, RT_NULL }", source)
+        self.assertIn("{ RT_NULL, RT_NULL, RT_NULL, RT_NULL }", source)
         self.assertIn('#include "sifli_unity.h"', source)
+
+    def test_each_row_carries_its_own_source(self):
+        # Columns are padded to line up, hence the regex rather than a literal.
+        suites = {
+            "lz4": [("roundtrip", "test_lz4_roundtrip", "test_lz4.c")],
+            "cjson": [("malformed", "test_cjson_malformed", "test_cjson.c")],
+        }
+        source = test_registry.generate_c(suites)
+
+        self.assertRegex(
+            source,
+            r'\{ "lz4",\s+"roundtrip",\s+test_lz4_roundtrip,\s+"test_lz4\.c" \},')
+        self.assertRegex(
+            source,
+            r'\{ "cjson",\s+"malformed",\s+test_cjson_malformed,\s+"test_cjson\.c" \},')
 
     def test_an_empty_registry_still_compiles(self):
         source = test_registry.generate_c({})
         self.assertIn("sifli_unity_cases[] =", source)
-        self.assertIn("{ RT_NULL, RT_NULL, RT_NULL }", source)
+        self.assertIn("{ RT_NULL, RT_NULL, RT_NULL, RT_NULL }", source)
         self.assertNotIn("void test_", source)
 
     def test_the_manifest_lists_the_cases_of_every_suite(self):
-        suites = {"lz4": [("roundtrip", "test_lz4_roundtrip")],
-                  "cjson": [("malformed", "test_cjson_malformed_returns_null")]}
+        suites = {"lz4": [("roundtrip", "test_lz4_roundtrip", "test_lz4.c")],
+                  "cjson": [("malformed", "test_cjson_malformed_returns_null",
+                             "test_cjson.c")]}
         manifest = test_registry.generate_manifest(
             suites, ["/a/src/test_lz4.c", "/a/src/test_cjson.c"], {"board": "b"})
 
@@ -180,9 +213,22 @@ class TreeTest(unittest.TestCase):
             with self.subTest(project=project):
                 suites = test_registry.collect(self.sources(project))
                 self.assertEqual(
-                    {suite: [short for short, _ in cases]
+                    {suite: [short for short, _, _ in cases]
                      for suite, cases in suites.items()},
                     expected)
+
+    def test_each_case_carries_a_file_the_manifest_also_names(self):
+        # The device prints the file and the manifest lists the sources; a
+        # different spelling in either would send a reader looking for a file
+        # that is not there.
+        for project in self.CASES:
+            with self.subTest(project=project):
+                paths = self.sources(project)
+                suites = test_registry.collect(paths)
+                manifest = test_registry.generate_manifest(suites, paths)
+                for cases in suites.values():
+                    for _, _, source in cases:
+                        self.assertIn(source, manifest["sources"])
 
     def test_unit_test_has_the_ring_buffer_suite_the_qemu_carrier_drops(self):
         # The suite is gated by SrcRemove in the SConscript, not by an #if in a
@@ -190,7 +236,7 @@ class TreeTest(unittest.TestCase):
         suites = test_registry.collect(self.sources("example/test/unit_test"))
         self.assertIn("circular_buf", suites)
         self.assertEqual(["fill_and_drain", "wraparound", "full_and_empty"],
-                         [short for short, _ in suites["circular_buf"]])
+                         [short for short, _, _ in suites["circular_buf"]])
 
 
 if __name__ == "__main__":

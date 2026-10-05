@@ -26,6 +26,10 @@ A hint is written on a line of its own inside a comment -- standalone
 The patterns are anchored to the whole line so that a sentence which happens to
 contain "case:" is not mistaken for one.
 
+Each case also carries the source it came from, under the same name the
+manifest lists it by, so the device can print a real file on Unity's result
+line instead of the suite standing in for one.
+
 * **suite** -- a ``suite: name`` hint anywhere in the file if present, otherwise
   the file name with ``test_`` and ``.c`` stripped. Prefer naming a file
   ``test_<suite>.c`` so that no hint is needed.
@@ -134,14 +138,18 @@ def _derive_short(function: str, suite: str) -> str:
     return function
 
 
-def collect(paths: List[str]) -> "Dict[str, List[Tuple[str, str]]]":
+def collect(paths: List[str]) -> "Dict[str, List[Tuple[str, str, str]]]":
     """Map every suite found in ``paths`` to its cases.
+
+    A case is ``(short_name, function_name, source_file)``. ``source_file`` is
+    the basename, the same spelling the manifest lists its sources under, so
+    the two never disagree about what a file is called.
 
     Suites come out in sorted order so the generated file does not depend on the
     order ``Glob`` happened to return. Case order within a suite follows the
     source file, which is the order the cases will run in.
     """
-    suites: Dict[str, List[Tuple[str, str]]] = {}
+    suites: "Dict[str, List[Tuple[str, str, str]]]" = {}
 
     for path in paths:
         with open(path, 'r', encoding='utf-8') as handle:
@@ -152,24 +160,25 @@ def collect(paths: List[str]) -> "Dict[str, List[Tuple[str, str]]]":
         if not cases:
             continue
 
+        source = os.path.basename(path)
         bucket = suites.setdefault(suite, [])
         for short, function in cases:
-            if any(short == existing for existing, _ in bucket):
+            if any(short == existing for existing, _, _ in bucket):
                 raise ValueError(
                     f'{path}: case "{short}" of suite "{suite}" is already '
                     f'defined; two cases of one suite must not share a name, '
                     f'because the name is what the host filters on'
                 )
-            bucket.append((short, function))
+            bucket.append((short, function, source))
 
     return {suite: suites[suite] for suite in sorted(suites)}
 
 
-def generate_c(suites: "Dict[str, List[Tuple[str, str]]]") -> str:
+def generate_c(suites: "Dict[str, List[Tuple[str, str, str]]]") -> str:
     """The registry translation unit."""
-    flat = [(suite, short, function)
+    flat = [(suite, short, function, source)
             for suite, cases in suites.items()
-            for short, function in cases]
+            for short, function, source in cases]
 
     out = [
         '/*',
@@ -192,26 +201,28 @@ def generate_c(suites: "Dict[str, List[Tuple[str, str]]]") -> str:
             '',
         ]
     else:
-        for _, _, function in flat:
+        for _, _, function, _ in flat:
             out.append(f'void {function}(void);')
         out.append('')
 
-    suite_width = max((len(suite) for suite, _, _ in flat), default=0)
-    case_width = max((len(short) for _, short, _ in flat), default=0)
+    suite_width = max((len(suite) for suite, _, _, _ in flat), default=0)
+    case_width = max((len(short) for _, short, _, _ in flat), default=0)
+    function_width = max((len(function) for _, _, function, _ in flat), default=0)
 
     out += [
         'const sifli_unity_case_t sifli_unity_cases[] =',
         '{',
     ]
-    for suite, short, function in flat:
-        out.append('    { %-*s %-*s %s },'
+    for suite, short, function, source in flat:
+        out.append('    { %-*s %-*s %-*s %s },'
                    % (suite_width + 3, '"%s",' % suite,
                       case_width + 3, '"%s",' % short,
-                      function))
+                      function_width + 1, function + ',',
+                      '"%s"' % source))
     if flat:
         out.append('')
     out += [
-        '    { RT_NULL, RT_NULL, RT_NULL }',
+        '    { RT_NULL, RT_NULL, RT_NULL, RT_NULL }',
         '};',
         '',
     ]
@@ -219,7 +230,7 @@ def generate_c(suites: "Dict[str, List[Tuple[str, str]]]") -> str:
     return '\n'.join(out)
 
 
-def generate_manifest(suites: "Dict[str, List[Tuple[str, str]]]",
+def generate_manifest(suites: "Dict[str, List[Tuple[str, str, str]]]",
                       paths: List[str],
                       meta: Optional[dict] = None) -> dict:
     """A description of what the firmware registered, for the host side.
@@ -232,7 +243,7 @@ def generate_manifest(suites: "Dict[str, List[Tuple[str, str]]]",
     manifest = {
         'generated_by': _GENERATED_BY,
         'sources': [os.path.basename(path) for path in paths],
-        'suites': {suite: [short for short, _ in cases]
+        'suites': {suite: [short for short, _, _ in cases]
                    for suite, cases in suites.items()},
     }
     manifest.update(meta or {})

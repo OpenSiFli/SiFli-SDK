@@ -36,6 +36,7 @@ typedef struct
     const char *suite;          /**< suite name, e.g. "lz4"                 */
     const char *name;           /**< case name,  e.g. "roundtrip"           */
     void (*func)(void);         /**< the test body                          */
+    const char *file;           /**< source file, e.g. "test_lz4.c"         */
 } sifli_unity_case_t;
 
 /**
@@ -45,12 +46,19 @@ typedef struct
  *
  *     const sifli_unity_case_t sifli_unity_cases[] =
  *     {
- *         { "lz4", "roundtrip", test_lz4_roundtrip },
- *         { RT_NULL, RT_NULL, RT_NULL },
+ *         { "lz4", "roundtrip", test_lz4_roundtrip, "test_lz4.c" },
+ *         { RT_NULL, RT_NULL, RT_NULL, RT_NULL },
  *     };
  *
- * Suite and case names must not contain ':' -- Unity prints them between
- * colons and the host parses the line by splitting on them.
+ * ``file`` is the source the case was found in, which Unity prints as the
+ * location of a result line. It is the last field on purpose: a registry
+ * generated before it existed still compiles, its three initializers landing
+ * in the same three slots, and the runner falls back to the suite name for the
+ * file rather than printing a NULL.
+ *
+ * The runner prints a case as "suite.case", so a name must not contain '.' any
+ * more than suite and case names may contain ':' -- Unity prints them between
+ * colons and the host parses the line by splitting it on both.
  */
 extern const sifli_unity_case_t sifli_unity_cases[];
 

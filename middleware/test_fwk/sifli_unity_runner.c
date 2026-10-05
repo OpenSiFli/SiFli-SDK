@@ -137,30 +137,47 @@ int sifli_unity_run(const char *filter)
     }
 
     /*
-     * Unity's result line is "<file>:<line>:<name>:<status>". The name comes
-     * from the argument to UnityDefaultTestRun(), and the file from
-     * Unity.TestFile, which UnityBegin() sets from its own argument -- the
-     * registry has no source file to report, so the suite name is used there
-     * instead, and the per-case ordinal stands in for the line number (Unity
-     * needs a positive one to print).
+     * Unity's result line is "<file>:<line>:<name>:<status>". The name is the
+     * argument to UnityDefaultTestRun(), which is the case's fully-qualified
+     * "suite.case" -- so the raw transcript identifies a case on its own, and
+     * the name the host splits on is the same one unity_run accepts as a
+     * filter. The file is Unity.TestFile, which UnitySetTestFile() sets per
+     * case from the registry's source file; the argument here is only that
+     * field's initial value and is never printed, because every case replaces
+     * it before it can appear on a line.
      */
     UnityBegin("sifli_unity_cases");
 
     for (i = 0; i < total; i++)
     {
         const sifli_unity_case_t *tc = &sifli_unity_cases[i];
+        char qualified[64];
 
         if (!sifli_unity_case_matches(tc, filter))
         {
             continue;
         }
 
-        UnitySetTestFile(tc->suite);
+        /*
+         * A registry generated before the case carried a file has none; the
+         * suite stands in for it, which is what the device used to print, so a
+         * stale generated file costs nothing and cannot hand Unity a NULL.
+         */
+        UnitySetTestFile((tc->file != RT_NULL) ? tc->file : tc->suite);
+
+        rt_snprintf(qualified, sizeof(qualified), "%s.%s",
+                    (tc->suite != RT_NULL) ? tc->suite : "",
+                    (tc->name != RT_NULL) ? tc->name : "");
+
         /*
          * Not RUN_TEST(): it stringifies its argument, and here the function
          * comes from a table at run time.
+         *
+         * The third argument is the case's number, not a source line: Unity
+         * prints it on the PASS line, where a failing case prints the
+         * assertion's own __LINE__ instead. Nothing reports it as a location.
          */
-        UnityDefaultTestRun(tc->func, tc->name, (int)(i + 1));
+        UnityDefaultTestRun(tc->func, qualified, (int)(i + 1));
     }
 
     failures = UnityEnd();

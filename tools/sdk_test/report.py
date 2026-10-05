@@ -136,7 +136,22 @@ class CaseResult:
     status: str
     message: str = ""
     file: str = ""
+    #: The line that decided the case, zero when nothing did: see
+    #: :meth:`__post_init__`.
     line: int = 0
+
+    def __post_init__(self) -> None:
+        """Drop a line no assertion produced.
+
+        Only a failure has an assertion line: Unity prints ``__LINE__`` when an
+        assertion trips. On a PASS line the number is the case's ordinal -- the
+        value the device has to hand Unity because Unity prints it there -- and
+        carrying that into the report is how "1" and "2" came to be reported as
+        source locations. A case that passed therefore has no line here,
+        whatever the harness sent, and every renderer reads one field.
+        """
+        if self.status == PASSED:
+            self.line = 0
 
     @property
     def passed(self) -> bool:
@@ -436,7 +451,7 @@ def _suite_to_dict(result: TestResult) -> Dict[str, Any]:
 
 
 def _case_identifier(case: CaseResult) -> str:
-    """A case's name, qualified by the group it came from when it has one.
+    """A case's name, which is already the fully-qualified ``suite.case``.
 
     The bare name is not unique: Unity case names repeat across suites -- both
     cjson and lz4 have a ``boundaries`` -- and one instance emits one row per
@@ -444,27 +459,26 @@ def _case_identifier(case: CaseResult) -> str:
     XML. Qualifying it is what stops a passing ``boundaries`` and a failing one
     from being the same row.
 
-    ``suite.case`` is how this framework already spells a fully-qualified case:
-    it is the filter ``unity_run`` accepts, and the runner puts the suite in
-    ``file`` (``UnitySetTestFile(tc->suite)``), so the report says it the same
-    way rather than inventing a second convention.
+    No qualification happens here because none is needed: the device runs each
+    case under ``suite.case`` (``UnityDefaultTestRun``), which is also the
+    name it prints on the result line and the filter ``unity_run`` accepts, so
+    the name arrives qualified and the report spells it the same way rather
+    than inventing a second convention.
     """
-    if case.file:
-        return f"{case.file}.{case.name}"
     return case.name
 
 
 def _case_label(case: "CaseResult") -> str:
-    """A case on one line: its qualified name and the line that decided it.
+    """A case on one line: its qualified name and where it failed.
 
     The suite belongs in the name because a Unity case name repeats across
     suites, and repeating it in the parentheses as well would say the same thing
-    twice. What is left there is the line, and for a failure that is the
-    assertion's own -- Unity prints ``__LINE__``, not the line the case was
-    declared on.
+    twice. What is left there is the location -- ``file:line``, the real source
+    file and, for a failure, the assertion's own line, which is ``__LINE__``
+    rather than the line the case was declared on.
     """
     name = _case_identifier(case)
-    return f"{name} ({case.line})" if case.line else name
+    return f"{name} ({case.location})" if case.location else name
 
 
 def dict_to_xml(
@@ -583,9 +597,10 @@ def _case_body(case: Dict[str, Any], suite: Dict[str, Any]) -> str:
     and appending the instance's reason to it is how a green case once ended up
     carrying its sibling's failure text.
 
-    For a failing case: where it failed, then what it said -- that is the line
-    with the expected/actual -- then the instance-level reason, which adds how
-    many of its siblings failed too.
+    For a failing case: where it failed, then the instance-level reason, which
+    adds how many of its siblings failed too. The case's own reason is not part
+    of the body -- it is already the element's ``message`` attribute, and it was
+    the body's first line as well, so every failure said the same sentence twice.
     """
     if str(case.get("status", "")) not in (FAILED, ERROR):
         return ""
@@ -596,14 +611,11 @@ def _case_body(case: Dict[str, Any], suite: Dict[str, Any]) -> str:
         if case.get("line"):
             location += f":{case['line']}"
         parts.append(location)
-    if case.get("reason"):
-        parts.append(str(case["reason"]))
-    body = "\n".join(parts)
 
     suite_reason = str(suite.get("reason", "") or "")
-    if suite_reason and suite_reason not in body:
-        body = f"{body}\n{suite_reason}" if body else suite_reason
-    return body
+    if suite_reason:
+        parts.append(suite_reason)
+    return "\n".join(parts)
 
 
 def _xml_case(

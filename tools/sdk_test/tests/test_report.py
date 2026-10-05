@@ -224,15 +224,17 @@ class TestJunitXml(SdkTestCase):
                 message="1 of 3 Unity test(s) failed",
                 platform="qemu_sf32lb52x",
                 cases=[
-                    report.CaseResult("test_roundtrip", report.PASSED, file="lz4"),
+                    report.CaseResult("lz4.roundtrip", report.PASSED,
+                                      file="test_lz4.c"),
                     report.CaseResult(
-                        "test_bounds",
+                        "lz4.boundaries",
                         report.FAILED,
                         message="expected -1, got 1024",
-                        file="lz4",
+                        file="test_lz4.c",
                         line=58,
                     ),
-                    report.CaseResult("test_slow", report.SKIPPED, file="lz4"),
+                    report.CaseResult("lz4.slow", report.SKIPPED,
+                                      file="test_lz4.c", line=9),
                 ],
             )
         )
@@ -240,16 +242,19 @@ class TestJunitXml(SdkTestCase):
         cases = root.findall("testcase")
 
         self.assertEqual([c.get("name") for c in cases],
-                         ["lz4.test_roundtrip", "lz4.test_bounds", "lz4.test_slow"])
+                         ["lz4.roundtrip", "lz4.boundaries", "lz4.slow"])
         # Every case belongs to its instance, so that is the classname.
         self.assertEqual({c.get("classname") for c in cases}, {"unit_test.lz4"})
         self.assertEqual({c.get("platform") for c in cases}, {"qemu_sf32lb52x"})
 
         failure = cases[1].find("failure")
         self.assertIn("expected -1, got 1024", failure.get("message"))
-        self.assertIn("lz4:58", failure.text)
+        self.assertIn("test_lz4.c:58", failure.text)
         # The instance-level reason rides along: it says how many siblings failed.
         self.assertIn("1 of 3 Unity test(s) failed", failure.text)
+        # And the message is not repeated in the body: it is already the
+        # attribute, and saying it twice is what the old body did.
+        self.assertNotIn("expected -1, got 1024", failure.text)
 
         # A passing case explains nothing and carries no child element -- in
         # particular not its sibling's failure reason, which is what it once got.
@@ -267,12 +272,13 @@ class TestJunitXml(SdkTestCase):
                 "unit_test.board",
                 report.FAILED,
                 cases=[
-                    report.CaseResult("boundaries", report.PASSED, file="cjson", line=6),
+                    report.CaseResult("cjson.boundaries", report.PASSED,
+                                      file="test_cjson.c", line=6),
                     report.CaseResult(
-                        "boundaries",
+                        "lz4.boundaries",
                         report.FAILED,
                         message="Expected 1024 to be less than 0",
-                        file="lz4",
+                        file="test_lz4.c",
                         line=129,
                     ),
                 ],
@@ -481,36 +487,90 @@ class TestFormatSummary(SdkTestCase):
                 report.FAILED,
                 message="2 of 3 Unity test(s) failed",
                 cases=[
-                    report.CaseResult("test_roundtrip", report.PASSED, file="lz4"),
+                    report.CaseResult("lz4.roundtrip", report.PASSED,
+                                      file="test_lz4.c"),
                     report.CaseResult(
-                        "test_bounds",
+                        "lz4.boundaries",
                         report.FAILED,
                         message="expected -1, got 1024",
-                        file="lz4",
+                        file="test_lz4.c",
                         line=58,
                     ),
-                    report.CaseResult("test_slow_path", report.SKIPPED, file="lz4"),
+                    report.CaseResult("lz4.slow_path", report.SKIPPED,
+                                      file="test_lz4.c", line=9),
                 ],
             )
         )
 
         text = report.format_summary(summary)
-        self.assertIn("FAIL  lz4.test_bounds (58): expected -1, got 1024", text)
+        self.assertIn(
+            "FAIL  lz4.boundaries (test_lz4.c:58): expected -1, got 1024", text)
         # A passing or skipped case is not worth a line on a failure list.
-        self.assertNotIn("test_roundtrip", text)
-        self.assertNotIn("test_slow_path", text)
+        self.assertNotIn("roundtrip", text)
+        self.assertNotIn("slow_path", text)
+
+
+class TestCaseResults(SdkTestCase):
+    """The seam where the harness's per-case objects become the report's.
+
+    Duck-typed, exactly as :func:`report.case_results` is: only the attributes
+    the adapter reads are here, so the test says what the contract is.
+    """
+
+    class HarnessCase:
+        def __init__(self, name, status, file="", line=0, message=""):
+            self.name = name
+            self.status = status
+            self.file = file
+            self.line = line
+            self.message = message
+
+    def test_a_passing_case_reports_no_line(self):
+        # Unity's PASS line carries the case's ordinal, not a source line: the
+        # device hands Unity that number because Unity prints it there. Reading
+        # it as a location is how "1" and "2" ended up in a report as if they
+        # were file positions -- a passing case has no line to report at all.
+        mapped = report.case_results([
+            self.HarnessCase("lz4.roundtrip", "PASS", file="test_lz4.c", line=1),
+        ])
+        self.assertEqual(mapped[0].line, 0)
+        self.assertEqual(mapped[0].location, "test_lz4.c")
+
+    def test_a_failing_case_keeps_the_assertions_line(self):
+        mapped = report.case_results([
+            self.HarnessCase("lz4.boundaries", "FAIL",
+                             file="test_lz4.c", line=129, message="boom"),
+        ])
+        self.assertEqual(mapped[0].line, 129)
+        self.assertEqual(mapped[0].location, "test_lz4.c:129")
+
+    def test_an_ignored_case_keeps_the_line_it_was_ignored_on(self):
+        # An ignored case is not a passing one: Unity prints __LINE__ there too.
+        mapped = report.case_results([
+            self.HarnessCase("lz4.slow", "IGNORE", file="test_lz4.c", line=9),
+        ])
+        self.assertEqual(mapped[0].line, 9)
+
+    def test_the_line_is_dropped_wherever_a_case_is_built(self):
+        # Enforced by the model rather than by one adapter, so no renderer can
+        # be handed a passing case that still claims a line.
+        case = report.CaseResult("lz4.roundtrip", report.PASSED,
+                                 file="test_lz4.c", line=1)
+        self.assertEqual(case.line, 0)
+        self.assertEqual(case.location, "test_lz4.c")
 
 
 class TestTheTerminalCaseLine(SdkTestCase):
-    """The line a human reads names the suite, and the assertion that decided it.
+    """The line a human reads names the suite, and where the assertion tripped.
 
     The XML has said ``lz4.boundaries`` since a case name stopped being unique
-    inside one instance; the terminal still said ``boundaries (lz4:129)``, which
-    buries the suite where the assertion line goes and so reads as if the bare
-    name were enough.
+    inside one instance; the terminal then said ``boundaries (lz4:129)``, which
+    buried the suite where the location goes, and later ``lz4.boundaries (129)``,
+    which dropped the file. It reads ``lz4.boundaries (test_lz4.c:129)`` now:
+    the suite in the name, the real file and line in the parentheses.
     """
 
-    def test_a_case_line_carries_its_suite_and_the_failing_line(self):
+    def test_a_case_line_carries_its_suite_and_where_it_failed(self):
         summary = report.RunSummary(started_at=0.0)
         summary.add(
             report.TestResult(
@@ -518,10 +578,10 @@ class TestTheTerminalCaseLine(SdkTestCase):
                 report.FAILED,
                 cases=[
                     report.CaseResult(
-                        "boundaries",
+                        "lz4.boundaries",
                         report.FAILED,
                         message="Expected 1024 to be less than 0",
-                        file="lz4",
+                        file="test_lz4.c",
                         line=129,
                     )
                 ],
@@ -529,19 +589,33 @@ class TestTheTerminalCaseLine(SdkTestCase):
         )
         text = report.format_summary(summary)
 
-        self.assertIn("lz4.boundaries (129)", text)
-        self.assertNotIn("(lz4:129)", text)
+        self.assertIn("lz4.boundaries (test_lz4.c:129)", text)
+        # The parentheses hold a location now, not a bare number: a reader has
+        # to be able to open the file the line is in.
+        self.assertNotIn("(129)", text)
 
-    def test_a_case_with_no_suite_is_still_labelled(self):
+    def test_a_case_with_no_suite_in_its_name_is_still_labelled(self):
         summary = report.RunSummary(started_at=0.0)
         summary.add(
             report.TestResult(
                 "unit_test.board",
                 report.FAILED,
-                cases=[report.CaseResult("solo", report.FAILED, line=7)],
+                cases=[report.CaseResult("solo", report.FAILED,
+                                         file="test_solo.c", line=7)],
             )
         )
-        self.assertIn("solo (7)", report.format_summary(summary))
+        self.assertIn("solo (test_solo.c:7)", report.format_summary(summary))
+
+    def test_the_case_identifier_is_the_name_the_device_printed(self):
+        # Not re-derived from anything: the device runs and prints the case as
+        # "suite.case", so the report says exactly that.
+        self.assertEqual(
+            report._case_identifier(
+                report.CaseResult("lz4.boundaries", report.FAILED,
+                                  file="test_lz4.c", line=129)
+            ),
+            "lz4.boundaries",
+        )
 
 
 if __name__ == "__main__":

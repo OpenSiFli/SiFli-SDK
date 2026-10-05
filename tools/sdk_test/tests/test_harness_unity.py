@@ -19,8 +19,8 @@ from sdk_test.harness import unity
 PASSING = """\
 Unity test run 1 of 1
 -----------------------
-lz4:42:test_roundtrip:PASS
-lz4:58:test_bounds:PASS
+test_lz4.c:1:lz4.roundtrip:PASS
+test_lz4.c:2:lz4.boundaries:PASS
 
 -----------------------
 2 Tests 0 Failures 0 Ignored
@@ -28,8 +28,8 @@ OK
 """
 
 FAILING = """\
-lz4:42:test_roundtrip:PASS
-lz4:58:test_bounds:FAIL:Expected 1 Was 2
+test_lz4.c:1:lz4.roundtrip:PASS
+test_lz4.c:129:lz4.boundaries:FAIL:Expected 1 Was 2
 
 -----------------------
 2 Tests 1 Failures 0 Ignored
@@ -42,14 +42,19 @@ class TestPassingRun(SdkTestCase):
         result = unity.parse_unity_output(PASSING)
         self.assertTrue(result.passed, result.detail)
         self.assertEqual((result.tests, result.failures, result.ignored), (2, 0, 0))
-        self.assertEqual([case.name for case in result.cases], ["test_roundtrip", "test_bounds"])
-        self.assertEqual(result.cases[0].file, "lz4")
-        self.assertEqual(result.cases[0].line, 42)
+        self.assertEqual([case.name for case in result.cases],
+                         ["lz4.roundtrip", "lz4.boundaries"])
+        # The file is the source file Unity printed, not the suite standing in
+        # for one; the suite travels in the case's name.
+        self.assertEqual(result.cases[0].file, "test_lz4.c")
+        # On a PASS line that number is the case's ordinal, not a location --
+        # the report drops it rather than presenting it as one (report.CaseResult).
+        self.assertEqual(result.cases[0].line, 1)
         self.assertTrue(result.summary_seen)
         self.assertEqual(result.verdict_seen, "OK")
 
     def test_ignored_tests_are_reported_but_do_not_fail_the_run(self):
-        text = "test/a.c:1:t:PASS\n1 Tests 0 Failures 2 Ignored\nOK\n"
+        text = "test/a.c:1:a.t:PASS\n1 Tests 0 Failures 2 Ignored\nOK\n"
         result = unity.parse_unity_output(text)
         self.assertTrue(result.passed)
         self.assertEqual(result.ignored, 2)
@@ -66,7 +71,7 @@ class TestVacuousPassGuards(SdkTestCase):
         self.assertIn("vacuous", result.detail)
 
     def test_a_missing_summary_is_a_failure(self):
-        result = unity.parse_unity_output("test/a.c:1:t:PASS\n")
+        result = unity.parse_unity_output("test/a.c:1:a.t:PASS\n")
         self.assertFalse(result.passed)
         self.assertIn("no Unity summary line found", result.detail)
 
@@ -88,7 +93,15 @@ class TestFailures(SdkTestCase):
         self.assertIn("1 of 2", result.detail)
         # Qualified, because the bare name does not identify a case: cjson has a
         # `boundaries` too.
-        self.assertIn("lz4.test_bounds", result.detail)
+        self.assertIn("lz4.boundaries", result.detail)
+
+    def test_the_case_knows_its_suite_from_its_own_name(self):
+        # The suite used to ride in the file field; it travels in the name now,
+        # so what a suite claims out of a transcript is still unambiguous.
+        result = unity.parse_unity_output(FAILING)
+        self.assertEqual([case.suite for case in result.cases], ["lz4", "lz4"])
+        self.assertEqual([case.label for case in result.cases],
+                         ["lz4.roundtrip", "lz4.boundaries"])
 
     def test_a_fail_case_message_is_captured(self):
         result = unity.parse_unity_output(FAILING)
@@ -123,21 +136,22 @@ class TestLineEndings(SdkTestCase):
     """
 
     CRLF = (
-        "lz4:42:test_roundtrip:PASS\r\n"
-        "lz4:58:test_bounds:PASS\r\n"
+        "test_lz4.c:1:lz4.roundtrip:PASS\r\n"
+        "test_lz4.c:2:lz4.boundaries:PASS\r\n"
         "\r\n2 Tests 0 Failures 0 Ignored\r\nOK\r\n"
     )
 
     def test_crlf_terminated_case_lines_are_parsed(self):
         result = unity.parse_unity_output(self.CRLF)
         self.assertEqual(
-            [case.name for case in result.cases], ["test_roundtrip", "test_bounds"]
+            [case.name for case in result.cases],
+            ["lz4.roundtrip", "lz4.boundaries"],
         )
         self.assertEqual([case.status for case in result.cases], ["PASS", "PASS"])
         self.assertTrue(result.passed, result.detail)
 
     def test_a_crlf_fail_message_does_not_carry_the_carriage_return(self):
-        text = "test/a.c:7:t:FAIL:Expected 1 Was 2\r\n\r\n1 Tests 1 Failures 0 Ignored\r\nFAIL\r\n"
+        text = "test/a.c:7:a.t:FAIL:Expected 1 Was 2\r\n\r\n1 Tests 1 Failures 0 Ignored\r\nFAIL\r\n"
         result = unity.parse_unity_output(text)
         self.assertEqual(result.cases[0].message, "Expected 1 Was 2")
 
@@ -161,15 +175,15 @@ class TestLineEndings(SdkTestCase):
 class TestCaseParsing(SdkTestCase):
     def test_ignored_cases_are_recognised_in_both_spellings(self):
         text = (
-            "test/a.c:1:first:IGNORE\n"
-            "test/a.c:2:second:IGNORED\n"
+            "test/a.c:1:a.first:IGNORE\n"
+            "test/a.c:2:a.second:IGNORED\n"
             "2 Tests 0 Failures 2 Ignored\nOK\n"
         )
         result = unity.parse_unity_output(text)
         self.assertEqual([case.ignored for case in result.cases], [True, True])
 
     def test_a_case_line_without_a_message_has_an_empty_message(self):
-        result = unity.parse_unity_output("test/a.c:7:t:PASS\n1 Tests 0 Failures 0 Ignored\nOK\n")
+        result = unity.parse_unity_output("test/a.c:7:a.t:PASS\n1 Tests 0 Failures 0 Ignored\nOK\n")
         self.assertEqual(result.cases[0].message, "")
 
     def test_unity_padding_around_the_numbers_is_tolerated(self):
@@ -196,7 +210,7 @@ class TestStartCommand(SdkTestCase):
 
 class TestCompletion(SdkTestCase):
     def test_is_complete_only_once_the_summary_has_arrived(self):
-        self.assertFalse(unity.is_complete("test/a.c:1:t:PASS\n"))
+        self.assertFalse(unity.is_complete("test/a.c:1:a.t:PASS\n"))
         self.assertTrue(unity.is_complete(PASSING))
 
     def test_is_complete_survives_a_split_summary_line(self):
@@ -309,16 +323,19 @@ class TestRecordIsRejected(SdkTestCase):
 
 #: What an auto-running firmware prints, in the shape the board produced it:
 #: every suite in one session, so a single summary covers all of them, and each
-#: case line carries its suite in the ``file`` field -- the runner calls
-#: ``UnitySetTestFile(tc->suite)``, which is what lets a test case claim its own
-#: slice of one transcript without any extra bookkeeping.
+#: case line carries its suite in its own name -- the runner calls
+#: ``UnityDefaultTestRun(tc->func, "suite.case", ...)``, which is what lets a
+#: test case claim its own slice of one transcript without any extra
+#: bookkeeping, and what leaves the file field free to be the real source file.
+#: The number on a PASS line is the case's ordinal and the number on the FAIL
+#: line is the assertion's ``__LINE__``; only the second is a location.
 AUTORUN_TRANSCRIPT = """\
 SiFli SDK unit tests (Unity)
   unity_run [suite|case|suite.case]
-circular_buf:1:fill_and_drain:PASS
-cjson:2:parse_and_read:PASS
-cjson:129:malformed:FAIL:Expected 1 Was 2
-lz4:4:roundtrip:PASS
+test_circular_buf.c:1:circular_buf.fill_and_drain:PASS
+test_cjson.c:2:cjson.parse_and_read:PASS
+test_cjson.c:129:cjson.malformed:FAIL:Expected 1 Was 2
+test_lz4.c:4:lz4.roundtrip:PASS
 
 -----------------------
 4 Tests 1 Failures 0 Ignored
@@ -364,7 +381,7 @@ class TestAutorunPerSuite(SdkTestCase):
         )
 
         self.assertTrue(outcome.passed, outcome.detail)
-        self.assertEqual([case.name for case in outcome.cases], ["roundtrip"])
+        self.assertEqual([case.name for case in outcome.cases], ["lz4.roundtrip"])
 
     def test_a_failing_suite_fails_and_names_only_its_own_cases(self):
         console = FakeConsole(boot=[AUTORUN_TRANSCRIPT])
@@ -375,7 +392,8 @@ class TestAutorunPerSuite(SdkTestCase):
         self.assertFalse(outcome.passed)
         self.assertIn("cjson.malformed", outcome.detail)
         self.assertEqual(
-            [case.name for case in outcome.cases], ["parse_and_read", "malformed"]
+            [case.name for case in outcome.cases],
+            ["cjson.parse_and_read", "cjson.malformed"],
         )
 
     def test_a_suite_that_never_ran_is_a_failure_not_a_pass(self):
@@ -393,7 +411,7 @@ class TestAutorunPerSuite(SdkTestCase):
         self.assertEqual(outcome.cases, [])
 
     def test_a_transcript_that_never_finished_is_reported_as_such(self):
-        console = FakeConsole(boot=["lz4:1:roundtrip:PASS\n"])
+        console = FakeConsole(boot=["test_lz4.c:1:lz4.roundtrip:PASS\n"])
         outcome = unity.run(
             an_instance(autorun=True, suite="lz4"), console, timeout=0.05, poll=0.001
         )

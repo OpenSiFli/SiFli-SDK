@@ -221,7 +221,7 @@ class PytestAgainstFakeAgentMixin:
     """
 
     BOOT = " | / - RT - Thread\r\nmsh />"
-    UNITY = "\r\ntest/a.c:1:roundtrip:PASS\r\n\r\n1 Tests 0 Failures 0 Ignored\r\nOK\r\n"
+    UNITY = "\r\ntest/a.c:1:a.roundtrip:PASS\r\n\r\n1 Tests 0 Failures 0 Ignored\r\nOK\r\n"
 
     #: The lab the agent serves. The platform below is the one the run names,
     #: as a user's `-p` would name it; the agent picks the board that answers it.

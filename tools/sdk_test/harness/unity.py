@@ -6,9 +6,14 @@ Unity (ThrowTheSwitch) is the C unit-test framework this framework introduces.
 It runs *on the device*; the host only sends the start command and interprets
 what comes back. The output contract relied on here is Unity's, not this SDK's:
 
-* per test, ``<file>:<line>:<test name>:PASS`` (or ``:FAIL:<message>``)
+* per test, ``<file>:<line>:<suite.case>:PASS`` (or ``:FAIL:<message>``)
 * a summary, ``<n> Tests <n> Failures <n> Ignored``
 * a verdict line, ``OK`` or ``FAIL``
+
+The case is spelled ``suite.case`` because the device runs it under that name
+(``sifli_unity_runner.c``), which is what leaves the ``file`` field free to be
+the real source file -- and what lets a suite claim its own cases out of a
+transcript that holds every suite.
 
 Two rules exist purely to stop a vacuous pass, which is the failure mode a
 console-parsing harness is most prone to: a summary line must have been seen at
@@ -35,7 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover - type hints only
     from . import ConsoleLike
     from . import HarnessOutcome
 
-#: ``test/test_lz4.c:42:test_roundtrip:PASS[:message]``
+#: ``test/test_lz4.c:42:lz4.roundtrip:PASS[:message]``
 #:
 #: Tolerates a CRLF line ending. On this SDK's console that is the *normal*
 #: form: ``rt_kprintf`` routes through ``_serial_poll_tx``, which expands every
@@ -137,17 +142,27 @@ class UnityCase:
         return self.status in ("IGNORE", "IGNORED")
 
     @property
+    def suite(self) -> str:
+        """The suite that owns the case: the name up to its first dot.
+
+        The device runs each case as ``suite.case``, so the attribution is in
+        the name and ``file`` is free to be the source file Unity prints. A
+        Unity case name is a C identifier, so the first dot is always the one
+        the device put there -- there is no second convention to reconcile.
+        """
+        return self.name.split(".", 1)[0]
+
+    @property
     def label(self) -> str:
-        """How the case should be named: ``suite.case``.
+        """How the case should be named: ``suite.case``, as the device spelled it.
 
         Unity case names repeat across suites -- both cjson and lz4 have a
         ``boundaries`` -- so a bare name does not identify one, and a message
         that says "1 of 9 failed: boundaries" leaves the reader to guess which.
-        ``file`` holds the suite here, because the runner sets it from the suite
-        name; ``suite.case`` is also the filter ``unity_run`` accepts, so the
-        report and the device agree on how a case is spelled.
+        ``suite.case`` is also the filter ``unity_run`` accepts, so the report
+        and the device agree on how a case is spelled.
         """
-        return f"{self.file}.{self.name}" if self.file else self.name
+        return self.name
 
 
 @dataclass
@@ -278,8 +293,8 @@ def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
 
     An auto-running firmware reports every suite in one session, so its summary
     line describes the firmware rather than any one test case. What a test case
-    owns is the cases whose ``file`` equals its suite -- the runner sets that
-    field from the suite name -- so the transcript attributes itself and no
+    owns is the cases whose name is qualified by its suite -- the runner prints
+    each case as ``suite.case`` -- so the transcript attributes itself and no
     extra bookkeeping is needed to split it.
 
     A suite that contributed no case has not passed, it has not *run*: the
@@ -288,7 +303,7 @@ def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
     proving nothing, which is the one false verdict this harness exists to
     avoid.
     """
-    own = [case for case in result.cases if case.file == suite]
+    own = [case for case in result.cases if case.suite == suite]
     verdict = UnityResult(
         passed=False,
         detail="",
@@ -308,7 +323,7 @@ def verdict_for_suite(result: "UnityResult", suite: str) -> "UnityResult":
         return verdict
 
     if not own:
-        seen = ", ".join(sorted({case.file for case in result.cases})) or "none"
+        seen = ", ".join(sorted({case.suite for case in result.cases})) or "none"
         verdict.detail = (
             f'suite "{suite}" reported no case: the auto-run did not reach it '
             f"(the transcript holds cases from: {seen})"

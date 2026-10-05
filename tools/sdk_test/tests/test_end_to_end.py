@@ -49,11 +49,13 @@ BOOT_LOG = (
     "msh />"
 )
 
-#: What a Unity binary prints when it runs.
+#: What a Unity binary prints when it runs. The file is the source Unity was
+#: handed, the case is qualified by its suite, and the number on a PASS line is
+#: the case's ordinal -- only the FAIL line's number is a source line.
 UNITY_LOG = (
     "\r\n"
-    "test/test_lz4.c:42:test_roundtrip:PASS\r\n"
-    "test/test_lz4.c:58:test_bounds:PASS\r\n"
+    "test/test_lz4.c:1:lz4.roundtrip:PASS\r\n"
+    "test/test_lz4.c:2:lz4.boundaries:PASS\r\n"
     "\r\n"
     "-----------------------\r\n"
     "2 Tests 0 Failures 0 Ignored\r\n"
@@ -316,7 +318,7 @@ class TestUnityHarnessEndToEnd(EndToEndCase):
     def test_a_failing_unity_run_is_reported_as_a_failure(self):
         self.response = (
             "\r\n"
-            "test/test_lz4.c:42:test_roundtrip:FAIL:Expected 1 Was 2\r\n"
+            "test/test_lz4.c:129:lz4.boundaries:FAIL:Expected 1 Was 2\r\n"
             "\r\n1 Tests 1 Failures 0 Ignored\r\nFAIL\r\n"
         )
         suite = self.make_project(
@@ -331,7 +333,9 @@ class TestUnityHarnessEndToEnd(EndToEndCase):
         result = summary.results[0]
 
         self.assertEqual(result.status, FAILED, result.message)
-        self.assertIn("test_roundtrip", result.message)
+        # Named the way the device printed it: suite and case, so a reader can
+        # tell which suite's case this is without opening the transcript.
+        self.assertIn("lz4.boundaries", result.message)
 
     def test_a_vacuous_unity_run_is_refused(self):
         # A binary that linked Unity but ran nothing prints a clean "OK".
