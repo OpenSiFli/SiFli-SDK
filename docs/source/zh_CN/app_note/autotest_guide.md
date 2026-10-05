@@ -221,8 +221,7 @@ sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # 由 agent 分配一块
 | `--report-suffix` | 加到报告文件名后，CI 里区分 build 号（→ `sifli_ci123.xml`） |
 | `--report` | **兼容别名**：钉住 JUnit 的目录与文件名（会剥掉扩展名，JSON 落在同主干下）。现在报告默认就产出，一般不需要它 |
 | `--fail-fast` | 首个失败即停（默认继续跑完，nightly 更需要全景） |
-| `--no-confirm` | 中途不再停下来问。只影响手动复位的板子（见第 8 节）。会连带禁掉"先写后读"的 harness，也就是**没开 `autorun` 的 `unity`**；`console`、`pytest`，以及开了自动运行的 unity，都不受影响 |
-| `--confirm-reset` | 反过来：不停下来问，但**声明板子已就绪**。手动复位的板子在无人值守时靠它越过那道启动确认，与 `--no-confirm` 互斥 |
+| `--no-confirm` | 中途不再停下来问。只影响 `reset.method: manual` 的板子（见第 8 节）。给了它就**没人回答**"板子起来了没"，于是"先写后读"的 harness 会被拒——也就是**没开 `autorun` 的 `unity`**；`console`、`pytest`，以及开了自动运行的 unity，都不受影响 |
 
 ---
 
@@ -503,11 +502,11 @@ circular_buf）。
 # 干跑：先确认规划出什么（不碰硬件）
 sdk.py test plan -T example/test/unit_test -t unit_test.board -p sf32lb52-lcd_a128r16
 
-# 真板。手动复位的板子要 --confirm-reset —— 那是"启动已经安排好了"的声明：
-# 自动运行的结果从板子启动的第一个字节就开始了，所以那次启动必须发生在串口
-# 打开之后，否则那份转录没人看见。
+# 真板。这块板的 reset.method 是 auto —— 下载自己会把板子带起来，不需要任何
+# 额外动作。自动运行的结果从板子启动的第一个字节就开始了，所以那次启动必须发
+# 生在串口打开之后，否则那份转录没人看见。
 sdk.py test run  -T example/test/unit_test -t unit_test.board `
-    -p sf32lb52-lcd_a128r16 --confirm-reset
+    -p sf32lb52-lcd_a128r16
 ```
 
 **`unit_test.qemu` 那条钉在 `qemu_cortex_m33` 上**，这个 lab 没有 QEMU 平台，于是
@@ -735,7 +734,7 @@ Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文�
     flash:
       method: jlink               # jlink（探针）| sftool（UART）
     reset:
-      method: jlink               # jlink（探针，默认）| manual（人按复位键）
+      method: jlink               # jlink（探针，默认）| auto（下载自己带起来）| manual（可能要人按）
 ```
 
 ### 8.1 字段速查
@@ -767,16 +766,30 @@ Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文�
 `jlink:` / `flash:` / `reset:` 各有哪些子键，见带注释的模板
 `tools/lab_agent/examples/runner.local.yaml`——那份就是给人照着抄的。
 
-### 手动复位（`reset.method: manual`）
+### 三种复位模式：`jlink` / `auto` / `manual`
 
-给**没有探针**的板子用：框架自己不碰探针，板子由外部启动（下载、开端口、或者人）。
+`reset:` 说的不只是"谁去按复位"，还有**这次启动有没有人担保**：
+
+| `reset.method` | 谁复位 | 停下来问人 | 没开 `autorun` 的 `unity` |
+|---|---|---|---|
+| `jlink`（默认） | 探针 | 不 | ✅ |
+| `auto` | 没有人——也不需要：下载结束跑起新镜像，那就是那次复位 | 不 | ✅ |
+| `manual` | 没有人，**也不保证**（可能要人按按钮） | 要（有终端时） | ❌ 在下载**之前**就拒绝 |
+
+`auto` 和 `manual` 在框架这一侧都是 no-op，区别只在承诺：**启动是不是必然发生**。
+而这一条恰好就是"要不要问人"和"写型 harness 放不放行"的全部依据。
 
 ```yaml
     reset:
-      method: manual
+      method: auto      # 下载可靠地会把板子带起来（UART 下载结束时 ROM 跳到新镜像，
+                        # 开 console 时 DTR/RTS 往往再复位一次）
+      # method: manual  # 不能保证，靠人按
 ```
 
-#### 有终端时：会停下来确认一次
+**`auto` 什么也不打印。** `[reset]` 那行是在**对操作员说话**（"按复位，然后回车"），
+`auto` 没有操作员可交代——`jlink` 同样一声不吭。
+
+#### `manual`：有终端时会停下来确认一次
 
 ```powershell
 sdk.py test run ...        # 在终端里跑
@@ -794,27 +807,26 @@ console 打开后：
 **多半不用按。** UART 下载（`flash.method: sftool`）结束时 ROM 会跳到新镜像——
 板子已经自己启动了一次；打开 console 口时 pyserial 又会驱动 DTR/RTS，
 可能再复位一次。所以通常敲个回车就行，这句话只是兜底。
+**如果这种情况每次都成立，就该把这块板的 `reset.method` 写成 `auto`**——
+同一件事，把"问"去掉。
 
 回答 `n`（或 Ctrl-D）这个用例记为 **skipped**，不是 failed——用例根本没跑，
 说它坏了是没有依据的断言。
 
-#### 三种模式，一张表
+这一次回车不只是礼节：`manual` 板上**没有别的东西能让板子起来**，
+所以那次按键就是复位本身。这也正是"有人守着"能让写型 harness 在此跑起来的原因。
 
-| 命令 | 停不停 | 板子怎么起来 | `unity` |
-|---|---|---|---|
-| 默认（有终端） | 停下来等回车 | 人看着 | ✅ |
-| `--confirm-reset` | 不停 | 调用方声明它已经起来 | ✅ |
-| `--no-confirm` / 无终端（CI） | 不停 | 没人管 | ❌ 在下载**之前**就拒绝 |
+#### `manual` 且没人可问（`--no-confirm`，或无终端）
 
-后两种都**不阻塞**，只打一行提示，窗口是用例自己的 `timeout`（默认 60s）：
+不阻塞，只打一行提示，窗口是用例自己的 `timeout`（默认 60s）：
 
 ```
 [reset] sf32lb52-lcd_a128r16_01 (sf32lb52-lcd_a128r16) has no probe -
 waiting for the board to boot; press its RESET button if nothing appears (60s)
 ```
 
-`--no-confirm` 与 `--confirm-reset` 一起给会直接报错——一个说"没人管"，一个说
-"已经管好了"，不能同时为真。
+这时"先写后读"的 harness 会被拒——也就是**没开 `autorun` 的 `unity`**，
+拒绝发生在**下载之前**。
 
 #### `unity` 为什么能在这块板上跑
 

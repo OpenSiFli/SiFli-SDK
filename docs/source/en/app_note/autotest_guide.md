@@ -229,8 +229,7 @@ Common flags:
 | `--report-suffix` | Appended to the report filename to tell builds apart in CI (→ `sifli_ci123.xml`) |
 | `--report` | **Compatibility alias**: pins the JUnit directory and filename (the extension is stripped, and the JSON lands under the same stem). Reports are produced by default now, so you normally do not need it |
 | `--fail-fast` | Stop at the first failure (by default the run continues; nightly needs the full picture more) |
-| `--no-confirm` | Never stop to ask mid-run. It only affects boards with manual reset (see section 8). It also disables the harnesses that write before they read, that is, **`unity` without `autorun`**; `console`, `pytest` and unity with autorun are all unaffected |
-| `--confirm-reset` | The other way round: do not stop to ask, but **declare the board ready**. On a manual-reset board this is what carries an unattended run past that boot confirmation; mutually exclusive with `--no-confirm` |
+| `--no-confirm` | Never stop to ask mid-run. It only affects boards with `reset.method: manual` (see section 8). Giving it means **nobody answers** "has the board booted", so the harnesses that write before they read are refused, that is, **`unity` without `autorun`**; `console`, `pytest` and unity with autorun are all unaffected |
 
 ---
 
@@ -522,11 +521,11 @@ So do not split entries by suite: splitting would mean three flashes and three b
 # Dry run: confirm what gets planned first (no hardware touched)
 sdk.py test plan -T example/test/unit_test -t unit_test.board -p sf32lb52-lcd_a128r16
 
-# Real hardware. A manual-reset board needs --confirm-reset — that is the declaration that
-# "the boot has already been arranged": autorun's results start from the first byte the board
-# boots, so that boot has to happen after the serial port is open, or nobody sees the transcript.
+# Real hardware. This bench's reset.method is `auto` — the download brings the board up by
+# itself, so the run needs no extra action. Autorun's results start from the first byte the
+# board boots, so that boot has to happen after the serial port is open, or nobody sees it.
 sdk.py test run  -T example/test/unit_test -t unit_test.board `
-    -p sf32lb52-lcd_a128r16 --confirm-reset
+    -p sf32lb52-lcd_a128r16
 ```
 
 **The `unit_test.qemu` one is pinned to `qemu_cortex_m33`**, a platform this lab does not have, so
@@ -755,7 +754,7 @@ the agent reads all of it, and no part of it reaches the SDK side:
     flash:
       method: jlink               # jlink (probe) | sftool (UART)
     reset:
-      method: jlink               # jlink (probe, default) | manual (a person presses the reset button)
+      method: jlink               # jlink (probe, default) | auto (the download brings it up) | manual (a person may press the button)
 ```
 
 ### 8.1 Field Quick Reference
@@ -787,16 +786,32 @@ table marks which, so copying it will not go wrong.
 The sub-keys of `jlink:` / `flash:` / `reset:` are in the annotated template
 `tools/lab_agent/examples/runner.local.yaml` — that one is written for people to copy from.
 
-### Manual reset (`reset.method: manual`)
+### Three reset modes: `jlink` / `auto` / `manual`
 
-For boards **without a probe**: the framework does not touch a probe at all, and the board is started externally (a download, opening a port, or a person).
+`reset:` says more than who presses the button — it also says **whether anything vouches for the boot**:
+
+| `reset.method` | who resets it | does the run stop and ask | `unity` without `autorun` |
+|---|---|---|---|
+| `jlink` (default) | the probe | no | ✅ |
+| `auto` | nobody — and nothing needs to: the download runs the new image, and that is the reset | no | ✅ |
+| `manual` | nobody, **and nothing guarantees it** (a person may have to press the button) | yes, on a terminal | ❌ refused **before** the download |
+
+`auto` and `manual` are both no-ops on the framework's side; the difference is the promise — **whether the
+boot is bound to happen**. That promise is the only thing deciding whether an operator is asked and whether
+a harness that writes to the device is allowed.
 
 ```yaml
     reset:
-      method: manual
+      method: auto      # the download reliably brings the board up (a UART download ends
+                        # by running the new image, and opening the console drives DTR/RTS,
+                        # which often resets it once more)
+      # method: manual  # not guaranteed; somebody presses the button
 ```
 
-#### With a terminal: it stops once for confirmation
+**`auto` prints nothing.** The `[reset]` line is addressed **to an operator** ("press reset, then Enter"),
+and `auto` has none to address — `jlink` says nothing either.
+
+#### `manual`: with a terminal it stops once for confirmation
 
 ```powershell
 sdk.py test run ...        # run it in a terminal
@@ -814,27 +829,27 @@ After the console opens:
 **You most likely do not need to press it.** When a UART download (`flash.method: sftool`) finishes, the ROM jumps to the new image —
 the board has already started itself once; and opening the console port makes pyserial drive DTR/RTS, which may reset it once more.
 So pressing Enter is usually all it takes, and this prompt is only a fallback.
+**When that holds every time, this bench's `reset.method` should say `auto`** — the same thing, with the asking taken out.
 
 Answering `n` (or Ctrl-D) records this test case as **skipped**, not failed — the case never ran,
 and calling it broken would be an assertion with nothing behind it.
 
-#### Three modes, one table
+That Enter is not a formality: on a `manual` bench **nothing else can bring the board up**, so the press
+*is* the reset. That is exactly why somebody standing there is what lets a harness which writes to the
+device run here at all.
 
-| Command | Does it stop | How the board comes up | `unity` |
-|---|---|---|---|
-| default (with a terminal) | stops and waits for Enter | a person watches | ✅ |
-| `--confirm-reset` | does not stop | the caller declares it has booted | ✅ |
-| `--no-confirm` / no terminal (CI) | does not stop | nobody is watching | ❌ refused **before** the download |
+#### `manual` with nobody to ask (`--no-confirm`, or no terminal)
 
-The last two **do not block**; they print a single line of notice, and the window is the test case's own `timeout` (60s by default):
+It does not block; it prints a single line of notice, and the window is the test case's own `timeout`
+(60s by default):
 
 ```
 [reset] sf32lb52-lcd_a128r16_01 (sf32lb52-lcd_a128r16) has no probe -
 waiting for the board to boot; press its RESET button if nothing appears (60s)
 ```
 
-Giving `--no-confirm` together with `--confirm-reset` is an outright error — one says "nobody is watching", the other says
-"it has already been taken care of", and both cannot be true at once.
+Here the harnesses that write before they read are refused — that is, **`unity` without `autorun`** —
+and the refusal lands **before** the download.
 
 #### Why `unity` can run on this board
 
