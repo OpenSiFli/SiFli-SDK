@@ -188,6 +188,40 @@ same machine as you.
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
+**The SDK holds no inventory of the lab.** A run is (instance, platform, backend, build dir) and nothing
+finer: which *board* of that platform will host it is not decided here and cannot be, because the agent
+allocates from its own configuration at the moment hardware is requested. So naming a platform is the
+whole of what you say — the hardware map never enters this side at all (it belongs to the hardware team,
+see section 8).
+
+**`-p` overrides a case's own `integration_platforms`** — the flag wins. The whole tree is
+pulled onto the platform you name, including cases pinned to a different one. That is exactly
+what "run everything on this board" wants, but it does bypass the cases' own declarations, so
+do not be surprised when a cross-platform case turns up.
+
+**To run on several platforms**: the command line takes only one `-p` today. Running the whole
+tree on two platforms means naming them in the cases' `integration_platforms:`, or running twice.
+
+Common flags:
+
+| Flag | What it does |
+|---|---|
+| `-T/--testsuite-root` | The directory to search recursively for `testcase.yaml` (default: the SDK's `example/`) |
+| `-t/--testcase` | Run only the given id (repeatable). Both the full id and just the tests key are supported |
+| `--tag` | Select by tag (union) |
+| `-p/--platform` | Name a board to build for; needed unless every test case names its own `integration_platforms` |
+| `--no-build` | Skip the build and use what is already in `build_<board>/` |
+| `-j/--jobs` | Number of parallel build jobs |
+| `--timeout` | Override the timeout of every test case |
+| `--outdir` | Artifact root, default `test-out/`. **Each run creates a timestamped directory under it**, holding this run's run-level `runner.log`, the per-instance `device.log`/`runner.log`, and the reports |
+| `-i/--inline-logs` | On failure, print the serial log **into the terminal** instead of only giving the path |
+| `--report-dir` | Where the reports land; defaults to `--outdir` |
+| `--report-name` | The report filename stem, default `sifli` (producing `<name>.json` and `<name>.xml`) |
+| `--report-suffix` | Appended to the report filename to tell builds apart in CI (→ `sifli_ci123.xml`) |
+| `--report` | **Compatibility alias**: pins the JUnit directory and filename (the extension is stripped, and the JSON lands under the same stem). Reports are produced by default now, so you normally do not need it |
+| `--fail-fast` | Stop at the first failure (by default the run continues; nightly needs the full picture more) |
+| `--no-confirm` | Never stop to ask mid-run. It only affects boards with `reset.method: manual` (see section 8). Giving it means **nobody answers** "has the board booted", so the harnesses that write before they read are refused, that is, **`unity` without `autorun`**; `console`, `pytest` and unity with autorun are all unaffected |
+
 ### 3.1 How the build reaches the board
 
 **It is sent as one package, so the two machines need not share a filesystem.** The build happens
@@ -221,49 +255,6 @@ while your SDK keeps changing. Two layers:
   two revisions produced this result" is answered afterwards. Differing revisions are not an error
   by themselves, but they are the only clue to the most common real accident here: a long-running
   agent still holding old code.
-
-**The SDK holds no inventory of the lab.** A run is (instance, platform, backend, build dir) and nothing
-finer: which *board* of that platform will host it is not decided here and cannot be, because the agent
-allocates from its own configuration at the moment hardware is requested. So naming a platform is the
-whole of what you say — the hardware map never enters this side at all (it belongs to the hardware team,
-see section 8).
-
-Three checks that used to happen *before the build* are now deferred to the moment hardware is
-requested:
-
-| What is lost | Consequence |
-|---|---|
-| fixture matching | a case needing a fixture nobody offers fails at `allocate`, not at `plan` |
-| the binding ↔ `features.yaml` contradiction check | "there is a flash on spi1 but the board declares no spi" is no longer caught early |
-| platform filter, phase two | whatever a case declares is overridden by `-p` (below) |
-
-**`-p` overrides a case's own `integration_platforms`** — the flag wins. The whole tree is
-pulled onto the platform you name, including cases pinned to a different one. That is exactly
-what "run everything on this board" wants, but it does bypass the cases' own declarations, so
-do not be surprised when a cross-platform case turns up.
-
-**To run on several platforms**: the command line takes only one `-p` today. Running the whole
-tree on two platforms means naming them in the cases' `integration_platforms:`, or running twice.
-
-Common flags:
-
-| Flag | What it does |
-|---|---|
-| `-T/--testsuite-root` | The directory to search recursively for `testcase.yaml` (default: the SDK's `example/`) |
-| `-t/--testcase` | Run only the given id (repeatable). Both the full id and just the tests key are supported |
-| `--tag` | Select by tag (union) |
-| `-p/--platform` | Name a board to build for; needed unless every test case names its own `integration_platforms` |
-| `--no-build` | Skip the build and use what is already in `build_<board>/` |
-| `-j/--jobs` | Number of parallel build jobs |
-| `--timeout` | Override the timeout of every test case |
-| `--outdir` | Artifact root, default `test-out/`. **Each run creates a timestamped directory under it**, holding this run's run-level `runner.log`, the per-instance `device.log`/`runner.log`, and the reports |
-| `-i/--inline-logs` | On failure, print the serial log **into the terminal** instead of only giving the path |
-| `--report-dir` | Where the reports land; defaults to `--outdir` |
-| `--report-name` | The report filename stem, default `sifli` (producing `<name>.json` and `<name>.xml`) |
-| `--report-suffix` | Appended to the report filename to tell builds apart in CI (→ `sifli_ci123.xml`) |
-| `--report` | **Compatibility alias**: pins the JUnit directory and filename (the extension is stripped, and the JSON lands under the same stem). Reports are produced by default now, so you normally do not need it |
-| `--fail-fast` | Stop at the first failure (by default the run continues; nightly needs the full picture more) |
-| `--no-confirm` | Never stop to ask mid-run. It only affects boards with `reset.method: manual` (see section 8). Giving it means **nobody answers** "has the board booted", so the harnesses that write before they read are refused, that is, **`unity` without `autorun`**; `console`, `pytest` and unity with autorun are all unaffected |
 
 ---
 
