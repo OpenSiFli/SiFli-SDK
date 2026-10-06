@@ -29,6 +29,7 @@ from sdk_test.backends.pc_sim import PcSimBackend
 from sdk_test.backends.qemu import QemuBackend
 from sdk_test.errors import BackendError
 from sdk_test.errors import LabAgentError
+from sdk_test.version import PROTOCOL
 
 
 class _StubHandler(BaseHTTPRequestHandler):
@@ -88,7 +89,7 @@ class ClientTestCase(SdkTestCase):
 
 class TestRequestShaping(ClientTestCase):
     def test_allocate_sends_fixtures_not_ports(self):
-        self.route("/allocate", {"testbed_id": "tb_01"})
+        self.route("/allocate", {"testbed_id": "tb_01", "protocol": PROTOCOL})
         self.client.allocate(
             platform="board_a", fixtures=["flash"], holder="job-1"
         )
@@ -122,6 +123,42 @@ class TestRequestShaping(ClientTestCase):
         body = self.server.requests[-1]["body"]
         self.assertEqual(body["build_dir"], "/tmp/b")
         self.assertFalse(body["reset"])
+
+
+class TestProtocolGate(ClientTestCase):
+    """An agent that speaks a different version of this interface is refused.
+
+    Both directions matter: a *newer* agent sends fields this checkout cannot
+    read, and an agent from before the version was introduced sends none at all.
+    Either would otherwise surface as a wrong result several calls later.
+    """
+
+    def test_an_agent_from_before_the_protocol_existed_is_refused(self):
+        self.route("/allocate", {"testbed_id": "tb_01"})
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.allocate(platform="board_a")
+        self.assertIn("did not say which protocol", str(caught.exception))
+
+    def test_a_different_protocol_is_refused_and_both_are_named(self):
+        self.route("/allocate", {"testbed_id": "tb_01", "protocol": PROTOCOL + 1})
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.allocate(platform="board_a")
+        message = str(caught.exception)
+        self.assertIn(str(PROTOCOL + 1), message)
+        self.assertIn(str(PROTOCOL), message)
+
+    def test_a_bool_is_not_a_protocol_number(self):
+        # `True == 1` in Python, so a `protocol: true` would pass a naive check
+        # against protocol 1 -- a version gate that opens for the wrong reason.
+        self.route("/allocate", {"testbed_id": "tb_01", "protocol": True})
+        with self.assertRaises(LabAgentError):
+            self.client.allocate(platform="board_a")
+
+    def test_the_matching_protocol_is_accepted(self):
+        self.route("/allocate", {"testbed_id": "tb_01", "protocol": PROTOCOL})
+        self.assertEqual(
+            self.client.allocate(platform="board_a")["testbed_id"], "tb_01"
+        )
 
 
 class TestErrorHandling(ClientTestCase):

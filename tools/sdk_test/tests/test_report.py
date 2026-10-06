@@ -470,6 +470,32 @@ class TestJunitXml(SdkTestCase):
         self.assertEqual(properties["count.passed"], "1")
         self.assertEqual(properties["count.failed"], "1")
 
+    def test_the_two_revisions_that_produced_the_run_are_recorded(self):
+        # The agent outlives many SDK checkouts, so a result whose lab was
+        # running something else has to be explainable from the artefact alone.
+        # Recorded, not checked: a dirtied checkout is a normal working state.
+        from sdk_test.version import PROTOCOL
+        from sdk_test.version import package_root
+        from sdk_test.version import revision
+
+        summary = make_summary()
+        summary.agent_revision = "abc1234-dirty"
+        root = self.write_and_parse(summary)
+        properties = {
+            prop.get("name"): prop.get("value") for prop in root.find("properties")
+        }
+        self.assertEqual(properties["agent_revision"], "abc1234-dirty")
+        self.assertEqual(properties["sdk_revision"], revision(package_root()))
+        self.assertEqual(properties["sdk_protocol"], str(PROTOCOL))
+
+    def test_an_agent_that_never_answered_leaves_no_property(self):
+        # A host-target run has no agent, and an empty property reads as one
+        # that answered with nothing.
+        root = self.write_and_parse(make_summary())
+        names = [prop.get("name") for prop in root.find("properties")]
+        self.assertNotIn("agent_revision", names)
+        self.assertIn("sdk_revision", names)
+
     def test_the_output_directory_is_created(self):
         path = self.root + "/nested/deeper/junit.xml"
         report.write_junit_xml(make_summary(), path)

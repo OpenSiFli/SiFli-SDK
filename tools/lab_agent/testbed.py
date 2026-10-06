@@ -48,6 +48,10 @@ from .transport.jlink import JLinkTransport
 from .transport.serial import SerialTransport
 from .transport.sftool import SftoolTransport
 
+from sdk_test.version import PROTOCOL
+from sdk_test.version import package_root
+from sdk_test.version import revision
+
 _JLINK_DEVICE_RE = re.compile(
     r"^\s*JLINK_DEVICE\s*=\s*['\"]([^'\"]*)['\"]", re.MULTILINE
 )
@@ -578,6 +582,12 @@ class LabManager:
     ) -> None:
         self.config = config
         self.sdk_root = sdk_root
+        #: What this agent speaks and what it is built from. Both are reported on
+        #: every allocation: the caller refuses on a protocol mismatch, and
+        #: records the revision so a strange result can be explained later. See
+        #: :mod:`sdk_test.version` for why only the protocol is a gate.
+        self.protocol = PROTOCOL
+        self.revision = revision(package_root())
         self._runtimes: Dict[str, TestBedRuntime] = {
             testbed.id: TestBedRuntime(
                 testbed, config.settings, sdk_root, console_factory, jlink_factory

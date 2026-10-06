@@ -43,6 +43,13 @@ class Session(Protocol):
     #: its boot is the download's and therefore guaranteed, which is the whole
     #: difference between the two modes.
     manual_reset: bool
+    #: What the agent behind this session said it was built from, if there is one.
+    #:
+    #: Empty for a host target, and empty for an agent too old to say. Recorded
+    #: rather than checked: an agent is a long-running process and is routinely
+    #: older than the checkout driving it, so this is the trail left for whoever
+    #: has to explain a strange result. See :mod:`sdk_test.version`.
+    agent_revision: str
     #: Everything the device said, as far as the backend still retains it.
     #:
     #: Only valid before :meth:`close` -- closing tears the console down and

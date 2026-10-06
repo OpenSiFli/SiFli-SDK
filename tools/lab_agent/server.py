@@ -168,6 +168,11 @@ class _Handler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "runner": self.manager.config.settings.name,
                 "testbeds": len(self.manager.ids()),
+                # What this agent speaks, and what it is built from. A caller
+                # compares the first and records the second -- see
+                # sdk_test.version for why only one of them is a gate.
+                "protocol": self.manager.protocol,
+                "revision": self.manager.revision,
             }
 
         if head == "testbeds":
@@ -193,6 +198,11 @@ class _Handler(BaseHTTPRequestHandler):
                 # reset only works for a harness that never writes to the
                 # console, and that is worth refusing before a flash, not after.
                 "reset": runtime.describe()["reset"],
+                # Repeating /health's two answers here because this is the one
+                # call every hardware run makes, and the revision has to reach
+                # that run's report.
+                "protocol": self.manager.protocol,
+                "revision": self.manager.revision,
             }
 
         if head == "release":

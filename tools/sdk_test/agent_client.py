@@ -26,6 +26,7 @@ from typing import Tuple
 
 from .errors import LabAgentError
 from .errors import MatchError
+from .version import PROTOCOL
 
 #: Generous default: flashing over a slow link is not a hung agent.
 DEFAULT_TIMEOUT = 60.0
@@ -107,7 +108,7 @@ class LabAgentClient:
         testbed_id: Optional[str] = None,
         holder: Optional[str] = None,
     ) -> Dict[str, Any]:
-        return self._request(
+        allocation = self._request(
             "POST",
             "/allocate",
             {
@@ -117,6 +118,8 @@ class LabAgentClient:
                 "holder": holder,
             },
         )
+        check_protocol(allocation)
+        return allocation
 
     def release(self, testbed_id: str, holder: Optional[str] = None) -> None:
         self._request("POST", "/release", {"testbed_id": testbed_id, "holder": holder})
@@ -238,3 +241,28 @@ def require_testbed(allocation: Dict[str, Any]) -> str:
     if not testbed_id:
         raise MatchError(f"Lab Agent returned no testbed id: {allocation!r}")
     return str(testbed_id)
+
+
+def check_protocol(allocation: Dict[str, Any]) -> None:
+    """Refuse an agent that speaks a different version of this interface.
+
+    The agent is a long-running process, so it is routinely older or newer than
+    the checkout driving it, and being different is not by itself a problem --
+    see :mod:`sdk_test.version`. Speaking *differently* is, because the
+    alternative to refusing here is a field the other side cannot read showing
+    up as a wrong result three calls later.
+    """
+    spoken = allocation.get("protocol")
+    if not isinstance(spoken, int) or isinstance(spoken, bool):
+        raise LabAgentError(
+            "The Lab Agent did not say which protocol it speaks, so it is from "
+            f"before this checkout was written (which speaks {PROTOCOL}). "
+            "Restart it from the same revision: python tools/lab_agent/runner.py "
+            "--config <file>."
+        )
+    if spoken != PROTOCOL:
+        raise LabAgentError(
+            f"The Lab Agent speaks protocol {spoken}, this checkout speaks "
+            f"{PROTOCOL}. The two cannot be mixed; restart the agent from the "
+            "same revision."
+        )

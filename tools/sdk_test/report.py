@@ -34,6 +34,10 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from .version import PROTOCOL
+from .version import package_root
+from .version import revision
+
 #: The three per-instance logs, named after the layer that produced them.
 BUILD_LOG = "build.log"
 DEVICE_LOG = "device.log"
@@ -212,6 +216,11 @@ class RunSummary:
     #: apart from ``total`` so that "twelve discovered, three not for this
     #: board" stays readable.
     discovered: int = 0
+    #: What the Lab Agent said it was built from, when one took part. Recorded
+    #: rather than checked: an agent is a long-running process and is routinely
+    #: older than the checkout driving it, so this is the trail for whoever has
+    #: to explain a strange result later. See :mod:`sdk_test.version`.
+    agent_revision: str = ""
 
     def add(self, result: TestResult) -> None:
         self.results.append(result)
@@ -388,6 +397,13 @@ def summary_to_dict(summary: RunSummary) -> Dict[str, Any]:
     return {
         "environment": {
             "framework": "sdk_test",
+            # Which code produced this run, both sides of it. Neither is a gate
+            # -- a dirty checkout is a normal working state -- but a result
+            # whose agent was built from something else has to be explainable
+            # afterwards, and this is the only place that can say so.
+            "sdk_revision": revision(package_root()),
+            "sdk_protocol": PROTOCOL,
+            "agent_revision": summary.agent_revision,
             "started": _iso(summary.started_at),
             "finished": _iso(summary.finished_at),
             "root": summary.root,
@@ -566,6 +582,17 @@ def dict_to_xml(
                 properties,
                 "property",
                 {"name": f"count.{status_key}", "value": str(count)},
+            )
+
+    # Which code produced this. JUnit's own properties block is where a reader
+    # looks for run-level facts, and CI already surfaces it -- so a result whose
+    # lab was running a different revision can be explained without the machine
+    # it came from.
+    for name in ("sdk_revision", "sdk_protocol", "agent_revision"):
+        value = environment.get(name)
+        if value:
+            ElementTree.SubElement(
+                properties, "property", {"name": name, "value": str(value)}
             )
 
     for element in emitted:

@@ -41,6 +41,7 @@ class BoardSession:
         platform: str,
         holder: Optional[str],
         manual_reset: bool = False,
+        agent_revision: str = "",
     ) -> None:
         self._client = client
         self.testbed_id = testbed_id
@@ -49,6 +50,9 @@ class BoardSession:
         self.holder = holder
         #: This board has no probe: its reset button is the operator's job.
         self.manual_reset = manual_reset
+        #: What the agent says it was built from. Carried on the session so the
+        #: run's report can say which two revisions produced the result.
+        self.agent_revision = agent_revision
         self._closed = False
         self._transcript: Optional[str] = None
         self._dropped = 0
@@ -221,4 +225,5 @@ class BoardBackend(Backend):
             platform=resolved_platform,
             holder=holder,
             manual_reset=manual_reset,
+            agent_revision=str(allocation.get("revision") or ""),
         )

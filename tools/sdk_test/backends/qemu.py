@@ -358,6 +358,8 @@ class QemuSession:
         self.testbed_id: Optional[str] = None
         #: Booting is the emulator's own job, so no operator is ever asked.
         self.manual_reset = False
+        #: There is no agent here to have a revision.
+        self.agent_revision = ""
         self._closed = False
 
     @property

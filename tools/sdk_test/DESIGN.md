@@ -169,6 +169,26 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 
 ---
 
+## 两侧版本：协议硬校验，revision 只记录
+
+agent 是**长驻进程**，SDK 侧一直在变，两者不同步是常态而非异常。
+
+| | 是什么 | 处理 | 为什么 |
+|---|---|---|---|
+| `PROTOCOL`（`sdk_test/version.py`） | 一个整数，只在接口真的不兼容时 +1 | **对不上就拒**，报出两边各是什么 | "我发的字段你读不懂"这类问题的机械答案，版本号猜不出来 |
+| 两侧 `revision` | `git rev-parse --short HEAD`，被改过的 tracked 文件加 `-dirty` | **只记录**，进报告 `<properties>` | 脏 worktree 是正常工作状态；拿它当门槛会在最需要它工作时（正在改这个框架）全线误拒 |
+
+`revision()` 的根从 `version.py` **自己的位置**推（`package_root()`），不从 `SIFLI_SDK_PATH`：
+要回答的是"正在跑的是哪份代码"，而实验室机器上那个变量可能指着另一份 checkout。
+
+untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下载物，一个永远为真的标记什么
+都记不下来。
+
+报告里的 `sdk_revision` / `agent_revision` / `sdk_protocol` 是事后解释"这次结果到底是哪两份
+代码跑出来的"的唯一线索——长驻 agent 拿着旧代码，是这里最常见的真事故。
+
+---
+
 ## 目录与文件
 
 ### 1. SDK 侧：`tools/sdk_test/`（twister 等价物）
@@ -185,7 +205,8 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | `pytest_plugin.py` | 提供 `testbed` / `dut` / `console` / `fixture` / `apppath` / `build_dir` fixture，形态对齐 pytest-embedded。 |
 | `backends/{board,pc_sim,qemu}.py` | 执行后端。**MVP 只实现 `board`**；`pc_sim`（`customer/boards/pc`）与 `qemu`（`customer/boards/qemu_cortex_m33`）定义接口 + `NotImplementedError`，但**接口按"无需 Lab Agent 分配"设计**（它们在 SDK 里就是 board 名，构建+执行都在本地）。 |
 | `runner.py` | 编排：解析 → 匹配 testbed → 构建 → （Tier A）申请 testbed → 烧录 → 执行 pytest → 收集。 |
-| `agent_client.py` | 与 Lab Agent runner 的 HTTP 客户端（stdlib `urllib`，不引 FastAPI）。 |
+| `agent_client.py` | 与 Lab Agent runner 的 HTTP 客户端（stdlib `urllib`，不引 FastAPI）。申请硬件时核对对方的协议版本。 |
+| `version.py` | `PROTOCOL` 与两侧 `revision()`。见"两侧版本"。 |
 | `report.py` | 结果聚合、每实例日志落盘、run 日志、JSON 主文档与 JUnit 派生、终端汇总。全部用标准库（`json` / `xml.etree`），不引依赖；`junit_xml` 这个包虽然还在 lock 里，但**无人 import**。 |
 | `tests/` | **框架自身**的 pytest 单测（discovery / binding / harness 解析），不需要硬件。 |
 

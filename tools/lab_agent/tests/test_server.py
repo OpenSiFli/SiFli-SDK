@@ -63,6 +63,17 @@ class TestHealth(ServerTestCase):
         self.assertEqual(payload["runner"], "test-runner")
         self.assertEqual(payload["testbeds"], 2)
 
+    def test_health_says_what_it_speaks_and_what_it_is_built_from(self):
+        # A caller compares the first and records the second: only a protocol
+        # mismatch is a refusal, because the agent is a long-running process and
+        # is routinely older than the checkout driving it.
+        from sdk_test.version import PROTOCOL
+
+        status, payload = self.request("GET", "/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["protocol"], PROTOCOL)
+        self.assertTrue(payload["revision"])
+
 
 class TestTestbeds(ServerTestCase):
     def test_the_listing_exposes_fixtures_not_just_ids(self):

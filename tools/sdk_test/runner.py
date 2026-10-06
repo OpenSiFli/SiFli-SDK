@@ -247,6 +247,10 @@ class TestRunner:
         #: the norm in CI, and not an error, only a thinner guarantee.
         self._confirm = confirm
         self._client: Optional[LabAgentClient] = None
+        #: What the agent said it was built from, once one has answered. Carried
+        #: to the report so a result can be explained against the code that
+        #: produced it -- an agent outlives many SDK checkouts.
+        self._agent_revision = ""
         # Resolved once, here, because three call sites need this path: taking
         # the timestamp at each would drop the instance logs and the run log
         # into different directories whenever a run straddles a second.
@@ -614,6 +618,11 @@ class TestRunner:
             )
             result.testbed_id = session.testbed_id or result.testbed_id
             result.platform = session.platform or result.platform
+            # One run talks to one agent in practice, so the first session that
+            # names a revision is the run's. Recorded, never enforced: see
+            # sdk_test.version.
+            if session.agent_revision and not self._agent_revision:
+                self._agent_revision = session.agent_revision
 
             context = RunContext(
                 python_exe=self.options.python_exe,
@@ -900,6 +909,9 @@ class TestRunner:
                     break
 
         summary.finished_at = time.time()
+        # Read here rather than when the summary was built: which agent answered
+        # is only known once one has. Every result is already in by now.
+        summary.agent_revision = self._agent_revision
         self._write_artifacts(summary)
         return summary
 

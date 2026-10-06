@@ -565,6 +565,16 @@ class TestReporting(EndToEndCase):
         self.assertEqual(case.get("testbed"), "tb_01")
         self.assertEqual(case.get("platform"), "sf32lb52-lcd_n16r8")
 
+    def test_the_run_records_the_revision_of_the_agent_it_used(self):
+        # The only way a result can be explained against the code that produced
+        # it: the agent is a long-running process and is routinely older than
+        # the checkout that drove the run.
+        from sdk_test.version import package_root
+        from sdk_test.version import revision
+
+        summary = self.runner(self.harness_case()).run()
+        self.assertEqual(summary.agent_revision, revision(package_root()))
+
     def test_a_failure_is_recorded_in_the_report(self):
         suite = self.make_project(
             testcase_yaml="""

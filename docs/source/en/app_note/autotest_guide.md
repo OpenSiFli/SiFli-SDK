@@ -188,6 +188,21 @@ same machine as you.
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
+### 3.2 When the agent is not the same code as your SDK
+
+The agent is a **long-running process**, quite possibly started days ago from another checkout,
+while your SDK keeps changing. Two layers:
+
+- **The protocol version**: a mismatch is **refused outright**, and the message names both sides.
+  It only moves when the interface genuinely stops being compatible -- "a field I send that you
+  cannot read" -- which is not something a version number can guess at.
+- **The two revisions**: **recorded, never checked**. A dirty worktree is a normal working state,
+  and making it a gate would refuse to run exactly when somebody is mid-change. `sifli.xml` carries
+  `sdk_revision`, `agent_revision` and `sdk_protocol` in its `<properties>`, which is where "which
+  two revisions produced this result" is answered afterwards. Differing revisions are not an error
+  by themselves, but they are the only clue to the most common real accident here: a long-running
+  agent still holding old code.
+
 **The SDK holds no inventory of the lab.** A run is (instance, platform, backend, build dir) and nothing
 finer: which *board* of that platform will host it is not decided here and cannot be, because the agent
 allocates from its own configuration at the moment hardware is requested. So naming a platform is the
