@@ -21,6 +21,7 @@ from sdk_test.platforms import check_declaration
 from sdk_test.platforms import declared_features
 from sdk_test.platforms import feature_symbol
 from sdk_test.platforms import features_path
+from sdk_test.platforms import jlink_device
 from sdk_test.platforms import load_platform_features
 from sdk_test.platforms import platform_types
 from sdk_test.platforms import split_platform
@@ -234,6 +235,51 @@ class QemuCarrierTest(unittest.TestCase):
                 self.assertEqual(
                     ["spi"],
                     unsatisfied(load_platform_features(board), ["spi"]))
+
+
+class JLinkDeviceTest(SdkTestCase):
+    """The probe's device name, read from the board's own ``rtconfig.py``.
+
+    It lives beside the feature declaration because it is the same kind of fact:
+    a property of the board, in the board's own directory. Both sides read it --
+    the SDK side to put it in the firmware package, the agent as a fallback.
+    """
+
+    def test_the_device_is_read_from_the_boards_own_file(self):
+        self.write(
+            "customer/boards/my-board/hcpu/rtconfig.py",
+            """
+            import os
+            TARGET_NAME = 'bf0_ap'
+            JLINK_DEVICE = 'SF32LB52X_NOR'
+            CORE = "HCPU"
+            """,
+        )
+        self.assertEqual(jlink_device("my-board", self.root), "SF32LB52X_NOR")
+
+    def test_a_core_suffix_picks_that_core(self):
+        self.write(
+            "customer/boards/my-board/lcpu/rtconfig.py", "JLINK_DEVICE = 'L'\n"
+        )
+        self.write(
+            "customer/boards/my-board/hcpu/rtconfig.py", "JLINK_DEVICE = 'H'\n"
+        )
+        self.assertEqual(jlink_device("my-board", self.root), "H")
+        self.assertEqual(jlink_device("my-board_lcpu", self.root), "L")
+
+    def test_an_empty_device_is_not_offered_as_a_name(self):
+        # Boards that are not real hardware (pc, dummy) declare an empty value,
+        # and an empty name is worse than none: it would be handed to the probe.
+        self.write("customer/boards/pc/hcpu/rtconfig.py", "JLINK_DEVICE = ''\n")
+        self.assertIsNone(jlink_device("pc", self.root))
+
+    def test_a_board_that_declares_nothing_yields_nothing(self):
+        self.assertIsNone(jlink_device("no-such-board", self.root))
+
+    def test_the_real_board_declares_one(self):
+        # Pins the reading against the tree it actually runs in, so a change to
+        # how this is spelled is noticed rather than silently yielding nothing.
+        self.assertEqual(jlink_device("sf32lb52-lcd_a128r16"), "SF32LB52X_NAND")
 
 
 if __name__ == "__main__":

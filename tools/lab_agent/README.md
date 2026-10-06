@@ -42,14 +42,20 @@ GET  /health
 GET  /testbeds
 POST /allocate                     {platform, fixtures, testbed_id, holder}
 POST /release                      {testbed_id, holder}
-POST /testbed/{id}/prepare         {build_dir, reset}
+POST /testbed/{id}/firmware        body = a firmware package (tar)
+POST /testbed/{id}/prepare         {firmware, reset}
 POST /testbed/{id}/reset
-POST /testbed/{id}/flash           {build_dir}
+POST /testbed/{id}/flash           {firmware}
 POST /testbed/{id}/console/open
 POST /testbed/{id}/console/close
 GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS
 POST /testbed/{id}/console/write   {data}
 ```
+
+`firmware` is the digest the upload answered with, not a path: the package is
+unpacked under its own name and flashed from there, so this machine never needs
+to see the one that built it. See `sdk_test/firmware.py`, which both sides
+import.
 
 **为什么控制台不是流式的。** 客户端问"游标 N 之后有什么"，服务端最多阻塞 `timeout` 秒。
 流式意味着 chunked 响应、断线重连、以及"客户端读到哪了"的第二个真相来源；

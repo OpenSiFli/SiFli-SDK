@@ -10,6 +10,7 @@ surface) is the real implementation under test.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -144,6 +145,44 @@ class LabTestCase(unittest.TestCase):
         path = os.path.join(self.root, relative_path.replace("/", os.sep))
         os.makedirs(path, exist_ok=True)
         return path
+
+    def a_firmware_package(
+        self,
+        platform: str = "sf32lb52-lcd_n16r8",
+        images=None,
+        suffix: str = "",
+        jlink_device: Optional[str] = None,
+    ) -> bytes:
+        """A package the SDK side would have built, with real images inside.
+
+        Built with the real packer rather than a hand-rolled tar: the agent's
+        upload path is only worth testing against something the other side can
+        actually produce.
+        """
+        from sdk_test.firmware import build_package
+
+        build = self.mkdir("built" + suffix)
+        for name, content in (images or {"output/main.bin": "an image"}).items():
+            self.write(("built" + suffix + "/" + name), content)
+        self.write(
+            "built" + suffix + "/sftool_param.json",
+            json.dumps(
+                {
+                    "chip": "SF32LB52",
+                    "memory": "NAND",
+                    "write_flash": {
+                        "files": [
+                            {"path": name, "address": "0x620A0000"}
+                            for name in (images or {"output/main.bin": "an image"})
+                        ]
+                    },
+                }
+            ),
+        )
+        metadata = {"platform": platform, "board": platform + "_hcpu"}
+        if jlink_device:
+            metadata["jlink_device"] = jlink_device
+        return build_package(build, metadata)
 
     def make_config(self, yaml_text: str = CONFIG_YAML):
         from lab_agent.config import parse_runner_config

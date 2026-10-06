@@ -188,6 +188,25 @@ same machine as you.
 
 Exit codes: `0` everything passed, `1` some test case failed, `2` the request itself is not usable.
 
+### 3.1 How the build reaches the board
+
+**It is sent as one package, so the two machines need not share a filesystem.** The build happens
+here; the SDK side packs the **two manifests** in `build_<board>/` (`download.jlink`,
+`sftool_param.json`) together with the images they name into one tar and POSTs it to the agent. The
+agent unpacks it into a directory of its own and **flashes from there**. The rest of
+`build_<board>/` -- tens of thousands of object files -- is not sent; for this board the whole
+package comes to 420 KB.
+
+So the agent can run on **another machine**: it never needs to see your build directory. Uploading
+the same build twice is fine -- the agent names a package after its contents, so it unpacks one
+copy. A testbed's packages go away when it is released.
+
+The package carries its `platform`, and **the agent checks it**: only the side that built the image
+knows which board it was for, and without the check an A-board image programmed into a B board
+succeeds all the way to a result nobody can explain. It also carries the **device name the probe
+needs** (`SF32LB52X_NAND` and the like) -- that is not in `download.jlink`, and without it a remote
+agent can only read the board file in its own checkout, which may be a different revision.
+
 ### 3.2 When the agent is not the same code as your SDK
 
 The agent is a **long-running process**, quite possibly started days ago from another checkout,

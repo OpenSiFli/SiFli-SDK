@@ -54,6 +54,24 @@ class ServerTestCase(LabTestCase):
         except urllib.error.HTTPError as error:
             return error.code, json.loads(error.read() or b"{}")
 
+    def upload(self, testbed_id: str, payload: bytes):
+        """POST a firmware package. The body is a tar, not JSON."""
+        request = urllib.request.Request(
+            f"{self.base}/testbed/{testbed_id}/firmware", data=payload, method="POST"
+        )
+        request.add_header("Content-Type", "application/octet-stream")
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                return response.status, json.loads(response.read() or b"{}")
+        except urllib.error.HTTPError as error:
+            return error.code, json.loads(error.read() or b"{}")
+
+    def stage(self, testbed_id: str, platform: str = "sf32lb52-lcd_n16r8") -> str:
+        """Upload a package and return the token that names it."""
+        status, payload = self.upload(testbed_id, self.a_firmware_package(platform))
+        self.assertEqual(status, 200, payload)
+        return payload["token"]
+
 
 class TestHealth(ServerTestCase):
     def test_health_names_the_runner_and_its_testbed_count(self):
@@ -203,18 +221,103 @@ class TestPreparationOverHttp(ServerTestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(self.manager.probes["tb_01"].resets), 1)
 
-    def test_flash_needs_a_build_dir(self):
+    def test_flash_needs_a_firmware_token(self):
         status, payload = self.request("POST", "/testbed/tb_01/flash", {})
         self.assertEqual(status, 400)
-        self.assertIn("build_dir", payload["error"])
+        self.assertIn("firmware", payload["error"])
 
-    def test_prepare_flashes_and_resets(self):
-        status, _ = self.request(
-            "POST", "/testbed/tb_01/prepare", {"build_dir": "/tmp/build"}
-        )
+    def test_prepare_flashes_the_uploaded_package_and_resets(self):
+        token = self.stage("tb_01")
+
+        status, _ = self.request("POST", "/testbed/tb_01/prepare", {"firmware": token})
         self.assertEqual(status, 200)
-        self.assertEqual(self.manager.probes["tb_01"].flashed, ["/tmp/build"])
+
+        flashed = self.manager.probes["tb_01"].flashed
+        self.assertEqual(len(flashed), 1)
+        # Where it was unpacked, not where it was built -- the two machines need
+        # share nothing, so the directory the agent flashes from is its own.
+        self.assertTrue(flashed[0].endswith(token), flashed[0])
         self.assertEqual(len(self.manager.probes["tb_01"].resets), 1)
+
+
+class TestFirmwareUpload(ServerTestCase):
+    """A package arrives over HTTP and is flashed from where it landed."""
+
+    def test_a_package_is_staged_under_its_own_digest(self):
+        payload = self.a_firmware_package()
+        status, body = self.upload("tb_01", payload)
+
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["platform"], "sf32lb52-lcd_n16r8")
+        self.assertEqual(body["board"], "sf32lb52-lcd_n16r8_hcpu")
+        self.assertEqual(body["bytes"], len(payload))
+        # Derived here, not accepted from the caller: it names the package.
+        from sdk_test.firmware import digest
+
+        self.assertEqual(body["token"], digest(payload))
+
+    def test_the_same_package_twice_is_staged_once(self):
+        # Two test cases sharing one firmware, or a re-run of the same build.
+        first = self.stage("tb_01")
+        second = self.stage("tb_01")
+        self.assertEqual(first, second)
+
+    def test_a_flash_by_token_flashes_the_unpacked_package(self):
+        token = self.stage("tb_01")
+
+        status, _ = self.request("POST", "/testbed/tb_01/flash", {"firmware": token})
+        self.assertEqual(status, 200)
+        self.assertEqual(len(self.manager.probes["tb_01"].flashed), 1)
+
+    def test_a_token_nothing_was_sent_under_is_refused(self):
+        # The whole reason the upload and the flash are separate calls. If the
+        # agent flashed "whatever arrived last", a run that skipped its upload
+        # would test the previous run's image and report green.
+        status, payload = self.request(
+            "POST", "/testbed/tb_01/flash", {"firmware": "0" * 64}
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("has been uploaded", payload["error"])
+        self.assertEqual(self.manager.probes.get("tb_01"), None)
+
+    def test_prepare_by_unknown_token_is_refused_before_anything_moves(self):
+        status, payload = self.request(
+            "POST", "/testbed/tb_01/prepare", {"firmware": "0" * 64}
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("has been uploaded", payload["error"])
+        self.assertEqual(self.manager.probes.get("tb_01"), None)
+
+    def test_a_package_for_another_board_is_refused(self):
+        # A wrong-platform image flashes perfectly well, which is why this is
+        # checked here: nothing later in the run would notice.
+        status, payload = self.upload(
+            "tb_01", self.a_firmware_package(platform="eh-lb563")
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("eh-lb563", payload["error"])
+        self.assertIn("sf32lb52-lcd_n16r8", payload["error"])
+
+    def test_a_body_that_is_not_a_package_is_refused(self):
+        status, payload = self.upload("tb_01", b"this is not a tar at all")
+        self.assertEqual(status, 400)
+        self.assertIn("not a readable tar", payload["error"])
+
+    def test_an_empty_body_is_refused(self):
+        status, payload = self.upload("tb_01", b"")
+        self.assertEqual(status, 400)
+        self.assertIn("cannot be empty", payload["error"])
+
+    def test_releasing_the_testbed_takes_its_firmware_with_it(self):
+        # "Uploaded" must never come to mean "uploaded by the run before this
+        # one": the next caller uploads its own, and the disk does not grow.
+        self.request("POST", "/allocate", {"testbed_id": "tb_01"})
+        token = self.stage("tb_01")
+        status, _ = self.request("POST", "/release", {"testbed_id": "tb_01"})
+        self.assertEqual(status, 200)
+
+        status, _ = self.request("POST", "/testbed/tb_01/flash", {"firmware": token})
+        self.assertEqual(status, 400)
 
 
 #: A lab with one board that has no probe: downloaded over UART, reset by hand.

@@ -31,6 +31,10 @@ from .version import PROTOCOL
 #: Generous default: flashing over a slow link is not a hung agent.
 DEFAULT_TIMEOUT = 60.0
 
+#: Uploading a package is the one call whose duration follows the payload, so it
+#: gets a floor of its own rather than the request default.
+UPLOAD_TIMEOUT = 300.0
+
 
 class LabAgentClient:
     """Talks to one Lab Agent runner."""
@@ -52,6 +56,11 @@ class LabAgentClient:
         if data is not None:
             request.add_header("Content-Type", "application/json")
 
+        return self._send(request, method, path, timeout)
+
+    def _send(
+        self, request: urllib.request.Request, method: str, path: str, timeout: Optional[float]
+    ) -> Dict[str, Any]:
         try:
             with urllib.request.urlopen(request, timeout=timeout or self.timeout) as response:
                 raw = response.read()
@@ -92,6 +101,7 @@ class LabAgentClient:
                 f"object for {method} {path}"
             )
         return payload
+        return payload
 
     # -- control plane -------------------------------------------------------
 
@@ -126,21 +136,42 @@ class LabAgentClient:
 
     # -- testbed operations --------------------------------------------------
 
+    def upload_firmware(self, testbed_id: str, payload: bytes) -> Dict[str, Any]:
+        """Send a firmware package. The body is a tar, not JSON.
+
+        The agent unpacks it and answers with the token that names it, which is
+        what the later ``prepare`` must quote. Nothing is flashed by this call:
+        a package that is still travelling is not a package to program a board
+        from.
+        """
+        request = urllib.request.Request(
+            f"{self.base_url}/testbed/{_quote(testbed_id)}/firmware",
+            data=payload,
+            method="POST",
+        )
+        request.add_header("Content-Type", "application/octet-stream")
+        return self._send(
+            request,
+            "POST",
+            f"/testbed/{testbed_id}/firmware",
+            timeout=max(self.timeout, UPLOAD_TIMEOUT),
+        )
+
     def prepare(
-        self, testbed_id: str, build_dir: Optional[str] = None, reset: bool = True
+        self, testbed_id: str, firmware: str, reset: bool = True
     ) -> Dict[str, Any]:
         return self._request(
             "POST",
             f"/testbed/{_quote(testbed_id)}/prepare",
-            {"build_dir": build_dir, "reset": reset},
+            {"firmware": firmware, "reset": reset},
         )
 
     def reset(self, testbed_id: str) -> Dict[str, Any]:
         return self._request("POST", f"/testbed/{_quote(testbed_id)}/reset")
 
-    def flash(self, testbed_id: str, build_dir: str) -> Dict[str, Any]:
+    def flash(self, testbed_id: str, firmware: str) -> Dict[str, Any]:
         return self._request(
-            "POST", f"/testbed/{_quote(testbed_id)}/flash", {"build_dir": build_dir}
+            "POST", f"/testbed/{_quote(testbed_id)}/flash", {"firmware": firmware}
         )
 
     # -- console -------------------------------------------------------------

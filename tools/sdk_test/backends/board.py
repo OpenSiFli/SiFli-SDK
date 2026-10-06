@@ -5,13 +5,16 @@
 The ordering in :meth:`BoardBackend.open` is the part worth reading, because
 each step exists to prevent a specific and quiet failure:
 
-1. **allocate** -- one test program per testbed, so two runs cannot interleave.
-2. **flash** -- with the console still *closed*. For a board flashed over UART
+1. **package and send the build** -- before any hardware is claimed, because a
+   build directory missing its manifest is a local mistake. Nothing on this side
+   names a path afterwards: the agent flashes what it unpacked itself.
+2. **allocate** -- one test program per testbed, so two runs cannot interleave.
+3. **flash** -- with the console still *closed*. For a board flashed over UART
    the console port *is* the download port, so the two cannot be open at once.
-3. **open the console** -- before the reset, not after.
-4. **reset** -- last, so the boot log lands in an already-open console's buffer.
+4. **open the console** -- before the reset, not after.
+5. **reset** -- last, so the boot log lands in an already-open console's buffer.
 
-If step 3 came after step 4, the earliest lines of the boot log would race the
+If step 4 came after step 5, the earliest lines of the boot log would race the
 serial port being opened, and a ``console`` harness asserting on the banner would
 fail intermittently for a reason that has nothing to do with the firmware. That
 race is the classic reason an embedded test suite is called flaky.
@@ -19,13 +22,18 @@ race is the classic reason an embedded test suite is called flaky.
 
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 from ..agent_client import LabAgentClient
 from ..agent_client import RemoteConsole
 from ..agent_client import require_testbed
 from ..errors import BackendError
+from ..firmware import build_package
 from ..model import TestInstance
+from ..platforms import jlink_device
+from ..version import package_root
+from ..version import revision
 from .base import Backend
 from .base import Session
 
@@ -121,6 +129,36 @@ class BoardBackend(Backend):
     def __init__(self, client: LabAgentClient) -> None:
         self.client = client
 
+    def _package(
+        self, instance: TestInstance, platform: str, build_dir: Optional[str]
+    ) -> bytes:
+        """The build to send, as one package.
+
+        Built before any hardware is claimed: a build directory that is missing
+        the manifest it needs is a local mistake, and discovering it while
+        holding somebody's bench is both rude and slow.
+        """
+        if not build_dir:
+            raise BackendError(
+                f'"{instance.id}": a board run has to send a build, and none was '
+                "planned for this instance"
+            )
+        metadata = {
+            "platform": platform,
+            "board": os.path.basename(os.path.normpath(build_dir)),
+            # Which checkout built this. Recorded rather than enforced: see
+            # sdk_test.version.
+            "sdk_commit": revision(package_root()),
+        }
+        # Only a probe needs this, and which route the lab takes is not known
+        # here -- the same reason both manifests travel. Omitted when the board
+        # declares none, so the lab falls back to its own checkout instead of
+        # being handed an empty name.
+        device = jlink_device(platform)
+        if device:
+            metadata["jlink_device"] = device
+        return build_package(build_dir, metadata)
+
     def open(
         self,
         instance: TestInstance,
@@ -130,6 +168,9 @@ class BoardBackend(Backend):
         will_confirm_boot: bool = False,
     ) -> BoardSession:
         fixtures = [fixture.spec for fixture in instance.fixtures]
+
+        # Local work first, so a broken build directory never costs a bench.
+        package = self._package(instance, platform, build_dir)
 
         allocation = self.client.allocate(
             platform=platform,
@@ -196,9 +237,14 @@ class BoardBackend(Backend):
 
             console = self.client.console_for(testbed_id)
 
+            # Send the build, then flash from what the agent unpacked. Nothing
+            # here names a path on this machine: the two sides need share no
+            # filesystem, which is the whole reason the package travels.
+            token = str(self.client.upload_firmware(testbed_id, package)["token"])
+
             # Fixtures and flash, but explicitly NOT the reset: the console has
             # to be open first (see the module docstring).
-            self.client.prepare(testbed_id, build_dir=build_dir, reset=False)
+            self.client.prepare(testbed_id, firmware=token, reset=False)
             self.client.console_open(testbed_id)
             self.client.reset(testbed_id)
         except BackendError:

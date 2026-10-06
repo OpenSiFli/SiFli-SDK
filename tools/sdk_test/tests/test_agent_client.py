@@ -66,7 +66,14 @@ class _StubHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length else b""
-        self._record(json.loads(raw) if raw else None)
+        self.server.raw.append(raw)
+        try:
+            body = json.loads(raw) if raw else None
+        except ValueError:
+            # A firmware upload is a tar, not JSON. Reading it as one would be
+            # the bug this stub exists to let a test catch.
+            body = None
+        self._record(body)
         self._reply()
 
 
@@ -75,6 +82,7 @@ class ClientTestCase(SdkTestCase):
         super().setUp()
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), _StubHandler)
         self.server.requests = []
+        self.server.raw = []
         self.server.routes = {}
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -115,14 +123,24 @@ class TestRequestShaping(ClientTestCase):
         self.client.console_write("tb_01", "unity_run\r\n")
         self.assertEqual(self.server.requests[-1]["body"]["data"], "unity_run\r\n")
 
-    def test_prepare_can_suppress_the_reset(self):
+    def test_prepare_names_the_package_and_can_suppress_the_reset(self):
         # The board backend flashes with the reset suppressed so the console can
         # be opened first; the request must actually say so.
         self.route("/testbed/tb_01/prepare", {"prepared": True})
-        self.client.prepare("tb_01", build_dir="/tmp/b", reset=False)
+        self.client.prepare("tb_01", firmware="abc123", reset=False)
         body = self.server.requests[-1]["body"]
-        self.assertEqual(body["build_dir"], "/tmp/b")
+        self.assertEqual(body["firmware"], "abc123")
         self.assertFalse(body["reset"])
+        # A path from this machine would mean the two sides share a filesystem,
+        # which is exactly what sending a package removes the need for.
+        self.assertNotIn("build_dir", body)
+
+    def test_a_firmware_upload_is_a_bare_tar_body(self):
+        self.route("/testbed/tb_01/firmware", {"token": "abc123", "platform": "p"})
+        self.client.upload_firmware("tb_01", b"a tar")
+        requests = self.server.requests[-1]
+        self.assertEqual(requests["method"], "POST")
+        self.assertEqual(self.server.raw[-1], b"a tar")
 
 
 class TestProtocolGate(ClientTestCase):

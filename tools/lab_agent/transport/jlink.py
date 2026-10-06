@@ -17,16 +17,15 @@ cannot express.
 from __future__ import annotations
 
 import os
-import re
 import subprocess
 import tempfile
 from typing import List
 from typing import Optional
 
+from sdk_test.firmware import load_lines_from_download_script
+
 from ..errors import TransportError
 
-#: Lines in a generated download script that actually program the device.
-_LOAD_RE = re.compile(r"^\s*(?:loadbin|loadfile)\s+\S", re.IGNORECASE)
 
 def _preamble(speed: int) -> List[str]:
     """Probe preamble shared by every script this transport writes."""
@@ -162,7 +161,8 @@ class JLinkTransport:
         script = os.path.join(build_dir, "download.jlink")
         if not os.path.isfile(script):
             raise TransportError(
-                f'No download.jlink in "{build_dir}"; build the project first'
+                f'No download.jlink in "{build_dir}": the build produced none, or '
+                "it was not packed with the firmware"
             )
 
         loads = load_lines_from_download_script(script)
@@ -175,28 +175,3 @@ class JLinkTransport:
         # actually run, which is what the test then observes on the console.
         lines = _preamble(self.speed) + ["h"] + loads + ["r", "g", "exit"]
         return self._run_script(lines, "flash", cwd=build_dir)
-
-
-def load_lines_from_download_script(path: str) -> List[str]:
-    """Extract the ``loadbin``/``loadfile`` lines from a generated script.
-
-    The paths in them are relative to the build directory, which is why
-    :meth:`JLinkTransport.flash` runs the probe from there. They are returned
-    verbatim: rewriting them would be a second way of saying where the images
-    are, and the one place that must not disagree with the build.
-    """
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as handle:
-            raw = handle.read()
-    except OSError as exc:
-        raise TransportError(f"Cannot read {path}: {exc}") from exc
-
-    lines: List[str] = []
-    for line in raw.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith(("//", "#")):
-            continue
-        if _LOAD_RE.match(stripped):
-            # Strip a trailing comment, which JLink would otherwise try to parse.
-            lines.append(stripped.split("//")[0].strip())
-    return lines

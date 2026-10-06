@@ -5,6 +5,10 @@
 Flashing itself needs hardware, but the parts that decide *what* gets programmed
 are worth pinning: a wrong address silently bricks a board, and a missing image
 must be caught before the probe is invoked rather than during it.
+
+The manifests those parts read are shared with the SDK side that packs them, so
+parsing them is tested there (:mod:`sdk_test.tests.test_firmware`); what is left
+here is what each transport does with one.
 """
 
 from __future__ import annotations
@@ -16,13 +20,12 @@ from unittest import mock
 
 from _support import LabTestCase
 
-from lab_agent.errors import TransportError
 from lab_agent.transport import jlink as jlink_module
 from lab_agent.transport.jlink import JLinkTransport
-from lab_agent.transport.jlink import load_lines_from_download_script
 from lab_agent.transport.sftool import build_flash_arguments
 from lab_agent.transport.sftool import normalize_uart_port
-from lab_agent.transport.sftool import read_sftool_param
+from sdk_test.errors import FirmwareError
+from sdk_test.firmware import read_sftool_param
 
 #: Exactly the shape tools/build/sdk_resource.py generates.
 DOWNLOAD_JLINK = """\
@@ -34,43 +37,6 @@ loadbin fs.bin 0x64200000
 loadfile main.hex
 exit
 """
-
-
-class TestDownloadScriptParsing(LabTestCase):
-    def test_the_load_lines_are_extracted_verbatim(self):
-        path = self.write("build_x/download.jlink", DOWNLOAD_JLINK)
-        self.assertEqual(
-            load_lines_from_download_script(path),
-            [
-                "loadbin ER_IROM1.bin 0x12000000",
-                "loadbin fs.bin 0x64200000",
-                "loadfile main.hex",
-            ],
-        )
-
-    def test_the_probe_preamble_is_not_replayed(self):
-        # `si`, `speed`, `r` and `exit` are replaced by the transport's own
-        # preamble so a probe serial number can be selected; replaying the
-        # build's `r` would reset the board mid-programming.
-        path = self.write("build_x/download.jlink", DOWNLOAD_JLINK)
-        loads = load_lines_from_download_script(path)
-        for noise in ("si SWD", "speed 10000", "exit"):
-            self.assertNotIn(noise, loads)
-
-    def test_trailing_comments_are_stripped(self):
-        path = self.write(
-            "build_x/download.jlink",
-            "loadbin a.bin 0x1000 // the boot image\n",
-        )
-        self.assertEqual(load_lines_from_download_script(path), ["loadbin a.bin 0x1000"])
-
-    def test_a_script_with_no_loads_yields_nothing(self):
-        path = self.write("build_x/download.jlink", "si SWD\nr\nexit\n")
-        self.assertEqual(load_lines_from_download_script(path), [])
-
-    def test_a_missing_script_is_reported(self):
-        with self.assertRaises(TransportError):
-            load_lines_from_download_script(self.root + "/absent.jlink")
 
 
 class TestSftoolParam(LabTestCase):
@@ -130,7 +96,7 @@ class TestSftoolParam(LabTestCase):
                 "write_flash": {"files": [{"path": "absent.bin", "address": "0x0"}]},
             }
         )
-        with self.assertRaises(TransportError) as caught:
+        with self.assertRaises(FirmwareError) as caught:
             build_flash_arguments(build_dir, read_sftool_param(build_dir))
         self.assertIn("absent.bin", str(caught.exception))
 
@@ -138,19 +104,31 @@ class TestSftoolParam(LabTestCase):
         build_dir = self.make_param(
             {"chip": "SF32LB52", "memory": "NOR", "write_flash": {"files": []}}
         )
-        with self.assertRaises(TransportError) as caught:
+        with self.assertRaises(FirmwareError) as caught:
             build_flash_arguments(build_dir, read_sftool_param(build_dir))
         self.assertIn("no flashable images", str(caught.exception))
 
-    def test_a_missing_param_file_names_the_build_step(self):
-        with self.assertRaises(TransportError) as caught:
-            read_sftool_param(self.root)
-        self.assertIn("build the project first", str(caught.exception))
-
-    def test_a_malformed_param_file_is_reported(self):
-        self.write("build_x/sftool_param.json", "{not json")
-        with self.assertRaises(TransportError):
-            read_sftool_param(self.mkdir("build_x"))
+    def test_a_windows_separator_still_resolves(self):
+        # The generator writes `output\main.bin`, and the package preserves that
+        # text verbatim. Whatever separator a manifest uses, the lookup has to
+        # work wherever the directory actually is.
+        build_dir = self.mkdir("build_x")
+        self.write("build_x/output/main.bin", "x")
+        self.write(
+            "build_x/sftool_param.json",
+            json.dumps(
+                {
+                    "chip": "SF32LB52",
+                    "memory": "NAND",
+                    "write_flash": {
+                        "files": [{"path": "output\\main.bin", "address": "0x620A0000"}]
+                    },
+                }
+            ),
+        )
+        arguments = build_flash_arguments(build_dir, read_sftool_param(build_dir))
+        self.assertEqual(len(arguments), 1)
+        self.assertIn("main.bin@0x620A0000", arguments[0].replace("\\", "/"))
 
 
 class TestFlashRunsInTheBuildDirectory(LabTestCase):

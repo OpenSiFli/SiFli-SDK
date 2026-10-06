@@ -19,9 +19,10 @@ Routes::
     GET  /testbeds
     POST /allocate                     {platform, fixtures, testbed_id, holder}
     POST /release                      {testbed_id, holder}
-    POST /testbed/{id}/prepare         {build_dir, reset}
+    POST /testbed/{id}/firmware        body = a firmware package (tar)
+    POST /testbed/{id}/prepare         {firmware, reset}
     POST /testbed/{id}/reset
-    POST /testbed/{id}/flash           {build_dir}
+    POST /testbed/{id}/flash           {firmware}
     POST /testbed/{id}/console/open
     POST /testbed/{id}/console/close
     GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS
@@ -42,6 +43,9 @@ from typing import Tuple
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+from sdk_test.errors import FirmwareError
+from sdk_test.firmware import MAX_TOTAL_BYTES
+
 from .errors import AllocationError
 from .errors import ConfigError
 from .errors import LabAgentError
@@ -61,6 +65,10 @@ _ERROR_STATUS = {
     TestbedError: 409,
     TransportError: 502,
     ConfigError: 500,
+    # A package the agent cannot accept is the sender's problem, not the lab's:
+    # it was built and packed elsewhere. 400 rather than 5xx so a caller goes
+    # looking at its own build step instead of at the bench.
+    FirmwareError: 400,
     # Least specific, so it must be checked last: a plain LabAgentError is a
     # malformed request (bad JSON, a body that is not an object), which is the
     # client's fault, not the agent's. Reporting it as 500 would make a caller's
@@ -112,6 +120,32 @@ class _Handler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             raise LabAgentError("Request body must be a JSON object")
         return data
+
+    def _read_body_bytes(self) -> bytes:
+        """Read a raw body -- a firmware package, not JSON.
+
+        The length is taken from the header and enforced before anything is
+        read, so a caller cannot make the agent buffer an unbounded amount of
+        whatever it feels like sending.
+        """
+        length = self.headers.get("Content-Length")
+        if not length:
+            raise LabAgentError('A firmware upload needs a "Content-Length" header')
+        try:
+            size = int(length)
+        except ValueError as exc:
+            raise LabAgentError(f'Bad "Content-Length": {length!r}') from exc
+        if size <= 0:
+            raise LabAgentError("A firmware upload cannot be empty")
+        if size > MAX_TOTAL_BYTES:
+            raise LabAgentError(
+                f"Firmware upload is {size} bytes; at most {MAX_TOTAL_BYTES} "
+                "are accepted"
+            )
+        try:
+            return self.rfile.read(size)
+        except OSError as exc:
+            raise LabAgentError(f"Cannot read the firmware upload: {exc}") from exc
 
     def _respond(self, status: int, payload: Any) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
@@ -231,12 +265,24 @@ class _Handler(BaseHTTPRequestHandler):
 
         name = action[0]
 
+        if name == "firmware":
+            if method != "POST":
+                return 405, {"error": "POST only"}
+            staged = runtime.firmware.stage(self._read_body_bytes())
+            self.logger.info(
+                "Staged firmware %s (%s bytes) for %s",
+                staged["token"][:12],
+                staged["bytes"],
+                testbed_id,
+            )
+            return 200, staged
+
         if name == "prepare":
             if method != "POST":
                 return 405, {"error": "POST only"}
             body = self._read_body()
             runtime.prepare(
-                build_dir=body.get("build_dir"),
+                build_dir=runtime.firmware.path(str(body.get("firmware") or "")),
                 reset=bool(body.get("reset", True)),
             )
             return 200, {"prepared": True, "testbed_id": testbed_id}
@@ -261,10 +307,11 @@ class _Handler(BaseHTTPRequestHandler):
         if name == "flash":
             if method != "POST":
                 return 405, {"error": "POST only"}
-            build_dir = self._read_body().get("build_dir")
-            if not build_dir:
-                return 400, {"error": '"build_dir" is required'}
-            runtime.flash(str(build_dir))
+            body = self._read_body()
+            token = str(body.get("firmware") or "")
+            if not token:
+                return 400, {"error": '"firmware" is required'}
+            runtime.flash(runtime.firmware.path(token))
             return 200, {"flashed": True, "testbed_id": testbed_id}
 
         if name == "console" and action[1:]:

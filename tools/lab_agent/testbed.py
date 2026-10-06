@@ -21,7 +21,6 @@ not lose data that is still inside the retention window.
 from __future__ import annotations
 
 import os
-import re
 import threading
 import time
 from dataclasses import dataclass
@@ -44,43 +43,42 @@ from .errors import LabAgentError
 from .errors import TestbedError
 from .errors import TransportError
 from .fixture_drivers import driver_for
+from .firmware import FirmwareStore
 from .transport.jlink import JLinkTransport
 from .transport.serial import SerialTransport
 from .transport.sftool import SftoolTransport
 
+from sdk_test.platforms import jlink_device
 from sdk_test.version import PROTOCOL
 from sdk_test.version import package_root
 from sdk_test.version import revision
 
-_JLINK_DEVICE_RE = re.compile(
-    r"^\s*JLINK_DEVICE\s*=\s*['\"]([^'\"]*)['\"]", re.MULTILINE
-)
+def resolve_jlink_device(
+    configured: Optional[str],
+    from_package: Optional[str],
+    platform: str,
+    sdk_root: Optional[str] = None,
+) -> Optional[str]:
+    """Which device name to give the probe, first source first.
 
+    ``download.jlink`` names images and addresses but not the device, and a
+    probe is told which one it is attached to in order to pick a flash
+    algorithm -- so the name comes from somewhere else, and there are three
+    somewheres:
 
-def board_jlink_device(platform: str, sdk_root: Optional[str] = None) -> Optional[str]:
-    """Read ``JLINK_DEVICE`` out of a board's ``rtconfig.py``.
+    1. ``jlink.device`` in the lab's own config. A person who wrote it meant it,
+       and they are the one holding the probe.
+    2. The firmware package, which carries the name the *build* read from the
+       board file it was built against.
+    3. This checkout's own board file, for a package that says nothing.
 
-    Reusing the board description keeps the probe model in one place: a board
-    that gains a new J-Link device name should not also require the lab config
-    to be edited. Parsed with a regex rather than ``exec`` so that a config file
-    can never execute code in the runner process.
+    The order is the point. Before the package travelled, a lab on another
+    machine had only (1) and (3) -- and (3) is that machine's checkout, which may
+    be a different revision than the one that produced the image. A stale board
+    file there is not an error the run can see: the probe simply uses the wrong
+    flash algorithm, and the flash succeeds.
     """
-    root = sdk_root or os.environ.get("SIFLI_SDK_PATH")
-    if not root:
-        return None
-
-    for core in ("hcpu", "acpu", "lcpu"):
-        path = os.path.join(root, "customer", "boards", platform, core, "rtconfig.py")
-        if not os.path.isfile(path):
-            continue
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as handle:
-                match = _JLINK_DEVICE_RE.search(handle.read())
-        except OSError:
-            continue
-        if match and match.group(1).strip():
-            return match.group(1).strip()
-    return None
+    return configured or from_package or jlink_device(platform, sdk_root)
 
 
 class ConsoleStream:
@@ -220,6 +218,7 @@ class TestBedRuntime:
         sdk_root: Optional[str] = None,
         console_factory: Optional[Callable[[TestBed], Any]] = None,
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
+        firmware_root: Optional[str] = None,
     ) -> None:
         self.testbed = testbed
         self.settings = settings or RunnerSettings()
@@ -229,6 +228,13 @@ class TestBedRuntime:
         self._console: Optional[ConsoleStream] = None
         self._jlink: Optional[JLinkTransport] = None
         self._active_fixtures: List[Any] = []
+        #: Firmware uploaded for this board. Keyed by the package's own digest,
+        #: and told which platform it serves so it can refuse an image built for
+        #: a different board -- a wrong-platform image flashes perfectly well.
+        self.firmware = FirmwareStore(
+            root=os.path.join(firmware_root, testbed.id) if firmware_root else None,
+            platform=testbed.platform,
+        )
         # Seams so the agent can be exercised without hardware: a fake console
         # transport or a stub probe lets the HTTP surface be tested for real.
         self._console_factory = console_factory or (
@@ -284,6 +290,16 @@ class TestBedRuntime:
                 # the others from being released.
                 pass
         self._active_fixtures = []
+        # Firmware goes with the claim that brought it: the next run uploads its
+        # own, and keeping a finished run's images unpacked is how a lab PC
+        # fills up. It also means "uploaded" can never be confused with
+        # "uploaded by the run happening now".
+        self.firmware.clear()
+        # And the probe goes with it, because part of how it is built comes from
+        # the package: a device name is a property of the board the image was
+        # built for, and the next run's package may say a different one.
+        with self._lock:
+            self._jlink = None
 
     # -- preparation ---------------------------------------------------------
 
@@ -308,8 +324,11 @@ class TestBedRuntime:
             return transport
 
         options = self._jlink_options()
-        device = options.get("device") or board_jlink_device(
-            self.testbed.platform, self.sdk_root
+        device = resolve_jlink_device(
+            configured=options.get("device"),
+            from_package=self.firmware.in_use().get("jlink_device"),
+            platform=self.testbed.platform,
+            sdk_root=self.sdk_root,
         )
         if not device:
             raise TestbedError(
@@ -579,6 +598,7 @@ class LabManager:
         sdk_root: Optional[str] = None,
         console_factory: Optional[Callable[[TestBed], Any]] = None,
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
+        firmware_root: Optional[str] = None,
     ) -> None:
         self.config = config
         self.sdk_root = sdk_root
@@ -590,7 +610,12 @@ class LabManager:
         self.revision = revision(package_root())
         self._runtimes: Dict[str, TestBedRuntime] = {
             testbed.id: TestBedRuntime(
-                testbed, config.settings, sdk_root, console_factory, jlink_factory
+                testbed,
+                config.settings,
+                sdk_root,
+                console_factory,
+                jlink_factory,
+                firmware_root,
             )
             for testbed in config.testbeds
         }

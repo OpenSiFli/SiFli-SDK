@@ -18,13 +18,16 @@ UART the console uses. The console must therefore be closed while flashing, and
 
 from __future__ import annotations
 
-import json
 import os
 import platform
 import shutil
 import subprocess
 from typing import List
 from typing import Optional
+
+from sdk_test.errors import FirmwareError
+from sdk_test.firmware import portable
+from sdk_test.firmware import read_sftool_param
 
 from ..errors import TransportError
 
@@ -44,33 +47,16 @@ def normalize_uart_port(port: str) -> str:
     return port
 
 
-def read_sftool_param(build_dir: str) -> dict:
-    """Load and sanity-check ``sftool_param.json`` from a build directory."""
-    path = os.path.join(build_dir, "sftool_param.json")
-    if not os.path.isfile(path):
-        raise TransportError(
-            f'No sftool_param.json in "{build_dir}"; build the project first'
-        )
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            config = json.load(handle)
-    except (OSError, json.JSONDecodeError) as exc:
-        raise TransportError(f"Cannot read {path}: {exc}") from exc
-
-    if not isinstance(config, dict):
-        raise TransportError(f"{path}: top level must be an object")
-    return config
-
-
 def build_flash_arguments(build_dir: str, config: dict) -> List[str]:
     """Turn ``sftool_param.json`` into ``sftool write_flash`` file arguments.
 
-    Relative image paths are resolved against the build directory, which is what
-    the generator means by them.
+    Relative image paths are resolved against the directory being flashed, which
+    is what the generator means by them -- the build directory when a bench is
+    flashed in place, the unpacked package when one was uploaded.
     """
     files = (config.get("write_flash") or {}).get("files") or []
     if not isinstance(files, list):
-        raise TransportError("sftool_param.json: write_flash.files must be a list")
+        raise FirmwareError("sftool_param.json: write_flash.files must be a list")
 
     arguments: List[str] = []
     for entry in files:
@@ -79,15 +65,16 @@ def build_flash_arguments(build_dir: str, config: dict) -> List[str]:
         path = entry.get("path")
         if not path:
             continue
+        path = portable(str(path))
         if not os.path.isabs(path):
             path = os.path.join(build_dir, path)
         if not os.path.isfile(path):
-            raise TransportError(f"Flash image not found: {path}")
+            raise FirmwareError(f"Flash image not found: {path}")
         address = entry.get("address")
         arguments.append(f"{path}@{address}" if address else path)
 
     if not arguments:
-        raise TransportError("sftool_param.json lists no flashable images")
+        raise FirmwareError("sftool_param.json lists no flashable images")
     return arguments
 
 

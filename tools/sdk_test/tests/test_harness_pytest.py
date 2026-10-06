@@ -12,6 +12,7 @@ harnesses.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 import threading
@@ -281,7 +282,31 @@ class PytestAgainstFakeAgentMixin:
         self.write("example/ptcase/project/SConstruct", "# project\n")
         self.write("example/ptcase/project/proj.conf", "CONFIG_X=y\n")
         self.write("example/ptcase/test_device.py", suite_body)
+        self.a_build()
         return os.path.join(self.root, "example", "ptcase")
+
+    def a_build(self) -> str:
+        """The build directory the runner will send, laid out as a build leaves one.
+
+        A board run uploads its build now, so a test that only wrote the project
+        would fail while packaging -- with a message about a missing manifest,
+        which is a long way from what such a test is actually about.
+        """
+        relative = "example/ptcase/project/build_sf32lb52-lcd_n16r8_hcpu"
+        self.write(
+            f"{relative}/sftool_param.json",
+            json.dumps(
+                {
+                    "chip": "SF32LB52",
+                    "memory": "NAND",
+                    "write_flash": {
+                        "files": [{"path": "main.bin", "address": "0x620A0000"}]
+                    },
+                }
+            ),
+        )
+        self.write(f"{relative}/main.bin", "an image")
+        return os.path.join(self.root, relative.replace("/", os.sep))
 
     def run_case(self, suite_body: str, **overrides):
         from sdk_test.runner import RunOptions

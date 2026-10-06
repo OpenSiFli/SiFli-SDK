@@ -183,6 +183,21 @@ sdk.py test run  -T example -p sf32lb52-lcd_a128r16     # 由 agent 分配一块
 
 退出码：`0` 全过，`1` 有用例失败，`2` 请求本身不可用。
 
+### 3.1 编译产物怎么送到板子那边
+
+**打成一个包发过去，不要求两边共享文件系统。** 构建在本机做完，SDK 侧把
+`build_<board>/` 里的**两份清单**（`download.jlink`、`sftool_param.json`）和它们点名
+的镜像打成一个 tar，POST 给 agent；agent 解到自己的临时目录，**从那里烧**。整个
+`build_<board>/`（上万个 `.o`）不传——这块板实测整包 420 KB。
+
+所以 agent 可以跑在**另一台机器**上，它不需要能看见你的构建目录。同一份 build 重复
+上传也没关系：agent 按内容摘要给包命名，同一份只解一次。包在 testbed 释放时清掉。
+
+包里带 `platform`，**agent 会核对**：这块固件是给谁编的，只有构建那一侧知道；不核对
+的话，A 板的镜像烧进 B 板会一路成功，然后报出一个谁也解释不了的结果。包里还带
+**探针要的 device 名**（`SF32LB52X_NAND` 这种）—— 它不在 `download.jlink` 里，不带的话
+远端 agent 只能从自己那份 checkout 的板子文件读，而那份可能是另一个版本。
+
 ### 3.2 agent 与你的 SDK 不是同一份代码怎么办
 
 agent 是**长期运行的进程**，可能几天前从另一份 checkout 起的，而你这边的 SDK 一直在

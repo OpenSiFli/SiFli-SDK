@@ -10,15 +10,16 @@ diagnose after the fact, so it is enforced here rather than trusted to callers.
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
 from _support import CONFIG_YAML  # noqa: F401  (also fixes sys.path)
 from _support import LabTestCase
 
+from lab_agent import testbed as testbed_module
 from lab_agent.errors import AllocationError
 from lab_agent.errors import RelayNotAvailable
 from lab_agent.errors import TestbedError
 from lab_agent.testbed import allocate_request_from_mapping
-from lab_agent.testbed import board_jlink_device
 
 
 class TestAllocation(LabTestCase):
@@ -145,54 +146,103 @@ class TestCapabilityMatching(LabTestCase):
             allocate_request_from_mapping({"fixtures": {"not": "a list"}})
 
 
-class TestBoardMetadata(LabTestCase):
-    def test_the_probe_device_is_read_from_the_boards_own_rtconfig(self):
-        self.write(
-            "customer/boards/my-board/hcpu/rtconfig.py",
-            """
-            import os
-            TARGET_NAME = 'bf0_ap'
-            JLINK_DEVICE = 'SF32LB52X_NOR'
-            CORE = "HCPU"
-            """,
-        )
-        self.assertEqual(
-            board_jlink_device("my-board", sdk_root=self.root), "SF32LB52X_NOR"
-        )
+class TestJLinkDeviceResolution(LabTestCase):
+    """Which device name the probe gets, and from where.
 
-    def test_an_empty_jlink_device_is_not_offered_as_a_name(self):
-        # Boards that are not real hardware (pc, dummy) declare an empty value.
-        self.write(
-            "customer/boards/pc/hcpu/rtconfig.py",
-            "JLINK_DEVICE = ''\n",
-        )
-        self.assertIsNone(board_jlink_device("pc", sdk_root=self.root))
+    A generated ``download.jlink`` names images and addresses but not the device
+    it programs, and that name picks the flash algorithm. So it comes from
+    somewhere else, and before the firmware travelled the only somewheres a lab
+    on another machine had were its own config and its own checkout -- the
+    second being a board file from a possibly different revision, whose wrong
+    answer produces a flash that succeeds against the wrong algorithm.
 
-    def test_a_missing_board_yields_nothing(self):
-        self.assertIsNone(board_jlink_device("no-such-board", sdk_root=self.root))
+    Driven through ``runtime.jlink()`` rather than through the resolver alone:
+    what matters is the name the probe is actually built with.
+    """
 
-    def test_the_derived_device_reaches_the_probe(self):
-        self.write(
-            "customer/boards/my-board/hcpu/rtconfig.py",
-            "JLINK_DEVICE = 'SF32LB56X_NAND'\n",
-        )
+    def a_runtime(self, platform: str = "my-board", device: str = ""):
+        """A testbed whose probe is really constructed, with JLinkExe stubbed."""
+        configured = f"                jlink: {{device: {device}}}\n" if device else ""
         manager = self.make_manager(
-            """
+            f"""
             testbed:
               - id: tb
-                platform: my-board
-                console:
-                  port: COM1
-            """
+                platform: {platform}
+                console: {{port: COM1}}
+{configured}"""
         )
         runtime = manager.get("tb")
-        runtime._jlink_factory = None  # use the real construction path
-        options = runtime._jlink_options()
-        self.assertEqual(options, {})
-        self.assertEqual(
-            board_jlink_device(runtime.testbed.platform, runtime.sdk_root),
-            "SF32LB56X_NAND",
+        runtime._jlink_factory = None  # take the real construction path
+        return runtime
+
+    def the_probe_device(self, runtime) -> str:
+        with mock.patch.object(testbed_module, "find_jlink", lambda _path: "JLinkExe"):
+            return runtime.jlink().device
+
+    def stage(
+        self,
+        runtime,
+        device: str = "",
+        platform: str = "my-board",
+        suffix: str = "",
+    ) -> None:
+        """Put a package in front of the testbed, as a run would."""
+        payload = self.a_firmware_package(
+            platform=platform, jlink_device=device, suffix=suffix
         )
+        runtime.firmware.path(runtime.firmware.stage(payload)["token"])
+
+    def a_board_file(self, device: str) -> None:
+        self.write(
+            "customer/boards/my-board/hcpu/rtconfig.py",
+            f"JLINK_DEVICE = '{device}'\n",
+        )
+
+    def test_the_config_wins_when_it_names_one(self):
+        # A person who wrote the device into their own config meant it, and they
+        # are the one holding the probe.
+        self.a_board_file("FROM_RTCONFIG")
+        runtime = self.a_runtime(device="FROM_CONFIG")
+        self.stage(runtime, "FROM_PACKAGE")
+        self.assertEqual(self.the_probe_device(runtime), "FROM_CONFIG")
+
+    def test_the_package_is_used_when_the_config_is_silent(self):
+        # The case the package was made to carry: the board file on *this*
+        # machine says something else, and this machine is not the one that
+        # built the image.
+        self.a_board_file("FROM_RTCONFIG")
+        runtime = self.a_runtime()
+        self.stage(runtime, "FROM_PACKAGE")
+        self.assertEqual(self.the_probe_device(runtime), "FROM_PACKAGE")
+
+    def test_the_checkout_is_the_last_resort(self):
+        self.a_board_file("FROM_RTCONFIG")
+        runtime = self.a_runtime()
+        self.assertEqual(self.the_probe_device(runtime), "FROM_RTCONFIG")
+
+    def test_a_package_that_says_nothing_falls_through_to_the_checkout(self):
+        # Boards that are not real hardware declare no device, and the package
+        # omits the field rather than carrying an empty name.
+        self.a_board_file("FROM_RTCONFIG")
+        runtime = self.a_runtime()
+        self.stage(runtime, "")
+        self.assertEqual(self.the_probe_device(runtime), "FROM_RTCONFIG")
+
+    def test_the_next_runs_package_builds_its_own_probe(self):
+        # The device travels with the package, so a probe built for one run's
+        # image must not be handed to the next run's. Claimed and released the
+        # way a run does it, because that is the boundary the probe is dropped
+        # at -- a release that had nothing to release is not a run.
+        self.a_board_file("FROM_RTCONFIG")
+        runtime = self.a_runtime()
+        runtime.allocate("job-1")
+        self.stage(runtime, "FIRST_PACKAGE")
+        self.assertEqual(self.the_probe_device(runtime), "FIRST_PACKAGE")
+
+        runtime.release("job-1")
+        runtime.allocate("job-2")
+        self.stage(runtime, "SECOND_PACKAGE", suffix="2")
+        self.assertEqual(self.the_probe_device(runtime), "SECOND_PACKAGE")
 
     def test_a_testbed_without_a_probe_and_without_board_metadata_fails_clearly(self):
         manager = self.make_manager(

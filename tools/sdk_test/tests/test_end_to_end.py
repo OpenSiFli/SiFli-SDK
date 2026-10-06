@@ -112,6 +112,7 @@ class FakeProbe:
     def __init__(self) -> None:
         self.resets = []
         self.flashed = []
+        self.contents = []
 
     def reset(self, extra_script=None) -> str:
         self.resets.append(extra_script)
@@ -119,6 +120,18 @@ class FakeProbe:
 
     def flash(self, build_dir: str) -> str:
         self.flashed.append(build_dir)
+        # Snapshot of what was there, taken now: the agent releases its staged
+        # firmware when the testbed is handed back, so a test that looked at the
+        # directory afterwards would find nothing and learn nothing.
+        found = []
+        for root, _dirs, names in os.walk(build_dir):
+            for name in names:
+                found.append(
+                    os.path.relpath(os.path.join(root, name), build_dir).replace(
+                        os.sep, "/"
+                    )
+                )
+        self.contents.append(sorted(found))
         return "ok"
 
 
@@ -189,7 +202,7 @@ class EndToEndCase(SdkTestCase):
         self.probes[testbed.id] = probe
         return probe
 
-    def make_project(self, suffix="rtt", testcase_yaml="", extra_files=()):
+    def make_project(self, suffix="rtt", testcase_yaml="", extra_files=(), platforms=None):
         """Lay out a project the way the repository does: testcase beside project/."""
         base = f"example/{suffix}"
         self.write(f"{base}/testcase.yaml", testcase_yaml)
@@ -197,7 +210,41 @@ class EndToEndCase(SdkTestCase):
         self.write(f"{base}/project/proj.conf", "CONFIG_X=y\n")
         for name, content in extra_files:
             self.write(f"{base}/{name}", content)
+        for platform in platforms or [self.platform]:
+            self.a_build(suffix, platform)
         return os.path.join(self.root, base.replace("/", os.sep))
+
+    def a_build(self, suffix: str, platform: str) -> str:
+        """Lay out a build directory the way a real build leaves one.
+
+        Until this existed, the board tests named a directory that was never
+        created and the fake probe recorded the string without looking at it.
+        That is how a shared-filesystem assumption stayed untested for so long:
+        the run only ever needed a *path*, never a file at the end of it.
+
+        Both manifests, because a real build writes both and which one matters
+        is the lab's decision, taken after the package has been sent.
+        """
+        from sdk_test.runner import canonical_board_name
+
+        relative = f"example/{suffix}/project/build_{canonical_board_name(platform)}"
+        self.write(f"{relative}/download.jlink", "loadbin output\\main.bin 0x620A0000\n")
+        self.write(
+            f"{relative}/sftool_param.json",
+            json.dumps(
+                {
+                    "chip": "SF32LB52",
+                    "memory": "NAND",
+                    "write_flash": {
+                        "files": [
+                            {"path": "output\\main.bin", "address": "0x620A0000"}
+                        ]
+                    },
+                }
+            ),
+        )
+        self.write(f"{relative}/output/main.bin", "an image")
+        return os.path.join(self.root, relative.replace("/", os.sep))
 
     def harness_case(self, harness="console"):
         """A one-test project for ``harness``, laid out the way the repo does."""
@@ -405,7 +452,24 @@ class TestSessionLifecycle(EndToEndCase):
 
         probe = self.probes["tb_01"]
         self.assertEqual(len(probe.flashed), 1)
-        self.assertTrue(probe.flashed[0].endswith("build_sf32lb52-lcd_n16r8_hcpu"))
+        unpacked = probe.flashed[0]
+        # Where the agent *unpacked* the package, not where the build left it:
+        # the two machines need share nothing, so the only directory the probe
+        # can be run from is the one the agent made.
+        self.assertNotEqual(unpacked, self.a_build("hello", self.platform))
+        # And what it holds is flashable -- the manifests, the images at the
+        # relative paths they name, and the package's own metadata. That is the
+        # whole contract between the packer and the flash, and it is why the
+        # paths are carried verbatim.
+        self.assertEqual(
+            probe.contents[0],
+            [
+                "download.jlink",
+                "firmware.json",
+                "output/main.bin",
+                "sftool_param.json",
+            ],
+        )
         self.assertEqual(len(probe.resets), 1)
         # The console must be open before the reset, or the boot log races it.
         self.assertEqual(self.transports["tb_01"].opened, 1)

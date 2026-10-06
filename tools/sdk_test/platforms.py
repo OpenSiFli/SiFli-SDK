@@ -62,6 +62,12 @@ _SYMBOL_PREFIX = "BSP_USING_"
 #: The only key a feature declaration may carry.
 _FEATURES_KEY = "features"
 
+#: ``JLINK_DEVICE = 'SF32LB52X_NAND'`` in a board's ``rtconfig.py``, which is a
+#: python file this deliberately does not import.
+_JLINK_DEVICE_RE = re.compile(
+    r"^\s*JLINK_DEVICE\s*=\s*['\"]([^'\"]*)['\"]", re.MULTILINE
+)
+
 
 def split_platform(platform: str) -> Tuple[str, str]:
     """``qemu_sf32lb52x`` -> ``("qemu_sf32lb52x", "hcpu")``.
@@ -79,6 +85,37 @@ def features_path(platform: str, root: str = REPOSITORY_ROOT) -> str:
     """Where ``platform`` declares its features."""
     board, core = split_platform(platform)
     return os.path.join(root, "customer", "boards", board, core, "features.yaml")
+
+
+def jlink_device(platform: str, root: str = REPOSITORY_ROOT) -> Optional[str]:
+    """The J-Link device name a board declares, or ``None`` if it declares none.
+
+    A probe is told which device it is attached to -- ``SF32LB52X_NAND`` -- and
+    that name selects the flash algorithm. It is a property of the *board*, so it
+    lives in the board's own ``rtconfig.py`` rather than being repeated in every
+    lab's config, and this is the one place that reads it.
+
+    Both sides call this. The SDK side carries the answer in the firmware package
+    it sends, because the lab may be another machine whose checkout would
+    otherwise have to hold the same value; the agent falls back to reading it
+    from its own checkout for a package that says nothing.
+
+    Parsed with a regex rather than ``exec``, so that a board file can never run
+    code in whatever process happens to be looking at it.
+    """
+    board, core = split_platform(platform)
+    for name in (core,) + tuple(c for c in ("hcpu", "acpu", "lcpu") if c != core):
+        path = os.path.join(root, "customer", "boards", board, name, "rtconfig.py")
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as handle:
+                match = _JLINK_DEVICE_RE.search(handle.read())
+        except OSError:
+            continue
+        if match and match.group(1).strip():
+            return match.group(1).strip()
+    return None
 
 
 def type_of(feature: str) -> str:

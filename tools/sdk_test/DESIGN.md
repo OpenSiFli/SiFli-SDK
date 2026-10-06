@@ -169,6 +169,56 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 
 ---
 
+## 固件怎么过去：一个包，不是一条路径
+
+**旧做法**：SDK 侧把 `build_<board>/` 的**绝对路径当字符串**发给 agent，agent 拿自己的
+文件系统去开。于是隐式要求是"两台机器共享同一个文件系统、且路径一致"——而这条**哪里都没
+写**。远端 agent 会走成两种：文件不存在（还算诚实），或者同盘符的另一份旧 checkout 正好在
+那个路径上，**烧了旧镜像而测试照样绿**。测试只验证了字符串：端到端用例里 `FakeProbe` 记下
+的 `build_dir` 压根不存在，所以这个假设一直没被覆盖，直到包这条路上线才暴露。
+
+**现在**：SDK 侧打一个 tar 上传，agent 解到自己的临时目录，**从那里烧**。`build_dir` 从线
+上删掉。
+
+```
+POST /testbed/{id}/firmware   body = tar
+   → {"token": "<sha256>", "bytes": N, "platform": ...}
+POST /testbed/{id}/prepare    {firmware: "<token>", reset}
+POST /testbed/{id}/flash      {firmware: "<token>"}
+```
+
+包 = `firmware.json` + 两份清单 + 清单点名的镜像，全部相对包根。`firmware.json` 里是
+`platform`（agent 硬校验）、`board` / `sdk_commit`（记录）和 `jlink_device`。共用的解析代码在
+`sdk_test/firmware.py`，**两侧都 import 它**——打包和解包用同一份清单解析，才不可能对不上。
+
+**为什么两份清单都装**：哪一份有意义是 lab 的 `flash.method` 决定的，而那个决定发生在包发出
+**之后**；实测两条点名的是同样三个文件，所以取并集不花钱。两个都没有 → 打包时就报"先编译"。
+
+**为什么 `jlink_device` 也要装**：sftool 那条路是自足的（`sftool_param.json` 里有 `chip` 和
+`memory`），**jlink 那条不是**——`download.jlink` 只写镜像和地址，device 名（`SF32LB52X_NAND`，
+决定用哪套 flash loader）来自板子自己的 `rtconfig.py`。包里不带，agent 就只能读**它那份
+checkout**，而那份可能是另一个 revision：板子文件过期不会报错，探针会安静地用错 flash 算法，
+然后烧写"成功"。解析链是 `jlink.device`（lab 配置，人写的覆盖）→ **包里的** → 自己 checkout 的
+兜底，`sdk_test.platforms.jlink_device()` 是唯一读板子文件的地方，两侧共用。
+
+**为什么上传和烧录是两个调用**：agent 不烧"最近一次上传的那个"。否则一次忘了上传的运行会
+悄悄烧上一轮的固件然后报绿——正是这套代码一贯拒绝的那种"自信的错误答案"。`token` 是内容的
+sha256，两边各自算，**不由调用方指定**（调用方能指定的名字，调用方就能指定错）。
+
+**清单里的路径原样带走**，只要求"清单点到的文件按相对路径都能在包里找到"。这样 agent 从哪
+解出来都能烧：两条 transport 都拿工作目录解析相对路径，而探针现在**从解包目录启动**
+（`JLinkTransport.flash` 的 `cwd`）。构建自己的 `download.bat` 也是先 `cd` 进构建目录才起
+JLink——这条以前漏了，只在 agent 恰好在构建目录里启动时才工作。
+
+**解包是攻击面**：只收普通文件，拒绝对路径 / `..` / 反斜杠 / 符号链接，限成员数与总大小，
+而且**先全部检查再落盘**（被拒的包不能留下半份让下一次烧录捡到）。包是另一台机器发来的，
+不能给它"大概没问题"的余地。
+
+**store 有界**：每个 testbed 一份、按 token 去重、上限 8 个、testbed 释放时清空。一个只涨不
+落的 store 就是实验室机器悄悄塞满的磁盘。
+
+---
+
 ## 两侧版本：协议硬校验，revision 只记录
 
 agent 是**长驻进程**，SDK 侧一直在变，两者不同步是常态而非异常。
@@ -206,6 +256,7 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 | `backends/{board,pc_sim,qemu}.py` | 执行后端。**MVP 只实现 `board`**；`pc_sim`（`customer/boards/pc`）与 `qemu`（`customer/boards/qemu_cortex_m33`）定义接口 + `NotImplementedError`，但**接口按"无需 Lab Agent 分配"设计**（它们在 SDK 里就是 board 名，构建+执行都在本地）。 |
 | `runner.py` | 编排：解析 → 匹配 testbed → 构建 → （Tier A）申请 testbed → 烧录 → 执行 pytest → 收集。 |
 | `agent_client.py` | 与 Lab Agent runner 的 HTTP 客户端（stdlib `urllib`，不引 FastAPI）。申请硬件时核对对方的协议版本。 |
+| `firmware.py` | 固件包的打包/解包，**两侧共用**（agent 也 import 它）：清单解析、成员表、`build_package` / `unpack_package`。见"固件怎么过去"。 |
 | `version.py` | `PROTOCOL` 与两侧 `revision()`。见"两侧版本"。 |
 | `report.py` | 结果聚合、每实例日志落盘、run 日志、JSON 主文档与 JUnit 派生、终端汇总。全部用标准库（`json` / `xml.etree`），不引依赖；`junit_xml` 这个包虽然还在 lock 里，但**无人 import**。 |
 | `tests/` | **框架自身**的 pytest 单测（discovery / binding / harness 解析），不需要硬件。 |
@@ -216,6 +267,7 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 |---|---|
 | `runner.py` | 服务入口：读 `--config runner.local.yaml`（本机有哪些 testbed），暴露 localhost HTTP：`GET /testbeds`、`POST /allocate`、`POST /release`、`POST /testbed/{id}/{reset,flash,console/open,console/close}`。MVP 用 stdlib `http.server` + JSON。 |
 | `testbed.py` | testbed 生命周期与**互斥占用**（docx：同一时刻只能被一个测试程序占用）。前置准备（复位、烧录、fixture 就绪）对用例透明且不可跳过。 |
+| `firmware.py` | 每个 testbed 一份、按内容摘要命名的固件包 store（解包、去重、上限、释放时清空）。 |
 | `transport/serial.py` | pyserial 封装：惰性 import、context manager、`reset_input_buffer()`、`expect(regex, timeout)`（容忍拆行/噪声）、`sendline()`。**1 Mbaud 默认**。 |
 | `transport/jlink.py` | 复位/烧录：`tools/segger/halt_all_cpu_and_disable_all_wdt_*.jlink` + `r`；或 `sdk.py flash -u jlink`。 |
 | `transport/relay.py` | 电源/mux 带外控制。**接口先定**（`power_on/off`、`mux_select(channel)`），MVP 只留桩——`SwitchReset.exe` 不在仓库。 |

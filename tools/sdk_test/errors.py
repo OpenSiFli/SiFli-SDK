@@ -52,5 +52,15 @@ class BuildError(SdkTestError):
         self.output = output
 
 
+class FirmwareError(SdkTestError):
+    """A firmware package is missing, malformed, or names a file it does not carry.
+
+    Raised by :mod:`sdk_test.firmware`, which both sides import: the SDK packing
+    a build directory and the agent unpacking what arrived. It is therefore the
+    *sender's* kind of failure on the agent, and a 400 rather than a 5xx -- the
+    lab is fine, the package is not.
+    """
+
+
 class LabAgentError(SdkTestError):
     """The Lab Agent runner is unreachable or refused an operation."""
