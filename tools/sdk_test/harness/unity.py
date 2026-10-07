@@ -77,7 +77,17 @@ DEFAULT_CMD = "unity_run"
 #: ``unity_run`` *is* an msh command, so waiting for the msh prompt assumes
 #: nothing the command did not already assume -- it just stops the harness from
 #: addressing a shell that is not there yet.
-DEFAULT_PROMPT = r"msh />"
+#:
+#: Deliberately not pinned to one spelling. finsh builds the prompt as
+#: ``"msh " + cwd + ">"`` and the working directory appears only when
+#: RT_USING_DFS and DFS_USING_WORKDIR are both on, so a board with DFS off shows
+#: ``msh >`` and never ``msh />``. The QEMU carrier is one of those, and while
+#: this default was the DFS spelling the wait could not match there: it spent the
+#: entire timeout before sending the command, on every instance. Measured on
+#: example/test/hal_real: 132.5 s per instance waiting, 13.8 s once the prompt
+#: matched. Newline is excluded so a stray "msh " earlier in the boot log cannot
+#: match something further down.
+DEFAULT_PROMPT = r"msh [^>\n]*>"
 
 #: The manifest ``tools/build/test_registry.py`` writes beside the registry it
 #: generates, listing every suite the build registered.

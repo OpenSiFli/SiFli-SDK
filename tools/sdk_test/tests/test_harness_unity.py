@@ -288,6 +288,26 @@ class TestWaitsForTheShell(SdkTestCase):
         console = FakeConsole(boot=["still booting\n"] * 500)
         self.assertFalse(unity._wait_for_prompt(console, r"msh />", 0.05, 0.001))
 
+    def test_the_default_prompt_accepts_both_spellings(self):
+        # finsh spells the prompt "msh " + cwd + ">", and the cwd appears only
+        # when RT_USING_DFS && DFS_USING_WORKDIR are on. Pinned to the DFS
+        # spelling the default could not match a board without DFS -- the QEMU
+        # carrier is one -- and the wait then ran out the whole timeout before
+        # the command was sent, which reads as a slow device rather than as a
+        # pattern that never matched.
+        for prompt in ("msh >", "msh />", "msh /sdcard>"):
+            console = FakeConsole(boot=["booting\n", prompt])
+            self.assertTrue(
+                unity._wait_for_prompt(console, unity.DEFAULT_PROMPT, 5.0, 0.01),
+                prompt)
+
+    def test_the_default_prompt_is_more_than_the_msh_prefix(self):
+        # "msh " on its own is not a prompt, and a ">" further down the log is
+        # not the end of one.
+        console = FakeConsole(boot=["msh \n", "still booting\n"] * 200)
+        self.assertFalse(
+            unity._wait_for_prompt(console, unity.DEFAULT_PROMPT, 0.05, 0.001))
+
     def test_an_uncompilable_pattern_does_not_hang(self):
         # `harness_config.prompt` is user input; a typo in it must not wedge
         # the run before the harness's own timeout can say anything.
