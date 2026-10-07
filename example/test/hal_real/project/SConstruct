@@ -1,0 +1,52 @@
+import os
+import rtconfig
+
+# Check SDK
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+# Prepare environment.
+PrepareEnv()
+
+# Add bootloader project (skipped for the QEMU carrier)
+AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
+
+# Set default compile options
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+# Prepare building environment
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+
+# Nothing chip-specific is set here, deliberately -- same as example/test/hal_mock.
+#
+# The modules under test are HAL implementations, which include bf0_hal.h, which
+# does not compile until a chip is selected. The chip's register map also has to
+# precede this carrier's own drivers_qemu/register.h, since bf0_hal.h does
+# #include "register.h" by name. Both come from the board: --board=qemu_sf32lb52x
+# selects SOC_SF32LB52X in Kconfig, and
+# rtos/rtthread/bsp/sifli/drivers_qemu/SConscript turns that into the include
+# paths and the SF32LB52X / SOC_BF0_HCPU / USE_HAL_DRIVER defines, in the order
+# they have to be in. Spelling it out here as -D instead was tried and is wrong
+# in two ways -- a compiler define does not satisfy an #ifndef SOC_SF32LB55X
+# guard, and nothing keeps the defines in step with rtconfig.CHIP. See the
+# board's hcpu/Kconfig.board.
+#
+# So this project builds only on a board that names a chip; a board that
+# selects none stops at bf0_hal.h, and there is no such carrier here -- every
+# customer/boards/qemu_* board names one:
+#
+#     scons --board=qemu_sf32lb52x -j8
+
+# Build application.
+DoBuilding(TARGET, objs)
+
+# Add flash table build (skipped for the QEMU carrier)
+AddFTAB(SIFLI_SDK, rtconfig.CHIP, env)
+
+# Generate download .bat script
+GenDownloadScript(env)

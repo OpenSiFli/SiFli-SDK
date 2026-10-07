@@ -1,0 +1,47 @@
+# Real HAL implementations, running on the QEMU carrier with their peripheral
+# registers backed by RAM.
+#
+# The other two unit-test projects stop short of this. cmock_unit and hal_mock
+# replace a module or a HAL symbol with a CMock mock and measure what calls it --
+# which answers "what does the driver do when the HAL reports this", and cannot
+# answer "does the HAL do the right thing". Here the module under test *is* the
+# HAL: drivers/hal/bf0_hal_ptc.c and bf0_hal_crc.c are compiled from source and
+# executed. Their registers are not emulated; the handle's Instance pointer is
+# aimed at a variable the test owns, so a status bit the driver waits on is
+# something the test can set beforehand and a value it writes is something the
+# test can read afterwards. See src/test_ptc.c for what that does and does not
+# establish.
+#
+# It names its platform directly, so it needs no hardware, no Lab Agent and no
+# binding file:  sdk.py test run -T example/test/hal_real
+#
+# One firmware, two entries -- both suites live in the same image and the
+# harness filters the transcript by suite name.
+tests:
+  - id: hal_real.ptc
+    description: HAL_PTC runs on a RAM register block; register writes are asserted.
+    harness: unity
+    tags: [unit, hal, qemu]
+    timeout: 120
+    integration_platforms: [qemu_sf32lb52x]
+    harness_config:
+      # No `prompt:` override, deliberately. This carrier's shell prompt is
+      # "msh >" -- no slash, because finsh spells it "msh " + cwd + ">" and the
+      # working directory only appears with RT_USING_DFS && DFS_USING_WORKDIR,
+      # which the QEMU board.conf turns off. The harness default was pinned to
+      # the DFS spelling and so could not match here: every instance spent its
+      # whole timeout waiting before the command went out at all (132.5 s per
+      # instance, against 13.8 s once the wait could finish). The default now
+      # accepts both spellings, so nothing carrier-specific belongs in this file.
+      cmd: unity_run
+      suite: ptc
+
+  - id: hal_real.crc
+    description: HAL_CRC programming and its polling accumulate loop, status bit primed.
+    harness: unity
+    tags: [unit, hal, qemu]
+    timeout: 120
+    integration_platforms: [qemu_sf32lb52x]
+    harness_config:
+      cmd: unity_run
+      suite: crc

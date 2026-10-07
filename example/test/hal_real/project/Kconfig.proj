@@ -1,0 +1,32 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool
+	select custom_mem_map
+	default y if !SOC_SIMULATOR
+
+# Compile the real HAL into the image, though a QEMU carrier is being built.
+#
+# Promptless, so it does not appear in menuconfig: it is this project's own
+# choice of what it builds, not something to be turned on by hand for another
+# board. drivers/SConscript reads it and, with SOC_QEMU, walks the driver tree
+# it would otherwise skip -- all of it but cmsis/, which cannot come in.
+#
+# It has to be declared here rather than offered by the driver layer, and that
+# is worth stating because it reads backwards. A symbol under drivers/ could
+# only be set from proj.conf if it had a prompt -- kconfig.py runs with
+# --handwritten-input-configs and fails the build outright on an assignment to a
+# promptless symbol ("is assigned in a configuration file, but is not directly
+# user-configurable (has no prompt)"). With a prompt it would be visible in
+# menuconfig, which is what this must not be. So the only way to have both is
+# for the value to come from a `default`, which means the project that wants it
+# declares it -- the same arrangement example/lcpu_rom/Kconfig.proj:6-8 uses for
+# ROM_ATTR, which drivers/hal/SConscript reads the same way.
+#
+# The cost of that is duplication: a second HAL test project would declare the
+# symbol again. The benefit is that example/test/hal_mock, which needs *no* HAL
+# implementation in its image so that its CMock mock is the sole definition of
+# a HAL symbol, cannot see this symbol at all.
+config QEMU_HAL_DRIVER_ENABLED
+    bool
+    depends on SOC_QEMU
+    default y

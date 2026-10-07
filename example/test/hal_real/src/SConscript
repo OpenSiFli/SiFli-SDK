@@ -1,0 +1,78 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+Import('SIFLI_SDK')
+
+src = Glob('*.c')
+CPPPATH = []
+
+# ---------------------------------------------------------------------------
+# The modules under test: real HAL implementations, compiled from the SDK.
+#
+# They are not built on this carrier by default. drivers/SConscript skips the
+# whole drivers/ tree when SOC_QEMU is set, so the HAL is absent from the
+# image -- which is the same mechanism example/test/hal_mock relies on to keep
+# the HAL out while substituting a mock for one of its symbols.
+#
+# project/Kconfig.proj declares QEMU_HAL_DRIVER_ENABLED, and drivers/SConscript
+# reads it to take the driver tree back out of that skip. drivers/hal/SConscript
+# then runs, and the modules under test come in through the SDK's own walk, at
+# the paths that walk gives them. Nothing is named here, and nothing here has to
+# know where their objects land: the object of drivers/hal/<name>.c lands at
+# build_qemu_sf32lb52x_hcpu/sifli_sdk/drivers/hal/<name>.o, the same rule every
+# other SDK module follows.
+#
+# The switch is not set in proj.conf. It is promptless so that it stays out of
+# menuconfig, and a promptless symbol cannot be assigned in a config file -- the
+# build fails on the attempt. It comes from that declaration's `default y`, and
+# it is this project's alone: example/test/hal_mock, which needs no HAL
+# implementation in its image, does not declare it and cannot see it.
+#
+# The switch brings the whole HAL with it, not just the modules this project
+# exercises -- 68 translation units here, against the 2 that used to be named.
+# That is affordable because gcc sections each function (-ffunction-sections)
+# and the link discards what nothing reaches (--gc-sections): 3 of the 68 keep
+# any code at all, 1,118 bytes. What the switch costs is build time (+10 s from
+# clean here), not image size.
+#
+# The image does come out ~4 KB smaller than the 2-file build's, but not
+# because of anything this project asks for, so it is worth naming rather than
+# reading as a free lunch: bf0_hal.c defines weak stubs for the ARM unwinding
+# personalities, and once bf0_hal.o is on the link line they satisfy that
+# reference, so libgcc's unwinder (libunwind.o + pr-support.o + unwind-arm.o,
+# 4,039 bytes) is no longer pulled in. That is what a real board does too --
+# bf0_hal.o is always linked there -- but on this carrier it means the image
+# differs from the 2-file build's by more than the two modules under test.
+# ---------------------------------------------------------------------------
+
+# drivers/Include is put on the include path by drivers/hal/SConscript, which
+# now runs. Naming it here as well is harmless -- CPPPATH de-duplicates -- and
+# it keeps this file working if the HAL group is ever scoped differently.
+CPPPATH += [os.path.join(SIFLI_SDK, 'drivers/hal'),
+            os.path.join(SIFLI_SDK, 'drivers/Include')]
+
+# ---------------------------------------------------------------------------
+# The Unity case registry, generated from the test sources above. See
+# example/test/hal_mock/src/SConscript for why `gen/` is load-bearing rather
+# than tidiness: a registry written into this directory would be picked up by
+# the next run's Glob as well as by the Command that produced it, and the object
+# would reach the linker twice.
+# ---------------------------------------------------------------------------
+import test_registry
+
+test_sources = [f for f in src if os.path.basename(str(f)).startswith('test_')]
+try:
+    board = GetOption('board')
+except Exception:
+    board = None
+
+registry = GetCurrentEnv().Command(
+    'gen/unity_suites_gen.c',
+    test_sources,
+    test_registry.action(board=board))
+src += registry
+
+group = DefineGroup('Applications', src, depend=[''], CPPPATH=CPPPATH)
+
+Return('group')
