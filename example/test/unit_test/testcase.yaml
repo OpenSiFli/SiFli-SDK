@@ -26,8 +26,14 @@ tests:
     # applies even when `-p` names a board, so the case can only ever run under
     # QEMU. Drop the first and the case is unplannable with no `-p`; drop the
     # second and `-p` drags it onto a bench.
-    platform_allow: [qemu_cortex_m33]
-    integration_platforms: [qemu_cortex_m33]
+    # qemu_sf32lb52x, and it has to be a carrier that names a chip: the suites
+    # include circular_buf, which reaches bf0_hal.h through ipc_hw.h. The
+    # chipless qemu_cortex_m33 carrier this case first ran on has been deleted;
+    # every qemu_* carrier left in the tree selects one. Both fields change
+    # together -- see the note above for why leaving one behind makes the case
+    # unplannable.
+    platform_allow: [qemu_sf32lb52x]
+    integration_platforms: [qemu_sf32lb52x]
     harness_config:
       autorun: true
 

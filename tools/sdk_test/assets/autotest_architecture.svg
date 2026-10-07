@@ -211,7 +211,7 @@
     <text class="t" x="442" y="488">控制台＝模拟 UART0，无需 Lab Agent</text>
     <text class="t s-ok" x="442" y="512">可跑 harness: unity / pytest</text>
     <text class="t s-ok" x="442" y="530">板上的单测能不加改动搬过来</text>
-    <text class="mono" x="442" y="566">BSP_USING_QEMU → 整树跳过 drivers/</text>
+    <text class="mono" x="442" y="566">SOC_QEMU → 整树跳过 drivers/</text>
     <text class="tiny" x="442" y="586">故 CMock 的 mock 可以是符号的唯一定义</text>
 
     <!-- pc_sim -->

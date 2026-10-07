@@ -127,11 +127,11 @@ class PlanInstanceTest(SdkTestCase):
     def test_every_named_platform_becomes_a_run(self):
         runner = make_runner()
         instance = make_instance(integration_platforms=[EMPTY_CARRIER,
-                                                        "qemu_cortex_m33"])
+                                                        "qemu_sf32lb55x"])
         with mock.patch("sdk_test.runner.find_project_dir", return_value="/p"):
             planned, filtered = runner.plan_instance(instance)
         self.assertEqual(2, len(planned))
-        self.assertEqual([EMPTY_CARRIER, "qemu_cortex_m33"],
+        self.assertEqual([EMPTY_CARRIER, "qemu_sf32lb55x"],
                          [run.platform for run in planned])
         self.assertEqual([], filtered)
 

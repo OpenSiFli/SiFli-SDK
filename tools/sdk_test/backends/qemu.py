@@ -6,7 +6,7 @@ This backend runs a test on this machine instead of on a board, and it needs no
 Lab Agent -- there is no hardware to allocate, so there is no testbed to lock and
 nothing to release.
 
-It is the carrier that makes mock-based unit tests possible. ``BSP_USING_QEMU``
+It is the carrier that makes mock-based unit tests possible. ``SOC_QEMU``
 puts the boot in ``rtos/rtthread/bsp/sifli/drivers_qemu/`` and, like the pc
 simulator, makes ``drivers/SConscript`` skip the whole ``drivers/`` tree. No HAL
 implementation is linked, so a CMock-generated mock is the *only* definition of

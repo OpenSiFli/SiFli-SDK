@@ -1148,7 +1148,7 @@ class TestRunManifest(EndToEndCase):
                   record: ["Hello world!"]
               - id: gated.elsewhere
                 harness: console
-                platform_allow: [qemu_cortex_m33]
+                platform_allow: [qemu_sf32lb55x]
                 harness_config:
                   record: ["Hello world!"]
             """,

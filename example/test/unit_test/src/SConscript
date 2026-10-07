@@ -21,9 +21,9 @@ CPPPATH = []
 # `LOCAL_CCFLAGS` (the SPI driver on a real board, but not on the emulator)
 # then calls `.abspath` on it and the whole build dies.
 #
-# circular_buf is the exception, and it is deliberate: its component is a tree
-# of per-chip ports, not one file, and it does not build on the emulator at
-# all. See below.
+# circular_buf is named here instead, because its component is a tree of
+# per-chip ports rather than one file, and this project does not turn that
+# component on.
 #
 # All three are pure logic -- no peripheral, no board dependency -- so the
 # tests written against them need no stubbing and run unchanged on any board.
@@ -36,30 +36,27 @@ CPPPATH = []
 # those headers must be reachable for the file to compile, so the same include
 # paths the ipc_queue component uses have to be spelled out here.
 #
-# Not built for the QEMU carrier: ipc_hw.h reaches bf0_hal.h, which only
-# compiles when a real core is selected (SOC_BF0_HCPU/LCPU) and errors out
-# otherwise. The other modules here are plain C and build anywhere, so the
-# QEMU build simply carries one fewer suite.
-if GetDepend('BSP_USING_QEMU'):
-    # Its test file is globbed in with the rest of src/; drop it along with the
-    # module, or it fails on the missing circular_buf.h.
-    SrcRemove(src, 'test_circular_buf.c')
-else:
-    # `File(...)` is load-bearing, not decoration: a bare path string survives
-    # into the linker's object list un-converted, and the build dies later in a
-    # loop that has nothing to do with this file. Verified by taking it off.
-    src += [File(os.path.join(SIFLI_SDK, 'middleware/ipc_queue/common/circular_buf.c'))]
-    CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/ipc_queue/common')]
-    CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/ipc_queue/porting/os/rtthread')]
-    CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/include')]
+# Built on every board, because what it needs is a chip and every board has
+# one: ipc_hw.h reaches bf0_hal.h, which compiles only once a real core is
+# selected (SOC_BF0_HCPU/LCPU). Every qemu_* carrier names a real
+# SOC_SF32LB5<nn>X beside SOC_QEMU, as every real board does, and the chipless
+# carrier this was once conditional on is gone.
+#
+# `File(...)` is load-bearing, not decoration: a bare path string survives
+# into the linker's object list un-converted, and the build dies later in a
+# loop that has nothing to do with this file. Verified by taking it off.
+src += [File(os.path.join(SIFLI_SDK, 'middleware/ipc_queue/common/circular_buf.c'))]
+CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/ipc_queue/common')]
+CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/ipc_queue/porting/os/rtthread')]
+CPPPATH += [os.path.join(SIFLI_SDK, 'middleware/include')]
 
-    # middleware/ipc_queue/porting/<chip>/<core>
-    chip_port = os.path.join(SIFLI_SDK, 'middleware/ipc_queue/porting', rtconfig.CHIP.lower())
-    if GetDepend(['BF0_LCPU']):
-        chip_port = os.path.join(chip_port, 'lcpu')
-    else:
-        chip_port = os.path.join(chip_port, 'hcpu')
-    CPPPATH += [chip_port]
+# middleware/ipc_queue/porting/<chip>/<core>
+chip_port = os.path.join(SIFLI_SDK, 'middleware/ipc_queue/porting', rtconfig.CHIP.lower())
+if GetDepend(['BF0_LCPU']):
+    chip_port = os.path.join(chip_port, 'lcpu')
+else:
+    chip_port = os.path.join(chip_port, 'hcpu')
+CPPPATH += [chip_port]
 
 # ---------------------------------------------------------------------------
 # The Unity case registry, generated from the test sources above.

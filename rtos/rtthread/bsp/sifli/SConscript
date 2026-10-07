@@ -8,7 +8,9 @@ list = os.listdir(cwd)
 CPPPATH = [cwd]
 CPPPATH += [cwd + '/../../components/drivers/include/drivers',]
 
-if GetDepend(['BSP_USING_PC_SIMULATOR']):
+if GetDepend(['SOC_QEMU']):
+    objs = objs + SConscript('drivers_qemu/SConscript')
+elif GetDepend(['BSP_USING_PC_SIMULATOR']):
     objs = objs + SConscript('drivers_pc/SConscript')
 else:
     objs = objs + SConscript('drivers/SConscript')

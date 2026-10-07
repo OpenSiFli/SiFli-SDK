@@ -7,7 +7,7 @@ src = []
 inc = []
 path = []
 
-if GetDepend('BSP_USING_RTTHREAD') and not GetDepend('BF0_LCPU'):
+if GetDepend('BSP_USING_RTTHREAD') and not GetDepend('BF0_LCPU') and not GetDepend('SOC_QEMU'):
 	path = [cwd + '/inc']
 	path += [cwd + '/port/fal/inc']
 	src  += Glob('port/fal/src/*.c')

@@ -178,20 +178,36 @@ class DeclaredFeaturesTest(SdkTestCase):
 
 
 class QemuCarrierTest(unittest.TestCase):
-    """The carriers in this repository, as they actually are."""
+    """The carriers in this repository, as they actually are.
 
-    BOARD_NAMES = ("qemu_cortex_m33", "qemu_sf32lb52x", "qemu_sf32lb55x",
-                   "qemu_sf32lb56x", "qemu_sf32lb57x", "qemu_sf32lb58x")
+    The list is read off the disk rather than written down here. It was written
+    down once, and went stale the moment a carrier was deleted, failing a test
+    whose subject was the carriers that exist. A carrier added without a
+    declaration still fails it, which is the half worth keeping.
+    """
+
+    def carriers(self):
+        boards = os.path.join(REPOSITORY_ROOT, "customer", "boards")
+        return sorted(
+            name for name in os.listdir(boards)
+            if name.startswith("qemu_")
+            and os.path.isdir(os.path.join(boards, name))
+        )
+
+    def test_the_directory_scan_finds_the_carriers(self):
+        # Without this, an empty scan would let both tests below pass over an
+        # empty loop and say nothing about any carrier at all.
+        self.assertTrue(self.carriers())
 
     def test_every_one_declares_that_it_has_no_peripherals(self):
         # Not a placeholder: saying "nothing" is what makes `depends_on: [spi]`
         # filter a test out instead of building and booting it to find out.
-        for board in self.BOARD_NAMES:
+        for board in self.carriers():
             with self.subTest(board=board):
                 self.assertEqual([], load_platform_features(board))
 
     def test_a_bus_requirement_is_therefore_unmet(self):
-        for board in self.BOARD_NAMES:
+        for board in self.carriers():
             with self.subTest(board=board):
                 self.assertEqual(
                     ["spi"],

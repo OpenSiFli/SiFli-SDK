@@ -257,7 +257,7 @@ class TestSessionAndBackend(SdkTestCase):
         process = spawn("import time; time.sleep(60)")
         console = QemuConsole(process)
         console.start()
-        session = QemuSession(process, console, "qemu_cortex_m33", "/b/main.elf")
+        session = QemuSession(process, console, "qemu_sf32lb52x", "/b/main.elf")
 
         session.close()
         self.assertIsNotNone(process.poll(), "the emulator should be stopped")
@@ -266,7 +266,7 @@ class TestSessionAndBackend(SdkTestCase):
     def test_a_session_has_no_testbed_because_there_is_no_hardware(self):
         process = spawn("pass")
         console = QemuConsole(process)
-        session = QemuSession(process, console, "qemu_cortex_m33", "/b/main.elf")
+        session = QemuSession(process, console, "qemu_sf32lb52x", "/b/main.elf")
         self.addCleanup(reap, process)
         self.addCleanup(session.close)
         self.assertIsNone(session.testbed_id)
@@ -276,23 +276,23 @@ class TestSessionAndBackend(SdkTestCase):
 
     def test_opening_without_a_build_directory_is_refused(self):
         with self.assertRaises(BackendError) as caught:
-            QemuBackend().open(make_instance(), "qemu_cortex_m33", build_dir=None)
+            QemuBackend().open(make_instance(), "qemu_sf32lb52x", build_dir=None)
         self.assertIn("build directory", str(caught.exception))
 
     def test_a_missing_elf_names_the_build_command(self):
-        build_dir = self.mkdir("build_qemu_cortex_m33_hcpu")
+        build_dir = self.mkdir("build_qemu_sf32lb52x_hcpu")
         with self.assertRaises(BackendError) as caught:
-            QemuBackend().open(make_instance(), "qemu_cortex_m33", build_dir=build_dir)
+            QemuBackend().open(make_instance(), "qemu_sf32lb52x", build_dir=build_dir)
         message = str(caught.exception)
         self.assertIn(ELF_NAME, message)
-        self.assertIn("scons --board=qemu_cortex_m33", message)
+        self.assertIn("scons --board=qemu_sf32lb52x", message)
 
     def test_a_missing_interpreter_is_reported_before_launch(self):
         build_dir = self.mkdir("build")
         self.write("build/main.elf", "not really an elf")
         with self.assertRaises(BackendError) as caught:
             QemuBackend(qemu_exe="definitely-not-qemu").open(
-                make_instance(), "qemu_cortex_m33", build_dir=build_dir
+                make_instance(), "qemu_sf32lb52x", build_dir=build_dir
             )
         self.assertIn("not found", str(caught.exception))
 

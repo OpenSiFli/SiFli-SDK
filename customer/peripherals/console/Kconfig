@@ -16,17 +16,20 @@ choice
     config CONSOLE_UART6
         bool "UART6"
     config CONSOLE_PC
-        bool "PC Simulator"        
+        bool "PC Simulator"
+    config CONSOLE_QEMU
+        bool "QEMU Simulator"
 endchoice
 config RT_CONSOLE_DEVICE_NAME
-    string 
+    string
     default "uart1" if CONSOLE_UART1
     default "uart2" if CONSOLE_UART2
     default "uart3" if CONSOLE_UART3
-    default "uart4" if CONSOLE_UART4    
-    default "uart5" if CONSOLE_UART5    
+    default "uart4" if CONSOLE_UART4
+    default "uart5" if CONSOLE_UART5
     default "uart6" if CONSOLE_UART6
     default "console" if CONSOLE_PC
+    default "console" if CONSOLE_QEMU
 
 
 endmenu

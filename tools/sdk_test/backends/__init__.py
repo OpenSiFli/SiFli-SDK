@@ -14,7 +14,7 @@ is that they need **no** Lab Agent, because there is no hardware to allocate and
 therefore no testbed to lock.
 
 Choosing between them is a property of the platform name, which is why the same
-`scons --board=<name>` covers all three: ``pc_hcpu``, ``qemu_cortex_m33`` and a
+`scons --board=<name>` covers all three: ``pc_hcpu``, ``qemu_sf32lb52x`` and a
 real board are all just board names to the build system.
 """
 

@@ -1,0 +1,9 @@
+# QEMU Cortex-M33 virtual board presenting the SF32LB55X chip identity.
+#
+# Same QEMU machine (mps2-an505) and the same link.lds as every other
+# qemu_* board; only the chip identity selected in hcpu/Kconfig.board
+# differs. Kept as a separate directory because --board=<name> resolves to
+# customer/boards/<name>/hcpu, and because a testcase names its platform by
+# board name -- so "which chip is being emulated" has to be readable there.
+#
+# Console selection (CONSOLE_QEMU) lives in customer/peripherals/console/Kconfig.

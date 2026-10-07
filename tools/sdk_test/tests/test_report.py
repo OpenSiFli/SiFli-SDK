@@ -142,8 +142,8 @@ class TestManifest(SdkTestCase):
                 (2, 2, "a/hello.unity", "sf32lb52-lcd_n16r8", "unity"),
             ],
             [
-                _pair("a/hello.unity", "qemu_cortex_m33",
-                      "platform qemu_cortex_m33 not allowed"),
+                _pair("a/hello.unity", "qemu_sf32lb55x",
+                      "platform qemu_sf32lb55x not allowed"),
             ],
         )
         lines = text.splitlines()
@@ -151,16 +151,16 @@ class TestManifest(SdkTestCase):
         self.assertIn("2/2  a/hello.unity", lines[2])
         self.assertEqual(lines[3], "1 (test, platform) pair(s) turned away:")
         self.assertEqual(lines[4], "  a/hello.unity")
-        self.assertEqual(lines[5], "    platform:   qemu_cortex_m33")
+        self.assertEqual(lines[5], "    platform:   qemu_sf32lb55x")
         self.assertEqual(
-            lines[6], "    reason:     platform qemu_cortex_m33 not allowed"
+            lines[6], "    reason:     platform qemu_sf32lb55x not allowed"
         )
 
     def test_a_refused_tree_says_so_instead_of_naming_no_runs(self):
         # No runs at all, so there is no runs block to append to -- the header
         # that says the block is the whole answer is the one for this shape.
         text = report.format_turned_away(
-            [_pair("a/hello.unity", "qemu_cortex_m33", "not allowed")],
+            [_pair("a/hello.unity", "qemu_sf32lb55x", "not allowed")],
             nothing_planned=True,
         )
         self.assertEqual(

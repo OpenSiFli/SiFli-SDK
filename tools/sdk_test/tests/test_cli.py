@@ -176,7 +176,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
             tests:
               - id: solo
                 harness: console
-                integration_platforms: [qemu_cortex_m33]
+                integration_platforms: [qemu_sf32lb52x]
                 harness_config:
                   record: ["x"]
             """,
@@ -189,7 +189,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
         text = "\n".join(lines)
 
         self.assertEqual(code, cli.EXIT_OK)
-        self.assertIn("qemu_cortex_m33", text)
+        self.assertIn("qemu_sf32lb52x", text)
         self.assertIn("(qemu)", text)
         # And it should say plainly that no hardware is involved.
         self.assertIn("no Lab Agent needed", text)
@@ -204,7 +204,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
             tests:
               - id: multi
                 harness: console
-                integration_platforms: [qemu_cortex_m33, qemu_sf32lb52x]
+                integration_platforms: [qemu_sf32lb55x, qemu_sf32lb52x]
                 harness_config:
                   record: ["x"]
             """,
@@ -232,7 +232,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
             tests:
               - id: single
                 harness: console
-                integration_platforms: [qemu_cortex_m33]
+                integration_platforms: [qemu_sf32lb52x]
                 harness_config:
                   record: ["x"]
             """,
@@ -269,8 +269,8 @@ class TestListingNeedsNoHardware(SdkTestCase):
                   record: ["x"]
               - id: gated.qemu
                 harness: console
-                platform_allow: [qemu_cortex_m33]
-                integration_platforms: [qemu_cortex_m33]
+                platform_allow: [qemu_sf32lb55x]
+                integration_platforms: [qemu_sf32lb55x]
                 harness_config:
                   record: ["x"]
             """,
@@ -309,7 +309,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
                   record: ["x"]
               - id: verbatim.qemu
                 harness: console
-                platform_allow: [qemu_cortex_m33]
+                platform_allow: [qemu_sf32lb55x]
                 harness_config:
                   record: ["x"]
             """,
@@ -330,7 +330,7 @@ class TestListingNeedsNoHardware(SdkTestCase):
             "  verbatim.qemu",
             "    platform:   sf32lb52-lcd_a128r16",
             "    reason:     platform sf32lb52-lcd_a128r16 not allowed "
-            "(allow=['qemu_cortex_m33'], exclude=none)",
+            "(allow=['qemu_sf32lb55x'], exclude=none)",
         ])
 
     def test_plan_says_a_turned_away_tree_is_not_an_empty_one(self):
@@ -342,8 +342,8 @@ class TestListingNeedsNoHardware(SdkTestCase):
             tests:
               - id: only.qemu
                 harness: console
-                platform_allow: [qemu_cortex_m33]
-                integration_platforms: [qemu_cortex_m33]
+                platform_allow: [qemu_sf32lb55x]
+                integration_platforms: [qemu_sf32lb55x]
                 harness_config:
                   record: ["x"]
             """,

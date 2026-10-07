@@ -1,0 +1,37 @@
+# QEMU Cortex-M33 carrier presenting the SF32LB55X chip identity.
+#
+# Why a board per series, rather than project-supplied compiler defines:
+#
+#   * Kconfig symbols, not defines, are what the SDK branches on. drv_spi_flash.c
+#     guards HAL_FLASH_NOP_CMD with "#ifndef SOC_SF32LB55X" -- a -DSF32LB55X on
+#     the command line does not satisfy it, so the wrong branch is compiled and
+#     the failure surfaces as an unrelated-looking header error. Selecting the
+#     chip here puts SOC_SF32LB55X in rtconfig.h where that code expects it.
+#
+#   * The include order is not something a project can get right on its own.
+#     bf0_hal.h does #include "register.h" by name, so the chip's register map
+#     has to precede the carrier's own drivers_qemu/register.h; get it wrong and
+#     the error reads as a missing register map. The carrier fixes the order
+#     centrally, in rtos/rtthread/bsp/sifli/drivers_qemu/SConscript.
+#
+#   * The chip headers and the HAL macros they need (SF32LB55X, SOC_BF0_HCPU,
+#     USE_HAL_DRIVER) normally come from SConscripts under drivers/, which
+#     SOC_QEMU skips wholesale. The carrier supplies the equivalents.
+#
+#   * One board symbol per carrier, with the chip identity separate from it.
+#     The build gates on SOC_QEMU (drivers/, FlashDB, middleware/system), but
+#     "which board is this build for" has to be answerable on its own: a
+#     testcase names its platform by board name, and the .config is what says
+#     which carrier produced it.
+#
+# Nothing here compiles a HAL implementation. The chip identity is declarations
+# only -- which is what lets a CMock-generated mock be the sole definition of a
+# HAL symbol on this carrier.
+config BSP_USING_BOARD_QEMU_SF32LB55X
+    bool
+    select SOC_QEMU
+    select SOC_SF32LB55X
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"

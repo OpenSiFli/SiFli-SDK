@@ -140,7 +140,7 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
    不是实测**：1908 行的文件 `nm -u` 出 35 个，但 `--gc-sections` 之后只剩 2 个。
 
    ROM 符号表那条注意仍然值得留着，但**在这个载体上不适用**：挂 `-T sifli_rom_*.sym`
-   的逻辑本身就在 `drivers/` 整树里，被 `BSP_USING_QEMU` 跳过，
+   的逻辑本身就在 `drivers/` 整树里，被 `SOC_QEMU` 跳过，
    所以 QEMU 载体上永远不会挂（构建产物里搜 `sifli_rom`：0 处）。
 
    机制、踩到的点与"芯片身份必须来自板子"的完整推理见

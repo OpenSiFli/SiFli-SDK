@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# What this platform offers, for `sdk.py test plan` to filter on before it
+# builds anything.
+#
+# Declare the *instances* the board has -- `spi1`, `i2c2` -- not the types: a
+# test asks for `depends_on: [spi]`, and the type match accepts any instance of
+# it. Everything under a `menuconfig BSP_USING_<TYPE>` in
+# customer/boards/Kconfig_drv is an instance; a resource with no instances
+# (`gpio`) is declared by its own name. Declaring a type as well as an instance
+# is rejected, because that redundancy is what drifts.
+#
+# This carrier has none. SOC_QEMU builds the console, the scheduler and
+# the clock out of rtos/rtthread/bsp/sifli/drivers_qemu/, and nothing else --
+# board.conf beside this file turns CONSOLE_QEMU on and PIN off -- so a test that
+# needs a bus is filtered out here rather than built, booted and failed for a
+# reason that has nothing to do with the code under test.
+#
+# An empty list is a declaration, not a placeholder. If a board has simply not
+# been annotated yet, leave the file out: a missing file is an error for a test
+# that states `depends_on:`, while an empty one is an answer.
+features: []

@@ -297,7 +297,7 @@ class TestCanonicalBoardName(SdkTestCase):
         # `scons --board=pc` builds into build_pc_hcpu, which is what the
         # simulator backend has to look in.
         self.assertEqual(canonical_board_name("pc"), "pc_hcpu")
-        self.assertEqual(canonical_board_name("qemu_cortex_m33"), "qemu_cortex_m33_hcpu")
+        self.assertEqual(canonical_board_name("qemu_sf32lb52x"), "qemu_sf32lb52x_hcpu")
 
 
 class TestBackendSelection(SdkTestCase):
@@ -312,8 +312,8 @@ class TestBackendSelection(SdkTestCase):
         self.assertTrue(is_host_platform("pc_hcpu"))
 
     def test_qemu_is_a_host_platform(self):
-        self.assertEqual(select_backend_name("qemu_cortex_m33"), "qemu")
-        self.assertTrue(is_host_platform("qemu_cortex_m33"))
+        self.assertEqual(select_backend_name("qemu_sf32lb52x"), "qemu")
+        self.assertTrue(is_host_platform("qemu_sf32lb52x"))
 
     def test_an_empty_platform_is_refused(self):
         with self.assertRaises(BackendError) as caught:
@@ -345,7 +345,7 @@ class TestBackendSelection(SdkTestCase):
         # It got past the stub: the first thing it asks for is a place to find
         # the ELF, which only a built project can supply.
         with self.assertRaises(BackendError) as caught:
-            create_backend("qemu").open(_instance(), "qemu_cortex_m33")
+            create_backend("qemu").open(_instance(), "qemu_sf32lb52x")
         self.assertIn("build directory", str(caught.exception))
         self.assertNotIn("not implemented", str(caught.exception))
 

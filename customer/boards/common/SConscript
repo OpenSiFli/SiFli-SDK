@@ -5,7 +5,24 @@ cwd = GetCurrentDir()
 src = []
 path = []
 
-if not GetDepend("BSP_USING_BOARD_DUMMY"):
+# A carrier -- a QEMU board, and the dummy board -- builds none of the board
+# layer, because its projects supply that seam themselves.
+#
+# example/test/hal_mock is the proof and the reason: it defines
+# BSP_Flash_get_handle and BSP_Flash_Init so that its CMock mock is the only
+# definition of HAL_QSPI_GET_SR in the image and no flash controller has to
+# exist. Compiling this directory puts flash.c's own definitions of both beside
+# them and the link stops on a duplicate:
+#
+#   test_spi_flash_status.o: multiple definition of `BSP_Flash_get_handle';
+#   customer/boards/common/flash.c:237: first defined here
+#
+# So the exclusion is a link-level one, and it is not about a missing header.
+# The two other sources here would compile on a carrier and then be discarded
+# by --gc-sections (bsp_common.c, bsp_psram.c), and flash.c is the one that
+# needs a customer/boards/<board>/bsp_board.h a carrier does not have -- but
+# neither of those is what decides it.
+if not GetDepend("BSP_USING_BOARD_DUMMY") and not GetDepend("SOC_QEMU"):
     src += Glob('./*.c')
 
     path +=  [cwd, 

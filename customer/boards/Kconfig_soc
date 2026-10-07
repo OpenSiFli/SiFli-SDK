@@ -15,7 +15,19 @@ config SOC_SF32LB57X
     bool 
     
 config SOC_SIMULATOR
-    bool 
+    bool
+
+# Set by the QEMU carrier boards -- each customer/boards/qemu_<series>/hcpu/
+# Kconfig.board selects it -- and gated on by the build: drivers/,
+# external/FlashDB and middleware/system all step aside for it, and
+# tools/build/building.py skips the bootloader and the flash table.
+#
+# Plain bool, no prompt and no default: the carrier is what decides. Which
+# chip is being emulated is a separate fact, carried by the real
+# SOC_SF32LB5<nn>X that the carrier also selects, and by its own board symbol
+# (BSP_USING_BOARD_QEMU_<SERIES>), which is what names the board in a testcase.
+config SOC_QEMU
+    bool
 
 config BF0_HCPU
     bool
@@ -62,7 +74,7 @@ if BF0_LCPU
 endif
 
 
-if !BSP_USING_PC_SIMULATOR
+if !BSP_USING_PC_SIMULATOR && !SOC_QEMU
     menu "Board Config"
         config LXT_DISABLE
         bool "Low power crystal disabled"

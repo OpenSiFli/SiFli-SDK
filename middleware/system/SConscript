@@ -5,7 +5,8 @@ src   = []
 CPPPATH = []
 cwd   = GetCurrentDir()
 
-src += ['bf0_common.c']
+if not GetDepend('SOC_QEMU'):
+    src += ['bf0_common.c']
 if GetDepend(['BSP_USING_PM']):
     src += ['bf0_pm.c']
 if GetDepend(['GUI_APP_PM']):
