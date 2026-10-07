@@ -11,9 +11,9 @@
 /*
  * A real board's board.h pulls in bf0_hal.h, and drivers rely on that for
  * basics such as RT_WEAK -- drv_spi_flash.c uses it at file scope, before its
- * own includes. This carrier has no HAL to include, so the RTOS headers stand in
- * for it: everything that expected those basics through board.h still compiles,
- * without pretending a chip exists.
+ * own includes. These boards compile no HAL implementation, so pulling that
+ * header in would supply declarations with nothing behind them. The RTOS headers
+ * stand in instead, and what a driver expects from board.h still compiles.
  *
  * rthw.h is part of the same substitution. A real board.h also includes
  * drv_common.h, which is what declares rt_hw_interrupt_disable() and friends;
