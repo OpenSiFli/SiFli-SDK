@@ -1,0 +1,27 @@
+# The QEMU carrier needs no hardware, so this case names its platform directly
+# instead of asking a binding to supply one. That is the whole point of the
+# backend split: `qemu_sf32lb52x` is a board name like any other, and the only
+# difference is that nothing has to be allocated before it can run.
+#
+# The example is pure RT-Thread -- it never includes bf0_hal.h -- so any of the
+# five chip-identified carriers would serve; the case names one because a
+# platform is what a testcase pins.
+#
+# Run it with:
+#     sdk.py test run -T example/qemu
+#
+# No Lab Agent, no board, no COM port.
+tests:
+  - id: hello_qemu.console
+    description: Boot banner and application output, read off the QEMU console.
+    harness: console
+    tags: [smoke, qemu]
+    integration_platforms: [qemu_sf32lb52x]
+    timeout: 60
+    harness_config:
+      record:
+        # The kernel banner, then the application's own line. Matching is in
+        # order and against the accumulated console, so QEMU's own noise around
+        # them does not matter.
+        - "SiFli Corporation"
+        - "Hello SiFli on QEMU!"

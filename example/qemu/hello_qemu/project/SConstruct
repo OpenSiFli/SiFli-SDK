@@ -1,0 +1,32 @@
+import os
+import rtconfig
+
+# Check SDK
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+# Prepare environment.
+PrepareEnv()
+
+# Add bootloader project (skipped for the QEMU board)
+AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
+
+# Set default compile options
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+# Prepare building environment
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+
+# Build application.
+DoBuilding(TARGET, objs)
+
+# Add flash table build (skipped for the QEMU board)
+AddFTAB(SIFLI_SDK, rtconfig.CHIP, env)
+
+# Generate download script (skipped for the QEMU board)
+GenDownloadScript(env)
