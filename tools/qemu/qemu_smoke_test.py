@@ -11,13 +11,14 @@ Exit code 0 on success, 1 on failure.
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import time
 
 DEFAULT_ELF = "../../example/qemu/hello_qemu/project/build_qemu_sf32lb52x_hcpu/main.elf"
 
-# Strings that must appear on the semihosting console (in order)
+# Strings that must appear on the console, in order
 EXPECTED = [
     "SiFli Corporation",     # RT-Thread (SiFli) kernel banner
     "Hello SiFli on QEMU!",  # application output
@@ -30,11 +31,12 @@ def main():
     args = parser.parse_args()
 
     qemu_cmd = [
-        "qemu-system-arm",
+        os.environ.get("SIFLI_QEMU_EXE", "qemu-system-arm"),
         "-machine", "mps2-an505",
         "-cpu", "cortex-m33",
-        "-nographic",
-        "-semihosting", "-semihosting-config", "enable=on,target=native",
+        "-display", "none",
+        "-monitor", "none",
+        "-serial", "stdio",
         "-kernel", args.elf,
     ]
 
