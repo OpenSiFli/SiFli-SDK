@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Callable
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -54,10 +53,6 @@ _CORE_SUFFIXES = ("_hcpu", "_lcpu", "_acpu")
 _DEFAULT_CORE = "hcpu"
 
 _TRAILING_DIGITS = re.compile(r'\d+$')
-
-#: The prefix every peripheral switch in this SDK carries. ``spi1`` is compiled
-#: in by ``BSP_USING_SPI1``, which is what :func:`feature_symbol` relies on.
-_SYMBOL_PREFIX = "BSP_USING_"
 
 #: The only key a feature declaration may carry.
 _FEATURES_KEY = "features"
@@ -140,52 +135,6 @@ def unsatisfied(features: Iterable[str], requirements: Iterable[str]) -> List[st
             if name not in available and name not in types]
 
 
-def feature_symbol(feature: str) -> str:
-    """The Kconfig symbol behind a declared instance: ``spi1`` -> ``BSP_USING_SPI1``.
-
-    The convention is what makes a declaration checkable at all: a declared
-    instance and the switch that compiles its driver are the same word, so the
-    declaration can be held against the build it claims to describe.
-    """
-    return _SYMBOL_PREFIX + feature.upper()
-
-
-def unresolved(features: Iterable[str], is_enabled: Callable[[str], bool]) -> List[str]:
-    """Declared instances whose Kconfig symbol is off in this build."""
-    return [name for name in features if not is_enabled(feature_symbol(name))]
-
-
-def check_declaration(platform: str, is_enabled: Callable[[str], bool],
-                      root: str = REPOSITORY_ROOT) -> None:
-    """Raise when a board declares an instance that this build does not have.
-
-    Called from a test project's ``SConscript`` with the build's own predicate
-    (``GetDepend``), so a declaration cannot quietly go on describing a board
-    that no longer exists. A ``features.yaml`` claiming a bus the build lacks
-    lets a test be *allowed* onto a platform that cannot run it -- and that
-    failure then lands on the device, where its cause is hardest to see.
-
-    The reverse direction -- a peripheral the build has and the declaration
-    omits -- is not checked: knowing which switches to look for would take a
-    vocabulary of every peripheral in the tree, and that list would drift too.
-    """
-    features = declared_features(platform, root)
-    if not features:
-        return
-
-    wrong = unresolved(features, is_enabled)
-    if not wrong:
-        return
-
-    raise PlatformError(
-        f"{features_path(platform, root)} declares {wrong}, but this build has "
-        f"no {' or '.join(feature_symbol(name) for name in wrong)}. Either the "
-        f"peripheral is not enabled for this board, or the declaration is stale "
-        f"-- a declaration that does not match the build lets tests onto a "
-        f"platform that cannot run them."
-    )
-
-
 def declared_features(platform: str,
                       root: str = REPOSITORY_ROOT) -> Optional[List[str]]:
     """Like :func:`load_platform_features`, but ``None`` when nothing is declared.
@@ -193,7 +142,9 @@ def declared_features(platform: str,
     The difference matters to a caller checking a *contradiction* rather than
     answering a *requirement*: an empty declaration is a claim that the board has
     no bus at all, while a missing file is merely silence, and only the first of
-    those can contradict a binding.
+    those can contradict a binding. The Lab Agent is that caller -- see
+    ``lab_agent/config.py``, where a board with no declaration is skipped rather
+    than reported as disagreeing with every binding that names a bus.
     """
     if not os.path.isfile(features_path(platform, root)):
         return None

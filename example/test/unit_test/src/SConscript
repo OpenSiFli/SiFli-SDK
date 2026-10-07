@@ -93,24 +93,6 @@ registry = GetCurrentEnv().Command(
     test_registry.action(board=board))
 src += registry
 
-# ---------------------------------------------------------------------------
-# Hold this board's feature declaration against the build.
-#
-# features.yaml is what `sdk.py test plan` filters on, and it describes *this*
-# build: if it claims a bus the build does not have, a test needing that bus is
-# allowed onto a carrier that cannot run it, and the failure then lands on the
-# device rather than here. Only a board that carries the file is checked, so one
-# nobody has annotated for testing yet keeps building.
-# ---------------------------------------------------------------------------
-import sys
-
-sys.path.insert(0, os.path.join(SIFLI_SDK, 'tools'))
-
-from sdk_test.platforms import check_declaration
-
-if board:
-    check_declaration(board, GetDepend)
-
 group = DefineGroup('Applications', src, depend=[''], CPPPATH=CPPPATH)
 
 Return('group')

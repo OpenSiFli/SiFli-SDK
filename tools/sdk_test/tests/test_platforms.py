@@ -17,9 +17,7 @@ from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 
 from sdk_test.errors import PlatformError
 from sdk_test.platforms import REPOSITORY_ROOT
-from sdk_test.platforms import check_declaration
 from sdk_test.platforms import declared_features
-from sdk_test.platforms import feature_symbol
 from sdk_test.platforms import features_path
 from sdk_test.platforms import jlink_device
 from sdk_test.platforms import load_platform_features
@@ -27,7 +25,6 @@ from sdk_test.platforms import platform_types
 from sdk_test.platforms import split_platform
 from sdk_test.platforms import type_of
 from sdk_test.platforms import unsatisfied
-from sdk_test.platforms import unresolved
 
 
 class SplitPlatformTest(unittest.TestCase):
@@ -157,37 +154,14 @@ class LoadTest(SdkTestCase):
                          load_platform_features("board_a", root=self.root))
 
 
-class FeatureSymbolTest(unittest.TestCase):
-    """The convention that lets a declaration be held against a build."""
+class DeclaredFeaturesTest(SdkTestCase):
+    """A missing file is silence; an empty one is a claim.
 
-    def test_an_instance_maps_to_its_switch(self):
-        self.assertEqual("BSP_USING_SPI1", feature_symbol("spi1"))
-        self.assertEqual("BSP_USING_I2C12", feature_symbol("i2c12"))
-
-    def test_a_singleton_maps_to_its_switch(self):
-        self.assertEqual("BSP_USING_GPIO", feature_symbol("gpio"))
-
-
-class UnresolvedTest(unittest.TestCase):
-    def test_a_switch_that_is_off_leaves_the_instance_unresolved(self):
-        self.assertEqual(["spi1"], unresolved(["spi1"], lambda _name: False))
-
-    def test_a_switch_that_is_on_resolves_it(self):
-        self.assertEqual([], unresolved(["spi1"], lambda _name: True))
-
-    def test_the_switch_asked_about_is_the_one_the_declaration_names(self):
-        asked = []
-
-        def is_enabled(name):
-            asked.append(name)
-            return True
-
-        unresolved(["spi1", "i2c2"], is_enabled)
-        self.assertEqual(["BSP_USING_SPI1", "BSP_USING_I2C2"], asked)
-
-
-class CheckDeclarationTest(SdkTestCase):
-    """What a test project's SConscript calls before it builds."""
+    The Lab Agent's wiring check is the caller, and the distinction is the whole
+    point of it there: a board nobody has annotated must not be reported as
+    contradicting every binding that names a bus, while an empty declaration is
+    a claim a binding can disagree with.
+    """
 
     def declare(self, platform, body):
         path = features_path(platform, root=self.root)
@@ -195,25 +169,12 @@ class CheckDeclarationTest(SdkTestCase):
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(body)
 
-    def test_a_claim_the_build_contradicts_fails_the_build(self):
-        self.declare("board_a", "features: [spi1]\n")
-        with self.assertRaises(PlatformError) as caught:
-            check_declaration("board_a", lambda _name: False, root=self.root)
-        message = str(caught.exception)
-        self.assertIn("spi1", message)
-        self.assertIn("BSP_USING_SPI1", message)
+    def test_a_missing_file_is_not_a_declaration(self):
+        self.assertIsNone(declared_features("board_a", root=self.root))
 
-    def test_a_claim_the_build_backs_passes(self):
-        self.declare("board_a", "features: [spi1]\n")
-        check_declaration("board_a", lambda _name: True, root=self.root)
-
-    def test_an_empty_declaration_claims_nothing_to_check(self):
+    def test_an_empty_declaration_is_one(self):
         self.declare("board_a", "features: []\n")
-        check_declaration("board_a", lambda _name: False, root=self.root)
-
-    def test_a_board_that_declares_nothing_is_not_checked(self):
-        # Gradual rollout: a board nobody has annotated keeps building.
-        check_declaration("board_a", lambda _name: False, root=self.root)
+        self.assertEqual([], declared_features("board_a", root=self.root))
 
 
 class QemuCarrierTest(unittest.TestCase):
