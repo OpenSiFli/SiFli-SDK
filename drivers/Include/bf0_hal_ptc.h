@@ -1570,8 +1570,12 @@ HAL_StatusTypeDef HAL_PTC_Enable(PTC_HandleTypeDef *hptc, int enable);
 * @brief  Get PTC Data
 * @param  hptc Handle of PTC
 * @retval PTC data
+*
+* TDR is a plain __IO uint32_t in PTC_ChnTypeDef, so the dereference this used
+* to carry could not compile, and nothing in the SDK expanded the macro -- which
+* is how it survived.
 */
-#define HAL_PTC_GetData(hptc) (*(hptc->Chn->TDR))
+#define HAL_PTC_GetData(hptc) ((hptc)->Chn->TDR)
 
 /**
 * @brief  Handle PTC interrupt
