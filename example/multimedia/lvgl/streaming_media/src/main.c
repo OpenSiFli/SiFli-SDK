@@ -289,7 +289,7 @@ static rt_int32_t player_start(void)
 
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && defined(RT_USING_DFS) && !defined(BSP_USING_SPI_NAND)
 #ifndef FS_REGION_START_ADDR
     #error "Need to define file system start address!"
 #endif
@@ -353,7 +353,7 @@ int mnt_init(void)
     return RT_EOK;
 }
 INIT_ENV_EXPORT(mnt_init);
-#endif /* _WIN32 */
+#endif /* !_WIN32 && RT_USING_DFS && !BSP_USING_SPI_NAND */
 
 void update_pan_conn_state(bool connected)
 {
@@ -437,4 +437,3 @@ int main(void)
     return RT_EOK;
 
 }
-

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -15,7 +20,7 @@
 
 void lottie_setup(lv_obj_t *parent, const char *fname);
 
-#ifndef BSP_USING_PC_SIMULATOR
+#if !defined(BSP_USING_PC_SIMULATOR) && defined(RT_USING_DFS)
 
 #ifndef FS_REGION_START_ADDR
     #error "Need to define file system start address!"
