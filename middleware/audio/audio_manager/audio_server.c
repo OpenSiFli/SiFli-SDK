@@ -725,14 +725,23 @@ static inline void process_speaker_rx(audio_server_t *server, audio_device_speak
 
         if (client->callback)
         {
-            if (my->mic_used != AUDIO_MIC1_ONLY)
+            if (my->mic_used == AUDIO_MIC0_ONLY)
             {
                 client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
             }
-            if (my->mic_used != AUDIO_MIC0_ONLY)
+            if (my->mic_used == AUDIO_MIC1_ONLY)
             {
                 client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data2);
             }
+#if defined(PKG_USING_ANYKA) || defined(PKG_USING_ELEVOC)
+            if (my->all_mic_channels == 4 && my->mic_used == AUDIO_MIC_ALL)
+            {
+                mix_4_channel((int16_t *)my->mixed_4_channel, (int16_t *)my->rx_data_tmp, (int16_t *)my->rx_data_tmp2);
+                data.data = my->mixed_4_channel;
+                data.data_len = len * 2;
+                client->callback(as_callback_cmd_data_coming, client->user_data, (uint32_t)&data);
+            }
+#endif
         }
     }
 Exit:
