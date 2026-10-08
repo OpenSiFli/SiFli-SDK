@@ -77,7 +77,7 @@ The options below are already set in `project/proj.conf`; carry them over when p
 | Option | Value | Description |
 |---|---|---|
 | `CONFIG_LV_USING_FREETYPE_ENGINE` | y | Enable the FreeType font engine |
-| `CONFIG_FREETYPE_FONT_BPP_8` | y | Render glyphs as 8bpp gray bitmaps |
+| `CONFIG_FREETYPE_NORMAL_FONT` | y | Use the full FreeType library |
 | `CONFIG_LV_FREETYPE_CACHE_FT_FACES` | 4 | Maximum number of font files open at once |
 | `CONFIG_LV_FREETYPE_CACHE_FT_SIZES` | 16 | Maximum number of cached sizes |
 | `CONFIG_LVSF_FONT_MIN_FREE_HEAP` | 32768 | System heap that must remain after creating a font object; below this the font is refused |

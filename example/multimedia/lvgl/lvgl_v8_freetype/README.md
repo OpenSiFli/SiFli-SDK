@@ -77,7 +77,7 @@ please input the serial port num:5
 | 配置项 | 取值 | 说明 |
 |---|---|---|
 | `CONFIG_LV_USING_FREETYPE_ENGINE` | y | 启用FreeType字体引擎 |
-| `CONFIG_FREETYPE_FONT_BPP_8` | y | 字形位图使用8bpp灰度 |
+| `CONFIG_FREETYPE_NORMAL_FONT` | y | 使用完整FreeType库 |
 | `CONFIG_LV_FREETYPE_CACHE_FT_FACES` | 4 | 同时打开的字体文件数上限 |
 | `CONFIG_LV_FREETYPE_CACHE_FT_SIZES` | 16 | 字号缓存数量上限 |
 | `CONFIG_LVSF_FONT_MIN_FREE_HEAP` | 32768 | 创建字体后须保留的系统堆下限，低于此值则拒绝加载 |
