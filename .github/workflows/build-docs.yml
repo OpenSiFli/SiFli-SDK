@@ -124,7 +124,7 @@ jobs:
           delete_remote: true
 
       - name: Upload ${{ matrix.variant }} documentation artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: docs-${{ matrix.variant }}
           path: docs/build_${{ matrix.variant }}/html/
@@ -141,7 +141,7 @@ jobs:
           merge-multiple: false
 
       - name: Archive all documentation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: docs-${{ needs.build-docs.outputs.version }}
           path: |
