@@ -587,9 +587,9 @@ void lv_freetype_set_font_size(lv_font_t *font, uint16_t size)
 }
 
 
-#if FT_CACHE_SIZE > 0
 /**
  * @brief Get the maximum weight allowed for the FreeType cache.
+ * A zero pool size uses the system heap, so the cache still needs a limit.
  * @retval uint32_t Maximum cache weight.
  */
 uint32_t ft_get_cache_size(void)
@@ -598,6 +598,7 @@ uint32_t ft_get_cache_size(void)
     return max_weight;
 }
 
+#if FT_CACHE_SIZE > 0
 static void ft_clean_cache_cb(void)
 {
 #if defined (FREETYPE_CACHE_IN_SRAM_STANDALONE) || defined (FREETYPE_CACHE_IN_PSRAM)
@@ -611,6 +612,7 @@ static void ft_clean_cache_cb(void)
     }
 #endif
 }
+#endif
 
 #if defined (LV_USING_FREETYPE_ENGINE)
 #include <freetype/internal/ftmemory.h>
@@ -762,8 +764,6 @@ static FT_Error ft_convert_bitmap_2bpp_cb(FTC_SBit sbit, FT_Bitmap  *bitmap, FT_
 #endif
 }
 #endif /* LV_USE_GPU */
-
-#endif
 
 #endif
 
@@ -1056,7 +1056,9 @@ int ft_callback_reg(void)
     lv_freetype_set_parameter(FT_BPP, 512, EXTERN_CACHE_AGINE);
 #if !defined(PKG_SCHRIFT)
     ft_render_pool_apply_mem_register(ft_render_pool_apply_mem, ft_render_pool_rel_mem);
+#if FT_CACHE_SIZE > 0
     ft_cache_clean_register(ft_clean_cache_cb);
+#endif
 #endif
 #if FT_USING_2BPP_INTERNAL
     ft_bitmap_to_bpp_register(ft_convert_bitmap_2bpp_cb, FT_BPP);
