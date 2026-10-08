@@ -388,7 +388,7 @@ struct VRleTask {
             outRef.convert(mPath);
             outRef.convert(mCap, mJoin, mStrokeWidth, mMiterLimit);
 
-            uint32_t points, contors;
+            SW_FT_UInt points, contors;
 
             SW_FT_Stroker_Set(stroker, outRef.ftWidth, outRef.ftCap,
                               outRef.ftJoin, outRef.ftMiterLimit);

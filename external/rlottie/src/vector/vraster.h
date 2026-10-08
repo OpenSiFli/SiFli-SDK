@@ -22,6 +22,7 @@
 
 #ifndef VRASTER_H
 #define VRASTER_H
+#include <memory>
 #ifndef USING_MINI_RLOTTIE
 #include <future>
 #endif
