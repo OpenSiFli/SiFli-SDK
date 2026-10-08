@@ -29,6 +29,10 @@
 #if defined(WEBRTC_RUN_IN_ACPU)
     #include "audio_3a_webrtc.h"
 #endif
+#if LIBHELIX_RUN_IN_ACPU
+    #include "mp3dec.h"
+    #include "libhelix_acpu.h"
+#endif
 
 static rt_mailbox_t g_call_mb;
 static acpu_ctrl_ipc_msg_t *p_received_msg;
@@ -380,8 +384,18 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_send_result((uint32_t)0, 0);
         break;
     }
-
 #endif
+
+#if LIBHELIX_RUN_IN_ACPU
+    case ACPU_TASK_MP3Decode:
+    {
+        libhelix_decode_parameter_t *arg = (libhelix_decode_parameter_t *)param;
+        int ret = MP3Decode(arg->hMP3Decoder, arg->inbuf, arg->bytesLeft, arg->outbuf, arg->useSize, arg->is_seeking);
+        acpu_send_result(0, (uint32_t)ret);
+        break;
+    }
+#endif
+
     default:
     {
         //here will come sometimes

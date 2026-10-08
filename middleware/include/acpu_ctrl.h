@@ -110,7 +110,8 @@ typedef struct
 #define ACPU_TASK_webrtc_uplink          (19)
 #define ACPU_TASK_webrtc_downlink        (20)
 #define ACPU_TASK_webrtc_farput          (21)
-#define ACPU_TASK_COUNT                  (21)
+#define ACPU_TASK_MP3Decode              (22)
+
 
 /** HCPU task name */
 #define HCPU_TASK_INVALID                (0)
