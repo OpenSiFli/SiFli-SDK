@@ -95,6 +95,7 @@ typedef enum
     DRV_EPIC_DRAW_LINE,
     DRV_EPIC_DRAW_BORDER,
     DRV_EPIC_DRAW_POLYGON,
+    DRV_EPIC_DRAW_SHADOW,
     DRV_EPIC_DRAW_MAX,
     DRV_EPIC_INVALID = 0xFFFF,      //Invalid
 } drv_epic_op_type_t;
@@ -230,10 +231,22 @@ typedef struct
             uint8_t bot_side : 1;
             uint8_t left_side : 1;
             uint8_t right_side : 1;
-            uint8_t reserved : 4;
+            uint8_t mask_owned : 1; // Producer owns the parent mask until render completion.
+            uint8_t reserved : 3;
 
             uint32_t argb8888;
         } border;
+        struct
+        {
+            EPIC_AreaTypeDef area;
+            uint16_t radius;
+            uint16_t width;
+            int16_t spread;
+            int16_t ofs_x;
+            int16_t ofs_y;
+            uint8_t mask_owned;
+            uint32_t argb8888;
+        } shadow;
         struct
         {
             EPIC_PointTypeDef points[DRV_EPIC_POLYGON_POINT_MAX];

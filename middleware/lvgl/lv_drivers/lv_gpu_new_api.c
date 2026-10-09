@@ -73,11 +73,25 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
     int ref_count = (int)usr_data;
 
     if (op->mask.data && !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image) &&
-            !(op->op == DRV_EPIC_DRAW_RECT && op->desc.rectangle.bg_image))
+            !(op->op == DRV_EPIC_DRAW_RECT && op->desc.rectangle.bg_image) &&
+            !(op->op == DRV_EPIC_DRAW_BORDER && op->desc.border.mask_owned) &&
+            !(op->op == DRV_EPIC_DRAW_SHADOW && op->desc.shadow.mask_owned))
         app_mem_set_ref_count((void *)op->mask.data, ref_count, MEM_ASYN_IMG);
 
     switch (op->op)
     {
+    case DRV_EPIC_DRAW_BORDER:
+    case DRV_EPIC_DRAW_SHADOW:
+        if (REDER_MEM_UNLOCK == ref_count &&
+                ((op->op == DRV_EPIC_DRAW_BORDER && op->desc.border.mask_owned) ||
+                 (op->op == DRV_EPIC_DRAW_SHADOW && op->desc.shadow.mask_owned)))
+        {
+            app_cache_free(op->mask.data);
+            op->mask.data = NULL;
+            if (op->op == DRV_EPIC_DRAW_BORDER) op->desc.border.mask_owned = 0;
+            else op->desc.shadow.mask_owned = 0;
+        }
+        break;
     case DRV_EPIC_DRAW_RECT:
         if (op->desc.rectangle.bg_image && op->desc.rectangle.bg_image->layer.data)
             app_mem_set_ref_count((void *)op->desc.rectangle.bg_image->layer.data, ref_count, MEM_ASYN_IMG);
@@ -1609,13 +1623,150 @@ static void draw_border(lv_draw_ctx_t *draw_ctx,
     lv_gpu_render_commit_op(o);
 }
 
+/* Snapshot only the active parent masks. Effect geometry is rendered by EPIC's
+ * driver after submission, so LVGL mask stack pointers must not escape here. */
+static bool rect_effect_parent_mask(lv_draw_ctx_t *draw_ctx, const lv_area_t *bounds,
+                                    EPIC_LayerConfigTypeDef *mask, lv_area_t *clip)
+{
+    HAL_EPIC_LayerConfigInit(mask);
+    if (!_lv_area_intersect(clip, bounds, draw_ctx->clip_area) ||
+            !_lv_area_intersect(clip, clip, draw_ctx->buf_area)) return false;
+#if LV_DRAW_COMPLEX
+    if (lv_draw_mask_get_cnt())
+    {
+        int32_t width = lv_area_get_width(clip);
+        size_t size = (size_t)width * lv_area_get_height(clip);
+        uint8_t *coverage = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+        if (!coverage) return false;
+        memset(coverage, 255, size);
+        for (int32_t y = clip->y1; y <= clip->y2; y++)
+        {
+            uint8_t *line = coverage + (y - clip->y1) * width;
+            if (lv_draw_mask_apply(line, clip->x1, y, width) == LV_DRAW_MASK_RES_TRANSP)
+                memset(line, 0, width);
+        }
+        setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, coverage, clip);
+    }
+#endif
+    return true;
+}
+
+static void draw_outline(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
+{
+    if (dsc->outline_width <= 0 || dsc->outline_opa <= LV_OPA_MIN) return;
+
+    if (dsc->blend_mode != LV_BLEND_MODE_NORMAL)
+    {
+        LV_LOG_WARN("Outline blend mode unsupported");
+        return;
+    }
+
+    /* Match lv_draw_sw_rect.c's one-pixel overlap at outline_pad == 0. */
+    int32_t pad = (int32_t)dsc->outline_pad - 1;
+    int32_t extent = pad + dsc->outline_width;
+
+    if ((int32_t)lv_area_get_width(coords) + 2 * pad <= 0 ||
+            (int32_t)lv_area_get_height(coords) + 2 * pad <= 0 ||
+            (int32_t)coords->x1 - extent < LV_COORD_MIN ||
+            (int32_t)coords->y1 - extent < LV_COORD_MIN ||
+            (int32_t)coords->x2 + extent > LV_COORD_MAX ||
+            (int32_t)coords->y2 + extent > LV_COORD_MAX) return;
+    lv_area_t bounds = {coords->x1 - extent, coords->y1 - extent,
+                       coords->x2 + extent, coords->y2 + extent};
+    EPIC_LayerConfigTypeDef mask;
+    lv_area_t clip;
+    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip)) return;
+    drv_epic_render_buf dst_buf;
+    setup_render_buf(&dst_buf, draw_ctx);
+    letter_blend_reset();
+    p_line_op = NULL;
+    drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
+    RT_ASSERT(o != NULL);
+    o->op = DRV_EPIC_DRAW_BORDER;
+    o->mask = mask;
+    o->desc.border.mask_owned = mask.data != NULL;
+    LV_AREA_TO_EPIC_AREA(&o->clip_area, &clip);
+    LV_AREA_TO_EPIC_AREA(&o->desc.border.area, &bounds);
+    int32_t short_side = LV_MIN(lv_area_get_width(coords), lv_area_get_height(coords)) + 2 * pad;
+    o->desc.border.radius = LV_MIN(dsc->radius, short_side / 2) + dsc->outline_width;
+    o->desc.border.width = dsc->outline_width;
+    o->desc.border.top_side = o->desc.border.bot_side = 1;
+    o->desc.border.left_side = o->desc.border.right_side = 1;
+    lv_color32_t argb;
+    argb.full = lv_color_to32(dsc->outline_color);
+    argb.ch.alpha = dsc->outline_opa;
+    o->desc.border.argb8888 = argb.full;
+    lv_gpu_render_commit_op(o);
+}
+
+static void draw_shadow(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
+{
+#if LV_DRAW_COMPLEX
+    if (dsc->shadow_width <= 0 || dsc->shadow_opa <= LV_OPA_MIN) return;
+
+    if (dsc->shadow_width == 1 && dsc->shadow_spread <= 0 &&
+            dsc->shadow_ofs_x == 0 && dsc->shadow_ofs_y == 0) return;
+
+    if (dsc->blend_mode != LV_BLEND_MODE_NORMAL)
+    {
+        LV_LOG_WARN("Shadow blend mode unsupported");
+        return;
+    }
+    int32_t spread = dsc->shadow_spread;
+    int32_t blur = dsc->shadow_width / 2 + 1;
+    int32_t left = (int32_t)coords->x1 + dsc->shadow_ofs_x - spread - blur;
+    int32_t top = (int32_t)coords->y1 + dsc->shadow_ofs_y - spread - blur;
+    int32_t right = (int32_t)coords->x2 + dsc->shadow_ofs_x + spread + blur;
+    int32_t bottom = (int32_t)coords->y2 + dsc->shadow_ofs_y + spread + blur;
+
+    if ((int32_t)lv_area_get_width(coords) + 2 * spread <= 0 ||
+            (int32_t)lv_area_get_height(coords) + 2 * spread <= 0 ||
+            left < LV_COORD_MIN || top < LV_COORD_MIN ||
+            right > LV_COORD_MAX || bottom > LV_COORD_MAX) return;
+
+    lv_area_t bounds = {left, top, right, bottom};
+    EPIC_LayerConfigTypeDef mask;
+    lv_area_t clip;
+    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip)) return;
+    drv_epic_render_buf dst_buf;
+    setup_render_buf(&dst_buf, draw_ctx);
+    letter_blend_reset();
+    p_line_op = NULL;
+    drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
+    RT_ASSERT(o != NULL);
+    o->op = DRV_EPIC_DRAW_SHADOW;
+    o->mask = mask;
+    o->desc.shadow.mask_owned = mask.data != NULL;
+    LV_AREA_TO_EPIC_AREA(&o->clip_area, &clip);
+    LV_AREA_TO_EPIC_AREA(&o->desc.shadow.area, coords);
+    o->desc.shadow.radius = dsc->radius;
+    o->desc.shadow.width = dsc->shadow_width;
+    o->desc.shadow.spread = dsc->shadow_spread;
+    o->desc.shadow.ofs_x = dsc->shadow_ofs_x;
+    o->desc.shadow.ofs_y = dsc->shadow_ofs_y;
+    lv_color32_t argb;
+    argb.full = lv_color_to32(dsc->shadow_color);
+    argb.ch.alpha = dsc->shadow_opa;
+    o->desc.shadow.argb8888 = argb.full;
+    lv_gpu_render_commit_op(o);
+#else
+    LV_UNUSED(draw_ctx);
+    LV_UNUSED(dsc);
+    LV_UNUSED(coords);
+#endif
+}
+
 static void draw_rect(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
 {
+    draw_shadow(draw_ctx, dsc, coords);
+
     /*Draw bg*/
     draw_bg(draw_ctx, dsc, coords);
 
     /*Draw border*/
     draw_border(draw_ctx, dsc, coords);
+
+    draw_outline(draw_ctx, dsc, coords);
 }
 
 
