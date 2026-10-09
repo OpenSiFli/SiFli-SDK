@@ -4,10 +4,19 @@ from building import *
 
 cwd = GetCurrentDir()
 
+nor_backend = GetDepend('RT_DFS_ELM_DHARA_NOR_MODE')
+nand_backend = GetDepend('RT_LFS_DHARA_ENABLED') or GetDepend('RT_USING_MTD_DHARA')
+
+if nor_backend and nand_backend:
+    raise RuntimeError(
+        'RT_DFS_ELM_DHARA_NOR_MODE cannot be combined with '
+        'RT_LFS_DHARA_ENABLED or RT_USING_MTD_DHARA'
+    )
+
 src = []
 if GetDepend('RT_DFS_ELM_DHARA_ENABLED') or GetDepend('RT_LFS_DHARA_ENABLED') or GetDepend('RT_USING_MTD_DHARA'):
     src = Glob('dhara/*.c')
-    if GetDepend('RT_DFS_ELM_DHARA_NOR_MODE'):
+    if nor_backend:
         SrcRemove(src, "dhara/nand.c")
     else:
         SrcRemove(src, "dhara/nor.c")
