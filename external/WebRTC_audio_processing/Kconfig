@@ -5,6 +5,7 @@ menuconfig PKG_USING_WEBRTC
 
 if PKG_USING_WEBRTC
     config WEBRTC_RUN_IN_ACPU
+    depends on BSP_USING_ACPU
     bool "webrtc run in acpu"
     default n 
 

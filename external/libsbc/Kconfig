@@ -1,0 +1,10 @@
+config PKG_USING_LIBSBC
+    bool "libsbc - enable google sbc decoder/encoder"
+    default n
+
+if PKG_USING_LIBSBC
+    config LIBSBC_RUN_IN_ACPU
+    depends on BSP_USING_ACPU
+    bool "libsbc run in acpu"
+    default n
+endif
