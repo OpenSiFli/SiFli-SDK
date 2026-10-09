@@ -259,6 +259,10 @@ config LCD_USING_EPD_OPM060DA
     bool
     default n
 
+config LCD_USING_EPD_E0470A03
+    bool
+    default n
+
 
 # LCD interfaces
 config BSP_LCDC_USING_SPI_NODCX_1DATA
