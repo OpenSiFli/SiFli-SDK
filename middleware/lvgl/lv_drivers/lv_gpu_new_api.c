@@ -1851,12 +1851,26 @@ uint32_t lv_gpu_render_start(lv_disp_drv_t *disp_drv)
         drv_epic_render_list_t p_rd_list;
 
         render_buf.cf = lv_img_2_epic_cf2(draw_buf_cf);
-        render_buf.data = disp_drv->draw_buf->buf_act;
+        render_buf.data = disp_drv->draw_ctx->buf;
         lv_area_to_EPIC_area(disp_drv->draw_ctx->buf_area, &render_buf.area);
         p_rd_list = drv_epic_alloc_render_list(&render_buf, &ow_area);
         RT_ASSERT(p_rd_list != NULL);
 
         RT_ASSERT(!HAL_EPIC_AreaIsValid(&ow_area));
+
+        if (draw_buf_cf == LV_IMG_CF_TRUE_COLOR_ALPHA)
+        {
+            drv_epic_operation *o = drv_epic_alloc_op(&render_buf);
+            RT_ASSERT(o != NULL);
+            o->op = DRV_EPIC_DRAW_FILL;
+            lv_area_to_EPIC_area(disp_drv->draw_ctx->buf_area, &o->clip_area);
+            HAL_EPIC_LayerConfigInit(&o->mask);
+            o->desc.fill.r = 0;
+            o->desc.fill.g = 0;
+            o->desc.fill.b = 0;
+            o->desc.fill.opa = 0;
+            drv_epic_commit_op(o);
+        }
 
         return (uint32_t)p_rd_list;
     }
