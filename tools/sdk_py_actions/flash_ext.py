@@ -169,8 +169,16 @@ def flash_callback(
 
     raise UsageError(f"Unsupported protocol: {protocol}")
 
+def get_baud_rate():
+    baud_rate = os.getenv("SIFLI_DOWNLOAD_BAUD_RATE", "").strip()
+    if baud_rate.isdigit():
+        rate_num = int(baud_rate)
+        if 115200 <= rate_num <= 3000000:
+            return rate_num
+    return 1000000
 
 def register(registry: CommandRegistry) -> None:
+    baud = get_baud_rate()
     registry.command(
         path="flash",
         callback=flash_callback,
@@ -192,7 +200,7 @@ def register(registry: CommandRegistry) -> None:
                 "names": ["-b", "--baud"],
                 "help": "Baud rate for UART flash.",
                 "type": int,
-                "default": 1000000,
+                "default": baud,
             },
             {
                 "names": ["-d", "--device"],
