@@ -57,7 +57,52 @@ static drv_epic_operation *p_line_op = NULL;    //Save the last struct pointer
 #define REDER_MEM_LOCK      (1)
 #define REDER_MEM_UNLOCK    (-1)
 
+/* Shared cache for A8 parent-mask snapshots.
+ *
+ * Every EPIC operation that renders under a LVGL parent mask used to build
+ * its own per-operation coverage snapshot. Operations that share the same
+ * parent mask within one frame now reuse a single coverage buffer through a
+ * hash-bucketed, reference-counted cache: the first operation generates the
+ * coverage, later operations with an equal key only bump the ref count.
+ *
+ * The key is geometric (buffer area + each inner radius mask's rect/radius)
+ * rather than the LVGL mask parameter addresses, because LVGL reuses the
+ * same parameter structs across objects. Only stacks made purely of inner
+ * (hole-punch) radius masks are cached; outer radius, non-radius and empty
+ * stacks fall back to the per-operation snapshot path. */
+typedef struct parent_mask_cache parent_mask_cache_t;
+
+#if LV_DRAW_COMPLEX
+#define PARENT_MASK_CACHE_BUCKET_COUNT 32 /* Cache hash-table bucket count */
+
+typedef struct
+{
+    lv_area_t rect;     /* Bounding rect of one radius mask (cfg.rect) */
+    lv_coord_t radius;  /* Corner radius of that mask (cfg.radius) */
+} parent_mask_key_item_t;
+
+typedef struct
+{
+    lv_area_t area;                                  /* Snapshot area: buf_area trimmed by each inner mask rect */
+    uint32_t hash;                                   /* FNV-1a hash; selects the bucket only, equality is field-by-field */
+    uint8_t mask_count;                              /* Number of active inner radius masks captured */
+    parent_mask_key_item_t masks[_LV_MASK_MAX_NUM];  /* Per-mask geometry, first mask_count entries are valid */
+} parent_mask_key_t;
+
+struct parent_mask_cache
+{
+    struct parent_mask_cache *next; /* Next entry in the hash bucket chain */
+    parent_mask_key_t key;          /* The cache key this entry was built for */
+    uint32_t ref_count;             /* Number of operations currently referencing this coverage */
+    uint8_t *coverage;              /* Shared A8 coverage (1 byte per pixel, 255 = fully kept) */
+};
+
+static parent_mask_cache_t *parent_mask_cache_buckets[PARENT_MASK_CACHE_BUCKET_COUNT];
+static void parent_mask_cache_release(parent_mask_cache_t *cache);
+#endif
+
 void my_gpu_wait(lv_draw_ctx_t *draw_ctx);
+static void snapshot_parent_mask(drv_epic_operation *op);
 
 typedef struct
 {
@@ -82,7 +127,30 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
 
     int ref_count = (int)usr_data;
 
-    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_IMAGE && op->desc.blend.layer_owned) &&
+    /* Release the parent mask this operation referenced. A cache-backed mask
+     * only drops the shared entry's ref count; an independently snapshot mask
+     * is freed directly. The shared coverage must outlive every operation
+     * that still references it, so it is never freed here while refs remain. */
+    if (REDER_MEM_UNLOCK == ref_count && op->parent_mask_owned)
+    {
+        if (op->parent_mask_ref)
+        {
+#if LV_DRAW_COMPLEX
+            /* Shared cache entry: decrement ref count, freed on last release. */
+            parent_mask_cache_release((parent_mask_cache_t *)op->parent_mask_ref);
+#endif
+            op->parent_mask_ref = NULL;
+        }
+        else
+        {
+            /* Independently allocated snapshot: owned solely by this op. */
+            app_cache_free(op->mask.data);
+        }
+        op->mask.data = NULL;
+        op->parent_mask_owned = 0;
+    }
+
+    if (op->mask.data && !op->parent_mask_owned && !(op->op == DRV_EPIC_DRAW_IMAGE && op->desc.blend.layer_owned) &&
             !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image) &&
             !(op->op == DRV_EPIC_DRAW_RECT && op->desc.rectangle.bg_image) &&
             !(op->op == DRV_EPIC_DRAW_BORDER && op->desc.border.mask_owned) &&
@@ -190,6 +258,7 @@ rt_err_t lv_gpu_render_mem_unlock(drv_epic_render_list_t list)
 
 static rt_err_t lv_gpu_render_commit_op(drv_epic_operation *op)
 {
+    snapshot_parent_mask(op);
     lv_gpu_render_trav_cb(op, (void *)REDER_MEM_LOCK);
     return drv_epic_commit_op(op);
 }
@@ -578,6 +647,69 @@ static void setup_fg_layer(EPIC_LayerConfigTypeDef *p_fg_layer,
 
 
 static drv_epic_operation *letter_op = NULL;
+static const void *letter_target;
+
+static lv_area_t letter_clip;
+static bool letter_unclipped;
+#if LV_DRAW_COMPLEX
+static struct
+{
+    bool active;
+    lv_area_t rect;
+    lv_coord_t radius;
+    uint8_t outer;
+} letter_masks[_LV_MASK_MAX_NUM];
+static bool letter_masks_supported = true;
+static bool letter_masks_active;
+#endif
+
+/* Compare values rather than stack parameter addresses: LVGL can reuse them
+ * for another object's clip_corner. Other mask types are not batched. */
+static bool letter_masks_match(void)
+{
+    bool match = true;
+#if LV_DRAW_COMPLEX
+    if (!lv_draw_mask_is_any(NULL))
+    {
+        /* Flush a masked batch once when leaving its mask stack. */
+        match = !letter_masks_active;
+        if (letter_masks_active) memset(letter_masks, 0, sizeof(letter_masks));
+        letter_masks_active = false;
+        letter_masks_supported = true;
+        return match;
+    }
+    letter_masks_active = true;
+    bool supported = true;
+    match = letter_masks_supported;
+    for (uint32_t i = 0; i < _LV_MASK_MAX_NUM; i++)
+    {
+        const _lv_draw_mask_common_dsc_t *param = LV_GC_ROOT(_lv_draw_mask_list[i]).param;
+        bool active = param != NULL;
+        if (letter_masks[i].active != active) match = false;
+        letter_masks[i].active = active;
+        if (!active) continue;
+        if (param->type != LV_DRAW_MASK_TYPE_RADIUS)
+        {
+            supported = false;
+            match = false;
+            continue;
+        }
+        const lv_draw_mask_radius_param_t *radius = (const lv_draw_mask_radius_param_t *)param;
+        if (letter_masks[i].rect.x1 != radius->cfg.rect.x1 ||
+                letter_masks[i].rect.y1 != radius->cfg.rect.y1 ||
+                letter_masks[i].rect.x2 != radius->cfg.rect.x2 ||
+                letter_masks[i].rect.y2 != radius->cfg.rect.y2 ||
+                letter_masks[i].radius != radius->cfg.radius ||
+                letter_masks[i].outer != radius->cfg.outer) match = false;
+        letter_masks[i].rect = radius->cfg.rect;
+        letter_masks[i].radius = radius->cfg.radius;
+        letter_masks[i].outer = radius->cfg.outer;
+    }
+    letter_masks_supported = supported;
+#endif
+    return match;
+}
+static const void *line_target;
 static void letter_blend_reset(void)
 {
     if (letter_op)
@@ -604,23 +736,38 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
     ax_color_u32.full = lv_color_to32(ax_color);
     uint32_t color_mode = lv_img_2_epic_cf(src);
 
+    bool masks_match = letter_masks_match();
+    bool glyph_unclipped = _lv_area_is_in(src_coords, output_coords, 0);
+    bool same_clip = letter_clip.x1 == output_coords->x1
+                     && letter_clip.y1 == output_coords->y1
+                     && letter_clip.x2 == output_coords->x2
+                     && letter_clip.y2 == output_coords->y2;
+    /* Joining clips is safe only when it cannot expose clipped glyph pixels.
+     * Parent masks keep their original batch area and coverage snapshot. */
+    bool join_clip = letter_op && letter_unclipped && glyph_unclipped
+                     && !mask_map && !letter_op->mask.data && !lv_draw_mask_is_any(NULL);
+
     if ((letter_op != NULL)
+            && letter_target == dest->data
+            && masks_match
+            && (same_clip || join_clip)
             && (letter_op->desc.label.color_mode == color_mode)
             && (letter_op->desc.label.opa == opa)
             && (letter_op->desc.label.r == ax_color_u32.ch.red)
             && (letter_op->desc.label.g == ax_color_u32.ch.green)
             && (letter_op->desc.label.b == ax_color_u32.ch.blue))
     {
-        EPIC_AreaTypeDef epic_output_area;
-
-
         drv_epic_letter_type_t *p_letter = drv_epic_op_alloc_letter(letter_op);
         RT_ASSERT(p_letter);
 
         p_letter->data = src->data;
         LV_AREA_TO_EPIC_AREA(&p_letter->area, src_coords);
-        LV_AREA_TO_EPIC_AREA(&epic_output_area, output_coords);
-        HAL_EPIC_AreaJoin(&letter_op->clip_area, &letter_op->clip_area, &epic_output_area);
+        letter_unclipped = letter_unclipped && glyph_unclipped;
+        if (!same_clip)
+        {
+            _lv_area_join(&letter_clip, &letter_clip, output_coords);
+            LV_AREA_TO_EPIC_AREA(&letter_op->clip_area, &letter_clip);
+        }
     }
     else
     {
@@ -639,6 +786,9 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
         drv_epic_operation *o = drv_epic_alloc_op(&dst_buf);
         RT_ASSERT(o != NULL);
         letter_op = o;
+        letter_target = dest->data;
+        letter_clip = *output_coords;
+        letter_unclipped = glyph_unclipped;
 
         o->op = DRV_EPIC_DRAW_LETTERS;
         LV_AREA_TO_EPIC_AREA(&o->clip_area, output_coords);
@@ -699,6 +849,9 @@ static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
 
         p_letter->data = src->data;
         LV_AREA_TO_EPIC_AREA(&p_letter->area, src_coords);
+        /* Capture the batch clip while the mask stack is still valid. Later
+         * letters with the same stack and clip reuse this operation's mask. */
+        snapshot_parent_mask(o);
     }
     lv_gpu_render_mem_lock((void *)src->data, MEM_ASYN_FONT);
 }
@@ -1014,6 +1167,210 @@ void img_rotate_adv1(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
 #endif
 }
 
+#if LV_DRAW_COMPLEX
+typedef enum
+{
+    PARENT_MASK_CACHE_UNSUPPORTED,
+    PARENT_MASK_CACHE_EMPTY,
+    PARENT_MASK_CACHE_READY,
+} parent_mask_cache_status_t;
+
+/* Build the cache key that identifies the active parent-mask stack.
+ *
+ * The key area is the whole buffer (not the child clip) so operations that
+ * share one parent mask in the same frame collide onto a single entry,
+ * regardless of their individual clip rectangles. Only stacks made purely of
+ * inner (hole-punch) radius masks are cacheable: outer radius masks (e.g.
+ * clip_corner) and non-radius masks make the key unsupported, and an empty
+ * stack means no snapshot is needed at all. */
+static parent_mask_cache_status_t parent_mask_cache_make_key(lv_draw_ctx_t *draw_ctx,
+                                                              parent_mask_key_t *key)
+{
+    if (!draw_ctx->clip_area || !draw_ctx->buf_area || !lv_draw_mask_is_any(NULL))
+        return PARENT_MASK_CACHE_UNSUPPORTED;   /* No draw context or no active mask: caching not applicable */
+
+    /* Child clips must not split a shared parent mask into per-child entries. */
+    key->area = *draw_ctx->buf_area;
+
+    key->mask_count = 0;
+    for (uint32_t i = 0; i < _LV_MASK_MAX_NUM; i++)
+    {
+        const _lv_draw_mask_common_dsc_t *mask = LV_GC_ROOT(_lv_draw_mask_list[i]).param;
+        if (!mask) continue;
+        if (mask->type != LV_DRAW_MASK_TYPE_RADIUS)
+            return PARENT_MASK_CACHE_UNSUPPORTED;   /* Non-radius masks cannot be described by the key */
+
+        const lv_draw_mask_radius_param_t *radius =
+            (const lv_draw_mask_radius_param_t *)mask;
+        if (radius->cfg.outer)
+            return PARENT_MASK_CACHE_UNSUPPORTED;   /* Outer (clip) masks are not cached */
+
+        parent_mask_key_item_t *item = &key->masks[key->mask_count++];
+        item->rect = radius->cfg.rect;
+        item->radius = radius->cfg.radius;
+
+        /* Inner masks only affect pixels inside their rect: trim the snapshot
+         * area to the intersection, or mark everything clipped when empty. */
+        if (!_lv_area_intersect(&key->area, &key->area, &radius->cfg.rect))
+            return PARENT_MASK_CACHE_EMPTY;
+    }
+
+    /* FNV-1a hash over the area and every mask geometry; it only selects a
+     * bucket, exact equality is still verified by parent_mask_key_equal(). */
+    uint32_t hash = 2166136261u;
+    hash = (hash ^ (uint32_t)key->area.x1) * 16777619u;
+    hash = (hash ^ (uint32_t)key->area.y1) * 16777619u;
+    hash = (hash ^ (uint32_t)key->area.x2) * 16777619u;
+    hash = (hash ^ (uint32_t)key->area.y2) * 16777619u;
+    hash = (hash ^ key->mask_count) * 16777619u;
+    for (uint32_t i = 0; i < key->mask_count; i++)
+    {
+        const parent_mask_key_item_t *item = &key->masks[i];
+        hash = (hash ^ (uint32_t)item->rect.x1) * 16777619u;
+        hash = (hash ^ (uint32_t)item->rect.y1) * 16777619u;
+        hash = (hash ^ (uint32_t)item->rect.x2) * 16777619u;
+        hash = (hash ^ (uint32_t)item->rect.y2) * 16777619u;
+        hash = (hash ^ (uint32_t)item->radius) * 16777619u;
+    }
+    key->hash = hash;
+    return key->mask_count ? PARENT_MASK_CACHE_READY : PARENT_MASK_CACHE_UNSUPPORTED;
+}
+
+/* Field-by-field key comparison. The hash only selects a bucket; two keys
+ * are equal only when area, mask count and every mask geometry match. */
+static bool parent_mask_key_equal(const parent_mask_key_t *a, const parent_mask_key_t *b)
+{
+    if (a->hash != b->hash || a->mask_count != b->mask_count ||
+            a->area.x1 != b->area.x1 || a->area.y1 != b->area.y1 ||
+            a->area.x2 != b->area.x2 || a->area.y2 != b->area.y2)
+        return false;
+
+    for (uint32_t i = 0; i < a->mask_count; i++)
+    {
+        const parent_mask_key_item_t *ma = &a->masks[i];
+        const parent_mask_key_item_t *mb = &b->masks[i];
+        if (ma->rect.x1 != mb->rect.x1 || ma->rect.y1 != mb->rect.y1 ||
+                ma->rect.x2 != mb->rect.x2 || ma->rect.y2 != mb->rect.y2 ||
+                ma->radius != mb->radius)
+            return false;
+    }
+
+    return true;
+}
+
+/* Look up the bucket selected by the key hash and scan its chain for an
+ * entry with an exactly equal key. */
+static parent_mask_cache_t *parent_mask_cache_find(const parent_mask_key_t *key)
+{
+    uint32_t bucket = key->hash % PARENT_MASK_CACHE_BUCKET_COUNT;
+    for (parent_mask_cache_t *cache = parent_mask_cache_buckets[bucket]; cache; cache = cache->next)
+    {
+        if (parent_mask_key_equal(&cache->key, key)) return cache;
+    }
+    return NULL;
+}
+
+/* Acquire a cached coverage for the key, generating it on first use.
+ *
+ * Lookup and bucket insertion are protected by a critical section (scheduler
+ * locked) because operations may be committed from different threads. The
+ * expensive row-by-row mask evaluation runs outside the critical section; a
+ * re-check after generation drops the local candidate if another thread has
+ * inserted the same key in the meantime. */
+static parent_mask_cache_t *parent_mask_cache_get(const parent_mask_key_t *key)
+{
+    rt_enter_critical();                       /* Serialize cache access (find + ref count) */
+    parent_mask_cache_t *cache = parent_mask_cache_find(key);
+    if (cache)
+    {
+        RT_ASSERT(cache->ref_count < UINT32_MAX);
+        cache->ref_count++;                    /* Hit: one more operation shares the coverage */
+        rt_exit_critical();
+        return cache;
+    }
+    rt_exit_critical();
+
+    /* Miss: compute the coverage area size. */
+    int32_t width = lv_area_get_width(&key->area);
+    int32_t height = lv_area_get_height(&key->area);
+    if (width <= 0 || height <= 0 || (size_t)width > SIZE_MAX / (size_t)height)
+        return NULL;
+
+    size_t size = (size_t)width * height;
+    if (size > UINT32_MAX) return NULL;
+
+    parent_mask_cache_t *candidate = app_calloc(1, sizeof(*candidate));
+    if (!candidate) return NULL;
+    candidate->coverage = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+    if (!candidate->coverage)
+    {
+        app_free(candidate);
+        return NULL;
+    }
+    candidate->key = *key;
+
+    /* Evaluate the mask stack once, row by row, into the A8 coverage. */
+    memset(candidate->coverage, 255, size);
+    for (int32_t row = 0; row < height; row++)
+    {
+        uint8_t *line = candidate->coverage + row * width;
+        if (lv_draw_mask_apply(line, key->area.x1, key->area.y1 + row, width) ==
+                LV_DRAW_MASK_RES_TRANSP)
+            memset(line, 0, width);
+    }
+
+    rt_enter_critical();                       /* Re-check: another thread may have inserted it */
+    cache = parent_mask_cache_find(key);
+    if (cache)
+    {
+        RT_ASSERT(cache->ref_count < UINT32_MAX);
+        cache->ref_count++;
+        rt_exit_critical();
+        app_cache_free(candidate->coverage);   /* Keep the existing entry, drop the duplicate */
+        app_free(candidate);
+        return cache;
+    }
+
+    candidate->ref_count = 1;                  /* First reference: insert into the bucket */
+    uint32_t bucket = key->hash % PARENT_MASK_CACHE_BUCKET_COUNT;
+    candidate->next = parent_mask_cache_buckets[bucket];
+    parent_mask_cache_buckets[bucket] = candidate;
+    rt_exit_critical();
+    return candidate;
+}
+
+/* Drop one reference. When the last reference is released, unlink the entry
+ * from its bucket (inside the critical section) and free the coverage buffer
+ * and the entry itself (outside it, so the allocator is never called while
+ * the scheduler is locked). */
+static void parent_mask_cache_release(parent_mask_cache_t *cache)
+{
+    bool release = false;
+
+    rt_enter_critical();
+    RT_ASSERT(cache->ref_count > 0);
+    if (--cache->ref_count == 0)
+    {
+        uint32_t bucket = cache->key.hash % PARENT_MASK_CACHE_BUCKET_COUNT;
+        parent_mask_cache_t **link = &parent_mask_cache_buckets[bucket];
+        while (*link && *link != cache) link = &(*link)->next;
+        RT_ASSERT(*link == cache);
+        if (*link == cache)
+        {
+            *link = cache->next;
+            release = true;
+        }
+    }
+    rt_exit_critical();
+
+    if (release)
+    {
+        app_cache_free(cache->coverage);
+        app_free(cache);
+    }
+}
+#endif
+
 void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                      const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
                      const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
@@ -1256,8 +1613,7 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
 
     lv_disp_t *disp = _lv_refr_get_disp_refreshing();
 
-    if ((lv_draw_mask_get_cnt() < 2)
-            && (LV_BLEND_MODE_NORMAL == dsc->blend_mode)
+    if ((LV_BLEND_MODE_NORMAL == dsc->blend_mode)
             && (bpp >= gpu_support_min_bpp)
             && (0 == g.resolved_font->subpx)
        )
@@ -1488,7 +1844,10 @@ static lv_res_t my_decode_and_draw(lv_draw_ctx_t *draw_ctx, const lv_draw_img_ds
             return LV_RES_OK;
         }
 
+        const lv_area_t *saved_clip = draw_ctx->clip_area;
+        draw_ctx->clip_area = &clip_com;
         draw_img(draw_ctx, draw_dsc, coords, &cdsc->dec_dsc);
+        draw_ctx->clip_area = saved_clip;
     }
 
 
@@ -1507,40 +1866,71 @@ static void draw_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *ds
 }
 
 #if LV_DRAW_COMPLEX
-/* Only omit snapshots in fully covered straight bands; curved edges can
- * contain antialiased pixels even when their geometry contains the area. */
-static bool bg_image_needs_parent_mask(const lv_area_t *clip)
+/** Return true only when a mask leaves every pixel in the area opaque. */
+static bool mask_area_is_full_cover(const _lv_draw_mask_common_dsc_t *param, const lv_area_t *area)
+{
+    if (param->type == LV_DRAW_MASK_TYPE_RADIUS)
+    {
+        const lv_draw_mask_radius_param_t *radius = (const lv_draw_mask_radius_param_t *)param;
+        const lv_area_t *rect = &radius->cfg.rect;
+        if (radius->cfg.outer) return !_lv_area_is_on(area, rect);
+        if (!_lv_area_is_in(area, rect, 0)) return false;
+
+        /* Curved edges can contain antialiased pixels despite geometric containment. */
+        int32_t r = radius->cfg.radius;
+        return (area->y1 >= rect->y1 + r && area->y2 <= rect->y2 - r) ||
+               (area->x1 >= rect->x1 + r && (int32_t)area->x2 + 1 <= rect->x2 - r);
+    }
+
+    if (param->type == LV_DRAW_MASK_TYPE_ANGLE)
+    {
+        const lv_draw_mask_angle_param_t *angle = (const lv_draw_mask_angle_param_t *)param;
+        /* A reflex sector is not convex: opaque corners do not prove opaque contents. */
+        if (angle->delta_deg > 180) return false;
+    }
+    else if (param->type != LV_DRAW_MASK_TYPE_LINE)
+    {
+        return false;
+    }
+
+    /* Keep a one-pixel guard around convex masks: isolated corner samples can
+     * take different AA shortcuts from a complete scanline in LVGL. */
+    if (area->x1 <= LV_COORD_MIN || area->y1 <= LV_COORD_MIN ||
+            area->x2 >= LV_COORD_MAX || area->y2 >= LV_COORD_MAX) return false;
+    const lv_point_t corners[] = {
+        {area->x1, area->y1}, {area->x2, area->y1},
+        {area->x1, area->y2}, {area->x2, area->y2}
+    };
+    for (uint32_t i = 0; i < sizeof(corners) / sizeof(corners[0]); i++)
+    {
+        for (int32_t y = corners[i].y - 1; y <= corners[i].y + 1; y++)
+        {
+            lv_opa_t coverage[3] = {LV_OPA_COVER, LV_OPA_COVER, LV_OPA_COVER};
+            if (param->cb(coverage, corners[i].x - 1, y, 3, (void *)param) !=
+                    LV_DRAW_MASK_RES_FULL_COVER)
+                return false;
+        }
+    }
+    return true;
+}
+
+/** Check the active stack before allocating an A8 parent-mask snapshot. */
+static bool parent_mask_needs_snapshot(const lv_area_t *area)
 {
     for (uint32_t i = 0; i < _LV_MASK_MAX_NUM; i++)
     {
         const _lv_draw_mask_common_dsc_t *param = LV_GC_ROOT(_lv_draw_mask_list[i]).param;
-        if (!param) continue;
-        if (param->type != LV_DRAW_MASK_TYPE_RADIUS) return true;
-        const lv_draw_mask_radius_param_t *radius = (const lv_draw_mask_radius_param_t *)param;
-        const lv_area_t *rect = &radius->cfg.rect;
-        if (radius->cfg.outer)
-        {
-            if (_lv_area_is_on(clip, rect)) return true;
-            continue;
-        }
-        if (!_lv_area_is_in(clip, rect, 0)) return true;
-        int32_t r = radius->cfg.radius;
-        if (!((clip->y1 >= rect->y1 + r && clip->y2 <= rect->y2 - r) ||
-                (clip->x1 >= rect->x1 + r && (int32_t)clip->x2 + 1 <= rect->x2 - r)))
-            return true;
+        if (param && !mask_area_is_full_cover(param, area)) return true;
     }
     return false;
 }
 #endif
 
 /* Decode the rectangle background image and configure the EPIC foreground
- * layer.  If a parent mask is active, snapshot it into A8 so the driver
- * can clip the entire RECT operation without touching the LVGL mask stack.
- * The mask data is owned by the image allocation and exposed through op->mask. */
+ * layer. Parent masks are attached to the RECT operation at commit time. */
 static __NOINLINE drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
-        const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords, EPIC_LayerConfigTypeDef *mask)
+        const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
 {
-    HAL_EPIC_LayerConfigInit(mask);
     if (!dsc->bg_img_src || dsc->bg_img_opa <= LV_OPA_MIN ||
             lv_img_src_get_type(dsc->bg_img_src) == LV_IMG_SRC_SYMBOL) return NULL;
     if (dsc->blend_mode != LV_BLEND_MODE_NORMAL)
@@ -1599,15 +1989,7 @@ static __NOINLINE drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ct
     lv_area_t area = {left, top, left + decoded->header.w - 1, top + decoded->header.h - 1};
     lv_area_t image_clip;
     if (!dsc->bg_img_tiled && !_lv_area_intersect(&image_clip, &clip, &area)) goto done;
-    /* With no rectangle color, only the centered image needs parent coverage. */
-    if (!dsc->bg_img_tiled && dsc->bg_opa == LV_OPA_TRANSP) clip = image_clip;
-    size_t mask_size = 0;
-#if LV_DRAW_COMPLEX
-    if (bg_image_needs_parent_mask(&clip))
-        mask_size = (size_t)lv_area_get_width(&clip) * lv_area_get_height(&clip);
-#endif
-    if (mask_size > SIZE_MAX - sizeof(*image)) goto done;
-    image = app_cache_alloc(sizeof(*image) + mask_size, IMAGE_CACHE_PSRAM);
+    image = app_cache_alloc(sizeof(*image), IMAGE_CACHE_PSRAM);
     if (!image) goto done;
     lv_img_dsc_t source = {0};
     source.header = decoded->header;
@@ -1618,22 +2000,6 @@ static __NOINLINE drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ct
     image->tiled = dsc->bg_img_tiled;
     setup_fg_layer(&image->layer, &source, &area, 0, EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE,
                    &pivot, dsc->bg_img_opa, dsc->bg_img_recolor, 0, 0);
-#if LV_DRAW_COMPLEX
-    /* Snapshot the active LVGL masks into A8 for the driver. */
-    if (mask_size)
-    {
-        uint8_t *coverage = (uint8_t *)(image + 1);
-        int32_t width = lv_area_get_width(&clip);
-        memset(coverage, 255, mask_size);
-        for (int32_t row = 0; row < lv_area_get_height(&clip); row++)
-        {
-            uint8_t *line = coverage + row * width;
-            if (lv_draw_mask_apply(line, clip.x1, clip.y1 + row, width) == LV_DRAW_MASK_RES_TRANSP)
-                memset(line, 0, width);
-        }
-        setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, coverage, &clip);
-    }
-#endif
 done:
     my_draw_cleanup(cache);
     if (!image) LV_LOG_WARN("Background image unavailable or unsupported");
@@ -1643,10 +2009,7 @@ done:
 static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
 {
     lv_color32_t ax_color_u32;
-    EPIC_LayerConfigTypeDef image_mask;
-    drv_epic_rect_image_t *image = NULL;
-    if (dsc->bg_img_src && dsc->bg_img_opa > LV_OPA_MIN)
-        image = bg_image_prepare(draw_ctx, dsc, coords, &image_mask);
+    drv_epic_rect_image_t *image = bg_image_prepare(draw_ctx, dsc, coords);
 
     /*Draw bg*/
     if (dsc->bg_opa >= LV_OPA_MIN || image)
@@ -1666,11 +2029,10 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
 
         lv_draw_mask_map_param_t mask_param;
         HAL_EPIC_LayerConfigInit(&o->mask);
-        if (image)
-        {
-            o->mask = image_mask;
-        }
-        else if (lv_draw_mask_is_only_map_mask(&bg_coords, &mask_param))
+        /* With a background image, the parent mask is attached by the common
+         * commit path (snapshot_parent_mask); only the image-less path keeps
+         * the LVGL map mask here. */
+        if (!image && lv_draw_mask_is_only_map_mask(&bg_coords, &mask_param))
         {
             LV_ASSERT(LV_DRAW_MASK_TYPE_MAP == mask_param.dsc.type);
             setup_mask_layer(&o->mask, LV_IMG_CF_ALPHA_8BIT, mask_param.cfg.map, &mask_param.cfg.coords);
@@ -1759,31 +2121,112 @@ static void draw_border(lv_draw_ctx_t *draw_ctx,
 }
 
 /* Snapshot only the active parent masks. Effect geometry is rendered by EPIC's
- * driver after submission, so LVGL mask stack pointers must not escape here. */
+ * driver after submission, so LVGL mask stack pointers must not escape here.
+ *
+ * When a shared cache entry is used, *cache_ref is set to it and the caller
+ * must reference it through op->parent_mask_ref; otherwise it stays NULL and
+ * the caller owns a mask layer with its own coverage (op->mask.data). */
 static bool rect_effect_parent_mask(lv_draw_ctx_t *draw_ctx, const lv_area_t *bounds,
-                                    EPIC_LayerConfigTypeDef *mask, lv_area_t *clip)
+                                    EPIC_LayerConfigTypeDef *mask, lv_area_t *clip,
+                                    parent_mask_cache_t **cache_ref)
 {
     HAL_EPIC_LayerConfigInit(mask);
+    if (cache_ref) *cache_ref = NULL;
     if (!_lv_area_intersect(clip, bounds, draw_ctx->clip_area) ||
             !_lv_area_intersect(clip, clip, draw_ctx->buf_area)) return false;
 #if LV_DRAW_COMPLEX
-    if (lv_draw_mask_get_cnt())
+    /* Trim only the guaranteed transparent exterior of inner radius masks. */
+    for (uint32_t i = 0; i < _LV_MASK_MAX_NUM; i++)
     {
-        int32_t width = lv_area_get_width(clip);
-        size_t size = (size_t)width * lv_area_get_height(clip);
-        uint8_t *coverage = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
-        if (!coverage) return false;
-        memset(coverage, 255, size);
-        for (int32_t y = clip->y1; y <= clip->y2; y++)
-        {
-            uint8_t *line = coverage + (y - clip->y1) * width;
-            if (lv_draw_mask_apply(line, clip->x1, y, width) == LV_DRAW_MASK_RES_TRANSP)
-                memset(line, 0, width);
-        }
-        setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, coverage, clip);
+        const _lv_draw_mask_common_dsc_t *param = LV_GC_ROOT(_lv_draw_mask_list[i]).param;
+        if (!param || param->type != LV_DRAW_MASK_TYPE_RADIUS) continue;
+        const lv_draw_mask_radius_param_t *radius = (const lv_draw_mask_radius_param_t *)param;
+        if (!radius->cfg.outer && !_lv_area_intersect(clip, clip, &radius->cfg.rect)) return false;
     }
+    if (!parent_mask_needs_snapshot(clip)) return true;
+
+    /* Try the shared cache first. Only a pure inner-radius mask stack yields
+     * a cacheable key; anything else falls through to a per-op snapshot. */
+    parent_mask_key_t key = {0};
+    parent_mask_cache_status_t cache_status = parent_mask_cache_make_key(draw_ctx, &key);
+    if (cache_status == PARENT_MASK_CACHE_EMPTY) return false;  /* Fully clipped: invalidate the op */
+    if (cache_status == PARENT_MASK_CACHE_READY && cache_ref &&
+            _lv_area_intersect(clip, clip, &key.area))          /* Keep the clip inside the cached area */
+    {
+        parent_mask_cache_t *cache = parent_mask_cache_get(&key);
+        if (cache)
+        {
+            /* Attach the shared coverage; ownership is tracked via *cache_ref. */
+            setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, cache->coverage, &cache->key.area);
+            *cache_ref = cache;
+            return true;
+        }
+    }
+
+    /* Fallback: allocate a per-operation snapshot (original path). */
+    int32_t width = lv_area_get_width(clip);
+    size_t size = (size_t)width * lv_area_get_height(clip);
+    uint8_t *coverage = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+    if (!coverage)
+    {
+        LOG_E("EPIC parent mask allocation failed: %u bytes", (unsigned)size);
+        return false;
+    }
+    memset(coverage, 255, size);
+    for (int32_t y = clip->y1; y <= clip->y2; y++)
+    {
+        uint8_t *line = coverage + (y - clip->y1) * width;
+        if (lv_draw_mask_apply(line, clip->x1, y, width) == LV_DRAW_MASK_RES_TRANSP)
+            memset(line, 0, width);
+    }
+    setup_mask_layer(mask, LV_IMG_CF_ALPHA_8BIT, coverage, clip);
 #endif
     return true;
+}
+
+/* Capture LVGL masks before their stack entries disappear. Existing operation
+ * masks retain their own ownership; combining them with parent masks is deferred. */
+static void snapshot_parent_mask(drv_epic_operation *op)
+{
+#if LV_DRAW_COMPLEX
+    if (op->mask.data)
+    {
+        /* TODO: Combine existing operation coverage with the active parent masks. */
+        return;
+    }
+    if (!lv_draw_mask_is_any(NULL))
+    {
+        return;
+    }
+
+    lv_draw_ctx_t *ctx = _lv_refr_get_disp_refreshing()->driver->draw_ctx;
+    lv_area_t bounds = {op->clip_area.x0, op->clip_area.y0,
+                        op->clip_area.x1, op->clip_area.y1};
+    lv_area_t clip;
+    parent_mask_cache_t *cache = NULL;
+    if (!rect_effect_parent_mask(ctx, &bounds, &op->mask, &clip, &cache))
+    {
+        /* Keep the allocated operation in its list, but never render unclipped
+         * on allocation failure (or an empty intersection). */
+        op->clip_area.x0 = 1;
+        op->clip_area.x1 = 0;
+        return;
+    }
+    if (cache)
+    {
+        /* Shared cache entry: the op references it and releases it on UNLOCK. */
+        op->parent_mask_ref = cache;
+        op->parent_mask_owned = 1;
+    }
+    else
+    {
+        /* Independent snapshot: owned and freed by this operation. */
+        op->parent_mask_owned = op->mask.data != NULL;
+    }
+    LV_AREA_TO_EPIC_AREA(&op->clip_area, &clip);
+#else
+    LV_UNUSED(op);
+#endif
 }
 
 static void draw_outline(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
@@ -1810,7 +2253,8 @@ static void draw_outline(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc,
                        coords->x2 + extent, coords->y2 + extent};
     EPIC_LayerConfigTypeDef mask;
     lv_area_t clip;
-    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip)) return;
+    parent_mask_cache_t *mask_ref = NULL;
+    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip, &mask_ref)) return;
     drv_epic_render_buf dst_buf;
     setup_render_buf(&dst_buf, draw_ctx);
     letter_blend_reset();
@@ -1819,7 +2263,17 @@ static void draw_outline(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc,
     RT_ASSERT(o != NULL);
     o->op = DRV_EPIC_DRAW_BORDER;
     o->mask = mask;
-    o->desc.border.mask_owned = mask.data != NULL;
+    if (mask_ref)
+    {
+        /* Shared cache entry: released via trav_cb on UNLOCK. */
+        o->parent_mask_ref = mask_ref;
+        o->parent_mask_owned = 1;
+    }
+    else
+    {
+        /* Independent snapshot owned by the border descriptor. */
+        o->desc.border.mask_owned = mask.data != NULL;
+    }
     LV_AREA_TO_EPIC_AREA(&o->clip_area, &clip);
     LV_AREA_TO_EPIC_AREA(&o->desc.border.area, &bounds);
     int32_t short_side = LV_MIN(lv_area_get_width(coords), lv_area_get_height(coords)) + 2 * pad;
@@ -1862,7 +2316,8 @@ static void draw_shadow(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, 
     lv_area_t bounds = {left, top, right, bottom};
     EPIC_LayerConfigTypeDef mask;
     lv_area_t clip;
-    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip)) return;
+    parent_mask_cache_t *mask_ref = NULL;
+    if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip, &mask_ref)) return;
     drv_epic_render_buf dst_buf;
     setup_render_buf(&dst_buf, draw_ctx);
     letter_blend_reset();
@@ -1871,7 +2326,17 @@ static void draw_shadow(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, 
     RT_ASSERT(o != NULL);
     o->op = DRV_EPIC_DRAW_SHADOW;
     o->mask = mask;
-    o->desc.shadow.mask_owned = mask.data != NULL;
+    if (mask_ref)
+    {
+        /* Shared cache entry: released via trav_cb on UNLOCK. */
+        o->parent_mask_ref = mask_ref;
+        o->parent_mask_owned = 1;
+    }
+    else
+    {
+        /* Independent snapshot owned by the shadow descriptor. */
+        o->desc.shadow.mask_owned = mask.data != NULL;
+    }
     LV_AREA_TO_EPIC_AREA(&o->clip_area, &clip);
     LV_AREA_TO_EPIC_AREA(&o->desc.shadow.area, coords);
     o->desc.shadow.radius = dsc->radius;
@@ -1910,20 +2375,17 @@ static void draw_rect(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t 
  * Prepare the image source layer for an image arc operation.
  *
  * Decodes the image from dsc->img_src via the LVGL image cache, validates
- * the color format, centers the image on the arc center, copies the decoded
- * pixel data into a persistent buffer, and configures an EPIC layer descriptor
- * for the foreground image. If LV_DRAW_COMPLEX is enabled and parent masks
- * are active, also computes the parent coverage mask and configures the
- * parent mask layer.
+ * the color format, centers the image on the arc center, and configures the
+ * foreground image layer. Parent coverage is attached by the common operation
+ * commit path so image arcs share it with other operations.
  *
  * @param draw_ctx  Pointer to the LVGL draw context
  * @param dsc       Pointer to the arc draw descriptor containing img_src
  * @param center    Pointer to the arc center point
- * @param parent    Output parent mask layer descriptor (used when LV_DRAW_COMPLEX is active)
  * @return          Pointer to the configured EPIC image layer, or NULL on failure
  */
 static EPIC_LayerConfigTypeDef *arc_image_prepare(lv_draw_ctx_t *draw_ctx,
-        const lv_draw_arc_dsc_t *dsc, const lv_point_t *center, EPIC_LayerConfigTypeDef *parent)
+        const lv_draw_arc_dsc_t *dsc, const lv_point_t *center)
 {
     if (dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
             lv_img_src_get_type(dsc->img_src) == LV_IMG_SRC_SYMBOL) return NULL;
@@ -1958,18 +2420,12 @@ static EPIC_LayerConfigTypeDef *arc_image_prepare(lv_draw_ctx_t *draw_ctx,
     lv_area_t mask_area;
     if (!_lv_area_intersect(&mask_area, &area, draw_ctx->clip_area) ||
             !_lv_area_intersect(&mask_area, &mask_area, draw_ctx->buf_area)) goto done;
-    size_t mask_size = 0;
-#if LV_DRAW_COMPLEX
-    if (lv_draw_mask_get_cnt())
-        mask_size = (size_t)lv_area_get_width(&mask_area) * lv_area_get_height(&mask_area);
-#endif
     size_t source_size = decoded->img_data_size;
     if (!EPIC_SUPPORTED_CF(decoded->header.cf)) goto done;
     if (decoded->header.cf != LV_IMG_CF_RAW && decoded->header.cf != LV_IMG_CF_RAW_ALPHA &&
             source_size < lv_img_buf_get_img_size(decoded->header.w, decoded->header.h, decoded->header.cf))
         goto done;
-    if (mask_size > SIZE_MAX - sizeof(*image)) goto done;
-    image = app_malloc(sizeof(*image) + mask_size);
+    image = app_malloc(sizeof(*image));
     if (!image) goto done;
     lv_img_dsc_t source = {0};
     source.header = decoded->header;
@@ -1979,21 +2435,6 @@ static EPIC_LayerConfigTypeDef *arc_image_prepare(lv_draw_ctx_t *draw_ctx,
     HAL_EPIC_LayerConfigInit(image);
     setup_fg_layer(image, &source, &area, 0, EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE,
                    &pivot, dsc->opa, dsc->color, 0, 0);
-#if LV_DRAW_COMPLEX
-    if (mask_size)
-    {
-        uint8_t *coverage = (uint8_t *)(image + 1);
-        int32_t width = lv_area_get_width(&mask_area);
-        memset(coverage, 255, mask_size);
-        for (int32_t row = 0; row < lv_area_get_height(&mask_area); row++)
-        {
-            uint8_t *line = coverage + row * width;
-            if (lv_draw_mask_apply(line, mask_area.x1, mask_area.y1 + row, width) == LV_DRAW_MASK_RES_TRANSP)
-                memset(line, 0, width);
-        }
-        setup_mask_layer(parent, LV_IMG_CF_ALPHA_8BIT, coverage, &mask_area);
-    }
-#endif
 done:
     my_draw_cleanup(cache);
     return image;
@@ -2015,7 +2456,7 @@ static void draw_arc(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_arc_dsc_t *d
             LV_LOG_WARN("arc image coordinates out of range");
             return;
         }
-        image = arc_image_prepare(draw_ctx, dsc, center, &parent);
+        image = arc_image_prepare(draw_ctx, dsc, center);
         if (!image)
         {
             LV_LOG_WARN("arc image unavailable or unsupported");
@@ -2065,6 +2506,12 @@ static void draw_line(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_line_dsc_t 
     ax_color_u32.ch.alpha = dsc->opa;
 
     if (p_line_op \
+            && line_target == draw_ctx->buf \
+            && !lv_draw_mask_is_any(NULL) && !p_line_op->mask.data \
+            && p_line_op->clip_area.x0 == draw_ctx->clip_area->x1 \
+            && p_line_op->clip_area.y0 == draw_ctx->clip_area->y1 \
+            && p_line_op->clip_area.x1 == draw_ctx->clip_area->x2 \
+            && p_line_op->clip_area.y1 == draw_ctx->clip_area->y2 \
             && p_line_op->desc.line.argb8888 == ax_color_u32.full \
             && p_line_op->desc.line.width == dsc->width \
             && p_line_op->desc.line.dash_width == dsc->dash_width \
@@ -2123,6 +2570,7 @@ static void draw_line(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_line_dsc_t 
 
         lv_gpu_render_commit_op(o);
         p_line_op = o;
+        line_target = draw_ctx->buf;
     }
 }
 
@@ -2318,12 +2766,13 @@ static void epic_layer_blend(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
     lv_area_t clip;
     lv_area_t bounds;
     EPIC_LayerConfigTypeDef mask;
+    parent_mask_cache_t *mask_ref = NULL;
     _lv_img_buf_get_transformed_area(&bounds, lv_area_get_width(&base->area_act),
                                     lv_area_get_height(&base->area_act), dsc->angle,
                                     dsc->zoom, &dsc->pivot);
     lv_area_move(&bounds, base->area_act.x1, base->area_act.y1);
     if (!dsc->zoom || dsc->opa < LV_OPA_MIN ||
-            !rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip))
+            !rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip, &mask_ref))
     {
         app_cache_free(base->buf);
         base->buf = NULL;
@@ -2335,6 +2784,12 @@ static void epic_layer_blend(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
     RT_ASSERT(op);
     op->op = DRV_EPIC_DRAW_IMAGE;
     op->mask = mask;
+    if (mask_ref)
+    {
+        /* Shared cache entry: released via trav_cb on UNLOCK. */
+        op->parent_mask_ref = mask_ref;
+        op->parent_mask_owned = 1;
+    }
     LV_AREA_TO_EPIC_AREA(&op->clip_area, &clip);
     lv_img_dsc_t image = {0};
     image.data = base->buf;
