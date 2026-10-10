@@ -1408,12 +1408,14 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                 if 'type' not in region or (("app_img" not in region['type']) and ('app_exec' not in region['type']) and ("app_img2" not in region['type'])):
                     continue
 
-                if ext and ext != '1':
-                    # no need to construct ftab for non-first part
+                region_type_list = region['type']
+                if ext and ext != '1' and ('app_img' in region_type_list and 'app_exec' in region_type_list):
+                    # for multiple img, skip non-first XIP img
                     continue
 
-                region_type_list = region['type']
                 item_name = base
+                if ext and ext != '1':
+                    item_name = base + ':' + ext
                 if item_name not in ftab:
                     ftab[item_name] = {}
 
@@ -1421,12 +1423,11 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                 assert ('max_size' not in ftab_item) or (
                         max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab_item['max_size'], max_size)
                 ftab_item['max_size'] = max_size
-                if 'app_exec' in region_type_list and ((not ext) or ('1' == ext)):
-                    # only first binary need to be described in ftab
+                if 'app_exec' in region_type_list:
                     assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
                     same_region_exec = ('app_img' in region_type_list) or ('app_img2' in region_type_list)
                     ftab_item['xip'] = _legacy_ftab_xip_addr(start_addr, offset, region, same_region_exec)
-                if 'app_img' in region_type_list and ((not ext) or ('1' == ext)):
+                if 'app_img' in region_type_list:
                     assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
                     ftab_item['base'] = start_addr
                 if 'app_img2' in region_type_list:
@@ -1448,7 +1449,7 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                             if img['name'] == bin_name:
                                 size = img['size']
                                 break
-                    assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+                    assert size > 0, 'Size of img {} cannot be determined'.format(region['name'])
                     ftab_item['img'] = {'name': region['name'], 'size': size}
 
     # check if all images defined in img_size are in ftab
@@ -1492,7 +1493,7 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                     if img['name'] == bin_name:
                         size = img['size']
                         break
-            assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+            assert size > 0, 'Size of img {} cannot be determined'.format(region['name'])
             ftab_item['img'] = {'name': region['name'], 'size': size}
 
 
@@ -1678,14 +1679,13 @@ def GenFtabCFile(src, output_name, imgs_info):
         if (k != 'main') and (k != 'bootloader') and (k != 'dfu') :
             ftab_item = v
             if 'img' in ftab_item:
+                assert ex_region_idx < len(ex_region_names), 'Not enough EXT region to describe ftab item "{}"'.format(k)
                 assert 'base' in ftab_item, 'base of {} is not defined'.format(k)
                 assert 'xip' in ftab_item, 'xip of {} is not defined'.format(k)
                 assert 'max_size' in ftab_item, 'max_size of {} is not defined'.format(k)
                 s += MakeLine(
                     '.ftab[{}] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
                         ex_region_names[ex_region_idx], ftab_item['base'], ftab_item['max_size'], ftab_item['xip']))
-                assert 'img' in ftab_item, "img binary name for {} must be specified if img needs to be copied from " \
-                                           "base to xip address".format(k)
                 img_info = ftab_item['img']
                 size = img_info['size']
                 s += MakeLine(
@@ -1762,7 +1762,7 @@ def ConstructImgDownloadInfoV2(img_download_info, mems):
                     if proj_name not in img_download_info:
                         img_download_info[proj_name] = {}
                     assert ext not in img_download_info[
-                        proj_name], "{} download address already configured".format(region['img'])
+                        proj_name], "{} download address already configured".format(region['name'])
                     img_download_info[proj_name][GetMultiBinaryName(ext)] = start_addr
 
 
