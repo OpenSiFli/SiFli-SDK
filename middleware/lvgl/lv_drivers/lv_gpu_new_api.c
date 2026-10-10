@@ -58,6 +58,15 @@ static drv_epic_operation *p_line_op = NULL;    //Save the last struct pointer
 
 void my_gpu_wait(lv_draw_ctx_t *draw_ctx);
 
+typedef struct
+{
+    lv_draw_layer_ctx_t base;
+    lv_draw_layer_ctx_t *parent;
+    drv_epic_render_list_t list;
+    lv_img_cf_t cf;
+    uint32_t buf_size;
+} epic_layer_ctx_t;
+
 #ifdef LV_USING_FREETYPE_ENGINE
     lv_font_t *lvsf_get_glyph_by_lib(const lv_font_t *font, uint32_t u_letter, lv_font_glyph_dsc_t *g);
 #endif
@@ -72,7 +81,8 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
 
     int ref_count = (int)usr_data;
 
-    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image) &&
+    if (op->mask.data && !(op->op == DRV_EPIC_DRAW_IMAGE && op->desc.blend.layer_owned) &&
+            !(op->op == DRV_EPIC_DRAW_ARC && op->desc.arc.image) &&
             !(op->op == DRV_EPIC_DRAW_RECT && op->desc.rectangle.bg_image) &&
             !(op->op == DRV_EPIC_DRAW_BORDER && op->desc.border.mask_owned) &&
             !(op->op == DRV_EPIC_DRAW_SHADOW && op->desc.shadow.mask_owned))
@@ -103,7 +113,18 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
         }
         break;
     case DRV_EPIC_DRAW_IMAGE:
-        if (op->desc.blend.layer.data)
+        if (op->desc.blend.layer_owned)
+        {
+            if (REDER_MEM_UNLOCK == ref_count)
+            {
+                app_cache_free(op->desc.blend.layer.data);
+                op->desc.blend.layer.data = NULL;
+                if (op->mask.data) app_cache_free(op->mask.data);
+                op->mask.data = NULL;
+                op->desc.blend.layer_owned = 0;
+            }
+        }
+        else if (op->desc.blend.layer.data)
             app_mem_set_ref_count((void *)op->desc.blend.layer.data, ref_count, MEM_ASYN_IMG);
         if ((REDER_MEM_UNLOCK == ref_count) && op->desc.blend.layer.transform_cfg.trans_matrix)
         {
@@ -382,9 +403,15 @@ static uint32_t get_refreshing_disp_buf_cf(void)
     else
         return LV_IMG_CF_UNKNOWN;
 }
+static lv_img_cf_t get_draw_buf_cf(lv_draw_ctx_t *draw_ctx)
+{
+    epic_draw_ctx_t *ctx = (epic_draw_ctx_t *)draw_ctx;
+    if (ctx->epic_layer) return ((epic_layer_ctx_t *)ctx->epic_layer)->cf;
+    return get_refreshing_disp_buf_cf();
+}
 static void setup_render_buf(drv_epic_render_buf *p_render_buf, struct _lv_draw_ctx_t *draw_ctx)
 {
-    p_render_buf->cf = lv_img_2_epic_cf2(get_refreshing_disp_buf_cf());
+    p_render_buf->cf = lv_img_2_epic_cf2(get_draw_buf_cf(draw_ctx));
     p_render_buf->data = (uint8_t *)draw_ctx->buf;
     p_render_buf->area.x0 = draw_ctx->buf_area->x1;
     p_render_buf->area.y0 = draw_ctx->buf_area->y1;
@@ -1113,7 +1140,7 @@ static void draw_img(struct _lv_draw_ctx_t *draw_ctx,
         dest.data = draw_ctx->buf;
         dest.header.w = lv_area_get_width(draw_ctx->buf_area);
         dest.header.h = lv_area_get_height(draw_ctx->buf_area);
-        dest.header.cf = get_refreshing_disp_buf_cf();
+        dest.header.cf = get_draw_buf_cf(draw_ctx);
         dest.data_size = lv_img_buf_get_img_size(dest.header.w, dest.header.h, dest.header.cf);
         dest.header.always_zero = 0;
 
@@ -1301,7 +1328,7 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
         dest.header.always_zero = 0;
         dest.header.w = lv_area_get_width(draw_ctx->buf_area);
         dest.header.h = lv_area_get_height(draw_ctx->buf_area);
-        dest.header.cf = get_refreshing_disp_buf_cf();
+        dest.header.cf = get_draw_buf_cf(draw_ctx);
         dest.data_size = lv_img_buf_get_img_size(dest.header.w, dest.header.h, dest.header.cf);
 
         letter_blend(&dest, &src,
@@ -1506,9 +1533,6 @@ done:
 
 static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords)
 {
-#if LV_COLOR_SCREEN_TRANSP && LV_COLOR_DEPTH == 32
-    RT_ASSERT(0);//Not supported now.
-#endif
     lv_color32_t ax_color_u32;
     EPIC_LayerConfigTypeDef image_mask;
     drv_epic_rect_image_t *image = bg_image_prepare(draw_ctx, dsc, coords, &image_mask);
@@ -2069,6 +2093,164 @@ void my_gpu_wait(lv_draw_ctx_t *draw_ctx)
     // lv_draw_sw_wait_for_finish(draw_ctx);
 }
 
+static void epic_layer_done(drv_epic_render_list_t list, EPIC_LayerConfigTypeDef *dst,
+                            void *usr_data, uint32_t last)
+{
+    LV_UNUSED(dst);
+    LV_UNUSED(last);
+    lv_gpu_render_mem_unlock(list);
+    rt_sem_release((rt_sem_t)usr_data);
+}
+
+static void epic_layer_finish(lv_draw_ctx_t *draw_ctx, epic_layer_ctx_t *layer)
+{
+    if (!layer->list) return;
+    my_gpu_wait(draw_ctx);
+    struct rt_semaphore sem;
+    EPIC_MsgTypeDef msg = {0};
+    rt_sem_init(&sem, "lv_layer", 0, RT_IPC_FLAG_FIFO);
+    msg.id = EPIC_MSG_RENDER_TO_BUF;
+    msg.render_list = layer->list;
+    lv_area_to_EPIC_area(&layer->base.area_act, &msg.content.r2b.dst_area);
+    msg.content.r2b.done_cb = epic_layer_done;
+    msg.content.r2b.usr_data = &sem;
+    drv_epic_render_msg_commit(&msg);
+    rt_err_t err = rt_sem_take(&sem, RT_WAITING_FOREVER);
+    RT_ASSERT(RT_EOK == err);
+    rt_sem_detach(&sem);
+    layer->list = NULL;
+}
+
+static void epic_layer_begin(lv_draw_ctx_t *draw_ctx, epic_layer_ctx_t *layer)
+{
+    drv_epic_render_buf buf;
+    setup_render_buf(&buf, draw_ctx);
+    layer->list = drv_epic_alloc_render_list(&buf, NULL);
+    RT_ASSERT(layer->list);
+}
+
+static void epic_layer_adjust(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
+                              lv_draw_layer_flags_t flags)
+{
+    epic_layer_ctx_t *layer = (epic_layer_ctx_t *)base;
+    epic_draw_ctx_t *ctx = (epic_draw_ctx_t *)draw_ctx;
+    bool alpha = (flags & LV_DRAW_LAYER_FLAG_HAS_ALPHA) != 0;
+    my_gpu_wait(draw_ctx);
+    layer->cf = alpha ? (LV_COLOR_DEPTH == 16 ? LV_IMG_CF_RGBA5658 : LV_IMG_CF_RGBA8888)
+                     : LV_IMG_CF_TRUE_COLOR;
+    /* Each chunk has its own pixels: the parent list may consume it much later. */
+    if (!base->buf) base->buf = app_cache_alloc(layer->buf_size, IMAGE_CACHE_PSRAM);
+    RT_ASSERT(base->buf);
+    memset(base->buf, 0, layer->buf_size);
+    ctx->epic_layer = base;
+    draw_ctx->buf = base->buf;
+    draw_ctx->buf_area = &base->area_act;
+    draw_ctx->clip_area = &base->area_act;
+    _lv_refr_get_disp_refreshing()->driver->screen_transp = alpha;
+    epic_layer_begin(draw_ctx, layer);
+}
+
+static lv_draw_layer_ctx_t *epic_layer_init(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
+                                           lv_draw_layer_flags_t flags)
+{
+    epic_layer_ctx_t *layer = (epic_layer_ctx_t *)base;
+    epic_draw_ctx_t *ctx = (epic_draw_ctx_t *)draw_ctx;
+    uint32_t width = lv_area_get_width(&base->area_full);
+    uint32_t height = lv_area_get_height(&base->area_full);
+    uint32_t px_size = LV_COLOR_DEPTH == 16 ? 3 : 4;
+    if (LV_COLOR_DEPTH != 16 && LV_COLOR_DEPTH != 24 && LV_COLOR_DEPTH != 32)
+    {
+        LV_LOG_WARN("EPIC layers require 16, 24 or 32 bit color");
+        return NULL;
+    }
+    if (!width || !height || width > UINT32_MAX / px_size / height) return NULL;
+    base->area_act = base->area_full;
+    uint32_t rows = height;
+    if (flags & LV_DRAW_LAYER_FLAG_CAN_SUBDIVIDE)
+    {
+        rows = LV_LAYER_SIMPLE_BUF_SIZE / (width * px_size);
+        if (!rows) rows = 1;
+        if (rows > height) rows = height;
+    }
+    layer->buf_size = width * rows * px_size;
+    base->buf = app_cache_alloc(layer->buf_size, IMAGE_CACHE_PSRAM);
+    if (!base->buf)
+    {
+        LV_LOG_WARN("Cannot allocate EPIC layer pixels");
+        return NULL;
+    }
+    my_gpu_wait(draw_ctx);
+    layer->parent = ctx->epic_layer;
+    /* Keep the existing two-list pool usable at arbitrary object nesting depth. */
+    if (layer->parent) epic_layer_finish(draw_ctx, (epic_layer_ctx_t *)layer->parent);
+    base->max_row_with_alpha = rows;
+    base->max_row_with_no_alpha = rows;
+    if (!(flags & LV_DRAW_LAYER_FLAG_CAN_SUBDIVIDE)) epic_layer_adjust(draw_ctx, base, flags);
+    return base;
+}
+
+static void epic_layer_blend(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
+                             const lv_draw_img_dsc_t *dsc)
+{
+    epic_layer_ctx_t *layer = (epic_layer_ctx_t *)base;
+    epic_draw_ctx_t *ctx = (epic_draw_ctx_t *)draw_ctx;
+    epic_layer_finish(draw_ctx, layer);
+    draw_ctx->buf = base->original.buf;
+    draw_ctx->buf_area = base->original.buf_area;
+    draw_ctx->clip_area = base->original.clip_area;
+    _lv_refr_get_disp_refreshing()->driver->screen_transp = base->original.screen_transp;
+    ctx->epic_layer = layer->parent;
+    if (layer->parent && !((epic_layer_ctx_t *)layer->parent)->list)
+        epic_layer_begin(draw_ctx, (epic_layer_ctx_t *)layer->parent);
+
+    lv_area_t clip;
+    lv_area_t bounds;
+    EPIC_LayerConfigTypeDef mask;
+    _lv_img_buf_get_transformed_area(&bounds, lv_area_get_width(&base->area_act),
+                                    lv_area_get_height(&base->area_act), dsc->angle,
+                                    dsc->zoom, &dsc->pivot);
+    lv_area_move(&bounds, base->area_act.x1, base->area_act.y1);
+    if (!dsc->zoom || dsc->opa < LV_OPA_MIN ||
+            !rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip))
+    {
+        app_cache_free(base->buf);
+        base->buf = NULL;
+        return;
+    }
+    drv_epic_render_buf dst;
+    setup_render_buf(&dst, draw_ctx);
+    drv_epic_operation *op = drv_epic_alloc_op(&dst);
+    RT_ASSERT(op);
+    op->op = DRV_EPIC_DRAW_IMAGE;
+    op->mask = mask;
+    LV_AREA_TO_EPIC_AREA(&op->clip_area, &clip);
+    lv_img_dsc_t image = {0};
+    image.data = base->buf;
+    image.header.cf = layer->cf;
+    image.header.w = lv_area_get_width(&base->area_act);
+    image.header.h = lv_area_get_height(&base->area_act);
+    image.data_size = (uint32_t)image.header.w * image.header.h *
+                     (HAL_EPIC_GetColorDepth(lv_img_2_epic_cf2(layer->cf)) >> 3);
+    lv_point_t pivot = dsc->pivot;
+    int32_t pitch = (uint32_t)LV_IMG_ZOOM_NONE * EPIC_INPUT_SCALE_NONE / dsc->zoom;
+    HAL_EPIC_LayerConfigInit(&op->desc.blend.layer);
+    setup_fg_layer(&op->desc.blend.layer, &image, &base->area_act, dsc->angle,
+                   pitch, pitch, &pivot, dsc->opa, dsc->recolor,
+                   dsc->coord_x_frac, dsc->coord_y_frac);
+    op->desc.blend.use_dest_as_bg = EPIC_BLEND_MODE_NORMAL;
+    op->desc.blend.layer_owned = 1;
+    lv_gpu_render_commit_op(op);
+    base->buf = NULL;
+}
+
+static void epic_layer_destroy(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base)
+{
+    epic_layer_ctx_t *layer = (epic_layer_ctx_t *)base;
+    RT_ASSERT(!layer->list);
+    ((epic_draw_ctx_t *)draw_ctx)->epic_layer = layer->parent;
+    if (base->buf) app_cache_free(base->buf);
+}
+
 static void draw_ctx_setup_gpu(lv_draw_ctx_t *p_draw_ctx, bool en)
 {
 #if LV_USE_GPU
@@ -2089,6 +2271,11 @@ static void draw_ctx_setup_gpu(lv_draw_ctx_t *p_draw_ctx, bool en)
         my_draw_ctx->sw_ctx.base_draw.wait_for_finish = my_gpu_wait;
         my_draw_ctx->sw_ctx.base_draw.draw_letter = draw_letter;
         my_draw_ctx->sw_ctx.base_draw.draw_bg = draw_bg;
+        p_draw_ctx->layer_init = epic_layer_init;
+        p_draw_ctx->layer_adjust = epic_layer_adjust;
+        p_draw_ctx->layer_blend = epic_layer_blend;
+        p_draw_ctx->layer_destroy = epic_layer_destroy;
+        p_draw_ctx->layer_instance_size = sizeof(epic_layer_ctx_t);
     }
     else
     {
@@ -2101,6 +2288,11 @@ static void draw_ctx_setup_gpu(lv_draw_ctx_t *p_draw_ctx, bool en)
         my_draw_ctx->sw_ctx.base_draw.wait_for_finish = my_draw_ctx->sw_ctx_backup.base_draw.wait_for_finish;
         my_draw_ctx->sw_ctx.base_draw.draw_letter = my_draw_ctx->sw_ctx_backup.base_draw.draw_letter;
         my_draw_ctx->sw_ctx.base_draw.draw_bg = my_draw_ctx->sw_ctx_backup.base_draw.draw_bg;
+        p_draw_ctx->layer_init = my_draw_ctx->sw_ctx_backup.base_draw.layer_init;
+        p_draw_ctx->layer_adjust = my_draw_ctx->sw_ctx_backup.base_draw.layer_adjust;
+        p_draw_ctx->layer_blend = my_draw_ctx->sw_ctx_backup.base_draw.layer_blend;
+        p_draw_ctx->layer_destroy = my_draw_ctx->sw_ctx_backup.base_draw.layer_destroy;
+        p_draw_ctx->layer_instance_size = my_draw_ctx->sw_ctx_backup.base_draw.layer_instance_size;
     }
 #endif
 }
@@ -2210,6 +2402,7 @@ void lv_gpu_epic_ctx_init(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx)
     /*Change some callbacks*/
     epic_draw_ctx_t *my_draw_ctx = (epic_draw_ctx_t *)draw_ctx;
 
+    my_draw_ctx->epic_layer = NULL;
     memcpy(&my_draw_ctx->sw_ctx_backup, &my_draw_ctx->sw_ctx, sizeof(lv_draw_sw_ctx_t));
 
     draw_ctx_setup_gpu(draw_ctx, true);

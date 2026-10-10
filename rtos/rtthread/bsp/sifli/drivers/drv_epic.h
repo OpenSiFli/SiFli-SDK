@@ -154,6 +154,7 @@ typedef struct
         {
             EPIC_LayerConfigTypeDef layer;
             uint8_t use_dest_as_bg; // See drv_epic_blend_mode_type_t
+            uint8_t layer_owned; // Offscreen pixels and mask are released after consumption.
             uint8_t r;
             uint8_t g;
             uint8_t b;
