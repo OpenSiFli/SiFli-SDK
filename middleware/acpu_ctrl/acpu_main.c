@@ -80,7 +80,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     RT_ASSERT(sem);
 
 
-    //Send message to ACPU via IPC queue
+    //Send message to HCPU via IPC queue
     size_t wr_size;
     size_t msg_size;
     acpu_ctrl_ipc_msg_t msg;
@@ -104,7 +104,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     RT_ASSERT(RT_EOK == err);
     rt_sem_delete(sem);
 
-    //Make sure the message was processed by ACPU
+    //Make sure the message was processed by HCPU
     RT_ASSERT(1 == msg.is_rsp);
     RT_ASSERT(task_name == msg.task_id);
 
@@ -438,7 +438,7 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             return -RT_ERROR;
         }
 
-        if (p_msg->is_rsp)
+        if (p_msg->is_rsp) // Handle the response messages(Started by ACPU)
         {
             if (p_msg->ret_error_code == ACPU_ERR_OK)
             {
@@ -457,14 +457,14 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
                 RT_ASSERT(0);
             }
         }
-        else
+        else // Handle the request messages(Started by HCPU)
         {
             rt_err_t err;
             if (0)
             {
             }
 #ifdef DRV_EPIC_NEW_API
-            else if (ACPU_TASK_epic_rl == p_msg->task_id)
+            else if (ACPU_TASK_epic_rl == p_msg->task_id) // EPIC render list has it own task, forward it to EPIC task queue
             {
                 err = rt_mb_send(g_epic_mb, (rt_uint32_t)p_msg);
             }

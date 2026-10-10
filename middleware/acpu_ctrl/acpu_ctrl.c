@@ -156,7 +156,7 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             return -RT_ERROR;
         }
 
-        if (p_msg->is_rsp)
+        if (p_msg->is_rsp) // Handle the response messages(Started by HCPU)
         {
             if (p_msg->ret_error_code == ACPU_ERR_OK)
             {
@@ -177,7 +177,7 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             }
         }
 #ifdef ACPU_CALLER_ENABLED
-        else
+        else // Handle the request messages(Started by ACPU), forward it to acpu_caller_entry task queue
         {
             rt_err_t err = rt_mb_send(g_call_mb, (rt_uint32_t)p_msg);
             if (RT_EOK != err)
