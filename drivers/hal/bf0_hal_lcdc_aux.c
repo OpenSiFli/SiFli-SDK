@@ -190,7 +190,7 @@ void DPI_HW_FSM_START(LCDC_HandleTypeDef *lcdc)
 
     //Burst copy from CPAR to CM0AR
     p_DMACH->CCR = DMAC_CCR1_MEM2MEM
-                   | (2 << DMAC_CCR1_PL_Pos)
+                   | DMA_PRIORITY_LOW /* keep m2m below peripheral transfers, see DMA_AdjustPriority() */
                    | DMAC_CCR1_MINC | (0x2 << DMAC_CCR1_MSIZE_Pos)
                    | DMAC_CCR1_PINC | (0x2 << DMAC_CCR1_PSIZE_Pos)
                    | GPDMA_CCR1_DBURST | GPDMA_CCR1_SBURST

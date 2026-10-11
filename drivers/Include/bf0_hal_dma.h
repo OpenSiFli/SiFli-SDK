@@ -92,7 +92,19 @@ typedef struct
                                                  data transfer is configured on the selected Channel */
 
     uint32_t Priority;                  /*!< Specifies the software priority for the DMAy Channelx.
-                                           This parameter can be a value of @ref DMA_Priority_level */
+                                           This parameter can be a value of @ref DMA_Priority_level
+                                           @note The requested value is not programmed into CCR as is, it is
+                                                 adjusted by the transfer direction first, so that every
+                                                 peripheral transfer stays strictly above memory-to-memory ones:
+                                                 - memory-to-memory transfers always use DMA_PRIORITY_LOW;
+                                                 - otherwise the level is shifted up by one and saturates at
+                                                   DMA_PRIORITY_VERY_HIGH, i.e. LOW->MEDIUM, MEDIUM->HIGH,
+                                                   HIGH/VERY_HIGH->VERY_HIGH, which keeps the relative order
+                                                   between peripheral transfers.
+                                                 DMA_PRIORITY_HIGH and DMA_PRIORITY_VERY_HIGH are therefore
+                                                 not distinguishable for peripheral transfers. The same
+                                                 adjustment is applied to the Control word of each node prepared
+                                                 by HAL_DMA_PrepareMultiple(). */
 
     uint32_t BurstSize;                 /*!< Specifies the burst size in non-m2m mode
                                           When BS>1, DMA will transfer for BS times for each request if left NDT is larger than BS,
@@ -853,6 +865,8 @@ typedef struct
   *         parameters in the DMA_InitTypeDef and initialize the associated handle.
   * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
   *               the configuration information for the specified DMA Channel.
+  * @note   hdma->Init.Priority is not programmed into CCR as is, it is adjusted by
+  *         the transfer direction first, see DMA_InitTypeDef::Priority.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma);
