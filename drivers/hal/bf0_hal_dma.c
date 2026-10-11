@@ -100,6 +100,36 @@ static uint32_t DMA_GetSrcBytes(DMA_HandleTypeDef *hdma, uint32_t Counts)
 }
 #endif
 
+/**
+  * @brief  Get the priority level to be written into the PL field of CCR, which is
+  *         also used by the Control word of a link-list node (CCR compatible).
+  *         m2m always uses low priority to avoid affecting peripheral transmission.
+  *         Peripheral levels are shifted up by one so that every peripheral transmission
+  *         is strictly higher than the LOW used by m2m, while the relative order between
+  *         peripherals is kept, e.g. after the shift a peripheral originally asking for
+  *         MEDIUM still outranks one asking for LOW. The shift saturates at VERY_HIGH.
+  * @param  Init DMA init parameters
+  * @retval priority level to use
+  */
+static uint32_t DMA_AdjustPriority(const DMA_InitTypeDef *Init)
+{
+    if (DMA_MEMORY_TO_MEMORY == Init->Direction)
+    {
+        return DMA_PRIORITY_LOW;
+    }
+    else if (DMA_PRIORITY_LOW == Init->Priority)
+    {
+        return DMA_PRIORITY_MEDIUM;
+    }
+    else if (DMA_PRIORITY_MEDIUM == Init->Priority)
+    {
+        return DMA_PRIORITY_HIGH;
+    }
+    else
+    {
+        return DMA_PRIORITY_VERY_HIGH;
+    }
+}
 
 static void DMA_Init(DMA_HandleTypeDef *hdma)
 {
@@ -109,6 +139,7 @@ static void DMA_Init(DMA_HandleTypeDef *hdma)
     uint8_t periph_width;
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
     uint32_t mask;
+    uint32_t priority;
 
     /* Change DMA peripheral state */
     hdma->State = HAL_DMA_STATE_BUSY;
@@ -133,10 +164,11 @@ static void DMA_Init(DMA_HandleTypeDef *hdma)
                         DMA_CCR_DIR   | DMA_CCR_MEM2MEM));
 
     /* Prepare the DMA Channel configuration */
+    priority = DMA_AdjustPriority(&hdma->Init);
     tmp |=  hdma->Init.Direction        |
             hdma->Init.PeriphInc           | hdma->Init.MemInc           |
             hdma->Init.PeriphDataAlignment | hdma->Init.MemDataAlignment |
-            hdma->Init.Mode                | hdma->Init.Priority;
+            hdma->Init.Mode                | priority;
 
 #ifdef DMA_SUPPORT_GPDMA
 //TODO:
@@ -1078,6 +1110,7 @@ HAL_StatusTypeDef HAL_DMA_PrepareMultiple(DMA_HandleTypeDef *hdma, DMA_XferDescT
     uint32_t ssize;
     uint32_t dsize;
     DMA_ListNodeTypeDef *node;
+    uint32_t priority;
 
     if (Len > 0)
     {
@@ -1106,9 +1139,11 @@ HAL_StatusTypeDef HAL_DMA_PrepareMultiple(DMA_HandleTypeDef *hdma, DMA_XferDescT
             ssize = (XferDescList->Init.PeriphDataAlignment >> DMAC_CCR1_PSIZE_Pos) << DMAC_CCR1_MSIZE_Pos;
             dsize = (XferDescList->Init.MemDataAlignment >> DMAC_CCR1_MSIZE_Pos) << DMAC_CCR1_PSIZE_Pos;
         }
+        HAL_ASSERT(IS_DMA_PRIORITY(XferDescList->Init.Priority));
+        priority = DMA_AdjustPriority(&XferDescList->Init);
         node->Control = XferDescList->Init.Direction
                         | sinc | dinc  | ssize | dsize
-                        | XferDescList->Init.Mode | XferDescList->Init.Priority
+                        | XferDescList->Init.Mode | priority
                         | MAKE_REG_VAL(XferDescList->Delay, GPDMA_LL_CONTROL_DELAY_Msk, GPDMA_LL_CONTROL_DELAY_Pos)
                         | GPDMA_LL_CONTROL_NEXT;
         if (XferDescList->EndTrigger)
