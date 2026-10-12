@@ -369,7 +369,7 @@ void gui_app_gesture_init(void)
 {
     /** Slide from left to right, manual animation and close swipe right anywhere to goback**/
     lv_gesture_init(gui_app_gesture_event_cb_manual_anim);
-    lv_gesture_set_area_line(LV_HOR_RES);
+    lv_gesture_set_area_line(LV_HOR_RES / 4);
     lv_gesture_set_goback(false);
     lv_gesture_enable();
 
