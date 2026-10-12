@@ -55,6 +55,14 @@ L1_NON_RET_BSS_SECT_END
 static rt_mutex_t more_data_lock;
 
 /*
+    Set while a tp_ctrl "shake" is running. While true, touch_write_more()
+    ignores writes from other paths (real touch driver, click/slide, remote
+    input) so the shake owns the input stream. The shake path writes through
+    touch_write_more_impl() to bypass this guard.
+*/
+static bool g_shake_active = false;
+
+/*
     if pos_rec_beg == pos_rec_end, EMPTY
 
     if pos_rec_end + 1 == pos_rec_beg,  FULL
@@ -76,7 +84,8 @@ static struct touch_message last_rec = {0, 0, TOUCH_EVENT_UP};
 static bool rotate_180 = false;
 static struct rt_device_rect_info rotate_rect;
 
-static void touch_write_more(rt_uint8_t  event, rt_uint16_t x, rt_uint16_t  y)
+/* Unguarded core: performs the actual record-buffer write. */
+static void touch_write_more_impl(rt_uint8_t  event, rt_uint16_t x, rt_uint16_t  y)
 {
     rt_bool_t send_indicate = RT_FALSE;
 
@@ -139,6 +148,18 @@ static void touch_write_more(rt_uint8_t  event, rt_uint16_t x, rt_uint16_t  y)
 
 }
 
+/*
+    Public entry. While a shake is running, drop writes from other paths
+    (real touch hardware, click/slide/remote-input) so the shake is the only
+    writer. The shake itself writes through touch_write_more_impl() to bypass
+    this guard.
+*/
+static void touch_write_more(rt_uint8_t event, rt_uint16_t x, rt_uint16_t y)
+{
+    if (g_shake_active)
+        return;
+    touch_write_more_impl(event, x, y);
+}
 
 static rt_list_t driver_list;
 
@@ -911,6 +932,144 @@ INIT_BOARD_EXPORT(rt_touch_driver_init);
 
 #ifdef FINSH_USING_MSH
 #include <finsh.h>
+
+/* ----------------------------------------------------------------------
+ * Shake test: feed oscillating touch points into the record buffer
+ * via a soft rt_timer at ~90Hz. When the record buffer is full, writing
+ * is delayed (bounded wait) instead of overwriting, per requirement.
+ * -------------------------------------------------------------------- */
+#define SHAKE_SAMPLE_HZ     90          /* timer fire frequency              */
+#define SHAKE_SIN_STEPS     20          /* 18 deg step, consecutive sin differ */
+
+/* Pre-computed sine table (scaled by 1000), one full cycle of 20 samples.
+   Consecutive entries always differ (peaks appear as 951/1000/951).
+   Avoids pulling in libm for a simple test helper. */
+static const rt_int32_t shake_sin_table[SHAKE_SIN_STEPS] =
+{
+    0,  309,  588,  809,  951, 1000,  951,  809,  588,  309,
+    0, -309, -588, -809, -951, -1000, -951, -809, -588, -309
+};
+
+typedef struct
+{
+    rt_uint16_t pivot_x;
+    rt_uint16_t pivot_y;
+    rt_uint16_t x_range;
+    rt_uint16_t y_range;
+    rt_tick_t  start_tick;
+    rt_tick_t  duration_ticks;
+    uint32_t   sample_count;            /* MOVE points sent, also sine phase */
+} shake_ctx_t;
+
+static shake_ctx_t g_shake_ctx;
+static struct rt_timer g_shake_timer;
+static bool g_shake_timer_inited = false;
+
+/*
+ * If the record buffer is full, wait (delay) for the consumer to free a slot
+ * before feeding the point. The wait is bounded (~1s) so the soft-timer
+ * thread is never blocked forever when nobody reads the touch device.
+ */
+static void touch_write_more_wait(rt_uint8_t event, rt_uint16_t x, rt_uint16_t y)
+{
+    rt_tick_t budget = RT_TICK_PER_SECOND;   /* up to ~1 second            */
+
+    while (budget--)
+    {
+        rt_mutex_take(more_data_lock, RT_WAITING_FOREVER);
+        bool full = REC_BUF_FULL();
+        rt_mutex_release(more_data_lock);
+        if (!full)
+            break;
+        rt_thread_delay(1);                 /* retry next tick            */
+    }
+    /* Either space is available, or the wait budget is exhausted; feed the
+     * event through the unguarded core so the shake is not blocked by its
+     * own guard in touch_write_more(). */
+    touch_write_more_impl(event, x, y);
+}
+
+static void shake_timer_cb(void *parameter)
+{
+    shake_ctx_t *ctx = (shake_ctx_t *)parameter;
+    rt_tick_t now     = rt_tick_get();
+    rt_tick_t elapsed = now - ctx->start_tick;
+
+    /* End time reached: send UP and do not restart the one-shot timer */
+    if (elapsed >= ctx->duration_ticks)
+    {
+        touch_write_more_wait(TOUCH_EVENT_UP, ctx->pivot_x, ctx->pivot_y);
+        g_shake_active = false;
+        LOG_I("Shake finished, elapsed=%dms (target=%dms)",
+              (int)(elapsed * 1000 / RT_TICK_PER_SECOND),
+              (int)(ctx->duration_ticks * 1000 / RT_TICK_PER_SECOND));
+        return;
+    }
+
+    /* Advance phase every callback so consecutive sin_val differ */
+    rt_int32_t sin_val = shake_sin_table[ctx->sample_count % SHAKE_SIN_STEPS];
+    rt_int32_t dx = (rt_int32_t)ctx->x_range * sin_val / 1000;
+    rt_int32_t dy = (rt_int32_t)ctx->y_range * sin_val / 1000;
+    rt_uint16_t x = (rt_uint16_t)((rt_int32_t)ctx->pivot_x + dx);
+    rt_uint16_t y = (rt_uint16_t)((rt_int32_t)ctx->pivot_y + dy);
+    /* Non-blocking: never stall the timer thread on a full record buffer.
+     * Overwriting/dropping a MOVE sample is acceptable for a shake test, while
+     * the final UP below must still be delivered reliably. */
+    touch_write_more_impl(TOUCH_EVENT_MOVE, x, y);
+    ctx->sample_count++;
+
+    /* Phase-lock to absolute timeline: next MOVE tick or the exact end tick */
+    rt_tick_t end_tick  = ctx->start_tick + ctx->duration_ticks;
+    rt_tick_t next_move = ctx->start_tick +
+                          (rt_tick_t)((uint64_t)ctx->sample_count * RT_TICK_PER_SECOND / SHAKE_SAMPLE_HZ);
+    rt_tick_t target    = (next_move < end_tick) ? next_move : end_tick;
+    now = rt_tick_get();
+    rt_tick_t delay = (target > now) ? (target - now) : 1;
+    rt_timer_control(&g_shake_timer, RT_TIMER_CTRL_SET_TIME, &delay);
+    rt_timer_start(&g_shake_timer);
+}
+
+static rt_err_t shake_start(rt_uint16_t pivot_x, rt_uint16_t pivot_y,
+                            rt_uint16_t x_range, rt_uint16_t y_range,
+                            uint32_t duration_ms)
+{
+    rt_tick_t period;
+
+    if (g_shake_active)
+    {
+        LOG_W("Shake already running.");
+        return RT_ERROR;
+    }
+
+    memset(&g_shake_ctx, 0, sizeof(g_shake_ctx));
+    g_shake_ctx.pivot_x        = pivot_x;
+    g_shake_ctx.pivot_y        = pivot_y;
+    g_shake_ctx.x_range        = x_range;
+    g_shake_ctx.y_range        = y_range;
+    g_shake_ctx.duration_ticks = (rt_tick_t)((uint64_t)duration_ms * RT_TICK_PER_SECOND / 1000);
+    g_shake_ctx.start_tick     = rt_tick_get();
+    g_shake_active             = true;
+
+    /* Send DOWN now; MOVE/UP are scheduled by the one-shot timer on an absolute timeline */
+    touch_write_more_wait(TOUCH_EVENT_DOWN, pivot_x, pivot_y);
+
+    period = RT_TICK_PER_SECOND / SHAKE_SAMPLE_HZ;
+    if (period == 0)
+        period = 1;
+
+    if (!g_shake_timer_inited)
+    {
+        rt_timer_init(&g_shake_timer, "tpshk", shake_timer_cb, &g_shake_ctx,
+                      period, RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
+        g_shake_timer_inited = true;
+    }
+    rt_timer_start(&g_shake_timer);
+
+    LOG_I("Shake start: pivot(%d,%d) range(%d,%d) %ums",
+          pivot_x, pivot_y, x_range, y_range, duration_ms);
+    return RT_EOK;
+}
+
 static rt_err_t en_drvtp_log(int argc, char **argv)
 {
     if (current_driver)
@@ -938,6 +1097,7 @@ static rt_err_t tp_ctrl(int argc, char **argv)
         LOG_I("    tp_ctrl log     - Toggle log\n");
         LOG_I("    tp_ctrl click <x> <y>  - Click at specified coordinates <x> <y>\n");
         LOG_I("    tp_ctrl slide <x1> <y1> <x2> <y2>  - Slide from <x1> <y1> to <x2> <y2>\n");
+        LOG_I("    tp_ctrl shake <pivot_x> <pivot_y> <x_range> <y_range> <duration_ms>  - Shake around pivot\n");
         return RT_EOK;
     }
 
@@ -1006,6 +1166,25 @@ static rt_err_t tp_ctrl(int argc, char **argv)
         touch_write_more(TOUCH_EVENT_DOWN, x2, y2);
         rt_thread_delay(rt_tick_from_millisecond(100));
         touch_write_more(TOUCH_EVENT_UP, x2, y2);
+    }
+    else if (strcmp(argv[1], "shake") == 0)
+    {
+        if (argc < 7)
+        {
+            LOG_I("Too less param, e.g: tp_ctrl shake <pivot_x> <pivot_y> <x_range> <y_range> <duration_ms>");
+            return RT_EOK;
+        }
+
+        rt_uint16_t pivot_x, pivot_y, x_range, y_range;
+        rt_uint32_t duration_ms;
+
+        pivot_x = strtol(argv[2], 0, 10);
+        pivot_y = strtol(argv[3], 0, 10);
+        x_range = strtol(argv[4], 0, 10);
+        y_range = strtol(argv[5], 0, 10);
+        duration_ms = strtol(argv[6], 0, 10);
+
+        shake_start(pivot_x, pivot_y, x_range, y_range, duration_ms);
     }
 
 
