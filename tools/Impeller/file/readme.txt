@@ -1,5 +1,5 @@
 把文件夹中所有文件放到工具路径下的file文件夹中，支持flash列表如下：
-20251028
+20260907
 
 NAND FLASH:
 FT_CONST FLASH_RDID_TYPE_T nand_cmd_id_pool_type0[] =
@@ -22,8 +22,10 @@ FT_CONST FLASH_RDID_TYPE_T nand_cmd_id_pool_type1[] =
     {0x8c, 0x01, 0x8c, 0x10, 0x8000000}, //XCSP1AAPK-IT_RDID
     {0x8c, 0xb1, 0x8c, 0x18, 0x20000000}, //XCSP4AAPK-IT_RDID
     {0x0b, 0x33, 0X00, 0x44, 0x20000000},//XT26G04DXXX_RDID
+    {0x0b, 0x53, 0X00, 0x44, 0x20000000},//XT26Q04DXXX_RDID
     {0xc8, 0xd9, 0xc8, 0x10, 0x8000000}, //GD5F1GQ4UxxH_RDID
     {0xc8, 0xc9, 0xc8, 0x10, 0x8000000}, //GD5F1GQ4RxxH_RDID
+    {0xc8, 0xa1, 0x48, 0x10, 0x8000000}, //GD5F1GQ4RxxH_RDID
     {FLASH_INVALID_ID, 0, 0, 0, 0},      //last one
 };
 
@@ -58,6 +60,10 @@ FT_CONST FLASH_RDID_TYPE_T nand_cmd_id_pool_type2[] =
     {0xB0, 0x25, 0xB0, 0x20, 0x10000000},   //UM19A1LISW_RDID
     {0xB0, 0x0C, 0xB0, 0x20, 0x4000000},   //UM19A9HISW_RDID
     {0xB0, 0x0D, 0xB0, 0x20, 0x4000000},   //UM19A9LISW_RDID
+    {0xB0, 0x34, 0xB0, 0x2C, 0x20000000},  //UM19B2HISW_RDID
+    {0xB0, 0x35, 0xB0, 0x2C, 0x20000000},  //UM19B2LISW_RDID
+    {0xB0, 0x1C, 0xB0, 0x20, 0x8000000},   //UM19C0HISW_RDID
+    {0xB0, 0x1D, 0xB0, 0x20, 0x8000000},   //UM19C0LISW_RDID		
     {FLASH_INVALID_ID, 0, 0, 0, 0},         //last one
 };
 
@@ -126,6 +132,7 @@ FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ0[] =
 FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ1[] =
 {
     {0x85, 0x60, 0x16, 1, 0x400000},    //P25Q32L_RDID
+    {0x85, 0x42, 0x16, 1, 0x400000},    //P25Q32L_RDID, old id
     {0x85, 0x60, 0x17, 1, 0x800000},    //P25Q64H_RDID, P25Q64SH
     {0x85, 0x60, 0x18, 1, 0x1000000},   //P25Q128L_RDID
     {0x85, 0x65, 0x18, 1, 0x1000000},   //P25Q128LA_RDID
@@ -156,6 +163,7 @@ FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ2[] =
     {0xef, 0x40, 0x19, 0, 0x2000000},   //W25Q256JVM_RDID
     {0x68, 0x49, 0x19, 0, 0x2000000},   //BY25Q256FS
     {0x5e, 0x40, 0x19, 0, 0x2000000},   //ZQ25Q256AW1G
+    {0xa1, 0x60, 0x19, 1, 0x2000000},   //FM25LP256_RDID
     {FLASH_INVALID_ID, 0, 0, 0, 0},      //last one
 };
 FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ3[] =
