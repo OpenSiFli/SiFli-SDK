@@ -163,11 +163,8 @@ void HAL_PMU_Init(void)
     /* XT48 ready flag is set after waiting for 2ms, default 1ms is not enough, assume PMU always uses RC32K */
     MODIFY_REG(hwp_pmuc->HXT_CR3, PMUC_HXT_CR3_DLY_Msk, MAKE_REG_VAL(0x3F, PMUC_HXT_CR3_DLY_Msk, PMUC_HXT_CR3_DLY_Pos));
 
-
-#ifdef PMUC_WKUP_CNT_PIN0_CNT_Pos
-    hwp_pmuc->WKUP_CNT = 0x00010001;
-#endif /* PMUC_WKUP_CNT_PIN0_CNT_Pos */
-
+    /* minimize de-glitch time */
+    MODIFY_REG(hwp_pmuc->WKUP_CNT, PMUC_WKUP_CNT_PIN_DLY_Msk, MAKE_REG_VAL2(1, PMUC_WKUP_CNT_PIN_DLY));
 }
 
 #endif /* SOC_BF0_HCPU */
