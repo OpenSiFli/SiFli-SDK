@@ -1974,6 +1974,7 @@ uint32_t lv_gpu_render_start(lv_disp_drv_t *disp_drv)
         drv_epic_render_list_t p_rd_list;
 
         render_buf.cf = lv_img_2_epic_cf2(draw_buf_cf);
+        /* Canvas/snapshot displays only populate the draw context. */
         render_buf.data = disp_drv->draw_ctx->buf;
         lv_area_to_EPIC_area(disp_drv->draw_ctx->buf_area, &render_buf.area);
         p_rd_list = drv_epic_alloc_render_list(&render_buf, &ow_area);
