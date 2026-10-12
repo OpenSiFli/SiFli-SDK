@@ -117,8 +117,13 @@ static void lv_gpu_render_trav_cb(drv_epic_operation *op, void *usr_data)
         {
             if (REDER_MEM_UNLOCK == ref_count)
             {
-                app_cache_free(op->desc.blend.layer.data);
+                uint8_t *data = op->desc.blend.layer.data;
+                /* Owned L8 snapshots include the palette header before the pixels. */
+                if (data && op->desc.blend.layer.color_mode == EPIC_INPUT_L8)
+                    data = op->desc.blend.layer.lookup_table - sizeof(uint32_t);
+                app_cache_free(data);
                 op->desc.blend.layer.data = NULL;
+                op->desc.blend.layer.lookup_table = NULL;
                 if (op->mask.data) app_cache_free(op->mask.data);
                 op->mask.data = NULL;
                 op->desc.blend.layer_owned = 0;
@@ -1362,6 +1367,75 @@ static void my_draw_cleanup(_lv_img_cache_entry_t *cache)
 #endif
 }
 
+/* Snapshot as L8: a uint32_t palette count, two BGRA entries, then byte indices.
+ * The caller owns the returned buffer until the queued image is consumed. */
+static uint8_t *indexed1_snapshot(const lv_img_dsc_t *src)
+{
+    uint32_t w = src->header.w, h = src->header.h;
+    uint32_t stride = (w + 7) / 8;
+    uint32_t palette_size = 2;
+    uint32_t header_size = sizeof(palette_size) + palette_size * sizeof(lv_color32_t);
+    if (!src->data || !w || !h || w > (UINT32_MAX - header_size) / h ||
+            src->data_size < 8 + stride * h) return NULL;
+    uint8_t *snapshot = app_cache_alloc(header_size + w * h, IMAGE_CACHE_PSRAM);
+    if (!snapshot) return NULL;
+    memcpy(snapshot, &palette_size, sizeof(palette_size));
+    memcpy(snapshot + sizeof(palette_size), src->data, palette_size * sizeof(lv_color32_t));
+    uint8_t *pixels = snapshot + header_size;
+    const uint8_t *bits = src->data + 8;
+    for (uint32_t y = 0; y < h; y++)
+    {
+        for (uint32_t x = 0; x < w; x++)
+        {
+            uint32_t index = (bits[y * stride + x / 8] >> (7 - x % 8)) & 1;
+            pixels[y * w + x] = (uint8_t)index;
+        }
+    }
+    return snapshot;
+}
+
+static lv_res_t draw_indexed1(lv_draw_ctx_t *ctx, const lv_draw_img_dsc_t *dsc,
+                              const lv_area_t *coords, const lv_img_dsc_t *src)
+{
+    if (!dsc->zoom) return LV_RES_OK;
+    lv_area_t bounds, clip;
+    _lv_img_buf_get_transformed_area(&bounds, src->header.w, src->header.h,
+                                    dsc->angle, dsc->zoom, &dsc->pivot);
+    lv_area_move(&bounds, coords->x1, coords->y1);
+    if (!_lv_area_intersect(&clip, &bounds, ctx->clip_area) ||
+            !_lv_area_intersect(&clip, &clip, ctx->buf_area)) return LV_RES_OK;
+    uint8_t *snapshot = indexed1_snapshot(src);
+    if (!snapshot)
+    {
+        LV_LOG_WARN("Cannot create indexed 1-bit image snapshot");
+        return LV_RES_INV;
+    }
+    letter_blend_reset();
+    p_line_op = NULL;
+    drv_epic_render_buf dst;
+    setup_render_buf(&dst, ctx);
+    drv_epic_operation *op = drv_epic_alloc_op(&dst);
+    RT_ASSERT(op);
+    op->op = DRV_EPIC_DRAW_IMAGE;
+    LV_AREA_TO_EPIC_AREA(&op->clip_area, &clip);
+    lv_img_dsc_t image = *src;
+    image.header.cf = LV_IMG_CF_INDEXED_8BIT;
+    image.data = snapshot;
+    image.data_size = sizeof(uint32_t) + 2 * sizeof(lv_color32_t) +
+                      (uint32_t)src->header.w * src->header.h;
+    HAL_EPIC_LayerConfigInit(&op->desc.blend.layer);
+    lv_point_t pivot = dsc->pivot;
+    int32_t pitch = (uint32_t)LV_IMG_ZOOM_NONE * EPIC_INPUT_SCALE_NONE / dsc->zoom;
+    setup_fg_layer(&op->desc.blend.layer, &image, coords, dsc->angle,
+                   pitch, pitch, &pivot, dsc->opa, dsc->recolor,
+                   dsc->coord_x_frac, dsc->coord_y_frac);
+    op->desc.blend.layer.data_size = (uint32_t)src->header.w * src->header.h;
+    op->desc.blend.use_dest_as_bg = EPIC_BLEND_MODE_NORMAL;
+    op->desc.blend.layer_owned = 1;
+    lv_gpu_render_commit_op(op);
+    return LV_RES_OK;
+}
+
 /*
     This function is copied from decode_and_draw() at lv_draw_img.c
 */
@@ -1369,6 +1443,11 @@ static lv_res_t my_decode_and_draw(lv_draw_ctx_t *draw_ctx, const lv_draw_img_ds
                                    const lv_area_t *coords, const void *src)
 {
     if (draw_dsc->opa <= LV_OPA_MIN) return LV_RES_OK;
+
+    /* Canvas data is mutable: bypass the decoder cache and snapshot each draw. */
+    if (lv_img_src_get_type(src) == LV_IMG_SRC_VARIABLE &&
+            ((const lv_img_dsc_t *)src)->header.cf == LV_IMG_CF_INDEXED_1BIT)
+        return draw_indexed1(draw_ctx, draw_dsc, coords, src);
 
     _lv_img_cache_entry_t *cdsc = _lv_img_cache_open(src, draw_dsc->recolor, draw_dsc->frame_id);
 
