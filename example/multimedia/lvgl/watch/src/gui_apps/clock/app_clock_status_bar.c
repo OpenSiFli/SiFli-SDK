@@ -22,7 +22,6 @@ static lv_obj_t *status_bar_area_up;
 static lv_obj_t *status_bar_area_down;
 
 static rt_bool_t alarm_enabled = RT_TRUE;
-static rt_bool_t timer_enabled = RT_TRUE;
 
 
 static lv_obj_t *app_clock_tileview;
@@ -31,11 +30,12 @@ static lv_obj_t *app_clock_tileview;
 static const lv_btnmatrix_ctrl_t btnm_ctrl_map[] =
 {
     1 | LV_BTNMATRIX_CTRL_DISABLED,  1 | LV_BTNMATRIX_CTRL_DISABLED,
-    1 | LV_BTNMATRIX_CTRL_CHECKABLE, 1 | LV_BTNMATRIX_CTRL_CHECKABLE,
+    1 | LV_BTNMATRIX_CTRL_CHECKABLE | LV_BTNMATRIX_CTRL_CLICK_TRIG,
+    1 | LV_BTNMATRIX_CTRL_CHECKABLE | LV_BTNMATRIX_CTRL_CLICK_TRIG,
 };
 
 static const char *btnm_map[] = {"BT", "GPS", "\n",
-                                 "ALARM", "TIMER", ""
+                                 "ALARM", "FPS", ""
                                 };
 static const notification_msg_cntxt_t notify_msgs[] =
 {
@@ -139,7 +139,8 @@ static void btnm_event_handler(lv_event_t *event)
 
     if (event->code == LV_EVENT_VALUE_CHANGED)
     {
-        const char *txt = lv_btnmatrix_get_btn_text(obj, lv_btnmatrix_get_selected_btn(obj));
+        uint16_t btn_id = lv_btnmatrix_get_selected_btn(obj);
+        const char *txt = lv_btnmatrix_get_btn_text(obj, btn_id);
 
         if (txt)
         {
@@ -148,8 +149,14 @@ static void btnm_event_handler(lv_event_t *event)
             if (0 == strcmp(txt, "ALARM"))
                 alarm_enabled = !alarm_enabled;
 
-            if (0 == strcmp(txt, "TIMER"))
-                timer_enabled = !timer_enabled;
+            if (0 == strcmp(txt, "FPS"))
+            {
+                /* Button is checkable: sync its checked state with the actual FPS/CPU-load display */
+
+                bool fps_en = lv_btnmatrix_has_btn_ctrl(obj, btn_id, LV_BTNMATRIX_CTRL_CHECKED);
+                rt_kprintf("fps_en = %d\n", fps_en);
+                set_display_fps_and_cpu_load(fps_en);
+            }
         }
     }
 }
@@ -249,7 +256,11 @@ static void control_panel_content_init(lv_obj_t *par)
     lv_btnmatrix_set_ctrl_map(btnm1, btnm_ctrl_map);
     lv_obj_align_to(btnm1, label1, LV_ALIGN_OUT_BOTTOM_MID, 0, PX_5mm);
 
-
+    /* "FPS" is button id 3: reflect the actual FPS/CPU-load display state (BT=0, GPS=1, ALARM=2, FPS=3) */
+    if (get_display_fps_and_cpu_load())
+        lv_btnmatrix_set_btn_ctrl(btnm1, 3, LV_BTNMATRIX_CTRL_CHECKED);
+    else
+        lv_btnmatrix_clear_btn_ctrl(btnm1, 3, LV_BTNMATRIX_CTRL_CHECKED);
 
     label2 = lv_label_create(par);
     lv_label_set_text(label2, "clock redraw time & steps");
@@ -309,6 +320,14 @@ static void msg_list_content_init(lv_obj_t *par)
         lv_label_set_text(content_label, notify_msgs[i].p_content);
         lv_obj_set_layout(content_label, LV_LAYOUT_FLEX);
 
+        //Snapshot the labels with long content
+        if (3 == i || 4 == i)
+        {
+            lv_obj_update_layout(content_label_container);
+            lv_snapshot_obj_to_img(content_label_container, content_label, &content_label->coords, LV_IMG_CF_TRUE_COLOR_ALPHA);
+            //Hide the content label
+            lv_obj_add_flag(content_label, LV_OBJ_FLAG_HIDDEN);
+        }
 
         lv_obj_align_to(title_label, align_base, LV_ALIGN_OUT_BOTTOM_LEFT, 0, PX_5mm);
         lv_obj_align_to(content_label_container, title_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
