@@ -80,7 +80,7 @@ static void acpu_caller_entry(void *parameter)
             if (p_msg->task_id == HCPU_TASK_MALLOC)
             {
                 size_t size = (size_t)p_msg->task_param;
-                void *p = malloc(size);
+                void *p = rt_malloc(size);
                 if (!p)
                 {
                     rt_kprintf("malloc %d\n", size);
@@ -92,7 +92,7 @@ static void acpu_caller_entry(void *parameter)
             {
                 void *addr = p_msg->task_param;
                 uint32_t size = p_msg->task_param_size;
-                void *p = realloc(addr, size);
+                void *p = rt_realloc(addr, size);
                 if (!p)
                 {
                     rt_kprintf("realloc %d\n", size);
@@ -102,12 +102,12 @@ static void acpu_caller_entry(void *parameter)
             }
             else if (p_msg->task_id == HCPU_TASK_FREE)
             {
-                free((void *)p_msg->task_param);
+                rt_free((void *)p_msg->task_param);
                 p_msg->ret_value = 0;
             }
             else if (p_msg->task_id == HCPU_TASK_PRINTF)
             {
-                rt_kprintf("%s", (char *)p_msg->task_param);
+                rt_kprintf("%s\n", (char *)p_msg->task_param);
             }
             else
             {

@@ -69,6 +69,32 @@ static void my_dump(T_ECHO_DUMP_ITEM_ID item_id, T_S32 size, T_pCVOID data, T_pC
 {
 }
 
+static void *my_malloc(uint32_t size)
+{
+#ifdef SOC_SF32LB58X
+    void *p = rt_malloc(size);
+#else
+    void *p = acpu_call_hcpu_malloc(size);
+#endif
+    if (!p)
+    {
+        acpu_printf("malloc failed\n");
+        acpu_send_assert(__FILE__, __LINE__);
+    }
+    return p;
+}
+static void my_free(void *p)
+{
+    if (p)
+    {
+#ifdef SOC_SF32LB58X
+        rt_free(p);
+#else
+        acpu_call_hcpu_free(p);
+#endif
+    }
+}
+
 int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
 {
     int result;
@@ -87,13 +113,8 @@ int acpu_audio_3a_open(acpu_audio_3a_open_parameter_t *arg)
 
     sd_cb = _SD_GetPlatformDependentList();
 
-#ifdef SOC_SF32LB58X
-    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)malloc;
-    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)free;
-#else
-    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)acpu_call_hcpu_malloc;
-    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)acpu_call_hcpu_free;
-#endif
+    sd_cb->Malloc = (MEDIALIB_CALLBACK_FUN_MALLOC)my_malloc;
+    sd_cb->Free = (MEDIALIB_CALLBACK_FUN_FREE)my_free;
     sd_cb->printf = (MEDIALIB_CALLBACK_FUN_PRINTF)my_printf;
     sd_cb->flushDCache = t4_flush_dcache_range;
 

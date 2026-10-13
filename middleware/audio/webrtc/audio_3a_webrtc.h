@@ -75,9 +75,9 @@ typedef struct
 typedef struct
 {
     audio_3a_t *thiz;
-    int16_t    *data_out;
-    int16_t    *outframe;
-    int16_t    *outframe2;
+    int16_t    *far_ref;
+    int16_t    *in;
+    int16_t    *out;
     uint8_t    ans1_disabled;
     uint8_t    aecm_enable;
     uint8_t    uplink_agc_enable;
@@ -97,17 +97,9 @@ typedef struct
     audio_3a_t *thiz;
 } acpu_webrtc_close_parameter_t;
 
-typedef struct
-{
-    void        *aecm;
-    uint16_t    *data;
-    uint32_t    data_len;
-} acpu_webrtc_farput_parameter_t;
-
 int acpu_webrtc_open(audio_3a_t *thiz, uint32_t samplerate);
-int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, int16_t *outframe, int16_t *outframe2, uint8_t ans_disable, uint8_t aec_enable, uint8_t uplink_agc_enable);
+int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disable, uint8_t aec_enable, uint8_t uplink_agc_enable);
 int acpu_webrtc_downlink(void *agcInst, int16_t spframe[160], int16_t outframe[160], uint32_t samplerate);
-int acpu_webrtc_farput(void *aecm, uint8_t *data, uint32_t data_len);
 int acpu_webrtc_close(audio_3a_t *thiz);
 
 #ifdef __cplusplus

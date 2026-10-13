@@ -373,15 +373,8 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
     case ACPU_TASK_webrtc_uplink:
     {
         acpu_webrtc_uplink_parameter_t *arg = (acpu_webrtc_uplink_parameter_t *)param;
-        int ret = acpu_webrtc_uplink(arg, arg->outframe, arg->outframe2, arg->ans1_disabled, arg->aecm_enable, arg->uplink_agc_enable);
-        acpu_send_result((uint32_t)0, 0);
-        break;
-    }
-    case ACPU_TASK_webrtc_farput:
-    {
-        acpu_webrtc_farput_parameter_t *arg = (acpu_webrtc_farput_parameter_t *)param;
-        int ret = acpu_webrtc_farput(arg->aecm, (uint8_t *)arg->data, arg->data_len);
-        acpu_send_result((uint32_t)0, 0);
+        int ret = acpu_webrtc_uplink(arg, arg->ans1_disabled, arg->aecm_enable, arg->uplink_agc_enable);
+        acpu_send_result((uint32_t)0, ret);
         break;
     }
 #endif

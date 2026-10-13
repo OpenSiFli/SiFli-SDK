@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
+#include <rtthread.h>
 #include <string.h>
 #include <stdlib.h>
 #include "acpu_ctrl.h"
@@ -165,65 +165,57 @@ void audio_agc_proc(void *agcInst, int16_t spframe[160], int16_t outframe[160], 
     WebRtcAgc_Process(agcInst, (const int16_t *const *)spframe_p, 1, u16_frame_len, (int16_t *const *)outframe_p, micLevelIn, &micLevelOut, 0, &saturationWarning);
 }
 
-int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, int16_t *outframe, int16_t *outframe2, uint8_t ans_disable, uint8_t aec_enable, uint8_t uplink_agc_enable)
+#define SWAP_IN_OUT()  do {temp = in; in = out; out = temp;} while(0)
+
+int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disable, uint8_t aec_enable, uint8_t uplink_agc_enable)
 {
-    int16_t  *data_in;
-    int16_t  *data_in2;
-    int16_t  *data_out;
-    int16_t  *temp;
-
     audio_3a_t *thiz = uplink->thiz;
-    data_out = uplink->data_out;
+    int16_t  *in = uplink->in;
+    int16_t  *out = uplink->out;
+    int16_t  *temp;
+    int16_t  *out_old = uplink->out;
 
-    data_in = data_out;
-    data_out = outframe;
-    data_in2 = NULL;
+    WebRtcAecm_BufferFarend(thiz->aecmInst, (const int16_t *)uplink->far_ref, thiz->frame_len);
 
     if (!ans_disable)
     {
-        audio_ans_proc(thiz->pNS_inst, data_in, data_out);
+        audio_ans_proc(thiz->pNS_inst, in, out);
     }
     else
     {
-        memcpy(data_out, data_in, thiz->frame_len);
+        SWAP_IN_OUT();
     }
 
-    data_in2 = data_out;
+    SWAP_IN_OUT();
+
     if (thiz->is_far_putted && aec_enable)
     {
         aec_input_para_t input_para;
-        data_out = outframe2;
-        input_para.nearframe = outframe;
+        input_para.nearframe = in;
         input_para.nearframe_clean = NULL;
-        input_para.outframe = data_out;
-        if (thiz->is_aecm_mic_putted == 0)
-        {
-            thiz->is_aecm_mic_putted = 1;
-        }
-
+        input_para.outframe = out;
         audio_aec_proc(thiz->aecmInst, &input_para, thiz->samplerate);
     }
     else
     {
-        memcpy(data_out, data_in, thiz->frame_len);
+        SWAP_IN_OUT();
     }
 
-    data_in = data_out;
-    data_out = outframe;
-    memcpy(data_out, data_in, thiz->frame_len);
+    SWAP_IN_OUT();
 
-    temp = data_in;
-    data_in = data_out;
-    data_out = temp;
-
-    if (uplink_agc_enable && !thiz->disable_uplink_agc)
+    if (uplink_agc_enable)
     {
-        audio_agc_proc(thiz->agcInst, data_in, data_out, thiz->samplerate);
+        audio_agc_proc(thiz->agcInst, in, out, thiz->samplerate);
     }
     else
     {
-        memcpy(data_out, data_in, thiz->frame_len);
+        SWAP_IN_OUT();
     }
+    if (out == out_old)
+    {
+        return 1;
+    }
+
     return 0;
 }
 
