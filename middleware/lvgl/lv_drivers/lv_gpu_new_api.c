@@ -1476,7 +1476,7 @@ static drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
     }
     if (decoded->header.cf != LV_IMG_CF_RAW && decoded->header.cf != LV_IMG_CF_RAW_ALPHA &&
             decoded->img_data_size < lv_img_buf_get_img_size(decoded->header.w, decoded->header.h,
-                                                            decoded->header.cf)) goto done;
+                    decoded->header.cf)) goto done;
 
     /* Tiled images start at the top-left; otherwise center them. */
     int32_t left = coords->x1;
@@ -1696,7 +1696,8 @@ static void draw_outline(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc,
             (int32_t)coords->x2 + extent > LV_COORD_MAX ||
             (int32_t)coords->y2 + extent > LV_COORD_MAX) return;
     lv_area_t bounds = {coords->x1 - extent, coords->y1 - extent,
-                       coords->x2 + extent, coords->y2 + extent};
+                        coords->x2 + extent, coords->y2 + extent
+                       };
     EPIC_LayerConfigTypeDef mask;
     lv_area_t clip;
     if (!rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip)) return;
@@ -2137,7 +2138,7 @@ static void epic_layer_adjust(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base
     bool alpha = (flags & LV_DRAW_LAYER_FLAG_HAS_ALPHA) != 0;
     my_gpu_wait(draw_ctx);
     layer->cf = alpha ? (LV_COLOR_DEPTH == 16 ? LV_IMG_CF_RGBA5658 : LV_IMG_CF_RGBA8888)
-                     : LV_IMG_CF_TRUE_COLOR;
+                : LV_IMG_CF_TRUE_COLOR;
     /* Each chunk has its own pixels: the parent list may consume it much later. */
     if (!base->buf) base->buf = app_cache_alloc(layer->buf_size, IMAGE_CACHE_PSRAM);
     RT_ASSERT(base->buf);
@@ -2151,7 +2152,7 @@ static void epic_layer_adjust(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base
 }
 
 static lv_draw_layer_ctx_t *epic_layer_init(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
-                                           lv_draw_layer_flags_t flags)
+        lv_draw_layer_flags_t flags)
 {
     epic_layer_ctx_t *layer = (epic_layer_ctx_t *)base;
     epic_draw_ctx_t *ctx = (epic_draw_ctx_t *)draw_ctx;
@@ -2207,8 +2208,8 @@ static void epic_layer_blend(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
     lv_area_t bounds;
     EPIC_LayerConfigTypeDef mask;
     _lv_img_buf_get_transformed_area(&bounds, lv_area_get_width(&base->area_act),
-                                    lv_area_get_height(&base->area_act), dsc->angle,
-                                    dsc->zoom, &dsc->pivot);
+                                     lv_area_get_height(&base->area_act), dsc->angle,
+                                     dsc->zoom, &dsc->pivot);
     lv_area_move(&bounds, base->area_act.x1, base->area_act.y1);
     if (!dsc->zoom || dsc->opa < LV_OPA_MIN ||
             !rect_effect_parent_mask(draw_ctx, &bounds, &mask, &clip))
@@ -2230,7 +2231,7 @@ static void epic_layer_blend(lv_draw_ctx_t *draw_ctx, lv_draw_layer_ctx_t *base,
     image.header.w = lv_area_get_width(&base->area_act);
     image.header.h = lv_area_get_height(&base->area_act);
     image.data_size = (uint32_t)image.header.w * image.header.h *
-                     (HAL_EPIC_GetColorDepth(lv_img_2_epic_cf2(layer->cf)) >> 3);
+                      (HAL_EPIC_GetColorDepth(lv_img_2_epic_cf2(layer->cf)) >> 3);
     lv_point_t pivot = dsc->pivot;
     int32_t pitch = (uint32_t)LV_IMG_ZOOM_NONE * EPIC_INPUT_SCALE_NONE / dsc->zoom;
     HAL_EPIC_LayerConfigInit(&op->desc.blend.layer);
@@ -2517,13 +2518,15 @@ int32_t gpu_ezipa_draw(ezipa_obj_t *obj, const lv_area_t *src_area, const lv_are
 #include <finsh.h>
 extern bool lv_refr_enable_full_buffer(bool enable);
 extern bool lv_refr_is_full_buffer_enabled(void);
+extern bool lv_refr_enable_force_full(bool enable);
+extern bool lv_refr_is_force_full_enabled(void);
 static rt_err_t gpu_cfg(int argc, char **argv)
 {
 
     if (argc < 2)
     {
         rt_kprintf("gpu_cfg [OPTION] [VALUE]\n");
-        rt_kprintf("    OPTION:enable\n");
+        rt_kprintf("    OPTION:enable | full_buf | force_full\n");
         return RT_EOK;
     }
 
@@ -2552,6 +2555,19 @@ static rt_err_t gpu_cfg(int argc, char **argv)
             rt_kprintf("full buffer is enable.\n");
         else
             rt_kprintf("full buffer is disable.\n");
+    }
+    else if (strcmp(argv[1], "force_full") == 0)
+    {
+        if (argc > 2) //write
+        {
+            uint32_t v = strtoul(argv[2], 0, 10);
+            lv_refr_enable_force_full(v);
+        }
+
+        if (lv_refr_is_force_full_enabled())
+            rt_kprintf("force full refresh is enable.\n");
+        else
+            rt_kprintf("force full refresh is disable.\n");
     }
     else
     {

@@ -83,6 +83,12 @@ static struct rt_semaphore lcd_sema;
 static lv_disp_drv_t *lcd_flushing_disp_drv = NULL;
 static lv_disp_drv_t disp_drv;
 
+/* Force always full-screen refresh: a polled input device that invalidates the
+ * whole active screen on every read when enabled. Registered lazily on first enable. */
+static uint8_t lv_refr_force_full_enabled = 0;
+static lv_indev_drv_t force_full_indev_drv;
+static lv_indev_t *force_full_indev = NULL;
+
 #if (LV_COLOR_DEPTH == 24)
     typedef lv_color_t lv_fb_color_t;
 #elif (LV_COLOR_DEPTH == 16)
@@ -980,3 +986,45 @@ bool lv_refr_is_full_buffer_enabled(void)
     return lv_refr_full_buffer_enabled != 0;
 }
 #endif /*DRV_EPIC_NEW_API*/
+
+/*
+ * Force always full-screen refresh.
+ *
+ * A dedicated LVGL input device (type NONE, no real input reported) is registered
+ * lazily on first enable. LVGL polls every registered indev's read_cb periodically
+ * (LV_INDEV_DEF_READ_PERIOD). When enabled, the read_cb invalidates the whole active
+ * screen so the next refresh cycle redraws the entire framebuffer.
+ *
+ * This is independent of which GPU path (lv_gpu.c / lv_gpu_new_api.c) is in use;
+ * both gpu_cfg commands toggle this via the public API below.
+ */
+static void force_full_refr_read_cb(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+{
+    (void)indev_drv;
+    if (lv_refr_force_full_enabled)
+    {
+        lv_obj_invalidate(lv_scr_act());
+    }
+    data->state = LV_INDEV_STATE_REL;
+}
+
+bool lv_refr_enable_force_full(bool enable)
+{
+    /* Register the polling input device on first enable (display must exist by then). */
+    if (enable && force_full_indev == NULL)
+    {
+        lv_indev_drv_init(&force_full_indev_drv);
+        force_full_indev_drv.type = LV_INDEV_TYPE_NONE;
+        force_full_indev_drv.read_cb = force_full_refr_read_cb;
+        force_full_indev = lv_indev_drv_register(&force_full_indev_drv);
+    }
+    lv_refr_force_full_enabled = enable ? 1 : 0;
+    return lv_refr_force_full_enabled != 0;
+}
+
+bool lv_refr_is_force_full_enabled(void)
+{
+    return lv_refr_force_full_enabled != 0;
+}
+
+

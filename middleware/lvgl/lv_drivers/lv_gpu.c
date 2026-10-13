@@ -1730,13 +1730,15 @@ int32_t gpu_ezipa_draw(ezipa_obj_t *obj, const lv_area_t *src_area, const lv_are
 
 #ifdef FINSH_USING_MSH
 #include <finsh.h>
+extern bool lv_refr_enable_force_full(bool enable);
+extern bool lv_refr_is_force_full_enabled(void);
 static rt_err_t gpu_cfg(int argc, char **argv)
 {
 
     if (argc < 2)
     {
         rt_kprintf("gpu_cfg [OPTION] [VALUE]\n");
-        rt_kprintf("    OPTION:enable\n");
+        rt_kprintf("    OPTION:enable | force_full\n");
         return RT_EOK;
     }
 
@@ -1752,6 +1754,23 @@ static rt_err_t gpu_cfg(int argc, char **argv)
             rt_kprintf("gpu is enable.\n");
         else
             rt_kprintf("gpu is disable.\n");
+    }
+    else if (strcmp(argv[1], "force_full") == 0)
+    {
+        if (argc > 2) //write
+        {
+            uint32_t v = strtoul(argv[2], 0, 10);
+            lv_refr_enable_force_full(v);
+        }
+
+        if (lv_refr_is_force_full_enabled())
+            rt_kprintf("force full refresh is enable.\n");
+        else
+            rt_kprintf("force full refresh is disable.\n");
+    }
+    else
+    {
+        rt_kprintf("unknown option:%s\n", argv[1]);
     }
     return RT_EOK;
 }
