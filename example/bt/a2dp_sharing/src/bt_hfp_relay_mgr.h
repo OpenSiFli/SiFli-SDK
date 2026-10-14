@@ -21,6 +21,15 @@ extern "C" {
 #endif
 
 #define BT_HFP_RELAY_INVALID_CHANNEL 0xffff
+#define BT_HFP_RELAY_MAX_AG_CONN     2
+
+typedef enum
+{
+    /* Phone is HF and one headset is AG. */
+    BT_HFP_RELAY_MODE_PHONE_HEADSET = 0,
+    /* Both headsets are HF clients of the local AG service. */
+    BT_HFP_RELAY_MODE_HEADSET_INTERCOM,
+} bt_hfp_relay_mode_t;
 
 typedef struct
 {
@@ -39,25 +48,36 @@ typedef enum
 
 typedef struct
 {
+    uint16_t channel;
+    bt_notify_device_mac_t mac;
+    uint8_t pending_make_call;
+    uint8_t hfp_sco_state;
+    uint8_t intercom_call_state;
+} bt_hfp_relay_ag_context_t;
+
+typedef struct
+{
     uint16_t hf_channel;
-    uint16_t ag_channel;
+    bt_hfp_relay_mode_t mode;
     hfp_cind_status_t cind_status;
     hfp_phone_number_t local_phone_num;
     hfp_phone_call_info_t remote_call;
     hfp_remote_calls_info_t remote_calls;
     uint8_t has_local_phone_num;
     uint8_t has_remote_call;
-    uint8_t pending_ag_make_call;
+    uint16_t pending_make_call_channel;
     uint8_t phone_vgs;
     uint8_t phone_vgm;
     uint8_t phone_bsir;
     uint8_t phone_bvra;
-    uint8_t hfp_ag_sco_state;
     bt_notify_device_mac_t hf_mac;
-    bt_notify_device_mac_t ag_mac;
+    bt_hfp_relay_ag_context_t ag[BT_HFP_RELAY_MAX_AG_CONN];
 } bt_hfp_relay_context_t;
 
 void bt_hfp_relay_mgr_init(void);
+int bt_hfp_relay_set_mode(bt_hfp_relay_mode_t mode);
+bt_hfp_relay_mode_t bt_hfp_relay_get_mode(void);
+int bt_hfp_relay_connect_ag_audio(uint8_t ag_index);
 
 int bt_hfp_relay_hf_event_handle(bt_hfp_relay_notify_data_t *msg);
 int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg);
