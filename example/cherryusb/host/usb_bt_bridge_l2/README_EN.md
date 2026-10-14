@@ -58,6 +58,27 @@ The **CherryUSB Kconfig option `PKG_CHERRYUSB_HOST_CDC_RNDIS_NO_NETIF`** (C macr
 - **USB → BT**: `external/cherryusb/class/wireless/usbh_rndis.c` defines the weak function `usbh_rndis_on_raw_rx(buf, len)`; this project overrides it in `main.c`: when a PAN connection exists (`s_pan_bnep_id` is valid), it calls `bt_pan_send_data(s_pan_bnep_id, buf, len)` to send the USB frame to the earbud over the BNEP channel.
 - **BT → USB**: `middleware/bluetooth/service/bt/bt_finsh/bts2_app_pan.c` defines the weak function `bt_pan_on_raw_rx(buff, len)`; this project overrides it in `main.c`: it takes the RNDIS TX buffer via `usbh_rndis_get_eth_txbuf()`, `memcpy`s the frame, and sends it via `usbh_rndis_eth_output()`.
 
+### Automatic PAN Re-sync (Phone Change / Reboot)
+
+In transparent-bridge mode the **earbud's IP address is assigned by the phone's DHCP server** and must be in the same subnet as the phone's current USB network. Each "USB tethering" session uses a subnet that may differ from the previous one (switching phones or rebooting the phone); the Bluetooth link, however, does not drop with USB, so the earbud keeps its old DHCP lease and never re-acquires an address by itself — after a phone swap or phone reboot it simply loses Internet access until the lease expires or the earbud is restarted.
+
+To handle this, the example performs an automatic re-sync: when the Dongle detects a **new RNDIS session** (USB re-enumeration caused by switching phones, a phone reboot or a cable re-plug) while PAN is connected, it disconnects and reconnects the PAN link once. The peer then rebuilds its netif and re-runs DHCP, automatically adopting the new phone's subnet without restarting the earbud.
+
+- Every USB session change triggers one re-connect (including re-plugging the same phone); the bridge is interrupted for a few seconds — this is expected.
+- `pan_net disc` on the Dongle disconnects PAN manually (re-connect with `pan_net conn <earbud MAC>`), useful for debugging.
+- This mechanism relies on the peer re-running DHCP after a PAN reconnect (SDK-based earbud firmwares such as `example/bt/pan` do this by default).
+- Expected log:
+
+```none
+[USB] RNDIS link lost, bridge inactive
+[USB] RNDIS link up, USB<->BT bridge active
+[BT] New USB session: re-sync PAN, peer will re-run DHCP
+[BT] PAN disconnected
+[BT] PAN re-sync: reconnecting
+[BT] PAN connect request accepted: ...
+[BT] PAN connected, USB<->BT bridge ready
+```
+
 ### Key Configurations
 
 - `PKG_CHERRYUSB_HOST_CDC_RNDIS_NO_NETIF` (provided by CherryUSB, enabled by this project): the lwIP netif `u2` is **not registered** after RNDIS enumeration; the RNDIS driver itself tracks the link state (`usbh_rndis_is_link_up()`), so the Dongle never touches lwIP.
@@ -116,6 +137,7 @@ TX:ping 8.8.8.8
 ## Troubleshooting
 
 - **Dongle does not respond when connected to the phone**: make sure the USB cable supports data transfer.
+- **Earbud has no Internet after switching phones or rebooting the phone**: the earbud still holds the old phone's DHCP lease. The example automatically re-syncs PAN on a new USB session (see "Automatic PAN Re-sync"); if it does not recover, run `pan_net disc` followed by `pan_net conn <earbud MAC>` on the Dongle to verify manually, and check the earbud's `ifconfig` for an address in the phone's current subnet.
 
 
 - [CherryUSB](https://github.com/cherry-embedded/CherryUSB)
