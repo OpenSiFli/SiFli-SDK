@@ -20,7 +20,7 @@ extern "C" {
         .Instance = SDIO1,                               \
         .name     = "sd0",                               \
         .irqn = SDMMC1_IRQn,                             \
-        .rcc_mod = RCC_MOD_SDMMC1,                      \
+        .rcc_mod = RCC_MOD_SDMMC1,                       \
         .mem_base = SDMMC1_MEM_BASE,                     \
         .dma_rx.dma_irq_prio = SDMMC1_DMA_IRQ_PRIO,      \
         .dma_tx.dma_irq_prio = SDMMC1_DMA_IRQ_PRIO,      \
@@ -38,7 +38,7 @@ extern "C" {
         .Instance = SDIO2,                               \
         .name     = "sd1",                               \
         .irqn = SDMMC2_IRQn,                             \
-        .rcc_mod = RCC_MOD_SDMMC2,                      \
+        .rcc_mod = RCC_MOD_SDMMC2,                       \
         .mem_base = SDMMC2_MEM_BASE,                     \
         .dma_rx.dma_irq_prio = SDMMC2_DMA_IRQ_PRIO,      \
         .dma_tx.dma_irq_prio = SDMMC2_DMA_IRQ_PRIO,      \

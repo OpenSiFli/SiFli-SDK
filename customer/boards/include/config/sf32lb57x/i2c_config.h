@@ -18,11 +18,7 @@ extern "C" {
 #define I2C1_CORE   CORE_ID_HCPU
 #define I2C2_CORE   CORE_ID_HCPU
 #define I2C3_CORE   CORE_ID_HCPU
-#define I2C4_CORE   CORE_ID_LCPU
-#define I2C5_CORE   CORE_ID_LCPU
-#define I2C6_CORE   CORE_ID_LCPU
-
-
+#define I2C4_CORE   CORE_ID_HCPU
 
 #if defined(BSP_I2C1_USING_DMA)
 #ifndef I2C1_TRX_DMA_CONFIG
@@ -129,5 +125,3 @@ extern "C" {
 #endif
 
 #endif /* __TIM_CONFIG_H__ */
-/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
-

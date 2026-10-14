@@ -20,9 +20,6 @@ extern "C" {
 
 #define GPTIM1_CORE CORE_ID_HCPU
 #define GPTIM2_CORE CORE_ID_HCPU
-#define GPTIM3_CORE CORE_ID_LCPU
-#define GPTIM4_CORE CORE_ID_LCPU
-#define GPTIM5_CORE CORE_ID_LCPU
 #define ATIM1_CORE CORE_ID_HCPU
 #define ATIM2_CORE CORE_ID_HCPU
 #define BTIM1_CORE CORE_ID_HCPU
@@ -30,7 +27,7 @@ extern "C" {
 #define BTIM3_CORE CORE_ID_LCPU
 #define BTIM4_CORE CORE_ID_LCPU
 #define LPTIM1_CORE CORE_ID_HCPU
-#define LPTIM2_CORE CORE_ID_LCPU
+#define LPTIM2_CORE CORE_ID_HCPU
 #define LPTIM3_CORE CORE_ID_LCPU
 
 #ifndef GPT_DEV_INFO_CONFIG
@@ -73,36 +70,6 @@ extern "C" {
        .core                    = GPTIM2_CORE, \
     }
 #endif /* BSP_USING_GPTIM2 */
-
-#ifdef BSP_USING_GPTIM3
-#define GPTIM3_CONFIG                           \
-    {                                           \
-       .tim_handle.Instance     = GPTIM3,       \
-       .tim_irqn                = GPTIM3_IRQn,  \
-       .name                    = "gptim3",     \
-       .core                    = GPTIM3_CORE, \
-    }
-#endif /* BSP_USING_GPTIM3 */
-
-#ifdef BSP_USING_GPTIM4
-#define GPTIM4_CONFIG                           \
-    {                                           \
-       .tim_handle.Instance     = GPTIM4,       \
-       .tim_irqn                = GPTIM4_IRQn,  \
-       .name                    = "gptim4",     \
-       .core                    = GPTIM4_CORE, \
-    }
-#endif /* BSP_USING_GPTIM4 */
-
-#ifdef BSP_USING_GPTIM5
-#define GPTIM5_CONFIG                           \
-    {                                           \
-       .tim_handle.Instance     = GPTIM5,       \
-       .tim_irqn                = GPTIM5_IRQn,  \
-       .name                    = "gptim5",     \
-       .core                    = GPTIM5_CORE, \
-    }
-#endif /* BSP_USING_GPTIM5 */
 
 #ifdef BSP_USING_ATIM1
 #define ATIM1_CONFIG                            \
