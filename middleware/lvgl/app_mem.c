@@ -17,18 +17,25 @@
 #include <string.h>
 #include "app_mem.h"
 
+#if defined(DISABLE_LVGL_V9)
+    /* app_mem.c sizes the transition-animation buffers by the same snapshot format
+    * that lvsf_switchanim.c uses; include its header to keep a single source of
+    * truth instead of duplicating the mask option here. */
+    #include "lvsf/gui_widgets/lvsf_switchanim.h"
+#endif
+
 #if IMAGE_CACHE_IN_PSRAM_SIZE > 0
     /*
-     * Reclaim the decoded image memory when the PSRAM cache heap is running low.
-     *
-     * LVGL v8: lv_img_cache_clean()/MAX_IMG_CACHE_SIZE come with the upgraded
-     *          LVGL, the LVGL shipped in this SDK only has
-     *          lv_img_cache_invalidate_src(), which closes all the cached images.
-     * LVGL v9: lv_img_cache.h does not exist any more, app_mem.h already includes
-     *          lv_image_cache.h and lv_conf_sifli.h maps
-     *          lv_img_cache_invalidate_src() onto lv_image_cache_drop(), where a
-     *          NULL source drops all the cached images.
-     */
+    * Reclaim the decoded image memory when the PSRAM cache heap is running low.
+    *
+    * LVGL v8: lv_img_cache_clean()/MAX_IMG_CACHE_SIZE come with the upgraded
+    *          LVGL, the LVGL shipped in this SDK only has
+    *          lv_img_cache_invalidate_src(), which closes all the cached images.
+    * LVGL v9: lv_img_cache.h does not exist any more, app_mem.h already includes
+    *          lv_image_cache.h and lv_conf_sifli.h maps
+    *          lv_img_cache_invalidate_src() onto lv_image_cache_drop(), where a
+    *          NULL source drops all the cached images.
+    */
     #if !defined(DISABLE_LVGL_V8)
         #include "lv_img_cache.h"
     #endif
@@ -76,7 +83,7 @@ static struct rt_memheap_item *app_mem_get_async_header(void *ptr)
 {
     struct rt_memheap_item *header;
 
-    /* Validate the allocator header magic number instead of relying on a fixed address-window 
+    /* Validate the allocator header magic number instead of relying on a fixed address-window
     allowlist — SBus remap addresses may fall outside the PSRAM base/size range. */
     if (!ptr)
     {
@@ -224,20 +231,30 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
 
 
 
+/* Animation buffer pixel size must be the same as the transition snapshot
+ * format. Reuse APP_TRANS_ANIM_SNAPSHOT_PX_BYTE from lvsf_switchanim.h instead
+ * of re-evaluating the mask option here, so both sides can never diverge. */
+#if defined(DISABLE_LVGL_V9)
+    #define APP_ANIM_BUF_PX_BYTE APP_TRANS_ANIM_SNAPSHOT_PX_BYTE
+#else
+    /* LVGL v9: lvsf_v9/lvsf_switchanim.h has no mask option, size by colour. */
+    #define APP_ANIM_BUF_PX_BYTE (LV_COLOR_DEPTH / 8)
+#endif
+
 #ifdef APP_TRANS_ANIMATION_SCALE_NEXT
     L2_NON_RET_BSS_SECT_BEGIN(anim_frambuf)
-    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
+    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * APP_ANIM_BUF_PX_BYTE]);
     L2_NON_RET_BSS_SECT_END
 #elif defined(APP_TRANS_ANIMATION_SCALE) || defined(SIFLI_APP_MEM_REUSE_TRANS_ANIM_BUF)
     /*
-     * Keep a pair of frame buffers when app_mem needs to reuse them as large
-     * temporary memheaps. This is independent from UI transition style:
-     * APP_TRANS_ANIMATION_NONE may still be selected while upper layers borrow
-     * these buffers for document/image decode work.
-     */
+    * Keep a pair of frame buffers when app_mem needs to reuse them as large
+    * temporary memheaps. This is independent from UI transition style:
+    * APP_TRANS_ANIMATION_NONE may still be selected while upper layers borrow
+    * these buffers for document/image decode work.
+    */
     L2_NON_RET_BSS_SECT_BEGIN(anim_frambuf)
-    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
-    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_b[LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8]);
+    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_a[LV_HOR_RES_MAX * LV_VER_RES_MAX * APP_ANIM_BUF_PX_BYTE]);
+    APP_L2_NON_RET_BSS_SECT(anim_frambuf, static char app_trans_anim_buf_b[LV_HOR_RES_MAX * LV_VER_RES_MAX * APP_ANIM_BUF_PX_BYTE]);
     L2_NON_RET_BSS_SECT_END
 #elif defined(APP_TRANS_ANIMATION_OVERWRITE) || defined(APP_TRANS_ANIMATION_NONE)
     /*No trans animtion buf need*/
@@ -271,7 +288,7 @@ MSH_CMD_EXPORT_ALIAS(app_mem_log, app_mem, app_mem: open or close app_mem log);
     struct rt_memheap app_message_memheap;
 #endif
 
-#define APP_ANIM_BUF_BYTES ((size_t)LV_HOR_RES_MAX * LV_VER_RES_MAX * LV_COLOR_SIZE / 8U)
+#define APP_ANIM_BUF_BYTES ((size_t)LV_HOR_RES_MAX * LV_VER_RES_MAX * APP_ANIM_BUF_PX_BYTE)
 #define APP_ANIM_RT_MEMHEAP_SIZE RT_ALIGN(sizeof(struct rt_memheap_item), RT_ALIGN_SIZE)
 
 static struct rt_memheap app_anim_buf_memheap[2];
@@ -2006,7 +2023,7 @@ void hindi_shaper_free(void *ptr)
 #endif
 
 #if LV_USE_TINY_TTF
-void * app_tiny_ttf_mem_alloc(size_t size)
+void *app_tiny_ttf_mem_alloc(size_t size)
 {
 #if defined(TINY_TTF_CACHE_IN_SRAM_STANDALONE) || defined(TINY_TTF_CACHE_IN_PSRAM)
     return rt_memheap_alloc(&app_tiny_ttf_memheap, size);

@@ -36,6 +36,7 @@ static lv_switchanim_finish_cb finish_cb = NULL;
 
 #include "lvsf_switchanim.h"
 #define SWITCH_ANIM_PERIOD 300
+
 void gui_app_gesture_init(void);
 void app_trans_animation_init(void)
 {
@@ -137,17 +138,39 @@ void  app_trans_animation_hook(const screen_t scr, gui_app_msg_type_t msg)
         lv_img_dsc_t img_dsc;
         img_dsc.header.always_zero = 0;
         img_dsc.header.reserved = 0;
-        img_dsc.header.cf = LV_IMG_CF_TRUE_COLOR;
+        img_dsc.header.cf = APP_TRANS_ANIM_SNAPSHOT_CF;
         img_dsc.header.w = APP_TRANS_ANIM_SNAPSHOT_WIDTH;
         img_dsc.header.h = APP_TRANS_ANIM_SNAPSHOT_HEIGHT;
         img_dsc.data = p_buf;
         img_dsc.data_size = APP_TRANS_ANIM_SNAPSHOT_SIZE;
+
+#if APP_TRANS_ANIM_WITH_MASK
+        /* This buffer is reused later as the exit-page snapshot (index 1), so it
+         * must carry the same circular mask as the enter snapshot rendered in
+         * lvsf_switchanim.c, and its alpha channel must be cleared first. */
+#if !defined(DRV_EPIC_NEW_API) || defined (BSP_USING_PC_SIMULATOR)
+        rt_memset(p_buf, 0, APP_TRANS_ANIM_SNAPSHOT_SIZE);
+#endif
+        lv_switchanim_snapshot_mask_add();
+#endif
 
         lv_obj_t *obj = (lv_obj_t *)scr;
         if (APP_TRANS_ANIM_FULL_SCALE == APP_TRANS_ANIM_SNAPSHOT_SCALE)
             lv_snapshot_obj_to_dsc(obj, &obj->coords, &img_dsc);
         else
             lv_snapshot_obj_to_dsc_scale(obj, &obj->coords, &img_dsc);
+
+#if APP_TRANS_ANIM_WITH_MASK
+#ifdef DISABLE_LVGL_V9
+        /* Keep the mask installed until the (asynchronous) snapshot render has
+         * been consumed by the GPU. */
+        lv_disp_t *disp = _lv_refr_get_disp_refreshing();
+        if (NULL == disp) disp = lv_disp_get_default();
+        if (disp && disp->driver && disp->driver->draw_ctx && disp->driver->draw_ctx->wait_for_finish)
+            disp->driver->draw_ctx->wait_for_finish(disp->driver->draw_ctx);
+#endif
+        lv_switchanim_snapshot_mask_remove();
+#endif
 #endif
         break;
     }

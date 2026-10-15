@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -10,10 +10,74 @@
 #if LVSF_USING_SWITCHANIM != 0
 
 #if !LV_USE_SNAPSHOT
-#error "LV_USE_SNAPSHOT must be enabled when LVSF_USING_SWITCHANIM is enabled"
+    #error "LV_USE_SNAPSHOT must be enabled when LVSF_USING_SWITCHANIM is enabled"
 #endif
 
 #define LVSF_ANIM_PERIOD_MS 3000
+
+#if APP_TRANS_ANIM_WITH_MASK
+/* The circle shape mask is generated once, resident in PSRAM, so the snapshot
+ * render can install it as an LVGL MAP draw-mask; the EPIC GPU then blends the
+ * snapshot through it in hardware. */
+static uint8_t *s_mask_buf = NULL;
+static lv_draw_mask_map_param_t s_mask_param;
+static int16_t s_mask_id = -1;
+
+static void transanim_init_circle_mask(uint8_t *buf, uint32_t size, uint32_t w, uint32_t h)
+{
+    RT_ASSERT(size >= w * h);
+    uint32_t r = LV_MIN(w, h);
+    /* Center the circle in the buffer: on a non-square display it must still be
+     * centered, otherwise only the top-left r x r area is shaped and the rest of
+     * the rows/columns are zeroed by the mask apply below. */
+    lv_area_t circle_area = { (lv_coord_t)((w - r) / 2), (lv_coord_t)((h - r) / 2), 0, 0 };
+    circle_area.x2 = circle_area.x1 + r - 1;
+    circle_area.y2 = circle_area.y1 + r - 1;
+
+    lv_draw_mask_radius_param_t circle_mask;
+    lv_draw_mask_radius_init(&circle_mask, &circle_area, r / 2, false);
+
+    int16_t mask_id = lv_draw_mask_add(&circle_mask, NULL);
+    rt_memset(buf, 0xFF, size);
+    uint8_t *p_buf = buf;
+    for (uint32_t y = 0; y < h; y++)
+    {
+        lv_draw_mask_res_t res = lv_draw_mask_apply(p_buf, 0, y, w);
+        if (res == LV_DRAW_MASK_RES_TRANSP)
+            lv_memset(p_buf, 0x00, w);
+        p_buf += w;
+    }
+    lv_draw_mask_remove_id(mask_id);
+    lv_draw_mask_free_param(&circle_mask);
+}
+
+/* Install/remove the resident circle mask around a snapshot render. Shared by
+ * the transition animation and the pre-captured exit snapshot in
+ * gui_app_trans_anim.c, so both snapshots are shaped identically. */
+void lv_switchanim_snapshot_mask_add(void)
+{
+    if (s_mask_buf && s_mask_id < 0)
+        s_mask_id = lv_draw_mask_add(&s_mask_param, NULL);
+}
+
+void lv_switchanim_snapshot_mask_remove(void)
+{
+    if (s_mask_id >= 0)
+    {
+        lv_draw_mask_remove_id(s_mask_id);
+        s_mask_id = -1;
+    }
+}
+#endif /* APP_TRANS_ANIM_WITH_MASK */
+
+/* Clear the snapshot buffer before rendering. Skipped for the exit snapshot
+ * reusing a pre-captured buffer (LV_SWITCHANIM_FLAG_SKIP_SNAPHOT) so its content
+ * is not wiped out. */
+#if APP_TRANS_ANIM_WITH_MASK && (!defined(DRV_EPIC_NEW_API) || defined (BSP_USING_PC_SIMULATOR))
+    #define TRANS_ANIM_SNAPSHOT_CLEAR(dsc) rt_memset((void *)(dsc)->data, 0, (dsc)->data_size)
+#else
+    #define TRANS_ANIM_SNAPSHOT_CLEAR(dsc) do { } while (0)
+#endif
 
 #define MY_CLASS  &lv_switchanim_class
 
@@ -104,11 +168,43 @@ void lv_switchanim_init()
 {
     _lv_ll_init(&g_baseanim_anim_list, sizeof(lv_baseanim_cb));
     lv_switchanim_load();
+
+#if APP_TRANS_ANIM_WITH_MASK
+    /* Use the compile-time max resolution: LV_HOR_RES/LV_VER_RES are runtime
+     * queries and may return 0 if the display is not registered yet. */
+    lv_coord_t w = LV_HOR_RES_MAX;
+    lv_coord_t h = LV_VER_RES_MAX;
+    s_mask_buf = app_cache_alloc(w * h, CACHE_PSRAM);
+    if (s_mask_buf)
+    {
+        transanim_init_circle_mask(s_mask_buf, w * h, w, h);
+        lv_area_t mask_area = { 0, 0, w - 1, h - 1 };
+        lv_draw_mask_map_init(&s_mask_param, &mask_area, s_mask_buf);
+    }
+    else
+    {
+        /* The snapshot stays TRUE_COLOR_ALPHA without a mask to fill its alpha
+         * channel, so it ends up fully transparent and the transition animation
+         * becomes invisible. Report the reason instead of failing silently. */
+        rt_kprintf("lv_switchanim: no memory for %dx%d snapshot mask, "
+                   "transition mask disabled\n", w, h);
+    }
+#endif
 }
 
 void lv_switchanim_deinit()
 {
     _lv_ll_clear(&g_baseanim_anim_list);
+#if APP_TRANS_ANIM_WITH_MASK
+    /* Detach the mask from the LVGL mask list before releasing the A8 map it
+     * points to, otherwise later draws would read freed memory. */
+    lv_switchanim_snapshot_mask_remove();
+    if (s_mask_buf)
+    {
+        app_cache_free(s_mask_buf);
+        s_mask_buf = NULL;
+    }
+#endif
 }
 
 lv_baseanim_cb *lv_switchanim_find_anim(uint32_t major)
@@ -193,11 +289,11 @@ static void lv_baseanim_init_snapshot_dsc(lv_img_dsc_t *img_dsc, uint8_t index, 
 
     img_dsc->header.always_zero = 0;
     img_dsc->header.reserved = 0;
-    img_dsc->header.cf = LV_IMG_CF_TRUE_COLOR;
+    img_dsc->header.cf = APP_TRANS_ANIM_SNAPSHOT_CF;
     img_dsc->header.w = w;
     img_dsc->header.h = h;
     img_dsc->data = trans_anim_buf;
-    img_dsc->data_size = lv_img_buf_get_img_size(w, h, LV_IMG_CF_TRUE_COLOR);
+    img_dsc->data_size = lv_img_buf_get_img_size(w, h, APP_TRANS_ANIM_SNAPSHOT_CF);
 }
 
 static void lv_baseanim_init_fb_dsc(lv_img_dsc_t *img_scr, lv_disp_t *disp)
@@ -245,11 +341,16 @@ lv_obj_t *lv_baseanim_create_snapshot(lv_baseanim_t *baseanim, lv_obj_t *parent)
     if (draw_ctx->wait_for_finish) draw_ctx->wait_for_finish(draw_ctx);
 #endif
 
+#if APP_TRANS_ANIM_WITH_MASK
+    lv_switchanim_snapshot_mask_add();
+#endif
+
     if (LV_BASEANIM_EXIT_TYPE == baseanim->type)
     {
         lv_baseanim_para_t *para = lv_baseanim_get_para(baseanim);
         if (!(para->flag & LV_SWITCHANIM_FLAG_SKIP_SNAPHOT))
         {
+            TRANS_ANIM_SNAPSHOT_CLEAR(snapshot_dsc);
 #if defined(LCD_FB_USING_TWO_COMPRESSED) || defined(LCD_FB_USING_ONE_COMPRESSED)
 #if (APP_TRANS_ANIM_FULL_SCALE != APP_TRANS_ANIM_SNAPSHOT_SCALE)
             lv_snapshot_obj_to_dsc_scale(baseanim->screen, &baseanim->screen->coords, snapshot_dsc);
@@ -264,7 +365,7 @@ lv_obj_t *lv_baseanim_create_snapshot(lv_baseanim_t *baseanim, lv_obj_t *parent)
     }
     else if (LV_BASEANIM_ENTER_TYPE == baseanim->type)
     {
-
+        TRANS_ANIM_SNAPSHOT_CLEAR(snapshot_dsc);
 #if (APP_TRANS_ANIM_FULL_SCALE != APP_TRANS_ANIM_SNAPSHOT_SCALE)
         lv_snapshot_obj_to_dsc_scale(baseanim->screen, &baseanim->screen->coords, snapshot_dsc);
 #else
@@ -274,6 +375,9 @@ lv_obj_t *lv_baseanim_create_snapshot(lv_baseanim_t *baseanim, lv_obj_t *parent)
     }
 #ifdef DISABLE_LVGL_V9
     if (draw_ctx->wait_for_finish) draw_ctx->wait_for_finish(draw_ctx);
+#endif
+#if APP_TRANS_ANIM_WITH_MASK
+    lv_switchanim_snapshot_mask_remove();
 #endif
     lv_obj_t *image = lv_img_create(parent);
     lv_img_set_src(image, snapshot_dsc);
