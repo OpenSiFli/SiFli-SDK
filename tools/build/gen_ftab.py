@@ -67,6 +67,7 @@ PARTITION_INFO_STRUCT = struct.Struct("<IIII")  # base, size, xip_base, flags
 FLASH_TABLE_SIZE = 0x8000
 SEC_CONFIG_MAGIC = 0x53454346  # 'FCES'
 EX_IMAGE_SLOT_FLASH_IDS = [11, 12, 13]  # DFU_FLASH_HCPU_EXT2 / LCPU_EXT1 / LCPU_EXT2
+EX_IMAGE_SLOT_NAMES = ['DFU_FLASH_HCPU_EXT2', 'DFU_FLASH_LCPU_EXT1', 'DFU_FLASH_LCPU_EXT2']
 EX_IMAGE_SLOT_PARTITION_INDICES = [
     PartitionIndex.HCPU_IMAGE_RESERVE2,
     PartitionIndex.LCPU_IMAGE_RESERVE1,
@@ -137,6 +138,13 @@ def _collect_partition_roles(partitions: List[dict]) -> Dict[str, object]:
     if factory_hcpu_partition is None:
         for p in partitions:
             if p.get('type') == 'app' and p.get('subtype') == 'factory':
+                # Never adopt another core's image as the HCPU main image: an ACPU code
+                # partition would take ftab[4] (HCPU_IMAGE) instead of an extended slot.
+                core = _get_partition_core(p)
+                if core != 'HCPU':
+                    raise ValueError(
+                        "ptab v3 has no HCPU factory app partition; refusing to use "
+                        "'{}' (core {}) as the main image".format(p.get('name', '?'), core))
                 factory_hcpu_partition = p
                 break
     if dfu_hcpu_partition is None:
@@ -303,6 +311,8 @@ def build_partition_table_entries(
 
         In legacy ftab.c, ACPU image xip_base uses HCPU-visible RAM address
         (e.g. HPSYS_RAM_BASE + offset -> 0x2020_0000), not ACPU local view.
+        Returns None for regions this mapping does not cover (PSRAM/NOR); the
+        caller then falls back to the SBUS/cbus rule.
         """
         r = (exec_region or '').strip().lower()
         mem_map_ints = _load_mem_map_ints()
@@ -330,12 +340,20 @@ def build_partition_table_entries(
             exec_offset = ptab_module.parse_size(exec_def.get('offset', 0))
             core_u = str(core or '').strip().upper()
             if core_u == 'ACPU':
+                # RAM execution regions use the HCPU/bootloader view of the same memory
+                # (see _acpu_exec_host_addr); regions it does not cover (PSRAM/NOR) fall
+                # back to the SBUS/cbus rule below, i.e. the address the core that
+                # copies the image uses.
                 host_addr = _acpu_exec_host_addr(exec_region, exec_offset)
                 if host_addr is not None:
                     xip_addr = int(host_addr)
                 else:
                     exec_sbus_addr, _ = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=core)
                     xip_addr = _select_ftab_exec_addr(exec_sbus_addr)
+                if not xip_addr:
+                    raise ValueError(
+                        "partition '{}': cannot resolve the ACPU execution address of "
+                        "region '{}'".format(partition.get('name', '?'), exec_region))
             else:
                 exec_sbus_addr, _ = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=core)
                 xip_addr = _select_ftab_exec_addr(exec_sbus_addr)
@@ -420,18 +438,34 @@ def build_partition_table_entries(
         base_addr, size, xip_addr = _partition_entry_addr(dfu_partition)
         entries[PartitionIndex.LCPU_IMAGE_PING] = (base_addr, size, xip_addr, 0)
 
+    # Only named partitions can be registered in the flash table.
+    extra_app_partitions = [
+        p for p in extra_app_partitions if str(p.get('name') or '').strip()
+    ]
+
+    # All extra images share the three extended ftab slots, so order them
+    # deterministically: extra ACPU code images keep their image order (region 1
+    # before region 2), everything else follows by name. An overlay file or the
+    # injected default partitions can then never move an image to another slot.
+    def _extra_slot_order(part: dict):
+        if ptab_module.is_acpu_code_partition_v3(part):
+            return (0, ptab_module.get_acpu_code_rom_index(part) or 0, str(part.get('name') or ''))
+        return (1, 0, str(part.get('name') or ''))
+
+    extra_app_partitions = sorted(extra_app_partitions, key=_extra_slot_order)
+
     if len(extra_app_partitions) > len(EX_IMAGE_SLOT_PARTITION_INDICES):
-        names = [p.get('name', '?') for p in extra_app_partitions]
+        names = [str(p.get('name') or '?') for p in extra_app_partitions]
         raise ValueError(
-            "Too many extra app partitions for ftab ext slots (max {}): {}".format(
-                len(EX_IMAGE_SLOT_PARTITION_INDICES), ", ".join(names)
-            )
+            "Too many extra images for the ftab extended slots ({} = flash ids {}); the pool "
+            "is shared by every 'type: app' partition that is not the HCPU factory/DFU "
+            "image: {}".format(
+                '/'.join(EX_IMAGE_SLOT_NAMES), '/'.join(str(i) for i in EX_IMAGE_SLOT_FLASH_IDS),
+                ", ".join(names))
         )
 
     for idx, part in enumerate(extra_app_partitions):
         part_name = str(part.get('name') or '').strip()
-        if not part_name:
-            continue
         base_addr, size, xip_addr = _partition_entry_addr(part)
         part_idx = EX_IMAGE_SLOT_PARTITION_INDICES[idx]
         flash_id = EX_IMAGE_SLOT_FLASH_IDS[idx]
@@ -575,11 +609,13 @@ def generate_ftab_binary(
         return int(default)
 
     partition_size_by_name: Dict[str, int] = {}
+    partition_by_name: Dict[str, dict] = {}
     for p in partitions:
         pname = str(p.get('name') or '').strip()
         if not pname:
             continue
         partition_size_by_name[pname] = int(ptab_module.parse_size(p.get('size', 0)))
+        partition_by_name[pname] = p
 
     bootloader_part = roles.get('bootloader')
     factory_hcpu = roles.get('factory_hcpu')
@@ -613,12 +649,31 @@ def generate_ftab_binary(
         entries[PartitionIndex.LCPU_IMAGE_PING] = (0, 0, 0, 0)
     partition_table = pack_partition_table(entries)
 
+    # An ACPU image is only advertised when the build really produced one, which is
+    # visible as an ACPU partition named after its build env. Extra images of the same
+    # project are declared without such an env, so they follow the same gate instead of
+    # always being registered from their partition size.
+    acpu_image_built = any(
+        ptab_module.is_acpu_code_partition_v3(p) and str(p.get('name') or '').strip() in image_sizes
+        for p in partitions
+    )
+
     ext_image_sizes: Dict[int, int] = {}
     for part_name, flash_id in ext_flash_ids.items():
+        part = partition_by_name.get(part_name)
         if part_name in image_sizes:
             ext_size = int(partition_size_by_name.get(part_name, 0))
             if ext_size <= 0:
                 ext_size = int(image_sizes[part_name])
+            ext_image_sizes[int(flash_id)] = int(ext_size)
+            continue
+        # Extra ACPU code images: the partition size is the image size.
+        if (acpu_image_built and part is not None
+                and ptab_module.get_acpu_code_rom_index(part) is not None):
+            ext_size = int(partition_size_by_name.get(part_name, 0))
+            if ext_size <= 0:
+                raise ValueError(
+                    "ACPU code partition '{}' must declare a non-zero size".format(part_name))
             ext_image_sizes[int(flash_id)] = int(ext_size)
 
     image_descriptions = build_image_descriptions(

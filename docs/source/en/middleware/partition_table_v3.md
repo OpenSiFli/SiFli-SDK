@@ -284,8 +284,10 @@ Notes:
 
 Each region maps to two addresses:
 
-- SBUS address (storage address): used for DMA and flashing
-- CBUS address (XIP address): used for CPU execution
+- SBUS address (storage address): used for DMA and flashing; also valid as an execution address
+- CBUS address (XIP address): execute-in-place view of NOR/PSRAM
+
+For PSRAM, `0x10xxxxxx` is only the HCPU-side alias of the memory mapped at SBUS `0x60xxxxxx`. An ACPU image cannot fetch through that alias, so its execution address always uses the SBUS view of the region, which is also the flash table `xip_base` and the 2nd bootloader's copy target.
 
 Address mapping comes from `tools/SiliconSchema/common/mpi/<chip>/mpi.yaml`.
 
@@ -327,7 +329,7 @@ When `type=app` and `subtype=factory`, the generator will emit:
 #define CODE_SIZE        (0x...)
 ```
 
-`CODE_START_ADDR` corresponds to the execution address specified by `exec`. If `exec` is absent, the storage CBUS address is used.
+`CODE_START_ADDR` corresponds to the execution address specified by `exec`. If `exec` is absent, the storage region is used and resolved with the same rule. ACPU images always use the SBUS view; HCPU/LCPU use the SBUS view for RAM/NAND and default to the CBUS/XIP view for NOR/PSRAM. For ACPU, `ACPU_CODE_REGION<N>_EXEC_START_ADDR` therefore always equals `ACPU_CODE_REGION<N>_EXEC_SBUS_START_ADDR`.
 
 If macros such as `HCPU_FLASH_CODE` or `FLASH_BOOT_LOADER` are generated from execution-address compatibility rules and also include `_MEM_TYPE`, the `_MEM_TYPE` follows the final execution region rather than the storage region. If the execution region is on-chip RAM, the `_MEM_TYPE` will not be generated.
 
@@ -509,6 +511,65 @@ Output files under each build directory's `output/`:
 If a resource partition has no corresponding input section or the section is empty, the build skips generating that partition's `main.<partition_name>.bin/.hex` without error.
 
 Avoid naming `app/ex` partitions `app` to prevent filename collisions on case-insensitive filesystems.
+
+### Multiple ACPU code images (ptab v3 + GCC/Keil)
+
+One ACPU project may need several code images out of a single ELF when their execution
+regions are not contiguous. Declare every image after the first as its own `type: app`,
+`subtype: factory`, `core: ACPU` partition that names the ELF output section holding its
+code:
+
+```yaml
+- name: acpu2                  # must differ from any project (env) name
+  type: app
+  subtype: factory             # same kind as the first image: registered in the flash
+                               # table and copied into its execution region
+  core: ACPU
+  region: mpi4
+  offset: 0x00E7C000           # storage region -> flash table base / download address
+  size: 0x00100000
+  exec:
+    region: psram1             # execution region -> flash table xip_base / link address
+    offset: 0x00400000
+  sections:
+    - section: .rom2           # ELF output section holding this image's code
+  aliases:
+    - ACPU_CODE_LOAD_REGION2   # optional legacy alias; must match .rom<N> if present
+```
+
+The `.rom<N>` section name (N >= 2) is the explicit binding between the partition and its
+image: it selects the ELF content, names the link script section and sets the artifact
+suffix, using the same naming as the v1/v2 multi-image flow and the embedded LCPU flow.
+The first image keeps its code in the code artifact and must not declare a `.rom<N>`
+section; `validate_ptab_v3.py` enforces exactly one such first image and distinct `N`.
+Both the link script and the `ACPU_CODE_REGION<N>_*` macros take `N` from the `.rom<N>`
+section, so the alias is optional and, if present, must match that `N`.
+
+The ACPU `link.jinja2` / `link.sct.jinja2` templates emit one extra memory region per
+image (GCC `ACPU_ROM<N>`, holding the `.rom<N>` output section) or one load/execution
+region per image (Keil `LR_IROM<N>` / `ER_IROM<N>`), linked at the SBUS view of the partition `exec`
+address. Each extra image is then downloaded to its partition `region`/`offset` and
+copied into its execution region by the 2nd bootloader; the copy is skipped when both
+addresses are identical (execute in place). The flash table stores the partition `size`
+as the image length, so the execution region must be able to hold `size` bytes.
+The first ACPU image follows the same rule; HCPU/LCPU images keep executing in place
+from the CBUS/XIP view of NOR/PSRAM.
+
+Artifacts under the ACPU project's `output/` directory:
+
+- Code image (first ACPU image): `build_xxx/acpu/output/acpu.ER_IROM1.bin`
+- Extra images: `build_xxx/acpu/output/acpu.ER_IROM2.bin` (and the `.hex` twins)
+
+Up to three extra images are supported in total: they share the extended flash table slots
+`DFU_FLASH_HCPU_EXT2` / `DFU_FLASH_LCPU_EXT1` / `DFU_FLASH_LCPU_EXT2` (flash ids 11/12/13)
+with every other extra `type: app` partition, and they are assigned in image order.
+
+Notes:
+
+- Currently supported for SF32LB58X only: the other chips have no Jinja2 ACPU template and
+  their bootloaders do not walk all extended flash table slots yet.
+- The project must build the ACPU image (an ACPU child project); images provided through
+  `AddCustomImg` are not covered.
 
 ### ftab.bin generation
 

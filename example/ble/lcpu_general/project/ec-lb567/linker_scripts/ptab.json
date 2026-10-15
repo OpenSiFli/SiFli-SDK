@@ -51,7 +51,7 @@
             }, 
             {
                 "offset": "0x00400000", 
-                "max_size": "0x00020000", 
+                "max_size": "0x00010000", 
                 "tags": [
                     "ACPU_CODE_REGION2"
                 ], 
@@ -114,7 +114,7 @@
             }, 
             {
                 "offset": "0x00300000", 
-                "max_size": "0x00010000", 
+                "max_size": "0x00020000", 
                 "tags": [
                     "ACPU_CODE_LOAD_REGION1"
                 ], 
@@ -127,7 +127,7 @@
             }, 
             {
                 "offset": "0x00420000", 
-                "max_size": "0x00020000", 
+                "max_size": "0x00010000", 
                 "tags": [
                     "ACPU_CODE_LOAD_REGION2"
                 ], 

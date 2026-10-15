@@ -179,6 +179,49 @@ def get_partition_selectors_v3(partition: Any) -> List[Dict[str, str]]:
     return deduped
 
 
+# An ACPU project may build several code images out of a single ELF because the
+# execution regions are not contiguous. Every image after the first is declared as
+# its own app/factory/core=ACPU partition that names the ELF output section holding
+# its code ('.rom<N>'), which also gives the image index N, the artifact suffix
+# ('ER_IROM<N>', the same naming as the v1/v2 multi-image flow and the embedded
+# LCPU flow) and the Keil fromelf region name.
+_ACPU_CODE_ROM_SECTION_RE = re.compile(r'^\.rom(\d+)$', re.IGNORECASE)
+
+
+def is_acpu_code_partition_v3(partition: Any) -> bool:
+    """Return True for ptab v3 partitions that carry ACPU code."""
+    if not isinstance(partition, dict):
+        return False
+    if str(partition.get('type') or '').strip().lower() != 'app':
+        return False
+    if str(partition.get('subtype') or '').strip().lower() != 'factory':
+        return False
+    return str(partition.get('core') or '').strip().upper() == 'ACPU'
+
+
+def get_acpu_code_rom_indexes(partition: Any) -> List[int]:
+    """Return every '.rom<N>' image index declared by an ACPU code partition."""
+    if not isinstance(partition, dict):
+        return []
+    indexes = []
+    for item in normalize_partition_sections(partition.get('sections')):
+        match = _ACPU_CODE_ROM_SECTION_RE.match(str(item.get('section') or '').strip())
+        if match:
+            indexes.append(int(match.group(1)))
+    return indexes
+
+
+def get_acpu_code_rom_index(partition: Any) -> Optional[int]:
+    """Return the image index N of an ACPU code partition declaring '.rom<N>'.
+
+    Returns None for the first ACPU image (its code stays in the code artifact)
+    and for any ACPU code partition without a '.rom<N>' section. A partition must
+    not declare more than one '.rom<N>' section (validate_ptab_v3.py rejects it).
+    """
+    indexes = get_acpu_code_rom_indexes(partition)
+    return indexes[0] if indexes else None
+
+
 class Ptab:
     def __init__(self, path, mems):
         self.path = os.path.abspath(path)
@@ -1511,6 +1554,62 @@ def iter_int_res_partitions_v3(ptab_obj: Any, core: Optional[str] = None) -> Lis
         if pcore != core_u:
             continue
         out.append(p)
+    return out
+
+
+def iter_acpu_code_ext_partitions_v3(ptab_obj: Any) -> List[Dict[str, Any]]:
+    """Iterate the extra ACPU code images of a ptab v3 file, in '.rom<N>' order.
+
+    Each entry describes one code image carved out of the ACPU project ELF:
+      name                            partition name
+      rom_index                       image index N of the '.rom<N>' section
+      image / keil_region             artifact suffix and fromelf region ('ER_IROM<N>')
+      section                         GCC output section / objcopy selector ('.rom<N>')
+      size                            partition size in bytes
+      storage_region / storage_offset where the image is stored (ftab base)
+      exec_region / exec_offset       where the image is executed (ftab xip_base)
+      selectors                       input sections gathered into '.rom<N>'
+
+    Addresses are returned as raw region/offset pairs on purpose: the address rules
+    live in the callers (gen_link_lds.py and gen_ftab.py), so this helper never
+    introduces a second copy of them.
+    """
+    if not ptab_obj or not hasattr(ptab_obj, 'is_v3') or not ptab_obj.is_v3():
+        return []
+
+    out: List[Dict[str, Any]] = []
+    for p in getattr(ptab_obj, 'partitions', []) or []:
+        if not is_acpu_code_partition_v3(p):
+            continue
+        rom_index = get_acpu_code_rom_index(p)
+        if rom_index is None:
+            # First ACPU image: its code stays in the code artifact.
+            continue
+
+        section = '.rom{}'.format(rom_index)
+        # The '.rom<N>' entry names the output section itself; any further entry is
+        # an input selector for the code to gather into it.
+        selectors = [
+            item for item in normalize_partition_sections(p.get('sections'))
+            if str(item.get('section') or '').strip().lower() != section
+        ] or [{'section': '{}*'.format(section)}]
+
+        exec_def = p.get('exec') if isinstance(p.get('exec'), dict) else {}
+        out.append({
+            'name': str(p.get('name') or '').strip(),
+            'rom_index': rom_index,
+            'image': 'ER_IROM{}'.format(rom_index),
+            'keil_region': 'ER_IROM{}'.format(rom_index),
+            'section': section,
+            'size': parse_size(p.get('size', 0)),
+            'storage_region': str(p.get('region') or '').strip(),
+            'storage_offset': parse_size(p.get('offset', 0)),
+            'exec_region': str(exec_def.get('region') or '').strip(),
+            'exec_offset': parse_size(exec_def.get('offset', 0)),
+            'selectors': selectors,
+        })
+
+    out.sort(key=lambda entry: (entry['rom_index'], entry['name']))
     return out
 
 

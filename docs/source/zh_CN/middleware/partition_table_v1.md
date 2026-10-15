@@ -187,6 +187,10 @@
 - DFU_FLASH_LCPU_EXT1： 12
 - DFU_FLASH_LCPU_EXT2： 13
 
+这些条目按对应 `ftab` 项在分区表中首次出现的顺序分配，且只有 3 个。
+
+若一个工程需要拆出多个 bin（例如两段执行地址不连续的 ACPU 代码），则每个镜像各声明一个存储区和一个执行区，各自使用独立的 `ftab.name`，并在 `img` 中显式写出二进制名，例如 `acpu:ER_IROM1.bin` 与 `acpu:ER_IROM2.bin`。同一个 `ftab` 项的所有 region 必须声明相同的 `max_size`，因为一条 flash table 表项只为该镜像保存一个 size。
+
 例如下面这段ptab.json中定义了`acpu_region1`使用flash4的`0x00300000`偏移地址作为ACPU程序的base地址，hpsys_ram的`0x00200000`偏移地址作为ACPU程序的xip地址，生成的ftab.c文件使用`DFU_FLASH_HCPU_EXT2`项描述了ACPU程序镜像文件的存放和执行地址，length（需要搬移的数据长度）则由`img`属性（详细说明见[](#img)）指定的程序文件名按照实际文件大小填写（示例中实际长度为0x7d4字节）。
 
 ````{dropdown} acpu_region1示例代码
@@ -217,7 +221,7 @@
     "regions": [
         {
             "offset": "0x00200000", 
-            "max_size": "0x00020000", 
+            "max_size": "0x00010000", 
             "tags": [
                 "ACPU_CODE_REGION1_SBUS"
             ], 
@@ -258,7 +262,7 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT2)] = {.length = 0xFFFFFFFF},
-    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00020000,  .xip_base = 0x20200000, .flags = 0},
+    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00010000,  .xip_base = 0x20200000, .flags = 0},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)] = {.length = 0x000007D4, .blksize = 512, .flags = DFU_FLAG_AUTO},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT1)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT2)] = {.length = 0xFFFFFFFF},
@@ -365,7 +369,9 @@ RT_USED const struct sec_configuration sec_config =
 ```
 
 ```{note}
-需要注意的是，对于PSRAM分区，存在CBUS和SBUS两个地址空间，例如上面的例子中CBUS地址是`0x10000000`，SBUS地址是`0x60000000`，`exec`属性需要填写在CBUS分区中，以确保代码执行地址使用CBUS地址空间，而`ftab`属性的`"xip"`类型则填写在SBUS分区中，以确保使用SBUS地址搬移代码
+需要注意的是，对于PSRAM分区，存在CBUS和SBUS两个地址空间，例如上面的例子中CBUS地址是`0x10000000`，SBUS地址是`0x60000000`。两个视图都可以作为执行地址。若要从PSRAM就地执行，`exec`属性需要填写在CBUS分区中，以确保代码执行地址使用CBUS地址空间，而`ftab`属性的`"xip"`类型则填写在SBUS分区中，以确保使用SBUS地址搬移代码。
+
+ACPU镜像无法从CBUS/XIP别名取指，其执行地址恒取region的SBUS视图。对PSRAM来说，这就是写入`ftab` `"xip"`的同一个`0x60xxxxxx`地址。
 ```
 
 ### custom

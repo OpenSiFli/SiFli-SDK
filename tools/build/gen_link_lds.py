@@ -354,13 +354,17 @@ def _select_start_addr(mem_type: str, sbus_addr: int, cbus_addr: int) -> int:
 
 def _select_exec_addr(mem_type: str, sbus_addr: int, cbus_addr: int, core=None) -> int:
     # Execution address selection:
-    # - RAM/NAND: base (SBUS)
-    # - NOR/PSRAM: XIP （CBUS）
+    # - ACPU: always the SBUS view. The ACPU cannot fetch from the CBUS/XIP
+    #   alias of NOR/PSRAM (e.g. PSRAM 0x10xxxxxx); the 2nd bootloader copies
+    #   the image to the SBUS address that gen_ftab.py stores as xip_base.
+    # - HCPU/LCPU: RAM/NAND use the base (SBUS) address; NOR/PSRAM default to
+    #   the CBUS/XIP view so the image executes in place.
     #
-    # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
-    # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while the
-    # HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made the exec
-    # address unusable for HCPU when ACPU passes that address over.
+    # NOTE: the ACPU rule also covers on-chip RAM (e.g. SF32LB58 hpsys_ram is
+    # 0-based for ACPU while the HCPU/DFU/SBUS view is 0x20200000); the exec
+    # address must stay valid in HCPU's view because ACPU passes it over.
+    if str(core or '').strip().upper() == 'ACPU':
+        return sbus_addr
     return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 
 
@@ -671,13 +675,13 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
             exec_offset = ptab_module.parse_size(exec_def.get('offset', 0))
             exec_sbus, exec_cbus = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=core)
             exec_mem_type = _get_region_mem_type(exec_region, chip_config)
-            rom_base = _select_exec_addr(exec_mem_type, exec_sbus, exec_cbus, core)
+            rom_base = _select_exec_addr(exec_mem_type, exec_sbus, exec_cbus, core or build_core)
         else:
             region = code_p.get('region', '')
             offset = ptab_module.parse_size(code_p.get('offset', 0))
             exec_sbus, exec_cbus = ptab_module.resolve_region_address(region, offset, chip_config, core=core)
             mem_type = _get_region_mem_type(region, chip_config)
-            rom_base = _select_exec_addr(mem_type, exec_sbus, exec_cbus, core)
+            rom_base = _select_exec_addr(mem_type, exec_sbus, exec_cbus, core or build_core)
         rom_size = size
 
     # Pick RAM region for current build
@@ -787,6 +791,38 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
     out['HCPU_FLASH2_IMG_SIZE'] = int(out['__ROM2_SIZE'])
     out['HCPU_FLASH2_FONT_START_ADDR'] = int(out['__ROM3_BASE'])
     out['HCPU_FLASH2_FONT_SIZE'] = int(out['__ROM3_SIZE'])
+
+    # Extra ACPU code images: one ACPU project may build several code images out of a
+    # single ELF when their execution regions are not contiguous. Each extra image is
+    # linked at its own execution address and is later extracted into its own artifact
+    # (ER_IROM<N>.bin) - see ptab_module.iter_acpu_code_ext_partitions_v3().
+    # NOTE: the MEMORY name is template-internal on purpose: __ROM2_* / __ROM3_* are
+    # already taken by the HCPU flash2 layout above.
+    acpu_ext_code_regions: List[Dict[str, Any]] = []
+    if build_core == 'ACPU':
+        for entry in ptab_module.iter_acpu_code_ext_partitions_v3(ptab_obj):
+            exec_region = entry['exec_region']
+            if not exec_region or int(entry['size']) <= 0:
+                continue
+            exec_sbus, exec_cbus = ptab_module.resolve_region_address(
+                exec_region, entry['exec_offset'], chip_config, core='ACPU')
+            exec_mem_type = _get_region_mem_type(exec_region, chip_config)
+            # Same rule as the primary ACPU image: keep every ACPU image on the
+            # SBUS view of its execution region - the address gen_ftab.py emits
+            # as xip_base and the 2nd bootloader copies to.
+            exec_base = _select_exec_addr(exec_mem_type, exec_sbus, exec_cbus, 'ACPU')
+            acpu_ext_code_regions.append({
+                'memory': 'ACPU_ROM{}'.format(entry['rom_index']),
+                'index': int(entry['rom_index']),
+                'section': entry['section'],
+                'image': entry['image'],
+                'base': int(exec_base),
+                'size': int(entry['size']),
+                'selectors': entry['selectors'],
+                'selectors_gnu': [s for s in (_selector_to_gnu(sel) for sel in entry['selectors']) if s],
+                'selectors_keil': [s for s in (_selector_to_keil(sel) for sel in entry['selectors']) if s],
+            })
+    out['ACPU_EXT_CODE_REGIONS'] = acpu_ext_code_regions
 
     # 56x/58x LCPU extra regions
     if build_core == 'LCPU' and cmsis_dir in ('sf32lb56x', 'sf32lb58x'):

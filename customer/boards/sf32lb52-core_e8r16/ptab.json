@@ -37,7 +37,7 @@
             }, 
             {
                 "offset": "0x00071000", 
-                "max_size": "0x00700000", 
+                "max_size": "0x00380000", 
                 "tags": [], 
                 "ftab": {
                     "name": "main", 

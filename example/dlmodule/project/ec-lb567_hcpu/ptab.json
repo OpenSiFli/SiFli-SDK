@@ -84,7 +84,7 @@
         "regions": [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00600000", 
+                "max_size": "0x00580000", 
                 "tags": [
                     "HCPU_FLASH_CODE_LOAD_REGION"
                 ], 

@@ -137,6 +137,8 @@
 - DFU_FLASH_LCPU_EXT1： 12
 - DFU_FLASH_LCPU_EXT2： 13
 
+这些条目按对应 region 在分区表中首次出现的顺序分配，且只有 3 个。属于同一个镜像（`name` 相同，即同一个 `proj` 或 `proj:N`）的所有 region 必须声明相同的 `max_size`，因为一条 flash table 表项只为该镜像保存一个 size。
+
 例如下面这段ptab.json中定义了`acpu`使用flash4的`0x00300000`偏移地址作为ACPU程序的存放地址，hpsys_ram的`0x00200000`偏移地址作为ACPU程序的执行地址，生成的ftab.c文件使用`DFU_FLASH_HCPU_EXT2`项描述了ACPU程序镜像文件的存放和执行地址，length（需要搬移的数据长度）则由`name`属性（详细说明见[](#name)）指定的程序文件名按照实际文件大小填写（示例中实际长度为0x7d4字节）。
 
 ````{dropdown} ACPU程序分区示例
@@ -159,7 +161,7 @@
     "regions": [
         {
             "offset": "0x00200000", 
-            "max_size": "0x00020000", 
+            "max_size": "0x00010000", 
             "name": "acpu",
             "type": ["app_exec"]
         }
@@ -193,7 +195,7 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT2)] = {.length = 0xFFFFFFFF},
-    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00020000,  .xip_base = 0x20200000, .flags = 0},
+    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00010000,  .xip_base = 0x20200000, .flags = 0},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)] = {.length = 0x000007D4, .blksize = 512, .flags = DFU_FLAG_AUTO},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT1)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT2)] = {.length = 0xFFFFFFFF},

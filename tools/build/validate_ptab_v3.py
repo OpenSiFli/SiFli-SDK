@@ -26,6 +26,10 @@ if str(_TOOLS_BUILD_PATH) not in sys.path:
 
 import ptab as ptab_module
 
+# Extra ACPU code images use the '.rom<N>' / 'ER_IROM<N>' family shared with the v1/v2
+# multi-image flow, which probes '.rom2'..'.rom6' (building.MAX_EX_IMG_NUM = 5).
+_ACPU_CODE_ROM_INDEX_MAX = 6
+
 
 class ValidationError:
     def __init__(self, message: str, severity: str = "error"):
@@ -355,17 +359,25 @@ def validate_exec(exec_def, partition_name: str, chip_config: dict, core: Option
 
 
 def validate_sections(sections: Any, partition: dict) -> List[ValidationError]:
-    """Validate structured selectors used by app/ex resource partitions."""
+    """Validate structured selectors used by resource and ACPU code partitions."""
     errors = []
     pname = partition.get('name', '?')
-    is_app_ex = ptab_module.is_app_ex_partition_v3(partition)
+    ptype = str(partition.get('type') or '').strip().lower()
+    psubtype = str(partition.get('subtype') or '').strip().lower()
+    # 'sections' describes the ELF content of a partition: a resource partition
+    # (app/ex) gathers input sections into an output section named after the
+    # partition, while an extra ACPU code image (app/factory) names its own output
+    # section '.rom<N>' so that it maps to ER_IROM<N>.bin.
+    is_app_ex = ptype == 'app' and psubtype == 'ex'
+    is_acpu_code = ptab_module.is_acpu_code_partition_v3(partition)
 
     if sections is None:
         return errors
 
-    if not is_app_ex:
+    if not (is_app_ex or (is_acpu_code and ptab_module.get_acpu_code_rom_indexes(partition))):
         errors.append(ValidationError(
-            f"Partition '{pname}': 'sections' is only supported for type='app', subtype='ex'"
+            f"Partition '{pname}': 'sections' is only supported for type='app' subtype='ex' "
+            f"or for an ACPU code image naming its '.rom<N>' output section"
         ))
         return errors
 
@@ -458,7 +470,7 @@ def validate_ftab_unique(partitions: List[dict]) -> List[ValidationError]:
 
 
 def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationError]:
-    """Validate: at most one factory app per core."""
+    """Validate: at most one factory app per core (ACPU may carry several images)."""
     errors = []
     seen: Dict[str, List[str]] = {}
 
@@ -466,6 +478,11 @@ def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationEr
         if p.get('type') != 'app' or p.get('subtype') != 'factory':
             continue
         core = (p.get('core') or 'HCPU').upper()
+        # One ACPU project may build several code images out of a single ELF, so the
+        # ACPU core is allowed to own more than one factory partition; those extra
+        # images are validated by validate_acpu_code_partitions().
+        if core == 'ACPU':
+            continue
         seen.setdefault(core, []).append(p.get('name', '?'))
 
     for core, names in seen.items():
@@ -473,6 +490,74 @@ def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationEr
             errors.append(ValidationError(
                 f"Multiple factory app partitions found for core {core}: {', '.join(names)}"
             ))
+
+    return errors
+
+
+def validate_acpu_code_partitions(partitions: List[dict]) -> List[ValidationError]:
+    """Validate the ACPU code partitions, including extra multi-image partitions.
+
+    One ACPU project may build several code images from a single ELF: the first
+    image keeps its code in the project code artifact, while every further image is
+    declared as its own app/factory/core=ACPU partition naming the ELF output
+    section that holds its code ('.rom<N>', N >= 2) - which also gives the artifact
+    suffix ER_IROM<N>.bin.
+    """
+    errors = []
+    acpu_parts = [p for p in partitions if ptab_module.is_acpu_code_partition_v3(p)]
+    if not acpu_parts:
+        return errors
+
+    indexes: Dict[int, str] = {}
+    primary: List[str] = []
+    for p in acpu_parts:
+        pname = p.get('name', '?')
+        if not isinstance(p.get('exec'), dict):
+            errors.append(ValidationError(
+                f"Partition '{pname}': ACPU code partition must provide 'exec: {{region, offset}}'"
+            ))
+
+        rom_indexes = ptab_module.get_acpu_code_rom_indexes(p)
+        if len(rom_indexes) > 1:
+            errors.append(ValidationError(
+                "Partition '{}': at most one '.rom<N>' section is allowed (got {})".format(
+                    pname, ', '.join('.rom{}'.format(n) for n in rom_indexes))
+            ))
+
+        # The first image owns region 1 and keeps its code in the code artifact.
+        expected_region = 1
+        if not rom_indexes:
+            primary.append(pname)
+        else:
+            rom_index = rom_indexes[0]
+            expected_region = rom_index
+            if rom_index < 2 or rom_index > _ACPU_CODE_ROM_INDEX_MAX:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': '.rom{rom_index}' is out of range "
+                    f"(.rom2..rom{_ACPU_CODE_ROM_INDEX_MAX})"
+                ))
+            if rom_index in indexes:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': '.rom{rom_index}' is already used by '{indexes[rom_index]}'"
+                ))
+            else:
+                indexes[rom_index] = pname
+
+        # The legacy macro alias and the ELF section must describe the same image.
+        for alias in p.get('aliases') or []:
+            match = re.match(r'^ACPU_CODE_LOAD_REGION(\d+)$', str(alias or '').strip().upper())
+            if match and int(match.group(1)) != expected_region:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': alias '{alias}' does not match image "
+                    f"{expected_region}{' (.rom{})'.format(expected_region) if rom_indexes else ' (first image)'}"
+                ))
+
+    if len(primary) != 1:
+        errors.append(ValidationError(
+            "Exactly one ACPU code partition must stay without a '.rom<N>' section (the image "
+            "whose code stays in the code artifact); found {}: {}".format(
+                len(primary), ', '.join(primary) if primary else 'none')
+        ))
 
     return errors
 
@@ -730,6 +815,7 @@ def validate_ptab_v3(ptab_obj) -> List[ValidationError]:
     errors.extend(validate_bootloader_unique(partitions))
     errors.extend(validate_ftab_unique(partitions))
     errors.extend(validate_factory_unique_by_core(partitions))
+    errors.extend(validate_acpu_code_partitions(partitions))
     errors.extend(validate_nand_memory_block_sizes(ptab_obj))
     errors.extend(validate_nand_partition_alignment(partitions, chip_config))
     errors.extend(validate_sf32lb52_storage_reservations(ptab_obj, partitions, chip_config))

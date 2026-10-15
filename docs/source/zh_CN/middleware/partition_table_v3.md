@@ -284,8 +284,10 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
 
 每个 region 对应两个地址：
 
-- **SBUS 地址（存储地址）**：用于 DMA 访问、下载烧录
-- **CBUS 地址（XIP 地址）**：用于 CPU 直接执行
+- **SBUS 地址（存储地址）**：用于 DMA 访问、下载烧录，也可作为执行地址
+- **CBUS 地址（XIP 地址）**：NOR/PSRAM 的就地执行视图
+
+对 PSRAM 来说，`0x10xxxxxx` 只是同一片内存在 HCPU 侧的别名，实际映射在 SBUS `0x60xxxxxx`。ACPU 无法通过该别名取指，因此其执行地址恒为 region 的 SBUS 视图，它同时也是 flash table 的 `xip_base` 和二级 bootloader 的拷贝目标。
 
 地址映射从 `tools/SiliconSchema/common/mpi/<chip>/mpi.yaml` 加载。
 
@@ -327,7 +329,7 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
 #define CODE_SIZE        (0x...)
 ```
 
-需要注意的是，`CODE_START_ADDR` 对应 `exec` 字段指定的执行地址。如果没有指定 `exec`，则使用存储的 CBUS 地址。
+需要注意的是，`CODE_START_ADDR` 对应 `exec` 字段指定的执行地址。如果没有指定 `exec`，则使用存储 region 并按同一规则解析地址。ACPU 恒取 SBUS 视图；HCPU/LCPU 的 RAM/NAND 取 SBUS，NOR/PSRAM 默认取 CBUS/XIP。因此 ACPU 的 `ACPU_CODE_REGION<N>_EXEC_START_ADDR` 恒等于 `ACPU_CODE_REGION<N>_EXEC_SBUS_START_ADDR`。
 
 对于 `HCPU_FLASH_CODE`、`FLASH_BOOT_LOADER` 这类由执行地址兼容出来的宏，若同时生成 `_MEM_TYPE`，其取值也跟随最终执行 region，而不是存储 region。若执行 region 为片上 RAM，则不会保留对应的 `_MEM_TYPE` 定义。
 
@@ -513,6 +515,54 @@ GCC 默认的段收集规则为：
 如果某个 `app/ex` 分区在 ELF 中没有对应输出段（或段为空），则会跳过生成该分区的 `main.<partition_name>.bin/.hex`（不报错）。
 
 另外，`app/ex` 分区名应避免与代码镜像后缀 `app` 冲突，以避免在大小写不敏感文件系统下发生文件名覆盖，例如不要让某个资源分区命名为 `app`。
+
+### 多个 ACPU 代码镜像（ptab v3 + GCC/Keil）
+
+当一个 ACPU 工程的两段代码执行地址不连续时，需要从同一个 ELF 里拆出多个代码镜像。除第一个镜像
+外，每个镜像都声明为一个独立的 `type: app`、`subtype: factory`、`core: ACPU` 分区，并指明该镜像
+代码在 ELF 中的输出段：
+
+```yaml
+- name: acpu2                  # 必须不同于任何工程（env）名
+  type: app
+  subtype: factory             # 与第一个镜像同类：会登记进 flash table 并被拷贝到执行区
+  core: ACPU
+  region: mpi4
+  offset: 0x00E7C000           # 存储区 → flash table 的 base / 烧写地址
+  size: 0x00100000
+  exec:
+    region: psram1             # 执行区 → flash table 的 xip_base / 链接地址
+    offset: 0x00400000
+  sections:
+    - section: .rom2           # 该镜像代码所在的 ELF 输出段
+  aliases:
+    - ACPU_CODE_LOAD_REGION2   # 可选的历史 alias；若保留，编号必须与 .rom<N> 一致
+```
+
+段名 `.rom<N>`（N >= 2）就是"分区 ↔ 镜像"的显式绑定：它同时决定 ELF 内容、链接脚本中的段名与产物
+后缀，沿用 v1/v2 多镜像流程和嵌入式 LCPU 流程的同一套命名。第一个镜像的代码留在代码产物里，不得
+声明 `.rom<N>` 段；`validate_ptab_v3.py` 会检查"恰好一个不带 `.rom<N>` 的首镜像"以及 N 不重复。
+链接脚本和 `ACPU_CODE_REGION<N>_*` 宏都以该 `.rom<N>` 段确定编号，因此 alias 可省略；若保留，编号必须与 `.rom<N>` 一致。
+
+ACPU 的 `link.jinja2` / `link.sct.jinja2` 会为每个额外镜像生成一段存储区域（GCC 为 `ACPU_ROM<N>`，
+其内部是 `.rom<N>` 输出段；Keil 为 `LR_IROM<N>` / `ER_IROM<N>`），链接地址取 `exec` 的 SBUS 视图。
+额外镜像会按其分区的 `region`/`offset` 烧写，
+并在启动时由二级 bootloader 拷贝进执行区；两个地址相同时（就地执行）不会发生拷贝。flash table 用分区
+`size` 作为镜像长度，因此执行区必须能容纳 `size` 字节。首镜像遵循同一规则；HCPU/LCPU 的
+NOR/PSRAM 镜像仍从 CBUS/XIP 视图就地执行。
+
+ACPU 工程 `output/` 目录下的产物：
+
+- 代码镜像（第一个 ACPU 镜像）：`build_xxx/acpu/output/acpu.ER_IROM1.bin`
+- 额外镜像：`build_xxx/acpu/output/acpu.ER_IROM2.bin`（以及对应的 `.hex`）
+
+最多支持 3 个额外镜像：它们与其他额外的 `type: app` 分区共用 `DFU_FLASH_HCPU_EXT2` /
+`DFU_FLASH_LCPU_EXT1` / `DFU_FLASH_LCPU_EXT2`（flash id 11/12/13）这三个扩展槽，并按镜像序号分配。
+
+注意事项：
+
+- 目前仅支持 SF32LB58X：其他芯片没有 Jinja2 的 ACPU 模板，且其 bootloader 尚未遍历全部扩展槽。
+- 该特性要求工程本身编译 ACPU 镜像（ACPU 子工程）；通过 `AddCustomImg` 提供的镜像不在覆盖范围内。
 
 ### ftab.bin 生成
 

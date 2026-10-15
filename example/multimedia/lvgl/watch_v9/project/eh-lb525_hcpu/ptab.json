@@ -14,7 +14,7 @@
             }, 
             {
                 "offset": "0x00020000", 
-                "max_size": "0x00020000", 
+                "max_size": "0x00010000", 
                 "tags": [
                 ], 
                 "ftab": {
@@ -27,7 +27,7 @@
             }, 
             {
                 "offset": "0x00060000", 
-                "max_size": "0x00580000", 
+                "max_size": "0x00680000", 
                 "tags": [
                 ], 
                 "ftab": {
@@ -93,7 +93,7 @@
         "regions": [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00580000", 
+                "max_size": "0x00680000", 
                 "exec": "main",
                 "tags": [
                     "HCPU_FLASH_CODE"

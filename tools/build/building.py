@@ -739,6 +739,12 @@ def _infer_build_core(env, fallback: str = 'HCPU') -> str:
 
 def _get_ptab_v3_split_section(partition: dict, ptab_module) -> str:
     """Map a ptab v3 app/ex partition to the ELF section used for objcopy."""
+    # An extra ACPU code image names the ELF output section holding its code
+    # ('.rom<N>'), which also gives the artifact suffix ER_IROM<N>.bin; a resource
+    # partition collects into the output section named after the partition.
+    rom_index = ptab_module.get_acpu_code_rom_index(partition)
+    if rom_index is not None:
+        return '.rom{}'.format(rom_index)
     name = (partition.get('name') or '').strip()
     return '.{}'.format(name) if name else ''
 
@@ -759,7 +765,19 @@ def _collect_ptab_v3_split_partitions(ptab_obj, core: str, ptab_module):
         out.append({
             'name': name,
             'section': section,
+            'kind': 'resource',
         })
+
+    # Extra ACPU code images are carved out of the same ELF and become
+    # '<base>.ER_IROM<N>.bin', the same naming as the v1/v2 multi-image flow and the
+    # embedded LCPU flow. The first ACPU image stays in the code artifact.
+    if (core or '').strip().upper() == 'ACPU':
+        for entry in ptab_module.iter_acpu_code_ext_partitions_v3(ptab_obj):
+            out.append({
+                'name': entry['image'],
+                'section': entry['section'],
+                'kind': 'code',
+            })
 
     return out
 
@@ -807,6 +825,9 @@ def GetPtabV3CodeArtifactCandidates(output_dir: str, base_name: str, ext: str):
     return [
         GetPtabV3ArtifactPath(output_dir, base_name, ext, 'app'),
         GetPtabV3ArtifactPath(output_dir, base_name, ext),
+        # A project with extra ACPU code images names its code artifact after the
+        # first image ('ER_IROM1', see _collect_ptab_v3_split_partitions).
+        GetPtabV3ArtifactPath(output_dir, base_name, ext, 'ER_IROM1'),
     ]
 
 
@@ -1055,18 +1076,37 @@ def _build_ptab_v3_keil_artifacts(program_file: str, out_dir: str, base_name: st
     entries = _ptab_v3_fromelf_entries(export_path, ext)
     used_paths = set()
     used_resources = []
+    used_code_region = False
+    code_region_missing = []
 
     for entry in split_entries:
         name = entry['name']
         aliases = _ptab_v3_fromelf_region_aliases(name)
         src = _find_ptab_v3_fromelf_entry(entries, aliases, used_paths, ext)
         if not src:
+            if entry.get('kind') == 'code':
+                code_region_missing.append(name)
             continue
         out_file = GetPtabV3ArtifactPath(out_dir, base_name, ext, name)
         used_paths.add(src['path'])
         _remove_file_or_dir(out_file)
         shutil.move(src['path'], out_file)
         used_resources.append(name)
+        if entry.get('kind') == 'code':
+            used_code_region = True
+
+    if code_region_missing:
+        # The ftab still advertises these images, so a missing artifact would make the
+        # bootloader copy unprogrammed flash into the execution region.
+        # Point at the linked image, not the fromelf export: that export never holds the
+        # missing region and is removed right here.
+        _remove_file_or_dir(export_path)
+        for name in code_region_missing:
+            logging.error(
+                "ptab v3 ACPU image '%s' has no ER_IROM%s region in %s "
+                "(check the ACPU scatter file)",
+                name, name[len('ER_IROM'):], program_file)
+        raise SystemExit(1)
 
     code_entry = _select_ptab_v3_fromelf_code_entry(entries, used_paths, ext)
     if not code_entry:
@@ -1077,7 +1117,7 @@ def _build_ptab_v3_keil_artifacts(program_file: str, out_dir: str, base_name: st
         out_dir,
         base_name,
         ext,
-        'app' if used_resources else None,
+        'ER_IROM1' if used_code_region else ('app' if used_resources else None),
     )
     _remove_file_or_dir(code_path)
     shutil.move(code_entry['path'], code_path)
@@ -1389,29 +1429,47 @@ def ProgramBinaryBuild(target, source, env):
         used_sections = []
         all_sections = []
         present_sections = []
+        used_code_region = False
+        code_region_missing = []
         for entry in split_entries:
             name = entry['name']
             if not name:
                 continue
             sec = entry['section']
+            is_code_region = entry.get('kind') == 'code'
             all_sections.append(sec)
             out_file = GetPtabV3ArtifactPath(out_dir, base_name, '.bin', name)
             _remove_file_or_dir(out_file)
             res = subprocess.run([rtconfig.OBJCPY, '-Obinary', '-j{}'.format(sec), program_file, out_file])
             if res.returncode != 0:
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             present_sections.append(sec)
             if not _ptab_v3_artifact_has_payload(out_file, '.bin'):
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             used_sections.append(sec)
+            if is_code_region:
+                used_code_region = True
+
+        if code_region_missing:
+            # The ftab still advertises these images, so a missing artifact would make
+            # the bootloader copy unprogrammed flash into the execution region.
+            for name, sec in code_region_missing:
+                logging.error(
+                    "ptab v3 ACPU image '%s' has no '%s' payload (check the ACPU link script)",
+                    name, sec)
+            raise SystemExit(1)
 
         code_bin_path = GetPtabV3ArtifactPath(
             out_dir,
             base_name,
             '.bin',
-            'app' if used_sections else None,
+            'ER_IROM1' if used_code_region else ('app' if used_sections else None),
         )
         exclude_args = ['-R{}'.format(s) for s in dict.fromkeys(all_sections)]
         _remove_file_or_dir(code_bin_path)
@@ -1555,29 +1613,47 @@ def ProgramHexBuild(target, source, env):
         used_sections = []
         all_sections = []
         present_sections = []
+        used_code_region = False
+        code_region_missing = []
         for entry in split_entries:
             name = entry['name']
             if not name:
                 continue
             sec = entry['section']
+            is_code_region = entry.get('kind') == 'code'
             all_sections.append(sec)
             out_file = GetPtabV3ArtifactPath(out_dir, base_name, '.hex', name)
             _remove_file_or_dir(out_file)
             res = subprocess.run([rtconfig.OBJCPY, '-O', 'ihex', '-j{}'.format(sec), program_file, out_file])
             if res.returncode != 0:
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             present_sections.append(sec)
             if not _ptab_v3_artifact_has_payload(out_file, '.hex'):
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             used_sections.append(sec)
+            if is_code_region:
+                used_code_region = True
+
+        if code_region_missing:
+            # The ftab still advertises these images, so a missing artifact would make
+            # the bootloader copy unprogrammed flash into the execution region.
+            for name, sec in code_region_missing:
+                logging.error(
+                    "ptab v3 ACPU image '%s' has no '%s' payload (check the ACPU link script)",
+                    name, sec)
+            raise SystemExit(1)
 
         code_hex_path = GetPtabV3ArtifactPath(
             out_dir,
             base_name,
             '.hex',
-            'app' if used_sections else None,
+            'ER_IROM1' if used_code_region else ('app' if used_sections else None),
         )
         exclude_args = ['-R{}'.format(s) for s in dict.fromkeys(all_sections)]
         _remove_file_or_dir(code_hex_path)

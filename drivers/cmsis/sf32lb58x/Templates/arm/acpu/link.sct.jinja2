@@ -20,8 +20,13 @@ LR_IROM1 {{ hex32(defines['__ROM_BASE']) }} {{ hex32(defines['__ROM_SIZE']) }}  
 }
 
 
-;LR_IROM2 ACPU_CODE_REGION2_START_ADDR ACPU_CODE_REGION2_SIZE  {    ; load region size_region
-;  ER_IROM2 ACPU_CODE_REGION2_START_ADDR ACPU_CODE_REGION2_SIZE  {  ; load address = execution address
-;    *.o (.text.HAL_PMU_EnableXTAL32)
-;  }
-;}
+; Extra ACPU code images (ptab v3): one ACPU project may build several code images
+; out of a single ELF when their execution regions are not contiguous. Every image
+; after the first gets its own load/execution region and is extracted into its own
+; artifact (ER_IROM<N>.bin) by fromelf.
+{% for region in defines.get('ACPU_EXT_CODE_REGIONS', []) %}LR_IROM{{ region.index }} {{ hex32(region.base) }} {{ hex32(region.size) }}  {    ; load region size_region
+  ER_IROM{{ region.index }} {{ hex32(region.base) }} {{ hex32(region.size) }}  {  ; load address = execution address
+{% for selector in region.selectors_keil %}    {{ selector }}
+{% endfor %}  }
+}
+{% endfor %}
