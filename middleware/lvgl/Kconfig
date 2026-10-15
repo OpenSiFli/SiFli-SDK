@@ -24,6 +24,26 @@ menu "SiFli extend"
                 bool "using Freetype Normal Lib"
         endchoice
 
+        choice
+            prompt "FreeType output bitmap depth"
+            depends on LV_USING_FREETYPE_ENGINE
+            default LV_FREETYPE_BPP_4 if SOC_SF32LB55X || SOC_SF32LB56X || SOC_SF32LB58X
+            default LV_FREETYPE_BPP_2
+            help
+              Select the packed glyph bitmap depth. A2/A4 use the existing
+              EPIC layout where supported; A8 uses one byte per pixel.
+              With the EPIC Ax compatibility layout enabled, ordinary LVGL
+              A2/A4 bitmap fonts must also be converted to that layout.
+            config LV_FREETYPE_BPP_2
+                bool "2 bpp (A2)"
+                depends on SOC_SF32LB52X || SOC_SF32LB57X
+            config LV_FREETYPE_BPP_4
+                bool "4 bpp (A4)"
+            config LV_FREETYPE_BPP_8
+                bool "8 bpp (A8)"
+                depends on SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB57X || SOC_SF32LB58X
+        endchoice
+
         menu "FreeType cache config"
             depends on LV_USING_FREETYPE_ENGINE
 
