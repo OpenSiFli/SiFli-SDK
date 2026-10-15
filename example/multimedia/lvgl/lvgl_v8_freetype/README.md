@@ -83,6 +83,10 @@ please input the serial port num:5
 | `CONFIG_LVSF_FONT_MIN_FREE_HEAP` | 32768 | 创建字体后须保留的系统堆下限，低于此值则拒绝加载 |
 | `CONFIG_RT_USING_DFS_ELMFAT` | y | 字体从FAT文件系统读取 |
 
+字形输出位深默认使用当前芯片的配置，可在 `menuconfig` 的 `SiFli extend -> FreeType output bitmap depth` 中选择：SF32LB52X/57X 支持 A2/A4/A8，默认 A2；SF32LB56X/58X 支持 A4/A8，默认 A4；SF32LB55X 使用 A4 软件路径。例如选择 `CONFIG_LV_FREETYPE_BPP_4=y`，输出和缓存的位图就实际按 A4 打包。
+
+启用 `COMPATIBLE_WITH_SIFLI_EPIC_Ax` 时，混用的普通 LVGL v8 A2/A4 点阵字体也需要离线转换为 EPIC 布局，FreeType 回调不会自动转换它们；A8 不需要高低位重排。配置及内存说明见 [LVGL FreeType 字体](../../../../docs/source/zh_CN/middleware/lvgl_v8/lvgl_freetype.md)。
+
 ## 示例输出
 如果示例运行成功，您将在串口看到以下输出：
 ```
