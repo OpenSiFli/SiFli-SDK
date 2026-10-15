@@ -78,6 +78,7 @@ void bt_hfp_relay_mgr_init(void);
 int bt_hfp_relay_set_mode(bt_hfp_relay_mode_t mode);
 bt_hfp_relay_mode_t bt_hfp_relay_get_mode(void);
 int bt_hfp_relay_connect_ag_audio(uint8_t ag_index);
+int bt_hfp_relay_disconnect_ag_audio(void);
 
 int bt_hfp_relay_hf_event_handle(bt_hfp_relay_notify_data_t *msg);
 int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg);

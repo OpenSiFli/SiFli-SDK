@@ -224,6 +224,34 @@ int bt_hfp_relay_connect_ag_audio(uint8_t ag_index)
     return RT_EOK;
 }
 
+int bt_hfp_relay_disconnect_ag_audio(void)
+{
+    uint8_t i;
+    uint8_t found = 0;
+
+    if (g_hfp_relay_ctx.mode != BT_HFP_RELAY_MODE_HEADSET_INTERCOM)
+    {
+        return -RT_EINVAL;
+    }
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        bt_hfp_relay_ag_context_t *ag_ctx = &g_hfp_relay_ctx.ag[i];
+
+        if ((ag_ctx->channel != BT_HFP_RELAY_INVALID_CHANNEL) &&
+                ag_ctx->hfp_sco_state)
+        {
+            BTS2S_BD_ADDR addr;
+
+            bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &addr);
+            bt_hfp_disconnect_audio(&addr);
+            found = 1;
+        }
+    }
+
+    return found ? RT_EOK : -RT_ENOSYS;
+}
+
 void bt_hfp_relay_handle_sco_event(uint16_t event_id, bt_notify_device_sco_info_t *sco_info)
 {
     bt_hfp_relay_context_t *ctx = bt_hfp_relay_get_context();
@@ -945,6 +973,11 @@ __ROM_USED void hfp_cmd(int argc, char **argv)
         {
             int result = bt_hfp_relay_connect_ag_audio(0);
             rt_kprintf("HFP intercom SCO connect headset 1: %d\n", result);
+        }
+        else if (strcmp(cmd, "intercom_sco_disconnect") == 0)
+        {
+            int result = bt_hfp_relay_disconnect_ag_audio();
+            rt_kprintf("HFP intercom SCO disconnect: %d\n", result);
         }
         else if (strcmp(cmd, "headset_connect") == 0)
         {
