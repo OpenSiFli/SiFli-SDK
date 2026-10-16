@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "app_clock_status_bar.h"
+#include "app_clock_emoji.h"
 #include "app_mem.h"
 
 typedef struct
@@ -42,33 +43,33 @@ static const notification_msg_cntxt_t notify_msgs[] =
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_SUPER, LV_PCT(40),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😀",
+        "😀思澈科技欢迎您🔥"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_HUGE, LV_PCT(20),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😂",
+        "😂思澈科技欢迎您💖"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_BIGL, LV_PCT(20),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😍",
+        "😍思澈科技欢迎您👍"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0x00, 0x00), FONT_NORMAL, LV_PCT(30),
-        "关于我们",
-        "思澈科技是一家专注于物联网技术的公司，提供一站式的物联网解决方案。最先提出嵌入式MCU+GPU的物联网解决方案，为客户提供更高性能、更低功耗的物联网产品。"
+        "关于我们👍",
+        "思澈科技是一家专注于物联网技术的公司，提供一站式的物联网解决方案。最先提出嵌入式MCU+GPU的物联网解决方案，为客户提供更高性能、更低功耗的物联网产品。👍💖"
     },
 
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_NORMAL,
         LV_COLOR_MAKE(0x00, 0x00, 0xFF), FONT_SMALL, LV_PCT(20),
-        "我们是谁",
-        "思澈科技成立於2019年3月，總部位於上海張江高科技園區，在重慶、北京、深圳、蘇州均設有分子公司，團隊成員均來自於美國、中國的一線電晶體設計企業，包括Marvell、 Broadcom、Amazon、 紫光展銳、聯發科等，碩士以上學歷占比超過80%； 團隊骨幹具有豐富的產品定義->自主研發->大規模量產的全流程經驗，由這些骨幹成員主導研發的晶片累計出貨超過10億顆。"
+        "我们是谁😀",
+        "思澈科技成立於2019年3月，總部位於上海張江高科技園區，在重慶、北京、深圳、蘇州均設有分子公司，團隊成員均來自於美國、中國的一線電晶體設計企業，包括Marvell、 Broadcom、Amazon、 紫光展銳、聯發科等，碩士以上學歷占比超過80%； 團隊骨幹具有豐富的產品定義->自主研發->大規模量產的全流程經驗，由這些骨幹成員主導研發的晶片累計出貨超過10億顆。😀😂😍👍🔥💖"
     },
 
 };
@@ -292,6 +293,9 @@ static void msg_list_content_init(lv_obj_t *par)
     lv_obj_t *label_header;
     lv_obj_t *align_base;
 
+    /*Attach emoji imgfonts as fallback of freetype fonts before any text layout*/
+    app_clock_emoji_font_init();
+
     label_header = lv_label_create(par);
     lv_label_set_text(label_header, "Notifications");
     lv_ext_set_local_font(label_header, FONT_TITLE, LV_COLOR_WHITE);
@@ -320,9 +324,9 @@ static void msg_list_content_init(lv_obj_t *par)
         lv_label_set_text(content_label, notify_msgs[i].p_content);
         lv_obj_set_layout(content_label, LV_LAYOUT_FLEX);
 
-        //Snapshot the labels with long content
         if (3 == i || 4 == i)
         {
+            //Snapshot the content label
             lv_obj_update_layout(content_label_container);
             lv_snapshot_obj_to_img(content_label_container, content_label, &content_label->coords, LV_IMG_CF_TRUE_COLOR_ALPHA);
             //Hide the content label

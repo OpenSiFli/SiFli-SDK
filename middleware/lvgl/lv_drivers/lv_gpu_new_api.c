@@ -1180,6 +1180,9 @@ static void draw_img(struct _lv_draw_ctx_t *draw_ctx,
 * @param color color of letter
 * @param opa opacity of letter (0..255)
 */
+static lv_res_t my_decode_and_draw(lv_draw_ctx_t *draw_ctx, const lv_draw_img_dsc_t *draw_dsc,
+                                   const lv_area_t *coords, const void *src);
+
 static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,  const lv_point_t *pos_p,
                         uint32_t letter)
 {
@@ -1245,6 +1248,60 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
     uint32_t bpp = g.bpp;
     if (bpp == 3) bpp = 4;
 
+#if LV_USE_IMGFONT
+    if (LV_IMGFONT_BPP == bpp) //is imgfont, blend the emoji image by hardware
+    {
+        /* An imgfont's glyph bitmap is either a variable image descriptor or a
+         * path string; both can be zoom-scaled by EPIC. Fetch the native image
+         * size via the LVGL image API that matches the src type, then derive
+         * the EPIC zoom from the wanted glyph height (`g.box_h`).
+         * EPIC scales a layer by pitch = 256 * 1024 / zoom, so the rendered
+         * extent equals width(coords) * zoom / 256: pass the native image size
+         * as coords (anchored at gpos) and let the hardware fit it into the
+         * glyph box.  Zoom is computed with floor to keep the rendered height
+         * within `g.box_h` — ceiling (e.g. box_h * 256 / native_h + 1) would
+         * overshoot the font line height by up to 1px and overflow into the
+         * next glyph's area. */
+        lv_coord_t native_w, native_h;
+        lv_img_src_t src_type = lv_img_src_get_type(map_p);
+        if (src_type == LV_IMG_SRC_VARIABLE)
+        {
+            const lv_img_dsc_t *src_img = (const lv_img_dsc_t *)map_p;
+            native_w = (lv_coord_t)src_img->header.w;
+            native_h = (lv_coord_t)src_img->header.h;
+        }
+        else if ((src_type == LV_IMG_SRC_FILE) || (src_type == LV_IMG_SRC_SYMBOL))
+        {
+            lv_img_header_t header;
+            if (lv_img_decoder_get_info(map_p, &header) != LV_RES_OK) return;
+            native_w = (lv_coord_t)header.w;
+            native_h = (lv_coord_t)header.h;
+        }
+        else
+        {
+            return;
+        }
+        if ((native_w <= 0) || (native_h <= 0)) return;
+
+        lv_area_t fill_area;
+        fill_area.x1 = gpos.x;
+        fill_area.y1 = gpos.y;
+        fill_area.x2 = gpos.x + native_w - 1;
+        fill_area.y2 = gpos.y + native_h - 1;
+        lv_draw_img_dsc_t img_dsc;
+        lv_draw_img_dsc_init(&img_dsc);
+        img_dsc.angle = 0;
+        img_dsc.opa = dsc->opa;
+        img_dsc.blend_mode = dsc->blend_mode;
+        img_dsc.pivot.x = 0;
+        img_dsc.pivot.y = 0;
+        uint32_t zoom = ((uint32_t)g.box_h * LV_IMG_ZOOM_NONE) / (uint32_t)native_h;
+        if (zoom == 0) zoom = 1;
+        img_dsc.zoom = (uint16_t)zoom;
+        my_decode_and_draw(draw_ctx, &img_dsc, &fill_area, map_p);
+        return;
+    }
+#endif /* LV_USE_IMGFONT */
 
 
 #if defined(SOC_SF32LB56X)||defined(SOC_SF32LB58X)
