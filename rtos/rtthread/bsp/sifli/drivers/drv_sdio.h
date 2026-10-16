@@ -16,7 +16,7 @@
 
 #define SDCARD_INSTANCE_TYPE              SD_TypeDef
 //#define SDCARD_INSTANCE_TYPE              SD_TypeDef
-#define SDIO_BUFF_SIZE       64 * 1024
+#define SDIO_BUFF_SIZE       65024 /*The maximum effective transmission length for a single command in the SDMMC DLR register is 65024 bytes (a total of 127 complete data blocks, 63.5 KB).*/
 #define SDIO_MAX_FREQ        (48* 1000 * 1000)
 #define SDIO_MIN_FREQ        400000
 #define SDIO_ALIGN_LEN       32
