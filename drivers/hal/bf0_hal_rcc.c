@@ -1515,7 +1515,8 @@ __HAL_ROM_USED void HAL_RCC_LCPU_SetDiv(int div, int pdiv1, int pdiv2)
         }
 #endif /* SF32LB52X && !SF32LB57X */
     }
-    SystemCoreClock = HAL_RCC_GetHCLKFreq(CORE_ID_LCPU);
+    if (CORE_ID_CURRENT == CORE_ID_LCPU)
+        SystemCoreClock = HAL_RCC_GetHCLKFreq(CORE_ID_LCPU);
 }
 
 void HAL_RCC_LCPU_GetDiv(int *div, int *pdiv1, int *pdiv2)
