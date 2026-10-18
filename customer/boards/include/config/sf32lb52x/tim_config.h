@@ -21,7 +21,6 @@ extern "C" {
 #define GPTIM1_CORE CORE_ID_HCPU
 #define GPTIM2_CORE CORE_ID_HCPU
 #define ATIM1_CORE CORE_ID_HCPU
-#define ATIM2_CORE CORE_ID_HCPU
 #define BTIM1_CORE CORE_ID_HCPU
 #define BTIM2_CORE CORE_ID_HCPU
 #define BTIM3_CORE CORE_ID_LCPU
@@ -79,17 +78,7 @@ extern "C" {
            .name                    = "atim1",      \
            .core                    = ATIM1_CORE,   \
         }
-#endif /* BSP_USING_BTIM1 */
-
-#ifdef BSP_USING_ATIM2
-#define ATIM2_CONFIG                             \
-        {                                            \
-           .tim_handle.Instance     = (GPT_TypeDef *)ATIM2,         \
-           .tim_irqn                = ATIM2_IRQn,    \
-           .name                    = "atim2",       \
-           .core                    = ATIM2_CORE,   \
-        }
-#endif /* BSP_USING_BTIM2 */
+#endif /* BSP_USING_ATIM1 */
 
 #ifdef BSP_USING_BTIM1
 #define BTIM1_CONFIG                            \
