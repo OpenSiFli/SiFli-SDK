@@ -109,6 +109,29 @@ typedef struct
     __IO uint32_t OFIFO7;
 } PTM_TypeDef;
 
+/**
+  * @brief One core slice of PTM_TypeDef, i.e. the registers of a single core.
+  *
+  * The register block of the cores is repeated every 0x30 bytes starting at CCR0,
+  * so this structure must stay identical to one core block of PTM_TypeDef,
+  * reserved words included: its size is the distance between the registers of two
+  * cores (PTM_CORE_REG_STRIDE in bf0_hal_ptm.c).  Keep the two definitions next
+  * to each other when the register map changes.
+  */
+typedef struct
+{
+    __IO uint32_t CCR;      /*!< 0x00 control: PSC / REP / END0 / END1              */
+    __IO uint32_t ICR;      /*!< 0x04 input  FIFO configuration, status in the MSBs */
+    __IO uint32_t OCR;      /*!< 0x08 output FIFO configuration, status in the MSBs */
+    __IO uint32_t X;        /*!< 0x0C 32 bit general purpose register X             */
+    __IO uint32_t Y;        /*!< 0x10 32 bit general purpose register Y             */
+    __IO uint32_t A;        /*!< 0x14 16 bit general purpose register A             */
+    __IO uint32_t B;        /*!< 0x18 16 bit general purpose register B             */
+    __IO uint32_t PC;       /*!< 0x1C program counter                               */
+    __IO uint32_t IFIFO;    /*!< 0x20 input  FIFO data                              */
+    __IO uint32_t OFIFO;    /*!< 0x24 output FIFO data                              */
+    __IO uint32_t RSVD[2];  /*!< 0x28 reserved, pads the slice to 0x30 bytes        */
+} PTM_CoreRegTypeDef;
 
 /******************** Bit definition for PTM_ISR register *********************/
 #define PTM_ISR_EVT0_Pos                (0U)
