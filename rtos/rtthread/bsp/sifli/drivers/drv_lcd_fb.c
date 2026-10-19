@@ -309,6 +309,7 @@ static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
     Enable_LineCpltCbk = 0;
 
 #ifdef BSP_USING_RAMLESS_LCD
+    if (drv_lcd_fb.fb_total > 1)
     /*
      * For RAMLESS LCD, the current fb 'drv_lcd_fb.flush_fb_idx' is always the one
      * being read by the LCDC/PTM.
@@ -337,13 +338,16 @@ static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
             DRV_LCD_FB_ASSERT(RT_EOK == err);
         }
     }
-#else
-    p_fb->fb_flushing_lcd = 0;
-    set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
-
-    err = rt_event_send(&drv_lcd_fb.event,
-                        (0 == drv_lcd_fb.flush_fb_idx) ? EVENT_FB0_FLUSH_DONE : EVENT_FB1_FLUSH_DONE);
+    else
 #endif /* BSP_USING_RAMLESS_LCD */
+    {
+        /* Single buffering must release the current framebuffer. */
+        p_fb->fb_flushing_lcd = 0;
+        set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
+
+        err = rt_event_send(&drv_lcd_fb.event,
+                            (0 == drv_lcd_fb.flush_fb_idx) ? EVENT_FB0_FLUSH_DONE : EVENT_FB1_FLUSH_DONE);
+    }
 
     rt_hw_interrupt_enable(level);
 
