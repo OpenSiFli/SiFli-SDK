@@ -60,6 +60,9 @@ extern "C" {
 #define SPI2_RX_DMA_REQUEST                    DMA_REQUEST_31
 #define I2S1_TX_DMA_REQUEST                    DMA_REQUEST_32
 #define I2S1_RX_DMA_REQUEST                    DMA_REQUEST_33
+/* TODO: keep for compatibility, will be removed if dual i2s changed is merged */
+#define I2S_TX_DMA_REQUEST                     I2S1_TX_DMA_REQUEST
+#define I2S_RX_DMA_REQUEST                     I2S1_RX_DMA_REQUEST
 #define I2S2_TX_DMA_REQUEST                    DMA_REQUEST_34
 #define I2S2_RX_DMA_REQUEST                    DMA_REQUEST_35
 #define PDM1_L_DMA_REQUEST                     DMA_REQUEST_36
