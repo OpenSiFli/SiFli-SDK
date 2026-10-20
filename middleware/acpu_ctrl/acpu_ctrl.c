@@ -61,10 +61,6 @@ static size_t ha_ipc_queue_write(const void *buffer, size_t size, uint32_t timeo
 
 #ifdef ACPU_CALLER_ENABLED
 static rt_mailbox_t g_call_mb;
-extern void *audio_mem_malloc(uint32_t size);
-extern void audio_mem_free(void *ptr);
-extern void *audio_mem_calloc(uint32_t count, uint32_t size);
-extern void *audio_mem_realloc(void *mem_address, unsigned int newsize);
 
 /*
     notice: can not call acpu function in acpu_caller_entry()
@@ -111,12 +107,13 @@ static void acpu_caller_entry(void *parameter)
             }
             else
             {
+                rt_kprintf("acpu call hcpu unknow %d", p_msg->task_id);
                 RT_ASSERT(0);
             }
 
             p_msg->is_rsp = 1;
             p_msg->ret_error_code = 0;
-
+            SCB_CleanInvalidateDCache_by_Addr((uint32_t *)p_msg, sizeof(acpu_ctrl_ipc_msg_t));
             size_t wr_size = ha_ipc_queue_write(&p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
             RT_ASSERT(wr_size == sizeof(acpu_ctrl_ipc_msg_t *));
 
@@ -155,6 +152,8 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             RT_ASSERT(0);
             return -RT_ERROR;
         }
+
+        SCB_CleanInvalidateDCache_by_Addr((uint32_t *)p_msg, sizeof(acpu_ctrl_ipc_msg_t));
 
         if (p_msg->is_rsp) // Handle the response messages(Started by HCPU)
         {
@@ -198,8 +197,6 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 {
     rt_err_t err;
 
-    SCB_CleanInvalidateDCache();
-
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
 #endif /* RT_USING_PM */
@@ -223,6 +220,8 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
     msg.sema = sem;
     msg.ret_error_code = 0;
     msg.ret_value = 0;
+
+    SCB_CleanInvalidateDCache();
 
     msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
     wr_size = ha_ipc_queue_write(&p_msg, msg_size, 1000);
@@ -278,7 +277,7 @@ RT_WEAK int acpu_init(void)
     rt_thread_t tid = rt_thread_create("acpu",
                                        acpu_caller_entry,
                                        NULL,
-                                       1024,
+                                       1536,
                                        RT_THREAD_PRIORITY_HIGH,
                                        RT_THREAD_TICK_DEFAULT);
     rt_thread_startup(tid);

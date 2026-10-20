@@ -167,7 +167,7 @@ void audio_agc_proc(void *agcInst, int16_t spframe[160], int16_t outframe[160], 
 
 #define SWAP_IN_OUT()  do {temp = in; in = out; out = temp;} while(0)
 
-int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disable, uint8_t aec_enable, uint8_t uplink_agc_enable)
+int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink)
 {
     audio_3a_t *thiz = uplink->thiz;
     int16_t  *in = uplink->in;
@@ -175,9 +175,11 @@ int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disab
     int16_t  *temp;
     int16_t  *out_old = uplink->out;
 
-    WebRtcAecm_BufferFarend(thiz->aecmInst, (const int16_t *)uplink->far_ref, thiz->frame_len);
 
-    if (!ans_disable)
+    WebRtcAecm_BufferFarend(thiz->aecmInst, (const int16_t *)uplink->far_ref, thiz->frame_len / 2);
+
+
+    if (!uplink->ans1_disabled)
     {
         audio_ans_proc(thiz->pNS_inst, in, out);
     }
@@ -188,7 +190,7 @@ int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disab
 
     SWAP_IN_OUT();
 
-    if (thiz->is_far_putted && aec_enable)
+    if (thiz->is_far_putted && uplink->aecm_enable)
     {
         aec_input_para_t input_para;
         input_para.nearframe = in;
@@ -203,7 +205,7 @@ int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disab
 
     SWAP_IN_OUT();
 
-    if (uplink_agc_enable)
+    if (uplink->uplink_agc_enable && !thiz->disable_uplink_agc)
     {
         audio_agc_proc(thiz->agcInst, in, out, thiz->samplerate);
     }
@@ -218,11 +220,4 @@ int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink, uint8_t ans_disab
 
     return 0;
 }
-
-int acpu_webrtc_farput(void *aecm, uint8_t *farframe, uint32_t data_len)
-{
-    WebRtcAecm_BufferFarend(aecm, (const int16_t *)farframe,  data_len);
-    return 0;
-}
-
 

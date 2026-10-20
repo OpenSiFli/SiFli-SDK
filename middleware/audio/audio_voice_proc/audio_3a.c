@@ -564,7 +564,6 @@ void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_si
     uint16_t getsize, putsize;
     int16_t  *in;
     int16_t  *out;
-    int16_t  *result;
     int16_t  *temp;
 
     in = frame1;
@@ -591,14 +590,12 @@ void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_si
     SWAP_IN_OUT();
 
 #if WEBRTC_RUN_IN_ACPU
-    uint16_t farframe[160] = {0};
-    uint32_t get_size = rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
-    if (get_size != p_3a_env->frame_len)
+    int16_t farframe[160] = {0};
+    if (rt_ringbuffer_data_len(p_3a_env->rbuf_far) >= p_3a_env->frame_len)
     {
-        LOG_I("far empty");
+        rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
+        audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
     }
-
-    audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
     uint8_t error_code = 1;
     acpu_webrtc_uplink_parameter_t arg = {0};
     arg.thiz = p_3a_env;
@@ -608,7 +605,6 @@ void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_si
     arg.ans1_disabled = g_ans1_disabled;
     arg.aecm_enable = g_u16_test_aec;
     arg.uplink_agc_enable = g_uplink_agc;
-    arg.is_far_putted = p_3a_env->is_far_putted;
     int ret = (int)acpu_run_task(ACPU_TASK_webrtc_uplink, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
     if (!ret)
@@ -851,7 +847,7 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
     }
     else
     {
-        LOG_I("3a_w far full");
+        LOG_D("3a_w far full");
         rt_ringbuffer_put(p_3a_env->rbuf_far, fifo, fifo_size);
     }
 

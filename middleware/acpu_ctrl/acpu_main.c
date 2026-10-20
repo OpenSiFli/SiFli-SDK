@@ -93,6 +93,8 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     msg.ret_error_code = 0;
     msg.ret_value = 0;
 
+    SCB_CleanInvalidateDCache();
+
     msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
     wr_size = ah_ipc_write(&p_msg, msg_size, 1000);
     RT_ASSERT(wr_size == msg_size);
@@ -373,7 +375,7 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
     case ACPU_TASK_webrtc_uplink:
     {
         acpu_webrtc_uplink_parameter_t *arg = (acpu_webrtc_uplink_parameter_t *)param;
-        int ret = acpu_webrtc_uplink(arg, arg->ans1_disabled, arg->aecm_enable, arg->uplink_agc_enable);
+        int ret = acpu_webrtc_uplink(arg);
         acpu_send_result((uint32_t)0, ret);
         break;
     }

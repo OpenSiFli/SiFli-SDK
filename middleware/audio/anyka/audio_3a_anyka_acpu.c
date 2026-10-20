@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
+#include <rtthread.h>
 #include <string.h>
 #include <stdlib.h>
 #include "acpu_ctrl.h"
@@ -25,6 +25,7 @@ static T_SSL_EVENT          *ssl_data_out;
 static uint32_t             ssl_data_out_len;
 
 void acpu_printf(const char *fmt, ...);
+void acpu_send_assert(const char *file, int line);
 
 static void srp_ssl_lib_init()
 {
