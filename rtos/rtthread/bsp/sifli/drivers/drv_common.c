@@ -225,7 +225,11 @@ void SysTick_Handler(void)
     old_tick = rt_tick_get();
 
 #ifdef SOC_BF0_HCPU
+#if defined(SF32LB52X) || defined(SF32LB57X)
+    if (true) /* PMU is by HPSYS side on 52x and 57x */
+#else
     if (HAL_HPAON_IS_LP_ACTIVE() && HAL_HPAON_IS_HP2LP_REQ_ACTIVE())
+#endif /* SF32LB52X || SF32LB57X */
 #else
 #if defined(SF32LB52X) || defined(SF32LB57X)
 //TODO: LCPU cannot access PMU when HCPU is in sleep
