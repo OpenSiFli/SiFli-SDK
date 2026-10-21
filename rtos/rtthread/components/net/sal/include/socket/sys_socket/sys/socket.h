@@ -57,7 +57,7 @@ int socketpair(int domain, int type, int protocol, int *fds);
 #define recv(s, mem, len, flags)                           sal_recvfrom(s, mem, len, flags, NULL, NULL)
 #define recvfrom(s, mem, len, flags, from, fromlen)        sal_recvfrom(s, mem, len, flags, from, fromlen)
 #define recvmsg(s, message, flags)                         sal_recvmsg(s, message, flags)
-#define send(s, dataptr, size, flags)                      sal_sendto(s, dataptr, size, flags, NULL, NULL)
+#define send(s, dataptr, size, flags)                      sal_sendto(s, dataptr, size, flags, NULL, 0)
 #define sendto(s, dataptr, size, flags, to, tolen)         sal_sendto(s, dataptr, size, flags, to, tolen)
 #define sendmsg(s, message, flags)                         sal_sendmsg(s, message, flags)
 #define socket(domain, type, protocol)                     sal_socket(domain, type, protocol)

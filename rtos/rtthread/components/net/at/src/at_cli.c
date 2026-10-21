@@ -200,6 +200,7 @@ static void client_cli_parser(at_client_t  client)
     char ch;
     char cur_line[FINSH_CMD_SIZE] = { 0 };
     rt_size_t cur_line_len = 0;
+    rt_bool_t exit_cli = RT_FALSE;
     static rt_err_t (*client_odev_rx_ind)(rt_device_t dev, rt_size_t size) = RT_NULL;
     rt_base_t level;
     rt_thread_t at_client;
@@ -228,10 +229,10 @@ static void client_cli_parser(at_client_t  client)
         if (client_rx_fifo && at_client)
         {
             rt_kprintf("======== Welcome to using RT-Thread AT command client cli ========\n");
-            rt_kprintf("Cli will forward your command to server port(%s). Press 'ESC' to exit.\n", client->device->parent.name);
+            rt_kprintf("Cli will forward your command to server port(%s). Press 'ESC' or input 'exit' to exit.\n", client->device->parent.name);
             rt_thread_startup(at_client);
             /* process user input */
-            while (ESC_KEY != (ch = console_getchar()))
+            while (!exit_cli && ESC_KEY != (ch = console_getchar()))
             {
                 if (ch == BACKSPACE_KEY || ch == DELECT_KEY)
                 {
@@ -247,8 +248,16 @@ static void client_cli_parser(at_client_t  client)
                     /* execute a AT request */
                     if (cur_line_len)
                     {
+                        cur_line[cur_line_len] = '\0';
                         rt_kprintf("\n");
-                        at_obj_exec_cmd(client, RT_NULL, "%.*s", cur_line_len, cur_line);
+                        if (!strcmp(cur_line, "exit") || !strcmp(cur_line, "quit"))
+                        {
+                            exit_cli = RT_TRUE;
+                        }
+                        else
+                        {
+                            at_obj_exec_cmd(client, RT_NULL, "%.*s", cur_line_len, cur_line);
+                        }
                     }
                     cur_line_len = 0;
                 }

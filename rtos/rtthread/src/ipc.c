@@ -210,6 +210,7 @@ __ROM_USED rt_err_t rt_sem_init(rt_sem_t    sem,
 
     /* set init value */
     sem->value = (rt_uint16_t)value;
+    sem->max_value = UINT16_MAX;
 
     /* set parent */
     sem->parent.parent.flag = flag;
@@ -273,6 +274,7 @@ __ROM_USED rt_sem_t rt_sem_create(const char *name, rt_uint32_t value, rt_uint8_
 
     /* set init value */
     sem->value = (rt_uint16_t)value;
+    sem->max_value = UINT16_MAX;
 
     /* set parent */
     sem->parent.parent.flag = flag;
@@ -457,7 +459,17 @@ __ROM_USED rt_err_t rt_sem_release(rt_sem_t sem)
         need_schedule = RT_TRUE;
     }
     else
-        sem->value ++; /* increase value */
+    {
+        if (sem->value < sem->max_value)
+        {
+            sem->value ++; /* increase value */
+        }
+        else
+        {
+            rt_hw_interrupt_enable(temp);
+            return -RT_EFULL; /* value overflowed */
+        }
+    }
 
     /* enable interrupt */
     rt_hw_interrupt_enable(temp);
@@ -506,6 +518,38 @@ __ROM_USED rt_err_t rt_sem_control(rt_sem_t sem, int cmd, void *arg)
         rt_hw_interrupt_enable(level);
 
         rt_schedule();
+
+        return RT_EOK;
+    }
+    else if (cmd == RT_IPC_CMD_SET_VLIMIT)
+    {
+        rt_ubase_t max_value;
+        rt_bool_t need_schedule = RT_FALSE;
+
+        max_value = (rt_uint16_t)((rt_ubase_t)arg);
+        if (max_value > RT_UINT16_MAX || max_value < 1)
+        {
+            return -RT_EINVAL;
+        }
+
+        level = rt_hw_interrupt_disable();
+        if (max_value < sem->value)
+        {
+            if (!rt_list_isempty(&sem->parent.suspend_thread))
+            {
+                /* resume all waiting thread */
+                rt_ipc_list_resume_all(&sem->parent.suspend_thread);
+                need_schedule = RT_TRUE;
+            }
+        }
+        /* set new value */
+        sem->max_value = max_value;
+        rt_hw_interrupt_enable(level);
+
+        if (need_schedule)
+        {
+            rt_schedule();
+        }
 
         return RT_EOK;
     }
