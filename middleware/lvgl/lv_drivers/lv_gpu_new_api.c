@@ -16,6 +16,7 @@
 #include "section.h"
 #include "cpu_usage_profiler.h"
 #include "lv_draw_sw.h"
+#include "src/misc/lv_gc.h"
 #include "lvsf_perf.h"
 #include "lv_gpu_sifli_epic.h"
 
@@ -1505,11 +1506,38 @@ static void draw_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *ds
     LV_ASSERT(0);
 }
 
+#if LV_DRAW_COMPLEX
+/* Only omit snapshots in fully covered straight bands; curved edges can
+ * contain antialiased pixels even when their geometry contains the area. */
+static bool bg_image_needs_parent_mask(const lv_area_t *clip)
+{
+    for (uint32_t i = 0; i < _LV_MASK_MAX_NUM; i++)
+    {
+        const _lv_draw_mask_common_dsc_t *param = LV_GC_ROOT(_lv_draw_mask_list[i]).param;
+        if (!param) continue;
+        if (param->type != LV_DRAW_MASK_TYPE_RADIUS) return true;
+        const lv_draw_mask_radius_param_t *radius = (const lv_draw_mask_radius_param_t *)param;
+        const lv_area_t *rect = &radius->cfg.rect;
+        if (radius->cfg.outer)
+        {
+            if (_lv_area_is_on(clip, rect)) return true;
+            continue;
+        }
+        if (!_lv_area_is_in(clip, rect, 0)) return true;
+        int32_t r = radius->cfg.radius;
+        if (!((clip->y1 >= rect->y1 + r && clip->y2 <= rect->y2 - r) ||
+                (clip->x1 >= rect->x1 + r && (int32_t)clip->x2 + 1 <= rect->x2 - r)))
+            return true;
+    }
+    return false;
+}
+#endif
+
 /* Decode the rectangle background image and configure the EPIC foreground
  * layer.  If a parent mask is active, snapshot it into A8 so the driver
  * can clip the entire RECT operation without touching the LVGL mask stack.
  * The mask data is owned by the image allocation and exposed through op->mask. */
-static drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
+static __NOINLINE drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
         const lv_draw_rect_dsc_t *dsc, const lv_area_t *coords, EPIC_LayerConfigTypeDef *mask)
 {
     HAL_EPIC_LayerConfigInit(mask);
@@ -1571,9 +1599,11 @@ static drv_epic_rect_image_t *bg_image_prepare(lv_draw_ctx_t *draw_ctx,
     lv_area_t area = {left, top, left + decoded->header.w - 1, top + decoded->header.h - 1};
     lv_area_t image_clip;
     if (!dsc->bg_img_tiled && !_lv_area_intersect(&image_clip, &clip, &area)) goto done;
+    /* With no rectangle color, only the centered image needs parent coverage. */
+    if (!dsc->bg_img_tiled && dsc->bg_opa == LV_OPA_TRANSP) clip = image_clip;
     size_t mask_size = 0;
 #if LV_DRAW_COMPLEX
-    if (lv_draw_mask_get_cnt())
+    if (bg_image_needs_parent_mask(&clip))
         mask_size = (size_t)lv_area_get_width(&clip) * lv_area_get_height(&clip);
 #endif
     if (mask_size > SIZE_MAX - sizeof(*image)) goto done;
@@ -1614,7 +1644,9 @@ static void draw_bg(lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t *dsc, cons
 {
     lv_color32_t ax_color_u32;
     EPIC_LayerConfigTypeDef image_mask;
-    drv_epic_rect_image_t *image = bg_image_prepare(draw_ctx, dsc, coords, &image_mask);
+    drv_epic_rect_image_t *image = NULL;
+    if (dsc->bg_img_src && dsc->bg_img_opa > LV_OPA_MIN)
+        image = bg_image_prepare(draw_ctx, dsc, coords, &image_mask);
 
     /*Draw bg*/
     if (dsc->bg_opa >= LV_OPA_MIN || image)
@@ -1864,7 +1896,8 @@ static void draw_rect(struct _lv_draw_ctx_t *draw_ctx, const lv_draw_rect_dsc_t 
     draw_shadow(draw_ctx, dsc, coords);
 
     /*Draw bg*/
-    draw_bg(draw_ctx, dsc, coords);
+    if (dsc->bg_opa >= LV_OPA_MIN || (dsc->bg_img_src && dsc->bg_img_opa > LV_OPA_MIN))
+        draw_bg(draw_ctx, dsc, coords);
 
     /*Draw border*/
     draw_border(draw_ctx, dsc, coords);
