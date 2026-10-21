@@ -11,7 +11,7 @@
 #include "drv_log.h"
 #include "drv_gpio.h"
 #include "bf0_hal.h"
-
+#include "bf0_mbox_common.h"
 #ifdef BSP_USING_PM
     #include "bf0_pm.h"
 #endif /* BSP_USING_PM */
@@ -19,6 +19,8 @@
 #ifndef LXT_LP_CYCLE
     #define LXT_LP_CYCLE 200
 #endif
+
+#define TICK_COMPENSATION_ENABLED
 
 /** @addtogroup bsp_driver Driver IO
   * @{
@@ -183,10 +185,10 @@ __ROM_USED int rt_in_system_heap(void *ptr)
 void SysTick_Handler(void)
 {
     uint32_t pin_wsr;
-#ifdef BSP_USING_PM
+#ifdef TICK_COMPENSATION_ENABLED
     rt_tick_t old_tick;
     rt_tick_t new_tick;
-#endif /* BSP_USING_PM */
+#endif /* TICK_COMPENSATION_ENABLED */
 
 #ifdef HAL_RISCV_MODULE_ENABLED
     // Reload timer
@@ -221,7 +223,7 @@ void SysTick_Handler(void)
 
     /* hal tick is not used, don't compensate */
     HAL_IncTick();
-#if defined(BSP_USING_PM)
+#ifdef TICK_COMPENSATION_ENABLED
     old_tick = rt_tick_get();
 
 #ifdef SOC_BF0_HCPU
@@ -239,7 +241,7 @@ void SysTick_Handler(void)
 #endif /* SF32LB52X || SF32LB57X */
 #endif /* SOC_BF0_HCPU */
     {
-        new_tick = pm_latch_tick(old_tick + 1, HAL_GTIMER_READ(), HAL_LPTIM_GetFreq(), (void *)1);
+        new_tick = sf_latch_tick(old_tick + 1, HAL_GTIMER_READ(), HAL_LPTIM_GetFreq(), (void *)1);
     }
     else
     {
@@ -260,13 +262,13 @@ void SysTick_Handler(void)
             rt_tick_increase();
             rt_tick_increase();
             /* update last_latch_tick as rt_tick is not updated as expected */
-            pm_set_last_latch_tick(old_tick + 2);
+            sf_set_last_latch_tick(old_tick + 2);
             //rt_tick_increase_by_step(new_tick - old_tick);
         }
     }
 #else
     rt_tick_increase();
-#endif /* BSP_USING_PM */
+#endif /* TICK_COMPENSATION_ENABLED */
 
     /* leave interrupt */
     rt_interrupt_leave();

@@ -40,6 +40,8 @@
     #endif /* USING_SF_CRYPTO */
 #endif /* SF32LB57X */
 
+#include "bf0_mbox_common.h"
+
 #define LOG_TAG       "sys.pm"
 #include "log.h"
 
@@ -212,20 +214,11 @@ typedef struct
 
 typedef struct
 {
-    bool init;
     /** GTIME when systick is stopped */
     uint32_t sleep_start_time;
-    /** GTIME when GTIME and rt_tick are latched */
-    uint32_t last_latch_time;
-    /** rt_tick when GTIME nd rt_tick are latched */
-    uint32_t last_latch_tick;
-    /** fractional part of tick error which cannot be compensated on rt_tick yet, must be less than 1 */
-    float tick_error_frac;
-    uint32_t tick_acc;
     /** GTIME when system wakeups */
     uint32_t wakeup_time;
-    uint32_t tick_reset_cnt;
-} pm_tick_cal_t;
+} pm_record_t;
 
 typedef struct
 {
@@ -364,7 +357,7 @@ static pm_debug_metrics_ctx_t pm_debug_metrics_ctx;
 
 #endif /* PM_METRICS_USE_COLLECTOR */
 
-static pm_tick_cal_t pm_tick_cal;
+static pm_record_t pm_record;
 static pm_scenario_ctx_t pm_scenario_ctx;
 
 #ifndef BSP_PM_PIN_BACKUP_DISABLED
@@ -1753,7 +1746,7 @@ static void pm_update_wakeup_src_stat(void)
         if ((1UL << stat->wakeup_src) & wakeup_src)
         {
             stat->wakeup_times++;
-            stat->run_time += (float)(pm_tick_cal.sleep_start_time - pm_tick_cal.wakeup_time) / HAL_LPTIM_GetFreq();
+            stat->run_time += (float)(pm_record.sleep_start_time - pm_record.wakeup_time) / HAL_LPTIM_GetFreq();
             wakeup_src &= ~(1UL << stat->wakeup_src);
         }
     }
@@ -1767,7 +1760,7 @@ static void pm_update_wakeup_src_stat(void)
             stat = &pm_stat.wakeup_src_stat[pm_stat.wakeup_src_num];
             stat->wakeup_src = i;
             stat->wakeup_times = 1;
-            stat->run_time = (float)(pm_tick_cal.sleep_start_time - pm_tick_cal.wakeup_time) / HAL_LPTIM_GetFreq();
+            stat->run_time = (float)(pm_record.sleep_start_time - pm_record.wakeup_time) / HAL_LPTIM_GetFreq();
 
             wakeup_src &= ~(1UL << i);
             pm_stat.wakeup_src_num++;
@@ -1841,7 +1834,7 @@ static void sifli_sleep(struct rt_pm *pm, uint8_t mode)
 
         r = sifli_standby_handler();
 
-        pm_tick_cal.wakeup_time = HAL_GTIMER_READ();
+        pm_record.wakeup_time = HAL_GTIMER_READ();
 
 #ifdef PM_PROFILING_ENABLED
         test_pm_data.restore_time.device_resume_begin = HAL_GTIMER_READ();
@@ -1906,14 +1899,14 @@ static void sifli_sleep(struct rt_pm *pm, uint8_t mode)
     case PM_SLEEP_MODE_DEEP:
     {
         int32_t i = sifli_deep_handler();
-        pm_tick_cal.wakeup_time = HAL_GTIMER_READ();
+        pm_record.wakeup_time = HAL_GTIMER_READ();
         if (i >= 0)
             return;
         break;
     }
     case PM_SLEEP_MODE_LIGHT:
         sifli_light_handler();
-        pm_tick_cal.wakeup_time = HAL_GTIMER_READ();
+        pm_record.wakeup_time = HAL_GTIMER_READ();
         break;
     default:
         break;
@@ -2471,7 +2464,7 @@ __ROM_USED void sifli_timer_start(struct rt_pm *pm, rt_uint32_t timeout)
     t.usec *= (1000000 / RT_TICK_PER_SECOND);
     g_sleep_tick = 0;
 
-    pm_tick_cal.sleep_start_time = HAL_GTIMER_READ();
+    pm_record.sleep_start_time = HAL_GTIMER_READ();
 
     timer_dev = (rt_hwtimer_t *)g_t_hwtimer;
 
@@ -2551,18 +2544,19 @@ __ROM_USED rt_tick_t sifli_timer_get_tick(struct rt_pm *pm)
 
     gtime_freq = HAL_LPTIM_GetFreq();
     /* wait until GTIMER has been latched, will wait for one lp clock at most */
-    while (HAL_GTIMER_READ() == pm_tick_cal.wakeup_time)
+    while (HAL_GTIMER_READ() == pm_record.wakeup_time)
     {
     }
     curr_time = HAL_GTIMER_READ();
-    delta_time = (curr_time - pm_tick_cal.sleep_start_time);
+    delta_time = (curr_time - pm_record.sleep_start_time);
 
+    /* TODO: this calculation can be removed, as it's overwritten by sf_latch_tick */
     g_sleep_tick = (uint64_t)delta_time * RT_TICK_PER_SECOND / gtime_freq;
 
     base_tick = rt_tick_get();
     new_tick = base_tick + g_sleep_tick;
 
-    new_tick = pm_latch_tick(new_tick, curr_time, gtime_freq, (void *)0);
+    new_tick = sf_latch_tick(new_tick, curr_time, gtime_freq, (void *)0);
     g_sleep_tick = new_tick - base_tick;
 
     return g_sleep_tick;
@@ -2578,52 +2572,6 @@ struct rt_pm_ops sifli_pm =
     .timer_stop = sifli_timer_stop,
     .timer_get_tick = sifli_timer_get_tick,
 };
-
-__ROM_USED rt_tick_t pm_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data)
-{
-    uint32_t delta_time;
-    rt_tick_t new_tick_ref;
-    float delta_tick_ref;
-
-    if (!pm_tick_cal.init)
-    {
-        return curr_tick;
-    }
-
-    delta_time = (curr_time - pm_tick_cal.last_latch_time);
-    delta_tick_ref = ((float)delta_time * RT_TICK_PER_SECOND / gtime_freq + pm_tick_cal.tick_error_frac);
-    new_tick_ref = pm_tick_cal.last_latch_tick + (uint32_t)delta_tick_ref;
-
-    if ((new_tick_ref != curr_tick)      /* tick needs to be adjusted */
-            || (delta_tick_ref > (60 * 1000))) /* tick has not been latched for 1 minutes */
-    {
-        /* only support 1ms tick */
-        RT_ASSERT(RT_TICK_PER_SECOND == 1000);
-        // rt_kprintf("adj:%d,%d,%d,%d,%.2f\n", curr_tick, curr_time, new_tick_ref, (uint32_t)delta_tick_ref, gtime_freq);
-        // rt_kprintf("adj2:%d,%d,%.2f,%.2f\n", pm_tick_cal.last_latch_time, pm_tick_cal.last_latch_tick, pm_tick_cal.tick_error_frac, delta_tick_ref);
-
-        if (((int32_t)(new_tick_ref - curr_tick) < 0) && (1 != (uint32_t)user_data))
-        {
-            /* new_tick_ref is less than curr_tick, use curr_tick instead */
-            new_tick_ref = curr_tick;
-            delta_tick_ref = (float)0;
-            pm_tick_cal.tick_reset_cnt++;
-        }
-        pm_tick_cal.last_latch_tick = new_tick_ref;
-        pm_tick_cal.last_latch_time = curr_time;
-        pm_tick_cal.tick_error_frac = (delta_tick_ref - (uint32_t)delta_tick_ref);
-        // rt_kprintf("adj2:%d,%d,%.2f,%.2f\n", pm_tick_cal.last_latch_time, pm_tick_cal.last_latch_tick, pm_tick_cal.tick_error_frac, delta_tick_ref);
-
-        RT_ASSERT(pm_tick_cal.tick_error_frac < 1);
-    }
-
-    return new_tick_ref;
-}
-
-void pm_set_last_latch_tick(rt_tick_t last_latch_tick)
-{
-    pm_tick_cal.last_latch_tick = last_latch_tick;
-}
 
 #ifdef SOC_BF0_HCPU
 #define LPTIMER "lptim1"
@@ -3195,10 +3143,6 @@ __ROM_USED int low_power_init(void)
     pm_init_sp = *(uint32_t *)&__Vectors;
 
 #endif /* SF32LB55X && SOC_BF0_HCPU */
-
-    pm_tick_cal.last_latch_time = HAL_GTIMER_READ();
-    pm_tick_cal.last_latch_tick = rt_tick_get();
-    pm_tick_cal.init = true;
 
 #if defined(SOC_BF0_LCPU) && defined(PM_DEEP_ENABLE) && defined(SF32LB58X)
     HAL_LPAON_ENABLE_DS_PWR_REQ();
