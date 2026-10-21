@@ -100,7 +100,7 @@ done
 | 编译报 `undefined reference`（`HAL_PTM_*` / `PTM1_BASE`） | 目标芯片不是 SF32LB57x：PTM 只在 57x 上提供，本 HAL 也只在 HCPU 侧使能。请用带 PTM 的板子编译本示例。 |
 
 ## 参考文档
-+ PTM HAL 使用说明：[PTM](../../../../docs/source/zh_CN/hal/ptm.md)
++ PTM HAL 使用说明：[PTM](/hal/ptm.md)
 + UM5701 第 18 章（PTM），FIFO 位域见 ICRx/OCR 寄存器说明
 
 ## 更新记录

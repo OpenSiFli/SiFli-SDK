@@ -89,7 +89,7 @@ one, hence `0x0`).
 | The build fails with `undefined reference` (`HAL_PTM_*` / `PTM1_BASE`) | The target chip is not an SF32LB57x: PTM exists on 57x only and this HAL is enabled for the HCPU side. Build this example for a board that has PTM. |
 
 ## Reference Documents
-+ PTM HAL guide: [PTM](../../../../docs/source/en/hal/ptm.md)
++ PTM HAL guide: [PTM](/hal/ptm.md)
 + UM5701 chapter 18 (PTM)
 
 ## Update Log
