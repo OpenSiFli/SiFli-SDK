@@ -113,14 +113,14 @@ if GetDepend(['BSP_USING_EPIC']):
         print("Warning: EPIC driver requrie RT_USING_MESSAGEQUEUE!")
     else:
         if GetDepend(['DRV_EPIC_NEW_API_DUAL_CORE_ACPU']):
-            src += ['drv_epic_mask.c','drv_epic_rl_draw.c','drv_epic_rl_ll.c','drv_epic_rl_com.c']
+            src += ['drv_epic_mask.c', 'drv_epic_shadow_cache.c', 'drv_epic_rl_draw.c', 'drv_epic_rl_ll.c', 'drv_epic_rl_com.c']
         else:
             if GetDepend(['DRV_EPIC_NEW_API_DUAL_CORE_HCPU']):
                 src += ['drv_epic.c','drv_epic_rl_mng.c','drv_epic_rl_com.c']
             else:
                 src += ['drv_epic.c']
                 if GetDepend(['DRV_EPIC_NEW_API']):
-                    src += ['drv_epic_rl_com.c', 'drv_epic_mask.c','drv_epic_rl_mng.c','drv_epic_rl_ll.c','drv_epic_rl_draw.c']
+                    src += ['drv_epic_rl_com.c', 'drv_epic_mask.c', 'drv_epic_shadow_cache.c', 'drv_epic_rl_mng.c','drv_epic_rl_ll.c','drv_epic_rl_draw.c']
                 else:
                     src += ['drv_epic_single.c']
 

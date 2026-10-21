@@ -7,6 +7,7 @@
 #if defined(DRV_EPIC_NEW_API) && defined(BSP_USING_EPIC)
 #include "drv_epic_private.h"
 #include "drv_epic_mask.h"
+#include "drv_epic_shadow_cache.h"
 #include "string.h"
 #ifdef DRV_EPIC_ARC_MASK_VGLITE
 #include "drv_epic_arc_vglite.h"
@@ -1504,6 +1505,69 @@ static void shadow_blur_corner(uint32_t size, uint32_t sw, uint16_t *buf, uint16
     }
 }
 
+typedef struct
+{
+    EPIC_AreaTypeDef core;
+    int32_t width;
+    int32_t radius;
+    int32_t size;
+} shadow_mask_generate_ctx_t;
+
+/* Generate the blurred A8 corner mask shared by shadow render operations. */
+static rt_err_t shadow_mask_generate(uint8_t *mask_buf, void *user_data)
+{
+    shadow_mask_generate_ctx_t *ctx = user_data;
+    int32_t size = ctx->size;
+    int32_t width = ctx->width;
+    int32_t radius = ctx->radius;
+    uint16_t *coverage = epic_malloc((size_t)size * size * sizeof(*coverage));
+    uint16_t *line = epic_malloc((size_t)size * sizeof(*line));
+    uint8_t *coverage_line = epic_malloc((size_t)size);
+    if (!coverage || !line || !coverage_line)
+    {
+        epic_free(coverage);
+        epic_free(line);
+        epic_free(coverage_line);
+        return -RT_ENOMEM;
+    }
+
+    EPIC_AreaTypeDef corner = ctx->core;
+    corner.x1 = width / 2 + radius - 1 - ((width & 1) ? 0 : 1);
+    corner.y0 = width / 2 + 1;
+    corner.x0 = corner.x1 - HAL_EPIC_AreaWidth(&ctx->core);
+    corner.y1 = corner.y0 + HAL_EPIC_AreaHeight(&ctx->core);
+    drv_epic_mask_radius_param_t rounded;
+    drv_epic_mask_radius_init2(&rounded, &corner, radius, false);
+    void *corner_masks[] = {&rounded, NULL};
+    int32_t blur = width == 1 ? 1 : width >> 1;
+    for (int32_t y = 0; y < size; y++)
+    {
+        memset(coverage_line, 255, size);
+        if (drv_epic_mask_apply(corner_masks, coverage_line, 0, y, size) == DRAW_MASK_RES_TRANSP)
+            memset(coverage_line, 0, size);
+        for (int32_t x = 0; x < size; x++) coverage[y * size + x] = (coverage_line[x] << 6) / blur;
+    }
+    if (blur > 1)
+    {
+        shadow_blur_corner(size, blur, coverage, line);
+        blur += width & 1;
+        if (blur > 1)
+        {
+            for (int32_t i = 0; i < size * size; i++)
+                coverage[i] = coverage[i] ? ((coverage[i] == 255) ? (255u << 6) / blur : (coverage[i] << 6) / blur) : 0;
+            shadow_blur_corner(size, blur, coverage, line);
+        }
+    }
+    drv_epic_mask_free_param(&rounded);
+    for (int32_t i = 0; i < size * size; i++)
+        mask_buf[i] = width < 4 ? coverage[i] >> 6 : coverage[i];
+
+    epic_free(line);
+    epic_free(coverage);
+    epic_free(coverage_line);
+    return RT_EOK;
+}
+
 static rt_err_t render_shadow(drv_epic_operation *op, EPIC_LayerConfigTypeDef *dst,
                               const EPIC_AreaTypeDef *clip)
 {
@@ -1528,48 +1592,22 @@ static rt_err_t render_shadow(drv_epic_operation *op, EPIC_LayerConfigTypeDef *d
                          MIN(HAL_EPIC_AreaWidth(&core), HAL_EPIC_AreaHeight(&core)) / 2));
     int32_t size = width + radius;
     if (size <= 0 || (size_t)size > SIZE_MAX / (size_t)size / sizeof(uint16_t)) return -RT_EINVAL;
-    uint16_t *coverage = epic_malloc((size_t)size * size * sizeof(*coverage));
-    uint16_t *line = epic_malloc((size_t)size * sizeof(*line));
-    uint8_t *coverage_line = epic_malloc((size_t)size);
-    uint8_t *mask_buf = epic_malloc((size_t)size * size);
-    if (!coverage || !line || !coverage_line || !mask_buf)
+    int32_t tile_width = gp_drv_epic->dbg_mask_buf_pool_max / 2;
+    if (tile_width <= 0) return -RT_ENOMEM;
+
+    shadow_mask_generate_ctx_t generate_ctx = {core, width, radius, size};
+    drv_epic_shadow_cache_key_t key =
     {
-        epic_free(coverage); epic_free(line); epic_free(coverage_line); epic_free(mask_buf);
-        return -RT_ENOMEM;
-    }
-    EPIC_AreaTypeDef corner = core;
-    corner.x1 = width / 2 + radius - 1 - ((width & 1) ? 0 : 1);
-    corner.y0 = width / 2 + 1;
-    corner.x0 = corner.x1 - HAL_EPIC_AreaWidth(&core);
-    corner.y1 = corner.y0 + HAL_EPIC_AreaHeight(&core);
-    drv_epic_mask_radius_param_t rounded;
-    drv_epic_mask_radius_init2(&rounded, &corner, radius, false);
-    void *corner_masks[] = {&rounded, NULL};
-    int32_t blur = width == 1 ? 1 : width >> 1;
-    for (int32_t y = 0; y < size; y++)
-    {
-        memset(coverage_line, 255, size);
-        if (drv_epic_mask_apply(corner_masks, coverage_line, 0, y, size) == DRAW_MASK_RES_TRANSP)
-            memset(coverage_line, 0, size);
-        for (int32_t x = 0; x < size; x++) coverage[y * size + x] = (coverage_line[x] << 6) / blur;
-    }
-    if (blur > 1)
-    {
-        shadow_blur_corner(size, blur, coverage, line);
-        blur += width & 1;
-        if (blur > 1)
-        {
-            for (int32_t i = 0; i < size * size; i++)
-                coverage[i] = coverage[i] ? ((coverage[i] == 255) ? (255u << 6) / blur : (coverage[i] << 6) / blur) : 0;
-            shadow_blur_corner(size, blur, coverage, line);
-        }
-    }
-    drv_epic_mask_free_param(&rounded);
-    /* Blurred coverage is already in the 0..255 range. When width < 4,
-     * no blur runs, so remove the initial 64-fold scaling before storing it. */
-    for (int32_t i = 0; i < size * size; i++)
-        mask_buf[i] = width < 4 ? coverage[i] >> 6 : coverage[i];
-    epic_free(line); epic_free(coverage); epic_free(coverage_line);
+        .width = width,
+        .radius = radius,
+        .core_width = HAL_EPIC_AreaWidth(&core),
+        .core_height = HAL_EPIC_AreaHeight(&core),
+        .size = size,
+    };
+    uint8_t *mask_buf;
+    rt_err_t result = drv_epic_shadow_cache_acquire(&key, (size_t)size * size,
+                                                    shadow_mask_generate, &generate_ctx, &mask_buf);
+    if (result != RT_EOK) return result;
 
     /* Corner mask coordinates are reflected around the full shadow bounds. */
     EPIC_AreaTypeDef shadow = outer;
@@ -1581,14 +1619,7 @@ static rt_err_t render_shadow(drv_epic_operation *op, EPIC_LayerConfigTypeDef *d
     void *masks[] = {&sm, &hole, NULL};
     draw_rect_dsc_t rect = {0};
     rect.argb8888 = op->desc.shadow.argb8888;
-    int32_t tile_width = gp_drv_epic->dbg_mask_buf_pool_max / 2;
-    if (tile_width <= 0)
-    {
-        drv_epic_mask_free_param(&hole);
-        epic_free(mask_buf);
-        return -RT_ENOMEM;
-    }
-    rt_err_t result = RT_EOK;
+    result = RT_EOK;
     for (int32_t x = area.x0; x <= area.x1; x += tile_width)
     {
         EPIC_AreaTypeDef tile = area;
@@ -1599,7 +1630,7 @@ static rt_err_t render_shadow(drv_epic_operation *op, EPIC_LayerConfigTypeDef *d
         if (result != RT_EOK) break;
     }
     drv_epic_mask_free_param(&hole);
-    epic_free(mask_buf);
+    drv_epic_shadow_cache_release(mask_buf);
     return result;
 }
 
