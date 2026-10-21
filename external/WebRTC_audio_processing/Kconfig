@@ -7,7 +7,9 @@ if PKG_USING_WEBRTC
     config WEBRTC_RUN_IN_ACPU
     depends on BSP_USING_ACPU
     bool "webrtc run in acpu"
-    default n 
+    default y if BF0_ACPU
+    default n
+
 
     choice
         prompt "Select noise suppression Type"

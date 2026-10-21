@@ -40,6 +40,8 @@ static size_t ha_ipc_queue_write(const void *buffer, size_t size, uint32_t timeo
     rt_err_t err;
     size_t wr_size;
 
+    SCB_CleanDCache();
+
     err = rt_mutex_take(&s_ha_ipc_tx_mutex, RT_WAITING_FOREVER);
     if (RT_EOK != err)
     {
@@ -107,13 +109,12 @@ static void acpu_caller_entry(void *parameter)
             }
             else
             {
-                rt_kprintf("acpu call hcpu unknow %d", p_msg->task_id);
+                rt_kprintf("acpu call hcpu unknow %d\n", p_msg->task_id);
                 RT_ASSERT(0);
             }
 
             p_msg->is_rsp = 1;
             p_msg->ret_error_code = 0;
-            SCB_CleanInvalidateDCache_by_Addr((uint32_t *)p_msg, sizeof(acpu_ctrl_ipc_msg_t));
             size_t wr_size = ha_ipc_queue_write(&p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
             RT_ASSERT(wr_size == sizeof(acpu_ctrl_ipc_msg_t *));
 
@@ -153,7 +154,7 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             return -RT_ERROR;
         }
 
-        SCB_CleanInvalidateDCache_by_Addr((uint32_t *)p_msg, sizeof(acpu_ctrl_ipc_msg_t));
+        SCB_InvalidateDCache();
 
         if (p_msg->is_rsp) // Handle the response messages(Started by HCPU)
         {
@@ -221,12 +222,9 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
     msg.ret_error_code = 0;
     msg.ret_value = 0;
 
-    SCB_CleanInvalidateDCache();
-
     msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
     wr_size = ha_ipc_queue_write(&p_msg, msg_size, 1000);
     RT_ASSERT(wr_size == msg_size);
-
 
 
     //Wait for task completion, and delete semaphore
@@ -238,7 +236,6 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
     RT_ASSERT(1 == msg.is_rsp);
     RT_ASSERT(task_name == msg.task_id);
 
-    // rt_kprintf("acpu error_code=%d\n", msg.ret_error_code);
     if (msg.ret_error_code == (uint8_t)ACPU_ERR_ASSERT)
     {
         rt_kprintf("acpu assert: %s\n", msg.ret_value);

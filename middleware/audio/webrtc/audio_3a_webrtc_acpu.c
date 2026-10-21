@@ -175,9 +175,7 @@ int acpu_webrtc_uplink(acpu_webrtc_uplink_parameter_t *uplink)
     int16_t  *temp;
     int16_t  *out_old = uplink->out;
 
-
     WebRtcAecm_BufferFarend(thiz->aecmInst, (const int16_t *)uplink->far_ref, thiz->frame_len / 2);
-
 
     if (!uplink->ans1_disabled)
     {

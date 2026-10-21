@@ -46,6 +46,8 @@ static size_t ah_ipc_write(const void *buffer, size_t size, uint32_t timeout)
     rt_err_t err;
     size_t wr_size;
 
+    SCB_CleanDCache();
+
     err = rt_mutex_take(&s_ah_ipc_tx_mutex, RT_WAITING_FOREVER);
     if (RT_EOK != err)
     {
@@ -92,8 +94,6 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     msg.sema = sem;
     msg.ret_error_code = 0;
     msg.ret_value = 0;
-
-    SCB_CleanInvalidateDCache();
 
     msg_size = sizeof(acpu_ctrl_ipc_msg_t *);
     wr_size = ah_ipc_write(&p_msg, msg_size, 1000);
@@ -193,7 +193,6 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
     p_msg->ret_error_code = err_code;
     p_msg->ret_value = ret_value;
 
-
     size_t wr_size = ah_ipc_write(&p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
     RT_ASSERT(wr_size == sizeof(acpu_ctrl_ipc_msg_t *));
 
@@ -203,7 +202,6 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
 
 void acpu_send_result(uint32_t err_code, uint32_t ret_value)
 {
-    SCB_CleanInvalidateDCache();
     acpu_send_result2(p_received_msg, err_code, ret_value);
 }
 
@@ -432,6 +430,8 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             RT_ASSERT(0);
             return -RT_ERROR;
         }
+
+        SCB_InvalidateDCache();
 
         if (p_msg->is_rsp) // Handle the response messages(Started by ACPU)
         {

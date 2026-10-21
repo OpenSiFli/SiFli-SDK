@@ -6,5 +6,6 @@ if PKG_USING_LIBHELIX
     config LIBHELIX_RUN_IN_ACPU
     depends on BSP_USING_ACPU
     bool "libhelix run in acpu"
+    default y if BF0_ACPU
     default n
 endif
