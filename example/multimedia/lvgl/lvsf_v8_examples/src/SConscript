@@ -1,0 +1,50 @@
+from building import *
+import os
+
+Import('SIFLI_SDK')
+
+cwd = GetCurrentDir()
+
+# main.c is always built
+src = Glob('*.c')
+inc = [cwd]
+
+widgets_dir = os.path.join(cwd, 'widgets')
+
+# (sub-folder name, Kconfig macro that enables it)
+WIDGET_DEMOS = [
+    ('basechart',  'LV_WIDGET_DEMO_BASECHART'),
+    ('baselabel',  'LV_WIDGET_DEMO_BASELABEL'),
+    ('follow',     'LV_WIDGET_DEMO_FOLLOW'),
+    ('imgarray',   'LV_WIDGET_DEMO_IMGARRAY'),
+    ('imgbar',     'LV_WIDGET_DEMO_IMGBAR'),
+    ('mulroller',  'LV_WIDGET_DEMO_MULROLLER'),
+    ('multanim',   'LV_WIDGET_DEMO_MULTANIM'),
+    ('multlist',   'LV_WIDGET_DEMO_MULTLIST'),
+    ('multroller', 'LV_WIDGET_DEMO_MULTROLLER'),
+    ('multslider', 'LV_WIDGET_DEMO_MULTSLIDER'),
+    ('sector',     'LV_WIDGET_DEMO_SECTOR'),
+    ('select',     'LV_WIDGET_DEMO_SELECT'),
+    ('timeline',   'LV_WIDGET_DEMO_TIMELINE'),
+]
+
+# Every demo folder is on the include path so its headers can be found.
+for name, macro in WIDGET_DEMOS:
+    inc.append(os.path.join(widgets_dir, name))
+
+# multlist (gui_app framework) needs the registration framework headers
+inc.append(os.path.join(SIFLI_SDK, 'middleware', 'app_fwk', 'reg_fwk'))
+
+# Only compile the sources of the selected demo. This also avoids duplicate
+# symbol errors (e.g. lv_txtanim_compat.c is shared by multlist & multroller).
+for name, macro in WIDGET_DEMOS:
+    if GetDepend(macro):
+        demo_dir = os.path.join(widgets_dir, name)
+        for root, dirs, files in os.walk(demo_dir):
+            rel_path = root.replace(cwd, '').lstrip(os.sep)
+            src += Glob(os.path.join(rel_path, '*.c'))
+
+group = DefineGroup('LVSF_V8_EXAMPLES', src,
+                    depend=['PKG_USING_LITTLEVGL2RTT'],
+                    CPPPATH=inc)
+Return('group')

@@ -20,6 +20,7 @@ char *operation_name(drv_epic_op_type_t op)
         OP_TO_NAME_CASE(DRV_EPIC_DRAW_LINE);
         OP_TO_NAME_CASE(DRV_EPIC_DRAW_BORDER);
         OP_TO_NAME_CASE(DRV_EPIC_DRAW_POLYGON);
+        OP_TO_NAME_CASE(DRV_EPIC_DRAW_SHADOW);
 
     default:
         return "UNKNOW";
@@ -124,6 +125,13 @@ void print_operation(const char *name, const drv_epic_operation *op)
              );
     }
     break;
+
+    case DRV_EPIC_DRAW_SHADOW:
+        LOG_E("Shadow area="AreaString", radius=%d width=%d spread=%d ofs=%d,%d",
+              AreaParams(&op->desc.shadow.area), op->desc.shadow.radius,
+              op->desc.shadow.width, op->desc.shadow.spread,
+              op->desc.shadow.ofs_x, op->desc.shadow.ofs_y);
+        break;
 
     case DRV_EPIC_DRAW_POLYGON:
     {

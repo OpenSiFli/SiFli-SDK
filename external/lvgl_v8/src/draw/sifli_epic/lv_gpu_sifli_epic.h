@@ -11,6 +11,7 @@ typedef struct
     lv_draw_sw_ctx_t sw_ctx_backup;
 
     uint32_t reserved;
+    struct _lv_draw_layer_ctx_t *epic_layer;
 } epic_draw_ctx_t;
 
 

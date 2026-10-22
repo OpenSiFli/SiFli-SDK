@@ -136,6 +136,23 @@ const LV_ATTRIBUTE_MEM_ALIGN uint8_t png_filename_map[] = {
 ...
 ```
 
+
+:::{only} SF32LB57X
+
+### SF32LB57 窗口大小限制
+
+SF32LB57 的硬件 EZIP 解码器无法处理窗口大小大于 2048 的压缩流，生成 EZIP 资源时必须将压缩窗口大小限制为 2048。
+
+使用 `-winsize` 参数指定窗口大小：
+
+```
+ezip -convert png_filename.png -rgb565 -binfile 2 -winsize 2048
+```
+
+使用 SCons 构建系统时，若检测到目标芯片为 SF32LB57X 且未显式指定 `-winsize`，构建脚本会自动追加 `-winsize 2048`。
+
+:::
+
 ### 生成可供硬件EZIP解压的GZIP BIN文件
 - 例如对同目录下的file.bin进行压缩，使用如下命令
 ```

@@ -92,7 +92,7 @@ void BSP_PIN_Init(void)
     }
 #endif
 
-#if defined(BSP_USING_USBD) || defined(PKG_CHERRYUSB_DEVICE)
+#if defined(BSP_USING_USBD) || defined(PKG_CHERRYUSB_DEVICE) || defined(PKG_CHERRYUSB_HOST) || defined(BSP_USING_USBH)
     {
         HAL_PIN_Set_Analog(PAD_PA17, 1);
         HAL_PIN_Set_Analog(PAD_PA18, 1);

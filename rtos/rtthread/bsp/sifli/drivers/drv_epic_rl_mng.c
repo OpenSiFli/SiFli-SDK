@@ -122,6 +122,9 @@ static void render_lock_flash(drv_epic_render_list_t list)
         if (o->op == DRV_EPIC_DRAW_IMAGE)
             add_flash_addr((uint32_t)o->desc.blend.layer.data);
 
+        if (o->op == DRV_EPIC_DRAW_RECT && o->desc.rectangle.bg_image)
+            add_flash_addr((uint32_t)o->desc.rectangle.bg_image->layer.data);
+
         if (o->op == DRV_EPIC_DRAW_ARC && o->desc.arc.image)
             add_flash_addr((uint32_t)o->desc.arc.image->data);
 

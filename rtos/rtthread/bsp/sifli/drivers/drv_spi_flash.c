@@ -218,7 +218,6 @@ static int rt_nor_erase_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, uint32_t
 
     LOG_D("flash erase from 0x%x + %d to 0x%x + %d\n", addr, size, al_addr, al_size);
 
-    rt_nor_dtr_cfg(hflash, 0);
 alig64k:
     // 1 block 64k aligned, for start addr not aligned do not process, need support later
     if (IS_ALIGNED((QSPI_NOR_BLK64_SIZE << hflash->dualFlash), al_addr) && (al_size >= (QSPI_NOR_BLK64_SIZE << hflash->dualFlash))) // block erease first
@@ -227,7 +226,9 @@ alig64k:
         {
 
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             HAL_QSPIEX_BLK64_ERASE(hflash, al_addr);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             al_size -= QSPI_NOR_BLK64_SIZE << hflash->dualFlash;
             al_addr += QSPI_NOR_BLK64_SIZE << hflash->dualFlash;
@@ -241,7 +242,9 @@ alig64k:
         {
 
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             HAL_QSPIEX_SECT_ERASE(hflash, al_addr);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             al_size -= QSPI_NOR_SECT_SIZE << hflash->dualFlash;
             al_addr += QSPI_NOR_SECT_SIZE << hflash->dualFlash;
@@ -258,7 +261,6 @@ alig64k:
 
 _exit:
 
-    rt_nor_dtr_cfg(hflash, 1);
     return ret;
 
 }
@@ -283,8 +285,6 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
     else
         taddr = addr;
 
-    rt_nor_dtr_cfg(hflash, 0);
-
     mpu_dcache_clean((void *)buf, size);
 
     if (hflash->dualFlash) // need lenght and address 2 aligned
@@ -292,7 +292,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
         if (taddr & 1) // dst odd, make 2 bytes write
         {
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             HAL_QSPIEX_FILL_EVEN(hflash, taddr, tbuf, 1);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             // update buffer and address
             taddr++;
@@ -319,12 +321,14 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
         if (hflash->dualFlash && (start & 1))   // for this case, it should be the lastest write
         {
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             i = HAL_QSPIEX_WRITE_PAGE(hflash, taddr, tbuf, start & (~1));
 
             taddr += i;
             tbuf += i;
             //tsize -= i;
             HAL_QSPIEX_FILL_EVEN(hflash, taddr, tbuf, 0);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             cnt += start;
 
@@ -333,7 +337,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
         else
         {
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             i = HAL_QSPIEX_WRITE_PAGE(hflash, taddr, tbuf, start);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             if (i != start)
             {
@@ -351,7 +357,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
     {
 
         nor_lock(hflash->base);
+        rt_nor_dtr_cfg(hflash, 0);
         i = HAL_QSPIEX_WRITE_PAGE(hflash, taddr, tbuf, aligned_size);
+        rt_nor_dtr_cfg(hflash, 1);
         nor_unlock(hflash->base);
         cnt += aligned_size;
         taddr += aligned_size;
@@ -365,7 +373,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
         if (hflash->dualFlash && (tsize & 1))
         {
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             i = HAL_QSPIEX_WRITE_PAGE(hflash, taddr, tbuf, tsize & (~1));
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
 
             if (tsize & 1)  // remain 1 byte
@@ -373,7 +383,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
                 taddr += i;
                 tbuf += i;
                 nor_lock(hflash->base);
+                rt_nor_dtr_cfg(hflash, 0);
                 HAL_QSPIEX_FILL_EVEN(hflash, taddr, tbuf, 0);
+                rt_nor_dtr_cfg(hflash, 1);
                 nor_unlock(hflash->base);
             }
             cnt += tsize;
@@ -381,7 +393,9 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
         else
         {
             nor_lock(hflash->base);
+            rt_nor_dtr_cfg(hflash, 0);
             i = HAL_QSPIEX_WRITE_PAGE(hflash, taddr, tbuf, tsize);
+            rt_nor_dtr_cfg(hflash, 1);
             nor_unlock(hflash->base);
             if (i != tsize)
             {
@@ -393,7 +407,6 @@ static int rt_nor_write_rom(FLASH_HandleTypeDef *hflash, uint32_t addr, const ui
     }
 
 exit:
-    rt_nor_dtr_cfg(hflash, 1);
 
     return cnt;
 }

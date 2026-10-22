@@ -34,6 +34,8 @@
 #define PAN_INQUIRY_TIMEOUT_S 15U
 #define PAN_INQUIRY_MAX_RESPONSES 10U
 #define PAN_CONNECT_TIMEOUT_MS 25000U
+#define PAN_RESYNC_DELAY_MS 1000U
+#define PAN_RESYNC_RETRY_MAX 3U
 
 #define BRIDGE_ETH_HEADER_LEN 14
 #define BRIDGE_ETH_FRAME_MAX_LEN 1600
@@ -54,6 +56,15 @@ static rt_timer_t s_pan_connect_timer;
 static BTS2S_BD_ADDR s_pan_target;
 static volatile uint16_t s_pan_bnep_id = 0xffff; /* current PAN BNEP channel id */
 
+static volatile uint8_t s_pan_resync_active;
+static uint8_t s_pan_resync_retry;
+static uint8_t s_pan_resync_disc_wait;
+static rt_timer_t s_pan_resync_timer;
+
+#if defined(BT_FINSH) && defined(BT_FINSH_PAN)
+    static int pan_connect_start(const BTS2S_BD_ADDR *address);
+#endif
+
 static void pan_connect_timeout(void *parameter)
 {
     (void)parameter;
@@ -62,8 +73,153 @@ static void pan_connect_timeout(void *parameter)
         s_pan_connect_pending = 0U;
         rt_kprintf("[BT] PAN connect timeout: %04X:%02X:%06lX\n",
                    s_pan_target.nap, s_pan_target.uap, s_pan_target.lap);
+#if defined(BT_FINSH) && defined(BT_FINSH_PAN)
+        if (s_pan_resync_active)
+        {
+            if (s_pan_resync_retry < PAN_RESYNC_RETRY_MAX)
+            {
+                s_pan_resync_retry++;
+                rt_kprintf("[BT] PAN re-sync: reconnect retry %u/%u\n",
+                           s_pan_resync_retry, PAN_RESYNC_RETRY_MAX);
+                (void)pan_connect_start(&s_pan_target);
+            }
+            else
+            {
+                s_pan_resync_active = 0U;
+                rt_kprintf("[BT] PAN re-sync failed, reconnect manually with 'pan_net conn'\n");
+            }
+        }
+#endif
     }
 }
+
+#if defined(BT_FINSH) && defined(BT_FINSH_PAN)
+/* (re)issue the PAN connect request for the stored target. Shared by the
+ * 'pan_net conn' command and the USB session re-sync logic. */
+static int pan_connect_start(const BTS2S_BD_ADDR *address)
+{
+    int ret;
+
+    if (!s_bt_stack_ready)
+    {
+        rt_kprintf("[BT] Bluetooth stack is not ready\n");
+        return -RT_ERROR;
+    }
+    if (s_pan_connect_pending)
+    {
+        rt_kprintf("[BT] PAN connection already pending\n");
+        return -RT_EBUSY;
+    }
+    if (s_pan_connected)
+    {
+        rt_kprintf("[BT] PAN is already connected\n");
+        return -RT_EBUSY;
+    }
+
+    if (s_pan_connect_timer == RT_NULL)
+    {
+        s_pan_connect_timer = rt_timer_create("pan_conn",
+                                              pan_connect_timeout,
+                                              RT_NULL,
+                                              rt_tick_from_millisecond(PAN_CONNECT_TIMEOUT_MS),
+                                              RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
+        if (s_pan_connect_timer == RT_NULL)
+        {
+            rt_kprintf("[BT] PAN connect timer create failed\n");
+            return -RT_ENOMEM;
+        }
+    }
+
+    s_pan_target = *address;
+    s_pan_connect_pending = 1U;
+    rt_timer_stop(s_pan_connect_timer);
+    if (rt_timer_start(s_pan_connect_timer) != RT_EOK)
+    {
+        s_pan_connect_pending = 0U;
+        rt_kprintf("[BT] PAN connect timer start failed\n");
+        return -RT_ERROR;
+    }
+
+    bt_interface_stop_inquiry();
+    ret = bt_pan_connect_request_ext(&s_pan_target, PAN_PANU_ROLE);
+    if (ret != 0)
+    {
+        rt_timer_stop(s_pan_connect_timer);
+        s_pan_connect_pending = 0U;
+        rt_kprintf("[BT] PAN connect request rejected ret=%d\n", ret);
+        return -RT_ERROR;
+    }
+
+    rt_kprintf("[BT] PAN connect request accepted: %04X:%02X:%06lX (local NAP, remote PANU)\n",
+               s_pan_target.nap, s_pan_target.uap, s_pan_target.lap);
+    return 0;
+}
+
+static void pan_resync_reconnect(void *parameter)
+{
+    (void)parameter;
+
+    if (s_pan_connected)
+    {
+        /* the BNEP disconnect has not completed yet, check again shortly */
+        if (s_pan_resync_disc_wait++ < 5U)
+        {
+            rt_timer_stop(s_pan_resync_timer);
+            rt_timer_start(s_pan_resync_timer);
+            return;
+        }
+        s_pan_resync_active = 0U;
+        rt_kprintf("[BT] PAN re-sync: disconnect did not complete, aborted\n");
+        return;
+    }
+
+    rt_kprintf("[BT] PAN re-sync: reconnecting\n");
+    (void)pan_connect_start(&s_pan_target);
+}
+
+/* Called when the USB side reports a new RNDIS session: bounce the PAN link so
+ * that the peer re-runs DHCP and adopts the network of the new session. */
+static void pan_resync_start(void)
+{
+    if (!s_pan_connected || s_pan_bnep_id == 0xffff)
+    {
+        /* no PAN peer to re-sync */
+        return;
+    }
+    if (s_pan_resync_active)
+    {
+        return;
+    }
+
+    if (s_pan_resync_timer == RT_NULL)
+    {
+        s_pan_resync_timer = rt_timer_create("pan_sync",
+                                             pan_resync_reconnect,
+                                             RT_NULL,
+                                             rt_tick_from_millisecond(PAN_RESYNC_DELAY_MS),
+                                             RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
+        if (s_pan_resync_timer == RT_NULL)
+        {
+            rt_kprintf("[BT] PAN re-sync timer create failed\n");
+            return;
+        }
+    }
+
+    s_pan_resync_active = 1U;
+    s_pan_resync_retry = 0U;
+    s_pan_resync_disc_wait = 0U;
+    rt_kprintf("[BT] New USB session: re-sync PAN, peer will re-run DHCP\n");
+    bt_pan_disc(&s_pan_target);
+
+    /* safety net: if the disconnect notification is lost, keep checking */
+    rt_timer_stop(s_pan_resync_timer);
+    rt_timer_start(s_pan_resync_timer);
+}
+#else
+static void pan_resync_start(void)
+{
+}
+#endif
 
 static int usb_bt_bridge_bt_event_handler(uint16_t type,
         uint16_t event_id,
@@ -87,6 +243,8 @@ static int usb_bt_bridge_bt_event_handler(uint16_t type,
 
             s_pan_connected = 1U;
             s_pan_connect_pending = 0U;
+            s_pan_resync_active = 0U;
+            s_pan_resync_retry = 0U;
             profile = (const bt_notify_profile_state_info_t *)data;
             if (data != RT_NULL && data_len >= sizeof(*profile))
             {
@@ -96,6 +254,10 @@ static int usb_bt_bridge_bt_event_handler(uint16_t type,
             {
                 rt_timer_stop(s_pan_connect_timer);
             }
+            if (s_pan_resync_timer != RT_NULL)
+            {
+                rt_timer_stop(s_pan_resync_timer);
+            }
             rt_kprintf("[BT] PAN connected, USB<->BT bridge ready\n");
         }
         else if (event_id == BT_NOTIFY_PAN_PROFILE_DISCONNECTED)
@@ -103,6 +265,13 @@ static int usb_bt_bridge_bt_event_handler(uint16_t type,
             s_pan_connected = 0U;
             s_pan_bnep_id = 0xffff;
             rt_kprintf("[BT] PAN disconnected\n");
+            if (s_pan_resync_active && s_pan_resync_timer != RT_NULL)
+            {
+                /* re-sync in progress: reconnect shortly so the peer can
+                 * rebuild its netif and re-run DHCP on the new network */
+                rt_timer_stop(s_pan_resync_timer);
+                rt_timer_start(s_pan_resync_timer);
+            }
         }
     }
 
@@ -209,6 +378,11 @@ static void rndis_monitor_thread(void *parameter)
         }
         rt_kprintf("[USB] RNDIS link up, USB<->BT bridge active\n");
 
+        /* A (re)appearing USB session may be a different phone, or the same
+         * phone after a reboot, so the network behind the bridge can have
+         * changed. Re-sync the PAN side so the peer re-runs DHCP. */
+        pan_resync_start();
+
         while (1)
         {
             rt_thread_mdelay(LINK_POLL_INTERVAL_MS);
@@ -228,6 +402,7 @@ static void pan_net_help(void)
     rt_kprintf("  pan_net inquiry start\n");
     rt_kprintf("  pan_net inquiry stop\n");
     rt_kprintf("  pan_net conn <XX:XX:XX:XX:XX:XX|XXXXXXXXXXXX>\n");
+    rt_kprintf("  pan_net disc\n");
 }
 
 __ROM_USED void pan_net(int argc, char **argv)
@@ -278,17 +453,6 @@ __ROM_USED void pan_net(int argc, char **argv)
             return;
         }
 
-        if (s_pan_connect_pending)
-        {
-            rt_kprintf("[BT] PAN connection already pending\n");
-            return;
-        }
-        if (s_pan_connected)
-        {
-            rt_kprintf("[BT] PAN is already connected\n");
-            return;
-        }
-
         if (bt_addr_convert_from_string_to_general(argv[2], &mac) != BD_ADDR_LEN)
         {
             rt_kprintf("[BT] Invalid Bluetooth address: %s\n", argv[2]);
@@ -304,48 +468,30 @@ __ROM_USED void pan_net(int argc, char **argv)
             return;
         }
 
-        if (s_pan_connect_timer == RT_NULL)
+        (void)pan_connect_start(&address);
+        return;
+    }
+    else if (argc == 2 && strcmp(argv[1], "disc") == 0)
+    {
+        if (!s_pan_connected || s_pan_bnep_id == 0xffff)
         {
-            s_pan_connect_timer = rt_timer_create("pan_conn",
-                                                  pan_connect_timeout,
-                                                  RT_NULL,
-                                                  rt_tick_from_millisecond(PAN_CONNECT_TIMEOUT_MS),
-                                                  RT_TIMER_FLAG_ONE_SHOT | RT_TIMER_FLAG_SOFT_TIMER);
-            if (s_pan_connect_timer == RT_NULL)
-            {
-                rt_kprintf("[BT] PAN connect timer create failed\n");
-                return;
-            }
-        }
-
-        s_pan_target = address;
-        s_pan_connect_pending = 1U;
-        rt_timer_stop(s_pan_connect_timer);
-        if (rt_timer_start(s_pan_connect_timer) != RT_EOK)
-        {
-            s_pan_connect_pending = 0U;
-            rt_kprintf("[BT] PAN connect timer start failed\n");
+            rt_kprintf("[BT] PAN is not connected\n");
             return;
         }
 
-        bt_interface_stop_inquiry();
-        ret = bt_pan_connect_request_ext(&address, PAN_PANU_ROLE);
-        if (ret != 0)
+        s_pan_resync_active = 0U;
+        if (s_pan_resync_timer != RT_NULL)
         {
-            rt_timer_stop(s_pan_connect_timer);
-            s_pan_connect_pending = 0U;
-            rt_kprintf("[BT] PAN connect request rejected ret=%d\n", ret);
-            return;
+            rt_timer_stop(s_pan_resync_timer);
         }
-
-        rt_kprintf("[BT] PAN connect request accepted: %04X:%02X:%06lX (local NAP, remote PANU)\n",
-                   address.nap, address.uap, address.lap);
+        rt_kprintf("[BT] PAN disconnect requested\n");
+        bt_pan_disc(&s_pan_target);
         return;
     }
 
     pan_net_help();
 }
-MSH_CMD_EXPORT(pan_net, scan and connect a Bluetooth PANU device)
+MSH_CMD_EXPORT(pan_net, scan / connect / disconnect a Bluetooth PANU device)
 #endif
 
 #if defined(BSP_USING_SPI_NAND) && defined(RT_USING_DFS)

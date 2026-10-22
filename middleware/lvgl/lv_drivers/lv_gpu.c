@@ -295,7 +295,6 @@ void img_rotate_opa_frac2(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, 
 
     RT_ASSERT((RT_NULL != src_coords) && (RT_NULL != dst_coords) && (RT_NULL != output_coords));
 
-
     angle = angle % 3600;
     if (angle < 0)
     {
@@ -480,7 +479,6 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
 
 
     RT_ASSERT((RT_NULL != src_coords) && (RT_NULL != dst_coords) && (RT_NULL != output_coords));
-
 
     /*Setup mask layer*/
     if ((mask_map) && (_lv_area_is_on(mask_coords, src_coords)))
@@ -703,6 +701,122 @@ void img_rotate_opa_frac(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, u
                          output_coords, pivot, opa, ax_color,
                          src_off_x_frac, src_off_y_frac, 1,
                          mask_cf, mask_map, mask_coords);
+}
+
+/**
+ * Blend a single glyph (alpha bitmap) onto the destination buffer using EPIC
+ * continuous-blend mode. Multiple consecutive glyphs are accumulated in the
+ * same continuous-blend session; the session is torn down by the EPIC driver
+ * itself, since every drv_epic_blend/transform/fill/copy entry first waits for
+ * the GPU (wait_gpu_done()/drv_gpu_check_done()) and that path calls
+ * cont_blend_reset() before starting the new operation.
+ */
+static void letter_blend(lv_img_dsc_t *dest, lv_img_dsc_t *src,
+                         const lv_area_t *src_coords, const lv_area_t *dst_coords,
+                         const lv_area_t *output_coords, lv_opa_t opa, lv_color_t ax_color,
+                         lv_img_cf_t mask_cf, const lv_opa_t *mask_map, const lv_area_t *mask_coords)
+{
+    EPIC_LayerConfigTypeDef input_layers[3];
+    EPIC_LayerConfigTypeDef output_canvas;
+    uint8_t pixel_size;
+    uint32_t color_bpp;
+    uint8_t input_layer_cnt = 2;
+
+    RT_ASSERT((RT_NULL != src_coords) && (RT_NULL != dst_coords) && (RT_NULL != output_coords));
+
+    lv_area_t res;
+    if (!_lv_area_intersect(&res, dst_coords, output_coords)) return;
+
+    /*Setup mask layer*/
+    if ((mask_map) && (_lv_area_is_on(mask_coords, src_coords)))
+    {
+#ifdef EPIC_SUPPORT_MASK
+        HAL_EPIC_LayerConfigInit(&input_layers[2]);
+        input_layers[2].data = (uint8_t *)mask_map;
+        input_layers[2].x_offset = mask_coords->x1;
+        input_layers[2].y_offset = mask_coords->y1;
+        input_layers[2].width = lv_area_get_width(mask_coords);
+        input_layers[2].total_width = input_layers[2].width;
+        input_layers[2].height = lv_area_get_height(mask_coords);
+        if (LV_IMG_CF_ALPHA_8BIT == mask_cf)
+            input_layers[2].color_mode = EPIC_INPUT_A8;
+        else if (LV_IMG_CF_ALPHA_4BIT == mask_cf)
+            input_layers[2].color_mode = EPIC_INPUT_A4;
+        else
+            LV_ASSERT(false);
+
+        input_layers[2].ax_mode = ALPHA_BLEND_MASK;
+        pixel_size = HAL_EPIC_GetColorDepth(input_layers[2].color_mode);
+        input_layers[2].data_size = ((pixel_size * input_layers[2].total_width * input_layers[2].height) + 7) >> 3;
+
+        input_layer_cnt = 3;
+#else
+        LV_ASSERT(0);
+#endif /* EPIC_SUPPORT_MASK */
+    }
+
+    /*Setup fg layer (glyph alpha with recolor)*/
+    HAL_EPIC_LayerConfigInit(&input_layers[1]);
+    input_layers[1].alpha = opa;
+    input_layers[1].x_offset = src_coords->x1;
+    input_layers[1].y_offset = src_coords->y1;
+    input_layers[1].data = (uint8_t *)src->data;
+    input_layers[1].color_mode = lv_img_2_epic_cf(src);
+    color_bpp = HAL_EPIC_GetColorDepth(input_layers[1].color_mode);
+    input_layers[1].width = lv_area_get_width(src_coords);
+    input_layers[1].total_width = (color_bpp > 8) ? src->header.w : RT_ALIGN(src->header.w, 8 / color_bpp);
+    input_layers[1].height = lv_area_get_height(src_coords);
+    input_layers[1].data_size = src->data_size;
+
+    if ((LV_IMG_CF_ALPHA_2BIT == src->header.cf)
+            || (LV_IMG_CF_ALPHA_4BIT == src->header.cf)
+            || (LV_IMG_CF_ALPHA_8BIT == src->header.cf))
+    {
+        lv_color32_t ax_color_u32;
+
+        ax_color_u32.full = lv_color_to32(ax_color);
+        input_layers[1].color_en = true;
+        input_layers[1].color_r = ax_color_u32.ch.red;
+        input_layers[1].color_g = ax_color_u32.ch.green;
+        input_layers[1].color_b = ax_color_u32.ch.blue;
+    }
+    else
+    {
+        LV_ASSERT(0);
+    }
+
+    /*Setup bg layer (destination buffer)*/
+    HAL_EPIC_LayerConfigInit(&input_layers[0]);
+    input_layers[0].color_en = false;
+    input_layers[0].data = (uint8_t *)dest->data;
+    input_layers[0].color_mode = lv_img_2_epic_cf(dest);
+    pixel_size = HAL_EPIC_GetColorDepth(input_layers[0].color_mode);
+    RT_ASSERT(0 == (pixel_size % 8));
+    pixel_size = pixel_size >> 3;
+    input_layers[0].width = lv_area_get_width(dst_coords);
+    input_layers[0].total_width = dest->header.w;
+    input_layers[0].height = lv_area_get_height(dst_coords);
+    input_layers[0].x_offset = dst_coords->x1;
+    input_layers[0].y_offset = dst_coords->y1;
+    input_layers[0].data_size = pixel_size * input_layers[0].total_width * input_layers[0].height;
+
+    /*Setup output layer (write back to destination buffer at output_coords)*/
+    HAL_EPIC_LayerConfigInit(&output_canvas);
+    output_canvas.color_en = false;
+    output_canvas.data = (uint8_t *)(dest->data + pixel_size * (input_layers[0].total_width * (output_coords->y1 - dst_coords->y1) + (output_coords->x1 - dst_coords->x1)));
+    output_canvas.color_mode = input_layers[0].color_mode;
+    output_canvas.width = lv_area_get_width(output_coords);
+    output_canvas.total_width = input_layers[0].total_width;
+    output_canvas.height = lv_area_get_height(output_coords);
+    output_canvas.x_offset = output_coords->x1;
+    output_canvas.y_offset = output_coords->y1;
+    output_canvas.data_size = pixel_size * output_canvas.total_width * output_canvas.height;
+
+    rt_err_t err = drv_epic_cont_blend(input_layers, input_layer_cnt, &output_canvas);
+    if (RT_EOK != err)
+    {
+        lv_async_call(invalidate_screen, NULL);
+    }
 }
 
 static void fill_color_opa(lv_img_cf_t cf, lv_color_t *dest_buf, lv_coord_t dest_width,
@@ -1284,7 +1398,6 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
 
         lv_img_dsc_t src;
         lv_img_dsc_t dest;
-        lv_point_t pivot = {0, 0};
 
 
 
@@ -1332,12 +1445,19 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
         }
 
         dest.header.always_zero = 0;
-
+#if 0
+        lv_point_t pivot = {0, 0};
         img_rotate_opa_frac(&dest, &src, 0, (uint32_t)LV_IMG_ZOOM_NONE,
                             &letter_area, draw_ctx->buf_area,
                             draw_ctx->clip_area, &pivot, dsc->opa, dsc->color, 0, 0,
                             mask_cf, mask_map, &mask_coords);
+#else
 
+        letter_blend(&dest, &src,
+                     &letter_area, draw_ctx->buf_area,
+                     draw_ctx->clip_area, dsc->opa, dsc->color,
+                     mask_cf, mask_map, &mask_coords);
+#endif
         return;
     }
 
@@ -1730,13 +1850,15 @@ int32_t gpu_ezipa_draw(ezipa_obj_t *obj, const lv_area_t *src_area, const lv_are
 
 #ifdef FINSH_USING_MSH
 #include <finsh.h>
+extern bool lv_refr_enable_force_full(bool enable);
+extern bool lv_refr_is_force_full_enabled(void);
 static rt_err_t gpu_cfg(int argc, char **argv)
 {
 
     if (argc < 2)
     {
         rt_kprintf("gpu_cfg [OPTION] [VALUE]\n");
-        rt_kprintf("    OPTION:enable\n");
+        rt_kprintf("    OPTION:enable | force_full\n");
         return RT_EOK;
     }
 
@@ -1752,6 +1874,23 @@ static rt_err_t gpu_cfg(int argc, char **argv)
             rt_kprintf("gpu is enable.\n");
         else
             rt_kprintf("gpu is disable.\n");
+    }
+    else if (strcmp(argv[1], "force_full") == 0)
+    {
+        if (argc > 2) //write
+        {
+            uint32_t v = strtoul(argv[2], 0, 10);
+            lv_refr_enable_force_full(v);
+        }
+
+        if (lv_refr_is_force_full_enabled())
+            rt_kprintf("force full refresh is enable.\n");
+        else
+            rt_kprintf("force full refresh is disable.\n");
+    }
+    else
+    {
+        rt_kprintf("unknown option:%s\n", argv[1]);
     }
     return RT_EOK;
 }

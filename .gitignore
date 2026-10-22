@@ -32,3 +32,5 @@ tools/mkfatimg/mkfatimg_nand/Release/
 # sf-pkg generated artifacts (aggregated conanfile/fingerprint and deployed components)
 .sf-pkg/
 sf-pkgs/
+# local scratch directory of the agent sessions (build logs, manual text extracts)
+.dsh-scratch/

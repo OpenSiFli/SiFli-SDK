@@ -167,14 +167,14 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
         break;
         case BT_NOTIFY_COMMON_SCO_CONNECTED:
         {
-            LOG_I("HFP HF audio_connected");
+            LOG_I("HFP audio_connected");
             bt_notify_device_sco_info_t *sco_info = (bt_notify_device_sco_info_t *)data;
             bt_hfp_relay_handle_sco_event(event_id, sco_info);
             break;
         }
         case BT_NOTIFY_COMMON_SCO_DISCONNECTED:
         {
-            LOG_I("HFP HF audio_disconnected");
+            LOG_I("HFP audio_disconnected");
             bt_notify_device_sco_info_t *sco_info = (bt_notify_device_sco_info_t *)data;
             bt_hfp_relay_handle_sco_event(event_id, sco_info);
             break;
@@ -579,6 +579,8 @@ int main(void)
         LOG_I("BT/BLE stack and profile init failed");
 
     rt_ringbuffer32_init(&transfor_rb, mempool, TRANSFOR_BUFFER_SIZE);
+
+    bt_hfp_relay_mgr_init();
 
     while (1)
     {

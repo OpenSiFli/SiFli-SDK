@@ -87,6 +87,18 @@ typedef struct
     struct rt_device_graphic_info lcd_info;
 } clk_setting_t;
 
+typedef struct
+{
+    bool init;
+    /** GTIME when GTIME and rt_tick are latched */
+    uint32_t last_latch_time;
+    /** rt_tick when GTIME nd rt_tick are latched */
+    uint32_t last_latch_tick;
+    /** fractional part of tick error which cannot be compensated on rt_tick yet, must be less than 1 */
+    float tick_error_frac;
+    uint32_t tick_reset_cnt;
+} sf_tick_cal_t;
+
 #ifdef USING_IPC_QUEUE
     #if defined(SOC_BF0_ACPU)
         static ipc_queue_handle_t sys_ah_ipc_queue = IPC_QUEUE_INVALID_HANDLE;
@@ -107,6 +119,9 @@ typedef struct
         #endif /* RT_DEBUG && SF32LB55X */
     #endif /* SOC_BF0_LCPU */
 #endif /* USING_IPC_QUEUE */
+
+
+static sf_tick_cal_t sf_tick_cal;
 
 /** @addtogroup mailbox library
  * @ingroup middleware
@@ -961,6 +976,62 @@ __ROM_USED int sysinfo(int argc, char **argv)
 MSH_CMD_EXPORT(sysinfo, Show system information);
 
 #endif
+
+int sf_tick_cal_init(void)
+{
+    sf_tick_cal.last_latch_time = HAL_GTIMER_READ();
+    sf_tick_cal.last_latch_tick = rt_tick_get();
+    sf_tick_cal.init = true;
+
+    return 0;
+}
+INIT_DEVICE_EXPORT(sf_tick_cal_init);
+
+__ROM_USED rt_tick_t sf_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data)
+{
+    uint32_t delta_time;
+    rt_tick_t new_tick_ref;
+    float delta_tick_ref;
+
+    if (!sf_tick_cal.init)
+    {
+        return curr_tick;
+    }
+
+    delta_time = (curr_time - sf_tick_cal.last_latch_time);
+    delta_tick_ref = ((float)delta_time * RT_TICK_PER_SECOND / gtime_freq + sf_tick_cal.tick_error_frac);
+    new_tick_ref = sf_tick_cal.last_latch_tick + (uint32_t)delta_tick_ref;
+
+    if ((new_tick_ref != curr_tick)      /* tick needs to be adjusted */
+            || (delta_tick_ref > (60 * 1000))) /* tick has not been latched for 1 minutes */
+    {
+        /* only support 1ms tick */
+        RT_ASSERT(RT_TICK_PER_SECOND == 1000);
+        // rt_kprintf("adj:%d,%d,%d,%d,%.2f\n", curr_tick, curr_time, new_tick_ref, (uint32_t)delta_tick_ref, gtime_freq);
+        // rt_kprintf("adj2:%d,%d,%.2f,%.2f\n", sf_tick_cal.last_latch_time, sf_tick_cal.last_latch_tick, sf_tick_cal.tick_error_frac, delta_tick_ref);
+
+        if (((int32_t)(new_tick_ref - curr_tick) < 0) && (1 != (uint32_t)user_data))
+        {
+            /* new_tick_ref is less than curr_tick, use curr_tick instead */
+            new_tick_ref = curr_tick;
+            delta_tick_ref = (float)0;
+            sf_tick_cal.tick_reset_cnt++;
+        }
+        sf_tick_cal.last_latch_tick = new_tick_ref;
+        sf_tick_cal.last_latch_time = curr_time;
+        sf_tick_cal.tick_error_frac = (delta_tick_ref - (uint32_t)delta_tick_ref);
+        // rt_kprintf("adj2:%d,%d,%.2f,%.2f\n", sf_tick_cal.last_latch_time, sf_tick_cal.last_latch_tick, sf_tick_cal.tick_error_frac, delta_tick_ref);
+
+        RT_ASSERT(sf_tick_cal.tick_error_frac < 1);
+    }
+
+    return new_tick_ref;
+}
+
+void sf_set_last_latch_tick(rt_tick_t last_latch_tick)
+{
+    sf_tick_cal.last_latch_tick = last_latch_tick;
+}
 
 #endif
 

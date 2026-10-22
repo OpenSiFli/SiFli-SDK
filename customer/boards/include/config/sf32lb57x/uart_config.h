@@ -194,44 +194,8 @@ extern "C" {
 #endif /* BSP_UART5_TX_USING_DMA */
 
 
-#if defined(BSP_USING_UART6)
-#ifndef UART6_CONFIG
-#define UART6_CONFIG                                                \
-    {                                                               \
-        .name = "uart6",                                            \
-        .Instance = USART6,                                         \
-        .irq_type = USART6_IRQn,                                    \
-    }
-#endif /* UART6_CONFIG */
-#endif /* BSP_USING_UART6 */
-
-#if defined(BSP_UART6_RX_USING_DMA)
-#ifndef UART6_RX_DMA_CONFIG
-#define UART6_RX_DMA_CONFIG                                         \
-    {                                                               \
-        .Instance = UART6_RX_DMA_INSTANCE,                          \
-        .request  = UART6_RX_DMA_REQUEST,                           \
-        .dma_irq_prio  = UART6_RX_DMA_IRQ_PRIO,                     \
-        .dma_irq  = UART6_RX_DMA_IRQ,                               \
-    }
-#endif /* UART6_RX_DMA_CONFIG */
-#endif /* BSP_UART6_RX_USING_DMA */
-
-#if defined(BSP_UART6_TX_USING_DMA)
-#ifndef UART6_TX_DMA_CONFIG
-#define UART6_TX_DMA_CONFIG                                         \
-    {                                                               \
-        .Instance = UART6_TX_DMA_INSTANCE,                          \
-        .request  = UART6_TX_DMA_REQUEST,                           \
-        .dma_irq_prio  = UART6_TX_DMA_IRQ_PRIO,                     \
-        .dma_irq  = UART6_TX_DMA_IRQ,                               \
-    }
-#endif /* UART6_TX_DMA_CONFIG */
-#endif /* BSP_UART6_TX_USING_DMA */
-
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __UART_CONFIG_H__ */
-/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

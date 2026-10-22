@@ -1,0 +1,15 @@
+from building import *
+Import('rtconfig')
+
+cwd = GetCurrentDir()
+src = Glob('src/*.c')
+path = [cwd + '/interface', cwd + '/src']
+
+LOCAL_CCFLAGS = ''
+if rtconfig.PLATFORM != 'gcc':
+    LOCAL_CCFLAGS = ' -Wno-error'
+
+group = DefineGroup('silk_fix', src, depend=['PKG_USING_SILK_FIX'],
+                    CPPPATH=path, LOCAL_CCFLAGS=LOCAL_CCFLAGS)
+
+Return('group')

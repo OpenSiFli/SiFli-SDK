@@ -275,6 +275,40 @@ export SIFLI_SDK_TOOLS_PATH="$HOME/required_sdk_tools_path"
 `export.sh` requires `uv` in PATH to run the SDK environment management flow.
 ```
 
+### Offline or Intranet Use
+
+If your computer cannot access the internet but you have successfully run `./install.sh`, you can activate the local environment offline as long as it remains complete and compatible with the current SDK. Updating SDK code does not necessarily require reinstalling the environment. This depends on the environment compatibility check, not just whether the compiler version is unchanged.
+
+Before disconnecting, complete the installation and successfully run `export.sh` once using the same user account. Keep the SDK tools directory (default: `$HOME/.sifli`), the `uv` cache, and the Python runtime managed by `uv`. Also prepare any external build dependencies required by your project.
+
+In a terminal without internet access or with intranet-only access, run:
+
+```bash
+cd ~/OpenSiFli/SiFli-SDK
+export UV_OFFLINE=1
+. ./export.sh --offline
+```
+
+If you use a custom tools directory, first export the same `SIFLI_SDK_TOOLS_PATH` used during installation.
+
+`UV_OFFLINE=1` prevents the outer `uv` bootstrap process from accessing the network and restricts it to local cached data and files. `--offline` enables offline mode for SDK environment management. Once activation succeeds, enter your project directory and run the build commands in the same terminal.
+
+```{warning}
+Offline mode does not supply missing dependencies. `sifli-sdk-env.json` (located under `$HOME/.sifli` by default) records installed environment information. Its presence does not guarantee that the Python runtime, toolchain, and caches are still complete.
+
+If Python cannot be found, cached packages such as `rich` or `tomli_w` are missing, or the environment is incompatible, prepare the required dependencies in an environment with internet access. Adding only `--offline` does not prevent network access during the outer `uv` bootstrap process, so also set `UV_OFFLINE=1`.
+
+The commands above are not sufficient for a first-time installation on a completely disconnected machine. Intranet machines need all installation dependencies prepared in advance or accessible internal dependency sources. Switching to a public mirror does not solve a lack of internet access.
+```
+
+After restoring internet access, allow `uv` to download or update dependencies again by clearing the offline setting in the current terminal:
+
+```bash
+unset UV_OFFLINE
+```
+
+### Set Up an Alias (Optional)
+
 If you need to run SiFli-SDK frequently, you can create an alias for executing export.sh by following these steps:
 
 1. Copy and paste the following command into your shell configuration file (.profile, .bashrc, .zprofile, etc.)

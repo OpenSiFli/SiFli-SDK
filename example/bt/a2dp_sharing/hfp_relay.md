@@ -391,6 +391,52 @@ BT_NOTIFY_AG_EXTERN_AT_CMD_KEY_REQ
     -> bt_interface_hf_send_at_cmd_by_id(hf_channel, at_cmd)
 ```
 
+### 6.6 命令行操作
+
+示例通过 `hfp_cmd` 提供模式和音频链路控制命令。命令在设备 FinSH 控制台中执行。
+
+| 命令 | 作用 |
+| --- | --- |
+| `hfp_cmd mode` | 获取当前 relay 模式。 |
+| `hfp_cmd mode <mode>` | 设置 relay 模式。`0` 为手机-耳机模式，`1` 为耳机对讲模式。 |
+| `hfp_cmd headset_connect <mac>` | 使用指定 MAC 地址连接耳机侧 HFP。 |
+| `hfp_cmd intercom_sco` | 在对讲模式下连接第一个已连接耳机的 SCO 音频。 |
+| `hfp_cmd intercom_sco_disconnect` | 在对讲模式下断开所有已连接耳机的 SCO 音频，不断开 HFP profile。 |
+
+#### 6.6.1 获取和设置模式
+
+```text
+hfp_cmd mode
+hfp_cmd mode 0
+hfp_cmd mode 1
+```
+
+模式切换要求手机侧 HF 和所有耳机侧 AG HFP 连接均已断开。存在 HFP 连接时，设置模式命令会失败并输出错误码。模式值 `0` 为 `BT_HFP_RELAY_MODE_PHONE_HEADSET`，`1` 为 `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`。
+
+#### 6.6.2 连接耳机
+
+```text
+hfp_cmd headset_connect <mac>
+```
+
+例如：`hfp_cmd headset_connect 12:34:56:78:9A:BC`。该命令只发起耳机侧 HFP 连接请求，最终结果以 `BT_NOTIFY_AG_PROFILE_CONNECTED` 或 `BT_NOTIFY_AG_PROFILE_DISCONNECTED` 事件为准。
+
+#### 6.6.3 连接对讲 SCO
+
+```text
+hfp_cmd intercom_sco
+```
+
+该命令仅适用于 `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`，当前固定尝试连接 `ag[0]` 对应耳机的 SCO；该耳机必须已经完成 HFP 连接。最终结果以 SCO 连接事件为准。
+
+#### 6.6.4 断开对讲 SCO
+
+```text
+hfp_cmd intercom_sco_disconnect
+```
+
+该命令仅适用于 `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`，尝试断开所有已连接耳机的 SCO 音频链路，但不会断开 HFP profile。最终结果以 `BT_NOTIFY_COMMON_SCO_DISCONNECTED` 事件为准。
+
 ## 7. API 接口汇总
 
 ### 7.1 初始化与上下文接口

@@ -1,0 +1,37 @@
+# Select one SiFli custom widget example to run
+menu "LVSF v8 widget examples"
+
+choice
+    prompt "Select widget example"
+    default LV_WIDGET_DEMO_BASECHART
+
+config LV_WIDGET_DEMO_BASECHART
+    bool "basechart - base chart widget"
+config LV_WIDGET_DEMO_BASELABEL
+    bool "baselabel - base label widget"
+config LV_WIDGET_DEMO_FOLLOW
+    bool "follow - follow/scroll text widget"
+config LV_WIDGET_DEMO_IMGARRAY
+    bool "imgarray - image array widget"
+config LV_WIDGET_DEMO_IMGBAR
+    bool "imgbar - image progress bar widget"
+config LV_WIDGET_DEMO_MULROLLER
+    bool "mulroller - multi-function roller widget"
+config LV_WIDGET_DEMO_MULTANIM
+    bool "multanim - multi animation image widget"
+config LV_WIDGET_DEMO_MULTLIST
+    bool "multlist - multi-function list (gui_app framework)"
+config LV_WIDGET_DEMO_MULTROLLER
+    bool "multroller - multi roller widget"
+config LV_WIDGET_DEMO_MULTSLIDER
+    bool "multslider - multi-function slider widget"
+config LV_WIDGET_DEMO_SECTOR
+    bool "sector - sector/ring widget"
+config LV_WIDGET_DEMO_SELECT
+    bool "select - select widget"
+config LV_WIDGET_DEMO_TIMELINE
+    bool "timeline - timeline widget"
+
+endchoice
+
+endmenu

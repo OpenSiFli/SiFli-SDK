@@ -5388,7 +5388,7 @@ void bt_rf_cal(void)
     else
     {
 #ifndef ENABLE_RF_ATE
-        bt_rf_cal_index();
+        //bt_rf_cal_index();
 #endif
     }
     HAL_RCC_ResetBluetoothRF();

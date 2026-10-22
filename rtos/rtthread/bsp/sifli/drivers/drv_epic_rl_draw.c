@@ -347,7 +347,7 @@ static inline void draw_rect2(EPIC_LayerConfigTypeDef *dst, const EPIC_AreaTypeD
     EPIC_AreaTypeDef com_area;
     if (HAL_EPIC_AreaIntersect(&com_area, p_fill_area, p_clip_area))
     {
-        draw_rect_dsc_t rect_desc;
+        draw_rect_dsc_t rect_desc = {0};
         rect_desc.is_grad = 0;
         rect_desc.p_grad_color = NULL;
         rect_desc.p_rect_area = NULL;
@@ -372,7 +372,7 @@ static inline void draw_rect3(EPIC_LayerConfigTypeDef *dst, const EPIC_AreaTypeD
  * Solid fills use a colored A8 foreground and a separate parent mask. Image
  * fills use the image as the foreground, leaving only one EPIC mask layer
  * for both shape and parent clipping. Multiply their coverage in place as
- * (shape * parent + 127) / 255, then clean the modified data for EPIC access.
+ * (shape * parent + 127) / 255.
  * No merge is needed when the parent mask is absent.
  *
  * @param mask   Writable A8 tile, already clipped to the parent mask area.
@@ -390,7 +390,6 @@ static void merge_image_mask(EPIC_LayerConfigTypeDef *mask, const EPIC_LayerConf
         for (int32_t column = 0; column < mask->width; column++)
             coverage[column] = ((uint32_t)coverage[column] * source[column] + 127) / 255;
     }
-    mpu_dcache_clean(mask->data, mask->data_size);
 }
 
 static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigTypeDef *p_extra_mask_layer,
@@ -398,21 +397,21 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
                                  const EPIC_AreaTypeDef *p_circle_mask_area1,
                                  const EPIC_AreaTypeDef *p_circle_mask_area2,
                                  drv_epic_mask_opa_t *p_circle_mask_buf,
-                                 uint32_t circle_mask_width,
-                                 const EPIC_LayerConfigTypeDef *image
+                                 uint32_t circle_mask_width
                                 )
 {
     HAL_StatusTypeDef ret;
     EPIC_LayerConfigTypeDef *p_rect_color_layer, *p_mask_layer;
-    EPIC_LayerConfigTypeDef input_layers[3];
+    EPIC_LayerConfigTypeDef input_layers[4];
     EPIC_LayerConfigTypeDef output_layer;
     EPIC_AreaTypeDef com_area;
+    const EPIC_LayerConfigTypeDef *image = p_rect_desc->image;
 
     if (!_layer_IntersectArea(dst, p_draw_area, &com_area))
         return RT_EOK;
 
-    if (image && !_layer_IntersectArea(image, &com_area, &com_area)) return RT_EOK;
-    if (image && p_extra_mask_layer && p_extra_mask_layer->data &&
+    if (image && !p_rect_desc->fill_bg && !_layer_IntersectArea(image, &com_area, &com_area)) return RT_EOK;
+    if ((image || p_rect_desc->is_grad) && p_extra_mask_layer && p_extra_mask_layer->data &&
             !_layer_IntersectArea(p_extra_mask_layer, &com_area, &com_area)) return RT_EOK;
     if (image && HAL_EPIC_AreaWidth(&com_area) > ARC_IMG_TILE_WIDTH)
     {
@@ -423,7 +422,7 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
             tile.x1 = MIN(left + ARC_IMG_TILE_WIDTH - 1, com_area.x1);
             rt_err_t result = draw_masked_rect(dst, p_extra_mask_layer, masks, &tile, p_rect_desc,
                                p_circle_mask_area1, p_circle_mask_area2, p_circle_mask_buf,
-                               circle_mask_width, image);
+                               circle_mask_width);
             if (result != RT_EOK) return result;
         }
         return RT_EOK;
@@ -449,7 +448,7 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
 
 
     /*Inital mask layer*/
-    p_mask_layer = &input_layers[2];
+    p_mask_layer = &input_layers[image && p_rect_desc->fill_bg ? 3 : 2];
     HAL_EPIC_LayerConfigInit(p_mask_layer);
     p_mask_layer->color_mode = EPIC_INPUT_A8;
     p_mask_layer->width  = blend_w;
@@ -562,7 +561,7 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
                 p_mask_layer->data = (uint8_t *)mask_buf_ping_pong;
                 p_mask_layer->height = fill_h;
                 p_mask_layer->y_offset = fill_area.y0;
-                if (image) p_mask_layer->data_size = blend_w * fill_h;
+                p_mask_layer->data_size = blend_w * fill_h;
             }
 
 
@@ -582,14 +581,36 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
             {
                 merge_image_mask(p_mask_layer, p_extra_mask_layer);
                 input_layers[0] = output_layer;
-                ret = Call_Hal_Api(HAL_API_BLEND_EX, input_layers, (void *)3, &output_layer);
+                uint8_t input_layer_num = 3;
+                if (p_rect_desc->fill_bg)
+                {
+                    /* The colored A8 layer and image mask read the same coverage. */
+                    input_layers[1] = *p_mask_layer;
+                    input_layers[1].ax_mode = ALPHA_BLEND_RGBCOLOR;
+                    input_layers[1].color_en = true;
+                    input_layers[1].alpha = (uint8_t)(p_rect_desc->argb8888 >> 24);
+                    input_layers[1].color_r = (uint8_t)(p_rect_desc->argb8888 >> 16);
+                    input_layers[1].color_g = (uint8_t)(p_rect_desc->argb8888 >> 8);
+                    input_layers[1].color_b = (uint8_t)p_rect_desc->argb8888;
+#if defined(SF32LB52X)
+                    /* 52X needs two blends, but neither changes the mask buffer. */
+                    ret = Call_Hal_Api(HAL_API_BLEND_EX, input_layers, (void *)2, &output_layer);
+                    if (ret != HAL_OK) return -RT_ERROR;
+                    input_layers[1] = *image;
+                    input_layers[2] = *p_mask_layer;
+#else
+                    input_layers[2] = *image;
+                    input_layer_num = 4;
+#endif
+                }
+                ret = Call_Hal_Api(HAL_API_BLEND_EX, input_layers, (void *)(uintptr_t)input_layer_num, &output_layer);
                 if (ret != HAL_OK) return -RT_ERROR;
             }
             else if (p_rect_desc->is_grad)
             {
                 if (p_extra_mask_layer)
                 {
-                    RT_ASSERT(0); //TODO, merge extra mask into p_mask_layer
+                    merge_image_mask(p_mask_layer, p_extra_mask_layer);
                 }
 
                 input_layers[0] = output_layer; //Setup bg layer
@@ -631,13 +652,13 @@ static inline rt_err_t draw_masked_rect2(EPIC_LayerConfigTypeDef *dst, const EPI
     EPIC_AreaTypeDef com_area;
     if (HAL_EPIC_AreaIntersect(&com_area, p_draw_area, p_clip_area))
     {
-        draw_rect_dsc_t rect_desc;
+        draw_rect_dsc_t rect_desc = {0};
         rect_desc.is_grad = 0;
         rect_desc.p_grad_color = NULL;
         rect_desc.p_rect_area = NULL;
         rect_desc.argb8888 = argb8888;
         return draw_masked_rect(dst, p_mask_layer, masks, &com_area, &rect_desc,
-                                p_circle_mask_area1, p_circle_mask_area2, p_circle_mask_buf, circle_mask_width, NULL);
+                                p_circle_mask_area1, p_circle_mask_area2, p_circle_mask_buf, circle_mask_width);
     }
 
     return RT_EOK;
@@ -654,7 +675,7 @@ static inline rt_err_t draw_masked_rect3(EPIC_LayerConfigTypeDef *dst, const EPI
     EPIC_AreaTypeDef com_area;
     if (HAL_EPIC_AreaIntersect(&com_area, p_draw_area, p_clip_area))
         return draw_masked_rect(dst, p_mask_layer, masks, &com_area, p_rect_desc,
-                                p_circle_mask_area1, p_circle_mask_area2, p_circle_mask_buf, circle_mask_width, NULL);
+                                p_circle_mask_area1, p_circle_mask_area2, p_circle_mask_buf, circle_mask_width);
 
     return RT_EOK;
 }
@@ -662,14 +683,14 @@ static inline rt_err_t draw_masked_rect3(EPIC_LayerConfigTypeDef *dst, const EPI
 static rt_err_t draw_masked_rect4(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigTypeDef *p_extra_mask_layer,
                                   void *masks[], const EPIC_AreaTypeDef *p_draw_area, uint32_t argb8888)
 {
-    draw_rect_dsc_t rect_desc;
+    draw_rect_dsc_t rect_desc = {0};
     rect_desc.is_grad = 0;
     rect_desc.p_grad_color = NULL;
     rect_desc.p_rect_area = NULL;
     rect_desc.argb8888 = argb8888;
 
     return draw_masked_rect(dst, p_extra_mask_layer, masks, p_draw_area, &rect_desc,
-                            NULL, NULL, NULL, 0, NULL);
+                            NULL, NULL, NULL, 0);
 }
 
 static void get_rounded_area(int16_t angle, int32_t radius, uint8_t thickness, EPIC_AreaTypeDef *res_area)
@@ -890,17 +911,18 @@ static rt_err_t render_arc(drv_epic_operation *p_operation, EPIC_LayerConfigType
         mask_counts++;
     }
 
-    draw_rect_dsc_t rect_desc;
+    draw_rect_dsc_t rect_desc = {0};
     rect_desc.is_grad = 0;
     rect_desc.p_grad_color = NULL;
     rect_desc.p_rect_area = NULL;
     rect_desc.argb8888 = p_operation->desc.arc.argb8888;
+    rect_desc.image = p_operation->desc.arc.image;
 
     rt_err_t result = draw_masked_rect(dst, &p_operation->mask,
                      mask_list, &clipped_area, &rect_desc,
                      &round_area_1, &round_area_2,
                      circle_mask,
-                     width, p_operation->desc.arc.image
+                     width
                     );
 
 
@@ -909,17 +931,102 @@ static rt_err_t render_arc(drv_epic_operation *p_operation, EPIC_LayerConfigType
     return result;
 }
 
+/* Return true when the solid background and image can be drawn in one masked
+ * traversal.  Requires no gradient, no operation mask, and symmetric corners. */
+static bool rectangle_image_fill_bg(const drv_epic_operation *operation)
+{
+    const drv_epic_rect_image_t *image = operation->desc.rectangle.bg_image;
+    return image && !operation->desc.rectangle.grad_color_en &&
+           (operation->desc.rectangle.argb8888 >> 24) > EPIC_OPA_MIN &&
+           !operation->mask.data &&
+           operation->desc.rectangle.top_fillet == operation->desc.rectangle.bot_fillet;
+}
+
+/* Draw the rectangle background image.  Walks the tile grid for tiled images,
+ * or draws once for centered images.  fill_bg keeps the solid color in the
+ * same traversal so both layers share one geometry mask. */
+static rt_err_t render_rectangle_image(drv_epic_operation *operation, EPIC_LayerConfigTypeDef *dst,
+                                     const EPIC_AreaTypeDef *clip)
+{
+    drv_epic_rect_image_t *image = operation->desc.rectangle.bg_image;
+    if (!image) return RT_EOK;
+    bool fill_bg = rectangle_image_fill_bg(operation);
+
+    EPIC_AreaTypeDef area;
+    if (!_layer_IntersectArea(dst, clip, &area)) return RT_EOK;
+    EPIC_LayerConfigTypeDef *parent = &operation->mask;
+    if (parent->data && !_layer_IntersectArea(parent, &area, &area)) return RT_EOK;
+    if (!fill_bg && !image->tiled && !_layer_IntersectArea(&image->layer, &area, &area)) return RT_EOK;
+
+    int32_t image_w = image->layer.width;
+    int32_t image_h = image->layer.height;
+    if (image_w <= 0 || image_h <= 0) return -RT_EINVAL;
+
+    int32_t first_x = image->layer.x_offset;
+    int32_t first_y = image->layer.y_offset;
+    if (image->tiled)
+    {
+        first_x += (area.x0 - first_x) / image_w * image_w;
+        first_y += (area.y0 - first_y) / image_h * image_h;
+    }
+
+    drv_epic_mask_radius_param_t radius_mask;
+    void *masks[2] = {NULL, NULL};
+    if (operation->desc.rectangle.radius)
+    {
+        drv_epic_mask_radius_init2(&radius_mask, &operation->desc.rectangle.area,
+                                  operation->desc.rectangle.radius, false);
+        masks[0] = &radius_mask;
+    }
+    rt_err_t result = RT_EOK;
+    draw_rect_dsc_t rect_desc = {0};
+    rect_desc.fill_bg = fill_bg;
+    rect_desc.argb8888 = operation->desc.rectangle.argb8888;
+    if (fill_bg && !image->tiled)
+    {
+        /* Keep the background outside a centered image in the same traversal. */
+        rect_desc.image = &image->layer;
+        result = draw_masked_rect(dst, parent, masks, &area, &rect_desc,
+                                  NULL, NULL, NULL, 0);
+        goto done;
+    }
+    for (int32_t y = first_y; y <= area.y1; y += image_h)
+    {
+        for (int32_t x = first_x; x <= area.x1; x += image_w)
+        {
+            EPIC_LayerConfigTypeDef source = image->layer;
+            source.x_offset = x;
+            source.y_offset = y;
+            EPIC_AreaTypeDef visible;
+            if (!_layer_IntersectArea(&source, &area, &visible)) continue;
+            rect_desc.image = &source;
+            result = draw_masked_rect(dst, parent, masks, &visible, &rect_desc,
+                                      NULL, NULL, NULL, 0);
+            if (result != RT_EOK) goto done;
+            if (!image->tiled) break;
+        }
+        if (!image->tiled) break;
+    }
+done:
+    if (masks[0]) drv_epic_mask_free_param(&radius_mask);
+    return result;
+}
+
 static rt_err_t render_rectangle(drv_epic_operation *p_operation, EPIC_LayerConfigTypeDef *dst, const EPIC_AreaTypeDef *p_clip_area)
 {
     const int32_t SPLIT_LIMIT = 100;
     EPIC_AreaTypeDef *p_rect_area = &p_operation->desc.rectangle.area;
     uint32_t color = p_operation->desc.rectangle.argb8888;
+    drv_epic_rect_image_t *image = p_operation->desc.rectangle.bg_image;
     int32_t coords_w = HAL_EPIC_AreaWidth(p_rect_area);
     int32_t coords_h = HAL_EPIC_AreaHeight(p_rect_area);
     EPIC_AreaTypeDef draw_area;
-    draw_rect_dsc_t rect_desc;
+    draw_rect_dsc_t rect_desc = {0};
 
     if (!HAL_EPIC_AreaIntersect(&draw_area, p_rect_area, p_clip_area))  return RT_EOK;
+
+    if (image && ((color >> 24) == 0 || rectangle_image_fill_bg(p_operation)))
+        return render_rectangle_image(p_operation, dst, &draw_area);
 
     rect_desc.is_grad = p_operation->desc.rectangle.grad_color_en;
     rect_desc.p_grad_color = &p_operation->desc.rectangle.grad_color;
@@ -1053,7 +1160,7 @@ static rt_err_t render_rectangle(drv_epic_operation *p_operation, EPIC_LayerConf
 
         drv_epic_mask_free_param(&mask_out_param);
     }
-    return RT_EOK;
+    return render_rectangle_image(p_operation, dst, &draw_area);
 }
 
 static rt_err_t render_border_complex(drv_epic_operation *p_operation, EPIC_LayerConfigTypeDef *dst,  const EPIC_AreaTypeDef *p_clip_area,
@@ -1334,6 +1441,168 @@ static rt_err_t render_border(drv_epic_operation *p_operation, EPIC_LayerConfigT
     return RT_EOK;
 }
 
+/* Shadow coverage is built in the render layer and passed through the same
+ * masked-rectangle path as rounded backgrounds and borders.  Keeping the
+ * mask list local is important: all descriptors are consumed synchronously
+ * by draw_masked_rect(). */
+typedef struct
+{
+    drv_epic_mask_common_dsc_t dsc;
+    EPIC_AreaTypeDef area;
+    uint8_t *data;
+    int32_t size;
+} shadow_mask_t;
+
+static drv_epic_mask_res_t shadow_mask_apply(uint8_t *buf, int32_t x, int32_t y,
+                                             int32_t len, void *param)
+{
+    shadow_mask_t *m = param;
+    bool changed = false;
+    for (int32_t i = 0; i < len; i++)
+    {
+        int32_t dx = MIN(x + i - m->area.x0, m->area.x1 - x - i);
+        int32_t dy = MIN(y - m->area.y0, m->area.y1 - y);
+        int32_t ix = m->size - 1 - MIN(dx, m->size - 1);
+        int32_t iy = MIN(dy, m->size - 1);
+        uint8_t c = (dx >= m->size && dy >= m->size) ? 255 : m->data[iy * m->size + ix];
+        uint8_t v = (uint16_t)buf[i] * c / 255;
+        changed |= v != buf[i];
+        buf[i] = v;
+    }
+    return changed ? DRAW_MASK_RES_CHANGED : DRAW_MASK_RES_FULL_COVER;
+}
+
+static void shadow_blur_corner(uint32_t size, uint32_t sw, uint16_t *buf, uint16_t *line)
+{
+    int32_t left = (int32_t)(sw >> 1) - ((sw & 1) ? 0 : 1);
+    int32_t right = sw >> 1;
+    for (uint32_t y = 0; y < size; y++)
+    {
+        uint16_t *row = buf + y * size;
+        int32_t value = row[size - 1] * (int32_t)sw;
+        for (int32_t x = (int32_t)size - 1; x >= 0; x--)
+        {
+            line[x] = value;
+            value -= x + right < (int32_t)size ? row[x + right] : 0;
+            value += x - left - 1 < 0 ? row[0] : row[x - left - 1];
+        }
+        memcpy(row, line, size * sizeof(*line));
+    }
+    uint32_t max = 255u << 6, max_div = max / sw;
+    for (uint32_t i = 0; i < size * size; i++)
+        if (buf[i]) buf[i] = buf[i] == max ? max_div : buf[i] / sw;
+    for (uint32_t x = 0; x < size; x++)
+    {
+        int32_t value = buf[x] * (int32_t)sw;
+        for (uint32_t y = 0; y < size; y++)
+        {
+            line[y] = value < 0 ? 0 : (uint16_t)(value >> 6);
+            value -= y <= right ? buf[y * size + x] : buf[(y - right) * size + x];
+            value += y + left + 1 < size ? buf[(y + left + 1) * size + x] : buf[(size - 1) * size + x];
+        }
+        for (uint32_t y = 0; y < size; y++) buf[y * size + x] = line[y];
+    }
+}
+
+static rt_err_t render_shadow(drv_epic_operation *op, EPIC_LayerConfigTypeDef *dst,
+                              const EPIC_AreaTypeDef *clip)
+{
+    int32_t width = op->desc.shadow.width;
+    uint8_t opa = (uint8_t)(op->desc.shadow.argb8888 >> 24);
+    if (width <= 0 || opa <= EPIC_OPA_MIN) return RT_EOK;
+
+    EPIC_AreaTypeDef core = op->desc.shadow.area;
+    HAL_EPIC_AreaMove(&core, op->desc.shadow.ofs_x, op->desc.shadow.ofs_y);
+    core.x0 -= op->desc.shadow.spread;
+    core.y0 -= op->desc.shadow.spread;
+    core.x1 += op->desc.shadow.spread;
+    core.y1 += op->desc.shadow.spread;
+    int32_t half = width / 2 + 1;
+    EPIC_AreaTypeDef outer = core;
+    outer.x0 -= half; outer.y0 -= half;
+    outer.x1 += half; outer.y1 += half;
+    EPIC_AreaTypeDef area;
+    if (!HAL_EPIC_AreaIntersect(&area, &outer, clip)) return RT_EOK;
+
+    int32_t radius = MAX(0, MIN(op->desc.shadow.radius + op->desc.shadow.spread,
+                         MIN(HAL_EPIC_AreaWidth(&core), HAL_EPIC_AreaHeight(&core)) / 2));
+    int32_t size = width + radius;
+    if (size <= 0 || (size_t)size > SIZE_MAX / (size_t)size / sizeof(uint16_t)) return -RT_EINVAL;
+    uint16_t *coverage = epic_malloc((size_t)size * size * sizeof(*coverage));
+    uint16_t *line = epic_malloc((size_t)size * sizeof(*line));
+    uint8_t *coverage_line = epic_malloc((size_t)size);
+    uint8_t *mask_buf = epic_malloc((size_t)size * size);
+    if (!coverage || !line || !coverage_line || !mask_buf)
+    {
+        epic_free(coverage); epic_free(line); epic_free(coverage_line); epic_free(mask_buf);
+        return -RT_ENOMEM;
+    }
+    EPIC_AreaTypeDef corner = core;
+    corner.x1 = width / 2 + radius - 1 - ((width & 1) ? 0 : 1);
+    corner.y0 = width / 2 + 1;
+    corner.x0 = corner.x1 - HAL_EPIC_AreaWidth(&core);
+    corner.y1 = corner.y0 + HAL_EPIC_AreaHeight(&core);
+    drv_epic_mask_radius_param_t rounded;
+    drv_epic_mask_radius_init2(&rounded, &corner, radius, false);
+    void *corner_masks[] = {&rounded, NULL};
+    int32_t blur = width == 1 ? 1 : width >> 1;
+    for (int32_t y = 0; y < size; y++)
+    {
+        memset(coverage_line, 255, size);
+        if (drv_epic_mask_apply(corner_masks, coverage_line, 0, y, size) == DRAW_MASK_RES_TRANSP)
+            memset(coverage_line, 0, size);
+        for (int32_t x = 0; x < size; x++) coverage[y * size + x] = (coverage_line[x] << 6) / blur;
+    }
+    if (blur > 1)
+    {
+        shadow_blur_corner(size, blur, coverage, line);
+        blur += width & 1;
+        if (blur > 1)
+        {
+            for (int32_t i = 0; i < size * size; i++)
+                coverage[i] = coverage[i] ? ((coverage[i] == 255) ? (255u << 6) / blur : (coverage[i] << 6) / blur) : 0;
+            shadow_blur_corner(size, blur, coverage, line);
+        }
+    }
+    drv_epic_mask_free_param(&rounded);
+    /* Blurred coverage is already in the 0..255 range. When width < 4,
+     * no blur runs, so remove the initial 64-fold scaling before storing it. */
+    for (int32_t i = 0; i < size * size; i++)
+        mask_buf[i] = width < 4 ? coverage[i] >> 6 : coverage[i];
+    epic_free(line); epic_free(coverage); epic_free(coverage_line);
+
+    /* Corner mask coordinates are reflected around the full shadow bounds. */
+    EPIC_AreaTypeDef shadow = outer;
+    drv_epic_mask_radius_param_t hole;
+    EPIC_AreaTypeDef hole_area = op->desc.shadow.area;
+    hole_area.x0++; hole_area.y0++; hole_area.x1--; hole_area.y1--;
+    drv_epic_mask_radius_init2(&hole, &hole_area, op->desc.shadow.radius, true);
+    shadow_mask_t sm = {{shadow_mask_apply, DRAW_MASK_TYPE_MAP}, shadow, mask_buf, size};
+    void *masks[] = {&sm, &hole, NULL};
+    draw_rect_dsc_t rect = {0};
+    rect.argb8888 = op->desc.shadow.argb8888;
+    int32_t tile_width = gp_drv_epic->dbg_mask_buf_pool_max / 2;
+    if (tile_width <= 0)
+    {
+        drv_epic_mask_free_param(&hole);
+        epic_free(mask_buf);
+        return -RT_ENOMEM;
+    }
+    rt_err_t result = RT_EOK;
+    for (int32_t x = area.x0; x <= area.x1; x += tile_width)
+    {
+        EPIC_AreaTypeDef tile = area;
+        tile.x0 = x;
+        tile.x1 = MIN(area.x1, x + tile_width - 1);
+        result = draw_masked_rect(dst, &op->mask, masks, &tile, &rect,
+                                  NULL, NULL, NULL, 0);
+        if (result != RT_EOK) break;
+    }
+    drv_epic_mask_free_param(&hole);
+    epic_free(mask_buf);
+    return result;
+}
+
 
 
 static rt_err_t render_line_hor(drv_epic_operation *p_operation, EPIC_LayerConfigTypeDef *dst, const EPIC_AreaTypeDef *p_clip_area)
@@ -1359,7 +1628,7 @@ static rt_err_t render_line_hor(drv_epic_operation *p_operation, EPIC_LayerConfi
     /*If there is no mask then simply draw a rectangle*/
     if (!dashed)
     {
-        draw_rect_dsc_t rect_desc;
+        draw_rect_dsc_t rect_desc = {0};
         rect_desc.is_grad = 0;
         rect_desc.p_grad_color = NULL;
         rect_desc.p_rect_area = NULL;
@@ -1460,7 +1729,7 @@ static rt_err_t render_line_ver(drv_epic_operation *p_operation, EPIC_LayerConfi
     /*If there is no mask then simply draw a rectangle*/
     if (!dashed)
     {
-        draw_rect_dsc_t rect_desc;
+        draw_rect_dsc_t rect_desc = {0};
         rect_desc.is_grad = 0;
         rect_desc.p_grad_color = NULL;
         rect_desc.p_rect_area = NULL;
@@ -2299,7 +2568,7 @@ static rt_err_t render(drv_epic_render_list_t list)
 
                 case DRV_EPIC_DRAW_RECT:
                     render_rectangle(p_operation, dst, &intersect_area);
-                    break;
+                    break;                
 
                 case DRV_EPIC_DRAW_IMAGE:
                     render_image(p_operation, dst, &intersect_area);
@@ -2324,6 +2593,12 @@ static rt_err_t render(drv_epic_render_list_t list)
                 case DRV_EPIC_DRAW_BORDER:
                     render_border(p_operation, dst, &intersect_area);
                     break;
+
+                case DRV_EPIC_DRAW_SHADOW:
+                {
+                    render_shadow(p_operation, dst, &intersect_area);
+                    break;
+                }
 
                 case DRV_EPIC_DRAW_POLYGON:
                     render_polygon(p_operation, dst, &intersect_area);

@@ -278,6 +278,38 @@ Each time you open a new terminal window, you need to run the `export.ps1` scrip
 `export.ps1` requires `uv` in PATH to run the SDK environment management flow.
 ```
 
+### Offline or Intranet Use
+
+If your computer cannot access the Internet, you can activate an existing local environment offline, provided that `.\install.ps1` has completed successfully and the environment is still complete and compatible with the current SDK. Updating SDK code does not necessarily require reinstalling the environment. This depends on the environment compatibility check, not just whether the compiler version matches.
+
+Before disconnecting, complete installation and successfully run `export.ps1` with the same user account. Keep the SDK tools directory (by default, `$HOME\.sifli`), the `uv` cache, and the Python runtime managed by `uv`. If your project downloads external build dependencies, prepare those in advance as well.
+
+In a PowerShell terminal without Internet access or with intranet-only access, run:
+
+```powershell
+cd C:\OpenSiFli\SiFli-SDK
+$env:UV_OFFLINE="1"
+.\export.ps1 --offline
+```
+
+If you use a custom tools directory, first set `SIFLI_SDK_TOOLS_PATH` to the value used during installation.
+
+`UV_OFFLINE=1` prevents the outer `uv` startup process from accessing the network, using only local files and cached data. `--offline` enables offline mode for the SDK environment management flow. After activation succeeds, enter your project directory in the same terminal and run your build commands as usual.
+
+```{warning}
+Offline mode cannot supply missing dependencies. `sifli-sdk-env.json` (stored under `$HOME\.sifli` by default) records installed environment information. Its presence does not guarantee that Python, the toolchain, and cached data are still complete.
+
+If Python is unavailable, cached dependencies such as `rich` or `tomli_w` are missing, or the environment is incompatible, prepare the required dependencies again with network access. Passing only `--offline` does not prevent network access during the outer `uv` startup process, so also set `UV_OFFLINE=1`.
+
+These commands alone cannot perform a first-time installation on a fully disconnected computer. Intranet computers need installation dependencies prepared in advance or accessible internal dependency sources. Switching to a public mirror does not solve a complete lack of Internet access.
+```
+
+After restoring Internet access, remove the offline setting in the current terminal to allow `uv` to download or update dependencies:
+
+```powershell
+Remove-Item Env:UV_OFFLINE -ErrorAction SilentlyContinue
+```
+
 ### Windows Terminal Quick Configuration
 
 If you need to run SiFli-SDK frequently and want to automatically set environment variables each time you open the terminal, you can create a new Windows Terminal profile by following these steps:

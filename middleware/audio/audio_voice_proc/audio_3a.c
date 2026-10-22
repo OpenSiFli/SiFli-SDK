@@ -549,138 +549,137 @@ void dc_cancellation_proc(int16_t spframe[160], uint16_t len)
 }
 #endif
 
+#define SWAP_IN_OUT()  do {temp = in; in = out; out = temp;} while(0)
+
 void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_size)
 {
 #ifdef AUDIO_MEM_ALLOC
-    int16_t *spframe = audio_mem_malloc(160 * 2);
-    int16_t *outframe = audio_mem_malloc(160 * 2);
-    int16_t *outframe2 = audio_mem_malloc(160 * 2);
-    RT_ASSERT(spframe && outframe && outframe2);
+    int16_t *frame1 = audio_mem_malloc(160 * 2);
+    int16_t *frame2 = audio_mem_malloc(160 * 2);
+    RT_ASSERT(frame1 && frame2);
 #else
-    int16_t spframe[160];
-    int16_t outframe[160];
-    int16_t outframe2[160];
+    int16_t frame1[160];
+    int16_t frame2[160];
 #endif
     uint16_t getsize, putsize;
-    int16_t  *data_in;
-    int16_t  *data_in2;
-    int16_t  *data_out;
+    int16_t  *in;
+    int16_t  *out;
     int16_t  *temp;
+
+    in = frame1;
+    out = frame2;
 
     RT_ASSERT(fifo_size == p_3a_env->frame_len)
 
-    memcpy(outframe2, fifo, fifo_size);
+    memcpy(in, fifo, fifo_size);
     audio_dump_data(ADUMP_AUDPRC, fifo, fifo_size);
     if (g_bypass)
     {
-        data_out = outframe2;
+        out = in;
         goto bypass_3a;
     }
 
-    data_in = outframe2;
-    data_out = spframe;
 #if (g_dc_enabled)
     audio_tick_in(AUDIO_DC_TIME);
-    DcCorrection_Process(p_3a_env->dcInst, data_in, data_out, p_3a_env->frame_len / 2);
+    DcCorrection_Process(p_3a_env->dcInst, in, out, p_3a_env->frame_len / 2);
     audio_tick_out(AUDIO_DC_TIME);
 #else
-    memcpy(data_out, data_in, p_3a_env->frame_len);
+    SWAP_IN_OUT();
 #endif
-    audio_dump_data(ADUMP_DC_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+    audio_dump_data(ADUMP_DC_OUT, (uint8_t *)out, p_3a_env->frame_len);
+    SWAP_IN_OUT();
 
 #if WEBRTC_RUN_IN_ACPU
+    int16_t farframe[160] = {0};
+    if (rt_ringbuffer_data_len(p_3a_env->rbuf_far) >= p_3a_env->frame_len)
+    {
+        rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
+        audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
+    }
     uint8_t error_code = 1;
     acpu_webrtc_uplink_parameter_t arg = {0};
     arg.thiz = p_3a_env;
-    arg.data_out = data_out;
-    arg.outframe = outframe;
-    arg.outframe2 = outframe2;
+    arg.far_ref = farframe;
+    arg.in = in;
+    arg.out = out;
     arg.ans1_disabled = g_ans1_disabled;
     arg.aecm_enable = g_u16_test_aec;
     arg.uplink_agc_enable = g_uplink_agc;
-    arg.is_far_putted = p_3a_env->is_far_putted;
-    acpu_run_task(ACPU_TASK_webrtc_uplink, &arg, sizeof(arg), &error_code);
+    int ret = (int)acpu_run_task(ACPU_TASK_webrtc_uplink, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
+    if (!ret)
+    {
+        SWAP_IN_OUT();
+    }
 #else //WEBRTC_RUN_IN_ACPU
     {
-        data_in = data_out;  //spframe
-        data_out = outframe;
-        data_in2 = NULL;
-
         if (!g_ans1_disabled)
         {
             audio_tick_in(AUDIO_ANS1_TIME);
-            audio_ans_proc(p_3a_env->pNS_inst, data_in, data_out);
+            audio_ans_proc(p_3a_env->pNS_inst, in, out);
             audio_tick_out(AUDIO_ANS1_TIME);
-            audio_dump_data(ADUMP_ANS_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+            audio_dump_data(ADUMP_ANS_OUT, (uint8_t *)out, p_3a_env->frame_len);
         }
         else
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
 
-        data_in2 = data_out; //outframe
+        SWAP_IN_OUT();
+
         if (p_3a_env->is_far_putted && g_u16_test_aec)
         {
             aec_input_para_t input_para;
-            data_out = outframe2;
-            input_para.nearframe = outframe; //ans out
+            input_para.nearframe = in;
             input_para.nearframe_clean = NULL;
-            input_para.outframe = data_out; //outframe2
+            input_para.outframe = out;
             if (p_3a_env->is_aecm_mic_putted == 0)
             {
                 LOG_I("---first aecm input2 dump");
                 p_3a_env->is_aecm_mic_putted = 1;
             }
-            audio_dump_data(ADUMP_AECM_INPUT2, (uint8_t *)data_in, p_3a_env->frame_len);
+            audio_dump_data(ADUMP_AECM_INPUT2, (uint8_t *)in, p_3a_env->frame_len);
             audio_tick_in(AUDIO_AEC_TIME);
             audio_aec_proc(p_3a_env->aecmInst, &input_para, p_3a_env->samplerate); //data_out = data_in;
             audio_tick_out(AUDIO_AEC_TIME);
-            audio_dump_data(ADUMP_AECM_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
         }
         else
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
+        audio_dump_data(ADUMP_AECM_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
-        data_in = data_out; //outframe2
-        data_out = outframe;    //outframe
-        memcpy(data_out, data_in, p_3a_env->frame_len);
-
-        temp = data_in;     //outframe2
-        data_in = data_out; //outframe
-        data_out = temp;    //outframe2
+        SWAP_IN_OUT();
 
         if (g_uplink_agc && !p_3a_env->disable_uplink_agc)
         {
             audio_tick_in(AUDIO_UPAGC_TIME);
-            audio_agc_proc(p_3a_env->agcInst, data_in, data_out, p_3a_env->samplerate);
+            audio_agc_proc(p_3a_env->agcInst, in, out, p_3a_env->samplerate);
             audio_tick_out(AUDIO_UPAGC_TIME);
         }
         else
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
     }
 #endif // WEBRTC_RUN_IN_ACPU
-    audio_dump_data(ADUMP_AGC_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+    audio_dump_data(ADUMP_AGC_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
 
-    temp = data_in;     //outframe
-    data_in = data_out; //outframe2;
-    data_out = temp;    //outframe
+    SWAP_IN_OUT();
+
     audio_tick_in(AUDIO_RAMPOUT_TIME);
-    if (RampOut_Process(p_3a_env->rampOutInst, data_in, data_out, p_3a_env->frame_len / 2) < 0)
+    if (RampOut_Process(p_3a_env->rampOutInst, in, out, p_3a_env->frame_len / 2) < 0)
     {
-        data_out = data_in;
+        SWAP_IN_OUT();
     }
     audio_tick_out(AUDIO_RAMPOUT_TIME);
-    audio_dump_data(ADUMP_RAMP_OUT_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+    audio_dump_data(ADUMP_RAMP_OUT_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
 bypass_3a:
     if (rt_ringbuffer_space_len(p_3a_env->rbuf_out) >= p_3a_env->frame_len)
     {
-        rt_ringbuffer_put(p_3a_env->rbuf_out, (uint8_t *)data_out, p_3a_env->frame_len);
+        rt_ringbuffer_put(p_3a_env->rbuf_out, (uint8_t *)out, p_3a_env->frame_len);
     }
     else
     {
@@ -688,9 +687,8 @@ bypass_3a:
     }
 
 #ifdef AUDIO_MEM_ALLOC
-    audio_mem_free(spframe);
-    audio_mem_free(outframe);
-    audio_mem_free(outframe2);
+    audio_mem_free(frame1);
+    audio_mem_free(frame2);
 #endif
 }
 
@@ -831,47 +829,6 @@ void audio_3a_close()
     }
 }
 
-#if WEBRTC_RUN_IN_ACPU
-extern void notify_server_call_acpu_far_put(void);
-
-void audio_3a_far_put_by_apcu(void)
-{
-    audio_3a_t *p_3a_env = &g_audio_3a_env;
-    if (p_3a_env->state == 0)
-    {
-        LOG_I("3a far put: closed");
-        return;
-    }
-
-    uint16_t farframe[160];
-
-    while (1)
-    {
-        uint16_t get_size;
-        if (rt_ringbuffer_data_len(p_3a_env->rbuf_far) < p_3a_env->frame_len)
-        {
-            break;
-        }
-        get_size = rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
-        RT_ASSERT(get_size == p_3a_env->frame_len);
-        audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
-
-        uint8_t error_code = 1;
-        acpu_webrtc_farput_parameter_t arg = {0};
-        arg.aecm = p_3a_env->aecmInst;
-        arg.data = farframe;
-        arg.data_len = p_3a_env->frame_len / 2;
-        acpu_run_task(ACPU_TASK_webrtc_farput, &arg, sizeof(arg), &error_code);
-        RT_ASSERT(error_code == 0);
-        if (p_3a_env->is_far_putted == 0)
-        {
-            LOG_I("---first far dump");
-        }
-        p_3a_env->is_far_putted = 1;
-    }
-}
-#endif
-
 void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
 {
     audio_3a_t *p_3a_env = &g_audio_3a_env;
@@ -880,23 +837,26 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
         LOG_I("3a far put: closed");
         return;
     }
+
+    if (g_bypass)
+        return;
+
     if (rt_ringbuffer_space_len(p_3a_env->rbuf_far) >= fifo_size)
     {
         rt_ringbuffer_put(p_3a_env->rbuf_far, fifo, fifo_size);
     }
     else
     {
-        LOG_I("3a_w far full");
-        rt_ringbuffer_put_force(p_3a_env->rbuf_far, fifo, fifo_size);
+        LOG_D("3a_w far full");
+        rt_ringbuffer_put(p_3a_env->rbuf_far, fifo, fifo_size);
     }
 
 #if WEBRTC_RUN_IN_ACPU
-    if (rt_ringbuffer_data_len(p_3a_env->rbuf_far) < p_3a_env->frame_len)
+    if (p_3a_env->is_far_putted == 0)
     {
-        return;
+        LOG_I("---first far dump");
     }
-    notify_server_call_acpu_far_put();
-    return;
+    p_3a_env->is_far_putted = 1;
 #else
 
     uint16_t farframe[160];

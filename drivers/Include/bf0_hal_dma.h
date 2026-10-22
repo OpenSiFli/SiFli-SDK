@@ -92,7 +92,19 @@ typedef struct
                                                  data transfer is configured on the selected Channel */
 
     uint32_t Priority;                  /*!< Specifies the software priority for the DMAy Channelx.
-                                           This parameter can be a value of @ref DMA_Priority_level */
+                                           This parameter can be a value of @ref DMA_Priority_level
+                                           @note The requested value is not programmed into CCR as is, it is
+                                                 adjusted by the transfer direction first, so that every
+                                                 peripheral transfer stays strictly above memory-to-memory ones:
+                                                 - memory-to-memory transfers always use DMA_PRIORITY_LOW;
+                                                 - otherwise the level is shifted up by one and saturates at
+                                                   DMA_PRIORITY_VERY_HIGH, i.e. LOW->MEDIUM, MEDIUM->HIGH,
+                                                   HIGH/VERY_HIGH->VERY_HIGH, which keeps the relative order
+                                                   between peripheral transfers.
+                                                 DMA_PRIORITY_HIGH and DMA_PRIORITY_VERY_HIGH are therefore
+                                                 not distinguishable for peripheral transfers. The same
+                                                 adjustment is applied to the Control word of each node prepared
+                                                 by HAL_DMA_PrepareMultiple(). */
 
     uint32_t BurstSize;                 /*!< Specifies the burst size in non-m2m mode
                                           When BS>1, DMA will transfer for BS times for each request if left NDT is larger than BS,
@@ -263,6 +275,7 @@ typedef struct
   */
 #if !defined (DMAMUX1)
 
+#if defined(SF32LB55X) || defined(SF32LB58X)
 #define DMA_REQUEST_0                     0U
 #define DMA_REQUEST_1                     1U
 #define DMA_REQUEST_2                     2U
@@ -295,7 +308,102 @@ typedef struct
 #define DMA_REQUEST_29                    29U
 #define DMA_REQUEST_30                    30U
 #define DMA_REQUEST_31                    31U
-#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
+#define DMA_REQUEST_MAX                   DMA_REQUEST_31
+#endif /* SF32LB55X || SF32LB58X */
+#if defined(SF32LB56X) || defined(SF32LB52X)
+#define DMA_REQUEST_0                     0U
+#define DMA_REQUEST_1                     1U
+#define DMA_REQUEST_2                     2U
+#define DMA_REQUEST_3                     3U
+#define DMA_REQUEST_4                     4U
+#define DMA_REQUEST_5                     5U
+#define DMA_REQUEST_6                     6U
+#define DMA_REQUEST_7                     7U
+#define DMA_REQUEST_8                     8U
+#define DMA_REQUEST_9                     9U
+#define DMA_REQUEST_10                    10U
+#define DMA_REQUEST_11                    11U
+#define DMA_REQUEST_12                    12U
+#define DMA_REQUEST_13                    13U
+#define DMA_REQUEST_14                    14U
+#define DMA_REQUEST_15                    15U
+#define DMA_REQUEST_16                    16U
+#define DMA_REQUEST_17                    17U
+#define DMA_REQUEST_18                    18U
+#define DMA_REQUEST_19                    19U
+#define DMA_REQUEST_20                    20U
+#define DMA_REQUEST_21                    21U
+#define DMA_REQUEST_22                    22U
+#define DMA_REQUEST_23                    23U
+#define DMA_REQUEST_24                    24U
+#define DMA_REQUEST_25                    25U
+#define DMA_REQUEST_26                    26U
+#define DMA_REQUEST_27                    27U
+#define DMA_REQUEST_28                    28U
+#define DMA_REQUEST_29                    29U
+#define DMA_REQUEST_30                    30U
+#define DMA_REQUEST_31                    31U
+#define DMA_REQUEST_32                    32U
+#define DMA_REQUEST_33                    33U
+#define DMA_REQUEST_34                    34U
+#define DMA_REQUEST_35                    35U
+#define DMA_REQUEST_36                    36U
+#define DMA_REQUEST_37                    37U
+#define DMA_REQUEST_38                    38U
+#define DMA_REQUEST_39                    39U
+#define DMA_REQUEST_40                    40U
+#define DMA_REQUEST_41                    41U
+#define DMA_REQUEST_42                    42U
+#define DMA_REQUEST_43                    43U
+#define DMA_REQUEST_44                    44U
+#define DMA_REQUEST_45                    45U
+#define DMA_REQUEST_46                    46U
+#define DMA_REQUEST_47                    47U
+#define DMA_REQUEST_48                    48U
+#define DMA_REQUEST_49                    49U
+#define DMA_REQUEST_50                    50U
+#define DMA_REQUEST_51                    51U
+#define DMA_REQUEST_52                    52U
+#define DMA_REQUEST_53                    53U
+#define DMA_REQUEST_54                    54U
+#define DMA_REQUEST_55                    55U
+#define DMA_REQUEST_56                    56U
+#define DMA_REQUEST_57                    57U
+#define DMA_REQUEST_MAX                   DMA_REQUEST_57
+#endif /* SF32LB56X || SF32LB52X */
+#if defined(SF32LB57X)
+#define DMA_REQUEST_0                     0U
+#define DMA_REQUEST_1                     1U
+#define DMA_REQUEST_2                     2U
+#define DMA_REQUEST_3                     3U
+#define DMA_REQUEST_4                     4U
+#define DMA_REQUEST_5                     5U
+#define DMA_REQUEST_6                     6U
+#define DMA_REQUEST_7                     7U
+#define DMA_REQUEST_8                     8U
+#define DMA_REQUEST_9                     9U
+#define DMA_REQUEST_10                    10U
+#define DMA_REQUEST_11                    11U
+#define DMA_REQUEST_12                    12U
+#define DMA_REQUEST_13                    13U
+#define DMA_REQUEST_14                    14U
+#define DMA_REQUEST_15                    15U
+#define DMA_REQUEST_16                    16U
+#define DMA_REQUEST_17                    17U
+#define DMA_REQUEST_18                    18U
+#define DMA_REQUEST_19                    19U
+#define DMA_REQUEST_20                    20U
+#define DMA_REQUEST_21                    21U
+#define DMA_REQUEST_22                    22U
+#define DMA_REQUEST_23                    23U
+#define DMA_REQUEST_24                    24U
+#define DMA_REQUEST_25                    25U
+#define DMA_REQUEST_26                    26U
+#define DMA_REQUEST_27                    27U
+#define DMA_REQUEST_28                    28U
+#define DMA_REQUEST_29                    29U
+#define DMA_REQUEST_30                    30U
+#define DMA_REQUEST_31                    31U
 #define DMA_REQUEST_32                    32U
 #define DMA_REQUEST_33                    33U
 #define DMA_REQUEST_34                    34U
@@ -346,7 +454,15 @@ typedef struct
 #define DMA_REQUEST_79                    79U
 #define DMA_REQUEST_80                    80U
 #define DMA_REQUEST_81                    81U
-#endif /* SF32LB56X || SF32LB52X */
+#define DMA_REQUEST_82                    82U
+#define DMA_REQUEST_83                    83U
+#define DMA_REQUEST_84                    84U
+#define DMA_REQUEST_85                    85U
+#define DMA_REQUEST_86                    86U
+#define DMA_REQUEST_87                    87U
+#define DMA_REQUEST_88                    88U
+#define DMA_REQUEST_MAX                   DMA_REQUEST_88
+#endif /* SF32LB57X */
 
 
 #endif
@@ -853,6 +969,8 @@ typedef struct
   *         parameters in the DMA_InitTypeDef and initialize the associated handle.
   * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
   *               the configuration information for the specified DMA Channel.
+  * @note   hdma->Init.Priority is not programmed into CCR as is, it is adjusted by
+  *         the transfer direction first, see DMA_InitTypeDef::Priority.
   * @retval HAL status
   */
 HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma);
@@ -1154,11 +1272,7 @@ HAL_StatusTypeDef HAL_DMA_FreeChannel(DMA_HandleTypeDef *hdma);
                                         ((STATE) == DMA_MINC_DISABLE))
 
 #if !defined (DMAMUX1)
-#if defined(SF32LB56X) || defined(SF32LB52X) || defined(SF32LB57X)
-#define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_81)
-#else
-#define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_31)
-#endif
+#define IS_DMA_ALL_REQUEST(REQUEST) ((REQUEST) <= DMA_REQUEST_MAX)
 #endif
 
 #if defined(DMAMUX1)

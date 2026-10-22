@@ -1,0 +1,21 @@
+from building import *
+
+objs_ezip = []
+
+# Only pack the images needed by the selected widget demo, so unused demo
+# assets do not occupy flash.
+if GetDepend('LV_WIDGET_DEMO_MULTANIM'):
+    objs_ezip += Glob('animimg00*.png')
+if GetDepend('LV_WIDGET_DEMO_MULTLIST'):
+    objs_ezip += Glob('demo_list_*.png')
+    objs_ezip += Glob('menu_multlist.png')
+
+if 16 == GetConfigValue('LV_COLOR_DEPTH'):
+    img_flags = '-rgb565'
+else:
+    img_flags = '-rgb888'
+
+src = Env.ImgResource(objs_ezip, img_flags + ' -section ROM3_IMG -cfile 2 -dpt 1')
+group = DefineGroup('lvsf_examples_asset', src, depend=['PKG_USING_LITTLEVGL2RTT'])
+
+Return('group')
