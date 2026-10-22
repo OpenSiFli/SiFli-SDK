@@ -260,6 +260,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Init(SPI_HandleTypeDef *hspi)
     /* Configure : SPI_SFRM_POL*/
     //WRITE_REG(hspi->Instance->SFRM_POL, (hspi->Init.SFRMPol));
 #ifdef SPI_FRM_HDR_DATA_HDR_DATA
+    WRITE_REG(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_CLK_SSP_EN);
     if (1 == hspi->Init.BaudRatePrescaler)
     {
         SET_BIT(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_CLK_SEL);
@@ -270,7 +271,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Init(SPI_HandleTypeDef *hspi)
                    MAKE_REG_VAL(hspi->Init.BaudRatePrescaler, SPI_TOP_CTRL_CLK_DIV_Msk, SPI_TOP_CTRL_CLK_DIV_Pos));
     }
 
-    SET_BIT(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_CLK_SSP_EN);
     SET_BIT(hspi->Instance->TOP_CTRL, value);
 
     if (hspi->Init.Direction == SPI_DIRECTION_1LINE)
