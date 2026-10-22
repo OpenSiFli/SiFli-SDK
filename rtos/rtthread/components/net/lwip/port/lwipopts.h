@@ -425,7 +425,7 @@
     #define TCPIP_THREAD_STACKSIZE      4096
 #endif
 #define TCPIP_THREAD_NAME           "tcpip"
-#define DEFAULT_TCP_RECVMBOX_SIZE   10
+#define DEFAULT_TCP_RECVMBOX_SIZE   32
 
 /* ---------- ARP options ---------- */
 #define LWIP_ARP                    1
