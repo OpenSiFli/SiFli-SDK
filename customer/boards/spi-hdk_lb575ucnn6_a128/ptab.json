@@ -85,7 +85,7 @@
             },            
             {
                 "offset": "0x00340000", 
-                "max_size": "0x000C0000", 
+                "max_size": "0x004C0000", 
                 "tags": [
                     "PSRAM_DATA"
                 ]
