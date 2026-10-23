@@ -1,0 +1,5 @@
+baseline_commit=b4036bf8f64f04a1e6a0fa7bc9fc57cca9320cd9
+baseline_tag=
+baseline_repo=/home/admin/project/aic8800_rtos
+sync_date=2026-10-13
+synced_files=host/port/platform/构建配置 同同步#2(基准 d4509b7->f5d2aef); 追加 b4036bf(仅 docs/SYNC_CHANGELOG.md 客户可见发布变更记录); 平台侧 host/Makefile 增 baseline_repo 回退解析(修版本串降级);kept=port/inc/fmac_port.h,platform_config_cortex-m33.mk

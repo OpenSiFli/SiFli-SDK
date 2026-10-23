@@ -77,4 +77,18 @@ menuconfig BSP_WIFI_SWT6621
             int "SWT6621 SDIO port number, 0-SDHCI1; 1-SDHCI2; 2-SDIO"
             default 0
     endif
+
+menuconfig AIC_WLAN_AIC8800D40N
+    bool "WIFI mod aic8800d40-n"
+    default n
+    select LPKG_USING_MBEDTLS
+    help
+      AIC8800D40-N SDIO WiFi: prebuilt host library (libaic8800_driver.a +
+      libaic_mbedtls.a) plus the platform adaptation layer (built by scons).
+      Route 1 (default): the driver creates its own lwIP netif and does not
+      depend on rt_wlan.
+      Route 2: see the AIC8800_USE_RT_WLAN sub-menu.
+    if AIC_WLAN_AIC8800D40N
+    source "$SIFLI_SDK/customer/peripherals/wifi/aic8800d40-n/Kconfig"
+    endif
 endmenu

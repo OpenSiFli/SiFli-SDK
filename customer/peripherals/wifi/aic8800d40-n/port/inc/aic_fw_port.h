@@ -1,0 +1,104 @@
+/*
+ * Copyright (C) 2018-2024 AICSemi Ltd.
+ *
+ * All Rights Reserved
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Firmware port interface - platform registers firmware data providers.
+ */
+
+#ifndef _AIC_FW_PORT_H_
+#define _AIC_FW_PORT_H_
+
+#include "aic_porting_types.h"
+
+enum aic_fw
+{
+    FW_UNKNOWN = 0,
+    FMACFW,
+    FMACFW_RF,
+    FW_ADID,
+    FW_PATCH,
+    FW_PATCH_TABLE,
+    FW_ADID_U03,
+    FW_PATCH_U03,
+    FW_PATCH_TABLE_U03,
+    FMACFW_8800DC,
+    FMACFW_RF_8800DC,
+    FMACFW_PATCH_8800DC,
+    FMACFW_RF_PATCH_8800DC,
+    LMACFW_RF_8800DC,
+    FMACFW_PATCH_8800DC_U02,
+    FMACFW_PATCH_TBL_8800DC_U02,
+    FW_ADID_8800DC,
+    FW_PATCH_8800DC,
+    FW_PATCH_TABLE_8800DC,
+    FW_ADID_8800DC_U02,
+    FW_PATCH_8800DC_U02,
+    FW_PATCH_TABLE_8800DC_U02,
+    FW_ADID_8800D80,
+    FW_ADID_8800D80_U02,
+    FMACFW_8800D80,
+    FMACFW_8800D80_U02,
+    FMACFW_8800D80_H_U02,           /* SDIO standard version */
+    FMACFW_8800D80_H_U02_IPC,       /* SDIO IPC version (CONFIG_FOR_IPCAM) */
+    FMACFW_8800D80_H_U02_USB,       /* USB standard version */
+    FMACFW_8800D80_H_U02_USB_IPC,   /* USB IPC version */
+    FMACFW_RF_8800D80,
+    FMACFW_RF_8800D80_U02,
+    FW_PATCH_8800D80,
+    FW_PATCH_8800D80_U02,
+    FW_PATCH_TABLE_8800D80,
+    FW_PATCH_TABLE_8800D80_U02,
+    FW_PATCH_8800D80_U02_EXT,
+    FW_PATCH_8800D80_U02_EXT1,      /* ext patch of BT patch table id=1 (new firmware set declares 2 ext patches) */
+    FMACFW_CALIB_8800DC_U02,
+    FMACFW_CALIB_8800DC_H_U02,
+    FMACFW_PATCH_8800DC_H_U02,
+    FMACFW_PATCH_TBL_8800DC_H_U02,
+    FW_ADID_8800D80N_U02,
+    FW_ADID_8800D80N_U02C,
+    FW_PATCH_8800D80N_U02,
+    FW_PATCH_8800D80N_U02C,
+    FW_PATCH_TABLE_8800D80N_U02,
+    FW_PATCH_TABLE_8800D80N_U02C,
+    FW_PATCH_8800D80N_U02_EXT,
+    FW_PATCH_8800D80N_U02C_EXT,
+    LMACFW_RF_8800D80N,
+    LMACFW_RF_8800D80N_I,           /* 8819i (chip_id upper 2 bits = 0xC0) RF test firmware */
+    /* D80N RFTEST BT firmware (Linux fw_patch_8800d80n_rf_u02*.bin, CPMODE_TEST only) */
+    FW_PATCH_8800D80N_RF_U02,
+    FW_PATCH_8800D80N_RF_U02_EXT,
+    FW_PATCH_TABLE_8800D80N_RF_U02,
+    FW_PATCH_8800D80N_RF_U02C,
+    FW_PATCH_8800D80N_RF_U02C_EXT,
+    FW_PATCH_TABLE_8800D80N_RF_U02C,
+    /* D80N 4-stage boot flow firmware (PATCH / PATCH_TBL / CINIT / CALIB × U02/U02C) */
+    FMACFW_PATCH_8800D80N_U02,
+    FMACFW_PATCH_TBL_8800D80N_U02,
+    FMACFW_CINIT_8800D80N_U02,
+    FMACFW_CALIB_8800D80N_U02,
+    FMACFW_PATCH_8800D80N_U02C,
+    FMACFW_PATCH_TBL_8800D80N_U02C,
+    FMACFW_CINIT_8800D80N_U02C,
+    FMACFW_CALIB_8800D80N_U02C,
+    /* AIC8800D80X2 (U05 baseline, 2T2R) — WiFi + BT firmware */
+    FMACFW_8800D80X2,
+    LMACFW_RF_8800D80X2,
+    FW_ADID_8800D80X2_U05,
+    FW_PATCH_8800D80X2_U05,
+    FW_PATCH_TABLE_8800D80X2_U05,
+    FW_PATCH_8800D80X2_U05_EXT0,
+    FW_PATCH_8800D80X2_U05_EXT1,
+    /* DC_H BLE controller (fw_*8800dc_u02h.bin → innermode arrays) */
+    FW_ADID_8800DC_U02H,
+    FW_PATCH_8800DC_U02H,
+    FW_PATCH_TABLE_8800DC_U02H,
+};
+
+/* Firmware data — platform must provide implementations */
+void     *aic_fw_ptr_get(enum aic_fw id);
+uint32_t  aic_fw_size_get(enum aic_fw id);
+
+#endif /* _AIC_FW_PORT_H_ */

@@ -1,0 +1,136 @@
+#-----------------------------
+# AIC8800D40-N driver local parameter
+#
+# This file is sourced only when the master switch AIC_WLAN_AIC8800D40N
+# in customer/peripherals/wifi/Kconfig is enabled, so every option below
+# implicitly depends on AIC_WLAN_AIC8800D40N.
+#-----------------------------
+
+menu "AIC8800D40-N Parameter"
+
+    config CHIP_SELECT_AIC8800D40N
+        bool "select AIC8800D40N (D80N chip)"
+        default y
+        help
+          AIC8800D40N modules (SDIO PID 0x9084; siblings D40LN 0x9085 and
+          D40WN 0x9086) all use the AIC8800D80N chip internally.
+          SConscript uses this to inject CONFIG_AIC8800D80N (+ U02C firmware
+          set) as required by the prebuilt host library, so upper layers only
+          need to use the D40-N naming.
+
+    config AIC8800_USE_RT_WLAN
+        bool "connect to RT-Thread Wi-Fi framework (rt_wlan + SDK netif)"
+        default n
+        select RT_USING_WIFI
+        select RT_USING_NETDEV
+        select LWIP_USING_DHCPD
+        help
+          Off (default): route 1 - the driver creates its own lwIP netif
+                         and does not depend on rt_wlan.
+          On:            route 2 - netif is created by the rt_wlan framework
+                         and the driver only provides rt_wlan_dev_ops; the
+                         wifi command and rt_wlan_* APIs are available, the
+                         framework starts the DHCP client for STA and the
+                         DHCP server for SoftAP.
+
+    choice
+        prompt "AIC8800 RX mode"
+        default AIC8800_RX_MODE_IRQ_IN_ISR
+        config AIC8800_RX_MODE_IRQ_IN_ISR
+            bool "SDIO IRQ, RX in interrupt context"
+            help
+              Receive packets synchronously inside the SDIO interrupt
+              handler, clearing the chip interrupt source before returning,
+              so the DAT1 level interrupt does not retrigger while the
+              source is still pending (interrupt storm).
+        config AIC8800_RX_MODE_IRQ_TASK
+            bool "SDIO IRQ, RX in dedicated task"
+            help
+              After registering the SDIO interrupt, an internal rx task
+              receives packets, keeping the interrupt context shorter.
+    endchoice
+
+    choice
+        prompt "AIC8800 firmware load mode"
+        default AIC8800_FW_LOAD_INNER
+        help
+          Source of the WiFi firmware image. This SDK integration only uses
+          the embedded array (inner) mode; file mode requires a file system
+          and flash mode requires firmware partitions defined in ptab.
+
+        config AIC8800_FW_LOAD_INNER
+            bool "embedded firmware array (innermode, CONFIG_LOAD_FW=2)"
+
+        config AIC8800_FW_LOAD_FLASH
+            bool "load from flash (flashmode, CONFIG_LOAD_FW=1)"
+
+        config AIC8800_FW_LOAD_FILE
+            bool "load from file system (filemode, CONFIG_LOAD_FW=0)"
+    endchoice
+
+    config AIC8800_IRQ_SUS
+        bool "re-enable SDIO interrupt after each RX round (CONFIG_IRQ_SUS_DEFAULT=1)"
+        default n
+        help
+          Re-enable the SDIO interrupt after RX processing. Keep disabled for
+          the default RX flow.
+
+    config AIC8800_RX_POLLING
+        bool "poll for RX instead of using the SDIO interrupt (CONFIG_RX_POLLING_DEFAULT=1)"
+        depends on AIC8800_RX_MODE_IRQ_TASK
+        default n
+        help
+          Keep the SDIO interrupt masked and let the library RX task poll
+          every 10 ms. Use as a fallback when the DAT1 level interrupt
+          storms. Requires the "RX in dedicated task" mode above.
+
+    choice
+        prompt "aic8800 wlan power-on control"
+        default AIC8800_RTOS_WIRELESS_PWR_DIRECT_GPIO
+        help
+          Control method for the WiFi chip power enable pin (WL_REG_ON).
+
+        config AIC8800_RTOS_WIRELESS_PWR_DIRECT_GPIO
+            bool "direct MCU GPIO"
+            help
+              PWRON is connected directly to an MCU GPIO and the driver
+              controls power up/down through rt_pin.
+
+        config AIC8800_RTOS_WIRELESS_PWR_VIA_IOEXP
+            bool "via IO expander (e.g. AW9523 on I2C)"
+            help
+              PWRON is connected to an I2C IO expander and power up/down is
+              controlled through the expander (the board must provide
+              aw9523.h/aw9523.c). Because the I2C bus must be ready, the
+              power-on hook is registered at INIT_PREV_EXPORT.
+    endchoice
+
+    config AIC8800_RTOS_WIRELESS_PWR_GPIO
+        int "aic8800 wlan power-on gpio (WL_REG_ON, -1 = not used)"
+        depends on AIC8800_RTOS_WIRELESS_PWR_DIRECT_GPIO
+        default -1
+        help
+          WiFi chip power enable pin. At driver start-up the pin is driven
+          low -> delayed -> driven high to power on the chip (configure -1 to
+          skip all GPIO operations and let the hardware ensure power-up).
+
+    config AIC8800_RTOS_WIRELESS_PWR_IOEXP_PIN
+        hex "aic8800 wlan power-on pin on IO expander (AW9523 0x15 = P1_5)"
+        depends on AIC8800_RTOS_WIRELESS_PWR_VIA_IOEXP
+        default 0x15
+        help
+          Power enable pin number on the IO expander, encoded as in
+          aw9523.h: 0xPp (P = port 0/1, p = bit 0~7).
+          AW9523_PIN_WF_PWREN = 0x15 (P1_5).
+
+    config AIC8800_RTOS_WIRELESS_PWR_IOEXP_PIN_KEY
+        hex "aic8800 wlan power-on sequence pin on IO expander (AW9523 0x14 = P1_4)"
+        depends on AIC8800_RTOS_WIRELESS_PWR_VIA_IOEXP
+        default 0x14
+        help
+          Power-on sequence pin number on the IO expander (driven after the
+          supply is stable to complete the power-on sequence).
+          Encoded as in aw9523.h: 0xPp (P = port 0/1, p = bit 0~7).
+          AW9523_PIN_WF_PWRKEY = 0x14 (P1_4).
+
+endmenu

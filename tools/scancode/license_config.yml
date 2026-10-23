@@ -91,5 +91,12 @@ extensions:
     - "install.ps1"
     ignore_license: true
     ignore_copyright: true
+  # aic8800d40-n: firmware binary array headers (generated from .bin) and Marvell UAP API,
+  # not AIC/SiFli original code
+  - path:
+      - "customer/peripherals/wifi/aic8800d40-n/platform/fmac/fw"
+      - "customer/peripherals/wifi/aic8800d40-n/platform/uapapi"
+    ignore_license: true
+    ignore_copyright: true
 
 
