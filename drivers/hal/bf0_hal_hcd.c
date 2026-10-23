@@ -16,7 +16,6 @@
 
 #include "bf0_hal_usb_common.h"
 
-
 /** @defgroup HCD HCD
   * @brief HCD HAL module driver
   * @{
@@ -318,6 +317,9 @@ __weak void  HAL_HCD_MspInit(HCD_HandleTypeDef *hhcd)
     {
         hwp_hpsys_cfg->ANAU_CR |= HPSYS_CFG_ANAU_CR_EN_BG;
     }
+
+    hwp_hpsys_rcc->CSR &= ~HPSYS_RCC_CSR_SEL_USBC;
+    hwp_hpsys_rcc->USBCR = 4;
 #endif /* SOC_SF32LB57X */
 
     HAL_RCC_EnableModule(RCC_MOD_USBC);
@@ -325,8 +327,11 @@ __weak void  HAL_HCD_MspInit(HCD_HandleTypeDef *hhcd)
 #ifdef SF32LB57X
     /* Delay 10us to make sure BG and rcc usb clock is ready */
     HAL_Delay_us(10);
-    /* switch to 48MHz (clk_en=1 and mode_48m=1). mode_48m default value is 1, write 1 again to avoid read back */
-    hwp_usbc->mode_48m = 3;
+    /* 60MHz mode needs HCLK 240MHz; otherwise fall back to 48MHz crystal mode */
+    if (240000000 == HAL_RCC_GetHCLKFreq(CORE_ID_DEFAULT))
+        hwp_usbc->mode_48m = 2;
+    else
+        hwp_usbc->mode_48m = 3;
 #endif /* SF32LB57X */
 
 #ifdef SF32LB58X
