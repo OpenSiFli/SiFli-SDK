@@ -16,8 +16,8 @@ PrepareEnv()
 # Add bootloader project
 AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 
-# Add ACPU project
-if GetDepend('SOC_SF32LB57X') or GetDepend('SOC_SF32LB58X'):
+# Add ACPU project if needed
+if GetDepend('DRV_EPIC_NEW_API_DUAL_CORE_HCPU'):
     acpu_proj_path = os.path.join(SIFLI_SDK, 'example/acpu/project')
     acpu_proj_name = 'acpu'
     AddChildProj(acpu_proj_name, acpu_proj_path, False, core="ACPU")
