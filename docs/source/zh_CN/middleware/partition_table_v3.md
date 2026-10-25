@@ -164,13 +164,14 @@ partitions:
 
 ## memory 定义
 
-memory 用于定义外挂的存储器的熟悉，如 NAND Flash、NOR Flash 等。
+memory 用于定义外挂的存储器的属性，如 NAND Flash、NOR Flash 等。
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `name` | string | 是 | MPI 接口或者 SCMMC 接口名称，如 `mpi2`、`sdmmc1`等 |
 | `type` | string | 是 | 存储器类型，可选为 `nand`、`nor`、`sd` |
 | `size` | string | 是 | 存储器大小，支持 `0x` 前缀和 `KB`/`MB` 后缀 |
+| `block_size` | string | 否 | NAND 擦除块大小，可选 `128KB`（默认）或 `256KB`；仅 NAND 存储器可配置，并在 NAND 作为启动存储时生效 |
 
 如果是外挂的 SDMMC 存储器（eMMC/SD 卡），还需要在 `memory` 中定义对应的存储器，并且在分区中通过 `region` 字段引用。
 
@@ -259,6 +260,15 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
   - 当启动存储位于 NAND 上时，会自动保留 `factory_data` 分区，别名为 `FACTORY_DATA`，默认 `offset = 2 * block_size`、`size = block_size`。未显式配置 `memory.block_size` 时，NAND block size 默认为 128KB；显式配置 256KB block size 时，`FACTORY_DATA` 默认偏移和大小也会同步调整。
   - 当启动存储位于 SDMMC 上时，会自动保留 `mbr` 分区（别名 `MBR`，`offset=0x0`，`size=0x1000`）和 `factory_data` 分区（别名 `FACTORY_DATA`，`offset=0x41000`，`size=0x20000`）。
   - 在保持默认 RAM 布局的情况下，`hcpu_ram_data`、`bootloader_ram_data`、`lpsys_ram` 可以省略。
+- `SF32LB57`
+  - `flash_table` 和 `bootloader` 会根据 HCPU factory app 的存储 `region` 自动推导。启动存储可以是 NOR（`mpi2` 或 `mpi3`）、NAND（仅 `mpi3`）或 SD（`sdmmc1` 或 `sdmmc2`）。
+  - NOR：`flash_table` 位于 `offset=0x0`、`size=0x8000`；`bootloader` 位于 `offset=0x10000`、`size=0x10000`，`exec` 指向 `hpsys_ram` 的 `offset=0x20000`。不会注入 `AUTO_FLASH_MAC_ADDRESS`。
+  - NAND：`flash_table` 位于 `offset=0x0`、`size=0x8000`（ftab 分区只覆盖实际生效的分区表，不占用一整个擦除块）；`factory_data`（别名 `FACTORY_DATA`）位于 `offset = 2 * block_size`、`size = block_size`；`bootloader` 位于 `offset = 4 * block_size`、`size=0x10000`。`block_size` 取自启动 `memory` 条目的 `block_size` 字段，未配置时使用 128KB。会注入 `AUTO_FLASH_MAC_ADDRESS`，取值为启动 region 的 SBUS 基地址（`mpi3` → `0x64000000`，`mpi2` → `0x62000000`）。
+  - SD（`sdmmc1` / `sdmmc2`）：会自动保留 `mbr`（别名 `MBR`，`offset=0x0`，`size=0x1000`）、`flash_table`（`offset=0x1000`，`size=0x8000`）、`factory_data`（`offset=0x41000`，`size=0x20000`）和 `bootloader`（`offset=0x61000`，`size=0x10000`）。不会注入 `AUTO_FLASH_MAC_ADDRESS`。
+  - `bootloader` 默认大小为 64KB。
+  - 在保持默认 RAM 布局的情况下，`hcpu_ram_data`（`hpsys_ram` `offset=0`、`size=0x6FC00`）和 `bootloader_ram_data`（`hpsys_ram` `offset=0x40000`、`size=0x10000`）可以省略。
+  - SF32LB57 有 LPSYS RAM，但 ptab v3 默认不生成 `lpsys_ram` 分区（默认构建不启用 LCPU）；如果用户在 YAML 中显式声明 `lpsys_ram`，该分区会被保留。
+  - `acpu` 和 `acpu_ram_data` 不会由 ptab v3 默认注入；在使用 `new-board` 且 `with_acpu=true` 时，它们会由 `new-board` 生成到板级 `ptab.yaml` 中。
 - `SF32LB56` / `SF32LB58`
   - 位于内部 `mpi5` 上的 `flash_table` 和 `bootloader` 可以省略。
 - `psram_data` / `psram_data2`
@@ -278,7 +288,7 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
 |------|------|
 | `外置存储` | 通过 `memory` 定义的外挂存储区域，如 `mpi1`、`mpi2`、`sdmmc1` 等 |
 | `hpsys_ram` | HPSYS RAM |
-| `lpsys_ram` | LPSYS RAM |
+| `lpsys_ram` | LPSYS RAM（SF32LB57 默认不生成） |
 
 ### 地址解析
 
@@ -664,6 +674,7 @@ sdk.py ptab-export --strict
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.5 | 2026-10 | 新增 SF32LB57 在 NOR/NAND/SD 启动存储下的默认分区推导、NAND 的 `AUTO_FLASH_MAC_ADDRESS` 基址，以及默认不生成 `lpsys_ram` 的说明；补充 `acpu` / `acpu_ram_data` 由 `new-board` 在 `with_acpu=true` 时生成 |
 | v3.4 | 2026-04 | `FAL_PART_TABLE` 自动收录 `flashdb_kv`、`filesystem` 和 `app(subtype != ex)` 分区，并补充 `mpi5` / `sdmmc` 映射规则 |
 | v3.3 | 2026-03 | 补充默认分区自动推导规则，支持省略默认 `flash_table` / `bootloader` / 部分 RAM 分区 |
 | v3.2 | 2026-03 | 新增工程级 `ptab.overlay.yaml`、`sdk.py ptab-export` 和最终 `ptab.effective.yaml` 导出 |
