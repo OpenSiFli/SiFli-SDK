@@ -7,7 +7,7 @@
   "required": [
     "chip_series",
     "chip_model",
-    "boot_storage",
+    "app_storage",
     "board_name",
     "generate_base"
   ],
@@ -20,7 +20,7 @@
       "type": "string",
       "minLength": 1
     },
-    "boot_storage": {
+    "app_storage": {
       "type": "object",
       "additionalProperties": false,
       "required": ["type", "port"],
@@ -118,7 +118,7 @@
           "chip_series": {
             "const": "58"
           },
-          "boot_storage": {
+          "app_storage": {
             "properties": {
               "port": {
                 "enum": ["mpi4", "sdmmc1"]
@@ -127,11 +127,11 @@
             "required": ["port"]
           }
         },
-        "required": ["chip_series", "boot_storage"]
+        "required": ["chip_series", "app_storage"]
       },
       "then": {
         "properties": {
-          "boot_storage": {
+          "app_storage": {
             "required": ["pinmux_type"]
           }
         }
@@ -140,18 +140,18 @@
     {
       "if": {
         "properties": {
-          "boot_storage": {
+          "app_storage": {
             "required": ["pinmux_type"]
           }
         },
-        "required": ["boot_storage"]
+        "required": ["app_storage"]
       },
       "then": {
         "properties": {
           "chip_series": {
             "const": "58"
           },
-          "boot_storage": {
+          "app_storage": {
             "properties": {
               "port": {
                 "enum": ["mpi4", "sdmmc1"]
@@ -177,7 +177,7 @@
     {
       "if": {
         "properties": {
-          "boot_storage": {
+          "app_storage": {
             "properties": {
               "type": {
                 "not": {
@@ -188,11 +188,11 @@
             "required": ["type"]
           }
         },
-        "required": ["boot_storage"]
+        "required": ["app_storage"]
       },
       "then": {
         "properties": {
-          "boot_storage": {
+          "app_storage": {
             "not": {
               "required": ["block_size_kb"]
             }

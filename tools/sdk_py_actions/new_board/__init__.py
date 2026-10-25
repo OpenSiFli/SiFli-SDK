@@ -209,15 +209,6 @@ BOOT_SD_PORTS = {
     '58': ('sdmmc1', 'sdmmc2'),
 }
 
-# Interactive default for the SD boot controller. Series 58 boards keep their
-# second controller as the default, as they did before ports became explicit.
-DEFAULT_BOOT_SD_PORT = {
-    '52': 'sdmmc1',
-    '56': 'sdmmc1',
-    '57': 'sdmmc1',
-    '58': 'sdmmc2',
-}
-
 STORAGE_TYPES = ('nor', 'nand', 'sdmmc')
 
 # Ports whose pin routing depends on the 58-series pinmux type, and the choice
@@ -347,26 +338,52 @@ class ExternalStorage:
 class Spec:
     series: str
     chip_model: str
-    boot_storage_type: str
-    boot_storage_port: str
-    boot_storage_size_mb: Optional[int]
+    app_storage_type: str
+    app_storage_port: str
+    app_storage_size_mb: Optional[int]
     board_name: str
     base_name: str
     generate_base: bool
-    boot_storage_pinmux_type: Optional[str] = None
-    boot_nand_block_size_kb: Optional[int] = None
+    app_storage_pinmux_type: Optional[str] = None
+    app_nand_block_size_kb: Optional[int] = None
     external_storage: Tuple[ExternalStorage, ...] = ()
     with_acpu: bool = False
 
     @property
-    def boot_is_internal(self) -> bool:
-        # normalize_spec guarantees that internal SiP boot storage never
-        # carries size_mb, while external boot storage always requires it.
-        return self.boot_storage_size_mb is None
+    def app_is_internal(self) -> bool:
+        # normalize_spec guarantees that internal SiP app storage never
+        # carries size_mb, while external app storage always requires it.
+        return self.app_storage_size_mb is None
 
     @property
     def storage_region(self) -> str:
-        return self.boot_storage_port
+        return self.app_storage_port
+
+    @property
+    def boot_is_internal(self) -> bool:
+        # 56/58 always boot from the fixed SiP mpi5 NOR; 52/57 boot from the
+        # same medium that holds the application.
+        return self.series in ('56', '58') or self.app_is_internal
+
+    @property
+    def boot_storage_type(self) -> str:
+        if self.series in ('56', '58'):
+            return 'nor'
+        return self.app_storage_type
+
+    @property
+    def boot_storage_port(self) -> str:
+        if self.series in ('56', '58'):
+            return 'mpi5'
+        return self.app_storage_port
+
+    @property
+    def boot_storage_pinmux_type(self) -> Optional[str]:
+        # The fixed 56/58 boot flash has no pinmux choice; the application
+        # medium keeps its own pinmux type.
+        if self.series in ('56', '58'):
+            return None
+        return self.app_storage_pinmux_type
 
 
 @dataclass(frozen=True)
@@ -514,41 +531,54 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
 
     selected_variant = next(item for item in series_variants if item.part_number == chip_model)
 
-    boot_storage_type = ask(
-        questionary.select(
-            'Select boot storage type',
-            choices=[
-                questionary.Choice('nor', value='nor'),
-                questionary.Choice('nand', value='nand'),
-                questionary.Choice('sdmmc', value='sdmmc'),
-            ],
-        ),
-        'Board creation cancelled.',
-    )
-
-    port_choices = prompt_port_choices(
-        series=series,
-        variant=selected_variant,
-        storage_type=boot_storage_type,
-        role='boot',
-        used_ports=(),
-    )
-    if not port_choices:
-        raise FatalError(
-            f'No usable boot storage port for series {series} and storage type {boot_storage_type}.'
+    fixed_app_storage = selected_variant.first_non_psram() if series in ('52', '57') else None
+    if series in ('56', '58'):
+        print('Boot flash: SiP mpi5 (fixed)')
+    elif fixed_app_storage is not None:
+        print(
+            f'App/Boot storage: SiP {fixed_app_storage.mpi} '
+            f'{fixed_app_storage.mem_type.upper()} (fixed)'
         )
 
-    boot_storage_port = ask(
-        questionary.select('Select boot storage port', choices=port_choices),
-        'Board creation cancelled.',
-    )
+    if fixed_app_storage is not None:
+        app_storage_type = fixed_app_storage.mem_type
+        app_storage_port = fixed_app_storage.mpi
+        app_is_internal = True
+    else:
+        app_storage_type = ask(
+            questionary.select(
+                'Select app storage type',
+                choices=[
+                    questionary.Choice('nor', value='nor'),
+                    questionary.Choice('nand', value='nand'),
+                    questionary.Choice('sdmmc', value='sdmmc'),
+                ],
+            ),
+            'Board creation cancelled.',
+        )
 
-    sip_entry = find_sip_storage(selected_variant, boot_storage_port, boot_storage_type)
-    boot_is_internal = sip_entry is not None
+        port_choices = prompt_port_choices(
+            series=series,
+            variant=selected_variant,
+            storage_type=app_storage_type,
+            role='app',
+            used_ports=(),
+        )
+        if not port_choices:
+            raise FatalError(
+                f'No usable external app storage port for series {series} '
+                f'and storage type {app_storage_type}.'
+            )
 
-    boot_nand_block_size_kb: Optional[int] = None
-    if boot_storage_type == 'nand':
-        boot_nand_block_size_kb = ask(
+        app_storage_port = ask(
+            questionary.select('Select app storage port', choices=port_choices),
+            'Board creation cancelled.',
+        )
+        app_is_internal = False
+
+    app_nand_block_size_kb: Optional[int] = None
+    if app_storage_type == 'nand':
+        app_nand_block_size_kb = ask(
             questionary.select(
                 'Select NAND block size',
                 choices=[
@@ -560,28 +590,28 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
             'Board creation cancelled.',
         )
 
-    boot_storage_size_mb: Optional[int] = None
-    if not boot_is_internal:
+    app_storage_size_mb: Optional[int] = None
+    if not app_is_internal:
         raw_size = ask(
             questionary.text(
-                'Input boot storage capacity (MB)',
+                'Input app storage capacity (MB)',
                 validate=lambda text: True if (text or '').isdigit() and int(text) > 0 else 'Enter a positive integer.',
             ),
             'Board creation cancelled.',
         )
-        boot_storage_size_mb = int(raw_size)
+        app_storage_size_mb = int(raw_size)
 
-    boot_storage_pinmux_type: Optional[str] = None
-    if pinmux_required(series, boot_storage_port, boot_is_internal):
-        default_pinmux_type = DEFAULT_PINMUX_TYPE.get(boot_storage_port)
-        boot_storage_pinmux_type = ask(
+    app_storage_pinmux_type: Optional[str] = None
+    if pinmux_required(series, app_storage_port, app_is_internal):
+        default_pinmux_type = DEFAULT_PINMUX_TYPE.get(app_storage_port)
+        app_storage_pinmux_type = ask(
             questionary.select(
-                'Select boot storage pinmux type',
+                'Select app storage pinmux type',
                 choices=[
                     questionary.Choice(
-                        storage_pinmux_choice_label(boot_storage_port, pinmux),
+                        storage_pinmux_choice_label(app_storage_port, pinmux),
                         value=pinmux,
-                        description=storage_pinmux_choice_description(boot_storage_port, pinmux),
+                        description=storage_pinmux_choice_description(app_storage_port, pinmux),
                     )
                     for pinmux in sorted(
                         ('type0', 'type1'),
@@ -601,11 +631,11 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
         ask=ask,
         series=series,
         variant=selected_variant,
-        boot_storage_port=boot_storage_port,
+        app_storage_port=app_storage_port,
     )
 
     with_acpu = False
-    if series == '57' and not boot_is_internal:
+    if series == '57' and not app_is_internal:
         with_acpu = ask(
             questionary.confirm('Generate an ACPU partition?', default=False),
             'Board creation cancelled.',
@@ -638,14 +668,14 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
     summary = build_confirmation_summary(
         series=series,
         chip_model=chip_model,
-        boot_storage_type=boot_storage_type,
-        boot_storage_port=boot_storage_port,
-        boot_storage_size_mb=boot_storage_size_mb,
+        app_storage_type=app_storage_type,
+        app_storage_port=app_storage_port,
+        app_storage_size_mb=app_storage_size_mb,
         board_name=board_name,
         base_name=base_name,
         generate_base=generate_base,
-        boot_storage_pinmux_type=boot_storage_pinmux_type,
-        boot_nand_block_size_kb=boot_nand_block_size_kb,
+        app_storage_pinmux_type=app_storage_pinmux_type,
+        app_nand_block_size_kb=app_nand_block_size_kb,
         external_storage=external_storage,
         with_acpu=with_acpu,
     )
@@ -657,21 +687,21 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
     if not confirmed:
         raise FatalError('Board creation cancelled.')
 
-    boot_storage: Dict[str, Any] = {
-        'type': boot_storage_type,
-        'port': boot_storage_port,
+    app_storage: Dict[str, Any] = {
+        'type': app_storage_type,
+        'port': app_storage_port,
     }
-    if boot_storage_size_mb is not None:
-        boot_storage['size_mb'] = boot_storage_size_mb
-    if boot_storage_pinmux_type is not None:
-        boot_storage['pinmux_type'] = boot_storage_pinmux_type
-    if boot_nand_block_size_kb is not None:
-        boot_storage['block_size_kb'] = boot_nand_block_size_kb
+    if app_storage_size_mb is not None:
+        app_storage['size_mb'] = app_storage_size_mb
+    if app_storage_pinmux_type is not None:
+        app_storage['pinmux_type'] = app_storage_pinmux_type
+    if app_nand_block_size_kb is not None:
+        app_storage['block_size_kb'] = app_nand_block_size_kb
 
     config: Dict[str, Any] = {
         'chip_series': series,
         'chip_model': chip_model,
-        'boot_storage': boot_storage,
+        'app_storage': app_storage,
         'board_name': board_name,
         'generate_base': generate_base,
         'base_name': base_name,
@@ -696,20 +726,10 @@ def prompt_port_choices(
     sip_ports = variant.sip_ports()
     choices: List[Any] = []
 
-    if role == 'boot' and storage_type != 'sdmmc':
-        for entry in sorted(variant.memory, key=_memory_sort_key):
-            if entry.mem_type != storage_type:
-                continue
-            choices.append(questionary.Choice(
-                f'{entry.mpi} (internal SiP {entry.mem_type.upper()}, {_format_memory_size(entry.size_bytes)})',
-                value=entry.mpi,
-            ))
-
-    if role == 'boot' and storage_type == 'sdmmc':
-        default_port = default_boot_sd_port(series)
-        external_ports = (default_port,) + tuple(
-            port for port in BOOT_SD_PORTS[series] if port != default_port
-        )
+    # App storage is always an external device here: parts with SiP flash use
+    # it without a prompt, and 56/58 fix the boot flash on the SiP mpi5.
+    if role == 'app':
+        external_ports = app_external_ports(series, storage_type)
     else:
         external_ports = EXTERNAL_STORAGE_PORTS[series][storage_type]
 
@@ -726,10 +746,10 @@ def prompt_external_storage(
     ask: Any,
     series: str,
     variant: ChipVariant,
-    boot_storage_port: str,
+    app_storage_port: str,
 ) -> List[Dict[str, Any]]:
     items: List[Dict[str, Any]] = []
-    used_ports = {boot_storage_port}
+    used_ports = {app_storage_port}
 
     while ask(
         questionary.confirm('Add an external storage device?', default=False),
@@ -773,7 +793,7 @@ def prompt_external_storage(
         )
 
         pinmux_type: Optional[str] = None
-        if pinmux_required(series, port, boot_is_internal=False):
+        if pinmux_required(series, port, is_internal=False):
             default_pinmux_type = DEFAULT_PINMUX_TYPE.get(port)
             pinmux_type = ask(
                 questionary.select(
@@ -825,14 +845,14 @@ def prompt_external_storage(
 def build_confirmation_summary(
     series: str,
     chip_model: str,
-    boot_storage_type: str,
-    boot_storage_port: Optional[str],
-    boot_storage_size_mb: Optional[int],
+    app_storage_type: str,
+    app_storage_port: Optional[str],
+    app_storage_size_mb: Optional[int],
     board_name: str,
     base_name: str,
     generate_base: bool,
-    boot_storage_pinmux_type: Optional[str] = None,
-    boot_nand_block_size_kb: Optional[int] = None,
+    app_storage_pinmux_type: Optional[str] = None,
+    app_nand_block_size_kb: Optional[int] = None,
     external_storage: Iterable[Any] = (),
     with_acpu: bool = False,
 ) -> List[str]:
@@ -841,23 +861,29 @@ def build_confirmation_summary(
         f'  series: {SERIES_LABEL.get(series, series)}',
         f'  chip_model: {chip_model}',
     ]
+    if series in ('56', '58'):
+        lines.append('  boot_flash: SiP mpi5 (fixed)')
+    elif app_storage_size_mb is None:
+        lines.append(
+            f'  boot_flash: SiP {app_storage_port} {app_storage_type.upper()} (fixed)'
+        )
     if with_acpu:
         lines.append('  with_acpu: true')
     lines.extend([
         '',
-        '[Boot storage]',
-        f'  type: {boot_storage_type}',
+        '[App storage]',
+        f'  type: {app_storage_type}',
     ])
-    if boot_storage_port:
-        lines.append(f'  port: {boot_storage_port}')
-    lines.append(f'  location: {"external" if boot_storage_size_mb is not None else "internal SiP"}')
-    if boot_storage_pinmux_type:
-        lines.append(f'  pinmux_type: {storage_pinmux_choice_label(boot_storage_port, boot_storage_pinmux_type)}')
-        lines.extend(storage_pinmux_detail_lines(boot_storage_port, selected_type=boot_storage_pinmux_type, indent='  '))
-    if boot_nand_block_size_kb is not None:
-        lines.append(f'  block_size_kb: {boot_nand_block_size_kb}')
-    if boot_storage_size_mb is not None:
-        lines.append(f'  capacity_mb: {boot_storage_size_mb}')
+    if app_storage_port:
+        lines.append(f'  port: {app_storage_port}')
+    lines.append(f'  location: {"external" if app_storage_size_mb is not None else "internal SiP"}')
+    if app_storage_pinmux_type:
+        lines.append(f'  pinmux_type: {storage_pinmux_choice_label(app_storage_port, app_storage_pinmux_type)}')
+        lines.extend(storage_pinmux_detail_lines(app_storage_port, selected_type=app_storage_pinmux_type, indent='  '))
+    if app_nand_block_size_kb is not None:
+        lines.append(f'  block_size_kb: {app_nand_block_size_kb}')
+    if app_storage_size_mb is not None:
+        lines.append(f'  capacity_mb: {app_storage_size_mb}')
 
     external_items = list(external_storage or ())
     lines.extend(['', '[External storage]'])
@@ -979,14 +1005,14 @@ def normalize_spec(
 
     series = str(raw_config.get('chip_series') or '').strip()
     chip_model = str(raw_config.get('chip_model') or '').strip()
-    boot_storage = raw_config.get('boot_storage') or {}
-    boot_storage_type = str(boot_storage.get('type') or '').strip().lower()
-    boot_storage_port = str(boot_storage.get('port') or '').strip().lower()
-    raw_boot_storage_size_mb = boot_storage.get('size_mb')
-    boot_storage_pinmux_type = boot_storage.get('pinmux_type')
-    if boot_storage_pinmux_type:
-        boot_storage_pinmux_type = str(boot_storage_pinmux_type).strip().lower()
-    raw_boot_nand_block_size_kb = boot_storage.get('block_size_kb')
+    app_storage = raw_config.get('app_storage') or {}
+    app_storage_type = str(app_storage.get('type') or '').strip().lower()
+    app_storage_port = str(app_storage.get('port') or '').strip().lower()
+    raw_app_storage_size_mb = app_storage.get('size_mb')
+    app_storage_pinmux_type = app_storage.get('pinmux_type')
+    if app_storage_pinmux_type:
+        app_storage_pinmux_type = str(app_storage_pinmux_type).strip().lower()
+    raw_app_nand_block_size_kb = app_storage.get('block_size_kb')
     raw_external_storage = raw_config.get('external_storage') or []
     board_name = str(raw_config.get('board_name') or '').strip()
     generate_base = bool(raw_config.get('generate_base'))
@@ -1003,68 +1029,101 @@ def normalize_spec(
         raise FatalError(f'Chip model "{chip_model}" does not belong to series {series}')
     variant = matching[0]
 
-    if boot_storage_type not in STORAGE_TYPES:
-        raise FatalError(f'boot_storage.type must be one of: {", ".join(STORAGE_TYPES)}.')
-    if not boot_storage_port:
-        raise FatalError('boot_storage.port is required.')
+    if app_storage_type not in STORAGE_TYPES:
+        raise FatalError(f'app_storage.type must be one of: {", ".join(STORAGE_TYPES)}.')
+    if not app_storage_port:
+        raise FatalError('app_storage.port is required.')
 
     sip_ports = variant.sip_ports()
-    sip_entry = find_sip_storage(variant, boot_storage_port, boot_storage_type)
-    boot_is_internal = sip_entry is not None
+    fixed_app_storage = variant.first_non_psram() if series in ('52', '57') else None
 
-    if boot_is_internal:
-        if raw_boot_storage_size_mb is not None:
+    if fixed_app_storage is not None:
+        # Parts with SiP flash do not expose their application medium on the
+        # board: the on-die device is the only valid app storage.
+        if (
+            app_storage_type != fixed_app_storage.mem_type
+            or app_storage_port != fixed_app_storage.mpi
+        ):
             raise FatalError(
-                f'boot_storage.size_mb must be omitted for internal SiP storage '
-                f'({boot_storage_port}/{boot_storage_type}); its size comes from chip model "{variant.part_number}".'
+                f'app_storage is fixed to the internal {fixed_app_storage.mem_type.upper()} '
+                f'on {fixed_app_storage.mpi} for this part ({variant.part_number}); '
+                f'use type="{fixed_app_storage.mem_type}" and port="{fixed_app_storage.mpi}".'
             )
-        boot_storage_size_mb: Optional[int] = None
-    else:
-        if boot_storage_port in sip_ports:
+        if raw_app_storage_size_mb is not None:
             raise FatalError(
-                f'boot_storage.port "{boot_storage_port}" is occupied by SiP {sip_ports[boot_storage_port].upper()} '
+                f'app_storage.size_mb must be omitted for the internal SiP '
+                f'{fixed_app_storage.mem_type.upper()} on {fixed_app_storage.mpi}; '
+                f'its size comes from chip model "{variant.part_number}".'
+            )
+        app_storage_size_mb: Optional[int] = None
+        app_is_internal = True
+    elif series in ('56', '58'):
+        # The boot flash is the SiP mpi5 NOR; mpi1/mpi2 are the SiP PSRAM
+        # controllers. None of them may host app_storage.
+        if app_storage_port in sip_ports or app_storage_port in ('mpi1', 'mpi2', 'mpi5'):
+            raise FatalError(
+                f'app_storage.port "{app_storage_port}" cannot be used on series {series}: '
+                f'the boot flash is fixed to the SiP mpi5 NOR, so app_storage must be an '
+                f'external device ({", ".join(app_external_ports(series, app_storage_type))} '
+                f'for {app_storage_type}).'
+            )
+        allowed_ports = app_external_ports(series, app_storage_type)
+        if app_storage_port not in allowed_ports:
+            raise FatalError(
+                f'Series {series} requires app_storage.port to be one of: '
+                f'{", ".join(allowed_ports)} for {app_storage_type} app storage.'
+            )
+        if raw_app_storage_size_mb is None or int(raw_app_storage_size_mb) <= 0:
+            raise FatalError('app_storage.size_mb must be a positive integer for external app storage.')
+        app_storage_size_mb = int(raw_app_storage_size_mb)
+        app_is_internal = False
+    else:
+        if app_storage_port in sip_ports:
+            raise FatalError(
+                f'app_storage.port "{app_storage_port}" is occupied by SiP {sip_ports[app_storage_port].upper()} '
                 f'memory on chip model "{variant.part_number}".'
             )
-        allowed_ports = boot_external_ports(series, boot_storage_type)
-        if boot_storage_port not in allowed_ports:
+        allowed_ports = app_external_ports(series, app_storage_type)
+        if app_storage_port not in allowed_ports:
             raise FatalError(
-                f'Series {series} requires boot_storage.port to be one of: '
-                f'{", ".join(allowed_ports)} for {boot_storage_type} boot storage.'
+                f'Series {series} requires app_storage.port to be one of: '
+                f'{", ".join(allowed_ports)} for {app_storage_type} app storage.'
             )
-        if raw_boot_storage_size_mb is None or int(raw_boot_storage_size_mb) <= 0:
-            raise FatalError('boot_storage.size_mb must be a positive integer for external boot storage.')
-        boot_storage_size_mb = int(raw_boot_storage_size_mb)
+        if raw_app_storage_size_mb is None or int(raw_app_storage_size_mb) <= 0:
+            raise FatalError('app_storage.size_mb must be a positive integer for external app storage.')
+        app_storage_size_mb = int(raw_app_storage_size_mb)
+        app_is_internal = False
 
-    boot_nand_block_size_kb = parse_nand_block_size(
-        raw_boot_nand_block_size_kb,
-        prefix='boot_storage',
-        storage_type=boot_storage_type,
+    app_nand_block_size_kb = parse_nand_block_size(
+        raw_app_nand_block_size_kb,
+        prefix='app_storage',
+        storage_type=app_storage_type,
     )
 
-    if pinmux_required(series, boot_storage_port, boot_is_internal):
-        if boot_storage_pinmux_type not in ('type0', 'type1'):
+    if pinmux_required(series, app_storage_port, app_is_internal):
+        if app_storage_pinmux_type not in ('type0', 'type1'):
             raise FatalError(
-                f'Series 58 boot_storage.port={boot_storage_port} requires '
-                'boot_storage.pinmux_type=type0|type1.'
+                f'Series 58 app_storage.port={app_storage_port} requires '
+                'app_storage.pinmux_type=type0|type1.'
             )
-    elif boot_storage_pinmux_type is not None:
+    elif app_storage_pinmux_type is not None:
         raise FatalError(
-            'boot_storage.pinmux_type is only supported for series 58 '
-            'boot_storage.port=mpi4|sdmmc1.'
+            'app_storage.pinmux_type is only supported for series 58 '
+            'app_storage.port=mpi4|sdmmc1.'
         )
 
     psram = variant.first_psram()
-    if boot_storage_type in ('nand', 'sdmmc') and psram is None:
-        raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to use {boot_storage_type}.')
+    if app_storage_type in ('nand', 'sdmmc') and psram is None:
+        raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to use {app_storage_type}.')
     if series == '58' and psram is None:
         raise FatalError(f'Chip model "{variant.part_number}" is not compatible with the fixed 58-series template because it has no SiP PSRAM.')
 
     if with_acpu:
         if series != '57':
             raise FatalError('with_acpu is only supported for series 57.')
-        if boot_is_internal:
+        if app_is_internal:
             raise FatalError(
-                'with_acpu is not supported with internal boot storage: '
+                'with_acpu is not supported with internal app storage: '
                 'the 57-series internal layout has no free 0x40000-byte region between main and fs_region.'
             )
         if psram is None:
@@ -1074,7 +1133,7 @@ def normalize_spec(
         raw_external_storage,
         series=series,
         variant=variant,
-        boot_storage_port=boot_storage_port,
+        app_storage_port=app_storage_port,
     )
 
     if generate_base:
@@ -1083,14 +1142,14 @@ def normalize_spec(
     spec = Spec(
         series=series,
         chip_model=variant.part_number,
-        boot_storage_type=boot_storage_type,
-        boot_storage_port=boot_storage_port,
-        boot_storage_size_mb=boot_storage_size_mb,
+        app_storage_type=app_storage_type,
+        app_storage_port=app_storage_port,
+        app_storage_size_mb=app_storage_size_mb,
         board_name=board_name,
         base_name=base_name,
         generate_base=generate_base,
-        boot_storage_pinmux_type=boot_storage_pinmux_type,
-        boot_nand_block_size_kb=boot_nand_block_size_kb,
+        app_storage_pinmux_type=app_storage_pinmux_type,
+        app_nand_block_size_kb=app_nand_block_size_kb,
         external_storage=external_storage,
         with_acpu=with_acpu,
     )
@@ -1102,10 +1161,10 @@ def parse_external_storage(
     raw_items: Iterable[Any],
     series: str,
     variant: ChipVariant,
-    boot_storage_port: str,
+    app_storage_port: str,
 ) -> Tuple[ExternalStorage, ...]:
     sip_ports = variant.sip_ports()
-    seen_ports = {boot_storage_port}
+    seen_ports = {app_storage_port}
     result: List[ExternalStorage] = []
 
     for index, raw_item in enumerate(raw_items):
@@ -1133,7 +1192,7 @@ def parse_external_storage(
 
         raw_pinmux_type = raw_item.get('pinmux_type')
         pinmux_type = str(raw_pinmux_type).strip().lower() if raw_pinmux_type else None
-        if pinmux_type is not None and not pinmux_required(series, port, boot_is_internal=False):
+        if pinmux_type is not None and not pinmux_required(series, port, is_internal=False):
             raise FatalError(
                 f'{prefix}.pinmux_type is only supported for series 58 '
                 f'external_storage.port=mpi4|sdmmc1.'
@@ -1145,8 +1204,8 @@ def parse_external_storage(
                 f'memory on chip model "{variant.part_number}".'
             )
         if port in seen_ports:
-            if port == boot_storage_port:
-                raise FatalError(f'{prefix}.port "{port}" conflicts with boot_storage.port.')
+            if port == app_storage_port:
+                raise FatalError(f'{prefix}.port "{port}" conflicts with app_storage.port.')
             raise FatalError(f'{prefix}.port "{port}" duplicates another storage device.')
 
         allowed_ports = EXTERNAL_STORAGE_PORTS[series][storage_type]
@@ -1187,12 +1246,20 @@ def boot_external_ports(series: str, storage_type: str) -> Tuple[str, ...]:
     return EXTERNAL_STORAGE_PORTS[series][storage_type]
 
 
-def default_boot_sd_port(series: str) -> str:
-    return DEFAULT_BOOT_SD_PORT.get(series, 'sdmmc1')
+def app_external_ports(series: str, storage_type: str) -> Tuple[str, ...]:
+    """Ports allowed for an external app_storage device.
+
+    56/58 keep the boot flash on the SiP mpi5 and may use every wired external
+    port. 52/57 boot from app_storage, so their historical SD boot restriction
+    still applies.
+    """
+    if series in ('56', '58'):
+        return EXTERNAL_STORAGE_PORTS[series][storage_type]
+    return boot_external_ports(series, storage_type)
 
 
-def pinmux_required(series: str, port: str, boot_is_internal: bool) -> bool:
-    return series == '58' and not boot_is_internal and port in ('mpi4', 'sdmmc1')
+def pinmux_required(series: str, port: str, is_internal: bool) -> bool:
+    return series == '58' and not is_internal and port in ('mpi4', 'sdmmc1')
 
 
 def _storage_pinmux_representative_pad(storage_port: str, pinmux_type: str) -> Optional[str]:
@@ -1211,11 +1278,11 @@ def validate_pinmux_pad_conflicts(spec: Spec) -> None:
     """
     ports: List[Tuple[str, str]] = []
     if (
-        not spec.boot_is_internal
-        and spec.boot_storage_pinmux_type in ('type0', 'type1')
-        and spec.boot_storage_port in PINMUX_STORAGE_PORTS
+        not spec.app_is_internal
+        and spec.app_storage_pinmux_type in ('type0', 'type1')
+        and spec.app_storage_port in PINMUX_STORAGE_PORTS
     ):
-        ports.append((spec.boot_storage_port, spec.boot_storage_pinmux_type))
+        ports.append((spec.app_storage_port, spec.app_storage_pinmux_type))
     for item in spec.external_storage:
         if item.pinmux_type in ('type0', 'type1') and item.port in PINMUX_STORAGE_PORTS:
             ports.append((item.port, item.pinmux_type))
@@ -1238,13 +1305,6 @@ def validate_pinmux_pad_conflicts(spec: Spec) -> None:
                     f'Pinmux conflict between {port_a} ({type_a}) and '
                     f'{port_b} ({type_b}): {pads}.'
                 )
-
-
-def find_sip_storage(variant: ChipVariant, port: str, storage_type: str) -> Optional[MemoryEntry]:
-    if storage_type == 'sdmmc':
-        return None
-    return variant.sip_storage(port, storage_type)
-
 
 
 def validate_config_schema(raw_config: Dict[str, Any], schema_path: Path) -> None:
@@ -1454,27 +1514,27 @@ def use_new_board_base_template(spec: Spec, filename: str) -> bool:
 def storage_pinmux_types(spec: Spec) -> Dict[str, str]:
     """Return the pinmux type to use on each 58 storage port.
 
-    The boot device selects the board-wide pinmux type, while an external
-    device may select the type of the port it is wired to.
+    The app storage device selects the board-wide pinmux type, while an
+    external data device may select the type of the port it is wired to.
     """
     pinmux_types: Dict[str, str] = {}
     if (
-        not spec.boot_is_internal
-        and spec.boot_storage_port in PINMUX_STORAGE_PORTS
-        and spec.boot_storage_pinmux_type in ('type0', 'type1')
+        not spec.app_is_internal
+        and spec.app_storage_port in PINMUX_STORAGE_PORTS
+        and spec.app_storage_pinmux_type in ('type0', 'type1')
     ):
-        pinmux_types[spec.boot_storage_port] = spec.boot_storage_pinmux_type
+        pinmux_types[spec.app_storage_port] = spec.app_storage_pinmux_type
 
     for item in spec.external_storage:
         if item.port in PINMUX_STORAGE_PORTS and item.pinmux_type in ('type0', 'type1'):
             pinmux_types[item.port] = item.pinmux_type
 
-    # The boot selection describes the board-wide wiring, so it also applies to
-    # the storage port that no device uses. This mirrors the original
-    # single-type template behavior.
-    if spec.boot_storage_pinmux_type in ('type0', 'type1'):
+    # The app storage selection describes the board-wide wiring, so it also
+    # applies to the storage port that no device uses. This mirrors the
+    # original single-type template behavior.
+    if spec.app_storage_pinmux_type in ('type0', 'type1'):
         for port in PINMUX_STORAGE_PORTS:
-            pinmux_types.setdefault(port, spec.boot_storage_pinmux_type)
+            pinmux_types.setdefault(port, spec.app_storage_pinmux_type)
     return pinmux_types
 
 
@@ -1523,13 +1583,15 @@ def render_ptab_yaml(
 def build_external_memory_entries(spec: Spec) -> List[Dict[str, Any]]:
     entries: List[Dict[str, Any]] = []
 
-    if not spec.boot_is_internal:
+    # 56/58 boot from the SiP mpi5 NOR, which is described by the chip model
+    # rather than by the board ptab. Only an external app_storage is listed.
+    if not spec.app_is_internal:
         add_memory_entry(
             entries,
-            storage_type=spec.boot_storage_type,
-            port=spec.boot_storage_port,
-            size_mb=spec.boot_storage_size_mb,
-            block_size_kb=spec.boot_nand_block_size_kb,
+            storage_type=spec.app_storage_type,
+            port=spec.app_storage_port,
+            size_mb=spec.app_storage_size_mb,
+            block_size_kb=spec.app_nand_block_size_kb,
         )
 
     for item in spec.external_storage:
@@ -1567,16 +1629,16 @@ def add_memory_entry(
 
 
 def build_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
-    if spec.boot_is_internal:
+    if spec.app_is_internal:
         return build_internal_partitions(spec, variant)
 
     storage_region = storage_region_for_spec(spec)
     psram = variant.first_psram()
     psram_region = psram_alias(psram)
-    total_size = spec.boot_storage_size_mb * MB if spec.boot_storage_size_mb is not None else 0
+    total_size = spec.app_storage_size_mb * MB if spec.app_storage_size_mb is not None else 0
     app_exec_region = None
     app_attrs = None
-    if spec.boot_storage_type in ('nand', 'sdmmc'):
+    if spec.app_storage_type in ('nand', 'sdmmc'):
         app_exec_region = psram_region
         if spec.series == '56':
             app_attrs = boot_psram_attrs(variant)
@@ -1594,11 +1656,11 @@ def build_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
 
 
 def build_internal_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
-    internal_storage = variant.sip_storage(spec.boot_storage_port, spec.boot_storage_type)
+    internal_storage = variant.sip_storage(spec.app_storage_port, spec.app_storage_type)
     if internal_storage is None:
         raise FatalError(
-            f'Chip model "{variant.part_number}" has no internal {spec.boot_storage_type.upper()} '
-            f'on {spec.boot_storage_port}.'
+            f'Chip model "{variant.part_number}" has no internal {spec.app_storage_type.upper()} '
+            f'on {spec.app_storage_port}.'
         )
 
     psram = variant.first_psram()
@@ -1620,9 +1682,9 @@ def build_fixed_partitions(
     exec_region: Optional[str],
     attrs: Optional[Dict[str, Any]],
 ) -> List[Partition]:
-    layout = FIXED_PARTITION_LAYOUTS.get((spec.series, spec.boot_storage_type))
+    layout = FIXED_PARTITION_LAYOUTS.get((spec.series, spec.app_storage_type))
     if layout is None:
-        raise FatalError(f'No fixed partition layout for series={spec.series} storage={spec.boot_storage_type}')
+        raise FatalError(f'No fixed partition layout for series={spec.series} storage={spec.app_storage_type}')
 
     alignment = storage_offset_alignment(spec)
     partitions = build_reserved_storage_partitions(spec, region)
@@ -1709,7 +1771,7 @@ def build_reserved_storage_partitions(spec: Spec, region: str) -> List[Partition
     if spec.series != '52':
         return []
 
-    if spec.boot_storage_type == 'nand':
+    if spec.app_storage_type == 'nand':
         block_size = nand_block_size_bytes(spec)
         return [
             Partition(
@@ -1723,7 +1785,7 @@ def build_reserved_storage_partitions(spec: Spec, region: str) -> List[Partition
             ),
         ]
 
-    if spec.boot_storage_type == 'sdmmc':
+    if spec.app_storage_type == 'sdmmc':
         return [
             Partition(
                 'mbr',
@@ -1749,7 +1811,7 @@ def build_reserved_storage_partitions(spec: Spec, region: str) -> List[Partition
 
 
 def acpu_storage_offset(spec: Spec, app_offset: int, app_size: int) -> int:
-    if spec.boot_storage_type == 'sdmmc':
+    if spec.app_storage_type == 'sdmmc':
         # Existing 57 SD boards keep the ACPU image 7 MB past the app start
         # instead of directly after the (3 MB) HCPU app region.
         return app_offset + SF32LB57_SD_ACPU_OFFSET_FROM_APP
@@ -1772,7 +1834,7 @@ def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Tuple
     if psram2 is not None:
         # Dual-PSRAM parts (e.g. SF32LB57EYBBN6) put the ACPU image in psram2.
         return psram_alias(psram2), 0
-    if spec.boot_storage_type == 'nor':
+    if spec.app_storage_type == 'nor':
         return psram_alias(psram), 0
     # NAND/SD execute the HCPU app from the first PSRAM, so the ACPU image
     # follows it in the same region.
@@ -1788,7 +1850,7 @@ def build_internal_storage_partitions(
 ) -> List[Partition]:
     if spec.with_acpu:
         raise FatalError(
-            'with_acpu is not supported with internal boot storage: '
+            'with_acpu is not supported with internal app storage: '
             'the 57-series internal layout has no free 0x40000-byte region between main and fs_region.'
         )
 
@@ -1833,10 +1895,11 @@ def build_hcpu_board_conf_context(spec: Spec, variant: ChipVariant) -> Dict[str,
     sd_ports = configured_sd_ports(spec)
     use_sdmmc1 = 'sdmmc1' in sd_ports
     use_sdmmc2 = 'sdmmc2' in sd_ports
-    # Every attached medium needs its MTD layer. A non-NAND boot board keeps
-    # the historical MTD_NOR default, and any attached NOR device needs it as
-    # well, so both options may be enabled at the same time.
-    rt_using_mtd_nand = spec.boot_storage_type == 'nand' or any(
+    # Every attached medium needs its MTD layer. 56/58 also keep the SiP mpi5
+    # NOR, so their MTD_NOR requirement comes from the derived boot medium. A
+    # non-NAND boot board keeps the historical MTD_NOR default, and any
+    # attached NOR device needs it as well, so both may be enabled at once.
+    rt_using_mtd_nand = spec.app_storage_type == 'nand' or any(
         item.storage_type == 'nand' for item in spec.external_storage
     )
     rt_using_mtd_nor = spec.boot_storage_type != 'nand' or any(
@@ -1860,8 +1923,8 @@ def build_hcpu_board_conf_context(spec: Spec, variant: ChipVariant) -> Dict[str,
 
 def configured_sd_ports(spec: Spec) -> set[str]:
     ports: set[str] = set()
-    if not spec.boot_is_internal and spec.boot_storage_type == 'sdmmc':
-        ports.add(spec.boot_storage_port)
+    if not spec.app_is_internal and spec.app_storage_type == 'sdmmc':
+        ports.add(spec.app_storage_port)
     for item in spec.external_storage:
         if item.storage_type == 'sdmmc':
             ports.add(item.port)
@@ -1905,12 +1968,12 @@ def build_memory_config_context(spec: Spec, variant: ChipVariant) -> Dict[str, D
         enable(entry)
         included_mpis.add(entry.mpi)
 
-    if not spec.boot_is_internal and spec.boot_storage_type != 'sdmmc':
-        if spec.boot_storage_port not in included_mpis:
+    if not spec.app_is_internal and spec.app_storage_type != 'sdmmc':
+        if spec.app_storage_port not in included_mpis:
             enable(MemoryEntry(
-                spec.boot_storage_port,
-                spec.boot_storage_type,
-                (spec.boot_storage_size_mb or 0) * MB,
+                spec.app_storage_port,
+                spec.app_storage_type,
+                (spec.app_storage_size_mb or 0) * MB,
             ))
 
     for item in spec.external_storage:
@@ -1969,36 +2032,40 @@ def core_definitions(series: str) -> List[Tuple[str, str, Optional[str]]]:
 
 
 def choose_hcpu_jlink_device(spec: Spec) -> str:
+    # JLink programs the application medium, which is not necessarily the
+    # bootloader medium (56/58 boot from the SiP mpi5 NOR).
+    app_type = spec.app_storage_type
+
     if spec.series == '52':
-        if spec.boot_storage_type == 'nand':
+        if app_type == 'nand':
             return 'SF32LB52X_NAND'
-        if spec.boot_storage_type == 'sdmmc':
+        if app_type == 'sdmmc':
             return 'SF32LB52X_SD'
         return 'SF32LB52X_NOR'
 
     if spec.series == '56':
-        if spec.boot_storage_type == 'nand':
+        if app_type == 'nand':
             return 'SF32LB56X_NAND'
-        if spec.boot_storage_type == 'sdmmc':
+        if app_type == 'sdmmc':
             return 'SF32LB56X_SD'
         return 'SF32LB56X'
 
     if spec.series == '57':
-        if spec.boot_storage_type == 'nand':
+        if app_type == 'nand':
             return 'SF32LB57X_NAND'
-        if spec.boot_storage_type == 'sdmmc':
+        if app_type == 'sdmmc':
             return 'SF32LB57X_SD'
         return 'SF32LB57X_NOR'
 
-    if spec.boot_storage_type == 'nand':
+    if app_type == 'nand':
         device = 'SF32LB58X_NAND'
-    elif spec.boot_storage_type == 'sdmmc':
+    elif app_type == 'sdmmc':
         device = 'SF32LB58X_SD'
     else:
         device = 'SF32LB58X'
-    # Only the boot storage selects the device variant; external storage keeps
-    # the same JLink device as the boot medium.
-    if spec.boot_storage_pinmux_type == 'type1':
+    # The app storage pinmux selects the device variant; external data storage
+    # does not influence the JLink device.
+    if spec.app_storage_pinmux_type == 'type1':
         device += '_TYPE1'
     return device
 
@@ -2030,11 +2097,11 @@ def boot_psram_attrs(variant: ChipVariant) -> Optional[Dict[str, Any]]:
 
 
 def storage_region_for_spec(spec: Spec) -> str:
-    return spec.boot_storage_port
+    return spec.app_storage_port
 
 
 def nand_block_size_bytes(spec: Spec) -> int:
-    return nand_block_size_bytes_from_kb(spec.boot_nand_block_size_kb)
+    return nand_block_size_bytes_from_kb(spec.app_nand_block_size_kb)
 
 
 def nand_block_size_bytes_from_kb(block_size_kb: Optional[int]) -> int:
@@ -2043,19 +2110,19 @@ def nand_block_size_bytes_from_kb(block_size_kb: Optional[int]) -> int:
 
 
 def storage_offset_alignment(spec: Spec) -> int:
-    if spec.boot_storage_type == 'nand':
+    if spec.app_storage_type == 'nand':
         return nand_block_size_bytes(spec)
-    return STORAGE_OFFSET_ALIGNMENT.get(spec.boot_storage_type, 1)
+    return STORAGE_OFFSET_ALIGNMENT.get(spec.app_storage_type, 1)
 
 
 def minimum_fixed_partition_offset(spec: Spec) -> int:
-    if spec.series == '52' and spec.boot_storage_type == 'nand':
+    if spec.series == '52' and spec.app_storage_type == 'nand':
         bootloader_end = (
             SF32LB52_NAND_BOOTLOADER_BLOCK_INDEX * nand_block_size_bytes(spec)
             + SF32LB52_NAND_BOOTLOADER_SIZE
         )
         return align_up(bootloader_end, storage_offset_alignment(spec))
-    if spec.series == '57' and spec.boot_storage_type == 'nand':
+    if spec.series == '57' and spec.app_storage_type == 'nand':
         bootloader_end = (
             SF32LB57_NAND_BOOTLOADER_BLOCK_INDEX * nand_block_size_bytes(spec)
             + SF32LB57_NAND_BOOTLOADER_SIZE
