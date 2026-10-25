@@ -2045,21 +2045,112 @@ def DownloadScriptBuild(target, source, env):
 
     sdk_resource.BuildJLinkLoadScript(env)
 
+def _get_flash_medium_from_qspi_mode(mem_name):
+    """Resolve the medium of a v1/v2 flash memory from its board QSPI mode.
+
+    flashN is backed by MPI/QSPI controller N. customer/boards/Kconfig_drv
+    defines BSP_QSPI<N>_MODE as 0 for NOR, 1 for NAND and 2..6 for the PSRAM
+    variants. Return None when the mode is a PSRAM mode or cannot be read, so
+    the caller can fall back to the base-address heuristic.
+    """
+    match = re.fullmatch(r'flash(\d+)', mem_name)
+    if not match:
+        return None
+    port = match.group(1)
+    if GetDepend('BSP_QSPI{}_MODE_0'.format(port)):
+        return 'nor'
+    if GetDepend('BSP_QSPI{}_MODE_1'.format(port)):
+        return 'nand'
+    mode = GetConfigValue('BSP_QSPI{}_MODE'.format(port))
+    mode = str(mode).strip().strip('"')
+    if mode == '0':
+        return 'nor'
+    if mode == '1':
+        return 'nand'
+    return None
+
+
+def _get_fs_region_medium(env):
+    """Return the medium ('nand', 'nor', 'sd', ...) of the filesystem partition.
+
+    A board may boot from NOR/SD and still attach an external NAND, so
+    RT_USING_MTD_NAND cannot identify the medium that holds fs_region. Resolve
+    it from the partition table instead. Returns None when the medium cannot be
+    determined, so the caller keeps the legacy Kconfig-based behavior.
+    """
+    import ptab as ptab_module
+
+    ptab_obj = env.GetPtab() if hasattr(env, 'GetPtab') else None
+    if ptab_obj is None:
+        ptab_path = env.get('PARTITION_TABLE') if hasattr(env, 'get') else None
+        if not ptab_path:
+            return None
+        ptab_obj = ptab_module.load_ptab(ptab_path, fatal=False)
+    if ptab_obj is None:
+        return None
+
+    fs_subtypes = ('filesystem', 'littlefs', 'fat', 'fatfs', 'flashdb')
+
+    if ptab_obj.is_v3():
+        chip_config = ptab_obj.get_chip_config()
+        for partition in ptab_obj.partitions:
+            if str(partition.get('type') or '').strip().lower() != 'data':
+                continue
+            subtype = str(partition.get('subtype') or '').strip().lower()
+            aliases = {str(alias).strip().upper() for alias in (partition.get('aliases') or [])}
+            if subtype not in fs_subtypes and 'FS_REGION' not in aliases:
+                continue
+            region = str(partition.get('region') or '').strip()
+            mem_type = ptab_module._get_region_memory_type(region, chip_config)
+            return str(mem_type or '').strip().lower() or None
+        return None
+
+    # v1/v2: the filesystem region is marked by the FS_REGION tag. Prefer the
+    # board QSPI mode because a base address alone is ambiguous: 55x maps NOR
+    # XIP flash at 0x64000000/0x68000000, inside the NAND address range.
+    for mem in ptab_obj.content_mems():
+        if 'version' in mem:
+            continue
+        mem_name = str(mem.get('mem') or '').strip().lower()
+        try:
+            base = int(mem.get('base', 0), 0)
+        except (TypeError, ValueError):
+            base = 0
+        for region in mem.get('regions') or []:
+            tags = {str(tag).strip().upper() for tag in (region.get('tags') or [])}
+            if 'FS_REGION' not in tags:
+                continue
+            if 'flash' in mem_name:
+                medium = _get_flash_medium_from_qspi_mode(mem_name)
+                if medium is not None:
+                    return medium
+                if 0x60000000 <= base <= 0x6FFFFFFF:
+                    return 'nand'
+                if 0x10000000 <= base <= 0x1FFFFFFF:
+                    return 'nor'
+            if 'emmc' in mem_name or 'sdmmc' in mem_name or mem_name.startswith('sd'):
+                return 'sd'
+            return None
+    return None
+
+
 def FileSystemBuild(source, env):
     if GetDepend('RT_USING_DFS_ELMFAT'):
         target=os.path.join(env['build_dir'],'fs_root.bin')
         source_list=[]
         for r,d,f in os.walk(source):
             for file in f:
-                source_list+=[os.path.join(r,file)]                
+                source_list+=[os.path.join(r,file)]
         Depends(target,source_list)
         SIFLI_SDK = os.getenv('SIFLI_SDK')
-        if GetDepend('RT_USING_MTD_NAND'):
+        fs_medium = _get_fs_region_medium(env)
+        if fs_medium is not None:
+            use_nand_image = fs_medium == 'nand'
+        else:
+            use_nand_image = bool(GetDepend('RT_USING_MTD_NAND'))
+        if use_nand_image:
             MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg_nand/Release/mkfatimg{env['tool_suffix']}")
             page_size=2048
-        elif GetDepend('RT_USING_MTD_NOR'):
-            MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
-            page_size=4096
         else:
             MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
             page_size=4096
