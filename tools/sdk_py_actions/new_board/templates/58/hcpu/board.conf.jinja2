@@ -38,7 +38,8 @@ CONFIG_BSP_USING_PWMT2=y
 {% endif %}{% endif %}{% if memory.mpi5.enabled %}CONFIG_BSP_ENABLE_MPI5=y
 {% if memory.mpi5.mode is not none %}CONFIG_BSP_MPI5_MODE_{{ memory.mpi5.mode }}=y
 {% endif %}{% if memory.mpi5.size_mb is not none %}CONFIG_BSP_QSPI5_MEM_SIZE={{ memory.mpi5.size_mb }}
-{% endif %}{% endif %}{% if has_psram_cache_wb %}CONFIG_PSRAM_CACHE_WB=y
+{% endif %}{% else %}# CONFIG_BSP_ENABLE_MPI5 is not set
+{% endif %}{% if has_psram_cache_wb %}CONFIG_PSRAM_CACHE_WB=y
 {% endif %}CONFIG_BSP_USING_ONCHIP_RTC=y
 CONFIG_BSP_USING_EPIC=y
 {% if use_sdmmc %}CONFIG_BSP_USING_SDIO=y

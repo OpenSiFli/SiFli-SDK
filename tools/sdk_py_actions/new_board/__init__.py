@@ -1896,6 +1896,12 @@ def build_memory_config_context(spec: Spec, variant: ChipVariant) -> Dict[str, D
             # them in board.conf.
             included_mpis.add(entry.mpi)
             continue
+        if spec.series in ('56', '58') and entry.mpi == 'mpi5':
+            # MPI5 is the 56/58 SiP flash and may be enabled by the LCPU.
+            # Emitting it here would let both cores drive the same
+            # controller, so keep it disabled in the HCPU configuration.
+            included_mpis.add(entry.mpi)
+            continue
         enable(entry)
         included_mpis.add(entry.mpi)
 

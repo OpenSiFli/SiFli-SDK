@@ -2049,6 +2049,85 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertIn("CONFIG_SD_MAX_FREQ=48000000\n", board_conf)
         self.assertIn("CONFIG_SD2_MAX_FREQ=48000000\n", board_conf)
 
+    def test_56_board_conf_keeps_mpi5_disabled(self) -> None:
+        self.make_existing_base(self.output_root / "shared_base")
+        variant = self._make_56_variant()
+        cases = [
+            # Internal SiP NOR boot: mpi5 comes from the chip variant.
+            dict(boot_storage_type="nor", boot_storage_port="mpi5"),
+            # External NOR boot: mpi5 still belongs to the SiP memory.
+            dict(boot_storage_type="nor", boot_storage_size_mb=16, boot_storage_port="mpi3"),
+        ]
+
+        for kwargs in cases:
+            with self.subTest(**kwargs):
+                spec = self.make_spec(
+                    "shared_base",
+                    series="56",
+                    chip_model=variant.part_number,
+                    **kwargs,
+                )
+                board_conf = self.render_hcpu_board_conf(spec, variant)
+
+                self.assertIn("# CONFIG_BSP_ENABLE_MPI5 is not set\n", board_conf)
+                self.assertNotIn("CONFIG_BSP_ENABLE_MPI5=y\n", board_conf)
+                self.assertNotIn("CONFIG_BSP_QSPI5_MEM_SIZE", board_conf)
+
+    def test_58_board_conf_keeps_mpi5_disabled(self) -> None:
+        self.make_existing_base(self.output_root / "shared_base")
+        variant = self._make_58_variant()
+        cases = [
+            # Internal SiP NOR boot: mpi5 comes from the chip variant.
+            dict(boot_storage_type="nor", boot_storage_port="mpi5"),
+            dict(boot_storage_type="nor", boot_storage_size_mb=16, boot_storage_port="mpi3"),
+            dict(
+                boot_storage_type="nor",
+                boot_storage_size_mb=16,
+                boot_storage_port="mpi4",
+                boot_storage_pinmux_type="type0",
+            ),
+        ]
+
+        for kwargs in cases:
+            with self.subTest(**kwargs):
+                spec = self.make_spec(
+                    "shared_base",
+                    series="58",
+                    chip_model=variant.part_number,
+                    **kwargs,
+                )
+                board_conf = self.render_hcpu_board_conf(spec, variant)
+
+                self.assertIn("# CONFIG_BSP_ENABLE_MPI5 is not set\n", board_conf)
+                self.assertNotIn("CONFIG_BSP_ENABLE_MPI5=y\n", board_conf)
+                self.assertNotIn("CONFIG_BSP_QSPI5_MEM_SIZE", board_conf)
+
+    def test_56_58_lcpu_and_acpu_board_conf_have_no_mpi5(self) -> None:
+        self.make_existing_base(self.output_root / "shared_base")
+
+        for series, variant in (("56", self._make_56_variant()), ("58", self._make_58_variant())):
+            with self.subTest(series=series):
+                spec = self.make_spec(
+                    "shared_base",
+                    series=series,
+                    chip_model=variant.part_number,
+                    boot_storage_type="nor",
+                    boot_storage_port="mpi5",
+                )
+                rendered = render_board_files(
+                    spec=spec,
+                    variant=variant,
+                    sdk_root=self.sdk_root,
+                    output_root=self.output_root,
+                    assets_root=ASSETS_ROOT,
+                )
+
+                board = self.output_root / spec.board_name
+                cores = ["lcpu"] if series == "56" else ["lcpu", "acpu"]
+                for core in cores:
+                    board_conf = rendered[board / core / "board.conf"]
+                    self.assertNotIn("MPI5", board_conf)
+
     def test_board_conf_selects_mtd_layer_for_every_medium(self) -> None:
         self.make_existing_base(self.output_root / "shared_base")
         variant = self._make_58_variant()
