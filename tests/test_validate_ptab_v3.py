@@ -187,7 +187,7 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
 
         self.assertTrue(any("FACTORY_DATA" in message and "0x40000" in message for message in messages), messages)
 
-    def test_52_nand_256k_default_partitions_are_block_size_aware(self) -> None:
+    def test_52_nand_256k_default_partitions_follow_v2_layout(self) -> None:
         data = {
             "version": 3,
             "chip": "SF32LB52X",
@@ -214,7 +214,9 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
         bootloader = next(part for part in partitions if part.get("name") == "bootloader")
         messages = [str(issue) for issue in validate_ptab_v3(ptab_obj)]
 
-        self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00040000)
+        # The flash table keeps the v2 size (0x8000); only the factory data
+        # and the bootloader are aligned to the 256K erase block.
+        self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00008000)
         self.assertEqual(ptab.parse_size(factory_data["offset"]), 0x00080000)
         self.assertEqual(ptab.parse_size(factory_data["size"]), 0x00040000)
         self.assertEqual(ptab.parse_size(bootloader["offset"]), 0x00100000)
@@ -319,8 +321,26 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
 
         messages = self.validation_messages(data)
 
-        self.assertTrue(any("flash_table" in message and "size=0x40000" in message for message in messages), messages)
+        self.assertTrue(any("flash_table" in message and "size=0x8000" in message for message in messages), messages)
         self.assertTrue(any("bootloader" in message and "offset=0x100000" in message for message in messages), messages)
+
+    def test_52_nand_real_board_ptabs_accept_v2_flash_table_size(self) -> None:
+        # Both NAND boards rely on the injected 0x8000 flash table while their
+        # 128K erase block is larger; the rest of the block stays reserved.
+        for board in ("sf32lb52-lcd_a128r16", "sf32lb52-nano_a128r16"):
+            ptab_path = Path(ROOT) / "customer" / "boards" / board / "ptab.yaml"
+            ptab_obj = ptab.load_ptab(ptab_path, fatal=True)
+
+            flash_table = next(
+                part for part in ptab_obj.partitions if part.get("name") == "flash_table"
+            )
+            self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00008000, board)
+
+            messages = [str(issue) for issue in validate_ptab_v3(ptab_obj)]
+            self.assertFalse(
+                any("flash_table" in message for message in messages),
+                f"{board}: {messages}",
+            )
 
     def test_non_nand_rejects_memory_block_size(self) -> None:
         data = self.base_52_sdmmc_partitions(

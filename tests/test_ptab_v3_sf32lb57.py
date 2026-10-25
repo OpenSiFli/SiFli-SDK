@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+#
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+"""ptab v3 default-partition tests for the SF32LB57 series.
+
+The 57 series differs from the 52 series in two user-visible ways:
+
+* it can boot from mpi2 or mpi3, so the NAND MAC address must follow the
+  boot region SBUS base instead of a hard-coded constant;
+* it has LPSYS RAM, but ptab v3 does not generate ``lpsys_ram`` by default.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+from typing import Any, Optional
+
+import yaml
+
+
+ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(ROOT, "tools", "build"))
+
+import ptab  # noqa: E402
+from validate_ptab_v3 import validate_ptab_v3  # noqa: E402
+
+
+SERIES = "sf32lb57"
+PART_NUMBER = "SF32LB575YBBN6"
+HPSYS_RAM_BASE = 0x20000000
+
+
+class PtabV3Sf32lb57DefaultsTests(unittest.TestCase):
+    def load_ptab(self, data: dict[str, Any]):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "ptab.yaml"
+            path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            return ptab.load_ptab(path, fatal=True)
+
+    def partitions_by_name(self, data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+        ptab_obj = self.load_ptab(data)
+        return {
+            str(part.get("name")): part
+            for part in ptab_obj.partitions
+            if part.get("name")
+        }
+
+    @staticmethod
+    def _app_partition(region: str, offset: int) -> dict[str, Any]:
+        return {
+            "name": "hcpu_flash_code",
+            "type": "app",
+            "subtype": "factory",
+            "region": region,
+            "offset": offset,
+            "size": 0x00600000,
+            "core": "HCPU",
+        }
+
+    def nor_ptab(self, region: str, chip: str = "SF32LB57X") -> dict[str, Any]:
+        return {
+            "version": 3,
+            "chip": chip,
+            "memory": [
+                {"mpi": region, "type": "nor", "size": 16 * 1024 * 1024},
+            ],
+            "partitions": [self._app_partition(region, 0x00020000)],
+        }
+
+    def nand_ptab(self, block_size: int, chip: str = "SF32LB57X") -> dict[str, Any]:
+        return {
+            "version": 3,
+            "chip": chip,
+            "memory": [
+                {
+                    "mpi": "mpi3",
+                    "type": "nand",
+                    "size": 128 * 1024 * 1024,
+                    "block_size": block_size,
+                },
+            ],
+            "partitions": [self._app_partition("mpi3", 0x00140000)],
+        }
+
+    def sd_ptab(self, chip: str = "SF32LB57X") -> dict[str, Any]:
+        return {
+            "version": 3,
+            "chip": chip,
+            "memory": [
+                {"sdmmc": "sdmmc1", "type": "sd", "size": 16 * 1024 * 1024},
+            ],
+            "partitions": [self._app_partition("sdmmc1", 0x00091000)],
+        }
+
+    def assert_partition(
+        self,
+        part: dict[str, Any],
+        *,
+        ptype: Optional[str] = None,
+        subtype: Optional[str] = None,
+        region: Optional[str] = None,
+        offset: Optional[int] = None,
+        size: Optional[int] = None,
+    ) -> None:
+        if ptype is not None:
+            self.assertEqual(part.get("type"), ptype)
+        if subtype is not None:
+            self.assertEqual(part.get("subtype"), subtype)
+        if region is not None:
+            self.assertEqual(part.get("region"), region)
+        if offset is not None:
+            self.assertEqual(ptab.parse_size(part.get("offset", 0)), offset)
+        if size is not None:
+            self.assertEqual(ptab.parse_size(part.get("size", 0)), size)
+
+    def assert_nor_boot_layout(self, region: str) -> None:
+        parts = self.partitions_by_name(self.nor_ptab(region))
+
+        self.assert_partition(
+            parts["flash_table"], ptype="ftab", region=region, offset=0x00000000, size=0x00008000
+        )
+        self.assert_partition(
+            parts["bootloader"],
+            ptype="bootloader",
+            region=region,
+            offset=0x00010000,
+            size=0x00010000,
+        )
+        self.assertEqual(
+            parts["bootloader"]["exec"],
+            {"region": "hpsys_ram", "offset": 0x00020000},
+        )
+        self.assert_partition(
+            parts["bootloader_ram_data"],
+            ptype="data",
+            subtype="ram",
+            region="hpsys_ram",
+            offset=0x00040000,
+            size=0x00010000,
+        )
+        self.assert_partition(
+            parts["hcpu_ram_data"],
+            ptype="data",
+            subtype="ram",
+            region="hpsys_ram",
+            offset=0x00000000,
+            size=0x0006FC00,
+        )
+
+        # NOR does not carry an auto MAC address, and lpsys_ram is not
+        # generated by default.
+        self.assertNotIn("AUTO_FLASH_MAC_ADDRESS", parts["flash_table"].get("attrs", {}))
+        self.assertNotIn("lpsys_ram", parts)
+
+    def test_nor_mpi2_default_partitions(self) -> None:
+        self.assert_nor_boot_layout("mpi2")
+
+    def test_nor_mpi3_default_partitions(self) -> None:
+        self.assert_nor_boot_layout("mpi3")
+
+    def test_nand_128k_default_partitions(self) -> None:
+        parts = self.partitions_by_name(self.nand_ptab(0x00020000))
+
+        self.assert_partition(
+            parts["flash_table"], ptype="ftab", region="mpi3", offset=0x00000000, size=0x00008000
+        )
+        self.assert_partition(
+            parts["factory_data"],
+            ptype="data",
+            subtype="raw",
+            region="mpi3",
+            offset=0x00040000,
+            size=0x00020000,
+        )
+        self.assert_partition(
+            parts["bootloader"],
+            ptype="bootloader",
+            region="mpi3",
+            offset=0x00080000,
+            size=0x00010000,
+        )
+        self.assertEqual(
+            parts["flash_table"].get("attrs", {}).get("AUTO_FLASH_MAC_ADDRESS"),
+            0x64000000,
+        )
+        self.assertNotIn("lpsys_ram", parts)
+
+    def test_nand_256k_default_partitions(self) -> None:
+        parts = self.partitions_by_name(self.nand_ptab(0x00040000))
+
+        self.assert_partition(
+            parts["flash_table"], ptype="ftab", region="mpi3", offset=0x00000000, size=0x00008000
+        )
+        self.assert_partition(
+            parts["factory_data"],
+            ptype="data",
+            subtype="raw",
+            region="mpi3",
+            offset=0x00080000,
+            size=0x00040000,
+        )
+        self.assert_partition(
+            parts["bootloader"],
+            ptype="bootloader",
+            region="mpi3",
+            offset=0x00100000,
+            size=0x00010000,
+        )
+        self.assertEqual(
+            parts["flash_table"].get("attrs", {}).get("AUTO_FLASH_MAC_ADDRESS"),
+            0x64000000,
+        )
+        self.assertNotIn("lpsys_ram", parts)
+
+    def test_sd_default_partitions(self) -> None:
+        parts = self.partitions_by_name(self.sd_ptab())
+
+        self.assert_partition(
+            parts["mbr"], ptype="data", subtype="raw", region="sdmmc1", offset=0x00000000, size=0x00001000
+        )
+        self.assert_partition(
+            parts["flash_table"], ptype="ftab", region="sdmmc1", offset=0x00001000, size=0x00008000
+        )
+        self.assert_partition(
+            parts["factory_data"],
+            ptype="data",
+            subtype="raw",
+            region="sdmmc1",
+            offset=0x00041000,
+            size=0x00020000,
+        )
+        self.assert_partition(
+            parts["bootloader"],
+            ptype="bootloader",
+            region="sdmmc1",
+            offset=0x00061000,
+            size=0x00010000,
+        )
+        self.assertNotIn("AUTO_FLASH_MAC_ADDRESS", parts["flash_table"].get("attrs", {}))
+        self.assertNotIn("lpsys_ram", parts)
+
+    def test_explicit_lpsys_ram_partition_is_kept(self) -> None:
+        data = self.nor_ptab("mpi3")
+        data["partitions"].append(
+            {
+                "name": "lpsys_ram",
+                "type": "data",
+                "subtype": "ram",
+                "region": "lpsys_ram",
+                "offset": 0x00000000,
+                "size": 0x00006000,
+            }
+        )
+
+        parts = self.partitions_by_name(data)
+
+        # The explicit partition must survive, and the default injection must
+        # not add a second one.
+        self.assertEqual(
+            [p.get("name") for p in self.load_ptab(data).partitions].count("lpsys_ram"),
+            1,
+        )
+        self.assert_partition(
+            parts["lpsys_ram"],
+            ptype="data",
+            subtype="ram",
+            region="lpsys_ram",
+            offset=0x00000000,
+            size=0x00006000,
+        )
+
+    def test_part_number_and_series_name_normalize_to_sf32lb57(self) -> None:
+        # SF32BPRTUN3N6/SF32BPRTYB3N6 are SiP variants of the 57 series.
+        for chip in (
+            PART_NUMBER,
+            "SF32LB57X",
+            "SF32BPRTUN3N6",
+            "SF32BPRTYB3N6",
+        ):
+            ptab_obj = self.load_ptab(self.nor_ptab("mpi3", chip=chip))
+
+            self.assertEqual(ptab_obj.chip_series, SERIES, chip)
+            parts = {part.get("name"): part for part in ptab_obj.partitions}
+            self.assertEqual(ptab.parse_size(parts["hcpu_ram_data"]["size"]), 0x0006FC00, chip)
+            self.assertEqual(
+                ptab.parse_size(parts["bootloader_ram_data"]["offset"]), 0x00040000, chip
+            )
+
+
+    def test_acpu_requires_acpu_ram_data(self) -> None:
+        data = self.nor_ptab("mpi3")
+        data["partitions"].append(self._acpu_app_partition("mpi3", 0x00072000))
+
+        messages = self.validation_messages(data)
+
+        self.assertTrue(
+            any("acpu_ram_data" in message for message in messages), messages
+        )
+
+    def test_acpu_with_acpu_ram_data_is_valid(self) -> None:
+        data = self.nor_ptab("mpi3")
+        data["partitions"].append(self._acpu_app_partition("mpi3", 0x00072000))
+        data["partitions"].append(
+            {
+                "name": "acpu_ram_data",
+                "type": "data",
+                "subtype": "ram",
+                "region": "hpsys_ram",
+                "offset": 0x0006FC00,
+                "size": 0x0000FC00,
+                "core": "ACPU",
+                "aliases": ["ACPU_RAM_DATA"],
+            }
+        )
+
+        messages = self.validation_messages(data)
+
+        self.assertFalse(
+            any("acpu_ram_data" in message for message in messages), messages
+        )
+
+    def test_58_acpu_does_not_require_acpu_ram_data(self) -> None:
+        # The 58 ACPU code region is in hpsys_ram and its board headers use
+        # ACPU_CODE_REGION1_SBUS_*, so no dedicated RAM partition is needed.
+        data = {
+            "version": 3,
+            "chip": "SF32LB58X",
+            "memory": [
+                {"mpi": "mpi4", "type": "nor", "size": 64 * 1024 * 1024},
+            ],
+            "partitions": [
+                {
+                    "name": "acpu",
+                    "type": "app",
+                    "subtype": "factory",
+                    "region": "mpi4",
+                    "offset": 0x00F60000,
+                    "size": 0x0007C000,
+                    "core": "ACPU",
+                    "aliases": ["ACPU_CODE_LOAD_REGION1"],
+                    "exec": {"region": "hpsys_ram", "offset": 0x00200000},
+                }
+            ],
+        }
+
+        messages = self.validation_messages(data)
+
+        self.assertFalse(
+            any("acpu_ram_data" in message for message in messages), messages
+        )
+
+    @staticmethod
+    def _acpu_app_partition(region: str, offset: int) -> dict[str, Any]:
+        return {
+            "name": "acpu",
+            "type": "app",
+            "subtype": "factory",
+            "region": region,
+            "offset": offset,
+            "size": 0x00040000,
+            "core": "ACPU",
+            "aliases": ["ACPU_CODE_LOAD_REGION1"],
+            "exec": {"region": "psram1", "offset": 0},
+        }
+
+    def validation_messages(self, data: dict[str, Any]) -> list[str]:
+        ptab_obj = self.load_ptab(data)
+        return [str(issue) for issue in validate_ptab_v3(ptab_obj)]
+
+
+if __name__ == "__main__":
+    unittest.main()

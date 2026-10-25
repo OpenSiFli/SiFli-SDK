@@ -209,6 +209,8 @@ def build_partition_table_entries(
             chip_series = 'sf32lb58'
         elif chip_u.startswith('SF32LB55'):
             chip_series = 'sf32lb55'
+        elif chip_u.startswith('SF32LB57') or chip_u.startswith('SF32BPRT'):
+            chip_series = 'sf32lb57'
 
     def _mpi_name_from_region(region: str) -> Optional[str]:
         if not region:
@@ -265,6 +267,11 @@ def build_partition_table_entries(
                 cmsis_dir = 'sf32lb56x'
             elif chip_u.startswith('SF32LB58'):
                 cmsis_dir = 'sf32lb58x'
+            elif chip_u.startswith('SF32LB57'):
+                cmsis_dir = 'sf32lb57x'
+            elif chip_u.startswith('SF32BPRT'):
+                # SF32BPRT* are SiP variants of the 57 series.
+                cmsis_dir = 'sf32lb57x'
             else:
                 return None
             import gen_link_lds
@@ -298,6 +305,11 @@ def build_partition_table_entries(
                 cmsis_dir = 'sf32lb56x'
             elif chip_u.startswith('SF32LB58'):
                 cmsis_dir = 'sf32lb58x'
+            elif chip_u.startswith('SF32LB57'):
+                cmsis_dir = 'sf32lb57x'
+            elif chip_u.startswith('SF32BPRT'):
+                # SF32BPRT* are SiP variants of the 57 series.
+                cmsis_dir = 'sf32lb57x'
             else:
                 return _mem_map_cache
             import gen_link_lds

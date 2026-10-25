@@ -1735,7 +1735,7 @@ def ProgramAsmBuild(target, source, env):
     #TODO: only support keil and gcc
     import rtconfig
     if rtconfig.PLATFORM == 'armcc':
-        if GetDepend("SOC_SF32LB58X") or GetDepend("SOC_SF32LB56X"):
+        if GetDepend("SOC_SF32LB58X") or GetDepend("SOC_SF32LB56X") or GetDepend("SOC_SF32LB57X"):
             subprocess.run(['fromelf', '--cpu=8-M.Main', '--coproc1=cde', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
         else:
             subprocess.run(['fromelf', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
@@ -2197,6 +2197,8 @@ def _get_chip_link_fallback(link_source, env):
         chip = 'sf32lb56x'
     elif GetDepend('SOC_SF32LB58X'):
         chip = 'sf32lb58x'
+    elif GetDepend('SOC_SF32LB57X'):
+        chip = 'sf32lb57x'
     else:
         return None
 

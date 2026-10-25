@@ -305,6 +305,10 @@ class PtabV3:
             match = re.match(r'(SF32LB\d{2})', self._chip, re.IGNORECASE)
             if match:
                 return match.group(1).lower()
+            # SF32BPRTUN3N6/SF32BPRTYB3N6 are SiP variants documented under
+            # the SF32LB57x chip directory and share the 57 series defaults.
+            if re.match(r'SF32BPRT', self._chip, re.IGNORECASE):
+                return 'sf32lb57'
         return None
 
     @property
@@ -917,7 +921,7 @@ _PTAB_V3_SERIES_DEFAULTS: Dict[str, Dict[str, int]] = {
         'lpsys_ram_size': 0x00006000,
         'bootloader_exec_offset': 0x00020000,
         'flash_table_nor_size': 0x00008000,
-        'flash_table_nand_size': 0x00020000,
+        'flash_table_nand_size': 0x00008000,
         'flash_table_sd_offset': 0x00001000,
         'flash_table_sd_size': 0x00008000,
         'mbr_sd_offset': 0x00000000,
@@ -926,6 +930,23 @@ _PTAB_V3_SERIES_DEFAULTS: Dict[str, Dict[str, int]] = {
         'factory_data_sd_size': 0x00020000,
         'bootloader_nor_offset': 0x00010000,
         'bootloader_nand_offset': 0x00080000,
+        'bootloader_sd_offset': 0x00061000,
+        'bootloader_size': 0x00010000,
+    },
+    'sf32lb57': {
+        'hcpu_ram_size': 0x0006FC00,
+        'bootloader_ram_offset': 0x00040000,
+        'bootloader_ram_size': 0x00010000,
+        'bootloader_exec_offset': 0x00020000,
+        'flash_table_nor_size': 0x00008000,
+        'flash_table_nand_size': 0x00008000,
+        'flash_table_sd_offset': 0x00001000,
+        'flash_table_sd_size': 0x00008000,
+        'mbr_sd_offset': 0x00000000,
+        'mbr_sd_size': 0x00001000,
+        'factory_data_sd_offset': 0x00041000,
+        'factory_data_sd_size': 0x00020000,
+        'bootloader_nor_offset': 0x00010000,
         'bootloader_sd_offset': 0x00061000,
         'bootloader_size': 0x00010000,
     },
@@ -1056,7 +1077,9 @@ def _infer_default_partitions_v3(
             if boot_mem_type == 'nand':
                 block_size = _get_region_nand_block_size(boot_region, chip_config)
                 flash_table_offset = 0
-                flash_table_size = block_size
+                # Match the v2 default: the ftab partition describes the live
+                # table only; the rest of the erase block stays reserved.
+                flash_table_size = cfg['flash_table_nand_size']
                 bootloader_offset = 4 * block_size
                 flash_table_attrs['AUTO_FLASH_MAC_ADDRESS'] = SF32LB52_NAND_AUTO_FLASH_MAC_ADDRESS
             elif boot_mem_type == 'sd':
@@ -1145,6 +1168,104 @@ def _infer_default_partitions_v3(
             'offset': 0,
             'size': cfg['lpsys_ram_size'],
         }
+        return defaults
+
+    if series == 'sf32lb57':
+        boot_region, boot_mem_type = _infer_default_boot_region_v3(partitions, chip_config)
+        if boot_region and boot_mem_type in ('nor', 'nand', 'sd'):
+            flash_table_attrs = {}
+            if boot_mem_type == 'nand':
+                block_size = _get_region_nand_block_size(boot_region, chip_config)
+                flash_table_offset = 0
+                # Match the v2 default: the ftab partition describes the live
+                # table only; the rest of the erase block stays reserved.
+                flash_table_size = cfg['flash_table_nand_size']
+                bootloader_offset = 4 * block_size
+                # The MAC address lives at the start of the boot NAND device.
+                # Derive it from the boot region SBUS base instead of reusing
+                # the 52 series constant, since 57 can boot from mpi2 or mpi3.
+                mac_base, _mac_cbus = resolve_region_address(boot_region, 0, chip_config)
+                flash_table_attrs['AUTO_FLASH_MAC_ADDRESS'] = mac_base
+            elif boot_mem_type == 'sd':
+                defaults['mbr'] = {
+                    'name': 'mbr',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': cfg['mbr_sd_offset'],
+                    'size': cfg['mbr_sd_size'],
+                    'aliases': ['MBR'],
+                }
+                flash_table_offset = cfg['flash_table_sd_offset']
+                flash_table_size = cfg['flash_table_sd_size']
+                bootloader_offset = cfg['bootloader_sd_offset']
+            else:
+                flash_table_offset = 0
+                flash_table_size = cfg['flash_table_nor_size']
+                bootloader_offset = cfg['bootloader_nor_offset']
+
+            flash_table = {
+                'name': 'flash_table',
+                'type': 'ftab',
+                'region': boot_region,
+                'offset': flash_table_offset,
+                'size': flash_table_size,
+            }
+            if flash_table_attrs:
+                flash_table['attrs'] = flash_table_attrs
+            defaults['flash_table'] = flash_table
+            if boot_mem_type == 'nand':
+                defaults['factory_data'] = {
+                    'name': 'factory_data',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': 2 * block_size,
+                    'size': block_size,
+                    'aliases': ['FACTORY_DATA'],
+                }
+            defaults['bootloader'] = {
+                'name': 'bootloader',
+                'type': 'bootloader',
+                'region': boot_region,
+                'offset': bootloader_offset,
+                'size': cfg['bootloader_size'],
+                'core': 'HCPU',
+                'exec': {
+                    'region': 'hpsys_ram',
+                    'offset': cfg['bootloader_exec_offset'],
+                },
+            }
+            if boot_mem_type == 'sd':
+                defaults['factory_data'] = {
+                    'name': 'factory_data',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': cfg['factory_data_sd_offset'],
+                    'size': cfg['factory_data_sd_size'],
+                    'aliases': ['FACTORY_DATA'],
+                }
+
+        defaults['hcpu_ram_data'] = {
+            'name': 'hcpu_ram_data',
+            'type': 'data',
+            'subtype': 'ram',
+            'region': 'hpsys_ram',
+            'offset': 0,
+            'size': cfg['hcpu_ram_size'],
+        }
+        defaults['bootloader_ram_data'] = {
+            'name': 'bootloader_ram_data',
+            'type': 'data',
+            'subtype': 'ram',
+            'region': 'hpsys_ram',
+            'offset': cfg['bootloader_ram_offset'],
+            'size': cfg['bootloader_ram_size'],
+            'core': 'HCPU',
+        }
+        # SF32LB57 has LPSYS RAM, but ptab v3 does not generate lpsys_ram by
+        # default; an explicit user partition with that name is kept.
         return defaults
 
     defaults['flash_table'] = {

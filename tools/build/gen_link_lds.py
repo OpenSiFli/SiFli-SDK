@@ -163,6 +163,11 @@ def _infer_cmsis_dir_from_chip(chip: str) -> str:
         return 'sf32lb56x'
     if chip.startswith('SF32LB58'):
         return 'sf32lb58x'
+    if chip.startswith('SF32LB57'):
+        return 'sf32lb57x'
+    # SF32BPRT* are SiP variants of the 57 series living in its CMSIS directory.
+    if chip.startswith('SF32BPRT'):
+        return 'sf32lb57x'
     raise LinkLdsError('Unsupported chip for Jinja2 link generation: {}'.format(chip))
 
 

@@ -732,10 +732,13 @@ def validate_sf32lb52_nand_boot_layout(ptab_obj, partitions: List[dict], chip_co
             except (ValueError, TypeError):
                 offset = None
                 size = None
-            if offset != 0 or size != block_size:
+            # The flash table keeps the v1/v2 size (0x8000) regardless of the
+            # NAND erase block size; the rest of the block stays reserved.
+            expected_size = 0x00008000
+            if offset != 0 or size != expected_size:
                 errors.append(ValidationError(
                     f"SF32LB52 NAND region '{region}' flash_table must use offset=0x0, "
-                    f"size=0x{block_size:X} for block_size 0x{block_size:X}"
+                    f"size=0x{expected_size:X}"
                 ))
 
         bootloader = _find_partition_in_region(partitions, region, ptype='bootloader')
@@ -751,6 +754,42 @@ def validate_sf32lb52_nand_boot_layout(ptab_obj, partitions: List[dict], chip_co
                     f"for block_size 0x{block_size:X}"
                 ))
 
+    return errors
+
+
+def validate_sf32lb57_acpu_ram_data(ptab_obj, partitions: List[dict]) -> List[ValidationError]:
+    """SF32LB57 ACPU images need an explicit ACPU RAM window.
+
+    The 57 series runs ACPU code from PSRAM but keeps .data/.bss/stack in
+    hpsys_ram, and its board headers derive HEAP_END from ACPU_RAM_DATA_*.
+    Unlike the 58 series, the code region is not the RAM window, so the
+    window cannot be inferred from the ACPU app partition.
+    """
+    errors: List[ValidationError] = []
+    if str(getattr(ptab_obj, 'chip_series', '') or '').strip().lower() != 'sf32lb57':
+        return errors
+
+    if not any(
+        str(partition.get('type') or '').strip() == 'app'
+        and str(partition.get('core') or '').strip().upper() == 'ACPU'
+        for partition in partitions
+    ):
+        return errors
+
+    has_acpu_ram = any(
+        str(partition.get('name') or '').strip() == 'acpu_ram_data'
+        or 'ACPU_RAM_DATA' in {
+            str(alias).strip().upper()
+            for alias in (partition.get('aliases') or partition.get('tags') or [])
+        }
+        for partition in partitions
+    )
+    if not has_acpu_ram:
+        errors.append(ValidationError(
+            "SF32LB57 ACPU images require an 'acpu_ram_data' partition "
+            "(or an 'ACPU_RAM_DATA' alias) in hpsys_ram: the ACPU HEAP_END "
+            "and linker script resolve ACPU_RAM_DATA_* from it"
+        ))
     return errors
 
 
@@ -820,6 +859,7 @@ def validate_ptab_v3(ptab_obj) -> List[ValidationError]:
     errors.extend(validate_nand_partition_alignment(partitions, chip_config))
     errors.extend(validate_sf32lb52_storage_reservations(ptab_obj, partitions, chip_config))
     errors.extend(validate_sf32lb52_nand_boot_layout(ptab_obj, partitions, chip_config))
+    errors.extend(validate_sf32lb57_acpu_ram_data(ptab_obj, partitions))
 
     # Bootloader must have exec (execution address)
     bootloaders = [p for p in partitions if p.get('type') == 'bootloader']
