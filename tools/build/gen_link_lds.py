@@ -549,6 +549,10 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
         _match_partition_by_alias(partitions, 'HCPU_RO_DATA')
         or _find_partition(partitions, name='hcpu_ro_data')
     )
+    acpu_ram_part = (
+        _match_partition_by_alias(partitions, 'ACPU_RAM_DATA')
+        or _find_partition(partitions, name='acpu_ram_data')
+    )
     bootloader_ram_part = (
         _match_partition_by_alias(partitions, 'BOOTLOADER_RAM_DATA')
         or _find_partition(partitions, name='bootloader_ram_data')
@@ -584,6 +588,7 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
     lpsys_ram_base_ptab, lpsys_ram_size_ptab, _ = _partition_to_base_size(lpsys_ram_part)
     hcpu_ram_base_ptab, hcpu_ram_size_ptab, _ = _partition_to_base_size(hcpu_ram_part)
     hcpu_ro_base_ptab, hcpu_ro_size_ptab, _ = _partition_to_base_size(hcpu_ro_part)
+    acpu_ram_base_ptab, acpu_ram_size_ptab, _ = _partition_to_base_size(acpu_ram_part)
     bootloader_ram_base, bootloader_ram_size, _ = _partition_to_base_size(bootloader_ram_part)
     legacy_bootloader_ram = _LEGACY_BOOTLOADER_RAM_DEFAULTS.get(str(getattr(ptab_obj, 'chip_series', '')).strip().lower())
     if bootloader_ram_part and legacy_bootloader_ram:
@@ -714,17 +719,26 @@ def compute_link_defines(ptab_obj, build_name: str, build_core: str, rtconfig_de
         else:
             ram_base, ram_size = lcpu_ram_base, lcpu_ram_size
     elif build_core == 'ACPU' and code_p:
-        # ACPU code executes from RAM mapped by `exec`.
-        exec_def = code_p.get('exec')
-        if isinstance(exec_def, dict):
-            exec_region = str(exec_def.get('region', '')).strip()
-            exec_offset = ptab_module.parse_size(exec_def.get('offset', 0))
-            exec_sbus, exec_cbus = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=code_p.get('core'))
-            exec_mem_type = _get_region_mem_type(exec_region, chip_config)
-            ram_base = _select_start_addr(exec_mem_type, exec_sbus, exec_cbus)
-            ram_size = ptab_module.parse_size(code_p.get('size', 0))
+        if acpu_ram_base_ptab and acpu_ram_size_ptab:
+            # ACPU keeps its writable data (`.data`/`.bss`/stack/heap) in the
+            # dedicated ACPU RAM window (ACPU_RAM_DATA, e.g. hpsys_ram on
+            # SF32LB57). The code still executes from the `exec` window, which
+            # is only the ROM side of the link script.
+            ram_base = int(acpu_ram_base_ptab)
+            ram_size = int(acpu_ram_size_ptab)
         else:
-            ram_base, ram_size = hcpu_ram_base, hcpu_ram_size
+            # No dedicated ACPU RAM partition (e.g. SF32LB58): keep the legacy
+            # behavior and place RAM at the `exec` window.
+            exec_def = code_p.get('exec')
+            if isinstance(exec_def, dict):
+                exec_region = str(exec_def.get('region', '')).strip()
+                exec_offset = ptab_module.parse_size(exec_def.get('offset', 0))
+                exec_sbus, exec_cbus = ptab_module.resolve_region_address(exec_region, exec_offset, chip_config, core=code_p.get('core'))
+                exec_mem_type = _get_region_mem_type(exec_region, chip_config)
+                ram_base = _select_start_addr(exec_mem_type, exec_sbus, exec_cbus)
+                ram_size = ptab_module.parse_size(code_p.get('size', 0))
+            else:
+                ram_base, ram_size = hcpu_ram_base, hcpu_ram_size
     else:
         ram_base, ram_size = hcpu_ram_base, hcpu_ram_size
 
