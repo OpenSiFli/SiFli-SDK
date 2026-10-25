@@ -2680,7 +2680,7 @@ def _add_default_regions_52x(mems):
         if not bootloader_img_found:
             if "sd" == boot_dev_type:
                 bootloader_region = {
-                    "offset": "0x00011000",
+                    "offset": "0x00061000",
                     "max_size": "0x00010000",
                     "tags": [],
                     "name": "bootloader",
@@ -2809,7 +2809,7 @@ def _add_default_regions_57x(mems):
         if not bootloader_img_found:
             if "sd" == boot_dev_type:
                 bootloader_region = {
-                    "offset": "0x00011000",
+                    "offset": "0x00061000",
                     "max_size": "0x00010000",
                     "tags": [],
                     "name": "bootloader",

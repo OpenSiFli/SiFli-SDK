@@ -5,7 +5,7 @@
         "base": "0x64000000", 
         "regions": [
             {
-                "offset": "0x00021000", 
+                "offset": "0x00071000", 
                 "max_size": "0x00300000",
                 "name": "main",
                 "tags": [
@@ -14,14 +14,14 @@
                 "type": ["app_img"]
             },
             {
-                "offset": "0x00721000", 
+                "offset": "0x00771000", 
                 "max_size": "0x00040000",
                 "name": "acpu",
                 "core": "acpu",
                 "type": ["app_img"]
             },
             {
-                "offset": "0x00761000",
+                "offset": "0x007B1000",
                 "max_size": "0x00060000",
                 "name": "dfu",
                 "type": ["app_img"],
@@ -30,14 +30,14 @@
                 ]
             },
             {
-                "offset": "0x007C1000",
+                "offset": "0x00811000",
                 "max_size": "0x00120000",
                 "tags": [
                     "DFU_DOWNLOAD_REGION"
                 ]
             },
             {
-                "offset": "0x008E1000",
+                "offset": "0x00931000",
                 "max_size": "0x00600000",
                 "name": "fs_root", 
                 "tags": [
@@ -45,14 +45,14 @@
                 ]
             }, 
             {
-                "offset": "0x00EE1000", 
+                "offset": "0x00F31000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_DFU_REGION"
                 ]
             }, 
             {
-                "offset": "0x00EE5000", 
+                "offset": "0x00F35000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_BLE_REGION"
