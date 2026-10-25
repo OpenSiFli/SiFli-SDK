@@ -7,7 +7,7 @@
   "required": [
     "chip_series",
     "chip_model",
-    "storage",
+    "boot_storage",
     "board_name",
     "generate_base"
   ],
@@ -20,14 +20,18 @@
       "type": "string",
       "minLength": 1
     },
-    "storage": {
+    "boot_storage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type"],
+      "required": ["type", "port"],
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["none", "nor", "nand", "sdmmc"]
+          "enum": ["nor", "nand", "sdmmc"]
+        },
+        "port": {
+          "type": "string",
+          "enum": ["mpi1", "mpi2", "mpi3", "mpi4", "mpi5", "sdmmc1", "sdmmc2"]
         },
         "size_mb": {
           "type": "integer",
@@ -43,9 +47,50 @@
         }
       }
     },
-    "storage_port": {
-      "type": "string",
-      "enum": ["mpi2", "mpi3", "mpi4", "sdmmc1", "sdmmc2"]
+    "external_storage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "port", "size_mb"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["nor", "nand", "sdmmc"]
+          },
+          "port": {
+            "type": "string",
+            "enum": ["mpi1", "mpi2", "mpi3", "mpi4", "mpi5", "sdmmc1", "sdmmc2"]
+          },
+          "size_mb": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "block_size_kb": {
+            "type": "integer",
+            "enum": [128, 256]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "not": {
+                    "const": "nand"
+                  }
+                }
+              },
+              "required": ["type"]
+            },
+            "then": {
+              "not": {
+                "required": ["block_size_kb"]
+              }
+            }
+          }
+        ]
+      }
     },
     "board_name": {
       "type": "string",
@@ -66,22 +111,24 @@
     {
       "if": {
         "properties": {
-          "storage": {
+          "chip_series": {
+            "const": "58"
+          },
+          "boot_storage": {
             "properties": {
-              "type": {
-                "not": {
-                  "const": "none"
-                }
+              "port": {
+                "enum": ["mpi4", "sdmmc1"]
               }
             },
-            "required": ["type"]
+            "required": ["port"]
           }
-        }
+        },
+        "required": ["chip_series", "boot_storage"]
       },
       "then": {
         "properties": {
-          "storage": {
-            "required": ["size_mb"]
+          "boot_storage": {
+            "required": ["pinmux_type"]
           }
         }
       }
@@ -89,22 +136,25 @@
     {
       "if": {
         "properties": {
+          "boot_storage": {
+            "required": ["pinmux_type"]
+          }
+        },
+        "required": ["boot_storage"]
+      },
+      "then": {
+        "properties": {
           "chip_series": {
             "const": "58"
           },
-          "storage": {
+          "boot_storage": {
             "properties": {
-              "type": {
-                "enum": ["nor", "nand"]
+              "port": {
+                "enum": ["mpi4", "sdmmc1"]
               }
-            },
-            "required": ["type"]
+            }
           }
-        },
-        "required": ["chip_series", "storage"]
-      },
-      "then": {
-        "required": ["storage_port"]
+        }
       }
     },
     {
@@ -123,7 +173,7 @@
     {
       "if": {
         "properties": {
-          "storage": {
+          "boot_storage": {
             "properties": {
               "type": {
                 "not": {
@@ -134,11 +184,11 @@
             "required": ["type"]
           }
         },
-        "required": ["storage"]
+        "required": ["boot_storage"]
       },
       "then": {
         "properties": {
-          "storage": {
+          "boot_storage": {
             "not": {
               "required": ["block_size_kb"]
             }

@@ -6,7 +6,7 @@
 #define SD1_RESET_PIN       (11)
 #define SD1_EN_PIN          (2)
 {%- endset %}
-{% if storage_pinmux_type == 'type0' -%}
+{% if boot_storage_pinmux_type == 'type0' -%}
 {{ base_content | replace(default_sdmmc1_power_pins, type0_sdmmc1_power_pins) }}
 {%- else -%}
 {{ base_content }}

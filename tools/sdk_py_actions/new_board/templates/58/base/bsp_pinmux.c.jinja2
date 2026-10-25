@@ -58,9 +58,9 @@
     HAL_PIN_Set(PAD_PA36, MPI4_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA38, MPI4_DIO3, PIN_PULLUP, 1);
 {%- endset %}
-{% if storage_pinmux_type == 'type0' -%}
+{% if boot_storage_pinmux_type == 'type0' -%}
 {{ base_content | replace(default_sdmmc1_pins, type0_sdmmc1_pins) }}
-{%- elif storage_pinmux_type == 'type1' -%}
+{%- elif boot_storage_pinmux_type == 'type1' -%}
 {{ base_content | replace(default_sdmmc1_pins, type1_sdmmc1_pins) | replace(default_mpi4_pins, type1_mpi4_pins) }}
 {%- else -%}
 {{ base_content }}
