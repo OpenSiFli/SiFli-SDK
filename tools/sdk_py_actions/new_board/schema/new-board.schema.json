@@ -69,6 +69,10 @@
           "block_size_kb": {
             "type": "integer",
             "enum": [128, 256]
+          },
+          "pinmux_type": {
+            "type": "string",
+            "enum": ["type0", "type1"]
           }
         },
         "allOf": [

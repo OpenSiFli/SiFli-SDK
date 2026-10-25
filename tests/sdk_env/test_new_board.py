@@ -379,6 +379,30 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertNotIn("CONFIG_BSP_USING_SDMMC2=y\n", board_conf)
         self.assertIn("JLINK_DEVICE = 'SF32LB58X_SD_TYPE1'\n", rtconfig)
 
+    def test_58_jlink_device_follows_boot_medium_and_type(self) -> None:
+        cases = [
+            ("nand", "mpi4", "SF32LB58X_NAND"),
+            ("nor", "mpi4", "SF32LB58X"),
+            ("sdmmc", "sdmmc1", "SF32LB58X_SD"),
+        ]
+
+        for boot_type, boot_port, base in cases:
+            for pinmux, suffix in (("type0", ""), ("type1", "_TYPE1")):
+                with self.subTest(boot_type=boot_type, pinmux=pinmux):
+                    spec = self.make_spec(
+                        "shared_base",
+                        series="58",
+                        chip_model="SF32LB58X",
+                        boot_storage_type=boot_type,
+                        boot_storage_size_mb=16,
+                        boot_storage_port=boot_port,
+                        boot_storage_pinmux_type=pinmux,
+                        # External storage must not influence the JLink device.
+                        external_storage=(ExternalStorage("nand", "mpi3", 128, 128),),
+                    )
+
+                    self.assertEqual(choose_hcpu_jlink_device(spec), base + suffix)
+
     def test_52_nand_ptab_reserves_factory_data(self) -> None:
         self.make_existing_base(self.output_root / "shared_base")
         variant = ChipVariant(
@@ -688,7 +712,7 @@ class NewBoardRenderTests(unittest.TestCase):
                 for name, offset in offsets.items():
                     self.assertEqual(offset % 512, 0, f"{name} offset is not 512-byte aligned")
 
-    def test_generated_58_type1_base_specializes_storage_pinmux(self) -> None:
+    def test_generated_58_type1_base_keeps_default_mpi4_pinmux(self) -> None:
         self.make_sample_base(series="58", real_pinmux=True)
         variant = ChipVariant(
             series="58",
@@ -718,11 +742,11 @@ class NewBoardRenderTests(unittest.TestCase):
 
         pinmux = rendered[self.output_root / spec.base_name / "bsp_pinmux.c"]
         rtconfig = rendered[self.output_root / spec.board_name / "hcpu" / "rtconfig.py"]
-        self.assertIn("HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
+        self.assertIn("HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
         self.assertIn("HAL_PIN_Set(PAD_PA49, GPIO_A49, PIN_PULLUP, 1);", pinmux)
-        self.assertNotIn("HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
+        self.assertNotIn("HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
         self.assertNotIn("HAL_PIN_Set(PAD_PA66, GPIO_A66, PIN_PULLUP, 1);", pinmux)
-        self.assertIn("JLINK_DEVICE = 'SF32LB58X_NAND'\n", rtconfig)
+        self.assertIn("JLINK_DEVICE = 'SF32LB58X_NAND_TYPE1'\n", rtconfig)
 
     def test_generated_58_sdmmc1_type0_base_uses_reference_pinmux(self) -> None:
         self.make_sample_base(series="58", real_pinmux=True)
@@ -771,7 +795,7 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertNotIn("#define SD1_EN_PIN          (80)\n", power)
         self.assertIn("JLINK_DEVICE = 'SF32LB58X_SD'\n", rtconfig)
 
-    def test_generated_58_mpi4_type0_base_keeps_sdmmc1_type0_pinmux(self) -> None:
+    def test_generated_58_mpi4_type0_base_uses_pa39_pinmux(self) -> None:
         self.make_sample_base(series="58", real_pinmux=True)
         variant = ChipVariant(
             series="58",
@@ -801,11 +825,14 @@ class NewBoardRenderTests(unittest.TestCase):
 
         pinmux = rendered[self.output_root / spec.base_name / "bsp_pinmux.c"]
         power = rendered[self.output_root / spec.base_name / "bsp_power.c"]
-        self.assertIn("HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
+        rtconfig = rendered[self.output_root / spec.board_name / "hcpu" / "rtconfig.py"]
+        self.assertIn("HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
         self.assertIn("HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1);", pinmux)
         self.assertIn("HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);", pinmux)
+        self.assertNotIn("HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
         self.assertIn("#define SD1_RESET_PIN       (11)\n", power)
         self.assertIn("#define SD1_EN_PIN          (2)\n", power)
+        self.assertIn("JLINK_DEVICE = 'SF32LB58X_NAND'\n", rtconfig)
 
     def test_generated_58_sdmmc1_type1_base_uses_reference_pinmux(self) -> None:
         self.make_sample_base(series="58", real_pinmux=True)
@@ -970,7 +997,7 @@ class NewBoardRenderTests(unittest.TestCase):
                     "mpi2",
                     boot_storage_size_mb=16,
                     external_storage=[
-                        {"type": "nor", "port": "mpi3", "size_mb": 16, "pinmux_type": "type0"},
+                        {"type": "nor", "port": "mpi3", "size_mb": 16, "unknown_field": 1},
                     ],
                 ),
                 SCHEMA_PATH,
@@ -1983,6 +2010,7 @@ class NewBoardRenderTests(unittest.TestCase):
 
         self.assertTrue(spec.with_acpu)
 
+
     def test_57_board_conf_enables_both_sd_controllers(self) -> None:
         self.make_existing_base(self.output_root / "shared_base")
         variant = self._make_57eybbn6_variant()
@@ -2098,6 +2126,296 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertEqual(default_boot_sd_port("56"), "sdmmc1")
         self.assertEqual(default_boot_sd_port("57"), "sdmmc1")
         self.assertEqual(default_boot_sd_port("58"), "sdmmc2")
+
+    def test_normalize_external_storage_pinmux_type(self) -> None:
+        variant = self._make_58_variant()
+
+        spec, _variant = normalize_spec(
+            self.make_config(
+                "58",
+                variant.part_number,
+                "nor",
+                "mpi3",
+                boot_storage_size_mb=16,
+                external_storage=[
+                    {"type": "nand", "port": "mpi4", "size_mb": 128, "pinmux_type": "type1"},
+                    {"type": "sdmmc", "port": "sdmmc1", "size_mb": 32, "pinmux_type": "type1"},
+                ],
+            ),
+            SCHEMA_PATH,
+            {"58": [variant]},
+        )
+
+        self.assertEqual(spec.external_storage[0].pinmux_type, "type1")
+        self.assertEqual(spec.external_storage[1].pinmux_type, "type1")
+
+    def test_normalize_58_pinmux_pad_compatibility(self) -> None:
+        variant = self._make_58_variant()
+        cases = [
+            ("type0", "type0"),
+            ("type1", "type1"),
+        ]
+
+        for mpi4_type, sdmmc1_type in cases:
+            with self.subTest(mpi4=mpi4_type, sdmmc1=sdmmc1_type):
+                spec, _variant = normalize_spec(
+                    self.make_config(
+                        "58",
+                        variant.part_number,
+                        "nor",
+                        "mpi3",
+                        boot_storage_size_mb=16,
+                        external_storage=[
+                            {"type": "nand", "port": "mpi4", "size_mb": 128, "pinmux_type": mpi4_type},
+                            {"type": "sdmmc", "port": "sdmmc1", "size_mb": 32, "pinmux_type": sdmmc1_type},
+                        ],
+                    ),
+                    SCHEMA_PATH,
+                    {"58": [variant]},
+                )
+
+                self.assertEqual(spec.external_storage[0].pinmux_type, mpi4_type)
+                self.assertEqual(spec.external_storage[1].pinmux_type, sdmmc1_type)
+
+    def test_normalize_58_rejects_pinmux_pad_conflicts(self) -> None:
+        variant = self._make_58_variant()
+        cases = [
+            ("type0", "type1", "PAD_PA39"),
+            ("type1", "type0", "PAD_PA09"),
+        ]
+
+        for mpi4_type, sdmmc1_type, pad in cases:
+            with self.subTest(mpi4=mpi4_type, sdmmc1=sdmmc1_type):
+                with self.assertRaisesRegex(Exception, rf"Pinmux conflict.*{pad}"):
+                    normalize_spec(
+                        self.make_config(
+                            "58",
+                            variant.part_number,
+                            "nor",
+                            "mpi3",
+                            boot_storage_size_mb=16,
+                            external_storage=[
+                                {"type": "nand", "port": "mpi4", "size_mb": 128, "pinmux_type": mpi4_type},
+                                {"type": "sdmmc", "port": "sdmmc1", "size_mb": 32, "pinmux_type": sdmmc1_type},
+                            ],
+                        ),
+                        SCHEMA_PATH,
+                        {"58": [variant]},
+                    )
+
+    def test_normalize_58_rejects_boot_pinmux_pad_conflict(self) -> None:
+        variant = self._make_58_variant()
+
+        with self.assertRaisesRegex(Exception, "Pinmux conflict.*PAD_PA39"):
+            normalize_spec(
+                self.make_config(
+                    "58",
+                    variant.part_number,
+                    "nor",
+                    "mpi4",
+                    boot_storage_size_mb=16,
+                    external_storage=[
+                        {"type": "sdmmc", "port": "sdmmc1", "size_mb": 32, "pinmux_type": "type1"},
+                    ],
+                )
+                | {"boot_storage": {"type": "nor", "port": "mpi4", "size_mb": 16, "pinmux_type": "type0"}},
+                SCHEMA_PATH,
+                {"58": [variant]},
+            )
+
+    def test_normalize_external_storage_pinmux_type_rejects_other_ports(self) -> None:
+        variant = self._make_58_variant()
+
+        with self.assertRaisesRegex(Exception, "only supported for series 58"):
+            normalize_spec(
+                self.make_config(
+                    "58",
+                    variant.part_number,
+                    "nor",
+                    "mpi3",
+                    boot_storage_size_mb=16,
+                    external_storage=[
+                        {"type": "nor", "port": "mpi3", "size_mb": 16, "pinmux_type": "type1"},
+                    ],
+                ),
+                SCHEMA_PATH,
+                {"58": [variant]},
+            )
+
+        with self.assertRaisesRegex(Exception, "only supported for series 58"):
+            normalize_spec(
+                self.make_config(
+                    "58",
+                    variant.part_number,
+                    "nor",
+                    "mpi3",
+                    boot_storage_size_mb=16,
+                    external_storage=[
+                        {"type": "sdmmc", "port": "sdmmc2", "size_mb": 32, "pinmux_type": "type1"},
+                    ],
+                ),
+                SCHEMA_PATH,
+                {"58": [variant]},
+            )
+
+    def test_normalize_external_storage_pinmux_type_rejects_non_58(self) -> None:
+        variant = self._make_57eybbn6_variant()
+
+        with self.assertRaisesRegex(Exception, "only supported for series 58"):
+            normalize_spec(
+                self.make_config(
+                    "57",
+                    variant.part_number,
+                    "nor",
+                    "mpi3",
+                    boot_storage_size_mb=16,
+                    external_storage=[
+                        {"type": "sdmmc", "port": "sdmmc1", "size_mb": 32, "pinmux_type": "type1"},
+                    ],
+                ),
+                SCHEMA_PATH,
+                {"57": [variant]},
+            )
+
+    def test_generated_58_external_mpi4_pinmux(self) -> None:
+        self.make_sample_base(series="58", real_pinmux=True)
+        variant = self._make_58_variant()
+        cases = [
+            (
+                "type0",
+                "HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);",
+                "HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);",
+            ),
+            (
+                "type1",
+                "HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);",
+                "HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);",
+            ),
+        ]
+
+        for pinmux_type, expected, unexpected in cases:
+            with self.subTest(pinmux_type=pinmux_type):
+                spec = self.make_spec(
+                    "demo_board_base",
+                    generate_base=True,
+                    series="58",
+                    chip_model=variant.part_number,
+                    boot_storage_type="nor",
+                    boot_storage_port="mpi5",
+                    external_storage=(ExternalStorage("nor", "mpi4", 16, pinmux_type=pinmux_type),),
+                )
+
+                rendered = render_board_files(
+                    spec=spec,
+                    variant=variant,
+                    sdk_root=self.sdk_root,
+                    output_root=self.output_root,
+                    assets_root=ASSETS_ROOT,
+                )
+                pinmux = rendered[self.output_root / spec.base_name / "bsp_pinmux.c"]
+
+                self.assertIn(expected, pinmux)
+                self.assertNotIn(unexpected, pinmux)
+
+    def test_generated_58_external_sdmmc1_pinmux(self) -> None:
+        self.make_sample_base(series="58", real_pinmux=True)
+        variant = self._make_58_variant()
+        cases = [
+            (
+                "type0",
+                (
+                    "HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1);",
+                    "HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);",
+                    "#define SD1_RESET_PIN       (11)\n",
+                    "#define SD1_EN_PIN          (2)\n",
+                ),
+                (
+                    "HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1);",
+                    "HAL_PIN_Set(PAD_PA66, GPIO_A66, PIN_PULLUP, 1);",
+                    "#define SD1_RESET_PIN       (49)\n",
+                ),
+            ),
+            (
+                "type1",
+                (
+                    "HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1);",
+                    "HAL_PIN_Set(PAD_PA80, GPIO_A80, PIN_PULLUP, 1);",
+                    "HAL_PIN_Set(PAD_PA49, GPIO_A49, PIN_PULLUP, 1);",
+                    "#define SD1_RESET_PIN       (49)\n",
+                    "#define SD1_EN_PIN          (80)\n",
+                ),
+                (
+                    "HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1);",
+                    "HAL_PIN_Set(PAD_PA66, GPIO_A66, PIN_PULLUP, 1);",
+                    "#define SD1_RESET_PIN       (11)\n",
+                ),
+            ),
+        ]
+
+        for pinmux_type, expected_lines, unexpected_lines in cases:
+            with self.subTest(pinmux_type=pinmux_type):
+                spec = self.make_spec(
+                    "demo_board_base",
+                    generate_base=True,
+                    series="58",
+                    chip_model=variant.part_number,
+                    boot_storage_type="nor",
+                    boot_storage_port="mpi5",
+                    external_storage=(
+                        ExternalStorage("sdmmc", "sdmmc1", 32, pinmux_type=pinmux_type),
+                    ),
+                )
+
+                rendered = render_board_files(
+                    spec=spec,
+                    variant=variant,
+                    sdk_root=self.sdk_root,
+                    output_root=self.output_root,
+                    assets_root=ASSETS_ROOT,
+                )
+                pinmux = rendered[self.output_root / spec.base_name / "bsp_pinmux.c"]
+                power = rendered[self.output_root / spec.base_name / "bsp_power.c"]
+
+                for line in expected_lines:
+                    self.assertIn(line, pinmux + power)
+                for line in unexpected_lines:
+                    self.assertNotIn(line, pinmux + power)
+
+
+    def test_generated_58_multiple_external_storage_pinmux(self) -> None:
+        self.make_sample_base(series="58", real_pinmux=True)
+        variant = self._make_58_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="58",
+            chip_model=variant.part_number,
+            boot_storage_type="nor",
+            boot_storage_port="mpi5",
+            external_storage=(
+                ExternalStorage("nor", "mpi4", 16, pinmux_type="type0"),
+                ExternalStorage("sdmmc", "sdmmc1", 32, pinmux_type="type0"),
+            ),
+        )
+
+        rendered = render_board_files(
+            spec=spec,
+            variant=variant,
+            sdk_root=self.sdk_root,
+            output_root=self.output_root,
+            assets_root=ASSETS_ROOT,
+        )
+        pinmux = rendered[self.output_root / spec.base_name / "bsp_pinmux.c"]
+        power = rendered[self.output_root / spec.base_name / "bsp_power.c"]
+
+        # mpi4 type0 drives the PA39 group ...
+        self.assertIn("HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
+        self.assertNotIn("HAL_PIN_Set(PAD_PA09, MPI4_CLK, PIN_NOPULL, 1);", pinmux)
+        # ... while sdmmc1 type0 drives the PA09 group.
+        self.assertIn("HAL_PIN_Set(PAD_PA09, SD1_CLK, PIN_NOPULL, 1);", pinmux)
+        self.assertIn("HAL_PIN_Set(PAD_PA02, GPIO_A2, PIN_PULLUP, 1);", pinmux)
+        self.assertNotIn("HAL_PIN_Set(PAD_PA39, SD1_CLK, PIN_NOPULL, 1);", pinmux)
+        self.assertIn("#define SD1_RESET_PIN       (11)\n", power)
 
 
 if __name__ == "__main__":

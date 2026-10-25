@@ -50,7 +50,7 @@
     HAL_PIN_Set(PAD_PA01, MPI4_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA06, MPI4_DIO3, PIN_PULLUP, 1);
 {%- endset %}
-{% set type1_mpi4_pins -%}
+{% set type0_mpi4_pins -%}
     HAL_PIN_Set(PAD_PA39, MPI4_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA30, MPI4_CS, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA40, MPI4_DIO0, PIN_PULLDOWN, 1);
@@ -58,10 +58,7 @@
     HAL_PIN_Set(PAD_PA36, MPI4_DIO2, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA38, MPI4_DIO3, PIN_PULLUP, 1);
 {%- endset %}
-{% if boot_storage_pinmux_type == 'type0' -%}
-{{ base_content | replace(default_sdmmc1_pins, type0_sdmmc1_pins) }}
-{%- elif boot_storage_pinmux_type == 'type1' -%}
-{{ base_content | replace(default_sdmmc1_pins, type1_sdmmc1_pins) | replace(default_mpi4_pins, type1_mpi4_pins) }}
-{%- else -%}
-{{ base_content }}
-{%- endif %}
+{% set content = base_content -%}
+{% if sdmmc1_pinmux_type == 'type0' %}{% set content = content | replace(default_sdmmc1_pins, type0_sdmmc1_pins) %}{% elif sdmmc1_pinmux_type == 'type1' %}{% set content = content | replace(default_sdmmc1_pins, type1_sdmmc1_pins) %}{% endif -%}
+{% if mpi4_pinmux_type == 'type0' %}{% set content = content | replace(default_mpi4_pins, type0_mpi4_pins) %}{% endif -%}
+{{ content -}}

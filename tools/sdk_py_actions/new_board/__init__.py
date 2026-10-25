@@ -220,23 +220,37 @@ DEFAULT_BOOT_SD_PORT = {
 
 STORAGE_TYPES = ('nor', 'nand', 'sdmmc')
 
+# Ports whose pin routing depends on the 58-series pinmux type, and the choice
+# preselected by the interactive prompt for each port.
+PINMUX_STORAGE_PORTS = ('mpi4', 'sdmmc1')
+DEFAULT_PINMUX_TYPE = {
+    'mpi4': 'type0',
+    'sdmmc1': 'type0',
+}
+
+# Signal whose pad pin is shown next to each interactive pinmux choice.
+PINMUX_REPRESENTATIVE_SIGNAL = {
+    'mpi4': 'MPI4_CLK',
+    'sdmmc1': 'SD1_CLK',
+}
+
 STORAGE_PINMUX_DETAILS = {
     'mpi4': {
         'type0': (
-            'MPI4_CLK=PAD_PA09',
-            'MPI4_CS=PAD_PA10',
-            'MPI4_DIO0=PAD_PA05',
-            'MPI4_DIO1=PAD_PA04',
-            'MPI4_DIO2=PAD_PA01',
-            'MPI4_DIO3=PAD_PA06',
-        ),
-        'type1': (
             'MPI4_CLK=PAD_PA39',
             'MPI4_CS=PAD_PA30',
             'MPI4_DIO0=PAD_PA40',
             'MPI4_DIO1=PAD_PA37',
             'MPI4_DIO2=PAD_PA36',
             'MPI4_DIO3=PAD_PA38',
+        ),
+        'type1': (
+            'MPI4_CLK=PAD_PA09',
+            'MPI4_CS=PAD_PA10',
+            'MPI4_DIO0=PAD_PA05',
+            'MPI4_DIO1=PAD_PA04',
+            'MPI4_DIO2=PAD_PA01',
+            'MPI4_DIO3=PAD_PA06',
         ),
     },
     'sdmmc1': {
@@ -326,6 +340,7 @@ class ExternalStorage:
     port: str
     size_mb: int
     block_size_kb: Optional[int] = None
+    pinmux_type: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -558,21 +573,22 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
 
     boot_storage_pinmux_type: Optional[str] = None
     if pinmux_required(series, boot_storage_port, boot_is_internal):
+        default_pinmux_type = DEFAULT_PINMUX_TYPE.get(boot_storage_port)
         boot_storage_pinmux_type = ask(
             questionary.select(
                 'Select boot storage pinmux type',
                 choices=[
                     questionary.Choice(
-                        'type0',
-                        value='type0',
-                        description=storage_pinmux_choice_description(boot_storage_port, 'type0'),
-                    ),
-                    questionary.Choice(
-                        'type1',
-                        value='type1',
-                        description=storage_pinmux_choice_description(boot_storage_port, 'type1'),
-                    ),
+                        storage_pinmux_choice_label(boot_storage_port, pinmux),
+                        value=pinmux,
+                        description=storage_pinmux_choice_description(boot_storage_port, pinmux),
+                    )
+                    for pinmux in sorted(
+                        ('type0', 'type1'),
+                        key=lambda value: value != default_pinmux_type,
+                    )
                 ],
+                default=default_pinmux_type,
                 style=questionary.Style([
                     ('text', 'fg:#8a8a8a'),
                 ]),
@@ -756,11 +772,38 @@ def prompt_external_storage(
             'Board creation cancelled.',
         )
 
+        pinmux_type: Optional[str] = None
+        if pinmux_required(series, port, boot_is_internal=False):
+            default_pinmux_type = DEFAULT_PINMUX_TYPE.get(port)
+            pinmux_type = ask(
+                questionary.select(
+                    'Select external storage pinmux type',
+                    choices=[
+                        questionary.Choice(
+                            storage_pinmux_choice_label(port, pinmux),
+                            value=pinmux,
+                            description=storage_pinmux_choice_description(port, pinmux),
+                        )
+                        for pinmux in sorted(
+                            ('type0', 'type1'),
+                            key=lambda value: value != default_pinmux_type,
+                        )
+                    ],
+                    default=default_pinmux_type,
+                    style=questionary.Style([
+                        ('text', 'fg:#8a8a8a'),
+                    ]),
+                ),
+                'Board creation cancelled.',
+            )
+
         item: Dict[str, Any] = {
             'type': storage_type,
             'port': port,
             'size_mb': int(raw_size),
         }
+        if pinmux_type is not None:
+            item['pinmux_type'] = pinmux_type
         if storage_type == 'nand':
             item['block_size_kb'] = ask(
                 questionary.select(
@@ -809,7 +852,7 @@ def build_confirmation_summary(
         lines.append(f'  port: {boot_storage_port}')
     lines.append(f'  location: {"external" if boot_storage_size_mb is not None else "internal SiP"}')
     if boot_storage_pinmux_type:
-        lines.append(f'  pinmux_type: {boot_storage_pinmux_type}')
+        lines.append(f'  pinmux_type: {storage_pinmux_choice_label(boot_storage_port, boot_storage_pinmux_type)}')
         lines.extend(storage_pinmux_detail_lines(boot_storage_port, selected_type=boot_storage_pinmux_type, indent='  '))
     if boot_nand_block_size_kb is not None:
         lines.append(f'  block_size_kb: {boot_nand_block_size_kb}')
@@ -826,14 +869,18 @@ def build_confirmation_summary(
             ext_port = item.get('port')
             ext_size = item.get('size_mb')
             ext_block = item.get('block_size_kb')
+            ext_pinmux = item.get('pinmux_type')
         else:
             ext_type = item.storage_type
             ext_port = item.port
             ext_size = item.size_mb
             ext_block = item.block_size_kb
+            ext_pinmux = item.pinmux_type
         detail = f'  - type: {ext_type}, port: {ext_port}, capacity_mb: {ext_size}'
         if ext_block is not None:
             detail += f', block_size_kb: {ext_block}'
+        if ext_pinmux is not None:
+            detail += f', pinmux_type: {storage_pinmux_choice_label(ext_port, ext_pinmux)}'
         lines.append(detail)
 
     lines.extend([
@@ -880,6 +927,33 @@ def storage_pinmux_choice_description(storage_port: Optional[str], pinmux_type: 
         return ''
     pins = STORAGE_PINMUX_DETAILS.get(storage_port, {}).get(pinmux_type, ())
     return ', '.join(_short_pinmux_pin_name(storage_port, pin) for pin in pins)
+
+
+def storage_pinmux_representative_pin(storage_port: Optional[str], pinmux_type: str) -> Optional[str]:
+    """Return the pin that identifies a pinmux type on a storage port."""
+    if storage_port is None:
+        return None
+    pins = STORAGE_PINMUX_DETAILS.get(storage_port, {}).get(pinmux_type, ())
+    signal = PINMUX_REPRESENTATIVE_SIGNAL.get(storage_port)
+    for pin in pins:
+        if pin.split('=', 1)[0] == signal:
+            return pin
+    return pins[0] if pins else None
+
+
+def storage_pinmux_pad_set(storage_port: str, pinmux_type: str) -> frozenset:
+    """Return the pads used by a pinmux type on a storage port."""
+    pins = STORAGE_PINMUX_DETAILS.get(storage_port, {}).get(pinmux_type, ())
+    return frozenset(pin.split('=', 1)[1] for pin in pins)
+
+
+def storage_pinmux_choice_label(storage_port: Optional[str], pinmux_type: str) -> str:
+    """Format an interactive choice as "typeN (SIGNAL=PADxx)"."""
+    pin = storage_pinmux_representative_pin(storage_port, pinmux_type)
+    if pin is None:
+        return pinmux_type
+    signal, pad = pin.split('=', 1)
+    return f'{pinmux_type} ({signal}={pad.removeprefix("PAD_")})'
 
 
 def _format_pinmux_pin_name(pin: str) -> str:
@@ -1020,6 +1094,7 @@ def normalize_spec(
         external_storage=external_storage,
         with_acpu=with_acpu,
     )
+    validate_pinmux_pad_conflicts(spec)
     return spec, variant
 
 
@@ -1056,6 +1131,14 @@ def parse_external_storage(
             storage_type=storage_type,
         )
 
+        raw_pinmux_type = raw_item.get('pinmux_type')
+        pinmux_type = str(raw_pinmux_type).strip().lower() if raw_pinmux_type else None
+        if pinmux_type is not None and not pinmux_required(series, port, boot_is_internal=False):
+            raise FatalError(
+                f'{prefix}.pinmux_type is only supported for series 58 '
+                f'external_storage.port=mpi4|sdmmc1.'
+            )
+
         if port in sip_ports:
             raise FatalError(
                 f'{prefix}.port "{port}" is occupied by SiP {sip_ports[port].upper()} '
@@ -1078,6 +1161,7 @@ def parse_external_storage(
             port=port,
             size_mb=size_mb,
             block_size_kb=block_size_kb,
+            pinmux_type=pinmux_type,
         ))
         seen_ports.add(port)
 
@@ -1109,6 +1193,51 @@ def default_boot_sd_port(series: str) -> str:
 
 def pinmux_required(series: str, port: str, boot_is_internal: bool) -> bool:
     return series == '58' and not boot_is_internal and port in ('mpi4', 'sdmmc1')
+
+
+def _storage_pinmux_representative_pad(storage_port: str, pinmux_type: str) -> Optional[str]:
+    pin = storage_pinmux_representative_pin(storage_port, pinmux_type)
+    if pin is None:
+        return None
+    return pin.split('=', 1)[1]
+
+
+def validate_pinmux_pad_conflicts(spec: Spec) -> None:
+    """Reject storage ports whose resolved pin sets overlap.
+
+    Pinmux type labels are not comparable between ports: mpi4 type0 and
+    sdmmc1 type1 drive the same pads. Compare the pads each port resolves to
+    instead, and only for ports that actually use a pinmux type.
+    """
+    ports: List[Tuple[str, str]] = []
+    if (
+        not spec.boot_is_internal
+        and spec.boot_storage_pinmux_type in ('type0', 'type1')
+        and spec.boot_storage_port in PINMUX_STORAGE_PORTS
+    ):
+        ports.append((spec.boot_storage_port, spec.boot_storage_pinmux_type))
+    for item in spec.external_storage:
+        if item.pinmux_type in ('type0', 'type1') and item.port in PINMUX_STORAGE_PORTS:
+            ports.append((item.port, item.pinmux_type))
+
+    for index, (port_a, type_a) in enumerate(ports):
+        pads_a = storage_pinmux_pad_set(port_a, type_a)
+        for port_b, type_b in ports[index + 1:]:
+            overlap = pads_a & storage_pinmux_pad_set(port_b, type_b)
+            if overlap:
+                # Prefer the pads that identify each port's pinmux type.
+                representatives = {
+                    pad for pad in (
+                        _storage_pinmux_representative_pad(port_a, type_a),
+                        _storage_pinmux_representative_pad(port_b, type_b),
+                    )
+                    if pad in overlap
+                }
+                pads = ', '.join(sorted(representatives or overlap))
+                raise FatalError(
+                    f'Pinmux conflict between {port_a} ({type_a}) and '
+                    f'{port_b} ({type_b}): {pads}.'
+                )
 
 
 def find_sip_storage(variant: ChipVariant, port: str, storage_type: str) -> Optional[MemoryEntry]:
@@ -1253,6 +1382,7 @@ def render_board_files(
         if not sample_base_dir.exists():
             raise FatalError(f'Base template directory not found: {sample_base_dir}')
 
+        pinmux_types = storage_pinmux_types(spec)
         for name in ['Kconfig.board', 'board.h', 'bsp_board.h', 'bsp_init.c', 'bsp_lcd_tp.c', 'bsp_pinmux.c', 'bsp_power.c']:
             source_path = sample_base_dir / name
             if not source_path.exists():
@@ -1260,7 +1390,8 @@ def render_board_files(
             if use_new_board_base_template(spec, name):
                 rendered[base_dir / name] = render_template(env, template_prefix + f'base/{name}.jinja2', {
                     'base_content': source_path.read_text(encoding='utf-8'),
-                    'boot_storage_pinmux_type': spec.boot_storage_pinmux_type,
+                    'mpi4_pinmux_type': pinmux_types.get('mpi4'),
+                    'sdmmc1_pinmux_type': pinmux_types.get('sdmmc1'),
                 })
             else:
                 rendered[base_dir / name] = env.from_string(source_path.read_text(encoding='utf-8')).render()
@@ -1310,12 +1441,41 @@ def render_template(env: Any, template_name: str, context: Dict[str, Any]) -> st
 def use_new_board_base_template(spec: Spec, filename: str) -> bool:
     if spec.series != '58' or filename not in ('bsp_pinmux.c', 'bsp_power.c'):
         return False
-    if spec.boot_storage_pinmux_type not in ('type0', 'type1'):
-        return False
-    storage_region = storage_region_for_spec(spec)
+    pinmux_types = storage_pinmux_types(spec)
     if filename == 'bsp_pinmux.c':
-        return storage_region in ('mpi4', 'sdmmc1')
-    return storage_region in ('mpi4', 'sdmmc1') and spec.boot_storage_pinmux_type == 'type0'
+        # Both pins sets differ from the unmodified base content.
+        return (
+            pinmux_types.get('sdmmc1') in ('type0', 'type1')
+            or pinmux_types.get('mpi4') == 'type0'
+        )
+    return pinmux_types.get('sdmmc1') == 'type0'
+
+
+def storage_pinmux_types(spec: Spec) -> Dict[str, str]:
+    """Return the pinmux type to use on each 58 storage port.
+
+    The boot device selects the board-wide pinmux type, while an external
+    device may select the type of the port it is wired to.
+    """
+    pinmux_types: Dict[str, str] = {}
+    if (
+        not spec.boot_is_internal
+        and spec.boot_storage_port in PINMUX_STORAGE_PORTS
+        and spec.boot_storage_pinmux_type in ('type0', 'type1')
+    ):
+        pinmux_types[spec.boot_storage_port] = spec.boot_storage_pinmux_type
+
+    for item in spec.external_storage:
+        if item.port in PINMUX_STORAGE_PORTS and item.pinmux_type in ('type0', 'type1'):
+            pinmux_types[item.port] = item.pinmux_type
+
+    # The boot selection describes the board-wide wiring, so it also applies to
+    # the storage port that no device uses. This mirrors the original
+    # single-type template behavior.
+    if spec.boot_storage_pinmux_type in ('type0', 'type1'):
+        for port in PINMUX_STORAGE_PORTS:
+            pinmux_types.setdefault(port, spec.boot_storage_pinmux_type)
+    return pinmux_types
 
 
 def render_ptab_yaml(
@@ -1830,7 +1990,9 @@ def choose_hcpu_jlink_device(spec: Spec) -> str:
         device = 'SF32LB58X_SD'
     else:
         device = 'SF32LB58X'
-    if spec.boot_storage_type == 'sdmmc' and spec.boot_storage_pinmux_type == 'type1':
+    # Only the boot storage selects the device variant; external storage keeps
+    # the same JLink device as the boot medium.
+    if spec.boot_storage_pinmux_type == 'type1':
         device += '_TYPE1'
     return device
 
