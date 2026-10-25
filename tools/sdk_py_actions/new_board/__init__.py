@@ -23,6 +23,18 @@ NAND_BLOCK_SIZE_KB_DEFAULT = 128
 NAND_BLOCK_SIZE_KB_CHOICES = (128, 256)
 SF32LB52_NAND_BOOTLOADER_BLOCK_INDEX = 4
 SF32LB52_NAND_BOOTLOADER_SIZE = 0x00010000
+SF32LB57_NAND_BOOTLOADER_BLOCK_INDEX = 4
+SF32LB57_NAND_BOOTLOADER_SIZE = 0x00010000
+ACPU_PARTITION_SIZE = 0x00040000
+# ACPU private RAM window inside hpsys_ram, right after the HCPU RAM data
+# region (0x0006FC00) as used by the existing 57-series v2 boards. It is
+# consumed by bsp_board.h for the ACPU heap end.
+ACPU_RAM_DATA_OFFSET = 0x0006FC00
+ACPU_RAM_DATA_SIZE = 0x0000FC00
+# On series 57 SD cards the ACPU image does not follow the HCPU app region
+# directly; it keeps the offset used by the existing boards (app start +
+# 7 MB), which is also where the v2 layout placed it before the +0x50000 shift.
+SF32LB57_SD_ACPU_OFFSET_FROM_APP = 0x00700000
 STORAGE_OFFSET_ALIGNMENT = {
     'sdmmc': 512,
 }
@@ -100,36 +112,84 @@ FIXED_PARTITION_LAYOUTS = {
         'dfu': (0x00400000, 0x00004000),
         'ble': (0x00404000, 0x00004000),
     },
+    ('57', 'none'): {
+        'hcpu_flash_code': (0x00020000, 0x00010000),
+        'fs_region': (0x00050000, 0x00028000),
+        'dfu': (0x00078000, 0x00004000),
+        'ble': (0x0007C000, 0x00004000),
+    },
+    ('57', 'nor'): {
+        'hcpu_flash_code': (0x00020000, 0x00700000),
+        'fs_region': (0x008E0000, 0x00600000),
+        'dfu': (0x00EE0000, 0x00004000),
+        'ble': (0x00EE4000, 0x00004000),
+    },
+    ('57', 'nand'): {
+        'hcpu_flash_code': (0x000A0000, 0x00300000),
+        'fs_region': (0x00540000, 0x00300000),
+        'dfu': (0x00840000, 0x00004000),
+        'ble': (0x00844000, 0x00004000),
+    },
+    ('57', 'sdmmc'): {
+        'hcpu_flash_code': (0x00071000, 0x00300000),
+        'fs_region': (0x00931000, 0x00600000),
+        'dfu': (0x00F31000, 0x00004000),
+        'ble': (0x00F35000, 0x00004000),
+    },
 }
 
 SERIES_DIRS = {
     '52': ['SF32LB52_X', 'SF32LB52x'],
     '56': ['SF32LB56x'],
+    '57': ['SF32LB57x'],
     '58': ['SF32LB58x'],
 }
 
 SERIES_LABEL = {
     '52': 'SF32LB52',
     '56': 'SF32LB56',
+    '57': 'SF32LB57',
     '58': 'SF32LB58',
 }
 
 FAMILY_CHIP = {
     '52': 'SF32LB52X',
     '56': 'SF32LB56X',
+    '57': 'SF32LB57X',
     '58': 'SF32LB58X',
 }
 
 SOC_SYMBOL = {
     '52': 'SOC_SF32LB52X',
     '56': 'SOC_SF32LB56X',
+    '57': 'SOC_SF32LB57X',
     '58': 'SOC_SF32LB58X',
 }
 
 SAMPLE_BASE = {
     '52': 'customer/boards/sf32lb52-core_base',
     '56': 'customer/boards/sf32lb56-lcd_base',
+    '57': 'customer/boards/sf32lb57-dpi-hdk_base',
     '58': 'customer/boards/sf32lb58-core_base',
+}
+
+# External NOR/NAND storage ports allowed per series, and their defaults.
+# Series not present here use the generic path (52 -> mpi2, 56 -> mpi3).
+# SF32LB57X NAND is only wired to mpi3, while NOR may use mpi2 or mpi3.
+ALLOWED_STORAGE_PORTS = {
+    '57': {
+        'nor': ('mpi2', 'mpi3'),
+        'nand': ('mpi3',),
+    },
+    '58': {
+        'nor': ('mpi3', 'mpi4'),
+        'nand': ('mpi3', 'mpi4'),
+    },
+}
+
+DEFAULT_NOR_NAND_PORT = {
+    '57': 'mpi3',
+    '58': 'mpi3',
 }
 
 STORAGE_PINMUX_DETAILS = {
@@ -236,6 +296,7 @@ class Spec:
     generate_base: bool
     storage_pinmux_type: Optional[str] = None
     nand_block_size_kb: Optional[int] = None
+    with_acpu: bool = False
 
 
 @dataclass(frozen=True)
@@ -356,6 +417,7 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
             choices=[
                 questionary.Choice(SERIES_LABEL['52'], value='52'),
                 questionary.Choice(SERIES_LABEL['56'], value='56'),
+                questionary.Choice(SERIES_LABEL['57'], value='57'),
                 questionary.Choice(SERIES_LABEL['58'], value='58'),
             ],
         ),
@@ -398,18 +460,19 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
     )
 
     storage_port: Optional[str] = None
-    if series == '58' and storage_type in ('nor', 'nand'):
+    series_ports = ALLOWED_STORAGE_PORTS.get(series, {}).get(storage_type)
+    if series_ports:
         storage_port = ask(
             questionary.select(
                 'Select external storage port',
                 choices=[
-                    questionary.Choice('mpi3', value='mpi3'),
-                    questionary.Choice('mpi4', value='mpi4'),
+                    questionary.Choice(port, value=port)
+                    for port in series_ports
                 ],
             ),
             'Board creation cancelled.',
         )
-    elif series in ('56', '58') and storage_type == 'sdmmc':
+    elif series in ('56', '57', '58') and storage_type == 'sdmmc':
         default_sdmmc = default_sdmmc_storage_port(series)
         other_sdmmc = 'sdmmc1' if default_sdmmc == 'sdmmc2' else 'sdmmc2'
         storage_port = ask(
@@ -472,6 +535,13 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
         )
         storage_size_mb = int(raw_size)
 
+    with_acpu = False
+    if series == '57' and storage_type != 'none':
+        with_acpu = ask(
+            questionary.confirm('Generate an ACPU partition?', default=False),
+            'Board creation cancelled.',
+        )
+
     board_name = ask(
         questionary.text(
             'Input board name',
@@ -507,6 +577,7 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
         generate_base=generate_base,
         storage_pinmux_type=storage_pinmux_type,
         nand_block_size_kb=nand_block_size_kb,
+        with_acpu=with_acpu,
     )
 
     confirmed = ask(
@@ -534,6 +605,8 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
         config['storage']['block_size_kb'] = nand_block_size_kb
     if storage_port is not None:
         config['storage_port'] = storage_port
+    if with_acpu:
+        config['with_acpu'] = True
     return config
 
 
@@ -548,15 +621,20 @@ def build_confirmation_summary(
     generate_base: bool,
     storage_pinmux_type: Optional[str] = None,
     nand_block_size_kb: Optional[int] = None,
+    with_acpu: bool = False,
 ) -> List[str]:
     lines = [
         '[Chip]',
         f'  series: {SERIES_LABEL.get(series, series)}',
         f'  chip_model: {chip_model}',
+    ]
+    if with_acpu:
+        lines.append('  with_acpu: true')
+    lines.extend([
         '',
         '[Storage]',
         f'  type: {storage_type}',
-    ]
+    ])
     if storage_port:
         lines.append(f'  port: {storage_port}')
     if storage_pinmux_type:
@@ -649,6 +727,7 @@ def normalize_spec(
     board_name = str(raw_config.get('board_name') or '').strip()
     generate_base = bool(raw_config.get('generate_base'))
     base_name = str(raw_config.get('base_name') or '').strip()
+    with_acpu = bool(raw_config.get('with_acpu', False))
 
     if not BOARD_NAME_RE.fullmatch(board_name):
         raise FatalError(f'Invalid board_name: {board_name}')
@@ -703,6 +782,25 @@ def normalize_spec(
                 raise FatalError(f'Series 58 storage_port={storage_port} requires storage.pinmux_type=type0|type1.')
         elif storage_pinmux_type is not None:
             raise FatalError('storage.pinmux_type is only supported for series 58 storage_port=mpi4|sdmmc1.')
+    elif series == '57':
+        if storage_type in ('nor', 'nand'):
+            allowed_ports = ALLOWED_STORAGE_PORTS[series][storage_type]
+            if storage_port is None:
+                storage_port = DEFAULT_NOR_NAND_PORT[series]
+            elif storage_port not in allowed_ports:
+                allowed = '|'.join(allowed_ports)
+                raise FatalError(f'Series 57 requires storage_port={allowed} for nor/nand external storage.')
+        elif storage_type == 'sdmmc':
+            if storage_port is None:
+                storage_port = default_sdmmc_storage_port(series)
+            elif storage_port not in allowed_sdmmc_storage_ports(series):
+                allowed = '|'.join(allowed_sdmmc_storage_ports(series))
+                raise FatalError(f'Series 57 requires storage_port={allowed} when storage.type is "sdmmc".')
+        else:
+            storage_port = None
+
+        if storage_pinmux_type is not None:
+            raise FatalError('storage.pinmux_type is only supported for series 58 storage_port=mpi4|sdmmc1.')
     elif storage_type == 'sdmmc':
         if storage_port is None:
             storage_port = default_sdmmc_storage_port(series)
@@ -722,6 +820,17 @@ def normalize_spec(
     if series == '58' and psram is None:
         raise FatalError(f'Chip model "{variant.part_number}" is not compatible with the fixed 58-series template because it has no SiP PSRAM.')
 
+    if with_acpu:
+        if series != '57':
+            raise FatalError('with_acpu is only supported for series 57.')
+        if storage_type == 'none':
+            raise FatalError(
+                'with_acpu is not supported when storage.type is "none": '
+                'the 57-series none layout has no free 0x40000-byte region between main and fs_region.'
+            )
+        if psram is None:
+            raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to use with_acpu.')
+
     if generate_base:
         base_name = f'{board_name}_base'
 
@@ -736,6 +845,7 @@ def normalize_spec(
         generate_base=generate_base,
         storage_pinmux_type=storage_pinmux_type,
         nand_block_size_kb=nand_block_size_kb,
+        with_acpu=with_acpu,
     )
     return spec, variant
 
@@ -802,6 +912,7 @@ def render_board_files(
     board_symbol = board_config_symbol(spec.board_name)
     chip_family = FAMILY_CHIP[spec.series]
     package_name = chip_package_prefix(spec.chip_model) if spec.series == '58' else None
+    part_symbol = f'SOC_{spec.chip_model.upper()}' if spec.series == '57' else None
     template_prefix = f'{spec.series}/'
 
     memory_entries = build_external_memory_entries(spec)
@@ -842,6 +953,7 @@ def render_board_files(
         rendered[core_dir / 'Kconfig.board'] = render_template(env, core_template_prefix + 'Kconfig.board.jinja2', {
             'board_symbol': board_symbol,
             'soc_symbol': SOC_SYMBOL[spec.series],
+            'part_symbol': part_symbol,
             'core_select': core_select,
             'extra_select': extra_select,
         })
@@ -1017,6 +1129,7 @@ def build_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
 
     return build_fixed_partitions(
         spec=spec,
+        variant=variant,
         region=storage_region,
         total_size=total_size,
         exec_region=app_exec_region,
@@ -1042,6 +1155,7 @@ def build_none_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
 
 def build_fixed_partitions(
     spec: Spec,
+    variant: ChipVariant,
     region: str,
     total_size: int,
     exec_region: Optional[str],
@@ -1056,6 +1170,14 @@ def build_fixed_partitions(
     min_offset = max((part.offset + part.size for part in partitions), default=0)
     min_offset = max(min_offset, minimum_fixed_partition_offset(spec))
     aligned_layout = align_fixed_partition_layout(layout, alignment, min_offset=min_offset)
+
+    acpu_exec: Optional[Tuple[str, int]] = None
+    if spec.with_acpu:
+        app_offset, app_size = aligned_layout['hcpu_flash_code']
+        layout_with_acpu = dict(layout)
+        layout_with_acpu['acpu'] = (acpu_storage_offset(spec, app_offset, app_size), ACPU_PARTITION_SIZE)
+        aligned_layout = align_fixed_partition_layout(layout_with_acpu, alignment, min_offset=min_offset)
+        acpu_exec = acpu_exec_location(spec, variant, app_size)
 
     max_end = max(offset + size for offset, size in aligned_layout.values())
     if total_size < max_end:
@@ -1082,11 +1204,45 @@ def build_fixed_partitions(
             attrs=attrs,
         )
     )
+    if spec.with_acpu:
+        acpu_offset, acpu_size = aligned_layout['acpu']
+        assert acpu_exec is not None
+        acpu_exec_region, acpu_exec_offset = acpu_exec
+        partitions.append(
+            Partition(
+                'acpu',
+                'app',
+                region,
+                acpu_offset,
+                acpu_size,
+                subtype='factory',
+                core='ACPU',
+                aliases=('ACPU_CODE_LOAD_REGION1', 'APP_ACPU_CODE'),
+                exec_region=acpu_exec_region,
+                exec_offset=acpu_exec_offset,
+            )
+        )
     partitions.extend([
         Partition('fs_region', 'data', region, fs_offset, fs_size, subtype='filesystem'),
         Partition('dfu', 'data', region, dfu_offset, KV_PART_SIZE, subtype='flashdb_kv'),
         Partition('ble', 'data', region, ble_offset, KV_PART_SIZE, subtype='flashdb_kv'),
     ])
+    if spec.with_acpu:
+        # RAM window for the ACPU core. It is not part of the storage layout,
+        # but ptab.h must expose ACPU_RAM_DATA_START_ADDR/_SIZE for the ACPU
+        # board header (HEAP_END). Must never be emitted without with_acpu.
+        partitions.append(
+            Partition(
+                'acpu_ram_data',
+                'data',
+                'hpsys_ram',
+                ACPU_RAM_DATA_OFFSET,
+                ACPU_RAM_DATA_SIZE,
+                subtype='ram',
+                core='ACPU',
+                aliases=('ACPU_RAM_DATA',),
+            )
+        )
     return partitions
 
 
@@ -1133,6 +1289,37 @@ def build_reserved_storage_partitions(spec: Spec, region: str) -> List[Partition
     return []
 
 
+def acpu_storage_offset(spec: Spec, app_offset: int, app_size: int) -> int:
+    if spec.storage_type == 'sdmmc':
+        # Existing 57 SD boards keep the ACPU image 7 MB past the app start
+        # instead of directly after the (3 MB) HCPU app region.
+        return app_offset + SF32LB57_SD_ACPU_OFFSET_FROM_APP
+    return app_offset + app_size
+
+
+def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Tuple[str, int]:
+    psram = variant.first_psram()
+    if psram is None:
+        raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to place the ACPU exec region.')
+
+    psram2 = next(
+        (
+            entry
+            for entry in sorted(variant.memory, key=_memory_sort_key)
+            if entry.mem_type == 'psram' and entry.mpi == 'mpi2'
+        ),
+        None,
+    )
+    if psram2 is not None:
+        # Dual-PSRAM parts (e.g. SF32LB57EYBBN6) put the ACPU image in psram2.
+        return psram_alias(psram2), 0
+    if spec.storage_type == 'nor':
+        return psram_alias(psram), 0
+    # NAND/SD execute the HCPU app from the first PSRAM, so the ACPU image
+    # follows it in the same region.
+    return psram_alias(psram), app_size
+
+
 def build_none_storage_partitions(
     spec: Spec,
     region: str,
@@ -1140,6 +1327,12 @@ def build_none_storage_partitions(
     exec_region: Optional[str],
     attrs: Optional[Dict[str, Any]],
 ) -> List[Partition]:
+    if spec.with_acpu:
+        raise FatalError(
+            'with_acpu is not supported when storage.type is "none": '
+            'the 57-series none layout has no free 0x40000-byte region between main and fs_region.'
+        )
+
     layout = FIXED_PARTITION_LAYOUTS.get((spec.series, 'none'))
     if layout is None:
         raise FatalError(f'No fixed partition layout for series={spec.series} storage=none')
@@ -1217,6 +1410,13 @@ def build_memory_config_context(spec: Spec, variant: ChipVariant) -> Dict[str, D
 
     included_mpis: set[str] = set()
     for entry in sorted(variant.memory, key=_memory_sort_key):
+        if spec.series == '57':
+            # SiP memory is fully described by the part number in
+            # soc/sf32lb57x/Kconfig.<part>, which sets BSP_ENABLE_MPI<n>,
+            # BSP_MPI<n>_MODE_<m> and BSP_QSPI<n>_MEM_SIZE. Do not duplicate
+            # them in board.conf.
+            included_mpis.add(entry.mpi)
+            continue
         if should_enable_internal_memory(spec, entry):
             enable(entry)
             included_mpis.add(entry.mpi)
@@ -1276,6 +1476,10 @@ def mpi_mode_for_memory(series: str, variant: ChipVariant, mpi: str, mem_type: s
             return 3
         if mpi == 'mpi2':
             return 5
+    if series == '57':
+        # SiP PSRAM mode comes from soc/sf32lb57x/Kconfig.<part>; return None
+        # so no board.conf override is emitted.
+        return None
     if series == '58':
         return 4
     return None
@@ -1283,7 +1487,7 @@ def mpi_mode_for_memory(series: str, variant: ChipVariant, mpi: str, mem_type: s
 
 def core_definitions(series: str) -> List[Tuple[str, str, Optional[str]]]:
     defs = [('HCPU', 'BF0_HCPU', None), ('LCPU', 'BF0_LCPU', None)]
-    if series == '58':
+    if series in ('57', '58'):
         defs.append(('ACPU', 'BF0_ACPU', 'BF0_HCPU'))
     return defs
 
@@ -1302,6 +1506,13 @@ def choose_hcpu_jlink_device(spec: Spec) -> str:
         if spec.storage_type == 'sdmmc':
             return 'SF32LB56X_SD'
         return 'SF32LB56X'
+
+    if spec.series == '57':
+        if spec.storage_type == 'nand':
+            return 'SF32LB57X_NAND'
+        if spec.storage_type == 'sdmmc':
+            return 'SF32LB57X_SD'
+        return 'SF32LB57X_NOR'
 
     if spec.storage_type == 'nand':
         device = 'SF32LB58X_NAND'
@@ -1385,6 +1596,12 @@ def minimum_fixed_partition_offset(spec: Spec) -> int:
         bootloader_end = (
             SF32LB52_NAND_BOOTLOADER_BLOCK_INDEX * nand_block_size_bytes(spec)
             + SF32LB52_NAND_BOOTLOADER_SIZE
+        )
+        return align_up(bootloader_end, storage_offset_alignment(spec))
+    if spec.series == '57' and spec.storage_type == 'nand':
+        bootloader_end = (
+            SF32LB57_NAND_BOOTLOADER_BLOCK_INDEX * nand_block_size_bytes(spec)
+            + SF32LB57_NAND_BOOTLOADER_SIZE
         )
         return align_up(bootloader_end, storage_offset_alignment(spec))
     return 0

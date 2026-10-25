@@ -18,6 +18,7 @@ import yaml
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools"))
+sys.path.insert(0, os.path.join(ROOT, "tools", "build"))
 
 from sdk_py_actions.new_board import ChipVariant  # noqa: E402
 from sdk_py_actions.new_board import MB  # noqa: E402
@@ -25,9 +26,14 @@ from sdk_py_actions.new_board import MemoryEntry  # noqa: E402
 from sdk_py_actions.new_board import SAMPLE_BASE  # noqa: E402
 from sdk_py_actions.new_board import Spec  # noqa: E402
 from sdk_py_actions.new_board import build_confirmation_summary  # noqa: E402
+from sdk_py_actions.new_board import choose_hcpu_jlink_device  # noqa: E402
+from sdk_py_actions.new_board import core_definitions  # noqa: E402
 from sdk_py_actions.new_board import normalize_spec  # noqa: E402
 from sdk_py_actions.new_board import render_board_files  # noqa: E402
 from sdk_py_actions.new_board import _memory_summary_suffix  # noqa: E402
+
+import ptab  # noqa: E402
+import sdk_resource  # noqa: E402
 
 
 ASSETS_ROOT = Path(ROOT) / "tools" / "sdk_py_actions" / "new_board"
@@ -73,6 +79,7 @@ class NewBoardRenderTests(unittest.TestCase):
         storage_port: Optional[str] = None,
         storage_pinmux_type: Optional[str] = None,
         nand_block_size_kb: Optional[int] = None,
+        with_acpu: bool = False,
     ) -> Spec:
         return Spec(
             series=series,
@@ -85,6 +92,7 @@ class NewBoardRenderTests(unittest.TestCase):
             generate_base=generate_base,
             storage_pinmux_type=storage_pinmux_type,
             nand_block_size_kb=nand_block_size_kb,
+            with_acpu=with_acpu,
         )
 
     def make_sample_base(self, series: str = "52", real_pinmux: bool = False) -> None:
@@ -167,6 +175,20 @@ class NewBoardRenderTests(unittest.TestCase):
             if str(part.get("name") or "") == name:
                 return part
         self.fail(f"Partition not found: {name}")
+
+    def render_ptab_h_macros(self, spec: Spec, variant: ChipVariant) -> dict[str, str]:
+        data = self.render_top_ptab_data(spec, variant=variant)
+        ptab_obj = ptab.PtabV3("<in-memory>", data)
+        sdk_resource.InitIndentation()
+        body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "main"}, ptab_obj)
+        macros: dict[str, str] = {}
+        for line in body.splitlines():
+            line = line.strip()
+            if line.startswith("#define"):
+                parts = line.split(None, 2)
+                if len(parts) == 3:
+                    macros[parts[1]] = parts[2]
+        return macros
 
     @staticmethod
     def parse_int(value: Any) -> int:
@@ -974,6 +996,460 @@ class NewBoardRenderTests(unittest.TestCase):
 
         self.assertIn("  mode: reuse existing base board", summary)
         self.assertIn(f"  base_name_or_path: {external_base}", summary)
+
+    def _make_57_variant(self) -> ChipVariant:
+        return ChipVariant(
+            series="57",
+            chip_dir="SF32LB57x",
+            model_id="SF32LB57X",
+            part_number="SF32LB575YBBN6",
+            memory=(MemoryEntry("mpi1", "psram", 4 * MB),),
+        )
+
+    def _make_57_nor_spec(self, **kwargs: Any) -> Spec:
+        return self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model="SF32LB575YBBN6",
+            storage_type="nor",
+            storage_size_mb=16,
+            storage_port="mpi3",
+            **kwargs,
+        )
+
+    def test_57_nor_ptab_uses_mpi3_region_and_xip(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+
+        content = self.render_top_ptab(self._make_57_nor_spec(), variant=variant)
+
+        self.assertIn("  - mpi: mpi3\n    type: nor\n", content)
+        app = self.find_ptab_partition(self._make_57_nor_spec(), variant, "hcpu_flash_code")
+        self.assertEqual(app["region"], "mpi3")
+        self.assertNotIn("exec", app)
+
+    def test_57_nand_ptab_executes_from_psram(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+
+        app = self.find_ptab_partition(
+            self.make_spec(
+                "demo_board_base",
+                generate_base=True,
+                series="57",
+                chip_model="SF32LB575YBBN6",
+                storage_type="nand",
+                storage_size_mb=64,
+                storage_port="mpi3",
+            ),
+            variant,
+            "hcpu_flash_code",
+        )
+
+        self.assertEqual(app["region"], "mpi3")
+        self.assertEqual(app["exec"]["region"], "psram1")
+
+    def test_57_sdmmc_ptab_uses_sdmmc1_region_and_psram_exec(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+
+        data = self.render_top_ptab_data(
+            self.make_spec(
+                "demo_board_base",
+                generate_base=True,
+                series="57",
+                chip_model="SF32LB575YBBN6",
+                storage_type="sdmmc",
+                storage_size_mb=16,
+                storage_port="sdmmc1",
+            ),
+            variant=variant,
+        )
+
+        self.assertEqual(data["memory"][0]["sdmmc"], "sdmmc1")
+        app = next(part for part in data["partitions"] if part["name"] == "hcpu_flash_code")
+        self.assertEqual(app["region"], "sdmmc1")
+        self.assertEqual(app["exec"]["region"], "psram1")
+
+    def test_57_sdmmc_ptab_uses_shifted_layout(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model=variant.part_number,
+            storage_type="sdmmc",
+            storage_size_mb=16,
+            storage_port="sdmmc1",
+        )
+
+        hcpu_flash_code = self.find_ptab_partition(spec, variant, "hcpu_flash_code")
+        fs_region = self.find_ptab_partition(spec, variant, "fs_region")
+        dfu = self.find_ptab_partition(spec, variant, "dfu")
+        ble = self.find_ptab_partition(spec, variant, "ble")
+
+        self.assertEqual(self.parse_int(hcpu_flash_code["offset"]), 0x00071000)
+        self.assertEqual(self.parse_int(fs_region["offset"]), 0x00931000)
+        self.assertEqual(self.parse_int(dfu["offset"]), 0x00F31000)
+        self.assertEqual(self.parse_int(ble["offset"]), 0x00F35000)
+
+    def test_57_without_acpu_has_no_acpu_partition(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+
+        for storage_type, storage_port in (
+            ("nor", "mpi3"),
+            ("nand", "mpi3"),
+            ("sdmmc", "sdmmc1"),
+        ):
+            with self.subTest(storage_type=storage_type):
+                spec = self.make_spec(
+                    "demo_board_base",
+                    generate_base=True,
+                    series="57",
+                    chip_model=variant.part_number,
+                    storage_type=storage_type,
+                    storage_size_mb=128 if storage_type == "nand" else 16,
+                    storage_port=storage_port,
+                )
+                data = self.render_top_ptab_data(spec, variant=variant)
+                names = [str(part["name"]) for part in data["partitions"]]
+                self.assertNotIn("acpu", names)
+                self.assertNotIn("acpu_ram_data", names)
+
+                macros = self.render_ptab_h_macros(spec, variant)
+                self.assertNotIn("ACPU_RAM_DATA_START_ADDR", macros)
+                self.assertNotIn("ACPU_RAM_DATA_SIZE", macros)
+
+    def test_57_nor_acpu_partition(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model=variant.part_number,
+            storage_type="nor",
+            storage_size_mb=16,
+            storage_port="mpi3",
+            with_acpu=True,
+        )
+
+        acpu = self.find_ptab_partition(spec, variant, "acpu")
+        self.assertEqual(acpu["type"], "app")
+        self.assertEqual(acpu["subtype"], "factory")
+        self.assertEqual(acpu["core"], "ACPU")
+        self.assertEqual(acpu["region"], "mpi3")
+        self.assertEqual(self.parse_int(acpu["offset"]), 0x00720000)
+        self.assertEqual(self.parse_int(acpu["size"]), 0x00040000)
+        self.assertEqual(acpu["aliases"], ["ACPU_CODE_LOAD_REGION1", "APP_ACPU_CODE"])
+        self.assertEqual(acpu["exec"]["region"], "psram1")
+        self.assertEqual(self.parse_int(acpu["exec"]["offset"]), 0x00000000)
+
+        ram_data = self.find_ptab_partition(spec, variant, "acpu_ram_data")
+        self.assertEqual(ram_data["type"], "data")
+        self.assertEqual(ram_data["subtype"], "ram")
+        self.assertEqual(ram_data["region"], "hpsys_ram")
+        self.assertEqual(self.parse_int(ram_data["offset"]), 0x0006FC00)
+        self.assertEqual(self.parse_int(ram_data["size"]), 0x0000FC00)
+        self.assertEqual(ram_data["core"], "ACPU")
+        self.assertEqual(ram_data["aliases"], ["ACPU_RAM_DATA"])
+
+        macros = self.render_ptab_h_macros(spec, variant)
+        self.assertIn("APP_ACPU_CODE_START_ADDR", macros)
+        self.assertIn("ACPU_RAM_DATA_START_ADDR", macros)
+        self.assertIn("ACPU_RAM_DATA_SIZE", macros)
+
+        offsets = self.render_ptab_offsets(spec, variant)
+        self.assertEqual(offsets["acpu"], offsets["hcpu_flash_code"] + 0x00700000)
+
+    def test_57_nand_acpu_partition(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model=variant.part_number,
+            storage_type="nand",
+            storage_size_mb=128,
+            storage_port="mpi3",
+            with_acpu=True,
+        )
+
+        acpu = self.find_ptab_partition(spec, variant, "acpu")
+        app = self.find_ptab_partition(spec, variant, "hcpu_flash_code")
+        self.assertEqual(acpu["type"], "app")
+        self.assertEqual(acpu["subtype"], "factory")
+        self.assertEqual(acpu["core"], "ACPU")
+        self.assertEqual(acpu["region"], "mpi3")
+        self.assertEqual(self.parse_int(app["offset"]), 0x000A0000)
+        self.assertEqual(self.parse_int(acpu["offset"]), 0x003A0000)
+        self.assertEqual(self.parse_int(acpu["size"]), 0x00040000)
+        self.assertEqual(acpu["exec"]["region"], "psram1")
+        self.assertEqual(self.parse_int(acpu["exec"]["offset"]), 0x00300000)
+
+    def test_57_sdmmc_acpu_partition(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model=variant.part_number,
+            storage_type="sdmmc",
+            storage_size_mb=16,
+            storage_port="sdmmc1",
+            with_acpu=True,
+        )
+
+        acpu = self.find_ptab_partition(spec, variant, "acpu")
+        self.assertEqual(acpu["type"], "app")
+        self.assertEqual(acpu["subtype"], "factory")
+        self.assertEqual(acpu["core"], "ACPU")
+        self.assertEqual(acpu["region"], "sdmmc1")
+        self.assertEqual(self.parse_int(acpu["offset"]), 0x00771000)
+        self.assertEqual(self.parse_int(acpu["size"]), 0x00040000)
+        self.assertEqual(acpu["exec"]["region"], "psram1")
+        self.assertEqual(self.parse_int(acpu["exec"]["offset"]), 0x00300000)
+
+    def test_57_nand_256k_app_starts_after_bootloader(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model=variant.part_number,
+            storage_type="nand",
+            storage_size_mb=128,
+            storage_port="mpi3",
+            nand_block_size_kb=256,
+            with_acpu=True,
+        )
+
+        app = self.find_ptab_partition(spec, variant, "hcpu_flash_code")
+        acpu = self.find_ptab_partition(spec, variant, "acpu")
+        bootloader_end = 4 * 0x00040000 + 0x00010000
+
+        self.assertEqual(self.parse_int(app["offset"]), 0x00140000)
+        self.assertGreaterEqual(self.parse_int(app["offset"]), bootloader_end)
+        self.assertEqual(self.parse_int(acpu["offset"]), 0x00440000)
+        self.assertGreaterEqual(
+            self.parse_int(acpu["offset"]),
+            self.parse_int(app["offset"]) + self.parse_int(app["size"]),
+        )
+
+    def test_57_jlink_devices(self) -> None:
+        nor = self.make_spec(
+            "demo_board_base", series="57", chip_model="SF32LB575YBBN6",
+            storage_type="nor", storage_size_mb=16, storage_port="mpi3",
+        )
+        nand = self.make_spec(
+            "demo_board_base", series="57", chip_model="SF32LB575YBBN6",
+            storage_type="nand", storage_size_mb=16, storage_port="mpi3",
+        )
+        sdmmc = self.make_spec(
+            "demo_board_base", series="57", chip_model="SF32LB575YBBN6",
+            storage_type="sdmmc", storage_size_mb=16, storage_port="sdmmc1",
+        )
+
+        self.assertEqual(choose_hcpu_jlink_device(nor), "SF32LB57X_NOR")
+        self.assertEqual(choose_hcpu_jlink_device(nand), "SF32LB57X_NAND")
+        self.assertEqual(choose_hcpu_jlink_device(sdmmc), "SF32LB57X_SD")
+
+    def test_57_core_definitions_include_acpu(self) -> None:
+        self.assertIn(("ACPU", "BF0_ACPU", "BF0_HCPU"), core_definitions("57"))
+
+    def test_57_board_renders_three_cores_and_part_symbol(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_57_variant()
+
+        rendered = render_board_files(
+            spec=self._make_57_nor_spec(),
+            variant=variant,
+            sdk_root=self.sdk_root,
+            output_root=self.output_root,
+            assets_root=ASSETS_ROOT,
+        )
+
+        board = self.output_root / "demo_board"
+        self.assertIn(board / "hcpu" / "Kconfig.board", rendered)
+        self.assertIn(board / "lcpu" / "Kconfig.board", rendered)
+        self.assertIn(board / "acpu" / "Kconfig.board", rendered)
+
+        hcpu_kconfig = rendered[board / "hcpu" / "Kconfig.board"]
+        self.assertIn("select SOC_SF32LB57X\n", hcpu_kconfig)
+        self.assertIn("select SOC_SF32LB575YBBN6\n", hcpu_kconfig)
+        self.assertIn("select BF0_HCPU\n", hcpu_kconfig)
+
+        acpu_kconfig = rendered[board / "acpu" / "Kconfig.board"]
+        self.assertIn("select SOC_SF32LB575YBBN6\n", acpu_kconfig)
+        self.assertIn("select BF0_ACPU\n", acpu_kconfig)
+        self.assertIn("select BF0_HCPU\n", acpu_kconfig)
+
+    def test_normalize_57_storage_port_rules(self) -> None:
+        variant = self._make_57_variant()
+        variants = {"57": [variant]}
+
+        with self.assertRaisesRegex(Exception, "requires storage_port=mpi2"):
+            normalize_spec(
+                {
+                    "chip_series": "57",
+                    "chip_model": "SF32LB575YBBN6",
+                    "storage": {"type": "nor", "size_mb": 16},
+                    "storage_port": "mpi4",
+                    "board_name": "demo_board",
+                    "generate_base": False,
+                    "base_name": "shared_base",
+                },
+                SCHEMA_PATH,
+                variants,
+            )
+
+        with self.assertRaisesRegex(Exception, "pinmux_type is only supported"):
+            normalize_spec(
+                {
+                    "chip_series": "57",
+                    "chip_model": "SF32LB575YBBN6",
+                    "storage": {"type": "sdmmc", "size_mb": 16, "pinmux_type": "type1"},
+                    "storage_port": "sdmmc1",
+                    "board_name": "demo_board",
+                    "generate_base": False,
+                    "base_name": "shared_base",
+                },
+                SCHEMA_PATH,
+                variants,
+            )
+
+        spec, _variant = normalize_spec(
+            {
+                "chip_series": "57",
+                "chip_model": "SF32LB575YBBN6",
+                "storage": {"type": "nor", "size_mb": 16},
+                "storage_port": "mpi3",
+                "board_name": "demo_board",
+                "generate_base": False,
+                "base_name": "shared_base",
+            },
+            SCHEMA_PATH,
+            variants,
+        )
+        self.assertEqual(spec.storage_port, "mpi3")
+
+        default_spec, _variant = normalize_spec(
+            {
+                "chip_series": "57",
+                "chip_model": "SF32LB575YBBN6",
+                "storage": {"type": "nor", "size_mb": 16},
+                "board_name": "demo_board",
+                "generate_base": False,
+                "base_name": "shared_base",
+            },
+            SCHEMA_PATH,
+            variants,
+        )
+        self.assertEqual(default_spec.storage_port, "mpi3")
+
+    def test_normalize_57_nand_rejects_mpi2(self) -> None:
+        variant = self._make_57_variant()
+        variants = {"57": [variant]}
+
+        with self.assertRaisesRegex(Exception, "requires storage_port=mpi3"):
+            normalize_spec(
+                {
+                    "chip_series": "57",
+                    "chip_model": variant.part_number,
+                    "storage": {"type": "nand", "size_mb": 128},
+                    "storage_port": "mpi2",
+                    "board_name": "demo_board",
+                    "generate_base": False,
+                    "base_name": "shared_base",
+                },
+                SCHEMA_PATH,
+                variants,
+            )
+
+    def test_normalize_57_nor_allows_mpi2(self) -> None:
+        variant = self._make_57_variant()
+
+        spec, _variant = normalize_spec(
+            {
+                "chip_series": "57",
+                "chip_model": variant.part_number,
+                "storage": {"type": "nor", "size_mb": 16},
+                "storage_port": "mpi2",
+                "board_name": "demo_board",
+                "generate_base": False,
+                "base_name": "shared_base",
+            },
+            SCHEMA_PATH,
+            {"57": [variant]},
+        )
+
+        self.assertEqual(spec.storage_port, "mpi2")
+
+    def test_normalize_with_acpu_only_supported_for_57(self) -> None:
+        with self.assertRaisesRegex(Exception, "only supported for series 57"):
+            normalize_spec(
+                {
+                    "chip_series": "52",
+                    "chip_model": "SF32LB52X",
+                    "storage": {"type": "nor", "size_mb": 16},
+                    "board_name": "demo_board",
+                    "generate_base": False,
+                    "base_name": "shared_base",
+                    "with_acpu": True,
+                },
+                SCHEMA_PATH,
+                {"52": [self.variant]},
+            )
+
+    def test_normalize_57_with_acpu_rejects_none_storage(self) -> None:
+        variant = ChipVariant(
+            series="57",
+            chip_dir="SF32LB57x",
+            model_id="SF32LB57x",
+            part_number="SF32LB573UB7N6",
+            memory=(
+                MemoryEntry("mpi1", "psram", 4 * MB),
+                MemoryEntry("mpi2", "nor", 16 * MB),
+            ),
+        )
+
+        with self.assertRaisesRegex(Exception, "with_acpu is not supported"):
+            normalize_spec(
+                {
+                    "chip_series": "57",
+                    "chip_model": "SF32LB573UB7N6",
+                    "storage": {"type": "none"},
+                    "board_name": "demo_board",
+                    "generate_base": False,
+                    "base_name": "shared_base",
+                    "with_acpu": True,
+                },
+                SCHEMA_PATH,
+                {"57": [variant]},
+            )
+
+    def test_normalize_57_with_acpu_defaults_to_false(self) -> None:
+        variant = self._make_57_variant()
+        spec, _variant = normalize_spec(
+            {
+                "chip_series": "57",
+                "chip_model": variant.part_number,
+                "storage": {"type": "nor", "size_mb": 16},
+                "board_name": "demo_board",
+                "generate_base": False,
+                "base_name": "shared_base",
+            },
+            SCHEMA_PATH,
+            {"57": [variant]},
+        )
+
+        self.assertFalse(spec.with_acpu)
 
 
 if __name__ == "__main__":

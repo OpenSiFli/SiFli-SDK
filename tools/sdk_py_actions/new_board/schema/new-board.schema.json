@@ -14,7 +14,7 @@
   "properties": {
     "chip_series": {
       "type": "string",
-      "enum": ["52", "56", "58"]
+      "enum": ["52", "56", "57", "58"]
     },
     "chip_model": {
       "type": "string",
@@ -45,7 +45,7 @@
     },
     "storage_port": {
       "type": "string",
-      "enum": ["mpi3", "mpi4", "sdmmc1", "sdmmc2"]
+      "enum": ["mpi2", "mpi3", "mpi4", "sdmmc1", "sdmmc2"]
     },
     "board_name": {
       "type": "string",
@@ -57,6 +57,9 @@
     "base_name": {
       "type": "string",
       "minLength": 1
+    },
+    "with_acpu": {
+      "type": "boolean"
     }
   },
   "allOf": [
