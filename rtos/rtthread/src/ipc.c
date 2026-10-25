@@ -210,7 +210,7 @@ __ROM_USED rt_err_t rt_sem_init(rt_sem_t    sem,
 
     /* set init value */
     sem->value = (rt_uint16_t)value;
-    sem->max_value = UINT16_MAX;
+    sem->max_value = RT_UINT16_MAX;
 
     /* set parent */
     sem->parent.parent.flag = flag;
@@ -274,7 +274,7 @@ __ROM_USED rt_sem_t rt_sem_create(const char *name, rt_uint32_t value, rt_uint8_
 
     /* set init value */
     sem->value = (rt_uint16_t)value;
-    sem->max_value = UINT16_MAX;
+    sem->max_value = RT_UINT16_MAX;
 
     /* set parent */
     sem->parent.parent.flag = flag;
