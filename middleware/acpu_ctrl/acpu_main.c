@@ -377,6 +377,13 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_send_result((uint32_t)0, ret);
         break;
     }
+    case ACPU_TASK_webrtc_close:
+    {
+        acpu_webrtc_close_parameter_t *arg = (acpu_webrtc_close_parameter_t *)param;
+        acpu_webrtc_close(arg->thiz);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
 #endif
 
 #if LIBHELIX_RUN_IN_ACPU
