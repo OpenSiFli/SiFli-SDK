@@ -209,6 +209,16 @@ BOOT_SD_PORTS = {
     '58': ('sdmmc1', 'sdmmc2'),
 }
 
+# Interactive default for the SD app storage controller. Series 58 boards keep
+# their second controller as the default, as they did before ports became
+# explicit; the other series use the first one.
+DEFAULT_APP_SD_PORT = {
+    '52': 'sdmmc1',
+    '56': 'sdmmc1',
+    '57': 'sdmmc1',
+    '58': 'sdmmc2',
+}
+
 STORAGE_TYPES = ('nor', 'nand', 'sdmmc')
 
 # Ports whose pin routing depends on the 58-series pinmux type, and the choice
@@ -376,14 +386,6 @@ class Spec:
         if self.series in ('56', '58'):
             return 'mpi5'
         return self.app_storage_port
-
-    @property
-    def boot_storage_pinmux_type(self) -> Optional[str]:
-        # The fixed 56/58 boot flash has no pinmux choice; the application
-        # medium keeps its own pinmux type.
-        if self.series in ('56', '58'):
-            return None
-        return self.app_storage_pinmux_type
 
 
 @dataclass(frozen=True)
@@ -635,7 +637,19 @@ def prompt_for_config(variants: Dict[str, List[ChipVariant]]) -> Dict[str, Any]:
     )
 
     with_acpu = False
-    if series == '57' and not app_is_internal:
+    app_supports_acpu = series == '57' and (
+        not app_is_internal
+        or (
+            fixed_app_storage is not None
+            and fixed_layout_fits(
+                series,
+                app_storage_type,
+                fixed_app_storage.size_bytes,
+                with_acpu=True,
+            )
+        )
+    )
+    if app_supports_acpu:
         with_acpu = ask(
             questionary.confirm('Generate an ACPU partition?', default=False),
             'Board creation cancelled.',
@@ -730,6 +744,14 @@ def prompt_port_choices(
     # it without a prompt, and 56/58 fix the boot flash on the SiP mpi5.
     if role == 'app':
         external_ports = app_external_ports(series, storage_type)
+        if storage_type == 'sdmmc':
+            # Keep the series default as the first choice so pressing Enter
+            # selects it.
+            default_port = DEFAULT_APP_SD_PORT.get(series)
+            if default_port in external_ports:
+                external_ports = (default_port,) + tuple(
+                    port for port in external_ports if port != default_port
+                )
     else:
         external_ports = EXTERNAL_STORAGE_PORTS[series][storage_type]
 
@@ -1122,10 +1144,17 @@ def normalize_spec(
         if series != '57':
             raise FatalError('with_acpu is only supported for series 57.')
         if app_is_internal:
-            raise FatalError(
-                'with_acpu is not supported with internal app storage: '
-                'the 57-series internal layout has no free 0x40000-byte region between main and fs_region.'
-            )
+            internal_storage = variant.sip_storage(app_storage_port, app_storage_type)
+            if internal_storage is None or not fixed_layout_fits(
+                series,
+                app_storage_type,
+                internal_storage.size_bytes,
+                with_acpu=True,
+            ):
+                raise FatalError(
+                    'with_acpu is not supported with internal app storage: '
+                    'the internal layout has no free 0x40000-byte region after the app partition.'
+                )
         if psram is None:
             raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to use with_acpu.')
 
@@ -1630,6 +1659,19 @@ def add_memory_entry(
 
 def build_partitions(spec: Spec, variant: ChipVariant) -> List[Partition]:
     if spec.app_is_internal:
+        internal_storage = variant.sip_storage(spec.app_storage_port, spec.app_storage_type)
+        if internal_storage is not None and internal_layout_uses_normal_fixed_layout(spec, variant):
+            # A SiP flash large enough for the series layout keeps the same
+            # regions as an external medium; only small SiP parts fall back to
+            # the compact internal layout.
+            return build_fixed_partitions(
+                spec=spec,
+                variant=variant,
+                region=internal_storage.mpi,
+                total_size=internal_storage.size_bytes,
+                exec_region=None,
+                attrs=None,
+            )
         return build_internal_partitions(spec, variant)
 
     storage_region = storage_region_for_spec(spec)
@@ -1696,7 +1738,10 @@ def build_fixed_partitions(
     if spec.with_acpu:
         app_offset, app_size = aligned_layout['hcpu_flash_code']
         layout_with_acpu = dict(layout)
-        layout_with_acpu['acpu'] = (acpu_storage_offset(spec, app_offset, app_size), ACPU_PARTITION_SIZE)
+        layout_with_acpu['acpu'] = (
+            acpu_storage_offset(spec.app_storage_type, app_offset, app_size),
+            ACPU_PARTITION_SIZE,
+        )
         aligned_layout = align_fixed_partition_layout(layout_with_acpu, alignment, min_offset=min_offset)
         acpu_exec = acpu_exec_location(spec, variant, app_size)
 
@@ -1810,12 +1855,55 @@ def build_reserved_storage_partitions(spec: Spec, region: str) -> List[Partition
     return []
 
 
-def acpu_storage_offset(spec: Spec, app_offset: int, app_size: int) -> int:
-    if spec.app_storage_type == 'sdmmc':
+def acpu_storage_offset(storage_type: str, app_offset: int, app_size: int) -> int:
+    if storage_type == 'sdmmc':
         # Existing 57 SD boards keep the ACPU image 7 MB past the app start
         # instead of directly after the (3 MB) HCPU app region.
         return app_offset + SF32LB57_SD_ACPU_OFFSET_FROM_APP
     return app_offset + app_size
+
+
+def fixed_layout_fits(
+    series: str,
+    storage_type: str,
+    total_size: int,
+    with_acpu: bool = False,
+) -> bool:
+    """Return whether a fixed (series, storage_type) layout fits total_size."""
+    layout = FIXED_PARTITION_LAYOUTS.get((series, storage_type))
+    if layout is None:
+        return False
+    if with_acpu:
+        if series != '57':
+            return False
+        app_offset, app_size = layout['hcpu_flash_code']
+        layout = dict(layout)
+        layout['acpu'] = (
+            acpu_storage_offset(storage_type, app_offset, app_size),
+            ACPU_PARTITION_SIZE,
+        )
+    return max(offset + size for offset, size in layout.values()) <= total_size
+
+
+def internal_layout_uses_normal_fixed_layout(spec: Spec, variant: ChipVariant) -> bool:
+    """Whether the internal SiP flash can hold the normal series layout.
+
+    52/57 boot from the SiP flash that also stores the application when no
+    external medium is used. A large part keeps the same layout as an external
+    device (including an ACPU partition when requested), while a small part
+    uses the compact (series, 'internal') layout.
+    """
+    if not spec.app_is_internal:
+        return False
+    internal_storage = variant.sip_storage(spec.app_storage_port, spec.app_storage_type)
+    if internal_storage is None:
+        return False
+    return fixed_layout_fits(
+        spec.series,
+        spec.app_storage_type,
+        internal_storage.size_bytes,
+        with_acpu=spec.with_acpu,
+    )
 
 
 def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Tuple[str, int]:

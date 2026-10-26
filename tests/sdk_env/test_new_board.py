@@ -36,6 +36,7 @@ from sdk_py_actions.new_board import normalize_spec  # noqa: E402
 from sdk_py_actions.new_board import render_board_files  # noqa: E402
 from sdk_py_actions.new_board import _memory_summary_suffix  # noqa: E402
 from sdk_py_actions.new_board import prompt_for_config  # noqa: E402
+from sdk_py_actions.new_board import prompt_port_choices  # noqa: E402
 
 import ptab  # noqa: E402
 import sdk_resource  # noqa: E402
@@ -960,6 +961,13 @@ class NewBoardRenderTests(unittest.TestCase):
             ),
         )
 
+    def _make_bprtun3n6_variant(self) -> ChipVariant:
+        return self.make_variant(
+            "57",
+            "SF32BPRTUN3N6",
+            (MemoryEntry("mpi2", "nor", 1 * MB),),
+        )
+
     def _make_56_variant(self) -> ChipVariant:
         return self.make_variant(
             "56",
@@ -994,6 +1002,15 @@ class NewBoardRenderTests(unittest.TestCase):
                 },
                 SCHEMA_PATH,
                 {"52": [self.variant]},
+            )
+
+    def test_schema_rejects_legacy_boot_storage_key(self) -> None:
+        with self.assertRaisesRegex(Exception, "Invalid board config"):
+            normalize_spec(
+                self.make_config("57", "SF32LB573UB7N6", "nor", "mpi2")
+                | {"boot_storage": {"type": "nor", "port": "mpi2"}},
+                SCHEMA_PATH,
+                {"57": [self._make_573ub7n6_variant()]},
             )
 
     def test_schema_rejects_unknown_external_storage_fields(self) -> None:
@@ -1447,6 +1464,33 @@ class NewBoardRenderTests(unittest.TestCase):
             {"type": "nor", "port": "mpi3", "size_mb": 16},
         )
 
+    def test_prompt_57_large_sip_internal_offers_acpu(self) -> None:
+        variants = {"57": [self._make_573ub7n6_variant()]}
+        config, _output = self.run_prompt(
+            variants,
+            ["57", "SF32LB573UB7N6", False, True, "demo_board", True, True],
+        )
+
+        self.assertEqual(config["app_storage"], {"type": "nor", "port": "mpi2"})
+        self.assertTrue(config["with_acpu"])
+
+    def test_app_sd_port_choices_put_series_default_first(self) -> None:
+        variants = {
+            "52": self._make_52_fixed_variant(),
+            "56": self._make_56_variant(),
+            "57": self._make_57eybbn6_variant(),
+            "58": self._make_58_variant(),
+        }
+        expected = {"52": "sdmmc1", "56": "sdmmc1", "57": "sdmmc1", "58": "sdmmc2"}
+
+        for series, variant in variants.items():
+            with self.subTest(series=series):
+                with mock.patch.dict(sys.modules, {"questionary": self._FakeQuestionary([])}):
+                    choices = prompt_port_choices(series, variant, "sdmmc", "app", ())
+
+                self.assertEqual(choices[0].value, expected[series])
+                self.assertIn(expected[series], [choice.value for choice in choices])
+
     def test_normalize_573ub7n6_internal_nor_plus_external_nand(self) -> None:
         variant = self._make_573ub7n6_variant()
 
@@ -1667,6 +1711,9 @@ class NewBoardRenderTests(unittest.TestCase):
 
         self.assertEqual(app["region"], "mpi1")
         self.assertEqual(self.parse_int(app["offset"]), 0x00020000)
+        # 2MB cannot hold the normal 52 NOR layout, so the compact layout
+        # reserves the 500KB minimum app region.
+        self.assertEqual(self.parse_int(app["size"]), 0x0007D000)
         self.assertNotIn("exec", app)
 
     def test_56_external_app_ptab_keeps_boot_on_mpi5(self) -> None:
@@ -1738,6 +1785,92 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertNotIn("memory", data)
         self.assertEqual(app["region"], "mpi2")
         self.assertEqual(spec.boot_storage_port, "mpi2")
+
+    def test_57_large_sip_internal_nor_uses_normal_layout(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_573ub7n6_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model="SF32LB573UB7N6",
+            app_storage_port="mpi2",
+        )
+
+        data = self.render_top_ptab_data(spec, variant=variant)
+        partitions = {part["name"]: part for part in data["partitions"]}
+
+        # The 16MB SiP NOR holds the same layout as an external 57 NOR.
+        self.assertNotIn("memory", data)
+        self.assertEqual(self.parse_int(partitions["hcpu_flash_code"]["offset"]), 0x00020000)
+        self.assertEqual(self.parse_int(partitions["hcpu_flash_code"]["size"]), 0x00700000)
+        self.assertEqual(self.parse_int(partitions["fs_region"]["offset"]), 0x008E0000)
+        self.assertEqual(self.parse_int(partitions["fs_region"]["size"]), 0x00600000)
+        self.assertEqual(self.parse_int(partitions["dfu"]["offset"]), 0x00EE0000)
+        self.assertEqual(self.parse_int(partitions["ble"]["offset"]), 0x00EE4000)
+
+    def test_57_large_sip_internal_nor_allows_acpu(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_573ub7n6_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model="SF32LB573UB7N6",
+            app_storage_port="mpi2",
+            with_acpu=True,
+        )
+
+        data = self.render_top_ptab_data(spec, variant=variant)
+        partitions = {part["name"]: part for part in data["partitions"]}
+
+        self.assertEqual(self.parse_int(partitions["hcpu_flash_code"]["size"]), 0x00700000)
+        self.assertEqual(self.parse_int(partitions["acpu"]["offset"]), 0x00720000)
+        self.assertEqual(self.parse_int(partitions["acpu"]["size"]), 0x00040000)
+
+    def test_57_small_sip_internal_nor_uses_compact_layout(self) -> None:
+        self.make_sample_base(series="57")
+        variant = self._make_bprtun3n6_variant()
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="57",
+            chip_model="SF32BPRTUN3N6",
+            app_storage_port="mpi2",
+        )
+
+        data = self.render_top_ptab_data(spec, variant=variant)
+        app = next(part for part in data["partitions"] if part["name"] == "hcpu_flash_code")
+        fs_region = next(part for part in data["partitions"] if part["name"] == "fs_region")
+
+        # 1MB cannot hold the normal 57 NOR layout.
+        self.assertEqual(self.parse_int(app["offset"]), 0x00020000)
+        self.assertEqual(self.parse_int(app["size"]), 0x0007D000)
+        self.assertEqual(self.parse_int(fs_region["offset"]), 0x0009D000)
+
+    def test_52_large_sip_internal_nor_uses_normal_layout(self) -> None:
+        self.make_sample_base(series="52")
+        variant = self.make_variant(
+            "52",
+            "SF32LB52BU56",
+            (MemoryEntry("mpi1", "nor", 16 * MB),),
+        )
+        spec = self.make_spec(
+            "demo_board_base",
+            generate_base=True,
+            series="52",
+            chip_model="SF32LB52BU56",
+            app_storage_port="mpi1",
+        )
+
+        data = self.render_top_ptab_data(spec, variant=variant)
+        partitions = {part["name"]: part for part in data["partitions"]}
+
+        # A 16MB SiP NOR holds the normal 52 NOR layout.
+        self.assertEqual(self.parse_int(partitions["hcpu_flash_code"]["offset"]), 0x00020000)
+        self.assertEqual(self.parse_int(partitions["hcpu_flash_code"]["size"]), 0x00700000)
+        self.assertEqual(self.parse_int(partitions["fs_region"]["offset"]), 0x008A0000)
+        self.assertEqual(self.parse_int(partitions["dfu"]["offset"]), 0x00CA0000)
 
     def test_52_external_nor_mpi2_ptab(self) -> None:
         variant = self.make_variant(
@@ -2215,14 +2348,31 @@ class NewBoardRenderTests(unittest.TestCase):
                 {"52": [self.variant]},
             )
 
-    def test_normalize_57_with_acpu_rejects_internal_storage(self) -> None:
+    def test_normalize_57_with_acpu_allows_large_internal_storage(self) -> None:
         variant = self._make_573ub7n6_variant()
+
+        spec, _variant = normalize_spec(
+            self.make_config(
+                "57",
+                "SF32LB573UB7N6",
+                "nor",
+                "mpi2",
+                with_acpu=True,
+            ),
+            SCHEMA_PATH,
+            {"57": [variant]},
+        )
+
+        self.assertTrue(spec.with_acpu)
+
+    def test_normalize_57_with_acpu_rejects_small_internal_storage(self) -> None:
+        variant = self._make_bprtun3n6_variant()
 
         with self.assertRaisesRegex(Exception, "with_acpu is not supported with internal app storage"):
             normalize_spec(
                 self.make_config(
                     "57",
-                    "SF32LB573UB7N6",
+                    "SF32BPRTUN3N6",
                     "nor",
                     "mpi2",
                     with_acpu=True,
