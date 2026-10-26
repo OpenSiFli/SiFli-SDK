@@ -94,6 +94,22 @@ menu "SiFli extend"
             bool "Use on-the-fly ezip decoder"
             default y
 
+        choice
+            prompt "LVGL V9 image file data allocation pool"
+            depends on LV_USE_EZIP
+            default LVSF_IMG_DECODER_ALLOC_PSRAM
+            help
+                Select the preferred app_cache_alloc pool for image file data.
+                Keep the allocator's existing fallback behavior when the pool
+                is exhausted. This does not affect NOR direct mapping.
+
+            config LVSF_IMG_DECODER_ALLOC_SRAM
+                bool "Prefer SRAM cache pool"
+
+            config LVSF_IMG_DECODER_ALLOC_PSRAM
+                bool "Prefer PSRAM cache pool"
+        endchoice
+
         config LV_USE_SIFLI_JPEGD
             bool "Use SiFli on-the-fly jpeg decoder"
             default y
