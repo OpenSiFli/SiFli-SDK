@@ -36,7 +36,7 @@
         "regions":   [
             {
                 "offset": "0x00000000",
-                "max_size": "0x00580000", 
+                "max_size": "0x00600000", 
                 "tags": [],
                 "ftab": {
                     "name": "main",
@@ -46,8 +46,8 @@
                }
             },
             {
-                "offset": "0x00580000", 
-                "max_size": "0x00280000", 
+                "offset": "0x00600000", 
+                "max_size": "0x00200000", 
                 "tags": [
                     "PSRAM_DATA"
                 ]
@@ -60,15 +60,15 @@
         "regions": [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00580000", 
+                "max_size": "0x00600000", 
                 "tags": [
                     "HCPU_FLASH_CODE"
                 ],
                 "exec": "main"
             },
             {
-                "offset": "0x00580000",
-                "max_size": "0x00280000", 
+                "offset": "0x00600000",
+                "max_size": "0x00200000", 
                 "tags": []
             }
         ]
@@ -88,7 +88,7 @@
         [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00580000", 
+                "max_size": "0x00600000", 
                 "tags": [
                     "HCPU_FLASH_CODE_LOAD_REGION"
                 ], 
