@@ -4,6 +4,8 @@ We recommend using the [CodeKit](https://marketplace.visualstudio.com/items?item
 
 ## Installation Prerequisites
 
+If your development computer uses file encryption software, configure the tool allowlist or decryption policies as described in [File Encryption Policies in Development Environments](../index.md#file-encryption-policies-in-development-environments). In particular, ensure that both `uv.exe` and the `python.exe` actually used by the SDK can read temporary build result files as plaintext. If installation reports errors involving `prepare_metadata_for_build_wheel.txt` or `stream did not contain valid UTF-8`, follow that guidance to check the file access policies.
+
 ### `uv` Environment
 
 Windows users do not need to pre-install system Python for the SDK scripts anymore. The supported workflow uses `uv` to provision the SDK-managed Python runtime on demand.

@@ -4,6 +4,8 @@
 
 ## 安装准备
 
+如果研发电脑安装了文件加密管控软件，请先按照[研发环境中的文件加密策略](../index.md#file-encryption-policies-in-development-environments)配置相关工具的白名单或解密策略，尤其要确保 `uv.exe` 和 SDK 实际使用的 `python.exe` 均能读取临时构建结果文件的明文。如果安装时出现 `prepare_metadata_for_build_wheel.txt` 或 `stream did not contain valid UTF-8` 相关错误，请参照该说明检查文件访问策略。
+
 ### `uv` 环境
 
 Windows 脚本主链路不再要求用户预装系统 Python。当前支持的方式是通过 `uv` 按需准备 SDK 管理的 Python 运行时。
