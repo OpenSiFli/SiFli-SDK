@@ -40,6 +40,7 @@ from sdk_py_actions.new_board import prompt_port_choices  # noqa: E402
 
 import ptab  # noqa: E402
 import sdk_resource  # noqa: E402
+from validate_ptab_v3 import validate_ptab_v3  # noqa: E402
 
 
 ASSETS_ROOT = Path(ROOT) / "tools" / "sdk_py_actions" / "new_board"
@@ -2152,9 +2153,9 @@ class NewBoardRenderTests(unittest.TestCase):
         self.assertEqual(acpu["region"], "mpi3")
         self.assertEqual(self.parse_int(acpu["offset"]), 0x00720000)
         self.assertEqual(self.parse_int(acpu["size"]), 0x00040000)
-        self.assertEqual(acpu["aliases"], ["ACPU_CODE_LOAD_REGION1", "APP_ACPU_CODE"])
-        self.assertEqual(acpu["exec"]["region"], "psram1")
-        self.assertEqual(self.parse_int(acpu["exec"]["offset"]), 0x00000000)
+        self.assertEqual(acpu["aliases"], ["ACPU_CODE_LOAD_REGION1"])
+        # NOR is XIP-capable, so the ACPU runs in place and has no exec window.
+        self.assertNotIn("exec", acpu)
 
         ram_data = self.find_ptab_partition(spec, variant, "acpu_ram_data")
         self.assertEqual(ram_data["type"], "data")
@@ -2172,6 +2173,16 @@ class NewBoardRenderTests(unittest.TestCase):
 
         offsets = self.render_ptab_offsets(spec, variant)
         self.assertEqual(offsets["acpu"], offsets["hcpu_flash_code"] + 0x00700000)
+
+        # The generated board must pass the build-time ptab validation: an ACPU
+        # image without exec is allowed because NOR executes in place.
+        data = self.render_top_ptab_data(spec, variant=variant)
+        errors = [
+            str(issue)
+            for issue in validate_ptab_v3(ptab.PtabV3("<in-memory>", data))
+            if issue.severity == "error"
+        ]
+        self.assertEqual(errors, [])
 
     def test_57_nand_acpu_partition(self) -> None:
         self.make_sample_base(series="57")

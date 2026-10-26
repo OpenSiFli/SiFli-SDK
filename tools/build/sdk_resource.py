@@ -890,6 +890,9 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
     - FLASH_BOOT_LOADER_EXEC_* from bootloader.exec (execution address)
     - HCPU_FLASH_CODE_EXEC_* from HCPU factory app.exec (execution address)
     - ACPU_CODE_REGION<N>_EXEC[_SBUS]_* from ACPU factory app.exec
+    - APP_<NAME>_CODE_* from the ACPU factory app name (the whole group
+      describes the execution window: START_ADDR references the exec macro,
+      OFFSET is the exec offset, SIZE is the partition size)
     - CODE_START_ADDR/CODE_SIZE for the current env image (best-effort)
 
     Storage vs execution address: the per-partition pass always emits
@@ -934,9 +937,13 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             return mtype or 'nor'
         return ''
 
-    def _select_start_addr(region, sbus_addr, cbus_addr, subtype):
+    def _select_start_addr(region, sbus_addr, cbus_addr, subtype, core=None):
         # For RAM-like partitions, always use base address
         if subtype == 'ram':
+            return sbus_addr
+        # The ACPU only sees the SBUS view; the CBUS/XIP alias of NOR/PSRAM is
+        # not reachable from that core.
+        if str(core or '').strip().upper() == 'ACPU':
             return sbus_addr
         mem_type = _get_region_mem_type(region)
         if mem_type == 'nor':
@@ -1024,21 +1031,31 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         except Exception:
             return None
 
-    def _infer_acpu_code_region_num(partition):
-        candidates = []
-        name = partition.get('name')
-        if name:
-            candidates.append(name)
-        candidates.extend(partition.get('aliases', []) or [])
+    def _split_acpu_code_name(name):
+        """Split the image index off the end of an ACPU partition name.
 
-        for candidate in candidates:
-            token = str(candidate).strip().upper()
-            match = re.match(r'^ACPU_CODE_LOAD_REGION(\d+)$', token)
-            if not match:
-                match = re.match(r'^ACPU_CODE_REGION(\d+)(?:_SBUS)?$', token)
-            if match:
-                return match.group(1)
-        return '1'
+        `acpu` -> ('acpu', ''), `acpu2` -> ('acpu', '2'). The index is a name
+        suffix because the whole name is pasted into the `<NAME>_*` macros:
+        validate_ptab_v3.py only accepts lowercase letters, digits and
+        underscores, so the v2 `acpu:2` form can neither pass validation nor
+        produce a legal macro. The suffix only labels the image: the number
+        itself comes from the '.rom<N>' binding, and validate_ptab_v3.py
+        rejects a partition whose name disagrees with it.
+        """
+        name = str(name or '').strip()
+        match = re.match(r'^(.*?)(\d+)$', name)
+        if not match or not match.group(1) or int(match.group(2)) < 1:
+            return name, ''
+        return match.group(1), str(int(match.group(2)))
+
+    def _acpu_code_region_num(partition):
+        # The '.rom<N>' section is the canonical image binding between a
+        # partition and its code image. A partition without one is the first
+        # image - its code stays in the code artifact - so it always owns
+        # region 1, whatever its name or alias says; validate_ptab_v3.py
+        # rejects a partition that disagrees.
+        rom_index = ptab.get_acpu_code_rom_index(partition)
+        return str(rom_index) if rom_index is not None else '1'
 
     # Quick lookup maps
     by_name = {}
@@ -1086,7 +1103,7 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             core = partition.get('core')
 
             sbus_addr, cbus_addr = ptab.resolve_region_address(region, offset, chip_config, core=core)
-            start_addr = _select_start_addr(region, sbus_addr, cbus_addr, subtype)
+            start_addr = _select_start_addr(region, sbus_addr, cbus_addr, subtype, core)
             region_mem_type = _get_region_mem_type(region)
 
             name_upper = name.upper()
@@ -1204,28 +1221,36 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         s += _define_mem_type(hcpu_base, _get_region_mem_type(exec_region), clear=True)
 
     # ACPU_CODE_REGION<N>_EXEC[_SBUS]_* macros (execution address, from exec).
-    # v3 keeps the ACPU execution RAM in the app's exec descriptor instead of
-    # a separate legacy RAM partition.
+    # v3 keeps the ACPU execution window in the app's exec descriptor instead of
+    # a separate legacy RAM partition. When the app executes in place (e.g. NOR
+    # XIP on SF32LB57) there is no exec descriptor, and the partition's own
+    # storage region is the execution window.
     emitted_acpu_code_regions = set()
     for partition in partitions:
         if partition.get('type') != 'app' or partition.get('subtype') != 'factory':
             continue
         if str(partition.get('core') or '').strip().upper() != 'ACPU':
             continue
-        exec_def = partition.get('exec')
-        if not isinstance(exec_def, dict):
-            continue
 
-        # The '.rom<N>' section is the canonical image binding; the legacy
-        # ACPU_CODE_LOAD_REGION<N> alias is optional and only a fallback.
-        rom_index = ptab.get_acpu_code_rom_index(partition)
-        region_num = str(rom_index) if rom_index is not None else _infer_acpu_code_region_num(partition)
+        # The '.rom<N>' section is the canonical image binding; the name suffix
+        # and the legacy ACPU_CODE_LOAD_REGION<N> alias are optional fallbacks.
+        region_num = _acpu_code_region_num(partition)
         if region_num in emitted_acpu_code_regions:
             continue
-        emitted_acpu_code_regions.add(region_num)
 
-        exec_region = str(exec_def.get('region', '')).strip()
-        exec_offset = ptab.parse_size(exec_def.get('offset', 0))
+        exec_def = partition.get('exec')
+        if isinstance(exec_def, dict):
+            exec_region = str(exec_def.get('region', '')).strip()
+            exec_offset = ptab.parse_size(exec_def.get('offset', 0))
+        else:
+            # In-place execution: only XIP-capable storage can host the ACPU
+            # image without an exec window, so anything else is left alone.
+            exec_region = str(partition.get('region', '')).strip()
+            if _get_region_mem_type(exec_region) != 'nor':
+                continue
+            exec_offset = ptab.parse_size(partition.get('offset', 0))
+
+        emitted_acpu_code_regions.add(region_num)
         exec_sbus, exec_cbus = ptab.resolve_region_address(exec_region, exec_offset, chip_config, core='ACPU')
         acpu_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus, 'ACPU')
         acpu_size = ptab.parse_size(partition.get('size', 0))
@@ -1258,6 +1283,54 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             s += _define_ref('{}_START_ADDR'.format(legacy_base), '{}_START_ADDR'.format(exec_base))
             s += _define_ref('{}_SIZE'.format(legacy_base), '{}_SIZE'.format(exec_base))
             s += _define_ref('{}_OFFSET'.format(legacy_base), '{}_OFFSET'.format(exec_base))
+
+    # Legacy APP_<NAME>_CODE_* macros, derived from the ACPU app partition
+    # name like v2 instead of requiring an APP_ACPU_CODE alias. The whole group
+    # describes the execution window, not the storage partition:
+    # APP_<NAME>_CODE_START_ADDR is passed to HAL_RCC_ReleaseACPU() as the ACPU
+    # VTOR and references the execution macro emitted above (the ACPU image
+    # runs from its exec region, e.g. PSRAM, or in place from NOR), OFFSET is
+    # that exec region's offset (the storage offset when the image runs in
+    # place), and SIZE is the partition size, i.e. the length of that window.
+    for partition in partitions:
+        if partition.get('type') != 'app' or partition.get('subtype') != 'factory':
+            continue
+        if str(partition.get('core') or '').strip().upper() != 'ACPU':
+            continue
+        name = str(partition.get('name') or '').strip()
+        if not name:
+            continue
+        region_num = _acpu_code_region_num(partition)
+        if region_num not in emitted_acpu_code_regions:
+            continue
+
+        # `acpu2` -> APP_ACPU_CODE2. The suffix is the image number, so the
+        # macro always names the same image as ACPU_CODE_REGION<N>_*; the
+        # first image (normally just `acpu`) owns APP_ACPU_CODE.
+        base, _ = _split_acpu_code_name(name)
+        base = base.upper()
+        if not base:
+            continue
+        code_prefix = 'APP_{}_CODE'.format(base)
+        if region_num != '1':
+            code_prefix += region_num
+
+        s += MakeLine('')
+        s += _define_ref(
+            '{}_START_ADDR'.format(code_prefix),
+            'ACPU_CODE_REGION{}_EXEC_START_ADDR'.format(region_num),
+        )
+        # Like v2, the whole macro group describes the execution window: for an
+        # in-place image (NOR XIP) that window is the partition itself.
+        exec_def = partition.get('exec')
+        if isinstance(exec_def, dict):
+            code_offset = ptab.parse_size(exec_def.get('offset', 0))
+        else:
+            code_offset = ptab.parse_size(partition.get('offset', 0))
+        s += _define_u32(
+            '{}_SIZE'.format(code_prefix),
+            ptab.parse_size(partition.get('size', 0)))
+        s += _define_u32('{}_OFFSET'.format(code_prefix), code_offset)
 
     # CODE_START_ADDR/CODE_SIZE for current image (best-effort)
     env_name = (env.get('name') or '').strip().lower()

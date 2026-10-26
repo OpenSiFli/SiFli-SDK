@@ -30,6 +30,23 @@ import ptab as ptab_module
 # multi-image flow, which probes '.rom2'..'.rom6' (building.MAX_EX_IMG_NUM = 5).
 _ACPU_CODE_ROM_INDEX_MAX = 6
 
+# An ACPU code partition may label its image with a trailing name index (`acpu2`),
+# which sdk_resource.py uses for the APP_<NAME>_CODE<N> macro prefix.
+_ACPU_CODE_NAME_SUFFIX_RE = re.compile(r'^(.*?)(\d+)$')
+
+
+def get_acpu_code_name_suffix(name: str) -> Optional[int]:
+    """Return the trailing image index of an ACPU code partition name.
+
+    Returns None when the name carries no suffix. The index must agree with the
+    partition's image number (its '.rom<N>' section, or 1 for the first image).
+    """
+    match = _ACPU_CODE_NAME_SUFFIX_RE.match(str(name or '').strip())
+    if not match or not match.group(1):
+        return None
+    index = int(match.group(2))
+    return index if index >= 1 else None
+
 
 class ValidationError:
     def __init__(self, message: str, severity: str = "error"):
@@ -494,7 +511,10 @@ def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationEr
     return errors
 
 
-def validate_acpu_code_partitions(partitions: List[dict]) -> List[ValidationError]:
+def validate_acpu_code_partitions(
+    partitions: List[dict],
+    chip_config: Optional[dict] = None,
+) -> List[ValidationError]:
     """Validate the ACPU code partitions, including extra multi-image partitions.
 
     One ACPU project may build several code images from a single ELF: the first
@@ -502,6 +522,11 @@ def validate_acpu_code_partitions(partitions: List[dict]) -> List[ValidationErro
     declared as its own app/factory/core=ACPU partition naming the ELF output
     section that holds its code ('.rom<N>', N >= 2) - which also gives the artifact
     suffix ER_IROM<N>.bin.
+
+    An image on XIP-capable storage (NOR) may omit `exec`: it executes in place
+    from its storage region, and sdk_resource.py generates the same region as the
+    execution window. Any other storage needs an explicit exec region, because
+    the image must be copied into RAM/PSRAM before it runs.
     """
     errors = []
     acpu_parts = [p for p in partitions if ptab_module.is_acpu_code_partition_v3(p)]
@@ -513,9 +538,11 @@ def validate_acpu_code_partitions(partitions: List[dict]) -> List[ValidationErro
     for p in acpu_parts:
         pname = p.get('name', '?')
         if not isinstance(p.get('exec'), dict):
-            errors.append(ValidationError(
-                f"Partition '{pname}': ACPU code partition must provide 'exec: {{region, offset}}'"
-            ))
+            if _region_memory_type(p.get('region'), chip_config) != 'nor':
+                errors.append(ValidationError(
+                    f"Partition '{pname}': ACPU code partition must provide "
+                    f"'exec: {{region, offset}}' unless it runs in place from NOR"
+                ))
 
         rom_indexes = ptab_module.get_acpu_code_rom_indexes(p)
         if len(rom_indexes) > 1:
@@ -551,6 +578,16 @@ def validate_acpu_code_partitions(partitions: List[dict]) -> List[ValidationErro
                     f"Partition '{pname}': alias '{alias}' does not match image "
                     f"{expected_region}{' (.rom{})'.format(expected_region) if rom_indexes else ' (first image)'}"
                 ))
+
+        # The name suffix labels the same image: sdk_resource.py strips it from
+        # the APP_<NAME>_CODE<N> prefix, so a disagreeing suffix would name a
+        # different image than ACPU_CODE_REGION<N>_*.
+        suffix = get_acpu_code_name_suffix(pname)
+        if suffix is not None and suffix != expected_region:
+            errors.append(ValidationError(
+                f"Partition '{pname}': name suffix {suffix} does not match image "
+                f"{expected_region}{' (.rom{})'.format(expected_region) if rom_indexes else ' (first image)'}"
+            ))
 
     if len(primary) != 1:
         errors.append(ValidationError(
@@ -854,7 +891,7 @@ def validate_ptab_v3(ptab_obj) -> List[ValidationError]:
     errors.extend(validate_bootloader_unique(partitions))
     errors.extend(validate_ftab_unique(partitions))
     errors.extend(validate_factory_unique_by_core(partitions))
-    errors.extend(validate_acpu_code_partitions(partitions))
+    errors.extend(validate_acpu_code_partitions(partitions, chip_config))
     errors.extend(validate_nand_memory_block_sizes(ptab_obj))
     errors.extend(validate_nand_partition_alignment(partitions, chip_config))
     errors.extend(validate_sf32lb52_storage_reservations(ptab_obj, partitions, chip_config))

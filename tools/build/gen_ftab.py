@@ -377,6 +377,13 @@ def build_partition_table_entries(
                         partition.get('name', '?')
                     )
                 )
+            # No exec descriptor: the image runs in place, so base and xip_base
+            # stay the same pair of storage views and the 2nd bootloader skips
+            # the copy (`src != dest` is false). For an ACPU image on NOR that
+            # pair is the CBUS/XIP view while the ACPU VTOR comes from the SBUS
+            # macro in sdk_resource.py; both aliases name the same flash bytes,
+            # and encoding xip_base as SBUS here would make the bootloader copy
+            # into the read-only SBUS window instead.
             xip_addr = int(_select_exec_addr(region, sbus_addr, cbus_addr))
         return int(base_addr), int(size), int(xip_addr)
 

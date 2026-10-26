@@ -1688,7 +1688,9 @@ def iter_acpu_code_ext_partitions_v3(ptab_obj: Any) -> List[Dict[str, Any]]:
       section                         GCC output section / objcopy selector ('.rom<N>')
       size                            partition size in bytes
       storage_region / storage_offset where the image is stored (ftab base)
-      exec_region / exec_offset       where the image is executed (ftab xip_base)
+      exec_region / exec_offset       where the image is executed (ftab xip_base);
+                                      the storage window when the image runs in
+                                      place (no exec descriptor, NOR only)
       selectors                       input sections gathered into '.rom<N>'
 
     Addresses are returned as raw region/offset pairs on purpose: the address rules
@@ -1716,6 +1718,17 @@ def iter_acpu_code_ext_partitions_v3(ptab_obj: Any) -> List[Dict[str, Any]]:
         ] or [{'section': '{}*'.format(section)}]
 
         exec_def = p.get('exec') if isinstance(p.get('exec'), dict) else {}
+        storage_region = str(p.get('region') or '').strip()
+        storage_offset = parse_size(p.get('offset', 0))
+        exec_region = str(exec_def.get('region') or '').strip()
+        if exec_region:
+            exec_offset = parse_size(exec_def.get('offset', 0))
+        else:
+            # No exec descriptor: the image executes in place from its storage
+            # region (validate_ptab_v3.py only allows this on NOR), so the
+            # storage window is also the execution window the link script needs.
+            exec_region = storage_region
+            exec_offset = storage_offset
         out.append({
             'name': str(p.get('name') or '').strip(),
             'rom_index': rom_index,
@@ -1723,10 +1736,10 @@ def iter_acpu_code_ext_partitions_v3(ptab_obj: Any) -> List[Dict[str, Any]]:
             'keil_region': 'ER_IROM{}'.format(rom_index),
             'section': section,
             'size': parse_size(p.get('size', 0)),
-            'storage_region': str(p.get('region') or '').strip(),
-            'storage_offset': parse_size(p.get('offset', 0)),
-            'exec_region': str(exec_def.get('region') or '').strip(),
-            'exec_offset': parse_size(exec_def.get('offset', 0)),
+            'storage_region': storage_region,
+            'storage_offset': storage_offset,
+            'exec_region': exec_region,
+            'exec_offset': exec_offset,
             'selectors': selectors,
         })
 

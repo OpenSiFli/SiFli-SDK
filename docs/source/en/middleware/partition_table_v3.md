@@ -555,6 +555,20 @@ section; `validate_ptab_v3.py` enforces exactly one such first image and distinc
 Both the link script and the `ACPU_CODE_REGION<N>_*` macros take `N` from the `.rom<N>`
 section, so the alias is optional and, if present, must match that `N`.
 
+An ACPU code partition may omit `exec` when its storage region is NOR: the image then
+executes in place from that region, the link script places it at the same window, the
+generated `ACPU_CODE_REGION<N>_EXEC_*` macros describe it, and the 2nd bootloader skips
+the copy. Any other storage (NAND/SD/PSRAM) needs an explicit `exec` region;
+`validate_ptab_v3.py` enforces both rules.
+
+An extra image is named with a trailing index (`acpu2`, `acpu3`). The generator strips
+that index before building the `APP_<NAME>_CODE<N>` prefix: `acpu2` produces
+`APP_ACPU_CODE2_*`, not `APP_ACPU2_CODE2_*`. The index must match the image binding: `N`
+from the `.rom<N>` section, or 1 for the single partition without one, which
+`validate_ptab_v3.py` enforces. The name itself is still pasted verbatim into the
+`<NAME>_START_ADDR/_SIZE/_OFFSET` macros, so it must be a legal identifier: the v2
+`acpu:2` form is rejected by `validate_ptab_v3.py` and would produce an illegal macro.
+
 The ACPU `link.jinja2` / `link.sct.jinja2` templates emit one extra memory region per
 image (GCC `ACPU_ROM<N>`, holding the `.rom<N>` output section) or one load/execution
 region per image (Keil `LR_IROM<N>` / `ER_IROM<N>`), linked at the SBUS view of the partition `exec`

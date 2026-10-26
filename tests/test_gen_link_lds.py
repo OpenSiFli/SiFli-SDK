@@ -225,5 +225,94 @@ class LinkTemplateRenderTests(unittest.TestCase):
                 self.assertIn("ER_IROM1", rendered)
 
 
+def _make_58_ptab_in_place_ext_image() -> "ptab.PtabV3":
+    """SF32LB58 v3 ptab whose second ACPU image executes in place from NOR.
+
+    The extra image binds '.rom2' but has no exec descriptor, so its storage
+    window is also its execution window.
+    """
+    data = {
+        "version": 3,
+        "chip": "SF32LB58X",
+        "memory": [{"mpi": "mpi4", "type": "nor", "size": 128 * MB}],
+        "partitions": [
+            {
+                "name": "hcpu_flash_code",
+                "type": "app",
+                "subtype": "factory",
+                "region": "mpi4",
+                "offset": 0x00000000,
+                "size": 0x00400000,
+                "core": "HCPU",
+                "exec": {"region": "psram1", "offset": 0},
+            },
+            {
+                "name": "acpu",
+                "type": "app",
+                "subtype": "factory",
+                "region": "mpi4",
+                "offset": 0x00E00000,
+                "size": 0x0007C000,
+                "core": "ACPU",
+                "aliases": ["ACPU_CODE_LOAD_REGION1"],
+                "exec": {"region": "psram1", "offset": 0},
+            },
+            {
+                "name": "acpu2",
+                "type": "app",
+                "subtype": "factory",
+                "region": "mpi4",
+                "offset": 0x00E7C000,
+                "size": 0x00100000,
+                "core": "ACPU",
+                "sections": [{"section": ".rom2"}],
+            },
+        ],
+    }
+    return ptab.PtabV3("<in-memory>", data)
+
+
+@unittest.skipUnless(gen_link_lds is not None, _skip_reason())
+class AcpuInPlaceExtImageLinkTests(unittest.TestCase):
+    """An extra ACPU image without exec links at its NOR storage window."""
+
+    def test_ext_image_keeps_its_link_region(self) -> None:
+        defines = gen_link_lds.compute_link_defines(
+            _make_58_ptab_in_place_ext_image(), "acpu", "ACPU", {})
+        regions = defines["ACPU_EXT_CODE_REGIONS"]
+        # mpi4 0x68000000 + 0x00E7C000 in the SBUS view, the address the ACPU
+        # fetches from and gen_ftab.py copies to.
+        self.assertEqual(
+            [(region["index"], region["base"]) for region in regions],
+            [(2, 0x68E7C000)],
+        )
+
+    def test_templates_emit_the_ext_image_sections(self) -> None:
+        defines = gen_link_lds.compute_link_defines(
+            _make_58_ptab_in_place_ext_image(), "acpu", "ACPU", {})
+        cases = [
+            (
+                "drivers/cmsis/sf32lb58x/Templates/gcc/acpu/link.jinja2",
+                "acpu.lds",
+                ("ACPU_ROM2", ".rom2"),
+            ),
+            (
+                "drivers/cmsis/sf32lb58x/Templates/arm/acpu/link.sct.jinja2",
+                "acpu.sct",
+                ("LR_IROM2", "ER_IROM2"),
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for rel_path, output_name, needles in cases:
+                with self.subTest(template=rel_path):
+                    output = os.path.join(temp_dir, output_name)
+                    gen_link_lds.render_link_lds(
+                        os.path.join(ROOT, rel_path), output, defines)
+                    rendered = Path(output).read_text(encoding="utf-8")
+                    for needle in needles:
+                        self.assertIn(needle, rendered)
+
+
 if __name__ == "__main__":
     unittest.main()

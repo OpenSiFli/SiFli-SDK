@@ -554,6 +554,16 @@ GCC 默认的段收集规则为：
 声明 `.rom<N>` 段；`validate_ptab_v3.py` 会检查"恰好一个不带 `.rom<N>` 的首镜像"以及 N 不重复。
 链接脚本和 `ACPU_CODE_REGION<N>_*` 宏都以该 `.rom<N>` 段确定编号，因此 alias 可省略；若保留，编号必须与 `.rom<N>` 一致。
 
+ACPU 代码分区的存储区是 NOR 时可以省略 `exec`：镜像从该区域原地执行，链接脚本也把它放在
+同一窗口，生成的 `ACPU_CODE_REGION<N>_EXEC_*` 宏描述的就是该窗口，二级 bootloader 不会拷贝。
+其它存储（NAND/SD/PSRAM）必须显式给出 `exec` 区域，两条规则都由 `validate_ptab_v3.py` 检查。
+
+额外镜像用名字末尾的编号命名（`acpu2`、`acpu3`）。生成 `APP_<NAME>_CODE<N>` 时会先去掉名字末尾的
+编号：`acpu2` 生成 `APP_ACPU_CODE2_*`，而不是 `APP_ACPU2_CODE2_*`。该编号必须与镜像绑定一致：取
+`.rom<N>` 的 N，唯一不带 `.rom<N>` 的首镜像固定为 1，`validate_ptab_v3.py` 会检查二者是否一致。
+分区名本身仍原样用于 `<NAME>_START_ADDR/_SIZE/_OFFSET` 这组宏，因此必须是合法的标识符：v2 的
+`acpu:2` 写法会被 `validate_ptab_v3.py` 拒绝，也无法生成合法宏。
+
 ACPU 的 `link.jinja2` / `link.sct.jinja2` 会为每个额外镜像生成一段存储区域（GCC 为 `ACPU_ROM<N>`，
 其内部是 `.rom<N>` 输出段；Keil 为 `LR_IROM<N>` / `ER_IROM<N>`），链接地址取 `exec` 的 SBUS 视图。
 额外镜像会按其分区的 `region`/`offset` 烧写，

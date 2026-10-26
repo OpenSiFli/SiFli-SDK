@@ -1772,8 +1772,8 @@ def build_fixed_partitions(
     )
     if spec.with_acpu:
         acpu_offset, acpu_size = aligned_layout['acpu']
-        assert acpu_exec is not None
-        acpu_exec_region, acpu_exec_offset = acpu_exec
+        # acpu_exec is None when the ACPU runs in place from NOR.
+        acpu_exec_region, acpu_exec_offset = acpu_exec or (None, None)
         partitions.append(
             Partition(
                 'acpu',
@@ -1783,7 +1783,7 @@ def build_fixed_partitions(
                 acpu_size,
                 subtype='factory',
                 core='ACPU',
-                aliases=('ACPU_CODE_LOAD_REGION1', 'APP_ACPU_CODE'),
+                aliases=('ACPU_CODE_LOAD_REGION1',),
                 exec_region=acpu_exec_region,
                 exec_offset=acpu_exec_offset,
             )
@@ -1906,7 +1906,12 @@ def internal_layout_uses_normal_fixed_layout(spec: Spec, variant: ChipVariant) -
     )
 
 
-def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Tuple[str, int]:
+def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Optional[Tuple[str, int]]:
+    if spec.app_storage_type == 'nor':
+        # NOR is XIP-capable, so the ACPU executes in place from the app storage
+        # and needs no exec window (same layout as the v2 app_exec boards).
+        return None
+
     psram = variant.first_psram()
     if psram is None:
         raise FatalError(f'Chip model "{variant.part_number}" needs SiP PSRAM to place the ACPU exec region.')
@@ -1922,8 +1927,6 @@ def acpu_exec_location(spec: Spec, variant: ChipVariant, app_size: int) -> Tuple
     if psram2 is not None:
         # Dual-PSRAM parts (e.g. SF32LB57EYBBN6) put the ACPU image in psram2.
         return psram_alias(psram2), 0
-    if spec.app_storage_type == 'nor':
-        return psram_alias(psram), 0
     # NAND/SD execute the HCPU app from the first PSRAM, so the ACPU image
     # follows it in the same region.
     return psram_alias(psram), app_size
