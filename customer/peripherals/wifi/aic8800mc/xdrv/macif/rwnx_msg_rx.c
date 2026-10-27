@@ -1146,7 +1146,15 @@ static inline int rwnx_fhcustmsg_connect_result_cfm(struct rwnx_hw *rwnx_hw,
         DBG_MACIF_INF("connect_result: wrong passwd\n");
         DBG_MACIF_INF("ssid: \'%s\'\n", cfm->ussid);
     }
-
+    else
+    {
+        return 0;
+    }
+#ifdef RT_USING_WIFI
+    /* Report the failure to wlan mgnt, so that rt_wlan_connect() can return
+     * immediately instead of waiting for its own timeout. */
+    aic8800mc_wlan_report_connect_fail();
+#endif
     return 0;
 }
 

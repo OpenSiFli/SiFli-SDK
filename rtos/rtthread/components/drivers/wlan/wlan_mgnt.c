@@ -1644,6 +1644,21 @@ rt_bool_t rt_wlan_get_autoreconnect_mode(void)
     return enable;
 }
 
+/* Clear the cached scan results. The caller must already hold MGNT_LOCK. */
+static void _rt_wlan_scan_result_clean(void)
+{
+    SRESULT_LOCK();
+
+    /* If there is data */
+    if (scan_result.num)
+    {
+        scan_result.num = 0;
+        rt_free(scan_result.info);
+        scan_result.info = RT_NULL;
+    }
+    SRESULT_UNLOCK();
+}
+
 /* Call the underlying scan function, which is asynchronous.
 The hotspots scanned are returned by callbacks */
 rt_err_t rt_wlan_scan(void)
@@ -1657,6 +1672,9 @@ rt_err_t rt_wlan_scan(void)
     RT_WLAN_LOG_D("%s is run", __FUNCTION__);
 
     MGNT_LOCK();
+    /* Clear the cache and start the scan in the same critical section, so that
+     * a concurrent scan cannot fill the cache in between. */
+    _rt_wlan_scan_result_clean();
     err = rt_wlan_dev_scan(STA_DEVICE(), RT_NULL);
     MGNT_UNLOCK();
     return err;
@@ -1676,6 +1694,7 @@ struct rt_wlan_scan_result *rt_wlan_scan_sync(void)
 struct rt_wlan_scan_result *rt_wlan_scan_with_info(struct rt_wlan_info *info)
 {
     rt_err_t err = RT_EOK;
+    struct rt_wlan_info info_bak;
     struct rt_wlan_complete_des *complete;
     rt_uint32_t set = 0, recved = 0;
 
@@ -1690,8 +1709,20 @@ struct rt_wlan_scan_result *rt_wlan_scan_with_info(struct rt_wlan_info *info)
         return RT_NULL;
     }
 
+    /* The filter may point into scan_result, which is freed by the clean below,
+     * so keep a local copy under the cache lock. */
+    if (info != RT_NULL)
+    {
+        SRESULT_LOCK();
+        info_bak = *info;
+        SRESULT_UNLOCK();
+        info = &info_bak;
+    }
+
     /* Create an event that needs to wait. */
     MGNT_LOCK();
+    /* Clear the scan cache of last time, so that only fresh results are reported */
+    _rt_wlan_scan_result_clean();
     complete = rt_wlan_complete_create("scan");
     if (complete == RT_NULL)
     {
@@ -1758,16 +1789,7 @@ struct rt_wlan_scan_result *rt_wlan_scan_get_result(void)
 void rt_wlan_scan_result_clean(void)
 {
     MGNT_LOCK();
-    SRESULT_LOCK();
-
-    /* If there is data */
-    if (scan_result.num)
-    {
-        scan_result.num = 0;
-        rt_free(scan_result.info);
-        scan_result.info = RT_NULL;
-    }
-    SRESULT_UNLOCK();
+    _rt_wlan_scan_result_clean();
     MGNT_UNLOCK();
 }
 
