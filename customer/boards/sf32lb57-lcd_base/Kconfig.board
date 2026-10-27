@@ -1,0 +1,57 @@
+config ASIC
+    bool
+    select BSP_USING_AW9523
+    default y
+
+config BSP_SUPPORT_DPI
+    bool
+    default y
+
+config TOUCH_IRQ_PIN
+    int
+    default 20
+
+config LCD_PWM_BACKLIGHT_INTERFACE_NAME
+    string
+    default "pwmt1"
+
+config LCD_PWM_BACKLIGHT_CHANEL_NUM
+    int
+    default 4
+
+config LCD_BACKLIGHT_CONTROL_PIN
+    int
+    default 11 if BSP_LCDC_USING_DPI
+    default 11 if BSP_LCDC_USING_DIRECT_EPD
+    default 45 if BSP_LCDC_USING_QADSPI
+config CAMERA_I2C_DEVICE_NAME
+    string
+    default "i2c1"
+
+config EPD_TPS_I2C_DEVICE_NAME
+    string
+    default "i2c1"
+
+config EPD_TPS_WAKEUP_PIN
+    int
+    default 20
+
+config EPD_TPS_PWRCOM_PIN
+    int
+    default 24
+
+config EPD_TPS_PWRUP_PIN
+    int
+    default 26
+
+
+
+
+menu "SF32LB57-LCD Configuration"
+
+config BSP_USING_CAMERA1
+    bool "Camera 1"
+    select BSP_USING_GC032A
+    default n
+
+endmenu

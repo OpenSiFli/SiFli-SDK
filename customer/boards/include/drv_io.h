@@ -140,6 +140,9 @@ void BSP_GPIO_Set(int pin, int val, int is_porta);
  */
 void BSP_CAMERA_PowerUp(void);
 void BSP_CAMERA_PowerDown(void);
+#ifdef BSP_USING_DCMI
+void BSP_CAMERA_Pinmux(void);
+#endif
 
 /**
  * @brief PSRAM
