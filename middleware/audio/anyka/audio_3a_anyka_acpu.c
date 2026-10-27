@@ -72,7 +72,7 @@ static void my_dump(T_ECHO_DUMP_ITEM_ID item_id, T_S32 size, T_pCVOID data, T_pC
 
 static void *my_malloc(uint32_t size)
 {
-#ifdef SOC_SF32LB58X
+#if ANYKA_USE_ACPU_HEAP
     void *p = rt_malloc(size);
 #else
     void *p = acpu_call_hcpu_malloc(size);
@@ -88,7 +88,7 @@ static void my_free(void *p)
 {
     if (p)
     {
-#ifdef SOC_SF32LB58X
+#if ANYKA_USE_ACPU_HEAP
         rt_free(p);
 #else
         acpu_call_hcpu_free(p);

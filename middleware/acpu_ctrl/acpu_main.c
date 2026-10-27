@@ -46,14 +46,14 @@ static size_t ah_ipc_write(const void *buffer, size_t size, uint32_t timeout)
     rt_err_t err;
     size_t wr_size;
 
-    SCB_CleanDCache();
-
     err = rt_mutex_take(&s_ah_ipc_tx_mutex, RT_WAITING_FOREVER);
     if (RT_EOK != err)
     {
         RT_ASSERT(RT_EOK == err);
         return 0;
     }
+
+    SCB_CleanDCache();
 
     wr_size = ipc_queue_write(sys_get_ah_ipc_queue(), buffer, size, timeout);
 
