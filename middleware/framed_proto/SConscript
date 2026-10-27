@@ -1,0 +1,19 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Split("""
+framed_proto_link.c
+framed_proto_port.c
+framed_proto_rsp.c
+framed_proto_sync.c
+""")
+
+CPPPATH = [cwd]
+CPPPATH += [cwd + '/../include']
+
+group = DefineGroup('framed_proto', src, depend = ['FRAMED_PROTO'], CPPPATH = CPPPATH)
+
+Return('group')
