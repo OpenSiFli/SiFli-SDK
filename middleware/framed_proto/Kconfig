@@ -1,0 +1,10 @@
+menuconfig FRAMED_PROTO
+    bool "Framed message transport"
+    default n
+    help
+        Framed message transport shared by the OTA engine and by any other
+        consumer that needs the same channel, for example the screen-cast
+        stream over WiFi. The peer-side specification calls it V3.
+
+
+

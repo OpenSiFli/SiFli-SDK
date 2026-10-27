@@ -62,6 +62,7 @@ menu "SiFli Built-in Components"
     source "$SIFLI_SDK/middleware/nvm_storage/Kconfig"
     source "$SIFLI_SDK/middleware/profiler/Kconfig"
     source "$SIFLI_SDK/middleware/partition_table/Kconfig"
+    source "$SIFLI_SDK/middleware/framed_proto/Kconfig"
     source "$SIFLI_SDK/middleware/system/Kconfig"
     source "$SIFLI_SDK/middleware/test_fwk/Kconfig"
 
