@@ -3567,19 +3567,34 @@ def GroupLibFullName(name, env):
 def BuildLibInstallAction(target, source, env):
     import rtconfig
     lib_name = GetOption('buildlib')
-    for Group in Projects:
-        if Group['name'] == lib_name:
-            lib_name = GroupLibFullName(Group['name'], env)
-            dst_name = os.path.join(Group['path'], lib_name)
-            lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
-            logging.info ('Copy '+lib_name+' => ' + dst_name)
-            do_copy_file(lib_name, dst_name)
-            try:
-                os.system(rtconfig.POST_ACTION)
-            except:
-                pass
-            #os.system("postbuild.bat")
-            break
+    if '*' != lib_name:
+        for Group in Projects:
+            if Group['name'] == lib_name:
+                lib_name = GroupLibFullName(Group['name'], env)
+                dst_name = os.path.join(Group['path'], lib_name)
+                lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
+                logging.info ('Copy '+lib_name+' => ' + dst_name)
+                do_copy_file(lib_name, dst_name)
+                try:
+                    os.system(rtconfig.POST_ACTION)
+                except:
+                    pass
+                #os.system("postbuild.bat")
+                break
+    else:
+        assert 'LIBNAME' in env, 'LIBNAME is not defined in env'
+        assert 'INSTALL_PATH' in env, 'INSTALL_PATH is not defined in env'
+        lib_name = env['LIBNAME']
+        lib_name = GroupLibFullName(lib_name, env)
+        dst_name = os.path.join(env['INSTALL_PATH'], lib_name)
+        lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
+        logging.info ('Copy '+lib_name+' => ' + dst_name)
+        do_copy_file(lib_name, dst_name)
+        try:
+            os.system(rtconfig.POST_ACTION)
+        except:
+            pass
+
 
 def DoBuilding(target, objects):
     import rtconfig
@@ -3623,7 +3638,7 @@ def DoBuilding(target, objects):
         
     # check whether special buildlib option
     lib_name = GetOption('buildlib')
-    if lib_name:
+    if lib_name and '*' != lib_name:
         objects = [] # remove all of objects
         # build library with special component
         for Group in Projects:
@@ -3639,6 +3654,18 @@ def DoBuilding(target, objects):
                 Env.BuildLib(lib_name, program)
 
                 break
+    elif lib_name and '*' == lib_name:
+        objects = [] # remove all of objects
+        # build library with special component
+        lib_name = GroupLibName(Env['LIBNAME'], Env)
+        for Group in Projects:
+            if not local_group(Group, objects):
+                objects += Env.Object(Group['src'])
+
+        lib_name = os.path.join(os.path.dirname(target), lib_name)
+        program = Env.Library(lib_name, objects)
+        # add library copy action
+        Env.BuildLib(lib_name, program)
     else:
         # remove source files with local flags setting
         for group in Projects:
