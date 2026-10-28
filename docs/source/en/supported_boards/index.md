@@ -63,6 +63,12 @@ Abbreviation |  Model                    |    Board Directory   |
 58-LCD_N16R32N1_DSI | SF32LB58-DevKit-LCD_N16R32N1_DSI |   [sf32lb58-lcd_n16r32n1_dsi](boards/sf32lb58-lcd_n16r32n1_dsi/doc/index.md)    |
 58-LCD_N16R64N4 | SF32LB58-DevKit-LCD_N16R64N4 |   [sf32lb58-lcd_n16r64n4](boards/sf32lb58-lcd_n16r64n4/doc/index.md)    |
 
+## SF32LB57x Series
+
+Abbreviation | Model | Board Directory |
+--- | --- | --- |
+57-EPD_N16R16 | SF32LB57-DevKit-EPD_MB_V1.0 | [sf32lb57-epd_n16r16](boards/sf32lb57-epd_n16r16/doc/index.md) |
+
 ## SF32LB56x Series
 
 Abbreviation  |  Model                    |    Board Directory   |    
@@ -118,6 +124,7 @@ boards/sf32lb56-lcd_a128r12n1/doc/index
 boards/sf32lb56-lcd_n16r12n1/doc/index
 boards/sf32lb56-wlan-core_a128r12n1/doc/index
 boards/sf32lb56-wlan-core_n16r12n1/doc/index
+boards/sf32lb57-epd_n16r16/doc/index
 boards/sf32lb58-core_a128r32n1/doc/index
 boards/sf32lb58-core_n16r32n1/doc/index
 boards/sf32lb58-lcd_a128r32n1_dsi/doc/index

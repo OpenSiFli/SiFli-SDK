@@ -1,0 +1,41 @@
+config ASIC
+    bool
+    default y
+
+config BSP_SUPPORT_DPI
+    bool
+    default y
+
+config TOUCH_IRQ_PIN
+    int
+    default 3
+
+configdefault LCD_HOR_RES_MAX
+    default 684 if LCD_USING_EPD_E0470A03
+
+configdefault LCD_VER_RES_MAX
+    default 1216 if LCD_USING_EPD_E0470A03
+
+config EPD_TPS_I2C_DEVICE_NAME
+    string
+    default "i2c1"
+
+config EPD_TPS_WAKEUP_PIN
+    int
+    default 42
+
+config EPD_TPS_PWRCOM_PIN
+    int
+    default 43
+
+config EPD_TPS_PWRUP_PIN
+    int
+    default 44
+
+config EPD_TPS_GOOD_PIN
+    int
+    default 52
+
+config EPD_WAVEFORM_USE_BIN
+    bool
+    default y if LCD_USING_EPD_E0470A03
