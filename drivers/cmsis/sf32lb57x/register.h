@@ -79,7 +79,7 @@ typedef enum IRQn
     Interrupt45_IRQn              =  45,
     LPTIM1_IRQn                   =  46,
     LPTIM2_IRQn                   =  47,
-    CHG_IRQn                      =  48,
+    PMUC_IRQn                     =  48,
     RTC_IRQn                      =  49,
     DMAC1_CH1_IRQn                =  50,
     DMAC1_CH2_IRQn                =  51,
