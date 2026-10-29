@@ -451,10 +451,22 @@ static HAL_StatusTypeDef SelectIntf(LCDC_HandleTypeDef *lcdc, HAL_LCDC_IF_TypeDe
     return HAL_OK;
 }
 #ifdef LCD_IF_LCD_CONF_INTF_CLK_DIV
+/*
+    The LCDC clock tree is as follows:
+    1.  LCDC_CLK_SOURCE(HCLK/DLL1/DLL2) ---int_clk_div----> CLK1
+    2.  CLK1 ----int_clk_div2p5----->CLK2
+    3.  CLK2 ----(SPI/DPI/DBI interface div)----->SPI/DPI/DBI interface
+
+    Note:
+    1. The maximum frequency of the CLK1 is 120MHz if the 'use_div2p5' is 1 on 57x.
+*/
+#define max_freq_of_clk1 (120*1000*1000)
 static void LCDC_SetIntfClockDivider(LCDC_HandleTypeDef *lcdc, uint32_t freq)
 {
     uint32_t lcdc_clk = HAL_RCC_GetModuleFreq(GET_LCDC_RCC_MOD(lcdc));
     uint32_t intf_div = 1;
+    //The minimum value of 'intf_div' if the 'use_div2p5' is 1
+    uint32_t min_intf_div = (lcdc_clk + max_freq_of_clk1 - 1) / max_freq_of_clk1;
     uint32_t use_div2p5 = 0;
     uint32_t total_div = (lcdc_clk + (freq - 1)) / freq;
     LCDC_InitTypeDef *init = &lcdc->Init;
@@ -465,22 +477,28 @@ static void LCDC_SetIntfClockDivider(LCDC_HandleTypeDef *lcdc, uint32_t freq)
     {
 #define MAX_INTF_DIV (LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk>>LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos)
         if (total_div <= MAX_INTF_DIV) intf_div = total_div;
-        else if (total_div % 5 == 0) use_div2p5 = 1;
+        else if (total_div % (5 * min_intf_div) == 0) use_div2p5 = 1;
         else if (total_div % 6 == 0) intf_div = 3;
         else intf_div = 1;
     }
     else //The minimum divider of the interfaces is 2
     {
-        if (total_div % 5 == 0) use_div2p5 = 1;
+        if (total_div % (5 * min_intf_div) == 0) use_div2p5 = 1;
         else if (total_div % 6 == 0) intf_div = 3;
         else intf_div = 1;
     }
 
-    MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, intf_div << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
+
     if (use_div2p5)
+    {
         lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+        MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, min_intf_div << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
+    }
     else
+    {
         lcdc->Instance->LCD_CONF &= ~LCD_IF_LCD_CONF_INTF_CLK_DIV2P5_SEL;
+        MODIFY_REG(lcdc->Instance->LCD_CONF, LCD_IF_LCD_CONF_INTF_CLK_DIV_Msk, intf_div << LCD_IF_LCD_CONF_INTF_CLK_DIV_Pos);
+    }
 
     lcdc->Instance->LCD_CONF |= LCD_IF_LCD_CONF_INTF_CLK_DIV_UPDATE;
 }
