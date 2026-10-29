@@ -1507,10 +1507,7 @@ static void draw_img(struct _lv_draw_ctx_t *draw_ctx,
         dest.data_size = lv_img_buf_get_img_size(dest.header.w, dest.header.h, dest.header.cf);
         dest.header.always_zero = 0;
 
-        lv_opa_t opa = (cf == LV_IMG_CF_ALPHA_1BIT || \
-                        cf == LV_IMG_CF_ALPHA_2BIT || \
-                        cf == LV_IMG_CF_ALPHA_4BIT || \
-                        cf == LV_IMG_CF_ALPHA_8BIT) ? draw_dsc->recolor_opa : draw_dsc->opa;
+        lv_opa_t opa = draw_dsc->opa;
 
         {
             img_rotate_opa_frac(&dest, &src, draw_dsc->angle, (uint32_t)draw_dsc->zoom,
