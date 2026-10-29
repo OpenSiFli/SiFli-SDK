@@ -19,7 +19,8 @@
 #include "app_mem.h"
 
 
-#if (1 == LV_USE_GPU) && (!defined(SF32LB55X))
+/* This demo draws directly into the framebuffer through the legacy EPIC API. */
+#if (1 == LV_USE_GPU) && !defined(SF32LB55X) && !defined(DRV_EPIC_NEW_API)
 #include "drv_epic.h"
 #if (IMAGE_CACHE_IN_SRAM_SIZE >= 258*1000)
     #define ROTATE_BG_IMG_VARIABLE clock_rotate_bg_bg   //Image size 257766 bytes, 359x359

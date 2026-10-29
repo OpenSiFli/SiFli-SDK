@@ -68,6 +68,7 @@ void lv_draw_epic_release_deferred_resources(void);
 
 void render_list_set_display_pixel_align(lv_display_t *disp, uint32_t pixel_align);
 drv_epic_render_buf *render_list_get_current_buf(void);
+bool render_list_is_offscreen_layer(const lv_layer_t *layer);
 
 int render_list_create_main_frame(lv_display_t *disp);
 int render_list_submit_main_frame(void);
