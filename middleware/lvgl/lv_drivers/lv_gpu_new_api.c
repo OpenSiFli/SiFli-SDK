@@ -1529,6 +1529,58 @@ static void draw_img(struct _lv_draw_ctx_t *draw_ctx,
 }
 
 
+/* LVGL reuses its compressed-font decode buffer for the next glyph.
+ * Copy packed pixels into EPIC's row-aligned layout before queuing the draw. */
+static void draw_compressed_glyph(lv_draw_ctx_t *ctx, const lv_draw_label_dsc_t *dsc,
+                                  const lv_font_glyph_dsc_t *glyph, const lv_point_t *pos,
+                                  const uint8_t *bitmap)
+{
+    uint32_t bpp = glyph->bpp == 3 ? 4 : glyph->bpp;
+    if (bpp != 2 && bpp != 4 && bpp != 8) return;
+    uint32_t stride = (glyph->box_w * bpp + 7) / 8;
+    uint32_t size = stride * glyph->box_h;
+    uint8_t *copy = app_cache_alloc(size, IMAGE_CACHE_PSRAM);
+    if (!copy)
+    {
+        LV_LOG_WARN("Cannot snapshot compressed glyph");
+        return;
+    }
+    memset(copy, 0, size);
+    for (uint32_t y = 0; y < glyph->box_h; y++)
+    {
+        for (uint32_t x = 0; x < glyph->box_w; x++)
+        {
+            uint32_t bit = (y * glyph->box_w + x) * bpp;
+            uint8_t pixel = (bitmap[bit / 8] >> (8 - bpp - bit % 8)) & ((1U << bpp) - 1);
+            copy[y * stride + x * bpp / 8] |= pixel << (8 - bpp - x * bpp % 8);
+        }
+    }
+    letter_blend_reset();
+    p_line_op = NULL;
+    drv_epic_render_buf dst;
+    setup_render_buf(&dst, ctx);
+    drv_epic_operation *op = drv_epic_alloc_op(&dst);
+    RT_ASSERT(op);
+    op->op = DRV_EPIC_DRAW_IMAGE;
+    LV_AREA_TO_EPIC_AREA(&op->clip_area, ctx->clip_area);
+    lv_area_t area = {pos->x, pos->y, pos->x + glyph->box_w - 1, pos->y + glyph->box_h - 1};
+    lv_img_dsc_t image = {0};
+    image.header.cf = bpp == 2 ? LV_IMG_CF_ALPHA_2BIT :
+                      bpp == 4 ? LV_IMG_CF_ALPHA_4BIT : LV_IMG_CF_ALPHA_8BIT;
+    image.header.w = glyph->box_w;
+    image.header.h = glyph->box_h;
+    image.data = copy;
+    image.data_size = size;
+    lv_point_t pivot = {0, 0};
+    HAL_EPIC_LayerConfigInit(&op->desc.blend.layer);
+    setup_fg_layer(&op->desc.blend.layer, &image, &area, 0,
+                   EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE, &pivot,
+                   dsc->opa, dsc->color, 0, 0);
+    op->desc.blend.use_dest_as_bg = EPIC_BLEND_MODE_NORMAL;
+    op->desc.blend.layer_owned = 1;
+    lv_gpu_render_commit_op(op);
+}
+
 /**
 * Draw a letter in the Virtual Display Buffer
 * @param pos_p left-top coordinate of the latter
@@ -1602,6 +1654,14 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
 
 
 
+
+    if (g.resolved_font->get_glyph_bitmap == lv_font_get_bitmap_fmt_txt &&
+            ((const lv_font_fmt_txt_dsc_t *)g.resolved_font->dsc)->bitmap_format != LV_FONT_FMT_TXT_PLAIN &&
+            dsc->blend_mode == LV_BLEND_MODE_NORMAL && !g.resolved_font->subpx)
+    {
+        draw_compressed_glyph(draw_ctx, dsc, &g, &gpos, map_p);
+        return;
+    }
 
     uint32_t bpp = g.bpp;
     if (bpp == 3) bpp = 4;
