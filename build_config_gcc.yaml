@@ -48,9 +48,6 @@ default_boards: &default_boards
   - dpi-hdk_lb57eybbn6_n16_dbi
   - spi-hdk_lb573ub7n6
   - spi-hdk_lb575ucnn6_n16
-  - sf32lb57-lcd_n16r16_qspi
-  - sf32lb57-lcd_n16r16_dpi
-  - sf32lb57-lcd_n16r8_dpi
 
 default_nand_boards: &default_nand_boards
   - ec-lb567_hcpu
@@ -82,9 +79,6 @@ bt_boards: &bt_boards
   - dpi-hdk_lb57eybbn6_n16_qspi
   - spi-hdk_lb573ub7n6
   - spi-hdk_lb575ucnn6_n16
-  - sf32lb57-lcd_n16r16_qspi
-  - sf32lb57-lcd_n16r16_dpi
-  - sf32lb57-lcd_n16r8_dpi
 
 multicore_boards: &multicore_boards
   - ec-lb567_hcpu
@@ -117,9 +111,6 @@ after_55x_boards: &after_55x_boards
   - sf32lb58-lcd_n16r32n1_qspi  
   - spi-hdk_lb573ub7n6
   - spi-hdk_lb575ucnn6_n16
-  - sf32lb57-lcd_n16r16_qspi
-  - sf32lb57-lcd_n16r16_dpi
-  - sf32lb57-lcd_n16r8_dpi
 
 525_devkit_lcd_boards: &525_devkit_lcd_boards
   - sf32lb52-lcd_n16r8 
@@ -138,9 +129,6 @@ devkit_lcd_boards: &devkit_lcd_boards
   - sf32lb58-lcd_n16r32n1_qspi
   - spi-hdk_lb573ub7n6
   - spi-hdk_lb575ucnn6_n16
-  - sf32lb57-lcd_n16r16_qspi
-  - sf32lb57-lcd_n16r16_dpi
-  - sf32lb57-lcd_n16r8_dpi
 
 devkit-boards: &devkit-boards
   - sf32lb52-lcd_n16r8 
@@ -161,9 +149,6 @@ devkit-boards: &devkit-boards
   - sf32lb58-core_n16r32n1
   - spi-hdk_lb573ub7n6
   - spi-hdk_lb575ucnn6_n16
-  - sf32lb57-lcd_n16r16_qspi
-  - sf32lb57-lcd_n16r16_dpi
-  - sf32lb57-lcd_n16r8_dpi
 
 # in alphabetical order
 common_projects:
