@@ -24,6 +24,7 @@
 #ifdef USING_EZIPA_DEC
 #include "ezipa_dec.h"
 
+#ifndef DRV_EPIC_NEW_API
 static void invalidate_screen(void *data)
 {
     lv_obj_invalidate(lv_scr_act());
@@ -233,6 +234,8 @@ void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 2);
 }
+
+#endif /* !DRV_EPIC_NEW_API: legacy transform API */
 
 extern void HAL_EPIC_Adv_Log(uint32_t level);
 void lv_gpu_adv_log(uint32_t level)
