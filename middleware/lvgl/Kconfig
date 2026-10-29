@@ -111,9 +111,29 @@ menu "SiFli extend"
         endchoice
 
         config LV_USE_SIFLI_JPEGD
-            bool "Use SiFli on-the-fly jpeg decoder"
+            bool "Use SiFli hardware JPEG decoder"
             default y
-            depends on SOC_SF32LB57X
+            depends on SOC_SF32LB57X || SOC_SF32LB58X
+            select USING_JPEG_DEC if SOC_SF32LB58X
+            help
+                SF32LB57X passes compressed images to the EPIC JPEGD path.
+                SF32LB58X decodes images to an RGB buffer with the JPEG codec.
+
+        choice
+            prompt "LVGL V9 JPEG decoder allocation pool"
+            depends on LV_USE_SIFLI_JPEGD && SOC_SF32LB58X
+            default LVSF_JPEG_DECODER_ALLOC_PSRAM
+            help
+                Select the preferred app_cache_alloc pool for SF32LB58X JPEG
+                input and decoded pixel buffers. Allocation falls back to the
+                system heap when the selected pool is unavailable.
+
+            config LVSF_JPEG_DECODER_ALLOC_SRAM
+                bool "Prefer SRAM cache pool"
+
+            config LVSF_JPEG_DECODER_ALLOC_PSRAM
+                bool "Prefer PSRAM cache pool"
+        endchoice
 
         config LVSF_USING_SJPG
             bool "Use LVSF JPEG/SJPEG decoder"
