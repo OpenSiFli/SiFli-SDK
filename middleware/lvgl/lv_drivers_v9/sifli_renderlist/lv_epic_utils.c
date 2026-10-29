@@ -133,7 +133,7 @@ void lv_epic_get_coord_offset(const lv_draw_task_t *draw_task, int32_t *offset_x
     if (draw_task == NULL) return;
 
     lv_layer_t *target_layer = draw_task->target_layer;
-    bool sub = (target_layer && target_layer->parent != NULL);
+    bool sub = (target_layer && target_layer->parent != NULL) || render_list_is_offscreen_layer(target_layer);
     if (is_sub_layer) *is_sub_layer = sub;
 
     if (sub)

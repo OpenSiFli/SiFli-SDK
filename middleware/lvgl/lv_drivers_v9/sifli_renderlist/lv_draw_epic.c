@@ -107,6 +107,8 @@ typedef struct
  **********************/
 static uint8_t initialized = 0;
 static render_list_context_t render_list_ctx;
+static lv_layer_t *display_root_layer;
+static struct rt_semaphore offscreen_sema;
 
 /**********************
  *      MACROS
@@ -136,6 +138,7 @@ void render_list_set_display_pixel_align(lv_display_t *disp, uint32_t pixel_alig
     }
 
     render_list_ctx.display_cache.disp = disp;
+    display_root_layer = disp->layer_head;
     render_list_ctx.display_cache.pixel_align = (pixel_align != 0U) ? pixel_align : DEFAULT_PIXEL_ALIGN;
 }
 
@@ -466,6 +469,25 @@ int render_list_release_by_handle(drv_epic_render_list_t rl)
 }
 
 // Sub-layer render done callback (called by EPIC hardware), releases RL when last slice completes
+bool render_list_is_offscreen_layer(const lv_layer_t *layer)
+{
+    if (layer == NULL) return false;
+    while (layer->parent != NULL) layer = layer->parent;
+    return layer != display_root_layer;
+}
+
+static void offscreen_render_done_callback(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst,
+                                            void *usr_data, uint32_t last)
+{
+    LV_UNUSED(p_dst);
+    LV_UNUSED(usr_data);
+    if (last)
+    {
+        render_list_release_by_handle(rl);
+        rt_sem_release(&offscreen_sema);
+    }
+}
+
 static void sub_layer_render_done_callback(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst,
                                            void *usr_data, uint32_t last)
 {
@@ -930,7 +952,10 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
         }
     }
 
-    bool is_sub_layer = (layer && layer->parent != NULL);
+    /* Snapshot roots have no parent, but own a real destination buffer.
+     * They do not pass through the display's render_start/flush callbacks. */
+    bool offscreen = render_list_is_offscreen_layer(layer);
+    bool is_sub_layer = (layer && layer->parent != NULL) || offscreen;
 
     if (is_sub_layer)
     {
@@ -987,6 +1012,20 @@ static int32_t dispatch(lv_draw_unit_t *draw_unit, lv_layer_t *layer)
     draw_epic_unit->is_sub_layer_task = is_sub_layer;
 
     execute_drawing(draw_epic_unit);
+    if (offscreen)
+    {
+        /* Complete each offscreen operation before LVGL can consume or free
+         * the snapshot and its child layers. Never send this list to LCD. */
+        EPIC_MsgTypeDef msg = {0};
+        msg.id = EPIC_MSG_RENDER_TO_BUF;
+        msg.render_list = render_list_ctx.layer.active.rl;
+        msg.content.r2b.dst_area = render_list_ctx.layer.active.buf.area;
+        msg.content.r2b.done_cb = offscreen_render_done_callback;
+        rt_err_t err = drv_epic_render_msg_commit(&msg);
+        RT_ASSERT(err == RT_EOK);
+        err = rt_sem_take(&offscreen_sema, RT_WAITING_FOREVER);
+        RT_ASSERT(err == RT_EOK);
+    }
     finish_current_task(draw_epic_unit);
 
     return 1;
@@ -1006,6 +1045,7 @@ void lv_draw_epic_init(void)
 
         drv_gpu_open();
         render_list_manager_init();
+        rt_sem_init(&offscreen_sema, "epic_snap", 0, RT_IPC_FLAG_FIFO);
 
         draw_epic_unit->p_sw_unit = draw_epic_unit->base_unit.next;
         initialized = 1;
