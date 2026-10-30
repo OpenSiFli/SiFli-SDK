@@ -133,6 +133,14 @@ void BSP_SD_PowerUp(void);
 
 void BSP_SD2_PowerUp(void);
 
+/**
+ * @brief PDM microphone power
+ */
+void BSP_MIC1_PowerUp(void);
+void BSP_MIC1_PowerDown(void);
+void BSP_MIC2_PowerUp(void);
+void BSP_MIC2_PowerDown(void);
+
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 
 /**

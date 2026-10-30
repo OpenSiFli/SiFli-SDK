@@ -431,6 +431,18 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
         }
 
         LOG_I("bf0_audio_init len=%d, hdmarx=%x", hpdm->RxXferSize, hpdm->hdmarx);
+
+        if (hwp_pdm1 == hpdm->Instance)
+        {
+            BSP_MIC1_PowerUp();
+        }
+#ifdef BSP_USING_PDM2
+        else if (hwp_pdm2 == hpdm->Instance)
+        {
+            BSP_MIC2_PowerUp();
+        }
+#endif /* BSP_USING_PDM2 */
+
         if (AUDIO_STREAM_PDM_PRESTART == stream)
             return RT_EOK;
     }
@@ -525,6 +537,18 @@ static rt_err_t bf0_audio_stop(struct rt_audio_device *audio, int stream)
 
         ret = HAL_PDM_DMAStop(&(hpdm_audio->hpdm));
         HAL_PDM_DeInit(&(hpdm_audio->hpdm));
+
+        /* Power down the microphone after the PDM controller is stopped. */
+        if (hwp_pdm1 == hpdm->Instance)
+        {
+            BSP_MIC1_PowerDown();
+        }
+#ifdef BSP_USING_PDM2
+        else if (hwp_pdm2 == hpdm->Instance)
+        {
+            BSP_MIC2_PowerDown();
+        }
+#endif /* BSP_USING_PDM2 */
 
         if (PDM_ERROR_NONE != hpdm->ErrorCode)
         {

@@ -7,6 +7,14 @@
 #include "bsp_board.h"
 #include "aw9523.h"
 
+#ifdef BSP_USING_RTTHREAD
+    #include <rtthread.h>
+
+    #define PDM_MIC_PWR_SETTLE_MS   5
+
+    static int pdm_mic_ref;
+#endif /* BSP_USING_RTTHREAD */
+
 void aw9523_ensure_init(void)
 {
     static uint8_t inited = 0;
@@ -96,3 +104,54 @@ void BSP_CAMERA_PowerDown(void)
     /* Camera power down: DVP_PDN=1 (AW9523 P0_6). */
     aw9523_set_pin(AW9523_PIN_DVP_PDN, 1);
 }
+
+#ifdef BSP_USING_RTTHREAD
+
+static void pdm_mic_power(int on)
+{
+    if (on)
+    {
+        if (pdm_mic_ref > 0)
+        {
+            pdm_mic_ref++;
+            return;
+        }
+        aw9523_ensure_init();
+        if (aw9523_set_pin(AW9523_PIN_PDM_PWREN, 1) != 0)
+        {
+            rt_kprintf("pdm mic: power on failed\n");
+            return;
+        }
+        pdm_mic_ref = 1;
+        rt_thread_mdelay(PDM_MIC_PWR_SETTLE_MS);
+    }
+    else
+    {
+        if (pdm_mic_ref == 0 || --pdm_mic_ref > 0)
+            return;
+
+        aw9523_set_pin(AW9523_PIN_PDM_PWREN, 0);
+    }
+}
+
+void BSP_MIC1_PowerUp(void)
+{
+    pdm_mic_power(1);
+}
+
+void BSP_MIC1_PowerDown(void)
+{
+    pdm_mic_power(0);
+}
+
+void BSP_MIC2_PowerUp(void)
+{
+    pdm_mic_power(1);
+}
+
+void BSP_MIC2_PowerDown(void)
+{
+    pdm_mic_power(0);
+}
+
+#endif /* BSP_USING_RTTHREAD */
