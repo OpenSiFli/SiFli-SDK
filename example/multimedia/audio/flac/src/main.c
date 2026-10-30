@@ -49,6 +49,7 @@ static uint32_t g_pcm_len, g_pcm_cap;
 static struct rt_thread flac_play_thread;
 static uint32_t flac_play_stack[FLAC_STACK_SIZE / sizeof(uint32_t)];
 static char g_flac_play_path[128];
+static int thread_running;
 
 L2_RET_BSS_SECT_BEGIN(flac_pcm)
 ALIGN(4) static uint8_t g_pcm_storage[MIC_PCM_BUF_SIZE] L2_RET_BSS_SECT(flac_pcm);
@@ -378,8 +379,10 @@ _play_exit:
 static void flac_play_thread_entry(void *param)
 {
     (void)param;
+    thread_running = 1;
     flac_decode_and_play(g_flac_play_path);
     rt_kprintf("flac_play: thread exit\n");
+    thread_running = 0;
 }
 
 static void flac_test_thread(void *param)
@@ -387,19 +390,30 @@ static void flac_test_thread(void *param)
     uint32_t seconds = g_record_seconds;
     (void)param;
 
+    thread_running = 1;
+
     if (mic_record_to_file(seconds) != 0)
-        return;
+        goto _exit;
 
     if (flac_encode_file(MIC_PCM_FILE, FLAC_FILE) != 0)
-        return;
+        goto _exit;
 
     flac_decode_and_play(FLAC_FILE);
 
     rt_kprintf("flac_test: all done!\n");
+
+_exit:
+    thread_running = 0;
 }
 
 static int cmd_flac_test(int argc, char *argv[])
 {
+    if (thread_running)
+    {
+        rt_kprintf("flac thread is running, please wait for it to exit\n");
+        return -1;
+    }
+
     g_record_seconds = (argc > 1) ? (uint32_t)atoi(argv[1]) : MIC_DEFAULT_SECONDS;
     rt_thread_init(&flac_thread, "flac", flac_test_thread, NULL,
                    flac_stack, FLAC_STACK_SIZE, RT_THREAD_PRIORITY_HIGH, 10);
@@ -412,6 +426,13 @@ static int cmd_flac_enc(int argc, char *argv[])
 {
     const char *in  = (argc > 1) ? argv[1] : MIC_PCM_FILE;
     const char *out = (argc > 2) ? argv[2] : FLAC_FILE;
+
+    if (thread_running)
+    {
+        rt_kprintf("flac thread is running, please wait for it to exit\n");
+        return -1;
+    }
+
     return flac_encode_file(in, out);
 }
 MSH_CMD_EXPORT_ALIAS(cmd_flac_enc, flac_enc, Encode PCM to FLAC);
@@ -419,6 +440,12 @@ MSH_CMD_EXPORT_ALIAS(cmd_flac_enc, flac_enc, Encode PCM to FLAC);
 static int cmd_flac_play(int argc, char *argv[])
 {
     const char *path = (argc > 1) ? argv[1] : FLAC_FILE;
+
+    if (thread_running)
+    {
+        rt_kprintf("flac thread is running, please wait for it to exit\n");
+        return -1;
+    }
 
     rt_strncpy(g_flac_play_path, path, sizeof(g_flac_play_path) - 1);
     g_flac_play_path[sizeof(g_flac_play_path) - 1] = '\0';
