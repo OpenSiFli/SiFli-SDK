@@ -241,7 +241,7 @@ void SysTick_Handler(void)
 #endif /* SF32LB52X || SF32LB57X */
 #endif /* SOC_BF0_HCPU */
     {
-        new_tick = sf_latch_tick(old_tick + 1, HAL_GTIMER_READ(), HAL_LPTIM_GetFreq(), (void *)1);
+        new_tick = pm_latch_tick(old_tick + 1, HAL_GTIMER_READ(), HAL_LPTIM_GetFreq(), (void *)1);
     }
     else
     {

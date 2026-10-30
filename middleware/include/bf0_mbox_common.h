@@ -94,7 +94,7 @@ void print_sysinfo(char *buf, uint32_t buf_len);
  *
  * @retval compensated rt_tick
  */
-rt_tick_t sf_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data);
+rt_tick_t pm_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data);
 
 /**
  * @brief Update last latch tick if rt_tick cannot be updated as expected

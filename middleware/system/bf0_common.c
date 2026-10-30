@@ -987,7 +987,7 @@ int sf_tick_cal_init(void)
 }
 INIT_DEVICE_EXPORT(sf_tick_cal_init);
 
-__ROM_USED rt_tick_t sf_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data)
+__ROM_USED rt_tick_t pm_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data)
 {
     uint32_t delta_time;
     rt_tick_t new_tick_ref;

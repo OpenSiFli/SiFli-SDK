@@ -2550,13 +2550,13 @@ __ROM_USED rt_tick_t sifli_timer_get_tick(struct rt_pm *pm)
     curr_time = HAL_GTIMER_READ();
     delta_time = (curr_time - pm_record.sleep_start_time);
 
-    /* TODO: this calculation can be removed, as it's overwritten by sf_latch_tick */
+    /* TODO: this calculation can be removed, as it's overwritten by pm_latch_tick */
     g_sleep_tick = (uint64_t)delta_time * RT_TICK_PER_SECOND / gtime_freq;
 
     base_tick = rt_tick_get();
     new_tick = base_tick + g_sleep_tick;
 
-    new_tick = sf_latch_tick(new_tick, curr_time, gtime_freq, (void *)0);
+    new_tick = pm_latch_tick(new_tick, curr_time, gtime_freq, (void *)0);
     g_sleep_tick = new_tick - base_tick;
 
     return g_sleep_tick;
