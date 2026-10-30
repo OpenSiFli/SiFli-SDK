@@ -777,6 +777,15 @@ def menuconfig(kconf,conf='.config'):
     # Load existing configuration and set _conf_changed True if it is outdated
     _conf_changed = _load_config()
 
+    # Refuse to open the configuration if an active configdefault targets a
+    # symbol that is not defined. Such a tree cannot build, and letting the
+    # user edit it would only hide the problem until the next build.
+    errors = _check_configdefaults()
+    if errors:
+        sys.exit("\n" + "\n\n".join(errors) + "\n\n"
+                 "error: active configdefault targets are undefined; fix the "
+                 "Kconfig files before running menuconfig\n")
+
     # Filename to save minimal configuration to
     _minconf_filename = _conf_filename
 
@@ -1054,7 +1063,7 @@ def _menuconfig(stdscr):
             if 'proj.conf' in _minconf_filename or _minconf_filename=='board.conf' :
                 _warning_board()
             else:
-                filename = _save_dialog(_kconf.write_config, _conf_filename,
+                filename = _save_dialog(_write_config_checked, _conf_filename,
                                     "configuration")
                 if filename:
                     # save header file
@@ -1063,7 +1072,7 @@ def _menuconfig(stdscr):
                     _conf_changed = False
 
         elif c in ("d", "D"):
-            filename = _save_dialog(_kconf.write_min_config, _minconf_filename,
+            filename = _save_dialog(_write_min_config_checked, _minconf_filename,
                                     "minimal configuration")
             if filename:
                 _minconf_filename = filename
@@ -1115,9 +1124,9 @@ def _quit_dialog():
         if c == "y":
             # Returns a message to print
             if 'proj.conf' in _minconf_filename or _minconf_filename=='board.conf' :
-                msg = _try_save(_kconf.write_min_config, _minconf_filename, "minimal configuration")
+                msg = _try_save(_write_min_config_checked, _minconf_filename, "minimal configuration")
             else:                        
-                msg = _try_save(_kconf.write_config, _conf_filename, "configuration")
+                msg = _try_save(_write_config_checked, _conf_filename, "configuration")
                 if msg:
                     # save header file
                     _kconf.write_autoconf()
@@ -2028,6 +2037,49 @@ def _try_load(filename):
         _error("Error loading '{}'\n\n{} (errno: {})"
                .format(filename, e.strerror, errno.errorcode[e.errno]))
         return False
+
+
+def _check_configdefaults():
+    # Runs the configdefault check and returns the warnings it generated.
+    # Warnings are disabled while curses is active and stderr is unusable
+    # there, so collect them for the caller to display.
+    old_warn = _kconf.warn
+    old_warn_to_stderr = _kconf.warn_to_stderr
+    _kconf.warn = True
+    _kconf.warn_to_stderr = False
+    try:
+        before = len(_kconf.warnings)
+        _kconf.check_undefined_configdefaults()
+        return _kconf.warnings[before:]
+    finally:
+        _kconf.warn = old_warn
+        _kconf.warn_to_stderr = old_warn_to_stderr
+
+
+def _write_checked(write_fn, filename):
+    # Wraps a configuration writer so that a configuration with an active
+    # configdefault targeting an undefined symbol is never saved.
+    warnings = _check_configdefaults()
+    if warnings:
+        # Key dialogs clip long lines instead of wrapping, and the warnings
+        # contain long paths, so wrap them to the dialog width here.
+        width = max(_width(_stdscr) - 6, 20)
+        text = ("Cannot save the configuration:\n\n"
+                "These configdefault statements are active, but their target "
+                "symbol is not defined:\n\n" + "\n\n".join(warnings))
+        text = "\n".join(textwrap.fill(line, width) if line else line
+                         for line in text.split("\n"))
+        _error(text)
+        return None
+    return write_fn(filename)
+
+
+def _write_config_checked(filename):
+    return _write_checked(_kconf.write_config, filename)
+
+
+def _write_min_config_checked(filename):
+    return _write_checked(_kconf.write_min_config, filename)
 
 
 def _save_dialog(save_fn, default_filename, description):

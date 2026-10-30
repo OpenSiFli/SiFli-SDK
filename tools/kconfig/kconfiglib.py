@@ -815,6 +815,7 @@ class Kconfig(object):
       See the module docstring.
     """
     __slots__ = (
+        "_configs_loaded",
         "_encoding",
         "_functions",
         "_set_match",
@@ -983,6 +984,11 @@ class Kconfig(object):
         self.warn_unsatisfied_deps = True
 
         self.warnings = []
+
+        # True once load_config() has run successfully, or has determined that
+        # the default symbol values are final. Consumed by
+        # check_undefined_configdefaults(), which needs final symbol values.
+        self._configs_loaded = False
 
         # symbol definitions needs to be excluded when saving as minimal conf
         self.excluding_sym = []
@@ -1233,6 +1239,7 @@ class Kconfig(object):
                not exists(join(self.srctree, filename)):
                 defconfig = self.defconfig_filename
                 if defconfig is None:
+                    self._configs_loaded = True
                     return "Using default symbol values (no '{}')" \
                            .format(filename)
 
@@ -1256,6 +1263,7 @@ class Kconfig(object):
         finally:
             self._warn_assign_no_prompt = True
 
+        self._configs_loaded = True
         return ("Loaded" if replace else "Merged") + msg
 
     def _load_config(self, filename, replace):
@@ -3855,8 +3863,13 @@ class Kconfig(object):
                                        sym.name_and_loc))
 
             else:  # UNKNOWN
-                self._warn("{} defined without a type"
-                           .format(sym.name_and_loc))
+                # Symbols that only have configdefault nodes are validated
+                # after the configuration fragments are loaded, by
+                # check_undefined_configdefaults(). Their conditions may be
+                # inactive, in which case the configdefault is inert.
+                if not all(node.is_configdefault for node in sym.nodes):
+                    self._warn("{} defined without a type"
+                               .format(sym.name_and_loc))
 
 
             if sym.ranges:
@@ -3876,6 +3889,55 @@ class Kconfig(object):
                                                sym.name_and_loc,
                                                low.name_and_loc,
                                                high.name_and_loc))
+
+    def check_undefined_configdefaults(self):
+        """
+        Checks for configdefault statements that are active in the currently
+        loaded configuration but whose target symbol is not defined by any
+        'config' or 'menuconfig' statement.
+
+        configdefaults whose condition evaluates to n are inert, just like
+        'default ... if <false>', and do not generate warnings. This makes it
+        possible to keep per-module configdefaults in always-sourced Kconfig
+        files even when the module Kconfig itself is conditionally sourced.
+
+        Must be called after Kconfig.load_config(). Generates at most one
+        warning per symbol per call, pointing at the first active
+        configdefault. Every consumer that displays or enforces Kconfig
+        warnings must call this: the parse-time "defined without a type"
+        warning is suppressed for symbols that only have configdefault nodes.
+
+        Conditions follow normal Kconfig semantics, so a misspelled guard
+        symbol evaluates to n and makes the block inert. Warnings are subject
+        to Kconfig.warn; callers that disabled warnings must re-enable them
+        (see _check_configdefaults() in menuconfig.py).
+        """
+        if not self._configs_loaded:
+            raise KconfigError(
+                "check_undefined_configdefaults() must be called after "
+                "load_config()")
+
+        for sym in self.unique_defined_syms:
+            if not sym.configdefaults:
+                continue
+
+            if any(not node.is_configdefault for node in sym.nodes):
+                # Defined by a real 'config'/'menuconfig' statement. Any
+                # missing type is diagnosed by _check_sym_sanity().
+                continue
+
+            active = [(node, cond)
+                      for node in sym.nodes if node.is_configdefault
+                      for _, cond in node.defaults if expr_value(cond)]
+            if not active:
+                continue
+
+            node, cond = active[0]
+            self._warn(
+                "configdefault for {} is active (condition: {}), but the "
+                "symbol has no 'config' or 'menuconfig' definition"
+                .format(sym.name, expr_str(cond)),
+                node.filename, node.linenr)
 
     def _check_choice_sanity(self):
         # Checks various choice properties that are handiest to check after
