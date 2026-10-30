@@ -141,6 +141,12 @@ void BSP_MIC1_PowerDown(void);
 void BSP_MIC2_PowerUp(void);
 void BSP_MIC2_PowerDown(void);
 
+/**
+ * @brief Speaker power amplifier power
+ */
+void BSP_SPK_PowerUp(void);
+void BSP_SPK_PowerDown(void);
+
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 
 /**

@@ -123,11 +123,13 @@ RT_WEAK void audio_hardware_pa_init()
 }
 RT_WEAK void audio_hardware_pa_start(uint32_t samplerate, uint32_t reserved)
 {
-
+    (void)samplerate;
+    (void)reserved;
+    BSP_SPK_PowerUp();
 }
 RT_WEAK void audio_hardware_pa_stop(void)
 {
-
+    BSP_SPK_PowerDown();
 }
 
 #endif

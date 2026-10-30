@@ -9,11 +9,13 @@
 
 #ifdef BSP_USING_RTTHREAD
     #include <rtthread.h>
-
-    #define PDM_MIC_PWR_SETTLE_MS   5
-
-    static int pdm_mic_ref;
 #endif /* BSP_USING_RTTHREAD */
+
+#define PDM_MIC_PWR_SETTLE_MS   5
+#define PA_START_DELAY_MS       100
+#define PA_STOP_DELAY_MS        10
+
+static int pdm_mic_ref;
 
 void aw9523_ensure_init(void)
 {
@@ -106,6 +108,25 @@ void BSP_CAMERA_PowerDown(void)
 }
 
 #ifdef BSP_USING_RTTHREAD
+
+void BSP_SPK_PowerUp(void)
+{
+    aw9523_ensure_init();
+
+    if (aw9523_set_pin(AW9523_PIN_AU_PA_EN, 1) != 0)
+    {
+        rt_kprintf("audio PA: enable failed\n");
+        return;
+    }
+
+    rt_thread_mdelay(PA_START_DELAY_MS);
+}
+
+void BSP_SPK_PowerDown(void)
+{
+    aw9523_set_pin(AW9523_PIN_AU_PA_EN, 0);
+    rt_thread_mdelay(PA_STOP_DELAY_MS);
+}
 
 static void pdm_mic_power(int on)
 {
