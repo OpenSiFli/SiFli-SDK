@@ -188,7 +188,10 @@ static void update_sec_flash(struct sec_configuration *sec_config)
         size = (size + 4096) / 4096 * 4096;
     }
     g_flash_erase(flash_addr, size);
-    g_flash_read(flash_addr, (const int8_t *)sec_config, sizeof(struct sec_configuration));
+    g_flash_write(flash_addr, (const int8_t *)sec_config, sizeof(struct sec_configuration));
+
+    SCB_InvalidateDCache_by_Addr((void *)flash_addr, size);
+    SCB_InvalidateICache_by_Addr((void *)flash_addr, size);
 }
 
 static void select_boot()
@@ -353,14 +356,14 @@ void boot_images_help()
             {
                 // Reuse DFU's startup logic
                 // Set running_imgs[CORE_HCPU] to point to DFU's image header
-                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & 
-                    (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
+                sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) &
+                        (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
             }
         }
 
 // dfu_v2 logical program:
         if (DFU_V2_LOADER_START_ADDR != DFU_FLASH_UNINIT_32
-            && DFU_V2_LOADER_SIZE != DFU_FLASH_UNINIT_32)
+                && DFU_V2_LOADER_SIZE != DFU_FLASH_UNINIT_32)
         {
             bool needs_update = 0;
             for (int i = 0; i < DFU_MAX_FW_FILES; i++)
@@ -371,18 +374,18 @@ void boot_images_help()
                 // Check the magic number first
                 uint32_t magic_value = 0;
                 int magic_result = g_flash_read(
-                    base + DFU_MAGIC_OFFSET,
-                    (const int8_t *)&magic_value,
-                    sizeof(uint32_t));
+                                       base + DFU_MAGIC_OFFSET,
+                                       (const int8_t *)&magic_value,
+                                       sizeof(uint32_t));
 
                 if (magic_result == sizeof(uint32_t)
-                    && magic_value == DFU_FW_MAGIC)
+                        && magic_value == DFU_FW_MAGIC)
                 {
                     uint32_t update_value = 0;
                     int result = g_flash_read(
-                        base + DFU_NEEDS_UPDATE_OFFSET,
-                        (const int8_t *)&update_value,
-                        sizeof(uint32_t));
+                                     base + DFU_NEEDS_UPDATE_OFFSET,
+                                     (const int8_t *)&update_value,
+                                     sizeof(uint32_t));
 
                     if (result == sizeof(uint32_t) && update_value)
                     {
@@ -393,12 +396,12 @@ void boot_images_help()
             }
 
             if (needs_update
-                && is_ota_program_valid(DFU_V2_LOADER_START_ADDR))
+                    && is_ota_program_valid(DFU_V2_LOADER_START_ADDR))
             {
                 sec_config_cache.running_imgs[CORE_HCPU] =
-                    (struct image_header_enc *) &(
+                    (struct image_header_enc *) & (
                         ((struct sec_configuration *)
-                            FLASH_TABLE_START_ADDR)
+                         FLASH_TABLE_START_ADDR)
                         ->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)]);
             }
         }
