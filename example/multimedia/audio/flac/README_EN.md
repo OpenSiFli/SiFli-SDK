@@ -9,6 +9,7 @@
 - sf32lb52-lcd
 - sf32lb56-lcd
 - sf32lb58-lcd
+- sf32lb57-lcd
 
 ## Overview
 
@@ -93,5 +94,5 @@ Manual command：
 | Version | Date    | Release Notes   |
 | :------ | :------ | :-------------- |
 | 0.0.1   | 04/2026 | Initial version |
-|         |         |                 |
+| 0.0.2   | 10/2026 | Fix the crash caused by sending a command repeatedly |
 |         |         |                 |
