@@ -1,6 +1,6 @@
 config ASIC
     bool
-    select BSP_USING_AW9523
+    select BSP_USING_AW9523 if BF0_HCPU && !BF0_ACPU
     default y
 
 config BSP_SUPPORT_DPI
