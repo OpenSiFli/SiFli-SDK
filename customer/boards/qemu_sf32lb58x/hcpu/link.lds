@@ -8,7 +8,9 @@
  *   RAM2 : 0x28000000 (2 MB, where the data region lives)
  *
  * Copy/zero table layout matches the __copy_table_start__ / __zero_table_start__
- * convention consumed by startup_qemu.S (source, dest, size in bytes).
+ * convention consumed by the Reset_Handler of the startup this board links --
+ * the chip's Templates/gcc/startup_bf0_hcpu.S, not a startup of the board's own
+ * (source, dest, size in bytes).
  ******************************************************************************/
 ENTRY(Reset_Handler)
 
@@ -48,10 +50,30 @@ __HEAP_SIZE  = 0x00010000;   /* 64 KB */
 
 SECTIONS
 {
+    /*
+     * The vector table has to be given content by the script itself -- here four
+     * bytes after it -- or it never reaches the image. The chip's
+     * startup_bf0_hcpu.S declares it as `.section .vectors` with no flags, so the
+     * input section is not allocatable, and an output section whose content
+     * comes only from such an input is emitted not allocatable too: it is left
+     * out of the LOAD segment, and the section that follows (.text) is laid down
+     * at the same address, on top of the table. The image then has no reset
+     * vector. QEMU takes the initial SP and PC from whatever now sits at ROM
+     * start and locks up before Reset_Handler runs a single instruction:
+     *
+     *     qemu: fatal: Lockup: can't escalate 3 to HardFault (current priority -1)
+     *     R15=47704718  (deregister_tm_clones, read as a vector)
+     *
+     * Every real board's script gives it that content the same way; see the
+     * .vectors block in drivers/cmsis/<chip>/Templates/gcc/hcpu/link.lds, where
+     * the same four bytes also keep the next section's load address from landing
+     * on the table.
+     */
     .vectors :
     {
+        _stext = ABSOLUTE(.);
         KEEP(*(.vectors));
-        . = ALIGN(4);
+        . = . + 4;
     } > ROM
 
     .text :
