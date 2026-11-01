@@ -7,10 +7,9 @@
 > **There are now examples you can actually run**: `example/test/unit_test/` (on-board Unity
 > unit tests) and `example/get-started/hello_world/` (the console and pytest harnesses).
 >
-> Still **not in this batch of commits**: the QEMU carrier from section 4
-> (`customer/boards/qemu_*`, `rtos/rtthread/bsp/sifli/drivers_qemu/`, `tools/qemu/`,
-> `example/qemu/`), and the **two CMock example projects** from section 7.1 (the next
-> change). Each place that mentions those two sections belongs to its own batch.
+> The QEMU carrier from section 4 (`customer/boards/qemu_*`,
+> `rtos/rtthread/bsp/sifli/drivers_qemu/`, `tools/qemu/`, `example/qemu/`) and the **two CMock
+> example projects** from section 7.1 are in the tree now too, so the commands run.
 > For the full boundary, see the table at the top of `tools/sdk_test/DESIGN.md`.
 
 ---
@@ -38,11 +37,9 @@
 
 ## 2. Quick Start (No Hardware Needed)
 
-> **You can type this section out as it stands.** The tree contains two example test case projects
-> you can list and plan: `example/get-started/hello_world/` (console and pytest)
-> and `example/test/unit_test/` (on-board Unity unit tests).
-> Only `example/qemu/` is in another batch along with the QEMU carrier, so `-T example` will be
-> missing that one entry.
+> **You can type this section out as it stands.** The tree contains three example test case projects
+> you can list and plan: `example/get-started/hello_world/` (console and pytest),
+> `example/test/unit_test/` (on-board Unity unit tests) and `example/qemu/`.
 
 ```bash
 ./export.ps1                      # Windows; on Linux/macOS use source ./export.sh
@@ -260,13 +257,11 @@ while your SDK keeps changing. Two layers:
 
 ## 4. Running Without Hardware: the QEMU Carrier
 
-> **The content of this section is in another batch of commits, along with the QEMU carrier.**
-> The framework side's `backends/qemu.py` is already in the tree, but the boards these commands
-> need (`customer/boards/qemu_*`), the BSP (`rtos/rtthread/bsp/sifli/drivers_qemu/`) and the
-> examples (`example/qemu/`) are all still missing, so **typing them out will fail**. And the
-> QEMU route itself is not settled yet, so this section describes the design intent.
+> **Everything this section needs is in the tree now**: the framework side's `backends/qemu.py`,
+> the boards (`customer/boards/qemu_*`), the BSP (`rtos/rtthread/bsp/sifli/drivers_qemu/`) and the
+> examples (`example/qemu/`), so the commands below run as written.
 
-A real board is not the only carrier. `qemu_cortex_m33` is an ordinary board name in the SDK,
+A real board is not the only carrier. `qemu_sf32lb52x` is an ordinary board name in the SDK,
 so **the same test cases, with the same harnesses, can run with no hardware at all** — no Lab Agent,
 no binding file, no wiring.
 
@@ -282,7 +277,7 @@ The test case declares where it runs:
   - id: unit_test.qemu
     harness: unity
     timeout: 120
-    integration_platforms: [qemu_cortex_m33]   # with this, no binding is needed
+    integration_platforms: [qemu_sf32lb52x]   # with this, no binding is needed
     harness_config:
       autorun: true
 ```
@@ -292,8 +287,9 @@ You need QEMU installed locally; when it is not on PATH, point at it with `SIFLI
 
 ### 4.1 QEMU Boards with a Chip Identity
 
-`qemu_cortex_m33` is a **fake SoC** — it has not selected any chip. To touch anything chip-related
-(`bf0_hal.h`, register maps, any code under `#ifdef SOC_SF32LB5xx`), you need these five boards:
+All five QEMU boards **select a chip** — there is no chipless carrier. To touch anything
+chip-related (`bf0_hal.h`, register maps, any code under `#ifdef SOC_SF32LB5xx`), pick the board
+whose series matches:
 
 | Board name | Chip identity |
 |---|---|
@@ -303,7 +299,13 @@ You need QEMU installed locally; when it is not on PATH, point at it with `SIFLI
 | `qemu_sf32lb57x` | SF32LB57X |
 | `qemu_sf32lb58x` | SF32LB58X |
 
-The same QEMU machine (mps2-an505), the same `link.lds`, **only the chip identity differs**.
+The same QEMU machine (mps2-an505), the same `link.lds`, **only the chip identity differs** — and
+that identity has to be in the board name, since `--board=<name>` resolves to
+`customer/boards/<name>/hcpu` and a testcase names its platform by board name.
+
+> There used to be a sixth carrier, `qemu_cortex_m33`, that selected no chip and served as a fake
+> SoC. It is **gone**: the cases that need `bf0_hal.h` (CMock stubs, the HAL tests, `unit_test`)
+> could not compile against it at all, and the rest run just as well on a board that names a chip.
 
 ```bash
 scons --board=qemu_sf32lb52x -j8            # build directly
@@ -326,10 +328,12 @@ will not be satisfied), and you do not control the include order — what comes 
 **Note**: these boards only exist in the KCONFIG_V2 flow that `--board=` goes through; the old
 `sdk.py menuconfig` without `--board=` cannot see them (in v1 the chip is a choice, mutually exclusive with `SOC_QEMU`).
 
-**Why QEMU matters**: like the `pc` simulator, `BSP_USING_QEMU` makes `drivers/SConscript`
+**Why QEMU matters**: like the `pc` simulator, `SOC_QEMU` makes `drivers/SConscript`
 **skip the whole `drivers/` tree**. That is, the image contains no HAL implementation at all,
 and a CMock-generated mock is the **only definition** of the symbol it replaces —
 which is exactly the precondition requirement 3 (stubbing) needs. See `middleware/test_fwk/mocks/README.md` for details.
+(Skipping is the default: a project that declares `QEMU_HAL_DRIVER_ENABLED` takes the tree back out of
+it — all of `drivers/` but `cmsis/`, see 7.2 — that is the route the real-HAL cases take.)
 
 **A few traps (all of them silent failures)**:
 
@@ -341,8 +345,9 @@ which is exactly the precondition requirement 3 (stubbing) needs. See `middlewar
   and what you see is "no Unity summary line found" after waiting out the full timeout.
 - The console **does not go through interrupts**; it is polled (measured: enabling the UART receive interrupt and unmasking
   every NVIC line produces no device interrupt at all). So do not expect it to reflect real interrupt behaviour.
-- The `qemu_run.*` and `qemu_smoke_test.py` under `tools/qemu/` still use the old semihosting calls and are
-  **out of date**; running them produces no output.
+- The `qemu_run.*` and `qemu_smoke_test.py` under `tools/qemu/` match the backend: the same
+  `-display none -monitor none -serial stdio`, with `SIFLI_QEMU_EXE` pointing at the binary when
+  QEMU is not on PATH. Use them to run an image outside `sdk.py test`.
 
 ## 5. Writing a `testcase.yaml`
 
@@ -507,9 +512,10 @@ silently ignored.
 
 ```yaml
     harness_config:
-      prompt: "msh />"    # optional; default msh />. Wait for it to appear in the console
-                          # output before sending the command; writing your own string
-                          # replaces it, it does not add to it
+      prompt: "msh />"    # optional; the default is the msh prompt (msh [^>\n]*>, which
+                          # takes both `msh >` and `msh />`). Wait for it to appear in the
+                          # console output before sending the command; writing your own
+                          # string replaces it, it does not add to it
       # cmd: unity_run    # optional; default unity_run. The command itself, sent once the wait is over
 ```
 
@@ -521,9 +527,9 @@ opens the gate" — again not one after the other.
 Waiting for `prompt` is load-bearing, not a safety net: on a manual-reset board, the console is opened
 while **the download has just finished writing and the board is still booting**, and sending the command
 out at that moment means the board never receives it. The two defaults are a matched pair — `cmd` sends
-`unity_run` by default, and that is an **msh command**, which can only run if msh is already up; so
-`prompt` waits for `msh />` by default, which is exactly that precondition. For a different shell, point
-`prompt` at the readiness marker the firmware itself prints.
+`unity_run` by default, and that is an **msh command**, which can only run if msh is already up; so `prompt`
+waits for the msh prompt by default (`msh [^>\n]*>`, which takes both spellings), which is exactly that
+precondition. For a different shell, point `prompt` at the readiness marker the firmware itself prints.
 
 Not finding the prompt **is not a failure**: the command is sent anyway and the existing checks decide.
 
@@ -553,7 +559,7 @@ sdk.py test run  -T example/test/unit_test -t unit_test.board `
     -p sf32lb52-lcd_a128r16
 ```
 
-**The `unit_test.qemu` one is pinned to `qemu_cortex_m33`**, a platform this lab does not have, so
+**The `unit_test.qemu` one is pinned to `qemu_sf32lb52x`**, a platform this lab does not have, so
 `test plan` **aborts as a whole** (it is strict), while `test run` records it as an ERROR and carries on.
 So pick the real-hardware one with `-t unit_test.board`.
 
@@ -684,9 +690,8 @@ and the host-side parser tolerates both LF and CRLF.
 
 ### 7.1 Stubbing: CMock
 
-> CMock itself and the `mock_*.c/h` generated artifacts **are committed along with this change**; the two projects below are for the next one.
-> And the `BSP_USING_QEMU` they depend on (section 4) is not in this batch either, so these commands cannot run yet
-> — they wait for the QEMU carrier to catch up.
+> CMock itself and the `mock_*.c/h` generated artifacts came in with an earlier commit; the two projects below
+> and the `SOC_QEMU` they depend on (section 4) are in the tree now too, so these commands run locally.
 
 When the branch you want to test cannot be reproduced on the bench ("erase failure", "write timeout", "ID mismatch"),
 replace that dependency with a CMock-generated mock. Two ready-made projects to copy from:
@@ -703,9 +708,11 @@ sdk.py test run -T example/test/hal_mock
 
 Both need a **board with a chip identity** (see 4.1), because the module under test includes `bf0_hal.h`.
 
-**The mechanism is "do not compile the mocked implementation", not interception**: `BSP_USING_QEMU` makes
+**The mechanism is "do not compile the mocked implementation", not interception**: `SOC_QEMU` makes
 `drivers/SConscript` skip the whole `drivers/` tree, the image contains no HAL implementation at all,
 so the mock is the only definition of that symbol — no duplication, no weak symbols, no touching the ROM table.
+(Skipping is the default: a project that declares `QEMU_HAL_DRIVER_ENABLED` takes the tree back out of
+it — all of `drivers/` but `cmsis/`, see 7.2 — and `hal_mock` declares no such thing, so the paragraph above is its case.)
 
 Three points that really do bite:
 
@@ -724,6 +731,147 @@ Without that step you cannot prove the mock is really linked in — if what got 
 
 For the details (how the generator is run, how `:strippables` is written, why the chip identity must come from the board,
 why the link-time closure is only 2 symbols), see `middleware/test_fwk/mocks/README.md`.
+
+### 7.2 Running the Real HAL: Registers in RAM
+
+7.1 replaces a HAL **function** with a mock and measures whoever calls it; this one goes the other way, compiling
+the HAL **implementation** into the image and executing it. The first answers "what does the driver do when the
+HAL reports this state", the second "are the words the driver writes to the peripheral right". Neither covers
+the other: the second's assertion grain — the exact word written, the exact place a channel lands — is not
+something a bench can give you.
+
+**The mechanism**: SiFli's HAL is STM32-style — the handle's `Instance` is the register base, and every access in
+the driver is written `hptc->Instance->FIELD`. So a test can declare a register block of its own and hand over its
+address:
+
+```c
+static PTC_TypeDef g_ptc_regs;
+g_ptc.Instance = &g_ptc_regs;
+HAL_PTC_Enable(&g_ptc, 1);
+TEST_ASSERT_EQUAL_HEX32(expected, g_ptc_regs.IER);
+```
+
+Every word the driver writes lands in that variable. **No linker script change, no reserved memory and no address
+remapping** are involved: the block is an ordinary variable whose address the linker chooses, and the carrier's own
+console at `0x40200000` is nowhere near it.
+
+**Getting the HAL into the image**: `SOC_QEMU` makes `drivers/SConscript` skip the whole `drivers/` tree,
+so running the real HAL in a carrier image means the project has to narrow that skip. It does so by declaring a
+switch of its own in `Kconfig.proj`:
+
+```kconfig
+config QEMU_HAL_DRIVER_ENABLED
+    bool
+    depends on SOC_QEMU
+    default y
+```
+
+`drivers/SConscript` reads it and compiles the tree back out of the skip, by the SDK's own walk — all of
+`drivers/` but `cmsis/`, whose chip bring-up does not compile on a carrier and whose `startup_bf0_hcpu.S`
+would be a second `Reset_Handler` beside the carrier's own — **the project lists no files at all**, and the
+objects land under `build_qemu_sf32lb52x_hcpu/sifli_sdk/drivers/<subdir>/` by the same rule every other SDK
+module follows.
+`example/test/hal_real/project/Kconfig.proj` holds those three lines.
+
+**Why the project declares that switch, and the driver layer does not offer it**: it has to be promptless,
+or it would appear in `menuconfig`, which it must not; but a promptless symbol **cannot** be assigned in a
+configuration file — `check_no_promptless_assign` in `tools/kconfig/kconfig.py` (invoked with
+`--handwritten-input-configs` from `tools/build/building.py:3185`) fails the build outright with
+
+```
+is assigned in a configuration file, but is not directly user-configurable (has no prompt)
+```
+
+Satisfying both at once leaves one route: the value has to come from a `default`, and that means the project
+that wants it declares it — the arrangement `example/lcpu_rom/Kconfig.proj:6-8` uses for `ROM_ATTR`. The cost
+is that every HAL-testing project copies those lines again; the benefit is that a project which does not
+declare it **cannot see the symbol at all**, which is how `example/test/hal_mock` keeps its image free of any
+HAL implementation so that its CMock mock stays the sole definition of a HAL symbol (see 7.1).
+
+**What that costs**: the switch brings the whole of `drivers/hal` back, not the two modules a case touches — 68
+of its 76 `.c` on `qemu_sf32lb52x` (the other 8 are excluded by the existing per-chip logic), all 68 compiling
+with zero diagnostics and no unresolved symbol at the link. The cost is build time: a clean `-j8` build goes
+from ~18–21 s to ~28–31 s. It does not mean the whole subtree reaches the image either: gcc sections each
+function (`-ffunction-sections`) and the link discards what nothing reaches (`--gc-sections`), so 3 of the 68
+keep any code at all, 1,118 bytes. Three things you would not guess without measuring:
+
+- **The image comes out about 4 KB *smaller*** (`.text` 33,453 → 29,501 B): `bf0_hal.c:56` defines
+  `__WEAK __aeabi_unwind_cpp_pr0`, and libgcc's unwind objects (`libunwind.o` + `pr-support.o` +
+  `unwind-arm.o`, 4,039 B) existed only to satisfy that reference, so `bf0_hal.o` on the link line retires
+  them. It is not a benefit this project asked for — on a real board `bf0_hal.o` is always linked.
+- **`drivers/hal` registers no init entries at all** (no `INIT_*_EXPORT` anywhere in it), so the usual worry
+  that "the kept init table drags things in" does not apply here.
+- **What does reach in is the vector table**: `bf0_hal.c:575` defines a **strong** `NMI_Handler` while
+  `drivers_qemu/startup_qemu.S:112` declares it weak, so on this carrier the HAL's handler takes the slot.
+  That is a real behaviour change and the tests cannot see it — NMI never fires under mps2-an505.
+
+**The limit**: only entries that **take `Instance` from the caller** can be driven this way. A HAL file that
+reaches for a global `hwp_*` pointer (RCC, pinmux, AON) has no handle to point anywhere, and needs a different
+mechanism.
+
+```bash
+sdk.py test run -T example/test/hal_real     # no hardware, no Lab Agent, no binding
+```
+
+The project's two suites (`ptc`, `crc`) share one image and the host dispatches by suite name — the same rule as
+section 6.
+
+**What it establishes**: the driver's decision logic and its register choreography — which bits a value goes to,
+which block a channel lands in, whether the table's constants are right, which word a polling pass writes. The
+values written are readable afterwards, so a case asserts the **exact word** instead of inferring it from behaviour.
+
+**What it does not establish** (these matter more than the lines above, and each case says so in its own header):
+
+- **Timing, handshakes, interrupts, DMA completion: none of it.** A polling path is testable only because the test
+  can **write the status bit beforehand**: that is what `test_crc.c` does with `CRC_SR_DONE`, and the wait loop in
+  `HAL_CRC_Accumulate` reads back exactly what the test put there. The other way round, a driver that **polled the
+  wrong bit, or never exited**, cannot be caught here.
+- **RAM cannot tell a write-1-to-clear register from a plain one.** `ICR |= 1 << channel` clears an interrupt flag
+  on silicon and merely sets a bit in RAM. That case therefore pins the **store** itself, not its effect.
+
+**Three things the first run turned up** (they all cost time):
+
+1. **`setUp`/`tearDown` is one pair per image, not one per suite.** Unity reaches the pair by name from
+   `UnityDefaultTestRun()`, and `middleware/test_fwk/sifli_unity_runner.c` defines it `RT_WEAK` so a project can
+   replace it — two suites in one image each defining it is two strong definitions, and the link stops:
+
+   ```
+   test_ptc.c:100: multiple definition of `setUp';
+   test_crc.c:56: first defined here
+   ```
+
+   So the pair lives in `src/unity_main.c` (which already owns the other image-wide concern, autorun), and it calls
+   the `*_fixture_reset()` each suite exports, with the registers staying private to their own file.
+
+2. **`HAL_PTC_Enable()` without `HAL_PTC_Init()` writes to address 0, and says nothing.** `Chn` is derived by `Init`
+   alone (`(PTC_ChnTypeDef *)&Instance->TCR1 + Channel`), and `Enable` never derives it; with `Init` left out the
+   handle still holds the NULL `setUp` memsets into it, so `hptc->Chn->TCR = ...` lands at 0 — which on this carrier
+   is **real memory** (`0x0` is an alias of `0x10000000`), not a fault. The assertion then reads zeros out of a
+   register nothing wrote, and a case can pass **vacuously**: asserting "RCR stays 0" while the driver under test is
+   writing to 0. The arrange step is part of the test.
+
+3. **This carrier's shell prompt has no slash, so the host default could not match it and every instance
+   burned its whole `timeout`.** `finsh` spells the prompt `"msh " + cwd + ">"`, and the cwd only appears
+   when `RT_USING_DFS && DFS_USING_WORKDIR` is on — which the QEMU board's `board.conf` turns off, so what
+   gets printed is `msh >` while the default was pinned to the cwd spelling and could never match. The symptom
+   reads as "a slow device": the command does not go out until the timeout expires, which does not look like a
+   pattern that never matched. Measured on this project: 132.5 s per instance → 13.8 s, run total 265 s → 27 s.
+   The fix went into the framework, not the test case: `DEFAULT_PROMPT` in `tools/sdk_test/harness/unity.py`
+   now accepts `msh [^>\n]*>`, which takes both spellings (`msh ` alone, or a `>` further down the log, does
+   not), so this project needs no `harness_config.prompt` at all — that is a property of one carrier and does
+   not belong in a test case file.
+
+One thing worth knowing, though it is not about this section's mechanism: `HAL_PTC_GetData` in
+`drivers/Include/bf0_hal_ptc.h` used to be spelled `(*(hptc->Chn->TDR))`, while `PTC_ChnTypeDef.TDR` is a plain
+`__IO uint32_t`, so expanding it **could not compile**. Nothing in the SDK ever expanded it, which is how it
+survived; `hal_real` is the first thing to — the last case in `test_ptc.c`, which reads a register back through
+the HAL, is what turned it up, and the header has since been fixed (the stray `*` gone, with a comment naming the
+project that found it). The case stays: it is the only one in the file that reads a register **through** the HAL
+rather than writing one, and breaking the macro again would take it out.
+
+The full account of the mechanism and its limits is in the project's own file headers: `testcase.yaml` (the whole
+idea), `project/Kconfig.proj` (why the switch is the project's to declare), and `src/test_ptc.c` /
+`src/test_crc.c` (what each case establishes and what it does not).
 
 ---
 
@@ -890,10 +1038,10 @@ board once more — the boot log is usually already sitting in the buffer. That 
 Enter" confirmation is the fallback kept for exactly this.
 
 (With `autorun` off and back on the send-a-command path, the host first waits for the shell prompt in the
-console output (default `msh />`) — that is the positive signal for "is it safe to send?". **Not "wait for
-the serial port to go quiet"**: the board is also quiet before it has started booting, we tried it,
-"silence" was taken for "finished talking", and the command was lost just the same. Not finding the prompt
-is not a failure: the command is sent anyway and the existing checks decide.)
+console output (default `msh [^>\n]*>`, which takes both `msh >` and `msh />`) — that is the positive signal
+for "is it safe to send?". **Not "wait for the serial port to go quiet"**: the board is also quiet before it
+has started booting, we tried it, "silence" was taken for "finished talking", and the command was lost just
+the same. Not finding the prompt is not a failure: the command is sent anyway and the existing checks decide.)
 
 #### Three things to watch
 
@@ -974,6 +1122,7 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 | Relay / power control | `transport/relay.py` has only the interface and raises `RelayNotAvailable` |
 | `backends/qemu.py` | **implemented**: the QEMU carrier can run console/unity/pytest, see section 4 |
 | CMock stubbing cases | **delivered** as two projects (middleware + HAL), see section 7.1 and `middleware/test_fwk/mocks/README.md` |
+| Real-HAL cases | **delivered**: `example/test/hal_real/` with two instances (`hal_real.ptc`, `hal_real.crc`), `sdk.py test run -T example/test/hal_real`, see section 7.2 |
 | Per-instance `build.log` | **implemented**: compiler output goes to disk instead of flooding the console |
 
 **Troubleshooting**

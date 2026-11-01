@@ -22,18 +22,19 @@
 ## 交付状态（as-built，本文其余部分为设计意图）
 
 > **本次提交的范围**：测试框架本身（发现 / 能力匹配 / 编排 / 三种 harness /
-> 后端 / 日志与报告）+ Lab Agent + 板上 Unity 运行时 + 用例注册表生成器。
+> 后端 / 日志与报告）+ Lab Agent + 板上 Unity 运行时 + 用例注册表生成器
+> + QEMU 载体（`customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
+> `tools/qemu/`、`example/qemu/`，连同它要求的构建侧改动：`SOC_QEMU` 与每块载体板
+> 各自的 `BSP_USING_BOARD_QEMU_*` 等 Kconfig 符号、`tools/build/building.py`）。
 >
-> **不在内的**，各见另一批：
+> **不在内的**只剩一处，见下一笔：
 >
 > | 不在本次提交里 | 内容 |
 > |---|---|
-> | QEMU 载体 | `customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`，以及它要求的构建侧改动（`BSP_USING_QEMU`/`SOC_QEMU` 两个 Kconfig 符号、`tools/build/building.py`、`cpuport.c` 的 `bf0_hal_hlp.h`） |
-> | CMock 打桩（需求 3） | 库（`external/cmock/`）与 mock 生成物（`middleware/test_fwk/mocks/`）已随本提交入库；两个示例工程见下一笔 |
+> | CMock 打桩的两个示例工程（需求 3） | 库（`external/cmock/`）与 mock 生成物（`middleware/test_fwk/mocks/`）已随本提交入库；`example/test/cmock_unit/` 与 `example/test/hal_mock/` 见下一笔 |
 >
-> 下文凡提到这些的地方，请按这个边界读：**`backends/qemu.py` 这个后端本身在本次提交里，
-> 它要驱动的那个载体不在**。而 QEMU 这条路线本身的做法尚未定型，本文对它的描述是设计意图，
-> 不是既成事实。
+> 下文凡提到这些的地方，请按这个边界读：**`backends/qemu.py` 这个后端本来就在框架那一笔里，
+> 载体随后一笔才到，现在两者都在树里**——QEMU 这条路线是跑通了的既成事实，不再是设计意图。
 >
 > （示例用例工程 `example/test/unit_test/` 与 `example/get-started/hello_world/` 的
 > `testcase.yaml` 曾列在上面，现已随框架一起提交。）
@@ -45,12 +46,12 @@
 | `sdk.py test` 入口（list / plan / run / info） | ✅ 完成 |
 | harness `console` / `unity` / `pytest` | ✅ 完成（`pytest` 由设计态提前到本期） |
 | harness `shell` | ⬜ 仍会明确 raise |
-| 板上 Unity：`external/unity` + `middleware/test_fwk` | ✅ 在本次提交里；单元测试用例工程见另一批 |
+| 板上 Unity：`external/unity` + `middleware/test_fwk` | ✅ 在本次提交里；用例工程 `example/test/unit_test/` 与 `example/test/hal_real/` 同批 |
 | 后端 `board`（Tier A，真板卡） | ✅ 完成 |
-| 后端 `qemu`（Tier B，无硬件） | ✅ 后端已实现并跑通；**它要驱动的 QEMU 载体不在本次提交里** |
+| 后端 `qemu`（Tier B，无硬件） | ✅ 完成，`example/qemu` 与 `-t unit_test.qemu` 都在它上面跑过 |
 | 后端 `pc_sim` | ⬜ 只有接口 |
-| 带芯片身份的 QEMU 板（`qemu_sf32lb{52x…58x}`） | ⬜ 已构建并跑通过，但**不在本次提交里** |
-| CMock 打桩用例（需求 3） | ✅ 已完成并反向验证过；**用例工程与 mock 生成物不在本次提交里** |
+| 带芯片身份的 QEMU 板（`qemu_sf32lb{52x…58x}`） | ✅ 五块都已构建并跑通过 |
+| CMock 打桩用例（需求 3） | ✅ mock 生成物已入库、两个用例工程都已跑通并反向验证过；**用例工程见下一笔** |
 | 日志与报告（按 twister 对齐） | ✅ 完成：每实例 `device.log` + `runner.log`、run 级 `runner.log`、JSON 主文档 + JUnit 派生、失败阶段标记 |
 | 需求 4（多设备） | ⬜ schema 与插件接口已支持，调度未实现 |
 
@@ -71,12 +72,12 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | | **Tier A：真板卡** | **Tier B：mock 单测** |
 |---|---|---|
 | 用例 | console 端到端、Unity 真外设单测 | 模块 API/边界 + CMock 打桩 |
-| 载体 | 真板卡（Lab Agent 分配） | **非板卡**：`pc` 板打样 → `qemu_cortex_m33` |
+| 载体 | 真板卡（Lab Agent 分配） | **非板卡**：`pc` 板打样 → `qemu_sf32lb52x` |
 | HAL | 真实 HAL | **不编译 `drivers/hal`** |
 | 需求覆盖 | 1 / 2 / 4 | 1 / 3 |
 | MVP | ✅ 本期交付 | ❌ 本期只出设计与接口 |
 
-**载体在 SDK 里天然统一**：真板卡、`pc_hcpu`、`qemu_cortex_m33` 都是 `scons --board=<name>` 的取值。区别只在"要不要向 Lab Agent 申请硬件"——真板卡要，pc/QEMU 不要（无硬件，也就没有 testbed 分配与互斥）。
+**载体在 SDK 里天然统一**：真板卡、`pc_hcpu`、`qemu_sf32lb52x` 都是 `scons --board=<name>` 的取值。区别只在"要不要向 Lab Agent 申请硬件"——真板卡要，pc/QEMU 不要（无硬件，也就没有 testbed 分配与互斥）。
 
 ---
 
@@ -87,7 +88,7 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 | 板上 C 测试框架 | RT-Thread **utest** 已在树内：`rtos/rtthread/components/utilities/utest/`，Kconfig `RT_USING_UTEST`（`rtos/rtthread/components/utilities/Kconfig:210`）。40+ 链接脚本模板已保留 `UtestTcTab` 段。**Unity 不在树内**（`external/lvgl_v9/tests/unity/` 是上游死代码，无 SConscript）。 |
 | 现成真机测试套件 | `example/hal_example/`：37 个 `src/example/example_*.c`，`UTEST_TC_EXPORT`，`proj.conf` 里 `CONFIG_RT_USING_UTEST=y`。MSH 命令 `utest_list` / `utest_run <name>`。 |
 | utest 结果契约 | `utest.c` 打印 `[  PASSED  ] [ result   ] testcase (%s)` / `[  FAILED  ]`。解析先例：`tools/audio_test_script/utestClient.py`。 |
-| 宿主载体（两个） | ① `customer/boards/pc`：`BSP_USING_PC_SIMULATOR`，MSVC/`ARCH='sim'`/x86 `.exe`，**`drivers/SConscript` 整树跳过 `drivers/`**，用 `drivers_pc/` 假驱动替代。② `customer/boards/qemu_cortex_m33`：**不在本次提交里**（见开头的范围说明），`BSP_USING_QEMU` 同样整树跳过 `drivers/`，走 arm-none-eabi + QEMU mps2-an505，控制台是模拟 UART0（**不是** semihosting，理由见需求 3）。 |
+| 宿主载体（两个） | ① `customer/boards/pc`：`BSP_USING_PC_SIMULATOR`，MSVC/`ARCH='sim'`/x86 `.exe`，**`drivers/SConscript` 整树跳过 `drivers/`**，用 `drivers_pc/` 假驱动替代。② `customer/boards/qemu_sf32lb52x`（同类载体共五块，各带一个芯片身份）：`SOC_QEMU` 同样整树跳过 `drivers/`，走 arm-none-eabi + QEMU mps2-an505，控制台是模拟 UART0（**不是** semihosting，理由见需求 3）。 |
 | 命令扩展点 | `tools/sdk_py_actions/cli/registry.py` `CommandRegistry`，自动发现 `*_ext.py`；**`test` 路径未被占用**。参考 `flash_ext.py`（含 `build_<board>` 解析）。 |
 | 烧录 | `sftool -p COMx -b 1000000 -c <chip> -m <nor\|nand> write_flash f@addr ...`，文件清单来自 `build_<board>/sftool_param.json`（机读）。J-Link 走生成的 `download.jlink`。`sdk.py flash` 已封装两条路径。 |
 | 控制台 | 设备固定 `uart1`（`customer/peripherals/console/Kconfig`），**波特率 1000000**（`drv_usart.c:29`）。 |
@@ -149,7 +150,7 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
                                   真实板卡（跑 Unity 或 msh）
 ```
 
-**两条载体路线是同一个抽象**：真板卡、`qemu_cortex_m33`、`pc_hcpu` 都是
+**两条载体路线是同一个抽象**：真板卡、`qemu_sf32lb52x`、`pc_hcpu` 都是
 `scons --board=<name>` 的取值，区别只在"要不要向 Lab Agent 申请硬件"。
 所以用例自己不需要知道跑在哪；`integration_platforms` 声明了平台的用例
 连 binding 文件都不需要。
@@ -253,7 +254,7 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 | `fixtures.py` | fixture 能力匹配、`fixture:name:param` 后缀解析（twister 语义）。 |
 | `harness/{console,unity,shell,pytest}.py` | 四种 harness 的判定逻辑（见下）。 |
 | `pytest_plugin.py` | 提供 `testbed` / `dut` / `console` / `fixture` / `apppath` / `build_dir` fixture，形态对齐 pytest-embedded。 |
-| `backends/{board,pc_sim,qemu}.py` | 执行后端。**MVP 只实现 `board`**；`pc_sim`（`customer/boards/pc`）与 `qemu`（`customer/boards/qemu_cortex_m33`）定义接口 + `NotImplementedError`，但**接口按"无需 Lab Agent 分配"设计**（它们在 SDK 里就是 board 名，构建+执行都在本地）。 |
+| `backends/{board,pc_sim,qemu}.py` | 执行后端。**MVP 只实现 `board`**；`pc_sim`（`customer/boards/pc`）与 `qemu`（`customer/boards/qemu_sf32lb52x`）定义接口 + `NotImplementedError`，但**接口按"无需 Lab Agent 分配"设计**（它们在 SDK 里就是 board 名，构建+执行都在本地）。 |
 | `runner.py` | 编排：解析 → 匹配 testbed → 构建 → （Tier A）申请 testbed → 烧录 → 执行 pytest → 收集。 |
 | `agent_client.py` | 与 Lab Agent runner 的 HTTP 客户端（stdlib `urllib`，不引 FastAPI）。申请硬件时核对对方的协议版本。 |
 | `firmware.py` | 固件包的打包/解包，**两侧共用**（agent 也 import 它）：清单解析、成员表、`build_package` / `unpack_package`。见"固件怎么过去"。 |
@@ -308,7 +309,7 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 | `shell` | 没有 | 按序下发 `{command, regex, ordered, repeat}` 到 msh | 设计 |
 | `pytest` | 可选 | 用例目录自带 `test_*.py`，拿 `dut` fixture 自由编排（多设备/外部仪器）；解析 Unity 时用 `dut.expect_unity_test_output()` | 设计 |
 
-`harness_config` 键名沿用 twister：`fixture`、`record`、`pytest_root`、`pytest_args`、`dut_fixture`、`pytest_dut_client`；`unity` 另有 `prompt`（默认 `msh />`）、`cmd`、`suite`、`autorun`。
+`harness_config` 键名沿用 twister：`fixture`、`record`、`pytest_root`、`pytest_args`、`dut_fixture`、`pytest_dut_client`；`unity` 另有 `prompt`（默认 `msh [^>\n]*>`，两种拼法都收）、`cmd`、`suite`、`autorun`。
 
 **unity 为什么不让宿主发命令。** 发命令必须落在正确时刻，而**没有可靠的时刻**：
 `unity_run` 只在 shell 起来之后才有效，可没有任何东西能可靠地宣告那一刻——启动
@@ -317,6 +318,12 @@ banner 由 main 线程打印，且**早于**提示符（提示符是优先级更
 `RT_USING_DFS && DFS_USING_WORKDIR` 时才恰好是 `msh />`，否则是 `msh >`）。命令发早
 了就丢，而症状是耗完超时后报 `no Unity summary line found`——**它指向固件，不指向
 时机**。
+
+**`prompt` 的默认值因此收两种拼法**（`msh [^>\n]*>`）。这一点当初写对了原因、写错了
+结论：默认值被钉在 `msh />` 上，而无 DFS 的载体（QEMU 就是）永远不打印那一版，于是
+每个实例先在**串口安静里白等满整个 timeout** 才发命令——症状是"设备慢"，不是"正则
+没匹配上"。实测 `example/test/hal_real`：132.5 s/实例 → 13.8 s/实例。等待有界这件事
+在这里是双刃的：它保证了不会挂死，也把"永远匹配不上"藏成了一段正常的耗时。
 
 能控制复位也不解决问题：探针只保证"板子会启动"，不保证"shell 起来了"。
 
@@ -344,7 +351,7 @@ banner 由 main 线程打印，且**早于**提示符（提示符是优先级更
 
 **为什么载体必须在 Tier B**：Tier A 是真板卡，而结果上报走串口 console（→ `drv_usart.c` → `bf0_hal_usart.c`）、启动依赖 RCC/pinmux/PMU，所以**真板卡上不能整树不编译 `drivers/hal`**。两个非板卡载体都天然满足这个前提：
 
-- `qemu_cortex_m33`（**首选；载体不在本次提交里**）：`BSP_USING_QEMU` 让 `drivers/SConscript` 整树跳过 `drivers/`。同一份 ARM elf、同一套工具链，跨平台、能进 CI，且控制台完全双向（已跑通 `harness: unity`，见下）。
+- `qemu_sf32lb52x`（**首选**）：`SOC_QEMU` 让 `drivers/SConscript` 整树跳过 `drivers/`。同一份 ARM elf、同一套工具链，跨平台、能进 CI，且控制台完全双向（已跑通 `harness: unity`，见下）。
 - `pc` 板（`BSP_USING_PC_SIMULATOR`）：同样整树跳过 `drivers/`，用 `drivers_pc/` 假驱动替代。代价：MSVC / 只能 Windows，Linux CI 跑不了。
   - **`sim/x86` vs `sim/win32` 的疑点已被推翻**：`SifliMsvcEnv()` 会把 `rtconfig.CPU` 覆写成 `win32`，路径推导是对的。
   - `--board=pc` 的全量构建原本编不过，原因是 `external/liblc3` 需要 C11 `<stdalign.h>` 而 MSVC 2017 没有；已在 `external/liblc3/SConscript` 上对模拟器跳过，pc 全量构建现在能过。
@@ -377,7 +384,7 @@ banner 由 main 线程打印，且**早于**提示符（提示符是优先级更
 
 这些在真板卡上分别来自 `drivers/cmsis/<chip>/SConscript`（芯片头路径 + `SF32LB<nnn>X`）与
 `drivers/hal/SConscript`（`SOC_BF0_HCPU` + `USE_HAL_DRIVER`），两者都在 `drivers/` 整树里、
-被 `BSP_USING_QEMU` 一并跳过，所以由载体侧补上等价物。
+被 `SOC_QEMU` 一并跳过，所以由载体侧补上等价物。
 
 **已交付（两个工程，都做了反向验证）**：
 
@@ -415,7 +422,7 @@ HAL_QSPI_GET_SR                         HAL，由 CMock 生成
 **实测的符号表边界（已核实）**：
 
 先说一句结论上的简化：**在 QEMU 载体上这段完全不适用**——挂符号表的逻辑
-（`drivers/hal/SConscript:142`）本身就在 `drivers/` 整树里，被 `BSP_USING_QEMU` 跳过，
+（`drivers/hal/SConscript:142`）本身就在 `drivers/` 整树里，被 `SOC_QEMU` 跳过，
 所以载体上永远不会挂 `sifli_rom_<chip>_gcc.sym`（在新板子的构建产物里搜 `sifli_rom`：0 处）。
 下面这段只在**把 mock 用例搬回真板卡**时才需要看——本文风险 7 提到的那种做法。
 
@@ -526,10 +533,10 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 1. **`harness: pytest` 提前到本期**——原本只是设计态。
 2. **`backends/qemu.py` 提前到本期**，连带把 QEMU 载体一起做了。
    这是最有价值的一次超范围：它让**板上的那套 Unity 单测可以完全不用硬件跑**，
-   也第一次让 Tier B 有了现实载体。**后端在本次提交里，载体不在**（见开头的范围说明）。
+   也第一次让 Tier B 有了现实载体。**后端与它要驱动的载体都在本次提交里**（见开头的范围说明）。
    代价是 QEMU BSP 上踩了一串坑（链接脚本谎报 RAM 大小、链接脚本缺 init 段、
    semihosting 输入会把 vCPU 阻塞住、UART 基址是 AN505 特有的 0x40200000），
-   记在 `docs/source/zh_CN/app_note/autotest_guide.md` 第 4 节——那一节也随载体一起在另一批。
+   记在 `docs/source/zh_CN/app_note/autotest_guide.md` 第 4 节。
 
 **依赖新增**：无。框架自己（`console` / `unity` harness、Lab Agent、自测）是纯标准库；
 `pyyaml` / `jsonschema` / `pyserial` 本就在锁定环境里，`pytest` 也已加入
@@ -547,10 +554,21 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
    （写成 stdlib `unittest` 而非 pytest：默认 SDK python 环境里没有 pytest，
    而这套自测必须开箱即用；两者兼容。）
 2. ✅ **用例发现**：`sdk.py test list -T example` 列出 ID 与 harness；`--json` 给 CI 生成矩阵用。
-3. ⬜ **真板卡端到端（需求 2）**：`sdk.py test run -T example/get-started/hello_world -p <platform>`。
-   代码路径已就绪、有端到端自测覆盖（真 Lab Agent + 伪造设备），但**没有在真实板卡上跑过**。
+3. ◐ **真板卡端到端（需求 2）**，2026-10-07 首次在真硬件上跑起来：
+   - ✅ **`unity` harness 在真板上**：`sdk.py test run -T example/test/unit_test -t unit_test.board
+     -p sf32lb52-lcd_a128r16`，30.4 s，9 条用例，`stage: run`、`console: 3025 bytes, complete`
+     ——预算 / 构建 / 烧录 / 开串口 / autorun / 判定全链路走通，`reset: auto` 的时序也对
+     （banner 从 `Serial:c2,Chip:4…` 起就在转录里）。唯一的红是 `unit_test.lz4.boundaries`，
+     即下面风险 9 那条未定论的断言——它在这块板上和 QEMU 上**给出同样的结果**，所以与载体无关。
+   - ⬜ **`console` harness 在真板上**：`sdk.py test run -T example/get-started/hello_world
+     -p <platform>` 仍未跑过。后端本身已在真硬件上验证（上一条），差的只是这个 harness 的路径。
 4. ✅ **无硬件端到端（QEMU）**：`sdk.py test run -T example/qemu` 通过；
-   板上那套 Unity 单测也能整个搬过来跑：`-t unit_test.qemu` 通过。
+   板上那套 Unity 单测也能整个搬过来跑：`-t unit_test.qemu`。
+   ⚠️ 但它现在**不是全绿**：`unit_test.lz4.boundaries` 会红，那是风险 9 那条未定论的
+   断言（与载体无关——`test_lz4.c` 无条件编译，任何板子上都在镜像里）。`unit_test.qemu`
+   原本跑在无芯片的 `qemu_cortex_m33` 上（那块板后来删掉了，树里只剩带芯片身份的载体），
+   `circular_buf` 那套进不去；改用 `qemu_sf32lb52x`
+   之后三套都在（9 条用例），其中 8 条通过。
 5. ✅ **反例必须失败**：期望串写成 `Hello worldXYZ!` 时判定为 FAIL；
    Unity 的空转（`0 Tests` + `OK`）被拒；乱序的启动日志被拒。
    （这一条是这套框架最容易做假的地方，单测里钉死了。）
@@ -593,6 +611,17 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 | `dut` / `dut_client` | 多设备：一条用例需要第二块板（对端、仪器） | 设计见上面「需求 4」那节；**在那之前，多设备要走 `pytest` harness 自己编排** |
 | `harness_config.dut_fixture` / `pytest_dut_client` | 同上，pytest harness 侧的两个开关 | 与 `dut`/`dut_client` 一起实现 |
 
+同一次清理还删掉了一个**构建期检查**（它不是配置字段，所以不走上面那张表）：
+`platforms.py` 的 `check_declaration`，连同只服务于它的 `unresolved`、`feature_symbol`
+与 `_SYMBOL_PREFIX`，以及它们的用例。**`declared_features` 不在此列**——Lab Agent 的接线
+检查（`lab_agent/config.py`）在用它，而且"文件缺失是沉默、空列表是主张"这个区分正是那里需要的，
+所以它留下，并补上了自己的直接测试。
+它由测试工程的 `src/SConscript` 调用，把 `features.yaml` 的声明对到构建的 `GetDepend` 上，
+声明与构建不符就让构建失败。删的理由：它把框架的职责摊进了每个测试工程，而这份信息本来就在
+产物里——`build_<board>_hcpu/rtconfig.h` 里的 `BSP_USING_*` 直接说明了某条总线有没有使能，
+不需要谁来"自动检查"。要恢复时也不必再让工程配合：**框架侧在构建之后读那份 `rtconfig.h`**
+就够了，那才是它该在的地方。`features.yaml` 本身留着——`sdk.py test plan` 的平台过滤仍然读它。
+
 指南第 5 节那张"现状"表指向这里。
 
 ## 风险与待确认
@@ -602,11 +631,10 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 3. **两套框架并存**：存量 37 个 utest 用例（`example/hal_example`）不回迁，需明确"新用例写 Unity"。Unity 用显式 `RUN_TEST()`、不需要链接段，与 40 多个已保留 `UtestTcTab` 段的模板不冲突。
 4. **串口物理限制**：1 Mbaud、`FINSH_ECHO_DISABLE_DEFAULT=1`（无回显，别把 expect 逻辑建在回显上）、`RT_CONSOLEBUF_SIZE=128`（长行拆块）——expect 必须是"累积缓冲 + 正则跨块匹配"。
 5. **`SwitchReset.exe` 不在仓库**：MVP 复位只能靠 J-Link；纯串口（无调试器）的 testbed 在 MVP 里支持不了电源复位，需求 4 的 mux/电源部分要等硬件团队提供带外继电器方案。
-6. **QEMU 载体**：`customer/boards/qemu_cortex_m33`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
-   `example/qemu/`、`tools/qemu/` 都已做好并跑通过，**但不在本次提交里**——本次只带
-   `backends/qemu.py` 这个后端本身。剩下的只是 BSP 自身的坑（链接脚本 RAM 大小、
-   init 段、semihosting 输入阻塞 vCPU、UART 基址 0x40200000），
-   见 `docs/source/zh_CN/app_note/autotest_guide.md` 第 4 节（同样在另一批）。
+6. **QEMU 载体**：`customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
+   `example/qemu/`、`tools/qemu/` 都已做好并跑通过。剩下的只是 BSP 自身的坑
+   （链接脚本 RAM 大小、init 段、semihosting 输入阻塞 vCPU、UART 基址 0x40200000），
+   见 `docs/source/zh_CN/app_note/autotest_guide.md` 第 4 节。
 7. ~~**Tier B 的 HAL 排除粒度**~~ —— **已解决，且原先的判断是错的。**
    原文说"HAL 外设函数的打桩在两个非板卡载体上都做不到"。它对 `pc`（MSVC）成立，
    对 QEMU 不成立：QEMU 走 arm-none-eabi，`core_cm33.h` 由工具链提供，
@@ -639,9 +667,9 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 10. **QEMU 控制台没有走中断，是轮询的**。已实测：使能 UART 接收中断、把所有向量都指向探针、
     放开全部 32 条 NVIC 线，**没有任何设备中断产生**。所以别拿它验证中断相关行为；
     成因也还没查清（QEMU 的 mps2-an505 是否根本没把 UART 的 IRQ 连到 NVIC，未验证）。
-11. **`tools/qemu/` 下的脚本已过期**：`qemu_run.bat` / `qemu_run.sh` / `qemu_smoke_test.py`
-    仍用 semihosting 调用，而 BSP 的控制台已经换成 UART，照它们跑不会有输出。
-    需要改成 `-display none -monitor none -serial stdio`。
+11. ~~**`tools/qemu/` 下的脚本已过期**~~ —— **已对齐**：`qemu_run.bat` / `qemu_run.sh` /
+    `qemu_smoke_test.py` 现在都走 `-display none -monitor none -serial stdio`（QEMU 不在 PATH 上时
+    由 `SIFLI_QEMU_EXE` 指路），`qemu_smoke_test.py` 已对 `example/qemu/hello_qemu` 实跑通过。
 12. ~~**CMock 打桩用例仍未交付**~~ —— **已交付两个**：
      `example/test/cmock_unit/`（中间件，5 个用例）与 `example/test/hal_mock/`
      （HAL 函数，3 个用例）。都是 `sdk.py test run -T example/test/<工程名>`，
@@ -671,12 +699,11 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 
     现在 lz4/cJSON 改走 Kconfig（`CONFIG_PKG_USING_LZ4/CJSON=y`，组件自己的
     SConscript 负责源文件与 include 路径），只剩 `circular_buf` 一处手工引入——
-    它的组件是按芯片分叉的目录树、不是一个文件，且 QEMU 上根本编不过。
+    它的组件是按芯片分叉的目录树、不是一个文件。
     那一处保留 `File(...)` 包裹，**已反向验证**：去掉就复现上面的报错。
 
-**关于 `example/test/unit_test` 的一个顺手可得的改进（本期未做）**：
-`unit_test/src/SConscript` 现在在 QEMU 上把 `circular_buf.c` 整个跳过，
-理由是 `ipc_hw.h` 会碰 `bf0_hal.h`、在无芯片载体上编不过。那个理由随着
-带芯片身份的板子消失了——改用 `qemu_sf32lb52x` 后，
-`unit_test.circular_buf` 这个用例应该也能在 QEMU 上跑（它目前在真板卡上跑）。
-没有一并改，是因为本次的验收范围是打桩用例本身。
+**关于 `example/test/unit_test` 的那处改进（已做）**：
+`unit_test/src/SConscript` 现在无条件编 `circular_buf.c`：它要的只是一个芯片，
+而每个载体都有——`ipc_hw.h` 碰的 `bf0_hal.h` 只有选中真实核（`SOC_BF0_HCPU/LCPU`）才编得过，
+`qemu_*` 载体和真板卡一样另有一个真实的 `SOC_SF32LB5<nn>X`。于是 `testcase.yaml`
+那条 QEMU 用例钉死在 `qemu_sf32lb52x` 上，`unit_test.circular_buf` 在两边跑同一份用例。

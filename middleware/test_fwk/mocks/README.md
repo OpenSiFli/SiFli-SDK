@@ -89,7 +89,7 @@ Unity 裁剪时删掉了整个 `auto/`，所以这个文件被单独取回来了
 
 ### 打桩的前提是"不编译被 mock 的实现"
 
-`BSP_USING_QEMU` 让 `drivers/SConscript` 整树跳过 `drivers/`，镜像里没有任何 HAL 实现，
+`SOC_QEMU` 让 `drivers/SConscript` 整树跳过 `drivers/`，镜像里没有任何 HAL 实现，
 所以 CMock 生成的 mock 就是它替换掉的那个符号的唯一定义——无重复定义、不依赖 weak、
 不与 ROM 表竞争。`rtos/rtthread/bsp/sifli/SConscript` 同时把 `drivers_qemu/` 换进来，
 载体本身仍然完整（控制台、启动、时钟都在）。
@@ -161,6 +161,9 @@ HAL_QSPI_GET_SR                         HAL，由 CMock 生成
 
 打桩只替换符号，所以它验证的是**调用方的逻辑**——"HAL 报这种状态时驱动怎么做"——
 而不是 HAL 本身的行为。这正是它的用处：那种分支在台架上复现不出来。
+
+要往另一个方向走（验证 HAL 本身），是另一套机制：把 HAL 的实现编进镜像、让它的寄存器落在
+RAM 里，见 `docs/source/zh_CN/app_note/autotest_guide.md` 第 7.2 节与 `example/test/hal_real/`。
 
 ### 反向验证（必须做，已做）
 

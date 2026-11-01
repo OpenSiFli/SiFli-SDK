@@ -6,10 +6,9 @@
 > **可以照着跑的示例现在有了**：`example/test/unit_test/`（板上 Unity 单测）与
 > `example/get-started/hello_world/`（console 与 pytest 两个 harness）。
 >
-> 仍**不在本次提交里**的：第 4 节的 QEMU 载体（`customer/boards/qemu_*`、
-> `rtos/rtthread/bsp/sifli/drivers_qemu/`、`tools/qemu/`、`example/qemu/`），
-> 以及第 7.1 节 CMock 的**两个示例工程**（下一笔）。提到这两节的地方各自另有批次。
-> 完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
+> 第 4 节的 QEMU 载体（`customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
+> `tools/qemu/`、`example/qemu/`）与第 7.1 节 CMock 的**两个示例工程**现在也都在树里，
+> 命令可以直接跑。完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
 
 ---
 
@@ -37,9 +36,8 @@
 
 ## 2. 快速上手（不需要硬件）
 
-> **本节可以直接照着敲。** 树内有 `example/get-started/hello_world/`（console 与 pytest）
-> 和 `example/test/unit_test/`（板上 Unity 单测）两个示例用例工程可列、可规划。
-> 只有 `example/qemu/` 随 QEMU 载体在另一批，所以 `-T example` 会少它那一条。
+> **本节可以直接照着敲。** 树内有 `example/get-started/hello_world/`（console 与 pytest）、
+> `example/test/unit_test/`（板上 Unity 单测）和 `example/qemu/` 三个示例用例工程可列、可规划。
 
 ```bash
 ./export.ps1                      # Windows；Linux/macOS 用 source ./export.sh
@@ -247,12 +245,11 @@ agent 是**长期运行的进程**，可能几天前从另一份 checkout 起的
 
 ## 4. 没有硬件也能跑：QEMU 载体
 
-> **本节的内容随 QEMU 载体一起在另一批提交里。** 框架侧的 `backends/qemu.py`
-> 已经在树内，但下面这些命令要的板子（`customer/boards/qemu_*`）、BSP
-> （`rtos/rtthread/bsp/sifli/drivers_qemu/`）和示例（`example/qemu/`）都还不在，
-> **照敲会失败**。而且 QEMU 这条路线本身的做法尚未定型，本节描述的是设计意图。
+> **这一节要的东西现在都在树里**：框架侧的 `backends/qemu.py`、板子
+> （`customer/boards/qemu_*`）、BSP（`rtos/rtthread/bsp/sifli/drivers_qemu/`）
+> 和示例（`example/qemu/`），下面这些命令可以直接跑。
 
-真板卡不是唯一的载体。`qemu_cortex_m33` 在 SDK 里就是一个普通板名，
+真板卡不是唯一的载体。`qemu_sf32lb52x` 在 SDK 里就是一个普通板名，
 所以**同一套用例、同一套 harness，可以完全不用硬件跑**——不需要 Lab Agent，
 不需要 binding 文件，不需要接线。
 
@@ -268,7 +265,7 @@ sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
   - id: unit_test.qemu
     harness: unity
     timeout: 120
-    integration_platforms: [qemu_cortex_m33]   # 有它就不需要 binding
+    integration_platforms: [qemu_sf32lb52x]   # 有它就不需要 binding
     harness_config:
       autorun: true
 ```
@@ -278,8 +275,8 @@ sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
 
 ### 4.1 带芯片身份的 QEMU 板
 
-`qemu_cortex_m33` 是**伪 SoC**——它一个芯片都没选。要碰芯片相关的东西
-（`bf0_hal.h`、寄存器映射、任何 `#ifdef SOC_SF32LB5xx` 的代码），就得用下面这五块板：
+五块 QEMU 板**每一块都选一颗芯片**，没有不选芯片的载体：要碰芯片相关的东西
+（`bf0_hal.h`、寄存器映射、任何 `#ifdef SOC_SF32LB5xx` 的代码），挑一块对上系列的板就行。
 
 | 板名 | 芯片身份 |
 |---|---|
@@ -289,7 +286,13 @@ sdk.py test run -T example/test/unit_test --no-build -t unit_test.qemu
 | `qemu_sf32lb57x` | SF32LB57X |
 | `qemu_sf32lb58x` | SF32LB58X |
 
-同一个 QEMU 机器（mps2-an505）、同一份 `link.lds`，**只有芯片身份不同**。
+同一个 QEMU 机器（mps2-an505）、同一份 `link.lds`，**只有芯片身份不同**——也正是
+这个身份必须写在板名里：`--board=<name>` 解析到 `customer/boards/<name>/hcpu`，
+testcase 又用板名指平台，所以"仿真的是哪颗芯片"只能在这一层读。
+
+> 曾经还有一块谁都不选、只当"伪 SoC"用的 `qemu_cortex_m33`，**已删除**：
+> 要碰 `bf0_hal.h` 的用例（CMock 打桩、HAL 单测、`unit_test`）在它上面根本编不过，
+> 而编得过的那些用例换到带芯片的板上一样跑。
 
 ```bash
 scons --board=qemu_sf32lb52x -j8            # 直接构建
@@ -297,7 +300,9 @@ sdk.py test run -T example/test/hal_mock               # 用例自己声明平�
 sdk.py test run -T example/test/hal_mock --no-build -p qemu_sf32lb55x   # 换系列跑
 ```
 
-**它替你做了什么**：板子的 `Kconfig.board` 里 `select SOC_SF32LB5<nnn>X`，
+**它替你做了什么**：板子的 `Kconfig.board` 里 `select SOC_SF32LB5<nnn>X` 与
+`select SOC_QEMU`（后者是无 prompt 的纯 `bool`，只由载体板 select，构建侧只看它，
+并不告诉你仿的是哪颗芯片）；
 载体侧（`rtos/rtthread/bsp/sifli/drivers_qemu/SConscript`）据此加上芯片的
 include 路径与 `SF32LB<nnn>X` / `SOC_BF0_HCPU` / `USE_HAL_DRIVER` 三个宏，
 **并且保证 include 顺序**——`bf0_hal.h` 按名字 `#include "register.h"`，
@@ -312,10 +317,12 @@ include 路径与 `SF32LB<nnn>X` / `SOC_BF0_HCPU` / `USE_HAL_DRIVER` 三个宏�
 **注意**：这些板子只存在于 `--board=` 走的 KCONFIG_V2 流程里，不带 `--board=` 的
 旧版 `sdk.py menuconfig` 看不到它们（v1 的芯片是 choice，与 `SOC_QEMU` 互斥）。
 
-**为什么 QEMU 重要**：`BSP_USING_QEMU` 和 `pc` 模拟器一样会让 `drivers/SConscript`
+**为什么 QEMU 重要**：`SOC_QEMU` 和 `pc` 模拟器一样会让 `drivers/SConscript`
 **整树跳过 `drivers/`**。也就是说镜像里没有任何 HAL 实现，
 一个 CMock 生成的 mock 就是它替换掉的那个符号的**唯一定义**——
 这正是需求 3（打桩）需要的前提。详见 `middleware/test_fwk/mocks/README.md`。
+（跳过是默认：工程声明 `QEMU_HAL_DRIVER_ENABLED` 就能把整棵树要回去（`cmsis/` 除外），见 7.2——
+正是实跑 HAL 的用例走的那条路。）
 
 **几个坑（都是静默失败）**：
 
@@ -327,8 +334,9 @@ include 路径与 `SF32LB<nnn>X` / `SOC_BF0_HCPU` / `USE_HAL_DRIVER` 三个宏�
   表现为等满超时后报 "no Unity summary line found"。
 - 控制台**没有走中断**，是轮询的（已实测：使能 UART 接收中断并放开全部
   NVIC 线，没有任何设备中断产生）。所以别指望它反映真实的中断行为。
-- `tools/qemu/` 下的 `qemu_run.*` 与 `qemu_smoke_test.py` 仍用旧的 semihosting 调用，
-  **已过期**，照它们跑不会有输出。
+- `tools/qemu/` 下的 `qemu_run.*` 与 `qemu_smoke_test.py` 与后端一致：同一组
+  `-display none -monitor none -serial stdio`，QEMU 不在 PATH 上时由 `SIFLI_QEMU_EXE` 指路。
+  想在 `sdk.py test` 之外单跑一个镜像时用它们。
 
 ## 5. 写一个 `testcase.yaml`
 
@@ -488,8 +496,8 @@ tests:
 
 ```yaml
     harness_config:
-      prompt: "msh />"    # 可省，默认 msh />。发命令前先在串口输出里等它出现；
-                          # 写自己的字符串是替换它，不是叠加
+      prompt: "msh />"    # 可省，默认认 msh 的提示符（msh [^>\n]*>，两种拼法都收）。
+                          # 发命令前先在串口输出里等它出现；写自己的字符串是替换它，不是叠加
       # cmd: unity_run    # 可省，默认 unity_run。等到之后要发出去的命令本身
 ```
 
@@ -500,9 +508,9 @@ tests:
 
 `prompt` 这一步是承重的，不是保险：在手动复位的板子上，console 是在**下载刚写完、
 板子还在启动**的时候就打开的，此时把命令发出去，板子根本收不到。两个默认值是配套
-的——`cmd` 默认发 `unity_run`，而它是一条 **msh 命令**，能执行的前提就是 msh 已经在
-跑；所以 `prompt` 默认等 `msh />`，等的正是这个前提。换成别的 shell，就把 `prompt`
-改成固件自己打印的就绪标志。
+的——`cmd` 默认发 `unity_run`，而它是一条 **msh 命令**，能执行的前提就是 msh 已经在跑；
+所以 `prompt` 默认等 msh 的提示符（`msh [^>\n]*>`，两种拼法都收），等的正是这个前提。
+换成别的 shell，就把 `prompt` 改成固件自己打印的就绪标志。
 
 等不到提示符**不算失败**：命令照发，由原有的检查去判。
 
@@ -529,7 +537,7 @@ sdk.py test run  -T example/test/unit_test -t unit_test.board `
     -p sf32lb52-lcd_a128r16
 ```
 
-**`unit_test.qemu` 那条钉在 `qemu_cortex_m33` 上**，这个 lab 没有 QEMU 平台，于是
+**`unit_test.qemu` 那条钉在 `qemu_sf32lb52x` 上**，这个 lab 没有 QEMU 平台，于是
 `test plan` 会**整体中止**（它是严格的），`test run` 则把它记为 ERROR 后继续。所以
 用 `-t unit_test.board` 挑出真板那条。
 
@@ -660,9 +668,8 @@ CONFIG_USING_TEST_FWK=y
 
 ### 7.1 打桩：CMock
 
-> CMock 本身与 `mock_*.c/h` 生成物**已随本次提交入库**；下面这两个工程见下一笔。
-> 而它们依赖的 `BSP_USING_QEMU`（第 4 节）也不在这批里，所以这些命令暂时跑不起来
-> ——要等 QEMU 载体跟上。
+> CMock 本身与 `mock_*.c/h` 生成物在更早的提交里入库；下面这两个工程和它们依赖的
+> `SOC_QEMU`（第 4 节）现在也都在树里，所以这些命令在本地就能跑起来。
 
 要测的分支在台架上复现不出来时（"擦除失败""写超时""ID 不匹配"），把那个依赖换成
 CMock 生成的 mock。两个现成工程可以抄：
@@ -679,9 +686,11 @@ sdk.py test run -T example/test/hal_mock
 
 两条都要用**带芯片身份的板子**（见 4.1），因为被测模块会 include `bf0_hal.h`。
 
-**机制是"不编译被 mock 的实现"，不是拦截**：`BSP_USING_QEMU` 让
+**机制是"不编译被 mock 的实现"，不是拦截**：`SOC_QEMU` 让
 `drivers/SConscript` 整树跳过 `drivers/`，镜像里没有任何 HAL 实现，
 所以 mock 就是那个符号的唯一定义——不重复、不靠 weak、不碰 ROM 表。
+（跳过是默认：工程声明 `QEMU_HAL_DRIVER_ENABLED` 就能把整棵树要回去（`cmsis/` 除外），见 7.2；
+`hal_mock` 没有声明它，上面说的正是它的情形。）
 
 三个实际会咬人的点：
 
@@ -700,6 +709,131 @@ sdk.py test run -T example/test/hal_mock
 
 细节（生成器怎么跑、`:strippables` 怎么写、芯片身份为什么必须来自板子、
 链接期闭包为什么只有 2 个符号）见 `middleware/test_fwk/mocks/README.md`。
+
+### 7.2 实跑 HAL：把寄存器落到 RAM
+
+7.1 把 HAL 的某个**函数**换成 mock，量的是调用它的人；这一节反过来，把 HAL 的**实现**编进镜像
+执行。前者回答"HAL 报出这种状态时，驱动怎么做"，后者回答"驱动写给外设的那些字对不对"。
+两件事互不覆盖：后者的断言粒度——写出去的确切字、通道落到的确切位置——台架上取不到。
+
+**机制**：SiFli 的 HAL 是 STM32 式的——句柄里的 `Instance` 就是寄存器基址，驱动里每处访问都写成
+`hptc->Instance->FIELD`。测试于是自己声明一块寄存器，把地址交出去：
+
+```c
+static PTC_TypeDef g_ptc_regs;
+g_ptc.Instance = &g_ptc_regs;
+HAL_PTC_Enable(&g_ptc, 1);
+TEST_ASSERT_EQUAL_HEX32(expected, g_ptc_regs.IER);
+```
+
+驱动写进去的每个字都落在这个变量上。**不需要改链接脚本、不占保留内存、不做地址重映射**：
+那块寄存器就是个普通变量，地址由链接器定，载体自己在 `0x40200000` 上的控制台离它很远。
+
+**把 HAL 编进镜像**：`SOC_QEMU` 让 `drivers/SConscript` 整树跳过 `drivers/`，所以要在载体
+的镜像里跑真实 HAL，得让工程把这个跳过收窄。做法是工程在自己的 `Kconfig.proj` 里声明一个开关：
+
+```kconfig
+config QEMU_HAL_DRIVER_ENABLED
+    bool
+    depends on SOC_QEMU
+    default y
+```
+
+`drivers/SConscript` 读到它，就把整棵树按 SDK 自己的走法编回来（`cmsis/` 是唯一的例外：它那份芯片
+bring-up 在载体上编不过，`startup_bf0_hcpu.S` 还会和载体自己的凑成两个 `Reset_Handler`）——**工程侧
+一个文件都不用列**，产物自己落在 `build_qemu_sf32lb52x_hcpu/sifli_sdk/drivers/<子目录>/` 下，和其他
+SDK 模块同一条规则。`example/test/hal_real/project/Kconfig.proj` 里就是这三行。
+
+**为什么这个开关由工程声明，而不是由驱动层提供**：它必须是 promptless 的，否则就会出现在
+`menuconfig` 里，而它不该被人手动打开；可是 promptless 符号**不能**在配置文件里赋值——
+`tools/kconfig/kconfig.py` 的 `check_no_promptless_assign`（由 `tools/build/building.py:3185`
+带 `--handwritten-input-configs` 调用）会让构建当场失败，报
+
+```
+is assigned in a configuration file, but is not directly user-configurable (has no prompt)
+```
+
+两条同时满足只剩一条路：值只能来自 `default`，于是由想要它的工程自己声明——
+`example/lcpu_rom/Kconfig.proj:6-8` 的 `ROM_ATTR` 就是这个安排。代价是每个测 HAL 的工程都要
+再抄一遍这几行；好处是不声明的工程**根本看不到这个符号**，`example/test/hal_mock` 正是靠这一点
+保证镜像里没有任何 HAL 实现，它的 CMock mock 才继续是那个符号的唯一定义（见 7.1）。
+
+**这条路要付什么**：开关带回来的是整棵 `drivers/hal`，不是用例碰到的那两个模块——在
+`qemu_sf32lb52x` 上是 76 个 `.c` 里的 68 个（另外 8 个被既有的芯片分支排除），68 个全部零警告
+编过，链接没有未定义符号；代价是构建时间，`-j8` 干净构建从 ~18–21 s 变成 ~28–31 s。这也并不
+意味着整棵都会进镜像：gcc 按函数分段（`-ffunction-sections`）、链接丢掉没人到达的部分
+（`--gc-sections`），68 个里真正留下代码的只有 3 个，共 1,118 B。另外三件不实际量过不会猜到：
+
+- **镜像反而小约 4 KB**（`.text` 33,453 → 29,501 B）：`bf0_hal.c:56` 定义了
+  `__WEAK __aeabi_unwind_cpp_pr0`，libgcc 的 unwind 目标文件（`libunwind.o` + `pr-support.o` +
+  `unwind-arm.o`，4,039 B）原本就是为这个引用才被拉进来的，`bf0_hal.o` 进了链接它就不用了。
+  这不是这个工程要来的好处——真板子上 `bf0_hal.o` 一直在链接里。
+- **`drivers/hal` 一条 init 入口都没有**（整个目录里没有 `INIT_*_EXPORT`），所以"被 `KEEP` 的
+  init 表把东西拖进来"这个常被担心的情况在这里不成立。
+- **真正起作用的是向量表**：`bf0_hal.c:575` 定义的是**强** `NMI_Handler`，而
+  `drivers_qemu/startup_qemu.S:112` 把它声明成 weak，于是这块载体上 HAL 的那份占住了这个槽。
+  这是一次真实的行为变化，用例看不见它——mps2-an505 下 NMI 从不触发。
+
+**限制**：只有**从调用方接 `Instance`** 的入口能这么驱动。某个 HAL 文件里直接取全局 `hwp_*`
+指针（RCC、pinmux、AON 那些），没有句柄可以指，得另换一套机制。
+
+```bash
+sdk.py test run -T example/test/hal_real     # 不要硬件、不要 Lab Agent、不要 binding
+```
+
+工程里两个 suite（`ptc`、`crc`）共用一个镜像，宿主按 suite 名分派——和 6 节的规矩一样。
+
+**它证明了什么**：驱动的判断逻辑和它的寄存器编排——一个值摆到哪几位、通道落到哪一块、表里的
+常数对不对、轮询那一轮写出去的是哪个字。写进去的值之后读得回来，所以用例断言的是**确切的字**，
+不必从行为反推。
+
+**它没证明什么**（这几条比上面重要，用例自己的头注释里也逐条写着）：
+
+- **时序、握手、中断、DMA 完成，一律没有。** 轮询路径之所以能测，只是因为测试能**先把状态位
+  写进去**：`test_crc.c` 对 `CRC_SR_DONE` 就是这么做的，`HAL_CRC_Accumulate` 的等待循环读到的
+  正是测试摆在那里的值。反过来，驱动**轮询了错的位、或者根本不退出**，这里看不出来。
+- **RAM 分不出"写 1 清零"寄存器和普通寄存器。** `ICR |= 1 << channel` 在硅片上清中断标志，
+  在 RAM 里只是置了个位。所以那条用例钉住的是**这次 store**本身，不是它的效果。
+
+**第一次跑撞出来的三件事**（都花掉了时间）：
+
+1. **`setUp`/`tearDown` 是镜像级一份，不是每个 suite 一份。** Unity 由 `UnityDefaultTestRun()`
+   按名字够到这一对，而 `middleware/test_fwk/sifli_unity_runner.c` 把它定义成 `RT_WEAK` 供工程
+   顶掉——一个镜像里两个 suite 各定义一份，就是两份强定义，链接停在这里：
+
+   ```
+   test_ptc.c:100: multiple definition of `setUp';
+   test_crc.c:56: first defined here
+   ```
+
+   所以这一对放在 `src/unity_main.c`（它本来就管着另一个镜像级的东西——autorun），由它依次调用
+   各 suite 自己导出的 `*_fixture_reset()`，寄存器仍留在各自文件里。
+
+2. **不调 `HAL_PTC_Init()` 就 `HAL_PTC_Enable()`，写出去的是地址 0，而且一声不响。**
+   `Chn` 只由 `Init` 算出来（`(PTC_ChnTypeDef *)&Instance->TCR1 + Channel`），`Enable` 从不自己
+   推；少了 Init，句柄里还是 `setUp` memset 进去的 NULL，那句 `hptc->Chn->TCR = ...` 就落在 0 上
+   ——而这个载体上 0 是**真内存**（`0x0` 与 `0x10000000` 是同一块的 alias），不是 fault。于是断言
+   从一个没人写过的寄存器里读出 0，用例可以**空过**：一边断言"RCR 保持 0"，一边被测驱动正把值
+   写到 0 去。arrange 那一步本身就是测试的一部分。
+
+3. **这个载体的 shell 提示符没有斜杠，宿主默认匹配不上，每个实例白烧掉一整个 `timeout`。**
+   `finsh` 拼提示符是 `"msh " + cwd + ">"`，cwd 只在 `RT_USING_DFS && DFS_USING_WORKDIR`
+   打开时才出现——QEMU 板的 `board.conf` 把它关了，所以打印出来的是 `msh >`，而默认写死的
+   是带 cwd 的那种拼法，永远匹配不上。症状读起来像"设备慢"：命令直到超时才发出去，不像模式
+   没匹配上。本工程实测 132.5 s/实例 → 13.8 s/实例，整轮 265 s → 27 s。修在框架里、不在用例里：
+   `tools/sdk_test/harness/unity.py` 的 `DEFAULT_PROMPT` 现在认 `msh [^>\n]*>`，两种拼法都对
+   （光有 `msh `、或日志里更远处的 `>` 不算），因此这个工程不需要写 `harness_config.prompt`
+   ——那是某个载体的特征，不该落到用例文件里。
+
+顺带一件与本节机制无关、但值得知道的事：`HAL_PTC_GetData` 曾经在 `drivers/Include/bf0_hal_ptc.h`
+里写成 `(*(hptc->Chn->TDR))`，而 `PTC_ChnTypeDef.TDR` 是普通的 `__IO uint32_t`，所以它**编不过**。
+SDK 里没有任何代码展开过它，一直没露头；`hal_real` 是第一个展开它的工程——正是 `test_ptc.c` 最后
+那个读寄存器的用例把它翻出来，头文件随后就修了（多余的 `*` 去掉，注释里记了发现它的工程）。
+那个用例留着：它是全文件唯一**从 HAL 读**寄存器（而不是写）的用例，宏再坏掉就会重新打红它。
+
+机制与边界的完整说明在工程自己那几份文件的头注释里：`testcase.yaml`（整件事的想法）、
+`project/Kconfig.proj`（开关为什么由工程声明）、`src/test_ptc.c` 与 `src/test_crc.c`
+（各自证明了什么、没证明什么）。
 
 ---
 
@@ -860,9 +994,9 @@ waiting for the board to boot; press its RESET button if nothing appears (60s)
 复位，然后回车"的确认就是为这件事留的兜底。
 
 （关掉 `autorun`、回到发命令那条路时，宿主会先在串口输出里等 shell 提示符
-（默认 `msh />`）——那是"可以发了吗"的正向信号。**不是"等串口安静"**：板子还没开始
-启动时也是安静的，我们试过，"静默"被当成"已经说完"，命令照样发丢。等不到提示符
-不算失败，命令照发，由原有的检查去判。）
+（默认 `msh [^>\n]*>`，`msh >` 与 `msh />` 都收）——那是"可以发了吗"的正向信号。
+**不是"等串口安静"**：板子还没开始启动时也是安静的，我们试过，"静默"被当成
+"已经说完"，命令照样发丢。等不到提示符不算失败，命令照发，由原有的检查去判。）
 
 #### 三条要注意的
 
@@ -943,6 +1077,7 @@ test:
 | 继电器 / 电源控制 | `transport/relay.py` 只有接口，会抛 `RelayNotAvailable` |
 | `backends/qemu.py` | **已实现**：QEMU 载体可跑 console/unity/pytest，见第 4 节 |
 | CMock 打桩用例 | **已交付**两个工程（中间件 + HAL），见第 7.1 节与 `middleware/test_fwk/mocks/README.md` |
+| 实跑 HAL 的用例 | **已交付**：`example/test/hal_real/` 两条实例（`hal_real.ptc`、`hal_real.crc`），`sdk.py test run -T example/test/hal_real`，见第 7.2 节 |
 | 每实例 `build.log` | **已实现**：编译器输出落盘，不再刷控制台 |
 
 **排错**
