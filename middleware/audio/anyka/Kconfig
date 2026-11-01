@@ -16,5 +16,6 @@ endif
 config ANYKA_RUN_IN_ACPU
     bool "anyka lib run in acpu"
         depends on PKG_USING_ANYKA
-    default n 
+    default y if BF0_ACPU
+    default n
 

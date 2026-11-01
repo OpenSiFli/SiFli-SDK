@@ -140,6 +140,16 @@ __HAL_ROM_USED void HAL_NVIC_SystemReset(void)
     NVIC_SystemReset();
 }
 
+void HAL_NVIC_SystemResetEx(uint32_t boot_mode)
+{
+#ifdef HAL_CORTEX_BOOTMODE_PERSISTENCE_SUPPORT
+    __HAL_SYSCFG_SET_BOOT_MODE(boot_mode);
+#else
+    UNUSED(boot_mode);
+#endif /* HAL_CORTEX_BOOTMODE_PERSISTENCE_SUPPORT */
+    HAL_NVIC_SystemReset();
+}
+
 /**
   * @brief  Initialize the System Timer with interrupt enabled and start the System Tick Timer (SysTick):
   *         Counter is in free running mode to generate periodic interrupts.

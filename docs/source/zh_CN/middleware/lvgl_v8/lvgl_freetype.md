@@ -79,6 +79,30 @@ FreeType 本身不依赖 `RT_USING_DFS_ELMFAT`；只有使用 ELM FAT 文件系�
 本文所述实现要求使用 LVGL v8 的 FreeType 路径。`PKG_SCHRIFT` 或 `USING_VGLITE` 与 `LV_USING_FREETYPE_ENGINE` 同时启用时无法完成构建：`lv_freetype.c` 的实现主体被条件编译排除，而字体管理器仍会编译并引用这些接口。不要将这些配置与本文接口组合使用。
 ```
 
+### 字形位图输出位深
+
+启用字体引擎后，在同一菜单的 `FreeType output bitmap depth` 中选择输出位深。该配置在编译时生效，控制字形透明度的灰度级数和位图存储格式，不改变显示屏的 RGB 色深。
+
+| 芯片系列 | 可选位深 | 默认值 |
+| --- | --- | --- |
+| SF32LB52X、SF32LB57X | A2、A4、A8 | A2 |
+| SF32LB56X、SF32LB58X | A4、A8 | A4 |
+| SF32LB55X | A4（软件路径） | A4 |
+
+对应配置为 `CONFIG_LV_FREETYPE_BPP_2`、`CONFIG_LV_FREETYPE_BPP_4` 和 `CONFIG_LV_FREETYPE_BPP_8`，三者互斥，菜单只显示当前芯片支持的选项。例如选择 A4：
+
+```none
+CONFIG_LV_FREETYPE_BPP_4=y
+```
+
+`lv_conf_sifli.h` 将所选配置映射为 `FT_BPP`，无需手动修改该头文件。FreeType 先光栅化生成 A8，再由注册的 `ft_convert_bitmap_2bpp_cb()` 转换并交给 `FTC_SBitCache` 缓存。A2/A4 分别保留 4/16 级灰度，并实际打包为每字节 4/2 个像素；A8 保留每像素一个字节，直接接管原始位图。LVGL 字形描述符的 `bpp` 与最终存储位深一致。
+
+A2/A4 转换期间原始 A8 缓冲和目标缓冲会短暂共存，转换后释放原始 A8 缓冲。紧凑存储减少的是字形位图占用，不能按相同比例估算整个字体引擎的内存。缓存命中时复用转换后的位图，无需重复打包。
+
+```{warning}
+当 `COMPATIBLE_WITH_SIFLI_EPIC_Ax` 根据芯片、`FT_BPP` 和字体引擎配置启用时，A2/A4 使用 EPIC 要求的低位优先、逐行补齐字节布局。普通 LVGL v8 点阵字库使用高位优先、跨行连续打包，必须离线转换为匹配的布局后再混用；该兼容宏也会影响软件字体绘制路径。此 FreeType 转换回调不会自动转换普通点阵字体，`lv_font_fmt_txt.c` 的普通点阵回调也不会将 A2/A4 展开为 A8。A8 每像素占一个字节，不需要这种高低位重排。以上说明适用于本文的 LVGL v8 适配层。
+```
+
 ### 初始化
 
 标准 SDK 启动流程通过 `gui_lib_init()` 初始化 FreeType 和字体管理器，应用通常不需要再次初始化。
@@ -331,7 +355,7 @@ static int set_app_font_fallback(void)
 | --- | --- | --- |
 | 管理器字号缓存 | 每个“字体条目、像素字号”保存一个 `lv_font_t`，没有独立的数量上限 | 替换引用后调用 `lvsf_font_clear_cache()` 或卸载文件字体 |
 | FTC Face/Size 缓存 | 同一字体源的多个字号共享 Face，Face 和 Size 数量受配置限制 | `LV_FREETYPE_CACHE_FT_FACES`、`LV_FREETYPE_CACHE_FT_SIZES` |
-| FTC 字形和字符映射缓存 | 按总容量淘汰，需要时重新生成 | 使用 SDK 缓存容量；应用通常无需直接操作 |
+| FTC 字形和字符映射缓存 | SBit 缓存保存按 `FT_BPP` 转换后的字形位图；按总容量淘汰，需要时重新生成 | 使用 SDK 缓存容量；应用通常无需直接操作 |
 
 持续请求新的像素字号会持续增加管理器字号对象。增大 FTC Size 数量不能限制这部分增长。
 

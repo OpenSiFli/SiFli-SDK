@@ -540,11 +540,11 @@ HAL_StatusTypeDef HAL_HPAON_DisablePinWakeup(pin_pad pad);
  * @param  gpio GPIO instance, e.g. hwp_gpio1
  * @param  gpio_pin gpio pin, start from 0, 0 is the first pin of the gpio instance
  * @return wakeup pin number, its range varies with different chips
- * @retval -1 invalid
+ * @retval -1 invalid, gpio_pin is not a wakeup pin of the given gpio instance
  * @retval 0~3 for sf32lb55x, PA77~PA80
  * @retval 0~17 for sf32lb58x, PB54~PB59, PA64~PA69, PBR0~PBR5
  * @retval 0~13 for sf32lb56x, PB32~PB36, PA50~PA54, PBR0~PBR3
- * @retval 0~20 for sf32lb52x, PA24~PA44
+ * @retval 0~20 for sf32lb52x, PA24~PA44 except PIN4~PIN9 (PA28~PA33)
  * @retval 0~13 for sf32lb57x, PA33~PA42, PA24~PA27
  *
  */
@@ -553,16 +553,25 @@ int8_t HAL_HPAON_QueryWakeupPin(GPIO_TypeDef *gpio, uint16_t gpio_pin);
 
 /**
  * @brief  Query gpio pin bound with corresponding wakeup pin
- * @param[in] wakeup_pin wakeup pin, range: 0~5 (Z0), 0~3 (A0)
+ * @param[in] wakeup_pin wakeup pin number, n stands for PINn of the chip, e.g.
+ *                       4 stands for PIN4 and 10 stands for PIN10.
+ *                       Its valid range varies with different chips:
+ *                       0~3 for sf32lb55x,
+ *                       0~13 for sf32lb56x,
+ *                       0~13 for sf32lb57x,
+ *                       0~17 for sf32lb58x,
+ *                       0~3 and 10~20 for sf32lb52x
  * @param[in,out] gpio_pin  pointer to output gpio pin
- * @retval gpio instance, NULL: not found
+ * @retval gpio instance
+ * @retval NULL invalid, wakeup_pin is out of range
  */
 GPIO_TypeDef *HAL_HPAON_QueryWakeupGpioPin(uint8_t wakeup_pin, uint16_t *gpio_pin);
 
 
 /**
  * @brief  Get wakeup pin mode
- * @param[in] wakeup_pin wakeup pin, range: 0~5 (Z0), 0~3 (A0)
+ * @param[in] wakeup_pin wakeup pin, its valid range varies with different chips,
+ *                       refer to HAL_HPAON_QueryWakeupGpioPin()
  * @param[in,out] mode  pointer to output pin mode
  * @retval status
  */
@@ -710,26 +719,42 @@ HAL_StatusTypeDef HAL_LPAON_DisableWakeupSrc(LPAON_WakeupSrcTypeDef src);
 
 /**
  * @brief  Query wakeup pin bound with corresponding gpio pin
- * @param  gpio GPIO instance, e.g. hwp_gpio1
- * @param  gpio_pin gpio pin, start from 1
- * @retval wakeup pin, valid range 0~5, invalid: -1
+ * @param  gpio GPIO instance, e.g. hwp_gpio2
+ * @param  gpio_pin gpio pin, start from 0, 0 is the first pin of the gpio instance
+ * @return wakeup pin number, its range varies with different chips
+ * @retval -1 invalid, gpio_pin is not a wakeup pin of the given gpio instance
+ * @retval 0~5 for sf32lb55x, PB43~PB48
+ * @retval 0~13 for sf32lb56x, PB32~PB36, PA50~PA54, PBR0~PBR3
+ * @retval 0~20 for sf32lb52x, PA24~PA44 except PIN4~PIN9 (PA28~PA33), same as HPSYS
+ * @retval 0~17 for sf32lb58x, PB54~PB59, PA64~PA69, PBR0~PBR5
+ * @note   not available for sf32lb57x, whose LPSYS has no PIN wakeup
  */
 int8_t HAL_LPAON_QueryWakeupPin(GPIO_TypeDef *gpio, uint16_t gpio_pin);
 
 
 /**
  * @brief  Query gpio pin bound with corresponding wakeup pin
- * @param[in] wakeup_pin wakeup pin, range: 0~5
+ * @param[in] wakeup_pin wakeup pin number, n stands for PINn of the chip, e.g.
+ *                       4 stands for PIN4 and 10 stands for PIN10.
+ *                       Its valid range varies with different chips:
+ *                       0~5 for sf32lb55x,
+ *                       0~13 for sf32lb56x,
+ *                       0~17 for sf32lb58x,
+ *                       0~3 and 10~20 for sf32lb52x
  * @param[in,out] gpio_pin  pointer to output gpio pin
- * @retval gpio instance, NULL: not found
+ * @retval gpio instance
+ * @retval NULL invalid, wakeup_pin is out of range
+ * @note   not available for sf32lb57x, whose LPSYS has no PIN wakeup
  */
 GPIO_TypeDef *HAL_LPAON_QueryWakeupGpioPin(uint8_t wakeup_pin, uint16_t *gpio_pin);
 
 /**
  * @brief  Get wakeup pin mode
- * @param[in] wakeup_pin wakeup pin, range: 0~5
+ * @param[in] wakeup_pin wakeup pin, its valid range varies with different chips,
+ *                       refer to HAL_LPAON_QueryWakeupGpioPin()
  * @param[in,out] mode  pointer to output pin mode
  * @retval status
+ * @retval HAL_ERROR always for sf32lb57x, whose LPSYS has no PIN wakeup
  */
 HAL_StatusTypeDef HAL_LPAON_GetWakeupPinMode(uint8_t wakeup_pin, AON_PinModeTypeDef *mode);
 

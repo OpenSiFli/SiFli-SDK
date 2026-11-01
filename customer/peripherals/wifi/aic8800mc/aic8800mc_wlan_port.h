@@ -18,6 +18,10 @@ void aic8800mc_wlan_report_disconnect(void);
 void aic8800mc_wlan_report_connect_fail(void);
 void aic8800mc_wlan_report_scan_done(void);
 void aic8800mc_wlan_report_scan_result(struct rt_wlan_info *info);
+void aic8800mc_wlan_report_ap_start(void);
+void aic8800mc_wlan_report_ap_stop(void);
+void aic8800mc_wlan_report_ap_assoc(rt_uint8_t mac[]);
+void aic8800mc_wlan_report_ap_disassoc(rt_uint8_t mac[]);
 void aic8800mc_wlan_rx_data(void *buff, int len);
 
 #endif

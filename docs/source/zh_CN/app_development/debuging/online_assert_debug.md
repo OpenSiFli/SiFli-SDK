@@ -80,7 +80,7 @@ exit
 ![52选择芯片](../../../assets/52_ozone2.png)
 
 
-:::{only} SF32LB55X or SF32LB56X or SF32LB58X
+:::{only} SF32LB55X or SF32LB56X or SF32LB58X or SF32LB57X
 
 **选择连接接口**：选择 J-Link (SWD/JTAG), 找不到时请检查连接和供电。
 

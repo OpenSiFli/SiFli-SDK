@@ -679,4 +679,15 @@ mem_free_callback(void *m)
     return tcpip_try_callback(mem_free, m);
 }
 
+/**
+ * Check whether the tcpip thread mailbox is valid.
+ *
+ * @return non-zero if the tcpip thread mailbox is valid, zero otherwise
+ */
+int tcpip_sys_mbox_valid(void)
+{
+    return (int)sys_mbox_valid_val(tcpip_mbox);
+}
+
+
 #endif /* !NO_SYS */

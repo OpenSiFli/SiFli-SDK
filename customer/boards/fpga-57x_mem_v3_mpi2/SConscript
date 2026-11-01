@@ -10,6 +10,6 @@ path =  [cwd,
 group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_FPGA_57X_MEM_V3_MPI2'], CPPPATH = path)
 
 if GetDepend('BSP_USING_BOARD_FPGA_57X_MEM_V3_MPI2'):
-    group = group + SConscript('../fpga-57x_base/SConscript.base')
+    group = group + SConscript(os.path.join(cwd, '../fpga-57x_base/SConscript.base'), variant_dir="base", duplicate=0)
 
 Return('group')

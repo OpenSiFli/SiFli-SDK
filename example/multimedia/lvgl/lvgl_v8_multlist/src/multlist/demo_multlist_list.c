@@ -12,6 +12,8 @@
 #include "demo_multlist.h"
 #include "demo_multlist_cards.h"
 #include "lvsf_multlist.h"
+#include "lvsf_scrollbar.h"
+#include "lvsf_imgprog.h"
 #define ITEM_BG_COLOR lv_color_make(82, 93, 118)
 #define _MODULE_NAME_ "multlist"
 static lv_obj_t *p_list = NULL;
@@ -131,6 +133,25 @@ static void on_start(void)
             lv_multlist_add_info(p_list, 110, LV_VER_RES, NULL, NULL);
         }
     }
+
+#if LVSF_USE_SCROLLBAR && LVSF_USE_IMGPROG
+    if (MULTLIST_IS_VER(flag))
+    {
+        lv_imgprog_cfg_t cfg = *lv_imgprog_get_default_cfg();
+        /* The built-in image layers describe an arc with a 227-pixel radius. */
+        cfg.radius = 227;
+        lv_imgprog_set_default_cfg(&cfg);
+
+        lv_obj_t *scrollbar = lv_scrollbar_create(p_list, LV_SCROLLBAR_IMAGE_TYPE);
+        lv_obj_set_style_bg_opa(scrollbar, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(scrollbar, 0, 0);
+        lv_obj_set_style_pad_all(scrollbar, 0, 0);
+        lv_obj_clear_flag(scrollbar, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_size(scrollbar, cfg.radius * 2, cfg.radius * 2);
+        lv_scrollbar_set_pos(scrollbar, LV_ALIGN_RIGHT_MID, 0, 0);
+        lv_scrollbar_set_always_visible(scrollbar, true);
+    }
+#endif
 
     lv_multlist_set_springback(p_list, 0, 0);
     lv_multlist_align_to(p_list, LV_MULTLIST_ALIGN_HEAD, 0, 0, 0);

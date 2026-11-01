@@ -1,0 +1,52 @@
+si SWD
+speed 10000
+
+w4 0x5000B008 1 //Switch to LCPU and halt it
+Sleep 500
+usb
+H
+mem32 E000E100 8
+mem32 E000E200 8
+mem32 E000E300 8
+
+w4 0x5000B008 0 //Switch to HCPU and halt it
+Sleep 500
+usb
+H
+mem32 E000E100 8
+mem32 E000E200 8
+mem32 E000E300 8
+
+//mem32 0x50094000 0x8
+//mem32 0x4000b000 0x8
+//mem32 0x500cc000 0x8
+//w4 0x5009400c 0x34
+//w4 0x4000b00c 0x34
+//w4 0x500cc00c 0x34
+
+savebin systick.bin 0xE000E010 0x10
+savebin scb.bin 0xE000ED00 0x278
+savebin hpsys_rcc.bin 0x50000000 0x80
+savebin mpi1.bin 0x50041000 0xB0
+savebin mpi2.bin 0x50042000 0xB0
+savebin mpi3.bin 0x50043000 0xB0
+savebin hpsys_aon.bin 0x500c0000 0x38
+savebin pmu.bin 0x500ca000 0xD4
+savebin hpsys_cfg.bin 0x5000b000 0x58
+savebin lcdc_reg.bin 0x50008000 0x160
+savebin epic_reg.bin 0x50007000 0x200
+savebin ezip_reg.bin 0x50006000 0xa0
+
+//Dump memorys
+savebin hcpu_ram.bin 0x20000000 0x80000
+savebin lcpu_ram.bin  0x20400000 0x14000
+
+savebin lpsys_aon_reg.bin 0x40040000 0x108
+savebin mac.bin 0x40090000 0xa34
+savebin rf.bin 0x40082800 0x10c
+savebin rf_mem.bin 0x40082000 0x200
+savebin phy.bin 0x40084000 0x250
+
+savebin psram.bin    0x60000000 0x400000
+savebin psram2.bin    0x62000000 0x400000
+exit

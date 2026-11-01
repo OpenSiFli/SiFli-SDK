@@ -317,13 +317,16 @@ static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
 
 #ifdef BSP_USING_RAMLESS_LCD
     /*
-     * For RAMLESS LCD, the current fb 'drv_lcd_fb.flush_fb_idx' is always the one
-     * being read by the LCDC/PTM.
-     * So, release the other buffer now.
+     * Ramless multi-buffer: the current flush_fb_idx is always the one being
+     * read by the LCDC/PTM, so after its flush we only release the *other* fb
+     * that the CPU was writing. The current fb is kept as-is (flushing_lcd=1)
+     * because the LCDC may still be reading it.
      */
+    if (drv_lcd_fb.fb_total > 1)
     {
         int16_t other_idx = (int16_t)drv_lcd_fb.flush_fb_idx ^ 1;
 
+        /* fbs[] is currently sized 2; the bound check is defensive for future multi-buffer */
         if ((other_idx < (int16_t)drv_lcd_fb.fb_total) &&
                 drv_lcd_fb.fbs[other_idx].fb_flushing_lcd)
         {
@@ -344,13 +347,22 @@ static rt_err_t fb_flush_done(rt_device_t dev, void *buffer)
             DRV_LCD_FB_ASSERT(RT_EOK == err);
         }
     }
-#else
-    p_fb->fb_flushing_lcd = 0;
-    set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
-
-    err = rt_event_send(&drv_lcd_fb.event,
-                        (0 == drv_lcd_fb.flush_fb_idx) ? EVENT_FB0_FLUSH_DONE : EVENT_FB1_FLUSH_DONE);
+    else
 #endif /* BSP_USING_RAMLESS_LCD */
+    {
+        /*
+         * Reached when:
+         *  - non-ramless fb (fb_total can be 1 or 2): flush done for the current fb,
+         *    it becomes idle; clear its state and post its FLUSH_DONE event.
+         *  - ramless single-buffer (fb_total == 1): no other fb exists to release,
+         *    the current fb is the only buffer and must be returned to the writer.
+         */
+        p_fb->fb_flushing_lcd = 0;
+        set_valid_y(p_fb->fb.area.y1 - p_fb->fb.area.y0);
+
+        err = rt_event_send(&drv_lcd_fb.event,
+                            (0 == drv_lcd_fb.flush_fb_idx) ? EVENT_FB0_FLUSH_DONE : EVENT_FB1_FLUSH_DONE);
+    }
 
     rt_hw_interrupt_enable(level);
 

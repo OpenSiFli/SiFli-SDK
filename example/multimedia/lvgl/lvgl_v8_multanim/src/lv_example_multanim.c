@@ -246,6 +246,7 @@ void lv_example_multanim(void)
 
     /* 1) 主动画区域 */
     multanim = lv_multanim_create(scr);
+    lv_obj_set_style_bg_opa(multanim, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_size(multanim, hor, ver - ctrl_h);
     lv_obj_align(multanim, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_clear_flag(multanim, LV_OBJ_FLAG_SCROLLABLE);

@@ -10,10 +10,16 @@ list = os.listdir(cwd)
 CPPPATH = [cwd]
 CPPPATH += [os.path.join(cwd, 'include')]
 
-if GetDepend('BF0_ACPU'):
+if GetDepend('BF0_ACPU') and GetDepend('ANYKA_RUN_IN_ACPU'):
     CPPPATH += [cwd + '/anyka',]
-    objs = group = DefineGroup('anyka', src,depend = ['ANYKA_RUN_IN_ACPU'],CPPPATH = CPPPATH)
+    objs = group = DefineGroup('anyka', src, depend = ['ANYKA_RUN_IN_ACPU'], CPPPATH = CPPPATH)
     objs = objs + SConscript(os.path.join('anyka', 'SConscript'))
+    Return('objs')
+
+if GetDepend('BF0_ACPU') and GetDepend('WEBRTC_RUN_IN_ACPU'):
+    CPPPATH += [cwd + '/webrtc',]
+    objs = group = DefineGroup('webrtc', src, depend = ['WEBRTC_RUN_IN_ACPU'], CPPPATH = CPPPATH)
+    objs = objs + SConscript(os.path.join('webrtc', 'SConscript'))
     Return('objs')
 
 if GetDepend('BF0_HCPU'):
@@ -22,6 +28,7 @@ if GetDepend('BF0_HCPU'):
     CPPPATH += [cwd + '/../../external/libhelix-mp3/pub',]
     CPPPATH += [cwd + '/../app_fwk',]
     CPPPATH += [cwd + '/anyka',]
+    CPPPATH += [cwd + '/webrtc',]
     CPPPATH += [cwd + '/vbe_drc',]
 
 

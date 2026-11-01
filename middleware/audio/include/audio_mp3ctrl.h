@@ -44,6 +44,8 @@ typedef struct
 #define MP3CTRL_IOCTRL_FADE_OUT_START       3
 #define MP3CTRL_IOCTRL_IS_FADE_OUT_DONE     4
 #define MP3CTRL_IOCTRL_FADE_OUT_STOP        5
+#define MP3CTRL_IOCTRL_STRETCH_PERCENT      6
+
 
 /*
 open:
@@ -88,6 +90,9 @@ mp3ctrl_handle mp3ctrl_open_ringbuffer(audio_type_t type, struct rt_ringbuffer *
            if handle is  return by mp3ctrl_open_buffer, can't switch to new file
       MP3CTRL_IOCTRL_THREAD_PRIORITY
            set thread priority, param is priority value
+      MP3CTRL_IOCTRL_STRETCH_PERCENT
+           set audio stretch percent, param is 150, mean stretch ratio is 150%; param is 90 means 90%
+
 */
 int mp3ctrl_ioctl(mp3ctrl_handle handle, int cmd, uint32_t param);
 int mp3ctrl_close(mp3ctrl_handle handle);

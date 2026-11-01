@@ -409,6 +409,11 @@ if BSP_USING_BUILTIN_LCD
                     the wave_table partition.
         endif
 
+        config LCD_USING_EPD_8BIT_E0470A03
+            bool "4.7inch EPD E0470A03 8bit"
+            select LCD_USING_EPD_E0470A03
+            select BSP_LCDC_USING_DIRECT_EPD
+
         config LCD_USING_YX40018ACT
             bool "3.92 rect DBI-16bit 320x320 TFT (YX40018ACT)"
             select LCD_USING_ST7796U

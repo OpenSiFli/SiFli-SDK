@@ -694,11 +694,18 @@ int usbd_ep_start_write(uint8_t busid, const uint8_t ep, const uint8_t *data, ui
     if (data_len == 0) {
         if (ep_idx == 0x00) {
             if (g_musb_udc.setup.wLength == 0) {
+                /* handle_ep0() already wrote RXRDYC|DATAEND for this no-data-stage
+                 * request, which ends the control transfer and lets the core drive
+                 * the status stage by itself. Writing TXRDY|DATAEND here would
+                 * re-assert DATAEND: when the core has already consumed the first
+                 * one, the stale bit survives and makes it end the next transfer
+                 * right after its first full-size packet, which stalls EP0.
+                 */
                 usb_ep0_state = USB_EP0_STATE_IN_STATUS;
             } else {
                 usb_ep0_state = USB_EP0_STATE_IN_ZLP;
+                HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_TXRDY | USB_CSRL0_DATAEND);
             }
-            HWREGB(USB_TXCSRL_BASE(ep_idx)) = (USB_CSRL0_TXRDY | USB_CSRL0_DATAEND);
         } else {
             HWREGB(USB_TXCSRL_BASE(ep_idx)) = USB_TXCSRL1_TXRDY;
             HWREGH(USB_BASE + MUSB_TXIE_OFFSET) |= (1 << ep_idx);

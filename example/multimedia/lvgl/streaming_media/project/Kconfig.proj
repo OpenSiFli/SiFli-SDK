@@ -8,4 +8,12 @@ config CUSTOM_MEM_MAP
     bool 
 	select custom_mem_map
 	default y    
+
+config SOLUTION_ALLOC_MEM
+    bool
+    default y
+
+# App cache options are defined in middleware/lvgl/Kconfig_mem.
+# Configure this example's cache locations and sizes in proj.conf.
+
 rsource "../src/Kconfig"

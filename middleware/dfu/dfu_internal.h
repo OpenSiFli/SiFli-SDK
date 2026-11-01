@@ -54,6 +54,7 @@ extern "C" {
 #define DFU_OTA_VERSION_LEN_MAX 32
 #define DFU_HASH_VERIFY_WDT_PET_FREQUENCY 20
 #define DFU_DOWNLOAD_FREQUENCY 10
+#define DFU_DOWNLOAD_SLOW_FREQUENCY 4
 
 #define DFU_EMMC_ADDR_RANGE 0xA0000000
 #define DFU_EMMC_ADDR_RANGE_FLAG 0xF0000000
@@ -120,6 +121,13 @@ extern "C" {
 #define L2_RET_SECT_BEGIN(section_name)  SECTION_ZIDATA_BEGIN(.l2_ota_ret_data_##section_name)
 #define L2_RET_SECT_END SECTION_ZIDATA_END
 #endif
+
+#define DFU_SET_BIT(val, pos)             ((val) |= (1U << (pos)))
+#define DFU_CLEAR_BIT(val, pos)           ((val) &= ~(1U << (pos)))
+#define DFU_GET_BIT(val, pos)             (((val) >> (pos)) & 1U)
+#define DFU_WRITE_BIT(val, pos, bit_val)  ((val) = ((val) & ~(1U << (pos))) | (((bit_val) & 1U) << (pos)))
+
+#define DFU_DOWNLOAD_SLOW_FLAG_POS 0
 
 typedef enum
 {

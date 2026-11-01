@@ -5,9 +5,12 @@
 SiFli MCU 芯片为双核 Cortex‑M33 STAR SoC 芯片。大核 HCPU 工作频率为 0~240MHz，属于 HPSYS 子系统，适用于进行图形、音频、神经网络等高性能运算；小核 LCPU 工作频率为 0~48MHz，属于 LPSYS 子系统，适用于运行蓝牙、传感器收集与运算等任务。
 ```
 ```{only} SF32LB58X
-SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，芯片中的双大核性能处理器最高工作频率 240MHz，单核 CoreMark 跑分高达 984，功耗效率8.29uA/CoreMark，用于提供丰富应用和流畅人机交
-互所需的图形和音频算力。小核低功耗处理器最高工作频率96MHz，CoreMark 跑分达到 394，功耗效率3.88uA/CoreMark，在作为低功耗传感器控制中心（Sensor Hub）的同时兼顾运行蓝牙协议栈。
+SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，芯片中的双大核性能处理器最高工作频率 240MHz，单核 CoreMark 跑分高达 984，功耗效率8.29uA/CoreMark，用于提供丰富应用和流畅人机交互所需的图形和音频算力。小核低功耗处理器最高工作频率96MHz，CoreMark 跑分达到 394，功耗效率3.88uA/CoreMark，在作为低功耗传感器控制中心（Sensor Hub）的同时兼顾运行蓝牙协议栈。
 ```
+```{only} SF32LB57X
+SF32LB57X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，芯片中的双大核性能处理器最高工作频率 240MHz，单核 CoreMark 跑分高达 984，用于提供丰富应用和流畅人机交互所需的图形和音频算力。小核 LCPU 工作频率为 0~48MHz，属于 LPSYS 子系统，作为蓝牙专用核使用。
+```
+
 低功耗开发例程参考 `example\pm\classical`。
 
 :::{only} SF32LB56X
@@ -21,7 +24,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 ## 2 配置低功耗模式
 
 ### 2.1 打开低功耗模式
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 在 工程目录下运行 `sdk.py menuconfig` 打开软件配置菜单：
 
 1. 使能低功耗功能(`Enable Low power support`)：
@@ -34,7 +37,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  enable Low Power 配置菜单
 ```
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 2. 选择低功耗模式(`Enable Deep Mode`)：
     - 路径：RTOS → RT-Thread Components → Device Drivers → Using Power Management device drivers → Select PM Mode
     - 选择：Enable Deep Mode
@@ -45,7 +48,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  deep Sleep 配置菜单 
 ```
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 3. 开启低功耗调试开关，打开后会输出低功耗相关日志 (非必选，开启后会有低功耗日志打印，会占用时间，对功耗有影响) (`Enable PM Debug`)
     - 路径：Sifli middleware → Enable Low power support -> Enable PM Debug
         - 选择：Enable PM Debug
@@ -56,7 +59,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  debug 配置菜单  
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X
 在 工程目录下运行 `sdk.py menuconfig` 打开软件配置菜单：
 
 1. 使能低功耗功能(`Enable Low power support`)：
@@ -69,7 +72,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图 enable Low Power 配置菜单
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X
 2. 选择低功耗模式(`Enable Standby Mode`)：
     - 路径：RTOS → RT-Thread Components → Device Drivers → Using Power Management device drivers → Select PM Mode
     - 选择：Enable Standby Mode
@@ -80,7 +83,7 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  Standby Sleep 配置菜单   
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X
 3. 开启低功耗调试开关，打开后会输出低功耗相关日志 (非必选，开启后会有低功耗日志打印，会占用时间，对功耗有影响) (`Enable PM Debug`)
     - 路径：Sifli middleware → Enable Low power support -> Enable PM Debug
         - 选择：Enable PM Debug
@@ -91,18 +94,18 @@ SF32LB58X为三核芯片(双大核性能处理器 + 小核低功耗处理器)，
 :align: center
 图  debug 配置菜单  
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X
 - 注意：如果 LCPU 打开了 STANDBY 模式，那么 HCPU 也必须打开 STANDBY 模式。
 ```
 4) 配置好后，确认工程配置文件 `rtconfig.h` 内已包含下面的定义：
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 ```c
 #define RT_USING_PM 1           // 启动 PM 模块
 #define PM_DEEP_ENABLE 1        // DEEP 休眠模式
 #define BSP_USING_PM 1          // 启动 PM 模块
 #define BSP_PM_DEBUG 1          // 打印 PM[S], PM[W] 的日志(非必选)
 ```
-```{only} SF32LB58X or SF32LB56X or SF32LB55X or SF32LB57X
+```{only} SF32LB58X or SF32LB56X or SF32LB55X
 ```c
 #define RT_USING_PM 1           // 启动 PM 模块
 #define PM_STANDBY_ENABLE 1     // STANDBY 休眠模式
@@ -151,6 +154,13 @@ HAL_LPAON_EnableWakeupSrc(LPAON_WAKEUP_SRC_PIN5, AON_PIN_MODE_NEG_EDGE);    // 5
 rt_kprintf("wsr:0x%x,wer:0x%x,\n", hwp_hpsys_aon->WSR, hwp_hpsys_aon->WER); // hcpu
 rt_kprintf("wsr:0x%x,wer:0x%x,\n", hwp_lpsys_aon->WSR, hwp_lpsys_aon->WER); // lcpu
 ```
+```{only} SF32LB57X
+```c
+HAL_HPAON_EnableWakeupSrc(HPAON_WAKEUP_SRC_PIN10, AON_PIN_MODE_LOW);        // 57x PA24 #WKUP_PIN10
+// 配置是否生效，需读取 PMUC 寄存器：57 系列的 PIN 唤醒源走 PMUC（使能在 PMUC WER，触发模式在 PMUC WKUP_MODE，
+// 状态在 PMUC WSR，地址 0x500ca008）；HPSYS AON WER/WSR 仅包含 RTC/LPTIM/IWDT/Mailbox 等非 PIN 唤醒源:
+rt_kprintf("pmuc wsr:0x%x,wer:0x%x,mode:0x%x,\n", hwp_pmuc->WSR, hwp_pmuc->WER, hwp_pmuc->WKUP_MODE); // hcpu
+```
 
 **关机唤醒配置（适用于 hibernate 唤醒）**
 ```{only} SF32LB55X
@@ -164,7 +174,7 @@ rt_kprintf("CR:0x%x,WER:0x%x\n", hwp_pmuc->CR, hwp_pmuc->WER);
 ```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
 55 系列之后 MCU：允许同时存在两个唤醒源 PIN0 和 PIN1，每个唤醒源可指定到任意 HCPU/LCPU 唤醒 PIN；具体参见用户手册 PMUC CR 寄存器配置。
 ```c
-// 58x/56x/52x 配置方法:
+// 58x/56x/52x/57x 配置方法:
 HAL_PMU_SelectWakeupPin(0, HAL_HPAON_QueryWakeupPin(hwp_gpio1, BSP_KEY1_PIN)); // select PA34 to wake_pin0
 HAL_PMU_EnablePinWakeup(0, AON_PIN_MODE_HIGH);                                  // enable wake_pin0 
 rt_kprintf("CR:0x%x,WER:0x%x\n", hwp_pmuc->CR, hwp_pmuc->WER);
@@ -229,11 +239,17 @@ CPU进入待机(standby)模式，系统中高速时钟关闭，CPU相关的外�
 | 低功耗模式           | CPU 状态 | 外设状态 | SRAM                                                     | 唤醒源   | 唤醒时间     | 
 |----------------------|----------|----------|----------------------------------------------------------|----------|---------------------------------------------------------|
 | PM_SLEEP_MODE_IDLE   | stop     | run      | 可访问                                                   | 任意中断 | <1µs       |
-| PM_SLEEP_MODE_DEEP   | stop     | stop     | LPSYS：不可访问，全保留<br>HPSYS：不可访问，全保留 | RTC, 唤醒 PIN, IO(PA),LPTIM1,<br> LPSYS,
- MAILBOX2 | ~ 250us   |
-| PM_SLEEP_MODE_STANDBY| reset    | reset    | LPSYS：不可访问，全保留<br>HPSYS：不可访问，只保留 64KB | RTC, 唤醒 PIN,  LPTIM1,<br>,LPSYS,
- MAILBOX2| ~ 1.5ms       | 
+| PM_SLEEP_MODE_DEEP   | stop     | stop     | LPSYS：不可访问，全保留<br>HPSYS：不可访问，全保留 | RTC, 唤醒 PIN, IO(PA),<br>LPTIM1, LPSYS, MAILBOX2 | ~ 250us   |
+| PM_SLEEP_MODE_STANDBY| reset    | reset    | LPSYS：不可访问，全保留<br>HPSYS：不可访问，只保留 64KB | RTC, 唤醒 PIN, <br>LPTIM1, LPSYS, MAILBOX2 | ~ 1.5ms      | 
 ```
+```{only} SF32LB57X 
+| 低功耗模式           | CPU 状态 | 外设状态 | SRAM                                                     | 唤醒源   | 唤醒时间     | 
+|----------------------|----------|----------|----------------------------------------------------------|----------|---------------------------------------------------------|
+| PM_SLEEP_MODE_IDLE   | stop     | run      | 可访问                                                   | 任意中断 | <1µs       |
+| PM_SLEEP_MODE_DEEP   | stop     | stop     | LPSYS：不可访问，全保留<br>HPSYS：不可访问，全保留 |RTC, 唤醒PIN, IO(PA),<br>LPTIM1, LPSYS, MAILBOX2| ~ 250us   |
+| PM_SLEEP_MODE_STANDBY| reset    | reset    | LPSYS：不可访问，全保留<br>HPSYS：不可访问，全保留 | RTC, 唤醒PIN, <br>LPTIM1, LPSYS, MAILBOX2 | ~ 1.5ms      | 
+```
+
 ### 4.2 关机模式
 
 除了每个子系统提供上述四种低功耗模式，芯片还提供两个系统级关机模式
@@ -262,7 +278,10 @@ CPU进入待机(standby)模式，系统中高速时钟关闭，CPU相关的外�
 ```{only} SF32LB52X 
 降频后的 WFI 频率由 `HAL_RCC_HCPU_SetDeepWFIDiv` 配置。当有音频外设工作时，仅可降至 48MHz；其它情况下可降至 4MHz。同时需要将 `hwp_hpsys_rcc->DBGR` 的 `HPSYS_RCC_DBGR_FORCE_HP` 位置 1。
 ```
-```{only} SF32LB56X or SF32LB58X  
+```{only} SF32LB57X
+降频后的 WFI 频率由 `HAL_RCC_HCPU_SetDeepWFIDiv` 配置。当有音频外设工作时，仅可降至 48MHz；其它情况下可降至 4MHz。
+```
+```{only} SF32LB56X or SF32LB58X
 降频后的 WFI 频率由 `HAL_RCC_HCPU_SetDeepWFIDiv` 配置。当有音频外设工作时，仅可降至 48MHz；其它情况下可降至 1MHz。
 ```
 ### 4.4 场景化动态调频
@@ -297,7 +316,7 @@ SDK 还提供 `pm_scenario_start`/`pm_scenario_stop` 便于按场景切换。目
 ```{only} SF32LB52X 
 HPSYS 可以由低功耗定时器(LPTIM)，RTC，BLE MAC(LCPU Only)，Mailbox(其他CPU)，deeepsleep模式下任意pin唤醒。比如说将当按键按下，HPSYS则会被唤醒。
 ```
-```{only} SF32LB55X or SF32LB58X or SF32LB56X
+```{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 HPSYS 可以由以下几种方式唤醒：低功耗定时器(LPTIM)、RTC、BLE MAC(仅LCPU)、Mailbox(来自其他CPU)或者特定的唤醒引脚。例如，当我们使能按键引脚的唤醒功能后，按下按键时HPSYS就会被唤醒。
 ```
 以按键唤醒亮屏为例，流程如图 4.2；亮屏后进入新一轮熄屏判断流程。来自手机 APP 的 setting 事件触发的唤醒流程如图 4.3，处理完 Setting 请求回到 IDLE 线程可立即进入睡眠。
@@ -311,7 +330,7 @@ HPSYS 可以由以下几种方式唤醒：低功耗定时器(LPTIM)、RTC、BLE 
 :align: center
 图 4.3 收到手机 Setting 事件的唤醒流程
 ```
-```{only} SF32LB55X or SF32LB58X or SF32LB56X
+```{only} SF32LB55X or SF32LB58X or SF32LB56X or SF32LB57X
 #### 4.5.3 LPSYS 唤醒
 
 LPSYS 可被以下事件唤醒：
@@ -333,7 +352,7 @@ SiFli 的 HCPU 与 LCPU 分属不同电源域，分别控制各自电源域内�
 - HCPU：在待机前会将需保留的数据/上下文备份至 PSRAM；唤醒后从 PSRAM 恢复运行现场（无 PSRAM 时仅依赖 HPSYS 的 Retention 区域）。
 - LCPU：保持所有 RAM 供电，将 CPU 寄存器上下文保存在 RAM 中；唤醒后直接从 RAM 恢复现场。
 ```
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 关于待机下的现场保留：
 - HCPU：DEEPSLEEP 模式下,RAM全保留,唤醒后直接从 RAM 恢复现场。
 - LCPU：保持所有 RAM 供电，将 CPU 寄存器上下文保存在 RAM 中；唤醒后直接从 RAM 恢复现场。
@@ -500,10 +519,48 @@ HCPU 和 LCPU 会通过 console 输出日志。按 2.1 节的方法打开低功�
 | [19]    | PIN11 唤醒   |
 | [20]    | PIN12 唤醒   |
 | [21]    | PIN13 唤醒   |
-| [22]    | PIN15 唤醒   |
+| [22]    | PIN14 唤醒   |
 | [23]    | PIN15 唤醒   |
 | [24]    | PIN16 唤醒   |
 | [25]    | PIN17 唤醒   |
+```
+```{only} SF32LB57X
+* HPSYS 的 WSR 含义（PIN 唤醒位来自 PMUC_WSR）
+
+| 比特域 | 含义                    |
+|--------|-------------------------|
+| [0]    | PIN0 唤醒 (PA33)        |
+| [1]    | PIN1 唤醒 (PA34)        |
+| [2]    | PIN2 唤醒 (PA35)        |
+| [3]    | PIN3 唤醒 (PA36)        |
+| [4]    | PIN4 唤醒 (PA37)        |
+| [5]    | PIN5 唤醒 (PA38)        |
+| [6]    | PIN6 唤醒 (PA39)        |
+| [7]    | PIN7 唤醒 (PA40)        |
+| [8]    | PIN8 唤醒 (PA41)        |
+| [9]    | PIN9 唤醒 (PA42)        |
+| [10]   | PIN10 唤醒 (PA24)       |
+| [11]   | PIN11 唤醒 (PA25)       |
+| [12]   | PIN12 唤醒 (PA26)       |
+| [13]   | PIN13 唤醒 (PA27)       |
+| [16]   | RTC 唤醒                |
+| [17]   | IWDT 唤醒               |
+| [18]   | GPIO1 唤醒              |
+| [19]   | LPTIM1 唤醒             |
+| [21]   | LP2HP_WDT 唤醒          |
+| [22]   | LPSYS 手动唤醒 HPSYS    |
+| [23]   | LPSYS 使用 Mailbox 唤醒 HPSYS |
+| [25]   | CHG 唤醒                |
+
+* LPSYS 的 WSR 含义
+
+| 比特域 | 含义                    |
+|--------|-------------------------|
+| [0]    | BT 唤醒                 |
+| [1]    | WDT2 唤醒               |
+| [2]    | LPTIM3 唤醒             |
+| [6]    | HPSYS 手动唤醒 LPSYS    |
+| [7]    | HPSYS 使用 Mailbox 唤醒 LPSYS |
 ```
 ```{only} SF32LB52X
 * HPSYS 的 WSR 含义
@@ -596,6 +653,27 @@ HCPU 和 LCPU 会通过 console 输出日志。按 2.1 节的方法打开低功�
 | PIN4 | PB36     |
 | PIN5 | PA50     |
 ```
+```{only} SF32LB57X
+表4‑4：57 系列 HPSYS 唤醒 PIN 映射表
+
+| 唤醒 | PIN 含义 |
+|------|----------|
+| PIN0 | PA33     |
+| PIN1 | PA34     |
+| PIN2 | PA35     |
+| PIN3 | PA36     |
+| PIN4 | PA37     |
+| PIN5 | PA38     |
+| PIN6 | PA39     |
+| PIN7 | PA40     |
+| PIN8 | PA41     |
+| PIN9 | PA42     |
+| PIN10| PA24     |
+| PIN11| PA25     |
+| PIN12| PA26     |
+| PIN13| PA27     |
+
+```
 
 ```{only} SF32LB52X
 表4‑4：52 系列 HPSYS 唤醒 PIN 映射表（部分）
@@ -685,7 +763,7 @@ static const pm_policy_t default_pm_policy[] =
 
 1) 打开 PM 模块并确认宏定义：
 
-```{only} SF32LB52X
+```{only} SF32LB52X or SF32LB57X
 ```c
 #define RT_USING_PM 1
 #define BSP_USING_PM 1          // 开启低功耗模式
@@ -716,10 +794,10 @@ static const pm_policy_t default_pm_policy[] =
 ```
 
 4) 确认 OS 定时器超时时间大于睡眠门限：
-在 console 中发送命令list_timer，显示操作系统的所有已创建的定时器，将 flag 为 activated 定时器的 timeout 值与睡眠门限作比较，若小于睡眠门限，则表示因为该定时器导致无法进入睡眠。操作系统定时器timeout 的单位为 ms。
+在 console 中发送命令 list_timer，显示操作系统的所有已创建的定时器，将 flag 为 activated 定时器的 timeout 值与睡眠门限作比较，若小于睡眠门限，则表示因为该定时器导致无法进入睡眠。操作系统定时器timeout 的单位为 ms。
 ```{figure} ../../assets/low_power19.png
 :align: center
-图 4.8 pm_dump 命令返回的信息
+图 4.8 list_timer 命令返回的信息
 ```
 见如下配置,HPSYS 的睡眠门限默认为100ms，LPSYS 的睡眠门限为 10ms
 ```c
@@ -794,6 +872,16 @@ regop read 40040020 1   # HPSYS WSR
 regop unlock 0000
 regop read 50040020 1   # LPSYS WSR
 regop read 40040020 1   # HPSYS WSR
+```
+```{only} SF32LB57X
+57 系列WSR地址：
+```text
+regop unlock 0000
+regop read 4004001c 1   # LPSYS WSR
+regop read 500c001c 1   # HPSYS WSR
+regop read 500ca008 1   # PMUC WSR（PIN 唤醒位在此，对应 #WKUP_PIN0-13）
+
+说明：57 系列 HPSYS 的 PIN 唤醒位不在 `HPSYS AON WSR`，而是映射到 `PMUC WSR`（即 `hwp_pmuc->WSR`，地址 `0x500ca008`，对应 #WKUP_PIN0-13），因此排查 PIN 唤醒时需读取该寄存器；`HPSYS AON WSR` 与 `LPSYS AON WSR` 中仅包含 RTC/LPTIM/IWDT/Mailbox 等唤醒位。
 ```
 
 - 也可用 Jlink/SifliUsartServer 读取寄存器或通过日志打印：
@@ -1105,14 +1193,21 @@ HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_NOPULL, 1);
 
 注：52 系列的 LCPU 不开放代码修改。
 ```
+```{only} SF32LB57X
+建议使用 deepsleep 低功耗模式（睡眠模式），该模式下所有 RAM 数据和硬件配置都能保持，从睡眠模式回到工作状态所需的恢复时间也较短，睡眠期间 IO 电平可以保持在工作时的状态，但睡眠模式下外设停止工作，CPU 只能被有限几个唤醒源唤醒，包括 GPIO 中断、RTC 中断、LPTIM 中断以及核间通信中断。
+
+• HCPU 休眠唤醒（简化流程）：
+进入 `sifli_deep_handler()`，且无外设 SUSPEND/RESUME 与现场恢复，唤醒更快：
+`sifli_sleep →` 日志 `[pm]S:3,11620140` → `sifli_deep_handler → BSP_IO_Power_Down → WFI` 进入 deep → 定时器/IO 唤醒 → 回到 WFI 后继续 → `BSP_Power_Up →` 日志 `[pm]W:11620520`、`[pm]WSR:0x80`。
+```
 ### 5.4 Hibernate 关机漏电分析
 
 #### 5.4.1 Hibernate 关机流程
 ```{only} SF32LB55X
 进入 Hibernate：调用 `HAL_PMU_EnterHibernate()`。休眠前需配置好 Hibernate 下 PMU 的唤醒 PIN 与电平。
 ```
-```{only} SF32LB52X
-进入 Hibernate：调用 `HAL_PMU_EnterHibernate()`。休眠前需配置好 Hibernate 下 PMU 的唤醒 PIN 与电平。52 系列因内置 3 个 LDO，需结合硬件通过 `HAL_PMU_ConfigPeriLdo` 关闭无用 LDO。
+```{only} SF32LB52X or SF32LB57X
+进入 Hibernate：调用 `HAL_PMU_EnterHibernate()`。休眠前需配置好 Hibernate 下 PMU 的唤醒 PIN 与电平。52/57 系列因内置 3 个 LDO，需结合硬件通过 `HAL_PMU_ConfigPeriLdo` 关闭无用 LDO。
 ```
 ```{only} SF32LB56X or SF32LB58X
 进入 Hibernate：调用 `HAL_PMU_EnterHibernate()`。休眠前需配置好 Hibernate 下 PMU 的唤醒 PIN 与电平。56/58 系列因 Hibernate 下新增 PMU 上下拉系统，建议用 `HAL_PIN_Set` 配置唤醒 PIN 上下拉。
@@ -1168,10 +1263,10 @@ HAL_PMU_EnterHibernate();
 ```
 
 注意：
-```{only} SF32LB55X
-- 55 系列 MCU：每个唤醒 pin 可单独使能，仅需 `HAL_PMU_EnablePinWakeup` 即可；
+```{only} SF32LB55X or SF32LB57X
+- 55/57 系列 MCU：每个唤醒 pin 可单独使能，仅需 `HAL_PMU_EnablePinWakeup` 即可；
 ```
-```{only} SF32LB52X or SF32LB56X or SF32LB57X or SF32LB58X
+```{only} SF32LB52X or SF32LB56X or SF32LB58X
 - 58/56/52 系列：同时仅允许 2 个唤醒源 `pin0/pin1`，需用 `HAL_PMU_SelectWakeupPin` 指定映射；
 ```
 ```{only} SF32LB52X

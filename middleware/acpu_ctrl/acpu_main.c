@@ -26,6 +26,13 @@
 #if defined(ANYKA_RUN_IN_ACPU)
     #include "audio_3a_anyka.h"
 #endif
+#if defined(WEBRTC_RUN_IN_ACPU)
+    #include "audio_3a_webrtc.h"
+#endif
+#if LIBHELIX_RUN_IN_ACPU
+    #include "mp3dec.h"
+    #include "libhelix_acpu.h"
+#endif
 
 static rt_mailbox_t g_call_mb;
 static acpu_ctrl_ipc_msg_t *p_received_msg;
@@ -45,6 +52,8 @@ static size_t ah_ipc_write(const void *buffer, size_t size, uint32_t timeout)
         RT_ASSERT(RT_EOK == err);
         return 0;
     }
+
+    SCB_CleanDCache();
 
     wr_size = ipc_queue_write(sys_get_ah_ipc_queue(), buffer, size, timeout);
 
@@ -73,7 +82,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     RT_ASSERT(sem);
 
 
-    //Send message to ACPU via IPC queue
+    //Send message to HCPU via IPC queue
     size_t wr_size;
     size_t msg_size;
     acpu_ctrl_ipc_msg_t msg;
@@ -97,7 +106,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     RT_ASSERT(RT_EOK == err);
     rt_sem_delete(sem);
 
-    //Make sure the message was processed by ACPU
+    //Make sure the message was processed by HCPU
     RT_ASSERT(1 == msg.is_rsp);
     RT_ASSERT(task_name == msg.task_id);
 
@@ -127,6 +136,21 @@ void *acpu_call_hcpu_malloc(uint32_t size)
 void acpu_call_hcpu_free(void *p)
 {
     req_hcpu_run_task(HCPU_TASK_FREE, p, sizeof(p), NULL);
+}
+
+void *acpu_call_hcpu_calloc(uint32_t count, uint32_t size)
+{
+    uint32_t cs = count * size;
+    void *p = acpu_call_hcpu_malloc(cs);
+    if (p)
+    {
+        memset(p, 0, cs);
+    }
+    return p;
+}
+void *acpu_call_hcpu_realloc(void *address, uint32_t newsize)
+{
+    return req_hcpu_run_task(HCPU_TASK_REALLOC, address, newsize, NULL);
 }
 
 void acpu_printf(const char *fmt, ...)
@@ -169,7 +193,6 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
     p_msg->ret_error_code = err_code;
     p_msg->ret_value = ret_value;
 
-
     size_t wr_size = ah_ipc_write(&p_msg, sizeof(acpu_ctrl_ipc_msg_t *), 1000);
     RT_ASSERT(wr_size == sizeof(acpu_ctrl_ipc_msg_t *));
 
@@ -179,7 +202,6 @@ static void acpu_send_result2(acpu_ctrl_ipc_msg_t *p_msg, uint32_t err_code, uin
 
 void acpu_send_result(uint32_t err_code, uint32_t ret_value)
 {
-    SCB_CleanInvalidateDCache();
     acpu_send_result2(p_received_msg, err_code, ret_value);
 }
 
@@ -317,6 +339,7 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         acpu_audio_3a_uplink_parameter_t *arg  = (acpu_audio_3a_uplink_parameter_t *)param;
         acpu_audio_3a_uplink_ssl(arg);
         acpu_send_result(0, 0);
+        break;
     }
     case ACPU_TASK_audio_3a_downlink:
     {
@@ -332,12 +355,54 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         break;
     }
 #endif
+#if WEBRTC_RUN_IN_ACPU
+    case ACPU_TASK_webrtc_open:
+    {
+        acpu_webrtc_open_parameter_t *arg = (acpu_webrtc_open_parameter_t *)param;
+        int ret = acpu_webrtc_open(arg->thiz, arg->samplerate);
+        acpu_send_result((uint32_t)ret, 0);
+        break;
+    }
+    case ACPU_TASK_webrtc_downlink:
+    {
+        acpu_webrtc_downlink_parameter_t *arg = (acpu_webrtc_downlink_parameter_t *)param;
+        int ret = acpu_webrtc_downlink(arg->thiz->agcInst, arg->in, arg->out, arg->samplerate);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
+    case ACPU_TASK_webrtc_uplink:
+    {
+        acpu_webrtc_uplink_parameter_t *arg = (acpu_webrtc_uplink_parameter_t *)param;
+        int ret = acpu_webrtc_uplink(arg);
+        acpu_send_result((uint32_t)0, ret);
+        break;
+    }
+    case ACPU_TASK_webrtc_close:
+    {
+        acpu_webrtc_close_parameter_t *arg = (acpu_webrtc_close_parameter_t *)param;
+        acpu_webrtc_close(arg->thiz);
+        acpu_send_result((uint32_t)0, 0);
+        break;
+    }
+#endif
+
+#if LIBHELIX_RUN_IN_ACPU
+    case ACPU_TASK_MP3Decode:
+    {
+        libhelix_decode_parameter_t *arg = (libhelix_decode_parameter_t *)param;
+        int ret = MP3Decode(arg->hMP3Decoder, arg->inbuf, arg->bytesLeft, arg->outbuf, arg->useSize, arg->is_seeking);
+        acpu_send_result(0, (uint32_t)ret);
+        break;
+    }
+#endif
+
     default:
     {
         //here will come sometimes
         //ACPU_ASSERT(0);
         acpu_printf("acpu: unknown task id %d\n", task_name);
         acpu_send_result(0, (uint32_t)"unknown task");
+        break;
     }
     }
 }
@@ -373,7 +438,9 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
             return -RT_ERROR;
         }
 
-        if (p_msg->is_rsp)
+        SCB_InvalidateDCache();
+
+        if (p_msg->is_rsp) // Handle the response messages(Started by ACPU)
         {
             if (p_msg->ret_error_code == ACPU_ERR_OK)
             {
@@ -392,14 +459,14 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
                 RT_ASSERT(0);
             }
         }
-        else
+        else // Handle the request messages(Started by HCPU)
         {
             rt_err_t err;
             if (0)
             {
             }
 #ifdef DRV_EPIC_NEW_API
-            else if (ACPU_TASK_epic_rl == p_msg->task_id)
+            else if (ACPU_TASK_epic_rl == p_msg->task_id) // EPIC render list has it own task, forward it to EPIC task queue
             {
                 err = rt_mb_send(g_epic_mb, (rt_uint32_t)p_msg);
             }
@@ -422,10 +489,17 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
 }
 #ifdef DRV_EPIC_NEW_API
 #include "drv_epic.h"
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+    #include "drv_vglite.h"
+    #include "drv_epic_arc_vglite.h"
+#endif
 extern rt_err_t drv_epic_render_list(void *p_drv_epic, void *list);
 extern rt_err_t drv_epic_render_list_scale(void *p_drv_epic, void *list, void *p_scaled_area);
 static void epic_rl_task_entry(void *parameter)
 {
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+    bool vglite_opened = false;
+#endif
     rt_kprintf("epic_rl_task_entry start\n");
 
     while (1)
@@ -440,6 +514,36 @@ static void epic_rl_task_entry(void *parameter)
                 rt_err_t ret;
                 //acpu_printf("epic_rl_task_entry: 0x%x, 0x%x\n", arg->p_drv_epic, arg->p_render_list);
 
+#ifdef DRV_EPIC_ARC_MASK_VGLITE
+                if (arg->p_render_list == NULL)
+                {
+                    ret = RT_EOK;
+                    if (vglite_opened)
+                    {
+                        ret = drv_epic_arc_vglite_idle() ? drv_vglite_close() : -RT_ERROR;
+                        if (ret == RT_EOK)
+                        {
+                            HAL_NVIC_DisableIRQ(V2D_GPU_IRQn);
+                            vglite_opened = false;
+                        }
+                    }
+                    acpu_send_result2(p_msg, 0, ret);
+                    continue;
+                }
+                if (!vglite_opened)
+                {
+                    HAL_NVIC_SetPriority(V2D_GPU_IRQn, 3, 0);
+                    HAL_NVIC_EnableIRQ(V2D_GPU_IRQn);
+                    ret = drv_vglite_open();
+                    if (ret != RT_EOK)
+                    {
+                        HAL_NVIC_DisableIRQ(V2D_GPU_IRQn);
+                        acpu_send_result2(p_msg, 0, ret);
+                        continue;
+                    }
+                    vglite_opened = true;
+                }
+#endif
                 if (arg->p_scaled_area == NULL)
                     ret = drv_epic_render_list(arg->p_drv_epic, arg->p_render_list);
                 else
@@ -504,4 +608,3 @@ int main(void)
     return RT_EOK;
 }
 #endif /* SOC_BF0_ACPU */
-

@@ -20,8 +20,10 @@
 #include "audio_server.h"
 #include "audio_cvsd.h"
 #include "audio_filter.h"
-#include "audio_bt_voice_lc3swb.h"
 
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
+    #include "audio_bt_voice_lc3swb.h"
+#endif
 
 #define DBG_TAG           "audio"
 #define DBG_LVL           AUDIO_DBG_LVL
@@ -61,7 +63,11 @@ static struct rt_ringbuffer uplink_ring;
 #define AUDIO_BT_VOICE_BUFFER_LEN       512
 #define AUDIO_BT_VOICE_PCM_IN_LEN       120
 #define AUDIO_BT_VOICE_MSBC_IN_LEN      60
-#define AUDIO_BT_VOICE_LC3SWB_IN_LEN    AUDIO_BT_VOICE_LC3SWB_FRAME_BYTES
+
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
+    #define AUDIO_BT_VOICE_LC3SWB_IN_LEN    AUDIO_BT_VOICE_LC3SWB_FRAME_BYTES
+#endif
+
 #define CVSD_MODE                       2
 #define TRANS_MODE                      3
 #define LC3SWB_MODE                     4
@@ -882,6 +888,7 @@ uint16_t bt_voice_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
 
         }
     }
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
     else if (p_msbc_env->audio_fmt_id == AUDIO_FMT_LC3SWB)
     {
         uint16_t lc3swb_pcm_size = audio_bt_voice_lc3swb_get_pcm_samples() * sizeof(int16_t);
@@ -910,6 +917,7 @@ uint16_t bt_voice_decode_process(uint8_t *fifo, uint8_t *output, uint8_t size)
             LOG_W("3a_w lc3swb totalRxCnt:%d, rx errcnt:%d, decode errcnt:%d\n", p_msbc_env->total_packet, p_msbc_env->error_packet, p_msbc_env->decode_err);
         }
     }
+#endif
     else //msbc
     {
         //msbc_plc
@@ -1052,6 +1060,7 @@ void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
 #ifdef AUDIO_MSBC_STATIC_TIME
     g_msbc_test_cur = audio_get_curr_tick();
 #endif
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
     if (fifo_size == (audio_bt_voice_lc3swb_get_pcm_samples() * sizeof(int16_t)))
     {
         p_data = g_msbc_fifo;
@@ -1071,53 +1080,55 @@ void bt_voice_encode_process(uint8_t *fifo, uint16_t fifo_size)
         // LOG_I("bt_voice_encode_process lc3 %d p_data:0x%2x", fifo_size, g_msbc_fifo[1]);
         bt_voice_uplink_process(g_msbc_fifo, AUDIO_BT_VOICE_LC3SWB_IN_LEN + 2);
     }
-    else if (240 == fifo_size) //msbc,  16000
-    {
-        //msbc_encode();
-        p_data = g_msbc_fifo;
-        memset(p_data, 0, 60);
-        *p_data++ = 0x1;
-        *p_data++ = msbc_sn[p_msbc_env->sn_cnt++];
-        if (p_msbc_env->sn_cnt == 4)
-        {
-            p_msbc_env->sn_cnt = 0;
-        }
-        pbss_t.psrc = fifo;
-        pbss_t.src_len = 240;
-        pbss_t.dst_len = 57;
-        pbss_t.pdst = p_data;
-        bts2_msbc_encode(&pbss_t);
-        if ((240 != pbss_t.src_len_used) || (pbss_t.dst_len_used != 57))
-        {
-            LOG_W("3a_w msbc encode src_len_use=%d,dst_len_use=%d\n", pbss_t.src_len_used, pbss_t.dst_len_used);
-        }
-        bt_voice_uplink_process(g_msbc_fifo, 60);
-    }
-    else//cvsd
-    {
-        //no process
-#if !SOFT_CVSD_ENCODE
-        bt_voice_uplink_process(fifo, 120);
-#else
-        //audio_dump_data_align_size(ADUMP_DOWNLINK, fifo, 120);
-
-        memmove(g_audio_cvsd_env.inp_buf, (int16_t *)(g_audio_cvsd_env.inp_buf + BT_CVSD_FRAME_LEN), FIR_FILTER_LENGTH * sizeof(int16_t));
-        memcpy(g_audio_cvsd_env.inp_buf_shift, fifo, 120);
-
-        interpolation_x8(g_audio_cvsd_env.inp_buf, g_audio_cvsd_env.buf_size_FIR_assumpt, g_audio_cvsd_env.interpolate_buf, g_audio_cvsd_env.out_len_interpolate);
-        //cvsdEncode(&cvsd_e, (const int16_t *)interpolate_buf, out_len_interpolate, (uint32_t *)bit_buf);
-        cvsdEncode(&(g_audio_cvsd_env.cvsd_e), (const int16_t *)g_audio_cvsd_env.interpolate_buf, g_audio_cvsd_env.out_len_interpolate, (uint32_t *)fifo);
-
-        for (int i = 0; i < BT_CVSD_FRAME_LEN; i++)
-        {
-            fifo[i] = Reverse_byte(fifo[i]);
-        }
-
-        //audio_dump_data_align_size(ADUMP_DOWNLINK_AGC, fifo, 60);
-
-        bt_voice_uplink_process(fifo, 60);
+    else
 #endif
-    }
+        if (240 == fifo_size) //msbc,  16000
+        {
+            //msbc_encode();
+            p_data = g_msbc_fifo;
+            memset(p_data, 0, 60);
+            *p_data++ = 0x1;
+            *p_data++ = msbc_sn[p_msbc_env->sn_cnt++];
+            if (p_msbc_env->sn_cnt == 4)
+            {
+                p_msbc_env->sn_cnt = 0;
+            }
+            pbss_t.psrc = fifo;
+            pbss_t.src_len = 240;
+            pbss_t.dst_len = 57;
+            pbss_t.pdst = p_data;
+            bts2_msbc_encode(&pbss_t);
+            if ((240 != pbss_t.src_len_used) || (pbss_t.dst_len_used != 57))
+            {
+                LOG_W("3a_w msbc encode src_len_use=%d,dst_len_use=%d\n", pbss_t.src_len_used, pbss_t.dst_len_used);
+            }
+            bt_voice_uplink_process(g_msbc_fifo, 60);
+        }
+        else//cvsd
+        {
+            //no process
+#if !SOFT_CVSD_ENCODE
+            bt_voice_uplink_process(fifo, 120);
+#else
+            //audio_dump_data_align_size(ADUMP_DOWNLINK, fifo, 120);
+
+            memmove(g_audio_cvsd_env.inp_buf, (int16_t *)(g_audio_cvsd_env.inp_buf + BT_CVSD_FRAME_LEN), FIR_FILTER_LENGTH * sizeof(int16_t));
+            memcpy(g_audio_cvsd_env.inp_buf_shift, fifo, 120);
+
+            interpolation_x8(g_audio_cvsd_env.inp_buf, g_audio_cvsd_env.buf_size_FIR_assumpt, g_audio_cvsd_env.interpolate_buf, g_audio_cvsd_env.out_len_interpolate);
+            //cvsdEncode(&cvsd_e, (const int16_t *)interpolate_buf, out_len_interpolate, (uint32_t *)bit_buf);
+            cvsdEncode(&(g_audio_cvsd_env.cvsd_e), (const int16_t *)g_audio_cvsd_env.interpolate_buf, g_audio_cvsd_env.out_len_interpolate, (uint32_t *)fifo);
+
+            for (int i = 0; i < BT_CVSD_FRAME_LEN; i++)
+            {
+                fifo[i] = Reverse_byte(fifo[i]);
+            }
+
+            //audio_dump_data_align_size(ADUMP_DOWNLINK_AGC, fifo, 60);
+
+            bt_voice_uplink_process(fifo, 60);
+#endif
+        }
 }
 void msbc_open(uint32_t samplerate)
 {
@@ -1137,22 +1148,25 @@ void msbc_open(uint32_t samplerate)
         rt_ringbuffer_init(&uplink_ring, p_uplink_pool, AUDIO_BT_UPLINK_BUFFER_SIZE);
         p_msbc_env->pcm_plc = audio_mem_malloc(sizeof(LowcFE_c));
         RT_ASSERT(p_msbc_env->pcm_plc);
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
         if (samplerate == AUDIO_BT_VOICE_LC3SWB_SAMPLE_RATE)
         {
             RT_ASSERT(audio_bt_voice_lc3swb_open_default() == 0);
             p_msbc_env->audio_fmt_id = AUDIO_FMT_LC3SWB;
             //need lc3 plc
         }
-        else if (samplerate == 8000)
-        {
-            cvsd_g711plc_construct(p_msbc_env->pcm_plc);
-            p_msbc_env->audio_fmt_id = AUDIO_FMT_PCM;
-        }
-        else if (samplerate == 16000)
-        {
-            msbc_g711plc_construct(p_msbc_env->pcm_plc);
-            p_msbc_env->audio_fmt_id = AUDIO_FMT_MSBC;
-        }
+        else
+#endif
+            if (samplerate == 8000)
+            {
+                cvsd_g711plc_construct(p_msbc_env->pcm_plc);
+                p_msbc_env->audio_fmt_id = AUDIO_FMT_PCM;
+            }
+            else if (samplerate == 16000)
+            {
+                msbc_g711plc_construct(p_msbc_env->pcm_plc);
+                p_msbc_env->audio_fmt_id = AUDIO_FMT_MSBC;
+            }
 
         LOG_I("msbc_open defresize=%d,enfresize=%d, rate=%d\n", defresize, enfresize, samplerate);
         p_msbc_env->state = 1;
@@ -1181,7 +1195,9 @@ void msbc_close()
 #endif
         bts2_msbc_encode_completed();
         bts2_msbc_decode_completed();
+#if defined(LC3_CODEC_ENABLE) || defined(ZBT)
         audio_bt_voice_lc3swb_close();
+#endif
         audio_mem_free(p_uplink_pool);
         p_msbc_env->send_enable = 0;
         p_msbc_env->sn_cnt = 0;

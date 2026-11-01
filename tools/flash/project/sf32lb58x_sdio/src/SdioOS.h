@@ -23,6 +23,20 @@
 #define MAX_NUM_SECTORS (512)      // Max. number of sectors, must not be modified.
 #define ALGO_VERSION    (0x0101)   // Algo version, must not be modified.
 
+#ifdef JLINK_SDIO_1
+#ifdef SD1_PINMUX_TYPE1
+    #define SDIO_NAME  "SF32LB58X External SDIO1 TYPE1"
+#else
+    #define SDIO_NAME  "SF32LB58X External SDIO1"
+#endif /* SD1_PINMUX_TYPE1 */
+    #define SDIO_BASE  0x68000000
+    #define SDIO_SIZE  0x38000000
+#elif defined(JLINK_SDIO_2)
+    #define SDIO_NAME  "SF32LB58X External SDIO2"
+    #define SDIO_BASE  0xa0000000
+    #define SDIO_SIZE  0x40000000
+#endif
+
 struct SECTOR_INFO
 {
     U32 SectorSize;       // Sector Size in bytes

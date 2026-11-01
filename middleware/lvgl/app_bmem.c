@@ -65,73 +65,391 @@ enum
 
 typedef struct
 {
-    uint16_t            num;
     uint16_t            statue;
-    bmem_node_t        *node_list;
+    bmem_node_t         node;
     uint32_t            max_size;
 } bmem_header_t;
 
-#define MAGIC_FREE      0x1ea0
-#define MAGIC_ALLOC     0x1ea1
+#define MAGIC_FREE      0x1eb0
+#define MAGIC_ALLOC     0x1eb1
 
 #define BMEM_HEAD_SIZE              sizeof(bmem_item_t)
+#define BMEM_FOOT_SIZE              sizeof(bmem_footer_t)
 #define BMEM_VALID(p, bmem_node)    ((uint8_t *)p >= bmem_node->header_ptr && (uint8_t *)p < bmem_node->tailer_ptr)
 
 static bmem_header_t    bmem_list_header;
 
+static inline void bmem_check_run_footer(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units, uint16_t magic);
+
+#define bmem_run_bin_index(units, bin_num) (units > bin_num ? (bin_num - 1) : (units - 1))
+
+static inline uint16_t bmem_calc_run_bin_num(uint32_t unit_size)
+{
+    uint32_t max_units;
+    uint32_t bin_num;
+
+    RT_ASSERT(unit_size > 0);
+
+    max_units = (BMEM_HEAD_SIZE + BMEM_MAX_ALLOC_SIZE + BMEM_FOOT_SIZE + unit_size - 1) / unit_size;
+    bin_num = max_units + 1;
+    if (bin_num > BMEM_RUN_BIN_NUM)
+    {
+        bin_num = BMEM_RUN_BIN_NUM;
+    }
+
+    return (uint16_t)bin_num;
+}
+
 void list_bmem(void)
 {
 #ifdef USING_BLOCK_MEM
-    bmem_node_t *bmem_node = bmem_list_header.node_list;
-    for (int i = 0; i < bmem_list_header.num; i++)
+    bmem_node_t *bmem_node = &bmem_list_header.node;
+
+    if (BMEM_NULL == bmem_list_header.statue)
     {
-        rt_kprintf("bmem: %s, num %d max %d actual %d\n", bmem_node->name, bmem_node->num, bmem_node->max_used_num, bmem_node->act_used_num);
-        bmem_node++;
+        return;
     }
+
+    rt_kprintf("bmem: %s, unit_size %d total_units %d actual_used_units %d max_used_units %d\n",
+               bmem_node->name, bmem_node->size, bmem_node->num, bmem_node->act_used_num, bmem_node->max_used_num);
 #endif
 }
 
-#define FREE_LIST_NOT_EMPTY(bmem_node) (bmem_node->free_header)
+void list_bmem_detail(void)
+{
+#ifdef USING_BLOCK_MEM
+    bmem_node_t *bmem_node = &bmem_list_header.node;
+
+    if (BMEM_NULL == bmem_list_header.statue)
+    {
+        return;
+    }
+
+    list_bmem();
+#ifdef USING_BMEM_MAGIC
+    uint16_t bin_num = bmem_node->bin_num;
+    uint32_t alloc_runs[BMEM_RUN_BIN_NUM] = {0};
+    uint32_t alloc_units[BMEM_RUN_BIN_NUM] = {0};
+    uint32_t free_runs[BMEM_RUN_BIN_NUM] = {0};
+    uint32_t free_units[BMEM_RUN_BIN_NUM] = {0};
+
+    for (uint32_t unit_index = 0; unit_index < bmem_node->num;)
+    {
+        bmem_item_t *bmem = (bmem_item_t *)(bmem_node->header_ptr + unit_index * bmem_node->size);
+        uint16_t units;
+        uint16_t bin;
+
+        RT_ASSERT(MAGIC_ALLOC == bmem->magic || MAGIC_FREE == bmem->magic);
+        units = bmem->units;
+        RT_ASSERT(units > 0 && unit_index + units <= bmem_node->num);
+        bmem_check_run_footer(bmem_node, bmem, units, bmem->magic);
+
+        if (MAGIC_ALLOC == bmem->magic)
+        {
+            uint16_t alloc_units_by_size = (uint16_t)((bmem->size + bmem_node->size - 1) / bmem_node->size);
+
+            RT_ASSERT(alloc_units_by_size > 0);
+            bin = bmem_run_bin_index(alloc_units_by_size, bin_num);
+            alloc_runs[bin]++;
+            alloc_units[bin] += units;
+        }
+        else
+        {
+            bin = bmem_run_bin_index(units, bin_num);
+            free_runs[bin]++;
+            free_units[bin] += units;
+        }
+
+        unit_index += units;
+    }
+
+    rt_kprintf("%14s %10s %10s\n", "alloc_size", "count", "used_unit");
+    for (uint16_t bin = 0; bin < bin_num; bin++)
+    {
+        if (alloc_runs[bin])
+        {
+            uint16_t units = bin + 1;
+
+            if (bin_num - 1 == bin)
+            {
+                rt_kprintf("%13s%d %10d %10d\n", ">=", bmem_node->size * bin_num,
+                           alloc_runs[bin], alloc_units[bin]);
+            }
+            else
+            {
+                rt_kprintf("%14d %10d %10d\n", units * bmem_node->size,
+                           alloc_runs[bin], alloc_units[bin]);
+            }
+        }
+    }
+
+    rt_kprintf("%14s %10s %10s\n", "free_run_size", "count", "free_unit");
+    for (uint16_t bin = 0; bin < bin_num; bin++)
+    {
+        if (free_runs[bin])
+        {
+            uint16_t units = bin + 1;
+
+            if (bin_num - 1 == bin)
+            {
+                rt_kprintf("%13s%d %10d %10d\n", ">=", bmem_node->size * bin_num,
+                           free_runs[bin], free_units[bin]);
+            }
+            else
+            {
+                rt_kprintf("%14d %10d %10d\n", units * bmem_node->size,
+                           free_runs[bin], free_units[bin]);
+            }
+        }
+    }
+#endif
+#endif
+}
+
+#ifdef RT_USING_FINSH
+    #include <finsh.h>
+    MSH_CMD_EXPORT_ALIAS(list_bmem_detail, list_bmem, list_bmem);
+#endif
 
 static struct rt_mutex  bmem_mutex;
 
+static inline uint16_t bmem_run_units(bmem_node_t *bmem_node, uint32_t size)
+{
+    return (uint16_t)((BMEM_HEAD_SIZE + size + BMEM_FOOT_SIZE + bmem_node->size - 1) / bmem_node->size);
+}
+
+static inline uint8_t *bmem_run_end(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units)
+{
+    return (uint8_t *)bmem + units * bmem_node->size;
+}
+
+static inline bmem_footer_t *bmem_run_footer(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units)
+{
+    return (bmem_footer_t *)(bmem_run_end(bmem_node, bmem, units) - BMEM_FOOT_SIZE);
+}
+
+static inline void bmem_set_run_footer(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units, uint16_t magic)
+{
+    bmem_footer_t *footer = bmem_run_footer(bmem_node, bmem, units);
+
+    footer->magic = magic;
+    footer->units = units;
+}
+
+static inline void bmem_check_run_footer(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units, uint16_t magic)
+{
+    bmem_footer_t *footer = bmem_run_footer(bmem_node, bmem, units);
+
+    RT_ASSERT(footer->magic == magic && footer->units == units);
+}
+
+static inline void bmem_insert_run(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units)
+{
+    uint16_t bin = bmem_run_bin_index(units, bmem_node->bin_num);
+
+#ifdef USING_BMEM_MAGIC
+    bmem->magic = MAGIC_FREE;
+    bmem->size = 0;
+    bmem->units = units;
+    bmem_set_run_footer(bmem_node, bmem, units, MAGIC_FREE);
+#endif
+    bmem->node = (void *)bmem_node;
+    bmem->next = bmem_node->free_bins[bin];
+    bmem_node->free_bins[bin] = bmem;
+    bmem_node->free_header = bmem;
+    bmem_node->free_bin_map |= (1U << bin);
+}
+
+static inline void bmem_remove_run_from_bin(bmem_node_t *bmem_node, uint16_t bin, bmem_item_t *prev, bmem_item_t *bmem)
+{
+    if (prev)
+    {
+        prev->next = bmem->next;
+    }
+    else
+    {
+        bmem_node->free_bins[bin] = bmem->next;
+    }
+
+    if (!bmem_node->free_bins[bin])
+    {
+        bmem_node->free_bin_map &= ~(1U << bin);
+    }
+
+    bmem_node->free_header = NULL;
+    for (uint16_t i = 0; i < bmem_node->bin_num; i++)
+    {
+        if (bmem_node->free_bins[i])
+        {
+            bmem_node->free_header = bmem_node->free_bins[i];
+            break;
+        }
+    }
+}
+
+static bmem_item_t *bmem_find_run(bmem_node_t *bmem_node, uint16_t units, uint16_t *bin_out, bmem_item_t **prev_out)
+{
+    uint16_t start_bin = bmem_run_bin_index(units, bmem_node->bin_num);
+    uint32_t map = bmem_node->free_bin_map & (~0U << start_bin);
+
+    while (map)
+    {
+        uint16_t bin = 0;
+        uint32_t bit = map & (~map + 1U);
+
+        while ((bit >> bin) != 1U)
+        {
+            bin++;
+        }
+
+        bmem_item_t *prev = NULL;
+        bmem_item_t *bmem = bmem_node->free_bins[bin];
+        while (bmem)
+        {
+            if (bmem->units >= units)
+            {
+                *bin_out = bin;
+                *prev_out = prev;
+                return bmem;
+            }
+
+            prev = bmem;
+            bmem = bmem->next;
+        }
+
+        map &= ~bit;
+    }
+
+    return NULL;
+}
+
+static void bmem_remove_run(bmem_node_t *bmem_node, bmem_item_t *bmem)
+{
+    uint16_t bin = bmem_run_bin_index(bmem->units, bmem_node->bin_num);
+    bmem_item_t *prev = NULL;
+    bmem_item_t *free_run = bmem_node->free_bins[bin];
+
+    while (free_run)
+    {
+        if (free_run == bmem)
+        {
+            bmem_remove_run_from_bin(bmem_node, bin, prev, free_run);
+            return;
+        }
+
+        prev = free_run;
+        free_run = free_run->next;
+    }
+
+    RT_ASSERT(0);
+}
+
+static void bmem_merge_and_insert_run(bmem_node_t *bmem_node, bmem_item_t *bmem, uint16_t units)
+{
+    uint8_t *run_start = (uint8_t *)bmem;
+    uint8_t *run_end = bmem_run_end(bmem_node, bmem, units);
+
+    if (run_start > bmem_node->header_ptr)
+    {
+        bmem_footer_t *left_footer = (bmem_footer_t *)(run_start - BMEM_FOOT_SIZE);
+
+        RT_ASSERT(MAGIC_FREE == left_footer->magic || MAGIC_ALLOC == left_footer->magic);
+        if (MAGIC_FREE == left_footer->magic && left_footer->units > 0)
+        {
+            uint16_t left_units = left_footer->units;
+            uint32_t left_size = left_units * bmem_node->size;
+
+            if (left_size <= (uint32_t)(run_start - bmem_node->header_ptr))
+            {
+                uint8_t *left_start = run_start - left_size;
+                bmem_item_t *left = (bmem_item_t *)left_start;
+
+                if (bmem_run_end(bmem_node, left, left_units) == run_start &&
+                        left->magic == MAGIC_FREE && left->units == left_units)
+                {
+                    bmem_check_run_footer(bmem_node, left, left_units, MAGIC_FREE);
+                    bmem_remove_run(bmem_node, left);
+                    bmem = left;
+                    units += left_units;
+                    run_start = (uint8_t *)bmem;
+                }
+            }
+        }
+    }
+
+    run_end = bmem_run_end(bmem_node, bmem, units);
+    if (run_end < bmem_node->tailer_ptr)
+    {
+        bmem_item_t *right = (bmem_item_t *)run_end;
+
+        RT_ASSERT(MAGIC_FREE == right->magic || MAGIC_ALLOC == right->magic);
+        if (MAGIC_FREE == right->magic && right->units > 0 && bmem_run_end(bmem_node, right, right->units) <= bmem_node->tailer_ptr)
+        {
+            uint16_t right_units = right->units;
+
+            bmem_check_run_footer(bmem_node, right, right_units, MAGIC_FREE);
+            bmem_remove_run(bmem_node, right);
+            units += right_units;
+        }
+    }
+
+    bmem_insert_run(bmem_node, bmem, units);
+}
+
+static inline bmem_item_t *bmem_find_alloc_run(bmem_node_t *bmem_node, uint32_t size, uint16_t *units, uint16_t *bin, bmem_item_t **prev)
+{
+    *units = bmem_run_units(bmem_node, size);
+    return bmem_find_run(bmem_node, *units, bin, prev);
+}
+
 void *bmem_alloc(uint32_t size)
 {
+    if (size > BMEM_MAX_ALLOC_SIZE) return NULL;
+#ifdef USING_BMEM_MAGIC
+    if (size > 0xFFFF) return NULL;
+#endif
     if (BMEM_NULL == bmem_list_header.statue || size > bmem_list_header.max_size) return NULL;
 
+    bmem_node_t *bmem_node = &bmem_list_header.node;
     bmem_item_t *ptr = NULL;
-    bmem_node_t *bmem_node = bmem_list_header.node_list;
+    uint16_t units;
+    uint16_t bin;
+    uint16_t run_units;
+    bmem_item_t *prev;
 
     rt_mutex_take(&bmem_mutex, RT_WAITING_FOREVER);
 
-    for (uint16_t i = 0; i < bmem_list_header.num; i++)
+    ptr = bmem_find_alloc_run(bmem_node, size, &units, &bin, &prev);
+    if (!ptr)
     {
-        if (size < bmem_node->size)
-        {
-            //RT_ASSERT(bmem_node->name);
-            if (FREE_LIST_NOT_EMPTY(bmem_node)) goto end;
-#ifndef BMEM_ALLOC_ALWAYS
-            //allocated fail, because the block memory with the closest size is full.
-            break;
-#endif
-        }
-        bmem_node++;
+        rt_mutex_release(&bmem_mutex);
+        return NULL;
     }
 
-    rt_mutex_release(&bmem_mutex);
-    return NULL;
+    {
+        run_units = ptr->units;
 
-end:
+        bmem_remove_run_from_bin(bmem_node, bin, prev, ptr);
+        if (run_units > units && (run_units - units) * bmem_node->size >= BMEM_HEAD_SIZE + BMEM_FOOT_SIZE)
+        {
+            bmem_item_t *remain = (bmem_item_t *)bmem_run_end(bmem_node, ptr, units);
+            bmem_insert_run(bmem_node, remain, run_units - units);
+        }
+        else
+        {
+            units = run_units;
+        }
+    }
 
-    ptr = bmem_node->free_header;
 #ifdef USING_BMEM_MAGIC
     RT_ASSERT(ptr->magic == MAGIC_FREE);
     ptr->magic = MAGIC_ALLOC;
     ptr->size = size;
+    ptr->units = units;
+    bmem_set_run_footer(bmem_node, ptr, units, MAGIC_ALLOC);
 #endif
 
-    bmem_node->free_header = bmem_node->free_header->next;
-    bmem_node->act_used_num++;
+    bmem_node->act_used_num += units;
     if (bmem_node->max_used_num < bmem_node->act_used_num) bmem_node->max_used_num = bmem_node->act_used_num;
 
 #ifdef USING_BMEM_TICK
@@ -175,16 +493,16 @@ int bmem_free(void *p)
 
     rt_mutex_take(&bmem_mutex, RT_WAITING_FOREVER);
 #ifdef USING_BMEM_MAGIC
-    bmem_item_t *next = (bmem_item_t *)((uint8_t *) p + bmem_node->size);
+    uint16_t units = bmem->units;
     RT_ASSERT(MAGIC_ALLOC == bmem->magic &&
-              bmem->size <= bmem_node->size);
-    if (BMEM_VALID(next, bmem_node))
-        RT_ASSERT(MAGIC_ALLOC == next->magic || MAGIC_FREE == next->magic);
+              bmem->size <= bmem_node->size * bmem_node->num - BMEM_HEAD_SIZE - BMEM_FOOT_SIZE);
+    bmem_check_run_footer(bmem_node, bmem, units, MAGIC_ALLOC);
     bmem->magic = MAGIC_FREE;
+#else
+    uint16_t units = bmem_run_units(bmem_node, 0);
 #endif
-    bmem->next = bmem_node->free_header;
-    bmem_node->free_header = bmem;
-    bmem_node->act_used_num--;
+    bmem_merge_and_insert_run(bmem_node, bmem, units);
+    bmem_node->act_used_num -= units;
     RT_ASSERT(bmem_node->act_used_num >= 0);
     rt_mutex_release(&bmem_mutex);
 
@@ -199,106 +517,38 @@ SECTION_DEF(BMEM_SECTION_NAME, bmem_desc_t);
 static void bmem_load(void)
 {
     bmem_desc_t *block_desc;
-    uint32_t    *end;
-    uint32_t    *temp;
-    uint32_t     num = 0;
-    bmem_node_t *bmem_node;
+    uint32_t    *end = (uint32_t *)SECTION_END_ADDR(BMEM_SECTION_NAME);
+    uint32_t    *temp = (uint32_t *)SECTION_START_ADDR(BMEM_SECTION_NAME);
+    bmem_node_t *bmem_node = &bmem_list_header.node;
 
-    end  = (uint32_t *)SECTION_END_ADDR(BMEM_SECTION_NAME);
-    temp = (uint32_t *)SECTION_START_ADDR(BMEM_SECTION_NAME);
+    memset(&bmem_list_header, 0x00, sizeof(bmem_list_header));
 
-    //rt_mutex_take(&bmem_mutex, RT_WAITING_FOREVER);
-    bmem_list_header.node_list = NULL;
-    bmem_list_header.max_size = 0;
-    bmem_list_header.statue = BMEM_NORMAL;
-
-    /* Get number of the block_memory from BMEM_REGISTER */
     while (temp < end)
     {
         block_desc = (bmem_desc_t *)temp;
 
         if (block_desc->size > 0 && block_desc->name && block_desc->num > 0)
         {
-            temp += (sizeof(bmem_desc_t) >> 2);
-            num++;
-        }
-        else
-        {
-            temp++;
-        }
-    }
+            RT_ASSERT(block_desc->num <= 0xFFFF);
 
-    if (0 == num) return;
-
-    temp = (uint32_t *)SECTION_START_ADDR(BMEM_SECTION_NAME);
-    bmem_node = (bmem_node_t *) rt_calloc(1, sizeof(bmem_node_t) * num);
-    RT_ASSERT(bmem_node);
-    bmem_list_header.num = num;
-    bmem_list_header.node_list = bmem_node;
-
-    num = 0;
-    while (temp < end)
-    {
-        block_desc = (bmem_desc_t *)temp;
-
-        if (block_desc->size > 0 && block_desc->name && block_desc->num > 0)
-        {
-            uint32_t i;
-            for (i = 0; i < num; i++)
-            {
-                if (block_desc->size < bmem_list_header.node_list[i].size) break;
-            }
-
-            bmem_node = &bmem_list_header.node_list[i];
-
-            for (int k = num - 1; k >= (int) i; k--)
-            {
-                bmem_list_header.node_list[k + 1] = bmem_list_header.node_list[k];
-            }
-
-            RT_ASSERT(bmem_node);
             bmem_node->size = block_desc->size;
             bmem_node->name = block_desc->name;
             bmem_node->num = block_desc->num;
+            bmem_node->bin_num = bmem_calc_run_bin_num(bmem_node->size);
             bmem_node->header_ptr = block_desc->ptr;
-            bmem_node->tailer_ptr = bmem_node->header_ptr + block_desc->num * (bmem_node->size + BMEM_HEAD_SIZE);
-            bmem_node->act_used_num = 0;
-            bmem_node->free_header = NULL;
-            num++;
+            bmem_node->tailer_ptr = bmem_node->header_ptr + block_desc->num * bmem_node->size;
+            bmem_insert_run(bmem_node, (bmem_item_t *)bmem_node->header_ptr, (uint16_t)block_desc->num);
 
-            for (i = block_desc->num; i > 0; i--)
-            {
-                bmem_item_t *bmem = (bmem_item_t *)(bmem_node->header_ptr + (i - 1) * (bmem_node->size + BMEM_HEAD_SIZE));
-#ifdef USING_BMEM_MAGIC
-                bmem->magic = MAGIC_FREE;
-                bmem->size = bmem_node->size;
-#endif
-#ifdef USING_BMEM_TRACE
-#ifdef USING_BMEM_TICK
-                ((bmem_item_t *) bmem)->tick = 0;
-#endif
-                ((bmem_item_t *) bmem)->ret_addr = 0;
-#endif
-                bmem->next = bmem_node->free_header;
-                bmem_node->free_header = (bmem_item_t *)bmem;
-            }
+            bmem_list_header.max_size = bmem_node->size * bmem_node->num - BMEM_HEAD_SIZE - BMEM_FOOT_SIZE;
+            bmem_list_header.statue = BMEM_NORMAL;
 
-            if (bmem_list_header.max_size < bmem_node->size)
-            {
-                bmem_list_header.max_size = bmem_node->size;
-            }
-
-            rt_kprintf("%s: %s, num %d\n", __func__, bmem_node->name, bmem_node->num);
-            temp += (sizeof(bmem_desc_t) >> 2);
-        }
-        else
-        {
-            temp++;
+            rt_kprintf("%s: %s, unit_size %d total_units %d bin_num %d\n",
+                       __func__, bmem_node->name, bmem_node->size, bmem_node->num, bmem_node->bin_num);
+            return;
         }
 
+        temp++;
     }
-
-    //rt_mutex_release(&bmem_mutex);
 }
 
 /**
@@ -307,7 +557,6 @@ static void bmem_load(void)
 static void bmem_unload(void)
 {
     rt_mutex_take(&bmem_mutex, RT_WAITING_FOREVER);
-    rt_free(bmem_list_header.node_list);
     memset(&bmem_list_header, 0x00, sizeof(bmem_list_header));
     rt_mutex_release(&bmem_mutex);
 }
@@ -319,33 +568,41 @@ uint32_t bmem_backup(uint32_t (*func)(uint32_t addr, uint32_t size))
     RT_ASSERT(func);
 
     rt_mutex_take(&bmem_mutex, RT_WAITING_FOREVER);
-    bmem_node_t *bmem_node;
-    for (uint16_t i = 0; i < bmem_list_header.num; i++)
+    if (BMEM_NORMAL == bmem_list_header.statue && bmem_list_header.node.act_used_num > 0)
     {
-        bmem_node = &bmem_list_header.node_list[i];
+        bmem_node_t *bmem_node = &bmem_list_header.node;
+
         RT_ASSERT(bmem_node->name);
-        uint32_t num = 0;
-        if (0 == bmem_node->act_used_num)
+        for (uint32_t unit_index = 0; unit_index < bmem_node->num;)
         {
-            continue;
-        }
-
-        uint32_t size = bmem_node->size + BMEM_HEAD_SIZE;
-        uint32_t used_num = 0;
-
-        for (uint32_t i = 0; i < bmem_node->num; i++)
-        {
-            bmem_item_t *bmem = (bmem_item_t *)(bmem_node->header_ptr + i * size);
+            bmem_item_t *bmem = (bmem_item_t *)(bmem_node->header_ptr + unit_index * bmem_node->size);
 #ifdef USING_BMEM_MAGIC
+            uint16_t units;
+
+            RT_ASSERT(MAGIC_ALLOC == bmem->magic || MAGIC_FREE == bmem->magic);
+            units = bmem->units;
+            RT_ASSERT(units > 0 && unit_index + units <= bmem_node->num);
+            bmem_check_run_footer(bmem_node, bmem, units, bmem->magic);
+
             if (MAGIC_ALLOC == bmem->magic)
-#else
-            if (1)//NEXT_ALLOC == bmem->next)
-#endif
             {
-                ret = func((uint32_t) bmem, size);
+                ret = func((uint32_t) bmem, units * bmem_node->size);
                 if (ret) break;
             }
+            else
+            {
+                ret = func((uint32_t) bmem, BMEM_HEAD_SIZE);
+                if (ret) break;
 
+                ret = func((uint32_t)bmem_run_footer(bmem_node, bmem, units), BMEM_FOOT_SIZE);
+                if (ret) break;
+            }
+            unit_index += units;
+#else
+            ret = func((uint32_t) bmem, bmem_node->size);
+            if (ret) break;
+            unit_index++;
+#endif
         }
     }
     rt_mutex_release(&bmem_mutex);
@@ -369,26 +626,15 @@ int bmem_init(void)
  */
 void *mem_is_bmem(void *p)
 {
+    bmem_node_t *node = &bmem_list_header.node;
 #ifdef USING_BMEM_MAGIC
-    bmem_item_t *bmem = (bmem_item_t *) p - 1;
-    if (MAGIC_ALLOC == bmem->magic
-#ifdef MEM_ASYN_FREE
-            && REF_COUNT_MAGIC == bmem->ref_count_magic
-#endif
-            && 'b' == (((bmem_node_t *) bmem->node)->name)[0]
-            && 'm' == (((bmem_node_t *) bmem->node)->name)[1])
-    {
-        return bmem->node;
-    }
-#else
-    bmem_node_t *bmem_node = bmem_list_header.node_list;
-    for (uint16_t i = 0; i < bmem_list_header.num; i++)
-    {
-        //RT_ASSERT(bmem_node->name);
-        if (BMEM_VALID(p, bmem_node)) return bmem_node;
-        bmem_node++;
-    }
-#endif
-    return NULL;
-}
+    bmem_item_t *bmem;
 
+    if (!p || BMEM_NORMAL != bmem_list_header.statue || !BMEM_VALID(p, node)) return NULL;
+
+    bmem = (bmem_item_t *)((uint8_t *)p - BMEM_HEAD_SIZE);
+    return (MAGIC_ALLOC == bmem->magic && bmem->node == node) ? node : NULL;
+#else
+    return (p && BMEM_NORMAL == bmem_list_header.statue && BMEM_VALID(p, node)) ? node : NULL;
+#endif
+}

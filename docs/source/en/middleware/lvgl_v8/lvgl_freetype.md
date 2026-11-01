@@ -79,6 +79,30 @@ The current font adapter registers only the TrueType outline driver. This restri
 The implementation described here requires the LVGL v8 FreeType integration. Enabling `PKG_SCHRIFT` or `USING_VGLITE` together with `LV_USING_FREETYPE_ENGINE` does not build: the body of _lv_freetype.c_ is excluded by conditional compilation while the font manager still compiles and references these APIs. Do not combine either setting with the APIs described here.
 ```
 
+### Glyph Bitmap Output Depth
+
+After enabling the font engine, select `FreeType output bitmap depth` in the same menu. This build-time setting controls the number of glyph opacity levels and the bitmap storage format; it does not change the display's RGB color depth.
+
+| Chip series | Available depths | Default |
+| --- | --- | --- |
+| SF32LB52X, SF32LB57X | A2, A4, A8 | A2 |
+| SF32LB56X, SF32LB58X | A4, A8 | A4 |
+| SF32LB55X | A4 (software path) | A4 |
+
+The corresponding options are `CONFIG_LV_FREETYPE_BPP_2`, `CONFIG_LV_FREETYPE_BPP_4`, and `CONFIG_LV_FREETYPE_BPP_8`. They are mutually exclusive, and the menu only shows options supported by the selected chip. For example, select A4 with:
+
+```none
+CONFIG_LV_FREETYPE_BPP_4=y
+```
+
+`lv_conf_sifli.h` maps the selected option to `FT_BPP`; no manual header edit is needed. FreeType first rasterizes to A8, then the registered `ft_convert_bitmap_2bpp_cb()` converts the bitmap for storage in `FTC_SBitCache`. A2/A4 retain 4/16 grayscale levels and actually pack 4/2 pixels per byte, respectively. A8 retains one byte per pixel and takes ownership of the original bitmap. The LVGL glyph descriptor's `bpp` matches the final storage depth.
+
+During A2/A4 conversion, the original A8 buffer and the destination buffer coexist briefly; the original buffer is then freed. Compact storage reduces glyph bitmap memory, so the same reduction ratio does not apply to the entire font engine. Cache hits reuse the converted bitmap without repacking.
+
+```{warning}
+When `COMPATIBLE_WITH_SIFLI_EPIC_Ax` is enabled according to the chip, `FT_BPP`, and font-engine configuration, A2/A4 use the EPIC layout: low bits first, with each row padded to a byte boundary. Ordinary LVGL v8 bitmap fonts use high bits first and pack pixels continuously across rows. Convert them offline to the matching layout before mixing them with this configuration; the compatibility macro also affects software font rendering. This FreeType conversion callback does not automatically convert ordinary bitmap fonts, and the ordinary bitmap callback in `lv_font_fmt_txt.c` does not expand A2/A4 to A8. A8 uses one byte per pixel and does not require this bit reordering. These details apply to the LVGL v8 adapter described in this document.
+```
+
 ### Initialization
 
 The standard SDK startup sequence initializes FreeType and the font manager through `gui_lib_init()`. Applications normally do not need to initialize them again.
@@ -331,7 +355,7 @@ Do not retain font pointers indefinitely without tracking their source and unloa
 | --- | --- | --- |
 | Manager font cache | Retains one `lv_font_t` for each combination of font entry and pixel size, with no independent object-count limit | Replace references, then call `lvsf_font_clear_cache()` or unload the file-based font |
 | FTC face and size caches | Multiple sizes from one font source share a face; configuration limits the number of face and size objects | `LV_FREETYPE_CACHE_FT_FACES`, `LV_FREETYPE_CACHE_FT_SIZES` |
-| FTC glyph and charmap caches | Evicts entries based on total capacity and recreates them when needed | Uses the SDK cache capacity; applications normally do not manage these caches directly |
+| FTC glyph and charmap caches | The SBit cache stores glyph bitmaps converted according to `FT_BPP`; entries are evicted based on total capacity and recreated when needed | Uses the SDK cache capacity; applications normally do not manage these caches directly |
 
 Continuously requesting new pixel sizes increases the number of managed font objects retained by the manager. Increasing the FTC size-object capacity does not limit this growth.
 

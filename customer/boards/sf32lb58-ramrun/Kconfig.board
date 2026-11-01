@@ -1,0 +1,4 @@
+config ASIC
+    bool
+    default y
+

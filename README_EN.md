@@ -63,11 +63,11 @@ The SDK supports the following SiFli Technologies SoC families:
 
 | SoC Family | Supported since  |
 |------------|------------------|
-| SF32LB52X  | v2.3.0           |
-| SF32LB55X  | v2.3.0           |
-| SF32LB56X  | v2.3.0           |
-| SF32LB57X  | v2.5.1           |
-| SF32LB58X  | v2.3.0           |
+| SF32LB52   | v2.3.0           |
+| SF32LB55   | v2.3.0           |
+| SF32LB56   | v2.3.0           |
+| SF32LB57   | v2.5.1           |
+| SF32LB58   | v2.3.0           |
 
 ## Versioning Policy
 
@@ -101,4 +101,4 @@ The repository contains the following branches:
 |---------|------------------|---------------------|-----------|
 | v2.3    | January 21, 2025 |                     | Yes       |
 | v2.4    | June 5, 2025     |                     | Yes       |
-| v2.5    | June 19, 2025    |                     | Yes       |
+| v2.5    | June 19, 2026    |                     | Yes       |

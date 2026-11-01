@@ -16,6 +16,10 @@
     #include "mbedtls/pk.h"
     #include "mbedtls/sha256.h"
 #endif
+#if defined(BSP_USING_HW_AES)
+    #include "drv_aes.h"
+#endif
+
 
 ALIGN(4)
 uint8_t g_uid[DFU_UID_SIZE];
@@ -199,8 +203,19 @@ int sifli_hw_dec(uint8_t *key, uint8_t *in_data, uint8_t *out_data, int size, ui
         {
             int len = (size - offset) < AES_BLOCK_SIZE ? (size - offset) : AES_BLOCK_SIZE;
             memcpy(temp, in_data + offset, len);
-            HAL_AES_init((uint32_t *)key, DFU_KEY_SIZE, (uint32_t *)dfu_get_counter(init_offset + offset), AES_MODE_CTR);
-            HAL_AES_run(AES_DEC, temp, out_data + offset, len);
+
+            AES_KeyTypeDef cfg;
+            memset(&cfg, 0, sizeof(cfg));
+            cfg.key = (uint32_t *)key;
+            cfg.key_size = DFU_KEY_SIZE;
+            cfg.iv = (uint32_t *)dfu_get_counter(init_offset + offset);
+            cfg.mode = AES_MODE_CTR;
+            AES_IOTypeDef data;
+            memset(&data, 0, sizeof(data));
+            data.in_data = temp;
+            data.out_data = out_data + offset;
+            data.size = len;
+            drv_aes_dec_sync(&cfg, &data);
             offset += len;
         }
     }
@@ -231,8 +246,19 @@ void sifli_hw_init_xip_key(uint8_t *enc_img_key)
     uid = &g_uid[0];
     sifli_hw_efuse_read(EFUSE_UID, uid, DFU_UID_SIZE);
     memset(plain_key, 0, sizeof(plain_key));
-    HAL_AES_init(NULL, DFU_KEY_SIZE, (uint32_t *)uid, AES_MODE_CBC);
-    HAL_AES_run(AES_DEC, enc_img_key, (uint8_t *)plain_key, DFU_KEY_SIZE);
+
+    AES_KeyTypeDef cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.key = (uint32_t *)NULL;
+    cfg.key_size = DFU_KEY_SIZE;
+    cfg.iv = (uint32_t *)uid;
+    cfg.mode = AES_MODE_CBC;
+    AES_IOTypeDef data;
+    memset(&data, 0, sizeof(data));
+    data.in_data = enc_img_key;
+    data.out_data = (uint8_t *)plain_key;
+    data.size = DFU_KEY_SIZE;
+    drv_aes_dec_sync(&cfg, &data);
     /* restore to normal mode */
     __HAL_SYSCFG_CLEAR_SECURITY();
 }
@@ -254,8 +280,19 @@ int sifli_hw_dec_key(uint8_t *in_data, uint8_t *out_data, int size)
 
     uid = &g_uid[0];
     sifli_hw_efuse_read(EFUSE_UID, uid, DFU_UID_SIZE);
-    HAL_AES_init((uint32_t *)key, DFU_KEY_SIZE, (uint32_t *)uid, AES_MODE_CBC);
-    HAL_AES_run(AES_DEC, in_data, out_data, DFU_KEY_SIZE);
+
+    AES_KeyTypeDef cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.key = (uint32_t *)key;
+    cfg.key_size = DFU_KEY_SIZE;
+    cfg.iv = (uint32_t *)uid;
+    cfg.mode = AES_MODE_CBC;
+    AES_IOTypeDef data;
+    memset(&data, 0, sizeof(data));
+    data.in_data = in_data;
+    data.out_data = (uint8_t *)out_data;
+    data.size = DFU_KEY_SIZE;
+    drv_aes_dec_sync(&cfg, &data);
 #if 0
     uint8_t *key;
     key = &root_key[0];
@@ -287,8 +324,19 @@ void sifli_hw_enc(uint8_t *in_data, uint8_t *out_data, int size)
 
     uid = &g_uid[0];
     sifli_hw_efuse_read(EFUSE_UID, uid, DFU_UID_SIZE);
-    HAL_AES_init((uint32_t *)key, DFU_KEY_SIZE, (uint32_t *)uid, AES_MODE_CBC);
-    HAL_AES_run(AES_ENC, in_data, out_data, DFU_KEY_SIZE);
+
+    AES_KeyTypeDef cfg;
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.key = (uint32_t *)key;
+    cfg.key_size = DFU_KEY_SIZE;
+    cfg.iv = (uint32_t *)uid;
+    cfg.mode = AES_MODE_CBC;
+    AES_IOTypeDef data;
+    memset(&data, 0, sizeof(data));
+    data.in_data = in_data;
+    data.out_data = (uint8_t *)out_data;
+    data.size = DFU_KEY_SIZE;
+    drv_aes_enc_sync(&cfg, &data);
 #else
 
     uint8_t *uid;
@@ -319,8 +367,19 @@ void sifli_hw_enc_with_key(uint8_t *key, uint8_t *in_data, uint8_t *out_data, in
         {
             int len = (size - offset) < AES_BLOCK_SIZE ? (size - offset) : AES_BLOCK_SIZE;
             memcpy(temp, in_data + offset, len);
-            HAL_AES_init((uint32_t *)key, DFU_KEY_SIZE, (uint32_t *)dfu_get_counter(init_offset + offset), AES_MODE_CTR);
-            HAL_AES_run(AES_ENC, temp, out_data + offset, len);
+
+            AES_KeyTypeDef cfg;
+            memset(&cfg, 0, sizeof(cfg));
+            cfg.key = (uint32_t *)key;
+            cfg.key_size = DFU_KEY_SIZE;
+            cfg.iv = (uint32_t *)dfu_get_counter(init_offset + offset);
+            cfg.mode = AES_MODE_CTR;
+            AES_IOTypeDef data;
+            memset(&data, 0, sizeof(data));
+            data.in_data = temp;
+            data.out_data = out_data + offset;
+            data.size = len;
+            drv_aes_enc_sync(&cfg, &data);
             offset += len;
         }
     }

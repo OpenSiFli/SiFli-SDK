@@ -1,0 +1,135 @@
+import os
+from building import *
+
+cwd = GetCurrentDir()
+
+# ============================================================================
+# platform 适配层源文件 (SDIO / rtthread / AIC_FEATURE_PLT=1)
+#   共 14 个文件:
+#   排除: hal/usb_port.c(USB) / bt/*(BT) /
+#         crypto/aic_mbedtls_port_example.c(仅 MBEDTLS=0) / rtos/rtos_freertos.c
+# ============================================================================
+src = [
+    cwd + '/platform/platform_init.c',
+    cwd + '/platform/hal/sdio_port.c',            # SDIO 分支
+    cwd + '/platform/hal/plat_port.c',            # platform_config 手动追加, 勿漏
+    cwd + '/platform/netif/netif_port.c',
+    cwd + '/platform/rtos/rtos_rtt.c',
+    cwd + '/platform/wifi/wifi_port_sta.c',
+    cwd + '/platform/wifi/wifi_port_ap.c',
+    cwd + '/platform/wifi/wifi_port.c',
+    cwd + '/platform/wifi/wifi_port_wps.c',
+    cwd + '/platform/wifi/wifi_port_cmd.c',
+    cwd + '/platform/fmac/aic_fw_port.c',
+    cwd + '/platform/fmac/aic_chip_desc_port.c',
+    cwd + '/platform/fmac/userconfig.c',
+    cwd + '/platform/wifi/wifi_port_plt.c',       # AIC_FEATURE_PLT=1
+]
+
+# ============================================================================
+# 头文件搜索路径
+#   A) port/inc            移植接口头 (host+platform 共用)
+#   B) lib/include/*        host 预编译库公开头
+#   C) platform/*           platform 内部私有头 (对应 Makefile INC_PLATFORM L167-175)
+#   注: lwIP / rtthread / drivers 头由 SDK 各组件 DefineGroup 全局注入, 无需在此重复。
+# ============================================================================
+CPPPATH = [
+    cwd + '/port/inc',
+    cwd + '/lib/include',
+    cwd + '/lib/include/drv_api/inc',
+    cwd + '/lib/include/drv_wifi',
+    cwd + '/lib/include/utils/inc',
+    cwd + '/platform/fmac',
+    cwd + '/platform/fmac/fw',
+    cwd + '/platform/hal',
+    cwd + '/platform/netif',
+    cwd + '/platform/rtos',
+    cwd + '/platform/wifi',
+    cwd + '/platform/uapapi/inc',
+    # RT-Thread Wi-Fi 管理框架头文件 (AIC8800_USE_RT_WLAN 时需要)
+    cwd + '/../../../../rtos/rtthread/components/drivers/wlan',
+]
+
+# ============================================================================
+# 编译宏
+#
+# A 类: 必须与 host 预编译库 (lib/libaic8800_driver.a) 的 ABI 或平台环境一致,
+#       写死不可开放为 Kconfig 选项, 否则结构体布局/总线行为会与库不一致。
+# B 类: 由 Kconfig (aic8800d40-n/Kconfig) 选项映射而来, 默认值与旧版一致。
+# ============================================================================
+CPPDEFINES = [
+    # ---- A 类: ABI / 平台环境常量 ----
+    # CONFIG_RX_NOCOPY 改变 sdio_def.h 中 aic_wifi_rxdata_t 的成员布局,
+    # host 库按"开启"编译; 关闭会导致平台与库的结构体不一致 (内存踩踏)。
+    'CONFIG_RX_NOCOPY',
+    # BT HCI 走 SDIO (当前未编入 BT 代码); 其余为平台环境常量。
+    'AIC_HCI_OVER_SDIO',
+    'SYS_SOCK_DEFINE',
+    'PLATFORM_NO_FILE',
+    'RT_THREAD',
+]
+
+# ---- B 类: Kconfig 选项映射 ----
+# 芯片型号: CHIP_SELECT_AIC8800D40N 打开时注入 host 库要求的 D80N/U02C 命名。
+if GetDepend('CHIP_SELECT_AIC8800D40N'):
+    CPPDEFINES += ['CONFIG_AIC8800D80N', 'CONFIG_AIC8800D80N_U02C']
+
+# 固件加载方式: innermode(2) 默认; flashmode(1)/filemode(0) 需 ptab/文件系统支持。
+if GetDepend('AIC8800_FW_LOAD_FLASH'):
+    fw_load_mode = 1
+elif GetDepend('AIC8800_FW_LOAD_FILE'):
+    fw_load_mode = 0
+else:
+    fw_load_mode = 2
+CPPDEFINES += ['CONFIG_LOAD_FW=' + str(fw_load_mode)]
+
+# RX 模式: 中断内同步收包 (默认) / 专用 task 收包
+if GetDepend('AIC8800_RX_MODE_IRQ_IN_ISR'):
+    # 先清掉芯片侧中断源再返回, 避免 DAT1 电平中断在源未清时被反复触发(中断风暴)
+    CPPDEFINES += ['CONFIG_RXTASK_INSDIO_DEFAULT=1']
+else:
+    CPPDEFINES += ['CONFIG_RXTASK_INSDIO_DEFAULT=0']
+
+# SDIO 中断恢复 / RX 轮询 (fallback, 需专用 RX task 模式)
+CPPDEFINES += ['CONFIG_IRQ_SUS_DEFAULT=' + ('1' if GetDepend('AIC8800_IRQ_SUS') else '0')]
+CPPDEFINES += ['CONFIG_RX_POLLING_DEFAULT=' + ('1' if GetDepend('AIC8800_RX_POLLING') else '0')]
+
+# ============================================================================
+# 板级上电引脚 —— Kconfig AIC8800_RTOS_WIRELESS_PWR_GPIO (aic8800d40-n/Kconfig)
+# 注入为 AIC_WIRELESS_PWR_GPIO, 供 platform/hal/plat_port.c 使用; 未配置则不定义。
+# ============================================================================
+pwr_gpio = GetConfigValue('AIC8800_RTOS_WIRELESS_PWR_GPIO')
+if pwr_gpio != '':
+    CPPDEFINES += ['AIC_WIRELESS_PWR_GPIO=' + str(pwr_gpio)]
+
+# ============================================================================
+# 电源脚挂在 I2C IO 拓展芯片 (如 AW9523) 上时的分支
+#   AIC8800_RTOS_WIRELESS_PWR_VIA_IOEXP=y 时注入 AIC_WIRELESS_PWR_VIA_IOEXP,
+#   由 plat_port.c 改调 aw9523_init()/aw9523_set_pin(),
+#   platform_init.c 相应把上电钩子下移到 INIT_PREV_EXPORT (等 I2C 总线就绪)。
+# ============================================================================
+if GetDepend('AIC8800_RTOS_WIRELESS_PWR_VIA_IOEXP'):
+    CPPDEFINES.append('AIC_WIRELESS_PWR_VIA_IOEXP')
+    ioexp_pin = GetConfigValue('AIC8800_RTOS_WIRELESS_PWR_IOEXP_PIN')
+    if ioexp_pin != '':
+        CPPDEFINES += ['AIC_WIRELESS_PWR_IOEXP_PIN=' + str(ioexp_pin)]
+    ioexp_pin_key = GetConfigValue('AIC8800_RTOS_WIRELESS_PWR_IOEXP_PIN_KEY')
+    if ioexp_pin_key != '':
+        CPPDEFINES += ['AIC_WIRELESS_PWR_IOEXP_PIN_KEY=' + str(ioexp_pin_key)]
+
+# ============================================================================
+# 条件纳入: RT-Thread Wi-Fi 管理框架对接层 (CONFIG_AIC8800_USE_RT_WLAN=y)
+#   wlan_dev.h 等框架头由 components/drivers/wlan/SConscript DefineGroup 全局注入 CPPPATH
+# ============================================================================
+if GetDepend('AIC8800_USE_RT_WLAN'):
+    src.append(cwd + '/platform/wlan/aic8800_wlan_dev.c')
+    CPPDEFINES.append('AIC8800_USE_RT_WLAN')
+
+group = DefineGroup('aic8800_rtos', src,
+    depend      = ['AIC_WLAN_AIC8800D40N'],
+    CPPPATH     = CPPPATH,
+    CPPDEFINES  = CPPDEFINES,
+    LIBPATH     = [cwd + '/lib'],
+    LIBS        = ['aic8800_driver', 'aic_mbedtls'])   # 两库分开, 避免 utils.c 同名冲突
+
+Return('group')

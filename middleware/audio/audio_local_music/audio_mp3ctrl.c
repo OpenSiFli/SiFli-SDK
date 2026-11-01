@@ -25,6 +25,10 @@
     #include "mp3_ringbuffer.h"
 #endif
 
+#if PKG_USING_AUDIO_STRETCH
+    #include "stretch.h"
+#endif
+
 #define PUBLIC_API
 
 #include "mp3dec.h"
@@ -148,6 +152,15 @@ struct mp3ctrl_t
 #endif
 #if defined(SYS_HEAP_IN_PSRAM)
     uint8_t        *stack_addr;
+#endif
+    uint32_t        audio_stretch_percent;
+#if PKG_USING_AUDIO_STRETCH
+    float           ratio;
+    StretchHandle   stretcher;
+    int16_t         *stretch_out;
+    int16_t         *stretch_out2;
+    uint32_t        stretch_output_samps;
+    uint32_t        strech_need_reset;
 #endif
 };
 
@@ -610,7 +623,7 @@ static inline void stereo2mono(int16_t *stereo, uint32_t samples, int16_t *mono)
 
 #if BT_BAP_BROADCAST_SOURCE
 extern void ble_src_send(uint8_t *data, uint32_t len);
-static int ble_preapre_and_write_data(mp3ctrl_handle ctrl, uint8_t *outBuf2, MP3FrameInfo *mp3FrameInfo)
+static int ble_preapre_and_write_data(mp3ctrl_handle ctrl, uint8_t *outBuf2, uint32_t ch)
 {
     int ret;
     uint8_t read_all = 0;
@@ -668,7 +681,7 @@ static int ble_preapre_and_write_data(mp3ctrl_handle ctrl, uint8_t *outBuf2, MP3
         ctrl->resample_remain = 0;
         ctrl->resample_used = 0;
     }
-    LOG_D("4. offset=%d, remain=%d used=%d ch=%d\n", ctrl->ble_src_offset, ctrl->resample_remain, ctrl->resample_used, mp3FrameInfo->nChans);
+    LOG_D("4. offset=%d, remain=%d used=%d ch=%d\n", ctrl->ble_src_offset, ctrl->resample_remain, ctrl->resample_used, ch);
     if (read_all)
     {
         return 2;
@@ -677,9 +690,42 @@ static int ble_preapre_and_write_data(mp3ctrl_handle ctrl, uint8_t *outBuf2, MP3
 }
 #endif
 
-static int write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *outBuf, int16_t *outBuf2, MP3FrameInfo *mp3FrameInfo, short *vbe_out)
+#if PKG_USING_AUDIO_STRETCH
+    static void stretch_open(mp3ctrl_handle ctrl, uint32_t samples, uint32_t samplerate, uint32_t ch);
+    static void stretch_close(mp3ctrl_handle ctrl);
+#endif
+
+static int write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *in, int16_t *out, MP3FrameInfo *mp3FrameInfo, short *vbe_out)
 {
     int ret;
+    uint32_t outputSamps = mp3FrameInfo->outputSamps;
+
+#if PKG_USING_AUDIO_STRETCH
+    stretch_open(ctrl, outputSamps, mp3FrameInfo->samprate, mp3FrameInfo->nChans);
+
+    if (ctrl->stretcher)
+    {
+        if (is_new_data)
+        {
+            int input_samps = outputSamps / mp3FrameInfo->nChans;
+
+            ctrl->stretch_output_samps = stretch_samples(ctrl->stretcher,
+                                         in,
+                                         input_samps,
+                                         ctrl->stretch_out,
+                                         ctrl->ratio);
+        }
+
+        if (ctrl->stretch_output_samps == 0)
+        {
+            return 1;
+        }
+
+        in = ctrl->stretch_out;
+        out = ctrl->stretch_out2;
+        outputSamps = ctrl->stretch_output_samps * mp3FrameInfo->nChans;
+    }
+#endif
 #if BT_BAP_BROADCAST_SOURCE
     if (audio_server_is_ble_src_enable())
     {
@@ -730,19 +776,19 @@ static int write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *outBuf,
         }
         if (is_new_data)
         {
-            uint32_t size = mp3FrameInfo->outputSamps * 2;
+            uint32_t size = outputSamps * sizeof(int16_t);
             if (mp3FrameInfo->nChans == 2)
             {
-                stereo2mono(outBuf, mp3FrameInfo->outputSamps, outBuf);
+                stereo2mono(in, outputSamps, in);
                 size >>= 1;
             }
-            uint32_t bytes = sifli_resample_process(ctrl->resample, outBuf, size, 0);
+            uint32_t bytes = sifli_resample_process(ctrl->resample, in, size, 0);
             ctrl->resample_used = 0;
             ctrl->resample_remain = bytes;
         }
         do
         {
-            ret = ble_preapre_and_write_data(ctrl, (uint8_t *)outBuf2, mp3FrameInfo);
+            ret = ble_preapre_and_write_data(ctrl, (uint8_t *)out, mp3FrameInfo->nChans);
             if (ret == 0)
             {
                 return 0;
@@ -785,24 +831,24 @@ static int write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *outBuf,
                 }
                 if (mp3FrameInfo->nChans == 2)
                 {
-                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf, mp3FrameInfo->outputSamps * 2, 0);
+                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)in, outputSamps * 2, 0);
                     ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
                 }
                 else
                 {
-                    mono2stereo((int16_t *)outBuf, mp3FrameInfo->outputSamps, (int16_t *)outBuf2);
-                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf2, mp3FrameInfo->outputSamps * 4, 0);
+                    mono2stereo((int16_t *)in, outputSamps, (int16_t *)out);
+                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)out, outputSamps * 4, 0);
                     ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
                 }
             }
             else if (mp3FrameInfo->nChans == 1)
             {
-                mono2stereo((int16_t *)outBuf, mp3FrameInfo->outputSamps, (int16_t *)outBuf2);
-                ret = audio_write(ctrl->client, (uint8_t *)outBuf2, mp3FrameInfo->outputSamps * 4);
+                mono2stereo((int16_t *)in, outputSamps, (int16_t *)out);
+                ret = audio_write(ctrl->client, (uint8_t *)out, outputSamps * 4);
             }
             else
             {
-                ret = audio_write(ctrl->client, (uint8_t *)outBuf, mp3FrameInfo->outputSamps * 2);
+                ret = audio_write(ctrl->client, (uint8_t *)in, outputSamps * sizeof(int16_t));
             }
         }
         else
@@ -811,16 +857,84 @@ static int write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *outBuf,
 #if PKG_USING_VBE_DRC
             if (is_new_data)
             {
-                ctrl->last_veb_out_bytes = vbe_drc_process(ctrl->vbe, outBuf, mp3FrameInfo->outputSamps, vbe_out, VBE_OUT_BUFFER_SIZE);
+                ctrl->last_veb_out_bytes = vbe_drc_process(ctrl->vbe, in, outputSamps, vbe_out, VBE_OUT_BUFFER_SIZE);
             }
             ret = vbe_audio_write(ctrl->client, vbe_out, ctrl->last_veb_out_bytes);
 #else
-            ret = audio_write(ctrl->client, (uint8_t *)outBuf, mp3FrameInfo->outputSamps * 2);
+            ret = audio_write(ctrl->client, (uint8_t *)in, outputSamps * 2);
 #endif
         }
 
     return ret;
 }
+
+#if PKG_USING_AUDIO_STRETCH
+
+#define upper_frequency 333
+#define lower_frequency 55
+
+static void stretch_open(mp3ctrl_handle ctrl, uint32_t samples, uint32_t samplerate, uint32_t ch)
+{
+    if (ctrl->audio_stretch_percent == 0)
+    {
+        stretch_close(ctrl);
+        return;
+    }
+
+    if (!ctrl->stretcher && ctrl->audio_stretch_percent != 0)
+    {
+        int max_expected_samples;
+        int flags = STRETCH_FAST_FLAG;
+
+        int min_period = samplerate / upper_frequency;
+        int max_period = samplerate / lower_frequency;
+#if 0
+        if (samplerate < 32000)
+            flags = 0;
+#endif
+
+        if (upper_frequency < lower_frequency * 2 || upper_frequency >= samplerate / 2)
+        {
+            LOG_I("invalid frequencies specified!\n");
+            return;
+        }
+        LOG_I("stretch init");
+        ctrl->stretcher = stretch_init(min_period, max_period, ch, flags);
+        if (!ctrl->stretcher)
+            return;
+
+        ctrl->ratio = ((float)ctrl->audio_stretch_percent) / 100.0f;
+        max_expected_samples = stretch_output_capacity(ctrl->stretcher, samples / ch, 4.0f); /* may change ratio while processing, so use max ratio 4.0f*/
+        ctrl->stretch_out = audio_mem_malloc(max_expected_samples * ch * sizeof(int16_t));
+        ctrl->stretch_out2 = audio_mem_malloc(max_expected_samples * 2 * sizeof(int16_t)); /* for mono 2 stereo */
+        LOG_I("stretch init ratio=%f per=%d", ctrl->ratio, ctrl->audio_stretch_percent);
+
+        if (!ctrl->stretch_out || !ctrl->stretch_out2)
+        {
+            audio_mem_free(ctrl->stretch_out);
+            audio_mem_free(ctrl->stretch_out2);
+            ctrl->stretch_out = NULL;
+            ctrl->stretch_out2 = NULL;
+            stretch_deinit(ctrl->stretcher);
+            ctrl->stretcher = NULL;
+        }
+    }
+}
+
+static void stretch_close(mp3ctrl_handle ctrl)
+{
+    if (ctrl->stretcher)
+    {
+        stretch_deinit(ctrl->stretcher);
+        ctrl->stretcher = NULL;
+        audio_mem_free(ctrl->stretch_out);
+        audio_mem_free(ctrl->stretch_out2);
+        ctrl->stretch_out = NULL;
+        ctrl->stretch_out2 = NULL;
+        ctrl->stretch_output_samps = 0;
+    }
+}
+#endif
 
 static void mp3ctrl_thread_entry_file(void *parameter)
 {
@@ -833,7 +947,10 @@ static void mp3ctrl_thread_entry_file(void *parameter)
     mp3ctrl_handle ctrl = (mp3ctrl_handle)parameter;
     HMP3Decoder hMP3Decoder = MP3InitDecoder();
     RT_ASSERT(hMP3Decoder);
-    short *outBuf = audio_mem_malloc(sizeof(short) * MAX_NCHAN * MAX_NGRAN * MAX_NSAMP);
+
+    uint32_t max_decode_out_size = sizeof(short) * MAX_NCHAN * MAX_NGRAN * MAX_NSAMP;
+
+    short *outBuf = audio_mem_malloc(max_decode_out_size);
 #if !TWS_MIX_ENABLE || BT_BAP_BROADCAST_SOURCE
     short *outBuf2 = audio_mem_malloc(sizeof(short) * MAX_NCHAN * MAX_NGRAN * MAX_NSAMP);
     RT_ASSERT(outBuf2);
@@ -1148,6 +1265,11 @@ static void mp3ctrl_thread_entry_file(void *parameter)
                 {
                     audio_close(ctrl->client);
                     ctrl->client = NULL;
+
+#if PKG_USING_AUDIO_STRETCH
+                    stretch_close(ctrl);
+#endif
+
 #if PKG_USING_VBE_DRC
                     if (ctrl->vbe)
                     {
@@ -1231,6 +1353,11 @@ static void mp3ctrl_thread_entry_file(void *parameter)
             }
         }
     }
+
+#if PKG_USING_AUDIO_STRETCH
+    stretch_close(ctrl);
+#endif
+
     if (ctrl->client)
         audio_close(ctrl->client);
     ctrl->client = NULL;
@@ -1278,7 +1405,161 @@ static void mp3ctrl_thread_entry_file(void *parameter)
     LOG_I("mp3 exit done");
 }
 
-#define WAV_FRAME_SIZE   1024
+static int wav_write_data(uint8_t is_new_data, mp3ctrl_handle ctrl, int16_t *in, int16_t *out, uint32_t samples, uint32_t ch, short *vbe_out)
+{
+#if PKG_USING_AUDIO_STRETCH
+    stretch_open(ctrl, samples, ctrl->wave_samplerate, ch);
+    if (ctrl->stretcher)
+    {
+        if (is_new_data)
+        {
+            int input_samps = samples / ch;
+            //rt_tick_t start = rt_tick_get();
+            ctrl->stretch_output_samps = stretch_samples(ctrl->stretcher,
+                                         in,
+                                         input_samps,
+                                         ctrl->stretch_out,
+                                         ctrl->ratio);
+            //LOG_I("stretch tick=%d", rt_tick_get() - start);
+        }
+        if (ctrl->stretch_output_samps == 0)
+            return 1;
+
+        in = ctrl->stretch_out;
+        samples = ctrl->stretch_output_samps * ch;
+        out = ctrl->stretch_out2;
+    }
+#endif
+
+#if BT_BAP_BROADCAST_SOURCE
+    if (audio_server_is_ble_src_enable())
+    {
+        int ret;
+        if (!ctrl->is_open_for_ble_src)
+        {
+            LOG_I("reopen hw device for ble");
+            audio_close(ctrl->client);
+            audio_parameter_t pa = {0};
+            pa.write_bits_per_sample = 16;
+            pa.write_channnel_num = 1;
+            pa.write_samplerate = 48000;
+            ctrl->is_open_for_ble_src = 1;
+            ctrl->old_channels = 1;
+            ctrl->old_samplerate = pa.write_samplerate;
+            ctrl->use_device = AUDIO_DEVICE_SPEAKER;
+            pa.write_cache_size = MP3_FRAME_CACHE_SIZE;
+            ctrl->client = audio_open2(ctrl->type, AUDIO_TX, &pa, mp3_audio_server_callback, (void *)ctrl, ctrl->use_device);
+            RT_ASSERT(ctrl->client);
+
+            uint8_t zero[16] = {0};
+            uint32_t size = 0;
+            while (size + sizeof(zero) <= pa.write_cache_size)
+            {
+                audio_write(ctrl->client, zero, sizeof(zero));
+                size += sizeof(zero);
+            }
+        }
+        if (!ctrl->resample)
+        {
+            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_SAMPLERATE, (void *)48000);
+            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_CH, (void *)1);
+            ctrl->resample = sifli_resample_open(1, ctrl->wave_samplerate, 48000);
+            RT_ASSERT(ctrl->resample);
+            ctrl->resample_samplerate = ctrl->wave_samplerate;
+
+        }
+        else if (ctrl->resample_samplerate != ctrl->wave_samplerate)
+        {
+            LOG_I("reopen resample from %d", ctrl->wave_samplerate);
+            sifli_resample_close(ctrl->resample);
+            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_SAMPLERATE, (void *)48000);
+            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_CH, (void *)1);
+            ctrl->resample = sifli_resample_open(1, ctrl->wave_samplerate, 48000);
+            RT_ASSERT(ctrl->resample);
+            ctrl->resample_samplerate = ctrl->wave_samplerate;
+            ctrl->resample_used = 0;
+            is_new_data = 1;
+        }
+        if (is_new_data)
+        {
+            uint32_t size = samples * sizeof(int16_t);
+            if (ch == 2)
+            {
+                stereo2mono(in, samples, in);
+                size >>= 1;
+            }
+            uint32_t bytes = sifli_resample_process(ctrl->resample, in, size, 0);
+            ctrl->resample_used = 0;
+            ctrl->resample_remain = bytes;
+        }
+        do
+        {
+            ret = ble_preapre_and_write_data(ctrl, (uint8_t *)out, ch);
+            if (ret == 0)
+            {
+                return 0;
+            }
+            else if (ret == 2)
+            {
+                break;
+            }
+        }
+        while (1/*0*/); /* use 0 to send on packet in a 10ms DMA event, use 1 to send all util cache full  */
+
+        if (ret == 1)
+        {
+            return 0;
+        }
+        return 1;
+    }
+    else
+#endif
+
+#if !TWS_MIX_ENABLE
+        if (audio_device_is_a2dp_sink())
+        {
+            uint32_t bytes;
+            if (ctrl->wave_samplerate != 44100 && ctrl->wave_samplerate)
+            {
+                if (!ctrl->resample)
+                {
+                    audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_SAMPLERATE, (void *)44100);
+                    audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_CH, (void *)2);
+                    ctrl->resample = sifli_resample_open(2, ctrl->wave_samplerate, 44100);
+                    RT_ASSERT(ctrl->resample);
+                }
+                if (!is_new_data && ctrl->resample->dst_bytes)
+                    return audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), ctrl->resample->dst_bytes);
+
+                if (ch == 2)
+                {
+                    bytes = sifli_resample_process(ctrl->resample, in, samples * sizeof(int16_t), 0);
+                }
+                else
+                {
+                    mono2stereo(in, samples, out);
+                    bytes = sifli_resample_process(ctrl->resample, out, samples * 2 * sizeof(int16_t), 0);
+                }
+                return audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
+            }
+
+            if (ch == 1)
+            {
+                mono2stereo(in, samples, out);
+                return audio_write(ctrl->client, (uint8_t *)out, samples * 2 * sizeof(int16_t));
+            }
+        }
+#endif
+
+    return audio_write(ctrl->client, (uint8_t *)in, samples * sizeof(int16_t));
+
+}
+
+#if PKG_USING_AUDIO_STRETCH
+    #define WAV_FRAME_SIZE   4096
+#else
+    #define WAV_FRAME_SIZE   1024
+#endif
 static void wave_thread_entry_file(void *parameter)
 {
     uint16_t last_frame_len = WAV_FRAME_SIZE;
@@ -1290,8 +1571,14 @@ static void wave_thread_entry_file(void *parameter)
     mp3ctrl_handle ctrl = (mp3ctrl_handle)parameter;
     short *outBuf = audio_mem_malloc(WAV_FRAME_SIZE);
     RT_ASSERT(outBuf);
-#if !TWS_MIX_ENABLE
-    short *outBuf2 = audio_mem_malloc(WAV_FRAME_SIZE * 2);
+    short *outBuf2 = NULL;
+
+#if !TWS_MIX_ENABLE || BT_BAP_BROADCAST_SOURCE
+    uint32_t ble_stereo_size = WAV_FRAME_SIZE * 2;
+#if BT_BAP_BROADCAST_SOURCE
+    ble_stereo_size += SPEAKER_10MS_DMA_SIZE * 4;
+#endif
+    outBuf2 = audio_mem_malloc(ble_stereo_size);
     RT_ASSERT(outBuf2);
 #endif
     int nFrames = 0;
@@ -1412,6 +1699,10 @@ static void wave_thread_entry_file(void *parameter)
                     buf_seek(ctrl, ctrl->tag_len + offset);
                 ctrl->cache_bytesLeft = 0;
                 ctrl->is_file_end = 0;
+#if PKG_USING_AUDIO_STRETCH
+                if (ctrl->stretcher)
+                    stretch_reset(ctrl->stretcher);
+#endif
             }
             audio_mem_free(p_cmd);
             rt_event_send(ctrl->api_event, API_EVENT_SEEK);
@@ -1443,52 +1734,13 @@ static void wave_thread_entry_file(void *parameter)
             int ret;
             if (cache_full_occured)
             {
-#if !TWS_MIX_ENABLE
-                if (audio_device_is_a2dp_sink())
-                {
-                    uint32_t bytes;
-                    if (ctrl->wave_samplerate != 44100)
-                    {
-                        if (ctrl->resample)
-                        {
-                            ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), ctrl->resample->dst_bytes);
-                            goto check_write_result;
-                        }
-                        else
-                        {
-                            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_SAMPLERATE, (void *)44100);
-                            audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_CH, (void *)2);
-                            ctrl->resample = sifli_resample_open(2, ctrl->wave_samplerate, 44100);
-                            RT_ASSERT(ctrl->resample);
-                        }
-                        if (ctrl->wave_channels == 2)
-                        {
-                            bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf, last_frame_len, 0);
-                            ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
-                        }
-                        else
-                        {
-                            mono2stereo((int16_t *)outBuf, last_frame_len / 2, (int16_t *)outBuf2);
-                            bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf2, last_frame_len * 2, 0);
-                            ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
-                        }
-                    }
-                    else if (ctrl->wave_channels == 1)
-                    {
-                        mono2stereo((int16_t *)outBuf, last_frame_len / 2, (int16_t *)outBuf2);
-                        ret = audio_write(ctrl->client, (uint8_t *)outBuf2, last_frame_len * 2);
-                    }
-                    else
-                    {
-                        ret = audio_write(ctrl->client, (uint8_t *)outBuf, last_frame_len);
-                    }
-                }
-                else
-#endif
-                {
-                    ret = audio_write(ctrl->client, (uint8_t *)outBuf, last_frame_len);
-                }
-check_write_result:
+                ret = wav_write_data(0,
+                                     ctrl,
+                                     outBuf,
+                                     outBuf2,
+                                     last_frame_len / sizeof(int16_t),
+                                     ctrl->wave_channels,
+                                     NULL);
                 if (ret == 0)
                 {
                     LOG_D("wav cache full");
@@ -1547,6 +1799,10 @@ check_write_result:
                 }
                 LOG_I("wav--loop");
                 last_frame_len = WAV_FRAME_SIZE;
+#if PKG_USING_AUDIO_STRETCH
+                if (ctrl->stretcher)
+                    stretch_reset(ctrl->stretcher);
+#endif
                 continue;
             }
 
@@ -1562,13 +1818,21 @@ check_write_result:
         }
         ctrl->frame_index++;
         nFrames++;
-        if (ctrl->wave_channels != old_channels || ctrl->wave_samplerate != old_samplerate)
+        if ((ctrl->wave_channels != old_channels || ctrl->wave_samplerate != old_samplerate)
+#if BT_BAP_BROADCAST_SOURCE
+                && !ctrl->is_open_for_ble_src
+#endif
+           )
+
         {
             if (ctrl->client)
             {
                 audio_close(ctrl->client);
                 ctrl->client = NULL;
             }
+#if PKG_USING_AUDIO_STRETCH
+            stretch_close(ctrl);
+#endif
             if (ctrl->resample)
             {
                 sifli_resample_close(ctrl->resample);
@@ -1589,56 +1853,47 @@ check_write_result:
             {
                 pa.write_cache_size = WAV_FRAME_SIZE * 8 + 10;
             }
+#if BT_BAP_BROADCAST_SOURCE
+            ctrl->is_open_for_ble_src = 0;
+            if (audio_server_is_ble_src_enable())
+            {
+                pa.write_channnel_num = 1;
+                pa.write_samplerate = 48000;
+                ctrl->use_device = AUDIO_DEVICE_SPEAKER;
+                ctrl->is_open_for_ble_src = 1;
+                ctrl->old_channels = 1;
+                ctrl->old_samplerate = 48000;
+            }
+#endif
             ctrl->frameinfo.samplerate = ctrl->wave_samplerate;
             ctrl->frameinfo.channels = old_channels;
             ctrl->frameinfo.one_channel_sampels = WAV_FRAME_SIZE / 2 / old_channels;
             ctrl->client = audio_open2(ctrl->type, AUDIO_TX, &pa, mp3_audio_server_callback, (void *)ctrl, ctrl->use_device);
             RT_ASSERT(ctrl->client);
+#if BT_BAP_BROADCAST_SOURCE
+            if (audio_server_is_ble_src_enable())
+            {
+                uint8_t zero[16] = {0};
+                uint32_t size = 0;
+                while (size + sizeof(zero) <= pa.write_cache_size)
+                {
+                    audio_write(ctrl->client, zero, sizeof(zero));
+                    size += sizeof(zero);
+                }
+            }
+#endif
+
             LOG_I("wav open ctrl=0x%x, client=0x%x, c=%d samrate=%d",
                   ctrl, ctrl->client, ctrl->wave_channels, ctrl->wave_samplerate);
         }
         LOG_D("nFrames=%d", nFrames);
-        int ret;
-#if !TWS_MIX_ENABLE
-        if (audio_device_is_a2dp_sink())
-        {
-            uint32_t bytes;
-            if (ctrl->wave_samplerate != 44100 && ctrl->wave_samplerate)
-            {
-                if (!ctrl->resample)
-                {
-                    audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_SAMPLERATE, (void *)44100);
-                    audio_ioctl(ctrl->client, AUDIO_IOCTL_SET_CACHE_CH, (void *)2);
-                    ctrl->resample = sifli_resample_open(2, ctrl->wave_samplerate, 44100);
-                    RT_ASSERT(ctrl->resample);
-                }
-                if (ctrl->wave_channels == 2)
-                {
-                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf, last_frame_len, 0);
-                    ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
-                }
-                else
-                {
-                    mono2stereo((int16_t *)outBuf, last_frame_len / 2, (int16_t *)outBuf2);
-                    bytes = sifli_resample_process(ctrl->resample, (int16_t *)outBuf2, last_frame_len * 2, 0);
-                    ret = audio_write(ctrl->client, (uint8_t *)sifli_resample_get_output(ctrl->resample), bytes);
-                }
-            }
-            else if (ctrl->wave_channels == 1)
-            {
-                mono2stereo((int16_t *)outBuf, last_frame_len / 2, (int16_t *)outBuf2);
-                ret = audio_write(ctrl->client, (uint8_t *)outBuf2, last_frame_len * 2);
-            }
-            else
-            {
-                ret = audio_write(ctrl->client, (uint8_t *)outBuf, last_frame_len);
-            }
-        }
-        else
-#endif
-        {
-            ret = audio_write(ctrl->client, (uint8_t *)outBuf, len);
-        }
+        int ret = wav_write_data(1,
+                                 ctrl,
+                                 outBuf,
+                                 outBuf2,
+                                 len / sizeof(int16_t),
+                                 ctrl->wave_channels,
+                                 NULL);
 
         if (ret == -1)
         {
@@ -1658,6 +1913,9 @@ check_write_result:
             rt_event_send(ctrl->event, MP3_EVENT_FLAG_DECODE);
         }
     }
+#if PKG_USING_AUDIO_STRETCH
+    stretch_close(ctrl);
+#endif
     if (ctrl->client)
         audio_close(ctrl->client);
     ctrl->client = NULL;
@@ -2043,6 +2301,25 @@ PUBLIC_API int mp3ctrl_ioctl(mp3ctrl_handle handle, int cmd, uint32_t param)
 {
     if (!handle || handle->magic != MP3_HANDLE_MAGIC)
         return -1;
+    if (cmd == MP3CTRL_IOCTRL_STRETCH_PERCENT)
+    {
+#if PKG_USING_AUDIO_STRETCH
+        uint32_t percent = param;
+        if (percent < 25)
+            percent = 25;
+        else if (percent > 400)
+            percent = 400;
+        else if (percent == 100)
+        {
+            percent = 0;
+        }
+        handle->audio_stretch_percent = percent;
+        LOG_I("audio strech percent %d-->%d\n", param, percent);
+#else
+        return -1;
+#endif
+        return 0;
+    }
 
     if (cmd == MP3CTRL_IOCTRL_FADE_OUT_START)
     {

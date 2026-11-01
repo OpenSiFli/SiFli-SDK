@@ -378,6 +378,16 @@ if PKG_USING_CHERRYUSB
             select CONFIG_USBHOST_PLATFORM_CDC_RNDIS
             default n
 
+        config PKG_CHERRYUSB_HOST_CDC_RNDIS_NO_NETIF
+            bool
+            prompt "Enable usb rndis driver without lwip netif"
+            depends on PKG_CHERRYUSB_HOST_CDC_RNDIS
+            default n
+            help
+                Do not register the lwIP netif for the RNDIS host. RX frames are handed to the
+                usbh_rndis_on_raw_rx() hook instead of the netif, and the
+                link state is polled via usbh_rndis_is_link_up().
+
         config PKG_CHERRYUSB_HOST_CDC_NCM
             bool
             prompt "Enable usb cdc ncm driver"

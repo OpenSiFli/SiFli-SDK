@@ -21,6 +21,8 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
     src += ['lvsf_perf.c']
     src += ['lvsf_perf_v9.c']
     src += ['app_mem.c']
+    if GetDepend('USING_BLOCK_MEM'):
+        src += ['app_bmem.c']
     src += ['hash_cache.c']
 
     objs = DefineGroup('lvgl_sifli', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc)

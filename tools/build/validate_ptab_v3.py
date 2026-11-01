@@ -26,6 +26,27 @@ if str(_TOOLS_BUILD_PATH) not in sys.path:
 
 import ptab as ptab_module
 
+# Extra ACPU code images use the '.rom<N>' / 'ER_IROM<N>' family shared with the v1/v2
+# multi-image flow, which probes '.rom2'..'.rom6' (building.MAX_EX_IMG_NUM = 5).
+_ACPU_CODE_ROM_INDEX_MAX = 6
+
+# An ACPU code partition may label its image with a trailing name index (`acpu2`),
+# which sdk_resource.py uses for the APP_<NAME>_CODE<N> macro prefix.
+_ACPU_CODE_NAME_SUFFIX_RE = re.compile(r'^(.*?)(\d+)$')
+
+
+def get_acpu_code_name_suffix(name: str) -> Optional[int]:
+    """Return the trailing image index of an ACPU code partition name.
+
+    Returns None when the name carries no suffix. The index must agree with the
+    partition's image number (its '.rom<N>' section, or 1 for the first image).
+    """
+    match = _ACPU_CODE_NAME_SUFFIX_RE.match(str(name or '').strip())
+    if not match or not match.group(1):
+        return None
+    index = int(match.group(2))
+    return index if index >= 1 else None
+
 
 class ValidationError:
     def __init__(self, message: str, severity: str = "error"):
@@ -355,17 +376,25 @@ def validate_exec(exec_def, partition_name: str, chip_config: dict, core: Option
 
 
 def validate_sections(sections: Any, partition: dict) -> List[ValidationError]:
-    """Validate structured selectors used by app/ex resource partitions."""
+    """Validate structured selectors used by resource and ACPU code partitions."""
     errors = []
     pname = partition.get('name', '?')
-    is_app_ex = ptab_module.is_app_ex_partition_v3(partition)
+    ptype = str(partition.get('type') or '').strip().lower()
+    psubtype = str(partition.get('subtype') or '').strip().lower()
+    # 'sections' describes the ELF content of a partition: a resource partition
+    # (app/ex) gathers input sections into an output section named after the
+    # partition, while an extra ACPU code image (app/factory) names its own output
+    # section '.rom<N>' so that it maps to ER_IROM<N>.bin.
+    is_app_ex = ptype == 'app' and psubtype == 'ex'
+    is_acpu_code = ptab_module.is_acpu_code_partition_v3(partition)
 
     if sections is None:
         return errors
 
-    if not is_app_ex:
+    if not (is_app_ex or (is_acpu_code and ptab_module.get_acpu_code_rom_indexes(partition))):
         errors.append(ValidationError(
-            f"Partition '{pname}': 'sections' is only supported for type='app', subtype='ex'"
+            f"Partition '{pname}': 'sections' is only supported for type='app' subtype='ex' "
+            f"or for an ACPU code image naming its '.rom<N>' output section"
         ))
         return errors
 
@@ -458,7 +487,7 @@ def validate_ftab_unique(partitions: List[dict]) -> List[ValidationError]:
 
 
 def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationError]:
-    """Validate: at most one factory app per core."""
+    """Validate: at most one factory app per core (ACPU may carry several images)."""
     errors = []
     seen: Dict[str, List[str]] = {}
 
@@ -466,6 +495,11 @@ def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationEr
         if p.get('type') != 'app' or p.get('subtype') != 'factory':
             continue
         core = (p.get('core') or 'HCPU').upper()
+        # One ACPU project may build several code images out of a single ELF, so the
+        # ACPU core is allowed to own more than one factory partition; those extra
+        # images are validated by validate_acpu_code_partitions().
+        if core == 'ACPU':
+            continue
         seen.setdefault(core, []).append(p.get('name', '?'))
 
     for core, names in seen.items():
@@ -473,6 +507,94 @@ def validate_factory_unique_by_core(partitions: List[dict]) -> List[ValidationEr
             errors.append(ValidationError(
                 f"Multiple factory app partitions found for core {core}: {', '.join(names)}"
             ))
+
+    return errors
+
+
+def validate_acpu_code_partitions(
+    partitions: List[dict],
+    chip_config: Optional[dict] = None,
+) -> List[ValidationError]:
+    """Validate the ACPU code partitions, including extra multi-image partitions.
+
+    One ACPU project may build several code images from a single ELF: the first
+    image keeps its code in the project code artifact, while every further image is
+    declared as its own app/factory/core=ACPU partition naming the ELF output
+    section that holds its code ('.rom<N>', N >= 2) - which also gives the artifact
+    suffix ER_IROM<N>.bin.
+
+    An image on XIP-capable storage (NOR) may omit `exec`: it executes in place
+    from its storage region, and sdk_resource.py generates the same region as the
+    execution window. Any other storage needs an explicit exec region, because
+    the image must be copied into RAM/PSRAM before it runs.
+    """
+    errors = []
+    acpu_parts = [p for p in partitions if ptab_module.is_acpu_code_partition_v3(p)]
+    if not acpu_parts:
+        return errors
+
+    indexes: Dict[int, str] = {}
+    primary: List[str] = []
+    for p in acpu_parts:
+        pname = p.get('name', '?')
+        if not isinstance(p.get('exec'), dict):
+            if _region_memory_type(p.get('region'), chip_config) != 'nor':
+                errors.append(ValidationError(
+                    f"Partition '{pname}': ACPU code partition must provide "
+                    f"'exec: {{region, offset}}' unless it runs in place from NOR"
+                ))
+
+        rom_indexes = ptab_module.get_acpu_code_rom_indexes(p)
+        if len(rom_indexes) > 1:
+            errors.append(ValidationError(
+                "Partition '{}': at most one '.rom<N>' section is allowed (got {})".format(
+                    pname, ', '.join('.rom{}'.format(n) for n in rom_indexes))
+            ))
+
+        # The first image owns region 1 and keeps its code in the code artifact.
+        expected_region = 1
+        if not rom_indexes:
+            primary.append(pname)
+        else:
+            rom_index = rom_indexes[0]
+            expected_region = rom_index
+            if rom_index < 2 or rom_index > _ACPU_CODE_ROM_INDEX_MAX:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': '.rom{rom_index}' is out of range "
+                    f"(.rom2..rom{_ACPU_CODE_ROM_INDEX_MAX})"
+                ))
+            if rom_index in indexes:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': '.rom{rom_index}' is already used by '{indexes[rom_index]}'"
+                ))
+            else:
+                indexes[rom_index] = pname
+
+        # The legacy macro alias and the ELF section must describe the same image.
+        for alias in p.get('aliases') or []:
+            match = re.match(r'^ACPU_CODE_LOAD_REGION(\d+)$', str(alias or '').strip().upper())
+            if match and int(match.group(1)) != expected_region:
+                errors.append(ValidationError(
+                    f"Partition '{pname}': alias '{alias}' does not match image "
+                    f"{expected_region}{' (.rom{})'.format(expected_region) if rom_indexes else ' (first image)'}"
+                ))
+
+        # The name suffix labels the same image: sdk_resource.py strips it from
+        # the APP_<NAME>_CODE<N> prefix, so a disagreeing suffix would name a
+        # different image than ACPU_CODE_REGION<N>_*.
+        suffix = get_acpu_code_name_suffix(pname)
+        if suffix is not None and suffix != expected_region:
+            errors.append(ValidationError(
+                f"Partition '{pname}': name suffix {suffix} does not match image "
+                f"{expected_region}{' (.rom{})'.format(expected_region) if rom_indexes else ' (first image)'}"
+            ))
+
+    if len(primary) != 1:
+        errors.append(ValidationError(
+            "Exactly one ACPU code partition must stay without a '.rom<N>' section (the image "
+            "whose code stays in the code artifact); found {}: {}".format(
+                len(primary), ', '.join(primary) if primary else 'none')
+        ))
 
     return errors
 
@@ -647,10 +769,13 @@ def validate_sf32lb52_nand_boot_layout(ptab_obj, partitions: List[dict], chip_co
             except (ValueError, TypeError):
                 offset = None
                 size = None
-            if offset != 0 or size != block_size:
+            # The flash table keeps the v1/v2 size (0x8000) regardless of the
+            # NAND erase block size; the rest of the block stays reserved.
+            expected_size = 0x00008000
+            if offset != 0 or size != expected_size:
                 errors.append(ValidationError(
                     f"SF32LB52 NAND region '{region}' flash_table must use offset=0x0, "
-                    f"size=0x{block_size:X} for block_size 0x{block_size:X}"
+                    f"size=0x{expected_size:X}"
                 ))
 
         bootloader = _find_partition_in_region(partitions, region, ptype='bootloader')
@@ -666,6 +791,42 @@ def validate_sf32lb52_nand_boot_layout(ptab_obj, partitions: List[dict], chip_co
                     f"for block_size 0x{block_size:X}"
                 ))
 
+    return errors
+
+
+def validate_sf32lb57_acpu_ram_data(ptab_obj, partitions: List[dict]) -> List[ValidationError]:
+    """SF32LB57 ACPU images need an explicit ACPU RAM window.
+
+    The 57 series runs ACPU code from PSRAM but keeps .data/.bss/stack in
+    hpsys_ram, and its board headers derive HEAP_END from ACPU_RAM_DATA_*.
+    Unlike the 58 series, the code region is not the RAM window, so the
+    window cannot be inferred from the ACPU app partition.
+    """
+    errors: List[ValidationError] = []
+    if str(getattr(ptab_obj, 'chip_series', '') or '').strip().lower() != 'sf32lb57':
+        return errors
+
+    if not any(
+        str(partition.get('type') or '').strip() == 'app'
+        and str(partition.get('core') or '').strip().upper() == 'ACPU'
+        for partition in partitions
+    ):
+        return errors
+
+    has_acpu_ram = any(
+        str(partition.get('name') or '').strip() == 'acpu_ram_data'
+        or 'ACPU_RAM_DATA' in {
+            str(alias).strip().upper()
+            for alias in (partition.get('aliases') or partition.get('tags') or [])
+        }
+        for partition in partitions
+    )
+    if not has_acpu_ram:
+        errors.append(ValidationError(
+            "SF32LB57 ACPU images require an 'acpu_ram_data' partition "
+            "(or an 'ACPU_RAM_DATA' alias) in hpsys_ram: the ACPU HEAP_END "
+            "and linker script resolve ACPU_RAM_DATA_* from it"
+        ))
     return errors
 
 
@@ -730,10 +891,12 @@ def validate_ptab_v3(ptab_obj) -> List[ValidationError]:
     errors.extend(validate_bootloader_unique(partitions))
     errors.extend(validate_ftab_unique(partitions))
     errors.extend(validate_factory_unique_by_core(partitions))
+    errors.extend(validate_acpu_code_partitions(partitions, chip_config))
     errors.extend(validate_nand_memory_block_sizes(ptab_obj))
     errors.extend(validate_nand_partition_alignment(partitions, chip_config))
     errors.extend(validate_sf32lb52_storage_reservations(ptab_obj, partitions, chip_config))
     errors.extend(validate_sf32lb52_nand_boot_layout(ptab_obj, partitions, chip_config))
+    errors.extend(validate_sf32lb57_acpu_ram_data(ptab_obj, partitions))
 
     # Bootloader must have exec (execution address)
     bootloaders = [p for p in partitions if p.get('type') == 'bootloader']

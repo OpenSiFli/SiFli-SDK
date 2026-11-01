@@ -18,6 +18,7 @@ WatchDog can also be programmed to directly generate a system reset. The HCPU or
 ```{note}
 SF32LB55X has three WDTs: HCPU WDT1, LCPU WDT2, and one system IWDT. WDT1/2 provide interrupt functionality and can only reset HCPU/LCPU subsystems when triggered. IWDT cannot provide interrupt functionality, but can reset the entire chip when triggered. The WDT clock for 55X can be selected from RC10K/32K LXT.
       SF32LB56X/58X WDT1/WDT2 have enhanced functionality and can trigger reset of the entire chip. The clock source for SF32LB56X/58X comes from RC10K and no longer derives from the 32K low-power clock.
+      SF32LB57X has three WDTs: HCPU IWDT, LCPU WDT2, and ACPU WDT1. WDT1/WDT2 provide interrupt functionality and can only reset the ACPU/LCPU subsystems when triggered. IWDT also provides interrupt functionality, and can reset the entire chip when triggered. The WDT clock for 57X can be selected between RC10K and 32K LXT.
 ```
 
 ## Using WDT

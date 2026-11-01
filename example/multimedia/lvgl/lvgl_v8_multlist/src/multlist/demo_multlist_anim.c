@@ -39,14 +39,16 @@ static void demo_get_item_display_size(const lv_img_dsc_t *src, uint16_t zoom, l
     if(h) *h = (lv_coord_t)LV_MAX(((uint32_t)src->header.h * zoom) / LV_IMG_ZOOM_NONE, 1);
 }
 
-int demo_tranform_cb(lv_obj_t *multlist, lv_multlist_item_t *item, int32_t offset, lv_coord_t zoom)
+int demo_tranform_cb(lv_obj_t *multlist, lv_multlist_item_t *item, float offset, float zoom)
 {
+    LV_UNUSED(zoom);
+    int32_t offset_px = (int32_t)offset;
     int32_t size_max = LV_HOR_RES;
     const lv_img_dsc_t *src = demo_multlist_get_card_snapshot(DEMO_MULTLIST_CARD_STYLE_ANIM,
                                                                item->index);
     if (MULTLIST_IS_VER(flag))
         size_max = LV_VER_RES;
-    int32_t cent_off = offset - (size_max >> 1);
+    int32_t cent_off = offset_px - (size_max >> 1);
     if (cent_off > -size_max && cent_off < size_max)
     {
         if (!item->element)
@@ -64,25 +66,25 @@ int demo_tranform_cb(lv_obj_t *multlist, lv_multlist_item_t *item, int32_t offse
         }
         int32_t val = lv_map(LV_ABS(cent_off), 0, size_max, 0, 1024);
         val = lv_bezier3(val, 0, 500, 900, 1024);
-        lv_coord_t zoom = lv_map(val, 0, 1024, LV_IMG_ZOOM_NONE, LV_MAX(LV_IMG_ZOOM_NONE / 3, 1));
+        lv_coord_t img_zoom = lv_map(val, 0, 1024, LV_IMG_ZOOM_NONE, LV_MAX(LV_IMG_ZOOM_NONE / 3, 1));
         lv_coord_t opa = lv_map(val, 0, 1024, LV_OPA_100, LV_OPA_10);
         lv_coord_t disp_w;
         lv_coord_t disp_h;
-        lv_img_set_zoom(item->element, zoom);
+        lv_img_set_zoom(item->element, img_zoom);
         lv_obj_set_style_img_opa(item->element, opa, 0);
-        demo_get_item_display_size(src, zoom, &disp_w, &disp_h);
+        demo_get_item_display_size(src, img_zoom, &disp_w, &disp_h);
         if (val < 128)
             lv_obj_move_foreground(item->element);
         val = lv_map(val, 0, 1024, 0, size_max / 2);
         if (cent_off < 0)
-            offset = -val + (size_max >> 1);
+            offset_px = -val + (size_max >> 1);
         else
-            offset = val + (size_max >> 1);
+            offset_px = val + (size_max >> 1);
 
         if (MULTLIST_IS_VER(flag))
-            lv_obj_set_pos(item->element, (lv_obj_get_width(multlist) - disp_w) >> 1, offset - (disp_h >> 1));
+            lv_obj_set_pos(item->element, (lv_obj_get_width(multlist) - disp_w) >> 1, offset_px - (disp_h >> 1));
         else
-            lv_obj_set_pos(item->element, offset - (disp_w >> 1), (lv_obj_get_height(multlist) - disp_h) >> 1);
+            lv_obj_set_pos(item->element, offset_px - (disp_w >> 1), (lv_obj_get_height(multlist) - disp_h) >> 1);
     }
     else
     {

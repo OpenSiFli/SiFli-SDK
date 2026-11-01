@@ -65,7 +65,7 @@ static size_t coredump_nor_write(uint8_t *buf, size_t len)
     do
     {
         wr_len = 0;
-        if (IS_DMA_ACCROSS_1M_BOUNDARY((uint32_t)buf, remain_size))
+        if (IS_DMA_ACROSS_1M_BOUNDARY((uint32_t)buf, remain_size))
         {
             wr_len = DMA_1M_LEN - ((uint32_t)buf & DMA_1M_BOUNDARY_MASK);
         }
@@ -323,7 +323,7 @@ static coredump_err_code_t coredump_backend_partition_start(void)
         }
     }
 
-/* Disable SDIO interrupt to avoid interference during coredump writing */
+    /* Disable SDIO interrupt to avoid interference during coredump writing */
 #if defined(BSP_USING_SDIO)
     rt_mmcsd_irq_disable();
 #endif /* BSP_USING_SDIO */

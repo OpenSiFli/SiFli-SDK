@@ -79,6 +79,11 @@ struct rt_semaphore lcd_sema;
 static lv_display_t *lcd_flushing_disp_drv = NULL;
 static lv_display_t *disp;
 
+#if defined(BSP_USING_LCD_FRAMEBUFFER) && \
+    (defined(LCD_FB_USING_TWO_COMPRESSED) || defined(LCD_FB_USING_TWO_UNCOMPRESSED))
+static uint8_t use_new_framebuffer;
+#endif
+
 #if (LV_COLOR_DEPTH == 24)
     typedef lv_color_t lv_fb_color_t;
 #elif (LV_COLOR_DEPTH == 16)
@@ -220,13 +225,17 @@ static void render_start(lv_event_t *e)
     {
         const lv_area_t scr_area = { 0, 0, LV_HOR_RES_MAX - 1, LV_VER_RES_MAX - 1};
         lv_inv_area(disp, &scr_area); //To avoid copying PSRAM->PSRAM
+#ifdef BSP_USING_LCD_FRAMEBUFFER
+        use_new_framebuffer = 1;
+#endif
+    }
+#ifdef BSP_USING_LCD_FRAMEBUFFER
+    else
+    {
+        use_new_framebuffer = 0;
     }
 #endif
-
-#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
-    switch_draw_buf();
-    update_fb();
-#endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
+#endif
 
 }
 
@@ -253,6 +262,7 @@ static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
     RT_ASSERT(RT_EOK == err);
     p_disp->flushing = 0;
 }
+
 #else
 static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
 {
@@ -333,6 +343,14 @@ static void lcd_flush(lv_display_t *disp_drv, const lv_area_t *refresh_area, uin
     lcd_flushing_disp_drv = disp_drv;
 
 #ifdef BSP_USING_LCD_FRAMEBUFFER
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    if (use_new_framebuffer)
+    {
+        switch_draw_buf();
+        update_fb();
+        use_new_framebuffer = 0;
+    }
+#endif /* LCD_FB_USING_TWO_COMPRESSED || LCD_FB_USING_TWO_UNCOMPRESSED */
     drv_lcd_fb_write_send(&clip_area, &src_area, (uint8_t *)color_p, lcd_flush_done,
                           disp_drv->flushing_last);
 #else

@@ -739,6 +739,12 @@ def _infer_build_core(env, fallback: str = 'HCPU') -> str:
 
 def _get_ptab_v3_split_section(partition: dict, ptab_module) -> str:
     """Map a ptab v3 app/ex partition to the ELF section used for objcopy."""
+    # An extra ACPU code image names the ELF output section holding its code
+    # ('.rom<N>'), which also gives the artifact suffix ER_IROM<N>.bin; a resource
+    # partition collects into the output section named after the partition.
+    rom_index = ptab_module.get_acpu_code_rom_index(partition)
+    if rom_index is not None:
+        return '.rom{}'.format(rom_index)
     name = (partition.get('name') or '').strip()
     return '.{}'.format(name) if name else ''
 
@@ -759,7 +765,19 @@ def _collect_ptab_v3_split_partitions(ptab_obj, core: str, ptab_module):
         out.append({
             'name': name,
             'section': section,
+            'kind': 'resource',
         })
+
+    # Extra ACPU code images are carved out of the same ELF and become
+    # '<base>.ER_IROM<N>.bin', the same naming as the v1/v2 multi-image flow and the
+    # embedded LCPU flow. The first ACPU image stays in the code artifact.
+    if (core or '').strip().upper() == 'ACPU':
+        for entry in ptab_module.iter_acpu_code_ext_partitions_v3(ptab_obj):
+            out.append({
+                'name': entry['image'],
+                'section': entry['section'],
+                'kind': 'code',
+            })
 
     return out
 
@@ -807,6 +825,9 @@ def GetPtabV3CodeArtifactCandidates(output_dir: str, base_name: str, ext: str):
     return [
         GetPtabV3ArtifactPath(output_dir, base_name, ext, 'app'),
         GetPtabV3ArtifactPath(output_dir, base_name, ext),
+        # A project with extra ACPU code images names its code artifact after the
+        # first image ('ER_IROM1', see _collect_ptab_v3_split_partitions).
+        GetPtabV3ArtifactPath(output_dir, base_name, ext, 'ER_IROM1'),
     ]
 
 
@@ -1055,18 +1076,37 @@ def _build_ptab_v3_keil_artifacts(program_file: str, out_dir: str, base_name: st
     entries = _ptab_v3_fromelf_entries(export_path, ext)
     used_paths = set()
     used_resources = []
+    used_code_region = False
+    code_region_missing = []
 
     for entry in split_entries:
         name = entry['name']
         aliases = _ptab_v3_fromelf_region_aliases(name)
         src = _find_ptab_v3_fromelf_entry(entries, aliases, used_paths, ext)
         if not src:
+            if entry.get('kind') == 'code':
+                code_region_missing.append(name)
             continue
         out_file = GetPtabV3ArtifactPath(out_dir, base_name, ext, name)
         used_paths.add(src['path'])
         _remove_file_or_dir(out_file)
         shutil.move(src['path'], out_file)
         used_resources.append(name)
+        if entry.get('kind') == 'code':
+            used_code_region = True
+
+    if code_region_missing:
+        # The ftab still advertises these images, so a missing artifact would make the
+        # bootloader copy unprogrammed flash into the execution region.
+        # Point at the linked image, not the fromelf export: that export never holds the
+        # missing region and is removed right here.
+        _remove_file_or_dir(export_path)
+        for name in code_region_missing:
+            logging.error(
+                "ptab v3 ACPU image '%s' has no ER_IROM%s region in %s "
+                "(check the ACPU scatter file)",
+                name, name[len('ER_IROM'):], program_file)
+        raise SystemExit(1)
 
     code_entry = _select_ptab_v3_fromelf_code_entry(entries, used_paths, ext)
     if not code_entry:
@@ -1077,7 +1117,7 @@ def _build_ptab_v3_keil_artifacts(program_file: str, out_dir: str, base_name: st
         out_dir,
         base_name,
         ext,
-        'app' if used_resources else None,
+        'ER_IROM1' if used_code_region else ('app' if used_resources else None),
     )
     _remove_file_or_dir(code_path)
     shutil.move(code_entry['path'], code_path)
@@ -1389,29 +1429,47 @@ def ProgramBinaryBuild(target, source, env):
         used_sections = []
         all_sections = []
         present_sections = []
+        used_code_region = False
+        code_region_missing = []
         for entry in split_entries:
             name = entry['name']
             if not name:
                 continue
             sec = entry['section']
+            is_code_region = entry.get('kind') == 'code'
             all_sections.append(sec)
             out_file = GetPtabV3ArtifactPath(out_dir, base_name, '.bin', name)
             _remove_file_or_dir(out_file)
             res = subprocess.run([rtconfig.OBJCPY, '-Obinary', '-j{}'.format(sec), program_file, out_file])
             if res.returncode != 0:
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             present_sections.append(sec)
             if not _ptab_v3_artifact_has_payload(out_file, '.bin'):
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             used_sections.append(sec)
+            if is_code_region:
+                used_code_region = True
+
+        if code_region_missing:
+            # The ftab still advertises these images, so a missing artifact would make
+            # the bootloader copy unprogrammed flash into the execution region.
+            for name, sec in code_region_missing:
+                logging.error(
+                    "ptab v3 ACPU image '%s' has no '%s' payload (check the ACPU link script)",
+                    name, sec)
+            raise SystemExit(1)
 
         code_bin_path = GetPtabV3ArtifactPath(
             out_dir,
             base_name,
             '.bin',
-            'app' if used_sections else None,
+            'ER_IROM1' if used_code_region else ('app' if used_sections else None),
         )
         exclude_args = ['-R{}'.format(s) for s in dict.fromkeys(all_sections)]
         _remove_file_or_dir(code_bin_path)
@@ -1555,29 +1613,47 @@ def ProgramHexBuild(target, source, env):
         used_sections = []
         all_sections = []
         present_sections = []
+        used_code_region = False
+        code_region_missing = []
         for entry in split_entries:
             name = entry['name']
             if not name:
                 continue
             sec = entry['section']
+            is_code_region = entry.get('kind') == 'code'
             all_sections.append(sec)
             out_file = GetPtabV3ArtifactPath(out_dir, base_name, '.hex', name)
             _remove_file_or_dir(out_file)
             res = subprocess.run([rtconfig.OBJCPY, '-O', 'ihex', '-j{}'.format(sec), program_file, out_file])
             if res.returncode != 0:
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             present_sections.append(sec)
             if not _ptab_v3_artifact_has_payload(out_file, '.hex'):
                 _remove_file_or_dir(out_file)
+                if is_code_region:
+                    code_region_missing.append((name, sec))
                 continue
             used_sections.append(sec)
+            if is_code_region:
+                used_code_region = True
+
+        if code_region_missing:
+            # The ftab still advertises these images, so a missing artifact would make
+            # the bootloader copy unprogrammed flash into the execution region.
+            for name, sec in code_region_missing:
+                logging.error(
+                    "ptab v3 ACPU image '%s' has no '%s' payload (check the ACPU link script)",
+                    name, sec)
+            raise SystemExit(1)
 
         code_hex_path = GetPtabV3ArtifactPath(
             out_dir,
             base_name,
             '.hex',
-            'app' if used_sections else None,
+            'ER_IROM1' if used_code_region else ('app' if used_sections else None),
         )
         exclude_args = ['-R{}'.format(s) for s in dict.fromkeys(all_sections)]
         _remove_file_or_dir(code_hex_path)
@@ -1659,7 +1735,7 @@ def ProgramAsmBuild(target, source, env):
     #TODO: only support keil and gcc
     import rtconfig
     if rtconfig.PLATFORM == 'armcc':
-        if GetDepend("SOC_SF32LB58X") or GetDepend("SOC_SF32LB56X"):
+        if GetDepend("SOC_SF32LB58X") or GetDepend("SOC_SF32LB56X") or GetDepend("SOC_SF32LB57X"):
             subprocess.run(['fromelf', '--cpu=8-M.Main', '--coproc1=cde', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
         else:
             subprocess.run(['fromelf', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
@@ -1972,21 +2048,112 @@ def DownloadScriptBuild(target, source, env):
 
     sdk_resource.BuildJLinkLoadScript(env)
 
+def _get_flash_medium_from_qspi_mode(mem_name):
+    """Resolve the medium of a v1/v2 flash memory from its board QSPI mode.
+
+    flashN is backed by MPI/QSPI controller N. customer/boards/Kconfig_drv
+    defines BSP_QSPI<N>_MODE as 0 for NOR, 1 for NAND and 2..6 for the PSRAM
+    variants. Return None when the mode is a PSRAM mode or cannot be read, so
+    the caller can fall back to the base-address heuristic.
+    """
+    match = re.fullmatch(r'flash(\d+)', mem_name)
+    if not match:
+        return None
+    port = match.group(1)
+    if GetDepend('BSP_QSPI{}_MODE_0'.format(port)):
+        return 'nor'
+    if GetDepend('BSP_QSPI{}_MODE_1'.format(port)):
+        return 'nand'
+    mode = GetConfigValue('BSP_QSPI{}_MODE'.format(port))
+    mode = str(mode).strip().strip('"')
+    if mode == '0':
+        return 'nor'
+    if mode == '1':
+        return 'nand'
+    return None
+
+
+def _get_fs_region_medium(env):
+    """Return the medium ('nand', 'nor', 'sd', ...) of the filesystem partition.
+
+    A board may boot from NOR/SD and still attach an external NAND, so
+    RT_USING_MTD_NAND cannot identify the medium that holds fs_region. Resolve
+    it from the partition table instead. Returns None when the medium cannot be
+    determined, so the caller keeps the legacy Kconfig-based behavior.
+    """
+    import ptab as ptab_module
+
+    ptab_obj = env.GetPtab() if hasattr(env, 'GetPtab') else None
+    if ptab_obj is None:
+        ptab_path = env.get('PARTITION_TABLE') if hasattr(env, 'get') else None
+        if not ptab_path:
+            return None
+        ptab_obj = ptab_module.load_ptab(ptab_path, fatal=False)
+    if ptab_obj is None:
+        return None
+
+    fs_subtypes = ('filesystem', 'littlefs', 'fat', 'fatfs', 'flashdb')
+
+    if ptab_obj.is_v3():
+        chip_config = ptab_obj.get_chip_config()
+        for partition in ptab_obj.partitions:
+            if str(partition.get('type') or '').strip().lower() != 'data':
+                continue
+            subtype = str(partition.get('subtype') or '').strip().lower()
+            aliases = {str(alias).strip().upper() for alias in (partition.get('aliases') or [])}
+            if subtype not in fs_subtypes and 'FS_REGION' not in aliases:
+                continue
+            region = str(partition.get('region') or '').strip()
+            mem_type = ptab_module._get_region_memory_type(region, chip_config)
+            return str(mem_type or '').strip().lower() or None
+        return None
+
+    # v1/v2: the filesystem region is marked by the FS_REGION tag. Prefer the
+    # board QSPI mode because a base address alone is ambiguous: 55x maps NOR
+    # XIP flash at 0x64000000/0x68000000, inside the NAND address range.
+    for mem in ptab_obj.content_mems():
+        if 'version' in mem:
+            continue
+        mem_name = str(mem.get('mem') or '').strip().lower()
+        try:
+            base = int(mem.get('base', 0), 0)
+        except (TypeError, ValueError):
+            base = 0
+        for region in mem.get('regions') or []:
+            tags = {str(tag).strip().upper() for tag in (region.get('tags') or [])}
+            if 'FS_REGION' not in tags:
+                continue
+            if 'flash' in mem_name:
+                medium = _get_flash_medium_from_qspi_mode(mem_name)
+                if medium is not None:
+                    return medium
+                if 0x60000000 <= base <= 0x6FFFFFFF:
+                    return 'nand'
+                if 0x10000000 <= base <= 0x1FFFFFFF:
+                    return 'nor'
+            if 'emmc' in mem_name or 'sdmmc' in mem_name or mem_name.startswith('sd'):
+                return 'sd'
+            return None
+    return None
+
+
 def FileSystemBuild(source, env):
     if GetDepend('RT_USING_DFS_ELMFAT'):
         target=os.path.join(env['build_dir'],'fs_root.bin')
         source_list=[]
         for r,d,f in os.walk(source):
             for file in f:
-                source_list+=[os.path.join(r,file)]                
+                source_list+=[os.path.join(r,file)]
         Depends(target,source_list)
         SIFLI_SDK = os.getenv('SIFLI_SDK')
-        if GetDepend('RT_USING_MTD_NAND'):
+        fs_medium = _get_fs_region_medium(env)
+        if fs_medium is not None:
+            use_nand_image = fs_medium == 'nand'
+        else:
+            use_nand_image = bool(GetDepend('RT_USING_MTD_NAND'))
+        if use_nand_image:
             MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg_nand/Release/mkfatimg{env['tool_suffix']}")
             page_size=2048
-        elif GetDepend('RT_USING_MTD_NOR'):
-            MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
-            page_size=4096
         else:
             MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
             page_size=4096
@@ -2124,6 +2291,8 @@ def _get_chip_link_fallback(link_source, env):
         chip = 'sf32lb56x'
     elif GetDepend('SOC_SF32LB58X'):
         chip = 'sf32lb58x'
+    elif GetDepend('SOC_SF32LB57X'):
+        chip = 'sf32lb57x'
     else:
         return None
 
@@ -3131,11 +3300,12 @@ def ResolveBoardConfig(bsp_root, build_dir, board):
 
     # create Kconfig
     s = ''
-    s += 'source "$SIFLI_SDK/Kconfig.v2"\n'
-    s += 'source "$SIFLI_SDK/customer/boards/Kconfig.v2"\n'
     _path1, board_path = GetBoardPath(board)
+    # source Kconfig.board first to make `configdefault` take effect
     board_path += "/Kconfig.board"
     s += 'source "{}"\n'.format(board_path)
+    s += 'source "$SIFLI_SDK/Kconfig.v2"\n'
+    s += 'source "$SIFLI_SDK/customer/boards/Kconfig.v2"\n'
 
     # kconfiglib doesn't recognize backslash
     bsp_root = os.path.abspath(bsp_root).replace('\\', '/')
@@ -3570,19 +3740,34 @@ def GroupLibFullName(name, env):
 def BuildLibInstallAction(target, source, env):
     import rtconfig
     lib_name = GetOption('buildlib')
-    for Group in Projects:
-        if Group['name'] == lib_name:
-            lib_name = GroupLibFullName(Group['name'], env)
-            dst_name = os.path.join(Group['path'], lib_name)
-            lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
-            logging.info ('Copy '+lib_name+' => ' + dst_name)
-            do_copy_file(lib_name, dst_name)
-            try:
-                os.system(rtconfig.POST_ACTION)
-            except:
-                pass
-            #os.system("postbuild.bat")
-            break
+    if '*' != lib_name:
+        for Group in Projects:
+            if Group['name'] == lib_name:
+                lib_name = GroupLibFullName(Group['name'], env)
+                dst_name = os.path.join(Group['path'], lib_name)
+                lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
+                logging.info ('Copy '+lib_name+' => ' + dst_name)
+                do_copy_file(lib_name, dst_name)
+                try:
+                    os.system(rtconfig.POST_ACTION)
+                except:
+                    pass
+                #os.system("postbuild.bat")
+                break
+    else:
+        assert 'LIBNAME' in env, 'LIBNAME is not defined in env'
+        assert 'INSTALL_PATH' in env, 'INSTALL_PATH is not defined in env'
+        lib_name = env['LIBNAME']
+        lib_name = GroupLibFullName(lib_name, env)
+        dst_name = os.path.join(env['INSTALL_PATH'], lib_name)
+        lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
+        logging.info ('Copy '+lib_name+' => ' + dst_name)
+        do_copy_file(lib_name, dst_name)
+        try:
+            os.system(rtconfig.POST_ACTION)
+        except:
+            pass
+
 
 def DoBuilding(target, objects):
     import rtconfig
@@ -3626,7 +3811,7 @@ def DoBuilding(target, objects):
         
     # check whether special buildlib option
     lib_name = GetOption('buildlib')
-    if lib_name:
+    if lib_name and '*' != lib_name:
         objects = [] # remove all of objects
         # build library with special component
         for Group in Projects:
@@ -3642,6 +3827,18 @@ def DoBuilding(target, objects):
                 Env.BuildLib(lib_name, program)
 
                 break
+    elif lib_name and '*' == lib_name:
+        objects = [] # remove all of objects
+        # build library with special component
+        lib_name = GroupLibName(Env['LIBNAME'], Env)
+        for Group in Projects:
+            if not local_group(Group, objects):
+                objects += Env.Object(Group['src'])
+
+        lib_name = os.path.join(os.path.dirname(target), lib_name)
+        program = Env.Library(lib_name, objects)
+        # add library copy action
+        Env.BuildLib(lib_name, program)
     else:
         # remove source files with local flags setting
         for group in Projects:

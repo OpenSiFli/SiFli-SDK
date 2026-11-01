@@ -77,9 +77,27 @@ static uint8_t blebr_rf_power_set(int8_t txpwr)
         hwp_bt_mac->AESCNTL &= ~BT_MAC_AESCNTL_FORCE_POLAR_LEVEL_VAL;
         hwp_bt_mac->AESCNTL |= level_val << BT_MAC_AESCNTL_FORCE_POLAR_LEVEL_VAL_Pos;
         hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_POLAR_LEVEL;
+        hwp_bt_phy->TX_CTRL &= ~(BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
     }
     else
 #endif
+    {
+        hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_IQ_PWR;
+        hwp_bt_phy->TX_CTRL |= (BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
+        ret = rf_iq_tx_ctrl_force_set(0, txpwr);
+    }
+    return ret;
+}
+
+static uint8_t blebr_iq_rf_power_set(int8_t txpwr)
+{
+    uint8_t ret = 0;
+    hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_POLAR_PWR; // Force dedicated value
+
+    uint32_t lvl_para;
+    uint8_t  level_val, pwr_val;
+
+    //rt_kprintf("set txpwr %d, actully pwr %d\r\n", txpwr, rf_blebr_db[i]);
     {
         hwp_bt_mac->AESCNTL |= BT_MAC_AESCNTL_FORCE_IQ_PWR;
         hwp_bt_phy->TX_CTRL |= (BT_PHY_TX_CTRL_MOD_METHOD_BLE | BT_PHY_TX_CTRL_MOD_METHOD_BR);
@@ -128,6 +146,14 @@ uint8_t btdm_rf_power_set(uint8_t type, int8_t txpwr)
     else if (type == 1)
     {
         ret = edr_rf_power_set(txpwr);
+    }
+    else if (type == 2)
+    {
+        ret = blebr_iq_rf_power_set(txpwr);
+    }
+    else
+    {
+        ret = 1;
     }
     HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
 

@@ -1,6 +1,7 @@
 # SPI
 
 支持4个SPI 其中2个在HCPU(SPI1,SPI2), 2个在LCPU(SPI3,SPI4).
+（SF32LB57X系列只有2个SPI 都在 HCPU 上）
 
 ## 主要功能
  - 提供单收、单发、同时收发3种模式，每种模式均支持轮询、中断、DMA3种方法

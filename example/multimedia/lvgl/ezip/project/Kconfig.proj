@@ -4,16 +4,10 @@ config CUSTOM_MEM_MAP
     select custom_mem_map
     default y if !SOC_SIMULATOR
 
-config IMAGE_CACHE_IN_PSRAM_SIZE
-    int "image cache in psram size(standalone)"
-    depends on BSP_USING_PSRAM
-    default 262144
-
-config IMAGE_CACHE_IN_PSRAM_SIZE
-    int
-    depends on !BSP_USING_PSRAM
-    default 0
-
+# The image cache size is shared by all examples now, see
+# middleware/lvgl/Kconfig_mem. Give the value this project needs here:
+#
+#   CONFIG_IMAGE_CACHE_IN_PSRAM_SIZE=262144
 choice EZIP_SDCARD_BACKEND
     prompt "EZIP SD card storage backend"
     default EZIP_SDCARD_BACKEND_SDIO if BSP_USING_SDIO

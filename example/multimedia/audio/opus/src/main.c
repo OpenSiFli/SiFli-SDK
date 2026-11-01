@@ -21,12 +21,23 @@
 #include "os_adaptor.h"
 #include "dfs_file.h"
 #include "dfs_posix.h"
+#include "mem_section.h"
 #if defined(BSP_USING_ACPU)
     #include "acpu_ctrl.h"
 #endif
 #define DBG_TAG           "opus"
 #define DBG_LVL           LOG_LVL_ERROR
 #include "log.h"
+
+//#define MIC_RECORD_FILE "/ramfs/mic16k.pcm"
+#define MIC_RECORD_FILE "/mic16k.pcm"
+
+#define RECORD_USING_WEBRTC 0
+#define RECORD_SECONDS        10
+#define RECORD_FRAME_BYTES    320
+#define RECORD_FRAMES         (RECORD_SECONDS * 100)
+#define RECORD_BUF_SIZE       (RECORD_FRAMES * RECORD_FRAME_BYTES)
+#define RECORD_TIMEOUT_MS     (RECORD_SECONDS * 1000 + 5000)  /* recording time plus margin */
 
 static OpusEncoder *encoder;
 static OpusDecoder *decoder;
@@ -37,17 +48,20 @@ static int cache_full;
 static int pcm_file;
 static struct rt_thread thread;
 static int thread_running;
-static int opus_ready;      
+static int opus_ready;
 static uint8_t drop_noise_frame_cnt;
 
 static struct rt_semaphore loopback_sem;
 static uint8_t loopback_pcm_buf[320];
 static int loopback_pcm_len;
 
-//#define MIC_RECORD_FILE "/ramfs/mic16k.pcm"
-#define MIC_RECORD_FILE "/mic16k.pcm"
+L2_RET_BSS_SECT_BEGIN(rec_pcm)
+ALIGN(4) static uint8_t rec_pcm_buf[RECORD_BUF_SIZE] L2_RET_BSS_SECT(rec_pcm);
+L2_RET_BSS_SECT_END
 
-#define RECORD_USING_WEBRTC 0
+static volatile uint32_t rec_bytes;
+static volatile uint8_t rec_full;
+static struct rt_semaphore rec_done_sem;
 
 
 #if RECORD_USING_WEBRTC
@@ -145,7 +159,7 @@ static void webrtc_close()
 
 static int audio_callback_record(audio_server_callback_cmt_t cmd, void *callback_userdata, uint32_t reserved)
 {
-    int fd = (int)callback_userdata;
+    (void)callback_userdata;
     if (cmd == as_callback_cmd_data_coming)
     {
         if (drop_noise_frame_cnt < 20)
@@ -153,15 +167,33 @@ static int audio_callback_record(audio_server_callback_cmt_t cmd, void *callback
             drop_noise_frame_cnt++;
             return 0;
         }
+        if (rec_full)
+        {
+            return 0;
+        }
         audio_server_coming_data_t *p = (audio_server_coming_data_t *)reserved;
+        uint32_t len = p->data_len;
+        if (len > RECORD_FRAME_BYTES)
+        {
+            len = RECORD_FRAME_BYTES;
+        }
+        if (rec_bytes + len > RECORD_BUF_SIZE)
+        {
+            len = RECORD_BUF_SIZE - rec_bytes;
+        }
 #if RECORD_USING_WEBRTC
-        RT_ASSERT(p->data_len == 320);
+        RT_ASSERT(p->data_len == RECORD_FRAME_BYTES);
         webrtc_process_frame(p->data, p->data_len);
-        write(fd, frame1, 320);
+        memcpy(&rec_pcm_buf[rec_bytes], frame1, len);
 #else
-        //auido_gain_pcm((int16_t *)p->data, p->data_len, 4); //pcm data left shift 4 bits
-        write(fd, (uint8_t *)p->data, p->data_len);
+        memcpy(&rec_pcm_buf[rec_bytes], p->data, len);
 #endif
+        rec_bytes += len;
+        if (rec_bytes >= RECORD_BUF_SIZE)
+        {
+            rec_full = 1;
+            rt_sem_release(&rec_done_sem);
+        }
     }
     return 0;
 }
@@ -202,7 +234,8 @@ static int opus_loop_record(audio_server_callback_cmt_t cmd, void *callback_user
 static void mic2file()
 {
     int fd;
-    uint32_t record_seconds = 0;
+    int written;
+    uint32_t play_seconds;
     audio_parameter_t pa = {0};
     pa.write_bits_per_sample = 16;
     pa.write_channnel_num = 1;
@@ -213,56 +246,72 @@ static void mic2file()
     pa.read_cache_size = 0;
     pa.write_cache_size = 2048;
     drop_noise_frame_cnt = 0;
-    pcm = NULL;
+    rec_bytes = 0;
+    rec_full = 0;
     cache_full = 0;
-    pcm = malloc(4096);
-    RT_ASSERT(pcm);
+    rt_sem_init(&rec_done_sem, "rec_done", 0, RT_IPC_FLAG_FIFO);
+#if RECORD_USING_WEBRTC
+    webrtc_open();
+#endif
+    audio_client_t client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, audio_callback_record, RT_NULL);
+    RT_ASSERT(client);
+    rt_kprintf("record start\n");
+
+    if (rt_sem_take(&rec_done_sem, rt_tick_from_millisecond(RECORD_TIMEOUT_MS)) != RT_EOK)
+    {
+        rt_kprintf("record timeout: %u/%u bytes\n", rec_bytes, RECORD_BUF_SIZE);
+    }
+
+    audio_close(client);
+    rt_sem_detach(&rec_done_sem);
+#if RECORD_USING_WEBRTC
+    webrtc_close();
+#endif
+    rt_kprintf("record stop: %u bytes (%u ms)\n", rec_bytes, rec_bytes / 32);
+
+    /* record to file */
     fd = open(MIC_RECORD_FILE, O_RDWR | O_CREAT | O_TRUNC | O_BINARY);
     if (fd < 0)
     {
-        LOG_E("open %s failed, skip recording (errno=%d)", MIC_RECORD_FILE, errno);
+        LOG_E("open %s failed (errno=%d)", MIC_RECORD_FILE, errno);
+        return;
+    }
+    written = write(fd, rec_pcm_buf, rec_bytes);
+    if (written != (int)rec_bytes)
+    {
+        LOG_E("write %s failed: %d/%u", MIC_RECORD_FILE, written, rec_bytes);
+    }
+    close(fd);
+    rt_kprintf("record end\n");
+    //play now
+    pcm = malloc(4096);
+    RT_ASSERT(pcm);
+    pa.write_cache_size = 4096;
+    fd = open(MIC_RECORD_FILE, O_RDONLY | O_BINARY);
+    if (fd < 0)
+    {
+        LOG_E("open %s failed (errno=%d)", MIC_RECORD_FILE, errno);
         free(pcm);
         pcm = NULL;
         return;
     }
-#if RECORD_USING_WEBRTC
-    webrtc_open();
-#endif
-    audio_client_t client = audio_open(AUDIO_TYPE_LOCAL_RECORD, AUDIO_RX, &pa, audio_callback_record, (void *)fd);
-    RT_ASSERT(client);
-
-    while (record_seconds < 10)
-    {
-        rt_thread_mdelay(1000);
-        record_seconds++;
-        LOG_I("record\n");
-    }
-    audio_close(client);
-    close(fd);
-#if RECORD_USING_WEBRTC
-    webrtc_close();
-#endif
-
-    LOG_I("record end\n");
-    //play now
-    pa.write_cache_size = 4096;
-    fd = open(MIC_RECORD_FILE, O_RDONLY | O_BINARY);
-    RT_ASSERT(fd >= 0);
 
     g_client = audio_open(AUDIO_TYPE_LOCAL_MUSIC, AUDIO_TX, &pa, audio_callback_play, (void *)fd);
     RT_ASSERT(g_client >= 0);
-    record_seconds = 0;
-    while (record_seconds < 10)
+    /* 16 kHz, 16-bit mono: 32 bytes per ms */
+    play_seconds = (rec_bytes / 32 + 999) / 1000;
+    rt_kprintf("playing start\n");
+    while (play_seconds > 0)
     {
         rt_thread_mdelay(1000);
-        record_seconds++;
-        LOG_I("playing\n");
+        play_seconds--;
     }
 
     audio_close(g_client);
     close(fd);
     free(pcm);
-    LOG_I("playing end\n");
+    pcm = NULL;
+    rt_kprintf("playing end\n");
 }
 #if defined(BSP_USING_ACPU)
     #define OPUS_STACK_SIZE     16000

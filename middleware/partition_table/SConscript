@@ -74,7 +74,17 @@ if GetDepend('USING_PARTITION_TABLE'):
     if ptab_obj and ptab_obj.is_v3():
         env.AppendUnique(CPPDEFINES=['USING_PTAB_V3'])
 
-    ptab_header = env.PtabHeader(os.path.join(output_dir, 'ptab.h'), File(src_file))
+    # The header content is produced by these build-time modules, so they must
+    # be tracked as dependencies. Otherwise a changed generator leaves a stale
+    # ptab.h behind in an existing build directory.
+    ptab_header_sources = [File(src_file)]
+    generator_dir = os.path.dirname(os.path.abspath(sdk_resource.__file__))
+    for generator in ('ptab.py', 'sdk_resource.py'):
+        generator_path = os.path.join(generator_dir, generator)
+        if os.path.exists(generator_path):
+            ptab_header_sources.append(File(generator_path))
+
+    ptab_header = env.PtabHeader(os.path.join(output_dir, 'ptab.h'), ptab_header_sources)
     env['PTAB_HEADER'] = ptab_header
 
     # AddFTAB creates ftab.bin after all child projects are registered.

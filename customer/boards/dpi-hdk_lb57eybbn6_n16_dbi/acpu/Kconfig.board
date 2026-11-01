@@ -1,0 +1,10 @@
+config BSP_USING_BOARD_DPI_HDK_LB57EYBBN6_N16_DBI
+    bool
+    select SOC_SF32LB57X
+    select SOC_SF32LB57EYBBN6
+    select BF0_ACPU
+    select BF0_HCPU
+    default y
+
+rsource "../Kconfig.board"
+

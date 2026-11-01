@@ -191,6 +191,10 @@ Programs that are not reserved system programs (`name` is not `main`, `bootloade
 - DFU_FLASH_LCPU_EXT1: 12
 - DFU_FLASH_LCPU_EXT2: 13
 
+The entries are assigned in the order the corresponding `ftab` items first appear in the partition table, and there are only three of them.
+
+A program that builds several binaries out of one project (for example two ACPU code images whose execution addresses are not contiguous) declares one storage region and one execution region per image, each under its own `ftab.name`, and names the binary explicitly with `img`, e.g. `acpu:ER_IROM1.bin` and `acpu:ER_IROM2.bin`. All regions of the same `ftab` item must declare the same `max_size`, because a flash table entry stores a single size for the image.
+
 For example, the following `ptab.json` snippet defines `acpu_region1` using flash4 offset `0x00300000` as the ACPU program’s base address and hpsys_ram offset `0x00200000` as the XIP address. The generated `ftab.c` file uses `DFU_FLASH_HCPU_EXT2` to describe the image storage and execution addresses, with `length` determined by the program image file (example: 0x7d4 bytes) that is specified by `img` property (see [](#img) for details)
 
 ````{dropdown} acpu_region1 Example
@@ -221,7 +225,7 @@ For example, the following `ptab.json` snippet defines `acpu_region1` using flas
     "regions": [
         {
             "offset": "0x00200000", 
-            "max_size": "0x00020000", 
+            "max_size": "0x00010000", 
             "tags": [
                 "ACPU_CODE_REGION1_SBUS"
             ], 
@@ -262,7 +266,7 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT2)] = {.length = 0xFFFFFFFF},
-    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00020000,  .xip_base = 0x20200000, .flags = 0},
+    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00010000,  .xip_base = 0x20200000, .flags = 0},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)] = {.length = 0x000007D4, .blksize = 512, .flags = DFU_FLAG_AUTO},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT1)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT2)] = {.length = 0xFFFFFFFF},
@@ -372,7 +376,9 @@ When building the main program:
 ```
 
 ```{note}
-Note: For PSRAM partitions, CBUS and SBUS are two address spaces. For example, CBUS address is `0x10000000` and SBUS is `0x60000000`. The `exec` property must be specified for the CBUS partition to ensure the execution address uses CBUS space, while `ftab` `"xip"` must be specified for the SBUS partition to ensure the code is copied there.
+Note: For PSRAM partitions, CBUS and SBUS are two address spaces. For example, CBUS address is `0x10000000` and SBUS is `0x60000000`. Either view can be used as an execution address. To execute in place from PSRAM, specify the `exec` property on the CBUS partition so the execution address uses CBUS space, while `ftab` `"xip"` is specified on the SBUS partition to ensure the code is copied there.
+
+ACPU images cannot fetch from the CBUS/XIP alias, so an ACPU execution address always uses the SBUS view of the region. For PSRAM this is the same `0x60xxxxxx` address written to `ftab` `"xip"`.
 ```
 
 ### custom

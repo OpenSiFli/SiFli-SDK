@@ -16,8 +16,8 @@ config WEBCLIENT_DEBUG
     bool "enable webclient debug"
     default n
 
-config IMAGE_CACHE_IN_PSRAM_SIZE
-    int "image cache size in psram"
-    default 1000000
-
+# The image cache size is shared by all examples now, see
+# middleware/lvgl/Kconfig_mem. Give the value this project needs here:
+#
+#   CONFIG_IMAGE_CACHE_IN_PSRAM_SIZE=1000000
 rsource "../src/Kconfig"

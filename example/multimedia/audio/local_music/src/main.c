@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -191,6 +197,9 @@ void mp3_proc_thread_entry(void *params)
                                         play_callback_func,  /* play callback function. */
                                         NULL);
             RT_ASSERT(g_mp3_handle);
+
+            //mp3ctrl_ioctl(g_mp3_handle, MP3CTRL_IOCTRL_STRETCH_PERCENT, 60);
+
             /* Set loop times. */
             mp3ctrl_ioctl(g_mp3_handle,   /* handle returned by mp3ctrl_open. */
                           0,              /* cmd = 0, set loop times. */

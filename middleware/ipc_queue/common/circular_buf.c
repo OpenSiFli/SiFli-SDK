@@ -186,6 +186,7 @@ __ROM_USED size_t circular_buf_put(struct circular_buf *cb,
         /* this should not cause overflow because there is enough space for
          * length of data in current mirror */
         wr_idx += length;
+        CB_DMB();
         cb->write_idx_mirror = CB_MAKE_PTR_IDX_MIRROR(wr_idx, wr_mirror);
         return length;
     }
@@ -208,6 +209,7 @@ __ROM_USED size_t circular_buf_put(struct circular_buf *cb,
     /* we are going into the other side of the mirror */
     wr_mirror = ~wr_mirror;
     wr_idx = length - (cb->buffer_size - wr_idx);
+    CB_DMB();
     cb->write_idx_mirror = CB_MAKE_PTR_IDX_MIRROR(wr_idx, wr_mirror);
 
     return length;
@@ -307,6 +309,8 @@ __ROM_USED size_t circular_buf_get(struct circular_buf *cb,
     rd_mirror = CB_GET_PTR_MIRROR(cb->read_idx_mirror);
     if (cb->buffer_size - rd_idx > length)
     {
+        CB_DMB();
+
         /* copy all of data */
         memcpy(ptr, &cb->rd_buffer_ptr[rd_idx], length);
         circular_buf_validate(cb, rd_idx, ptr, length);
@@ -316,6 +320,8 @@ __ROM_USED size_t circular_buf_get(struct circular_buf *cb,
         cb->read_idx_mirror = CB_MAKE_PTR_IDX_MIRROR(rd_idx, rd_mirror);
         return length;
     }
+
+    CB_DMB();
 
     memcpy(&ptr[0],
            &cb->rd_buffer_ptr[rd_idx],
@@ -366,6 +372,8 @@ __ROM_USED size_t circular_buf_get_and_update_len(struct circular_buf *cb,
     if (cb->buffer_size - rd_idx > length)
     {
 
+        CB_DMB();
+
         /* copy all of data */
         memcpy(ptr, &cb->rd_buffer_ptr[rd_idx], length);
         circular_buf_validate(cb, rd_idx, ptr, length);
@@ -386,6 +394,8 @@ __ROM_USED size_t circular_buf_get_and_update_len(struct circular_buf *cb,
 
         return length;
     }
+
+    CB_DMB();
 
     memcpy(&ptr[0],
            &cb->rd_buffer_ptr[rd_idx],
@@ -444,6 +454,7 @@ __ROM_USED size_t circular_buf_putchar(struct circular_buf *cb, const uint8_t ch
     {
         wr_idx++;
     }
+    CB_DMB();
     cb->write_idx_mirror = CB_MAKE_PTR_IDX_MIRROR(wr_idx, wr_mirror);
 
     return 1;
@@ -517,6 +528,8 @@ __ROM_USED size_t circular_buf_getchar(struct circular_buf *cb, uint8_t *ch)
 
     rd_idx = CB_GET_PTR_IDX(cb->read_idx_mirror);
     rd_mirror = CB_GET_PTR_MIRROR(cb->read_idx_mirror);
+
+    CB_DMB();
 
     /* put character */
     *ch = cb->rd_buffer_ptr[rd_idx];

@@ -17,21 +17,14 @@
     #include "dfs_file.h"
     #include "dfs_posix.h"
 #endif
-#ifdef WEBRTC_ANS_FIX
-    #include "webrtc/modules/audio_processing/ns/include/noise_suppression_x.h"
-#endif
-#ifdef WEBRTC_AECM
-    #include "webrtc/modules/audio_processing/aecm/include/echo_control_mobile.h"
-#endif
-#ifdef WEBRTC_AGC_FIX
-    #include "webrtc/modules/audio_processing/agc/legacy/gain_control.h"
-#endif
 
-#ifdef PKG_USING_WEBRTC
-    #include "webrtc/modules/audio_processing/dc_correction/dc_correction.h"
-    #include "webrtc/modules/audio_processing/ramp_in/ramp_in.h"
-    #include "webrtc/modules/audio_processing/ramp_out/ramp_out.h"
-#endif
+#include "webrtc/modules/audio_processing/ns/include/noise_suppression_x.h"
+#include "webrtc/modules/audio_processing/aecm/include/echo_control_mobile.h"
+#include "webrtc/modules/audio_processing/agc/legacy/gain_control.h"
+#include "webrtc/modules/audio_processing/dc_correction/dc_correction.h"
+#include "webrtc/modules/audio_processing/ramp_in/ramp_in.h"
+#include "webrtc/modules/audio_processing/ramp_out/ramp_out.h"
+
 
 #if defined(RT_USING_BT) && defined(SOLUTION)
     #include "bt_connect.h"
@@ -43,41 +36,15 @@
 #include "log.h"
 #include "audio_server.h"
 
+#if WEBRTC_RUN_IN_ACPU
+    #include "acpu_ctrl.h"
+#endif
+
+#include "audio_3a_webrtc.h"
+
 #define DOWN_LINK_AGC_ENABLE  1
 
 #define AUDIO_3A_RINGBUFFER_SIZE (320)
-
-enum AEC_MODE_TAG
-{
-    kQuietEarpieceOrHeadset = 0,
-    kEarpiece,
-    kLoudEarpiece,
-    kSpeakerphone,
-    kLoudSpeakerphone
-};
-
-typedef struct audio_3a_tag
-{
-    uint8_t      state;
-    uint8_t      is_bt_voice;
-    uint8_t      disable_uplink_agc;
-    volatile uint8_t is_far_putted;
-    volatile uint8_t is_aecm_mic_putted;
-    uint16_t     frame_len; //byte
-    uint16_t     samplerate;
-    struct rt_ringbuffer *rbuf_out;
-    struct rt_ringbuffer *rbuf_far;
-    struct rt_ringbuffer *rbuf_dwlink;
-#ifdef WEBRTC_ANS_FIX
-    NsxHandle *pNS_inst;
-#endif
-    void      *aecmInst;
-    void      *agcInst;
-    void      *dwlink_agcInst;
-    void      *dcInst;
-    void      *rampInInst;
-    void      *rampOutInst;
-} audio_3a_t;
 
 static audio_3a_t g_audio_3a_env =
 {
@@ -267,57 +234,6 @@ void audio_dnlink_time_print(void)
 {
     rt_kprintf("dnlink_time: %d, %d, %d, %d\n",  g_audio_time[9], g_audio_time[10], g_audio_time[11], g_dwlink_max);
 }
-#if 0
-void audio_time_print(void)
-{
-    //rt_hexdump("audio_time", 32, g_audio_time, AUDIO_TIME_MAX*4);
-    int col = (AUDIO_TIME_MAX >> 2);
-
-    if (g_audio_cnt < 128)
-    {
-        g_audio_cnt++;
-        return;
-    }
-    g_audio_cnt = 0;
-    if (AUDIO_TIME_MAX % 4)
-    {
-        col++;
-    }
-#if 0
-    for (int i = 0; i < col; i++)
-    {
-        rt_kprintf("audio_time: %d, %d, %d, %d\n", g_audio_time[i * 4], g_audio_time[i * 4 + 1], g_audio_time[i * 4 + 2], g_audio_time[i * 4 + 3]);
-    }
-
-    for (int i = 0; i < col; i++)
-    {
-        rt_kprintf("max_audio_time: %d, %d, %d, %d\n", g_audio_time_max[i * 4], g_audio_time_max[i * 4 + 1], g_audio_time_max[i * 4 + 2], g_audio_time_max[i * 4 + 3]);
-    }
-
-    for (int i = 0; i < col; i++)
-    {
-        rt_kprintf("avg_audio_time: %d, %d, %d, %d\n", g_audio_time_ave[i * 4] >> 7, g_audio_time_ave[i * 4 + 1] >> 7, g_audio_time_ave[i * 4 + 2] >> 7, g_audio_time_ave[i * 4 + 3] >> 7);
-    }
-    for (int i = 0; i < col; i++)
-    {
-        rt_kprintf("min_audio_time: %d, %d, %d, %d\n", g_audio_time_min[i * 4], g_audio_time_min[i * 4 + 1], g_audio_time_min[i * 4 + 2], g_audio_time_min[i * 4 + 3]);
-    }
-#else
-    rt_kprintf("ins_time: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n", g_audio_time[0], g_audio_time[1], g_audio_time[2], g_audio_time[3], g_audio_time[5], g_audio_time[6], g_audio_time[7], g_audio_time[8], g_audio_time[9], g_audio_time[10], g_audio_time[11], g_audio_time[4]);
-    rt_kprintf("max_time: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n", g_audio_time_max[0], g_audio_time_max[1], g_audio_time_max[2], g_audio_time_max[3], g_audio_time_max[5], g_audio_time_max[6], g_audio_time_max[7], g_audio_time_max[8], g_audio_time_max[9], g_audio_time_max[10], g_audio_time_max[11], g_audio_time_max[4]);
-    rt_kprintf("avg_time: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n", g_audio_time_ave[0] >> 7, g_audio_time_ave[1] >> 7, g_audio_time_ave[2] >> 7, g_audio_time_ave[3] >> 7, g_audio_time_ave[5] >> 7, g_audio_time_ave[6] >> 7, g_audio_time_ave[7] >> 7, g_audio_time_ave[8] >> 7, g_audio_time_ave[9] >> 7, g_audio_time_ave[10] >> 7, g_audio_time_ave[11] >> 7, g_audio_time_ave[4] / g_systick_cnt);
-    rt_kprintf("min_time: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d\n", g_audio_time_min[0], g_audio_time_min[1], g_audio_time_min[2], g_audio_time_min[3], g_audio_time_min[5], g_audio_time_min[6], g_audio_time_min[7], g_audio_time_min[8], g_audio_time_min[9], g_audio_time_min[10], g_audio_time_min[11], g_audio_time_min[4], g_systick_cnt);
-
-#endif
-    for (int i = 0; i < AUDIO_TIME_MAX; i++)
-    {
-        g_audio_time_max[i] = 0;
-        g_audio_time_ave[i] = 0;
-        g_audio_time_min[i] = 0xFFFFFFFF;
-        g_systick_cnt = 0;
-    }
-}
-#endif
 #else
 __WEAK void audio_tick_in(uint8_t type)
 {
@@ -338,13 +254,7 @@ __WEAK void audio_dnlink_time_print(void)
 
 #ifdef WEBRTC_ANS_FIX
 
-typedef enum  ANS_LEVEL_TAG
-{
-    ANS_LOW_LEVEL,
-    ANS_MODERATE_LEVEL,
-    ANS_HIGH_LEVEL,
-    ANS_VERY_HIGH_LEVEL,
-} ANS_LEVEL;
+
 
 uint8_t audio_ans_init(audio_3a_t *p_3a_env, uint32_t samplerate)
 {
@@ -432,14 +342,6 @@ uint8_t audio_aec_init(audio_3a_t *p_3a_env, uint32_t samplerate)
     }
     return 0;
 }
-
-typedef struct aec_input_para_tag
-{
-    int16_t *nearframe;
-    int16_t *nearframe_clean;
-    int16_t *outframe;
-} aec_input_para_t;
-
 
 int16_t audio_aec_proc(void *aecmInst, aec_input_para_t *pt_input_para, uint16_t samplerate)
 {
@@ -571,7 +473,14 @@ void audio_3a_module_init(audio_3a_t *p_3a_env, uint32_t samplerate)
     uint8_t ret = 0;
 
     audio_ramp_init(p_3a_env);
-
+#if WEBRTC_RUN_IN_ACPU
+    uint8_t error_code = 1;
+    acpu_webrtc_open_parameter_t arg = {0};
+    arg.thiz = p_3a_env;
+    arg.samplerate = samplerate;
+    acpu_run_task(ACPU_TASK_webrtc_open, &arg, sizeof(arg), &error_code);
+    RT_ASSERT(error_code == 0);
+#else // WEBRTC_RUN_IN_ACPU
 #ifdef WEBRTC_ANS_FIX
     ret = audio_ans_init(p_3a_env, samplerate);
     if (ret != 0)
@@ -593,6 +502,8 @@ void audio_3a_module_init(audio_3a_t *p_3a_env, uint32_t samplerate)
         RT_ASSERT(0);
     }
 #endif
+#endif // WEBRTC_RUN_IN_ACPU
+
     if (samplerate == 32000)
     {
         g_audio_3a_env.rbuf_out = rt_ringbuffer_create(480 * 2);
@@ -615,7 +526,6 @@ void audio_3a_module_init(audio_3a_t *p_3a_env, uint32_t samplerate)
     HAL_NVIC_SetPriority(FFT1_IRQn, 3, 0);
     HAL_NVIC_EnableIRQ(FFT1_IRQn);
 #endif
-
 }
 
 
@@ -639,174 +549,158 @@ void dc_cancellation_proc(int16_t spframe[160], uint16_t len)
 }
 #endif
 
+#define SWAP_IN_OUT()  do {temp = in; in = out; out = temp;} while(0)
+
 void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_size)
 {
 #ifdef AUDIO_MEM_ALLOC
-    int16_t *spframe = audio_mem_malloc(160 * 2);
-    int16_t *outframe = audio_mem_malloc(160 * 2);
-    int16_t *outframe2 = audio_mem_malloc(160 * 2);
-    RT_ASSERT(spframe && outframe && outframe2);
+    int16_t *frame1 = audio_mem_malloc(160 * 2);
+    int16_t *frame2 = audio_mem_malloc(160 * 2);
+    RT_ASSERT(frame1 && frame2);
 #else
-    int16_t spframe[160];
-    int16_t outframe[160];
-    int16_t outframe2[160];
+    int16_t frame1[160];
+    int16_t frame2[160];
 #endif
     uint16_t getsize, putsize;
-    int16_t  *data_in;
-    int16_t  *data_in2;
-    int16_t  *data_out;
+    int16_t  *in;
+    int16_t  *out;
     int16_t  *temp;
+
+    in = frame1;
+    out = frame2;
 
     RT_ASSERT(fifo_size == p_3a_env->frame_len)
 
-    memcpy(outframe2, fifo, fifo_size);
+    memcpy(in, fifo, fifo_size);
     audio_dump_data(ADUMP_AUDPRC, fifo, fifo_size);
     if (g_bypass)
     {
-        data_out = outframe2;
+        out = in;
         goto bypass_3a;
     }
-#if PKG_USING_AUDIO_TEST_API
-    {
-        extern uint8_t audio_test_api_3a_is_enable();
-        g_uplink_agc = 0;
-        g_ans1_disabled = 1;
 
-        if (audio_test_api_3a_is_enable())
-        {
-            g_ans1_disabled = 0;
-            g_uplink_agc = 1;
-        }
-    }
-#endif
-
-#ifdef PKG_USING_WEBRTC
-    data_in = outframe2;
-    data_out = spframe;
 #if (g_dc_enabled)
     audio_tick_in(AUDIO_DC_TIME);
-    DcCorrection_Process(p_3a_env->dcInst, data_in, data_out, p_3a_env->frame_len / 2);
+    DcCorrection_Process(p_3a_env->dcInst, in, out, p_3a_env->frame_len / 2);
     audio_tick_out(AUDIO_DC_TIME);
 #else
-    memcpy(data_out, data_in, p_3a_env->frame_len);
+    SWAP_IN_OUT();
 #endif
-    audio_dump_data(ADUMP_DC_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
-#endif
+    audio_dump_data(ADUMP_DC_OUT, (uint8_t *)out, p_3a_env->frame_len);
+    SWAP_IN_OUT();
 
+#if WEBRTC_RUN_IN_ACPU
+    int16_t farframe[160] = {0};
+    if (rt_ringbuffer_data_len(p_3a_env->rbuf_far) >= p_3a_env->frame_len)
     {
-        data_in = data_out;  //spframe
-        data_out = outframe;
-        data_in2 = NULL;
-#ifdef WEBRTC_ANS_FIX
+        rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
+        audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
+    }
+    uint8_t error_code = 1;
+    acpu_webrtc_uplink_parameter_t arg = {0};
+    arg.thiz = p_3a_env;
+    arg.far_ref = farframe;
+    arg.in = in;
+    arg.out = out;
+    arg.ans1_disabled = g_ans1_disabled;
+    arg.aecm_enable = g_u16_test_aec;
+    arg.uplink_agc_enable = g_uplink_agc;
+    int ret = (int)acpu_run_task(ACPU_TASK_webrtc_uplink, &arg, sizeof(arg), &error_code);
+    RT_ASSERT(error_code == 0);
+    if (!ret)
+    {
+        SWAP_IN_OUT();
+    }
+#else //WEBRTC_RUN_IN_ACPU
+    {
         if (!g_ans1_disabled)
         {
             audio_tick_in(AUDIO_ANS1_TIME);
-            audio_ans_proc(p_3a_env->pNS_inst, data_in, data_out);
+            audio_ans_proc(p_3a_env->pNS_inst, in, out);
             audio_tick_out(AUDIO_ANS1_TIME);
-            audio_dump_data(ADUMP_ANS_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+            audio_dump_data(ADUMP_ANS_OUT, (uint8_t *)out, p_3a_env->frame_len);
         }
         else
-#endif
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
 
-        data_in2 = data_out; //outframe
-#ifdef WEBRTC_AECM
+        SWAP_IN_OUT();
+
         if (p_3a_env->is_far_putted && g_u16_test_aec)
         {
             aec_input_para_t input_para;
-            data_out = outframe2;
-            input_para.nearframe = outframe; //ans out
+            input_para.nearframe = in;
             input_para.nearframe_clean = NULL;
-            input_para.outframe = data_out; //outframe2
+            input_para.outframe = out;
             if (p_3a_env->is_aecm_mic_putted == 0)
             {
                 LOG_I("---first aecm input2 dump");
                 p_3a_env->is_aecm_mic_putted = 1;
             }
-            audio_dump_data(ADUMP_AECM_INPUT2, (uint8_t *)data_in, p_3a_env->frame_len);
+            audio_dump_data(ADUMP_AECM_INPUT2, (uint8_t *)in, p_3a_env->frame_len);
             audio_tick_in(AUDIO_AEC_TIME);
-#if PKG_USING_AUDIO_TEST_API
-            {
-                extern uint8_t audio_test_api_3a_is_enable();
-                if (audio_test_api_3a_is_enable())
-                {
-                    audio_aec_proc(p_3a_env->aecmInst, &input_para, p_3a_env->samplerate);
-                }
-                else
-                {
-                    data_out = data_in;
-                }
-            }
-#else
             audio_aec_proc(p_3a_env->aecmInst, &input_para, p_3a_env->samplerate); //data_out = data_in;
-#endif
             audio_tick_out(AUDIO_AEC_TIME);
-            audio_dump_data(ADUMP_AECM_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
         }
         else
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
-#endif
+        audio_dump_data(ADUMP_AECM_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
+        SWAP_IN_OUT();
 
-        data_in = data_out; //outframe2
-        data_out = outframe;    //outframe
-        memcpy(data_out, data_in, p_3a_env->frame_len);
-
-        temp = data_in;     //outframe2
-        data_in = data_out; //outframe
-        data_out = temp;    //outframe2
-#ifdef WEBRTC_AGC_FIX
         if (g_uplink_agc && !p_3a_env->disable_uplink_agc)
         {
             audio_tick_in(AUDIO_UPAGC_TIME);
-            audio_agc_proc(p_3a_env->agcInst, data_in, data_out, p_3a_env->samplerate);
+            audio_agc_proc(p_3a_env->agcInst, in, out, p_3a_env->samplerate);
             audio_tick_out(AUDIO_UPAGC_TIME);
         }
         else
-#endif
         {
-            memcpy(data_out, data_in, p_3a_env->frame_len);
+            SWAP_IN_OUT();
         }
-        audio_dump_data(ADUMP_AGC_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
+    }
+#endif // WEBRTC_RUN_IN_ACPU
+    audio_dump_data(ADUMP_AGC_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
 
-#ifdef PKG_USING_WEBRTC
-        temp = data_in;     //outframe
-        data_in = data_out; //outframe2;
-        data_out = temp;    //outframe
-        audio_tick_in(AUDIO_RAMPOUT_TIME);
-        if (RampOut_Process(p_3a_env->rampOutInst, data_in, data_out, p_3a_env->frame_len / 2) < 0)
-        {
-            data_out = data_in;
-        }
-        audio_tick_out(AUDIO_RAMPOUT_TIME);
-        audio_dump_data(ADUMP_RAMP_OUT_OUT, (uint8_t *)data_out, p_3a_env->frame_len);
-#endif
+    SWAP_IN_OUT();
+
+    audio_tick_in(AUDIO_RAMPOUT_TIME);
+    if (RampOut_Process(p_3a_env->rampOutInst, in, out, p_3a_env->frame_len / 2) < 0)
+    {
+        SWAP_IN_OUT();
+    }
+    audio_tick_out(AUDIO_RAMPOUT_TIME);
+    audio_dump_data(ADUMP_RAMP_OUT_OUT, (uint8_t *)out, p_3a_env->frame_len);
 
 bypass_3a:
-        if (rt_ringbuffer_space_len(p_3a_env->rbuf_out) >= p_3a_env->frame_len)
-        {
-            rt_ringbuffer_put(p_3a_env->rbuf_out, (uint8_t *)data_out, p_3a_env->frame_len);
-        }
-        else
-        {
-            LOG_I("3a_w rbuf_out full\n");
-        }
+    if (rt_ringbuffer_space_len(p_3a_env->rbuf_out) >= p_3a_env->frame_len)
+    {
+        rt_ringbuffer_put(p_3a_env->rbuf_out, (uint8_t *)out, p_3a_env->frame_len);
+    }
+    else
+    {
+        LOG_I("3a_w rbuf_out full\n");
+    }
 
 #ifdef AUDIO_MEM_ALLOC
-        audio_mem_free(spframe);
-        audio_mem_free(outframe);
-        audio_mem_free(outframe2);
+    audio_mem_free(frame1);
+    audio_mem_free(frame2);
 #endif
-    }
 }
 
 void audio_3a_module_free(audio_3a_t *p_3a_env)
 {
+#if WEBRTC_RUN_IN_ACPU
+    uint8_t error_code = 1;
+    acpu_webrtc_close_parameter_t arg = {0};
+    arg.thiz = p_3a_env;
+    acpu_run_task(ACPU_TASK_webrtc_close, &arg, sizeof(arg), &error_code);
+    RT_ASSERT(error_code == 0);
+#else // WEBRTC_RUN_IN_ACPU
 #ifdef WEBRTC_ANS_FIX
     RT_ASSERT(p_3a_env);
     RT_ASSERT(p_3a_env->pNS_inst);
@@ -829,6 +723,7 @@ void audio_3a_module_free(audio_3a_t *p_3a_env)
     p_3a_env->dwlink_agcInst = NULL;
 #endif
 #endif
+#endif // WEBRTC_RUN_IN_ACPU
 
 #if g_dc_enabled
     DcCorrection_Free(p_3a_env->dcInst);
@@ -942,18 +837,29 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
         LOG_I("3a far put: closed");
         return;
     }
+
+    if (g_bypass)
+        return;
+
     if (rt_ringbuffer_space_len(p_3a_env->rbuf_far) >= fifo_size)
     {
         rt_ringbuffer_put(p_3a_env->rbuf_far, fifo, fifo_size);
     }
     else
     {
-        LOG_I("3a_w far full");
-        rt_ringbuffer_put_force(p_3a_env->rbuf_far, fifo, fifo_size);
+        LOG_D("3a_w far full");
+        rt_ringbuffer_put(p_3a_env->rbuf_far, fifo, fifo_size);
     }
 
-    uint16_t farframe[160];
+#if WEBRTC_RUN_IN_ACPU
+    if (p_3a_env->is_far_putted == 0)
+    {
+        LOG_I("---first far dump");
+    }
+    p_3a_env->is_far_putted = 1;
+#else
 
+    uint16_t farframe[160];
 
     while (1)
     {
@@ -965,17 +871,14 @@ void audio_3a_far_put(uint8_t *fifo, uint16_t fifo_size)
         get_size = rt_ringbuffer_get(p_3a_env->rbuf_far, (uint8_t *)farframe, p_3a_env->frame_len);
         RT_ASSERT(get_size == p_3a_env->frame_len);
         audio_dump_data(ADUMP_AECM_INPUT1, (uint8_t *)farframe, p_3a_env->frame_len);
-#ifdef WEBRTC_AECM
         WebRtcAecm_BufferFarend(p_3a_env->aecmInst, (const int16_t *)farframe,  p_3a_env->frame_len / 2);
-#endif
-
         if (p_3a_env->is_far_putted == 0)
         {
             LOG_I("---first far dump");
         }
-
         p_3a_env->is_far_putted = 1;
     }
+#endif
 }
 
 uint8_t audio_3a_dnlink_buf_is_full(uint16_t size)
@@ -1086,7 +989,18 @@ void audio_3a_downlink(uint8_t *fifo, uint16_t size)
         if (g_u16_test_agc == 1)
         {
             data_out = data2;
+#if WEBRTC_RUN_IN_ACPU
+            uint8_t error_code = 1;
+            acpu_webrtc_downlink_parameter_t arg = {0};
+            arg.thiz = p_3a_env;
+            arg.in = (int16_t *)data_in;
+            arg.out = (int16_t *)data_out;
+            arg.samplerate = p_3a_env->samplerate;
+            acpu_run_task(ACPU_TASK_webrtc_downlink, &arg, sizeof(arg), &error_code);
+            RT_ASSERT(error_code == 0);
+#else // WEBRTC_RUN_IN_ACPU
             audio_agc_proc(p_3a_env->dwlink_agcInst, (int16_t *)data_in, (int16_t *)data_out, p_3a_env->samplerate);
+#endif
             audio_dump_data(ADUMP_DOWNLINK_AGC, data_out, p_3a_env->frame_len);
         }
 #endif
@@ -1168,24 +1082,6 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
 #endif
 }
 
-#ifdef WEBRTC_AECM
-int set_3a_aec_en(int argc, char *argv[])
-{
-    rt_thread_t thread;
-
-    if (argc != 2)
-    {
-        rt_kprintf("arg para num error: aec_en, aecdelay\n");
-        return -1;
-    }
-    g_aec_delay = strtol(argv[1], NULL, 10);
-    rt_kprintf("g_u16_test_aec=%d,u16_delay=%d\n", g_u16_test_aec, g_aec_delay);
-
-    return 0;
-}
-
-MSH_CMD_EXPORT(set_3a_aec_en,    aec enabel test);
-#endif
 
 #ifdef AUDIO_3A_STATIC_TIME
 int read_3a_stat(int argc, char *argv[])

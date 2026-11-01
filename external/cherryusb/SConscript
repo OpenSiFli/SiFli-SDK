@@ -313,6 +313,8 @@ if GetDepend(['PKG_CHERRYUSB_HOST']):
         src += Glob('class/msc/usbh_msc.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_CDC_RNDIS']):
         src += Glob('class/wireless/usbh_rndis.c')
+        if GetDepend(['PKG_CHERRYUSB_HOST_CDC_RNDIS_NO_NETIF']):
+            CPPDEFINES += ['USBHOST_RNDIS_NO_NETIF']
     if GetDepend(['PKG_CHERRYUSB_HOST_CDC_ECM']):
         src += Glob('class/cdc/usbh_cdc_ecm.c')
     if GetDepend(['PKG_CHERRYUSB_HOST_CDC_NCM']):

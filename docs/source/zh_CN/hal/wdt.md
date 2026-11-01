@@ -18,6 +18,7 @@ WatchDog也可以被编程为直接产生系统复位。 HCPU 或 LCPU 子系统
 ```{note}
 SF32LB55X 有三个WDT, HCPU WDT1, LCPU WDT2以及一个系统IWDT. 其中WDT1/2提供中断功能，触发时只能reset HCPU/LCPU子系统。 IWDT不能提供中断功能，不过触发时可以reset整个芯片。55X的WDT时钟可以在RC10K/32K LXT中选择。
       SF32LB56X/58X WDT1/WDT2 增加了功能，可以触发reset 整个芯片，SF32LB56X/58X的时钟来源于RC10K，不再从32K低功耗时钟获取。
+SF32LB57X 有三个WDT，HCPU IWDT, LCPU WDT2, ACPU WDT1，其中WDT1/WDT2提供中断功能，触发时只reset ACPU/LCPU子系统。IWDT也提供中断功能，触发时可以reset整个芯片。57X的WDT时钟可以在RC10K/32K LXT之间选择
 ```
 
 ## 使用WDT

@@ -1,0 +1,14 @@
+menu "USB-BT Bridge Configuration"
+
+config CUSTOM_MEM_MAP
+    bool
+    select custom_mem_map
+    default y
+
+config USB_BT_BRIDGE_BT_NAME
+    string "Bluetooth device name"
+    default "SiFli_USB_Bridge"
+    help
+        Bluetooth device name visible to other devices
+
+endmenu

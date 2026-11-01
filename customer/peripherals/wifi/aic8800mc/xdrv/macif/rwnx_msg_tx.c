@@ -1749,6 +1749,66 @@ int rwnx_send_fhcustmsg_stop_p2p_req(struct rwnx_hw *rwnx_hw)
     return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_STOP_P2PGO_CFM, NULL);
 }
 
+int rwnx_send_fhcustmsg_start_ap_req(struct rwnx_hw *rwnx_hw, const char *ssid, const char *passwd,
+                                     uint8_t band)
+{
+    struct fhcustmsg_start_ap_req *req;
+    int ssid_len, pw_len;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (ssid == NULL || strlen(ssid) == 0)
+        return -1;
+
+    ssid_len = strlen(ssid);
+    if (ssid_len >= AP_SSID_BUF_MAX)
+        return -2;
+
+    if (passwd == NULL)
+    {
+        pw_len = 0;
+    }
+    else
+    {
+        pw_len = strlen(passwd);
+        if (pw_len >= AP_PSWD_BUF_MAX)
+            return -3;
+    }
+
+    /* Build the message */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_START_AP_REQ, TASK_DBG, DRV_TASK_ID,
+                          sizeof(struct fhcustmsg_start_ap_req));
+    if (!req)
+        return -12;//ENOMEM;
+
+    req->band = band;
+    strcpy((char *)req->ssid, ssid);
+    if (passwd && pw_len > 0)
+        strcpy((char *)req->pw, passwd);
+    else
+        req->pw[0] = '\0';
+
+    /* Send the message to LMAC FW, use CUSTOM_MSG_START_AP_CFM as confirm.
+     * The real start result comes later via CUSTOM_MSG_START_AP_IND. */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_START_AP_CFM, NULL);
+}
+
+int rwnx_send_fhcustmsg_stop_ap_req(struct rwnx_hw *rwnx_hw)
+{
+    void *req;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    /* Build the message */
+    req = rwnx_msg_zalloc(CUSTOM_MSG_STOP_AP_REQ, TASK_DBG, DRV_TASK_ID, 1);
+    if (!req)
+        return -12;//ENOMEM;
+
+    /* Send the message to LMAC FW, use CUSTOM_MSG_STOP_AP_CFM as confirm.
+     * CUSTOM_MSG_STOP_AP_IND is sent after the AP is really stopped. */
+    return rwnx_host_send_msg(rwnx_hw, req, 1, CUSTOM_MSG_STOP_AP_CFM, NULL);
+}
+
 int rwnx_send_msg_tx(struct rwnx_hw *rwnx_hw, lmac_task_id_t dst_id, lmac_msg_id_t msg_id, uint16_t msg_len, void *msg, int reqcfm, lmac_msg_id_t reqid, void *cfm)
 {
     int ret = 0;

@@ -1,0 +1,109 @@
+[
+    {"version": "2"},
+    {
+        "mem": "flash3", 
+        "base": "0x14000000", 
+        "regions": [
+            {
+                "offset": "0x00020000", 
+                "max_size": "0x00700000",
+                "tags": [
+                    "HCPU_FLASH_CODE"
+                ], 
+                "name": "main",
+                "type": ["app_img", "app_exec"]
+            },
+            {
+                "offset": "0x00720000", 
+                "max_size": "0x00040000",
+                "name": "acpu",
+                "core": "acpu",
+                "type": ["app_img", "app_exec"]
+            },
+            {
+                "offset": "0x00760000",
+                "max_size": "0x00060000",
+                "name": "dfu",
+                "type": ["app_img", "app_exec"],
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ]
+            },
+            {
+                "offset": "0x007C0000",
+                "max_size": "0x00120000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {
+                "offset": "0x008E0000",
+                "max_size": "0x00400000",
+                "name": "fs_root", 
+                "tags": [
+                    "FS_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x00CE0000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_DFU_REGION"
+                ]
+            }, 
+            {
+                "offset": "0x00CE4000", 
+                "max_size": "0x00004000", 
+                "tags": [
+                    "KVDB_BLE_REGION"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "psram1", 
+        "base": "0x60000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00400000", 
+                "tags": [
+                    "PSRAM_DATA"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "psram2", 
+        "base": "0x62000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x00400000", 
+                "tags": [
+                    "PSRAM_DATA2"
+                ]
+            }
+        ]
+    }, 
+    {
+        "mem": "hpsys_ram", 
+        "base": "0x20000000", 
+        "regions": [
+            {
+                "offset": "0x00000000", 
+                "max_size": "0x0006FC00", 
+                "tags": [
+                    "HCPU_RAM_DATA"
+                ]
+            }, 
+            {
+                "offset": "0x0006FC00", 
+                "max_size": "0x0000FC00", 
+                "tags": [
+                    "ACPU_RAM_DATA"
+                ]
+            }
+        ]
+    }
+]

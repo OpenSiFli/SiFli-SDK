@@ -120,11 +120,11 @@
 #define FLASH_BOOT_PATCH_END_ADDR   (END_ADDR(FLASH_BOOT_PATCH_START_ADDR, FLASH_BOOT_PATCH_SIZE)) /* 0x1001FFFF */
 //================== Bootloader ==================
 #define FLASH_BOOT_LOADER_START_ADDR (FLASH_BOOT_PATCH_END_ADDR + 1)   /* 0x10020000 */
-#define FLASH_BOOT_LOADER_SIZE       (128*1024)
+#define FLASH_BOOT_LOADER_SIZE       (64*1024)
 #define FLASH_BOOT_LOADER_END_ADDR   (END_ADDR(FLASH_BOOT_LOADER_START_ADDR, FLASH_BOOT_LOADER_SIZE))
 
 //================== Flash 1 ==================
-#define FLASH_USER_CODE_START_ADDR   (FLASH_BOOT_LOADER_END_ADDR+1)   /* 0x10040000 */
+#define FLASH_USER_CODE_START_ADDR   (FLASH_BOOT_LOADER_END_ADDR+1)   /* 0x10030000 */
 
 //================== Flash 2 ==================
 #define FLASH2_BASE_ADDR            (QSPI2_MEM_BASE)

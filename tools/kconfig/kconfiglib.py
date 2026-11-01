@@ -815,6 +815,7 @@ class Kconfig(object):
       See the module docstring.
     """
     __slots__ = (
+        "_configs_loaded",
         "_encoding",
         "_functions",
         "_set_match",
@@ -984,6 +985,11 @@ class Kconfig(object):
 
         self.warnings = []
 
+        # True once load_config() has run successfully, or has determined that
+        # the default symbol values are final. Consumed by
+        # check_undefined_configdefaults(), which needs final symbol values.
+        self._configs_loaded = False
+
         # symbol definitions needs to be excluded when saving as minimal conf
         self.excluding_sym = []
 
@@ -1108,6 +1114,8 @@ class Kconfig(object):
 
         # Do various menu tree post-processing
         self._finalize_node(self.top_node, self.y)
+        for s in self.syms.values():
+            self._finalize_sym(s)
 
         self.unique_defined_syms = _ordered_unique(self.defined_syms)
         self.unique_choices = _ordered_unique(self.choices)
@@ -1231,6 +1239,7 @@ class Kconfig(object):
                not exists(join(self.srctree, filename)):
                 defconfig = self.defconfig_filename
                 if defconfig is None:
+                    self._configs_loaded = True
                     return "Using default symbol values (no '{}')" \
                            .format(filename)
 
@@ -1254,6 +1263,7 @@ class Kconfig(object):
         finally:
             self._warn_assign_no_prompt = True
 
+        self._configs_loaded = True
         return ("Loaded" if replace else "Merged") + msg
 
     def _load_config(self, filename, replace):
@@ -2332,6 +2342,7 @@ class Kconfig(object):
         sym.kconfig = self
         sym.name = name
         sym.is_constant = False
+        sym.configdefaults = []
         sym.rev_dep = sym.weak_rev_dep = sym.direct_dep = self.n
 
         if self._parsing_kconfigs:
@@ -2351,6 +2362,7 @@ class Kconfig(object):
         sym.kconfig = self
         sym.name = name
         sym.is_constant = True
+        sym.configdefaults = []
         sym.rev_dep = sym.weak_rev_dep = sym.direct_dep = self.n
 
         if self._parsing_kconfigs:
@@ -2940,7 +2952,7 @@ class Kconfig(object):
         while self._next_line():
             t0 = self._tokens[0]
 
-            if t0 is _T_CONFIG or t0 is _T_MENUCONFIG:
+            if t0 in [_T_CONFIG, _T_MENUCONFIG, _T_CONFIGDEFAULT]:
                 # The tokenizer allocates Symbol objects for us
                 sym = self._tokens[1]
 
@@ -2955,7 +2967,8 @@ class Kconfig(object):
                 node = MenuNode()
                 node.kconfig = self
                 node.item = sym
-                node.is_menuconfig = (t0 is _T_MENUCONFIG)
+                node.is_menuconfig = t0 is _T_MENUCONFIG
+                node.is_configdefault = t0 is _T_CONFIGDEFAULT
                 node.prompt = node.help = node.list = None
                 node.parent = parent
                 node.filename = self.filename
@@ -2965,6 +2978,14 @@ class Kconfig(object):
                 sym.nodes.append(node)
 
                 self._parse_props(node)
+
+                if node.is_configdefault:
+                    if (node.prompt or
+                            node.dep != self.y or
+                            len(node.ranges) > 0 or
+                            len(node.selects) > 0 or
+                            len(node.implies) > 0):
+                        self._parse_error("configdefault can only contain `default`")
 
                 if node.is_menuconfig and not node.prompt:
                     self._warn("the menuconfig symbol {} has no prompt"
@@ -3578,6 +3599,23 @@ class Kconfig(object):
     # Post-parsing menu tree processing, including dependency propagation and
     # implicit submenu creation
     #
+    def _finalize_sym(self, sym):
+        # Finalizes symbol definitions
+        #
+        #  - Applies configdefault node defaults to final symbols
+        #
+        # sym:
+        #   The symbol to finalize.
+
+        inserted = 0
+        for (idx, defaults) in sym.configdefaults:
+            for d in defaults:
+                # Add the defaults to the node, with the requirement that
+                # direct dependencies are respected. The original order
+                # of the default statements between nodes is preserved.
+                default = (d[0], self._make_and(sym.direct_dep, d[1]))
+                sym.defaults.insert(inserted + idx, default)
+                inserted += 1
 
     def _finalize_node(self, node, visible_if):
         # Finalizes a menu node and its children:
@@ -3724,6 +3762,14 @@ class Kconfig(object):
 
         sym = node.item
 
+        if node.is_configdefault:
+            # Store any defaults for later application after the complete tree
+            # is known. The current length of of the default array is stored so
+            # the configdefaults can be inserted in the order they originally
+            # appeared.
+            sym.configdefaults.append((len(sym.defaults), node.defaults))
+            return
+
         # See the Symbol class docstring
         sym.direct_dep = self._make_or(sym.direct_dep, node.dep)
 
@@ -3817,8 +3863,13 @@ class Kconfig(object):
                                        sym.name_and_loc))
 
             else:  # UNKNOWN
-                self._warn("{} defined without a type"
-                           .format(sym.name_and_loc))
+                # Symbols that only have configdefault nodes are validated
+                # after the configuration fragments are loaded, by
+                # check_undefined_configdefaults(). Their conditions may be
+                # inactive, in which case the configdefault is inert.
+                if not all(node.is_configdefault for node in sym.nodes):
+                    self._warn("{} defined without a type"
+                               .format(sym.name_and_loc))
 
 
             if sym.ranges:
@@ -3838,6 +3889,55 @@ class Kconfig(object):
                                                sym.name_and_loc,
                                                low.name_and_loc,
                                                high.name_and_loc))
+
+    def check_undefined_configdefaults(self):
+        """
+        Checks for configdefault statements that are active in the currently
+        loaded configuration but whose target symbol is not defined by any
+        'config' or 'menuconfig' statement.
+
+        configdefaults whose condition evaluates to n are inert, just like
+        'default ... if <false>', and do not generate warnings. This makes it
+        possible to keep per-module configdefaults in always-sourced Kconfig
+        files even when the module Kconfig itself is conditionally sourced.
+
+        Must be called after Kconfig.load_config(). Generates at most one
+        warning per symbol per call, pointing at the first active
+        configdefault. Every consumer that displays or enforces Kconfig
+        warnings must call this: the parse-time "defined without a type"
+        warning is suppressed for symbols that only have configdefault nodes.
+
+        Conditions follow normal Kconfig semantics, so a misspelled guard
+        symbol evaluates to n and makes the block inert. Warnings are subject
+        to Kconfig.warn; callers that disabled warnings must re-enable them
+        (see _check_configdefaults() in menuconfig.py).
+        """
+        if not self._configs_loaded:
+            raise KconfigError(
+                "check_undefined_configdefaults() must be called after "
+                "load_config()")
+
+        for sym in self.unique_defined_syms:
+            if not sym.configdefaults:
+                continue
+
+            if any(not node.is_configdefault for node in sym.nodes):
+                # Defined by a real 'config'/'menuconfig' statement. Any
+                # missing type is diagnosed by _check_sym_sanity().
+                continue
+
+            active = [(node, cond)
+                      for node in sym.nodes if node.is_configdefault
+                      for _, cond in node.defaults if expr_value(cond)]
+            if not active:
+                continue
+
+            node, cond = active[0]
+            self._warn(
+                "configdefault for {} is active (condition: {}), but the "
+                "symbol has no 'config' or 'menuconfig' definition"
+                .format(sym.name, expr_str(cond)),
+                node.filename, node.linenr)
 
     def _check_choice_sanity(self):
         # Checks various choice properties that are handiest to check after
@@ -4276,6 +4376,7 @@ class Symbol(object):
         "_write_to_conf",
         "choice",
         "defaults",
+        "configdefaults",
         "direct_dep",
         "env_var",
         "implies",
@@ -5642,6 +5743,7 @@ class MenuNode(object):
         "help",
         "include_path",
         "is_menuconfig",
+        "is_configdefault",
         "item",
         "kconfig",
         "linenr",
@@ -5843,8 +5945,13 @@ class MenuNode(object):
         sc = self.item
 
         if sc.__class__ is Symbol:
-            lines = [("menuconfig " if self.is_menuconfig else "config ")
-                     + sc.name]
+            if self.is_menuconfig:
+                t = "menuconfig "
+            elif self.is_configdefault:
+                t = "configdefault "
+            else:
+                t = "config "
+            lines = [t + sc.name]
         else:
             lines = ["choice " + sc.name if sc.name else "choice"]
 
@@ -6876,6 +6983,7 @@ except AttributeError:
     _T_CLOSE_PAREN,
     _T_COMMENT,
     _T_CONFIG,
+    _T_CONFIGDEFAULT,
     _T_DEFAULT,
     _T_DEFCONFIG_LIST,
     _T_DEF_BOOL,
@@ -6919,7 +7027,7 @@ except AttributeError:
     _T_TRISTATE,
     _T_UNEQUAL,
     _T_VISIBLE,
-) = range(1, 51)
+) = range(1, 52)
 
 # Keyword to token map, with the get() method assigned directly as a small
 # optimization
@@ -6931,6 +7039,7 @@ _get_keyword = {
     "choice":         _T_CHOICE,
     "comment":        _T_COMMENT,
     "config":         _T_CONFIG,
+    "configdefault":  _T_CONFIGDEFAULT,
     "def_bool":       _T_DEF_BOOL,
     "def_hex":        _T_DEF_HEX,
     "def_int":        _T_DEF_INT,

@@ -16,6 +16,27 @@ extern "C" {
 #include "sf_type.h"
 
 
+/* ---- memory barrier ---- */
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION)
+/* ARMCC / AC6 */
+#define CB_DMB()   __dmb(0xF)   /* 0xF = full system DMB */
+#define CB_DSB()   __dsb(0xF)
+#elif defined(__GNUC__) || defined(__clang__)
+#if defined(__arm__) || defined(__aarch64__)
+#define CB_DMB()   __asm__ volatile("dmb sy" ::: "memory")
+#define CB_DSB()   __asm__ volatile("dsb sy" ::: "memory")
+#else
+#define CB_DMB()   __asm__ volatile("" ::: "memory")
+#define CB_DSB()   __asm__ volatile("" ::: "memory")
+#endif
+#elif defined(__ICCARM__)
+#define CB_DMB()   __DMB()
+#define CB_DSB()   __DSB()
+#else
+#define CB_DMB()   __asm volatile("" ::: "memory")
+#define CB_DSB()   __asm volatile("" ::: "memory")
+#endif
+
 #define CB_PTR_MIRROR_OFFSET        (0)
 #define CB_PTR_MIRROR_MASK          (0xFFFF)
 #define CB_PTR_IDX_OFFSET           (16)

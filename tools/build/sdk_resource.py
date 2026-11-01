@@ -890,6 +890,9 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
     - FLASH_BOOT_LOADER_EXEC_* from bootloader.exec (execution address)
     - HCPU_FLASH_CODE_EXEC_* from HCPU factory app.exec (execution address)
     - ACPU_CODE_REGION<N>_EXEC[_SBUS]_* from ACPU factory app.exec
+    - APP_<NAME>_CODE_* from the ACPU factory app name (the whole group
+      describes the execution window: START_ADDR references the exec macro,
+      OFFSET is the exec offset, SIZE is the partition size)
     - CODE_START_ADDR/CODE_SIZE for the current env image (best-effort)
 
     Storage vs execution address: the per-partition pass always emits
@@ -934,9 +937,13 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             return mtype or 'nor'
         return ''
 
-    def _select_start_addr(region, sbus_addr, cbus_addr, subtype):
+    def _select_start_addr(region, sbus_addr, cbus_addr, subtype, core=None):
         # For RAM-like partitions, always use base address
         if subtype == 'ram':
+            return sbus_addr
+        # The ACPU only sees the SBUS view; the CBUS/XIP alias of NOR/PSRAM is
+        # not reachable from that core.
+        if str(core or '').strip().upper() == 'ACPU':
             return sbus_addr
         mem_type = _get_region_mem_type(region)
         if mem_type == 'nor':
@@ -945,15 +952,18 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
 
     def _select_exec_addr(region, sbus_addr, cbus_addr, core=None):
         # Execution address selection:
-        # - RAM/NAND: base
-        # - NOR/PSRAM: XIP
+        # - ACPU: always the SBUS view. The ACPU cannot fetch from the CBUS/XIP
+        #   alias of NOR/PSRAM (e.g. PSRAM 0x10xxxxxx); the 2nd bootloader copies
+        #   the image to the SBUS address that gen_ftab.py stores as xip_base.
+        # - HCPU/LCPU: RAM/NAND use the base (SBUS) address; NOR/PSRAM default
+        #   to the CBUS/XIP view so the image executes in place.
         #
-        # NOTE: ACPU deliberately uses the same SBUS-based rule instead of its
-        # local CBUS view (e.g. SF32LB58 hpsys_ram is 0-based for ACPU while
-        # the HCPU/DFU/SBUS view is 0x20200000). Picking CBUS for ACPU made
-        # the exec address (ACPU_CODE_REGION<N>_EXEC_START_ADDR) unusable for
-        # HCPU when ACPU passes that address over. The common rule below keeps
-        # the macro valid in every core's view.
+        # NOTE: the ACPU rule also covers on-chip RAM (e.g. SF32LB58 hpsys_ram is
+        # 0-based for ACPU while the HCPU/DFU/SBUS view is 0x20200000).
+        # ACPU_CODE_REGION<N>_EXEC_START_ADDR is passed to HCPU, so it must stay
+        # valid in HCPU's view.
+        if str(core or '').strip().upper() == 'ACPU':
+            return sbus_addr
         mem_type = _get_region_mem_type(region)
         return sbus_addr if mem_type in ('ram', 'nand') else cbus_addr
 
@@ -1021,21 +1031,31 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         except Exception:
             return None
 
-    def _infer_acpu_code_region_num(partition):
-        candidates = []
-        name = partition.get('name')
-        if name:
-            candidates.append(name)
-        candidates.extend(partition.get('aliases', []) or [])
+    def _split_acpu_code_name(name):
+        """Split the image index off the end of an ACPU partition name.
 
-        for candidate in candidates:
-            token = str(candidate).strip().upper()
-            match = re.match(r'^ACPU_CODE_LOAD_REGION(\d+)$', token)
-            if not match:
-                match = re.match(r'^ACPU_CODE_REGION(\d+)(?:_SBUS)?$', token)
-            if match:
-                return match.group(1)
-        return '1'
+        `acpu` -> ('acpu', ''), `acpu2` -> ('acpu', '2'). The index is a name
+        suffix because the whole name is pasted into the `<NAME>_*` macros:
+        validate_ptab_v3.py only accepts lowercase letters, digits and
+        underscores, so the v2 `acpu:2` form can neither pass validation nor
+        produce a legal macro. The suffix only labels the image: the number
+        itself comes from the '.rom<N>' binding, and validate_ptab_v3.py
+        rejects a partition whose name disagrees with it.
+        """
+        name = str(name or '').strip()
+        match = re.match(r'^(.*?)(\d+)$', name)
+        if not match or not match.group(1) or int(match.group(2)) < 1:
+            return name, ''
+        return match.group(1), str(int(match.group(2)))
+
+    def _acpu_code_region_num(partition):
+        # The '.rom<N>' section is the canonical image binding between a
+        # partition and its code image. A partition without one is the first
+        # image - its code stays in the code artifact - so it always owns
+        # region 1, whatever its name or alias says; validate_ptab_v3.py
+        # rejects a partition that disagrees.
+        rom_index = ptab.get_acpu_code_rom_index(partition)
+        return str(rom_index) if rom_index is not None else '1'
 
     # Quick lookup maps
     by_name = {}
@@ -1083,7 +1103,7 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             core = partition.get('core')
 
             sbus_addr, cbus_addr = ptab.resolve_region_address(region, offset, chip_config, core=core)
-            start_addr = _select_start_addr(region, sbus_addr, cbus_addr, subtype)
+            start_addr = _select_start_addr(region, sbus_addr, cbus_addr, subtype, core)
             region_mem_type = _get_region_mem_type(region)
 
             name_upper = name.upper()
@@ -1201,25 +1221,36 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         s += _define_mem_type(hcpu_base, _get_region_mem_type(exec_region), clear=True)
 
     # ACPU_CODE_REGION<N>_EXEC[_SBUS]_* macros (execution address, from exec).
-    # v3 keeps the ACPU execution RAM in the app's exec descriptor instead of
-    # a separate legacy RAM partition.
+    # v3 keeps the ACPU execution window in the app's exec descriptor instead of
+    # a separate legacy RAM partition. When the app executes in place (e.g. NOR
+    # XIP on SF32LB57) there is no exec descriptor, and the partition's own
+    # storage region is the execution window.
     emitted_acpu_code_regions = set()
     for partition in partitions:
         if partition.get('type') != 'app' or partition.get('subtype') != 'factory':
             continue
         if str(partition.get('core') or '').strip().upper() != 'ACPU':
             continue
-        exec_def = partition.get('exec')
-        if not isinstance(exec_def, dict):
-            continue
 
-        region_num = _infer_acpu_code_region_num(partition)
+        # The '.rom<N>' section is the canonical image binding; the name suffix
+        # and the legacy ACPU_CODE_LOAD_REGION<N> alias are optional fallbacks.
+        region_num = _acpu_code_region_num(partition)
         if region_num in emitted_acpu_code_regions:
             continue
-        emitted_acpu_code_regions.add(region_num)
 
-        exec_region = str(exec_def.get('region', '')).strip()
-        exec_offset = ptab.parse_size(exec_def.get('offset', 0))
+        exec_def = partition.get('exec')
+        if isinstance(exec_def, dict):
+            exec_region = str(exec_def.get('region', '')).strip()
+            exec_offset = ptab.parse_size(exec_def.get('offset', 0))
+        else:
+            # In-place execution: only XIP-capable storage can host the ACPU
+            # image without an exec window, so anything else is left alone.
+            exec_region = str(partition.get('region', '')).strip()
+            if _get_region_mem_type(exec_region) != 'nor':
+                continue
+            exec_offset = ptab.parse_size(partition.get('offset', 0))
+
+        emitted_acpu_code_regions.add(region_num)
         exec_sbus, exec_cbus = ptab.resolve_region_address(exec_region, exec_offset, chip_config, core='ACPU')
         acpu_exec_addr = _select_exec_addr(exec_region, exec_sbus, exec_cbus, 'ACPU')
         acpu_size = ptab.parse_size(partition.get('size', 0))
@@ -1227,9 +1258,9 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         s += MakeLine('')
         s += MakeLine('')
         s += MakeLine('/* ACPU factory app exec addr */')
-        # ACPU_CODE_REGION<N>_EXEC_SBUS_* uses the SBUS view of the exec
-        # region; ACPU_CODE_REGION<N>_EXEC_* uses the selected execution
-        # address (cbus for NOR/PSRAM, sbus for RAM/NAND). The two can differ.
+        # ACPU_CODE_REGION<N>_EXEC_SBUS_* and ACPU_CODE_REGION<N>_EXEC_* are
+        # identical by design: an ACPU image executes from the SBUS view, so the
+        # execution address never selects the CBUS/XIP alias of NOR/PSRAM.
         acpu_bases = (
             ('ACPU_CODE_REGION{}_EXEC_SBUS'.format(region_num), int(exec_sbus)),
             ('ACPU_CODE_REGION{}_EXEC'.format(region_num), int(acpu_exec_addr)),
@@ -1252,6 +1283,54 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
             s += _define_ref('{}_START_ADDR'.format(legacy_base), '{}_START_ADDR'.format(exec_base))
             s += _define_ref('{}_SIZE'.format(legacy_base), '{}_SIZE'.format(exec_base))
             s += _define_ref('{}_OFFSET'.format(legacy_base), '{}_OFFSET'.format(exec_base))
+
+    # Legacy APP_<NAME>_CODE_* macros, derived from the ACPU app partition
+    # name like v2 instead of requiring an APP_ACPU_CODE alias. The whole group
+    # describes the execution window, not the storage partition:
+    # APP_<NAME>_CODE_START_ADDR is passed to HAL_RCC_ReleaseACPU() as the ACPU
+    # VTOR and references the execution macro emitted above (the ACPU image
+    # runs from its exec region, e.g. PSRAM, or in place from NOR), OFFSET is
+    # that exec region's offset (the storage offset when the image runs in
+    # place), and SIZE is the partition size, i.e. the length of that window.
+    for partition in partitions:
+        if partition.get('type') != 'app' or partition.get('subtype') != 'factory':
+            continue
+        if str(partition.get('core') or '').strip().upper() != 'ACPU':
+            continue
+        name = str(partition.get('name') or '').strip()
+        if not name:
+            continue
+        region_num = _acpu_code_region_num(partition)
+        if region_num not in emitted_acpu_code_regions:
+            continue
+
+        # `acpu2` -> APP_ACPU_CODE2. The suffix is the image number, so the
+        # macro always names the same image as ACPU_CODE_REGION<N>_*; the
+        # first image (normally just `acpu`) owns APP_ACPU_CODE.
+        base, _ = _split_acpu_code_name(name)
+        base = base.upper()
+        if not base:
+            continue
+        code_prefix = 'APP_{}_CODE'.format(base)
+        if region_num != '1':
+            code_prefix += region_num
+
+        s += MakeLine('')
+        s += _define_ref(
+            '{}_START_ADDR'.format(code_prefix),
+            'ACPU_CODE_REGION{}_EXEC_START_ADDR'.format(region_num),
+        )
+        # Like v2, the whole macro group describes the execution window: for an
+        # in-place image (NOR XIP) that window is the partition itself.
+        exec_def = partition.get('exec')
+        if isinstance(exec_def, dict):
+            code_offset = ptab.parse_size(exec_def.get('offset', 0))
+        else:
+            code_offset = ptab.parse_size(partition.get('offset', 0))
+        s += _define_u32(
+            '{}_SIZE'.format(code_prefix),
+            ptab.parse_size(partition.get('size', 0)))
+        s += _define_u32('{}_OFFSET'.format(code_prefix), code_offset)
 
     # CODE_START_ADDR/CODE_SIZE for current image (best-effort)
     env_name = (env.get('name') or '').strip().lower()
@@ -1283,7 +1362,7 @@ def GenPartitionTableHeaderContentV3(env, ptab_obj):
         else:
             size = ptab.parse_size(code_partition.get('size', 0))
             exec_def = code_partition.get('exec')
-            core = code_partition.get('core')
+            core = code_partition.get('core') or build_core
             if isinstance(exec_def, dict):
                 exec_region = str(exec_def.get('region', '')).strip()
                 exec_offset = ptab.parse_size(exec_def.get('offset', 0))
@@ -1408,12 +1487,14 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                 if 'type' not in region or (("app_img" not in region['type']) and ('app_exec' not in region['type']) and ("app_img2" not in region['type'])):
                     continue
 
-                if ext and ext != '1':
-                    # no need to construct ftab for non-first part
+                region_type_list = region['type']
+                if ext and ext != '1' and ('app_img' in region_type_list and 'app_exec' in region_type_list):
+                    # for multiple img, skip non-first XIP img
                     continue
 
-                region_type_list = region['type']
                 item_name = base
+                if ext and ext != '1':
+                    item_name = base + ':' + ext
                 if item_name not in ftab:
                     ftab[item_name] = {}
 
@@ -1421,12 +1502,11 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                 assert ('max_size' not in ftab_item) or (
                         max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab_item['max_size'], max_size)
                 ftab_item['max_size'] = max_size
-                if 'app_exec' in region_type_list and ((not ext) or ('1' == ext)):
-                    # only first binary need to be described in ftab
+                if 'app_exec' in region_type_list:
                     assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
                     same_region_exec = ('app_img' in region_type_list) or ('app_img2' in region_type_list)
                     ftab_item['xip'] = _legacy_ftab_xip_addr(start_addr, offset, region, same_region_exec)
-                if 'app_img' in region_type_list and ((not ext) or ('1' == ext)):
+                if 'app_img' in region_type_list:
                     assert 'base' not in ftab_item, 'base address already configured in {}'.format(item_name)
                     ftab_item['base'] = start_addr
                 if 'app_img2' in region_type_list:
@@ -1448,7 +1528,7 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                             if img['name'] == bin_name:
                                 size = img['size']
                                 break
-                    assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+                    assert size > 0, 'Size of img {} cannot be determined'.format(region['name'])
                     ftab_item['img'] = {'name': region['name'], 'size': size}
 
     # check if all images defined in img_size are in ftab
@@ -1461,7 +1541,7 @@ def ConstructFtabDictV2(ftab, mems, img_size):
         
 
     #  Add default bootloader configuration if not specified in ptab
-    if not building.GetDepend("SOC_SF32BL55X") and "bootloader" not in ftab:
+    if not building.GetDepend("SOC_SF32LB55X") and "bootloader" not in ftab:
         ftab['bootloader'] = {}
         ftab_item = ftab["bootloader"]
         ftab_item['max_size'] = max_size
@@ -1492,7 +1572,7 @@ def ConstructFtabDictV2(ftab, mems, img_size):
                     if img['name'] == bin_name:
                         size = img['size']
                         break
-            assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
+            assert size > 0, 'Size of img {} cannot be determined'.format(region['name'])
             ftab_item['img'] = {'name': region['name'], 'size': size}
 
 
@@ -1514,8 +1594,11 @@ def ConstructFtabDictV1(ftab, mems, img_size):
                     ftab[item_name] = {}
 
                 ftab_item = ftab[item_name]
-                assert ('max_size' not in ftab) or (
-                        max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab['max_size'], max_size)
+                # A flash table entry stores a single size for the image, so the regions
+                # of one ftab item (storage and execution view of the same image) must
+                # declare the same max_size.
+                assert ('max_size' not in ftab_item) or (
+                        max_size == ftab_item['max_size']), "{} max_size must be same, old: 0x{:08X}, new: 0x{:08X}".format(item_name, ftab_item['max_size'], max_size)
                 ftab_item['max_size'] = max_size
                 if 'xip' in region['ftab']['address']:
                     assert 'xip' not in ftab_item, 'xip address already configured in {}'.format(item_name)
@@ -1532,18 +1615,26 @@ def ConstructFtabDictV1(ftab, mems, img_size):
                     img_name = region['img'].split(':')
                     proj_name = img_name[0]
                     if proj_name in img_size:
+                        proj_images = img_size[proj_name]
                         if len(img_name) == 1:
-                            assert len(img_size[
-                                           proj_name]) == 1, "img '{}' is expected to be a file but it's a directory " \
-                                                             "now".format(proj_name)
-                            size = img_size[proj_name][0]['size']
+                            # A project with several binaries must name the binary
+                            # explicitly, e.g. "acpu:ER_IROM1.bin".
+                            assert len(proj_images) == 1, \
+                                "img '{}' is expected to be a file but it's a directory now, " \
+                                "please use the 'proj_name:binary_name' form (available: {})".format(
+                                    proj_name, ', '.join(sorted(img['name'] for img in proj_images)))
+                            size = proj_images[0]['size']
                         else:
                             bin_name = img_name[1]
                             size = 0
-                            for img in img_size[proj_name]:
+                            for img in proj_images:
                                 if img['name'] == bin_name:
                                     size = img['size']
                                     break
+                            assert size > 0, \
+                                "img '{}': '{}' is not produced by project '{}' (available: {})".format(
+                                    region['img'], bin_name, proj_name,
+                                    ', '.join(sorted(img['name'] for img in proj_images)))
                         assert size > 0, 'Size of img {} cannot be determined'.format(region['img'])
                         ftab_item['img'] = {'name': region['img'], 'size': size}
                     else:
@@ -1678,14 +1769,19 @@ def GenFtabCFile(src, output_name, imgs_info):
         if (k != 'main') and (k != 'bootloader') and (k != 'dfu') :
             ftab_item = v
             if 'img' in ftab_item:
+                assert ex_region_idx < len(ex_region_names), 'Not enough EXT region to describe ftab item "{}"'.format(k)
                 assert 'base' in ftab_item, 'base of {} is not defined'.format(k)
                 assert 'xip' in ftab_item, 'xip of {} is not defined'.format(k)
                 assert 'max_size' in ftab_item, 'max_size of {} is not defined'.format(k)
+                # The extended slots are assigned in ftab item order, which is the
+                # order the items first appear in the partition table; log the
+                # mapping so it can be checked against the generated ftab.
+                logging.info('ftab extended slot %s <- "%s" (base 0x%08X, xip 0x%08X, size 0x%08X)',
+                             ex_region_names[ex_region_idx], k, ftab_item['base'], ftab_item['xip'],
+                             ftab_item['max_size'])
                 s += MakeLine(
                     '.ftab[{}] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
                         ex_region_names[ex_region_idx], ftab_item['base'], ftab_item['max_size'], ftab_item['xip']))
-                assert 'img' in ftab_item, "img binary name for {} must be specified if img needs to be copied from " \
-                                           "base to xip address".format(k)
                 img_info = ftab_item['img']
                 size = img_info['size']
                 s += MakeLine(
@@ -1762,29 +1858,42 @@ def ConstructImgDownloadInfoV2(img_download_info, mems):
                     if proj_name not in img_download_info:
                         img_download_info[proj_name] = {}
                     assert ext not in img_download_info[
-                        proj_name], "{} download address already configured".format(region['img'])
+                        proj_name], "{} download address already configured".format(region['name'])
                     img_download_info[proj_name][GetMultiBinaryName(ext)] = start_addr
 
 
-def ConstructImgDownloadInfoV1(img_download_info, mems):    
+def ConstructImgDownloadInfoV1(img_download_info, mems):
+    # Collect {proj: {binary name or None: address}} first, so that a project is
+    # never recorded as both a scalar and a dict whatever the order of its regions
+    # is (a project with several binaries must use 'proj_name:binary_name' on every
+    # region of that project).
+    proj_download_info = OrderedDict()
     for mem in mems:
         mem_base = int(mem['base'], 0)
         for region in mem['regions']:
             offset = int(region['offset'], 0)
             start_addr = mem_base + offset
-            if 'img' in region:
-                img_name = region['img']
-                img_name = img_name.split(':')
-                proj_name = img_name[0]
-                if len(img_name) == 1:
-                    assert proj_name not in img_download_info, "{} download address already configured".format(proj_name)
-                    img_download_info[proj_name] = start_addr
-                else:
-                    if proj_name not in img_download_info:
-                        img_download_info[proj_name] = {}
-                    assert img_name[1] not in img_download_info[
-                        proj_name], "{} download address already configured".format(region['img'])
-                    img_download_info[proj_name][img_name[1]] = start_addr
+            if 'img' not in region:
+                continue
+            img_name = region['img'].split(':')
+            proj_name = img_name[0]
+            bin_name = img_name[1] if len(img_name) > 1 else None
+            proj_entries = proj_download_info.setdefault(proj_name, OrderedDict())
+            assert bin_name not in proj_entries, "{} download address already configured".format(region['img'])
+            proj_entries[bin_name] = start_addr
+
+    # Keep the scalar form for a single-binary project that never names a binary, so
+    # that BuildJLinkLoadScript can load that one file directly.
+    for proj_name, proj_entries in proj_download_info.items():
+        if len(proj_entries) == 1 and None in proj_entries:
+            img_download_info[proj_name] = proj_entries[None]
+            continue
+        bins = OrderedDict()
+        for bin_name, start_addr in proj_entries.items():
+            # The unnamed region of a project with several binaries is its first
+            # image ('proj_name' without suffix == 'proj_name:ER_IROM1.bin').
+            bins[bin_name if bin_name else GetMultiBinaryName('1')] = start_addr
+        img_download_info[proj_name] = bins
 
 
 def ConstructImgDownloadInfoV3(img_download_info, ptab_obj):
@@ -1863,6 +1972,17 @@ def BuildJLinkLoadScript(main_env):
                     offset = ptab.parse_size(part.get('offset', 0))
                     addr = ptab.get_download_addr_v3(region, offset, chip_config, core=part.get('core'))
                     items.append({'name': name, 'addr': addr})
+                # Extra ACPU code images are built from the same project ELF as the
+                # first image, so they are downloaded from the same output directory
+                # as '<base>.ER_IROM<N>.bin' at their own storage addresses.
+                if core == 'ACPU':
+                    for entry in ptab.iter_acpu_code_ext_partitions_v3(ptab_obj):
+                        items.append({
+                            'name': entry['image'],
+                            'addr': ptab.get_download_addr_v3(
+                                entry['storage_region'], entry['storage_offset'],
+                                chip_config, core='ACPU'),
+                        })
                 int_res_download_items[core] = items
         elif ptab_obj.is_v2():
             ConstructImgDownloadInfoV2(img_download_info, mems)
@@ -1891,7 +2011,7 @@ def BuildJLinkLoadScript(main_env):
             # load address is defined in map, load binary using address
             info = img_download_info[env['name']]
             bin_file = str(env['program_binary'][0])
-            if type(info) is dict:
+            if isinstance(info, dict):
                 assert os.path.isdir(bin_file), "{} should have multiple binaries as map defines".format(env['name'])
 
                 dir_list = os.listdir(bin_file)
@@ -1963,11 +2083,10 @@ def BuildJLinkLoadScript(main_env):
 
                 # ptab v3: load app/ex resource bins from the same `output/` directory
                 if is_ptab_v3:
-                    core = 'HCPU'
-                    if env.get('name') == 'lcpu':
-                        core = 'LCPU'
-                    elif env.get('name') == 'acpu':
-                        core = 'ACPU'
+                    # Match the artifact side: a project may be named other than
+                    # 'acpu'/'lcpu' and still build an ACPU/LCPU image (the link
+                    # template identifies the core).
+                    core = building._infer_build_core(env)
 
                     res_dir = bin_file if os.path.isdir(bin_file) else os.path.dirname(bin_file)
                     base_name = building.GetPtabV3ArtifactBaseName(env)
@@ -2050,7 +2169,7 @@ def BuildJLinkLoadScript(main_env):
             if 0 == len(env['program_binary']):
                 continue
             bin_file = str(env['program_binary'][0])
-            if type(info) is dict:
+            if isinstance(info, dict):
                 assert os.path.isdir(bin_file), "{} should have multiple binaries as map defines".format(env['name'])
 
                 dir_list = os.listdir(bin_file)

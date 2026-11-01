@@ -10,7 +10,7 @@ sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 
 进入配置界面后，选择 `RT-Thread online packages` 来配置相关的软件包。
 
-**注意**：在首次使用时需要先执行 `sdk.py rt-pkg-upgrade` 下载更新软件包相关配置。
+**注意**：在首次使用时需要先执行 `sdk.py rt-pkg upgrade` 下载更新软件包相关配置。
 
 ![](../../assets/rt_pkg_option_packages.png)
 
@@ -19,7 +19,7 @@ sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 ### 查看帮助信息
 
 ```shell
-sdk.py --help
+sdk.py rt-pkg --help
 ```
 
 该命令可以查询rt-pkg相关命令的使用说明。
@@ -31,7 +31,7 @@ sdk.py --help
 ### 列出已配置的软件包
 
 ```shell
-sdk.py rt-pkg-list
+sdk.py rt-pkg list
 ```
 
 在 `menuconfig` 中添加了新的软件包后，使用该命令可以输出已经添加的软件包。
@@ -51,7 +51,7 @@ sdk.py rt-pkg-list
 ### 更新软件包配置
 
 ```shell
-sdk.py rt-pkg-update
+sdk.py rt-pkg update
 ```
 
 `menuconfig` 中添加了新的软件包后，使用该命令下载相应软件包。
@@ -66,7 +66,7 @@ sdk.py rt-pkg-update
 ### 打印环境变量
 
 ```shell
-sdk.py rt-pkg-printenv
+sdk.py rt-pkg printenv
 ```
 
 该命令可以打印环境变量以进行检查。
@@ -76,7 +76,7 @@ sdk.py rt-pkg-printenv
 ### 升级软件包
 
 ```shell
-sdk.py rt-pkg-upgrade
+sdk.py rt-pkg upgrade
 ```
 
 使用该命令可以对已经配置的软件包进行升级。在首次使用rt-pkg时需要先使用该命令配置软件包。
@@ -86,7 +86,7 @@ sdk.py rt-pkg-upgrade
 ### 升级Python模块
 
 ```shell
-sdk.py rt-pkg-upgrade-modules
+sdk.py rt-pkg upgrade-modules
 ```
 
 使用该命令对Python模块对象进行升级（例如requests）。
@@ -94,13 +94,13 @@ sdk.py rt-pkg-upgrade-modules
 ### 创建新软件包
 
 ```shell
-sdk.py rt-pkg-wizard
+sdk.py rt-pkg wizard
 ```
 
 使用该命令可以使用wizard创建新的软件包。
 
 ## 使用流程建议
-1. 首先使用 `sdk.py --help` 查看可用命令
-2. 使用 `sdk.py rt-pkg-list` 查看当前配置
+1. 首先使用 `sdk.py rt-pkg --help` 查看可用命令
+2. 使用 `sdk.py rt-pkg list` 查看当前配置
 3. 通过menuconfig配置需要的软件包
-4. 使用 `sdk.py rt-pkg-update` 更新配置 整理一下格式
+4. 使用 `sdk.py rt-pkg update` 更新配置 (首次使用需执行 `sdk.py rt-pkg upgrade` 获取软件包配置数据库)

@@ -63,7 +63,7 @@ int get_pdm_volume();
 #define  AUDIO_SERVER_EVENT_DOWN_START      (1 << 11)
 #define  AUDIO_SERVER_EVENT_DOWN_END        (1 << 12)
 #define  AUDIO_SERVER_EVENT_TX_FULL_EMPTY   (1 << 13)
-
+#define  AUDIO_SERVER_EVENT_ACPU_FAR_PUT    (1 << 14)
 
 #define AUDIO_SERVER_EVENT_ALL  ( \
                                 AUDIO_SERVER_EVENT_CMD| \
@@ -76,6 +76,7 @@ int get_pdm_volume();
                                 AUDIO_SERVER_EVENT_A2DP_PREV| \
                                 AUDIO_SERVER_EVENT_A2DP_PAUSE| \
                                 AUDIO_SERVER_EVENT_A2DP_RESUME| \
+                                AUDIO_SERVER_EVENT_ACPU_FAR_PUT| \
                                 0 \
                                 )
 

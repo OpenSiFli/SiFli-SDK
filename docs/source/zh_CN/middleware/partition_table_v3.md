@@ -164,13 +164,14 @@ partitions:
 
 ## memory 定义
 
-memory 用于定义外挂的存储器的熟悉，如 NAND Flash、NOR Flash 等。
+memory 用于定义外挂的存储器的属性，如 NAND Flash、NOR Flash 等。
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `name` | string | 是 | MPI 接口或者 SCMMC 接口名称，如 `mpi2`、`sdmmc1`等 |
 | `type` | string | 是 | 存储器类型，可选为 `nand`、`nor`、`sd` |
 | `size` | string | 是 | 存储器大小，支持 `0x` 前缀和 `KB`/`MB` 后缀 |
+| `block_size` | string | 否 | NAND 擦除块大小，可选 `128KB`（默认）或 `256KB`；仅 NAND 存储器可配置，并在 NAND 作为启动存储时生效 |
 
 如果是外挂的 SDMMC 存储器（eMMC/SD 卡），还需要在 `memory` 中定义对应的存储器，并且在分区中通过 `region` 字段引用。
 
@@ -259,6 +260,15 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
   - 当启动存储位于 NAND 上时，会自动保留 `factory_data` 分区，别名为 `FACTORY_DATA`，默认 `offset = 2 * block_size`、`size = block_size`。未显式配置 `memory.block_size` 时，NAND block size 默认为 128KB；显式配置 256KB block size 时，`FACTORY_DATA` 默认偏移和大小也会同步调整。
   - 当启动存储位于 SDMMC 上时，会自动保留 `mbr` 分区（别名 `MBR`，`offset=0x0`，`size=0x1000`）和 `factory_data` 分区（别名 `FACTORY_DATA`，`offset=0x41000`，`size=0x20000`）。
   - 在保持默认 RAM 布局的情况下，`hcpu_ram_data`、`bootloader_ram_data`、`lpsys_ram` 可以省略。
+- `SF32LB57`
+  - `flash_table` 和 `bootloader` 会根据 HCPU factory app 的存储 `region` 自动推导。启动存储可以是 NOR（`mpi2` 或 `mpi3`）、NAND（仅 `mpi3`）或 SD（`sdmmc1` 或 `sdmmc2`）。
+  - NOR：`flash_table` 位于 `offset=0x0`、`size=0x8000`；`bootloader` 位于 `offset=0x10000`、`size=0x10000`，`exec` 指向 `hpsys_ram` 的 `offset=0x20000`。不会注入 `AUTO_FLASH_MAC_ADDRESS`。
+  - NAND：`flash_table` 位于 `offset=0x0`、`size=0x8000`（ftab 分区只覆盖实际生效的分区表，不占用一整个擦除块）；`factory_data`（别名 `FACTORY_DATA`）位于 `offset = 2 * block_size`、`size = block_size`；`bootloader` 位于 `offset = 4 * block_size`、`size=0x10000`。`block_size` 取自启动 `memory` 条目的 `block_size` 字段，未配置时使用 128KB。会注入 `AUTO_FLASH_MAC_ADDRESS`，取值为启动 region 的 SBUS 基地址（`mpi3` → `0x64000000`，`mpi2` → `0x62000000`）。
+  - SD（`sdmmc1` / `sdmmc2`）：会自动保留 `mbr`（别名 `MBR`，`offset=0x0`，`size=0x1000`）、`flash_table`（`offset=0x1000`，`size=0x8000`）、`factory_data`（`offset=0x41000`，`size=0x20000`）和 `bootloader`（`offset=0x61000`，`size=0x10000`）。不会注入 `AUTO_FLASH_MAC_ADDRESS`。
+  - `bootloader` 默认大小为 64KB。
+  - 在保持默认 RAM 布局的情况下，`hcpu_ram_data`（`hpsys_ram` `offset=0`、`size=0x6FC00`）和 `bootloader_ram_data`（`hpsys_ram` `offset=0x40000`、`size=0x10000`）可以省略。
+  - SF32LB57 有 LPSYS RAM，但 ptab v3 默认不生成 `lpsys_ram` 分区（默认构建不启用 LCPU）；如果用户在 YAML 中显式声明 `lpsys_ram`，该分区会被保留。
+  - `acpu` 和 `acpu_ram_data` 不会由 ptab v3 默认注入；在使用 `new-board` 且 `with_acpu=true` 时，它们会由 `new-board` 生成到板级 `ptab.yaml` 中。
 - `SF32LB56` / `SF32LB58`
   - 位于内部 `mpi5` 上的 `flash_table` 和 `bootloader` 可以省略。
 - `psram_data` / `psram_data2`
@@ -278,14 +288,16 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
 |------|------|
 | `外置存储` | 通过 `memory` 定义的外挂存储区域，如 `mpi1`、`mpi2`、`sdmmc1` 等 |
 | `hpsys_ram` | HPSYS RAM |
-| `lpsys_ram` | LPSYS RAM |
+| `lpsys_ram` | LPSYS RAM（SF32LB57 默认不生成） |
 
 ### 地址解析
 
 每个 region 对应两个地址：
 
-- **SBUS 地址（存储地址）**：用于 DMA 访问、下载烧录
-- **CBUS 地址（XIP 地址）**：用于 CPU 直接执行
+- **SBUS 地址（存储地址）**：用于 DMA 访问、下载烧录，也可作为执行地址
+- **CBUS 地址（XIP 地址）**：NOR/PSRAM 的就地执行视图
+
+对 PSRAM 来说，`0x10xxxxxx` 只是同一片内存在 HCPU 侧的别名，实际映射在 SBUS `0x60xxxxxx`。ACPU 无法通过该别名取指，因此其执行地址恒为 region 的 SBUS 视图，它同时也是 flash table 的 `xip_base` 和二级 bootloader 的拷贝目标。
 
 地址映射从 `tools/SiliconSchema/common/mpi/<chip>/mpi.yaml` 加载。
 
@@ -327,7 +339,7 @@ ptab v3 在解析阶段会自动补齐一部分“系统默认分区”。这意
 #define CODE_SIZE        (0x...)
 ```
 
-需要注意的是，`CODE_START_ADDR` 对应 `exec` 字段指定的执行地址。如果没有指定 `exec`，则使用存储的 CBUS 地址。
+需要注意的是，`CODE_START_ADDR` 对应 `exec` 字段指定的执行地址。如果没有指定 `exec`，则使用存储 region 并按同一规则解析地址。ACPU 恒取 SBUS 视图；HCPU/LCPU 的 RAM/NAND 取 SBUS，NOR/PSRAM 默认取 CBUS/XIP。因此 ACPU 的 `ACPU_CODE_REGION<N>_EXEC_START_ADDR` 恒等于 `ACPU_CODE_REGION<N>_EXEC_SBUS_START_ADDR`。
 
 对于 `HCPU_FLASH_CODE`、`FLASH_BOOT_LOADER` 这类由执行地址兼容出来的宏，若同时生成 `_MEM_TYPE`，其取值也跟随最终执行 region，而不是存储 region。若执行 region 为片上 RAM，则不会保留对应的 `_MEM_TYPE` 定义。
 
@@ -514,6 +526,64 @@ GCC 默认的段收集规则为：
 
 另外，`app/ex` 分区名应避免与代码镜像后缀 `app` 冲突，以避免在大小写不敏感文件系统下发生文件名覆盖，例如不要让某个资源分区命名为 `app`。
 
+### 多个 ACPU 代码镜像（ptab v3 + GCC/Keil）
+
+当一个 ACPU 工程的两段代码执行地址不连续时，需要从同一个 ELF 里拆出多个代码镜像。除第一个镜像
+外，每个镜像都声明为一个独立的 `type: app`、`subtype: factory`、`core: ACPU` 分区，并指明该镜像
+代码在 ELF 中的输出段：
+
+```yaml
+- name: acpu2                  # 必须不同于任何工程（env）名
+  type: app
+  subtype: factory             # 与第一个镜像同类：会登记进 flash table 并被拷贝到执行区
+  core: ACPU
+  region: mpi4
+  offset: 0x00E7C000           # 存储区 → flash table 的 base / 烧写地址
+  size: 0x00100000
+  exec:
+    region: psram1             # 执行区 → flash table 的 xip_base / 链接地址
+    offset: 0x00400000
+  sections:
+    - section: .rom2           # 该镜像代码所在的 ELF 输出段
+  aliases:
+    - ACPU_CODE_LOAD_REGION2   # 可选的历史 alias；若保留，编号必须与 .rom<N> 一致
+```
+
+段名 `.rom<N>`（N >= 2）就是"分区 ↔ 镜像"的显式绑定：它同时决定 ELF 内容、链接脚本中的段名与产物
+后缀，沿用 v1/v2 多镜像流程和嵌入式 LCPU 流程的同一套命名。第一个镜像的代码留在代码产物里，不得
+声明 `.rom<N>` 段；`validate_ptab_v3.py` 会检查"恰好一个不带 `.rom<N>` 的首镜像"以及 N 不重复。
+链接脚本和 `ACPU_CODE_REGION<N>_*` 宏都以该 `.rom<N>` 段确定编号，因此 alias 可省略；若保留，编号必须与 `.rom<N>` 一致。
+
+ACPU 代码分区的存储区是 NOR 时可以省略 `exec`：镜像从该区域原地执行，链接脚本也把它放在
+同一窗口，生成的 `ACPU_CODE_REGION<N>_EXEC_*` 宏描述的就是该窗口，二级 bootloader 不会拷贝。
+其它存储（NAND/SD/PSRAM）必须显式给出 `exec` 区域，两条规则都由 `validate_ptab_v3.py` 检查。
+
+额外镜像用名字末尾的编号命名（`acpu2`、`acpu3`）。生成 `APP_<NAME>_CODE<N>` 时会先去掉名字末尾的
+编号：`acpu2` 生成 `APP_ACPU_CODE2_*`，而不是 `APP_ACPU2_CODE2_*`。该编号必须与镜像绑定一致：取
+`.rom<N>` 的 N，唯一不带 `.rom<N>` 的首镜像固定为 1，`validate_ptab_v3.py` 会检查二者是否一致。
+分区名本身仍原样用于 `<NAME>_START_ADDR/_SIZE/_OFFSET` 这组宏，因此必须是合法的标识符：v2 的
+`acpu:2` 写法会被 `validate_ptab_v3.py` 拒绝，也无法生成合法宏。
+
+ACPU 的 `link.jinja2` / `link.sct.jinja2` 会为每个额外镜像生成一段存储区域（GCC 为 `ACPU_ROM<N>`，
+其内部是 `.rom<N>` 输出段；Keil 为 `LR_IROM<N>` / `ER_IROM<N>`），链接地址取 `exec` 的 SBUS 视图。
+额外镜像会按其分区的 `region`/`offset` 烧写，
+并在启动时由二级 bootloader 拷贝进执行区；两个地址相同时（就地执行）不会发生拷贝。flash table 用分区
+`size` 作为镜像长度，因此执行区必须能容纳 `size` 字节。首镜像遵循同一规则；HCPU/LCPU 的
+NOR/PSRAM 镜像仍从 CBUS/XIP 视图就地执行。
+
+ACPU 工程 `output/` 目录下的产物：
+
+- 代码镜像（第一个 ACPU 镜像）：`build_xxx/acpu/output/acpu.ER_IROM1.bin`
+- 额外镜像：`build_xxx/acpu/output/acpu.ER_IROM2.bin`（以及对应的 `.hex`）
+
+最多支持 3 个额外镜像：它们与其他额外的 `type: app` 分区共用 `DFU_FLASH_HCPU_EXT2` /
+`DFU_FLASH_LCPU_EXT1` / `DFU_FLASH_LCPU_EXT2`（flash id 11/12/13）这三个扩展槽，并按镜像序号分配。
+
+注意事项：
+
+- 目前仅支持 SF32LB58X：其他芯片没有 Jinja2 的 ACPU 模板，且其 bootloader 尚未遍历全部扩展槽。
+- 该特性要求工程本身编译 ACPU 镜像（ACPU 子工程）；通过 `AddCustomImg` 提供的镜像不在覆盖范围内。
+
 ### ftab.bin 生成
 
 v3 格式下，`ftab.bin` 直接通过 Python 脚本生成，不再编译 ftab 子工程：
@@ -614,6 +684,7 @@ sdk.py ptab-export --strict
 
 | 版本 | 日期 | 说明 |
 |------|------|------|
+| v3.5 | 2026-10 | 新增 SF32LB57 在 NOR/NAND/SD 启动存储下的默认分区推导、NAND 的 `AUTO_FLASH_MAC_ADDRESS` 基址，以及默认不生成 `lpsys_ram` 的说明；补充 `acpu` / `acpu_ram_data` 由 `new-board` 在 `with_acpu=true` 时生成 |
 | v3.4 | 2026-04 | `FAL_PART_TABLE` 自动收录 `flashdb_kv`、`filesystem` 和 `app(subtype != ex)` 分区，并补充 `mpi5` / `sdmmc` 映射规则 |
 | v3.3 | 2026-03 | 补充默认分区自动推导规则，支持省略默认 `flash_table` / `bootloader` / 部分 RAM 分区 |
 | v3.2 | 2026-03 | 新增工程级 `ptab.overlay.yaml`、`sdk.py ptab-export` 和最终 `ptab.effective.yaml` 导出 |

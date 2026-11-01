@@ -36,7 +36,10 @@
   -----------------------------------------------------------------------------*/
 __ROM_BASE = ACPU_CODE_REGION1_START_ADDR;
 __ROM_SIZE = ACPU_CODE_REGION1_SIZE;
-
+#ifdef ACPU_CODE_REGION2_START_ADDR
+__ROM2_BASE = ACPU_CODE_REGION2_START_ADDR;
+__ROM2_SIZE = ACPU_CODE_REGION2_SIZE;
+#endif /* ACPU_CODE_REGION2_START_ADDR */
 
 /*--------------------- Embedded RAM Configuration ----------------------------
   <h> RAM Configuration
@@ -62,6 +65,9 @@ __HEAP_SIZE  = STARTUP_HEAP_SIZE;
 MEMORY
 {
     ROM (rx)  : ORIGIN = __ROM_BASE,  LENGTH = __ROM_SIZE
+#ifdef ACPU_CODE_REGION2_START_ADDR
+    ROM2 (rx)  : ORIGIN = __ROM2_BASE,  LENGTH = __ROM2_SIZE
+#endif /* ACPU_CODE_REGION2_START_ADDR */
     RAM (rw)  : ORIGIN = __RAM_BASE,  LENGTH = __RAM_SIZE
 }
 
@@ -99,6 +105,13 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
+#ifdef ACPU_CODE_REGION2_START_ADDR
+  .rom2 :
+  {
+    /* add app code here */
+  } > ROM2
+#endif /* ACPU_CODE_REGION2_START_ADDR */
+
   .text :
   {
     _stext = ABSOLUTE(.);  

@@ -18,18 +18,121 @@ static uint8_t g_hfp_relay_clcc_process_status = BT_HFP_RELAY_CLCC_STATUS_COMPLE
 static bt_hfp_relay_context_t g_hfp_relay_ctx =
 {
     .hf_channel = BT_HFP_RELAY_INVALID_CHANNEL,
-    .ag_channel = BT_HFP_RELAY_INVALID_CHANNEL,
-    .cind_status =
-    {
-        .service_status = 1,
-        .call = 0,
-        .callsetup = 0,
-        .batt_level = 5,
-        .signal = 5,
-        .roam_status = 0,
-        .callheld = 0,
-    },
 };
+
+static bt_hfp_relay_ag_context_t *bt_hfp_relay_find_ag(uint16_t channel)
+{
+    uint8_t i;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if (g_hfp_relay_ctx.ag[i].channel == channel)
+        {
+            return &g_hfp_relay_ctx.ag[i];
+        }
+    }
+
+    return NULL;
+}
+
+static bt_hfp_relay_ag_context_t *bt_hfp_relay_alloc_ag(void)
+{
+    uint8_t i;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if (g_hfp_relay_ctx.ag[i].channel == BT_HFP_RELAY_INVALID_CHANNEL)
+        {
+            return &g_hfp_relay_ctx.ag[i];
+        }
+    }
+
+    return NULL;
+}
+
+static void bt_hfp_relay_for_each_ag_phone_state(HFP_CALL_INFO_T *call_info)
+{
+    if (g_hfp_relay_ctx.ag[0].channel != BT_HFP_RELAY_INVALID_CHANNEL)
+    {
+        call_info->mux_id = (uint8_t)g_hfp_relay_ctx.ag[0].channel;
+        bt_interface_phone_state_changed(call_info);
+    }
+}
+
+static void bt_hfp_relay_for_each_ag_indicator(HFP_IND_INFO_T *ind_info)
+{
+    if (g_hfp_relay_ctx.ag[0].channel != BT_HFP_RELAY_INVALID_CHANNEL)
+    {
+        bt_interface_indicator_status_changed(g_hfp_relay_ctx.ag[0].channel, ind_info);
+    }
+}
+
+static bt_hfp_relay_ag_context_t *bt_hfp_relay_get_other_ag(uint16_t channel)
+{
+    uint8_t i;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if ((g_hfp_relay_ctx.ag[i].channel != BT_HFP_RELAY_INVALID_CHANNEL) &&
+                (g_hfp_relay_ctx.ag[i].channel != channel))
+        {
+            return &g_hfp_relay_ctx.ag[i];
+        }
+    }
+
+    return NULL;
+}
+
+static void bt_hfp_relay_notify_intercom_call(uint8_t active, uint8_t setup,
+        uint16_t source_channel, const uint8_t *number)
+{
+    bt_hfp_relay_ag_context_t *target;
+    char *phone_num = (char *)(number != NULL ? number : (const uint8_t *)"");
+    uint8_t phone_len = (uint8_t)strlen(phone_num) + 1;
+
+    target = bt_hfp_relay_get_other_ag(source_channel);
+    if (target == NULL)
+    {
+        return;
+    }
+
+    bt_hfp_ag_app_call_status_change((uint8_t)target->channel, phone_num, phone_len,
+                                     active, setup, PHONE_CALL_DIR_OUTGOING);
+}
+
+static void bt_hfp_relay_notify_intercom_call_to_all(uint8_t active, uint8_t setup,
+        const uint8_t *number)
+{
+    uint8_t i;
+    char *phone_num = (char *)(number != NULL ? number : (const uint8_t *)"");
+    uint8_t phone_len = (uint8_t)strlen(phone_num) + 1;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if (g_hfp_relay_ctx.ag[i].channel != BT_HFP_RELAY_INVALID_CHANNEL)
+        {
+            bt_hfp_ag_app_call_status_change((uint8_t)g_hfp_relay_ctx.ag[i].channel,
+                                             phone_num, phone_len, active, setup,
+                                             PHONE_CALL_DIR_OUTGOING);
+        }
+    }
+}
+
+static void bt_hfp_relay_connect_intercom_audio(void)
+{
+    uint8_t i;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        bt_hfp_relay_ag_context_t *ag_ctx = &g_hfp_relay_ctx.ag[i];
+        if (ag_ctx->channel != BT_HFP_RELAY_INVALID_CHANNEL && !ag_ctx->hfp_sco_state)
+        {
+            BTS2S_BD_ADDR addr;
+            bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &addr);
+            bt_hfp_connect_audio(&addr);
+        }
+    }
+}
 
 uint8_t bt_hfp_ag_set_auto_answer_call_default()
 {
@@ -38,14 +141,115 @@ uint8_t bt_hfp_ag_set_auto_answer_call_default()
 
 void bt_hfp_relay_mgr_init(void)
 {
+    uint8_t i;
+
     memset(&g_hfp_relay_ctx, 0, sizeof(g_hfp_relay_ctx));
     g_hfp_relay_ctx.hf_channel = BT_HFP_RELAY_INVALID_CHANNEL;
-    g_hfp_relay_ctx.ag_channel = BT_HFP_RELAY_INVALID_CHANNEL;
+    g_hfp_relay_ctx.mode = BT_HFP_RELAY_MODE_PHONE_HEADSET;
+    g_hfp_relay_ctx.pending_make_call_channel = BT_HFP_RELAY_INVALID_CHANNEL;
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        g_hfp_relay_ctx.ag[i].channel = BT_HFP_RELAY_INVALID_CHANNEL;
+    }
     g_hfp_relay_ctx.cind_status.service_status = 1;
     g_hfp_relay_ctx.cind_status.batt_level = 5;
     g_hfp_relay_ctx.cind_status.signal = 5;
     g_hfp_relay_ctx.remote_calls.calls = &g_hfp_relay_ctx.remote_call;
     g_hfp_relay_clcc_process_status = BT_HFP_RELAY_CLCC_STATUS_COMPLETE;
+}
+
+int bt_hfp_relay_set_mode(bt_hfp_relay_mode_t mode)
+{
+    uint8_t i;
+
+    if ((mode != BT_HFP_RELAY_MODE_PHONE_HEADSET) &&
+            (mode != BT_HFP_RELAY_MODE_HEADSET_INTERCOM))
+    {
+        return -RT_EINVAL;
+    }
+
+    if (g_hfp_relay_ctx.mode == mode)
+    {
+        return RT_EOK;
+    }
+
+    if (g_hfp_relay_ctx.hf_channel != BT_HFP_RELAY_INVALID_CHANNEL)
+    {
+        return -RT_EBUSY;
+    }
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if (g_hfp_relay_ctx.ag[i].channel != BT_HFP_RELAY_INVALID_CHANNEL)
+        {
+            return -RT_EBUSY;
+        }
+    }
+
+    g_hfp_relay_ctx.mode = mode;
+    bt_hfp_relay_reset_cached_call();
+
+    return RT_EOK;
+}
+
+bt_hfp_relay_mode_t bt_hfp_relay_get_mode(void)
+{
+    return g_hfp_relay_ctx.mode;
+}
+
+int bt_hfp_relay_connect_ag_audio(uint8_t ag_index)
+{
+    bt_hfp_relay_ag_context_t *ag_ctx;
+    BTS2S_BD_ADDR addr;
+
+    if (g_hfp_relay_ctx.mode != BT_HFP_RELAY_MODE_HEADSET_INTERCOM ||
+            ag_index >= BT_HFP_RELAY_MAX_AG_CONN)
+    {
+        return -RT_EINVAL;
+    }
+
+    ag_ctx = &g_hfp_relay_ctx.ag[ag_index];
+    if (ag_ctx->channel == BT_HFP_RELAY_INVALID_CHANNEL)
+    {
+        return -RT_ENOSYS;
+    }
+
+    if (ag_ctx->hfp_sco_state)
+    {
+        return -RT_EBUSY;
+    }
+
+    bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &addr);
+    bt_hfp_connect_audio(&addr);
+    return RT_EOK;
+}
+
+int bt_hfp_relay_disconnect_ag_audio(void)
+{
+    uint8_t i;
+    uint8_t found = 0;
+
+    if (g_hfp_relay_ctx.mode != BT_HFP_RELAY_MODE_HEADSET_INTERCOM)
+    {
+        return -RT_EINVAL;
+    }
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        bt_hfp_relay_ag_context_t *ag_ctx = &g_hfp_relay_ctx.ag[i];
+
+        if ((ag_ctx->channel != BT_HFP_RELAY_INVALID_CHANNEL) &&
+                ag_ctx->hfp_sco_state)
+        {
+            BTS2S_BD_ADDR addr;
+
+            bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &addr);
+            bt_hfp_disconnect_audio(&addr);
+            found = 1;
+        }
+    }
+
+    return found ? RT_EOK : -RT_ENOSYS;
 }
 
 void bt_hfp_relay_handle_sco_event(uint16_t event_id, bt_notify_device_sco_info_t *sco_info)
@@ -65,21 +269,38 @@ void bt_hfp_relay_handle_sco_event(uint16_t event_id, bt_notify_device_sco_info_
     case BT_NOTIFY_COMMON_SCO_CONNECTED:
     {
 #ifdef CFG_BT_VOICE_RELAY
+
         hfp_audio_relay_option(&sco_info->para, 1);
-        if (sco_info->sco_type == BT_NOTIFY_HFP_HF)
+        if ((g_hfp_relay_ctx.mode == BT_HFP_RELAY_MODE_HEADSET_INTERCOM) &&
+                (sco_info->sco_type == BT_NOTIFY_HFP_AG))
         {
-            bt_hfp_relay_context_t *ctx = bt_hfp_relay_get_context();
-            if (!ctx->hfp_ag_sco_state)
+            bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(sco_info->profile_channel);
+            if (ag_ctx)
+            {
+                ag_ctx->hfp_sco_state = 1;
+            }
+            bt_hfp_relay_connect_intercom_audio();
+
+        }
+        else if (sco_info->sco_type == BT_NOTIFY_HFP_HF)
+        {
+            bt_hfp_relay_ag_context_t *ag_ctx = &g_hfp_relay_ctx.ag[0];
+            if ((ag_ctx->channel != BT_HFP_RELAY_INVALID_CHANNEL) &&
+                    !ag_ctx->hfp_sco_state)
             {
                 BTS2S_BD_ADDR dest_addr;
-                bt_addr_convert_to_bts((bd_addr_t *)&ctx->ag_mac, &dest_addr);
+                bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &dest_addr);
                 bt_hfp_connect_audio(&dest_addr);
             }
+
         }
         else if (sco_info->sco_type == BT_NOTIFY_HFP_AG)
         {
-            bt_hfp_relay_context_t *ctx = bt_hfp_relay_get_context();
-            ctx->hfp_ag_sco_state = 1;
+            bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(sco_info->profile_channel);
+            if (ag_ctx)
+            {
+                ag_ctx->hfp_sco_state = 1;
+            }
         }
 #endif
         break;
@@ -88,21 +309,36 @@ void bt_hfp_relay_handle_sco_event(uint16_t event_id, bt_notify_device_sco_info_
     case BT_NOTIFY_COMMON_SCO_DISCONNECTED:
     {
 #ifdef CFG_BT_VOICE_RELAY
+
         hfp_audio_relay_option(&sco_info->para, 0);
+
         if (sco_info->sco_type == BT_NOTIFY_HFP_HF)
         {
             bt_hfp_relay_context_t *ctx = bt_hfp_relay_get_context();
-            if (ctx->hfp_ag_sco_state)
+            bt_hfp_relay_ag_context_t *ag_ctx = &g_hfp_relay_ctx.ag[0];
+            if (ag_ctx && ag_ctx->hfp_sco_state)
             {
                 BTS2S_BD_ADDR dest_addr;
-                bt_addr_convert_to_bts((bd_addr_t *)&ctx->ag_mac, &dest_addr);
+                bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &dest_addr);
                 bt_hfp_disconnect_audio(&dest_addr);
             }
         }
         else if (sco_info->sco_type == BT_NOTIFY_HFP_AG)
         {
-            bt_hfp_relay_context_t *ctx = bt_hfp_relay_get_context();
-            ctx->hfp_ag_sco_state = 0;
+            bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(sco_info->profile_channel);
+            if (ag_ctx)
+            {
+                ag_ctx->hfp_sco_state = 0;
+            }
+
+            ag_ctx = bt_hfp_relay_get_other_ag(sco_info->profile_channel);
+
+            if (ag_ctx && ag_ctx->hfp_sco_state)
+            {
+                BTS2S_BD_ADDR dest_addr;
+                bt_addr_convert_to_bts((bd_addr_t *)&ag_ctx->mac, &dest_addr);
+                bt_hfp_disconnect_audio(&dest_addr);
+            }
         }
 #endif
         break;
@@ -125,7 +361,17 @@ uint16_t bt_hfp_relay_get_hf_channel(void)
 
 uint16_t bt_hfp_relay_get_ag_channel(void)
 {
-    return g_hfp_relay_ctx.ag_channel;
+    uint8_t i;
+
+    for (i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+    {
+        if (g_hfp_relay_ctx.ag[i].channel != BT_HFP_RELAY_INVALID_CHANNEL)
+        {
+            return g_hfp_relay_ctx.ag[i].channel;
+        }
+    }
+
+    return BT_HFP_RELAY_INVALID_CHANNEL;
 }
 
 void bt_hfp_relay_set_hf_channel(uint16_t channel, bt_notify_device_mac_t *mac)
@@ -136,8 +382,16 @@ void bt_hfp_relay_set_hf_channel(uint16_t channel, bt_notify_device_mac_t *mac)
 
 void bt_hfp_relay_set_ag_channel(uint16_t channel, bt_notify_device_mac_t *mac)
 {
-    g_hfp_relay_ctx.ag_channel = channel;
-    bmemcpy(&g_hfp_relay_ctx.ag_mac, mac, sizeof(bt_notify_device_mac_t));
+    bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(channel);
+    if (ag_ctx == NULL)
+    {
+        ag_ctx = bt_hfp_relay_alloc_ag();
+    }
+    if (ag_ctx)
+    {
+        ag_ctx->channel = channel;
+        bmemcpy(&ag_ctx->mac, mac, sizeof(bt_notify_device_mac_t));
+    }
 }
 
 void bt_hfp_relay_clear_hf_channel(uint16_t channel)
@@ -148,16 +402,21 @@ void bt_hfp_relay_clear_hf_channel(uint16_t channel)
         bt_hfp_relay_reset_cached_call();
         memset(&g_hfp_relay_ctx.local_phone_num, 0, sizeof(g_hfp_relay_ctx.local_phone_num));
         g_hfp_relay_ctx.has_local_phone_num = 0;
-        g_hfp_relay_ctx.pending_ag_make_call = 0;
+        g_hfp_relay_ctx.pending_make_call_channel = BT_HFP_RELAY_INVALID_CHANNEL;
     }
 }
 
 void bt_hfp_relay_clear_ag_channel(uint16_t channel)
 {
-    if (g_hfp_relay_ctx.ag_channel == channel)
+    bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(channel);
+    if (ag_ctx)
     {
-        g_hfp_relay_ctx.ag_channel = BT_HFP_RELAY_INVALID_CHANNEL;
-        g_hfp_relay_ctx.pending_ag_make_call = 0;
+        memset(ag_ctx, 0, sizeof(*ag_ctx));
+        ag_ctx->channel = BT_HFP_RELAY_INVALID_CHANNEL;
+        if (g_hfp_relay_ctx.pending_make_call_channel == channel)
+        {
+            g_hfp_relay_ctx.pending_make_call_channel = BT_HFP_RELAY_INVALID_CHANNEL;
+        }
     }
 }
 
@@ -230,7 +489,8 @@ void bt_hfp_relay_notify_ag_call_state(void)
     uint8_t phone_len = 0;
     hfp_phone_call_info_t *call = &g_hfp_relay_ctx.remote_call;
 
-    if (BT_HFP_RELAY_INVALID_CHANNEL == g_hfp_relay_ctx.ag_channel)
+    if ((g_hfp_relay_ctx.ag[0].channel == BT_HFP_RELAY_INVALID_CHANNEL) &&
+            (g_hfp_relay_ctx.ag[1].channel == BT_HFP_RELAY_INVALID_CHANNEL))
     {
         return;
     }
@@ -248,7 +508,6 @@ void bt_hfp_relay_notify_ag_call_state(void)
     RT_ASSERT(call_info);
     memset(call_info, 0, sizeof(HFP_CALL_INFO_T) + phone_len);
 
-    call_info->mux_id = (uint8_t)g_hfp_relay_ctx.ag_channel;
     call_info->num_active = g_hfp_relay_ctx.cind_status.call;
     call_info->num_held = g_hfp_relay_ctx.cind_status.callheld;
     call_info->callsetup_state = g_hfp_relay_ctx.cind_status.callsetup;
@@ -259,7 +518,7 @@ void bt_hfp_relay_notify_ag_call_state(void)
         memcpy(call_info->phone_number, call->phone_info.phone_number, phone_len);
     }
 
-    bt_interface_phone_state_changed(call_info);
+    bt_hfp_relay_for_each_ag_phone_state(call_info);
     rt_free(call_info);
 }
 
@@ -343,10 +602,13 @@ void bt_hfp_relay_handle_at_cmd_cfm(uint8_t cmd_id, uint8_t res)
     case HFP_HF_AT_CLCC:
         LOG_I("get remote all call information complete %d", res);
         g_hfp_relay_clcc_process_status = BT_HFP_RELAY_CLCC_STATUS_COMPLETE;
-        if (BT_HFP_RELAY_INVALID_CHANNEL != g_hfp_relay_ctx.ag_channel)
+        // for (uint8_t i = 0; i < BT_HFP_RELAY_MAX_AG_CONN; i++)
+        // {
+        if (g_hfp_relay_ctx.ag[0].channel != BT_HFP_RELAY_INVALID_CHANNEL)
         {
-            bt_interface_remote_call_info_res(g_hfp_relay_ctx.ag_channel, &g_hfp_relay_ctx.remote_calls);
+            bt_interface_remote_call_info_res(g_hfp_relay_ctx.ag[0].channel, &g_hfp_relay_ctx.remote_calls);
         }
+        // }
         break;
     case HFP_HF_AT_ATA:
         LOG_I("answer a call complete %d", res);
@@ -356,10 +618,10 @@ void bt_hfp_relay_handle_at_cmd_cfm(uint8_t cmd_id, uint8_t res)
         break;
     case HFP_HF_AT_ATD:
         LOG_I("make a call complete %d", res);
-        if (g_hfp_relay_ctx.pending_ag_make_call && (BT_HFP_RELAY_INVALID_CHANNEL != g_hfp_relay_ctx.ag_channel))
+        if (g_hfp_relay_ctx.pending_make_call_channel != BT_HFP_RELAY_INVALID_CHANNEL)
         {
-            g_hfp_relay_ctx.pending_ag_make_call = 0;
-            bt_interface_make_call_res(g_hfp_relay_ctx.ag_channel, res);
+            bt_interface_make_call_res(g_hfp_relay_ctx.pending_make_call_channel, res);
+            g_hfp_relay_ctx.pending_make_call_channel = BT_HFP_RELAY_INVALID_CHANNEL;
         }
         break;
     case HFP_HF_AT_BLDN:
@@ -415,19 +677,26 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
     case BT_NOTIFY_AG_MAKE_CALL_REQ:
     {
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
+        bt_hfp_relay_ag_context_t *ag_ctx = bt_hfp_relay_find_ag(at_arg->profile_channel);
+
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
-            ctx->pending_ag_make_call = 1;
+            if (ag_ctx)
+            {
+                ag_ctx->pending_make_call = 1;
+                ctx->pending_make_call_channel = at_arg->profile_channel;
+            }
             bt_interface_hf_out_going_call_by_id(g_hfp_relay_ctx.hf_channel, at_arg->payload_len, at_arg->payload);
         }
         else
         {
-            bt_interface_make_call_res(ctx->ag_channel, BTS2_FAILED);
+            bt_interface_make_call_res(at_arg->profile_channel, BTS2_FAILED);
         }
         break;
     }
     case BT_NOTIFY_AG_ANSWER_CALL_REQ:
     {
+        bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if (BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel)
         {
             bt_interface_start_hf_answer_req_send_by_id(ctx->hf_channel);
@@ -436,6 +705,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
     }
     case BT_NOTIFY_AG_HANGUP_CALL_REQ:
     {
+        bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if (BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel)
         {
             bt_interface_handup_call_by_id(ctx->hf_channel);
@@ -468,7 +738,7 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
     {
         bt_notify_ag_at_arg_t *at_arg = (bt_notify_ag_at_arg_t *)msg->data;
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) &&
-                (BT_HFP_RELAY_INVALID_CHANNEL != ctx->ag_channel))
+                (bt_hfp_relay_find_ag(at_arg->profile_channel) != NULL))
         {
             bt_interface_get_remote_call_status_by_id(ctx->hf_channel);
         }
@@ -512,11 +782,11 @@ int bt_hfp_relay_ag_event_handle(bt_hfp_relay_notify_data_t *msg)
         if ((BT_HFP_RELAY_INVALID_CHANNEL != ctx->hf_channel) && at_arg->payload_len)
         {
             bt_interface_hfp_set_extern_cmd_by_id(ctx->hf_channel, at_arg->payload, at_arg->payload_len);
-            bt_interface_make_call_res(ctx->ag_channel, BTS2_SUCC);
+            bt_interface_make_call_res(at_arg->profile_channel, BTS2_SUCC);
         }
         else
         {
-            bt_interface_make_call_res(ctx->ag_channel, BTS2_FAILED);
+            bt_interface_make_call_res(at_arg->profile_channel, BTS2_FAILED);
         }
         break;
     }
@@ -575,9 +845,10 @@ int bt_hfp_relay_hf_event_handle(bt_hfp_relay_notify_data_t *msg)
             bt_hfp_relay_cache_local_phone_num(data->payload, data->payload_len);
             LOG_I("the remote phone local number:%s", g_hfp_relay_ctx.local_phone_num.phone_number);
         }
-        if (BT_HFP_RELAY_INVALID_CHANNEL != g_hfp_relay_ctx.ag_channel)
+
+        if (g_hfp_relay_ctx.ag[0].channel != BT_HFP_RELAY_INVALID_CHANNEL)
         {
-            bt_interface_local_phone_info_res(g_hfp_relay_ctx.ag_channel, &g_hfp_relay_ctx.local_phone_num);
+            bt_interface_local_phone_info_res(g_hfp_relay_ctx.ag[0].channel, &g_hfp_relay_ctx.local_phone_num);
         }
         break;
     }
@@ -604,10 +875,12 @@ int bt_hfp_relay_hf_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_notify_ag_at_arg_t *data = (bt_notify_ag_at_arg_t *)msg->data;
         g_hfp_relay_ctx.phone_vgs = data->payload[0];
         LOG_I("the remote phone want to change volume be: %d", data->payload[0]);
-        if (BT_HFP_RELAY_INVALID_CHANNEL != g_hfp_relay_ctx.ag_channel)
+
+        if (g_hfp_relay_ctx.ag[0].channel != BT_HFP_RELAY_INVALID_CHANNEL)
         {
-            bt_interface_spk_vol_change_req(g_hfp_relay_ctx.ag_channel, g_hfp_relay_ctx.phone_vgs);
+            bt_interface_spk_vol_change_req(g_hfp_relay_ctx.ag[0].channel, g_hfp_relay_ctx.phone_vgs);
         }
+
         break;
     }
     case BT_NOTIFY_HF_CALL_STATUS_UPDATE:
@@ -632,10 +905,7 @@ int bt_hfp_relay_hf_event_handle(bt_hfp_relay_notify_data_t *msg)
         bt_hfp_relay_update_cind_by_indicator(cind_status->type, cind_status->val);
         ind_info.ind_type = cind_status->type;
         ind_info.ind_val = cind_status->val;
-        if (BT_HFP_RELAY_INVALID_CHANNEL != g_hfp_relay_ctx.ag_channel)
-        {
-            bt_interface_indicator_status_changed(g_hfp_relay_ctx.ag_channel, &ind_info);
-        }
+        bt_hfp_relay_for_each_ag_indicator(&ind_info);
         LOG_I("the remote phone call status type:%d, status: %d", cind_status->type, cind_status->val);
         break;
     }
@@ -663,97 +933,150 @@ static void help(void)
 {
 }
 
-// __ROM_USED void hfp_cmd(int argc, char **argv)
-// {
-//     if (argc < 2)
-//         help();
-//     else
-//     {
-//         const char *cmd = argv[1];
-//         if (strcmp(cmd, "c") == 0)
-//         {
-//             bt_cm_delete_bonded_devs();
-//         }
-//         else if (strcmp(cmd, "start_inquiry") == 0)
-//         {
-//             bt_start_inquiry_ex_t para;
-//             para.max_rsp = MAX_DISCOV_RESS;
-//             para.max_timeout = 60;
-//             para.dev_cls_mask = BT_DEVCLS_PHONE;
-//             bt_interface_start_inquiry_ex(&para);
-//         }
-//         else if (strcmp(cmd, "stop_inquiry") == 0)
-//         {
-//             bt_interface_stop_inquiry();
-//         }
-//         else if (strcmp(cmd, "hfp_connect") == 0)
-//         {
-//             bd_addr_t mac;
-//             bt_addr_convert_from_string_to_general(argv[2], &mac);
-//             bt_interface_conn_ext((unsigned char *)&mac, BT_PROFILE_HFP);
-//         }
-//         else if (strcmp(cmd, "hfp_disconnect") == 0)
-//         {
-//             bd_addr_t mac;
-//             bt_addr_convert_from_string_to_general(argv[2], &mac);
-//             bt_interface_disc_ext((unsigned char *)&mac, BT_PROFILE_HFP);
-//         }
-//         else if (strcmp(cmd, "local_phone_number") == 0)
-//         {
-//             bt_interface_get_ph_num();
-//         }
-//         else if (strcmp(cmd, "remote_calls_info") == 0)
-//         {
-//             bt_interface_get_remote_ph_num();
-//         }
-//         else if (strcmp(cmd, "remote_calls_status") == 0)
-//         {
-//             bt_interface_get_remote_call_status();
-//         }
-//         else if (strcmp(cmd, "make_call") == 0)
-//         {
-//             bt_interface_hf_out_going_call(rt_strlen(argv[2]), argv[2]);
-//         }
-//         else if (strcmp(cmd, "call_back") == 0)
-//         {
-//             bt_interface_start_last_num_dial_req_send();
-//         }
-//         else if (strcmp(cmd, "answer_call") == 0)
-//         {
-//             bt_interface_start_hf_answer_req_send();
-//         }
-//         else if (strcmp(cmd, "handup_call") == 0)
-//         {
-//             bt_interface_handup_call();
-//         }
-//         else if (strcmp(cmd, "dtmf_key") == 0)
-//         {
-//             char key = argv[2][0];
-//             bt_interface_start_dtmf_req_send(key);
-//         }
-//         else if (strcmp(cmd, "volume_control") == 0)
-//         {
-//             bt_interface_set_speaker_volume(atoi(argv[2]));
-// #if defined(AUDIO_USING_MANAGER)
-//             audio_server_set_private_volume(AUDIO_TYPE_BT_VOICE, atoi(argv[2]));
-// #endif
-//         }
-//         else if (strcmp(cmd, "voice_recognition") == 0)
-//         {
-//             bt_interface_voice_recog(atoi(argv[2]));
-//         }
-//         else if (strcmp(cmd, "audio_connect") == 0)
-//         {
-//             bt_interface_audio_switch(0);
-//         }
-//         else if (strcmp(cmd, "audio_disconnect") == 0)
-//         {
-//             bt_interface_audio_switch(1);
-//         }
-//         else if (strcmp(cmd, "battery_update") == 0)
-//         {
-//             bt_interface_hf_update_battery(atoi(argv[2]));
-//         }
-//     }
-// }
-// MSH_CMD_EXPORT(hfp_cmd, hfp_cmd command)
+__ROM_USED void hfp_cmd(int argc, char **argv)
+{
+    if (argc < 2)
+        help();
+    else
+    {
+        const char *cmd = argv[1];
+        if (strcmp(cmd, "mode") == 0)
+        {
+            bt_hfp_relay_mode_t mode;
+
+            if (argc == 2)
+            {
+                mode = bt_hfp_relay_get_mode();
+                rt_kprintf("HFP relay mode: %d (%s)\n", mode,
+                           mode == BT_HFP_RELAY_MODE_HEADSET_INTERCOM ?
+                           "headset intercom" : "phone headset");
+            }
+            else if (argc == 3 && (strcmp(argv[2], "0") == 0 || strcmp(argv[2], "1") == 0))
+            {
+                mode = (bt_hfp_relay_mode_t)atoi(argv[2]);
+                int result = bt_hfp_relay_set_mode(mode);
+                if (result == RT_EOK)
+                {
+                    rt_kprintf("HFP relay mode set to %d\n", mode);
+                }
+                else
+                {
+                    rt_kprintf("HFP relay mode switch failed: %d\n", result);
+                }
+            }
+            else
+            {
+                rt_kprintf("Usage: hfp_cmd mode [0|1]\n");
+            }
+        }
+        else if (strcmp(cmd, "intercom_sco") == 0)
+        {
+            int result = bt_hfp_relay_connect_ag_audio(0);
+            rt_kprintf("HFP intercom SCO connect headset 1: %d\n", result);
+        }
+        else if (strcmp(cmd, "intercom_sco_disconnect") == 0)
+        {
+            int result = bt_hfp_relay_disconnect_ag_audio();
+            rt_kprintf("HFP intercom SCO disconnect: %d\n", result);
+        }
+        else if (strcmp(cmd, "headset_connect") == 0)
+        {
+            if (argc != 3)
+            {
+                rt_kprintf("Usage: hfp_cmd headset_connect <mac>\n");
+            }
+            else
+            {
+                bd_addr_t mac;
+                bt_addr_convert_from_string_to_general(argv[2], &mac);
+                bt_interface_conn_to_source_ext((unsigned char *)&mac, BT_PROFILE_HFP);
+                rt_kprintf("HFP headset connect requested: %s\n", argv[2]);
+            }
+        }
+        else if (strcmp(cmd, "c") == 0)
+        {
+            bt_cm_delete_bonded_devs();
+        }
+        else if (strcmp(cmd, "start_inquiry") == 0)
+        {
+            bt_start_inquiry_ex_t para;
+            para.max_rsp = MAX_DISCOV_RESS;
+            para.max_timeout = 60;
+            para.dev_cls_mask = BT_DEVCLS_PHONE;
+            bt_interface_start_inquiry_ex(&para);
+        }
+        else if (strcmp(cmd, "stop_inquiry") == 0)
+        {
+            bt_interface_stop_inquiry();
+        }
+        else if (strcmp(cmd, "hfp_connect") == 0)
+        {
+            bd_addr_t mac;
+            bt_addr_convert_from_string_to_general(argv[2], &mac);
+            bt_interface_conn_ext((unsigned char *)&mac, BT_PROFILE_HFP);
+        }
+        else if (strcmp(cmd, "hfp_disconnect") == 0)
+        {
+            bd_addr_t mac;
+            bt_addr_convert_from_string_to_general(argv[2], &mac);
+            bt_interface_disc_ext((unsigned char *)&mac, BT_PROFILE_HFP);
+        }
+        else if (strcmp(cmd, "local_phone_number") == 0)
+        {
+            bt_interface_get_ph_num();
+        }
+        else if (strcmp(cmd, "remote_calls_info") == 0)
+        {
+            bt_interface_get_remote_ph_num();
+        }
+        else if (strcmp(cmd, "remote_calls_status") == 0)
+        {
+            bt_interface_get_remote_call_status();
+        }
+        else if (strcmp(cmd, "make_call") == 0)
+        {
+            bt_interface_hf_out_going_call(rt_strlen(argv[2]), argv[2]);
+        }
+        else if (strcmp(cmd, "call_back") == 0)
+        {
+            bt_interface_start_last_num_dial_req_send();
+        }
+        else if (strcmp(cmd, "answer_call") == 0)
+        {
+            bt_interface_start_hf_answer_req_send();
+        }
+        else if (strcmp(cmd, "handup_call") == 0)
+        {
+            bt_interface_handup_call();
+        }
+        else if (strcmp(cmd, "dtmf_key") == 0)
+        {
+            char key = argv[2][0];
+            bt_interface_start_dtmf_req_send(key);
+        }
+        else if (strcmp(cmd, "volume_control") == 0)
+        {
+            bt_interface_set_speaker_volume(atoi(argv[2]));
+#if defined(AUDIO_USING_MANAGER)
+            audio_server_set_private_volume(AUDIO_TYPE_BT_VOICE, atoi(argv[2]));
+#endif
+        }
+        else if (strcmp(cmd, "voice_recognition") == 0)
+        {
+            bt_interface_voice_recog(atoi(argv[2]));
+        }
+        else if (strcmp(cmd, "audio_connect") == 0)
+        {
+            bt_interface_audio_switch(0);
+        }
+        else if (strcmp(cmd, "audio_disconnect") == 0)
+        {
+            bt_interface_audio_switch(1);
+        }
+        else if (strcmp(cmd, "battery_update") == 0)
+        {
+            bt_interface_hf_update_battery(atoi(argv[2]));
+        }
+    }
+}
+MSH_CMD_EXPORT(hfp_cmd, hfp_cmd command)

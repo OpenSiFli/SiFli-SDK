@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "app_clock_status_bar.h"
+#include "app_clock_emoji.h"
 #include "app_mem.h"
 
 typedef struct
@@ -22,7 +23,6 @@ static lv_obj_t *status_bar_area_up;
 static lv_obj_t *status_bar_area_down;
 
 static rt_bool_t alarm_enabled = RT_TRUE;
-static rt_bool_t timer_enabled = RT_TRUE;
 
 
 static lv_obj_t *app_clock_tileview;
@@ -31,44 +31,45 @@ static lv_obj_t *app_clock_tileview;
 static const lv_btnmatrix_ctrl_t btnm_ctrl_map[] =
 {
     1 | LV_BTNMATRIX_CTRL_DISABLED,  1 | LV_BTNMATRIX_CTRL_DISABLED,
-    1 | LV_BTNMATRIX_CTRL_CHECKABLE, 1 | LV_BTNMATRIX_CTRL_CHECKABLE,
+    1 | LV_BTNMATRIX_CTRL_CHECKABLE | LV_BTNMATRIX_CTRL_CLICK_TRIG,
+    1 | LV_BTNMATRIX_CTRL_CHECKABLE | LV_BTNMATRIX_CTRL_CLICK_TRIG,
 };
 
 static const char *btnm_map[] = {"BT", "GPS", "\n",
-                                 "ALARM", "TIMER", ""
+                                 "ALARM", "FPS", ""
                                 };
 static const notification_msg_cntxt_t notify_msgs[] =
 {
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_SUPER, LV_PCT(40),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😀",
+        "😀思澈科技欢迎您🔥"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_HUGE, LV_PCT(20),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😂",
+        "😂思澈科技欢迎您💖"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_BIGL, LV_PCT(20),
-        "思澈科技欢迎您",
-        "思澈科技欢迎您"
+        "思澈科技欢迎您😍",
+        "😍思澈科技欢迎您👍"
     },
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
         LV_COLOR_MAKE(0x00, 0x00, 0x00), FONT_NORMAL, LV_PCT(30),
-        "关于我们",
-        "思澈科技是一家专注于物联网技术的公司，提供一站式的物联网解决方案。最先提出嵌入式MCU+GPU的物联网解决方案，为客户提供更高性能、更低功耗的物联网产品。"
+        "关于我们👍",
+        "思澈科技是一家专注于物联网技术的公司，提供一站式的物联网解决方案。最先提出嵌入式MCU+GPU的物联网解决方案，为客户提供更高性能、更低功耗的物联网产品。👍💖"
     },
 
     {
         LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_NORMAL,
         LV_COLOR_MAKE(0x00, 0x00, 0xFF), FONT_SMALL, LV_PCT(20),
-        "我们是谁",
-        "思澈科技成立於2019年3月，總部位於上海張江高科技園區，在重慶、北京、深圳、蘇州均設有分子公司，團隊成員均來自於美國、中國的一線電晶體設計企業，包括Marvell、 Broadcom、Amazon、 紫光展銳、聯發科等，碩士以上學歷占比超過80%； 團隊骨幹具有豐富的產品定義->自主研發->大規模量產的全流程經驗，由這些骨幹成員主導研發的晶片累計出貨超過10億顆。"
+        "我们是谁😀",
+        "思澈科技成立於2019年3月，總部位於上海張江高科技園區，在重慶、北京、深圳、蘇州均設有分子公司，團隊成員均來自於美國、中國的一線電晶體設計企業，包括Marvell、 Broadcom、Amazon、 紫光展銳、聯發科等，碩士以上學歷占比超過80%； 團隊骨幹具有豐富的產品定義->自主研發->大規模量產的全流程經驗，由這些骨幹成員主導研發的晶片累計出貨超過10億顆。😀😂😍👍🔥💖"
     },
 
 };
@@ -139,7 +140,8 @@ static void btnm_event_handler(lv_event_t *event)
 
     if (event->code == LV_EVENT_VALUE_CHANGED)
     {
-        const char *txt = lv_btnmatrix_get_btn_text(obj, lv_btnmatrix_get_selected_btn(obj));
+        uint16_t btn_id = lv_btnmatrix_get_selected_btn(obj);
+        const char *txt = lv_btnmatrix_get_btn_text(obj, btn_id);
 
         if (txt)
         {
@@ -148,8 +150,14 @@ static void btnm_event_handler(lv_event_t *event)
             if (0 == strcmp(txt, "ALARM"))
                 alarm_enabled = !alarm_enabled;
 
-            if (0 == strcmp(txt, "TIMER"))
-                timer_enabled = !timer_enabled;
+            if (0 == strcmp(txt, "FPS"))
+            {
+                /* Button is checkable: sync its checked state with the actual FPS/CPU-load display */
+
+                bool fps_en = lv_btnmatrix_has_btn_ctrl(obj, btn_id, LV_BTNMATRIX_CTRL_CHECKED);
+                rt_kprintf("fps_en = %d\n", fps_en);
+                set_display_fps_and_cpu_load(fps_en);
+            }
         }
     }
 }
@@ -249,7 +257,11 @@ static void control_panel_content_init(lv_obj_t *par)
     lv_btnmatrix_set_ctrl_map(btnm1, btnm_ctrl_map);
     lv_obj_align_to(btnm1, label1, LV_ALIGN_OUT_BOTTOM_MID, 0, PX_5mm);
 
-
+    /* "FPS" is button id 3: reflect the actual FPS/CPU-load display state (BT=0, GPS=1, ALARM=2, FPS=3) */
+    if (get_display_fps_and_cpu_load())
+        lv_btnmatrix_set_btn_ctrl(btnm1, 3, LV_BTNMATRIX_CTRL_CHECKED);
+    else
+        lv_btnmatrix_clear_btn_ctrl(btnm1, 3, LV_BTNMATRIX_CTRL_CHECKED);
 
     label2 = lv_label_create(par);
     lv_label_set_text(label2, "clock redraw time & steps");
@@ -281,6 +293,9 @@ static void msg_list_content_init(lv_obj_t *par)
     lv_obj_t *label_header;
     lv_obj_t *align_base;
 
+    /*Attach emoji imgfonts as fallback of freetype fonts before any text layout*/
+    app_clock_emoji_font_init();
+
     label_header = lv_label_create(par);
     lv_label_set_text(label_header, "Notifications");
     lv_ext_set_local_font(label_header, FONT_TITLE, LV_COLOR_WHITE);
@@ -309,6 +324,14 @@ static void msg_list_content_init(lv_obj_t *par)
         lv_label_set_text(content_label, notify_msgs[i].p_content);
         lv_obj_set_layout(content_label, LV_LAYOUT_FLEX);
 
+        if (3 == i || 4 == i)
+        {
+            //Snapshot the content label
+            lv_obj_update_layout(content_label_container);
+            lv_snapshot_obj_to_img(content_label_container, content_label, &content_label->coords, LV_IMG_CF_TRUE_COLOR_ALPHA);
+            //Hide the content label
+            lv_obj_add_flag(content_label, LV_OBJ_FLAG_HIDDEN);
+        }
 
         lv_obj_align_to(title_label, align_base, LV_ALIGN_OUT_BOTTOM_LEFT, 0, PX_5mm);
         lv_obj_align_to(content_label_container, title_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);

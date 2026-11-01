@@ -1,0 +1,22 @@
+
+from building import *
+import rtconfig
+
+src = []
+inc = []
+
+
+# get current directory
+cwd = GetCurrentDir()
+src += Glob('./src/*.c')
+inc += [cwd + "/include"]
+
+LOCAL_CCFLAGS = ''
+LOCAL_CCFLAGS += ' -DSBC_ASM'
+
+group = DefineGroup('libsbc', src, depend = ['PKG_USING_LIBSBC'], CPPPATH = inc, LOCAL_CCFLAGS = LOCAL_CCFLAGS)
+
+Return('group')
+
+
+

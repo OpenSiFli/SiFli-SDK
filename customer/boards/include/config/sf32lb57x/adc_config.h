@@ -34,7 +34,7 @@ extern "C" {
 #ifndef ADC1_DMA_CONFIG
 #define ADC1_DMA_CONFIG                               \
     {                                                 \
-        .dma_rcc = GPADC_DMA_RCC,                     \
+        .dma_irq_prio = GPADC_DMA_IRQ_PRIO,           \
         .Instance = GPADC_DMA_INSTANCE,               \
         .dma_irq = GPADC_DMA_IRQ,                     \
         .request = GPADC_DMA_REQUEST,                 \
@@ -50,4 +50,4 @@ extern "C" {
 #endif
 
 #endif /* __ADC_CONFIG_H__ */
-/************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
+

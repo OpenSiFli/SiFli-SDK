@@ -77,8 +77,12 @@ sdk.py crash-dump analyze \
 
 ![alt text](../../../assets/trace32002.png)
 
-:::{only} SF32LB52X or SF32LB57X
-5. 如果内存与地址映射建立成功，可参考芯片手册的 Memory 地址空间查看现场。如果未恢复，请检查 bin 是否有效，或通过修改 jlink/dump 脚本增加或减少需要 dump 的地址空间（例如 `sf32lb52x_uart.jlink` / `sf32lb57x_uart.jlink`）。
+:::{only} SF32LB52X
+5. 如果内存与地址映射建立成功，可参考芯片手册的 Memory 地址空间查看现场。如果未恢复，请检查 bin 是否有效，或通过修改 jlink/dump 脚本增加或减少需要 dump 的地址空间（例如 `sf32lb52x_uart.jlink`）。
+:::
+
+:::{only} SF32LB57X
+5. 如果内存与地址映射建立成功，可参考芯片手册的 Memory 地址空间查看现场。如果未恢复，请检查 bin 是否有效，或通过修改 jlink/dump 脚本增加或减少需要 dump 的地址空间（例如 `sf32lb57x_uart.jlink`）。
 :::
 
 :::{only} SF32LB56X
@@ -167,7 +171,7 @@ LCPU 恢复与 HCPU 类似，需将 `lcpu.axf` 和对应的 `rom_axf` 文件拷�
 - 选择 `rom_axf` 时请根据板子型号选择正确文件（数字系列使用 `lcpu_rom_micro`，字母系列使用 `rev7`）。
 :::
 
-:::{only} SF32LB55X or SF32LB56X or SF32LB58X
+:::{only} SF32LB55X or SF32LB56X or SF32LB57X or SF32LB58X
 - 选择 `rom_axf` 时请根据板子型号选择正确文件 。
 :::
 

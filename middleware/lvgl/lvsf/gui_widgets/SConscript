@@ -1,7 +1,19 @@
 from building import *
+import os
+import rtconfig
 
 cwd = GetCurrentDir()
 src = []
+assets = []
+local_ccflags = ''
+
+if GetDepend('DISABLE_LVGL_V9'):
+    src += ['lvsf_widget_src.c']
+    img_flags = '-rgb565' if GetConfigValue('LV_COLOR_DEPTH') == 16 else '-rgb888'
+    img_flags += ' -cfile 1'
+    assets = Env.ImgResource(Glob('resources/*.png'), img_flags)
+    if rtconfig.PLATFORM == 'cl':
+        local_ccflags = ' /FI"{}" '.format(os.path.join(cwd, 'resources', 'lvsf_widget_src_asset.h'))
 
 CPPPATH = [cwd]
 lib = [GroupLibName('gui_widgets')]
@@ -15,5 +27,9 @@ group = DefineGroup(
     LIBPATH=libpath,
     CPPPATH=CPPPATH
 )
+
+group.extend(DefineGroup('gui_widgets_assets', assets,
+                         depend=['PKG_USING_LITTLEVGL2RTT'],
+                         LOCAL_CCFLAGS=local_ccflags))
 
 Return('group')

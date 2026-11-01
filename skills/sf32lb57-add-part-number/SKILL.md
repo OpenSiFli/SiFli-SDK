@@ -1,11 +1,16 @@
 ---
 name: sf32lb57-add-part-number
-description: Add a new SF32LB57X chip part number to the SiFli SDK. Use this skill when the user wants to add a new chip part number, 添加新料号, or add a new part number. Guides through modifying Kconfig_soc.sf32lb57x, Kconfig_soc.sf32lb57x.v1, Kconfig_soc.sf32lb57x.common, and Kconfig_drv with the correct MPI mode, pinmap mode, package type, and memory size settings.
+description: Add a new SF32LB57X chip part number to the SiFli SDK. Use this skill when the user wants to add a new chip part number, 添加新料号, or add a new part number. Guides through Kconfig_soc.sf32lb57x, Kconfig_soc.sf32lb57x.v1 and a new soc/sf32lb57x/Kconfig.<part> file with the correct MPI mode, pinmap mode, package type, and memory size settings.
 ---
 
 # Add New SF32LB57X Part Number
 
 Adds a new chip part number to the SF32LB57X family in the SiFli SDK.
+
+Every per-part-number default lives in **one file per part number** under
+`soc/sf32lb57x/`. `customer/boards/Kconfig_drv` and
+`Kconfig_soc.sf32lb57x.common` hold only part-number-independent fallbacks and
+must **not** be edited when adding a part number.
 
 ## Before You Start
 
@@ -26,6 +31,10 @@ Collect the following information from the user:
 5. **MPI3 settings** (if NOR Flash is connected):
    - MPI mode (typically `BSP_MPI3_MODE_0` for NOR)
    - Memory size (MB)
+
+For **every** MPI controller the part enables, the mode must be stated
+explicitly — including NOR (`BSP_MPIx_MODE_0`). Never leave it to the shared
+fallback: a later change to that fallback would then silently change this part.
 
 ### Reference: Package Type Mapping from Part Number
 
@@ -84,116 +93,191 @@ config SOC_SF32LB57xxxN6
 
 - Add it in alphabetical order within the choice block
 
-### Step 3: `customer/boards/Kconfig_soc.sf32lb57x.common`
+### Step 3: new file `soc/sf32lb57x/Kconfig.<part>`
 
-Add PSRAM MPI mode and pinmap mode defaults. Use `depends on BSP_USING_PSRAM1` or `BSP_USING_PSRAM2` respectively.
-
-For PSRAM1 (MPI1):
-```kconfig
-config BSP_PSRAM1_PKG_TYPE0_MPI_MODE
-    int
-    depends on BSP_USING_PSRAM1
-    default <n> if SOC_SF32LB57xxxN6
-    ...
-
-config BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE
-    int
-    depends on BSP_USING_PSRAM1
-    default <n> if SOC_SF32LB57xxxN6
-    ...
-
-config BSP_PSRAM1_PKG_TYPE1_MPI_MODE
-    int
-    depends on BSP_USING_PSRAM1
-    default <n> if SOC_SF32LB57xxxN6
-    ...
-
-config BSP_PSRAM1_PKG_TYPE1_PINMAP_MODE
-    int
-    depends on BSP_USING_PSRAM1
-    default <n> if SOC_SF32LB57xxxN6
-    ...
-```
-
-For PSRAM2 (MPI2): use `BSP_PSRAM2_PKG_TYPE*` equivalents.
-
-- Add the `if SOC_SF32LB57xxxN6` condition to existing `default` lines for the corresponding config
-- If the part does not use PSRAM on a given MPI, no changes needed (falls back to existing defaults)
-
-### Step 4: `customer/boards/Kconfig_drv`
-
-Three places to modify:
-
-#### 4a. Enable MPI controllers
+This is the only place for the part's defaults. The file name is `Kconfig.`
+followed by the part number in lowercase (`Kconfig.sf32lb57eybbn6`,
+`Kconfig.sf32bprtyb3n6`), and it must end with CRLF line endings like the rest
+of the tree.
 
 ```kconfig
-config BSP_ENABLE_MPI1
-    default y if SOC_SF32LB57xxxN6
+if SOC_SF32LB57xxxN6
+configdefault BSP_ENABLE_MPI1
+    default y
 
-config BSP_ENABLE_MPI2
-    default y if SOC_SF32LB57xxxN6
+choice BSP_MPI1_MODE_CHOICE
+    default BSP_MPI1_MODE_<n>
+endchoice
 
-config BSP_ENABLE_MPI3
-    default y if SOC_SF32LB57xxxN6   # only if NOR Flash connected
+configdefault BSP_QSPI1_MEM_SIZE
+    default <MB>
+
+configdefault BSP_ENABLE_MPI2
+    default y
+
+choice BSP_MPI2_MODE_CHOICE
+    default BSP_MPI2_MODE_<n>
+endchoice
+
+configdefault BSP_QSPI2_MEM_SIZE
+    default <MB>
+
+# only when MPI1 runs a PSRAM mode (2/3/4/5/6)
+configdefault BSP_PSRAM1_PKG_TYPE0_MPI_MODE
+    default <n>
+
+configdefault BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE
+    default <n>
+
+# only when the part has a secondary PSRAM1 supplier: mode and pinmap together
+configdefault BSP_PSRAM1_PKG_TYPE1_MPI_MODE
+    default <n>
+
+configdefault BSP_PSRAM1_PKG_TYPE1_PINMAP_MODE
+    default <n>
+
+# only when MPI2 runs a PSRAM mode (2/3/4/5/6)
+configdefault BSP_PSRAM2_PKG_TYPE0_MPI_MODE
+    default <n>
+
+configdefault BSP_PSRAM2_PKG_TYPE0_PINMAP_MODE
+    default <n>
+endif
 ```
 
-#### 4b. Select default MPI mode in the choice blocks
+Which symbol carries which setting:
 
-For MPI1 (inside `BSP_ENABLE_MPI1` → `choice` block):
+| Setting | Entry in the part file |
+|---|---|
+| MPI controller enable | `configdefault BSP_ENABLE_MPI<n>` / `default y` |
+| MPI mode | `choice BSP_MPI<n>_MODE_CHOICE` / `default BSP_MPI<n>_MODE_<m>` |
+| Memory size (MB) | `configdefault BSP_QSPI<n>_MEM_SIZE` / `default <MB>` |
+| PSRAM pkg type MPI mode | `configdefault BSP_PSRAM<n>_PKG_TYPE<m>_MPI_MODE` |
+| PSRAM pkg type pinmap | `configdefault BSP_PSRAM<n>_PKG_TYPE<m>_PINMAP_MODE` |
+
+Rules:
+
+- A `configdefault` block may contain **only `default` statements** — no
+  prompt, `depends on`, `select`, `imply` or `range` (kconfiglib rejects them).
+  Conditions go on the default itself: `default <v> if <cond>`.
+- Write the entries for a controller together, in this order: enable, mode,
+  memory size. Omit a controller entirely when the part does not enable it.
+- State a PSRAM's `PKG_TYPE0` mode and pinmap **only when the matching MPI
+  controller runs a PSRAM mode (2/3/4/5/6)** — that is when the PSRAM is
+  selected and the values are actually read. For NOR (mode 0) or a controller
+  the part does not enable, leave them out. Never omit a value the part *does*
+  use: the shared fallback would then decide it silently.
+  (`BSP_PSRAM1_PKG_TYPE1_*` describes a secondary PSRAM1 supplier: for a part
+  that populates one, state **both** its mode and its pinmap (e.g.
+  `default 6` and `default 2`) — never leave the type-1 pinmap to the shared
+  default. TYPE2/TYPE3 are not used yet.)
+- The MPI mode decides whether PSRAM or NOR is used. For a PSRAM mode
+  (2/3/4/5/6) Kconfig automatically `select`s `BSP_USING_PSRAM` and enables
+  `BSP_USING_PSRAM1/2`, which is what makes the `BSP_PSRAM*_PKG_TYPE*_*`
+  values take effect.
+
+### Step 4: board `Kconfig.board` (for boards that use the new part)
+
+Each core's board file selects the part symbol:
+
 ```kconfig
-default BSP_MPI1_MODE_<n> if SOC_SF32LB57xxxN6
+config BSP_USING_BOARD_XXX
+    bool
+    select SOC_SF32LB57X
+    select SOC_SF32LB57xxxN6
+    select BF0_HCPU        # BF0_LCPU / BF0_ACPU on the other cores
+    default y
 ```
 
-For MPI2 (inside `BSP_ENABLE_MPI2` → `choice` block):
+### Do not edit these when adding a part number
+
+`customer/boards/Kconfig_drv` and
+`customer/boards/Kconfig_soc.sf32lb57x.common` — they keep only the
+part-number-independent fallbacks (`default n`, `default BSP_MPIx_MODE_0`,
+default memory sizes, default pinmap modes).
+
+`Kconfig_soc.sf32lb57x.common` pulls the part files in with
+
 ```kconfig
-default BSP_MPI2_MODE_<n> if SOC_SF32LB57xxxN6
+source "$SIFLI_SDK/soc/sf32lb57x/Kconfig.*"
 ```
 
-For MPI3 (inside `BSP_ENABLE_MPI3` → `choice` block):
-```kconfig
-default BSP_MPI3_MODE_<n> if SOC_SF32LB57xxxN6
-```
-
-**Important**: The MPI mode selected here determines whether PSRAM or NOR Flash is used. If this is a PSRAM mode (2/3/4/5/6), Kconfig will automatically `select BSP_USING_PSRAM` and enable `BSP_USING_PSRAM1/2`, and then the values from `Kconfig_soc.sf32lb57x.common` take effect.
-
-#### 4c. Set memory size
-
-```kconfig
-config BSP_QSPI1_MEM_SIZE
-    default <MB> if SOC_SF32LB57xxxN6
-
-config BSP_QSPI2_MEM_SIZE
-    default <MB> if SOC_SF32LB57xxxN6
-
-config BSP_QSPI3_MEM_SIZE
-    default <MB> if SOC_SF32LB57xxxN6   # only if MPI3 enabled
-```
+and that line must stay **before** the `config` declarations in that file and
+before `Kconfig_drv` is parsed. `configdefault` inserts its defaults at the
+position where it was parsed, and kconfiglib picks the first default whose
+condition holds, so a part file that is sourced later would be silently
+overridden by the unconditional fallback defaults. Keep the line where it is.
 
 ## Verification
 
 After making all changes, verify by:
-1. Checking that the board's `Kconfig.board` selects the correct `SOC_SF32LB57xxxN6` symbol
-2. Building a project that uses this board to ensure Kconfig resolves correctly
-3. Running `sdk.py menuconfig --board=<board_name>` to verify defaults are applied
+
+1. Checking that the board's `Kconfig.board` selects the correct
+   `SOC_SF32LB57xxxN6` symbol
+2. Building a project that uses this board — a Kconfig warning aborts the
+   build, so a successful build means the part file parses cleanly:
+
+   ```
+   scons --board=<board_name> -j8
+   ```
+
+3. Checking the generated `build_<board_name>/<core>/rtconfig.h` for the
+   expected values, e.g. for the part above:
+
+   ```
+   #define BSP_ENABLE_MPI1 1
+   #define BSP_MPI1_MODE_5 1
+   #define BSP_QSPI1_MEM_SIZE 4
+   ```
+
+   Re-running the build with the part file removed must change these values —
+   if it does not, the file is not being sourced.
+4. Running `sdk.py menuconfig --board=<board_name>` to verify the MPI mode
+   choices show the intended selection.
+
+Note: adding a part file shifts the line order of a few `#define`s in the
+generated `.config` / `rtconfig.h` (the symbols' first menu node moves into the
+early-sourced part file). The values are unchanged; do not chase that diff.
 
 ## Example
 
-If the part is `SF32LB579V6EN6` (BGA112, PSRAM1 on MPI1 in OPSRAM mode, PSRAM2 on MPI2 in OPSRAM mode):
+Part `SF32LB579V6EN6` (BGA112, MPI1 as 8 MB NOR flash, MPI2 in OPSRAM mode with
+PSRAM2, 32 MB). Note there is no `BSP_PSRAM1_*` entry: MPI1 runs NOR, so PSRAM1
+is never selected:
 
-**Kconfig_soc.sf32lb57x**: `select SOC_PACKAGE_BGA112`
+**`customer/boards/Kconfig_soc.sf32lb57x`**: `select SOC_PACKAGE_BGA112`
 
-**Kconfig_soc.sf32lb57x.v1**: `bool "SF32LB579V6EN6"` + `select SOC_PACKAGE_BGA112`
+**`customer/boards/Kconfig_soc.sf32lb57x.v1`**: `bool "SF32LB579V6EN6"` +
+`select SOC_PACKAGE_BGA112`
 
-**Kconfig_soc.sf32lb57x.common**:
-- `BSP_PSRAM1_PKG_TYPE0_MPI_MODE default 3 if SOC_SF32LB579V6EN6`
-- `BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE default 3 if SOC_SF32LB579V6EN6`
-- `BSP_PSRAM2_PKG_TYPE0_MPI_MODE default 3 if SOC_SF32LB579V6EN6`
-- `BSP_PSRAM2_PKG_TYPE0_PINMAP_MODE default 3 if SOC_SF32LB579V6EN6`
+**`soc/sf32lb57x/Kconfig.sf32lb579v6en6`**:
 
-**Kconfig_drv**:
-- `BSP_ENABLE_MPI1 default y if SOC_SF32LB579V6EN6`
-- `BSP_ENABLE_MPI2 default y if SOC_SF32LB579V6EN6`
-- `default BSP_MPI1_MODE_3 if SOC_SF32LB579V6EN6` (in MPI1 choice)
-- `default BSP_MPI2_MODE_3 if SOC_SF32LB579V6EN6` (in MPI2 choice)
-- `BSP_QSPI1_MEM_SIZE default 8 if SOC_SF32LB579V6EN6`
-- `BSP_QSPI2_MEM_SIZE default 32 if SOC_SF32LB579V6EN6`
+```kconfig
+if SOC_SF32LB579V6EN6
+configdefault BSP_ENABLE_MPI1
+    default y
+
+choice BSP_MPI1_MODE_CHOICE
+    default BSP_MPI1_MODE_0
+endchoice
+
+configdefault BSP_QSPI1_MEM_SIZE
+    default 8
+
+configdefault BSP_ENABLE_MPI2
+    default y
+
+choice BSP_MPI2_MODE_CHOICE
+    default BSP_MPI2_MODE_3
+endchoice
+
+configdefault BSP_QSPI2_MEM_SIZE
+    default 32
+
+configdefault BSP_PSRAM2_PKG_TYPE0_MPI_MODE
+    default 3
+
+configdefault BSP_PSRAM2_PKG_TYPE0_PINMAP_MODE
+    default 3
+endif
+```

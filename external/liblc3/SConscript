@@ -4,9 +4,7 @@ from building import *
 objs = []
 cwd = GetCurrentDir()
 
-# The LC3 audio codec (Bluetooth LE Audio). Skipped on the simulator, whose
-# toolchain has no <stdalign.h> -- which src/common.h includes.
-if not GetDepend('ZBT') and not GetDepend('BSP_USING_PC_SIMULATOR'):
+if GetDepend('LC3_CODEC_ENABLE') and not GetDepend('ZBT'):
     items = os.listdir(cwd)
 
     for item in items:

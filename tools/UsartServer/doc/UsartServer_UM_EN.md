@@ -3,7 +3,7 @@
 
 ## 1. Overview
 
-UsartServer is an in-house tool developed by SiFli Technology. It is a companion tool for debugging via the chip's built-in Debug IP. The SF32LB52X and SF32LB56X chip series produced by SiFli Technology have an integrated Debug IP that enables debugging over a serial port.\
+UsartServer is an in-house tool developed by SiFli Technology. It is a companion tool for debugging via the chip's built-in Debug IP. The SF32LB52, SF32LB56 and SF322LB57 chip series produced by SiFli Technology have an integrated Debug IP that enables debugging over a serial port.\
 Tool path: `tools/UsartServer`
 
 ## 2. Environment Setup

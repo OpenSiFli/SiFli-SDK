@@ -77,11 +77,15 @@ The options below are already set in `project/proj.conf`; carry them over when p
 | Option | Value | Description |
 |---|---|---|
 | `CONFIG_LV_USING_FREETYPE_ENGINE` | y | Enable the FreeType font engine |
-| `CONFIG_FREETYPE_FONT_BPP_8` | y | Render glyphs as 8bpp gray bitmaps |
+| `CONFIG_FREETYPE_NORMAL_FONT` | y | Use the full FreeType library |
 | `CONFIG_LV_FREETYPE_CACHE_FT_FACES` | 4 | Maximum number of font files open at once |
 | `CONFIG_LV_FREETYPE_CACHE_FT_SIZES` | 16 | Maximum number of cached sizes |
 | `CONFIG_LVSF_FONT_MIN_FREE_HEAP` | 32768 | System heap that must remain after creating a font object; below this the font is refused |
 | `CONFIG_RT_USING_DFS_ELMFAT` | y | Fonts are read from a FAT file system |
+
+Glyph output depth defaults to the selected chip's setting and can be selected under `SiFli extend -> FreeType output bitmap depth` in `menuconfig`: SF32LB52X/57X support A2/A4/A8 and default to A2; SF32LB56X/58X support A4/A8 and default to A4; SF32LB55X uses the A4 software path. For example, selecting `CONFIG_LV_FREETYPE_BPP_4=y` makes the output and cached bitmaps actually use packed A4 storage.
+
+When `COMPATIBLE_WITH_SIFLI_EPIC_Ax` is enabled, ordinary LVGL v8 A2/A4 bitmap fonts used alongside FreeType also require offline conversion to the EPIC layout; the FreeType callback does not automatically convert them. A8 does not require bit reordering. See [LVGL FreeType Fonts](../../../../docs/source/en/middleware/lvgl_v8/lvgl_freetype.md) for configuration and memory details.
 
 ## Example Output
 When the example runs successfully, the serial output looks like this:

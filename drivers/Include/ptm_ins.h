@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-FileCopyrightText: 2019-2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,7 +16,17 @@ extern "C" {
 #endif /* !WIN32 */
 
 #ifdef PTM1_BASE
-//PTM register macros used in parameter rn/rd/rm of all instruction
+/**
+ * @defgroup PTM PTM Instruction Encoding
+ * @brief Macros used to compose PTM (Parallel Task Machine) instructions
+ * @{
+ */
+
+/**
+ * @defgroup PTM_REG PTM Register Macros
+ * @brief PTM register macros used in parameter rn/rd/rm of all instruction
+ * @{
+ */
 #define PTM_X      0
 #define PTM_Y      1
 #define PTM_A      2
@@ -35,7 +45,15 @@ extern "C" {
 #define PTM_ALL1  14
 #define PTM_ZERO  15
 
-//PTM IO input macros used in parameter rn of JMP instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_IO_INPUT PTM IO Input Macros
+ * @brief PTM IO input macros used in parameter rn of JMP instruction
+ * @{
+ */
 #define PTM_IN0   0
 #define PTM_IN1   1
 #define PTM_IN2   2
@@ -53,7 +71,15 @@ extern "C" {
 #define PTM_IN14 14
 #define PTM_IN15 15
 
-//PTM event macros used in parameter rn of JMP instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_EVENT PTM Event Macros
+ * @brief PTM event macros used in parameter rn of JMP instruction
+ * @{
+ */
 #define PTM_EVT0   0
 #define PTM_EVT1   1
 #define PTM_EVT2   2
@@ -71,7 +97,15 @@ extern "C" {
 #define PTM_EVT14 14
 #define PTM_EVT15 15
 
-//PTM operation macros used in parameter op of SET instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_OPERATION PTM Operation Macros
+ * @brief PTM operation macros used in parameter op of SET instruction
+ * @{
+ */
 #define OP_NOP    0
 #define OP_XOR    1
 #define OP_AND    2
@@ -84,7 +118,15 @@ extern "C" {
 #define OP_REV16  9
 #define OP_REV8  10
 
-//PTM target macros used in parameter tgt of JMP instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_TARGET PTM Target Macros
+ * @brief PTM target macros used in parameter tgt of JMP instruction
+ * @{
+ */
 #define JMP_TCM0   (128+  0)
 #define JMP_TCM1   (128+  1)
 #define JMP_TCM2   (128+  2)
@@ -216,7 +258,15 @@ extern "C" {
 #define JMP_X       256
 #define JMP_Y       257
 
-//PTM condition macros used in parameter cond of JMP instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_CONDITION PTM Condition Macros
+ * @brief PTM condition macros used in parameter cond of JMP instruction
+ * @{
+ */
 #define JMP_EQ      0
 #define JMP_NEQ     1
 #define JMP_EQCH    2
@@ -226,7 +276,16 @@ extern "C" {
 #define JMP_GT      6
 #define JMP_LT      7
 
-//PTM wait macros used in parameter src of WAIT instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_WAIT_SRC PTM Wait Macros
+ * @brief PTM wait macros used in parameter src of WAIT instruction
+ * 0~127: use macro PTM_TRIG_* defined in ptm.h
+ * @{
+ */
 #define WAIT_PA00     (128+ 0)
 #define WAIT_PA01     (128+ 1)
 #define WAIT_PA02     (128+ 2)
@@ -344,7 +403,15 @@ extern "C" {
 #define WAIT_EVT14    254
 #define WAIT_EVT15    255
 
-//PTM output macros used in parameter Iocnt of IO instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_IO_PUSH PTM IO Push Macros
+ * @brief PTM output macros used in parameter Iocnt of IO instruction
+ * @{
+ */
 #define IO_PUSH0     0
 #define IO_PUSH1     1
 #define IO_PUSH2     2
@@ -363,7 +430,15 @@ extern "C" {
 #define IO_PUSH15   15
 #define IO_PUSH16   16
 
-//PTM input macros used in parameter IOcnt of IO instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_IO_PULL PTM IO Pull Macros
+ * @brief PTM input macros used in parameter IOcnt of IO instruction
+ * @{
+ */
 #define IO_PULL0    32
 #define IO_PULL1    33
 #define IO_PULL2    34
@@ -382,7 +457,15 @@ extern "C" {
 #define IO_PULL15   47
 #define IO_PULL16   48
 
-//PTM single output macros used in parameter Om and On of IO instruction
+/**
+ * @}
+ */
+
+/**
+ * @defgroup PTM_IO_OUT PTM IO Single Output Macros
+ * @brief PTM single output macros used in parameter Om and On of IO instruction
+ * @{
+ */
 #define IO_NOP      0
 #define IO_OUT0_R   16
 #define IO_OUT1_R   17
@@ -433,13 +516,25 @@ extern "C" {
 #define IO_OUT14_H  62
 #define IO_OUT15_H  63
 
+/**
+ * @}
+ */
 
-//Construct SET instruction
-//Rd = Rn Op Imm
-//Rd: Destination register selected from PTM register macros. Example values: PTM_X, PTM_FIFO, PTM_EVTS.
-//Rn: Source register selected from PTM register macros. Example values: PTM_X, PTM_FIFO.
-//Op: Operation selected from PTM operation macros. Example values: OP_ADD, OP_REV8.
-//Imm: 16-bit immediate value for operation. Considered as a signed value for add operation. Example values: 0x200, -30.
+/**
+ * @defgroup PTM_INSN PTM Instruction Constructors
+ * @brief Macros that encode one PTM instruction word
+ * @{
+ */
+
+/**
+ * @brief Construct SET instruction
+ *        Rd = Rn Op Imm
+ * @param Rd  Destination register selected from PTM register macros. Example values: PTM_X, PTM_FIFO, PTM_EVTS.
+ * @param Rn  Source register selected from PTM register macros. Example values: PTM_X, PTM_FIFO.
+ * @param Op  Operation selected from PTM operation macros. Example values: OP_ADD, OP_REV8.
+ * @param Imm 16-bit immediate value for operation. Considered as a signed value for add operation.
+ *            Example values: 0x200, -30.
+ */
 #define PTM_SET(Rd,Rn,Op,Imm) \
   (((((uint32_t)( Op)&0x0000000f)<<24) | \
     (((uint32_t)( Rd)&0x0000000f)<<20) | \
@@ -448,16 +543,20 @@ extern "C" {
    ) | 0x30000000  \
   )
 
-//Construct JMP instruction
-//if Rm and Rn match Cond
-//  PC = Tgt, delay Dly
-//else
-//  PC = PC + 1
-//Cond: Condition selected from PTM condition macros. Example values: JMP_EQ, JMP_GT.
-//Rm: Register selected from PTM register macros. Example values: PTM_X, PTM_YL, PTM_ALL1.
-//Rn: Register selected from PTM register macros, or certain IO input from PTM IO input macros, or certain event from PTM event macros. Example values: PTM_X, PTM_IN5, PTM_EVT15.
-//Dly: 6-bit delay cycles.
-//Tgt: Target selected from PTM target macros, or 8-bit signed offset from -127 to 127. Example values: JMP_TCM18, JMP_X, -5, 127.
+/**
+ * @brief Construct JMP instruction
+ *        if Rm and Rn match Cond
+ *          PC = Tgt, delay Dly
+ *        else
+ *          PC = PC + 1
+ * @param Tgt  Target selected from PTM target macros, or 8-bit signed offset from -127 to 127.
+ *             Example values: JMP_TCM18, JMP_X, -5, 127.
+ * @param Rn   Register selected from PTM register macros, or certain IO input from PTM IO input macros,
+ *             or certain event from PTM event macros. Example values: PTM_X, PTM_IN5, PTM_EVT15.
+ * @param Cond Condition selected from PTM condition macros. Example values: JMP_EQ, JMP_GT.
+ * @param Rm   Register selected from PTM register macros. Example values: PTM_X, PTM_YL, PTM_ALL1.
+ * @param Dly  6-bit delay cycles.
+ */
 #define PTM_JMP(Tgt,Rn,Cond,Rm,Dly) \
   (((((uint32_t)(Cond)&0x00000007)<<24) | \
     (((uint32_t)(  Rm)&0x0000000f)<<20) | \
@@ -467,11 +566,13 @@ extern "C" {
    ) | 0x20000000  \
   )
 
-//Construct WAIT instruction
-//wait until Src == Pol, then delay Dly
-//Src: Source selected from PTM wait macros. Example values: WAIT_TRIG66, WAIT_PA35, WAIT_EVT10.
-//Pol: Polarity selected between 0 and 1.
-//Dly: 16-bit delay cycles.
+/**
+ * @brief Construct WAIT instruction
+ *        wait until Src == Pol, then delay Dly
+ * @param Src Source selected from PTM wait macros. Example values: PTM_TRIG_HCPU_SLEEPING, WAIT_PA35, WAIT_EVT10.
+ * @param Pol Polarity selected between 0 and 1.
+ * @param Dly 16-bit delay cycles.
+ */
 #define PTM_WAIT(Src,Pol,Dly) \
   (((((uint32_t)(Pol)&0x00000001)<<24) | \
     (((uint32_t)(Src)&0x000000ff)<<16) | \
@@ -479,31 +580,37 @@ extern "C" {
    ) | 0x00000000  \
   )
 
-//Construct LDM instruction
-//Rd = [Addr]
-//Rd: Register selected between PTM_X and PTM_Y.
-//Addr: 32-bit address
+/**
+ * @brief Construct LDM instruction
+ *        Rd = [Addr]
+ * @param Rd   Register selected between PTM_X and PTM_Y.
+ * @param Addr 32-bit address
+ */
 #define PTM_LDM(Rd,Addr) \
   (((((uint32_t)(Rd)&0x00000001)<<29) | \
      (((uint32_t)(Addr)>>2)&0x1fffffff) \
    ) | 0x80000000  \
   )
 
-//Construct STM instruction
-//[Addr] = Rn
-//Rn: Register selected between PTM_X and PTM_Y.
-//Addr: 32-bit address
+/**
+ * @brief Construct STM instruction
+ *        [Addr] = Rn
+ * @param Rn   Register selected between PTM_X and PTM_Y.
+ * @param Addr 32-bit address
+ */
 #define PTM_STM(Rn,Addr) \
   (((((uint32_t)(Rn)&0x00000001)<<29) | \
      (((uint32_t)(Addr)>>2)&0x1fffffff) \
    ) | 0xc0000000  \
   )
 
-//Construct LDR instruction
-//Rd = [Rn + Off]
-//Rd: Destination register selected from PTM register macros. Example values: PTM_X, PTM_YH.
-//Rn: Source register selected between PTM_X and PTM_Y.
-//Off: 16-bit signed address offset
+/**
+ * @brief Construct LDR instruction
+ *        Rd = [Rn + Off]
+ * @param Rd  Destination register selected from PTM register macros. Example values: PTM_X, PTM_YH.
+ * @param Rn  Source register selected between PTM_X and PTM_Y.
+ * @param Off 16-bit signed address offset
+ */
 #define PTM_LDR(Rd,Rn,Off) \
   (((((uint32_t)( Rd)&0x00000007)<<20) | \
     (((uint32_t)( Rn)&0x00000001)<<16) | \
@@ -511,11 +618,13 @@ extern "C" {
    ) | 0x66000000  \
   )
 
-//Construct STR instruction
-//[Rd + Off] = Rn
-//Rn: Source register selected from PTM register macros. Example values: PTM_X, PTM_YH.
-//Rd: Destination register selected between PTM_X and PTM_Y.
-//Off: 16-bit signed address offset
+/**
+ * @brief Construct STR instruction
+ *        [Rd + Off] = Rn
+ * @param Rn  Source register selected from PTM register macros. Example values: PTM_X, PTM_YH.
+ * @param Rd  Destination register selected between PTM_X and PTM_Y.
+ * @param Off 16-bit signed address offset
+ */
 #define PTM_STR(Rn,Rd,Off) \
   (((((uint32_t)( Rn)&0x00000007)<<20) | \
     (((uint32_t)( Rd)&0x00000001)<<16) | \
@@ -523,11 +632,16 @@ extern "C" {
    ) | 0x76000000  \
   )
 
-//Construct IO instruction
-//Iocnt: Output count selected from PTM output macros, or Input count selected from PTM input macros. Example values: IO_PUSH5, IO_PULL16.
-//Om: First single output selected from PTM single output macros. Example values: IO_NOP, IO_OUT10_L, IO_OUT5_R.
-//On: Second single output selected from PTM single output macros. Example values: IO_NOP, IO_OUT10_L, IO_OUT5_R.
-//Dly: 6-bit delay cycles.
+/**
+ * @brief Construct IO instruction
+ * @param Iocnt Output count selected from PTM output macros, or Input count selected from PTM input
+ *              macros. Example values: IO_PUSH5, IO_PULL16.
+ * @param Om    First single output selected from PTM single output macros.
+ *              Example values: IO_NOP, IO_OUT10_L, IO_OUT5_R.
+ * @param On    Second single output selected from PTM single output macros.
+ *              Example values: IO_NOP, IO_OUT10_L, IO_OUT5_R.
+ * @param Dly   6-bit delay cycles.
+ */
 #define PTM_IO(Iocnt,Om,On,Dly) \
   (((((uint32_t)(   Om)&0x0000003f)<<22) | \
     (((uint32_t)(   On)&0x0000003f)<<16) | \
@@ -536,8 +650,15 @@ extern "C" {
    ) | 0x40000000  \
   )
 
+/**
+ * @} PTM_INSN
+ */
 
-//TCM base address of PTM
+/**
+ * @defgroup PTM_TCM PTM TCM Base Addresses
+ * @brief TCM base address of PTM
+ * @{
+ */
 #define PTM1_CORE0_TCM (uint32_t *)(PTM1_BASE + 0x200)
 #define PTM1_CORE1_TCM (uint32_t *)(PTM1_BASE + 0x240)
 #define PTM1_CORE2_TCM (uint32_t *)(PTM1_BASE + 0x280)
@@ -546,6 +667,14 @@ extern "C" {
 #define PTM1_CORE5_TCM (uint32_t *)(PTM1_BASE + 0x340)
 #define PTM1_CORE6_TCM (uint32_t *)(PTM1_BASE + 0x380)
 #define PTM1_CORE7_TCM (uint32_t *)(PTM1_BASE + 0x3c0)
+
+/**
+ * @} PTM_TCM
+ */
+
+/**
+ * @} PTM
+ */
 
 #endif /* PTM1_BASE */
 

@@ -1,4 +1,6 @@
 from building import *
+import os
+import rtconfig
 
 objs_ezip = []
 
@@ -10,7 +12,15 @@ if 16 == GetConfigValue('LV_COLOR_DEPTH'):
 else:
     img_flags = '-rgb888'
 
-src = Env.ImgResource(objs_ezip, img_flags + ' -section ROM3_IMG -cfile 2 -dpt 1')
-group = DefineGroup('multlist_asset', src, depend=['PKG_USING_LITTLEVGL2RTT'])
+local_ccflags = ''
+if rtconfig.PLATFORM == 'cl':
+    img_flags += ' -cfile 1'
+    local_ccflags = ' /FI"{}" '.format(os.path.join(GetCurrentDir(), 'pc_asset.h'))
+else:
+    img_flags += ' -section ROM3_IMG -cfile 2 -dpt 1'
+
+src = Env.ImgResource(objs_ezip, img_flags)
+group = DefineGroup('multlist_asset', src, depend=['PKG_USING_LITTLEVGL2RTT'],
+                    LOCAL_CCFLAGS=local_ccflags)
 
 Return('group')

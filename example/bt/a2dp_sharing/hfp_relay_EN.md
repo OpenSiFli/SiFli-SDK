@@ -391,6 +391,52 @@ BT_NOTIFY_AG_EXTERN_AT_CMD_KEY_REQ
     -> bt_interface_hf_send_at_cmd_by_id(hf_channel, at_cmd)
 ```
 
+### 6.6 Command-Line Operations
+
+The example provides mode and audio-link control commands through `hfp_cmd`. Run these commands in the device FinSH console.
+
+| Command | Purpose |
+| --- | --- |
+| `hfp_cmd mode` | Gets the current relay mode. |
+| `hfp_cmd mode <mode>` | Sets the relay mode. `0` is phone-headset mode and `1` is headset intercom mode. |
+| `hfp_cmd headset_connect <mac>` | Connects the headset-side HFP profile using the specified MAC address. |
+| `hfp_cmd intercom_sco` | Connects SCO audio for the first connected headset in intercom mode. |
+| `hfp_cmd intercom_sco_disconnect` | Disconnects SCO audio for all connected headsets in intercom mode without disconnecting their HFP profiles. |
+
+#### 6.6.1 Get and Set the Mode
+
+```text
+hfp_cmd mode
+hfp_cmd mode 0
+hfp_cmd mode 1
+```
+
+The phone-side HF and all headset-side AG HFP connections must be disconnected before switching modes. If any HFP connection remains, the set-mode command fails and prints an error code. Mode `0` is `BT_HFP_RELAY_MODE_PHONE_HEADSET`; mode `1` is `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`.
+
+#### 6.6.2 Connect a Headset
+
+```text
+hfp_cmd headset_connect <mac>
+```
+
+For example: `hfp_cmd headset_connect 12:34:56:78:9A:BC`. This command only starts the headset-side HFP connection request. The final result is reported through `BT_NOTIFY_AG_PROFILE_CONNECTED` or `BT_NOTIFY_AG_PROFILE_DISCONNECTED`.
+
+#### 6.6.3 Connect Intercom SCO
+
+```text
+hfp_cmd intercom_sco
+```
+
+This command is only valid in `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`. It currently attempts to connect SCO for the headset associated with `ag[0]`; that headset must already have an established HFP connection. The final result is reported through SCO connection events.
+
+#### 6.6.4 Disconnect Intercom SCO
+
+```text
+hfp_cmd intercom_sco_disconnect
+```
+
+This command is only valid in `BT_HFP_RELAY_MODE_HEADSET_INTERCOM`. It attempts to disconnect SCO audio for all connected headsets without disconnecting their HFP profiles. The final result is reported through `BT_NOTIFY_COMMON_SCO_DISCONNECTED` events.
+
 ## 7. API Summary
 
 ### 7.1 Initialization and Context APIs

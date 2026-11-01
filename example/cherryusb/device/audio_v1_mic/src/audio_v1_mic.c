@@ -290,12 +290,6 @@ static int audio_callback_record(audio_server_callback_cmt_t cmd,
         }
 
         const uint32_t chunk_size = AUDIO_IN_PACKET;
-        if (p->data_len % chunk_size == 0)
-        {
-            rt_kprintf("[UAC Record] data_len %d is a multiple of chunk_size %d\n",
-                       p->data_len, chunk_size);
-            // return -1;
-        }
 
         const uint32_t total_chunks = p->data_len / chunk_size;
         uint8_t *data_ptr = (uint8_t *)p->data;
@@ -303,13 +297,8 @@ static int audio_callback_record(audio_server_callback_cmt_t cmd,
         for (uint32_t i = 0; i < total_chunks; i++)
         {
             /* Send the current data chunk */
-            int ret = usbd_ep_start_write(0, AUDIO_IN_EP, data_ptr + (i * chunk_size),
-                                          chunk_size);
-            if (ret == 0)
-            {
-                rt_kprintf("[UAC Record] send chunk %d, ret=%d\n", i, ret);
-                // return -1;
-            }
+            usbd_ep_start_write(0, AUDIO_IN_EP, data_ptr + (i * chunk_size),
+                                chunk_size);
 
             /* Wait for the transfer to complete. The task will block here without
              * consuming CPU. */

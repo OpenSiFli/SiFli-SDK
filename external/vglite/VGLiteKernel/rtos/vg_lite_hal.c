@@ -340,7 +340,7 @@ vg_lite_error_t vg_lite_hal_allocate_contiguous(unsigned long size, vg_lite_vidm
     /* Align the size to 64 bytes. */
     aligned_size = (size + 63) & ~63;
 
-    rt_kprintf("[%d]free:%d,%d\n", pool, device->heap[pool].free, size);
+    // rt_kprintf("[%d]free:%d,%d\n", pool, device->heap[pool].free, size);
 
     /* Check if there is enough free memory available. */
     if (aligned_size > device->heap[pool].free) {

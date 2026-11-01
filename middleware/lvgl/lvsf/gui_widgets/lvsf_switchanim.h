@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -33,7 +33,47 @@ extern "C" {
 #define APP_TRANS_ANIM_SNAPSHOT_WIDTH (LV_HOR_RES_MAX * APP_TRANS_ANIM_PERCENT)
 #define APP_TRANS_ANIM_SNAPSHOT_HEIGHT (LV_VER_RES_MAX * APP_TRANS_ANIM_PERCENT)
 
-#define APP_TRANS_ANIM_SNAPSHOT_SIZE (APP_TRANS_ANIM_SNAPSHOT_WIDTH * APP_TRANS_ANIM_SNAPSHOT_HEIGHT * LV_COLOR_DEPTH / 8)
+/* Whether the transition animation installs a draw-mask around the snapshot
+ * render, so the moving snapshot itself is shaped by the mask (blended by the
+ * EPIC GPU in hardware). This is a transition-animation option independent of
+ * the panel shape; off by default, a project enables it where needed. */
+#ifndef APP_TRANS_ANIM_WITH_MASK
+#define APP_TRANS_ANIM_WITH_MASK 0
+#endif
+
+/* The mask option makes the snapshot TRUE_COLOR_ALPHA and relies on the EPIC
+ * render-list API to write the alpha channel. The legacy GPU draw path
+ * (lv_drivers/lv_gpu.c) hard-codes a TRUE_COLOR destination when it blends into
+ * the draw buffer, so it would store the snapshot with the wrong pixel size and
+ * no alpha; reject that combination at build time instead of rendering a
+ * garbled snapshot at run time. */
+#if APP_TRANS_ANIM_WITH_MASK && !defined(DRV_EPIC_NEW_API) && !defined(BSP_USING_PC_SIMULATOR)
+#error "APP_TRANS_ANIM_WITH_MASK requires DRV_EPIC_NEW_API (or the PC simulator build)"
+#endif
+
+/* Snapshot pixel format follows the mask option:
+ * - with the draw-mask, the EPIC GPU writes the mask into the snapshot alpha
+ *   channel, so the outer corners are naturally transparent -> TRUE_COLOR_ALPHA;
+ * - without it, no alpha channel is needed -> TRUE_COLOR (saves 1 byte/pixel). */
+#if APP_TRANS_ANIM_WITH_MASK
+#define APP_TRANS_ANIM_SNAPSHOT_CF      LV_IMG_CF_TRUE_COLOR_ALPHA
+#define APP_TRANS_ANIM_SNAPSHOT_PX_BYTE LV_IMG_PX_SIZE_ALPHA_BYTE
+#else
+#define APP_TRANS_ANIM_SNAPSHOT_CF      LV_IMG_CF_TRUE_COLOR
+#define APP_TRANS_ANIM_SNAPSHOT_PX_BYTE (LV_COLOR_DEPTH / 8)
+#endif
+
+#define APP_TRANS_ANIM_SNAPSHOT_SIZE (APP_TRANS_ANIM_SNAPSHOT_WIDTH * APP_TRANS_ANIM_SNAPSHOT_HEIGHT * APP_TRANS_ANIM_SNAPSHOT_PX_BYTE)
+
+#if APP_TRANS_ANIM_WITH_MASK
+/**
+@brief Install/remove the resident circle draw-mask around a snapshot render, so
+       the rendered snapshot is shaped by the mask. Both calls must be paired.
+@return none.
+ */
+void lv_switchanim_snapshot_mask_add(void);
+void lv_switchanim_snapshot_mask_remove(void);
+#endif
 
 enum
 {

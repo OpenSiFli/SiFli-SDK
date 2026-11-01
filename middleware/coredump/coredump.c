@@ -333,6 +333,8 @@ static void coredump_write_header(void)
     fmt_str = "58X_" HEADER_FORMAT_STR;
 #elif defined(SOC_SF32LB52X)
     fmt_str = "52X_" HEADER_FORMAT_STR;
+#elif defined(SOC_SF32LB57X)
+    fmt_str = "57X_" HEADER_FORMAT_STR;
 #else
 #error "Unknown SOC, please check!"
 #endif
@@ -393,7 +395,7 @@ static rt_err_t coredump_dump_lcpu_sram_data(void)
     size_t len;
 
     /* dump data in SRAM */
-#if defined(SOC_SF32LB52X)
+#if defined(SOC_SF32LB52X) || defined(SOC_SF32LB57X)
     start_addr = LCPU_ADDR_2_HCPU_ADDR(LPSYS_SRAM_BASE);
     len = LPSYS_SRAM_TOTAL_SIZE;
 #else
@@ -409,7 +411,7 @@ static rt_err_t coredump_dump_lcpu_sram_data(void)
         start_addr = LCPU_ADDR_2_HCPU_ADDR(LPSYS_SRAM_BASE) + (len - LPSYS_ITCM_SIZE);
         len = LPSYS_SRAM_TOTAL_SIZE - (len - LPSYS_ITCM_SIZE);
     }
-#endif
+#endif /* SF32LB52X || SF32LB57X */
 
     if (coredump_block_write(start_addr, len) < len)
     {
@@ -1004,9 +1006,9 @@ void coredump(void)
 #endif
     log_pause(1);
 
-#if defined(SOC_SF32LB52X)
+#if defined(SOC_SF32LB52X) || defined(SOC_SF32LB57X)
     HAL_HPAON_WakeCore(CORE_ID_LCPU);
-#endif
+#endif /* SF32LB52X || SF32LB57X */
     if (rt_interrupt_get_nest())
     {
         coredump_info.interrupt_nest = rt_interrupt_get_nest();

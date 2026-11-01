@@ -241,11 +241,11 @@ static void init_pin(void)
 {
 #if (SLEEP_CTRL_PIN < GPIO1_PIN_NUM)
     button_cfg_t cfg = {0};
-#if defined(BSP_USING_PM) && !defined(SF32LB52X)
+#if defined(BSP_USING_PM) && !defined(SF32LB52X) && !defined(SF32LB57X)
     int8_t wakeup_pin;
     uint16_t gpio_pin;
     GPIO_TypeDef *gpio;
-#endif /* BSP_USING_PM && !SF32LB52X */
+#endif /* BSP_USING_PM && !SF32LB52X && !SF32LB57X */
 
     cfg.pin = SLEEP_CTRL_PIN;
     cfg.active_state = BUTTON_ACTIVE_POL;
@@ -256,7 +256,7 @@ static void init_pin(void)
     RT_ASSERT(SF_EOK == button_enable(id));
     key1_button_handle = id;
 
-#if defined(BSP_USING_PM) && !defined(SF32LB52X)
+#if defined(BSP_USING_PM) && !defined(SF32LB52X) && !defined(SF32LB57X)
     gpio = GET_GPIO_INSTANCE(SLEEP_CTRL_PIN);
     gpio_pin = GET_GPIOx_PIN(SLEEP_CTRL_PIN);
 
@@ -264,7 +264,7 @@ static void init_pin(void)
     RT_ASSERT(wakeup_pin >= 0);
 
     pm_enable_pin_wakeup(wakeup_pin, AON_PIN_MODE_DOUBLE_EDGE);
-#endif /* BSP_USING_PM && !SF32LB52X */
+#endif /* BSP_USING_PM && !SF32LB52X && !SF32LB57X */
 
 #endif /* SLEEP_CTRL_PIN < GPIO1_PIN_NUM */
 

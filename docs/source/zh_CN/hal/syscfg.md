@@ -9,7 +9,7 @@ SYSCFG（SYStem ConFiG）模块用于配置系统功能，包括安全模式和S
     #include "bf0_hal.h"
     
     ...
-    printf("Boot mode is in %d mode\n", __HAL_SYSCFG_GET_BOOT_MODE()?"uart loop":"normal");
+    printf("Boot mode is in %s mode\n", __HAL_SYSCFG_GET_BOOT_MODE()?"bootrom":"normal");
     
     // Following code is A0 only
     {

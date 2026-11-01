@@ -1858,6 +1858,29 @@ __HAL_ROM_USED int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set)
     return r;
 }
 
+/**
+  * @brief  Set pin driving capability.
+  * @param  pad physical pin
+  * @param  ds driving capability, see PIN_DrivingStrengthTypeDef
+  * @retval HAL_OK if success, HAL_ERROR if pad is invalid
+  */
+HAL_StatusTypeDef HAL_PIN_SetDS(int pad, PIN_DrivingStrengthTypeDef ds)
+{
+    int r;
+
+    /*
+     * hcpu is derived from pad inside HAL_PIN_Set_DS0/DS1, the value passed
+     * here is ignored.
+     */
+    r = HAL_PIN_Set_DS0(pad, 1, (ds >> 1) & 0x1U);
+    if (0 == r)
+    {
+        r = HAL_PIN_Set_DS1(pad, 1, ds & 0x1U);
+    }
+
+    return (0 == r) ? HAL_OK : HAL_ERROR;
+}
+
 
 __HAL_ROM_USED int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode)
 {

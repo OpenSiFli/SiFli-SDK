@@ -14,6 +14,9 @@ Covers the SF32LB58 ACPU CBUS mapping fix:
   using the shared SBUS view for the execution address
   (ACPU no longer selects its local CBUS view, so addresses ACPU passes to
   HCPU stay valid in HCPU's view).
+- ACPU execution addresses always use the SBUS view, including exec regions on
+  PSRAM/NOR: the ACPU cannot fetch from the CBUS/XIP alias (e.g. PSRAM
+  0x10xxxxxx), which is not the flash table xip_base or the copy target.
 """
 
 from __future__ import annotations
@@ -28,6 +31,11 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "build"))
 
 import ptab  # noqa: E402
 import sdk_resource  # noqa: E402
+
+try:
+    import gen_link_lds  # noqa: E402
+except ImportError:  # pragma: no cover - jinja2 ships with the build environment
+    gen_link_lds = None
 
 
 def _sf32lb58_chip_config():
@@ -53,6 +61,50 @@ def _acpu_v3_ptab():
                 "exec": {"region": "hpsys_ram", "offset": 0x00200000},
             },
         ],
+    }
+    return ptab.PtabV3("<in-memory>", data)
+
+
+def _acpu_psram_v3_ptab(*, aliases=True, extra_first=False):
+    """SF32LB58 v3 ptab with a primary and an extra ACPU image executing from
+    PSRAM (SBUS 0x60000000, HCPU-side CBUS/XIP 0x10000000).
+
+    aliases=False drops the legacy ACPU_CODE_LOAD_REGION<N> aliases, leaving the
+    '.rom<N>' section as the only image binding; extra_first=True lists the extra
+    image before the primary one.
+    """
+    primary = {
+        "name": "acpu",
+        "type": "app",
+        "subtype": "factory",
+        "region": "mpi4",
+        "offset": 0x00F60000,
+        "size": 0x00040000,
+        "core": "ACPU",
+        "aliases": ["ACPU_CODE_LOAD_REGION1"],
+        "exec": {"region": "psram1", "offset": 0x00020000},
+    }
+    extra = {
+        "name": "acpu2",
+        "type": "app",
+        "subtype": "factory",
+        "region": "mpi4",
+        "offset": 0x00FA0000,
+        "size": 0x00040000,
+        "core": "ACPU",
+        "aliases": ["ACPU_CODE_LOAD_REGION2"],
+        "exec": {"region": "psram1", "offset": 0x00400000},
+        "sections": [{"section": ".rom2"}],
+    }
+    if not aliases:
+        primary.pop("aliases")
+        extra.pop("aliases")
+    partitions = [extra, primary] if extra_first else [primary, extra]
+    data = {
+        "version": 3,
+        "chip": "SF32LB58X",
+        "memory": [{"mpi": "mpi4", "type": "nor", "size": 16 * 1024 * 1024}],
+        "partitions": partitions,
     }
     return ptab.PtabV3("<in-memory>", data)
 
@@ -239,6 +291,105 @@ class PtabV3BootAndHcpuMacroTests(unittest.TestCase):
             macros.get("HCPU_FLASH_CODE_EXEC_START_ADDR"),
             macros.get("HCPU_FLASH_CODE_START_ADDR"),
         )
+
+
+class PtabV3AcpuPsramMacroTests(unittest.TestCase):
+    def setUp(self) -> None:
+        sdk_resource.InitIndentation()
+
+    def test_acpu_psram_exec_macros_use_sbus_view(self) -> None:
+        ptab_obj = _acpu_psram_v3_ptab()
+        body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "acpu"}, ptab_obj)
+        macros = _parse_macros(body)
+
+        # PSRAM: SBUS 0x60000000 + offset, HCPU-side CBUS/XIP 0x10000000 + offset.
+        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_SBUS_START_ADDR"), "(0x60020000)")
+        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_START_ADDR"), "(0x60020000)")
+        self.assertEqual(macros.get("ACPU_CODE_REGION2_EXEC_START_ADDR"), "(0x60400000)")
+        self.assertEqual(
+            macros.get("ACPU_CODE_REGION1_START_ADDR"),
+            "(ACPU_CODE_REGION1_EXEC_START_ADDR)",
+        )
+
+    def test_acpu_psram_code_start_addr_uses_sbus(self) -> None:
+        ptab_obj = _acpu_psram_v3_ptab()
+        body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "acpu"}, ptab_obj)
+        macros = _parse_macros(body)
+        self.assertEqual(macros.get("CODE_START_ADDR"), "(0x60020000)")
+
+    def test_acpu_extra_image_without_alias_gets_region_macros(self) -> None:
+        # The '.rom<N>' section alone must bind the image to its region number;
+        # the legacy ACPU_CODE_LOAD_REGION<N> alias is optional.
+        ptab_obj = _acpu_psram_v3_ptab(aliases=False)
+        body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "acpu"}, ptab_obj)
+        macros = _parse_macros(body)
+
+        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_START_ADDR"), "(0x60020000)")
+        self.assertEqual(macros.get("ACPU_CODE_REGION2_EXEC_START_ADDR"), "(0x60400000)")
+
+    def test_acpu_region_numbering_is_order_independent(self) -> None:
+        # Listing the extra image first must not let it claim region 1.
+        ptab_obj = _acpu_psram_v3_ptab(aliases=False, extra_first=True)
+        body = sdk_resource.GenPartitionTableHeaderContentV3({"name": "acpu"}, ptab_obj)
+        macros = _parse_macros(body)
+
+        self.assertEqual(macros.get("ACPU_CODE_REGION1_EXEC_START_ADDR"), "(0x60020000)")
+        self.assertEqual(macros.get("ACPU_CODE_REGION2_EXEC_START_ADDR"), "(0x60400000)")
+
+
+@unittest.skipIf(gen_link_lds is None, "gen_link_lds requires jinja2")
+class ExecAddressSelectionTests(unittest.TestCase):
+    def test_acpu_psram_and_nor_exec_use_sbus(self) -> None:
+        for mem_type in ("psram", "nor"):
+            for core in ("ACPU", "acpu"):
+                self.assertEqual(
+                    gen_link_lds._select_exec_addr(mem_type, 0x60000000, 0x10000000, core),
+                    0x60000000,
+                    "{} on {}".format(mem_type, core),
+                )
+
+    def test_non_acpu_psram_exec_keeps_cbus(self) -> None:
+        for core in ("HCPU", "LCPU", "hcpu", None, ""):
+            self.assertEqual(
+                gen_link_lds._select_exec_addr("psram", 0x60000000, 0x10000000, core),
+                0x10000000,
+                "core={}".format(core),
+            )
+
+    def test_ram_and_nand_exec_use_sbus_for_all_cores(self) -> None:
+        for mem_type, sbus_addr in (("ram", 0x20200000), ("nand", 0x60000000)):
+            for core in ("ACPU", "HCPU", "LCPU", None):
+                self.assertEqual(
+                    gen_link_lds._select_exec_addr(mem_type, sbus_addr, 0x10020000, core),
+                    sbus_addr,
+                    "{} on {}".format(mem_type, core),
+                )
+
+
+@unittest.skipIf(gen_link_lds is None, "gen_link_lds requires jinja2")
+class ComputeLinkDefinesAcpuTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._saved_sdk = os.environ.get("SIFLI_SDK")
+        os.environ["SIFLI_SDK"] = ROOT
+
+    def tearDown(self) -> None:
+        if self._saved_sdk is None:
+            os.environ.pop("SIFLI_SDK", None)
+        else:
+            os.environ["SIFLI_SDK"] = self._saved_sdk
+
+    def test_acpu_psram_link_base_uses_sbus(self) -> None:
+        out = gen_link_lds.compute_link_defines(_acpu_psram_v3_ptab(), "acpu", "ACPU", {})
+        self.assertEqual(out["__ROM_BASE"], 0x60020000)
+        self.assertEqual(out["__ROM_SIZE"], 0x00040000)
+        self.assertEqual(
+            [(e["memory"], e["base"]) for e in out["ACPU_EXT_CODE_REGIONS"]],
+            [("ACPU_ROM2", 0x60400000)],
+        )
+
+    def test_hcpu_psram_link_base_keeps_cbus(self) -> None:
+        out = gen_link_lds.compute_link_defines(_sf32lb52_boot_hcpu_ptab(), "main", "HCPU", {})
+        self.assertEqual(out["__ROM_BASE"], 0x10000000)
 
 
 if __name__ == "__main__":

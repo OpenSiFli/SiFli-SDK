@@ -22,12 +22,27 @@
     #define vglite_free                     rt_free
 #endif
 
-#ifdef BSP_USING_LCD
+/* VGLite tessellation buffer dimensions.
+ * Default to LCD resolution when BSP_USING_LCD is enabled,
+ * otherwise use 320x320. Can be overridden via Kconfig (VGLITE_TESS_WIDTH/HEIGHT). */
+#ifndef VG_WIDTH_DEFAULT
+#if defined(VGLITE_TESS_WIDTH) && VGLITE_TESS_WIDTH > 0
+    #define VG_WIDTH_DEFAULT   (VGLITE_TESS_WIDTH)
+#elif defined(BSP_USING_LCD)
     #define VG_WIDTH_DEFAULT   (LCD_HOR_RES_MAX)
-    #define VG_HEIGHT_DEFAULT  (LCD_VER_RES_MAX)
 #else
     #define VG_WIDTH_DEFAULT   (320)
+#endif
+#endif
+
+#ifndef VG_HEIGHT_DEFAULT
+#if defined(VGLITE_TESS_HEIGHT) && VGLITE_TESS_HEIGHT > 0
+    #define VG_HEIGHT_DEFAULT  (VGLITE_TESS_HEIGHT)
+#elif defined(BSP_USING_LCD)
+    #define VG_HEIGHT_DEFAULT  (LCD_VER_RES_MAX)
+#else
     #define VG_HEIGHT_DEFAULT  (320)
+#endif
 #endif
 
 #define VG_BUFFER_ALIGN    (64)
@@ -48,7 +63,14 @@ static char *vglite_error_type[] =
 };
 
 #define VGLITE_ERROR_TYPE_NUM   (sizeof(vglite_error_type) / sizeof(vglite_error_type[0]))
-#define VGLITE_MEM_SIZE   ((320) * 1024)
+
+/* VGLite contiguous memory pool size.
+ * This pool stores command buffer, tessellation buffer, target buffers
+ * and other VGLite runtime allocations.
+ * Default 320KB, can be overridden via Kconfig (VGLITE_CONT_MEM_SIZE). */
+#ifndef VGLITE_MEM_SIZE
+#define VGLITE_MEM_SIZE   ((VGLITE_CONT_MEM_SIZE) * 1024)
+#endif
 
 L1_NON_RET_BSS_SECT_BEGIN(drv_vglite_stack)
 
@@ -56,7 +78,12 @@ L1_NON_RET_BSS_SECT(drv_vglite_stack, ALIGN(64) static uint8_t drv_vglite_pool[V
 
 L1_NON_RET_BSS_SECT_END
 
-#define VG_LITE_CMD_BUF_SIZE    (102<<10)
+/* VGLite command buffer size.
+ * Stores VGLite command sequences consumed by GPU.
+ * Default 102KB, can be overridden via Kconfig (VGLITE_CMD_BUF_SIZE_KB). */
+#ifndef VG_LITE_CMD_BUF_SIZE
+#define VG_LITE_CMD_BUF_SIZE    ((VGLITE_CMD_BUF_SIZE_KB) << 10)
+#endif
 
 
 void vglite_print_error(const char *func, size_t line, vg_lite_error_t err)
@@ -645,4 +672,3 @@ void vg_lite_draw_img_texture(float fov, vg_lite_buffer_t *dst, vg_lite_buffer_t
     }
 
 }
-

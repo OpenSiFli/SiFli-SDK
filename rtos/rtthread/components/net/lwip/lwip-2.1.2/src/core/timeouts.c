@@ -61,6 +61,8 @@
 #include "lwip/sys.h"
 #include "lwip/pbuf.h"
 
+#include "lwip_netif_state.h"
+
 #if LWIP_DEBUG_TIMERNAMES
     #define HANDLER(x) x, #x
 #else /* LWIP_DEBUG_TIMERNAMES */
@@ -286,6 +288,7 @@ void sys_timeouts_init(void)
           (this is OK as cyclic_timer() casts back to const* */
         sys_timeout(lwip_cyclic_timers[i].interval_ms, lwip_cyclic_timer, LWIP_CONST_CAST(void *, &lwip_cyclic_timers[i]));
     }
+    lwip_netif_state_on_timeout_init();
 }
 
 /**
@@ -311,6 +314,7 @@ void sys_timeouts_uninit(void)
     {
         sys_untimeout(lwip_cyclic_timer, LWIP_CONST_CAST(void *, &lwip_cyclic_timers[i]));
     }
+    lwip_netif_state_on_timeout_uninit();
 }
 
 /**

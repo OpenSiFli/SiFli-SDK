@@ -84,6 +84,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FLASH_PreInit(FLASH_HandleTypeDef *hflash)
         return HAL_ERROR;
     }
 
+    hflash->otp_base = spi_flash_get_otp_base(fid, did, mtype);
+    hflash->ext_cfg = spi_nor_get_ext_cfg_by_id(fid, did, mtype);
+    if (hflash->ext_cfg)
+    {
+        hflash->otp_base = ((nor_ext_cfg_t *)(hflash->ext_cfg))->otp_base;
+    }
+
     size = spi_flash_get_size_by_id(fid, did, mtype);
     if (size != 0)  // use size from table to replace configure size
     {

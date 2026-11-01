@@ -11,6 +11,7 @@
 
 #include <rtthread.h>
 #include <rthw.h>
+#include <rtdef.h>
 
 #include <string.h>
 #include <sys/time.h>
@@ -42,6 +43,12 @@
 #define DBG_TAG                        "sal.skt"
 #define DBG_LVL                        DBG_INFO
 #include <rtdbg.h>
+
+#if !defined(RT_VERSION_MAJOR)
+    #define RT_VERSION_MAJOR    RTT_VERSION
+    #define RT_VERSION_MINOR    RTT_SUBVERSION
+    #define RT_VERSION_PATCH    RTT_REVISION
+#endif
 
 #define SOCKET_TABLE_STEP_LEN          4
 
@@ -1459,7 +1466,7 @@ int sal_ioctlsocket(int socket, long cmd, void *arg)
                 struct sal_ifreq sal_ifreq_temp;
                 count_size++;
                 netdev = rt_list_entry(node, struct netdev, list);
-                rt_strcpy(sal_ifreq_temp.ifr_ifrn.ifrn_name, netdev->name);
+                strcpy(sal_ifreq_temp.ifr_ifrn.ifrn_name, netdev->name);
                 rt_memcpy(ifconf_tmp->ifc_ifcu.ifcu_buf, &sal_ifreq_temp, sizeof(struct sal_ifreq));
                 ifconf_tmp->ifc_ifcu.ifcu_buf += sizeof(struct sal_ifreq);
             }

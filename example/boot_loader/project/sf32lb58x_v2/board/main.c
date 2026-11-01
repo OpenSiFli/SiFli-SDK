@@ -942,6 +942,8 @@ void boot_images_help(void)
 {
     dfu_install_info info;
     dfu_install_info info_ext;
+    uint32_t i;
+
     if (dfu_flash_reader != NULL)
     {
         if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
@@ -982,9 +984,12 @@ void boot_images_help(void)
         }
 
         /* load extended img if present, such as ACPU img */
-        if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)].length != FLASH_UNINIT_32)
+        for (i = DFU_FLASH_HCPU_EXT2; i <= DFU_FLASH_LCPU_EXT2; i++)
         {
-            dfu_boot_img_in_flash(DFU_FLASH_HCPU_EXT2);
+            if (g_sec_config->imgs[DFU_FLASH_IMG_IDX(i)].length != FLASH_UNINIT_32)
+            {
+                dfu_boot_img_in_flash(i);
+            }
         }
 
         if (g_sec_config->running_imgs[CORE_HCPU] != (struct image_header_enc *)FLASH_UNINIT_32)

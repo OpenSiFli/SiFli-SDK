@@ -36,7 +36,11 @@ extern int Set_pdm_gain(int8_t value);
 #define PDM1_AFTER_PDM2         1 //delete this if PDM2 after PDM1
 
 
-#define PDM_MOMO_FRAME_SIZE     320
+#if defined(PKG_USING_ELEVOC) || defined(PKG_USING_SOUNDPLUS)
+    #define PDM_MOMO_FRAME_SIZE     480
+#else
+    #define PDM_MOMO_FRAME_SIZE     320
+#endif
 #define PDM_STREO_FRAME_SIZE    (PDM_MOMO_FRAME_SIZE * 2)
 #define PDM_4MIC_FRAME_SIZE     (PDM_STREO_FRAME_SIZE * 2)
 
@@ -276,19 +280,19 @@ static int mic_callback(audio_server_callback_cmt_t cmd, void *callback_userdata
         {
             if (total_channels == 4)
             {
-                RT_ASSERT(p->data_len == 640);
+                RT_ASSERT(p->data_len == PDM_4MIC_FRAME_SIZE);
                 LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }
             else if (total_channels == 2)
             {
-                RT_ASSERT(p->data_len == 640);
+                RT_ASSERT(p->data_len == PDM_STREO_FRAME_SIZE);
                 LOG_I("raw pdm %d stereo data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }
             else
             {
-                RT_ASSERT(p->data_len == 320);
+                RT_ASSERT(p->data_len == PDM_MOMO_FRAME_SIZE);
                 LOG_I("raw pdm %d mono data comming len=%d", p->reserved, p->data_len);
                 wav_save_data(data_raw, sizeof(data_raw), p->data, p->data_len, &data_raw_len);
             }

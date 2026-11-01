@@ -2,7 +2,8 @@
 
 HAL PINMUX provides abstract software interfaces to operate the hardware PINMUX module, setting pin functions and pull-up/pull-down attributes.
 The chip has two PINMUX instances: PINMUX1 (`hwp_pinmux1`) in the HPSYS domain and PINMUX2 (`hwp_pinmux2`) in the LPSYS domain.
-PINMUX1's pin list is found in `pin_pad_hcpu`, with available pin functions referenced in `pin_pad_func_hcpu`. Similarly, PINMUX2's pin list is found in `pin_pad_lcpu`, with pin function definitions found in `pin_pad_func_lcpu`.
+All pins are defined uniformly in the enum type `pin_pad`, no longer distinguishing between HCPU and LCPU; the functions available for a pin are defined uniformly in the enum type `pin_function`.
+For the SF32LB57X series, the functions supported by dedicated pads can be found in the master table `pad_fsel_func_tbls`. `pin_function` contains both arbitrary pin functions and dedicated pad functions: enum values between 16 and 255 are arbitrarily mappable functions (matrix functions, starting from `PIN_MATRIX_FUNC_START = 16`), while enum values less than 16 are dedicated pad functions.
 
 Starting from 56x series chips (excluding 55x, 58x), any GPIO in the pinmux functionality can serve as an I/O pin for any I2C/UART/PWM in the current system.
 

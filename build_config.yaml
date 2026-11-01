@@ -47,10 +47,14 @@ default_boards: &default_boards
   - sf32lb58-lcd_n16r32n1_a1_dsi
   - sf32lb58-lcd_n16r32n1_dpi
   - sf32lb58-core_n16r32n1
-  - dpi-hdk_lb575ybbn6_n16_qspi
-  - dpi-hdk_lb575ybbn6_n16_dpi
-  - dpi-hdk_lb575ybbn6_n16_dbi
+  - dpi-hdk_lb57eybbn6_n16_qspi
+  - dpi-hdk_lb57eybbn6_n16_dpi
+  - dpi-hdk_lb57eybbn6_n16_dbi
   - spi-hdk_lb573ub7n6
+  - spi-hdk_lb575ucnn6_n16
+  - sf32lb57-lcd_n16r16_qspi
+  - sf32lb57-lcd_n16r16_dpi
+  - sf32lb57-lcd_n16r8_dpi
 
 default_nand_boards: &default_nand_boards
   - ec-lb567_hcpu
@@ -79,8 +83,12 @@ bt_boards: &bt_boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
   - sf32lb58-lcd_n16r64n4
-  - dpi-hdk_lb575ybbn6_n16_qspi
+  - dpi-hdk_lb57eybbn6_n16_qspi
   - spi-hdk_lb573ub7n6
+  - spi-hdk_lb575ucnn6_n16
+  - sf32lb57-lcd_n16r16_qspi
+  - sf32lb57-lcd_n16r16_dpi
+  - sf32lb57-lcd_n16r8_dpi
 
 multicore_boards: &multicore_boards
   - ec-lb567_hcpu
@@ -112,6 +120,10 @@ after_55x_boards: &after_55x_boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi  
   - spi-hdk_lb573ub7n6
+  - spi-hdk_lb575ucnn6_n16
+  - sf32lb57-lcd_n16r16_qspi
+  - sf32lb57-lcd_n16r16_dpi
+  - sf32lb57-lcd_n16r8_dpi
 
 525_devkit_lcd_boards: &525_devkit_lcd_boards
   - sf32lb52-lcd_n16r8 
@@ -129,6 +141,10 @@ devkit_lcd_boards: &devkit_lcd_boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-lcd_n16r32n1_qspi
   - spi-hdk_lb573ub7n6
+  - spi-hdk_lb575ucnn6_n16
+  - sf32lb57-lcd_n16r16_qspi
+  - sf32lb57-lcd_n16r16_dpi
+  - sf32lb57-lcd_n16r8_dpi
 
 devkit-boards: &devkit-boards
   - sf32lb52-lcd_n16r8 
@@ -148,7 +164,10 @@ devkit-boards: &devkit-boards
   - sf32lb58-lcd_a128r32n1_qspi
   - sf32lb58-core_n16r32n1
   - spi-hdk_lb573ub7n6
-
+  - spi-hdk_lb575ucnn6_n16
+  - sf32lb57-lcd_n16r16_qspi
+  - sf32lb57-lcd_n16r16_dpi
+  - sf32lb57-lcd_n16r8_dpi
 
 # in alphabetical order
 common_projects:
@@ -263,17 +282,22 @@ common_projects:
     boards: *devkit-boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/cherryusb/device/hid_mouse/project
     boards: *devkit-boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/cherryusb/device/msc/nor_flash_disk/project
     boards: 
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_n16r32n1_qspi
       - sf32lb52-lcd_n16r8
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/cherryusb/device/msc/ram_disk/project
     boards: *devkit-boards
@@ -291,6 +315,9 @@ common_projects:
       - sf32lb58-lcd_n16r32n1_dsi
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/cherryusb/host/cdc_acm_host/project
     boards: *devkit-boards
@@ -324,6 +351,7 @@ common_projects:
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/get-started/hello_world/no-os/project
     boards: *default_boards
@@ -378,6 +406,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/hash/project
     boards: 
@@ -394,16 +423,19 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/i2c/master/project
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/i2c/slave/project
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/nnacc/project
     boards:
@@ -418,6 +450,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/rng/project
     boards: *devkit_lcd_boards
@@ -426,6 +459,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/spi/dma/project
     boards: *devkit_lcd_boards
@@ -436,6 +470,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/tsen/project
     boards: *devkit_lcd_boards
@@ -444,6 +479,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/hal/wdt/iwdt/project
     boards: *devkit_lcd_boards
@@ -484,7 +520,10 @@ common_projects:
     boards: 
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/multicore/data_service/project/hcpu
     boards: *multicore_boards
@@ -576,8 +615,9 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
       - pc
 
   - path: example/multimedia/lvgl/lvgl_v8_examples/project
@@ -603,8 +643,9 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
       - pc
 
   # - path: example/multimedia/lvgl/lvgl_v8_lottie/project
@@ -628,8 +669,9 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
       # - pc
 
   - path: example/multimedia/lvgl/lvgl_v9_demos/project
@@ -654,8 +696,12 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
       - pc
 
   - path: example/multimedia/lvgl/lvgl_v9_examples/project
@@ -680,8 +726,12 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
-      - dpi-hdk_lb575ybbn6_n16_qspi
+      - dpi-hdk_lb57eybbn6_n16_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
       - pc
 
   - path: example/multimedia/lvgl/watch/project
@@ -702,6 +752,9 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/multimedia/lvgl/watch_v9/project
     boards:
@@ -718,6 +771,9 @@ common_projects:
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
       - sf32lb58-lcd_n16r64n4
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/pm/AMOLED/project
     boards:
@@ -780,11 +836,15 @@ common_projects:
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_a128r32n1_qspi
       - sf32lb58-lcd_n16r32n1_qspi  
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/rt_device/gpio/project
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/gpu/render_list_mode/project
     boards: *devkit_lcd_boards
@@ -796,6 +856,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/i2s/project
     boards: *devkit_lcd_boards
@@ -832,6 +893,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/pwm/pwm_dma/project
     boards: *525_devkit_lcd_boards
@@ -840,6 +902,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/rtc/project
     boards: *devkit_lcd_boards
@@ -848,11 +911,13 @@ common_projects:
     boards: *525_devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/spi/circular_rx/project
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/spi_tf/project
     boards: *525_devkit_lcd_boards
@@ -861,6 +926,7 @@ common_projects:
     boards: *devkit_lcd_boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
 
   - path: example/rt_device/usb/usb_mstorage/project/nor
     boards: 
@@ -869,6 +935,9 @@ common_projects:
       - sf32lb52-nano_n16r16
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/rt_device/usb/usb_mstorage/project/nand
     boards:
@@ -886,6 +955,9 @@ common_projects:
     boards:
       - sf32lb56-wlan-core_n16r12n1
       - sf32lb56-wlan-core_a128r12n1  
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/rt_driver/project
     boards: *default_boards
@@ -914,6 +986,10 @@ common_projects:
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_n16r32n1_qspi
       - spi-hdk_lb573ub7n6
+      - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/storage/littlefs/nor/project
     boards:
@@ -923,6 +999,9 @@ common_projects:
       - sf32lb52-nano_n16r16
       - sf32lb56-lcd_n16r12n1
       - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
 
   - path: example/system/coredump/project
     boards:

@@ -148,7 +148,8 @@ myst_fence_as_directive = ["mermaid"]
 # `only`和`toctree`指示符不能嵌套使用，当把toctree嵌在only里时，虽然页面上的目录树可以正常显示，但侧边导航栏的显示不正确，而且即使没有被toctree引用的文件也会被转成html
 if "SF32LB55X" in tags:
     # HAL
-    exclude_patterns = ["**/audcodec.md", "**/audprc.md", "**/atim.md", "**/facc.md", "**/fft.md", "**/hash.md", "**/mpi.md"]
+    exclude_patterns = ["**/audcodec.md", "**/audprc.md", "**/atim.md", "**/facc.md", "**/fft.md", "**/hash.md", "**/mpi.md",
+                        "**/ptm.md"]
     # Drivers
     exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
@@ -156,14 +157,14 @@ if "SF32LB55X" in tags:
     # Middlware
     exclude_patterns += ["**/bt_service.md"]
     # Example 
-    exclude_patterns += ["**/hash/**", "example/bt/**"]
+    exclude_patterns += ["**/hash/**", "example/bt/**", "example/hal/ptm/**"]
     # app_development
     exclude_patterns += ["**/startup_flow_sf32lb52x.md"]
 
 
 if "SF32LB58X" in tags:
     # HAL
-    exclude_patterns = ["**/hash.md", "**/psram.md", "**/qspi.md"]
+    exclude_patterns = ["**/hash.md", "**/psram.md", "**/qspi.md", "**/ptm.md"]
     # Drivers
     exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
@@ -171,14 +172,14 @@ if "SF32LB58X" in tags:
     # Middlware
     exclude_patterns += []
     # Example 
-    exclude_patterns += ["**/hash/**"]
+    exclude_patterns += ["**/hash/**", "example/hal/ptm/**"]
     # app_development
     exclude_patterns += ["**/startup_flow_sf32lb52x.md"]
 
 
 if "SF32LB56X" in tags:
     # HAL
-    exclude_patterns = ["**/dsi.md", "**/psram.md", "**/qspi.md"]
+    exclude_patterns = ["**/dsi.md", "**/psram.md", "**/qspi.md", "**/ptm.md"]
     # Drivers
     exclude_patterns += ["**/spi_flash_52x.md"]
     # App note
@@ -186,7 +187,7 @@ if "SF32LB56X" in tags:
     # Middlware
     exclude_patterns += []
     # Example 
-    exclude_patterns += []    
+    exclude_patterns += ["example/hal/ptm/**"]
     # app_development
     exclude_patterns += ["**/startup_flow_sf32lb52x.md"]
 
@@ -206,7 +207,7 @@ if "SF32LB57X" in tags:
 
 if "SF32LB52X" in tags:
     # HAL
-    exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md"]
+    exclude_patterns = ["**/busmon.md", "**/dsi.md", "**/facc.md", "**/fft.md", "**/nnacc.md", "**/psram.md", "**/qspi.md", "**/ptm.md"]
     # Drivers
     exclude_patterns += ["**/spi_flash.md"]
     # App note
@@ -214,7 +215,7 @@ if "SF32LB52X" in tags:
     # Middlware
     exclude_patterns += []
     # Example 
-    exclude_patterns += ["example/multicore/**"]
+    exclude_patterns += ["example/multicore/**", "example/hal/ptm/**"]
 
 
 exclude_patterns += ["example/52x_mode_test/*", "example/gpadc/*", "example/micropython/*",

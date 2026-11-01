@@ -17,10 +17,10 @@ choice SOC_SF32LB57X_PART
         bool "SF32LB573UB776"
         select SOC_PACKAGE_QFN68
     config SOC_SF32LB575UCNN6
-        bool
+        bool "SF32LB575UCNN6"
         select SOC_PACKAGE_QFN68
     config SOC_SF32LB575UC7N6
-        bool
+        bool "SF32LB575UC7N6"
         select SOC_PACKAGE_QFN68
     config SOC_SF32LB575YBBN6
         bool "SF32LB575YBBN6"
@@ -41,11 +41,26 @@ choice SOC_SF32LB57X_PART
         bool "SF32LB57GVD776"
         select SOC_PACKAGE_BGA112
     config SOC_SF32LB57GYD7N6
-        bool
+        bool "SF32LB57GYD7N6"
         select SOC_PACKAGE_QFN80
     config SOC_SF32LB57BUN3N6
         bool "SF32LB57BUN3N6"
         select SOC_PACKAGE_QFN68
+    config SOC_SF32BPRTUN3N6
+        bool "SF32BPRTUN3N6"
+        select SOC_PACKAGE_QFN68
+    config SOC_SF32BPRTYB3N6
+        bool "SF32BPRTYB3N6"
+        select SOC_PACKAGE_QFN80
+    config SOC_SF32LB57ZUN3N6
+        bool "SF32LB57ZUN3N6"
+        select SOC_PACKAGE_QFN68
+    config SOC_SF32LB57ZVN3N6
+        bool "SF32LB57ZVN3N6"
+        select SOC_PACKAGE_BGA112
+    config SOC_SF32LB57ZVN7N6
+        bool "SF32LB57ZVN7N6"
+        select SOC_PACKAGE_BGA112
 endchoice
 
 rsource "Kconfig_soc.sf32lb57x.common"

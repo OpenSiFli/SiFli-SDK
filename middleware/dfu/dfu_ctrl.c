@@ -241,14 +241,6 @@ static void dfu_image_package_start_rsp(dfu_ctrl_env_t *env, uint16_t result, ui
     LOG_I("dfu_image_package_start_rsp %d, %d", result, completed_count);
     dfu_image_package_start_rsp_t *rsp = DFU_PROTOCOL_PKT_BUFF_ALLOC(DFU_IMAGE_PACKAGE_START_RSP, dfu_image_package_start_rsp_t);
     rsp->result = result;
-    if (env->remote_version == 0)
-    {
-        env->rsp_frequency = 1;
-    }
-    else
-    {
-        env->rsp_frequency = DFU_DOWNLOAD_FREQUENCY;
-    }
 
     rsp->response_frequency = env->rsp_frequency;
     rsp->reserved = 0;
@@ -269,6 +261,7 @@ static void dfu_image_package_start_handler(dfu_ctrl_env_t *env, uint8_t *data, 
     uint32_t file_len;
     uint32_t packet_count;
     uint32_t crc_value;
+    uint8_t reserved1;
     env->remote_version = 0;
 
     //LOG_I("dfu_image_package_start_handler LEN %d", len);
@@ -279,6 +272,7 @@ static void dfu_image_package_start_handler(dfu_ctrl_env_t *env, uint8_t *data, 
         file_len = req->file_len;
         packet_count = req->packet_count;
         crc_value = req->crc_value;
+        env->rsp_frequency = 1;
     }
     else
     {
@@ -288,6 +282,16 @@ static void dfu_image_package_start_handler(dfu_ctrl_env_t *env, uint8_t *data, 
         file_len = req_new->file_len;
         packet_count = req_new->packet_count;
         crc_value = req_new->crc_value;
+        reserved1 = req_new->reserved1;
+
+        uint8_t is_download_slow = DFU_GET_BIT(reserved1, DFU_DOWNLOAD_SLOW_FLAG_POS);
+
+        env->rsp_frequency = DFU_DOWNLOAD_FREQUENCY;
+        if (is_download_slow)
+        {
+            LOG_I("download slow");
+            env->rsp_frequency = DFU_DOWNLOAD_SLOW_FREQUENCY;
+        }
     }
 
 

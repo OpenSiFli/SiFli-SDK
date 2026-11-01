@@ -40,6 +40,7 @@ enum
     LV_MULTLIST_FLAG_ANIM_BUF               = (1U << 14),
     LV_MULTLIST_FLAG_SHOW_ALL               = (1U << 15), //Alignment method when element length is shorter than the length of the multlist
     LV_MULTLIST_FLAG_ALIGN_HEAD             = (1U << 16), //Alignment method when element length is shorter than the length of the multlist
+    LV_MULTLIST_FLAG_SCROLL_PAGE            = (1U << 17),
 };
 typedef uint32_t lv_multlist_flag_t;
 #define LV_MULTLIST_FLAG_PAGE (LV_MULTLIST_FLAG_THREE_PAGE | LV_MULTLIST_FLAG_TOW_PAGE)
@@ -161,7 +162,7 @@ typedef lv_multlist_delete_info_cb lv_multlist_remove_item_cb;
 typedef lv_obj_t *(*lv_multlist_create_item_cb)(lv_obj_t *parent, lv_multlist_item_t *item);
 typedef void(*lv_multlist_refresh_cb)(lv_obj_t *multlist, int32_t scrl_pos);
 typedef void(*lv_multlist_page_cb)(lv_obj_t *multlist, lv_multlist_item_t *item, int32_t offset);
-typedef int(*lv_multlist_tranform_cb)(lv_obj_t *multlist, lv_multlist_item_t *item, int32_t offset, lv_coord_t zoom);
+typedef int(*lv_multlist_tranform_cb)(lv_obj_t *multlist, lv_multlist_item_t *item, float offset, float zoom);
 typedef struct
 {
     float                       *table;

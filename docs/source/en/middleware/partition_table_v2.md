@@ -151,6 +151,8 @@ Program partition name that are not system-reserved (i.e., `name` is not `main`,
 * `DFU_FLASH_LCPU_EXT1`: 12
 * `DFU_FLASH_LCPU_EXT2`: 13
 
+The entries are assigned in the order the corresponding regions first appear in the partition table, and there are only three of them. All regions that belong to one image (same `name`, i.e. the same `proj` or `proj:N`) must declare the same `max_size`, because a flash table entry stores a single size for that image.
+
 For example, in the `ptab.json` snippet below, the partition `acpu` is defined to use an offset of `0x00300000` in `flash4` as the storage address for the ACPU program, and an offset of `0x00200000` in `hpsys_ram` as the execution address.
 The generated `ftab.c` file will use the `DFU_FLASH_HCPU_EXT2` entry to describe the storage and execution addresses of the ACPU image.
 The `length` (i.e., the amount of data to be relocated) is determined based on the actual file size of the program specified by the `name` property (see [](#name) for details). In this example, the actual length is 0x7d4 bytes.
@@ -175,7 +177,7 @@ The `length` (i.e., the amount of data to be relocated) is determined based on t
     "regions": [
         {
             "offset": "0x00200000", 
-            "max_size": "0x00020000", 
+            "max_size": "0x00010000", 
             "name": "acpu",
             "type": ["app_exec"]
         }
@@ -209,7 +211,7 @@ RT_USED const struct sec_configuration sec_config =
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU2)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT2)] = {.length = 0xFFFFFFFF},
-    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00020000,  .xip_base = 0x20200000, .flags = 0},
+    .ftab[DFU_FLASH_HCPU_EXT2] = {.base = 0x18300000, .size = 0x00010000,  .xip_base = 0x20200000, .flags = 0},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)] = {.length = 0x000007D4, .blksize = 512, .flags = DFU_FLAG_AUTO},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT1)] = {.length = 0xFFFFFFFF},
     .imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_LCPU_EXT2)] = {.length = 0xFFFFFFFF},

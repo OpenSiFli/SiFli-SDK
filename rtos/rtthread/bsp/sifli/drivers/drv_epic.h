@@ -14,6 +14,26 @@
 
 #define DRV_EPIC_POLYGON_POINT_MAX 16
 #define mono_layer_addr HPSYS_RAM1_BASE  //Any accessable address for mono layer, SRAM is better
+
+/* Arc image tiling dimensions.
+ * The image arc is rendered in horizontal/vertical tiles to limit per-block
+ * memory usage and fit within EPIC mask layer constraints. Values come from
+ * Kconfig (ARC_IMG_TILE_WIDTH/HEIGHT), with compile-time fallback defaults. */
+#ifndef ARC_IMG_TILE_WIDTH
+#ifdef CONFIG_ARC_IMG_TILE_WIDTH
+#define ARC_IMG_TILE_WIDTH   CONFIG_ARC_IMG_TILE_WIDTH
+#else
+#define ARC_IMG_TILE_WIDTH   64
+#endif
+#endif
+#ifndef ARC_IMG_TILE_HEIGHT
+#ifdef CONFIG_ARC_IMG_TILE_HEIGHT
+#define ARC_IMG_TILE_HEIGHT  CONFIG_ARC_IMG_TILE_HEIGHT
+#else
+#define ARC_IMG_TILE_HEIGHT  16
+#endif
+#endif
+
 typedef void (*drv_epic_cplt_cbk)(EPIC_HandleTypeDef *);
 
 #ifndef DRV_EPIC_NEW_API
@@ -75,6 +95,7 @@ typedef enum
     DRV_EPIC_DRAW_LINE,
     DRV_EPIC_DRAW_BORDER,
     DRV_EPIC_DRAW_POLYGON,
+    DRV_EPIC_DRAW_SHADOW,
     DRV_EPIC_DRAW_MAX,
     DRV_EPIC_INVALID = 0xFFFF,      //Invalid
 } drv_epic_op_type_t;
@@ -113,6 +134,14 @@ typedef struct
     uint32_t br; //Bottom-right
 } rect_vertex_color_t;
 
+/* Optional rectangle image. The producer owns this descriptor and its buffers
+ * until the render list completes. Image coordinates are the first tile origin. */
+typedef struct
+{
+    EPIC_LayerConfigTypeDef layer;
+    uint8_t tiled;
+} drv_epic_rect_image_t;
+
 typedef struct
 {
     drv_epic_op_type_t  op;
@@ -125,6 +154,7 @@ typedef struct
         {
             EPIC_LayerConfigTypeDef layer;
             uint8_t use_dest_as_bg; // See drv_epic_blend_mode_type_t
+            uint8_t layer_owned; // Offscreen pixels and mask are released after consumption.
             uint8_t r;
             uint8_t g;
             uint8_t b;
@@ -161,6 +191,7 @@ typedef struct
             uint8_t round_end;
 
             uint32_t argb8888;
+            EPIC_LayerConfigTypeDef *image;
         } arc;
         struct
         {
@@ -174,6 +205,7 @@ typedef struct
 
             uint32_t argb8888;
             rect_vertex_color_t grad_color;
+            drv_epic_rect_image_t *bg_image;
         } rectangle;
         struct
         {
@@ -200,10 +232,22 @@ typedef struct
             uint8_t bot_side : 1;
             uint8_t left_side : 1;
             uint8_t right_side : 1;
-            uint8_t reserved : 4;
+            uint8_t mask_owned : 1; // Producer owns the parent mask until render completion.
+            uint8_t reserved : 3;
 
             uint32_t argb8888;
         } border;
+        struct
+        {
+            EPIC_AreaTypeDef area;
+            uint16_t radius;
+            uint16_t width;
+            int16_t spread;
+            int16_t ofs_x;
+            int16_t ofs_y;
+            uint8_t mask_owned;
+            uint32_t argb8888;
+        } shadow;
         struct
         {
             EPIC_PointTypeDef points[DRV_EPIC_POLYGON_POINT_MAX];
@@ -376,4 +420,3 @@ rt_err_t drv_epic_copy(const uint8_t *src, uint8_t *dst,
                        drv_epic_cplt_cbk cbk);
 
 #endif /* __DRV_EPIC_H__ */
-

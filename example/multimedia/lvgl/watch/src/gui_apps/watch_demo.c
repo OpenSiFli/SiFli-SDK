@@ -486,7 +486,10 @@ void app_watch_entry(void *parameter)
     gui_app_run("Main");
     lv_disp_trig_activity(NULL);
 #if defined(GUI_APP_FRAMEWORK)&&(!defined (APP_TRANS_ANIMATION_NONE))
-    lvsf_gesture_init(lv_layer_top());
+    /* lvsf_gesture has conflict with lv_gesture, so it is disabled.
+        lv_gesture is used instead.
+    */
+    //lvsf_gesture_init(lv_layer_top());
 #endif /* defined(GUI_APP_FRAMEWORK)&&(!defined (APP_TRANS_ANIMATION_NONE)) */
 
     while (1)

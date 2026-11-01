@@ -56,6 +56,9 @@ You can just include register.h which includes bf0_hal.h also"
 #define HAL_PINMUX_MODULE_ENABLED
 #define HAL_PMU_MODULE_ENABLED
 #define HAL_PTC_ENABLED
+#ifdef PTM1_BASE
+#define HAL_PTM_MODULE_ENABLED
+#endif /* PTM1_BASE */
 #define HAL_RCC_MODULE_ENABLED
 #define HAL_RNG_MODULE_ENABLED
 #define HAL_RTC_MODULE_ENABLED
@@ -466,6 +469,10 @@ in voltage and temperature.  */
 
 #ifdef HAL_PTC_ENABLED
 #include "bf0_hal_ptc.h"
+#endif
+
+#ifdef HAL_PTM_MODULE_ENABLED
+#include "bf0_hal_ptm.h"
 #endif
 
 #ifdef HAL_PDM_MODULE_ENABLED

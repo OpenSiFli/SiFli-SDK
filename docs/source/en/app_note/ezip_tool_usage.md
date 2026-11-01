@@ -134,6 +134,23 @@ const LV_ATTRIBUTE_MEM_ALIGN uint8_t png_filename_map[] = {
 }
 ```
 
+
+:::{only} SF32LB57X
+
+### SF32LB57 Window Size Limitation
+
+The hardware EZIP decoder of SF32LB57 cannot handle compressed streams with a window size greater than 2048. When generating EZIP resources, the compression window size must be limited to 2048.
+
+Use the `-winsize` parameter to specify the window size:
+
+```
+ezip -convert png_filename.png -rgb565 -binfile 2 -winsize 2048
+```
+
+When using the SCons build system, if `-winsize` is not explicitly specified, the build script automatically appends `-winsize 2048`.
+
+:::
+
 ### Generate GZIP BIN File for Hardware EZIP Decompression
 
 - For example, to compress the file _file.bin_ in the same directory, use the following command:

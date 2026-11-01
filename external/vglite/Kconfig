@@ -7,6 +7,32 @@ menuconfig USING_VGLITE
             bool "Use static contiguous mem for VG-Lite"
             default n
         config VGLITE_CONT_MEM_SIZE
-            int "VG-Lite contiguous mem size in kbyte"
-            default 256
-    endif     
+            int "VGLite contiguous memory pool size (KB)"
+            default 320
+            help
+                Size of VGLite contiguous memory pool in KB.
+                This pool is used for command buffer, tessellation buffer,
+                target buffers and other VGLite runtime allocations.
+                For arc mask generation (e.g. 226x226 A8), 192KB is enough.
+                For full-screen VGLite rendering, 320KB or more is recommended.
+        config VGLITE_CMD_BUF_SIZE_KB
+            int "VGLite command buffer size (KB)"
+            default 102
+            help
+                Size of VGLite command buffer in KB.
+                The command buffer stores VGLite command sequences consumed by GPU.
+        config VGLITE_TESS_WIDTH
+            int "VGLite tessellation buffer width"
+            default 0
+            help
+                Width of VGLite tessellation buffer in pixels.
+                A positive value overrides the width on either CPU core.
+                Zero uses the LCD width when LCD is enabled, otherwise 320.
+        config VGLITE_TESS_HEIGHT
+            int "VGLite tessellation buffer height"
+            default 0
+            help
+                Height of VGLite tessellation buffer in pixels.
+                A positive value overrides the height on either CPU core.
+                Zero uses the LCD height when LCD is enabled, otherwise 320.
+    endif

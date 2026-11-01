@@ -250,27 +250,6 @@ rt_err_t pm_enable_rtc_wakeup(void);
  */
 rt_err_t pm_disable_rtc_wakeup(void);
 
-/**
- * @brief Calculate the compensated rt_tick
- *
- *  @param[in] curr_tick current rt_tick
- *  @param[in] curr_time current GTIME
- *  @param[in] gtime_freq GTIMER frequency
- *  @param[in] user_data user data
- *
- * @retval compensated rt_tick
- */
-rt_tick_t pm_latch_tick(rt_tick_t curr_tick, uint32_t curr_time, float gtime_freq, void *user_data);
-
-/**
- * @brief Update last latch tick if rt_tick cannot be updated as expected
- *
- *  @param[in] last_latch_tick last_latch_tick
- *
- * @return void
- */
-void pm_set_last_latch_tick(rt_tick_t last_latch_tick);
-
 /** Indicate specified scanario is started
  *
  * @param[in] scenario scenario

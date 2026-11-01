@@ -1,0 +1,10 @@
+config {{ board_symbol }}
+    bool
+    select {{ soc_symbol }}
+{% if part_symbol %}    select {{ part_symbol }}
+{% endif %}    select {{ core_select }}
+{% if extra_select %}    select {{ extra_select }}
+{% endif %}
+    default y
+
+rsource "../Kconfig.board"

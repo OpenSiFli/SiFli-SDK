@@ -14,6 +14,7 @@ objs_ezip += Glob('common/ezip/*.png')
 objs_ezip += Glob('common/ezip/*.gif')
 objs_no_ezip = Glob('common/no_ezip/*.png')
 objs_no_ezip += Glob('common/no_ezip/*.gif')
+objs_no_ezip += Glob('common/emoji/*.png')
 objs_large_ezip += Glob('common/large_ezip/*.png')
 objs_large_ezip += Glob('common/large_ezip/*.gif')
 

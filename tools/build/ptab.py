@@ -179,6 +179,49 @@ def get_partition_selectors_v3(partition: Any) -> List[Dict[str, str]]:
     return deduped
 
 
+# An ACPU project may build several code images out of a single ELF because the
+# execution regions are not contiguous. Every image after the first is declared as
+# its own app/factory/core=ACPU partition that names the ELF output section holding
+# its code ('.rom<N>'), which also gives the image index N, the artifact suffix
+# ('ER_IROM<N>', the same naming as the v1/v2 multi-image flow and the embedded
+# LCPU flow) and the Keil fromelf region name.
+_ACPU_CODE_ROM_SECTION_RE = re.compile(r'^\.rom(\d+)$', re.IGNORECASE)
+
+
+def is_acpu_code_partition_v3(partition: Any) -> bool:
+    """Return True for ptab v3 partitions that carry ACPU code."""
+    if not isinstance(partition, dict):
+        return False
+    if str(partition.get('type') or '').strip().lower() != 'app':
+        return False
+    if str(partition.get('subtype') or '').strip().lower() != 'factory':
+        return False
+    return str(partition.get('core') or '').strip().upper() == 'ACPU'
+
+
+def get_acpu_code_rom_indexes(partition: Any) -> List[int]:
+    """Return every '.rom<N>' image index declared by an ACPU code partition."""
+    if not isinstance(partition, dict):
+        return []
+    indexes = []
+    for item in normalize_partition_sections(partition.get('sections')):
+        match = _ACPU_CODE_ROM_SECTION_RE.match(str(item.get('section') or '').strip())
+        if match:
+            indexes.append(int(match.group(1)))
+    return indexes
+
+
+def get_acpu_code_rom_index(partition: Any) -> Optional[int]:
+    """Return the image index N of an ACPU code partition declaring '.rom<N>'.
+
+    Returns None for the first ACPU image (its code stays in the code artifact)
+    and for any ACPU code partition without a '.rom<N>' section. A partition must
+    not declare more than one '.rom<N>' section (validate_ptab_v3.py rejects it).
+    """
+    indexes = get_acpu_code_rom_indexes(partition)
+    return indexes[0] if indexes else None
+
+
 class Ptab:
     def __init__(self, path, mems):
         self.path = os.path.abspath(path)
@@ -262,6 +305,10 @@ class PtabV3:
             match = re.match(r'(SF32LB\d{2})', self._chip, re.IGNORECASE)
             if match:
                 return match.group(1).lower()
+            # SF32BPRTUN3N6/SF32BPRTYB3N6 are SiP variants documented under
+            # the SF32LB57x chip directory and share the 57 series defaults.
+            if re.match(r'SF32BPRT', self._chip, re.IGNORECASE):
+                return 'sf32lb57'
         return None
 
     @property
@@ -874,7 +921,7 @@ _PTAB_V3_SERIES_DEFAULTS: Dict[str, Dict[str, int]] = {
         'lpsys_ram_size': 0x00006000,
         'bootloader_exec_offset': 0x00020000,
         'flash_table_nor_size': 0x00008000,
-        'flash_table_nand_size': 0x00020000,
+        'flash_table_nand_size': 0x00008000,
         'flash_table_sd_offset': 0x00001000,
         'flash_table_sd_size': 0x00008000,
         'mbr_sd_offset': 0x00000000,
@@ -883,6 +930,23 @@ _PTAB_V3_SERIES_DEFAULTS: Dict[str, Dict[str, int]] = {
         'factory_data_sd_size': 0x00020000,
         'bootloader_nor_offset': 0x00010000,
         'bootloader_nand_offset': 0x00080000,
+        'bootloader_sd_offset': 0x00061000,
+        'bootloader_size': 0x00010000,
+    },
+    'sf32lb57': {
+        'hcpu_ram_size': 0x0006FC00,
+        'bootloader_ram_offset': 0x00040000,
+        'bootloader_ram_size': 0x00010000,
+        'bootloader_exec_offset': 0x00020000,
+        'flash_table_nor_size': 0x00008000,
+        'flash_table_nand_size': 0x00008000,
+        'flash_table_sd_offset': 0x00001000,
+        'flash_table_sd_size': 0x00008000,
+        'mbr_sd_offset': 0x00000000,
+        'mbr_sd_size': 0x00001000,
+        'factory_data_sd_offset': 0x00041000,
+        'factory_data_sd_size': 0x00020000,
+        'bootloader_nor_offset': 0x00010000,
         'bootloader_sd_offset': 0x00061000,
         'bootloader_size': 0x00010000,
     },
@@ -1013,7 +1077,9 @@ def _infer_default_partitions_v3(
             if boot_mem_type == 'nand':
                 block_size = _get_region_nand_block_size(boot_region, chip_config)
                 flash_table_offset = 0
-                flash_table_size = block_size
+                # Match the v2 default: the ftab partition describes the live
+                # table only; the rest of the erase block stays reserved.
+                flash_table_size = cfg['flash_table_nand_size']
                 bootloader_offset = 4 * block_size
                 flash_table_attrs['AUTO_FLASH_MAC_ADDRESS'] = SF32LB52_NAND_AUTO_FLASH_MAC_ADDRESS
             elif boot_mem_type == 'sd':
@@ -1102,6 +1168,104 @@ def _infer_default_partitions_v3(
             'offset': 0,
             'size': cfg['lpsys_ram_size'],
         }
+        return defaults
+
+    if series == 'sf32lb57':
+        boot_region, boot_mem_type = _infer_default_boot_region_v3(partitions, chip_config)
+        if boot_region and boot_mem_type in ('nor', 'nand', 'sd'):
+            flash_table_attrs = {}
+            if boot_mem_type == 'nand':
+                block_size = _get_region_nand_block_size(boot_region, chip_config)
+                flash_table_offset = 0
+                # Match the v2 default: the ftab partition describes the live
+                # table only; the rest of the erase block stays reserved.
+                flash_table_size = cfg['flash_table_nand_size']
+                bootloader_offset = 4 * block_size
+                # The MAC address lives at the start of the boot NAND device.
+                # Derive it from the boot region SBUS base instead of reusing
+                # the 52 series constant, since 57 can boot from mpi2 or mpi3.
+                mac_base, _mac_cbus = resolve_region_address(boot_region, 0, chip_config)
+                flash_table_attrs['AUTO_FLASH_MAC_ADDRESS'] = mac_base
+            elif boot_mem_type == 'sd':
+                defaults['mbr'] = {
+                    'name': 'mbr',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': cfg['mbr_sd_offset'],
+                    'size': cfg['mbr_sd_size'],
+                    'aliases': ['MBR'],
+                }
+                flash_table_offset = cfg['flash_table_sd_offset']
+                flash_table_size = cfg['flash_table_sd_size']
+                bootloader_offset = cfg['bootloader_sd_offset']
+            else:
+                flash_table_offset = 0
+                flash_table_size = cfg['flash_table_nor_size']
+                bootloader_offset = cfg['bootloader_nor_offset']
+
+            flash_table = {
+                'name': 'flash_table',
+                'type': 'ftab',
+                'region': boot_region,
+                'offset': flash_table_offset,
+                'size': flash_table_size,
+            }
+            if flash_table_attrs:
+                flash_table['attrs'] = flash_table_attrs
+            defaults['flash_table'] = flash_table
+            if boot_mem_type == 'nand':
+                defaults['factory_data'] = {
+                    'name': 'factory_data',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': 2 * block_size,
+                    'size': block_size,
+                    'aliases': ['FACTORY_DATA'],
+                }
+            defaults['bootloader'] = {
+                'name': 'bootloader',
+                'type': 'bootloader',
+                'region': boot_region,
+                'offset': bootloader_offset,
+                'size': cfg['bootloader_size'],
+                'core': 'HCPU',
+                'exec': {
+                    'region': 'hpsys_ram',
+                    'offset': cfg['bootloader_exec_offset'],
+                },
+            }
+            if boot_mem_type == 'sd':
+                defaults['factory_data'] = {
+                    'name': 'factory_data',
+                    'type': 'data',
+                    'subtype': 'raw',
+                    'region': boot_region,
+                    'offset': cfg['factory_data_sd_offset'],
+                    'size': cfg['factory_data_sd_size'],
+                    'aliases': ['FACTORY_DATA'],
+                }
+
+        defaults['hcpu_ram_data'] = {
+            'name': 'hcpu_ram_data',
+            'type': 'data',
+            'subtype': 'ram',
+            'region': 'hpsys_ram',
+            'offset': 0,
+            'size': cfg['hcpu_ram_size'],
+        }
+        defaults['bootloader_ram_data'] = {
+            'name': 'bootloader_ram_data',
+            'type': 'data',
+            'subtype': 'ram',
+            'region': 'hpsys_ram',
+            'offset': cfg['bootloader_ram_offset'],
+            'size': cfg['bootloader_ram_size'],
+            'core': 'HCPU',
+        }
+        # SF32LB57 has LPSYS RAM, but ptab v3 does not generate lpsys_ram by
+        # default; an explicit user partition with that name is kept.
         return defaults
 
     defaults['flash_table'] = {
@@ -1511,6 +1675,75 @@ def iter_int_res_partitions_v3(ptab_obj: Any, core: Optional[str] = None) -> Lis
         if pcore != core_u:
             continue
         out.append(p)
+    return out
+
+
+def iter_acpu_code_ext_partitions_v3(ptab_obj: Any) -> List[Dict[str, Any]]:
+    """Iterate the extra ACPU code images of a ptab v3 file, in '.rom<N>' order.
+
+    Each entry describes one code image carved out of the ACPU project ELF:
+      name                            partition name
+      rom_index                       image index N of the '.rom<N>' section
+      image / keil_region             artifact suffix and fromelf region ('ER_IROM<N>')
+      section                         GCC output section / objcopy selector ('.rom<N>')
+      size                            partition size in bytes
+      storage_region / storage_offset where the image is stored (ftab base)
+      exec_region / exec_offset       where the image is executed (ftab xip_base);
+                                      the storage window when the image runs in
+                                      place (no exec descriptor, NOR only)
+      selectors                       input sections gathered into '.rom<N>'
+
+    Addresses are returned as raw region/offset pairs on purpose: the address rules
+    live in the callers (gen_link_lds.py and gen_ftab.py), so this helper never
+    introduces a second copy of them.
+    """
+    if not ptab_obj or not hasattr(ptab_obj, 'is_v3') or not ptab_obj.is_v3():
+        return []
+
+    out: List[Dict[str, Any]] = []
+    for p in getattr(ptab_obj, 'partitions', []) or []:
+        if not is_acpu_code_partition_v3(p):
+            continue
+        rom_index = get_acpu_code_rom_index(p)
+        if rom_index is None:
+            # First ACPU image: its code stays in the code artifact.
+            continue
+
+        section = '.rom{}'.format(rom_index)
+        # The '.rom<N>' entry names the output section itself; any further entry is
+        # an input selector for the code to gather into it.
+        selectors = [
+            item for item in normalize_partition_sections(p.get('sections'))
+            if str(item.get('section') or '').strip().lower() != section
+        ] or [{'section': '{}*'.format(section)}]
+
+        exec_def = p.get('exec') if isinstance(p.get('exec'), dict) else {}
+        storage_region = str(p.get('region') or '').strip()
+        storage_offset = parse_size(p.get('offset', 0))
+        exec_region = str(exec_def.get('region') or '').strip()
+        if exec_region:
+            exec_offset = parse_size(exec_def.get('offset', 0))
+        else:
+            # No exec descriptor: the image executes in place from its storage
+            # region (validate_ptab_v3.py only allows this on NOR), so the
+            # storage window is also the execution window the link script needs.
+            exec_region = storage_region
+            exec_offset = storage_offset
+        out.append({
+            'name': str(p.get('name') or '').strip(),
+            'rom_index': rom_index,
+            'image': 'ER_IROM{}'.format(rom_index),
+            'keil_region': 'ER_IROM{}'.format(rom_index),
+            'section': section,
+            'size': parse_size(p.get('size', 0)),
+            'storage_region': storage_region,
+            'storage_offset': storage_offset,
+            'exec_region': exec_region,
+            'exec_offset': exec_offset,
+            'selectors': selectors,
+        })
+
+    out.sort(key=lambda entry: (entry['rom_index'], entry['name']))
     return out
 
 
@@ -2581,7 +2814,7 @@ def _add_default_regions_52x(mems):
         if not bootloader_img_found:
             if "sd" == boot_dev_type:
                 bootloader_region = {
-                    "offset": "0x00011000",
+                    "offset": "0x00061000",
                     "max_size": "0x00010000",
                     "tags": [],
                     "name": "bootloader",
@@ -2710,7 +2943,7 @@ def _add_default_regions_57x(mems):
         if not bootloader_img_found:
             if "sd" == boot_dev_type:
                 bootloader_region = {
-                    "offset": "0x00011000",
+                    "offset": "0x00061000",
                     "max_size": "0x00010000",
                     "tags": [],
                     "name": "bootloader",

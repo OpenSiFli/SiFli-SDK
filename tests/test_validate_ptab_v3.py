@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(ROOT, "tools", "build"))
 
 import ptab  # noqa: E402
 from validate_ptab_v3 import validate_ptab_v3  # noqa: E402
+from validate_ptab_v3 import validate_sf32lb52_storage_reservations  # noqa: E402
 
 
 class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
@@ -187,7 +188,7 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
 
         self.assertTrue(any("FACTORY_DATA" in message and "0x40000" in message for message in messages), messages)
 
-    def test_52_nand_256k_default_partitions_are_block_size_aware(self) -> None:
+    def test_52_nand_256k_default_partitions_follow_v2_layout(self) -> None:
         data = {
             "version": 3,
             "chip": "SF32LB52X",
@@ -214,7 +215,9 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
         bootloader = next(part for part in partitions if part.get("name") == "bootloader")
         messages = [str(issue) for issue in validate_ptab_v3(ptab_obj)]
 
-        self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00040000)
+        # The flash table keeps the v2 size (0x8000); only the factory data
+        # and the bootloader are aligned to the 256K erase block.
+        self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00008000)
         self.assertEqual(ptab.parse_size(factory_data["offset"]), 0x00080000)
         self.assertEqual(ptab.parse_size(factory_data["size"]), 0x00040000)
         self.assertEqual(ptab.parse_size(bootloader["offset"]), 0x00100000)
@@ -319,8 +322,26 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
 
         messages = self.validation_messages(data)
 
-        self.assertTrue(any("flash_table" in message and "size=0x40000" in message for message in messages), messages)
+        self.assertTrue(any("flash_table" in message and "size=0x8000" in message for message in messages), messages)
         self.assertTrue(any("bootloader" in message and "offset=0x100000" in message for message in messages), messages)
+
+    def test_52_nand_real_board_ptabs_accept_v2_flash_table_size(self) -> None:
+        # Both NAND boards rely on the injected 0x8000 flash table while their
+        # 128K erase block is larger; the rest of the block stays reserved.
+        for board in ("sf32lb52-lcd_a128r16", "sf32lb52-nano_a128r16"):
+            ptab_path = Path(ROOT) / "customer" / "boards" / board / "ptab.yaml"
+            ptab_obj = ptab.load_ptab(ptab_path, fatal=True)
+
+            flash_table = next(
+                part for part in ptab_obj.partitions if part.get("name") == "flash_table"
+            )
+            self.assertEqual(ptab.parse_size(flash_table["size"]), 0x00008000, board)
+
+            messages = [str(issue) for issue in validate_ptab_v3(ptab_obj)]
+            self.assertFalse(
+                any("flash_table" in message for message in messages),
+                f"{board}: {messages}",
+            )
 
     def test_non_nand_rejects_memory_block_size(self) -> None:
         data = self.base_52_sdmmc_partitions(
@@ -438,6 +459,192 @@ class ValidatePtabV3ReservedPartitionTests(unittest.TestCase):
         )
 
         self.assertNoReservationMessages(data)
+
+
+class ValidateAcpuCodeNameSuffixTests(unittest.TestCase):
+    """The image index in an ACPU partition name must match its '.rom<N>'."""
+
+    def _ptab_obj(self, acpu_parts: list[dict[str, Any]]):
+        data = {
+            "version": 3,
+            "chip": "SF32LB58X",
+            "memory": [{"mpi": "mpi4", "type": "nor", "size": 32 * 1024 * 1024}],
+            "partitions": [
+                {
+                    "name": "hcpu_flash_code",
+                    "type": "app",
+                    "subtype": "factory",
+                    "region": "mpi4",
+                    "offset": 0x00000000,
+                    "size": 0x00400000,
+                    "core": "HCPU",
+                    "exec": {"region": "psram1", "offset": 0x00000000},
+                },
+            ] + acpu_parts,
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "ptab.yaml"
+            path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            return ptab.load_ptab(path, fatal=True)
+
+    def _messages(self, acpu_parts: list[dict[str, Any]]) -> list[str]:
+        return [str(issue) for issue in validate_ptab_v3(self._ptab_obj(acpu_parts))]
+
+    @staticmethod
+    def _acpu(name: str, offset: int, **extra: Any) -> dict[str, Any]:
+        part = {
+            "name": name,
+            "type": "app",
+            "subtype": "factory",
+            "region": "mpi4",
+            "offset": offset,
+            "size": 0x00040000,
+            "core": "ACPU",
+            "exec": {"region": "hpsys_ram", "offset": 0x00200000},
+        }
+        part.update(extra)
+        return part
+
+    def test_name_suffix_must_match_first_image(self) -> None:
+        """Without '.rom<N>' the partition is image 1, so `acpu2` is rejected."""
+        messages = self._messages([
+            self._acpu("acpu2", 0x01900000,
+                       aliases=["ACPU_CODE_LOAD_REGION1"]),
+        ])
+        self.assertTrue(
+            any("name suffix 2 does not match image 1" in m for m in messages),
+            messages)
+
+    def test_name_suffix_must_match_rom_section(self) -> None:
+        """`acpu3` cannot declare '.rom2': the two would name different images."""
+        messages = self._messages([
+            self._acpu("acpu", 0x01900000,
+                       aliases=["ACPU_CODE_LOAD_REGION1"]),
+            self._acpu("acpu3", 0x01980000,
+                       aliases=["ACPU_CODE_LOAD_REGION2"],
+                       exec={"region": "hpsys_ram", "offset": 0x00280000},
+                       sections=[{"section": ".rom2"}]),
+        ])
+        self.assertTrue(
+            any("name suffix 3 does not match image 2 (.rom2)" in m
+                for m in messages),
+            messages)
+
+    def test_matching_name_suffix_is_accepted(self) -> None:
+        messages = self._messages([
+            self._acpu("acpu", 0x01900000,
+                       aliases=["ACPU_CODE_LOAD_REGION1"]),
+            self._acpu("acpu2", 0x01980000,
+                       aliases=["ACPU_CODE_LOAD_REGION2"],
+                       exec={"region": "hpsys_ram", "offset": 0x00280000},
+                       sections=[{"section": ".rom2"}]),
+        ])
+        self.assertFalse(
+            [m for m in messages if "name suffix" in m], messages)
+
+
+class ValidateAcpuInPlaceExecutionTests(unittest.TestCase):
+    """An ACPU image may omit `exec` only when it runs in place from NOR."""
+
+    def _ptab_obj(self, storage_type: str):
+        data = {
+            "version": 3,
+            "chip": "SF32LB57X",
+            "memory": [{"mpi": "mpi3", "type": storage_type,
+                        "size": 16 * 1024 * 1024}],
+            "partitions": [
+                {
+                    "name": "hcpu_flash_code",
+                    "type": "app",
+                    "subtype": "factory",
+                    "region": "mpi3",
+                    "offset": 0x00020000,
+                    "size": 0x00700000,
+                    "core": "HCPU",
+                },
+                {
+                    # No exec: the board generator emits this for NOR storage.
+                    "name": "acpu",
+                    "type": "app",
+                    "subtype": "factory",
+                    "region": "mpi3",
+                    "offset": 0x00720000,
+                    "size": 0x00040000,
+                    "core": "ACPU",
+                    "aliases": ["ACPU_CODE_LOAD_REGION1"],
+                },
+                {
+                    "name": "acpu_ram_data",
+                    "type": "data",
+                    "subtype": "ram",
+                    "region": "hpsys_ram",
+                    "offset": 0x0006FC00,
+                    "size": 0x0000FC00,
+                    "core": "ACPU",
+                    "aliases": ["ACPU_RAM_DATA"],
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "ptab.yaml"
+            path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            return ptab.load_ptab(path, fatal=True)
+
+    def _exec_errors(self, storage_type: str) -> list[str]:
+        return [
+            str(issue)
+            for issue in validate_ptab_v3(self._ptab_obj(storage_type))
+            if "must provide 'exec" in str(issue)
+        ]
+
+    def test_nor_acpu_without_exec_is_accepted(self) -> None:
+        self.assertEqual(self._exec_errors("nor"), [])
+
+    def test_nand_acpu_without_exec_is_rejected(self) -> None:
+        errors = self._exec_errors("nand")
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("unless it runs in place from NOR", errors[0])
+
+
+class ValidateSf32lb52SdReservationTests(unittest.TestCase):
+    """SD regions keep their 'sd' type even without a memory_info entry.
+
+    The reservation check keys on the region memory type, so a helper that
+    reports '' for an undeclared sdmmc region would silently skip the MBR /
+    FACTORY_DATA checks on 52 SD boards.
+    """
+
+    class _Ptab52:
+        chip_series = 'sf32lb52'
+
+    def test_undeclared_sd_region_still_requires_reservations(self) -> None:
+        chip_config = {
+            'series': 'sf32lb52',
+            'mpi': {},
+            'ram': {},
+            'sdmmc': {},
+            'memory_info': {},
+        }
+        partitions = [
+            {
+                "name": "hcpu_flash_code",
+                "type": "app",
+                "subtype": "factory",
+                "region": "sdmmc1",
+                "offset": 0x00061000,
+                "size": 0x00100000,
+                "core": "HCPU",
+            },
+        ]
+
+        errors = [
+            str(issue)
+            for issue in validate_sf32lb52_storage_reservations(
+                self._Ptab52(), partitions, chip_config)
+        ]
+
+        self.assertTrue([e for e in errors if "'MBR'" in e], errors)
+        self.assertTrue([e for e in errors if "'FACTORY_DATA'" in e], errors)
 
 
 if __name__ == "__main__":

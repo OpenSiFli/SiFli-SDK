@@ -119,7 +119,8 @@ static HAL_StatusTypeDef HAL_JPEGD_ConfigDecode(JPEGD_HandleTypeDef *hdl, JPEGD_
 
         // AHB mode does not support clip window, need to output all.
         col_start = row_start = 0;
-        HAL_JPEGD_GetDim(config->input, config->input_data_size, (int *)&col_end, (int *)&row_end);
+        if (HAL_OK != HAL_JPEGD_GetDim(config->input, config->input_data_size, (int *)&col_end, (int *)&row_end))
+            return HAL_ERROR;
         col_end--;
         row_end--;
     }
@@ -437,29 +438,64 @@ HAL_StatusTypeDef HAL_JPEGD_GetOutputSize(JPEGD_HandleTypeDef *hdl, JPEGD_Decode
 HAL_StatusTypeDef HAL_JPEGD_GetDim(uint8_t *input, uint32_t size, int *width, int *height)
 {
     int w = -1, h = -1, i = 0;
-    uint16_t len;
+    uint8_t marker;
 
-    while (i < size - 4)
+    if (size < 4)
+        return HAL_ERROR;
+
+    while (i < (int)size - 4)
     {
-        if (input[i] == 0xFF)
+        /* Every JPEG segment starts with 0xFF */
+        if (input[i] != 0xFF)
+            return HAL_ERROR;
+
+        marker = input[i + 1];
+
+        /* 0xFF 0x00 is byte stuffing, invalid outside entropy-coded data */
+        if (marker == 0x00)
+            return HAL_ERROR;
+
+        /* 0xFF 0xFF is fill byte, skip one byte */
+        if (marker == 0xFF)
         {
-            len = LDB_WORD(input + i + 2);
-            if (input[i + 1] == 0xD8)   // SOI
+            i++;
+            continue;
+        }
+
+        /* SOI: no length field */
+        if (marker == 0xD8)
+        {
+            i += 2;
+            continue;
+        }
+        /* EOI: no length field, end of image */
+        if (marker == 0xD9)
+            break;
+        /* RST0-RST7: no length field */
+        if (marker >= 0xD0 && marker <= 0xD7)
+        {
+            i += 2;
+            continue;
+        }
+
+        /* SOF0 (baseline) or SOF2 (progressive): extract dimensions */
+        if (marker == 0xC0 || marker == 0xC2)
+        {
+            if ((uint32_t)i + 9 <= size)
             {
-                i += 2;
-                continue;
+                h = LDB_WORD(input + i + 5);
+                w = LDB_WORD(input + i + 7);
             }
-            if (input[i + 1] == 0xC0)   /* SOF0 (baseline JPEG) */
-            {
-                if (i < size - 9)
-                {
-                    h = LDB_WORD(input + i + 5);
-                    w = LDB_WORD(input + i + 7);
-                }
-                break;
-            }
-            // Next tag
-            i += len + 2;
+            break;
+        }
+
+        /* All other markers (APPn, DQT, DHT, SOS, DRI, COM, ...):
+           have a 2-byte length field, skip by length */
+        {
+            uint16_t seg_len = LDB_WORD(input + i + 2);
+            if (seg_len < 2)
+                return HAL_ERROR;
+            i += (uint32_t)seg_len + 2;
         }
     }
     if (width)
@@ -467,7 +503,7 @@ HAL_StatusTypeDef HAL_JPEGD_GetDim(uint8_t *input, uint32_t size, int *width, in
     if (height)
         *height = h;
 
-    return HAL_OK;
+    return (w > 0 && h > 0) ? HAL_OK : HAL_ERROR;
 }
 
 #endif

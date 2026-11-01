@@ -127,7 +127,7 @@ int main(void)
     }
     lv_ex_data_pool_init();
 
-    gui_app_init();
+    gui_app_init(1);
     gui_app_run(DEMO_MULTLIST_MAIN_ID);
 
     while (1)

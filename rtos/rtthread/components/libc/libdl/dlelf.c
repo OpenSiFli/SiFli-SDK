@@ -173,7 +173,6 @@ rt_err_t dlmodule_load_shared_object(struct rt_dlmodule *module, void *module_pt
         /* allocate module space */
         module->mem_space = dlm_malloc(module_size);
         rt_kprintf("%s: line %d %p %d\n", __func__, __LINE__, module->mem_space, module_size);
-        RT_ASSERT(module->mem_space);
         if (module->mem_space == RT_NULL)
         {
             rt_kprintf("Module: allocate space failed.\n");
@@ -308,13 +307,25 @@ rt_err_t dlmodule_load_shared_object(struct rt_dlmodule *module, void *module_pt
                 count ++;
         }
 
-        module->symtab = (struct rt_module_symtab *)dlm_malloc
-                         (count * sizeof(struct rt_module_symtab));
-        RT_ASSERT(module->symtab);
-        rt_memset(module->symtab, 0x00, count * sizeof(struct rt_module_symtab));
-        //rt_kprintf("%s: line %d %p %d\n", __func__, __LINE__, module->symtab, count * sizeof(struct rt_module_symtab));
-        module->nsym = count;
-        for (i = 0, count = 0; i < shdr[index].sh_size / sizeof(Elf32_Sym); i++)
+        if (count > RT_UINT16_MAX)
+        {
+            rt_kprintf("Module: too many exported symbols.\n");
+            return -RT_ERROR;
+        }
+        /* Destruction must only visit names that were successfully allocated. */
+        module->nsym = 0;
+        if (count > 0)
+        {
+            module->symtab = (struct rt_module_symtab *)dlm_malloc
+                             (count * sizeof(struct rt_module_symtab));
+            if (module->symtab == RT_NULL)
+            {
+                rt_kprintf("Module: allocate symbol table failed.\n");
+                return -RT_ENOMEM;
+            }
+            rt_memset(module->symtab, 0x00, count * sizeof(struct rt_module_symtab));
+        }
+        for (i = 0; i < shdr[index].sh_size / sizeof(Elf32_Sym); i++)
         {
             rt_size_t length;
 
@@ -325,19 +336,22 @@ rt_err_t dlmodule_load_shared_object(struct rt_dlmodule *module, void *module_pt
 
             length = rt_strlen((const char *)(strtab + symtab[i].st_name)) + 1;
 
-            module->symtab[count].addr =
+            module->symtab[module->nsym].addr =
                 (void *)(module->exec_mem_space + symtab[i].st_value - module->vstart_addr);
-            module->symtab[count].name = dlm_malloc(length);
-            RT_ASSERT(module->symtab[count].name);
-            rt_memset((void *)module->symtab[count].name, 0, length);
-            rt_memcpy((void *)module->symtab[count].name,
+            module->symtab[module->nsym].name = dlm_malloc(length);
+            if (module->symtab[module->nsym].name == RT_NULL)
+            {
+                rt_kprintf("Module: allocate symbol name failed.\n");
+                return -RT_ENOMEM;
+            }
+            rt_memset((void *)module->symtab[module->nsym].name, 0, length);
+            rt_memcpy((void *)module->symtab[module->nsym].name,
                       strtab + symtab[i].st_name,
                       length);
-            //rt_kprintf("%s_symtab: line %d %s %p\n", __func__, __LINE__, module->symtab[count].name, module->symtab[count].addr);
-            count ++;
+            module->nsym ++;
 
             /* all global symbols have been saved */
-            if (count >= module->nsym)
+            if (module->nsym >= count)
             {
                 break;
             }

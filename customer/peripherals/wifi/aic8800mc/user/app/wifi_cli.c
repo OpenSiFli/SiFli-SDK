@@ -30,6 +30,9 @@
 #include "lwip/netif.h"
 #include "netdev.h"
 #include "netal_service.h"
+#ifdef RT_USING_WIFI
+    #include <wlan_mgnt.h>
+#endif
 
 #ifdef AIC_ENABLE_P2P
 
@@ -618,6 +621,70 @@ static void cmd_p2p_echo_test(int argc, char **argv)
 
 #endif /* AIC_ENABLE_P2P */
 
+// SoftAP command handlers
+
+#ifdef RT_USING_WIFI
+
+#define CLI_WLAN_DEV_NAME   "wlan0"
+
+static void cmd_wifi_ap_start(int argc, char **argv)
+{
+    rt_err_t ret;
+    const char *ssid;
+    const char *passwd = RT_NULL;
+
+    WIFI_NOT_ON_EXIT();
+
+    if (argc < 2)
+    {
+        DBG_APP_ERR("Usage: wifi_ap_start SSID <PASSWORD>\n");
+        return;
+    }
+    ssid = argv[1];
+    if (argc > 2)
+        passwd = argv[2];
+
+    DBG_APP_INF("starting AP: ssid=%s\n", ssid);
+
+    /* Switch wlan0 to AP role and start the softap.
+     * rt_wlan_start_ap() returns after the AP_START event is reported
+     * by the driver (firmware's START_AP_IND), or on timeout. */
+    ret = rt_wlan_set_mode(CLI_WLAN_DEV_NAME, RT_WLAN_AP);
+    if (ret != RT_EOK)
+    {
+        DBG_APP_ERR("set AP mode fail: %d\n", ret);
+        return;
+    }
+
+    ret = rt_wlan_start_ap(ssid, passwd);
+    if (ret != RT_EOK)
+    {
+        DBG_APP_ERR("start AP fail: %d\n", ret);
+        return;
+    }
+
+    DBG_APP_INF("AP started, ssid=%s\n", ssid);
+}
+
+static void cmd_wifi_ap_stop(int argc, char **argv)
+{
+    rt_err_t ret;
+
+    WIFI_NOT_ON_EXIT();
+
+    DBG_APP_INF("stopping AP\n");
+    ret = rt_wlan_ap_stop();
+    if (ret != RT_EOK)
+    {
+        DBG_APP_ERR("stop AP fail: %d\n", ret);
+        return;
+    }
+
+    DBG_APP_INF("AP stopped\n");
+}
+
+#endif /* RT_USING_WIFI */
+
 #if 0
 static void cmd_http_request(int argc, char **argv)
 {
@@ -668,6 +735,10 @@ static const cmd_entry wifi_cli_cmd_list[] =
     {"wifi_p2p_stop", cmd_wifi_p2p_stop},
     {"wifi_p2p_auto_go", cmd_wifi_p2p_auto_go_start},
     {"p2p_echo_test", cmd_p2p_echo_test},
+#endif
+#ifdef RT_USING_WIFI
+    {"wifi_ap_start", cmd_wifi_ap_start},
+    {"wifi_ap_stop", cmd_wifi_ap_stop},
 #endif
 
 //    {"http_request", cmd_http_request},

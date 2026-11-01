@@ -12,6 +12,9 @@
 + sf32lb58-lcd_n16r32n1_dsi（SDIO/eMMC）
 + sf32lb58-lcd_a128r32n1_qspi（SDIO/eMMC）
 + sf32lb58-lcd_n16r32n1_qspi（SDIO/eMMC）
++ sf32lb57-lcd_n16r8_dpi（SDIO/eMMC单线）
++ sf32lb57-lcd_n16r16_dpi（SDIO/eMMC单线）
++ sf32lb57-lcd_n16r16_qspi（SDIO/eMMC单线）
 + spi-hdk_lb573ub7n6（SDIO/eMMC单线）
 
 ## 概述

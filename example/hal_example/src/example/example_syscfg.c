@@ -27,7 +27,7 @@ static rt_err_t utest_tc_cleanup(void)
 
 static void testcase(int argc, char **argv)
 {
-    LOG_I("Boot mode is in %s mode\n", __HAL_SYSCFG_GET_BOOT_MODE() ? "uart loop" : "normal");
+    LOG_I("Boot mode is in %s mode\n", __HAL_SYSCFG_GET_BOOT_MODE() ? "bootrom" : "normal");
 }
 
 UTEST_TC_EXPORT(testcase, "example_syscfg", utest_tc_init, utest_tc_cleanup, 10);

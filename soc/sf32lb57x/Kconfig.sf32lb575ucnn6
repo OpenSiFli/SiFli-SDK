@@ -1,0 +1,17 @@
+if SOC_SF32LB575UCNN6
+configdefault BSP_ENABLE_MPI1
+    default y
+
+choice BSP_MPI1_MODE_CHOICE
+    default BSP_MPI1_MODE_3
+endchoice
+
+configdefault BSP_QSPI1_MEM_SIZE
+    default 8
+
+configdefault BSP_PSRAM1_PKG_TYPE0_MPI_MODE
+    default 3
+
+configdefault BSP_PSRAM1_PKG_TYPE0_PINMAP_MODE
+    default 2
+endif

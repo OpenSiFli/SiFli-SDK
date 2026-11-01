@@ -1,0 +1,486 @@
+/******************************************************************************
+ * @file     gcc_arm.ld
+ * @brief    GNU Linker Script for Cortex-M based device (Jinja2 template)
+ * @version  V2.0.0
+ * @date     21. May 2019
+ ******************************************************************************/
+/*
+ * NOTE:
+ * - This file is rendered by SiFli build system (ptab v3, Jinja2-only).
+ * - Do NOT add C preprocessor directives here (#include/#ifdef/#ifndef...).
+ */
+
+__ROM_BASE = {{ hex32(defines['__ROM_BASE']) }};
+__ROM_SIZE = {{ hex32(defines['__ROM_SIZE']) }};
+__RAM_BASE = {{ hex32(defines['__RAM_BASE']) }};
+__RAM_SIZE = {{ hex32(defines['__RAM_SIZE']) }};
+
+__STACK_SIZE = 0x00002000;
+__HEAP_SIZE  = 0x00000C00;
+
+__ROM_EX_BASE = {{ hex32(defines['__ROM_EX_BASE']) }};
+__ROM_EX_SIZE = {{ hex32(defines['__ROM_EX_SIZE']) }};
+
+__PSRAM_BASE = {{ hex32(defines['__PSRAM_BASE']) }};
+__PSRAM_SIZE = {{ hex32(defines['__PSRAM_SIZE']) }};
+
+__PSRAM2_BASE = {{ hex32(defines.get('__PSRAM2_BASE', 0)) }};
+__PSRAM2_SIZE = {{ hex32(defines.get('__PSRAM2_SIZE', 0)) }};
+
+{% for r in defines.get('INT_RES_PARTS', []) %}
+__{{ r.name_upper }}_BASE = {{ hex32(r.base) }};
+__{{ r.name_upper }}_SIZE = {{ hex32(r.size) }};
+{% endfor %}
+
+MEMORY
+{
+    ROM (rx) : ORIGIN = __ROM_BASE, LENGTH = __ROM_SIZE
+    RAM (rw) : ORIGIN = __RAM_BASE, LENGTH = __RAM_SIZE
+    ROM_EX(rw):ORIGIN = __ROM_EX_BASE, LENGTH = __ROM_EX_SIZE
+    PSRAM(rw): ORIGIN = __PSRAM_BASE, LENGTH = __PSRAM_SIZE
+{% if defines.get('__PSRAM2_SIZE', 0) > 0 %}
+    PSRAM2(rw): ORIGIN = __PSRAM2_BASE, LENGTH = __PSRAM2_SIZE
+{% endif %}
+{% for r in defines.get('INT_RES_PARTS', []) %}
+    {{ r.name_upper }} (rx): ORIGIN = __{{ r.name_upper }}_BASE, LENGTH = __{{ r.name_upper }}_SIZE
+{% endfor %}
+}
+
+ENTRY(Reset_Handler)
+
+SECTIONS
+{
+{% if not defines.get('FLASH_TABLE_ONLY') %}
+  .vectors :
+  {
+    _stext = ABSOLUTE(.);
+    KEEP(*(.vectors));
+    /* workaround to avoid load address of .retm_data doesn't skip .vectors region */
+    . = . + 4;
+  } > ROM
+
+  .stack :
+  {
+    . = ALIGN(8);
+    __StackLimit = .;
+    . = . + __STACK_SIZE;
+    . = ALIGN(8);
+    __StackTop = .;
+  } > RAM
+  PROVIDE(__stack = __StackTop);
+
+  .heap :
+  {
+    . = ALIGN(8);
+    __end__ = .;
+    PROVIDE(end = .);
+    . = . + __HEAP_SIZE;
+    . = ALIGN(8);
+    __HeapLimit = .;
+  } > RAM
+
+  .retm_data :
+  {
+    . = ALIGN(4);
+    __rw_retm_data_start__ = .;
+    __RW_IRAM_RET$$RO_start__ = .;
+
+    * (.*l1_ret_text_*)
+    * (.*l1_ret_rodata_*)
+
+    *drv_spi_flash.o     (.text* .rodata*)
+    *flash_table.o       (.text* .rodata*)
+    *bf0_hal_mpi.o       (.text* .rodata*)
+    *bf0_hal_mpi_ex.o    (.text* .rodata*)
+    *bf0_hal_mpi_psram.o (.text* .rodata*)
+    *flash.o             (.text* .rodata*)
+    *drv_psram.o         (.text* .rodata*)
+
+    *context_gcc.o      (.text* .rodata*)
+    *drv_common.o       (.text.HAL_GetTick)
+    *bf0_hal_rcc.o      (.text* .rodata*)
+
+    *bf0_pm.o           (.text.sifli_light_handler)
+    *bf0_pm.o           (.text.sifli_deep_handler)
+    *bf0_pm.o           (.text.sifli_standby_handler)
+    *bf0_pm.o           (.text.SystemInitFromStandby)
+    *.o                 (.text.SystemPowerOnModeGet)
+
+    *bsp_init.o         (.text* .rodata*)
+    *bsp_lcd_tp.o       (.text* .rodata*)
+    *bsp_pinmux.o       (.text* .rodata*)
+    *bsp_power.o        (.text* .rodata*)
+    *bf0_hal_gpio.o     (.text* .rodata*)
+
+    *bf0_hal_hpaon.o    (.text* .rodata*)
+    *bf0_hal.o          (.text.HAL_Init)
+    *.o                 (.text.HAL_Delay_us)
+    *.o                 (.text.HAL_Delay_us_)
+    *.o                 (.text.HAL_Delay_us2_)
+    *.o                 (.text.HAL_MspInit)
+    *.o                 (.text.HAL_Delay)
+    *bf0_hal_pinmux.o   (.text* .rodata*)
+    *bf0_pin_const.o    (.text* .rodata*)
+    *drv_common.o       (.text.rt_hw_us_delay)
+    *.o                 (.text.rt_memset)
+    *rt_memclr*.o       (.text*)
+    *memset*.o          (.text*)
+
+{% if defines.get('BSP_QSPI2_DUAL_MODE') %}
+    *bf0_hal_dma.o (.text* .rodata*)
+    *.o (.text.HAL_GetTick)
+    *.o (.text.HAL_AssertFailed)
+    *.o (.text.HAL_NVIC_DisableIRQ)
+    *bf0_hal_cortex.o (.text* .rodata*)
+{% endif %}
+
+    . = ALIGN(4);
+    __RW_IRAM_RET$$RO_end__ = .;        
+
+    __nor_cfg_db_start__ = .;
+    KEEP(*(.nor_cfg_db))
+    __nor_cfg_db_end__ = .;
+
+    . = ALIGN(4);
+    __RW_IRAM_RET$$RW_start__ = .;
+
+    *.o (.retm_data_*)
+
+    . = ALIGN(4);
+    __RW_IRAM_RET$$RW_end__ = .;
+    __rw_retm_data_end__ = .;
+
+  } > RAM AT > ROM
+{% endif %}
+
+  .text :
+  {
+{% if defines.get('FLASH_TABLE_ONLY') %}
+    KEEP(*ftab.o(.text* .rodata*))
+{% else %}
+    *(.text*)
+    *(.rodata*)
+
+    KEEP(*(.init))
+    KEEP(*(.fini))
+
+    /* section information for finsh shell */
+    . = ALIGN(4);
+    __fsymtab_start = .;
+    KEEP(*(FSymTab))
+    __fsymtab_end = .;
+
+    . = ALIGN(4);
+    __vsymtab_start = .;
+    KEEP(*(VSymTab))
+    __vsymtab_end = .;
+
+    . = ALIGN(4);
+    LcdDriverDescTab_start = .;
+    KEEP(*(LcdDriverDescTab))
+    LcdDriverDescTab_end = .;
+
+    . = ALIGN(4);
+    __rt_utest_tc_tab_start = .;
+    KEEP(*(UtestTcTab))
+    __rt_utest_tc_tab_end = .;
+
+    /* section information for initial. */
+    . = ALIGN(4);
+    __rt_init_start = .;
+    KEEP(*(SORT(.rti_fn*)))
+    __rt_init_end = .;
+
+    . = ALIGN(4);
+    BuiltinApp1Tab_start = .;
+    KEEP(*(.BuiltinApp1Tab))
+    BuiltinApp1Tab_end = .;
+
+    . = ALIGN(4);
+    BuiltinApp2Tab_start = .;
+    KEEP(*(.BuiltinApp2Tab))
+    BuiltinApp2Tab_end = .;
+
+    . = ALIGN(4);
+    __switch_anim_start__ = .;
+    KEEP(*(.switch_anim))
+    __switch_anim_end__ = .;
+
+    . = ALIGN(4);
+    __app_font_start__ = .;
+    KEEP(*(.app_font))
+    __app_font_end__ = .;
+
+    . = ALIGN(4);
+    __SerialTranClientExport_start__ = .;
+    KEEP(*(SerialTranClientExport))
+    __SerialTranClientExport_end__ = .;
+
+    . = ALIGN(4);
+    __SerialTranExport_start__ = .;
+    KEEP(*(SerialTranExport))
+    __SerialTranExport_end__ = .;
+
+    . = ALIGN(4);
+    __app_subpage_db_start__ = .;
+    KEEP(*(.app_subpage_db))
+    __app_subpage_db_end__ = .;
+
+    . = ALIGN(4);
+    __sifli_reg_start__ = .;
+    KEEP(*(SORT(.sifli_reg*)))
+    __sifli_reg_end__ = .;
+
+    . = ALIGN(4);
+    __bt_sifli_reg_start__ = .;
+    KEEP(*(SORT(.bt_sifli_reg*)))
+    __bt_sifli_reg_end__ = .;
+
+    /* section information for modules */
+    . = ALIGN(4);
+    __rtmsymtab_start = .;
+    KEEP(*(RTMSymTab))
+    __rtmsymtab_end = .;
+
+    . = ALIGN(4);
+    __usbh_class_info_start__ = .;
+    KEEP(*(.usbh_class_info))
+    __usbh_class_info_end__ = .;
+
+    . = ALIGN(4);
+    __nand_cfg_db_start__ = .;
+    KEEP(*(.nand_cfg_db))
+    __nand_cfg_db_end__ = .;
+
+    KEEP(*(.eh_frame*))
+    _etext = ABSOLUTE(.);
+{% endif %}
+  } > ROM
+
+{% if defines.get('ZBT') %}
+{% include 'zbt_rom.jinja2' %}
+{% endif %}
+
+{% if not defines.get('FLASH_TABLE_ONLY') %}
+  .rom_ex :
+  {
+
+    . = ALIGN(4);
+    __rw_rom_ex_start__ = .;
+    __ER_IROM1_EX$$RO_start__ = .;
+    __ER_IROM1_EX$$RO_load_start__ = LOADADDR(.rom_ex);
+
+    *(.l1_non_ret_text_*)
+    *(.l1_non_ret_rodata_*)
+
+    . = ALIGN(4);
+    __rw_rom_ex_end__ = .;
+    __ER_IROM1_EX$$RO_end__ = .;
+    __ER_IROM1_EX$$RO_load_end__ = LOADADDR(.rom_ex) + SIZEOF(.rom_ex);
+
+  } > ROM_EX AT > ROM
+
+  .ARM.extab :
+  {
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } > ROM
+
+  __exidx_start = .;
+  .ARM.exidx :
+  {
+    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+  } > ROM
+  __exidx_end = .;
+
+  .copy.table :
+  {
+    . = ALIGN(4);
+    __copy_table_start__ = .;
+    LONG (LOADADDR(.data))
+    LONG (ADDR(.data))
+    LONG (SIZEOF(.data))
+
+    LONG (LOADADDR(.retm_data))
+    LONG (ADDR(.retm_data))
+    LONG (SIZEOF(.retm_data))
+
+    LONG (LOADADDR(.rom_ex))
+    LONG (ADDR(.rom_ex))
+    LONG (SIZEOF(.rom_ex))
+
+    __copy_table_end__ = .;
+  } > ROM
+
+  .zero.table :
+  {
+    . = ALIGN(4);
+    __zero_table_start__ = .;
+    /* Add each additional bss section here */
+
+    LONG (__bss_start__)
+    LONG (__bss_end__ - __bss_start__)
+
+    LONG (__rw_retm_bss_start__)
+    LONG (__RW_IRAM_RET$$ZI_end__ - __RW_IRAM_RET$$ZI_start__)
+
+    __zero_table_end__ = .;
+  } > ROM
+
+  .retm_bss :
+  {
+    . = ALIGN(4);
+    __rw_retm_bss_start__ = .;
+    __RW_IRAM_RET$$ZI_start__ = .;
+    * (.bss.retm_bss_*)
+
+    . = ALIGN(4);
+    __RW_IRAM_RET$$ZI_end__ = .;
+  } > RAM
+
+  .RW_IRAM0 :
+  {
+    *(non_ret)
+    *(.*l1_non_ret_data_*)
+    *(.*l1_non_ret_bss_*)
+{% if not defines.get('BSP_USING_PSRAM') %}
+    *(.nand_cache)
+    *(.*l2_non_ret_data_*)
+    *(.*l2_non_ret_bss_*)
+    *(.*l2_cache_non_ret_data_*)
+    *(.*l2_cache_non_ret_bss_*)
+{% endif %}
+  } > RAM
+
+  __etext = ALIGN (4);
+
+  .data :
+  {
+    _sdata = ABSOLUTE(.);
+    __data_start__ = .;
+    __RW_IRAM1_start__ = .;
+    *(vtable)
+    *(.data)
+    *(.data.*)
+    *(.l1_ret_data_*)
+    *(Jlink_RTT)
+
+    . = ALIGN(4);
+    /* preinit data */
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP(*(.preinit_array))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+
+    . = ALIGN(4);
+    /* init data */
+    _sinit = ABSOLUTE(.);
+    PROVIDE(__ctors_start__ = .);
+    PROVIDE_HIDDEN (__init_array_start = .);
+    /* old GCC version uses .ctors */
+    KEEP(*(SORT(.ctors.*)))
+    KEEP(*(.ctors))
+    /* new GCC version uses .init_array */
+    KEEP(*(SORT(.init_array.*)))
+    KEEP(*(.init_array))
+    _einit = ABSOLUTE(.);
+    PROVIDE_HIDDEN (__init_array_end = .);
+    PROVIDE(__ctors_end__ = .);
+
+    . = ALIGN(4);
+    /* finit data */
+    PROVIDE(__dtors_start__ = .);
+    PROVIDE_HIDDEN (__fini_array_start = .);
+
+    KEEP(*(SORT(.dtors.*)))
+    KEEP(*(.dtors))
+
+    KEEP(*(SORT(.fini_array.*)))
+    KEEP(*(.fini_array))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+    PROVIDE(__dtors_end__ = .);
+
+{% if defines.get('ZBT') %}
+{% include 'zbt_data.jinja2' %}
+{% endif %}
+
+    KEEP(*(.jcr*))
+    . = ALIGN(4);
+    /* All data end */
+    __data_end__ = .;
+    __RW_IRAM1_end__ = .;
+    _edata = ABSOLUTE(.);
+  } > RAM AT > ROM
+
+  __etext2 = ALIGN (4);
+
+{% if defines.get('BSP_USING_PSRAM') %}
+{% if defines.get('__PSRAM2_SIZE', 0) > 0 %}
+  /*
+  * PSRAM2 is for l2 frame buffer only.
+  */
+  .RW_PSRAM2 :
+  {
+    . = ALIGN(4);
+    __rw_psram2_start__ = .;
+    *(.*l2_non_ret_bss_frambuf*)
+    . = ALIGN(4);
+    __rw_psram2_end__ = .;
+
+  } > PSRAM2
+{% endif %}
+
+  .RW_PSRAM1 :
+  {
+    . = ALIGN(4);
+    __rw_psram1_start__ = .;
+    *(.*l2_ret_data_*)
+    *(.*l2_ret_bss_*)
+    *(.*l2_cache_ret_data_*)
+    *(.*l2_cache_ret_bss_*)
+    . = ALIGN(4);
+    __rw_psram1_end__ = .;
+
+  } > PSRAM
+
+  .RW_PSRAM_NON_RET :
+  {
+    /* aligned to cache line size */
+    . = ALIGN(32);
+    __RW_PSRAM_NON_RET_start__ = .;
+    *(.nand_cache)
+    *(.*l2_non_ret_data_*)
+    *(.*l2_non_ret_bss_*)
+    *(.*l2_cache_non_ret_data_*)
+    *(.*l2_cache_non_ret_bss_*)
+    . = ALIGN(4);
+    __RW_PSRAM_NON_RET_end__ = .;
+
+  } > PSRAM
+{% endif %}
+
+  .bss :
+  {
+    _sbss = ABSOLUTE(.);
+    . = ALIGN(4);
+    __bss_start__ = .;
+    *(.bss)
+    *(.bss.*)
+    *(COMMON)
+    *(.l1_ret_bss_*)
+    . = ALIGN(4);
+    __bss_end__ = .;
+    __bss_end = .;
+    _ebss = ABSOLUTE(.);
+    __end__ = .;
+    PROVIDE(end = .);
+  } > RAM AT > RAM
+
+{% for r in defines.get('INT_RES_PARTS', []) %}
+  .{{ r.name }} :
+  {
+{% for selector in r.selectors_gnu %}
+    {{ selector }}
+{% endfor %}
+  } > {{ r.name_upper }}
+{% endfor %}
+{% endif %}
+}

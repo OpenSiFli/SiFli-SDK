@@ -133,6 +133,14 @@ void BSP_SD_PowerUp(void);
 
 void BSP_SD2_PowerUp(void);
 
+/**
+ * @brief PDM microphone power
+ */
+void BSP_MIC1_PowerUp(void);
+void BSP_MIC1_PowerDown(void);
+void BSP_MIC2_PowerUp(void);
+void BSP_MIC2_PowerDown(void);
+
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 
 /**
@@ -140,6 +148,9 @@ void BSP_GPIO_Set(int pin, int val, int is_porta);
  */
 void BSP_CAMERA_PowerUp(void);
 void BSP_CAMERA_PowerDown(void);
+#ifdef BSP_USING_DCMI
+void BSP_CAMERA_Pinmux(void);
+#endif
 
 /**
  * @brief PSRAM

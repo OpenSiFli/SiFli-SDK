@@ -109,6 +109,29 @@ typedef struct
     __IO uint32_t OFIFO7;
 } PTM_TypeDef;
 
+/**
+  * @brief One core slice of PTM_TypeDef, i.e. the registers of a single core.
+  *
+  * The register block of the cores is repeated every 0x30 bytes starting at CCR0,
+  * so this structure must stay identical to one core block of PTM_TypeDef,
+  * reserved words included: its size is the distance between the registers of two
+  * cores (PTM_CORE_REG_STRIDE in bf0_hal_ptm.c).  Keep the two definitions next
+  * to each other when the register map changes.
+  */
+typedef struct
+{
+    __IO uint32_t CCR;      /*!< 0x00 control: PSC / REP / END0 / END1              */
+    __IO uint32_t ICR;      /*!< 0x04 input  FIFO configuration, status in the MSBs */
+    __IO uint32_t OCR;      /*!< 0x08 output FIFO configuration, status in the MSBs */
+    __IO uint32_t X;        /*!< 0x0C 32 bit general purpose register X             */
+    __IO uint32_t Y;        /*!< 0x10 32 bit general purpose register Y             */
+    __IO uint32_t A;        /*!< 0x14 16 bit general purpose register A             */
+    __IO uint32_t B;        /*!< 0x18 16 bit general purpose register B             */
+    __IO uint32_t PC;       /*!< 0x1C program counter                               */
+    __IO uint32_t IFIFO;    /*!< 0x20 input  FIFO data                              */
+    __IO uint32_t OFIFO;    /*!< 0x24 output FIFO data                              */
+    __IO uint32_t RSVD[2];  /*!< 0x28 reserved, pads the slice to 0x30 bytes        */
+} PTM_CoreRegTypeDef;
 
 /******************** Bit definition for PTM_ISR register *********************/
 #define PTM_ISR_EVT0_Pos                (0U)
@@ -1313,5 +1336,136 @@ typedef struct
 #define PTM_OFIFO7_DAT_Pos              (0U)
 #define PTM_OFIFO7_DAT_Msk              (0xFFFFFFFFUL << PTM_OFIFO7_DAT_Pos)
 #define PTM_OFIFO7_DAT                  PTM_OFIFO7_DAT_Msk
+
+
+/******************* PTM Trigger **********************************************/
+#define PTM_TRIG_RSVD_0                  (0UL)
+#define PTM_TRIG_HCPU_SLEEPING           (1UL)
+#define PTM_TRIG_GPTIM1_UPDATE           (2UL)
+#define PTM_TRIG_GPTIM1_TRIG             (3UL)
+#define PTM_TRIG_GPTIM1_CH1              (4UL)
+#define PTM_TRIG_GPTIM1_CH2              (5UL)
+#define PTM_TRIG_GPTIM1_CH3              (6UL)
+#define PTM_TRIG_GPTIM1_CH4              (7UL)
+#define PTM_TRIG_GPTIM2_UPDATE           (8UL)
+#define PTM_TRIG_GPTIM2_TRIG             (9UL)
+#define PTM_TRIG_GPTIM2_CH1              (10UL)
+#define PTM_TRIG_GPTIM2_CH2              (11UL)
+#define PTM_TRIG_RSVD_12                 (12UL)
+#define PTM_TRIG_RSVD_13                 (13UL)
+#define PTM_TRIG_BTIM1_UPDATE            (14UL)
+#define PTM_TRIG_BTIM2_UPDATE            (15UL)
+#define PTM_TRIG_ATIM1_UPDATE            (16UL)
+#define PTM_TRIG_ATIM1_TRIG              (17UL)
+#define PTM_TRIG_ATIM1_CH1               (18UL)
+#define PTM_TRIG_ATIM1_CH2               (19UL)
+#define PTM_TRIG_ATIM1_CH3               (20UL)
+#define PTM_TRIG_ATIM1_CH4               (21UL)
+#define PTM_TRIG_ATIM1_COM               (22UL)
+#define PTM_TRIG_CAN1_BUSY               (23UL)
+#define PTM_TRIG_DMAC1_DONE1             (24UL)
+#define PTM_TRIG_DMAC1_DONE2             (25UL)
+#define PTM_TRIG_DMAC1_DONE3             (26UL)
+#define PTM_TRIG_DMAC1_DONE4             (27UL)
+#define PTM_TRIG_DMAC1_DONE5             (28UL)
+#define PTM_TRIG_DMAC1_DONE6             (29UL)
+#define PTM_TRIG_DMAC1_DONE7             (30UL)
+#define PTM_TRIG_DMAC1_DONE8             (31UL)
+#define PTM_TRIG_DMAC1_HALF1             (32UL)
+#define PTM_TRIG_DMAC1_HALF2             (33UL)
+#define PTM_TRIG_DMAC1_HALF3             (34UL)
+#define PTM_TRIG_DMAC1_HALF4             (35UL)
+#define PTM_TRIG_DMAC1_HALF5             (36UL)
+#define PTM_TRIG_DMAC1_HALF6             (37UL)
+#define PTM_TRIG_DMAC1_HALF7             (38UL)
+#define PTM_TRIG_DMAC1_HALF8             (39UL)
+#define PTM_TRIG_DMAC1_LDONE1            (40UL)
+#define PTM_TRIG_DMAC1_LDONE2            (41UL)
+#define PTM_TRIG_DMAC1_LDONE3            (42UL)
+#define PTM_TRIG_DMAC1_LDONE4            (43UL)
+#define PTM_TRIG_DMAC1_LDONE5            (44UL)
+#define PTM_TRIG_DMAC1_LDONE6            (45UL)
+#define PTM_TRIG_DMAC1_LDONE7            (46UL)
+#define PTM_TRIG_DMAC1_LDONE8            (47UL)
+#define PTM_TRIG_DCMI_VSYNC              (48UL)
+#define PTM_TRIG_DCMI_FRAMESYNC          (49UL)
+#define PTM_TRIG_BT_RX_EN                (50UL)
+#define PTM_TRIG_BT_TX_EN                (51UL)
+#define PTM_TRIG_MAILBOX1_C1IRQ7         (52UL)
+#define PTM_TRIG_MAILBOX1_C2IRQ7         (53UL)
+#define PTM_TRIG_MAILBOX1_C3IRQ7         (54UL)
+#define PTM_TRIG_MAILBOX1_C4IRQ7         (55UL)
+#define PTM_TRIG_PWM1_UPDATE1            (56UL)
+#define PTM_TRIG_PWM1_UPDATE2            (57UL)
+#define PTM_TRIG_PWM1_UPDATE3            (58UL)
+#define PTM_TRIG_PWM1_UPDATE4            (59UL)
+#define PTM_TRIG_PWM1_UPDATE5            (60UL)
+#define PTM_TRIG_ATIM2_UPDATE            (61UL)
+#define PTM_TRIG_ATIM2_TRIG              (62UL)
+#define PTM_TRIG_ATIM2_CH1               (63UL)
+#define PTM_TRIG_BT_ACTIVE               (64UL)
+#define PTM_TRIG_BT_PRIORITY             (65UL)
+#define PTM_TRIG_BT_COLLISION            (66UL)
+#define PTM_TRIG_WLAN_ACTIVE             (67UL)
+#define PTM_TRIG_I2C1_ATDONE             (68UL)
+#define PTM_TRIG_I2C1_DMADONE            (69UL)
+#define PTM_TRIG_I2C1_TXEMPTY            (70UL)
+#define PTM_TRIG_I2C1_RXFULL             (71UL)
+#define PTM_TRIG_I2C2_ATDONE             (72UL)
+#define PTM_TRIG_I2C2_DMADONE            (73UL)
+#define PTM_TRIG_I2C2_TXEMPTY            (74UL)
+#define PTM_TRIG_I2C2_RXFULL             (75UL)
+#define PTM_TRIG_I2C3_ATDONE             (76UL)
+#define PTM_TRIG_I2C3_DMADONE            (77UL)
+#define PTM_TRIG_I2C3_TXEMPTY            (78UL)
+#define PTM_TRIG_I2C3_RXFULL             (79UL)
+#define PTM_TRIG_SPI1_DONE               (80UL)
+#define PTM_TRIG_SPI1_START              (81UL)
+#define PTM_TRIG_SPI2_DONE               (82UL)
+#define PTM_TRIG_SPI2_START              (83UL)
+#define PTM_TRIG_SDMMC1_CMDDONE          (84UL)
+#define PTM_TRIG_SDMMC1_DATDONE          (85UL)
+#define PTM_TRIG_SDMMC2_CMDDONE          (86UL)
+#define PTM_TRIG_SDMMC2_DATDONE          (87UL)
+#define PTM_TRIG_USART1_RXBYTE           (88UL)
+#define PTM_TRIG_USART1_TXBYTE           (89UL)
+#define PTM_TRIG_USART2_RXBYTE           (90UL)
+#define PTM_TRIG_USART2_TXBYTE           (91UL)
+#define PTM_TRIG_I2C4_ATDONE             (92UL)
+#define PTM_TRIG_I2C4_DMADONE            (93UL)
+#define PTM_TRIG_I2C4_TXEMPTY            (94UL)
+#define PTM_TRIG_I2C4_RXFULL             (95UL)
+#define PTM_TRIG_USB_TX                  (96UL)
+#define PTM_TRIG_USB_RX                  (97UL)
+#define PTM_TRIG_USART3_RXBYTE           (98UL)
+#define PTM_TRIG_USART3_TXBYTE           (99UL)
+#define PTM_TRIG_EZIP1_DONE              (100UL)
+#define PTM_TRIG_EZIP1_ROW               (101UL)
+#define PTM_TRIG_TSEN_DONE               (102UL)
+#define PTM_TRIG_LCDC1_BUSY              (103UL)
+#define PTM_TRIG_LCDC1_DONE              (104UL)
+#define PTM_TRIG_LCDC1_FMARK             (105UL)
+#define PTM_TRIG_LCDC1_LINEHIT           (106UL)
+#define PTM_TRIG_LCDC1_LINE              (107UL)
+#define PTM_TRIG_LCDC1_ERR               (108UL)
+#define PTM_TRIG_JPEGD_INT               (109UL)
+#define PTM_TRIG_EPIC_DONE               (110UL)
+#define PTM_TRIG_EPIC_LINEHIT            (111UL)
+#define PTM_TRIG_HCPU_SLEEPDEEP          (112UL)
+#define PTM_TRIG_TRNG_SEEDGEN            (113UL)
+#define PTM_TRIG_TRNG_RANDGEN            (114UL)
+#define PTM_TRIG_AES_DONE                (115UL)
+#define PTM_TRIG_I2S1_UF                 (116UL)
+#define PTM_TRIG_I2S1_OF                 (117UL)
+#define PTM_TRIG_I2S2_UF                 (118UL)
+#define PTM_TRIG_I2S2_OF                 (119UL)
+#define PTM_TRIG_PTM1_EVT0               (120UL)
+#define PTM_TRIG_PTM1_EVT1               (121UL)
+#define PTM_TRIG_PTM1_EVT2               (122UL)
+#define PTM_TRIG_PTM1_EVT3               (123UL)
+#define PTM_TRIG_PTM1_EVT4               (124UL)
+#define PTM_TRIG_PTM1_EVT5               (125UL)
+#define PTM_TRIG_PTM1_EVT6               (126UL)
+#define PTM_TRIG_PTM1_EVT7               (127UL)
 
 #endif

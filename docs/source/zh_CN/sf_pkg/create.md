@@ -112,12 +112,12 @@ class Example_AddRecipe(ConanFile):
     description = "<Description of hello package here>"
     topics = ("<Put some tag here>", "<here>", "<and here>")
 
-    support_sdk_version = "^2.4"
+    support_sdk_version = ">=2.4 <3"
 
     # Sources are located in the same place as this recipe, copy them to the recipe
     exports_sources = "*"
 
-    python_requires = "sf-pkg-base/[^1.0]@sifli"
+    python_requires = "sf-pkg-base/[>=1.0 <2.0]@sifli"
     python_requires_extend = "sf-pkg-base.SourceOnlyBase"
 
     def requirements(self):

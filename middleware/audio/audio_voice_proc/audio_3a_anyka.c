@@ -110,7 +110,7 @@ static const char factory_far[] =
     " --eqmode=user"
     " --preGain=1dB"
     " --bands=\"4, hpf 100 0dB 0.8 enable, hpf 100 0dB 0.8 enable, pf1 600 -12dB 1 enable, pf1 3000 6dB 1 enable\""
-    " --nrEna=1"
+    " --nrEna=0"
     " --noiseSuppressDb=-20"
     " --volLoad=1"
     " --limit=0.80FS"
@@ -126,19 +126,19 @@ static const char factory_near_1mic[] =
     " --aecEna=1"
     " --tail=512"
     " --farDigiGain=1.0"
-    " --nearDigiGain=1.0"
+    " --nearDigiGain=2.0"
     " --farLimit=0.15FS"
     " --farBreakdownThresh=0"
     " --nrEna=1"
     " --noiseSuppressDb=-40"
     " --agcEna=1"
-    " --agcLevel=0.25FS"
+    " --agcLevel=0.95FS"
     " --maxGain=4"
     " --minGain=0.1"
     " --nearSensitivity=20"
     " --volLoad=1"
     " --limit=0.85FS"
-    " --vol_dB=3dB"
+    " --vol_dB=12dB"
 };
 
 static char factory_near_2mic[] =
@@ -482,6 +482,11 @@ void audio_3a_open(audio_3a_input_t *input)
 
         audio_3a_module_init(input, thiz);
 
+        thiz->ts_far = 0;
+        thiz->ts_dac_stream = 0;
+        thiz->is_far_putted = 0;
+        thiz->is_bt_voice = input->is_bt_voice;
+
 #if ANYKA_RUN_IN_ACPU
         uint8_t error_code = 1;
         acpu_audio_3a_open_parameter_t arg;
@@ -505,10 +510,6 @@ void audio_3a_open(audio_3a_input_t *input)
         audio_mem_free(arg.const_far);
         audio_mem_free(arg.const_near);
 #else
-        thiz->ts_far = 0;
-        thiz->ts_dac_stream = 0;
-        thiz->is_far_putted = 0;
-        thiz->is_bt_voice = input->is_bt_voice;
         LOG_I("3a_w open samplerate=%ld", input->samplerate);
 
         T_SDLIB_PLATFORM_DEPENDENT_LIST *sd_cb;
@@ -717,7 +718,7 @@ void audio_3a_downlink(uint8_t *fifo, uint16_t size)
     else
     {
         LOG_I("3a_w rbuf_dwlink full");
-        putsize = rt_ringbuffer_put_force(&thiz->rbuf_dwlink, fifo, size);
+        putsize = rt_ringbuffer_put(&thiz->rbuf_dwlink, fifo, size);
     }
 
     while (rt_ringbuffer_data_len(&thiz->rbuf_dwlink) >= ANYKA_FRAME_SIZE)
@@ -845,7 +846,7 @@ static inline void process_data(audio_3a_t *thiz)
 
 #if ANYKA_RUN_IN_ACPU
     uint8_t error_code = 1;
-    acpu_audio_3a_uplink_parameter_t arg;
+    acpu_audio_3a_uplink_parameter_t arg = {0};
     arg.refframe = refframe;
     arg.ts = ts;
     arg.fifo = fifo;
@@ -985,7 +986,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         rt_size_t w = rt_ringbuffer_put(thiz->anyka_input, fifo, fifo_size);
         if (w != fifo_size)
         {
-            LOG_I("anya ring full");
+            LOG_I("anyka ring full=%d", w);
         }
         rt_event_send(thiz->input_evt, INPUT_EVT_DATA);
 
@@ -996,7 +997,7 @@ void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t
         rt_size_t got = rt_ringbuffer_get(thiz->anyka_output, result, ANYKA_FRAME_SIZE);
         if (got != ANYKA_FRAME_SIZE)
         {
-            LOG_E("anyka underrun");
+            LOG_E("anyka underrun=%d", got);
         }
         if (is_mute)
         {

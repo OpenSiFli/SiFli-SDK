@@ -1409,6 +1409,98 @@ static inline int rwnx_fhcustmsg_stop_p2pgo_ind(struct rwnx_hw *rwnx_hw,
     return 0;
 }
 
+// softap IND message handlers
+
+static inline int rwnx_fhcustmsg_start_ap_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    struct fhcustmsg_ap_status_ind *ind;
+
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    if (msg->param_len < sizeof(struct fhcustmsg_ap_status_ind))
+    {
+        DBG_MACIF_WRN("ap_ind: param too short: %d\n", msg->param_len);
+        return -1;
+    }
+
+    ind = (struct fhcustmsg_ap_status_ind *)msg->param;
+
+    /* status == AIC_AP_START means the AP is up; AIC_AP_CLOSE means start failed. */
+    if (ind->status != AIC_AP_START)
+    {
+        DBG_MACIF_WRN("ap_ind: AP start failed, status=%d\n", ind->status);
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+        /* Report AP_STOP so rt_wlan_start_ap() returns immediately instead of
+         * blocking for the full RT_WLAN_START_AP_WAIT_MS timeout. */
+        aic8800mc_wlan_report_ap_stop();
+#endif
+        return -1;
+    }
+
+    DBG_MACIF_INF("ap_ind: AP started status=%d\n", ind->status);
+    DBG_MACIF_INF("ip: %d.%d.%d.%d,  gw: %d.%d.%d.%d,  mk: %d.%d.%d.%d\n",
+                  (ind->ip >> 0) & 0xff, (ind->ip >> 8) & 0xff, (ind->ip >> 16) & 0xff, (ind->ip >> 24) & 0xff,
+                  (ind->gw >> 0) & 0xff, (ind->gw >> 8) & 0xff, (ind->gw >> 16) & 0xff, (ind->gw >> 24) & 0xff,
+                  (ind->mask >> 0) & 0xff, (ind->mask >> 8) & 0xff, (ind->mask >> 16) & 0xff, (ind->mask >> 24) & 0xff);
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+#ifdef RT_USING_NETDEV
+    {
+        struct netif *net_if = netif_find("w00");
+        if (net_if)
+        {
+            ip4_addr_t addr_ip, addr_nm, addr_gw;
+            ip4_addr_set_u32(&addr_ip, ind->ip);
+            ip4_addr_set_u32(&addr_nm, ind->mask);
+            ip4_addr_set_u32(&addr_gw, ind->gw);
+            netif_set_addr(net_if, &addr_ip, &addr_nm, &addr_gw);
+            netifapi_netif_set_link_up(net_if);
+        }
+        else
+        {
+            DBG_MACIF_WRN("ap_ind: netif \"w00\" not found\n");
+        }
+    }
+#endif
+    /* Configure IP on the netif before reporting AP_START so the link comes up
+     * with a valid address. Note: when LWIP_USING_DHCPD is enabled, dhcpd_start()
+     * overwrites this with CONFIG_DHCPD_SERVER_IP. */
+    aic8800mc_wlan_report_ap_start();
+#endif
+
+    return 0;
+}
+
+static inline int rwnx_fhcustmsg_stop_ap_ind(struct rwnx_hw *rwnx_hw,
+        struct rwnx_cmd *cmd,
+        struct e2a_msg *msg)
+{
+    RWNX_DBG(RWNX_FN_ENTRY_STR);
+
+    DBG_MACIF_INF("ap_ind: AP stopped\n");
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+#ifdef RT_USING_NETDEV
+    {
+        struct netif *net_if = netif_find("w00");
+        if (net_if)
+        {
+            netifapi_netif_set_link_down(net_if);
+        }
+        else
+        {
+            DBG_MACIF_WRN("ap_ind: netif \"w00\" not found\n");
+        }
+    }
+#endif
+    aic8800mc_wlan_report_ap_stop();
+#endif
+
+    return 0;
+}
+
 static inline int rwnx_fhcustmsg_assoc_ap_ind(struct rwnx_hw *rwnx_hw,
         struct rwnx_cmd *cmd,
         struct e2a_msg *msg)
@@ -1420,6 +1512,10 @@ static inline int rwnx_fhcustmsg_assoc_ap_ind(struct rwnx_hw *rwnx_hw,
     DBG_MACIF_INF("P2P/AP: STA joined, MAC=%02X:%02X:%02X:%02X:%02X:%02X\n",
                   ind->sta_addr[0], ind->sta_addr[1], ind->sta_addr[2],
                   ind->sta_addr[3], ind->sta_addr[4], ind->sta_addr[5]);
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+    aic8800mc_wlan_report_ap_assoc(ind->sta_addr);
+#endif
 
     return 0;
 }
@@ -1435,6 +1531,10 @@ static inline int rwnx_fhcustmsg_disassoc_ap_ind(struct rwnx_hw *rwnx_hw,
     DBG_MACIF_INF("P2P/AP: STA left, MAC=%02X:%02X:%02X:%02X:%02X:%02X\n",
                   ind->sta_addr[0], ind->sta_addr[1], ind->sta_addr[2],
                   ind->sta_addr[3], ind->sta_addr[4], ind->sta_addr[5]);
+
+#if defined(CONFIG_VNET_MODE) && defined(RT_USING_WIFI)
+    aic8800mc_wlan_report_ap_disassoc(ind->sta_addr);
+#endif
 
     return 0;
 }
@@ -1647,6 +1747,8 @@ static msg_cb_fct cust_msg_hdlrs[MSG_I(CUSTOM_MSG_MAX)] =
     [MSG_I(CUSTOM_MSG_STOP_P2PGO_IND)]          = rwnx_fhcustmsg_stop_p2pgo_ind,
     [MSG_I(CUSTOM_MSG_ASSOC_AP_IND)]            = rwnx_fhcustmsg_assoc_ap_ind,
     [MSG_I(CUSTOM_MSG_DISASSOC_AP_IND)]         = rwnx_fhcustmsg_disassoc_ap_ind,
+    [MSG_I(CUSTOM_MSG_START_AP_IND)]            = rwnx_fhcustmsg_start_ap_ind,
+    [MSG_I(CUSTOM_MSG_STOP_AP_IND)]             = rwnx_fhcustmsg_stop_ap_ind,
 };
 
 /**

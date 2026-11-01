@@ -45,7 +45,6 @@
  *  the only file you'll need to change.
  **************************************************************************************/
 #include <rtthread.h>
-//#include "hlxclib/stdlib.h"		/* for malloc, free */ 
 #include <stdlib.h>
 #include <string.h>
 #include "coder.h"

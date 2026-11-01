@@ -10,13 +10,17 @@ import copy
 import os
 import struct
 import sys
+import tempfile
 import unittest
+
+import yaml
 
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "tools", "build"))
 
 import gen_ftab  # noqa: E402
+import gen_link_lds  # noqa: E402
 import ptab  # noqa: E402
 
 
@@ -281,6 +285,64 @@ class GenFtabPartitionEntryTests(unittest.TestCase):
         self.assertEqual(img_sbus, img_cbus)
         self.assertEqual(entries[gen_ftab.PartitionIndex.HCPU_IMAGE][2], exec_sbus)
         self.assertNotEqual(exec_sbus, exec_cbus)
+
+    def test_bprt_sip_variant_uses_57_bootloader_size(self) -> None:
+        # SF32BPRT* are SiP variants of the 57 series. The ftab bootloader size
+        # must come from the sf32lb57x CMSIS mem_map instead of the ptab entry;
+        # the entry below is deliberately smaller so a failed lookup is visible.
+        data = {
+            "version": 3,
+            "chip": "SF32BPRTUN3N6",
+            "memory": [{"mpi": "mpi3", "type": "nor", "size": 16 * 1024 * 1024}],
+            "partitions": [
+                {
+                    "name": "bootloader",
+                    "type": "bootloader",
+                    "region": "mpi3",
+                    "offset": 0x00010000,
+                    "size": 0x00008000,
+                    "exec": {"region": "hpsys_ram", "offset": 0x00020000},
+                },
+                {
+                    "name": "hcpu_flash_code",
+                    "type": "app",
+                    "subtype": "factory",
+                    "region": "mpi3",
+                    "offset": 0x00020000,
+                    "size": 0x00600000,
+                    "core": "HCPU",
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = os.path.join(temp_dir, "ptab.yaml")
+            with open(path, "w", encoding="utf-8") as handle:
+                yaml.safe_dump(data, handle, sort_keys=False)
+            ptab_obj = ptab.load_ptab(path, fatal=True)
+
+        entries, _ = gen_ftab.build_partition_table_entries(
+            ptab_obj.partitions,
+            ptab_obj.get_chip_config(),
+            ptab_obj.chip,
+        )
+
+        self.assertEqual(entries[gen_ftab.PartitionIndex.BOOTLOADER][1], 0x00010000)
+
+
+class CmsisDirInferenceTests(unittest.TestCase):
+    def test_bprt_sip_variants_resolve_to_sf32lb57x(self) -> None:
+        for chip in ("SF32BPRTUN3N6", "SF32BPRTYB3N6", "sf32bprtun3n6"):
+            self.assertEqual(
+                gen_link_lds._infer_cmsis_dir_from_chip(chip),
+                "sf32lb57x",
+                chip,
+            )
+
+    def test_lb57_part_number_still_resolves_to_sf32lb57x(self) -> None:
+        self.assertEqual(
+            gen_link_lds._infer_cmsis_dir_from_chip("SF32LB575YBBN6"),
+            "sf32lb57x",
+        )
 
 
 if __name__ == "__main__":

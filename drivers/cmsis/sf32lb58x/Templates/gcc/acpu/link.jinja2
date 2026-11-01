@@ -40,7 +40,9 @@
   -----------------------------------------------------------------------------*/
 __ROM_BASE = {{ hex32(defines['__ROM_BASE']) }};
 __ROM_SIZE = {{ hex32(defines['__ROM_SIZE']) }};
-
+{% for region in defines.get('ACPU_EXT_CODE_REGIONS', []) %}__{{ region.memory }}_BASE = {{ hex32(region.base) }};
+__{{ region.memory }}_SIZE = {{ hex32(region.size) }};
+{% endfor %}
 
 /*--------------------- Embedded RAM Configuration ----------------------------
   <h> RAM Configuration
@@ -65,7 +67,8 @@ __HEAP_SIZE  = {{ hex32(defines.get('STARTUP_HEAP_SIZE', 0x00000C00)) }};
  */
 MEMORY
 {
-    ROM (rx)  : ORIGIN = __ROM_BASE,  LENGTH = __ROM_SIZE
+    ROM (rx)  : ORIGIN = __ROM_BASE,  LENGTH = __ROM_SIZE{% for region in defines.get('ACPU_EXT_CODE_REGIONS', []) %}
+    {{ region.memory }} (rx)  : ORIGIN = __{{ region.memory }}_BASE,  LENGTH = __{{ region.memory }}_SIZE{% endfor %}
     RAM (rw)  : ORIGIN = __RAM_BASE,  LENGTH = __RAM_SIZE
 }
 
@@ -103,7 +106,14 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-  .text :
+{# Extra ACPU code images are emitted first, before .text, as the v1/v2 link.lds does
+   for ACPU_CODE_REGION2's .rom2 section; .vectors stays inside .text (not split out). -#}
+{% for region in defines.get('ACPU_EXT_CODE_REGIONS', []) %}  {{ region.section }} :
+  {
+{% for selector in region.selectors_gnu %}    {{ selector }}
+{% endfor %}  } > {{ region.memory }}
+
+{% endfor %}  .text :
   {
     _stext = ABSOLUTE(.);  
     KEEP(*(.vectors));

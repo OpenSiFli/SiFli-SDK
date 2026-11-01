@@ -1,0 +1,12 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('*.c')
+
+path =  [os.path.join(cwd, "."), 
+         os.path.join(cwd, '../include'), 
+         os.path.join(cwd, '../../peripherals/ioexpander/aw9523')]
+
+group = DefineGroup('Drivers', src, depend = [], CPPPATH = path)
+Return('group')

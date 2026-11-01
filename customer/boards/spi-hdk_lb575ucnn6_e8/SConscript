@@ -10,6 +10,6 @@ path =  [cwd,
 group = DefineGroup('Drivers', src, depend = ['BSP_USING_BOARD_SPI_HDK_LB575UCNN6_E8'], CPPPATH = path)
 
 if GetDepend('BSP_USING_BOARD_SPI_HDK_LB575UCNN6_E8'):
-    group = group + SConscript('../sf32lb57-spi-hdk_base/SConscript.base')
+    group = group + SConscript(os.path.join(cwd, '../sf32lb57-spi-hdk_base/SConscript.base'), variant_dir="base", duplicate=0)
 
 Return('group')

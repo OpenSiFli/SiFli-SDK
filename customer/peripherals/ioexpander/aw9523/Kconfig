@@ -1,0 +1,7 @@
+menu "AW9523 I2C GPIO Expander"
+
+config BSP_USING_AW9523
+    bool "AW9523B I2C GPIO expander"
+    default n
+
+endmenu

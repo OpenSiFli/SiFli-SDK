@@ -49,6 +49,7 @@
  */
 
 #include "lwip/opt.h"
+#include "lwip_netif_state.h"
 
 #include <string.h> /* memset */
 #include <stdlib.h> /* atoi */
@@ -1092,6 +1093,7 @@ netif_set_link_up(struct netif *netif)
     if (!(netif->flags & NETIF_FLAG_LINK_UP))
     {
         netif_set_flags(netif, NETIF_FLAG_LINK_UP);
+        lwip_netif_state_on_link_up();
 
 #if LWIP_DHCP
         dhcp_network_changed(netif);
@@ -1136,6 +1138,7 @@ netif_set_link_down(struct netif *netif)
     if (netif->flags & NETIF_FLAG_LINK_UP)
     {
         netif_clear_flags(netif, NETIF_FLAG_LINK_UP);
+        lwip_netif_state_on_link_down();
         NETIF_LINK_CALLBACK(netif);
 #if LWIP_NETIF_EXT_STATUS_CALLBACK
         {

@@ -1,0 +1,19 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+src = []
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+libpath = [cwd]
+libs = []
+group = []
+
+if GetDepend('PKG_USING_WEBRTC') and not GetDepend('WEBRTC_RUN_IN_ACPU'):
+    group = DefineGroup('webrtc', src, depend=['BF0_HCPU'], CPPPATH=CPPPATH, LIBS=libs, LIBPATH=libpath)
+
+elif GetDepend('PKG_USING_WEBRTC') and GetDepend('WEBRTC_RUN_IN_ACPU'):
+    src = Glob('*.c')
+    group = DefineGroup('webrtc', src, depend=['BF0_ACPU'], CPPPATH=CPPPATH, LIBS=libs, LIBPATH=libpath)
+
+Return('group')
