@@ -113,6 +113,8 @@ LR_IROM1 {{ hex32(defines['__ROM_BASE']) }} {{ hex32(defines['__ROM_SIZE']) }}  
    bf0_hal_cortex.o (+RO)
 {% endif %}
 
+   *.o  (nor_cfg_db)
+
 {% endif %}
 
   }

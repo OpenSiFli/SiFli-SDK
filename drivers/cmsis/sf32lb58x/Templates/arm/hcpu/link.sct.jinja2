@@ -85,6 +85,7 @@ LR_IROM1 {{ hex32(defines['__ROM_BASE']) }} {{ hex32(defines['__ROM_SIZE']) }}  
    bf0_hal_pinmux.o   (+RO)
    bf0_pin_const.o    (+RO)
    *.o                (.text.rt_memset)
+   *.o  (nor_cfg_db)
   }
 
   RW_IRAM2_RET +0  {

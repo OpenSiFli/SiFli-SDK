@@ -93,6 +93,8 @@ LR_IROM1 {{ hex32(defines['__ROM_BASE']) }} {{ hex32(defines['__ROM_SIZE']) }}  
    drv_common.o       (.text.HAL_Delay_us)
    drv_common.o       (.text.rt_hw_us_delay)
 
+   *.o  (nor_cfg_db)
+
    *.o(.bss.bf0_psram_handle)
   }
 
