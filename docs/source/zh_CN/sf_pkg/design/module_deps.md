@@ -27,7 +27,7 @@
 # 工程根固定依赖
 requires:
   - sht30/0.0.4@caisong123
-support_sdk_version: "^2.4"   # 可选：工程要求的 SDK 区间（npm semver），缺省不检查
+support_sdk_version: ">=2.4 <3"   # 可选：工程要求的 SDK 区间（npm semver），缺省不检查
 ```
 
 - 选择 YAML 而非 JSON：可写注释、无尾逗号/引号这类易错语法，工程开发者与模块作者都可读可改。
@@ -47,14 +47,14 @@ enable:
 requires:
   - mesh-lib/1.3.0@acme    # conan 引用串，可写版本区间
   - crypto/2.0.1@sifli
-support_sdk_version: "^2.4"   # 可选：本模块要求的 SDK 区间（npm semver），缺省不检查
+support_sdk_version: ">=2.4 <3"   # 可选：本模块要求的 SDK 区间（npm semver），缺省不检查
 ```
 
 字段说明：
 
 - `enable`：本模块的 Kconfig 使能符号。数组内任一为 `y` 即视为参与；缺失视为“总是参与”，仅用于确实无开关的固定模块。
 - `requires`：与工程根相同的 Conan 包引用格式。
-- `support_sdk_version`：npm 风格 semver 区间（如 `^2.4`、`~2.4.1`、`>=2.4,<3`）。语义与包 recipe 的类属性 `support_sdk_version`、以及基类 `sf-pkg-base.SourceOnlyBase.validate()` 完全一致：用 `semantic_version.NpmSpec` 解析，版本取环境变量 `SIFLI_SDK_VERSION`（由 `export.ps1` / `set_env.bat` 设置，形如 `2.4` / `2.4.1`）。
+- `support_sdk_version`：npm 风格 semver 区间（如 `>=2.4 <3`、`>=2.4.1 <2.5.0`；简写形式 `^2.4`、`~2.4.1` 也支持，注意用空格分隔条件、不要用逗号）。语义与包 recipe 的类属性 `support_sdk_version`、以及基类 `sf-pkg-base.SourceOnlyBase.validate()` 完全一致：用 `semantic_version.NpmSpec` 解析，版本取环境变量 `SIFLI_SDK_VERSION`（由 `export.ps1` / `set_env.bat` 设置，形如 `2.4` / `2.4.1`）。
 
 ### 候选模块发现：基于 `kconfiglist`，不做全盘扫描
 

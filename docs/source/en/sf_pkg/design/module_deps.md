@@ -50,7 +50,7 @@ The project root dependency declaration moves from `conanfile.py` to
 # Project root fixed dependencies
 requires:
   - sht30/0.0.4@caisong123
-support_sdk_version: "^2.4"   # optional: SDK range (npm semver), unchecked when absent
+support_sdk_version: ">=2.4 <3"   # optional: SDK range (npm semver), unchecked when absent
 ```
 
 - YAML is chosen over JSON: it supports comments and avoids error-prone syntax
@@ -90,7 +90,7 @@ enable:
 requires:
   - mesh-lib/1.3.0@acme    # conan reference; version ranges allowed
   - crypto/2.0.1@sifli
-support_sdk_version: "^2.4"   # optional: SDK range this module needs (npm semver)
+support_sdk_version: ">=2.4 <3"   # optional: SDK range this module needs (npm semver)
 ```
 
 Fields:
@@ -100,8 +100,9 @@ Fields:
   module is treated as "always participating" (only for fixed modules that
   have no switch).
 - `requires`: same Conan reference format as the project root.
-- `support_sdk_version`: npm-style semver range (e.g. `^2.4`, `~2.4.1`,
-  `>=2.4,<3`). Semantics match the package recipe class attribute
+- `support_sdk_version`: npm-style semver range (e.g. `>=2.4 <3`,
+  `>=2.4.1 <2.5.0`; the shorthand forms `^2.4` and `~2.4.1` also work - separate
+  conditions with spaces, not commas). Semantics match the package recipe class attribute
   `support_sdk_version` and the base class
   `sf-pkg-base.SourceOnlyBase.validate()`: parsed with
   `semantic_version.NpmSpec`, and the SDK version comes from the environment
