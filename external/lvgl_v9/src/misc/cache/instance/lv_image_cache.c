@@ -71,6 +71,7 @@ lv_result_t lv_image_cache_init(uint32_t size)
 
 void lv_image_cache_resize(uint32_t new_size, bool evict_now)
 {
+    if(img_cache_p == NULL) return;
     lv_cache_set_max_size(img_cache_p, new_size, NULL);
     if(evict_now) {
         lv_cache_reserve(img_cache_p, new_size, NULL);
@@ -82,6 +83,7 @@ void lv_image_cache_drop(const void * src)
     /*If user invalidate image, the header cache should be invalidated too.*/
     lv_image_header_cache_drop(src);
 
+    if(img_cache_p == NULL) return;
     if(src == NULL) {
         lv_cache_drop_all(img_cache_p, NULL);
         return;
@@ -97,11 +99,12 @@ void lv_image_cache_drop(const void * src)
 
 bool lv_image_cache_is_enabled(void)
 {
-    return lv_cache_is_enabled(img_cache_p);
+    return img_cache_p != NULL && lv_cache_is_enabled(img_cache_p);
 }
 
 lv_iter_t * lv_image_cache_iter_create(void)
 {
+    if(img_cache_p == NULL) return NULL;
     return lv_cache_iter_create(img_cache_p);
 }
 
