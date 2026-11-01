@@ -218,6 +218,9 @@ typedef struct
     uint32_t                    tx_samplerate;
     uint32_t                    rx_samplerate;
     int                         last_volume;
+#if SOFTWARE_TX_MIX_ENABLE
+    int                         mix_volumex2;
+#endif
     uint32_t                    tx_dma_size;
     uint16_t                    rx_drop_cnt;
     uint8_t                     is_need_3a;

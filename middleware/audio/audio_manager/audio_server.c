@@ -57,6 +57,11 @@
 #include "drv_audprc.h"
 #include "audio_server_internal.h"
 
+#if SOFTWARE_TX_MIX_ENABLE
+    #include <math.h>
+    #include <stdint.h>
+#endif
+
 #ifdef CFG_BT_VOICE_RELAY
     #include "audio_bt_voice_relay.h"
 #endif
@@ -278,21 +283,40 @@ static inline void unlock()
 }
 
 /* -----------------speaker device start----------------- */
+#if SOFTWARE_TX_MIX_ENABLE && !AUDIO_TX_USING_I2S
+static void mix_output_init_volume(audio_device_speaker_t *my)
+{
+    int base = MUTE_UNDER_MIN_VOLUME;
+    for (uint8_t volume = 0; volume <= AUDIO_MAX_VOLUME; ++volume)
+    {
+        int music = eq_get_music_volumex2(volume);
+        int voice = eq_get_tel_volumex2(volume);
+        if (music > base) base = music;
+        if (voice > base) base = voice;
+    }
+    /* Keep the codec reference unchanged while mixed PCM is queued. */
+    my->mix_volumex2 = base == MUTE_UNDER_MIN_VOLUME ? 0 : base;
+    my->last_volume = my->mix_volumex2;
+    my->is_eq_mute_volume = 0;
+    rt_device_control(my->audcodec_dev, AUDIO_CTL_SETVOLUME, (void *)my->mix_volumex2);
+}
+#endif
+
 static void inline speaker_update_volume(audio_device_speaker_t *my, int16_t spframe[], uint16_t len)
 {
+#if SOFTWARE_TX_MIX_ENABLE
+    if (!my->parent->is_busy || !my->tx_ref || !device_get_tx_in_running(my->parent, 0))
+        return;
+    if (g_server.public_is_tx_mute)
+        memset(spframe, 0, len * 2);
+#else
     audio_type_t audio_type;
     int8_t  decrease_level = 0;
     int     volx2;
     uint8_t vol = g_server.volume;
     audio_client_t first;
-#if 0 //SOFTWARE_TX_MIX_ENABLE
-    RT_ASSERT(0); //todo
-    first = NULL;
-    audio_type = AUDIO_TYPE_LOCAL_MUSIC;
-#else
     first = device_get_tx_in_running(my->parent, 0);
     audio_type = first->audio_type;
-#endif
 
     if (!my->parent->is_busy || !my->tx_ref || !first)
     {
@@ -427,7 +451,7 @@ static void inline speaker_update_volume(audio_device_speaker_t *my, int16_t spf
         }
     }
 #endif
-
+#endif
 }
 
 static inline void process_speaker_tx(audio_server_t *server, audio_device_speaker_t *my)
@@ -1038,6 +1062,9 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
 
     rt_device_control(my->audprc_dev, AUDIO_CTL_CONFIGURE, &caps);
 
+#if SOFTWARE_TX_MIX_ENABLE
+    mix_output_init_volume(my);
+#else
     if (eq_is_working())
     {
         int volx2 = eq_get_default_volumex2();
@@ -1061,6 +1088,7 @@ static void config_tx(audio_device_speaker_t *my, audio_client_t client)
         my->last_volume = MUTE_UNDER_MIN_VOLUME;
         rt_device_control(my->audcodec_dev, AUDIO_CTL_SETVOLUME, (void *)volumex2);
     }
+#endif
 #endif
 }
 
@@ -3333,8 +3361,8 @@ static inline void stereo2mono(int16_t *stereo, uint32_t samples, int16_t *mono)
 {
     for (int i = 0; i < samples / 2; i++)
     {
-        *mono++ = *stereo++;
-        stereo++;
+        *mono++ = (int16_t)(((int32_t)stereo[0] + stereo[1]) / 2);
+        stereo += 2;
     }
 }
 
@@ -3446,7 +3474,7 @@ static int audio_write_resample(audio_client_t c, uint8_t *data, uint32_t data_l
             return 0;
         }
 
-        for (int i = 0; i < data_len / TX_DMA_SIZE; i++)
+        while (data_len >= TX_DMA_SIZE)
         {
             out_bytes = sifli_resample_process(c->resample, (int16_t *)data, TX_DMA_SIZE, 0);
             fade_out(c, (uint8_t *)c->resample->dst, out_bytes, out_bytes * 1000 * 2 / c->parameter.write_samplerate / c->parameter.write_channnel_num);
@@ -3464,6 +3492,62 @@ static int audio_write_resample(audio_client_t c, uint8_t *data, uint32_t data_l
     return src_len;
 }
 
+static void client_mix_volume(audio_client_t client, audio_device_ctrl_t *device,
+                              int16_t *pcm, uint32_t samples)
+{
+    uint8_t volume = device->device_type == AUDIO_DEVICE_A2DP_SINK ?
+                     (g_tws_volume_relative ? g_tws_volume : AUDIO_MAX_VOLUME) :
+                     audio_server_get_private_volume(client->audio_type);
+    int32_t gain = 32768;
+    if (get_server()->public_is_tx_mute
+#if VOLUME_0_MUTE
+            || !volume
+#endif
+       )
+        gain = 0;
+    else if (device->device_type == AUDIO_DEVICE_A2DP_SINK)
+        gain >>= AUDIO_MAX_VOLUME - volume;
+    else
+    {
+        bool voice = client->audio_type == AUDIO_TYPE_BT_VOICE ||
+                     client->audio_type == AUDIO_TYPE_MODEM_VOICE;
+        int target = voice ? eq_get_tel_volumex2(volume) : eq_get_music_volumex2(volume);
+        int base = 0;
+#if !AUDIO_TX_USING_I2S
+        base = get_server()->device_speaker_private.mix_volumex2;
+        if (eq_is_working())
+            target = eq_get_default_volumex2();
+#endif
+        /* I2S has no codec attenuation; other clients share one output gain. */
+        if (target == MUTE_UNDER_MIN_VOLUME || base == MUTE_UNDER_MIN_VOLUME)
+            gain = 0;
+        else if (target != base)
+        {
+            float scaled_gain = 32768.0f * powf(10.0f, (target - base) / 40.0f);
+            gain = scaled_gain < (float)INT32_MAX ? (int32_t)scaled_gain : INT32_MAX;
+        }
+#if !AUDIO_TX_USING_I2S
+        if (volume == AUDIO_MAX_VOLUME)
+        {
+            static const uint16_t decrease[] = {0, 640, 1280, 1920, 2496, 3136, 3712};
+            int level = eq_get_decrease_level(voice, target);
+            if (level > 0 && level < sizeof(decrease) / sizeof(decrease[0]))
+                gain = (int32_t)((int64_t)gain * (65536 - decrease[level]) / 65536);
+        }
+#endif
+    }
+    for (uint32_t i = 0; i < samples; ++i)
+    {
+        int64_t sample = (int64_t)pcm[i] * gain / 32768;
+        pcm[i] = sample > INT16_MAX ? INT16_MAX : sample < INT16_MIN ? INT16_MIN : (int16_t)sample;
+    }
+#if MIX_STEREO_TO_MONO
+    if (device->device_type == AUDIO_DEVICE_SPEAKER && device->tx_mix_dst_channel == 2)
+        for (uint32_t i = 0; i + 1 < samples; i += 2)
+            pcm[i] = pcm[i + 1] = (int16_t)(((int32_t)pcm[i] + pcm[i + 1]) / 2);
+#endif
+}
+
 static void client_mix_process(audio_client_t c1, audio_client_t c2, audio_device_ctrl_t *d)
 {
     uint8_t ch;
@@ -3473,6 +3557,8 @@ static void client_mix_process(audio_client_t c1, audio_client_t c2, audio_devic
 
     int16_t m1[TX_DMA_SIZE / 2];
     int16_t m2[TX_DMA_SIZE / 2];
+
+    if (!c1 || rt_ringbuffer32_space_len(p_mix_rb) < TX_DMA_SIZE) return;
 
     // 1. mix it
     if (c1 && c2)
@@ -3485,6 +3571,8 @@ static void client_mix_process(audio_client_t c1, audio_client_t c2, audio_devic
         {
             rt_ringbuffer32_get(&c1->ring_buf, (rt_uint8_t *)m1, TX_DMA_SIZE);
             rt_ringbuffer32_get(&c2->ring_buf, (rt_uint8_t *)m2, TX_DMA_SIZE);
+            client_mix_volume(c1, d, m1, TX_DMA_SIZE / 2);
+            client_mix_volume(c2, d, m2, TX_DMA_SIZE / 2);
 
             //tws stream average, can use other mix algorithm
             for (int i = 0; i < TX_DMA_SIZE / 2; i++)
@@ -3502,12 +3590,14 @@ static void client_mix_process(audio_client_t c1, audio_client_t c2, audio_devic
         {
             //LOG_I("mix empty c=0x%p t=%d n=%s", c1, c1->audio_type, c1->name);
             rt_ringbuffer32_get(&c2->ring_buf, (rt_uint8_t *)m2, TX_DMA_SIZE);
+            client_mix_volume(c2, d, m2, TX_DMA_SIZE / 2);
             rt_ringbuffer32_put(p_mix_rb, (rt_uint8_t *)m2, TX_DMA_SIZE);
         }
         else
         {
             //LOG_I("mix empty c=0x%p t=%d n=%s", c2, c2->audio_type, c2->name);
             rt_ringbuffer32_get(&c1->ring_buf, (rt_uint8_t *)m1, TX_DMA_SIZE);
+            client_mix_volume(c1, d, m1, TX_DMA_SIZE / 2);
             rt_ringbuffer32_put(p_mix_rb, (rt_uint8_t *)m1, TX_DMA_SIZE);
         }
     }
@@ -3517,12 +3607,14 @@ static void client_mix_process(audio_client_t c1, audio_client_t c2, audio_devic
         if (len1 >= TX_DMA_SIZE)
         {
             rt_ringbuffer32_get(&c1->ring_buf, (rt_uint8_t *)m1, TX_DMA_SIZE);
+            client_mix_volume(c1, d, m1, TX_DMA_SIZE / 2);
             rt_ringbuffer32_put(p_mix_rb, (rt_uint8_t *)m1, TX_DMA_SIZE);
         }
     }
 
     if (rt_ringbuffer32_space_len(p_mix_rb) >= TX_DMA_SIZE
-            && (rt_ringbuffer32_data_len(&c1->ring_buf) >= TX_DMA_SIZE || rt_ringbuffer32_data_len(&c2->ring_buf) >= TX_DMA_SIZE)
+            && (rt_ringbuffer32_data_len(&c1->ring_buf) >= TX_DMA_SIZE ||
+                (c2 && rt_ringbuffer32_data_len(&c2->ring_buf) >= TX_DMA_SIZE))
             && (len1 >= 3 * TX_DMA_SIZE || len2 >= 3 * TX_DMA_SIZE))
     {
         //continue do mix
@@ -4146,11 +4238,26 @@ AUDIO_API int audio_ioctl(audio_client_t handle, int cmd, void *parameter)
         if (parameter)
         {
             uint32_t bytes_per_second = handle->cache_samplerate * handle->cache_ch * 2;
+#if SOFTWARE_TX_MIX_ENABLE
+            uint32_t cached = rt_ringbuffer32_data_len(&handle->ring_buf);
+            if (handle->device_using < AUDIO_DEVICE_NUMBER)
+            {
+                audio_device_ctrl_t *device = &get_server()->devices_ctrl[handle->device_using];
+                bytes_per_second = device->tx_mix_dst_samplerate * device->tx_mix_dst_channel * 2;
+                cached += rt_ringbuffer32_data_len(&device->tx_mixed_rb);
+            }
+            if (bytes_per_second)
+            {
+                *time_ms = cached * 1000 / bytes_per_second;
+                ret = 0;
+            }
+#else
             if (bytes_per_second)
             {
                 *time_ms = rt_ringbuffer32_data_len(&handle->ring_buf) * 1000 / bytes_per_second;
                 ret = 0;
             }
+#endif
         }
     }
     else if (cmd == AUDIO_IOCTL_SET_CACHE_SAMPLERATE)
