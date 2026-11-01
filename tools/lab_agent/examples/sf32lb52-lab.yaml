@@ -1,0 +1,65 @@
+# SiFli SDK 自动化测试 —— 实验机配置（真实硬件，不进仓库）
+#
+# 一份文件两边共用：`sdk.py test run --binding <本文件>` 时 SDK 侧只读 testbed: 块，
+# 顶层的 runner: 块被忽略；`python tools/lab_agent/runner.py -c <本文件>` 时两边都读。
+#
+#   python tools/lab_agent/runner.py -c E:\code2\lab\sf32lb52-lab.yaml --check
+#   python tools/lab_agent/runner.py -c E:\code2\lab\sf32lb52-lab.yaml --list
+#   sdk.py test plan -T example/get-started/hello_world -b E:\code2\lab\sf32lb52-lab.yaml
+#   sdk.py test run  -T example/get-started/hello_world -b E:\code2\lab\sf32lb52-lab.yaml
+#
+# 这块板没有 J-Link 探针，所以：
+#   - 烧录走 sftool（UART 下载）
+#   - 复位走人工（reset.method: manual）——框架不碰探针，改为在串口打开后打提示，
+#     由人按板子上的复位键。提示里会写明还剩多少秒（= 用例自己的 timeout）。
+
+runner:
+  name: local
+  host: 127.0.0.1          # 本机 HTTP，没有认证，不要改成 0.0.0.0
+  port: 8760
+  console_poll: 0.2
+  max_buffer: 4194304      # 每个 testbed 保留的串口文本上限（字符）
+
+testbed:
+  - id: sf32lb52-lcd_a128r16_01
+    platform: sf32lb52-lcd_a128r16     # 不带核后缀即可，会补成 _hcpu
+    runner: local
+
+    console:
+      port: COM8             # USB-Enhanced-SERIAL CH343；也是 UART 下载口
+      baud: 1000000          # SDK 控制台固定 1 Mbaud（drv_usart.c）
+
+    # 没有接任何外挂器件（NOR flash / 传感器等），所以没有 connections:。
+    # 用例若要 fixture，这里必须先声明，否则匹配不上。
+
+    # -- 以下两块是 Lab-Agent 私有，SDK 侧只解析不解释 --
+
+    flash:
+      method: sftool         # UART 下载。下载口就是 console 口，所以框架会保证
+                             # 烧录发生在开串口【之前】。
+                             # -m 的 nor/nand 从构建产物的 sftool_param.json 自动取，
+                             # 这块板是 NAND（JLINK_DEVICE = SF32LB52X_NAND）。
+      # sftool 随 SDK python 环境安装；export.ps1 之后应在 PATH 上。
+      # 找不到时报 "Cannot find the `sftool` command"，用下面这行 pin 住：
+      # sftool: C:\Users\rabbi\AppData\Local\sftool\sftool.exe
+
+    reset:
+      method: auto           # 框架不碰探针，也不需要人——下载结束跑起新镜像，
+                             # 那就是这块板的一次复位。
+                             #
+                             # auto 与 manual 的区别只有一条：启动是不是必然发生。
+                             # 这块板实测【启动是必然的】：sftool 下载结束时 ROM 会
+                             # 跳到新镜像自己启动一次，而打开 console 口时 pyserial
+                             # 又可能用 DTR/RTS 再复位一次。所以不需要任何人做任何
+                             # 事，也不会停下来问。
+                             #
+                             # 因为启动是保证的，写型 harness（一启动就发 unity_run
+                             # 的 unity）在这里可以直接跑——命令不会被随后的复位冲掉。
+                             #
+                             # 如果哪天换了块板子、启动不再有保证（比如烧完要人按
+                             # 复位键才起来），就改成 manual：那时框架会在串口打开后
+                             # 停下来问一次，由人按板上的复位键，窗口 = 用例的 timeout。
+                             # manual 模式下 wdt_script 不会执行，看门狗不关。
+
+    # 没有 jlink: 块，也不需要——auto 复位 + sftool 烧录的组合下，
+    # 框架不会构造探针（TestBedRuntime.needs_jlink() 为假）。
