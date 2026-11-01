@@ -298,7 +298,7 @@ def check_sdk_versions(
             raise SfPkgError(
                 "Invalid support_sdk_version expression '{}' in '{}'. It must "
                 "be a valid npm-style semver range (e.g. '^2.4', '~2.4.1', "
-                "'>=" "2.4,<3').".format(constraint, source)
+                "'>=" "2.4 <3').".format(constraint, source)
             ) from exc
         if sdk_version not in spec:
             raise SfPkgError(
