@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
 """QEMU smoke test for the qemu_sf32lb52x board.
 
 Boots a qemu_sf32lb52x build under QEMU MPS2-AN505 and asserts that the
