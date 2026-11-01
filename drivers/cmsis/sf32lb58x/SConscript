@@ -26,9 +26,10 @@ except:
      
 src=['bf0_pin_const.c']
 src += ['pmu_ldo_update.c']
-src += ['Templates/system_bf0_ap.c']
+if not GetDepend(['SOC_QEMU']):
+    src += ['Templates/system_bf0_ap.c']
 src += ['lcpu_config_type.c']
-if GetDepend(['BF0_HCPU']):
+if GetDepend(['BF0_HCPU']) and not GetDepend(['SOC_QEMU']):
     if GetDepend('LCPU_CONFIG_V2') :
         src += ['lcpu_patch_a2.c']
     else:

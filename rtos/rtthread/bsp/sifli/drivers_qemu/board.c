@@ -30,12 +30,16 @@
 #include "board.h"
 #include "uart_console.h"
 
-extern uint32_t SystemCoreClock;
-
 /* SysTick: RT-Thread 1ms tick */
 void SysTick_Handler(void)
 {
+    /* enter interrupt */
+    rt_interrupt_enter();
+
     rt_tick_increase();
+
+    /* leave interrupt */
+    rt_interrupt_leave();
 }
 
 /**
@@ -58,11 +62,6 @@ void rt_hw_board_init(void)
 #if defined(RT_USING_CONSOLE)
     rt_console_set_device(RT_CONSOLE_DEVICE_NAME);
 #endif
-}
-
-/* Weak board hooks expected by the SDK; nothing to do under QEMU */
-void BSP_IO_Init(void)
-{
 }
 
 void print_sysinfo(char *buf, uint32_t buf_len)

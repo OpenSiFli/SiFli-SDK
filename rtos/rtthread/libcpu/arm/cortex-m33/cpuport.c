@@ -676,6 +676,14 @@ void rt_coredump_info_dump(rt_mem_dump_cb_t dump_cb)
     dump_cb((uint32_t)&saved_scb_reg, sizeof(saved_scb_reg), RT_NULL, RT_NULL);
 }
 
+#ifdef SOC_QEMU
+__ROM_USED void rt_dwt_exception_handler(struct exception_info *exception_info)
+{
+    while (1)
+    {
+    }
+}
+#else
 static void dwt_wp_set(uint32_t addr)
 {
     //Enable DWT global
@@ -775,6 +783,7 @@ void rt_thread_switch_examine(rt_uint32_t *p_from_sp, rt_uint32_t *p_to_sp)
         dwt_wp_clr();
     }
 }
+#endif /* SOC_QEMU */
 
 #ifdef RT_USING_CPU_FFS
 /**

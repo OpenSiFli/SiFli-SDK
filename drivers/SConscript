@@ -6,90 +6,18 @@ import rtconfig
 
 cwd = GetCurrentDir()
 objs = []
+list = os.listdir(cwd)
 
-# ---------------------------------------------------------------------------
-# Which subdirectories of drivers/ get walked.
-#
-# The boards that supply their own drivers -- the PC simulator, a non-SiFli
-# board, the dummy board and the QEMU carriers -- skip this whole tree, on the
-# grounds that their equivalents replace it. That is what keeps the HAL out of
-# a QEMU image, which is what lets a CMock-generated mock be the sole
-# definition of a HAL symbol (example/test/hal_mock, and the note on it in
-# middleware/test_fwk/mocks/README.md). The PC simulator replaces the hal
-# subtree in particular -- drivers_pc/ -- and for a PC build that is what the
-# empty list below has always meant.
-#
-# QEMU_HAL_DRIVER_ENABLED is the one way back in. A test of the HAL
-# implementation itself wants the opposite -- the real HAL in the image -- and
-# used to get it by naming the translation units it wanted in its own
-# SConscript, which also had to arrange by hand where their objects landed
-# (example/test/hal_real/src/SConscript). The switch does that from here
-# instead: its objects land under build_<board>/sifli_sdk/drivers/<subdir> by
-# the same rule everything else in the SDK follows, with nothing arranged by
-# hand.
-#
-# The switch takes the tree, and the list below is the tree -- every
-# subdirectory with an SConscript, computed once, before anything branches on
-# it. Naming subtrees one by one is what this replaces: a subdirectory added to
-# drivers/ later is then inside the switch by existing, rather than silently
-# outside it until someone remembers to add it.
-#
-# cmsis/ is the one subtree a carrier cannot walk, and it is named as the
-# directory it is rather than as a list of translation units, because it is the
-# chip's bring-up as a whole that fails. drivers/cmsis/<chip>/SConscript is
-# gated on SOC_SF32LB<nn>X, which a carrier selects for chip identity, so
-# walking it compiles that bring-up on a machine that is not the chip. Two
-# independent things stop it:
-#
-#   * drivers/cmsis/sf32lb52x/bt_rf_cw_config.c and bt_power_config.c do not
-#     compile here. Each reaches the chip's register map only through board.h,
-#     and board.h differs by design: a real board's includes bf0_hal.h, this
-#     carrier's does not (rtos/rtthread/bsp/sifli/drivers_qemu/board.h says
-#     why). They stop at 'hwp_bt_mac' undeclared, 'CORE_ID_LCPU' undeclared and
-#     HAL_HPAON_* implicitly declared.
-#   * drivers/cmsis/<chip>/SConscript adds Templates/gcc/startup_bf0_hcpu.S on
-#     a GCC build, which defines Reset_Handler and __Vectors globally. The
-#     carrier has startup_qemu.S, which defines both as well. Both are entry
-#     points, so gc-sections cannot drop one, and the link would fail on a
-#     duplicate definition.
-#
-# Walking the rest of the tree therefore widens the switch to ll/ and
-# hal_epic_ex/ as well, which today contribute an include path and an
-# unreferenced archive. That is the point: they are in by being there, not by
-# being judged harmless.
-#
-# None of that changes what a carrier owes its projects, because the switch is
-# off unless a project asks for it. Skipped by default are the two groups that
-# supply the chip identity -- drivers/cmsis/<chip>/SConscript's include path and
-# SF32LB<nnn>X, and drivers/hal/SConscript's SOC_BF0_HCPU and USE_HAL_DRIVER --
-# and rtos/rtthread/bsp/sifli/drivers_qemu/SConscript supplies the equivalents,
-# the include order among them, which is the part a project cannot fix itself.
-#
-# The symbol is declared by the project that wants the HAL, promptless, in its
-# own Kconfig.proj -- example/test/hal_real/project/Kconfig.proj has the
-# declaration and the reasoning. It cannot be declared here: a symbol a project
-# sets from proj.conf needs a prompt, and one with a prompt shows in menuconfig,
-# which this must not.
-# ---------------------------------------------------------------------------
-carrier_board = (GetDepend('BSP_USING_PC_SIMULATOR')
-                 or GetDepend('BSP_USING_NON_SIFLI_BOARD')
-                 or GetDepend('BSP_USING_BOARD_DUMMY')
-                 or GetDepend('SOC_QEMU'))
-
-# The tree: every subdirectory of drivers/ that has an SConscript. Computed
-# once, so that the loop below decides nothing.
-all_dirs = [d for d in os.listdir(cwd)
-            if os.path.isfile(os.path.join(cwd, d, 'SConscript'))]
-
-dirs = all_dirs
-if carrier_board:
-    dirs = []
-    if GetDepend('QEMU_HAL_DRIVER_ENABLED'):
-        # Only a QEMU carrier can ask for this: the symbol depends on SOC_QEMU.
-        # The tree, less cmsis/ -- see the note above for what excludes it.
-        dirs = [d for d in all_dirs if d != 'cmsis']
-
-for d in dirs:
-    objs = objs + SConscript(os.path.join(d, 'SConscript'))
+if (not GetDepend(['BSP_USING_PC_SIMULATOR']) 
+  and not GetDepend(['BSP_USING_NON_SIFLI_BOARD']) 
+  and not GetDepend("BSP_USING_BOARD_DUMMY")):
+    for d in list:
+        path = os.path.join(cwd, d)
+        if os.path.isfile(os.path.join(path, 'SConscript')):
+            if (d=='hal') and GetDepend(['BSP_USING_PC_SIMULATOR'])==True:
+                continue
+            if ((d == 'hal') or (d == 'hal_epic_ex'))  and GetDepend('SOC_QEMU') and not GetDepend('QEMU_HAL_DRIVER_ENABLED'):
+                continue
+            objs = objs + SConscript(os.path.join(d, 'SConscript'))
 
 Return('objs')

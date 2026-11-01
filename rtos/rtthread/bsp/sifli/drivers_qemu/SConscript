@@ -4,65 +4,21 @@ from building import *
 Import('SIFLI_SDK')
 
 cwd = GetCurrentDir()
-src = ['board.c', 'system_qemu.c', 'uart_console.c', 'startup_qemu.S']
+# src = ['board.c', 'system_qemu.c', 'uart_console.c', 'startup_qemu.S']
+src = ['board.c', 'system_qemu.c', 'uart_console.c']
 LIBS = []
 LIBPATH = []
 CPPPATH = [cwd,
            SIFLI_SDK + '/drivers/include/',
            SIFLI_SDK + '/external/CMSIS/Include']
-CPPDEFINES = ['SOC_QEMU']
+CPPDEFINES = []
 
-# ---------------------------------------------------------------------------
-# Chip identity, for the boards that select one.
-#
-# On a real board the chip's headers and macros come from two SConscripts under
-# drivers/, and SOC_QEMU skips that whole tree:
-#
-#   drivers/cmsis/<chip>/SConscript   the register map's include path, and the
-#                                     SF32LB<nnn>X macro
-#   drivers/hal/SConscript            SOC_BF0_HCPU and USE_HAL_DRIVER
-#
-# A qemu_sf32lb<nnn>x board selects SOC_SF32LB<nnn>X, so this carrier owes
-# its projects what those two groups would have provided. Supplying it here
-# rather than in each project's SConstruct is the point: the include ORDER
-# below is not something a project can get right on its own, and getting it
-# wrong reads as a missing register map rather than as an include-order problem.
-#
-# The definitions are declarations only. No HAL implementation is compiled on
-# this carrier, which is exactly what lets a CMock-generated mock be the sole
-# definition of a HAL symbol here.
-# ---------------------------------------------------------------------------
-CHIP_SERIES = [
-    ('SOC_SF32LB52X', 'sf32lb52x'),
-    ('SOC_SF32LB55X', 'sf32lb55x'),
-    ('SOC_SF32LB56X', 'sf32lb56x'),
-    ('SOC_SF32LB57X', 'sf32lb57x'),
-    ('SOC_SF32LB58X', 'sf32lb58x'),
-]
-
-for symbol, chip in CHIP_SERIES:
-    if not GetDepend(symbol):
-        continue
-
-    # Prepended, not appended. bf0_hal.h does #include "register.h" by name and
-    # this directory has a register.h of its own (the carrier's CMSIS
-    # prerequisites); the chip's map has to be found first. The same goes for
-    # core_cm33.h's prerequisites generally.
-    #
-    # customer/boards/include is what a real board adds for its board-layer
-    # headers -- drv_io.h among them, which drv_spi_flash.c includes.
-    # drivers/cmsis/Include is the chip's own support headers (system_bf0_ap.h
-    # and the peripheral register maps the chip's register.h includes). It is not
-    # external/CMSIS/Include, which is upstream ARM CMSIS.
-    env = GetCurrentEnv()
-    env.PrependUnique(CPPPATH=[
-        os.path.join(SIFLI_SDK, 'drivers/cmsis', chip),
-        os.path.join(SIFLI_SDK, 'drivers/cmsis/Include'),
-        os.path.join(SIFLI_SDK, 'customer/boards/include'),
-        os.path.join(SIFLI_SDK, 'customer/boards/include/config', chip),
-    ])
-    env.AppendUnique(CPPDEFINES=[chip.upper(), 'SOC_BF0_HCPU', 'USE_HAL_DRIVER'])
-    break
+if GetDepend('BF0_HCPU'):
+    CPPDEFINES+=['SOC_BF0_HCPU']
+elif GetDepend('BF0_LCPU'):
+    CPPDEFINES+=['SOC_BF0_LCPU']
+else:
+    print('Warning: Core not defined')    
 
 group = DefineGroup('Drivers', src, depend = ['SOC_QEMU'],
                     CPPPATH = CPPPATH, CPPDEFINES = CPPDEFINES,

@@ -29,7 +29,7 @@ except:
 src=['bf0_pin_const.c']
 src += ['lcpu_config_type.c']
 src += ['pmu_ldo_update.c']
-if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']):
+if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']) and not GetDepend(['SOC_QEMU']):
     src += ['lcpu_patch.c']
     src += ['bf0_lcpu_init.c']
     src += ['bt_rf_cw_config.c']
@@ -50,7 +50,8 @@ CPPDEFINES=['SF32LB57X']
 path = [cwd, cwd+'/../Include']
 
 if GetDepend(['BF0_LCPU']):
-    src += ['Templates/system_bf0_ap.c']
+    if not GetDepend(['SOC_QEMU']):
+        src += ['Templates/system_bf0_ap.c']
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
     if rtconfig.PLATFORM == 'gcc':
@@ -65,7 +66,8 @@ if GetDepend(['BF0_LCPU']):
             src += ['Templates/arm/startup_bf0_lcpu.S']
     path = path + [os.path.join(SIFLI_SDK, 'external/CMSIS/Include')]
 elif GetDepend(['BF0_HCPU']):
-    src += ['Templates/system_bf0_ap.c']
+    if not GetDepend(['SOC_QEMU']):
+        src += ['Templates/system_bf0_ap.c']
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
     if rtconfig.PLATFORM == 'gcc':
