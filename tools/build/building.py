@@ -3297,11 +3297,12 @@ def ResolveBoardConfig(bsp_root, build_dir, board):
 
     # create Kconfig
     s = ''
-    s += 'source "$SIFLI_SDK/Kconfig.v2"\n'
-    s += 'source "$SIFLI_SDK/customer/boards/Kconfig.v2"\n'
     _path1, board_path = GetBoardPath(board)
+    # source Kconfig.board first to make `configdefault` take effect
     board_path += "/Kconfig.board"
     s += 'source "{}"\n'.format(board_path)
+    s += 'source "$SIFLI_SDK/Kconfig.v2"\n'
+    s += 'source "$SIFLI_SDK/customer/boards/Kconfig.v2"\n'
 
     # kconfiglib doesn't recognize backslash
     bsp_root = os.path.abspath(bsp_root).replace('\\', '/')
