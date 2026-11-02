@@ -262,6 +262,25 @@ menu "On-chip Peripherals"
                 1. Can not works on SFLB55X serials
                 2. Asynchronized rendering, must keep the buffers used by the render-list available until rendering is complete.
 
+            config DRV_EPIC_LETTER_POOL_IN_PSRAM
+                bool "Place EPIC static letter pool in PSRAM"
+                depends on DRV_EPIC_NEW_API && BSP_USING_PSRAM
+                default n
+                help
+                    Place the static letter records for render lists in PSRAM.
+                    This does not change the allocator used by
+                    drv_epic_set_letter_pool_size() for larger dynamic pools.
+
+            config DRV_EPIC_LETTER_POOL_SIZE
+                int "Static letter records per EPIC render list"
+                depends on DRV_EPIC_NEW_API
+                range 1 65535
+                default 800
+                help
+                    Number of letter drawing records reserved per render list.
+                    Two lists are reserved. Capacity depends on the number of
+                    glyph draws collected in a list, not directly on resolution.
+
             config DRV_EPIC_ALLOC_USE_ANIM_HEAP
             bool "Use animation heap for EPIC render-list allocations"
             depends on DRV_EPIC_NEW_API && PKG_USING_LITTLEVGL2RTT
