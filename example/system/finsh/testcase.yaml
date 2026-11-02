@@ -1,0 +1,21 @@
+# FinSH's own value is the commands it runs, and a console harness can only
+# read the UART -- it cannot type a command. So this example is checked with
+# the pytest harness, which can send a line and assert on the reply.
+#
+# One firmware, one flash, one boot: the suite beside this file walks the
+# prompt, both custom commands and the shell's own error paths.
+#
+# No platform is named here: the same image runs on any board in the lab, and
+# `-p <board>` picks one -- the same convention as hello_world's pytest case.
+#
+# Run it with:
+#     sdk.py test run -T example/system/finsh -p sf32lb52-lcd_a128r16
+tests:
+  - id: finsh.pytest
+    description: Drive myhello and atcmd over the shell and assert on their replies.
+    harness: pytest
+    tags: [pytest]
+    # Covers the build, the flash, the reset and the boot.
+    timeout: 180
+    harness_config:
+      pytest_root: pytest
