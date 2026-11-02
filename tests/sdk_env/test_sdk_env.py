@@ -873,7 +873,7 @@ class InstallStateTests(unittest.TestCase):
             )
 
         install_paths.assert_not_called()
-        ensure_python.assert_called_once_with(config, lock, old_env)
+        ensure_python.assert_called_once_with(config, lock, old_env, clear_existing=True)
         initialize_conan.assert_called_once_with(config, lock, old_env, old_conan, None)
         loaded = sdk_env.load_state(state_path)
         self.assertEqual(
@@ -1959,6 +1959,106 @@ class DownloadTests(unittest.TestCase):
             "https://uv.agentsmirror.com/metadata/python-downloads.json",
         )
         self.assertEqual(sync_env["UV_PROJECT_ENVIRONMENT"], env_path)
+
+
+class PipCompatibilityTests(unittest.TestCase):
+    def config(self, **changes):
+        values = dict(offline=False, python_indexes=[],
+                      python_default_index="https://pypi.org/simple",
+                      python_index_strategy="first-index")
+        values.update(changes)
+        return SimpleNamespace(**values)
+
+    def test_pip_installs_exported_lock_with_hashes_in_sdk_environment(self):
+        config = self.config()
+        lock = SimpleNamespace(python_version="3.13")
+        env = {"UV_PROJECT_ENVIRONMENT": "/sdk/env"}
+        with mock.patch("sdk_env.run_command") as run:
+            sdk_env.install_python_deps_with_pip(config, lock, "/sdk/env", "/project", env)
+        commands = [call.args[0] for call in run.call_args_list]
+        python = sdk_env.python_executable("/sdk/env")
+        self.assertEqual(commands[0], ["uv", "venv", "--allow-existing", "--python", "3.13", "/sdk/env"])
+        self.assertEqual(commands[1], [python, "-m", "ensurepip", "--upgrade"])
+        self.assertIn("--locked", commands[2])
+        self.assertIn("--no-emit-project", commands[2])
+        self.assertNotIn("--no-hashes", commands[2])
+        self.assertEqual(commands[3][:5], [python, "-m", "pip", "--isolated", "install"])
+        self.assertIn("--require-hashes", commands[3])
+        self.assertEqual(commands[3][-1], commands[2][commands[2].index("--output-file") + 1])
+        self.assertEqual(commands[4], [python, "-m", "pip", "--isolated", "check"])
+        for call in run.call_args_list:
+            self.assertIs(call.kwargs["env"], env)
+        self.assertFalse(os.path.exists(commands[3][-1]))
+
+    def test_pip_can_clear_reused_environment_before_installing_lock(self):
+        with mock.patch("sdk_env.run_command") as run:
+            sdk_env.install_python_deps_with_pip(
+                self.config(), SimpleNamespace(python_version="3.13"),
+                "/sdk/env", "/project", {}, clear_existing=True,
+            )
+        self.assertEqual(
+            run.call_args_list[0].args[0],
+            ["uv", "venv", "--clear", "--python", "3.13", "/sdk/env"],
+        )
+
+    def test_update_marks_exclusive_previous_environment_for_rebuild(self):
+        state_doc = {
+            "repos": {"/repo": {"profiles": {
+                "default": {"selected_env_key": "default|old"},
+            }}},
+            "envs": {"default|old": {
+                "python": {"env_path": "/sdk/old"},
+                "conan": {"home": "/sdk/conan"},
+            }},
+        }
+        lock = SimpleNamespace(profile="default")
+        resolved = sdk_env.ResolvedEnvInstance(
+            key="default|new", compat_sha="new", env_state=None,
+            python_env_path="/sdk/new", conan_home="/sdk/new-conan",
+        )
+        with (
+            mock.patch("sdk_env.resolve_env_instance", return_value=resolved),
+            mock.patch("sdk_env.validate_resolved_env_instance", return_value=["lock changed"]),
+            mock.patch("sdk_env.reusable_env_paths", return_value=("/sdk/old", "/sdk/conan")),
+        ):
+            decision = sdk_env.decide_environment_install(
+                SimpleNamespace(), lock, [], ["all"], state_doc, "/repo",
+                sdk_env.InstallIntent.UPDATE,
+            )
+        self.assertTrue(decision.clear_python_env)
+        self.assertEqual(decision.python_env_path, "/sdk/old")
+
+    def test_invalid_or_unsupported_mode_fails_before_changing_environment(self):
+        for installer, config in [
+            ("unknown", self.config()),
+            ("pip", self.config(offline=True)),
+            ("pip", self.config(python_indexes=["https://extra.example/simple"])),
+        ]:
+            with self.subTest(installer=installer, config=config):
+                with mock.patch.dict(os.environ, {"SIFLI_SDK_PYTHON_INSTALLER": installer}):
+                    with mock.patch("sdk_env.run_command") as run:
+                        with self.assertRaises(sdk_env.SDKEnvError):
+                            sdk_env.ensure_python_env(config, SimpleNamespace(), "/sdk/env")
+                run.assert_not_called()
+
+    def test_opt_in_dispatches_to_pip_instead_of_uv_sync(self):
+        config = self.config()
+        lock = SimpleNamespace(python_version="3.13", profile="default")
+        with mock.patch.dict(os.environ, {"SIFLI_SDK_PYTHON_INSTALLER": "pip"}):
+            with mock.patch("sdk_env.temporary_uv_project", return_value=contextlib.nullcontext("/project")):
+                with mock.patch("sdk_env.run_command") as run:
+                    with mock.patch("sdk_env.install_python_deps_with_pip") as pip_install:
+                        with mock.patch("sdk_env.os.path.exists", return_value=True):
+                            self.assertEqual(sdk_env.ensure_python_env(config, lock, "/sdk/env"), "/sdk/env")
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(pip_install.call_args.args[:4], (config, lock, "/sdk/env", "/project"))
+        self.assertEqual(pip_install.call_args.args[4]["UV_PROJECT_ENVIRONMENT"], "/sdk/env")
+
+    def test_pip_failure_is_not_silently_ignored(self):
+        with mock.patch("sdk_env.run_command", side_effect=sdk_env.SDKEnvError("build failed")):
+            with self.assertRaisesRegex(sdk_env.SDKEnvError, "build failed"):
+                sdk_env.install_python_deps_with_pip(
+                    self.config(), SimpleNamespace(python_version="3.13"), "/sdk/env", "/project", {})
 
 
 class UvMirrorRewriteTests(unittest.TestCase):

@@ -412,6 +412,7 @@ class EnvironmentInstallDecision:
     previous_env_key: Optional[str]
     prune_env_keys: Tuple[str, ...]
     reason: str
+    clear_python_env: bool = False
 
 
 @dataclass(frozen=True)
@@ -1540,7 +1541,49 @@ def install_paths_for_env(
     return python_path, conan_home
 
 
-def ensure_python_env(config: RuntimeConfig, lock: ProfileLock, env_path: str) -> str:
+def install_python_deps_with_pip(
+    config: RuntimeConfig, lock: ProfileLock, env_path: str,
+    project_dir: str, env: Dict[str, str], clear_existing: bool = False,
+) -> None:
+    """Install locked dependencies with pip, without uv's source-build IPC."""
+    venv_cmd = ["uv", "venv"]
+    venv_cmd.append("--clear" if clear_existing else "--allow-existing")
+    venv_cmd.extend(["--python", lock.python_version, env_path])
+    run_command(venv_cmd, env=env)
+    python_path = python_executable(env_path)
+    # ensurepip uses Python's bundled pip and does not require a source build.
+    run_command([python_path, "-m", "ensurepip", "--upgrade"], env=env)
+    with tempfile.TemporaryDirectory(prefix="sdk-env-pip-") as temp_dir:
+        requirements = os.path.join(temp_dir, "requirements.txt")
+        run_command(
+            [
+                "uv", "export", "--project", project_dir, "--locked",
+                "--format", "requirements.txt", "--no-emit-project",
+                "--output-file", requirements, *uv_index_args(config),
+            ],
+            env=env,
+        )
+        # Keep exported versions AND hashes. Do not install the unpinned project.
+        run_command(
+            [
+                python_path, "-m", "pip", "--isolated", "install",
+                "--index-url", config.python_default_index,
+                "--require-hashes", "-r", requirements,
+            ],
+            env=env,
+        )
+        run_command([python_path, "-m", "pip", "--isolated", "check"], env=env)
+
+
+def ensure_python_env(
+    config: RuntimeConfig, lock: ProfileLock, env_path: str,
+    clear_existing: bool = False,
+) -> str:
+    installer = os.environ.get("SIFLI_SDK_PYTHON_INSTALLER", "uv").strip().lower()
+    if installer not in ("uv", "pip"):
+        raise SDKEnvError("SIFLI_SDK_PYTHON_INSTALLER must be 'uv' or 'pip'")
+    if installer == "pip" and (config.offline or config.python_indexes):
+        raise SDKEnvError("pip compatibility mode requires online access and a single package index")
     uv_env = os.environ.copy()
     apply_china_mirror_preset(uv_env)
     sync_env = uv_env.copy()
@@ -1553,18 +1596,25 @@ def ensure_python_env(config: RuntimeConfig, lock: ProfileLock, env_path: str) -
     run_command(python_install_cmd, env=uv_env)
 
     with temporary_uv_project(lock, config) as project_dir:
-        sync_cmd = [
-            "uv",
-            "sync",
-            "--project",
-            project_dir,
-            "--locked",
-            "--python",
-            lock.python_version,
-            "--no-install-project",
-            *uv_index_args(config),
-        ]
-        run_command(sync_cmd, env=sync_env)
+        if installer == "pip":
+            log_warn("Using opt-in pip compatibility mode for locked Python dependencies")
+            install_python_deps_with_pip(
+                config, lock, env_path, project_dir, sync_env,
+                clear_existing=clear_existing,
+            )
+        else:
+            sync_cmd = [
+                "uv",
+                "sync",
+                "--project",
+                project_dir,
+                "--locked",
+                "--python",
+                lock.python_version,
+                "--no-install-project",
+                *uv_index_args(config),
+            ]
+            run_command(sync_cmd, env=sync_env)
     python_path = python_executable(env_path)
     if not os.path.exists(python_path):
         raise SDKEnvError(f"python environment was created but interpreter is missing: {python_path}")
@@ -2103,6 +2153,7 @@ def decide_environment_install(
                 previous_env_key=previous_env_key,
                 prune_env_keys=(previous_env_key,),
                 reason="previous environment is referenced only by this SDK",
+                clear_python_env=True,
             )
 
     if previous_env_key and previous_env_key != resolved_env.key:
@@ -2166,7 +2217,10 @@ def perform_install(
         log_ok(f"Install completed for profile '{lock.profile}'")
         return resolved_env.env_state or {}
 
-    env_path = ensure_python_env(config, lock, env_path)
+    if env_decision.clear_python_env:
+        env_path = ensure_python_env(config, lock, env_path, clear_existing=True)
+    else:
+        env_path = ensure_python_env(config, lock, env_path)
     for plan in plans:
         if plan.required:
             install_tool_plan(config, plan, args.from_bundle)
