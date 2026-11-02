@@ -103,8 +103,12 @@
 
 #include "rtconfig.h"
 
+#if defined (LV_USING_FREETYPE_ENGINE)
 #if defined (RT_USING_DFS)
 #include <dfs_posix.h>
+#else
+struct dfs_fd;
+#endif
 #define FT_FILE     struct dfs_fd
 extern struct dfs_fd* ft_fopen(const char* name, const char* mode);
 extern long ft_ftell(struct dfs_fd* f);
@@ -112,6 +116,13 @@ extern int ft_fseek(struct dfs_fd* f, long offset, int whence);
 extern size_t ft_fread(void* ptr, size_t size, size_t nitems, struct dfs_fd* f);
 //extern size_t lv_font_write(const void* ptr, size_t size, size_t nitems,struct dfs_fd* f);
 extern int ft_fclose(struct dfs_fd* f);
+#else
+#define FT_FILE     FILE
+#define ft_fclose   fclose
+#define ft_fopen    fopen
+#define ft_fread    fread
+#define ft_fseek    fseek
+#define ft_ftell    ftell
 #endif
 
 #define ft_sprintf  sprintf
@@ -135,25 +146,16 @@ extern int ft_fclose(struct dfs_fd* f);
  *
  */
 
-#if 0
-#if defined(FREETYPE_CACHE_IN_SRAM) || defined(BSP_USING_PC_SIMULATOR)
-    #define ft_scalloc   calloc
-    #define ft_sfree     free
-    #define ft_smalloc   malloc
-    #define ft_srealloc  realloc
-#else
-    extern struct rt_memheap app_ft_memheap;
-    #define ft_scalloc(count, size)   rt_memheap_calloc(&app_ft_memheap, count, size)
-    #define ft_sfree(p)     rt_memheap_free(p)
-    #define ft_smalloc(n)    rt_memheap_alloc(&app_ft_memheap, n)
-    #define ft_srealloc(p, newsize)  rt_memheap_realloc(&app_ft_memheap, p, newsize)
-#endif
-#else
+#ifdef LV_USING_FREETYPE_ENGINE
 extern void * ft_smalloc(size_t nbytes);
 extern void ft_sfree(void *ptr);
 extern void *ft_srealloc(void *ptr, size_t nbytes);
 extern void *ft_scalloc(size_t count, size_t size);
-
+#else
+    #define ft_scalloc   calloc
+    #define ft_sfree     free
+    #define ft_smalloc   malloc
+    #define ft_srealloc  realloc
 #endif
 
 /**************************************************************************

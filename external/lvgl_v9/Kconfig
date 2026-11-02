@@ -1455,6 +1455,7 @@ menu "LVGL V9 configuration"
 
 		config LV_USE_FREETYPE
 			bool "FreeType library"
+			select PKG_FREETYPE
 		config LV_FREETYPE_USE_LVGL_PORT
 			bool "Let FreeType to use LVGL memory and file porting"
 			default n
