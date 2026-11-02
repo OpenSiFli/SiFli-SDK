@@ -22,6 +22,7 @@
 #define PWM_CMD_BREAK_DEAD              (128 + 5)
 #define PWM_CMD_SET_CLK_SOURECE         (128 + 6)
 #define PWM_CMD_SET_COLOR               (128 + 7)
+#define PWM_CMD_GET_CLK                 (128 + 8)   /* arg: rt_uint32_t *, counter clock of CCR in Hz */
 
 /*
 This bit-field defines the frequency used to sample BRK input and the length of the digital filter applied to BRK.
