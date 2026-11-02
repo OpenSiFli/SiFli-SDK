@@ -13,11 +13,11 @@ config TOUCH_IRQ_PIN
 
 config LCD_PWM_BACKLIGHT_INTERFACE_NAME
     string
-    default "pwmt1"
+    default "pwmt2"
 
 config LCD_PWM_BACKLIGHT_CHANEL_NUM
     int
-    default 4
+    default 2
 
 config LCD_BACKLIGHT_CONTROL_PIN
     int
