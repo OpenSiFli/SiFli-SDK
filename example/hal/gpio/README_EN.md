@@ -6,16 +6,18 @@ The example can run on the following development boards.
 * sf32lb52-lcd series
 * sf32lb58-lcd series
 * sf32lb56-lcd series
+* sf32lb57-lcd series
 ## Example Overview
 * Configure GPIO output and input interrupt operations to demonstrate GPIO HAL functions
 * Toggle GPIO_out level value every second, input GPIO triggers interrupt on rising and falling edges, printing interrupt information via serial port
 ## GPIO Overview
-The HAL GPIO module provides an abstract software interface to operate the hardware GPIO module. 
-HPSYS and LPSYS each have a GPIO module, with supported features including:
+The HAL GPIO module provides an abstract software interface to operate the hardware GPIO module, with supported features including:
 - Output mode
 - Input mode, can detect input level to trigger interrupts, supports high level, low level, rising edge, falling edge, and dual edge detection
 
-The hardware GPIO module of HPSYS is `hwp_gpio1` (or called GPIO_A), and the hardware GPIO module of LPSYS is `hwp_gpio2` (or called GPIO_B). 
+The hardware GPIO module of HPSYS is `hwp_gpio1` (or called GPIO_A), supported by the entire **sf32lb5x** family.
+
+The hardware GPIO module of LPSYS is `hwp_gpio2` (or called GPIO_B). supported only by the **sf32lb55**  **sf32lb56** **sf32lb58** series.
 
 ```{note}
 If you need to set GPIO pins for other functions, or change pull-up/pull-down drive capability, please refer to pinmux settings [PINMUX](#hal-pinmux)
@@ -34,10 +36,13 @@ For detailed API description, refer to [GPIO](#hal-gpio)
 |sf32lb52-lcd_n16r8 |5       |PA41      |3      |PA42      |
 |sf32lb58-lcd_n16r64n4 |5       |PB28      |3      |PB29      |
 |sf32lb56-lcd_n16r12n1 |5       |PA20      |3      |PB12   |
+|sf32lb57-lcd |26      |PA41      |28     |PA42     |
 
 * For more detailed pin definitions, please refer to
-`[sf32lb52-lcd_n16r8]()`
-`[sf32lb58-lcd_n16r64n4]()`
+[sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
+[sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
+[sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+[sf32lb57-lcd](https://wiki.sifli.com/board/sf32lb57x/SF32LB57-DevKit-LCD.html)
 
 ### Compilation and Programming
 #### SF525 Project Code Compilation
@@ -138,6 +143,12 @@ Adapt to different pin configurations on different development boards
 #elif defined(SF32LB56X)
     #define Pin_Out 20
     #define Pin_In 12
+    #define GPIO_IRQn GPIO1_IRQn
+    #define hwp_gpio hwp_gpio1
+    #define RCC_MOD_GPIO RCC_MOD_GPIO1
+#elif defined(SF32LB57X)
+    #define Pin_Out 41
+    #define Pin_In 42
     #define GPIO_IRQn GPIO1_IRQn
     #define hwp_gpio hwp_gpio1
     #define RCC_MOD_GPIO RCC_MOD_GPIO1
