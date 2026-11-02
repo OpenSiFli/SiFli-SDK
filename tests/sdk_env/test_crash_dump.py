@@ -25,6 +25,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 from sdk_py_actions import crash_dump  # noqa: E402
 from sdk_py_actions import crash_dump_ext  # noqa: E402
 from sdk_py_actions.sifli_uart_dap import SifliUartDap  # noqa: E402
+from sdk_py_actions.sifli_uart_dap import extract_probe_port  # noqa: E402
 from sdk_py_actions.cli.context import SdkConfig  # noqa: E402
 from sdk_py_actions.cli.registry import CommandRegistry  # noqa: E402
 
@@ -1228,6 +1229,43 @@ class BackendTests(unittest.TestCase):
     def test_uart_dap_rejects_unsupported_chip(self) -> None:
         with self.assertRaisesRegex(ValueError, "UART DAP does not support"):
             SifliUartDap("/dev/fake", chip="SF32LB58")
+
+    def test_extract_probe_port_accepts_posix_device_paths(self) -> None:
+        self.assertEqual("/dev/ttyUSB0", extract_probe_port("/dev/ttyUSB0"))
+        self.assertEqual(
+            "/dev/cu.wchusbserial58CD1576891",
+            extract_probe_port("1a86:55d3-1:/dev/cu.wchusbserial58CD1576891"),
+        )
+
+    def test_extract_probe_port_accepts_windows_com_ports(self) -> None:
+        self.assertEqual("COM5", extract_probe_port("COM5"))
+        self.assertEqual("COM10", extract_probe_port("\\\\.\\COM10"))
+        self.assertEqual("COM5", extract_probe_port("1a86:55d3-1:COM5"))
+
+    def test_extract_probe_port_rejects_unknown_spec(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Cannot extract serial port"):
+            extract_probe_port("1a86:55d3-1")
+
+    @mock.patch("sdk_py_actions.sifli_uart_dap.normalize_chip_for_dap", return_value="SF32LB52")
+    @mock.patch("sdk_py_actions.sifli_uart_dap.SifliUartDap")
+    def test_capture_live_uart_accepts_windows_com_port(self, dap_cls, _norm) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            script = root / "capture.jlink"
+            script.write_text("savebin hcpu_ram.bin 0x20000000 0x4\n")
+            dap_cls.return_value = self._make_mock_dap()
+
+            manifest = crash_dump.capture_live(
+                self._make_uart_sdk_ctx(root),
+                "uart",
+                "SF32LB52",
+                root / "out",
+                script_path=script,
+                probe="COM5",
+            )
+
+            dap_cls.assert_called_once_with("COM5", chip="SF32LB52")
+            self.assertEqual("live-uart", manifest["source"])
 
     @mock.patch("sdk_py_actions.sifli_uart_dap.normalize_chip_for_dap", return_value="SF32LB56")
     @mock.patch("sdk_py_actions.sifli_uart_dap.extract_probe_port", return_value="/dev/fake")

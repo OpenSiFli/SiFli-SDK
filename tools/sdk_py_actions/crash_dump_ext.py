@@ -200,7 +200,11 @@ def register(registry: CommandRegistry) -> None:
                 "type": click.Path(),
                 "required": True,
             },
-            {"names": ["--probe"], "default": None},
+            {
+                "names": ["--probe"],
+                "default": None,
+                "help": "Serial port for --transport uart: /dev/ttyUSB0, COM5, or a probe-rs selector like VID:PID-index:port.",
+            },
             {"names": ["--probe-rs", "probe_rs"], "default": "probe-rs"},
             {"names": ["--jlink"], "default": None},
             {"names": ["--jlink-ip", "jlink_ip"], "default": None},

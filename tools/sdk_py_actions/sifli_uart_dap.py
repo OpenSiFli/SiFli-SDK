@@ -21,6 +21,7 @@ Reference:
 
 from __future__ import annotations
 
+import re
 import struct
 import time
 from typing import Dict, Optional
@@ -280,23 +281,42 @@ class SifliUartDap:
 
 def normalize_chip_for_dap(chip: str) -> str:
     """Extract chip family from a chip string (e.g. 'SF32LB52' from 'SF32LB52X')."""
-    import re
     match = re.search(r"(52|55|56|57|58)", chip.upper())
     if not match:
         raise ValueError(f"Unsupported chip: {chip}")
     return f"SF32LB{match.group(1)}"
 
 
+_DEVICE_PATH_RE = re.compile(r"/dev/\S+$")
+# Windows COM port, optionally with the "\\.\" driver prefix and optionally
+# preceded by the probe-rs VID:PID-index selector.
+_COM_PORT_RE = re.compile(r"(?:^|[:\s])(?:\\\\\.\\)?(COM\d+)$", re.IGNORECASE)
+
+
 def extract_probe_port(probe_spec: str) -> str:
-    """Extract the serial-port path from a probe-rs --probe string.
+    """Extract the serial port from a probe-rs ``--probe`` value.
+
+    Accepted forms:
+
+    * plain POSIX device path: ``/dev/ttyUSB0``
+    * probe-rs selector with a POSIX device path:
+      ``1a86:55d3-1:/dev/cu.wchusbserial58CD1576891``
+    * plain Windows COM port: ``COM5`` / ``\\\\.\\COM5``
+    * probe-rs selector with a Windows COM port: ``1a86:55d3-1:COM5``
 
     >>> extract_probe_port("1a86:55d3-1:/dev/cu.wchusbserial58CD1576891")
     '/dev/cu.wchusbserial58CD1576891'
+    >>> extract_probe_port("1a86:55d3-1:COM5")
+    'COM5'
     """
-    # probe-rs format: VID:PID-index:serial_path
-    if ":/dev/" in probe_spec or ":/dev/" in probe_spec.replace("\\", "/"):
-        return probe_spec.split(":", 2)[-1]
-    # plain serial path
-    if probe_spec.startswith("/dev/"):
-        return probe_spec
-    raise ValueError(f"Cannot extract serial port from probe spec: {probe_spec}")
+    text = probe_spec.strip()
+    match = _DEVICE_PATH_RE.search(text)
+    if match:
+        return match.group(0)
+    match = _COM_PORT_RE.search(text)
+    if match:
+        return match.group(1)
+    raise ValueError(
+        "Cannot extract serial port from probe spec "
+        f"(expected /dev/... or COMx): {probe_spec}"
+    )

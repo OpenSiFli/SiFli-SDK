@@ -580,7 +580,7 @@ sdk.py crash-dump capture-live \
   --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
 ```
 
-`--probe` 用于指定 UART DEBUG IP 所在的串口。Linux 下可使用 `/dev/ttyUSB0`，macOS 下通常为 `/dev/cu.*`，请替换为实际设备路径。
+`--probe` 用于指定 UART DEBUG IP 所在的串口。Linux 下可使用 `/dev/ttyUSB0`，macOS 下通常为 `/dev/cu.*`，Windows 下使用 `COM5` 这样的端口名；也支持 probe-rs 选择器形式，例如 `1a86:55d3-1:COM5`。
 
 如果板子需要导出 PSRAM，增加 `--include-psram`，也可以用 `--psram-size 8MB` 手动指定 PSRAM 脚本。导出过程中会按文件显示进度。
 

@@ -462,7 +462,7 @@ sdk.py crash-dump capture-live \
   --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
 ```
 
-`--probe` selects the serial port that exposes the UART DEBUG IP. Use the actual device path, such as `/dev/ttyUSB0` on Linux or `/dev/cu.*` on macOS.
+`--probe` selects the serial port that exposes the UART DEBUG IP. Use the actual device path, such as `/dev/ttyUSB0` on Linux, `/dev/cu.*` on macOS, or `COM5` on Windows. A probe-rs selector such as `1a86:55d3-1:COM5` is also accepted.
 
 To export PSRAM as well, add `--include-psram`, or use `--psram-size 8MB` to select the PSRAM script manually. The command prints per-file export progress.
 
