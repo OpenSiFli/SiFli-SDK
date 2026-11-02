@@ -2,313 +2,130 @@
 # SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
 # SPDX-License-Identifier: Apache-2.0
 # -*- coding: utf-8 -*-
-import os
+import argparse
+import math
 import sys
+
 import yaml
-import json
-import subprocess
-import tempfile
-from pathlib import Path
+
+
+DEFAULT_BATCH_SIZE = 100
+BATCH_PIPELINE = '.gitlab/ci/build_sdk_batch.yml'
+
 
 class DynamicPipelineGenerator:
     def __init__(self, config_file='build_config_gcc.yaml'):
         self.config_file = config_file
+        self.batch_size = DEFAULT_BATCH_SIZE
         self.config = self._load_config()
-        self.pipeline_config = {
-            'stages': ['build', 'collect', 'merge'],
+
+    def _load_config(self):
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as config_file:
+                config = yaml.safe_load(config_file) or {}
+        except Exception as exc:
+            raise ValueError(f'failed to load {self.config_file}: {exc}') from exc
+
+        if not isinstance(config, dict):
+            raise ValueError(f'{self.config_file} must contain a YAML mapping')
+        return config
+
+    @staticmethod
+    def _generate_job_name(project_path, board=None):
+        name = project_path.replace('/', '_').replace('-', '_').replace('.', '_')
+        if board:
+            name += f'_{board.replace("-", "_")}'
+        return f'build_{name}'
+
+    def get_build_jobs(self):
+        jobs = []
+        names = set()
+
+        for project_group in self.config.get('projects', []):
+            for project_path in project_group.get('path', []):
+                jobs.append((self._generate_job_name(project_path), project_path, None, False))
+
+        for common_project in self.config.get('common_projects', []):
+            project_path = common_project['path']
+            excluded = set(common_project.get('exclude_boards', []))
+            for board in common_project.get('boards', []):
+                if board not in excluded:
+                    jobs.append((self._generate_job_name(project_path, board), project_path, board, True))
+
+        for name, *_ in jobs:
+            if name in names:
+                raise ValueError(f'duplicate generated build job name: {name}')
+            names.add(name)
+        return jobs
+
+    def generate_child_pipeline(self):
+        jobs = self.get_build_jobs()
+        if not jobs:
+            raise ValueError('build configuration contains no build jobs')
+        batch_count = math.ceil(len(jobs) / self.batch_size)
+        batch_stages = [f'batch_{index + 1:03d}' for index in range(batch_count)]
+        pipeline = {
+            'stages': batch_stages,
             'variables': {
                 'GIT_SUBMODULE_STRATEGY': 'recursive',
                 'COMPILER': 'gcc',
-                'PARALLEL_JOBS': '8'
-            }
-        }
-    
-    def _load_config(self):
-        try:
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                return yaml.safe_load(f)
-        except Exception as e:
-            print(f"❌ 加载配置文件失败: {e}")
-            sys.exit(1)
-    
-    def _create_build_job(self, project_path, board=None, is_common=False):
-        """创建单个构建Job配置"""
-        # 生成Job名称
-        job_name = self._generate_job_name(project_path, board)
-        
-        # 生成日志文件名
-        log_name = job_name.replace('build_', '')
-        
-        # 构建参数
-        # 处理board参数：scons命令需要去掉_hcpu后缀
-        scons_board = board.replace('_hcpu', '') if board and '_hcpu' in board else board
-        build_args = f"--board={scons_board}" if (is_common and scons_board) else ""
-        project_type = "common" if is_common else "normal"
-        
-        # 简化的Job配置
-        job_config = {
-            'stage': 'build',
-            'tags': ['build'],
-            'variables': {
-                'PROJECT_PATH': project_path,
-                'BOARD': board or "",  # 保留原始board名称用于目录名
-                'SCONS_BOARD': scons_board or "",  # scons命令使用的board名称
-                'BUILD_ARGS': build_args,
-                'LOG_NAME': log_name,
-                'PROJECT_TYPE': project_type
+                'PARALLEL_JOBS': '8',
             },
-            'script': [
-                'source ./export.sh',
-                'bash tools/ci/build_job.sh'
-            ],
-            'artifacts': {
-                'paths': [
-                    f'ci_build_logs/{log_name}.log',
-                    f'artifacts/{log_name}/',
-                    f'job_status/{log_name}.env'
-                ],
-                'expire_in': '1 day',
-                'when': 'always'
-            },
-            'rules': [
-                {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'},
-                {'when': 'manual', 'allow_failure': True}
-            ]
         }
-        return job_name, job_config
-    
-    def _create_collect_job(self, build_job_names):
-        """创建收集artifacts的Job - 使用分层策略控制单个收集Job规模"""
-        MAX_GROUP_SIZE = 50
-        
-        collect_jobs = {}
-        
-        if len(build_job_names) <= MAX_GROUP_SIZE:
-            # 如果job数量不超过限制，直接创建单个收集job
-            collect_jobs['collect_all_artifacts'] = {
-                'stage': 'collect',
-                'tags': ['build'],
-                'script': [
-                    'echo "🔍 开始收集所有构建artifacts..."',
-                    'python3 tools/ci/collect_artifacts_simple.py --output-dir merged_artifacts',
-                ],
-                'artifacts': {
-                    'paths': ['merged_artifacts/'],
-                    'expire_in': '1 week',
-                    'when': 'always'
+
+        for batch_index in range(batch_count):
+            job_name = f'build_batch_{batch_index + 1:03d}'
+            pipeline[job_name] = {
+                'stage': batch_stages[batch_index],
+                'trigger': {
+                    'include': [{'local': BATCH_PIPELINE}],
+                    'strategy': 'depend',
                 },
-                'dependencies': build_job_names,
+                'variables': {
+                    'BATCH_INDEX': str(batch_index),
+                    'BUILD_CONFIG': str(self.config_file),
+                },
                 'rules': [
-                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
-                ]
+                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'},
+                ],
             }
 
-            collect_jobs['collect_failed_artifacts'] = {
-                'stage': 'collect',
-                'tags': ['build'],
-                'script': [
-                    'echo "🔍 开始收集失败Job的构建artifacts..."',
-                    'python3 tools/ci/collect_artifacts_simple.py --failed-only --output-dir failed_merged_artifacts',
-                ],
-                'artifacts': {
-                    'paths': ['failed_merged_artifacts/'],
-                    'expire_in': '1 week',
-                    'when': 'always'
-                },
-                'dependencies': build_job_names,
-                'rules': [
-                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'on_failure'}
-                ]
-            }
-        else:
-            # 如果job数量超过限制，使用分层收集策略
-            print(f"⚠️  构建job数量({len(build_job_names)})超过单个收集Job建议规模({MAX_GROUP_SIZE})，使用分层收集策略")
-            
-            # 将构建job分组
-            job_groups = []
-            for i in range(0, len(build_job_names), MAX_GROUP_SIZE):
-                group = build_job_names[i:i + MAX_GROUP_SIZE]
-                job_groups.append(group)
-            
-            intermediate_jobs = []
-            
-            # 为每组创建中间收集job
-            for group_idx, job_group in enumerate(job_groups):
-                intermediate_job_name = f'collect_group_{group_idx + 1}'
-                intermediate_jobs.append(intermediate_job_name)
-                
-                collect_jobs[intermediate_job_name] = {
-                    'stage': 'collect',
-                    'tags': ['build'],
-                    'script': [
-                        f'echo "🔍 收集第{group_idx + 1}组artifacts (共{len(job_groups)}组)..."',
-                        f'python3 tools/ci/collect_artifacts_simple.py --output-dir group_{group_idx + 1}_artifacts/merged_artifacts',
-                        f'echo "✅ 第{group_idx + 1}组收集完成"'
-                    ],
-                    'artifacts': {
-                        'paths': [f'group_{group_idx + 1}_artifacts/'],
-                        'expire_in': '1 day',
-                        'when': 'always'
-                    },
-                    'dependencies': job_group,
-                    'rules': [
-                        {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
-                    ]
-                }
-            
-            # 创建最终合并job
-            collect_jobs['merge_all_artifacts'] = {
-                'stage': 'merge',
-                'tags': ['build'],
-                'script': [
-                    'echo "🔄 合并所有组的artifacts..."',
-                    'python3 tools/ci/merge_group_artifacts.py --output-dir final_merged_artifacts',
-                ],
-                'artifacts': {
-                    'paths': [
-                        'final_merged_artifacts/'
-                    ],
-                    'expire_in': '1 week',
-                    'when': 'always'
-                },
-                'dependencies': intermediate_jobs,
-                'rules': [
-                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'}
-                ]
-            }
+        print(
+            f'Generated {len(jobs)} build jobs in {batch_count} batches '
+            f'(up to {self.batch_size} jobs per child pipeline)'
+        )
+        return pipeline
 
-            collect_jobs['merge_failed_artifacts'] = {
-                'stage': 'merge',
-                'tags': ['build'],
-                'script': [
-                    'echo "🔄 合并失败Job的artifacts..."',
-                    'python3 tools/ci/merge_group_artifacts.py --failed-only --output-dir failed_merged_artifacts',
-                ],
-                'artifacts': {
-                    'paths': [
-                        'failed_merged_artifacts/'
-                    ],
-                    'expire_in': '1 week',
-                    'when': 'always'
-                },
-                'dependencies': intermediate_jobs,
-                'rules': [
-                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'on_failure'}
-                ]
-            }
-        
-        return collect_jobs
-    
-    def _generate_job_name(self, project_path, board=None):
-        """生成Job名称"""
-        name = project_path.replace('/', '_').replace('-', '_').replace('.', '_')
-        if board:
-            name += f"_{board.replace('-', '_')}"
-        return f"build_{name}"
-    
-    def generate_child_pipeline(self):
-        """生成子Pipeline配置"""
-        print("🚀 动态生成构建Pipeline...")
-        
-        jobs = {}
-        job_count = 0
-        
-        # 处理普通项目
-        if 'projects' in self.config:
-            for project_group in self.config['projects']:
-                for project_path in project_group['path']:
-                    job_name, job_config = self._create_build_job(project_path, is_common=False)
-                    jobs[job_name] = job_config
-                    job_count += 1
-        
-        # 处理通用项目
-        if 'common_projects' in self.config:
-            for common_project in self.config['common_projects']:
-                project_path = common_project['path']
-                exclude_boards = set(common_project.get('exclude_boards', []))
-                for board in common_project['boards']:
-                    if board in exclude_boards:
-                        continue
-                    job_name, job_config = self._create_build_job(project_path, board, is_common=True)
-                    jobs[job_name] = job_config
-                    job_count += 1
-        
-        # 合并配置
-        self.pipeline_config.update(jobs)
-        
-        # 添加收集artifacts的job
-        if job_count > 0:
-            collect_jobs = self._create_collect_job(list(jobs.keys()))
-            self.pipeline_config.update(collect_jobs)
-            collect_job_count = len(collect_jobs)
-        else:
-            collect_job_count = 0
-        
-        print(f"📊 动态生成了 {job_count} 个构建Job + {collect_job_count}个收集Job")
-        return self.pipeline_config
-    
     def save_child_pipeline(self, output_file='child-pipeline.yml'):
-        """保存子Pipeline配置"""
         pipeline = self.generate_child_pipeline()
-        
-        with open(output_file, 'w', encoding='utf-8') as f:
-            yaml.dump(pipeline, f, default_flow_style=False, allow_unicode=True, indent=2)
-        
-        print(f"✅ 子Pipeline配置已保存: {output_file}")
+        with open(output_file, 'w', encoding='utf-8') as output:
+            yaml.safe_dump(pipeline, output, sort_keys=False, allow_unicode=True)
+        print(f'Child pipeline configuration saved: {output_file}')
         return output_file
-    
-    def trigger_child_pipeline(self):
-        """触发子Pipeline"""
-        # 生成临时配置文件
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
-            pipeline = self.generate_child_pipeline()
-            yaml.dump(pipeline, f, default_flow_style=False, allow_unicode=True, indent=2)
-            temp_file = f.name
-        
-        print(f"📄 临时Pipeline配置: {temp_file}")
-        
-        # 使用GitLab CI API触发子Pipeline
-        if 'CI_PROJECT_ID' in os.environ and 'CI_PIPELINE_ID' in os.environ:
-            self._trigger_via_api(temp_file)
-        else:
-            print("💡 在本地环境中，将配置文件复制到 child-pipeline.yml")
-            import shutil
-            shutil.copy2(temp_file, 'child-pipeline.yml')
-        
-        # 清理临时文件
-        os.unlink(temp_file)
 
 
 def main():
-    """主函数"""
-    import argparse
-    
-    parser = argparse.ArgumentParser(description='动态Pipeline生成器')
-    parser.add_argument('-c', '--config', default='build_config_gcc.yaml', help='配置文件路径')
-    parser.add_argument('-o', '--output', default='child-pipeline.yml', help='输出文件路径')
-    parser.add_argument('--trigger', action='store_true', help='直接触发子Pipeline')
-    parser.add_argument('--dry-run', action='store_true', help='仅显示生成的Job数量')
-    
+    parser = argparse.ArgumentParser(description='Generate batched GitLab child pipelines')
+    parser.add_argument('-c', '--config', default='build_config_gcc.yaml', help='build config YAML')
+    parser.add_argument('-o', '--output', default='child-pipeline.yml', help='output pipeline YAML')
+    parser.add_argument('--dry-run', action='store_true', help='print pipeline size and counts')
     args = parser.parse_args()
-    
+
     try:
         generator = DynamicPipelineGenerator(args.config)
-        
+        pipeline = generator.generate_child_pipeline()
         if args.dry_run:
-            pipeline = generator.generate_child_pipeline()
-            job_count = len([k for k in pipeline.keys() if k.startswith('build_')])
-            print(f"📊 将生成 {job_count} 个构建Job")
-            
-        elif args.trigger:
-            generator.trigger_child_pipeline()
-            
+            rendered = yaml.safe_dump(pipeline, sort_keys=False, allow_unicode=True)
+            print(f'Generated bridge YAML: {len(rendered.encode("utf-8"))} bytes')
         else:
-            generator.save_child_pipeline(args.output)
-            
-    except Exception as e:
-        print(f"❌ 执行失败: {e}")
-        sys.exit(1)
+            with open(args.output, 'w', encoding='utf-8') as output:
+                yaml.safe_dump(pipeline, output, sort_keys=False, allow_unicode=True)
+            print(f'Child pipeline configuration saved: {args.output}')
+    except Exception as exc:
+        print(f'Pipeline generation failed: {exc}', file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

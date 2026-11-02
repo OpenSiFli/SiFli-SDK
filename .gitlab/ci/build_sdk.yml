@@ -1,5 +1,5 @@
 # GitLab CI 动态构建系统
-# 运行时动态解析配置并生成子Pipeline
+# 运行时生成批次触发配置，避免单个 child pipeline YAML 过大。
 
 # 动态Pipeline生成Job
 generate_dynamic_pipeline:
@@ -7,11 +7,10 @@ generate_dynamic_pipeline:
   tags:
     - build
   script:
-    - echo "🚀 开始动态生成构建Pipeline..."
+    - echo "🚀 开始动态生成分批构建Pipeline..."
     - python3 tools/ci/dynamic_pipeline.py -c build_config_gcc.yaml -o child-pipeline.yml
     - echo "📄 生成的子Pipeline配置:"
-    - head -20 child-pipeline.yml
-    - echo "..."
+    - cat child-pipeline.yml
   artifacts:
     paths:
       - child-pipeline.yml

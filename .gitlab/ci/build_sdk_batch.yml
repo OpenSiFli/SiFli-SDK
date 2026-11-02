@@ -1,0 +1,61 @@
+# A bounded child pipeline keeps each parsed configuration and job set small.
+stages:
+  - build
+  - collect
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+  COMPILER: gcc
+  PARALLEL_JOBS: "8"
+
+build_sdk:
+  stage: build
+  tags:
+    - build
+  parallel: 100
+  script:
+    - BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --batch-index "$BATCH_INDEX" --node-index "$CI_NODE_INDEX")" || exit 1
+    - eval "$BUILD_JOB_ENV"
+    - if [ "$BUILD_BATCH_SKIP" = "1" ]; then echo "No build assigned to this parallel slot"; exit 0; fi
+    - source ./export.sh
+    - bash tools/ci/build_job.sh
+  artifacts:
+    paths:
+      - ci_build_logs/
+      - artifacts/
+      - job_status/
+    expire_in: 1 day
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+      when: always
+
+collect_all_artifacts:
+  stage: collect
+  tags:
+    - build
+  when: always
+  script:
+    - python3 tools/ci/collect_artifacts_simple.py --output-dir merged_artifacts
+  artifacts:
+    paths:
+      - merged_artifacts/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+collect_failed_artifacts:
+  stage: collect
+  tags:
+    - build
+  when: on_failure
+  script:
+    - python3 tools/ci/collect_artifacts_simple.py --failed-only --output-dir failed_merged_artifacts
+  artifacts:
+    paths:
+      - failed_merged_artifacts/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
