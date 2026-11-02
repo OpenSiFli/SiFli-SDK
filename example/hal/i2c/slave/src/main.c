@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtconfig.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -31,6 +37,11 @@ void I2C_Slave_Init(void)
     HAL_PIN_Set(PAD_PA20, I2C3_SCL, PIN_PULLUP, 1); // i2c io select
     HAL_PIN_Set(PAD_PA12, I2C3_SDA, PIN_PULLUP, 1);
 #define SLAVE_I2C I2C3// i2c number of cpu
+#elif defined(SF32LB57X)
+    HAL_RCC_EnableModule(RCC_MOD_I2C2); // enable i2c2
+    HAL_PIN_Set(PAD_PA22, I2C2_SCL, PIN_PULLUP, 1); // i2c io select
+    HAL_PIN_Set(PAD_PA23, I2C2_SDA, PIN_PULLUP, 1);
+#define SLAVE_I2C I2C2// i2c number of cpu
 #endif
     //i2c init
     hi2c.Instance = SLAVE_I2C;// i2c slave mode

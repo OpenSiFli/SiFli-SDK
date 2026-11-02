@@ -5,6 +5,7 @@ The example can run on the following development boards.
 * sf32lb52-lcd series
 * sf32lb58-lcd series
 * sf32lb56-lcd series
+* sf32lb57-lcd series
 
 
 ## Overview
@@ -21,12 +22,13 @@ Connect AT24CO8SC's SDA and SCK according to the table below based on the develo
 |sf32lb52-lcd |3       |PA42     |5      |PA41      |
 |sf32lb58-lcd |3 (CONN1)   |PB29     |5 (CONN1)  |PB28      |
 |sf32lb56-lcd |3       |PA12     |5      |PA20      |
+|sf32lb57-lcd |3       |PA23     |5      |PA22      |
 
 * For more detailed pin definitions, please refer to
 [sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
 [sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
 [sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
-
+[sf32lb57-lcd](https://wiki.sifli.com/board/sf32lb57x/SF32LB57-DevKit-LCD.html)
 
 * AT24C08SC
 ![alt text](assets/at24c08sc.png)
@@ -133,6 +135,12 @@ void EEPROM_init(void)
 #define EXAMPLE_I2C_IRQ I2C3_IRQn // i2c number of interruput when using interrupte mode 
     HAL_PIN_Set(PAD_PA20, I2C3_SCL, PIN_PULLUP, 1); // i2c io select
     HAL_PIN_Set(PAD_PA12, I2C3_SDA, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+    HAL_RCC_EnableModule(RCC_MOD_I2C2); // enable i2c2
+#define EXAMPLE_I2C I2C2 // i2c number of cpu
+#define EXAMPLE_I2C_IRQ I2C2_IRQn // i2c number of interruput when using interrupte mode 
+    HAL_PIN_Set(PAD_PA22, I2C2_SCL, PIN_PULLUP, 1); // i2c io select
+    HAL_PIN_Set(PAD_PA23, I2C2_SDA, PIN_PULLUP, 1);
 #endif
 
     // 2. i2c init
