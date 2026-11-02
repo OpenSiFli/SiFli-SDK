@@ -73,11 +73,16 @@ static lv_timer_t *perf_task = NULL;
 
 #define FPS_LABEL_BUFFER_SIZE (FPS_LABEL_WIDTH * FPS_LABEL_HEIGHT * LV_IMG_PX_SIZE_ALPHA_BYTE)
 #define FPS_STATISTICS_PERIOD_MS  2000
+#ifdef LVGL_V9
+    #define FPS_REFR_PERIOD_MS LV_DEF_REFR_PERIOD
+#else
+    #define FPS_REFR_PERIOD_MS LV_DISP_DEF_REFR_PERIOD
+#endif
 #define FPS_LOWEST_x_PERCENT  5
 static bool fps_on = 0;
 static uint8_t mem_on = 0;
 #ifdef FPS_LOWEST_x_PERCENT
-    #define FPS_LOWEST_x_PERCENT_MAX  ((FPS_LOWEST_x_PERCENT * (FPS_STATISTICS_PERIOD_MS/LV_DISP_DEF_REFR_PERIOD) / 100) + 10/*Exra 10 more records*/)
+    #define FPS_LOWEST_x_PERCENT_MAX  ((FPS_LOWEST_x_PERCENT * (FPS_STATISTICS_PERIOD_MS/FPS_REFR_PERIOD_MS) / 100) + 10/*Exra 10 more records*/)
 
 
     static bool lowest_fps_statistics_first = true;
@@ -192,8 +197,14 @@ void display_fps_and_cpu_load(void)
 
     if (fps_cpu_load_label)
     {
+#ifdef LVGL_V9
+        /* Avoid a redraw caused only by writing an unchanged FPS label. */
+        if (rt_strcmp(lv_label_get_text(fps_cpu_load_label), buff) != 0)
+            lv_label_set_text(fps_cpu_load_label, buff);
+#else
         lv_label_set_text(fps_cpu_load_label, buff);
         lv_obj_invalidate(fps_cpu_load_label);
+#endif
     }
 
 }
@@ -246,7 +257,11 @@ static void perf_task_handler(lv_timer_t *task)
 
 
         LOG_I("\n%d%% lowest frame(ms):", FPS_LOWEST_x_PERCENT);
-        if (calc_items > lowest_frames_count)
+        if (calc_items == 0)
+        {
+            lowest_frames_fps_avg = 0.0f;
+        }
+        else if (calc_items > lowest_frames_count)
         {
             LOG_I("Need more data: expect %d, got %d.", calc_items, lowest_frames_count);
             lowest_frames_fps_avg = 0.0f;
@@ -313,6 +328,7 @@ void set_display_fps_and_cpu_load(int en)
     lowest_fps_statistics_first = true;
 #endif /* FPS_LOWEST_x_PERCENT */
     frame_cnt = 0;
+    fps = 0;
     fps_statistics_first = true;
 
     fps_on = en;
@@ -332,28 +348,36 @@ static void enable_fps_label(int en)
 #if defined(LV_USE_LVSF) && !defined(DISABLE_LVGL_V8)
         lv_ext_set_local_font(fps_cpu_load_label, FONT_NORMAL, lv_palette_main(LV_PALETTE_RED));
 #endif /* LV_USE_LVSF && !DISABLE_LVGL_V8 */
+#ifdef LVGL_V9
+        lv_obj_set_style_text_color(fps_cpu_load_label, lv_color_hex(0x00FF00), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(fps_cpu_load_label, lv_color_hex(0x000000), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(fps_cpu_load_label, LV_OPA_50, LV_PART_MAIN);
+        lv_obj_align(fps_cpu_load_label, LV_ALIGN_BOTTOM_RIGHT, -4, -4);
+#else
         lv_obj_align(fps_cpu_load_label, LV_ALIGN_TOP_MID, 0, 0);
+#endif
         //display_fps_and_cpu_load();
         lv_label_set_text(fps_cpu_load_label, "Waitting...");
+#ifndef LVGL_V9
         perf_task = lv_timer_create(perf_task_handler, 500, (void *)0);
+#endif
     }
     else if ((fps_cpu_load_label) && (!en))
     {
         lv_obj_del(fps_cpu_load_label);
         fps_cpu_load_label = NULL;
 
+#ifndef LVGL_V9
         lv_timer_del(perf_task);
         perf_task = NULL;
+#endif
     }
     else
     {
         //Ignore repeated setup.
     }
 }
-#ifndef DISABLE_LVGL_V8
-
-
-void perf_monitor(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
+static void record_display_frame(void)
 {
     if (fps_on)
     {
@@ -367,11 +391,11 @@ void perf_monitor(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
         }
         else
         {
-            uint32_t elapsed_time = get_elapsed_tick(prev_time);
+            uint32_t elapsed_time = get_elapsed_tick(prev_time) * 1000 / RT_TICK_PER_SECOND;
 
 
             //Avoid the average of lowest frame larger than 'fps'
-            if (elapsed_time < LV_DISP_DEF_REFR_PERIOD) elapsed_time = LV_DISP_DEF_REFR_PERIOD;
+            if (elapsed_time < FPS_REFR_PERIOD_MS) elapsed_time = FPS_REFR_PERIOD_MS;
 
             if (0 == lowest_frames_count)
             {
@@ -417,9 +441,40 @@ void perf_monitor(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
 #endif /* FPS_LOWEST_x_PERCENT */
     }
 
+}
+
+#ifndef DISABLE_LVGL_V8
+void perf_monitor(struct _lv_disp_drv_t *disp_drv, uint32_t time, uint32_t px)
+{
+    record_display_frame();
     enable_fps_label(fps_on);
 }
 #endif /* DISABLE_LVGL_V8 */
+
+#ifdef LVGL_V9
+static void fps_display_event_cb(lv_event_t *event)
+{
+    LV_UNUSED(event);
+    if (fps_on && fps_statistics_first) perf_task_handler(NULL);
+    /* One event per redraw, including all dirty areas and partial buffers.
+     * Empty refresh cycles do not emit RENDER_READY. */
+    record_display_frame();
+}
+
+static void fps_timer_cb(lv_timer_t *timer)
+{
+    /* Shell commands only toggle fps_on; update LVGL objects on its thread. */
+    enable_fps_label(fps_on);
+    if (fps_on) perf_task_handler(timer);
+}
+
+void littlevgl2rtt_fps_init(lv_display_t *disp)
+{
+    RT_ASSERT(disp);
+    lv_display_add_event_cb(disp, fps_display_event_cb, LV_EVENT_RENDER_READY, NULL);
+    lv_timer_create(fps_timer_cb, 500, NULL);
+}
+#endif
 
 float lv_get_fps(void)
 {

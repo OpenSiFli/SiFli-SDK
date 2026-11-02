@@ -27,6 +27,9 @@ void littlevgl2rtt_send_input_event(rt_int16_t x, rt_int16_t y, rt_uint8_t state
 float lv_get_fps(void);
 void set_display_fps_and_cpu_load(int en);
 int get_display_fps_and_cpu_load(void);
+#ifdef LVGL_V9
+void littlevgl2rtt_fps_init(lv_display_t *disp);
+#endif
 
 #ifdef __cplusplus
 }

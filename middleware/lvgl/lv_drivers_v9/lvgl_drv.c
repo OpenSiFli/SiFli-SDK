@@ -26,6 +26,7 @@ void lv_hal_init(const char *name)
 
     /* LCD Device Init */
     lv_lcd_init(name);
+    littlevgl2rtt_fps_init(lv_display_get_default());
 
     lv_sifli_img_decoder();
 
