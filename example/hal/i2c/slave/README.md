@@ -6,6 +6,7 @@
 * sf32lb52-lcd_n16r8
 * sf32lb58-lcd_n16r64n4
 * sf32lb56-lcd_n16r12n1
+* sf32lb57-lcd
 
 ## 概述
 * 本示例演示了如何使用芯片的I2C接口实现主从通信功能。代码实现了I2C从机模式(EXAMPLE_I2C_SLAVE)，在此模式下：
@@ -38,6 +39,7 @@
 |sf32lb52-lcd_n16r8 |3       |PA42     |5      |PA41      |
 |sf32lb56-lcd_n16r12n1 |3       |PA12     |5      |PA20      |
 |sf32lb58-lcd_n16r64n4 |3 (CONN1)   |PB29     |5 (CONN1)  |PB28      |
+|sf32lb57-lcd |3       |PA23     |5      |PA22      |
 
 ### 编译和烧录
 切换到例程project目录，运行scons命令执行编译：
@@ -128,6 +130,11 @@ void I2C_Slave_Init(void)
     HAL_PIN_Set(PAD_PA20, I2C3_SCL, PIN_PULLUP, 1); // i2c io select
     HAL_PIN_Set(PAD_PA12, I2C3_SDA, PIN_PULLUP, 1);
 #define SLAVE_I2C I2C3// i2c number of cpu
+#elif defined(SF32LB57X)
+    HAL_RCC_EnableModule(RCC_MOD_I2C2); // enable i2c2
+    HAL_PIN_Set(PAD_PA22, I2C2_SCL, PIN_PULLUP, 1); // i2c io select
+    HAL_PIN_Set(PAD_PA23, I2C2_SDA, PIN_PULLUP, 1);
+#define SLAVE_I2C I2C2// i2c number of cpu
 #endif
     //i2c init
     hi2c.Instance = SLAVE_I2C;// i2c slave mode
