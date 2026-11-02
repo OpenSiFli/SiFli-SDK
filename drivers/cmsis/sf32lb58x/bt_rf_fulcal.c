@@ -5050,6 +5050,10 @@ void bt_rf_cal(void)
 #endif
 
     uint32_t addr = bt_rfc_init();
+#ifndef ENABLE_RF_ATE
+    hwp_bt_rfc->RBB_REG1 &= ~BT_RFC_RBB_REG1_BRF_SEL_LDOVREF_RBB_LV;
+    hwp_bt_rfc->RBB_REG1 |= 0xB << BT_RFC_RBB_REG1_BRF_SEL_LDOVREF_RBB_LV_Pos;
+#endif
     bt_ful_cal(addr);
 
     bt_rf_opt_cal();
@@ -5064,7 +5068,7 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.1.0_3582";
+char *g_rf_ful_ver = "1.1.1_3723";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;
