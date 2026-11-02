@@ -66,7 +66,11 @@ extern "C" {
 #ifdef DRV_EPIC_NEW_API
 
 #define render_list_pool_max    2
-#define letter_pool_max         800//800
+#ifdef DRV_EPIC_LETTER_POOL_SIZE
+#define letter_pool_max         DRV_EPIC_LETTER_POOL_SIZE
+#else
+#define letter_pool_max         800
+#endif
 #define mask_buf_max_bytes      (16*1024)
 #define mask_buf2_max_bytes     1600
 #if defined(ROTATE_BUF_SIZE) && defined(ROTATE_BUF_IN_SRAM)

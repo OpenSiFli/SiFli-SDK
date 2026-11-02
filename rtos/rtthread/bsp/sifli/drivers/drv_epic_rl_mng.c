@@ -47,13 +47,20 @@ L1_RET_BSS_SECT_END
 L1_NON_RET_BSS_SECT_BEGIN(drv_epic_stack)
 L1_NON_RET_BSS_SECT(drv_epic_stack, ALIGN(RT_ALIGN_SIZE) static uint8_t drv_epic_mask_buf_pool[mask_buf_max_bytes]);
 L1_NON_RET_BSS_SECT(drv_epic_stack, ALIGN(RT_ALIGN_SIZE) static uint8_t drv_epic_mask_buf2_pool[mask_buf2_max_bytes]);
+#ifndef DRV_EPIC_LETTER_POOL_IN_PSRAM
 L1_NON_RET_BSS_SECT(drv_epic_stack, ALIGN(RT_ALIGN_SIZE) static drv_epic_letter_type_t drv_epic_letter_pool[letter_pool_max * render_list_pool_max]);
+#endif
 #if (rotate_buf_bytes > 0)
     L1_NON_RET_BSS_SECT(drv_epic_stack, ALIGN(RT_ALIGN_SIZE) static uint8_t drv_epic_rotate_buf[rotate_buf_bytes]);
 #endif
 L1_NON_RET_BSS_SECT(drv_epic_stack, ALIGN(RT_ALIGN_SIZE) static uint8_t drv_epic_stack[4096]);
 L1_NON_RET_BSS_SECT_END
 
+#ifdef DRV_EPIC_LETTER_POOL_IN_PSRAM
+L2_NON_RET_BSS_SECT_BEGIN(drv_epic_letters)
+L2_NON_RET_BSS_SECT(drv_epic_letters, ALIGN(RT_ALIGN_SIZE) static drv_epic_letter_type_t drv_epic_letter_pool[letter_pool_max * render_list_pool_max]);
+L2_NON_RET_BSS_SECT_END
+#endif
 
 
 
