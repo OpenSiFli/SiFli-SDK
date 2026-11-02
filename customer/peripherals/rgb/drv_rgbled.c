@@ -5,7 +5,6 @@
  */
 
 #include <board.h>
-#include "bf0_hal_rcc.h"
 #include "drv_rgbled.h"
 
 /** @addtogroup bsp_driver Driver IO
@@ -35,21 +34,24 @@
 #define RGB_TOTAL_COLOR_LEN   (RGB_COLOR_BITS_PER_LED * BSP_RGB_LED_COUNT)
 #define RGB_TOTAL_BUFFER_LEN  (RGB_REST_LEN + RGB_TOTAL_COLOR_LEN + RGB_STOP_LEN)
 
-/* PWM timing parameters for SK6812 protocol
- * Based on 48MHz timer clock with prescaler resulting in 30MHz counter
- * Period = 1600 ticks = 53.3μs (close to SK6812's 1.25μs ± 0.6μs requirement)
+/* PWM timing parameters for the SK6812 protocol.
+ * config.period / config.pulse are passed to rt_pwm_set() and are in
+ * nanoseconds; drv_pwm_tim.c converts them with the real counter clock.
+ * 1600ns per bit is accepted by the SK6812 (nominal 1.25us +/-0.6us).
  */
-#define pwm_period  1600        /*!< PWM period in timer ticks */
-#define pulse_period  800       /*!< PWM pulse width in timer ticks (50% duty cycle base) */
+#define pwm_period    1600      /*!< bit period in ns */
+#define pulse_period   800      /*!< 50% duty base, in ns */
 
-/* SK6812 protocol timing values (PWM compare register values)
- * reg_high: ~0.8μs high time for logic '1' (18/30MHz = 0.6μs + rise time)
- * reg_low:  ~0.4μs high time for logic '0' (7/30MHz = 0.23μs + rise time)  
- * reg_end:  Long high pulse for reset/latch signal (50/30MHz = 1.67μs)
+/* SK6812 bit timing. The DMA writes these values into the PWM compare
+ * register on every timer update, so they are converted to the counter ticks
+ * of the PWM device, see rgb_led_ns_to_tick():
+ *   reg_high_ns: logic 1, 750ns high (SK6812 range 450..750ns)
+ *   reg_low_ns : logic 0, 290ns high (SK6812 range 150..450ns)
+ *   reg_end_ns : trailing pulse, 2080ns
  */
-#define reg_high 18    /*!< PWM compare value for logic '1' */
-#define reg_low  7     /*!< PWM compare value for logic '0' */
-#define reg_end  50    /*!< PWM compare value for end/reset signal */
+#define reg_high_ns   750
+#define reg_low_ns    290
+#define reg_end_ns   2080
 
 #ifdef RGB_USING_SK6812MINI_HS_DEV_NAME
     #define RGBLED_NAME "rgbled"
@@ -77,6 +79,45 @@ static struct bf0_rgbled bf0_rgbled_obj = {
 
 static rt_err_t drv_rgbled_control(rt_device_t device, int cmd, void *arg);
 
+/*
+ * Convert a time in nanoseconds to PWM counter ticks. The counter clock is
+ * queried from the PWM device, so the pulse width stays the same whatever SoC,
+ * timer or HCPU frequency is used and also follows a clock change at runtime.
+ */
+static uint16_t rgb_led_ns_to_tick(uint32_t ns, uint32_t clk_hz)
+{
+    uint64_t tick = ((uint64_t)ns * clk_hz + 500000000ULL) / 1000000000ULL;
+
+    if (tick > 0xFFFF)
+    {
+        tick = 0xFFFF;
+    }
+
+    return (uint16_t)tick;
+}
+
+/*
+ * Program the PWM period before the DMA data is built. The counter clock
+ * reported by PWM_CMD_GET_CLK is derived from the prescaler that drv_pwm_set()
+ * programs for this period, so it has to be queried after this call.
+ */
+static rt_err_t drv_rgbled_set_period(struct bf0_rgbled *rgb_obj)
+{
+    struct rt_pwm_configuration config;
+
+#ifndef BSP_USING_RGBLED_CH
+    LOG_E("NO CONFIG BSP_USING_RGBLED_CH");
+    return -RT_ERROR;
+#endif
+
+    rt_memset(&config, 0, sizeof(config));
+    config.channel = BSP_USING_RGBLED_CH;
+    config.period = pwm_period;
+    config.pulse = pulse_period;
+
+    return rt_device_control((struct rt_device *)rgb_obj->pwm_device, PWM_CMD_SET, (void *)&config);
+}
+
 /**
  * @brief Create color array for LEDs
  * @param rgb_obj RGB LED device object
@@ -93,6 +134,22 @@ static void create_color_array(struct bf0_rgbled *rgb_obj, rt_uint32_t *colors, 
 
     rt_memset(rgb_obj->rgb_buffer, 0, sizeof(rgb_obj->rgb_buffer));
     
+    /* The PWM device converts period/pulse by itself, but the DMA array is
+     * written straight into the compare register, so it has to be given in
+     * counter ticks. Ask the device for its clock instead of assuming one. */
+    rt_uint32_t clk_hz = 0;
+    rt_device_control((struct rt_device *)rgb_obj->pwm_device, PWM_CMD_GET_CLK, &clk_hz);
+
+    if (0 == clk_hz)
+    {
+        LOG_W("Get pwm clock failed, falling back to 24MHz");
+        clk_hz = 24000000UL;
+    }
+
+    uint16_t reg_high_tick = rgb_led_ns_to_tick(reg_high_ns, clk_hz);
+    uint16_t reg_low_tick  = rgb_led_ns_to_tick(reg_low_ns,  clk_hz);
+    uint16_t reg_end_tick  = rgb_led_ns_to_tick(reg_end_ns,  clk_hz);
+    
     uint16_t offset = RGB_REST_LEN;
 
     for (int led = 0; led < led_count; led++)
@@ -108,16 +165,16 @@ static void create_color_array(struct bf0_rgbled *rgb_obj, rt_uint32_t *colors, 
         for (int i = 0; i < 8; i++)
         {
             // Encode Green (GRB order for SK6812)
-            rgb_obj->rgb_buffer[led_offset + i] = ((green << i) & 0x80) ? reg_high : reg_low;
+            rgb_obj->rgb_buffer[led_offset + i] = ((green << i) & 0x80) ? reg_high_tick : reg_low_tick;
             // Encode Red  
-            rgb_obj->rgb_buffer[led_offset + i + 8] = ((red << i) & 0x80) ? reg_high : reg_low;
+            rgb_obj->rgb_buffer[led_offset + i + 8] = ((red << i) & 0x80) ? reg_high_tick : reg_low_tick;
             // Encode Blue
-            rgb_obj->rgb_buffer[led_offset + i + 16] = ((blue << i) & 0x80) ? reg_high : reg_low;
+            rgb_obj->rgb_buffer[led_offset + i + 16] = ((blue << i) & 0x80) ? reg_high_tick : reg_low_tick;
         }
     }
     
     // Add stop signal after all LEDs
-    rgb_obj->rgb_buffer[RGB_REST_LEN + (led_count * RGB_COLOR_BITS_PER_LED)] = reg_end;
+    rgb_obj->rgb_buffer[RGB_REST_LEN + (led_count * RGB_COLOR_BITS_PER_LED)] = reg_end_tick;
 
 #ifdef DRV_DEBUG
     LOG_D("Color array created for %d LEDs", led_count);
@@ -214,6 +271,14 @@ static rt_err_t drv_rgbled_control(rt_device_t device, int cmd, void *arg)
             }
             
             rt_uint32_t color = single_config->color_rgb;
+
+            result = drv_rgbled_set_period(rgb_obj);
+            if (result != RT_EOK)
+            {
+                LOG_E("Set pwm period failed with error %d", result);
+                break;
+            }
+
             create_color_array(rgb_obj, &color, 1);
             result = drv_rgbled_send_data(rgb_obj, 1);
         }
@@ -229,6 +294,13 @@ static rt_err_t drv_rgbled_control(rt_device_t device, int cmd, void *arg)
                 break;
             }
             
+            result = drv_rgbled_set_period(rgb_obj);
+            if (result != RT_EOK)
+            {
+                LOG_E("Set pwm period failed with error %d", result);
+                break;
+            }
+
             create_color_array(rgb_obj, multi_config->color_array, multi_config->led_count);
             result = drv_rgbled_send_data(rgb_obj, multi_config->led_count);
         }
