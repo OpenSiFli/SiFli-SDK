@@ -1,0 +1,22 @@
+# ulog's output only exists after a command is typed: the example registers
+# `ulog_test` and prints nothing on its own. A console harness can only read
+# the UART, so this example is checked with pytest, which can send the command
+# and then assert on the lines ulog emits.
+#
+# One firmware, one flash, one boot: the suite beside this file covers the five
+# log levels, the hexdump, and the runtime level filter in both directions.
+#
+# No platform is named here: the same image runs on any board in the lab, and
+# `-p <board>` picks one.
+#
+# Run it with:
+#     sdk.py test run -T example/system/ulog -p sf32lb52-lcd_a128r16
+tests:
+  - id: ulog.pytest
+    description: Drive ulog_test and the runtime level filter, and assert on the log lines.
+    harness: pytest
+    tags: [pytest]
+    # Covers the build, the flash, the reset and the boot.
+    timeout: 180
+    harness_config:
+      pytest_root: pytest
