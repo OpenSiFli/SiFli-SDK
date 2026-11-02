@@ -7,7 +7,7 @@
 #ifndef SIFLI_RESAMPLE
 #define SIFLI_RESAMPLE 1
 
-
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,8 +19,9 @@ typedef struct
     int16_t *dst;
     uint32_t dst_size;
     uint32_t dst_bytes;
-    uint32_t total_src_index;
-    uint32_t total_dst_index;
+    uint64_t total_src_index;
+    uint64_t next_src_index;
+    uint32_t src_phase_remainder;
     uint32_t src_samplerate;
     uint32_t dst_samplerate;
     int16_t  last_left;

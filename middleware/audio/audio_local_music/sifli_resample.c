@@ -79,19 +79,29 @@ uint32_t sifli_resample_process(sifli_resample_t *p, int16_t *src, uint32_t src_
     }
     int16_t *dst = p->dst;
     uint32_t samples = src_bytes / sizeof(int16_t) / p->channels;
-    uint32_t totla_dst_index = p->total_dst_index;
+    if (samples == 0)
+    {
+        p->dst_bytes = 0;
+        return 0;
+    }
+
     int16_t data_left1, data_right1, data_left2, data_right2;
     uint32_t current = 0;
-    int32_t  src_index;
-    float src_index_float;
+    int64_t src_index;
     float coef;
-    float d1_ratio = 1.0f / p->ratio;
+    uint32_t src_step = p->src_samplerate / p->dst_samplerate;
+    uint32_t src_step_remainder = p->src_samplerate % p->dst_samplerate;
     while (1)
     {
-        src_index_float = totla_dst_index * d1_ratio;
-        src_index = (int32_t)src_index_float;
-        coef = src_index_float - src_index;
-        src_index = src_index - p->total_src_index;
+        if (p->next_src_index >= p->total_src_index)
+        {
+            src_index = (int64_t)(p->next_src_index - p->total_src_index);
+        }
+        else
+        {
+            src_index = -(int64_t)(p->total_src_index - p->next_src_index);
+        }
+        coef = (float)p->src_phase_remainder / p->dst_samplerate;
         if (src_index + 1 >= samples)
         {
             if (p->channels == 1)
@@ -104,9 +114,12 @@ uint32_t sifli_resample_process(sifli_resample_t *p, int16_t *src, uint32_t src_
                 p->last_left = src[2 * samples - 2];
                 p->last_right = src[2 * samples - 1];
             }
-            p-> total_src_index += samples;
-            p->total_dst_index = totla_dst_index;
+            p->total_src_index += samples;
             break;
+        }
+        if ((uint64_t)(current + 1) * sizeof(int16_t) * p->channels > p->dst_size)
+        {
+            RT_ASSERT(0);
         }
         if (src_index < 0)
         {
@@ -126,13 +139,7 @@ uint32_t sifli_resample_process(sifli_resample_t *p, int16_t *src, uint32_t src_
                 *dst++ = (1.0f - coef) * data_right1 + coef * data_right2;
             }
 
-            if (current * 2 >= p->dst_size)
-            {
-                RT_ASSERT(0);
-            }
             current++;
-            totla_dst_index++;
-
         }
         else
         {
@@ -152,12 +159,18 @@ uint32_t sifli_resample_process(sifli_resample_t *p, int16_t *src, uint32_t src_
                 *dst++ = (1.0f - coef) * data_right1 + coef * data_right2;
             }
 
-            if (current * 2 >= p->dst_size)
-            {
-                RT_ASSERT(0);
-            }
             current++;
-            totla_dst_index++;
+        }
+
+        if (p->src_phase_remainder >= p->dst_samplerate - src_step_remainder)
+        {
+            p->src_phase_remainder -= p->dst_samplerate - src_step_remainder;
+            p->next_src_index += src_step + 1;
+        }
+        else
+        {
+            p->src_phase_remainder += src_step_remainder;
+            p->next_src_index += src_step;
         }
     }
     if (is_last_packet)
