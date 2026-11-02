@@ -7,17 +7,19 @@
 * sf32lb52-lcd系列
 * sf32lb58-lcd系列
 * sf32lb56-lcd系列
+* sf32lb57-lcd系列
 
 ## 示例概述
 * 配置GPIO输出，输入中断操作，进行GPIO HAL函数演示
 * 每一秒翻转GPIO_out电平值，输入GPIO在上升沿和下降沿触发中断，串口打印中断信息
 ## GPIO概述
-HAL GPIO 模块提供抽象的软件接口操作硬件GPIO模块. 
-HPSYS和LPSYS各有一个GPIO模块，支持的特性有:
+HAL GPIO 模块提供抽象的软件接口操作硬件GPIO模块,支持的特性有:
 - 输出模式
 - 输入模式， 可检测输入电平触发中断，支持高电平、低电平、上升沿、下降沿和双沿检测
 
-HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模块为 `hwp_gpio2` (或称为GPIO_B). 
+HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), sf32lb5x 系列都支持。
+
+LPSYS的硬件GPIO模块为 `hwp_gpio2` (或称为GPIO_B)，仅sf32lb55, sf32lb56, sf32lb58 系列支持。
 
 ```{note}
 如果需要设置GPIO管脚为其他功能，或者更改上下拉驱动能力，请参考pinmux的设置[PINMUX](#hal-pinmux)
@@ -37,10 +39,13 @@ HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模
 |sf32lb52-lcd |5       |PA41      |3      |PA42      |
 |sf32lb58-lcd |5       |PB28      |3      |PB29      |
 |sf32lb56-lcd |5       |PA20      |3      |PB12   |
+|sf32lb57-lcd |26      |PA41      |28     |PA42     |
 
 * 更详细的引脚定义请参考\
-`[sf32lb52-lcd_n16r8]()`\
-`[sf32lb58-lcd_n16r64n4]()`
+[sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
+[sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
+[sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+[sf32lb57-lcd](https://wiki.sifli.com/board/sf32lb57x/SF32LB57-DevKit-LCD.html)
 
 ### 编译和烧录
 #### sf32lb52-lcd编译示例
@@ -141,6 +146,12 @@ Pin_In 42, value = 0
 #elif defined(SF32LB56X)
     #define Pin_Out 20
     #define Pin_In 12
+    #define GPIO_IRQn GPIO1_IRQn
+    #define hwp_gpio hwp_gpio1
+    #define RCC_MOD_GPIO RCC_MOD_GPIO1
+#elif defined(SF32LB57X)
+    #define Pin_Out 41
+    #define Pin_In 42
     #define GPIO_IRQn GPIO1_IRQn
     #define hwp_gpio hwp_gpio1
     #define RCC_MOD_GPIO RCC_MOD_GPIO1
