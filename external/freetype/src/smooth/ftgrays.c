@@ -2078,7 +2078,6 @@ int gray_convert_glyph( RAS_ARG )
           continue;
         }
         else if ( error != Smooth_Err_Raster_Overflow )
-          ft_sfree(buffer);
           return error;
 
         /* render pool overflow; we will reduce the render band by half */
@@ -2088,7 +2087,7 @@ int gray_convert_glyph( RAS_ARG )
         if ( width == 0 )
         {
           FT_TRACE7(( "gray_convert_glyph: rotten glyph\n" ));
-          ft_sfree(buffer);
+          return FT_THROW( Raster_Overflow );
         }
 
         band++;
