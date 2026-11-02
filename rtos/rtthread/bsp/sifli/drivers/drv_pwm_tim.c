@@ -852,6 +852,23 @@ static rt_err_t drv_pwm_enable(struct bf0_pwm *pwm, struct rt_pwm_configuration 
 }
 
 /**
+* @brief  Get the clock that drives the timer counter, in Hz.
+* @param[in]  htim: GPT handle
+* @retval counter clock before prescaler, in Hz
+*/
+static rt_uint32_t drv_pwm_get_gpt_clock(GPT_HandleTypeDef *htim)
+{
+    rt_uint32_t clk = HAL_RCC_GetPCLKFreq(htim->core, 1);
+
+#ifdef FIXED_GPTBTIM_SRC_CLK
+    if (htim->Instance == hwp_gptim2)
+        clk = FIXED_GPTBTIM_SRC_CLK;
+#endif
+
+    return clk;
+}
+
+/**
 * @brief  Get a PWM device configuration.
 * @param[in]  htim: GPT device object handle.
 * @param[in,out]  configuration: GPT configuration, input mainly GPT channel number. return period and pulse.
@@ -863,13 +880,7 @@ static rt_err_t drv_pwm_get(struct bf0_pwm *pwm, struct rt_pwm_configuration *co
     rt_uint32_t channel = 0x04 * (configuration->channel - 1);
     rt_uint64_t gpt_clock;
     GPT_HandleTypeDef *htim = &(pwm->tim_handle);
-    gpt_clock = HAL_RCC_GetPCLKFreq(htim->core, 1);
-
-#ifdef FIXED_GPTBTIM_SRC_CLK
-    if (htim->Instance == hwp_gptim2)
-        gpt_clock = FIXED_GPTBTIM_SRC_CLK;
-#endif
-
+    gpt_clock = drv_pwm_get_gpt_clock(htim);
 
     /* Convert nanosecond to frequency and duty cycle. 1s = 1 * 1000 * 1000 * 1000 ns */
     gpt_clock /= 1000000UL;
@@ -903,11 +914,7 @@ static rt_err_t drv_pwm_set(struct bf0_pwm *pwm, struct rt_pwm_configuration *co
         max_period = MAX_PERIOD_ATM;
 #endif
 
-    gpt_clock = HAL_RCC_GetPCLKFreq(htim->core, 1);
-#ifdef FIXED_GPTBTIM_SRC_CLK
-    if (htim->Instance == hwp_gptim2)
-        gpt_clock = FIXED_GPTBTIM_SRC_CLK;
-#endif
+    gpt_clock = drv_pwm_get_gpt_clock(htim);
 
     //GPT_clock = SystemCoreClock;
 
@@ -987,11 +994,7 @@ static rt_err_t drv_pwm_set_period(struct bf0_pwm *pwm, struct rt_pwm_configurat
         max_period = MAX_PERIOD_ATM;
 #endif
 
-    gpt_clock = HAL_RCC_GetPCLKFreq(htim->core, 1);
-#ifdef FIXED_GPTBTIM_SRC_CLK
-    if (htim->Instance == hwp_gptim2)
-        gpt_clock = FIXED_GPTBTIM_SRC_CLK;
-#endif
+    gpt_clock = drv_pwm_get_gpt_clock(htim);
 
     /* Convert nanosecond to frequency and duty cycle. 1s = 1 * 1000 * 1000 * 1000 ns */
     gpt_clock /= 1000000UL;
@@ -1020,11 +1023,7 @@ static rt_err_t drv_pwm_set_break_dead(struct bf0_pwm *pwm, struct rt_pwm_config
     struct rt_pwm_break_dead *bkd = (struct rt_pwm_break_dead *)&configuration->break_dead;
     rt_uint32_t gpt_clock = 0, dead_time = 0;
 
-    gpt_clock = HAL_RCC_GetPCLKFreq(htim->core, 1);
-#ifdef FIXED_GPTBTIM_SRC_CLK
-    if (htim->Instance == hwp_gptim2)
-        gpt_clock = FIXED_GPTBTIM_SRC_CLK;
-#endif
+    gpt_clock = drv_pwm_get_gpt_clock(htim);
 
     gpt_clock /= 1000000UL;
 
@@ -1079,7 +1078,8 @@ static rt_err_t drv_pwm_control(struct rt_device_pwm *device, int cmd, void *arg
     //GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)device->parent.user_data;
     struct bf0_pwm *pwm = (struct bf0_pwm *)device->parent.user_data;
 
-    if ((RT_DEVICE_CTRL_RESUME != cmd) && (RT_DEVICE_CTRL_SUSPEND != cmd))
+    if ((RT_DEVICE_CTRL_RESUME != cmd) && (RT_DEVICE_CTRL_SUSPEND != cmd)
+            && (PWM_CMD_GET_CLK != cmd))
     {
         /* arg is not configuration for RESUME and SUSPEND command */
         RT_ASSERT(configuration->channel > 0); //Channel id must > 0
@@ -1098,6 +1098,16 @@ static rt_err_t drv_pwm_control(struct rt_device_pwm *device, int cmd, void *arg
         return drv_pwm_set_period(pwm, configuration);
     case PWM_CMD_BREAK_DEAD:
         return drv_pwm_set_break_dead(pwm, configuration);
+    case PWM_CMD_GET_CLK:
+        if (!arg)
+        {
+            return -RT_EINVAL;
+        }
+        /* CCR is counted with the clock after prescaler, which drv_pwm_set()
+         * programs together with the period. */
+        *(rt_uint32_t *)arg = drv_pwm_get_gpt_clock(&pwm->tim_handle)
+                              / (pwm->tim_handle.Instance->PSC + 1);
+        return RT_EOK;
     default:
         return RT_EINVAL;
     }
