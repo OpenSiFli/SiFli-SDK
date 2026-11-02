@@ -78,6 +78,9 @@ typedef struct
     uint32_t submit_seq;    // Submit sequence number (debug)
     drv_epic_render_list_t last_created;
     uint8_t pending_submit;     // Pending submit flag (leak detection)
+#ifdef LV_USE_PARTIAL_REFRESH
+    lv_area_t refresh_area;
+#endif
 } render_list_frame_state_t;
 
 // Sub-layer level state
@@ -570,6 +573,12 @@ static int render_list_submit_internal(drv_epic_render_list_t rl, drv_epic_rende
         msg.content.rd.area.y0 = disp->offset_y;
         msg.content.rd.area.x1 = (int16_t)(disp->offset_x + disp->hor_res - 1);
         msg.content.rd.area.y1 = (int16_t)(disp->offset_y + disp->ver_res - 1);
+#ifdef LV_USE_PARTIAL_REFRESH
+        msg.content.rd.area.x0 = render_list_ctx.frame.refresh_area.x1 + disp->offset_x;
+        msg.content.rd.area.y0 = render_list_ctx.frame.refresh_area.y1 + disp->offset_y;
+        msg.content.rd.area.x1 = render_list_ctx.frame.refresh_area.x2 + disp->offset_x;
+        msg.content.rd.area.y1 = render_list_ctx.frame.refresh_area.y2 + disp->offset_y;
+#endif
 
         msg.content.rd.usr_data = disp;
         msg.content.rd.partial_done_cb = main_frame_render_done_callback;
@@ -744,6 +753,10 @@ int render_list_create_main_frame(lv_display_t *disp)
     }
 
     render_list_ctx.frame.disp = disp;
+#ifdef LV_USE_PARTIAL_REFRESH
+    /* lv_lcd.c has merged dirty areas before any draw tasks are generated. */
+    render_list_ctx.frame.refresh_area = disp->inv_areas[0];
+#endif
     render_list_ctx.frame.pixel_align = render_list_get_display_pixel_align(disp);
     render_list_set_released_flag(render_list_ctx.frame.active.rl, 0U);
 
