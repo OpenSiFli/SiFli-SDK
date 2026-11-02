@@ -55,3 +55,6 @@ config BSP_USING_CAMERA1
     default n
 
 endmenu
+
+configdefault SDMMC1_BUS_WIDTH_1_ONLY
+    default y
