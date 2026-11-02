@@ -6,6 +6,7 @@ Source path: example/rt_device/rgbled
 <!-- Which boards and chip platforms are supported -->
 + sf32lb52-lcd series
 + sf32lb56-lcd series
++ sf32lb57-lcd series
 + sf32lb58-lcd series
 ## Overview
 <!-- Example introduction -->
@@ -29,7 +30,8 @@ Run the following command
 ```c
 sdk.py menuconfig --board=sf32lb52-lcd_n16r8
 ```
-Enable PWM， 52x use PWMT2 CHANNLE1, 58x use  PWMT3 CHANNLE4<br>  
+Enable PWM: 52x uses PWMT2 CHANNEL1, 56x uses PWMT3 CHANNEL4, 58x uses PWMT3 CHANNEL4,
+57x uses PWMT2 CHANNEL4<br>  
 ![Enable rgbled:](./assets/menuconfig_pwm_52x.png)<br>
 ![Enable rgbled:](./assets/menuconfig_pwm_58x.png)<br>
 
@@ -45,7 +47,6 @@ Similar conflict error:
 
 Error from different pwm channel and rgb configuration:
 ![Enable timer:](./assets/Possible_error2.png)
-
 
 ### Compilation and Programming
 Switch to the example project directory and run the scons command to execute compilation:
