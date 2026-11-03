@@ -757,6 +757,23 @@ class BackendTests(unittest.TestCase):
         self.assertNotIn("lpsys_aon", rendered)
         self.assertNotIn("Switch to", rendered)
 
+    def test_default_jlink_script_uses_58x_psramless(self) -> None:
+        script = crash_dump.default_jlink_script(ROOT, "SF32LB58", legacy_layout=True)
+
+        self.assertEqual("sf32lb58x_psramless.jlink", script.name)
+        self.assertNotIn("savebin psram", script.read_text())
+
+    def test_default_jlink_script_selects_58x_model_psram(self) -> None:
+        script = crash_dump.default_jlink_script(
+            ROOT,
+            "SF32LB58",
+            legacy_layout=True,
+            chip_model="LB583",
+            include_psram=True,
+        )
+
+        self.assertEqual("sf32lb58x_psram_8MB_8MB.jlink", script.name)
+
     def test_sftool_read_command(self) -> None:
         command = crash_dump.build_sftool_read_command(
             "sftool",
