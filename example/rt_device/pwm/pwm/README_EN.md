@@ -36,9 +36,9 @@ For detailed steps on compilation and downloading, please refer to the relevant 
 #### Example Output Results Display:
 * log output:
 ```
-07-31 14:21:42:818    Start gtimer pwm + input capture demo!
+07-31 14:21:42:818    Start GPTIM pwm + input capture demo!
 07-31 14:21:42:821    pwm_set:percentage:20,period:1000000,freq:1000hz
-07-31 14:21:42:822    gtimer pwm + input capture demo started!
+07-31 14:21:42:822    GPTIM pwm + input capture demo started!
 07-31 14:21:42:823    connect PWM output pin to INCAP input pin with jumper wire
 07-31 14:21:42:828    msh />
 

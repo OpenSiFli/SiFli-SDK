@@ -113,7 +113,7 @@ void pwm_dma_atim_set_example()
 
 void pwm_dma_gptim_set_example()
 {
-    struct rt_pwm_configuration config_gtim;
+    struct rt_pwm_configuration config_gptim;
     uint8_t percentage = 10;
     uint32_t period = PWM_PERIOD;
 
@@ -127,35 +127,35 @@ void pwm_dma_gptim_set_example()
         percentage = 100;
     rt_uint32_t pulse = percentage * period / 100;
 #ifdef SF32LB52X
-    config_gtim.channel = 1;//pwm config
+    config_gptim.channel = 1;//pwm config
 #elif defined SF32LB58X
-    config_gtim.channel = 2;//58 pwm config
+    config_gptim.channel = 2;//58 pwm config
 #endif
 
-    config_gtim.period = period;
-    config_gtim.pulse = pulse;
-    config_gtim.use_percentage = 1;//Enables the percentage calculation of pulse
-    config_gtim.data_len = 3;//dma_data_len
+    config_gptim.period = period;
+    config_gptim.pulse = pulse;
+    config_gptim.use_percentage = 1;//Enables the percentage calculation of pulse
+    config_gptim.data_len = 3;//dma_data_len
 //Calculating pulse procedure
 
     // Allocates memory for pulse_dma_data and initializes pulse as a percentage of period before the calculation
-    config_gtim.pulse_dma_data = (rt_uint32_t *)malloc(config_gtim.data_len * sizeof(rt_uint32_t));
-    if (!config_gtim.pulse_dma_data)
+    config_gptim.pulse_dma_data = (rt_uint32_t *)malloc(config_gptim.data_len * sizeof(rt_uint32_t));
+    if (!config_gptim.pulse_dma_data)
     {
         printf("Memory allocation failed\n");
 
     }
     //dma_data
-    config_gtim.dma_data = (rt_uint16_t *)malloc(config_gtim.data_len * sizeof(rt_uint16_t));
-    if (!config_gtim.dma_data)
+    config_gptim.dma_data = (rt_uint16_t *)malloc(config_gptim.data_len * sizeof(rt_uint16_t));
+    if (!config_gptim.dma_data)
     {
         printf("Memory allocation failed\n");
 
     }
     //pulse percentage value before calculation
-    config_gtim.pulse_dma_data[0] = (20 % 100) * PWM_PERIOD / 100;; // 20%
-    config_gtim.pulse_dma_data[1] = (30 % 100) * PWM_PERIOD / 100;; // 40%
-    config_gtim.pulse_dma_data[2] = (40 % 100) * PWM_PERIOD / 100;; // 60%
+    config_gptim.pulse_dma_data[0] = (20 % 100) * PWM_PERIOD / 100;; // 20%
+    config_gptim.pulse_dma_data[1] = (30 % 100) * PWM_PERIOD / 100;; // 40%
+    config_gptim.pulse_dma_data[2] = (40 % 100) * PWM_PERIOD / 100;; // 60%
 
     struct rt_device_pwm *device = RT_NULL;
 #ifdef SF32LB52X
@@ -174,7 +174,7 @@ void pwm_dma_gptim_set_example()
     }
 #endif
 
-    rt_device_control((struct rt_device *)device, PWM_CMD_SET, (void *)&config_gtim);
+    rt_device_control((struct rt_device *)device, PWM_CMD_SET, (void *)&config_gptim);
 #ifdef SF32LB52X
     LOG_I("hwp_gptim2_ccr1:%d", hwp_gptim2->CCR1); //52x
     LOG_I("hwp_gptim2_arr:%d", hwp_gptim2->ARR);
@@ -187,20 +187,20 @@ void pwm_dma_gptim_set_example()
     // Copy the calculated pulse value to the dma data
     for (size_t i = 0; i < global_array_length; i++)
     {
-        config_gtim.dma_data[i] = (rt_uint16_t)global_pulse_values[i];
+        config_gptim.dma_data[i] = (rt_uint16_t)global_pulse_values[i];
     }
 
     //check
     printf("DMA data before transfer:\n");
-    for (size_t i = 0; i < config_gtim.data_len; i++)
+    for (size_t i = 0; i < config_gptim.data_len; i++)
     {
-        printf("dma_data[%zu]: %u\n", i, config_gtim.dma_data[i]);
+        printf("dma_data[%zu]: %u\n", i, config_gptim.dma_data[i]);
     }
 
-    rt_device_control((struct rt_device *)device, PWM_CMD_ENABLE, (void *)&config_gtim); //dma_transfer
+    rt_device_control((struct rt_device *)device, PWM_CMD_ENABLE, (void *)&config_gptim); //dma_transfer
 
-    free(config_gtim.dma_data);
-    free(config_gtim.pulse_dma_data);
+    free(config_gptim.dma_data);
+    free(config_gptim.pulse_dma_data);
 
 }
 
@@ -211,18 +211,18 @@ void pwm_dma_gptim_set_example()
   */
 int main(void)
 {
-    rt_kprintf("Start atimer pwm demo!\n");
+    rt_kprintf("Start ATIM pwm demo!\n");
     pwm_dma_atim_set_example();
-    rt_kprintf("atimer pwm demo end!\n");
+    rt_kprintf("ATIM pwm demo end!\n");
 
     rt_thread_mdelay(20);
 #ifdef SF32LB52X
     MODIFY_REG(hwp_hpsys_cfg->ATIM1_PINR1, HPSYS_CFG_ATIM1_PINR1_CH1_PIN_Msk, HPSYS_CFG_ATIM1_PINR1_CH1_PIN_Msk);
 #endif
 
-    rt_kprintf("Start gtimer pwm demo!\n");
+    rt_kprintf("Start GPTIM pwm demo!\n");
     pwm_dma_gptim_set_example();
-    rt_kprintf("gtimer pwm demo end!\n");
+    rt_kprintf("GPTIM pwm demo end!\n");
     while (1)
     {
         rt_thread_mdelay(5000);

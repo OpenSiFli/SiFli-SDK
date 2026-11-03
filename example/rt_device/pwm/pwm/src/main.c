@@ -329,12 +329,12 @@ int main(void)
     rt_sem_init(&s_incap_sem, "incap_sem", 0, RT_IPC_FLAG_FIFO);
     rt_mutex_init(&s_incap_mutex, "incap_mtx", RT_IPC_FLAG_PRIO);
 
-    rt_kprintf("Start gtimer pwm + input capture demo!\n");
+    rt_kprintf("Start GPTIM pwm + input capture demo!\n");
 
     /* start PWM output */
     pwm_set(20, PWM_PERIOD);
 
-    rt_kprintf("gtimer pwm + input capture demo started!\n");
+    rt_kprintf("GPTIM pwm + input capture demo started!\n");
     rt_kprintf("connect PWM output pin to INCAP input pin with jumper wire\n");
 
     /* capture consumer: the rx_indicate callback (GPTIM ISR) releases

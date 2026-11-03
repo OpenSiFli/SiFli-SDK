@@ -84,7 +84,7 @@ please input the serial port num:5
 1. 通过PWM/DMA寄存器确认PWM/DMA配置状态：
 2. Enable rgb的配置错误
 
-GTIM2的寄存器状态：<br>
+GPTIM2的寄存器状态：<br>
 ![PWM_DMA](./assets/reg_rgled_gtim.png)<br>
 DMAC1的寄存器状态：<br>
 ![PWM_DMA](./assets/reg_rgled_dma.png)<br>
