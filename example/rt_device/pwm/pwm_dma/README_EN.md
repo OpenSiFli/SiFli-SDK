@@ -7,7 +7,7 @@ The example can run on the following development boards.
 * sf32lb56-lcd series
 * sf32lb58-lcd series
 ## Overview
-* Includes examples of Gtime, Atime using pwm+dma functionality to output PWM waveforms via IO ports
+* Includes examples of GPTIM, ATIM using pwm+dma functionality to output PWM waveforms via IO ports
 
 
 ## Example Usage
@@ -43,9 +43,9 @@ please input the serial port num:5
 ```
 
 For detailed steps on compilation and downloading, please refer to the relevant introduction in [](/quickstart/get-started.md).
-### Atime Output Waveform
+### ATIM Output Waveform
 ![Enable timer:](./assets/atim_waveform.png)
-### Gtime Output Waveform
+### GPTIM Output Waveform
 ![Enable timer:](./assets/gtim_waveform.png)
 
 
@@ -53,7 +53,7 @@ For detailed steps on compilation and downloading, please refer to the relevant 
 #### Example Output Results Display:
 * 52x log output:
 ```
-Start atimer pwm demo!
+Start ATIM pwm demo!
 [32m][2692] I/NO_TAG: pwm_set:percentage:90,period:1000000,freq:1000hz
 [0m][32m][2721] I/NO_TAG: hwp_atim1_ccr1:107999
 [0m][32m][2739] I/NO_TAG: hwp_atim1_arr:119999
@@ -61,8 +61,8 @@ Start atimer pwm demo!
 pulse_dma_data[0]: 59999
 pulse_dma_data[1]: 71999
 pulse_dma_data[2]: 83999
-atimer pwm demo end!
-msh />Start gtimer pwm demo!
+ATIM pwm demo end!
+msh />Start GPTIM pwm demo!
 [32m][3471] I/NO_TAG: pwm_set:percentage:10,period:1000000,freq:1000hz
 [0m][32m][3500] I/NO_TAG: hwp_gptim2_ccr1:2399
 [0m][32m][3518] I/NO_TAG: hwp_gptim2_arr:23999
@@ -70,7 +70,7 @@ msh />Start gtimer pwm demo!
 dma_data[0]: 4799
 dma_data[1]: 7199
 dma_data[2]: 9599
-gtimer pwm demo end!
+GPTIM pwm demo end!
 msh />
 ``` 
 
@@ -111,20 +111,20 @@ void pwm_dma_atim_set_example()
 void pwm_dma_gptim_set_example()
 {
      #ifdef SF32LB52X
-     HAL_PIN_Set(PAD_PA20, GPTIM2_CH1, PIN_NOPULL, 1);//52x gtime2_ch1 corresponds to pwm3_cc1
+     HAL_PIN_Set(PAD_PA20, GPTIM2_CH1, PIN_NOPULL, 1);//52x gptim2_ch1 corresponds to pwm3_cc1
      #elif defined SF32LB58X
-     HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);//58X gtime1_ch2 corresponds to pwm2_cc2
+     HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);//58X gptim1_ch2 corresponds to pwm2_cc2
      #endif
 
      #ifdef SF32LB52X
-     config_gtim.channel = 1;//pwm config
+     config_gptim.channel = 1;//pwm config
      #elif defined SF32LB58X
-     config_gtim.channel = 2;//58 pwm config
+     config_gptim.channel = 2;//58 pwm config
      #endif
 
-     rt_device_control((struct rt_device *)device,PWM_CMD_SET,(void *)&config_gtim);
+     rt_device_control((struct rt_device *)device,PWM_CMD_SET,(void *)&config_gptim);
      //dma_transfer
-     rt_device_control((struct rt_device *)device,PWM_CMD_ENABLE,(void *)&config_gtim);
+     rt_device_control((struct rt_device *)device,PWM_CMD_ENABLE,(void *)&config_gptim);
 }
 
 
@@ -138,10 +138,10 @@ void pwm_dma_gptim_set_example()
      uint8_t percentage = 10;
      rt_uint32_t pulse = (percentage % 100) * period / 100;
 
-    config_gtim.period = period;
-    config_gtim.pulse = pulse;
-    config_gtim.use_percentage = 1;//Enables the percentage calculation of pulse
-    config_gtim.data_len = 3;//dma_data_len
+    config_gptim.period = period;
+    config_gptim.pulse = pulse;
+    config_gptim.use_percentage = 1;//Enables the percentage calculation of pulse
+    config_gptim.data_len = 3;//dma_data_len
 ```
 
 

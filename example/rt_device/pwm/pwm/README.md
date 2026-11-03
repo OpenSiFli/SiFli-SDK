@@ -36,11 +36,11 @@ please input the serial port num:5
 #### 例程输出结果展示:
 * log输出:
 ```
-Start gtimer pwm demo!
+Start GPTIM pwm demo!
 [32m][2821] I/pwm: pwm_set:percentage:20,period:1000000,freq:1000hz
 [0m][32m][2848] I/drv.pwm: psc 2, Period 60000,
 [0m][32m][2866] I/drv.pwm: Pulse 12000
-[0m]gtimer pwm demo end!
+[0m]GPTIM pwm demo end!
 msh />
 ```
 * PA09输出PWM波形(默认200Hz,20%占空比)

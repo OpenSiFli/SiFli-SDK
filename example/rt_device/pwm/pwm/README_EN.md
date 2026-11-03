@@ -36,11 +36,11 @@ For detailed steps on compilation and downloading, please refer to the relevant 
 #### Example Output Results Display:
 * log output:
 ```
-Start gtimer pwm demo!
+Start GPTIM pwm demo!
 [32m][2821] I/pwm: pwm_set:percentage:20,period:1000000,freq:1000hz
 [0m][32m][2848] I/drv.pwm: psc 2, Period 60000,
 [0m][32m][2866] I/drv.pwm: Pulse 12000
-[0m]gtimer pwm demo end!
+[0m]GPTIM pwm demo end!
 msh />
 ```
 * PA09 outputs PWM waveform (default 200Hz, 20% duty cycle)
@@ -55,8 +55,8 @@ Physical position refers to the pin header position corresponding to the pin on 
 |Form Factor Name  | PWM      | CHX     | Pin (Physical Position)            |    
 |--------|------------|---------------|-------------------|
 |sf32lb52-nano | GPTIM1 | CH2 | PA20 (Physical pin is on the back of the board, requires manual flying wire to bring out) |
-|sf32lb52-lcd    | GPTIM1     | CH2    | PA20 ï¼ˆ10ï¼‰                  |   
-|sf32lb58-lcd | GPTIM1    | CH2  |PA51 ï¼ˆCONN2 28ï¼‰                  |
+|sf32lb52-lcd    | GPTIM1     | CH2    | PA20 £¨10£©                  |   
+|sf32lb58-lcd | GPTIM1    | CH2  |PA51 £¨CONN2 28£©                  |
 |sf32lb56-lcd | GPTIM1    | CH2  |PA36  (40)                 |
 
 

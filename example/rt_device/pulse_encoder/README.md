@@ -83,7 +83,7 @@ msh />
 
 
 
-//GTIM设备命名是:encoder（number） 
+//GPTIM设备命名是:encoder（number） 
 //ATIM设备命名：Aencoder（number）
 #define ENCODER_DEVICE_NAME1 "encoder1"
 #define ENCODER_DEVICE_NAME2 "encoder2"

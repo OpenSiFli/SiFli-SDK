@@ -86,7 +86,7 @@ After the example starts, the serial port cyclically outputs color characters, a
 1. Confirm PWM/DMA configuration status through PWM/DMA registers:
 2. Enable rgb configuration error
 
-GTIM2 register status:
+GPTIM2 register status:
 ![PWM_DMA](./assets/reg_rgled_gtim.png)
 DMAC1 register status:
 ![PWM_DMA](./assets/reg_rgled_dma.png)

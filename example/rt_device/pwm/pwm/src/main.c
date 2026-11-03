@@ -57,11 +57,11 @@ void pwm_set(uint8_t percentage, uint32_t period)
   */
 int main(void)
 {
-    rt_kprintf("Start gtimer pwm demo!\n");
+    rt_kprintf("Start GPTIM pwm demo!\n");
 
     pwm_set(20, PWM_PERIOD);
 
-    rt_kprintf("gtimer pwm demo end!\n");
+    rt_kprintf("GPTIM pwm demo end!\n");
 
     while (1)
     {
