@@ -462,43 +462,11 @@ sdk.py crash-dump capture-live \
   --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
 ```
 
-`--probe` selects the serial port that exposes the UART DEBUG IP. Use the actual device path, such as `/dev/ttyUSB0` on Linux, `/dev/cu.*` on macOS, or `COM5` on Windows. A probe-rs selector such as `1a86:55d3-1:COM5` is also accepted.
+`--probe` selects the serial port that exposes the UART DEBUG IP: `/dev/ttyUSB0` on Linux, `/dev/cu.*` on macOS, or `COM5` on Windows. To use J-Link or SifliUsartServer instead, switch to `--transport jlink`, optionally with `--jlink-ip 127.0.0.1:19025`; add `--core hcpu` or `--core lcpu` to export a single core.
 
-To export PSRAM as well, add `--include-psram`, or use `--psram-size 8MB` to select the PSRAM script manually. The command prints per-file export progress.
+Add `--include-psram` to capture PSRAM using the script selected by `--chip-model`. To select a capacity manually, use `--psram-size 8MB` and drop `--chip-model`; the two options cannot be combined. The output directory can be used directly as a Trace32/AssertDump context directory.
 
-When using SifliUsartServer with J-Link over IP, use `--transport jlink --jlink-ip 127.0.0.1:19025`. To export a single core only, add `--core hcpu` or `--core lcpu`. Example:
-
-```bash
-sdk.py crash-dump capture-live \
-  --transport jlink \
-  --jlink-ip 127.0.0.1:19025 \
-  --core hcpu \
-  --chip SF32LB52 \
-  --chip-model LB525 \
-  --output /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
-
-The SDK keeps the IP connection in the `.jlink` script instead of rewriting it to USB J-Link. `--core hcpu` filters out LCPU/LPSYS dump items and removes core-switch commands from the generated script.
-
-The output directory contains `*.bin`, `hcpu.axf`, `log.txt`, and an AssertDump-compatible `manifest.json` for Trace32/AssertDump by default. The full SDK/AI metadata is saved as `sdk_manifest.json`.
-
-To use a GDB-compatible core file, first convert the exported package:
-
-```bash
-sdk.py crash-dump readcore \
-  --package /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
-  --output /tmp/live-crash/coredump.elf
-```
-
-Then analyze the captured core ELF with the matching firmware ELF:
-
-```bash
-sdk.py crash-dump analyze \
-  --core /tmp/live-crash/coredump.elf \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
+For the complete option reference, `export-coredump`, crash package layout, `readcore`/`analyze` usage, and troubleshooting, see [crash-dump Command-Line Tool](crash_dump_cli.md).
 
 ## 4. Restoring Context
 ### 4.1 Restoring HCPU Context
@@ -553,7 +521,7 @@ After completing the previous 3 steps, sometimes the crash scene stack will not 
 
 
 - 3. For gcc compilation, you can try modifying PC to be the same value as r14
-![](/assets/crash_analysis_toolsbar_HR2.png)
+![](../../assets/crash_analysis_toolsbar_HR2.png)
 ### 4.2 Restoring LCPU Context
 
 Restoring LCPU context is similar to HCPU, but first, you need to copy the required files (lcpu.axf and rom_axf files) to the script directory.

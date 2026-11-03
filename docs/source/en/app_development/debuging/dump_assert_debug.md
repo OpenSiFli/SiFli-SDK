@@ -25,40 +25,12 @@ sdk.py crash-dump capture-live \
   --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
 ```
 
-To export PSRAM as well, add `--include-psram`, or use `--psram-size 8MB` to select the PSRAM size manually. The command prints per-file export progress. The output directory contains `*.bin`, `hcpu.axf`, `log.txt`, and an AssertDump-compatible `manifest.json` for Trace32/AssertDump by default. The full SDK/AI metadata is saved as `sdk_manifest.json`.
+To capture PSRAM as well, add `--include-psram` (the script is selected by `--chip-model`). To select a capacity manually, use `--psram-size 8MB` and drop `--chip-model`; the two options cannot be combined. To use J-Link or SifliUsartServer instead, switch to `--transport jlink`, optionally with `--jlink-ip 127.0.0.1:19025`; add `--core hcpu` or `--core lcpu` to export a single core.
 
-When using SifliUsartServer with J-Link over IP, use `--transport jlink --jlink-ip 127.0.0.1:19025`. To export a single core only, add `--core hcpu` or `--core lcpu`. Example:
-
-```bash
-sdk.py crash-dump capture-live \
-  --transport jlink \
-  --jlink-ip 127.0.0.1:19025 \
-  --core hcpu \
-  --chip SF32LB52 \
-  --chip-model LB525 \
-  --output /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
-
-The SDK keeps the IP connection in the `.jlink` script instead of rewriting it to USB J-Link. `--core hcpu` filters out LCPU/LPSYS dump items and removes core-switch commands from the generated script.
-
-To create a GDB-compatible core ELF from the exported package, run:
-
-```bash
-sdk.py crash-dump readcore \
-  --package /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
-  --output /tmp/live-crash/coredump.elf
-```
-
-Then analyze the captured core ELF with the matching firmware ELF:
-
-```bash
-sdk.py crash-dump analyze \
-  --core /tmp/live-crash/coredump.elf \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
+For the complete option reference, `export-coredump`, crash package layout, `readcore`/`analyze` usage, and troubleshooting, see [crash-dump Command-Line Tool](../../app_note/crash_dump_cli.md).
 :::
+
+For the complete crash-dump command-line reference (including J-Link usage on 55X/58X), see [crash-dump Command-Line Tool](../../app_note/crash_dump_cli.md).
 
 ## Trace32 Restoration and Analysis
 
