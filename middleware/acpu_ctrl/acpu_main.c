@@ -34,6 +34,7 @@
     #include "libhelix_acpu.h"
 #endif
 
+static struct rt_semaphore acpu_call_hcpu_sema;
 static rt_mailbox_t g_call_mb;
 static acpu_ctrl_ipc_msg_t *p_received_msg;
 static struct rt_mutex s_ah_ipc_tx_mutex;
@@ -67,6 +68,17 @@ static size_t ah_ipc_write(const void *buffer, size_t size, uint32_t timeout)
     return wr_size;
 }
 
+static inline void call_request()
+{
+    rt_err_t ret = rt_sem_take(&acpu_call_hcpu_sema, RT_WAITING_FOREVER);
+    RT_ASSERT(ret == RT_EOK);
+}
+
+static inline void call_release()
+{
+    rt_sem_release(&acpu_call_hcpu_sema);
+}
+
 static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_size, uint8_t *error_code)
 {
     rt_err_t err;
@@ -74,6 +86,8 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
 #endif /* RT_USING_PM */
+
+    call_request();
 
     //Create blocking semaphore
     char task_name_str[RT_NAME_MAX];
@@ -121,6 +135,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
         *error_code = msg.ret_error_code;
     }
 
+    call_release();
 
 #ifdef RT_USING_PM
     rt_pm_release(PM_SLEEP_MODE_IDLE);
@@ -213,6 +228,9 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
     {
     case ACPU_TASK_0:
     {
+        extern rt_uint32_t used_sram_size(void);
+        extern rt_uint32_t max_sram_size(void);
+        acpu_printf("acpu mem total=%d used=%d\n", max_sram_size(), used_sram_size());
         acpu_send_result(0, (uint32_t)"task_0");
         break;
     }
@@ -569,9 +587,11 @@ int main(void)
         return result;
     }
 
-    g_call_mb = rt_mb_create("recv_req", 1, RT_IPC_FLAG_FIFO);
+    g_call_mb = rt_mb_create("recv_req", ACPU_MAX_MAILBOX, RT_IPC_FLAG_FIFO);
     RT_ASSERT(g_call_mb);
 
+    result = rt_sem_init(&acpu_call_hcpu_sema, "a_call_h", ACPU2HCPU_CALL_MBOX_SIZE, RT_IPC_FLAG_FIFO);
+    RT_ASSERT(RT_EOK == result);
 
 #ifdef DRV_EPIC_NEW_API
     g_epic_mb = rt_mb_create("epic_rl", 1, RT_IPC_FLAG_FIFO);

@@ -23,6 +23,8 @@
 #include "bf0_mbox_common.h"
 static struct rt_semaphore acpu_task_done_sema;
 static struct rt_mutex s_ha_ipc_tx_mutex;
+static struct rt_semaphore acpu_task_run_sema;
+
 
 static int acpu_ctrl_tx_lock_init(void)
 {
@@ -62,6 +64,7 @@ static size_t ha_ipc_queue_write(const void *buffer, size_t size, uint32_t timeo
 }
 
 #ifdef ACPU_CALLER_ENABLED
+
 static rt_mailbox_t g_call_mb;
 
 /*
@@ -194,6 +197,17 @@ static int32_t queue_rx_ind(ipc_queue_handle_t handle, size_t size)
     return 0;
 }
 
+static inline void run_request()
+{
+    rt_err_t ret = rt_sem_take(&acpu_task_run_sema, RT_WAITING_FOREVER);
+    RT_ASSERT(ret == RT_EOK);
+}
+
+static inline void run_release()
+{
+    rt_sem_release(&acpu_task_run_sema);
+}
+
 RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size, uint8_t *error_code)
 {
     rt_err_t err;
@@ -201,6 +215,8 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
 #endif /* RT_USING_PM */
+
+    run_request();
 
     //Create blocking semaphore
     char task_name_str[RT_NAME_MAX];
@@ -229,6 +245,10 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 
     //Wait for task completion, and delete semaphore
     err = rt_sem_take(sem, rt_tick_from_millisecond(1000));
+    if (RT_EOK != err)
+    {
+        rt_kprintf("acpu run task %d timeout\n", task_name);
+    }
     RT_ASSERT(RT_EOK == err);
     rt_sem_delete(sem);
 
@@ -246,6 +266,8 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
         *error_code = msg.ret_error_code;
     }
 
+    run_release();
+
 
 #ifdef RT_USING_PM
     rt_pm_release(PM_SLEEP_MODE_IDLE);
@@ -258,6 +280,9 @@ RT_WEAK int acpu_init(void)
 {
     rt_err_t err;
     int32_t r;
+
+    err = rt_sem_init(&acpu_task_run_sema, "h_call_a", ACPU_MAX_MAILBOX, RT_IPC_FLAG_FIFO);
+    RT_ASSERT(RT_EOK == err);
 
     ipc_queue_handle_t acpu_task_ntf_queue = sys_init_ha_ipc_queue(queue_rx_ind);
 
@@ -337,5 +362,12 @@ __ERR:
     return 0;
 }
 MSH_CMD_EXPORT(acpu, acpu control);
+
+__ROM_USED int acpu_mem(int argc, char **argv)
+{
+    acpu_run_task(ACPU_TASK_0, NULL, 0, NULL);
+    return 0;
+}
+MSH_CMD_EXPORT(acpu_mem, acpu mem);
 
 #endif /* SOC_BF0_HCPU */

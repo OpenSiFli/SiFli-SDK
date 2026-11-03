@@ -27,6 +27,8 @@ extern "C" {
 #define ACPU_ERR_OK         0
 #define ACPU_ERR_ASSERT     0xff
 
+#define ACPU_MAX_MAILBOX    3
+
 typedef struct
 {
     void *st;
