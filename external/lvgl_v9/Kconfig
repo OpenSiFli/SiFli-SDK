@@ -1713,11 +1713,12 @@ menu "LVGL V9 configuration"
 	menu "Devices"
 		config LV_USE_SDL
 			bool "Use SDL to open window on PC and handle mouse and keyboard"
+			depends on BSP_USING_PC_SIMULATOR
 			default n
 		config LV_SDL_INCLUDE_PATH
 			string "SDL include path"
 			depends on LV_USE_SDL
-			default "SDL2/SDL.h"
+			default "SDL.h"
 
 		choice
 			prompt "SDL rendering mode"

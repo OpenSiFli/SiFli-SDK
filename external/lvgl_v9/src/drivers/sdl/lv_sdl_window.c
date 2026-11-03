@@ -466,12 +466,11 @@ static void texture_resize(lv_display_t * disp)
     if(dsc->texture) SDL_DestroyTexture(dsc->texture);
 
 #if LV_COLOR_DEPTH == 32 || LV_COLOR_DEPTH == 1
-    SDL_PixelFormatEnum px_format =
-        SDL_PIXELFORMAT_RGB888; /*same as SDL_PIXELFORMAT_RGB888, but it's not supported in older versions*/
+    Uint32 px_format = SDL_PIXELFORMAT_RGB888;
 #elif LV_COLOR_DEPTH == 24
-    SDL_PixelFormatEnum px_format = SDL_PIXELFORMAT_BGR24;
+    Uint32 px_format = SDL_PIXELFORMAT_BGR24;
 #elif LV_COLOR_DEPTH == 16
-    SDL_PixelFormatEnum px_format = SDL_PIXELFORMAT_RGB565;
+    Uint32 px_format = SDL_PIXELFORMAT_RGB565;
 #else
 #error("Unsupported color format")
 #endif

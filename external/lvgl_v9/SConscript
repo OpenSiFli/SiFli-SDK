@@ -37,7 +37,16 @@ if GetDepend('LVGL_V9'):
     else:
         CPPDEFINES = ['LV_CONF_KCONFIG_EXTERNAL_INCLUDE=\\<lv_conf_sifli.h\\>']
 
-    group = DefineGroup('LVGL', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc, CPPDEFINES = CPPDEFINES)
+    libs = []
+    libpath = []
+    if GetDepend('LV_USE_SDL'):
+        sdl_dir = os.path.join(cwd, '..', 'SDL2-2.0.7')
+        inc.append(os.path.join(sdl_dir, 'include'))
+        libpath.append(os.path.join(sdl_dir, 'lib', 'x86'))
+        libs.append('SDL2')
+
+    group = DefineGroup('LVGL', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc, CPPDEFINES = CPPDEFINES,
+                        LIBS = libs, LIBPATH = libpath)
     #group = SConscript(cwd + '/env_support/rt-thread/SConscript')
 
     Return('group')
