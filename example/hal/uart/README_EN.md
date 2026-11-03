@@ -7,6 +7,7 @@ Examples can run on the following development boards:
 * sf32lb52-lcd series
 * sf32lb58-lcd series
 * sf32lb56-lcd series
+* sf32lb57-lcd series
 
 ## Overview
 * Operate UART hal functions using RX DMA method, operate UART2 to verify its serial port transmission and reception capabilities
@@ -65,7 +66,9 @@ Physical position refers to the pin header position corresponding to the pins on
 |525    | UART2     | PAD_PA27（8）    | PAD_PA20（10）    |   
 |587  | UART2     | PAD_PA28 (CONN2 5)  |PAD_PA29 (CONN2 3)  |
 |56  | UART2     | PAD_PA37 (38)   |PAD_PA36 (40)  |
+|57-LCD|UART2    | PAD_PA28 (J3 10) |PAD_PA27 (J3 7) |
 
+Here is an example diagram of the 525 connection:
 * PA27 is software-configured as UART2's TX, connected to the computer's USB-to-serial RX
 * PA20 is software-configured as UART2's RX, connected to the computer's USB-to-serial TX
 * GND is connected to the USB-to-serial GND, as shown below:
@@ -138,6 +141,9 @@ HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
 #elif defined (BSP_USING_BOARD_SF32LB56_LCD_N16R12N1)
     HAL_PIN_Set(PAD_PA36, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA37, USART2_TXD, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA27, USART2_RXD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
 #endif
 ```
 
