@@ -86,6 +86,22 @@ Configuration priority: `proj.conf` > `board.conf` > Kconfig defaults
 
 For details read [build_and_configuration](docs\source\en\app_development\build_and_configuration.md)
 
+## Automated Tests
+
+The automated test framework lives in `tools/sdk_test/` (discovery, build, run, reporting) and `tools/lab_agent/` (machine side, holds the real boards). It is driven by `sdk.py test` (list / plan / run / info), not by a bare `scons`.
+
+Framework self-tests need no hardware:
+```bash
+python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"
+python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
+```
+
+On hardware, run a case with `sdk.py test run -T <example dir> -p <board>`, in an environment initialized via `export.ps1` / `export.sh`.
+
+A testcase is declared by `<example dir>/testcase.yaml` with `harness: pytest|console|unity` (plus `project_dir` when the `SConstruct` is not at the example root or its `project/` child); a pytest suite lives in `<example dir>/pytest/` beside it. Usage is in `docs/source/en/app_note/autotest_guide.md`, design intent in `tools/sdk_test/DESIGN.md`.
+
+**Negative verification is mandatory** before submitting a new testcase: deliberately break the feature and confirm the case goes red, because a green run on a working board does not prove the assertions are right. See "Negative verification" in the autotest guide.
+
 ## Repository Structure
 
 ```
