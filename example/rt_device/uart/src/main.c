@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -85,6 +91,9 @@ int uart2_init(void)
 #elif defined(BSP_USING_BOARD_SF32LB56_LCD_N16R12N1) || defined(BSP_USING_BOARD_SF32LB56_LCD_A128R12N1)
     HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA27, USART2_RXD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
 #endif
 
     /* 2, find  and config uart2 device */

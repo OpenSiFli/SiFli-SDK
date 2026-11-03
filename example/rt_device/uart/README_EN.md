@@ -6,6 +6,7 @@ The example can run on the following development boards:
 * sf32lb52-lcd series
 * sf32lb56-lcd series
 * sf32lb58-lcd series
+* sf32lb57-lcd series
 ## Overview
 * Under RT-Thread operating system, use RX DMA mode to operate UART2 to verify its serial port transmission and reception capabilities
 * Note that after development board reset, if uart2 prints log consistent with the image below, it indicates successful transmission. To verify uart2 reception capability, the default serial port print log is used to verify the accuracy of received content
@@ -48,12 +49,14 @@ Here is the document link, in which the pin definitions have the actual pin mapp
 [SF32LB52-DevKit-Nano](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-Nano.html)
 [SF32LB56-DevKit-LCD](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
 [SF32LB58-DevKit-LCD](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+[SF32LB57-DevKit-LCD](https://wiki.sifli.com/board/sf32lb57x/SF32LB57-DevKit-LCD.html#)
 
 |Board Name  | UART       | TX(Physical Position)     | RX(Physical Position)   |    
 |--------|------------|---------------|-------------------|
 |525/56    | UART2     | PAD_PA27(8)    | PAD_PA20(10)    |   
 |587  | UART2     | PAD_PA28 (CONN2 5)  |PAD_PA29 (CONN2 3)  |
 |52nano  | UART2     | PAD_PA28   |PAD_PA25  |
+|57-LCD|UART2    | PAD_PA28 (J3 10) |PAD_PA27 (J3 7) |
 
 Here is an example diagram of the 525 connection:
 * PA27 configured in software as UART2 TX, connected to computer USB-to-serial RX
