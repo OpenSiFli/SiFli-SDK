@@ -7,7 +7,7 @@ The example can run on the following development boards.
 * sf32lb52-lcd series
 * sf32lb56-lcd series
 * sf32lb58-lcd series
-* dpi/spi-hdk_lb57x series
+* sf32lb57-lcd series
 
 ## Overview
 * Includes examples of GPtimer outputting PWM via IO ports
@@ -78,7 +78,7 @@ Physical position refers to the pin header position corresponding to the pin on 
 |sf32lb52-lcd    | GPTIM1     | CH2    | PA20 (10)                  |   
 |sf32lb58-lcd | GPTIM1    | CH2  |PA51 (CONN2 28)                  |
 |sf32lb56-lcd | GPTIM1    | CH2  |PA36 (40)                 |
-|dpi/spi-hdk_lb57x | GPTIM1    | CH2  |PA51                  |
+|sf32lb57-lcd | GPTIM1    | CH2  |PA29                  |
 
 ```c
 
@@ -89,7 +89,7 @@ Physical position refers to the pin header position corresponding to the pin on 
     #elif defined (SF32LB56X)/* 56 series default PA36 output */
     HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
     #elif defined (SF32LB57X)/* 57 series default PA51 output */
-    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
     #endif
 
 ```
@@ -110,7 +110,7 @@ Input capture uses GPTIM2_CH1 (58x: GPTIM3_CH2/PB01 because the GPTIM2_CH1 pin i
 |sf32lb52-lcd   | PA20 (10)                | PA37 |
 |sf32lb58-lcd   | PA51 (CONN2 28)          | PB01 |
 |sf32lb56-lcd   | PA36 (40)                | PA39 |
-|dpi/spi-hdk_lb57x | PA51                  | PA21 |
+|sf32lb57-lcd   | PA29                    | PA30 |
 
 **Use a jumper wire to connect the PWM output pin to the input capture pin.**
 

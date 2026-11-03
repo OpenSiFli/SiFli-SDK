@@ -7,7 +7,7 @@
 * sf32lb52-lcd系列
 * sf32lb56-lcd系列
 * sf32lb58-lcd系列
-* dpi/spi-hdk_lb57x系列
+* sf32lb57-lcd系列
 
 ## 概述
 * 包含了GPtimer通过IO口输出PWM的示例
@@ -78,7 +78,7 @@ please input the serial port num:5
 |sf32lb52-lcd    | GPTIM1     | CH2    | PA20 （10）                  |   
 |sf32lb58-lcd | GPTIM1    | CH2  |PA51 （CONN2 28）                  |
 |sf32lb56-lcd | GPTIM1    | CH2  |PA36  (40)                 |
-|dpi/spi-hdk_lb57x | GPTIM1    | CH2  |PA51                  |
+|sf32lb57-lcd | GPTIM1    | CH2  |PA29                  |
 
 ```c
 
@@ -88,8 +88,8 @@ please input the serial port num:5
     HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
     #elif defined (SF32LB56X)/* 56系列默认PA36输出 */
     HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
-    #elif defined (SF32LB57X)/* 57系列默认PA51输出 */
-    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB57X)/* 57系列默认PA29输出 */
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
     #endif
 
 
@@ -111,7 +111,7 @@ please input the serial port num:5
 |sf32lb52-lcd   | PA20 (10)                | PA37 |
 |sf32lb58-lcd   | PA51 (CONN2 28)          | PB01 |
 |sf32lb56-lcd   | PA36 (40)                | PA39 |
-|dpi/spi-hdk_lb57x | PA51                  | PA21 |
+|sf32lb57-lcd   | PA29                    | PA30 |
 
 **用杜邦线将PWM输出引脚连接到输入捕获引脚。**
 

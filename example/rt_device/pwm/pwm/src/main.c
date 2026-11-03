@@ -142,7 +142,7 @@ static void pwm_set(uint8_t percentage, uint32_t period)
 #elif defined (SF32LB56X)
     HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
 #elif defined (SF32LB57X)
-    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
 #endif
 
     if (percentage > 100)
@@ -192,7 +192,7 @@ static int incap_start(int argc, char **argv)
 #elif defined (SF32LB56X)
     HAL_PIN_Set(PAD_PA39, GPTIM2_CH1, PIN_NOPULL, 1);
 #elif defined (SF32LB57X)
-    HAL_PIN_Set(PAD_PA21, GPTIM2_CH1, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA30, GPTIM2_CH1, PIN_NOPULL, 1);
 #endif
 
     /* The capture driver assumes the input starts low (first edge = rising).
