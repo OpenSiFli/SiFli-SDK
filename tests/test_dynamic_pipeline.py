@@ -49,6 +49,7 @@ class DynamicPipelineTests(unittest.TestCase):
             self.assertEqual(pipeline[name]['stage'], 'build')
             self.assertEqual(pipeline[name]['extends'], '.build_sdk_batch_template')
             self.assertNotIn('trigger', pipeline[name])
+            self.assertEqual(pipeline[name]['parallel'], generator.batch_size)
             self.assertEqual(
                 pipeline[f'collect_batch_{suffix}']['needs'],
                 [{'job': name, 'artifacts': True}],
@@ -60,21 +61,27 @@ class DynamicPipelineTests(unittest.TestCase):
         ))
         self.assertLess(len(yaml.safe_dump(pipeline).encode('utf-8')), 32_000)
 
-    def test_resolver_covers_all_jobs_once(self):
-        config_path = REPO_ROOT / 'build_config_gcc.yaml'
-        generator = dynamic_pipeline.DynamicPipelineGenerator(config_path)
+    def test_emitted_parallel_slots_cover_all_targets_within_needs_limit(self):
+        generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
+        pipeline = generator.generate_child_pipeline()
         jobs = generator.get_build_jobs()
-        resolved = [
-            resolver.resolve_build_job(
-                generator,
-                job_index // generator.batch_size,
-                job_index % generator.batch_size + 1,
-            )
-            for job_index in range(len(jobs))
-        ]
+        resolved = []
+        for name, job in pipeline.items():
+            if not name.startswith('collect_batch_'):
+                continue
+            expanded_needs = 0
+            for need in job['needs']:
+                build = pipeline[need['job']]
+                expanded_needs += build['parallel']
+                batch_index = int(build['variables']['BATCH_INDEX'])
+                for node_index in range(1, build['parallel'] + 1):
+                    target = resolver.resolve_build_job(generator, batch_index, node_index)
+                    if target is not None:
+                        resolved.append(target['LOG_NAME'])
+            self.assertLessEqual(expanded_needs, 50, name)
 
-        self.assertEqual([job['LOG_NAME'] for job in resolved], [job[0][len('build_'):] for job in jobs])
-        self.assertEqual(len({job['LOG_NAME'] for job in resolved}), len(jobs))
+        self.assertEqual(resolved, [job[0][len('build_'):] for job in jobs])
+        self.assertEqual(len(set(resolved)), len(jobs))
 
     def test_unused_parallel_slots_are_skipped(self):
         config_path = REPO_ROOT / 'build_config_gcc.yaml'
@@ -115,7 +122,7 @@ class DynamicPipelineTests(unittest.TestCase):
         self.assertIn('after_script:', template)
         self.assertIn('|| exit 1', template)
         self.assertIn('junit: job_status/*.junit.xml', template)
-        self.assertIn('parallel: 100', template)
+        self.assertNotIn('parallel', yaml.safe_load(template)['.build_sdk_batch_template'])
         self.assertIn('collect_artifacts_simple.py --failed-only', template)
         self.assertNotIn('\\"$BATCH_INDEX\\"', template)
 

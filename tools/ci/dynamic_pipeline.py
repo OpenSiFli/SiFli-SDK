@@ -9,7 +9,8 @@ import sys
 import yaml
 
 
-DEFAULT_BATCH_SIZE = 100
+# A collector needs every parallel build in its group; GitLab defaults to 50 needs.
+DEFAULT_BATCH_SIZE = 50
 BATCH_PIPELINE = '.gitlab/ci/build_sdk_batch.yml'
 
 
@@ -79,6 +80,7 @@ class DynamicPipelineGenerator:
             pipeline[job_name] = {
                 'extends': '.build_sdk_batch_template',
                 'stage': 'build',
+                'parallel': self.batch_size,
                 'variables': {
                     'BATCH_INDEX': str(batch_index),
                     'BUILD_CONFIG': str(self.config_file),

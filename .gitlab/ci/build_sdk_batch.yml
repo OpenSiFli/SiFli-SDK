@@ -1,7 +1,6 @@
 .build_sdk_batch_template:
   tags:
     - build
-  parallel: 100
   script:
     - BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --batch-index "$BATCH_INDEX" --node-index "$CI_NODE_INDEX")" || exit 1
     - eval "$BUILD_JOB_ENV"
