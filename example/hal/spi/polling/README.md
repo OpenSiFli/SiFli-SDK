@@ -4,12 +4,12 @@
 ## 支持平台
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
-
+- `sf32lb57-lcd`
 ## 概述
 该例程演示 SPI HAL 在**阻塞轮询模式**下的自发自收（loopback）例程
 
 核心行为：
-- SPI1 主机模式、2Lines、8bit、默认 MODE0。
+- SPI 主机模式、2Lines、8bit、默认 MODE0。
 - 周期调用 `HAL_SPI_TransmitReceive()`。
 - 每轮发送 16 字节递增 pattern（`seed + i`），并统计收发不一致个数 `mismatch`。
 
@@ -28,13 +28,12 @@ scons --board=sf32lb58-lcd_n16r64n4 -j8
 
 ## 硬件连接
 ### 单板回环（推荐）
-将 SPI1 MOSI 与 MISO 短接：
-- `sf32lb52`：`PA24(DIO)` ↔ `PA25(DI)`
-- `sf32lb58`：`PA21(DO)` ↔ `PA20(DI)`
-
-并保持：
-- `CLK`: `PA28`
-- `CS`:  `PA29`
+将 SPI1 或者 SPI2 MOSI 与 MISO 短接：
+|开发板    |MOSI |MISO|CLK|CS|
+|:---     |:---    |:---     |:---   |:---      |
+|sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
+|sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
+|sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
 
 说明：
 - 此例程用 `HAL_SPI_TransmitReceive` 一次完成收发，不再手动 `TAKE/RELEASE CS`。

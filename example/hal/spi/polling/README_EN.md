@@ -4,12 +4,13 @@ Source path: `example/hal/spi/polling`
 ## Supported Boards
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
+- `sf32lb57-lcd`
 
 ## Overview
 This example demonstrates SPI HAL in **blocking polling mode** with self loopback verification.
 
 Core behavior:
-- SPI1 master mode, 2Lines, 8-bit, default MODE0.
+- SPI master mode, 2Lines, 8-bit, default MODE0.
 - Periodic `HAL_SPI_TransmitReceive()` transactions.
 - Per-round 16-byte incremental TX pattern (`seed + i`) and mismatch counting.
 
@@ -28,13 +29,12 @@ After build, enter the generated `build_*` directory and run the download script
 
 ## Hardware Setup
 ### Single-board loopback (recommended)
-Short SPI1 MOSI and MISO:
-- `sf32lb52`: `PA24(DIO)` ↔ `PA25(DI)`
-- `sf32lb58`: `PA21(DO)` ↔ `PA20(DI)`
-
-Keep:
-- `CLK`: `PA28`
-- `CS`:  `PA29`
+Short SPI1 or SPI2 MOSI and MISO:
+|Board Name    |MOSI |MISO|CLK|CS|
+|:---     |:---    |:---     |:---   |:---      |
+|sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
+|sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
+|sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
 
 Notes:
 - This example uses one-shot `HAL_SPI_TransmitReceive` per round; no manual `TAKE/RELEASE CS` is used.
@@ -44,7 +44,7 @@ Notes:
 Startup logs:
 ```text
 Start spi polling loopback demo!
-tip: short SPI1 MOSI(DIO/DO) to MISO(DI) for loopback verification.
+tip: short SPI1/SPI2 MOSI(DIO/DO) to MISO(DI) for loopback verification.
 ```
 
 Runtime logs:
