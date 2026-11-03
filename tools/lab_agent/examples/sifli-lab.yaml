@@ -1,17 +1,16 @@
-# SiFli SDK 自动化测试 —— 实验机配置（真实硬件，不进仓库）
+# SiFli SDK 自动化测试 —— 实验机配置（示例；真实端口/序列号请勿提交）
 #
-# 一份文件两边共用：`sdk.py test run --binding <本文件>` 时 SDK 侧只读 testbed: 块，
-# 顶层的 runner: 块被忽略；`python tools/lab_agent/runner.py -c <本文件>` 时两边都读。
+# 这个文件只由 Lab Agent 读取：`python tools/lab_agent/runner.py -c <本文件>`
+# 读 runner: 与 testbed: 两块。SDK 侧不读它——跑用例时用 -p 指定平台，
+# 名字取下面某个 testbed 的 platform。
 #
-#   python tools/lab_agent/runner.py -c E:\code2\lab\sf32lb52-lab.yaml --check
-#   python tools/lab_agent/runner.py -c E:\code2\lab\sf32lb52-lab.yaml --list
-#   sdk.py test plan -T example/get-started/hello_world -b E:\code2\lab\sf32lb52-lab.yaml
-#   sdk.py test run  -T example/get-started/hello_world -b E:\code2\lab\sf32lb52-lab.yaml
+#   python tools/lab_agent/runner.py -c E:\code2\lab\sifli-lab.yaml --check
+#   python tools/lab_agent/runner.py -c E:\code2\lab\sifli-lab.yaml --list
+#   sdk.py test plan -T example/get-started/hello_world -p sf32lb52-lcd_a128r16
+#   sdk.py test run  -T example/get-started/hello_world -p sf32lb52-lcd_a128r16
 #
-# 这块板没有 J-Link 探针，所以：
-#   - 烧录走 sftool（UART 下载）
-#   - 复位走人工（reset.method: manual）——框架不碰探针，改为在串口打开后打提示，
-#     由人按板子上的复位键。提示里会写明还剩多少秒（= 用例自己的 timeout）。
+# 52 板没有 J-Link 探针：烧录走 sftool（UART 下载），下载结束自己启动镜像，
+# 因此复位记为 auto；56 板接了 J-Link，烧录与复位都走探针。
 
 runner:
   name: local
@@ -63,3 +62,26 @@ testbed:
 
     # 没有 jlink: 块，也不需要——auto 复位 + sftool 烧录的组合下，
     # 框架不会构造探针（TestBedRuntime.needs_jlink() 为假）。
+
+  # ---------------------------------------------------------------- 56x board
+  - id: sf32lb56-lcd_a128r12n1_01
+    platform: sf32lb56-lcd_a128r12n1
+    runner: local
+
+    console:
+      port: COM22            # USB-Enhanced-SERIAL-B CH342 (interface B); this board's console
+      baud: 1000000          # SDK console is fixed at 1 Mbaud (drv_usart.c)
+
+    jlink:
+      serial: "69660307"     # this machine's probe; -SelectEmuBySN when there are several
+      # device is omitted: it is read from
+      # customer/boards/sf32lb56-lcd_a128r12n1/hcpu/rtconfig.py -> SF32LB56X_NAND
+      # wdt_script: tools/segger/halt_all_cpu_and_disable_all_wdt_56x.jlink
+      #   ^ enable it if this board's watchdog reboots mid-test
+
+    flash:
+      method: jlink          # program through the probe, using the loadbin entries of build_<board>/download.jlink
+
+    reset:
+      method: jlink          # probe reset; boot is guaranteed, so nobody has to press a button
+
