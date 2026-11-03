@@ -1284,6 +1284,82 @@ class BackendTests(unittest.TestCase):
             dap_cls.assert_called_once_with("COM5", chip="SF32LB52")
             self.assertEqual("live-uart", manifest["source"])
 
+    def test_capture_live_rejects_chip_model_with_psram_size(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(crash_dump.UsageError, "mutually exclusive"):
+                crash_dump.capture_live(
+                    self._make_uart_sdk_ctx(Path(temp_dir)),
+                    "jlink",
+                    "SF32LB52",
+                    Path(temp_dir) / "out",
+                    chip_model="LB525",
+                    psram_size="8MB",
+                )
+
+    def test_capture_live_rejects_include_psram_without_chip_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(crash_dump.UsageError, "requires --chip-model"):
+                crash_dump.capture_live(
+                    self._make_uart_sdk_ctx(Path(temp_dir)),
+                    "jlink",
+                    "SF32LB52",
+                    Path(temp_dir) / "out",
+                    include_psram=True,
+                )
+
+    def test_capture_live_rejects_script_with_selector_options(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            script = root / "capture.jlink"
+            script.write_text("savebin hcpu_ram.bin 0x20000000 0x4\n")
+            with self.assertRaisesRegex(crash_dump.UsageError, "cannot be combined"):
+                crash_dump.capture_live(
+                    self._make_uart_sdk_ctx(root),
+                    "jlink",
+                    "SF32LB52",
+                    root / "out",
+                    script_path=script,
+                    chip_model="LB525",
+                )
+
+    def test_export_coredump_rejects_chip_model_with_psram_size(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with self.assertRaisesRegex(crash_dump.UsageError, "mutually exclusive"):
+                crash_dump.export_coredump(
+                    self._make_uart_sdk_ctx(Path(temp_dir)),
+                    Path(temp_dir) / "out",
+                    chip="SF32LB52",
+                    address=0x12000000,
+                    size=0x1000,
+                    chip_model="LB525",
+                    psram_size="8MB",
+                )
+
+    def test_capture_live_warns_when_probe_rs_is_not_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            script = root / "capture.jlink"
+            script.write_text("savebin hcpu_ram.bin 0x20000000 0x4\n")
+            runner = mock.Mock()
+            runner.run.return_value = mock.Mock(stdout="", stderr="")
+            sdk_ctx = mock.Mock(
+                env={"SIFLI_SDK_PATH": str(ROOT)},
+                runner=runner,
+            )
+            stderr = io.StringIO()
+
+            with redirect_stderr(stderr):
+                crash_dump.capture_live(
+                    sdk_ctx,
+                    "jlink",
+                    "SF32LB52",
+                    root / "out",
+                    script_path=script,
+                    probe_rs="C:/tools/probe-rs.exe",
+                )
+
+            self.assertIn("--probe-rs is reserved", stderr.getvalue())
+
     @mock.patch("sdk_py_actions.sifli_uart_dap.normalize_chip_for_dap", return_value="SF32LB56")
     @mock.patch("sdk_py_actions.sifli_uart_dap.extract_probe_port", return_value="/dev/fake")
     @mock.patch("sdk_py_actions.sifli_uart_dap.SifliUartDap")
