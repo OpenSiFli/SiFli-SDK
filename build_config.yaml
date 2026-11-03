@@ -829,7 +829,11 @@ common_projects:
 
   - path: example/rt_device/audprc/project
     boards: *after_55x_boards
-
+    exclude_boards:
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r8_dpi
+      
   - path: example/rt_device/emmc/project
     boards:
       - sf32lb56-lcd_a128r12n1
@@ -860,6 +864,10 @@ common_projects:
 
   - path: example/rt_device/i2s/project
     boards: *devkit_lcd_boards
+    exclude_boards:
+    - sf32lb57-lcd_n16r16_qspi
+    - sf32lb57-lcd_n16r16_dpi
+    - sf32lb57-lcd_n16r8_dpi
 
   - path: example/rt_device/motor/project
     boards:
