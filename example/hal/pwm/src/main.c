@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtconfig.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -122,6 +128,8 @@ void ATIM1_Init(void)
 
 #elif defined (SF32LB58X)
     atim_Handle.Instance = (GPT_TypeDef *)hwp_atim2;
+#elif defined (SF32LB57X)
+    atim_Handle.Instance = (GPT_TypeDef *)hwp_atim1;
 #endif
 
     atim_Handle.core = CORE_ID_HCPU;
@@ -192,6 +200,9 @@ void ATIM1_Stop(void)
 //**********************************************atimer pwm_end******************************************//
 //********************************************************************************************************//
 
+//********************************************************************************************************//
+//**********************************************GPTIM pwm_start******************************************//
+//********************************************************************************************************//
 #define MAX_PERIOD_GPT (0xFFFF)
 #define MAX_PERIOD_ATM (0xFFFFFFFF)
 #define MIN_PERIOD 3
@@ -223,11 +234,16 @@ T_haltest_pwm_cfg testcfg[] =
 {
     {hwp_gptim1, CORE_ID_HCPU, GPTIM1_CH2, GPT_CHANNEL_2, 5000000, 1000000, 0},
 };  //period:0.5s  pulse:0.25s
+#elif defined(SF32LB57X)
+T_haltest_pwm_cfg testcfg[] =
+{
+    {hwp_gptim2, CORE_ID_HCPU, GPTIM2_CH1, GPT_CHANNEL_1, 5000000, 1000000, 0},
+};  //period:0.5s  pulse:0.25s
 #endif
 
 static GPT_HandleTypeDef gpt_Handle = {0};
 
-static HAL_StatusTypeDef pwm_test_init(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *cfg)
+static HAL_StatusTypeDef gptim_pwm_test_init(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *cfg)
 {
     HAL_StatusTypeDef result = HAL_OK;
     GPT_OC_InitTypeDef oc_config = {0};
@@ -286,7 +302,7 @@ __exit:
     return result;
 }
 
-static HAL_StatusTypeDef pwm_set(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *pCfg)
+static HAL_StatusTypeDef gptim_pwm_set(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *pCfg)
 {
     unsigned int period, pulse;
     unsigned int GPT_clock, psc;
@@ -300,6 +316,10 @@ static HAL_StatusTypeDef pwm_set(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *pCf
 #ifdef  SF32LB52X
     if (pCfg->instance == hwp_gptim2 || pCfg->instance == hwp_btim2)
         GPT_clock = 24000000; /* gptim2 btim2 clk from clk_peri/2 */
+    else
+#elif defined(SF32LB57X)
+    if (pCfg->instance == hwp_gptim2 || pCfg->instance == hwp_btim2)
+        GPT_clock = 48000000; /* gptim2 btim2 clk from clk_peri */
     else
 #endif
         GPT_clock = HAL_RCC_GetPCLKFreq(htim->core, 1);
@@ -366,11 +386,13 @@ static HAL_StatusTypeDef pwm_set(GPT_HandleTypeDef *htim, T_haltest_pwm_cfg *pCf
     //#define GPTIM2_CH_0 GPTIM2_CH1
 #elif defined(SF32LB52X)
     #define PAD_PA_09 PAD_PA09
-
+    //#define GPTIM2_CH_0 GPTIM2_CH1
+#elif defined(SF32LB57X)
+    #define PAD_PA_29 PAD_PA29
     //#define GPTIM2_CH_0 GPTIM2_CH1
 #endif
 
-void pwm_test_pinset(T_haltest_pwm_cfg *cfg)
+void gptim_pwm_test_pinset(T_haltest_pwm_cfg *cfg)
 {
 #ifdef  SF32LB55X
     HAL_PIN_Set(PAD_PB_22, cfg->pad_func, PIN_PULLUP, 0);
@@ -380,8 +402,14 @@ void pwm_test_pinset(T_haltest_pwm_cfg *cfg)
     HAL_PIN_Set(PAD_PA_36, cfg->pad_func, PIN_PULLUP, 1);
 #elif defined(SF32LB52X)
     HAL_PIN_Set(PAD_PA_09, cfg->pad_func, PIN_PULLUP, 1); /* GPTIM */
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA_29, cfg->pad_func, PIN_PULLUP, 1);
 #endif
 }
+
+//********************************************************************************************************//
+//**********************************************GPTIM pwm_end******************************************//
+//********************************************************************************************************//
 
 /**
   * @brief  Main program
@@ -401,18 +429,18 @@ int main(void)
         /* clear the handle of Gptimer */
         memset(&gpt_Handle, 0, sizeof(GPT_HandleTypeDef));
         /* configure in pwm mode  */
-        ret = pwm_test_init(&gpt_Handle, &testcfg[i]);
+        ret = gptim_pwm_test_init(&gpt_Handle, &testcfg[i]);
 
         if (ret != HAL_OK)
         {
-            rt_kprintf("pwm_test_init error!\n");
+            rt_kprintf("gptim_pwm_test_init error!\n");
         }
 
         /* cal and set the pwm run para  */
-        pwm_set(&gpt_Handle, &testcfg[i]);
+        gptim_pwm_set(&gpt_Handle, &testcfg[i]);
 
         /* configure pinmux */
-        pwm_test_pinset(&testcfg[i]);
+        gptim_pwm_test_pinset(&testcfg[i]);
 
         /* start pwm  */
         HAL_GPT_PWM_Start(&gpt_Handle, testcfg[i].channel);
@@ -450,6 +478,12 @@ int main(void)
     HAL_PIN_Set(PAD_PA86, ATIM2_CH1N, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA90, ATIM2_CH2,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA91, ATIM2_CH2N, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+
+    HAL_PIN_Set(PAD_PA46, ATIM1_CH1,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA47, ATIM1_CH1N, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA48, ATIM1_CH2,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA49, ATIM1_CH2N, PIN_PULLUP, 1);
 #endif
 
     freq = 50000;   /* 50000 is frequence of pwm（50000hz）*/
