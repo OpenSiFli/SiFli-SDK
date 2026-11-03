@@ -280,10 +280,20 @@ hardfault发生时会打印如下信息，最后打印hardfault的类型，如�
 
 ![](../../assets/save_ram_52bat.png)
 
-- `.jlink`文件内容含有`ip`服务连接（关联_SifliUsartServer.exe串口服务）以及具体发送的导出现场bin文件命令，可以根据实际情况进行修改
+- `.jlink`文件内容含有`ip`服务连接（关联_SifliUsartServer.exe串口服务）以及具体发送的导出现场bin文件命令，可以根据实际情况进行修改。以 `tools/crash_dump_analyser/script/sf32lb52x_uart.jlink` 为例：
 
+```text
+si SWD
+speed 10000
 
-![](../../assets/52x_jlink.png)
+w4 0x5000B008 1 //Switch to LCPU and halt it
+Sleep 500
+ip 127.0.0.1:19025
+H
+...
+savebin hcpu_ram.bin 0x20000000 0x80000
+savebin lcdc_reg.bin 0x50008000 0x128
+```
 
 #### 3.1.2 方法2：使用AssertDumpUart软件
 - _AssertDumpUart.exe_ 在Sifli_Trace工具包文件夹下
@@ -568,7 +578,7 @@ _AssertDumpUart.exe_ 在Sifli_Trace工具包文件夹下
 ### 3.3 使用sdk.py命令行导出兼容目录
 ```
 
-在工程目录下编译出对应的ELF/AXF后，可以使用 `sdk.py crash-dump capture-live` 直接导出 Trace32/AssertDump 兼容目录。例如：
+在工程目录下编译出对应的 ELF/AXF 后，可以使用 `sdk.py crash-dump capture-live` 直接导出 Trace32/AssertDump 兼容目录。例如：
 
 ```bash
 sdk.py crash-dump capture-live \
@@ -580,43 +590,11 @@ sdk.py crash-dump capture-live \
   --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
 ```
 
-`--probe` 用于指定 UART DEBUG IP 所在的串口。Linux 下可使用 `/dev/ttyUSB0`，macOS 下通常为 `/dev/cu.*`，Windows 下使用 `COM5` 这样的端口名；也支持 probe-rs 选择器形式，例如 `1a86:55d3-1:COM5`。
+`--probe` 用于指定 UART DEBUG IP 所在的串口：Linux 下通常为 `/dev/ttyUSB0`，macOS 下为 `/dev/cu.*`，Windows 下为 `COM5`。使用 J-Link 或 SifliUsartServer 时改用 `--transport jlink`，可配合 `--jlink-ip 127.0.0.1:19025`；只导出单个核心可加 `--core hcpu` 或 `--core lcpu`。
 
-如果板子需要导出 PSRAM，增加 `--include-psram`，也可以用 `--psram-size 8MB` 手动指定 PSRAM 脚本。导出过程中会按文件显示进度。
+需要抓取 PSRAM 时加 `--include-psram`（按 `--chip-model` 选择脚本）；如果要手动指定容量，改用 `--psram-size 8MB` 并去掉 `--chip-model`（两者不能同时使用）。输出目录可直接作为 Trace32/AssertDump 的现场目录使用。
 
-如果使用 SifliUsartServer 加 J-Link 的 IP 方式导出，使用 `--transport jlink --jlink-ip 127.0.0.1:19025`。只导出单个核心时可增加 `--core hcpu` 或 `--core lcpu`。示例：
-
-```bash
-sdk.py crash-dump capture-live \
-  --transport jlink \
-  --jlink-ip 127.0.0.1:19025 \
-  --core hcpu \
-  --chip SF32LB52 \
-  --chip-model LB525 \
-  --output /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
-
-此时 SDK 会保留 `.jlink` 脚本中的 IP 连接方式，不会改成 USB J-Link；`--core hcpu` 会过滤 LCPU/LPSYS 导出项，并移除脚本中的切核命令。
-
-输出目录中会默认包含 Trace32/AssertDump 可直接使用的 `*.bin`、`hcpu.axf`、`log.txt` 和兼容格式 `manifest.json`。SDK/AI 后续分析使用的完整元数据保存在 `sdk_manifest.json`。
-
-如果需要按 GDB core 文件方式分析，先生成现场 ELF：
-
-```bash
-sdk.py crash-dump readcore \
-  --package /tmp/live-crash \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf \
-  --output /tmp/live-crash/coredump.elf
-```
-
-然后使用现场 ELF 和程序 ELF 进行离线分析：
-
-```bash
-sdk.py crash-dump analyze \
-  --core /tmp/live-crash/coredump.elf \
-  --elf build_sf32lb52-lcd_n16r8_hcpu/main.elf
-```
+完整的参数说明、`export-coredump`、崩溃包结构、`readcore`/`analyze` 用法和常见问题见 [crash-dump 命令行工具](crash_dump_cli.md)。
 
 
 ## 4. 恢复现场
@@ -669,7 +647,7 @@ HR(HCPU Registers)按钮用于恢复没有走到异常处理程序的CPU寄存�
 - 2. 从log里面打印的16个寄存器中，回填到trace32的register窗口中![](../../assets/crash_analysis_restore_registers_from_log.png)
 
 - 3. gcc编译的可以尝试将PC修改成和r14的值一样
-![](/assets/crash_analysis_toolsbar_HR2.png)
+![](../../assets/crash_analysis_toolsbar_HR2.png)
 
 ### 4.2 LCPU恢复现场
 
