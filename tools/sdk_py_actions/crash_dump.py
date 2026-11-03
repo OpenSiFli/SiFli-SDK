@@ -1262,6 +1262,25 @@ def _write_live_manifest(
     return manifest
 
 
+def _validate_capture_options(
+    script_path: Optional[Path],
+    psram_size: Optional[str],
+    chip_model: Optional[str],
+    include_psram: bool,
+) -> None:
+    """Reject script-selection options that would otherwise be ignored."""
+    if chip_model and psram_size:
+        raise UsageError(
+            "--chip-model and --psram-size are mutually exclusive; use one of them"
+        )
+    if include_psram and not chip_model:
+        raise UsageError("--include-psram requires --chip-model")
+    if script_path and (chip_model or psram_size or include_psram):
+        raise UsageError(
+            "--script cannot be combined with --chip-model, --psram-size, or --include-psram"
+        )
+
+
 def capture_live(
     sdk_ctx: Any,
     transport: str,
@@ -1280,6 +1299,12 @@ def capture_live(
     jlink_ip: Optional[str] = None,
     core: Optional[str] = None,
 ) -> Dict[str, Any]:
+    _validate_capture_options(script_path, psram_size, chip_model, include_psram)
+    if probe_rs != "probe-rs":
+        print(
+            "warning: --probe-rs is reserved and currently ignored",
+            file=sys.stderr,
+        )
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     sdk_root = _sdk_root(sdk_ctx)
@@ -1430,6 +1455,7 @@ def export_coredump(
     chip_model: Optional[str] = None,
     include_psram: bool = False,
 ) -> Dict[str, Any]:
+    _validate_capture_options(script_path, psram_size, chip_model, include_psram)
     output_dir = Path(output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_path = output_dir / "coredump.bin"
