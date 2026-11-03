@@ -1,0 +1,24 @@
+# The profiler prints its report on its own: CPU_USAGE_METRICS_PRINT_DIRECTLY
+# starts a periodic timer at app init, so no shell command is needed.
+#
+# This case uses pytest rather than console for one reason: what it must prove
+# is that each of the first two reports is complete. A console record cannot
+# say that -- its matcher searches forward, so a block that printed only its
+# title would take the header and idle line from the next block. The suite
+# beside this file splits the transcript on the title and checks each block on
+# its own, which is both stricter and easier to read than an anchored regex.
+#
+# No platform is named here: the same image runs on any board in the lab, and
+# `-p <board>` picks one.
+#
+# Run it with:
+#     sdk.py test run -T example/system/cpu_usage_profiler -p sf32lb52-lcd_a128r16
+tests:
+  - id: cpu_usage_profiler.pytest
+    description: Check that each of the first two CPU usage reports is complete.
+    harness: pytest
+    tags: [pytest]
+    # Covers the build, the flash, the boot and two 10 s reports.
+    timeout: 180
+    harness_config:
+      pytest_root: pytest
