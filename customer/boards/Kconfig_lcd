@@ -683,7 +683,7 @@ endif
 
 
     config BSP_USING_LCD_FRAMEBUFFER
-        bool
+        bool "Enable LCD screen sized framebuffer manager module"
         default n
 
 

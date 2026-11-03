@@ -36,6 +36,10 @@ L2_NON_RET_BSS_SECT_BEGIN(test_images)
 L2_NON_RET_BSS_SECT(test_images, ALIGN(64) static uint8_t test_image[TEST_IMAGE_WIDTH * TEST_IMAGE_HEIGHT * TEST_IMAGE_PIXEL_BYTES]);
 L2_NON_RET_BSS_SECT_END
 
+extern rt_device_t open_lcd(uint8_t *pixel_align, uint16_t framebuffer_color_format);
+extern void lcd_flush(rt_device_t dev, const EPIC_LayerConfigTypeDef *dst, uint32_t last);
+extern void wait_lcd_flush_done(void);
+
 /* Test data. */
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t ezip_data_argb565[] =
@@ -93,85 +97,8 @@ void dummy_func(void)
 {
 }
 
-#include "drv_lcd.h"
-static struct rt_semaphore lcd_sema;
 static struct rt_semaphore render_done_sema;
 
-static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
-{
-    rt_sem_release(&lcd_sema);
-    return RT_EOK;
-}
-
-static rt_device_t open_lcd(uint8_t *pixel_align)
-{
-    /*
-        Open LCD Device and get LCD infomation
-    */
-    rt_device_t lcd_device = rt_device_find("lcd");
-
-    if (lcd_device)
-    {
-        if (rt_device_open(lcd_device, RT_DEVICE_OFLAG_RDWR) == RT_EOK)
-        {
-            struct rt_device_graphic_info info;
-            uint16_t framebuffer_color_format = BUF_COLOR_FORMAT;
-
-            if (rt_device_control(lcd_device, RTGRAPHIC_CTRL_GET_INFO, &info) == RT_EOK)
-            {
-                *pixel_align = info.draw_align;
-                rt_device_control(lcd_device, RTGRAPHIC_CTRL_SET_BUF_FORMAT, &framebuffer_color_format);
-
-                rt_sem_init(&lcd_sema, "rd_lcd", 1, RT_IPC_FLAG_FIFO);
-                rt_device_set_tx_complete(lcd_device, lcd_flush_done);
-                return lcd_device;
-            }
-        }
-    }
-
-    *pixel_align = 1;
-    return NULL;
-}
-
-static void lcd_flush(rt_device_t dev, const EPIC_LayerConfigTypeDef *dst)
-{
-    lcd_flush_info_t flush_info;
-    rt_err_t err;
-
-    flush_info.cmpr_rate = 0;
-    flush_info.pixel      = dst->data;
-    switch (dst->color_mode)
-    {
-    case EPIC_COLOR_RGB888:
-        flush_info.color_format = RTGRAPHIC_PIXEL_FORMAT_RGB888;
-        break;
-    case EPIC_COLOR_RGB565:
-    default:
-        flush_info.color_format = RTGRAPHIC_PIXEL_FORMAT_RGB565;
-        break;
-    }
-
-    flush_info.window.x0 = dst->x_offset;
-    flush_info.window.x1 = dst->x_offset + dst->width - 1;
-    flush_info.window.y0 = dst->y_offset;
-    flush_info.window.y1 = dst->y_offset + dst->height - 1;
-
-    flush_info.pixel_area = flush_info.window;
-
-    err = rt_device_control(dev, SF_GRAPHIC_CTRL_LCDC_FLUSH, &flush_info);
-
-    if (RT_EOK != err)  rt_kprintf("lcd_flush err=%d", err);
-}
-
-static void wait_lcd_flush_done(void)
-{
-    rt_err_t err;
-    err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(1000));
-    RT_ASSERT(RT_EOK == err);
-
-    err = rt_sem_release(&lcd_sema);
-    RT_ASSERT(RT_EOK == err);
-}
 #ifdef EPIC_SUPPORT_TRANS_MATRIX
 static void render_trav_cb(drv_epic_operation *op, void *usr_data)
 {
@@ -196,25 +123,15 @@ static void render_done_free_memory_cb(drv_epic_render_list_t rl, EPIC_LayerConf
 #endif /* EPIC_SUPPORT_TRANS_MATRIX */
 static void partial_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst, void *usr_data, uint32_t last)
 {
-    static uint8_t lcd_te = 1;
-    rt_device_t p_lcd_device = usr_data;
-    rt_err_t err;
-    err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(1000));
-    RT_ASSERT(RT_EOK == err);
+    lcd_flush((rt_device_t)usr_data, p_dst, last);
+
     if (last)
     {
 #ifdef EPIC_SUPPORT_TRANS_MATRIX
         render_done_free_memory_cb(rl, p_dst, usr_data, last);
 #endif /* EPIC_SUPPORT_TRANS_MATRIX */
-        lcd_te = 1;
         rt_sem_release(&render_done_sema);
     }
-    else
-    {
-        lcd_te = 0;
-    }
-    rt_device_control(p_lcd_device, RTGRAPHIC_CTRL_SET_NEXT_TE, &lcd_te);
-    lcd_flush(p_lcd_device, p_dst);
 }
 
 static void fill_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst, void *usr_data, uint32_t last)
@@ -1194,7 +1111,7 @@ int main(void)
     rt_thread_delay(1000);
 
     uint8_t pixel_align;
-    rt_device_t lcd_device = open_lcd(&pixel_align);
+    rt_device_t lcd_device = open_lcd(&pixel_align, BUF_COLOR_FORMAT);
     if (!lcd_device)
     {
         rt_kprintf("Open LCD fail!\r\n");
