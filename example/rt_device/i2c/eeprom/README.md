@@ -6,6 +6,7 @@
 * sf32lb52-lcd系列
 * sf32lb56-lcd系列
 * sf32lb58-lcd系列
+* sf32lb57-lcd系列
 
 ## 概述
 * 在RT-Thread操作系统下,通过对EEPROM芯片AT24CO8SC模块的读写操作，演示I2C的使用方法
@@ -21,13 +22,15 @@ AT24CO8SC的SDA,SCK分别按照下表，根据开发板型号进行连接
 |sf32lb52-nano |3        |PA42     |5      |PA41      |
 |sf32lb52-lcd |3          |PA42     |5      |PA41      |
 |sf32lb56-lcd |3          |PA12     |5      |PA20      |
-|sf32lb58-lcd |3       |PB29     |       |PB28      |
+|sf32lb58-lcd |3       |PB29     |5      |PB28      |
+|sf32lb57-lcd |3       |PA23     |5      |PA22      |
 
 * 更详细的引脚定义请参考\
 [sf32lb52-nano](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-Nano.html)
 [sf32lb52-lcd](https://wiki.sifli.com/board/sf32lb52x/SF32LB52-DevKit-LCD.html)
 [sf32lb56-lcd](https://wiki.sifli.com/board/sf32lb56x/SF32LB56-DevKit-LCD.html)
 [sf32lb58-lcd](https://wiki.sifli.com/board/sf32lb58x/SF32LB58-DevKit-LCD.html)
+[sf32lb57-lcd](https://wiki.sifli.com/board/sf32lb57x/SF32LB57-DevKit-LCD.html)
 
 * AT24C08SC
 ![alt text](assets/at24c08sc.png)
