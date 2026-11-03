@@ -63,9 +63,9 @@ class DynamicPipelineGenerator:
         if not jobs:
             raise ValueError('build configuration contains no build jobs')
         batch_count = math.ceil(len(jobs) / self.batch_size)
-        batch_stages = [f'batch_{index + 1:03d}' for index in range(batch_count)]
         pipeline = {
-            'stages': batch_stages,
+            'include': [{'local': BATCH_PIPELINE}],
+            'stages': ['build', 'collect'],
             'variables': {
                 'GIT_SUBMODULE_STRATEGY': 'recursive',
                 'COMPILER': 'gcc',
@@ -74,25 +74,25 @@ class DynamicPipelineGenerator:
         }
 
         for batch_index in range(batch_count):
-            job_name = f'build_batch_{batch_index + 1:03d}'
+            suffix = f'{batch_index + 1:03d}'
+            job_name = f'build_batch_{suffix}'
             pipeline[job_name] = {
-                'stage': batch_stages[batch_index],
-                'trigger': {
-                    'include': [{'local': BATCH_PIPELINE}],
-                    'strategy': 'depend',
-                },
+                'extends': '.build_sdk_batch_template',
+                'stage': 'build',
                 'variables': {
                     'BATCH_INDEX': str(batch_index),
                     'BUILD_CONFIG': str(self.config_file),
                 },
-                'rules': [
-                    {'if': '$CI_PIPELINE_SOURCE == "parent_pipeline"', 'when': 'always'},
-                ],
+            }
+            pipeline[f'collect_batch_{suffix}'] = {
+                'extends': '.collect_sdk_batch_template',
+                'stage': 'collect',
+                'needs': [{'job': job_name, 'artifacts': True}],
             }
 
         print(
-            f'Generated {len(jobs)} build jobs in {batch_count} batches '
-            f'(up to {self.batch_size} jobs per child pipeline)'
+            f'Generated {len(jobs)} build jobs in {batch_count} parallel groups '
+            f'(up to {self.batch_size} build slots per group)'
         )
         return pipeline
 
@@ -116,7 +116,7 @@ def main():
         pipeline = generator.generate_child_pipeline()
         if args.dry_run:
             rendered = yaml.safe_dump(pipeline, sort_keys=False, allow_unicode=True)
-            print(f'Generated bridge YAML: {len(rendered.encode("utf-8"))} bytes')
+            print(f'Generated child pipeline YAML: {len(rendered.encode("utf-8"))} bytes')
         else:
             with open(args.output, 'w', encoding='utf-8') as output:
                 yaml.safe_dump(pipeline, output, sort_keys=False, allow_unicode=True)

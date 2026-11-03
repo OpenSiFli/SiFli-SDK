@@ -4,6 +4,7 @@
 import importlib.util
 import sys
 import unittest
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import yaml
@@ -12,6 +13,7 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[1]
 GENERATOR_PATH = REPO_ROOT / 'tools/ci/dynamic_pipeline.py'
 RESOLVER_PATH = REPO_ROOT / 'tools/ci/resolve_build_job.py'
+JUNIT_PATH = REPO_ROOT / 'tools/ci/write_build_junit.py'
 
 spec = importlib.util.spec_from_file_location('dynamic_pipeline', GENERATOR_PATH)
 dynamic_pipeline = importlib.util.module_from_spec(spec)
@@ -22,40 +24,41 @@ if sys_path not in sys.path:
 resolver_spec = importlib.util.spec_from_file_location('resolve_build_job', RESOLVER_PATH)
 resolver = importlib.util.module_from_spec(resolver_spec)
 resolver_spec.loader.exec_module(resolver)
+junit_spec = importlib.util.spec_from_file_location('write_build_junit', JUNIT_PATH)
+junit = importlib.util.module_from_spec(junit_spec)
+junit_spec.loader.exec_module(junit)
 
 
 class DynamicPipelineTests(unittest.TestCase):
-    def test_generated_config_uses_bounded_batch_triggers(self):
+    def test_generated_config_keeps_parallel_batches_in_one_child_pipeline(self):
         config_path = REPO_ROOT / 'build_config_gcc.yaml'
         generator = dynamic_pipeline.DynamicPipelineGenerator(config_path)
         pipeline = generator.generate_child_pipeline()
-        bridge_jobs = [name for name in pipeline if name.startswith('build_batch_')]
+        batch_jobs = [name for name in pipeline if name.startswith('build_batch_')]
         build_jobs = generator.get_build_jobs()
 
         self.assertGreater(len(build_jobs), 0)
         self.assertEqual(
-            len(bridge_jobs),
+            len(batch_jobs),
             (len(build_jobs) + generator.batch_size - 1) // generator.batch_size,
         )
-        self.assertEqual(len(pipeline['stages']), len(bridge_jobs))
-        self.assertEqual(
-            [pipeline[name]['stage'] for name in bridge_jobs],
-            pipeline['stages'],
-        )
-        self.assertTrue(all(
-            pipeline[name]['trigger']['strategy'] == 'depend'
-            for name in bridge_jobs
-        ))
+        self.assertEqual(pipeline['stages'], ['build', 'collect'])
+        self.assertEqual(pipeline['include'], [{'local': '.gitlab/ci/build_sdk_batch.yml'}])
+        for index, name in enumerate(batch_jobs):
+            suffix = f'{index + 1:03d}'
+            self.assertEqual(pipeline[name]['stage'], 'build')
+            self.assertEqual(pipeline[name]['extends'], '.build_sdk_batch_template')
+            self.assertNotIn('trigger', pipeline[name])
+            self.assertEqual(
+                pipeline[f'collect_batch_{suffix}']['needs'],
+                [{'job': name, 'artifacts': True}],
+            )
+            self.assertEqual(pipeline[f'collect_batch_{suffix}']['stage'], 'collect')
         self.assertTrue(all(
             pipeline[name]['variables']['BUILD_CONFIG'] == str(config_path)
-            for name in bridge_jobs
+            for name in batch_jobs
         ))
         self.assertLess(len(yaml.safe_dump(pipeline).encode('utf-8')), 32_000)
-        self.assertTrue(all(
-            pipeline[name]['trigger']['include'][0]['local']
-            == '.gitlab/ci/build_sdk_batch.yml'
-            for name in bridge_jobs
-        ))
 
     def test_resolver_covers_all_jobs_once(self):
         config_path = REPO_ROOT / 'build_config_gcc.yaml'
@@ -109,8 +112,26 @@ class DynamicPipelineTests(unittest.TestCase):
         self.assertIn('--config "$BUILD_CONFIG"', template)
         self.assertIn('--batch-index "$BATCH_INDEX"', template)
         self.assertIn('--node-index "$CI_NODE_INDEX"', template)
+        self.assertIn('after_script:', template)
         self.assertIn('|| exit 1', template)
+        self.assertIn('junit: job_status/*.junit.xml', template)
+        self.assertIn('parallel: 100', template)
+        self.assertIn('collect_artifacts_simple.py --failed-only', template)
         self.assertNotIn('\\"$BATCH_INDEX\\"', template)
+
+    def test_junit_report_records_failed_build_target(self):
+        from tempfile import TemporaryDirectory
+
+        with TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / 'nested' / 'build.junit.xml'
+            junit.write_report('failed', output, 'example_project', 'example/project', 'board<&')
+            report = ET.parse(output).getroot()
+
+        testcase = report.find('.//testcase')
+        failure = testcase.find('failure')
+        self.assertEqual(testcase.attrib['classname'], 'example/project')
+        self.assertEqual(testcase.attrib['name'], 'board<&: example_project')
+        self.assertEqual(failure.attrib['message'], 'SDK build failed')
 
 
 if __name__ == '__main__':
