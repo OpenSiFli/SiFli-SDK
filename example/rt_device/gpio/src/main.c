@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -20,6 +26,10 @@
 #elif defined(SF32LB56X)
     #define Pin_Out 20
     #define Pin_In 12
+    #define hwp_gpio hwp_gpio1
+#elif defined(SF32LB57X)
+    #define Pin_Out 41
+    #define Pin_In 42
     #define hwp_gpio hwp_gpio1
 #endif
 
@@ -53,6 +63,9 @@ void gpio_init(void)
     HAL_PIN_Set(PAD_PB00 + Pin_Out - 96, GPIO_B0 + Pin_Out - 96, PIN_PULLUP, 0);
     HAL_PIN_Set(PAD_PB00 + Pin_In - 96, GPIO_B0 + Pin_In - 96, PIN_PULLDOWN, 0);
 #elif defined(SF32LB56X)
+    HAL_PIN_Set(PAD_PA00 + Pin_Out, GPIO_A0 + Pin_Out, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA00 + Pin_In, GPIO_A0 + Pin_In, PIN_PULLDOWN, 1);
+#elif defined(SF32LB57X)
     HAL_PIN_Set(PAD_PA00 + Pin_Out, GPIO_A0 + Pin_Out, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA00 + Pin_In, GPIO_A0 + Pin_In, PIN_PULLDOWN, 1);
 #endif
