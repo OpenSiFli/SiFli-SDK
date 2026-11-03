@@ -39,7 +39,11 @@ if GetDepend('PKG_FREETYPE'):
                 'src/cache/ftcsbits.c'
                ]
     else:
-        src = ['lib_interface/ftsystem.c']
+        if not GetDepend('LV_FREETYPE_USE_LVGL_PORT'):
+            src = ['lib_interface/ftsystem.c']
+        if GetDepend('LVGL_V9') and GetDepend('LV_USE_FREETYPE'):
+            # LVGL v9 references stroker APIs absent from the Tiny font library.
+            src += ['src/base/ftstroke.c']
 
 CPPDEFINES = ['FT2_BUILD_LIBRARY']
 
