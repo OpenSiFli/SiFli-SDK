@@ -633,6 +633,39 @@ For pure assertions it is only more verbose, and it costs you an extra pytest in
 > `pytest` is not a hard dependency of the framework: `console` and `unity`, and the framework's own tests, are pure standard library.
 > pytest is only there if you installed it with `install.ps1` (it is already in `tools/locks/default`).
 
+### Negative verification: do it before submitting
+
+An over-permissive test case also passes on a working device, so "it is green on
+the board" is not evidence that the assertions are right. Before submitting,
+verify in the other direction and answer one question: **what broken behaviour
+would still let this case pass?** If you can answer, the assertion is too weak.
+
+`console` cases can do this entirely offline, without occupying a board: feed
+synthetic transcripts to the real `ConsoleMatcher` and confirm the cases that
+should fail do fail. Cover all four defects -- first, middle or last occurrence
+missing content, and out-of-order output.
+
+**The multi-occurrence trap**: `ordered` does not bind entries to the *same*
+occurrence. A later entry only has to find its text after the cursor, so when an
+earlier occurrence is missing content it borrows that text from the next one.
+For example, splitting a report into `CPU Usage:` + `run_time` + `tidle` groups
+still passes when the first report printed only its title and the second is
+complete: `run_time` and `tidle` are taken from the second. To assert that one
+occurrence is complete, anchor it inside a single match (e.g. use the boot
+banner as the only anchor and `(?!...).` to forbid crossing the next title), or
+switch to `pytest` and split the transcript into blocks -- usually more readable.
+
+For `pytest` / `unity` cases, deliberately break one expectation (or make the
+command fail) once and confirm the run goes `FAIL`, then put it back.
+
+Before submitting:
+
+- [ ] the normal path passes on a real board (or the intended carrier)
+- [ ] at least one "feature is broken" input was tried, and the case did fail
+- [ ] multi-occurrence assertions survive the first/middle/last-defect and shuffled matrices
+- [ ] expected strings come from the actual `device.log`, not from source or README
+- [ ] you can answer: what broken behaviour would still let this pass?
+
 ---
 
 ## 7. Writing On-Board Unity Unit Tests
