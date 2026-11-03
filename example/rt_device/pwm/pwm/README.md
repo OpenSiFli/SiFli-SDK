@@ -7,6 +7,7 @@
 * sf32lb52-lcd系列
 * sf32lb56-lcd系列
 * sf32lb58-lcd系列
+* sf32lb57-lcd系列
 
 ## 概述
 * 包含了GPtimer通过IO口输出PWM的示例
@@ -58,13 +59,18 @@ msh />
 |sf32lb52-lcd    | GPTIM1     | CH2    | PA20 （10）                  |   
 |sf32lb58-lcd | GPTIM1    | CH2  |PA51 （CONN2 28）                  |
 |sf32lb56-lcd | GPTIM1    | CH2  |PA36  (40)                 |
+|sf32lb57-lcd | GPTIM1    | CH2  |PA29                  |
 
 ```c
 
-    #if defined(BSP_USING_BOARD_EM_LB525XXX)/* 52系列默认PA20(物理位置10)输出 */
-    HAL_PIN_Set(PAD_PA20, GPTIM1_CH2, PIN_NOPULL, 1);/*GPTIM1_CH1功能*/
-    #elif defined (BSP_USING_BOARD_EM_LB587XXX)/* 587系列默认PA51输出 */
-    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);/*GPTIM1_CH2功能*/
+    #if defined(SF32LB52X)/* 52系列默认PA20(物理位置10)输出 */
+    HAL_PIN_Set(PAD_PA20, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB58X)/* 58系列默认PA51输出 */
+    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB56X)/* 56系列默认PA36输出 */
+    HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB57X)/* 57系列默认PA29输出 */
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
     #endif
 
 

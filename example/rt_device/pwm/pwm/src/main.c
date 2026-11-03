@@ -31,6 +31,8 @@ void pwm_set(uint8_t percentage, uint32_t period)
     HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
 #elif defined (SF32LB56X)
     HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
+#elif defined (SF32LB57X)
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
 #endif
 //    LOG_I("hysys_GPTIM2_PINR1:%x",((hwp_hpsys_cfg->GPTIM1_PINR) & HPSYS_CFG_GPTIM1_PINR_CH2_PIN_Msk)>>HPSYS_CFG_GPTIM1_PINR_CH2_PIN_Pos);
 

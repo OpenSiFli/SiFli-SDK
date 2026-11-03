@@ -7,6 +7,7 @@ The example can run on the following development boards.
 * sf32lb52-lcd series
 * sf32lb56-lcd series
 * sf32lb58-lcd series
+* sf32lb57-lcd series
 
 ## Overview
 * Includes examples of GPtimer outputting PWM via IO ports
@@ -54,18 +55,23 @@ Physical position refers to the pin header position corresponding to the pin on 
 
 |Form Factor Name  | PWM      | CHX     | Pin (Physical Position)            |    
 |--------|------------|---------------|-------------------|
-|sf32lb52-nano | GPTIM1 | CH2 | PA20 (Physical pin is on the back of the board, requires manual flying wire to bring out) |
-|sf32lb52-lcd    | GPTIM1     | CH2    | PA20 £¨10£©                  |   
-|sf32lb58-lcd | GPTIM1    | CH2  |PA51 £¨CONN2 28£©                  |
-|sf32lb56-lcd | GPTIM1    | CH2  |PA36  (40)                 |
+|sf32lb52-nano  | GPTIM1     | CH2    | PA20 (Physical pin is on the back of the board, requires manual flying wire)    | 
+|sf32lb52-lcd    | GPTIM1     | CH2    | PA20 (10)                  |   
+|sf32lb58-lcd | GPTIM1    | CH2  |PA51 (CONN2 28)                  |
+|sf32lb56-lcd | GPTIM1    | CH2  |PA36 (40)                 |
+|sf32lb57-lcd | GPTIM1    | CH2  |PA29                  |
 
 
 ```c
 
-    #if defined(BSP_USING_BOARD_EM_LB525XXX)/* 52 series default PA20 (physical position 10) output */
-    HAL_PIN_Set(PAD_PA20, GPTIM1_CH2, PIN_NOPULL, 1);/*GPTIM1_CH1 function*/
-    #elif defined (BSP_USING_BOARD_EM_LB587XXX)/* 587 series default PA51 output */
-    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);/*GPTIM1_CH2 function*/
+    #if defined(SF32LB52X)/* 52 series default PA20 (physical position 10) output */
+    HAL_PIN_Set(PAD_PA20, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB58X)/* 58 series default PA51 output */
+    HAL_PIN_Set(PAD_PA51, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB56X)/* 56 series default PA36 output */
+    HAL_PIN_Set(PAD_PA36, GPTIM1_CH2, PIN_NOPULL, 1);
+    #elif defined (SF32LB57X)/* 57 series default PA51 output */
+    HAL_PIN_Set(PAD_PA29, GPTIM1_CH2, PIN_NOPULL, 1);
     #endif
 
 
