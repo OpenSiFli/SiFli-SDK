@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtconfig.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -49,19 +55,27 @@ static void spi_test(void)
     HAL_PIN_Set(PAD_PA25, SPI1_DI,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, SPI1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA29, SPI1_CS,  PIN_NOPULL, 1);
-
+#define EXAMPLE_SPI  SPI1
+    HAL_RCC_EnableModule(RCC_MOD_SPI1);
 #elif defined(SF32LB58X)
     HAL_PIN_Set(PAD_PA21, SPI1_DO, PIN_PULLDOWN, 1);       // SPI1 (Nor flash)
     HAL_PIN_Set(PAD_PA20, SPI1_DI,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, SPI1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA29, SPI1_CS,  PIN_NOPULL, 1);
-#endif
-    /* 2, open spi1 clock source  */
+#define EXAMPLE_SPI  SPI1
     HAL_RCC_EnableModule(RCC_MOD_SPI1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA37, SPI2_DIO, PIN_PULLDOWN, 1);       // SPI2
+    HAL_PIN_Set(PAD_PA38, SPI2_DI,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA39, SPI2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA40, SPI2_CS,  PIN_NOPULL, 1);
+#define EXAMPLE_SPI  SPI2
+    HAL_RCC_EnableModule(RCC_MOD_SPI2);
+#endif
 
     //----------------------------------------------
     // 2. spi init
-    spi_Handle.Instance = SPI1;
+    spi_Handle.Instance = EXAMPLE_SPI;
     spi_Handle.Init.Direction = SPI_DIRECTION_2LINES;
     spi_Handle.Init.Mode = SPI_MODE_MASTER;
     spi_Handle.Init.DataSize = SPI_DATASIZE_8BIT;
@@ -112,7 +126,7 @@ static void spi_test(void)
 
     //----------------------------------------------
     // 3. polling loopback test
-    rt_kprintf("tip: short SPI1 MOSI(DIO/DO) to MISO(DI) for loopback verification.\n");
+    rt_kprintf("tip: short SPI1 or SPI2 MOSI(DIO/DO) to MISO(DI) for loopback verification.\n");
 
     while (1)
     {
