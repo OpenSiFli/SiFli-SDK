@@ -5,6 +5,7 @@
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
 - `sf32lb56-lcd_a128r12n1`
+- `sf32lb57-lcd`
 ## 概述
 该例程用于验证 RT-Thread SPI 驱动中的 DMA 循环模式，支持三种模式：
 - **Master TRX 模式**：全双工收发，适用于 loopback 测试
@@ -31,7 +32,7 @@ CONFIG_BSP_SPI1_TX_USING_DMA=y
 CONFIG_BSP_SPI1_RX_USING_DMA=y
 CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 
-#56-LCD需要配置为SPI2
+#56-LCD/57-LCD需要配置为SPI2
 CONFIG_BSP_USING_SPI2=y
 CONFIG_BSP_SPI2_TX_USING_DMA=y
 CONFIG_BSP_SPI2_RX_USING_DMA=y
@@ -74,29 +75,22 @@ CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 
 ### 引脚映射表
 
-| 开发板 | 功能引脚 | 本端设备引脚 | 对端设备引脚 | 物理引脚（CONN2） |
-|--------|----------|--------------|--------------|-------------------|
-| sf32lb52-lcd | PA_24 | dio | SPI_MOSI | 19 |
-|              | PA_25 | di  | SPI_MISO | 21 |
-|              | PA_28 | clk | SPI_CLK  | 23 |
-|              | PA_29 | cs  | SPI_CS   | 24 |
-| sf32lb58-lcd | PA_21 | dio | SPI_MOSI | 8 |
-|              | PA_20 | di  | SPI_MISO | 10 |
-|              | PA_28 | clk | SPI_CLK  | 5 |
-|              | PA_29 | cs  | SPI_CS   | 3 |
-| sf32lb56-lcd | PA_64 | do  | SPI_MOSI | 19 |
-|              | PA_69 | di  | SPI_MISO | 29 |
-|              | PA_73 | clk | SPI_CLK  | 23 |
-|              | PA_71 | cs  | SPI_CS   | 24 |
+|开发板    |MOSI |MISO|CLK|CS|
+|:---     |:---    |:---     |:---   |:---      |
+|sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
+|sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
+|sf32lb56-lcd |PA64       |PA69     |PA73      |PA71     |
+|sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
 
 sf32lb52-lcd_n16r8硬件原理图参考如下图：
 
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 ### 方式一：单板回环（Master TRX 模式）
-短接 SPI1 MOSI 与 MISO：
+短接 SPI1或者SPI2的  MOSI 与 MISO：
 - `sf32lb52x`：`PA24(DIO)` ↔ `PA25(DI)`
 - `sf32lb58x`：`PA21(DO)` ↔ `PA20(DI)`
 - `sf32lb56x`：`PA64(DO)` ↔ `PA69(DI)`
+- `sf32lb57x`：`PA37(DIO)` ↔ `PA38(DI)`
 
 ### 方式二：外接 SPI 从设备（Slave 模式）
 按标准 4 线 SPI 连接，需外部 Master 提供时钟。

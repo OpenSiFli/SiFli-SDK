@@ -11,7 +11,9 @@
 #include "drv_spi.h"
 #include <string.h>
 
-#ifdef SF32LB56X
+#if defined(SF32LB56X)
+    #define SPI_BUS_NAME            "spi2"
+#elif defined (SF32LB57X)
     #define SPI_BUS_NAME            "spi2"
 #else
     #define SPI_BUS_NAME            "spi1"
@@ -115,6 +117,11 @@ static void spi_pinmux_init(void)
     HAL_PIN_Set(PAD_PA69, SPI2_DI,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA73, SPI2_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA71, SPI2_CS,  PIN_NOPULL, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA37, SPI2_DIO, PIN_PULLDOWN, 1);
+    HAL_PIN_Set(PAD_PA38, SPI2_DI,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA39, SPI2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA40, SPI2_CS,  PIN_NOPULL, 1);
 #else
 #error "Unsupported chip for circular_rx example"
 #endif

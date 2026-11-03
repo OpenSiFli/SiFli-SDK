@@ -5,6 +5,7 @@ Source path: `example/rt_device/spi/circular_rx`
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
 - `sf32lb56-lcd_a128r12n1`
+- `sf32lb57-lcd`
 ## Overview
 This example validates DMA circular mode in the RT-Thread SPI driver and supports three modes:
 - **Master TRX mode**: full-duplex TX/RX, suitable for loopback testing
@@ -31,7 +32,7 @@ CONFIG_BSP_SPI1_TX_USING_DMA=y
 CONFIG_BSP_SPI1_RX_USING_DMA=y
 CONFIG_BSP_USING_SPI_DMA_CIRCULAR=y
 
-#56-LCD need to be configured to SPI2
+#56-LCD/57-LCD need to be configured to SPI2
 CONFIG_BSP_USING_SPI2=y
 CONFIG_BSP_SPI2_TX_USING_DMA=y
 CONFIG_BSP_SPI2_RX_USING_DMA=y
@@ -73,29 +74,22 @@ Select by the `SPI_CIRCULAR_DEMO_MODE` macro:
 
 ### Pin Mapping Table
 
-| Board | Function Pin | Local Device Pin | Remote Device Pin | Physical Pin (CONN2) |
-|--------|----------|--------------|--------------|-------------------|
-| sf32lb52-lcd | PA_24 | dio | SPI_MOSI | 19 |
-|              | PA_25 | di  | SPI_MISO | 21 |
-|              | PA_28 | clk | SPI_CLK  | 23 |
-|              | PA_29 | cs  | SPI_CS   | 24 |
-| sf32lb58-lcd | PA_21 | dio | SPI_MOSI | 8 |
-|              | PA_20 | di  | SPI_MISO | 10 |
-|              | PA_28 | clk | SPI_CLK  | 5 |
-|              | PA_29 | cs  | SPI_CS   | 3 |
-| sf32lb56-lcd | PA_64 | do  | SPI_MOSI | 19 |
-|              | PA_69 | di  | SPI_MISO | 29 |
-|              | PA_73 | clk | SPI_CLK  | 23 |
-|              | PA_71 | cs  | SPI_CS   | 24 |
+|Board Name    |MOSI |MISO|CLK|CS|
+|:---     |:---    |:---     |:---   |:---      |
+|sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
+|sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
+|sf32lb56-lcd |PA64       |PA69     |PA73      |PA71     |
+|sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
 
 The hardware schematic of `sf32lb52-lcd_n16r8` is shown below:
 
 ![alt text](assets/52-DevKit-lcd-V1.0.png)
 ### Option 1: Single-board Loopback (Master TRX Mode)
-Short SPI1 MOSI and MISO:
+Short SPI1 or SPI2 MOSI and MISO:
 - `sf32lb52x`: `PA24(DIO)` ↔ `PA25(DI)`
 - `sf32lb58x`: `PA21(DO)` ↔ `PA20(DI)`
 - `sf32lb56x`：`PA64(DO)` ↔ `PA69(DI)`
+- `sf32lb57x`：`PA37(DIO)` ↔ `PA38(DI)`
 
 ### Option 2: External SPI Slave Device (Slave Mode)
 Connect with standard 4-wire SPI. An external Master must provide clock.
