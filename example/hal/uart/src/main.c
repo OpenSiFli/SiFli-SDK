@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtconfig.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
@@ -15,6 +21,8 @@
 #elif defined (BSP_USING_BOARD_SF32LB58_LCD_A128R32N1_A1_DSI) || (BSP_USING_BOARD_SF32LB58_LCD_A128R32N1_DSI) || (BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_A1_DPI)|| (BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_A1_DSI) || (BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_DPI) || (BSP_USING_BOARD_SF32LB58_LCD_N16R32N1_DSI) || (BSP_USING_BOARD_SF32LB58_LCD_N16R64N4)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH5_IRQHandler
 #elif defined (BSP_USING_BOARD_SF32LB56_LCD_N16R12N1) || (BSP_USING_BOARD_SF32LB56_LCD_A128R12N1)
+    #define UART2_DMA_RX_IRQHandler          DMAC1_CH5_IRQHandler
+#elif defined (SF32LB57X)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH5_IRQHandler
 #endif
 #define UART2_RX_DMA_RCC                 0
@@ -249,6 +257,9 @@ int main(void)
     HAL_PIN_Set(PAD_PA37, USART2_TXD, PIN_PULLUP, 1);
 #elif defined(BSP_USING_BOARD_SF32LB52_NANO_A128R16) || (BSP_USING_BOARD_SF32LB52_NANO_N16R16)
     HAL_PIN_Set(PAD_PA25, USART2_RXD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+    HAL_PIN_Set(PAD_PA27, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
 #endif
     /* 2, open uart2 clock source  */
