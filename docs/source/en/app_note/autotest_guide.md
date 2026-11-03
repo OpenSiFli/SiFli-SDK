@@ -906,6 +906,123 @@ The full account of the mechanism and its limits is in the project's own file he
 idea), `project/Kconfig.proj` (why the switch is the project's to declare), and `src/test_ptc.c` /
 `src/test_crc.c` (what each case establishes and what it does not).
 
+### 7.3 Unit Testing Practice Guide
+
+When testing module A with module B replaced by a mock, the hard part in this SDK is usually not CMock but
+the build: in Kconfig/SConscript, one switch often decides both "B's headers are on the include path" and
+"B's `.c` files are compiled". Turn it on and B is in the image, leaving no room for the mock; turn it off
+and B's headers cannot be found either.
+
+**The principle is to separate the three concerns and let the test project declare them explicitly**,
+instead of letting B's Kconfig decide the test build indirectly:
+
+| What the test build needs | Decided by | Mechanism |
+|---|---|---|
+| Which headers are visible | the test project | `DefineGroup(..., src=[], CPPPATH=[...])` |
+| Which implementations are compiled | the test project | list A's `.c` and the mock explicitly; never list B's `.c` |
+| Which configuration macros are visible | the test project / the carrier | define only the macros the headers need; otherwise use `STUB_<B>` |
+
+`DefineGroup()` appends `CPPPATH` to the shared environment even when `src=[]`
+(`tools/build/building.py`), so "headers only, no implementation" is already possible and needs no change to B.
+
+#### Test project skeleton
+
+```
+example/test/<A>/
+  project/
+    proj.conf          # B's Kconfig stays off (except carrier dependencies such as HAL)
+    Kconfig.proj       # declare a promptless STUB_<B> when needed
+  src/
+    SConscript
+    test_a.c
+  mocks/               # generated once, checked in, never hand-edited
+    mock_b.c
+    mock_b.h
+    cmock_config.yml
+```
+
+```python
+# example/test/<A>/src/SConscript
+import os
+from building import *
+
+cwd = GetCurrentDir()
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+
+src = [
+    os.path.join(SIFLI_SDK, 'middleware/<A>/<a>.c'),  # A: named explicitly
+    'test_a.c',
+    os.path.join(cwd, '../mocks/mock_b.c'),           # the mock
+    # B's .c files are not listed
+]
+
+CPPPATH = [
+    cwd,
+    os.path.join(SIFLI_SDK, 'middleware/<A>/include'),
+    os.path.join(SIFLI_SDK, 'middleware/<B>/include'),  # independent of whether B is enabled
+    os.path.join(cwd, '../mocks'),
+]
+
+group = DefineGroup('test_<A>', src, depend=['USING_TEST_FWK'], CPPPATH=CPPPATH)
+```
+
+#### By the shape of B
+
+| Shape of B | What to do | Change B? |
+|---|---|---|
+| Standalone middleware with self-contained public headers | add B's `CPPPATH` in the test project; keep B's Kconfig off | no |
+| A and B in the same SConscript/directory (e.g. `middleware/ipc_queue/common`) | do not invoke that SConscript; name A's `.c` in the test project, add the directory's include, leave B's `.c` out | no |
+| B's public header depends on `USING_<B>` macros | keep B enabled, but its SConscript clears `src` and keeps `CPPPATH` under `GetDepend('STUB_<B>')`; the test project declares `config STUB_<B>` / `default y` in `Kconfig.proj` | yes (one line) |
+| HAL / a whole subsystem | use the QEMU carrier: `SOC_QEMU` skips the whole tree and the carrier supplies includes and chip macros (see 4.1 and 7.1); the mock is the symbol's only definition | no |
+| Real board with B in bring-up (clock/UART/MPI) | **do not stub**: without B the board will not boot. Put the case on QEMU, or move B behind a replaceable interface (see section 11) | architecture change |
+
+For the same-SConscript case, **do not use `SrcRemove` to edit someone else's group**: groups are global, and
+another SConscript may add it back; the test project compiling only the sources it names is the controllable
+approach.
+
+`STUB_<B>` has to be promptless: a promptless symbol cannot be assigned in `proj.conf`, or the build fails at
+`check_no_promptless_assign`; its value can only come from `default`, so every test project that wants it must
+declare it. `QEMU_HAL_DRIVER_ENABLED` in `example/test/hal_real/project/Kconfig.proj` is that arrangement.
+
+#### Where the mock lives
+
+- **By default, the test project's own `mocks/`**: the expectations encode "how A's test believes B is called",
+  not B's contract; putting it in B's group would also compile it into production firmware when B is enabled.
+- **When several test projects share it**, promote it to `middleware/test_fwk/mocks/` — the existing
+  `mock_circular_buf`, `mock_ipc_hw` and `mock_bf0_hal_*` live there.
+- Generated files are checked in and never hand-edited; commit `cmock_config.yml` and the generation command
+  with them. See `middleware/test_fwk/mocks/README.md` for generation, `:strippables` and the size trade-off.
+- `setUp()` calls `mock_b_Init()`; `tearDown()` calls `mock_b_Verify()` / `mock_b_Destroy()`. With
+  `:enforce_strict_ordering`, the test project defines `GlobalExpectCount` / `GlobalVerifyOrder` (the generated
+  mock only declares them `extern`), and `_CallCount()` is not the call count — see 7.1.
+
+#### Verification: prove B is not linked in
+
+Check the symbols after a build:
+
+```bash
+arm-none-eabi-nm -C build_<board>/main.elf | grep -E ' <b_symbol>| mock_b'
+```
+
+The expectation is that none of B's real functions are present and the mock's symbols are the only definitions.
+Then reverse-verify: deliberately break one expectation and the case must `FAIL` — if the real implementation
+were linked, changing the mock would have no effect. See the end of section 6 for the general requirement.
+
+If B is still pulled into the global build by another group or dependency, "turn B's Kconfig off" is not enough:
+only `STUB_<B>` (so it compiles no sources) or a carrier-wide tree skip will do; `nm` is the final judge.
+
+#### Long-term conventions
+
+So that "any of these shapes" stops being a problem, define the module boundary like this:
+
+1. every module exposes its own `include/`, and its public headers do not depend on its own Kconfig;
+2. split SConscript groups by module; do not use `depend=[]` to bind A and B into one group
+   (`middleware/ipc_queue/common` is the counterexample: `ipc_queue.c` and `circular_buf.c` are in one group
+   with `depend=[]`);
+3. test projects always use an explicit source list, never "enable B's Kconfig and then remove it".
+
+Most modules then fall into the first row; only the HAL/platform-related minority needs a carrier or `STUB_<B>`.
+
 ---
 
 ## 8. The binding File: Describing a Lab (the hardware team's)

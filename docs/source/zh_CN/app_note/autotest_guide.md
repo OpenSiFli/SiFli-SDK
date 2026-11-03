@@ -861,6 +861,121 @@ SDK 里没有任何代码展开过它，一直没露头；`hal_real` 是第一�
 `project/Kconfig.proj`（开关为什么由工程声明）、`src/test_ptc.c` 与 `src/test_crc.c`
 （各自证明了什么、没证明什么）。
 
+### 7.3 单元测试实践指南
+
+测 A 时把 B 换成 mock，在这个 SDK 里最容易卡住的地方不是 CMock，而是构建：A 和 B 在
+Kconfig/SConscript 里往往由**同一个开关**同时决定"B 的头文件在 include 路径里"和
+"B 的 .c 参与编译"。打开开关，B 被编进镜像、mock 没有立足之地；关掉开关，B 的头文件
+也找不到了。
+
+**原则是把三件事拆开，交给测试工程显式声明**，不要再用 B 的 Kconfig 间接决定测试构建：
+
+| 测试构建需要 | 谁决定 | 用什么 |
+|---|---|---|
+| 看得到哪些头文件 | 测试工程 | `DefineGroup(..., src=[], CPPPATH=[...])` |
+| 编哪些实现 | 测试工程 | 显式列 A 的 `.c` 和 mock，不列 B 的 `.c` |
+| 哪些配置宏可见 | 测试工程 / 载体 | 只补头文件真正需要的宏；否则用 `STUB_<B>` |
+
+`DefineGroup()` 在 `src=[]` 时也会把 `CPPPATH` 加进共享环境（`tools/build/building.py`），
+所以"只加头文件路径、不编任何实现"是现成能力，不需要改 B。
+
+#### 测试工程的骨架
+
+```
+example/test/<A>/
+  project/
+    proj.conf          # B 的 Kconfig 保持关闭（HAL 等载体依赖除外）
+    Kconfig.proj       # 需要时声明无 prompt 的 STUB_<B>
+  src/
+    SConscript
+    test_a.c
+  mocks/               # 生成一次、入库、不手改
+    mock_b.c
+    mock_b.h
+    cmock_config.yml
+```
+
+```python
+# example/test/<A>/src/SConscript
+import os
+from building import *
+
+cwd = GetCurrentDir()
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+
+src = [
+    os.path.join(SIFLI_SDK, 'middleware/<A>/<a>.c'),  # A：显式点名
+    'test_a.c',
+    os.path.join(cwd, '../mocks/mock_b.c'),           # mock
+    # 不列 B 的 .c
+]
+
+CPPPATH = [
+    cwd,
+    os.path.join(SIFLI_SDK, 'middleware/<A>/include'),
+    os.path.join(SIFLI_SDK, 'middleware/<B>/include'),  # 与 B 是否使能无关
+    os.path.join(cwd, '../mocks'),
+]
+
+group = DefineGroup('test_<A>', src, depend=['USING_TEST_FWK'], CPPPATH=CPPPATH)
+```
+
+#### 按 B 的形态套用
+
+| B 的形态 | 做法 | 要改 B 吗 |
+|---|---|---|
+| 独立 middleware，public header 自包含 | 测试工程加 B 的 `CPPPATH`，B 的 Kconfig 关闭 | 否 |
+| A、B 在同一个 SConscript/目录（如 `middleware/ipc_queue/common`） | 不调用那个 SConscript；测试工程直接点名 A 的 `.c`，加该目录的 include，B 的 `.c` 不列 | 否 |
+| B 的 public header 依赖 `USING_<B>` 宏 | B 使能，但它的 SConscript 在 `GetDepend('STUB_<B>')` 时把 `src` 清空、只留 `CPPPATH`；测试工程在 `Kconfig.proj` 里声明 `config STUB_<B>` / `default y` | 是（一行） |
+| HAL / 整棵子系统 | 用 QEMU 载体：`SOC_QEMU` 让整树不编，载体补 include 与芯片宏（见 4.1、7.1），mock 是符号的唯一定义 | 否 |
+| 真板 + B 是 bring-up（时钟/UART/MPI） | **不能打桩**：不编 B 板子起不来。用例放 QEMU，或把 B 抽到可替换的接口后面（见第 11 节） | 架构调整 |
+
+同一个 SConscript 组里的情况，**不要用 `SrcRemove` 去改别人的组**：组是全局的，别的
+SConscript 可能又把它加回来；测试工程只编自己点名的源文件，最可控。
+
+`STUB_<B>` 必须是无 prompt 符号：promptless 符号不能在 `proj.conf` 里赋值，否则构建
+在 `check_no_promptless_assign` 处报错；值只能来自 `default`，所以每个想要它的测试工程
+都要自己声明一遍。`example/test/hal_real/project/Kconfig.proj` 的
+`QEMU_HAL_DRIVER_ENABLED` 就是这个安排。
+
+#### mock 放哪
+
+- **默认放测试工程自己的 `mocks/`**：mock 里的期望是"A 的测试认为 B 会怎么被调用"，
+  不是 B 的契约；放进 B 的 group 还会在 B 使能时被编进生产固件。
+- **多个测试工程共用时**，再提升到 `middleware/test_fwk/mocks/`——仓库现有的
+  `mock_circular_buf`、`mock_ipc_hw`、`mock_bf0_hal_*` 就放在那里。
+- 生成物入库、从不手改；`cmock_config.yml` 与生成命令一起提交。生成方式、`:strippables`、
+  体积取舍见 `middleware/test_fwk/mocks/README.md`。
+- `setUp()` 调 `mock_b_Init()`，`tearDown()` 调 `mock_b_Verify()` / `mock_b_Destroy()`；
+  开了 `:enforce_strict_ordering` 时，`GlobalExpectCount` / `GlobalVerifyOrder` 由测试工程定义
+  （生成的 mock 只 `extern` 声明），`_CallCount()` 不是调用次数——见 7.1。
+
+#### 验证：确认 B 真的没被链接进去
+
+构建后直接查符号：
+
+```bash
+arm-none-eabi-nm -C build_<board>/main.elf | grep -E ' <b_symbol>| mock_b'
+```
+
+期望是 B 的真实函数一个都没有，mock 的符号是唯一定义。再做一次反向验证：故意改错一条
+期望，用例必须 `FAIL`——如果链接进去的是真实实现，改 mock 不会有任何反应。反向验证的
+一般要求见第 6 节末尾。
+
+如果 B 还被别的组或依赖拉进全局构建，"关掉 B 的 Kconfig"就不够了：此时只能用
+`STUB_<B>` 让它不编源文件，或用载体的整树跳过；`nm` 是最终判据。
+
+#### 长期约定
+
+要让"都有可能"以后不再是问题，把模块边界定成这样：
+
+1. 每个模块暴露独立的 `include/`，public header 不依赖模块自身的 Kconfig；
+2. SConscript 按模块拆组，避免 `depend=[]` 把 A、B 绑在同一个组里
+   （`middleware/ipc_queue/common` 就是反例：`ipc_queue.c` 与 `circular_buf.c` 同组且 `depend=[]`）；
+3. 测试工程永远用显式源文件列表，不通过"打开 B 的 Kconfig 再想办法摘掉"来配置测试构建。
+
+这样绝大多数模块都会落进第一行，只有 HAL/平台相关的那一小部分需要载体或 `STUB_<B>`。
+
 ---
 
 ## 8. binding 文件：描述一个 lab（硬件团队的）
