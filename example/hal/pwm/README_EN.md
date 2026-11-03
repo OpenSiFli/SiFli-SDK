@@ -6,6 +6,7 @@ The example can run on the following development boards.
 * sf32lb52-lcd series
 * sf32lb56-lcd series
 * sf32lb58-lcd series
+* sf32lb57-lcd series
 ## Overview
 * Contains examples of GPtimer outputting PWM through IO ports
 * Contains examples of using Atimer to output complementary PWM through IO
@@ -50,6 +51,7 @@ Physical position refers to the actual pin position on the board's header
 |sf32lb52-lcd   | GPTIM2     | CH1    |    PA09 (37)     |
 |sf32lb56-lcd    | GPTIM2     | CH1    |    PA36 (40)     |
 |sf32lb58-lcd  | GPTIM1     | CH2  |      PA51    (CONN2 28)    |
+|sf32lb57-lcd  | GPTIM2     | CH1  |      PA29    （J3 11）    |
 ```c
     #define PAD_PA_09 PAD_PA09 /* 52 series default PA09 output (physical position 37) */
     HAL_PIN_Set(PAD_PA_09, cfg->pad_func, PIN_PULLUP, 1);/*Configure PA09 as GPTIM2_CH1 function*/
@@ -57,6 +59,9 @@ Physical position refers to the actual pin position on the board's header
 
     #define PAD_PA_51 PAD_PA51/* 58 series default PA51 output (physical position CONN2 28) */
     HAL_PIN_Set(PAD_PA_51, cfg->pad_func, PIN_PULLUP, 1);/*Configure PA51 as GPTIM1_CH2 function*/
+
+    #define PAD_PA_29 PAD_PA29 /* 57 series default PA29 output (J3 11)  */
+    HAL_PIN_Set(PAD_PA_29, cfg->pad_func, PIN_PULLUP, 1);
 ```
 **Note**: 
 1. Except for 55x chips, can be configured to any IO with PA_TIM function to output PWM waveform (to query pin multiplexing table, you can search for the corresponding board type pin multiplexing in the project path files such as: bf0_pin_const.c)
@@ -64,15 +69,26 @@ Physical position refers to the actual pin position on the board's header
 * PWM period period, pulse width pulse modification
 
 ```c
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
-    T_haltest_pwm_cfg testcfg[] =
+#if defined(SF32LB52X)
+
+T_haltest_pwm_cfg testcfg[] =
 {
     {hwp_gptim2, CORE_ID_HCPU, GPTIM2_CH1, GPT_CHANNEL_1, 5000000, 1000000, 0},
 };  //period:0.5s  pulse:0.25s
-#elif defined BSP_USING_BOARD_EM_LB587XXX
-    T_haltest_pwm_cfg testcfg[] =
+#elif defined (SF32LB56X)
+T_haltest_pwm_cfg testcfg[] =
+{
+    {hwp_gptim2, CORE_ID_HCPU, GPTIM2_CH1, GPT_CHANNEL_1, 5000000, 1000000, 0},
+};  //period:0.5s  pulse:0.25s
+#elif defined (SF32LB58X)
+T_haltest_pwm_cfg testcfg[] =
 {
     {hwp_gptim1, CORE_ID_HCPU, GPTIM1_CH2, GPT_CHANNEL_2, 5000000, 1000000, 0},
+};  //period:0.5s  pulse:0.25s
+#elif defined(SF32LB57X)
+T_haltest_pwm_cfg testcfg[] =
+{
+    {hwp_gptim2, CORE_ID_HCPU, GPTIM2_CH1, GPT_CHANNEL_1, 5000000, 1000000, 0},
 };  //period:0.5s  pulse:0.25s
 #endif
 ```
@@ -111,34 +127,51 @@ Physical position refers to the pin position corresponding to the board's header
 |--------|------------|---------------|-------------------|
 |525    | ATIM1     | PAD_PA00 (physical position 32), PAD_PA02 (physical position 36)   | PAD_PA03 (physical position 40), PAD_PA03 (physical position 38)    |   
 |587  | ATIM2     | PAD_PA84 (conn2 21), PAD_PA86 (conn2 24) |PAD_PA90 (conn2 27), PAD_PA91 (conn2 26)  |
+|sf32lb57-lcd  | ATIM1     | PAD_PA46（J3 29）,PAD_PA47（J3 32） |PAD_PA48（J3 31）,PAD_PA49（J3 33）  |
 * 52 series: PA00, PA02 output Channel1 complementary PWM waveform, PA03, PA04 output Channel2 complementary PWM waveform:
 * 587 series: PA84, PA86 output Channel1 complementary PWM waveform, PA90, PA91 output Channel2 complementary PWM waveform:
+* 57 series: PA46, PA47 output Channel1 complementary PWM waveform, PA48, PA49 output Channel2 complementary PWM waveform:
 ![alt text](assets/atimer_ch1_ch2_pwm-1.jpg)
 #### PWM Parameter Modification
 * ATIM modification: 52 series selects ATIM1, 587 selects ATIM2
 ```c
-    #if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(SF32LB52X)
     atim_Handle.Instance = (GPT_TypeDef *)hwp_atim1;
-
-    #elif defined (BSP_USING_BOARD_EM_LB587XXX)
+#elif defined (SF32LB56X)
+    atim_Handle.Instance = (GPT_TypeDef *)hwp_atim1;
+#elif defined (SF32LB58X)
     atim_Handle.Instance = (GPT_TypeDef *)hwp_atim2;
-    #endif
+#elif defined (SF32LB57X)
+    atim_Handle.Instance = (GPT_TypeDef *)hwp_atim1;
+#endif
 ```
 * IO output modification
 Except for 55x chips, can be configured to any IO with PA_TIM function to output PWM waveform
 ![alt text](assets/image-1.png)
 ```c
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
-	HAL_PIN_Set(PAD_PA00, ATIM1_CH1,  PIN_PULLUP, 1);
+#if defined(SF32LB52X)
+    HAL_PIN_Set(PAD_PA00, ATIM1_CH1,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA02, ATIM1_CH1N, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA03, ATIM1_CH2,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA04, ATIM1_CH2N, PIN_PULLUP, 1);
 
-#elif defined(BSP_USING_BOARD_EM_LB587XXX)
+#elif defined(SF32LB56X)
+    HAL_PIN_Set(PAD_PA24, ATIM1_CH1,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA25, ATIM1_CH1N, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA29, ATIM1_CH2,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA30, ATIM1_CH2N, PIN_PULLUP, 1);
+#elif defined(SF32LB58X)
+
     HAL_PIN_Set(PAD_PA84, ATIM2_CH1,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA86, ATIM2_CH1N, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA90, ATIM2_CH2,  PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA91, ATIM2_CH2N, PIN_PULLUP, 1);
+#elif defined(SF32LB57X)
+
+    HAL_PIN_Set(PAD_PA46, ATIM1_CH1,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA47, ATIM1_CH1N, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA48, ATIM1_CH2,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA49, ATIM1_CH2N, PIN_PULLUP, 1);
 #endif
 ```
 * PWM period period, pulse width pulse modification, use delay function to maintain waveform for 2s
