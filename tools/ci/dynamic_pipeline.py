@@ -77,12 +77,18 @@ class DynamicPipelineGenerator:
         for batch_index in range(batch_count):
             suffix = f'{batch_index + 1:03d}'
             job_name = f'build_batch_{suffix}'
+            batch_jobs = jobs[
+                batch_index * self.batch_size:(batch_index + 1) * self.batch_size
+            ]
             pipeline[job_name] = {
                 'extends': '.build_sdk_batch_template',
                 'stage': 'build',
-                'parallel': self.batch_size,
+                'parallel': {
+                    'matrix': [
+                        {'BUILD_JOB_LABEL': job[0][len('build_'):]} for job in batch_jobs
+                    ],
+                },
                 'variables': {
-                    'BATCH_INDEX': str(batch_index),
                     'BUILD_CONFIG': str(self.config_file),
                 },
             }

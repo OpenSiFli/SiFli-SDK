@@ -2,14 +2,14 @@
   tags:
     - build
   script:
-    - BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --batch-index "$BATCH_INDEX" --node-index "$CI_NODE_INDEX")" || exit 1
+    - BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --job-label "$BUILD_JOB_LABEL")" || exit 1
     - eval "$BUILD_JOB_ENV"
     - if [ "$BUILD_BATCH_SKIP" = "1" ]; then echo "No build assigned to this parallel slot"; exit 0; fi
     - source ./export.sh
     - bash tools/ci/build_job.sh
   after_script:
     - |
-      BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --batch-index "$BATCH_INDEX" --node-index "$CI_NODE_INDEX")" || exit 0
+      BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --job-label "$BUILD_JOB_LABEL")" || exit 0
       eval "$BUILD_JOB_ENV"
       if [ "$BUILD_BATCH_SKIP" = "1" ]; then exit 0; fi
       REPORT_STATUS=failed

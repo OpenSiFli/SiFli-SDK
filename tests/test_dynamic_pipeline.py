@@ -44,12 +44,18 @@ class DynamicPipelineTests(unittest.TestCase):
         )
         self.assertEqual(pipeline['stages'], ['build', 'collect'])
         self.assertEqual(pipeline['include'], [{'local': '.gitlab/ci/build_sdk_batch.yml'}])
+        emitted_labels = []
         for index, name in enumerate(batch_jobs):
             suffix = f'{index + 1:03d}'
+            matrix = pipeline[name]['parallel']['matrix']
             self.assertEqual(pipeline[name]['stage'], 'build')
             self.assertEqual(pipeline[name]['extends'], '.build_sdk_batch_template')
             self.assertNotIn('trigger', pipeline[name])
-            self.assertEqual(pipeline[name]['parallel'], generator.batch_size)
+            self.assertLessEqual(len(matrix), 50)
+            self.assertEqual(len(pipeline[f'collect_batch_{suffix}']['needs']), 1)
+            labels = [entry['BUILD_JOB_LABEL'] for entry in matrix]
+            emitted_labels.extend(labels)
+            self.assertLessEqual(max(len(f'{name}: [{label}]') for label in labels), 128)
             self.assertEqual(
                 pipeline[f'collect_batch_{suffix}']['needs'],
                 [{'job': name, 'artifacts': True}],
@@ -59,9 +65,13 @@ class DynamicPipelineTests(unittest.TestCase):
             pipeline[name]['variables']['BUILD_CONFIG'] == str(config_path)
             for name in batch_jobs
         ))
-        self.assertLess(len(yaml.safe_dump(pipeline).encode('utf-8')), 32_000)
+        self.assertEqual(
+            emitted_labels,
+            [job[0][len('build_'):] for job in build_jobs],
+        )
+        self.assertLess(len(yaml.safe_dump(pipeline).encode('utf-8')), 1_000_000)
 
-    def test_emitted_parallel_slots_cover_all_targets_within_needs_limit(self):
+    def test_matrix_labels_resolve_each_target_exactly_once(self):
         generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
         pipeline = generator.generate_child_pipeline()
         jobs = generator.get_build_jobs()
@@ -69,16 +79,15 @@ class DynamicPipelineTests(unittest.TestCase):
         for name, job in pipeline.items():
             if not name.startswith('collect_batch_'):
                 continue
-            expanded_needs = 0
             for need in job['needs']:
                 build = pipeline[need['job']]
-                expanded_needs += build['parallel']
-                batch_index = int(build['variables']['BATCH_INDEX'])
-                for node_index in range(1, build['parallel'] + 1):
-                    target = resolver.resolve_build_job(generator, batch_index, node_index)
-                    if target is not None:
-                        resolved.append(target['LOG_NAME'])
-            self.assertLessEqual(expanded_needs, 50, name)
+                for entry in build['parallel']['matrix']:
+                    target = resolver.resolve_build_job_by_label(
+                        generator,
+                        entry['BUILD_JOB_LABEL'],
+                    )
+                    self.assertIsNotNone(target, entry['BUILD_JOB_LABEL'])
+                    resolved.append(target['LOG_NAME'])
 
         self.assertEqual(resolved, [job[0][len('build_'):] for job in jobs])
         self.assertEqual(len(set(resolved)), len(jobs))
@@ -117,14 +126,23 @@ class DynamicPipelineTests(unittest.TestCase):
         template = (REPO_ROOT / '.gitlab/ci/build_sdk_batch.yml').read_text(encoding='utf-8')
 
         self.assertIn('--config "$BUILD_CONFIG"', template)
-        self.assertIn('--batch-index "$BATCH_INDEX"', template)
-        self.assertIn('--node-index "$CI_NODE_INDEX"', template)
+        self.assertIn('--job-label "$BUILD_JOB_LABEL"', template)
         self.assertIn('after_script:', template)
         self.assertIn('|| exit 1', template)
         self.assertIn('junit: job_status/*.junit.xml', template)
         self.assertNotIn('parallel', yaml.safe_load(template)['.build_sdk_batch_template'])
         self.assertIn('collect_artifacts_simple.py --failed-only', template)
-        self.assertNotIn('\\"$BATCH_INDEX\\"', template)
+
+    def test_build_job_label_resolves_common_board_configuration(self):
+        generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
+        common_job = next(job for job in generator.get_build_jobs() if job[2])
+        label = common_job[0][len('build_'):]
+        values = resolver.resolve_build_job_by_label(generator, label)
+
+        self.assertIsNotNone(values)
+        self.assertEqual(values['PROJECT_TYPE'], 'common')
+        self.assertEqual(values['BOARD'], common_job[2])
+        self.assertIsNone(resolver.resolve_build_job_by_label(generator, 'not_a_real_target'))
 
     def test_junit_report_records_failed_build_target(self):
         from tempfile import TemporaryDirectory
