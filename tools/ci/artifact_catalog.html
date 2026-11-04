@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SiFli SDK 产物目录</title>
+<style>
+  :root { color-scheme: light; font: 15px/1.6 "PingFang SC", "Microsoft YaHei", sans-serif; color: #243746; background: #f5f7fa; }
+  body { max-width: 1440px; margin: auto; padding: 28px; }
+  h1 { font-size: 28px; margin: 0; color: #164c73; }
+  header { border-bottom: 3px solid #176497; padding-bottom: 18px; }
+  a { color: #095d98; text-underline-offset: 3px; }
+  .meta, .note { color: #516775; overflow-wrap: anywhere; }
+  .filters { display: flex; gap: 16px; flex-wrap: wrap; padding: 24px 0 12px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 5px; }
+  input, select, button { font: inherit; padding: 8px 10px; border: 1px solid #9aaebb; border-radius: 4px; background: white; color: inherit; }
+  input { min-width: 300px; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid #3186c7; outline-offset: 3px; }
+  #warning { border-left: 4px solid #b95217; background: #fff1e5; padding: 12px 16px; }
+  #warning:empty { display: none; }
+  .table { overflow: auto; background: white; border: 1px solid #d6e0e7; }
+  table { border-collapse: collapse; width: 100%; text-align: left; }
+  th { background: #e7eff5; white-space: nowrap; }
+  td, th { padding: 12px 16px; border-bottom: 1px solid #d6e0e7; vertical-align: top; }
+  .project { min-width: 230px; overflow-wrap: anywhere; }
+  .status { white-space: nowrap; font-weight: 600; }
+  .success { color: #20683c; } .failed, .unavailable, .unknown { color: #a33722; }
+  details { min-width: 180px; } summary { cursor: pointer; color: #095d98; }
+  .file { display: block; overflow-wrap: anywhere; margin: 6px 0; }
+  .pages { display: flex; gap: 16px; align-items: center; padding-top: 18px; }
+  @media (max-width: 600px) { body { padding: 16px; } input { min-width: 0; width: 100%; box-sizing: border-box; } label { width: 100%; } }
+</style>
+<header>
+  <h1>SiFli SDK 产物目录</h1>
+  <div id="meta" class="meta"></div>
+</header>
+<p class="note">选择板子和工程，展开文件列表即可下载。产物通常保留一周；链接固定指向本次构建，过期后不会切换到其他版本。</p>
+<p id="warning" role="alert"></p>
+<div class="filters">
+  <label>板子<select id="board"><option value="">全部板子</option></select></label>
+  <label>工程或文件名<input id="search" type="search" placeholder="例如 uart、lvgl 或 firmware.bin"></label>
+  <label>构建状态<select id="status"><option value="">全部状态</option><option value="success">成功</option><option value="failed">失败</option><option value="unknown">状态未知</option><option value="unavailable">清单缺失</option></select></label>
+  <button id="reset" type="button">清除筛选</button>
+</div>
+<p id="count" aria-live="polite"></p>
+<div class="table"><table>
+  <thead><tr><th>板子</th><th>工程</th><th>状态</th><th>产物</th><th>日志</th></tr></thead>
+  <tbody id="rows"></tbody>
+</table></div>
+<div class="pages"><button id="prev" type="button">上一页</button><span id="page"></span><button id="next" type="button">下一页</button></div>
+<noscript>请启用 JavaScript 使用筛选，或查看同目录的 README.md。</noscript>
+<script type="application/json" id="data">__CATALOG_DATA__</script>
+<script>
+  'use strict';
+  const data = JSON.parse(document.getElementById('data').textContent);
+  const byId = id => document.getElementById(id);
+  const names = {success: '成功', failed: '失败', unknown: '状态未知', unavailable: '清单缺失'};
+  const size = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+  const link = (title, url) => {
+    const a = document.createElement('a'); a.textContent = title; a.href = url;
+    a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;
+  };
+  byId('meta').append(link(`Pipeline #${data.pipeline_id}`, data.pipeline_url),
+    document.createTextNode(`　Commit ${data.commit.slice(0, 12)}　生成于 ${data.generated_at}`));
+  const warnings = [];
+  if (data.smoke_test) warnings.push('快速验证数据：仅用于测试目录、日志和下载，不含可烧录固件。');
+  if (data.issues.length) warnings.push(`目录不完整：发现 ${data.issues.length} 项异常。清单缺失的条目无法下载，请查看 catalog.json 的 issues 或对应批次任务。`);
+  byId('warning').textContent = warnings.join(' ');
+  for (const board of [...new Set(data.rows.map(r => r.board))].sort()) {
+    const option = document.createElement('option'); option.value = board; option.textContent = board;
+    byId('board').append(option);
+  }
+  const searchable = data.rows.map(row => ({row, text: [row.board, row.project, row.label, ...row.files.map(f => f.name)].join(' ').toLowerCase()}));
+  let page = 0;
+  function render() {
+    const query = byId('search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const selected = searchable.filter(({row, text}) => (!byId('board').value || row.board === byId('board').value)
+      && (!byId('status').value || row.status === byId('status').value) && query.every(q => text.includes(q))).map(x => x.row);
+    const pages = Math.max(1, Math.ceil(selected.length / 50)); page = Math.min(page, pages - 1);
+    byId('count').textContent = `找到 ${selected.length} / ${data.rows.length} 个构建目标；成功 ${data.rows.filter(r => r.status === 'success').length}，失败 ${data.rows.filter(r => r.status === 'failed').length}，未知或缺失 ${data.rows.filter(r => !['success', 'failed'].includes(r.status)).length}。`;
+    byId('rows').replaceChildren();
+    for (const row of selected.slice(page * 50, (page + 1) * 50)) {
+      const tr = document.createElement('tr');
+      for (const value of [row.board, row.project, names[row.status]]) {
+        const td = document.createElement('td'); td.textContent = value; tr.append(td);
+      }
+      tr.children[1].className = 'project'; tr.children[2].className = `status ${row.status}`;
+      const files = document.createElement('td');
+      if (row.files.length) {
+        const detail = document.createElement('details'), summary = document.createElement('summary');
+        summary.textContent = `${row.files.length} 个文件`; detail.append(summary);
+        for (const file of row.files) { const a = link(`${file.name} (${size(file.size)})`, file.url); a.className = 'file'; detail.append(a); }
+        files.append(detail);
+      } else files.textContent = row.status === 'success' ? '无产物文件' : '无可下载产物';
+      if (row.browse_url) { files.append(document.createElement('br'), link('打开文件目录', row.browse_url)); }
+      const logs = document.createElement('td');
+      for (const log of row.logs) { const a = link('查看构建日志', log.url); a.className = 'file'; logs.append(a); }
+      if (row.job_url) logs.append(link('批次任务', row.job_url));
+      tr.append(files, logs); byId('rows').append(tr);
+    }
+    if (!selected.length) { const tr = document.createElement('tr'), td = document.createElement('td'); td.colSpan = 5; td.textContent = '没有匹配结果，请调整板子、关键词或状态。'; tr.append(td); byId('rows').append(tr); }
+    byId('page').textContent = `${page + 1} / ${pages}`; byId('prev').disabled = page === 0; byId('next').disabled = page + 1 >= pages;
+  }
+  for (const id of ['board', 'search', 'status']) byId(id).addEventListener('input', () => { page = 0; render(); });
+  byId('reset').addEventListener('click', () => { for (const id of ['board', 'search', 'status']) byId(id).value = ''; page = 0; render(); });
+  byId('prev').addEventListener('click', () => { page--; render(); });
+  byId('next').addEventListener('click', () => { page++; render(); });
+  render();
+</script>
+</html>

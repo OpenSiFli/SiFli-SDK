@@ -4,6 +4,7 @@
 # -*- coding: utf-8 -*-
 import argparse
 import math
+import os
 import sys
 
 import yaml
@@ -12,11 +13,13 @@ import yaml
 # A collector needs every parallel build in its group; GitLab defaults to 50 needs.
 DEFAULT_BATCH_SIZE = 50
 BATCH_PIPELINE = '.gitlab/ci/build_sdk_batch.yml'
+SMOKE_CONFIG = 'tools/ci/catalog_smoke.yaml'
 
 
 class DynamicPipelineGenerator:
-    def __init__(self, config_file='build_config_gcc.yaml'):
-        self.config_file = config_file
+    def __init__(self, config_file='build_config_gcc.yaml', smoke_test=False):
+        self.smoke_test = smoke_test
+        self.config_file = SMOKE_CONFIG if smoke_test else config_file
         self.batch_size = DEFAULT_BATCH_SIZE
         self.config = self._load_config()
 
@@ -66,11 +69,13 @@ class DynamicPipelineGenerator:
         batch_count = math.ceil(len(jobs) / self.batch_size)
         pipeline = {
             'include': [{'local': BATCH_PIPELINE}],
-            'stages': ['build', 'collect'],
+            'stages': ['build', 'collect', 'catalog'],
             'variables': {
                 'GIT_SUBMODULE_STRATEGY': 'recursive',
                 'COMPILER': 'gcc',
                 'PARALLEL_JOBS': '8',
+                'BUILD_CONFIG': str(self.config_file),
+                'CATALOG_SMOKE_TEST': '1' if self.smoke_test else '0',
             },
         }
 
@@ -92,11 +97,24 @@ class DynamicPipelineGenerator:
                     'BUILD_CONFIG': str(self.config_file),
                 },
             }
+            if self.smoke_test:
+                pipeline[job_name].update({
+                    'extends': '.build_sdk_catalog_smoke_template',
+                    'allow_failure': True,
+                })
             pipeline[f'collect_batch_{suffix}'] = {
                 'extends': '.collect_sdk_batch_template',
                 'stage': 'collect',
                 'needs': [{'job': job_name, 'artifacts': True}],
             }
+
+        # Stage ordering waits for collectors without expanding hundreds of needs
+        # or downloading their firmware archives into the catalog workspace.
+        pipeline['artifact_catalog'] = {
+            'extends': '.sdk_artifact_catalog_template',
+            'stage': 'catalog',
+            'dependencies': [],
+        }
 
         print(
             f'Generated {len(jobs)} build jobs in {batch_count} parallel groups '
@@ -117,10 +135,13 @@ def main():
     parser.add_argument('-c', '--config', default='build_config_gcc.yaml', help='build config YAML')
     parser.add_argument('-o', '--output', default='child-pipeline.yml', help='output pipeline YAML')
     parser.add_argument('--dry-run', action='store_true', help='print pipeline size and counts')
+    parser.add_argument('--smoke-test', action='store_true',
+                        default=os.getenv('CATALOG_SMOKE_TEST') == '1',
+                        help='use tiny synthetic artifacts instead of compiling firmware')
     args = parser.parse_args()
 
     try:
-        generator = DynamicPipelineGenerator(args.config)
+        generator = DynamicPipelineGenerator(args.config, smoke_test=args.smoke_test)
         pipeline = generator.generate_child_pipeline()
         if args.dry_run:
             rendered = yaml.safe_dump(pipeline, sort_keys=False, allow_unicode=True)

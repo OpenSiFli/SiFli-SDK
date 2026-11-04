@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+
+# Synthetic targets only. These paths are never passed to the firmware compiler.
+common_projects:
+  - path: ci-smoke/uart/project
+    boards: [smoke-board-a, smoke-board-b]
+  - path: ci-smoke/expected-failure/project
+    boards: [smoke-board-a]

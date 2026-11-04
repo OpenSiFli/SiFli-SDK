@@ -6,6 +6,8 @@ generate_dynamic_pipeline:
   stage: build
   tags:
     - build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
   script:
     - echo "🚀 开始动态生成分批构建Pipeline..."
     - python3 tools/ci/dynamic_pipeline.py -c build_config_gcc.yaml -o child-pipeline.yml
@@ -16,6 +18,8 @@ generate_dynamic_pipeline:
       - child-pipeline.yml
     expire_in: 1 hour
   rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+      when: always
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
@@ -28,6 +32,10 @@ generate_dynamic_pipeline:
 # 触发动态生成的子Pipeline
 trigger_child_pipeline:
   stage: build
+  inherit:
+    variables: false
+  variables:
+    SDK_PARENT_PIPELINE_ID: '$CI_PIPELINE_ID'
   trigger:
     include:
       - artifact: child-pipeline.yml
@@ -36,6 +44,8 @@ trigger_child_pipeline:
   needs:
     - generate_dynamic_pipeline
   rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+      when: always
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
@@ -44,3 +54,30 @@ trigger_child_pipeline:
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: always
+
+# The small parent pipeline exposes the catalog without loading the build graph.
+artifact_catalog:
+  stage: build
+  tags:
+    - build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  needs:
+    - job: trigger_child_pipeline
+      artifacts: false
+  when: always
+  script:
+    - python3 tools/ci/artifact_catalog.py entry
+  artifacts:
+    name: "sdk-artifact-catalog-$CI_PIPELINE_ID"
+    expose_as: 'SDK artifact catalog'
+    paths:
+      - artifact_catalog/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

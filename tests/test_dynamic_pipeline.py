@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import importlib.util
+import os
+import subprocess
 import sys
 import unittest
 import xml.etree.ElementTree as ET
@@ -42,7 +44,9 @@ class DynamicPipelineTests(unittest.TestCase):
             len(batch_jobs),
             (len(build_jobs) + generator.batch_size - 1) // generator.batch_size,
         )
-        self.assertEqual(pipeline['stages'], ['build', 'collect'])
+        self.assertEqual(pipeline['stages'], ['build', 'collect', 'catalog'])
+        self.assertEqual(pipeline['artifact_catalog']['dependencies'], [])
+        self.assertNotIn('needs', pipeline['artifact_catalog'])
         self.assertEqual(pipeline['include'], [{'local': '.gitlab/ci/build_sdk_batch.yml'}])
         emitted_labels = []
         for index, name in enumerate(batch_jobs):
@@ -132,6 +136,69 @@ class DynamicPipelineTests(unittest.TestCase):
         self.assertIn('junit: job_status/*.junit.xml', template)
         self.assertNotIn('parallel', yaml.safe_load(template)['.build_sdk_batch_template'])
         self.assertIn('collect_artifacts_simple.py --failed-only', template)
+
+    def test_collector_runs_all_collection_steps_after_any_failure(self):
+        template = yaml.safe_load((REPO_ROOT / '.gitlab/ci/build_sdk_batch.yml').read_text())
+        command = template['.collect_sdk_batch_template']['script'][0]
+        for fail_at in (0, 1, 2, 3):
+            with self.subTest(fail_at=fail_at):
+                shell = f'''calls=0
+python3() {{
+  calls=$((calls + 1))
+  printf 'CALL:%s:%s\\n' "$calls" "$*"
+  [ "$calls" -ne "$FAIL_AT" ]
+}}
+{command}
+'''
+                result = subprocess.run(['bash', '-c', shell], env={**os.environ,
+                                            'FAIL_AT': str(fail_at)},
+                                        capture_output=True, text=True)
+                self.assertEqual(sum(line.startswith('CALL:')
+                                     for line in result.stdout.splitlines()), 3)
+                self.assertEqual(result.returncode == 0, fail_at == 0)
+
+    def test_catalog_scales_beyond_fifty_collectors_without_artifact_dependencies(self):
+        from unittest.mock import patch
+
+        generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
+        jobs = [(f'build_target_{i}', f'example/{i}', 'board', True) for i in range(5000)]
+        with patch.object(generator, 'get_build_jobs', return_value=jobs):
+            pipeline = generator.generate_child_pipeline()
+        self.assertEqual(sum(name.startswith('collect_batch_') for name in pipeline), 100)
+        self.assertEqual(pipeline['artifact_catalog']['dependencies'], [])
+        self.assertNotIn('needs', pipeline['artifact_catalog'])
+        template = yaml.safe_load((REPO_ROOT / '.gitlab/ci/build_sdk_batch.yml').read_text())
+        self.assertEqual(template['.sdk_artifact_catalog_template']['when'], 'always')
+        self.assertLess(len(yaml.safe_dump(pipeline).encode()), 1_000_000)
+
+    def test_smoke_mode_only_generates_tiny_synthetic_targets(self):
+        generator = dynamic_pipeline.DynamicPipelineGenerator(smoke_test=True)
+        pipeline = generator.generate_child_pipeline()
+        builds = [job for name, job in pipeline.items() if name.startswith('build_batch_')]
+        self.assertEqual(len(generator.get_build_jobs()), 3)
+        self.assertEqual(len(builds), 1)
+        self.assertEqual(builds[0]['extends'], '.build_sdk_catalog_smoke_template')
+        self.assertTrue(builds[0]['allow_failure'])
+        self.assertEqual(pipeline['variables']['CATALOG_SMOKE_TEST'], '1')
+        template = yaml.safe_load((REPO_ROOT / '.gitlab/ci/build_sdk_batch.yml').read_text())
+        smoke = template['.build_sdk_catalog_smoke_template']
+        self.assertEqual(smoke['after_script'], [])
+        self.assertEqual(smoke['variables']['GIT_SUBMODULE_STRATEGY'], 'none')
+        self.assertNotIn('build_job.sh', str(smoke['script']))
+        self.assertNotIn('export.sh', str(smoke['script']))
+
+    def test_parent_entry_waits_for_child_and_downloads_no_firmware(self):
+        parent = yaml.safe_load((REPO_ROOT / '.gitlab/ci/build_sdk.yml').read_text())
+        entry = parent['artifact_catalog']
+        self.assertEqual(entry['needs'], [{'job': 'trigger_child_pipeline', 'artifacts': False}])
+        self.assertEqual(entry['when'], 'always')
+        self.assertEqual(entry['script'], ['python3 tools/ci/artifact_catalog.py entry'])
+        self.assertEqual(parent['trigger_child_pipeline']['variables']['SDK_PARENT_PIPELINE_ID'],
+                         '$CI_PIPELINE_ID')
+        self.assertIs(parent['trigger_child_pipeline']['inherit']['variables'], False)
+        for name in ['generate_dynamic_pipeline', 'trigger_child_pipeline', 'artifact_catalog']:
+            self.assertEqual(parent[name]['rules'][0]['if'],
+                             '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/')
 
     def test_build_job_label_resolves_common_board_configuration(self):
         generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
