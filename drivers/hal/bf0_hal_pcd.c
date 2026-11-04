@@ -136,6 +136,8 @@ HAL_StatusTypeDef HAL_PCD_Init(PCD_HandleTypeDef *hpcd)
 
 
     hpcd->USB_Address = 0U;
+    hpcd->Instance->faddr = 0U;        /* init/Reset must bring the device back to address 0 */
+    hpcd->pending_addr = 0xFFU;        /* no pending address */
     hpcd->State = HAL_PCD_STATE_READY;
     ep0_state_change(hpcd, HAL_PCD_EP0_SETUP);
     hpcd->phy_state = OTG_STATE_B_PERIPHERALS;
@@ -504,12 +506,22 @@ __weak void HAL_PCD_DisconnectCallback(PCD_HandleTypeDef *hpcd)
   */
 HAL_StatusTypeDef HAL_PCD_SetAddress(PCD_HandleTypeDef *hpcd, uint8_t address)
 {
-    __HAL_LOCK(hpcd);
 
-    /* set device address and enable function */
-    hpcd->Instance->faddr = address;
-    hpcd->USB_Address = address;
-    __HAL_UNLOCK(hpcd);
+    /* Do NOT write FADDR here: per USB 2.0 9.4.6 the address only takes effect
+     * after the status stage of SET_ADDRESS has completed, so the actual write
+     * is deferred to the EP0 STATUSIN branch.
+     *
+     * This call (from the gadget thread) does nothing. The address has already
+     * been recorded by service_zero_data_request() in interrupt context, which
+     * runs before HAL_PCD_SetupStageCallback() reaches udcd_ops.set_address.
+     * Re-recording it here would be redundant at best; if the status stage has
+     * already completed, it would put back an address that was just cleared to
+     * 0xFF and leave a stale pending address for the next control transfer.
+     *
+     * Kept only because the udcd_ops table needs a valid callback and because
+     * callers must not be given a way to write FADDR early. */
+    (void)hpcd;
+    (void)address;
     return HAL_OK;
 }
 /**
@@ -1117,6 +1129,13 @@ service_zero_data_request(PCD_HandleTypeDef *hpcd,  struct urequest *req)
         switch (req->bRequest)
         {
         case USB_REQ_SET_ADDRESS:
+            /* Record the address here (in interrupt context) so it can be
+             * applied once the status stage completes, without any race with
+             * the gadget thread. */
+            hpcd->pending_addr = (uint8_t)req->wValue;
+            /* change it after the status stage */
+            handled = 1;
+            break;
         case USB_REQ_SET_CONFIGURATION:
             /* change it after the status stage */
             handled = 1;
@@ -1302,7 +1321,15 @@ static HAL_StatusTypeDef PCD_EP0_ISR_Handler(PCD_HandleTypeDef *hpcd)
             HAL_PCD_DataOutStageCallback(hpcd, 0);
         break;
     case HAL_PCD_EP0_STATUSIN:
-    // Set USB address ???
+        /* Status stage has completed. Apply a pending SET_ADDRESS now.
+         * pending_addr is set in interrupt context (service_zero_data_request)
+         * before this branch runs, so there is no thread-race. */
+        if (hpcd->pending_addr != 0xFFU)
+        {
+            hpcd->Instance->faddr = hpcd->pending_addr;
+            hpcd->USB_Address = hpcd->pending_addr;
+            hpcd->pending_addr = 0xFFU;
+        }
     case HAL_PCD_EP0_STATUSOUT:
     case HAL_PCD_EP0_ACKWAIT:
         if (csr & USB_CSR0_RXPKTRDY)
@@ -1463,6 +1490,9 @@ static int musbd_stage0_irq(PCD_HandleTypeDef *hpcd, uint8_t int_usb)
             hpcd->phy_state = OTG_STATE_B_WAIT_ACON;
             break;
         case OTG_STATE_B_IDLE:
+            break;
+        case OTG_STATE_B_WAIT_ACON:
+            /* Already suspended; a repeat SUSPEND is benign, ignore it. */
             break;
         default:
             HAL_DBG_printf("phy_state=%d\r\n", hpcd->phy_state);
