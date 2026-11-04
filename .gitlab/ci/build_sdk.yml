@@ -82,3 +82,38 @@ artifact_catalog:
     - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
     - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Publish the latest default-branch catalog as the fixed internal entry page.
+# Smoke runs only replace it when CATALOG_PUBLISH=1 is set explicitly.
+# Build failures fail the child pipeline, so this runs `always` and the script
+# publishes only when artifact_catalog succeeded with a complete catalog.
+# Publishing is serialized and never lets an older pipeline that finishes late
+# replace a catalog that a newer pipeline actually deployed.
+pages:
+  stage: build
+  tags:
+    - build
+  resource_group: sdk-artifact-catalog-pages
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  needs:
+    - job: artifact_catalog
+      artifacts: true
+  script:
+    - python3 tools/ci/artifact_catalog.py pages
+  allow_failure:
+    exit_codes:
+      - 3
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 day
+  rules:
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CATALOG_PUBLISH == "1"'
+      when: always
+    - if: '$CATALOG_SMOKE_TEST == "1"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|web|api)$/ && $BUILD_SDK'
+      when: always

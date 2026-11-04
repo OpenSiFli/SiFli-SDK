@@ -1,15 +1,35 @@
 # SDK 产物查找入口
 
-流水线完成后，在任务很少的**父流水线**打开 `artifact_catalog` 任务的
+**固定入口：`http://10.21.10.172:8091`**（公司内网或 VPN）。打开后自动进入 `main`
+分支最近一次完整构建的产物目录，首次访问需登录具有项目访问权限的 GitLab 账号。
+该页面由父流水线的 `pages` 任务发布，每次 `main` 分支的完整构建（schedule/web/api 且设置
+`BUILD_SDK`）完成后自动更新；MR 和其他分支的流水线不会替换它。
+只有完整的目录才会发布：编译失败只是目录中的失败状态，不影响发布（编译失败会使子流水线失败，
+因此 `pages` 任务设为 `when: always`，由脚本通过 API 核验本流水线父 `artifact_catalog` 任务成功）；
+目录本身有异常（collector 索引缺失、上传失败、权限错误等）或父目录任务失败/取消时，
+`pages` 任务失败且不生成 `public/`，保留原入口，不会发布失败任务遗留的目录文件。
+发布任务通过 `resource_group` 串行执行，发布前检查是否已有更新的 `main` 流水线**实际部署成功**：
+依据 GitLab 在每次 `pages` 任务成功后异步生成的 `pages:deploy` 状态，而不是 `pages` 任务状态；
+包含重试前的历史尝试，部署成功后再重试失败也算已发布，任务成功但部署失败不算。
+更新的流水线部署仍在进行（或部署状态尚未生成）时，最多等待 10 分钟，超时则任务失败、不发布。
+较早的流水线晚完成时会跳过发布（任务以退出码 3 显示为允许失败），不会让入口回退；
+GitLab 自身也会拒绝提交 SHA 已过期且已有更新流水线部署的发布。
+服务器 nginx 将 `8091` 的根路径重定向到 Pages 站点 `/sw/SiFli-SDK/`。
+页面中的下载链接仍指向对应构建任务，产物过期（通常一周）后链接失效，需等待下一次构建。
+
+查看某一次特定流水线时，在任务很少的**父流水线**打开 `artifact_catalog` 任务的
 **Browse artifacts → artifact_catalog/**，不需要等待几千个任务的子流水线图加载。
 子流水线同名任务也保留目录入口。
-下载 `index.html` 后用浏览器打开，选择板子、搜索工程或文件名，展开文件列表即可下载单个文件；
+点击 `index.html` 在线预览，选择板子、搜索工程或文件名，展开文件列表即可下载单个文件；
 状态选“失败”可集中查看失败目标和日志。搜索支持多个空格分隔的关键词，文件列表保留子工程路径。
 页面不需要用户提供 API token；下载私有项目的文件时，浏览器需要登录 GitLab。
 
-GitLab 开启 Pages 及私有项目访问控制时，可以在线预览 HTML artifact。
-未开启时仍可下载目录页使用，也可以在 GitLab 中查看 `README.md` 的完整目标清单。
-这次改动不启用或修改 Pages 配置。
+在线预览使用内网 GitLab Pages `http://10.21.10.172:8091`，需要连接公司内网或 VPN，
+并登录具有项目访问权限的 GitLab 账号。点击 `index.html` 后，GitLab 会显示外部页面提示，
+点击提示中的内网链接即可打开。预览地址绑定具体任务，例如：
+`http://10.21.10.172:8091/sw/-/SiFli-SDK/-/jobs/<job_id>/artifacts/artifact_catalog/index.html`。
+外网无法访问预览入口时，仍可下载 `index.html` 本地打开，
+也可以在 GitLab 中查看 `README.md` 的完整目标清单。
 
 ## 快速验证，不编译固件
 
@@ -21,6 +41,8 @@ GitLab 开启 Pages 及私有项目访问控制时，可以在线预览 HTML art
 只生成数百字节的 `SMOKE_TEST_ONLY.txt`、日志和状态，不调用编译器、不拉取子模块。
 预期失败的模拟编译任务允许失败；收集、上传、目录及父流水线入口仍严格检查错误。
 目录显示“快速验证数据”，测试文件不含可烧录固件。
+快速验证默认不更新固定入口；需要验证 Pages 发布时，在 `main` 分支运行并额外设置
+`CATALOG_PUBLISH=1`，入口会暂时显示模拟数据，直到下一次完整构建覆盖。
 
 它会实际验证 Generic Package 指针读写、单文件 artifact API 权限、目录生成和父流水线入口。
 在父流水线打开目录后，应能看到两个可下载的测试文件、一个失败目标和三个日志入口。
@@ -66,7 +88,8 @@ python3 -m unittest discover -s tests -p 'test_artifact_catalog.py'
 
 需要启用本项目 Package Registry，且流水线的 `CI_JOB_TOKEN` 能上传/下载 Generic Packages
 以及读取同项目的 job artifacts。SDK 项目目前已启用 Package Registry。
-如服务器不允许 `CI_JOB_TOKEN` 读取任务列表、Pipelines Bridges API 或单个 job artifact，则需配置 masked CI/CD 变量
+如服务器不允许 `CI_JOB_TOKEN` 读取任务列表、Pipelines Bridges API 或单个 job artifact，
+以及 `pages` 任务使用的流水线列表和提交状态（commit statuses）API，则需配置 masked CI/CD 变量
 `GITLAB_API_READ_TOKEN`，其只读 API token 至少具有 `read_api` 权限。可将变量限制在受信任的分支，
 并在测试分支受保护时设为 protected。若两种认证均不可用，父目录入口会明确失败，不会回退显示旧目录。
 这些权限需要在真实 CI 中验证；目录生成失败时查看任务日志中的 HTTP 状态码。

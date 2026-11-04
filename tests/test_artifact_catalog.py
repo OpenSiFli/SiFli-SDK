@@ -304,6 +304,163 @@ class ArtifactCatalogTests(unittest.TestCase):
             self.assertTrue((Path(temp) / 'index.html').is_file())
             self.assertTrue((Path(temp) / 'catalog.json').is_file())
 
+    def write_pages_source(self, root, issues=(), commit='abc123'):
+        source = Path(root) / 'artifact_catalog'
+        source.mkdir()
+        (source / 'catalog.json').write_text(json.dumps(
+            {'pipeline_id': '124', 'project_id': '38', 'commit': commit,
+             'rows': [{'status': 'failed'}], 'issues': list(issues)}), encoding='utf-8')
+        (source / 'index.html').write_text('<title>catalog</title>', encoding='utf-8')
+        return source
+
+    CATALOG_JOB_PATH = 'pipelines/123/jobs?per_page=100&page=1'
+    PIPELINES_PATH = 'pipelines?ref=main&order_by=id&sort=desc&per_page=100&page=1'
+    CATALOG_PASSED = [{'id': 1230, 'name': 'artifact_catalog', 'status': 'success', 'retried': False}]
+
+    @staticmethod
+    def status_path(pipeline_id, name):
+        name = name.replace(':', '%3A')
+        return (f'repository/commits/def456/statuses?pipeline_id={pipeline_id}'
+                f'&name={name}&all=true&per_page=100&page=1')
+
+    def fake_pages_api(self, catalog_jobs=CATALOG_PASSED, pipelines=(), statuses=None):
+        """statuses maps (pipeline, name) to status lists, or to one list per poll."""
+        responses = {self.CATALOG_JOB_PATH: catalog_jobs, self.PIPELINES_PATH: [
+            {'id': pipeline_id, 'source': source, 'sha': 'def456'} for pipeline_id, source in pipelines]}
+        polls = {}
+        for (pipeline_id, name), values in (statuses or {}).items():
+            path = self.status_path(pipeline_id, name)
+            if values and isinstance(values[0], list):
+                polls[path] = iter(values)
+            else:
+                responses[path] = values
+
+        def respond(path, **_kwargs):
+            if path not in polls and path not in responses:
+                raise AssertionError(f'unexpected GitLab request: {path}')
+            values = next(polls[path]) if path in polls else responses[path]
+            if path.startswith('repository/'):
+                return [{'name': 'pages', 'status': status} for status in values]
+            return copy.deepcopy(values)
+        self.client.json_request = Mock(side_effect=respond)
+
+    def requested_paths(self):
+        return [call.args[0] for call in self.client.json_request.call_args_list]
+
+    def test_pages_publishes_complete_catalog_with_failed_builds(self):
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}):
+            source = self.write_pages_source(temp)
+            output = Path(temp) / 'public'
+            (output / 'stale').mkdir(parents=True)
+            self.fake_pages_api(pipelines=[(123, 'schedule'), (100, 'web')])
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertEqual(sorted(p.name for p in output.iterdir()), ['catalog.json', 'index.html'])
+            self.assertEqual(self.requested_paths(), [self.CATALOG_JOB_PATH, self.PIPELINES_PATH])
+
+    def test_pages_never_publishes_files_left_by_unsuccessful_catalog_job(self):
+        # Pages runs `always`; a failed catalog job may still have uploaded a complete-looking page.
+        for jobs in [[{'id': 1229, 'name': 'artifact_catalog', 'status': 'success', 'retried': True},
+                      {'id': 1230, 'name': 'artifact_catalog', 'status': 'failed', 'retried': False}],
+                     [{'id': 1230, 'name': 'artifact_catalog', 'status': 'canceled', 'retried': False}],
+                     []]:
+            with self.subTest(jobs=jobs), TemporaryDirectory() as temp, \
+                    patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}):
+                source = self.write_pages_source(temp)
+                self.fake_pages_api(catalog_jobs=jobs)
+                with self.assertRaisesRegex(ValueError, 'artifact_catalog job is'):
+                    catalog.publish_pages(self.client, source, Path(temp) / 'public')
+                self.assertFalse((Path(temp) / 'public').exists())
+                self.assertEqual(self.requested_paths(), [self.CATALOG_JOB_PATH])
+
+    def test_pages_keeps_published_entry_for_incomplete_or_foreign_catalog(self):
+        for kwargs in [{'issues': ['collect_batch_001: collector index missing']}, {'commit': 'old'}]:
+            with self.subTest(**kwargs), TemporaryDirectory() as temp, \
+                    patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}):
+                source = self.write_pages_source(temp, **kwargs)
+                self.fake_pages_api()
+                with self.assertRaises(ValueError):
+                    catalog.publish_pages(self.client, source, Path(temp) / 'public')
+                self.assertFalse((Path(temp) / 'public').exists())
+                self.assertEqual(self.requested_paths(), [self.CATALOG_JOB_PATH])
+
+    def test_pages_does_not_let_older_pipeline_replace_newer_deployment(self):
+        statuses = {
+            # The job uploaded artifacts but GitLab failed to deploy them: not live.
+            (130, 'pages'): ['success'], (130, 'pages:deploy'): ['failed'],
+            # Deployed once, then a retried attempt failed to deploy: still live.
+            (126, 'pages'): ['success', 'success'], (126, 'pages:deploy'): ['success', 'failed'],
+        }
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+                patch.object(catalog.time, 'sleep') as sleep:
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(pipelines=[(130, 'web'), (128, 'parent_pipeline'), (126, 'schedule'),
+                                           (123, 'schedule')], statuses=statuses)
+            self.assertEqual(catalog.publish_pages(self.client, source, Path(temp) / 'public'), '126')
+            self.assertFalse((Path(temp) / 'public').exists())
+            sleep.assert_not_called()
+            paths = self.requested_paths()
+            self.assertIn('repository/commits/def456/statuses?pipeline_id=126'
+                          '&name=pages%3Adeploy&all=true&per_page=100&page=1', paths)
+            # The child pipeline and older pipelines are never scanned.
+            self.assertFalse(any('pipeline_id=128' in path or 'pipeline_id=123' in path for path in paths))
+
+    def test_pages_publishes_when_newer_job_succeeded_but_deployment_failed(self):
+        statuses = {
+            (125, 'pages'): ['failed', 'success'], (125, 'pages:deploy'): ['failed'],
+            # A newer pipeline without pages, e.g. the GitHub sync schedule.
+            (124, 'pages'): [], (124, 'pages:deploy'): [],
+        }
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+                patch.object(catalog.time, 'sleep') as sleep:
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(pipelines=[(125, 'web'), (124, 'schedule'), (123, 'schedule')],
+                                statuses=statuses)
+            self.assertIsNone(catalog.publish_pages(self.client, source, Path(temp) / 'public'))
+            self.assertTrue((Path(temp) / 'public' / 'index.html').is_file())
+            sleep.assert_not_called()
+
+    def test_pages_waits_until_newer_deployment_finishes(self):
+        for result, expected in [('success', '125'), ('failed', None)]:
+            # The job succeeded before GitLab created, then ran, its pages:deploy status.
+            statuses = {(125, 'pages'): ['success'],
+                        (125, 'pages:deploy'): [[], ['running'], [result]]}
+            with self.subTest(result=result), TemporaryDirectory() as temp, \
+                    patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+                    patch.object(catalog.time, 'sleep') as sleep:
+                source = self.write_pages_source(temp)
+                self.fake_pages_api(pipelines=[(125, 'web'), (123, 'schedule')], statuses=statuses)
+                self.assertEqual(catalog.publish_pages(self.client, source, Path(temp) / 'public'), expected)
+                self.assertEqual((Path(temp) / 'public').exists(), expected is None)
+                self.assertEqual(sleep.call_count, 2)
+
+    def test_pages_does_not_wait_forever_for_newer_deployment(self):
+        statuses = {(125, 'pages'): ['success'], (125, 'pages:deploy'): ['pending']}
+        clock = iter(range(0, catalog.PAGES_DEPLOY_TIMEOUT * 2, catalog.PAGES_DEPLOY_POLL))
+
+        def tick():
+            now = next(clock, None)
+            if now is None:
+                raise AssertionError('waited past the deadline')
+            return now
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+                patch.object(catalog.time, 'sleep') as sleep, \
+                patch.object(catalog.time, 'monotonic', side_effect=tick):
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(pipelines=[(125, 'web'), (123, 'schedule')], statuses=statuses)
+            with self.assertRaisesRegex(ValueError, 'still unfinished'):
+                catalog.publish_pages(self.client, source, Path(temp) / 'public')
+            self.assertFalse((Path(temp) / 'public').exists())
+            self.assertEqual(sleep.call_count, catalog.PAGES_DEPLOY_TIMEOUT // catalog.PAGES_DEPLOY_POLL - 1)
+
+    def test_pages_skip_uses_allowed_failure_exit_code(self):
+        with patch('sys.argv', ['artifact_catalog.py', 'pages']), patch.object(catalog, 'GitLab'), \
+                patch.object(catalog, 'publish_pages', return_value='126'), redirect_stdout(io.StringIO()):
+            self.assertEqual(catalog.main(), catalog.PAGES_SKIPPED)
+        with patch('sys.argv', ['artifact_catalog.py', 'pages']), patch.object(catalog, 'GitLab'), \
+                patch.object(catalog, 'publish_pages', side_effect=ValueError('catalog has 1 issues')), \
+                patch('sys.stderr', io.StringIO()):
+            self.assertEqual(catalog.main(), 1)
+
     def test_parent_catalog_file_falls_back_to_read_token_for_permission_errors(self):
         with patch.dict(os.environ, {'CI_PIPELINE_ID': '122'}):
             parent_client = catalog.GitLab()

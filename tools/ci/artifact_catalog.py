@@ -10,6 +10,7 @@ import html
 import json
 import os
 from pathlib import Path, PurePosixPath
+import shutil
 import sys
 import time
 from urllib.error import HTTPError, URLError
@@ -21,6 +22,12 @@ from dynamic_pipeline import DynamicPipelineGenerator
 
 PACKAGE_NAME = 'sdk-artifact-catalog-pointers'
 INDEX_PATH = 'merged_artifacts/file_index.json'
+# Allowed-failure exit code: a newer pipeline already owns the published entry.
+PAGES_SKIPPED = 3
+# GitLab deploys a successful pages job asynchronously; wait this long for a newer one.
+PAGES_DEPLOY_TIMEOUT = 600
+PAGES_DEPLOY_POLL = 10
+FINISHED_STATUSES = ('success', 'failed', 'canceled', 'skipped')
 
 
 class SafeRedirect(HTTPRedirectHandler):
@@ -209,6 +216,93 @@ def load_parent_catalog(client):
     return catalog
 
 
+def newer_published_pipeline(client):
+    """Return a newer default-branch pipeline whose Pages deployment succeeded."""
+    ref = quote(os.environ['CI_DEFAULT_BRANCH'], safe='')
+    page = 1
+    while True:
+        pipelines = client.read_json(
+            f'pipelines?ref={ref}&order_by=id&sort=desc&per_page=100&page={page}', 'pipelines')
+        if not isinstance(pipelines, list):
+            raise ValueError('invalid pipeline list')
+        for pipeline in pipelines:
+            pipeline_id = str(pipeline.get('id', '')) if isinstance(pipeline, dict) else ''
+            if not pipeline_id.isdecimal():
+                continue
+            if int(pipeline_id) <= int(client.pipeline):
+                return None
+            # Child pipelines hold thousands of build jobs and never run pages.
+            if pipeline.get('source') == 'parent_pipeline':
+                continue
+            sha = pipeline.get('sha')
+            if not isinstance(sha, str) or not sha:
+                raise ValueError(f'pipeline #{pipeline_id} has no commit SHA')
+            if pages_deployed(client, pipeline_id, sha):
+                return pipeline_id
+        if len(pipelines) < 100:
+            return None
+        page += 1
+
+
+def commit_statuses(client, sha, pipeline_id, name):
+    statuses = []
+    page = 1
+    while True:
+        # all=true keeps retried attempts; the latest attempt alone may hide a deployment.
+        batch = client.read_json(
+            f'repository/commits/{quote(sha, safe="")}/statuses?pipeline_id={pipeline_id}'
+            f'&name={quote(name, safe="")}&all=true&per_page=100&page={page}', 'commit statuses')
+        if not isinstance(batch, list):
+            raise ValueError('invalid commit status list')
+        statuses.extend(status.get('status') for status in batch if isinstance(status, dict))
+        if len(batch) < 100:
+            return statuses
+        page += 1
+
+
+def pages_deployed(client, pipeline_id, sha):
+    """Return whether GitLab actually deployed a pages attempt of the pipeline.
+
+    A successful pages job only uploads artifacts; GitLab then deploys them
+    asynchronously and records the result as a pages:deploy status.
+    """
+    deadline = time.monotonic() + PAGES_DEPLOY_TIMEOUT
+    while True:
+        deploys = commit_statuses(client, sha, pipeline_id, 'pages:deploy')
+        if 'success' in deploys:
+            return True
+        jobs = commit_statuses(client, sha, pipeline_id, 'pages')
+        # Every successful pages job gets one pages:deploy status once GitLab picks it up.
+        pending = (any(status not in FINISHED_STATUSES for status in deploys)
+                   or jobs.count('success') > len(deploys))
+        if not pending:
+            return False
+        if time.monotonic() >= deadline:
+            raise ValueError(f'Pages deployment of pipeline #{pipeline_id} is still unfinished')
+        time.sleep(PAGES_DEPLOY_POLL)
+
+
+def publish_pages(client, source, output):
+    # Pages also runs after build failures, so only publish files from a catalog job that passed.
+    catalog_job = client.latest_job(client.pipeline, 'artifact_catalog')
+    if catalog_job is None or catalog_job['status'] != 'success':
+        status = catalog_job['status'] if catalog_job else 'missing'
+        raise ValueError(f'artifact_catalog job is {status}; keeping the published entry')
+    catalog = json.loads((source / 'catalog.json').read_text(encoding='utf-8'))
+    if (not isinstance(catalog, dict) or catalog.get('commit') != os.environ['CI_COMMIT_SHA']
+            or not isinstance(catalog.get('issues'), list) or not (source / 'index.html').is_file()):
+        raise ValueError('catalog page is missing or belongs to another commit')
+    # Build failures are row statuses; issues mean the catalog itself is incomplete.
+    if catalog['issues']:
+        raise ValueError(f'catalog has {len(catalog["issues"])} issues; keeping the published entry')
+    newer = newer_published_pipeline(client)
+    if newer:
+        return newer
+    shutil.rmtree(output, ignore_errors=True)
+    shutil.copytree(source, output)
+    return None
+
+
 def artifact_path(path):
     if not isinstance(path, str) or not path or '\\' in path:
         raise ValueError('invalid artifact path')
@@ -384,14 +478,22 @@ def write_catalog(catalog, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['publish', 'generate', 'entry'])
+    parser.add_argument('action', choices=['publish', 'generate', 'entry', 'pages'])
     parser.add_argument('--config', default='build_config_gcc.yaml')
     parser.add_argument('--output', type=Path, default=Path('artifact_catalog'))
+    parser.add_argument('--pages-output', type=Path, default=Path('public'))
     args = parser.parse_args()
     try:
         client = GitLab()
         if args.action == 'publish':
             publish_pointer(client)
+            return 0
+        if args.action == 'pages':
+            newer = publish_pages(client, args.output, args.pages_output)
+            if newer:
+                print(f'Pipeline #{newer} already published a newer catalog; keeping it')
+                return PAGES_SKIPPED
+            print(f'Publishing catalog from pipeline #{client.pipeline}')
             return 0
         if args.action == 'entry':
             catalog = load_parent_catalog(client)

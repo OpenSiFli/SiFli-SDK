@@ -202,6 +202,22 @@ python3() {{
             self.assertEqual(parent[name]['rules'][0]['if'],
                              '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/')
 
+    def test_pages_publishes_default_branch_catalog_only(self):
+        pages = yaml.safe_load((REPO_ROOT / '.gitlab/ci/build_sdk.yml').read_text())['pages']
+        self.assertEqual(pages['needs'], [{'job': 'artifact_catalog', 'artifacts': True}])
+        self.assertEqual(pages['artifacts']['paths'], ['public/'])
+        self.assertEqual(pages['script'], ['python3 tools/ci/artifact_catalog.py pages'])
+        self.assertEqual(pages['resource_group'], 'sdk-artifact-catalog-pages')
+        self.assertEqual(pages['allow_failure'], {'exit_codes': [3]})
+        rules = [(rule['if'], rule['when']) for rule in pages['rules']]
+        self.assertEqual(rules[0], ('$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH', 'never'))
+        # A smoke run must not replace the real catalog unless publishing is requested.
+        self.assertIn('$CATALOG_PUBLISH == "1"', rules[1][0])
+        self.assertEqual(rules[2], ('$CATALOG_SMOKE_TEST == "1"', 'never'))
+        # Build failures fail the upstream trigger; the script itself checks artifact_catalog.
+        self.assertEqual([when for _condition, when in rules if when != 'never'], ['always', 'always'])
+        self.assertNotIn('merge_request_event', str(rules))
+
     def test_build_job_label_resolves_common_board_configuration(self):
         generator = dynamic_pipeline.DynamicPipelineGenerator(REPO_ROOT / 'build_config_gcc.yaml')
         common_job = next(job for job in generator.get_build_jobs() if job[2])
