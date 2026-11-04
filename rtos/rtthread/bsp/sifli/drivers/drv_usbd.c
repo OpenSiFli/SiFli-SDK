@@ -47,6 +47,12 @@ void USBD_IRQHandler(void)
 
 void HAL_PCD_ResetCallback(PCD_HandleTypeDef *pcd)
 {
+    /* USB reset must bring the device back to address 0, otherwise the host's
+     * re-enumeration (SET_ADDRESS @ addr 0) is dropped by the address filter. */
+    pcd->Instance->faddr = 0;
+    pcd->USB_Address = 0;
+    pcd->pending_addr = 0xFFU;     /* no pending address */
+
     /* open ep0 OUT and IN */
     HAL_PCD_EP_Open(pcd, 0x00, 0x40, EP_TYPE_CTRL);
     HAL_PCD_EP_Open(pcd, 0x80, 0x40, EP_TYPE_CTRL);
