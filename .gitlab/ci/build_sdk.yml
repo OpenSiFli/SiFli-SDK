@@ -36,6 +36,7 @@ trigger_child_pipeline:
     variables: false
   variables:
     SDK_PARENT_PIPELINE_ID: '$CI_PIPELINE_ID'
+    GITLAB_API_READ_TOKEN: '$GITLAB_API_READ_TOKEN'
   trigger:
     include:
       - artifact: child-pipeline.yml

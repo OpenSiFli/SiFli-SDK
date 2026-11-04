@@ -62,6 +62,18 @@ class GitLab:
                     raise ValueError('GitLab request timed out or could not connect') from None
             time.sleep(attempt + 1)
 
+    def read_json(self, path, resource):
+        try:
+            return self.json_request(path)
+        except ValueError as exc:
+            if not any(f'HTTP {code}' in str(exc) for code in (401, 403, 404)):
+                raise
+            api_token = os.getenv('GITLAB_API_READ_TOKEN')
+            if not api_token or api_token == '$GITLAB_API_READ_TOKEN':
+                raise ValueError(
+                    f'CI_JOB_TOKEN cannot read {resource}; configure GITLAB_API_READ_TOKEN') from None
+            return self.json_request(path, api_token=api_token)
+
     def pointer_path(self, batch, pipeline=None):
         return f'packages/generic/{PACKAGE_NAME}/{pipeline or self.pipeline}/{batch}.json'
 
@@ -77,7 +89,7 @@ class GitLab:
         if not job_id.isdecimal() or int(job_id) < 1:
             raise ValueError('invalid collector job ID')
         # Fetch only the small JSON file, after GitLab has stored the group archive.
-        index = self.json_request(f'jobs/{job_id}/artifacts/{INDEX_PATH}')
+        index = self.read_json(f'jobs/{job_id}/artifacts/{INDEX_PATH}', 'job artifacts')
         if (not isinstance(index, dict)
                 or str(index.get('pipeline_id')) != self.pipeline
                 or str(index.get('project_id')) != self.project
@@ -95,16 +107,7 @@ class GitLab:
         page = 1
         while True:
             path = f'{endpoint}?per_page=100&page={page}'
-            try:
-                batch = self.json_request(path)
-            except ValueError as exc:
-                if not any(f'HTTP {code}' in str(exc) for code in (401, 403, 404)):
-                    raise
-                api_token = os.getenv('GITLAB_API_READ_TOKEN')
-                if not api_token:
-                    raise ValueError(
-                        'CI_JOB_TOKEN cannot read pipeline jobs; configure GITLAB_API_READ_TOKEN') from None
-                batch = self.json_request(path, api_token=api_token)
+            batch = self.read_json(path, 'pipeline jobs')
             if not isinstance(batch, list):
                 raise ValueError('invalid pipeline job list')
             jobs.extend(batch)
@@ -162,16 +165,8 @@ def publish_parent_pointer(client):
 
 def load_parent_catalog(client):
     pointer = client.json_request(client.pointer_path('artifact_catalog'))
-    api_token = os.getenv('GITLAB_API_READ_TOKEN')
     bridges_path = f'pipelines/{client.pipeline}/bridges'
-    try:
-        bridges = client.json_request(bridges_path)
-    except ValueError as exc:
-        if not any(f'HTTP {code}' in str(exc) for code in (401, 403, 404)):
-            raise
-        if not api_token:
-            raise ValueError('CI_JOB_TOKEN cannot read pipeline triggers; configure GITLAB_API_READ_TOKEN') from None
-        bridges = client.json_request(bridges_path, api_token=api_token)
+    bridges = client.read_json(bridges_path, 'pipeline triggers')
     if not isinstance(bridges, list):
         raise ValueError('invalid parent pipeline trigger list')
     current_children = {
@@ -203,7 +198,7 @@ def load_parent_catalog(client):
         raise ValueError('catalog pointer does not match the latest child catalog attempt')
     if current_catalog_job['status'] not in ('success', 'failed'):
         raise ValueError(f'latest child catalog attempt is not finished: {current_catalog_job["status"]}')
-    catalog = client.json_request(f'jobs/{job_id}/artifacts/artifact_catalog/catalog.json')
+    catalog = client.read_json(f'jobs/{job_id}/artifacts/artifact_catalog/catalog.json', 'job artifacts')
     if (not isinstance(catalog, dict)
             or str(catalog.get('pipeline_id')) != pipeline_id
             or str(catalog.get('project_id')) != client.project

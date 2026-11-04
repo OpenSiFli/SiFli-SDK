@@ -46,8 +46,8 @@ python3 -m unittest discover -s tests -p 'test_artifact_catalog.py'
 - `artifact_catalog` 在 collect 阶段完成后运行，`dependencies: []` 避免自动下载全部固件。
   它读取指针，再通过 job ID 的单文件 API 读取 `merged_artifacts/file_index.json`。
   另外只查询当前流水线的 job 列表，以识别 collector 重试后的最新 job ID 和状态；
-  不会列举/下载其他流水线任务的 artifact。若桥接 API 返回 401/403/404，则使用
-  `GITLAB_API_READ_TOKEN` 备用认证。
+  不会列举/下载其他流水线任务的 artifact。读取任务列表或单文件 API 返回 401/403/404 时，
+  使用 `GITLAB_API_READ_TOKEN` 备用认证。
 - 获取索引发生在批次 artifact 上传结束之后。上传失败、指针缺失、索引身份不符或目标缺失都会显示为异常；
   目录仍上传，但任务失败以提示目录不完整。编译失败本身只记录失败状态，不阻止目录生成。
 - 所有下载链接绑定具体 collector job ID，文件路径经过转义。不会回退到某分支的最后一次成功构建。
@@ -66,10 +66,12 @@ python3 -m unittest discover -s tests -p 'test_artifact_catalog.py'
 
 需要启用本项目 Package Registry，且流水线的 `CI_JOB_TOKEN` 能上传/下载 Generic Packages
 以及读取同项目的 job artifacts。SDK 项目目前已启用 Package Registry。
-如服务器不允许 `CI_JOB_TOKEN` 读取 Pipelines Bridges API，则需配置 masked CI/CD 变量
+如服务器不允许 `CI_JOB_TOKEN` 读取任务列表、Pipelines Bridges API 或单个 job artifact，则需配置 masked CI/CD 变量
 `GITLAB_API_READ_TOKEN`，其只读 API token 至少具有 `read_api` 权限。可将变量限制在受信任的分支，
 并在测试分支受保护时设为 protected。若两种认证均不可用，父目录入口会明确失败，不会回退显示旧目录。
 这些权限需要在真实 CI 中验证；目录生成失败时查看任务日志中的 HTTP 状态码。
+在 Run pipeline 页面临时填写的 `GITLAB_API_READ_TOKEN` 也会显式传给子流水线，
+不依赖 GitLab 默认不转发的 pipeline variables；其他父流水线变量仍按原有继承规则处理。
 重试 collector 会再次发布同流水线、同文件名的指针，Generic Packages 必须允许该包重复文件名
 （GitLab 默认允许）；下载端使用最新指针，仍校验流水线和 commit。
 

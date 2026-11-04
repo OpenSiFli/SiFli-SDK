@@ -196,6 +196,8 @@ python3() {{
         self.assertEqual(parent['trigger_child_pipeline']['variables']['SDK_PARENT_PIPELINE_ID'],
                          '$CI_PIPELINE_ID')
         self.assertIs(parent['trigger_child_pipeline']['inherit']['variables'], False)
+        self.assertEqual(parent['trigger_child_pipeline']['variables']['GITLAB_API_READ_TOKEN'],
+                         '$GITLAB_API_READ_TOKEN')
         for name in ['generate_dynamic_pipeline', 'trigger_child_pipeline', 'artifact_catalog']:
             self.assertEqual(parent[name]['rules'][0]['if'],
                              '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/')

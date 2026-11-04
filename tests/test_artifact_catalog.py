@@ -57,6 +57,44 @@ class ArtifactCatalogTests(unittest.TestCase):
         self.assertEqual(self.client.json_request.call_args.args[0],
                          'pipelines/123/jobs?per_page=100&page=1')
 
+    def test_collector_index_falls_back_to_read_token_for_permission_errors(self):
+        for status in (401, 403, 404):
+            with self.subTest(status=status):
+                self.client.json_request = Mock(side_effect=[
+                    self.pointer, ValueError(f'GitLab request failed (HTTP {status})'), self.index])
+                self.assertEqual(self.client.load_index('collect_batch_001'), ('789', self.index))
+                self.assertEqual(self.client.json_request.call_args.args,
+                                 ('jobs/789/artifacts/merged_artifacts/file_index.json',))
+                self.assertEqual(self.client.json_request.call_args.kwargs,
+                                 {'api_token': 'api-read-secret'})
+
+    def test_index_fallback_does_not_hide_missing_files_or_invalid_identity(self):
+        self.client.json_request = Mock(side_effect=[
+            self.pointer, ValueError('GitLab request failed (HTTP 404)'),
+            ValueError('GitLab request failed (HTTP 404)')])
+        with self.assertRaisesRegex(ValueError, 'HTTP 404'):
+            self.client.load_index('collect_batch_001')
+        self.assertEqual(self.client.json_request.call_count, 3)
+        self.client.json_request = Mock(side_effect=[
+            self.pointer, ValueError('GitLab request failed (HTTP 404)'),
+            dict(self.index, pipeline_id='old')])
+        with self.assertRaisesRegex(ValueError, 'another pipeline'):
+            self.client.load_index('collect_batch_001')
+
+    def test_index_api_does_not_fallback_for_connection_errors_or_without_token(self):
+        self.client.json_request = Mock(side_effect=[
+            self.pointer, ValueError('GitLab request timed out')])
+        with self.assertRaisesRegex(ValueError, 'timed out'):
+            self.client.load_index('collect_batch_001')
+        self.assertEqual(self.client.json_request.call_count, 2)
+        for token in ('', '$GITLAB_API_READ_TOKEN'):
+            with self.subTest(token=token), patch.dict(os.environ, {'GITLAB_API_READ_TOKEN': token}):
+                self.client.json_request = Mock(side_effect=[
+                    self.pointer, ValueError('GitLab request failed (HTTP 404)')])
+                with self.assertRaisesRegex(ValueError, 'configure GITLAB_API_READ_TOKEN'):
+                    self.client.load_index('collect_batch_001')
+                self.assertEqual(self.client.json_request.call_count, 2)
+
     def test_jobs_api_falls_back_to_read_token_for_permission_errors(self):
         for status in (401, 403, 404):
             with self.subTest(status=status):
@@ -265,6 +303,27 @@ class ArtifactCatalogTests(unittest.TestCase):
             self.assertEqual(catalog.main(), 1)
             self.assertTrue((Path(temp) / 'index.html').is_file())
             self.assertTrue((Path(temp) / 'catalog.json').is_file())
+
+    def test_parent_catalog_file_falls_back_to_read_token_for_permission_errors(self):
+        with patch.dict(os.environ, {'CI_PIPELINE_ID': '122'}):
+            parent_client = catalog.GitLab()
+        pointer = {'kind': 'catalog', 'project_id': '38', 'parent_pipeline_id': '122',
+                   'commit': 'abc123', 'job_id': '999', 'pipeline_id': '123'}
+        bridges = [{'name': 'trigger_child_pipeline', 'retried': False,
+                    'downstream_pipeline': {'id': 123}}]
+        jobs = [{'name': 'artifact_catalog', 'id': 999, 'status': 'success'}]
+        result = {'pipeline_id': '123', 'project_id': '38', 'commit': 'abc123',
+                  'rows': [], 'issues': []}
+        for status in (401, 403, 404):
+            with self.subTest(status=status):
+                parent_client.json_request = Mock(side_effect=[
+                    pointer, bridges, jobs,
+                    ValueError(f'GitLab request failed (HTTP {status})'), result])
+                self.assertEqual(catalog.load_parent_catalog(parent_client), result)
+                self.assertEqual(parent_client.json_request.call_args.args,
+                                 ('jobs/999/artifacts/artifact_catalog/catalog.json',))
+                self.assertEqual(parent_client.json_request.call_args.kwargs,
+                                 {'api_token': 'api-read-secret'})
 
     def test_parent_catalog_rejects_missing_or_ambiguous_current_trigger(self):
         with patch.dict(os.environ, {'CI_PIPELINE_ID': '122'}):
