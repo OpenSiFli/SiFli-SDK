@@ -177,24 +177,18 @@ static void img_event_handler(lv_event_t *e)
 
         lv_obj_t *obj = lv_event_get_target(e);
 
-#ifndef DISABLE_LVGL_V8
-        lv_draw_ctx_t *draw_ctx = lv_event_get_draw_ctx(e);
-        const lv_area_t *buf_area = draw_ctx->buf_area;
-        const lv_area_t *clip_area = draw_ctx->clip_area;
-        void *p_fb = draw_ctx->buf;
-#else
         lv_layer_t *draw_ctx = lv_event_get_layer(e);
         const lv_area_t *buf_area = &draw_ctx->buf_area;
         const lv_area_t *clip_area = &draw_ctx->_clip_area;
         void *p_fb = draw_ctx->draw_buf->data;
-#endif /* DISABLE_LVGL_V8 */
 
-        lv_img_dsc_t dest;
+        lv_img_dsc_t dest = {0};
 
         dest.data = p_fb;
         dest.header.w = lv_area_get_width(buf_area);
         dest.header.h = lv_area_get_height(buf_area);
-        dest.data_size = dest.header.w * dest.header.h * sizeof(lv_color_t);
+        dest.header.stride = draw_ctx->draw_buf->header.stride;
+        dest.data_size = dest.header.stride * dest.header.h;
         dest.header.cf = LV_IMG_CF_TRUE_COLOR;
         dest.header.always_zero = 0;
 
@@ -250,16 +244,26 @@ static void img_event_handler(lv_event_t *e)
         }
         else
         {
+            if (rotation3d.image_rotate_degree > 450)
+            {
+                img_rotate_adv2(&dest, image0, rotation3d.image_rotate_degree,
+                                &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
+                                &pivot, pivot_z, src_img_z, src_zoom);
 
-            img_rotate_adv2(&dest, image0, rotation3d.image_rotate_degree,
-                            &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
-                            &pivot, pivot_z, src_img_z, src_zoom);
+                img_rotate_adv2(&dest, image1, rotation3d.image_rotate_degree - 900,
+                                &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
+                                &pivot, pivot_z, src_img_z, src_zoom);
+            }
+            else
+            {
+                img_rotate_adv2(&dest, image1, rotation3d.image_rotate_degree - 900,
+                                &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
+                                &pivot, pivot_z, src_img_z, src_zoom);
 
-
-
-            img_rotate_adv2(&dest, image1, rotation3d.image_rotate_degree - 900,
-                            &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
-                            &pivot, pivot_z, src_img_z, src_zoom);
+                img_rotate_adv2(&dest, image0, rotation3d.image_rotate_degree,
+                                &src_coords, buf_area, clip_area, LV_OPA_COVER, LV_COLOR_BLACK,
+                                &pivot, pivot_z, src_img_z, src_zoom);
+            }
 
         }
 
