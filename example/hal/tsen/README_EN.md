@@ -5,6 +5,7 @@ Source code path: example/hal/tsen
 * sf32lb52-lcd series
 * sf32lb56-lcd series
 * sf32lb58-lcd series
+* sf32lb57-lcd series
 
 ## Overview
 Used to represent the "Temperature Sensor" hardware module. Specifically, TSEN is an integrated temperature sensor designed to measure on-chip temperature, helping to implement temperature monitoring and temperature-related system functions.
