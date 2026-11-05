@@ -1417,7 +1417,7 @@ static void mainmenu_cell_ui_init(void *param)
 
     lv_obj_align(page, LV_ALIGN_CENTER, 0, 0);
 
-
+    lv_obj_set_style_pad_all(page, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_border_width(page, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_set_scroll_snap_x(page, LV_SCROLL_SNAP_CENTER);
