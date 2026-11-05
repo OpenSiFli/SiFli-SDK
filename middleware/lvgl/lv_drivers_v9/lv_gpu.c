@@ -21,10 +21,13 @@
 #include "lv_draw_epic.h"
 #include "lv_epic_utils.h"
 #include "lv_conf_sifli.h"
+#ifdef DRV_EPIC_NEW_API
+#include "lv_display_private.h"
+#endif
 #ifdef USING_EZIPA_DEC
 #include "ezipa_dec.h"
+#endif
 
-#ifndef DRV_EPIC_NEW_API
 static void invalidate_screen(void *data)
 {
     lv_obj_invalidate(lv_scr_act());
@@ -43,7 +46,9 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                    uint8_t type)
 {
     EPIC_LayerConfigTypeDef input_layers[3];
+#ifndef DRV_EPIC_NEW_API
     EPIC_LayerConfigTypeDef output_canvas;
+#endif
     rt_err_t err;
 
     uint8_t pixel_size;
@@ -175,6 +180,12 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
     input_layers[1].transform_cfg.vp_y_offset = input_layers[1].transform_cfg.pivot_y;
     input_layers[1].transform_cfg.dst_z_offset = input_layers[1].transform_cfg.z_offset;
 
+#ifdef DRV_EPIC_NEW_API
+    input_layers[1].alpha = opa;
+    err = lv_draw_epic_transform(lv_refr_get_disp_refreshing()->layer_head, &input_layers[1],
+                                 input_layer_cnt == 3 ? &input_layers[2] : NULL,
+                                 output_coords);
+#else
 
     /*Setup bg layer*/
     HAL_EPIC_LayerConfigInit(&input_layers[0]);
@@ -209,20 +220,93 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
         err = drv_epic_transform(&input_layers[0], input_layer_cnt, &output_canvas, NULL);
     else
         err = drv_epic_transform(&input_layers[1], input_layer_cnt - 1, &output_canvas, NULL);
+#endif
 
     if (RT_EOK != err)
     {
         lv_async_call(invalidate_screen, NULL);
     }
 }
+#if defined(DRV_EPIC_NEW_API) && defined(EPIC_SUPPORT_TRANS_MATRIX)
+/* Match the v8 matrix projection, using the display as the viewport even when
+ * v9 renders into a partial draw buffer. */
+static void img_rotate_matrix(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
+                              const lv_area_t *src_coords, const lv_area_t *dst_coords,
+                              const lv_area_t *output_coords, lv_opa_t opa,
+                              lv_coord_t pivot_z, lv_coord_t src_z, uint16_t zoom, bool horizontal)
+{
+    const float fov = 40.0f;
+    lv_display_t *display = lv_display_get_default();
+    float dst_w = lv_display_get_horizontal_resolution(display);
+    float dst_h = lv_display_get_vertical_resolution(display);
+    float src_w = lv_area_get_width(src_coords);
+    float src_h = lv_area_get_height(src_coords);
+    lv_area_t clip;
+    if (!zoom || !lv_area_intersect(&clip, dst_coords, output_coords)) return;
+
+    float scale = sifli_get_perspective_scaling_factor(fov);
+    float distance = scale * LV_IMG_ZOOM_NONE / zoom;
+    float radius = LV_ABS(pivot_z - src_z) / dst_h * 2.0f;
+    sifli_matrix_4x4_t matrix;
+    sifli_identity_4x4(&matrix);
+    sifli_translate_4x4(0, 0, -distance, &matrix);
+
+    sifli_matrix_4x4_t rotation;
+    sifli_identity_4x4(&rotation);
+    sifli_translate_4x4(0, 0, -radius, &rotation);
+    if (horizontal)
+        sifli_rotate_y(-angle / 10.0f, &rotation);
+    else
+        sifli_rotate_x(-angle / 10.0f, &rotation);
+    sifli_translate_4x4(0, 0, radius, &rotation);
+    sifli_multiply_4x4(&matrix, &rotation);
+
+    float x = (dst_w - src_coords->x1 - src_coords->x2) / dst_h;
+    float y = (dst_h - src_coords->y1 - src_coords->y2) / dst_h;
+    float w = src_w / dst_h;
+    float h = src_h / dst_h;
+    sifli_quad_3d_t quad =
+    {
+        {x - w, y + h, 0}, {x - w, y - h, 0},
+        {x + w, y - h, 0}, {x + w, y + h, 0},
+    };
+    for (uint32_t i = 0; i < 4; i++)
+        sifli_mat_vertex_multiply_4x4(&matrix, &quad[i], &quad[i]);
+
+    sifli_matrix_3x3_t transform;
+    if (SIFLI_MATRIX_SUCCESS != sifli_get_texture_map_matrix(fov, src_w, src_h,
+            dst_w, dst_h, quad, &transform)) return;
+
+    EPIC_LayerConfigTypeDef layer;
+
+    HAL_EPIC_LayerConfigInit(&layer);
+    layer.data = (uint8_t *)src->data;
+    layer.color_mode = lv_img_2_epic_cf(src->header.cf);
+    layer.width = src->header.w;
+    layer.height = src->header.h;
+    layer.total_width = src->header.w;
+    layer.data_size = src->data_size;
+    layer.alpha = opa;
+    layer.transform_cfg.trans_matrix = &transform;
+
+    if (RT_EOK != lv_draw_epic_transform(lv_refr_get_disp_refreshing()->layer_head, &layer, NULL, &clip))
+        lv_async_call(invalidate_screen, NULL);
+}
+#endif /* DRV_EPIC_NEW_API && EPIC_SUPPORT_TRANS_MATRIX */
+
 void img_rotate_adv1(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                      const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
                      const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
                      lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
 {
+#if defined(DRV_EPIC_NEW_API) && defined(EPIC_SUPPORT_TRANS_MATRIX)
+    img_rotate_matrix(dest, src, angle, p_src_coords, p_dst_coords, p_output_coords,
+                      opa, pivot_z, src_z, src_zoom, false);
+#else
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 1);
+#endif
 }
 
 void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
@@ -230,12 +314,15 @@ void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                      const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
                      lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
 {
+#if defined(DRV_EPIC_NEW_API) && defined(EPIC_SUPPORT_TRANS_MATRIX)
+    img_rotate_matrix(dest, src, angle, p_src_coords, p_dst_coords, p_output_coords,
+                      opa, pivot_z, src_z, src_zoom, true);
+#else
     img_transform(dest, src, angle, p_src_coords, p_dst_coords,
                   p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
                   0, NULL, NULL, 2);
+#endif
 }
-
-#endif /* !DRV_EPIC_NEW_API: legacy transform API */
 
 extern void HAL_EPIC_Adv_Log(uint32_t level);
 void lv_gpu_adv_log(uint32_t level)
@@ -243,6 +330,7 @@ void lv_gpu_adv_log(uint32_t level)
     HAL_EPIC_Adv_Log(level);
 }
 
+#ifdef USING_EZIPA_DEC
 #ifdef RT_USING_PM
     #define GPU_DEVICE_START()   rt_pm_hw_device_start()
     #define GPU_DEVICE_STOP()     rt_pm_hw_device_stop()
@@ -300,5 +388,5 @@ int32_t gpu_ezipa_draw(ezipa_obj_t *obj, const lv_area_t *src_area, const lv_lay
     return r;
 }
 
-#endif /* USING_EAZIP_DEC */
+#endif /* USING_EZIPA_DEC */
 
