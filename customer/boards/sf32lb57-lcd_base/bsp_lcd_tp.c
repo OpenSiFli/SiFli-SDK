@@ -166,24 +166,22 @@ void BSP_LCD_PowerUp(void)
 
 #elif defined(BSP_LCDC_USING_QADSPI)
     /*
-     * QSPI routing of the sf32lb57-lcd devkit.
+     * QSPI routing of the sf32lb57-lcd devkit with the 57 QSPI ribbon.
      *
-     * The devkit shares its LCD connector with the sf32lb58-lcd devkit, so the
-     * panel signals come out on the pads that carry the same connector pin
-     * here. Each line below is verified against the DPI assignment above:
-     *   DIO0 PA39 (DPI G4)   DIO1 PA38 (DPI G3)   DIO2 PA37 (DPI G2)
-     *   DIO3 PA32 (DPI G0)   CLK  PA33 (DPI G1)   CS   PA31 (DPI R7)
-     *   TE   PA30 (DPI R6)
+     * DIO0..DIO2 use the pads shared with the DPI connector, while DIO3, CLK,
+     * CS and TE are routed on the pads of the dedicated 57 QSPI ribbon:
+     *   DIO0 PA39   DIO1 PA38   DIO2 PA37   DIO3 PA30
+     *   CLK  PA31 (12mA)       CS   PA29   TE   PA28
      * The panel reset is not a SoC pad, it is driven by the AW9523 (P1_7).
      */
     QSPI_PIN_Set(PAD_PA39, LCDC1_MATRIX_SPI_DIO0, PIN_NOPULL, 1);
     QSPI_PIN_Set(PAD_PA38, LCDC1_MATRIX_SPI_DIO1, PIN_NOPULL, 1);
     QSPI_PIN_Set(PAD_PA37, LCDC1_MATRIX_SPI_DIO2, PIN_NOPULL, 1);
-    QSPI_PIN_Set(PAD_PA32, LCDC1_MATRIX_SPI_DIO3, PIN_NOPULL, 1);
-    QSPI_PIN_Set(PAD_PA33, LCDC1_MATRIX_SPI_CLK,  PIN_NOPULL, 1);
-    HAL_PIN_SetDS(PAD_PA33, PIN_DS_12MA);
-    HAL_PIN_Set(PAD_PA31, LCDC1_MATRIX_SPI_CS,    PIN_NOPULL, 1);
-    HAL_PIN_Set(PAD_PA30, LCDC1_MATRIX_SPI_TE,    PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA30, LCDC1_MATRIX_SPI_DIO3, PIN_NOPULL, 1);
+    QSPI_PIN_Set(PAD_PA31, LCDC1_MATRIX_SPI_CLK,  PIN_NOPULL, 1);
+    HAL_PIN_SetDS(PAD_PA31, PIN_DS_12MA);
+    HAL_PIN_Set(PAD_PA29, LCDC1_MATRIX_SPI_CS,    PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA28, LCDC1_MATRIX_SPI_TE,    PIN_NOPULL, 1);
 
     HAL_PIN_Set(PAD_PA45, GPTIM2_CH2, PIN_NOPULL, 1);   // LCDC1_BL_PWM_CTRL, LCD backlight PWM (pwmt2 CH2)
 
