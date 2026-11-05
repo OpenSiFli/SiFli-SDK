@@ -655,7 +655,7 @@ class TestRunner:
             result.message = f"{type(exc).__name__}: {exc}"
         finally:
             # Before closing, because the transcript dies with the session.
-            self._capture_transcript(session, result)
+            self._capture_transcript(session, result, planned)
             if backend is not None:
                 self._close_session(backend, session, result)
             result.duration = time.time() - started
@@ -665,7 +665,9 @@ class TestRunner:
 
         return result
 
-    def _capture_transcript(self, session: Any, result: TestResult) -> None:
+    def _capture_transcript(
+        self, session: Any, result: TestResult, planned: "PlannedRun"
+    ) -> None:
         """Take the device's own account of the run, while it still exists.
 
         Kept separate from ``result.log`` rather than replacing it: neither is a
@@ -683,6 +685,42 @@ class TestRunner:
             return
         result.transcript = getattr(session, "transcript", "") or ""
         result.dropped = int(getattr(session, "dropped", 0) or 0)
+        self._capture_instrument_transcripts(session, result, planned)
+
+    def _capture_instrument_transcripts(
+        self, session: Any, result: TestResult, planned: "PlannedRun"
+    ) -> None:
+        """Capture each declared instrument's console, next to ``device.log``.
+
+        The test opens these streams itself (the agent owns the ports), so the
+        runner reads them back from zero before the testbed is released -- the
+        same moment and the same way the DUT's transcript is taken. A fixture
+        the test never opened answers with ``None`` and is skipped: a blank file
+        would claim a silent instrument.
+
+        Addressed by the declared spec only. The agent keys a stream by the
+        *connection's* spec, so a bare-name declaration still finds an instance
+        the lab pinned; falling back to the bare name here could instead read a
+        different instrument that happens to share it.
+        """
+        reader = getattr(session, "instrument_transcript", None)
+        if reader is None:
+            return
+        for fixture in planned.instance.fixtures:
+            try:
+                text = reader(fixture.spec)
+            except Exception as exc:  # noqa: BLE001 - evidence, not the verdict
+                # A transcript that could not be collected is recorded, not
+                # swallowed: the file is missing either way, but a warning in
+                # the runner log keeps that from reading as "the test opened no
+                # instrument". The verdict was settled before this ran, so it
+                # must not fail the case.
+                result.capture_warnings.append(
+                    f"{fixture.spec}: instrument transcript unavailable: {exc}"
+                )
+                continue
+            if text is not None:
+                result.instrument_logs[fixture.spec] = text
 
     def _write_instance_logs(
         self, planned: PlannedRun, result: TestResult, outcome: Any
@@ -701,6 +739,7 @@ class TestRunner:
                 result.transcript,
                 self._runner_log(planned, result, outcome),
                 build_output=result.build_output,
+                instrument_logs=result.instrument_logs,
             )
             result.out_dir = planned.out_dir
         except OSError as exc:
@@ -749,6 +788,14 @@ class TestRunner:
             lines.append(f"build log:  {len(result.build_output)} bytes, see build.log")
         lines.append("")
         lines.append(f"verdict: {result.message or '(none)'}")
+
+        # Evidence problems are reported next to the verdict, not instead of it:
+        # a green run whose instrument log could not be read back still needs
+        # the reader to know why the file is missing.
+        if result.capture_warnings:
+            lines.append("")
+            for warning in result.capture_warnings:
+                lines.append(f"warning: {warning}")
 
         failing = [case for case in result.cases if not case.passed]
         if result.cases:

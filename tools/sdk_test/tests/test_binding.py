@@ -225,6 +225,32 @@ class TestRunnerOwnedKeys(SdkTestCase):
         testbeds = binding.parse_binding(MINIMAL)
         self.assertEqual(testbeds[0].raw["console"]["port"], "COM13")
 
+    def test_a_connection_keeps_the_keys_the_agent_needs(self):
+        # An instrument's console lives on its connection, next to the fixture
+        # name. Parsing only fixture/pinmap/mux would drop it silently, and the
+        # agent would then report "no console configured" for a binding that
+        # plainly has one.
+        testbeds = binding.parse_binding(
+            {
+                "testbed": [
+                    {
+                        "id": "tb_01",
+                        "platform": "sf32lb52-lcd_n16r8",
+                        "connections": [
+                            {
+                                "fixture": "ble_peer",
+                                "console": {"port": "COM99", "baud": 1000000},
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+        connection = testbeds[0].connections[0]
+        self.assertEqual(connection.fixture.name, "ble_peer")
+        self.assertEqual(connection.options["console"]["port"], "COM99")
+        self.assertEqual(connection.options["console"]["baud"], 1000000)
+
 
 if __name__ == "__main__":
     unittest.main()

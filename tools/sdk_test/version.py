@@ -34,7 +34,13 @@ from typing import Optional
 #: on every hardware run and refuse to proceed when they disagree, because the
 #: alternative is a mismatch that shows up as a wrong result rather than an
 #: error.
-PROTOCOL = 1
+#:
+#: 2 -- instrument consoles. ``?stream=<fixture>`` on the console routes means
+#: "this other port", and an agent from before it ignores the parameter and
+#: serves the DUT's console instead: a suite would then drive the DUT as if it
+#: were the peer and record the wrong transcript. That is the silent-wrong-result
+#: case this number exists for.
+PROTOCOL = 2
 
 #: What a checkout with no git, or no repository, reports.
 UNKNOWN = "unknown"

@@ -243,6 +243,21 @@ class TestWiringAgainstFeatures(SdkTestCase):
             [],
             wiring_problems([make_testbed("tb_01", fixtures=["flash"])], []))
 
+    def test_an_instrument_console_is_not_a_bus_claim(self):
+        # `ble_peer:peer1` names the instrument, not an instance the board has
+        # to declare. Only bus-wired fixtures carry that obligation.
+        testbed = TestBed(
+            id="tb_01",
+            platform="board_a",
+            connections=[
+                Connection(
+                    fixture=parse_fixture_ref("ble_peer:peer1"),
+                    options={"console": {"port": "COM9"}},
+                )
+            ],
+        )
+        self.assertEqual([], wiring_problems([testbed], []))
+
     def test_every_testbed_gets_a_line(self):
         testbeds = [make_testbed("tb_01"), make_testbed("tb_02", platform="board_b")]
         message = explain_no_match(make_instance(platform_allow=["board_c"]), testbeds)

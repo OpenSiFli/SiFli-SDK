@@ -392,6 +392,21 @@ class TestJunitXml(SdkTestCase):
             ElementTree.tostring(from_dict), ElementTree.tostring(from_summary)
         )
 
+    def test_instrument_logs_are_named_but_not_inlined(self):
+        summary = report.RunSummary(started_at=0.0)
+        summary.add(
+            report.TestResult(
+                "a/peer",
+                report.PASSED,
+                instrument_logs={"ble_peer": "peer said a lot"},
+            )
+        )
+        document = report.summary_to_dict(summary)
+        suite = document["testsuites"][0]
+        self.assertEqual(suite["instrument_logs"], ["ble_peer.log"])
+        # The transcript lives in the file, not in the report.
+        self.assertNotIn("peer said a lot", json.dumps(document))
+
     def test_the_run_log_names_the_root_the_outdir_and_the_failures(self):
         summary = make_summary()
         summary.root = "example"
@@ -698,6 +713,61 @@ class TestTheTerminalCaseLine(SdkTestCase):
             ),
             "lz4.boundaries",
         )
+
+
+class TestInstanceLogs(SdkTestCase):
+    def test_an_instrument_log_sits_next_to_the_device_log(self):
+        out = os.path.join(self.root, "inst")
+        report.write_instance_logs(
+            out,
+            "dut says",
+            "runner says",
+            instrument_logs={"ble_peer": "peer says"},
+        )
+        with open(os.path.join(out, report.DEVICE_LOG), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), "dut says")
+        with open(os.path.join(out, "ble_peer.log"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), "peer says")
+
+    def test_a_pinned_fixture_spec_becomes_a_portable_file_name(self):
+        self.assertEqual(report.instrument_log_name("ble_peer:peer1"), "ble_peer-peer1.log")
+
+    def test_an_instrument_cannot_overwrite_a_layer_log(self):
+        self.assertEqual(report.instrument_log_name("device"), "instrument-device.log")
+        self.assertEqual(report.instrument_log_name("runner"), "instrument-runner.log")
+
+    def test_windows_device_names_are_not_used_as_files(self):
+        # `aux.log` is the AUX device on Windows, not a file: writing it either
+        # fails or goes into the device and loses the transcript.
+        for spec in ("aux", "CON", "com1", "lpt9"):
+            self.assertEqual(
+                report.instrument_log_name(spec), f"instrument-{spec}.log"
+            )
+
+    def test_case_insensitive_filesystems_get_two_files(self):
+        specs = ["Device", "device", "ble_peer:Peer1", "ble_peer:peer1"]
+        names = report.instrument_log_names(specs)
+        self.assertEqual(len({name.lower() for name in names.values()}), 4)
+        self.assertNotIn("device.log", [name.lower() for name in names.values()])
+
+    def test_two_specs_that_sanitize_alike_get_two_files(self):
+        # `ble_peer:peer1` and a fixture literally named `ble_peer-peer1` both
+        # sanitize to the same stem. One name each, or the second write would
+        # overwrite the first and the report would point both at one file.
+        specs = ["ble_peer:peer1", "ble_peer-peer1"]
+        names = report.instrument_log_names(specs)
+        self.assertEqual(len(set(names.values())), 2)
+
+        out = os.path.join(self.root, "inst")
+        report.write_instance_logs(
+            out,
+            "dut",
+            "runner",
+            instrument_logs={spec: f"transcript {index}" for index, spec in enumerate(specs)},
+        )
+        for index, spec in enumerate(specs):
+            with open(os.path.join(out, names[spec]), encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), f"transcript {index}")
 
 
 if __name__ == "__main__":

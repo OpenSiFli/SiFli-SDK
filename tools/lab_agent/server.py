@@ -23,10 +23,10 @@ Routes::
     POST /testbed/{id}/prepare         {firmware, reset}
     POST /testbed/{id}/reset
     POST /testbed/{id}/flash           {firmware}
-    POST /testbed/{id}/console/open
-    POST /testbed/{id}/console/close
-    GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS
-    POST /testbed/{id}/console/write   {data}
+    POST /testbed/{id}/console/open           [?stream=dut|ble_peer]
+    POST /testbed/{id}/console/close          [?stream=dut|ble_peer]
+    GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
+    POST /testbed/{id}/console/write   {data}   [?stream=dut|ble_peer]
 """
 
 from __future__ import annotations
@@ -43,6 +43,7 @@ from typing import Tuple
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+from sdk_test.errors import BindingError
 from sdk_test.errors import FirmwareError
 from sdk_test.firmware import MAX_TOTAL_BYTES
 
@@ -69,6 +70,10 @@ _ERROR_STATUS = {
     # it was built and packed elsewhere. 400 rather than 5xx so a caller goes
     # looking at its own build step instead of at the bench.
     FirmwareError: 400,
+    # A fixture spec the caller wrote cannot be parsed. It reaches this layer on
+    # several paths -- an allocation's `fixtures`, a console stream name -- and
+    # is always the sender's mistake, so it must not surface as a 500.
+    BindingError: 400,
     # Least specific, so it must be checked last: a plain LabAgentError is a
     # malformed request (bad JSON, a body that is not an object), which is the
     # client's fault, not the agent's. Reporting it as 500 would make a caller's
@@ -169,7 +174,9 @@ class _Handler(BaseHTTPRequestHandler):
     def _handle(self, method: str) -> None:
         parsed = urlparse(self.path)
         segments = [segment for segment in parsed.path.split("/") if segment]
-        query = parse_qs(parsed.query)
+        # Blank values are kept so `?stream=` is a visible mistake (a 400 below)
+        # rather than silently falling back to the DUT's console.
+        query = parse_qs(parsed.query, keep_blank_values=True)
 
         try:
             status, payload = self._dispatch(method, segments, query)
@@ -322,17 +329,31 @@ class _Handler(BaseHTTPRequestHandler):
     def _dispatch_console(
         self, method: str, runtime, testbed_id: str, action: str, query: Dict[str, list]
     ) -> Tuple[int, Any]:
+        # One console per DUT, plus one per instrument fixture the allocation
+        # asked for. `stream` names which; the default keeps every existing
+        # caller and URL unchanged.
+        stream = (query.get("stream") or ["dut"])[0]
+        if not stream:
+            return 400, {"error": '"stream" must not be empty'}
+        instrument = stream != "dut"
+
         if action == "open":
             if method != "POST":
                 return 405, {"error": "POST only"}
-            runtime.console_open()
-            return 200, {"console_open": True, "testbed_id": testbed_id}
+            if instrument:
+                runtime.fixture_console_open(stream)
+            else:
+                runtime.console_open()
+            return 200, {"console_open": True, "testbed_id": testbed_id, "stream": stream}
 
         if action == "close":
             if method != "POST":
                 return 405, {"error": "POST only"}
-            runtime.console_close()
-            return 200, {"console_open": False, "testbed_id": testbed_id}
+            if instrument:
+                runtime.fixture_console_close(stream)
+            else:
+                runtime.console_close()
+            return 200, {"console_open": False, "testbed_id": testbed_id, "stream": stream}
 
         if action == "read":
             if method != "GET":
@@ -342,7 +363,10 @@ class _Handler(BaseHTTPRequestHandler):
             if timeout < 0:
                 return 400, {"error": '"timeout" must not be negative'}
             timeout = min(timeout, MAX_READ_TIMEOUT)
-            data, new_cursor = runtime.console_read(cursor, timeout)
+            if instrument:
+                data, new_cursor = runtime.fixture_console_read(stream, cursor, timeout)
+            else:
+                data, new_cursor = runtime.console_read(cursor, timeout)
             return 200, {"data": data, "cursor": new_cursor}
 
         if action == "write":
@@ -351,7 +375,10 @@ class _Handler(BaseHTTPRequestHandler):
             data = self._read_body().get("data")
             if data is None:
                 return 400, {"error": '"data" is required'}
-            runtime.console_write(str(data))
+            if instrument:
+                runtime.fixture_console_write(stream, str(data))
+            else:
+                runtime.console_write(str(data))
             return 200, {"written": len(str(data))}
 
         return 404, {"error": f"No such console action: {action}"}

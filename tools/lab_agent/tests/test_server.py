@@ -25,12 +25,19 @@ class ServerTestCase(LabTestCase):
 
     #: Transcript the fake console replays.
     script = ""
+    #: Transcript the fake instrument console replays, if the config has one.
+    fixture_script = ""
     #: Runner config the agent is built from; override for a different lab.
     config_yaml = CONFIG_YAML
 
     def setUp(self):
         super().setUp()
-        self.manager = self.make_manager(self.config_yaml, script=self.script, chunk=1)
+        self.manager = self.make_manager(
+            self.config_yaml,
+            script=self.script,
+            chunk=1,
+            fixture_script=self.fixture_script,
+        )
         self.manager.config.settings.host = "127.0.0.1"
         self.manager.config.settings.port = 0  # let the OS choose
         self.server = LabAgentServer(self.manager)
@@ -213,6 +220,126 @@ class TestConsoleOverHttp(ServerTestCase):
         status, payload = self.request("POST", "/testbed/tb_01/console/write", {})
         self.assertEqual(status, 400)
         self.assertIn("data", payload["error"])
+
+
+class TestInstrumentConsoleOverHttp(ServerTestCase):
+    """The same console routes, addressed with ``stream=<fixture>``.
+
+    An instrument is a second physical port on the testbed, so it is a second
+    stream rather than a second testbed: one allocation, two consoles, and the
+    default (``stream`` omitted) still means the DUT.
+    """
+
+    config_yaml = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_peer
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM13
+        connections:
+          - fixture: ble_peer
+            console:
+              port: COM99
+              baud: 1000000
+    """
+    fixture_script = "msh />\r\n"
+
+    def allocate_peer(self):
+        status, payload = self.request(
+            "POST", "/allocate", {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+        )
+        self.assertEqual(status, 200)
+        return payload["testbed_id"]
+
+    def test_the_instrument_stream_is_independent_of_the_dut_stream(self):
+        testbed = self.allocate_peer()
+        # Open the DUT console too, so "the instrument write never reached it"
+        # is checked against a real, open transport rather than a missing one.
+        self.request("POST", f"/testbed/{testbed}/console/open")
+
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/console/open?stream=ble_peer"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["stream"], "ble_peer")
+
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/console/read?stream=ble_peer&cursor=0&timeout=2"
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("msh", payload["data"])
+
+        status, _ = self.request(
+            "POST", f"/testbed/{testbed}/console/write?stream=ble_peer", {"data": "diss help\r\n"}
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("diss help", self.manager.fixture_transports["ble_peer"].sent)
+        # The DUT console was never written to.
+        self.assertEqual(self.manager.transports["tb_peer"].sent, "")
+
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/console/close?stream=ble_peer"
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(payload["console_open"])
+        self.assertEqual(self.manager.fixture_transports["ble_peer"].closed, 1)
+
+    def test_an_instrument_the_allocation_did_not_ask_for_is_refused(self):
+        status, payload = self.request(
+            "POST", "/allocate", {"testbed_id": "tb_peer"}
+        )
+        self.assertEqual(status, 200)
+        testbed = payload["testbed_id"]
+
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/console/open?stream=ble_peer"
+        )
+        self.assertEqual(status, 409)
+        self.assertIn("not requested", payload["error"])
+
+    def test_an_empty_stream_name_is_a_400(self):
+        self.allocate_peer()
+        status, payload = self.request("POST", "/testbed/tb_peer/console/open?stream=")
+        self.assertEqual(status, 400)
+        self.assertIn("stream", payload["error"])
+
+    def test_a_malformed_stream_name_is_a_400(self):
+        # `parse_fixture_ref` raises BindingError for a name with no fixture
+        # part. It used to fall through to a 500 and a server stack trace.
+        self.allocate_peer()
+        status, payload = self.request(
+            "POST", "/testbed/tb_peer/console/open?stream=%3Apeer1"
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("not a fixture name", payload["error"])
+
+    def test_a_malformed_fixture_in_an_allocation_is_a_400(self):
+        # The unpinned path parses the request's fixtures during selection; a
+        # bad spec there is the caller's mistake, not a lab failure.
+        status, payload = self.request(
+            "POST",
+            "/allocate",
+            {"platform": "sf32lb52-lcd_n16r8", "fixtures": [":bogus"]},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("bogus", payload["error"])
+
+    def test_a_malformed_requested_fixture_reaches_open_as_a_400(self):
+        status, _ = self.request(
+            "POST", "/allocate", {"testbed_id": "tb_peer", "fixtures": [":bogus"]}
+        )
+        self.assertEqual(status, 200)
+        status, payload = self.request(
+            "POST", "/testbed/tb_peer/console/open?stream=ble_peer"
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("bogus", payload["error"])
 
 
 class TestPreparationOverHttp(ServerTestCase):

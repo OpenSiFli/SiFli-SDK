@@ -113,6 +113,12 @@ test-out/                        ← --outdir，默认落在你执行 sdk.py 的
     runner.log                   run 级：这次跑成什么样、跑在什么之上
     sifli.json                   主文档
     sifli.xml                    JUnit，从 JSON 派生
+    sf32lb52-lcd_a128r16/
+      ble_central_and_peripheral.peer/
+        build.log                编译器原文（--no-build 时没有这个文件）
+        device.log               设备原文，含启动 banner
+        ble_peer.log             用例驱动的仪表原文（仅在用例打开过时）
+        runner.log               该实例的记录
     qemu_sf32lb52x/
       hal_mock.spi_flash_status/
         build.log                编译器原文（--no-build 时没有这个文件）
@@ -129,12 +135,13 @@ test-out/                        ← --outdir，默认落在你执行 sdk.py 的
 而真想看它的时刻（构建失败）恰恰是它已经滚过去的时候。所以默认只打一行
 `[build] <id> for <board>`，全文进文件。
 
-三个文件各管什么、什么时候看哪个：
+这些文件各管什么、什么时候看哪个：
 
 | 文件 | 回答的问题 |
 |---|---|
 | `build.log` | **编译器说了什么**。构建失败时唯一有答案的地方——退出码 2 看不出是缺头文件还是类型错 |
 | `device.log` | **设备到底说了什么**。逐字节原文，无表头无分隔线，能 `diff`、能 `grep`、能原样贴工单 |
+| `<fixture>.log` | **仪表说了什么**（`ble_peer.log`）。另一个射频的原文，和 device.log 同目录；用例没声明仪表时没有这个文件 |
 | 实例 `runner.log` | **harness 据此怎么判的**：裁决、逐条用例表、harness 原文，外加"串口保留了多少、有没有被截断" |
 | run 级 `runner.log` | **这次跑成什么样**：发现/运行数、过滤掉哪些及原因、时间与环境 |
 
@@ -611,6 +618,94 @@ def test_the_console_is_bidirectional(dut):
 > `pytest` 不是框架的硬依赖：`console` 和 `unity` 以及框架自身的测试都是纯标准库。
 > 装了 `install.ps1` 才会有 pytest（它已在 `tools/locks/default` 里）。
 
+### 对端仪表：把第二块板子当 BLE 对端 {#peer-instrument}
+
+有些用例需要第二个射频：连接、服务发现、读写、通知。框架把那块板建模成**仪表**，而不是第二个 `dut`：
+
+- 它不是 testbed——框架既不编译它、也不烧录它、也不复位它；
+- 它跑一份**固定固件**，由实验室烧一次；
+- 它在 binding 里和 DUT 一起声明；
+- 测试通过它自己的控制台驱动它。
+
+**固件用哪个工程编。** 第一个使用者是 `example/ble/central_and_peripheral`：仪表跑同一个例程，用
+`example/ble/central_and_peripheral/project/hcpu` 这个工程、按仪表自己的板子编译：
+
+```
+cd example/ble/central_and_peripheral/project/hcpu
+scons --board=<对端板名> -j8
+```
+
+然后用 `build_<board>_hcpu/download.bat`（52x 是 `uart_download.bat`）**烧一次**，作为实验室的固定设备。
+它的 `diss` 命令就是仪表的协议；用例既不编译也不烧录它。
+
+**binding。** 仪表是 DUT 所在 testbed 上的一条 connection，带自己的串口：
+
+```yaml
+testbed:
+  - id: sf32lb52-lcd_a128r16_01
+    platform: sf32lb52-lcd_a128r16
+    console: {port: COM5, baud: 1000000}
+    connections:
+      - fixture: ble_peer
+        console: {port: COM9, baud: 1000000}   # 仪表自己的 UART
+```
+
+仪表的端口只写在这里，用例仍然只写 `ble_peer`。
+
+**testcase。** 像其它 fixture 一样声明需求，并单独占一个条目，这样没有仪表的实验室仍能跑其它用例：
+
+```yaml
+  - id: ble_central_and_peripheral.peer
+    harness: pytest
+    tags: [pytest, ble, peer]
+    harness_config:
+      fixture: ble_peer
+      pytest_root: pytest_peer
+```
+
+这样分配只会在提供 `ble_peer` 的 testbed 上成功；实验室没有仪表时，这一条在 open 阶段记为错误，其余用例照跑。
+
+**套件。** `ble_peer` fixture 返回一个 `BlePeer`，它讲仪表固件那套 `diss` 命令。
+连接放在 session 作用域的 fixture 里而不是一条测试里，这样任何需要链路
+的用例都能单独跑（`pytest -k gatt`）：
+
+```python
+@pytest.fixture(scope="session")
+def connected_peer(dut, ble_peer):
+    ble_peer.expect_shell()                        # 仪表上确实是这份固件
+    ble_peer.connect(ble_peer.strongest(ble_peer.scan()))   # 扫描，RSSI 最强在前
+    dut.expect(r"Peer device\(role:\d+\).* connected as deivce 0", timeout=30)
+    return ble_peer
+
+def test_gatt(connected_peer):
+    listing = connected_peer.search_service()      # 128 位服务 -> 句柄
+    connected_peer.write_value(listing.value_handle(), b"\x22\x00\x00\x00")
+    assert connected_peer.read_value(listing.value_handle()) == b"\x22\x00\x00\x00"
+```
+
+`scan / strongest / connect / search_service / read_value / write_value / subscribe / wait_notification`
+负责解析仪表的输出（包括 hexdump），BLE 用例不必各写一遍。对端是 **session** fixture，它的游标和 `dut` 一样只前进。
+
+随仓库的 `example/ble/central_and_peripheral/pytest_peer/` 套件则是按顺序写成一串测试、并在文件开头声明了这一点——
+一条线性场景这样读更顺。上面 `connected_peer` 的写法是"某条用例必须能单独跑"时才需要的。
+
+用例用了 `ble_peer` 却没有在 testcase 里声明 `fixture: ble_peer` 时，fixture 会 **skip** 并说明原因——
+那是漏声明，不是测试失败。
+
+**仪表的日志也会留下。** 用例结束时，runner 会在释放 testbed 之前把测试打开过的每个仪表控制台读回来，
+和 `device.log` 写在同一个目录，文件名为 `<fixture>.log`（这里是 `ble_peer.log`；pinned 的 spec 会把参数
+保留在文件名里，`ble_peer:peer1` → `ble_peer-peer1.log`）。这样双射频的问题
+可以两边对照着看，而不是只读一边对另一边的转述。用例没打开过的流不产生文件——空文件会被读成"仪表没说话"。
+
+**需要知道的约束：**
+
+- 仪表控制台在 **agent 那台机器**上打开（端口写在 binding 里），所以 agent 可以远程。
+- 用例按 **RSSI 最强**选广播，因为 agent 不知道 DUT 的蓝牙地址。请把仪表放在 DUT 旁边；
+  一旦连到别的板，失败会出现在 DUT 侧的 `connected` 断言上，而不是静默通过。
+- 裸名 `ble_peer` 必须唯一对应一台仪表。一个 testbed 可以挂多台：在 testcase 里写完整 spec
+  （`harness_config.fixture: ble_peer:peer1`）指定用哪一台，fixture 就打开那一个实例。
+- 框架不复位仪表。两次运行之间的恢复是实验室的事（断电重上），或者靠 DUT 自己复位把链路断掉。
+
 ### 负向验证：提交前必做
 
 一个过于宽松的用例，在正常设备上同样会 PASS，所以“上板跑绿”不能证明断言是对的。
@@ -996,6 +1091,8 @@ testbed:
       - fixture: spi_nor_flash:spi1
         pinmap:
           - {pin: PA00, signal: CS}
+      - fixture: ble_peer              # 仪表，不是 testbed：见第 6 节
+        console: {port: COM9, baud: 1000000}
 ```
 
 **板子能做什么不写在这里。** `depends_on` 匹配的是**板子自己的声明**——

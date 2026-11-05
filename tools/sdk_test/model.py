@@ -61,6 +61,14 @@ class Connection:
     fixture: FixtureRef
     pinmap: List[Dict[str, str]] = field(default_factory=list)
     mux: Optional[str] = None
+    options: Dict[str, Any] = field(default_factory=dict)
+    """The connection entry's other keys, kept verbatim.
+
+    Same rule as :attr:`TestBed.raw`: which keys a driver needs is the driver's
+    business, and parsing them here would be a second schema to keep in step.
+    An active fixture such as a peer board keeps its own console here, e.g.
+    ``console: {port: COM9, baud: 1000000}``.
+    """
 
 
 @dataclass

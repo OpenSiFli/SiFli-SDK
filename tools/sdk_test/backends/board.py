@@ -29,6 +29,7 @@ from ..agent_client import LabAgentClient
 from ..agent_client import RemoteConsole
 from ..agent_client import require_testbed
 from ..errors import BackendError
+from ..errors import LabAgentError
 from ..firmware import build_package
 from ..model import TestInstance
 from ..platforms import jlink_device
@@ -100,6 +101,27 @@ class BoardSession:
         if self._transcript is None:
             _ = self.transcript
         return self._dropped
+
+    def instrument_transcript(self, stream: str) -> Optional[str]:
+        """What an instrument console said, or ``None`` if it was never opened.
+
+        The same read-from-zero the DUT's transcript uses, on a sibling stream:
+        the agent keeps each instrument's console separately, and it closes them
+        with the testbed, so this is answerable only while the session is open.
+
+        ``None`` only for the agent's "this console is not open" (409): "the
+        test never opened it" must not be written out as an empty log, and it
+        must not be confused with a failure to collect evidence either -- that
+        is raised, so the caller can record it instead of silently losing the
+        transcript.
+        """
+        try:
+            data, _end = self.console.for_stream(stream).read_from(0, 0.0)
+        except LabAgentError as exc:
+            if exc.status == 409:
+                return None
+            raise
+        return data
 
     def close(self) -> None:
         """Close the console and give the testbed back.

@@ -73,7 +73,8 @@ class LabAgentClient:
             except (ValueError, OSError):
                 detail = error.reason or ""
             raise LabAgentError(
-                f"{method} {path} failed ({error.code}): {detail or error.reason}"
+                f"{method} {path} failed ({error.code}): {detail or error.reason}",
+                status=error.code,
             ) from error
         except urllib.error.URLError as error:
             raise LabAgentError(
@@ -176,16 +177,34 @@ class LabAgentClient:
 
     # -- console -------------------------------------------------------------
 
-    def console_open(self, testbed_id: str) -> None:
-        self._request("POST", f"/testbed/{_quote(testbed_id)}/console/open")
+    # `stream` names which console on the testbed: "dut" (the default, so every
+    # existing caller is unchanged) or the name of an instrument fixture the
+    # allocation declared. An instrument is not a testbed -- it has no build,
+    # no flash and no reset -- so it gets a stream, not an allocation of its own.
 
-    def console_close(self, testbed_id: str) -> None:
-        self._request("POST", f"/testbed/{_quote(testbed_id)}/console/close")
+    @staticmethod
+    def _stream_query(stream: str) -> str:
+        return "" if stream == "dut" else "?" + urllib.parse.urlencode({"stream": stream})
+
+    def console_open(self, testbed_id: str, stream: str = "dut") -> None:
+        self._request(
+            "POST",
+            f"/testbed/{_quote(testbed_id)}/console/open{self._stream_query(stream)}",
+        )
+
+    def console_close(self, testbed_id: str, stream: str = "dut") -> None:
+        self._request(
+            "POST",
+            f"/testbed/{_quote(testbed_id)}/console/close{self._stream_query(stream)}",
+        )
 
     def console_read(
-        self, testbed_id: str, cursor: int, timeout: float
+        self, testbed_id: str, cursor: int, timeout: float, stream: str = "dut"
     ) -> Tuple[str, int]:
-        query = urllib.parse.urlencode({"cursor": int(cursor), "timeout": float(timeout)})
+        fields = {"cursor": int(cursor), "timeout": float(timeout)}
+        if stream != "dut":
+            fields["stream"] = stream
+        query = urllib.parse.urlencode(fields)
         payload = self._request(
             "GET",
             f"/testbed/{_quote(testbed_id)}/console/read?{query}",
@@ -195,15 +214,17 @@ class LabAgentClient:
         )
         return str(payload.get("data", "")), int(payload.get("cursor", cursor))
 
-    def console_write(self, testbed_id: str, data: str) -> None:
+    def console_write(self, testbed_id: str, data: str, stream: str = "dut") -> None:
         self._request(
-            "POST", f"/testbed/{_quote(testbed_id)}/console/write", {"data": data}
+            "POST",
+            f"/testbed/{_quote(testbed_id)}/console/write{self._stream_query(stream)}",
+            {"data": data},
         )
 
     # -- convenience ---------------------------------------------------------
 
-    def console_for(self, testbed_id: str) -> "RemoteConsole":
-        return RemoteConsole(self, testbed_id)
+    def console_for(self, testbed_id: str, stream: str = "dut") -> "RemoteConsole":
+        return RemoteConsole(self, testbed_id, stream)
 
 
 def _quote(value: str) -> str:
@@ -218,9 +239,15 @@ class RemoteConsole:
     of one read -- the next call resumes exactly where the last one stopped.
     """
 
-    def __init__(self, client: LabAgentClient, testbed_id: str) -> None:
+    def __init__(
+        self, client: LabAgentClient, testbed_id: str, stream: str = "dut"
+    ) -> None:
         self._client = client
         self.testbed_id = testbed_id
+        #: "dut" for the board under test, or the name of an instrument fixture
+        #: the allocation declared. The cursor semantics are identical; only
+        #: which physical port the agent reads differs.
+        self.stream = stream
         self._cursor = 0
 
     @property
@@ -231,16 +258,38 @@ class RemoteConsole:
     def read(self, timeout: float = 1.0) -> str:
         """Return text received after the last read; ``""`` if nothing arrived."""
         data, self._cursor = self._client.console_read(
-            self.testbed_id, self._cursor, timeout
+            self.testbed_id, self._cursor, timeout, stream=self.stream
         )
         return data
 
     def read_from(self, cursor: int, timeout: float = 1.0) -> Tuple[str, int]:
         """Return text after an explicit cursor without disturbing :meth:`read`."""
-        return self._client.console_read(self.testbed_id, cursor, timeout)
+        return self._client.console_read(
+            self.testbed_id, cursor, timeout, stream=self.stream
+        )
 
     def write(self, data: str) -> None:
-        self._client.console_write(self.testbed_id, data)
+        self._client.console_write(self.testbed_id, data, stream=self.stream)
+
+    def open(self) -> None:
+        """Open the stream on the agent. The DUT's is opened by the runner."""
+        self._client.console_open(self.testbed_id, stream=self.stream)
+
+    def close(self) -> None:
+        self._client.console_close(self.testbed_id, stream=self.stream)
+        # The agent drops the stream on close; a later open() creates a new one
+        # whose cursor starts at 0. Keeping the old cursor here would make the
+        # first read after reopening skip everything the new stream already
+        # held, which reads as a device that went quiet.
+        self._cursor = 0
+
+    def for_stream(self, stream: str) -> "RemoteConsole":
+        """Another console on the same testbed, with its own cursor.
+
+        Used to read an instrument's retained transcript without disturbing the
+        cursor of the console a harness is still reading through.
+        """
+        return RemoteConsole(self._client, self.testbed_id, stream)
 
     def send_line(self, line: str) -> None:
         self.write(line + "\r\n")
@@ -256,7 +305,9 @@ class RemoteConsole:
     def skip_to_end(self) -> int:
         """Advance the cursor past everything buffered, and return it."""
         while True:
-            data, cursor = self._client.console_read(self.testbed_id, self._cursor, 0.0)
+            data, cursor = self._client.console_read(
+                self.testbed_id, self._cursor, 0.0, stream=self.stream
+            )
             if cursor <= self._cursor:
                 # Either the stream is drained, or the agent is not honouring
                 # the cursor it was given. Stop either way: blindly looping

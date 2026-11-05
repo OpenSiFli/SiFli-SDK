@@ -46,11 +46,17 @@ POST /testbed/{id}/firmware        body = a firmware package (tar)
 POST /testbed/{id}/prepare         {firmware, reset}
 POST /testbed/{id}/reset
 POST /testbed/{id}/flash           {firmware}
-POST /testbed/{id}/console/open
-POST /testbed/{id}/console/close
-GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS
-POST /testbed/{id}/console/write   {data}
+POST /testbed/{id}/console/open           [?stream=dut|ble_peer]
+POST /testbed/{id}/console/close          [?stream=dut|ble_peer]
+GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
+POST /testbed/{id}/console/write   {data}   [?stream=dut|ble_peer]
 ```
+
+`stream` names which console on the testbed: `dut` (the default, so existing
+callers are unchanged) or a fixture the allocation declared. A fixture with a
+`console:` entry in its connection is an **instrument** — a peer board, say —
+with its own port, no build and no flash; the agent opens and closes that stream
+with the testbed, and only for a fixture the allocation asked for.
 
 `firmware` is the digest the upload answered with, not a path: the package is
 unpacked under its own name and flashed from there, so this machine never needs
@@ -94,4 +100,6 @@ python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"   # 105 个�
 
 - `transport/relay.py` 只有接口（`SwitchReset.exe` 不在仓库里，在 Jenkins 上）。
 - `fixture_drivers/` 只有 passive 驱动 + 注册接口；active 驱动（对端板、手机、仪器）未实现。
+  仪表目前走的是"带控制台的 fixture"这条更窄的路：`TestBedRuntime` 按 fixture 维护独立的
+  `ConsoleStream`（路由参数 `stream=`），由 pytest 侧驱动，不走 driver 接口。
 - 控制平面 / dashboard / 跨机调度未实现（MVP 是单机 runner + 手工 binding）。

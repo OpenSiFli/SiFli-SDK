@@ -177,6 +177,13 @@ def wiring_problems(testbeds: Iterable[TestBed],
     problems: List[str] = []
     for testbed in testbeds:
         for connection in testbed.connections:
+            if connection.options.get("console"):
+                # An instrument with its own console is not wired to a board
+                # bus: its parameter names the instrument (``ble_peer:peer1``),
+                # not an instance the platform has to declare. Treating it as a
+                # bus would reject a perfectly good binding on any board that
+                # ships a features.yaml.
+                continue
             bus = connection.fixture.param
             if not bus:
                 continue

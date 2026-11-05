@@ -9,20 +9,98 @@ diagnose after the fact, so it is enforced here rather than trusted to callers.
 
 from __future__ import annotations
 
+import threading
 import unittest
 from unittest import mock
 
 from _support import CONFIG_YAML  # noqa: F401  (also fixes sys.path)
+from _support import FakeJLink
+from _support import FakeSerialTransport
 from _support import LabTestCase
 
 from lab_agent import testbed as testbed_module
 from lab_agent.errors import AllocationError
+from lab_agent.errors import LabAgentError
 from lab_agent.errors import RelayNotAvailable
 from lab_agent.errors import TestbedError
+from lab_agent.testbed import LabManager
 from lab_agent.testbed import allocate_request_from_mapping
 
 
+class _SlowCloseTransport(FakeSerialTransport):
+    """A port whose close blocks, so a concurrent reopen can be observed."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.closing = threading.Event()
+        self.allow_close = threading.Event()
+
+    def close(self) -> None:
+        self.closing.set()
+        self.allow_close.wait(5)
+        super().close()
+
+
 class TestAllocation(LabTestCase):
+    TWO_PEERS_CONFIG = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_a
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM13
+        connections:
+          - fixture: ble_peer
+            console:
+              port: COM99
+
+      - id: tb_b
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM14
+        connections:
+          - fixture: ble_peer
+            console:
+              port: COM98
+    """
+
+    def test_a_releasing_testbed_is_skipped_by_selection(self):
+        # A board being torn down is not free: its per-claim state is still
+        # being cleared. Selection must pick another candidate instead of the
+        # releasing one and then failing the allocation.
+        manager = self.make_manager(self.TWO_PEERS_CONFIG)
+        first = manager.allocate(
+            allocate_request_from_mapping({"testbed_id": "tb_a"})
+        )
+        entered = threading.Event()
+        finish = threading.Event()
+        original = first._teardown
+
+        def slow_teardown():
+            entered.set()
+            finish.wait(5)
+            original()
+
+        first._teardown = slow_teardown  # type: ignore[method-assign]
+        release = threading.Thread(target=manager.release, args=("tb_a",))
+        release.start()
+        try:
+            self.assertTrue(entered.wait(2), "release never reached teardown")
+            chosen = manager.allocate(
+                allocate_request_from_mapping(
+                    {"platform": "sf32lb52-lcd_n16r8", "fixtures": ["ble_peer"]}
+                )
+            )
+            self.assertEqual(chosen.testbed.id, "tb_b")
+        finally:
+            finish.set()
+            release.join(5)
+
     def test_a_testbed_has_exactly_one_holder(self):
         manager = self.make_manager()
         runtime = manager.allocate(
@@ -616,6 +694,292 @@ class TestDescribe(LabTestCase):
         manager.allocate(allocate_request_from_mapping({"testbed_id": "tb_02"}))
         manager.shutdown()
         self.assertFalse(any(item["busy"] for item in manager.list()))
+
+
+class TestInstrumentConsoles(LabTestCase):
+    """A fixture with a console is an instrument the test may drive.
+
+    It is not a testbed: nothing is built or flashed for it, and it is opened
+    only when the allocation asked for that fixture -- the alternative is a test
+    quietly driving hardware it never declared.
+    """
+
+    PEER_CONFIG = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_peer
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM13
+        connections:
+          - fixture: ble_peer
+            console:
+              port: COM99
+              baud: 1000000
+
+      - id: tb_peer_no_console
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM14
+        connections:
+          - fixture: ble_peer
+    """
+
+    PINNED_CONFIG = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_peer
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM13
+        connections:
+          - fixture: ble_peer:peer1
+            console:
+              port: COM99
+              baud: 1000000
+    """
+
+    def test_two_spellings_of_one_instrument_share_one_stream(self):
+        # The bare name and the pinned instance are the same physical port.
+        # Opening both would put two pump threads on one serial port, splitting
+        # or dropping bytes between them.
+        manager = self.make_manager(self.PINNED_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        runtime.fixture_console_open("ble_peer")
+        runtime.fixture_console_open("ble_peer:peer1")
+
+        self.assertEqual(runtime.describe()["fixture_consoles"], ["ble_peer:peer1"])
+        self.assertEqual(len(manager.fixture_transports), 1)
+
+        # And closing by either spelling closes that one stream.
+        runtime.fixture_console_close("ble_peer")
+        self.assertEqual(manager.fixture_transports["ble_peer:peer1"].closed, 1)
+
+    def test_a_pinned_instance_that_does_not_exist_is_not_substituted(self):
+        # `ble_peer:peer2` must not reach peer1 because they share a name: a
+        # pinned spec is a claim about which instance, and silently choosing
+        # another would drive the wrong instrument.
+        manager = self.make_manager(self.PINNED_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_open("ble_peer:peer2")
+        message = str(caught.exception)
+        self.assertIn("ble_peer:peer2", message)
+        self.assertIn("ble_peer:peer1", message)  # says what does exist
+
+    def test_an_instrument_cannot_be_opened_after_the_testbed_was_released(self):
+        # The HTTP server answers on a thread per request, so an open can
+        # arrive after the release it raced with; it must be refused rather
+        # than leave a port open on a testbed nobody owns.
+        manager = self.make_manager(self.PINNED_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        manager.release("tb_peer")
+
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_open("ble_peer")
+        self.assertIn("not allocated", str(caught.exception))
+
+    def test_a_new_claim_waits_for_the_previous_release_to_finish(self):
+        # The holder is cleared before teardown, so a claim that arrives during
+        # teardown would have its own requested-fixtures/firmware wiped by the
+        # old one's cleanup. Allocation is refused until the release settles.
+        manager = self.make_manager(self.PINNED_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping({"testbed_id": "tb_peer"})
+        )
+        entered = threading.Event()
+        finish = threading.Event()
+        original = runtime._teardown
+
+        def slow_teardown():
+            entered.set()
+            finish.wait(5)
+            original()
+
+        runtime._teardown = slow_teardown  # type: ignore[method-assign]
+        release = threading.Thread(target=manager.release, args=("tb_peer",))
+        release.start()
+        try:
+            self.assertTrue(entered.wait(2), "release never reached teardown")
+            with self.assertRaises(AllocationError) as caught:
+                manager.allocate(
+                    allocate_request_from_mapping({"testbed_id": "tb_peer"})
+                )
+            self.assertIn("still being released", str(caught.exception))
+        finally:
+            finish.set()
+            release.join(5)
+
+        claimed = manager.allocate(
+            allocate_request_from_mapping({"testbed_id": "tb_peer"})
+        )
+        self.assertTrue(claimed.busy)
+
+    def test_a_malformed_instrument_name_is_the_callers_error(self):
+        # `parse_fixture_ref(":peer1")` raises BindingError, which the server
+        # does not map: it would surface as a 500 and a server stack trace.
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        with self.assertRaises(LabAgentError) as caught:
+            runtime.fixture_console_open(":peer1")
+        self.assertIn("not a fixture name", str(caught.exception))
+
+    def test_reopening_waits_until_the_old_port_is_closed(self):
+        # ConsoleStream.stop() closes the port last; a reopen that slipped in
+        # after the map entry was removed would find the port still busy.
+        transports = []
+        created = threading.Event()
+
+        def factory(testbed, connection):
+            transport = _SlowCloseTransport()
+            transports.append(transport)
+            created.set()
+            return transport
+
+        manager = LabManager(
+            self.make_config(self.PINNED_CONFIG),
+            sdk_root=self.root,
+            console_factory=lambda tb: FakeSerialTransport(),
+            jlink_factory=lambda tb, settings: FakeJLink(),
+            fixture_console_factory=factory,
+        )
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        runtime.fixture_console_open("ble_peer")
+        created.clear()
+
+        closing = threading.Thread(
+            target=runtime.fixture_console_close, args=("ble_peer",)
+        )
+        opening = threading.Thread(
+            target=runtime.fixture_console_open, args=("ble_peer",)
+        )
+        closing.start()
+        try:
+            self.assertTrue(transports[0].closing.wait(2), "close never started")
+            opening.start()
+            opening.join(0.2)
+            self.assertTrue(
+                opening.is_alive(),
+                "a reopen must wait until the old stream has released the port",
+            )
+            self.assertFalse(
+                created.is_set(),
+                "the reopen built a transport while the old port was still closing",
+            )
+        finally:
+            transports[0].allow_close.set()
+            closing.join(5)
+            if opening.ident is not None:
+                opening.join(5)
+
+        self.assertFalse(opening.is_alive())
+        self.assertTrue(created.is_set())
+        self.assertEqual(len(transports), 2)
+
+    def test_the_stream_is_refused_until_the_allocation_declares_it(self):
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping({"testbed_id": "tb_peer"})
+        )
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_open("ble_peer")
+        message = str(caught.exception)
+        self.assertIn("not requested", message)
+        self.assertIn("ble_peer", message)
+
+    def test_an_instrument_console_round_trips_text(self):
+        manager = self.make_manager(
+            self.PEER_CONFIG, fixture_script="SIFLI_APP-aa-bb\r\n"
+        )
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        runtime.fixture_console_open("ble_peer")
+
+        data, _cursor = runtime.fixture_console_read("ble_peer", 0, 1.0)
+        self.assertIn("SIFLI_APP-aa-bb", data)
+
+        runtime.fixture_console_write("ble_peer", "diss help\r\n")
+        self.assertIn("diss help", manager.fixture_transports["ble_peer"].sent)
+        self.assertEqual(runtime.describe()["fixture_consoles"], ["ble_peer"])
+
+    def test_reading_an_unopened_instrument_stream_is_reported(self):
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_read("ble_peer", 0, 0.1)
+        self.assertIn("not open", str(caught.exception))
+
+    def test_release_closes_the_instrument_console(self):
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        runtime.fixture_console_open("ble_peer")
+        manager.release("tb_peer")
+
+        self.assertEqual(runtime.describe()["fixture_consoles"], [])
+        self.assertEqual(manager.fixture_transports["ble_peer"].closed, 1)
+
+    def test_a_fixture_without_a_console_says_so(self):
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer_no_console", "fixtures": ["ble_peer"]}
+            )
+        )
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_open("ble_peer")
+        self.assertIn("no console configured", str(caught.exception))
+
+    def test_an_unknown_fixture_lists_what_the_testbed_offers(self):
+        manager = self.make_manager(self.PEER_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer"]}
+            )
+        )
+        with self.assertRaises(TestbedError) as caught:
+            runtime.fixture_console_open("no_such_instrument")
+        self.assertIn("ble_peer", str(caught.exception))
 
 
 class TestRelay(LabTestCase):

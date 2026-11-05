@@ -9,6 +9,8 @@ These are deliberately independent of :mod:`sdk_py_actions.errors` so that
 
 from __future__ import annotations
 
+from typing import Optional
+
 
 class SdkTestError(RuntimeError):
     """Base class for every error raised by this package."""
@@ -63,4 +65,14 @@ class FirmwareError(SdkTestError):
 
 
 class LabAgentError(SdkTestError):
-    """The Lab Agent runner is unreachable or refused an operation."""
+    """The Lab Agent runner is unreachable or refused an operation.
+
+    ``status`` is the HTTP status when the agent answered, and ``None`` when it
+    did not (unreachable, timed out). Callers that must tell "the agent says
+    this console is not open" (409) apart from "the answer never arrived" need
+    the difference; the message alone cannot carry it.
+    """
+
+    def __init__(self, message: str, status: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.status = status

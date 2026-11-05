@@ -17,6 +17,7 @@ import os
 import sys
 import threading
 import unittest
+from unittest import mock
 
 from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 
@@ -27,9 +28,11 @@ from sdk_test.errors import HarnessError
 from sdk_test.harness import RunContext
 from sdk_test.harness import run as run_harness
 from sdk_test.harness.pytest import ENV_AGENT_URL
+from sdk_test.harness.pytest import ENV_FIXTURES
 from sdk_test.harness.pytest import ENV_PLATFORM
 from sdk_test.harness.pytest import ENV_TESTBED_ID
 from sdk_test.harness.pytest import ENV_TESTCASE_DIR
+from sdk_test.fixtures import parse_fixture_ref
 from sdk_test.harness.pytest import _summarise
 from sdk_test.harness.pytest import build_command
 from sdk_test.harness.pytest import ensure_available
@@ -127,6 +130,19 @@ class TestPluginEnv(SdkTestCase):
         self.assertNotIn(ENV_AGENT_URL, env)
         self.assertNotIn(ENV_TESTBED_ID, env)
 
+    def test_declared_fixtures_reach_the_plugin(self):
+        # The plugin's `ble_peer` fixture skips unless the case declared it, and
+        # this environment variable is the only way it can know. JSON, because a
+        # fixture parameter may itself contain a comma.
+        instance = make_instance(self.root)
+        instance.fixtures = [parse_fixture_ref("ble_peer"), parse_fixture_ref("power_relay:r1,2")]
+        env = plugin_env(instance, RunContext())
+        self.assertEqual(json.loads(env[ENV_FIXTURES]), ["ble_peer", "power_relay:r1,2"])
+
+    def test_a_case_without_fixtures_exports_an_empty_list(self):
+        env = plugin_env(make_instance(self.root), RunContext())
+        self.assertEqual(json.loads(env[ENV_FIXTURES]), [])
+
 
 class TestSummarise(SdkTestCase):
     def test_the_final_tally_is_extracted(self):
@@ -174,9 +190,18 @@ class TestFailureModes(SdkTestCase):
 
 
 class FakeTransport:
-    def __init__(self, boot: str = "", response: str = "", chunk: int = 1) -> None:
+    def __init__(
+        self,
+        boot: str = "",
+        response: str = "",
+        chunk: int = 1,
+        replies=None,
+    ) -> None:
         self._stream = boot
         self.response = response
+        #: Text to append when a written line contains a trigger, so a fake
+        #: console can answer a command the way a shell thread would.
+        self.replies = dict(replies or {})
         #: How much one read hands over. A character by default, which is the
         #: harshest realistic chunking. A test that needs to prove something
         #: about a single read carrying several expectations' worth of text
@@ -202,6 +227,9 @@ class FakeTransport:
         self.written.append(text)
         if "unity_run" in text:
             self._stream += self.response
+        for trigger, reply in self.replies.items():
+            if trigger in text:
+                self._stream += reply
 
     @property
     def sent(self) -> str:
@@ -241,6 +269,7 @@ class PytestAgainstFakeAgentMixin:
     def setUp(self):
         super().setUp()
         self.transports = {}
+        self.fixture_transports = {}
         import yaml
 
         manager = LabManager(
@@ -248,6 +277,7 @@ class PytestAgainstFakeAgentMixin:
             sdk_root=self.root,
             console_factory=self._console,
             jlink_factory=lambda testbed, settings: _FakeProbe(),
+            fixture_console_factory=self._fixture_console,
         )
         manager.config.settings.host = "127.0.0.1"
         manager.config.settings.port = 0
@@ -259,6 +289,12 @@ class PytestAgainstFakeAgentMixin:
     #: How much the faked console hands over per read; see FakeTransport.
     chunk = 1
 
+    #: Responses the fake instrument console gives to shell lines, by trigger.
+    FIXTURE_REPLIES = {}
+
+    #: The fixture the generated testcase declares, if any.
+    CASE_FIXTURE = None
+
     def _console(self, testbed):
         transport = FakeTransport(
             boot=self.BOOT, response=self.UNITY, chunk=self.chunk
@@ -266,8 +302,18 @@ class PytestAgainstFakeAgentMixin:
         self.transports[testbed.id] = transport
         return transport
 
+    def _fixture_console(self, testbed, connection):
+        transport = FakeTransport(chunk=self.chunk, replies=self.FIXTURE_REPLIES)
+        self.fixture_transports[connection.fixture.spec] = transport
+        return transport
+
     def make_case(self, suite_body: str) -> str:
         """A testcase directory: testcase.yaml, its pytest suite, and a project."""
+        fixture_line = (
+            f"                  fixture: {self.CASE_FIXTURE}\n"
+            if self.CASE_FIXTURE
+            else ""
+        )
         self.write(
             "example/ptcase/testcase.yaml",
             """
@@ -277,7 +323,12 @@ class PytestAgainstFakeAgentMixin:
                 timeout: 60
                 harness_config:
                   pytest_root: .
-            """,
+            """
+            # The literal must end with a newline before the fixture line is
+            # appended, or the closing indentation and the new line merge into
+            # one over-indented line.
+            + "\n"
+            + fixture_line,
         )
         self.write("example/ptcase/project/SConstruct", "# project\n")
         self.write("example/ptcase/project/proj.conf", "CONFIG_X=y\n")
@@ -326,6 +377,39 @@ class PytestAgainstFakeAgentMixin:
         for key, value in overrides.items():
             setattr(options, key, value)
         return TestRunner(options).run()
+
+
+@unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")
+class TestDeclaredFixturesEnv(SdkTestCase):
+    """The consumer side of ``SIFLI_TEST_FIXTURES``.
+
+    The producer is asserted in ``TestPluginEnv``; a mismatch between the two
+    would turn every instrument case into a skip, so the decoder is tested on
+    its own terms.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from sdk_test.pytest_plugin import _declared_fixtures
+
+        self.declared = _declared_fixtures
+
+    def test_a_json_array_is_decoded_including_commas(self):
+        with mock.patch.dict(
+            os.environ, {ENV_FIXTURES: json.dumps(["ble_peer:peer,1"])}
+        ):
+            self.assertEqual(self.declared(), ["ble_peer:peer,1"])
+
+    def test_an_absent_variable_means_no_fixtures(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(ENV_FIXTURES, None)
+            self.assertEqual(self.declared(), [])
+
+    def test_a_malformed_value_is_reported_not_read_as_empty(self):
+        with mock.patch.dict(os.environ, {ENV_FIXTURES: "ble_peer,other"}):
+            with self.assertRaises(RuntimeError) as caught:
+                self.declared()
+        self.assertIn(ENV_FIXTURES, str(caught.exception))
 
 
 @unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")
@@ -395,6 +479,80 @@ class TestRealPytestAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCase):
         self.assertIn("skipped", outcome.log.lower())
         # And it must say *why*, not just skip silently.
         self.assertIn("SIFLI_TEST_AGENT_URL", outcome.log)
+
+    def test_the_peer_fixture_skips_when_the_case_declares_no_fixture(self):
+        # A lab without an instrument must not turn a case that forgot to declare
+        # the need into a wrong failure; the skip reason names the fix.
+        summary = self.run_case(
+            """
+            def test_peer(ble_peer):
+                raise AssertionError("the fixture must not run")
+            """
+        )
+        result = summary.results[0]
+        self.assertEqual(result.status, "passed", result.message)
+        self.assertIn("skipped", result.log.lower())
+        # pytest truncates the reason in its summary line, so assert on its
+        # opening words rather than the whole sentence.
+        self.assertIn("BLE peer", result.log)
+
+
+@unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")
+class TestPeerInstrumentAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCase):
+    """A testbed with an instrument: the case declares it, the lab offers it.
+
+    This is the whole chain for one line of code in a suite: the case's
+    ``fixture:`` reaches the agent through allocation, the agent opens the
+    instrument's console from the binding, the plugin's ``ble_peer`` fixture
+    attaches to that stream, and the bytes go to the peer's port -- not the
+    DUT's.
+    """
+
+    LAB_YAML = """
+    runner: {name: pytest-e2e, console_poll: 0.005}
+    testbed:
+      - id: tb_01
+        platform: sf32lb52-lcd_n16r8
+        console: {port: COM13}
+        connections:
+          - fixture: ble_peer
+            console: {port: COM99, baud: 1000000}
+    """
+
+    #: What the generated testcase declares.
+    CASE_FIXTURE = "ble_peer"
+
+    #: What the fake instrument answers. Enough for `BlePeer.expect_shell`.
+    FIXTURE_REPLIES = {"diss help": "Command list:\r\n"}
+
+    def test_a_suite_drives_the_instrument_over_its_own_console(self):
+        summary = self.run_case(
+            """
+            def test_peer_shell(ble_peer):
+                ble_peer.expect_shell()
+            """
+        )
+        result = summary.results[0]
+        self.assertEqual(result.status, "passed", result.message)
+        self.assertIn("diss help", self.fixture_transports["ble_peer"].sent)
+        self.assertEqual(self.fixture_transports["ble_peer"].closed, 1)
+        # The DUT's port must not have carried the instrument's traffic.
+        self.assertNotIn("diss help", self.transports["tb_01"].sent)
+
+    def test_the_instrument_transcript_is_written_beside_the_device_log(self):
+        summary = self.run_case(
+            """
+            def test_peer_shell(ble_peer):
+                ble_peer.expect_shell()
+            """
+        )
+        result = summary.results[0]
+        self.assertEqual(result.status, "passed", result.message)
+
+        log_path = os.path.join(result.out_dir, "ble_peer.log")
+        self.assertTrue(os.path.exists(log_path), f"no instrument log in {result.out_dir}")
+        with open(log_path, encoding="utf-8") as handle:
+            self.assertIn("Command list:", handle.read())
 
 
 @unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")

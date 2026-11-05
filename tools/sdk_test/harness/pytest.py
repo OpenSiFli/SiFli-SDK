@@ -20,6 +20,7 @@ its tests passed and re-deriving that would be a second opinion nobody asked for
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -53,6 +54,10 @@ ENV_PLATFORM = "SIFLI_TEST_PLATFORM"
 ENV_BUILD_DIR = "SIFLI_TEST_BUILD_DIR"
 #: Directory the testcase.yaml lives in.
 ENV_TESTCASE_DIR = "SIFLI_TEST_TESTCASE_DIR"
+#: The fixture specs this instance declared (comma-separated), so a suite can
+#: skip precisely when it needs an instrument the test case did not ask for,
+#: instead of guessing from what the agent happens to offer.
+ENV_FIXTURES = "SIFLI_TEST_FIXTURES"
 #: The test id, for reporting.
 ENV_CASE_ID = "SIFLI_TEST_CASE_ID"
 
@@ -84,6 +89,11 @@ def plugin_env(
     env = {
         ENV_TESTCASE_DIR: instance.testcase_dir,
         ENV_CASE_ID: instance.id,
+        # The specs, not the resolved testbed: which board offers the fixture is
+        # the agent's answer, and a suite only needs to know what it declared.
+        # JSON rather than a comma-separated list: a fixture parameter may itself
+        # contain a comma (`ble_peer:peer,1`), which the delimiter would split.
+        ENV_FIXTURES: json.dumps([fixture.spec for fixture in instance.fixtures]),
         # So `-p sdk_test.pytest_plugin` resolves inside the subprocess, and so
         # a suite can import sdk_test helpers (ConsoleMatcher, parse_unity_output)
         # without every test directory shipping a conftest.py.

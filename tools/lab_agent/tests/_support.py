@@ -191,7 +191,14 @@ class LabTestCase(unittest.TestCase):
 
         return parse_runner_config(yaml.safe_load(textwrap.dedent(yaml_text)))
 
-    def make_manager(self, yaml_text: str = CONFIG_YAML, script: str = "", chunk: int = 1):
+    def make_manager(
+        self,
+        yaml_text: str = CONFIG_YAML,
+        script: str = "",
+        chunk: int = 1,
+        fixture_script: str = "",
+        fixture_chunk: int = 1,
+    ):
         """A LabManager whose consoles and probes are fakes."""
         from lab_agent.testbed import LabManager
 
@@ -209,12 +216,21 @@ class LabTestCase(unittest.TestCase):
             jlinks[testbed.id] = probe
             return probe
 
+        fixture_transports = {}
+
+        def fixture_console_factory(testbed, connection):
+            transport = FakeSerialTransport(script=fixture_script, chunk=fixture_chunk)
+            fixture_transports[connection.fixture.spec] = transport
+            return transport
+
         manager = LabManager(
             self.make_config(yaml_text),
             sdk_root=self.root,
             console_factory=console_factory,
             jlink_factory=jlink_factory,
+            fixture_console_factory=fixture_console_factory,
         )
         manager.transports = transports  # type: ignore[attr-defined]
         manager.probes = jlinks  # type: ignore[attr-defined]
+        manager.fixture_transports = fixture_transports  # type: ignore[attr-defined]
         return manager

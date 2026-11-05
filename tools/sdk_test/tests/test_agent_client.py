@@ -143,6 +143,112 @@ class TestRequestShaping(ClientTestCase):
         self.assertEqual(self.server.raw[-1], b"a tar")
 
 
+class TestInstrumentStreams(ClientTestCase):
+    """``stream`` selects an instrument console; the default stays the DUT.
+
+    Instrument hardware is a second stream on the same testbed, so every
+    existing call -- and every URL a running agent already understands -- must
+    keep meaning the DUT when the argument is not given.
+    """
+
+    def test_the_default_console_urls_carry_no_stream(self):
+        self.route("/testbed/tb_01/console/open", {"console_open": True})
+        self.client.console_open("tb_01")
+        self.assertEqual(
+            self.server.requests[-1]["path"], "/testbed/tb_01/console/open"
+        )
+
+        self.route("/testbed/tb_01/console/write", {"written": 1})
+        self.client.console_write("tb_01", "x")
+        self.assertEqual(
+            self.server.requests[-1]["path"], "/testbed/tb_01/console/write"
+        )
+
+    def test_an_instrument_stream_is_named_on_every_console_call(self):
+        self.route("/testbed/tb_01/console/open", {"console_open": True})
+        self.client.console_open("tb_01", stream="ble_peer")
+        self.assertEqual(
+            self.server.requests[-1]["path"],
+            "/testbed/tb_01/console/open?stream=ble_peer",
+        )
+
+        self.route("/testbed/tb_01/console/read", {"data": "", "cursor": 0})
+        self.client.console_read("tb_01", 0, 0.1, stream="ble_peer")
+        self.assertIn("stream=ble_peer", self.server.requests[-1]["path"])
+
+        self.route("/testbed/tb_01/console/write", {"written": 1})
+        self.client.console_write("tb_01", "x", stream="ble_peer")
+        self.assertIn("stream=ble_peer", self.server.requests[-1]["path"])
+
+        self.route("/testbed/tb_01/console/close", {"console_open": False})
+        self.client.console_close("tb_01", stream="ble_peer")
+        self.assertIn("stream=ble_peer", self.server.requests[-1]["path"])
+
+    def test_a_remote_console_keeps_its_stream_and_cursor(self):
+        self.route("/testbed/tb_01/console/read", {"data": "ab", "cursor": 2})
+        console = self.client.console_for("tb_01", stream="ble_peer")
+        self.assertEqual(console.read(0.1), "ab")
+        self.assertIn("stream=ble_peer", self.server.requests[-1]["path"])
+        self.assertEqual(console.cursor, 2)
+
+    def test_opening_and_closing_a_stream_reach_the_agent(self):
+        self.route("/testbed/tb_01/console/open", {"console_open": True})
+        self.route("/testbed/tb_01/console/close", {"console_open": False})
+        console = self.client.console_for("tb_01", stream="ble_peer")
+        console.open()
+        self.assertEqual(
+            self.server.requests[-1]["path"],
+            "/testbed/tb_01/console/open?stream=ble_peer",
+        )
+        console.close()
+        self.assertEqual(
+            self.server.requests[-1]["path"],
+            "/testbed/tb_01/console/close?stream=ble_peer",
+        )
+
+
+class TestInstrumentTranscript(ClientTestCase):
+    """A transcript that could not be collected is not "not opened"."""
+
+    class _Console:
+        def __init__(self, error):
+            self.error = error
+
+        def for_stream(self, stream):
+            return self
+
+        def read_from(self, cursor, timeout):
+            raise self.error
+
+    def session(self, error):
+        from sdk_test.backends.board import BoardSession
+
+        return BoardSession(
+            client=self.client,
+            testbed_id="tb_01",
+            console=self._Console(error),
+            platform="board_a",
+            holder=None,
+        )
+
+    def test_a_console_the_agent_says_is_not_open_is_none(self):
+        self.assertIsNone(
+            self.session(LabAgentError("console is not open", status=409))
+            .instrument_transcript("ble_peer")
+        )
+
+    def test_any_other_failure_is_raised_for_the_caller_to_record(self):
+        with self.assertRaises(LabAgentError) as caught:
+            self.session(LabAgentError("agent went away", status=500)).instrument_transcript(
+                "ble_peer"
+            )
+        self.assertEqual(caught.exception.status, 500)
+
+    def test_an_unreachable_agent_is_raised_too(self):
+        with self.assertRaises(LabAgentError):
+            self.session(LabAgentError("cannot reach")).instrument_transcript("ble_peer")
+
+
 class TestProtocolGate(ClientTestCase):
     """An agent that speaks a different version of this interface is refused.
 
@@ -188,12 +294,25 @@ class TestErrorHandling(ClientTestCase):
         self.assertIn("busy", message)
         self.assertIn("409", message)
 
+    def test_an_http_error_carries_its_status(self):
+        # Callers that must tell "the console is not open" (409) from "the
+        # answer never arrived" need the number, not just the text.
+        self.route(
+            "/testbed/tb_01/console/read",
+            {"error": "console is not open"},
+            status=409,
+        )
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.console_read("tb_01", 0, 0.1, stream="ble_peer")
+        self.assertEqual(caught.exception.status, 409)
+
     def test_an_unreachable_agent_says_how_to_start_it(self):
         client = LabAgentClient("http://127.0.0.1:1")
         with self.assertRaises(LabAgentError) as caught:
             client.health()
         self.assertIn("Lab Agent", str(caught.exception))
         self.assertIn("runner.py", str(caught.exception))
+        self.assertIsNone(caught.exception.status)
 
     def test_a_json_response_of_the_wrong_shape_is_rejected(self):
         # Valid JSON, wrong shape -- an older or foreign agent. Rejecting it here
@@ -268,6 +387,24 @@ class TestRemoteConsoleCursor(ClientTestCase):
         self.route("/testbed/tb_01/console/read", {"data": "", "cursor": 3})
         console = RemoteConsole(self.client, "tb_01")
         self.assertEqual(console.drain(), "")
+
+    def test_reopening_a_stream_starts_reading_from_zero_again(self):
+        # The agent drops the stream on close, so the next open is a fresh one
+        # whose cursor starts at 0. Keeping the old cursor would skip everything
+        # the new stream already held.
+        self.route("/testbed/tb_01/console/read", {"data": "ab", "cursor": 2})
+        console = RemoteConsole(self.client, "tb_01")
+        self.assertEqual(console.read(0.1), "ab")
+        self.assertEqual(console.cursor, 2)
+
+        self.route("/testbed/tb_01/console/close", {"console_open": False})
+        console.close()
+        self.assertEqual(console.cursor, 0)
+
+        self.route("/testbed/tb_01/console/open", {"console_open": True})
+        console.open()
+        console.read(0.1)
+        self.assertIn("cursor=0", self.server.requests[-1]["path"])
 
 
 class TestCanonicalBoardName(SdkTestCase):

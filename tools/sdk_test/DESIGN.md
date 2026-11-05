@@ -53,7 +53,7 @@
 | 带芯片身份的 QEMU 板（`qemu_sf32lb{52x…58x}`） | ✅ 五块都已构建并跑通过 |
 | CMock 打桩用例（需求 3） | ✅ mock 生成物已入库、两个用例工程都已跑通并反向验证过；**用例工程见下一笔** |
 | 日志与报告（按 twister 对齐） | ✅ 完成：每实例 `device.log` + `runner.log`、run 级 `runner.log`、JSON 主文档 + JUnit 派生、失败阶段标记 |
-| 需求 4（多设备） | ⬜ schema 与插件接口已支持，调度未实现 |
+| 需求 4（多设备） | 🟡 仪表控制台流已实现（第二块板作为 fixture，pytest 的 `ble_peer`）；多 DUT 调度（`dut:` / `dut_client:`）未实现 |
 
 **自测怎么跑**（不需要硬件、不需要 Lab Agent）：
 
@@ -509,10 +509,17 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 
 ---
 
-## 需求 4 的设计（多设备，未实现）
+## 需求 4 的设计（多设备；仪表控制台已实现，多 DUT 调度未实现）
 
 - **多 DUT**：`testcase.yaml` 支持 `dut:` / `dut_client:` 列表（twister 语义），每项可带 `platform_allow`；`runner.py` **原子地**一次申请 N 个 testbed（按 testbed id 排序申请，避免死锁）；pytest 插件在 N>1 时把 `dut` 暴露成 list（pytest-embedded 风格）。
 - **I2C 双板**：一块板跑用例，另一块作为对端 fixture。对端板 = 一个 `fixture` + 一个 active driver。
+- **已实现：仪表的控制台流（2026-11）**。第二块板作为**仪表**接入，不是第二个 testbed：binding 的
+  `connections[].console` 给出它自己的串口，`connection.options` 原样保留该配置；Lab Agent 的
+  `TestBedRuntime` 按 fixture 名维护独立的 `ConsoleStream`，控制台路由增加 `stream=<fixture>`
+  （默认 `dut`，旧调用不变），且只允许打开**本次分配申请过**的 fixture；SDK 侧
+  `LabAgentClient`/`RemoteConsole` 带上 stream，pytest 插件提供 `ble_peer` fixture
+  （`tools/sdk_test/ble_peer.py` 是它对 `diss` 协议的解析层）。仪表不编译、不烧录、不复位——
+  固件由实验室固定。多 DUT 调度（`dut:` / `dut_client:`、一次申请 N 个 testbed）仍未实现。
 - **手机**：建模成 fixture（如 `fixture: android_phone:pixel_01`），由 runner 侧 driver 插件驱动（adb / BLE central），手机池化后按能力分配；多台手机＝同名 fixture 多实例，等价性由硬件团队保证。
 - **带外硬约束**（docx 强调两次）：mux/电源/复位**不得**用 MCU 自己的 IO 做控制信号，必须走 runner 的 relay/driver。`transport/relay.py` 与 fixture driver 接口就是为此预留。
 

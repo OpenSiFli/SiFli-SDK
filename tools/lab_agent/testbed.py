@@ -33,6 +33,9 @@ from typing import Tuple
 from sdk_test.fixtures import explain_no_match
 from sdk_test.fixtures import parse_fixture_ref
 from sdk_test.fixtures import select_testbeds
+from sdk_test.errors import BindingError
+from sdk_test.model import Connection
+from sdk_test.model import ConsoleConfig
 from sdk_test.model import TestBed
 from sdk_test.model import TestInstance
 
@@ -52,6 +55,40 @@ from sdk_test.platforms import jlink_device
 from sdk_test.version import PROTOCOL
 from sdk_test.version import package_root
 from sdk_test.version import revision
+
+
+def _fixture_console_config(connection: Connection) -> ConsoleConfig:
+    """The serial port an instrument fixture answers on, from its binding entry.
+
+    An active fixture keeps its own settings in the connection entry, and this
+    is the one setting the agent needs: where to open a console. Refusing here
+    with the fixture's name beats a ``KeyError`` surfacing as a 500.
+    """
+    options = connection.options.get("console")
+    if not isinstance(options, dict):
+        raise TestbedError(
+            f'fixture "{connection.fixture.spec}" has no console configured; '
+            'add "console: {port: ..., baud: ...}" to its connection'
+        )
+    port = options.get("port")
+    if not port:
+        raise TestbedError(
+            f'fixture "{connection.fixture.spec}" has no console port'
+        )
+    try:
+        baud = int(options.get("baud", 1000000))
+    except (TypeError, ValueError) as exc:
+        raise TestbedError(
+            f'fixture "{connection.fixture.spec}": console baud must be an integer'
+        ) from exc
+    return ConsoleConfig(port=str(port), baud=baud)
+
+
+def _default_fixture_console(testbed: TestBed, connection: Connection) -> SerialTransport:
+    """The real transport for an instrument console, built from its binding entry."""
+    config = _fixture_console_config(connection)
+    return SerialTransport(port=config.port, baud=config.baud)
+
 
 def resolve_jlink_device(
     configured: Optional[str],
@@ -219,6 +256,7 @@ class TestBedRuntime:
         console_factory: Optional[Callable[[TestBed], Any]] = None,
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
         firmware_root: Optional[str] = None,
+        fixture_console_factory: Optional[Callable[[TestBed, Any], Any]] = None,
     ) -> None:
         self.testbed = testbed
         self.settings = settings or RunnerSettings()
@@ -228,6 +266,26 @@ class TestBedRuntime:
         self._console: Optional[ConsoleStream] = None
         self._jlink: Optional[JLinkTransport] = None
         self._active_fixtures: List[Any] = []
+        #: Consoles of instruments attached to this testbed, keyed by the fixture
+        #: name the test asked for. They are not testbeds: nothing is built or
+        #: flashed for them, and they are only opened when the allocation
+        #: requested the fixture.
+        self._fixture_consoles: Dict[str, ConsoleStream] = {}
+        #: The fixture specs this allocation asked for, so an instrument cannot
+        #: be driven by a test that never declared it.
+        self._requested_fixtures: List[str] = []
+        #: True from the moment the claim is dropped until teardown finishes.
+        #: The holder is cleared first so the board is visibly free, but its
+        #: per-claim state (requested fixtures, firmware, probe) is being wiped
+        #: -- a new claim in that window would have its state deleted by the old
+        #: teardown, so allocation is refused until it settles.
+        self._releasing = False
+        #: Serializes opening and closing instrument consoles against each other
+        #: and against teardown. The HTTP server answers on a thread per request,
+        #: and ``transport.open()`` blocks: without this, an open that started
+        #: before a release can finish after it and leave a serial port held on
+        #: a testbed nobody owns.
+        self._fixture_lock = threading.Lock()
         #: Firmware uploaded for this board. Keyed by the package's own digest,
         #: and told which platform it serves so it can refuse an image built for
         #: a different board -- a wrong-platform image flashes perfectly well.
@@ -240,6 +298,7 @@ class TestBedRuntime:
         self._console_factory = console_factory or (
             lambda tb: SerialTransport(port=tb.console.port, baud=tb.console.baud)
         )
+        self._fixture_console_factory = fixture_console_factory or _default_fixture_console
         self._jlink_factory = jlink_factory
 
     # -- allocation ----------------------------------------------------------
@@ -247,22 +306,45 @@ class TestBedRuntime:
     @property
     def busy(self) -> bool:
         with self._lock:
-            return self._holder is not None
+            # A testbed being torn down is not available either: its per-claim
+            # state is still being cleared, so selection must skip it rather
+            # than pick it and fail the allocation.
+            return self._holder is not None or self._releasing
 
     @property
     def holder(self) -> Optional[str]:
         with self._lock:
             return self._holder
 
-    def allocate(self, holder: Optional[str] = None) -> None:
-        """Claim the testbed. Raises if someone else already holds it."""
+    def describe_state(self) -> str:
+        """One phrase for why this testbed is (un)available, for a message."""
+        holder = self.holder
+        if holder is not None:
+            return f"held by {holder}"
+        return "being released" if self._releasing else "free"
+
+    def allocate(
+        self, holder: Optional[str] = None, fixtures: Optional[List[str]] = None
+    ) -> None:
+        """Claim the testbed. Raises if someone else already holds it.
+
+        ``fixtures`` is what the allocation asked for. It is remembered rather
+        than checked here -- selection already matched it -- because it is the
+        gate that keeps a test from driving an instrument it never declared.
+        """
         with self._lock:
             if self._holder is not None:
                 raise AllocationError(
                     f'testbed "{self.testbed.id}" is already held by '
                     f'"{self._holder}"'
                 )
+            if self._releasing:
+                raise AllocationError(
+                    f'testbed "{self.testbed.id}" is still being released; '
+                    "please retry"
+                )
             self._holder = holder or "anonymous"
+            self._requested_fixtures = list(fixtures or [])
 
     def release(self, holder: Optional[str] = None) -> None:
         """Drop the claim and return the hardware to a known-idle state."""
@@ -275,13 +357,21 @@ class TestBedRuntime:
                     f'not by "{holder}"'
                 )
             self._holder = None
+            self._releasing = True
 
         # Teardown happens outside the lock: it can block on hardware, and a
         # second release from another thread must not be able to deadlock it.
-        self._teardown()
+        # The releasing flag is what keeps a new claim from starting in the
+        # window where the old claim's state is still being cleared.
+        try:
+            self._teardown()
+        finally:
+            with self._lock:
+                self._releasing = False
 
     def _teardown(self) -> None:
         self.console_close()
+        self.fixture_consoles_close()
         for connection, driver in reversed(self._active_fixtures):
             try:
                 driver.teardown(self.testbed, connection)
@@ -295,6 +385,9 @@ class TestBedRuntime:
         # fills up. It also means "uploaded" can never be confused with
         # "uploaded by the run happening now".
         self.firmware.clear()
+        # The next claim declares its own fixtures; keeping last run's would let
+        # an instrument be opened by a test that never asked for it.
+        self._requested_fixtures = []
         # And the probe goes with it, because part of how it is built comes from
         # the package: a device name is a property of the board the image was
         # built for, and the next run's package may say a different one.
@@ -539,6 +632,141 @@ class TestBedRuntime:
     def console_transcript(self) -> str:
         return self._require_console().transcript
 
+    # -- instrument consoles -------------------------------------------------
+    #
+    # A fixture with a console is an instrument the test drives -- a peer board,
+    # in this first use. It is deliberately not a console on the DUT's stream:
+    # a test must not be able to mistake the two, and the two are opened and
+    # closed independently. Addressing a stream by fixture name also keeps the
+    # test out of the binding: the port number never leaves this file.
+
+    def fixture_console_open(self, spec: str) -> None:
+        connection = self._instrument_connection(spec)
+        # Keyed by the *connection's* spec, not by what the caller wrote: the
+        # bare name and a pinned instance are two spellings of one port, and two
+        # ConsoleStreams on one serial port split or drop bytes unpredictably.
+        key = connection.fixture.spec
+        with self._fixture_lock:
+            # Checked under the lock so a release that already tore the consoles
+            # down cannot be outlived by this open.
+            #
+            # It cannot tell *which* allocation this request belongs to: the
+            # console routes carry no claim identity, so a request abandoned by
+            # an earlier round can still open the stream of a newer one that
+            # re-declared the same fixture. That is bounded and benign -- the
+            # open is idempotent (the new round would open the same stream), it
+            # only starts the agent's retention sooner, and the next release
+            # closes it. Removing the window entirely needs the client to send
+            # its claim, i.e. a protocol addition.
+            if self._holder is None:
+                raise TestbedError(
+                    f'testbed "{self.testbed.id}" is not allocated; refusing to '
+                    f'open the console of fixture "{key}"'
+                )
+            if key in self._fixture_consoles:
+                return
+            requested = [parse_fixture_ref(entry) for entry in self._requested_fixtures]
+            if not any(need.accepts(connection.fixture) for need in requested):
+                declared = ", ".join(entry for entry in self._requested_fixtures) or "none"
+                raise TestbedError(
+                    f'testbed "{self.testbed.id}": fixture "{connection.fixture.spec}" '
+                    f"was not requested by this allocation (requested: {declared})"
+                )
+
+            # Validate the port here rather than only inside the default factory:
+            # the factory is a test seam, and a binding mistake must be caught on
+            # the real path even when the seam is replaced.
+            _fixture_console_config(connection)
+
+            # Held across start() on purpose: it opens a port and starts a
+            # thread, and a release must not slip in between that and the
+            # registration below.
+            stream = ConsoleStream(
+                self._fixture_console_factory(self.testbed, connection),
+                max_buffer=self.settings.max_buffer,
+                poll=self.settings.console_poll,
+            )
+            stream.start()
+            self._fixture_consoles[key] = stream
+
+    def fixture_console_close(self, spec: str) -> None:
+        key = self._instrument_connection(spec).fixture.spec
+        # ``stop()`` closes the port only after its reader thread has exited, so
+        # the lock is held across it: a reopen that slipped in after the pop but
+        # before the port was released would fail on Windows (port still busy).
+        with self._fixture_lock:
+            stream = self._fixture_consoles.pop(key, None)
+            if stream is not None:
+                stream.stop()
+
+    def fixture_consoles_close(self) -> None:
+        with self._fixture_lock:
+            streams = list(self._fixture_consoles.values())
+            self._fixture_consoles.clear()
+            for stream in streams:
+                stream.stop()
+
+    def fixture_console_read(
+        self, spec: str, cursor: int, timeout: float
+    ) -> Tuple[str, int]:
+        return self._require_fixture_console(spec).read_from(cursor, timeout)
+
+    def fixture_console_write(self, spec: str, data: str) -> None:
+        self._require_fixture_console(spec).write(data)
+
+    def _require_fixture_console(self, spec: str) -> ConsoleStream:
+        key = self._instrument_connection(spec).fixture.spec
+        with self._fixture_lock:
+            stream = self._fixture_consoles.get(key)
+        if stream is None:
+            raise TestbedError(
+                f'testbed "{self.testbed.id}": the console of fixture "{key}" '
+                "is not open"
+            )
+        return stream
+
+    def _instrument_connection(self, spec: str) -> Connection:
+        """Find the connection an instrument stream name refers to.
+
+        The client may name the fixture (``ble_peer``) or pin one of several
+        instances (``ble_peer:peer1``). A pinned name must match exactly -- the
+        same rule as ``FixtureRef.accepts``, so asking for ``peer2`` can never
+        reach ``peer1`` under another spelling. Only an unpinned name falls back
+        to the testbed's single connection of that type.
+        """
+        wanted = None
+        try:
+            wanted = parse_fixture_ref(spec)
+        except BindingError as exc:
+            # A caller-supplied name that cannot be parsed is a bad request, not
+            # an agent failure: LabAgentError maps to 400, where a BindingError
+            # would fall through to a 500 and a server-side stack trace.
+            raise LabAgentError(
+                f'testbed "{self.testbed.id}": "{spec}" is not a fixture name: {exc}'
+            ) from exc
+        exact = [c for c in self.testbed.connections if c.fixture.spec == wanted.spec]
+        if exact:
+            return exact[0]
+        offered = ", ".join(c.fixture.spec for c in self.testbed.connections) or "none"
+        if wanted.param is not None:
+            raise TestbedError(
+                f'testbed "{self.testbed.id}" has no fixture "{wanted.spec}" '
+                f"(it offers: {offered})"
+            )
+        by_name = [c for c in self.testbed.connections if c.fixture.name == wanted.name]
+        if len(by_name) == 1:
+            return by_name[0]
+        if not by_name:
+            raise TestbedError(
+                f'testbed "{self.testbed.id}" has no fixture named "{wanted.name}" '
+                f"(it offers: {offered})"
+            )
+        raise TestbedError(
+            f'testbed "{self.testbed.id}" has several fixtures named '
+            f'"{wanted.name}"; address one by its full spec '
+            f"({', '.join(c.fixture.spec for c in by_name)})"
+        )
+
     # -- reporting -----------------------------------------------------------
 
     def describe(self) -> Dict[str, Any]:
@@ -567,6 +795,10 @@ class TestBedRuntime:
             "busy": self.busy,
             "holder": self.holder,
             "console_open": self._console is not None,
+            # Instruments are not testbeds, but a control plane still needs to
+            # see which ones are talking: a stuck peer console looks exactly
+            # like a quiet one until someone asks.
+            "fixture_consoles": sorted(self._fixture_consoles),
             # Surfaced so a control plane can tell three kinds of lab apart: one
             # that can power-cycle a wedged board, one that can only reset it
             # through the probe, and one where a person presses the button.
@@ -599,6 +831,7 @@ class LabManager:
         console_factory: Optional[Callable[[TestBed], Any]] = None,
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
         firmware_root: Optional[str] = None,
+        fixture_console_factory: Optional[Callable[[TestBed, Any], Any]] = None,
     ) -> None:
         self.config = config
         self.sdk_root = sdk_root
@@ -616,6 +849,7 @@ class LabManager:
                 console_factory,
                 jlink_factory,
                 firmware_root,
+                fixture_console_factory,
             )
             for testbed in config.testbeds
         }
@@ -663,7 +897,7 @@ class LabManager:
         with self._lock:
             if request.testbed_id:
                 runtime = self.get(request.testbed_id)
-                runtime.allocate(request.holder)
+                runtime.allocate(request.holder, request.fixtures)
                 return runtime
 
             candidates, instance = self._candidates(request)
@@ -673,7 +907,7 @@ class LabManager:
                     all_testbeds = [runtime.testbed for runtime in self._runtimes.values()]
                     raise AllocationError(explain_no_match(instance, all_testbeds))
                 busy = ", ".join(
-                    f"{testbed.id} (held by {self._runtimes[testbed.id].holder})"
+                    f"{testbed.id} ({self._runtimes[testbed.id].describe_state()})"
                     for testbed in candidates
                 )
                 raise AllocationError(
@@ -681,7 +915,7 @@ class LabManager:
                 )
 
             chosen = self._runtimes[free[0].id]
-            chosen.allocate(request.holder)
+            chosen.allocate(request.holder, request.fixtures)
             return chosen
 
     def release(self, testbed_id: str, holder: Optional[str] = None) -> None:

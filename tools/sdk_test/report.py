@@ -13,6 +13,7 @@ them buries the one that matters:
     build.log     what the compiler said
     device.log    what the device said, byte for byte, unedited
     runner.log    what the harness made of it, plus a header naming the run
+    <fixture>.log what an instrument the test drove said (e.g. ``ble_peer.log``)
 
 Each is deliberately pure -- no header, no separator -- so that ``diff`` and
 ``grep`` work on it and it can be pasted into a bug report as-is. The compiler's
@@ -31,6 +32,7 @@ from dataclasses import field
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import Optional
 
@@ -42,6 +44,77 @@ from .version import revision
 BUILD_LOG = "build.log"
 DEVICE_LOG = "device.log"
 RUNNER_LOG = "runner.log"
+
+#: The logs of the three layers; an instrument must not be named one of these.
+_RESERVED_LOG_NAMES = {BUILD_LOG, DEVICE_LOG, RUNNER_LOG}
+
+#: Device names Windows resolves before the filesystem, with or without an
+#: extension: ``aux.log`` is the AUX device, not a file. ``conin$``/``conout$``
+#: are not listed because ``$`` is sanitized away before this check.
+_WINDOWS_DEVICE_NAMES = (
+    {"con", "prn", "aux", "nul"}
+    | {f"com{number}" for number in "123456789¹²³"}
+    | {f"lpt{number}" for number in "123456789¹²³"}
+)
+
+
+def _is_reserved_stem(stem: str) -> bool:
+    """Whether ``stem`` is a name Windows will not treat as a file."""
+    # Windows checks only the part before the first dot.
+    return stem.split(".", 1)[0].strip().lower() in _WINDOWS_DEVICE_NAMES
+
+
+def _instrument_log_stem(spec: str) -> str:
+    """The file stem for one spec, before collisions are considered.
+
+    The spec is sanitized because a pinned fixture is written ``ble_peer:peer1``
+    and ``:`` is not portable in a file name. A name the platform reserves is
+    prefixed rather than allowed to overwrite a layer log (``Device`` would be
+    ``device.log`` on a case-insensitive filesystem) or to address a device
+    (``aux.log``, ``COM1.log``).
+    """
+    safe = "".join(char if char.isalnum() or char in "-_." else "-" for char in spec)
+    layer_names = {name.lower() for name in _RESERVED_LOG_NAMES}
+    if f"{safe}.log".lower() in layer_names or _is_reserved_stem(safe):
+        return f"instrument-{safe}"
+    return safe
+
+
+def instrument_log_names(specs: Iterable[str]) -> Dict[str, str]:
+    """One collision-free file name per spec, in the order given.
+
+    Collisions are real even though they are rare: ``ble_peer:peer1`` and a
+    fixture actually named ``ble_peer-peer1`` sanitize to the same stem, and
+    ``build``/``instrument-build`` meet through the reserved-name rule. Naming
+    the whole set together is what makes the two instruments keep two files --
+    computing a name per spec could only turn the second one into an overwrite,
+    and the report would then point both entries at one file.
+
+    Comparison is case-insensitive, because the filesystem may be (Windows and
+    macOS by default): ``Peer1`` and ``peer1`` are two instruments in the log
+    format and one file on disk.
+    """
+    names: Dict[str, str] = {}
+    used = set()
+    for spec in specs:
+        stem = _instrument_log_stem(spec)
+        candidate = f"{stem}.log"
+        counter = 2
+        while candidate.lower() in used:
+            candidate = f"{stem}-{counter}.log"
+            counter += 1
+        used.add(candidate.lower())
+        names[spec] = candidate
+    return names
+
+
+def instrument_log_name(spec: str) -> str:
+    """The file name for a spec considered on its own.
+
+    Collision-free only for a single spec; the writer and the report use
+    :func:`instrument_log_names` over the whole set so they cannot disagree.
+    """
+    return instrument_log_names([spec])[spec]
 
 PASSED = "passed"
 FAILED = "failed"
@@ -98,6 +171,22 @@ class TestResult:
     #: Written verbatim to ``device.log``; not inlined into the report, which
     #: would repeat up to a few megabytes per instance for no gain.
     transcript: str = ""
+    #: Retained transcripts of instrument consoles the test opened, keyed by the
+    #: fixture spec the test case declared (``ble_peer``, ``ble_peer:peer1``).
+    #:
+    #: Written next to ``device.log``, one file per instrument, so a failure that
+    #: spans two radios can be read from both sides without re-running it. Empty
+    #: for a case that declared no instrument, and a stream the test never
+    #: opened is absent rather than written blank -- an empty log would claim a
+    #: silent instrument.
+    instrument_logs: Dict[str, str] = field(default_factory=dict)
+    #: Evidence that could not be collected after the verdict, one line each.
+    #:
+    #: For an instrument console that could not be read back (agent error,
+    #: timeout). The verdict is already settled and must not change; these go
+    #: into the runner log so a missing ``<fixture>.log`` is not mistaken for a
+    #: test that never opened one.
+    capture_warnings: List[str] = field(default_factory=list)
     #: Bytes trimmed off the head of the transcript by the backend's buffer cap,
     #: so a reader can tell a complete log from a truncated one.
     dropped: int = 0
@@ -322,7 +411,8 @@ def instance_log_dir(out_dir: str, platform: str, instance_id: str) -> str:
 
 
 def write_instance_logs(out_dir: str, transcript: str, runner_log: str,
-                        build_output: str = "") -> str:
+                        build_output: str = "",
+                        instrument_logs: Optional[Dict[str, str]] = None) -> str:
     """Write this instance's logs; return the directory.
 
     Each file is one layer's own words, verbatim -- no header, no separator --
@@ -331,10 +421,17 @@ def write_instance_logs(out_dir: str, transcript: str, runner_log: str,
         build.log     what the compiler said
         device.log    what the device said
         runner.log    what the harness made of it
+        <fixture>.log what an instrument the test drove said (see below)
 
     ``build.log`` is written only when there is something to write: a test run
     with ``--no-build`` never invoked a compiler, and an empty file would claim
     one ran and said nothing.
+
+    ``instrument_logs`` maps a declared fixture spec to its retained console
+    transcript. Each becomes ``<fixture>.log`` in the same directory as
+    ``device.log``, so two radios are read side by side rather than from one
+    side's account of the other. A stream the test never opened is omitted by
+    the caller, not written blank.
 
     The name ``runner.log`` is deliberate at both levels: this file is the
     runner's record of *one instance*, and ``<outdir>/runner.log`` is its record
@@ -353,6 +450,13 @@ def write_instance_logs(out_dir: str, transcript: str, runner_log: str,
     device_path = os.path.join(out_dir, DEVICE_LOG)
     with open(device_path, "w", encoding="utf-8", errors="replace") as handle:
         handle.write(transcript)
+
+    logs = instrument_logs or {}
+    names = instrument_log_names(logs)
+    for spec, text in logs.items():
+        path = os.path.join(out_dir, names[spec])
+        with open(path, "w", encoding="utf-8", errors="replace") as handle:
+            handle.write(text)
 
     runner_path = os.path.join(out_dir, RUNNER_LOG)
     with open(runner_path, "w", encoding="utf-8", errors="replace") as handle:
@@ -445,6 +549,13 @@ def _suite_to_dict(result: TestResult) -> Dict[str, Any]:
         suite["stage"] = result.stage
     if result.dropped:
         suite["transcript_dropped"] = result.dropped
+    if result.instrument_logs:
+        # Names only: the transcripts themselves live beside device.log, for the
+        # same reason the device's does -- a report should not copy megabytes.
+        # The whole set is named together so the report and the writer agree on
+        # a colliding pair.
+        names = instrument_log_names(result.instrument_logs)
+        suite["instrument_logs"] = [names[spec] for spec in result.instrument_logs]
 
     # The log is inlined for failures only, following twister: it makes a red
     # report self-contained. A passing instance keeps its transcript one path

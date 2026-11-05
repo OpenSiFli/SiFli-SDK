@@ -28,8 +28,14 @@ testbed:
       port: COM8             # USB-Enhanced-SERIAL CH343；也是 UART 下载口
       baud: 1000000          # SDK 控制台固定 1 Mbaud（drv_usart.c）
 
-    # 没有接任何外挂器件（NOR flash / 传感器等），所以没有 connections:。
-    # 用例若要 fixture，这里必须先声明，否则匹配不上。
+    # 接了一台 BLE 对端仪表（第二块板，跑固定固件、不编译不烧录）：
+    # COM22 是仪表自己的控制台。用例里写 harness_config.fixture: ble_peer 即可；
+    # 仪表固件用 example/ble/central_and_peripheral/project/hcpu 编译，烧一次即固定。
+    connections:
+      - fixture: ble_peer
+        console:
+          port: COM22          # USB-Enhanced-SERIAL-B CH342 (interface B); the peer instrument
+          baud: 1000000
 
     # -- 以下两块是 Lab-Agent 私有，SDK 侧只解析不解释 --
 
@@ -64,24 +70,29 @@ testbed:
     # 框架不会构造探针（TestBedRuntime.needs_jlink() 为假）。
 
   # ---------------------------------------------------------------- 56x board
-  - id: sf32lb56-lcd_a128r12n1_01
-    platform: sf32lb56-lcd_a128r12n1
-    runner: local
-
-    console:
-      port: COM22            # USB-Enhanced-SERIAL-B CH342 (interface B); this board's console
-      baud: 1000000          # SDK console is fixed at 1 Mbaud (drv_usart.c)
-
-    jlink:
-      serial: "69660307"     # this machine's probe; -SelectEmuBySN when there are several
-      # device is omitted: it is read from
-      # customer/boards/sf32lb56-lcd_a128r12n1/hcpu/rtconfig.py -> SF32LB56X_NAND
-      # wdt_script: tools/segger/halt_all_cpu_and_disable_all_wdt_56x.jlink
-      #   ^ enable it if this board's watchdog reboots mid-test
-
-    flash:
-      method: jlink          # program through the probe, using the loadbin entries of build_<board>/download.jlink
-
-    reset:
-      method: jlink          # probe reset; boot is guaranteed, so nobody has to press a button
+  # Commented out for now: this board is not on the bench, and its COM22 is the
+  # BLE peer instrument of the 52x testbed above. Two testbeds must never name
+  # the same physical port -- an agent that opened both would fight over it.
+  # Restore the block (with this board's actual console port) when it is back.
+  #
+  # - id: sf32lb56-lcd_a128r12n1_01
+  #   platform: sf32lb56-lcd_a128r12n1
+  #   runner: local
+  #
+  #   console:
+  #     port: COM22            # USB-Enhanced-SERIAL-B CH342 (interface B); this board's console
+  #     baud: 1000000          # SDK console is fixed at 1 Mbaud (drv_usart.c)
+  #
+  #   jlink:
+  #     serial: "69660307"     # this machine's probe; -SelectEmuBySN when there are several
+  #     # device is omitted: it is read from
+  #     # customer/boards/sf32lb56-lcd_a128r12n1/hcpu/rtconfig.py -> SF32LB56X_NAND
+  #     # wdt_script: tools/segger/halt_all_cpu_and_disable_all_wdt_56x.jlink
+  #     #   ^ enable it if this board's watchdog reboots mid-test
+  #
+  #   flash:
+  #     method: jlink          # program through the probe, using the loadbin entries of build_<board>/download.jlink
+  #
+  #   reset:
+  #     method: jlink          # probe reset; boot is guaranteed, so nobody has to press a button
 

@@ -28,6 +28,14 @@ Shape (see ``examples/binding.local.yaml``)::
             pinmap:
               - {pin: PA00, signal: CS}
             mux: mux_01.channel.3
+          # An instrument the test drives: a peer board that answers on its own
+          # UART. It is not a testbed and is never built or flashed -- the lab
+          # keeps its firmware fixed -- but the agent can open its console and
+          # the pytest suite can read and write it like the DUT's.
+          - fixture: ble_peer
+            console:
+              port: COM9
+              baud: 1000000
         muxes:
           - id: mux_01
             type: relay
@@ -86,6 +94,15 @@ def _parse_connection(value: Any, where: str) -> Connection:
         fixture=parse_fixture_ref(mapping["fixture"]),
         pinmap=[dict(entry) for entry in pinmap],
         mux=mapping.get("mux"),
+        # Anything else is the fixture driver's own business -- an active
+        # fixture such as a peer board keeps its console here. Keeping it
+        # verbatim is the same rule as TestBed.raw, and for the same reason:
+        # a second schema would be a second place to forget a key.
+        options={
+            key: entry
+            for key, entry in mapping.items()
+            if key not in ("fixture", "pinmap", "mux")
+        },
     )
 
 
