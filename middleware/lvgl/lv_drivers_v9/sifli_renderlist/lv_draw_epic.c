@@ -42,6 +42,7 @@ typedef enum
 {
     RL_RESOURCE_LAYER_DRAW_BUF, // Sub-layer draw buffer
     RL_RESOURCE_GLYPH_DATA, // Glyph data
+    RL_RESOURCE_TRANSFORM, // Image transform matrix
 } render_list_resource_type_t;
 
 // Resource linked list node - used for deferred release
@@ -368,6 +369,11 @@ bool lv_draw_epic_retain_layer_draw_buf(lv_draw_buf_t *draw_buf)
 bool lv_draw_epic_retain_glyph_data(void *glyph_data)
 {
     return render_list_retain_resource(glyph_data, RL_RESOURCE_GLYPH_DATA, "glyph data");
+}
+
+bool lv_draw_epic_retain_transform(sifli_matrix_3x3_t *matrix)
+{
+    return render_list_retain_resource(matrix, RL_RESOURCE_TRANSFORM, "transform matrix");
 }
 
 // Release deferred resources
