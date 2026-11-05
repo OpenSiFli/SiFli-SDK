@@ -336,9 +336,17 @@ common_projects:
 
   - path: example/get-started/blink/rtt/project
     boards: *default_boards
+    exclude_boards:
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/get-started/blink/no-os/project
     boards: *default_boards
+    exclude_boards:
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/get-started/dualcore/project/hcpu
     boards: 
