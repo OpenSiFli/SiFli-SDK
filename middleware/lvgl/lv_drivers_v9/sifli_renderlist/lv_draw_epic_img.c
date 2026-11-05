@@ -203,7 +203,15 @@ static void img_draw_core(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *
     lv_color_format_t cf = decoded->header.cf;
     uint32_t img_total_width;
 
-    if (decoded->header.flags & LV_IMAGE_FLAGS_EZIP)
+#ifndef EPIC_SUPPORT_JPEGD
+    if (decoded->header.flags & LV_IMAGE_FLAGS_JPEG)
+    {
+        LV_LOG_WARN("EPIC JPEG input is not supported on this chip\n");
+        return;
+    }
+#endif
+
+    if (decoded->header.flags & (LV_IMAGE_FLAGS_EZIP | LV_IMAGE_FLAGS_JPEG))
         img_total_width = decoded->header.w;
     else
         img_total_width = decoded->header.stride / lv_color_format_get_size(cf);
@@ -253,12 +261,19 @@ static void img_draw_core(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *
         op->desc.blend.layer.x_offset = img_coords->x1 - coord_offset_x;
         op->desc.blend.layer.y_offset = img_coords->y1 - coord_offset_y;
 
+#ifdef EPIC_SUPPORT_JPEGD
+        if (decoded->header.flags & LV_IMAGE_FLAGS_JPEG)
+            op->desc.blend.layer.color_mode = EPIC_INPUT_JPEG;
+        else if (decoded->header.flags & LV_IMAGE_FLAGS_USER1)
+#else
         if (decoded->header.flags & LV_IMAGE_FLAGS_USER1)
+#endif
             op->desc.blend.layer.color_mode = EPIC_INPUT_EZIP;
         else
             op->desc.blend.layer.color_mode = lv_img_2_epic_cf(cf);
 
         op->desc.blend.layer.data = (uint8_t *)src_buf;
+        op->desc.blend.layer.data_size = decoded->data_size;
 
         op->desc.blend.layer.width = lv_area_get_width(img_coords);
         op->desc.blend.layer.height = lv_area_get_height(img_coords);
@@ -285,7 +300,7 @@ static void img_draw_core(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *
                             && (op->desc.blend.layer.transform_cfg.scale_y == EPIC_INPUT_SCALE_NONE);
         bool can_overwrite_dst = no_transform
                                  && (draw_dsc->opa >= LV_OPA_MAX)
-                                 && !(decoded->header.flags & LV_IMAGE_FLAGS_USER1)
+                                 && !(decoded->header.flags & (LV_IMAGE_FLAGS_USER1 | LV_IMAGE_FLAGS_JPEG))
                                  && img_cf_can_overwrite_dst(cf);
         op->desc.blend.use_dest_as_bg = can_overwrite_dst ? EPIC_BLEND_MODE_OVERWRITE : EPIC_BLEND_MODE_NORMAL;
 
