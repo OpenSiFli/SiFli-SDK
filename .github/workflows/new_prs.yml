@@ -15,7 +15,7 @@ jobs:
         (github.event.label.name == 'PR-Sync-Rebase')  ||
         (github.event.label.name == 'PR-Sync-Update')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Sync approved PRs to internal codebase
         uses: OpenSiFli/sync-pr-to-gitlab@v2
