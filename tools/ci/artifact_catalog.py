@@ -5,10 +5,11 @@
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import html
 import json
 import os
+import re
 from pathlib import Path, PurePosixPath
 import shutil
 import sys
@@ -22,6 +23,9 @@ from dynamic_pipeline import DynamicPipelineGenerator
 
 PACKAGE_NAME = 'sdk-artifact-catalog-pointers'
 INDEX_PATH = 'merged_artifacts/file_index.json'
+HISTORY_DAYS = 7
+HISTORY_REFS = ('main', 'release/v2.5')
+HISTORY_WORKERS = 4
 # Allowed-failure exit code: a newer pipeline already owns the published entry.
 PAGES_SKIPPED = 3
 # GitLab deploys a successful pages job asynchronously; wait this long for a newer one.
@@ -282,6 +286,105 @@ def pages_deployed(client, pipeline_id, sha):
         time.sleep(PAGES_DEPLOY_POLL)
 
 
+
+def pipeline_created_at(value):
+    if not isinstance(value, str):
+        raise ValueError('pipeline has no creation time')
+    created = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if created.tzinfo is None:
+        raise ValueError('pipeline creation time has no timezone')
+    return created
+
+
+def history_entry(pipeline, catalog, project):
+    # The parent job reuses its child's catalog, so catalog.pipeline_id is a child ID.
+    if (not isinstance(catalog, dict) or str(catalog.get('project_id')) != project
+            or not pipeline.get('sha') or catalog.get('commit') != pipeline['sha']
+            or not str(catalog.get('pipeline_id', '')).isdecimal()
+            or not isinstance(catalog.get('pipeline_url'), str)
+            or not isinstance(catalog.get('generated_at'), str)
+            or not isinstance(catalog.get('rows'), list)
+            or not isinstance(catalog.get('issues'), list) or catalog['issues']
+            or catalog.get('smoke_test')):
+        raise ValueError('catalog is incomplete, simulated, or belongs to another project/commit')
+    pipeline_created_at(catalog['generated_at'])
+    required_strings = ('label', 'project', 'board', 'batch', 'job_url', 'browse_url')
+    for row in catalog['rows']:
+        if (not isinstance(row, dict)
+                or any(not isinstance(row.get(key), str) for key in required_strings)
+                or row.get('status') not in ('success', 'failed', 'unknown', 'unavailable')
+                or not isinstance(row.get('files'), list) or not isinstance(row.get('logs'), list)):
+            raise ValueError('invalid catalog row')
+        for file in (*row['files'], *row['logs']):
+            if (not isinstance(file, dict) or not isinstance(file.get('name'), str)
+                    or not isinstance(file.get('url'), str)
+                    or type(file.get('size')) is not int or file['size'] < 0):
+                raise ValueError('invalid catalog file entry')
+    pipeline_created_at(pipeline.get('created_at'))
+    return {
+        'pipeline_id': str(pipeline['id']), 'ref': pipeline['ref'], 'commit': pipeline['sha'],
+        'created_at': pipeline['created_at'],
+        'success_count': sum(row['status'] == 'success' for row in catalog['rows']),
+        'failed_count': sum(row['status'] == 'failed' for row in catalog['rows']),
+        'catalog': catalog,
+    }
+
+
+def load_history(client):
+    """Rebuild recent parent catalogs from artifacts; a broken entry is isolated."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=HISTORY_DAYS)
+    updated_after = quote(cutoff.isoformat(), safe='')
+    candidates = []
+    for branch in HISTORY_REFS:
+        page = 1
+        while True:
+            ref = quote(branch, safe='')
+            # Listing failures are fatal: publishing a silently empty history would hide builds.
+            pipelines = client.read_json(
+                f'pipelines?ref={ref}&updated_after={updated_after}'
+                f'&order_by=id&sort=desc&per_page=100&page={page}', 'pipeline history')
+            if not isinstance(pipelines, list):
+                raise ValueError(f'invalid pipeline history list for {branch}')
+            for pipeline in pipelines:
+                pipeline_id = str(pipeline.get('id', '')) if isinstance(pipeline, dict) else ''
+                if (not pipeline_id.isdecimal() or int(pipeline_id) < 1
+                        or int(pipeline_id) == int(client.pipeline)
+                        or pipeline.get('source') == 'parent_pipeline'):
+                    continue
+                try:
+                    # updated_after is only a discovery filter; retention uses creation time.
+                    if pipeline_created_at(pipeline.get('created_at')) < cutoff:
+                        continue
+                    pipeline['ref'] = branch
+                    candidates.append(pipeline)
+                except (ValueError, KeyError, TypeError, OSError) as exc:
+                    print(f'Warning: skipping history pipeline #{pipeline_id}: {exc}', file=sys.stderr)
+            if len(pipelines) < 100:
+                break
+            page += 1
+
+    def load_entry(pipeline):
+        pipeline_id = str(pipeline['id'])
+        try:
+            job = client.latest_job(pipeline_id, 'artifact_catalog')
+            # Push, sync and other non-build pipelines on the branch have no catalog.
+            if job is None:
+                return None
+            if job.get('status') != 'success':
+                raise ValueError('latest artifact_catalog attempt is not successful')
+            catalog = client.read_json(
+                f'jobs/{job["id"]}/artifacts/artifact_catalog/catalog.json', 'historical catalog')
+            return history_entry(pipeline, catalog, client.project)
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            print(f'Warning: skipping history pipeline #{pipeline_id}: {exc}', file=sys.stderr)
+            return None
+
+    # Bound API concurrency so non-build pipelines do not serialize Pages publication
+    # or create an unbounded burst against GitLab.
+    with ThreadPoolExecutor(max_workers=HISTORY_WORKERS) as pool:
+        return [entry for entry in pool.map(load_entry, candidates) if entry is not None]
+
+
 def publish_pages(client, source, output):
     # Pages also runs after build failures, so only publish files from a catalog job that passed.
     catalog_job = client.latest_job(client.pipeline, 'artifact_catalog')
@@ -290,7 +393,8 @@ def publish_pages(client, source, output):
         raise ValueError(f'artifact_catalog job is {status}; keeping the published entry')
     catalog = json.loads((source / 'catalog.json').read_text(encoding='utf-8'))
     if (not isinstance(catalog, dict) or catalog.get('commit') != os.environ['CI_COMMIT_SHA']
-            or not isinstance(catalog.get('issues'), list) or not (source / 'index.html').is_file()):
+            or not isinstance(catalog.get('issues'), list)
+            or not isinstance(catalog.get('rows'), list) or not (source / 'index.html').is_file()):
         raise ValueError('catalog page is missing or belongs to another commit')
     # Build failures are row statuses; issues mean the catalog itself is incomplete.
     if catalog['issues']:
@@ -298,8 +402,33 @@ def publish_pages(client, source, output):
     newer = newer_published_pipeline(client)
     if newer:
         return newer
+    history = load_history(client)
+    created_at = os.environ['CI_PIPELINE_CREATED_AT']
+    cutoff = datetime.now(timezone.utc) - timedelta(days=HISTORY_DAYS)
+    if not catalog.get('smoke_test') and pipeline_created_at(created_at) >= cutoff:
+        history.append(history_entry(
+            {'id': client.pipeline, 'ref': os.environ['CI_COMMIT_REF_NAME'],
+             'sha': os.environ['CI_COMMIT_SHA'], 'created_at': created_at},
+            catalog, client.project))
+    history.sort(key=lambda entry: (pipeline_created_at(entry['created_at']), int(entry['pipeline_id'])),
+                 reverse=True)
+    index = [{key: value for key, value in entry.items() if key != 'catalog'} for entry in history]
+    # A Pages smoke run exercises history without promoting simulated data to a real build.
+    default_entry = next((entry for entry in history if entry['ref'] == 'main'), None)
+    if default_entry is None and (not catalog.get('smoke_test') or history):
+        raise ValueError('no unexpired complete catalog for main is available; keeping the published entry')
+    latest = default_entry['catalog'] if default_entry else catalog
     shutil.rmtree(output, ignore_errors=True)
-    shutil.copytree(source, output)
+    write_catalog(latest, output, history={
+        'days': HISTORY_DAYS, 'pipelines': index,
+        'default_pipeline_id': default_entry['pipeline_id'] if default_entry else None,
+    } if history else None)
+    (output / 'history.json').write_text(json.dumps(index, ensure_ascii=False), encoding='utf-8')
+    for entry in history:
+        directory = output / 'pipelines' / entry['pipeline_id']
+        directory.mkdir(parents=True)
+        (directory / 'catalog.json').write_text(
+            json.dumps(entry['catalog'], ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
     return None
 
 
@@ -451,14 +580,19 @@ def validate_smoke_catalog(catalog):
         row.pop('_indexed_artifact_count', None)
 
 
-def write_catalog(catalog, output):
+def write_catalog(catalog, output, history=None):
     output.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(catalog, ensure_ascii=False, separators=(',', ':'))
     (output / 'catalog.json').write_text(payload, encoding='utf-8')
     # Embedded data makes the page work offline, without CORS or a user API token.
     template = Path(__file__).with_name('artifact_catalog.html').read_text(encoding='utf-8')
-    embedded = payload.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
-    (output / 'index.html').write_text(template.replace('__CATALOG_DATA__', embedded), encoding='utf-8')
+    def embed(value):
+        text = json.dumps(value, ensure_ascii=False, separators=(',', ':'))
+        return text.replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026')
+    data = {'__CATALOG_DATA__': embed(catalog), '__HISTORY_DATA__': embed(history)}
+    # One pass, so a file name containing a placeholder cannot be substituted twice.
+    page = re.sub('__(?:CATALOG|HISTORY)_DATA__', lambda match: data[match.group(0)], template)
+    (output / 'index.html').write_text(page, encoding='utf-8')
     # A native GitLab-rendered fallback that also works when HTML preview is disabled.
     lines = [f'# SDK 产物目录 · Pipeline {catalog["pipeline_id"]}', '',
              '下载同目录的 index.html 并在浏览器打开，可按板子、工程、状态筛选。', '',

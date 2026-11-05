@@ -6,107 +6,413 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SiFli SDK 产物目录</title>
 <style>
-  :root { color-scheme: light; font: 15px/1.6 "PingFang SC", "Microsoft YaHei", sans-serif; color: #243746; background: #f5f7fa; }
-  body { max-width: 1440px; margin: auto; padding: 28px; }
-  h1 { font-size: 28px; margin: 0; color: #164c73; }
-  header { border-bottom: 3px solid #176497; padding-bottom: 18px; }
-  a { color: #095d98; text-underline-offset: 3px; }
-  .meta, .note { color: #516775; overflow-wrap: anywhere; }
-  .filters { display: flex; gap: 16px; flex-wrap: wrap; padding: 24px 0 12px; align-items: end; }
-  label { display: flex; flex-direction: column; gap: 5px; }
-  input, select, button { font: inherit; padding: 8px 10px; border: 1px solid #9aaebb; border-radius: 4px; background: white; color: inherit; }
-  input { min-width: 300px; }
+  :root {
+    color-scheme: light;
+    --ink: #1d2f3d; --muted: #5d7180; --line: #dbe3ea; --panel: #ffffff; --page: #f2f5f8;
+    --brand: #0f5d92; --brand-dark: #0b3f63; --brand-soft: #e6f0f8;
+    --ok: #1f7a45; --ok-soft: #e4f4ea; --bad: #b3361f; --bad-soft: #fbe9e5; --warn: #9a5a00; --warn-soft: #fff3dc;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    color: var(--ink); background: var(--page);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  [hidden] { display: none !important; }
+  a { color: var(--brand); text-underline-offset: 3px; }
+  :focus-visible { outline: 3px solid #3d8fd1; outline-offset: 2px; }
+  .wrap { max-width: 1440px; margin: auto; padding: 0 28px; }
+
+  header { background: linear-gradient(120deg, var(--brand-dark), var(--brand)); color: white; padding: 26px 0 22px; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: .5px; }
+  .note { margin: 6px 0 0; color: #cfe2f1; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .meta:empty { display: none; }
+  .chip { display: inline-flex; gap: 6px; align-items: baseline; padding: 3px 10px; border-radius: 999px;
+    background: rgba(255, 255, 255, .14); color: white; font-size: 13px; overflow-wrap: anywhere; }
+  .chip b { font-weight: 500; color: #b9d5ea; }
+  .chip a { color: white; }
+  .chip code { font-family: var(--mono); }
+
+  main { padding: 20px 0 40px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; }
+  .controls .panel { margin: 0; flex: 1 1 auto; }
+  #build-panel { flex-grow: 0; }
+  .panel h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 10px; letter-spacing: .5px; }
+  .fields { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+  input, select, button { font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid #b7c6d1;
+    border-radius: 6px; background: white; color: var(--ink); }
+  select { cursor: pointer; }
+  input { min-width: 260px; }
+  #build { min-width: 360px; max-width: 100%; font-family: var(--mono); font-size: 13px; }
   button { cursor: pointer; }
-  :focus-visible { outline: 3px solid #3186c7; outline-offset: 3px; }
-  #warning { border-left: 4px solid #b95217; background: #fff1e5; padding: 12px 16px; }
-  #warning:empty { display: none; }
-  .table { overflow: auto; background: white; border: 1px solid #d6e0e7; }
-  table { border-collapse: collapse; width: 100%; text-align: left; }
-  th { background: #e7eff5; white-space: nowrap; }
-  td, th { padding: 12px 16px; border-bottom: 1px solid #d6e0e7; vertical-align: top; }
-  .project { min-width: 230px; overflow-wrap: anywhere; }
-  .status { white-space: nowrap; font-weight: 600; }
-  .success { color: #20683c; } .failed, .unavailable, .unknown { color: #a33722; }
-  details { min-width: 180px; } summary { cursor: pointer; color: #095d98; }
-  .file { display: block; overflow-wrap: anywhere; margin: 6px 0; }
-  .pages { display: flex; gap: 16px; align-items: center; padding-top: 18px; }
-  @media (max-width: 600px) { body { padding: 16px; } input { min-width: 0; width: 100%; box-sizing: border-box; } label { width: 100%; } }
+  button:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
+  button:disabled { cursor: default; opacity: .45; }
+  .link-button { border: 0; background: none; color: var(--brand); padding: 7px 4px; }
+  .link-button:hover:not(:disabled) { text-decoration: underline; }
+
+  .banner { margin: 0 0 14px; padding: 10px 14px; border-radius: 6px; border-left: 4px solid; }
+  .banner:empty { display: none; }
+  #warning { border-color: var(--warn); background: var(--warn-soft); color: #6b3f00; }
+  #load-message { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
+  #load-message.error { border-color: var(--bad); background: var(--bad-soft); color: #7d2412; }
+  #retry { margin-left: 10px; }
+
+  .summary { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 4px 0 12px; }
+  .summary:empty { display: none; }
+  .stat { display: inline-flex; gap: 8px; align-items: baseline; padding: 6px 14px; border-radius: 6px;
+    border: 1px solid var(--line); background: white; color: var(--ink); }
+  .stat strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .stat.success strong { color: var(--ok); } .stat.failed strong { color: var(--bad); } .stat.other strong { color: var(--warn); }
+  .stat[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); box-shadow: inset 0 0 0 1px var(--brand); }
+  .shown { color: var(--muted); margin-left: auto; }
+
+  .table { overflow: auto; background: white; border: 1px solid var(--line); border-radius: 8px; max-height: 72vh; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; text-align: left; }
+  th { position: sticky; top: 0; z-index: 1; background: #edf2f6; color: var(--muted); font-weight: 600;
+    font-size: 13px; white-space: nowrap; }
+  td, th { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:hover td { background: #f7fafc; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .board { white-space: nowrap; font-family: var(--mono); font-size: 13px; }
+  .project { min-width: 240px; font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 1px 10px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge.success { color: var(--ok); background: var(--ok-soft); }
+  .badge.failed { color: var(--bad); background: var(--bad-soft); }
+  .badge.unknown, .badge.unavailable { color: var(--warn); background: var(--warn-soft); }
+  .empty { color: var(--muted); }
+  details { min-width: 200px; }
+  summary { cursor: pointer; color: var(--brand); width: max-content; }
+  details[open] summary { margin-bottom: 4px; }
+  .file { display: flex; gap: 10px; justify-content: space-between; padding: 3px 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 13px; }
+  .file span { color: var(--muted); white-space: nowrap; font-family: inherit; }
+  .actions { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .actions a { white-space: nowrap; }
+  .no-match td { text-align: center; color: var(--muted); padding: 32px; }
+
+  .pages { display: flex; gap: 14px; justify-content: center; align-items: center; padding-top: 16px; color: var(--muted); }
+  @media (max-width: 720px) {
+    .wrap { padding: 0 14px; }
+    label, input, #build { width: 100%; min-width: 0; }
+    .shown { margin-left: 0; width: 100%; }
+  }
 </style>
 <header>
-  <h1>SiFli SDK 产物目录</h1>
-  <div id="meta" class="meta"></div>
+  <div class="wrap">
+    <h1>SiFli SDK 产物目录</h1>
+    <p class="note">选择构建、板子和工程，展开文件列表即可下载。产物通常保留一周，链接固定指向所选构建，过期后不会切换到其他版本。</p>
+    <div id="meta" class="meta"></div>
+  </div>
 </header>
-<p class="note">选择板子和工程，展开文件列表即可下载。产物通常保留一周；链接固定指向本次构建，过期后不会切换到其他版本。</p>
-<p id="warning" role="alert"></p>
-<div class="filters">
-  <label>板子<select id="board"><option value="">全部板子</option></select></label>
-  <label>工程或文件名<input id="search" type="search" placeholder="例如 uart、lvgl 或 firmware.bin"></label>
-  <label>构建状态<select id="status"><option value="">全部状态</option><option value="success">成功</option><option value="failed">失败</option><option value="unknown">状态未知</option><option value="unavailable">清单缺失</option></select></label>
-  <button id="reset" type="button">清除筛选</button>
-</div>
-<p id="count" aria-live="polite"></p>
-<div class="table"><table>
-  <thead><tr><th>板子</th><th>工程</th><th>状态</th><th>产物</th><th>日志</th></tr></thead>
-  <tbody id="rows"></tbody>
-</table></div>
-<div class="pages"><button id="prev" type="button">上一页</button><span id="page"></span><button id="next" type="button">下一页</button></div>
-<noscript>请启用 JavaScript 使用筛选，或查看同目录的 README.md。</noscript>
+<main class="wrap">
+  <p id="warning" class="banner" role="alert"></p>
+  <div class="controls">
+  <section id="build-panel" class="panel" hidden>
+    <h2>选择构建</h2>
+    <div class="fields">
+      <label id="branch-filter" hidden>分支<select id="branch"></select></label>
+      <label id="build-filter" hidden>构建时间（北京时间）<select id="build"></select></label>
+    </div>
+  </section>
+  <section class="panel">
+    <h2>筛选产物</h2>
+    <div class="fields">
+      <label>板子<select id="board"><option value="">全部板子</option></select></label>
+      <label>工程或文件名<input id="search" type="search" placeholder="空格分隔多个词，如 uart lvgl main.bin"></label>
+      <label>构建状态<select id="status"><option value="">全部状态</option><option value="success">成功</option><option value="failed">失败</option><option value="unknown">状态未知</option><option value="unavailable">清单缺失</option></select></label>
+      <button id="reset" class="link-button" type="button">清除筛选</button>
+    </div>
+  </section>
+  </div>
+  <p id="load-message" class="banner" role="status" aria-live="polite"></p>
+  <div id="count" class="summary" aria-live="polite"></div>
+  <div class="table"><table>
+    <thead><tr><th>板子</th><th>工程</th><th>状态</th><th>产物</th><th>日志</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table></div>
+  <div class="pages"><button id="prev" type="button">上一页</button><span id="page"></span><button id="next" type="button">下一页</button></div>
+  <noscript>请启用 JavaScript 使用筛选，或查看同目录的 README.md。</noscript>
+</main>
 <script type="application/json" id="data">__CATALOG_DATA__</script>
+<script type="application/json" id="history-data">__HISTORY_DATA__</script>
 <script>
   'use strict';
-  const data = JSON.parse(document.getElementById('data').textContent);
+  let data = JSON.parse(document.getElementById('data').textContent);
+  // Named historyData so it never shadows window.history.
+  const historyData = JSON.parse(document.getElementById('history-data').textContent);
   const byId = id => document.getElementById(id);
+  const DAY = 86400000;
   const names = {success: '成功', failed: '失败', unknown: '状态未知', unavailable: '清单缺失'};
   const size = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
-  const link = (title, url) => {
-    const a = document.createElement('a'); a.textContent = title; a.href = url;
-    a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   };
-  byId('meta').append(link(`Pipeline #${data.pipeline_id}`, data.pipeline_url),
-    document.createTextNode(`　Commit ${data.commit.slice(0, 12)}　生成于 ${data.generated_at}`));
-  const warnings = [];
-  if (data.smoke_test) warnings.push('快速验证数据：仅用于测试目录、日志和下载，不含可烧录固件。');
-  if (data.issues.length) warnings.push(`目录不完整：发现 ${data.issues.length} 项异常。清单缺失的条目无法下载，请查看 catalog.json 的 issues 或对应批次任务。`);
-  byId('warning').textContent = warnings.join(' ');
-  for (const board of [...new Set(data.rows.map(r => r.board))].sort()) {
-    const option = document.createElement('option'); option.value = board; option.textContent = board;
-    byId('board').append(option);
+  const link = (title, url) => {
+    const a = el('a', '', title); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; return a;
+  };
+  const timeZone = 'Asia/Shanghai';
+  const fullTime = new Intl.DateTimeFormat('zh-CN', {timeZone, dateStyle: 'medium', timeStyle: 'short', hour12: false});
+  const dayParts = new Intl.DateTimeFormat('en-CA', {timeZone, year: 'numeric', month: '2-digit', day: '2-digit'});
+  const buildTime = new Intl.DateTimeFormat('zh-CN', {timeZone, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false});
+  const dateKey = value => {
+    const parts = Object.fromEntries(dayParts.formatToParts(new Date(value)).map(part => [part.type, part.value]));
+    return `${parts.year}-${parts.month}-${parts.day}`;
+  };
+  // allEntries never changes; entries is the fresh, selected-branch view of it.
+  const allEntries = historyData ? historyData.pipelines : [];
+  let entries = [], selectedBranch = '', selectedId = '', expiryTimer;
+  let searchable = [], page = 0, request = 0;
+  const cache = new Map();
+  if (historyData && historyData.default_pipeline_id) cache.set(historyData.default_pipeline_id, data);
+  const fresh = () => allEntries.filter(entry => Date.parse(entry.created_at) >= Date.now() - historyData.days * DAY);
+
+  function validateCatalog(catalog, entry) {
+    if (!catalog || typeof catalog !== 'object' || catalog.commit !== entry.commit
+        || !/^\d+$/.test(String(catalog.pipeline_id)) || typeof catalog.pipeline_url !== 'string'
+        || !Number.isFinite(Date.parse(catalog.generated_at)) || !Array.isArray(catalog.rows)
+        || !Array.isArray(catalog.issues) || catalog.issues.length || catalog.smoke_test) return false;
+    return catalog.rows.every(row => row && typeof row === 'object'
+      && ['label', 'project', 'board'].every(key => typeof row[key] === 'string')
+      && ['success', 'failed', 'unknown', 'unavailable'].includes(row.status)
+      && Array.isArray(row.files) && Array.isArray(row.logs)
+      && typeof row.job_url === 'string' && typeof row.browse_url === 'string'
+      && [...row.files, ...row.logs].every(file => file && typeof file.name === 'string'
+        && typeof file.url === 'string' && Number.isSafeInteger(file.size) && file.size >= 0));
   }
-  const searchable = data.rows.map(row => ({row, text: [row.board, row.project, row.label, ...row.files.map(f => f.name)].join(' ').toLowerCase()}));
-  let page = 0;
+
+  function displayCatalog(catalog, entry) {
+    try {
+      showCatalog(catalog, entry);
+      return true;
+    } catch (_) {
+      data = null; searchable = [];
+      try { showCatalog(null); } catch (_) { /* Keep the failure message visible. */ }
+      return false;
+    }
+  }
+
+  function setMessage(text, error = false, retryAction = () => selectBuild(selectedId)) {
+    byId('load-message').textContent = text;
+    byId('load-message').classList.toggle('error', error);
+    if (error) {
+      const retry = el('button', 'link-button', '重新加载所选构建'); retry.id = 'retry'; retry.type = 'button';
+      retry.addEventListener('click', retryAction);
+      byId('load-message').append(retry);
+    }
+  }
+
+  function chip(label, value) {
+    const node = el('span', 'chip'); node.append(el('b', '', label));
+    if (value instanceof Node) node.append(value); else node.append(document.createTextNode(value));
+    return node;
+  }
+
+  function showCatalog(catalog, entry) {
+    data = catalog;
+    byId('meta').replaceChildren();
+    byId('warning').textContent = '';
+    if (!data) { searchable = []; render(); return; }
+    if (entry) byId('meta').append(chip('分支', entry.ref), chip('构建于', `${fullTime.format(new Date(entry.created_at))}（北京时间）`));
+    const commit = el('code', '', data.commit.slice(0, 12)); commit.title = data.commit;
+    byId('meta').append(chip('Commit', commit), chip('流水线', link(`#${data.pipeline_id}`, data.pipeline_url)),
+      chip('目录生成于', fullTime.format(new Date(data.generated_at))));
+    const warnings = [];
+    if (data.smoke_test) warnings.push('快速验证数据：仅用于测试目录、日志和下载，不含可烧录固件。');
+    if (data.issues.length) warnings.push(`目录不完整：发现 ${data.issues.length} 项异常。清单缺失的条目无法下载，请查看 catalog.json 的 issues 或对应批次任务。`);
+    byId('warning').textContent = warnings.join(' ');
+    // Keep the selected board even if this build has no matching target.
+    const selectedBoard = byId('board').value;
+    const boards = new Set(data.rows.map(row => row.board));
+    if (selectedBoard) boards.add(selectedBoard);
+    byId('board').replaceChildren(new Option('全部板子', ''));
+    for (const board of [...boards].sort()) byId('board').append(new Option(board, board));
+    byId('board').value = selectedBoard;
+    searchable = data.rows.map(row => ({row, text: [row.board, row.project, row.label, ...row.files.map(file => file.name)].join(' ').toLowerCase()}));
+    page = 0;
+    render();
+  }
+
+  function refreshBuilds() {
+    entries = fresh().filter(entry => entry.ref === selectedBranch);
+    byId('build').replaceChildren(new Option('选择构建', ''));
+    let group, previousDay;
+    for (const entry of entries) {
+      const day = dateKey(entry.created_at);
+      if (day !== previousDay) {
+        group = document.createElement('optgroup'); group.label = day; byId('build').append(group); previousDay = day;
+      }
+      group.append(new Option(`${day.slice(5)} ${buildTime.format(new Date(entry.created_at))} · ${entry.commit.slice(0, 8)} · 成功 ${entry.success_count} / 失败 ${entry.failed_count}`, entry.pipeline_id));
+      group.lastChild.title = `流水线 #${entry.pipeline_id} · ${entry.commit}`;
+    }
+    byId('build-filter').hidden = !entries.length;
+    byId('build').value = entries.some(entry => entry.pipeline_id === selectedId) ? selectedId : '';
+    clearTimeout(expiryTimer);
+    const all = fresh();
+    if (all.length) {
+      const nextExpiry = Math.min(...all.map(entry => Date.parse(entry.created_at))) + historyData.days * DAY + 1;
+      expiryTimer = setTimeout(() => {
+        refreshBuilds();
+        if (selectedId && !entries.some(entry => entry.pipeline_id === selectedId)) {
+          request++; selectedId = ''; showCatalog(null);
+          setMessage(`所选构建已超过 ${historyData.days} 天保留期，请选择其他构建。`);
+        }
+      }, Math.min(Math.max(1, nextExpiry - Date.now()), 2147483647));
+    }
+  }
+
+  async function selectBuild(id, updateUrl = false) {
+    const ticket = ++request;
+    selectedId = id;
+    refreshBuilds();
+    if (updateUrl) {
+      const url = new URL(location.href);
+      url.searchParams.delete('date');
+      if (id) url.searchParams.set('pipeline', id);
+      else url.searchParams.delete('pipeline');
+      url.searchParams.set('ref', selectedBranch);
+      window.history.replaceState(null, '', url);
+    }
+    const entry = entries.find(item => item.pipeline_id === id);
+    if (!entry) {
+      displayCatalog(null);
+      setMessage(entries.length ? `所选构建不在最近 ${historyData.days} 天的可用目录中，请选择其他构建。`
+        : `最近 ${historyData.days} 天没有可用的完整构建，请等待下一次构建。`);
+      return;
+    }
+    let catalog = cache.get(id);
+    if (!catalog) {
+      showCatalog(null);
+      setMessage('正在加载所选构建…');
+      try {
+        const response = await fetch(`pipelines/${encodeURIComponent(id)}/catalog.json`, {credentials: 'same-origin'});
+        if (!response.ok) throw new Error('无法读取目录');
+        catalog = await response.json();
+        if (!validateCatalog(catalog, entry)) throw new Error('目录校验失败');
+      } catch (_) {
+        if (ticket === request) setMessage('所选构建加载失败，请重试，或确认 GitLab 登录状态后刷新页面。', true);
+        return;
+      }
+      if (ticket !== request) return;
+    }
+    if (!validateCatalog(catalog, entry)) {
+      cache.delete(id);
+      displayCatalog(null);
+      setMessage('所选构建目录格式无效，未显示该目录。', true);
+      return;
+    }
+    setMessage('');
+    if (!displayCatalog(catalog, entry)) {
+      cache.delete(id);
+      setMessage('所选构建渲染失败，请重新加载。', true);
+      return;
+    }
+    cache.set(id, catalog);
+  }
+
+  function openSharedBuild() {
+    request++;
+    selectedId = '';
+    const params = new URLSearchParams(location.search);
+    const available = fresh();
+    const refs = [...new Set(available.map(entry => entry.ref))].sort((a, b) => (b === 'main') - (a === 'main') || a.localeCompare(b));
+    if (!refs.includes('main')) refs.unshift('main');
+    const requestedRef = params.get('ref');
+    if (params.has('ref') && !refs.includes(requestedRef)) refs.push(requestedRef);
+    const target = available.find(entry => entry.pipeline_id === params.get('pipeline'));
+    selectedBranch = target?.ref || (params.get('ref') || 'main');
+    byId('branch').replaceChildren(...refs.map(ref => new Option(ref, ref)));
+    byId('branch').value = selectedBranch;
+    byId('branch-filter').hidden = refs.length < 2;
+    byId('build-panel').hidden = false;
+    refreshBuilds();
+    if (params.has('pipeline') && !target) {
+      displayCatalog(null);
+      setMessage('链接中的构建已过期或不可用；为避免展示错误版本，未切换到其他构建。', true, openSharedBuild);
+      return;
+    }
+    const dateEntry = params.has('date')
+      ? entries.find(entry => dateKey(entry.created_at) === params.get('date')) : null;
+    if (params.has('date') && !dateEntry) {
+      displayCatalog(null);
+      setMessage('链接中的日期没有可用构建；为避免展示错误版本，未切换到其他构建。', true, openSharedBuild);
+      return;
+    }
+    const id = target?.pipeline_id || dateEntry?.pipeline_id || (!params.has('pipeline') && !params.has('date')
+      ? entries[0]?.pipeline_id : undefined);
+    selectBuild(id || '');
+  }
+
+  function stat(label, count, className, status) {
+    const node = el('button', `stat ${className}`); node.type = 'button';
+    node.append(el('strong', '', String(count)), document.createTextNode(label));
+    node.setAttribute('aria-pressed', String(byId('status').value === status));
+    node.addEventListener('click', () => {
+      byId('status').value = byId('status').value === status ? '' : status; page = 0; render();
+    });
+    return node;
+  }
+
   function render() {
+    if (!data) {
+      byId('rows').replaceChildren(); byId('count').replaceChildren(); byId('page').textContent = '';
+      byId('prev').disabled = true; byId('next').disabled = true; return;
+    }
     const query = byId('search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const selected = searchable.filter(({row, text}) => (!byId('board').value || row.board === byId('board').value)
       && (!byId('status').value || row.status === byId('status').value) && query.every(q => text.includes(q))).map(x => x.row);
     const pages = Math.max(1, Math.ceil(selected.length / 50)); page = Math.min(page, pages - 1);
-    byId('count').textContent = `找到 ${selected.length} / ${data.rows.length} 个构建目标；成功 ${data.rows.filter(r => r.status === 'success').length}，失败 ${data.rows.filter(r => r.status === 'failed').length}，未知或缺失 ${data.rows.filter(r => !['success', 'failed'].includes(r.status)).length}。`;
+    const count = status => data.rows.filter(row => row.status === status).length;
+    // Tiles double as status filters; rare statuses appear only when present.
+    const rare = ['unknown', 'unavailable'].filter(status => count(status)).map(status => stat(names[status], count(status), 'other', status));
+    byId('count').replaceChildren(stat('全部目标', data.rows.length, 'total', ''), stat('成功', count('success'), 'success', 'success'),
+      stat('失败', count('failed'), 'failed', 'failed'), ...rare,
+      el('span', 'shown', `当前显示 ${selected.length} / ${data.rows.length}`));
     byId('rows').replaceChildren();
     for (const row of selected.slice(page * 50, (page + 1) * 50)) {
       const tr = document.createElement('tr');
-      for (const value of [row.board, row.project, names[row.status]]) {
-        const td = document.createElement('td'); td.textContent = value; tr.append(td);
-      }
-      tr.children[1].className = 'project'; tr.children[2].className = `status ${row.status}`;
-      const files = document.createElement('td');
+      const status = el('td'); status.append(el('span', `badge ${row.status}`, names[row.status] || row.status));
+      const files = el('td');
       if (row.files.length) {
-        const detail = document.createElement('details'), summary = document.createElement('summary');
-        summary.textContent = `${row.files.length} 个文件`; detail.append(summary);
-        for (const file of row.files) { const a = link(`${file.name} (${size(file.size)})`, file.url); a.className = 'file'; detail.append(a); }
+        const detail = el('details'); detail.append(el('summary', '', `${row.files.length} 个文件`));
+        for (const file of row.files) {
+          const a = link(file.name, file.url); a.className = 'file'; a.append(el('span', '', size(file.size))); detail.append(a);
+        }
         files.append(detail);
-      } else files.textContent = row.status === 'success' ? '无产物文件' : '无可下载产物';
-      if (row.browse_url) { files.append(document.createElement('br'), link('打开文件目录', row.browse_url)); }
-      const logs = document.createElement('td');
-      for (const log of row.logs) { const a = link('查看构建日志', log.url); a.className = 'file'; logs.append(a); }
-      if (row.job_url) logs.append(link('批次任务', row.job_url));
-      tr.append(files, logs); byId('rows').append(tr);
+      } else files.append(el('span', 'empty', row.status === 'success' ? '无产物文件' : '无可下载产物'));
+      if (row.browse_url) { const actions = el('div', 'actions'); actions.append(link('打开文件目录', row.browse_url)); files.append(actions); }
+      const logs = el('td'), actions = el('div', 'actions');
+      for (const log of row.logs) actions.append(link('构建日志', log.url));
+      if (row.job_url) actions.append(link('批次任务', row.job_url));
+      logs.append(actions);
+      tr.append(el('td', 'board', row.board), el('td', 'project', row.project), status, files, logs);
+      byId('rows').append(tr);
     }
-    if (!selected.length) { const tr = document.createElement('tr'), td = document.createElement('td'); td.colSpan = 5; td.textContent = '没有匹配结果，请调整板子、关键词或状态。'; tr.append(td); byId('rows').append(tr); }
-    byId('page').textContent = `${page + 1} / ${pages}`; byId('prev').disabled = page === 0; byId('next').disabled = page + 1 >= pages;
+    if (!selected.length) {
+      const tr = el('tr', 'no-match'), td = el('td', '', '没有匹配结果，请调整板子、关键词或状态。'); td.colSpan = 5; tr.append(td); byId('rows').append(tr);
+    }
+    byId('page').textContent = `第 ${page + 1} / ${pages} 页`; byId('prev').disabled = page === 0; byId('next').disabled = page + 1 >= pages;
   }
   for (const id of ['board', 'search', 'status']) byId(id).addEventListener('input', () => { page = 0; render(); });
   byId('reset').addEventListener('click', () => { for (const id of ['board', 'search', 'status']) byId(id).value = ''; page = 0; render(); });
   byId('prev').addEventListener('click', () => { page--; render(); });
   byId('next').addEventListener('click', () => { page++; render(); });
-  render();
+  if (historyData) {
+    byId('branch').addEventListener('change', () => {
+      selectedBranch = byId('branch').value;
+      const url = new URL(location.href); url.searchParams.set('ref', selectedBranch);
+      url.searchParams.delete('pipeline'); url.searchParams.delete('date');
+      window.history.replaceState(null, '', url);
+      refreshBuilds(); selectBuild(entries[0]?.pipeline_id || '');
+    });
+    byId('build').addEventListener('change', () => selectBuild(byId('build').value, true));
+    window.addEventListener('popstate', openSharedBuild);
+    openSharedBuild();
+  } else displayCatalog(data);
 </script>
 </html>

@@ -2,16 +2,20 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timedelta, timezone
 import io
 import json
 import os
 from pathlib import Path
 import sys
+import threading
+import time
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import Mock, patch
 from urllib.request import Request
+from urllib.parse import parse_qs, urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'tools/ci'))
 import artifact_catalog as catalog
@@ -26,9 +30,12 @@ class ArtifactCatalogTests(unittest.TestCase):
             'CI_PIPELINE_ID': '123', 'CI_JOB_ID': '999', 'CI_JOB_TOKEN': 'test-secret',
             'CI_COMMIT_SHA': 'abc123', 'CI_JOB_NAME': 'collect_batch_001',
             'GITLAB_API_READ_TOKEN': 'api-read-secret',
+            'CI_DEFAULT_BRANCH': 'main', 'CI_COMMIT_REF_NAME': 'main',
+            'CI_PIPELINE_CREATED_AT': '2026-11-04T00:00:00Z',
         })
         self.env.start()
         self.addCleanup(self.env.stop)
+        self.now = datetime(2026, 11, 4, 6, tzinfo=timezone.utc)
         self.client = catalog.GitLab()
         self.pointer = {'pipeline_id': '123', 'project_id': '38', 'commit': 'abc123',
                         'batch': 'collect_batch_001', 'job_id': '789'}
@@ -208,9 +215,78 @@ class ArtifactCatalogTests(unittest.TestCase):
             page = (output / 'index.html').read_text()
             self.assertNotIn('</script><script>alert(1)</script>', page)
             self.assertIn('\\u003c/script', page)
-            self.assertNotIn('fetch(', page)
+            self.assertIn('id="history-data">null</script>', page)
             self.assertEqual(json.loads((output / 'catalog.json').read_text()), result)
             self.assertTrue((output / 'README.md').exists())
+
+    def test_placeholder_text_inside_catalog_data_is_not_substituted_again(self):
+        result = self.build()
+        result['rows'][0]['project'] = 'demo/__HISTORY_DATA__/project'
+        history = {'days': 7, 'pipelines': [], 'default_pipeline_id': '123'}
+        with TemporaryDirectory() as temp:
+            output = Path(temp)
+            catalog.write_catalog(result, output, history=history)
+            page = (output / 'index.html').read_text()
+            embedded = page.split('id="data">', 1)[1].split('</script>', 1)[0]
+            self.assertEqual(json.loads(embedded)['rows'][0]['project'], 'demo/__HISTORY_DATA__/project')
+            embedded_history = page.split('id="history-data">', 1)[1].split('</script>', 1)[0]
+            self.assertEqual(json.loads(embedded_history), history)
+
+    def test_generated_html_preserves_unavailable_explicit_ref(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        self.assertIn("target?.ref || (params.get('ref') || 'main')", template)
+        self.assertIn('if (params.has(\'ref\') && !refs.includes(requestedRef)) refs.push(requestedRef);', template)
+        self.assertIn("byId('branch-filter').hidden = refs.length < 2;", template)
+
+    def test_shared_catalog_without_ref_stays_on_main_when_only_release_is_fresh(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        open_shared_build = template.split('function openSharedBuild() {', 1)[1].split('\n  }', 1)[0]
+        self.assertIn("if (!refs.includes('main')) refs.unshift('main');", open_shared_build)
+        self.assertIn("selectedBranch = target?.ref || (params.get('ref') || 'main');", open_shared_build)
+
+    def test_invalid_shared_date_clears_old_selection_and_retries_current_url(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        open_shared_build = template.split('function openSharedBuild() {', 1)[1].split('\n  }', 1)[0]
+        self.assertLess(open_shared_build.index("selectedId = '';"), open_shared_build.index("if (params.has('date') && !dateEntry)"))
+        self.assertIn("setMessage('链接中的日期没有可用构建；为避免展示错误版本，未切换到其他构建。', true, openSharedBuild);",
+                      open_shared_build)
+        self.assertIn('retry.addEventListener(\'click\', retryAction);', template)
+
+    def test_empty_build_selection_clears_build_url_parameters_before_returning(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        select_build = template.split('async function selectBuild(id, updateUrl = false) {', 1)[1].split(
+            '\n  function openSharedBuild()', 1)[0]
+        self.assertLess(select_build.index("url.searchParams.delete('date')"), select_build.index('if (!entry) {'))
+        self.assertLess(select_build.index("url.searchParams.delete('pipeline')"), select_build.index('if (!entry) {'))
+        self.assertIn("url.searchParams.set('ref', selectedBranch);", select_build)
+
+    def test_open_shared_link_invalidates_inflight_build_requests(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        open_shared_build = template.split('function openSharedBuild() {', 1)[1].split('\n  }', 1)[0]
+        self.assertTrue(open_shared_build.lstrip().startswith('request++;'))
+        self.assertLess(open_shared_build.index('request++;'), open_shared_build.index("if (params.has('pipeline') && !target)"))
+        self.assertLess(open_shared_build.index('request++;'), open_shared_build.index("if (params.has('date') && !dateEntry)"))
+
+    def test_generated_html_renders_without_history_entry(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
+        self.assertIn('} else displayCatalog(data);', template)
+
+    def test_history_skips_pipelines_without_catalog_job_silently(self):
+        recent = self.now.isoformat()
+        self.client.read_json = Mock(side_effect=lambda path, resource: (
+            [{'id': 122, 'source': 'push', 'sha': 'good', 'created_at': recent}]
+            if path.startswith('pipelines?') and 'ref=main' in path else []))
+        self.client.latest_job = Mock(return_value=None)
+
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return self.now if tz else self.now.replace(tzinfo=None)
+
+        with patch.object(catalog, 'datetime', FrozenDateTime):
+            with redirect_stderr(io.StringIO()) as warnings:
+                self.assertEqual(catalog.load_history(self.client), [])
+        self.assertEqual(warnings.getvalue(), '')
 
     def test_malformed_file_entries_do_not_prevent_partial_catalog_generation(self):
         for entries in [42, [None], [{'path': 42, 'size': 10}],
@@ -307,10 +383,10 @@ class ArtifactCatalogTests(unittest.TestCase):
     def write_pages_source(self, root, issues=(), commit='abc123'):
         source = Path(root) / 'artifact_catalog'
         source.mkdir()
-        (source / 'catalog.json').write_text(json.dumps(
-            {'pipeline_id': '124', 'project_id': '38', 'commit': commit,
-             'rows': [{'status': 'failed'}], 'issues': list(issues)}), encoding='utf-8')
-        (source / 'index.html').write_text('<title>catalog</title>', encoding='utf-8')
+        result = self.build()
+        result.update(pipeline_id='124', commit=commit, issues=list(issues))
+        result['rows'][0]['status'] = 'failed'
+        catalog.write_catalog(result, source)
         return source
 
     CATALOG_JOB_PATH = 'pipelines/123/jobs?per_page=100&page=1'
@@ -323,10 +399,11 @@ class ArtifactCatalogTests(unittest.TestCase):
         return (f'repository/commits/def456/statuses?pipeline_id={pipeline_id}'
                 f'&name={name}&all=true&per_page=100&page=1')
 
-    def fake_pages_api(self, catalog_jobs=CATALOG_PASSED, pipelines=(), statuses=None):
+    def fake_pages_api(self, catalog_jobs=CATALOG_PASSED, pipelines=(), statuses=None, history=(), extra=None):
         """statuses maps (pipeline, name) to status lists, or to one list per poll."""
         responses = {self.CATALOG_JOB_PATH: catalog_jobs, self.PIPELINES_PATH: [
             {'id': pipeline_id, 'source': source, 'sha': 'def456'} for pipeline_id, source in pipelines]}
+        responses.update(extra or {})
         polls = {}
         for (pipeline_id, name), values in (statuses or {}).items():
             path = self.status_path(pipeline_id, name)
@@ -336,11 +413,21 @@ class ArtifactCatalogTests(unittest.TestCase):
                 responses[path] = values
 
         def respond(path, **_kwargs):
+            if path.startswith('pipelines?') and 'updated_after=' in path:
+                page = int(parse_qs(urlsplit(path).query)['page'][0])
+                if isinstance(history, Exception):
+                    raise history
+                branch = parse_qs(urlsplit(path).query)['ref'][0]
+                branch_history = history.get(branch, []) if isinstance(history, dict) else history
+                branch_history = list(branch_history)
+                return copy.deepcopy(branch_history[(page - 1) * 100:page * 100])
             if path not in polls and path not in responses:
                 raise AssertionError(f'unexpected GitLab request: {path}')
             values = next(polls[path]) if path in polls else responses[path]
             if path.startswith('repository/'):
                 return [{'name': 'pages', 'status': status} for status in values]
+            if isinstance(values, Exception):
+                raise values
             return copy.deepcopy(values)
         self.client.json_request = Mock(side_effect=respond)
 
@@ -354,8 +441,268 @@ class ArtifactCatalogTests(unittest.TestCase):
             (output / 'stale').mkdir(parents=True)
             self.fake_pages_api(pipelines=[(123, 'schedule'), (100, 'web')])
             self.assertIsNone(catalog.publish_pages(self.client, source, output))
-            self.assertEqual(sorted(p.name for p in output.iterdir()), ['catalog.json', 'index.html'])
-            self.assertEqual(self.requested_paths(), [self.CATALOG_JOB_PATH, self.PIPELINES_PATH])
+            self.assertEqual(sorted(p.name for p in output.iterdir()),
+                             ['README.md', 'catalog.json', 'history.json', 'index.html', 'pipelines'])
+            self.assertEqual(self.requested_paths()[:2], [self.CATALOG_JOB_PATH, self.PIPELINES_PATH])
+            self.assertIn('updated_after=', self.requested_paths()[2])
+            self.assertIn('ref=release%2Fv2.5', self.requested_paths()[3])
+            history = json.loads((output / 'history.json').read_text())
+            self.assertEqual(history, [{'pipeline_id': '123', 'ref': 'main', 'commit': 'abc123',
+                                       'created_at': '2026-11-04T00:00:00Z',
+                                       'success_count': 0, 'failed_count': 1}])
+            self.assertEqual(json.loads((output / 'pipelines/123/catalog.json').read_text()),
+                             json.loads((source / 'catalog.json').read_text()))
+            self.assertFalse((output / 'stale').exists())
+
+    def test_load_history_queries_each_branch_filters_boundaries_and_validates_catalogs(self):
+        recent = self.now.isoformat()
+        at_boundary = (self.now - timedelta(days=catalog.HISTORY_DAYS)).isoformat()
+        outside = (self.now - timedelta(days=catalog.HISTORY_DAYS, seconds=1)).isoformat()
+        def valid_catalog(commit, status='success'):
+            value = self.build()
+            value.update(project_id='38', commit=commit, issues=[])
+            value['rows'][0]['status'] = status
+            return value
+
+        pipelines = {
+            'main': [
+                {'id': 122, 'source': 'schedule', 'sha': 'good', 'created_at': recent},
+                {'id': 121, 'source': 'parent_pipeline', 'sha': 'good', 'created_at': recent},
+                {'id': 120, 'source': 'schedule', 'sha': 'good', 'created_at': at_boundary},
+                {'id': 119, 'source': 'schedule', 'sha': 'good', 'created_at': outside},
+                {'id': 118, 'source': 'schedule', 'sha': 'smoke', 'created_at': recent},
+                {'id': 117, 'source': 'schedule', 'sha': 'issues', 'created_at': recent},
+                {'id': 116, 'source': 'schedule', 'sha': 'wrong', 'created_at': recent},
+                {'id': 124, 'source': 'schedule', 'sha': 'newer', 'created_at': recent},
+            ],
+            'release/v2.5': [
+                {'id': 125, 'source': 'web', 'sha': 'release', 'created_at': recent},
+            ],
+        }
+        jobs = {str(i): {'id': str(i * 10), 'status': 'success'}
+                for i in (122, 120, 118, 117, 116, 124, 125)}
+        catalogs = {
+            '122': valid_catalog('good'), '120': valid_catalog('good', 'failed'),
+            '118': valid_catalog('smoke'), '117': valid_catalog('issues'),
+            '116': valid_catalog('another'), '124': valid_catalog('newer'),
+            '125': valid_catalog('release'),
+        }
+        catalogs['118']['smoke_test'] = True
+        catalogs['117']['issues'] = ['bad']
+        self.client.read_json = Mock(side_effect=lambda path, resource: (
+            pipelines[parse_qs(urlsplit(path).query)['ref'][0]] if path.startswith('pipelines?')
+            else catalogs[next(key for key, job in jobs.items() if path.startswith(f'jobs/{job["id"]}/'))]))
+        self.client.latest_job = Mock(side_effect=lambda pipeline_id, name: jobs.get(pipeline_id))
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return self.now if tz else self.now.replace(tzinfo=None)
+
+        with patch.object(catalog, 'datetime', FrozenDateTime):
+            with redirect_stderr(io.StringIO()) as warnings:
+                history = catalog.load_history(self.client)
+        self.assertEqual([(item['pipeline_id'], item['ref']) for item in history],
+                         [('122', 'main'), ('120', 'main'), ('124', 'main'), ('125', 'release/v2.5')])
+        self.assertEqual(warnings.getvalue().count('Warning:'), 3)
+        listing_refs = [parse_qs(urlsplit(call.args[0]).query).get('ref', [''])[0]
+                        for call in self.client.read_json.call_args_list
+                        if call.args[0].startswith('pipelines?')]
+        self.assertEqual(listing_refs, ['main', 'release/v2.5'])
+
+    def test_load_history_reads_candidate_catalogs_with_bounded_concurrency(self):
+        recent = self.now.isoformat()
+        pipelines = [{'id': 200 + index, 'source': 'schedule', 'sha': f'sha-{index}',
+                      'created_at': recent} for index in range(8)]
+        jobs = {str(item['id']): {'id': f"{item['id']}0", 'status': 'success'} for item in pipelines}
+        catalogs = {}
+        for item in pipelines:
+            value = self.build()
+            value.update(project_id='38', commit=item['sha'], issues=[])
+            catalogs[jobs[str(item['id'])]['id']] = value
+
+        active = 0
+        max_active = 0
+        lock = threading.Lock()
+
+        def latest_job(pipeline_id, _name):
+            nonlocal active, max_active
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+            time.sleep(0.02)
+            with lock:
+                active -= 1
+            return jobs.get(pipeline_id)
+
+        def read_json(path, _resource):
+            if path.startswith('pipelines?'):
+                ref = parse_qs(urlsplit(path).query)['ref'][0]
+                return pipelines if ref == 'main' else []
+            job_id = path.split('/')[1]
+            return catalogs[job_id]
+
+        self.client.latest_job = latest_job
+        self.client.read_json = read_json
+
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return self.now if tz else self.now.replace(tzinfo=None)
+
+        with patch.object(catalog, 'datetime', FrozenDateTime):
+            history = catalog.load_history(self.client)
+        self.assertEqual(len(history), len(pipelines))
+        self.assertGreater(max_active, 1)
+        self.assertLessEqual(max_active, catalog.HISTORY_WORKERS)
+
+    def test_pipeline_list_failure_is_fatal_to_history(self):
+        self.client.read_json = Mock(side_effect=ValueError('pipeline listing denied'))
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return self.now if tz else self.now.replace(tzinfo=None)
+
+        with patch.object(catalog, 'datetime', FrozenDateTime):
+            with self.assertRaisesRegex(ValueError, 'pipeline listing denied'):
+                catalog.load_history(self.client)
+
+    def test_smoke_pages_publish_stays_in_single_pipeline_mode_without_real_history(self):
+        with TemporaryDirectory() as temp:
+            source = self.write_pages_source(temp)
+            current = json.loads((source / 'catalog.json').read_text())
+            current['smoke_test'] = True
+            catalog.write_catalog(current, source)
+            self.fake_pages_api()
+            output = Path(temp) / 'public'
+            catalog.publish_pages(self.client, source, output)
+            page = (output / 'index.html').read_text()
+            self.assertIn('id="history-data">null</script>', page)
+            self.assertIn('"smoke_test":true', page)
+            self.assertEqual(json.loads((output / 'history.json').read_text()), [])
+
+    def test_smoke_pages_does_not_replace_main_when_only_release_history_exists(self):
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {
+                'CI_PIPELINE_CREATED_AT': '2026-11-04T00:00:00Z'}):
+            source = self.write_pages_source(temp)
+            current = json.loads((source / 'catalog.json').read_text())
+            current['smoke_test'] = True
+            catalog.write_catalog(current, source)
+            release_catalog = dict(current, smoke_test=False, project_id='38',
+                                   commit='release-sha', pipeline_id='1250', issues=[])
+            release_pipeline = {
+                'id': 125, 'source': 'web', 'sha': 'release-sha',
+                'created_at': '2026-11-19T00:00:00Z',
+            }
+            self.client.latest_job = Mock(return_value={'id': '1250', 'status': 'success'})
+            self.fake_pages_api(
+                history={'release/v2.5': [release_pipeline]},
+                extra={'jobs/1250/artifacts/artifact_catalog/catalog.json': release_catalog},
+            )
+
+            class FrozenDateTime(datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    value = datetime(2026, 11, 20, tzinfo=timezone.utc)
+                    return value if tz else value.replace(tzinfo=None)
+
+            output = Path(temp) / 'public'
+            with patch.object(catalog, 'datetime', FrozenDateTime):
+                with self.assertRaisesRegex(ValueError, 'no unexpired complete catalog for main'):
+                    catalog.publish_pages(self.client, source, output)
+            self.assertFalse(output.exists())
+
+    def test_pages_keeps_main_as_default_when_release_build_is_newer(self):
+        with TemporaryDirectory() as temp:
+            source = self.write_pages_source(temp)
+            current = json.loads((source / 'catalog.json').read_text())
+            current['smoke_test'] = True
+            catalog.write_catalog(current, source)
+            main_time = '2026-11-03T00:00:00Z'
+            release_time = '2026-11-04T00:00:00Z'
+            main_catalog = json.loads((source / 'catalog.json').read_text())
+            main_catalog['smoke_test'] = False
+            main_catalog.update(commit='main-sha', pipeline_id='9991')
+            release_catalog = dict(main_catalog, commit='release-sha', pipeline_id='9992')
+            history = {
+                'main': [{'id': 120, 'source': 'schedule', 'sha': 'main-sha', 'created_at': main_time}],
+                'release/v2.5': [{'id': 125, 'source': 'web', 'sha': 'release-sha', 'created_at': release_time}],
+            }
+            self.client.latest_job = Mock(side_effect=lambda pipeline_id, _name: {
+                'id': '1200' if pipeline_id == '120' else '1250', 'status': 'success'})
+            self.client.read_json = Mock(side_effect=lambda path, _resource: (
+                history[parse_qs(urlsplit(path).query)['ref'][0]] if path.startswith('pipelines?')
+                else main_catalog if path.startswith('jobs/1200/') else release_catalog))
+            output = Path(temp) / 'public'
+            catalog.publish_pages(self.client, source, output)
+            embedded = json.loads((output / 'catalog.json').read_text())
+            history_data = json.loads((output / 'index.html').read_text().split(
+                'id="history-data">', 1)[1].split('</script>', 1)[0])
+            self.assertEqual(embedded['commit'], 'main-sha')
+            self.assertEqual(history_data['default_pipeline_id'], '120')
+
+    def test_pages_does_not_use_release_as_default_when_main_history_is_expired(self):
+        with TemporaryDirectory() as temp, patch.dict(os.environ, {
+                'CI_PIPELINE_CREATED_AT': '2026-11-04T00:00:00Z'}):
+            source = self.write_pages_source(temp)
+            release_catalog = json.loads((source / 'catalog.json').read_text())
+            release_catalog.update(project_id='38', commit='release-sha', pipeline_id='1250', issues=[])
+            release_pipeline = {
+                'id': 125, 'source': 'web', 'sha': 'release-sha',
+                'created_at': '2026-11-19T00:00:00Z',
+            }
+            self.client.latest_job = Mock(return_value={'id': '1250', 'status': 'success'})
+            self.fake_pages_api(
+                history={'release/v2.5': [release_pipeline]},
+                extra={'jobs/1250/artifacts/artifact_catalog/catalog.json': release_catalog},
+            )
+
+            class FrozenDateTime(datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    value = datetime(2026, 11, 20, tzinfo=timezone.utc)
+                    return value if tz else value.replace(tzinfo=None)
+
+            output = Path(temp) / 'public'
+            with patch.object(catalog, 'datetime', FrozenDateTime):
+                with self.assertRaisesRegex(ValueError, 'no unexpired complete catalog for main'):
+                    catalog.publish_pages(self.client, source, output)
+            self.assertFalse(output.exists())
+        documentation = Path(catalog.__file__).with_name('ARTIFACT_CATALOG.md').read_text()
+        self.assertIn('不会用 `release/v2.5` 替代', documentation)
+        self.assertIn('Pages 发布也会失败并保留原入口', documentation)
+
+    def test_history_entry_rejects_missing_render_fields(self):
+        pipeline = {'id': '122', 'ref': 'main', 'sha': 'abc123',
+                    'created_at': '2026-11-04T00:00:00Z'}
+        for field in ('generated_at', 'pipeline_url'):
+            broken = self.build()
+            broken.pop(field)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                catalog.history_entry(pipeline, broken, '38')
+        for field in ('board', 'project', 'files', 'logs'):
+            broken = self.build()
+            broken['rows'][0].pop(field)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                catalog.history_entry(pipeline, broken, '38')
+        broken = self.build()
+        broken['generated_at'] = 'not-a-date'
+        with self.assertRaises(ValueError):
+            catalog.history_entry(pipeline, broken, '38')
+
+    def test_pages_does_not_publish_an_expired_current_catalog_without_history(self):
+        with TemporaryDirectory() as temp:
+            source = self.write_pages_source(temp)
+            self.fake_pages_api()
+            class FrozenDateTime(datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    value = datetime(2026, 11, 20, tzinfo=timezone.utc)
+                    return value if tz else value.replace(tzinfo=None)
+            output = Path(temp) / 'public'
+            with patch.object(catalog, 'datetime', FrozenDateTime):
+                with self.assertRaisesRegex(ValueError, 'no unexpired complete catalog for main'):
+                    catalog.publish_pages(self.client, source, output)
+            self.assertFalse(output.exists())
 
     def test_pages_never_publishes_files_left_by_unsuccessful_catalog_job(self):
         # Pages runs `always`; a failed catalog job may still have uploaded a complete-looking page.
