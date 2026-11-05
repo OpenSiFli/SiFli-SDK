@@ -283,12 +283,18 @@ common_projects:
     exclude_boards:
       - spi-hdk_lb573ub7n6
       - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/cherryusb/device/hid_mouse/project
     boards: *devkit-boards
     exclude_boards:
       - spi-hdk_lb573ub7n6
       - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/cherryusb/device/msc/nor_flash_disk/project
     boards: 
@@ -460,6 +466,9 @@ common_projects:
     exclude_boards:
       - spi-hdk_lb573ub7n6
       - spi-hdk_lb575ucnn6_n16
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/hal/spi/dma/project
     boards: *devkit_lcd_boards
@@ -489,6 +498,10 @@ common_projects:
 
   - path: example/hal_example/project
     boards: *default_boards
+    exclude_boards:
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
 
   - path: example/jpeg_dec/project
     boards: 
