@@ -1,0 +1,57 @@
+# The example registers a `diss` shell command and does part of its work only
+# when one is typed (command list, scan, advertising-data update). A `console`
+# harness can only read the UART, so this case uses pytest, which can send a
+# line and assert on the reply.
+#
+# Scope of `ble_central_and_peripheral.pytest`: one board, no peer. Power-on,
+# the GATT server registration, the extended advertising start, the central
+# scan and the shell command are all visible from the board itself.
+#
+# The second entry adds the other half. It needs a peer BLE device, which the
+# lab provides as an *instrument*: a second board wired to the same testbed and
+# declared in the binding as `fixture: ble_peer`, running a fixed image of this
+# same example (built from `project/hcpu`, flashed once by the lab) and driven
+# over its own console. Nothing is built or flashed for it here.
+#
+# project_dir is spelled out because the example keeps two projects side by
+# side under `project/` (hcpu and acpu), so the conventional lookup finds two
+# candidates and refuses to pick one.
+#
+# Negative verification: comment out `ble_app_ext_advertising_start()` in
+# `src/main.c` and both entries go red on the advertising assertion (the ADV
+# start line never arrives). For the peer entry, power off the instrument and
+# its first `diss help` never answers.
+#
+# Run it with:
+#     sdk.py test run -T example/ble/central_and_peripheral -p sf32lb52-lcd_a128r16
+#     sdk.py test run -T example/ble/central_and_peripheral -t ble_central_and_peripheral.pytest -p sf32lb52-lcd_a128r16
+#     sdk.py test run -T example/ble/central_and_peripheral --tag peer -p sf32lb52-lcd_a128r16
+#
+# The first selects both entries and needs a lab that has the instrument; the
+# second runs the one-board case alone, the third only the peer case. A bare
+# `-t peer` is not a test id and is refused.
+tests:
+  - id: ble_central_and_peripheral.pytest
+    description: Power on BLE, check the extended advertisement started, and drive the diss shell command.
+    harness: pytest
+    tags: [pytest, ble]
+    # Covers the build, the flash, the boot, BLE power-on and a 2 s scan.
+    timeout: 180
+    project_dir: project/hcpu
+    harness_config:
+      pytest_root: pytest
+
+  - id: ble_central_and_peripheral.peer
+    description: A peer instrument connects, discovers the service, reads, writes and receives notifications.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    # Covers the build, the flash, the boot, a 3 s scan, the connection and the
+    # GATT traffic -- all of it with two boards to drive.
+    timeout: 240
+    project_dir: project/hcpu
+    harness_config:
+      # The lab must wire an instrument to the testbed and declare it in the
+      # binding; without one this entry errors and the first entry still runs.
+      fixture: ble_peer
+      pytest_root: pytest_peer
+
