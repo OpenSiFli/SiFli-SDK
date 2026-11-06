@@ -44,9 +44,6 @@ config EPD_TPS_PWRUP_PIN
     int
     default 26
 
-
-
-
 menu "SF32LB57-LCD Configuration"
 
 config BSP_USING_CAMERA1
@@ -54,7 +51,67 @@ config BSP_USING_CAMERA1
     select BSP_USING_GC032A
     default n
 
+config BOARD_USING_WIFI
+    bool "WiFi"
+    default n
+
 endmenu
 
 configdefault SDMMC1_BUS_WIDTH_1_ONLY
     default y
+
+configdefault LXT_DISABLE
+    default y
+
+# KEY1 used as a single key without ADC button function
+configdefault BSP_USING_KEY1
+    default y
+
+configdefault BSP_KEY1_PIN
+    default 34
+
+configdefault BSP_KEY1_ACTIVE_HIGH
+    default y
+
+# ADC button configuration
+configdefault USING_ADC_BUTTON
+    default y
+
+configdefault ADC_BUTTON_GROUP_NUM
+    default 1
+
+configdefault ADC_BUTTON_ADC_DEV_NAME
+    default "bat1"
+
+configdefault ADC_BUTTON_GROUP1_MAX_NUM
+    default 3
+
+configdefault ADC_BUTTON_GROUP1_ADC_DEV_CHANNEL
+    default 6
+
+# KEY1
+configdefault ADC_BUTTON_GROUP1_BUTTON1_VOLT
+    default 2973
+
+configdefault ADC_BUTTON_GROUP1_BUTTON1_RANGE
+    default 190
+
+# KEY2
+configdefault ADC_BUTTON_GROUP1_BUTTON2_VOLT
+    default 2578
+
+configdefault ADC_BUTTON_GROUP1_BUTTON2_RANGE
+    default 190
+
+# KEY3
+configdefault ADC_BUTTON_GROUP1_BUTTON3_VOLT
+    default 2185
+
+configdefault ADC_BUTTON_GROUP1_BUTTON3_RANGE
+    default 190
+
+# WiFi configuration
+if BOARD_USING_WIFI
+configdefault AIC_WLAN_AIC8800D40N
+    default y
+endif # BOARD_USING_WIFI
