@@ -71,6 +71,13 @@ static void spi_test(void)
     HAL_PIN_Set(PAD_PA40, SPI2_CS,  PIN_NOPULL, 1);
 #define EXAMPLE_SPI  SPI2
     HAL_RCC_EnableModule(RCC_MOD_SPI2);
+#elif defined(SF32LB56X)
+    HAL_PIN_Set(PAD_PA64, SPI2_DO, PIN_PULLDOWN, 1);       // SPI2
+    HAL_PIN_Set(PAD_PA69, SPI2_DI,  PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA73, SPI2_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA71, SPI2_CS,  PIN_NOPULL, 1);
+#define EXAMPLE_SPI  SPI2
+    HAL_RCC_EnableModule(RCC_MOD_SPI2);
 #endif
 
     //----------------------------------------------

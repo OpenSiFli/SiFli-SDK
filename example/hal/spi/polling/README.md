@@ -5,6 +5,7 @@
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
 - `sf32lb57-lcd`
+- `sf32lb56-lcd`
 ## 概述
 该例程演示 SPI HAL 在**阻塞轮询模式**下的自发自收（loopback）例程
 
@@ -34,6 +35,7 @@ scons --board=sf32lb58-lcd_n16r64n4 -j8
 |sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
 |sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
 |sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
+|sf32lb56-lcd |PA64       |PA69     |PA73      |PA71     |
 
 说明：
 - 此例程用 `HAL_SPI_TransmitReceive` 一次完成收发，不再手动 `TAKE/RELEASE CS`。

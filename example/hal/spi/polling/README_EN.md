@@ -5,6 +5,7 @@ Source path: `example/hal/spi/polling`
 - `sf32lb52-lcd_n16r8`
 - `sf32lb58-lcd_n16r64n4`
 - `sf32lb57-lcd`
+- `sf32lb56-lcd`
 
 ## Overview
 This example demonstrates SPI HAL in **blocking polling mode** with self loopback verification.
@@ -35,6 +36,7 @@ Short SPI1 or SPI2 MOSI and MISO:
 |sf32lb52-lcd |PA24       |PA25     |PA28      |PA29     |
 |sf32lb58-lcd |PA21       |PA20     |PA28      |PA29     |
 |sf32lb57-lcd |PA37       |PA38     |PA39      |PA40     |
+|sf32lb56-lcd |PA64       |PA69     |PA73      |PA71     |
 
 Notes:
 - This example uses one-shot `HAL_SPI_TransmitReceive` per round; no manual `TAKE/RELEASE CS` is used.
