@@ -18,6 +18,16 @@
 #define MAX_NUM_SECTORS (512)      // Max. number of sectors, must not be modified.
 #define ALGO_VERSION    (0x0101)   // Algo version, must not be modified.
 
+#ifdef JLINK_SDIO_1
+    #define SDIO_NAME  "SF32LB55X External SDIO1"
+    #define SDIO_BASE  0x68000000
+    #define SDIO_SIZE  0x38000000
+#elif defined(JLINK_SDIO_2)
+    #define SDIO_NAME  "SF32LB55X External SDIO2"
+    #define SDIO_BASE  0xa0000000
+    #define SDIO_SIZE  0x40000000
+#endif
+
 struct SECTOR_INFO
 {
     U32 SectorSize;       // Sector Size in bytes
@@ -60,7 +70,7 @@ extern int  SEGGER_OPEN_Erase(U32 SectorAddr, U32 SectorIndex, U32 NumSectors); 
 //extern void SEGGER_OPEN_Start    (volatile struct SEGGER_OPEN_CMD_INFO* pInfo);     // Optional
 
 
-#define PAGE_SIZE 0x20000
+#define PAGE_SIZE 0x4000
 
 
 

@@ -150,8 +150,6 @@ static void JLINK_DRV_BSP_PIN_Init(void)
 
 void HAL_MspInit(void)
 {
-    JLINK_DRV_BSP_PIN_Init();
-
     /*##-1- Configure the UART peripheral ######################################*/
     /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
     /* UART configured as follows:
@@ -161,6 +159,7 @@ void HAL_MspInit(void)
         - Parity      = ODD parity
         - BaudRate    = 9600 baud
         - Hardware flow control disabled (RTS and CTS signals) */
+    memset(&UartHandle, 0, sizeof(UART_HandleTypeDef));
     UartHandle.Instance        = USART3;
     UartHandle.Init.BaudRate   = 1000000;
     UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
@@ -174,7 +173,10 @@ void HAL_MspInit(void)
         /* Initialization Error */
         HAL_ASSERT(0);
     }
-    //debug_print("Init\r\n");
+
+    JLINK_DRV_BSP_PIN_Init();
+
+    debug_print("Init\r\n");
 }
 
 
