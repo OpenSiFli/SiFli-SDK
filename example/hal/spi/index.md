@@ -1,0 +1,9 @@
+# SPI
+
+```{toctree}
+:titlesonly:
+:glob:
+
+*/*
+
+```
