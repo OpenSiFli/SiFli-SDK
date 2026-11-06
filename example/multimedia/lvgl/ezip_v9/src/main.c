@@ -33,6 +33,23 @@ extern bool lv_refreshing_done(void);
 #define SDCARD_READY_RETRY_COUNT 100
 #define SDCARD_READY_RETRY_DELAY_MS 30
 
+static const char *image_storage_name(const char *path)
+{
+    const char *sdcard_path = path;
+    size_t sdcard_path_len = sizeof(SDCARD_MOUNT_PATH) - 1;
+
+    if (strncmp(sdcard_path, "A:", 2) == 0)
+    {
+        sdcard_path += 2;
+    }
+    if (strncmp(sdcard_path, SDCARD_MOUNT_PATH, sdcard_path_len) == 0
+            && (sdcard_path[sdcard_path_len] == '/' || sdcard_path[sdcard_path_len] == '\0'))
+    {
+        return "SD card";
+    }
+    return "filesystem";
+}
+
 typedef enum
 {
     IMG_SRC_INVALID = 0,
@@ -326,6 +343,7 @@ static int set_image(int argc, char **argv)
 {
     if (argc < 3 || argc > 4)
     {
+        rt_kprintf("Set image source: FAILED (invalid arguments)\n");
         rt_kprintf("Usage: set_image [path] [file/dsc] [sram/psram]\n");
         rt_kprintf("  path: image file path\n");
         rt_kprintf("  file/dsc: load as file or descriptor\n");
@@ -357,6 +375,7 @@ static int set_image(int argc, char **argv)
     }
     else
     {
+        rt_kprintf("Set image source: FAILED (invalid memory type)\n");
         rt_kprintf("Invalid memory type: %s, use 'sram' or 'psram'\n", mem_type);
         return -1;
     }
@@ -369,6 +388,7 @@ static int set_image(int argc, char **argv)
         next.src.file_path = (char *)malloc(strlen(path) + 1);
         if (next.src.file_path == NULL)
         {
+            rt_kprintf("Set image source: FAILED (file path allocation)\n");
             rt_kprintf("Failed to allocate memory for file path\n");
             return -1;
         }
@@ -380,12 +400,14 @@ static int set_image(int argc, char **argv)
         lv_img_dsc_t *img_dsc = (lv_img_dsc_t *)malloc(sizeof(lv_img_dsc_t));
         if (img_dsc == NULL)
         {
+            rt_kprintf("Set image source: FAILED (descriptor allocation)\n");
             rt_kprintf("Failed to allocate memory for image descriptor\n");
             return -1;
         }
 
         if (load_ezip(img_dsc, path, use_psram) != 0)
         {
+            rt_kprintf("Set image source: FAILED (image load)\n");
             rt_kprintf("Failed to load ezip image from: %s\n", path);
             free(img_dsc);
             return -1;
@@ -396,6 +418,7 @@ static int set_image(int argc, char **argv)
     }
     else
     {
+        rt_kprintf("Set image source: FAILED (invalid load type)\n");
         rt_kprintf("Invalid load type: %s, use 'file' or 'dsc'\n", load_type);
         return -1;
     }
@@ -408,6 +431,8 @@ static int set_image(int argc, char **argv)
         return -1;
     }
     rt_kprintf("Queued image source: %s (%s)\n", path, load_type);
+    rt_kprintf("Set image source: %s%s success\n", image_storage_name(path),
+               strcmp(load_type, "dsc") == 0 ? (use_psram ? " -> PSRAM" : " -> SRAM") : "");
 
     return 0;
 }
@@ -438,8 +463,10 @@ int main(void)
     lv_obj_t *img = lv_img_create(lv_scr_act());
     /* Set initial image source for LVGL V9 */
 #ifdef SOC_SF32LB57X
+    rt_kprintf("Image source: filesystem\n");
     lv_img_set_src(img, "A:/example_57.ezip");
 #else
+    rt_kprintf("Image source: filesystem\n");
     lv_img_set_src(img, "A:/example.ezip");
 #endif
     /* Align the image to the center of the screen */
