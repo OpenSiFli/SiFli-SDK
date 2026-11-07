@@ -14,7 +14,7 @@
 ## 例程的使用
 <!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
 对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
-1. 本例程的Finsh命令可以通过输入diss help来打印命令及使用方法。
+1. 本例程通过 `MSH_CMD_EXPORT(cmd_diss, ...)` 注册命令，命令名为 `cmd_diss`（没有 help 分支）。
 2. 作为从设备时开机会开启广播，广播名字以SIFLI_APP-xx-xx-xx-xx-xx-xx, 其中xx代表本设备的蓝牙地址。可以通过手机的BLE APP进行连接
 3. 可以使用sifli ble serial transport串行传输协议，从手机端发送文件到设备端，一次可以发送一个或者多个文件。
 

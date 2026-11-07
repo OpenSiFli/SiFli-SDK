@@ -10,7 +10,7 @@ This example demonstrates how to implement a GAP peripheral role on this platfor
 ## Example Usage
 <!-- Instructions on how to use the example, such as connecting hardware pins to observe waveforms, compilation and downloading can reference related documents.
 For rt_device examples, also need to list the configuration switches used in this example, such as PWM example uses PWM1, need to enable PWM1 in onchip menu -->
-1. The Finsh commands for this example can be displayed by entering `diss help` to show command usage.
+1. This example registers its command with `MSH_CMD_EXPORT(cmd_diss, ...)`, so the command is `cmd_diss`; it has no help branch.
 2. When operating as a peripheral device, it will start advertising on boot with the name format: SIFLI_APP-xx-xx-xx-xx-xx-xx, where xx represents the device's Bluetooth address. You can connect using a mobile BLE app.
 3. The sifli ble serial transport protocol can be used to send files from the mobile device to the target device, supporting one or multiple files in a single transfer.
 ### Hardware Requirements

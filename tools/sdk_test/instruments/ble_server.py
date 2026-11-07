@@ -16,6 +16,7 @@ like a broken instrument rather than a property the example does not have.
 from __future__ import annotations
 
 import re
+import time
 from typing import Any
 
 from .errors import InstrumentProtocolError
@@ -91,13 +92,15 @@ def expect_classic_ready(dut: Any, timeout: float = 40.0) -> None:
     dut.expect(r"bt stack ready", timeout=timeout)
 
 
-def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 3) -> Any:
+def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 6) -> Any:
     """Scan, connect to a connectable report, and confirm the DUT saw the link.
 
     A dense lab has more than one connectable advertiser in range, so the
     strongest report is only a guess. The DUT-side ``connected`` line is the
-    proof; when it does not appear, the link belongs to a neighbour -- drop it
-    and try the next report, public addresses first.
+    proof; when it does not appear, the link was to a neighbour or the DUT
+    dropped it (HCI reason 62) -- release it and try the next report. The
+    file_transfer/peripheral examples were observed dropping the first one or
+    two connections, hence the generous budget.
     """
     reports = peer.ble.scan(duration_ms=3000)
     # A peripheral example may also run a non-connectable background
@@ -131,16 +134,18 @@ def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 3) -> Any:
         try:
             link = peer.ble.connect(report, timeout=10.0)
         except (InstrumentTimeout, InstrumentProtocolError):
+            time.sleep(0.5)
             continue
         try:
             dut.expect(r"Peer device\(.*\) connected", timeout=8)
             return link
         except AssertionError:
-            # The link is up, but not to this DUT. Release it and try the next.
+            # The link is up, but not to this DUT (or the DUT dropped it).
             try:
                 peer.ble.disconnect(link)
             except (InstrumentTimeout, InstrumentProtocolError):
                 pass
+            time.sleep(0.5)
 
     raise AssertionError(
         "could not establish a link the DUT acknowledged after "
