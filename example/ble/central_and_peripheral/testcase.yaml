@@ -9,9 +9,9 @@
 #
 # The second entry adds the other half. It needs a peer BLE device, which the
 # lab provides as an *instrument*: a second board wired to the same testbed and
-# declared in the binding as `fixture: ble_peer`, running a fixed image of this
-# same example (built from `project/hcpu`, flashed once by the lab) and driven
-# over its own console. Nothing is built or flashed for it here.
+# declared in the binding as `fixture: bt_peer`, running the fixed bt_peer
+# firmware (built once from example/test/bt_peer) and driven over its own
+# console. Nothing is built or flashed for it here.
 #
 # project_dir is spelled out because the example keeps two projects side by
 # side under `project/` (hcpu and acpu), so the conventional lookup finds two
@@ -20,7 +20,7 @@
 # Negative verification: comment out `ble_app_ext_advertising_start()` in
 # `src/main.c` and both entries go red on the advertising assertion (the ADV
 # start line never arrives). For the peer entry, power off the instrument and
-# its first `diss help` never answers.
+# its first `peer info` never answers.
 #
 # Run it with:
 #     sdk.py test run -T example/ble/central_and_peripheral -p sf32lb52-lcd_a128r16
@@ -52,6 +52,7 @@ tests:
     harness_config:
       # The lab must wire an instrument to the testbed and declare it in the
       # binding; without one this entry errors and the first entry still runs.
-      fixture: ble_peer
+      # `ble` is the capability: the bt_peer image must advertise it in @info.
+      fixture: bt_peer:ble
       pytest_root: pytest_peer
 
