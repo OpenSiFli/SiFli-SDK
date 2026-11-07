@@ -1,0 +1,18 @@
+# The peer path for the peripheral example: the DUT is a legacy-connectable
+# GATT server (the shared "sifli_app" service), and bt_peer is the GATT client.
+#
+# Negative verification: break ble_app_service_init() and
+# `test_peer_discovers_the_service` goes red; drop the memcpy in the write
+# callback and the `Updated app value ... to:34` assertion goes red; remove
+# `ble_app_start_send_thread()` (or the 0x1111 branch) and
+# `test_notification_burst_reaches_the_peer` goes red; power off the instrument
+# and the first `peer info` never answers.
+tests:
+  - id: ble_peripheral.peer
+    description: A peer connects to the peripheral server, discovers it, writes, reads, subscribes and receives a notification.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    timeout: 300
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest

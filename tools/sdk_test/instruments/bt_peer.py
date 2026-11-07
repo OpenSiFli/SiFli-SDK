@@ -45,6 +45,9 @@ class AdvReport:
     address_type: str
     rssi: Optional[int]
     data: bytes = b""
+    #: False for a non-connectable report (a background broadcaster, for
+    #: instance); ``connect_to_dut`` must not pick one of those.
+    connectable: bool = True
 
 
 @dataclass(frozen=True)
@@ -527,6 +530,7 @@ def _adv_from_event(event: Dict[str, Any]) -> AdvReport:
         address_type=address_type,
         rssi=signal,
         data=data,
+        connectable=values.get("conn", "1") != "0",
     )
 
 

@@ -18,6 +18,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .errors import InstrumentProtocolError
+from .errors import InstrumentTimeout
+
 #: The shared service UUID of the peripheral examples: "sifli_app".
 SIFLI_APP_UUID = bytes(
     [0x73, 0x69, 0x66, 0x6C, 0x69, 0x5F, 0x61, 0x70, 0x70] + [0x00] * 7
@@ -30,6 +33,27 @@ PROMPT = r"msh [^>\n]*>"
 #: A value the example echoes back on read; 0x22 avoids the special 0x11 trigger
 #: some examples use to start a notification burst.
 DEFAULT_VALUE = bytes([0x22, 0x00, 0x00, 0x00])
+
+#: The name prefix the peripheral examples advertise. The full name carries the
+#: board address, so selecting by it is deterministic where RSSI is not.
+SIFLI_APP_NAME_PREFIX = "SIFLI_APP-"
+
+
+def advertised_name(data: bytes) -> str:
+    """Pull the complete/shortened local name out of raw AD structures."""
+    position = 0
+    while position + 1 < len(data):
+        length = data[position]
+        if length == 0:
+            break
+        end = position + 1 + length
+        if end > len(data):
+            break
+        ad_type = data[position + 1]
+        if ad_type in (0x08, 0x09):  # shortened / complete local name
+            return data[position + 2:end].decode("utf-8", "replace")
+        position = end
+    return ""
 
 
 def expect_ready(dut: Any, *, expected_mode: int | None = None) -> None:
@@ -57,17 +81,71 @@ def expect_ready(dut: Any, *, expected_mode: int | None = None) -> None:
         )
 
 
-def connect_to_dut(dut: Any, peer: Any) -> Any:
-    """Scan, connect to the strongest report, and confirm the DUT saw the link.
+def expect_classic_ready(dut: Any, timeout: float = 40.0) -> None:
+    """Wait for the classic stack (SPP server) the profile examples also start.
 
-    The strongest report is only a heuristic; the DUT-side ``connected`` line is
-    what proves the peer latched onto this board rather than a neighbour.
+    Their BLE advertisement is up long before the classic page scan finishes;
+    connecting in that window ends in HCI reason 62 (supervision timeout) even
+    though the initiator reported a link.
+    """
+    dut.expect(r"bt stack ready", timeout=timeout)
+
+
+def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 3) -> Any:
+    """Scan, connect to a connectable report, and confirm the DUT saw the link.
+
+    A dense lab has more than one connectable advertiser in range, so the
+    strongest report is only a guess. The DUT-side ``connected`` line is the
+    proof; when it does not appear, the link belongs to a neighbour -- drop it
+    and try the next report, public addresses first.
     """
     reports = peer.ble.scan(duration_ms=3000)
-    target = peer.ble.strongest(reports)
-    link = peer.ble.connect(target)
-    dut.expect(r"Peer device\(.*\) connected", timeout=30)
-    return link
+    # A peripheral example may also run a non-connectable background
+    # advertisement from a generated random address.
+    connectable = [report for report in reports if report.connectable]
+    if not connectable:
+        raise AssertionError(
+            "the scan saw no connectable advertisement (%d report(s)); "
+            "check that the DUT is advertising connectably" % len(reports)
+        )
+
+    # The instrument is the central here, so *it* selects the DUT. The examples
+    # advertise "SIFLI_APP-<address>"; matching that name is deterministic where
+    # "strongest" is not. Fall back to every connectable report when no name was
+    # seen (an example that advertises no name, or a truncated report).
+    named = [
+        report
+        for report in connectable
+        if advertised_name(report.data).startswith(SIFLI_APP_NAME_PREFIX)
+    ]
+    candidates = named or connectable
+    ordered = sorted(
+        candidates,
+        key=lambda report: (
+            report.address_type != "public",
+            -(report.rssi if report.rssi is not None else -(2 ** 31)),
+        ),
+    )
+
+    for report in ordered[:attempts]:
+        try:
+            link = peer.ble.connect(report, timeout=10.0)
+        except (InstrumentTimeout, InstrumentProtocolError):
+            continue
+        try:
+            dut.expect(r"Peer device\(.*\) connected", timeout=8)
+            return link
+        except AssertionError:
+            # The link is up, but not to this DUT. Release it and try the next.
+            try:
+                peer.ble.disconnect(link)
+            except (InstrumentTimeout, InstrumentProtocolError):
+                pass
+
+    raise AssertionError(
+        "could not establish a link the DUT acknowledged after "
+        f"{attempts} attempt(s); scanned {len(connectable)} connectable report(s)"
+    )
 
 
 def discover_service(peer: Any, link: Any) -> Any:
@@ -111,9 +189,40 @@ def write_then_read(
         assert peer.ble.read(link, handle) == payload
 
 
+def write_only(
+    dut: Any,
+    peer: Any,
+    link: Any,
+    service: Any,
+    payload: bytes = DEFAULT_VALUE,
+    *,
+    log: str = r"BLE RX",
+) -> None:
+    """Write without comparing the read-back.
+
+    ``cscpc`` accepts a write, logs the bytes as ``BLE RX`` and keeps serving a
+    fixed value, so the write log is the observable, not the read.
+    """
+    peer.ble.write(link, service.value_handle(), payload)
+    dut.expect(log, timeout=10)
+
+
 def subscribe(dut: Any, peer: Any, link: Any, service: Any) -> None:
     peer.ble.subscribe(link, service.cccd_handle())
     dut.expect(r"CCCD 1", timeout=10)
+
+
+def wait_notification(
+    peer: Any,
+    link: Any,
+    service: Any,
+    *,
+    since_seq: int | None = None,
+    timeout: float = 15.0,
+) -> bytes:
+    return peer.ble.wait_notification(
+        service.value_handle(), link=link, since_seq=since_seq, timeout=timeout
+    )
 
 
 def disconnect(peer: Any, link: Any) -> None:

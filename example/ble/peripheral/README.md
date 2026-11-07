@@ -16,7 +16,7 @@
 <!-- 说明如何使用例程，比如连接哪些硬件管脚观察波形，编译和烧写可以引用相关文档。
 对于rt_device的例程，还需要把本例程用到的配置开关列出来，比如PWM例程用到了PWM1，需要在onchip菜单里使能PWM1 -->
 1. 作为从设备时开机会开启广播，广播名字以SIFLI_APP-xx-xx-xx-xx-xx-xx, 其中xx代表本设备的蓝牙地址。可以通过手机的BLE APP进行连接
-2. 作为GATT server时，可以在手机端进行write和read操作，或者使能CCCD，设备会每一秒更新一次特征值。
+2. 作为GATT server时，可以在手机端进行write和read操作，或者使能CCCD，设备会每 5 秒（`BLE_APP_TIMEOUT_INTERVAL`）更新一次特征值。
 
 
 ### 硬件需求
