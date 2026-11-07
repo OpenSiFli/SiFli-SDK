@@ -23,6 +23,9 @@ static uint16_t g_adv_count;
 static int8_t g_scan_rssi_min = -127;
 static uint8_t g_scanning;
 static uint8_t g_scan_failed;
+/** Event boundary and wait budget of the scan in progress. */
+static uint32_t g_scan_first_seq;
+static uint32_t g_scan_budget_ms;
 
 static uint8_t g_connect_pending;
 static int g_connect_result;
@@ -552,14 +555,11 @@ static int peer_ble_event_handler(uint16_t event_id, uint8_t *data, uint16_t len
 
 BLE_EVENT_REGISTER(peer_ble_event_handler, NULL);
 
-int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
+int peer_ble_scan_begin(uint32_t duration_ms, uint32_t interval_ms,
                         uint32_t window_ms, uint8_t dup, int8_t rssi_min,
                         peer_reply_t *reply)
 {
     ble_gap_scan_start_t param;
-    rt_tick_t start;
-    rt_tick_t budget;
-    uint32_t first_seq;
     uint8_t ret;
 
     if (!g_powered_on)
@@ -585,7 +585,8 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
      * on it, so a report still in flight from an earlier scan cannot be counted
      * as one of this scan's.
      */
-    first_seq = peer_evt_seq_current();
+    g_scan_first_seq = peer_evt_seq_current();
+    g_scan_budget_ms = duration_ms + 3000;
 
     param.own_addr_type = GAPM_STATIC_ADDR;
     /* Observer receives legacy, extended and periodic reports alike. */
@@ -596,29 +597,53 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
     param.duration = (uint16_t)(duration_ms / 10);
     param.period = 0;
 
+    /* Set before the request: a very short scan can finish before it returns,
+     * and the completion would then clear a flag that is set afterwards. */
+    peer_ble_clear_bits(PEER_BIT_SCAN_DONE);
+    g_scanning = 1;
     ret = ble_gap_scan_start(&param);
     if (ret != HL_ERR_NO_ERROR)
     {
+        g_scanning = 0;
         peer_reply_err(reply, PEER_ERR_STATE, "scan_start");
         return -1;
     }
 
-    g_scanning = 1;
+    return 0;
+}
 
-    /*
-     * The scan is bounded by its own duration, so wait for the controller to
+uint8_t peer_ble_scan_active(void)
+{
+    return g_scanning;
+}
+
+void peer_ble_scan_end(void)
+{
+    if (!g_scanning)
+        return;
+
+    peer_ble_clear_bits(PEER_BIT_SCAN_DONE);
+    ble_gap_scan_stop();
+    peer_ble_wait(PEER_BIT_SCAN_DONE, 1000);
+    g_scanning = 0;
+}
+
+int peer_ble_scan_wait(peer_reply_t *reply)
+{
+    rt_tick_t start;
+    rt_tick_t budget;
+
+    /* The scan is bounded by its own duration, so wait for the controller to
      * stop it before answering: only then is the report count final, and the
-     * host can consume exactly as many `adv` events as `count` promises.
-     */
+     * host can consume exactly as many `adv` events as `count` promises. */
     start = rt_tick_get();
-    budget = rt_tick_from_millisecond((rt_int32_t)duration_ms + 3000);
+    budget = rt_tick_from_millisecond((rt_int32_t)g_scan_budget_ms);
     while (g_scanning && (rt_tick_get() - start) < budget)
         rt_thread_mdelay(10);
 
     if (g_scanning)
     {
-        ble_gap_scan_stop();
-        g_scanning = 0;
+        peer_ble_scan_end();
         peer_reply_err(reply, PEER_ERR_TIMEOUT, "gap.scan");
         return -1;
     }
@@ -630,8 +655,19 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
     }
 
     peer_reply_ok(reply, "count=%u first_seq=%u", g_adv_count,
-                  (unsigned)first_seq);
+                  (unsigned)g_scan_first_seq);
     return 0;
+}
+
+int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
+                        uint32_t window_ms, uint8_t dup, int8_t rssi_min,
+                        peer_reply_t *reply)
+{
+    if (peer_ble_scan_begin(duration_ms, interval_ms, window_ms, dup, rssi_min,
+                            reply) < 0)
+        return -1;
+
+    return peer_ble_scan_wait(reply);
 }
 
 int peer_ble_scan_stop(peer_reply_t *reply)

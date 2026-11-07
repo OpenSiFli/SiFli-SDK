@@ -774,6 +774,10 @@ static int peer_op_periodic_sync(const peer_args_t *args, peer_reply_t *reply)
     const peer_adv_report_t *report = RT_NULL;
     const char *addr_hex = peer_arg_get(args, "addr");
     uint8_t addr[BD_ADDR_LEN];
+    /* Copied out of the report table: starting the sync scans, and a scan
+     * clears the table the report points into. */
+    uint8_t sync_addr[BD_ADDR_LEN];
+    uint8_t sync_sid = 0;
     int index, addr_type;
 
     if (peer_arg_int(args, "index", 0, &index) < 0 ||
@@ -813,7 +817,18 @@ static int peer_op_periodic_sync(const peer_args_t *args, peer_reply_t *reply)
         return -1;
     }
 
-    return peer_periodic_sync(report, addr, (uint8_t)addr_type, reply);
+    if (report != RT_NULL)
+    {
+        memcpy(sync_addr, report->addr.addr, BD_ADDR_LEN);
+        sync_sid = report->adv_sid;
+        addr_type = report->addr_type;
+    }
+    else
+    {
+        memcpy(sync_addr, addr, BD_ADDR_LEN);
+    }
+
+    return peer_periodic_sync(sync_addr, (uint8_t)addr_type, sync_sid, reply);
 }
 
 static int peer_op_periodic_sync_stop(const peer_args_t *args, peer_reply_t *reply)

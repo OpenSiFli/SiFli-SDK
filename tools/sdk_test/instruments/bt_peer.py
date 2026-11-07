@@ -352,6 +352,56 @@ class BleInstrument:
     def stop_periodic_advertising(self, *, timeout: float = 10.0) -> None:
         self._console.command("periodic.adv.stop", timeout=timeout)
 
+    def sync_periodic(
+        self,
+        report: Optional[AdvReport] = None,
+        *,
+        address: Optional[str] = None,
+        address_type: int = 0,
+        timeout: float = 20.0,
+    ) -> int:
+        """Synchronise to a periodic advertiser and return the sync activity.
+
+        Either a scan report (its index names the advertisement the instrument
+        stored, including its SID) or an address. The periodic channel's data
+        then arrives as ``periodic`` events.
+        """
+        if report is None and address is None:
+            raise ValueError("sync_periodic() needs an AdvReport or an address")
+        if report is not None and address is not None:
+            raise ValueError(
+                "sync_periodic() takes an AdvReport or an address, not both"
+            )
+
+        if report is not None:
+            result = self._console.command(
+                "periodic.sync", timeout=timeout, index=report.index
+            )
+        else:
+            result = self._console.command(
+                "periodic.sync",
+                timeout=timeout,
+                addr=address.replace("-", "").lower(),
+                addr_type=address_type,
+            )
+        return _int(result, "link")
+
+    def stop_periodic_sync(self, *, timeout: float = 10.0) -> None:
+        self._console.command("periodic.sync.stop", timeout=timeout)
+
+    def wait_periodic(
+        self,
+        *,
+        link: Optional[int] = None,
+        since_seq: Optional[int] = None,
+        timeout: float = 15.0,
+    ) -> bytes:
+        """One periodic-channel payload, optionally from a given sync activity."""
+        event = self._console.next_event(
+            "periodic", timeout=timeout, since_seq=since_seq, link=link
+        )
+        return _payload(event["values"])
+
     # -- GATT client ---------------------------------------------------------
 
     def discover(

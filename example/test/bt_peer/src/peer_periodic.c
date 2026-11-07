@@ -20,6 +20,8 @@
 /** Create/establish budget for a periodic sync. */
 #define PEER_PERIODIC_CREATE_MS     3000
 #define PEER_PERIODIC_SYNC_MS       15000
+/** A scan started only to establish a sync lives this long. */
+#define PEER_PERIODIC_SCAN_MS      (PEER_PERIODIC_SYNC_MS + 5000)
 /** Sync timeout passed to the controller, in 10 ms units. */
 #define PEER_PERIODIC_SYNC_TO       1000
 /** Periodic advertising interval must exceed 20 ms, in 1.25 ms units. */
@@ -33,6 +35,9 @@ static uint8_t g_periodic_on;
 /** Status the last ADV_STARTED callback carried; 0 means started. */
 static int g_periodic_start_status;
 static uint8_t g_sync_idx = PEER_PERIODIC_NO_ACTV;
+/** Last periodic payload reported, so repeats are not re-sent. */
+static uint8_t g_last_per[PEER_ADV_DATA_MAX];
+static uint16_t g_last_per_len;
 static int8_t g_sync_result;
 
 /** Primary advertising interval, in 0.625 ms units. */
@@ -279,10 +284,11 @@ int peer_periodic_adv_stop(peer_reply_t *reply)
     return 0;
 }
 
-int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
-                       uint8_t addr_type, peer_reply_t *reply)
+int peer_periodic_sync(const uint8_t *addr, uint8_t addr_type,
+                       uint8_t adv_sid, peer_reply_t *reply)
 {
     ble_gap_periodic_advertising_sync_start_t sync;
+    uint8_t started_scan = 0;
     uint8_t ret;
 
     if (!peer_ble_ready())
@@ -297,7 +303,14 @@ int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
         return -1;
     }
 
+    /*
+     * Create the sync activity before the scan: creating it while a scan is
+     * running makes the controller stop that scan, and the sync then has
+     * nothing to listen with. The order is the one the periodic_adv_sync
+     * example uses (create, scan, start).
+     */
     g_sync_result = -1;
+    g_last_per_len = 0;
     peer_ble_clear_bits(PEER_BIT_PERIODIC_CREATED | PEER_BIT_PERIODIC_SYNC |
                         PEER_BIT_PERIODIC_FAIL | PEER_BIT_PERIODIC_STOPPED);
 
@@ -305,7 +318,7 @@ int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
     if (ret != HL_ERR_NO_ERROR)
     {
         peer_reply_err(reply, PEER_ERR_STATE, "sync_create");
-        return -1;
+        goto cleanup;
     }
 
     if (peer_ble_wait(PEER_BIT_PERIODIC_CREATED, PEER_PERIODIC_CREATE_MS) != RT_EOK)
@@ -320,24 +333,29 @@ int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
         goto cleanup;
     }
 
+    /*
+     * The controller finds the periodic channel through a running scan: the
+     * sync procedure listens for the advertisement that carries the sync info.
+     * A caller that is not scanning gets one started for it, and it is stopped
+     * again once the sync is established (or has failed).
+     */
+    if (!peer_ble_scan_active())
+    {
+        if (peer_ble_scan_begin(PEER_PERIODIC_SCAN_MS, 100, 50, 1, -127,
+                                reply) < 0)
+            goto cleanup;
+        started_scan = 1;
+    }
+
     memset(&sync, 0, sizeof(sync));
     sync.actv_idx = g_sync_idx;
     sync.type = GAP_PER_SYNC_TYPE_GENERAL;
     sync.skip = 0;
     sync.sync_to = PEER_PERIODIC_SYNC_TO;
 
-    if (report != RT_NULL)
-    {
-        sync.addr.addr_type = report->addr_type;
-        sync.addr.addr = report->addr;
-        sync.adv_sid = report->adv_sid;
-    }
-    else
-    {
-        sync.addr.addr_type = addr_type;
-        memcpy(sync.addr.addr.addr, addr, BD_ADDR_LEN);
-        sync.adv_sid = 0;
-    }
+    sync.addr.addr_type = addr_type;
+    memcpy(sync.addr.addr.addr, addr, BD_ADDR_LEN);
+    sync.adv_sid = adv_sid;
 
     ret = ble_gap_start_periodic_advertising_sync(&sync);
     if (ret != HL_ERR_NO_ERROR)
@@ -359,10 +377,16 @@ int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
         goto cleanup;
     }
 
+    if (started_scan)
+        peer_ble_scan_end();
+
     peer_reply_ok(reply, "link=%u", g_sync_idx);
     return 0;
 
 cleanup:
+    if (started_scan)
+        peer_ble_scan_end();
+
     /* A created activity that never established must not strand the next
      * sync behind `@err busy`. */
     if (g_sync_idx != PEER_PERIODIC_NO_ACTV)
@@ -489,6 +513,20 @@ static int peer_periodic_event_handler(uint16_t event_id, uint8_t *data,
         copy = ind->length;
         if (copy > PEER_ADV_DATA_MAX)
             copy = PEER_ADV_DATA_MAX;
+
+        /*
+         * The periodic channel repeats the same payload many times a second
+         * (every 20 ms in the examples), and a host that reads one line at a
+         * time drowns in it. Report a payload when it changes: that is what a
+         * suite can assert on, and it keeps the console usable for everything
+         * else. A caller that needs cadence has to measure it on the DUT side.
+         */
+        if (copy == g_last_per_len &&
+                memcmp(g_last_per, ind->data, copy) == 0)
+            break;
+
+        memcpy(g_last_per, ind->data, copy);
+        g_last_per_len = copy;
 
         peer_format_payload(payload, sizeof(payload), ind->data, copy);
         peer_emit_evt("periodic", "link=%u %s", ind->actv_idx, payload);

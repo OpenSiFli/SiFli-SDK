@@ -1,0 +1,19 @@
+# The peer path for the periodic_adv example. The DUT runs a periodic
+# advertising set in running mode 6: a plain scan checks the primary-channel
+# manufacturer data, and a sync to the set checks the periodic channel itself.
+#
+# Negative verification: change any byte of `manu_additnal_data` and
+# `test_the_advertisement_carries_the_sifli_manufacturer_data` goes red; switch
+# `para.config.adv_mode` away from SIBLES_ADV_PERIODIC_MODE and the `mode 6`
+# assertion goes red; break `ble_app_per_adv_update` (or stop `keep_per` from
+# updating) and `test_the_periodic_channel_carries_the_updated_payload` goes
+# red. Power off the instrument and the first `peer info` never answers.
+tests:
+  - id: ble_periodic_adv.peer
+    description: The peer scans the DUT's periodic set and syncs to its periodic channel.
+    harness: pytest
+    tags: [pytest, ble, peer, periodic]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest

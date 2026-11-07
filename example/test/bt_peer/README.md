@@ -149,7 +149,7 @@ write        link=<n> handle=<h> len=N data=<hex>
 read         link=<n> handle=<h> len=N data=<hex>
 mtu          link=<n> mtu=<n>
 passkey      link=<n> value=<n>
-periodic     link=<n> len=N data=<hex>
+periodic     link=<n> len=N data=<hex>   (only when the payload changes)
 ```
 
 ## Loopback service

@@ -164,6 +164,12 @@ uint8_t peer_link_count(void);
 const peer_adv_report_t *peer_ble_adv_report(uint8_t index);
 uint8_t peer_ble_adv_report_count(void);
 
+int peer_ble_scan_begin(uint32_t duration_ms, uint32_t interval_ms,
+                        uint32_t window_ms, uint8_t dup, int8_t rssi_min,
+                        peer_reply_t *reply);
+int peer_ble_scan_wait(peer_reply_t *reply);
+uint8_t peer_ble_scan_active(void);
+void peer_ble_scan_end(void);
 int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
                         uint32_t window_ms, uint8_t dup, int8_t rssi_min,
                         peer_reply_t *reply);
@@ -228,8 +234,8 @@ void peer_periodic_reset(void);
 int peer_periodic_adv_start(uint32_t interval_ms, const uint8_t *data,
                             uint16_t len, peer_reply_t *reply);
 int peer_periodic_adv_stop(peer_reply_t *reply);
-int peer_periodic_sync(const peer_adv_report_t *report, const uint8_t *addr,
-                       uint8_t addr_type, peer_reply_t *reply);
+int peer_periodic_sync(const uint8_t *addr, uint8_t addr_type, uint8_t adv_sid,
+                       peer_reply_t *reply);
 int peer_periodic_sync_stop(peer_reply_t *reply);
 
 #endif /* __PEER_H__ */
