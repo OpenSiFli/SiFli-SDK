@@ -68,6 +68,13 @@
 #define PEER_BIT_PERIODIC_SYNC      (1UL << 9)
 #define PEER_BIT_PERIODIC_FAIL      (1UL << 10)
 #define PEER_BIT_PERIODIC_STOPPED   (1UL << 11)
+#define PEER_BIT_CONN_PARAM_DONE    (1UL << 12)
+#define PEER_BIT_PHY_DONE           (1UL << 13)
+#define PEER_BIT_DATA_LEN_DONE      (1UL << 14)
+#define PEER_BIT_ADV_STARTED        (1UL << 15)
+
+/** "No connection": the stack's conn_idx is uint8_t, so 0xFF is free. */
+#define PEER_NO_CONN                0xFF
 
 /** One BLE link as seen by the wire protocol. */
 typedef struct
@@ -157,6 +164,14 @@ int peer_ble_adv_start(uint8_t extended, uint32_t interval_ms,
                        uint8_t connectable, const uint8_t *data,
                        uint16_t len, peer_reply_t *reply);
 int peer_ble_adv_stop(peer_reply_t *reply);
+int peer_ble_adv_update(const uint8_t *data, uint16_t len, peer_reply_t *reply);
+
+int peer_ble_update_conn_param(uint8_t link_id, uint16_t intv_min_ms,
+                               uint16_t intv_max_ms, uint16_t latency,
+                               uint16_t timeout_ms, peer_reply_t *reply);
+int peer_ble_update_phy(uint8_t link_id, uint8_t phy, peer_reply_t *reply);
+int peer_ble_update_data_len(uint8_t link_id, uint16_t tx_octets,
+                             uint16_t tx_time, peer_reply_t *reply);
 
 /* ---- peer_gatt_client.c ------------------------------------------------ */
 void peer_gatt_client_init(void);

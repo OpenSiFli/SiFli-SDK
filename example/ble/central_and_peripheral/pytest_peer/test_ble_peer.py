@@ -27,6 +27,10 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
+from sdk_test.instruments.errors import InstrumentProtocolError
+
 #: The prompt is ``msh />`` when DFS keeps a working directory and ``msh >``
 #: when it does not. Accept both rather than pinning one carrier's spelling.
 PROMPT = r"msh [^>\n]*>"
@@ -90,6 +94,24 @@ def test_peer_instrument_answers(bt_peer):
     # earlier case (or an aborted run) may have left it scanning, advertising
     # or connected. Reset once here, before the link tests.
     bt_peer.ble.reset()
+
+
+def test_peer_updates_advertising_data(bt_peer):
+    """A running extended advertisement can be replaced; an empty one is refused.
+
+    Runs before the link is made: SIBLES refuses an advertising update while
+    this peer already holds a connection. The payload is short because the
+    instrument's msh drops protocol lines above ~500 characters, so the
+    248-byte extended ceiling needs the unimplemented ``peer data``
+    continuation.
+    """
+    bt_peer.ble.advertise(mode="extended", data=b"\x01\x02", interval_ms=30)
+    try:
+        bt_peer.ble.set_advertising_data(b"\x03\x04")
+        with pytest.raises(InstrumentProtocolError):
+            bt_peer.ble.set_advertising_data(b"")
+    finally:
+        bt_peer.ble.stop_advertising()
 
 
 def test_peer_connects_to_the_dut(dut, bt_peer):
@@ -174,3 +196,17 @@ def test_notification_burst_reaches_the_peer(dut, bt_peer):
             f"notification {index} carried {payload.hex()}, "
             f"expected {NOTIFY_LENGTH} bytes of 0x{index:02x}"
         )
+
+
+def test_peer_tunes_the_link(bt_peer):
+    """The link-level ops a throughput-style case needs are live.
+
+    Each call waits for the controller's completion, so a firmware that merely
+    accepts the request and never reports back fails here instead of passing.
+    """
+    link = STATE["link"]
+    bt_peer.ble.update_connection(
+        link, interval_min_ms=15, interval_max_ms=30, latency=0, timeout_ms=5000
+    )
+    bt_peer.ble.set_phy(link, 2)
+    bt_peer.ble.set_data_length(link, 251, 2120)

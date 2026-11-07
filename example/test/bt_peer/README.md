@@ -114,6 +114,10 @@ Rules that matter when extending it:
 | `gatt.subscribe` | Writes the CCCD. |
 | `gatt.mtu` | `@ok mtu=<n>`. |
 | `adv.start` / `adv.stop` | Legacy or extended, connectable or not. |
+| `adv.data` | Replace the running advertisement's data; 1–31 bytes for legacy, 1–248 for extended. An empty payload is refused (SIBLES cannot clear one). |
+| `gap.conn_params` | `link`, `interval_min_ms` (8–4000), `interval_max_ms`, `latency` (0–499), `timeout_ms` (100–32000). `@ok` means the controller accepted it; the negotiated values arrive as `@evt conn_params`. |
+| `gap.phy` | `link`, `phy=1/2/3` (1M/2M/Coded); waits for the remote-PHY indication. |
+| `gap.data_len` | `link`, `tx_octets` (27–251), `tx_time` (0–2120). `@ok` means accepted; the negotiated values arrive as `@evt data_len`. |
 | `svc.register` | Registers the 128-bit loopback service; `@ok handle=<h>`. |
 | `svc.notify` | `handle=<h> len=N data=<hex>`; requires the DUT (the GATT client) to have subscribed. |
 | `sec.bond` | `io=<name>` (`no_input_no_output`, `display_only`, `display_yes_no`, `keyboard_only`, `keyboard_display`) or the numeric enum; `passkey=<n>`. |
@@ -121,8 +125,9 @@ Rules that matter when extending it:
 | `periodic.adv.start` / `periodic.adv.stop` | Periodic advertiser, SID 0. |
 | `periodic.sync` / `periodic.sync.stop` | By scan `index` or `addr`; reports arrive as `@evt periodic`. |
 
-Anything else answers `@err <id> unsupported <op>`: `gap.conn_params`,
-`gap.phy`, `gap.data_len`, `adv.data`, `peer data`.
+Anything else answers `@err <id> unsupported <op>`. The two remaining gaps are
+`peer data` (chunked continuation; the 1024-byte line covers a 460-byte payload)
+and `svc.unregister` (the stack cannot remove a service from the ATT database).
 
 ### Events
 
@@ -156,8 +161,8 @@ and one subscription flag per connection, so it can track several links at once.
 - `svc.unregister` answers `unsupported`: the stack cannot remove a service
   from the ATT database, so the loopback service stays registered for the
   lifetime of the image. `state.reset` only clears subscription state.
-- `peer data` (chunked payload continuation) is not implemented; the line
-  budget is `max_line=1024`, which covers a 244-byte write.
-- `adv.data`, `gap.conn_params`, `gap.phy` and `gap.data_len` are stubbed.
+- `peer data` (chunked payload continuation) is not implemented; the
+  `max_line=1024` budget covers a 460-byte payload, which is enough for a
+  244-byte MTU write.
 - Classic Bluetooth is out of scope for this image; the design reserves
   `bt_peer:classic` for a later one.

@@ -281,6 +281,57 @@ class TestGattClient(SdkTestCase):
         self.assertIn("nothing useful", str(caught.exception))
 
 
+class TestLinkTuning(SdkTestCase):
+    def test_update_connection_sends_the_requested_parameters(self):
+        peer, console = peer_for({"gap.conn_params": lines("@ok 1")})
+
+        peer.ble.update_connection(
+            Link(1, "aa"),
+            interval_min_ms=15,
+            interval_max_ms=30,
+            latency=0,
+            timeout_ms=5000,
+        )
+
+        self.assertEqual(
+            console.sent[-1],
+            "peer req 1 gap.conn_params link=1 interval_min_ms=15 "
+            "interval_max_ms=30 latency=0 timeout_ms=5000",
+        )
+
+    def test_set_phy_sends_the_phy_request(self):
+        peer, console = peer_for({"gap.phy": lines("@ok 1 rx_phy=2 tx_phy=2")})
+
+        peer.ble.set_phy(Link(1, "aa"), 2)
+
+        self.assertEqual(console.sent[-1], "peer req 1 gap.phy link=1 phy=2")
+
+    def test_set_data_length_sends_the_requested_octets(self):
+        peer, console = peer_for({"gap.data_len": lines("@ok 1")})
+
+        peer.ble.set_data_length(Link(1, "aa"), 251, 2120)
+
+        self.assertEqual(
+            console.sent[-1],
+            "peer req 1 gap.data_len link=1 tx_octets=251 tx_time=2120",
+        )
+
+    def test_set_advertising_data_encodes_the_payload(self):
+        peer, console = peer_for({"adv.data": lines("@ok 1 len=2")})
+
+        peer.ble.set_advertising_data(b"\x01\x02")
+
+        self.assertEqual(
+            console.sent[-1], "peer req 1 adv.data len=2 data=0102"
+        )
+
+    def test_a_silent_phy_request_times_out(self):
+        peer, _ = peer_for({"gap.phy": ""})
+
+        with self.assertRaises(InstrumentTimeout):
+            peer.ble.set_phy(Link(1, "aa"), 2, timeout=0.1)
+
+
 class TestServerAndSecurity(SdkTestCase):
     def test_register_loopback_returns_its_value_handle(self):
         peer, _ = peer_for({"svc.register": lines("@ok 1 handle=12")})

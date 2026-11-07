@@ -204,10 +204,46 @@ class BleInstrument:
     def disconnect(self, link: Link) -> None:
         self._console.command("gap.disconnect", link=link.link_id)
 
-    # gap.conn_params / gap.phy / gap.data_len are reserved in the protocol, but
-    # the M1 firmware answers them with `@err unsupported`. The host deliberately
-    # exposes no methods for them: an API that always fails is worse than an API
-    # that does not exist yet.
+    def update_connection(
+        self,
+        link: Link,
+        *,
+        interval_min_ms: int,
+        interval_max_ms: int,
+        latency: int = 0,
+        timeout_ms: int = 5000,
+        timeout: float = 10.0,
+    ) -> None:
+        """Ask the controller to change the link's connection parameters."""
+        self._console.command(
+            "gap.conn_params",
+            timeout=timeout,
+            link=link.link_id,
+            interval_min_ms=interval_min_ms,
+            interval_max_ms=interval_max_ms,
+            latency=latency,
+            timeout_ms=timeout_ms,
+        )
+
+    def set_phy(self, link: Link, phy: int, *, timeout: float = 10.0) -> None:
+        """Request a PHY change; ``phy`` is 1 (1M), 2 (2M) or 3 (Coded)."""
+        self._console.command("gap.phy", timeout=timeout, link=link.link_id, phy=phy)
+
+    def set_data_length(
+        self,
+        link: Link,
+        tx_octets: int,
+        tx_time: int = 0,
+        *,
+        timeout: float = 10.0,
+    ) -> None:
+        self._console.command(
+            "gap.data_len",
+            timeout=timeout,
+            link=link.link_id,
+            tx_octets=tx_octets,
+            tx_time=tx_time,
+        )
 
     def list_links(self) -> List[Link]:
         self._console.drain()
@@ -248,8 +284,9 @@ class BleInstrument:
     def stop_advertising(self) -> None:
         self._console.command("adv.stop")
 
-    # adv.data is reserved in the protocol; the M1 firmware answers it
-    # unsupported, so there is no host method until the firmware implements it.
+    def set_advertising_data(self, data: bytes, *, timeout: float = 10.0) -> None:
+        """Replace the running advertisement's data."""
+        self._console.command("adv.data", timeout=timeout, data=data)
 
     # -- GATT client ---------------------------------------------------------
 

@@ -790,10 +790,90 @@ static int peer_op_periodic_sync_stop(const peer_args_t *args, peer_reply_t *rep
     return peer_periodic_sync_stop(reply);
 }
 
-static int peer_op_unsupported_gap(const char *op, peer_reply_t *reply)
+static int peer_op_gap_conn_params(const peer_args_t *args, peer_reply_t *reply)
 {
-    peer_reply_err(reply, PEER_ERR_UNSUPPORTED, "%s", op);
-    return -1;
+    int link_id, intv_min, intv_max, latency, timeout_ms;
+
+    if (peer_arg_int(args, "link", -1, &link_id) < 0 ||
+            peer_arg_int(args, "interval_min_ms", 0, &intv_min) < 0 ||
+            peer_arg_int(args, "interval_max_ms", 0, &intv_max) < 0 ||
+            peer_arg_int(args, "latency", 0, &latency) < 0 ||
+            peer_arg_int(args, "timeout_ms", 0, &timeout_ms) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.conn_params");
+        return -1;
+    }
+
+    if (link_id <= 0 ||
+            intv_min < 8 || intv_min > 4000 ||
+            intv_max < intv_min || intv_max > 4000 ||
+            latency < 0 || latency > 499 ||
+            timeout_ms < 100 || timeout_ms > 32000)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.conn_params");
+        return -1;
+    }
+
+    return peer_ble_update_conn_param((uint8_t)link_id, (uint16_t)intv_min,
+                                      (uint16_t)intv_max, (uint16_t)latency,
+                                      (uint16_t)timeout_ms, reply);
+}
+
+static int peer_op_gap_phy(const peer_args_t *args, peer_reply_t *reply)
+{
+    int link_id, phy;
+
+    if (peer_arg_int(args, "link", -1, &link_id) < 0 ||
+            peer_arg_int(args, "phy", 0, &phy) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.phy");
+        return -1;
+    }
+
+    if (link_id <= 0 || phy < 1 || phy > 3)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.phy");
+        return -1;
+    }
+
+    return peer_ble_update_phy((uint8_t)link_id, (uint8_t)phy, reply);
+}
+
+static int peer_op_gap_data_len(const peer_args_t *args, peer_reply_t *reply)
+{
+    int link_id, tx_octets, tx_time;
+
+    if (peer_arg_int(args, "link", -1, &link_id) < 0 ||
+            peer_arg_int(args, "tx_octets", 0, &tx_octets) < 0 ||
+            peer_arg_int(args, "tx_time", 0, &tx_time) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.data_len");
+        return -1;
+    }
+
+    if (link_id <= 0 || tx_octets < 27 || tx_octets > 251 ||
+            tx_time < 0 || tx_time > 2120)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "gap.data_len");
+        return -1;
+    }
+
+    return peer_ble_update_data_len((uint8_t)link_id, (uint16_t)tx_octets,
+                                    (uint16_t)tx_time, reply);
+}
+
+static int peer_op_adv_data(const peer_args_t *args, peer_reply_t *reply)
+{
+    uint8_t payload[PEER_ADV_DATA_MAX];
+    uint16_t len = 0;
+
+    if (peer_arg_payload(args, payload, sizeof(payload), &len) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "payload");
+        return -1;
+    }
+
+    return peer_ble_adv_update(payload, len, reply);
 }
 
 static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
@@ -845,17 +925,16 @@ static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
         rc = peer_op_periodic_sync(args, &reply);
     else if (strcmp(op, "periodic.sync.stop") == 0)
         rc = peer_op_periodic_sync_stop(args, &reply);
-    else if (strcmp(op, "gap.conn_params") == 0 ||
-             strcmp(op, "gap.phy") == 0 ||
-             strcmp(op, "gap.data_len") == 0)
-        rc = peer_op_unsupported_gap(op, &reply);
+    else if (strcmp(op, "gap.conn_params") == 0)
+        rc = peer_op_gap_conn_params(args, &reply);
+    else if (strcmp(op, "gap.phy") == 0)
+        rc = peer_op_gap_phy(args, &reply);
+    else if (strcmp(op, "gap.data_len") == 0)
+        rc = peer_op_gap_data_len(args, &reply);
     else if (strcmp(op, "gatt.mtu") == 0)
         rc = peer_op_gatt_mtu(args, &reply);
     else if (strcmp(op, "adv.data") == 0)
-    {
-        peer_reply_err(&reply, PEER_ERR_UNSUPPORTED, "%s", op);
-        rc = -1;
-    }
+        rc = peer_op_adv_data(args, &reply);
     else
     {
         peer_reply_err(&reply, PEER_ERR_UNSUPPORTED, "%s", op);

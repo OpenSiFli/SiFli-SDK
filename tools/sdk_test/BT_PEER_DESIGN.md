@@ -190,7 +190,7 @@ gap.scan.stop
 gap.connect         index=<scan idx> | addr=<hex> addr_type=0/1 timeout_ms=.. interval_ms=..
 gap.disconnect      link=<n>
 gap.conn_params     link=<n> interval_min_ms=.. interval_max_ms=.. latency=.. timeout_ms=..
-gap.phy             link=<n> phy=1/2
+gap.phy             link=<n> phy=1/2/3   # 1M / 2M / Coded
 gap.data_len        link=<n> tx_octets=.. tx_time=..
 adv.start           mode=legacy/extended interval_ms=.. connectable=0/1 len=N data=<hex>
 adv.stop
@@ -211,9 +211,10 @@ periodic.sync       index=<scan idx> | addr=<hex>
 periodic.sync.stop
 ```
 
-M1 固件实现到 `svc.notify`；`gap.conn_params` / `gap.phy` / `gap.data_len` /
-`adv.data` / `peer data` 在协议里保留，但固件回 `@err ... unsupported`，
-宿主不提供对应方法——一个总是失败的方法比没有更糟。
+M1 固件已实现上表的命令分发与其余 op（含 `gap.conn_params` / `gap.phy` /
+`gap.data_len` / `adv.data`）。只有两项明确回 `@err ... unsupported`：
+`peer data`（分块续传，1024 行预算已覆盖 460-byte payload）和
+`svc.unregister`（栈无法从 ATT 数据库移除服务）。
 
 事件：
 
@@ -230,6 +231,8 @@ write        link=<n> handle=<h> len=N data=<hex>
 passkey      link=<n> value=<n>
 periodic     link=<n> len=N data=<hex>
 mtu          link=<n> mtu=<n>
+conn_params  link=<n> interval_ms=<n> latency=<n> timeout_ms=<n>
+data_len     link=<n> tx_octets=<n> tx_time=<n>
 ```
 
 ### 5.5 行长度
@@ -313,6 +316,11 @@ class BleInstrument:
     def disconnect(self, link: Link) -> None: ...
     def advertise(self, *, mode="extended", data=b"", interval_ms=30, connectable=True) -> None: ...
     def stop_advertising(self) -> None: ...
+    def set_advertising_data(self, data: bytes) -> None: ...
+    def update_connection(self, link: Link, *, interval_min_ms, interval_max_ms,
+                          latency=0, timeout_ms=5000) -> None: ...
+    def set_phy(self, link: Link, phy: int) -> None: ...
+    def set_data_length(self, link: Link, tx_octets: int, tx_time: int = 0) -> None: ...
     def discover(self, link: Link, uuid: bytes | None = None) -> Service: ...
     def read(self, link: Link, handle: int) -> bytes: ...
     def write(self, link: Link, handle: int, data: bytes, *, response=True) -> None: ...
@@ -591,6 +599,15 @@ subscribe/5 条通知）。这次实测暴露并修掉了三个传输层问题�
    解析前剥 ANSI；
 3. `msh />` 提示符没有换行，异步事件会变成 `msh />@evt ...` → 固件每条协议
    行前加换行，宿主也识别提示符后的 `@`。
+
+同一镜像上还手工验证了补齐的调参 op：
+
+```text
+gap.conn_params link=1 interval_min_ms=15 interval_max_ms=30 -> @ok
+gap.phy         link=1 phy=2                               -> @ok   # 1M/2M/Coded
+gap.data_len    link=1 tx_octets=251 tx_time=2120          -> @ok
+adv.start / adv.data / adv.stop                            -> @ok
+```
 
 ## 11. 经典蓝牙扩展
 

@@ -29,6 +29,19 @@ static uint8_t g_connect_link;
 
 static uint8_t g_adv_on;
 
+/* Results of the last update request, written by the BLE callback thread. */
+static uint8_t g_conn_param_status;
+static uint8_t g_data_len_status;
+static uint8_t g_phy_rx;
+static uint8_t g_phy_tx;
+/* Which connection each outstanding request belongs to, so a completion for
+ * another link (or a late one) cannot satisfy it. */
+static uint8_t g_conn_param_conn = PEER_NO_CONN;
+static uint8_t g_data_len_conn = PEER_NO_CONN;
+static uint8_t g_phy_conn = PEER_NO_CONN;
+/* Whether the running advertisement was started in extended mode. */
+static uint8_t g_adv_extended;
+
 SIBLES_ADVERTISING_CONTEXT_DECLAR(g_adv_context);
 
 static const char s_hex[] = "0123456789abcdef";
@@ -339,7 +352,67 @@ static int peer_ble_event_handler(uint16_t event_id, uint8_t *data, uint16_t len
         peer_link_t *link = peer_link_find_conn(ind->conn_idx);
 
         if (link != RT_NULL)
+        {
             link->interval = ind->con_interval;
+            /* con_interval is 1.25 ms units; sup_to is 10 ms units. */
+            peer_emit_evt("conn_params",
+                          "link=%u interval_ms=%u latency=%u timeout_ms=%u",
+                          link->link_id,
+                          (unsigned)((uint32_t)ind->con_interval * 5 / 4),
+                          ind->con_latency,
+                          (unsigned)((uint32_t)ind->sup_to * 10));
+        }
+        break;
+    }
+
+    case BLE_GAP_UPDATE_CONN_PARAM_CNF:
+    {
+        ble_gap_update_conn_param_cnf_t *cnf =
+            (ble_gap_update_conn_param_cnf_t *)data;
+
+        if (cnf->conn_idx != g_conn_param_conn)
+            break;
+        g_conn_param_conn = PEER_NO_CONN;
+        g_conn_param_status = cnf->status;
+        peer_ble_signal(PEER_BIT_CONN_PARAM_DONE);
+        break;
+    }
+
+    case BLE_GAP_UPDATE_DATA_LENGTH_IND:
+    {
+        ble_gap_update_data_length_ind_t *ind =
+            (ble_gap_update_data_length_ind_t *)data;
+        peer_link_t *link = peer_link_find_conn(ind->conn_idx);
+
+        if (link != RT_NULL)
+            peer_emit_evt("data_len", "link=%u tx_octets=%u tx_time=%u",
+                          link->link_id, ind->max_tx_octets, ind->max_tx_time);
+        break;
+    }
+
+    case BLE_GAP_UPDATE_DATA_LENGTH_CNF:
+    {
+        ble_gap_update_data_length_cnf_t *cnf =
+            (ble_gap_update_data_length_cnf_t *)data;
+
+        if (cnf->conn_idx != g_data_len_conn)
+            break;
+        g_data_len_conn = PEER_NO_CONN;
+        g_data_len_status = cnf->status;
+        peer_ble_signal(PEER_BIT_DATA_LEN_DONE);
+        break;
+    }
+
+    case BLE_GAP_REMOTE_PHY_IND:
+    {
+        ble_gap_remote_phy_ind_t *ind = (ble_gap_remote_phy_ind_t *)data;
+
+        if (ind->conn_idx != g_phy_conn)
+            break;
+        g_phy_conn = PEER_NO_CONN;
+        g_phy_rx = ind->rx_phy;
+        g_phy_tx = ind->tx_phy;
+        peer_ble_signal(PEER_BIT_PHY_DONE);
         break;
     }
 
@@ -616,6 +689,10 @@ void peer_ble_reset(void)
     g_adv_count = 0;
     g_scan_failed = 0;
     g_connect_pending = 0;
+    g_conn_param_conn = PEER_NO_CONN;
+    g_data_len_conn = PEER_NO_CONN;
+    g_phy_conn = PEER_NO_CONN;
+    g_adv_extended = 0;
 
     if (g_adv_on)
     {
@@ -632,9 +709,14 @@ static uint8_t peer_adv_event_cb(uint8_t event, void *context, void *data)
     (void)data;
 
     if (event == SIBLES_ADV_EVT_ADV_STARTED)
+    {
         g_adv_on = 1;
+        peer_ble_signal(PEER_BIT_ADV_STARTED);
+    }
     else if (event == SIBLES_ADV_EVT_ADV_STOPPED)
+    {
         g_adv_on = 0;
+    }
 
     return 0;
 }
@@ -711,6 +793,9 @@ int peer_ble_adv_start(uint8_t extended, uint32_t interval_ms,
         memcpy(para.adv_data.customized_data->data, data, len);
     }
 
+    g_adv_extended = extended;
+    peer_ble_clear_bits(PEER_BIT_ADV_STARTED);
+
     ret = sibles_advertising_init(g_adv_context, &para);
     if (ret == SIBLES_ADV_NO_ERR)
         ret = sibles_advertising_start(g_adv_context);
@@ -723,7 +808,14 @@ int peer_ble_adv_start(uint8_t extended, uint32_t interval_ms,
         return -1;
     }
 
-    g_adv_on = 1;
+    /* The SIBLES state stays STARTING until the controller's CNF; answering
+     * earlier lets an immediate adv.data hit SIBLES_ADV_NOT_ALLOWED. */
+    if (peer_ble_wait(PEER_BIT_ADV_STARTED, 2000) != RT_EOK)
+    {
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "adv_start");
+        return -1;
+    }
+
     peer_reply_ok(reply, "mode=%s interval_ms=%u",
                   extended ? "extended" : "legacy", (unsigned)interval_ms);
     return 0;
@@ -732,6 +824,7 @@ int peer_ble_adv_start(uint8_t extended, uint32_t interval_ms,
 int peer_ble_adv_stop(peer_reply_t *reply)
 {
     uint8_t ret;
+    uint8_t i;
 
     if (!g_adv_on)
     {
@@ -739,7 +832,15 @@ int peer_ble_adv_stop(peer_reply_t *reply)
         return 0;
     }
 
-    ret = sibles_advertising_stop(g_adv_context);
+    /* Same STARTING window as the update path. */
+    ret = SIBLES_ADV_NOT_ALLOWED;
+    for (i = 0; i < 20; i++)
+    {
+        ret = sibles_advertising_stop(g_adv_context);
+        if (ret != SIBLES_ADV_NOT_ALLOWED)
+            break;
+        rt_thread_mdelay(20);
+    }
     g_adv_on = 0;
 
     if (ret != SIBLES_ADV_NO_ERR)
@@ -749,5 +850,227 @@ int peer_ble_adv_stop(peer_reply_t *reply)
     }
 
     peer_reply_ok(reply, "");
+    return 0;
+}
+
+int peer_ble_adv_update(const uint8_t *data, uint16_t len, peer_reply_t *reply)
+{
+    sibles_adv_data_t adv;
+    sibles_adv_type_customize_t *custom = RT_NULL;
+    uint16_t max_len = g_adv_extended ? 248 : 31;
+    uint8_t ret;
+    uint8_t i;
+
+    if (!g_adv_on)
+    {
+        peer_reply_err(reply, PEER_ERR_STATE, "adv_stopped");
+        return -1;
+    }
+
+    /* compose reserves 3 bytes, so the extended ceiling is 248; legacy is 31.
+     * An empty payload cannot clear an advertisement through SIBLES, so it is
+     * refused rather than answered @ok with the old data still on air. */
+    if (len == 0 || len > max_len)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "len");
+        return -1;
+    }
+
+    memset(&adv, 0, sizeof(adv));
+    if (len > 0)
+    {
+        custom = rt_malloc(sizeof(*custom) + len);
+        if (custom == RT_NULL)
+        {
+            peer_reply_err(reply, PEER_ERR_NO_MEM, "adv_data");
+            return -1;
+        }
+        custom->len = (uint8_t)len;
+        memcpy(custom->data, data, len);
+        adv.customized_data = custom;
+    }
+
+    /* The ADV_STARTED callback can fire just before SIBLES flips its state to
+     * STARTED; a caller that updates immediately then sees NOT_ALLOWED. Retry
+     * briefly instead of reporting a state error for a transient one. */
+    ret = SIBLES_ADV_NOT_ALLOWED;
+    for (i = 0; i < 20; i++)
+    {
+        ret = sibles_advertising_update_adv_and_scan_rsp_data(g_adv_context,
+                                                              &adv, RT_NULL);
+        if (ret != SIBLES_ADV_NOT_ALLOWED)
+            break;
+        rt_thread_mdelay(20);
+    }
+    rt_free(custom);
+
+    if (ret == SIBLES_ADV_DATA_LENGTH_EXCEED)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "len");
+        return -1;
+    }
+    if (ret != SIBLES_ADV_NO_ERR)
+    {
+        peer_reply_err(reply, PEER_ERR_STATE, "adv_data");
+        return -1;
+    }
+
+    peer_reply_ok(reply, "len=%u", (unsigned)len);
+    return 0;
+}
+
+int peer_ble_update_conn_param(uint8_t link_id, uint16_t intv_min_ms,
+                               uint16_t intv_max_ms, uint16_t latency,
+                               uint16_t timeout_ms, peer_reply_t *reply)
+{
+    peer_link_t *link = peer_link_find(link_id);
+    ble_gap_update_conn_param_t param;
+
+    if (link == RT_NULL)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "link");
+        return -1;
+    }
+    if (intv_min_ms < 8 || intv_max_ms < intv_min_ms || timeout_ms < 100)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "params");
+        return -1;
+    }
+
+    memset(&param, 0, sizeof(param));
+    param.conn_idx = link->conn_idx;
+    param.intv_min = (uint16_t)(intv_min_ms * 4 / 5);
+    param.intv_max = (uint16_t)(intv_max_ms * 4 / 5);
+    param.latency = latency;
+    param.time_out = (uint16_t)(timeout_ms / 10);
+    param.ce_len_min = 1;
+    param.ce_len_max = 0x100;
+
+    g_conn_param_status = 0xFF;
+    g_conn_param_conn = link->conn_idx;
+    peer_ble_clear_bits(PEER_BIT_CONN_PARAM_DONE);
+
+    if (ble_gap_update_conn_param(&param) != HL_ERR_NO_ERROR)
+    {
+        g_conn_param_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_STATE, "conn_params");
+        return -1;
+    }
+
+    if (peer_ble_wait(PEER_BIT_CONN_PARAM_DONE, 3000) != RT_EOK)
+    {
+        g_conn_param_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "conn_params");
+        return -1;
+    }
+
+    if (g_conn_param_status != HL_ERR_NO_ERROR)
+    {
+        peer_reply_err(reply, PEER_ERR_STATE, "conn_params");
+        return -1;
+    }
+
+    peer_reply_ok(reply, "link=%u interval_min_ms=%u interval_max_ms=%u latency=%u timeout_ms=%u",
+                  link_id, intv_min_ms, intv_max_ms, latency, timeout_ms);
+    return 0;
+}
+
+int peer_ble_update_phy(uint8_t link_id, uint8_t phy, peer_reply_t *reply)
+{
+    peer_link_t *link = peer_link_find(link_id);
+    ble_gap_update_phy_t param;
+
+    if (link == RT_NULL)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "link");
+        return -1;
+    }
+    /* 1 = 1M, 2 = 2M, 3 = Coded -- the gap_phy_type numbering the indication
+     * reports. The request field is the enum gap_phy *bitfield*, so shift by
+     * phy-1: 1 -> 1 (1M), 2 -> 2 (2M), 3 -> 4 (Coded). */
+    if (phy < 1 || phy > 3)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "phy");
+        return -1;
+    }
+
+    memset(&param, 0, sizeof(param));
+    param.conn_idx = link->conn_idx;
+    param.rx_phy = (uint8_t)(1 << (phy - 1));
+    param.tx_phy = (uint8_t)(1 << (phy - 1));
+    param.phy_opt = 0;
+
+    g_phy_rx = 0;
+    g_phy_tx = 0;
+    g_phy_conn = link->conn_idx;
+    peer_ble_clear_bits(PEER_BIT_PHY_DONE);
+
+    if (ble_gap_update_phy(&param) != HL_ERR_NO_ERROR)
+    {
+        g_phy_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_STATE, "phy");
+        return -1;
+    }
+
+    if (peer_ble_wait(PEER_BIT_PHY_DONE, 3000) != RT_EOK)
+    {
+        g_phy_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "phy");
+        return -1;
+    }
+
+    peer_reply_ok(reply, "link=%u rx_phy=%u tx_phy=%u",
+                  link_id, g_phy_rx, g_phy_tx);
+    return 0;
+}
+
+int peer_ble_update_data_len(uint8_t link_id, uint16_t tx_octets,
+                             uint16_t tx_time, peer_reply_t *reply)
+{
+    peer_link_t *link = peer_link_find(link_id);
+    ble_gap_update_data_len_t param;
+
+    if (link == RT_NULL)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "link");
+        return -1;
+    }
+    if (tx_octets < 27 || tx_octets > 251 || tx_time > 2120)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "tx_octets");
+        return -1;
+    }
+
+    memset(&param, 0, sizeof(param));
+    param.conn_idx = link->conn_idx;
+    param.tx_octets = tx_octets;
+    param.tx_time = tx_time;
+
+    g_data_len_status = 0xFF;
+    g_data_len_conn = link->conn_idx;
+    peer_ble_clear_bits(PEER_BIT_DATA_LEN_DONE);
+
+    if (ble_gap_update_data_len(&param) != HL_ERR_NO_ERROR)
+    {
+        g_data_len_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_STATE, "data_len");
+        return -1;
+    }
+
+    if (peer_ble_wait(PEER_BIT_DATA_LEN_DONE, 3000) != RT_EOK)
+    {
+        g_data_len_conn = PEER_NO_CONN;
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "data_len");
+        return -1;
+    }
+
+    if (g_data_len_status != HL_ERR_NO_ERROR)
+    {
+        peer_reply_err(reply, PEER_ERR_STATE, "data_len");
+        return -1;
+    }
+
+    peer_reply_ok(reply, "link=%u tx_octets=%u tx_time=%u",
+                  link_id, tx_octets, tx_time);
     return 0;
 }
