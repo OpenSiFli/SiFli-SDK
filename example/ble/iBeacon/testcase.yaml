@@ -1,0 +1,19 @@
+# The peer path for the iBeacon example: the DUT only advertises, so the
+# instrument scans and checks the whole iBeacon payload, on a report whose
+# address is the DUT's own.
+#
+# Negative verification: change any field `ideacon2data()` writes -- the company
+# id, the beacon type, a byte of the proximity UUID, major, minor or the
+# measured power -- and `test_advertisement_carries_the_ibeacon_payload` goes
+# red. Change the advertising mode in `ble_app_advertising_start()` and the
+# `mode 2` assertion goes red. Power off the instrument and the first
+# `peer info` never answers.
+tests:
+  - id: ble_ibeacon.peer
+    description: The peer scans and finds the DUT's complete iBeacon payload.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    timeout: 180
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
