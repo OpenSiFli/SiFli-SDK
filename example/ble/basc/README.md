@@ -86,7 +86,7 @@ please input the serial port num:5
 ![alt text](assets/mac.png)
 ![alt text](assets/connect_success.jpg)
 
-* 可以通过手机app进行单片机电量读取，和写入数值
+* 可以通过手机app对自定义服务（`app_chara_uuid`，一个 32 位整数）进行读取和写入；电量值来自 BASC 客户端读取的**对端**电量服务，本机自定义服务里没有电量特征值
 ![alt text](assets/read_write_cccd.png)
 ![alt text](assets/write_data.jpg)
 
