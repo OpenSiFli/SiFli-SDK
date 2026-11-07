@@ -60,7 +60,7 @@ sdk.py menuconfig --board=board_name
 3.开启蓝牙心率配置文件（Enable BLE heart rate collector）
 - 路径：Sifli middleware → Bluetooth → Bluetooch service  → BLE service
     - 开启：Enable BLE heart rate collector
-         - 宏开关：`CONFIG_BSP_BLE_BASC`
+         - 宏开关：`CONFIG_BSP_BLE_HRPC`
          - 作用：用于启用蓝牙心率配置文件客户端(HRPC)的实现，使设备能够作为客户端连接到心率传感器设备并接收心率数据
 
 ### 编译和烧入

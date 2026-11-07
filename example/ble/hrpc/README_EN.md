@@ -59,7 +59,7 @@ sdk.py menuconfig --board=board_name
 3. Enable Bluetooth Heart Rate Profile (Enable BLE heart rate collector)
 - Path: Sifli middleware → Bluetooth → Bluetooth service → BLE service
     - Enable: Enable BLE heart rate collector
-         - Macro switch: `CONFIG_BSP_BLE_BASC`
+         - Macro switch: `CONFIG_BSP_BLE_HRPC`
          - Function: Enable Bluetooth Heart Rate Profile Client (HRPC) implementation, allowing the device to act as a client connecting to heart rate sensor devices and receiving heart rate data
 ### Compilation and Flashing
 Switch to the example project directory and run the scons command to compile:

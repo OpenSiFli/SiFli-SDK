@@ -1,0 +1,17 @@
+# The peer path for the hrpc example: the DUT is a GATT server (the shared
+# "sifli_app" 128-bit service), and the bt_peer instrument is the GATT client.
+#
+# Negative verification: break ble_app_service_init() and
+# `test_peer_discovers_the_service` goes red; drop the memcpy in the write
+# callback and the read-back assertion goes red; remove the
+# `Updated app value` log and the write test goes red; power off the instrument
+# and the first `peer info` never answers.
+tests:
+  - id: ble_hrpc.peer
+    description: A peer connects to the hrpc server, discovers it, writes, reads and subscribes.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
