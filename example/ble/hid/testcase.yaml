@@ -1,0 +1,17 @@
+# The peer path for the hid example: the DUT is a HID device (16-bit 0x1812
+# service), so the instrument discovers it as a GATT client, subscribes to the
+# report characteristic and receives the key report triggered by `test_hids`.
+#
+# Negative verification: break the HID service registration and
+# `test_peer_discovers_the_hid_service` goes red; remove HID_KEY_SEND's write
+# and `test_key_report_reaches_the_peer` goes red; power off the instrument and
+# the first `peer info` never answers.
+tests:
+  - id: ble_hid.peer
+    description: A peer discovers the HID service, subscribes and receives a key report.
+    harness: pytest
+    tags: [pytest, ble, peer, hid]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
