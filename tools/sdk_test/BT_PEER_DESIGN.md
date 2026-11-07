@@ -522,14 +522,18 @@ connections:
 
 ## 8. 覆盖矩阵
 
-| 例程 | DUT 角色 | 仪表用法 |
-|---|---|---|
-| `basc` `cscpc` `hrpc` `cppc` `diss` `tip_cts` `peripheral` `file_transfer` | 广播 + 注册 `sifli_app` 服务 | GATT client：scan/connect/discover/read/write/subscribe |
-| `iBeacon` `periodic_adv` | 只广播 | scan + 断言 adv data |
-| `throughput` `multi_connection` `central_and_peripheral` | 双向 | central + peripheral + loopback 服务 |
-| `pair` | 广播 + 配对 | central + bond/passkey |
-| `periodic_adv_sync` | 同步方 | periodic advertiser |
-| `hid` | 16-bit HID 服务 | GATT client + input report 订阅 |
+| 例程 | DUT 角色 | 仪表用法 | 状态 |
+|---|---|---|---|
+| `basc` `cscpc` `hrpc` `cppc` `diss` `tip_cts` | 广播 + 注册 `sifli_app` 服务 | GATT client：scan/connect/discover/read/write/subscribe | 套件已写；DUT 打完 `Page scan enbd` 后 HCPU 挂死，跳过并记录（见 §12.1） |
+| `peripheral` `file_transfer` | 同上 | 同上 | 真板通过，已提交 |
+| `central_and_peripheral` | 双向 | central + peripheral + loopback 服务 | 真板通过，已提交 |
+| `iBeacon` | 只广播 | scan + 断言完整 AD 与地址 | 真板通过，已提交 |
+| `periodic_adv` | 只广播（周期） | scan + `periodic.sync` 读周期信道 | 真板通过，已提交 |
+| `periodic_adv_sync` | 同步方 | `periodic.adv.start` + DUT 侧 shell | 真板通过，已提交 |
+| `hid` | 16-bit HID 服务 | GATT client + 配对 + input report 订阅 | 真板通过，已提交 |
+| `pair` | 广播 + 配对 | central + `sec.bond`（legacy） | 真板通过，已提交 |
+| `throughput` | 需要两块板跑同一例程 | 需要仪表侧的吞吐收发模式 | 本期未做（见 §12.2） |
+| `multi_connection` | 需要多个对端 | 一台仪表只提供一个对端 | 本期未做（见 §12.2） |
 
 ## 9. 迁移
 
@@ -648,6 +652,20 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 ## 12. 风险
 
+### 12.1 已知的、不是本期能修的
+
+- **经典蓝牙 profile 例程挂死**：`hrpc` `basc` `cscpc` `cppc` `diss` `tip_cts`
+  在 DUT 打印 `Page scan enbd` 之后 HCPU 不再响应，仪表侧看到 HCI reason 62。
+  已确认与仪表改动无关（改动前即复现），套件已写、暂不纳入提交。
+- **Secure Connections 配对失败**：52x DUT 与 58x 仪表做 SC 配对时双方都报
+  DHKey check failed（`0x6B` / `0x7B`）。legacy 配对正常，`hid` 与 `pair`
+  用例因此显式请求 `auth=legacy`；这两处例程只需要“加密链路”，不需要 SC。
+- **passkey 流程**：固件的 `sec.bond` 在配对完成前不回 `@ok`，所以测试线程
+  无法在配对过程中把 passkey 敲给对端。当前用例都用 Just Works；
+  支持 passkey 需要把 `sec.bond` 拆成“开始/等待”两步。
+- **命令行长度**：msh 实测在 ~500 字符以上拿不到响应（名义 1024），
+  所以 `adv.data` / `gatt.write` 的大负载仍受限；`peer data` 续行未实现。
+
 1. **固件工作量**：GAP/GATT/安全/周期广播多套逻辑，比宿主侧大。
    M1 只做最小命令集，M2/M3 增量补。
 2. **固件版本漂移**：实验室固定固件，宿主必须用 `@info` 校验；
@@ -661,6 +679,14 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 8. **事件风暴**：宿主有界队列 + `event_overflow`，不静默丢。
 9. **仪表是共享资源**：套件开始时 `state.reset()` 一次；改变全局状态的
    测试自己复位；文档里写明顺序敏感。
+
+### 12.2 两个例程本期未覆盖的原因
+
+- `throughput`：例程本身要求两块板都跑它自己（一边 central 一边 peripheral），
+  仪表要参与就得实现一条吞吐收发通路（大块数据双向持续传输），
+  这不是“对端仪表”而是第二个 DUT，A/ B 两块板对跑更合适。
+- `multi_connection`：例程的价值在一条 DUT 同时连多个对端；
+  一台仪表只代表一个对端，实验室需要多台 `bt_peer` 才能验证。
 
 ## 13. 已确认决策
 
