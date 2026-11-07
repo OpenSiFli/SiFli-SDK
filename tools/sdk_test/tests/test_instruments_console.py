@@ -19,6 +19,7 @@ from _support import SdkTestCase
 from sdk_test.instruments.console import EVENT_LIMIT
 from sdk_test.instruments.console import InstrumentConsole
 from sdk_test.instruments.errors import InstrumentCapabilityError
+from sdk_test.instruments.errors import InstrumentCommandError
 from sdk_test.instruments.errors import InstrumentProtocolError
 from sdk_test.instruments.errors import InstrumentTimeout
 
@@ -34,8 +35,10 @@ class TestRequests(SdkTestCase):
         console = FakeLineConsole({"peer req 1 gap.scan": lines("@err 1 busy pending")})
         instrument = InstrumentConsole(console)
 
-        with self.assertRaises(InstrumentProtocolError) as caught:
+        with self.assertRaises(InstrumentCommandError) as caught:
             instrument.command("gap.scan")
+        self.assertEqual(caught.exception.code, "busy")
+        self.assertEqual(caught.exception.text, "pending")
         self.assertIn("busy", str(caught.exception))
         self.assertIn("pending", str(caught.exception))
 

@@ -32,6 +32,7 @@ from typing import Optional
 from typing import Protocol
 
 from .errors import InstrumentCapabilityError
+from .errors import InstrumentCommandError
 from .errors import InstrumentProtocolError
 from .errors import InstrumentTimeout
 
@@ -298,10 +299,7 @@ class InstrumentConsole:
                 if kind == "ok":
                     return answer[1]
                 _, code, text = answer
-                raise InstrumentProtocolError(
-                    f"the instrument rejected `{op}` with {code}: {text}\n"
-                    f"sent: {line}"
-                )
+                raise InstrumentCommandError(op, code, text, sent=line)
 
             remaining = deadline - time.monotonic()
             if remaining <= 0:

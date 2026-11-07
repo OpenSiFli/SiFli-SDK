@@ -83,6 +83,17 @@ static uint32_t peer_evt_seq_next(void)
     return seq;
 }
 
+uint32_t peer_evt_seq_current(void)
+{
+    uint32_t seq;
+
+    rt_enter_critical();
+    seq = g_evt_seq;
+    rt_exit_critical();
+
+    return seq;
+}
+
 void peer_emit_evt(const char *name, const char *fmt, ...)
 {
     char line[PEER_LINE_MAX];
@@ -427,7 +438,25 @@ static int peer_op_gap_connect(const peer_args_t *args, peer_reply_t *reply)
                          (uint32_t)interval_ms, &link_id, reply) < 0)
         return -1;
 
-    peer_reply_ok(reply, "link=%u", link_id);
+    /* Report what the link actually is, not what was asked for: the peer may
+     * shorten the interval, and the address the peer reports is the one that
+     * was connected to. */
+    {
+        const peer_link_t *link = peer_link_find(link_id);
+        char addr_str[BD_ADDR_LEN * 2 + 1];
+
+        if (link == RT_NULL)
+        {
+            peer_reply_ok(reply, "link=%u", link_id);
+            return 0;
+        }
+
+        peer_ble_addr_str(&link->addr, addr_str, sizeof(addr_str));
+        peer_reply_ok(reply,
+                      "link=%u addr=%s addr_type=%u role=%u interval_ms=%u",
+                      link_id, addr_str, link->addr_type,
+                      link->role, (unsigned)(link->interval * 5 / 4));
+    }
     return 0;
 }
 
@@ -703,7 +732,8 @@ static int peer_op_sec_bond(const peer_args_t *args, peer_reply_t *reply)
         return -1;
     }
 
-    return peer_sec_bond(link, io, has_passkey, (uint32_t)passkey, reply);
+    return peer_sec_bond(link, io, peer_arg_get(args, "auth"), has_passkey,
+                         (uint32_t)passkey, reply);
 }
 
 static int peer_op_sec_clear(const peer_args_t *args, peer_reply_t *reply)

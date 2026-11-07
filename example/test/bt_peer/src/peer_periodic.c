@@ -30,6 +30,8 @@
 SIBLES_ADVERTISING_CONTEXT_DECLAR(g_periodic_context);
 
 static uint8_t g_periodic_on;
+/** Status the last ADV_STARTED callback carried; 0 means started. */
+static int g_periodic_start_status;
 static uint8_t g_sync_idx = PEER_PERIODIC_NO_ACTV;
 static int8_t g_sync_result;
 
@@ -68,12 +70,20 @@ static uint16_t peer_periodic_adv_intv(uint32_t interval_ms)
 static uint8_t peer_periodic_adv_event(uint8_t event, void *context, void *data)
 {
     (void)context;
-    (void)data;
 
     if (event == SIBLES_ADV_EVT_ADV_STARTED)
-        g_periodic_on = 1;
+    {
+        sibles_adv_evt_startted_t *started = (sibles_adv_evt_startted_t *)data;
+
+        g_periodic_start_status = started != RT_NULL ? (int)started->status : -1;
+        g_periodic_on = g_periodic_start_status == 0;
+        peer_ble_signal(PEER_BIT_PERIODIC_STARTED);
+    }
     else if (event == SIBLES_ADV_EVT_ADV_STOPPED)
+    {
         g_periodic_on = 0;
+        peer_ble_signal(PEER_BIT_PERIODIC_STOPPED);
+    }
 
     return 0;
 }
@@ -89,7 +99,14 @@ void peer_periodic_reset(void)
 {
     if (g_periodic_on)
     {
+        /*
+         * The stop is asynchronous: a start issued before the controller's
+         * stopped indication is refused with GAP_ERR_COMMAND_DISALLOWED, which
+         * is exactly what the next suite's `periodic.adv.start` would hit.
+         */
+        peer_ble_clear_bits(PEER_BIT_PERIODIC_STOPPED);
         sibles_advertising_stop(g_periodic_context);
+        peer_ble_wait(PEER_BIT_PERIODIC_STOPPED, 1000);
         g_periodic_on = 0;
     }
 
@@ -156,6 +173,32 @@ int peer_periodic_adv_start(uint32_t interval_ms, const uint8_t *data,
     para.evt_handler = peer_periodic_adv_event;
 
     /*
+     * The primary advertisement that carries the sync info is not empty in the
+     * reference example (name and manufacturer data). An empty set was refused
+     * by the controller with GAP_ERR_COMMAND_DISALLOWED, so carry the instrument
+     * name: a scan can then attribute the advertisement as well.
+     */
+    {
+        const char *name = peer_ble_local_name();
+        uint8_t name_len = (uint8_t)strlen(name);
+
+        if (name_len > 0 && name_len <= 0xFE)
+        {
+            para.adv_data.customized_data =
+                rt_malloc(sizeof(sibles_adv_type_customize_t) + 2 + name_len);
+            if (para.adv_data.customized_data == RT_NULL)
+            {
+                peer_reply_err(reply, PEER_ERR_NO_MEM, "adv_data");
+                return -1;
+            }
+            para.adv_data.customized_data->len = (uint8_t)(2 + name_len);
+            para.adv_data.customized_data->data[0] = (uint8_t)(1 + name_len);
+            para.adv_data.customized_data->data[1] = 0x09; /* complete name */
+            memcpy(&para.adv_data.customized_data->data[2], name, name_len);
+        }
+    }
+
+    /*
      * Always allocate, even for an empty payload: sibles_advertising_init()
      * dereferences periodic_data unconditionally in periodic mode, and the
      * protocol explicitly allows len=0.
@@ -163,6 +206,7 @@ int peer_periodic_adv_start(uint32_t interval_ms, const uint8_t *data,
     para.periodic_data = rt_malloc(sizeof(sibles_periodic_adv_t) + len);
     if (para.periodic_data == RT_NULL)
     {
+        rt_free(para.adv_data.customized_data);
         peer_reply_err(reply, PEER_ERR_NO_MEM, "periodic_data");
         return -1;
     }
@@ -172,13 +216,33 @@ int peer_periodic_adv_start(uint32_t interval_ms, const uint8_t *data,
 
     ret = sibles_advertising_init(g_periodic_context, &para);
     if (ret == SIBLES_ADV_NO_ERR)
+    {
+        peer_ble_clear_bits(PEER_BIT_PERIODIC_STARTED);
         ret = sibles_advertising_start(g_periodic_context);
+    }
 
     rt_free(para.periodic_data);
+    rt_free(para.adv_data.customized_data);
 
     if (ret != SIBLES_ADV_NO_ERR)
     {
         peer_reply_err(reply, PEER_ERR_STATE, "periodic_adv_start");
+        return -1;
+    }
+
+    /* As in `adv.start`: the controller's CNF is what says the set is on air. */
+    if (peer_ble_wait(PEER_BIT_PERIODIC_STARTED, 2000) != RT_EOK)
+    {
+        sibles_advertising_stop(g_periodic_context);
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "periodic_adv_start");
+        return -1;
+    }
+
+    if (g_periodic_start_status != 0)
+    {
+        sibles_advertising_stop(g_periodic_context);
+        peer_reply_err(reply, PEER_ERR_STATE, "periodic_adv_start rc=%d",
+                       g_periodic_start_status);
         return -1;
     }
 
@@ -195,9 +259,18 @@ int peer_periodic_adv_stop(peer_reply_t *reply)
         return 0;
     }
 
+    peer_ble_clear_bits(PEER_BIT_PERIODIC_STOPPED);
     if (sibles_advertising_stop(g_periodic_context) != SIBLES_ADV_NO_ERR)
     {
         peer_reply_err(reply, PEER_ERR_STATE, "periodic_adv_stop");
+        return -1;
+    }
+
+    /* Answer only once the controller agrees: an immediate restart would be
+     * refused with GAP_ERR_COMMAND_DISALLOWED. */
+    if (peer_ble_wait(PEER_BIT_PERIODIC_STOPPED, 1000) != RT_EOK)
+    {
+        peer_reply_err(reply, PEER_ERR_TIMEOUT, "periodic_adv_stop");
         return -1;
     }
 

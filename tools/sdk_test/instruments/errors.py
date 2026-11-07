@@ -26,5 +26,26 @@ class InstrumentProtocolError(InstrumentError):
     """The instrument answered, but not in the shape the protocol defines."""
 
 
+class InstrumentCommandError(InstrumentError):
+    """The instrument refused a command with a well-formed ``@err``.
+
+    A refusal is an answer, not a malformed one: ``busy`` means retry, ``state``
+    means the instrument is not in the state the caller assumed, ``invalid_arg``
+    means the request itself was wrong. A suite can branch on :attr:`code`;
+    treating every refusal as a protocol error would hide that distinction.
+    """
+
+    def __init__(self, op: str, code: str, text: str, sent: str = "") -> None:
+        self.op = op
+        self.code = code
+        self.text = text
+        self.sent = sent
+        detail = f"{code}: {text}" if text else code
+        message = f"the instrument rejected `{op}` with {detail}"
+        if sent:
+            message += f"\nsent: {sent}"
+        super().__init__(message)
+
+
 class InstrumentCapabilityError(InstrumentError):
     """The instrument's firmware does not provide the requested capability."""

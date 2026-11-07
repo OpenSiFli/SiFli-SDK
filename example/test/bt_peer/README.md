@@ -125,7 +125,7 @@ Rules that matter when extending it:
 | `gap.data_len` | `link`, `tx_octets` (27–251), `tx_time` (0–2120). `@ok` means accepted; the negotiated values arrive as `@evt data_len`. |
 | `svc.register` | Registers the 128-bit loopback service; `@ok handle=<h>`. |
 | `svc.notify` | `handle=<h> len=N data=<hex>`; requires the DUT (the GATT client) to have subscribed. |
-| `sec.bond` | `io=<name>` (`no_input_no_output`, `display_only`, `display_yes_no`, `keyboard_only`, `keyboard_display`) or the numeric enum; `passkey=<n>`. |
+| `sec.bond` | `io=<name>` (`no_input_no_output`, `display_only`, `display_yes_no`, `keyboard_only`, `keyboard_display`) or the numeric enum; `auth=<name>` (`none`, `legacy`, `legacy_mitm`, `secure`, `secure_mitm`) or the numeric `gap_auth`; `passkey=<n>`. The `@ok` waits for pairing to finish **and** the link to encrypt, so a protected attribute is immediately writable. |
 | `sec.clear` | Deletes all bonds. |
 | `periodic.adv.start` / `periodic.adv.stop` | Periodic advertiser, SID 0. |
 | `periodic.sync` / `periodic.sync.stop` | By scan `index` or `addr`; reports arrive as `@evt periodic`. |
@@ -142,7 +142,8 @@ scan.done    count=<n>
 conn         link=<n> addr=<hex> role=0/1 interval_ms=<n>
 disconn      link=<n> reason=<n>
 link         link=<n> addr=<hex> role=0/1 interval_ms=<n>
-char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h,h,...>
+char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h>:<uuidhex>,...
+             (UUID in the order the peer sent it, LSB first: a CCCD is 0229)
 notify       link=<n> handle=<h> len=N data=<hex>
 write        link=<n> handle=<h> len=N data=<hex>
 read         link=<n> handle=<h> len=N data=<hex>

@@ -29,6 +29,8 @@ static int g_connect_result;
 static uint8_t g_connect_link;
 
 static uint8_t g_adv_on;
+/** Status the last ADV_STARTED callback carried; 0 means started. */
+static int g_adv_start_status;
 
 /* Results of the last update request, written by the BLE callback thread. */
 static uint8_t g_conn_param_status;
@@ -557,6 +559,7 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
     ble_gap_scan_start_t param;
     rt_tick_t start;
     rt_tick_t budget;
+    uint32_t first_seq;
     uint8_t ret;
 
     if (!g_powered_on)
@@ -576,6 +579,13 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
     g_adv_count = 0;
     g_scan_rssi_min = rssi_min;
     g_scan_failed = 0;
+
+    /*
+     * Take the boundary before the scan can produce anything. The host filters
+     * on it, so a report still in flight from an earlier scan cannot be counted
+     * as one of this scan's.
+     */
+    first_seq = peer_evt_seq_current();
 
     param.own_addr_type = GAPM_STATIC_ADDR;
     /* Observer receives legacy, extended and periodic reports alike. */
@@ -619,7 +629,8 @@ int peer_ble_scan_start(uint32_t duration_ms, uint32_t interval_ms,
         return -1;
     }
 
-    peer_reply_ok(reply, "count=%u", g_adv_count);
+    peer_reply_ok(reply, "count=%u first_seq=%u", g_adv_count,
+                  (unsigned)first_seq);
     return 0;
 }
 
@@ -801,11 +812,16 @@ void peer_ble_reset(void)
 static uint8_t peer_adv_event_cb(uint8_t event, void *context, void *data)
 {
     (void)context;
-    (void)data;
 
     if (event == SIBLES_ADV_EVT_ADV_STARTED)
     {
-        g_adv_on = 1;
+        /* SIBLES reports a failed start as ADV_STARTED with a status; taking
+         * the callback alone as success would report an advertisement that the
+         * controller refused. */
+        sibles_adv_evt_startted_t *started = (sibles_adv_evt_startted_t *)data;
+
+        g_adv_start_status = started != RT_NULL ? (int)started->status : -1;
+        g_adv_on = g_adv_start_status == 0;
         peer_ble_signal(PEER_BIT_ADV_STARTED);
     }
     else if (event == SIBLES_ADV_EVT_ADV_STOPPED)
@@ -908,6 +924,12 @@ int peer_ble_adv_start(uint8_t extended, uint32_t interval_ms,
     if (peer_ble_wait(PEER_BIT_ADV_STARTED, 2000) != RT_EOK)
     {
         peer_reply_err(reply, PEER_ERR_TIMEOUT, "adv_start");
+        return -1;
+    }
+
+    if (g_adv_start_status != 0)
+    {
+        peer_reply_err(reply, PEER_ERR_STATE, "adv_start rc=%d", g_adv_start_status);
         return -1;
     }
 

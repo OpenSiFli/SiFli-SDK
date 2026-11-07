@@ -60,12 +60,29 @@ class Link:
     interval_ms: int = 0
 
 
+#: Client characteristic configuration, as it appears on the wire (LSB first).
+CCCD_UUID = bytes([0x02, 0x29])
+
+
 @dataclass(frozen=True)
 class Characteristic:
     index: int
     handle: int
     value_handle: int
     descriptors: List[int] = field(default_factory=list)
+    #: UUID of each descriptor, parallel to ``descriptors``; ``None`` where the
+    #: instrument did not report one. Bytes, in the order the peer sent them.
+    descriptor_uuids: List[Optional[bytes]] = field(default_factory=list)
+
+    def descriptor_handle(self, uuid: bytes) -> int:
+        """The handle of the descriptor with @p uuid, if the peer reported it."""
+        for handle, reported in zip(self.descriptors, self.descriptor_uuids):
+            if reported == uuid:
+                return handle
+        raise AssertionError(
+            f"characteristic {self.index} has no descriptor {uuid.hex()}; "
+            f"reported: {self.descriptor_uuids}"
+        )
 
 
 @dataclass(frozen=True)
@@ -82,23 +99,38 @@ class Service:
             ) from exc
 
     def cccd_handle(self, index: int = 0) -> int:
-        """The first descriptor of a characteristic -- its CCCD.
+        """The CCCD of a discovered characteristic.
 
-        The same convention as the old parser: the examples' service table has
-        exactly one descriptor, the client characteristic configuration.
+        Selected by UUID, because a characteristic may carry other descriptors
+        (a HID report has a report reference next to its CCCD). A characteristic
+        with exactly one descriptor can only be the CCCD, so that one is taken
+        as it is; with several and no UUID match the instrument did not report
+        enough to identify it, and guessing would write the wrong handle.
         """
         try:
-            descriptors = self.characteristics[index].descriptors
+            characteristic = self.characteristics[index]
         except IndexError as exc:
             raise InstrumentProtocolError(
                 f"characteristic {index} was not discovered "
                 f"({len(self.characteristics)} present)"
             ) from exc
+
+        descriptors = characteristic.descriptors
         if not descriptors:
             raise AssertionError(
                 f"characteristic {index} has no descriptor, so there is no CCCD to write"
             )
-        return descriptors[0]
+        if len(descriptors) == 1:
+            return descriptors[0]
+
+        try:
+            return characteristic.descriptor_handle(CCCD_UUID)
+        except AssertionError as exc:
+            raise InstrumentProtocolError(
+                f"characteristic {index} has {len(descriptors)} descriptors and "
+                f"none is a CCCD ({CCCD_UUID.hex()}); the instrument reported: "
+                f"{characteristic.descriptor_uuids}"
+            ) from exc
 
 
 class BleInstrument:
@@ -129,12 +161,11 @@ class BleInstrument:
         timeout: float = 20.0,
     ) -> List[AdvReport]:
         """Scan for ``duration_ms`` and return every report, strongest first."""
-        # Parse what is already in flight *before* taking the boundary. An event
-        # from a previous, timed-out scan can still be sitting in the console
-        # buffer; without this it is parsed during this scan's pump with a seq
-        # above the boundary and would be returned as this scan's report.
+        # Parsing what is already in flight keeps the transcript readable and
+        # drops junk, but it is not what makes this scan's reports separable: the
+        # firmware reports the sequence it was at before the scan could emit
+        # anything, and that boundary does the work.
         self._console.drain()
-        start = self._console.last_seq
         result = self._console.command(
             "gap.scan",
             timeout=timeout,
@@ -144,15 +175,18 @@ class BleInstrument:
             dup=int(duplicate_filter),
             rssi_min=rssi_min,
         )
+        first_seq = _event_boundary(result, "gap.scan")
         count = _int(result, "count")
         reports = [
-            _adv_from_event(self._console.next_event("adv", since_seq=start, timeout=timeout))
+            _adv_from_event(
+                self._console.next_event("adv", since_seq=first_seq, timeout=timeout)
+            )
             for _ in range(count)
         ]
         # `scan.done` is informational; consume it so a later wait cannot see it
         # as this scan's answer.
         try:
-            self._console.next_event("scan.done", since_seq=start, timeout=0.05)
+            self._console.next_event("scan.done", since_seq=first_seq, timeout=0.05)
         except InstrumentTimeout:
             pass
         return sorted(reports, key=_by_signal, reverse=True)
@@ -180,6 +214,11 @@ class BleInstrument:
         """Connect either to a scan report's index or to an explicit address."""
         if report is None and address is None:
             raise ValueError("connect() needs an AdvReport or an address")
+        if report is not None and address is not None:
+            raise ValueError(
+                "connect() takes an AdvReport or an address, not both: the "
+                "firmware prefers the report's index and would ignore the address"
+            )
 
         kwargs: Dict[str, Any] = {
             "timeout_ms": timeout_ms,
@@ -189,12 +228,11 @@ class BleInstrument:
             # The scan index is 1-based on the wire; the firmware prints it
             # after appending the report, so it is used verbatim.
             kwargs["index"] = report.index
-            address = address or report.address
-            if "addr_type" not in kwargs:
-                kwargs["addr_type"] = 0 if report.address_type == "public" else 1
-        if address is not None:
+            address = report.address
+            kwargs["addr_type"] = 0 if report.address_type == "public" else 1
+        else:
             kwargs["addr"] = address.replace("-", "").lower()
-            kwargs.setdefault("addr_type", address_type)
+            kwargs["addr_type"] = address_type
 
         result = self._console.command("gap.connect", timeout=timeout, **kwargs)
         return Link(
@@ -250,11 +288,12 @@ class BleInstrument:
 
     def list_links(self) -> List[Link]:
         self._console.drain()
+        start = self._console.last_seq
         result = self._console.command("dev.list")
         count = _int(result, "links")
         links = []
         for _ in range(count):
-            event = self._console.next_event("link")
+            event = self._console.next_event("link", since_seq=start)
             values = event["values"]
             links.append(
                 Link(
@@ -291,31 +330,55 @@ class BleInstrument:
         """Replace the running advertisement's data."""
         self._console.command("adv.data", timeout=timeout, data=data)
 
+    def start_periodic_advertising(
+        self,
+        data: bytes = b"",
+        *,
+        interval_ms: int = 100,
+        timeout: float = 15.0,
+    ) -> None:
+        """Run a periodic advertising set (SID 0) carrying @p data.
+
+        The primary-channel advertisement that carries the sync info is
+        implicit: the peer firmware starts it as part of this op.
+        """
+        self._console.command(
+            "periodic.adv.start",
+            timeout=timeout,
+            interval_ms=interval_ms,
+            data=data,
+        )
+
+    def stop_periodic_advertising(self, *, timeout: float = 10.0) -> None:
+        self._console.command("periodic.adv.stop", timeout=timeout)
+
     # -- GATT client ---------------------------------------------------------
 
     def discover(
-        self, link: Link, uuid: Optional[bytes] = None, timeout: float = 10.0
+        self, link: Link, uuid: Optional[bytes] = None, timeout: float = 15.0
     ) -> Service:
         """Discover a service and return its characteristics.
 
         The device emits every ``@evt char`` before the terminal ``@ok``, so by
-        the time ``command`` returns the events are already queued.
+        the time ``command`` returns the events are already queued. The default
+        timeout is above the firmware's own discovery budget, so a slow search
+        is reported by the instrument rather than by the host giving up first.
         """
-        # Same reason as scan(): a timed-out discovery can leave char events in
-        # flight; they must not be counted as this discovery's answer.
+        # The firmware's boundary, not the host's: a timed-out discovery can
+        # leave char events in flight, and they must not be counted here.
         self._console.drain()
-        start = self._console.last_seq
         result = self._console.command(
             "gatt.discover",
             timeout=timeout,
             link=link.link_id,
             uuid=uuid.hex() if uuid else None,
         )
+        first_seq = _event_boundary(result, "gatt.discover")
         count = _int(result, "count")
         characteristics = [
             _characteristic_from_event(
                 self._console.next_event(
-                    "char", since_seq=start, link=link.link_id, timeout=timeout
+                    "char", since_seq=first_seq, link=link.link_id, timeout=timeout
                 )
             )
             for _ in range(count)
@@ -425,11 +488,28 @@ class BleInstrument:
         link: Link,
         *,
         io: str = "no_input_no_output",
+        auth: Optional[str] = None,
         passkey: Optional[int] = None,
-        timeout: float = 30.0,
+        timeout: float = 40.0,
     ) -> None:
+        """Pair with the peer; returns once the link is encrypted.
+
+        ``auth`` picks the procedure -- ``legacy``, ``legacy_mitm``, ``secure``,
+        ``secure_mitm`` or the numeric ``gap_auth`` -- and defaults to whatever
+        the instrument firmware was built with.
+
+        The instrument holds the ``@ok`` until pairing has finished and the
+        link is encrypted, because that is when a protected attribute (a HID
+        CCCD, for one) starts accepting writes. A pairing that fails or leaves
+        the link in the clear is an ``@err``, not a silent success.
+        """
         self._console.command(
-            "sec.bond", timeout=timeout, link=link.link_id, io=io, passkey=passkey
+            "sec.bond",
+            timeout=timeout,
+            link=link.link_id,
+            io=io,
+            auth=auth,
+            passkey=passkey,
         )
 
     def wait_passkey(
@@ -509,6 +589,21 @@ class BtPeer:
 # -- parsing helpers ---------------------------------------------------------
 
 
+def _event_boundary(result: Dict[str, str], op: str) -> int:
+    """The event-sequence boundary an operation's ``@ok`` reports.
+
+    The firmware takes it before the operation can emit anything, which is what
+    makes its events separable from an earlier operation's still in flight. A
+    reply without it cannot be used safely, so it is an error, not a fallback.
+    """
+    if "first_seq" not in result:
+        raise InstrumentProtocolError(
+            f"the instrument's `{op}` reply carried no first_seq, so its events "
+            "cannot be told apart from a previous operation's"
+        )
+    return _int(result, "first_seq")
+
+
 def _adv_from_event(event: Dict[str, Any]) -> AdvReport:
     values = event["values"]
     rssi = values.get("rssi")
@@ -536,21 +631,25 @@ def _adv_from_event(event: Dict[str, Any]) -> AdvReport:
 
 def _characteristic_from_event(event: Dict[str, Any]) -> Characteristic:
     values = event["values"]
-    try:
-        descriptors = [
-            int(token)
-            for token in values.get("descs", "").split(",")
-            if token
-        ]
-    except ValueError as exc:
-        raise InstrumentProtocolError(
-            f"descs={values.get('descs')!r} is not a handle list"
-        ) from exc
+    descriptors: List[int] = []
+    descriptor_uuids: List[Optional[bytes]] = []
+    for token in values.get("descs", "").split(","):
+        if not token:
+            continue
+        handle, _, uuid_hex = token.partition(":")
+        try:
+            descriptors.append(int(handle))
+            descriptor_uuids.append(bytes.fromhex(uuid_hex) if uuid_hex else None)
+        except ValueError as exc:
+            raise InstrumentProtocolError(
+                f"descs={values.get('descs')!r} is not a handle[:uuid] list"
+            ) from exc
     return Characteristic(
         index=_int(values, "index"),
         handle=_int(values, "handle"),
         value_handle=_int(values, "value_handle"),
         descriptors=descriptors,
+        descriptor_uuids=descriptor_uuids,
     )
 
 

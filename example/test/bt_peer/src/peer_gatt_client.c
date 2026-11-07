@@ -33,6 +33,12 @@
 
 /** Descriptors reported per characteristic; the protocol line stays bounded. */
 #define PEER_GATT_MAX_DESCS         16
+/**
+ * Longest descriptor list: "<handle>:<uuid>," entries, a UUID being at most
+ * 128 bits. Kept in .bss rather than on the GATT callback thread's stack.
+ */
+#define PEER_GATT_DESC_CHARS \
+    (PEER_GATT_MAX_DESCS * (5 + 1 + ATT_UUID_128_LEN * 2 + 1) + 1)
 
 /** Empty slot in the per-connection registration table. */
 #define PEER_GATT_NO_CONN           0xFF
@@ -152,11 +158,45 @@ static void peer_gatt_leave(peer_link_t *link)
     link->gatt_busy = 0;
 }
 
+/**
+ * Append "<handle>:<uuid-hex>" to a descriptor list.
+ *
+ * The UUID goes out in the byte order the attribute database reported, so a
+ * 16-bit CCCD reads "0229" rather than "2902". The host compares raw bytes and
+ * so needs no byte-order convention of its own.
+ *
+ * @return the new length of @p out, unchanged if the entry did not fit.
+ */
+static size_t peer_gatt_desc_append(char *out, size_t size, size_t used,
+                                    uint8_t index,
+                                    const struct sibles_disc_char_desc_ind *desc)
+{
+    uint8_t b;
+    int n;
+
+    n = rt_snprintf(out + used, size - used, "%s%u:",
+                    index == 0 ? "" : ",", desc->attr_hdl);
+    if (n < 0 || (size_t)n >= size - used)
+        return used;
+    used += (size_t)n;
+
+    for (b = 0; b < desc->uuid_len && b < ATT_UUID_128_LEN; b++)
+    {
+        n = rt_snprintf(out + used, size - used, "%02x", desc->uuid[b]);
+        if (n < 0 || (size_t)n >= size - used)
+            return used;
+        used += (size_t)n;
+    }
+
+    return used;
+}
+
 static void peer_gatt_emit_characteristics(peer_link_t *link,
         const sibles_svc_remote_svc_t *svc)
 {
     const sibles_svc_search_char_t *chara =
         (const sibles_svc_search_char_t *)svc->att_db;
+    static char descs[PEER_GATT_DESC_CHARS];
     uint8_t i;
     uint8_t d;
 
@@ -167,7 +207,6 @@ static void peer_gatt_emit_characteristics(peer_link_t *link,
 
     for (i = 0; i < svc->char_count; i++)
     {
-        char descs[PEER_GATT_MAX_DESCS * 6 + 1];
         size_t used = 0;
         uint8_t reported = chara->desc_count;
 
@@ -176,14 +215,8 @@ static void peer_gatt_emit_characteristics(peer_link_t *link,
             reported = PEER_GATT_MAX_DESCS;
 
         for (d = 0; d < reported; d++)
-        {
-            int n = rt_snprintf(descs + used, sizeof(descs) - used, "%s%u",
-                                d == 0 ? "" : ",", chara->desc[d].attr_hdl);
-
-            if (n < 0 || used + (size_t)n >= sizeof(descs))
-                break;
-            used += (size_t)n;
-        }
+            used = peer_gatt_desc_append(descs, sizeof(descs), used, d,
+                                         &chara->desc[d]);
 
         /* One line per characteristic, all of them before the terminal @ok. */
         peer_emit_evt("char", "link=%u index=%u handle=%u value_handle=%u descs=%s",
@@ -404,6 +437,7 @@ int peer_gatt_client_discover(peer_link_t *link, const uint8_t *uuid,
                               uint8_t uuid_len, peer_reply_t *reply)
 {
     int rc = -1;
+    uint32_t first_seq = 0;
 
     if (peer_gatt_enter(link, reply) < 0)
         return -1;
@@ -420,6 +454,9 @@ int peer_gatt_client_discover(peer_link_t *link, const uint8_t *uuid,
     memset(g_search_uuid, 0, sizeof(g_search_uuid));
     if (uuid_len > 0)
         memcpy(g_search_uuid, uuid, uuid_len);
+
+    /* Boundary taken before the search can emit a single `char` event. */
+    first_seq = peer_evt_seq_current();
 
     if (sibles_search_service(link->conn_idx, uuid_len, (uint8_t *)uuid) != 0)
     {
@@ -445,7 +482,8 @@ int peer_gatt_client_discover(peer_link_t *link, const uint8_t *uuid,
         goto out;
     }
 
-    peer_reply_ok(reply, "count=%u", g_char_count);
+    peer_reply_ok(reply, "count=%u first_seq=%u", g_char_count,
+                  (unsigned)first_seq);
     rc = 0;
 
 out:
@@ -538,7 +576,7 @@ static int peer_gatt_write_raw(peer_link_t *link, uint16_t handle,
     if (ret != SIBLES_WRITE_NO_ERR)
     {
         g_write_conn = PEER_GATT_NO_CONN;
-        peer_reply_err(reply, PEER_ERR_WRITE_FAILED, "gatt.write");
+        peer_reply_err(reply, PEER_ERR_WRITE_FAILED, "gatt.write ret=%d", ret);
         return -1;
     }
 
@@ -554,7 +592,11 @@ static int peer_gatt_write_raw(peer_link_t *link, uint16_t handle,
 
         if (g_write_rc != 0)
         {
-            peer_reply_err(reply, PEER_ERR_WRITE_FAILED, "gatt.write");
+            /* An ATT error from the peer (0x03 write not permitted, 0x05/0x0F
+             * insufficient security): name it, so a suite can tell a bad handle
+             * from a permission problem. */
+            peer_reply_err(reply, PEER_ERR_WRITE_FAILED, "gatt.write rc=%d",
+                           g_write_rc);
             return -1;
         }
     }

@@ -27,6 +27,7 @@ from .classic import ClassicLink
 from .console import InstrumentConsole
 from .errors import InstrumentCapabilityError
 from .errors import InstrumentError
+from .errors import InstrumentCommandError
 from .errors import InstrumentProtocolError
 from .errors import InstrumentTimeout
 from .registry import INSTRUMENTS
@@ -45,6 +46,7 @@ __all__ = [
     "InstrumentConsole",
     "InstrumentError",
     "InstrumentProtocolError",
+    "InstrumentCommandError",
     "InstrumentTimeout",
     "Link",
     "Service",

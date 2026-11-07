@@ -19,9 +19,11 @@ from _support import SdkTestCase
 
 from sdk_test.instruments.bt_peer import AdvReport
 from sdk_test.instruments.bt_peer import BtPeer
+from sdk_test.instruments.bt_peer import CCCD_UUID
 from sdk_test.instruments.bt_peer import Link
 from sdk_test.instruments.console import InstrumentConsole
 from sdk_test.instruments.errors import InstrumentCapabilityError
+from sdk_test.instruments.errors import InstrumentCommandError
 from sdk_test.instruments.errors import InstrumentProtocolError
 from sdk_test.instruments.errors import InstrumentTimeout
 
@@ -39,7 +41,7 @@ class TestScan(SdkTestCase):
                     "@evt 1 adv index=2 addr=aa-bb type=public rssi=-50 len=2 data=0102",
                     "@evt 2 adv index=1 addr=cc-dd type=random rssi=-30",
                     "@evt 3 scan.done count=2",
-                    "@ok 1 count=2",
+                    "@ok 1 count=2 first_seq=0",
                 )
             }
         )
@@ -55,7 +57,7 @@ class TestScan(SdkTestCase):
             {
                 "gap.scan": lines(
                     "@evt 1 adv index=1 addr=aa type=1 rssi=-40",
-                    "@ok 1 count=1",
+                    "@ok 1 count=1 first_seq=0",
                 )
             }
         )
@@ -69,7 +71,7 @@ class TestScan(SdkTestCase):
                     "@evt 1 adv index=1 addr=no-rssi",
                     "@evt 2 adv index=2 addr=weak rssi=-80",
                     "@evt 3 scan.done count=2",
-                    "@ok 1 count=2",
+                    "@ok 1 count=2 first_seq=0",
                 )
             }
         )
@@ -85,7 +87,7 @@ class TestScan(SdkTestCase):
                 "peer info": info_line(caps="ble"),
                 "gap.scan": [
                     "",
-                    lines("@evt 2 adv index=1 addr=fresh rssi=-30", "@ok 2 count=1"),
+                    lines("@evt 2 adv index=1 addr=fresh rssi=-30", "@ok 2 count=1 first_seq=1"),
                 ],
             }
         )
@@ -105,7 +107,7 @@ class TestScan(SdkTestCase):
         console = FakeLineConsole(
             {
                 "peer info": info_line(caps="ble"),
-                "gap.scan": lines("@evt 11 adv index=1 addr=fresh rssi=-40", "@ok 1 count=1"),
+                "gap.scan": lines("@evt 11 adv index=1 addr=fresh rssi=-40", "@ok 1 count=1 first_seq=10"),
             },
             initial=lines("@evt 10 adv index=9 addr=stale rssi=-20"),
         )
@@ -130,7 +132,7 @@ class TestScan(SdkTestCase):
 
     def test_an_empty_scan_says_what_to_check(self):
         peer, _ = peer_for(
-            {"gap.scan": lines("@evt 1 scan.done count=0", "@ok 1 count=0")}
+            {"gap.scan": lines("@evt 1 scan.done count=0", "@ok 1 count=0 first_seq=0")}
         )
 
         with self.assertRaises(AssertionError) as caught:
@@ -149,7 +151,10 @@ class TestConnection(SdkTestCase):
 
         self.assertEqual(link, Link(link_id=0, address="aabbcc", role="central", interval_ms=30))
         self.assertIn("index=3", console.sent[-1])
-        self.assertIn("addr=aabbcc", console.sent[-1])
+        self.assertIn("addr_type=0", console.sent[-1])
+        # The index names the device; sending an address as well would be a
+        # second, possibly contradictory, identifier.
+        self.assertNotIn("addr=", console.sent[-1])
 
     def test_connect_by_address_does_not_need_a_scan(self):
         peer, console = peer_for(
@@ -174,8 +179,9 @@ class TestConnection(SdkTestCase):
     def test_a_refused_connection_is_an_error(self):
         peer, _ = peer_for({"gap.connect": lines("@err 1 failed connection refused")})
 
-        with self.assertRaises(InstrumentProtocolError) as caught:
+        with self.assertRaises(InstrumentCommandError) as caught:
             peer.ble.connect(AdvReport(1, "aa", "public", -40))
+        self.assertEqual(caught.exception.code, "failed")
         self.assertIn("connection refused", str(caught.exception))
 
     def test_list_links_reads_the_event_before_the_terminal(self):
@@ -213,7 +219,7 @@ class TestGattClient(SdkTestCase):
             {
                 "gatt.discover": lines(
                     "@evt 1 char link=0 index=0 handle=9 value_handle=10 descs=11",
-                    "@ok 1 count=1",
+                    "@ok 1 count=1 first_seq=0",
                 )
             }
         )
@@ -223,8 +229,44 @@ class TestGattClient(SdkTestCase):
         self.assertEqual(service.value_handle(), 10)
         self.assertEqual(service.cccd_handle(), 11)
 
+    def test_the_cccd_is_picked_by_uuid_not_by_position(self):
+        """A HID report has a report reference next to its CCCD."""
+        peer, _ = peer_for(
+            {
+                "gatt.discover": lines(
+                    "@evt 1 char link=0 index=0 handle=9 value_handle=10 "
+                    "descs=11:0829,12:0229",
+                    "@ok 1 count=1 first_seq=0",
+                )
+            }
+        )
+
+        service = peer.ble.discover(Link(0, "aa"))
+
+        self.assertEqual(service.cccd_handle(), 12)
+        self.assertEqual(
+            service.characteristics[0].descriptor_handle(CCCD_UUID), 12
+        )
+
+    def test_a_characteristic_with_several_descriptors_needs_a_cccd(self):
+        """Guessing would write the wrong handle; say so instead."""
+        peer, _ = peer_for(
+            {
+                "gatt.discover": lines(
+                    "@evt 1 char link=0 index=0 handle=9 value_handle=10 "
+                    "descs=11:2803,12:2a05",
+                    "@ok 1 count=1 first_seq=0",
+                )
+            }
+        )
+
+        service = peer.ble.discover(Link(0, "aa"))
+
+        with self.assertRaises(InstrumentProtocolError):
+            service.cccd_handle()
+
     def test_discover_without_characteristics_is_a_failure(self):
-        peer, _ = peer_for({"gatt.discover": lines("@ok 1 count=0")})
+        peer, _ = peer_for({"gatt.discover": lines("@ok 1 count=0 first_seq=0")})
 
         with self.assertRaises(AssertionError):
             peer.ble.discover(Link(0, "aa"))
@@ -339,12 +381,29 @@ class TestServerAndSecurity(SdkTestCase):
         self.assertEqual(peer.ble.register_loopback(), 12)
 
     def test_bond_passes_the_io_capability(self):
-        peer, console = peer_for({"sec.bond": lines("@ok 1")})
+        peer, console = peer_for({"sec.bond": lines("@ok 1 link=0 io=3")})
 
         peer.ble.bond(Link(0, "aa"), io="display_only", passkey=123456)
 
         self.assertIn("io=display_only", console.sent[-1])
         self.assertIn("passkey=123456", console.sent[-1])
+
+    def test_bond_passes_the_authentication_requirement(self):
+        peer, console = peer_for({"sec.bond": lines("@ok 1 link=0 io=3")})
+
+        peer.ble.bond(Link(0, "aa"), auth="legacy")
+
+        self.assertIn("auth=legacy", console.sent[-1])
+
+    def test_a_bond_the_instrument_cannot_complete_is_an_error(self):
+        """The instrument answers only after pairing; a failure is an @err."""
+        peer, _ = peer_for(
+            {"sec.bond": lines("@err 1 bond_failed sec.bond rc=107")}
+        )
+
+        with self.assertRaises(InstrumentCommandError) as caught:
+            peer.ble.bond(Link(0, "aa"))
+        self.assertEqual(caught.exception.code, "bond_failed")
 
 
 class TestCapability(SdkTestCase):

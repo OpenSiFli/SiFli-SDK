@@ -21,7 +21,7 @@
 4. extension advertising的secondary advertising phy默认设置为2M，连接后直接使用2M PHY，可以减少一次PHY更新。
 5. 一些比较老的手机或其他设备，可能无法搜索extension广播，如果有需求，可以去掉USING_LE_EXTENSION_ADV
 6. 作为主设备时，可以通过finsh命令搜索其他从设备，并发起连接。
-7. 作为GATT server时，可以在手机端进行write和read操作，或者使能CCCD，设备会每一秒更新一次特征值。
+7. 作为GATT server时，可以在手机端进行write和read操作，或者使能CCCD，再写入 0x11 触发一次 20 包的通知；本例程没有周期定时器。
 8. 作为GATT client时，可以通过finsh命令搜索server的database并显示，并对特征值进行读或写的操作。
 
 

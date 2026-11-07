@@ -53,6 +53,7 @@
 #define PEER_ERR_WRITE_FAILED   "write_failed"
 #define PEER_ERR_READ_FAILED    "read_failed"
 #define PEER_ERR_NO_MEM         "no_mem"
+#define PEER_ERR_BOND_FAILED    "bond_failed"
 #define PEER_ERR_PROTO          "proto"
 
 /** Event bits signalled from the BLE callback thread. */
@@ -72,6 +73,9 @@
 #define PEER_BIT_PHY_DONE           (1UL << 13)
 #define PEER_BIT_DATA_LEN_DONE      (1UL << 14)
 #define PEER_BIT_ADV_STARTED        (1UL << 15)
+#define PEER_BIT_BOND_DONE          (1UL << 16)
+#define PEER_BIT_PERIODIC_STARTED   (1UL << 17)
+#define PEER_BIT_PERIODIC_STOPPED   (1UL << 18)
 
 /** "No connection": the stack's conn_idx is uint8_t, so 0xFF is free. */
 #define PEER_NO_CONN                0xFF
@@ -129,6 +133,13 @@ typedef struct
 /* ---- peer_proto.c ------------------------------------------------------ */
 void peer_proto_init(void);
 void peer_emit_evt(const char *name, const char *fmt, ...);
+/**
+ * The sequence number events were at a moment ago.
+ *
+ * An operation reports this in its `@ok` as `first_seq`, so the host can tell
+ * the events it causes from ones still in flight from an earlier operation.
+ */
+uint32_t peer_evt_seq_current(void);
 void peer_reply_ok(peer_reply_t *reply, const char *fmt, ...);
 void peer_reply_err(peer_reply_t *reply, const char *code, const char *fmt, ...);
 const char *peer_arg_get(const peer_args_t *args, const char *key);
@@ -207,8 +218,8 @@ int peer_gatt_server_notify(peer_link_t *link, uint16_t handle,
 
 /* ---- peer_sec.c -------------------------------------------------------- */
 void peer_sec_init(void);
-int peer_sec_bond(peer_link_t *link, const char *io, uint8_t has_passkey,
-                  uint32_t passkey, peer_reply_t *reply);
+int peer_sec_bond(peer_link_t *link, const char *io, const char *auth,
+                  uint8_t has_passkey, uint32_t passkey, peer_reply_t *reply);
 int peer_sec_clear(peer_reply_t *reply);
 
 /* ---- peer_periodic.c --------------------------------------------------- */

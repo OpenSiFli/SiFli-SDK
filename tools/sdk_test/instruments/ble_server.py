@@ -18,8 +18,9 @@ from __future__ import annotations
 import re
 import time
 from typing import Any
+from typing import Optional
 
-from .errors import InstrumentProtocolError
+from .errors import InstrumentCommandError
 from .errors import InstrumentTimeout
 
 #: The shared service UUID of the peripheral examples: "sifli_app".
@@ -130,10 +131,15 @@ def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 6) -> Any:
         ),
     )
 
+    last_error: Optional[BaseException] = None
     for report in ordered[:attempts]:
         try:
             link = peer.ble.connect(report, timeout=10.0)
-        except (InstrumentTimeout, InstrumentProtocolError):
+        except (InstrumentTimeout, InstrumentCommandError) as exc:
+            # A refused or unanswered connect is worth another device; what it
+            # said is kept for the final message, because "state" or
+            # "invalid_arg" is a different problem from a weak signal.
+            last_error = exc
             time.sleep(0.5)
             continue
         try:
@@ -143,14 +149,17 @@ def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 6) -> Any:
             # The link is up, but not to this DUT (or the DUT dropped it).
             try:
                 peer.ble.disconnect(link)
-            except (InstrumentTimeout, InstrumentProtocolError):
+            except (InstrumentTimeout, InstrumentCommandError):
                 pass
             time.sleep(0.5)
 
-    raise AssertionError(
+    message = (
         "could not establish a link the DUT acknowledged after "
         f"{attempts} attempt(s); scanned {len(connectable)} connectable report(s)"
     )
+    if last_error is not None:
+        message += f"; last instrument failure: {last_error}"
+    raise AssertionError(message)
 
 
 def discover_service(peer: Any, link: Any) -> Any:

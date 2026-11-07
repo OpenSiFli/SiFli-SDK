@@ -29,7 +29,7 @@ import re
 
 import pytest
 
-from sdk_test.instruments.errors import InstrumentProtocolError
+from sdk_test.instruments.errors import InstrumentCommandError
 
 #: The prompt is ``msh />`` when DFS keeps a working directory and ``msh >``
 #: when it does not. Accept both rather than pinning one carrier's spelling.
@@ -108,8 +108,9 @@ def test_peer_updates_advertising_data(bt_peer):
     bt_peer.ble.advertise(mode="extended", data=b"\x01\x02", interval_ms=30)
     try:
         bt_peer.ble.set_advertising_data(b"\x03\x04")
-        with pytest.raises(InstrumentProtocolError):
+        with pytest.raises(InstrumentCommandError) as refused:
             bt_peer.ble.set_advertising_data(b"")
+        assert refused.value.code == "invalid_arg"
     finally:
         bt_peer.ble.stop_advertising()
 

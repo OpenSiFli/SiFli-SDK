@@ -203,7 +203,7 @@ gatt.mtu            link=<n>
 dev.list
 svc.register        name=loopback
 svc.unregister      name=loopback
-sec.bond            link=<n> io=<cap> passkey=<n>
+sec.bond            link=<n> io=<cap> auth=<legacy|secure|...> passkey=<n>
 sec.clear
 periodic.adv.start  interval_ms=.. len=N data=<hex>
 periodic.adv.stop
@@ -223,7 +223,8 @@ adv          index=<n> addr=<hex> type=0/1 rssi=<dBm> len=N data=<hex>
 scan.done    count=<n>
 conn         link=<n> addr=<hex> role=0/1 interval_ms=..
 disconn      link=<n> reason=<n>
-char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h,h,...>
+char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h>:<uuidhex>,...
+             (UUID in the order the peer sent it, LSB first: a CCCD is 0229)
 link         link=<n> addr=<hex> role=0/1 interval_ms=..
 notify       link=<n> handle=<h> len=N data=<hex>
 read         link=<n> handle=<h> len=N data=<hex>
@@ -327,7 +328,7 @@ class BleInstrument:
     def subscribe(self, link: Link, cccd_handle: int, *, enable=True) -> None: ...
     def wait_notification(self, handle: int, *, link=None, timeout=10.0) -> bytes: ...
     def register_loopback(self) -> int: ...
-    def bond(self, link: Link, *, io="no_input_no_output", passkey=None) -> None: ...
+    def bond(self, link: Link, *, io="no_input_no_output", auth=None, passkey=None) -> None: ...
 ```
 
 数据类：
