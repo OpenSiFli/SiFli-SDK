@@ -32,7 +32,7 @@ Shape (see ``examples/binding.local.yaml``)::
           # UART. It is not a testbed and is never built or flashed -- the lab
           # keeps its firmware fixed -- but the agent can open its console and
           # the pytest suite can read and write it like the DUT's.
-          - fixture: ble_peer
+          - fixture: bt_peer:ble
             console:
               port: COM9
               baud: 1000000

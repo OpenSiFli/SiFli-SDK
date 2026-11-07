@@ -179,7 +179,7 @@ def wiring_problems(testbeds: Iterable[TestBed],
         for connection in testbed.connections:
             if connection.options.get("console"):
                 # An instrument with its own console is not wired to a board
-                # bus: its parameter names the instrument (``ble_peer:peer1``),
+                # bus: its spec names the instrument capability (``bt_peer:ble``),
                 # not an instance the platform has to declare. Treating it as a
                 # bus would reject a perfectly good binding on any board that
                 # ships a features.yaml.

@@ -13,7 +13,7 @@ them buries the one that matters:
     build.log     what the compiler said
     device.log    what the device said, byte for byte, unedited
     runner.log    what the harness made of it, plus a header naming the run
-    <fixture>.log what an instrument the test drove said (e.g. ``ble_peer.log``)
+    <fixture>.log what an instrument the test drove said (e.g. ``bt_peer-ble.log``)
 
 Each is deliberately pure -- no header, no separator -- so that ``diff`` and
 ``grep`` work on it and it can be pasted into a bug report as-is. The compiler's
@@ -67,7 +67,7 @@ def _is_reserved_stem(stem: str) -> bool:
 def _instrument_log_stem(spec: str) -> str:
     """The file stem for one spec, before collisions are considered.
 
-    The spec is sanitized because a pinned fixture is written ``ble_peer:peer1``
+    The spec is sanitized because a fixture is written ``bt_peer:ble``
     and ``:`` is not portable in a file name. A name the platform reserves is
     prefixed rather than allowed to overwrite a layer log (``Device`` would be
     ``device.log`` on a case-insensitive filesystem) or to address a device
@@ -83,8 +83,8 @@ def _instrument_log_stem(spec: str) -> str:
 def instrument_log_names(specs: Iterable[str]) -> Dict[str, str]:
     """One collision-free file name per spec, in the order given.
 
-    Collisions are real even though they are rare: ``ble_peer:peer1`` and a
-    fixture actually named ``ble_peer-peer1`` sanitize to the same stem, and
+    Collisions are real even though they are rare: ``bt_peer:ble`` and a
+    fixture actually named ``bt_peer-ble`` sanitize to the same stem, and
     ``build``/``instrument-build`` meet through the reserved-name rule. Naming
     the whole set together is what makes the two instruments keep two files --
     computing a name per spec could only turn the second one into an overwrite,
@@ -172,7 +172,7 @@ class TestResult:
     #: would repeat up to a few megabytes per instance for no gain.
     transcript: str = ""
     #: Retained transcripts of instrument consoles the test opened, keyed by the
-    #: fixture spec the test case declared (``ble_peer``, ``ble_peer:peer1``).
+    #: fixture spec the test case declared (``bt_peer``, ``bt_peer:ble``).
     #:
     #: Written next to ``device.log``, one file per instrument, so a failure that
     #: spans two radios can be read from both sides without re-running it. Empty

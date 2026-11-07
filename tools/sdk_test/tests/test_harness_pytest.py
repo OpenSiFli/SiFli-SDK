@@ -131,13 +131,15 @@ class TestPluginEnv(SdkTestCase):
         self.assertNotIn(ENV_TESTBED_ID, env)
 
     def test_declared_fixtures_reach_the_plugin(self):
-        # The plugin's `ble_peer` fixture skips unless the case declared it, and
+        # The plugin's `bt_peer` fixture skips unless the case declared it, and
         # this environment variable is the only way it can know. JSON, because a
         # fixture parameter may itself contain a comma.
         instance = make_instance(self.root)
-        instance.fixtures = [parse_fixture_ref("ble_peer"), parse_fixture_ref("power_relay:r1,2")]
+        instance.fixtures = [parse_fixture_ref("bt_peer:ble"), parse_fixture_ref("power_relay:r1,2")]
         env = plugin_env(instance, RunContext())
-        self.assertEqual(json.loads(env[ENV_FIXTURES]), ["ble_peer", "power_relay:r1,2"])
+        self.assertEqual(
+            json.loads(env[ENV_FIXTURES]), ["bt_peer:ble", "power_relay:r1,2"]
+        )
 
     def test_a_case_without_fixtures_exports_an_empty_list(self):
         env = plugin_env(make_instance(self.root), RunContext())
@@ -396,9 +398,9 @@ class TestDeclaredFixturesEnv(SdkTestCase):
 
     def test_a_json_array_is_decoded_including_commas(self):
         with mock.patch.dict(
-            os.environ, {ENV_FIXTURES: json.dumps(["ble_peer:peer,1"])}
+            os.environ, {ENV_FIXTURES: json.dumps(["bt_peer:ble,1"])}
         ):
-            self.assertEqual(self.declared(), ["ble_peer:peer,1"])
+            self.assertEqual(self.declared(), ["bt_peer:ble,1"])
 
     def test_an_absent_variable_means_no_fixtures(self):
         with mock.patch.dict(os.environ, {}, clear=False):
@@ -406,7 +408,7 @@ class TestDeclaredFixturesEnv(SdkTestCase):
             self.assertEqual(self.declared(), [])
 
     def test_a_malformed_value_is_reported_not_read_as_empty(self):
-        with mock.patch.dict(os.environ, {ENV_FIXTURES: "ble_peer,other"}):
+        with mock.patch.dict(os.environ, {ENV_FIXTURES: "bt_peer:ble,other"}):
             with self.assertRaises(RuntimeError) as caught:
                 self.declared()
         self.assertIn(ENV_FIXTURES, str(caught.exception))
@@ -485,7 +487,7 @@ class TestRealPytestAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCase):
         # the need into a wrong failure; the skip reason names the fix.
         summary = self.run_case(
             """
-            def test_peer(ble_peer):
+            def test_peer(bt_peer):
                 raise AssertionError("the fixture must not run")
             """
         )
@@ -494,7 +496,7 @@ class TestRealPytestAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCase):
         self.assertIn("skipped", result.log.lower())
         # pytest truncates the reason in its summary line, so assert on its
         # opening words rather than the whole sentence.
-        self.assertIn("BLE peer", result.log)
+        self.assertIn("bt_peer", result.log)
 
 
 @unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")
@@ -503,7 +505,7 @@ class TestPeerInstrumentAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCas
 
     This is the whole chain for one line of code in a suite: the case's
     ``fixture:`` reaches the agent through allocation, the agent opens the
-    instrument's console from the binding, the plugin's ``ble_peer`` fixture
+    instrument's console from the binding, the plugin's ``bt_peer`` fixture
     attaches to that stream, and the bytes go to the peer's port -- not the
     DUT's.
     """
@@ -515,44 +517,47 @@ class TestPeerInstrumentAgainstFakeAgent(PytestAgainstFakeAgentMixin, SdkTestCas
         platform: sf32lb52-lcd_n16r8
         console: {port: COM13}
         connections:
-          - fixture: ble_peer
+          - fixture: bt_peer:ble
             console: {port: COM99, baud: 1000000}
     """
 
     #: What the generated testcase declares.
-    CASE_FIXTURE = "ble_peer"
+    CASE_FIXTURE = "bt_peer:ble"
 
-    #: What the fake instrument answers. Enough for `BlePeer.expect_shell`.
-    FIXTURE_REPLIES = {"diss help": "Command list:\r\n"}
+    #: What the fake instrument answers. `peer info` is the readiness gate the
+    #: plugin sends before the suite runs.
+    FIXTURE_REPLIES = {
+        "peer info": "@info proto=1 fw=test caps=ble roles=central\r\n"
+    }
 
     def test_a_suite_drives_the_instrument_over_its_own_console(self):
         summary = self.run_case(
             """
-            def test_peer_shell(ble_peer):
-                ble_peer.expect_shell()
+            def test_peer_ready(bt_peer):
+                assert "ble" in bt_peer.info["caps"]
             """
         )
         result = summary.results[0]
         self.assertEqual(result.status, "passed", result.message)
-        self.assertIn("diss help", self.fixture_transports["ble_peer"].sent)
-        self.assertEqual(self.fixture_transports["ble_peer"].closed, 1)
+        self.assertIn("peer info", self.fixture_transports["bt_peer:ble"].sent)
+        self.assertEqual(self.fixture_transports["bt_peer:ble"].closed, 1)
         # The DUT's port must not have carried the instrument's traffic.
-        self.assertNotIn("diss help", self.transports["tb_01"].sent)
+        self.assertNotIn("peer info", self.transports["tb_01"].sent)
 
     def test_the_instrument_transcript_is_written_beside_the_device_log(self):
         summary = self.run_case(
             """
-            def test_peer_shell(ble_peer):
-                ble_peer.expect_shell()
+            def test_peer_ready(bt_peer):
+                assert "ble" in bt_peer.info["caps"]
             """
         )
         result = summary.results[0]
         self.assertEqual(result.status, "passed", result.message)
 
-        log_path = os.path.join(result.out_dir, "ble_peer.log")
+        log_path = os.path.join(result.out_dir, "bt_peer-ble.log")
         self.assertTrue(os.path.exists(log_path), f"no instrument log in {result.out_dir}")
         with open(log_path, encoding="utf-8") as handle:
-            self.assertIn("Command list:", handle.read())
+            self.assertIn("@info", handle.read())
 
 
 @unittest.skipUnless(HAVE_PYTEST, "pytest is not installed in this interpreter")

@@ -92,7 +92,7 @@ def plugin_env(
         # The specs, not the resolved testbed: which board offers the fixture is
         # the agent's answer, and a suite only needs to know what it declared.
         # JSON rather than a comma-separated list: a fixture parameter may itself
-        # contain a comma (`ble_peer:peer,1`), which the delimiter would split.
+        # contain a comma (`bt_peer:ble,1`), which the delimiter would split.
         ENV_FIXTURES: json.dumps([fixture.spec for fixture in instance.fixtures]),
         # So `-p sdk_test.pytest_plugin` resolves inside the subprocess, and so
         # a suite can import sdk_test helpers (ConsoleMatcher, parse_unity_output)

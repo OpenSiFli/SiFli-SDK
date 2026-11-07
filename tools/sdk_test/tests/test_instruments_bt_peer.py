@@ -1,0 +1,324 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+"""Tests for the BLE half of ``bt_peer``.
+
+The scripted console here answers the protocol, not a log transcript. What it
+pins is the host's contract with the firmware: which line is sent, how a reply
+becomes a dataclass, and that a malformed reply is an error rather than an
+empty value.
+"""
+
+from __future__ import annotations
+
+import unittest
+
+from _instrument_support import FakeLineConsole
+from _instrument_support import info_line
+from _instrument_support import lines
+from _support import SdkTestCase
+
+from sdk_test.instruments.bt_peer import AdvReport
+from sdk_test.instruments.bt_peer import BtPeer
+from sdk_test.instruments.bt_peer import Link
+from sdk_test.instruments.console import InstrumentConsole
+from sdk_test.instruments.errors import InstrumentCapabilityError
+from sdk_test.instruments.errors import InstrumentProtocolError
+from sdk_test.instruments.errors import InstrumentTimeout
+
+
+def peer_for(replies=None, initial="", capability="ble", caps="ble"):
+    console = FakeLineConsole({"peer info": info_line(caps=caps), **(replies or {})}, initial)
+    return BtPeer(InstrumentConsole(console), capability=capability), console
+
+
+class TestScan(SdkTestCase):
+    def test_reports_are_sorted_strongest_first(self):
+        peer, _ = peer_for(
+            {
+                "gap.scan": lines(
+                    "@evt 1 adv index=2 addr=aa-bb type=public rssi=-50 len=2 data=0102",
+                    "@evt 2 adv index=1 addr=cc-dd type=random rssi=-30",
+                    "@evt 3 scan.done count=2",
+                    "@ok 1 count=2",
+                )
+            }
+        )
+
+        reports = peer.ble.scan(duration_ms=1000)
+
+        self.assertEqual([report.address for report in reports], ["cc-dd", "aa-bb"])
+        self.assertEqual(reports[1].data, b"\x01\x02")
+        self.assertEqual(reports[1].address_type, "public")
+
+    def test_a_numeric_address_type_is_spelled_out(self):
+        peer, _ = peer_for(
+            {
+                "gap.scan": lines(
+                    "@evt 1 adv index=1 addr=aa type=1 rssi=-40",
+                    "@ok 1 count=1",
+                )
+            }
+        )
+
+        self.assertEqual(peer.ble.scan()[0].address_type, "random")
+
+    def test_an_unmeasured_report_sorts_last(self):
+        peer, _ = peer_for(
+            {
+                "gap.scan": lines(
+                    "@evt 1 adv index=1 addr=no-rssi",
+                    "@evt 2 adv index=2 addr=weak rssi=-80",
+                    "@evt 3 scan.done count=2",
+                    "@ok 1 count=2",
+                )
+            }
+        )
+
+        reports = peer.ble.scan()
+
+        self.assertEqual([report.address for report in reports], ["weak", "no-rssi"])
+        self.assertIsNone(reports[1].rssi)
+
+    def test_a_late_event_from_a_timed_out_scan_does_not_satisfy_the_retry(self):
+        console = FakeLineConsole(
+            {
+                "peer info": info_line(caps="ble"),
+                "gap.scan": [
+                    "",
+                    lines("@evt 2 adv index=1 addr=fresh rssi=-30", "@ok 2 count=1"),
+                ],
+            }
+        )
+        peer = BtPeer(InstrumentConsole(console), capability="ble")
+
+        with self.assertRaises(InstrumentTimeout):
+            peer.ble.scan(timeout=0.05)
+
+        # The timed-out scan's report arrives after the timeout. It must be
+        # parsed before the retry takes its boundary, not handed to the retry.
+        console.feed(lines("@evt 1 adv index=9 addr=stale rssi=-20"))
+        reports = peer.ble.scan()
+
+        self.assertEqual([report.address for report in reports], ["fresh"])
+
+    def test_a_stale_event_does_not_satisfy_a_new_scan(self):
+        console = FakeLineConsole(
+            {
+                "peer info": info_line(caps="ble"),
+                "gap.scan": lines("@evt 11 adv index=1 addr=fresh rssi=-40", "@ok 1 count=1"),
+            },
+            initial=lines("@evt 10 adv index=9 addr=stale rssi=-20"),
+        )
+        peer = BtPeer(InstrumentConsole(console), capability="ble")
+        peer.console.drain()
+
+        reports = peer.ble.scan()
+
+        self.assertEqual([report.address for report in reports], ["fresh"])
+
+    def test_reset_clears_events_from_the_previous_state(self):
+        peer, _ = peer_for(
+            {"state.reset": lines("@ok 1")},
+            initial=lines("@evt 1 adv index=0 addr=stale"),
+        )
+        peer.console.drain()
+
+        peer.ble.reset()
+
+        with self.assertRaises(InstrumentTimeout):
+            peer.console.next_event("adv", timeout=0.1)
+
+    def test_an_empty_scan_says_what_to_check(self):
+        peer, _ = peer_for(
+            {"gap.scan": lines("@evt 1 scan.done count=0", "@ok 1 count=0")}
+        )
+
+        with self.assertRaises(AssertionError) as caught:
+            peer.ble.strongest(peer.ble.scan())
+        self.assertIn("advertising", str(caught.exception))
+
+
+class TestConnection(SdkTestCase):
+    def test_connect_uses_the_scan_index_and_returns_a_link(self):
+        peer, console = peer_for(
+            {"gap.connect": lines("@ok 1 link=0 addr=aabbcc role=central interval_ms=30")}
+        )
+        report = AdvReport(index=3, address="aa-bb-cc", address_type="public", rssi=-40)
+
+        link = peer.ble.connect(report)
+
+        self.assertEqual(link, Link(link_id=0, address="aabbcc", role="central", interval_ms=30))
+        self.assertIn("index=3", console.sent[-1])
+        self.assertIn("addr=aabbcc", console.sent[-1])
+
+    def test_connect_by_address_does_not_need_a_scan(self):
+        peer, console = peer_for(
+            {"gap.connect": lines("@ok 1 link=2 addr=112233 role=central interval_ms=30")}
+        )
+
+        link = peer.ble.connect(address="11-22-33", address_type=1)
+
+        self.assertEqual(link.link_id, 2)
+        self.assertIn("addr=112233", console.sent[-1])
+        self.assertIn("addr_type=1", console.sent[-1])
+
+    def test_a_random_report_connects_with_addr_type_one(self):
+        peer, console = peer_for(
+            {"gap.connect": lines("@ok 1 link=0 addr=aa role=central interval_ms=30")}
+        )
+
+        peer.ble.connect(AdvReport(1, "aa", "random", -40))
+
+        self.assertIn("addr_type=1", console.sent[-1])
+
+    def test_a_refused_connection_is_an_error(self):
+        peer, _ = peer_for({"gap.connect": lines("@err 1 failed connection refused")})
+
+        with self.assertRaises(InstrumentProtocolError) as caught:
+            peer.ble.connect(AdvReport(1, "aa", "public", -40))
+        self.assertIn("connection refused", str(caught.exception))
+
+    def test_list_links_reads_the_event_before_the_terminal(self):
+        peer, _ = peer_for(
+            {
+                "dev.list": lines(
+                    "@evt 1 link link=0 addr=aa role=central interval_ms=30",
+                    "@ok 1 links=1",
+                )
+            }
+        )
+
+        links = peer.ble.list_links()
+
+        self.assertEqual(len(links), 1)
+        self.assertEqual(links[0].link_id, 0)
+        self.assertEqual(links[0].role, "central")
+
+    def test_list_links_spells_out_a_peripheral_role(self):
+        peer, _ = peer_for(
+            {
+                "dev.list": lines(
+                    "@evt 1 link link=0 addr=aa role=1 interval_ms=30",
+                    "@ok 1 links=1",
+                )
+            }
+        )
+
+        self.assertEqual(peer.ble.list_links()[0].role, "peripheral")
+
+
+class TestGattClient(SdkTestCase):
+    def test_discover_returns_characteristics_and_handles(self):
+        peer, _ = peer_for(
+            {
+                "gatt.discover": lines(
+                    "@evt 1 char link=0 index=0 handle=9 value_handle=10 descs=11",
+                    "@ok 1 count=1",
+                )
+            }
+        )
+
+        service = peer.ble.discover(Link(0, "aa"))
+
+        self.assertEqual(service.value_handle(), 10)
+        self.assertEqual(service.cccd_handle(), 11)
+
+    def test_discover_without_characteristics_is_a_failure(self):
+        peer, _ = peer_for({"gatt.discover": lines("@ok 1 count=0")})
+
+        with self.assertRaises(AssertionError):
+            peer.ble.discover(Link(0, "aa"))
+
+    def test_read_returns_the_payload(self):
+        peer, _ = peer_for({"gatt.read": lines("@ok 1 len=4 data=22000000")})
+
+        self.assertEqual(peer.ble.read(Link(0, "aa"), 10), b"\x22\x00\x00\x00")
+
+    def test_a_zero_length_read_is_an_empty_value(self):
+        peer, _ = peer_for({"gatt.read": lines("@ok 1 len=0")})
+
+        self.assertEqual(peer.ble.read(Link(0, "aa"), 10), b"")
+
+    def test_a_length_that_does_not_match_the_payload_is_an_error(self):
+        peer, _ = peer_for({"gatt.read": lines("@ok 1 len=4 data=22")})
+
+        with self.assertRaises(InstrumentProtocolError) as caught:
+            peer.ble.read(Link(0, "aa"), 10)
+        self.assertIn("len=4", str(caught.exception))
+
+    def test_write_sends_an_explicit_length(self):
+        peer, console = peer_for({"gatt.write": lines("@ok 1")})
+
+        peer.ble.write(Link(0, "aa"), 10, b"\x22\x00\x00\x00")
+
+        self.assertIn("len=4 data=22000000", console.sent[-1])
+        self.assertIn("response=1", console.sent[-1])
+
+    def test_subscribe_sends_the_cccd_handle(self):
+        peer, console = peer_for({"gatt.subscribe": lines("@ok 1")})
+
+        peer.ble.subscribe(Link(0, "aa"), 11)
+
+        self.assertIn("cccd=11", console.sent[-1])
+        self.assertIn("enable=1", console.sent[-1])
+
+    def test_a_notification_for_another_handle_is_kept(self):
+        peer, _ = peer_for(
+            initial=lines(
+                "@evt 1 notify link=0 handle=10 len=2 data=aaaa",
+                "@evt 2 notify link=0 handle=20 len=1 data=0b",
+            )
+        )
+
+        self.assertEqual(peer.ble.wait_notification(20), b"\x0b")
+        self.assertEqual(peer.ble.wait_notification(10), b"\xaa\xaa")
+
+    def test_a_missing_notification_times_out_with_the_transcript(self):
+        peer, _ = peer_for(initial=lines("[I/ble_app] nothing useful"))
+
+        with self.assertRaises(InstrumentTimeout) as caught:
+            peer.ble.wait_notification(10, timeout=0.1)
+        self.assertIn("nothing useful", str(caught.exception))
+
+
+class TestServerAndSecurity(SdkTestCase):
+    def test_register_loopback_returns_its_value_handle(self):
+        peer, _ = peer_for({"svc.register": lines("@ok 1 handle=12")})
+
+        self.assertEqual(peer.ble.register_loopback(), 12)
+
+    def test_bond_passes_the_io_capability(self):
+        peer, console = peer_for({"sec.bond": lines("@ok 1")})
+
+        peer.ble.bond(Link(0, "aa"), io="display_only", passkey=123456)
+
+        self.assertIn("io=display_only", console.sent[-1])
+        self.assertIn("passkey=123456", console.sent[-1])
+
+
+class TestCapability(SdkTestCase):
+    def test_a_ble_peer_serves_the_ble_capability(self):
+        peer, _ = peer_for()
+
+        self.assertIsNotNone(peer.ble)
+
+    def test_asking_for_classic_from_a_ble_image_fails_at_construction(self):
+        with self.assertRaises(InstrumentCapabilityError):
+            peer_for(capability="classic")
+
+    def test_a_dual_capability_peer_serves_both_halves(self):
+        peer, _ = peer_for(capability="ble,classic", caps="ble,classic")
+
+        self.assertIsNotNone(peer.ble)
+        self.assertIsNotNone(peer.classic)
+
+    def test_a_ble_only_peer_refuses_the_classic_half(self):
+        peer, _ = peer_for()
+
+        with self.assertRaises(InstrumentCapabilityError) as caught:
+            peer.classic
+        self.assertIn("classic", str(caught.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()

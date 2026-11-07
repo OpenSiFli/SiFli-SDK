@@ -30,7 +30,9 @@ import pytest
 
 from .agent_client import LabAgentClient
 from .agent_client import RemoteConsole
-from .ble_peer import BlePeer
+from .instruments import INSTRUMENTS
+from .instruments import InstrumentConsole
+from .instruments.registry import RESERVED_NAMES
 from .harness.pytest import ENV_AGENT_URL
 from .harness.pytest import ENV_BUILD_DIR
 from .harness.pytest import ENV_CASE_ID
@@ -62,7 +64,6 @@ class Dut:
         platform: Optional[str] = None,
         build_dir: Optional[str] = None,
         case_id: Optional[str] = None,
-        reset_available: bool = True,
     ) -> None:
         self.console = console
         self._client = client
@@ -70,9 +71,6 @@ class Dut:
         self.platform = platform
         self.build_dir = build_dir
         self.case_id = case_id
-        #: False for an instrument: it is a fixed piece of lab equipment, not a
-        #: testbed, so there is no out-of-band reset the framework may perform.
-        self._reset_available = reset_available
         self._sent: List[str] = []
         #: Everything read so far, and how much of it earlier expectations have
         #: already accounted for. One buffer for the whole session, walked by a
@@ -198,11 +196,6 @@ class Dut:
         The console stays open across the reset, so the boot log that follows is
         captured rather than raced.
         """
-        if not self._reset_available:
-            raise RuntimeError(
-                "reset() is not available on an instrument: it is fixed lab "
-                "equipment, not a testbed. Power-cycle it in the lab."
-            )
         if self._client is None or not self.testbed_id:
             raise RuntimeError(
                 "reset() needs a Lab Agent connection; this DUT was built without one"
@@ -262,12 +255,6 @@ def console(dut: Dut) -> RemoteConsole:
     return dut.console
 
 
-#: The fixture name a test case writes to get an instrument peer. The peer is
-#: hardware, so it lives in the binding, not in the test; the test only says it
-#: needs one.
-PEER_FIXTURE = "ble_peer"
-
-
 def _declared_fixtures() -> List[str]:
     """The fixture specs this test case declared, from the runner's environment.
 
@@ -294,48 +281,75 @@ def _declared_fixtures() -> List[str]:
     return [str(entry) for entry in decoded]
 
 
-@pytest.fixture(scope="session")
-def ble_peer(dut: Dut) -> BlePeer:
-    """The BLE peer instrument declared by ``harness_config.fixture: ble_peer``.
+def _make_instrument_fixture(name: str, factory):
+    """Build one session fixture that opens ``name`` and yields ``factory``.
 
-    It is a second board on the same testbed, opened as another console stream:
-    nothing is built or flashed for it, and its firmware is the lab's. ``dut``
-    is taken only so the two consoles belong to one session and the report can
-    name the same case.
-
-    Skips when the case did not declare the fixture. That is not a failure: a
-    lab without an instrument still runs every case that does not ask for one,
-    and a suite that forgot to declare its need says exactly that in the skip
-    reason instead of failing at the first ``diss`` it sends.
+    The declared spec, not the bare name, is the stream: `bt_peer:peer1` pins
+    one of several same-named instruments, and the agent resolves an exact spec
+    before a name. The parameter is also the capability the firmware must
+    advertise, so a mis-flashed lab fails at construction rather than at the
+    first command.
     """
-    declared = [
-        spec
-        for spec in _declared_fixtures()
-        if spec.split(":", 1)[0] == PEER_FIXTURE
-    ]
-    if not declared:
-        pytest.skip(
-            "this suite needs the BLE peer instrument, but the test case did not "
-            f'declare it: add "fixture: {PEER_FIXTURE}" under harness_config.'
+
+    def _fixture(dut: Dut):
+        declared = [
+            spec
+            for spec in _declared_fixtures()
+            if spec.split(":", 1)[0] == name
+        ]
+        if not declared:
+            pytest.skip(
+                f"this suite needs the {name} instrument, but the test case did "
+                f'not declare it: add "fixture: {name}:<capability>" under '
+                "harness_config."
+            )
+        if len(declared) > 1:
+            pytest.fail(
+                f"the test case declares {name} more than once: {declared}. "
+                "A fixture resolves to one instrument; pin one spec or split the case."
+            )
+
+        # Taken only so the instrument belongs to the same session as the DUT;
+        # its coordinates are not used, and nothing is built or flashed for it.
+        _ = dut
+
+        client = LabAgentClient(_require(ENV_AGENT_URL))
+        testbed_id = _require(ENV_TESTBED_ID)
+        spec = declared[0]
+        _, _, capability = spec.partition(":")
+
+        instrument_console = client.console_for(testbed_id, stream=spec)
+        instrument_console.open()
+        # Deliberately not closing the stream in a teardown: the runner reads
+        # every open instrument's retained transcript right before it releases
+        # the testbed and writes it next to `device.log` as `<fixture>.log`.
+        yield factory(InstrumentConsole(instrument_console), capability=capability)
+
+    _fixture.__name__ = name
+    _fixture.__doc__ = (
+        f"The {name!r} instrument declared by "
+        f"``harness_config.fixture: {name}:<capability>``."
+    )
+    return pytest.fixture(scope="session", name=name)(_fixture)
+
+
+#: Reject a registration that would shadow the framework or cannot be a fixture
+#: name. This is checked at import time, where the mistake is cheap to see.
+#: Names already bound in this module: assigning a fixture over one of them
+#: would silently replace an import the plugin depends on.
+_MODULE_NAMES = frozenset(globals())
+
+for _name in INSTRUMENTS:
+    if (
+        _name in RESERVED_NAMES
+        or _name in _MODULE_NAMES
+        or not _name.isidentifier()
+    ):
+        raise RuntimeError(
+            f"instrument fixture {_name!r} cannot be registered: it must be a "
+            "Python identifier and must not shadow a framework fixture, a "
+            "pytest built-in, or a name this plugin imports"
         )
 
-    client = LabAgentClient(_require(ENV_AGENT_URL))
-    testbed_id = _require(ENV_TESTBED_ID)
-    # The declared spec, not the bare name: `ble_peer:peer1` pins one of several
-    # same-named instruments, and the agent resolves an exact spec before a name.
-    peer_console = client.console_for(testbed_id, stream=declared[0])
-    peer_console.open()
-    peer = Dut(
-        console=peer_console,
-        # No client and no testbed id on purpose: the peer is an instrument, and
-        # ``reset()`` must never fall through to resetting the DUT's board.
-        reset_available=False,
-        platform=dut.platform,
-        build_dir=dut.build_dir,
-        case_id=dut.case_id,
-    )
-    # Deliberately not closing the stream in a teardown: the runner reads every
-    # open instrument's retained transcript right before it releases the testbed
-    # and writes it next to `device.log` as `<fixture>.log`. Closing here would
-    # drop the buffer the agent is holding; the agent closes it with the testbed.
-    yield BlePeer(peer)
+for _name, _factory in INSTRUMENTS.items():
+    globals()[_name] = _make_instrument_fixture(_name, _factory)
