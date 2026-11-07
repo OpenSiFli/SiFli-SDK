@@ -48,6 +48,13 @@ testbed:
         pinmap:
           - {pin: PB03, signal: SCL}
           - {pin: PB04, signal: SDA}
+      # An instrument is a connection with its own `console:` and no `pinmap:`:
+      # a fixed second board the test drives over that UART, which the framework
+      # never builds, flashes or resets. `bt_peer:ble` is the BLE capability of
+      # the bt_peer firmware (example/test/bt_peer/); it speaks a line protocol,
+      # see tools/sdk_test/BT_PEER_DESIGN.md and section 6 of the autotest guide.
+      # - fixture: bt_peer:ble
+      #   console: {port: COM22, baud: 1000000}
 
   - id: eh-lb563_01
     platform: eh-lb563

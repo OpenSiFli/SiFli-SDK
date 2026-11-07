@@ -119,7 +119,7 @@ test-out/                        ← --outdir, defaults to the directory you ran
       ble_central_and_peripheral.peer/
         build.log                the compiler verbatim (absent with --no-build)
         device.log               the device verbatim, including the boot banner
-        ble_peer.log             the instrument the test drove (only when it opened one)
+        bt_peer-ble.log          the instrument the test drove (only when it opened one)
         runner.log               this instance's record
     qemu_sf32lb52x/
       hal_mock.spi_flash_status/
@@ -143,7 +143,7 @@ What each of these files is for, and when to look at which:
 |---|---|
 | `build.log` | **What the compiler said**. The only place with an answer when a build fails — exit code 2 does not tell you whether a header is missing or a type is wrong |
 | `device.log` | **What the device actually said**. Verbatim, byte for byte, no header and no separator lines, so you can `diff` it, `grep` it, or paste it into a ticket as-is |
-| `<fixture>.log` | **What an instrument said** (`ble_peer.log`). The other radio's own words, in the same directory; absent when the case declared no instrument |
+| `<fixture>.log` | **What an instrument said** (`bt_peer-ble.log`). The other radio's own words, in the same directory; absent when the case declared no instrument |
 | instance `runner.log` | **How the harness reached its verdict**: the verdict, the per-case table, the harness's own words, plus how much serial output was retained and whether any of it was trimmed |
 | run-level `runner.log` | **What this run did**: how many were discovered and how many ran, which were filtered out and why, the time and the environment |
 
@@ -648,18 +648,17 @@ Some tests need a second radio: connect, service discovery, read/write, notify. 
 - it is not a testbed -- it is never built, flashed or reset by the framework;
 - it runs a **fixed firmware**, flashed once by the lab;
 - it is declared in the binding, next to the DUT;
-- the test drives it over its own console.
+- the test drives it over its own console through a line protocol.
 
-**The firmware.** For the first user -- `example/ble/central_and_peripheral` -- the instrument runs that same example,
-built from `example/ble/central_and_peripheral/project/hcpu` for whatever board it is:
+**The firmware.** The instrument firmware is the `bt_peer` example (`example/test/bt_peer/`): one firmware that can
+play several roles, exposed as **capabilities**. The pytest fixture is named after the firmware and takes the
+capability as its parameter -- `bt_peer:ble` for the BLE peer used here. Build and flash it **once**, when the lab is
+set up; the suite never builds or flashes it.
 
-```
-cd example/ble/central_and_peripheral/project/hcpu
-scons --board=<peer board> -j8
-```
-
-and flashed from `build_<board>_hcpu/download.bat` (or `uart_download.bat`) **once**, when the lab is set up. Its
-`diss` shell command *is* the instrument's protocol; the suite never builds or flashes it.
+**The protocol.** Host and firmware speak a line protocol (`peer info`, `peer req <id> <op> ...`; the device answers
+`@info` / `@ok` / `@err` / `@evt`), so a response is matched by request id rather than by scraping ulog text. The host
+side lives in `tools/sdk_test/instruments/`; the command set, the rules and the host API are in
+[`tools/sdk_test/BT_PEER_DESIGN.md`](../../../../tools/sdk_test/BT_PEER_DESIGN.md).
 
 **The binding.** The instrument is a connection on the DUT's testbed, with its own console port:
 
@@ -669,11 +668,11 @@ testbed:
     platform: sf32lb52-lcd_a128r16
     console: {port: COM5, baud: 1000000}
     connections:
-      - fixture: ble_peer
+      - fixture: bt_peer:ble
         console: {port: COM9, baud: 1000000}   # the instrument's UART
 ```
 
-The instrument's port lives here and nowhere else: a test case still names only `ble_peer`.
+The instrument's port lives here and nowhere else: a test case still names only `bt_peer:ble`.
 
 **The test case.** Declare the need like any other fixture, and keep it in its own entry so a lab without the instrument
 still runs everything else:
@@ -683,45 +682,47 @@ still runs everything else:
     harness: pytest
     tags: [pytest, ble, peer]
     harness_config:
-      fixture: ble_peer
+      fixture: bt_peer:ble
       pytest_root: pytest_peer
 ```
 
-Allocation then only succeeds on a testbed that offers `ble_peer`; a lab that has none reports this entry as an error
+Allocation then only succeeds on a testbed that offers `bt_peer:ble`; a lab that has none reports this entry as an error
 at the open stage and runs the rest.
 
-**The suite.** The `ble_peer` fixture returns a `BlePeer`, which speaks the instrument firmware's `diss` command set.
+**The suite.** The `bt_peer` fixture returns a `BtPeer`; its BLE capability is `bt_peer.ble`, a `BleInstrument`.
 Connecting is a session-scoped fixture rather than a test, so any case that needs the link can be run on its own
 (`pytest -k gatt`):
 
 ```python
 @pytest.fixture(scope="session")
-def connected_peer(dut, ble_peer):
-    ble_peer.expect_shell()                        # the right image is on the instrument
-    ble_peer.connect(ble_peer.strongest(ble_peer.scan()))   # scan, strongest first
-    dut.expect(r"Peer device\(role:\d+\).* connected as deivce 0", timeout=30)
-    return ble_peer
+def connected_link(dut, bt_peer):
+    ble = bt_peer.ble                              # verifies the firmware advertises `ble`
+    ble.reset()
+    link = ble.connect(ble.strongest(ble.scan()))  # scan, strongest first
+    dut.expect(r"connected", timeout=30)           # whatever the DUT prints on connect
+    return link
 
-def test_gatt(connected_peer):
-    listing = connected_peer.search_service()      # 128-bit service -> handles
-    connected_peer.write_value(listing.value_handle(), b"\x22\x00\x00\x00")
-    assert connected_peer.read_value(listing.value_handle()) == b"\x22\x00\x00\x00"
+def test_gatt(bt_peer, connected_link):
+    service = bt_peer.ble.discover(connected_link, service_uuid)   # UUID as read from the DUT
+    handle = service.value_handle()
+    bt_peer.ble.write(connected_link, handle, b"\x22\x00\x00\x00")
+    assert bt_peer.ble.read(connected_link, handle) == b"\x22\x00\x00\x00"
 ```
 
-`scan / strongest / connect / search_service / read_value / write_value / subscribe / wait_notification` parse the
-instrument's output, including its hexdumps, so a BLE suite does not re-invent that parsing. The peer is a *session*
-fixture: its cursor moves forward like `dut`'s.
+`scan / strongest / connect / discover / read / write / subscribe / wait_notification` each map to one protocol op;
+the parsing lives in the instrument layer, so a BLE suite does not re-invent it. The peer is a *session* fixture: its
+cursor moves forward like `dut`'s.
 
 The shipped `example/ble/central_and_peripheral/pytest_peer/` suite instead keeps its steps as ordered tests and says so
-at the top -- that reads well for one linear scenario. The `connected_peer` pattern above is what a suite needs when a
+at the top -- that reads well for one linear scenario. The `connected_link` pattern above is what a suite needs when a
 case must be runnable on its own.
 
-If a suite uses `ble_peer` without the test case declaring `fixture: ble_peer`, the fixture **skips** and says so --
+If a suite uses `bt_peer` without the test case declaring `fixture: bt_peer:ble`, the fixture **skips** and says so --
 that is a missing declaration, not a failed test.
 
 **The instrument's log is kept too.** When the case ends, the runner reads back every instrument console the test
-opened, before releasing the testbed, and writes it next to `device.log` as `<fixture>.log` (here `ble_peer.log`; a
-pinned spec keeps its parameter after sanitising, so `ble_peer:peer1` becomes `ble_peer-peer1.log`).
+opened, before releasing the testbed, and writes it next to `device.log` as `<fixture>.log` (here `bt_peer-ble.log`;
+the `:` in a spec is not portable in a file name, so it is sanitised).
 A two-radio failure is then read from both sides instead of from one side's account of the other. A stream the test
 never opened produces no file -- an empty log would read as a silent instrument.
 
@@ -730,8 +731,8 @@ never opened produces no file -- an empty log would read as a silent instrument.
 - The instrument is opened on the **agent's** machine (the binding names its port), so a remote agent works.
 - The test picks the **strongest** advertisement, because the DUT's address is not otherwise known to the agent. Keep
   the peer next to its DUT; the DUT-side `connected` assertion is what fails when it latches onto another board.
-- A bare `ble_peer` must resolve to exactly one connection. A testbed may offer several; pin one by declaring the full
-  spec in the test case (`harness_config.fixture: ble_peer:peer1`), and the fixture opens that instance.
+- A `bt_peer:ble` connection must resolve to exactly one instrument. The fixture opens that instance; declaring the
+  fixture more than once is an error, not a guess.
 - The instrument has no framework-driven reset. Recovery between runs is the lab's (power-cycle), or the DUT's own
   reset, which drops the link.
 
@@ -1146,7 +1147,7 @@ testbed:
       - fixture: spi_nor_flash:spi1
         pinmap:
           - {pin: PA00, signal: CS}
-      - fixture: ble_peer              # an instrument, not a testbed: see section 6
+      - fixture: bt_peer:ble           # an instrument, not a testbed: see section 6
         console: {port: COM9, baud: 1000000}
 ```
 

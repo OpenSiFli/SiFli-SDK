@@ -28,13 +28,14 @@ testbed:
       port: COM8             # USB-Enhanced-SERIAL CH343；也是 UART 下载口
       baud: 1000000          # SDK 控制台固定 1 Mbaud（drv_usart.c）
 
-    # 接了一台 BLE 对端仪表（第二块板，跑固定固件、不编译不烧录）：
-    # COM22 是仪表自己的控制台。用例里写 harness_config.fixture: ble_peer 即可；
-    # 仪表固件用 example/ble/central_and_peripheral/project/hcpu 编译，烧一次即固定。
+    # 接了一台 bt_peer 仪表（第二块板，跑固定固件、不编译不烧录）：
+    # COM6 是仪表自己的控制台。用例里写 harness_config.fixture: bt_peer:ble 即可；
+    # 仪表固件是 example/test/bt_peer/（行协议 @info/@ok/@err/@evt，见
+    # tools/sdk_test/BT_PEER_DESIGN.md），烧一次即固定。
     connections:
-      - fixture: ble_peer
+      - fixture: bt_peer:ble
         console:
-          port: COM22          # USB-Enhanced-SERIAL-B CH342 (interface B); the peer instrument
+          port: COM6           # the bt_peer instrument
           baud: 1000000
 
     # -- 以下两块是 Lab-Agent 私有，SDK 侧只解析不解释 --
@@ -70,9 +71,9 @@ testbed:
     # 框架不会构造探针（TestBedRuntime.needs_jlink() 为假）。
 
   # ---------------------------------------------------------------- 56x board
-  # Commented out for now: this board is not on the bench, and its COM22 is the
-  # BLE peer instrument of the 52x testbed above. Two testbeds must never name
-  # the same physical port -- an agent that opened both would fight over it.
+  # Commented out for now: this board is not on the bench. Two testbeds must
+  # never name the same physical port -- an agent that opened both would fight
+  # over it. The bt_peer instrument of the 52x testbed above is on COM6.
   # Restore the block (with this board's actual console port) when it is back.
   #
   # - id: sf32lb56-lcd_a128r12n1_01

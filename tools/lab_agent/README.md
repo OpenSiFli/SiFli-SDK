@@ -46,16 +46,16 @@ POST /testbed/{id}/firmware        body = a firmware package (tar)
 POST /testbed/{id}/prepare         {firmware, reset}
 POST /testbed/{id}/reset
 POST /testbed/{id}/flash           {firmware}
-POST /testbed/{id}/console/open           [?stream=dut|ble_peer]
-POST /testbed/{id}/console/close          [?stream=dut|ble_peer]
+POST /testbed/{id}/console/open           [?stream=dut|bt_peer:ble]
+POST /testbed/{id}/console/close          [?stream=dut|bt_peer:ble]
 GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
-POST /testbed/{id}/console/write   {data}   [?stream=dut|ble_peer]
+POST /testbed/{id}/console/write   {data}   [?stream=dut|bt_peer:ble]
 ```
 
 `stream` names which console on the testbed: `dut` (the default, so existing
 callers are unchanged) or a fixture the allocation declared. A fixture with a
-`console:` entry in its connection is an **instrument** — a peer board, say —
-with its own port, no build and no flash; the agent opens and closes that stream
+`console:` entry in its connection is an **instrument** — the `bt_peer` board,
+say — with its own port, no build and no flash; the agent opens and closes that stream
 with the testbed, and only for a fixture the allocation asked for.
 
 `firmware` is the digest the upload answered with, not a path: the package is
