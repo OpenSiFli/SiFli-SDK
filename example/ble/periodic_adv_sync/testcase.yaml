@@ -1,0 +1,17 @@
+# The peer path for the periodic_adv_sync example. Roles are reversed here: the
+# instrument is the periodic advertiser and the DUT scans, creates a sync and
+# prints the data it receives.
+#
+# Negative verification: stop the instrument's periodic advertiser before the
+# scan and `test_dut_finds_the_instrument` times out red; change PAYLOAD and
+# `test_dut_syncs_and_receives_the_payload` goes red. Power off the instrument
+# and the first `peer info` never answers.
+tests:
+  - id: ble_periodic_adv_sync.peer
+    description: The DUT scans for the instrument's periodic advertising, syncs and receives its data.
+    harness: pytest
+    tags: [pytest, ble, peer, periodic]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
