@@ -290,11 +290,13 @@ static void peer_emit_err_raw(const char *id, const char *code, const char *text
 static void peer_emit_info(void)
 {
     char line[PEER_LINE_MAX];
+    char addr[BD_ADDR_LEN * 2 + 1];
 
+    peer_ble_local_addr_str(addr, sizeof(addr));
     rt_snprintf(line, sizeof(line),
-                "@info proto=%d fw=%s caps=%s roles=central,peripheral max_conn=%d ble=5.2 max_line=%d",
-                PEER_PROTO_VERSION, PEER_FW_ID, PEER_CAPS, PEER_MAX_LINKS,
-                PEER_LINE_MAX);
+                "@info proto=%d fw=%s caps=%s addr=%s name=%s roles=central,peripheral max_conn=%d ble=5.2 max_line=%d",
+                PEER_PROTO_VERSION, PEER_FW_ID, PEER_CAPS, addr,
+                peer_ble_local_name(), PEER_MAX_LINKS, PEER_LINE_MAX);
     peer_line_out(line);
 }
 

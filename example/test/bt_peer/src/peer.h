@@ -98,6 +98,7 @@ typedef struct
 {
     uint8_t addr_type;
     uint8_t report_type;
+    uint8_t conn_adv;           /*!< 1 when the report is connectable. */
     uint8_t adv_sid;            /*!< Advertising SID, needed to sync periodic adv. */
     int8_t rssi;
     bd_addr_t addr;
@@ -143,6 +144,8 @@ rt_err_t peer_ble_wait(uint32_t bits, int32_t timeout_ms);
 void peer_ble_signal(uint32_t bits);
 void peer_ble_clear_bits(uint32_t bits);
 void peer_ble_addr_str(const bd_addr_t *addr, char *out, size_t out_size);
+void peer_ble_local_addr_str(char *out, size_t out_size);
+const char *peer_ble_local_name(void);
 peer_link_t *peer_link_find(uint8_t link_id);
 peer_link_t *peer_link_find_conn(uint8_t conn_idx);
 peer_link_t *peer_link_at(uint8_t slot);

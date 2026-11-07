@@ -162,7 +162,7 @@ peer data <id> <hex>            # 超大负载的续传（可选，见 5.5）
 设备输出：
 
 ```
-@info proto=1 fw=<hash> caps=ble roles=central,peripheral max_conn=8 ble=5.2
+@info proto=1 fw=<hash> caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
@@ -450,7 +450,7 @@ harness_config:
 固件：
 
 ```
-@info proto=1 fw=... caps=ble,classic roles=... 
+@info proto=1 fw=... caps=ble,classic addr=... name=... roles=... 
 ```
 
 宿主：

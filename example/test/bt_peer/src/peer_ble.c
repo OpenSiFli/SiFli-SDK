@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "peer.h"
+#include "bf0_ble_common.h"
 #include "bf0_sibles.h"
 #include "bf0_sibles_advertising.h"
 
@@ -42,6 +43,13 @@ static uint8_t g_phy_conn = PEER_NO_CONN;
 /* Whether the running advertisement was started in extended mode. */
 static uint8_t g_adv_extended;
 
+/* UID-derived public address and device name. Without the override below the
+ * stack's weak default is the fixed AB:05:03:02:05:08, which every instrument
+ * in a lab would share. */
+static bd_addr_t g_local_addr;
+static uint8_t g_local_addr_valid;
+static char g_local_name[32];
+
 SIBLES_ADVERTISING_CONTEXT_DECLAR(g_adv_context);
 
 static const char s_hex[] = "0123456789abcdef";
@@ -65,8 +73,92 @@ void peer_ble_addr_str(const bd_addr_t *addr, char *out, size_t out_size)
     out[BD_ADDR_LEN * 2] = '\0';
 }
 
+/*
+ * The stack calls this weak hook while bringing the controller up. The
+ * examples derive the public address from the chip UID; without the override
+ * the weak fallback is one fixed address for every board in the lab.
+ */
+ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
+{
+    if (bt_mac_addr_generate_via_uid_v2(addr) != 0)
+        return BLE_UPDATE_NO_UPDATE;
+
+    g_local_addr = *addr;
+    g_local_addr_valid = 1;
+    return BLE_UPDATE_ONCE;
+}
+
+void peer_ble_local_addr_str(char *out, size_t out_size)
+{
+    if (g_local_addr_valid)
+        peer_ble_addr_str(&g_local_addr, out, out_size);
+    else if (out_size > 0)
+        out[0] = '\0';
+}
+
+const char *peer_ble_local_name(void)
+{
+    return g_local_name;
+}
+
+static void peer_ble_build_name(void)
+{
+    if (!g_local_addr_valid)
+    {
+        g_local_name[0] = '\0';
+        return;
+    }
+
+    /* Four bytes: 16 characters, under GAP_MAX_LOCAL_NAME_LEN even on 55X (18). */
+    rt_snprintf(g_local_name, sizeof(g_local_name),
+                "bt_peer-%02x%02x%02x%02x",
+                g_local_addr.addr[0], g_local_addr.addr[1],
+                g_local_addr.addr[2], g_local_addr.addr[3]);
+}
+
+/** Install the name on the LE stack once it is powered up. */
+static void peer_ble_apply_name(void)
+{
+    ble_gap_dev_name_t *dev;
+    bd_addr_t effective;
+    size_t len;
+
+    /* The hook requests the UID address, but NVDS may already hold a
+     * provisioned (factory/product) one; read back what the stack uses. */
+    if (ble_get_public_address(&effective) == HL_ERR_NO_ERROR)
+    {
+        g_local_addr = effective;
+        g_local_addr_valid = 1;
+    }
+    peer_ble_build_name();
+
+    if (!g_local_addr_valid)
+        return;
+
+    len = (size_t)rt_strlen(g_local_name);
+    dev = rt_malloc(sizeof(*dev) + len);
+    if (dev == RT_NULL)
+        return;
+    dev->len = (uint16_t)len;
+    memcpy(dev->name, g_local_name, len);
+    ble_gap_set_dev_name(dev);
+    rt_free(dev);
+}
+
 void peer_ble_init(void)
 {
+    bd_addr_t addr;
+
+    /* Seed before main() prints the banner, so an early `peer info` already
+     * carries the UID-derived values; the power-on path refreshes them from
+     * NVDS, which is authoritative. */
+    if (bt_mac_addr_generate_via_uid_v2(&addr) == 0)
+    {
+        g_local_addr = addr;
+        g_local_addr_valid = 1;
+        peer_ble_build_name();
+    }
+
     if (g_ble_event == RT_NULL)
         g_ble_event = rt_event_create("peer_ble", RT_IPC_FLAG_FIFO);
 }
@@ -219,6 +311,7 @@ static void peer_ble_handle_adv(ble_gap_ext_adv_report_ind_t *ind)
     report = &g_adv[g_adv_count];
     report->addr_type = ind->addr.addr_type;
     report->report_type = type;
+    report->conn_adv = (ind->info & GAPM_REPORT_INFO_CONN_ADV_BIT) ? 1 : 0;
     report->adv_sid = ind->adv_sid;
     report->rssi = ind->rssi;
     report->addr = ind->addr.addr;
@@ -229,8 +322,9 @@ static void peer_ble_handle_adv(ble_gap_ext_adv_report_ind_t *ind)
     peer_ble_addr_str(&report->addr, addr, sizeof(addr));
     peer_format_payload(payload, sizeof(payload), report->data, report->len);
 
-    peer_emit_evt("adv", "index=%u addr=%s type=%u rssi=%d %s",
-                  g_adv_count, addr, report->addr_type, report->rssi, payload);
+    peer_emit_evt("adv", "index=%u addr=%s type=%u conn=%u rssi=%d %s",
+                  g_adv_count, addr, report->addr_type, report->conn_adv,
+                  report->rssi, payload);
 }
 
 static void peer_ble_handle_connected(ble_gap_connect_ind_t *ind)
@@ -294,6 +388,7 @@ static int peer_ble_event_handler(uint16_t event_id, uint8_t *data, uint16_t len
     {
     case BLE_POWER_ON_IND:
         g_powered_on = 1;
+        peer_ble_apply_name();
         break;
 
     case BLE_GAP_SCAN_START_CNF:

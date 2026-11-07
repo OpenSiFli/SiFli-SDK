@@ -55,11 +55,16 @@ peer info
 Expected line, verbatim apart from `max_conn` (always 8 on this build):
 
 ```
-@info proto=1 fw=bt_peer-m2 caps=ble roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m2 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 ```
 
 `proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
 another image (the old `diss` one, for instance) fails here rather than later.
+
+`addr` and `name` are UID-derived (`bt_mac_addr_generate_via_uid_v2`), so every
+instrument in a lab has its own public address and its own `bt_peer-<suffix>`
+name. Without that override the stack's weak default would give every board the
+same address, `AB:05:03:02:05:08`.
 
 `PEER_CAPS` in `src/peer.h` is the single source of that capability string. A
 build that adds the Classic stack overrides it with `"ble,classic"`; the host
@@ -79,7 +84,7 @@ peer data <id> <hex>              # not implemented in M1
 Instrument to host:
 
 ```
-@info proto=1 fw=bt_peer-m2 caps=ble roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m2 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
