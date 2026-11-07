@@ -143,7 +143,9 @@ def connect_to_dut(dut: Any, peer: Any, *, attempts: int = 6) -> Any:
             time.sleep(0.5)
             continue
         try:
-            dut.expect(r"Peer device\(.*\) connected", timeout=8)
+            # The examples spell this differently: "Peer device(aa-bb-..) connected"
+            # and "Peer device(role:0) aa-bb-.. connected as deivce 0".
+            dut.expect(r"Peer device\([^)]*\).*connected", timeout=8)
             return link
         except AssertionError:
             # The link is up, but not to this DUT (or the DUT dropped it).

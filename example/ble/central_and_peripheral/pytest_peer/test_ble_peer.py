@@ -29,6 +29,7 @@ import re
 
 import pytest
 
+from sdk_test.instruments import ble_server
 from sdk_test.instruments.errors import InstrumentCommandError
 
 #: The prompt is ``msh />`` when DFS keeps a working directory and ``msh >``
@@ -122,14 +123,10 @@ def test_peer_connects_to_the_dut(dut, bt_peer):
     only visible to a peer whose controller understands them, so this also
     pins the peer firmware to a BLE 5 stack.
     """
-    reports = bt_peer.ble.scan(duration_ms=3000)
-    target = bt_peer.ble.strongest(reports)
-    STATE["link"] = bt_peer.ble.connect(target)
-
-    # The DUT's own connection event is the ground truth: the peer may have
-    # connected to some other board in range, and only this line proves it did
-    # not.
-    dut.expect(r"Peer device\(role:\d+\) .* connected as deivce 0", timeout=30)
+    # The helper picks a connectable SIFLI_APP- advertiser and retries, because
+    # the strongest report in a lab is often a neighbouring board: the DUT's
+    # own connection line is the ground truth that the link is the right one.
+    STATE["link"] = ble_server.connect_to_dut(dut, bt_peer)
 
     dut.send_line("diss show_dev")
     dut.expect(r"Total connected 1 devices", timeout=10)

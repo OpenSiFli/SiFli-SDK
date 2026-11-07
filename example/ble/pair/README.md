@@ -34,7 +34,7 @@ IO Cap 能力说明（配对方式与此相关）：
 |:--:|:--|:--|:--|
 | 0 | GAP_IO_CAP_DISPLAY_ONLY | 设备仅显示数字 | 手机输入 PIN；设备端打印 `SHOW PIN` |
 | 1 | GAP_IO_CAP_DISPLAY_YES_NO | 设备显示数字并确认 | 手机数字确认；设备端打印 `SHOW NC` |
-| 2 | GAP_IO_CAP_KB_ONLY | 设备可输入数字但不显示 | 手机显示 PIN；设备端用 `diss set_key` 输入 |
+| 2 | GAP_IO_CAP_KB_ONLY | 设备可输入数字但不显示 | 手机显示 PIN；设备端用 `cmd_diss set_key` 输入 |
 | 3 | GAP_IO_CAP_NO_INPUT_NO_OUTPUT | 无输入输出 | Just Works，一般无需输入/确认 |
 | 4 | GAP_IO_CAP_KB_DISPLAY | 既能显示也能输入 | 手机根据对端策略选择 PIN/确认 |
 

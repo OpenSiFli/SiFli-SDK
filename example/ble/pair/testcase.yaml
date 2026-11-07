@@ -1,0 +1,17 @@
+# The peer path for the pair example: the DUT is a peripheral that accepts
+# pairing, so the instrument connects, pairs, and the DUT reports the pairing
+# itself.
+#
+# Negative verification: reply BOND_REJECT instead of accepting in the DUT's
+# CONNECTION_MANAGER_BOND_AUTH_INFOR handler and `test_peer_pairs_with_the_dut`
+# goes red; remove the service registration and the read goes red. Power off the
+# instrument and the first `peer info` never answers.
+tests:
+  - id: ble_pair.peer
+    description: The peer connects to the DUT, pairs with it, and keeps using the link.
+    harness: pytest
+    tags: [pytest, ble, peer, security]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
