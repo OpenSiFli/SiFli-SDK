@@ -1,0 +1,163 @@
+# bt_peer — BLE test instrument
+
+`bt_peer` is the fixed firmware a test suite drives as the *other* end of a
+Bluetooth link. It runs no application of its own: it powers on the BLE stack,
+registers one MSH command (`peer`) and performs what the host asks over a
+single-line text protocol. The design is in
+[`tools/sdk_test/BT_PEER_DESIGN.md`](../../../tools/sdk_test/BT_PEER_DESIGN.md).
+
+Host side: `tools/sdk_test/instruments/bt_peer.py` (`BtPeer` / `BleInstrument`).
+The lab wiring is `fixture: bt_peer:ble` in the testcase and a `connections:`
+entry in the lab binding.
+
+## Build
+
+```bash
+source ./export.sh            # ./export.ps1 on Windows
+cd example/test/bt_peer/project
+scons --board=<board> -j8
+```
+
+The artifacts land in `build_<board>/`, as for any example. The project is
+`build_only` in `testcase.yaml`: CI compiles it, nothing executes it.
+
+The firmware needs `CONFIG_RT_CONSOLEBUF_SIZE=1024` and
+`CONFIG_FINSH_CMD_SIZE=1024` (already in `project/proj.conf`): one protocol
+line carries a 244-byte hex payload, which the default 80-byte shell line
+would truncate.
+
+## Flash once
+
+Flash the image once with the usual downloader and leave the board in the
+lab. It never needs re-flashing between test runs; `state.reset` returns it to
+a known state. Point the binding at its console:
+
+```yaml
+connections:
+  - fixture: bt_peer:ble
+    console: {port: COM22, baud: 1000000}
+```
+
+Then run any suite that declares `fixture: bt_peer:ble`, for example:
+
+```bash
+sdk.py test run -T example/ble/central_and_peripheral --tag peer -p <board>
+```
+
+## Checking that the instrument answers
+
+Type this in its console (or let the fixture do it):
+
+```
+peer info
+```
+
+Expected line, verbatim apart from `max_conn` (always 8 on this build):
+
+```
+@info proto=1 fw=bt_peer-m2 caps=ble roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+```
+
+`proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
+another image (the old `diss` one, for instance) fails here rather than later.
+
+`PEER_CAPS` in `src/peer.h` is the single source of that capability string. A
+build that adds the Classic stack overrides it with `"ble,classic"`; the host
+declares `fixture: bt_peer:ble,classic` and gets both `bt_peer.ble` and
+`bt_peer.classic` over the same console stream. No protocol or Agent change.
+
+## Protocol
+
+Host to instrument:
+
+```
+peer info
+peer req <id> <op> [key=value ...]
+peer data <id> <hex>              # not implemented in M1
+```
+
+Instrument to host:
+
+```
+@info proto=1 fw=bt_peer-m2 caps=ble roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@ok  <id> [key=value ...]
+@err <id> <code> <text>
+@evt <seq> <name> [key=value ...]
+```
+
+Rules that matter when extending it:
+
+1. Exactly one terminal line per request, correlated by `id`.
+2. Binary values are always `len=N data=<hex>`; an empty payload is
+   `len=0 data=`. The host waits for N bytes instead of guessing a quiet
+   window.
+3. Every `@` line is one locked `rt_kprintf`. Never build a line across calls.
+4. Non-`@` lines (ulog, the prompt) are ignored by the host.
+5. `gatt.discover` emits every `@evt char` before `@ok count=<n>`.
+6. One unfinished GATT operation per link; a second one answers `@err ... busy`.
+7. Scan and connection indices are 1-based on the wire; a link id is stable
+   for the life of the connection.
+
+### M1 operations
+
+| Op | Notes |
+|---|---|
+| `state.reset` | Drops links, stops scan/advertising/periodic, frees GATT client registrations. |
+| `gap.scan` | Blocks for `duration_ms`, then `@ok count=<n>`; one `@evt adv` per report, up to `PEER_MAX_ADV_REPORTS` (64). |
+| `gap.scan.stop` | Stops a scan early (the shell is serial, so mostly a no-op). |
+| `gap.connect` | By scan `index` or `addr`; `@ok link=<n>`. |
+| `gap.disconnect` | By `link`. |
+| `dev.list` | One `@evt link` per connection, then `@ok links=<n>`. |
+| `gatt.discover` | `uuid` optional; `@evt char` lines then `@ok count=<n>`. |
+| `gatt.read` | `@ok len=N data=<hex>`. |
+| `gatt.write` | `response=0/1`. |
+| `gatt.subscribe` | Writes the CCCD. |
+| `gatt.mtu` | `@ok mtu=<n>`. |
+| `adv.start` / `adv.stop` | Legacy or extended, connectable or not. |
+| `svc.register` | Registers the 128-bit loopback service; `@ok handle=<h>`. |
+| `svc.notify` | `handle=<h> len=N data=<hex>`; requires the DUT (the GATT client) to have subscribed. |
+| `sec.bond` | `io=<name>` (`no_input_no_output`, `display_only`, `display_yes_no`, `keyboard_only`, `keyboard_display`) or the numeric enum; `passkey=<n>`. |
+| `sec.clear` | Deletes all bonds. |
+| `periodic.adv.start` / `periodic.adv.stop` | Periodic advertiser, SID 0. |
+| `periodic.sync` / `periodic.sync.stop` | By scan `index` or `addr`; reports arrive as `@evt periodic`. |
+
+Anything else answers `@err <id> unsupported <op>`: `gap.conn_params`,
+`gap.phy`, `gap.data_len`, `adv.data`, `peer data`.
+
+### Events
+
+```
+adv          index=<n> addr=<hex> type=0/1 rssi=<dBm> len=N data=<hex>
+scan.done    count=<n>
+conn         link=<n> addr=<hex> role=0/1 interval_ms=<n>
+disconn      link=<n> reason=<n>
+link         link=<n> addr=<hex> role=0/1 interval_ms=<n>
+char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h,h,...>
+notify       link=<n> handle=<h> len=N data=<hex>
+write        link=<n> handle=<h> len=N data=<hex>
+read         link=<n> handle=<h> len=N data=<hex>
+mtu          link=<n> mtu=<n>
+passkey      link=<n> value=<n>
+periodic     link=<n> len=N data=<hex>
+```
+
+## Loopback service
+
+`svc.register name=loopback` registers the service `bt_peer-loop` with one
+characteristic `bt_peer-val`: readable, writable (request and command) and
+notifiable, plus a CCCD. Whatever the DUT writes is kept and served back to a
+later read, and the host can notify the DUT after it subscribes.
+
+The instrument keeps one shared value (the last write, whichever link made it)
+and one subscription flag per connection, so it can track several links at once.
+
+## Known limitations (M1)
+
+- `svc.unregister` answers `unsupported`: the stack cannot remove a service
+  from the ATT database, so the loopback service stays registered for the
+  lifetime of the image. `state.reset` only clears subscription state.
+- `peer data` (chunked payload continuation) is not implemented; the line
+  budget is `max_line=1024`, which covers a 244-byte write.
+- `adv.data`, `gap.conn_params`, `gap.phy` and `gap.data_len` are stubbed.
+- Classic Bluetooth is out of scope for this image; the design reserves
+  `bt_peer:classic` for a later one.

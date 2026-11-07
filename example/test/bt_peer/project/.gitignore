@@ -1,0 +1,8 @@
+.config
+config.h
+kconfiglist
+*.pyc
+__pycache__/
+.sconsign.dblite
+build/*
+build_*/*

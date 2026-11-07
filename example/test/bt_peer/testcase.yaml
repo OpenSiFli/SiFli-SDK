@@ -1,0 +1,28 @@
+# bt_peer is the instrument firmware a test suite drives as the "other end" of
+# a Bluetooth link. It has no application of its own: it powers on the BLE
+# stack, registers the `peer` MSH command and does what the host asks. Nothing
+# here is executed by the runner, so the only useful entry point in CI is a
+# build: if the instrument image does not compile, every peer testcase in the
+# lab fails for the wrong reason.
+#
+# `-p` still selects the board; flash the resulting image once, then point a
+# binding at its console:
+#
+#     sdk.py test run -T example/test/bt_peer -p <board>
+#     connections:
+#       - fixture: bt_peer:ble
+#         console: {port: COM22, baud: 1000000}
+#
+# Negative verification: break a protocol op (for example, return
+# PEER_ERR_UNSUPPORTED from peer_gatt_client_discover) and confirm that the
+# *DUT* suite using this instrument goes red; a green instrument build proves
+# only that it links.
+tests:
+  - id: test.bt_peer.build
+    description: Build the bt_peer BLE instrument firmware. Not executed; the lab flashes it as a fixture.
+    tags: [ble, instrument, build_only]
+    # A full SDK plus Bluetooth-library link, with no test to run afterwards.
+    timeout: 600
+    build_only: true
+    # The SConstruct sits under project/, one level below the testcase file.
+    project_dir: project
