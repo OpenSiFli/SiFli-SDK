@@ -6,22 +6,33 @@ The DUT is a GATT server on legacy connectable advertising. It does not bring
 up the classic stack. Notifications come from a 5-second CCCD timer (4-byte
 packets) and the 0x1111 burst trigger (20 packets of 10 bytes).
 
-What this does **not** cover is the example's headline feature: the file
-transfer itself, which is the watchface download protocol layered on the
-`sifli_sd` serial-transport service. Driving it needs a "push a file" client in
-the instrument firmware, so it is tracked as firmware work in
-BT_PEER_DESIGN.md 13.3.1 rather than pretended by a test that never sends a
-file.
+The suite also covers the example's headline feature: a file pushed over the
+``sifli_sd`` serial-transport service with the watchface download protocol.
+``test_peer_pushes_a_file`` subscribes to the data characteristic, calls
+``file_push`` (START / FILE_START / DATA / END / FINISH, with the CRC the DUT
+checks), and then asserts the path the DUT logged and that the name appears in
+the receive directory.
 """
 
 from __future__ import annotations
 
+import re
 import time
 
 import pytest
 
 from sdk_test.suite_helpers import ble_server
+from sdk_test.instruments.bt_peer import CCCD_UUID
 from sdk_test.instruments.errors import InstrumentTimeout
+
+#: The serial-transport service ("sifli_sd") and its data characteristic, as
+#: the DUT declares them (bf0_sibles_serial_trans_service.h).
+SIFLI_SD_UUID = b"sifli_sd" + b"\x00" * 8
+SIFLI_SD_DATA_UUID = b"sifli_sd" + bytes([0x00, 0x02, 0x00, 0x00]) + b"\x00" * 4
+
+#: One 4-byte aligned payload; the instrument appends the CRC word.
+FILE_NAME = "peer_test.bin"
+FILE_PAYLOAD = bytes(range(32))
 
 STATE: dict = {}
 
@@ -97,3 +108,57 @@ def test_notification_burst_reaches_the_peer(dut, bt_peer):
         assert payload == bytes([index]) * 10, (
             f"burst packet {index} carried {payload.hex()}"
         )
+
+
+def test_peer_pushes_a_file(dut, bt_peer):
+    """The watchface protocol writes a file the DUT then reports on disk.
+
+    The data characteristic carries both directions: requests are writes, every
+    response is a notification, so the CCCD is subscribed before the push. The
+    instrument checks each response's result word, which is what makes a
+    rejected step a failure here instead of a timeout later.
+    """
+    link = _require("link")
+
+    service = bt_peer.ble.discover(link, SIFLI_SD_UUID)
+    data = service.characteristic(SIFLI_SD_DATA_UUID)
+    bt_peer.ble.subscribe(link, data.descriptor_handle(CCCD_UUID))
+
+    bt_peer.ble.file_push(link, data.value_handle, FILE_NAME, FILE_PAYLOAD)
+
+    # The DUT logs the path it opened, then the length check of the whole
+    # transfer; neither line appears unless the CRC and the sizes agreed.
+    name_pattern = re.escape(FILE_NAME)
+    dut.expect(rf"file: /file_recv/{name_pattern}", timeout=15)
+    dut.expect(r"file recv success!", timeout=15)
+
+    # The log says it wrote; the file system says it is there.
+    dut.send_line("ls /file_recv")
+    dut.expect(name_pattern, timeout=10)
+
+
+#: Larger than one instrument chunk, so the push has to split the file and keep
+#: the running CRC across packets.
+LARGE_NAME = "peer_multi.bin"
+LARGE_PAYLOAD = bytes((index * 7) & 0xFF for index in range(52))
+
+
+def test_peer_pushes_a_multi_chunk_file(dut, bt_peer):
+    """The same exchange with a file that does not fit one packet.
+
+    Each data request carries an index the DUT checks for order, and the CRC is
+    only valid if every chunk landed in sequence, so a green run here says the
+    chunking and the reassembly agree.
+    """
+    link = _require("link")
+
+    service = bt_peer.ble.discover(link, SIFLI_SD_UUID)
+    data = service.characteristic(SIFLI_SD_DATA_UUID)
+
+    bt_peer.ble.file_push(link, data.value_handle, LARGE_NAME, LARGE_PAYLOAD)
+
+    dut.expect(rf"file: /file_recv/{re.escape(LARGE_NAME)}", timeout=20)
+    dut.expect(r"file recv success!", timeout=20)
+
+    dut.send_line("ls /file_recv")
+    dut.expect(rf"{re.escape(LARGE_NAME)}\s+52", timeout=10)
