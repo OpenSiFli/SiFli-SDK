@@ -1,0 +1,15 @@
+# The peer path for the cscpc example: the DUT is a GATT server (the shared
+# "sifli_app" 128-bit service), and the bt_peer instrument is the GATT client.
+#
+# Negative verification: break ble_app_service_init() and
+# `test_peer_discovers_the_service` goes red; power off the instrument and
+# the first `peer info` never answers.
+tests:
+  - id: ble_cscpc.peer
+    description: A peer connects to the cscpc server, discovers it, writes, reads and subscribes.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
