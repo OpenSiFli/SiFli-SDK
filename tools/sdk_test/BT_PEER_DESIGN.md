@@ -2,7 +2,7 @@
 
 ## 1. 为什么改
 
-当前的 `ble_peer` 不是一个"仪表"抽象，而是"某一份例程固件 + 针对它日志文本的解析器"：
+上一版的 `ble_peer` 不是一个"仪表"抽象，而是"某一份例程固件 + 针对它日志文本的解析器"：
 
 - `tools/sdk_test/ble_peer.py` 明确假设仪表运行 `example/ble/central_and_peripheral`，
   连该例程的 `sifli_app` 128-bit 服务 UUID 都硬编码在 `SERVICE_UUID_BYTES` 里；
@@ -11,8 +11,8 @@
 - 断言建立在 ulog 文本上（连 `"deivce"`、`"Charateristic"` 这类拼写都必须兼容），
   hexdump 是否收全靠 "quiet window" 猜。
 
-后果是：只能测 `central_and_peripheral` 一个例程；换一个例程要么换仪表固件，
-要么改框架解析器。本设计把仪表拆成三层——**专用对端固件、稳定行协议、
+后果是：只能测一个例程；换一个例程要么换仪表固件，要么改框架解析器。
+本设计把仪表拆成三层——**专用对端固件、稳定行协议、
 分层的宿主 API**——并用它覆盖 `example/ble` 下 server 类与双角色例程。
 同一套传输/协议/注册表以后可以直接扩展到 `example/bt` 的经典蓝牙。
 
@@ -24,7 +24,7 @@
 | **Lab Agent** | 插着板子的那台机器上的常驻服务，负责占用、烧录、复位、开串口。 |
 | **仪表 / peer** | 第二块板及其固件。本文统一叫 `bt_peer`。 |
 | **DUT** | 被测板。 |
-| **能力** | 仪表能扮演的角色，如 `ble`、`classic`。fixture 参数表达能力。 |
+| **能力** | 仪表能扮演的角色，如 `ble`、`classic`；写在 fixture spec 的 `:` 之后。 |
 
 命名约定（已确认）：
 
@@ -39,16 +39,17 @@ fixture 名描述的是**能力**，不是物理设备；一个物理仪表可�
 
 ## 3. 范围
 
-### 3.1 本期实现
+### 3.1 本期覆盖
 
 BLE：
 
 - GATT server 类：`basc`、`cscpc`、`hrpc`、`cppc`、`diss`、`tip_cts`、
   `peripheral`、`file_transfer`
 - 广播类：`iBeacon`、`periodic_adv`
-- 双角色：`throughput`、`multi_connection`、`central_and_peripheral`、`pair`、
-  `periodic_adv_sync`
+- 双角色：`central_and_peripheral`、`pair`、`periodic_adv_sync`
 - `hid` 单独处理（16-bit HID 服务）
+- `throughput` / `multi_connection` 不在本期：前者需要仪表侧的吞吐收发通路，
+  后者需要第二个对端（见 §11.2）
 
 ### 3.2 不在本期
 
@@ -179,7 +180,7 @@ peer data <id> <hex>            # 超大负载的续传（可选，见 5.5）
 7. 同一 link 同时只允许一个未完成的 GATT 操作；第二个请求回
    `@err <id> busy`。
 
-### 5.4 第一版命令与事件
+### 5.4 命令与事件
 
 命令：
 
@@ -268,7 +269,12 @@ tools/sdk_test/instruments/
   classic.py      BtClassicInstrument / ClassicDevice / ClassicLink
   _values.py      两个模块共用的 int / payload 解析
   registry.py     INSTRUMENTS: name -> class
-  errors.py       InstrumentError / InstrumentTimeout / InstrumentProtocolError
+  errors.py       InstrumentError / InstrumentTimeout / InstrumentCommandError /
+                  InstrumentProtocolError / InstrumentCapabilityError
+
+tools/sdk_test/suite_helpers/
+  ble_server.py   某一族例程共用的 DUT 日志约定（连接、写读、订阅），
+                  不属于仪表的通用能力，所以不在 instruments/ 里
 ```
 
 ### 6.2 `InstrumentConsole`
@@ -279,18 +285,31 @@ tools/sdk_test/instruments/
 - `@ok/@err` 按 id 唤醒等待者；
 - 已超时的 id 进 `expired` 集合，迟到响应丢弃并计数；
 - `@evt` 进有界队列；`event_overflow` 计数，不静默丢；
-- `drain()` 只清空待解析文本，不清事件队列。
+- 被调用方边界（`since_seq`）挡住的旧事件直接丢弃并记 `stale_events`，
+  不再留在队列里让每次等待都整表遍历；
+- 同一个 id 的第二次答复记 `duplicate_responses`，不覆盖第一次；
+- `drain()` 只清空待解析文本，不清事件队列；
+- 协议行只认行首或紧跟提示符（`msh ...>`）的 `@info/@ok/@err/@evt`，
+  日志里偶然出现的 `@ok` 不算答复。
 
 接口：
 
 ```python
 class InstrumentConsole:
     def command(self, op: str, timeout: float = 10.0, **kwargs) -> dict: ...
+    def command_events(self, op: str, event: str, *, count_key="count",
+                       match=None, timeout=10.0, boundary="firmware",
+                       **kwargs) -> tuple[dict, list[dict]]: ...
+    @staticmethod
+    def event_boundary(result: dict, op: str) -> int: ...
     def expect_ready(self, capability: str) -> dict: ...
     def next_event(self, name: str, timeout: float = 10.0, *,
                    since_seq: int | None = None, **match) -> dict: ...
     def release_event(self, event: dict) -> None: ...
     def drain(self) -> None: ...
+    #: 计数器：late_responses / stray_responses / duplicate_responses /
+    #: event_overflow / stale_events
+
 ```
 
 ### 6.3 `BtPeer`
@@ -318,6 +337,11 @@ class BleInstrument:
     def advertise(self, *, mode="extended", data=b"", interval_ms=30, connectable=True) -> None: ...
     def stop_advertising(self) -> None: ...
     def set_advertising_data(self, data: bytes) -> None: ...
+    def start_periodic_advertising(self, data=b"", *, interval_ms=100) -> None: ...
+    def stop_periodic_advertising(self) -> None: ...
+    def sync_periodic(self, report=None, *, address=None, address_type=0) -> int: ...
+    def stop_periodic_sync(self) -> None: ...
+    def wait_periodic(self, *, link=None, since_seq=None, timeout=15.0) -> bytes: ...
     def update_connection(self, link: Link, *, interval_min_ms, interval_max_ms,
                           latency=0, timeout_ms=5000) -> None: ...
     def set_phy(self, link: Link, phy: int) -> None: ...
@@ -326,9 +350,19 @@ class BleInstrument:
     def read(self, link: Link, handle: int) -> bytes: ...
     def write(self, link: Link, handle: int, data: bytes, *, response=True) -> None: ...
     def subscribe(self, link: Link, cccd_handle: int, *, enable=True) -> None: ...
-    def wait_notification(self, handle: int, *, link=None, timeout=10.0) -> bytes: ...
+    def exchange_mtu(self, link: Link) -> int: ...
+    def wait_notification(self, handle: int, *, link=None, since_seq=None, timeout=10.0) -> bytes: ...
+    def wait_read(self, handle: int, *, link=None, since_seq=None, timeout=10.0) -> bytes: ...
+    def wait_passkey(self, *, link=None, since_seq=None, timeout=30.0) -> int: ...
+    def list_links(self) -> list[Link]: ...
     def register_loopback(self) -> int: ...
+    def notify(self, handle: int, data: bytes) -> None: ...
     def bond(self, link: Link, *, io="no_input_no_output", auth=None, passkey=None) -> None: ...
+
+#: 所有 wait_* 的 `since_seq` 默认是"从现在起"（取当前 `last_seq`）；
+#: 要回溯历史就显式传入一个更早的边界（前提是那些事件还没被更早的边界丢弃）。
+#: 收连续突发（例如一次写入触发的一串通知）必须在触发前取一次边界，
+#: 整个循环复用同一个。
 ```
 
 数据类：
@@ -400,40 +434,46 @@ connections:
 
 ### 7.3 pytest 插件
 
-不再写死 `ble_peer`，从注册表动态生成 session fixture：
+不再写死 `ble_peer`，从注册表生成 session fixture。生成动作放在
+`pytest_configure` 里，`register_instrument()` 在插件已配置后会立即安装自己的
+fixture，所以从 `conftest` 注册也有效：
 
 ```python
-INSTRUMENTS = {"bt_peer": BtPeer}
-
-for name, cls in INSTRUMENTS.items():
-    globals()[name] = _make_instrument_fixture(name, cls)
+def pytest_configure(config):
+    for name, cls in INSTRUMENTS.items():
+        globals()[name] = _make_instrument_fixture(name, cls)
 ```
 
 规则：
 
 - fixture 名必须是合法 Python 标识符，且不能与 `dut` / `console` 冲突；
-  冲突在插件 import 时直接报错；
+  冲突在注册时直接报错；
+- 工厂必须接受 `capability=` 关键字（注册时校验），否则 fixture 会在构造时炸在
+  用例里；
 - 用例没声明该 fixture 时 `pytest.skip` 并说明缺什么；
-- 参数可以是能力集合（`bt_peer:ble,classic`），宿主要求 `@info caps` 全部满足；
+- spec 语法：`name[@实例][:能力,能力]`。`:` 后面是能力列表，宿主要求
+  `@info caps` 覆盖列表里的每一项（子集匹配）；`@实例` 是"钉住哪一台"，
+  与能力分开，所以 `bt_peer@peer1:ble` 既钉住实例又要求能力；
+- Agent 解析连接时用同一套 `accepts()`，所以"能力更全的仪表满足要求较少的用例"
+  在调度和固件校验两处一致；
 - 声明了多个同名 spec 时 `pytest.fail`，不猜；
 - 流不主动关闭，留给 runner 回收 `<fixture>.log`。
 
 ### 7.4 同一块仪表同时提供 BLE 和 Classic
 
-先看 `stream` 是什么：它是 Agent 的 **路由键**，不是能力开关。
+先看 `stream` 是什么：它是 Agent 的**路由键**，不是能力开关。
 
 ```
 GET /testbed/{id}/console/read?cursor=N&stream=bt_peer:ble
 ```
 
 - `stream` 省略或 `dut` → DUT 的串口；
-- `stream=bt_peer:ble` → binding 里 spec 恰好是 `bt_peer:ble` 的那条 connection 的串口；
+- `stream=bt_peer:ble` → binding 里满足该 spec 的那条 connection 的串口
+  （精确 spec 优先，其次 capability 子集匹配；`@实例` 用于消歧）；
 - Agent 只按 cursor 存取字节，不解析 `@info`；能力判断在宿主。
 
-所以"同一块板既有 BLE 又有 Classic"的核心问题是：
-**一块板通常只有一个 console 串口，两种能力的命令必须共享同一条流。**
-
-#### 方案 A（推荐）：一个 spec、一条流、能力集合
+一块板通常只有一个 console 串口，所以两套能力的命令必须共享同一条流。为此
+采用**一个 spec、一条流、能力集合**：
 
 ```yaml
 # binding
@@ -448,173 +488,80 @@ harness_config:
   fixture: bt_peer:ble,classic
 ```
 
-固件：
-
-```
-@info proto=1 fw=... caps=ble,classic addr=... name=... roles=... 
-```
-
-宿主：
-
 ```python
 def test_dual(bt_peer):
-    bt_peer.ble.scan(...)          # BLE ops
-    bt_peer.classic.inquiry(...)   # Classic ops
+    bt_peer.ble.scan(...)          # gap.* / gatt.*
+    bt_peer.classic.inquiry(...)   # btc.*
 ```
 
-- 一个 `BtPeer`、一个 `InstrumentConsole`；两种能力共用一条串口。
-- 协议用 op 命名空间区分（`gap.*` / `gatt.*` vs `btc.*`），请求 id 和事件 seq 负责多路复用。
-- `expect_ready("ble,classic")` 要求 `caps` 同时包含两者；缺一个就拒绝。
-- Agent 不改，`PROTOCOL` 不 bump；binding 和用例只是多写一个参数。
+- 多路复用交给协议本身：两套能力是不同 op 命名空间（`gap.*` / `gatt.*` 对
+  `btc.*`），请求 id 与事件 seq 已经能把它们分开，不需要第二条流。
+- spec 的 `:` 是能力列表，`expect_ready()` 要求 `@info caps` 覆盖其中每一项，
+  缺一个就明确拒绝；binding 和用例写同一个 spec，Agent 与 `PROTOCOL` 都不用改。
+- 固件的 `PEER_CAPS` 是能力字符串的唯一来源；加入 Classic 栈时用构建宏改成
+  `"ble,classic"`，协议不变。
 
-这是同板双能力最省事、也最容易推理的方案。
+**不采用的两种做法**（记录原因，避免以后重新讨论）：
 
-**实现状态（方案 A）**
-
-- 宿主：`InstrumentConsole.expect_ready()` 按逗号拆分能力集合，要求 `caps`
-  包含全部条目；`BtPeer.caps` 报告固件实际能力；`BtPeer.ble` 和
-  `BtPeer.classic` 各自检查对应能力，缺一个就明确拒绝。
-- 固件：`peer.h` 的 `PEER_CAPS` 是能力字符串的唯一来源，M1 默认 `"ble"`；
-  加入 Classic 栈时用构建宏覆盖成 `"ble,classic"`，协议不变。
-- 宿主 Classic 半边：`tools/sdk_test/instruments/classic.py` 定义
-  `BtClassicInstrument`（inquiry / connect / disconnect / SPP），M1 固件
-  尚未包含 Classic 栈，所以只有 `caps` 含 `classic` 的镜像才会交出它。
-- 单元测试覆盖：`bt_peer:ble,classic` 能同时取到 `.ble` 和 `.classic`；
-  BLE-only 镜像访问 `.classic` 明确报错；`btc.*` 命令与事件映射有独立测试。
-
-#### 方案 B：一个端口两条 connection，Agent 共享流
-
-```yaml
-connections:
-  - fixture: bt_peer:ble
-    console: {port: COM22}
-  - fixture: bt_peer:classic
-    console: {port: COM22}
-```
-
-当前 Agent 按 **connection 的 spec** 给每条 connection 建独立 `ConsoleStream`
-（`tools/lab_agent/testbed.py`）。两个 spec 指向同一端口时，会开两个 reader 线程
-抢同一串口，字节会丢/错位。要让这个方案成立，需要：
-
-1. Agent 改成按 **端口** 共享一个 `ConsoleStream`；
-2. 宿主侧两个 fixture 实例也共享一个 `InstrumentConsole`。
-
-改动比方案 A 大，且收益不大。**不建议第一期做。**
-
-#### 方案 C：两块板 / 两个端口
-
-```yaml
-connections:
-  - fixture: bt_peer:ble
-    console: {port: COM22}
-  - fixture: bt_peer:classic
-    console: {port: COM23}
-```
-
-- Agent 已经支持多个 fixture console，两条流互不干扰。
-- pytest 插件目前对"同一基名声明多次"是 **报错**（不猜）；要用这个方案，
-  需要让插件支持返回多个实例（列表/字典），或者用不同的基名（`bt_peer` / `bt_peer2`）。
-- 适用场景：BLE 和 Classic 不能共存于一块板/一个协议栈，或者确实需要两个独立的物理对端。
-- `PROTOCOL` 不需要改；这是插件能力扩展。
-
-**结论**：同板双能力用 **方案 A**；只有硬件/协议栈不能共存时才用 **方案 C**；
-方案 B 需要 Agent 改共享流，不划算。
+- 同一端口挂两条 connection（`bt_peer:ble` + `bt_peer:classic` 指向 COM22）：
+  Agent 按 connection 各建一个 `ConsoleStream`，两个 reader 线程抢同一串口会
+  丢字节/错位；要成立必须先让 Agent 按端口共享流，改动大、收益为零。
+- 两块板、两个端口：只有当硬件或协议栈确实不能共存时才需要；场合上属于
+  “两个独立对端”，不是“一块仪表两种能力”。插件还要求先支持同一基名返回多个
+  实例，与本期目标无关。
 
 ## 8. 覆盖矩阵
 
 | 例程 | DUT 角色 | 仪表用法 | 状态 |
 |---|---|---|---|
-| `basc` `cscpc` `hrpc` `cppc` `diss` `tip_cts` | 广播 + 注册 `sifli_app` 服务 | GATT client：scan/connect/discover/read/write/subscribe | 套件已写；DUT 打完 `Page scan enbd` 后 HCPU 挂死，跳过并记录（见 §12.1） |
-| `peripheral` `file_transfer` | 同上 | 同上 | 真板通过，已提交 |
-| `central_and_peripheral` | 双向 | central + peripheral + loopback 服务 | 真板通过，已提交 |
-| `iBeacon` | 只广播 | scan + 断言完整 AD 与地址 | 真板通过，已提交 |
-| `periodic_adv` | 只广播（周期） | scan + `periodic.sync` 读周期信道 | 真板通过，已提交 |
-| `periodic_adv_sync` | 同步方 | `periodic.adv.start` + DUT 侧 shell | 真板通过，已提交 |
-| `hid` | 16-bit HID 服务 | GATT client + 配对 + input report 订阅 | 真板通过，已提交 |
-| `pair` | 广播 + 配对 | central + `sec.bond`（legacy） | 真板通过，已提交 |
-| `throughput` | 需要两块板跑同一例程 | 需要仪表侧的吞吐收发模式 | 本期未做（见 §12.2） |
-| `multi_connection` | 需要多个对端 | 一台仪表只提供一个对端 | 本期未做（见 §12.2） |
+| `basc` `cscpc` `hrpc` `cppc` `diss` `tip_cts` | 广播 + 注册 `sifli_app` 服务 | GATT client：scan/connect/discover/read/write/subscribe | 已覆盖；DUT 偶发挂死见 §11.1 |
+| `peripheral` `file_transfer` | 同上 | 同上 | 已覆盖 |
+| `central_and_peripheral` | 双向 | central + peripheral + loopback 服务 | 已覆盖 |
+| `iBeacon` | 只广播 | scan + 断言完整 AD 与地址 | 已覆盖 |
+| `periodic_adv` | 只广播（周期） | scan + `periodic.sync` 读周期信道 | 已覆盖 |
+| `periodic_adv_sync` | 同步方 | `periodic.adv.start` + DUT 侧 shell | 已覆盖 |
+| `hid` | 16-bit HID 服务 | GATT client + 配对 + input report 订阅 | 已覆盖 |
+| `pair` | 广播 + 配对 | central + `sec.bond`（legacy） | 已覆盖 |
+| `throughput` | 需要两块板跑同一例程 | 需要仪表侧的吞吐收发模式 | 未覆盖（见 §11.2） |
+| `multi_connection` | 需要多个对端 | 一台仪表只提供一个对端 | 未覆盖（见 §11.2） |
 
-## 9. 迁移
+## 9. 验证
 
-1. 先把 `BlePeer` 的调用面拆成 `InstrumentConsole` + `BleInstrument`，现有用例行为不变。
-2. 新固件实现 `@info/@req/@ok/@evt`，先支持最小命令集。
-3. 切换 `central_and_peripheral/pytest_peer` 到 `bt_peer:ble`。
-4. 删除 `tools/sdk_test/ble_peer.py` 与旧的 transcript 解析测试；
-   重写为协议层测试。
-5. 逐例程补 `testcase.yaml` + pytest 套件（M2/M3）。
-6. 实验室固件与宿主代码同批切换；旧 `diss` 协议不保留兼容层。
-   若实验室无法同批更新，先不合入，避免两套协议并存。
-
-## 10. 验证
-
-### 10.1 无硬件
+### 9.1 无硬件
 
 ```bash
 python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"
 python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 ```
 
-协议单测覆盖：
+协议单测覆盖的是 console 的契约本身：跨读的分块行、`@ok`/`@err` 按 id 配对、
+迟到与重复答复不落入下一次请求、空 payload、跨 handle 的事件保留、队列上限与
+`event_overflow`、`first_seq` 缺失时报错、能力不足时报错、fixture 重名与
+保留名报错。
 
-- 分块行、`\r\r\n`、交错 ulog；
-- `@ok`/`@err` 按 id 配对；
-- 迟到响应被丢弃且不影响下一次请求；
-- 空 payload（`len=0`）；
-- 跨 handle 通知保留；
-- 事件队列上限与 `event_overflow`；
-- `@info` 能力不足 / 版本不符；
-- 重复声明同一 fixture 报错；
-- fixture 名与 `dut` 冲突报错。
+### 9.2 反向验证（必须）
 
-### 10.2 反向验证（必须）
+一条用例写没写对，只有在故意打红之后才知道：
 
-每条新用例都要故意打红：
+- DUT 侧坏掉（去掉广播或服务注册、发错字节）→ 断言红；
+- 仪表侧造假（`@ok` 却没执行、`len` 与 `data` 不符、旧镜像）→ 宿主报错，
+  不能静默通过；
+- 断电或断串口 → `peer info` 超时并带 transcript。
 
-- DUT 侧注释掉广播/服务注册 → 用例红；
-- 仪表 `gap.scan` 不返回结果 → `strongest` 断言红；
-- 仪表返回 `@ok` 但未真正执行写 → DUT 侧断言红；
-- 仪表固件缺 `proto=1` 或能力 → `expect_ready()` 明确失败；
-- 仪表返回 `len` 与 `data` 不一致 → 宿主报协议错误；
-- 断电/拔串口 → `peer info` 超时并带 transcript；
-- 旧 `diss` 镜像 → 即使 shell 有响应也必须失败。
+AGENTS.md 对此有硬性要求，设计上也要保证失败的信号是"用例红"，而不是
+"跳过"。
 
-### 10.3 真板
+### 9.3 真板
 
 ```bash
-sdk.py test list -T example/ble/central_and_peripheral
-sdk.py test run -T example/ble/central_and_peripheral -p <board>
-sdk.py test run -T example/ble/central_and_peripheral --tag peer -p <board>
+sdk.py test list -T <example>
+sdk.py test run  -T <example> -p <board>
 ```
 
-检查：
+要看的不是"绿了"，而是证据链：`device.log` 与 `<fixture>.log` 两端都在；
+断言针对的是 DUT 自己的输出（连接、配对、收到的数据），不是仪表的一厢情愿。
 
-- `device.log` 与 `bt_peer-ble.log` 双端日志都在；
-- `sdk.py test run` 退出码正确；
-- 逐例程跑 M2/M3。
-
-**首次真板通过（2026-11-07）**：DUT `sf32lb52-lcd_a128r16`（COM8）+ 仪表
-`sf32lb58-lcd_n16r32n1_qspi`（COM6，`fw=bt_peer-m2`），
-`ble_central_and_peripheral.peer` 7/7 通过（scan/connect/discover/write/read/
-subscribe/5 条通知）。这次实测暴露并修掉了三个传输层问题：
-
-1. ulog 的 `ULOG_LINE_BUF_SIZE=128` 截断长 `@evt adv` 行 → 协议行改为直接写
-   console 设备，绕开 ulog 行缓冲；
-2. ulog 的颜色码会粘在 `@ok`/`@evt` 行首 → 固件关 `ULOG_USING_COLOR`，宿主
-   解析前剥 ANSI；
-3. `msh />` 提示符没有换行，异步事件会变成 `msh />@evt ...` → 固件每条协议
-   行前加换行，宿主也识别提示符后的 `@`。
-
-同一镜像上还手工验证了补齐的调参 op：
-
-```text
-gap.conn_params link=1 interval_min_ms=15 interval_max_ms=30 -> @ok
-gap.phy         link=1 phy=2                               -> @ok   # 1M/2M/Coded
-gap.data_len    link=1 tx_octets=251 tx_time=2120          -> @ok
-adv.start / adv.data / adv.stop                            -> @ok
-```
-
-## 11. 经典蓝牙扩展
+## 10. 经典蓝牙扩展
 
 结论：**传输、协议、注册表、binding/分配这四层可以直接复用；
 profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。**
@@ -644,20 +591,21 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 - 固件加 `classic/` service plugins（A2DP SRC+SNK、AVRCP CT+TG、
   HFP HF+AG、SPP、L2CAP/3SCO）；
-- 宿主加 `BtClassicInstrument`，通过 `bt_peer.classic` 暴露；
+- 宿主的 `BtClassicInstrument` 已有骨架（inquiry / connect / disconnect / SPP），
+  接上真实的 `btc.*` 实现即可，通过 `bt_peer.classic` 暴露；
 - binding 加 `bt_peer:classic`；
 - 用例参数改为 `bt_peer:classic`；
 - `example/bt` 的工程布局是扁平 `project/`，没有 `project/hcpu`；
   测试用例的 `project_dir` 要按这个写。
 
-## 12. 风险
+## 11. 风险
 
-### 12.1 已知的、不是本期能修的
+### 11.1 已知的、不是本期能修的
 
-- **经典蓝牙 profile 例程偶发挂死**：早期几次 `hrpc` / `basc` / `cppc` 在 DUT 打印
-  `Page scan enbd` 之后 HCPU 不再响应，仪表侧看到 HCI reason 62；本期复测它们
-  都通过并已提交，重跑即可恢复，根因未定位。`cscpc` / `diss` / `tip_cts` 尚无套件。
-  提交后若再遇到同样的挂死，先重跑、再判断是不是例程侧的偶发问题。
+- **经典蓝牙 profile 例程偶发挂死**：`hrpc` / `basc` / `cppc`（以及尚未写套件的
+  `cscpc` / `diss` / `tip_cts`）有时在 DUT 打印 `Page scan enbd` 之后 HCPU 不再
+  响应，仪表侧看到 HCI reason 62；重跑即恢复，根因未定位。遇到时先重跑，再判断
+  是不是例程侧的问题。
 - **Secure Connections 配对失败**：52x DUT 与 58x 仪表做 SC 配对时双方都报
   DHKey check failed（`0x6B` / `0x7B`）。legacy 配对正常，`hid` 与 `pair`
   用例因此显式请求 `auth=legacy`；这两处例程只需要“加密链路”，不需要 SC。
@@ -666,6 +614,9 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
   支持 passkey 需要把 `sec.bond` 拆成“开始/等待”两步。
 - **命令行长度**：msh 实测在 ~500 字符以上拿不到响应（名义 1024），
   所以 `adv.data` / `gatt.write` 的大负载仍受限；`peer data` 续行未实现。
+- **被测例程自身的两个缺陷**（测试侧只绕开、不修）：`iBeacon` 的
+  `cmd_diss adv_update` 解析不出 UUID 字符串（只写进两个字节）；`periodic_adv`
+  的 `cmd_diss keep_per stop` 停不住周期数据的更新。
 
 1. **固件工作量**：GAP/GATT/安全/周期广播多套逻辑，比宿主侧大。
    M1 只做最小命令集，M2/M3 增量补。
@@ -684,7 +635,7 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
     `Failed to download stub: Timeout("waiting for shell prompt")`（板子没进入
     下载模式），重跑即可；不要把它当成用例失败去改用例。
 
-### 12.2 两个例程本期未覆盖的原因
+### 11.2 两个例程本期未覆盖的原因
 
 - `throughput`：例程本身要求两块板都跑它自己（一边 central 一边 peripheral），
   仪表要参与就得实现一条吞吐收发通路（大块数据双向持续传输），
@@ -692,7 +643,7 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 - `multi_connection`：例程的价值在一条 DUT 同时连多个对端；
   一台仪表只代表一个对端，实验室需要多台 `bt_peer` 才能验证。
 
-## 13. 已确认决策
+## 12. 已确认决策
 
 - 本期只做 BLE，不做 Q2（电流表）。
 - 新建专用固件工程，不扩展现有例程。
@@ -700,48 +651,22 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 - 设计文档放在 `tools/sdk_test/BT_PEER_DESIGN.md`。
 - 不考虑 `lcpu_general`（小核 controller 直接 `AddLCPU` 引用）。
 
-## 14. 下一期 TODO
+## 13. 下一期 TODO
 
-下面这些是本期审核（宿主层功能/架构 + 逐套件）里明确留下、但不阻塞已提交用例的项，
-按“先修哪个”排序。每条都写了为什么。
+下面这些是现在还欠的：宿主层残余、固件扩展、未覆盖的例程。按“先修哪个”排序，
+每条都写了为什么；已完成的实现细节不在这里重复，设计层面的结论已经写进
+§6 / §7。
 
-### 14.1 宿主层（先做，都是同一个模式被复制了多次）
+### 13.1 宿主层的残余项
 
-1. **`InstrumentConsole.command_events()`**：把“drain → 取固件边界 → 发请求 →
-   按 `count` 取 N 个事件”收敛成一个原语。现在 `scan()` / `discover()` /
-   `list_links()` / `classic.inquiry()` 各写了一遍，`list_links` 曾经漏了边界；
-   新的“产生事件的 op”（`periodic.sync`、以后的 `dev.list` 扩展）还得再抄一遍。
-2. **fixture 引用拆成“能力集合”与“实例 pin”**：现在 `bt_peer:ble,classic`
-   里的 `:param` 既当能力又当实例名，`pytest_plugin` 把它整个传给
-   `expect_ready()`，所以 `bt_peer:peer1` 会报能力错误；同时
-   `FixtureRef.accepts` 做的是精确字符串比较，双能力仪表无法服务只要 `:ble` 的用例。
-   建议写成 `bt_peer@peer1:ble,classic` 或在 fixture 解析层把两者分开。
-3. **`register_instrument()` 目前不产生 pytest fixture**：fixture 在插件导入时
-   一次性生成，`conftest` 之后注册的新仪器用不了。改成在 `pytest_configure`
-   里生成，或明确写死“必须在插件导入前注册”。顺带校验工厂函数接受 `capability=`。
-4. **`ble_server.py` 归属**：它编码的是某一族例程的 DUT 日志文本（`sifli_app`、
-   `SIFLI_APP-`、`ADV start resutl`、`CCCD 1`），放在通用的 `instruments/`
-   包里和设计目标相反。移到 `tools/sdk_test/suite_helpers/` 一类的位置，
-   `instruments/` 只留线协议与宿主 API。
-5. **`wait_notification()` / `wait_read()` 的 `since_seq` 默认值**：默认 `None`
-   允许消费上一个测试留下的事件，是设计里事件队列要防的假绿。改成必填，
-   或默认取调用时刻的 `last_seq`。
-6. **迟到/重复响应的记账**：重复的 `@ok/@err` 会被存进 `_responses` 永不清理，
-   `_expired`/`_sent` 也无界增长。把“已回答过的 id 又来一次”记成
-   `duplicate_responses` 并给出告警。
-7. **`_PROTOCOL_START_RE` 在整行任意位置匹配**：为了兼容 `msh />@evt` 才这样，
-   但 ulog 里偶然出现 `@ok ...` 的文本会被当成真答复。只在行首或紧跟提示符时接受。
-8. **高频事件与宿主队列**：`_take_event()` 只是跳过 `since_seq` 之前的匹配，
-   并不把它们从队列里删掉；仪表若按控制器速率上报（周期广播实测约 650 条/秒），
-   队列会被塞满，每次等待都要整表遍历，宿主会卡死在夹具里（表现为 pytest
-   无输出、退出码 1）。固件侧已经约定“只在变化时上报”（`@evt periodic`），
-   宿主侧仍应把被边界过滤掉的旧事件真正丢弃，并把“单类事件的上报速率”
-   纳入夹具的启动检查。
-9. **文档与实现对表**：§6.4 的 API 列表还没补 `start/stop_periodic_advertising`、
-   `sync_periodic`、`wait_periodic`、`wait_read`、`exchange_mtu`、`notify`、
-   `wait_passkey`、`list_links`、`descriptor_uuids`、`connect` 回复里的 `role/interval_ms`。
+- 单类事件的上报速率没有自动化检查，靠“固件只在变化时上报”加“宿主丢弃过期
+  事件”两道防线；出现新的高频事件源时要补一道启动期检查。
+- 计数（`late` / `stray` / `duplicate` / `overflow` / `stale`）只出现在失败信息里，
+  正常跑完不汇总；排查“数据看起来丢了”时它们本该先说话。
+- 协议行识别假设提示符是 `msh ...>`；换提示符的固件会静默丢弃应答。
+- 事件队列只允许向前消费，没有“看一眼再放回去”的能力。
 
-### 14.2 固件
+### 13.2 固件
 
 1. **`sec.bond` 拆成“开始 / 等待”两步**：现在它等到配对完成才回 `@ok`，
    测试线程被卡住，passkey 流程（对端要人在配对过程中输入数字）无法实现。
@@ -754,51 +679,30 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
    `expect_ready()`，然后在用例中途 `@err unsupported`。拆成
    `ble` / `ble.periodic` / `sec`，宿主按子能力发 API。
 
-### 14.3 用例
+### 13.3 用例
 
 1. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
    （`bt_peer:ble` + 发现/写读/订阅）。
 2. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
-   见 §12.2。
+   见 §11.2。
 3. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
    一台仪表只代表一个对端。
 4. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
    DHKey check failed 的原因（`0x6B`/`0x7B`）。定位前 `hid`/`pair` 继续显式用
    `auth=legacy`，并在用例注释指向这里。
 
-### 14.4 README 里写了、套件还没断言的行为
+### 13.4 覆盖缺口
 
-逐例程对照 README 的“预期结果”后，下面这些缺口不是假绿（现有断言是真的），
-而是覆盖不全。前两条值得优先补。
+现有断言都是真的，这些是“例程的主体功能还没有对端能力去测”的缺口：
 
-- **`file_transfer`**：例程的头号功能完全没测——串行传输服务（`sifli_sd`）与
-  `file_recv` / `ls` 流程。当前套件测的是同族共用的 `sifli_app` 回环服务。
-  最小一步：发现 `sifli_sd` 服务；完整一步：给仪表加“推一个文件”的能力。
-- **`central_and_peripheral`**：DUT 的 central/GATT-client 半边没跑过
-  （`diss conn_idx` / `search_svc` / `read_val` / `write_val`）。
-  需要仪表先 `svc.register` + `adv.start`，再让 DUT 连上来。
-- **`hrpc` / `basc` / `cppc`**：README 的主体是 profile 客户端（HRP/BAS/CPS），
-  需要仪表侧实现对应服务才能测；当前只覆盖共用服务。
-- **`pair`**：DUT 发起的 `cmd_diss set_sec 0 2` 与 `SHOW PIN` / `SHOW NC` 未测，
-  后者卡在 passkey 流程（见 14.2.1）；读 4 字节、写后打印新值已补。
-- **`periodic_adv`**：`cmd_diss adv_start` / `adv_stop` 对周期广播的作用未补
-  （创建/停止的启动路径本身由套件的第一步覆盖）。
-- **`hid`**：按下/抬起与键码已补；按钮库路径（`CONFIG_USING_BUTTON_LIB`）未测。
-- **`iBeacon`**：`adv_update` / `adv_stop` / `adv_start` 已补。注意
-  `adv_update` 的 UUID 参数在本构建里解析不出来：`uuid_string_to_bytes()`
-  的 `sscanf("%2hhx...")` 只写进两个字节（DUT 自己的
-  `in uuid_string_to_bytes` 十六进制打印是 `0C 00` + 旧 UUID 原样），返回值 2
-  而不是 16，所以套件只断言 major/minor/power 三个数值字段。另有
-  `argc` 未检查导致少传参数越界读，属于例程健壮性问题。
-- **`periodic_adv`**：`keep_per start` 的递增已补；`keep_per stop` 无法断言——
-  例程对这条命令不打印任何东西，且实测停止后周期数据仍按 100 ms 继续变化
-  （工作队列处理函数自己重新提交，`rt_work_cancel` 没拦住），
-  需要先修例程或给它加一条可观察的日志。
-- **`periodic_adv_sync`**：README 说创建成功会打印 `PER_ADV_SYNC created [idx]`，
-  那是 `LOG_D`；套件断言的是 `Create PER_ADV_SYNC result 0`（`LOG_I`）。
-  两条都能看到，套件只覆盖了后者。
-- **`central_and_peripheral` 的英文 README**比中文少一节（扩展广播 251 字节、
-  2M 次广播 PHY、`USING_LE_EXTENSION_ADV` 兼容开关），两份文档需要对齐。
-- **所有 peer 用例都需要第二块板**（`fixture: bt_peer:ble`），但各例程 README
-  的“硬件需求”仍只写“一块开发板 + 手机”，读者按 README 准备会跑不起来。
-- **`peripheral`**：5 秒 CCCD 定时通知已补（README 原写“每一秒”，已改正）。
+- **`file_transfer`**：串行传输服务（`sifli_sd`）与 `file_recv` 流程；当前测的是
+  同族共用的 `sifli_app` 回环服务。需要仪表具备“推文件”的能力。
+- **`central_and_peripheral`**：DUT 作为 central/GATT-client 的那一半
+  （`conn_idx` / `search_svc` / `read_val` / `write_val`）。需要仪表先注册回环
+  服务并广播，让 DUT 连上来。
+- **`hrpc` / `basc` / `cppc`**：主体是 profile 客户端（HRP / BAS / CPS），需要
+  仪表侧实现对应服务。
+- **`pair`**：DUT 发起的配对（`set_sec`）与 `SHOW PIN` / `SHOW NC`；后者依赖
+  passkey 流程（见 13.2.1）。
+- 其余命令级差异（如 `adv_start` / `adv_stop`、按钮库路径）在写套件时按 README
+  逐条补，不单独列。
