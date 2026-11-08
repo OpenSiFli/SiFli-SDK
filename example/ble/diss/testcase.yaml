@@ -1,0 +1,16 @@
+# The peer path for the diss example: the DUT is a GATT server (the shared
+# "sifli_app" 128-bit service), and the bt_peer instrument is the GATT client.
+#
+# Negative verification: break ble_app_service_init() and
+# `test_peer_discovers_the_service` goes red; stop the CCCD timer from
+# starting and `test_the_cccd_timer_notifies_every_five_seconds` goes red;
+# power off the instrument and the first `peer info` never answers.
+tests:
+  - id: ble_diss.peer
+    description: A peer connects to the diss server, discovers it, writes, reads and subscribes.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    timeout: 240
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest
