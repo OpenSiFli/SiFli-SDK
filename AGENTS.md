@@ -187,12 +187,12 @@ The sections below are harness-neutral. These are the mechanics, which are not:
 
 | Capability | Claude Code | DSH |
 |---|---|---|
-| Start a subagent | `Agent(subagent_type="<role>", prompt=<task>)` | `subagent(prompt=<role body> + <task>)` |
+| Start a subagent | `Agent(subagent_type="<role>", prompt=<task>)` | `subagent(description="<role>: <task>", prompt=<role body> + <task>)` — `description` is required |
 | Role source | Auto-registered from `.claude/agents/*.md`; do not inline | Not registered; read the file and inline the body |
 | Inherit context | `Agent(subagent_type="fork")` | `subagent_fork` |
 | Continue the same agent | `SendMessage(agentId, ...)` | `send_message` |
 | Large fan-out | `Workflow`, only when the user asks for it or agrees | `workflow`; ask the user first (only Claude Code enforces it) |
-| Load review rules by name | `Skill("sifli-code-review")` | `skill("sifli-code-review")` |
+| Load review rules by name | `Skill("sifli-code-review")` | `skill("sifli-code-review")` returns only the entry shell `.dsh/skills/sifli-code-review/SKILL.md`; the rules still come from `skills/sifli-code-review/SKILL.md` |
 | Read-only enforcement | `tools:` frontmatter is enforced | Not enforced; prompt + diff check |
 | Isolated parallel writes | `Agent(..., isolation: "worktree")` | none; serialize |
 | Role edits take effect | definitions are loaded at session start; if an edit seems ignored, start a new session | next dispatch (read each time) |
@@ -241,21 +241,24 @@ if it is, use the Claude Code column; if not, inline the role file.
 
 ### Review gate
 
-The Reviewer loads one file: `skills/sifli-code-review/SKILL.md` (single source; this workspace does
-not split `references/`). Its default target is Step 0c — the local uncommitted changes — and that needs
-no checkout. Read Step 1–Step 2, then the step that matches the change: Step 4 for
-`example/` code, Step 3 for example READMEs, Step 3b for `docs/` (also `.agents/` and `AGENTS.md`-style
-agent docs), Step 5 for commit messages, Step 6 for test assets (`pytest/`, `testcase.yaml`,
-`tools/sdk_test/tests/**`, `tools/lab_agent/tests/**`, `tests/**`), Step 7 for the severity labels. The report skeleton is the
-role file's own output format and a `verdict` line is mandatory. The skill is named
-`sifli-code-review` in both harnesses.
+The Reviewer's rules live in one file: `skills/sifli-code-review/SKILL.md` (single source; this
+workspace does not split `references/`). In DSH, `skill("sifli-code-review")` returns only the entry
+shell under `.dsh/skills/`, so the rules themselves still come from that file. Its default target is
+Step 0c — the local uncommitted changes — and that needs no checkout. Read Step 1–Step 2, then the
+step that matches the change: Step 4 for `example/` code, Step 3 for example READMEs, Step 3b for
+`docs/` (also `.agents/` and `AGENTS.md`-style agent docs), Step 5 for commit messages, Step 6 for
+test assets (`pytest/`, `testcase.yaml`, `tools/sdk_test/tests/**`, `tools/lab_agent/tests/**`,
+`tests/**`), Step 7 for the severity labels. The report skeleton is the role file's own output format
+and a `verdict` line is mandatory. The skill is named `sifli-code-review` in both harnesses.
 
 Accept only a report with `verdict` (`block`/`comment`/`approve`), findings carrying the skill's
 severity label (严重/问题/建议/OK), `path:line`, trigger, consequence and minimal fix; items that
-cannot be verified go to "待确认" and are not counted as findings. `approve` means "no blocking issue
-found", not "proven correct"; security, concurrency-model, public-contract and persistence changes
-still need a human decision. The Security Reviewer maps its own labels onto the same scale:
-Critical/High → 严重 (`block`), Medium → 问题 (`comment`), Low → 建议, unproven paths → 待确认.
+cannot be verified go to "待确认" and are not counted as findings. For test assets Step 6.3 overrides
+that: missing reverse-verification evidence is a finding (问题), not 待确认. `approve` means "no
+blocking issue found", not "proven correct"; security, concurrency-model, public-contract and
+persistence changes still need a human decision. The Security Reviewer maps its own labels onto the
+same scale: Critical/High → 严重 (`block`), Medium → 问题 (`comment`), Low → 建议, unproven paths →
+待确认.
 
 ### Acceptance before reporting
 
