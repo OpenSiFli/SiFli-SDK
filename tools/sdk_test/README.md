@@ -12,7 +12,7 @@
 
 **Tier A 全链路已打通并通过自测**（发现 / 能力匹配 / 构建 / 申请硬件 / 烧录 / 复位 /
 四种 harness 中的三种 / JUnit 上报 / `sdk.py test` 入口）。
-**Tier B（CMock 打桩）尚未实现** —— 见文末"未完成"。
+**Tier B（CMock 打桩）的库、mock 生成物与 QEMU 载体已就绪；两个示例工程不在本分支** —— 见文末"未完成"。
 
 框架自测：`tools/sdk_test/tests/` 与 `tools/lab_agent/tests/` **全绿**，都不需要硬件。
 （不写具体数字——它每加一个用例就过期一次，跑一遍比读一行准。）
@@ -125,7 +125,8 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
 
 ## 未完成（明确的下一步）
 
-1. ~~**Tier B / CMock 验收用例 —— 未交付。**~~ **已交付两个工程。**
+1. ~~**Tier B / CMock 验收用例 —— 未交付。**~~ **设计记录为已交付两个工程；当前分支尚未包含。**
+   下面两个工程不在本分支的 `example/test/` 里（现有：`bt_peer`、`hal_real`、`unit_test`）。
    当初记的两处环境阻塞都已不是阻塞：Ruby 装在 `C:\Ruby33-x64`（不在 PATH 上，
    要用绝对路径调）；`pc` 板也不再是唯一出路——载体换成了带芯片身份的 QEMU 板。
 
@@ -149,10 +150,9 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
 2. **`harness: shell`** 仍是设计态（会明确 raise，不会静默空转）。
 
 3. **`backends/pc_sim.py`** 是 stub，抛 `NotImplementedError`。
-   **`backends/qemu.py` 已实现**，能跑 `console` 和 `unity`，不需要 Lab Agent——
-   但**它要驱动的载体不在本分支**（`customer/boards/qemu_*`、`drivers_qemu/`、
-   `tools/qemu/`、`example/qemu/`，见 `DESIGN.md` 开头的范围说明），所以下面这两条
-   现在跑不起来，等载体落地：
+   **`backends/qemu.py` 已实现**，能跑 `console` 和 `unity`，不需要 Lab Agent；
+   它要驱动的载体（`customer/boards/qemu_*`、`drivers_qemu/`、`tools/qemu/`、
+   `example/qemu/`）也已在树内，所以下面这两条现在可以跑：
 
    ```bash
    sdk.py test run -T example/qemu
@@ -184,7 +184,7 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
 1. **`hello_world` 的期望字符串不要从源码推导。** 期望串固化在
    `example/get-started/hello_world/rtt/testcase.yaml` 里，与 `main.c` 的实际输出对齐后才写死。
 
-2. **上板单测不要用 mock。** mock 层（需求 3，CMock）必须跑在非板卡载体上：
-   真板卡的结果上报要走串口 console（→ `drv_usart.c` → `bf0_hal_usart.c`），
-   而"不编译 `drivers/hal`"会把时钟/UART/MPI 一起拿掉，板子既起不来也没有上报通道。
-   详见设计文档的分层模型与需求 3 章节。
+2. **不要给参与板级 bring-up 的依赖打桩。** 真板卡的结果上报要走串口 console
+   （→ `drv_usart.c` → `bf0_hal_usart.c`），而"不编译 `drivers/hal`"会把时钟/UART/MPI
+   一起拿掉，板子既起不来也没有上报通道。这类依赖的用例放 QEMU 载体；其他可隔离的依赖
+   在真板上按 guide §7.3 的表处理。详见设计文档的分层模型与需求 3 章节。

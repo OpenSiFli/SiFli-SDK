@@ -1,6 +1,6 @@
 ---
 name: sifli-code-review
-description: Review SiFli SDK code changes for coding style compliance, logic correctness, RTOS concurrency safety, unnecessary modifications, and clarity. For example code, also checks structure compliance, proj.conf minimality, and readability. For README docs, checks template compliance, clarity, CN/EN consistency, and scores the document. Supports reviewing local uncommitted changes, a local commit SHA, or fetching a specific commit from Gerrit for review.
+description: Review SiFli SDK code changes for coding style compliance, logic correctness, RTOS concurrency safety, unnecessary modifications, and clarity. For example code, also checks structure compliance, proj.conf minimality, and readability. For README docs, checks template compliance, clarity, CN/EN consistency, and scores the document. Supports reviewing local uncommitted changes, a local commit SHA, or fetching a specific commit from Gerrit for review. Also reviews test assets (`testcase.yaml`, `pytest/` suites, `tests/`) and agent docs (`.agents/`, `AGENTS.md`).
 ---
 
 # SiFli SDK Code Review
@@ -144,11 +144,17 @@ git status -s
 
 ## Step 1: Classify Changed Files
 
-Classify each changed file into one of four categories:
+Classify each changed file into one of six categories:
 - **General code**: C source/header files, build scripts (SConscript, SConstruct, Kconfig), configuration files
 - **Example README**: `README.md` or `README_EN.md` files in an example directory
 - **Example code**: C source/header files in `example/` directories (which also requires the general code checks)
 - **SDK documentation**: files under `docs/` directory (`.md`, `.rst`)
+- **Test code**: `pytest/` suites (e.g. `example/*/pytest/`), `testcase.yaml`, the framework's own
+  tests (`tools/sdk_test/tests/**`, `tools/lab_agent/tests/**`), and `tests/**` (Python test files).
+  Also requires the general code checks for the code they contain, plus Step 6. The rest of
+  `tools/sdk_test/` and `tools/lab_agent/` is framework implementation: review it as general code.
+- **Agent docs**: `.agents/`, `AGENTS.md` and similar. Review with Step 3b's clarity and consistency
+  lens; do not score.
 
 > **CRITICAL — Read source files yourself; do NOT delegate to sub-agents.**
 >
@@ -521,7 +527,81 @@ Describe the change in more detail, e.g. how is the problem fixed, why do you ma
 - If the commit touches multiple modules, does the description address each?
 - Are any significant side-effects or behavioral changes mentioned?
 
-## Step 6: Output Format
+## Step 6: Test Code Review (for test assets)
+
+Applies to the test code classified in Step 1. Review the level first, then the quality. Level and
+carrier are independent: a unit test may run on a real board, and an E2E case may run under QEMU.
+
+This repo has two levels:
+
+- **Unit test** — the module under test is the only subject. Its dependencies may be a real
+  peripheral, a RAM-backed register model, or CMock stubs; that does not change the level. Stubbing
+  a dependency that is part of board bring-up (clock, UART, MPI, the whole HAL) is not possible on a
+  real board — the board will not boot; put that case on the QEMU carrier. Other isolatable
+  dependencies follow autotest guide §7.3 and are not restricted by carrier.
+- **End-to-end (E2E)** — the module's external interface and behavior after integration with the
+  other modules: the final effect.
+
+### 6.1 Level Fit
+
+A **seam** is a boundary where the module under test meets something whose behavior it does not
+define (transport, storage, boot, timing/concurrency, link layout, external peer). It is where a
+unit test substitutes a model; every substitution is an assumption that only a real-side test can
+close.
+
+- Does a unit test cover the module's contract — parsing, state machine, arithmetic and boundary,
+  error codes?
+- Does an E2E cover the module's external interface and behavior, and does the case name the real
+  seams it crosses (transport, storage, boot, timing/concurrency, link layout, external peer)?
+- Is one case trying to serve both purposes? Ask for a split: one asserts the module's contract,
+  one asserts the final effect.
+- Is the carrier justified? Re-running pure logic on a real board wastes bench time unless the
+  point is the board's own autorun/parse path (`unit_test.board`); hardware-dependent behavior
+  verified only against a RAM model is a coverage hole. A HAL whose `Instance` is supplied by the
+  caller runs its real implementation on QEMU with RAM registers (`hal_real`), which closes register
+  write semantics but not timing or interrupts.
+
+### 6.2 Coverage Complement
+
+- Do the unit and E2E cases test different things? The same assertion at both levels should be
+  removed from the E2E or downgraded.
+- Does every real seam have at least one test that uses the real side? A board-level unit test can
+  close a driver↔hardware seam; an E2E is not required for that.
+
+### 6.3 Can It Fail
+
+- Does every new case come with reverse-verification evidence: the sabotage, the assertion expected
+  to go red, and the observed output? For a changed existing assertion, the sabotage must land on
+  that assertion. One sabotage per case is enough; a case with ten assertions does not need ten.
+- Does the sabotage target the behavior the case claims to cover? Editing a log line until a
+  grep-based assertion fails does not count unless the log line is itself the contract. For
+  `console` cases, offline verification with synthetic transcripts is valid (first/middle/last
+  occurrence defects and shuffled output); see the autotest guide.
+- Severity: a new case without that evidence is **问题**; a claimed defect fix with no case that
+  would have failed before the fix is **严重**.
+
+### 6.4 Determinism and Isolation
+
+- No fixed `sleep` as synchronization; wait for the event with a timeout.
+- Device state is reset between cases; a case does not depend on a previous case's output.
+- Within a `console` case, `ordered` entries share one cursor: a later entry can borrow its text
+  from the next occurrence, so a defective first occurrence still passes. Anchor the assertion
+  inside a single match, or split the transcript into blocks.
+- Expected strings come from the actual device log, not from the source or README.
+
+### 6.5 Assertion Strength
+
+- Assert on external behavior and real data: bytes on the wire, return value plus side effect, the
+  resulting device state.
+- `assert x is not None`, "no exception", and "the log contains X" are not proof of functional
+  correctness, unless the log line is itself the contract.
+
+### 6.6 Reporting
+
+Describe every case with three separate attributes: level (unit / E2E), carrier (host / QEMU /
+board), and the seam it closes. Do not infer the level from the harness name or from the carrier.
+
+## Step 7: Output Format
 
 **审查报告请使用中文撰写。**
 
@@ -594,6 +674,21 @@ Present the review as a structured report:
 
 #### SDK 文档评分: X/5
 [Brief justification on clarity, CN/EN consistency, and English quality]
+```
+
+**[If test code, add:]**
+
+```
+### 测试审查
+
+#### 级别与接缝
+[unit / E2E, carrier, seams crossed; level fit and coverage complement]
+
+#### 反向验证
+[evidence: sabotage, expected red assertion, observed output — or note it is missing]
+
+#### 未覆盖
+[seams or failure modes with no test]
 ```
 
 **[If local SHA or Gerrit commit, add:]**

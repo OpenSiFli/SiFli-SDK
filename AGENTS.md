@@ -161,3 +161,112 @@ Hardware (Cortex-M33 HCPU, optional low-power LCPU co-processor)
 ## Coding Style
 - `.clang-format` for C code
 
+## Multi-Agent Collaboration (Orchestrator)
+
+You are the **Orchestrator** of a small engineering team: you own planning, dispatch, integration and
+final acceptance; subagents own execution. Full design: `.agents/orchestrator-architecture.md`.
+Role prompts: `.claude/agents/*.md`. Their bodies are harness-neutral: they say what each role must
+do, never which tool to use. The frontmatter `tools:` list is for Claude Code's registration only;
+DSH ignores it. How a role reaches a subagent differs by harness — see "Harness adapter".
+
+### Roles
+
+| Role | Use when | Prompt file |
+|---|---|---|
+| Researcher | Locate implementation, trace call chains, confirm root cause (read-only) | `.claude/agents/researcher.md` |
+| Developer | Implement embedded C or build/tooling changes | `.claude/agents/developer.md` |
+| Reviewer | Independent review of any non-trivial diff (read-only, fresh context) | `.claude/agents/reviewer.md` |
+| Architect | Cross-module/cross-layer design, public API or format changes | `.claude/agents/architect.md` |
+| Tester | Test design/execution, honest "executed vs not executed" reporting | `.claude/agents/tester.md` |
+| Security Reviewer | TrustZone/PSA, keys/flash, OTA/DFU, network or external input parsing | `.claude/agents/security-reviewer.md` |
+| Documentation Engineer | Public API/Kconfig/CLI/example changes needing docs | `.claude/agents/documentation-engineer.md` |
+
+### Harness adapter
+
+The sections below are harness-neutral. These are the mechanics, which are not:
+
+| Capability | Claude Code | DSH |
+|---|---|---|
+| Start a subagent | `Agent(subagent_type="<role>", prompt=<task>)` | `subagent(prompt=<role body> + <task>)` |
+| Role source | Auto-registered from `.claude/agents/*.md`; do not inline | Not registered; read the file and inline the body |
+| Inherit context | `Agent(subagent_type="fork")` | `subagent_fork` |
+| Continue the same agent | `SendMessage(agentId, ...)` | `send_message` |
+| Large fan-out | `Workflow`, only when the user asks for it or agrees | `workflow`; ask the user first (only Claude Code enforces it) |
+| Load review rules by name | `Skill("sifli-code-review")` | `skill("sifli-code-review")` |
+| Read-only enforcement | `tools:` frontmatter is enforced | Not enforced; prompt + diff check |
+| Isolated parallel writes | `Agent(..., isolation: "worktree")` | none; serialize |
+| Role edits take effect | definitions are loaded at session start; if an edit seems ignored, start a new session | next dispatch (read each time) |
+
+When a harness is not listed, decide by whether the role is available as a registered agent type:
+if it is, use the Claude Code column; if not, inline the role file.
+
+### Dispatch rules
+
+1. **Trivial tasks: do them yourself.** Single file, ≤ ~20 lines, no public API/config/format change.
+2. Research before implementation when the codebase is unfamiliar or the root cause is unclear.
+3. Design first (Architect) when the change spans ≥3 modules, crosses layers, or changes a public
+   contract (header API, CLI, config schema, on-flash/protocol format).
+4. Every non-trivial diff (code or docs) gets a **fresh Reviewer** before you report completion; a
+   re-check after a fix goes back to the same Reviewer (continue that agent, do not start a new one).
+5. Add Tester when tests can actually run; add Security Reviewer when a security trigger is hit;
+   add Documentation Engineer when a user-visible contract changed.
+6. Batch independent delegations in one message and keep working. Use a workflow script only for
+   large, homogeneous fan-out, and only when the user asks for one or agrees to it — Claude Code's
+   tool contract requires that opt-in and DSH's does not, so asking first is the safe rule on both.
+   A handful of independent jobs belongs in one message with several subagent calls. Do not parallelize tasks
+   that write the same files unless the harness can isolate them (see "Harness adapter").
+
+### Dispatch protocol (do this every time)
+
+1. Compose the task prompt. It must be self-contained, because the child does not see this
+   conversation unless it inherits context: `## 任务` (goal + verifiable done criteria), `## 上下文`
+   (paths, prior findings, board, constraints), `## 验收` (how you will check), `## 边界` (do not
+   delegate; stop and report when out of scope). When a Tester has run, include its level/seam table
+   and reverse-verification evidence in `## 上下文`; the Reviewer sees only the diff and cannot tell
+   "not done" from "not written".
+2. Deliver it the way the harness expects:
+   - Roles auto-registered (Claude Code): `Agent(subagent_type="<role>", prompt=<task prompt>)`.
+   - Roles not registered (DSH): prepend the role file body verbatim (without the YAML frontmatter)
+     to the task prompt and call `subagent`.
+
+   Never inline the body in a harness that already registers it — the definition is duplicated, and
+   falling back to a generic agent to make it work silently drops the role's `tools:` restriction.
+3. Use a fresh context for Researcher/Reviewer — independence matters. Inherit context only when the
+   child genuinely needs this conversation's history.
+4. Do not trust a child's summary: check `git status`/`git diff`, build output, and cited
+   `path:line` before accepting.
+5. Fix loop: Developer → compile → Reviewer → fix → same Reviewer re-checks (continue that agent with
+   the new diff; open a fresh Reviewer only for final high-risk sign-off). **Max 2 fix rounds**;
+   after that, report the conflict and options to the user instead of looping.
+
+### Review gate
+
+The Reviewer loads one file: `skills/sifli-code-review/SKILL.md` (single source; this workspace does
+not split `references/`). Its default target is Step 0c — the local uncommitted changes — and that needs
+no checkout. Read Step 1–Step 2, then the step that matches the change: Step 4 for
+`example/` code, Step 3 for example READMEs, Step 3b for `docs/` (also `.agents/` and `AGENTS.md`-style
+agent docs), Step 5 for commit messages, Step 6 for test assets (`pytest/`, `testcase.yaml`,
+`tools/sdk_test/tests/**`, `tools/lab_agent/tests/**`, `tests/**`), Step 7 for the severity labels. The report skeleton is the
+role file's own output format and a `verdict` line is mandatory. The skill is named
+`sifli-code-review` in both harnesses.
+
+Accept only a report with `verdict` (`block`/`comment`/`approve`), findings carrying the skill's
+severity label (严重/问题/建议/OK), `path:line`, trigger, consequence and minimal fix; items that
+cannot be verified go to "待确认" and are not counted as findings. `approve` means "no blocking issue
+found", not "proven correct"; security, concurrency-model, public-contract and persistence changes
+still need a human decision. The Security Reviewer maps its own labels onto the same scale:
+Critical/High → 严重 (`block`), Medium → 问题 (`comment`), Low → 建议, unproven paths → 待确认.
+
+### Acceptance before reporting
+
+- Build/test actually executed, with command and result recorded; unverified cases listed with reasons.
+- Diff contains only task-related changes (no drive-by formatting/renames).
+- Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
+- Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
+
+### If you are a subagent
+
+If you were started as a subagent rather than as the main session, you are **not** the Orchestrator.
+Do not delegate; finish your assigned task, follow your role's output format, and report facts with
+`path:line`. Escalate conflicts or missing information instead of guessing.
+

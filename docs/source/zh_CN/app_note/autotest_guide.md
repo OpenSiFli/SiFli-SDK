@@ -7,8 +7,9 @@
 > `example/get-started/hello_world/`（console 与 pytest 两个 harness）。
 >
 > 第 4 节的 QEMU 载体（`customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
-> `tools/qemu/`、`example/qemu/`）与第 7.1 节 CMock 的**两个示例工程**现在也都在树里，
-> 命令可以直接跑。完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
+> `tools/qemu/`、`example/qemu/`）已在树里，板上单测可以在上面跑。第 7.1 节 CMock 的
+> **两个示例工程尚未实现**：它们不在当前树里，命令跑不起来。QEMU 的可用性优先级低于真板路线。
+> 完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
 
 ---
 
@@ -301,6 +302,8 @@ testcase 又用板名指平台，所以"仿真的是哪颗芯片"只能在这一
 > 要碰 `bf0_hal.h` 的用例（CMock 打桩、HAL 单测、`unit_test`）在它上面根本编不过，
 > 而编得过的那些用例换到带芯片的板上一样跑。
 
+> 下面 `hal_mock` 的命令所用的工程尚未进树（见 7.1），这里只说明形态，不是可运行的命令。
+
 ```bash
 scons --board=qemu_sf32lb52x -j8            # 直接构建
 sdk.py test run -T example/test/hal_mock               # 用例自己声明平台
@@ -319,7 +322,7 @@ include 路径与 `SF32LB<nnn>X` / `SOC_BF0_HCPU` / `USE_HAL_DRIVER` 三个宏�
 编译器宏**不等于** Kconfig 符号（`drv_spi_flash.c` 的 `#ifndef SOC_SF32LB55X`
 就满足不了），而且 include 顺序你控制不住——报出来的是"缺寄存器映射"或
 "未知类型名"，跟根因看着毫无关系。`example/test/cmock_unit/` 和
-`example/test/hal_mock/` 都按这个规矩写，可以直接抄。
+`example/test/hal_mock/` 都按这个规矩写（两者尚未进树），落地后可以照着抄。
 
 **注意**：这些板子只存在于 `--board=` 走的 KCONFIG_V2 流程里，不带 `--board=` 的
 旧版 `sdk.py menuconfig` 看不到它们（v1 的芯片是 choice，与 `SOC_QEMU` 互斥）。
@@ -797,11 +800,12 @@ CONFIG_USING_TEST_FWK=y
 
 ### 7.1 打桩：CMock
 
-> CMock 本身与 `mock_*.c/h` 生成物在更早的提交里入库；下面这两个工程和它们依赖的
-> `SOC_QEMU`（第 4 节）现在也都在树里，所以这些命令在本地就能跑起来。
+> CMock 本身与 `mock_*.c/h` 生成物在更早的提交里入库；下面这两个示例工程**尚未实现**，
+> 不在当前树里，所以这些命令跑不起来，表格记录的是预期的形态。工程落地前，生成方式与现有
+> mock 见 `middleware/test_fwk/mocks/README.md`。QEMU 的可用性优先级低于真板路线。
 
 要测的分支在台架上复现不出来时（"擦除失败""写超时""ID 不匹配"），把那个依赖换成
-CMock 生成的 mock。两个现成工程可以抄：
+CMock 生成的 mock。两个示例工程（尚未进树）可以用来参照形态：
 
 | 工程 | 打什么 | 用例数 |
 |---|---|---|
@@ -809,6 +813,7 @@ CMock 生成的 mock。两个现成工程可以抄：
 | `example/test/hal_mock/` | **HAL 函数**（`HAL_QSPI_GET_SR`） | 3 |
 
 ```bash
+# 尚未实现——仅记录预期形态
 sdk.py test run -T example/test/cmock_unit
 sdk.py test run -T example/test/hal_mock
 ```
@@ -1322,7 +1327,7 @@ test:
 | 多设备调度（需求 4） | schema 与插件接口已支持，实际调度未做 |
 | 继电器 / 电源控制 | `transport/relay.py` 只有接口，会抛 `RelayNotAvailable` |
 | `backends/qemu.py` | **已实现**：QEMU 载体可跑 console/unity/pytest，见第 4 节 |
-| CMock 打桩用例 | **已交付**两个工程（中间件 + HAL），见第 7.1 节与 `middleware/test_fwk/mocks/README.md` |
+| CMock 打桩用例 | **后续分支已交付；当前树未包含**，命令跑不起来——见第 7.1 节与 `middleware/test_fwk/mocks/README.md` |
 | 实跑 HAL 的用例 | **已交付**：`example/test/hal_real/` 两条实例（`hal_real.ptc`、`hal_real.crc`），`sdk.py test run -T example/test/hal_real`，见第 7.2 节 |
 | 每实例 `build.log` | **已实现**：编译器输出落盘，不再刷控制台 |
 
@@ -1343,5 +1348,5 @@ test:
 **两条必须记住的**
 
 1. **期望字符串不要从源码推导**，要固化在 `testcase.yaml` 里并跟实际输出对齐。
-2. **上板单测不要用 mock**：真板卡的结果上报要走串口 console，而"不编译 `drivers/hal`"
-   会把时钟/UART/MPI 一起拿掉。打桩只能落在非板卡载体上。
+2. **不要给参与板级 bring-up 的依赖打桩**（时钟、UART、MPI、整个 HAL）：不编它板子起不来。
+   这类用例放 QEMU 载体，或把该依赖抽到可替换的接口后面。其他可隔离的依赖在真板上打桩，按 7.3 节处理。

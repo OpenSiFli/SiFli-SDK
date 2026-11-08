@@ -8,8 +8,10 @@
 > unit tests) and `example/get-started/hello_world/` (the console and pytest harnesses).
 >
 > The QEMU carrier from section 4 (`customer/boards/qemu_*`,
-> `rtos/rtthread/bsp/sifli/drivers_qemu/`, `tools/qemu/`, `example/qemu/`) and the **two CMock
-> example projects** from section 7.1 are in the tree now too, so the commands run.
+> `rtos/rtthread/bsp/sifli/drivers_qemu/`, `tools/qemu/`, `example/qemu/`) is in the tree, and
+> the on-board unit tests run on it. The **two CMock example projects** from section 7.1 are
+> **not implemented yet**: they are not in this tree, so their commands do not run. QEMU
+> availability is a lower priority than the real-board path.
 > For the full boundary, see the table at the top of `tools/sdk_test/DESIGN.md`.
 
 ---
@@ -314,6 +316,9 @@ that identity has to be in the board name, since `--board=<name>` resolves to
 > SoC. It is **gone**: the cases that need `bf0_hal.h` (CMock stubs, the HAL tests, `unit_test`)
 > could not compile against it at all, and the rest run just as well on a board that names a chip.
 
+> The `hal_mock` commands below refer to a project that is not in this tree yet (see 7.1); they
+> illustrate the shape, not a runnable pair.
+
 ```bash
 scons --board=qemu_sf32lb52x -j8            # build directly
 sdk.py test run -T example/test/hal_mock               # the test cases declare their own platform
@@ -330,7 +335,8 @@ and the chip's copy has to win over the carrier's own `drivers_qemu/register.h`.
 a compiler macro is **not the same as** a Kconfig symbol (the `#ifndef SOC_SF32LB55X` in `drv_spi_flash.c`
 will not be satisfied), and you do not control the include order — what comes out is "missing register map" or
 "unknown type name", which looks nothing like the root cause. `example/test/cmock_unit/` and
-`example/test/hal_mock/` both follow this rule, so you can copy them directly.
+`example/test/hal_mock/` both follow this rule (neither is in this tree yet), so copy the shape
+when they land.
 
 **Note**: these boards only exist in the KCONFIG_V2 flow that `--board=` goes through; the old
 `sdk.py menuconfig` without `--board=` cannot see them (in v1 the chip is a choice, mutually exclusive with `SOC_QEMU`).
@@ -837,11 +843,15 @@ and the host-side parser tolerates both LF and CRLF.
 
 ### 7.1 Stubbing: CMock
 
-> CMock itself and the `mock_*.c/h` generated artifacts came in with an earlier commit; the two projects below
-> and the `SOC_QEMU` they depend on (section 4) are in the tree now too, so these commands run locally.
+> CMock itself and the `mock_*.c/h` generated artifacts came in with an earlier commit. The two
+> example projects below are **not implemented yet** in this tree, so the commands do not run;
+> the table records the intended shape. Until they land, see `middleware/test_fwk/mocks/README.md`
+> for the generator and the existing mocks. QEMU-carrier availability is a lower priority than the
+> real-board path.
 
 When the branch you want to test cannot be reproduced on the bench ("erase failure", "write timeout", "ID mismatch"),
-replace that dependency with a CMock-generated mock. Two ready-made projects to copy from:
+replace that dependency with a CMock-generated mock. Two intended example projects (not yet in this
+tree) to copy the shape from:
 
 | Project | What it stubs | Cases |
 |---|---|---|
@@ -849,6 +859,7 @@ replace that dependency with a CMock-generated mock. Two ready-made projects to 
 | `example/test/hal_mock/` | **HAL functions** (`HAL_QSPI_GET_SR`) | 3 |
 
 ```bash
+# not implemented yet -- kept for the intended shape
 sdk.py test run -T example/test/cmock_unit
 sdk.py test run -T example/test/hal_mock
 ```
@@ -1387,7 +1398,7 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 | Multi-device scheduling (requirement 4) | the schema and the plugin interface support it; the actual scheduling is not done |
 | Relay / power control | `transport/relay.py` has only the interface and raises `RelayNotAvailable` |
 | `backends/qemu.py` | **implemented**: the QEMU carrier can run console/unity/pytest, see section 4 |
-| CMock stubbing cases | **delivered** as two projects (middleware + HAL), see section 7.1 and `middleware/test_fwk/mocks/README.md` |
+| CMock stubbing cases | **delivered on a follow-up branch; not in this tree yet**, so the commands do not run — see 7.1 and `middleware/test_fwk/mocks/README.md` |
 | Real-HAL cases | **delivered**: `example/test/hal_real/` with two instances (`hal_real.ptc`, `hal_real.crc`), `sdk.py test run -T example/test/hal_real`, see section 7.2 |
 | Per-instance `build.log` | **implemented**: compiler output goes to disk instead of flooding the console |
 
@@ -1408,5 +1419,7 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 **Two things you must remember**
 
 1. **Do not derive the expected strings from the source code**; fix them in `testcase.yaml` and keep them aligned with the actual output.
-2. **Do not use mocks for on-board unit tests**: a real board reports its results over the serial console, and "not compiling `drivers/hal`"
-   takes out the clock/UART/MPI along with everything else. Stubbing can only live on a non-board carrier.
+2. **Do not stub a dependency that is part of board bring-up** (clock, UART, MPI, the whole HAL):
+   without it the board will not boot. Put that case on the QEMU carrier, or move the dependency
+   behind a replaceable interface. Stubbing other isolatable dependencies on a real board follows
+   section 7.3.

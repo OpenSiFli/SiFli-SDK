@@ -15,7 +15,7 @@
 - Lab Agent = MVP 单机 runner + 手工 binding。
 - MVP 必通链路 = hello_world console 端到端 + 真板卡 Unity 单测跑通调度。
 
-**一个关键澄清（改变了分层）**：用户指出"mock flash 驱动就不会真的上板测试了，因为没有真实 flash 驱动板子无法运行程序"。精确地说——XIP 取指走硬件 MPI 映射、不经由 `drv_spi_flash.c`，所以只排这一个文件未必起不来；但**整个 `drivers/hal` 不编译**则时钟/RCC、UART、pinmux、MPI 全无，板子确实跑不起来，也没有串口上报通道。更根本的是语义：被测对象是 flash 驱动本身时，在真 flash 上跑它没有意义。**结论：mock 层必须有非板卡载体**——这也正好解释了 docx 那句"SDK 侧的测试可以不需要依赖任何硬件"。
+**一个关键澄清（改变了分层）**：用户指出"mock flash 驱动就不会真的上板测试了，因为没有真实 flash 驱动板子无法运行程序"。精确地说——XIP 取指走硬件 MPI 映射、不经由 `drv_spi_flash.c`，所以只排这一个文件未必起不来；但**整个 `drivers/hal` 不编译**则时钟/RCC、UART、pinmux、MPI 全无，板子确实跑不起来，也没有串口上报通道。更根本的是语义：被测对象是 flash 驱动本身时，在真 flash 上跑它没有意义。**结论：mock 层必须有非板卡载体**（指整树跳过 `drivers/` 的方案；个别可隔离的依赖在真板上仍按指南 §7.3 处理）——这也正好解释了 docx 那句"SDK 侧的测试可以不需要依赖任何硬件"。
 
 ---
 
@@ -35,6 +35,10 @@
 >
 > 下文凡提到这些的地方，请按这个边界读：**`backends/qemu.py` 这个后端本来就在框架那一笔里，
 > 载体随后一笔才到，现在两者都在树里**——QEMU 这条路线是跑通了的既成事实，不再是设计意图。
+>
+> **当前分支状态（2026-11）**：`external/cmock/` 与 `middleware/test_fwk/mocks/` 已在树内；
+> `example/test/cmock_unit/`、`example/test/hal_mock/` 仍不在本分支，下文标"已交付"的记录指
+> 设计/后续分支，不代表本分支可直接运行。QEMU 路线的可用性优先级低于真板。
 >
 > （示例用例工程 `example/test/unit_test/` 与 `example/get-started/hello_world/` 的
 > `testcase.yaml` 曾列在上面，现已随框架一起提交。）

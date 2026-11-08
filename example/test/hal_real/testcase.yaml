@@ -1,8 +1,9 @@
 # Real HAL implementations, running on the QEMU carrier with their peripheral
 # registers backed by RAM.
 #
-# The other two unit-test projects stop short of this. cmock_unit and hal_mock
-# replace a module or a HAL symbol with a CMock mock and measure what calls it --
+# The other two unit-test projects (not present in this tree yet) stop short of
+# this. cmock_unit and hal_mock replace a module or a HAL symbol with a CMock mock
+# and measure what calls it --
 # which answers "what does the driver do when the HAL reports this", and cannot
 # answer "does the HAL do the right thing". Here the module under test *is* the
 # HAL: drivers/hal/bf0_hal_ptc.c and bf0_hal_crc.c are compiled from source and
