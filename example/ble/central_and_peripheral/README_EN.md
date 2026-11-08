@@ -18,7 +18,7 @@ For rt_device examples, also list the configuration switches used in this exampl
 1. The finsh commands for this example can be printed by entering "diss help" to show commands and usage methods.
 2. When operating as a slave device, the board starts advertising upon boot with the name SIFLI_APP-xx-xx-xx-xx-xx-xx, where xx represents the Bluetooth address of the device. It can be connected via BLE apps on mobile phones.
 3. When operating as a master device, you can search for other slave devices and initiate connections through finsh commands.
-4. When operating as a GATT server, write and read operations can be performed from the mobile client, or by enabling CCCD, the device will update the characteristic value every second.
+4. When operating as a GATT server, write and read operations can be performed from the mobile client, or by enabling CCCD and writing 0x11 to trigger a 20-packet notification burst; this example has no periodic timer.
 5. When operating as a GATT client, you can search and display the server's database through finsh commands, and perform read or write operations on characteristic values.
 
 

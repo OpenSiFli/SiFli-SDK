@@ -9,7 +9,7 @@ The example can run on the following development boards:
 * sf32lb58-lcd series
 
 ## Overview
-* This is an application example based on the Sifli BLE protocol stack that can read the microcontroller's battery level value. It includes the following functions: creation and registration of custom GATT services, BLE advertising (for Bluetooth connection), data read/write and notification mechanisms, and BASC functionality.
+* This is an application example based on the Sifli BLE protocol stack. Its custom GATT service holds a 32-bit value that accepts read and write; the battery level is what the BASC client reads from *another* device, and the local service has no battery characteristic. It includes creation and registration of custom GATT services, BLE advertising (for Bluetooth connection), data read/write and notification mechanisms, and BASC functionality.
 
 ## GATT Protocol
 GATT (Generic Attribute Profile, Generic Attribute Configuration File) is the core specification for low-power Bluetooth (BLE) communication, defining a unified framework and rules for data interaction between devices. It organizes data based on the attribute concept and is the foundation for BLE devices to implement service discovery, data read/write, real-time notifications, and other functions. GATT is essentially a data interaction protocol.

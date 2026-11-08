@@ -16,7 +16,7 @@ This example demonstrates how to implement GAP peripheral and GATT server functi
 <!-- Explain how to use the example, such as which hardware pins to connect to observe waveforms, compilation and flashing can reference related documentation.
 For rt_device examples, also list the configuration switches used in this example, for example PWM example uses PWM1, need to enable PWM1 in onchip menu -->
 1. When operating as a slave device, the board starts advertising upon boot with the name SIFLI_APP-xx-xx-xx-xx-xx-xx, where xx represents the Bluetooth address of the device. It can be connected via BLE apps on mobile phones.
-2. When operating as a GATT server, write and read operations can be performed from the mobile client, or by enabling CCCD, the device will update the characteristic value every second.
+2. When operating as a GATT server, write and read operations can be performed from the mobile client, or by enabling CCCD, the device will update the characteristic value every 5 seconds (`BLE_APP_TIMEOUT_INTERVAL`).
 
 
 ### Hardware Requirements
