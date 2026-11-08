@@ -688,13 +688,27 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 ### 13.3 用例
 
-1. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
+1. **`file_transfer` 的文件传输**（`sifli_sd` → 表盘协议 → `/file_recv/`）：
+   这是该例程的头号功能，当前套件只测了同族共用的 `sifli_app` 回环服务。
+   补不了的原因在固件，不在测试：
+   - 数据走串行传输特征，每包是 `[CateID=0x04][Flag][Length][Payload]`，
+     Flag 区分完整/首/续/末包；
+   - 其上还有一层多步握手：`APP_START`（DUT 回分区信息）→ `FILE_START`
+     （文件名 + 4 字节对齐长度，DUT 回启动响应）→ 若干数据分包（累加 CRC32，
+     末包尾部 4 字节是整文件 CRC）→ 收尾；
+   - 仪表要读回这些应答，才能继续下一步。
+
+   所以需要给 `bt_peer` 加一个“推文件”能力（`file.push`：分帧 + 握手 + CRC +
+   应答解析 + 超时重试），再在套件里推一个小文件并断言 DUT 打印
+   `file recv success!`、`/file_recv/` 下出现该文件。这是固件工作量，单列，
+   不与“照 README 补断言”混在一起。
+2. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
    （`bt_peer:ble` + 发现/写读/订阅）。
-2. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
+3. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
    见 §11.2。
-3. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
+4. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
    一台仪表只代表一个对端。
-4. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
+5. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
    DHKey check failed 的原因（`0x6B`/`0x7B`）。定位前 `hid`/`pair` 继续显式用
    `auth=legacy`，并在用例注释指向这里。
 
@@ -702,8 +716,8 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 现有断言都是真的，这些是“例程的主体功能还没有对端能力去测”的缺口：
 
-- **`file_transfer`**：串行传输服务（`sifli_sd`）与 `file_recv` 流程；当前测的是
-  同族共用的 `sifli_app` 回环服务。需要仪表具备“推文件”的能力。
+- **`file_transfer`**：串行传输与表盘协议（见 13.3.1 的工作量与原因）；现在是
+  同族共用的 `sifli_app` 回环服务。
 - **`central_and_peripheral`**：DUT 作为 central/GATT-client 的那一半
   （`conn_idx` / `search_svc` / `read_val` / `write_val`）。需要仪表先注册回环
   服务并广播，让 DUT 连上来。

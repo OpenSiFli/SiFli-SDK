@@ -5,6 +5,13 @@
 The DUT is a GATT server on legacy connectable advertising. It does not bring
 up the classic stack. Notifications come from a 5-second CCCD timer (4-byte
 packets) and the 0x1111 burst trigger (20 packets of 10 bytes).
+
+What this does **not** cover is the example's headline feature: the file
+transfer itself, which is the watchface download protocol layered on the
+`sifli_sd` serial-transport service. Driving it needs a "push a file" client in
+the instrument firmware, so it is tracked as firmware work in
+BT_PEER_DESIGN.md 13.3.1 rather than pretended by a test that never sends a
+file.
 """
 
 from __future__ import annotations
