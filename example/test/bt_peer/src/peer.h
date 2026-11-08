@@ -15,7 +15,7 @@
 /** Protocol version reported by @info. */
 #define PEER_PROTO_VERSION      1
 /** Firmware identity reported by @info. */
-#define PEER_FW_ID              "bt_peer-m4"
+#define PEER_FW_ID              "bt_peer-m5"
 
 /**
  * Capabilities advertised by @info.
@@ -32,14 +32,24 @@
 #define PEER_MAX_LINKS          8
 #define PEER_MAX_ADV_REPORTS    64
 /*
- * Sized so a full payload still fits one protocol line: "len=460 data=<920>"
- * plus the command/reply prefix is under PEER_LINE_MAX (1024) and under the
- * 1024-byte FINSH_CMD_SIZE. Larger values would be silently truncated by the
- * shell on the way in and by rt_snprintf on the way out.
+ * Bound for payloads the instrument *emits* (an `@evt notify`, an adv report):
+ * "len=460 data=<920>" plus the prefix fits PEER_LINE_MAX. Requests are a
+ * different budget -- the shell damages long lines, see PEER_CMD_MAX -- so a
+ * caller cannot send this much in one command.
  */
 #define PEER_MAX_PAYLOAD        460
 #define PEER_ADV_DATA_MAX       255
 #define PEER_LINE_MAX           1024
+/**
+ * Longest request line the shell takes reliably, reported as `@info max_line`.
+ *
+ * FINSH_CMD_SIZE is 1024, but in practice a line beyond a few hundred
+ * characters reaches the shell truncated or corrupted (observed: a 201
+ * character line is fine, a 329 character one arrived with a stray NUL and
+ * repeated bytes). The host refuses anything longer instead of letting the
+ * shell damage it silently, so a caller with more data must split it.
+ */
+#define PEER_CMD_MAX            240
 #define PEER_MAX_ARGS           10
 
 /** Result codes used in @err replies. */
@@ -55,6 +65,7 @@
 #define PEER_ERR_NO_MEM         "no_mem"
 #define PEER_ERR_BOND_FAILED    "bond_failed"
 #define PEER_ERR_PROTO          "proto"
+#define PEER_ERR_FILE_FAILED    "file_failed"
 
 /** Event bits signalled from the BLE callback thread. */
 #define PEER_BIT_CONNECTED      (1UL << 0)
@@ -75,7 +86,8 @@
 #define PEER_BIT_ADV_STARTED        (1UL << 15)
 #define PEER_BIT_BOND_DONE          (1UL << 16)
 #define PEER_BIT_PERIODIC_STARTED   (1UL << 17)
-#define PEER_BIT_PERIODIC_STOPPED   (1UL << 18)
+/** A response to the file push arrived (or the link dropped under it). */
+#define PEER_BIT_FILE_RSP           (1UL << 19)
 
 /** "No connection": the stack's conn_idx is uint8_t, so 0xFF is free. */
 #define PEER_NO_CONN                0xFF
@@ -206,11 +218,39 @@ int peer_gatt_client_write(peer_link_t *link, uint16_t handle,
 int peer_gatt_client_subscribe(peer_link_t *link, uint16_t cccd,
                                uint8_t enable, peer_reply_t *reply);
 int peer_gatt_client_mtu(peer_link_t *link, peer_reply_t *reply);
+/**
+ * Write without taking the link's GATT slot and without reporting success.
+ *
+ * For a multi-step exchange that owns the link itself (the file push): it waits
+ * for the response, and on failure it fills @p reply with the ATT/stack result
+ * so the caller can name its own step.
+ */
+int peer_gatt_client_write_raw(peer_link_t *link, uint16_t handle,
+                               const uint8_t *data, uint16_t len,
+                               uint8_t response, peer_reply_t *reply);
 void peer_gatt_client_on_search(void *rsp);
 void peer_gatt_client_on_write_rsp(void *rsp);
 void peer_gatt_client_on_read_error(void *ind);
 void peer_gatt_client_on_disconnect(uint8_t conn_idx);
 int peer_gatt_client_remote_cb(uint16_t event_id, uint8_t *data, uint16_t len);
+
+/* ---- peer_file.c ------------------------------------------------------- */
+/**
+ * Push one file to a peer that runs the watchface download server (the
+ * `sifli_sd` serial-transport service).
+ *
+ * @param link   the connection that has already discovered the service
+ * @param handle the data characteristic's value handle
+ * @param name   the file name the peer creates
+ * @param data   the file contents; @p len must be a multiple of 4
+ */
+int peer_file_push(peer_link_t *link, uint16_t handle, const char *name,
+                   const uint8_t *data, uint16_t len, peer_reply_t *reply);
+/** Feed a notification on the data characteristic to an in-flight push. */
+void peer_file_on_notify(uint8_t conn_idx, uint16_t handle,
+                         const uint8_t *data, uint16_t len);
+/** Fail an in-flight push on @p conn_idx; called when the link drops. */
+void peer_file_on_disconnect(uint8_t conn_idx);
 
 /* ---- peer_gatt_server.c ------------------------------------------------ */
 void peer_gatt_server_init(void);

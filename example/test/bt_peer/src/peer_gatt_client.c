@@ -421,6 +421,10 @@ int peer_gatt_client_remote_cb(uint16_t event_id, uint8_t *data, uint16_t len)
             copy = sizeof(g_notify_buf);
         memcpy(g_notify_buf, ind->value, copy);
 
+        /* The file push drives a multi-step exchange whose answers are these
+         * notifications; hand it the payload before it reaches the host. */
+        peer_file_on_notify(ind->conn_idx, ind->handle, ind->value, ind->length);
+
         peer_format_payload(payload, sizeof(payload), g_notify_buf, copy);
         peer_emit_evt("notify", "link=%u handle=%u %s",
                       link->link_id, ind->handle, payload);
@@ -587,7 +591,7 @@ out:
     return rc;
 }
 
-static int peer_gatt_write_raw(peer_link_t *link, uint16_t handle,
+int peer_gatt_client_write_raw(peer_link_t *link, uint16_t handle,
                                const uint8_t *data, uint16_t len,
                                uint8_t response, peer_reply_t *reply)
 {
@@ -658,7 +662,7 @@ int peer_gatt_client_write(peer_link_t *link, uint16_t handle,
     if (peer_gatt_enter_remote(link, reply) < 0)
         return -1;
 
-    rc = peer_gatt_write_raw(link, handle, data, len, response, reply);
+    rc = peer_gatt_client_write_raw(link, handle, data, len, response, reply);
     if (rc == 0)
         peer_reply_ok(reply, "handle=%u", handle);
 
@@ -678,7 +682,7 @@ int peer_gatt_client_subscribe(peer_link_t *link, uint16_t cccd,
     value[0] = enable ? 0x01 : 0x00;
     value[1] = 0x00;
 
-    rc = peer_gatt_write_raw(link, cccd, value, sizeof(value), 1, reply);
+    rc = peer_gatt_client_write_raw(link, cccd, value, sizeof(value), 1, reply);
     if (rc == 0)
         peer_reply_ok(reply, "cccd=%u enable=%u", cccd, enable);
 

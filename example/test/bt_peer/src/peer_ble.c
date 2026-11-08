@@ -376,6 +376,8 @@ static void peer_ble_handle_disconnected(ble_gap_disconnected_ind_t *ind)
 
     /* Release the remote service registration before the slot is reused. */
     peer_gatt_client_on_disconnect(ind->conn_idx);
+    /* A push waiting on this link must fail now, not at its timeout. */
+    peer_file_on_disconnect(ind->conn_idx);
     /* A reused conn_idx must not inherit the previous client's CCCD state. */
     peer_gatt_server_on_disconnect(ind->conn_idx);
 

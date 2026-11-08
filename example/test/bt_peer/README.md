@@ -55,7 +55,7 @@ peer info
 Expected line, verbatim apart from `max_conn` (always 8 on this build):
 
 ```
-@info proto=1 fw=bt_peer-m4 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m5 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
 ```
 
 `proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
@@ -84,7 +84,7 @@ peer data <id> <hex>              # not implemented in M1
 Instrument to host:
 
 ```
-@info proto=1 fw=bt_peer-m4 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m5 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
@@ -127,11 +127,12 @@ Rules that matter when extending it:
 | `svc.notify` | `handle=<h> len=N data=<hex>`; requires the DUT (the GATT client) to have subscribed. |
 | `sec.bond` | `io=<name>` (`no_input_no_output`, `display_only`, `display_yes_no`, `keyboard_only`, `keyboard_display`) or the numeric enum; `auth=<name>` (`none`, `legacy`, `legacy_mitm`, `secure`, `secure_mitm`) or the numeric `gap_auth`; `passkey=<n>`. The `@ok` waits for pairing to finish **and** the link to encrypt, so a protected attribute is immediately writable. |
 | `sec.clear` | Deletes all bonds. |
+| `file.push` | `link=<n> handle=<h> name=<file> len=N data=<hex>`; `N` must be a multiple of 4. Runs the whole watchface download exchange (below) and answers `@ok name=<file> bytes=<N>` only when the peer reports success for every step. The peer must have discovered the `sifli_sd` service, and the host must have subscribed to the data characteristic's CCCD. |
 | `periodic.adv.start` / `periodic.adv.stop` | Periodic advertiser, SID 0. |
 | `periodic.sync` / `periodic.sync.stop` | By scan `index` or `addr`; reports arrive as `@evt periodic`. |
 
 Anything else answers `@err <id> unsupported <op>`. The two remaining gaps are
-`peer data` (chunked continuation; the 1024-byte line covers a 460-byte payload)
+`peer data` (chunked continuation; a request line is capped at 240 characters)
 and `svc.unregister` (the stack cannot remove a service from the ATT database).
 
 ### Events
@@ -162,13 +163,48 @@ later read, and the host can notify the DUT after it subscribes.
 The instrument keeps one shared value (the last write, whichever link made it)
 and one subscription flag per connection, so it can track several links at once.
 
+## File push
+
+`file.push` drives the watchface download server used by
+`example/ble/file_transfer`: the instrument is the GATT client, the DUT is the
+server of the `sifli_sd` serial-transport service. Every value on that service
+is framed as:
+
+```
+[cate_id = 0x04][flag][length u16 LE][payload]
+```
+
+`flag` 0 is a complete packet; 1, 2, 3 are the first / continue / last packets
+of a message too long for one ATT write. Inside the payload, a request is a
+watchface message:
+
+```
+[message_id u16 LE][length u16 LE][data...]
+```
+
+The exchange is START_REQ/RSP (the response carries `max_data_len`), then
+FILE_SEND_START_REQ/RSP (4-byte aligned length including the CRC word, name),
+one FILE_SEND_DATA/RSP per chunk (`index` starts at 0, +1 per chunk), then
+FILE_SEND_END_REQ/RSP and END_REQ/RSP. A non-zero `result` stops the push and
+is reported as `@err file_failed` naming the step. The chunk size is the
+smaller of `max_data_len`, 200 bytes and the negotiated ATT MTU minus the
+4+4+4+3 bytes of framing. The payload is followed by the CRC-32 word
+(polynomial `0x04C11DB7`, init `0xFFFFFFFF`, no final XOR), stored little
+endian the way `file_recv_check_crc32()` rebuilds it.
+
+The responses arrive as notifications on the same data characteristic, so the
+host must subscribe before calling `file_push`; the notification hook feeds
+the push engine and still emits the usual `@evt notify` lines.
+
 ## Known limitations (M1)
 
 - `svc.unregister` answers `unsupported`: the stack cannot remove a service
   from the ATT database, so the loopback service stays registered for the
   lifetime of the image. `state.reset` only clears subscription state.
-- `peer data` (chunked payload continuation) is not implemented; the
-  `max_line=1024` budget covers a 460-byte payload, which is enough for a
-  244-byte MTU write.
+- `peer data` (chunked payload continuation) is not implemented. `max_line`
+  is 240 because a request line longer than a few hundred characters reaches
+  the shell damaged (a 329-character line arrived truncated, with a stray NUL);
+  the hex payload therefore has to stay around 80 bytes. `PEER_MAX_PAYLOAD`
+  (460) is the *output*/event bound, not a request one.
 - Classic Bluetooth is out of scope for this image; the design reserves
   `bt_peer:classic` for a later one.

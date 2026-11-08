@@ -307,7 +307,7 @@ static void peer_emit_info(void)
     rt_snprintf(line, sizeof(line),
                 "@info proto=%d fw=%s caps=%s addr=%s name=%s roles=central,peripheral max_conn=%d ble=5.2 max_line=%d",
                 PEER_PROTO_VERSION, PEER_FW_ID, PEER_CAPS, addr,
-                peer_ble_local_name(), PEER_MAX_LINKS, PEER_LINE_MAX);
+                peer_ble_local_name(), PEER_MAX_LINKS, PEER_CMD_MAX);
     peer_line_out(line);
 }
 
@@ -924,6 +924,46 @@ static int peer_op_adv_data(const peer_args_t *args, peer_reply_t *reply)
     return peer_ble_adv_update(payload, len, reply);
 }
 
+static int peer_op_file_push(const peer_args_t *args, peer_reply_t *reply)
+{
+    static uint8_t payload[PEER_MAX_PAYLOAD];
+    peer_link_t *link = peer_require_link(args, reply);
+    const char *name = peer_arg_get(args, "name");
+    uint16_t len = 0;
+    int handle;
+
+    if (link == RT_NULL)
+        return -1;
+
+    if (name == RT_NULL || name[0] == '\0')
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "name");
+        return -1;
+    }
+
+    if (peer_arg_int(args, "handle", -1, &handle) < 0 ||
+            handle <= 0 || handle > 0xFFFF)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "handle");
+        return -1;
+    }
+
+    if (peer_arg_payload(args, payload, sizeof(payload), &len) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "payload");
+        return -1;
+    }
+
+    /* The file length must carry a 4-byte aligned payload plus the CRC word. */
+    if (len == 0 || (len & 3) != 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "len");
+        return -1;
+    }
+
+    return peer_file_push(link, (uint16_t)handle, name, payload, len, reply);
+}
+
 static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
 {
     peer_reply_t reply;
@@ -983,6 +1023,8 @@ static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
         rc = peer_op_gatt_mtu(args, &reply);
     else if (strcmp(op, "adv.data") == 0)
         rc = peer_op_adv_data(args, &reply);
+    else if (strcmp(op, "file.push") == 0)
+        rc = peer_op_file_push(args, &reply);
     else
     {
         peer_reply_err(&reply, PEER_ERR_UNSUPPORTED, "%s", op);

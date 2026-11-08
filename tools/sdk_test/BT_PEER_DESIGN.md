@@ -201,6 +201,7 @@ gatt.read           link=<n> handle=<h>
 gatt.write          link=<n> handle=<h> response=0/1 len=N data=<hex>
 gatt.subscribe      link=<n> cccd=<h> enable=0/1
 gatt.mtu            link=<n>
+file.push           link=<n> handle=<h> name=<file> len=N data=<hex>
 dev.list
 svc.register        name=loopback
 svc.unregister      name=loopback
@@ -239,12 +240,15 @@ data_len     link=<n> tx_octets=<n> tx_time=<n>
 
 ### 5.5 行长度
 
-244-byte MTU 的 write 需要约 600 字符的 hex 行。仪表固件应把
-`RT_CONSOLEBUF_SIZE` 与 `FINSH_CMD_SIZE` 都调到 1024。若某块板仍放不下：
+`RT_CONSOLEBUF_SIZE` 与 `FINSH_CMD_SIZE` 都调到 1024，但**实际能收的行远短于此**：
+实测 201 字符的命令行正常，329 字符的行到达 shell 时被截断并出现杂散 NUL 与重复
+字节（`file.push` 一次 128 字节载荷时复现）。也就是说超长行的后果是"损坏"而不是
+"没响应"，必须由宿主在发送前拦住。
 
-1. `@info` 报告 `max_line=<n>`；
-2. 宿主在超长时改用 `peer data <id> <hex>` 分批续传；
-3. 宿主在发送前拒绝超过 `max_line` 的单行，而不是等 shell 静默截断。
+因此固件把**请求侧**预算单列成 `PEER_CMD_MAX`（240 字符），并由 `@info max_line`
+上报；`PEER_LINE_MAX`（1024）只约束**输出**行（`@evt adv` 这类）。宿主在
+`_build_request()` 里按 `max_line` 预检，超长直接报错。需要更长载荷时只能分批
+（`peer data` 续行仍未实现，见 13.2.2），不能靠加大 `FINSH_CMD_SIZE`。
 
 ### 5.6 能力校验
 
@@ -351,6 +355,8 @@ class BleInstrument:
     def write(self, link: Link, handle: int, data: bytes, *, response=True) -> None: ...
     def subscribe(self, link: Link, cccd_handle: int, *, enable=True) -> None: ...
     def exchange_mtu(self, link: Link) -> int: ...
+    def file_push(self, link: Link, handle: int, name: str, data: bytes, *,
+                  timeout: float = 60.0) -> None: ...
     def wait_notification(self, handle: int, *, link=None, since_seq=None, timeout=10.0) -> bytes: ...
     def wait_read(self, handle: int, *, link=None, since_seq=None, timeout=10.0) -> bytes: ...
     def wait_passkey(self, *, link=None, since_seq=None, timeout=30.0) -> int: ...
@@ -615,8 +621,9 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 - **passkey 流程**：固件的 `sec.bond` 在配对完成前不回 `@ok`，所以测试线程
   无法在配对过程中把 passkey 敲给对端。当前用例都用 Just Works；
   支持 passkey 需要把 `sec.bond` 拆成“开始/等待”两步。
-- **命令行长度**：msh 实测在 ~500 字符以上拿不到响应（名义 1024），
-  所以 `adv.data` / `gatt.write` 的大负载仍受限；`peer data` 续行未实现。
+- **命令行长度**：msh 名义 1024，但实测 201 字符正常、329 字符到达时已损坏
+  （截断 + 杂散 NUL）。固件把请求预算降到 `PEER_CMD_MAX`=240 并由 `@info
+  max_line` 上报，宿主超长直接拒绝；更大的负载仍需要 `peer data` 续行（未实现）。
 - **52x 上的 DIS 读取要求已认证链路**：明文读回 ATT 0x0F，Just Works 加密后仍是
   0x05。MITM 只能靠 passkey（SC 配对在本台失败），而 passkey 流程又依赖
   `sec.bond` 拆分（见 13.2.1），所以 `diss` 套件只验证 DIS 可被发现并枚举，
@@ -680,35 +687,22 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
    配对结果已经有 `CONNECTION_MANAGER_PAIRING_SUCCEED/FAILED` 可用，加一个
    `wait=0` 与 `@evt bond link=.. result=..` 即可，宿主侧对应
    `start_bond()` / `wait_bonded()`。
-2. **长负载续行**：msh 实测 ~500 字符以上拿不到响应，`adv.data` / `gatt.write`
-   的大负载仍受限。实现 `peer data <index> <hex>` 分段续写，宿主按 `max_line` 切块。
+2. **长负载续行**：请求预算只有 `PEER_CMD_MAX`（240 字符），`adv.data` /
+   `gatt.write` / `file.push` 的载荷都被 hex 长度限制住。实现 `peer data <index>
+   <hex>` 分段续写，宿主按 `max_line` 切块。
 3. **能力细分**：`caps=ble` 是整块能力，一个没编 `peer_periodic.c` 的镜像照样过
    `expect_ready()`，然后在用例中途 `@err unsupported`。拆成
    `ble` / `ble.periodic` / `sec`，宿主按子能力发 API。
 
 ### 13.3 用例
 
-1. **`file_transfer` 的文件传输**（`sifli_sd` → 表盘协议 → `/file_recv/`）：
-   这是该例程的头号功能，当前套件只测了同族共用的 `sifli_app` 回环服务。
-   补不了的原因在固件，不在测试：
-   - 数据走串行传输特征，每包是 `[CateID=0x04][Flag][Length][Payload]`，
-     Flag 区分完整/首/续/末包；
-   - 其上还有一层多步握手：`APP_START`（DUT 回分区信息）→ `FILE_START`
-     （文件名 + 4 字节对齐长度，DUT 回启动响应）→ 若干数据分包（累加 CRC32，
-     末包尾部 4 字节是整文件 CRC）→ 收尾；
-   - 仪表要读回这些应答，才能继续下一步。
-
-   所以需要给 `bt_peer` 加一个“推文件”能力（`file.push`：分帧 + 握手 + CRC +
-   应答解析 + 超时重试），再在套件里推一个小文件并断言 DUT 打印
-   `file recv success!`、`/file_recv/` 下出现该文件。这是固件工作量，单列，
-   不与“照 README 补断言”混在一起。
-2. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
+1. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
    （`bt_peer:ble` + 发现/写读/订阅）。
-3. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
+2. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
    见 §11.2。
-4. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
+3. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
    一台仪表只代表一个对端。
-5. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
+4. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
    DHKey check failed 的原因（`0x6B`/`0x7B`）。定位前 `hid`/`pair` 继续显式用
    `auth=legacy`，并在用例注释指向这里。
 
@@ -716,8 +710,6 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 现有断言都是真的，这些是“例程的主体功能还没有对端能力去测”的缺口：
 
-- **`file_transfer`**：串行传输与表盘协议（见 13.3.1 的工作量与原因）；现在是
-  同族共用的 `sifli_app` 回环服务。
 - **`central_and_peripheral`**：DUT 作为 central/GATT-client 的那一半
   （`conn_idx` / `search_svc` / `read_val` / `write_val`）。需要仪表先注册回环
   服务并广播，让 DUT 连上来。

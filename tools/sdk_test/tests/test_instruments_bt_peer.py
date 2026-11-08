@@ -364,6 +364,33 @@ class TestGattClient(SdkTestCase):
         self.assertIn("nothing useful", str(caught.exception))
 
 
+class TestFilePush(SdkTestCase):
+    def test_file_push_names_the_handle_and_the_payload(self):
+        peer, console = peer_for(
+            {"file.push": lines("@ok 1 name=peer_test.bin bytes=64")}
+        )
+        payload = bytes(range(64))
+
+        peer.ble.file_push(Link(2, "aa"), 21, "peer_test.bin", payload)
+
+        self.assertEqual(
+            console.sent[-1],
+            "peer req 1 file.push link=2 handle=21 name=peer_test.bin "
+            "len=64 data=" + payload.hex(),
+        )
+
+    def test_a_rejected_step_is_an_error_naming_that_step(self):
+        """The peer's result word must not look like a successful push."""
+        peer, _ = peer_for(
+            {"file.push": lines("@err 1 file_failed file.push data_rsp result=3")}
+        )
+
+        with self.assertRaises(InstrumentCommandError) as caught:
+            peer.ble.file_push(Link(0, "aa"), 21, "x.bin", b"\x00" * 4)
+        self.assertEqual(caught.exception.code, "file_failed")
+        self.assertIn("data_rsp", str(caught.exception))
+
+
 class TestLinkTuning(SdkTestCase):
     def test_update_connection_sends_the_requested_parameters(self):
         peer, console = peer_for({"gap.conn_params": lines("@ok 1")})

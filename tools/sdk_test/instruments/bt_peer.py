@@ -480,6 +480,35 @@ class BleInstrument:
         result = self._console.command("gatt.mtu", timeout=timeout, link=link.link_id)
         return _int(result, "mtu", default=0)
 
+    def file_push(
+        self,
+        link: Link,
+        handle: int,
+        name: str,
+        data: bytes,
+        *,
+        timeout: float = 60.0,
+    ) -> None:
+        """Push one file to a peer running the watchface download server.
+
+        ``handle`` is the value handle of the ``sifli_sd`` data characteristic.
+        The caller must have subscribed to that characteristic's CCCD first:
+        every step of the exchange is answered by a notification on it, and the
+        instrument waits for each answer before sending the next request.
+
+        ``data`` must be a multiple of 4 bytes. The instrument appends the
+        CRC-32 word and runs START / FILE_START / DATA / END / FINISH; a peer
+        that rejects a step turns into an ``@err file_failed`` naming the step.
+        """
+        self._console.command(
+            "file.push",
+            timeout=timeout,
+            link=link.link_id,
+            handle=handle,
+            name=name,
+            data=data,
+        )
+
     # -- events --------------------------------------------------------------
 
     def wait_notification(
