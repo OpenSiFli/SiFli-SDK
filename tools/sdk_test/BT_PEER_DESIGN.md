@@ -230,7 +230,7 @@ notify       link=<n> handle=<h> len=N data=<hex>
 read         link=<n> handle=<h> len=N data=<hex>
 write        link=<n> handle=<h> len=N data=<hex>
 passkey      link=<n> value=<n>
-periodic     link=<n> len=N data=<hex>
+periodic     link=<n> len=N data=<hex>   (only when the payload changes)
 mtu          link=<n> mtu=<n>
 conn_params  link=<n> interval_ms=<n> latency=<n> timeout_ms=<n>
 data_len     link=<n> tx_octets=<n> tx_time=<n>
@@ -654,9 +654,10 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 
 ### 12.1 已知的、不是本期能修的
 
-- **经典蓝牙 profile 例程挂死**：`hrpc` `basc` `cscpc` `cppc` `diss` `tip_cts`
-  在 DUT 打印 `Page scan enbd` 之后 HCPU 不再响应，仪表侧看到 HCI reason 62。
-  已确认与仪表改动无关（改动前即复现），套件已写、暂不纳入提交。
+- **经典蓝牙 profile 例程偶发挂死**：早期几次 `hrpc` / `basc` / `cppc` 在 DUT 打印
+  `Page scan enbd` 之后 HCPU 不再响应，仪表侧看到 HCI reason 62；本期复测它们
+  都通过并已提交，重跑即可恢复，根因未定位。`cscpc` / `diss` / `tip_cts` 尚无套件。
+  提交后若再遇到同样的挂死，先重跑、再判断是不是例程侧的偶发问题。
 - **Secure Connections 配对失败**：52x DUT 与 58x 仪表做 SC 配对时双方都报
   DHKey check failed（`0x6B` / `0x7B`）。legacy 配对正常，`hid` 与 `pair`
   用例因此显式请求 `auth=legacy`；这两处例程只需要“加密链路”，不需要 SC。
@@ -679,6 +680,9 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 8. **事件风暴**：宿主有界队列 + `event_overflow`，不静默丢。
 9. **仪表是共享资源**：套件开始时 `state.reset()` 一次；改变全局状态的
    测试自己复位；文档里写明顺序敏感。
+10. **烧录偶发失败**：DUT 走 `sftool` 时偶尔报
+    `Failed to download stub: Timeout("waiting for shell prompt")`（板子没进入
+    下载模式），重跑即可；不要把它当成用例失败去改用例。
 
 ### 12.2 两个例程本期未覆盖的原因
 
@@ -695,3 +699,106 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
 - 固件工程与 fixture 统一叫 `bt_peer`；能力用 `bt_peer:ble` / `bt_peer:classic`。
 - 设计文档放在 `tools/sdk_test/BT_PEER_DESIGN.md`。
 - 不考虑 `lcpu_general`（小核 controller 直接 `AddLCPU` 引用）。
+
+## 14. 下一期 TODO
+
+下面这些是本期审核（宿主层功能/架构 + 逐套件）里明确留下、但不阻塞已提交用例的项，
+按“先修哪个”排序。每条都写了为什么。
+
+### 14.1 宿主层（先做，都是同一个模式被复制了多次）
+
+1. **`InstrumentConsole.command_events()`**：把“drain → 取固件边界 → 发请求 →
+   按 `count` 取 N 个事件”收敛成一个原语。现在 `scan()` / `discover()` /
+   `list_links()` / `classic.inquiry()` 各写了一遍，`list_links` 曾经漏了边界；
+   新的“产生事件的 op”（`periodic.sync`、以后的 `dev.list` 扩展）还得再抄一遍。
+2. **fixture 引用拆成“能力集合”与“实例 pin”**：现在 `bt_peer:ble,classic`
+   里的 `:param` 既当能力又当实例名，`pytest_plugin` 把它整个传给
+   `expect_ready()`，所以 `bt_peer:peer1` 会报能力错误；同时
+   `FixtureRef.accepts` 做的是精确字符串比较，双能力仪表无法服务只要 `:ble` 的用例。
+   建议写成 `bt_peer@peer1:ble,classic` 或在 fixture 解析层把两者分开。
+3. **`register_instrument()` 目前不产生 pytest fixture**：fixture 在插件导入时
+   一次性生成，`conftest` 之后注册的新仪器用不了。改成在 `pytest_configure`
+   里生成，或明确写死“必须在插件导入前注册”。顺带校验工厂函数接受 `capability=`。
+4. **`ble_server.py` 归属**：它编码的是某一族例程的 DUT 日志文本（`sifli_app`、
+   `SIFLI_APP-`、`ADV start resutl`、`CCCD 1`），放在通用的 `instruments/`
+   包里和设计目标相反。移到 `tools/sdk_test/suite_helpers/` 一类的位置，
+   `instruments/` 只留线协议与宿主 API。
+5. **`wait_notification()` / `wait_read()` 的 `since_seq` 默认值**：默认 `None`
+   允许消费上一个测试留下的事件，是设计里事件队列要防的假绿。改成必填，
+   或默认取调用时刻的 `last_seq`。
+6. **迟到/重复响应的记账**：重复的 `@ok/@err` 会被存进 `_responses` 永不清理，
+   `_expired`/`_sent` 也无界增长。把“已回答过的 id 又来一次”记成
+   `duplicate_responses` 并给出告警。
+7. **`_PROTOCOL_START_RE` 在整行任意位置匹配**：为了兼容 `msh />@evt` 才这样，
+   但 ulog 里偶然出现 `@ok ...` 的文本会被当成真答复。只在行首或紧跟提示符时接受。
+8. **高频事件与宿主队列**：`_take_event()` 只是跳过 `since_seq` 之前的匹配，
+   并不把它们从队列里删掉；仪表若按控制器速率上报（周期广播实测约 650 条/秒），
+   队列会被塞满，每次等待都要整表遍历，宿主会卡死在夹具里（表现为 pytest
+   无输出、退出码 1）。固件侧已经约定“只在变化时上报”（`@evt periodic`），
+   宿主侧仍应把被边界过滤掉的旧事件真正丢弃，并把“单类事件的上报速率”
+   纳入夹具的启动检查。
+9. **文档与实现对表**：§6.4 的 API 列表还没补 `start/stop_periodic_advertising`、
+   `sync_periodic`、`wait_periodic`、`wait_read`、`exchange_mtu`、`notify`、
+   `wait_passkey`、`list_links`、`descriptor_uuids`、`connect` 回复里的 `role/interval_ms`。
+
+### 14.2 固件
+
+1. **`sec.bond` 拆成“开始 / 等待”两步**：现在它等到配对完成才回 `@ok`，
+   测试线程被卡住，passkey 流程（对端要人在配对过程中输入数字）无法实现。
+   配对结果已经有 `CONNECTION_MANAGER_PAIRING_SUCCEED/FAILED` 可用，加一个
+   `wait=0` 与 `@evt bond link=.. result=..` 即可，宿主侧对应
+   `start_bond()` / `wait_bonded()`。
+2. **长负载续行**：msh 实测 ~500 字符以上拿不到响应，`adv.data` / `gatt.write`
+   的大负载仍受限。实现 `peer data <index> <hex>` 分段续写，宿主按 `max_line` 切块。
+3. **能力细分**：`caps=ble` 是整块能力，一个没编 `peer_periodic.c` 的镜像照样过
+   `expect_ready()`，然后在用例中途 `@err unsupported`。拆成
+   `ble` / `ble.periodic` / `sec`，宿主按子能力发 API。
+
+### 14.3 用例
+
+1. **`cscpc` / `diss` / `tip_cts`**：与 `basc`/`cppc` 同族，套件照抄即可
+   （`bt_peer:ble` + 发现/写读/订阅）。
+2. **`throughput`**：需要仪表侧一条吞吐收发通路，或改用两块 DUT 对跑；
+   见 §12.2。
+3. **`multi_connection`**：需要实验室多一台 `bt_peer`（或多块 DUT）；
+   一台仪表只代表一个对端。
+4. **Secure Connections**：定位 52x DUT 与 58x 仪表做 SC 配对时双方都报
+   DHKey check failed 的原因（`0x6B`/`0x7B`）。定位前 `hid`/`pair` 继续显式用
+   `auth=legacy`，并在用例注释指向这里。
+
+### 14.4 README 里写了、套件还没断言的行为
+
+逐例程对照 README 的“预期结果”后，下面这些缺口不是假绿（现有断言是真的），
+而是覆盖不全。前两条值得优先补。
+
+- **`file_transfer`**：例程的头号功能完全没测——串行传输服务（`sifli_sd`）与
+  `file_recv` / `ls` 流程。当前套件测的是同族共用的 `sifli_app` 回环服务。
+  最小一步：发现 `sifli_sd` 服务；完整一步：给仪表加“推一个文件”的能力。
+- **`central_and_peripheral`**：DUT 的 central/GATT-client 半边没跑过
+  （`diss conn_idx` / `search_svc` / `read_val` / `write_val`）。
+  需要仪表先 `svc.register` + `adv.start`，再让 DUT 连上来。
+- **`hrpc` / `basc` / `cppc`**：README 的主体是 profile 客户端（HRP/BAS/CPS），
+  需要仪表侧实现对应服务才能测；当前只覆盖共用服务。
+- **`pair`**：DUT 发起的 `cmd_diss set_sec 0 2` 与 `SHOW PIN` / `SHOW NC` 未测，
+  后者卡在 passkey 流程（见 14.2.1）；读 4 字节、写后打印新值已补。
+- **`periodic_adv`**：`cmd_diss adv_start` / `adv_stop` 对周期广播的作用未补
+  （创建/停止的启动路径本身由套件的第一步覆盖）。
+- **`hid`**：按下/抬起与键码已补；按钮库路径（`CONFIG_USING_BUTTON_LIB`）未测。
+- **`iBeacon`**：`adv_update` / `adv_stop` / `adv_start` 已补。注意
+  `adv_update` 的 UUID 参数在本构建里解析不出来：`uuid_string_to_bytes()`
+  的 `sscanf("%2hhx...")` 只写进两个字节（DUT 自己的
+  `in uuid_string_to_bytes` 十六进制打印是 `0C 00` + 旧 UUID 原样），返回值 2
+  而不是 16，所以套件只断言 major/minor/power 三个数值字段。另有
+  `argc` 未检查导致少传参数越界读，属于例程健壮性问题。
+- **`periodic_adv`**：`keep_per start` 的递增已补；`keep_per stop` 无法断言——
+  例程对这条命令不打印任何东西，且实测停止后周期数据仍按 100 ms 继续变化
+  （工作队列处理函数自己重新提交，`rt_work_cancel` 没拦住），
+  需要先修例程或给它加一条可观察的日志。
+- **`periodic_adv_sync`**：README 说创建成功会打印 `PER_ADV_SYNC created [idx]`，
+  那是 `LOG_D`；套件断言的是 `Create PER_ADV_SYNC result 0`（`LOG_I`）。
+  两条都能看到，套件只覆盖了后者。
+- **`central_and_peripheral` 的英文 README**比中文少一节（扩展广播 251 字节、
+  2M 次广播 PHY、`USING_LE_EXTENSION_ADV` 兼容开关），两份文档需要对齐。
+- **所有 peer 用例都需要第二块板**（`fixture: bt_peer:ble`），但各例程 README
+  的“硬件需求”仍只写“一块开发板 + 手机”，读者按 README 准备会跑不起来。
+- **`peripheral`**：5 秒 CCCD 定时通知已补（README 原写“每一秒”，已改正）。
