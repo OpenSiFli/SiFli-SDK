@@ -15,7 +15,7 @@ import time
 
 import pytest
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 from sdk_test.instruments.errors import InstrumentTimeout
 
 STATE: dict = {}
@@ -32,7 +32,7 @@ def test_dut_boots_and_advertises(dut):
     # The connectable advertisement is legacy connect mode (running mode 0);
     # the background broadcaster logs "Broadcast ADV start resutl", which the
     # helper's placeholder skips.
-    ble_server.expect_ready(dut, expected_mode=0)
+    sifli_app.expect_ready(dut, expected_mode=0)
 
 
 def test_peer_instrument_is_ready(bt_peer):
@@ -40,21 +40,21 @@ def test_peer_instrument_is_ready(bt_peer):
 
 
 def test_peer_connects_to_the_dut(dut, bt_peer):
-    STATE["link"] = ble_server.connect_to_dut(dut, bt_peer)
+    STATE["link"] = sifli_app.connect_to_dut(dut, bt_peer)
 
 
 def test_peer_discovers_the_service(bt_peer):
-    STATE["service"] = ble_server.discover_service(bt_peer, _require("link"))
+    STATE["service"] = sifli_app.discover_service(bt_peer, _require("link"))
 
 
 def test_peer_writes_and_reads_the_value(dut, bt_peer):
-    ble_server.write_then_read(
+    sifli_app.write_then_read(
         dut, bt_peer, _require("link"), _require("service")
     )
 
 
 def test_peer_subscribes_to_notifications(dut, bt_peer):
-    ble_server.subscribe(dut, bt_peer, _require("link"), _require("service"))
+    sifli_app.subscribe(dut, bt_peer, _require("link"), _require("service"))
     STATE["subscribed"] = True
 
 
@@ -73,7 +73,7 @@ def test_the_cccd_timer_notifies_every_five_seconds(dut, bt_peer):
     deadline = time.monotonic() + 12.0
     payload = None
     while payload is None and time.monotonic() < deadline:
-        packet = ble_server.wait_notification(
+        packet = sifli_app.wait_notification(
             bt_peer,
             link,
             service,
@@ -106,7 +106,7 @@ def test_notification_burst_reaches_the_peer(dut, bt_peer):
     payloads = []
     while len(payloads) < 20 and time.monotonic() < deadline:
         try:
-            payload = ble_server.wait_notification(
+            payload = sifli_app.wait_notification(
                 bt_peer,
                 link,
                 service,

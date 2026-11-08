@@ -277,7 +277,7 @@ tools/sdk_test/instruments/
                   InstrumentProtocolError / InstrumentCapabilityError
 
 tools/sdk_test/suite_helpers/
-  ble_server.py   某一族例程共用的 DUT 日志约定（连接、写读、订阅），
+  sifli_app.py    某一族例程共用的 DUT 日志约定（连接、写读、订阅），
                   不属于仪表的通用能力，所以不在 instruments/ 里
 ```
 

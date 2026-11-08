@@ -29,7 +29,7 @@ import re
 
 import pytest
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 from sdk_test.instruments.errors import InstrumentCommandError
 
 #: The prompt is ``msh />`` when DFS keeps a working directory and ``msh >``
@@ -126,7 +126,7 @@ def test_peer_connects_to_the_dut(dut, bt_peer):
     # The helper picks a connectable SIFLI_APP- advertiser and retries, because
     # the strongest report in a lab is often a neighbouring board: the DUT's
     # own connection line is the ground truth that the link is the right one.
-    STATE["link"] = ble_server.connect_to_dut(dut, bt_peer)
+    STATE["link"] = sifli_app.connect_to_dut(dut, bt_peer)
 
     dut.send_line("diss show_dev")
     dut.expect(r"Total connected 1 devices", timeout=10)

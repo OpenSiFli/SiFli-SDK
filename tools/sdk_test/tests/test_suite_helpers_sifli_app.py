@@ -13,7 +13,7 @@ import unittest
 
 from _support import SdkTestCase
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 
 
 class FakeDut:
@@ -66,13 +66,13 @@ class TestExpectReady(SdkTestCase):
     def test_a_broadcast_start_line_is_skipped_for_the_connect_line(self):
         dut = FakeDut(READY_LINES)
 
-        ble_server.expect_ready(dut, expected_mode=0)
+        sifli_app.expect_ready(dut, expected_mode=0)
 
     def test_the_expected_mode_is_asserted(self):
         dut = FakeDut(READY_LINES)
 
         with self.assertRaises(AssertionError) as caught:
-            ble_server.expect_ready(dut, expected_mode=5)
+            sifli_app.expect_ready(dut, expected_mode=5)
         self.assertIn("mode 0", str(caught.exception))
 
 
@@ -83,19 +83,19 @@ class TestWriteThenRead(SdkTestCase):
         dut = FakeDut([self.LOG])
         peer = FakePeer()
 
-        ble_server.write_then_read(dut, peer, object(), FakeService())
+        sifli_app.write_then_read(dut, peer, object(), FakeService())
 
     def test_the_written_value_must_appear_in_the_log(self):
         dut = FakeDut(["[I/ble_app] Updated app value from:0 to:0"])
 
         with self.assertRaises(AssertionError):
-            ble_server.write_then_read(dut, FakePeer(), object(), FakeService())
+            sifli_app.write_then_read(dut, FakePeer(), object(), FakeService())
 
     def test_a_fixed_value_server_can_skip_the_readback(self):
         dut = FakeDut([self.LOG])
         peer = FakePeer(read_value=b"\x00\x00\x00\x00")
 
-        ble_server.write_then_read(
+        sifli_app.write_then_read(
             dut, peer, object(), FakeService(), verify_readback=False
         )
 
@@ -104,7 +104,7 @@ class TestWriteThenRead(SdkTestCase):
         peer = FakePeer(read_value=b"\x00\x00\x00\x00")
 
         with self.assertRaises(AssertionError):
-            ble_server.write_then_read(dut, peer, object(), FakeService())
+            sifli_app.write_then_read(dut, peer, object(), FakeService())
 
 
 if __name__ == "__main__":

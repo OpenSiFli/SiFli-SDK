@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import time
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 
 #: The DUT's manufacturer AD in full: length 36, type 0xFF, the Sifli company
 #: id 0x0A4C little-endian, then the example's 33 bytes of additional data.
@@ -40,8 +40,8 @@ def _ours(reports):
     return [
         report
         for report in reports
-        if ble_server.advertised_name(report.data).startswith(
-            ble_server.SIFLI_APP_NAME_PREFIX
+        if sifli_app.advertised_name(report.data).startswith(
+            sifli_app.SIFLI_APP_NAME_PREFIX
         )
     ]
 
@@ -49,7 +49,7 @@ def _ours(reports):
 def test_dut_boots_and_advertises(dut):
     # Periodic mode is running mode 6; asserting it is what tells this example
     # apart from one that merely broadcasts the same data.
-    ble_server.expect_ready(dut, expected_mode=6)
+    sifli_app.expect_ready(dut, expected_mode=6)
 
 
 def test_peer_instrument_is_ready(bt_peer):

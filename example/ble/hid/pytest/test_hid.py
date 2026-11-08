@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 from sdk_test.instruments.bt_peer import CCCD_UUID
 
 #: HID service, little-endian on the wire.
@@ -31,7 +31,7 @@ def _require(key: str):
 def test_dut_boots_and_advertises(dut):
     # The main advertisement is legacy connectable (mode 0); the example also
     # runs a broadcast background set, which the helper's guard skips.
-    ble_server.expect_ready(dut, expected_mode=0)
+    sifli_app.expect_ready(dut, expected_mode=0)
 
 
 def test_peer_instrument_is_ready(bt_peer):
@@ -39,7 +39,7 @@ def test_peer_instrument_is_ready(bt_peer):
 
 
 def test_peer_connects_to_the_dut(dut, bt_peer):
-    STATE["link"] = ble_server.connect_to_dut(dut, bt_peer)
+    STATE["link"] = sifli_app.connect_to_dut(dut, bt_peer)
 
 
 def test_peer_pairs_with_the_dut(bt_peer):

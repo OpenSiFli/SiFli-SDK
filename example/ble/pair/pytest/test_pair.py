@@ -9,7 +9,7 @@ procedure; a GATT read afterwards shows the link still carries traffic.
 
 from __future__ import annotations
 
-from sdk_test.suite_helpers import ble_server
+from sdk_test.suite_helpers import sifli_app
 
 STATE: dict = {}
 
@@ -22,7 +22,7 @@ def _require(key: str):
 
 
 def test_dut_boots_and_advertises(dut):
-    ble_server.expect_ready(dut, expected_mode=0)
+    sifli_app.expect_ready(dut, expected_mode=0)
 
 
 def test_peer_instrument_is_ready(bt_peer):
@@ -30,7 +30,7 @@ def test_peer_instrument_is_ready(bt_peer):
 
 
 def test_peer_connects_to_the_dut(dut, bt_peer):
-    STATE["link"] = ble_server.connect_to_dut(dut, bt_peer)
+    STATE["link"] = sifli_app.connect_to_dut(dut, bt_peer)
 
 
 def test_peer_pairs_with_the_dut(dut, bt_peer):
@@ -48,7 +48,7 @@ def test_peer_pairs_with_the_dut(dut, bt_peer):
 
 
 def test_the_encrypted_link_still_carries_gatt(dut, bt_peer):
-    service = ble_server.discover_service(bt_peer, _require("link"))
+    service = sifli_app.discover_service(bt_peer, _require("link"))
 
     payload = bt_peer.ble.read(_require("link"), service.value_handle())
     # The example serves a uint32, so a read is four bytes little-endian.
@@ -57,4 +57,4 @@ def test_the_encrypted_link_still_carries_gatt(dut, bt_peer):
     )
 
     # A write lands on the DUT (it logs the new value) and reads back.
-    ble_server.write_then_read(dut, bt_peer, _require("link"), service)
+    sifli_app.write_then_read(dut, bt_peer, _require("link"), service)
