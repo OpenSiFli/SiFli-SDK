@@ -67,6 +67,7 @@ verdict: block | comment | approve
 
 ## 发现
 ### [Critical|High|Medium|Low] `path:line`
+- severity: critical|high|medium|low
 - 攻击面与前提：[攻击者需要什么能力]
 - 影响：[读/写/执行/泄漏什么]
 - 触发路径：[从入口到缺陷的调用链]

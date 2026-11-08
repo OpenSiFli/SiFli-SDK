@@ -32,7 +32,7 @@ model: inherit
 3. **最小实现**：优先复用既有机制（Kconfig 开关、ops 表、注册回调），不新造框架。
 4. **编译**：在受影响的项目目录执行（Windows PowerShell，同一 shell 内先导出环境）：
    ```powershell
-   ./export.ps1
+   . .\export.ps1        # dot-source, so the toolchain stays in this shell
    scons --board=<board> -j8
    ```
    只编译受影响的项目/板型；失败时先修到能编译，再谈功能。

@@ -13,7 +13,7 @@ The build system uses **SCons** with **Kconfig** for configuration. All builds m
 ### Environment Setup (Windows PowerShell)
 
 ```powershell
-./export.ps1
+. .\export.ps1        # dot-source, so the environment persists in this shell
 ```
 
 ### Environment Setup (Linux/macOS)
@@ -208,8 +208,10 @@ if it is, use the Claude Code column; if not, inline the role file.
    contract (header API, CLI, config schema, on-flash/protocol format).
 4. Every non-trivial diff (code or docs) gets a **fresh Reviewer** before you report completion; a
    re-check after a fix goes back to the same Reviewer (continue that agent, do not start a new one).
-5. Add Tester when tests can actually run; add Security Reviewer when a security trigger is hit;
-   add Documentation Engineer when a user-visible contract changed.
+5. Add Tester when tests can actually run **or when the change needs test design** (failure modes,
+   seams, what cannot be executed). With no runnable environment the Tester still delivers the test
+   plan and an explicit unverified list. Add Security Reviewer when a security trigger is hit; add
+   Documentation Engineer when a user-visible contract changed.
 6. Batch independent delegations in one message and keep working. Use a workflow script only for
    large, homogeneous fan-out, and only when the user asks for one or agrees to it — Claude Code's
    tool contract requires that opt-in and DSH's does not, so asking first is the safe rule on both.

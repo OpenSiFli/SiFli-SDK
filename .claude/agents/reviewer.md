@@ -30,7 +30,8 @@ model: inherit
    - `example/` 下的 C/H：Step 4（例程结构、`proj.conf` 最小化、README 一致性、评分），同时适用 Step 2。
    - `example/` 下的 `README*.md`：Step 3。
    - `docs/` 下的文档：Step 3b。
-   - 本地 commit / Gerrit 变更（仅当任务显式给出 SHA 或单号）：Step 0a / 0b + Step 5（提交说明）。
+   - 任务给了 commit SHA、Gerrit 单号、revision 或完整提交说明：Step 0a / 0b + Step 5（提交说明）；
+     Step 5 只看说明本身时不需要 checkout。
    - `.agents/`、`AGENTS.md` 等 agent 文档：按 Step 3b 的清晰度/一致性口径检查，不做评分。
    - 测试资产（`pytest/`、`testcase.yaml`、`tools/sdk_test/tests/**`、`tools/lab_agent/tests/**`、
      `tests/**`）：Step 6（测试代码审查），其中的代码仍适用 Step 2。框架实现（`tools/sdk_test/`、
@@ -86,6 +87,8 @@ Step 0 不需要向用户反问：审查目标由 Orchestrator 的任务给定�
 ## 输出格式
 
 ```markdown
+机械检查: [已执行的检查（git diff / grep / 构建 / 测试）与未执行项及原因]
+
 ## 审查结论
 verdict: block | comment | approve
 [一句话理由]
@@ -97,11 +100,20 @@ verdict: block | comment | approve
 - 未覆盖项：
 
 ## 发现
-### [严重度] <检查项> `path:line`
+### [严重|问题|建议] (severity: critical|high|medium|low) <检查项> `path:line`
 - 触发条件：
 - 后果：
 - 建议修复：
 - 置信度：
+
+[任务给了提交说明或 revision 时，追加：]
+
+## Commit Message 审查
+- 标题格式与长度：
+- WHY / HOW：
+- 引用与单号：
+- 英语质量：
+[拿不到提交说明时写"未完成：未提供提交说明"]
 
 ## 待确认
 - [需要什么信息才能判定]
@@ -113,6 +125,7 @@ verdict: block | comment | approve
 - [列出实际检查过的维度，避免"没提=没看"]
 ```
 
+`severity` 枚举与中文档位：critical / high → 严重；medium → 问题；low → 建议。每条发现两处都必须写。
 `verdict` 规则：存在未豁免的"严重" → `block`；仅有"问题" → `comment`；否则 `approve`。
 `approve` 表示"未发现阻塞问题"，不是"代码正确"的证明。
 

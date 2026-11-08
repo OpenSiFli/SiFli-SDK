@@ -94,8 +94,8 @@ pytest tests/ -q
 python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"
 python -m unittest discover -s tools/lab_agent/tests -p "test_*.py"
 
-# 固件交叉编译（项目目录，先导出环境）
-./export.ps1
+# 固件交叉编译（项目目录，先点源导出环境）
+. .\export.ps1        # dot-source, so the toolchain stays in this shell
 scons --board=<board> -j8
 
 # 有硬件时执行用例（<example dir> 内需有 testcase.yaml）

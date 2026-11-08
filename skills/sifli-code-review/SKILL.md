@@ -13,7 +13,11 @@ When the user says "review下代码", "审阅下代码", "审查下代码", "rev
 
 ## Step 0: Determine the Review Target
 
-Ask the user to clarify whether the review is for:
+Use the target the caller provides (an orchestrator task, a CLI argument, or the user's request).
+Ask only when the target is genuinely missing; if asking is not possible, default to local changes
+and state the assumption at the top of the report.
+
+The target is one of:
 
 1. **Local changes** — uncommitted working tree changes (default if user just says "review下代码")
 2. **Local commit SHA** — a commit that already exists in the local repository. The user provides a SHA hash (full or short, e.g. `a1b2c3d` or `028f3a59f`).
@@ -450,9 +454,11 @@ Rate the example code from a reader's perspective on:
 - **Structure** — is the code well-organized?
 - **Documentation** — are comments helpful and sufficient?
 
-## Step 5: Commit Message Review (local SHA and Gerrit commits)
+## Step 5: Commit Message Review
 
-When reviewing a specific commit (local SHA or Gerrit), also check the commit message. First, read it:
+Check the commit message whenever the input includes one, or names a revision whose message can be
+read (local SHA, Gerrit change, or a message supplied with the task). If a message is expected but
+unavailable, report that instead of skipping the step. First, read it:
 
 **For local commit SHA:**
 ```bash
@@ -605,6 +611,9 @@ board), and the seam it closes. Do not infer the level from the harness name or 
 
 **审查报告请使用中文撰写。**
 
+Every finding carries a machine-readable `severity: critical|high|medium|low`; the Chinese label is
+derived from it: critical/high → 严重, medium → 问题, low → 建议.
+
 Present the review as a structured report:
 
 ```
@@ -613,7 +622,7 @@ Present the review as a structured report:
 ### 审查文件
 - [list of files]
 
-### 类别: [通用代码 / 例程代码 / README / SDK 文档]
+### 类别: [通用代码 / 例程代码 / README / SDK 文档 / 测试代码 / Agent 文档]
 
 #### 1. 代码风格
 [Findings, each marked as OK / 问题 / 建议]
@@ -691,13 +700,14 @@ Present the review as a structured report:
 [seams or failure modes with no test]
 ```
 
-**[If local SHA or Gerrit commit, add:]**
+**[If a commit message or a revision was provided, add:]**
 
 ```
 ### Commit Message 审查
 
 #### 标题行
 [Findings on tag format, description clarity, length]
+[If the message is unavailable, write "未完成：未提供提交说明" instead of omitting the section]
 
 #### 详细说明
 [Findings on why/how explanation, completeness]

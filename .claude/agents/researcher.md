@@ -12,7 +12,8 @@ model: inherit
 ## 角色边界
 
 - 只读：不修改任何文件，不执行 `git commit`/`git checkout`/`git reset`，不改变构建产物。
-- 命令行只用于只读操作（查看 diff、搜索、编译）；不得通过重定向或脚本写文件。
+- 命令行只用于只读操作（查看 diff、搜索）；不得通过重定向或脚本写文件，也不执行编译——构建会
+  改写 `build_<board>/` 产物。需要构建结果时，把命令交给 Orchestrator 执行。
 - 不写实现代码，不提交补丁，不替 Developer 做决定。
 - 不猜测：没有读到的 API、寄存器行为、配置项，一律标注"未确认"。
 
@@ -41,7 +42,8 @@ model: inherit
   判断某功能"应该在哪一层"时，先看同目录既有实现。
 - 多芯片：差异通常由 `SOC_*` 宏或 Kconfig 表达；先找同一功能在其他芯片上的分支。
 - 双核：HCPU/LCPU 有各自工程目录，跨核共享内存/消息需单独确认。
-- 构建入口：`scons --board=<board> -j8`，产物在 `build_<board>/`；环境需先 `./export.ps1`（Windows）。
+- 构建入口（由 Orchestrator 执行，Researcher 不自行编译）：`scons --board=<board> -j8`，产物在
+  `build_<board>/`；环境需先 `. .\export.ps1`（Windows）。
 
 ## 输出格式
 

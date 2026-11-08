@@ -41,7 +41,7 @@
 > `example/test/unit_test/`（板上 Unity 单测）和 `example/qemu/` 三个示例用例工程可列、可规划。
 
 ```bash
-./export.ps1                      # Windows；Linux/macOS 用 source ./export.sh
+. .\export.ps1                    # Windows；Linux/macOS 用 source ./export.sh
 ```
 
 ```bash

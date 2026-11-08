@@ -44,7 +44,7 @@
 > `example/test/unit_test/` (on-board Unity unit tests) and `example/qemu/`.
 
 ```bash
-./export.ps1                      # Windows; on Linux/macOS use source ./export.sh
+. .\export.ps1                    # Windows; on Linux/macOS use source ./export.sh
 ```
 
 ```bash

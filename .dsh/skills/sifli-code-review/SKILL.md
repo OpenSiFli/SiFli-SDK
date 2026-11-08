@@ -33,5 +33,6 @@ whenToUse: 需要对 SiFli SDK 的 diff、commit 或文件做 code review；或�
 
 - `verdict`：`block` / `comment` / `approve`。
 - 严重度沿用 Step 7：严重（阻塞）、问题（需回应）、建议（不阻塞）、OK（已确认）。
+- 每条发现带 `severity: critical|high|medium|low`（critical/high → 严重，medium → 问题，low → 建议）。
 - 证据不足、无法判定的条目放"待确认"，不计入问题数。
 - 每条发现必须含 `path:line`、触发条件、具体后果、最小修复；同一模式只报一次。
