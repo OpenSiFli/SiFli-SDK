@@ -20,27 +20,52 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class FixtureRef:
-    """A capability descriptor, written ``name`` or ``name:param``.
+    """What a test needs from a fixture, in one of five shapes.
 
-    The optional parameter is the Twister semantics the design doc reuses: a
-    test asking for ``spi_nor_flash:spi2`` is pinned to the instance of that
-    fixture wired to bus ``spi2``, while a bare ``spi_nor_flash`` accepts any.
+    ::
+
+        "spi_nor_flash"                 any instance
+        "spi_nor_flash:spi2"            the instance wired to bus spi2
+        "bt_peer:ble"                   an instrument providing the ble capability
+        "bt_peer:ble,classic"           one providing both
+        "bt_peer@peer1:ble"             that instance, which must provide ble
+
+    The part after ``:`` is a comma-separated *capability* list; a lab whose
+    connection offers more than the test asked for still satisfies it.
+    ``@name`` pins one specific instance and is what a lab with several
+    same-named instruments uses; it is separate from the capability list
+    because one string cannot be both a capability and an instance name.
     """
 
     name: str
     param: Optional[str] = None
+    instance: Optional[str] = None
+
+    @property
+    def capabilities(self) -> frozenset:
+        """The capabilities this reference requires, from the comma list."""
+        if not self.param:
+            return frozenset()
+        return frozenset(
+            entry.strip() for entry in self.param.split(",") if entry.strip()
+        )
 
     @property
     def spec(self) -> str:
-        return f"{self.name}:{self.param}" if self.param else self.name
+        text = self.name
+        if self.instance:
+            text += f"@{self.instance}"
+        if self.param:
+            text += f":{self.param}"
+        return text
 
     def accepts(self, available: "FixtureRef") -> bool:
         """True when ``available`` (what a testbed offers) satisfies ``self``."""
         if self.name != available.name:
             return False
-        if self.param is None:
-            return True
-        return self.param == available.param
+        if self.instance is not None and self.instance != available.instance:
+            return False
+        return self.capabilities <= available.capabilities
 
     def __str__(self) -> str:  # pragma: no cover - convenience only
         return self.spec

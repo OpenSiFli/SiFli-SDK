@@ -33,6 +33,7 @@ from .agent_client import RemoteConsole
 from .instruments import INSTRUMENTS
 from .instruments import InstrumentConsole
 from .instruments.registry import RESERVED_NAMES
+from .fixtures import parse_fixture_ref
 from .harness.pytest import ENV_AGENT_URL
 from .harness.pytest import ENV_BUILD_DIR
 from .harness.pytest import ENV_CASE_ID
@@ -284,18 +285,18 @@ def _declared_fixtures() -> List[str]:
 def _make_instrument_fixture(name: str, factory):
     """Build one session fixture that opens ``name`` and yields ``factory``.
 
-    The declared spec, not the bare name, is the stream: `bt_peer:peer1` pins
-    one of several same-named instruments, and the agent resolves an exact spec
-    before a name. The parameter is also the capability the firmware must
-    advertise, so a mis-flashed lab fails at construction rather than at the
-    first command.
+    The declared spec, not the bare name, is the stream: ``bt_peer@peer1:ble``
+    pins one of several same-named instruments, and the agent resolves it with
+    `FixtureRef.accepts` (an exact spec wins over a merely-satisfying one). The
+    part after the colon is the capability the firmware must advertise, so a
+    mis-flashed lab fails at construction rather than at the first command.
     """
 
     def _fixture(dut: Dut):
         declared = [
             spec
             for spec in _declared_fixtures()
-            if spec.split(":", 1)[0] == name
+            if parse_fixture_ref(spec).name == name
         ]
         if not declared:
             pytest.skip(
@@ -316,7 +317,10 @@ def _make_instrument_fixture(name: str, factory):
         client = LabAgentClient(_require(ENV_AGENT_URL))
         testbed_id = _require(ENV_TESTBED_ID)
         spec = declared[0]
-        _, _, capability = spec.partition(":")
+        # The capability list, without the instance pin:
+        # `bt_peer@peer1:ble,classic` asks the image for `ble` and `classic`,
+        # and asks the lab for the instrument called `peer1`.
+        capability = parse_fixture_ref(spec).param or ""
 
         instrument_console = client.console_for(testbed_id, stream=spec)
         instrument_console.open()
@@ -333,23 +337,53 @@ def _make_instrument_fixture(name: str, factory):
     return pytest.fixture(scope="session", name=name)(_fixture)
 
 
+def _install_fixture(name: str, factory) -> None:
+    """Bind one instrument fixture into this plugin module."""
+    _check_fixture_name(name)
+    globals()[name] = _make_instrument_fixture(name, factory)
+
+
+#: Set once pytest has configured this plugin; after that, a registration can
+#: still install its fixture, which is what makes a late `register_instrument()`
+#: useful instead of a silent no-op.
+_configured = False
+
+
+def pytest_configure(config) -> None:
+    """Install a fixture for every instrument registered so far."""
+    global _configured
+    _configured = True
+    for _name, _factory in INSTRUMENTS.items():
+        _install_fixture(_name, _factory)
+
+
+def register_instrument_fixture(name: str, factory) -> None:
+    """Called by the registry for every instrument, including late ones."""
+    if _configured:
+        _install_fixture(name, factory)
+
+
 #: Reject a registration that would shadow the framework or cannot be a fixture
 #: name. This is checked at import time, where the mistake is cheap to see.
 #: Names already bound in this module: assigning a fixture over one of them
 #: would silently replace an import the plugin depends on.
 _MODULE_NAMES = frozenset(globals())
 
-for _name in INSTRUMENTS:
+
+def _check_fixture_name(name: str) -> None:
     if (
-        _name in RESERVED_NAMES
-        or _name in _MODULE_NAMES
-        or not _name.isidentifier()
+        name in RESERVED_NAMES
+        or name in _MODULE_NAMES
+        or not name.isidentifier()
     ):
         raise RuntimeError(
-            f"instrument fixture {_name!r} cannot be registered: it must be a "
+            f"instrument fixture {name!r} cannot be registered: it must be a "
             "Python identifier and must not shadow a framework fixture, a "
             "pytest built-in, or a name this plugin imports"
         )
 
-for _name, _factory in INSTRUMENTS.items():
-    globals()[_name] = _make_instrument_fixture(_name, _factory)
+
+for _name in INSTRUMENTS:
+    _check_fixture_name(_name)
+# The fixtures themselves are installed by `pytest_configure`, so a
+# registration made after this module loaded still gets one.

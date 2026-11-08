@@ -31,12 +31,22 @@ class TestRegistry(SdkTestCase):
 
     def test_a_valid_registration_is_visible(self):
         class Dummy:
-            pass
+            def __init__(self, console, *, capability=""):
+                self.capability = capability
 
         registry.register_instrument("dummy_peer", Dummy)
         self.addCleanup(registry.INSTRUMENTS.pop, "dummy_peer", None)
 
         self.assertIs(registry.INSTRUMENTS["dummy_peer"], Dummy)
+
+    def test_a_factory_without_the_capability_keyword_is_refused(self):
+        class Dummy:
+            def __init__(self, console):
+                pass
+
+        with self.assertRaises(TypeError) as caught:
+            registry.register_instrument("dummy_peer", Dummy)
+        self.assertIn("capability", str(caught.exception))
 
 
 if __name__ == "__main__":

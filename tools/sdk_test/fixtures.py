@@ -42,7 +42,9 @@ def parse_fixture_ref(value: Any) -> FixtureRef:
     Accepted shapes::
 
         "spi_nor_flash"                 -> name only, any wiring
-        "spi_nor_flash:spi2"            -> pinned to the spi2 instance
+        "spi_nor_flash:spi2"            -> the instance wired to spi2
+        "bt_peer:ble,classic"           -> an instrument providing both capabilities
+        "bt_peer@peer1:ble"             -> that instance, which must provide ble
         {name: spi_nor_flash, param: spi2}
         {fixture: "spi_nor_flash:spi2"} -> binding-file connection form
     """
@@ -56,21 +58,38 @@ def parse_fixture_ref(value: Any) -> FixtureRef:
         name, _, param = spec.partition(":")
         name = name.strip()
         param = param.strip() or None
+        instance = None
+        if "@" in name:
+            name, _, instance = name.partition("@")
+            name = name.strip()
+            instance = instance.strip() or None
         if not name:
             raise BindingError(f'Fixture reference "{value}" has no name')
-        return FixtureRef(name=name, param=param)
+        return FixtureRef(name=name, param=param, instance=instance)
 
     if isinstance(value, dict):
         if "fixture" in value:
             ref = parse_fixture_ref(value["fixture"])
             if "param" in value and value["param"] is not None:
-                ref = FixtureRef(ref.name, str(value["param"]))
+                ref = FixtureRef(ref.name, str(value["param"]), ref.instance)
+            if "instance" in value and value["instance"] is not None:
+                ref = FixtureRef(ref.name, ref.param, str(value["instance"]))
             return ref
         name = value.get("name")
         if not name:
             raise BindingError(f"Fixture mapping needs a name: {value!r}")
+        # `{"name": "bt_peer@peer1"}` means the same as the string form.
+        text = str(name)
+        instance = value.get("instance")
+        if "@" in text:
+            text, _, pinned = text.partition("@")
+            instance = instance if instance is not None else pinned.strip() or None
         param = value.get("param")
-        return FixtureRef(str(name), str(param) if param is not None else None)
+        return FixtureRef(
+            text.strip(),
+            str(param) if param is not None else None,
+            str(instance) if instance is not None else None,
+        )
 
     raise BindingError(f"Unsupported fixture reference: {value!r}")
 
@@ -146,18 +165,6 @@ def instance_fixtures_from_config(harness_config: Optional[dict]) -> List[Fixtur
         return parse_fixture_refs(harness_config.get("fixture"))
     except BindingError as exc:  # normalise the error type for callers
         raise DiscoveryError(str(exc)) from exc
-
-
-def implicit_requirements(instance: TestInstance) -> List[str]:
-    """Feature types the test's own fixtures imply, from the bus each sits on.
-
-    Only the binding knows that ``spi_nor_flash:spi1`` means a board with an
-    ``spi`` instance -- which is exactly why this is derived rather than asked
-    of the test. The test says "a NOR flash", the wiring says which bus it is on,
-    and the board says whether it has one.
-    """
-    return [type_of(fixture.param) for fixture in instance.fixtures
-            if fixture.param]
 
 
 def wiring_problems(testbeds: Iterable[TestBed],

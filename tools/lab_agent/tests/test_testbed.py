@@ -743,7 +743,7 @@ class TestInstrumentConsoles(LabTestCase):
         console:
           port: COM13
         connections:
-          - fixture: ble_peer:peer1
+          - fixture: ble_peer@peer1
             console:
               port: COM99
               baud: 1000000
@@ -760,17 +760,17 @@ class TestInstrumentConsoles(LabTestCase):
             )
         )
         runtime.fixture_console_open("ble_peer")
-        runtime.fixture_console_open("ble_peer:peer1")
+        runtime.fixture_console_open("ble_peer@peer1")
 
-        self.assertEqual(runtime.describe()["fixture_consoles"], ["ble_peer:peer1"])
+        self.assertEqual(runtime.describe()["fixture_consoles"], ["ble_peer@peer1"])
         self.assertEqual(len(manager.fixture_transports), 1)
 
         # And closing by either spelling closes that one stream.
         runtime.fixture_console_close("ble_peer")
-        self.assertEqual(manager.fixture_transports["ble_peer:peer1"].closed, 1)
+        self.assertEqual(manager.fixture_transports["ble_peer@peer1"].closed, 1)
 
     def test_a_pinned_instance_that_does_not_exist_is_not_substituted(self):
-        # `ble_peer:peer2` must not reach peer1 because they share a name: a
+        # `ble_peer@peer2` must not reach peer1 because they share a name: a
         # pinned spec is a claim about which instance, and silently choosing
         # another would drive the wrong instrument.
         manager = self.make_manager(self.PINNED_CONFIG)
@@ -780,10 +780,60 @@ class TestInstrumentConsoles(LabTestCase):
             )
         )
         with self.assertRaises(TestbedError) as caught:
-            runtime.fixture_console_open("ble_peer:peer2")
+            runtime.fixture_console_open("ble_peer@peer2")
         message = str(caught.exception)
-        self.assertIn("ble_peer:peer2", message)
-        self.assertIn("ble_peer:peer1", message)  # says what does exist
+        self.assertIn("ble_peer@peer2", message)
+        self.assertIn("ble_peer@peer1", message)  # says what does exist
+
+    SUBSET_CONFIG = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_peer
+        platform: sf32lb52-lcd_n16r8
+        console:
+          port: COM13
+        connections:
+          - fixture: ble_peer:ble
+            console:
+              port: COM99
+          - fixture: ble_peer:ble,classic
+            console:
+              port: COM98
+    """
+
+    def test_a_case_asking_for_less_uses_the_exact_wiring(self):
+        # Both connections satisfy `ble_peer:ble`, so the exact one is chosen:
+        # a lab that wires a dual-mode peer next to a BLE-only one must not have
+        # its BLE-only case silently routed to the other port.
+        manager = self.make_manager(self.SUBSET_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer:ble"]}
+            )
+        )
+
+        runtime.fixture_console_open("ble_peer:ble")
+
+        self.assertEqual(runtime.describe()["fixture_consoles"], ["ble_peer:ble"])
+
+    def test_a_case_asking_for_more_gets_the_richer_peer(self):
+        manager = self.make_manager(self.SUBSET_CONFIG)
+        runtime = manager.allocate(
+            allocate_request_from_mapping(
+                {"testbed_id": "tb_peer", "fixtures": ["ble_peer:ble,classic"]}
+            )
+        )
+
+        runtime.fixture_console_open("ble_peer:ble,classic")
+
+        self.assertEqual(
+            runtime.describe()["fixture_consoles"], ["ble_peer:ble,classic"]
+        )
 
     def test_an_instrument_cannot_be_opened_after_the_testbed_was_released(self):
         # The HTTP server answers on a thread per request, so an open can

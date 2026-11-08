@@ -733,6 +733,11 @@ class TestBedRuntime:
         same rule as ``FixtureRef.accepts``, so asking for ``peer2`` can never
         reach ``peer1`` under another spelling. Only an unpinned name falls back
         to the testbed's single connection of that type.
+
+        The caller's spec is matched with :meth:`FixtureRef.accepts`: a bare
+        name, a bus instance, a capability list (``bt_peer:ble,classic``) and an
+        instance pin (``bt_peer@peer1:ble``) all resolve here, and an exact spec
+        wins over a connection that merely satisfies it.
         """
         wanted = None
         try:
@@ -744,27 +749,27 @@ class TestBedRuntime:
             raise LabAgentError(
                 f'testbed "{self.testbed.id}": "{spec}" is not a fixture name: {exc}'
             ) from exc
+        # The exact spec first: a lab may wire both `bt_peer:ble` and
+        # `bt_peer:ble,classic`, and a case that named one of them means that
+        # one. Only when nothing matches exactly does `accepts()` decide, which
+        # is what lets a richer instrument serve a case asking for less.
         exact = [c for c in self.testbed.connections if c.fixture.spec == wanted.spec]
-        if exact:
-            return exact[0]
+        matching = exact or [
+            c for c in self.testbed.connections if wanted.accepts(c.fixture)
+        ]
         offered = ", ".join(c.fixture.spec for c in self.testbed.connections) or "none"
-        if wanted.param is not None:
+        if len(matching) == 1:
+            return matching[0]
+        if not matching:
             raise TestbedError(
                 f'testbed "{self.testbed.id}" has no fixture "{wanted.spec}" '
                 f"(it offers: {offered})"
             )
-        by_name = [c for c in self.testbed.connections if c.fixture.name == wanted.name]
-        if len(by_name) == 1:
-            return by_name[0]
-        if not by_name:
-            raise TestbedError(
-                f'testbed "{self.testbed.id}" has no fixture named "{wanted.name}" '
-                f"(it offers: {offered})"
-            )
         raise TestbedError(
-            f'testbed "{self.testbed.id}" has several fixtures named '
-            f'"{wanted.name}"; address one by its full spec '
-            f"({', '.join(c.fixture.spec for c in by_name)})"
+            f'testbed "{self.testbed.id}" offers several fixtures that satisfy '
+            f'"{wanted.spec}" '
+            f"({', '.join(c.fixture.spec for c in matching)}); pin one with "
+            "'name@instance'"
         )
 
     # -- reporting -----------------------------------------------------------

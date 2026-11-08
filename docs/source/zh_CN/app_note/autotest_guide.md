@@ -663,6 +663,14 @@ testbed:
 
 这样分配只会在提供 `bt_peer:ble` 的 testbed 上成功；实验室没有仪表时，这一条在 open 阶段记为错误，其余用例照跑。
 
+`fixture:` 的写法是 `name[@实例][:能力,能力]`：
+
+- `bt_peer:ble`——要求具备 `ble` 能力的那台；实验室接的是 `bt_peer:ble,classic`
+  也会满足它（能力按**子集**匹配，不会因为多了 `classic` 就分配不到）。
+- `bt_peer:ble,classic`——两项都要有。
+- `bt_peer@peer1:ble`——钉住名为 `peer1` 的那台（它的 `connections` 里也写 `bt_peer@peer1`），
+  同时要求 `ble`。一台 testbed 接多台同名仪表时用它消歧；接错比不跑更糟。
+
 **套件。** `bt_peer` fixture 返回一个 `BtPeer`；BLE 能力是 `bt_peer.ble`（`BleInstrument`）。
 连接放在 session 作用域的 fixture 里而不是一条测试里，这样任何需要链路
 的用例都能单独跑（`pytest -k gatt`）：

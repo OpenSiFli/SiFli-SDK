@@ -16,7 +16,6 @@ from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 from sdk_test.errors import BindingError
 from sdk_test.errors import DiscoveryError
 from sdk_test.fixtures import explain_no_match
-from sdk_test.fixtures import implicit_requirements
 from sdk_test.fixtures import instance_fixtures_from_config
 from sdk_test.fixtures import parse_fixture_ref
 from sdk_test.fixtures import parse_fixture_refs
@@ -129,6 +128,46 @@ class TestAccepts(SdkTestCase):
     def test_different_names_never_match(self):
         self.assertFalse(FixtureRef("flash").accepts(FixtureRef("sensor")))
 
+    def test_a_capability_list_is_satisfied_by_a_richer_offer(self):
+        self.assertTrue(
+            FixtureRef("bt_peer", "ble").accepts(FixtureRef("bt_peer", "ble,classic"))
+        )
+        self.assertFalse(
+            FixtureRef("bt_peer", "ble,classic").accepts(FixtureRef("bt_peer", "ble"))
+        )
+
+    def test_an_instance_pin_is_separate_from_the_capability_list(self):
+        required = FixtureRef("bt_peer", "ble", instance="peer1")
+        self.assertTrue(
+            required.accepts(FixtureRef("bt_peer", "ble,classic", instance="peer1"))
+        )
+        self.assertFalse(
+            required.accepts(FixtureRef("bt_peer", "ble", instance="peer2"))
+        )
+        self.assertFalse(required.accepts(FixtureRef("bt_peer", "ble")))
+
+
+class TestParseInstancePin(SdkTestCase):
+    def test_at_pins_an_instance_and_colon_lists_capabilities(self):
+        ref = parse_fixture_ref("bt_peer@peer1:ble,classic")
+
+        self.assertEqual(ref.name, "bt_peer")
+        self.assertEqual(ref.instance, "peer1")
+        self.assertEqual(ref.capabilities, frozenset({"ble", "classic"}))
+        self.assertEqual(ref.spec, "bt_peer@peer1:ble,classic")
+
+    def test_the_mapping_form_splits_an_instance_pin_too(self):
+        ref = parse_fixture_ref({"name": "bt_peer@peer1", "param": "ble"})
+
+        self.assertEqual(ref.name, "bt_peer")
+        self.assertEqual(ref.instance, "peer1")
+        self.assertEqual(ref.capabilities, frozenset({"ble"}))
+
+    def test_a_pin_without_capabilities(self):
+        ref = parse_fixture_ref("bt_peer@peer1")
+
+        self.assertEqual((ref.instance, ref.capabilities), ("peer1", frozenset()))
+
 
 class TestSelectTestbeds(SdkTestCase):
     def test_the_same_fixture_on_several_testbeds_makes_them_interchangeable(self):
@@ -218,14 +257,6 @@ class TestExplainNoMatch(SdkTestCase):
 class TestWiringAgainstFeatures(SdkTestCase):
     """The one place a binding and a board's declaration meet."""
 
-    def test_a_fixture_parameter_implies_the_type_of_that_bus(self):
-        instance = make_instance(fixtures=["flash:spi1", "sensor"])
-        self.assertEqual(["spi"], implicit_requirements(instance))
-
-    def test_an_unparameterised_fixture_implies_nothing(self):
-        self.assertEqual([],
-                         implicit_requirements(make_instance(fixtures=["flash"])))
-
     def test_a_connection_the_platform_does_not_declare_is_a_problem(self):
         problems = wiring_problems([make_testbed("tb_01", fixtures=["flash:spi1"])], [])
         self.assertEqual(1, len(problems))
@@ -244,14 +275,14 @@ class TestWiringAgainstFeatures(SdkTestCase):
             wiring_problems([make_testbed("tb_01", fixtures=["flash"])], []))
 
     def test_an_instrument_console_is_not_a_bus_claim(self):
-        # `ble_peer:peer1` names the instrument, not an instance the board has
+        # `ble_peer@peer1` pins the instance; it is not a board bus
         # to declare. Only bus-wired fixtures carry that obligation.
         testbed = TestBed(
             id="tb_01",
             platform="board_a",
             connections=[
                 Connection(
-                    fixture=parse_fixture_ref("ble_peer:peer1"),
+                    fixture=parse_fixture_ref("ble_peer@peer1"),
                     options={"console": {"port": "COM9"}},
                 )
             ],

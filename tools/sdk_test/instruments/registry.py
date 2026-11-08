@@ -2,15 +2,21 @@
 # SPDX-License-Identifier: Apache-2.0
 """Instrument name -> host class.
 
-The pytest plugin builds one session fixture per entry, so adding an instrument
-is a registration here rather than an edit to the plugin. A fixture name must
-be a Python identifier and must not shadow the framework's own ``dut`` or
-``console`` fixtures; both are checked at import time, where the mistake is
-cheap to see.
+The pytest plugin builds one session fixture per entry, so adding an
+instrument is a registration here rather than an edit to the plugin. A fixture
+name must be a Python identifier and must not shadow the framework's own
+``dut`` or ``console`` fixtures, and the factory must accept ``capability=``;
+all three are checked here, where the mistake is cheap to see.
+
+A registration made while pytest is starting (a ``conftest`` imported before
+collection) still installs its fixture. A registration from a test module is
+too late: pytest has already parsed each plugin's fixtures, so the fixture
+exists but nothing can request it.
 """
 
 from __future__ import annotations
 
+import inspect
 from typing import Dict
 from typing import Type
 
@@ -49,7 +55,12 @@ INSTRUMENTS: Dict[str, Type] = {
 
 
 def register_instrument(name: str, factory: Type) -> None:
-    """Make ``factory`` the class behind fixture ``name``."""
+    """Make ``factory`` the class behind fixture ``name``.
+
+    The fixture is installed right away when pytest has already configured the
+    plugin, so a registration made from a ``conftest`` still produces a usable
+    fixture. Before that point the plugin installs every entry itself.
+    """
     candidate = str(name)
     if not candidate.isidentifier():
         raise ValueError(
@@ -61,4 +72,31 @@ def register_instrument(name: str, factory: Type) -> None:
             f"instrument fixture name {candidate!r} collides with a framework "
             f"fixture ({sorted(RESERVED_NAMES)})"
         )
+    if not callable(factory):
+        raise TypeError(f"instrument factory for {candidate!r} is not callable")
+    parameters = inspect.signature(factory).parameters
+    if "capability" not in parameters and not any(
+        parameter.kind is inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    ):
+        raise TypeError(
+            f"instrument factory {factory!r} must accept a `capability=` keyword: "
+            "the fixture passes the part after ':' in the declared spec"
+        )
+
     INSTRUMENTS[candidate] = factory
+
+    # Late import: this module is imported by the plugin, which owns the
+    # fixtures, so the dependency can only go this way at call time. Outside a
+    # pytest process there is nothing to install into, and saying so is more
+    # useful than a bare ModuleNotFoundError.
+    try:
+        from .. import pytest_plugin
+    except ModuleNotFoundError as exc:  # pragma: no cover - only without pytest
+        raise RuntimeError(
+            "register_instrument() needs the pytest environment: the fixture it "
+            "creates lives in sdk_test.pytest_plugin. Run it under the SDK "
+            "environment (`export.ps1` / `export.sh`) or from a pytest plugin."
+        ) from exc
+
+    pytest_plugin.register_instrument_fixture(candidate, factory)

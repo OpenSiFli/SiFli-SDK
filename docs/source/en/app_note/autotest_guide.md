@@ -689,6 +689,17 @@ still runs everything else:
 Allocation then only succeeds on a testbed that offers `bt_peer:ble`; a lab that has none reports this entry as an error
 at the open stage and runs the rest.
 
+A `fixture:` reference reads `name[@instance][:capability,capability]`:
+
+- `bt_peer:ble` -- any instrument providing `ble`. A lab wired as `bt_peer:ble,classic`
+  satisfies it too: capabilities are matched as a **subset**, so an instrument with more
+  does not lose cases that ask for less.
+- `bt_peer:ble,classic` -- both must be present.
+- `bt_peer@peer1:ble` -- the instrument called `peer1` (its `connections` entry says
+  `bt_peer@peer1` too), which must also provide `ble`. This is how one testbed with
+  several same-named instruments is disambiguated; driving the wrong board is worse
+  than not running.
+
 **The suite.** The `bt_peer` fixture returns a `BtPeer`; its BLE capability is `bt_peer.ble`, a `BleInstrument`.
 Connecting is a session-scoped fixture rather than a test, so any case that needs the link can be run on its own
 (`pytest -k gatt`):
