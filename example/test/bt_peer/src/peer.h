@@ -15,7 +15,7 @@
 /** Protocol version reported by @info. */
 #define PEER_PROTO_VERSION      1
 /** Firmware identity reported by @info. */
-#define PEER_FW_ID              "bt_peer-m3"
+#define PEER_FW_ID              "bt_peer-m4"
 
 /**
  * Capabilities advertised by @info.

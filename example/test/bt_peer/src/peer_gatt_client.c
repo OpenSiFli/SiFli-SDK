@@ -159,6 +159,32 @@ static void peer_gatt_leave(peer_link_t *link)
 }
 
 /**
+ * Render a characteristic UUID as hex, in the order the peer reported it.
+ *
+ * The host compares raw bytes, so a 16-bit 0x2A29 arrives as "292a" -- the same
+ * convention the descriptor list uses.
+ */
+static void peer_gatt_uuid_hex(const uint8_t *uuid, uint8_t len,
+                               char *out, size_t size)
+{
+    uint8_t i;
+    size_t used = 0;
+
+    if (len > ATT_UUID_128_LEN)
+        len = ATT_UUID_128_LEN;
+
+    for (i = 0; i < len && used + 3 <= size; i++)
+    {
+        int n = rt_snprintf(out + used, size - used, "%02x", uuid[i]);
+
+        if (n < 0 || (size_t)n >= size - used)
+            break;
+        used += (size_t)n;
+    }
+    out[used] = '\0';
+}
+
+/**
  * Append "<handle>:<uuid-hex>" to a descriptor list.
  *
  * The UUID goes out in the byte order the attribute database reported, so a
@@ -207,6 +233,7 @@ static void peer_gatt_emit_characteristics(peer_link_t *link,
 
     for (i = 0; i < svc->char_count; i++)
     {
+        char uuid_hex[ATT_UUID_128_LEN * 2 + 1];
         size_t used = 0;
         uint8_t reported = chara->desc_count;
 
@@ -218,9 +245,14 @@ static void peer_gatt_emit_characteristics(peer_link_t *link,
             used = peer_gatt_desc_append(descs, sizeof(descs), used, d,
                                          &chara->desc[d]);
 
-        /* One line per characteristic, all of them before the terminal @ok. */
-        peer_emit_evt("char", "link=%u index=%u handle=%u value_handle=%u descs=%s",
-                      link->link_id, i, chara->attr_hdl, chara->pointer_hdl, descs);
+        /* One line per characteristic, all of them before the terminal @ok.
+         * The UUID is what lets a host pick a characteristic by the identifier
+         * the profile defines, instead of by its position in the table. */
+        peer_gatt_uuid_hex(chara->uuid, chara->uuid_len, uuid_hex, sizeof(uuid_hex));
+        peer_emit_evt("char",
+                      "link=%u index=%u handle=%u value_handle=%u descs=%s uuid=%s",
+                      link->link_id, i, chara->attr_hdl, chara->pointer_hdl,
+                      descs, uuid_hex);
 
         g_char_count++;
         chara = (const sibles_svc_search_char_t *)((const uint8_t *)chara +
@@ -362,7 +394,8 @@ void peer_gatt_client_on_read_error(void *ind_)
     if (g_read_conn == PEER_GATT_NO_CONN || ind->conn_idx != g_read_conn)
         return;
 
-    g_read_rc = -1;
+    /* The stack's status, so `gatt.read` can name the ATT error it got. */
+    g_read_rc = ind->status != 0 ? (int)ind->status : -1;
     peer_ble_signal(PEER_BIT_READ_DONE);
 }
 
@@ -514,10 +547,15 @@ int peer_gatt_client_read(peer_link_t *link, uint16_t handle,
     g_read_conn = link->conn_idx;
     peer_ble_clear_bits(PEER_BIT_READ_DONE);
 
-    if (sibles_read_remote_value(link->rmt_svc_hdl, link->conn_idx, &req) != 0)
     {
-        peer_reply_err(reply, PEER_ERR_READ_FAILED, "gatt.read");
-        goto out;
+        int8_t ret = (int8_t)sibles_read_remote_value(link->rmt_svc_hdl,
+                      link->conn_idx, &req);
+
+        if (ret != 0)
+        {
+            peer_reply_err(reply, PEER_ERR_READ_FAILED, "gatt.read ret=%d", ret);
+            goto out;
+        }
     }
 
     if (peer_ble_wait(PEER_BIT_READ_DONE, PEER_GATT_TIMEOUT_MS) != RT_EOK)
@@ -528,7 +566,9 @@ int peer_gatt_client_read(peer_link_t *link, uint16_t handle,
 
     if (g_read_rc != 0)
     {
-        peer_reply_err(reply, PEER_ERR_READ_FAILED, "gatt.read");
+        /* An ATT error from the peer (0x02 read not permitted, 0x05/0x0F
+         * insufficient security): name it, like the write path does. */
+        peer_reply_err(reply, PEER_ERR_READ_FAILED, "gatt.read rc=%d", g_read_rc);
         goto out;
     }
 

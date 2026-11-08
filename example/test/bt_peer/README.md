@@ -55,7 +55,7 @@ peer info
 Expected line, verbatim apart from `max_conn` (always 8 on this build):
 
 ```
-@info proto=1 fw=bt_peer-m3 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m4 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 ```
 
 `proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
@@ -84,7 +84,7 @@ peer data <id> <hex>              # not implemented in M1
 Instrument to host:
 
 ```
-@info proto=1 fw=bt_peer-m3 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m4 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
@@ -142,7 +142,7 @@ scan.done    count=<n>
 conn         link=<n> addr=<hex> role=0/1 interval_ms=<n>
 disconn      link=<n> reason=<n>
 link         link=<n> addr=<hex> role=0/1 interval_ms=<n>
-char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h>:<uuidhex>,...
+char         link=<n> index=<n> handle=<h> value_handle=<h> uuid=<uuidhex> descs=<h>:<uuidhex>,...
              (UUID in the order the peer sent it, LSB first: a CCCD is 0229)
 notify       link=<n> handle=<h> len=N data=<hex>
 write        link=<n> handle=<h> len=N data=<hex>

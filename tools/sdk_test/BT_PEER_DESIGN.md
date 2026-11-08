@@ -224,7 +224,7 @@ adv          index=<n> addr=<hex> type=0/1 rssi=<dBm> len=N data=<hex>
 scan.done    count=<n>
 conn         link=<n> addr=<hex> role=0/1 interval_ms=..
 disconn      link=<n> reason=<n>
-char         link=<n> index=<n> handle=<h> value_handle=<h> descs=<h>:<uuidhex>,...
+char         link=<n> index=<n> handle=<h> value_handle=<h> uuid=<uuidhex> descs=<h>:<uuidhex>,...
              (UUID in the order the peer sent it, LSB first: a CCCD is 0229)
 link         link=<n> addr=<hex> role=0/1 interval_ms=..
 notify       link=<n> handle=<h> len=N data=<hex>
@@ -388,11 +388,14 @@ class Characteristic:
     index: int
     handle: int
     value_handle: int
+    uuid: bytes | None            # 选特征用它，不按顺序
     descriptors: list[int]
+    descriptor_uuids: list[bytes | None]
 
 @dataclass(frozen=True)
 class Service:
     characteristics: list[Characteristic]
+    def characteristic(self, uuid: bytes) -> Characteristic: ...
 ```
 
 ## 7. fixture、binding 与调度
@@ -614,6 +617,10 @@ profile 语义和音频通路不能复用，需要独立的 `classic/` 模块。
   支持 passkey 需要把 `sec.bond` 拆成“开始/等待”两步。
 - **命令行长度**：msh 实测在 ~500 字符以上拿不到响应（名义 1024），
   所以 `adv.data` / `gatt.write` 的大负载仍受限；`peer data` 续行未实现。
+- **52x 上的 DIS 读取要求已认证链路**：明文读回 ATT 0x0F，Just Works 加密后仍是
+  0x05。MITM 只能靠 passkey（SC 配对在本台失败），而 passkey 流程又依赖
+  `sec.bond` 拆分（见 13.2.1），所以 `diss` 套件只验证 DIS 可被发现并枚举，
+  不读它的值。
 - **被测例程自身的两个缺陷**（测试侧只绕开、不修）：`iBeacon` 的
   `cmd_diss adv_update` 解析不出 UUID 字符串（只写进两个字节）；`periodic_adv`
   的 `cmd_diss keep_per stop` 停不住周期数据的更新。

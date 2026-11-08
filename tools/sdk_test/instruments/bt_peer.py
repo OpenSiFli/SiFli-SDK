@@ -73,6 +73,8 @@ class Characteristic:
     #: UUID of each descriptor, parallel to ``descriptors``; ``None`` where the
     #: instrument did not report one. Bytes, in the order the peer sent them.
     descriptor_uuids: List[Optional[bytes]] = field(default_factory=list)
+    #: The characteristic's own UUID (2 or 16 bytes, as the peer sent it).
+    uuid: Optional[bytes] = None
 
     def descriptor_handle(self, uuid: bytes) -> int:
         """The handle of the descriptor with @p uuid, if the peer reported it."""
@@ -97,6 +99,20 @@ class Service:
                 f"characteristic {index} was not discovered "
                 f"({len(self.characteristics)} present)"
             ) from exc
+
+    def characteristic(self, uuid: bytes) -> Characteristic:
+        """The characteristic with @p uuid, selected the way the profile defines it.
+
+        Position is not an identifier: a profile's characteristic order is an
+        implementation detail, and a service may hold several.
+        """
+        for characteristic in self.characteristics:
+            if characteristic.uuid == uuid:
+                return characteristic
+        raise AssertionError(
+            f"no characteristic {uuid.hex()} in this service; reported: "
+            f"{[c.uuid.hex() if c.uuid else None for c in self.characteristics]}"
+        )
 
     def cccd_handle(self, index: int = 0) -> int:
         """The CCCD of a discovered characteristic.
@@ -676,12 +692,14 @@ def _characteristic_from_event(event: Dict[str, Any]) -> Characteristic:
             raise InstrumentProtocolError(
                 f"descs={values.get('descs')!r} is not a handle[:uuid] list"
             ) from exc
+    uuid_hex = values.get("uuid", "")
     return Characteristic(
         index=_int(values, "index"),
         handle=_int(values, "handle"),
         value_handle=_int(values, "value_handle"),
         descriptors=descriptors,
         descriptor_uuids=descriptor_uuids,
+        uuid=bytes.fromhex(uuid_hex) if uuid_hex else None,
     )
 
 

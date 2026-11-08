@@ -248,6 +248,26 @@ class TestGattClient(SdkTestCase):
             service.characteristics[0].descriptor_handle(CCCD_UUID), 12
         )
 
+    def test_a_characteristic_is_selected_by_its_uuid(self):
+        peer, _ = peer_for(
+            {
+                "gatt.discover": lines(
+                    "@evt 1 char link=0 index=0 handle=9 value_handle=10 "
+                    "uuid=292a descs=",
+                    "@evt 2 char link=0 index=1 handle=11 value_handle=12 "
+                    "uuid=2a29 descs=",
+                    "@ok 1 count=2 first_seq=0",
+                )
+            }
+        )
+
+        service = peer.ble.discover(Link(0, "aa"))
+
+        self.assertEqual(service.characteristic(bytes([0x29, 0x2A])).value_handle, 10)
+        self.assertEqual(service.characteristic(bytes([0x2A, 0x29])).value_handle, 12)
+        with self.assertRaises(AssertionError):
+            service.characteristic(bytes([0, 0]))
+
     def test_a_characteristic_with_several_descriptors_needs_a_cccd(self):
         """Guessing would write the wrong handle; say so instead."""
         peer, _ = peer_for(
