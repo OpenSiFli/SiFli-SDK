@@ -311,6 +311,121 @@ class TestEvents(SdkTestCase):
 
         self.assertEqual(instrument.next_event("adv")["values"]["addr"], "aa")
 
+    def test_a_protocol_marker_inside_a_log_line_is_not_an_answer(self):
+        """A ulog line that merely mentions `@ok` must not satisfy a request."""
+        console = FakeLineConsole(
+            {
+                "peer req 1 gap.scan": lines(
+                    "[D/sibles] echoed: @ok 1 count=9",
+                    "@ok 1 count=2",
+                )
+            }
+        )
+        instrument = InstrumentConsole(console)
+
+        self.assertEqual(instrument.command("gap.scan"), {"count": "2"})
+
+
+class TestCommandEvents(SdkTestCase):
+    def test_it_consumes_exactly_the_promised_events_from_the_firmware_boundary(self):
+        console = FakeLineConsole(
+            {
+                "peer req 1 gap.scan": lines(
+                    "@evt 1 adv index=9 addr=stale",
+                    "@evt 2 adv index=1 addr=fresh",
+                    "@ok 1 count=1 first_seq=1",
+                )
+            }
+        )
+        instrument = InstrumentConsole(console)
+
+        result, events, _ = instrument.command_events("gap.scan", "adv")
+
+        self.assertEqual(result["count"], "1")
+        self.assertEqual([event["values"]["addr"] for event in events], ["fresh"])
+
+    def test_a_reply_without_a_boundary_is_an_error(self):
+        console = FakeLineConsole({"peer req 1 gap.scan": lines("@ok 1 count=0")})
+        instrument = InstrumentConsole(console)
+
+        with self.assertRaises(InstrumentProtocolError) as caught:
+            instrument.command_events("gap.scan", "adv")
+        self.assertIn("first_seq", str(caught.exception))
+
+    def test_a_reply_without_a_count_is_an_error(self):
+        console = FakeLineConsole({"peer req 1 gap.scan": lines("@ok 1 first_seq=0")})
+        instrument = InstrumentConsole(console)
+
+        with self.assertRaises(InstrumentProtocolError) as caught:
+            instrument.command_events("gap.scan", "adv")
+        self.assertIn("count", str(caught.exception))
+
+    def test_the_host_boundary_is_available_for_firmware_without_one(self):
+        console = FakeLineConsole(
+            {
+                "peer req 1 btc.inquiry": lines(
+                    "@evt 2 btc.dev index=1 addr=aabbcc",
+                    "@ok 1 count=1",
+                )
+            },
+            initial=lines("@evt 1 btc.dev index=9 addr=stale"),
+        )
+        instrument = InstrumentConsole(console)
+        instrument.drain()
+
+        _, events, _ = instrument.command_events(
+            "btc.inquiry", "btc.dev", boundary="host"
+        )
+
+        self.assertEqual([event["values"]["addr"] for event in events], ["aabbcc"])
+
+
+class TestBookkeeping(SdkTestCase):
+    def test_events_before_the_boundary_are_discarded_not_just_skipped(self):
+        console = FakeLineConsole(
+            {
+                "peer req 1 gap.scan": lines(
+                    "@evt 6 adv index=1 addr=fresh",
+                    "@ok 1 count=1 first_seq=5",
+                )
+            },
+            initial=lines(
+                "@evt 1 adv index=1 addr=old",
+                "@evt 2 adv index=2 addr=older",
+            ),
+        )
+        instrument = InstrumentConsole(console)
+        instrument.drain()
+
+        _, events, _ = instrument.command_events("gap.scan", "adv")
+
+        self.assertEqual([event["values"]["addr"] for event in events], ["fresh"])
+        self.assertEqual(instrument.stale_events, 2)
+
+    def test_a_second_answer_for_one_request_is_counted(self):
+        console = FakeLineConsole(
+            {"peer req 1 gap.scan": lines("@ok 1 count=0", "@ok 1 count=7")}
+        )
+        instrument = InstrumentConsole(console)
+
+        self.assertEqual(instrument.command("gap.scan"), {"count": "0"})
+        instrument.drain()
+
+        self.assertEqual(instrument.duplicate_responses, 1)
+
+    def test_a_second_answer_after_the_first_was_collected_is_counted(self):
+        """The leak the review found: the duplicate arrives after the pop."""
+        console = FakeLineConsole({"peer req 1 gap.scan": lines("@ok 1 count=0")})
+        instrument = InstrumentConsole(console)
+        self.assertEqual(instrument.command("gap.scan"), {"count": "0"})
+
+        console.feed(lines("@ok 1 count=9"))
+        instrument.drain()
+
+        self.assertEqual(instrument.duplicate_responses, 1)
+        self.assertEqual(instrument._responses, {})
+
+
     def test_ordinary_log_lines_are_ignored(self):
         console = FakeLineConsole(
             initial=lines(

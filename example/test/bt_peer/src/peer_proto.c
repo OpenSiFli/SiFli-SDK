@@ -478,6 +478,7 @@ static int peer_op_dev_list(const peer_args_t *args, peer_reply_t *reply)
 {
     uint8_t slot;
     uint8_t count = 0;
+    uint32_t first_seq = peer_evt_seq_current();
     char addr[BD_ADDR_LEN * 2 + 1];
 
     (void)args;
@@ -496,7 +497,7 @@ static int peer_op_dev_list(const peer_args_t *args, peer_reply_t *reply)
         count++;
     }
 
-    peer_reply_ok(reply, "links=%u", count);
+    peer_reply_ok(reply, "links=%u first_seq=%u", count, (unsigned)first_seq);
     return 0;
 }
 

@@ -29,7 +29,7 @@ import re
 
 import pytest
 
-from sdk_test.instruments import ble_server
+from sdk_test.suite_helpers import ble_server
 from sdk_test.instruments.errors import InstrumentCommandError
 
 #: The prompt is ``msh />`` when DFS keeps a working directory and ``msh >``
@@ -180,6 +180,11 @@ def test_notification_burst_reaches_the_peer(dut, bt_peer):
     ``ble_write_to_remote``, so the payloads also prove the order and the count,
     not just that one packet arrived.
     """
+    # The boundary is taken before the trigger: the DUT sends the whole burst
+    # back to back, so one host read carries several packets. Without it the
+    # second wait would start "from now" and the rest of the burst would be
+    # treated as history.
+    start = bt_peer.console.last_seq
     bt_peer.ble.write(STATE["link"], STATE["value_handle"], NOTIFY_WRITE)
 
     # The DUT's own view of the trigger: this line is printed only when the
@@ -188,7 +193,7 @@ def test_notification_burst_reaches_the_peer(dut, bt_peer):
 
     for index in range(NOTIFY_COUNT):
         payload = bt_peer.ble.wait_notification(
-            STATE["value_handle"], link=STATE["link"], timeout=15
+            STATE["value_handle"], link=STATE["link"], since_seq=start, timeout=15
         )
         assert payload == bytes([index]) * NOTIFY_LENGTH, (
             f"notification {index} carried {payload.hex()}, "

@@ -55,7 +55,7 @@ peer info
 Expected line, verbatim apart from `max_conn` (always 8 on this build):
 
 ```
-@info proto=1 fw=bt_peer-m2 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m3 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 ```
 
 `proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
@@ -84,7 +84,7 @@ peer data <id> <hex>              # not implemented in M1
 Instrument to host:
 
 ```
-@info proto=1 fw=bt_peer-m2 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
+@info proto=1 fw=bt_peer-m3 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=1024
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
@@ -112,7 +112,7 @@ Rules that matter when extending it:
 | `gap.scan.stop` | Stops a scan early (the shell is serial, so mostly a no-op). |
 | `gap.connect` | By scan `index` or `addr`; `@ok link=<n>`. |
 | `gap.disconnect` | By `link`. |
-| `dev.list` | One `@evt link` per connection, then `@ok links=<n>`. |
+| `dev.list` | One `@evt link` per connection, then `@ok links=<n> first_seq=<n>`. |
 | `gatt.discover` | `uuid` optional; `@evt char` lines then `@ok count=<n>`. |
 | `gatt.read` | `@ok len=N data=<hex>`. |
 | `gatt.write` | `response=0/1`. |

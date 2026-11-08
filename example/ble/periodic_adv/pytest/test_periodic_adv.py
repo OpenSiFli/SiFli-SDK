@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import time
 
-from sdk_test.instruments import ble_server
+from sdk_test.suite_helpers import ble_server
 
 #: The DUT's manufacturer AD in full: length 36, type 0xFF, the Sifli company
 #: id 0x0A4C little-endian, then the example's 33 bytes of additional data.

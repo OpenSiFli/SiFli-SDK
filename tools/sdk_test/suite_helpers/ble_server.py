@@ -20,8 +20,8 @@ import time
 from typing import Any
 from typing import Optional
 
-from .errors import InstrumentCommandError
-from .errors import InstrumentTimeout
+from ..instruments.errors import InstrumentCommandError
+from ..instruments.errors import InstrumentTimeout
 
 #: The shared service UUID of the peripheral examples: "sifli_app".
 SIFLI_APP_UUID = bytes(

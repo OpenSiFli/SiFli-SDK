@@ -65,20 +65,18 @@ class BtClassicInstrument:
     # -- discovery -----------------------------------------------------------
 
     def inquiry(self, duration_ms: int = 10000, *, timeout: float = 20.0) -> List[ClassicDevice]:
-        # Discard events already in flight before taking the boundary; see
-        # BleInstrument.scan() for the stale-event failure this prevents.
-        self._console.drain()
-        start = self._console.last_seq
-        result = self._console.command(
-            "btc.inquiry", timeout=timeout, duration_ms=duration_ms
+        # The Classic firmware does not exist yet, so its reply cannot carry the
+        # firmware-side event boundary the BLE ops report. The host-side
+        # boundary is the fallback here and is stated as such: when the Classic
+        # build lands, give `btc.inquiry` a first_seq and drop this argument.
+        _, events, _ = self._console.command_events(
+            "btc.inquiry",
+            "btc.dev",
+            timeout=timeout,
+            boundary="host",
+            duration_ms=duration_ms,
         )
-        count = _int(result, "count")
-        return [
-            _device_from_event(
-                self._console.next_event("btc.dev", since_seq=start, timeout=timeout)
-            )
-            for _ in range(count)
-        ]
+        return [_device_from_event(event) for event in events]
 
     # -- connection ----------------------------------------------------------
 

@@ -161,13 +161,9 @@ class BleInstrument:
         timeout: float = 20.0,
     ) -> List[AdvReport]:
         """Scan for ``duration_ms`` and return every report, strongest first."""
-        # Parsing what is already in flight keeps the transcript readable and
-        # drops junk, but it is not what makes this scan's reports separable: the
-        # firmware reports the sequence it was at before the scan could emit
-        # anything, and that boundary does the work.
-        self._console.drain()
-        result = self._console.command(
+        result, events, boundary = self._console.command_events(
             "gap.scan",
+            "adv",
             timeout=timeout,
             duration_ms=duration_ms,
             interval_ms=interval_ms,
@@ -175,18 +171,14 @@ class BleInstrument:
             dup=int(duplicate_filter),
             rssi_min=rssi_min,
         )
-        first_seq = _event_boundary(result, "gap.scan")
-        count = _int(result, "count")
-        reports = [
-            _adv_from_event(
-                self._console.next_event("adv", since_seq=first_seq, timeout=timeout)
-            )
-            for _ in range(count)
-        ]
+        reports = [_adv_from_event(event) for event in events]
+
         # `scan.done` is informational; consume it so a later wait cannot see it
         # as this scan's answer.
         try:
-            self._console.next_event("scan.done", since_seq=first_seq, timeout=0.05)
+            self._console.next_event(
+                "scan.done", since_seq=boundary, timeout=0.05
+            )
         except InstrumentTimeout:
             pass
         return sorted(reports, key=_by_signal, reverse=True)
@@ -287,13 +279,11 @@ class BleInstrument:
         )
 
     def list_links(self) -> List[Link]:
-        self._console.drain()
-        start = self._console.last_seq
-        result = self._console.command("dev.list")
-        count = _int(result, "links")
+        _, events, _ = self._console.command_events(
+            "dev.list", "link", count_key="links"
+        )
         links = []
-        for _ in range(count):
-            event = self._console.next_event("link", since_seq=start)
+        for event in events:
             values = event["values"]
             links.append(
                 Link(
@@ -396,7 +386,13 @@ class BleInstrument:
         since_seq: Optional[int] = None,
         timeout: float = 15.0,
     ) -> bytes:
-        """One periodic-channel payload, optionally from a given sync activity."""
+        """One periodic-channel payload, optionally from a given sync activity.
+
+        Like the notification waits, the default boundary is "now"; the
+        instrument reports a periodic payload only when it changes.
+        """
+        if since_seq is None:
+            since_seq = self._console.last_seq
         event = self._console.next_event(
             "periodic", timeout=timeout, since_seq=since_seq, link=link
         )
@@ -416,23 +412,15 @@ class BleInstrument:
         """
         # The firmware's boundary, not the host's: a timed-out discovery can
         # leave char events in flight, and they must not be counted here.
-        self._console.drain()
-        result = self._console.command(
+        _, events, _ = self._console.command_events(
             "gatt.discover",
+            "char",
             timeout=timeout,
+            match={"link": link.link_id},
             link=link.link_id,
             uuid=uuid.hex() if uuid else None,
         )
-        first_seq = _event_boundary(result, "gatt.discover")
-        count = _int(result, "count")
-        characteristics = [
-            _characteristic_from_event(
-                self._console.next_event(
-                    "char", since_seq=first_seq, link=link.link_id, timeout=timeout
-                )
-            )
-            for _ in range(count)
-        ]
+        characteristics = [_characteristic_from_event(event) for event in events]
         if not characteristics:
             raise AssertionError("the peer discovered the service but reported no characteristic")
         return Service(characteristics=characteristics)
@@ -489,9 +477,14 @@ class BleInstrument:
         """Wait for the next notification on ``handle`` and return its payload.
 
         ``since_seq`` pins the wait to events after a point the caller captured
-        before the action that provokes the notification; without it, a packet
-        left over from an earlier test can satisfy the wait.
+        before the action that provokes the notification. Defaulting to the
+        current sequence means "from now": a packet left over from an earlier
+        test cannot satisfy it. A caller that wants history passes an explicit
+        earlier boundary, which works as long as those events have not already
+        been discarded by a previous boundary.
         """
+        if since_seq is None:
+            since_seq = self._console.last_seq
         event = self._console.next_event(
             "notify",
             timeout=timeout,
@@ -510,6 +503,8 @@ class BleInstrument:
         timeout: float = 10.0,
     ) -> bytes:
         """Wait for an unsolicited read (the DUT read the peer's value)."""
+        if since_seq is None:
+            since_seq = self._console.last_seq
         event = self._console.next_event(
             "read",
             timeout=timeout,
@@ -569,6 +564,8 @@ class BleInstrument:
         since_seq: Optional[int] = None,
         timeout: float = 30.0,
     ) -> int:
+        if since_seq is None:
+            since_seq = self._console.last_seq
         event = self._console.next_event(
             "passkey",
             timeout=timeout,
@@ -637,21 +634,6 @@ class BtPeer:
 
 
 # -- parsing helpers ---------------------------------------------------------
-
-
-def _event_boundary(result: Dict[str, str], op: str) -> int:
-    """The event-sequence boundary an operation's ``@ok`` reports.
-
-    The firmware takes it before the operation can emit anything, which is what
-    makes its events separable from an earlier operation's still in flight. A
-    reply without it cannot be used safely, so it is an error, not a fallback.
-    """
-    if "first_seq" not in result:
-        raise InstrumentProtocolError(
-            f"the instrument's `{op}` reply carried no first_seq, so its events "
-            "cannot be told apart from a previous operation's"
-        )
-    return _int(result, "first_seq")
 
 
 def _adv_from_event(event: Dict[str, Any]) -> AdvReport:

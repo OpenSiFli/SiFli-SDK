@@ -13,7 +13,7 @@ import unittest
 
 from _support import SdkTestCase
 
-from sdk_test.instruments import ble_server
+from sdk_test.suite_helpers import ble_server
 
 
 class FakeDut:

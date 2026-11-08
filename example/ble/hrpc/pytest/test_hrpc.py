@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import pytest
 
-from sdk_test.instruments import ble_server
+from sdk_test.suite_helpers import ble_server
 
 STATE: dict = {}
 

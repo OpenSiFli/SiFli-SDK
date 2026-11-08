@@ -30,6 +30,7 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Protocol
+from typing import Tuple
 
 from .errors import InstrumentCapabilityError
 from .errors import InstrumentCommandError
@@ -54,6 +55,18 @@ DEFAULT_TIMEOUT = 10.0
 #: is broken, and spinning on it would hang the suite instead of reporting why.
 MAX_DRAIN_READS = 4096
 
+#: How many sent lines are kept for `console.sent[-1]` and diagnostics.
+#: A long session issues thousands; keeping all of them is a slow leak.
+SENT_LIMIT = 256
+
+#: How many expired request ids are remembered, so a late answer can be
+#: recognised as late instead of matching a later request.
+EXPIRED_LIMIT = 1024
+
+#: How many answered request ids are remembered, so a second answer can be
+#: counted as a duplicate instead of being stored forever.
+ANSWERED_LIMIT = 1024
+
 #: ANSI SGR sequences. ulog can be built with colour, and its reset code
 #: (``\x1b[0m``) is emitted before the *next* line -- so an ``@ok`` line can
 #: arrive as ``\x1b[0m@ok ...``. Without stripping, that line is not recognised
@@ -63,7 +76,24 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 #: Where a protocol line starts inside a chunk. The shell prompt (``msh />``)
 #: has no trailing newline, so an asynchronous event can arrive as
 #: ``msh />@evt ...``; requiring ``@`` at column zero would drop that packet.
+#: The marker is accepted at column zero or right after that prompt -- not
+#: anywhere in the line, because a ulog line that merely mentions ``@ok`` must
+#: not be taken for the answer to a request.
+_PROMPT_RE = re.compile(r"msh [^>\n]*>")
 _PROTOCOL_START_RE = re.compile(r"@(?:info|ok|err|evt)\b")
+
+
+def _protocol_start(line: str) -> Optional[int]:
+    """Index where a protocol line begins, or ``None`` when it is not one."""
+    if _PROTOCOL_START_RE.match(line):
+        return 0
+    prompt = _PROMPT_RE.match(line)
+    if prompt is not None:
+        rest = line[prompt.end():]
+        stripped = rest.lstrip()
+        if _PROTOCOL_START_RE.match(stripped):
+            return prompt.end() + (len(rest) - len(stripped))
+    return None
 
 
 class LineConsole(Protocol):
@@ -98,6 +128,9 @@ class InstrumentConsole:
         #: than matched to the next request, which is the failure mode that
         #: makes a dead instrument look alive.
         self._expired: set = set()
+        #: Requests whose answer was handed to a waiter. A second answer for one
+        #: of these is a duplicate; storing it would leak and hide the bug.
+        self._answered: set = set()
         self._info: Optional[Dict[str, str]] = None
         #: What `@info` said the firmware's line budget is; 0 means unknown.
         self._max_line = 0
@@ -106,12 +139,17 @@ class InstrumentConsole:
         #: sending its request so a stale event from an earlier one cannot
         #: satisfy the new call.
         self._last_seq = 0
+        #: Recent request lines, bounded. Used by tests via `sent` and by
+        #: nothing else -- failure messages carry the line they sent directly.
         self._sent: List[str] = []
         #: Counters a test can assert on. Silently dropping either kind of line
         #: would hide exactly the bug this protocol exists to make visible.
         self.late_responses = 0
         self.stray_responses = 0
+        self.duplicate_responses = 0
         self.event_overflow = 0
+        #: Events discarded because they predate a caller's boundary.
+        self.stale_events = 0
 
     # -- public --------------------------------------------------------------
 
@@ -123,6 +161,12 @@ class InstrumentConsole:
     @property
     def sent(self) -> List[str]:
         return list(self._sent)
+
+    def _remember(self, line: str) -> None:
+        """Record a sent line, keeping only the most recent ones."""
+        self._sent.append(line)
+        if len(self._sent) > SENT_LIMIT:
+            del self._sent[0]
 
     @property
     def last_seq(self) -> int:
@@ -144,9 +188,82 @@ class InstrumentConsole:
         request_id = self._next_id
         self._next_id += 1
         line = self._build_request(request_id, op, kwargs)
-        self._sent.append(line)
+        self._remember(line)
         self._console.send_line(line)
         return self._await_response(request_id, op, line, timeout)
+
+    @staticmethod
+    def event_boundary(result: Dict[str, str], op: str) -> int:
+        """The event-sequence boundary an operation's ``@ok`` reports.
+
+        The firmware takes it before the operation can emit anything, which is
+        what makes its events separable from an earlier operation's still in
+        flight. A reply without it cannot be used safely, so it is an error.
+        """
+        raw = result.get("first_seq")
+        if raw is None:
+            raise InstrumentProtocolError(
+                f"the instrument's `{op}` reply carried no first_seq. Either the "
+                "image predates the event-boundary feature (reflash the "
+                "instrument; `peer info` should report fw=bt_peer-m3 or later) or "
+                "this op is not supposed to report one -- in that case pass "
+                "boundary=\"host\"."
+            )
+        try:
+            return int(raw)
+        except ValueError as exc:
+            raise InstrumentProtocolError(
+                f"first_seq={raw!r} is not an integer"
+            ) from exc
+
+    def command_events(
+        self,
+        op: str,
+        event: str,
+        *,
+        count_key: str = "count",
+        match: Optional[Dict[str, Any]] = None,
+        timeout: float = DEFAULT_TIMEOUT,
+        boundary: str = "firmware",
+        **kwargs: Any,
+    ) -> Tuple[Dict[str, str], List[Dict[str, Any]]]:
+        """Send one request and consume exactly the events it promises.
+
+        Every event-producing operation has the same shape: the terminal answer
+        says how many events follow, and (unless ``boundary="host"`` is asked
+        for) the sequence the firmware was at before any of them could be
+        emitted. Consuming exactly that many, from that boundary, is what keeps
+        an earlier operation's late events out of this one's result.
+
+        ``boundary="host"`` exists only for a firmware that does not report
+        ``first_seq`` yet; it is a documented fallback, not a default.
+
+        Returns ``(result, events, boundary)``. The boundary is returned so a
+        caller that also wants a related event (``scan.done``) filters it the
+        same way this call did, instead of re-deriving one.
+        """
+        if boundary not in ("firmware", "host"):
+            # Checked before sending: a typo must not run the operation.
+            raise ValueError(f"unknown boundary kind {boundary!r}")
+
+        self.drain()
+        host_boundary = self.last_seq
+        result = self.command(op, timeout=timeout, **kwargs)
+
+        start = (
+            self.event_boundary(result, op) if boundary == "firmware"
+            else host_boundary
+        )
+        count = _count_value(result, count_key, op)
+
+        # Applied even when no events are promised: the events this operation
+        # displaced are stale either way.
+        self._drop_stale(start)
+
+        return result, [
+            self.next_event(event, timeout=timeout, since_seq=start, **(match or {}))
+            for _ in range(count)
+        ], start
 
     def expect_ready(self, capability: str = "") -> Dict[str, str]:
         """Ask ``peer info`` and require the firmware to be the expected one.
@@ -157,7 +274,7 @@ class InstrumentConsole:
         """
         self._info = None
         line = "peer info"
-        self._sent.append(line)
+        self._remember(line)
         self._console.send_line(line)
 
         deadline = time.monotonic() + DEFAULT_TIMEOUT
@@ -210,8 +327,9 @@ class InstrumentConsole:
 
         Non-matching events stay in the queue, in order: a caller waiting for
         one handle's notification must not discard another handle's packet that
-        arrived first. ``since_seq`` ignores events from before the call that
-        started this operation.
+        arrived first. Events at or before ``since_seq`` are *discarded*, not
+        skipped -- a boundary only moves forward, so nothing can want them
+        again, and keeping them would make every later wait scan history.
         """
         deadline = time.monotonic() + timeout
         while True:
@@ -227,9 +345,25 @@ class InstrumentConsole:
                 )
             self._pump(min(0.2, remaining))
 
-    def release_event(self, event: Dict[str, Any]) -> None:
-        """Put an event back at the front, for a caller that looked too early."""
-        self._events.appendleft(event)
+    def _counters(self) -> str:
+        """The non-zero bookkeeping, for a failure message.
+
+        These exist so a protocol problem is visible in a real run, not only to
+        a unit test: "duplicate=1" explains a strange answer, "stale=7" explains
+        a queue that seemed to lose a packet.
+        """
+        parts = [
+            f"{name}={getattr(self, name)}"
+            for name in (
+                "late_responses",
+                "stray_responses",
+                "duplicate_responses",
+                "event_overflow",
+                "stale_events",
+            )
+            if getattr(self, name)
+        ]
+        return f" ({', '.join(parts)})" if parts else ""
 
     def clear_events(self) -> None:
         """Drop queued events after a state reset.
@@ -295,6 +429,11 @@ class InstrumentConsole:
         while True:
             answer = self._responses.pop(request_id, None)
             if answer is not None:
+                self._answered.add(request_id)
+                if len(self._answered) > ANSWERED_LIMIT:
+                    self._answered = set(
+                        sorted(self._answered)[-ANSWERED_LIMIT // 2:]
+                    )
                 kind = answer[0]
                 if kind == "ok":
                     return answer[1]
@@ -304,6 +443,10 @@ class InstrumentConsole:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 self._expired.add(request_id)
+                if len(self._expired) > EXPIRED_LIMIT:
+                    self._expired = set(
+                        sorted(self._expired)[-EXPIRED_LIMIT // 2:]
+                    )
                 raise InstrumentTimeout(
                     f"no answer to `{op}` within {timeout:.1f}s.\n"
                     f"sent: {line}\n--- instrument said ---\n"
@@ -330,13 +473,13 @@ class InstrumentConsole:
             self._handle_line(_ANSI_RE.sub("", line).rstrip("\r"))
 
     def _handle_line(self, line: str) -> None:
-        start = _PROTOCOL_START_RE.search(line)
+        start = _protocol_start(line)
         if start is None:
             return
-        if start.start() > 0:
-            # Drop whatever preceded it (a shell prompt, a log line without a
-            # newline); the protocol line itself starts at the marker.
-            line = line[start.start():]
+        if start > 0:
+            # Drop whatever preceded it (a shell prompt); the protocol line
+            # itself starts at the marker.
+            line = line[start:]
         head, _, rest = line[1:].partition(" ")
         tokens = rest.split()
 
@@ -385,11 +528,33 @@ class InstrumentConsole:
             self._expired.discard(request_id)
             self.late_responses += 1
             return
+        if request_id in self._answered:
+            # Answered, handed over, and now answered again: a firmware bug.
+            self.duplicate_responses += 1
+            return
         if request_id < self._next_id:
+            if request_id in self._responses:
+                # Same, for the duplicate that arrives before the first is
+                # collected: one request has exactly one terminal answer.
+                self.duplicate_responses += 1
+                return
             self._responses[request_id] = answer
             return
         # An id the host has not issued yet is not ours to guess at.
         self.stray_responses += 1
+
+    def _drop_stale(self, since_seq: int) -> None:
+        """Discard events a caller's boundary has put out of reach.
+
+        Keeping them would cost every later wait a scan over history nobody can
+        ask for again: boundaries only move forward.
+        """
+        dropped = 0
+        while self._events and self._events[0]["seq"] <= since_seq:
+            self._events.popleft()
+            dropped += 1
+        if dropped:
+            self.stale_events += dropped
 
     def _take_event(
         self,
@@ -397,6 +562,9 @@ class InstrumentConsole:
         match: Dict[str, Any],
         since_seq: Optional[int],
     ) -> Optional[Dict[str, Any]]:
+        if since_seq is not None:
+            self._drop_stale(since_seq)
+
         for position, event in enumerate(self._events):
             if event["name"] != name:
                 continue
@@ -410,6 +578,23 @@ class InstrumentConsole:
                 del self._events[position]
                 return event
         return None
+
+
+def _count_value(result: Dict[str, str], key: str, op: str) -> int:
+    """How many events a terminal answer promises."""
+    raw = result.get(key)
+    if raw is None:
+        raise InstrumentProtocolError(
+            f"the instrument's `{op}` reply carried no {key}, so the number of "
+            "events that follow is unknown"
+        )
+    try:
+        count = int(raw)
+    except ValueError as exc:
+        raise InstrumentProtocolError(f"{key}={raw!r} is not an integer") from exc
+    if count < 0:
+        raise InstrumentProtocolError(f"{key}={count} is negative")
+    return count
 
 
 def _key_values(tokens: Iterable[str]) -> Dict[str, str]:

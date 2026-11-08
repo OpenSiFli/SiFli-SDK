@@ -9,7 +9,7 @@ procedure; a GATT read afterwards shows the link still carries traffic.
 
 from __future__ import annotations
 
-from sdk_test.instruments import ble_server
+from sdk_test.suite_helpers import ble_server
 
 STATE: dict = {}
 

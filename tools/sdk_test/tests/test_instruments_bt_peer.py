@@ -189,7 +189,7 @@ class TestConnection(SdkTestCase):
             {
                 "dev.list": lines(
                     "@evt 1 link link=0 addr=aa role=central interval_ms=30",
-                    "@ok 1 links=1",
+                    "@ok 1 links=1 first_seq=0",
                 )
             }
         )
@@ -205,7 +205,7 @@ class TestConnection(SdkTestCase):
             {
                 "dev.list": lines(
                     "@evt 1 link link=0 addr=aa role=1 interval_ms=30",
-                    "@ok 1 links=1",
+                    "@ok 1 links=1 first_seq=0",
                 )
             }
         )
@@ -312,8 +312,29 @@ class TestGattClient(SdkTestCase):
             )
         )
 
-        self.assertEqual(peer.ble.wait_notification(20), b"\x0b")
-        self.assertEqual(peer.ble.wait_notification(10), b"\xaa\xaa")
+        # An explicit boundary asks for history; the default is "from now".
+        self.assertEqual(peer.ble.wait_notification(20, since_seq=0), b"\x0b")
+        self.assertEqual(peer.ble.wait_notification(10, since_seq=0), b"\xaa\xaa")
+
+    def test_a_burst_is_consumed_when_the_caller_keeps_one_boundary(self):
+        """Two packets in one read, one boundary: both arrive, in order."""
+        peer, _ = peer_for(
+            initial=lines(
+                "@evt 1 notify link=0 handle=10 len=1 data=01",
+                "@evt 2 notify link=0 handle=10 len=1 data=02",
+            )
+        )
+
+        self.assertEqual(peer.ble.wait_notification(10, since_seq=0), b"")
+        self.assertEqual(peer.ble.wait_notification(10, since_seq=0), b"")
+
+    def test_a_notification_from_before_the_call_is_not_returned_by_default(self):
+        peer, _ = peer_for(
+            initial=lines("@evt 1 notify link=0 handle=10 len=2 data=aaaa")
+        )
+
+        with self.assertRaises(InstrumentTimeout):
+            peer.ble.wait_notification(10, timeout=0.05)
 
     def test_a_missing_notification_times_out_with_the_transcript(self):
         peer, _ = peer_for(initial=lines("[I/ble_app] nothing useful"))
