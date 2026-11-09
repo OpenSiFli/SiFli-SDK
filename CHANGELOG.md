@@ -1,6 +1,317 @@
-# SiFli SDK Change Log v2.5.1
+# SiFli SDK Change Log v2.5.2
 
 ## Major Changes
+- Add SF32LB57-LCD series boards (n16r8/n16r16 DPI and n16r16 QSPI) and more SF32LB57X part numbers, including support for the 57x VERSION B chip.
+- Add LVGL v9 EPIC render list enhancements: outline and shadow rendering, image arcs, object rotate/zoom, rectangle background images and INDEXED_1BIT images.
+- Add `hal/pulse_in` (input capture) and `usb_dongle` (CherryUSB) examples, plus a merged LVGL v8 custom widget example suite.
+- Add SPI-emulated I2S slave RX driver, E0470A03 display driver, AIC8800D40-N WiFi driver and GC032A camera support on 57x via 8-bit DVP.
+- Add lwIP 2.1.2 NAT support.
+- Add Kconfig `configdefault` support with per-part defaults for 57x, and sf-pkg module-level external component dependencies.
+- Extend example support for the SF32LB57-LCD boards (UART, SPI, I2C EEPROM, PWM, GPIO, PDM, eZIP and LVGL demos).
+- Improve crash-dump tooling with 57x capture support, Windows COM ports and SiP PSRAM dump scripts.
+
+## Change log since v2.5.1
+### Drivers
+#### Fixed
+
+- cmsis: Add LCPU RAM project build on 57x (bae1894d1)
+- pinmux: Fix LCPU build error on 57x (cfe9e82ea)
+- spi: Fix spi_camera and spi_dma_circular not work when DMA_SUPPORT_DYN_CHANNEL_ALLOC is not enabled (3a92466ec)
+- audprc: Fix build error when DMA_SUPPORT_DYN_CHANNEL_ALLOC is disabled on 52x (8b1f7aee7)
+- ptc: Fix pin 95 cannot be used as PTC trigger source (f0f8945c9)
+- lcd_fb: Fix tearing effect of RAMLESS LCD caused by FB manager (9a4d05c2e)
+- cherryusb: Fix MUSB host TX/RX FIFO flush fail (9b6da8b4b)
+- pmu: Fix aon_vos_trim and aon_vos_polar calibration load error on 57x (26ed4ca00)
+- pmu: Fix SA/SB pad retention for 57X (dd46587da)
+- aon: Reject reserved wakeup PINs on SF32LB52X (281d2e2eb)
+- dma: Fix OrgChannelIndex is not updated (8605389c7)
+- pinmux: Fix doxygen comment of PIN_DrivingStrengthTypeDef (0420c94b6)
+- jpeg: Fix JPEG decoding timeout in render-list mode (f18c2f500)
+- epic: Support external memory allocation interfaces (c4a1a5d3a)
+- cherryusb: Fix EP1 channel conflict on the 52/56 series (47abf13ce)
+- cherryusb: Fix endpoint number check in MUSB host channel mapping (3cc96d3c9)
+- cmsis: Correct the PSRAM memory MPU config on 58x ACPU (8e1c450da)
+- dma: Fix stale linklist flag and GPDMA-only register access (70645b323)
+- dma: Fix non-owner handle can free a just allocated channel (848542c22)
+- dma: Fix abort/deinit racing with channel reallocation (90fb09d53)
+- pmu: Minimize PMU pin wakeup de-glitch time on 57x (b7c593f74)
+- pwm: Do not use a DMA priority macro as NVIC priority (2397e1cdb)
+- usb/mstorage: Fix file corruption when copying large files on macOS (d73c6a670)
+- cherryusb: Re-arm the EP0 TX interrupt in musb_control_urb_init (76a7bf741)
+- nor: Fix DTR is enabled when erase/write is still ongoing (237e4789c)
+- otp: Fix otp_base address was not initialized in HAL_FLASH_PreInit (87d3f51be)
+- cherryusb: Fix ZLP transfer fail in host high-speed mode (025ef68c5)
+- lcd_fb: Fix ramless single-buffer flush_done not releasing FB state (7bca0cc85)
+- cherryusb: Fix rt device->rx_indicate is not called for rtserial device (29de028eb)
+- cherryusb: Fix device enumeration failure in high-speed mode (befdf01c2)
+- sdio: Fix SDIO read failure caused by exceeding the SD controller limit (5eb4fe8ea)
+- spi: Fix SF32LB57x SPI master clock configuration (0b05af31d)
+- cmsis: Rename CHG_IRQn to PMUC_IRQn on 57x (b1e70bc73)
+- lcdc: Correct interface clock divider calculation (d01c88d9d)
+- cmsis: Fix external flash config is not put in RAM section on Keil build (65ebac714)
+- pwm: Add PWM_CMD_GET_CLK to report the counter clock (0ee28ac5d)
+- rgbled: Derive SK6812 pulse timing from the PWM clock (3bb34586c)
+- usb: Fix 57x host USB clock mode for low-speed devices (20c8662f1)
+
+#### Changed
+
+- psram: Read pkgid from HPSYS_CFG.IDR instead of efuse on 57x (ec5256300)
+- pmu: Load PMU calibration data on 57x (eddfd7667)
+- sys_cfg: Separate bf0_sys_cfg implementation file per chip for better maintenance (71b368f33)
+- rcc: Enable SYSCLK_SWLP to improve Bluetooth power consumption (d209a570d)
+- ptc: Add GPIO trigger and repetition support (db0e7779c)
+- pinmux: Rename ARTITRARY FUNC macro to MATRIX FUNC to be consistent with chip spec (8ba4a3516)
+- jpegd: Improve JPEG dimension parsing robustness (1d701f114)
+- cherryusb/rndis: Support Android RNDIS class code (0xEF/0x04/0x01) (d33039454)
+- cherryusb: Add network-bridge callback hook and enable gate for u2 netdev (581373cac)
+- epic: Support external memory allocation interfaces (b2f086aa6)
+- dma: Program m2m transfers at the lowest priority level (ea8cab43a)
+- cherryusb: Improve USB stability on 58x (e0e883ef5)
+- drv_common: Always perform SysTick compensation on the HPSYS side for 52x and 57x (5362f760d)
+
+#### Added
+
+- spi_i2s_slave: Add SPI emulated I2S slave RX driver (7263bb2e5)
+- pinmux: Add HAL_PIN_SetDS to select pin driving strength (95ff37380)
+- cortex: Add HAL_NVIC_SystemResetEx to select boot mode (1a326bda5)
+- cmsis/ptm: Add 57x PTM trigger definitions and doxygen comments (92a1c53ef)
+
+### Middleware
+#### Fixed
+
+- pm: AON/PM do not support double-edge for 57x (b9984f5f8)
+- acpu_ctrl: Fix concurrent IPC (db559cabb)
+- ipc_queue: Wake LCPU for 57x IPC mailbox (bd7213ac8)
+- lvsf: Add label to lvsf_perf obj name table (87d5700aa)
+- lvgl_v9: Widen cache compare results (bd2d6558c)
+- lvsf: Remove extra +4 offset in FreeType base_line to align with LVGL standard (14cae607c)
+- lwip: Fix NAT port allocation and adapt ipv4_nat to lwIP 2.1 (755ec3ceb)
+- lvsf: Always build ft_get_cache_size so FreeType works when FT_CACHE_SIZE=0 (59c5c8e90)
+- rlottie: Fix vraster build with newer clang/libc++ (922481cf1)
+- lvgl: Clear the snapshot buffer (7bceb0da4)
+- lv_drivers: Use draw_ctx->buf as render target for canvas/snapshot (4324c41b2)
+- pm: Back up ACPU RAM during context backup on 58x (588cb619e)
+- ipc_queue: Store the advanced write pointer in circular_buf_putchar_force (56f1528ea)
+- audio: Fix lc3codec compile error (5e995225d)
+- lvsf: Support configuration of FreeType output bit depth in v8 (676679b21)
+- lvgl: Fix v9 framebuffer switching before flush (9b8f1fe67)
+- lvgl: Fix EPIC task completion (f692dc57e)
+- lvgl_v9: Support the allocation pool for SRAM/PSRAM that prioritizes the configuration of V9 image file data (cdf33c459)
+- freetype: Fix raster error paths (e6eb3c1ba)
+- dfu: Fix pingpong DFU issue on 52x (1d6a6f87f)
+- freetype: Fix LVGL v9 integration (d92c71f4c)
+- freetype: Fix Tiny FreeType integration with LVGL v9 (7eff389ab)
+- lvgl_v9: Fix render-list offscreen layer submission and lifetime (b6f21a7e9)
+- lvgl_v9: Fix the update of FPS statistics and display (349776544)
+- lvgl: Fix LVGL v9 SDL build (20f9557a3)
+- lvgl_v9/freetype: Fix glyph rendering and cache cleanup (43c6a4df8)
+
+#### Changed
+
+- pm: No need to disable module clock anymore for 57 A2 (35f5564c1)
+- lvsf: Add L1/L2 glyph caches to reduce FTC queries (34b25283b)
+- lwip: Manage lwIP timeouts based on netif link state (a9dee6c77)
+- lvgl: Unify app cache Kconfig (ab0e12699)
+- lwip: Enable NAT support in lwIP 2.1.2 (37e3470fb)
+- coredump: Add SF32LB57 support (be0c10a7f)
+- lv_drivers: Reduce bg_image parent mask snapshot and skip empty background draws (d33d69601)
+
+#### Added
+
+- lvsf: Add the lvsf_textimg control (c2f0b9f9d)
+- lvsf: Update the Keil version library file of gui_widget (0c198a256)
+- lvgl: Support image arcs in EPIC render lists (725661585)
+- lvgl: Support drawing rectangle background image via EPIC GPU (47a7a27bb)
+- lvgl: Support outline and shadow rendering in EPIC NEW_API (9cf8cf793)
+- lvgl: Support object transform (rotate/zoom) via EPIC offscreen layer (bd2eea0bc)
+- lv_drivers: Support LV_IMG_CF_INDEXED_1BIT (lv_qrcode) on EPIC via L8 snapshot (7a3cdedfb)
+
+### Bluetooth
+#### Fixed
+
+- Fixed NVDS overwrite issue when data structure is modified and NVDS was saved using an older structure
+- Fixed BLE power abnormality of SF57x series during non-signaling test
+
+#### Changed
+
+- Sync classic BT changes from other repository
+- Improved BLE 2M spurious emission performance
+- bt: Support 57x VERSION B chip (367932a32)
+
+#### Added
+
+- Added new scan API to filter advertisements by advertising type and corresponding advertising data (supported on SF57x and SF58x series only)
+- Added AFH test support for SF57x series
+- Added USB PAN bridge support
+
+
+### RTOS
+#### Fixed
+
+- kernel: Sync with RT-Thread: fix issue that could stop all timers (42212b8f9)
+- libdl: Handle allocation failures (0ffd1a8b2)
+
+#### Changed
+
+- finsh: Disable echo mode by default on 57x (b20901127)
+
+### Examples
+#### Fixed
+
+- `get-started/dualcore`: Fix build error on 57x (bd76c0f54)
+- `lvgl_v8_media`: Fix build error caused by duplicate Kconfig symbol (0518a4529)
+- `lvgl`: Unify example app-cache config into Kconfig_mem and fix no-DFS build (f47adb021)
+- `cherryusb/host/usb_bt_bridge_l2`: Fix earbud losing Internet after phone switch/reboot by re-syncing PAN (c9b5509a1)
+- `audio/opus`: Fix recording duration drift and audio frame loss in the Opus example (7e40d8357)
+- `lvgl/watch_v9`: Add the 57e configuration file (c60dbc5db)
+- `lvgl/watch_v9`: Fix crash on board sf32lb57-lcd_n16r8_dpi (b3a51a1ca)
+- `audio/flac`: Fix crash when sending commands repeatedly in flac example (624442e65)
+- `audio/record`: Fix recording failure on 57_lcd board (6822ae02f)
+- `rt_device/i2s`: Fix i2s build error on 57 lcd boards (0ca496573)
+- `lvgl/watch`: Fix the 57 crash issue (d9a590ba8)
+- `lvgl/eez_studio`: Fix the 57 crash issue (12a4658da)
+- `lvgl/NXP_GUI_guider`: Fix the 57 crash issue (01f6f20e9)
+- `lvgl/example_v9`: Fix the 57 crash issue (5ba8840f5)
+- `lvgl/v9_demo`: Fix the 57 crash issue (2599ee687)
+- `lvgl/v8_example`: Fix the 57 crash issue (9b32e10e9)
+- `lvgl/v8_demo`: Fix the 57 crash issue (a2a0ba53b)
+- `rt_device/pdm`: Fix pdm example build error on 57 lcd boards (987d01967)
+- `lvgl/Square_Line`: Fix the 57 crash issue (3091dad3e)
+- `rt_device/pwm`: Fix typo in GPTIM and ATIM related examples (886e97c30)
+- `lvgl/watch_v9`: Fix single-step EPIC 3D drawing parameters and face drawing sequence (1b8a74a90)
+- `lvgl/watch_v9`: Use the 57x configuration uniformly (897cbedf4)
+- `lvgl/watch_v9`: Remove the padding (52efe9ab2)
+- `ezip_v9`: Allocate V9 image cache (dfc69b93a)
+- `ezip`: Fix image switching lifetime (e339907b8)
+- `ezi_v9`: Fix V9 image switching (61a52f433)
+- `ezip`/`ezip_v9`: Fix SPI-HDK SD routing (88dc19acf)
+
+#### Changed
+
+- `rt_device/pdm`: Add support of board spi-hdk_lb575ucnn6_n16 (22a29c216)
+- `rt_device/gpu/render_list_mode`: Complete README (CN/EN) (3fa7f1021)
+- `watch`: Include ACPU project if needed (d61eb0323)
+- `cherryusb/device/msc/sdcard_disk`: Fix build error on 57_lcd boards (99bcaa717)
+- `cherryusb/device/audio_v1_mic`: Remove UAC record log flooding (583de407f)
+- `hal/can`: Update hal/can example (7cd92a256)
+- `hal/gpio`: Update pin assignments for the SF32LB57-LCD board (e77f0e7a9)
+- `hal/i2c`: Update pin assignments for the SF32LB57-LCD board (46055b3d6)
+- `rt_device/gpu/render_list_mode`: Separate LCD flushing functions to lcd.c (55f6af81c)
+- `hal/tsen`: Update doc to indicate 57 series support (1480199ff)
+
+#### Added
+
+- `lvsf_v8`: Add merged lvsf v8 custom widget example suite (9d91a6d3b)
+- `usb_dongle`: Add USB dongle example based on CherryUSB (fe6a57c77)
+- `hal/pulse_in`: Add HAL input capture example (7104526a3)
+- `rt_device/rgb_led`: Add SF32LB57x support (a0311379e)
+- `ezip_v9`: Enable TF cards on 57 LCD (c4fcbcd5e)
+- `ezip`/`ezip_v9`: Enable TF cards on 57 boards (0f2a42328)
+- `rt_device/uart`: Add SF32LB57-LCD support to uart example (8d53b424d)
+- `rt_device/gpio`: Add SF32LB57-LCD support to GPIO example (6dfb7f434)
+- `hal/pwm`: Add SF32LB57-LCD support to PWM example (4d470963f)
+- `hal/uart`: Add SF32LB57-LCD support to UART example (9a9321dfc)
+- `rt_device/pwm`: Add SF32LB57-LCD support to PWM example (3e843ed05)
+- `rt_device/spi`: Add SF32LB57-LCD support to SPI circular example (d0a0d79f4)
+- `hal/spi`: Add SF32LB57-LCD support to SPI polling example (3400c795c)
+- `rt_device/i2c`: Add SF32LB57-LCD support to EEPROM example (930ffffbd)
+- `hal/spi`: Add SF32LB56-LCD support to SPI polling example (f4042d7e6)
+
+### Tools
+#### Fixed
+
+- patch: Fix custom HCPU_LCPU_CODE_START_ADDR doesn't take effect (9a786454a)
+- build: Fix ACPU code execution address on 57x (f0b7ba606)
+
+#### Changed
+
+- build: Enable 57 LCPU DSP extension for GCC (77ced584d)
+- flash: Add 58x sd1 Keil FLM target (2d39f8cb3)
+- SiFli_RfTool: Upgrade to v1.6 to support 57 series (f38aa8f84)
+- UsartServer: Upgrade to v3.1 to support 57 series (77ca0670f)
+- SifliTrace: Upgrade to v2.3.6 to support 57 series (4eae8e48f)
+- AssertDump: Upgrade to v3.2 to support 57 series (2e64f77fe)
+- impeller: Upgrade to 3.6.5 to support 57 series (c77e53657)(a9c5bf6b1)
+- build: Support multiple ACPU images for ptab v2 (d26771a99)
+- build: Source Kconfig.board first to make `configdefault` take effect (4ec22002f)
+- crash_dump: Validate crash-dump script selection (513bf086a)
+
+#### Added
+
+- sf-pkg: Support module-level external component dependencies (2024d9c57)
+- kconfig: Add configdefault support (b7f5dc09b)
+- crash_dump_analyser: Add script to dump PSRAM data for 57 chip with SiP PSRAM (af0a2d176)
+- build: Package all .o into one library (5ef08ada1)
+- kconfig: Support configdefault for conditionally sourced modules (cc6724764)
+- crash_dump: Support Windows COM ports for capture-live (32e92278b)
+- crash_dump: Add SF32LB58 psramless capture script (bd12ed423)
+
+### BSP
+#### Fixed
+
+- board: Fix CFG_SUPPORT_NON_OTP cannot be selected on 57x (4dfd7add8)
+- charger: Use hardware state instead of VBUS_RDY for actual charging status (9046fc2aa)
+- board: Fix stuck on 57 NAND and SD boot boards (d9fbae4f9)
+- board: Add missing prompts to three 57x part numbers (da325e1b4)
+- board: Set hdiv to make default value 1 take effect after wakeup from standby on 58 board (3e5630510)
+- board: Fix no response of USB peripherals hotplug on 56_lcd board in USB host mode (954aa06a8)
+- board: Fix 57 i2s build error introduced by 28fb9cb57 (b74280566)
+- board: Increase psram_data region size of 575ucnn6 board (107627203)
+- board: Fix SConscript.base reference path for external board build (ced86f6f7)
+- board: Fix main region size error of board spi-hdk_lb57bun3n6 (0adf32085)
+- board: Do not select the AW9523 driver on ACPU and LCPU (0ff00bbf5)
+- board: Fix SD card detection failure on 57-lcd boards (ad4d81faa)
+- board: Move the 57-lcd backlight to pwmt2 channel 2 (068387ff7)
+- board: Remap the 57-lcd QSPI panel pins for the 57 ribbon (63b58337b)
+
+#### Changed
+
+- board: Add support of chip SF32LB57EYBBN6 (cc1169eb6)
+- board: Load calibration data on 57x (d0aa05836)
+- board: Add support of chip SF32LB573UB766 (73b6f1e60)
+- board: Enable PSRAM_CACHE_WB by default on all boards (a02f00995)
+- board: Call HAL_PIN_SetSipFlash3 to configure SiP Flash3 pinmux (d16039779)
+- board: Replace SF32LB575YBBN6 with SF32LB57EYBBN6 on dpi/spi HDK (b22942722)
+- board: Move per-part defaults to soc/sf32lb57x/Kconfig.<part> (f81edfaa0)
+- board: Update dma_config and pwm_config of 57 series (28fb9cb57)
+- board: Raise 57-lcd QSPI clock drive strength to 12mA (fa45f0cf1)
+- board: Enable PDM mic on 57-lcd boards (99bf8a7bb)
+- board: Enable the audio PA on sf32lb57-lcd boards (991992d5e)
+
+#### Added
+
+- board: Add boards dpi-hdk_lb575ucnn6_n16_qspi and spi-hdk_lb575ucnn6_n16 (a442830ce)
+- board: Add support of chip SF32LB57GVD776 (ae19bf1b4)
+- board: Add part numbers SF32BPRTUN3N6 and SF32BPRTYB3N6 (373a024c7)
+- board: Add board dpi-hdk_lb57gyd7n6_qspi (812a1eb70)
+- display: Add display driver for model E0470A03 (e273494d4)
+- soc: Add SF32LB57ZUN3N6, SF32LB57ZVN3N6 and SF32LB57ZVN7N6 (71091c29f)
+- camera/gc032a: Camera gc032a works on 57x with DVP 8-bit (d64aef291)
+- board: Add 57-lcd n16r8/n16r16 DPI and n16r16 QSPI boards (0af0d6d9e)
+- wifi/aic8800d40-n: Add aic8800d40-n WiFi driver (de1b97a6f)
+
+### Docs
+#### Fixed
+
+- docs: Fix HAL exclude_patterns being discarded by the Drivers entry (d0fc6dd87)
+- docs: Fix MPI instance count and memory map per series (145483832)
+- docs: Fix EFUSE bank count for 57x series (54bfdd0f5)
+- docs: Fix ADC channel count description for 57x series (a23091706)
+- docs: Fix AON wakeup pin mapping per chip series (5d0a46195)
+- docs: Fix rt-pkg usage guide (8890e2bee)
+- docs: Pin CI Python version to 3.14 (a8512fe53)
+
+#### Changed
+
+- docs: Prefer explicit version ranges in sf-pkg docs (faa26d0b8)
+
+#### Added
+
+- lvgl_v8: Add 25 LVGL v8 widget documents for zh_CN and en (1962ea219)
+- hci_log: Add hci_log and corresponding documentation (b5dae1e02)
+
+## Change log since v2.5.0
+### Major Changes
 - Add support of the SF32LB57X chip family, including new boards (sf32lb57-dpi-hdk, sf32lb57-spi-hdk and sf32lb57x-ramrun series), drivers (LCD DPI/DBI/DIRECT_EPD, PSRAM calibration, SDIO single-wire, CAN, etc.), RF driver and 2nd bootloader.
 - Add DFU_V2 middleware, with CDC_DFU, BLE_DFU and PAN_DFU subprograms and examples.
 - Add crypt_block_dev middleware to support encrypted block device.
@@ -9,7 +320,6 @@
 - Add `a2dp_sharing` example: share media stream & call voice from phone to earphones
 - Add `hfp_relay` example: relay phone call audio to earphones
 
-## Change log since v2.5.0
 ### Drivers
 #### Fixed
 
