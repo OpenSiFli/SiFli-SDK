@@ -1,0 +1,42 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool
+    select custom_mem_map
+    default y if !SOC_SIMULATOR
+
+# Display port buffers. LVGL itself is configured in port/lv_conf.h; its
+# Kconfig symbols reuse LVGL C identifiers (LV_COLOR_FORMAT_*, LV_OS_*, ...)
+# and would become macros in rtconfig.h.
+choice LV_EXT_FB_MODE
+    prompt "LVGL draw buffer mode"
+    default LV_EXT_FB_TWO_PARTIAL
+    config LV_EXT_FB_TWO_PARTIAL
+        bool "Two partial buffers"
+    config LV_EXT_FB_ONE_PARTIAL
+        bool "One partial buffer"
+endchoice
+
+config LV_EXT_FB_LINE_NUM
+    int "Lines per draw buffer"
+    default 100
+
+# Switches consumed by the upstream LVGL SConscript and by this example.
+config PKG_USING_LVGL
+    bool "Build the external LVGL library"
+    default y
+
+config PKG_LVGL_USING_DEMOS
+    bool "Build external LVGL demos"
+    depends on PKG_USING_LVGL
+    default n
+
+config PKG_LVGL_USING_EXAMPLES
+    bool "Build external LVGL examples"
+    depends on PKG_USING_LVGL
+    default n
+
+config EXAMPLE_LVGL_BENCHMARK
+    bool "Run the external LVGL benchmark"
+    depends on PKG_USING_LVGL
+    select PKG_LVGL_USING_DEMOS
+    default n

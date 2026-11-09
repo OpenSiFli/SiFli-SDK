@@ -1,0 +1,95 @@
+from building import *
+import building
+import os
+import rtconfig
+
+cwd = GetCurrentDir()
+objs = []
+
+Import('SIFLI_SDK')
+
+# External LVGL checkout. It normally sits beside the SDK checkout
+# (<parent>/lvgl); a git worktree is nested one level deeper
+# (.../SiFli-SDK.worktrees/<name>), so walk up instead of counting "..": a
+# fixed count is correct for exactly one layout and silently wrong for the
+# next. LVGL_ROOT in the environment wins, for a checkout this cannot infer.
+def find_lvgl_checkout(sdk_root):
+    override = os.environ.get('LVGL_ROOT')
+    if override:
+        candidate = os.path.abspath(override)
+        if os.path.isfile(os.path.join(candidate, 'SConscript')):
+            return candidate
+        raise Exception(
+            'LVGL_ROOT points at %s, which has no SConscript; point it at '
+            'the LVGL checkout' % candidate
+        )
+
+    current = os.path.abspath(sdk_root)
+    for _ in range(3):
+        candidate = os.path.abspath(os.path.join(current, '..', 'lvgl'))
+        if os.path.isfile(os.path.join(candidate, 'SConscript')):
+            return candidate
+        parent = os.path.abspath(os.path.join(current, '..'))
+        if parent == current:
+            break
+        current = parent
+    return None
+
+
+LVGL_ROOT = find_lvgl_checkout(SIFLI_SDK)
+if LVGL_ROOT is None:
+    raise Exception(
+        'LVGL checkout not found beside the SDK checkout or its parent; '
+        'set LVGL_ROOT to the checkout directory'
+    )
+
+# LVGL is configured by port/lv_conf.h. Every translation unit that includes
+# lvgl.h must resolve the same header, so both paths and the switch are added
+# to the global environment.
+DefineGroup('LVGL_CONFIG', [], depend=['PKG_USING_LVGL'],
+            CPPPATH=[LVGL_ROOT, os.path.join(cwd, '..', 'port')],
+            CPPDEFINES=['LV_CONF_INCLUDE_SIMPLE'])
+
+# Build the upstream sources but keep their objects in the project build
+# directory instead of writing into the checkout.
+build_dir = os.path.join(GetCurrentEnv()['BSP_ROOT'], rtconfig.OUTPUT_DIR)
+variant_root = os.path.join(build_dir, 'lvgl', 'source')
+VariantDir(variant_root, LVGL_ROOT, duplicate=0)
+
+define_group = building.DefineGroup
+
+
+def external_group(name, src, depend, **parameters):
+    # The application runs lv_timer_handler() itself, so upstream's RT-Thread
+    # port (needs __RTTHREAD__, starts its own thread) is not built.
+    if name == 'LVGL-port':
+        return []
+    sources = []
+    for node in File(src):
+        path = node.srcnode().abspath
+        sources.append(File(os.path.join(variant_root,
+                                         os.path.relpath(path, LVGL_ROOT))))
+    return define_group(name, list(dict.fromkeys(sources)), depend, **parameters)
+
+
+building.DefineGroup = external_group
+try:
+    objs = objs + SConscript(os.path.join(LVGL_ROOT, 'SConscript'))
+    if GetDepend('PKG_LVGL_USING_DEMOS'):
+        # Upstream's RT-Thread script only walks the subdirectories of demos/,
+        # so the shared entry point has to be added here.
+        objs = objs + building.DefineGroup(
+            'LVGL_DEMOS',
+            [File(os.path.join(LVGL_ROOT, 'demos', 'lv_demos.c'))],
+            depend=['PKG_USING_LVGL', 'PKG_LVGL_USING_DEMOS'],
+            CPPPATH=[os.path.join(LVGL_ROOT, 'demos')])
+finally:
+    building.DefineGroup = define_group
+
+objs = objs + SConscript(os.path.join(cwd, '..', 'port', 'SConscript'),
+                         variant_dir='port', duplicate=0)
+objs = objs + SConscript(os.path.join(SIFLI_SDK, 'SConscript'),
+                         variant_dir='sifli_sdk', duplicate=0)
+objs = objs + SConscript(os.path.join(cwd, '..', 'src', 'SConscript'),
+                         variant_dir='src', duplicate=0)
+Return('objs')

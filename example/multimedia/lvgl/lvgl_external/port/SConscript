@@ -1,0 +1,7 @@
+from building import *
+
+cwd = GetCurrentDir()
+
+group = DefineGroup('LVGL_EXT_PORT', Glob('*.c'),
+                    depend=['PKG_USING_LVGL'], CPPPATH=[cwd])
+Return('group')
