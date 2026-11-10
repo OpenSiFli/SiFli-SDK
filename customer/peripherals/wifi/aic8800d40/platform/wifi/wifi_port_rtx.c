@@ -9,6 +9,7 @@
 #include <string.h>
 #include <rtthread.h>
 #include "wlan_dev.h"
+#include "wlan_mgnt.h"
 #include "aic_plat_log.h"
 
 #include "lmac_mac.h"
@@ -568,6 +569,39 @@ int wifi_device_reg(void)
 }
 
 INIT_COMPONENT_EXPORT(wifi_device_reg);
+
+/*
+ * Bind wlan0 to station mode at startup so that applications only need to
+ * call rt_wlan_scan()/rt_wlan_connect().
+ *
+ * The WLAN management layer records the STA device only inside
+ * rt_wlan_set_mode(), and the whole driver init chain is triggered by
+ * aic8800_init() (wlan_init op), which may wait up to 20s for the SDIO card
+ * auto-probe. Run it in a dedicated thread to keep the boot path non-blocking.
+ */
+static void aic8800_sta_mode_thread(void *parameter)
+{
+    if (rt_wlan_set_mode(RT_WLAN_DEVICE_STA_NAME, RT_WLAN_STATION) != RT_EOK)
+    {
+        AIC_LOG_PRINTF("set %s station mode failed\n", RT_WLAN_DEVICE_STA_NAME);
+    }
+}
+
+static int aic8800_sta_mode_init(void)
+{
+    rt_thread_t tid = rt_thread_create("aic_sta", aic8800_sta_mode_thread,
+                                       RT_NULL, 4096, 20, 10);
+
+    if (tid == RT_NULL)
+    {
+        AIC_LOG_PRINTF("create station mode thread failed\n");
+        return -RT_ERROR;
+    }
+
+    rt_thread_startup(tid);
+    return RT_EOK;
+}
+INIT_APP_EXPORT(aic8800_sta_mode_init);
 
 #define CMD_RX_BUF_SIZE 128
 char cmd_rx_buf[CMD_RX_BUF_SIZE];
