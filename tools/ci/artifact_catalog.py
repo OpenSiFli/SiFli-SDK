@@ -23,7 +23,7 @@ from dynamic_pipeline import DynamicPipelineGenerator
 
 PACKAGE_NAME = 'sdk-artifact-catalog-pointers'
 INDEX_PATH = 'merged_artifacts/file_index.json'
-HISTORY_DAYS = 7
+HISTORY_DAYS = 3
 HISTORY_REFS = ('main', 'release/v2.5')
 HISTORY_WORKERS = 4
 # Allowed-failure exit code: a newer pipeline already owns the published entry.
