@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
 # SPDX-License-Identifier: Apache-2.0
 """Link real ARM ELFs through both SF32LB57 HCPU linker templates.
 

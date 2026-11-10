@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-License-Identifier: Apache-2.0
  * Experimental RT-Thread 3.1.3 SMP scheduler, SF32LB57 HCPU/ACPU.
  * Keep the SDK's READY-includes-running model and public thread fields.
  * Selection happens in PendSV after the complete outgoing frame is saved.

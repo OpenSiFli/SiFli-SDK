@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: Apache-2.0
+/*
+ * SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+ * SPDX-License-Identifier: Apache-2.0
  * Same frame as the SiFli Cortex-M33 stack initializer. Selection and
  * outgoing ownership release occur only after r4-r11/FPU/PSPLIM are saved.
  */
