@@ -16,8 +16,15 @@
 
 #include <rthw.h>
 #include <rtthread.h>
+#ifdef RT_USING_SMP
+    #include <rtsmp.h>
+#endif
 
+#ifdef RT_USING_SMP
+static volatile rt_tick_t rt_tick = 0;
+#else
 static rt_tick_t rt_tick = 0;
+#endif
 
 
 RT_WEAK rt_tick_t rt_system_get_time(void)
@@ -75,14 +82,17 @@ __ROM_USED void rt_tick_increase(void)
 {
     struct rt_thread *thread;
 
-    /* increase the global tick */
+#ifdef RT_USING_SMP
+    rt_base_t level = rt_cpus_lock();
+#endif
+    /* Only HCPU calls this function; ACPU has a timeslice-only tick. */
     ++ rt_tick;
 
     /* check time slice */
     thread = rt_thread_self();
 
-    -- thread->remaining_tick;
-    if (thread->remaining_tick == 0)
+    /* A pending SysTick can precede the initial PendSV on either core. */
+    if (thread && --thread->remaining_tick == 0)
     {
         /* change to initialized tick */
         thread->remaining_tick = thread->init_tick;
@@ -93,11 +103,17 @@ __ROM_USED void rt_tick_increase(void)
 
     /* check timer */
     rt_timer_check();
+#ifdef RT_USING_SMP
+    rt_cpus_unlock(level);
+#endif
 }
 
 __ROM_USED void rt_tick_increase_by_step(rt_tick_t step)
 {
     struct rt_thread *thread;
+#ifdef RT_USING_SMP
+    rt_base_t level = rt_cpus_lock();
+#endif
 
     /* increase the global tick */
     rt_tick += step;
@@ -105,11 +121,11 @@ __ROM_USED void rt_tick_increase_by_step(rt_tick_t step)
     /* check time slice */
     thread = rt_thread_self();
 
-    if (thread->remaining_tick > step)
+    if (thread && thread->remaining_tick > step)
     {
         thread->remaining_tick -= step;
     }
-    else
+    else if (thread)
     {
         /* change to initialized tick */
         thread->remaining_tick = thread->init_tick;
@@ -120,6 +136,9 @@ __ROM_USED void rt_tick_increase_by_step(rt_tick_t step)
 
     /* check timer */
     rt_timer_check();
+#ifdef RT_USING_SMP
+    rt_cpus_unlock(level);
+#endif
 }
 
 /**

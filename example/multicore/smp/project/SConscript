@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+import os
+from building import *
+
+Import('SIFLI_SDK')
+cwd = GetCurrentDir()
+objs = SConscript(os.path.join(SIFLI_SDK, 'SConscript'),
+                  variant_dir='sifli_sdk', duplicate=0)
+objs += SConscript(os.path.join(cwd, '../src/SConscript'),
+                   variant_dir='src', duplicate=0)
+Return('objs')

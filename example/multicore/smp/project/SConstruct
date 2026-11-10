@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+import os
+import rtconfig
+from building import *
+
+SIFLI_SDK = os.environ['SIFLI_SDK']
+PrepareEnv()
+AddBootLoader(SIFLI_SDK, rtconfig.CHIP)
+SifliEnv()
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+DoBuilding(TARGET, objs)
+AddFTAB(SIFLI_SDK, rtconfig.CHIP, env)
+GenDownloadScript(env)

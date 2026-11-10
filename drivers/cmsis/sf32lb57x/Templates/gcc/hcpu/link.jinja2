@@ -35,6 +35,9 @@ __{{ r.name_upper }}_SIZE = {{ hex32(r.size) }};
 MEMORY
 {
     ROM (rx) : ORIGIN = __ROM_BASE, LENGTH = __ROM_SIZE
+{% if defines.get('RT_SMP_SHARED_XIP') %}
+    SMP_XIP (rx) : ORIGIN = __ROM_BASE + 0x50000000, LENGTH = __ROM_SIZE
+{% endif %}
     RAM (rw) : ORIGIN = __RAM_BASE, LENGTH = __RAM_SIZE
     ROM_EX(rw):ORIGIN = __ROM_EX_BASE, LENGTH = __ROM_EX_SIZE
     PSRAM(rw): ORIGIN = __PSRAM_BASE, LENGTH = __PSRAM_SIZE
@@ -57,6 +60,9 @@ SECTIONS
     KEEP(*(.vectors));
     /* workaround to avoid load address of .retm_data doesn't skip .vectors region */
     . = . + 4;
+{% if defines.get('RT_SMP_SHARED_XIP') %}
+    . = ALIGN(32);
+{% endif %}
   } > ROM
 
   .stack :
@@ -79,11 +85,65 @@ SECTIONS
     __HeapLimit = .;
   } > RAM
 
+{% if defines.get('RT_SMP_SHARED_XIP') %}
+  /* Both cores use the MPI2 system-bus alias, with one physical image. */
+  .smp_xip (__ROM_BASE + SIZEOF(.vectors) + 0x50000000) :
+  {
+    __smp_xip_start__ = .;
+    *(.smp_text .smp_text.* .smp_rodata .smp_rodata.*)
+    *scheduler_smp.o (.text* .rodata*)
+    *thread.o (.text* .rodata*)
+    *irq.o (.text* .rodata*)
+    *clock.o (.text* .rodata*)
+    *timer.o (.text* .rodata*)
+    *object.o (.text* .rodata*)
+    *ipc.o (.text* .rodata*)
+    *idle.o (.text* .rodata*)
+    *kservice.o (.text* .rodata*)
+    *mem.o (.text* .rodata*)
+    *memheap.o (.text* .rodata*)
+    *memheap2.o (.text* .rodata*)
+    *mempool.o (.text* .rodata*)
+    *slab.o (.text* .rodata*)
+    *smp_sf32lb57.o (.text* .rodata*)
+    *context_smp_gcc.o (.text* .rodata*)
+    *cpuport.o (.text* .rodata*)
+    . = ALIGN(32);
+    __smp_xip_end__ = .;
+  } > SMP_XIP AT > ROM
+  ASSERT(__ROM_BASE >= 0x12000000 && __ROM_BASE + __ROM_SIZE <= 0x14000000,
+         "SMP shared XIP requires an MPI2 NOR application partition")
+  ASSERT(LOADADDR(.smp_xip) == ADDR(.smp_xip) - 0x50000000,
+         "SMP shared XIP must alias its physical Flash load address")
+{% endif %}
+
   .retm_data :
   {
     . = ALIGN(4);
     __rw_retm_data_start__ = .;
     __RW_IRAM_RET$$RO_start__ = .;
+
+{% if defines.get('RT_USING_SMP') and not defines.get('RT_SMP_SHARED_XIP') %}
+    /* The SRAM-only port uses the same shared inputs without XIP. */
+    *(.smp_text .smp_text.* .smp_rodata .smp_rodata.*)
+    *scheduler_smp.o (.text* .rodata*)
+    *thread.o (.text* .rodata*)
+    *irq.o (.text* .rodata*)
+    *clock.o (.text* .rodata*)
+    *timer.o (.text* .rodata*)
+    *object.o (.text* .rodata*)
+    *ipc.o (.text* .rodata*)
+    *idle.o (.text* .rodata*)
+    *kservice.o (.text* .rodata*)
+    *mem.o (.text* .rodata*)
+    *memheap.o (.text* .rodata*)
+    *memheap2.o (.text* .rodata*)
+    *mempool.o (.text* .rodata*)
+    *slab.o (.text* .rodata*)
+    *smp_sf32lb57.o (.text* .rodata*)
+    *context_smp_gcc.o (.text* .rodata*)
+    *cpuport.o (.text* .rodata*)
+{% endif %}
 
     * (.*l1_ret_text_*)
     * (.*l1_ret_rodata_*)
@@ -462,6 +522,28 @@ SECTIONS
     _sbss = ABSOLUTE(.);
     . = ALIGN(4);
     __bss_start__ = .;
+{% if defines.get('RT_SMP_SRAM_WT_SYNC') %}
+    /* Keep pre-lock kernel state and control stacks outside cached SRAM. */
+    *(.smp_nocache .smp_nocache.*)
+    *scheduler_smp.o (.bss .bss.* COMMON)
+    *thread.o (.bss .bss.* COMMON)
+    *irq.o (.bss .bss.* COMMON)
+    *clock.o (.bss .bss.* COMMON)
+    *timer.o (.bss .bss.* COMMON)
+    *object.o (.bss .bss.* COMMON)
+    *ipc.o (.bss .bss.* COMMON)
+    *idle.o (.bss .bss.* COMMON)
+    *kservice.o (.bss .bss.* COMMON)
+    *mem.o (.bss .bss.* COMMON)
+    *memheap.o (.bss .bss.* COMMON)
+    *memheap2.o (.bss .bss.* COMMON)
+    *mempool.o (.bss .bss.* COMMON)
+    *slab.o (.bss .bss.* COMMON)
+    *smp_sf32lb57.o (.bss .bss.* COMMON)
+    *cpuport.o (.bss .bss.* COMMON)
+    . = ALIGN(32);
+    __smp_sram_cache_start__ = .;
+{% endif %}
     *(.bss)
     *(.bss.*)
     *(COMMON)

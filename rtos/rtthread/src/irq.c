@@ -54,7 +54,12 @@ __ROM_USED void rt_interrupt_leave_sethook(void (*hook)(void))
 
 /**@{*/
 
+#ifdef RT_USING_SMP
+#include <rtsmp.h>
+#define rt_interrupt_nest (rt_cpu_self()->interrupt_nest)
+#else
 __ROM_USED volatile rt_uint8_t rt_interrupt_nest;
+#endif
 
 /**
  * This function will be invoked by BSP, when enter interrupt service routine
@@ -112,12 +117,25 @@ RTM_EXPORT(rt_interrupt_leave);
  */
 __ROM_USED rt_uint8_t rt_interrupt_get_nest(void)
 {
+#ifdef RT_USING_SMP
+    rt_base_t level = rt_hw_local_irq_disable();
+    rt_uint8_t nest = rt_interrupt_nest;
+    rt_hw_local_irq_enable(level);
+    return nest;
+#else
     return rt_interrupt_nest;
+#endif
 }
 
 __ROM_USED void rt_interrupt_nest_clear(void)
 {
+#ifdef RT_USING_SMP
+    rt_base_t level = rt_hw_local_irq_disable();
+#endif
     rt_interrupt_nest = 0;
+#ifdef RT_USING_SMP
+    rt_hw_local_irq_enable(level);
+#endif
 }
 RTM_EXPORT(rt_interrupt_get_nest);
 RTM_EXPORT(rt_interrupt_nest_clear);

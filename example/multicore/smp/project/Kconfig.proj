@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: Apache-2.0
+config CUSTOM_MEM_MAP
+    bool
+    select custom_mem_map
+    default y
+
+config EXAMPLE_SMP_ROUNDS
+    int "SMP example thread creation rounds"
+    range 1 10000
+    default 32
+    help
+        Each round creates two threads, checks IPC and heap handoff,
+        migrates each thread 32 times, and waits for full reclamation.
