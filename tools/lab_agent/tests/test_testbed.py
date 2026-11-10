@@ -10,6 +10,7 @@ diagnose after the fact, so it is enforced here rather than trusted to callers.
 from __future__ import annotations
 
 import threading
+import time
 import unittest
 from unittest import mock
 
@@ -1045,6 +1046,88 @@ class TestRelay(LabTestCase):
                 call()
         with self.assertRaises(RelayNotAvailable):
             relay.mux_select(1)
+
+
+class TestProbeMemory(LabTestCase):
+    """Memory reads through the testbed's probe.
+
+    Three properties the transport cannot enforce on its own: an empty
+    ``jlink: {}`` is a declaration, a testbed with no probe is refused, and one
+    testbed never drives two J-Link processes at once.
+    """
+
+    EMPTY_JLINK_CONFIG = """
+runner:
+  name: test-runner
+  host: 127.0.0.1
+  port: 0
+  console_poll: 0.01
+
+testbed:
+  - id: tb_probe
+    platform: sf32lb52-lcd_n16r8
+    console:
+      port: COM13
+    jlink: {}
+    flash:
+      method: sftool
+    reset:
+      method: auto
+"""
+
+    def test_an_empty_jlink_block_declares_a_probe(self):
+        # `jlink: {}` means "the probe is here, defaults apply". Testing the
+        # options for truthiness would refuse a declaration the README says is
+        # enough.
+        manager = self.make_manager(self.EMPTY_JLINK_CONFIG)
+        runtime = manager.get("tb_probe")
+        data = runtime.read_memory(0x20000000, 4)
+        self.assertEqual(data, bytes((0x20000000 + i) & 0xFF for i in range(4)))
+        self.assertEqual(manager.probes["tb_probe"].memory_reads, [(0x20000000, 4)])
+
+    def test_without_a_declared_probe_the_read_is_refused(self):
+        yaml_text = self.EMPTY_JLINK_CONFIG.replace("    jlink: {}\n", "")
+        manager = self.make_manager(yaml_text)
+        with self.assertRaises(TestbedError) as caught:
+            manager.get("tb_probe").read_memory(0x20000000, 4)
+        self.assertIn("jlink", str(caught.exception))
+
+    def test_reads_on_one_testbed_are_serialized(self):
+        probe = _ConcurrencyProbe()
+        manager = LabManager(
+            self.make_config(),
+            sdk_root=self.root,
+            console_factory=lambda testbed: FakeSerialTransport(),
+            jlink_factory=lambda testbed, settings: probe,
+        )
+        runtime = manager.get("tb_01")
+        threads = [
+            threading.Thread(target=runtime.read_memory, args=(0x20000000, 4))
+            for _ in range(4)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=5)
+        self.assertEqual(probe.max_active, 1)
+
+
+class _ConcurrencyProbe:
+    """Records how many reads are inside the probe at once."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.active = 0
+        self.max_active = 0
+
+    def read_memory(self, address: int, length: int) -> bytes:
+        with self._lock:
+            self.active += 1
+            self.max_active = max(self.max_active, self.active)
+        time.sleep(0.05)
+        with self._lock:
+            self.active -= 1
+        return bytes(length)
 
 
 if __name__ == "__main__":

@@ -627,8 +627,16 @@ The `dut` fixture is loaded automatically by the framework (no `conftest.py` nee
 **the testbed the runner has already claimed**, not a new board request.
 
 Available methods: `expect(regex, timeout)`, `send_line()`, `write()`, `read()`, `drain()`,
-`reset()`, `expect_unity_test_output(timeout)`, plus `dut.testbed_id` / `dut.platform` /
-`dut.build_dir`.
+`reset()`, `expect_unity_test_output(timeout)`, `symbol(name)`, `read_memory(address, length)`,
+plus `dut.testbed_id` / `dut.platform` / `dut.build_dir`.
+
+Two of them reach past the console. `dut.read_memory(address, length)` asks the lab's probe for
+bytes of target RAM, so it needs a probe declared in the binding (`jlink:` or a probe
+flash/reset); a lab without one reports that as an error rather than skipping the evidence.
+`dut.symbol(name)` resolves an address from the ELF the build just produced and needs only the
+build directory, which `sdk.py test run` provides. A plain symbol needs the symbol table; a struct
+member (`dut.symbol("drv_lcd.debug_cnt1")`) is resolved through DWARF and therefore also needs debug
+information -- a build without `-g`, or a stripped ELF, raises `SymbolError` for the member form.
 
 **Two semantics of `expect`** (both load-bearing; keep them in mind when writing test cases):
 

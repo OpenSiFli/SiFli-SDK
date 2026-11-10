@@ -23,6 +23,7 @@ Routes::
     POST /testbed/{id}/prepare         {firmware, reset}
     POST /testbed/{id}/reset
     POST /testbed/{id}/flash           {firmware}
+    GET  /testbed/{id}/memory?address=0x...&length=N
     POST /testbed/{id}/console/open           [?stream=dut|ble_peer]
     POST /testbed/{id}/console/close          [?stream=dut|ble_peer]
     GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
@@ -31,6 +32,7 @@ Routes::
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import threading
@@ -60,6 +62,11 @@ DEFAULT_READ_TIMEOUT = 1.0
 
 #: Upper bound on a single console read, so a client cannot pin a thread forever.
 MAX_READ_TIMEOUT = 60.0
+
+#: Upper bound on one memory read. The response is JSON (base64), so this also
+#: bounds what a caller can make the agent encode and send; a test that needs
+#: more can issue several reads.
+MAX_MEMORY_READ = 4 * 1024 * 1024
 
 _ERROR_STATUS = {
     AllocationError: 409,
@@ -321,6 +328,28 @@ class _Handler(BaseHTTPRequestHandler):
             runtime.flash(runtime.firmware.path(token))
             return 200, {"flashed": True, "testbed_id": testbed_id}
 
+        if name == "memory":
+            if method != "GET":
+                return 405, {"error": "GET only"}
+            address = self._required_query_int(query, "address")
+            length = self._required_query_int(query, "length")
+            if address < 0:
+                return 400, {"error": '"address" must not be negative'}
+            if length <= 0 or length > MAX_MEMORY_READ:
+                return 400, {
+                    "error": f'"length" must be between 1 and {MAX_MEMORY_READ}'
+                }
+            data = runtime.read_memory(address, length)
+            return 200, {
+                "testbed_id": testbed_id,
+                "address": address,
+                "length": length,
+                # Base64 rather than a JSON array of numbers: the payload is
+                # binary and can be a framebuffer, and a host-side suite wants
+                # bytes, not a list to reassemble.
+                "data": base64.b64encode(data).decode("ascii"),
+            }
+
         if name == "console" and action[1:]:
             return self._dispatch_console(method, runtime, testbed_id, action[1], query)
 
@@ -391,6 +420,27 @@ class _Handler(BaseHTTPRequestHandler):
             return int(values[0])
         except (TypeError, ValueError) as exc:
             raise LabAgentError(f'Query parameter "{key}" must be an integer') from exc
+
+    def _required_query_int(self, query: Dict[str, list], key: str) -> int:
+        """A query parameter that must be present, read as decimal or 0x-hex.
+
+        Addresses are written in hex by every tool that shows one, so accepting
+        ``0x2005a7c0`` is not a convenience -- it is the spelling a caller will
+        reach for. Decimal is parsed as base 10 explicitly rather than with
+        ``int(x, 0)``, which rejects a legal value such as ``length=0008``.
+        """
+        values = query.get(key)
+        if not values or not values[0].strip():
+            raise LabAgentError(f'Query parameter "{key}" is required')
+        raw = values[0].strip()
+        try:
+            if raw.lower().lstrip("+-").startswith("0x"):
+                return int(raw, 16)
+            return int(raw, 10)
+        except (TypeError, ValueError) as exc:
+            raise LabAgentError(
+                f'Query parameter "{key}" must be an integer (decimal or 0x-hex)'
+            ) from exc
 
     def _query_float(self, query: Dict[str, list], key: str, default: float) -> float:
         values = query.get(key)

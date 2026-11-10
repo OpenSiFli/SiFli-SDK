@@ -602,8 +602,14 @@ def test_the_console_is_bidirectional(dut):
 **runner 已经申请好的那个 testbed**，不是新申请一块板子。
 
 可用方法：`expect(regex, timeout)`、`send_line()`、`write()`、`read()`、`drain()`、
-`reset()`、`expect_unity_test_output(timeout)`，以及 `dut.testbed_id` / `dut.platform` /
-`dut.build_dir`。
+`reset()`、`expect_unity_test_output(timeout)`、`symbol(name)`、`read_memory(address, length)`，
+以及 `dut.testbed_id` / `dut.platform` / `dut.build_dir`。
+
+其中两个方法越过串口。`dut.read_memory(address, length)` 向实验台的探针读取目标 RAM 的字节，
+因此要求 binding 里声明探针（`jlink:` 或探针烧录/复位）；没有探针的实验台会直接报错，
+而不是静默跳过证据。`dut.symbol(name)` 从本次构建产物 ELF 解析地址，只需要构建目录（由 `sdk.py test run` 提供）。
+普通符号只需要符号表；结构体成员（`dut.symbol("drv_lcd.debug_cnt1")`）通过 DWARF 解析，
+因此还要求 ELF 保留调试信息——没有 `-g` 的构建或被 strip 的 ELF，成员形式会抛 `SymbolError`。
 
 **`expect` 的两条语义**（都是承重的，写用例时要记着）：
 

@@ -209,6 +209,46 @@ class Dut:
         self._pull(0.0)
         return ""
 
+    # -- memory and symbols --------------------------------------------------
+    #
+    # A console can only see what the firmware prints. When the thing under
+    # test is what the firmware *produced* -- a rendered frame, a driver's own
+    # transfer counters -- the suite asks the lab's probe to read it, and asks
+    # this build's ELF where it lives. Both are named by the suite; neither a
+    # probe nor an address is written into the test.
+
+    def read_memory(self, address: int, length: int) -> bytes:
+        """Read ``length`` bytes of target RAM through the lab's probe.
+
+        The probe belongs to the lab, not to the suite: the agent halts the
+        board, takes the dump and resumes it, so no port or serial number
+        reaches the test.
+        """
+        if self._client is None or not self.testbed_id:
+            raise RuntimeError(
+                "read_memory() needs a Lab Agent connection; this DUT was "
+                "built without one"
+            )
+        return self._client.read_memory(self.testbed_id, address, length)
+
+    def symbol(self, name: str) -> int:
+        """Address of ``name`` in this run's build, or of ``variable.member``.
+
+        Resolved from the ELF the build produced, so a rebuild that moves a
+        buffer does not silently turn a test into a reader of the old address.
+        A struct member is resolved through DWARF, which is where the compiled
+        offset of a driver-internal counter actually lives.
+        """
+        if not self.build_dir:
+            raise RuntimeError(
+                "symbol() needs this run's build directory; it is set by the "
+                "runner, so the suite must be started by `sdk.py test run`"
+            )
+        from .symbols import address_of
+        from .symbols import find_elf
+
+        return address_of(find_elf(self.build_dir), name)
+
 
 def _require(name: str) -> str:
     value = os.environ.get(name)

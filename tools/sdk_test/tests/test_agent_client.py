@@ -11,6 +11,7 @@ console cursor it owns keeps reads lossless across many calls.
 
 from __future__ import annotations
 
+import base64
 import json
 import threading
 import unittest
@@ -141,6 +142,53 @@ class TestRequestShaping(ClientTestCase):
         requests = self.server.requests[-1]
         self.assertEqual(requests["method"], "POST")
         self.assertEqual(self.server.raw[-1], b"a tar")
+
+
+class TestMemoryRequests(ClientTestCase):
+    """The probe read's request shape and its failure modes.
+
+    A wrong address or a short dump must not reach a suite as data: this layer
+    is the last place that can tell "the agent's answer is unusable" apart from
+    "the board's memory says this".
+    """
+
+    def test_a_read_asks_for_a_hex_address_and_returns_the_bytes(self):
+        payload = bytes(range(8))
+        self.route(
+            "/testbed/tb_01/memory",
+            {
+                "address": 0x2005A7C0,
+                "length": 8,
+                "data": base64.b64encode(payload).decode("ascii"),
+            },
+        )
+        self.assertEqual(
+            self.client.read_memory("tb_01", 0x2005A7C0, 8), payload
+        )
+        path = self.server.requests[-1]["path"]
+        self.assertIn("address=0x2005a7c0", path)
+        self.assertIn("length=8", path)
+
+    def test_a_missing_data_field_is_an_error(self):
+        self.route("/testbed/tb_01/memory", {"address": 0, "length": 4})
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.read_memory("tb_01", 0, 4)
+        self.assertIn("no memory data", str(caught.exception))
+
+    def test_undecodable_data_is_an_error(self):
+        self.route("/testbed/tb_01/memory", {"data": "not base64!!"})
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.read_memory("tb_01", 0, 4)
+        self.assertIn("undecodable", str(caught.exception))
+
+    def test_a_short_dump_is_an_error(self):
+        self.route(
+            "/testbed/tb_01/memory",
+            {"data": base64.b64encode(b"abcd").decode("ascii")},
+        )
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.read_memory("tb_01", 0, 8)
+        self.assertIn("4 of 8", str(caught.exception))
 
 
 class TestInstrumentStreams(ClientTestCase):

@@ -280,6 +280,12 @@ class TestBedRuntime:
         #: -- a new claim in that window would have its state deleted by the old
         #: teardown, so allocation is refused until it settles.
         self._releasing = False
+        #: Serializes every operation that drives the debug probe. The HTTP
+        #: server answers on a thread per request, and a read, a reset and a
+        #: flash all start their own J-Link process: two at once fight over
+        #: the probe and one of them fails for a reason that has nothing to do
+        #: with the test.
+        self._probe_lock = threading.Lock()
         #: Serializes opening and closing instrument consoles against each other
         #: and against teardown. The HTTP server answers on a thread per request,
         #: and ``transport.open()`` blocks: without this, an open that started
@@ -492,7 +498,8 @@ class TestBedRuntime:
         if self.reset_mode() in ("auto", "manual"):
             return ""
         options = self._jlink_options()
-        return self.jlink().reset(extra_script=options.get("wdt_script"))
+        with self._probe_lock:
+            return self.jlink().reset(extra_script=options.get("wdt_script"))
 
     def _flash_options(self) -> Dict[str, Any]:
         options = self.testbed.runner_option("flash") or {}
@@ -534,7 +541,8 @@ class TestBedRuntime:
         method = self.flash_method()
 
         if method == "jlink":
-            return self.jlink().flash(build_dir)
+            with self._probe_lock:
+                return self.jlink().flash(build_dir)
 
         if method == "sftool":
             if self._console is not None:
@@ -557,6 +565,25 @@ class TestBedRuntime:
             ).flash(build_dir)
 
         raise AssertionError(f"unreachable flash method {method!r}")
+
+    def read_memory(self, address: int, length: int) -> bytes:
+        """Read target memory through this testbed's probe.
+
+        A board that declares neither a probe flash/reset nor a ``jlink`` block
+        has not said a probe is attached; guessing one would reach for hardware
+        the lab did not declare. An empty ``jlink: {}`` is a declaration -- the
+        probe is there and the defaults apply -- so presence is checked by key,
+        not by the truthiness of the options.
+        """
+        declared = self.testbed.runner_option("jlink") is not None
+        if not self.needs_jlink() and not declared:
+            raise TestbedError(
+                f'testbed "{self.testbed.id}": reading memory needs a J-Link '
+                'probe; declare a "jlink" block or a probe flash/reset for '
+                "this testbed"
+            )
+        with self._probe_lock:
+            return self.jlink().read_memory(address, length)
 
     def setup_fixtures(self) -> None:
         """Prepare every fixture this testbed declares."""

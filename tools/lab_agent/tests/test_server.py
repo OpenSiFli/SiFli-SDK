@@ -9,6 +9,7 @@ threading are the production code paths, not a mock of them.
 
 from __future__ import annotations
 
+import base64
 import json
 import unittest
 import urllib.error
@@ -18,6 +19,7 @@ from _support import CONFIG_YAML
 from _support import LabTestCase
 
 from lab_agent.server import LabAgentServer
+from lab_agent.server import MAX_MEMORY_READ
 
 
 class ServerTestCase(LabTestCase):
@@ -556,6 +558,83 @@ class TestAutoResetOverHttp(ServerTestCase):
         self.assertEqual(payload["mode"], "auto")
         self.assertFalse(payload["reset"])
         self.assertEqual(self.manager.probes, {})
+
+
+class TestMemoryOverHttp(ServerTestCase):
+    """A memory read is a probe operation on the lab's hardware.
+
+    The probe is faked at the transport boundary, so what is under test is the
+    route, the address parsing and the encoding the SDK-side suite decodes.
+    """
+
+    def probe_reads(self):
+        """What the fake probe was asked to read; empty if it was never built."""
+        probe = self.manager.probes.get("tb_01")
+        return [] if probe is None else probe.memory_reads
+
+    def test_a_read_round_trips_through_base64(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=0x20000000&length=8"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["address"], 0x20000000)
+        self.assertEqual(payload["length"], 8)
+        # The fake returns address-dependent bytes; a shuffled answer would not
+        # survive this.
+        self.assertEqual(base64.b64decode(payload["data"]), bytes(range(8)))
+        self.assertEqual(self.probe_reads(), [(0x20000000, 8)])
+
+    def test_a_decimal_address_is_accepted_too(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=536870912&length=1"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["address"], 0x20000000)
+
+    def test_a_decimal_length_with_leading_zeros_is_accepted(self):
+        # `int(x, 0)` rejects "0008"; the route promises decimal input.
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=0x20000000&length=0008"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["length"], 8)
+
+    def test_a_decimal_address_with_leading_zeros_is_accepted(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=0536870912&length=1"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["address"], 0x20000000)
+
+    def test_a_missing_length_is_a_400(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=0x20000000"
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("length", payload["error"])
+        self.assertEqual(self.probe_reads(), [])
+
+    def test_a_zero_length_is_a_400(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=0&length=0"
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("length", payload["error"])
+
+    def test_an_oversized_read_is_a_400(self):
+        status, payload = self.request(
+            "GET",
+            f"/testbed/tb_01/memory?address=0&length={MAX_MEMORY_READ + 1}",
+        )
+        self.assertEqual(status, 400)
+        self.assertIn(str(MAX_MEMORY_READ), payload["error"])
+
+    def test_a_malformed_address_is_a_400(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_01/memory?address=nowhere&length=4"
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("address", payload["error"])
 
 
 class TestMalformedRequests(ServerTestCase):

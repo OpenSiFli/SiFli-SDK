@@ -77,6 +77,7 @@ class FakeJLink:
         self.fail = fail
         self.resets: List[Optional[str]] = []
         self.flashed: List[str] = []
+        self.memory_reads: List[tuple] = []
 
     def reset(self, extra_script: Optional[str] = None) -> str:
         if self.fail:
@@ -89,6 +90,14 @@ class FakeJLink:
             raise RuntimeError("simulated probe failure")
         self.flashed.append(build_dir)
         return "flash ok"
+
+    def read_memory(self, address: int, length: int) -> bytes:
+        if self.fail:
+            raise RuntimeError("simulated probe failure")
+        self.memory_reads.append((address, length))
+        # Deterministic and address-dependent, so a test can tell a correct
+        # read from a shuffled one.
+        return bytes((address + offset) & 0xFF for offset in range(length))
 
     def run_script_file(self, path: str) -> str:
         return "script ok"

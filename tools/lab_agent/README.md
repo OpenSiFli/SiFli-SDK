@@ -46,6 +46,7 @@ POST /testbed/{id}/firmware        body = a firmware package (tar)
 POST /testbed/{id}/prepare         {firmware, reset}
 POST /testbed/{id}/reset
 POST /testbed/{id}/flash           {firmware}
+GET  /testbed/{id}/memory?address=0x...&length=N
 POST /testbed/{id}/console/open           [?stream=dut|bt_peer:ble]
 POST /testbed/{id}/console/close          [?stream=dut|bt_peer:ble]
 GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
@@ -62,6 +63,12 @@ with the testbed, and only for a fixture the allocation asked for.
 unpacked under its own name and flashed from there, so this machine never needs
 to see the one that built it. See `sdk_test/firmware.py`, which both sides
 import.
+
+`memory` reads target RAM through the testbed's probe (the CPU is halted around
+the read and resumed after it) and answers base64, because the payload can be a
+framebuffer. It needs a `jlink:` block, or a probe flash/reset on that testbed;
+a lab without a probe answers an error rather than an empty dump. The SDK side
+surfaces it as `dut.read_memory()`.
 
 **为什么控制台不是流式的。** 客户端问"游标 N 之后有什么"，服务端最多阻塞 `timeout` 秒。
 流式意味着 chunked 响应、断线重连、以及"客户端读到哪了"的第二个真相来源；

@@ -14,12 +14,14 @@ here is what each transport does with one.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import unittest
 from unittest import mock
 
 from _support import LabTestCase
 
+from lab_agent.errors import TransportError
 from lab_agent.transport import jlink as jlink_module
 from lab_agent.transport.jlink import JLinkTransport
 from lab_agent.transport.sftool import build_flash_arguments
@@ -175,6 +177,126 @@ class TestFlashRunsInTheBuildDirectory(LabTestCase):
         seen = self.flash_with_a_faked_probe(self.a_build_directory())
         self.assertIn("loadbin ER_IROM1.bin 0x12000000", seen["script"])
         self.assertIn("loadfile main.hex", seen["script"])
+
+
+class TestMemoryRead(LabTestCase):
+    """The probe's dump is how a suite sees what the firmware produced.
+
+    Only the parts that decide whether the answer is usable are pinned here:
+    the CPU is halted and resumed around the read, and a dump shorter than the
+    request is an error rather than a smaller answer the caller would read as
+    data.
+    """
+
+    def read_with_a_faked_probe(self, address: int, length: int, payload=None):
+        seen = {}
+
+        def fake_run(command, **kwargs):
+            script_path = command[command.index("-CommandFile") + 1]
+            # Read it here: the transport deletes the script on return.
+            with open(script_path, "r", encoding="ascii") as handle:
+                seen["script"] = handle.read()
+            seen["kwargs"] = kwargs
+            data = payload
+            if data is None:
+                data = bytes((address + offset) & 0xFF for offset in range(length))
+            with open(os.path.join(kwargs["cwd"], "memory.bin"), "wb") as handle:
+                handle.write(data)
+            return subprocess.CompletedProcess(command, 0, "ok", "")
+
+        with mock.patch.object(jlink_module.subprocess, "run", fake_run):
+            data = JLinkTransport(
+                device="SF32LB58X_NAND", jlink_exe="JLink.exe"
+            ).read_memory(address, length)
+        return data, seen
+
+    def test_the_dump_round_trips_verbatim(self):
+        data, _ = self.read_with_a_faked_probe(0x2005A7C0, 16)
+        self.assertEqual(
+            data, bytes((0x2005A7C0 + offset) & 0xFF for offset in range(16))
+        )
+
+    def test_the_cpu_is_halted_and_resumed_around_the_read(self):
+        _, seen = self.read_with_a_faked_probe(0x20000000, 4)
+        lines = seen["script"].splitlines()
+        self.assertIn("h", lines)
+        self.assertIn("g", lines)
+        self.assertLess(lines.index("h"), lines.index("g"))
+        self.assertTrue(
+            any(line.startswith("savebin memory.bin 0x20000000 0x4") for line in lines)
+        )
+
+    def test_the_probe_runs_where_the_dump_lands(self):
+        # A relative savebin name only resolves if the probe runs in the
+        # directory the transport then reads the file from.
+        _, seen = self.read_with_a_faked_probe(0x20000000, 4)
+        self.assertTrue(seen["kwargs"]["cwd"])
+        self.assertIn("savebin memory.bin ", seen["script"])
+
+    def test_a_short_dump_is_an_error(self):
+        with self.assertRaises(TransportError) as caught:
+            self.read_with_a_faked_probe(0x20000000, 8, payload=b"abcd")
+        self.assertIn("4 of 8", str(caught.exception))
+
+    def test_a_zero_length_read_never_reaches_the_probe(self):
+        calls = []
+
+        def fake_run(*args, **kwargs):
+            calls.append(kwargs)
+            return subprocess.CompletedProcess([], 0, "", "")
+
+        with mock.patch.object(jlink_module.subprocess, "run", fake_run):
+            with self.assertRaises(TransportError):
+                JLinkTransport(
+                    device="SF32LB58X_NAND", jlink_exe="JLink.exe"
+                ).read_memory(0x20000000, 0)
+        self.assertEqual(calls, [])
+
+    def test_a_relative_probe_path_is_pinned_before_the_temp_cwd(self):
+        # A read runs the probe from a temporary directory; a relative
+        # executable path would then resolve against that directory and the
+        # probe would look missing.
+        folder = self.mkdir("segger")
+        exe = os.path.join(folder, "JLink.exe")
+        with open(exe, "w", encoding="ascii") as handle:
+            handle.write("")
+        original = os.getcwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, original)
+        transport = JLinkTransport(
+            device="SF32LB58X_NAND", jlink_exe=os.path.join("segger", "JLink.exe")
+        )
+        self.assertTrue(os.path.isabs(transport.jlink_exe), transport.jlink_exe)
+        self.assertEqual(
+            os.path.normcase(transport.jlink_exe),
+            os.path.normcase(os.path.abspath(exe)),
+        )
+
+    def test_a_failed_read_resumes_the_core(self):
+        # The read happens between `h` and `g`; a failure there would leave the
+        # board halted, so the transport must send a resume instead of walking
+        # away from a dead console.
+        scripts = []
+
+        def fake_run(command, **kwargs):
+            script_path = command[command.index("-CommandFile") + 1]
+            with open(script_path, "r", encoding="ascii") as handle:
+                scripts.append(handle.read())
+            if len(scripts) == 1:
+                return subprocess.CompletedProcess(command, 1, "savebin failed", "")
+            return subprocess.CompletedProcess(command, 0, "ok", "")
+
+        with mock.patch.object(jlink_module.subprocess, "run", fake_run):
+            with self.assertRaises(TransportError):
+                JLinkTransport(
+                    device="SF32LB58X_NAND", jlink_exe="JLink.exe"
+                ).read_memory(0x20000000, 8)
+
+        self.assertEqual(len(scripts), 2, scripts)
+        self.assertIn("savebin memory.bin 0x20000000 0x8", scripts[0])
+        resume = [line.strip() for line in scripts[1].splitlines()]
+        self.assertIn("g", resume)
+        self.assertNotIn("savebin", scripts[1])
 
 
 class TestPortNormalization(LabTestCase):

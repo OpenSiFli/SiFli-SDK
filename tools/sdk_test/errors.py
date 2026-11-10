@@ -54,6 +54,15 @@ class BuildError(SdkTestError):
         self.output = output
 
 
+class SymbolError(SdkTestError):
+    """An address cannot be resolved from a build's ELF.
+
+    Raised by :mod:`sdk_test.symbols` when a suite asks for a symbol the image
+    does not contain, a struct member the debug information does not describe,
+    or when the build directory holds no usable ELF at all.
+    """
+
+
 class FirmwareError(SdkTestError):
     """A firmware package is missing, malformed, or names a file it does not carry.
 

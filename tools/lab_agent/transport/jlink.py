@@ -46,6 +46,11 @@ class JLinkTransport:
     ) -> None:
         if not device:
             raise TransportError("A J-Link device name is required (e.g. SF32LB52X)")
+        # A relative path is resolved against the process CWD, but a memory
+        # read runs the probe from a temporary directory. Pin an existing path
+        # now; a bare command name is left alone so PATH lookup still works.
+        if jlink_exe and os.path.isfile(jlink_exe):
+            jlink_exe = os.path.abspath(jlink_exe)
         self.device = device
         self.jlink_exe = jlink_exe
         self.interface = interface
@@ -175,3 +180,65 @@ class JLinkTransport:
         # actually run, which is what the test then observes on the console.
         lines = _preamble(self.speed) + ["h"] + loads + ["r", "g", "exit"]
         return self._run_script(lines, "flash", cwd=build_dir)
+
+    def read_memory(self, address: int, length: int) -> bytes:
+        """Read ``length`` bytes of target memory and return them verbatim.
+
+        The CPU is halted around the read and resumed afterwards: a probe can
+        often read RAM while the core runs, but "often" is not a contract, and
+        a torn read of the thing under observation is worse than a short pause.
+
+        ``savebin`` writes to a relative file name and the probe runs from the
+        directory that file lands in -- the same mechanism the crash-dump
+        reader uses, and the reason ``cwd`` is passed to :meth:`_run_script`.
+        """
+        if not isinstance(address, int) or isinstance(address, bool) or address < 0:
+            raise TransportError(
+                f"memory address must be a non-negative integer, got {address!r}"
+            )
+        if not isinstance(length, int) or isinstance(length, bool) or length <= 0:
+            raise TransportError(
+                f"memory length must be a positive integer, got {length!r}"
+            )
+
+        with tempfile.TemporaryDirectory(prefix="jlink_read_") as workdir:
+            raw_path = os.path.join(workdir, "memory.bin")
+            lines = _preamble(self.speed) + [
+                "h",
+                f"savebin memory.bin 0x{address:x} 0x{length:x}",
+                "g",
+                "exit",
+            ]
+            try:
+                self._run_script(lines, "memory read", cwd=workdir)
+            except TransportError:
+                # The script halts the core first. If the dump fails (or the
+                # probe times out) the `g` after it never runs, and leaving the
+                # board halted would turn one failed read into a dead console
+                # for every later step. Resume on a best-effort basis, then
+                # report the original failure.
+                self._resume_after_failed_read()
+                raise
+            try:
+                with open(raw_path, "rb") as handle:
+                    data = handle.read()
+            except OSError as exc:
+                raise TransportError(
+                    f"the probe did not produce a memory dump: {exc}"
+                ) from exc
+
+        if len(data) != length:
+            raise TransportError(
+                f"the probe returned {len(data)} of {length} requested bytes "
+                f"from 0x{address:08x}"
+            )
+        return data
+
+    def _resume_after_failed_read(self) -> None:
+        """Best-effort ``g`` after a failed read, so the core is not left halted."""
+        try:
+            self._run_script(
+                _preamble(self.speed) + ["g", "exit"], "resume after failed read"
+            )
+        except TransportError:
+            pass

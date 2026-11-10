@@ -14,6 +14,8 @@ room. It owns the cursor, which is what makes the reads stateless on the wire.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import urllib.error
 import urllib.parse
@@ -174,6 +176,37 @@ class LabAgentClient:
         return self._request(
             "POST", f"/testbed/{_quote(testbed_id)}/flash", {"firmware": firmware}
         )
+
+    def read_memory(self, testbed_id: str, address: int, length: int) -> bytes:
+        """Read ``length`` bytes of target memory through the lab's probe.
+
+        The lab owns the probe, so the suite never names one; it asks for an
+        address and a size, exactly as it would name a console.
+        """
+        query = urllib.parse.urlencode(
+            {"address": hex(int(address)), "length": int(length)}
+        )
+        payload = self._request(
+            "GET", f"/testbed/{_quote(testbed_id)}/memory?{query}"
+        )
+        encoded = payload.get("data")
+        if not isinstance(encoded, str):
+            raise LabAgentError(
+                f"the Lab Agent returned no memory data for {testbed_id} "
+                f"at 0x{int(address):08x}"
+            )
+        try:
+            data = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise LabAgentError(
+                f"the Lab Agent returned undecodable memory data: {exc}"
+            ) from exc
+        if len(data) != int(length):
+            raise LabAgentError(
+                f"the Lab Agent returned {len(data)} of {int(length)} memory "
+                f"bytes at 0x{int(address):08x}"
+            )
+        return data
 
     # -- console -------------------------------------------------------------
 
