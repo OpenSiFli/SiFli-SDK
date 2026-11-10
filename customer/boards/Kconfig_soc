@@ -57,7 +57,9 @@ config SOC_PACKAGE_QFN80
 config SOC_PACKAGE_BGA112
     bool
 
+if SOC_SF32LB57X
 rsource "Kconfig_soc.sf32lb57x"
+endif # SOC_SF32LB57X
 
 if BF0_LCPU
     config CORE
