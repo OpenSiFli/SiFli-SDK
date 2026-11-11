@@ -2904,8 +2904,7 @@ static HAL_StatusTypeDef EPIC_TransformVideoLayer(EPIC_TypeDef *epic,
         sifli_matrix_3x3_t mat;
         sifli_identity_3x3(&mat);
         sifli_mat_translate_3x3(new_offset_x, new_offset_y, &mat);
-        sifli_mat_multiply_3x3(&trans_result->matrix, &mat, &trans_result->matrix);
-
+        sifli_mat_multiply_3x3(&mat, &trans_result->matrix, &trans_result->matrix);
         EPIC_DEBUG_PRINT_FLOAT_MATRIX("Matrix for {0,0} image", &trans_result->matrix);
 
         //Get the transformed area
