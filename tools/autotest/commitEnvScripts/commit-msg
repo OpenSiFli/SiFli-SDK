@@ -29,11 +29,13 @@ fi
 echo -e "The commit msg:\n\n$msg"
 echo -e "\033[32m \n ****HOOK LOG****\n \033[0m"
 
-redmineid=$(echo "$msg" | grep "redmine: #")
-echo -e " The redmine content: $redmineid"
+# Ignore the guidance block from .commit_template: drop comment lines and
+# normalize CRLF so the real header is always the first non-empty line.
+clean_msg=$(printf '%s\n' "$msg" | tr -d '\r' | grep -v '^[[:space:]]*#')
+header=$(printf '%s\n' "$clean_msg" | awk 'NF { print; exit }')
 
-ext_redmineid=$(echo "$msg" | grep "ext-redmine: #")
-echo -e " The ext_redmine content: $ext_redmineid"
+ext_redmineid=$(printf '%s\n' "$clean_msg" | grep -E '^ext-redmine: #')
+echo -e " The ext-redmine content: $ext_redmineid"
 
 
 #if [[ $string == mas* ]];  start with 'mas' in string
@@ -53,36 +55,37 @@ echo -e " checked branch is $branch"
 
 # if the msg is merge then skip it
 mergePattern='^Merge '
-if [[ $msg =~ $mergePattern ]]; then
+if [[ $clean_msg =~ $mergePattern ]]; then
     echo -e "\033[32m skip the merge, commit success! \033[0m"
     exit 0
 fi
 # check the commit msg
 
-pattern_redmine='^redmine: #[0-9]+'
+# Conventional Commits header: <type>(<scope>): <subject>, with an optional
+# "!" before the colon to mark a breaking change.
 pattern_ext_redmine='^ext-redmine: #[0-9]+'
-pattern_header='^\[(bug|new|opt|chore)\]\[[a-zA-Z0-9_ ]+\].'
+pattern_header='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)\([a-zA-Z0-9_./-]+\)!?: .+'
 
 
 #if [[ $branch == *"$br1"* || $branch == *"$br2"* ]]; then
 if [[ "$branch" == *"main"* || "$branch" == *"release/"* ]]; then
     echo -e "\033[32m ******** \033[0m"
-    if [[ $msg =~ $pattern_header && ($redmineid =~ $pattern_redmine || $ext_redmineid =~ $pattern_ext_redmine) ]]; then
+    if [[ $header =~ $pattern_header && $ext_redmineid =~ $pattern_ext_redmine ]]; then
         echo -e "\033[32m commit success! \033[0m"
     else
-        echo -e "\033[31m Error: must be correct tags and redmineid or tapdid \033[m"
-        echo -e "\033[31m eg: [bug|new|opt|chore][module_name] Fixed games assert when start \033[m"
-        echo -e "\033[31m eg: redmine: #1999, REDMINE-1999 \033[m"
-        echo -e "\033[31m eg: ext-redmine: #2356|ext-redmine: #2356 \033[m"
+        echo -e "\033[31m Error: must be a Conventional Commits header and an ext-redmine id \033[m"
+        echo -e "\033[31m eg: feat(drv/usb): add host mode support for low-speed devices \033[m"
+        echo -e "\033[31m eg: ext-redmine: #2356, REDMINE-2356 \033[m"
         exit 1
     fi
 else
-    if [[ $msg =~ $pattern_header ]]; then
+    if [[ $header =~ $pattern_header ]]; then
         echo -e "\033[32m commit success! \033[0m"
     else
         echo -e "\033[31m Error: the commit message is irregular \033[m"
-        echo -e "\033[31m Error: must be four correct tags [bug|new|opt|chore]\033[m"
-        echo -e "\033[31m eg: [bug|new|opt|chore][module_name] Fixed watchdemo crush bug \033[m"
+        echo -e "\033[31m Error: header must be <type>(<scope>): <subject>, scope is required \033[m"
+        echo -e "\033[31m Error: <type> is one of feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert \033[m"
+        echo -e "\033[31m eg: fix(hal/adc): correct channel mapping for ADC2 \033[m"
         exit 1
     fi
 fi

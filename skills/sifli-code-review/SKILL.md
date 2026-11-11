@@ -460,25 +460,31 @@ git log -1 --format=full FETCH_HEAD
 
 The project follows a commit template (from `.commit_template`):
 
-```
-[bug|new|opt|chore][module_name] one line description
+```text
+<type>(<scope>): one line description
 
-redmine: #id, REDMINE-id
 ext-redmine: #id, REDMINE-id
 
-[Description in detail]
-Describe the change in more detail, e.g. how is the problem fixed, why do you make the modification in this way, explain the feature in more details
+Why is the change needed and how does it work?
 ```
 
 ### 5.1 Subject Line (First Line)
 
-- **Tag format**: Should start with one of `[bug]`, `[new]`, `[opt]`, `[chore]` followed by `[module_name]`.
-  - `[bug]` — bug fix
-  - `[new]` — new feature
-  - `[opt]` — optimization/refinement
-  - `[chore]` — chore/maintenance
-- **Module name**: The tag should identify the module being changed, e.g. `[ble]`, `[drv][adc]`, `[hal][gpio]`, `[rtos]`.
-- **Length**: The subject line should generally be under 72 characters (the tags help categorize, so the description part should be brief).
+- **Header format**: `<type>(<scope>): <subject>` — Conventional Commits. The scope is required.
+  - `feat` — new feature
+  - `fix` — bug fix
+  - `docs` — documentation only
+  - `style` — formatting/whitespace, no behavior change
+  - `refactor` — restructuring without behavior change
+  - `perf` — performance improvement
+  - `test` — tests only
+  - `build` — build system or dependencies
+  - `ci` — CI configuration
+  - `chore` — maintenance
+  - `revert` — reverts an earlier commit
+- **Scope**: The module being changed, nesting expressed with `/`, e.g. `drv/usb`, `hal/adc`, `example/rt_device/uart`.
+- **Breaking change**: Append `!` before the colon (`feat(api)!: ...`) and explain it in a `BREAKING CHANGE:` footer.
+- **Length**: The subject line should generally be under 72 characters.
 
 - **One-line description — MUST pass the "git log --oneline" test**:
   > Ask yourself: *If I read only this title in `git log --oneline` 6 months from now, would I know what changed and why?*
@@ -497,16 +503,16 @@ Describe the change in more detail, e.g. how is the problem fixed, why do you ma
   | Vague module-only reference | "Modify bt_sifli" — what about it? | "Unify AVRCP device address type across all control functions" |
 
   **Good examples** (specific enough to locate the change in history):
-  - `[bug][ble] Fix NULL pointer dereference in AVRCP volume set callback`
-  - `[opt][hal][gpio] Replace hardcoded pin numbers with Kconfig macros`
-  - `[new][drv][adc] Add support for ADC continuous sampling mode on SF32LB57`
+  - `fix(ble): fix NULL pointer dereference in AVRCP volume set callback`
+  - `refactor(hal/gpio): replace hardcoded pin numbers with Kconfig macros`
+  - `feat(drv/adc): add support for continuous sampling mode on SF32LB57`
 
 ### 5.2 Detailed Description
 
 - **Explanation of WHY**: The description should explain **why** the change was made, not just restate what the diff shows. What problem existed? How was it discovered?
 - **Explanation of HOW**: For non-trivial fixes, explain the approach: why was this specific fix chosen over alternatives? Are there any trade-offs?
 - **Clarity**: The description should be understandable to someone not familiar with the specific bug/feature. Avoid internal jargon without explanation.
-- **Redmine links**: If applicable, include `redmine:` and `ext-redmine:` references.
+- **Redmine links**: Include the `ext-redmine: #id, REDMINE-id` footer; it is required on `main` and `release/*` branches.
 
 ### 5.3 English Quality
 
