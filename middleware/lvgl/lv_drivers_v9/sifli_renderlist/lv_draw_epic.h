@@ -70,6 +70,11 @@ void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, c
 void lv_draw_epic_line(lv_draw_task_t *draw_task, const lv_draw_line_dsc_t *dsc);
 
 bool lv_draw_epic_retain_glyph_data(void *glyph_data);
+bool lv_draw_epic_retain_arc_image(void *arc_image);
+void lv_draw_epic_release_arc_image(void *arc_image);
+EPIC_LayerConfigTypeDef *lv_draw_epic_image_prepare(const void *src, lv_opa_t opa,
+                                                  lv_color_t color, EPIC_LayerConfigTypeDef *mask);
+void lv_draw_epic_image_release(void *image);
 
 bool lv_draw_epic_retain_image_data(void *image_data);
 

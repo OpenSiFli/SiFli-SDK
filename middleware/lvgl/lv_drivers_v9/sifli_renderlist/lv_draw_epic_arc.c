@@ -25,6 +25,7 @@
 #include "../../stdlib/lv_mem.h"
 #include "../../stdlib/lv_string.h"
 #include "../lv_draw_private.h"
+#include <stdint.h>
 
 /*********************
  *      DEFINES
@@ -39,6 +40,8 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
+static EPIC_LayerConfigTypeDef *arc_image_prepare(const lv_draw_arc_dsc_t *dsc,
+        int32_t center_x, int32_t center_y, EPIC_LayerConfigTypeDef *mask);
 
 /**********************
  *  STATIC VARIABLES
@@ -70,12 +73,6 @@ void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, c
     bool is_sub_layer = false;
     lv_epic_get_coord_offset(draw_task, &coord_offset_x, &coord_offset_y, &is_sub_layer);
 
-    if (dsc->img_src != NULL)
-    {
-        LV_LOG_ERROR("EPIC: Arc with image source is not supported in render-list mode\n");
-        return;
-    }
-
     drv_epic_render_buf *render_buf = render_list_get_current_buf();
     if (render_buf == NULL) {
         LV_LOG("EPIC: No render buffer available for arc drawing\n");
@@ -93,6 +90,34 @@ void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, c
     lv_epic_point_to_render_coords(dsc->center.x, dsc->center.y,
                                    coord_offset_x, coord_offset_y,
                                    &center_x_local, &center_y_local);
+
+    EPIC_LayerConfigTypeDef *image = NULL;
+    EPIC_LayerConfigTypeDef image_mask;
+    HAL_EPIC_LayerConfigInit(&image_mask);
+    if (dsc->img_src != NULL)
+    {
+        if (width <= 0 || dsc->radius == 0 ||
+                center_x_local - dsc->radius < INT16_MIN ||
+                center_x_local + dsc->radius - 1 > INT16_MAX ||
+                center_y_local - dsc->radius < INT16_MIN ||
+                center_y_local + dsc->radius - 1 > INT16_MAX)
+        {
+            LV_LOG_WARN("EPIC: Arc image geometry out of range\n");
+            return;
+        }
+        image = arc_image_prepare(dsc, center_x_local, center_y_local, &image_mask);
+        if (image == NULL)
+        {
+            LV_LOG_WARN("EPIC: Arc image unavailable or unsupported\n");
+            return;
+        }
+        if (!lv_draw_epic_retain_arc_image(image))
+        {
+            lv_draw_epic_release_arc_image(image);
+            LV_LOG_ERROR("EPIC: Failed to retain arc image until render-list completion\n");
+            return;
+        }
+    }
 
     drv_epic_operation *op = drv_epic_alloc_op(render_buf);
     if (op == NULL) {
@@ -114,6 +139,8 @@ void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, c
     op->desc.arc.radius = (uint16_t)dsc->radius;
     op->desc.arc.round_start = (uint8_t)dsc->rounded;
     op->desc.arc.round_end = (uint8_t)dsc->rounded;
+    op->desc.arc.image = image;
+    op->mask = image_mask;
 
     uint32_t alpha = dsc->opa;
     op->desc.arc.argb8888 = (alpha << 24) | (dsc->color.red << 16) | (dsc->color.green << 8) | dsc->color.blue;
@@ -124,5 +151,38 @@ void lv_draw_epic_arc(lv_draw_task_t *draw_task, const lv_draw_arc_dsc_t *dsc, c
 /**********************
  *   STATIC FUNCTIONS
  **********************/
+
+/* ARC resources share the same decoder lifetime as rectangle images. */
+void lv_draw_epic_release_arc_image(void *arc_image)
+{
+    lv_draw_epic_image_release(arc_image);
+}
+
+static EPIC_LayerConfigTypeDef *arc_image_prepare(const lv_draw_arc_dsc_t *dsc,
+                                                  int32_t center_x,
+                                                  int32_t center_y,
+                                                  EPIC_LayerConfigTypeDef *mask)
+{
+    EPIC_LayerConfigTypeDef *image =
+        lv_draw_epic_image_prepare(dsc->img_src, dsc->opa, dsc->color, mask);
+    if (image == NULL) return NULL;
+
+    int32_t left = center_x - image->width / 2;
+    int32_t top = center_y - image->height / 2;
+    if (left < INT16_MIN || left + image->width - 1 > INT16_MAX ||
+        top < INT16_MIN || top + image->height - 1 > INT16_MAX)
+    {
+        lv_draw_epic_image_release(image);
+        return NULL;
+    }
+    image->x_offset = left;
+    image->y_offset = top;
+    if (mask->data)
+    {
+        mask->x_offset = left;
+        mask->y_offset = top;
+    }
+    return image;
+}
 
 #endif /*LV_USE_DRAW_EPIC*/

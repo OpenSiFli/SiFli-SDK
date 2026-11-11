@@ -45,6 +45,7 @@ typedef enum
     RL_RESOURCE_GLYPH_DATA, // Glyph data
     RL_RESOURCE_IMAGE_DATA, // Compressed image data
     RL_RESOURCE_TRANSFORM, // Image transform matrix
+    RL_RESOURCE_ARC_IMAGE, // Arc image layer and retained decoder session
 } render_list_resource_type_t;
 
 // Resource linked list node - used for deferred release
@@ -386,6 +387,11 @@ bool lv_draw_epic_retain_transform(sifli_matrix_3x3_t *matrix)
     return render_list_retain_resource(matrix, RL_RESOURCE_TRANSFORM, "transform matrix");
 }
 
+bool lv_draw_epic_retain_arc_image(void *arc_image)
+{
+    return render_list_retain_resource(arc_image, RL_RESOURCE_ARC_IMAGE, "arc image");
+}
+
 // Release deferred resources
 void lv_draw_epic_release_deferred_resources(void)
 {
@@ -408,6 +414,10 @@ void lv_draw_epic_release_deferred_resources(void)
             else if (resource_list->type == RL_RESOURCE_IMAGE_DATA)
             {
                 app_cache_free(resource_list->resource);
+            }
+            else if (resource_list->type == RL_RESOURCE_ARC_IMAGE)
+            {
+                lv_draw_epic_release_arc_image(resource_list->resource);
             }
             else
             {
