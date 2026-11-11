@@ -1,8 +1,15 @@
-[bug|new|opt|chore][module_name] one line description, e.g. what problem does it fix or what feature does it add
+# Conventional Commits: <type>(<scope>): <subject>
+#
+#   type    feat | fix | docs | style | refactor | perf | test | build | ci | chore | revert
+#   scope   changed module, "/" for nesting, e.g. drv/usb, example/rt_device/uart
+#   subject one line, imperative, lowercase, no trailing period
+#
+# Body (optional): why the change is needed and how it works, wrapped at 72 columns.
+# Breaking change: write type(scope)!: ... and add a "BREAKING CHANGE: ..." footer.
+# ---------------------------------------------------------------------------
 
-redmine: #id, REDMINE-id
+<type>(<scope>): short imperative summary
 
 ext-redmine: #id, REDMINE-id
 
-[Description in detail]
-Describe the change in more detail, e.g. how is the problem fixed, why do you make the modification in this way, explain the feature in more details
+# Explain why the change is needed and how it works.
