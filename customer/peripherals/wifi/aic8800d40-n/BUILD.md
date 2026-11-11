@@ -626,7 +626,7 @@ port/inc/
 3. **类型定义**: host 层类型通过 `#ifndef` guard 自动处理冲突，platform 层如有冲突可在 `platform_config.mk` 中启用 `SYS_SOCK_DEFINE` / `SYS_NET_DEFINE`
 4. **mbedTLS**: crypto 层如平台已有 mbedTLS，在 `platform_config.mk` 设置 `USE_BUILTIN_MBEDTLS=0`（平台自实现 35 个 `aic_mbedtls_*` 符号，参考 `platform/crypto/aic_mbedtls_port_example.c`；TLS port 层用 `AIC_BUILD_MBEDTLS_PORT=0`，两者独立）
 5. **wifi_port_plt.c — 驱动启动 Demo + CLI 命令注册**: 
-   - `aic_wifi_demo_test()`: 完整的 WiFi 驱动启动流程 Demo（`aic_platform_init()` → 等待 SDIO 就绪 → `wifi_driver_init()` → 等待驱动初始化 → `aic_wifi_init_mac()` → `aicwf_net_if_plat_init()` → 配置 IP/子网掩码 → GPIO 触发）。应用层调用此函数即可完成驱动上电全流程。
+   - `aic_wifi_demo_test()`: 完整的 WiFi 驱动启动流程（`aic_platform_init()` → 等待 SDIO 就绪 → `wifi_driver_init()` → 等待驱动初始化 → `aic_wifi_init_mac()` → `aicwf_net_if_plat_init()` → 配置 IP/子网掩码 → GPIO 触发）。`AIC8800_USE_RT_WLAN` 下已通过 `INIT_APP_EXPORT` 在 `main()` 之前自动执行，应用层只需调用 `rt_wlan_*` 接口；route 1 仍由应用层自行调用。
    - `cmd_test(const char* temp_uart_buf)`: 将串口输入的 AT/WiFi 命令转发给 `aic_wifi_cmd()`。移植时需注册到平台 CLI/Shell 框架（FreeRTOS+CLI、ThreadX shell 等）。若平台无 CLI 框架，可跳过编译该文件。`wifi_port_cmd.c` 为命令分发表，已自动编译无需额外操作。
 
 ### 头文件 Include 路径配置

@@ -87,7 +87,7 @@ static void aicwf_aic_wifi_wait_driver_init(void)
     }
 }
 /**
- * @brief AIC WiFi driver demo test entry
+ * @brief AIC WiFi driver startup entry
  *
  * Complete WiFi driver startup flow:
  * 1. Platform initialization
@@ -97,6 +97,9 @@ static void aicwf_aic_wifi_wait_driver_init(void)
  * 5. Initialize MAC and the network interface
  * 6. Configure default IP/netmask
  * 7. Configure the GPIO triggers
+ *
+ * Route 2 (AIC8800_USE_RT_WLAN): registered at INIT_APP_EXPORT, so the whole flow
+ * completes before main(). Applications then only call the rt_wlan_* APIs.
  */
 //start aic wifi driver
 void aic_wifi_demo_test(void)
@@ -168,6 +171,17 @@ void aic_wifi_demo_test(void)
     aicwf_plat_gpio_trigger(DRV_TRG_POWCTR, 0);
     aicwf_plat_gpio_trigger(DRV_TRG_USB, 0);
 }
+#ifdef AIC8800_USE_RT_WLAN
+/* Route 2: run the startup flow automatically before main(), so applications only
+ * need to call the rt_wlan_* APIs. Route 1 keeps the application-owned startup
+ * because it still needs aicwf_net_if_plat_init() (driver-owned netif). */
+static int aic_wifi_auto_init(void)
+{
+    aic_wifi_demo_test();
+    return 0;
+}
+INIT_APP_EXPORT(aic_wifi_auto_init);
+#endif
 /**
  * @brief AT command test interface
  *
