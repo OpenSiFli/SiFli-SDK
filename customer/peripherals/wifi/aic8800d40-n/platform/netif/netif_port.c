@@ -1457,7 +1457,6 @@ int aicwf_rx_eth_data_process(uint8_t *pdata, uint16_t len, net_if_t netif,
     struct rt_wlan_device *wlan = aic8800_wlan_get_device();
     int ap_vif = aic_wifi_get_ap_vif_idx();
 
-    (void)lwip_msg;
     (void)is_reord;
     if (ap_vif >= 0 && netif != NULL &&
             netif == net_if_find_from_wifi_idx((unsigned int)ap_vif))
@@ -1465,6 +1464,14 @@ int aicwf_rx_eth_data_process(uint8_t *pdata, uint16_t len, net_if_t netif,
         wlan = aic8800_wlan_get_ap_device();
     }
     rt_wlan_dev_report_data(wlan, pdata, (int)len);
+    /* rt_wlan has already copied the frame and delivered it to the stack, so the
+     * pbuf allocated by the driver for the reorder/zero-copy path is unused and
+     * must be freed here; otherwise every RX frame leaks one PBUF_POOL block and
+     * all RX pbuf_alloc calls fail once the pool is exhausted */
+    if (lwip_msg)
+    {
+        aicwf_platform_net_buf_rx_free(lwip_msg);
+    }
     return 0;
 #else
 #ifdef CONFIG_RX_NOCOPY

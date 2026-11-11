@@ -55,6 +55,8 @@
 extern void aic_wifi_ext_event_register(aic_wifi_event_cb cb);
 /* netif_port.c: Ethernet frame TX direct-to-hardware entry */
 extern int aicwf_tx_eth_data_process(uint8_t *data, uint32_t len, void *msg);
+/* wifi_port.c: switch the platform + driver mode in one shot */
+extern int wifi_switch_mode(AIC_WIFI_MODE mode);
 
 /* ============================================================================
  * Module state
@@ -206,6 +208,16 @@ static rt_err_t aic8800_wlan_join(struct rt_wlan_device *wlan, struct rt_sta_inf
     if (klen > 0) rt_memcpy(pw, sta_info->key.val, klen);
 
     LOG_I("wlan_join ssid=%s", ssid);
+    /* A disconnect leaves the driver in WIFI_MODE_UNKNOWN (wlan_disconnect_sta() sets it internally),
+     * and aic_wifi_start_sta() rejects anything but STA/APSTA with -1. Restore the STA role first,
+     * the same way the route 1 app_wlan_sta_start() does. */
+    if (wifi_switch_mode(WIFI_MODE_STA) < 0)
+    {
+        LOG_E("wlan_join: cannot switch to STA mode");
+        rt_wlan_dev_indicate_event_handle(wlan, RT_WLAN_DEV_EVT_CONNECT_FAIL, RT_NULL);
+        return -RT_ERROR;
+    }
+
     ret = aic_wifi_start_sta((uint8_t *)ssid, (uint8_t *)pw, 30000);   /* 30s timeout */
     if (ret == 0)
     {
@@ -255,6 +267,13 @@ static rt_err_t aic8800_wlan_softap(struct rt_wlan_device *wlan, struct rt_ap_in
     cfg.dtim         = 1;
 
     LOG_I("wlan_softap ssid=%.*s ch=%d", slen, (char *)cfg.aic_ap_ssid.array, cfg.channel);
+    /* Same as wlan_join: a previous ap stop leaves the driver mode at WIFI_MODE_UNKNOWN. */
+    if (wifi_switch_mode(WIFI_MODE_AP) < 0)
+    {
+        LOG_E("wlan_softap: cannot switch to AP mode");
+        return -RT_ERROR;
+    }
+
     ret = aic_wifi_start_ap(&cfg);
     if (ret == 0)
     {
