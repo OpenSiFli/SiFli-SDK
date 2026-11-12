@@ -6,21 +6,30 @@ This file provides guidance to agents when working with code in this repository.
 
 SiFli SDK is an embedded firmware development framework built on RT-Thread RTOS, targeting SiFli Technologies' SoC family. The SDK supports five chip families: SF32LB52X, SF32LB55X, SF32LB56X, SF32LB57X, and SF32LB58X, with some supporting multi-core configurations (HCPU, LCPU and ACPU).
 
-## Build System
+## Environment Setup
 
-The build system uses **SCons** with **Kconfig** for configuration. All builds must run inside a properly initialized environment.
+`export.ps1` / `export.sh` must be loaded into the current shell. It initializes more than the build
+toolchain: it also selects the SDK Python environment (the `uv`-locked profile in
+`tools/locks/default/uv.lock`) and puts its interpreter on `PATH`. Run **any** SDK Python entry point
+in that environment — `sdk.py`, `tools/**/*.py`, the test harness — because the system Python lacks
+`pyyaml`, `pytest`, `pyserial` and `jsonschema`.
 
-### Environment Setup (Windows PowerShell)
+### Windows PowerShell
 
 ```powershell
 . .\export.ps1        # dot-source, so the environment persists in this shell
 ```
 
-### Environment Setup (Linux/macOS)
+### Linux/macOS
 
 ```bash
 source ./export.sh
 ```
+
+## Build System
+
+The build system uses **SCons** with **Kconfig** for configuration. All builds must run inside the
+environment set up above.
 
 ### Building a Project
 
@@ -90,12 +99,11 @@ For details read [build_and_configuration](docs\source\en\app_development\build_
 
 The automated test framework lives in `tools/sdk_test/` (discovery, build, run, reporting) and `tools/lab_agent/` (machine side, holds the real boards). It is driven by `sdk.py test` (list / plan / run / info), not by a bare `scons`.
 
-Framework self-tests need no hardware, but they need the SDK Python environment. **Activate it in the same shell before running any Python command** — the plain system Python does not carry `pyyaml`, `pytest`, `pyserial` or `jsonschema`, and the suite then fails at import with `pyyaml is required to read feature files` (or `No module named 'pytest'`). That is the environment, not the code.
-
-- **Windows (PowerShell):** `. .\export.ps1` — dot-source it so the environment changes stay in the current shell.
-- **Linux / macOS (bash/zsh):** `source ./export.sh`
-
-The script resolves the locked profile (`tools/locks/default/uv.lock`) through `uv` and puts its Python on `PATH`. The same applies to `sdk.py test ...`, not only to the self-tests.
+Framework self-tests need no hardware, but they must run in the SDK Python environment set up in
+**Environment Setup**: the system Python lacks `pyyaml`, `pytest`, `pyserial` and `jsonschema`, and
+the suite then fails at import with `pyyaml is required to read feature files` (or
+`No module named 'pytest'`). That is the environment, not the code. The same applies to `sdk.py
+test ...`, not only to the self-tests.
 
 ```bash
 python -m unittest discover -s tools/sdk_test/tests -p "test_*.py"
@@ -160,6 +168,9 @@ Hardware (Cortex-M33 HCPU, optional low-power LCPU co-processor)
 
 ## Coding Style
 - `.clang-format` for C code
+- C comments follow [Coding Style](docs/source/en/contribute/coding_style.md): English only, doxygen style
+  for functions (`/** ... */` with `@brief`, `@param`, `@return`) and for struct members / enum values
+  (`/**< ... */`)
 
 ## Multi-Agent Collaboration (Orchestrator)
 
