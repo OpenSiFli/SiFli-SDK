@@ -188,6 +188,9 @@ void lv_draw_epic_img(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *draw
         return;
     }
 
+    if (lv_draw_epic_bg_img(draw_task, draw_dsc, coords))
+        return;
+
     if (!draw_dsc->tile)
     {
         lv_draw_image_normal_helper(draw_task, draw_dsc, coords, img_draw_core);

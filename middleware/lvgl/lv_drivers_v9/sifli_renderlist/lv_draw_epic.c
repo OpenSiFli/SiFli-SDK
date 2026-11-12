@@ -46,6 +46,8 @@ typedef enum
     RL_RESOURCE_IMAGE_DATA, // Compressed image data
     RL_RESOURCE_TRANSFORM, // Image transform matrix
     RL_RESOURCE_ARC_IMAGE, // Arc image layer and retained decoder session
+    RL_RESOURCE_BG_IMAGE, // Rectangle images and retained decoder session
+    RL_RESOURCE_MASK_DATA, // A8 coverage consumed by an asynchronous operation
 } render_list_resource_type_t;
 
 // Resource linked list node - used for deferred release
@@ -392,6 +394,16 @@ bool lv_draw_epic_retain_arc_image(void *arc_image)
     return render_list_retain_resource(arc_image, RL_RESOURCE_ARC_IMAGE, "arc image");
 }
 
+bool lv_draw_epic_retain_bg_image(void *image)
+{
+    return render_list_retain_resource(image, RL_RESOURCE_BG_IMAGE, "background image");
+}
+
+bool lv_draw_epic_retain_mask_data(void *mask)
+{
+    return render_list_retain_resource(mask, RL_RESOURCE_MASK_DATA, "mask data");
+}
+
 // Release deferred resources
 void lv_draw_epic_release_deferred_resources(void)
 {
@@ -418,6 +430,14 @@ void lv_draw_epic_release_deferred_resources(void)
             else if (resource_list->type == RL_RESOURCE_ARC_IMAGE)
             {
                 lv_draw_epic_release_arc_image(resource_list->resource);
+            }
+            else if (resource_list->type == RL_RESOURCE_BG_IMAGE)
+            {
+                lv_draw_epic_release_bg_image(resource_list->resource);
+            }
+            else if (resource_list->type == RL_RESOURCE_MASK_DATA)
+            {
+                app_cache_free(resource_list->resource);
             }
             else
             {
@@ -893,6 +913,11 @@ static int32_t evaluate(lv_draw_unit_t *draw_unit, lv_draw_task_t *t)
             t->preference_score = 90;
         break;
 
+    case LV_DRAW_TASK_TYPE_MASK_RECTANGLE:
+        if (t->preference_score > 90)
+            t->preference_score = 90;
+        break;
+
     default:
         if (t->preference_score > 99)
             t->preference_score = 99;
@@ -943,6 +968,9 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
         break;
     case LV_DRAW_TASK_TYPE_ARC:
         lv_draw_epic_arc(t, t->draw_dsc, &t->area);
+        break;
+    case LV_DRAW_TASK_TYPE_MASK_RECTANGLE:
+        lv_draw_epic_mask_rect(t, t->draw_dsc);
         break;
     default:
         LV_LOG_WARN("EPIC: Unsupported draw task type %d\n", t->type);
