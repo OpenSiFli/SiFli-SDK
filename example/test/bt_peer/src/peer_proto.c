@@ -24,6 +24,7 @@
 #include <stdarg.h>
 
 #include "peer.h"
+#include "peer_classic.h"
 
 static rt_mutex_t g_out_lock;
 static uint32_t g_evt_seq;
@@ -302,11 +303,19 @@ static void peer_emit_info(void)
 {
     char line[PEER_LINE_MAX];
     char addr[BD_ADDR_LEN * 2 + 1];
+    const char *btc = "";
+
+#ifdef PEER_CLASSIC
+    /* Only advertise Classic once its callback and IPC objects are in place;
+     * otherwise every btc.* would be a timeout the host cannot explain. */
+    if (peer_classic_available())
+        btc = " btc=1";
+#endif
 
     peer_ble_local_addr_str(addr, sizeof(addr));
     rt_snprintf(line, sizeof(line),
-                "@info proto=%d fw=%s caps=%s addr=%s name=%s roles=central,peripheral max_conn=%d ble=5.2 max_line=%d",
-                PEER_PROTO_VERSION, PEER_FW_ID, PEER_CAPS, addr,
+                "@info proto=%d fw=%s caps=%s%s addr=%s name=%s roles=central,peripheral max_conn=%d ble=5.2 max_line=%d",
+                PEER_PROTO_VERSION, PEER_FW_ID, PEER_CAPS, btc, addr,
                 peer_ble_local_name(), PEER_MAX_LINKS, PEER_CMD_MAX);
     peer_line_out(line);
 }
@@ -340,6 +349,9 @@ static int peer_op_state_reset(const peer_args_t *args, peer_reply_t *reply)
     peer_ble_reset();
     peer_gatt_client_reset();
     peer_gatt_server_reset();
+#ifdef PEER_CLASSIC
+    peer_classic_reset();
+#endif
     peer_reply_ok(reply, "");
     return 0;
 }
@@ -964,6 +976,141 @@ static int peer_op_file_push(const peer_args_t *args, peer_reply_t *reply)
     return peer_file_push(link, (uint16_t)handle, name, payload, len, reply);
 }
 
+#ifdef PEER_CLASSIC
+static int peer_op_btc_local(const peer_args_t *args, peer_reply_t *reply)
+{
+    int timeout_ms;
+
+    if (peer_arg_int(args, "timeout_ms", 10000, &timeout_ms) < 0 ||
+            timeout_ms <= 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "btc.local");
+        return -1;
+    }
+
+    return peer_classic_local((uint32_t)timeout_ms, reply);
+}
+
+static int peer_op_btc_inquiry(const peer_args_t *args, peer_reply_t *reply)
+{
+    int duration_ms, max_rsp;
+
+    if (peer_arg_int(args, "duration_ms", 10000, &duration_ms) < 0 ||
+            peer_arg_int(args, "max_rsp", 0, &max_rsp) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "btc.inquiry");
+        return -1;
+    }
+
+    /* max_rsp 0 means "no cap": only duration_ms ends the inquiry. */
+    if (duration_ms <= 0 || max_rsp < 0 || max_rsp > 0xFF)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "btc.inquiry");
+        return -1;
+    }
+
+    return peer_classic_inquiry((uint32_t)duration_ms, (uint8_t)max_rsp, reply);
+}
+
+static int peer_op_btc_pair(const peer_args_t *args, peer_reply_t *reply)
+{
+    const char *addr_hex = peer_arg_get(args, "addr");
+    uint8_t addr[BD_ADDR_LEN];
+    int timeout_ms;
+
+    if (addr_hex == RT_NULL ||
+            peer_hex_decode(addr_hex, addr, sizeof(addr)) != BD_ADDR_LEN)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "addr");
+        return -1;
+    }
+
+    if (peer_arg_int(args, "timeout_ms", 20000, &timeout_ms) < 0 ||
+            timeout_ms <= 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "timeout_ms");
+        return -1;
+    }
+
+    return peer_classic_pair(addr, (uint32_t)timeout_ms, reply);
+}
+
+static int peer_op_btc_connect(const peer_args_t *args, peer_reply_t *reply)
+{
+    const char *addr_hex = peer_arg_get(args, "addr");
+    const char *uuid_hex = peer_arg_get(args, "uuid");
+    uint8_t uuid[16];
+    uint8_t addr[BD_ADDR_LEN];
+    int uuid_len;
+    int timeout_ms;
+
+    if (addr_hex == RT_NULL ||
+            peer_hex_decode(addr_hex, addr, sizeof(addr)) != BD_ADDR_LEN)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "addr");
+        return -1;
+    }
+
+    /* SPP by default; the user's uuid is in display order on the wire. */
+    if (uuid_hex == RT_NULL)
+        uuid_hex = "1101";
+
+    memset(uuid, 0, sizeof(uuid));
+    uuid_len = peer_hex_decode(uuid_hex, uuid, sizeof(uuid));
+    if (uuid_len != 2 && uuid_len != 4 && uuid_len != 16)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "uuid");
+        return -1;
+    }
+
+    if (peer_arg_int(args, "timeout_ms", 10000, &timeout_ms) < 0 ||
+            timeout_ms <= 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "timeout_ms");
+        return -1;
+    }
+
+    return peer_classic_connect(addr, uuid, (uint8_t)uuid_len,
+                                (uint32_t)timeout_ms, reply);
+}
+
+static int peer_op_btc_disconnect(const peer_args_t *args, peer_reply_t *reply)
+{
+    int link_id;
+
+    if (peer_arg_int(args, "link", -1, &link_id) < 0 ||
+            link_id <= 0 || link_id > 0xFF)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "link");
+        return -1;
+    }
+
+    return peer_classic_disconnect((uint8_t)link_id, reply);
+}
+
+static int peer_op_btc_spp_send(const peer_args_t *args, peer_reply_t *reply)
+{
+    static uint8_t payload[PEER_MAX_PAYLOAD];
+    uint16_t len = 0;
+    int link_id;
+
+    if (peer_arg_int(args, "link", -1, &link_id) < 0 ||
+            link_id <= 0 || link_id > 0xFF)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "link");
+        return -1;
+    }
+
+    if (peer_arg_payload(args, payload, sizeof(payload), &len) < 0)
+    {
+        peer_reply_err(reply, PEER_ERR_INVALID_ARG, "payload");
+        return -1;
+    }
+
+    return peer_classic_send((uint8_t)link_id, payload, len, reply);
+}
+#endif /* PEER_CLASSIC */
+
 static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
 {
     peer_reply_t reply;
@@ -1025,6 +1172,20 @@ static int peer_dispatch(const char *id, const char *op, peer_args_t *args)
         rc = peer_op_adv_data(args, &reply);
     else if (strcmp(op, "file.push") == 0)
         rc = peer_op_file_push(args, &reply);
+#ifdef PEER_CLASSIC
+    else if (strcmp(op, "btc.local") == 0)
+        rc = peer_op_btc_local(args, &reply);
+    else if (strcmp(op, "btc.inquiry") == 0)
+        rc = peer_op_btc_inquiry(args, &reply);
+    else if (strcmp(op, "btc.pair") == 0)
+        rc = peer_op_btc_pair(args, &reply);
+    else if (strcmp(op, "btc.connect") == 0)
+        rc = peer_op_btc_connect(args, &reply);
+    else if (strcmp(op, "btc.disconnect") == 0)
+        rc = peer_op_btc_disconnect(args, &reply);
+    else if (strcmp(op, "btc.spp.send") == 0)
+        rc = peer_op_btc_spp_send(args, &reply);
+#endif
     else
     {
         peer_reply_err(&reply, PEER_ERR_UNSUPPORTED, "%s", op);

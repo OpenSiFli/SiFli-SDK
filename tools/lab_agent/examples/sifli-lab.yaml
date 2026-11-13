@@ -21,7 +21,9 @@ runner:
 
 testbed:
   - id: sf32lb52-lcd_a128r16_01
-    platform: sf32lb52-lcd_a128r16     # 不带核后缀即可，会补成 _hcpu
+    # 与 `-p` 的值逐字相同；约定写板名本身、不带 _hcpu 之类的核心后缀
+    # （SDK 只会把 build 目录补成 _hcpu，不会补这里的 platform）。
+    platform: sf32lb52-lcd_a128r16
     runner: local
 
     console:

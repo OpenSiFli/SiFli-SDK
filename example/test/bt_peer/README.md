@@ -1,47 +1,83 @@
-# bt_peer — BLE test instrument
+# bt_peer — Bluetooth test instrument
 
 `bt_peer` is the fixed firmware a test suite drives as the *other* end of a
-Bluetooth link. It runs no application of its own: it powers on the BLE stack,
-registers one MSH command (`peer`) and performs what the host asks over a
-single-line text protocol. The design is in
+Bluetooth link. It runs no application of its own: it powers on the radio
+stack, registers one MSH command (`peer`) and performs what the host asks over
+a single-line text protocol. One image carries the BLE half (GAP/GATT) and, on
+58X, the Classic (BR/EDR) half (inquiry and SPP). The design is in
 [`tools/sdk_test/BT_PEER_DESIGN.md`](../../../tools/sdk_test/BT_PEER_DESIGN.md).
 
-Host side: `tools/sdk_test/instruments/bt_peer.py` (`BtPeer` / `BleInstrument`).
-The lab wiring is `fixture: bt_peer:ble` in the testcase and a `connections:`
-entry in the lab binding.
+Host side: `tools/sdk_test/instruments/bt_peer.py` (`BtPeer` /
+`BleInstrument`) for BLE and `tools/sdk_test/instruments/classic.py`
+(`BtClassicInstrument`) for Classic. The lab wiring is `fixture: bt_peer:ble`
+or `fixture: bt_peer:ble,classic` in the testcase and a matching
+`connections:` entry in the lab binding.
 
 ## Build
 
 ```bash
 source ./export.sh            # ./export.ps1 on Windows
 cd example/test/bt_peer/project
-scons --board=<board> -j8
+
+# BLE instrument: caps=ble
+scons --board=sf32lb52-lcd_a128r16_hcpu -j8
+
+# BLE + Classic instrument: caps=ble,classic, and btc=1 in @info
+scons --board=sf32lb58-lcd_n16r32n1_qspi_hcpu -j8
 ```
 
 The artifacts land in `build_<board>/`, as for any example. The project is
 `build_only` in `testcase.yaml`: CI compiles it, nothing executes it.
 
-The firmware needs `CONFIG_RT_CONSOLEBUF_SIZE=1024` and
-`CONFIG_FINSH_CMD_SIZE=1024` (already in `project/proj.conf`): one protocol
-line carries a 244-byte hex payload, which the default 80-byte shell line
-would truncate.
+The Classic half is selected by `project/sf32lb58x/proj.conf`, which the build
+merges for 58X only (the `<chip>/proj.conf` next to `project/proj.conf`). It
+sets `CONFIG_PEER_CLASSIC` — which depends on `SOC_SF32LB58X`, so a 52X build
+cannot pick it up — plus `CONFIG_BT_FINSH` and the SPP profile options. The same
+file also sets `LCPU_CONFIG_V2`, `HCI_DISABLE` and `LCPU_RUN_SEPERATE_IMG`,
+which the 58X boot path needs.
+
+The LCPU side takes the same path on both chips: `project/SConstruct` calls
+`AddLCPU(...)`, which builds the shared controller project
+`example/ble/lcpu_general` as a child project. Nothing is copied in from
+`example/rom_bin`. The 58X image is about 889 KB
+(`build_<board>/output/main.bin`).
+
+The firmware needs `CONFIG_RT_CONSOLEBUF_SIZE=1024` (a long `@evt` line may
+carry a 460-byte payload as 920 hex characters) and `CONFIG_FINSH_CMD_SIZE=1024`
+(the default 80-byte shell line would truncate a request long before its
+240-character cap). Both are already in `project/proj.conf`.
 
 ## Flash once
 
 Flash the image once with the usual downloader and leave the board in the
 lab. It never needs re-flashing between test runs; `state.reset` returns it to
-a known state. Point the binding at its console:
+a known state. Point the binding at the instrument's own console:
 
 ```yaml
 connections:
-  - fixture: bt_peer:ble
+  - fixture: bt_peer:ble            # 52X image
     console: {port: COM22, baud: 1000000}
+  # or, for the 58X image that also carries the Classic half:
+  # - fixture: bt_peer:ble,classic
+  #   console: {port: COM22, baud: 1000000}
 ```
+
+A 58X instrument is flashed once with the 58X build and then serves both
+halves; the binding names the capability set, and the case states the same
+spec (`fixture: bt_peer:ble,classic`). Capabilities are matched as a subset,
+so a case that asks only for `bt_peer:ble` still runs against it.
 
 Then run any suite that declares `fixture: bt_peer:ble`, for example:
 
 ```bash
 sdk.py test run -T example/ble/central_and_peripheral --tag peer -p <board>
+```
+
+A Classic suite names the board its *DUT* needs; the instrument's build and
+port come from the lab binding:
+
+```bash
+sdk.py test run -T example/bt/spp -p <board>
 ```
 
 ## Checking that the instrument answers
@@ -52,24 +88,38 @@ Type this in its console (or let the fixture do it):
 peer info
 ```
 
-Expected line, verbatim apart from `max_conn` (always 8 on this build):
+Expected line on the 52X image, verbatim apart from `max_conn` (always 8 on
+this build):
 
 ```
-@info proto=1 fw=bt_peer-m5 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
+@info proto=1 fw=bt_peer-m6 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
 ```
 
-`proto=1` and `caps=ble` are what `expect_ready()` gates on; a board running
+The 58X image adds the Classic capability and one marker field:
+
+```
+@info proto=1 fw=bt_peer-m6 caps=ble,classic btc=1 addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
+```
+
+`proto=1` and `caps` are what `expect_ready()` gates on; a board running
 another image (the old `diss` one, for instance) fails here rather than later.
+`btc=1` sits at the same level as `caps`: it says the image includes the
+Classic half (`#ifdef PEER_CLASSIC`) **and** that its init succeeded, not that
+the Classic stack is up — the first `btc.*` op (`btc.local`) answers that. A
+Classic build whose init failed omits it, so the SPP suite's explicit
+assertion fails instead of the first `btc.*` timing out.
 
 `addr` and `name` are UID-derived (`bt_mac_addr_generate_via_uid_v2`), so every
 instrument in a lab has its own public address and its own `bt_peer-<suffix>`
 name. Without that override the stack's weak default would give every board the
 same address, `AB:05:03:02:05:08`.
 
-`PEER_CAPS` in `src/peer.h` is the single source of that capability string. A
-build that adds the Classic stack overrides it with `"ble,classic"`; the host
-declares `fixture: bt_peer:ble,classic` and gets both `bt_peer.ble` and
-`bt_peer.classic` over the same console stream. No protocol or Agent change.
+`PEER_CAPS` is decided at build time: `project/Kconfig.proj` sets it to
+`"ble,classic"` when `CONFIG_PEER_CLASSIC` is on and `"ble"` otherwise, while
+`src/peer.h` keeps a C fallback for a build that does not go through Kconfig.
+The host declares the same set (`fixture: bt_peer:ble,classic`) and gets both
+`bt_peer.ble` and `bt_peer.classic` over the same console stream. No protocol
+or Agent change.
 
 ## Protocol
 
@@ -78,13 +128,13 @@ Host to instrument:
 ```
 peer info
 peer req <id> <op> [key=value ...]
-peer data <id> <hex>              # not implemented in M1
+peer data <id> <hex>              # not implemented
 ```
 
 Instrument to host:
 
 ```
-@info proto=1 fw=bt_peer-m5 caps=ble addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
+@info proto=1 fw=bt_peer-m6 caps=<ble | ble,classic> [btc=1] addr=<uid-derived> name=bt_peer-<xxx> roles=central,peripheral max_conn=8 ble=5.2 max_line=240
 @ok  <id> [key=value ...]
 @err <id> <code> <text>
 @evt <seq> <name> [key=value ...]
@@ -102,12 +152,15 @@ Rules that matter when extending it:
 6. One unfinished GATT operation per link; a second one answers `@err ... busy`.
 7. Scan and connection indices are 1-based on the wire; a link id is stable
    for the life of the connection.
+8. `gap.*` / `gatt.*` and `btc.*` are separate operation namespaces, and a
+   Classic `link` id is never a BLE `link` id. Never pass one where the other
+   belongs; the numbers alone cannot tell you it is wrong.
 
-### M1 operations
+### BLE operations (`gap.*`, `gatt.*`, ...)
 
 | Op | Notes |
 |---|---|
-| `state.reset` | Drops links, stops scan/advertising/periodic, frees GATT client registrations. |
+| `state.reset` | Drops links (BLE and Classic), stops scan/advertising/periodic, frees GATT client registrations. |
 | `gap.scan` | Blocks for `duration_ms`, then `@ok count=<n>`; one `@evt adv` per report, up to `PEER_MAX_ADV_REPORTS` (64). |
 | `gap.scan.stop` | Stops a scan early (the shell is serial, so mostly a no-op). |
 | `gap.connect` | By scan `index` or `addr`; `@ok link=<n>`. |
@@ -134,6 +187,61 @@ Rules that matter when extending it:
 Anything else answers `@err <id> unsupported <op>`. The two remaining gaps are
 `peer data` (chunked continuation; a request line is capped at 240 characters)
 and `svc.unregister` (the stack cannot remove a service from the ATT database).
+
+### Classic operations (`btc.*`)
+
+Present only in a build with `PEER_CLASSIC` (58X). Without it the dispatcher
+answers `@err <id> unsupported <op>`.
+
+| Op | Notes |
+|---|---|
+| `btc.local` | Brings up the Classic stack and reports the instrument's own identity. `timeout_ms` (default 10000) is the *instrument's* budget for the stack, not the host's wait. `@ok addr=<12hex> name=<hex> role=server`; the instrument takes the pageable role, so a DUT may connect to it. |
+| `btc.inquiry` | `duration_ms` (default 10000) and `max_rsp` (default 0 = no cap, 0–255; the inquiry ends early once that many devices have answered). Emits one `@evt btc.dev` per device, then `@ok count=<n> first_seq=<n>` once the inquiry has finished. It hears every device class: the firmware issues the inquiry directly because the finsh helper filters for audio devices on this branch. Refused with `@err ... busy` while an inquiry, a pair or a connect is pending. |
+| `btc.pair` | `addr=<12hex>` and `timeout_ms` (default 20000, instrument budget). Binds a link key so the SPP channel can authenticate; `@ok addr=<12hex>`. Refused with `@err ... busy` while an inquiry, a connect or another pair is pending; a failed pairing answers `@err state pair`, a pairing that reports no outcome `@err timeout pair`. The bond persists across reconnects. When no event names the outcome the firmware falls back to the security manager's paired-device list and then the connection manager's bond table; both are persistent and the callback carries no request id, so an **existing bond for the same address can make a failed attempt answer `@ok`**. |
+| `btc.connect` | `addr=<12hex>`, `uuid` (2, 4 or 16 bytes, display order, default `1101` = SPP) and `timeout_ms` (default 10000, instrument budget). Runs an SDP search for `uuid` first, then pages the peer; the two steps share `timeout_ms` plus the stack allowance (2 s). `@ok link=<n> addr=<12hex> channel=<n> role=0` only once the SPP link is up; the matching `@evt btc.conn` precedes it. Refused with `@err ... busy` while an inquiry, a pair or another connect is pending; an SDP refusal/failure answers `@err state connect`, a timeout in either step `@err timeout connect`. It does **not** pair implicitly — call `btc.pair` first. |
+| `btc.disconnect` | `link=<n>`. `@ok` means the request was accepted, not that the link is down: `@evt btc.disc` is the confirmation. |
+| `btc.spp.send` | `link=<n> len=N data=<hex>`; `@ok bytes=N`. `N` must fit the SPP link MTU, and the request line is capped at `max_line`, so the practical payload is roughly 90–100 bytes. An `N` above the link MTU is refused with `@err invalid_arg len`; an over-long line is refused by the host before it is sent. |
+
+Classic events:
+
+```
+btc.dev    addr=<12hex> name=<hex> rssi=<dBm>
+btc.conn   link=<n> addr=<12hex> channel=<n> role=0/1
+btc.disc   link=<n> reason=<n>
+btc.data   link=<n> len=N data=<hex> off=<n>
+```
+
+Conventions that are easy to get backwards:
+
+- **`uuid` is in display order** — most significant byte first — the reverse of
+  the BLE spelling. SPP is `1101` here; the same number would be `0111` in a
+  `gatt.*` call.
+- **`name` is the UTF-8 bytes of the name, hex encoded** (`btc.local`,
+  `btc.dev`). The host decodes it; an invalid sequence is replaced, not fatal.
+- **`role` is the instrument's side of the link**: 0 when it paged the DUT
+  (client), 1 when the DUT paged it (server). An incoming SPP connection is
+  accepted automatically and reported as `@evt btc.conn ... role=1`.
+- **`channel` is each end's own local service channel.** The instrument's
+  `channel` (from `btc.conn` / `btc.connect`) is what `btc.spp.send` uses; the
+  DUT's own `chl` is what its `send_data` needs. The two numbers differ by
+  design (8 and 1 on the bench) and are not expected to match.
+- **Pair before connect.** SPP's RFCOMM channel requires an authenticated link,
+  so `btc.connect` without a bond fails: the DUT reports HCI 0x06 (PIN or key
+  missing) and the instrument answers `@err timeout connect`, not a clearer
+  error. `state.reset` deletes the instrument's bonds while the DUT may keep
+  the old key; the first `btc.pair` then fails with `@err state pair` (the DUT
+  drops its record after KEY_MISSING) and a second attempt succeeds. The SPP
+  suite retries once.
+- **A Classic `link` id and a BLE `link` id are separate namespaces.** Both are
+  small integers, so a mix-up is silent; keep them apart in a dual-mode suite.
+- **A long SPP packet is split, not truncated.** `btc.data` carries at most
+  `PEER_MAX_PAYLOAD` (460) bytes per line; `off` is the offset within the
+  original packet, so a receiver concatenates by `off`. `len` is the length of
+  that chunk.
+- **`state.reset` drops the Classic links and deletes the bonds.** It waits at
+  most one second for the stack to tear links down and suppresses events for
+  the links it dropped, so a test that resets does not see the previous
+  state's `btc.disc`.
 
 ### Events
 
@@ -196,7 +304,7 @@ The responses arrive as notifications on the same data characteristic, so the
 host must subscribe before calling `file_push`; the notification hook feeds
 the push engine and still emits the usual `@evt notify` lines.
 
-## Known limitations (M1)
+## Known limitations
 
 - `svc.unregister` answers `unsupported`: the stack cannot remove a service
   from the ATT database, so the loopback service stays registered for the
@@ -204,7 +312,12 @@ the push engine and still emits the usual `@evt notify` lines.
 - `peer data` (chunked payload continuation) is not implemented. `max_line`
   is 240 because a request line longer than a few hundred characters reaches
   the shell damaged (a 329-character line arrived truncated, with a stray NUL);
-  the hex payload therefore has to stay around 80 bytes. `PEER_MAX_PAYLOAD`
-  (460) is the *output*/event bound, not a request one.
-- Classic Bluetooth is out of scope for this image; the design reserves
-  `bt_peer:classic` for a later one.
+  the request hex payload therefore stays under about 100 bytes.
+  `PEER_MAX_PAYLOAD` (460) is the *output*/event bound, not a request one.
+- The Classic half implements **SPP only**. A2DP, HFP, AVRCP and PAN have no
+  peer: `btc.*` has no operation that would set up those profiles, and a suite
+  that needs them cannot run against this instrument.
+- An SPP packet longer than 460 bytes arrives as several `btc.data` lines with
+  their `off` offsets. The host's `wait_data()` returns one chunk, so a caller
+  that must reassemble larger payloads has to read the events itself.
+- Classic `link` ids and BLE `link` ids are separate namespaces; see Protocol.

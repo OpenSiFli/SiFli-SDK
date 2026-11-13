@@ -15,6 +15,7 @@
 #include <board.h>
 
 #include "peer.h"
+#include "peer_classic.h"
 #include "bf0_sibles.h"
 
 static void peer_app_init(void)
@@ -27,6 +28,10 @@ static void peer_app_init(void)
     peer_gatt_server_init();
     peer_sec_init();
     peer_periodic_init();
+#ifdef PEER_CLASSIC
+    /* Registers the Classic event callback: must precede sifli_ble_enable(). */
+    peer_classic_init();
+#endif
 }
 
 int main(void)

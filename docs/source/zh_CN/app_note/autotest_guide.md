@@ -706,6 +706,16 @@ def test_gatt(bt_peer, connected_link):
 随仓库的 `example/ble/central_and_peripheral/pytest_peer/` 套件则是按顺序写成一串测试、并在文件开头声明了这一点——
 一条线性场景这样读更顺。上面 `connected_link` 的写法是"某条用例必须能单独跑"时才需要的。
 
+**经典（BR/EDR）半边。** 带经典栈的镜像在 `@info` 里声明 `ble,classic`，并在经典半边的 init 成功后追加
+`btc=1`（事件回调与 IPC 对象都就位；init 失败的镜像不发，SPP 用例的显式
+`btc=1` 断言会在第一条 `btc.*` 之前抓到）。
+`btc=1` 仍不代表栈已就绪，栈是否可用由第一次 `btc.*` op 回答；`bt_peer.classic` 随后交出
+`BtClassicInstrument`（inquiry、connect/disconnect、SPP 收发），用的是同一条 console 流，所以双模用例
+声明 `fixture: bt_peer:ble,classic` 并同时使用两个子 API。在只有 BLE 的镜像上访问 `.classic` 会在能力门
+报错，而不是等到第一条 `btc.*` 命令才失败。带经典能力的镜像是同一份固件的 58X 构建；完整示例见
+`example/bt/spp/pytest/`，`btc.*` 命令表（UUID 字节序、link 命名空间、行预算；含 `btc.pair`——
+SPP 连接前必须先配对）在 `example/test/bt_peer/README.md`。
+
 用例用了 `bt_peer` 却没有在 testcase 里声明 `fixture: bt_peer:ble` 时，fixture 会 **skip** 并说明原因——
 那是漏声明，不是测试失败。
 
@@ -1160,7 +1170,7 @@ Lab Agent 自己的设置（探针序列号、烧录方式）也写在这个文�
 | 键 | 谁读 | 说明 |
 |---|---|---|
 | `testbed[].id` | agent | 这个 testbed 在本次运行里的标识。同一个文件里不能重复 |
-| `testbed[].platform` | **agent** | **决定这条用例能不能落在这块板**。必须与 `customer/boards/<name>` 同名；不带核后缀即可，会补成 `_hcpu` |
+| `testbed[].platform` | **agent** | **决定这条用例能不能落在这块板**。必须与 `-p` 的值**逐字相同**，框架不会在这里补核后缀。约定两边都写板名本身、不带核后缀（`-p sf32lb52-lcd_a128r16`）——只有 build 目录会自动补 `_hcpu`。确实要带后缀时就两边都带（`-p <board>_hcpu` 与 `platform: <board>_hcpu`） |
 | `testbed[].console` | **agent** | `{port, baud}`。`baud` 默认 1000000（SDK console 固定 1 Mbaud） |
 | `testbed[].connections[].fixture` | agent | **只当用例写了 `harness_config.fixture` 时才会被查**。写 `name`，或 `name:param`（`spi_nor_flash:spi2`）精确锚定 |
 | `testbed[].connections[].pinmap` | 无 | 记录怎么接的线（哪个脚是 CS/CLK）。**目前没有代码消费**，写它是给硬件团队对线用的 |

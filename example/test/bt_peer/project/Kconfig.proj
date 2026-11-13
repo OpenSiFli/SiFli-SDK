@@ -6,3 +6,17 @@ config CUSTOM_MEM_MAP
     bool
     select custom_mem_map
     default y
+
+# The Classic stack (BR/EDR) needs the controller image built for it, which
+# only the 58X boards ship; a project selects this from its <chip>/proj.conf.
+config PEER_CLASSIC
+    bool "Classic (BR/EDR) instrument"
+    depends on SOC_SF32LB58X
+    default n
+
+# What @info advertises. Overridden from Kconfig rather than the C fallback in
+# peer.h, so one source tree describes both instruments.
+config PEER_CAPS
+    string
+    default "ble,classic" if PEER_CLASSIC
+    default "ble"

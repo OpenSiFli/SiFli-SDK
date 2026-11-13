@@ -1,0 +1,40 @@
+# The peer path for the BLE half of the combined example. `src/main.c` runs
+# the shared "sifli_app" GATT server and a legacy connectable advertisement
+# (`SIBLES_ADV_CONNECT_MODE`), so the `bt_peer:ble` instrument is the GATT
+# client. The example also compiles a Classic application module (`app_bt/`)
+# into the same firmware; this case only covers the BLE half.
+#
+# Reverse verification -- executed:
+#   sabotage: remove the `memcpy` in `ble_app_gatts_set_cbk()`, then rebuild
+#             and reflash.
+#   result:   2 failed, 7 passed.
+#             `test_peer_writes_and_reads_the_value` went red with
+#               expected /Updated app value from:\d+ to:34\b/ within 10s
+#             while the log showed `Updated app value from:0 to:0`;
+#             `test_notification_burst_reaches_the_peer` also went red because
+#             the trigger word was never written.
+#   restored and re-ran: 1 test(s): 1 passed (52.0 s, build and flash
+#   included; after rebasing the finsh changes onto origin/main).
+#
+# Other break points (planned, not executed): break `ble_app_service_init()` ->
+# `test_peer_discovers_the_service`; remove `ble_app_start_send_thread()` (or
+# the low-byte 0x11 branch) -> the burst test.
+#
+# An sftool flash exit 101 is a known bench flake (`sf32lb52-lab`): rerun; do
+# not treat it as a case failure.
+#
+# project_dir is spelled out because the SConstruct lives under `project/`
+# rather than at the example root.
+tests:
+  - id: bt_test_example.ble_peer
+    description: A BLE peer connects to the example's GATT server, writes, reads, subscribes and receives notifications.
+    harness: pytest
+    tags: [pytest, ble, peer]
+    # Covers the build, the flash, the boot, a 3 s scan, the connection,
+    # legacy pairing (the writable attributes and the CCCD require an
+    # encrypted link), the GATT traffic and one 5 s timer period.
+    timeout: 300
+    project_dir: project
+    harness_config:
+      fixture: bt_peer:ble
+      pytest_root: pytest_ble

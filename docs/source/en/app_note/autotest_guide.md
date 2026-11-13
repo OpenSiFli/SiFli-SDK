@@ -742,6 +742,17 @@ The shipped `example/ble/central_and_peripheral/pytest_peer/` suite instead keep
 at the top -- that reads well for one linear scenario. The `connected_link` pattern above is what a suite needs when a
 case must be runnable on its own.
 
+**The Classic (BR/EDR) half.** An image built with the Classic stack advertises `ble,classic` and adds `btc=1` to
+`@info` once the Classic half's init has succeeded (event callback and IPC objects in place; an image that failed
+there omits it, so the SPP suite's explicit `btc=1` assertion fails before the first `btc.*` command). `btc=1` still
+does not say the stack is up -- the first `btc.*` op answers that;
+`bt_peer.classic` then hands out a `BtClassicInstrument` (inquiry, connect/disconnect, SPP send and receive)
+over the same console stream, so a dual-mode case declares `fixture: bt_peer:ble,classic` and uses both sub-APIs.
+Asking for `.classic` on a BLE-only image raises a capability error instead of failing at the first `btc.*` command.
+The Classic-capable image is a 58X build of the same firmware; the worked example is `example/bt/spp/pytest/`, and the
+`btc.*` command table (UUID byte order, link id namespace, line budget; including `btc.pair` -- SPP must be paired
+before it connects) is in `example/test/bt_peer/README.md`.
+
 If a suite uses `bt_peer` without the test case declaring `fixture: bt_peer:ble`, the fixture **skips** and says so --
 that is a missing declaration, not a failed test.
 
@@ -1227,7 +1238,7 @@ table marks which, so copying it will not go wrong.
 | Key | Who reads it | Notes |
 |---|---|---|
 | `testbed[].id` | agent | The testbed's identifier within this run. It must not repeat within one file |
-| `testbed[].platform` | **agent** | **Decides whether a test case can land on this board.** Must be named the same as `customer/boards/<name>`; without the core suffix is fine, it gets completed to `_hcpu` |
+| `testbed[].platform` | **agent** | **Decides whether a test case can land on this board.** Must match the `-p` value **exactly**; the framework never adds a core suffix here. Convention: use the board name without a core suffix in both places (`-p sf32lb52-lcd_a128r16`) — only the build directory gets `_hcpu` appended. If you do include a suffix, include it in both places (`-p <board>_hcpu` and `platform: <board>_hcpu`) |
 | `testbed[].console` | **agent** | `{port, baud}`. `baud` defaults to 1000000 (the SDK console is fixed at 1 Mbaud) |
 | `testbed[].connections[].fixture` | agent | **Only consulted when a test case writes `harness_config.fixture`**. Write `name`, or `name:param` (`spi_nor_flash:spi2`) to anchor it exactly |
 | `testbed[].connections[].pinmap` | none | Records how the wiring is done (which pin is CS/CLK). **No code consumes it yet**; writing it is for the hardware team to check the wiring against |

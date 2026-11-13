@@ -1,0 +1,39 @@
+# The peer path for the SPP example: the DUT is the SPP server (its Classic
+# page scan is on from boot), the peer is a `bt_peer` image with the Classic
+# half, and the suite drives both ends over their own consoles.
+#
+# Reverse verification -- executed:
+#   sabotage: `peer_classic_send()` answers `@err ... write_failed sabotage`
+#             instead of sending, then rebuild and reflash.
+#   result:   2 failed, 6 passed.
+#             `test_peer_sends_data_to_the_dut` went red with
+#               InstrumentCommandError: the instrument rejected btc.spp.send
+#               with write_failed: sabotage
+#             and the DUT printed no `[SPP ... RX]` line.
+#   restored and re-ran: 1 test(s): 1 passed (75.3 s, build and flash
+#   included; after rebasing the finsh changes onto origin/main).
+#
+# Other break points (planned, not executed): remove `CONFIG_CFG_SPP_SRV` from
+# the DUT -> `test_peer_connects_to_the_dut`; stop emitting `btc.dev` ->
+# `test_peer_finds_the_dut`; power off the instrument -> the first `peer info`
+# never answers.
+#
+# project_dir is spelled out because the SConstruct lives under `project/`
+# rather than at the example root.
+tests:
+  - id: bt_spp.peer
+    description: A Classic peer finds the DUT, connects to its SPP server, and exchanges data in both directions.
+    harness: pytest
+    tags: [pytest, classic, peer]
+    # Covers the build, the flash, the boot, the Classic stack coming up, a
+    # 5 s inquiry, pairing, the SDP search plus connection, and both
+    # directions of SPP traffic.
+    timeout: 300
+    project_dir: project
+    harness_config:
+      # The case needs both halves: `ble` for the shared fixture plumbing and
+      # `classic` for `btc.*`. The image must advertise `caps` containing both
+      # and report `btc=1` in its @info reply; the firmware emits that marker
+      # only when the Classic half's init succeeded.
+      fixture: bt_peer:ble,classic
+      pytest_root: pytest

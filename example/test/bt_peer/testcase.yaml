@@ -1,22 +1,43 @@
 # bt_peer is the instrument firmware a test suite drives as the "other end" of
-# a Bluetooth link. It has no application of its own: it powers on the BLE
+# a Bluetooth link. It has no application of its own: it powers on the radio
 # stack, registers the `peer` MSH command and does what the host asks. Nothing
 # here is executed by the runner, so the only useful entry point in CI is a
 # build: if the instrument image does not compile, every peer testcase in the
 # lab fails for the wrong reason.
 #
-# `-p` still selects the board; flash the resulting image once, then point a
-# binding at its console:
+# `-p` still selects the board, and the board decides which halves exist:
+#
+#   * 52X (e.g. `-p sf32lb52-lcd_a128r16`) -> `caps=ble`;
+#   * 58X (e.g. `-p sf32lb58-lcd_n16r32n1_qspi`) -> `caps=ble,classic` plus
+#     the `btc=1` marker in @info, which the firmware emits only when the
+#     Classic half's init succeeded, because project/sf32lb58x/proj.conf
+#     sets CONFIG_PEER_CLASSIC together with BT_FINSH and the SPP profiles.
+#     That file also sets the 58X boot options (LCPU_CONFIG_V2 / HCI_DISABLE /
+#     LCPU_RUN_SEPERATE_IMG).
+#
+# Both chips build the LCPU controller the same way, through AddLCPU
+# (example/ble/lcpu_general); nothing is copied in from example/rom_bin. The
+# 58X image is about 889 KB (output/main.bin).
+#
+# peer_classic.c sits inside `#ifdef PEER_CLASSIC`, so only a 58X build
+# compiles the `btc.*` code at all; a 52X build cannot catch a mistake there.
+#
+# Flash the resulting image once, then point a binding at its own console:
 #
 #     sdk.py test run -T example/test/bt_peer -p <board>
 #     connections:
-#       - fixture: bt_peer:ble
+#       - fixture: bt_peer:ble            # 52X image
+#         console: {port: COM22, baud: 1000000}
+#       - fixture: bt_peer:ble,classic    # 58X image, both halves
 #         console: {port: COM22, baud: 1000000}
 #
 # Negative verification: break a protocol op (for example, return
-# PEER_ERR_UNSUPPORTED from peer_gatt_client_discover) and confirm that the
+# PEER_ERR_UNSUPPORTED from peer_gatt_client_discover, or drop the
+# peer_emit_evt("btc.data", ...) call in peer_classic.c) and confirm that the
 # *DUT* suite using this instrument goes red; a green instrument build proves
-# only that it links.
+# only that it links. This is not hypothetical: example/bt/spp/testcase.yaml
+# records a run where peer_classic_send() was broken and the DUT suite went
+# red.
 tests:
   - id: test.bt_peer.build
     description: Build the bt_peer BLE instrument firmware. Not executed; the lab flashes it as a fixture.
