@@ -1,0 +1,56 @@
+# The USB device path for the cdc_acm example. The DUT's USB port is wired to
+# the Lab Agent's host, so enumeration and the CDC data path are observed from
+# the host side (`usb_host`) and on the DUT console (`dut`); the runner itself
+# may sit on another machine.
+#
+# Negative verification -- executed on 2026-11-14 (sf32lb52-lcd_a128r16_01),
+# re-recorded against the Reviewer-revised suite
+# (hash 8182c15a630e1cda18e0c398dc2b9d841ddd3f8a). The official
+# `sdk.py test run` (test-out/2026-11-14T21-59-59, on the pre-Reviewer suite
+# 10168a290c4758f86dbc1201b0abcf35f99b6b2e) passed 4/4 in 88.28 s. The four
+# sabotages then ran against the same running board without a reflash: the agent
+# was allocated with `usb_host`, the DUT console was opened once, and pytest was
+# invoked directly (one test per sabotage), so the device was never reset. Each
+# change was restored and `git hash-object` returned
+# 8182c15a630e1cda18e0c398dc2b9d841ddd3f8a every time.
+#   * SERIAL "2022123456" -> "0000000000":
+#     `test_enumerates_as_a_cdc_acm_device` fails at `_wait_for_device` /
+#     `wait_for`: `UsbHostTimeout: ... no matching USB device appeared within
+#     30s` (30.79 s);
+#   * `serial.set_dtr(True)` removed:
+#     `test_sends_frames_when_dtr_is_asserted` fails at `read_exact`:
+#     `UsbHostTimeout: COM32: read 0 of 2048 bytes within 5.0s` (6.15 s);
+#   * `FRAME_PREFIX` `b"1234567890"` -> `b"1234567891"`: the same test fails at
+#     the prefix assertion: `the first 10 bytes are b'1234567890', expected
+#     b'1234567891'` (1.82 s);
+#   * `OUT_PAYLOAD` `b"SiFli\r\n"` -> `b"SiFli\n"`: `test_bulk_out_is_logged`
+#     fails at `dut.expect`: `expected /actual out len:7/ within 5s`; after
+#     `dut.drain()` the console carried only `actual out len:6` (6.16 s).
+# With every change restored the final direct run was `3 passed, 1 deselected
+# in 3.55s`. The banner test was deselected there: its console was opened after
+# the boot, so the startup output it expects is gone; it passed in the official
+# 4/4 run.
+#
+# Not verified by this case (recorded rather than skipped):
+#   * the bounded open retry now has evidence only of exhaustion: 18-19
+#     attempts over 30 s in each failing test, then `_open_serial` raises with
+#     the port name and the last refusal. Whether a longer budget helps is
+#     unknown -- the design's baseline saw a `PermissionError 13` clear after
+#     about 12 minutes, but an eight-minute idle wait here did not;
+#   * the console assertions for `actual in len` / `actual out len` assume
+#     `USB_LOG_RAW` keeps reaching the console through `CONFIG_USB_PRINTF`
+#     (`src/usb_config.h`). The suite calls `dut.drain()` before each of those
+#     expectations, so a direct run that reuses one console stream cannot pass
+#     on a line left by an earlier run; the sabotage session exercised this --
+#     the drained buffer for the bulk OUT case held only the new
+#     `actual out len:6`.
+tests:
+  - id: cdc_acm.usb_device
+    description: The DUT enumerates as a CDC ACM device and moves a framed IN stream and a bulk OUT packet.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, device]
+    timeout: 240
+    project_dir: project
+    harness_config:
+      fixture: usb_host
+      pytest_root: pytest
