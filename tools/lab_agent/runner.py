@@ -164,6 +164,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error("%s", exc)
         return 2
 
+    # A testbed disabled by a contract violation is announced by name and reason:
+    # it will be missing from `GET /testbeds`, and "why is my board not there"
+    # must not require reading the binding file.
+    for testbed_id, reasons in config.rejected:
+        for reason in reasons:
+            logger.warning("testbed %s is disabled: %s", testbed_id, reason)
+    for warning in config.contract_warnings:
+        logger.warning("%s", warning)
+
     if args.host:
         config.settings.host = args.host
     if args.port:

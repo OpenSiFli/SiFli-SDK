@@ -24,7 +24,9 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 
+from sdk_test.binding import fixture_contract_issues
 from sdk_test.binding import parse_binding
 from sdk_test.fixtures import wiring_problems
 from sdk_test.model import TestBed
@@ -125,6 +127,13 @@ class RunnerConfig:
     settings: RunnerSettings = field(default_factory=RunnerSettings)
     testbeds: List[TestBed] = field(default_factory=list)
     path: Optional[str] = None
+    #: Testbeds taken out of service at load time because a connection carries
+    #: an option that comes from params, with the reasons, one entry per testbed.
+    #: Dropping only the offending testbed is deliberate: one bad lab entry must
+    #: not take the whole agent -- and every other board on the bench -- down.
+    rejected: List[Tuple[str, List[str]]] = field(default_factory=list)
+    #: Non-fatal contract findings (an unknown key on a connection).
+    contract_warnings: List[str] = field(default_factory=list)
 
     def by_id(self, testbed_id: str) -> TestBed:
         for testbed in self.testbeds:
@@ -142,6 +151,10 @@ class RunnerConfig:
         halfway through a nightly run.
         """
         warnings: List[str] = []
+        for testbed_id, reasons in self.rejected:
+            for reason in reasons:
+                warnings.append(f'[disabled] {testbed_id}: {reason}')
+        warnings.extend(f"[contract] {item}" for item in self.contract_warnings)
         for testbed in self.testbeds:
             if testbed.console is None:
                 warnings.append(
@@ -196,10 +209,55 @@ def parse_runner_config(
     settings = RunnerSettings.from_mapping(data.get("runner"))
     # Duplicate testbed ids are already rejected by the shared binding parser.
     testbeds = parse_binding(data, source=source)
-    # Then the wiring is held against the boards' own declarations, which is the
-    # only place both files are in hand at once.
-    rule_out_contradictions(testbeds, source, sdk_root or REPOSITORY_ROOT)
-    return RunnerConfig(settings=settings, testbeds=testbeds, path=path)
+
+    # A connection that sets an option the fixture contract sources from params
+    # has a credential committed in the binding. The testbed is taken out of
+    # service rather than the agent refusing to start, so one bad entry cannot
+    # disable the rest of the bench. This runs before the wiring check: a
+    # testbed already out of service must not abort the whole agent through a
+    # contradiction that can no longer affect any run.
+    issues = fixture_contract_issues(testbeds)
+    errors_by_testbed: Dict[str, List[str]] = {}
+    for issue in issues:
+        if issue.severity != "error":
+            continue
+        errors_by_testbed.setdefault(issue.testbed_id, []).append(issue.message)
+
+    kept: List[TestBed] = []
+    rejected: List[Tuple[str, List[str]]] = []
+    for testbed in testbeds:
+        reasons = errors_by_testbed.get(testbed.id)
+        if reasons:
+            rejected.append((testbed.id, reasons))
+        else:
+            kept.append(testbed)
+
+    # Then the wiring of what remains is held against the boards' own
+    # declarations, which is the only place both files are in hand at once.
+    # If that also fails, keep the rejection reasons in the message: otherwise
+    # an operator fixes the wiring, restarts, and only then learns that another
+    # testbed was disabled.
+    try:
+        rule_out_contradictions(kept, source, sdk_root or REPOSITORY_ROOT)
+    except ConfigError as exc:
+        if not rejected:
+            raise
+        disabled = "; ".join(
+            f"[disabled] {testbed_id}: {reason}"
+            for testbed_id, reasons in rejected
+            for reason in reasons
+        )
+        raise ConfigError(f"{exc} (also {disabled})") from exc
+
+    return RunnerConfig(
+        settings=settings,
+        testbeds=kept,
+        path=path,
+        rejected=rejected,
+        contract_warnings=[
+            issue.message for issue in issues if issue.severity == "warning"
+        ],
+    )
 
 
 def load_runner_config(path: str) -> RunnerConfig:

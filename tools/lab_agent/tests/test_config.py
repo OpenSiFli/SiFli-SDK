@@ -9,6 +9,7 @@ import unittest
 from _support import CONFIG_YAML  # noqa: F401  (also fixes sys.path)
 from _support import LabTestCase
 
+from sdk_test.binding import parse_binding
 from sdk_test.model import Connection
 from sdk_test.model import FixtureRef
 from sdk_test.model import TestBed
@@ -233,6 +234,141 @@ class TestContradictionCheck(LabTestCase):
                 sdk_root=self.root,
             )
         self.assertIn("spi1", str(caught.exception))
+
+
+class TestFixtureContractAtLoad(LabTestCase):
+    """A binding that carries a credential takes only its own testbed out.
+
+    The agent must keep serving the rest of the bench: one lab entry with a
+    password written into it is a mistake to report, not a reason to refuse to
+    start.
+    """
+
+    BAD_AND_GOOD = """
+    testbed:
+      - id: tb_bad
+        platform: board_a
+        console: {port: COM1}
+        connections:
+          - fixture: wifi_ap:5g
+            psk: leaked
+      - id: tb_good
+        platform: board_a
+        console: {port: COM2}
+        connections:
+          - fixture: spi_nor_flash:spi1
+    """
+
+    def test_the_offending_testbed_is_dropped_and_the_other_stays(self):
+        config = self.make_config(self.BAD_AND_GOOD)
+
+        self.assertEqual([tb.id for tb in config.testbeds], ["tb_good"])
+        self.assertEqual([item[0] for item in config.rejected], ["tb_bad"])
+        reason = config.rejected[0][1][0]
+        self.assertIn('"psk"', reason)
+        self.assertIn("params", reason)
+        # And the reason is where a startup / `--check` reader will see it.
+        rendered = "\n".join(config.check())
+        self.assertIn("tb_bad", rendered)
+        self.assertIn("params", rendered)
+
+    def test_an_unknown_connection_key_is_a_warning_not_a_drop(self):
+        config = self.make_config(
+            """
+            testbed:
+              - id: tb
+                platform: board_a
+                console: {port: COM1}
+                connections:
+                  - fixture: wifi_ap:5g
+                    password: typo
+            """
+        )
+        self.assertEqual([tb.id for tb in config.testbeds], ["tb"])
+        self.assertEqual(config.rejected, [])
+        self.assertEqual(len(config.contract_warnings), 1)
+        self.assertIn("password", config.contract_warnings[0])
+
+    def test_a_dropped_testbed_cannot_abort_the_lab_through_its_wiring(self):
+        # tb_bad both leaks a credential and is wired to a bus board_a does not
+        # declare. It is already out of service, so its contradiction must not
+        # stop the agent; tb_good must still load.
+        self.write(
+            "customer/boards/board_a/hcpu/features.yaml",
+            "features: [i2c0]\n",
+        )
+        self.write(
+            "customer/boards/board_b/hcpu/features.yaml",
+            "features: [spi1]\n",
+        )
+
+        document = {
+            "testbed": [
+                {
+                    "id": "tb_bad",
+                    "platform": "board_a",
+                    "console": {"port": "COM1"},
+                    "connections": [
+                        {"fixture": "spi_nor_flash:spi1"},
+                        {"fixture": "wifi_ap:5g", "psk": "leaked"},
+                    ],
+                },
+                {
+                    "id": "tb_good",
+                    "platform": "board_b",
+                    "console": {"port": "COM2"},
+                    "connections": [{"fixture": "spi_nor_flash:spi1"}],
+                },
+            ]
+        }
+        # Pin the premise: on the unfiltered set the wiring check would abort.
+        # If it ever stops seeing this, this test must fail rather than pass by
+        # testing nothing.
+        parsed = parse_binding(document, source="cfg.yaml")
+        with self.assertRaises(ConfigError) as caught:
+            rule_out_contradictions(parsed, "cfg.yaml", self.root)
+        self.assertIn("spi1", str(caught.exception))
+
+        config = parse_runner_config(
+            document,
+            source="cfg.yaml",
+            sdk_root=self.root,
+        )
+
+        self.assertEqual([tb.id for tb in config.testbeds], ["tb_good"])
+        self.assertEqual([item[0] for item in config.rejected], ["tb_bad"])
+
+    def test_a_remaining_wiring_error_still_names_the_disabled_testbeds(self):
+        # Two problems in one config: one testbed is dropped for a credential
+        # in its binding, and another still contradicts its board. The operator
+        # must see both in one start, not after two restarts.
+        self.write(
+            "customer/boards/board_a/hcpu/features.yaml",
+            "features: [i2c0]\n",
+        )
+        document = {
+            "testbed": [
+                {
+                    "id": "tb_bad",
+                    "platform": "board_a",
+                    "console": {"port": "COM1"},
+                    "connections": [{"fixture": "wifi_ap:5g", "psk": "leaked"}],
+                },
+                {
+                    "id": "tb_wired",
+                    "platform": "board_a",
+                    "console": {"port": "COM2"},
+                    "connections": [{"fixture": "spi_nor_flash:spi1"}],
+                },
+            ]
+        }
+
+        with self.assertRaises(ConfigError) as caught:
+            parse_runner_config(document, source="cfg.yaml", sdk_root=self.root)
+        message = str(caught.exception)
+        self.assertIn("spi1", message)
+        self.assertIn("tb_bad", message)
+        self.assertIn("params", message)
 
 
 if __name__ == "__main__":
