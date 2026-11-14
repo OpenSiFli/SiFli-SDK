@@ -646,4 +646,4 @@ P1 完成后框架路径可用；真正跑 wifi 还需要 §10.5 的前置条件
 - `docs/source/zh_CN/app_note/autotest_guide.md` §10 与英文版：删除"向量就是一个 fixture"的表述，改为本文 §8 的清单 + 存储模型，并说明 fixture 只表达能力。
 - `tools/sdk_test/DESIGN.md`：在测试数据相关段落链接本文。
 - `tools/lab_agent/examples/sifli-lab.yaml` 与 `tools/sdk_test/examples/binding.local.yaml`：去除真实端口，改成模板或移出仓库（§14.3）。
-- `example/rt_device/wifi/sta/README.md` / `README_EN.md`：说明测试环境下改用 `wifi join`，凭据来自 runner 配置，不写死在 `main.c`。
+- `example/rt_device/wifi/sta/README.md` / `README_EN.md`：**不改**。示例文档面向使用者，测试用法写在指南 §10。

@@ -1373,25 +1373,180 @@ without it the report overwrites the file of the same name under `test-out/repor
 
 ---
 
-## 10. Where Test Data Lives
+## 10. Test Data and Credentials
 
 **Test code lives in the same repository as the code under test** (one review has to be able to look at them together);
-**test data goes through external storage**, and both are expressed with one mechanism: **a vector is a fixture**.
+**test data that does not belong in git, and credentials, stay outside the repository**. There are two mechanisms, in different states -- do not mix them:
+
+| Chain | Holds | Stored where | State |
+|---|---|---|---|
+| Credentials | AP ssid/password, tokens and other non-wiring values | runner-side `params.yaml` (outside the repo) | **P1 implemented, usable** |
+| Assets | golden files, captures, waveforms | in-repo manifest + external content store | **P2 design only, not implemented** |
+
+Both follow one rule: **a test case writes logical names only** (a fixture spec, a parameter key); the framework resolves the values and paths.
+
+### 10.1 The credential chain (P1, implemented)
+
+Three pieces of data, three responsibilities:
+
+| Data | Written in | Written by | Secret |
+|---|---|---|---|
+| What this lab can offer | binding (outside the repo) | the lab | no |
+| Which options a fixture type has, and where each comes from | `tools/sdk_test/fixture_types.yaml` | framework maintainers (reviewed with the code) | no |
+| The actual AP parameters and secret values | `params.yaml` (outside the repo) | the lab / the user | `psk` and anything marked `secret` |
+
+The contract has one type today: `wifi_ap` (`ssid` is required; `security` is one of `open`/`wpa2`/`wpa3`,
+default `wpa2`; `psk` is required when `security != open`, and is secret).
+
+**A binding declares capability only -- no ssid/psk**:
 
 ```yaml
-    harness_config:
-      fixture: audio_sample_16k     # declare the need only, no path
+# E:\code2\lab\sifli-lab.yaml (outside the repository)
+testbed:
+  - id: tb-52-wifi
+    platform: sf32lb52-wlan-core_n16r16   # must match `sdk.py test run -p` exactly
+    console: {port: COM8, baud: 1000000}
+    connections:
+      - fixture: wifi_ap:5g
 ```
 
-The test does not know the path, so the same test case runs both on a laptop with a cache and in CI against remote storage.
-This repository already has `jfrog.sifli.com/artifactory` (a conan remote) that can carry it.
+Putting `ssid`/`psk` in a binding makes `binding check` fail; driver-private keys the contract does not
+mention only warn. For a parameterized fixture, **the spec is an identity**: when a test asks for
+`wifi_ap:5g`, the binding's connection spec must equal it exactly -- capability-subset matching is not used.
+The protocol is now `PROTOCOL = 3`, so mixing a new SDK with an old agent (or the reverse) gets the
+allocation request refused.
+
+**Minimal example**:
+
+```yaml
+# example/<name>/testcase.yaml
+tests:
+  sta_connect:
+    harness: pytest
+    harness_config:
+      fixture: wifi_ap:5g
+    params:                                  # only values that do not belong to a fixture
+      cloud.token: {required: true, secret: true}
+      upload.timeout_s: 30                   # a scalar is a default
+    timeout: 120
+```
+
+```yaml
+# E:\code2\lab\params.yaml -- outside the repository, never committed
+fixtures:
+  "wifi_ap:5g":                              # the key is the spec exactly as the test wrote it; quote it because of the colon
+    ssid: SiFli-Test-5G
+    security: wpa2
+    psk:
+      value: "..."
+      secret: true
+
+params:                                      # same names as the testcase declaration, no params. prefix
+  cloud.token:
+    value: "..."
+    secret: true
+```
+
+The `secret` flag on `fixtures` options is decided by the contract, so the file need not repeat it;
+`params` keys have no contract, so the file declares `secret` itself. When CI supplies a value through
+the environment, `secret: true` must still be in the testcase declaration -- otherwise the value is
+neither redacted nor subject to the loopback guard.
+
+On the pytest side:
+
+```python
+def test_connect(dut):
+    ap = dut.fixture_options("wifi_ap:5g")     # only the options this instance needs
+    if ap["security"] == "open":
+        dut.send_line(f'wifi join "{ap["ssid"]}"')
+    else:
+        dut.send_line(f'wifi join "{ap["ssid"]}" "{ap["psk"]}"')
+
+
+def test_upload(dut, params):
+    timeout = params["upload.timeout_s"]       # declared params keep their declared names
+```
+
+When `security: open`, `psk` is absent from the returned mapping (the conditional requirement does not
+hold). A misspelled spec raises "unknown fixture"; a misspelled option is a `KeyError`, never a silent `None`.
+
+**File discovery order** (the first file that exists wins):
+
+1. `--params-file <path>`
+2. `SIFLI_TEST_PARAMS_FILE`
+3. `%USERPROFILE%\.sifli\test-params.yaml` (Windows) / `~/.sifli/test-params.yaml` (POSIX)
+
+**Per-key precedence** (highest first):
+
+1. `--param KEY=VALUE` (for debugging; it lands in shell history)
+2. `SIFLI_TEST_PARAM_<KEY>` (upper case, non-alphanumerics become `_`)
+3. `params.yaml`
+4. the default in the testcase or the contract
+
+Keys are flattened first: `fixtures.wifi_ap:5g.psk` becomes `SIFLI_TEST_PARAM_FIXTURES_WIFI_AP_5G_PSK`.
+`:` also becomes `_`, so `wifi_ap:5g` and `wifi_ap_5g` collide; a collision is an error, not a guess.
+
+Put the file's location in your own shell profile, **not** in the repository's `export.ps1`:
+
+```powershell
+$env:SIFLI_TEST_PARAMS_FILE = 'E:\code2\lab\params.yaml'
+```
+
+**Commands (none of them contact an agent)**:
+
+```bash
+# Is the configuration complete? Before any build; prints key names and sources, never values.
+sdk.py test params check -T example --params-file E:/code2/lab/params.yaml
+sdk.py test params check -T example --case <id> --unused --json
+# Has the binding put a params-sourced key into the wiring?
+sdk.py test binding check --file E:/code2/lab/sifli-lab.yaml
+# Planning uses the same resolution and the same loopback rule as a run.
+sdk.py test plan -T example -p sf32lb52-wlan-core_n16r16 --params-file E:/code2/lab/params.yaml
+```
+
+- `params check` and `test plan` both accept `--agent-url` / `--params-file` / `--param`; `--agent-url`
+  is used **only for the loopback decision**, and neither command contacts a Lab Agent.
+  `binding check` takes its path from `--file` or `SIFLI_TEST_BINDING`; there is no default search.
+- `params check` exits non-zero (10) on a missing `required` key, listing the missing keys, the files it
+  searched and the per-key overrides that would supply them. It does **not** skip.
+- `test list --json` gives each instance a `params` array of key names (fixture options expanded from the
+  contract) and never a value -- so it works on a machine with no credentials.
+
+**Redaction and known leak surfaces**:
+
+Host-side artifacts (`device.log`, `runner.log`, `<fixture>.log`, `sifli.json`, `sifli.xml`) are redacted
+in memory, including the failure path. Whenever any `secret` value is resolved, a plan fails unless the
+agent URL's host is a loopback address (`127.0.0.1` / `::1` / `localhost`); only an explicit
+`SIFLI_TEST_ALLOW_REMOTE_SECRETS=1` lets it through.
+
+That does **not** mean a password appears nowhere. P1 has three known leak surfaces:
+
+1. The test writes the psk to the DUT through `POST /testbed/{id}/console/write`, so it crosses the
+   **unauthenticated** agent HTTP in clear text;
+2. The psk stays in the agent's 4 MB in-memory console buffer until new output pushes it out or the agent restarts;
+3. The DUT's wlan driver prints the password at debug level, so it enters the DUT-side log and the
+   transcript the agent forwards; the forwarded copy on the host is redacted, the DUT's other log
+   backends are not.
+
+P1 is therefore intended for a local or trusted lab network only. Removing 1/2 needs P3 (assembling the
+command on the agent side); removing the DUT's own logging in 3 needs the firmware to disable that log,
+or the agent to redact at the source.
+
+### 10.2 The asset chain (P2, design only, not implemented)
+
+> Large vectors (golden files, captures, waveforms) are designed as: **a manifest in the repository, the
+> bytes in an external content store**, with a local `sha256`-addressed directory serving as both cache
+> and verification basis. A fixture expresses capability only (what is wired on this board); it does not
+> carry data.
+>
+> **P2 is not implemented**: `assets:` in `testcase.yaml`, `tools/sdk_test/assets.yaml`, the pytest
+> `asset("name")` fixture and `sdk.py test assets list|fetch|verify|add` are all unavailable today
+> (`assets:` is rejected by the schema). Storage layout, sensitive vectors and verification rules are in
+> [`docs/design/test_data_and_secrets.md`](../../../../docs/design/test_data_and_secrets.md) section 8.
+> No acceptance case needs a vector at present.
 
 **Do not commit large vectors to git**: git history only grows, and a 200 MB file committed once
 stays in **every** clone forever, and deleting it afterwards does not help.
-
-> A resolver that turns `fixture:` into "download + verify the hash + land in a local cache" is **not implemented yet**;
-> the interface is left in `tools/lab_agent/fixture_drivers/`.
-> None of the acceptance cases need a vector at present, so there is no urgency yet.
 
 ---
 
@@ -1409,6 +1564,9 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 | CMock stubbing cases | **delivered on a follow-up branch; not in this tree yet**, so the commands do not run — see 7.1 and `middleware/test_fwk/mocks/README.md` |
 | Real-HAL cases | **delivered**: `example/test/hal_real/` with two instances (`hal_real.ptc`, `hal_real.crc`), `sdk.py test run -T example/test/hal_real`, see section 7.2 |
 | Per-instance `build.log` | **implemented**: compiler output goes to disk instead of flooding the console |
+| Test parameters and the credential chain (`params:` / fixture contract / `params.yaml`) | **implemented (P1)**: `params check`, `binding check`, pytest's `params` and `dut.fixture_options`, see section 10 |
+| Asset chain (`assets:` / `assets.yaml` / `asset()` / `test assets`) | **not implemented (P2)**: design in [`docs/design/test_data_and_secrets.md`](../../../../docs/design/test_data_and_secrets.md) section 8 |
+| Agent-side secret execution, agent authentication | **not implemented (P3)**: P1's psk still crosses unauthenticated agent HTTP in clear text, see section 10 |
 
 **Troubleshooting**
 

@@ -1300,25 +1300,171 @@ test:
 
 ---
 
-## 10. 测试数据放哪
+## 10. 测试数据与凭据
 
-**测试代码与被测代码同仓库**（同一次 review 要能一起看）；
-**测试数据走外部存储**，两者用同一个机制表达：**向量就是一个 fixture**。
+**测试代码与被测代码同仓库**（同一次 review 要能一起看）；**大向量与凭据留在仓库外**。
+这里有两套机制，状态不同，不要混用：
+
+| 链 | 放什么 | 存放在哪 | 状态 |
+|---|---|---|---|
+| 凭据链 | AP 的 ssid/密码、token 等非接线参数 | runner 侧 `params.yaml`（仓库外） | **P1 已实现，可用** |
+| 资产链 | golden / 采样 / 波形等大文件 | 仓库内清单 + 外部内容存储 | **P2 设计态，未实现** |
+
+两条链共用一个原则：**用例只写逻辑名**（fixture spec、参数键名），值和路径由框架解析。
+
+### 10.1 凭据链（P1，已实现）
+
+三处数据，三种职责：
+
+| 数据 | 写在哪 | 谁写 | 是否秘密 |
+|---|---|---|---|
+| 这个 lab 有什么能力 | binding（仓库外） | 实验室 | 否 |
+| fixture 类型有哪些选项、从哪取 | `tools/sdk_test/fixture_types.yaml` | 框架维护者（随代码评审） | 否 |
+| 实际的 AP 参数与秘密值 | `params.yaml`（仓库外） | 实验室 / 使用者 | `psk` 等标了 `secret` 的值 |
+
+目前契约里只有一个类型：`wifi_ap`（`ssid` 必填；`security` 取 `open`/`wpa2`/`wpa3`，默认 `wpa2`；
+`psk` 在 `security != open` 时必填，且是秘密）。
+
+**binding 只声明能力，不写 ssid/psk**：
 
 ```yaml
-    harness_config:
-      fixture: audio_sample_16k     # 只声明能力，不写路径
+# E:\code2\lab\sifli-lab.yaml（仓库外）
+testbed:
+  - id: tb-52-wifi
+    platform: sf32lb52-wlan-core_n16r16   # 必须与 sdk.py test run -p 逐字一致
+    console: {port: COM8, baud: 1000000}
+    connections:
+      - fixture: wifi_ap:5g
 ```
 
-测试不知道路径，所以同一份用例在有缓存的笔记本和对着远端存储的 CI 上都能跑。
-本仓库已有 `jfrog.sifli.com/artifactory`（conan remote）可以承载。
+把 `ssid`/`psk` 写进 binding 会被 `binding check` 判为错误；契约没提到的 driver 私有键只会告警。
+参数化 fixture 的 **spec 是身份**：用例请求 `wifi_ap:5g` 时，binding 的连接 spec 必须与它完全相等，
+不做能力子集匹配。协议已 bump 到 `PROTOCOL = 3`——新旧 SDK/agent 混跑时分配请求会被拒绝。
+
+**最小示例**：
+
+```yaml
+# example/<name>/testcase.yaml
+tests:
+  sta_connect:
+    harness: pytest
+    harness_config:
+      fixture: wifi_ap:5g
+    params:                                  # 不依附 fixture 的值才写在这里
+      cloud.token: {required: true, secret: true}
+      upload.timeout_s: 30                   # 标量就是默认值
+    timeout: 120
+```
+
+```yaml
+# E:\code2\lab\params.yaml —— 仓库外，永不提交
+fixtures:
+  "wifi_ap:5g":                              # 键就是用例请求的 spec 原文，带 : 必须加引号
+    ssid: SiFli-Test-5G
+    security: wpa2
+    psk:
+      value: "..."
+      secret: true
+
+params:                                      # 与 testcase 的声明同名，不加 params. 前缀
+  cloud.token:
+    value: "..."
+    secret: true
+```
+
+`fixtures` 段各键的 `secret` 由契约决定，文件里不必重复标；`params` 段没有契约，`secret` 由文件自己声明。
+CI 用环境变量供值时，`secret: true` 也必须写在 testcase 的声明里，否则该值既不脱敏，也不触发回环守卫。
+
+pytest 侧：
+
+```python
+def test_connect(dut):
+    ap = dut.fixture_options("wifi_ap:5g")     # 只返回本实例需要的选项
+    if ap["security"] == "open":
+        dut.send_line(f'wifi join "{ap["ssid"]}"')
+    else:
+        dut.send_line(f'wifi join "{ap["ssid"]}" "{ap["psk"]}"')
+
+
+def test_upload(dut, params):
+    timeout = params["upload.timeout_s"]       # 声明过的 params，键名即声明名
+```
+
+`security: open` 时 `psk` 不在返回的映射里（条件必填不成立）；拼错的 spec 报“未知 fixture”，
+拼错的选项是 `KeyError`，不会悄悄返回 `None`。
+
+**文件发现顺序**（只取第一个存在的文件）：
+
+1. `--params-file <path>`
+2. `SIFLI_TEST_PARAMS_FILE`
+3. `%USERPROFILE%\.sifli\test-params.yaml`（Windows）/ `~/.sifli/test-params.yaml`（POSIX）
+
+**单键覆盖优先级**（高到低）：
+
+1. `--param KEY=VALUE`（调试用；会进 shell 历史）
+2. `SIFLI_TEST_PARAM_<KEY>`（大写，非字母数字转 `_`）
+3. `params.yaml`
+4. testcase 或契约里的默认值
+
+键名先扁平化：`fixtures.wifi_ap:5g.psk` → `SIFLI_TEST_PARAM_FIXTURES_WIFI_AP_5G_PSK`。
+`:` 也会变成 `_`，所以 `wifi_ap:5g` 与 `wifi_ap_5g` 会撞名；撞名直接报错，不做猜测。
+
+建议把文件位置写进自己的 shell profile，**不要**写进仓库里的 `export.ps1`：
+
+```powershell
+$env:SIFLI_TEST_PARAMS_FILE = 'E:\code2\lab\params.yaml'
+```
+
+**命令（都不连 agent）**：
+
+```bash
+# 构建之前判断配置齐不齐：只打印键名与来源，不打印值
+sdk.py test params check -T example --params-file E:/code2/lab/params.yaml
+sdk.py test params check -T example --case <id> --unused --json
+# 检查 binding 有没有把 params 来源的键写进去
+sdk.py test binding check --file E:/code2/lab/sifli-lab.yaml
+# 规划和运行使用同一套解析与回环判定
+sdk.py test plan -T example -p sf32lb52-wlan-core_n16r16 --params-file E:/code2/lab/params.yaml
+```
+
+- `params check` 与 `test plan` 都接受 `--agent-url` / `--params-file` / `--param`；`--agent-url`
+  **只用于回环判定**，`params check` 和 `test plan` 都不联系 Lab Agent。
+  `binding check` 的路径来自 `--file` 或 `SIFLI_TEST_BINDING`，没有默认搜索。
+- `params check` 缺 `required` 键时以非零码（10）结束，并列出缺失的键、搜索过的文件和可用的逐键覆盖；**不 skip**。
+- `test list --json` 里每个实例有 `params` 数组，只有键名（fixture 选项按契约展开），不看值——
+  没有凭据的机器也能跑。
+
+**脱敏与已知泄露面**：
+
+host 侧产物（`device.log`、`runner.log`、`<fixture>.log`、`sifli.json`、`sifli.xml`）在内存里统一脱敏，
+失败路径也覆盖。解析到任何 `secret` 值时，如果 agent URL 的主机不是回环地址
+（`127.0.0.1` / `::1` / `localhost`），plan 阶段直接失败；只有显式设置
+`SIFLI_TEST_ALLOW_REMOTE_SECRETS=1` 才放行。
+
+但这**不代表密码不会出现在任何地方**。P1 有三条已知泄露面：
+
+1. 测试用 `wifi join` 把 psk 经 `POST /testbed/{id}/console/write` 写进 DUT，psk 以明文经过**无认证**的 agent HTTP；
+2. psk 留在 agent 的 4 MB 内存控制台缓冲里，直到被新输出顶掉或 agent 重启；
+3. DUT 的 wlan 驱动在 debug 级别打印密码，密码因此进入 DUT 侧日志和 agent 转发的 transcript；
+   host 侧的转发副本会脱敏，DUT 自己的其它日志后端不会。
+
+因此 P1 只适用于本机或可信实验室网络。彻底消除 1/2 需要 P3（agent 侧组装命令），
+消除 3 中 DUT 自身的日志需要固件侧关掉该日志，或由 agent 在源头脱敏。
+
+### 10.2 资产链（P2，设计态，未实现）
+
+> 大向量（golden / 采样 / 波形）的设计是：**仓库只放清单，字节放外部内容存储**，
+> 本地按 `sha256` 内容寻址的目录既是缓存也是校验基准。fixture 只表达能力（这块板接了什么），
+> 不承载数据。
+>
+> **P2 尚未实现**：`testcase.yaml` 的 `assets:`、`tools/sdk_test/assets.yaml`、pytest 的
+> `asset("name")`、`sdk.py test assets list|fetch|verify|add` 目前都不可用（`assets:` 会被 schema 拒绝）。
+> 存储布局、敏感向量与校验规则见
+> [`docs/design/test_data_and_secrets.md`](../../../../docs/design/test_data_and_secrets.md) §8。
+> 目前所有验收用例都不需要向量。
 
 **不要往 git 里提交大向量**：git 历史只增不减，一个 200 MB 的文件提交一次，
 就永久留在**每一个** clone 里，之后删掉也没用。
-
-> 把 `fixture:` 解析成"下载 + 校验哈希 + 落本地缓存"的 resolver **尚未实现**，
-> 接口留在 `tools/lab_agent/fixture_drivers/`。
-> 目前所有验收用例都不需要向量，所以还没有紧迫性。
 
 ---
 
@@ -1336,6 +1482,9 @@ test:
 | CMock 打桩用例 | **后续分支已交付；当前树未包含**，命令跑不起来——见第 7.1 节与 `middleware/test_fwk/mocks/README.md` |
 | 实跑 HAL 的用例 | **已交付**：`example/test/hal_real/` 两条实例（`hal_real.ptc`、`hal_real.crc`），`sdk.py test run -T example/test/hal_real`，见第 7.2 节 |
 | 每实例 `build.log` | **已实现**：编译器输出落盘，不再刷控制台 |
+| 测试参数与凭据链（`params:` / fixture 契约 / `params.yaml`） | **已实现（P1）**：`params check`、`binding check`、pytest 的 `params` 与 `dut.fixture_options`，见第 10 节 |
+| 资产链（`assets:` / `assets.yaml` / `asset()` / `test assets`） | **未实现（P2）**：设计见 [`docs/design/test_data_and_secrets.md`](../../../../docs/design/test_data_and_secrets.md) §8 |
+| agent 侧执行秘密、agent 认证 | **未实现（P3）**：P1 的 psk 仍以明文经过无认证的 agent HTTP，见第 10 节 |
 
 **排错**
 

@@ -57,6 +57,9 @@
 | 带芯片身份的 QEMU 板（`qemu_sf32lb{52x…58x}`） | ✅ 五块都已构建并跑通过 |
 | CMock 打桩用例（需求 3） | ✅ mock 生成物已入库、两个用例工程都已跑通并反向验证过；**用例工程见下一笔** |
 | 日志与报告（按 twister 对齐） | ✅ 完成：每实例 `device.log` + `runner.log`、run 级 `runner.log`、JSON 主文档 + JUnit 派生、失败阶段标记 |
+| 测试参数与凭据链（P1） | ✅ 完成：`testcase.yaml` 的 `params:`、fixture 类型契约、`params.yaml` 解析/下发/脱敏、`params check` / `binding check`、pytest 的 `params` 与 `dut.fixture_options`；设计见 [`docs/design/test_data_and_secrets.md`](../../docs/design/test_data_and_secrets.md) |
+| 资产链（P2） | ⬜ 设计态：清单 + 内容寻址存储 + `asset()` + `test assets` 均未实现 |
+| agent 侧执行秘密 / agent 认证（P3） | ⬜ 未实现 |
 | 需求 4（多设备） | 🟡 仪表控制台流已实现（第二块板作为 fixture，pytest 的 `bt_peer:ble`）；多 DUT 调度（`dut:` / `dut_client:`）未实现 |
 
 **自测怎么跑**（不需要硬件、不需要 Lab Agent）：
@@ -254,10 +257,12 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 | `discovery.py` | 从 `-T/--testsuite-root` 递归找 `testcase.yaml`，按 `common:` + `tests:` 展开为 `TestInstance`，ID = 相对路径 + tests 键（twister 规则）。 |
 | `schema/testcase.schema.json` | jsonschema 校验。字段对齐 twister：`tags / type / depends_on / platform_allow / platform_exclude / integration_platforms / extra_args / extra_configs / filter / build_only / timeout / harness / harness_config / min_flash / min_ram / slow / skip`；多设备另加 `dut:` / `dut_client:`。 |
 | `model.py` | `TestInstance` / `TestBed` / `FixtureRef` / `RunnerConfig` 数据类。 |
-| `binding.py` | 载入 binding/hardware-map YAML（testbed、console、connections、muxes），校验 fixture 引用存在。 |
-| `fixtures.py` | fixture 能力匹配、`fixture:name:param` 后缀解析（twister 语义）。 |
+| `binding.py` | 载入 binding/hardware-map YAML（testbed、console、connections、muxes），校验 fixture 引用存在；`check_fixture_contracts` 拒绝 binding 里出现 params 来源的选项。 |
+| `fixtures.py` | fixture 能力匹配、`fixture:name:param` 后缀解析（twister 语义）。参数化 fixture（契约含 `source: params`）要求 spec 精确相等。 |
+| `fixture_types.py` + `fixture_types.yaml` | fixture 类型契约：选项名、来源、`required_if`、默认值、`secret`。`{spec}` 按用例请求的 spec 原文做一层替换；`source: binding` 在 P1 加载时报未实现。 |
+| `params.py` | 凭据链的唯一解析点：文件发现（`--params-file` > `SIFLI_TEST_PARAMS_FILE` > `~/.sifli/test-params.yaml`）、逐键优先级、扁平化与撞名检查、回环守卫、临时 JSON 下发、host 侧脱敏。 |
 | `harness/{console,unity,shell,pytest}.py` | 四种 harness 的判定逻辑（见下）。 |
-| `pytest_plugin.py` | 提供 `testbed` / `dut` / `console` / `fixture` / `apppath` / `build_dir` fixture，形态对齐 pytest-embedded。 |
+| `pytest_plugin.py` | 提供 `testbed` / `dut` / `console` / `fixture` / `apppath` / `build_dir` / `params` fixture，形态对齐 pytest-embedded；`dut.fixture_options(spec)` 返回 runner 解析出的 fixture 选项。 |
 | `backends/{board,pc_sim,qemu}.py` | 执行后端。**MVP 只实现 `board`**；`pc_sim`（`customer/boards/pc`）与 `qemu`（`customer/boards/qemu_sf32lb52x`）定义接口 + `NotImplementedError`，但**接口按"无需 Lab Agent 分配"设计**（它们在 SDK 里就是 board 名，构建+执行都在本地）。 |
 | `runner.py` | 编排：解析 → 匹配 testbed → 构建 → （Tier A）申请 testbed → 烧录 → 执行 pytest → 收集。 |
 | `agent_client.py` | 与 Lab Agent runner 的 HTTP 客户端（stdlib `urllib`，不引 FastAPI）。申请硬件时核对对方的协议版本。 |
@@ -265,6 +270,8 @@ untracked 文件不算 dirty：这个仓库的 checkout 里堆着构建树和下
 | `version.py` | `PROTOCOL` 与两侧 `revision()`。见"两侧版本"。 |
 | `report.py` | 结果聚合、每实例日志落盘、run 日志、JSON 主文档与 JUnit 派生、终端汇总。全部用标准库（`json` / `xml.etree`），不引依赖；`junit_xml` 这个包虽然还在 lock 里，但**无人 import**。 |
 | `tests/` | **框架自身**的 pytest 单测（discovery / binding / harness 解析），不需要硬件。 |
+
+**测试数据与凭据**：凭据（AP 的 ssid/密码、token 等）由 runner 解析，值放在仓库外的 `params.yaml`；binding 只声明能力，用例只写逻辑名。资产（golden / 采样 / 波形等大向量）的设计是"仓库清单 + 外部内容存储"，**P2 尚未实现**。完整设计与已知泄露面见 [`docs/design/test_data_and_secrets.md`](../../docs/design/test_data_and_secrets.md)。
 
 ### 2. Lab Agent：`tools/lab_agent/`
 

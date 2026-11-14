@@ -111,15 +111,19 @@ sdk.py test run  -T example/get-started/hello_world -p <platform>
 
 ### 测试向量不要进 git
 
-测试**代码**与被测代码同仓库（同一次 review 能一起看）；测试**数据**走外部存储。
-两者用**同一个机制**表达：向量就是一个 fixture（`fixture: audio_sample_16k`），
-测试只声明能力，binding 说字节在哪。
+测试**代码**与被测代码同仓库（同一次 review 能一起看）；测试**数据**走外部内容存储，
+仓库只保留清单（名字 → sha256/size/来源）。用例只写逻辑名：
+
+```yaml
+assets: [wifi_scan_golden]
+```
 
 原因：git 历史只增不减，一个 200 MB 的向量提交一次就永久留在**每个** clone 里，删掉也没用。
-本仓库已有 `jfrog.sifli.com/artifactory`（conan remote），向量放那里即可。
+本仓库已有 `jfrog.sifli.com/artifactory`（conan remote），字节放那里。
 
-**未实现**：把 `fixture: audio_sample_16k` 解析成"下载 + 校验哈希 + 落到本地缓存"的
-*resolver*。接口已经留好（`lab_agent/fixture_drivers/`），是个增量而非返工。
+**未实现**：资产链（`assets:` 解析、`asset()` fixture、`test assets` 命令）是 P2。
+fixture 只表达能力，不承载数据。设计与现状见
+[`docs/design/test_data_and_secrets.md`](../../docs/design/test_data_and_secrets.md) §8。
 
 ---
 
