@@ -17,6 +17,9 @@
 
 #include <rthw.h>
 #include <rtthread.h>
+#ifdef RT_USING_SMP
+    #include <rtsmp.h>
+#endif
 
 #ifdef RT_USING_MODULE
     #include <dlmodule.h>
@@ -41,6 +44,27 @@ ALIGN(RT_ALIGN_SIZE)
 __ROM_USED rt_uint8_t idle_thread_stack[IDLE_THREAD_STACK_SIZE];
 
 extern rt_list_t rt_thread_defunct;
+
+#ifdef RT_USING_SMP
+/* A peer can hold heap_sem while HCPU is idle. rt_free/object_delete may
+ * therefore block, which an idle task must never do. Reap on a real thread
+ * with its own stack; keep both CPU idle entries nonblocking. */
+static struct rt_thread smp_reaper;
+static rt_uint8_t smp_reaper_stack[2048] __attribute__((aligned(8)));
+static struct rt_semaphore smp_reaper_signal;
+
+void rt_smp_reaper_notify(void)
+{
+    rt_base_t level = rt_cpus_lock();
+    /* Coalesce notices, so a burst of defunct threads cannot overflow the
+     * semaphore. Queue publication and this flag share the kernel lock. */
+    if (!smp_reaper_signal.value)
+    {
+        rt_sem_release(&smp_reaper_signal);
+    }
+    rt_cpus_unlock(level);
+}
+#endif
 
 #ifdef RT_USING_IDLE_HOOK
 
@@ -162,6 +186,14 @@ __ROM_USED void rt_thread_idle_excute(void)
             thread = rt_list_entry(rt_thread_defunct.next,
                                    struct rt_thread,
                                    tlist);
+#ifdef RT_USING_SMP
+            /* ACPU can enqueue its exiting thread before PendSV saves it. */
+            if (thread->oncpu != RT_CPU_DETACHED)
+            {
+                rt_hw_interrupt_enable(lock);
+                return;
+            }
+#endif
 #ifdef RT_USING_MODULE
             module = (struct rt_dlmodule *)thread->module_id;
             if (module)
@@ -222,6 +254,27 @@ __ROM_USED void rt_thread_idle_excute(void)
 }
 
 extern void rt_system_power_manager(void);
+#ifdef RT_USING_SMP
+static void _smp_reaper_entry(void *parameter)
+{
+    (void)parameter;
+    for (;;)
+    {
+        rt_sem_take(&smp_reaper_signal, RT_WAITING_FOREVER);
+        do
+        {
+            rt_thread_idle_excute();
+            /* A remote exit may have enqueued before its final PendSV save.
+             * Retain the notification until oncpu releases that stack. */
+            if (_has_defunct_thread())
+            {
+                rt_thread_mdelay(1);
+            }
+        }
+        while (_has_defunct_thread());
+    }
+}
+#endif
 static void rt_thread_idle_entry(void *parameter)
 {
     while (1)
@@ -239,7 +292,9 @@ static void rt_thread_idle_entry(void *parameter)
         }
 #endif
 
+#ifndef RT_USING_SMP
         rt_thread_idle_excute();
+#endif
 #ifdef RT_USING_PM
         rt_system_power_manager();
 #else
@@ -259,6 +314,14 @@ static void rt_thread_idle_entry(void *parameter)
  */
 __ROM_USED void rt_thread_idle_init(void)
 {
+#ifdef RT_USING_SMP
+    rt_sem_init(&smp_reaper_signal, "reap", 0, RT_IPC_FLAG_FIFO);
+    rt_thread_init(&smp_reaper, "reaper", _smp_reaper_entry, RT_NULL,
+                   smp_reaper_stack, sizeof(smp_reaper_stack),
+                   RT_THREAD_PRIORITY_MAX - 2, 32);
+    /* Default HCPU affinity, same as the former idle reclamation path. */
+    rt_thread_startup(&smp_reaper);
+#endif
     /* initialize thread */
     rt_thread_init(&idle,
                    "tidle",
@@ -271,6 +334,9 @@ __ROM_USED void rt_thread_idle_init(void)
 
     /* startup */
     rt_thread_startup(&idle);
+#ifdef RT_USING_SMP
+    rt_smp_idle_init();
+#endif
 }
 
 /**

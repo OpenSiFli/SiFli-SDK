@@ -47,6 +47,11 @@ if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']) and not GetDepe
 ASFLAGS = ''
 CCFLAGS = ''
 CPPDEFINES=['SF32LB57X']
+# CMSIS does not include the RT-Thread configuration header. Propagate the
+# selected memory policy explicitly so HCPU and ACPU cannot silently differ.
+for option in ('RT_SMP_SHARED_XIP', 'RT_SMP_PSRAM_NONCACHE', 'RT_SMP_PSRAM_WT_SYNC', 'RT_SMP_SRAM_WT_SYNC'):
+    if GetDepend(option):
+        CPPDEFINES.append(option)
 path = [cwd, cwd+'/../Include']
 
 if GetDepend(['BF0_LCPU']):

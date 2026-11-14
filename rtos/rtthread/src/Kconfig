@@ -1,5 +1,70 @@
 menu "RT-Thread Kernel"
 
+config RT_USING_SMP
+    bool "Experimental SF32LB57 HCPU/ACPU SMP prototype"
+    depends on SOC_SF32LB57X && BF0_HCPU
+    select RT_USING_SEMAPHORE
+    default n
+    help
+        GCC-only prototype. Preserve RT-Thread 3.1.3 APIs; the thread
+        structure grows.
+        Shared data/stacks use noncached memory or the optional kernel
+        write-through synchronization policies. Default affinity is HCPU.
+        No AMP ACPU service, PM, signals or binary RTOS libraries.
+
+config RT_SMP_SHARED_XIP
+    bool "Use the common MPI2 Flash system-bus address for shared code"
+    depends on RT_USING_SMP
+    default n
+    help
+        The GCC HCPU linker places shared code at the common system-bus
+        address: the physical MPI2 Flash load address plus 0x50000000.
+        The HCPU-only 0x12000000 code-bus window is not accessible from ACPU.
+        Without this option, shared code runs from SRAM.
+
+config RT_SMP_PSRAM_NONCACHE
+    bool "Map shared PSRAM as noncacheable on both SMP cores"
+    depends on RT_SMP_SHARED_XIP
+    default y
+    help
+        Keep I/D caches enabled, but use Normal noncacheable, shareable
+        memory for 0x60000000-0x61ffffff on both cores. Required for
+        transparent sharing of PSRAM heaps, IPC objects and thread stacks.
+        When disabling this, select the experimental WT_SYNC protocol for
+        shared writable data. Ordinary locking without that protocol is
+        not cache coherence.
+
+config RT_SMP_PSRAM_WT_SYNC
+    bool "Experimental write-through PSRAM with kernel synchronization"
+    depends on RT_SMP_SHARED_XIP && !RT_SMP_PSRAM_NONCACHE
+    select RT_SMP_CACHE_SYNC
+    default n
+    help
+        Preserve existing IPC/thread APIs. All writable cacheable memory
+        must be write-through. Outer kernel-lock release drains writes and
+        marks the peer cache stale; its next outer acquisition invalidates
+        local DCache. This covers synchronized sharing and context migration,
+        not unsynchronized polling, DMA, cached aliases or write-back pools.
+
+config RT_SMP_SRAM_WT_SYNC
+    bool "Cache ACPU SRAM data and stacks with kernel synchronization"
+    depends on RT_SMP_SHARED_XIP
+    depends on RT_SMP_PSRAM_NONCACHE || RT_SMP_PSRAM_WT_SYNC
+    select RT_SMP_CACHE_SYNC
+    default n
+    help
+        Keep HCPU's direct SRAM path. ACPU caches ordinary BSS and the SRAM
+        heap/stacks as write-through; initialized data and kernel static
+        control objects stay noncacheable. The GCC HCPU linker supplies
+        a 32-byte-aligned boundary. Existing IPC and thread APIs publish
+        data and refresh the receiving core before access/migration.
+        Requires synchronized ownership; volatile/atomics alone are not
+        cross-core cache synchronization. No writable WB mappings or aliases.
+
+config RT_SMP_CACHE_SYNC
+    bool
+    default n
+
 config RT_NAME_MAX
     int "The maximal size of kernel object name"
     range 2 32

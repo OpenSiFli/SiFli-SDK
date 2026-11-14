@@ -665,6 +665,10 @@ struct rt_thread
 #endif
 
     rt_uint32_t user_data;                             /**< private user data beyond this thread */
+#ifdef RT_USING_SMP
+    rt_uint8_t bind_cpu;       /* 0/1, or RT_CPU_DETACHED for either core */
+    rt_uint8_t oncpu;          /* ownership retained until PendSV saves SP */
+#endif
 };
 typedef struct rt_thread *rt_thread_t;
 

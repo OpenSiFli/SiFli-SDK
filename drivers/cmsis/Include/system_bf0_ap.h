@@ -51,7 +51,13 @@ void cache_enable(void);
 void cache_disable(void);
 
 
+#ifdef RT_SMP_SRAM_WT_SYNC
+/* Shared HCPU image also executes on ACPU. Existing explicit receive-side
+ * cache maintenance APIs must recognize its cacheable SRAM mappings. */
+#define IS_DCACHED_RAM(addr)  ((((uint32_t)(addr) >= 0x20000000u) && ((uint32_t)(addr) < 0x20080000u)) || ((uint32_t)(addr) >= (PSRAM_BASE)))
+#else
 #define IS_DCACHED_RAM(addr)  (((uint32_t) addr) >= (PSRAM_BASE))
+#endif
 #ifdef PSRAM_CACHE_WB
 //TODO: replaced by HAL function, such that no need to implement it for every SoC
 int mpu_dcache_clean(void *data, uint32_t size);
