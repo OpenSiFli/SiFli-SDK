@@ -1,0 +1,66 @@
+# Console-side checks for the CherryUSB MSC host example.
+#
+# Bench precondition: the board's USB host port must be empty. The bench has no
+# USB flash drive and no second board running
+# `example/cherryusb/device/msc/ram_disk`, so this case verifies only what is
+# observable without an attached mass storage device: the boot banner, the
+# periodic "Scanning for..." loop, `lsusb -V` / `lsusb -t`, and the hub thread
+# in `ps`. If a U-disk is left plugged in, the firmware stops scanning and
+# reports a mount, so the case fails by design; do not relax the assertions for
+# that bench. It declares no `usb_host` fixture: with nothing plugged into the
+# host port there is no host-side device to observe.
+#
+# Negative verification:
+#   * Offline synthetic transcript -- executed earlier; the scripted console
+#     drove the assertions through the same window/boot-transcript paths.
+#   * Board sabotage -- EXECUTED on 2026-11-15 (sf32lb52-lcd_a128r16_01). The
+#     official `sdk.py test run` (test-out/2026-11-15T00-29-10) passed 1/1 in
+#     79.3 s. The injections then ran against the same running firmware without
+#     a reflash: the agent was allocated with `fixtures: []`, its DUT console
+#     was reopened and the board rebooted through the console (same image), and
+#     one test was selected per injection. Constant changes were restored and
+#     `git hash-object` returned
+#     ad8d89b48f664091e00c1ef7d666e46a95e1720a every time; the two mount
+#     injections never touched the test file -- they wrote the DUT's own
+#     `echo "mount successfully"` line onto the console:
+#       - `SCANNING` -> `Scanning for USB mass storage devices!!!`:
+#         `test_scans_for_storage_without_a_device` red on `15s of console
+#         output did not contain 'Scanning for USB mass storage devices!!!'`
+#         (15.28 s);
+#       - `mount successfully` injected during the 15 s quiet window (4 s after
+#         pytest start): the same test red on `the host reported 'mount
+#         successfully' during the 15s quiet window` (15.28 s);
+#       - `mount successfully` injected after a clean reboot and before the
+#         test, so the retained transcript read from offset zero held it: the
+#         same test red on `the host reported 'mount successfully' in the
+#         retained boot transcript` (15.30 s);
+#       - `LSUSB_VERSION_LINE` -> `CherryUSB version v9.9.9`:
+#         `test_host_stack_answers_lsusb` red with `lsusb -V reported
+#         'CherryUSB version v1.6.0', expected '...v9.9.9'` (0.55 s);
+#       - `HUB_THREAD` -> `no_such_thread`: `test_usb_host_thread_is_alive` red
+#         on `expected /no_such_thread/ within 10s`; `ps` listed `usbh_hub`
+#         (10.32 s).
+#     With every change restored the final direct run was `4 passed in 16.02s`.
+#
+# Coverage boundary: the no-mount claim has two halves. The retained console
+# transcript is read from offset zero, so a mount line printed during boot --
+# before the banner test's cursor passed it -- is still inspected; the 15 s
+# quiet window after the drain is inspected separately. Output already trimmed
+# from the agent's console retention window before the suite reads it cannot be
+# checked.
+#
+# Not verified here, recorded rather than skipped:
+#   * the real mount path: `USB mass storage device found: /dev/sd?`,
+#     `udisk: /dev/sd? mount successfully`, `File content:` and the
+#     `README.TXT` contents it prints;
+#   * the write path: `WRITE.TXT` is created and holds the two demo lines.
+#     Both need a U-disk or the MSC device example on a second board.
+tests:
+  - id: msc_host.host_stack
+    description: The MSC host example boots, keeps scanning for a volume during the quiet window, and answers lsusb/ps.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, host]
+    timeout: 180
+    project_dir: project
+    harness_config:
+      pytest_root: pytest
