@@ -719,6 +719,12 @@ SPP 连接前必须先配对）在 `example/test/bt_peer/README.md`。
 用例用了 `bt_peer` 却没有在 testcase 里声明 `fixture: bt_peer:ble` 时，fixture 会 **skip** 并说明原因——
 那是漏声明，不是测试失败。
 
+> **已知陷阱，尚未修复：** harness 以 pytest 子进程的退出码作为判据，而 skip 的退出码是 0，
+> 所以上面的运行会被记为 **PASS**。一条从未真正执行断言的用例也可能显示为绿。计划中的修复
+> （严格模式：框架驱动的运行中任何 skip 都转成失败；手工跑 pytest 仍可 skip）是
+> [`tools/sdk_test/DESIGN.md`](../../../../tools/sdk_test/DESIGN.md) 里“TODO：pytest 的 skip 不是 PASS”
+> 一节。在修复前，不要用 `skip` 表示“未验证”。
+
 **仪表的日志也会留下。** 用例结束时，runner 会在释放 testbed 之前把测试打开过的每个仪表控制台读回来，
 和 `device.log` 写在同一个目录，文件名为 `<fixture>.log`（这里是 `bt_peer-ble.log`；spec 里的 `:` 在文件名中
 不可移植，会被规整掉）。这样双射频的问题
