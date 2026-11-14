@@ -50,6 +50,12 @@ from .firmware import FirmwareStore
 from .transport.jlink import JLinkTransport
 from .transport.serial import SerialTransport
 from .transport.sftool import SftoolTransport
+from .usb_host import UsbHostService
+from .usb_host import create_service
+from .usb_host.base import USB_HOST_FIXTURE
+from .usb_host.errors import UsbHostFixtureNotRequested
+from .usb_host.errors import UsbHostNotAllocated
+from .usb_host.service import usb_host_connection
 
 from sdk_test.platforms import jlink_device
 from sdk_test.version import PROTOCOL
@@ -88,6 +94,22 @@ def _default_fixture_console(testbed: TestBed, connection: Connection) -> Serial
     """The real transport for an instrument console, built from its binding entry."""
     config = _fixture_console_config(connection)
     return SerialTransport(port=config.port, baud=config.baud)
+
+
+def _requests_usb_host(entries: List[str]) -> bool:
+    """Whether an allocation's fixture list asked for ``usb_host``.
+
+    A malformed entry is skipped rather than fatal: it is already refused when
+    the fixture it names is opened, and letting it hide a legitimate
+    ``usb_host`` later in the list would be worse than the silence.
+    """
+    for entry in entries:
+        try:
+            if parse_fixture_ref(entry).name == USB_HOST_FIXTURE:
+                return True
+        except BindingError:
+            continue
+    return False
 
 
 def resolve_jlink_device(
@@ -257,6 +279,7 @@ class TestBedRuntime:
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
         firmware_root: Optional[str] = None,
         fixture_console_factory: Optional[Callable[[TestBed, Any], Any]] = None,
+        usb_host_factory: Optional[Callable[[TestBed], UsbHostService]] = None,
     ) -> None:
         self.testbed = testbed
         self.settings = settings or RunnerSettings()
@@ -292,6 +315,13 @@ class TestBedRuntime:
         #: before a release can finish after it and leave a serial port held on
         #: a testbed nobody owns.
         self._fixture_lock = threading.Lock()
+        #: Serializes creation of the USB host service and its teardown. The
+        #: service is built lazily: a testbed whose tests never ask for USB
+        #: never pays for an enumeration, and a non-Windows agent only reports
+        #: ``supported: false`` when someone actually asks.
+        self._usb_lock = threading.Lock()
+        self._usb_host_service: Optional[UsbHostService] = None
+        self._usb_host_factory = usb_host_factory or create_service
         #: Firmware uploaded for this board. Keyed by the package's own digest,
         #: and told which platform it serves so it can refuse an image built for
         #: a different board -- a wrong-platform image flashes perfectly well.
@@ -378,6 +408,10 @@ class TestBedRuntime:
     def _teardown(self) -> None:
         self.console_close()
         self.fixture_consoles_close()
+        # USB serial sessions belong to the claim that opened them. They are
+        # closed here for the same reason the consoles are: a run that is
+        # released must not leave a COM port held against the next one.
+        self.usb_host_close()
         for connection, driver in reversed(self._active_fixtures):
             try:
                 driver.teardown(self.testbed, connection)
@@ -799,6 +833,104 @@ class TestBedRuntime:
             "'name@instance'"
         )
 
+    # -- USB host observation ------------------------------------------------
+    #
+    # The capability belongs to the testbed, not to a fixture driver: there is
+    # no console, no line protocol and nothing to build. It is still gated on
+    # the allocation, because the agent's USB bus is shared by every testbed on
+    # the machine and a test must not read it without saying it needs it.
+
+    def _usb_service_locked(self) -> UsbHostService:
+        """Build the service on first use. Caller holds ``_usb_lock``."""
+        if self._usb_host_service is None:
+            self._usb_host_service = self._usb_host_factory(self.testbed)
+        return self._usb_host_service
+
+    def _usb_gate_locked(self) -> None:
+        """Refuse unless this allocation declared ``usb_host``. Caller holds
+        ``_usb_lock``.
+
+        Both halves matter. The allocation must be active, and the binding must
+        actually wire the capability: an explicit ``testbed_id`` allocation can
+        name a fixture the binding does not offer, and falling back to default
+        options would let it read the whole host bus.
+        """
+        with self._lock:
+            holder = self._holder
+            requested = list(self._requested_fixtures)
+        if holder is None:
+            raise UsbHostNotAllocated(
+                f'testbed "{self.testbed.id}" is not allocated; its USB view '
+                "belongs to the run holding the testbed"
+            )
+        if usb_host_connection(self.testbed) is None:
+            raise UsbHostFixtureNotRequested(
+                f'testbed "{self.testbed.id}" does not wire fixture '
+                f'"{USB_HOST_FIXTURE}" in its binding'
+            )
+        if not _requests_usb_host(requested):
+            declared = ", ".join(requested) or "none"
+            raise UsbHostFixtureNotRequested(
+                f'testbed "{self.testbed.id}" allocation did not request fixture '
+                f'"{USB_HOST_FIXTURE}" (requested: {declared})'
+            )
+
+    def usb_host_service(self) -> UsbHostService:
+        """The testbed's USB service, built on first use.
+
+        Not gated: ``capabilities`` has to answer even for a testbed nobody
+        holds, because that is how a client discovers it should not have asked.
+        """
+        with self._usb_lock:
+            return self._usb_service_locked()
+
+    def usb_host_capabilities(self) -> Dict[str, Any]:
+        return self.usb_host_service().capabilities()
+
+    def usb_host_for_request(self) -> UsbHostService:
+        """The service for a route that needs an allocated, declared testbed."""
+        with self._usb_lock:
+            self._usb_gate_locked()
+            return self._usb_service_locked()
+
+    def usb_host_open_serial(
+        self,
+        device_key: str,
+        com_port: Optional[str] = None,
+        *,
+        baud: Optional[int] = None,
+        dtr: bool = False,
+        rts: bool = False,
+    ) -> Dict[str, Any]:
+        """Gate, then open a serial session, under the teardown lock.
+
+        The gate alone is not enough: a release between the gate and the open
+        would let a COM port be opened on a testbed nobody owns, and the token
+        route (deliberately ungated so a released token answers 404) would keep
+        it reachable. Holding ``_usb_lock`` across both makes an open either
+        happen entirely before teardown -- and be closed by it -- or see the
+        released testbed and fail.
+        """
+        with self._usb_lock:
+            self._usb_gate_locked()
+            return self._usb_service_locked().open_serial(
+                device_key, com_port, baud=baud, dtr=dtr, rts=rts
+            )
+
+    def usb_host_close(self) -> None:
+        """Close every USB serial session.
+
+        The service object is retained rather than dropped, because the session
+        registry is what turns a token from the released run into
+        ``token_not_found`` (404) instead of an allocation error -- the contract
+        the SDK-side client relies on. Teardown empties the registry, and it
+        holds ``_usb_lock`` so no open can register a session behind it.
+        """
+        with self._usb_lock:
+            service = self._usb_host_service
+            if service is not None:
+                service.close_all()
+
     # -- reporting -----------------------------------------------------------
 
     def describe(self) -> Dict[str, Any]:
@@ -864,6 +996,7 @@ class LabManager:
         jlink_factory: Optional[Callable[[TestBed, RunnerSettings], JLinkTransport]] = None,
         firmware_root: Optional[str] = None,
         fixture_console_factory: Optional[Callable[[TestBed, Any], Any]] = None,
+        usb_host_factory: Optional[Callable[[TestBed], UsbHostService]] = None,
     ) -> None:
         self.config = config
         self.sdk_root = sdk_root
@@ -882,6 +1015,7 @@ class LabManager:
                 jlink_factory,
                 firmware_root,
                 fixture_console_factory,
+                usb_host_factory,
             )
             for testbed in config.testbeds
         }

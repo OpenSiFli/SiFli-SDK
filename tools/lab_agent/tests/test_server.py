@@ -20,6 +20,11 @@ from _support import LabTestCase
 
 from lab_agent.server import LabAgentServer
 from lab_agent.server import MAX_MEMORY_READ
+from lab_agent.server import _redact_tokens
+from lab_agent.usb_host.service import UsbHostService
+from test_usb_host import CDC_DEVICE
+from test_usb_host import FakeBackend
+from test_usb_host import FakeSerialFactory
 
 
 class ServerTestCase(LabTestCase):
@@ -660,6 +665,323 @@ class TestMalformedRequests(ServerTestCase):
     def test_get_on_a_post_only_route_is_a_405(self):
         status, payload = self.request("GET", "/allocate")
         self.assertEqual(status, 405)
+
+
+#: A lab whose board carries the USB host-observation capability.
+USB_CONFIG = """
+runner:
+  name: test-runner
+  host: 127.0.0.1
+  port: 0
+  console_poll: 0.01
+
+testbed:
+  - id: tb_usb
+    platform: sf32lb52-lcd_n16r8
+    console: {port: COM13}
+    connections:
+      - fixture: usb_host
+"""
+
+
+class UsbServerTestCase(ServerTestCase):
+    """A real server over a fake USB backend.
+
+    The fake is injected at the service factory seam, so routing, gating, JSON
+    encoding and the error-to-status mapping are the production paths.
+    """
+
+    config_yaml = USB_CONFIG
+
+    def setUp(self):
+        super().setUp()
+        self.serial_factory = FakeSerialFactory()
+        self.backend = FakeBackend(devices=[CDC_DEVICE])
+        self.usb_service = UsbHostService(
+            self.backend,
+            forbidden_ports=["COM13"],
+            serial_factory=self.serial_factory,
+            cache_ttl=0,
+        )
+        for runtime in self.manager._runtimes.values():
+            runtime._usb_host_factory = lambda testbed: self.usb_service
+        self.addCleanup(self.usb_service.close_all)
+
+    def allocate_usb(self):
+        status, payload = self.request(
+            "POST", "/allocate", {"testbed_id": "tb_usb", "fixtures": ["usb_host"]}
+        )
+        self.assertEqual(status, 200, payload)
+        return payload["testbed_id"]
+
+
+class TestUsbCapabilitiesOverHttp(UsbServerTestCase):
+    def test_capabilities_answer_without_an_allocation(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_usb/usb/capabilities"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertTrue(payload["supported"])
+        self.assertEqual(payload["platform"], "test")
+        self.assertIn("devices", payload["features"])
+
+
+class TestUsbGatingOverHttp(UsbServerTestCase):
+    def test_devices_without_an_allocation_is_a_409(self):
+        status, payload = self.request("GET", "/testbed/tb_usb/usb/devices")
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["code"], "not_allocated")
+
+    def test_devices_without_the_fixture_is_a_409(self):
+        status, _ = self.request("POST", "/allocate", {"testbed_id": "tb_usb"})
+        self.assertEqual(status, 200)
+        status, payload = self.request("GET", "/testbed/tb_usb/usb/devices")
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["code"], "fixture_not_requested")
+
+    def test_an_allocated_usb_case_sees_the_devices(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/usb/devices"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["devices"][0]["key"], CDC_DEVICE.key)
+        self.assertTrue(payload["captured_at"])
+
+
+class TestUsbErrorBodies(UsbServerTestCase):
+    """Every USB refusal carries ``code`` (and ``details``) for the client."""
+
+    def test_a_missing_query_is_a_400_with_a_code(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/usb/files?path=README.TXT"
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["code"], "bad_request")
+        self.assertEqual(payload["details"], {})
+
+    def test_a_wrong_method_is_a_405_with_a_code(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/usb/devices"
+        )
+        self.assertEqual(status, 405)
+        self.assertEqual(payload["code"], "method_not_allowed")
+
+    def test_a_malformed_cursor_is_a_400_with_a_code(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/open",
+            {"device_key": CDC_DEVICE.key, "com_port": "COM12"},
+        )
+        self.assertEqual(status, 200, payload)
+        token = payload["token"]
+        status, payload = self.request(
+            "GET",
+            f"/testbed/{testbed}/usb/serial/{token}/read?cursor=abc",
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["code"], "bad_request")
+
+    def test_a_serial_token_is_redacted_in_logs(self):
+        path = "/testbed/tb/usb/serial/secret-token-123/read?cursor=0"
+        redacted = _redact_tokens(path)
+        self.assertNotIn("secret-token-123", redacted)
+        self.assertIn("/usb/serial/<token:", redacted)
+
+
+class TestUsbUndeclaredBinding(ServerTestCase):
+    """An explicit allocation cannot conjure a capability the binding lacks."""
+
+    def test_a_forced_allocation_cannot_use_an_undeclared_capability(self):
+        status, _ = self.request(
+            "POST",
+            "/allocate",
+            {"testbed_id": "tb_01", "fixtures": ["usb_host"]},
+        )
+        self.assertEqual(status, 200)
+        status, payload = self.request("GET", "/testbed/tb_01/usb/devices")
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["code"], "fixture_not_requested")
+        self.assertIn("binding", payload["error"])
+
+
+class TestUsbWaitOverHttp(UsbServerTestCase):
+    def test_a_match_returns_the_device(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/wait",
+            {"match": {"serial": "2022123456"}, "timeout": 1.0},
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["device"]["key"], CDC_DEVICE.key)
+
+    def test_an_unknown_match_key_is_a_400(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/wait",
+            {"match": {"serial_number": "x"}, "timeout": 0.1},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["code"], "bad_match_key")
+        self.assertIn("serial_number", payload["error"])
+
+
+class TestUsbSerialOverHttp(UsbServerTestCase):
+    def test_the_console_port_is_refused(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/open",
+            {"device_key": CDC_DEVICE.key, "com_port": "COM13"},
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["code"], "forbidden_port")
+
+    def test_open_read_write_lines_close(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/open",
+            {
+                "device_key": CDC_DEVICE.key,
+                "com_port": "COM12",
+                "baud": 921600,
+                "dtr": True,
+                "rts": False,
+            },
+        )
+        self.assertEqual(status, 200, payload)
+        token = payload["token"]
+        self.assertEqual(payload["port"], "COM12")
+        self.assertTrue(payload["dtr"])
+        self.assertTrue(self.serial_factory.opened["COM12"].dtr)
+
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/{token}/write",
+            {"data_base64": base64.b64encode(b"ping").decode("ascii")},
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["written"], 4)
+        self.assertEqual(self.serial_factory.opened["COM12"].writes, [b"ping"])
+
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/{token}/lines",
+            {"dtr": False, "rts": True},
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertFalse(payload["dtr"])
+        self.assertTrue(payload["rts"])
+
+        status, payload = self.request(
+            "GET",
+            f"/testbed/{testbed}/usb/serial/{token}/read?cursor=0&timeout=0",
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertEqual(payload["cursor"], 0)
+        self.assertFalse(payload["closed"])
+
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/usb/serial/{token}/close"
+        )
+        self.assertEqual(status, 200, payload)
+        self.assertTrue(payload["closed"])
+
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/usb/serial/{token}/read?cursor=0"
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(payload["code"], "token_not_found")
+
+    def test_a_second_open_of_the_same_port_is_a_409(self):
+        testbed = self.allocate_usb()
+        body = {"device_key": CDC_DEVICE.key, "com_port": "COM12"}
+        status, _ = self.request(
+            "POST", f"/testbed/{testbed}/usb/serial/open", body
+        )
+        self.assertEqual(status, 200)
+        status, payload = self.request(
+            "POST", f"/testbed/{testbed}/usb/serial/open", body
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(payload["code"], "port_busy")
+
+    def test_release_closes_the_sessions_it_opened(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "POST",
+            f"/testbed/{testbed}/usb/serial/open",
+            {"device_key": CDC_DEVICE.key, "com_port": "COM12"},
+        )
+        self.assertEqual(status, 200)
+        token = payload["token"]
+
+        status, _ = self.request(
+            "POST", "/release", {"testbed_id": testbed}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(self.serial_factory.opened["COM12"].closed, 1)
+
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/usb/serial/{token}/read?cursor=0"
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(payload["code"], "token_not_found")
+
+    def test_an_unknown_token_is_a_404(self):
+        testbed = self.allocate_usb()
+        status, payload = self.request(
+            "GET", f"/testbed/{testbed}/usb/serial/nope/read?cursor=0"
+        )
+        self.assertEqual(status, 404)
+        self.assertEqual(payload["code"], "token_not_found")
+
+
+class TestUsbUnsupportedOverHttp(ServerTestCase):
+    """``backend: null`` -- capabilities says no, every other route is a 501."""
+
+    config_yaml = """
+    runner:
+      name: test-runner
+      host: 127.0.0.1
+      port: 0
+      console_poll: 0.01
+
+    testbed:
+      - id: tb_null
+        platform: sf32lb52-lcd_n16r8
+        console: {port: COM13}
+        connections:
+          - fixture: usb_host
+            usb: {backend: null}
+    """
+
+    def test_capabilities_are_a_200_with_supported_false(self):
+        status, payload = self.request(
+            "GET", "/testbed/tb_null/usb/capabilities"
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(payload["supported"])
+        self.assertTrue(payload["reason"])
+
+    def test_any_other_route_is_a_501(self):
+        status, _ = self.request(
+            "POST",
+            "/allocate",
+            {"testbed_id": "tb_null", "fixtures": ["usb_host"]},
+        )
+        self.assertEqual(status, 200)
+        status, payload = self.request(
+            "GET", "/testbed/tb_null/usb/devices"
+        )
+        self.assertEqual(status, 501)
+        self.assertEqual(payload["code"], "usb_host_unsupported")
 
 
 if __name__ == "__main__":

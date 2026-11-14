@@ -28,13 +28,27 @@ Routes::
     POST /testbed/{id}/console/close          [?stream=dut|ble_peer]
     GET  /testbed/{id}/console/read?cursor=N&timeout=SECONDS[&stream=...]
     POST /testbed/{id}/console/write   {data}   [?stream=dut|ble_peer]
+    GET  /testbed/{id}/usb/capabilities
+    GET  /testbed/{id}/usb/devices
+    POST /testbed/{id}/usb/wait                {match, since, timeout, interval}
+    POST /testbed/{id}/usb/serial/open         {device_key, com_port, baud, dtr, rts}
+    GET  /testbed/{id}/usb/serial/{token}/read?cursor=N&timeout=S
+    POST /testbed/{id}/usb/serial/{token}/write  {data_base64}
+    POST /testbed/{id}/usb/serial/{token}/lines  {dtr, rts}
+    POST /testbed/{id}/usb/serial/{token}/close
+    GET  /testbed/{id}/usb/volumes
+    GET  /testbed/{id}/usb/files?device_key=...&path=...&encoding=text|base64
+    GET  /testbed/{id}/usb/audio?device_key=...
+    GET  /testbed/{id}/usb/hid?device_key=...
 """
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
+import re
 import threading
 from http.server import BaseHTTPRequestHandler
 from http.server import ThreadingHTTPServer
@@ -56,6 +70,10 @@ from .errors import TestbedError
 from .errors import TransportError
 from .testbed import LabManager
 from .testbed import allocate_request_from_mapping
+from .usb_host.errors import UsbHostBadRequest
+from .usb_host.errors import UsbHostError
+from .usb_host.errors import UsbHostUnsupported
+from .usb_host.serial_sessions import MAX_WRITE_BYTES
 
 #: Default value for an omitted ``timeout`` on a console read, in seconds.
 DEFAULT_READ_TIMEOUT = 1.0
@@ -90,10 +108,30 @@ _ERROR_STATUS = {
 
 
 def _status_for(error: Exception) -> int:
+    # USB errors carry their own status: the capability's contract has more
+    # statuses (408, 413, 501, 503) than the base error families do, and a
+    # route should not have to translate them a second time.
+    status = getattr(error, "status", None)
+    if isinstance(status, int):
+        return status
     for error_type, status in _ERROR_STATUS.items():
         if isinstance(error, error_type):
             return status
     return 500
+
+
+#: A serial token is a capability for a COM port, and an HTTP path is logged.
+#: Redacting it keeps the log useful for routing without leaving a usable
+#: secret in a log file the lab may ship with a run report.
+_SERIAL_TOKEN_PATH = re.compile(r"(/usb/serial/)([^/?#\s]+)")
+
+
+def _redact_tokens(text: str) -> str:
+    def label(match: "re.Match[str]") -> str:
+        digest = hashlib.sha256(match.group(2).encode("utf-8")).hexdigest()[:12]
+        return f"{match.group(1)}<token:{digest}>"
+
+    return _SERIAL_TOKEN_PATH.sub(label, text)
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -112,8 +150,11 @@ class _Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt: str, *args: Any) -> None:
         # Default behaviour writes straight to stderr on every request, which
-        # buries the agent's own logging. Route it through the logger instead.
-        self.logger.debug("%s - %s", self.address_string(), fmt % args)
+        # buries the agent's own logging. Route it through the logger instead,
+        # with USB serial tokens redacted.
+        self.logger.debug(
+            "%s - %s", self.address_string(), _redact_tokens(fmt % args)
+        )
 
     def _read_body(self) -> Dict[str, Any]:
         length = self.headers.get("Content-Length")
@@ -190,10 +231,16 @@ class _Handler(BaseHTTPRequestHandler):
         except Exception as exc:  # noqa: BLE001 - every failure becomes a response
             status = _status_for(exc)
             payload = {"error": str(exc)}
-            if status >= 500:
-                self.logger.exception("Request failed: %s %s", method, self.path)
+            if isinstance(exc, UsbHostError):
+                payload["code"] = exc.code
+                payload["details"] = exc.details
+            log_path = _redact_tokens(self.path)
+            if status >= 500 and not isinstance(exc, UsbHostUnsupported):
+                self.logger.exception("Request failed: %s %s", method, log_path)
             else:
-                self.logger.info("%s %s -> %s: %s", method, self.path, status, exc)
+                self.logger.info(
+                    "%s %s -> %s: %s", method, log_path, status, exc
+                )
 
         try:
             self._respond(status, payload)
@@ -350,10 +397,242 @@ class _Handler(BaseHTTPRequestHandler):
                 "data": base64.b64encode(data).decode("ascii"),
             }
 
+        if name == "usb" and action[1:]:
+            return self._dispatch_usb(method, runtime, action[1:], query)
+
         if name == "console" and action[1:]:
             return self._dispatch_console(method, runtime, testbed_id, action[1], query)
 
         return 404, {"error": f"No such testbed action: {name}"}
+
+    @staticmethod
+    def _usb_error(
+        status: int, message: str, code: str, details: Any = None
+    ) -> Tuple[int, Any]:
+        """The USB error body, including the fields the client switches on."""
+        return status, {
+            "error": message,
+            "code": code,
+            "details": dict(details or {}),
+        }
+
+    def _dispatch_usb(
+        self, method: str, runtime, action: list, query: Dict[str, list]
+    ) -> Tuple[int, Any]:
+        """Host-side USB observation for one testbed.
+
+        Every route except ``capabilities`` asks the runtime for a gated
+        service; the gate is what keeps a run from reading (or opening) hardware
+        it never declared. ``capabilities`` is deliberately ungated, because its
+        answer is how a client learns the bench has no USB backend at all.
+        """
+        sub = action[0]
+
+        if sub == "capabilities":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            return 200, runtime.usb_host_capabilities()
+
+        if sub == "serial":
+            if action[1:] == ["open"]:
+                # The runtime performs the gate and the open under its teardown
+                # lock; doing it here as two calls would leave a window where a
+                # release slips in between them.
+                return self._dispatch_usb_serial(
+                    method, runtime, action[1:], query
+                )
+            if len(action) == 3:
+                # A token-addressed route is answered from the retained session
+                # registry without the allocation gate. The contract promises
+                # that a token from a released run is ``token_not_found`` (404),
+                # and the gate would answer ``not_allocated`` (409) first. The
+                # registry is emptied by teardown, so the token is the only
+                # thing that could still address anything, and it is gone.
+                # ``usb_host_service`` takes the teardown lock, so this either
+                # runs before close_all or sees its empty result.
+                return self._dispatch_usb_serial(
+                    method, runtime.usb_host_service(), action[1:], query
+                )
+            return self._usb_error(404, "No such usb serial action", "not_found")
+
+        service = runtime.usb_host_for_request()
+
+        if sub == "devices":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            return 200, service.devices_payload()
+
+        if sub == "wait":
+            if method != "POST":
+                return self._usb_error(405, "POST only", "method_not_allowed")
+            body = self._read_body()
+            device, elapsed = service.wait(
+                body.get("match"),
+                since=body.get("since"),
+                timeout=body.get("timeout", 15.0),
+                interval=body.get("interval", 0.25),
+            )
+            return 200, {"device": device.to_dict(), "elapsed": elapsed}
+
+        if sub == "volumes":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            return 200, service.volumes_payload()
+
+        if sub == "files":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            device_key = self._required_usb_query(query, "device_key")
+            path = self._required_usb_query(query, "path")
+            encoding = (query.get("encoding") or ["text"])[0]
+            return 200, service.read_file(device_key, path, encoding)
+
+        if sub == "audio":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            return 200, service.audio_payload(
+                self._required_usb_query(query, "device_key")
+            )
+
+        if sub == "hid":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            return 200, service.hid_payload(
+                self._required_usb_query(query, "device_key")
+            )
+
+        return self._usb_error(404, f"No such usb action: {sub}", "not_found")
+
+    def _dispatch_usb_serial(
+        self, method: str, target, action: list, query: Dict[str, list]
+    ) -> Tuple[int, Any]:
+        # ``target`` is the runtime for ``open`` (the gate and the open must be
+        # one locked operation) and the service for every token-addressed verb.
+        if action == ["open"]:
+            if method != "POST":
+                return self._usb_error(405, "POST only", "method_not_allowed")
+            body = self._read_body()
+            device_key = body.get("device_key")
+            if not device_key:
+                return self._usb_error(
+                    400, '"device_key" is required', "bad_request"
+                )
+            baud = body.get("baud")
+            if baud is not None:
+                try:
+                    baud = int(baud)
+                except (TypeError, ValueError) as exc:
+                    raise UsbHostBadRequest('"baud" must be an integer') from exc
+            dtr = body.get("dtr", False)
+            rts = body.get("rts", False)
+            if not isinstance(dtr, bool) or not isinstance(rts, bool):
+                return self._usb_error(
+                    400,
+                    '"dtr" and "rts" must be true or false',
+                    "bad_request",
+                )
+            return 200, target.usb_host_open_serial(
+                str(device_key),
+                None if body.get("com_port") is None else str(body["com_port"]),
+                baud=baud,
+                dtr=dtr,
+                rts=rts,
+            )
+
+        if len(action) != 2:
+            return self._usb_error(404, "No such usb serial action", "not_found")
+        token, operation = action
+
+        if operation == "read":
+            if method != "GET":
+                return self._usb_error(405, "GET only", "method_not_allowed")
+            cursor = self._usb_query_int(query, "cursor", 0)
+            timeout = self._usb_query_float(
+                query, "timeout", DEFAULT_READ_TIMEOUT
+            )
+            if timeout < 0:
+                return self._usb_error(
+                    400, '"timeout" must not be negative', "bad_request"
+                )
+            return 200, target.read_serial(
+                token, cursor, min(timeout, MAX_READ_TIMEOUT)
+            )
+
+        if operation == "write":
+            if method != "POST":
+                return self._usb_error(405, "POST only", "method_not_allowed")
+            body = self._read_body()
+            raw = body.get("data_base64")
+            if raw is None:
+                return self._usb_error(
+                    400, '"data_base64" is required', "bad_request"
+                )
+            try:
+                data = base64.b64decode(str(raw), validate=True)
+            except (ValueError, TypeError) as exc:
+                raise UsbHostBadRequest('"data_base64" is not valid base64') from exc
+            if len(data) > MAX_WRITE_BYTES:
+                return self._usb_error(
+                    400,
+                    f"at most {MAX_WRITE_BYTES} bytes may be written at once",
+                    "bad_request",
+                )
+            return 200, target.write_serial(token, data)
+
+        if operation == "lines":
+            if method != "POST":
+                return self._usb_error(405, "POST only", "method_not_allowed")
+            body = self._read_body()
+            if "dtr" not in body and "rts" not in body:
+                return self._usb_error(
+                    400, '"dtr" or "rts" is required', "bad_request"
+                )
+            dtr = body.get("dtr")
+            rts = body.get("rts")
+            if (dtr is not None and not isinstance(dtr, bool)) or (
+                rts is not None and not isinstance(rts, bool)
+            ):
+                return self._usb_error(
+                    400,
+                    '"dtr" and "rts" must be true or false',
+                    "bad_request",
+                )
+            return 200, target.set_lines(token, dtr, rts)
+
+        if operation == "close":
+            if method != "POST":
+                return self._usb_error(405, "POST only", "method_not_allowed")
+            return 200, target.close_serial(token)
+
+        return self._usb_error(
+            404, f"No such usb serial action: {operation}", "not_found"
+        )
+
+    def _required_query(self, query: Dict[str, list], key: str) -> str:
+        values = query.get(key)
+        if not values or not values[0].strip():
+            raise LabAgentError(f'Query parameter "{key}" is required')
+        return values[0]
+
+    def _required_usb_query(self, query: Dict[str, list], key: str) -> str:
+        try:
+            return self._required_query(query, key)
+        except LabAgentError as exc:
+            raise UsbHostBadRequest(str(exc)) from exc
+
+    def _usb_query_int(self, query: Dict[str, list], key: str, default: int) -> int:
+        try:
+            return self._query_int(query, key, default)
+        except LabAgentError as exc:
+            raise UsbHostBadRequest(str(exc)) from exc
+
+    def _usb_query_float(
+        self, query: Dict[str, list], key: str, default: float
+    ) -> float:
+        try:
+            return self._query_float(query, key, default)
+        except LabAgentError as exc:
+            raise UsbHostBadRequest(str(exc)) from exc
 
     def _dispatch_console(
         self, method: str, runtime, testbed_id: str, action: str, query: Dict[str, list]

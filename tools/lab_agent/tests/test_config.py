@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
 from _support import CONFIG_YAML  # noqa: F401  (also fixes sys.path)
 from _support import LabTestCase
@@ -116,6 +117,93 @@ class TestCheck(LabTestCase):
         self.assertEqual(len(warnings), 1)
         self.assertIn("tb_no_console", warnings[0])
         self.assertIn("console", warnings[0])
+
+
+class TestUsbHostConfig(LabTestCase):
+    """The ``usb:`` block is validated where the config is loaded."""
+
+    USB_CONFIG = """
+    testbed:
+      - id: tb_usb
+        platform: board_a
+        console: {port: COM8}
+        connections:
+          - fixture: usb_host
+            usb:
+              backend: null
+              exclude_ports: [COM8, COM6]
+              max_file_bytes: 1024
+    """
+
+    def test_a_usb_host_connection_parses(self):
+        from lab_agent.usb_host.base import parse_usb_options
+
+        config = self.make_config(self.USB_CONFIG)
+        connection = config.by_id("tb_usb").connections[0]
+        self.assertEqual(connection.fixture.spec, "usb_host")
+        options = parse_usb_options(connection.options["usb"])
+        # YAML renders an unquoted ``null`` as Python None; it still names the
+        # null backend rather than the default.
+        self.assertEqual(options.backend, "null")
+        self.assertEqual(options.exclude_ports, ("COM8", "COM6"))
+        self.assertEqual(options.max_file_bytes, 1024)
+
+    def test_an_unknown_option_is_refused(self):
+        text = """
+        testbed:
+          - id: tb_usb
+            platform: board_a
+            connections:
+              - fixture: usb_host
+                usb:
+                  backends: auto
+        """
+        with self.assertRaises(ConfigError) as caught:
+            self.make_config(text)
+        message = str(caught.exception)
+        self.assertIn("backends", message)
+        self.assertIn("backend", message)
+
+    def test_a_usb_block_on_the_testbed_is_refused(self):
+        text = """
+        testbed:
+          - id: tb_usb
+            platform: board_a
+            usb: {backend: null}
+        """
+        with self.assertRaises(ConfigError) as caught:
+            self.make_config(text)
+        message = str(caught.exception)
+        self.assertIn("tb_usb", message)
+        self.assertIn("connection", message)
+
+    def test_a_usb_block_on_another_fixture_is_refused(self):
+        text = """
+        testbed:
+          - id: tb
+            platform: board_a
+            connections:
+              - fixture: bt_peer
+                usb: {backend: auto}
+        """
+        with self.assertRaises(ConfigError) as caught:
+            self.make_config(text)
+        self.assertIn("usb_host", str(caught.exception))
+
+    def test_a_non_windows_runner_is_warned_about_usb_host(self):
+        config = self.make_config(self.USB_CONFIG)
+        with mock.patch("lab_agent.config.os.name", "posix"):
+            warnings = config.check()
+        self.assertTrue(
+            any("usb_host" in warning and "501" in warning for warning in warnings),
+            warnings,
+        )
+
+    def test_a_windows_runner_is_not_warned(self):
+        config = self.make_config(self.USB_CONFIG)
+        with mock.patch("lab_agent.config.os.name", "nt"):
+            warnings = config.check()
+        self.assertFalse(any("usb_host" in warning for warning in warnings))
 
 
 class TestLoadRunnerConfig(LabTestCase):

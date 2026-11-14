@@ -34,6 +34,8 @@ from sdk_test.platforms import REPOSITORY_ROOT
 from sdk_test.platforms import declared_features
 
 from .errors import ConfigError
+from .usb_host.base import USB_HOST_FIXTURE
+from .usb_host.base import parse_usb_options
 
 #: Where a J-Link install usually lands when it is not already on PATH.
 _JLINK_CANDIDATES = (
@@ -165,7 +167,48 @@ class RunnerConfig:
                     f'{testbed.id}: console port "{testbed.console.port}" is not a COM port '
                     "(expected on Windows)"
                 )
+            if os.name != "nt" and any(
+                connection.fixture.name == USB_HOST_FIXTURE
+                for connection in testbed.connections
+            ):
+                # The capability is a Windows backend in this round. Saying so
+                # at startup turns "every USB case answers 501" into one line a
+                # person reads before the nightly run, not a report full of
+                # unexplained failures.
+                warnings.append(
+                    f'{testbed.id}: fixture "{USB_HOST_FIXTURE}" needs a Windows '
+                    "agent; its /usb/* routes will answer 501 on this runner"
+                )
         return warnings
+
+
+def validate_usb_host_connections(testbeds: List[TestBed], source: str) -> None:
+    """Validate every ``usb:`` block, and refuse one on the wrong fixture.
+
+    The option names are the agent's contract with the binding file, so a typo
+    is caught here -- when the config is loaded -- rather than on the first
+    ``/usb/*`` request. ``usb_host`` takes no capability suffix and no fixture
+    parameters; a ``usb:`` block on another connection means the file and the
+    reader disagree about which fixture is the USB capability.
+    """
+    for testbed in testbeds:
+        if "usb" in testbed.raw:
+            raise ConfigError(
+                f'{source}: testbed "{testbed.id}": a "usb" block belongs on a '
+                f'"{USB_HOST_FIXTURE}" connection, not on the testbed'
+            )
+        for connection in testbed.connections:
+            where = (
+                f'{source}: testbed "{testbed.id}" fixture '
+                f'"{connection.fixture.spec}"'
+            )
+            if connection.fixture.name == USB_HOST_FIXTURE:
+                parse_usb_options(connection.options.get("usb"), where=where)
+            elif "usb" in connection.options:
+                raise ConfigError(
+                    f'{where}: a "usb" block belongs on a "{USB_HOST_FIXTURE}" '
+                    "connection"
+                )
 
 
 def rule_out_contradictions(
@@ -209,6 +252,11 @@ def parse_runner_config(
     settings = RunnerSettings.from_mapping(data.get("runner"))
     # Duplicate testbed ids are already rejected by the shared binding parser.
     testbeds = parse_binding(data, source=source)
+
+    # USB host options are validated before the wiring check, so a typo in a
+    # ``usb:`` block is reported as itself rather than as a fixture mismatch.
+    validate_usb_host_connections(testbeds, source)
+
 
     # A connection that sets an option the fixture contract sources from params
     # has a credential committed in the binding. The testbed is taken out of
