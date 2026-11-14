@@ -1,0 +1,61 @@
+# Console-side check of the HID host example, on a bench with no external HID
+# device. The DUT is the USB host itself, so there is no `usb_host` fixture
+# here: the evidence is entirely on its own console (`src/main.c`,
+# `src/hid_host.c`, and the `lsusb` command from
+# external/cherryusb/platform/rtthread/usb_msh.c, which is compiled because
+# BSP_USING_RTTHREAD is set).
+#
+# Evidence for the assertions:
+#   * offline synthetic transcript: executed earlier; all four tests passed as
+#     written, and each injected transcript change turned its own test red.
+#   * board sabotage -- EXECUTED on 2026-11-15 (sf32lb52-lcd_a128r16_01). The
+#     official `sdk.py test run` (test-out/2026-11-15T00-21-21) passed 1/1 in
+#     65.6 s. The sabotages then ran against the same running firmware without
+#     a reflash: the agent was allocated with `fixtures: []`, its DUT console
+#     was reopened and the board rebooted through the console (same image) so
+#     the boot transcript was available, and one test was selected per
+#     injection. Each change was restored and `git hash-object` returned
+#     ce201be382bfd89bddc55d2d352d010fdffba548 every time.
+#       - boot string `hid host test` -> `hid host test wrong`:
+#         `test_boots_the_hid_host_stack` failed `expected /hid host test
+#         wrong/ within 30s` (`<nothing>` left after the first two lines),
+#         30.28 s;
+#       - `CHERRYUSB_VERSION` -> `CherryUSB version v9.9.9`:
+#         `test_host_stack_answers_lsusb` failed with `lsusb -V answered
+#         'CherryUSB version v1.6.0', expected 'CherryUSB version v9.9.9'`,
+#         0.44 s;
+#       - quiet-window injection: after the test's empty line, the DUT shell
+#         was sent `echo "mount a keyboard"` (a real console line, not a test
+#         variable), so the 2 s window contained it:
+#         `test_no_hid_device_is_mounted` failed with `a HID device announced
+#         itself on a device-less bench: 'mount a keyboard' appeared in the 2s
+#         window`, 2.25 s;
+#       - `HUB_THREAD` -> `no_such_thread`: `test_usb_host_thread_is_alive`
+#         failed `expected /no_such_thread/ within 10s`; `ps` listed
+#         `usbh_hub`, 10.47 s.
+#     With every change restored the final direct run was `4 passed in 3.01s`.
+#
+# Preconditions and not verified (recorded rather than skipped):
+#   * the DUT's USB host port must be empty. The case asserts that no HID
+#     device is mounted, so a bench that leaves a keyboard or a mouse plugged
+#     in will fail it by design; do not weaken the assertions to fit such a
+#     bench;
+#   * a real keyboard or mouse: no enumeration, no `mount a ...` branch and no
+#     `0x.. nbytes:%d` report parse is exercised. Asserting the mount lines
+#     absent is a weaker claim than "a device mounts and reports correctly";
+#   * the quiet window starts at the drain that precedes the empty line, so a
+#     mount line emitted during boot is outside it. A spurious mount after the
+#     empty line is caught; one printed during boot would not be;
+#   * a carrier with RT_NAME_MAX > 8: the thread is created as `usbh_hub0`
+#     (usbh_hub.c, bus 0), but 8 characters are kept here, so `ps` prints
+#     `usbh_hub`. The pattern accepts the full name too, but that spelling has
+#     not been observed on hardware.
+tests:
+  - id: hid.host_stack
+    description: The CherryUSB HID host stack starts, answers lsusb with its version and root hub, and mounts no HID device.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, host]
+    timeout: 180
+    project_dir: project
+    harness_config:
+      pytest_root: pytest
