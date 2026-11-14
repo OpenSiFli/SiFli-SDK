@@ -1451,6 +1451,32 @@ host 侧产物（`device.log`、`runner.log`、`<fixture>.log`、`sifli.json`、
 因此 P1 只适用于本机或可信实验室网络。彻底消除 1/2 需要 P3（agent 侧组装命令），
 消除 3 中 DUT 自身的日志需要固件侧关掉该日志，或由 agent 在源头脱敏。
 
+**fixture 词汇怎么查、怎么预检**：
+
+- **类型目录**在仓库里（`tools/sdk_test/fixture_types.yaml`），回答"能写哪些名字、能力 token 有哪些"：
+
+  ```bash
+  sdk.py test fixtures types
+  ```
+
+  目录条目只有描述、能力词表和选项契约，**不含**"某个 lab 有几台设备"——库存属于 binding。
+- **这个 lab 实际提供什么**（参数化类型的 spec 必须逐字相等，所以这里的报价才是权威）：
+
+  ```bash
+  sdk.py test fixtures list --agent-url http://127.0.0.1:8760
+  sdk.py test fixtures list --file E:/code2/lab/sifli-lab.yaml
+  ```
+- **构建前确认用例与 lab 对得上**：
+
+  ```bash
+  sdk.py test plan -T example -p sf32lb52-wlan-core_n16r16 --check-fixtures
+  ```
+
+  `harness_config.fixture` 是列表时表示"全部都要"，必须有一个 testbed 同时提供全部；
+  `skip` / `build_only` 的用例不参与预检。agent 不可达或响应不完整是错误，不会被当成"没有 fixture"。
+- 用例写了目录里没有的类型只会告警（实验室可以自定义类型）；`SIFLI_TEST_STRICT_FIXTURES=1`
+  时升级为错误。已知类型的未知能力 token 同样只告警不阻断。
+
 ### 10.2 资产链（P2，设计态，未实现）
 
 > 大向量（golden / 采样 / 波形）的设计是：**仓库只放清单，字节放外部内容存储**，

@@ -184,6 +184,11 @@ wifi_ap:
 - **参数化 fixture 的 spec 是身份，不只是能力**：契约里含 `source: params` 选项的类型，binding 的 connection spec 必须与用例请求的 spec **精确相等**，不做能力子集匹配。否则"请求 `wifi_ap:5g`、落到 `wifi_ap:5g,lab_a`"时参数会按错误的键查表。非参数化类型不受影响，仍按能力子集匹配。
 - 这条语义变更需要 bump `PROTOCOL`（`tools/sdk_test/version.py`，本次实现为 3）：新旧 SDK/agent 混跑会退回子集匹配，得到"错结果而不是报错"，正是该常量要防的情况。同理，把某个**已有类型**从目录条目改成参数化（新增 `source: params` 选项）也改变匹配语义，必须 bump。
 - `required_if` 只支持 `<选项> ==|!= <不加引号的字符串字面量>` 一种形式（如 `security != open`）；左侧必须是同一 fixture 的已解析选项，其它语法或未知选项在契约加载时报错。不引入表达式求值器。
+- `required_if` 引用的选项必须自身 `required: true` 或有 `default`，否则条件在它缺失时无法求值——契约加载直接拒绝。运行期若依赖仍未解析，报"依赖缺失"，而不是把依赖它的选项判为必填。
+- key 模板只允许 `{spec}`；去掉合法占位符后仍含 `{` 或 `}` → 契约加载错误。
+- `enum` 的每一项必须是字符串且不重复；有 `enum` 时 `default` 必须是其中一个字符串。运行期有 `enum` 时，非字符串值直接判为不在枚举，不做 `str()` 归一化。
+- 契约里的类型名和选项名必须是字符串键；YAML 重复的**字面**键（类型或选项）在加载时报错，不静默取最后一个。YAML 合并键（`<<`）允许，扫描时跳过它。
+- 同一类型内两个选项不得使用相同的 `key` 模板——否则参数合并后会以错误的名字报缺失。
 - **P1 只实现 `source: params`**：契约里出现 `source: binding` 时在加载阶段直接报"未实现"，等 P3 再开（P1 没有把 binding 选项送到 runner 的通道）。
 - 无契约的类型：options 原样保留，不校验（兼容现有实验台）。
 - **目录条目可以没有 `options`**：`capabilities` 与 `description` 只做词表与文档，不改变匹配语义。只有声明 `source: params` 选项的类型才是参数化类型；给 `bt_peer` 加目录不会让 `bt_peer:ble` 失去落到 `bt_peer:ble,classic` 的能力。
@@ -255,6 +260,11 @@ testcase 的 `params` 声明也可以标 `secret: true`（`{required: true, secr
 
 `KEY` 是扁平化后的键名，例如 `fixtures.wifi_ap:5g.psk` → `SIFLI_TEST_PARAM_FIXTURES_WIFI_AP_5G_PSK`。扁平化会把 `:` 也变成 `_`，因此 `wifi_ap:5g` 与 `wifi_ap_5g` 会撞名；发生碰撞时直接报错，不做猜测。
 
+逐键覆盖变量（`SIFLI_TEST_PARAM_*`）按**是否存在**判断：显式设为空字符串是"提供空值"，会覆盖文件里的值，不是"未设置"。
+`SIFLI_TEST_PARAMS_FILE` 是路径而不是值，空串仍视为未设置并继续按发现顺序查找——两者语义不同，是有意的。
+
+params 文件也使用同一套重复键检查：同一映射内重复的键在加载时报错，不静默保留最后一个。
+
 建议的设置方式（写进用户自己的 shell profile，**不要**写进仓库里的 `export.ps1`）：
 
 ```powershell
@@ -321,6 +331,7 @@ def test_connect(dut):
 | binding 出现契约声明为 `source: params` 的键（如 `ssid`/`psk`） | `binding check` 失败；运行期只让该 testbed 报错，其它 testbed 照常可用 |
 | binding 出现契约未提及的 driver 私有键（如仪表的 `console`） | 允许，不算未声明 |
 | agent 加载 binding 时发现 params 来源键 | 该 testbed 从可用列表剔除并打印原因，其它 testbed 照常；原因可在 agent 启动日志、`--list`、`--check` 看到（`GET /testbeds` 暂不暴露，未来可加 additive 字段） |
+| 被剔除的 testbed 同时接线矛盾 | 不影响 agent 启动：先按契约剔除，再只对保留下来的 testbed 做接线矛盾检查 |
 | params 缺所请求 spec 的 `fixtures` 段 | plan 失败，指出 spec 与契约要求的键 |
 | 契约的 `key` 模板出现未知占位符 | 契约加载失败（契约自身错误） |
 | 用例访问契约未声明的选项 | `KeyError`，测试失败（不放宽为 `None`） |
@@ -468,7 +479,7 @@ tests:
 
 schema 新增（`tools/sdk_test/schema/testcase.schema.json`，`tests` 条目）：
 
-- `params`: object，值为标量（默认值）或 `{required: true, secret: true}`（两键均可选）—— P1 加入；
+- `params`: object，值为标量（默认值）或 `{required: true, secret: true}`（至少一个为真；`{}` 与全为 false 都被拒绝）—— P1 加入；
 - `assets`: string 列表 —— P2 加入（与资产解析一起落地，避免出现能解析但不生效的字段）。
 
 ### 9.2 `fixture_types.yaml`
@@ -674,6 +685,19 @@ P1 完成后框架路径可用；真正跑 wifi 还需要 §10.5 的前置条件
 | `GET /testbeds` 响应缺 `testbeds` 键 | 明确报错（响应不完整），不当作空实验室 |
 | 实例请求多个 fixture，两个 testbed 各提供一个 | 预检失败：必须单个 testbed 同时满足全部 |
 | `skip` / `build_only` 实例缺 fixture | 不影响预检（不会申请硬件） |
+| `required_if` 的依赖未解析 | 报依赖缺失，不把依赖它的选项误报为必填 |
+| 契约的 `required_if` 依赖可选且无 default | 契约加载失败（条件无法求值） |
+| key 模板含多余大括号 | 契约加载失败 |
+| enum 含非字符串或重复项 | 契约加载失败 |
+| 契约选项名/类型名不是字符串 | 契约加载失败 |
+| YAML 中重复的类型名或选项名 | 契约加载失败（不静默取最后一个） |
+| 环境变量显式设为空串 | 逐键覆盖按"已提供"处理，覆盖文件值，来源为 environment |
+| `SIFLI_TEST_PARAMS_FILE` 设为空串 | 视为未设置，按发现顺序继续查找 |
+| `params: {x: {}}` 或全为 false | schema/发现阶段拒绝（至少一个为 true） |
+| 同一类型内两个选项用同一 `key` 模板 | 契约加载失败 |
+| params 文件同一映射内重复键 | 加载失败并给出行号 |
+| 契约使用 YAML 合并键 `<<` | 正常加载（不误报重复） |
+| enum 存在时运行值是数字 | 判为不在枚举，不做字符串归一化 |
 
 ## 14. 风险与未决
 

@@ -1532,6 +1532,37 @@ P1 is therefore intended for a local or trusted lab network only. Removing 1/2 n
 command on the agent side); removing the DUT's own logging in 3 needs the firmware to disable that log,
 or the agent to redact at the source.
 
+**Discovering fixture vocabulary and pre-checking a lab**:
+
+- **The type catalogue** lives in the repository (`tools/sdk_test/fixture_types.yaml`) and answers
+  "which names and capability tokens may I write":
+
+  ```bash
+  sdk.py test fixtures types
+  ```
+
+  Catalogue entries carry descriptions, capability vocabularies and option contracts only; they do
+  **not** say how many devices a lab has -- the inventory belongs to the binding.
+- **What this lab actually offers** (a parameterized fixture's spec must match exactly, so this is the
+  authoritative answer):
+
+  ```bash
+  sdk.py test fixtures list --agent-url http://127.0.0.1:8760
+  sdk.py test fixtures list --file E:/code2/lab/sifli-lab.yaml
+  ```
+- **Check the case against the lab before building**:
+
+  ```bash
+  sdk.py test plan -T example -p sf32lb52-wlan-core_n16r16 --check-fixtures
+  ```
+
+  A `harness_config.fixture` list means "all of these": one testbed must offer all of them.
+  `skip` / `build_only` cases are not pre-checked. An unreachable agent or an incomplete response is
+  an error, never "the lab has no such fixture".
+- A case naming a type that is not in the catalogue gets a warning (labs may define their own types);
+  `SIFLI_TEST_STRICT_FIXTURES=1` upgrades it. Unknown capability tokens of a known type also warn
+  without blocking.
+
 ### 10.2 The asset chain (P2, design only, not implemented)
 
 > Large vectors (golden files, captures, waveforms) are designed as: **a manifest in the repository, the
