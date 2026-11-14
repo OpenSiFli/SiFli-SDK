@@ -1,0 +1,63 @@
+# The USB host path for the cdc_acm_host example, observed on the DUT console
+# only. This round has no external USB device on the bench, so the case proves
+# the no-device branch and that the host stack itself came up; it does not
+# claim enumeration or a data path against a real CDC peer.
+#
+# Preconditions:
+#   * the DUT's USB host port must be empty. This round has no external USB
+#     device; if the bench keeps a CDC device attached, `ttyACM0 not found!`
+#     will not be printed and `test_reports_no_cdc_device` fails by design. Do
+#     not relax that assertion -- a device found here needs the README's
+#     receive-path assertions instead.
+#
+# Negative verification -- EXECUTED on the board, 2026-11-15
+# (sf32lb52-lcd_a128r16_01). The official
+# `sdk.py test run` (test-out/2026-11-15T00-05-42) passed 1/1 in 72.6 s. The
+# four sabotages then ran against the same running firmware without a reflash:
+# the agent was allocated with `fixtures: []`, its DUT console was reopened and
+# the board was rebooted through the console (same image) so the boot transcript
+# was available, and one test was selected per injection. Each change was
+# restored and `git hash-object` returned
+# 7bb6e65a467a19531373e4d34d5f7c093f862a4d every time.
+#   * `NO_DEVICE` `ttyACM0 not found!` -> `ttyACM0 found!`:
+#     `test_reports_no_cdc_device` fails `expected /ttyACM0 found!/ within 15s`
+#     (15.21 s);
+#   * `CHERRYUSB_VERSION` `v1.6.0` -> `v9.9.9`:
+#     `test_host_stack_answers_lsusb` fails `lsusb -V said 'CherryUSB version
+#     v1.6.0', expected 'CherryUSB version v9.9.9'` (0.45 s);
+#   * `ROOT_HUB` driver `hcd` -> `none`: the same test fails
+#     `expected /Class=root_hub, Driver=none/ within 10s`; the device said
+#     `... Class=root_hub, Driver=hcd, 0M` (10.50 s). A literal "remove
+#     `, Driver=hcd`" would still be a substring match, so the wrong driver is
+#     the sabotage that actually exercises the field;
+#   * `HOST_HUB_THREAD` `usbh_hub\d*` -> `no_such_thread`:
+#     `test_usb_host_thread_is_alive` fails `expected /no_such_thread/ within
+#     10s`; `ps` listed `usbh_hub` (10.25 s).
+# With every change restored the final direct run was `4 passed in 1.01s`.
+#
+# Bench note from the same session: before this host image was flashed, PnP
+# showed `USB\VID_38F4&PID_FFFF\2022123456` and COM32. After the host image
+# booted, PnP and `Win32_SerialPort` still listed both (LastArrivalDate stayed
+# 2026-11-14 22:01:42, no removal), but opening COM32 failed with
+# `PermissionError(13)`/WinError 31. The board switching from USB device to
+# host firmware therefore produces no host-visible device removal; the node is
+# stale. Device-side cases cannot be re-run automatically after a host flash --
+# they need a replug or an elevated `pnputil /restart-device`.
+#
+# Not verified by this case (recorded rather than skipped):
+#   * the README's "found and receive" path: `ttyACM0 found!`, then
+#     `rx callback, size:%d` / `receive data: ...` (`src/main.c:39-46`). It
+#     needs a real USB CDC ACM device wired to the DUT's host port, and the
+#     bench has none, so a green run says nothing about that path.
+#   * `src/main.c:75` probes `ttyACM0` once, after a 2000 ms delay, and never
+#     retries. A device plugged in after boot is therefore not seen; that
+#     behaviour is not exercised.
+tests:
+  - id: cdc_acm_host.host_stack
+    description: The CherryUSB host example boots, reports no CDC device and answers lsusb.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, host]
+    timeout: 180
+    project_dir: project
+    harness_config:
+      pytest_root: pytest
