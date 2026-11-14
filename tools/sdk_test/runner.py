@@ -43,6 +43,8 @@ from .errors import BuildError
 from .errors import DiscoveryError
 from .errors import SdkTestError
 from .fixture_types import default_fixture_types
+from .fixtures import strict_fixture_types
+from .fixtures import unregistered_fixture_types
 from .harness import RunContext
 from .harness import run as run_harness
 from .harness import unity
@@ -431,6 +433,34 @@ class TestRunner:
             f"drifted apart."
         )
 
+    def check_fixture_terms(self, instance: TestInstance) -> None:
+        """Report a fixture type the catalogue does not register.
+
+        The catalogue answers "what may a test author write", so a type missing
+        from it is either a typo or a lab-defined type -- and the framework
+        cannot tell those apart. It is therefore a warning, once per instance,
+        unless ``SIFLI_TEST_STRICT_FIXTURES=1`` makes it an error for a tree
+        whose authors want typos caught hard.
+
+        A type with no catalogue entry still runs: a lab is allowed to define
+        its own, and refusing one here would take that back.
+        """
+        unknown = unregistered_fixture_types(instance.fixtures)
+        if not unknown:
+            return
+        listed = ", ".join(f'"{name}"' for name in unknown)
+        message = (
+            f"fixture type(s) {listed} not registered in "
+            "tools/sdk_test/fixture_types.yaml; a lab-defined type is allowed, "
+            "but check the spelling"
+        )
+        if strict_fixture_types():
+            raise DiscoveryError(
+                f'"{instance.id}": {message} '
+                f"(SIFLI_TEST_STRICT_FIXTURES=1)"
+            )
+        self._echo(f"[warn]  {instance.id}: {message}")
+
     def plan_instance(self, instance: TestInstance
                       ) -> Tuple[List[PlannedRun], List[FilteredRun]]:
         """Resolve one instance: the runs it has, and the pairs it does not.
@@ -445,6 +475,7 @@ class TestRunner:
         hardware is requested. Naming no platform is therefore unplannable, and
         is refused by name rather than guessed at.
         """
+        self.check_fixture_terms(instance)
         wanted = self.planned_platforms(instance)
         if not wanted:
             raise BackendError(

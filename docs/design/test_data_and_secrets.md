@@ -124,19 +124,34 @@
 | 数据 | 存放 | 谁写 | 是否秘密 | 例子 |
 |---|---|---|---|---|
 | 能力声明 | binding（仓库外） | 实验室 | 否 | `fixture: wifi_ap:5g` |
-| 选项名与来源 | `tools/sdk_test/fixture_types.yaml` | 框架维护者（随代码评审） | 否 | `wifi_ap.ssid` 来自 params |
+| 类型目录与选项契约 | `tools/sdk_test/fixture_types.yaml` | 框架维护者（随代码评审） | 否 | `bt_peer` 的能力有 `ble`/`classic`；`wifi_ap.ssid` 来自 params |
 | AP 参数与秘密值 | `params.yaml`（仓库外） | 实验室 / 使用者 | `psk` 是 | `fixtures["wifi_ap:5g"]` 的 `ssid`/`security`/`psk` |
 
 **同一个键只允许有一个来源**。`wifi_ap` 的所有选项都声明为 `source: params`，所以 binding 的 connection 只需要 `fixture` 一个键；出现 `ssid`/`psk` 这类未声明的键必须报错——防止有人顺手把密码写进 binding 再提交。
 
-### 7.2 fixture 类型契约
+### 7.2 fixture 类型目录与选项契约
 
-契约文件是"测试按名字引用的选项"的单一来源。没有条目的类型保持现状（options 自由，不校验），这是对 `binding.py:97-100` 那条"不要第二套 schema"的保留：只有跨仓库引用的名字才需要契约。
+契约文件承担两件事：
+
+- **类型目录**：这个 fixture 类型存在吗、它的能力 token 有哪些。回答"写用例的人能写什么"。
+- **选项契约**：选项名、来源、必填/条件必填/秘密。回答"值从哪来"。
+
+两层要分清：**类型目录在仓库**（框架知识，随代码评审），**实例库存在 binding**（这个 lab 实际有几台、接哪个口）。没有条目的类型保持现状（options 自由，不校验），这是对 `binding.py:97-100` 那条"不要第二套 schema"的保留。
 
 ```yaml
 # tools/sdk_test/fixture_types.yaml
+bt_peer:
+  description: A second board running the peer firmware.
+  capabilities: [ble, classic]      # closed vocabulary for this type
+  # no options: its console is driver-private
+
+spi_nor_flash:
+  description: A NOR flash chip wired to an SPI bus.
+  # no capabilities: the token after ":" names the bus (spi1), not a capability
+
 wifi_ap:
   description: An access point the DUT can associate with.
+  capabilities: [2g, 5g]
   options:
     ssid:
       source: params
@@ -167,10 +182,14 @@ wifi_ap:
 - 严格校验的落点是 `binding check`；运行期只让出错的 testbed 不可用，不影响其它 testbed（与 `testbed.py:806-810` 刻意宽松的 describe 一致）。
 - **可互换性**：框架把提供同一 fixture spec 的 testbed 视为等价（`tools/sdk_test/fixtures.py:1-14`）。如果两个实验室的 AP 参数不同，它们必须声明**不同的 spec**（如 `wifi_ap:5g,lab_a`），而不是引入第二个配置来源。
 - **参数化 fixture 的 spec 是身份，不只是能力**：契约里含 `source: params` 选项的类型，binding 的 connection spec 必须与用例请求的 spec **精确相等**，不做能力子集匹配。否则"请求 `wifi_ap:5g`、落到 `wifi_ap:5g,lab_a`"时参数会按错误的键查表。非参数化类型不受影响，仍按能力子集匹配。
-- 这条语义变更需要 bump `PROTOCOL`（`tools/sdk_test/version.py`，本次实现为 3）：新旧 SDK/agent 混跑会退回子集匹配，得到"错结果而不是报错"，正是该常量要防的情况。
+- 这条语义变更需要 bump `PROTOCOL`（`tools/sdk_test/version.py`，本次实现为 3）：新旧 SDK/agent 混跑会退回子集匹配，得到"错结果而不是报错"，正是该常量要防的情况。同理，把某个**已有类型**从目录条目改成参数化（新增 `source: params` 选项）也改变匹配语义，必须 bump。
 - `required_if` 只支持 `<选项> ==|!= <不加引号的字符串字面量>` 一种形式（如 `security != open`）；左侧必须是同一 fixture 的已解析选项，其它语法或未知选项在契约加载时报错。不引入表达式求值器。
 - **P1 只实现 `source: params`**：契约里出现 `source: binding` 时在加载阶段直接报"未实现"，等 P3 再开（P1 没有把 binding 选项送到 runner 的通道）。
 - 无契约的类型：options 原样保留，不校验（兼容现有实验台）。
+- **目录条目可以没有 `options`**：`capabilities` 与 `description` 只做词表与文档，不改变匹配语义。只有声明 `source: params` 选项的类型才是参数化类型；给 `bt_peer` 加目录不会让 `bt_peer:ble` 失去落到 `bt_peer:ble,classic` 的能力。
+- `capabilities` 是该类型的封闭词表。binding 里出现已知类型的未知 token → **告警不阻断**（实验室可扩展 `wifi_ap:6e` 这类能力）；类型没有 `capabilities` 时不做这项检查（`spi1` 这类总线名不是能力）。
+- testcase 请求了目录里没有的类型 → **告警不阻断**，提示"该类型未在 fixture_types.yaml 中登记，实验室自定义类型允许"。`SIFLI_TEST_STRICT_FIXTURES=1` 时可升级为错误（可选）。
+- **校验只针对参数化类型**：`binding check` 不检查没有 params 来源选项的类型，避免把 `bt_peer` 的 `console` 误判为未知键。
 - 契约文件本身随代码评审；新增类型或改名是**破坏性变更**，按仓库现行原则不做兼容层。
 
 命名规则：小写 `snake_case`；避开 binding 已占用的 `fixture` / `pinmap` / `mux`；不用点号。
@@ -321,6 +340,20 @@ sdk.py test plan ... [--agent-url URL] [--params-file PATH] [--param KEY=VALUE]
 输出"键名 → 来源文件/变量"；不打印值。`--json` 供 CI 预检。
 
 由于键是从 testcase 的 spec 与契约静态推导的，`params check` **不连接 agent**，在编译之前就能判断配置是否齐全。`--agent-url` 只用于回环判定：带 secret 且指向远端 agent 时，pre-flight 与 `test run` 一样被拒绝。`test plan` 使用同一组选项与同一判定，避免"plan 通过、run 被拒"。
+
+fixture 词汇的发现与预检：
+
+```
+sdk.py test fixtures types                              # offline catalogue
+sdk.py test fixtures list [--agent-url URL | --file BINDING] [--platform P]
+sdk.py test plan ... --check-fixtures                   # compares before building
+```
+
+- `fixtures types`：离线打印目录（名称、描述、capabilities、选项、是否参数化）。写用例的人从这里知道能写什么。
+- `fixtures list`：打印某个来源的实际报价——在线读 `GET /testbeds`，离线读 binding 文件。参数化类型的 spec 必须逐字相等，所以在线列表才是"我该写哪个字符串"的权威。
+- `plan --check-fixtures`：用与分配相同的 `FixtureRef.accepts` 语义，对每个实例比对请求与目标平台上的报价；不满足时在**构建之前**失败，并列出两侧。agent 不可达或响应缺 `testbeds` 键都是错误，不会被当成"没有 fixture"。
+- `harness_config.fixture` 是列表时表示"全部都要"：必须有一个 testbed **同时**提供全部，预检与分配用同一条规则。两个 testbed 各提供一个不算满足，否则预检会通过而分配失败。
+- `skip: true` / `build_only: true` 的实例不参与预检——它们不会申请硬件，与 params 解析对 skip 的豁免理由相同。
 
 ## 8. 向量与资产链
 
@@ -480,6 +513,9 @@ def test_compare(asset):
 ```
 sdk.py test params check [--case ID] [--unused] [--json]
 sdk.py test assets list|fetch|verify|add
+sdk.py test fixtures types
+sdk.py test fixtures list [--agent-url URL | --file BINDING] [--platform P]
+sdk.py test plan ... --check-fixtures
 sdk.py test list --json          # 每个实例含 "params": [键名...]（不读值）；assets 在 P2 加入
 ```
 
@@ -593,14 +629,14 @@ script:
 
 ### 11.3 两项固定检查
 
-1. **提前失败**：job 开头用 `test list --json` 核对所需键名/资产名单，缺什么立刻报。
+1. **提前失败**：job 开头用 `test list --json` 核对所需键名/资产名单，并用 `test plan --check-fixtures --agent-url ...` 确认该 lab 真的提供这些 fixture；缺什么在构建前报。
 2. **证明没泄露**：跑完检查 `test-out/` 中不含真实秘密值（可由 CI 脚本 grep 一次）。
 
 ## 12. 实施阶段
 
 | 阶段 | 内容 | 主要落点 |
 |---|---|---|
-| P1 | schema、fixture 契约、params 解析、下发、脱敏、`fixture_options`/`params` 接口、`params check`、`binding check`、报告 provenance、agent 侧 binding 校验 | `schema/testcase.schema.json`、`fixture_types.yaml`（新）、`params.py`（新）、`discovery.py`、`model.py`、`runner.py`、`report.py`、`binding.py`（校验）、`lab_agent/config.py`、`cli.py`、`harness/pytest.py`、`pytest_plugin.py`、`test_ext.py`、`version.py`（PROTOCOL，若 bump） |
+| P1 | schema、fixture 目录与契约、params 解析、下发、脱敏、`fixture_options`/`params` 接口、`params check`、`binding check`、报告 provenance、agent 侧 binding 校验、`fixtures types/list`、`plan --check-fixtures` | `schema/testcase.schema.json`、`fixture_types.yaml`（新）、`params.py`（新）、`discovery.py`、`model.py`、`runner.py`、`report.py`、`binding.py`（校验）、`lab_agent/config.py`、`cli.py`、`harness/pytest.py`、`pytest_plugin.py`、`test_ext.py`、`version.py`（PROTOCOL，若 bump） |
 | P2 | 资产清单、store、取用/校验、`asset` fixture、`assets` CLI、报告字段 | `assets_store.py`（新）、`assets.yaml`（新）、`pytest_plugin.py`、`runner.py`、`report.py` |
 | P3（按需） | agent 侧执行模板命令（秘密不出实验室）、agent 认证 | `fixture_drivers/`、`testbed.py`、`server.py` |
 
@@ -629,6 +665,15 @@ P1 完成后框架路径可用；真正跑 wifi 还需要 §10.5 的前置条件
 | 带 secret 且 agent 非回环、未放行 | plan 失败，提示设置 `SIFLI_TEST_ALLOW_REMOTE_SECRETS=1` |
 | 带 secret 且 agent 非回环、已放行 | 运行，风险由使用方承担 |
 | 无契约条目的 fixture 类型 | options 仍可自由使用（不回归） |
+| testcase 请求未登记的类型 | 告警，不阻断（实验室自定义类型允许） |
+| 已知类型的未知 capability（`wifi_ap:6e`） | 告警，不阻断 |
+| `bt_peer` 连接的 `console` 键 | 不告警（非参数化类型不校验 options） |
+| `plan --check-fixtures` 缺 fixture | 构建前失败，列出请求与各 testbed 报价 |
+| `wifi_ap:5g` vs binding `wifi_ap:5g,lab_a` | 预检失败（参数化类型精确相等） |
+| `plan --check-fixtures` 时 agent 不可达 | 明确报错，不当作"没有 fixture" |
+| `GET /testbeds` 响应缺 `testbeds` 键 | 明确报错（响应不完整），不当作空实验室 |
+| 实例请求多个 fixture，两个 testbed 各提供一个 | 预检失败：必须单个 testbed 同时满足全部 |
+| `skip` / `build_only` 实例缺 fixture | 不影响预检（不会申请硬件） |
 
 ## 14. 风险与未决
 

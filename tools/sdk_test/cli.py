@@ -21,15 +21,23 @@ from typing import Optional
 
 from . import params
 from . import report
+from .agent_client import LabAgentClient
 from .backends import backend_names
 from .backends import is_host_platform
 from .backends import select_backend_name
 from .binding import check_fixture_contracts
 from .binding import parse_binding
 from .discovery import discover
+from .errors import MatchError
+from .errors import SdkTestError
+from .fixture_types import FixtureOption
 from .fixture_types import default_fixture_types
+from .fixtures import fixture_gap
+from .fixtures import testbeds_from_descriptions
 from .harness import IMPLEMENTED_HARNESSES
 from .harness import SUPPORTED_HARNESSES
+from .model import TestBed
+from .runner import PlannedRun
 from .runner import RunOptions
 from .runner import TestRunner
 
@@ -38,6 +46,10 @@ Echo = Callable[[str], None]
 EXIT_OK = 0
 EXIT_FAILURES = 1
 EXIT_USAGE = 2
+
+#: Where a Lab Agent listens unless told otherwise. Only the fixture commands
+#: read it here; the runner carries its own copy in :class:`RunOptions`.
+DEFAULT_AGENT_URL = "http://127.0.0.1:8760"
 
 
 def resolve_test_ids(
@@ -125,6 +137,8 @@ def describe_plan(
     agent_url: str = "http://127.0.0.1:8760",
     params_file: Optional[str] = None,
     param_overrides: Optional[Dict[str, str]] = None,
+    check_fixtures: bool = False,
+    client_factory: Optional[Callable[[str], Any]] = None,
 ) -> int:
     """Show what a run would do, without doing it.
 
@@ -133,6 +147,11 @@ def describe_plan(
     moment hardware is requested. Parameters are resolved here too, with the
     same options and the same loopback rule as ``test run``, so a plan cannot
     pass where a run would refuse.
+
+    ``check_fixtures`` adds the one question this side cannot answer alone: does
+    the lab actually offer the fixtures each run asks for? It is off by default
+    because it is the only option here that contacts an agent -- without it a
+    plan stays a pure computation.
     """
     echo = echo or print
     runner = TestRunner(
@@ -148,6 +167,12 @@ def describe_plan(
         )
     )
     planned, turned_away = runner.plan_with_filtered()
+
+    # Before anything is printed as a plan and long before anything is built: a
+    # run no testbed can host is a lab-side problem, and finding it after a
+    # compile would waste the expensive part.
+    if check_fixtures:
+        check_fixture_offers(planned, agent_url, echo, client_factory)
 
     if not planned and not turned_away:
         echo("Nothing to run.")
@@ -235,6 +260,211 @@ def describe_environment(echo: Optional[Echo] = None) -> int:
     echo("  pc_sim   : customer/boards/pc, no Lab Agent  [stub]")
     echo("  qemu     : QEMU, no Lab Agent  [stub]")
     return EXIT_OK
+
+
+# -- fixture vocabulary ------------------------------------------------------
+
+
+def _describe_option(option: FixtureOption) -> str:
+    parts = [f"source={option.source}"]
+    if option.required:
+        parts.append("required")
+    if option.required_if is not None:
+        parts.append(f'required_if="{option.required_if}"')
+    if option.secret:
+        parts.append("secret")
+    if option.enum:
+        parts.append("enum=" + "|".join(option.enum))
+    if option.has_default:
+        parts.append(f"default={option.default}")
+    return "  ".join(parts)
+
+
+def list_fixture_types(echo: Optional[Echo] = None) -> int:
+    """``sdk.py test fixtures types`` -- the catalogue, read offline.
+
+    Names, descriptions, capability vocabularies and option contracts are all
+    in the file that ships with the framework, so this needs no agent, no
+    binding and no params file. It is the answer to "what may I write after
+    ``fixture:``", which is the first question a test author has.
+    """
+    echo = echo or print
+    catalogue = default_fixture_types()
+    echo(f"fixture types from {catalogue.source}:")
+    for name in sorted(catalogue.types):
+        contract = catalogue.types[name]
+        echo(f"{name}")
+        if contract.description:
+            echo(f"  description:   {contract.description}")
+        echo(f"  capabilities:  {', '.join(contract.capabilities) or 'none'}")
+        echo(f"  parameterized: {'yes' if contract.parameterized else 'no'}")
+        if not contract.options:
+            echo("  options:       none")
+            continue
+        echo("  options:")
+        width = max(len(option.name) for option in contract.options)
+        for option in contract.options:
+            echo(f"    {option.name:<{width}}  {_describe_option(option)}")
+    return EXIT_OK
+
+
+def _load_binding_file(path: str) -> List[TestBed]:
+    """Read a binding file from disk. Shared by the commands that take one."""
+    from .errors import BindingError
+
+    try:
+        import yaml
+    except ImportError as exc:  # pragma: no cover - pyyaml is a core requirement
+        raise BindingError("pyyaml is required to read a binding file") from exc
+
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            raw = yaml.safe_load(handle)
+    except OSError as exc:
+        raise BindingError(f"Cannot read binding {path}: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise BindingError(f"{path}: malformed YAML: {exc}") from exc
+
+    return parse_binding(raw, source=path)
+
+
+def list_fixtures(
+    binding_file: Optional[str] = None,
+    agent_url: Optional[str] = None,
+    platform: Optional[str] = None,
+    echo: Optional[Echo] = None,
+    client_factory: Optional[Callable[[str], Any]] = None,
+) -> int:
+    """``sdk.py test fixtures list`` -- what a lab actually offers.
+
+    Two sources, one output: a binding file for a lab that is not running its
+    agent, or ``GET /testbeds`` for the live inventory. Display only -- nothing
+    is allocated and nothing is built.
+
+    The online list is the authority on the string to write: a parameterized
+    type's spec must be spelled exactly as the testbed declares it, so
+    ``wifi_ap:5g`` and ``wifi_ap:5g,lab_a`` are different fixtures.
+
+    :raises SdkTestError: both a file and an agent URL were given.
+    """
+    echo = echo or print
+    if binding_file and agent_url:
+        raise SdkTestError(
+            "--file and --agent-url are mutually exclusive: give the binding "
+            "to read offline, or the agent to ask, not both"
+        )
+
+    if binding_file:
+        source = binding_file
+        testbeds = _load_binding_file(binding_file)
+    else:
+        source = agent_url or DEFAULT_AGENT_URL
+        client = (client_factory or LabAgentClient)(source)
+        # An unreachable agent raises here. It is deliberately not turned into
+        # an empty list: "the lab has nothing" and "I could not ask" are
+        # different answers, and only one of them is about the lab.
+        testbeds = testbeds_from_descriptions(client.testbeds())
+
+    if platform is not None:
+        testbeds = [testbed for testbed in testbeds if testbed.platform == platform]
+
+    if not testbeds:
+        echo(f"No testbed on {platform}." if platform else "No testbeds.")
+        return EXIT_OK
+
+    echo(f"{len(testbeds)} testbed(s) from {source}:")
+    for testbed in testbeds:
+        console = (
+            f"{testbed.console.port}@{testbed.console.baud}"
+            if testbed.console
+            else "none"
+        )
+        busy = "  [busy]" if testbed.runner_option("busy") else ""
+        echo(f"  {testbed.id}  platform={testbed.platform}  console={console}{busy}")
+        offers = [ref.spec for ref in testbed.fixtures]
+        for spec in offers or ["(no fixtures)"]:
+            echo(f"    {spec}")
+    return EXIT_OK
+
+
+def check_fixture_offers(
+    planned: List[PlannedRun],
+    agent_url: str,
+    echo: Echo,
+    client_factory: Optional[Callable[[str], Any]] = None,
+) -> None:
+    """Refuse a plan no testbed on its platform can host, before any build.
+
+    The comparison is :func:`sdk_test.fixtures.fixture_gap`, which uses the
+    allocation's own ``FixtureRef.accepts`` and its one-testbed-per-run rule --
+    so a parameterized type's spec must match exactly here too, and a test
+    naming several fixtures is checked as a set, not one at a time.
+
+    The agent is asked only when some run declares a fixture: a plan for host
+    platforms needs no hardware, and making it depend on a reachable lab would
+    be a new way for it to fail. A run that will not ask for hardware -- one the
+    testcase marked ``skip`` or ``build_only`` -- is not checked either.
+
+    :raises MatchError: at least one run cannot be hosted.
+    :raises LabAgentError: the agent could not be reached or answered badly.
+    """
+    wanted = [
+        run
+        for run in planned
+        if run.instance.fixtures
+        and not run.instance.skip
+        and not run.instance.build_only
+    ]
+    if not wanted:
+        return
+
+    client = (client_factory or LabAgentClient)(agent_url)
+    testbeds = testbeds_from_descriptions(client.testbeds())
+
+    unmet: List[PlannedRun] = []
+    for run in wanted:
+        gap = fixture_gap(run.instance.fixtures, run.platform, testbeds)
+        if gap is None:
+            continue
+        unmet.append(run)
+        if gap.split:
+            # Every fixture exists here, just not together: a wiring problem,
+            # and saying "needs X" would send the reader looking for hardware
+            # the lab already has.
+            specs = ", ".join(ref.spec for ref in run.instance.fixtures)
+            echo(
+                f"case {run.id}: no single testbed on {run.platform} offers "
+                f"all of: {specs}"
+            )
+            continue
+        for ref in gap.unoffered:
+            echo(
+                f"case {run.id}: needs {ref.spec}, no testbed on {run.platform} "
+                "offers it"
+            )
+
+    if not unmet:
+        return
+
+    # Both sides, so the reader can see whether the lab is missing the hardware
+    # or the test is asking for a spec the lab spells differently.
+    seen: List[str] = []
+    for run in unmet:
+        if run.platform in seen:
+            continue
+        seen.append(run.platform)
+        echo(f"platform {run.platform} offers:")
+        on_platform = [tb for tb in testbeds if tb.platform == run.platform]
+        if not on_platform:
+            echo("  (no testbed on this platform)")
+        for testbed in on_platform:
+            offered = ", ".join(ref.spec for ref in testbed.fixtures) or "nothing"
+            busy = " [busy]" if testbed.runner_option("busy") else ""
+            echo(f"  {testbed.id}: {offered}{busy}")
+
+    raise MatchError(
+        f"fixture pre-check: {len(unmet)} run(s) the lab cannot host as wired"
+    )
 
 
 # -- prerequisites, checked without hardware ---------------------------------
@@ -367,20 +597,7 @@ def check_binding(
     from .errors import BindingError
 
     echo = echo or print
-    try:
-        import yaml
-    except ImportError as exc:  # pragma: no cover - pyyaml is a core requirement
-        raise BindingError("pyyaml is required to read a binding file") from exc
-
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            raw = yaml.safe_load(handle)
-    except OSError as exc:
-        raise BindingError(f"Cannot read binding {path}: {exc}") from exc
-    except yaml.YAMLError as exc:
-        raise BindingError(f"{path}: malformed YAML: {exc}") from exc
-
-    testbeds = parse_binding(raw, source=path)
+    testbeds = _load_binding_file(path)
     errors, warnings = check_fixture_contracts(testbeds)
     ok = not errors
 
@@ -415,9 +632,12 @@ def check_binding(
 
 __all__ = [
     "check_binding",
+    "check_fixture_offers",
     "check_params",
     "describe_environment",
     "describe_plan",
+    "list_fixture_types",
+    "list_fixtures",
     "list_tests",
     "run_tests",
     "select_backend_name",

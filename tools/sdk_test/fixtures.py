@@ -22,18 +22,33 @@ than left to surface as a test that mysteriously will not schedule.
 
 from __future__ import annotations
 
+import os
+from dataclasses import dataclass
 from typing import Any
 from typing import Iterable
 from typing import List
+from typing import Mapping
 from typing import Optional
+from typing import Tuple
 
 from .errors import BindingError
 from .errors import DiscoveryError
+from .errors import LabAgentError
+from .fixture_types import FixtureTypes
+from .fixture_types import default_fixture_types
+from .model import Connection
+from .model import ConsoleConfig
 from .model import FixtureRef
 from .model import TestInstance
 from .model import TestBed
 from .platforms import type_of
 from .platforms import unsatisfied
+
+#: Being explicit about the fixture vocabulary is the default; setting this to
+#: ``1`` makes a type missing from the catalogue an error instead of a warning.
+#: The warning exists because a lab may define its own types, so this is only
+#: for a tree whose authors want typos caught hard.
+ENV_STRICT_FIXTURES = "SIFLI_TEST_STRICT_FIXTURES"
 
 
 def parse_fixture_ref(value: Any) -> FixtureRef:
@@ -101,6 +116,164 @@ def parse_fixture_refs(value: Any) -> List[FixtureRef]:
     if isinstance(value, (list, tuple)):
         return [parse_fixture_ref(item) for item in value]
     return [parse_fixture_ref(value)]
+
+
+def strict_fixture_types(environ: Optional[Mapping[str, str]] = None) -> bool:
+    """Whether an unregistered fixture type is an error rather than a warning."""
+    current = os.environ if environ is None else environ
+    return current.get(ENV_STRICT_FIXTURES) == "1"
+
+
+def unregistered_fixture_types(
+    fixtures: Iterable[FixtureRef],
+    contracts: Optional[FixtureTypes] = None,
+) -> List[str]:
+    """The requested fixture type names that have no catalogue entry.
+
+    A lab may define a type of its own, so this is the input to a warning by
+    default; callers that want it stricter ask :func:`strict_fixture_types`.
+    Names are returned once each, in request order.
+    """
+    catalogue = contracts if contracts is not None else default_fixture_types()
+    missing: List[str] = []
+    for ref in fixtures:
+        if ref.name not in catalogue and ref.name not in missing:
+            missing.append(ref.name)
+    return missing
+
+
+def testbeds_from_descriptions(entries: Any) -> List[TestBed]:
+    """Turn a Lab Agent's ``GET /testbeds`` payload into testbeds.
+
+    The agent reports each fixture as the spec its connection declared, so
+    reparsing those specs is what lets the SDK side answer "does this lab offer
+    what this test asks for?" with :meth:`TestBed.offers` -- the same rule the
+    agent allocates with -- instead of a second matching rule that could
+    disagree with it.
+
+    :raises LabAgentError: the payload is not a list of testbed descriptions.
+    """
+    if not isinstance(entries, (list, tuple)):
+        raise LabAgentError(
+            "The Lab Agent returned no testbed list; expected a list under "
+            f"\"testbeds\", got {type(entries).__name__}"
+        )
+
+    testbeds: List[TestBed] = []
+    for index, entry in enumerate(entries):
+        where = f"testbeds[{index}]"
+        if not isinstance(entry, dict):
+            raise LabAgentError(
+                f"The Lab Agent returned a malformed {where}: expected an "
+                f"object, got {type(entry).__name__}"
+            )
+        testbed_id = entry.get("id")
+        platform = entry.get("platform")
+        if not testbed_id or not platform:
+            raise LabAgentError(
+                f"The Lab Agent returned a {where} without "
+                + ('an "id"' if not testbed_id else 'a "platform"')
+            )
+
+        specs = entry.get("fixtures") or []
+        if not isinstance(specs, (list, tuple)):
+            raise LabAgentError(
+                f"The Lab Agent returned a malformed {where}.fixtures: "
+                "expected a list of fixture specs"
+            )
+        try:
+            connections = [
+                Connection(fixture=parse_fixture_ref(spec)) for spec in specs
+            ]
+        except BindingError as exc:
+            raise LabAgentError(
+                f"The Lab Agent returned a malformed {where}.fixtures: {exc}"
+            ) from exc
+
+        console_raw = entry.get("console")
+        console = None
+        if isinstance(console_raw, dict) and console_raw.get("port"):
+            if "baud" in console_raw:
+                try:
+                    baud = int(console_raw["baud"])
+                except (TypeError, ValueError) as exc:
+                    raise LabAgentError(
+                        f"The Lab Agent returned a non-numeric "
+                        f"{where}.console.baud"
+                    ) from exc
+                console = ConsoleConfig(port=str(console_raw["port"]), baud=baud)
+            else:
+                # The model's own default, rather than a second copy of it here.
+                console = ConsoleConfig(port=str(console_raw["port"]))
+
+        testbeds.append(
+            TestBed(
+                id=str(testbed_id),
+                platform=str(platform),
+                runner=entry.get("runner"),
+                console=console,
+                connections=connections,
+                # `busy`, `holder` and the rest are the agent's own; keeping
+                # them verbatim is the same rule as for a binding entry.
+                raw=dict(entry),
+            )
+        )
+    return testbeds
+
+
+@dataclass(frozen=True)
+class FixtureGap:
+    """Why one test's fixture requests cannot be hosted on one platform.
+
+    Two shapes, because they need different words and are different mistakes:
+
+    * :attr:`unoffered` names fixtures *nobody* on the platform has -- the lab
+      is missing hardware, or the spec is spelled differently;
+    * :attr:`split` means every fixture exists somewhere on the platform, but no
+      single testbed has them all. Allocation picks one testbed per run, so this
+      is just as fatal; the fix is a wiring change, not a new purchase.
+    """
+
+    unoffered: Tuple[FixtureRef, ...] = ()
+    split: bool = False
+
+    def __bool__(self) -> bool:
+        return bool(self.unoffered) or self.split
+
+
+def fixture_gap(
+    required: Iterable[FixtureRef],
+    platform: str,
+    testbeds: Iterable[TestBed],
+) -> Optional[FixtureGap]:
+    """Why ``required`` cannot all be hosted on ``platform``, or ``None``.
+
+    A test's fixture list means "all of these", and allocation asks *one*
+    testbed to hold them all (:func:`sdk_test.fixtures.select_testbeds`), so the
+    question is asked of a single testbed here too. Checking each fixture
+    separately would pass a plan that allocation then refuses -- after a build.
+
+    Matching is :meth:`TestBed.offers`, which is what allocation uses, so a
+    parameterized type must match its spec exactly here too.
+
+    A busy testbed still counts: it is the lab's, and it becomes free. Whether
+    hardware is available *now* is the allocation's question, not this one's.
+    """
+    wanted = list(required)
+    candidates = [testbed for testbed in testbeds if testbed.platform == platform]
+    if not wanted:
+        return None
+    if any(all(testbed.offers(ref) for ref in wanted) for testbed in candidates):
+        return None
+
+    unoffered = tuple(
+        ref
+        for ref in wanted
+        if not any(testbed.offers(ref) for testbed in candidates)
+    )
+    if unoffered:
+        return FixtureGap(unoffered=unoffered)
+    return FixtureGap(split=True)
 
 
 def select_testbeds(

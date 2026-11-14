@@ -144,9 +144,11 @@ class TestContractValidation(SdkTestCase):
             parse(document)
         self.assertIn("not an option", str(caught.exception))
 
-    def test_a_type_needs_an_options_mapping(self):
-        with self.assertRaises(FixtureTypeError):
-            parse({"wifi_ap": {"description": "no options"}})
+    def test_a_type_may_have_no_options(self):
+        # A catalogue entry that only says "this type exists" is complete.
+        contracts = parse({"wifi_ap": {"description": "no options"}})
+        self.assertEqual(contracts.get("wifi_ap").options, ())
+        self.assertFalse(contracts.get("wifi_ap").parameterized)
 
     def test_required_if_naming_an_optional_option_without_a_default_is_rejected(self):
         # `security` may be absent, so the condition could never be evaluated
@@ -441,9 +443,32 @@ class TestBindingContractCheck(SdkTestCase):
         for allowed in ("ssid", "security", "psk"):
             self.assertIn(allowed, warnings[0])
 
-    def test_a_type_without_a_contract_is_left_alone(self):
-        # An instrument keeps its own console key; that is the driver's business
-        # and must not become a second schema.
+    def test_a_type_without_a_catalogue_entry_is_left_alone(self):
+        # A lab-defined instrument keeps its own keys; that is the driver's
+        # business and must not become a second schema.
+        testbeds = binding.parse_binding(
+            {
+                "testbed": [
+                    {
+                        "id": "tb",
+                        "platform": "board_a",
+                        "connections": [
+                            {
+                                "fixture": "lab_scope:scope1",
+                                "console": {"port": "COM9"},
+                                "gain": 3,
+                            }
+                        ],
+                    }
+                ]
+            }
+        )
+        errors, warnings = binding.check_fixture_contracts(testbeds)
+        self.assertEqual((errors, warnings), ([], []))
+
+    def test_a_catalogue_entry_without_options_does_not_check_connection_keys(self):
+        # `bt_peer` is registered for its capabilities only. Its console is the
+        # instrument driver's business, not an unknown key.
         testbeds = binding.parse_binding(
             {
                 "testbed": [

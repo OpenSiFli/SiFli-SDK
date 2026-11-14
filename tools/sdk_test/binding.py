@@ -218,11 +218,16 @@ def fixture_contract_issues(
     testbeds: Iterable[TestBed],
     contracts: Optional[FixtureTypes] = None,
 ) -> List[ContractIssue]:
-    """Check connection options against the fixture type contracts.
+    """Check a binding against the fixture type catalogue and option contracts.
 
-    A contract states, for a type, which options exist and which of them come
-    from the runner-side params file. That makes two rules checkable here:
+    The catalogue states which capability tokens a type accepts; the option
+    contract states which options exist and which of them come from the
+    runner-side params file. Three rules follow, and their severities differ on
+    purpose:
 
+    * a capability token the catalogue does not list is a warning. A lab may
+      extend a vocabulary (``wifi_ap:6e``) and the framework cannot tell that
+      from a typo, so it must not refuse hardware over it.
     * an option the contract sources from params must not appear in a binding.
       The binding belongs to the lab and is committed; a password written there
       is exactly the thing this mechanism exists to prevent. This is an error.
@@ -230,9 +235,11 @@ def fixture_contract_issues(
       private keys (an instrument's own ``console:``) are legitimate, and
       refusing them would be the second schema :mod:`sdk_test.binding` warned
       against. The warning names the keys the contract does allow, so a typo is
-      still easy to see.
+      still easy to see. This is checked only for a parameterized type -- a
+      catalogue entry that merely records a type's name and capabilities says
+      nothing about its options.
 
-    Types with no contract are not checked at all, which keeps existing labs
+    Types with no entry are not checked at all, which keeps lab-defined types
     working unchanged.
 
     :param testbeds: parsed testbeds.
@@ -249,8 +256,32 @@ def fixture_contract_issues(
             if contract is None:
                 continue
 
-            allowed = contract.option_names
             where = f'testbed "{testbed.id}" connection "{ref.spec}"'
+
+            vocabulary = set(contract.capabilities)
+            if vocabulary:
+                for token in sorted(ref.capabilities - vocabulary):
+                    issues.append(
+                        ContractIssue(
+                            testbed_id=testbed.id,
+                            severity="warning",
+                            message=(
+                                f'{where} requires capability "{token}", '
+                                f"which the {contract.name} entry does not "
+                                "list; it allows: "
+                                f"{', '.join(contract.capabilities)}"
+                            ),
+                        )
+                    )
+
+            # A catalogue entry without a params-sourced option is a name and a
+            # capability list, not a statement about connection keys. Checking
+            # them would turn an instrument's driver-private `console:` into an
+            # "unknown key".
+            if not contract.params_option_names:
+                continue
+
+            allowed = contract.option_names
             for key in sorted(connection.options):
                 if key in contract.params_option_names:
                     issues.append(

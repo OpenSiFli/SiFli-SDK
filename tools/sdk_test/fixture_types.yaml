@@ -1,13 +1,35 @@
 # SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
 # SPDX-License-Identifier: Apache-2.0
 #
-# Fixture type contracts.
+# Fixture type catalogue and option contracts.
 #
-# A contract says what options a fixture type has and where each option's value
-# comes from. It is the single source for option *names*: a test says
-# `fixture: wifi_ap:5g`, and the framework derives `fixtures.wifi_ap:5g.ssid`,
-# `.security` and `.psk` from the entry below. Nothing about a particular lab's
-# access point is written here -- that lives in the runner-side params file.
+# Two layers live here, and they answer different questions:
+#
+# * the type catalogue says which fixture types exist and which capability
+#   tokens each one accepts. A test author reads it to know what may be
+#   written after `fixture:`; an entry may state only `description` and
+#   `capabilities`, with no `options` at all.
+# * the option contract says which options a type has and where their values
+#   come from: `fixture: wifi_ap:5g` derives `fixtures.wifi_ap:5g.ssid`,
+#   `.security` and `.psk` from the entry below. Nothing about a particular
+#   lab's access point is written here -- that lives in the runner-side params
+#   file.
+#
+# Only a type with at least one `source: params` option is *parameterized*:
+# its spec is an identity, so a lab connection must match it exactly. A
+# catalogue entry without options changes no matching rule -- adding
+# `bt_peer` below does not stop `bt_peer:ble` from being served by a lab
+# connection that offers `bt_peer:ble,classic`.
+#
+# `capabilities` is a closed vocabulary for the type, and only a warning is
+# raised for a token it does not list: a lab may extend it (`wifi_ap:6e`) and
+# the framework cannot tell an extension from a typo. A type with no
+# `capabilities` is not checked -- `spi_nor_flash:spi1` names a bus, not a
+# capability.
+#
+# A type with no entry here is still allowed and unchecked, so a lab can
+# define its own. How many instances a lab has, and which port each is wired
+# to, belongs in the lab's binding and is never written in this file.
 #
 # `{spec}` is the spec exactly as the testcase wrote it (capability list
 # included), so the key can be derived without asking a Lab Agent.
@@ -20,8 +42,22 @@
 # public values that genuinely belong to the lab; P1 rejects it at load time
 # instead of silently resolving nothing.
 
+bt_peer:
+  description: A second board running the peer firmware, driven over its own console.
+  capabilities: [ble, classic]
+
+spi_nor_flash:
+  description: A NOR flash chip wired to an SPI bus.
+
+spi_nand_flash:
+  description: A NAND flash chip wired to an SPI bus.
+
+i2c_sensor:
+  description: A sensor wired to an I2C bus.
+
 wifi_ap:
   description: An access point the DUT can associate with.
+  capabilities: [2g, 5g]
   options:
     ssid:
       source: params

@@ -320,6 +320,7 @@ def test_plan_callback(
     agent_url: str = "http://127.0.0.1:8760",
     params_file: Optional[str] = None,
     param: Optional[List[str]] = None,
+    check_fixtures: bool = False,
 ) -> int:
     return sdk_test_cli.describe_plan(
         _suite_root(testsuite_root),
@@ -330,6 +331,7 @@ def test_plan_callback(
         agent_url=agent_url,
         params_file=params_file,
         param_overrides=_parse_param_overrides(param),
+        check_fixtures=check_fixtures,
     )
 
 
@@ -418,6 +420,34 @@ def test_params_check_callback(
 
 
 @_guard
+def test_fixtures_types_callback(sdk_ctx: SdkContext) -> int:
+    """Print the fixture type catalogue. Offline by construction."""
+    return sdk_test_cli.list_fixture_types()
+
+
+@_guard
+def test_fixtures_list_callback(
+    sdk_ctx: SdkContext,
+    file: Optional[str] = None,
+    agent_url: Optional[str] = None,
+    platform: Optional[str] = None,
+) -> int:
+    """Print what a lab offers, from its binding or from its agent.
+
+    The two sources are mutually exclusive, and the check lives here rather
+    than in the library so the CLI can report it as the usage error it is.
+    """
+    if file and agent_url:
+        raise click.BadParameter(
+            "--file and --agent-url are mutually exclusive: read a binding "
+            "offline, or ask a running agent, not both"
+        )
+    return sdk_test_cli.list_fixtures(
+        binding_file=file, agent_url=agent_url, platform=platform
+    )
+
+
+@_guard
 def test_binding_check_callback(
     sdk_ctx: SdkContext,
     file: Optional[str] = None,
@@ -488,6 +518,16 @@ def register(registry: CommandRegistry) -> None:
             _AGENT_URL_OPTION,
             _PARAMS_FILE_OPTION,
             _PARAM_OPTION,
+            {
+                "names": ["--check-fixtures"],
+                "help": (
+                    "Ask the Lab Agent whether every fixture each run asks for "
+                    "is offered on its platform. Fails before anything is built; "
+                    "the only option here that contacts an agent."
+                ),
+                "is_flag": True,
+                "default": False,
+            },
         ],
     )
 
@@ -635,6 +675,56 @@ def register(registry: CommandRegistry) -> None:
                 "help": "Emit machine-readable JSON (for CI pre-flight).",
                 "is_flag": True,
                 "default": False,
+            },
+        ],
+    )
+
+    registry.group(
+        path="test/fixtures",
+        help=(
+            "Inspect the fixture type catalogue, and what a lab actually offers."
+        ),
+    )
+    registry.command(
+        path="test/fixtures/types",
+        callback=test_fixtures_types_callback,
+        help=(
+            "Print every registered fixture type: description, capabilities, "
+            "options and whether its spec is an identity. Offline."
+        ),
+        options=[],
+    )
+    registry.command(
+        path="test/fixtures/list",
+        callback=test_fixtures_list_callback,
+        help=(
+            "Print the testbeds and fixtures a lab offers, read from a binding "
+            "file or from a running Lab Agent. Allocates and builds nothing."
+        ),
+        options=[
+            {
+                "names": ["--file"],
+                "help": (
+                    "Binding file to read instead of asking an agent. Mutually "
+                    "exclusive with --agent-url."
+                ),
+                "type": str,
+                "default": None,
+            },
+            {
+                "names": ["--agent-url"],
+                "help": (
+                    "Base URL of the Lab Agent to ask. Defaults to "
+                    "http://127.0.0.1:8760 when neither source is given."
+                ),
+                "type": str,
+                "default": None,
+            },
+            {
+                "names": ["-p", "--platform"],
+                "help": "Show only testbeds on this platform (board name).",
+                "type": str,
+                "default": None,
             },
         ],
     )

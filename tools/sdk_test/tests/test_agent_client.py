@@ -144,6 +144,32 @@ class TestRequestShaping(ClientTestCase):
         self.assertEqual(self.server.raw[-1], b"a tar")
 
 
+class TestTestbedListing(ClientTestCase):
+    """``GET /testbeds`` must answer the question, not be read as an empty lab.
+
+    "This bench has no hardware" and "this server did not answer" send an
+    operator to opposite places, and only the first is true of the bench.
+    """
+
+    def test_the_list_is_returned(self):
+        listings = [{"id": "tb", "platform": "board_a", "fixtures": []}]
+        self.route("/testbeds", {"testbeds": listings})
+        self.assertEqual(self.client.testbeds(), listings)
+
+    def test_a_response_without_the_key_is_an_error(self):
+        self.route("/testbeds", {"status": "ok"})
+        with self.assertRaises(LabAgentError) as caught:
+            self.client.testbeds()
+        message = str(caught.exception)
+        self.assertIn("testbeds", message)
+        self.assertIn("incomplete", message)
+
+    def test_a_non_list_is_an_error(self):
+        self.route("/testbeds", {"testbeds": {"tb": 1}})
+        with self.assertRaises(LabAgentError):
+            self.client.testbeds()
+
+
 class TestMemoryRequests(ClientTestCase):
     """The probe read's request shape and its failure modes.
 

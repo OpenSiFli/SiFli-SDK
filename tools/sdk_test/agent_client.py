@@ -112,7 +112,28 @@ class LabAgentClient:
         return self._request("GET", "/health")
 
     def testbeds(self) -> List[Dict[str, Any]]:
-        return self._request("GET", "/testbeds").get("testbeds", [])
+        """What this agent can host, as its own binding describes it.
+
+        An answer without a ``testbeds`` list is refused rather than read as an
+        empty lab: "there is no hardware here" and "this server did not answer
+        the question" lead an operator to opposite conclusions, and only the
+        first is about the bench.
+        """
+        payload = self._request("GET", "/testbeds")
+        if "testbeds" not in payload:
+            raise LabAgentError(
+                "The Lab Agent's GET /testbeds response has no \"testbeds\" "
+                "list; it is incomplete, or this URL is not a Lab Agent serving "
+                "the version of the interface this checkout speaks"
+            )
+        entries = payload["testbeds"]
+        if not isinstance(entries, list):
+            raise LabAgentError(
+                "The Lab Agent returned a "
+                f"{type(entries).__name__} for GET /testbeds \"testbeds\"; "
+                "expected a list"
+            )
+        return entries
 
     def allocate(
         self,

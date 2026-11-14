@@ -10,8 +10,25 @@ to fetch before the test runs, needs one thing more: a statement of which
 options exist and where each one comes from. That statement is this contract,
 and it is the only place option names are defined.
 
+The file carries two layers, and keeping them apart matters:
+
+* the **type catalogue** -- which fixture types exist and which capability
+  tokens each one accepts. This is framework knowledge: it answers "what may a
+  test author write", lives in the repository, and is reviewed with the code.
+  An entry may state only a description and a capability list;
+* the **option contract** -- which options a type has and where their values
+  come from. Only a type with at least one ``source: params`` option is
+  *parameterized*, and only for it does the spec become an identity rather than
+  a capability list.
+
+How many instances a lab actually has, and which port each is wired to, is the
+binding's business and is never written here. A type with no entry at all is
+still permitted and unchecked, which keeps a lab free to define its own.
+
 The contract is deliberately small. It says:
 
+* which capability tokens the type accepts (optional, and only a vocabulary --
+  an unlisted token in a binding warns rather than fails);
 * which options the type has;
 * whether an option's value comes from the runner-side params file
   (``source: params``) or from the binding (``source: binding``, reserved and
@@ -65,6 +82,11 @@ SOURCE_BINDING = "binding"
 RESERVED_OPTION_NAMES = frozenset({"fixture", "pinmap", "mux"})
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+#: Capability tokens are short words a test writes after ``:``. Digits and a
+#: leading digit are allowed (``5g``), and so are the separators a lab is
+#: likely to use to name a bench (``lab_a``, ``v1.2``). Whatever a driver can
+#: parse is not this file's business; that it is one token is.
+_CAPABILITY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _PLACEHOLDER_RE = re.compile(r"\{([^{}]*)\}")
 _SPEC_PLACEHOLDER = "spec"
 
@@ -75,7 +97,7 @@ _REQUIRED_IF_RE = re.compile(
     r"^(?P<option>[a-z][a-z0-9_]*)\s*(?P<operator>==|!=)\s*(?P<value>[^\s\"']+)$"
 )
 
-_TYPE_FIELDS = frozenset({"description", "options"})
+_TYPE_FIELDS = frozenset({"description", "capabilities", "options"})
 _OPTION_FIELDS = frozenset(
     {"source", "key", "required", "required_if", "secret", "enum", "default"}
 )
@@ -138,6 +160,10 @@ class FixtureType:
 
     name: str
     description: str = ""
+    #: The type's closed capability vocabulary, if it has one. Empty means the
+    #: part after ``:`` is not a capability list for this type (a bus name, as
+    #: in ``spi_nor_flash:spi1``), so it is not checked.
+    capabilities: Tuple[str, ...] = ()
     options: Tuple[FixtureOption, ...] = ()
 
     def option(self, name: str) -> Optional[FixtureOption]:
@@ -242,6 +268,25 @@ def _parse_required_if(value: Any, where: str,
             f"(it has: {', '.join(sorted(options))})"
         )
     return RequiredIf(target, match.group("operator"), match.group("value"))
+
+
+def _parse_capabilities(value: Any, where: str) -> Tuple[str, ...]:
+    """Read a type's capability vocabulary, which is a list of tokens."""
+    if not isinstance(value, list):
+        raise FixtureTypeError(
+            f"{where} must be a list of capability tokens, got "
+            f"{type(value).__name__}"
+        )
+    tokens: List[str] = []
+    for entry in value:
+        if not isinstance(entry, str) or not _CAPABILITY_RE.match(entry):
+            raise FixtureTypeError(
+                f"{where}: {entry!r} is not a capability token; use letters, "
+                "digits, '_', '.' and '-', starting with a letter or digit "
+                "(e.g. ble, 5g, lab_a)"
+            )
+        tokens.append(entry)
+    return tuple(tokens)
 
 
 def _parse_key(value: Any, where: str) -> str:
@@ -366,10 +411,19 @@ def _parse_type(name: str, raw: Any, source: str) -> FixtureType:
             f'{where}: "{name}" collides with a binding key or contains a dot'
         )
 
+    capabilities = (
+        _parse_capabilities(mapping["capabilities"], f"{where}.capabilities")
+        if "capabilities" in mapping
+        else ()
+    )
+
+    # ``options`` is optional: a catalogue entry that only says "this type
+    # exists, and these are its capabilities" is a complete entry. An explicit
+    # ``options: {}`` means the same thing.
     options_raw = mapping.get("options")
-    if options_raw is None:
-        raise FixtureTypeError(f'{where} needs an "options" mapping')
-    options_mapping = _mapping(options_raw, f"{where}.options")
+    options_mapping: Mapping[str, Any] = (
+        {} if options_raw is None else _mapping(options_raw, f"{where}.options")
+    )
 
     options: List[FixtureOption] = []
     # ``required_if`` may point at an option declared later, so the whole set is
@@ -421,6 +475,7 @@ def _parse_type(name: str, raw: Any, source: str) -> FixtureType:
     return FixtureType(
         name=name,
         description=str(mapping.get("description", "")),
+        capabilities=capabilities,
         options=tuple(options),
     )
 
