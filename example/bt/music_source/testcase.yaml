@@ -1,0 +1,25 @@
+# The local-playback path for the music_source example: the DUT mounts the
+# pre-installed disk image, plays the bundled track through its own speaker,
+# stops it, and rejects a missing file. No instrument is needed -- local
+# playback does not involve Bluetooth.
+#
+# Negative verification -- executed: moving `disk/test.mp3` out of the disk
+# image (rebuild + reflash) turns all five tests red. The first one fails at
+# `test.mp3\s+960887` in the root listing; the playback tests then fail at
+# `[LOCAL MUSIC]play_file /test.mp3` / `mp3 run...`; the missing-file test
+# fails because its earlier state never completed. Restoring the file and
+# re-running gives `1 test(s): 1 passed` (73.2 s, build and flash included).
+#
+# Not covered here: the A2DP Source / AVRCP checkpoints. They need a real
+# A2DP Sink peer to connect to, which the bench does not have; the reason is
+# recorded in the example README and the design discussion. This case
+# deliberately declares no fixture.
+tests:
+  - id: bt_music_source.local_playback
+    description: The example mounts its disk image and plays the bundled track through the local audio path.
+    harness: pytest
+    tags: [pytest, classic, music, local]
+    timeout: 300
+    project_dir: project
+    harness_config:
+      pytest_root: pytest
