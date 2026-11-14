@@ -23,6 +23,8 @@ import json
 import os
 import re
 import time
+from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -37,6 +39,7 @@ from .fixtures import parse_fixture_ref
 from .harness.pytest import ENV_AGENT_URL
 from .harness.pytest import ENV_BUILD_DIR
 from .harness.pytest import ENV_CASE_ID
+from .harness.pytest import ENV_DATA_FILE
 from .harness.pytest import ENV_FIXTURES
 from .harness.pytest import ENV_PLATFORM
 from .harness.pytest import ENV_TESTBED_ID
@@ -249,6 +252,47 @@ class Dut:
 
         return address_of(find_elf(self.build_dir), name)
 
+    # -- runner-side parameters ----------------------------------------------
+
+    def fixture_options(self, spec: str) -> Dict[str, Any]:
+        """The options this instance needs for ``spec``, and their values.
+
+        Every option the contract declares *and* the runner resolved is present.
+        An optional option whose ``required_if`` condition does not hold is
+        absent rather than ``None`` -- an open access point has no ``psk`` key --
+        so a suite that indexes it unconditionally fails where the mistake is,
+        instead of sending an empty key to the device.
+
+        The values were resolved by the runner from its params file (or a
+        ``--param``/environment override) and handed over in a short-lived JSON
+        file, so the suite never sees where they came from and never writes them
+        down itself.
+
+        :param spec: the fixture spec exactly as the testcase wrote it, e.g.
+            ``wifi_ap:5g``.
+        :return: option name to value.
+        :raises RuntimeError: the case did not declare this fixture, which is a
+            typo in the suite rather than an empty answer.
+        """
+        declared = _declared_fixtures()
+        if spec not in declared:
+            listing = ", ".join(declared) or "none"
+            raise RuntimeError(
+                f'unknown fixture "{spec}": this test case declared {listing}. '
+                "A suite may only ask for a fixture its testcase declares in "
+                "harness_config.fixture."
+            )
+
+        fixtures = _resolved_data().get("fixtures") or {}
+        if spec not in fixtures:
+            raise RuntimeError(
+                f'no resolved options for fixture "{spec}"; the runner wrote '
+                f"none. Is {ENV_DATA_FILE} stale or hand-edited?"
+            )
+        # A copy: one test mutating its options must not change what the next
+        # test reads.
+        return dict(fixtures[spec])
+
 
 def _require(name: str) -> str:
     value = os.environ.get(name)
@@ -294,6 +338,46 @@ def console(dut: Dut) -> RemoteConsole:
     device must share one view of what it has said.
     """
     return dut.console
+
+
+def _resolved_data() -> Dict[str, Any]:
+    """The runner-written params document, read fresh each time it is asked for.
+
+    Encoded as JSON in a file whose path arrives in ``SIFLI_TEST_DATA_FILE``.
+    Reading it through the environment path -- rather than caching the values in
+    a variable at import -- keeps one definition of the format: the runner writes
+    it, this reads it.
+
+    A missing variable is a skip, not a failure: the suite was started by hand
+    rather than by ``sdk.py test run``, which is the same situation
+    :func:`_require` handles for the DUT's coordinates. A malformed file, on the
+    other hand, is a runner bug and raises.
+    """
+    path = _require(ENV_DATA_FILE)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except OSError as exc:
+        raise RuntimeError(f"cannot read {ENV_DATA_FILE} ({path}): {exc}") from exc
+    except ValueError as exc:
+        raise RuntimeError(f"{ENV_DATA_FILE} ({path}) is not valid JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{ENV_DATA_FILE} ({path}) must contain a JSON object")
+    return data
+
+
+@pytest.fixture(scope="session")
+def params() -> Dict[str, Any]:
+    """The declared parameters this test case asked for.
+
+    Only the keys the testcase declared in its ``params:`` block are present;
+    fixture options are reached through :meth:`Dut.fixture_options` instead,
+    because the contract, not the testcase, decides which of those exist.
+
+    A value is never echoed by the framework: this fixture hands over the value,
+    and the runner redacts it from every log and report on the way out.
+    """
+    return dict(_resolved_data().get("params") or {})
 
 
 def _declared_fixtures() -> List[str]:

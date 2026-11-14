@@ -35,6 +35,14 @@ class FixtureRef:
     ``@name`` pins one specific instance and is what a lab with several
     same-named instruments uses; it is separate from the capability list
     because one string cannot be both a capability and an instance name.
+
+    A type whose values come from the runner-side params file
+    (:mod:`sdk_test.fixture_types`) is the exception: its spec is an *identity*
+    rather than a capability set, because the values are looked up under
+    ``fixtures.<spec>.…``. ``accepts`` therefore requires the specs to be equal
+    for such a type -- a lab connection offering ``wifi_ap:5g,lab_a`` does not
+    satisfy a request for ``wifi_ap:5g``, and would otherwise resolve the wrong
+    keys.
     """
 
     name: str
@@ -64,6 +72,13 @@ class FixtureRef:
         if self.name != available.name:
             return False
         if self.instance is not None and self.instance != available.instance:
+            return False
+        # Imported here rather than at module scope: the contract loader lives in
+        # a sibling module that must stay importable without the model, and the
+        # lookup is cached after the first call.
+        from .fixture_types import is_parameterized_type
+
+        if is_parameterized_type(self.name) and self.spec != available.spec:
             return False
         return self.capabilities <= available.capabilities
 
@@ -171,6 +186,12 @@ class TestInstance:
     #: project is the testcase directory or its ``project`` subdirectory.
     project_dir: Optional[str] = None
     fixtures: List[FixtureRef] = field(default_factory=list)
+    #: Keys this test needs from the runner-side params file, as declared in
+    #: ``testcase.yaml``. A scalar is a default value; ``{required: true}``
+    #: declares a key that must be supplied. Fixture options are *not* listed
+    #: here: their keys are derived from the requested spec and the fixture type
+    #: contract, see :mod:`sdk_test.params`.
+    params: Dict[str, Any] = field(default_factory=dict)
 
     def allows_platform(self, platform: str) -> bool:
         """Platform gating: explicit allow/exclude lists win over everything."""

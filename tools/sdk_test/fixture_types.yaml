@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+#
+# Fixture type contracts.
+#
+# A contract says what options a fixture type has and where each option's value
+# comes from. It is the single source for option *names*: a test says
+# `fixture: wifi_ap:5g`, and the framework derives `fixtures.wifi_ap:5g.ssid`,
+# `.security` and `.psk` from the entry below. Nothing about a particular lab's
+# access point is written here -- that lives in the runner-side params file.
+#
+# `{spec}` is the spec exactly as the testcase wrote it (capability list
+# included), so the key can be derived without asking a Lab Agent.
+#
+# This file is shared by tools/sdk_test (resolution) and tools/lab_agent
+# (allocation). Editing it is a reviewed change: renaming a type or an option is
+# a breaking change, and no compatibility layer is kept.
+#
+# Only `source: params` is implemented. `source: binding` is reserved for
+# public values that genuinely belong to the lab; P1 rejects it at load time
+# instead of silently resolving nothing.
+
+wifi_ap:
+  description: An access point the DUT can associate with.
+  options:
+    ssid:
+      source: params
+      key: "fixtures.{spec}.ssid"
+      required: true
+    security:
+      source: params
+      key: "fixtures.{spec}.security"
+      enum: [open, wpa2, wpa3]
+      default: wpa2
+    psk:
+      source: params
+      key: "fixtures.{spec}.psk"
+      # An open AP has no pre-shared key. Evaluated by the runner against the
+      # resolved sibling option; only `<option> ==|!= <literal>` is supported.
+      required_if: "security != open"
+      secret: true

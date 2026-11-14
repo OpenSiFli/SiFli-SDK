@@ -19,11 +19,15 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
+from . import params
 from . import report
 from .backends import backend_names
 from .backends import is_host_platform
 from .backends import select_backend_name
+from .binding import check_fixture_contracts
+from .binding import parse_binding
 from .discovery import discover
+from .fixture_types import default_fixture_types
 from .harness import IMPLEMENTED_HARNESSES
 from .harness import SUPPORTED_HARNESSES
 from .runner import RunOptions
@@ -70,6 +74,12 @@ def list_tests(
                         "tags": instance.tags,
                         "timeout": instance.timeout,
                         "fixtures": [fixture.spec for fixture in instance.fixtures],
+                        # Key names only, derived without reading a params file:
+                        # this command must stay usable on a machine that has no
+                        # credentials at all.
+                        "params": params.requirement_keys(
+                            instance, default_fixture_types()
+                        ),
                         "depends_on": instance.depends_on,
                         "platform_allow": instance.platform_allow,
                         "integration_platforms": instance.integration_platforms,
@@ -112,12 +122,17 @@ def describe_plan(
     platform: Optional[str] = None,
     backend: Optional[str] = None,
     echo: Optional[Echo] = None,
+    agent_url: str = "http://127.0.0.1:8760",
+    params_file: Optional[str] = None,
+    param_overrides: Optional[Dict[str, str]] = None,
 ) -> int:
     """Show what a run would do, without doing it.
 
     The plan names a platform, not a board: which board of that platform will
     host a run is the Lab Agent's to choose, from its own configuration, at the
-    moment hardware is requested.
+    moment hardware is requested. Parameters are resolved here too, with the
+    same options and the same loopback rule as ``test run``, so a plan cannot
+    pass where a run would refuse.
     """
     echo = echo or print
     runner = TestRunner(
@@ -127,6 +142,9 @@ def describe_plan(
             tags=list(tags or []),
             platform=platform,
             backend=backend,
+            agent_url=agent_url,
+            params_file=params_file,
+            param_overrides=dict(param_overrides or {}),
         )
     )
     planned, turned_away = runner.plan_with_filtered()
@@ -219,7 +237,185 @@ def describe_environment(echo: Optional[Echo] = None) -> int:
     return EXIT_OK
 
 
+# -- prerequisites, checked without hardware ---------------------------------
+
+
+def check_params(
+    testsuite_root: str,
+    testcase_ids: Optional[List[str]] = None,
+    tags: Optional[List[str]] = None,
+    show_unused: bool = False,
+    as_json: bool = False,
+    echo: Optional[Echo] = None,
+    params_file: Optional[str] = None,
+    overrides: Optional[Dict[str, str]] = None,
+    agent_url: str = "http://127.0.0.1:8760",
+) -> int:
+    """``sdk.py test params check`` -- can every selected case be supplied?
+
+    Keys come from the testcase and the fixture type contract, so this answer
+    needs neither a build nor a Lab Agent: it can run in CI before anything
+    expensive starts. Only names and sources are printed, never values.
+
+    The resolution path is the same one ``test run`` and ``test plan`` use,
+    including the loopback rule for secrets, so a pre-flight that passes is a
+    run that will not be refused for a configuration reason.
+
+    A problem is reported for every case that has one rather than stopping at
+    the first, because the point of a pre-flight check is to hand back the whole
+    list at once.
+
+    :raises params.ParamsError: at least one case cannot be supplied.
+    """
+    echo = echo or print
+    contracts = default_fixture_types()
+    instances = resolve_test_ids(testsuite_root, testcase_ids, tags)
+
+    path, searched = params.find_params_file(params_file)
+    file_values = params.load_params_file(path) if path else {}
+
+    rows: List[Dict[str, Any]] = []
+    warnings: List[str] = []
+    errors: List[Dict[str, str]] = []
+    used: List[str] = []
+
+    for instance in instances:
+        try:
+            resolved = params.resolve_params(
+                instance,
+                contracts,
+                params_file=params_file,
+                overrides=overrides,
+                agent_url=agent_url,
+            )
+        except params.ParamsError as exc:
+            errors.append({"case": instance.id, "message": str(exc)})
+            continue
+        used.extend(resolved.requested_keys)
+        for key in resolved.requested_keys:
+            entry = resolved.values.get(key)
+            if entry is not None:
+                rows.append(
+                    {"case": instance.id, "name": key, "source": entry.source}
+                )
+        warnings.extend(f"{instance.id}: {item}" for item in resolved.warnings)
+
+    unused = params.unused_keys(file_values, used) if show_unused else []
+    ok = not errors
+
+    if as_json:
+        import json
+
+        echo(
+            json.dumps(
+                {
+                    "ok": ok,
+                    "params_file": path,
+                    "search_paths": searched,
+                    "params": rows,
+                    "unused": unused,
+                    "warnings": warnings,
+                    "errors": errors,
+                },
+                indent=2,
+            )
+        )
+    else:
+        if not instances:
+            echo("No test cases found.")
+        else:
+            echo(f"params file: {path or '(none found)'}")
+            for row in rows:
+                echo(f"  {row['case']}")
+                echo(f"    {row['name']}  <-  {row['source']}")
+            if warnings:
+                echo("warnings:")
+                for warning in warnings:
+                    echo(f"  {warning}")
+            if unused:
+                echo(f"unused keys in {path}:")
+                for key in unused:
+                    echo(f"  - {key}")
+            if errors:
+                echo("errors:")
+                for error in errors:
+                    echo(f"  {error['case']}: {error['message']}")
+
+    if not ok:
+        raise params.ParamsError(
+            f"params check: {len(errors)} test case(s) cannot be supplied"
+        )
+    return EXIT_OK
+
+
+def check_binding(
+    path: str,
+    as_json: bool = False,
+    echo: Optional[Echo] = None,
+) -> int:
+    """``sdk.py test binding check`` -- is the lab's wiring consistent?
+
+    Strict where the design is strict: an option that a fixture type contract
+    sources from params must not appear in a binding, because the binding is
+    committed and a password in it is the leak this mechanism exists to stop.
+    Unknown keys only warn -- driver-private keys (an instrument's ``console``)
+    are legitimate, and refusing them would be a second schema.
+
+    :raises BindingError: the file is malformed, or a params-sourced key is set
+        in a connection.
+    """
+    from .errors import BindingError
+
+    echo = echo or print
+    try:
+        import yaml
+    except ImportError as exc:  # pragma: no cover - pyyaml is a core requirement
+        raise BindingError("pyyaml is required to read a binding file") from exc
+
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            raw = yaml.safe_load(handle)
+    except OSError as exc:
+        raise BindingError(f"Cannot read binding {path}: {exc}") from exc
+    except yaml.YAMLError as exc:
+        raise BindingError(f"{path}: malformed YAML: {exc}") from exc
+
+    testbeds = parse_binding(raw, source=path)
+    errors, warnings = check_fixture_contracts(testbeds)
+    ok = not errors
+
+    if as_json:
+        import json
+
+        echo(
+            json.dumps(
+                {
+                    "ok": ok,
+                    "file": path,
+                    "testbeds": [testbed.id for testbed in testbeds],
+                    "errors": errors,
+                    "warnings": warnings,
+                },
+                indent=2,
+            )
+        )
+    else:
+        echo(f"binding: {path} ({len(testbeds)} testbed(s))")
+        for warning in warnings:
+            echo(f"  warning: {warning}")
+        for error in errors:
+            echo(f"  error:   {error}")
+        if ok and not warnings:
+            echo("  ok")
+
+    if not ok:
+        raise BindingError(f"binding check: {len(errors)} problem(s) in {path}")
+    return EXIT_OK
+
+
 __all__ = [
+    "check_binding",
+    "check_params",
     "describe_environment",
     "describe_plan",
     "list_tests",

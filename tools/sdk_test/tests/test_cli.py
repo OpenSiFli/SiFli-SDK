@@ -14,13 +14,18 @@ Two things are pinned here that are easy to get wrong and expensive to miss:
 
 from __future__ import annotations
 
+import json
 import os
 import unittest
+from unittest import mock
 
+from _support import TOOLS_DIR
 from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 
 from sdk_test import cli
+from sdk_test.errors import BindingError
 from sdk_test.errors import SdkTestError
+from sdk_test.params import ParamsError
 
 
 class TestExitCodes(SdkTestCase):
@@ -373,6 +378,253 @@ class TestListingNeedsNoHardware(SdkTestCase):
         self.assertIn("pytest", text)
         self.assertIn("board", text)
         self.assertIn("qemu", text)
+
+
+WIFI_CASE = """
+tests:
+  upload:
+    harness: pytest
+    harness_config:
+      fixture: wifi_ap:5g
+    params:
+      cloud.token: {required: true}
+"""
+
+TWO_MISSING_CASES = """
+tests:
+  first:
+    params:
+      alpha: {required: true}
+  second:
+    params:
+      beta: {required: true}
+"""
+
+
+class TestCheckParams(SdkTestCase):
+    """``sdk.py test params check``: names and provenance, never values."""
+
+    def setUp(self):
+        super().setUp()
+        self.tree = os.path.join(self.root, "cases")
+        # The developer's own params file must not decide these tests.
+        patched = mock.patch.dict(
+            os.environ, {"USERPROFILE": self.root}, clear=False
+        )
+        patched.start()
+        self.addCleanup(patched.stop)
+        os.environ.pop("SIFLI_TEST_PARAMS_FILE", None)
+
+    def write_case(self, body: str) -> str:
+        self.write("cases/testcase.yaml", body)
+        return self.tree
+
+    def check(self, **kwargs):
+        lines = []
+        code = cli.check_params(self.tree, echo=lines.append, **kwargs)
+        return code, "\n".join(lines)
+
+    def test_the_json_report_lists_every_key_and_its_source(self):
+        self.write_case(WIFI_CASE)
+        path = self.write(
+            "params.yaml",
+            """
+            fixtures:
+              "wifi_ap:5g":
+                ssid: LabAP
+                psk: a-real-psk
+            params:
+              cloud.token: tok-abc
+            """,
+        )
+        code, out = self.check(as_json=True, params_file=path)
+        document = json.loads(out)
+
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertTrue(document["ok"])
+        self.assertEqual(
+            [row["name"] for row in document["params"]],
+            [
+                "cloud.token",
+                "fixtures.wifi_ap:5g.ssid",
+                "fixtures.wifi_ap:5g.security",
+                "fixtures.wifi_ap:5g.psk",
+            ],
+        )
+        self.assertTrue(all(row["source"] for row in document["params"]))
+        # The values themselves are never printed.
+        self.assertNotIn("a-real-psk", out)
+        self.assertNotIn("tok-abc", out)
+
+    def test_missing_keys_fail_and_every_case_is_reported(self):
+        self.write_case(TWO_MISSING_CASES)
+        lines = []
+        with self.assertRaises(ParamsError) as caught:
+            cli.check_params(self.tree, as_json=True, echo=lines.append)
+        document = json.loads("\n".join(lines))
+        self.assertFalse(document["ok"])
+        self.assertEqual(
+            [error["case"] for error in document["errors"]], ["first", "second"]
+        )
+        self.assertIn("2 test case(s)", str(caught.exception))
+
+    def test_unused_lists_keys_no_selected_case_refers_to(self):
+        self.write_case(
+            """
+            tests:
+              only:
+                params:
+                  alpha: {required: true}
+            """
+        )
+        path = self.write(
+            "params.yaml", "params:\n  alpha: one\n  spare.key: two\n"
+        )
+        code, out = self.check(as_json=True, show_unused=True, params_file=path)
+        document = json.loads(out)
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertEqual(document["unused"], ["spare.key"])
+
+    def test_list_json_includes_params_key_names_without_a_params_file(self):
+        self.write_case(WIFI_CASE)
+        lines = []
+        cli.list_tests(self.tree, as_json=True, echo=lines.append)
+        document = json.loads("\n".join(lines))
+        self.assertEqual(
+            document[0]["params"],
+            [
+                "cloud.token",
+                "fixtures.wifi_ap:5g.ssid",
+                "fixtures.wifi_ap:5g.security",
+                "fixtures.wifi_ap:5g.psk",
+            ],
+        )
+
+
+class TestCheckBinding(SdkTestCase):
+    def test_a_params_sourced_key_fails_and_is_named(self):
+        path = self.write(
+            "bad.yaml",
+            """
+            testbed:
+              - id: tb
+                platform: board_a
+                connections:
+                  - fixture: wifi_ap:5g
+                    psk: leaked
+            """,
+        )
+        lines = []
+        with self.assertRaises(BindingError) as caught:
+            cli.check_binding(path, echo=lines.append)
+        text = "\n".join(lines)
+        self.assertIn('"psk"', text)
+        self.assertIn("params", text)
+        self.assertIn("1 problem", str(caught.exception))
+
+    def test_the_shipped_template_passes(self):
+        example = os.path.join(
+            TOOLS_DIR, "sdk_test", "examples", "binding.local.yaml"
+        )
+        lines = []
+        self.assertEqual(
+            cli.check_binding(example, echo=lines.append), cli.EXIT_OK
+        )
+        self.assertIn("ok", "\n".join(lines))
+
+
+class TestParamOverrides(SdkTestCase):
+    def test_a_value_without_an_equals_sign_is_rejected(self):
+        import click
+
+        from sdk_py_actions import test_ext
+
+        with self.assertRaises(click.BadParameter):
+            test_ext._parse_param_overrides(["bad"])
+
+    def test_a_value_may_contain_an_equals_sign(self):
+        from sdk_py_actions import test_ext
+
+        self.assertEqual(
+            test_ext._parse_param_overrides(["k=a=b"]), {"k": "a=b"}
+        )
+
+
+class TestPlanOptions(SdkTestCase):
+    """``test plan`` resolves with the same options and rule as ``test run``."""
+
+    def setUp(self):
+        super().setUp()
+        patched = mock.patch.dict(
+            os.environ, {"USERPROFILE": self.root}, clear=False
+        )
+        patched.start()
+        self.addCleanup(patched.stop)
+        os.environ.pop("SIFLI_TEST_PARAMS_FILE", None)
+        self.write(
+            "cases/testcase.yaml",
+            """
+            tests:
+              upload:
+                harness: pytest
+                harness_config:
+                  fixture: wifi_ap:5g
+                params:
+                  cloud.token: {required: true}
+            """,
+        )
+        self.write("cases/project/SConstruct", "")
+        self.write("cases/project/proj.conf", "")
+        self.tree = os.path.join(self.root, "cases")
+
+    def test_the_plan_uses_the_params_file_it_was_given(self):
+        path = self.write(
+            "params.yaml",
+            """
+            fixtures:
+              "wifi_ap:5g":
+                ssid: LabAP
+                psk: a-real-psk
+            params:
+              cloud.token: tok-abc
+            """,
+        )
+        lines = []
+        code = cli.describe_plan(
+            self.tree,
+            platform="board_a",
+            params_file=path,
+            echo=lines.append,
+        )
+        self.assertEqual(code, cli.EXIT_OK)
+        self.assertIn("upload", "\n".join(lines))
+
+        # Without it the same plan is refused, which is what proves the option
+        # above was the difference rather than a default that happened to work.
+        with self.assertRaises(ParamsError):
+            cli.describe_plan(self.tree, platform="board_a", echo=lambda _m: None)
+
+
+class TestOptionConsistency(SdkTestCase):
+    """The three parameter-aware commands take the same options."""
+
+    def options_of(self, path: str) -> set:
+        from sdk_py_actions import test_ext
+        from sdk_py_actions.cli.registry import CommandRegistry
+
+        registry = CommandRegistry()
+        test_ext.register(registry)
+        return {
+            name
+            for option in registry._commands[path].options
+            for name in option.names
+        }
+
+    def test_plan_run_and_params_check_share_the_parameter_options(self):
+        required = {"--params-file", "--param", "--agent-url"}
+        for path in ("test/plan", "test/run", "test/params/check"):
+            with self.subTest(command=path):
+                self.assertTrue(required <= self.options_of(path))
 
 
 if __name__ == "__main__":

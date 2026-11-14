@@ -32,6 +32,7 @@ from typing import Optional
 from typing import TYPE_CHECKING
 
 from ..errors import HarnessError
+from ..params import ENV_DATA_FILE
 
 if TYPE_CHECKING:  # pragma: no cover - type hints only
     from ..model import TestInstance
@@ -60,6 +61,12 @@ ENV_TESTCASE_DIR = "SIFLI_TEST_TESTCASE_DIR"
 ENV_FIXTURES = "SIFLI_TEST_FIXTURES"
 #: The test id, for reporting.
 ENV_CASE_ID = "SIFLI_TEST_CASE_ID"
+#: Path of the runner-written JSON holding this instance's params and fixture
+#: options. The name is defined in :mod:`sdk_test.params` -- next to the code
+#: that writes the file and the code that reads it -- and imported above so this
+#: module still owns the environment contract. Values travel through the file,
+#: not the environment, so they do not leak into unrelated child processes.
+#: ``ENV_DATA_FILE`` (imported above) is the name used here.
 
 #: Extra wall-clock margin granted to the pytest subprocess over the harness
 #: timeout, so that pytest's own diagnostics survive long enough to be captured.
@@ -107,6 +114,8 @@ def plugin_env(
         env[ENV_BUILD_DIR] = context.build_dir
     if instance.platform or context.platform:
         env[ENV_PLATFORM] = str(instance.platform or context.platform)
+    if context.data_file:
+        env[ENV_DATA_FILE] = context.data_file
     return env
 
 

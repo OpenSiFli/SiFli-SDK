@@ -87,6 +87,24 @@ def _validate(raw: Any, path: str) -> None:
     raise DiscoveryError("\n".join(lines))
 
 
+def _check_params_declarations(params: Dict[str, Any], test_id: str) -> None:
+    """Reject a declaration object that declares neither ``required`` nor ``secret``.
+
+    The schema requires at least one key (``minProperties``), but a key set to
+    ``false`` says as little as ``{}`` and JSON Schema cannot express "at least
+    one of them is true".
+    """
+    for key, declaration in params.items():
+        if not isinstance(declaration, dict):
+            continue
+        if any(declaration.get(name) is True for name in ("required", "secret")):
+            continue
+        raise DiscoveryError(
+            f'"{test_id}": params "{key}" declares neither required nor secret; '
+            "set one of them to true or use a scalar default"
+        )
+
+
 def _build_instance(
     entry: Dict[str, Any],
     tests_key: str,
@@ -99,6 +117,11 @@ def _build_instance(
     harness_config = entry.get("harness_config") or {}
     if not isinstance(harness_config, dict):
         raise DiscoveryError(f'"{test_id}": harness_config must be a mapping')
+
+    params = entry.get("params") or {}
+    if not isinstance(params, dict):
+        raise DiscoveryError(f'"{test_id}": params must be a mapping')
+    _check_params_declarations(params, test_id)
 
     instance = TestInstance(
         id=test_id,
@@ -121,6 +144,7 @@ def _build_instance(
         skip=bool(entry.get("skip", False)),
         project_dir=entry.get("project_dir"),
         fixtures=instance_fixtures_from_config(harness_config),
+        params=dict(params),
     )
     return instance
 

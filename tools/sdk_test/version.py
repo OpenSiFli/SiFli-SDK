@@ -40,7 +40,15 @@ from typing import Optional
 #: serves the DUT's console instead: a suite would then drive the DUT as if it
 #: were the peer and record the wrong transcript. That is the silent-wrong-result
 #: case this number exists for.
-PROTOCOL = 2
+#:
+#: 3 -- fixture spec identity. For a fixture type whose options come from the
+#: runner-side params file (``wifi_ap``), a spec is an identity and matching
+#: requires it to be equal; before this, it was a capability set, and an agent
+#: could satisfy a request for ``wifi_ap:5g`` with ``wifi_ap:5g,lab_a``. The SDK
+#: then resolved ``fixtures.wifi_ap:5g.*`` and the agent drove the other access
+#: point -- a wrong-results mismatch, not an error. The HTTP shape did not
+#: change; what a spec *means* in an allocation request did.
+PROTOCOL = 3
 
 #: What a checkout with no git, or no repository, reports.
 UNKNOWN = "unknown"

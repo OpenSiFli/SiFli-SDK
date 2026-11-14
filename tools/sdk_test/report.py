@@ -205,6 +205,10 @@ class TestResult:
     #: instance never reached the runner. On a failure this says *where* it
     #: failed without anyone having to parse the message text.
     stage: str = ""
+    #: Which runner-side parameters this instance used, and where each value came
+    #: from: ``[{"name": ..., "source": ...}]``. Names and provenance only -- a
+    #: value must never be recorded, because some of them are secrets.
+    params: List[Dict[str, str]] = field(default_factory=list)
 
     @property
     def passed(self) -> bool:
@@ -547,6 +551,14 @@ def _suite_to_dict(result: TestResult) -> Dict[str, Any]:
         suite["out_dir"] = result.out_dir
     if result.stage:
         suite["stage"] = result.stage
+    if result.params:
+        # Names and sources only; see TestResult.params. This is what makes a
+        # run reproducible: the reader can tell which file supplied a value
+        # without the file's contents ever entering the report.
+        suite["params"] = [
+            {"name": entry.get("name", ""), "source": entry.get("source", "")}
+            for entry in result.params
+        ]
     if result.dropped:
         suite["transcript_dropped"] = result.dropped
     if result.instrument_logs:

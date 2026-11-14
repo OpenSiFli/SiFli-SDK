@@ -103,6 +103,14 @@ class TestProtocol(SdkTestCase):
         self.assertNotIsInstance(version.PROTOCOL, bool)
         self.assertGreater(version.PROTOCOL, 0)
 
+    def test_the_protocol_number_matches_the_current_interface(self):
+        # 3: a parameterized fixture's spec is an identity, not a capability
+        # set. An agent speaking 2 would satisfy a request with a superset spec
+        # and the SDK would resolve the wrong params keys -- wrong results, not
+        # an error. Update this assertion and the comment in version.py when the
+        # number moves.
+        self.assertEqual(version.PROTOCOL, 3)
+
 
 if __name__ == "__main__":
     unittest.main()

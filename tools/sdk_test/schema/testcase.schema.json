@@ -125,6 +125,25 @@
         "project_dir": {
           "description": "Directory containing the SConstruct to build, relative to the testcase file. Defaults to the testcase directory, or its `project` subdirectory.",
           "type": "string"
+        },
+        "params": {
+          "description": "Values this test needs from the runner-side params file. A scalar is a default; an object declares how a supplied value must be treated: {required: true} must be present, {secret: true} must never appear in a log or report. An object must state at least one of `required` or `secret`, and it must be true - an empty mapping, or one whose flags are all false, declares nothing. Fixture options are derived from `harness_config.fixture` and the fixture type contract instead.",
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              { "type": ["string", "number", "boolean", "null"] },
+              {
+                "description": "How a supplied value must be treated. At least one of `required` or `secret` must be true; an all-false object is rejected by discovery.",
+                "type": "object",
+                "minProperties": 1,
+                "additionalProperties": false,
+                "properties": {
+                  "required": { "type": "boolean" },
+                  "secret": { "type": "boolean" }
+                }
+              }
+            ]
+          }
         }
       }
     },

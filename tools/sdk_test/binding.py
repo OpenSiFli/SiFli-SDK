@@ -48,12 +48,18 @@ what is wired to it. Two files stating the same fact is what let them disagree.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 from .errors import BindingError
+from .fixture_types import FixtureTypes
+from .fixture_types import SOURCE_PARAMS
+from .fixture_types import default_fixture_types
 from .fixtures import parse_fixture_ref
 from .model import Connection
 from .model import ConsoleConfig
@@ -192,3 +198,94 @@ def parse_binding(data: Any, source: str = "<memory>") -> List[TestBed]:
         seen.add(testbed.id)
 
     return testbeds
+
+
+@dataclass(frozen=True)
+class ContractIssue:
+    """One problem with a connection, attributed to the testbed that carries it.
+
+    The testbed id is kept apart from the text so a caller can drop exactly the
+    offending testbed -- the Lab Agent does that at load time -- while still
+    printing a message a human can act on.
+    """
+
+    testbed_id: str
+    severity: str
+    message: str
+
+
+def fixture_contract_issues(
+    testbeds: Iterable[TestBed],
+    contracts: Optional[FixtureTypes] = None,
+) -> List[ContractIssue]:
+    """Check connection options against the fixture type contracts.
+
+    A contract states, for a type, which options exist and which of them come
+    from the runner-side params file. That makes two rules checkable here:
+
+    * an option the contract sources from params must not appear in a binding.
+      The binding belongs to the lab and is committed; a password written there
+      is exactly the thing this mechanism exists to prevent. This is an error.
+    * an option the contract does not mention is a warning, not an error. Driver
+      private keys (an instrument's own ``console:``) are legitimate, and
+      refusing them would be the second schema :mod:`sdk_test.binding` warned
+      against. The warning names the keys the contract does allow, so a typo is
+      still easy to see.
+
+    Types with no contract are not checked at all, which keeps existing labs
+    working unchanged.
+
+    :param testbeds: parsed testbeds.
+    :param contracts: contracts to consult; defaults to the ones shipped here.
+    :return: one :class:`ContractIssue` per problem.
+    """
+    catalogue = contracts if contracts is not None else default_fixture_types()
+    issues: List[ContractIssue] = []
+
+    for testbed in testbeds:
+        for connection in testbed.connections:
+            ref = connection.fixture
+            contract = catalogue.get(ref.name)
+            if contract is None:
+                continue
+
+            allowed = contract.option_names
+            where = f'testbed "{testbed.id}" connection "{ref.spec}"'
+            for key in sorted(connection.options):
+                if key in contract.params_option_names:
+                    issues.append(
+                        ContractIssue(
+                            testbed_id=testbed.id,
+                            severity="error",
+                            message=(
+                                f'{where} sets "{key}", which the '
+                                f"{contract.name} contract declares source: "
+                                f"{SOURCE_PARAMS}. Put it in the params file, "
+                                "not in the binding."
+                            ),
+                        )
+                    )
+                elif key not in allowed:
+                    permitted = ", ".join(allowed) or "none"
+                    issues.append(
+                        ContractIssue(
+                            testbed_id=testbed.id,
+                            severity="warning",
+                            message=(
+                                f'{where} has unknown key "{key}"; the '
+                                f"{contract.name} contract allows: {permitted}"
+                            ),
+                        )
+                    )
+    return issues
+
+
+def check_fixture_contracts(
+    testbeds: Iterable[TestBed],
+    contracts: Optional[FixtureTypes] = None,
+) -> Tuple[List[str], List[str]]:
+    """:func:`fixture_contract_issues` as ``(errors, warnings)`` strings."""
+    issues = fixture_contract_issues(testbeds, contracts)
+    errors = [issue.message for issue in issues if issue.severity == "error"]
+    warnings = [issue.message for issue in issues if issue.severity != "error"]
+    return errors, warnings

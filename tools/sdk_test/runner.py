@@ -26,10 +26,12 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
 from typing import Callable
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
 
+from . import params
 from . import report
 from .agent_client import LabAgentClient
 from .backends import create_backend
@@ -40,6 +42,7 @@ from .errors import BackendError
 from .errors import BuildError
 from .errors import DiscoveryError
 from .errors import SdkTestError
+from .fixture_types import default_fixture_types
 from .harness import RunContext
 from .harness import run as run_harness
 from .harness import unity
@@ -178,6 +181,11 @@ class RunOptions:
     #: Print a failed instance's log to the console instead of pointing at the
     #: file. Twister spells this ``--inline-logs``.
     inline_logs: bool = False
+    #: Runner-side params file. ``None`` means the documented discovery order
+    #: applies (``SIFLI_TEST_PARAMS_FILE``, then ``~/.sifli/test-params.yaml``).
+    params_file: Optional[str] = None
+    #: Per-key overrides from ``--param KEY=VALUE``, highest precedence.
+    param_overrides: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -201,6 +209,11 @@ class PlannedRun:
     #: Where this instance's log files go; computed at plan time so ``test plan``
     #: can show it before anything runs.
     out_dir: str = ""
+    #: The params and fixture options this instance resolved to, and the sources
+    #: they came from. ``None`` only if resolution never ran (it runs for every
+    #: instance, including those whose harness ignores the values, so a missing
+    #: required key fails before a build).
+    resolved: Optional[params.ResolvedParams] = None
 
     @property
     def id(self) -> str:
@@ -339,6 +352,20 @@ class TestRunner:
     def make_planned_run(self, instance: TestInstance, platform: str) -> PlannedRun:
         """Everything needed to build and open one (instance, platform) pair."""
         instance.platform = platform
+        # Resolved before the project is looked up and long before the build:
+        # a missing key is a configuration error, and spending a compile cycle
+        # before reporting it wastes the most expensive part of the run. A case
+        # the testcase marked `skip` is exempt: it will not run, so it must not
+        # require a secret to be present.
+        resolved = (
+            params.ResolvedParams()
+            if instance.skip
+            else self.resolve_instance_params(instance, platform)
+        )
+        # A secret short enough to over-redact is a warning, not a failure; the
+        # warning names the key only, never the value.
+        for warning in resolved.warnings:
+            self._echo(f"[warn]  {instance.id}: {warning}")
         project_dir = find_project_dir(instance)
         board = canonical_board_name(platform)
         planned = PlannedRun(
@@ -349,9 +376,28 @@ class TestRunner:
             build_dir=os.path.join(project_dir, f"build_{board}"),
             board=board,
             out_dir=report.instance_log_dir(self._run_dir, platform, instance.id),
+            resolved=resolved,
         )
         self.check_registry(planned)
         return planned
+
+    def resolve_instance_params(
+        self, instance: TestInstance, platform: str
+    ) -> params.ResolvedParams:
+        """Resolve this instance's declared params and fixture options.
+
+        The loopback rule is applied here because it is a property of the plan:
+        an instance whose secrets would cross to a remote agent must never be
+        built, let alone run.
+        """
+        return params.resolve_params(
+            instance,
+            default_fixture_types(),
+            params_file=self.options.params_file,
+            overrides=self.options.param_overrides,
+            agent_url=self.options.agent_url,
+            uses_agent=not is_host_platform(platform),
+        )
 
     def check_registry(self, planned: PlannedRun) -> None:
         """Refuse a Unity suite the firmware it is about to run on does not have.
@@ -572,6 +618,13 @@ class TestRunner:
             status=PASSED,
             platform=planned.platform,
         )
+        if planned.resolved is not None:
+            # Provenance only: which keys were used and where each came from.
+            # The values themselves never enter the report.
+            result.params = [
+                {"name": name, "source": source}
+                for name, source in planned.resolved.sources().items()
+            ]
 
         if instance.skip:
             result.status = SKIPPED
@@ -583,6 +636,9 @@ class TestRunner:
         #: Held past the try so the finally can put the harness's own account of
         #: the run into runner.log, even when the harness raised.
         outcome = None
+        #: The temporary JSON the pytest subprocess reads its values from. Named
+        #: out here so the finally can delete it whatever happened.
+        data_file: Optional[str] = None
         try:
             if self.options.build:
                 self._echo(f"[build] {instance.id} for {planned.platform}")
@@ -641,7 +697,21 @@ class TestRunner:
                 return result
 
             result.stage = report.STAGE_RUN
-            outcome = run_harness(instance, session.console, timeout, context=context)
+            if instance.harness == "pytest" and planned.resolved is not None:
+                # The values reach the suite through a file, not the environment:
+                # an environment variable is visible to every child process and
+                # to anything that can list a process's environment.
+                data_file = params.write_data_file(planned.resolved)
+                context.data_file = data_file
+            try:
+                outcome = run_harness(instance, session.console, timeout, context=context)
+            finally:
+                if data_file is not None and not params.remove_data_file(data_file):
+                    # A secret left on disk is worth a line in the log even
+                    # though the verdict is already being decided.
+                    note = f"could not delete the temporary params file {data_file}"
+                    result.capture_warnings.append(note)
+                    self._echo(f"[warn]  {instance.id}: {note}")
 
             result.status = PASSED if outcome.passed else FAILED
             result.message = outcome.detail
@@ -659,11 +729,31 @@ class TestRunner:
             if backend is not None:
                 self._close_session(backend, session, result)
             result.duration = time.time() - started
+            # Before anything is written: every log and the report are projections
+            # of these structures, so redacting in memory covers all of them --
+            # including the failure path, where an `expect` timeout has already
+            # folded the device transcript into the assertion message.
+            self._redact_evidence(result, outcome, planned)
             # After the duration and the final status, so handler.log reports
             # what the run actually concluded rather than an interim view.
             self._write_instance_logs(planned, result, outcome)
 
         return result
+
+    def _redact_evidence(
+        self, result: TestResult, outcome: Any, planned: PlannedRun
+    ) -> None:
+        """Remove secret values from everything this instance produced.
+
+        The harness's own output is redacted separately because ``runner.log``
+        inlines it verbatim; redacting only :class:`TestResult` would leave the
+        unredacted copy in the file. Nothing here changes the verdict.
+        """
+        secrets = planned.resolved.secrets if planned.resolved is not None else []
+        if not secrets:
+            return
+        params.redact_outcome(outcome, secrets)
+        params.redact_result(result, secrets)
 
     def _capture_transcript(
         self, session: Any, result: TestResult, planned: "PlannedRun"
@@ -833,15 +923,28 @@ class TestRunner:
                 f'"{planned.instance.id}": building was requested but no build '
                 "function was supplied"
             )
-        return self._build_fn(
-            planned.project_dir,
-            planned.board or planned.platform,
-            list(planned.instance.extra_args),
-            self.options.jobs,
-        )
+        # A build never needs a test parameter, and this design does not support
+        # compile-time injection of one. The variables are removed for the
+        # duration of the call so the compiler (and everything it spawns)
+        # cannot see them.
+        with params.stripped_param_environment():
+            return self._build_fn(
+                planned.project_dir,
+                planned.board or planned.platform,
+                list(planned.instance.extra_args),
+                self.options.jobs,
+            )
 
     def run(self) -> RunSummary:
         summary = RunSummary(root=self.options.testsuite_root, out_dir=self._run_dir)
+        # A crashed or killed run leaves its plaintext params file behind; one
+        # older than the documented window is nobody's live run.
+        stale = params.cleanup_stale_data_files()
+        if stale:
+            self._echo(
+                f"[clean] removed {len(stale)} stale params file(s) from the "
+                "temporary directory"
+            )
         # Said up front rather than only in the closing `[log]` line: with one
         # tree per run the path is not guessable, and it is worth knowing while
         # the run is still going -- `device.log` can be tailed as it is written.

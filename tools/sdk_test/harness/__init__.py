@@ -78,6 +78,9 @@ class RunContext:
     testbed_id: Optional[str] = None
     build_dir: Optional[str] = None
     platform: Optional[str] = None
+    #: Path of the runner-written JSON carrying this instance's params and
+    #: resolved fixture options. Set only for harnesses that read it.
+    data_file: Optional[str] = None
 
 
 @dataclass

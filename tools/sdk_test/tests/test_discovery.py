@@ -9,6 +9,7 @@ framework silently depends on, so they are pinned here first.
 
 from __future__ import annotations
 
+import json
 import os
 import unittest
 
@@ -57,6 +58,61 @@ class TestAllowedKeys(SdkTestCase):
             },
             "testcase.yaml",
         )
+
+
+class TestParamsDeclarations(SdkTestCase):
+    """A params declaration object must declare something."""
+
+    def validate(self, declaration) -> None:
+        discovery._validate(
+            {"tests": [{"id": "a", "params": {"cloud.token": declaration}}]},
+            "testcase.yaml",
+        )
+
+    def test_an_empty_declaration_object_is_rejected(self):
+        # `{}` declares neither required nor secret, so it would read as a
+        # default of "nothing" while looking like a declaration.
+        with self.assertRaises(DiscoveryError) as caught:
+            self.validate({})
+        self.assertIn("invalid testcase file", str(caught.exception))
+
+    def test_required_secret_and_both_are_accepted(self):
+        for declaration in (
+            {"required": True},
+            {"secret": True},
+            {"required": True, "secret": True},
+        ):
+            with self.subTest(declaration=declaration):
+                self.validate(declaration)
+
+    def parse(self, declaration) -> None:
+        path = self.write(
+            "case/testcase.yaml",
+            f"""
+            tests:
+              upload:
+                params:
+                  cloud.token: {json.dumps(declaration)}
+            """,
+        )
+        discovery.parse_testcase_file(path, self.root)
+
+    def test_a_declaration_whose_flags_are_all_false_is_rejected(self):
+        # `{required: false}` passes the schema's minProperties rule but says
+        # the same nothing as `{}`, so discovery rejects it explicitly.
+        for declaration in ({"required": False}, {"secret": False}):
+            with self.subTest(declaration=declaration):
+                with self.assertRaises(DiscoveryError) as caught:
+                    self.parse(declaration)
+                self.assertIn(
+                    "declares neither required nor secret",
+                    str(caught.exception),
+                )
+
+    def test_a_declaration_with_a_true_flag_is_accepted(self):
+        for declaration in ({"required": True}, {"secret": True}):
+            with self.subTest(declaration=declaration):
+                self.parse(declaration)
 
 
 class TestListForm(SdkTestCase):

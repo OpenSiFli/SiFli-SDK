@@ -182,6 +182,53 @@ _NO_CONFIRM_OPTION = {
     ),
 }
 
+_PARAMS_FILE_OPTION = {
+    "names": ["--params-file"],
+    "help": (
+        "Runner-side file holding credentials and other non-wiring values. "
+        "Defaults to the file named by SIFLI_TEST_PARAMS_FILE, then "
+        "~/.sifli/test-params.yaml."
+    ),
+    "type": str,
+    "default": None,
+}
+
+_PARAM_OPTION = {
+    "names": ["--param"],
+    "help": (
+        "Override one parameter, as KEY=VALUE. Repeatable. Highest precedence, "
+        "but it lands in the shell history -- prefer the environment variable "
+        "or the file."
+    ),
+    "type": str,
+    "multiple": True,
+    "default": None,
+}
+
+_AGENT_URL_OPTION = {
+    "names": ["--agent-url"],
+    "help": (
+        "Base URL of the Lab Agent holding the hardware. A run carrying secrets "
+        "refuses a non-loopback host unless SIFLI_TEST_ALLOW_REMOTE_SECRETS=1."
+    ),
+    "type": str,
+    "default": "http://127.0.0.1:8760",
+}
+
+#: A binding file named for the check, since it normally lives outside the repo.
+_BINDING_ENV = "SIFLI_TEST_BINDING"
+
+
+def _parse_param_overrides(values: Optional[List[str]]) -> dict:
+    """Turn repeated ``--param KEY=VALUE`` into a mapping."""
+    overrides: dict = {}
+    for item in values or []:
+        key, separator, value = str(item).partition("=")
+        if not separator or not key.strip():
+            raise click.BadParameter(f"--param expects KEY=VALUE, got {item!r}")
+        overrides[key.strip()] = value
+    return overrides
+
 
 def _confirm_for(
     no_confirm: bool,
@@ -270,6 +317,9 @@ def test_plan_callback(
     tag: Optional[List[str]] = None,
     platform: Optional[str] = None,
     backend: Optional[str] = None,
+    agent_url: str = "http://127.0.0.1:8760",
+    params_file: Optional[str] = None,
+    param: Optional[List[str]] = None,
 ) -> int:
     return sdk_test_cli.describe_plan(
         _suite_root(testsuite_root),
@@ -277,6 +327,9 @@ def test_plan_callback(
         tags=tag,
         platform=platform,
         backend=backend,
+        agent_url=agent_url,
+        params_file=params_file,
+        param_overrides=_parse_param_overrides(param),
     )
 
 
@@ -300,6 +353,8 @@ def test_run_callback(
     inline_logs: bool = False,
     fail_fast: bool = False,
     no_confirm: bool = False,
+    params_file: Optional[str] = None,
+    param: Optional[List[str]] = None,
 ) -> int:
     options = RunOptions(
         testsuite_root=_suite_root(testsuite_root),
@@ -321,12 +376,64 @@ def test_run_callback(
         inline_logs=inline_logs,
         fail_fast=fail_fast,
         python_exe=sys.executable,
+        params_file=params_file,
+        param_overrides=_parse_param_overrides(param),
     )
     return sdk_test_cli.run_tests(
         options,
         build_fn=_make_build_fn(sdk_ctx),
         confirm=_confirm_for(no_confirm, print),
     )
+
+
+@_guard
+def test_params_check_callback(
+    sdk_ctx: SdkContext,
+    testsuite_root: Optional[str] = None,
+    case: Optional[List[str]] = None,
+    tag: Optional[List[str]] = None,
+    agent_url: str = "http://127.0.0.1:8760",
+    params_file: Optional[str] = None,
+    param: Optional[List[str]] = None,
+    unused: bool = False,
+    json: bool = False,
+) -> int:
+    """Answer "can every selected case be supplied?" without a build or an agent.
+
+    The keys are derived from the testcase and the fixture type contract, so the
+    answer is available before anything expensive starts -- which is exactly
+    what makes it useful as a CI pre-flight. Resolution uses the same options
+    and the same loopback rule as ``test run``.
+    """
+    return sdk_test_cli.check_params(
+        _suite_root(testsuite_root),
+        testcase_ids=case,
+        tags=tag,
+        show_unused=unused,
+        as_json=json,
+        params_file=params_file,
+        overrides=_parse_param_overrides(param),
+        agent_url=agent_url,
+    )
+
+
+@_guard
+def test_binding_check_callback(
+    sdk_ctx: SdkContext,
+    file: Optional[str] = None,
+    json: bool = False,
+) -> int:
+    """Check a lab's binding against the fixture type contracts.
+
+    A binding normally lives outside the repository, so the path is given here
+    (or in ``SIFLI_TEST_BINDING``) rather than discovered.
+    """
+    path = file or os.environ.get(_BINDING_ENV)
+    if not path:
+        raise click.BadParameter(
+            f"give --file PATH, or set {_BINDING_ENV} to the binding to check"
+        )
+    return sdk_test_cli.check_binding(path, as_json=json)
 
 
 # -- registration ------------------------------------------------------------
@@ -378,6 +485,9 @@ def register(registry: CommandRegistry) -> None:
                 "type": click.Choice(backend_names(), case_sensitive=False),
                 "default": None,
             },
+            _AGENT_URL_OPTION,
+            _PARAMS_FILE_OPTION,
+            _PARAM_OPTION,
         ],
     )
 
@@ -405,12 +515,7 @@ def register(registry: CommandRegistry) -> None:
                 "type": click.Choice(backend_names(), case_sensitive=False),
                 "default": None,
             },
-            {
-                "names": ["--agent-url"],
-                "help": "Base URL of the Lab Agent holding the hardware.",
-                "type": str,
-                "default": "http://127.0.0.1:8760",
-            },
+            _AGENT_URL_OPTION,
             {
                 "names": ["--no-build"],
                 "help": "Skip the build step and use whatever is already in build_<board>/.",
@@ -482,6 +587,8 @@ def register(registry: CommandRegistry) -> None:
                 "is_flag": True,
                 "default": False,
             },
+            _PARAMS_FILE_OPTION,
+            _PARAM_OPTION,
         ],
     )
 
@@ -490,4 +597,74 @@ def register(registry: CommandRegistry) -> None:
         callback=test_info_callback,
         help="Show the harnesses and execution backends this build supports.",
         options=[],
+    )
+
+    registry.group(
+        path="test/params",
+        help="Inspect the runner-side parameters a test case needs.",
+    )
+    registry.command(
+        path="test/params/check",
+        callback=test_params_check_callback,
+        help=(
+            "Report which keys the selected cases need and where their values "
+            "come from. Uses the same resolution and loopback rule as `test run`, "
+            "but contacts no Lab Agent and builds nothing."
+        ),
+        options=[
+            _SUITE_ROOT_OPTION,
+            {
+                "names": ["--case"],
+                "help": "Test id (or bare tests key) to check. Repeatable.",
+                "type": str,
+                "multiple": True,
+                "default": None,
+            },
+            _TAG_OPTION,
+            _AGENT_URL_OPTION,
+            _PARAMS_FILE_OPTION,
+            _PARAM_OPTION,
+            {
+                "names": ["--unused"],
+                "help": "Also list params-file keys no selected case refers to.",
+                "is_flag": True,
+                "default": False,
+            },
+            {
+                "names": ["--json"],
+                "help": "Emit machine-readable JSON (for CI pre-flight).",
+                "is_flag": True,
+                "default": False,
+            },
+        ],
+    )
+
+    registry.group(
+        path="test/binding",
+        help="Check a lab's binding file against the fixture type contracts.",
+    )
+    registry.command(
+        path="test/binding/check",
+        callback=test_binding_check_callback,
+        help=(
+            "Fail when a connection sets an option that comes from params, and "
+            "warn about keys the fixture contract does not mention."
+        ),
+        options=[
+            {
+                "names": ["--file"],
+                "help": (
+                    "Binding file to check. Defaults to SIFLI_TEST_BINDING; the "
+                    "real binding normally lives outside the repository."
+                ),
+                "type": str,
+                "default": None,
+            },
+            {
+                "names": ["--json"],
+                "help": "Emit machine-readable JSON.",
+                "is_flag": True,
+                "default": False,
+            },
+        ],
     )
