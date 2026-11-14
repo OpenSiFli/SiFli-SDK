@@ -305,6 +305,14 @@ Do not weaken the assertions or the retry to hide
 this; a case that cannot open the port must fail with the port and the last
 refusal in its message.
 
+On 2026-11-15 the same experiment with a host-mode image failed to help:
+flashing `host/cdc_acm_host` over the device image did not produce a
+host-visible disconnect either. PnP kept the stale `VID_38F4`/`COM32` node
+with the same `LastArrivalDate`, and opening the port still failed with
+WinError 31. A host flash is therefore not a substitute for a replug; device
+cases need a physical replug (verified); a controllable VBUS and an elevated
+device restart are candidates, unverified.
+
 The working sequence is: unplug the DUT's USB data cable, start `sdk.py test
 run`, and plug the cable back during the enumeration wait. On 2026-11-14 this
 turned `device/cdc_acm` from `2 failed, 2 passed` into `4 passed in 88.28s`.
@@ -389,9 +397,9 @@ its own negative-verification record in the `testcase.yaml` comment.
 - `host/uvc_uac_host/src/SConscript` references a non-existent
   `cherryusb_hostuvcuac/` directory (dead `Glob`).
 
-## Implementation status (snapshot 2026-11-14)
+## Implementation status (snapshot 2026-11-15)
 
-Branch `testcase`, commits up to `e54f8b60d`:
+Branch `testcase`, commits up to `973b570a3`:
 
 | Commit | Content |
 |---|---|
@@ -402,6 +410,10 @@ Branch `testcase`, commits up to `e54f8b60d`:
 | `b63552180` | Chinese guide: mirror the skip-as-pass note |
 | `a87181177` | docs: make the commit review order explicit |
 | `e54f8b60d` | guide: the `usb_host` section in both languages |
+| `b3ccb7528` | docs: correct the design record |
+| `475a7334b` | test asset: `host/cdc_acm_host` |
+| `b6a01360c` | test asset: `host/hid` |
+| `973b570a3` | test asset: `host/msc_host` |
 
 Framework, guide text and the first example are committed. The lab binding is
 a local file outside the repository (`E:\code2\lab\sifli-lab.yaml`, backup
@@ -445,6 +457,11 @@ alone: `middleware/bluetooth` (modified) and
   replug. The final revision was re-checked directly against the running board
   and gave 3 passed with the boot-banner test deselected, because the console
   was opened after boot; four sabotages went red.
+- Host cases (committed in `475a7334b`, `b6a01360c`, `973b570a3`): official
+  runs passed the case 1/1 each (72.6/65.6/79.3 s) and the final direct runs
+  were 4/4 each. Four, four and five sabotages went red on the board,
+  including real console lines injected into the 2 s / 15 s windows and into
+  the retained boot transcript.
 
 ### Review state
 
@@ -470,22 +487,31 @@ alone: `middleware/bluetooth` (modified) and
   final revision was re-checked on the running board (four sabotages red,
   3 passed with the banner test deselected). `port_denied` is mapped to
   `UsbConflict` because the OS refusal is transient and retryable.
+- **Host group: approved.** One comment round (negative-verification records,
+  shell readiness, the redundant `Driver=hcd` assertion). Board runs passed
+  the case 1/1 each and the direct runs 4/4; the sabotages above all went red
+  on the board.
 - Both full suites are green at the final state: `lab_agent` 264 tests OK,
   `sdk_test` 686 tests OK.
 
 ### Remaining
 
-- The other six examples still need a board run, negative verification and one
-  commit each: `device/cdc_acm_uart`, `device/cdc_hid_msc`,
-  `device/hid_mouse`, `host/cdc_acm_host`, `host/hid`, `host/msc_host`.
+- The three device cases — `device/cdc_acm_uart`, `device/cdc_hid_msc`,
+  `device/hid_mouse` — are written and reviewed but not board-verified. Each
+  needs a host-visible re-enumeration after flash/reset, and the operator was
+  away from the bench. Flashing a host-mode image did not produce a
+  disconnect, so they stay uncommitted until someone can replug the DUT's USB
+  data cable during the enumeration wait (a controllable VBUS or an elevated
+  device restart are candidates, unverified).
+- Run the official case, the sabotages listed in its `testcase.yaml` and the
+  final green, update `testcase.yaml`, then commit each.
 
 ### Resume here
 
-1. Start the agent, then run the remaining six cases, one commit each, in the
-   order listed above.
-2. For each, record negative verification in the `testcase.yaml` comment: at
-   least one sabotage, the red run, then restore and re-run green (candidates
-   are in the table above).
+1. With someone at the bench, replug the DUT's USB data cable during the
+   enumeration wait for each device case.
+2. Record the sabotage red runs and the final green in `testcase.yaml`, then
+   commit one device case at a time.
 
 ### Commands
 

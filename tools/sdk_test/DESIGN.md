@@ -683,6 +683,8 @@ D+ 掉电，Windows 看不到 disconnect，仍用旧地址/旧配置；`SetCommS
 
 - run 前 COM32 可打开；烧录/复位后同一端口 WinError 31，PnP `LastArrivalDate` 不变；
 - `reboot`、sftool stub、8 分钟空闲、外接 hub 的 cycle、非提权 `pnputil` 均无效；
+- 2026-11-15：烧 host 模式例程（`host/cdc_acm_host`）也没有产生主机可见断开；
+  PnP 保留残留的 `VID_38F4`/COM32 节点，`LastArrivalDate` 不变。**host 烧录不能当作重枚举手段**；
 - “先拔线 → 启动 `sdk.py test run` → 枚举等待窗口内插回” 后 `cdc_acm` 4/4 通过。
 
 可自动化的路径（均未实现，按优先级）：
