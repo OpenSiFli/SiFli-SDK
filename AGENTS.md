@@ -280,6 +280,23 @@ same scale: Critical/High → 严重 (`block`), Medium → 问题 (`comment`), L
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 
+### Before each commit (Orchestrator)
+
+The review gate above already names the steps; these are the ones that are
+easy to skip. Do them in this order:
+
+1. Draft the commit message **before** the Reviewer's pass and give it to the
+   Reviewer with the diff, so Step 5 reviews the text that will actually be
+   committed. Do not write the message after the review.
+2. A diff that touches `docs/` is reviewed with Step 3b; for a bilingual doc,
+   check `en` and `zh_CN` in the same pass.
+3. If the diff changed after the review, send it back to the same Reviewer;
+   do not commit a diff the verdict predates.
+4. Stage explicit paths; `git status` must show only task files (no drive-by
+   submodule or untracked changes).
+5. Record the executed test/board evidence and the Reviewer's verdict in the
+   report or the commit body; "not executed" stays "not executed".
+
 ### If you are a subagent
 
 If you were started as a subagent rather than as the main session, you are **not** the Orchestrator.
