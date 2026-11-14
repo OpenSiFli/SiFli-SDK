@@ -644,6 +644,59 @@ HAL_QSPIEX_WRITE_PAGE       plain:[]   _rom:[]          <- 完全不在表中
 
 指南第 5 节那张"现状"表指向这里。
 
+## TODO：pytest 的 skip 不是 PASS
+
+**现状（2026-11 记录，未修）**：pytest harness 以子进程退出码作为唯一判据
+（`harness/pytest.py`，`passed = returncode == 0`），而框架自己会在几种情况下
+`pytest.skip`——`dut` fixture 缺 `SIFLI_TEST_*` 环境变量（手工跑 pytest）、
+`harness_config.fixture` 没声明就用仪表 fixture。skip 的退出码是 0，于是
+**“没测”被记成 PASS**。框架自测 `tests/test_harness_pytest.py` 里甚至把这条行为
+断言成了 passed。用户可见的说明在指南第 6 节（`autotest_guide.md` 的
+“If a suite uses `bt_peer` without ... the fixture **skips**”一段）。
+
+**为什么要修**：一次 green run 必须意味着断言真的执行过。能力缺失、agent 太旧、
+fixture 未声明都属于“这条用例没有成立”，应当 FAIL/ERROR，而不是 PASS。
+
+**计划**（框架仍在设计阶段，不做兼容开关）：
+
+1. `harness/pytest.py` 在框架驱动的子进程环境里写 `SIFLI_TEST_STRICT=1`。
+2. `pytest_plugin.py` 的 `_unavailable`/`_require` 在 strict 下改为 `pytest.fail`；
+   再加 `pytest_runtest_makereport` hook，把 `report.skipped` 改成 failed，
+   `longrepr = "SKIP IS NOT A PASS: <reason>"`。
+3. 审计存量 suite：显式声明 fixture 的用例不受影响；把依赖 `pytest.skip`
+   表达“前一步没跑”的地方改成明确的失败或独立可运行的 fixture
+   （参考 `example/ble/hrpc/pytest/` 的 `STATE` 写法）。
+4. 改写 `tests/test_harness_pytest.py` 中“框架内 skip 视为 passed”的断言；
+   另加一条“直接手工跑 pytest（无 SIFLI 环境）仍 skip 且退出 0”的测试，
+   证明两种运行方式的分界。
+5. 更新指南第 6 节：框架运行中 skip = FAIL，只有手工 pytest 才 skip。
+
+新增的 `usb_host` fixture（见 `docs/design/usb-host-observation.md`）**不复用**
+这条旧语义：它在缺声明/不支持时直接 raise，不等全局修复。
+
+## TODO：烧录/复位后的主机可见重枚举
+
+设备类 USB 用例（binding 声明 `usb_host`）在真板上有一个实验台约束：MCU 复位不会让
+D+ 掉电，Windows 看不到 disconnect，仍用旧地址/旧配置；`SetCommState` 报 WinError 31，
+重试无效。2026-11-14 在 `sf32lb52-lcd_a128r16` 上复现：
+
+- run 前 COM32 可打开；烧录/复位后同一端口 WinError 31，PnP `LastArrivalDate` 不变；
+- `reboot`、sftool stub、8 分钟空闲、外接 hub 的 cycle、非提权 `pnputil` 均无效；
+- “先拔线 → 启动 `sdk.py test run` → 枚举等待窗口内插回” 后 `cdc_acm` 4/4 通过。
+
+可自动化的路径（均未实现，按优先级）：
+
+1. **提权重启设备**：agent 在 `prepare` 之后调用 `pnputil /restart-device` 或
+   `SetupDiRestartDevNode`。需要 agent 以管理员运行，并先验证它确实产生主机可见的断开；
+   验证通过后可作为 `usb_host` 的一个受控动作（只接受本次枚举到的 `device_key`）。
+2. **可控 USB hub/VBUS**：支持 per-port power 的 hub 或继电器，由 agent 控制断电重连；
+   这是硬件方案，最可靠。
+3. **`--reuse` 模式**：`sdk.py test run` 不 build/flash，直接对运行中的镜像跑 pytest。
+   首次上电仍需一次断开，但后续反复跑用例不需要；与第 1/2 条组合后可做到全自动。
+
+在实现前：设备类用例的负向验证用“运行中直接 pytest”（allocate + console open +
+`SIFLI_TEST_*` 环境），官方绿跑用一次协作插拔；不要放宽断言或重试来掩盖失步。
+
 ## 风险与待确认
 
 1. **hello_world 期望字符串有坑**：工作区 `example/get-started/hello_world/rtt/src/main.c` 是**未提交**的 `rt_kprintf("Hello world3!\n")`，而 `README.md` 写的是 `Hello world!`。期望串必须**写在 testcase.yaml 里**，绝不能从源码推导。

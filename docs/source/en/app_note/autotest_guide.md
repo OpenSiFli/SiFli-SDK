@@ -756,6 +756,12 @@ before it connects) is in `example/test/bt_peer/README.md`.
 If a suite uses `bt_peer` without the test case declaring `fixture: bt_peer:ble`, the fixture **skips** and says so --
 that is a missing declaration, not a failed test.
 
+> **Known trap, not yet fixed:** the harness records the pytest exit code as the verdict, and a skip exits 0, so the
+> run above is reported as **PASS**. A suite that never really ran its assertions can therefore look green. The
+> planned fix (strict mode: any skip becomes a failure when the framework drives the run; a manual `pytest` still
+> skips) is a TODO in [`tools/sdk_test/DESIGN.md`](../../../../tools/sdk_test/DESIGN.md), section "TODO：pytest 的 skip
+> 不是 PASS". Until then, do not use `skip` to mean "not verified".
+
 **The instrument's log is kept too.** When the case ends, the runner reads back every instrument console the test
 opened, before releasing the testbed, and writes it next to `device.log` as `<fixture>.log` (here `bt_peer-ble.log`;
 the `:` in a spec is not portable in a file name, so it is sanitised).
