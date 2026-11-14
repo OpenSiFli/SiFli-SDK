@@ -38,28 +38,28 @@
             },
             {
                 "offset": "0x008E0000",
-                "max_size": "0x00400000",
+                "max_size": "0x00600000",
                 "name": "fs_root", 
                 "tags": [
                     "FS_REGION"
                 ]
             }, 
             {
-                "offset": "0x00CE0000", 
+                "offset": "0x00EE0000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_DFU_REGION"
                 ]
             }, 
             {
-                "offset": "0x00CE4000", 
+                "offset": "0x00EE4000", 
                 "max_size": "0x00004000", 
                 "tags": [
                     "KVDB_BLE_REGION"
                 ]
             },
             {
-                "offset": "0x00CE8000",
+                "offset": "0x00EE8000",
                 "max_size": "0x00020000",
                 "name": "wave_table", 
                 "tags": [
