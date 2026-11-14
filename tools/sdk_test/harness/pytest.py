@@ -234,6 +234,13 @@ def run(
     env.update(plugin_env(instance, context))
     # Keep the emitted output stable and free of a user's own pytest settings.
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # The suite prints the DUT transcript, which carries logs that are not in
+    # the console code page (Chinese text, ANSI reset codes). Pin both sides to
+    # UTF-8: without this, subprocess's reader thread dies with a
+    # UnicodeDecodeError on a GBK Windows console and the harness reports
+    # "pytest exited with 1" with no output at all.
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
 
     try:
         completed = subprocess.run(
@@ -242,6 +249,8 @@ def run(
             env=env,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=max(1.0, float(timeout)) + _SUBPROCESS_MARGIN,
             check=False,
         )
