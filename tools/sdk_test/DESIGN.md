@@ -660,7 +660,8 @@ fixture 未声明都属于“这条用例没有成立”，应当 FAIL/ERROR，�
 **计划**（框架仍在设计阶段，不做兼容开关）：
 
 1. `harness/pytest.py` 在框架驱动的子进程环境里写 `SIFLI_TEST_STRICT=1`。
-2. `pytest_plugin.py` 的 `_unavailable`/`_require` 在 strict 下改为 `pytest.fail`；
+2. `pytest_plugin.py` 里实际存在的两处 `pytest.skip`（`_require()` 的环境变量缺失分支、
+   仪表 fixture 的未声明分支）在 strict 下改为 `pytest.fail`；
    再加 `pytest_runtest_makereport` hook，把 `report.skipped` 改成 failed，
    `longrepr = "SKIP IS NOT A PASS: <reason>"`。
 3. 审计存量 suite：显式声明 fixture 的用例不受影响；把依赖 `pytest.skip`

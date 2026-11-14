@@ -69,7 +69,7 @@ testbed:
       - fixture: usb_host            # no parameter; a parameter is an error
         usb:
           backend: auto              # auto | windows | null (null: tests only)
-          exclude_ports: [COM8, COM6]
+          exclude_ports: []          # extra ports; console/instrument/download are reserved
           allow_fixed_drives: false
           max_file_bytes: 4194304
           serial_baud: 115200
@@ -228,8 +228,10 @@ Windows queries (no PowerShell, no WMI, no subprocess):
   `SPDRP_DEVICEDESC` / `SPDRP_COMPATIBLEIDS` / `SPDRP_ADDRESS` /
   `SPDRP_FRIENDLYNAME`; `&MI_xx` children grouped under their parent.
 - Endpoints/speed: root-hub handle via `GUID_DEVINTERFACE_USB_HUB`,
-  `IOCTL_USB_GET_NODE_INFORMATION`, `IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX`
-  (PipeList; `EndpointAddress` bit 7 = IN, isochronous = 1).
+  `IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX` (PipeList; `EndpointAddress`
+  bit 7 = IN, isochronous = 1) and
+  `IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION` for the configuration
+  descriptor (interfaces and endpoints).
 - COM: `GUID_DEVCLASS_PORTS` + friendly-name `(COM\d+)`, then `CM_Get_Parent`
   to the USB parent. The fallback reads `Enum\<instance>\Device Parameters\
   PortName`, which maps the port back to exactly that instance (more precise
@@ -295,9 +297,11 @@ but `SetCommState` failed with `WinError 31` on every attempt, including a
 direct pyserial open outside the framework. `reboot`, `sftool` stub entry,
 eight minutes idle, `IOCTL_USB_HUB_CYCLE_PORT` and non-elevated
 `pnputil /restart-device` did not produce a disconnect. Device-side cases
-therefore need a host-visible disconnect before they run: a physical replug of
-the DUT's USB data port, a controllable VBUS switch, or an elevated
-`pnputil /restart-device`. Do not weaken the assertions or the retry to hide
+therefore need a host-visible disconnect before they run. A **physical replug
+of the DUT's USB data port is the verified path**; an elevated
+`pnputil /restart-device` and a controllable hub/VBUS switch are candidates,
+unverified -- see `tools/sdk_test/DESIGN.md`, section "TODO：烧录/复位后的主机可见重枚举".
+Do not weaken the assertions or the retry to hide
 this; a case that cannot open the port must fail with the port and the last
 refusal in its message.
 
@@ -320,16 +324,19 @@ and `pytest_root: pytest`. No `platform_allow`; `-p` supplies the platform
 |---|---|---|---|---|
 | device/cdc_acm | `cdc_acm.usb_device` | `usb_host` | `cherryusb device cdc acm demo!`; `actual in len:2048`; `actual out len:7` | serial `2022123456`; COM; 2048-byte frame `1234567890` + `a`*2038; DTR required |
 | device/cdc_acm_uart | `cdc_acm_uart.usb_bridge` | `usb_host` | `[I/main] USB-UART Bridge starting...`; `UART initialized successfully`; `USB-UART bridge initialized`; `USB-UART Bridge ready`; `USB Configured`; `Set baud rate: 115200` | serial `202412345678`; COM opens at 115200 |
-| device/cdc_hid_msc | `cdc_hid_msc.composite` | `usb_host` | 9 boot lines; `USB connected`; `USB configured - device ready!`; `CDC actual out/in len:7` | serial `2025010101`; classes msc+cdc+hid; volume `SiFli MSC`; `README.TXT` exact bytes; CDC echo; HID usage 1/6 |
-| device/hid_mouse | `hid_mouse.usb_device` | `usb_host` | 3 banner lines; `KEY2 button initialized, pin=11`; `mouse thread created successfully!`; `USB HID Mouse configured!` | serial `2025101418`; HID usage 1/2; protocol 2 |
+| device/cdc_hid_msc | `cdc_hid_msc.composite` | `usb_host` | 10 boot lines (including the greeting); `USB connected`; `USB configured - device ready!`; `CDC actual out/in len:7` | serial `2025010101`; classes msc+cdc+hid; volume `SiFli MSC`; `README.TXT` exact bytes; CDC echo; HID boot interface (class 3 / subclass 1 / protocol 1) + usage 1/6 |
+| device/hid_mouse | `hid_mouse.usb_device` | `usb_host` | 3 banner lines; `KEY2 button initialized, pin=<board-specific>`; `mouse thread created successfully!`; `USB HID Mouse configured!` | serial `2025101418`; HID usage 1/2; host-inferred protocol 2 |
 | host/cdc_acm_host | `cdc_acm_host.host_stack` | — | `cherryusb host demo!`; `ttyACM0 not found!`; `lsusb -V`; `lsusb -t` | — |
 | host/hid | `hid.host_stack` | — | `cherryusb host demo!`; `hid host test`; root hub; no `mount a ...` | — |
 | host/msc_host | `msc_host.host_stack` | — | `cherryusb host demo!`; `Scanning for USB mass storage devices...`; root hub; no mount | — |
 
 Exact strings come from the source, not from the READMEs: several READMEs are
-stale (`host/hid` hub/hid lines, `msc_host` "Waiting for...", `cdc_acm`
-"CDC actual out len", `cdc_hid_msc` "internal Flash"). README fixes are a
-separate round.
+stale (`host/hid` hub/hid lines and `mount a ...`, `msc_host` "Waiting for USB
+mass storage device connection...", `cdc_hid_msc` "internal Flash" although the
+volume is RAM-based). `device/cdc_acm`'s README is not stale but incomplete: it
+shows `cherryusb device cdc acm demo!` and omits the `actual in len` /
+`actual out len` lines the firmware prints; `CDC actual out len` belongs to
+`cdc_hid_msc`, whose README documents it. README fixes are a separate round.
 
 ## Negative verification
 
@@ -345,7 +352,8 @@ Per example, at least one red assertion each, then restore and re-run green:
 | cdc_acm | wrong serial in the test / wrong frame prefix / DTR left false | `wait_for` timeout / frame assertion / `read_exact` timeout |
 | cdc_acm_uart | baud 9600 instead of 115200 (test or firmware `LOG_I`) | `Set baud rate: 115200` |
 | cdc_hid_msc | wrong README first line / wrong echo / remove HID interface | volume content / echo / HID usage |
-| hid_mouse | expect usage 1/6 / remove `USB HID Mouse configured!` | usage / boot `expect_all` |
+| hid_mouse | expect usage 1/6 | the usage assertion in `test_enumerates_as_a_mouse` |
+| hid_mouse | break `USB HID Mouse configured!` | `test_reports_the_configured_event` |
 | cdc_acm_host | expect `found` instead of `not found` | the `not found` assertion |
 | hid | wrong `hid host test` | the boot assertion |
 | msc_host | wrong `Scanning for...` text | the scanning assertion |
@@ -381,11 +389,24 @@ its own negative-verification record in the `testcase.yaml` comment.
 - `host/uvc_uac_host/src/SConscript` references a non-existent
   `cherryusb_hostuvcuac/` directory (dead `Glob`).
 
-## Implementation status (paused 2026-11-14)
+## Implementation status (snapshot 2026-11-14)
 
-Work is **uncommitted** on branch `testcase`; nothing in this task has been
-committed. Pre-existing, unrelated changes to leave alone:
-`middleware/bluetooth` (modified) and
+Branch `testcase`, commits up to `e54f8b60d`:
+
+| Commit | Content |
+|---|---|
+| `83897d142` | lab agent: serve the `usb_host` capability over the testbed API |
+| `c6777ffb9` | runner: expose `usb_host` to pytest suites |
+| `f6690dac6` | docs: the design document, the English guide skip note, the DESIGN.md TODOs |
+| `6adfbd81b` | test asset: `device/cdc_acm` |
+| `b63552180` | Chinese guide: mirror the skip-as-pass note |
+| `a87181177` | docs: make the commit review order explicit |
+| `e54f8b60d` | guide: the `usb_host` section in both languages |
+
+Framework, guide text and the first example are committed. The lab binding is
+a local file outside the repository (`E:\code2\lab\sifli-lab.yaml`, backup
+`sifli-lab.yaml.bak-2026-11-14`). Pre-existing, unrelated changes to leave
+alone: `middleware/bluetooth` (modified) and
 `example/multimedia/lvgl/lvgl_v9_external/` (untracked).
 
 ### Done
@@ -402,20 +423,28 @@ committed. Pre-existing, unrelated changes to leave alone:
   `cherryusb device cdc acm demo!`. The first `COM32` open was denied
   transiently and succeeded later; tests need a bounded retry (see the board
   baseline section).
-- Framework, agent side (uncommitted): `tools/lab_agent/usb_host/` (9 files),
-  `/testbed/{id}/usb/*` routes in `server.py`, gate/lifecycle in `testbed.py`,
-  `usb:` option validation in `config.py`, 51 new tests. Last run:
-  251 tests OK (skipped=1).
-- Framework, runner side (uncommitted): `tools/sdk_test/usb_host.py`,
+- Framework, agent side (committed in `83897d142`): `tools/lab_agent/usb_host/`
+  (9 files), `/testbed/{id}/usb/*` routes in `server.py`, gate/lifecycle in
+  `testbed.py`, `usb:` option validation in `config.py`, 58 new tests. Last
+  run: 264 tests OK (skipped=1).
+- Framework, runner side (committed in `c6777ffb9`): `tools/sdk_test/usb_host.py`,
   `suite_helpers/cherryusb.py`, the `usb_*` client methods,
   `LabAgentError.code`, the `usb_host` pytest fixture (raises, never skips),
-  the reserved name, 49 tests in `test_usb_host_client.py`. Focused suite OK
+  the reserved name, 53 tests in `test_usb_host_client.py`. Focused suite OK
   after the review fixes.
+- Documentation (committed in `f6690dac6`, `b63552180`, `e54f8b60d`,
+  `a87181177`): the `usb_host` capability and its binding in both languages,
+  plus the skip-as-pass trap and the commit review order.
 - Lab binding outside the repo: `E:\code2\lab\sifli-lab.yaml` now has a bare
   `fixture: usb_host` connection with `usb:` options; `--check` reports
   `Configuration OK.` Backup: `sifli-lab.yaml.bak-2026-11-14`.
 - Docs: this file; `tools/sdk_test/DESIGN.md` TODO for the global skip
   verdict; the guide's known-trap note.
+- Test asset `device/cdc_acm` (committed in `6adfbd81b`): approved. The
+  official run passed 4/4 on the pre-review revision, after the cooperating
+  replug. The final revision was re-checked directly against the running board
+  and gave 3 passed with the boot-banner test deselected, because the console
+  was opened after boot; four sabotages went red.
 
 ### Review state
 
@@ -423,7 +452,7 @@ committed. Pre-existing, unrelated changes to leave alone:
   (`read_exact` over-returned and dropped bytes) and test gaps; all six
   findings are closed. The same reviewer then approved the three low-risk
   follow-ups (non-ASCII base64, `_pending` vs `_closed`, `transport` code
-  docstring). Evidence: `test_usb_host_client.py` 52 tests OK, four behaviour
+  docstring). Evidence: `test_usb_host_client.py` 53 tests OK, four behaviour
   classes plus two edge fixes have sabotage records, and the full `sdk_test`
   suite ran 686 tests OK after the final fixes.
 - **Agent side: approved.** Two fix rounds. The first found a high-severity
@@ -443,31 +472,20 @@ committed. Pre-existing, unrelated changes to leave alone:
   `UsbConflict` because the OS refusal is transient and retryable.
 - Both full suites are green at the final state: `lab_agent` 264 tests OK,
   `sdk_test` 686 tests OK.
-- `device/cdc_acm` on the board is still pending the host-visible
-  re-enumeration described above; the first run passed the banner and
-  enumeration assertions but could not open `COM32`.
 
-### Not started
+### Remaining
 
-- Integrating the runner client with a real agent that offers `usb_host`
-  (allocation, capability, serial, volume).
-- `device/cdc_acm` is verified on the board: official run 4/4, four sabotages
-  red with restored hashes, final direct run 3 passed (boot test deselected
-  because the console was opened after boot). The test asset is approved.
-- The other six examples.
-- Per-example negative verification and the commit series.
+- The other six examples still need a board run, negative verification and one
+  commit each: `device/cdc_acm_uart`, `device/cdc_hid_msc`,
+  `device/hid_mouse`, `host/cdc_acm_host`, `host/hid`, `host/msc_host`.
 
 ### Resume here
 
-1. Run the full `sdk_test` suite; send the diff back to the same runner-side
-   reviewer for re-check; capture the sabotage records.
-2. Review the agent side.
-3. Start the agent, then write `device/cdc_acm`'s `testcase.yaml` and pytest
-   suite and run it end to end with `fixture: usb_host`. Negative
-   verification: wrong serial -> `wait_for` timeout; wrong frame prefix ->
-   frame assertion; DTR false -> `read_exact` timeout.
-4. Continue with the other three device cases and the three host cases, one
-   commit each.
+1. Start the agent, then run the remaining six cases, one commit each, in the
+   order listed above.
+2. For each, record negative verification in the `testcase.yaml` comment: at
+   least one sabotage, the red run, then restore and re-run green (candidates
+   are in the table above).
 
 ### Commands
 
@@ -481,4 +499,3 @@ python tools\sdk.py test run -T example/cherryusb/device/cdc_acm -p sf32lb52-lcd
 
 From Git Bash, clear `MSYSTEM` before calling `sdk.py`, or it prints
 "MSys/Mingw is no longer supported" and runs nothing.
-
