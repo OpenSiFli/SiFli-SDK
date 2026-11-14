@@ -739,6 +739,74 @@ SPP 连接前必须先配对）在 `example/test/bt_peer/README.md`。
   不会随便挑一个。
 - 框架不复位仪表。两次运行之间的恢复是实验室的事（断电重上），或者靠 DUT 自己复位把链路断掉。
 
+### USB 主机侧观测（`usb_host`） {#usb-host}
+
+设备类例程只靠 DUT 控制台只能证明一半，另一半是**主机**看到的证据：板子作为 USB 设备枚举后，Windows 看到的
+PnP 身份、CDC COM 口、挂载的卷、HID usage。`usb_host` 是 **testbed 级能力**，不是仪表：由 Lab Agent 所在的
+机器观测 DUT 的 USB 口，因此 runner 与 agent 可以不在同一台机器上。它没有要烧的固件，也没有行协议，
+用例只写 `usb_host`。
+
+**binding。** 在 DUT 所在 testbed 上声明成一条 connection，`usb:` 选项挂在这条 connection 下面：
+
+```yaml
+connections:
+  - fixture: usb_host          # 裸写，不带 :能力
+    usb:
+      backend: auto
+      exclude_ports: []          # 只追加端口；控制台/仪表/下载口会自动保留
+      allow_fixed_drives: false
+      max_file_bytes: 4194304
+      serial_baud: 115200
+```
+
+必须写 **`usb_host`，不要写 `usb_host:xxx`**：`fixture:` 的语法会把 `:` 后面的部分当成能力/总线校验，
+所以后缀是接线错误，不是参数。`usb:` 块必须挂在 connection 下——写在 testbed 级会在 binding 加载时被拒绝。
+DUT 控制台、仪表控制台和下载口会自动保留；`exclude_ports` 只是在此外再追加端口。
+
+**testcase。** 在 `harness_config.fixture` 里声明需求；同时还要用仪表时写成列表：
+
+```yaml
+harness_config:
+  fixture: usb_host
+  # 或带仪表：fixture: [usb_host, bt_peer:ble]
+  pytest_root: pytest
+```
+
+**套件。** `usb_host` fixture 返回一个 `UsbHost` 客户端；每次调用都走 agent 的 HTTP API。
+
+```python
+def test_cdc_frame(usb_host):
+    dev = usb_host.wait_for(vid=0x38F4, pid=0xFFFF,
+                            serial="2022123456", require_com=True, timeout=30)
+    with usb_host.serial(dev) as port:
+        port.set_dtr(True)
+        frame = port.read_exact(2048, timeout=5)
+    assert frame[:10] == b"1234567890"
+
+def test_msc_readme(usb_host):
+    dev = usb_host.wait_for(volume_label="SiFli MSC", timeout=30)
+    volume = usb_host.volume(dev, timeout=20)
+    text = volume.read_text("README.TXT")
+```
+
+**按 VID/PID + `iSerialNumber` 匹配，不要按产品名匹配。** Windows 给这类设备绑定类驱动，所以 PnP 里的
+产品串是 INF 描述（"USB Serial Device"），不是固件里的 iProduct。`class` 是 Python 保留字，要用映射形式
+传：`match={"class": 10}`。
+
+**失败语义。** fixture 会 **raise，不会 skip**：fixture 未声明、agent 不支持该能力、或 agent 太旧没有这些路由，
+都是错误，而不是“没跑”。`port_denied` 是可重试的 `UsbConflict`（操作系统拒绝打开，限时重试即可）；
+`forbidden_port` 与 `path_denied` 是永久的 `UsbDenied`。不要用 `skip` 表示“未验证”——上面那个陷阱同样适用。
+
+**实验台约束：烧录或复位不是主机可见的断开。** SoC 重新初始化了 USB 栈，但 D+ 不掉电，Windows 仍用旧地址和
+旧配置：PnP 里设备还在、`CreateFile` 也成功，可 `SetCommState` 每次都报 `WinError 31`。所以设备类用例运行前
+需要一次主机可见的重枚举。已验证的流程是：先拔掉 DUT 的 USB 数据线，启动 `sdk.py test run`，在枚举等待窗口内
+把线插回。自动重枚举（提权重启设备、可控 hub/VBUS、`--reuse` 模式）仍是 TODO，见 `tools/sdk_test/DESIGN.md`
+的“TODO：烧录/复位后的主机可见重枚举”一节。
+
+**完整契约。** HTTP 端点、错误码、客户端 API 与每个例程的检查点见
+[`docs/design/usb-host-observation.md`](../../../design/usb-host-observation.md)。该文件是仓库内的设计记录，
+不随文档站发布——与 `BT_PEER_DESIGN.md` 的安排相同。
+
 ### 负向验证：提交前必做
 
 一个过于宽松的用例，在正常设备上同样会 PASS，所以“上板跑绿”不能证明断言是对的。

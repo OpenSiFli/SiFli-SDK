@@ -778,6 +778,79 @@ never opened produces no file -- an empty log would read as a silent instrument.
 - The instrument has no framework-driven reset. Recovery between runs is the lab's (power-cycle), or the DUT's own
   reset, which drops the link.
 
+### USB host-side observation (`usb_host`) {#usb-host}
+
+Device examples are only half-proven on the DUT console: the other half is what the **host** sees when the board
+enumerates as a USB device -- the PnP identity, the CDC COM port, the mounted volume, the HID usage. `usb_host` is a
+**testbed-level capability**, not an instrument: the Lab Agent's machine observes the DUT's USB port, so the runner
+and the agent may live on different machines. There is no firmware to flash and no line protocol; the suite names
+only `usb_host`.
+
+**The binding.** Declare it as a connection on the DUT's testbed, with the `usb:` options under that connection:
+
+```yaml
+connections:
+  - fixture: usb_host          # bare, no :capability
+    usb:
+      backend: auto
+      exclude_ports: []          # extra ports only; the reserved ones are automatic
+      allow_fixed_drives: false
+      max_file_bytes: 4194304
+      serial_baud: 115200
+```
+
+Write **`usb_host`, never `usb_host:xxx`**: the `fixture:` grammar reads what follows `:` as a capability/bus
+check, so a suffix is a wiring error, not a parameter. The `usb:` block must hang under the connection -- a `usb:`
+block at testbed level is refused when the binding loads. The DUT console, the instrument consoles and the
+download port are reserved automatically; `exclude_ports` only adds further ports to that set.
+
+**The test case.** Declare the need under `harness_config.fixture`. When an instrument is needed too, use a list:
+
+```yaml
+harness_config:
+  fixture: usb_host
+  # or, with an instrument: fixture: [usb_host, bt_peer:ble]
+  pytest_root: pytest
+```
+
+**The suite.** The `usb_host` fixture returns a `UsbHost` client; every call goes through the agent's HTTP API.
+
+```python
+def test_cdc_frame(usb_host):
+    dev = usb_host.wait_for(vid=0x38F4, pid=0xFFFF,
+                            serial="2022123456", require_com=True, timeout=30)
+    with usb_host.serial(dev) as port:
+        port.set_dtr(True)
+        frame = port.read_exact(2048, timeout=5)
+    assert frame[:10] == b"1234567890"
+
+def test_msc_readme(usb_host):
+    dev = usb_host.wait_for(volume_label="SiFli MSC", timeout=30)
+    volume = usb_host.volume(dev, timeout=20)
+    text = volume.read_text("README.TXT")
+```
+
+**Match on VID/PID + `iSerialNumber`, not on the product name.** Windows binds a class driver to these devices, so
+the PnP product string is the INF description ("USB Serial Device"), not the firmware's iProduct. `class` is a
+Python reserved word: pass it through the mapping form, `match={"class": 10}`.
+
+**Failure semantics.** The fixture **raises**, it never skips: an undeclared fixture, an agent without the
+capability, or an agent older than these routes is an error, not "not run". `port_denied` is a retryable
+`UsbConflict` (the OS refused the open; retry for a bounded time); `forbidden_port` and `path_denied` are permanent
+`UsbDenied`. Do not use `skip` to mean "not verified" -- the trap above applies here too.
+
+**Bench constraint: a flash or reset is not a host-visible disconnect.** The SoC re-initialises its USB stack, but
+D+ never drops, so Windows keeps the old address and configuration: PnP still lists the device and `CreateFile`
+succeeds, yet `SetCommState` fails with `WinError 31` on every attempt. Device-class cases therefore need one
+host-visible re-enumeration before they run. The verified sequence is: unplug the DUT's USB data cable, start
+`sdk.py test run`, and plug the cable back during the enumeration wait window. Automatic re-enumeration (an
+elevated device restart, a switchable hub/VBUS, a `--reuse` mode) is a TODO; see `tools/sdk_test/DESIGN.md`,
+section "TODO：烧录/复位后的主机可见重枚举".
+
+**Full contract.** The HTTP endpoints, error codes, client API and the per-example check points are in
+[`docs/design/usb-host-observation.md`](../../../design/usb-host-observation.md). That file is a design record kept
+in the repository, not part of the published documentation site -- the same arrangement as `BT_PEER_DESIGN.md`.
+
 ### Negative verification: do it before submitting
 
 An over-permissive test case also passes on a working device, so "it is green on
