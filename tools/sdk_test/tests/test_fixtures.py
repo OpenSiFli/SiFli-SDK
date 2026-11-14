@@ -305,6 +305,14 @@ class TestInstanceFixturesFromConfig(SdkTestCase):
         self.assertEqual(instance_fixtures_from_config({}), [])
         self.assertEqual(instance_fixtures_from_config(None), [])
 
+    def test_usb_host_can_sit_in_a_list_with_an_instrument(self):
+        # The host-side USB view is a connection, not an instrument, but a
+        # case that needs both declares them the same way.
+        refs = instance_fixtures_from_config(
+            {"fixture": ["usb_host", "bt_peer:ble"]}
+        )
+        self.assertEqual([ref.spec for ref in refs], ["usb_host", "bt_peer:ble"])
+
     def test_a_malformed_fixture_is_reported_as_a_discovery_error(self):
         # Callers of this helper are reading a testcase file, so the error type
         # should say so, not leak the binding-file vocabulary.

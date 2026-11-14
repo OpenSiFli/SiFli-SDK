@@ -80,8 +80,25 @@ class LabAgentError(SdkTestError):
     did not (unreachable, timed out). Callers that must tell "the agent says
     this console is not open" (409) apart from "the answer never arrived" need
     the difference; the message alone cannot carry it.
+
+    ``code`` is the machine-readable reason from the error body, when the agent
+    sent one. Several routes answer the same status for different causes -- a
+    404 is "no such route" on an old agent but "no such device" on a current
+    one -- so a caller that maps errors onto its own types must key on it.
+
+    It can also be the local sentinel ``transport``, synthesized by the client
+    when no response arrived at all (unreachable agent, socket failure). That
+    value is not an agent code and never appears in an error body; it exists
+    because such a failure arrives with ``status=None``, exactly like a
+    malformed answer, and callers still need to tell the two apart.
     """
 
-    def __init__(self, message: str, status: Optional[int] = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        status: Optional[int] = None,
+        code: Optional[str] = None,
+    ) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code

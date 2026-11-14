@@ -47,6 +47,9 @@ from .harness.unity import DEFAULT_CMD
 from .harness.unity import UnityResult
 from .harness.unity import is_complete
 from .harness.unity import parse_unity_output
+from .usb_host import UsbHost
+from .usb_host import UsbHostError
+from .usb_host import UsbHostUnavailable
 
 #: Default budget for a single `expect`, in seconds.
 DEFAULT_EXPECT_TIMEOUT = 10.0
@@ -81,6 +84,15 @@ class Dut:
         #: cursor that only moves forward -- see `expect` for why.
         self._buffer = ""
         self._cursor = 0
+
+    @property
+    def client(self) -> Optional[LabAgentClient]:
+        """The Lab Agent client this DUT speaks through, or ``None``.
+
+        Read-only: the connection is part of how the DUT was opened, and a
+        suite that replaced it would be talking to a different testbed.
+        """
+        return self._client
 
     # -- io ------------------------------------------------------------------
 
@@ -378,6 +390,56 @@ def params() -> Dict[str, Any]:
     and the runner redacts it from every log and report on the way out.
     """
     return dict(_resolved_data().get("params") or {})
+
+
+@pytest.fixture(scope="session")
+def usb_host(dut: Dut) -> UsbHost:
+    """The host-side USB view of this bench.
+
+    Deliberately raises rather than skips in every "not available" case -- the
+    case did not declare the fixture, the binding does not offer it, the
+    agent's backend cannot observe USB, or the agent predates the routes. The
+    framework records pytest's exit code as the verdict, so a skip here would
+    be a false pass; the global fix for that is a TODO, and this fixture does
+    not wait for it (see ``docs/design/usb-host-observation.md``).
+    """
+    declared = [
+        spec
+        for spec in _declared_fixtures()
+        if parse_fixture_ref(spec).name == "usb_host"
+    ]
+    if not declared:
+        raise UsbHostUnavailable(
+            "this suite needs the usb_host fixture, but the test case did not "
+            'declare it: add "fixture: usb_host" under harness_config.'
+        )
+    if len(declared) > 1:
+        raise UsbHostError(
+            f"the test case declares usb_host more than once: {declared}. "
+            "There is one host-side USB view per bench."
+        )
+    reference = parse_fixture_ref(declared[0])
+    if reference.param or reference.instance:
+        raise UsbHostError(
+            f"usb_host takes no capability or instance parameter, got "
+            f"{declared[0]!r}; write it as plain `fixture: usb_host`."
+        )
+
+    client = dut.client
+    if client is None or not dut.testbed_id:
+        raise UsbHostUnavailable(
+            "usb_host needs the Lab Agent connection the runner opens for the "
+            "DUT; start the suite with `sdk.py test run`."
+        )
+
+    host = UsbHost(client, dut.testbed_id)
+    # Raises UsbHostUnavailable when the backend is missing or the agent is
+    # older than these routes -- still an error, never a skip.
+    host.require_supported()
+    try:
+        yield host
+    finally:
+        host.close()
 
 
 def _declared_fixtures() -> List[str]:

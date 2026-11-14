@@ -22,13 +22,14 @@ from typing import Type
 
 from .bt_peer import BtPeer
 
-#: Fixture names an instrument may not take over. `dut`/`console` are the
-#: framework's own; the rest are pytest built-ins whose shadowing would break
-#: suites in ways that are hard to trace back to a registration.
+#: Fixture names an instrument may not take over. `dut`/`console`/`usb_host`
+#: are the framework's own; the rest are pytest built-ins whose shadowing would
+#: break suites in ways that are hard to trace back to a registration.
 RESERVED_NAMES = frozenset(
     {
         "dut",
         "console",
+        "usb_host",
         "request",
         "tmp_path",
         "tmp_path_factory",

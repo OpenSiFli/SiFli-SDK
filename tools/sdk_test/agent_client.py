@@ -37,6 +37,12 @@ DEFAULT_TIMEOUT = 60.0
 #: gets a floor of its own rather than the request default.
 UPLOAD_TIMEOUT = 300.0
 
+#: ``code`` carried by a failure that never reached the agent. The agent's own
+#: error bodies name their cause; a local socket failure has no body, and
+#: callers still need to tell "the bench is unreachable" from "the answer was
+#: unusable" -- both arrive with ``status=None``.
+TRANSPORT_ERROR_CODE = "transport"
+
 
 class LabAgentClient:
     """Talks to one Lab Agent runner."""
@@ -67,24 +73,47 @@ class LabAgentClient:
             with urllib.request.urlopen(request, timeout=timeout or self.timeout) as response:
                 raw = response.read()
         except urllib.error.HTTPError as error:
-            # The agent puts a human-readable reason in the body; surfacing it is
-            # the whole point of the error contract.
+            # The agent puts a human-readable reason in the body, and on the
+            # routes that need it a machine-readable `code` beside it. Both are
+            # read here: the status alone cannot tell "no such route" from "no
+            # such device", and a second fetch of the body is impossible.
             detail = ""
+            code: Optional[str] = None
+            details: Any = None
             try:
-                detail = json.loads(error.read() or b"{}").get("error", "")
+                body = json.loads(error.read() or b"{}")
             except (ValueError, OSError):
+                body = {}
+            if isinstance(body, dict):
+                reported = body.get("error")
+                if reported:
+                    detail = str(reported)
+                reported_code = body.get("code")
+                if isinstance(reported_code, str) and reported_code:
+                    code = reported_code
+                details = body.get("details")
+            if not detail:
                 detail = error.reason or ""
+            message = f"{method} {path} failed ({error.code}): {detail}"
+            if details:
+                # A 408 from `usb/wait` carries the devices that could have
+                # matched. It has no field on the exception -- a caller keys on
+                # the type, and a suite reads this message -- so it is rendered
+                # here rather than dropped.
+                message += " " + json.dumps(details, sort_keys=True)
             raise LabAgentError(
-                f"{method} {path} failed ({error.code}): {detail or error.reason}",
-                status=error.code,
+                message, status=error.code, code=code
             ) from error
         except urllib.error.URLError as error:
             raise LabAgentError(
                 f"Cannot reach the Lab Agent at {self.base_url}: {error.reason}. "
-                "Start it with `python tools/lab_agent/runner.py --config <file>`."
+                "Start it with `python tools/lab_agent/runner.py --config <file>`.",
+                code=TRANSPORT_ERROR_CODE,
             ) from error
         except OSError as error:
-            raise LabAgentError(f"{method} {path} failed: {error}") from error
+            raise LabAgentError(
+                f"{method} {path} failed: {error}", code=TRANSPORT_ERROR_CODE
+            ) from error
 
         if not raw:
             return {}
@@ -273,6 +302,141 @@ class LabAgentClient:
             "POST",
             f"/testbed/{_quote(testbed_id)}/console/write{self._stream_query(stream)}",
             {"data": data},
+        )
+
+    # -- usb host ------------------------------------------------------------
+    #
+    # The USB evidence a device example needs is collected on the machine the
+    # device port is plugged into, which is the agent's machine. These are the
+    # raw routes; `sdk_test.usb_host` shapes them for a suite.
+
+    @staticmethod
+    def _usb_path(testbed_id: str, suffix: str) -> str:
+        return f"/testbed/{_quote(testbed_id)}/usb/{suffix}"
+
+    def usb_capabilities(self, testbed_id: str) -> Dict[str, Any]:
+        return self._request("GET", self._usb_path(testbed_id, "capabilities"))
+
+    def usb_devices(self, testbed_id: str) -> Dict[str, Any]:
+        return self._request("GET", self._usb_path(testbed_id, "devices"))
+
+    def usb_wait(
+        self,
+        testbed_id: str,
+        match: Dict[str, Any],
+        since: Optional[List[str]] = None,
+        timeout: float = 15.0,
+        interval: float = 0.25,
+    ) -> Dict[str, Any]:
+        # The agent blocks for `timeout` internally, so the socket deadline
+        # must outlast it or a quiet wait looks like a transport failure.
+        return self._request(
+            "POST",
+            self._usb_path(testbed_id, "wait"),
+            {
+                "match": dict(match),
+                "since": list(since or []),
+                "timeout": float(timeout),
+                "interval": float(interval),
+            },
+            timeout=max(self.timeout, float(timeout) + 10.0),
+        )
+
+    def usb_serial_open(
+        self,
+        testbed_id: str,
+        device_key: str,
+        com_port: str,
+        baud: int = 115200,
+        dtr: bool = False,
+        rts: bool = False,
+    ) -> Dict[str, Any]:
+        return self._request(
+            "POST",
+            self._usb_path(testbed_id, "serial/open"),
+            {
+                "device_key": device_key,
+                "com_port": com_port,
+                "baud": int(baud),
+                "dtr": bool(dtr),
+                "rts": bool(rts),
+            },
+        )
+
+    def usb_serial_read(
+        self, testbed_id: str, token: str, cursor: int, timeout: float = 1.0
+    ) -> Tuple[bytes, int, bool]:
+        """Return ``(data, cursor, closed)``; ``data`` is already decoded."""
+        query = urllib.parse.urlencode(
+            {"cursor": int(cursor), "timeout": float(timeout)}
+        )
+        payload = self._request(
+            "GET",
+            self._usb_path(testbed_id, f"serial/{_quote(token)}/read") + "?" + query,
+            timeout=max(self.timeout, float(timeout) + 10.0),
+        )
+        encoded = payload.get("data", "")
+        if not isinstance(encoded, str):
+            raise LabAgentError(
+                "the Lab Agent returned serial data that is not base64 text"
+            )
+        try:
+            data = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise LabAgentError(
+                f"the Lab Agent returned undecodable serial data: {exc}"
+            ) from exc
+        return data, int(payload.get("cursor", cursor)), bool(payload.get("closed"))
+
+    def usb_serial_write(self, testbed_id: str, token: str, data: bytes) -> int:
+        payload = self._request(
+            "POST",
+            self._usb_path(testbed_id, f"serial/{_quote(token)}/write"),
+            {"data_base64": base64.b64encode(data).decode("ascii")},
+        )
+        return int(payload.get("written") or 0)
+
+    def usb_serial_lines(
+        self, testbed_id: str, token: str, dtr: bool, rts: bool
+    ) -> Dict[str, Any]:
+        return self._request(
+            "POST",
+            self._usb_path(testbed_id, f"serial/{_quote(token)}/lines"),
+            {"dtr": bool(dtr), "rts": bool(rts)},
+        )
+
+    def usb_serial_close(self, testbed_id: str, token: str) -> None:
+        self._request(
+            "POST", self._usb_path(testbed_id, f"serial/{_quote(token)}/close")
+        )
+
+    def usb_volumes(self, testbed_id: str) -> Dict[str, Any]:
+        return self._request("GET", self._usb_path(testbed_id, "volumes"))
+
+    def usb_file(
+        self,
+        testbed_id: str,
+        device_key: str,
+        path: str,
+        encoding: str = "text",
+    ) -> Dict[str, Any]:
+        query = urllib.parse.urlencode(
+            {"device_key": device_key, "path": path, "encoding": encoding}
+        )
+        return self._request(
+            "GET", self._usb_path(testbed_id, "files") + "?" + query
+        )
+
+    def usb_audio(self, testbed_id: str, device_key: str) -> Dict[str, Any]:
+        query = urllib.parse.urlencode({"device_key": device_key})
+        return self._request(
+            "GET", self._usb_path(testbed_id, "audio") + "?" + query
+        )
+
+    def usb_hid(self, testbed_id: str, device_key: str) -> Dict[str, Any]:
+        query = urllib.parse.urlencode({"device_key": device_key})
+        return self._request(
+            "GET", self._usb_path(testbed_id, "hid") + "?" + query
         )
 
     # -- convenience ---------------------------------------------------------
