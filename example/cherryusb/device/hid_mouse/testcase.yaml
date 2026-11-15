@@ -1,0 +1,74 @@
+# The USB device path for the hid_mouse example. The DUT's USB port is wired
+# to the Lab Agent's host, so enumeration and the HID interface are observed
+# from the host side (`usb_host`) and the boot/config lines on the DUT console
+# (`dut`); the runner itself may sit on another machine.
+#
+# Bench constraint: after flashing, the device must be seen to enumerate on the
+# host. Windows keeps the previous PnP instance (and the previous driver
+# binding) when the same VID/PID/serial comes back, so a flash that does not
+# cause a host-visible re-enumeration can leave `wait_for` looking at the stale
+# entry. The working sequence used by the sibling `device/cdc_acm` case is to
+# unplug the DUT's USB data cable, start `sdk.py test run`, and plug the cable
+# back in during the enumeration wait; a `pnputil /restart-device` on the host
+# is the alternative. Do not widen the timeout to hide this: a run that cannot
+# find the device must fail with the lookup's own timeout message.
+#
+# Negative verification -- EXECUTED on 2026-11-15 (sf32lb52-lcd_a128r16_01).
+# The official `sdk.py test run` (test-out/2026-11-15T11-54-23) passed 3/3 in
+# 26.02 s (case 48.1 s). The direct injections then ran against the same
+# running firmware without a reflash or reset: the agent was allocated with
+# `fixtures: ["usb_host"]`, its DUT console was opened, and only
+# `test_enumerates_as_a_mouse` was run (the boot and configured-event tests
+# were deselected because the console is opened after boot; both are covered by
+# the official 3/3 run). Each change was restored and `git hash-object`
+# returned 78f14753419e4578b338fd0b3eac9079ef74bc1c every time.
+#   * SERIAL "2025101418" -> "0000000000":
+#     `test_enumerates_as_a_mouse` fails inside `usb_host.wait_for` with
+#     `UsbHostTimeout: ... no matching USB device appeared within 30s`
+#     (the match carried `'serial': '0000000000'`), 31.20 s;
+#   * `USAGE_MOUSE` 0x02 -> 0x06:
+#     the same test fails `exposed no Generic Desktop / Mouse collection;
+#     reported: (HidInfo(... usage_page=1, usage=2, protocol=2 ...),)`, 1.04 s;
+#   * `HID_PROTOCOL_MOUSE` 2 -> 1:
+#     the same test fails `reported protocol 1 expected for a mouse collection;
+#     mismatches: [HidInfo(... usage_page=1, usage=2, protocol=2 ...)]`, 1.07 s.
+# With every change restored the final direct run was
+# `1 passed, 2 deselected in 0.88s`.
+#
+# The configured-event sabotage was not run directly: with no boot transcript a
+# missing `USB HID Mouse configured!` cannot be told apart from the console
+# being opened late; it stays covered by the official run's
+# `test_reports_the_configured_event` (3/3).
+#
+# Not verified by this case (recorded rather than skipped):
+#   * the six `[MOUSE] ...` actions (left/right/middle click, scroll, move in
+#     circle, drag) all require a physical KEY2 press. This round has no
+#     actuator for the button, so only the button's initialization is
+#     asserted, not the reports it produces.
+#   * `test_reports_the_configured_event` reads the retained transcript from
+#     offset 0 precisely because the event may land before the prompt; the
+#     agent retains that transcript from the moment the console opened, but
+#     how much it trims on a long run (and whether the line survives such a
+#     trim) was not observed on a board. A run whose console was opened after
+#     the event would also miss it, which is the same constraint the boot test
+#     has.
+#   * the console events' exact arrival order relative to each other is not
+#     observed; only the boot test's print order is assumed (it is a single
+#     non-blocking block in `main`).
+#   * the HID `protocol` the host reports is the boot protocol *inferred* from
+#     the top-level collection usage (`tools/lab_agent/usb_host/windows.py`,
+#     `infer_hid_protocol`), not the descriptor's bInterfaceProtocol. The
+#     firmware descriptor carries 1 (`src/main.c`), while a usage 1/2 mouse
+#     collection is reported as 2. The assertion follows the reported value;
+#     the difference is recorded here so a descriptor change is not mistaken
+#     for a passing test.
+tests:
+  - id: hid_mouse.usb_device
+    description: The DUT boots, exposes a HID mouse collection and reports USB configuration.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, device]
+    timeout: 240
+    project_dir: project
+    harness_config:
+      fixture: usb_host
+      pytest_root: pytest
