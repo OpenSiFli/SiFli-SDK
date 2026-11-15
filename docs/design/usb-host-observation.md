@@ -332,7 +332,7 @@ and `pytest_root: pytest`. No `platform_allow`; `-p` supplies the platform
 |---|---|---|---|---|
 | device/cdc_acm | `cdc_acm.usb_device` | `usb_host` | `cherryusb device cdc acm demo!`; `actual in len:2048`; `actual out len:7` | serial `2022123456`; COM; 2048-byte frame `1234567890` + `a`*2038; DTR required |
 | device/cdc_acm_uart | `cdc_acm_uart.usb_bridge` | `usb_host` | `[I/main] USB-UART Bridge starting...`; `UART initialized successfully`; `USB-UART bridge initialized`; `USB-UART Bridge ready`; `USB Configured`; `Set baud rate: 115200` | serial `202412345678`; COM opens at 115200 |
-| device/cdc_hid_msc | `cdc_hid_msc.composite` | `usb_host` | 10 boot lines (including the greeting); `USB connected`; `USB configured - device ready!`; `CDC actual out/in len:7` | serial `2025010101`; classes msc+cdc+hid; volume `SiFli MSC`; `README.TXT` exact bytes; CDC echo; HID boot interface (class 3 / subclass 1 / protocol 1) + usage 1/6 |
+| device/cdc_hid_msc | `cdc_hid_msc.composite` | `usb_host` | 10 boot lines (including the greeting); `USB configured - device ready!` (the MUSB port emits no `USB connected` event); `CDC actual out/in len:7` | serial `2025010101`; classes msc+cdc+hid; volume `SiFli MSC`; `README.TXT` exact bytes; CDC echo; HID boot interface (class 3 / subclass 1 / protocol 1) + usage 1/6 |
 | device/hid_mouse | `hid_mouse.usb_device` | `usb_host` | 3 banner lines; `KEY2 button initialized, pin=<board-specific>`; `mouse thread created successfully!`; `USB HID Mouse configured!` | serial `2025101418`; HID usage 1/2; host-inferred protocol 2 |
 | host/cdc_acm_host | `cdc_acm_host.host_stack` | — | `cherryusb host demo!`; `ttyACM0 not found!`; `lsusb -V`; `lsusb -t` | — |
 | host/hid | `hid.host_stack` | — | `cherryusb host demo!`; `hid host test`; root hub; no `mount a ...` | — |
@@ -399,23 +399,9 @@ its own negative-verification record in the `testcase.yaml` comment.
 
 ## Implementation status (snapshot 2026-11-15)
 
-Branch `testcase`, commits up to `973b570a3`:
-
-| Commit | Content |
-|---|---|
-| `83897d142` | lab agent: serve the `usb_host` capability over the testbed API |
-| `c6777ffb9` | runner: expose `usb_host` to pytest suites |
-| `f6690dac6` | docs: the design document, the English guide skip note, the DESIGN.md TODOs |
-| `6adfbd81b` | test asset: `device/cdc_acm` |
-| `b63552180` | Chinese guide: mirror the skip-as-pass note |
-| `a87181177` | docs: make the commit review order explicit |
-| `e54f8b60d` | guide: the `usb_host` section in both languages |
-| `b3ccb7528` | docs: correct the design record |
-| `475a7334b` | test asset: `host/cdc_acm_host` |
-| `b6a01360c` | test asset: `host/hid` |
-| `973b570a3` | test asset: `host/msc_host` |
-
-Framework, guide text and the first example are committed. The lab binding is
+The commit hashes are deliberately not recorded here: a rebase changes them,
+and the content below is the status. Framework, guide text and all seven
+examples are committed. The lab binding is
 a local file outside the repository (`E:\code2\lab\sifli-lab.yaml`, backup
 `sifli-lab.yaml.bak-2026-11-14`). Pre-existing, unrelated changes to leave
 alone: `middleware/bluetooth` (modified) and
@@ -435,33 +421,37 @@ alone: `middleware/bluetooth` (modified) and
   `cherryusb device cdc acm demo!`. The first `COM32` open was denied
   transiently and succeeded later; tests need a bounded retry (see the board
   baseline section).
-- Framework, agent side (committed in `83897d142`): `tools/lab_agent/usb_host/`
+- Framework, agent side (committed): `tools/lab_agent/usb_host/`
   (9 files), `/testbed/{id}/usb/*` routes in `server.py`, gate/lifecycle in
-  `testbed.py`, `usb:` option validation in `config.py`, 58 new tests. Last
-  run: 264 tests OK (skipped=1).
-- Framework, runner side (committed in `c6777ffb9`): `tools/sdk_test/usb_host.py`,
+  `testbed.py`, `usb:` option validation in `config.py`, 77 tests in
+  `test_usb_host.py`. Last run: 283 tests OK (skipped=1).
+- Framework, runner side (committed): `tools/sdk_test/usb_host.py`,
   `suite_helpers/cherryusb.py`, the `usb_*` client methods,
   `LabAgentError.code`, the `usb_host` pytest fixture (raises, never skips),
   the reserved name, 53 tests in `test_usb_host_client.py`. Focused suite OK
   after the review fixes.
-- Documentation (committed in `f6690dac6`, `b63552180`, `e54f8b60d`,
-  `a87181177`): the `usb_host` capability and its binding in both languages,
+- Documentation (committed): the `usb_host` capability and its binding in both languages,
   plus the skip-as-pass trap and the commit review order.
 - Lab binding outside the repo: `E:\code2\lab\sifli-lab.yaml` now has a bare
   `fixture: usb_host` connection with `usb:` options; `--check` reports
   `Configuration OK.` Backup: `sifli-lab.yaml.bak-2026-11-14`.
 - Docs: this file; `tools/sdk_test/DESIGN.md` TODO for the global skip
   verdict; the guide's known-trap note.
-- Test asset `device/cdc_acm` (committed in `6adfbd81b`): approved. The
+- Test asset `device/cdc_acm` (committed): approved. The
   official run passed 4/4 on the pre-review revision, after the cooperating
   replug. The final revision was re-checked directly against the running board
   and gave 3 passed with the boot-banner test deselected, because the console
   was opened after boot; four sabotages went red.
-- Host cases (committed in `475a7334b`, `b6a01360c`, `973b570a3`): official
+- Host cases (committed): official
   runs passed the case 1/1 each (72.6/65.6/79.3 s) and the final direct runs
   were 4/4 each. Four, four and five sabotages went red on the board,
   including real console lines injected into the 2 s / 15 s windows and into
   the retained boot transcript.
+- Device cases (committed): official
+  runs passed 4/4, 6/6 and 3/3 (132.05 / 38.85 / 26.02 s) and the final direct
+  runs were 2, 4 and 1 passed with the boot/configured tests deselected. Two,
+  four and three sabotages went red. The composite run exposed and fixed the
+  volume attribution and HID usage gaps.
 
 ### Review state
 
@@ -471,7 +461,7 @@ alone: `middleware/bluetooth` (modified) and
   follow-ups (non-ASCII base64, `_pending` vs `_closed`, `transport` code
   docstring). Evidence: `test_usb_host_client.py` 53 tests OK, four behaviour
   classes plus two edge fixes have sabotage records, and the full `sdk_test`
-  suite ran 686 tests OK after the final fixes.
+  suite ran 687 tests OK after the final fixes.
 - **Agent side: approved.** Two fix rounds. The first found a high-severity
   release/open race, two wrong `SPDRP_*` constants, hub grouping that adopted
   downstream devices, a gate that did not require the binding to declare
@@ -479,7 +469,7 @@ alone: `middleware/bluetooth` (modified) and
   that the new race regression test blocked inside the registry lock and
   therefore could not fail without the fix; it now blocks in the backend
   enumeration and fails when either half of the lock is removed. Evidence:
-  `lab_agent` 264 tests OK (skipped=1) and the five sabotage red runs.
+  `lab_agent` 283 tests OK (skipped=1) and the five sabotage red runs.
 - **Example `device/cdc_acm`: approved.** One comment round: add
   `dut.drain()` before the console assertions, retry only `UsbConflict` /
   `UsbNotFound`, drop the redundant `com_ports` assertion, and tighten the
@@ -491,27 +481,22 @@ alone: `middleware/bluetooth` (modified) and
   shell readiness, the redundant `Driver=hcd` assertion). Board runs passed
   the case 1/1 each and the direct runs 4/4; the sabotages above all went red
   on the board.
-- Both full suites are green at the final state: `lab_agent` 264 tests OK,
-  `sdk_test` 686 tests OK.
+- Both full suites are green at the final state: `lab_agent` 283 tests OK,
+  `sdk_test` 687 tests OK.
 
 ### Remaining
 
-- The three device cases — `device/cdc_acm_uart`, `device/cdc_hid_msc`,
-  `device/hid_mouse` — are written and reviewed but not board-verified. Each
-  needs a host-visible re-enumeration after flash/reset, and the operator was
-  away from the bench. Flashing a host-mode image did not produce a
-  disconnect, so they stay uncommitted until someone can replug the DUT's USB
-  data cable during the enumeration wait (a controllable VBUS or an elevated
-  device restart are candidates, unverified).
-- Run the official case, the sabotages listed in its `testcase.yaml` and the
-  final green, update `testcase.yaml`, then commit each.
+None: all seven cases are committed. The device cases were verified after the
+operator returned to the bench, each with one replug during the enumeration
+wait.
 
 ### Resume here
 
-1. With someone at the bench, replug the DUT's USB data cable during the
-   enumeration wait for each device case.
-2. Record the sabotage red runs and the final green in `testcase.yaml`, then
-   commit one device case at a time.
+Nothing pending. The optional follow-up is to expose the HID usage source
+(`caps` / `report` / `compatible`) in `HidInfo`, so a case can assert that a
+fallback did not silently produce the expected value; the report-descriptor
+read through the hub IOCTL is best-effort and did not work on this Windows
+stack.
 
 ### Commands
 
