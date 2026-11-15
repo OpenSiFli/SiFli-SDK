@@ -1,0 +1,89 @@
+# The USB device path for the cdc_acm_uart example. The DUT's USB port is
+# wired to the Lab Agent's host, so enumeration and the line coding the host
+# applies are observed from the host side (`usb_host`) and on the DUT console
+# (`dut`); the runner itself may sit on another machine. Contract:
+# docs/design/usb-host-observation.md, row `device/cdc_acm_uart`.
+# The case stops at the USB side; the design row's check points are the four
+# boot lines, `USB Configured` and `Set baud rate`, and no internal thread name
+# or other implementation detail is asserted.
+#
+# Every expected console string below is taken from the source, not from the
+# README: the README documents the wiring and the two serial assistants but
+# shows no console output at all.
+#
+# Bench constraint -- host-visible re-enumeration after flashing. The design's
+# board baseline (2026-11-14) records that a reset with the USB cable left
+# attached reinitialises the device stack without ever dropping D+, so Windows
+# keeps the pre-reset address and configuration and never sends
+# SET_CONFIGURATION again. `test_configured_event_is_reported` is the assertion
+# that notices: the firmware prints `[I/usb_uart] USB Configured` only from the
+# USBD_EVENT_CONFIGURED callback. The working sequence is: unplug the DUT's USB
+# data cable, start `sdk.py test run`, and plug the cable back during the
+# enumeration wait. A red run there means the bench, not a weakened assertion.
+# The test reads the retained transcript from offset 0 through an explicit
+# console cursor, so it does not matter whether the event arrives before or
+# after the boot walk reaches its prompt; what it requires is that the event is
+# in the transcript at all, i.e. that the runner opened the console before the
+# reset (the same precondition as the boot test).
+#
+# Negative verification -- EXECUTED on 2026-11-15 (sf32lb52-lcd_a128r16_01).
+# The official `sdk.py test run` (test-out/2026-11-15T10-41-30) passed 4/4 in
+# 132.05 s (case 157.4 s). The direct injections then ran against the same
+# running firmware without a reflash or reset: the agent was allocated with
+# `fixtures: ["usb_host"]`, its DUT console was opened, and pytest was invoked
+# directly on the two tests that do not need the boot transcript
+# (`-k "enumerates or line_coding"`); the boot test and
+# `test_configured_event_is_reported` were deselected there because the console
+# is opened after boot, and both are covered by the official 4/4 run.
+#   * SERIAL "202412345678" -> "0000000000":
+#     `test_enumerates_with_its_own_serial` fails at `_wait_for_device` /
+#     `wait_for` with `UsbHostTimeout: ... no matching USB device appeared
+#     within 30s {"candidates": [], "since": []}` (the match carried
+#     `'serial': '0000000000'`), 30.85 s;
+#   * BAUD 115200 -> 9600:
+#     `test_line_coding_reaches_the_uart` fails at `dut.expect` with
+#     `expected /\[I/usb_uart\] Set baud rate: 115200/ within 10s`; the device
+#     said `[I/usb_uart] Set baud rate: 9600` (twice), 71.31 s. The ~60 s open
+#     is the firmware's SET_LINE_CODING latency, not a hang (see below).
+# Each change was restored and `git hash-object` returned
+# c6c450fd5e468abbf4e94c5844ba56bd0b7563a9 every time. With every change
+# restored the final direct run was `2 passed, 2 deselected in 32.33s`.
+#
+# The `USB Configured` sabotage was not executed in the direct session: with no
+# boot transcript a missing event cannot be distinguished from the console
+# being opened late, so it stays covered by the official run's
+# `test_configured_event_is_reported` (4/4).
+#
+# Not verified by this case (recorded rather than skipped):
+#   * the boot test and the configured-event sabotage: only the official 4/4
+#     run exercised them on hardware; the direct session opened the console
+#     after boot, so it intentionally deselected both;
+#   * the `[I/usb_uart]` tag prefix and the `USB Configured` / `Set baud rate`
+#     texts were verified on hardware by the official run (its boot transcript
+#     carried them); the direct session additionally observed
+#     `Set baud rate: 9600` in the baud sabotage and `115200` in the green run;
+#   * the line coding is only the callback log. `LOG_I("Set baud rate: %u")`
+#     runs before `rt_device_control(RT_DEVICE_CTRL_CONFIG)` is attempted, so
+#     the case proves the firmware received this open's coding, not that UART2
+#     switched to 115200; with no UART peer nothing observes the wire;
+#   * the UART2 data path. There is no UART peer or loopback on the bench, so
+#     nothing is written through the bridge: the case proves the USB side
+#     (enumeration, configuration, the line-coding callback) and stops there.
+#     USB->UART forwarding remains unverified until a loopback is wired.
+#   * the open latency: on this bench the first successful pyserial open of the
+#     CDC port took 60.02 s, and the device printed `Set baud rate` in the same
+#     window; the cause was not isolated (the OS may wait for the firmware's
+#     SET_LINE_CODING handler). The transport open timeout is 150 s and this
+#     case's open retry budget is 120 s (the case timeout itself is 240 s); a
+#     slower open is a bench/firmware issue, not a reason to weaken the
+#     assertion.
+tests:
+  - id: cdc_acm_uart.usb_bridge
+    description: The DUT boots as USB-UART bridge, enumerates as a CDC ACM port with its own serial and receives the host's line coding.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, device]
+    timeout: 240
+    project_dir: project
+    harness_config:
+      fixture: usb_host
+      pytest_root: pytest
