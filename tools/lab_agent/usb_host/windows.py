@@ -60,6 +60,12 @@ _COMPATIBLE = re.compile(
     re.IGNORECASE,
 )
 _COM_NAME = re.compile(r"\((COM\d+)\)", re.IGNORECASE)
+#: A volume interface path encodes the USBSTOR disk instance after ``_??_``.
+_USBSTOR_IN_VOLUME = re.compile(r"_usbstor#(.+?)#\{", re.IGNORECASE)
+#: HID boot protocol declared by the USB interface class triplet.
+_USB_HID_TRIPLET = re.compile(
+    r"Class_03&SubClass_01&Prot_(0?[12])", re.IGNORECASE
+)
 
 _DEVICE_CLASS_NAMES = {
     0x01: "audio",
@@ -276,13 +282,55 @@ def _ancestors(devinst: int) -> Iterable[int]:
         current = winapi.parent_devinst(current)
 
 
-def _physical_for(devinst: int, physical: Mapping[str, str]) -> Optional[str]:
-    """The physical device key an interface/volume/HID devnode belongs to."""
+def _physical_for(
+    devinst: int, physical: Mapping[str, Mapping[str, Any]]
+) -> Optional[str]:
+    """The physical device key an interface/volume/HID devnode belongs to.
+
+    Only ``CM_Get_Parent`` can reconstruct a composite parent: the child's
+    suffix after ``&MI_xx`` is a location, not the parent's iSerialNumber, so a
+    hardware-id fallback would never match a real ``physical`` key. Walking the
+    parent chain is therefore the whole rule, and the value returned is the
+    physical record's own instance id so callers can index their maps.
+    """
     for ancestor in _ancestors(devinst):
         instance_id = winapi.device_id(ancestor)
-        if instance_id and instance_id.upper() in physical:
-            return instance_id
+        if not instance_id:
+            continue
+        record = physical.get(instance_id.upper())
+        if record is not None:
+            return record["instance_id"]
     return None
+
+
+def usbstor_instance_from_volume_path(path: str) -> Optional[str]:
+    r"""The ``USBSTOR\\DISK...`` instance id encoded in a volume interface path.
+
+    ``\\?\storage#volume#_??_usbstor#disk&...#9&5fc6598&0&2025010101&0#...``
+    carries the disk instance; the volume devnode's own parent chain goes to
+    ``ROOT\\VOLMGR``, so this is the only link back to the USB device on that
+    Windows stack.
+    """
+    match = _USBSTOR_IN_VOLUME.search(path)
+    if not match:
+        return None
+    return ("USBSTOR\\" + match.group(1).replace("#", "\\")).upper()
+
+
+def _compatible_ids_for(
+    devinst: int, info: Mapping[int, Any]
+) -> Tuple[str, ...]:
+    """The first non-empty compatible-id list on the devnode or an ancestor.
+
+    A HID collection's own devnode often has none; the USB interface child
+    (``...&MI_03``) above it carries ``USB\\Class_03&SubClass_01&Prot_01/02``.
+    """
+    for ancestor in _ancestors(devinst):
+        node = info.get(ancestor)
+        ids = getattr(node, "compatible_ids", ()) if node is not None else ()
+        if ids:
+            return tuple(str(entry) for entry in ids)
+    return ()
 
 
 def _first_mi(devinst: int) -> int:
@@ -335,7 +383,7 @@ class WindowsUsbHost:
         }
 
         ports = self._com_ports(physical, records)
-        volumes = self._volumes(physical)
+        volumes = self._volumes(physical, nodes)
         hid = self._hid(physical, {node.devinst: node for node in nodes})
 
         devices: List[UsbDevice] = []
@@ -399,7 +447,8 @@ class WindowsUsbHost:
             raise UsbHostUnsupported(
                 "the Windows USB backend needs a Windows agent"
             )
-        records = self._usb_records(winapi.enumerate_nodes())
+        nodes = winapi.enumerate_nodes()
+        records = self._usb_records(nodes)
         physical_records = [
             record
             for record in records
@@ -410,7 +459,7 @@ class WindowsUsbHost:
         physical = {
             record["instance_id"].upper(): record for record in physical_records
         }
-        by_device = self._volumes(physical)
+        by_device = self._volumes(physical, nodes)
         return [
             volume
             for entries in by_device.values()
@@ -518,13 +567,35 @@ class WindowsUsbHost:
         return result
 
     def _volumes(
-        self, physical: Mapping[str, Mapping[str, Any]]
+        self,
+        physical: Mapping[str, Mapping[str, Any]],
+        pnps: Sequence[Any],
     ) -> Dict[str, List[UsbVolume]]:
-        nodes = {}
+        by_instance = {node.instance_id.upper(): node for node in pnps}
+        volume_nodes = {}
         for node in winapi.enumerate_interface_paths(
             winapi.GUID_DEVINTERFACE_VOLUME
         ):
-            nodes[node.path.rstrip("\\").upper()] = node
+            volume_nodes[node.path.rstrip("\\").upper()] = node
+
+        # A drive letter is joined to its USB disk by the storage device number:
+        # both ``\\.\D:`` and the disk interface path answer the same one. This
+        # is the reliable link on a stack where the volume devnode's parent
+        # chain stops at ROOT\VOLMGR. The map is built lazily -- opening every
+        # disk handle is wasted work when the first two associations succeed.
+        disks: Optional[Dict[int, Any]] = None
+
+        def disk_map() -> Dict[int, Any]:
+            nonlocal disks
+            if disks is None:
+                disks = {}
+                for node in winapi.enumerate_interface_paths(
+                    winapi.GUID_DEVINTERFACE_DISK
+                ):
+                    number = winapi.device_number(node.path)
+                    if number is not None:
+                        disks[number] = node
+            return disks
 
         result: Dict[str, List[UsbVolume]] = {}
         for drive in winapi.logical_drives():
@@ -539,10 +610,25 @@ class WindowsUsbHost:
             volume_name = winapi.volume_name_for_mount_point(drive)
             if not volume_name:
                 continue
-            node = nodes.get(volume_name.rstrip("\\").upper())
-            if node is None:
-                continue
-            key = _physical_for(node.devinst, physical)
+            key = None
+            node = volume_nodes.get(volume_name.rstrip("\\").upper())
+            if node is not None:
+                key = _physical_for(node.devinst, physical)
+                if key is None:
+                    # The volume devnode's parent chain can stop at
+                    # ROOT\VOLMGR; its interface path still names the USBSTOR
+                    # disk, whose own chain does reach the USB device.
+                    encoded = usbstor_instance_from_volume_path(
+                        node.path
+                    ) or usbstor_instance_from_volume_path(node.instance_id)
+                    disk = by_instance.get(encoded) if encoded else None
+                    if disk is not None:
+                        key = _physical_for(disk.devinst, physical)
+            if key is None:
+                number = winapi.device_number("\\\\.\\" + drive.rstrip("\\"))
+                disk = disk_map().get(number) if number is not None else None
+                if disk is not None:
+                    key = _physical_for(disk.devinst, physical)
             if key is None:
                 continue
             info = winapi.volume_information(drive)
@@ -575,27 +661,42 @@ class WindowsUsbHost:
                 continue
             interface = _first_mi(node.devinst)
             caps = winapi.hid_capabilities(node.path)
-            if caps is None:
-                # The collection could not be opened, but Windows still labels
-                # a keyboard/mouse collection in its compatible ids.
-                compatible = getattr(info.get(node.devinst), "compatible_ids", ())
+            # A collection that cannot be opened, or whose report descriptor
+            # yields no top-level usage, still has a USB interface class
+            # triplet to fall back on. ``hid_capabilities`` reports zero rather
+            # than None in the second case, so both must be checked.
+            compatible = _compatible_ids_for(node.devinst, info)
+            usage_page, usage = hid_usage(caps, ())
+            if usage_page == 0 and usage == 0:
+                # ``HidP_GetCaps`` is the primary source, but only a
+                # zero-access handle reaches a keyboard/mouse collection.
+                # Reading the report descriptor through the parent hub is a
+                # best-effort second source: the Windows 11 stack this project
+                # was verified against answers ERROR_GEN_FAILURE for HID
+                # class/report requests, while some stacks allow it. Compatible
+                # ids remain the last fallback.
+                record = physical.get(key.upper())
+                hub, port = (
+                    self._hub_for(record) if record is not None else (None, 0)
+                )
+                if hub and port:
+                    parsed = parse_hid_report_usage(
+                        winapi.hid_report_descriptor(hub, port, interface)
+                    )
+                    if parsed is not None:
+                        usage_page, usage = parsed
+            if usage_page == 0 and usage == 0:
                 usage_page, usage = _boot_usage(compatible)
-                caps = {
-                    "usage_page": usage_page,
-                    "usage": usage,
-                    "report_length": 0,
-                    "product": None,
-                }
-            usage_page = int(caps.get("usage_page", 0))
-            usage = int(caps.get("usage", 0))
             result.setdefault(key, []).append(
                 HidInfo(
                     interface=interface,
                     usage_page=usage_page,
                     usage=usage,
                     protocol=infer_hid_protocol(usage_page, usage),
-                    report_length=int(caps.get("report_length", 0)),
-                    product=caps.get("product"),
+                    report_length=int(caps.get("report_length", 0))
+                    if caps
+                    else 0,
+                    product=caps.get("product") if caps else None,
                 )
             )
         return result
@@ -663,10 +764,75 @@ def _is_mtp(
     return False
 
 
+def parse_hid_report_usage(data: Optional[bytes]) -> Optional[Tuple[int, int]]:
+    """The first (Usage Page, Usage) pair in a HID report descriptor.
+
+    Short items only: ``bSize`` is the low two bits, ``bType`` the next two and
+    ``bTag`` the top four. Usage Page is a Global item (type 1, tag 0) and
+    Usage a Local one (type 2, tag 0). Long items (``0xFE``) are skipped by
+    their declared length. Anything truncated or without a complete pair is
+    ``None``, which lets the caller fall back to the interface class.
+    """
+    if not data:
+        return None
+    index = 0
+    page = None
+    usage = None
+    length = len(data)
+    while index < length:
+        prefix = data[index]
+        if prefix == 0xFE:
+            if index + 2 >= length:
+                return None
+            index += 3 + data[index + 1]
+            continue
+        size_code = prefix & 0x03
+        item_type = (prefix >> 2) & 0x03
+        tag = (prefix >> 4) & 0x0F
+        size = 4 if size_code == 3 else size_code
+        start = index + 1
+        end = start + size
+        if end > length:
+            return None
+        value = int.from_bytes(data[start:end], "little") if size else 0
+        index = end
+        if item_type == 1 and tag == 0:
+            if page is None:
+                page = value
+        elif item_type == 2 and tag == 0:
+            if usage is None:
+                usage = value
+        if page is not None and usage is not None:
+            return page, usage
+    return None
+
+
+def hid_usage(
+    caps: Optional[Mapping[str, Any]], compatible_ids: Sequence[Any]
+) -> Tuple[int, int]:
+    """The top-level usage, falling back to the USB interface class triplet.
+
+    Windows binds the HID driver and may refuse to open a keyboard collection
+    for a non-elevated process; ``hid_capabilities`` then returns None, or a
+    caps dict whose usage is still 0. The interface's compatible ids always
+    carry ``Class_03&SubClass_01&Prot_01/02`` (boot keyboard/mouse), which is
+    enough to report the usage the design asserts.
+    """
+    usage_page = int(caps.get("usage_page", 0)) if caps else 0
+    usage = int(caps.get("usage", 0)) if caps else 0
+    if usage_page == 0 and usage == 0:
+        return _boot_usage(compatible_ids)
+    return usage_page, usage
+
+
 def _boot_usage(compatible_ids: Sequence[Any]) -> Tuple[int, int]:
     text = " ".join(str(entry) for entry in compatible_ids).upper()
     if "HID_DEVICE_SYSTEM_KEYBOARD" in text:
         return 0x01, 0x06
     if "HID_DEVICE_SYSTEM_MOUSE" in text:
         return 0x01, 0x02
+    # The HID devnode's compatible ids include the USB interface triplet too.
+    match = _USB_HID_TRIPLET.search(text)
+    if match:
+        return (0x01, 0x06) if match.group(1).lstrip("0") == "1" else (0x01, 0x02)
     return 0, 0

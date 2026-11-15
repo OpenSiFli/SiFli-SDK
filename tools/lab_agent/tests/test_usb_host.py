@@ -15,6 +15,8 @@ import os
 import threading
 import time
 import unittest
+from types import SimpleNamespace
+from unittest import mock
 
 from _support import LabTestCase
 
@@ -54,13 +56,19 @@ from lab_agent.usb_host.service import create_service
 from lab_agent.usb_host.service import forbidden_ports
 from lab_agent.usb_host.volume_paths import read_volume_file
 from lab_agent.usb_host.volume_paths import validate_relative_path
+from lab_agent.usb_host.windows import WindowsUsbHost
+from lab_agent.usb_host.windows import _compatible_ids_for
 from lab_agent.usb_host.windows import _is_mtp
+from lab_agent.usb_host.windows import _physical_for
 from lab_agent.usb_host.windows import group_usb_nodes
+from lab_agent.usb_host.windows import hid_usage
 from lab_agent.usb_host.windows import infer_hid_protocol
 from lab_agent.usb_host.windows import interface_name
 from lab_agent.usb_host.windows import parse_configuration
+from lab_agent.usb_host.windows import parse_hid_report_usage
 from lab_agent.usb_host.windows import parse_instance_id
 from lab_agent.usb_host.windows import usb_parent_key
+from lab_agent.usb_host.windows import usbstor_instance_from_volume_path
 from lab_agent.errors import ConfigError
 from sdk_test.model import Connection
 from sdk_test.model import FixtureRef
@@ -364,6 +372,408 @@ class TestHubGrouping(LabTestCase):
             ]
         )
         self.assertEqual(len(groups[parent.upper()]), 2)
+
+
+class TestPhysicalOwnership(LabTestCase):
+    """A USB devnode belongs to a physical device only through CM_Get_Parent."""
+
+    def test_a_non_mi_downstream_device_does_not_become_a_hub_interface(self):
+        downstream = "USB\\VID_9999&PID_0000\\DEV1"
+        hub = "USB\\VID_1111&PID_2222\\HUB1"
+        physical = {hub.upper(): {"instance_id": hub}}
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_id",
+            side_effect=lambda devinst: {7: downstream}.get(devinst),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.parent_devinst",
+            return_value=None,
+        ):
+            self.assertIsNone(_physical_for(7, physical))
+
+    def test_a_real_ancestor_chain_still_wins(self):
+        child = "USB\\VID_1234&PID_5678&MI_00\\9&ABCD&0&0000"
+        parent = "USB\\VID_1234&PID_5678\\SER1"
+        ids = {1: child, 2: parent}
+        parents = {1: 2}
+        physical = {parent.upper(): {"instance_id": parent}}
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_id",
+            side_effect=lambda devinst: ids.get(devinst),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.parent_devinst",
+            side_effect=lambda devinst: parents.get(devinst),
+        ):
+            self.assertEqual(_physical_for(1, physical), parent)
+
+
+class TestVolumeOwnershipPath(LabTestCase):
+    def test_the_usbstor_disk_instance_is_read_from_the_volume_path(self):
+        path = (
+            "\\\\?\\storage#volume#_??_usbstor#disk&ven_&prod_&rev_0.01"
+            "#9&5fc6598&0&2025010101&0"
+            "#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}"
+            "#{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}"
+        )
+        self.assertEqual(
+            usbstor_instance_from_volume_path(path),
+            "USBSTOR\\DISK&VEN_&PROD_&REV_0.01\\9&5FC6598&0&2025010101&0",
+        )
+
+    def test_a_fixed_disk_volume_has_no_usbstor_instance(self):
+        path = (
+            "\\\\?\\storage#volume#{d7253d87-0877-11ec-97e9-806e6f6e6963}"
+            "#0000000000100000#{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}"
+        )
+        self.assertIsNone(usbstor_instance_from_volume_path(path))
+
+
+class TestVolumeOwnership(LabTestCase):
+    """The three ways ``_volumes`` joins a drive letter to a USB device."""
+
+    PARENT = "USB\\VID_38F4&PID_FFFF\\2025010101"
+    USBSTOR_ID = (
+        "USBSTOR\\DISK&VEN_&PROD_&REV_0.01\\9&5FC6598&0&2025010101&0"
+    )
+    USBSTOR_PATH = (
+        "\\\\?\\storage#volume#_??_usbstor#disk&ven_&prod_&rev_0.01"
+        "#9&5fc6598&0&2025010101&0"
+        "#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}"
+        "#{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}"
+    )
+    FIXED_VOLUME_PATH = (
+        "\\\\?\\storage#volume#{d7253d87-0877-11ec-97e9-806e6f6e6963}"
+        "#0000000011500000#{53f5630d-b6bf-11d0-94f2-00a0c91efb8b}"
+    )
+
+    def node(self, devinst, instance_id, path):
+        return SimpleNamespace(
+            devinst=devinst, instance_id=instance_id, path=path
+        )
+
+    def disk(self, devinst=20):
+        return self.node(devinst, self.USBSTOR_ID, self.USBSTOR_PATH)
+
+    def interface_paths(self, volumes=(), disks=()):
+        def side_effect(guid):
+            if guid is winapi.GUID_DEVINTERFACE_VOLUME:
+                return list(volumes)
+            if guid is winapi.GUID_DEVINTERFACE_DISK:
+                return list(disks)
+            return []
+
+        return side_effect
+
+    def volume_information(self):
+        return {
+            "label": "SiFli MSC",
+            "filesystem": "FAT",
+            "size": 6656,
+            "drive_type": winapi.DRIVE_REMOVABLE,
+        }
+
+    def test_a_usbstor_path_identifies_the_composite_device(self):
+        volume = self.node(10, self.USBSTOR_PATH, self.USBSTOR_PATH)
+        disk = self.disk(20)
+        physical = {self.PARENT.upper(): {"instance_id": self.PARENT}}
+
+        def physical_for(devinst, _physical):
+            return self.PARENT if devinst == 20 else None
+
+        number = mock.Mock(return_value=None)
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.logical_drives",
+            return_value=["D:\\"],
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.drive_type",
+            return_value=winapi.DRIVE_REMOVABLE,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_name_for_mount_point",
+            return_value=self.USBSTOR_PATH,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.enumerate_interface_paths",
+            side_effect=self.interface_paths([volume], [disk]),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_number",
+            number,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_information",
+            return_value=self.volume_information(),
+        ), mock.patch(
+            "lab_agent.usb_host.windows._physical_for",
+            side_effect=physical_for,
+        ):
+            result = WindowsUsbHost()._volumes(physical, [disk])
+
+        self.assertEqual(list(result), [self.PARENT])
+        self.assertEqual(result[self.PARENT][0].drive, "D:")
+        self.assertEqual(result[self.PARENT][0].label, "SiFli MSC")
+        # The USBSTOR association answered before the disk-number fallback, so
+        # no disk handle was opened.
+        number.assert_not_called()
+
+    def test_a_disk_number_joins_the_drive_when_the_path_says_nothing(self):
+        volume = self.node(10, self.FIXED_VOLUME_PATH, self.FIXED_VOLUME_PATH)
+        disk = self.disk(20)
+        physical = {self.PARENT.upper(): {"instance_id": self.PARENT}}
+
+        def physical_for(devinst, _physical):
+            return self.PARENT if devinst == 20 else None
+
+        def number_for(path):
+            if path == "\\\\.\\D:" or path == self.USBSTOR_PATH:
+                return 7
+            return None
+
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.logical_drives",
+            return_value=["D:\\"],
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.drive_type",
+            return_value=winapi.DRIVE_REMOVABLE,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_name_for_mount_point",
+            return_value=self.FIXED_VOLUME_PATH,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.enumerate_interface_paths",
+            side_effect=self.interface_paths([volume], [disk]),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_number",
+            side_effect=number_for,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_information",
+            return_value=self.volume_information(),
+        ), mock.patch(
+            "lab_agent.usb_host.windows._physical_for",
+            side_effect=physical_for,
+        ):
+            result = WindowsUsbHost()._volumes(physical, [disk])
+
+        self.assertEqual(list(result), [self.PARENT])
+        self.assertEqual(result[self.PARENT][0].drive, "D:")
+
+    def test_a_fixed_drive_is_skipped_before_any_mapping_when_not_allowed(self):
+        drive_name = mock.Mock(return_value=None)
+        number = mock.Mock(return_value=None)
+        kind = mock.Mock(return_value=winapi.DRIVE_FIXED)
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.logical_drives",
+            return_value=["C:\\"],
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.drive_type",
+            kind,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_name_for_mount_point",
+            drive_name,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.enumerate_interface_paths",
+            side_effect=self.interface_paths([], [self.disk(20)]),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_number",
+            number,
+        ), mock.patch(
+            "lab_agent.usb_host.windows._physical_for",
+            return_value=self.PARENT,
+        ):
+            result = WindowsUsbHost(allow_fixed_drives=False)._volumes({}, [])
+
+        self.assertEqual(result, {})
+        # The drive was examined and refused on its type, not ignored wholesale.
+        kind.assert_called_once_with("C:\\")
+        drive_name.assert_not_called()
+        number.assert_not_called()
+
+    def test_a_fixed_drive_without_a_usb_ancestor_is_dropped(self):
+        disk = self.disk(20)
+
+        def number_for(path):
+            return 7 if path in ("\\\\.\\C:", self.USBSTOR_PATH) else None
+
+        number = mock.Mock(side_effect=number_for)
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.logical_drives",
+            return_value=["C:\\"],
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.drive_type",
+            return_value=winapi.DRIVE_FIXED,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_name_for_mount_point",
+            return_value=self.FIXED_VOLUME_PATH,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.enumerate_interface_paths",
+            side_effect=self.interface_paths([], [disk]),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_number",
+            number,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.volume_information",
+            return_value={
+                "label": None,
+                "filesystem": "NTFS",
+                "size": 1,
+                "drive_type": winapi.DRIVE_FIXED,
+            },
+        ), mock.patch(
+            "lab_agent.usb_host.windows._physical_for",
+            return_value=None,
+        ):
+            result = WindowsUsbHost(allow_fixed_drives=True)._volumes({}, [disk])
+
+        self.assertEqual(result, {})
+        # The disk-number mapping was attempted and produced no USB ancestor;
+        # the drive was not silently ignored before the lookup.
+        number.assert_any_call("\\\\.\\C:")
+
+
+class TestHidReportDescriptor(LabTestCase):
+    """The report descriptor is the authoritative top-level usage."""
+
+    def test_a_mouse_report_descriptor(self):
+        data = b"\x05\x01\x09\x02\xa1\x01\x09\x01\xa1\x00"
+        usage = parse_hid_report_usage(data)
+        self.assertEqual(usage, (0x01, 0x02))
+        self.assertEqual(infer_hid_protocol(*usage), 2)
+
+    def test_a_keyboard_report_descriptor(self):
+        data = b"\x05\x01\x09\x06\xa1\x01\x05\x07\x19\xe0"
+        usage = parse_hid_report_usage(data)
+        self.assertEqual(usage, (0x01, 0x06))
+        self.assertEqual(infer_hid_protocol(*usage), 1)
+
+    def test_empty_malformed_and_long_only_descriptors_are_none(self):
+        for data in (
+            b"",
+            b"\x06\x01",  # Usage Page declares 2 bytes, only 1 present
+            b"\xfe\x02\x00\xaa\xbb",  # a long item with no usage pair
+        ):
+            with self.subTest(data=data):
+                self.assertIsNone(parse_hid_report_usage(data))
+
+
+class TestHidSourceOrder(LabTestCase):
+    """caps -> report descriptor (best effort) -> compatible ids."""
+
+    PARENT = "USB\\VID_38F4&PID_FFFF\\2025010101"
+    MOUSE_REPORT = b"\x05\x01\x09\x02\xa1\x01"
+
+    def run_hid(self, *, caps, report, compatible):
+        node = SimpleNamespace(
+            devinst=10,
+            instance_id="HID\\VID_38F4&PID_FFFF\\9&1",
+            path="\\\\?\\hid#vid_38f4&pid_ffff#9&1",
+        )
+        physical = {self.PARENT.upper(): {"instance_id": self.PARENT}}
+        report_mock = mock.Mock(return_value=report)
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.enumerate_interface_paths",
+            return_value=[node],
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.hid_capabilities",
+            return_value=caps,
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.hid_report_descriptor",
+            report_mock,
+        ), mock.patch(
+            "lab_agent.usb_host.windows._physical_for",
+            return_value=self.PARENT,
+        ), mock.patch(
+            "lab_agent.usb_host.windows._first_mi",
+            return_value=0,
+        ), mock.patch(
+            "lab_agent.usb_host.windows._compatible_ids_for",
+            return_value=tuple(compatible),
+        ), mock.patch.object(
+            WindowsUsbHost,
+            "_hub_for",
+            return_value=("hub-path", 1),
+        ):
+            result = WindowsUsbHost()._hid(physical, {})
+        return result[self.PARENT][0], report_mock
+
+    def test_valid_caps_win_and_skip_the_report_descriptor(self):
+        info, report = self.run_hid(
+            caps={
+                "usage_page": 0x01,
+                "usage": 0x02,
+                "report_length": 5,
+                "product": "Mouse",
+            },
+            report=self.MOUSE_REPORT,
+            compatible=["USB\\Class_03&SubClass_01&Prot_01"],
+        )
+        self.assertEqual((info.usage_page, info.usage, info.protocol), (1, 2, 2))
+        report.assert_not_called()
+
+    def test_zero_caps_use_the_report_descriptor(self):
+        info, report = self.run_hid(
+            caps={"usage_page": 0, "usage": 0},
+            report=self.MOUSE_REPORT,
+            compatible=["USB\\Class_03&SubClass_01&Prot_01"],
+        )
+        self.assertEqual((info.usage_page, info.usage, info.protocol), (1, 2, 2))
+        report.assert_called_once_with("hub-path", 1, 0)
+
+    def test_a_failed_report_descriptor_falls_back_to_compatible_ids(self):
+        info, report = self.run_hid(
+            caps=None,
+            report=None,
+            compatible=[
+                "USB\\COMPAT_VID_38F4&Class_03&SubClass_01&Prot_01",
+                "USB\\Class_03&SubClass_01&Prot_01",
+            ],
+        )
+        self.assertEqual((info.usage_page, info.usage, info.protocol), (1, 6, 1))
+        report.assert_called_once_with("hub-path", 1, 0)
+
+    def test_a_failed_report_descriptor_continues_to_a_mouse_compatible_id(self):
+        info, report = self.run_hid(
+            caps={"usage_page": 0, "usage": 0},
+            report=None,
+            compatible=["USB\\Class_03&SubClass_01&Prot_02"],
+        )
+        self.assertEqual((info.usage_page, info.usage, info.protocol), (1, 2, 2))
+        report.assert_called_once_with("hub-path", 1, 0)
+
+
+class TestHidUsageFallback(LabTestCase):
+    def test_a_keyboard_class_triplet_supplies_the_usage_when_caps_are_missing(self):
+        compatible = [
+            "USB\\COMPAT_VID_38f4&Class_03&SubClass_01&Prot_01",
+            "USB\\Class_03&SubClass_01&Prot_01",
+        ]
+        self.assertEqual(hid_usage(None, compatible), (0x01, 0x06))
+
+    def test_zero_caps_fall_back_to_a_mouse_class_triplet(self):
+        caps = {"usage_page": 0, "usage": 0, "report_length": 0, "product": None}
+        compatible = ["USB\\Class_03&SubClass_01&Prot_02"]
+        self.assertEqual(hid_usage(caps, compatible), (0x01, 0x02))
+
+    def test_a_usable_caps_reading_is_not_overridden(self):
+        caps = {"usage_page": 0x01, "usage": 0x02}
+        self.assertEqual(
+            hid_usage(caps, ["USB\\Class_03&SubClass_01&Prot_01"]),
+            (0x01, 0x02),
+        )
+
+    def test_compatible_ids_are_found_on_a_usb_interface_ancestor(self):
+        info = {
+            4: type(
+                "Node", (), {"compatible_ids": ("USB\\Class_03&SubClass_01&Prot_01",)}
+            )()
+        }
+        with mock.patch(
+            "lab_agent.usb_host.windows.winapi.device_id",
+            side_effect=lambda devinst: {
+                3: "HID\\VID_38F4&PID_FFFF&MI_03\\9&1",
+                4: "USB\\VID_38F4&PID_FFFF&MI_03\\8&2",
+            }.get(devinst),
+        ), mock.patch(
+            "lab_agent.usb_host.windows.winapi.parent_devinst",
+            side_effect=lambda devinst: {3: 4}.get(devinst),
+        ):
+            self.assertEqual(
+                _compatible_ids_for(3, info),
+                ("USB\\Class_03&SubClass_01&Prot_01",),
+            )
 
 
 class TestEnumerationCache(LabTestCase):

@@ -69,9 +69,14 @@ DRIVE_RAMDISK = 6
 #: ``CTL_CODE(FILE_DEVICE_USB, function, METHOD_BUFFERED, FILE_ANY_ACCESS)``
 IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX = 0x00220448
 IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION = 0x00220410
+#: ``CTL_CODE(FILE_DEVICE_MASS_STORAGE, 0x420, METHOD_BUFFERED, FILE_ANY_ACCESS)``
+IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x002D1080
 
 USB_REQUEST_GET_DESCRIPTOR = 0x06
 USB_DESCRIPTOR_TYPE_CONFIGURATION = 0x02
+USB_DESCRIPTOR_TYPE_HID_REPORT = 0x22
+#: Device-to-host, standard, recipient = interface.
+USB_REQUEST_INTERFACE_STANDARD_IN = 0x81
 
 #: USB_DEVICE_SPEED values, as reported by the hub IOCTL.
 USB_SPEEDS = {0: "low", 1: "full", 2: "high", 3: "super"}
@@ -101,6 +106,7 @@ def _guid(text: str) -> _Guid:
 
 GUID_DEVINTERFACE_USB_HUB = _guid("f18a0e88-c30c-11d0-8815-00a0c906bed8")
 GUID_DEVINTERFACE_VOLUME = _guid("53f5630d-b6bf-11d0-94f2-00a0c91efb8b")
+GUID_DEVINTERFACE_DISK = _guid("53f56307-b6bf-11d0-94f2-00a0c91efb8b")
 GUID_DEVINTERFACE_HID = _guid("4d1e55b2-f16f-11cf-88cb-001111000030")
 GUID_DEVCLASS_PORTS = _guid("4d36e978-e325-11ce-bfc1-08002be10318")
 
@@ -191,6 +197,14 @@ class USB_DESCRIPTOR_REQUEST(ctypes.Structure):
         ("wIndex", ctypes.c_ushort),
         ("wLength", ctypes.c_ushort),
         ("Data", ctypes.c_ubyte * 1),
+    ]
+
+
+class STORAGE_DEVICE_NUMBER(ctypes.Structure):
+    _fields_ = [
+        ("DeviceType", wintypes.ULONG),
+        ("DeviceNumber", wintypes.ULONG),
+        ("PartitionNumber", wintypes.ULONG),
     ]
 
 
@@ -621,10 +635,10 @@ def enumerate_interface_paths(guid: _Guid) -> List[InterfaceNode]:
 # -- hub IOCTL ---------------------------------------------------------------
 
 
-def open_device(path: str) -> int:
+def open_device(path: str, access: int = GENERIC_READ | GENERIC_WRITE) -> int:
     handle = kernel32().CreateFileW(
         path,
-        GENERIC_READ | GENERIC_WRITE,
+        access,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         None,
         OPEN_EXISTING,
@@ -707,10 +721,15 @@ def connection_information(
         close_handle(handle)
 
 
-def configuration_descriptor(
-    hub_path: str, port: int, length: int = 4096
+def _descriptor_from_hub(
+    hub_path: str,
+    port: int,
+    request_type: int,
+    value: int,
+    index: int,
+    length: int,
 ) -> Optional[bytes]:
-    """The device's configuration descriptor, fetched through its parent hub."""
+    """Raw descriptor bytes from a device behind its parent hub."""
     # The flexible ``Data`` member starts at offset 12, not at ``sizeof``: the
     # ctypes structure rounds a ``UCHAR[1]`` up to a 4-byte tail, and using
     # ``sizeof`` would skip the first four descriptor bytes.
@@ -719,10 +738,10 @@ def configuration_descriptor(
     buffer = ctypes.create_string_buffer(total)
     request = ctypes.cast(buffer, ctypes.POINTER(USB_DESCRIPTOR_REQUEST))
     request.contents.ConnectionIndex = port
-    request.contents.bmRequestType = 0x80
+    request.contents.bmRequestType = request_type
     request.contents.bRequest = USB_REQUEST_GET_DESCRIPTOR
-    request.contents.wValue = USB_DESCRIPTOR_TYPE_CONFIGURATION << 8
-    request.contents.wIndex = 0
+    request.contents.wValue = value
+    request.contents.wIndex = index
     request.contents.wLength = length
     try:
         handle = open_device(hub_path)
@@ -737,25 +756,71 @@ def configuration_descriptor(
         )
         if not ok or returned <= header_size:
             return None
-        data = ctypes.string_at(
+        return ctypes.string_at(
             ctypes.addressof(buffer) + header_size, returned - header_size
         )
-        if len(data) >= 4:
-            total_length = struct.unpack("<H", data[2:4])[0]
-            if 0 < total_length <= len(data):
-                data = data[:total_length]
-        return data
     finally:
         close_handle(handle)
+
+
+def configuration_descriptor(
+    hub_path: str, port: int, length: int = 4096
+) -> Optional[bytes]:
+    """The device's configuration descriptor, fetched through its parent hub."""
+    data = _descriptor_from_hub(
+        hub_path,
+        port,
+        0x80,
+        USB_DESCRIPTOR_TYPE_CONFIGURATION << 8,
+        0,
+        length,
+    )
+    if data is None:
+        return None
+    if len(data) >= 4:
+        total_length = struct.unpack("<H", data[2:4])[0]
+        if 0 < total_length <= len(data):
+            data = data[:total_length]
+    return data
+
+
+def hid_report_descriptor(
+    hub_path: str, port: int, interface: int, length: int = 4096
+) -> Optional[bytes]:
+    """The HID report descriptor of one interface, or ``None`` if unreadable.
+
+    **Best effort only.** On the Windows 11 stack this project was verified
+    against, the hub ``IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION`` answers
+    ``ERROR_GEN_FAILURE`` for HID class/report requests (both ``0x81/0x21`` and
+    ``0x81/0x22``); some USB stacks allow them. The primary usage source is
+    therefore a zero-access ``HidP_GetCaps`` (see ``hid_capabilities``), this is
+    an extra source where available, and the interface compatible ids are the
+    last fallback. The parser in ``windows.py`` does not depend on where the
+    bytes came from.
+    """
+    return _descriptor_from_hub(
+        hub_path,
+        port,
+        USB_REQUEST_INTERFACE_STANDARD_IN,
+        USB_DESCRIPTOR_TYPE_HID_REPORT << 8,
+        interface,
+        length,
+    )
 
 
 # -- HID ---------------------------------------------------------------------
 
 
 def hid_capabilities(path: str) -> Optional[Dict[str, Any]]:
-    """Attributes and top-level collection caps, or ``None`` if unreadable."""
+    """Attributes and top-level collection caps, or ``None`` if unreadable.
+
+    The handle is opened with no desired access on purpose: Windows refuses
+    ``GENERIC_READ``/``GENERIC_WRITE`` for an exclusive keyboard/mouse
+    collection, while the HID metadata calls work on a zero-access handle. That
+    is the difference between a real usage and a fallback guess.
+    """
     try:
-        handle = open_device(path)
+        handle = open_device(path, access=0)
     except OSError:
         return None
     try:
@@ -847,6 +912,36 @@ def logical_drives() -> List[str]:
         if mask & (1 << index):
             drives.append(f"{chr(ord('A') + index)}:\\")
     return drives
+
+
+def device_number(path: str) -> Optional[int]:
+    """The underlying disk number of a volume or disk device path.
+
+    ``\\\\.\\D:`` and the matching ``GUID_DEVINTERFACE_DISK`` path both answer
+    the same number, which is what joins a drive letter to its USB disk devnode
+    when the volume interface's parent chain does not reach the device.
+    """
+    handle = kernel32().CreateFileW(
+        path, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, None, OPEN_EXISTING, 0, None
+    )
+    if handle == INVALID_HANDLE_VALUE:
+        return None
+    try:
+        data = STORAGE_DEVICE_NUMBER()
+        returned = wintypes.DWORD(0)
+        ok = kernel32().DeviceIoControl(
+            handle,
+            IOCTL_STORAGE_GET_DEVICE_NUMBER,
+            None,
+            0,
+            ctypes.cast(ctypes.byref(data), ctypes.c_void_p),
+            ctypes.sizeof(data),
+            ctypes.byref(returned),
+            None,
+        )
+        return int(data.DeviceNumber) if ok else None
+    finally:
+        close_handle(handle)
 
 
 def device_port_name(instance_id: str) -> Optional[str]:
