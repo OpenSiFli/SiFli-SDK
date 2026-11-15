@@ -22,6 +22,7 @@ from _support import SdkTestCase  # noqa: F401  (also fixes sys.path)
 
 from sdk_test.agent_client import LabAgentClient
 from sdk_test.agent_client import RemoteConsole
+from sdk_test.agent_client import SERIAL_OPEN_TIMEOUT
 from sdk_test.agent_client import require_testbed
 from sdk_test.backends import create_backend
 from sdk_test.backends import is_host_platform
@@ -123,6 +124,21 @@ class TestRequestShaping(ClientTestCase):
         self.route("/testbed/tb_01/console/write", {"written": 5})
         self.client.console_write("tb_01", "unity_run\r\n")
         self.assertEqual(self.server.requests[-1]["body"]["data"], "unity_run\r\n")
+
+    def test_serial_open_gets_its_own_longer_timeout(self):
+        # Windows can wait about a minute for the device's SET_LINE_CODING
+        # handler; the request default would abort just as the port opens.
+        seen = {}
+
+        def fake_request(method, path, body=None, timeout=None):
+            seen.update(method=method, path=path, timeout=timeout)
+            return {}
+
+        self.client._request = fake_request
+        self.client.usb_serial_open("tb_01", "USB\\VID&KEY", "COM1")
+        self.assertEqual(seen["method"], "POST")
+        self.assertIn("/usb/serial/open", seen["path"])
+        self.assertEqual(seen["timeout"], max(self.client.timeout, SERIAL_OPEN_TIMEOUT))
 
     def test_prepare_names_the_package_and_can_suppress_the_reset(self):
         # The board backend flashes with the reset suppressed so the console can

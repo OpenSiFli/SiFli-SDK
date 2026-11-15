@@ -37,6 +37,11 @@ DEFAULT_TIMEOUT = 60.0
 #: gets a floor of its own rather than the request default.
 UPLOAD_TIMEOUT = 300.0
 
+#: Opening a CDC port can outlast the default: the OS may wait for the device's
+#: SET_LINE_CODING handler, and some examples take about a minute to answer.
+#: Cutting that short aborts the request just as the agent is opening the port.
+SERIAL_OPEN_TIMEOUT = 150.0
+
 #: ``code`` carried by a failure that never reached the agent. The agent's own
 #: error bodies name their cause; a local socket failure has no body, and
 #: callers still need to tell "the bench is unreachable" from "the answer was
@@ -361,6 +366,7 @@ class LabAgentClient:
                 "dtr": bool(dtr),
                 "rts": bool(rts),
             },
+            timeout=max(self.timeout, SERIAL_OPEN_TIMEOUT),
         )
 
     def usb_serial_read(
