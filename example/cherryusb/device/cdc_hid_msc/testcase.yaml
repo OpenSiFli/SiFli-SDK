@@ -1,0 +1,75 @@
+# The USB device path for the cdc_hid_msc example. The DUT's USB data port is
+# wired to the Lab Agent's host, so enumeration, the mass-storage volume, the
+# CDC echo and the HID interface are observed from the host side (`usb_host`),
+# while the firmware's boot log and its transfer-length logs come from the DUT
+# console (`dut`). The runner may sit on another machine: every host-side check
+# goes through the Lab Agent's HTTP API.
+#
+# Bench constraint: the board must make a host-visible disconnect before this
+# case runs. A flash or reset that leaves D+ up keeps Windows on the previous
+# address and configuration, so the device is still listed and the COM port can
+# be opened while `SetCommState` fails; the working sequence is to unplug the
+# DUT's USB data cable, start the run, and plug it back during the enumeration
+# wait (see docs/design/usb-host-observation.md, "Board baseline").
+#
+# Negative verification -- EXECUTED on 2026-11-15 (sf32lb52-lcd_a128r16_01).
+# The official `sdk.py test run` (test-out/2026-11-15T11-31-02) passed 6/6 in
+# 38.85 s (case 58.0 s). The direct injections then ran against the same
+# running firmware without a reflash or reset: the agent was allocated with
+# `fixtures: ["usb_host"]`, its DUT console was opened, and pytest was invoked
+# with `-k "not boots and not configuration"` (the two tests that need the boot
+# transcript were deselected and are covered by the official 6/6 run). Each
+# change was restored and `git hash-object` returned
+# 54442814c12ab3374d16ec192a1275a049272fbf every time.
+#   * README first line `... Demo!` -> `... Demo?`:
+#     `test_msc_volume_carries_the_readme` red on the exact-content comparison
+#     (`README.TXT on D: is '...Demo!\r\n...'`, expected `'...Demo?\r\n...'`),
+#     3.44 s;
+#   * CDC payload 7 -> 6 bytes (`b"SiFli\n"`):
+#     `test_cdc_echoes_and_logs_lengths` red at `dut.expect` for
+#     `CDC actual out len:7`; the device said `CDC actual out len:6` and
+#     `CDC actual in len:6`, 6.43 s (the 6-byte echo itself matched, so the red
+#     is the length log);
+#   * HID report usage 6 -> 2:
+#     `test_hid_interface_is_a_boot_keyboard` red on the caps check; the real
+#     `HidInfo` was `usage_page=1, usage=6`, 1.08 s;
+#   * HID interface subclass 1 -> 2 (the optional second half):
+#     the same test red on the interface-descriptor check; the real
+#     `UsbInterface` was `class=3, subclass=1, protocol=1`, 1.48 s.
+# With every change restored the final direct run was
+# `4 passed, 2 deselected in 7.40s`. The `USB Configured` sabotage is not in
+# this set: a direct run has no boot transcript, so a missing event cannot be
+# told apart from the console being opened late; it stays covered by the
+# official run's `test_reports_usb_configuration` (6/6).
+#
+# The console evidence asserted here is `USB configured - device ready!` only.
+# `USB connected` is not asserted: board evidence for this example shows that
+# `USBD_EVENT_CONNECTED` is not produced on this MUSB port, so the line never
+# reaches the console. Its absence is a port property, not a firmware
+# regression; the configured event is the reliable evidence that enumeration
+# reached SET_CONFIGURATION.
+# Each sabotage is restored and the suite re-run green.
+#
+# Verified on the board (sf32lb52-lcd_a128r16_01, 2026-11-15):
+#   * Windows mounted the 8 KB RAM FAT12 volume as `D:` with label
+#     `SiFli MSC`, and `README.TXT` read back byte for byte.
+#
+# Not verified by this case (recorded rather than skipped):
+#   * KEY1/KEY2 key injection: the case does not press the buttons, so
+#     `hid_keyboard_send_string` and the two key hints are only checked as boot
+#     output, not as a HID report on the host;
+#   * the boot test and the configure-event test both need the console to have
+#     been opened before the board reset (the runner arranges that); a direct
+#     pytest run against an already booted board cannot see the banner or the
+#     retained configure event, so both were deselected there and are covered
+#     only by the official 6/6 run;
+tests:
+  - id: cdc_hid_msc.composite
+    description: The DUT enumerates as an MSC + CDC ACM + HID composite device, and its RAM disk, CDC echo and boot keyboard are observable from the host.
+    harness: pytest
+    tags: [pytest, cherryusb, usb, device]
+    timeout: 300
+    project_dir: project
+    harness_config:
+      fixture: usb_host
+      pytest_root: pytest
