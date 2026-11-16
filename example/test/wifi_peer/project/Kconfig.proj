@@ -1,0 +1,6 @@
+# The custom memory map is the SDK default for examples; nothing here depends
+# on a particular layout.
+config CUSTOM_MEM_MAP
+    bool
+    select custom_mem_map
+    default y

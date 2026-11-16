@@ -9,10 +9,10 @@
 >
 > The QEMU carrier from section 4 (`customer/boards/qemu_*`,
 > `rtos/rtthread/bsp/sifli/drivers_qemu/`, `tools/qemu/`, `example/qemu/`) is in the tree, and
-> the on-board unit tests run on it. The **two CMock example projects** from section 7.1 are
-> **not implemented yet**: they are not in this tree, so their commands do not run. QEMU
-> availability is a lower priority than the real-board path.
-> For the full boundary, see the table at the top of `tools/sdk_test/DESIGN.md`.
+> the on-board unit tests run on it.
+> **Which projects are not in the tree yet, and which cases are red right now, is recorded only in
+> section 11** — not repeated here, so the two places cannot drift apart.
+> For the design boundary, see the table at the top of `tools/sdk_test/DESIGN.md`.
 
 ---
 
@@ -364,6 +364,17 @@ it — all of `drivers/` but `cmsis/`, see 7.2 — that is the route the real-HA
 
 ## 5. Writing a `testcase.yaml`
 
+**Two rules to hold on to before you write the first one; every later section leans on them:**
+
+1. **Do not derive the expected strings from the source code.** Copy them out of the real output
+   (`test-out/<timestamp>/<board>/<case>/device.log`) and fix them in `testcase.yaml`, keeping them
+   aligned with the log — the format string in that `rt_kprintf` and the bytes that actually arrive
+   are not the same thing (newlines, buffer splits and prefixes all change).
+2. **Do not stub a dependency that is part of board bring-up** (clock, UART, MPI, the whole HAL):
+   without it the board will not boot. Put that case on the QEMU carrier, or move the dependency
+   behind a replaceable interface; stubbing other isolatable dependencies on a real board follows
+   section 7.3.
+
 Put it in the directory of the test case it measures. **The id is generated from "relative path + tests key"**, so do not assemble it yourself.
 
 ```yaml
@@ -583,8 +594,8 @@ So pick the real-hardware one with `-t unit_test.board`.
 [PASS ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)
 ```
 
-> As of this document it is actually **1 failed**: `lz4.boundaries` is not closed yet, see
-> risk 9 in `tools/sdk_test/DESIGN.md`. The above is the shape when everything is green.
+> The above is the shape when everything is green. In this tree that case still has one red
+> (`lz4.boundaries`); its state and cause are recorded only in section 11, not repeated here.
 
 On failure the terminal gives you **which sub-case** went red directly, with no digging through logs — **the one below is the actual current output**:
 
@@ -654,25 +665,31 @@ For pure assertions it is only more verbose, and it costs you an extra pytest in
 > `pytest` is not a hard dependency of the framework: `console` and `unity`, and the framework's own tests, are pure standard library.
 > pytest is only there if you installed it with `install.ps1` (it is already in `tools/locks/default`).
 
-### The peer instrument: a second board as a BLE peer {#peer-instrument}
+### The peer instrument: a second board as a peer (BLE / Wi-Fi) {#peer-instrument}
 
-Some tests need a second radio: connect, service discovery, read/write, notify. The framework models that board as an
-**instrument**, not as a second `dut`:
+Some tests need a second radio: connect, service discovery, read/write, notify (Bluetooth), or a
+hotspot and an echo server of their own that the test controls (Wi-Fi). The framework models that
+board as an **instrument**, not as a second `dut`:
 
 - it is not a testbed -- it is never built, flashed or reset by the framework;
 - it runs a **fixed firmware**, flashed once by the lab;
 - it is declared in the binding, next to the DUT;
 - the test drives it over its own console through a line protocol.
 
-**The firmware.** The instrument firmware is the `bt_peer` example (`example/test/bt_peer/`): one firmware that can
-play several roles, exposed as **capabilities**. The pytest fixture is named after the firmware and takes the
-capability as its parameter -- `bt_peer:ble` for the BLE peer used here. Build and flash it **once**, when the lab is
-set up; the suite never builds or flashes it.
+**The firmware.** One project per instrument; two ship with the repository: `example/test/bt_peer/`
+for BLE, and `example/test/wifi_peer/` for a Wi-Fi SoftAP (it brings its own DHCP server and an echo
+service). One firmware can play several roles, exposed as **capabilities**; the pytest fixture is
+named after the firmware and takes the capability as its parameter — `bt_peer:ble` for the BLE peer
+used here. Build and flash it **once**, when the lab is set up; the suite never builds or flashes it.
+**It is code, though**: change the instrument firmware and you have to reflash it — its command set
+and usage live in its own `README.md`.
 
 **The protocol.** Host and firmware speak a line protocol (`peer info`, `peer req <id> <op> ...`; the device answers
 `@info` / `@ok` / `@err` / `@evt`), so a response is matched by request id rather than by scraping ulog text. The host
 side lives in `tools/sdk_test/instruments/`; the command set, the rules and the host API are in
 [`tools/sdk_test/BT_PEER_DESIGN.md`](../../../../tools/sdk_test/BT_PEER_DESIGN.md).
+The Wi-Fi side shares that wire format; its ops are `ap.start` (`ssid=` / `key=` / `mac=` / `ch=`),
+`ap.stop`, `ap.status` and `state.reset`. What changes between instruments is the project, not the mechanism.
 
 **The binding.** The instrument is a connection on the DUT's testbed, with its own console port:
 
@@ -777,6 +794,12 @@ never opened produces no file -- an empty log would read as a silent instrument.
   fixture more than once is an error, not a guess.
 - The instrument has no framework-driven reset. Recovery between runs is the lab's (power-cycle), or the DUT's own
   reset, which drops the link.
+- **Two boards of the same model usually ship with the same MAC.** When the second board plays the AP, give it a
+  different address (`rt_wlan_dev_set_mac()`, called **before** the AP starts), or the AP's BSSID is the DUT's own
+  address and the peer rejects the association as "a station may not authenticate to itself". There is a second step:
+  sync lwIP's copy in `netif->hwaddr` (`netif_find("<iface>")` then `rt_memcpy`), because host-side frames are stamped
+  with that copy. Skip it and the symptom is "association succeeds, DHCP never lands, every ping is lost" while scan,
+  association and the 4-way handshake all look perfect. Assert explicitly that the peer runs at the address you chose.
 
 ### USB host-side observation (`usb_host`) {#usb-host}
 
@@ -942,10 +965,9 @@ and the host-side parser tolerates both LF and CRLF.
 ### 7.1 Stubbing: CMock
 
 > CMock itself and the `mock_*.c/h` generated artifacts came in with an earlier commit. The two
-> example projects below are **not implemented yet** in this tree, so the commands do not run;
-> the table records the intended shape. Until they land, see `middleware/test_fwk/mocks/README.md`
-> for the generator and the existing mocks. QEMU-carrier availability is a lower priority than the
-> real-board path.
+> example projects below are **not in this tree yet**, so the commands do not run — **landing
+> progress is recorded only in section 11**. Until they land, see `middleware/test_fwk/mocks/README.md`
+> for the generator and the existing mocks; the table records the intended shape.
 
 When the branch you want to test cannot be reproduced on the bench ("erase failure", "write timeout", "ID mismatch"),
 replace that dependency with a CMock-generated mock. Two intended example projects (not yet in this
@@ -1705,8 +1727,6 @@ stays in **every** clone forever, and deleting it afterwards does not help.
 
 **Two things you must remember**
 
-1. **Do not derive the expected strings from the source code**; fix them in `testcase.yaml` and keep them aligned with the actual output.
-2. **Do not stub a dependency that is part of board bring-up** (clock, UART, MPI, the whole HAL):
-   without it the board will not boot. Put that case on the QEMU carrier, or move the dependency
-   behind a replaceable interface. Stubbing other isolatable dependencies on a real board follows
-   section 7.3.
+Written at the **start of section 5**; this is just the reminder: copy the expected strings out of
+the real output instead of deriving them from the source, and do not stub a dependency that is part
+of board bring-up (clock, UART, MPI, the whole HAL) — without it the board will not boot.

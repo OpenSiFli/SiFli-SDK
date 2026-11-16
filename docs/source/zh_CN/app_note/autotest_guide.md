@@ -7,9 +7,9 @@
 > `example/get-started/hello_world/`（console 与 pytest 两个 harness）。
 >
 > 第 4 节的 QEMU 载体（`customer/boards/qemu_*`、`rtos/rtthread/bsp/sifli/drivers_qemu/`、
-> `tools/qemu/`、`example/qemu/`）已在树里，板上单测可以在上面跑。第 7.1 节 CMock 的
-> **两个示例工程尚未实现**：它们不在当前树里，命令跑不起来。QEMU 的可用性优先级低于真板路线。
-> 完整边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
+> `tools/qemu/`、`example/qemu/`）已在树里，板上单测可以在上面跑。
+> **哪些工程还没进树、哪些用例现在还红着，只记在第 11 节**——这里不复述，免得两处各自过时。
+> 设计边界见 `tools/sdk_test/DESIGN.md` 开头那张表。
 
 ---
 
@@ -350,6 +350,14 @@ include 路径与 `SF32LB<nnn>X` / `SOC_BF0_HCPU` / `USE_HAL_DRIVER` 三个宏�
 
 ## 5. 写一个 `testcase.yaml`
 
+**动手之前先记住两条，后面每一节都会用到：**
+
+1. **期望字符串不要从源码推导**：从实际输出里抄（`test-out/<时间戳>/<board>/<用例>/device.log`），
+   固化进 `testcase.yaml`，之后跟真实日志对齐——源码里那句 `rt_kprintf` 的格式串和你实际收到的
+   字节流不是一回事（换行、缓冲拆行、前缀都会变）。
+2. **不要给参与板级 bring-up 的依赖打桩**（时钟、UART、MPI、整个 HAL）：不编它板子起不来。
+   这类用例放 QEMU 载体，或把该依赖抽到可替换的接口后面；其他可隔离的依赖在真板上打桩，见 7.3 节。
+
 放在被测算例的目录里。**id 由"相对路径 + tests 键"自动生成**，所以不要自己拼。
 
 ```yaml
@@ -558,8 +566,8 @@ sdk.py test run  -T example/test/unit_test -t unit_test.board `
 [PASS ] unit_test.board on sf32lb52-lcd_a128r16_01  (19.0s)
 ```
 
-> 截至本文，实际是 **1 failed**：`lz4.boundaries` 还没结案，见
-> `tools/sdk_test/DESIGN.md` 风险 9。上面是全绿时的形态。
+> 上面是全绿时的形态。当前树里这条用例还有一条红（`lz4.boundaries`），
+> 状态与原因只记在第 11 节，本节不重复。
 
 失败时终端直接给出**哪条子用例**红了，不用翻日志——**下面这条是当前的真实输出**：
 
@@ -627,23 +635,29 @@ def test_the_console_is_bidirectional(dut):
 > `pytest` 不是框架的硬依赖：`console` 和 `unity` 以及框架自身的测试都是纯标准库。
 > 装了 `install.ps1` 才会有 pytest（它已在 `tools/locks/default` 里）。
 
-### 对端仪表：把第二块板子当 BLE 对端 {#peer-instrument}
+### 对端仪表：把第二块板子当对端（BLE / Wi-Fi）{#peer-instrument}
 
-有些用例需要第二个射频：连接、服务发现、读写、通知。框架把那块板建模成**仪表**，而不是第二个 `dut`：
+有些用例需要第二个射频：连接、服务发现、读写、通知（蓝牙），或者需要一个自己控制的
+热点、一台能回显的服务器（Wi-Fi）。框架把那块板建模成**仪表**，而不是第二个 `dut`：
 
 - 它不是 testbed——框架既不编译它、也不烧录它、也不复位它；
 - 它跑一份**固定固件**，由实验室烧一次；
 - 它在 binding 里和 DUT 一起声明；
 - 测试通过它自己的控制台、按一套**行协议**驱动它。
 
-**固件用哪个工程编。** 仪表固件是 `bt_peer` 工程（`example/test/bt_peer/`）：同一份固件可以扮演多种角色，
-用**能力**表达。pytest fixture 以固件命名，能力作为它的参数——这里用 `bt_peer:ble` 表示 BLE 对端。
-作为实验室的固定设备**烧一次**即可；用例既不编译也不烧录它。
+**固件用哪个工程编。** 每个仪表一个工程，随仓库提供的有两个：BLE 的
+`example/test/bt_peer/`、Wi-Fi SoftAP 的 `example/test/wifi_peer/`（自带 DHCP 与 echo 服务）。
+同一份固件可以扮演多种角色，用**能力**表达；pytest fixture 以固件命名，能力作为它的参数——
+这里用 `bt_peer:ble` 表示 BLE 对端。作为实验室的固定设备**烧一次**即可；用例既不编译也不烧录它。
+**它也是代码**：改了仪表固件就要重新烧，命令集与它自己的用法记在各自的 `README.md` 里。
 
 **协议。** 宿主与固件之间是一套行协议（`peer info`、`peer req <id> <op> ...`；设备回
 `@info` / `@ok` / `@err` / `@evt`），响应按请求 id 配对，不再靠抓 ulog 文本。宿主实现位于
 `tools/sdk_test/instruments/`；命令集、规则与宿主 API 见
 [`tools/sdk_test/BT_PEER_DESIGN.md`](../../../../tools/sdk_test/BT_PEER_DESIGN.md)。
+Wi-Fi 一侧共用同一套线上格式，操作是 `ap.start`（`ssid=` / `key=` / `mac=` / `ch=`）、
+`ap.stop`、`ap.status`、`state.reset`。两套命令都靠同一份宿主层解析，所以换的是一个工程，
+不是一套新机制。
 
 **binding。** 仪表是 DUT 所在 testbed 上的一条 connection，带自己的串口：
 
@@ -738,6 +752,12 @@ SPP 连接前必须先配对）在 `example/test/bt_peer/README.md`。
 - 一条 `bt_peer:ble` connection 必须唯一对应一台仪表；fixture 就打开那一个实例。同一用例声明两次是错误，
   不会随便挑一个。
 - 框架不复位仪表。两次运行之间的恢复是实验室的事（断电重上），或者靠 DUT 自己复位把链路断掉。
+- **两块同型号板出厂 MAC 常常相同。** 让第二块板当 AP 时，必须给它换一个地址
+  （`rt_wlan_dev_set_mac()`，要在起 AP **之前**调），否则 AP 的 BSSID 就是 DUT 自己的地址，
+  认证会被对端以"不允许自己认证自己"拒掉。改完还有一步：同步 lwIP 那份 `netif->hwaddr`
+  （`netif_find("<接口名>")` 后 `rt_memcpy`），因为主机侧的帧用那份地址盖源 MAC——不同步的
+  现象是"关联成功、DHCP 拿不到地址、ping 全丢"，而扫描、关联、握手全都是好的。这类用例
+  建议显式断言对端确实跑在你指定的地址上。
 
 ### USB 主机侧观测（`usb_host`） {#usb-host}
 
@@ -890,9 +910,9 @@ CONFIG_USING_TEST_FWK=y
 
 ### 7.1 打桩：CMock
 
-> CMock 本身与 `mock_*.c/h` 生成物在更早的提交里入库；下面这两个示例工程**尚未实现**，
-> 不在当前树里，所以这些命令跑不起来，表格记录的是预期的形态。工程落地前，生成方式与现有
-> mock 见 `middleware/test_fwk/mocks/README.md`。QEMU 的可用性优先级低于真板路线。
+> CMock 本身与 `mock_*.c/h` 生成物在更早的提交里入库；下面这两个示例工程**还没进树**，
+> 这些命令跑不起来——**进树进度只记在第 11 节**。工程落地前，生成方式与现有 mock 见
+> `middleware/test_fwk/mocks/README.md`。表格记录的是预期的形态。
 
 要测的分支在台架上复现不出来时（"擦除失败""写超时""ID 不匹配"），把那个依赖换成
 CMock 生成的 mock。两个示例工程（尚未进树）可以用来参照形态：
@@ -1612,6 +1632,5 @@ host 侧产物（`device.log`、`runner.log`、`<fixture>.log`、`sifli.json`、
 
 **两条必须记住的**
 
-1. **期望字符串不要从源码推导**，要固化在 `testcase.yaml` 里并跟实际输出对齐。
-2. **不要给参与板级 bring-up 的依赖打桩**（时钟、UART、MPI、整个 HAL）：不编它板子起不来。
-   这类用例放 QEMU 载体，或把该依赖抽到可替换的接口后面。其他可隔离的依赖在真板上打桩，按 7.3 节处理。
+写在**第 5 节开头**，这里只留一句提醒：期望串从实际输出抄、不要从源码推导；
+参与板级 bring-up 的依赖不要打桩（时钟、UART、MPI、整个 HAL），否则板子起不来。

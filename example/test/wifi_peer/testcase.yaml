@@ -1,0 +1,31 @@
+# wifi_peer is the instrument firmware a suite drives as the "other end" of a
+# Wi-Fi link: an access point the DUT joins. It has no application of its own --
+# it powers on the Wi-Fi driver, registers the `peer` MSH command and does what
+# the host asks. Nothing here is executed by the runner, so the only useful
+# entry point in CI is a build: if the instrument image does not compile, every
+# peer testcase in the lab fails for the wrong reason.
+#
+# `-p` still selects the board; flash the resulting image once, then point a
+# binding at its console:
+#
+#     sdk.py test run -T example/test/wifi_peer -p <board>
+#     connections:
+#       - fixture: wifi_peer:ap
+#         console: {port: COM22, baud: 1000000}
+#
+# Negative verification: break a protocol op (for example, return
+# PEER_ERR_UNSUPPORTED from peer_ap_start) and confirm that the *DUT* suite
+# using this instrument goes red; a green instrument build proves only that it
+# links.
+tests:
+  - id: test.wifi_peer.build
+    description: Build the wifi_peer SoftAP instrument firmware. Not executed; the lab flashes it as a fixture.
+    tags: [wifi, instrument, build_only]
+    # A full SDK plus the Wi-Fi driver, with no test to run afterwards.
+    timeout: 600
+    build_only: true
+    # Any board with the AIC8800 module builds this image; the one in the lab
+    # is the same board the STA example runs on.
+    integration_platforms: [sf32lb57-lcd_n16r16_dpi]
+    # The SConstruct sits under project/, one level below the testcase file.
+    project_dir: project

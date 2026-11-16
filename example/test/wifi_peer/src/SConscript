@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# wifi_peer instrument firmware: source group.
+
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Glob('*.c')
+
+CPPPATH = [cwd, str(Dir('#'))]
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')
