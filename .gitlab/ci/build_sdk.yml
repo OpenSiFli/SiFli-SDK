@@ -1,22 +1,25 @@
 # GitLab CI 动态构建系统
-# 运行时动态解析配置并生成子Pipeline
+# 运行时生成批次触发配置，避免单个 child pipeline YAML 过大。
 
 # 动态Pipeline生成Job
 generate_dynamic_pipeline:
   stage: build
   tags:
     - build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
   script:
-    - echo "🚀 开始动态生成构建Pipeline..."
+    - echo "🚀 开始动态生成分批构建Pipeline..."
     - python3 tools/ci/dynamic_pipeline.py -c build_config_gcc.yaml -o child-pipeline.yml
     - echo "📄 生成的子Pipeline配置:"
-    - head -20 child-pipeline.yml
-    - echo "..."
+    - cat child-pipeline.yml
   artifacts:
     paths:
       - child-pipeline.yml
     expire_in: 1 hour
   rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+      when: always
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
@@ -29,6 +32,11 @@ generate_dynamic_pipeline:
 # 触发动态生成的子Pipeline
 trigger_child_pipeline:
   stage: build
+  inherit:
+    variables: false
+  variables:
+    SDK_PARENT_PIPELINE_ID: '$CI_PIPELINE_ID'
+    GITLAB_API_READ_TOKEN: '$GITLAB_API_READ_TOKEN'
   trigger:
     include:
       - artifact: child-pipeline.yml
@@ -37,6 +45,8 @@ trigger_child_pipeline:
   needs:
     - generate_dynamic_pipeline
   rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+      when: always
     - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
@@ -44,4 +54,66 @@ trigger_child_pipeline:
     - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
       when: always
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+
+# The small parent pipeline exposes the catalog without loading the build graph.
+artifact_catalog:
+  stage: build
+  tags:
+    - build
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  needs:
+    - job: trigger_child_pipeline
+      artifacts: false
+  when: always
+  script:
+    - python3 tools/ci/artifact_catalog.py entry
+  artifacts:
+    name: "sdk-artifact-catalog-$CI_PIPELINE_ID"
+    expose_as: 'SDK artifact catalog'
+    paths:
+      - artifact_catalog/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/'
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "web" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "api" && $BUILD_SDK'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# Publish the latest default-branch catalog as the fixed internal entry page.
+# Smoke runs only replace it when CATALOG_PUBLISH=1 is set explicitly.
+# Build failures fail the child pipeline, so this runs `always` and the script
+# publishes only when artifact_catalog succeeded with a complete catalog.
+# Publishing is serialized and never lets an older pipeline that finishes late
+# replace a catalog that a newer pipeline actually deployed.
+pages:
+  stage: build
+  tags:
+    - build
+  resource_group: sdk-artifact-catalog-pages
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  needs:
+    - job: artifact_catalog
+      artifacts: true
+  script:
+    - python3 tools/ci/artifact_catalog.py pages
+  allow_failure:
+    exit_codes:
+      - 3
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 day
+  rules:
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CATALOG_PUBLISH == "1"'
+      when: always
+    - if: '$CATALOG_SMOKE_TEST == "1"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE =~ /^(schedule|web|api)$/ && $BUILD_SDK'
       when: always

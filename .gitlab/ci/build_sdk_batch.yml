@@ -1,0 +1,88 @@
+.build_sdk_batch_template:
+  tags:
+    - build
+  script:
+    - BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --job-label "$BUILD_JOB_LABEL")" || exit 1
+    - eval "$BUILD_JOB_ENV"
+    - if [ "$BUILD_BATCH_SKIP" = "1" ]; then echo "No build assigned to this parallel slot"; exit 0; fi
+    - source ./export.sh
+    - bash tools/ci/build_job.sh
+  after_script:
+    - |
+      BUILD_JOB_ENV="$(python3 tools/ci/resolve_build_job.py --config "$BUILD_CONFIG" --job-label "$BUILD_JOB_LABEL")" || exit 0
+      eval "$BUILD_JOB_ENV"
+      if [ "$BUILD_BATCH_SKIP" = "1" ]; then exit 0; fi
+      REPORT_STATUS=failed
+      if [ "$CI_JOB_STATUS" = "success" ]; then REPORT_STATUS=success; fi
+      python3 tools/ci/write_build_junit.py \
+        --status "$REPORT_STATUS" \
+        --output "job_status/${LOG_NAME}.junit.xml" \
+        --name "$LOG_NAME" \
+        --project "$PROJECT_PATH" \
+        --board "$BOARD" || echo "JUnit report generation failed"
+  artifacts:
+    reports:
+      junit: job_status/*.junit.xml
+    paths:
+      - ci_build_logs/
+      - artifacts/
+      - job_status/
+    expire_in: 1 day
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+      when: always
+
+.build_sdk_catalog_smoke_template:
+  extends: .build_sdk_batch_template
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - python3 tools/ci/artifact_catalog_smoke.py --job-label "$BUILD_JOB_LABEL"
+  after_script: []
+
+.collect_sdk_batch_template:
+  tags:
+    - build
+  when: always
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - |
+      set +e
+      python3 tools/ci/artifact_catalog.py publish
+      pointer_status=$?
+      python3 tools/ci/collect_artifacts_simple.py --output-dir merged_artifacts
+      collect_status=$?
+      python3 tools/ci/collect_artifacts_simple.py --failed-only --output-dir failed_merged_artifacts
+      failed_collect_status=$?
+      if [ "$pointer_status" -ne 0 ] || [ "$collect_status" -ne 0 ] || [ "$failed_collect_status" -ne 0 ]; then
+        echo "Collector errors: pointer=$pointer_status collect=$collect_status failed_collect=$failed_collect_status"
+        exit 1
+      fi
+  artifacts:
+    paths:
+      - merged_artifacts/
+      - failed_merged_artifacts/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
+
+.sdk_artifact_catalog_template:
+  tags:
+    - build
+  when: always
+  variables:
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - python3 tools/ci/artifact_catalog.py generate --config "$BUILD_CONFIG"
+  artifacts:
+    name: "sdk-artifact-catalog-$CI_PIPELINE_ID"
+    expose_as: 'SDK artifact catalog'
+    paths:
+      - artifact_catalog/
+    expire_in: 1 week
+    when: always
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "parent_pipeline"'
