@@ -6,6 +6,7 @@
 
 #include "bf0_hal.h"
 #include "ble_rf_cal.h"
+#include <string.h>
 
 
 enum BT_TEST_PKT_TYPE
@@ -179,6 +180,15 @@ uint32_t tx_des0;
 uint32_t tx_des1;
 uint32_t addr = 0x20408000;
 uint8_t tx_chan = 0xFF;
+uint8_t map_conf = 0;
+uint8_t bt_afh_test_map_conf(uint8_t *map_addr)
+{
+    memcpy((void *)addr + 0x21c, (void *)map_addr, 10);
+    (*(volatile uint16_t *)((addr + 0x226))) = 0x0303;
+
+    map_conf = 1;
+    return 0;
+}
 static void bt_em_init(uint32_t data_len, uint32_t type, uint8_t is_edr)
 {
     uint8_t i;
@@ -198,11 +208,11 @@ static void bt_em_init(uint32_t data_len, uint32_t type, uint8_t is_edr)
     write_memory(addr + 0x200, 0x00000802);
     if (is_edr)
     {
-        write_memory(addr + 0x204, 0x29550000); //[27] acledr
+        write_memory(addr + 0x204, 0x69550000); //[27] acledr
     }
     else
     {
-        write_memory(addr + 0x204, 0x21f50000); //[27] acledr
+        write_memory(addr + 0x204, 0x61f50000); //[27] acledr
     }
     write_memory(addr + 0x208, 0x004ca3bc);
     write_memory(addr + 0x20c, 0xb1ee0000);
@@ -218,9 +228,12 @@ static void bt_em_init(uint32_t data_len, uint32_t type, uint8_t is_edr)
         write_memory(addr + 0x214, pwrcntl); //[7:0] txpower
     }
     write_memory(addr + 0x218, 0x00a8001e); //[29:16] tx_desc=0x2a0
-    write_memory(addr + 0x21c, 0xffffffff);
-    write_memory(addr + 0x220, 0xffffffff);
-    write_memory(addr + 0x224, 0x0303ffff);
+    if (map_conf == 0)
+    {
+        write_memory(addr + 0x21c, 0xffffffff);
+        write_memory(addr + 0x220, 0xffffffff);
+        write_memory(addr + 0x224, 0x0303ffff);
+    }
     write_memory(addr + 0x228, 0x0000ffff);
     write_memory(addr + 0x22c, 0xad990000);
     write_memory(addr + 0x230, 0xa326521b);
@@ -305,10 +318,14 @@ uint8_t bt_123m_hop_infinite_tx(uint32_t data_len, uint32_t type, uint32_t is_ed
 uint8_t bt_hop_infinite_tx(uint32_t phy, uint32_t data_len, uint32_t type, int8_t pwr)
 {
     uint8_t ret = 0xFF;
+    uint32_t radiocntl0, radiocntl0_bak;
 
     HAL_RCC_Reset_and_Halt_LCPU(0);
     // Stop systick
     SysTick->CTRL &= ~(SysTick_CTRL_ENABLE_Msk | SysTick_CTRL_TICKINT_Msk);
+    radiocntl0_bak = hwp_bt_mac->DMRADIOCNTL0;
+    radiocntl0 = (radiocntl0_bak & ~BT_MAC_DMRADIOCNTL0_PHY_RF_TXOFF_DELAY_Msk) | (0x20 << BT_MAC_DMRADIOCNTL0_PHY_RF_TXOFF_DELAY_Pos);
+    hwp_bt_mac->DMRADIOCNTL0 = radiocntl0;
 
     extern void blebredr_rf_power_set(uint8_t type, int8_t txpwr);
     if (phy == 0x0)
@@ -331,9 +348,11 @@ uint8_t bt_hop_infinite_tx(uint32_t phy, uint32_t data_len, uint32_t type, int8_
         __WFI();
     }
     is_afh_test = 0;
+    map_conf = 0;
     HAL_Delay(10);
     bt_hop_infinite_set_stop(0);
     hwp_bt_phy->TX_CTRL |= BT_PHY_TX_CTRL_MAC_MOD_CTRL_EN;
+    hwp_bt_mac->DMRADIOCNTL0 = radiocntl0_bak;
     HAL_Delay(10);
     NVIC_DisableIRQ(DM_MAC_IRQn);
     NVIC_ClearPendingIRQ(DM_MAC_IRQn);
