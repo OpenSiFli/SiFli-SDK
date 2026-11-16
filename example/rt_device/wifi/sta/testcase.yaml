@@ -1,0 +1,68 @@
+# One case, both ends ours: the peer board runs example/test/wifi_peer and raises
+# the SoftAP, the DUT board runs this sta example and joins it. That lets both
+# sides be compared instead of trusting the DUT log alone -- in this example
+# "Target AP" and "Connecting to" are printed unconditionally, so they appear even
+# when the join fails, and watching only those lines gives a false green.
+#
+# What the case checks, in order:
+#   1. the peer brings the AP up with BSSID 02:00:5e:00:00:01 (different from the
+#      DUT's own address);
+#   2. the DUT sees the SSID in a scan;
+#   3. the DUT associates and completes the four-way handshake
+#      (wifi connect success ssid:...);
+#   4. the BSSID reported by the DUT's "wifi status" is this peer board -- the two
+#      ends are compared, so a different AP with the same SSID cannot pass;
+#   5. the DUT gets a 192.168.169.x lease from the peer's DHCP server, which also
+#      proves the downlink data path works;
+#   6. after the peer's ap.stop the DUT notices and tears the link down.
+#
+# How to run it:
+#     sdk.py test run -T example/rt_device/wifi/sta -p sf32lb57-lcd_n16r16_dpi
+#     sdk.py test run -T example/rt_device/wifi/sta -p <board> -t wifi_sta.peer
+#
+# The case only runs when the bench has the peer wired up; without it the module
+# is skipped (and shows as skipped in the pytest summary, not as a pass):
+#     connections:
+#       - fixture: wifi_peer:ap
+#         console: {port: COM22, baud: 1000000}
+tests:
+  - id: wifi_sta.peer
+    description: join the peer board's SoftAP; compare BSSID, lease and ping, then the drop
+    harness: pytest
+    project_dir: project
+    tags: [wifi, hardware, peer, rf]
+    # Worst case added up: the peer raises the AP (<=30s), the example's own thread
+    # gives up (<=90s), association (<=60s), status, the lease poll, the ping, and
+    # the DUT noticing the drop after ap.stop.
+    timeout: 480
+    harness_config:
+      fixture: wifi_peer:ap
+      pytest_root: pytest_peer
+
+  # Use this one when there is no peer board, only a real router: the DUT joins an
+  # AP on the air and checks DHCP plus a ping to the gateway.
+  #
+  # The SSID and passphrase never live in the repository. The case names a
+  # fixture spec (`wifi_ap:2g`); the runner resolves its options from a
+  # machine-local params file and hands them to the suite as
+  # `dut.fixture_options("wifi_ap:2g")`. The contract for that spec -- which
+  # options exist and where each value comes from -- is
+  # `tools/sdk_test/fixture_types.yaml`. Point the run at the file:
+  #     $env:SIFLI_TEST_PARAMS_FILE = "C:\Users\<you>\lab\params.yaml"
+  # or pass --params-file, and check it without hardware:
+  #     sdk.py test params check -T example/rt_device/wifi/sta --params-file <path>
+  # A bench that has no such AP simply does not declare the connection, and this
+  # case is filtered out instead of failing.
+  - id: wifi_sta.join
+    description: join the lab AP named by fixture wifi_ap:2g; check scan, join, status, DHCP+ping, weather and disconnect
+    harness: pytest
+    project_dir: project
+    tags: [wifi, hardware]
+    # Association is retried up to three times (a real AP occasionally drops the
+    # first authentication, and that first attempt tends to fail only after
+    # 60-90s), then come the 30s lease poll and the ping; 600s covers the worst
+    # case.
+    timeout: 600
+    harness_config:
+      fixture: wifi_ap:2g
+      pytest_root: pytest
