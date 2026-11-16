@@ -23,8 +23,6 @@
 #include "drv_flash.h"
 #include "mem_section.h"
 
-extern bool lv_refreshing_done(void);
-
 #ifndef EZIP_SDCARD_DEVNAME
     #define EZIP_SDCARD_DEVNAME "sd0"
 #endif
@@ -304,12 +302,8 @@ static void release_image_source(img_src_info_t *source)
 
 static void apply_image_source(lv_obj_t *img, const img_src_info_t *next)
 {
-    /* Keep the old source alive until draw units and the display port are idle. */
+    /* Keep the old source alive until draw units and EPIC no longer reference it. */
     lv_draw_wait_for_finish();
-    while (!lv_refreshing_done())
-    {
-        rt_thread_mdelay(1);
-    }
 
     lv_image_cache_drop(lv_image_get_src(img));
     if (next->type == IMG_SRC_DSC)

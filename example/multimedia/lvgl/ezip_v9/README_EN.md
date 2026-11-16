@@ -135,6 +135,19 @@ set_image /sdcard/image.ezip dsc sram
 set_image A:/sdcard/image.ezip dsc sram
 ```
 
+### JPG File Verification (SF32LB57 / SF32LB58)
+
+`disk/flower.jpg` is a standard 227 × 149 JPEG file and is packaged into the Flash root file system with the other files in `disk`.
+
+On SF32LB57 or SF32LB58, `CONFIG_LV_USE_SIFLI_JPEGD=y` is enabled by default; no additional configuration is required.
+
+```text
+# Load a JPG from a file
+set_image A:/flower.jpg file
+```
+
+The display should switch to the flower image. SF32LB57 passes compressed JPEG data to EPIC for on-the-fly decoding; SF32LB58 first decodes it to RGB pixels with its separate JPEG IP, then uses EPIC to draw them. `file` does not mean zero memory usage. Use `file` mode for a raw JPG. The `load_ezip()` function used by `dsc` mode only handles EZIP files with an LVGL image header.
+
 ## API Description
 
 ### load_ezip
