@@ -71,6 +71,8 @@ void lv_draw_epic_line(lv_draw_task_t *draw_task, const lv_draw_line_dsc_t *dsc)
 
 bool lv_draw_epic_retain_glyph_data(void *glyph_data);
 
+bool lv_draw_epic_retain_image_data(void *image_data);
+
 bool lv_draw_epic_retain_transform(sifli_matrix_3x3_t *matrix);
 
 /* Queue a private EPIC image task on the target LVGL layer. */

@@ -20,6 +20,7 @@
 #include "../../misc/lv_fs_private.h"
 #include <string.h>
 #include "app_mem.h"
+#include "drv_epic.h"
 #if defined(LVSF_IMG_DECODER_ALLOC_PSRAM) || defined(CONFIG_LVSF_IMG_DECODER_ALLOC_PSRAM)
     #define DECODER_IMAGE_CACHE_POOL IMAGE_CACHE_PSRAM
 #else
@@ -301,6 +302,11 @@ static void decoder_close(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *d
     LV_UNUSED(decoder);
     if (dsc->user_data)
     {
+#ifndef DRV_EPIC_NEW_API
+        /* Wait before freeing file data still read by the single-step renderer. */
+        rt_err_t ret = drv_gpu_check_done(10000);
+        LV_ASSERT(RT_EOK == ret);
+#endif
         app_cache_free(dsc->user_data);
         dsc->user_data = NULL;
     }
