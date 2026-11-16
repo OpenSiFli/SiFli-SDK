@@ -13,6 +13,7 @@
 
 #if LV_USE_DRAW_EPIC
 #include <string.h>
+#include "app_mem.h"
 
 #include "lv_epic_utils.h"
 
@@ -42,6 +43,7 @@ typedef enum
 {
     RL_RESOURCE_LAYER_DRAW_BUF, // Sub-layer draw buffer
     RL_RESOURCE_GLYPH_DATA, // Glyph data
+    RL_RESOURCE_IMAGE_DATA, // Compressed image data
     RL_RESOURCE_TRANSFORM, // Image transform matrix
 } render_list_resource_type_t;
 
@@ -374,6 +376,11 @@ bool lv_draw_epic_retain_glyph_data(void *glyph_data)
     return render_list_retain_resource(glyph_data, RL_RESOURCE_GLYPH_DATA, "glyph data");
 }
 
+bool lv_draw_epic_retain_image_data(void *image_data)
+{
+    return render_list_retain_resource(image_data, RL_RESOURCE_IMAGE_DATA, "image data");
+}
+
 bool lv_draw_epic_retain_transform(sifli_matrix_3x3_t *matrix)
 {
     return render_list_retain_resource(matrix, RL_RESOURCE_TRANSFORM, "transform matrix");
@@ -397,6 +404,10 @@ void lv_draw_epic_release_deferred_resources(void)
             if (resource_list->type == RL_RESOURCE_LAYER_DRAW_BUF)
             {
                 lv_draw_buf_destroy((lv_draw_buf_t *)resource_list->resource);
+            }
+            else if (resource_list->type == RL_RESOURCE_IMAGE_DATA)
+            {
+                app_cache_free(resource_list->resource);
             }
             else
             {

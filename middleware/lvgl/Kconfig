@@ -121,12 +121,13 @@ menu "SiFli extend"
 
         choice
             prompt "LVGL V9 JPEG decoder allocation pool"
-            depends on LV_USE_SIFLI_JPEGD && SOC_SF32LB58X
+            depends on LV_USE_SIFLI_JPEGD
             default LVSF_JPEG_DECODER_ALLOC_PSRAM
             help
-                Select the preferred app_cache_alloc pool for SF32LB58X JPEG
-                input and decoded pixel buffers. Allocation falls back to the
-                system heap when the selected pool is unavailable.
+                Select the preferred app_cache_alloc pool for JPEG file data
+                on SF32LB57X, and JPEG input and decoded pixel buffers on
+                SF32LB58X. Allocation falls back to the system heap when the
+                selected pool is unavailable.
 
             config LVSF_JPEG_DECODER_ALLOC_SRAM
                 bool "Prefer SRAM cache pool"
