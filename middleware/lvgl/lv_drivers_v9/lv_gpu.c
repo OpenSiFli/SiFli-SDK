@@ -21,6 +21,7 @@
 #include "lv_draw_epic.h"
 #include "lv_epic_utils.h"
 #include "lv_conf_sifli.h"
+#include "../../../external/lvgl_v9/src/misc/lv_area_private.h"
 #ifdef DRV_EPIC_NEW_API
 #include "lv_display_private.h"
 #endif
@@ -60,7 +61,7 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
 
 
     /*Setup mask layer*/
-    if ((mask_map) && (lv_area_is_on(mask_coords, src_coords)))
+    if (mask_map && lv_area_is_on(mask_coords, src_coords))
     {
 #ifdef EPIC_SUPPORT_MASK
         HAL_EPIC_LayerConfigInit(&input_layers[2]);
