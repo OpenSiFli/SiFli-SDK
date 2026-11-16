@@ -1,0 +1,16 @@
+from building import *
+
+cwd = GetCurrentDir()
+CPPPATH = [cwd]
+
+# Generic BT.656 layer: built as soon as the camera is enabled.
+objs = DefineGroup('Drivers', ['bt656.c'],
+                   depend = ['BSP_USING_BT656', 'BSP_USING_RTTHREAD'],
+                   CPPPATH = CPPPATH)
+
+# Decoder chip adapter: only when a chip is selected.
+objs += DefineGroup('Drivers', Glob('ark7128*.c'),
+                    depend = ['BSP_USING_BT656', 'BSP_USING_ARK7128', 'BSP_USING_RTTHREAD'],
+                    CPPPATH = CPPPATH)
+
+Return('objs')

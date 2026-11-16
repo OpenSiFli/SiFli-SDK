@@ -16,5 +16,8 @@ config BSP_USING_GC032A
 
 config BSP_USING_SPI_CAMERA
     bool "SPI Camera"
-    default n    
-endmenu    
+    default n
+
+# Camera sub-drivers (e.g. bt656 for the ARK7128 decoder)
+rsource "*/Kconfig"
+endmenu

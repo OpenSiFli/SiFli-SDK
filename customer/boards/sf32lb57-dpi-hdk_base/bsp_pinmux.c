@@ -115,6 +115,28 @@ void BSP_PIN_Init(void)
 
 #endif /* BSP_USING_DCMI */
 
+#ifdef BSP_USING_BT656
+    /*
+     * ARK7128 BT.656 decoder on the DPI HDK: I2C1 control bus (slave 0x58)
+     * and DCMI embedded-sync data pins. Embedded sync does not use the
+     * VSYNC/HSYNC pins, so only PCLK and D0..D7 are configured here.
+     */
+    HAL_PIN_Set(PAD_PA23, I2C1_SCL, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA22, I2C1_SDA, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA03, DCMI_CLK, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA04, DCMI_DI0, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA08, DCMI_DI1, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA09, DCMI_DI2, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA05, DCMI_DI3, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA10, DCMI_DI4, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA07, DCMI_DI5, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA36, DCMI_DI6, PIN_NOPULL, 1);
+    HAL_PIN_Set(PAD_PA35, DCMI_DI7, PIN_NOPULL, 1);
+#ifdef BSP_USING_SDMMC2
+#error "SDMMC2 shares the same pin with BT656"
+#endif /* BSP_USING_SDMMC2 */
+#endif /* BSP_USING_BT656 */
+
 #ifdef BSP_USING_PDM1
     HAL_PIN_Set(PAD_PA20, PDM1_CLK, PIN_NOPULL, 1);
     HAL_PIN_Set(PAD_PA21, PDM1_DATA, PIN_PULLDOWN, 1);

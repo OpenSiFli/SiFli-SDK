@@ -1,0 +1,16 @@
+#APP specific configuration.
+config CUSTOM_MEM_MAP
+    bool
+	select custom_mem_map
+	default y
+
+config BT656_DEMO_USING_LVGL
+    bool "BT.656 + LVGL preview demo"
+    depends on PKG_USING_LITTLEVGL2RTT
+    depends on LVGL_V8
+    default n
+    help
+      Build src/bt656_lvgl.c, which shows the camera frame in an LVGL
+      image widget (lv_img_set_src) using the YUV422 EPIC path.
+      Requires the LVGL package enabled and a CVBS (packed UYVY) input.
+
