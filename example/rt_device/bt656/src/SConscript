@@ -1,0 +1,9 @@
+from building import *
+
+# Add source code
+src = Glob('*.c')
+
+# The driver group adds its own include path
+group = DefineGroup('Applications', src, depend = [''])
+
+Return('group')

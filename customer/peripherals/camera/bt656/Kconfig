@@ -1,0 +1,65 @@
+menuconfig BSP_USING_BT656
+    bool "BT.656 Camera"
+    depends on SOC_SF32LB57X
+    depends on !BSP_USING_DCMI
+    select BSP_USING_I2C
+    select BSP_USING_I2C1
+    default n
+    help
+      Enable the generic BT.656 capture layer (bt656.c): HAL_DCMI capture,
+      multi-buffer borrow/return and a decoder chip adapter.
+
+      A decoder chip must be selected below before an application can
+      capture frames. The capture layer talks to HAL_DCMI directly and owns
+      the DCMI interrupt vector, so it cannot be built together with the
+      RT-Thread "dcmi" device driver (CONFIG_BSP_USING_DCMI).
+
+if BSP_USING_BT656
+
+choice
+    prompt "Decoder chip"
+    default BSP_USING_ARK7128
+    help
+      Select the BT.656 decoder mounted on the board.
+
+config BSP_USING_ARK7128
+    bool "ARK7128"
+
+endchoice
+
+if BSP_USING_ARK7128
+
+config ARK7128_I2C_BUS_NAME
+    string "I2C bus name"
+    default "i2c1"
+    help
+      Name of the RT-Thread I2C bus device used to control the decoder, as
+      registered by drv_i2c (for example "i2c1", "i2c2"). The selected bus
+      must be enabled separately under Board Peripherals -> I2C. The default
+      matches the dpi-hdk-lb57e wiring (I2C1, SCL PA23 / SDA PA22).
+
+choice
+    prompt "Video input format"
+    default ARK7128_VIDEO_CVBS_NTSC
+    help
+      Select the format of the video source connected to the board.
+      The driver picks the matching register table, geometry and DCMI
+      synchronization codes from ark7128_cfg.c.
+
+config ARK7128_VIDEO_CVBS_NTSC
+    bool "CVBS NTSC (720x240)"
+
+config ARK7128_VIDEO_CVBS_PAL
+    bool "CVBS PAL (720x288)"
+
+config ARK7128_VIDEO_AHD_720P_25
+    bool "AHD 720P 25fps"
+
+config ARK7128_VIDEO_AHD_720P_30
+    bool "AHD 720P 30fps"
+
+endchoice
+
+endif
+
+endif
