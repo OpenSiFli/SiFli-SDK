@@ -65,7 +65,16 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
     }
 
     HAL_RCC_EnableModule(RCC_MOD_DCMI);
-    HAL_RCC_ResetModule(RCC_MOD_DCMI);
+
+    /*
+     * Most callers rely on the reset pulse here, but a decoder whose
+     * interlaced FSM is sensitive to a reset taken with the clock running can
+     * reset the block itself (clock gated) and ask the HAL to skip it.
+     */
+    if (hdcmi->Init.SkipReset == 0U)
+    {
+        HAL_RCC_ResetModule(RCC_MOD_DCMI);
+    }
 
     /* Check function parameters */
     HAL_ASSERT(IS_DCMI_PCKPOLARITY(hdcmi->Init.PCKPolarity));
@@ -73,6 +82,9 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
     HAL_ASSERT(IS_DCMI_HSPOLARITY(hdcmi->Init.HSPolarity));
     HAL_ASSERT(IS_DCMI_SYNCHRO(hdcmi->Init.SynchroMode));
     HAL_ASSERT(IS_DCMI_EXTENDED_DATA(hdcmi->Init.ExtendedDataMode));
+    HAL_ASSERT(IS_DCMI_CAPTURE_MODE(hdcmi->Init.CaptureMode));
+    HAL_ASSERT(IS_DCMI_INTERFACE(hdcmi->Init.Interface));
+    HAL_ASSERT(IS_DCMI_IRQ_MODE(hdcmi->Init.IrqMode));
 
     if (hdcmi->State == HAL_DCMI_STATE_RESET)
     {
@@ -99,12 +111,29 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
     /* Change the DCMI state */
     hdcmi->State = HAL_DCMI_STATE_BUSY;
 
-    /* Configures the HS, VS, DE and PC polarity */
-    hdcmi->Instance->CR &= ~(DCMI_CR_PCKPOL | DCMI_CR_HSPOL  | DCMI_CR_VSPOL  | DCMI_CR_EDM_Msk);
+    /* Configures the HS, VS, DE and PC polarity, sync mode, capture mode,
+     * interface and extended-sync byte swap */
+    hdcmi->Instance->CR &= ~(DCMI_CR_PCKPOL | DCMI_CR_HSPOL  | DCMI_CR_VSPOL  | DCMI_CR_EDM_Msk |
+                             DCMI_CR_ESS    | DCMI_CR_ESS_SWAP | DCMI_CR_CM | DCMI_CR_IF_SEL);
 
     hdcmi->Instance->CR |= (uint32_t)(hdcmi->Init.SynchroMode | \
                                       hdcmi->Init.VSPolarity  | hdcmi->Init.HSPolarity  | \
                                       hdcmi->Init.PCKPolarity | hdcmi->Init.ExtendedDataMode);
+
+    if (hdcmi->Init.ExtendedSyncSwap != 0U)
+    {
+        hdcmi->Instance->CR |= DCMI_CR_ESS_SWAP;
+    }
+
+    if (hdcmi->Init.CaptureMode == DCMI_MODE_SNAPSHOT)
+    {
+        hdcmi->Instance->CR |= DCMI_CR_CM;
+    }
+
+    if (hdcmi->Init.Interface == DCMI_INTERFACE_SPI)
+    {
+        hdcmi->Instance->CR |= DCMI_CR_IF_SEL;
+    }
 
     if (hdcmi->Init.SynchroMode == DCMI_SYNCHRO_EMBEDDED)
     {
@@ -113,10 +142,30 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
                                  ((uint32_t)hdcmi->Init.SyncroCode.LineEndCode << DCMI_ESCR_LEC_Pos) | \
                                  ((uint32_t)hdcmi->Init.SyncroCode.FrameEndCode << DCMI_ESCR_FEC_Pos));
 
+        hdcmi->Instance->ESUR = (((uint32_t)hdcmi->Init.SyncUnmask.FrameStartUnmask) | \
+                                 ((uint32_t)hdcmi->Init.SyncUnmask.LineStartUnmask << DCMI_ESUR_LSU_Pos) | \
+                                 ((uint32_t)hdcmi->Init.SyncUnmask.LineEndUnmask << DCMI_ESUR_LEU_Pos) | \
+                                 ((uint32_t)hdcmi->Init.SyncUnmask.FrameEndUnmask << DCMI_ESUR_FEU_Pos));
     }
 
-    /* Enable the Line, Vsync, Error and Overrun interrupts */
-    __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_LINE | DCMI_IT_VSYNC | DCMI_IT_ERR | DCMI_IT_OVR);
+    if (hdcmi->Init.DmaBurstNum != 0U)
+    {
+        hdcmi->Instance->DMA_CR = (hdcmi->Instance->DMA_CR & ~DCMI_DMA_CR_DMA_NUM_Msk) |
+                                  ((hdcmi->Init.DmaBurstNum << DCMI_DMA_CR_DMA_NUM_Pos) &
+                                   DCMI_DMA_CR_DMA_NUM_Msk);
+    }
+
+    /* Interrupt sources: use the exact mask when requested, otherwise keep the
+     * legacy default so existing users are unaffected */
+    if (hdcmi->Init.IrqMask != 0U)
+    {
+        hdcmi->Instance->IE = hdcmi->Init.IrqMask;
+    }
+    else
+    {
+        /* Enable the Line, Vsync, Error and Overrun interrupts */
+        __HAL_DCMI_ENABLE_IT(hdcmi, DCMI_IT_LINE | DCMI_IT_VSYNC | DCMI_IT_ERR | DCMI_IT_OVR);
+    }
 
     /* Update error code */
     hdcmi->ErrorCode = HAL_DCMI_ERROR_NONE;
@@ -216,6 +265,22 @@ __weak void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi)
   */
 
 /**
+  * @brief  Discard the words still sitting in the DCMI RX FIFO.
+  * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
+  *                    the configuration information for DCMI.
+  * @param  max_words Upper bound on the number of words dropped.
+  * @retval None
+  */
+static void DCMI_DrainRxFifo(DCMI_HandleTypeDef *hdcmi, uint32_t max_words)
+{
+    while (((hdcmi->Instance->SR & DCMI_SR_FNE) != 0U) && (max_words > 0U))
+    {
+        (void)hdcmi->Instance->DR;
+        max_words--;
+    }
+}
+
+/**
   * @brief  Enables DCMI DMA request and enables DCMI capture
   * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
   *                    the configuration information for DCMI.
@@ -232,11 +297,32 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mo
     /* Check function parameters */
     HAL_ASSERT(IS_DCMI_CAPTURE_MODE(DCMI_Mode));
 
+    if ((hdcmi == NULL) || (hdcmi->DMA_Handle == NULL))
+    {
+        return HAL_ERROR;
+    }
+
     /* Process Locked */
     __HAL_LOCK(hdcmi);
 
     /* Lock the DCMI peripheral state */
     hdcmi->State = HAL_DCMI_STATE_BUSY;
+
+    /*
+     * Application-managed re-arm: a previous transfer may still be running when
+     * the caller hands over another buffer, so abort it to bring the channel
+     * back to READY before HAL_DMA_Start_IT(). This does not touch CR.CAPTURE:
+     * toggling the capture gate every field breaks the DCMI state machine.
+     *
+     * Only the application IRQ mode aborts. In the legacy (HAL) mode the
+     * in-flight transfer must be left alone: HAL_DMA_Start_IT() then reports
+     * HAL_BUSY and the caller keeps its old semantics.
+     */
+    if ((hdcmi->Init.IrqMode == DCMI_IRQ_MODE_APPLICATION) &&
+            (hdcmi->DMA_Handle->State == HAL_DMA_STATE_BUSY))
+    {
+        (void)HAL_DMA_Abort(hdcmi->DMA_Handle);
+    }
 
     /* Enable DCMI by setting DCMIEN bit */
     __HAL_DCMI_ENABLE(hdcmi);
@@ -245,14 +331,17 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mo
     hdcmi->Instance->CR &= ~(DCMI_CR_CM);
     hdcmi->Instance->CR |= (uint32_t)(DCMI_Mode);
 
-    /* Set the DMA memory0 conversion complete callback */
-    hdcmi->DMA_Handle->XferCpltCallback = DCMI_DMAXferCplt;
+    if (hdcmi->Init.IrqMode == DCMI_IRQ_MODE_HAL)
+    {
+        /* Set the DMA memory0 conversion complete callback */
+        hdcmi->DMA_Handle->XferCpltCallback = DCMI_DMAXferCplt;
+
+        /* Set the dma abort callback */
+        hdcmi->DMA_Handle->XferAbortCallback = NULL;
+    }
 
     /* Set the DMA error callback */
     hdcmi->DMA_Handle->XferErrorCallback = DCMI_DMAError;
-
-    /* Set the dma abort callback */
-    hdcmi->DMA_Handle->XferAbortCallback = NULL;
 
     /* Reset transfer counters value */
     hdcmi->XferCount = 0;
@@ -260,9 +349,21 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mo
     hdcmi->XferSize = 0;
     hdcmi->pBuffPtr = 0;
 
+    if (hdcmi->Init.IrqMode == DCMI_IRQ_MODE_APPLICATION)
+    {
+        /*
+         * The previous DMA has been aborted and the next transfer has not been
+         * armed yet, so the RX FIFO can only hold words that arrived after the
+         * previous transfer completed. Drop them, otherwise they would be
+         * prepended to the new buffer and shift the image horizontally.
+         */
+        DCMI_DrainRxFifo(hdcmi, 1024U);
+    }
+
     /* Enable the DMA Stream */
     if (HAL_DMA_Start_IT(hdcmi->DMA_Handle, (uint32_t)&hdcmi->Instance->DR, (uint32_t)pData, Length) != HAL_OK)
     {
+        __HAL_UNLOCK(hdcmi);
         return HAL_ERROR;
     }
 
@@ -411,6 +512,82 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
 {
     uint32_t isr_value = READ_REG(hdcmi->Instance->MIS);
 
+    /*
+     * Application-managed policy: clear the pending flags and dispatch the
+     * event callbacks only. Do not abort the DMA, do not change IE and do not
+     * leave the BUSY state; the user decides whether an error is fatal and
+     * re-arms the capture itself.
+     */
+    if (hdcmi->Init.IrqMode == DCMI_IRQ_MODE_APPLICATION)
+    {
+        if ((isr_value & DCMI_MIS_FRAME_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_FRAMERI);
+        }
+        if ((isr_value & DCMI_MIS_LINE_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_LINERI);
+        }
+        if ((isr_value & DCMI_MIS_VSYNC_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_VSYNCRI);
+        }
+        if ((isr_value & DCMI_MIS_OVR_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_OVRRI);
+            hdcmi->ErrorCode |= HAL_DCMI_ERROR_OVR;
+        }
+        if ((isr_value & DCMI_MIS_FSM_ERR_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_ERRRI);
+            hdcmi->ErrorCode |= HAL_DCMI_ERROR_SYNC;
+        }
+        if ((isr_value & DCMI_MIS_PACK_SIZE_ERR_MIS) != 0U)
+        {
+            __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_PACKRI);
+            hdcmi->ErrorCode |= HAL_DCMI_ERROR_PACK;
+        }
+
+        if ((isr_value & DCMI_MIS_FRAME_MIS) != 0U)
+        {
+#if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
+            /*Call registered DCMI frame event callback*/
+            hdcmi->FrameEventCallback(hdcmi);
+#else
+            HAL_DCMI_FrameEventCallback(hdcmi);
+#endif /* USE_HAL_DCMI_REGISTER_CALLBACKS */
+        }
+        if ((isr_value & DCMI_MIS_LINE_MIS) != 0U)
+        {
+#if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
+            /*Call registered DCMI line event callback*/
+            hdcmi->LineEventCallback(hdcmi);
+#else
+            HAL_DCMI_LineEventCallback(hdcmi);
+#endif /* USE_HAL_DCMI_REGISTER_CALLBACKS */
+        }
+        if ((isr_value & DCMI_MIS_VSYNC_MIS) != 0U)
+        {
+#if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
+            /*Call registered DCMI vsync event callback*/
+            hdcmi->VsyncEventCallback(hdcmi);
+#else
+            HAL_DCMI_VsyncEventCallback(hdcmi);
+#endif /* USE_HAL_DCMI_REGISTER_CALLBACKS */
+        }
+        if ((isr_value & (DCMI_MIS_OVR_MIS | DCMI_MIS_FSM_ERR_MIS |
+                          DCMI_MIS_PACK_SIZE_ERR_MIS)) != 0U)
+        {
+#if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
+            /*Call registered DCMI error callback*/
+            hdcmi->ErrorCallback(hdcmi);
+#else
+            HAL_DCMI_ErrorCallback(hdcmi);
+#endif /* USE_HAL_DCMI_REGISTER_CALLBACKS */
+        }
+        return;
+    }
+
     /* Synchronization error interrupt management *******************************/
     if ((isr_value & DCMI_FLAG_ERRRI) == DCMI_FLAG_ERRRI)
     {
@@ -449,6 +626,15 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
         {
             DCMI_DMAError(hdcmi->DMA_Handle);
         }
+    }
+    /* Pack size error interrupt management *************************************/
+    if ((isr_value & DCMI_FLAG_PACKRI) == DCMI_FLAG_PACKRI)
+    {
+        /* Clear the Pack size error flag, otherwise the interrupt stays pending */
+        __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_PACKRI);
+
+        /* Update error code */
+        hdcmi->ErrorCode |= HAL_DCMI_ERROR_PACK;
     }
     /* Line Interrupt management ************************************************/
     if ((isr_value & DCMI_FLAG_LINERI) == DCMI_FLAG_LINERI)
@@ -612,6 +798,28 @@ HAL_StatusTypeDef  HAL_DCMI_ConfigSyncUnmask(DCMI_HandleTypeDef *hdcmi, DCMI_Syn
     __HAL_UNLOCK(hdcmi);
 
     return HAL_OK;
+}
+
+/**
+ * @brief  Get the number of DMA items still to be transferred.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure
+ * @retval remaining count in DMA items (32-bit words for the DCMI configuration)
+ */
+uint32_t HAL_DCMI_GetRemainingCount(DCMI_HandleTypeDef *hdcmi)
+{
+    if ((hdcmi == NULL) || (hdcmi->DMA_Handle == NULL))
+    {
+        return 0U;
+    }
+
+#ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+    /* A long transfer is split into several DMA runs; LeftCounts holds the
+     * items of the runs that have not been started yet. In circular mode it
+     * stays 0, so this is the plain counter then. */
+    return hdcmi->DMA_Handle->LeftCounts + __HAL_DMA_GET_COUNTER(hdcmi->DMA_Handle);
+#else
+    return __HAL_DMA_GET_COUNTER(hdcmi->DMA_Handle);
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 }
 
 /**

@@ -63,6 +63,11 @@ typedef struct
 } DCMI_SyncUnmaskTypeDef;
 /**
   * @brief   DCMI Init structure definition
+  *
+  * @note  Zero-initialize the whole structure before assigning the fields you
+  *        need. Every field left at 0 keeps the legacy behavior; in particular
+  *        CaptureMode = DCMI_MODE_CONTINUOUS, Interface = DCMI_INTERFACE_DVP
+  *        and IrqMode = DCMI_IRQ_MODE_HAL are all 0.
   */
 typedef struct
 {
@@ -83,6 +88,30 @@ typedef struct
 
     DCMI_CodesInitTypeDef SyncroCode;     /*!< Specifies the code of the line/frame start delimiter and the
                                              line/frame end delimiter */
+
+    DCMI_SyncUnmaskTypeDef SyncUnmask;    /*!< Embedded synchronization delimiters unmasks (ESUR).
+                                             Only used when SynchroMode is DCMI_SYNCHRO_EMBEDDED */
+
+    uint32_t  ExtendedSyncSwap;           /*!< 0: keep the 32-bit word byte order, 1: swap bytes inside
+                                             each 32-bit word (CR.ESS_SWAP)                         */
+
+    uint32_t  DmaBurstNum;                /*!< DCMI DMA request threshold in 32-bit words (DMA_CR.DMA_NUM).
+                                             0 keeps the reset value                                    */
+
+    uint32_t  CaptureMode;                /*!< DCMI_MODE_CONTINUOUS or DCMI_MODE_SNAPSHOT (CR.CM)       */
+
+    uint32_t  Interface;                  /*!< DCMI_IF_DVP or DCMI_IF_SPI (CR.IF_SEL)                    */
+
+    uint32_t  IrqMask;                    /*!< Exact DCMI_IT_* mask written to IE. 0 keeps the legacy
+                                             default (LINE | VSYNC | ERR | OVR)                          */
+
+    uint32_t  IrqMode;                    /*!< DCMI_IRQ_MODE_HAL or DCMI_IRQ_MODE_APPLICATION           */
+
+    uint32_t  SkipReset;                  /*!< 0: HAL_DCMI_Init pulses the module reset (legacy).
+                                               1: the caller already reset the block with the clock
+                                                  gated and HAL_DCMI_Init must not pulse it again.
+                                                  Some interlaced decoders receive zero bytes when
+                                                  the reset is pulsed while the clock is running. */
 } DCMI_InitTypeDef;
 
 /**
@@ -150,6 +179,7 @@ typedef void (*pDCMI_CallbackTypeDef)(DCMI_HandleTypeDef *hdcmi);
 #define HAL_DCMI_ERROR_NONE             ((uint32_t)0x00000000U)  /*!< No error              */
 #define HAL_DCMI_ERROR_OVR              ((uint32_t)0x00000001U)  /*!< Overrun error         */
 #define HAL_DCMI_ERROR_SYNC             ((uint32_t)0x00000002U)  /*!< Synchronization error */
+#define HAL_DCMI_ERROR_PACK             ((uint32_t)0x00000004U)  /*!< Pack size error       */
 #define HAL_DCMI_ERROR_TIMEOUT          ((uint32_t)0x00000020U)  /*!< Timeout error         */
 #define HAL_DCMI_ERROR_DMA              ((uint32_t)0x00000040U)  /*!< DMA error             */
 #if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
@@ -164,11 +194,31 @@ typedef void (*pDCMI_CallbackTypeDef)(DCMI_HandleTypeDef *hdcmi);
   */
 #define DCMI_MODE_CONTINUOUS           ((uint32_t)0x00000000U)  /*!< The received data are transferred continuously 
                                                                     into the destination memory through the DMA             */
-#define DCMI_MODE_SNAPSHOT             ((uint32_t)DCMI_CR_CM)  /*!< Once activated, the interface waits for the start of 
+#define DCMI_MODE_SNAPSHOT             ((uint32_t)DCMI_CR_CM)  /*!< Once activated, the interface waits for the start of
                                                                     frame and then transfers a single frame through the DMA */
 /**
   * @}
   */
+
+/** @defgroup DCMI_IRQ_Mode DCMI interrupt handling mode
+ * @{
+ */
+#define DCMI_IRQ_MODE_HAL              ((uint32_t)0x00000000U)  /*!< Legacy policy: abort DMA on ERR/OVR and disable
+                                                                      interrupts after a frame event                 */
+#define DCMI_IRQ_MODE_APPLICATION      ((uint32_t)0x00000001U)  /*!< Only clear the flags and call the event
+                                                                      callbacks; capture policy belongs to the user  */
+/**
+ * @}
+ */
+
+/** @defgroup DCMI_Interface DCMI Transfer Interface
+ * @{
+ */
+#define DCMI_INTERFACE_DVP             ((uint32_t)0x00000000U)  /*!< Parallel DVP interface (CR.IF_SEL = 0) */
+#define DCMI_INTERFACE_SPI             ((uint32_t)0x00000001U)  /*!< SPI camera interface (CR.IF_SEL = 1)   */
+/**
+ * @}
+ */
 
 /** @defgroup DCMI_Synchronization_Mode DCMI Synchronization Mode
   * @{
@@ -252,6 +302,7 @@ typedef void (*pDCMI_CallbackTypeDef)(DCMI_HandleTypeDef *hdcmi);
 #define DCMI_IT_ERR      ((uint32_t)DCMI_IE_FSM_ERR_IE)  /*!< Synchronization error interrupt */
 #define DCMI_IT_VSYNC    ((uint32_t)DCMI_IE_VSYNC_IE)    /*!< VSYNC interrupt                 */
 #define DCMI_IT_LINE     ((uint32_t)DCMI_IE_LINE_IE)     /*!< Line interrupt                  */
+#define DCMI_IT_PACK     ((uint32_t)DCMI_IE_PACK_SIZE_ERR_IE) /*!< Pack size error interrupt   */
 /**
   * @}
   */
@@ -274,6 +325,7 @@ typedef void (*pDCMI_CallbackTypeDef)(DCMI_HandleTypeDef *hdcmi);
 #define DCMI_FLAG_ERRRI      ((uint32_t)DCMI_RIS_FSM_ERR_RIS)    /*!< Synchronization error interrupt flag  */
 #define DCMI_FLAG_VSYNCRI    ((uint32_t)DCMI_RIS_VSYNC_RIS)  /*!< VSYNC interrupt flag                  */
 #define DCMI_FLAG_LINERI     ((uint32_t)DCMI_RIS_LINE_RIS)   /*!< Line interrupt flag                   */
+#define DCMI_FLAG_PACKRI     ((uint32_t)DCMI_RIS_PACK_SIZE_ERR_RIS) /*!< Pack size error interrupt flag */
 /**
   * @brief   DCMI MIS register
   */
@@ -282,6 +334,7 @@ typedef void (*pDCMI_CallbackTypeDef)(DCMI_HandleTypeDef *hdcmi);
 #define DCMI_FLAG_ERRMI      ((uint32_t)DCMI_MIS_INDEX|DCMI_MIS_FSM_ERR_MIS  )  /*!< DCMI Synchronization error masked interrupt status  */
 #define DCMI_FLAG_VSYNCMI    ((uint32_t)DCMI_MIS_INDEX|DCMI_MIS_VSYNC_MIS)  /*!< DCMI VSYNC masked interrupt status                  */
 #define DCMI_FLAG_LINEMI     ((uint32_t)DCMI_MIS_INDEX|DCMI_MIS_LINE_MIS )  /*!< DCMI Line masked interrupt status                   */
+#define DCMI_FLAG_PACKMI     ((uint32_t)DCMI_MIS_INDEX|DCMI_MIS_PACK_SIZE_ERR_MIS) /*!< DCMI pack size error masked interrupt status */
 /**
   * @}
   */
@@ -647,9 +700,16 @@ void       HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi);
+
 /**
-  * @}
-  */
+ * @brief  Get the number of DMA items still to be transferred.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure
+ * @retval remaining count in DMA items (words for the current 32-bit configuration)
+ */
+uint32_t HAL_DCMI_GetRemainingCount(DCMI_HandleTypeDef *hdcmi);
+/**
+ * @}
+ */
 
 /** @addtogroup DCMI_Exported_Functions_Group3 Peripheral Control functions
  * @{
@@ -692,6 +752,12 @@ uint32_t              HAL_DCMI_GetError(DCMI_HandleTypeDef *hdcmi);
   */
 #define IS_DCMI_CAPTURE_MODE(MODE)(((MODE) == DCMI_MODE_CONTINUOUS) || \
                                    ((MODE) == DCMI_MODE_SNAPSHOT))
+
+#define IS_DCMI_IRQ_MODE(MODE)(((MODE) == DCMI_IRQ_MODE_HAL) || \
+                               ((MODE) == DCMI_IRQ_MODE_APPLICATION))
+
+#define IS_DCMI_INTERFACE(IFACE)(((IFACE) == DCMI_INTERFACE_DVP) || \
+                                 ((IFACE) == DCMI_INTERFACE_SPI))
 
 #define IS_DCMI_SYNCHRO(MODE)(((MODE) == DCMI_SYNCHRO_HARDWARE) || \
                               ((MODE) == DCMI_SYNCHRO_EMBEDDED))
