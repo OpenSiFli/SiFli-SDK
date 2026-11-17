@@ -1,0 +1,50 @@
+# FatFs on NOR (example/storage/fatfs/nor).
+#
+# The cases follow the procedure in README.md next to this file:
+#   1) mount at boot: `mount fs on flash to root success` (with a mkfs first when
+#      the region holds another file system)
+#   2) performance test: `fs_test 2048 4` -- write 2048 KB, read 2048 KB, with a
+#      progress line every 100 KB
+#   3) directory walk: `ls` -> `mkdir test1` -> `cd test1` -> `mkdir test2` ->
+#      `ls` -> `pwd`
+#
+# The supported boards match the "supported development boards" section in that README (52-lcd_n16r8 /
+# 56-lcd_n16r12n1 / 58-lcd_n16r32n1 / 57-lcd_n16r16_dpi). platform_allow is a
+# hard gate: on a board outside the list the case is filtered instead of being
+# run on hardware the README never promised.
+#
+# How to run:
+#   sdk.py test run -T example/storage/fatfs/nor -p sf32lb52-lcd_n16r8
+tests:
+  - id: fatfs_nor.mount
+    description: register the NOR fs_region as an MTD device and mount it as the FatFs root
+    harness: console
+    tags: [console, storage, fatfs, smoke]
+    timeout: 120
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        # Directly mounted when the region already holds FatFs; formatted first
+        # when it holds another file system (littlefs, for instance).
+        # A formatted region is not a mounted region: the mkfs branch must also
+        # show the remount that follows it, otherwise this entry would pass on
+        # a board whose root is still unmounted.
+        - '(mount fs on flash to root success|make elm fs on flash sucess, mount again[\s\S]*?mount fs on flash success)'
+        - 'Use help to check file system command!'
+        # src/main.c omits the closing quote and the argument hint in this
+        # string; copy it as it is, do not "fix" it.
+        - "Use 'fs_test \\[size_kb\\] \\[buffer_kb\\]' to perform file system performance test!"
+        - 'msh [^>\n]*>'
+
+  - id: fatfs_nor.io
+    description: fs_test reads and writes 2048 KB, then the README directory walk
+    harness: pytest
+    tags: [pytest, storage, fatfs]
+    timeout: 240
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      pytest_root: pytest

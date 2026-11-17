@@ -1,0 +1,49 @@
+# FatFs on NAND (example/storage/fatfs/nand, through D-HARA).
+#
+# The cases follow the procedure in README.md next to this file:
+#   1) mount at boot: `mount fs on flash to root success` (with a mkfs first when
+#      the region holds another file system)
+#   2) performance test: the README command is a bare `fs_test` (1024 KB and a
+#      1 KB buffer by default)
+#   3) directory walk: `ls` -> `mkdir test1` -> `cd test1` -> `mkdir test2` ->
+#      `ls` -> `pwd`
+#
+# The supported boards match the "supported development boards" section in that README (52-lcd_a128r16 /
+# 56-lcd_a128r12n1 / 58-lcd_a128r32n1). platform_allow is a hard gate: a board
+# outside the list gets the case filtered.
+#
+# How to run:
+#   sdk.py test run -T example/storage/fatfs/nand -p sf32lb52-lcd_a128r16
+tests:
+  - id: fatfs_nand.mount
+    description: register the NAND fs_region as a D-HARA MTD device and mount it as the FatFs root
+    harness: console
+    tags: [console, storage, fatfs, smoke]
+    timeout: 180
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    platform_allow: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    harness_config:
+      record:
+        # Directly mounted when the region already holds FatFs, formatted first
+        # when it holds another file system. Both are a normal boot.
+        # A formatted region is not a mounted region: the mkfs branch must also
+        # show the remount that follows it, otherwise this entry would pass on
+        # a board whose root is still unmounted.
+        - '(mount fs on flash to root success|make elm fs on flash sucess, mount again[\s\S]*?mount fs on flash success)'
+        - 'Use help to check file system command!'
+        # src/main.c omits the closing quote and the argument hint in this
+        # string; copy it as it is, do not "fix" it.
+        - "Use 'fs_test to perform file system performance test!"
+        - 'msh [^>\n]*>'
+
+  - id: fatfs_nand.io
+    description: the default 1024 KB fs_test run, then the README directory walk
+    harness: pytest
+    tags: [pytest, storage, fatfs]
+    timeout: 240
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    platform_allow: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    harness_config:
+      pytest_root: pytest

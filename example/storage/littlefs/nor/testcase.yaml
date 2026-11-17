@@ -1,0 +1,43 @@
+# LittleFS on NOR (example/storage/littlefs/nor).
+#
+# The cases follow the "expected results" section in README.md next to this file:
+#   1) mount at boot: `mount fs on flash to root success` (with a mkfs first on a
+#      fresh region or after another file system was used)
+#   2) `ls` -> `mkdir test2` -> `ls` (test2 is listed) -> `pwd`
+#
+# the "supported platforms" section in that README names sf32lb52-lcd_n16r8 only; 57-lcd_n16r16_dpi
+# was added to the README because the same image runs there. platform_allow is a
+# hard gate: a board outside the list gets the case filtered.
+#
+# How to run:
+#   sdk.py test run -T example/storage/littlefs/nor -p sf32lb52-lcd_n16r8
+tests:
+  - id: littlefs_nor.mount
+    description: register the NOR fs_region as an MTD device and mount it as the LittleFS root
+    harness: console
+    tags: [console, storage, littlefs, smoke]
+    timeout: 120
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        # Directly mounted when the region already holds littlefs, formatted
+        # first when it holds another file system (FatFs, for instance).
+        # A formatted region is not a mounted region: the mkfs branch must also
+        # show the remount that follows it, otherwise this entry would pass on
+        # a board whose root is still unmounted.
+        - '(mount fs on flash to root success|make lfs fs on flash sucess, mount again[\s\S]*?mount fs on flash success)'
+        - 'Use help to check file system command!'
+        - 'msh [^>\n]*>'
+
+  - id: littlefs_nor.io
+    description: the README directory walk, then write a file and read it back
+    harness: pytest
+    tags: [pytest, storage, littlefs]
+    timeout: 300
+    project_dir: project
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      pytest_root: pytest

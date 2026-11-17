@@ -8,6 +8,7 @@ Source path: example/storage/flashdb
 + sf32lb52-lcd series
 + sf32lb56-lcd series
 + sf32lb58-lcd series
++ sf32lb57-lcd series
 
 ## Overview
 <!-- Example introduction -->

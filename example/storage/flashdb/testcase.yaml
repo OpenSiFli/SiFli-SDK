@@ -1,0 +1,78 @@
+# FlashDB (example/storage/flashdb): FAL partitions on nor, file mode on nand.
+#
+# The cases follow the "expected results" section in README.md next to this file: kvdb
+# set/get/del and tsdb append/query_all/query_by_time/clear, with the quoted
+# keys the README table uses (`kvdb set "key1" int 100`).
+#
+# The README lists the 52-nano, 52-lcd, 56-lcd, 58-lcd and 57-lcd families; the
+# nor cases here run on the boards that were actually available and have a ptab
+# variant under project/nor (52-lcd_n16r8 / 56-lcd_n16r12n1 / 58-lcd_n16r32n1 /
+# 57-lcd_n16r16_dpi). sf32lb52-nano_n16r16 ships a variant as well but no board
+# was on the bench, so it is deliberately left out of platform_allow rather than
+# claiming support that was never executed. The nand cases run on the NAND
+# boards of the same families (52-lcd_a128r16 / 56-lcd_a128r12n1 /
+# 58-lcd_a128r32n1).
+#
+# How to run:
+#   sdk.py test run -T example/storage/flashdb -p sf32lb57-lcd_n16r16_dpi   # nor cases
+#   sdk.py test run -T example/storage/flashdb -p sf32lb52-lcd_a128r16      # nand cases
+tests:
+  - id: flashdb_nor.boot
+    description: both FAL partitions register and KVDB/TSDB initialise on nor
+    harness: console
+    tags: [console, storage, flashdb, smoke]
+    timeout: 120
+    project_dir: project/nor
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        - '\[I/FAL\] The FAL MTD NOR device \(kvdb_tst\) created successfully'
+        - '\[I/FAL\] The FAL MTD NOR device \(tsdb_tst\) created successfully'
+        - '\[FLASHDB\]Flashdb Example\.'
+        - 'kvdb init success !!!'
+        # The example spells it "sucess"; copy it, do not "fix" it.
+        - 'tsdb init sucess !!!'
+        - 'msh [^>\n]*>'
+
+  - id: flashdb_nor.kvdb
+    description: the README kvdb/tsdb commands, and the values survive a reboot
+    harness: pytest
+    tags: [pytest, storage, flashdb]
+    timeout: 300
+    project_dir: project/nor
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r32n1, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      pytest_root: pytest
+
+  - id: flashdb_nand.boot
+    description: file mode creates the kvdb_tst/tsdb_tst directories in the FAT and initialises both
+    harness: console
+    tags: [console, storage, flashdb, smoke]
+    timeout: 180
+    project_dir: project/nand
+    integration_platforms: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    platform_allow: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    harness_config:
+      record:
+        # The order has to match the device output: the console cursor only
+        # moves forward.
+        - '\[FLASHDB\]Flashdb Example\.'
+        - 'kvdb init success !!!'
+        - 'tsdb init sucess !!!'
+        - 'Directory /:'
+        - 'kvdb_tst\s+<DIR>'
+        - 'tsdb_tst\s+<DIR>'
+        - 'msh [^>\n]*>'
+
+  - id: flashdb_nand.kvdb
+    description: the README kvdb/tsdb commands, and the values survive a reboot
+    harness: pytest
+    tags: [pytest, storage, flashdb]
+    timeout: 240
+    project_dir: project/nand
+    integration_platforms: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    platform_allow: [sf32lb52-lcd_a128r16, sf32lb56-lcd_a128r12n1, sf32lb58-lcd_a128r32n1]
+    harness_config:
+      pytest_root: pytest_nand

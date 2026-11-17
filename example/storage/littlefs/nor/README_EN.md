@@ -6,6 +6,7 @@ Source code path: example/storage/littlefs
 <!-- Which boards and chip platforms are supported -->
 
 + sf32lb52-lcd_n16r8
++ sf32lb57-lcd_n16r16_dpi
 
 ## Overview
 <!-- Example introduction -->
