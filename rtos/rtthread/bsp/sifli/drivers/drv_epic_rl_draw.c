@@ -2038,7 +2038,7 @@ static rt_err_t render_line(drv_epic_operation *p_operation, EPIC_LayerConfigTyp
                     mask_list[1] = &mask_line_param;
                 }
 
-                draw_masked_rect4(dst, NULL,
+                draw_masked_rect4(dst, &p_operation->mask,
                                   mask_list, &clip_line, p_operation->desc.line.argb8888);
                 drv_epic_mask_free_param(&mask_out_param);
 
@@ -2085,7 +2085,7 @@ static rt_err_t render_line(drv_epic_operation *p_operation, EPIC_LayerConfigTyp
                     mask_list[1] = &mask_line_param;
                 }
 
-                draw_masked_rect4(dst, NULL,
+                draw_masked_rect4(dst, &p_operation->mask,
                                   mask_list, &clip_line, p_operation->desc.line.argb8888);
                 drv_epic_mask_free_param(&mask_out_param);
 
