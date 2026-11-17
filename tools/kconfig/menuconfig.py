@@ -777,14 +777,15 @@ def menuconfig(kconf,conf='.config'):
     # Load existing configuration and set _conf_changed True if it is outdated
     _conf_changed = _load_config()
 
-    # Refuse to open the configuration if an active configdefault targets a
-    # symbol that is not defined. Such a tree cannot build, and letting the
-    # user edit it would only hide the problem until the next build.
-    errors = _check_configdefaults()
+    # Refuse to open the configuration if the loaded Kconfig tree has
+    # unresolved configdefault targets or invalid choices. Such a tree cannot
+    # build, and letting the user edit it would only hide the problem until
+    # the next build.
+    errors = _run_deferred_checks()
     if errors:
         sys.exit("\n" + "\n\n".join(errors) + "\n\n"
-                 "error: active configdefault targets are undefined; fix the "
-                 "Kconfig files before running menuconfig\n")
+                 "error: Kconfig validation failed; fix the Kconfig files "
+                 "before running menuconfig\n")
 
     # Filename to save minimal configuration to
     _minconf_filename = _conf_filename
@@ -2039,10 +2040,10 @@ def _try_load(filename):
         return False
 
 
-def _check_configdefaults():
-    # Runs the configdefault check and returns the warnings it generated.
-    # Warnings are disabled while curses is active and stderr is unusable
-    # there, so collect them for the caller to display.
+def _run_deferred_checks():
+    # Runs the deferred Kconfig checks (configdefault and choice) and returns
+    # the warnings they generated. Warnings are disabled while curses is
+    # active and stderr is unusable there, so collect them for the caller.
     old_warn = _kconf.warn
     old_warn_to_stderr = _kconf.warn_to_stderr
     _kconf.warn = True
@@ -2057,16 +2058,15 @@ def _check_configdefaults():
 
 
 def _write_checked(write_fn, filename):
-    # Wraps a configuration writer so that a configuration with an active
-    # configdefault targeting an undefined symbol is never saved.
-    warnings = _check_configdefaults()
+    # Wraps a configuration writer so that a configuration which fails the
+    # deferred Kconfig checks is never saved.
+    warnings = _run_deferred_checks()
     if warnings:
         # Key dialogs clip long lines instead of wrapping, and the warnings
         # contain long paths, so wrap them to the dialog width here.
         width = max(_width(_stdscr) - 6, 20)
-        text = ("Cannot save the configuration:\n\n"
-                "These configdefault statements are active, but their target "
-                "symbol is not defined:\n\n" + "\n\n".join(warnings))
+        text = ("Cannot save the configuration; fix these Kconfig errors:\n\n"
+                + "\n\n".join(warnings))
         text = "\n".join(textwrap.fill(line, width) if line else line
                          for line in text.split("\n"))
         _error(text)

@@ -64,6 +64,30 @@ configdefault {target}
 endif
 """
 
+CHOICE_MODULE = """\
+choice MODE_CHOICE
+    prompt "mode"
+config MODE_A
+    bool "A"
+config MODE_B
+    bool "B"
+endchoice
+"""
+
+CHOICE_STUB = """\
+if AUDIO
+choice MODE_CHOICE
+    default MODE_A
+endchoice
+endif
+"""
+
+CHOICE_UNGUARDED_STUB = """\
+choice MODE_CHOICE
+    default MODE_A
+endchoice
+"""
+
 
 class ConfigdefaultTestCase(unittest.TestCase):
     def setUp(self):
@@ -107,6 +131,21 @@ class ConfigdefaultTestCase(unittest.TestCase):
         self.write("audio_on.config", "CONFIG_AUDIO=y\n"
                                      "CONFIG_TEST_CONFIG=y\n")
         self.write("module_absent.config", "CONFIG_TEST_CONFIG=y\n")
+        self.write("empty.config", "")
+
+    def write_choice_tree(self, guarded=True):
+        self.write("common/kconfig", COMMON_KCONFIG)
+        self.write("module/kconfig", CHOICE_MODULE)
+        self.write("board/kconfig.defconfig",
+                   CHOICE_STUB if guarded else CHOICE_UNGUARDED_STUB)
+        self.write("Kconfig.with_module",
+                   'rsource "board/kconfig.defconfig"\n'
+                   'rsource "common/kconfig"\n'
+                   'rsource "module/kconfig"\n')
+        self.write("Kconfig.without_module",
+                   'rsource "board/kconfig.defconfig"\n'
+                   'rsource "common/kconfig"\n')
+        self.write("audio_on.config", "CONFIG_AUDIO=y\n")
         self.write("empty.config", "")
 
 
@@ -248,6 +287,132 @@ class TestConfigdefaultValidation(ConfigdefaultTestCase):
             kconf.check_undefined_configdefaults()
 
 
+class TestChoiceDefaults(ConfigdefaultTestCase):
+    def test_stub_inert_when_module_absent(self):
+        self.write_choice_tree()
+        kconf = self.kconf("Kconfig.without_module")
+        self.load(kconf, ["empty.config"])
+        kconf.check_undefined_configdefaults()
+
+        self.assertEqual([], kconf.warnings)
+
+    def test_module_present_applies_default(self):
+        self.write_choice_tree()
+        kconf = self.kconf("Kconfig.with_module")
+        self.load(kconf, ["audio_on.config"])
+        kconf.check_undefined_configdefaults()
+
+        self.assertEqual([], kconf.warnings)
+        choice = kconf.named_choices["MODE_CHOICE"]
+        self.assertIs(kconf.syms["MODE_A"], choice.selection)
+
+    def test_module_present_but_guard_off_is_inert(self):
+        # The module is sourced, so the choice is fully defined, but the
+        # default's own condition is false. Nothing should be reported.
+        self.write_choice_tree()
+        kconf = self.kconf("Kconfig.with_module")
+        self.load(kconf, ["empty.config"])
+        kconf.check_undefined_configdefaults()
+
+        self.assertEqual([], kconf.warnings)
+
+    def test_default_condition_gates_contained_check(self):
+        # MODE_OUTSIDE is a normal symbol, not a member of the choice. The
+        # default may only be reported while its own condition is true.
+        self.write("common/kconfig", COMMON_KCONFIG + "\n"
+                   'config MODE_OUTSIDE\n'
+                   '    bool "outside"\n')
+        self.write("module/kconfig", CHOICE_MODULE)
+        self.write("board/kconfig.defconfig",
+                   "if AUDIO\n"
+                   "choice MODE_CHOICE\n"
+                   "    default MODE_OUTSIDE\n"
+                   "endchoice\n"
+                   "endif\n")
+        self.write("Kconfig.with_module",
+                   'rsource "board/kconfig.defconfig"\n'
+                   'rsource "common/kconfig"\n'
+                   'rsource "module/kconfig"\n')
+        self.write("audio_on.config", "CONFIG_AUDIO=y\n")
+        self.write("empty.config", "")
+
+        # AUDIO=n: the default is inactive and must not be reported.
+        kconf = self.kconf("Kconfig.with_module")
+        self.load(kconf, ["empty.config"])
+        kconf.check_undefined_configdefaults()
+        self.assertFalse(any("is not contained in the choice" in warning
+                             for warning in kconf.warnings))
+
+        # AUDIO=y: the default is active and must be reported.
+        kconf = self.kconf("Kconfig.with_module")
+        self.load(kconf, ["audio_on.config"])
+        kconf.check_undefined_configdefaults()
+        self.assertTrue(any("is not contained in the choice" in warning
+                            for warning in kconf.warnings))
+
+    def test_unguarded_stub_warns_when_module_absent(self):
+        self.write_choice_tree(guarded=False)
+        kconf = self.kconf("Kconfig.without_module")
+        self.load(kconf, ["empty.config"])
+        kconf.check_undefined_configdefaults()
+
+        text = "\n".join(kconf.warnings)
+        self.assertIn("defined with type unknown", text)
+        self.assertIn("defined without a prompt", text)
+        self.assertIn("is not contained in the choice", text)
+
+    def test_stub_guard_active_warns_when_module_absent(self):
+        self.write_choice_tree()
+        kconf = self.kconf("Kconfig.without_module")
+        self.load(kconf, ["audio_on.config"])
+        kconf.check_undefined_configdefaults()
+
+        text = "\n".join(kconf.warnings)
+        self.assertIn("defined with type unknown", text)
+        self.assertIn("defined without a prompt", text)
+        self.assertIn("is not contained in the choice", text)
+
+    def test_disabled_choice_with_members_still_checked(self):
+        # Only the empty stub is inert. A fully defined choice inside an
+        # inactive branch keeps the structure checks.
+        self.write("Kconfig",
+                   "if NEVER_DEFINED\n"
+                   "choice DISABLED_CHOICE\n"
+                   "    default A\n"
+                   "config A\n"
+                   "    bool \"A\"\n"
+                   "endchoice\n"
+                   "endif\n")
+        self.write("empty.config", "")
+        kconf = self.kconf("Kconfig")
+        self.load(kconf, ["empty.config"])
+        kconf.check_undefined_configdefaults()
+
+        self.assertTrue(any("defined without a prompt" in warning
+                            for warning in kconf.warnings))
+
+    def test_configdefault_on_choice_member_still_warns(self):
+        self.write("common/kconfig", COMMON_KCONFIG)
+        self.write("module/kconfig", CHOICE_MODULE)
+        self.write("board/kconfig.defconfig",
+                   "if AUDIO\n"
+                   "configdefault MODE_A\n"
+                   "    default y\n"
+                   "endif\n")
+        self.write("Kconfig.with_module",
+                   'rsource "board/kconfig.defconfig"\n'
+                   'rsource "common/kconfig"\n'
+                   'rsource "module/kconfig"\n')
+        self.write("audio_on.config", "CONFIG_AUDIO=y\n")
+        self.write("empty.config", "")
+        kconf = self.kconf("Kconfig.with_module")
+        self.load(kconf, ["audio_on.config"])
+        kconf.check_undefined_configdefaults()
+
+        self.assertTrue(any("defaults do not affect choice symbols" in warning
+                            for warning in kconf.warnings))
+
+
 class TestDriverIntegration(ConfigdefaultTestCase):
     def run_driver(self, root, fragment):
         out_config = os.path.join(self.tmpdir, "out.config")
@@ -273,6 +438,17 @@ class TestDriverIntegration(ConfigdefaultTestCase):
         result = self.run_driver("Kconfig.with_module", "audio_on.config")
         self.assertNotEqual(0, result.returncode)
         self.assertIn("configdefault", result.stderr)
+
+    def test_driver_accepts_inert_choice_stub(self):
+        self.write_choice_tree()
+        result = self.run_driver("Kconfig.without_module", "empty.config")
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_driver_rejects_missing_choice_members(self):
+        self.write_choice_tree(guarded=False)
+        result = self.run_driver("Kconfig.without_module", "empty.config")
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("not contained in the choice", result.stderr)
 
 
 class TestExistingSocConfigdefaults(ConfigdefaultTestCase):

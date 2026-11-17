@@ -62,10 +62,10 @@ def main():
         # replace=False creates a merged configuration
         logging.info(kconf.load_config(config, replace=False))
 
-    # Validate configdefault statements against the final symbol values. An
-    # inactive configdefault is inert (the module providing the symbol was not
-    # sourced), while an active one whose target was never defined is an
-    # error, turned fatal by the warning check below.
+    # Validate deferred Kconfig checks (configdefault targets, choice
+    # structure and choice defaults) against the final symbol values.
+    # Inactive references are inert; active ones that cannot resolve are
+    # errors, turned fatal by the warning check below.
     kconf.check_undefined_configdefaults()
 
     if args.handwritten_input_configs:
