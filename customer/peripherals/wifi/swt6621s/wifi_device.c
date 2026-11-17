@@ -99,7 +99,7 @@ void rt_wifi_sdio_init(void)
         break;
     case WIFI_SDIO_LINE:
 #ifdef BSP_USING_SD_LINE
-
+        extern int rt_hw_sdio_init(void);
         rt_hw_sdio_init();
 #endif
         break;
