@@ -15,6 +15,8 @@
 
 #include "../../draw/lv_image_decoder_private.h"
 #include "../../../lvgl.h"
+#include "../../draw/lv_draw_buf_private.h"
+#include "../../misc/cache/instance/lv_image_cache.h"
 #if (1 == LV_USE_DRAW_EPIC) && defined(LV_USE_EZIP)
 
 #include "../../misc/lv_fs_private.h"
@@ -114,6 +116,33 @@ static lv_result_t decoder_info(lv_image_decoder_t *decoder, lv_image_decoder_ds
  * @param dsc     pointer to the decoder descriptor
  * @return LV_RESULT_OK: no error; LV_RESULT_INVALID: can't open the image
  */
+#ifdef RT_USING_MTD_NOR
+/* Cache owns the descriptor, while its pixel data remains mapped in NOR. */
+static lv_draw_buf_handlers_t mapped_image_handlers;
+
+static void cache_mapped_image(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
+{
+    if (dsc->args.no_cache || !lv_image_cache_is_enabled()) return;
+
+    lv_draw_buf_t *decoded = (lv_draw_buf_t *)dsc->decoded;
+    uint32_t flags = decoded->header.flags;
+    const lv_draw_buf_handlers_t *handlers = decoded->handlers;
+    lv_image_cache_data_t key = {0};
+    key.src = dsc->src;
+    key.src_type = dsc->src_type;
+    /* Only metadata consumes RAM; do not charge the mapped pixel bytes. */
+    key.slot.size = sizeof(*decoded) + strlen(dsc->src) + 1;
+    decoded->header.flags |= LV_IMAGE_FLAGS_ALLOCATED;
+    decoded->handlers = &mapped_image_handlers;
+    dsc->cache_entry = lv_image_decoder_add_to_cache(decoder, &key, decoded, NULL);
+    if (dsc->cache_entry == NULL)
+    {
+        decoded->header.flags = flags;
+        decoded->handlers = handlers;
+    }
+}
+#endif /* RT_USING_MTD_NOR */
+
 static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
 {
     LV_UNUSED(decoder);
@@ -276,6 +305,9 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
             p_decoded->unaligned_data = p_decoded->data;
             p_decoded->handlers = lv_draw_buf_get_handlers();
             dsc->decoded = p_decoded;
+#if defined(RT_USING_MTD_NOR) && !defined(RT_USING_MTD_NAND)
+            if (use_direct_mapping) cache_mapped_image(decoder, dsc);
+#endif
         }
         else
         {
@@ -297,6 +329,9 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
 static void decoder_close(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
 {
     LV_UNUSED(decoder);
+    /* Generic decoder_close releases the cache reference after this callback. */
+    if (dsc->cache_entry != NULL) return;
+
     if (dsc->user_data)
     {
 #ifndef DRV_EPIC_NEW_API
@@ -325,6 +360,10 @@ void lv_sifli_img_decoder(void)
 #if (1 == LV_USE_DRAW_EPIC)
 
 #if defined(LV_USE_EZIP)
+#ifdef RT_USING_MTD_NOR
+    mapped_image_handlers = *lv_draw_buf_get_handlers();
+    mapped_image_handlers.buf_free_cb = NULL;
+#endif
     lv_image_decoder_t *dec = lv_image_decoder_create();
     lv_image_decoder_set_info_cb(dec, decoder_info);
     lv_image_decoder_set_open_cb(dec, decoder_open);
