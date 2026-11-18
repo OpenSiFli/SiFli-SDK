@@ -71,7 +71,11 @@ extern "C" {
 #else
 #define letter_pool_max         800
 #endif
+#ifdef DRV_EPIC_MASK_BUF_SIZE
+#define mask_buf_max_bytes      DRV_EPIC_MASK_BUF_SIZE
+#else
 #define mask_buf_max_bytes      (16*1024)
+#endif
 #define mask_buf2_max_bytes     1600
 #if defined(ROTATE_BUF_SIZE) && defined(ROTATE_BUF_IN_SRAM)
 #define rotate_buf_bytes   ROTATE_BUF_SIZE

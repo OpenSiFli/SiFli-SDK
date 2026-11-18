@@ -393,6 +393,13 @@ static void merge_image_mask(EPIC_LayerConfigTypeDef *mask, const EPIC_LayerConf
     }
 }
 
+/* Clean by address, including shared pools allocated by the other core.
+ * The platform helper is a no-op when write-back caching is disabled. */
+static inline void clean_software_mask(const EPIC_LayerConfigTypeDef *mask)
+{
+    mpu_dcache_clean(mask->data, mask->data_size);
+}
+
 static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigTypeDef *p_extra_mask_layer,
                                  void *masks[], const EPIC_AreaTypeDef *p_draw_area, draw_rect_dsc_t *p_rect_desc,
                                  const EPIC_AreaTypeDef *p_circle_mask_area1,
@@ -438,8 +445,8 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
     //ping-pong buffer for CPU and GPU paralell
     int32_t mask_buf_h = MIN((gp_drv_epic->dbg_mask_buf_pool_max / 2) / blend_w, blend_h);
     if (image) mask_buf_h = MIN(mask_buf_h, ARC_IMG_TILE_HEIGHT);
-    if (image && mask_buf_h <= 0) return -RT_ENOMEM;
-    RT_ASSERT(mask_buf_h > 0);
+    /* Both ping-pong halves must fit at least one complete A8 row. */
+    if (mask_buf_h <= 0) return -RT_ENOMEM;
     drv_epic_mask_opa_t *mask_buf = (drv_epic_mask_opa_t *)gp_drv_epic->mask_buf_pool;
     drv_epic_mask_opa_t *mask_buf_ping_pong = mask_buf;
 
@@ -581,6 +588,7 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
             if (image)
             {
                 merge_image_mask(p_mask_layer, p_extra_mask_layer);
+                clean_software_mask(p_mask_layer);
                 input_layers[0] = output_layer;
                 uint8_t input_layer_num = 3;
                 if (p_rect_desc->fill_bg)
@@ -614,12 +622,14 @@ static rt_err_t draw_masked_rect(EPIC_LayerConfigTypeDef *dst, EPIC_LayerConfigT
                     merge_image_mask(p_mask_layer, p_extra_mask_layer);
                 }
 
+                clean_software_mask(p_mask_layer);
                 input_layers[0] = output_layer; //Setup bg layer
                 ret =  Call_Hal_Api(HAL_API_BLEND_EX, input_layers, (void *)((uint32_t)3), &output_layer);
                 DRV_EPIC_ASSERT(HAL_OK == ret);
             }
             else
             {
+                clean_software_mask(p_mask_layer);
                 ret =  Call_Hal_Api(HAL_API_CONT_BLEND, p_mask_layer, p_extra_mask_layer, &output_layer);
                 DRV_EPIC_ASSERT(HAL_OK == ret);
             }
