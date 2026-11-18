@@ -44,6 +44,15 @@ menu "Wlan0 Parameter"
     config AIC_WIRELESS_PWR_GPIO
         int "aic8800 wlan0 power on gpio"
         default -1
+        help
+          RT-Thread pin id of the AIC8800D40 power enable pin.
+          The value is the rt_pin number, not a GPIO bit mask:
+          PA00..PA95 map to 0~95 and PB00..PB63 map to 96~159, so the
+          valid range is 0~159, for example 124 means PB28.
+
+    config AIC_WIRELESS_CHIP_EN_GPIO
+        int "aic8800 wlan0 chip enable gpio"
+        default -1
 
     config AIC_DEV_AIC8800_WLAN0_RST_GPIO
         int "aic8800 wlan0 reset gpio"

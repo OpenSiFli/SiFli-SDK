@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <rtthread.h>
+#include <drivers/pin.h>
 #include "wlan_dev.h"
-#include "wlan_mgnt.h"
 #include "aic_plat_log.h"
 
 #include "lmac_mac.h"
@@ -18,6 +18,7 @@
 #include "fhost.h"
 #include "cli_al.h"
 #include "fhost_wpa.h"
+#include "drv_io.h"
 
 #ifdef WIFI_USING_LOOPBACK_NETDEV
     bool loop_dev_reg_flag = 0;
@@ -337,19 +338,24 @@ rt_err_t aic8800_p2p_go_start(struct rt_wlan_device *wlan, struct rt_ap_info *ap
     ap_cfg.sta_num = aic_wifi_fmac_remote_sta_max_get();
 
     AIC_LOG_PRINTF("Start P2P GO ssid: %s\n", ap_cfg.aic_ap_ssid.array);
+
     struct fhost_vif_p2p_cfg p2p_cfg;
     memset(&p2p_cfg, 0, sizeof(p2p_cfg));
+
     memcpy(p2p_cfg.ssid.array, ap_cfg.aic_ap_ssid.array, ap_cfg.aic_ap_ssid.length);
     p2p_cfg.ssid.length = ap_cfg.aic_ap_ssid.length;
+
     if (ap_cfg.aic_ap_passwd.length > 0 && ap_cfg.aic_ap_passwd.length < sizeof(p2p_cfg.key))
     {
         memcpy(p2p_cfg.key, ap_cfg.aic_ap_passwd.array, ap_cfg.aic_ap_passwd.length);
         p2p_cfg.key[ap_cfg.aic_ap_passwd.length] = '\0';
     }
+
     p2p_cfg.chan.band = ap_cfg.band; // 0 -> 2.4G, 1 -> 5G
     p2p_cfg.chan.type = ap_cfg.type; // 0 -> 20M, 1 -> 40M
     p2p_cfg.chan.prim20_freq = 2412;
     p2p_cfg.chan.center1_freq = 2412;
+
     p2p_cfg.enable_he = ap_cfg.enable_he;
     p2p_cfg.enable_acs = ap_cfg.enable_acs;
 
@@ -522,15 +528,27 @@ void wifi_p2p_go_stopped(void)
 
 int wifi_device_power(void)
 {
-    rt_kprintf("%s ctrl pwrkey\n", __func__);
-    rtos_task_suspend(10);
-    platform_pwr_wifi_pin_init();
-    platform_pwr_wifi_pin_disable();
-    rtos_task_suspend(10);
-    platform_pwr_wifi_pin_enable();
-    rtos_task_suspend(5000);
+    rt_kprintf("%s n", __func__);
+    /* SiFli: AIC_WIRELESS_*_GPIO holds a rt_pin id (e.g. 124 = PB28), not a
+     * GPIO bit mask; drive it through the rt_pin API like the d40-n port. */
+    if (-1 != AIC_WIRELESS_CHIP_EN_GPIO)
+    {
+        rt_pin_mode(AIC_WIRELESS_CHIP_EN_GPIO, PIN_MODE_OUTPUT);
+        rt_pin_write(AIC_WIRELESS_CHIP_EN_GPIO, 1);
+        HAL_Delay_us(10 * 1000);
+    }
+
+    if (-1 != AIC_WIRELESS_PWR_GPIO)
+    {
+        rt_pin_mode(AIC_WIRELESS_PWR_GPIO, PIN_MODE_OUTPUT);
+        rt_pin_write(AIC_WIRELESS_PWR_GPIO, 0);
+        HAL_Delay_us(10 * 1000);
+        rt_pin_write(AIC_WIRELESS_PWR_GPIO, 1);
+        HAL_Delay_us(10 * 1000);
+    }
     return 0;
 }
+INIT_BOARD_EXPORT(wifi_device_power);
 
 int wifi_device_reg(void)
 {
@@ -637,6 +655,7 @@ rt_err_t wifi_test(int argc, char **argv)
     return ret;
 }
 MSH_CMD_EXPORT(wifi_test, wifi test cmd);
+
 
 rt_err_t aic8800_ele()
 {

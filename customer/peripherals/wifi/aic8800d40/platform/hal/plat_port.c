@@ -10,10 +10,6 @@
 int wifi_pwrkey_pin = 0;
 int wifi_rstkey_pin = 0;
 int bt_rstkey_pin = 0;
-#ifndef AIC_WIRELESS_PWR_GPIO
-#define AIC_WIRELESS_PWR_GPIO (26)
-#endif
-
 static void platform_pwr_wifi_pin_set(int on)
 {
     if (wifi_pwrkey_pin > 0)
