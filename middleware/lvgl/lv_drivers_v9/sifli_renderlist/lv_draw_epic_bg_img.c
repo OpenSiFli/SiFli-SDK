@@ -27,13 +27,13 @@ void lv_draw_epic_release_bg_image(void *image)
     lv_free(resource);
 }
 
-/* IMAGE tasks carry both ordinary images and rectangle background images.
- * Use the backend rectangle mask for untransformed images; leave transformed
- * or effect-bearing images on the existing image path. */
+/* Only rounded image clipping needs the backend rectangle mask. Keep square
+ * images, including tiled backgrounds, on the existing image path to avoid
+ * splitting compressed images into small masked hardware operations. */
 bool lv_draw_epic_bg_img(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *dsc,
                          const lv_area_t *coords)
 {
-    if (draw_task->type != LV_DRAW_TASK_TYPE_IMAGE ||
+    if (draw_task->type != LV_DRAW_TASK_TYPE_IMAGE || dsc->clip_radius <= 0 ||
         dsc->rotation || dsc->scale_x != LV_SCALE_NONE || dsc->scale_y != LV_SCALE_NONE ||
         dsc->skew_x || dsc->skew_y || dsc->recolor_opa > LV_OPA_MIN ||
         dsc->blend_mode != LV_BLEND_MODE_NORMAL || dsc->colorkey || dsc->bitmap_mask_src)
