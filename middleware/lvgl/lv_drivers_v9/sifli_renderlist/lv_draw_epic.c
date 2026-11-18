@@ -13,6 +13,7 @@
 
 #if LV_USE_DRAW_EPIC
 #include <string.h>
+#include "app_mem.h"
 
 #include "lv_epic_utils.h"
 
@@ -42,6 +43,7 @@ typedef enum
 {
     RL_RESOURCE_LAYER_DRAW_BUF, // Sub-layer draw buffer
     RL_RESOURCE_GLYPH_DATA, // Glyph data
+    RL_RESOURCE_IMAGE_DATA, // Compressed image data
     RL_RESOURCE_TRANSFORM, // Image transform matrix
 } render_list_resource_type_t;
 
@@ -78,6 +80,9 @@ typedef struct
     uint32_t submit_seq;    // Submit sequence number (debug)
     drv_epic_render_list_t last_created;
     uint8_t pending_submit;     // Pending submit flag (leak detection)
+#ifdef LV_USE_PARTIAL_REFRESH
+    lv_area_t refresh_area;
+#endif
 } render_list_frame_state_t;
 
 // Sub-layer level state
@@ -371,6 +376,11 @@ bool lv_draw_epic_retain_glyph_data(void *glyph_data)
     return render_list_retain_resource(glyph_data, RL_RESOURCE_GLYPH_DATA, "glyph data");
 }
 
+bool lv_draw_epic_retain_image_data(void *image_data)
+{
+    return render_list_retain_resource(image_data, RL_RESOURCE_IMAGE_DATA, "image data");
+}
+
 bool lv_draw_epic_retain_transform(sifli_matrix_3x3_t *matrix)
 {
     return render_list_retain_resource(matrix, RL_RESOURCE_TRANSFORM, "transform matrix");
@@ -394,6 +404,10 @@ void lv_draw_epic_release_deferred_resources(void)
             if (resource_list->type == RL_RESOURCE_LAYER_DRAW_BUF)
             {
                 lv_draw_buf_destroy((lv_draw_buf_t *)resource_list->resource);
+            }
+            else if (resource_list->type == RL_RESOURCE_IMAGE_DATA)
+            {
+                app_cache_free(resource_list->resource);
             }
             else
             {
@@ -570,6 +584,12 @@ static int render_list_submit_internal(drv_epic_render_list_t rl, drv_epic_rende
         msg.content.rd.area.y0 = disp->offset_y;
         msg.content.rd.area.x1 = (int16_t)(disp->offset_x + disp->hor_res - 1);
         msg.content.rd.area.y1 = (int16_t)(disp->offset_y + disp->ver_res - 1);
+#ifdef LV_USE_PARTIAL_REFRESH
+        msg.content.rd.area.x0 = render_list_ctx.frame.refresh_area.x1 + disp->offset_x;
+        msg.content.rd.area.y0 = render_list_ctx.frame.refresh_area.y1 + disp->offset_y;
+        msg.content.rd.area.x1 = render_list_ctx.frame.refresh_area.x2 + disp->offset_x;
+        msg.content.rd.area.y1 = render_list_ctx.frame.refresh_area.y2 + disp->offset_y;
+#endif
 
         msg.content.rd.usr_data = disp;
         msg.content.rd.partial_done_cb = main_frame_render_done_callback;
@@ -744,6 +764,10 @@ int render_list_create_main_frame(lv_display_t *disp)
     }
 
     render_list_ctx.frame.disp = disp;
+#ifdef LV_USE_PARTIAL_REFRESH
+    /* lv_lcd.c has merged dirty areas before any draw tasks are generated. */
+    render_list_ctx.frame.refresh_area = disp->inv_areas[0];
+#endif
     render_list_ctx.frame.pixel_align = render_list_get_display_pixel_align(disp);
     render_list_set_released_flag(render_list_ctx.frame.active.rl, 0U);
 

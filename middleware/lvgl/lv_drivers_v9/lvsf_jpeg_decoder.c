@@ -14,17 +14,19 @@
 
 #include "../../misc/lv_fs_private.h"
 #include <string.h>
-
-#ifdef SOC_SF32LB58X
-#include "jpeg_dec.h"
 #include "app_mem.h"
-#include "../../draw/lv_draw_buf_private.h"
-#include "../../osal/lv_os_private.h"
+#include "drv_epic.h"
+
 #if defined(LVSF_JPEG_DECODER_ALLOC_SRAM) || defined(CONFIG_LVSF_JPEG_DECODER_ALLOC_SRAM)
 #define JPEG_DECODER_CACHE_POOL IMAGE_CACHE_SRAM
 #else
 #define JPEG_DECODER_CACHE_POOL IMAGE_CACHE_PSRAM
 #endif
+
+#ifdef SOC_SF32LB58X
+#include "jpeg_dec.h"
+#include "../../draw/lv_draw_buf_private.h"
+#include "../../osal/lv_os_private.h"
 #ifdef DRV_EPIC_NEW_API
 #include "lv_draw_epic.h"
 #endif
@@ -48,6 +50,9 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
 static void decoder_close(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc);
 #ifndef SOC_SF32LB58X
 static int is_jpg(const uint8_t *raw_data, size_t len);
+static bool jpeg_read_exact(lv_fs_file_t *file, void *buffer, uint32_t size);
+static bool jpeg_skip(lv_fs_file_t *file, uint32_t size);
+static bool jpeg_get_dimensions(lv_fs_file_t *file, uint16_t *width, uint16_t *height);
 #endif
 
 #ifdef SOC_SF32LB58X
@@ -252,6 +257,9 @@ static void decoder_close(lv_image_decoder_t *decoder,
         RT_ASSERT(retained);
         LV_UNUSED(retained);
 #else
+        /* Wait once before freeing pixels, after all image tiles are submitted. */
+        rt_err_t ret = drv_gpu_check_done(10000);
+        LV_ASSERT(RT_EOK == ret);
         lv_draw_buf_destroy(session->draw_buf);
 #endif
         lv_free(session);
@@ -416,10 +424,20 @@ static lv_result_t decoder_info(lv_image_decoder_t *decoder, lv_image_decoder_ds
         const char *ext = lv_fs_get_ext(fn);
         if ((lv_strcmp(ext, "jpg") == 0) || (lv_strcmp(ext, "jpeg") == 0))
         {
+            uint16_t width;
+            uint16_t height;
+            if (!jpeg_get_dimensions(&dsc->file, &width, &height))
+            {
+                LV_LOG_WARN("Invalid JPEG header: %s", fn);
+                return LV_RESULT_INVALID;
+            }
 
-
-            //TODO: read the image header to get width and height
-            return LV_RESULT_INVALID;
+            header->cf = LV_COLOR_FORMAT_RAW;
+            header->w = width;
+            header->h = height;
+            header->stride = (uint32_t)width * 3;
+            header->flags = LV_IMAGE_FLAGS_JPEG;
+            return LV_RESULT_OK;
         }
     }
     return LV_RESULT_INVALID;
@@ -462,8 +480,56 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
         const char *fn = dsc->src;
         if ((lv_strcmp(lv_fs_get_ext(fn), "jpg") == 0) || (lv_strcmp(lv_fs_get_ext(fn), "jpeg") == 0))
         {
-            //TODO: Implement file reading and decoding logic
-            return LV_RESULT_INVALID;
+            lv_fs_file_t file;
+            lv_fs_res_t res = lv_fs_open(&file, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK)
+            {
+                LV_LOG_WARN("Cannot open JPEG file: %s", fn);
+                return LV_RESULT_INVALID;
+            }
+
+            uint32_t file_size = 0;
+            res = lv_fs_seek(&file, 0, LV_FS_SEEK_END);
+            if (res == LV_FS_RES_OK)
+                res = lv_fs_tell(&file, &file_size);
+            if (res == LV_FS_RES_OK)
+                res = lv_fs_seek(&file, 0, LV_FS_SEEK_SET);
+            if (res != LV_FS_RES_OK || file_size == 0)
+            {
+                lv_fs_close(&file);
+                return LV_RESULT_INVALID;
+            }
+
+            uint8_t *data = app_cache_alloc(file_size, JPEG_DECODER_CACHE_POOL);
+            lv_draw_buf_t *decoded = lv_malloc_zeroed(sizeof(*decoded));
+            if (data == NULL || decoded == NULL)
+            {
+                app_cache_free(data);
+                lv_free(decoded);
+                lv_fs_close(&file);
+                return LV_RESULT_INVALID;
+            }
+
+            uint32_t bytes_read = 0;
+            res = lv_fs_read(&file, data, file_size, &bytes_read);
+            lv_fs_close(&file);
+            if (res != LV_FS_RES_OK || bytes_read != file_size || !is_jpg(data, file_size))
+            {
+                app_cache_free(data);
+                lv_free(decoded);
+                LV_LOG_WARN("Failed to read JPEG file: %s", fn);
+                return LV_RESULT_INVALID;
+            }
+
+            decoded->header = dsc->header;
+            decoded->header.flags |= LV_IMAGE_FLAGS_JPEG;
+            decoded->data = data;
+            decoded->data_size = file_size;
+            decoded->unaligned_data = data;
+            decoded->handlers = lv_draw_buf_get_handlers();
+            dsc->decoded = decoded;
+            dsc->user_data = data;
+            return LV_RESULT_OK;
         }
     }
 
@@ -478,14 +544,86 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
 static void decoder_close(lv_image_decoder_t *decoder, lv_image_decoder_dsc_t *dsc)
 {
     LV_UNUSED(decoder);
+    if (dsc->user_data)
+    {
+#ifndef DRV_EPIC_NEW_API
+        /* Wait once before freeing file data, after all image tiles are submitted. */
+        rt_err_t ret = drv_gpu_check_done(10000);
+        LV_ASSERT(RT_EOK == ret);
+#endif
+        app_cache_free(dsc->user_data);
+    }
     if (dsc->decoded) lv_free((void *)dsc->decoded);
 }
 
 static int is_jpg(const uint8_t *raw_data, size_t len)
 {
-    const uint8_t jpg_signature[] = {0xFF, 0xD8, 0xFF,  0xE0,  0x00,  0x10, 0x4A,  0x46, 0x49, 0x46};
-    if (len < sizeof(jpg_signature)) return false;
-    return memcmp(jpg_signature, raw_data, sizeof(jpg_signature)) == 0;
+    return raw_data != NULL && len >= 3 && raw_data[0] == 0xFF && raw_data[1] == 0xD8 && raw_data[2] == 0xFF;
+}
+
+static bool jpeg_read_exact(lv_fs_file_t *file, void *buffer, uint32_t size)
+{
+    uint32_t bytes_read = 0;
+    return lv_fs_read(file, buffer, size, &bytes_read) == LV_FS_RES_OK && bytes_read == size;
+}
+
+static bool jpeg_skip(lv_fs_file_t *file, uint32_t size)
+{
+    uint32_t position;
+    if (lv_fs_tell(file, &position) != LV_FS_RES_OK || position > UINT32_MAX - size)
+        return false;
+    return lv_fs_seek(file, position + size, LV_FS_SEEK_SET) == LV_FS_RES_OK;
+}
+
+static bool jpeg_get_dimensions(lv_fs_file_t *file, uint16_t *width, uint16_t *height)
+{
+    uint8_t byte;
+    uint8_t marker;
+    uint8_t segment[6];
+    uint16_t segment_size;
+
+    if (lv_fs_seek(file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK)
+        return false;
+
+    uint8_t signature[2];
+    if (!jpeg_read_exact(file, signature, sizeof(signature)) || signature[0] != 0xFF || signature[1] != 0xD8)
+        return false;
+
+    for (;;)
+    {
+        do
+        {
+            if (!jpeg_read_exact(file, &byte, 1)) return false;
+        } while (byte != 0xFF);
+
+        do
+        {
+            if (!jpeg_read_exact(file, &marker, 1)) return false;
+        } while (marker == 0xFF);
+
+        if (marker == 0xD9 || marker == 0xDA) return false;
+        if (marker == 0xD8 || (marker >= 0xD0 && marker <= 0xD7) || marker == 0x01) continue;
+
+        uint8_t size_bytes[2];
+        if (!jpeg_read_exact(file, size_bytes, sizeof(size_bytes))) return false;
+        segment_size = ((uint16_t)size_bytes[0] << 8) | size_bytes[1];
+        if (segment_size < 2) return false;
+
+        bool is_sof = ((marker >= 0xC0 && marker <= 0xC3) ||
+                       (marker >= 0xC5 && marker <= 0xC7) ||
+                       (marker >= 0xC9 && marker <= 0xCB) ||
+                       (marker >= 0xCD && marker <= 0xCF));
+        if (is_sof)
+        {
+            if (segment_size < 8 || !jpeg_read_exact(file, segment, sizeof(segment))) return false;
+            if (segment_size < 8U + 3U * segment[5]) return false;
+            *height = ((uint16_t)segment[1] << 8) | segment[2];
+            *width = ((uint16_t)segment[3] << 8) | segment[4];
+            return *width != 0 && *height != 0;
+        }
+
+        if (!jpeg_skip(file, segment_size - 2)) return false;
+    }
 }
 
 #endif /* !SOC_SF32LB58X */

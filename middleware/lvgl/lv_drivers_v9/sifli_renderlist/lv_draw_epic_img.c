@@ -338,6 +338,19 @@ static void img_draw_core(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *
             return;
         }
 
+        /* Retain decoder-owned EZIP/JPEG input until the render list is done.
+         * The 58X decoder retains its RGB draw buffer in decoder_close(). */
+        if ((decoded->header.flags & (LV_IMAGE_FLAGS_EZIP | LV_IMAGE_FLAGS_JPEG)) &&
+            decoder_dsc->user_data != NULL)
+        {
+            if (!lv_draw_epic_retain_image_data(decoder_dsc->user_data))
+            {
+                LV_LOG_ERROR("EPIC: Failed to retain JPEG file data\n");
+                return;
+            }
+            ((lv_image_decoder_dsc_t *)decoder_dsc)->user_data = NULL;
+        }
+
         drv_epic_operation *op = drv_epic_alloc_op(render_buf);
         if (op == NULL) {
             LV_LOG("EPIC: Failed to allocate EPIC operation, returning\n");

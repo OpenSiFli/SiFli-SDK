@@ -206,21 +206,72 @@ static void rounder_cb(lv_event_t *e)
     area->y1 = RT_ALIGN_DOWN(area->y1, align_size);
     area->y2 = RT_ALIGN(area->y2 + 1, align_size) - 1;
 
-#ifdef FB_CMPR_RATE
+#if defined(FB_CMPR_RATE) || defined(LV_USE_PARTIAL_REFRESH)
     area->x1 = 0;
     area->x2 = LV_HOR_RES_MAX - 1;
 #endif
 
 }
 
+#ifdef LV_USE_PARTIAL_REFRESH
+static lv_area_t previous_dirty_area;
+static bool previous_dirty_valid;
+static lv_obj_t *previous_screen;
+
+/* Called at RENDER_START, after layout invalidations and LVGL area joining.
+ * Submit one bounding area per EPIC list. The default copy path requires a
+ * full-width band.
+ */
+static void prepare_partial_refresh(void)
+{
+    lv_area_t current;
+    bool valid = false;
+    for (uint32_t i = 0; i < disp->inv_p; ++i)
+    {
+        if (disp->inv_area_joined[i]) continue;
+        if (!valid) current = disp->inv_areas[i];
+        else lv_area_join(&current, &current, &disp->inv_areas[i]);
+        valid = true;
+    }
+    if (!valid) return;
+
+    if (!previous_dirty_valid || previous_screen != disp->act_scr || disp->prev_scr ||
+            drv_epic_get_rotation() != DRV_EPIC_ROT_NONE)
+    {
+        current = (lv_area_t){0, 0, disp->hor_res - 1, disp->ver_res - 1};
+    }
+    current.x1 = 0;
+    current.x2 = disp->hor_res - 1;
+
+    lv_area_t redraw = current;
+#if defined(LCD_FB_USING_TWO_COMPRESSED) || defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    /* The alternating back buffer missed the previous logical update.
+     * Save CURRENT, not the expanded redraw, otherwise the initial full-screen
+     * area would remain in the history forever. FIFO submission preserves order.
+     */
+    if (previous_dirty_valid) lv_area_join(&redraw, &redraw, &previous_dirty_area);
+#endif
+    previous_dirty_area = current;
+    previous_dirty_valid = true;
+    previous_screen = disp->act_scr;
+    disp->inv_areas[0] = redraw;
+    disp->inv_area_joined[0] = 0;
+    disp->inv_p = 1;
+}
+#endif
+
 static void render_start(lv_event_t *e)
 {
+#ifdef LV_USE_PARTIAL_REFRESH
+    prepare_partial_refresh();
+#else
 #if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
     if (disp->inv_p > 0)
     {
         const lv_area_t scr_area = { 0, 0, LV_HOR_RES_MAX - 1, LV_VER_RES_MAX - 1};
         lv_inv_area(disp, &scr_area);
     }
+#endif
 #endif
 
     int ret = render_list_create_main_frame(disp);
@@ -456,7 +507,14 @@ void lv_lcd_init(const char *name)
     rt_sem_init(&lcd_sema, "lv_lcd", 1, RT_IPC_FLAG_FIFO);
     lv_display_set_draw_buffers(disp, &draw_buf, NULL);
 
+#ifdef LV_USE_PARTIAL_REFRESH
+    /* One virtual full-screen descriptor preserves absolute OP coordinates.
+     * The hardware still renders into the existing two partial buffers.
+     */
+    lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_DIRECT);
+#else
     lv_display_set_render_mode(disp, LV_DISPLAY_RENDER_MODE_FULL);
+#endif
 
     uint32_t align_size = (info.draw_align != 0) ? info.draw_align : 1;
     int32_t offset_x = 0;
@@ -475,7 +533,11 @@ void lv_lcd_init(const char *name)
     lv_display_set_flush_cb(disp, lcd_flush);
     lv_display_set_flush_wait_cb(disp, wait_flush_done);
     lv_display_add_event_cb(disp, rounder_cb, LV_EVENT_INVALIDATE_AREA, &info);
+#ifdef LV_USE_PARTIAL_REFRESH
+    lv_display_add_event_cb(disp, render_start, LV_EVENT_RENDER_START, NULL);
+#else
     lv_display_add_event_cb(disp, render_start, LV_EVENT_REFR_START, NULL);
+#endif
 
     lv_display_set_driver_data(disp, device);
     render_list_set_display_pixel_align(disp, align_size);

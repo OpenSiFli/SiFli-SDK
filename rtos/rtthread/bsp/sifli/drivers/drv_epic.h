@@ -147,6 +147,8 @@ typedef struct
     drv_epic_op_type_t  op;
     EPIC_AreaTypeDef clip_area;
     EPIC_LayerConfigTypeDef mask;
+    uint8_t parent_mask_owned; // This operation owns an A8 mask or one cache reference.
+    void *parent_mask_ref; // Non-NULL when parent_mask_owned refers to a shared cache entry.
 
     union
     {

@@ -7,6 +7,7 @@
 #include "rtconfig.h"
 #include "littlevgl2rtt.h"
 #include "lvgl.h"
+#include "lv_area_private.h"
 #include "board.h"
 //#include "EventRecorder.h"
 #include "drv_io.h"

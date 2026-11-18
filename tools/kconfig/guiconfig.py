@@ -198,14 +198,15 @@ def menuconfig(kconf):
     # Load existing configuration and check if it's outdated
     conf_changed = _load_config()
 
-    # Refuse to open the GUI if an active configdefault targets a symbol that
-    # is not defined. Such a tree cannot build, and letting the user edit it
-    # would only hide the problem until the next build.
-    errors = _check_configdefaults()
+    # Refuse to open the GUI if the loaded Kconfig tree has unresolved
+    # configdefault targets or invalid choices. Such a tree cannot build, and
+    # letting the user edit it would only hide the problem until the next
+    # build.
+    errors = _run_deferred_checks()
     if errors:
         sys.exit("\n" + "\n\n".join(errors) + "\n\n"
-                 "error: active configdefault targets are undefined; fix the "
-                 "Kconfig files before running guiconfig\n")
+                 "error: Kconfig validation failed; fix the Kconfig files "
+                 "before running guiconfig\n")
 
     _create_ui()
 
@@ -1366,9 +1367,10 @@ def _range_info(sym):
     return None
 
 
-def _check_configdefaults():
-    # Runs the configdefault check and returns the warnings it generated.
-    # stderr is not useful while the GUI is up, so collect them for display.
+def _run_deferred_checks():
+    # Runs the deferred Kconfig checks (configdefault and choice) and returns
+    # the warnings they generated. stderr is not useful while the GUI is up,
+    # so collect them for display.
     old_warn = _kconf.warn
     old_warn_to_stderr = _kconf.warn_to_stderr
     _kconf.warn = True
@@ -1382,24 +1384,23 @@ def _check_configdefaults():
         _kconf.warn_to_stderr = old_warn_to_stderr
 
 
-def _configdefault_error_text(warnings):
-    # Formats the configdefault warnings for a message box, wrapping long
+def _deferred_error_text(warnings):
+    # Formats the deferred-check warnings for a message box, wrapping long
     # lines (the warnings contain long paths).
-    text = ("These configdefault statements are active, but their target "
-            "symbol is not defined:\n\n" + "\n\n".join(warnings))
+    text = "The Kconfig tree has errors:\n\n" + "\n\n".join(warnings)
     return "\n".join(textwrap.fill(line, 70) if line else line
                      for line in text.split("\n"))
 
 
 def _write_checked(write_fn, filename):
-    # Wraps a configuration writer so that a configuration with an active
-    # configdefault targeting an undefined symbol is never saved.
-    warnings = _check_configdefaults()
+    # Wraps a configuration writer so that a configuration which fails the
+    # deferred Kconfig checks is never saved.
+    warnings = _run_deferred_checks()
     if warnings:
         messagebox.showerror(
             "Error",
             "Cannot save the configuration:\n\n" +
-            _configdefault_error_text(warnings))
+            _deferred_error_text(warnings))
         return None
     return write_fn(filename)
 
