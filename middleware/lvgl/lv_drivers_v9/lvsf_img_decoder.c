@@ -83,26 +83,11 @@ static lv_result_t decoder_info(lv_image_decoder_t *decoder, lv_image_decoder_ds
     }
     else if (src_type == LV_IMAGE_SRC_FILE)
     {
-        const char *fn = src;
+        /* LVGL opens this file before calling the info callback. */
+        uint32_t size = 0;
+        lv_fs_res_t res = lv_fs_read(&dsc->file, header, sizeof(*header), &size);
 
-        lv_fs_file_t *f = lv_malloc(sizeof(lv_fs_file_t));
-
-        lv_fs_res_t res;
-        res = lv_fs_open(f, fn, LV_FS_MODE_RD);
-        if (res != LV_FS_RES_OK)
-        {
-            LV_LOG_WARN("Cannot open: %s\n", fn);
-            lv_free(f);
-            return LV_RESULT_INVALID;
-        }
-
-        uint32_t size;
-
-        res = lv_fs_read(f, header, sizeof(*header), &size);
-        lv_fs_close(f);
-        lv_free(f);
-
-        if (size < sizeof(*header))
+        if (res != LV_FS_RES_OK || size < sizeof(*header))
         {
             LV_LOG_WARN("Read error: %d\n", size);
             return LV_RESULT_INVALID;
@@ -168,9 +153,21 @@ static lv_result_t decoder_open(lv_image_decoder_t *decoder, lv_image_decoder_ds
         }
 
         uint32_t file_size;
-        lv_fs_seek(f, 0, LV_FS_SEEK_END);
-        lv_fs_tell(f, &file_size);
-        lv_fs_seek(f, 0, LV_FS_SEEK_SET);
+#if defined(RT_USING_DFS) && LV_USE_FS_POSIX
+        struct stat file_stat;
+        /* DFS already records the size at open; avoid walking the FAT to EOF. */
+        if (f->drv->letter == LV_FS_POSIX_LETTER &&
+            fstat((int)(uintptr_t)f->file_d - 1, &file_stat) == 0)
+        {
+            file_size = (uint32_t)file_stat.st_size;
+        }
+        else
+#endif
+        {
+            lv_fs_seek(f, 0, LV_FS_SEEK_END);
+            lv_fs_tell(f, &file_size);
+            lv_fs_seek(f, 0, LV_FS_SEEK_SET);
+        }
 
         if (file_size <= sizeof(lv_image_header_t))
         {
