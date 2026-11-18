@@ -67,18 +67,21 @@ static rt_int32_t wifi_if_sdio_remove(struct rt_mmcsd_card *card)
 }
 
 #if defined(CONFIG_AIC8800D80_SUPPORT)
-struct rt_sdio_device_id wifi_if_sdio_ids_d80[]= {
+struct rt_sdio_device_id wifi_if_sdio_ids_d80[] =
+{
     { 0, 0xc8a1, 0x0182},
 };
 #endif
 
 #if defined(CONFIG_AIC8800DC_SUPPORT) || defined(CONFIG_AIC8800DW_SUPPORT)
-struct rt_sdio_device_id wifi_if_sdio_ids_dcdw[]= {
+struct rt_sdio_device_id wifi_if_sdio_ids_dcdw[] =
+{
     { 0, 0xc8a1, 0xc08d},
 };
 #endif
 
-struct rt_sdio_driver wifi_if_sdio_drv = {
+struct rt_sdio_driver wifi_if_sdio_drv =
+{
     "aicwfsdio",
     wifi_if_sdio_probe,
     wifi_if_sdio_remove,
@@ -90,17 +93,20 @@ int wifi_if_sdio_init(void)
 {
     int chip_id = CONFIG_CHIPID_SELECT;
     if (0) {}
-    #if defined(CONFIG_AIC8800D80_SUPPORT)
-    else if (chip_id == PRODUCT_ID_AIC8800D80) {
+#if defined(CONFIG_AIC8800D80_SUPPORT)
+    else if (chip_id == PRODUCT_ID_AIC8800D80)
+    {
         wifi_if_sdio_drv.id = wifi_if_sdio_ids_d80;
     }
-    #endif
-    #if defined(CONFIG_AIC8800DC_SUPPORT) || defined(CONFIG_AIC8800DW_SUPPORT)
-    else if ((chip_id == PRODUCT_ID_AIC8800DC) || (chip_id == PRODUCT_ID_AIC8800DW)) {
+#endif
+#if defined(CONFIG_AIC8800DC_SUPPORT) || defined(CONFIG_AIC8800DW_SUPPORT)
+    else if ((chip_id == PRODUCT_ID_AIC8800DC) || (chip_id == PRODUCT_ID_AIC8800DW))
+    {
         wifi_if_sdio_drv.id = wifi_if_sdio_ids_dcdw;
     }
-    #endif
-    else {
+#endif
+    else
+    {
         AIC_LOG_PRINTF("invalid chip_id = %d\n", chip_id);
         return -1;
     }
@@ -151,7 +157,8 @@ int wifi_if_sdio_deinit(void)
 {
     int ret = sdio_unregister_driver(&wifi_if_sdio_drv);
     AIC_LOG_PRINTF("deinit sdio id = 0x%x\n", wifi_if_sdio_drv.id->product);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         AIC_LOG_PRINTF("rt sdio unregister driver failed:%d\n", ret);
         return ret;
     }
