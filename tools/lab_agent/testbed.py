@@ -579,23 +579,31 @@ class TestBedRuntime:
                 return self.jlink().flash(build_dir)
 
         if method == "sftool":
-            if self._console is not None:
-                # The download port *is* the console port, so the two cannot be
-                # open at once. Refuse rather than silently producing a corrupt
-                # download or a port conflict halfway through.
+            flash_options = self._flash_options()
+            flash_port = flash_options.get("port")
+            if flash_port is None and self.testbed.console is not None:
+                flash_port = self.testbed.console.port
+            if flash_port is None:
+                raise TestbedError(
+                    f'testbed "{self.testbed.id}": sftool flashing needs '
+                    '"flash.port" or a console port to be configured'
+                )
+            if (
+                self._console is not None
+                and self.testbed.console is not None
+                and str(self.testbed.console.port).casefold()
+                == str(flash_port).casefold()
+            ):
+                # The download and console ports cannot be open at once when
+                # they refer to the same port.
                 raise TestbedError(
                     f'testbed "{self.testbed.id}": the console is open on '
                     f"{self.testbed.console.port}, which is also the download "
                     "port; close the console before flashing over UART"
                 )
-            if self.testbed.console is None:
-                raise TestbedError(
-                    f'testbed "{self.testbed.id}": sftool flashing needs the '
-                    "console port to be configured (it is the download port)"
-                )
             return SftoolTransport(
-                port=self.testbed.console.port,
-                sftool=self._flash_options().get("sftool"),
+                port=flash_port,
+                sftool=flash_options.get("sftool"),
             ).flash(build_dir)
 
         raise AssertionError(f"unreachable flash method {method!r}")

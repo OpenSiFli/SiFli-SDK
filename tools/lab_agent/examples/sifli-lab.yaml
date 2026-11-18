@@ -43,8 +43,9 @@ testbed:
     # -- 以下两块是 Lab-Agent 私有，SDK 侧只解析不解释 --
 
     flash:
-      method: sftool         # UART 下载。下载口就是 console 口，所以框架会保证
-                             # 烧录发生在开串口【之前】。
+      method: sftool         # UART 下载。未单独配置 port 时，下载口就是 console 口。
+      # port: COM7           # 可选：单独指定下载串口；省略时使用 console.port。
+                             # 可填写 COM 端口 (eg COM7) 或 USB 序列号描述符 (eg SIFLI_1-A)。
                              # -m 的 nor/nand 从构建产物的 sftool_param.json 自动取，
                              # 这块板是 NAND（JLINK_DEVICE = SF32LB52X_NAND）。
       # sftool 随 SDK python 环境安装；export.ps1 之后应在 PATH 上。
@@ -84,6 +85,7 @@ testbed:
   #
   #   console:
   #     port: COM22            # USB-Enhanced-SERIAL-B CH342 (interface B); this board's console
+  #                            # 可填写 COM 端口 (eg COM7) 或 USB 序列号描述符 (eg SIFLI_1-A)。
   #     baud: 1000000          # SDK console is fixed at 1 Mbaud (drv_usart.c)
   #
   #   jlink:

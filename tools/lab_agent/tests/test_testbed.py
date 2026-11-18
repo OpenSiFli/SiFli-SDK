@@ -396,7 +396,57 @@ class TestFlashDispatch(LabTestCase):
             runtime.flash("/tmp/build")
         self.assertIn("close the console", str(caught.exception))
 
-    def test_sftool_flashing_needs_a_console_port_to_download_over(self):
+    @mock.patch.object(testbed_module, "SftoolTransport")
+    def test_sftool_defaults_to_the_console_port(self, sftool_transport):
+        manager = self.make_manager(
+            """
+            testbed:
+              - id: tb
+                platform: b
+                console: {port: COM1}
+                flash: {method: sftool}
+            """
+        )
+        manager.get("tb").flash("/tmp/build")
+        sftool_transport.assert_called_once_with(port="COM1", sftool=None)
+
+    @mock.patch.object(testbed_module, "SftoolTransport")
+    def test_sftool_uses_a_separate_flash_port_while_console_is_open(
+        self, sftool_transport
+    ):
+        manager = self.make_manager(
+            """
+            testbed:
+              - id: tb
+                platform: b
+                console: {port: COM1}
+                flash: {method: sftool, port: COM2}
+            """
+        )
+        runtime = manager.get("tb")
+        runtime.console_open()
+        try:
+            runtime.flash("/tmp/build")
+        finally:
+            runtime.console_close()
+
+        sftool_transport.assert_called_once_with(port="COM2", sftool=None)
+        sftool_transport.return_value.flash.assert_called_once_with("/tmp/build")
+
+    @mock.patch.object(testbed_module, "SftoolTransport")
+    def test_sftool_can_use_flash_port_without_a_console(self, sftool_transport):
+        manager = self.make_manager(
+            """
+            testbed:
+              - id: tb
+                platform: b
+                flash: {method: sftool, port: COM2}
+            """
+        )
+        manager.get("tb").flash("/tmp/build")
+        sftool_transport.assert_called_once_with(port="COM2", sftool=None)
+
+    def test_sftool_flashing_needs_a_console_or_flash_port(self):
         manager = self.make_manager(
             """
             testbed:
@@ -407,7 +457,7 @@ class TestFlashDispatch(LabTestCase):
         )
         with self.assertRaises(TestbedError) as caught:
             manager.get("tb").flash("/tmp/build")
-        self.assertIn("download port", str(caught.exception))
+        self.assertIn("flash.port", str(caught.exception))
 
 
 class TestPreparation(LabTestCase):

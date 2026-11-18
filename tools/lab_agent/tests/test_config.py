@@ -101,6 +101,82 @@ class TestParseRunnerConfig(LabTestCase):
         self.assertIn("tb_01", str(caught.exception))
 
 
+class TestSerialPortResolution(LabTestCase):
+    def _ports(self, *ports):
+        return [
+            mock.Mock(device=device, serial_number=serial, description=description)
+            for device, serial, description in ports
+        ]
+
+    def test_com_ports_are_preserved_case_insensitively(self):
+        config = self.make_config(
+            """
+            testbed:
+              - id: tb
+                platform: board_a
+                console: {port: com5}
+            """
+        )
+        self.assertEqual(config.by_id("tb").console.port, "com5")
+
+    @mock.patch("serial.tools.list_ports.comports")
+    def test_descriptor_resolves_dut_fixture_and_flash_ports(self, comports):
+        comports.side_effect = [
+            self._ports(("COM11", "DUT-SERIAL", "USB Serial")),
+            self._ports(("COM13", "FLASH-SERIAL", "USB Serial")),
+            self._ports(("COM12", "PEER-SERIAL", "USB Serial")),
+        ]
+        config = self.make_config(
+            """
+            testbed:
+              - id: tb
+                platform: board_a
+                console: {port: DUT-SERIAL}
+                flash: {method: sftool, port: FLASH-SERIAL}
+                connections:
+                  - fixture: bt_peer:ble
+                    console: {port: PEER-SERIAL}
+            """
+        )
+        testbed = config.by_id("tb")
+        self.assertEqual(testbed.console.port, "COM11")
+        self.assertEqual(testbed.connections[0].options["console"]["port"], "COM12")
+        self.assertEqual(testbed.runner_option("flash")["port"], "COM13")
+        self.assertEqual(comports.call_count, 3)
+
+    @mock.patch("serial.tools.list_ports.comports")
+    def test_descriptor_without_match_is_a_config_error(self, comports):
+        comports.return_value = []
+        with self.assertRaises(ConfigError) as caught:
+            self.make_config(
+                """
+                testbed:
+                  - id: tb
+                    platform: board_a
+                    console: {port: UNKNOWN-SERIAL}
+                """
+            )
+        self.assertIn("no COM port found", str(caught.exception))
+
+    @mock.patch("serial.tools.list_ports.comports")
+    def test_ambiguous_descriptor_is_a_config_error(self, comports):
+        comports.return_value = self._ports(
+            ("COM11", "SHARED-SERIAL", "USB Serial"),
+            ("COM12", "SHARED-SERIAL", "USB Serial"),
+        )
+        with self.assertRaises(ConfigError) as caught:
+            self.make_config(
+                """
+                testbed:
+                  - id: tb
+                    platform: board_a
+                    console: {port: SHARED-SERIAL}
+                """
+            )
+        self.assertIn("multiple COM ports found", str(caught.exception))
+        self.assertIn("COM11, COM12", str(caught.exception))
+
+
 class TestCheck(LabTestCase):
     def test_a_well_formed_config_reports_nothing(self):
         self.assertEqual(self.make_config().check(), [])

@@ -234,6 +234,74 @@ def rule_out_contradictions(
             raise ConfigError(f"{source}: " + "; ".join(problems))
 
 
+def _find_com_port(serial_number, ports):
+    """Find COM port matching a USB serial number."""
+    PORT_SUFFIXES = ("-A", "-B", "-C", "-D")
+    suffix = next(
+        (suffix for suffix in PORT_SUFFIXES if serial_number.endswith(suffix)),
+        None,
+    )
+    expected_serial = (
+        serial_number[: -len(suffix)] if suffix is not None else serial_number
+    )
+
+    return [
+        port.device
+        for port in ports
+        if  port.serial_number == expected_serial
+        and (suffix is None or suffix in (port.description or ""))
+    ]
+
+def _resolve_serial_port(port: Any, where: str) -> str:
+    """Resolve a configured USB serial descriptor to its current COM port."""
+    value = str(port).strip()
+    if value.upper().startswith("COM"):
+        return value
+
+    try:
+        from serial.tools import list_ports
+    except ImportError as exc:
+        raise ConfigError(
+            f'{where}: pyserial is required to resolve serial descriptor "{value}"'
+        ) from exc
+
+    matches = _find_com_port(value, list_ports.comports())
+    if not matches:
+        raise ConfigError(
+            f'{where}: no COM port found for serial descriptor "{value}"'
+        )
+    if len(matches) > 1:
+        raise ConfigError(
+            f'{where}: multiple COM ports found for serial descriptor "{value}": '
+            f'{", ".join(matches)}'
+        )
+    return matches[0]
+
+
+def _resolve_testbed_serial_ports(testbeds: List[TestBed], source: str) -> None:
+    """Resolve DUT, fixture, and flash serial ports after parsing the binding."""
+    for testbed in testbeds:
+        if testbed.console is not None:
+            where = f'{source}: testbed "{testbed.id}" console.port'
+            testbed.console.port = _resolve_serial_port(testbed.console.port, where)
+        flash = testbed.runner_option("flash")
+        if (
+            isinstance(flash, dict)
+            and str(flash.get("method", "jlink")).lower() == "sftool"
+            and flash.get("port") is not None
+        ):
+            where = f'{source}: testbed "{testbed.id}" flash.port'
+            flash["port"] = _resolve_serial_port(flash["port"], where)
+        for connection in testbed.connections:
+            console = connection.options.get("console")
+            if isinstance(console, dict) and console.get("port"):
+                where = (
+                    f'{source}: testbed "{testbed.id}" fixture '
+                    f'"{connection.fixture.spec}" console.port'
+                )
+                console["port"] = _resolve_serial_port(console["port"], where)
+
+
 def parse_runner_config(
     data: Any,
     source: str = "<memory>",
@@ -252,6 +320,7 @@ def parse_runner_config(
     settings = RunnerSettings.from_mapping(data.get("runner"))
     # Duplicate testbed ids are already rejected by the shared binding parser.
     testbeds = parse_binding(data, source=source)
+    _resolve_testbed_serial_ports(testbeds, source)
 
     # USB host options are validated before the wiring check, so a typo in a
     # ``usb:`` block is reported as itself rather than as a fixture mismatch.

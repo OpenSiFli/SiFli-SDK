@@ -142,7 +142,7 @@ class JLinkTransport:
 
         # `r` resets and halts, `g` lets it run: the test needs a booting board,
         # not a halted one.
-        return self._run_script(_preamble(self.speed) + ["r", "g", "exit"], "reset")
+        return self._run_script(_preamble(self.speed) + ["r", "Sleep 500", "g", "exit"], "reset")
 
     def run_script_file(self, path: str) -> str:
         """Run an existing ``.jlink`` command file verbatim."""
