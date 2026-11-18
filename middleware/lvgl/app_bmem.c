@@ -260,6 +260,18 @@ static inline void bmem_insert_run(bmem_node_t *bmem_node, bmem_item_t *bmem, ui
     bmem_node->free_bin_map |= (1U << bin);
 }
 
+/* Index of the lowest set bit. The caller guarantees a nonzero bitmap. */
+static inline uint16_t bmem_first_bin(uint32_t map)
+{
+    uint16_t bin = 0;
+    if (!(map & 0xFFFFU)) { bin += 16; map >>= 16; }
+    if (!(map & 0xFFU)) { bin += 8; map >>= 8; }
+    if (!(map & 0xFU)) { bin += 4; map >>= 4; }
+    if (!(map & 0x3U)) { bin += 2; map >>= 2; }
+    if (!(map & 0x1U)) bin++;
+    return bin;
+}
+
 static inline void bmem_remove_run_from_bin(bmem_node_t *bmem_node, uint16_t bin, bmem_item_t *prev, bmem_item_t *bmem)
 {
     if (prev)
@@ -277,13 +289,9 @@ static inline void bmem_remove_run_from_bin(bmem_node_t *bmem_node, uint16_t bin
     }
 
     bmem_node->free_header = NULL;
-    for (uint16_t i = 0; i < bmem_node->bin_num; i++)
+    if (bmem_node->free_bin_map)
     {
-        if (bmem_node->free_bins[i])
-        {
-            bmem_node->free_header = bmem_node->free_bins[i];
-            break;
-        }
+        bmem_node->free_header = bmem_node->free_bins[bmem_first_bin(bmem_node->free_bin_map)];
     }
 }
 
@@ -294,13 +302,8 @@ static bmem_item_t *bmem_find_run(bmem_node_t *bmem_node, uint16_t units, uint16
 
     while (map)
     {
-        uint16_t bin = 0;
-        uint32_t bit = map & (~map + 1U);
-
-        while ((bit >> bin) != 1U)
-        {
-            bin++;
-        }
+        uint16_t bin = bmem_first_bin(map);
+        uint32_t bit = 1U << bin;
 
         bmem_item_t *prev = NULL;
         bmem_item_t *bmem = bmem_node->free_bins[bin];
