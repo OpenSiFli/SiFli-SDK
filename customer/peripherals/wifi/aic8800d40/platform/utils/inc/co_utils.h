@@ -75,9 +75,31 @@
 #define CHAR_LEN    (CHAR_BIT/8)
 
 /// Pack a structure field
-#define __PACKED16 __attribute__ ((__packed__))
-#ifndef __PACKED
-#define __PACKED __attribute__ ((__packed__))
+#if defined(__CC_ARM) || defined(__ARMCC_VERSION)
+    #ifndef __PACKED
+        #define __PACKED __attribute__((packed))
+    #endif
+    #ifndef __PACKED16
+        #define __PACKED16 __attribute__((packed))
+    #endif
+#elif defined(__GNUC__) || defined(__clang__)
+    #ifndef __PACKED
+        #define __PACKED __attribute__((__packed__))
+    #endif
+    #ifndef __PACKED16
+        #define __PACKED16 __attribute__((__packed__))
+    #endif
+#else
+    #ifndef __PACKED
+        #define __PACKED
+    #endif
+    #ifndef __PACKED16
+        #define __PACKED16
+    #endif
+#endif
+
+#ifndef __packed
+    #define __packed __PACKED
 #endif
 
 /**
@@ -134,7 +156,7 @@
  */
 __STATIC_INLINE uint16_t co_read16(void const *ptr16)
 {
-    return *((uint16_t*)ptr16);
+    return *((uint16_t *)ptr16);
 }
 
 /**
@@ -146,7 +168,7 @@ __STATIC_INLINE uint16_t co_read16(void const *ptr16)
  */
 __STATIC_INLINE void co_write16(void const *ptr16, uint32_t value)
 {
-    *(uint16_t*)ptr16 = value;
+    *(uint16_t *)ptr16 = value;
 }
 
 /**
@@ -158,7 +180,7 @@ __STATIC_INLINE void co_write16(void const *ptr16, uint32_t value)
  */
 __STATIC_INLINE uint32_t co_read32(void const *ptr32)
 {
-    return *((uint32_t*)ptr32);
+    return *((uint32_t *)ptr32);
 }
 
 /**
@@ -170,7 +192,7 @@ __STATIC_INLINE uint32_t co_read32(void const *ptr32)
  */
 __STATIC_INLINE void co_write32(void const *ptr32, uint32_t value)
 {
-    *(uint32_t*)ptr32 = value;
+    *(uint32_t *)ptr32 = value;
 }
 
 /**
@@ -188,7 +210,7 @@ __STATIC_INLINE void co_write32(void const *ptr32, uint32_t value)
  */
 __STATIC_INLINE void co_copy32(uint32_t *dst, uint32_t *src, uint32_t len)
 {
-    len = CO_ALIGN4_HI(len)/4;
+    len = CO_ALIGN4_HI(len) / 4;
     while (len--)
     {
         *dst++ = *src++;
@@ -204,13 +226,13 @@ __STATIC_INLINE void co_copy32(uint32_t *dst, uint32_t *src, uint32_t len)
  */
 __STATIC_INLINE uint8_t co_read8p(uint32_t addr)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     int shift = (addr & 0x1) * 8;
     uint16_t *ptr = (uint16_t *)(addr / 2);
     return ((uint8_t)((*ptr >> shift) & 0xFF));
-    #else
+#else
     return (*(uint8_t *)(long)addr);
-    #endif
+#endif
 }
 
 /**
@@ -222,13 +244,13 @@ __STATIC_INLINE uint8_t co_read8p(uint32_t addr)
  */
 __STATIC_INLINE void co_write8p(uint32_t addr, uint8_t value)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     int shift = (addr & 0x1) * 8;
     uint16_t *ptr = (uint16_t *)(addr / 2);
-    *ptr =  (*ptr & ~(0xFF << shift)) | ((value & 0xFF) << shift);
-    #else
+    *ptr = (*ptr & ~(0xFF << shift)) | ((value & 0xFF) << shift);
+#else
     *(uint8_t *)(long)addr = value;
-    #endif
+#endif
 }
 
 
@@ -241,15 +263,15 @@ __STATIC_INLINE void co_write8p(uint32_t addr, uint8_t value)
  */
 __STATIC_INLINE uint16_t co_read16p(uint32_t addr)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     return ((((uint16_t)co_read8p(addr + 1)) << 8) | co_read8p(addr));
-    #else
+#else
     struct co_read16_struct
     {
         uint16_t val __PACKED16;
-    } *ptr = (struct co_read16_struct*)(long)addr;
+    } *ptr = (struct co_read16_struct *)(long)addr;
     return ptr->val;
-    #endif
+#endif
 }
 
 /**
@@ -261,17 +283,17 @@ __STATIC_INLINE uint16_t co_read16p(uint32_t addr)
  */
 __STATIC_INLINE void co_write16p(uint32_t addr, uint32_t value)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     co_write8p(addr, value & 0xFF);
     co_write8p(addr + 1, ((value >> 8) & 0xFF));
-    #else
+#else
     struct co_read16_struct
     {
         uint16_t val __PACKED16;
-    } *ptr = (struct co_read16_struct*)(long) addr;
+    } *ptr = (struct co_read16_struct *)(long) addr;
 
     ptr->val = value;
-    #endif
+#endif
 }
 
 /**
@@ -308,15 +330,15 @@ __STATIC_INLINE void co_write24p(uint32_t addr, uint32_t value)
  */
 __STATIC_INLINE uint32_t co_read32p(uint32_t addr)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     return ((((uint32_t)co_read16p(addr + 2)) << 16) | co_read16p(addr));
-    #else
+#else
     struct co_read32_struct
     {
         uint32_t val __PACKED;
-    } *ptr = (struct co_read32_struct*)(long) addr;
+    } *ptr = (struct co_read32_struct *)(long) addr;
     return ptr->val;
-    #endif
+#endif
 }
 
 /**
@@ -328,16 +350,16 @@ __STATIC_INLINE uint32_t co_read32p(uint32_t addr)
  */
 __STATIC_INLINE void co_write32p(uint32_t addr, uint32_t value)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     co_write16p(addr, value & 0xFFFF);
     co_write16p(addr + 2, ((value >> 16) & 0xFFFF));
-    #else
+#else
     struct co_read32_struct
     {
         uint32_t val __PACKED;
-    } *ptr = (struct co_read32_struct*)(long) addr;
+    } *ptr = (struct co_read32_struct *)(long) addr;
     ptr->val = value;
-    #endif
+#endif
 }
 
 /**
@@ -349,15 +371,15 @@ __STATIC_INLINE void co_write32p(uint32_t addr, uint32_t value)
  */
 __STATIC_INLINE uint64_t co_read64p(uint32_t addr)
 {
-    #ifdef CFG_RWTL
+#ifdef CFG_RWTL
     return ((((uint64_t)co_read32p(addr + 4)) << 32) | co_read32p(addr));
-    #else
+#else
     struct co_read64_struct
     {
         uint64_t val __PACKED;
-    } *ptr = (struct co_read64_struct*)(long) addr;
+    } *ptr = (struct co_read64_struct *)(long) addr;
     return ptr->val;
-    #endif
+#endif
 }
 
 /**
@@ -444,8 +466,8 @@ __STATIC_INLINE void co_copy8p(uint32_t dst, uint32_t src, uint32_t len)
 __STATIC_INLINE uint8_t co_val_get(uint8_t const array[], int lsb, int width)
 {
     int msb = lsb + width - 1;
-    int l_byte_idx = lsb/8;
-    int m_byte_idx = msb/8;
+    int l_byte_idx = lsb / 8;
+    int m_byte_idx = msb / 8;
     uint8_t val;
 
     if (m_byte_idx == l_byte_idx)
@@ -479,8 +501,8 @@ __STATIC_INLINE uint8_t co_val_get(uint8_t const array[], int lsb, int width)
 __STATIC_INLINE void co_val_set(uint8_t array[], int lsb, int width, uint8_t val)
 {
     int msb = lsb + width - 1;
-    int l_byte_idx = lsb/8;
-    int m_byte_idx = msb/8;
+    int l_byte_idx = lsb / 8;
+    int m_byte_idx = msb / 8;
 
     if (m_byte_idx == l_byte_idx)
     {
