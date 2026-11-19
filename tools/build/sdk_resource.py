@@ -2291,7 +2291,7 @@ def BuildJLinkLoadScript(main_env):
 
     decice_memory = main_env['JLINK_DEVICE'].split('_')
     device = decice_memory[0][:-1]
-    memory = decice_memory[1] if len(decice_memory) > 1 else 'NOR'
+    memory = '_'.join(decice_memory[1:]) if len(decice_memory) > 1 else 'NOR'
 
     download_list = ' '.join(
         f"\"{file['name']}\"" if file['name'].lower().endswith(('.elf', '.hex')) 
