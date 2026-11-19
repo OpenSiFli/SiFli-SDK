@@ -7,6 +7,7 @@
 #ifndef __LL_GPADC_H
 #define __LL_GPADC_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "register.h"
 
@@ -99,7 +100,7 @@ typedef struct
     uint32_t data_samp_dly; /**< DATA_SAMP_DLY field value for
                                ADC_CTRL_REG[20:17]. */
     uint32_t
-        conv_width; /**< CONV_WIDTH field value for ADC_CTRL_REG2[31:24]. */
+    conv_width; /**< CONV_WIDTH field value for ADC_CTRL_REG2[31:24]. */
     uint32_t samp_width; /**< SAMP_WIDTH field value for ADC_CTRL_REG2[23:0]. */
 } ll_gpadc_clock_config_t;
 
@@ -114,7 +115,7 @@ typedef struct
                               LL_GPADC_TRIGSRC_GPTIM1_TRGO to @ref
                               LL_GPADC_TRIGSRC_GPTIM1_CH2. */
     uint32_t
-        timer_type; /**< Timer trigger type, use @ref LL_GPADC_TIMER_TRIG_PULSE
+    timer_type; /**< Timer trigger type, use @ref LL_GPADC_TIMER_TRIG_PULSE
                        or @ref LL_GPADC_TIMER_TRIG_LEVEL. */
 } ll_gpadc_trigger_config_t;
 
@@ -134,10 +135,11 @@ typedef struct
 typedef struct
 {
     uint32_t slot_enable; /**< Non-zero to enable slot conversion. */
+    uint32_t acc_num; /**< Accumulation count exponent for slot conversion. */
     uint32_t
-        p_channel; /**< Positive channel field value for PCHNL_SEL[10:8]. */
+    p_channel; /**< Positive channel field value for PCHNL_SEL[10:8]. */
     uint32_t
-        n_channel; /**< Negative channel field value for NCHNL_SEL[13:11]. */
+    n_channel; /**< Negative channel field value for NCHNL_SEL[13:11]. */
 } ll_gpadc_slot_config_t;
 
 /**
@@ -146,142 +148,57 @@ typedef struct
  * @param[in] cfg Pointer to analog configuration.
  */
 static inline void ll_gpadc_config_analog(GPADC_TypeDef *GPADCx,
-                                          const ll_gpadc_analog_config_t *cfg)
+        const ll_gpadc_analog_config_t *cfg)
 {
     MODIFY_REG(GPADCx->ADC_CFG_REG1,
                GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_MUTE |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_SE |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18 |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN |
-                   GPADC_ADC_CFG_REG1_ANAU_GPADC_CMREF_FAST_EN,
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_MUTE |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_SE |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_V18 |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_CMREF_FAST_EN,
                ((cfg->cmm << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos) &
                 GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM) |
-                   ((cfg->cmpcl << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL) |
-                   ((cfg->vsp << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP) |
-                   ((cfg->ldovref_sel
-                     << GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL) |
-                   ((cfg->force_p_channel
-                     << GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH) |
-                   ((cfg->force_n_channel
-                     << GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH) |
-                   cfg->mute | cfg->input_mode | cfg->en_v18 |
-                   ((cfg->cl_dly << GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY_Pos) &
-                    GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY) |
-                   cfg->p_int_en | cfg->cmref_fast_en);
+               ((cfg->cmpcl << GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_CMPCL) |
+               ((cfg->vsp << GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_VSP) |
+               ((cfg->ldovref_sel
+                 << GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOVREF_SEL) |
+               ((cfg->force_p_channel
+                 << GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_PCH) |
+               ((cfg->force_n_channel
+                 << GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_SEL_NCH) |
+               cfg->mute | cfg->input_mode | cfg->en_v18 |
+               ((cfg->cl_dly << GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY_Pos) &
+                GPADC_ADC_CFG_REG1_ANAU_GPADC_CL_DLY) |
+               cfg->p_int_en | cfg->cmref_fast_en);
 }
 
 /**
- * @brief Configure conversion clock related fields.
+ * @brief Configure the ADC analog conversion fields (ADC_CFG_REG1.CMM/SE).
  * @param[in] GPADCx GPADC instance pointer.
- * @param[in] cfg Pointer to clock configuration.
+ * @param[in] cmm    CMM value (5 bits).
+ * @param[in] se     Single-ended enable (1 bit).
  */
-static inline void ll_gpadc_config_clock(GPADC_TypeDef *GPADCx,
-                                         const ll_gpadc_clock_config_t *cfg)
+static inline void ll_gpadc_config_analog_cfg1(GPADC_TypeDef *GPADCx,
+        uint32_t cmm, uint32_t se)
 {
-    MODIFY_REG(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DATA_SAMP_DLY,
-               ((cfg->data_samp_dly << GPADC_ADC_CTRL_REG_DATA_SAMP_DLY_Pos) &
-                GPADC_ADC_CTRL_REG_DATA_SAMP_DLY));
-
-    MODIFY_REG(GPADCx->ADC_CTRL_REG2,
-               GPADC_ADC_CTRL_REG2_CONV_WIDTH | GPADC_ADC_CTRL_REG2_SAMP_WIDTH,
-               ((cfg->conv_width << GPADC_ADC_CTRL_REG2_CONV_WIDTH_Pos) &
-                GPADC_ADC_CTRL_REG2_CONV_WIDTH) |
-                   ((cfg->samp_width << GPADC_ADC_CTRL_REG2_SAMP_WIDTH_Pos) &
-                    GPADC_ADC_CTRL_REG2_SAMP_WIDTH));
-}
-
-/**
- * @brief Configure trigger path fields.
- * @param[in] GPADCx GPADC instance pointer.
- * @param[in] cfg Pointer to trigger configuration.
- */
-static inline void ll_gpadc_config_trigger(GPADC_TypeDef *GPADCx,
-                                           const ll_gpadc_trigger_config_t *cfg)
-{
-    uint32_t val;
-
-    val = ((cfg->timer_enable != 0U) ? GPADC_ADC_CTRL_REG_TIMER_TRIG_EN : 0U) |
-          cfg->timer_source | cfg->timer_type;
-
-    MODIFY_REG(GPADCx->ADC_CTRL_REG,
-               GPADC_ADC_CTRL_REG_TIMER_TRIG_EN |
-                   GPADC_ADC_CTRL_REG_TIMER_TRIG_SRC_SEL |
-                   GPADC_ADC_CTRL_REG_TIMER_TRIG_TYP,
-               val);
-}
-
-/**
- * @brief Configure operation mode fields.
- * @param[in] GPADCx GPADC instance pointer.
- * @param[in] cfg Pointer to mode configuration.
- */
-static inline void ll_gpadc_config_mode(GPADC_TypeDef *GPADCx,
-                                        const ll_gpadc_mode_config_t *cfg)
-{
-    MODIFY_REG(GPADCx->ADC_CTRL_REG,
-               GPADC_ADC_CTRL_REG_ADC_OP_MODE | GPADC_ADC_CTRL_REG_INIT_TIME,
-               cfg->op_mode |
-                   ((cfg->init_time << GPADC_ADC_CTRL_REG_INIT_TIME_Pos) &
-                    GPADC_ADC_CTRL_REG_INIT_TIME));
-}
-
-/**
- * @brief Configure one slot register.
- * @param[in] GPADCx GPADC instance pointer.
- * @param[in] slot_index Slot index, valid range 0..7.
- * @param[in] cfg Pointer to slot configuration.
- */
-static inline void ll_gpadc_config_slot(GPADC_TypeDef *GPADCx,
-                                        uint32_t slot_index,
-                                        const ll_gpadc_slot_config_t *cfg)
-{
-    volatile uint32_t *slot_reg;
-
-    slot_reg = (&GPADCx->ADC_SLOT0_REG) + slot_index;
-    MODIFY_REG(*slot_reg, 0x00003F01UL,
-               (((cfg->n_channel << 11U) & 0x00003800UL) |
-                ((cfg->p_channel << 8U) & 0x00000700UL) |
-                ((cfg->slot_enable != 0U) ? 0x00000001UL : 0U)));
-}
-
-/**
- * @brief Enable GPADC core.
- * @param[in] GPADCx GPADC instance pointer.
- */
-static inline void ll_gpadc_enable_core(GPADC_TypeDef *GPADCx)
-{
-    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
-}
-
-/**
- * @brief Disable GPADC core.
- * @param[in] GPADCx GPADC instance pointer.
- */
-static inline void ll_gpadc_disable_core(GPADC_TypeDef *GPADCx)
-{
-    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
-}
-
-/**
- * @brief Check whether GPADC core is enabled.
- * @param[in] GPADCx GPADC instance pointer.
- * @return Non-zero when core is enabled.
- */
-static inline uint32_t ll_gpadc_is_enabled_core(GPADC_TypeDef *GPADCx)
-{
-    return READ_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
+    MODIFY_REG(GPADCx->ADC_CFG_REG1,
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM |
+               GPADC_ADC_CFG_REG1_ANAU_GPADC_SE,
+               MAKE_REG_VAL(cmm, GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Msk,
+                            GPADC_ADC_CFG_REG1_ANAU_GPADC_CMM_Pos) |
+               (se ? GPADC_ADC_CFG_REG1_ANAU_GPADC_SE : 0U));
 }
 
 /**
@@ -314,22 +231,35 @@ static inline uint32_t ll_gpadc_is_enabled_ldoref(GPADC_TypeDef *GPADCx)
 }
 
 /**
- * @brief Enable force channel selection from ADC_CFG_REG1.
+ * @brief Configure one slot register.
  * @param[in] GPADCx GPADC instance pointer.
+ * @param[in] slot_index Slot index, valid range 0..7.
+ * @param[in] cfg Pointer to slot configuration.
  */
-static inline void ll_gpadc_enable_force_channel_select(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_config_slot(GPADC_TypeDef *GPADCx,
+                                        uint32_t slot_index,
+                                        const ll_gpadc_slot_config_t *cfg)
 {
-    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_CHNL_SEL_FRC_EN);
+    volatile uint32_t *slot_reg;
+
+    if ((slot_index >= 8U) || (cfg == NULL))
+    {
+        return;
+    }
+
+    slot_reg = (&GPADCx->ADC_SLOT0_REG) + slot_index;
+    MODIFY_REG(*slot_reg,
+               GPADC_ADC_SLOT0_REG_ACC_NUM | GPADC_ADC_SLOT0_REG_NCHNL_SEL |
+               GPADC_ADC_SLOT0_REG_PCHNL_SEL | GPADC_ADC_SLOT0_REG_SLOT_EN,
+               MAKE_REG_VAL(cfg->acc_num, GPADC_ADC_SLOT0_REG_ACC_NUM_Msk,
+                            GPADC_ADC_SLOT0_REG_ACC_NUM_Pos) |
+               MAKE_REG_VAL(cfg->n_channel, GPADC_ADC_SLOT0_REG_NCHNL_SEL_Msk,
+                            GPADC_ADC_SLOT0_REG_NCHNL_SEL_Pos) |
+               MAKE_REG_VAL(cfg->p_channel, GPADC_ADC_SLOT0_REG_PCHNL_SEL_Msk,
+                            GPADC_ADC_SLOT0_REG_PCHNL_SEL_Pos) |
+               ((cfg->slot_enable != 0U) ? GPADC_ADC_SLOT0_REG_SLOT_EN : 0U));
 }
 
-/**
- * @brief Disable force channel selection from ADC_CFG_REG1.
- * @param[in] GPADCx GPADC instance pointer.
- */
-static inline void ll_gpadc_disable_force_channel_select(GPADC_TypeDef *GPADCx)
-{
-    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_CHNL_SEL_FRC_EN);
-}
 
 /**
  * @brief Read ADC_RDATA0 register.
@@ -339,6 +269,54 @@ static inline void ll_gpadc_disable_force_channel_select(GPADC_TypeDef *GPADCx)
 static inline uint32_t ll_gpadc_read_rdata0(GPADC_TypeDef *GPADCx)
 {
     return READ_REG(GPADCx->ADC_RDATA0);
+}
+
+/**
+ * @brief Read one slot conversion sample.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @param[in] slot_index Slot index, valid range 0..7.
+ * @return 12-bit slot sample data.
+ */
+static inline uint32_t ll_gpadc_get_slot_data(GPADC_TypeDef *GPADCx,
+        uint32_t slot_index)
+{
+    switch (slot_index)
+    {
+    case 0U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA0),
+                           GPADC_ADC_RDATA0_SLOT0_RDATA_Msk,
+                           GPADC_ADC_RDATA0_SLOT0_RDATA_Pos);
+    case 1U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA0),
+                           GPADC_ADC_RDATA0_SLOT1_RDATA_Msk,
+                           GPADC_ADC_RDATA0_SLOT1_RDATA_Pos);
+    case 2U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA1),
+                           GPADC_ADC_RDATA1_SLOT2_RDATA_Msk,
+                           GPADC_ADC_RDATA1_SLOT2_RDATA_Pos);
+    case 3U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA1),
+                           GPADC_ADC_RDATA1_SLOT3_RDATA_Msk,
+                           GPADC_ADC_RDATA1_SLOT3_RDATA_Pos);
+    case 4U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA2),
+                           GPADC_ADC_RDATA2_SLOT4_RDATA_Msk,
+                           GPADC_ADC_RDATA2_SLOT4_RDATA_Pos);
+    case 5U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA2),
+                           GPADC_ADC_RDATA2_SLOT5_RDATA_Msk,
+                           GPADC_ADC_RDATA2_SLOT5_RDATA_Pos);
+    case 6U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA3),
+                           GPADC_ADC_RDATA3_SLOT6_RDATA_Msk,
+                           GPADC_ADC_RDATA3_SLOT6_RDATA_Pos);
+    case 7U:
+        return GET_REG_VAL(READ_REG(GPADCx->ADC_RDATA3),
+                           GPADC_ADC_RDATA3_SLOT7_RDATA_Msk,
+                           GPADC_ADC_RDATA3_SLOT7_RDATA_Pos);
+    default:
+        return 0U;
+    }
 }
 
 /**
@@ -372,19 +350,14 @@ static inline uint32_t ll_gpadc_read_rdata3(GPADC_TypeDef *GPADCx)
 }
 
 /**
- * @brief Read one slot conversion sample.
+ * @brief Read DMA raw data field from ADC_DMA_RDATA.
  * @param[in] GPADCx GPADC instance pointer.
- * @param[in] slot_index Slot index, valid range 0..7.
- * @return 12-bit slot sample data.
+ * @return DMA_RDATA_RAW[28:16] field value.
  */
-static inline uint32_t ll_gpadc_get_slot_data(GPADC_TypeDef *GPADCx,
-                                              uint32_t slot_index)
+static inline uint32_t ll_gpadc_read_dma_raw_data(GPADC_TypeDef *GPADCx)
 {
-    uint32_t rdata;
-
-    rdata = *((&GPADCx->ADC_RDATA0) + (slot_index >> 1U));
-    return ((slot_index & 1U) == 0U) ? (rdata & 0x00000FFFUL)
-                                     : ((rdata >> 16U) & 0x00000FFFUL);
+    return (READ_REG(GPADCx->ADC_DMA_RDATA) & GPADC_ADC_DMA_RDATA_DMA_RDATA_RAW_Msk) >>
+           GPADC_ADC_DMA_RDATA_DMA_RDATA_RAW_Pos;
 }
 
 /**
@@ -394,105 +367,131 @@ static inline uint32_t ll_gpadc_get_slot_data(GPADC_TypeDef *GPADCx,
  */
 static inline uint32_t ll_gpadc_read_dma_data(GPADC_TypeDef *GPADCx)
 {
-    return (READ_REG(GPADCx->ADC_DMA_RDATA) & 0x00001FFFUL);
+    return (READ_REG(GPADCx->ADC_DMA_RDATA) & GPADC_ADC_DMA_RDATA_DMA_RDATA_Msk) >>
+           GPADC_ADC_DMA_RDATA_DMA_RDATA_Pos;
+}
+
+
+/**
+ * @brief Configure conversion clock related fields.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @param[in] cfg Pointer to clock configuration.
+ */
+static inline void ll_gpadc_config_clock(GPADC_TypeDef *GPADCx,
+        const ll_gpadc_clock_config_t *cfg)
+{
+    MODIFY_REG(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DATA_SAMP_DLY,
+               ((cfg->data_samp_dly << GPADC_ADC_CTRL_REG_DATA_SAMP_DLY_Pos) &
+                GPADC_ADC_CTRL_REG_DATA_SAMP_DLY));
+
+    MODIFY_REG(GPADCx->ADC_CTRL_REG2,
+               GPADC_ADC_CTRL_REG2_CONV_WIDTH | GPADC_ADC_CTRL_REG2_SAMP_WIDTH,
+               ((cfg->conv_width << GPADC_ADC_CTRL_REG2_CONV_WIDTH_Pos) &
+                GPADC_ADC_CTRL_REG2_CONV_WIDTH) |
+               ((cfg->samp_width << GPADC_ADC_CTRL_REG2_SAMP_WIDTH_Pos) &
+                GPADC_ADC_CTRL_REG2_SAMP_WIDTH));
 }
 
 /**
- * @brief Read DMA raw data field from ADC_DMA_RDATA.
+ * @brief Select DMA combined data output.
  * @param[in] GPADCx GPADC instance pointer.
- * @return DMA_RDATA_RAW[28:16] field value.
  */
-static inline uint32_t ll_gpadc_read_dma_raw_data(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_select_dma_combined_data(GPADC_TypeDef *GPADCx)
 {
-    return ((READ_REG(GPADCx->ADC_DMA_RDATA) >> 16U) & 0x00001FFFUL);
+    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DMA_DATA_SEL);
 }
 
 /**
- * @brief Check ADC_DONE status flag.
+ * @brief Select DMA raw data output.
  * @param[in] GPADCx GPADC instance pointer.
- * @return Non-zero when ADC_DONE is set.
  */
-static inline uint32_t ll_gpadc_is_active_flag_adc_done(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_select_dma_raw_data(GPADC_TypeDef *GPADCx)
 {
-    return READ_BIT(GPADCx->GPADC_STATUS, GPADC_GPADC_STATUS_ADC_DONE);
+    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DMA_DATA_SEL);
 }
 
 /**
- * @brief Get SLOT_DONE bitmap.
+ * @brief Configure trigger path fields.
  * @param[in] GPADCx GPADC instance pointer.
- * @return SLOT_DONE bits in position [8:1].
+ * @param[in] cfg Pointer to trigger configuration.
  */
-static inline uint32_t ll_gpadc_get_slot_done_mask(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_config_trigger(GPADC_TypeDef *GPADCx,
+        const ll_gpadc_trigger_config_t *cfg)
 {
-    return READ_BIT(GPADCx->GPADC_STATUS, GPADC_GPADC_STATUS_SLOT_DONE);
+    uint32_t val;
+
+    val = ((cfg->timer_enable != 0U) ? GPADC_ADC_CTRL_REG_TIMER_TRIG_EN : 0U) |
+          cfg->timer_source | cfg->timer_type;
+
+    MODIFY_REG(GPADCx->ADC_CTRL_REG,
+               GPADC_ADC_CTRL_REG_TIMER_TRIG_EN |
+               GPADC_ADC_CTRL_REG_TIMER_TRIG_SRC_SEL |
+               GPADC_ADC_CTRL_REG_TIMER_TRIG_TYP,
+               val);
 }
 
 /**
- * @brief Get currently converting slot index.
+ * @brief Enable GPADC core.
  * @param[in] GPADCx GPADC instance pointer.
- * @return CUR_SLOT field value in range 0..7.
  */
-static inline uint32_t ll_gpadc_get_current_slot(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_enable_core(GPADC_TypeDef *GPADCx)
 {
-    return ((READ_REG(GPADCx->GPADC_STATUS) & GPADC_GPADC_STATUS_CUR_SLOT) >>
-            GPADC_GPADC_STATUS_CUR_SLOT_Pos);
+    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
 }
 
 /**
- * @brief Check raw GPADC IRQ flag.
+ * @brief Disable GPADC core.
  * @param[in] GPADCx GPADC instance pointer.
- * @return Non-zero when raw IRQ flag is active.
  */
-static inline uint32_t ll_gpadc_is_active_flag_irq_raw(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_disable_core(GPADC_TypeDef *GPADCx)
 {
-    return READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IRSR);
+    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
 }
 
 /**
- * @brief Check masked GPADC IRQ flag.
+ * @brief Check whether GPADC core is enabled.
  * @param[in] GPADCx GPADC instance pointer.
- * @return Non-zero when masked IRQ flag is active.
+ * @return Non-zero when core is enabled.
  */
-static inline uint32_t ll_gpadc_is_active_flag_irq_masked(GPADC_TypeDef *GPADCx)
+static inline uint32_t ll_gpadc_is_enabled_core(GPADC_TypeDef *GPADCx)
 {
-    return READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_ISR);
+    return READ_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_FRC_EN_ADC);
 }
 
 /**
- * @brief Clear GPADC IRQ flag.
+ * @brief Enable force channel selection from ADC_CFG_REG1.
  * @param[in] GPADCx GPADC instance pointer.
  */
-static inline void ll_gpadc_clear_flag_irq(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_enable_force_channel_select(GPADC_TypeDef *GPADCx)
 {
-    SET_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_ICR);
+    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_CHNL_SEL_FRC_EN);
 }
 
 /**
- * @brief Enable end-of-conversion interrupt.
+ * @brief Disable force channel selection from ADC_CFG_REG1.
  * @param[in] GPADCx GPADC instance pointer.
  */
-static inline void ll_gpadc_enable_it_eoc(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_disable_force_channel_select(GPADC_TypeDef *GPADCx)
 {
-    CLEAR_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR);
+    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_CHNL_SEL_FRC_EN);
 }
 
 /**
- * @brief Disable end-of-conversion interrupt.
+ * @brief Enable GPIO-triggered sampling (ADC_CTRL_REG.GPIO_TRIG_EN).
  * @param[in] GPADCx GPADC instance pointer.
  */
-static inline void ll_gpadc_disable_it_eoc(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_enable_gpio_trigger(GPADC_TypeDef *GPADCx)
 {
-    SET_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR);
+    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_GPIO_TRIG_EN);
 }
 
 /**
- * @brief Check whether end-of-conversion interrupt is enabled.
+ * @brief Disable GPIO-triggered sampling (ADC_CTRL_REG.GPIO_TRIG_EN = 0).
  * @param[in] GPADCx GPADC instance pointer.
- * @return Non-zero when interrupt is enabled.
  */
-static inline uint32_t ll_gpadc_is_enabled_it_eoc(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_disable_gpio_trigger(GPADC_TypeDef *GPADCx)
 {
-    return (READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR) == 0U);
+    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_GPIO_TRIG_EN);
 }
 
 /**
@@ -524,30 +523,18 @@ static inline uint32_t ll_gpadc_is_enabled_dma(GPADC_TypeDef *GPADCx)
 }
 
 /**
- * @brief Select DMA combined data output.
+ * @brief Configure operation mode fields.
  * @param[in] GPADCx GPADC instance pointer.
+ * @param[in] cfg Pointer to mode configuration.
  */
-static inline void ll_gpadc_select_dma_combined_data(GPADC_TypeDef *GPADCx)
+static inline void ll_gpadc_config_mode(GPADC_TypeDef *GPADCx,
+                                        const ll_gpadc_mode_config_t *cfg)
 {
-    CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DMA_DATA_SEL);
-}
-
-/**
- * @brief Select DMA raw data output.
- * @param[in] GPADCx GPADC instance pointer.
- */
-static inline void ll_gpadc_select_dma_raw_data(GPADC_TypeDef *GPADCx)
-{
-    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_DMA_DATA_SEL);
-}
-
-/**
- * @brief Request ADC start conversion.
- * @param[in] GPADCx GPADC instance pointer.
- */
-static inline void ll_gpadc_request_start(GPADC_TypeDef *GPADCx)
-{
-    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_ADC_START);
+    MODIFY_REG(GPADCx->ADC_CTRL_REG,
+               GPADC_ADC_CTRL_REG_ADC_OP_MODE | GPADC_ADC_CTRL_REG_INIT_TIME,
+               cfg->op_mode |
+               ((cfg->init_time << GPADC_ADC_CTRL_REG_INIT_TIME_Pos) &
+                GPADC_ADC_CTRL_REG_INIT_TIME));
 }
 
 /**
@@ -566,6 +553,103 @@ static inline void ll_gpadc_request_stop(GPADC_TypeDef *GPADCx)
 static inline void ll_gpadc_clear_stop_request(GPADC_TypeDef *GPADCx)
 {
     CLEAR_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_ADC_STOP);
+}
+
+/**
+ * @brief Request ADC start conversion.
+ * @param[in] GPADCx GPADC instance pointer.
+ */
+static inline void ll_gpadc_request_start(GPADC_TypeDef *GPADCx)
+{
+    SET_BIT(GPADCx->ADC_CTRL_REG, GPADC_ADC_CTRL_REG_ADC_START);
+}
+
+/**
+ * @brief Get currently converting slot index.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return CUR_SLOT field value in range 0..7.
+ */
+static inline uint32_t ll_gpadc_get_current_slot(GPADC_TypeDef *GPADCx)
+{
+    return ((READ_REG(GPADCx->GPADC_STATUS) & GPADC_GPADC_STATUS_CUR_SLOT) >>
+            GPADC_GPADC_STATUS_CUR_SLOT_Pos);
+}
+
+/**
+ * @brief Get SLOT_DONE bitmap.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return SLOT_DONE bits in position [8:1].
+ */
+static inline uint32_t ll_gpadc_get_slot_done_mask(GPADC_TypeDef *GPADCx)
+{
+    return READ_BIT(GPADCx->GPADC_STATUS, GPADC_GPADC_STATUS_SLOT_DONE);
+}
+
+/**
+ * @brief Check ADC_DONE status flag.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return Non-zero when ADC_DONE is set.
+ */
+static inline uint32_t ll_gpadc_is_active_flag_adc_done(GPADC_TypeDef *GPADCx)
+{
+    return READ_BIT(GPADCx->GPADC_STATUS, GPADC_GPADC_STATUS_ADC_DONE);
+}
+
+/**
+ * @brief Check masked GPADC IRQ flag.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return Non-zero when masked IRQ flag is active.
+ */
+static inline uint32_t ll_gpadc_is_active_flag_irq_masked(GPADC_TypeDef *GPADCx)
+{
+    return READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_ISR);
+}
+
+/**
+ * @brief Check raw GPADC IRQ flag.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return Non-zero when raw IRQ flag is active.
+ */
+static inline uint32_t ll_gpadc_is_active_flag_irq_raw(GPADC_TypeDef *GPADCx)
+{
+    return READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IRSR);
+}
+
+/**
+ * @brief Enable end-of-conversion interrupt.
+ * @param[in] GPADCx GPADC instance pointer.
+ */
+static inline void ll_gpadc_enable_it_eoc(GPADC_TypeDef *GPADCx)
+{
+    CLEAR_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR);
+}
+
+/**
+ * @brief Disable end-of-conversion interrupt.
+ * @param[in] GPADCx GPADC instance pointer.
+ */
+static inline void ll_gpadc_disable_it_eoc(GPADC_TypeDef *GPADCx)
+{
+    SET_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR);
+}
+
+/**
+ * @brief Check whether end-of-conversion interrupt is enabled.
+ * @param[in] GPADCx GPADC instance pointer.
+ * @return Non-zero when interrupt is enabled.
+ */
+static inline uint32_t ll_gpadc_is_enabled_it_eoc(GPADC_TypeDef *GPADCx)
+{
+    return (READ_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_IMR) == 0U);
+}
+
+/**
+ * @brief Clear GPADC IRQ flag.
+ * @param[in] GPADCx GPADC instance pointer.
+ */
+static inline void ll_gpadc_clear_flag_irq(GPADC_TypeDef *GPADCx)
+{
+    SET_BIT(GPADCx->GPADC_IRQ, GPADC_GPADC_IRQ_GPADC_ICR);
 }
 
 #ifdef __cplusplus

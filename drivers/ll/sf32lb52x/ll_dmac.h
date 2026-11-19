@@ -142,126 +142,6 @@ static inline uint32_t ll_dmac_channel_flag_shift(uint32_t ch)
 }
 
 /**
- * @brief Get DMAC channel register pointer.
- * @param[in] DMACx DMAC instance pointer.
- * @param[in] ch Channel index in range 1..8.
- * @return Channel register pointer.
- */
-static inline ll_dmac_channel_t *ll_dmac_get_channel(DMAC_TypeDef *DMACx,
-                                                     uint32_t ch)
-{
-    return ((ll_dmac_channel_t *)&DMACx->CCR1) + (ch - 1U);
-}
-
-/**
- * @brief Configure channel CCR mode fields with one register update.
- * @param[in] chx DMAC channel pointer.
- * @param[in] cfg Pointer to channel configuration.
- */
-static inline void ll_dmac_config_channel(ll_dmac_channel_t *chx,
-                                          const ll_dmac_channel_config_t *cfg)
-{
-    MODIFY_REG(chx->CCR, LL_DMAC_CCR_CONFIG_MASK,
-               cfg->mem2mem | cfg->priority | cfg->msize | cfg->psize |
-                   cfg->minc | cfg->pinc | cfg->circ | cfg->dir | cfg->it_tc |
-                   cfg->it_ht | cfg->it_te);
-}
-
-/**
- * @brief Set CPAR register value.
- * @param[in] chx DMAC channel pointer.
- * @param[in] addr Address value written to CPAR.
- */
-static inline void ll_dmac_set_cpar(ll_dmac_channel_t *chx, uint32_t addr)
-{
-    WRITE_REG(chx->CPAR, addr);
-}
-
-/**
- * @brief Set CM0AR register value.
- * @param[in] chx DMAC channel pointer.
- * @param[in] addr Address value written to CM0AR.
- */
-static inline void ll_dmac_set_cm0ar(ll_dmac_channel_t *chx, uint32_t addr)
-{
-    WRITE_REG(chx->CM0AR, addr);
-}
-
-/**
- * @brief Set transfer unit count in CNDTR.NDT.
- * @param[in] chx DMAC channel pointer.
- * @param[in] ndt Transfer unit count in range 0..65535.
- */
-static inline void ll_dmac_set_ndt(ll_dmac_channel_t *chx, uint32_t ndt)
-{
-    MODIFY_REG(chx->CNDTR, DMAC_CNDTR1_NDT, (ndt & DMAC_CNDTR1_NDT));
-}
-
-/**
- * @brief Set burst size in CBSR.BS.
- * @param[in] chx DMAC channel pointer.
- * @param[in] bs Burst size field value.
- */
-static inline void ll_dmac_set_burst_size(ll_dmac_channel_t *chx, uint32_t bs)
-{
-    MODIFY_REG(chx->CBSR, DMAC_CBSR1_BS,
-               ((bs << DMAC_CBSR1_BS_Pos) & DMAC_CBSR1_BS_Msk));
-}
-
-/**
- * @brief Enable DMAC channel.
- * @param[in] chx DMAC channel pointer.
- */
-static inline void ll_dmac_enable_channel(ll_dmac_channel_t *chx)
-{
-    SET_BIT(chx->CCR, DMAC_CCR1_EN);
-}
-
-/**
- * @brief Disable DMAC channel.
- * @param[in] chx DMAC channel pointer.
- */
-static inline void ll_dmac_disable_channel(ll_dmac_channel_t *chx)
-{
-    CLEAR_BIT(chx->CCR, DMAC_CCR1_EN);
-}
-
-/**
- * @brief Check whether DMAC channel is enabled.
- * @param[in] chx DMAC channel pointer.
- * @return Non-zero when channel EN bit is set.
- */
-static inline uint32_t ll_dmac_is_enabled_channel(ll_dmac_channel_t *chx)
-{
-    return READ_BIT(chx->CCR, DMAC_CCR1_EN);
-}
-
-/**
- * @brief Select request source id for a channel.
- * @param[in] DMACx DMAC instance pointer.
- * @param[in] ch Channel index in range 1..8.
- * @param[in] request_id Request source id in range 0..63.
- */
-static inline void ll_dmac_set_channel_request(DMAC_TypeDef *DMACx, uint32_t ch,
-                                               uint32_t request_id)
-{
-    uint32_t shift;
-    uint32_t req;
-
-    req = (request_id & LL_DMAC_REQUEST_ID_MASK);
-    if (ch <= 4U)
-    {
-        shift = (ch - 1U) * 8U;
-        MODIFY_REG(DMACx->CSELR1, (DMAC_CSELR1_C1S << shift), (req << shift));
-    }
-    else
-    {
-        shift = (ch - 5U) * 8U;
-        MODIFY_REG(DMACx->CSELR2, (DMAC_CSELR2_C5S << shift), (req << shift));
-    }
-}
-
-/**
  * @brief Read DMAC global ISR register.
  * @param[in] DMACx DMAC instance pointer.
  * @return ISR register value.
@@ -278,7 +158,7 @@ static inline uint32_t ll_dmac_get_isr(DMAC_TypeDef *DMACx)
  * @return Non-zero when TCIF is set.
  */
 static inline uint32_t ll_dmac_is_active_flag_tc(DMAC_TypeDef *DMACx,
-                                                  uint32_t ch)
+        uint32_t ch)
 {
     return READ_BIT(DMACx->ISR, (LL_DMAC_FLAG_TC << ll_dmac_channel_flag_shift(ch)));
 }
@@ -290,7 +170,7 @@ static inline uint32_t ll_dmac_is_active_flag_tc(DMAC_TypeDef *DMACx,
  * @return Non-zero when HTIF is set.
  */
 static inline uint32_t ll_dmac_is_active_flag_ht(DMAC_TypeDef *DMACx,
-                                                  uint32_t ch)
+        uint32_t ch)
 {
     return READ_BIT(DMACx->ISR, (LL_DMAC_FLAG_HT << ll_dmac_channel_flag_shift(ch)));
 }
@@ -302,7 +182,7 @@ static inline uint32_t ll_dmac_is_active_flag_ht(DMAC_TypeDef *DMACx,
  * @return Non-zero when TEIF is set.
  */
 static inline uint32_t ll_dmac_is_active_flag_te(DMAC_TypeDef *DMACx,
-                                                  uint32_t ch)
+        uint32_t ch)
 {
     return READ_BIT(DMACx->ISR, (LL_DMAC_FLAG_TE << ll_dmac_channel_flag_shift(ch)));
 }
@@ -314,7 +194,7 @@ static inline uint32_t ll_dmac_is_active_flag_te(DMAC_TypeDef *DMACx,
  * @return Non-zero when GIF is set.
  */
 static inline uint32_t ll_dmac_is_active_flag_gi(DMAC_TypeDef *DMACx,
-                                                  uint32_t ch)
+        uint32_t ch)
 {
     return READ_BIT(DMACx->ISR, (LL_DMAC_FLAG_GI << ll_dmac_channel_flag_shift(ch)));
 }
@@ -361,6 +241,270 @@ static inline void ll_dmac_clear_flag_gi(DMAC_TypeDef *DMACx, uint32_t ch)
 {
     WRITE_REG(DMACx->IFCR,
               (LL_DMAC_CLEAR_GI << ll_dmac_channel_flag_shift(ch)));
+}
+
+/**
+ * @brief Get DMAC channel register pointer.
+ * @param[in] DMACx DMAC instance pointer.
+ * @param[in] ch Channel index in range 1..8.
+ * @return Channel register pointer.
+ */
+static inline ll_dmac_channel_t *ll_dmac_get_channel(DMAC_TypeDef *DMACx,
+        uint32_t ch)
+{
+    if (ch < LL_DMAC_CHANNEL_MIN || ch > LL_DMAC_CHANNEL_MAX)
+    {
+        return (ll_dmac_channel_t *)0;
+    }
+
+    return ((ll_dmac_channel_t *)&DMACx->CCR1) + (ch - 1U);
+}
+
+/**
+ * @brief Configure channel CCR mode fields with one register update.
+ * @param[in] chx DMAC channel pointer.
+ * @param[in] cfg Pointer to channel configuration.
+ */
+static inline void ll_dmac_config_channel(ll_dmac_channel_t *chx,
+        const ll_dmac_channel_config_t *cfg)
+{
+    MODIFY_REG(chx->CCR, LL_DMAC_CCR_CONFIG_MASK,
+               cfg->mem2mem | cfg->priority | cfg->msize | cfg->psize |
+               cfg->minc | cfg->pinc | cfg->circ | cfg->dir | cfg->it_tc |
+               cfg->it_ht | cfg->it_te);
+}
+
+/**
+ * @brief Enable transfer-error interrupt of selected channel (CCR.TEIE).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_enable_it_te(ll_dmac_channel_t *chx)
+{
+    SET_BIT(chx->CCR, DMAC_CCR1_TEIE);
+}
+
+/**
+ * @brief Disable transfer-error interrupt of selected channel (CCR.TEIE = 0).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_disable_it_te(ll_dmac_channel_t *chx)
+{
+    CLEAR_BIT(chx->CCR, DMAC_CCR1_TEIE);
+}
+
+/**
+ * @brief Enable half-transfer interrupt of selected channel (CCR.HTIE).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_enable_it_ht(ll_dmac_channel_t *chx)
+{
+    SET_BIT(chx->CCR, DMAC_CCR1_HTIE);
+}
+
+/**
+ * @brief Disable half-transfer interrupt of selected channel (CCR.HTIE = 0).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_disable_it_ht(ll_dmac_channel_t *chx)
+{
+    CLEAR_BIT(chx->CCR, DMAC_CCR1_HTIE);
+}
+
+/**
+ * @brief Enable transfer-complete interrupt of selected channel (CCR.TCIE).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_enable_it_tc(ll_dmac_channel_t *chx)
+{
+    SET_BIT(chx->CCR, DMAC_CCR1_TCIE);
+}
+
+/**
+ * @brief Disable transfer-complete interrupt of selected channel (CCR.TCIE = 0).
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_disable_it_tc(ll_dmac_channel_t *chx)
+{
+    CLEAR_BIT(chx->CCR, DMAC_CCR1_TCIE);
+}
+
+/**
+ * @brief Enable DMAC channel.
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_enable_channel(ll_dmac_channel_t *chx)
+{
+    SET_BIT(chx->CCR, DMAC_CCR1_EN);
+}
+
+/**
+ * @brief Disable DMAC channel.
+ * @param[in] chx DMAC channel pointer.
+ */
+static inline void ll_dmac_disable_channel(ll_dmac_channel_t *chx)
+{
+    CLEAR_BIT(chx->CCR, DMAC_CCR1_EN);
+}
+
+/**
+ * @brief Check whether DMAC channel is enabled.
+ * @param[in] chx DMAC channel pointer.
+ * @return Non-zero when channel EN bit is set.
+ */
+static inline uint32_t ll_dmac_is_enabled_channel(ll_dmac_channel_t *chx)
+{
+    return READ_BIT(chx->CCR, DMAC_CCR1_EN);
+}
+
+/**
+ * @brief Set transfer unit count in CNDTR.NDT.
+ * @param[in] chx DMAC channel pointer.
+ * @param[in] ndt Transfer unit count in range 0..65535.
+ */
+static inline void ll_dmac_set_ndt(ll_dmac_channel_t *chx, uint32_t ndt)
+{
+    MODIFY_REG(chx->CNDTR, DMAC_CNDTR1_NDT, (ndt & DMAC_CNDTR1_NDT));
+}
+
+/**
+ * @brief Read the pending transfer count (CNDTR.NDT).
+ * @param[in] chx DMAC channel pointer.
+ * @return Remaining transfer unit count.
+ */
+static inline uint32_t ll_dmac_get_ndt(ll_dmac_channel_t *chx)
+{
+    return READ_REG(chx->CNDTR) & DMAC_CNDTR1_NDT;
+}
+
+/**
+ * @brief Read the peripheral address register.
+ * @param[in] chx DMAC channel pointer.
+ * @return Peripheral address.
+ */
+static inline uint32_t ll_dmac_get_cpar(ll_dmac_channel_t *chx)
+{
+    return READ_REG(chx->CPAR);
+}
+
+/**
+ * @brief Set CPAR register value.
+ * @param[in] chx DMAC channel pointer.
+ * @param[in] addr Address value written to CPAR.
+ */
+static inline void ll_dmac_set_cpar(ll_dmac_channel_t *chx, uint32_t addr)
+{
+    WRITE_REG(chx->CPAR, addr);
+}
+
+/**
+ * @brief Read the memory address register.
+ * @param[in] chx DMAC channel pointer.
+ * @return Memory address.
+ */
+static inline uint32_t ll_dmac_get_cm0ar(ll_dmac_channel_t *chx)
+{
+    return READ_REG(chx->CM0AR);
+}
+
+/**
+ * @brief Set CM0AR register value.
+ * @param[in] chx DMAC channel pointer.
+ * @param[in] addr Address value written to CM0AR.
+ */
+static inline void ll_dmac_set_cm0ar(ll_dmac_channel_t *chx, uint32_t addr)
+{
+    WRITE_REG(chx->CM0AR, addr);
+}
+
+/**
+ * @brief Set burst size in CBSR.BS.
+ * @param[in] chx DMAC channel pointer.
+ * @param[in] bs Burst size field value.
+ */
+static inline void ll_dmac_set_burst_size(ll_dmac_channel_t *chx, uint32_t bs)
+{
+    MODIFY_REG(chx->CBSR, DMAC_CBSR1_BS,
+               ((bs << DMAC_CBSR1_BS_Pos) & DMAC_CBSR1_BS_Msk));
+}
+
+/**
+ * @brief Read the request source id for a channel.
+ * @param[in] DMACx DMAC instance pointer.
+ * @param[in] ch Channel index in range 1..8.
+ * @return Request source id, or 0 for an invalid channel.
+ */
+static inline uint32_t ll_dmac_get_channel_request(DMAC_TypeDef *DMACx, uint32_t ch)
+{
+    uint32_t shift;
+    uint32_t reg;
+
+    if (ch < LL_DMAC_CHANNEL_MIN || ch > LL_DMAC_CHANNEL_MAX)
+    {
+        return 0U;
+    }
+
+    if (ch <= 4U)
+    {
+        shift = (ch - 1U) * 8U;
+        reg = READ_REG(DMACx->CSELR1);
+    }
+    else
+    {
+        shift = (ch - 5U) * 8U;
+        reg = READ_REG(DMACx->CSELR2);
+    }
+
+    return (reg >> shift) & LL_DMAC_REQUEST_ID_MASK;
+}
+
+/**
+ * @brief Select request source id for a channel.
+ * @param[in] DMACx DMAC instance pointer.
+ * @param[in] ch Channel index in range 1..8.
+ * @param[in] request_id Request source id in range 0..63.
+ */
+static inline void ll_dmac_set_channel_request(DMAC_TypeDef *DMACx, uint32_t ch,
+        uint32_t request_id)
+{
+    uint32_t shift;
+    uint32_t req;
+
+    if (ch < LL_DMAC_CHANNEL_MIN || ch > LL_DMAC_CHANNEL_MAX)
+    {
+        return;
+    }
+
+    req = (request_id & LL_DMAC_REQUEST_ID_MASK);
+    if (ch <= 4U)
+    {
+        shift = (ch - 1U) * 8U;
+        MODIFY_REG(DMACx->CSELR1, (DMAC_CSELR1_C1S << shift), (req << shift));
+    }
+    else
+    {
+        shift = (ch - 5U) * 8U;
+        MODIFY_REG(DMACx->CSELR2, (DMAC_CSELR2_C5S << shift), (req << shift));
+    }
+}
+
+/**
+ * @brief Set the DMAC debug selection (DBGSEL.DBGSEL).
+ * @param[in] DMACx DMAC instance pointer.
+ * @param[in] selection Debug selection value in range 0..15.
+ */
+static inline void ll_dmac_set_debug_selection(DMAC_TypeDef *DMACx, uint32_t selection)
+{
+    MODIFY_REG(DMACx->DBGSEL, DMAC_DBGSEL_DBGSEL, selection & DMAC_DBGSEL_DBGSEL);
+}
+
+/**
+ * @brief Read the DMAC debug selection (DBGSEL.DBGSEL).
+ * @param[in] DMACx DMAC instance pointer.
+ * @return Debug selection value.
+ */
+static inline uint32_t ll_dmac_get_debug_selection(DMAC_TypeDef *DMACx)
+{
+    return (READ_REG(DMACx->DBGSEL) & DMAC_DBGSEL_DBGSEL) >> DMAC_DBGSEL_DBGSEL_Pos;
 }
 
 #ifdef __cplusplus

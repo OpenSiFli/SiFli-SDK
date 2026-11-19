@@ -66,48 +66,6 @@ typedef struct
 } ll_crc_ctrl_config_t;
 
 /**
- * @brief Set CRC initial value register.
- * @param[in] CRCx CRC instance pointer.
- * @param[in] init Initial value.
- */
-static inline void ll_crc_set_init(CRC_TypeDef *CRCx, uint32_t init)
-{
-    WRITE_REG(CRCx->INIT, init);
-}
-
-/**
- * @brief Set CRC polynomial register.
- * @param[in] CRCx CRC instance pointer.
- * @param[in] poly Polynomial value.
- */
-static inline void ll_crc_set_poly(CRC_TypeDef *CRCx, uint32_t poly)
-{
-    WRITE_REG(CRCx->POL, poly);
-}
-
-/**
- * @brief Configure CRC control fields DATASIZE/POLYSIZE/REV_IN/REV_OUT.
- * @param[in] CRCx CRC instance pointer.
- * @param[in] cfg Pointer to control configuration.
- */
-static inline void ll_crc_config_ctrl(CRC_TypeDef *CRCx,
-                                      const ll_crc_ctrl_config_t *cfg)
-{
-    MODIFY_REG(CRCx->CR,
-               CRC_CR_DATASIZE | CRC_CR_POLYSIZE | CRC_CR_REV_IN | CRC_CR_REV_OUT,
-               cfg->data_size | cfg->poly_size | cfg->rev_in | cfg->rev_out);
-}
-
-/**
- * @brief Reset CRC calculation unit to INIT state.
- * @param[in] CRCx CRC instance pointer.
- */
-static inline void ll_crc_reset(CRC_TypeDef *CRCx)
-{
-    SET_BIT(CRCx->CR, CRC_CR_RESET);
-}
-
-/**
  * @brief Push one 8-bit data item.
  * @param[in] CRCx CRC instance pointer.
  * @param[in] data 8-bit payload.
@@ -162,6 +120,16 @@ static inline uint32_t ll_crc_read_result(CRC_TypeDef *CRCx)
 }
 
 /**
+ * @brief Check OVERFLOW flag.
+ * @param[in] CRCx CRC instance pointer.
+ * @return Non-zero when OVERFLOW is set.
+ */
+static inline uint32_t ll_crc_is_active_flag_overflow(CRC_TypeDef *CRCx)
+{
+    return READ_BIT(CRCx->SR, CRC_SR_OVERFLOW);
+}
+
+/**
  * @brief Check DONE flag.
  * @param[in] CRCx CRC instance pointer.
  * @return Non-zero when DONE is set.
@@ -172,13 +140,54 @@ static inline uint32_t ll_crc_is_active_flag_done(CRC_TypeDef *CRCx)
 }
 
 /**
- * @brief Check OVERFLOW flag.
+ * @brief Configure CRC control fields DATASIZE/POLYSIZE/REV_IN/REV_OUT.
  * @param[in] CRCx CRC instance pointer.
- * @return Non-zero when OVERFLOW is set.
+ * @param[in] cfg Pointer to control configuration.
  */
-static inline uint32_t ll_crc_is_active_flag_overflow(CRC_TypeDef *CRCx)
+static inline void ll_crc_config_ctrl(CRC_TypeDef *CRCx,
+                                      const ll_crc_ctrl_config_t *cfg)
 {
-    return READ_BIT(CRCx->SR, CRC_SR_OVERFLOW);
+    MODIFY_REG(CRCx->CR,
+               CRC_CR_DATASIZE | CRC_CR_POLYSIZE | CRC_CR_REV_IN | CRC_CR_REV_OUT,
+               cfg->data_size | cfg->poly_size | cfg->rev_in | cfg->rev_out);
+}
+
+/**
+ * @brief Reset CRC calculation unit to INIT state.
+ * @param[in] CRCx CRC instance pointer.
+ */
+static inline void ll_crc_reset(CRC_TypeDef *CRCx)
+{
+    SET_BIT(CRCx->CR, CRC_CR_RESET);
+}
+
+/**
+ * @brief Deassert the CRC RESET bit (CR.RESET = 0).
+ * @param[in] CRCx CRC instance pointer.
+ */
+static inline void ll_crc_release_reset(CRC_TypeDef *CRCx)
+{
+    CLEAR_BIT(CRCx->CR, CRC_CR_RESET);
+}
+
+/**
+ * @brief Set CRC initial value register.
+ * @param[in] CRCx CRC instance pointer.
+ * @param[in] init Initial value.
+ */
+static inline void ll_crc_set_init(CRC_TypeDef *CRCx, uint32_t init)
+{
+    WRITE_REG(CRCx->INIT, init);
+}
+
+/**
+ * @brief Set CRC polynomial register.
+ * @param[in] CRCx CRC instance pointer.
+ * @param[in] poly Polynomial value.
+ */
+static inline void ll_crc_set_poly(CRC_TypeDef *CRCx, uint32_t poly)
+{
+    WRITE_REG(CRCx->POL, poly);
 }
 
 #ifdef __cplusplus
