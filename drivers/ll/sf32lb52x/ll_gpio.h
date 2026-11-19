@@ -33,17 +33,6 @@ extern "C"
 #define LL_GPIO_IRQ_POL_BOTH 3U
 /** @} */
 
-/** @defgroup LL_GPIO_BANK LL GPIO Bank Access */
-/** @{ */
-/* UM defines GPIO1 bank1 base at GPIO1_BASE + 0x80. Do not derive this offset
- * from sizeof(ll_gpio_bank_t), because the register map contains a reserved gap
- * between bank0 and bank1. */
-#define LL_GPIO_BANK_SIZE (0x80U)
-#define LL_GPIO1_BANK0 ((ll_gpio_bank_t *)GPIO1_BASE)
-#define LL_GPIO1_BANK1 ((ll_gpio_bank_t *)(GPIO1_BASE + LL_GPIO_BANK_SIZE))
-#define LL_GPIO2_BANK0 ((ll_gpio_bank_t *)GPIO2_BASE)
-/** @} */
-
 /**
  * @brief Single GPIO bank register layout.
  */
@@ -69,8 +58,10 @@ typedef struct
     __IO uint32_t IPLSR; /**< Low-level or falling-edge set register. */
     __IO uint32_t IPLCR; /**< Low-level or falling-edge clear register. */
     __IO uint32_t ISR;   /**< Interrupt status register (write 1 to clear). */
-    __IO uint32_t
-        RSVD[4];         /**< Reserved space for undocumented EXT registers. */
+    __IO uint32_t IER_EXT;  /**< Extended interrupt enable register. */
+    __IO uint32_t IESR_EXT; /**< Extended interrupt enable set register. */
+    __IO uint32_t IECR_EXT; /**< Extended interrupt enable clear register. */
+    __IO uint32_t ISR_EXT;  /**< Extended interrupt status register. */
     __IO uint32_t OEMR;  /**< Output mode register. */
     __IO uint32_t OEMSR; /**< Output mode set register. */
     __IO uint32_t OEMCR; /**< Output mode clear register. */
@@ -88,99 +79,25 @@ typedef struct
 } ll_gpio_irq_config_t;
 
 /**
- * @brief Get PA bank pointer and pin mask from absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- * @param[out] pin_mask Output bit mask for the selected pin.
- * @return PA bank pointer containing the pin.
+ * @brief Read input level of the full bank.
+ * @param[in] bank GPIO bank pointer.
+ * @return 32-bit input level value.
  */
-static inline ll_gpio_bank_t *ll_gpio_pa_resolve_bank(uint32_t pin,
-                                                      uint32_t *pin_mask)
+static inline uint32_t ll_gpio_bank_read_input_port(ll_gpio_bank_t *bank)
 {
-    *pin_mask = 1UL << (pin & 31U);
-    if (pin < 32U)
-    {
-        return LL_GPIO1_BANK0;
-    }
-
-    return LL_GPIO1_BANK1;
+    return bank->DIR;
 }
 
 /**
- * @brief Get PB bank pointer and pin mask from absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- * @param[out] pin_mask Output bit mask for the selected pin.
- * @return PB bank pointer containing the pin.
- */
-static inline ll_gpio_bank_t *ll_gpio_pb_resolve_bank(uint32_t pin,
-                                                      uint32_t *pin_mask)
-{
-    *pin_mask = 1UL << (pin & 31U);
-    return LL_GPIO2_BANK0;
-}
-
-/**
- * @brief Convert pin index to bit mask within a bank.
- * @param[in] pin Pin index in the bank.
- * @return Pin bit mask.
- */
-static inline uint32_t ll_gpio_pin_to_mask(uint32_t pin)
-{
-    return (1UL << (pin & 31U));
-}
-
-/**
- * @brief Enable output driver for selected pins.
+ * @brief Query input level for selected pins.
  * @param[in] bank GPIO bank pointer.
  * @param[in] pin_mask Bit mask of target pins.
+ * @return Non-zero for pins at high level.
  */
-static inline void ll_gpio_bank_enable_output(ll_gpio_bank_t *bank,
-                                              uint32_t pin_mask)
+static inline uint32_t ll_gpio_bank_is_input_high(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
 {
-    bank->DOESR = pin_mask;
-}
-
-/**
- * @brief Disable output driver for selected pins.
- * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of target pins.
- */
-static inline void ll_gpio_bank_disable_output(ll_gpio_bank_t *bank,
-                                               uint32_t pin_mask)
-{
-    bank->DOECR = pin_mask;
-}
-
-/**
- * @brief Query output enable status for selected pins.
- * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of target pins.
- * @return Non-zero for enabled pins.
- */
-static inline uint32_t ll_gpio_bank_is_output_enabled(ll_gpio_bank_t *bank,
-                                                      uint32_t pin_mask)
-{
-    return (bank->DOER & pin_mask);
-}
-
-/**
- * @brief Drive selected pins to high level.
- * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of target pins.
- */
-static inline void ll_gpio_bank_set_high(ll_gpio_bank_t *bank,
-                                         uint32_t pin_mask)
-{
-    bank->DOSR = pin_mask;
-}
-
-/**
- * @brief Drive selected pins to low level.
- * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of target pins.
- */
-static inline void ll_gpio_bank_set_low(ll_gpio_bank_t *bank, uint32_t pin_mask)
-{
-    bank->DOCR = pin_mask;
+    return (bank->DIR & pin_mask);
 }
 
 /**
@@ -213,25 +130,70 @@ static inline uint32_t ll_gpio_bank_read_output_port(ll_gpio_bank_t *bank)
 }
 
 /**
- * @brief Read input level of the full bank.
+ * @brief Drive selected pins to high level.
  * @param[in] bank GPIO bank pointer.
- * @return 32-bit input level value.
+ * @param[in] pin_mask Bit mask of target pins.
  */
-static inline uint32_t ll_gpio_bank_read_input_port(ll_gpio_bank_t *bank)
+static inline void ll_gpio_bank_set_high(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
 {
-    return bank->DIR;
+    bank->DOSR = pin_mask;
 }
 
 /**
- * @brief Query input level for selected pins.
+ * @brief Drive selected pins to low level.
  * @param[in] bank GPIO bank pointer.
  * @param[in] pin_mask Bit mask of target pins.
- * @return Non-zero for pins at high level.
  */
-static inline uint32_t ll_gpio_bank_is_input_high(ll_gpio_bank_t *bank,
-                                                  uint32_t pin_mask)
+static inline void ll_gpio_bank_set_low(ll_gpio_bank_t *bank, uint32_t pin_mask)
 {
-    return (bank->DIR & pin_mask);
+    bank->DOCR = pin_mask;
+}
+
+/**
+ * @brief Query output enable status for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ * @return Non-zero for enabled pins.
+ */
+static inline uint32_t ll_gpio_bank_is_output_enabled(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    return (bank->DOER & pin_mask);
+}
+
+/**
+ * @brief Enable output driver for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_enable_output(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->DOESR = pin_mask;
+}
+
+/**
+ * @brief Disable output driver for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_disable_output(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->DOECR = pin_mask;
+}
+
+/**
+ * @brief Query interrupt enable state for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ * @return Non-zero for interrupt-enabled pins.
+ */
+static inline uint32_t ll_gpio_bank_is_irq_enabled(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    return (bank->IER & pin_mask);
 }
 
 /**
@@ -240,7 +202,7 @@ static inline uint32_t ll_gpio_bank_is_input_high(ll_gpio_bank_t *bank,
  * @param[in] pin_mask Bit mask of target pins.
  */
 static inline void ll_gpio_bank_enable_irq(ll_gpio_bank_t *bank,
-                                           uint32_t pin_mask)
+        uint32_t pin_mask)
 {
     bank->IESR = pin_mask;
 }
@@ -251,42 +213,29 @@ static inline void ll_gpio_bank_enable_irq(ll_gpio_bank_t *bank,
  * @param[in] pin_mask Bit mask of target pins.
  */
 static inline void ll_gpio_bank_disable_irq(ll_gpio_bank_t *bank,
-                                            uint32_t pin_mask)
+        uint32_t pin_mask)
 {
     bank->IECR = pin_mask;
 }
 
 /**
- * @brief Query interrupt enable state for selected pins.
+ * @brief Read the interrupt type register (ITR) of a bank.
  * @param[in] bank GPIO bank pointer.
+ * @return Interrupt type bit mask (1 = edge-sensitive, 0 = level-sensitive).
+ */
+static inline uint32_t ll_gpio_bank_get_irq_type(ll_gpio_bank_t *bank)
+{
+    return READ_REG(bank->ITR);
+}
+
+/**
+ * @brief Write the interrupt type register (ITR) of a bank.
+ * @param[in] bank     GPIO bank pointer.
  * @param[in] pin_mask Bit mask of target pins.
- * @return Non-zero for interrupt-enabled pins.
  */
-static inline uint32_t ll_gpio_bank_is_irq_enabled(ll_gpio_bank_t *bank,
-                                                   uint32_t pin_mask)
+static inline void ll_gpio_bank_set_irq_type(ll_gpio_bank_t *bank, uint32_t pin_mask)
 {
-    return (bank->IER & pin_mask);
-}
-
-/**
- * @brief Read interrupt pending flags.
- * @param[in] bank GPIO bank pointer.
- * @return 32-bit pending bitmap.
- */
-static inline uint32_t ll_gpio_bank_get_irq_pending(ll_gpio_bank_t *bank)
-{
-    return bank->ISR;
-}
-
-/**
- * @brief Clear interrupt pending flags.
- * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of pending flags to clear.
- */
-static inline void ll_gpio_bank_clear_irq_pending(ll_gpio_bank_t *bank,
-                                                  uint32_t pin_mask)
-{
-    bank->ISR = pin_mask;
+    WRITE_REG(bank->ITR, pin_mask);
 }
 
 /**
@@ -328,25 +277,121 @@ ll_gpio_bank_config_irq_trigger(ll_gpio_bank_t *bank, uint32_t pin_mask,
 }
 
 /**
- * @brief Set output mode bit for selected pins.
+ * @brief Read the high-level/rising-edge enable register (IPHR) of a bank.
  * @param[in] bank GPIO bank pointer.
- * @param[in] pin_mask Bit mask of target pins.
+ * @return High-level/rising-edge enable bit mask.
  */
-static inline void ll_gpio_bank_set_output_mode(ll_gpio_bank_t *bank,
-                                                uint32_t pin_mask)
+static inline uint32_t ll_gpio_bank_get_irq_high_polarity(ll_gpio_bank_t *bank)
 {
-    bank->OEMSR = pin_mask;
+    return READ_REG(bank->IPHR);
 }
 
 /**
- * @brief Clear output mode bit for selected pins.
+ * @brief Write the high-level/rising-edge enable register (IPHR) of a bank.
+ * @param[in] bank     GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_set_irq_high_polarity(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    WRITE_REG(bank->IPHR, pin_mask);
+}
+
+/**
+ * @brief Read the low-level/falling-edge enable register (IPLR) of a bank.
+ * @param[in] bank GPIO bank pointer.
+ * @return Low-level/falling-edge enable bit mask.
+ */
+static inline uint32_t ll_gpio_bank_get_irq_low_polarity(ll_gpio_bank_t *bank)
+{
+    return READ_REG(bank->IPLR);
+}
+
+/**
+ * @brief Write the low-level/falling-edge enable register (IPLR) of a bank.
+ * @param[in] bank     GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_set_irq_low_polarity(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    WRITE_REG(bank->IPLR, pin_mask);
+}
+
+/**
+ * @brief Read interrupt pending flags.
+ * @param[in] bank GPIO bank pointer.
+ * @return 32-bit pending bitmap.
+ */
+static inline uint32_t ll_gpio_bank_get_irq_pending(ll_gpio_bank_t *bank)
+{
+    return bank->ISR;
+}
+
+/**
+ * @brief Clear interrupt pending flags.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of pending flags to clear.
+ */
+static inline void ll_gpio_bank_clear_irq_pending(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->ISR = pin_mask;
+}
+
+/**
+ * @brief Query extended interrupt enable state for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ * @return Non-zero for pins with extended interrupt enabled.
+ */
+static inline uint32_t ll_gpio_bank_is_ext_irq_enabled(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    return bank->IER_EXT & pin_mask;
+}
+
+/**
+ * @brief Enable the extended GPIO interrupt path for selected pins.
  * @param[in] bank GPIO bank pointer.
  * @param[in] pin_mask Bit mask of target pins.
  */
-static inline void ll_gpio_bank_clear_output_mode(ll_gpio_bank_t *bank,
-                                                  uint32_t pin_mask)
+static inline void ll_gpio_bank_enable_ext_irq(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
 {
-    bank->OEMCR = pin_mask;
+    bank->IESR_EXT = pin_mask;
+}
+
+/**
+ * @brief Disable the extended GPIO interrupt path for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_disable_ext_irq(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->IECR_EXT = pin_mask;
+}
+
+/**
+ * @brief Read extended interrupt pending flags.
+ * @param[in] bank GPIO bank pointer.
+ * @return Extended interrupt pending bitmap.
+ */
+static inline uint32_t ll_gpio_bank_get_ext_irq_pending(ll_gpio_bank_t *bank)
+{
+    return bank->ISR_EXT;
+}
+
+/**
+ * @brief Clear extended interrupt pending flags.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of pending flags to clear.
+ */
+static inline void ll_gpio_bank_clear_ext_irq_pending(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->ISR_EXT = pin_mask;
 }
 
 /**
@@ -360,12 +405,44 @@ static inline uint32_t ll_gpio_bank_get_output_mode(ll_gpio_bank_t *bank)
 }
 
 /**
+ * @brief Set output mode bit for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_set_output_mode(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->OEMSR = pin_mask;
+}
+
+/**
+ * @brief Clear output mode bit for selected pins.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin_mask Bit mask of target pins.
+ */
+static inline void ll_gpio_bank_clear_output_mode(ll_gpio_bank_t *bank,
+        uint32_t pin_mask)
+{
+    bank->OEMCR = pin_mask;
+}
+
+/**
+ * @brief Convert pin index to bit mask within a bank.
+ * @param[in] pin Pin index in the bank.
+ * @return Pin bit mask.
+ */
+static inline uint32_t ll_gpio_pin_to_mask(uint32_t pin)
+{
+    return (1UL << (pin & 31U));
+}
+
+/**
  * @brief Enable output driver by pin index.
  * @param[in] bank GPIO bank pointer.
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_enable_output_pin(ll_gpio_bank_t *bank,
-                                                  uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_enable_output(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -376,7 +453,7 @@ static inline void ll_gpio_bank_enable_output_pin(ll_gpio_bank_t *bank,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_disable_output_pin(ll_gpio_bank_t *bank,
-                                                   uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_disable_output(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -388,7 +465,7 @@ static inline void ll_gpio_bank_disable_output_pin(ll_gpio_bank_t *bank,
  * @return Non-zero when output is enabled.
  */
 static inline uint32_t ll_gpio_bank_is_output_enabled_pin(ll_gpio_bank_t *bank,
-                                                          uint32_t pin)
+        uint32_t pin)
 {
     return ll_gpio_bank_is_output_enabled(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -431,7 +508,7 @@ static inline void ll_gpio_bank_toggle_pin(ll_gpio_bank_t *bank, uint32_t pin)
  * @return Non-zero when input level is high.
  */
 static inline uint32_t ll_gpio_bank_is_input_high_pin(ll_gpio_bank_t *bank,
-                                                      uint32_t pin)
+        uint32_t pin)
 {
     return ll_gpio_bank_is_input_high(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -442,7 +519,7 @@ static inline uint32_t ll_gpio_bank_is_input_high_pin(ll_gpio_bank_t *bank,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_enable_irq_pin(ll_gpio_bank_t *bank,
-                                               uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_enable_irq(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -453,7 +530,7 @@ static inline void ll_gpio_bank_enable_irq_pin(ll_gpio_bank_t *bank,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_disable_irq_pin(ll_gpio_bank_t *bank,
-                                                uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_disable_irq(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -465,7 +542,7 @@ static inline void ll_gpio_bank_disable_irq_pin(ll_gpio_bank_t *bank,
  * @return Non-zero when interrupt is enabled.
  */
 static inline uint32_t ll_gpio_bank_is_irq_enabled_pin(ll_gpio_bank_t *bank,
-                                                       uint32_t pin)
+        uint32_t pin)
 {
     return ll_gpio_bank_is_irq_enabled(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -477,7 +554,7 @@ static inline uint32_t ll_gpio_bank_is_irq_enabled_pin(ll_gpio_bank_t *bank,
  * @return Non-zero when interrupt is pending.
  */
 static inline uint32_t ll_gpio_bank_is_irq_pending_pin(ll_gpio_bank_t *bank,
-                                                       uint32_t pin)
+        uint32_t pin)
 {
     return (ll_gpio_bank_get_irq_pending(bank) & ll_gpio_pin_to_mask(pin));
 }
@@ -488,9 +565,66 @@ static inline uint32_t ll_gpio_bank_is_irq_pending_pin(ll_gpio_bank_t *bank,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_clear_irq_pending_pin(ll_gpio_bank_t *bank,
-                                                      uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_clear_irq_pending(bank, ll_gpio_pin_to_mask(pin));
+}
+
+/**
+ * @brief Enable extended interrupt by pin index.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin Pin index in the bank.
+ */
+static inline void ll_gpio_bank_enable_ext_irq_pin(ll_gpio_bank_t *bank,
+        uint32_t pin)
+{
+    ll_gpio_bank_enable_ext_irq(bank, ll_gpio_pin_to_mask(pin));
+}
+
+/**
+ * @brief Disable extended interrupt by pin index.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin Pin index in the bank.
+ */
+static inline void ll_gpio_bank_disable_ext_irq_pin(ll_gpio_bank_t *bank,
+        uint32_t pin)
+{
+    ll_gpio_bank_disable_ext_irq(bank, ll_gpio_pin_to_mask(pin));
+}
+
+/**
+ * @brief Query extended interrupt enable status by pin index.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin Pin index in the bank.
+ * @return Non-zero when extended interrupt is enabled.
+ */
+static inline uint32_t ll_gpio_bank_is_ext_irq_enabled_pin(ll_gpio_bank_t *bank,
+        uint32_t pin)
+{
+    return ll_gpio_bank_is_ext_irq_enabled(bank, ll_gpio_pin_to_mask(pin));
+}
+
+/**
+ * @brief Query extended interrupt pending status by pin index.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin Pin index in the bank.
+ * @return Non-zero when extended interrupt is pending.
+ */
+static inline uint32_t ll_gpio_bank_is_ext_irq_pending_pin(ll_gpio_bank_t *bank,
+        uint32_t pin)
+{
+    return ll_gpio_bank_get_ext_irq_pending(bank) & ll_gpio_pin_to_mask(pin);
+}
+
+/**
+ * @brief Clear extended interrupt pending status by pin index.
+ * @param[in] bank GPIO bank pointer.
+ * @param[in] pin Pin index in the bank.
+ */
+static inline void ll_gpio_bank_clear_ext_irq_pending_pin(ll_gpio_bank_t *bank,
+        uint32_t pin)
+{
+    ll_gpio_bank_clear_ext_irq_pending(bank, ll_gpio_pin_to_mask(pin));
 }
 
 /**
@@ -512,7 +646,7 @@ ll_gpio_bank_config_irq_trigger_pin(ll_gpio_bank_t *bank, uint32_t pin,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_set_output_mode_pin(ll_gpio_bank_t *bank,
-                                                    uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_set_output_mode(bank, ll_gpio_pin_to_mask(pin));
 }
@@ -523,266 +657,11 @@ static inline void ll_gpio_bank_set_output_mode_pin(ll_gpio_bank_t *bank,
  * @param[in] pin Pin index in the bank.
  */
 static inline void ll_gpio_bank_clear_output_mode_pin(ll_gpio_bank_t *bank,
-                                                      uint32_t pin)
+        uint32_t pin)
 {
     ll_gpio_bank_clear_output_mode(bank, ll_gpio_pin_to_mask(pin));
 }
 
-/**
- * @brief Enable PA output driver by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_enable_output(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_enable_output(bank, pin_mask);
-}
-
-/**
- * @brief Disable PA output driver by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_disable_output(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_disable_output(bank, pin_mask);
-}
-
-/**
- * @brief Drive PA pin to high level by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_set_high(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_set_high(bank, pin_mask);
-}
-
-/**
- * @brief Drive PA pin to low level by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_set_low(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_set_low(bank, pin_mask);
-}
-
-/**
- * @brief Toggle PA pin by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- * @note This function reads DOR and writes DOSR/DOCR separately. Concurrent
- * updates to the same pins can still race.
- */
-static inline void ll_gpio_pa_toggle(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_toggle(bank, pin_mask);
-}
-
-/**
- * @brief Query PA input level by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- * @return Non-zero when input level is high.
- */
-static inline uint32_t ll_gpio_pa_is_input_high(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    return ll_gpio_bank_is_input_high(bank, pin_mask);
-}
-
-/**
- * @brief Enable PA interrupt by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_enable_irq(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_enable_irq(bank, pin_mask);
-}
-
-/**
- * @brief Disable PA interrupt by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_disable_irq(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_disable_irq(bank, pin_mask);
-}
-
-/**
- * @brief Query PA interrupt pending status by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- * @return Non-zero when interrupt is pending.
- */
-static inline uint32_t ll_gpio_pa_is_irq_pending(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    return (ll_gpio_bank_get_irq_pending(bank) & pin_mask);
-}
-
-/**
- * @brief Clear PA interrupt pending status by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- */
-static inline void ll_gpio_pa_clear_irq_pending(uint32_t pin)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_clear_irq_pending(bank, pin_mask);
-}
-
-/**
- * @brief Configure PA interrupt trigger by absolute pin index.
- * @param[in] pin Absolute PA pin index (PA00 as 0).
- * @param[in] cfg Pointer to IRQ trigger configuration.
- */
-static inline void
-ll_gpio_pa_config_irq_trigger(uint32_t pin, const ll_gpio_irq_config_t *cfg)
-{
-    ll_gpio_bank_t *bank;
-    uint32_t pin_mask;
-
-    bank = ll_gpio_pa_resolve_bank(pin, &pin_mask);
-    ll_gpio_bank_config_irq_trigger(bank, pin_mask, cfg);
-}
-
-/**
- * @brief Enable PB output driver by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_enable_output(uint32_t pin)
-{
-    ll_gpio_bank_enable_output(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Disable PB output driver by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_disable_output(uint32_t pin)
-{
-    ll_gpio_bank_disable_output(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Drive PB pin to high level by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_set_high(uint32_t pin)
-{
-    ll_gpio_bank_set_high(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Drive PB pin to low level by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_set_low(uint32_t pin)
-{
-    ll_gpio_bank_set_low(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Toggle PB pin by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- * @note This function reads DOR and writes DOSR/DOCR separately. Concurrent
- * updates to the same pins can still race.
- */
-static inline void ll_gpio_pb_toggle(uint32_t pin)
-{
-    ll_gpio_bank_toggle(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Query PB input level by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- * @return Non-zero when input level is high.
- */
-static inline uint32_t ll_gpio_pb_is_input_high(uint32_t pin)
-{
-    return ll_gpio_bank_is_input_high(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Enable PB interrupt by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_enable_irq(uint32_t pin)
-{
-    ll_gpio_bank_enable_irq(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Disable PB interrupt by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_disable_irq(uint32_t pin)
-{
-    ll_gpio_bank_disable_irq(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Query PB interrupt pending status by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- * @return Non-zero when interrupt is pending.
- */
-static inline uint32_t ll_gpio_pb_is_irq_pending(uint32_t pin)
-{
-    return (ll_gpio_bank_get_irq_pending(LL_GPIO2_BANK0) &
-            ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Clear PB interrupt pending status by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- */
-static inline void ll_gpio_pb_clear_irq_pending(uint32_t pin)
-{
-    ll_gpio_bank_clear_irq_pending(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin));
-}
-
-/**
- * @brief Configure PB interrupt trigger by absolute pin index.
- * @param[in] pin Absolute PB pin index (PB00 as 0).
- * @param[in] cfg Pointer to IRQ trigger configuration.
- */
-static inline void
-ll_gpio_pb_config_irq_trigger(uint32_t pin, const ll_gpio_irq_config_t *cfg)
-{
-    ll_gpio_bank_config_irq_trigger(LL_GPIO2_BANK0, ll_gpio_pin_to_mask(pin),
-                                    cfg);
-}
 
 #ifdef __cplusplus
 }

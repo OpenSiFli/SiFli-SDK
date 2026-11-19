@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 #include "ll_pinmux.h"
-#include "ll_gpio.h"
+#include "ll_gpio_ex.h"
 
 #ifndef SF32LB52X
     #error "This example currently supports SF32LB52x only."
@@ -27,11 +27,13 @@ static volatile uint32_t g_irq_count;
  */
 static void ll_gpio_example_board_init(void)
 {
-    ll_gpio_irq_config_t irq_cfg = {
+    ll_gpio_irq_config_t irq_cfg =
+    {
         .type = LL_GPIO_IRQ_TYPE_EDGE,
         .polarity = LL_GPIO_IRQ_POL_BOTH,
     };
-    ll_pinmux_pad_config_t out_pad_cfg = {
+    ll_pinmux_pad_config_t out_pad_cfg =
+    {
         .fsel = 0U,
         .pull = LL_PINMUX_PULL_UP,
         .input_en = LL_PINMUX_INPUT_ENABLE,
@@ -39,7 +41,8 @@ static void ll_gpio_example_board_init(void)
         .slew = LL_PINMUX_SLEW_FAST,
         .drive = LL_PINMUX_DRIVE_1,
     };
-    ll_pinmux_pad_config_t in_pad_cfg = {
+    ll_pinmux_pad_config_t in_pad_cfg =
+    {
         .fsel = 0U,
         .pull = LL_PINMUX_PULL_DOWN,
         .input_en = LL_PINMUX_INPUT_ENABLE,
