@@ -16,6 +16,7 @@ else:
     objs = objs + SConscript(os.path.join('pmic_controller', 'SConscript'))
     objs = objs + SConscript(os.path.join('nand', 'SConscript'))
     objs = objs + SConscript(os.path.join('nor', 'SConscript'))
+    objs = objs + SConscript(os.path.join('ioexpander', 'SConscript'))
 
 board_name = GetBoardName()
 if board_name:
