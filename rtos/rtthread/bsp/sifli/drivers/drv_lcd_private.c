@@ -173,6 +173,39 @@ HAL_LCDC_PixelFormat rt_lcd_format_to_hal_lcd_format(uint16_t rt_color_format)
 
 }
 
+uint16_t hal_lcd_format_to_rt_lcd_format(HAL_LCDC_PixelFormat hal_color_format)
+{
+    switch (hal_color_format)
+    {
+    case LCDC_PIXEL_FORMAT_MONO:
+        return RTGRAPHIC_PIXEL_FORMAT_MONO;
+
+    case LCDC_PIXEL_FORMAT_RGB332:
+        return RTGRAPHIC_PIXEL_FORMAT_RGB332;
+    case LCDC_PIXEL_FORMAT_RGB565:
+        return RTGRAPHIC_PIXEL_FORMAT_RGB565;
+    case LCDC_PIXEL_FORMAT_RGB666:
+        return RTGRAPHIC_PIXEL_FORMAT_RGB666;
+    case LCDC_PIXEL_FORMAT_RGB888:
+        return RTGRAPHIC_PIXEL_FORMAT_RGB888;
+    case LCDC_PIXEL_FORMAT_ARGB888:
+        return RTGRAPHIC_PIXEL_FORMAT_ARGB888;
+    case LCDC_PIXEL_FORMAT_ARGB565:
+        return RTGRAPHIC_PIXEL_FORMAT_ARGB565;
+
+    case LCDC_PIXEL_FORMAT_A4:
+        return RTGRAPHIC_PIXEL_FORMAT_GRAY4;
+    case LCDC_PIXEL_FORMAT_A8:
+        return RTGRAPHIC_PIXEL_FORMAT_A8;
+    case LCDC_PIXEL_FORMAT_L8:
+        return RTGRAPHIC_PIXEL_FORMAT_L8;
+
+    default:
+        RT_ASSERT(0); //unknow format
+        return 0;
+    }
+
+}
 
 
 rt_err_t rt_lcd_layer_control(LCD_DrvTypeDef *p_drv_lcd, int cmd, void *args)
