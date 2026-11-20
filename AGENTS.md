@@ -234,6 +234,11 @@ if it is, use the Claude Code column; if not, inline the role file.
    contract (header API, CLI, config schema, on-flash/protocol format).
 4. Every non-trivial diff (code or docs) gets a **fresh Reviewer** before you report completion; a
    re-check after a fix goes back to the same Reviewer (continue that agent, do not start a new one).
+   Every other diff skips the fresh agent, not the review: check it against Step 1–Step 2 and the
+   matching step in the current context before committing. The exception is a file loaded into a
+   later agent session — instructions, role or skill (`AGENTS.md`, `.claude/CLAUDE.md`, `.agents/`,
+   `.claude/agents/`, `skills/`, `.dsh/skills/`): one line there binds every session after it, so
+   it gets a fresh Reviewer whatever its size.
 5. Add Tester when tests can actually run **or when the change needs test design** (failure modes,
    seams, what cannot be executed). With no runnable environment the Tester still delivers the test
    plan and an explicit unverified list. Add Security Reviewer when a security trigger is hit; add
@@ -300,7 +305,8 @@ the diff in isolation.
 - Diff contains only task-related changes (no drive-by formatting/renames).
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
 - Process evidence: the dispatch path taken (`trivial` / `research → design → dev → review`),
-  the accepted design document path (N/A for a `trivial:` task), and the Reviewer verdict.
+  the accepted design document path (N/A for a `trivial:` task), and the Reviewer verdict — or,
+  for a self-checked trivial diff, the check outcome and the step it was checked against.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 
 ### Before each commit (Orchestrator)
@@ -321,8 +327,9 @@ easy to skip. Do them in this order:
    do not commit a diff the verdict predates.
 4. Stage explicit paths; `git status` must show only task files (no drive-by
    submodule or untracked changes).
-5. Record the executed test/board evidence and the Reviewer's verdict in the
-   report or the commit body; "not executed" stays "not executed".
+5. Record the executed test/board evidence and the Reviewer's verdict — or the
+   self-check outcome for a trivial diff — in the report or the commit body;
+   "not executed" stays "not executed".
 
 ### If you are a subagent
 
