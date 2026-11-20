@@ -213,9 +213,24 @@ if it is, use the Claude Code column; if not, inline the role file.
 
 ### Dispatch rules
 
-1. **Trivial tasks: do them yourself.** Single file, ≤ ~20 lines, no public API/config/format change.
+0. **Classify before writing (hard gate).** Before the first write of any kind (a `Write`/`Edit`
+   tool, shell redirection, or a script), state the classification in the message to the user
+   you are about to send: `trivial: <why>` or `design: docs/design/<topic>.md`. Any one of these
+   makes a task non-trivial: a new file, spanning ≥3 modules or crossing layers, a public
+   header/CLI/config/format change, or a new example/test asset. For a `design:` task, until
+   that design document exists and the user has accepted it, edit nothing in the repository
+   except `docs/design/<topic>.md`. A `trivial:` task is exempt from this gate; rule 1 still
+   defines what counts as trivial. "Accepted" means the user explicitly confirmed the design;
+   the Orchestrator cannot accept its own design. Detailed constraints from the user narrow the
+   design space; they do not waive this gate. If the scope
+   grows mid-task (new layer, new file, new test asset, new public interface), re-run this step
+   before continuing. Sketches and draft code belong outside the repository worktree (e.g. the
+   session's temporary directory); a file written into the repository is implementation,
+   whatever it is called.
+1. **Trivial tasks: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
+   API/config/format change.
 2. Research before implementation when the codebase is unfamiliar or the root cause is unclear.
-3. Design first (Architect) when the change spans ≥3 modules, crosses layers, or changes a public
+3. Design first (Architect) when the change spans ≥3 modules or crosses layers, or changes a public
    contract (header API, CLI, config schema, on-flash/protocol format).
 4. Every non-trivial diff (code or docs) gets a **fresh Reviewer** before you report completion; a
    re-check after a fix goes back to the same Reviewer (continue that agent, do not start a new one).
@@ -235,8 +250,10 @@ if it is, use the Claude Code column; if not, inline the role file.
    conversation unless it inherits context: `## 任务` (goal + verifiable done criteria), `## 上下文`
    (paths, prior findings, board, constraints), `## 验收` (how you will check), `## 边界` (do not
    delegate; stop and report when out of scope). When a Tester has run, include its level/seam table
-   and reverse-verification evidence in `## 上下文`; the Reviewer sees only the diff and cannot tell
-   "not done" from "not written".
+   and reverse-verification evidence in `## 上下文`; otherwise the Reviewer sees only the diff and
+   cannot tell "not done" from "not written". When an Architect has run, include the accepted
+   design document path in `## 上下文`; a Reviewer of a public-contract change needs it to check the
+   implementation against the design.
 2. Deliver it the way the harness expects:
    - Roles auto-registered (Claude Code): `Agent(subagent_type="<role>", prompt=<task prompt>)`.
    - Roles not registered (DSH): prepend the role file body verbatim (without the YAML frontmatter)
@@ -273,11 +290,17 @@ persistence changes still need a human decision. The Security Reviewer maps its 
 same scale: Critical/High → 严重 (`block`), Medium → 问题 (`comment`), Low → 建议, unproven paths →
 待确认.
 
+For a public-contract change, give the Reviewer the accepted design document and the acceptance
+criteria together with the diff; the Reviewer checks the implementation against the design, not
+the diff in isolation.
+
 ### Acceptance before reporting
 
 - Build/test actually executed, with command and result recorded; unverified cases listed with reasons.
 - Diff contains only task-related changes (no drive-by formatting/renames).
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
+- Process evidence: the dispatch path taken (`trivial` / `research → design → dev → review`),
+  the accepted design document path (N/A for a `trivial:` task), and the Reviewer verdict.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 
 ### Before each commit (Orchestrator)
