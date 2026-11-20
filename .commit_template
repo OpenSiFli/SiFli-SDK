@@ -5,6 +5,8 @@
 #   subject one line, imperative, lowercase, no trailing period
 #
 # Body (optional): why the change is needed and how it works, wrapped at 72 columns.
+# Lead with the problem or the decision; name a file or function only when the
+# reader needs it to follow that. A body that tours the diff adds nothing to it.
 # Breaking change: write type(scope)!: ... and add a "BREAKING CHANGE: ..." footer.
 # ---------------------------------------------------------------------------
 

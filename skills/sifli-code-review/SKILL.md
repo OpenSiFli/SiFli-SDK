@@ -523,6 +523,8 @@ Why is the change needed and how does it work?
 
 - **Explanation of WHY**: The description should explain **why** the change was made, not just restate what the diff shows. What problem existed? How was it discovered?
 - **Explanation of HOW**: For non-trivial fixes, explain the approach: why was this specific fix chosen over alternatives? Are there any trade-offs?
+- **Lead with the point**: The first sentence names the problem or the decision. Length is not the problem — a long body is fine when every paragraph carries something the diff cannot show; ordering is what buries the point.
+- **No diff recital — flag as 问题**: The body must not tour the diff ("the first block adds…, the second renames…, the third updates the call site"). Name a file, function or flag only where the reader needs it to follow the decision. If the body can be reconstructed by reading the diff hunk by hunk, it adds nothing and the important part is lost among the rest.
 - **Clarity**: The description should be understandable to someone not familiar with the specific bug/feature. Avoid internal jargon without explanation.
 - **Redmine links**: Include the `ext-redmine: #id, REDMINE-id` footer; it is required on `main` and `release/*` branches.
 
@@ -535,9 +537,8 @@ Why is the change needed and how does it work?
 
 ### 5.4 Completeness
 
-- Does the commit message cover all the changes in the diff?
-- If the commit touches multiple modules, does the description address each?
-- Are any significant side-effects or behavioral changes mentioned?
+- Does the message account for the change as a whole — is any significant behavior or side-effect left unexplained?
+- If the commit touches several modules, does one connected account of why they change together cover them (not one paragraph per module)? A per-module inventory ("changes X, Y and Z") is the diff recital of 5.2, not completeness.
 
 ## Step 6: Test Code Review (for test assets)
 

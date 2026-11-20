@@ -310,7 +310,11 @@ easy to skip. Do them in this order:
 
 1. Draft the commit message **before** the Reviewer's pass and give it to the
    Reviewer with the diff, so Step 5 reviews the text that will actually be
-   committed. Do not write the message after the review.
+   committed. Do not write the message after the review. Apply Step 5.2 of the
+   review skill while drafting: the first body sentence names the problem or the
+   decision; name a file or function only where the reader needs it to follow
+   that point; length is fine as long as every paragraph carries something the
+   diff cannot show; a body that tours the diff hunk by hunk is a 问题.
 2. A diff that touches `docs/` is reviewed with Step 3b; for a bilingual doc,
    check `en` and `zh_CN` in the same pass.
 3. If the diff changed after the review, send it back to the same Reviewer;
