@@ -216,20 +216,20 @@ if it is, use the Claude Code column; if not, inline the role file.
 0. **Classify before writing (hard gate).** Before the first write of any kind (a `Write`/`Edit`
    tool, shell redirection, or a script), state the classification in the message to the user
    you are about to send: `direct: <why>` or `design: docs/design/<topic>.md`. Anything that is
-   not a `direct:` edit needs a design document: a new file, a change past ~20 lines or across
-   files, a public header/CLI/config/format change, or a new example/test asset. For a `design:`
-   task, until that design document exists and the user has accepted it, edit nothing in the
-   repository except `docs/design/<topic>.md`. A `direct:` task is exempt from this gate; rule 1
-   still defines what counts as a `direct:` edit. "Accepted" means the user explicitly confirmed
-   the design; the Orchestrator cannot accept its own design. Detailed constraints from the user
-   narrow the design space; they do not waive this gate. If the scope
+   not a `direct:` edit needs a design document: a new file, a code change past ~20 lines, a
+   change across files, a public header/CLI/config/format change, or a new example/test asset.
+   For a `design:` task, until that design document exists and the user has accepted it, edit
+   nothing in the repository except `docs/design/<topic>.md`. A `direct:` task is exempt from
+   this gate; rule 1 still defines what counts as a `direct:` edit. "Accepted" means the user
+   explicitly confirmed the design; the Orchestrator cannot accept its own design. Detailed
+   constraints from the user narrow the design space; they do not waive this gate. If the scope
    grows mid-task (new layer, new file, new test asset, new public interface), re-run this step
    before continuing. Sketches and draft code belong outside the repository worktree (e.g. the
    session's temporary directory); a file written into the repository is implementation,
    whatever it is called.
 1. **Direct edits: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
-   API/config/format change; an existing rule file of any size is also a `direct:` edit — rule 4
-   still sends it to a fresh Reviewer.
+   API/config/format change. An existing documentation file (`.md`) and an existing rule file
+   are `direct:` edits at any size; rule 4 still sends the rule file to a fresh Reviewer.
 2. Research before implementation when the codebase is unfamiliar or the root cause is unclear.
 3. Design first (Architect) when the change spans ≥3 modules or crosses layers, or changes a public
    contract (header API, CLI, config schema, on-flash/protocol format).
