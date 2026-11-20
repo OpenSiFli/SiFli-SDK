@@ -186,7 +186,7 @@ DSH ignores it. How a role reaches a subagent differs by harness — see "Harnes
 |---|---|---|
 | Researcher | Locate implementation, trace call chains, confirm root cause (read-only) | `.claude/agents/researcher.md` |
 | Developer | Implement embedded C or build/tooling changes | `.claude/agents/developer.md` |
-| Reviewer | Independent review of any non-trivial diff (read-only, fresh context) | `.claude/agents/reviewer.md` |
+| Reviewer | Independent review of any non-`direct:` diff and of rule-file edits (read-only, fresh context) | `.claude/agents/reviewer.md` |
 | Architect | Cross-module/cross-layer design, public API or format changes | `.claude/agents/architect.md` |
 | Tester | Test design/execution, honest "executed vs not executed" reporting | `.claude/agents/tester.md` |
 | Security Reviewer | TrustZone/PSA, keys/flash, OTA/DFU, network or external input parsing | `.claude/agents/security-reviewer.md` |
@@ -215,30 +215,30 @@ if it is, use the Claude Code column; if not, inline the role file.
 
 0. **Classify before writing (hard gate).** Before the first write of any kind (a `Write`/`Edit`
    tool, shell redirection, or a script), state the classification in the message to the user
-   you are about to send: `trivial: <why>` or `design: docs/design/<topic>.md`. Any one of these
-   makes a task non-trivial: a new file, spanning ≥3 modules or crossing layers, a public
-   header/CLI/config/format change, or a new example/test asset. For a `design:` task, until
-   that design document exists and the user has accepted it, edit nothing in the repository
-   except `docs/design/<topic>.md`. A `trivial:` task is exempt from this gate; rule 1 still
-   defines what counts as trivial. "Accepted" means the user explicitly confirmed the design;
-   the Orchestrator cannot accept its own design. Detailed constraints from the user narrow the
-   design space; they do not waive this gate. If the scope
+   you are about to send: `direct: <why>` or `design: docs/design/<topic>.md`. Anything that is
+   not a `direct:` edit needs a design document: a new file, a change past ~20 lines or across
+   files, a public header/CLI/config/format change, or a new example/test asset. For a `design:`
+   task, until that design document exists and the user has accepted it, edit nothing in the
+   repository except `docs/design/<topic>.md`. A `direct:` task is exempt from this gate; rule 1
+   still defines what counts as a `direct:` edit. "Accepted" means the user explicitly confirmed
+   the design; the Orchestrator cannot accept its own design. Detailed constraints from the user
+   narrow the design space; they do not waive this gate. If the scope
    grows mid-task (new layer, new file, new test asset, new public interface), re-run this step
    before continuing. Sketches and draft code belong outside the repository worktree (e.g. the
    session's temporary directory); a file written into the repository is implementation,
    whatever it is called.
-1. **Trivial tasks: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
-   API/config/format change.
+1. **Direct edits: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
+   API/config/format change; an existing rule file of any size is also a `direct:` edit — rule 4
+   still sends it to a fresh Reviewer.
 2. Research before implementation when the codebase is unfamiliar or the root cause is unclear.
 3. Design first (Architect) when the change spans ≥3 modules or crosses layers, or changes a public
    contract (header API, CLI, config schema, on-flash/protocol format).
-4. Every non-trivial diff (code or docs) gets a **fresh Reviewer** before you report completion; a
-   re-check after a fix goes back to the same Reviewer (continue that agent, do not start a new one).
-   Every other diff skips the fresh agent, not the review: check it against Step 1–Step 2 and the
-   matching step in the current context before committing. The exception is a file loaded into a
-   later agent session — instructions, role or skill (`AGENTS.md`, `.claude/CLAUDE.md`, `.agents/`,
-   `.claude/agents/`, `skills/`, `.dsh/skills/`): one line there binds every session after it, so
-   it gets a fresh Reviewer whatever its size.
+4. Two kinds of diff get a **fresh Reviewer** before you report completion: one that is not a
+   `direct:` edit, and one that touches a file loaded into a later agent session — instructions,
+   role or skill (`AGENTS.md`, `.claude/CLAUDE.md`, `.agents/`, `.claude/agents/`, `skills/`,
+   `.dsh/skills/`). A re-check after a fix goes back to the same Reviewer (continue that agent, do
+   not start a new one). Every other diff skips the fresh agent, not the review: check it against
+   Step 1–Step 2 and the matching step in the current context before committing.
 5. Add Tester when tests can actually run **or when the change needs test design** (failure modes,
    seams, what cannot be executed). With no runnable environment the Tester still delivers the test
    plan and an explicit unverified list. Add Security Reviewer when a security trigger is hit; add
@@ -304,9 +304,9 @@ the diff in isolation.
 - Build/test actually executed, with command and result recorded; unverified cases listed with reasons.
 - Diff contains only task-related changes (no drive-by formatting/renames).
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
-- Process evidence: the dispatch path taken (`trivial` / `research → design → dev → review`),
-  the accepted design document path (N/A for a `trivial:` task), and the Reviewer verdict — or,
-  for a self-checked trivial diff, the check outcome and the step it was checked against.
+- Process evidence: the dispatch path taken (`direct` / `research → design → dev → review`),
+  the accepted design document path (N/A for a `direct:` task), and the Reviewer verdict — or,
+  for a self-checked diff, the check outcome and the step it was checked against.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 
 ### Before each commit (Orchestrator)
@@ -327,9 +327,9 @@ easy to skip. Do them in this order:
    do not commit a diff the verdict predates.
 4. Stage explicit paths; `git status` must show only task files (no drive-by
    submodule or untracked changes).
-5. Record the executed test/board evidence and the Reviewer's verdict — or the
-   self-check outcome for a trivial diff — in the report or the commit body;
-   "not executed" stays "not executed".
+5. Record the executed test/board evidence and the Reviewer's verdict — or, for a
+   diff with no Reviewer, the self-check outcome — in the report or the commit
+   body; "not executed" stays "not executed".
 
 ### If you are a subagent
 
