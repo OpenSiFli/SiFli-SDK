@@ -160,9 +160,15 @@ __WEAK void mpu_config(void)
     rlar = ARM_MPU_RLAR(0x1fffffff, ATTR_CODE_IDX);
     ARM_MPU_SetRegion(rnr++, rbar, rlar);
 
+    // SMP shared NOR code uses the system-bus alias on both cores.
+#ifdef RT_SMP_SHARED_XIP
+    rbar = ARM_MPU_RBAR(0x62000000, ARM_MPU_SH_NON, 1, 1, 0);
+    rlar = ARM_MPU_RLAR(0x6FFFFFFF, ATTR_CODE_IDX);
+#else
     // nand
     rbar = ARM_MPU_RBAR(0x64000000, ARM_MPU_SH_NON, 1, 1, 0); //Non-shareable,RO,any privilege,executable
     rlar = ARM_MPU_RLAR(0x6FFFFFFF, ATTR_RAM_IDX);
+#endif
     ARM_MPU_SetRegion(rnr++, rbar, rlar);
 
     // hpsys ram, disable sram cache
@@ -176,11 +182,27 @@ __WEAK void mpu_config(void)
     ARM_MPU_SetRegion(rnr++, rbar, rlar);
 
     // psram
+#ifdef RT_SMP_PSRAM_NONCACHE
+    rbar = ARM_MPU_RBAR(0x60000000, ARM_MPU_SH_OUTER, 0, 1, 1);
+    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_RAM_IDX);
+#elif defined(RT_SMP_PSRAM_WT_SYNC)
+    rbar = ARM_MPU_RBAR(0x60000000, ARM_MPU_SH_NON, 0, 1, 1);
+    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_PSRAM_WT_IDX);
+#else
     rbar = ARM_MPU_RBAR(0x60000000, ARM_MPU_SH_NON, 0, 1, 0); //Non-shareable,RW,any privilege,executable
 #ifdef PSRAM_CACHE_WB
+#ifdef RT_SMP_SHARED_XIP
+    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_PSRAM_WB_IDX);
+#else
     rlar = ARM_MPU_RLAR(0x63ffffff, ATTR_PSRAM_WB_IDX);
+#endif
+#else
+#ifdef RT_SMP_SHARED_XIP
+    rlar = ARM_MPU_RLAR(0x61ffffff, ATTR_PSRAM_WT_IDX);
 #else
     rlar = ARM_MPU_RLAR(0x63ffffff, ATTR_PSRAM_WT_IDX);
+#endif
+#endif
 #endif
 
     ARM_MPU_SetRegion(rnr++, rbar, rlar);

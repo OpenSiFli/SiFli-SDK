@@ -31,6 +31,7 @@
 /*
  * rt_base_t rt_hw_interrupt_disable();
  */
+#ifndef RT_USING_SMP
 .global rt_hw_interrupt_disable
 .type rt_hw_interrupt_disable, %function
 rt_hw_interrupt_disable:
@@ -247,6 +248,7 @@ rt_hw_cpu_idle:
     WFE
     BX lr
 
+#endif /* !RT_USING_SMP */
 .global HardFault_Handler
 .type HardFault_Handler, %function
 HardFault_Handler:

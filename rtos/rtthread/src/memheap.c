@@ -281,19 +281,19 @@ __ROM_USED void *rt_memheap_alloc(struct rt_memheap *heap, rt_size_t size)
     RT_DEBUG_LOG(RT_DEBUG_MEMHEAP, ("allocate %d on heap:%8.*s",
                                     size, RT_NAME_MAX, heap->parent.name));
 
+    /* Acquire before reading capacity: another core may have freed a block,
+     * and the SMP acquire refreshes a write-through cached heap descriptor. */
+    result = rt_sem_take(&(heap->lock), RT_WAITING_FOREVER);
+    if (result != RT_EOK)
+    {
+        rt_set_errno(result);
+        return RT_NULL;
+    }
+
     if (size < heap->available_size)
     {
         /* search on free list */
         free_size = 0;
-
-        /* lock memheap */
-        result = rt_sem_take(&(heap->lock), RT_WAITING_FOREVER);
-        if (result != RT_EOK)
-        {
-            rt_set_errno(result);
-
-            return RT_NULL;
-        }
 
         /* get the first free memory block */
         header_ptr = heap->free_list->next_free;
@@ -428,10 +428,10 @@ __ROM_USED void *rt_memheap_alloc(struct rt_memheap *heap, rt_size_t size)
 
             return (void *)((rt_uint8_t *)header_ptr + RT_MEMHEAP_SIZE);
         }
-
-        /* release lock */
-        rt_sem_release(&(heap->lock));
     }
+
+    /* Release the lock on both fragmentation and capacity failures. */
+    rt_sem_release(&(heap->lock));
 
     RT_DEBUG_LOG(RT_DEBUG_MEMHEAP, ("allocate memory: failed\n"));
 
