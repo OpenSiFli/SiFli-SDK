@@ -218,7 +218,7 @@ __ROM_USED void list_date(void)
     time_t now;
 
     now = time(RT_NULL);
-    rt_kprintf("%s\n", ctime(&now));
+    rt_kprintf("%s", ctime(&now));
 }
 MSH_CMD_EXPORT(list_date, show date and time.)
 
