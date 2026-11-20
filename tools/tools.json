@@ -22,6 +22,44 @@
       "version_regex": "sftool\\s+([\\d.]+)",
       "versions": [
         {
+          "name": "0.2.7",
+          "macos-arm64": {
+            "sha256": "7B470B32890B421CFE5ADF6F7C97C41F6043F9E05928F0F9BA1BB590EB5F2A49",
+            "size": 4564940,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-aarch64-apple-darwin.tar.xz"
+          },
+          "linux-arm64": {
+            "sha256": "7F5216E1A4D12F4D71D3B644E83D7AC45AC814044D523C8F969057DD7554405F",
+            "size": 4678476,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-aarch64-unknown-linux-gnu.tar.xz"
+          },
+          "win32": {
+            "sha256": "E374E78AEBC6506EA64FA18C071AC37F3CE747D73976F7630CC94831939EC4EC",
+            "size": 4998526,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-i686-pc-windows-msvc.zip"
+          },
+          "linux-i686": {
+            "sha256": "C9F8B3A3AD0495F0BC090A56A55D3864B6D1B75BB0069176E74B705A17FBB25E",
+            "size": 4869836,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-i686-unknown-linux-gnu.tar.xz"
+          },
+          "macos": {
+            "sha256": "AC0F0D90B96942A0FF405C5329F64B013463737E25E4BD47E771F69EA8415858",
+            "size": 4640760,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-x86_64-apple-darwin.tar.xz"
+          },
+          "win64": {
+            "sha256": "3339FA9FB851F53F1FE6395E26BEF0F31317E7165F5B45741CC71C40878787EE",
+            "size": 5173855,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-x86_64-pc-windows-msvc.zip"
+          },
+          "linux-amd64": {
+            "sha256": "D5162173616D86E0159B3B2764F31DC331740869BDC902E5609FF0A33397363C",
+            "size": 4810704,
+            "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-x86_64-unknown-linux-gnu.tar.xz"
+          }
+        },
+        {
           "name": "0.2.6",
           "macos-arm64": {
             "sha256": "CB91BD4FA6FDAC02405D51D21FDA740C35DBE500918DCAA96E40976C1F4738D5",
