@@ -49,7 +49,7 @@
             "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-x86_64-apple-darwin.tar.xz"
           },
           "win64": {
-            "sha256": "3339FA9FB851F53F1FE6395E26BEF0F31317E7165F5B45741CC71C40878787EE",
+            "sha256": "3339FA9FB851F53F3F1FE6395E26BEF0F31317E7165F5B45741CC71C408787EE",
             "size": 5173855,
             "url": "https://github.com/OpenSiFli/sftool/releases/download/0.2.7/sftool-0.2.7-x86_64-pc-windows-msvc.zip"
           },
