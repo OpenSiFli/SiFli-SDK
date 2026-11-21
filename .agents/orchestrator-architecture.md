@@ -332,12 +332,15 @@ SiFli-SDK/
 
 仓库里的"草稿文件"按实现计；草图与试验代码放仓库工作树之外（例如会话临时目录）。
 
-临时设计文档放 `docs/design/wip/`（已列入 .gitignore），`docs/design/` 只放已提交的设计记录：
-除非用户要求保留（在分类行写明 `design: docs/design/wip/<topic>.md (keep)`），在任务最后
-一笔提交、最后一轮审查关闭后删除该文件，且不提交它。提升保留稿属于 `direct:` 改动：移到
-`docs/design/<topic>.md` 后 `git add`（`git mv` 不接受未跟踪的源文件）。目录被 ignore，
-`git status` 看不到遗留稿，收尾时必须确认 `docs/design/wip/` 为空。需要长期存在的**用户
-文档**写进 `docs/source/{en,zh_CN}/` 或组件自己的 `DESIGN.md`。
+临时设计文档放 `docs/design/wip/`（已列入 .gitignore），`docs/design/` 只放已提交的设计记录。
+`direct:` 任务不写设计文档，所以下面关于工作稿的规则只适用于 `design:` 任务：除非用户要求
+保留（在分类行写明 `design: docs/design/wip/<topic>.md (keep)`），在任务最后一笔**实现**提交、
+最后一轮审查关闭后删除该文件，且不提交它。保留是该任务自己的收尾步骤，不另起一次分类：移到
+`docs/design/<topic>.md`，把该文件连同提交说明按普通 `docs/` 改动评审（Step 3b、Step 5）；评审
+关闭且无未解决的**严重**问题后，再 `git add`（`git mv` 不接受未跟踪的源文件）并提交，最后做收尾
+检查。
+目录被 ignore，`git status` 看不到遗留稿，收尾时必须确认其中没有本任务留下的稿子。需要
+长期存在的**用户文档**写进 `docs/source/{en,zh_CN}/` 或组件自己的 `DESIGN.md`。
 
 ### 5.1 判定表
 
@@ -413,6 +416,7 @@ Tester 可以在开发前参与测试设计，也可以在实现后执行；不�
 ## 上下文
 - 相关文件：<path:line>
 - 已知结论：<Researcher/Architect 的关键结论>
+- 设计文档：docs/design/wip/<topic>.md（被 gitignore，不在 git status 中，请按此路径直接读取）
 - 约束：<不许改什么、必须用什么机制、构建板型>
 - Tester 证据：<级别/接缝表、反向验证表；Tester 跑过时必填>
 
@@ -428,6 +432,8 @@ Tester 可以在开发前参与测试设计，也可以在实现后执行；不�
 
 - **自包含**：子代理看不到主会话历史（除非 fork），路径、板型、目标都必须写清。
 - **可验证**：验收标准写成"运行什么命令 / 检查什么文件"，不写"做好一点"。
+- **设计文档按路径投递**：wip 工作稿被 gitignore，`git status` 不会带出它，必须在「上下文」
+  写明路径；保留稿的评审与提交顺序见 §5.0。
 - **有边界**：明确禁止项，防止顺手重构。
 
 ### 5.6 何时不派发

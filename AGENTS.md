@@ -233,14 +233,19 @@ if it is, use the Claude Code column; if not, inline the role file.
    before continuing. Sketches and draft code belong outside the repository worktree (e.g. the
    session's temporary directory); a file written into the repository is implementation,
    whatever it is called. Working design documents live in `docs/design/wip/`, which is
-   git-ignored; `docs/design/` holds design records that are committed. Unless the user asked
-   to keep it (say so in the classification line, `design: docs/design/wip/<topic>.md (keep)`),
-   delete `docs/design/wip/<topic>.md` after the task's last commit and the final review round;
-   it is never committed. Promoting a kept document is a `direct:` edit: move it to
-   `docs/design/<topic>.md` and `git add` it (`git mv` rejects an untracked source). The
-   directory being ignored also means a forgotten draft does not show up in `git status` — at
-   task close, `docs/design/wip/` must be empty. User-facing documentation that must outlive
-   the task belongs in `docs/source/{en,zh_CN}/` or a component's `DESIGN.md`.
+   git-ignored; `docs/design/` holds design records that are committed. A `direct:` task
+   writes no design document, so the rules below about the working document apply to
+   `design:` tasks only. Unless the user asked to keep the document (say so in the
+   classification line, `design: docs/design/wip/<topic>.md (keep)`), delete
+   `docs/design/wip/<topic>.md` at close-out, after the task's last implementation commit and
+   the final review round; it is never committed. Keeping it is a close-out step of that same
+   task, not a new task to classify: move the file to `docs/design/<topic>.md`, review it as a
+   normal `docs/` change together with its commit message (Step 3b and Step 5), then, only once
+   the review closes with no unresolved 严重 (blocking) finding, `git add` it (`git mv` rejects
+   an untracked source) and commit it; run the close-out check after that. The directory being
+   ignored also means a forgotten draft does not show up in `git status` — at task close it must
+   hold no document this task wrote. User-facing documentation that must outlive the task belongs
+   in `docs/source/{en,zh_CN}/` or a component's `DESIGN.md`.
 1. **Direct edits: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
    API/config/format change. An existing documentation file (`.md`) and an existing rule file
    are `direct:` edits at any size; rule 4 still sends the rule file to a fresh Reviewer.
@@ -272,7 +277,8 @@ if it is, use the Claude Code column; if not, inline the role file.
    and reverse-verification evidence in `## 上下文`; otherwise the Reviewer sees only the diff and
    cannot tell "not done" from "not written". When an Architect has run, include the accepted
    design document path in `## 上下文`; a Reviewer of a public-contract change needs it to check the
-   implementation against the design.
+   implementation against the design. The working document is git-ignored, so pass it by path:
+   `git status` will not surface it.
 2. Deliver it the way the harness expects:
    - Roles auto-registered (Claude Code): `Agent(subagent_type="<role>", prompt=<task prompt>)`.
    - Roles not registered (DSH): prepend the role file body verbatim (without the YAML frontmatter)
@@ -322,7 +328,8 @@ the diff in isolation.
   the accepted design document path (N/A for a `direct:` task), and the Reviewer verdict — or,
   for a self-checked diff, the check outcome and the step it was checked against.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
-- `docs/design/wip/` is empty, or the kept document is committed under `docs/design/`.
+- No document this task wrote is left under `docs/design/wip/`; a kept one is committed under
+  `docs/design/`.
 
 ### Before each commit (Orchestrator)
 
