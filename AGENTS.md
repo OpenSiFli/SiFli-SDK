@@ -221,18 +221,26 @@ if it is, use the Claude Code column; if not, inline the role file.
 
 0. **Classify before writing (hard gate).** Before the first write of any kind (a `Write`/`Edit`
    tool, shell redirection, or a script), state the classification in the message to the user
-   you are about to send: `direct: <why>` or `design: docs/design/<topic>.md`. Anything that is
+   you are about to send: `direct: <why>` or `design: docs/design/wip/<topic>.md`. Anything that is
    not a `direct:` edit needs a design document: a new file, a code change past ~20 lines, a
    change across files, a public header/CLI/config/format change, or a new example/test asset.
    For a `design:` task, until that design document exists and the user has accepted it, edit
-   nothing in the repository except `docs/design/<topic>.md`. A `direct:` task is exempt from
+   nothing in the repository except `docs/design/wip/<topic>.md`. A `direct:` task is exempt from
    this gate; rule 1 still defines what counts as a `direct:` edit. "Accepted" means the user
    explicitly confirmed the design; the Orchestrator cannot accept its own design. Detailed
    constraints from the user narrow the design space; they do not waive this gate. If the scope
    grows mid-task (new layer, new file, new test asset, new public interface), re-run this step
    before continuing. Sketches and draft code belong outside the repository worktree (e.g. the
    session's temporary directory); a file written into the repository is implementation,
-   whatever it is called.
+   whatever it is called. Working design documents live in `docs/design/wip/`, which is
+   git-ignored; `docs/design/` holds design records that are committed. Unless the user asked
+   to keep it (say so in the classification line, `design: docs/design/wip/<topic>.md (keep)`),
+   delete `docs/design/wip/<topic>.md` after the task's last commit and the final review round;
+   it is never committed. Promoting a kept document is a `direct:` edit: move it to
+   `docs/design/<topic>.md` and `git add` it (`git mv` rejects an untracked source). The
+   directory being ignored also means a forgotten draft does not show up in `git status` — at
+   task close, `docs/design/wip/` must be empty. User-facing documentation that must outlive
+   the task belongs in `docs/source/{en,zh_CN}/` or a component's `DESIGN.md`.
 1. **Direct edits: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
    API/config/format change. An existing documentation file (`.md`) and an existing rule file
    are `direct:` edits at any size; rule 4 still sends the rule file to a fresh Reviewer.
@@ -314,6 +322,7 @@ the diff in isolation.
   the accepted design document path (N/A for a `direct:` task), and the Reviewer verdict — or,
   for a self-checked diff, the check outcome and the step it was checked against.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
+- `docs/design/wip/` is empty, or the kept document is committed under `docs/design/`.
 
 ### Before each commit (Orchestrator)
 

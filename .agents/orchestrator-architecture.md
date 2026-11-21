@@ -207,7 +207,7 @@ DSH 的 Agent Preset 是**插件组合**（Cordis YAML，profile 级），用于
 
 - 启用：跨 ≥3 模块、跨层、公共 API/格式变更、构建配置重构、需要方案对比。
 - 输出：≥2 个方案与推荐、分层与接口、文件范围、兼容性、扩展性判定、实施步骤、风险、验证计划。
-- 落盘：Architect 本身只读；其方案由 Orchestrator 保存到 `docs/design/<topic>.md`，
+- 落盘：Architect 本身只读；其方案由 Orchestrator 保存到 `docs/design/wip/<topic>.md`，
   并在派发 Developer 前由用户明确确认接受；Orchestrator 不得自行接受。
 - 边界：只读分析，不实现；方案必须落到文件与接口。
 
@@ -259,7 +259,8 @@ SiFli-SDK/
 ├── .agents/
 │   └── orchestrator-architecture.md  # 本文档（多代理方案设计，agent 通用可读目录）
 ├── docs/
-│   └── design/                       # 单个任务的实现设计文档（§5.0）
+│   └── design/                       # 长期设计记录（已提交）
+│       └── wip/                      # 单个任务的实现设计文档（git-ignored，§5.0）
 ├── .claude/
 │   ├── CLAUDE.md                     # 指向 AGENTS.md 的兼容入口（Claude Code）
 │   └── agents/                       # 角色定义（提示词库）
@@ -298,7 +299,7 @@ SiFli-SDK/
 - 与角色定义、技能入口同属"agent 可见区"，改方案时不用跨目录找；
 - 代价：不在 Sphinx 文档树内——本文档面向 agent 而不是最终用户，不需要进文档站。
 
-单个任务的实现设计文档不放这里：落 `docs/design/<topic>.md`（见 §5.0），
+单个任务的实现设计文档不放这里：落 `docs/design/wip/<topic>.md`（见 §5.0），
 本文件只保留架构级说明。
 
 ## 5. Orchestrator 调度策略
@@ -311,7 +312,7 @@ SiFli-SDK/
 - `direct: <理由>` —— 不写设计文档，仅限三种：修改**已存在的单个**文件、≤ ~20 行、不新增
   文件、不触碰公共面；修改**既有**规则文件（载入后续会话的指令/角色/技能，见 §5.1）；修改
   **既有的单个**文档文件（`.md`）。后两种不受行数限制；
-- `design: docs/design/<topic>.md` —— 其余全部。
+- `design: docs/design/wip/<topic>.md` —— 其余全部。
 
 除 `direct:` 之外一律要求设计文档，常见情形：**新建文件**、超过 ~20 行的代码改动或跨文件
 改动、跨 ≥3 模块**或**跨层、公共 API/CLI/配置/格式变更、新增例程、新增测试资产。
@@ -321,7 +322,7 @@ SiFli-SDK/
 文件」，归 `design:`。
 
 **被接受**指用户明确确认该设计；Orchestrator 不得自行接受自己写的方案。在 `design:` 任务的
-设计文档被接受前，除 `docs/design/<topic>.md` 外不修改仓库内任何文件；`direct:` 任务不受此
+设计文档被接受前，除 `docs/design/wip/<topic>.md` 外不修改仓库内任何文件；`direct:` 任务不受此
 限，但仍受 §5.1 各 `direct:` 行的范围约束。
 
 两条否定式规则：
@@ -330,6 +331,13 @@ SiFli-SDK/
 - 需求范围中途扩大（新增层/新文件/新测试资产/新公共接口）时，**重新执行本步骤**。
 
 仓库里的"草稿文件"按实现计；草图与试验代码放仓库工作树之外（例如会话临时目录）。
+
+临时设计文档放 `docs/design/wip/`（已列入 .gitignore），`docs/design/` 只放已提交的设计记录：
+除非用户要求保留（在分类行写明 `design: docs/design/wip/<topic>.md (keep)`），在任务最后
+一笔提交、最后一轮审查关闭后删除该文件，且不提交它。提升保留稿属于 `direct:` 改动：移到
+`docs/design/<topic>.md` 后 `git add`（`git mv` 不接受未跟踪的源文件）。目录被 ignore，
+`git status` 看不到遗留稿，收尾时必须确认 `docs/design/wip/` 为空。需要长期存在的**用户
+文档**写进 `docs/source/{en,zh_CN}/` 或组件自己的 `DESIGN.md`。
 
 ### 5.1 判定表
 

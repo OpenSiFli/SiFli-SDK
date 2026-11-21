@@ -39,7 +39,7 @@ model: inherit
 
 ```markdown
 ## 设计文档
-- 建议落盘路径：`docs/design/<topic>.md`
+- 建议落盘路径：`docs/design/wip/<topic>.md`
 - 状态：draft（由 Orchestrator 落盘、用户确认后改为 accepted）
 
 ## 推荐方案

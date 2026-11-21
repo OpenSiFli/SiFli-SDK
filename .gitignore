@@ -36,3 +36,5 @@ tools/mkfatimg/mkfatimg_nand/Release/
 sf-pkgs/
 # local scratch directory of the agent sessions (build logs, manual text extracts)
 .dsh-scratch/
+# working design documents of agent sessions; durable records live in docs/design/
+docs/design/wip/
