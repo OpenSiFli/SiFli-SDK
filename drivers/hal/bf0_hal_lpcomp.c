@@ -9,22 +9,22 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 #ifdef HAL_COMP_MODULE_ENABLED
 
 
 /** @defgroup COMP COMP
-  * @brief COMP HAL module driver
-  * @{
-  */
+ * @brief COMP HAL module driver
+ * @{
+ */
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /** @addtogroup COMP_Private_Constants
-  * @{
-  */
+ * @{
+ */
 
 /* Delay for COMP startup time.                                               */
 /* Note: Delay required to reach propagation delay specification.             */
@@ -42,8 +42,8 @@
 #define COMP_OUTPUT_LEVEL_BITOFFSET_POS    (LPCOMP_CR1_VAL_Pos)
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
@@ -51,8 +51,8 @@
 /* Exported functions --------------------------------------------------------*/
 
 /** @defgroup COMP_Exported_Functions COMP Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup COMP_Exported_Functions_Group1 Initialization/de-initialization functions
  *  @brief    Initialization and de-initialization functions.
@@ -68,13 +68,13 @@
   */
 
 /**
-  * @brief  Initialize the COMP according to the specified
-  *         parameters in the COMP_InitTypeDef and initialize the associated handle.
-  * @note   If the selected comparator is locked, initialization can't be performed.
-  *         To unlock the configuration, perform a system reset.
-  * @param  hcomp  COMP handle
-  * @retval HAL status
-  */
+ * @brief  Initialize the COMP according to the specified
+ *         parameters in the COMP_InitTypeDef and initialize the associated handle.
+ * @note   If the selected comparator is locked, initialization can't be performed.
+ *         To unlock the configuration, perform a system reset.
+ * @param  hcomp  COMP handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_Init(COMP_HandleTypeDef *hcomp)
 {
     uint32_t tmp_csr;
@@ -156,12 +156,12 @@ HAL_StatusTypeDef HAL_COMP_Init(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  DeInitialize the COMP peripheral.
-  * @note   Deinitialization cannot be performed if the COMP configuration is locked.
-  *         To unlock the configuration, perform a system reset.
-  * @param  hcomp  COMP handle
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the COMP peripheral.
+ * @note   Deinitialization cannot be performed if the COMP configuration is locked.
+ *         To unlock the configuration, perform a system reset.
+ * @param  hcomp  COMP handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_DeInit(COMP_HandleTypeDef *hcomp)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -204,10 +204,10 @@ HAL_StatusTypeDef HAL_COMP_DeInit(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  Initialize the COMP MSP.
-  * @param  hcomp  COMP handle
-  * @retval None
-  */
+ * @brief  Initialize the COMP MSP.
+ * @param  hcomp  COMP handle
+ * @retval None
+ */
 __weak void HAL_COMP_MspInit(COMP_HandleTypeDef *hcomp)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -231,10 +231,10 @@ __weak void HAL_COMP_MspInit(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  DeInitialize the COMP MSP.
-  * @param  hcomp  COMP handle
-  * @retval None
-  */
+ * @brief  DeInitialize the COMP MSP.
+ * @param  hcomp  COMP handle
+ * @retval None
+ */
 __weak void HAL_COMP_MspDeInit(COMP_HandleTypeDef *hcomp)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -258,18 +258,18 @@ __weak void HAL_COMP_MspDeInit(COMP_HandleTypeDef *hcomp)
 
 #if (USE_HAL_COMP_REGISTER_CALLBACKS == 1)
 /**
-  * @brief  Register a User COMP Callback
-  *         To be used instead of the weak predefined callback
-  * @param  hcomp Pointer to a COMP_HandleTypeDef structure that contains
-  *                the configuration information for the specified COMP.
-  * @param  CallbackID ID of the callback to be registered
-  *         This parameter can be one of the following values:
-  *          @arg @ref HAL_COMP_TRIGGER_CB_ID Trigger callback ID
-  *          @arg @ref HAL_COMP_MSPINIT_CB_ID MspInit callback ID
-  *          @arg @ref HAL_COMP_MSPDEINIT_CB_ID MspDeInit callback ID
-  * @param  pCallback pointer to the Callback function
-  * @retval HAL status
-  */
+ * @brief  Register a User COMP Callback
+ *         To be used instead of the weak predefined callback
+ * @param  hcomp Pointer to a COMP_HandleTypeDef structure that contains
+ *                the configuration information for the specified COMP.
+ * @param  CallbackID ID of the callback to be registered
+ *         This parameter can be one of the following values:
+ *          @arg @ref HAL_COMP_TRIGGER_CB_ID Trigger callback ID
+ *          @arg @ref HAL_COMP_MSPINIT_CB_ID MspInit callback ID
+ *          @arg @ref HAL_COMP_MSPDEINIT_CB_ID MspDeInit callback ID
+ * @param  pCallback pointer to the Callback function
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_RegisterCallback(COMP_HandleTypeDef *hcomp, HAL_COMP_CallbackIDTypeDef CallbackID, pCOMP_CallbackTypeDef pCallback)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -341,17 +341,17 @@ HAL_StatusTypeDef HAL_COMP_RegisterCallback(COMP_HandleTypeDef *hcomp, HAL_COMP_
 }
 
 /**
-  * @brief  Unregister a COMP Callback
-  *         COMP callback is redirected to the weak predefined callback
-  * @param  hcomp Pointer to a COMP_HandleTypeDef structure that contains
-  *                the configuration information for the specified COMP.
-  * @param  CallbackID ID of the callback to be unregistered
-  *         This parameter can be one of the following values:
-  *          @arg @ref HAL_COMP_TRIGGER_CB_ID Trigger callback ID
-  *          @arg @ref HAL_COMP_MSPINIT_CB_ID MspInit callback ID
-  *          @arg @ref HAL_COMP_MSPDEINIT_CB_ID MspDeInit callback ID
-  * @retval HAL status
-  */
+ * @brief  Unregister a COMP Callback
+ *         COMP callback is redirected to the weak predefined callback
+ * @param  hcomp Pointer to a COMP_HandleTypeDef structure that contains
+ *                the configuration information for the specified COMP.
+ * @param  CallbackID ID of the callback to be unregistered
+ *         This parameter can be one of the following values:
+ *          @arg @ref HAL_COMP_TRIGGER_CB_ID Trigger callback ID
+ *          @arg @ref HAL_COMP_MSPINIT_CB_ID MspInit callback ID
+ *          @arg @ref HAL_COMP_MSPDEINIT_CB_ID MspDeInit callback ID
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_UnRegisterCallback(COMP_HandleTypeDef *hcomp, HAL_COMP_CallbackIDTypeDef CallbackID)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -417,8 +417,8 @@ HAL_StatusTypeDef HAL_COMP_UnRegisterCallback(COMP_HandleTypeDef *hcomp, HAL_COM
 #endif /* USE_HAL_COMP_REGISTER_CALLBACKS */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup COMP_Exported_Functions_Group2 Start-Stop operation functions
  *  @brief   Start-Stop operation functions.
@@ -436,10 +436,10 @@ HAL_StatusTypeDef HAL_COMP_UnRegisterCallback(COMP_HandleTypeDef *hcomp, HAL_COM
   */
 
 /**
-  * @brief  Start the comparator.
-  * @param  hcomp  COMP handle
-  * @retval HAL status
-  */
+ * @brief  Start the comparator.
+ * @param  hcomp  COMP handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_Start(COMP_HandleTypeDef *hcomp)
 {
     __IO uint32_t wait_loop_index = 0UL;
@@ -487,10 +487,10 @@ HAL_StatusTypeDef HAL_COMP_Start(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  Stop the comparator.
-  * @param  hcomp  COMP handle
-  * @retval HAL status
-  */
+ * @brief  Stop the comparator.
+ * @param  hcomp  COMP handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_Stop(COMP_HandleTypeDef *hcomp)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -528,11 +528,11 @@ HAL_StatusTypeDef HAL_COMP_Stop(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  select which comparator to work.
-  * @param  hcomp  COMP handle
-  * @param  cfg configure parameters
-  * @retval HAL status
-  */
+ * @brief  select which comparator to work.
+ * @param  hcomp  COMP handle
+ * @param  cfg configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_COMP_Config(COMP_HandleTypeDef *hcomp, COMP_ConfigTypeDef *cfg)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -607,12 +607,12 @@ HAL_StatusTypeDef HAL_COMP_Config(COMP_HandleTypeDef *hcomp, COMP_ConfigTypeDef 
 }
 
 /**
-  * @brief  polling compare result.
-  * @param  hcomp  COMP handle
-  * @param  channel channel select, 0, 1 valid
-  * @param  timeout timeout in ms
-  * @retval compare result
-  */
+ * @brief  polling compare result.
+ * @param  hcomp  COMP handle
+ * @param  channel channel select, 0, 1 valid
+ * @param  timeout timeout in ms
+ * @retval compare result
+ */
 int HAL_COMP_PollForComp(COMP_HandleTypeDef *hcomp, uint8_t channel, uint32_t timeout)
 {
     uint32_t value;
@@ -677,10 +677,10 @@ int HAL_COMP_PollForComp(COMP_HandleTypeDef *hcomp, uint8_t channel, uint32_t ti
 
 
 /**
-  * @brief  Comparator IRQ handler.
-  * @param  hcomp  COMP handle
-  * @retval None
-  */
+ * @brief  Comparator IRQ handler.
+ * @param  hcomp  COMP handle
+ * @retval None
+ */
 void HAL_COMP_IRQHandler(COMP_HandleTypeDef *hcomp)
 {
     /* COMP trigger user callback */
@@ -705,8 +705,8 @@ void HAL_COMP_IRQHandler(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup COMP_Exported_Functions_Group3 Peripheral Control functions
  *  @brief   Management functions.
@@ -724,24 +724,24 @@ void HAL_COMP_IRQHandler(COMP_HandleTypeDef *hcomp)
 
 
 /**
-  * @brief  Return the output level (high or low) of the selected comparator.
-  *         The output level depends on the selected polarity.
-  *         If the polarity is not inverted:
-  *           - Comparator output is low when the input plus is at a lower
-  *             voltage than the input minus
-  *           - Comparator output is high when the input plus is at a higher
-  *             voltage than the input minus
-  *         If the polarity is inverted:
-  *           - Comparator output is high when the input plus is at a lower
-  *             voltage than the input minus
-  *           - Comparator output is low when the input plus is at a higher
-  *             voltage than the input minus
-  * @param  hcomp  COMP handle
-  * @retval Returns the selected comparator output level:
-  *         @arg COMP_OUTPUT_LEVEL_LOW
-  *         @arg COMP_OUTPUT_LEVEL_HIGH
-  *
-  */
+ * @brief  Return the output level (high or low) of the selected comparator.
+ *         The output level depends on the selected polarity.
+ *         If the polarity is not inverted:
+ *           - Comparator output is low when the input plus is at a lower
+ *             voltage than the input minus
+ *           - Comparator output is high when the input plus is at a higher
+ *             voltage than the input minus
+ *         If the polarity is inverted:
+ *           - Comparator output is high when the input plus is at a lower
+ *             voltage than the input minus
+ *           - Comparator output is low when the input plus is at a higher
+ *             voltage than the input minus
+ * @param  hcomp  COMP handle
+ * @retval Returns the selected comparator output level:
+ *         @arg COMP_OUTPUT_LEVEL_LOW
+ *         @arg COMP_OUTPUT_LEVEL_HIGH
+ *
+ */
 uint32_t HAL_COMP_GetOutputLevel(COMP_HandleTypeDef *hcomp)
 {
     /* Check the parameter */
@@ -754,10 +754,10 @@ uint32_t HAL_COMP_GetOutputLevel(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  Comparator trigger callback.
-  * @param  hcomp  COMP handle
-  * @retval None
-  */
+ * @brief  Comparator trigger callback.
+ * @param  hcomp  COMP handle
+ * @retval None
+ */
 __weak void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -770,8 +770,8 @@ __weak void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup COMP_Exported_Functions_Group4 Peripheral State functions
  *  @brief   Peripheral State functions.
@@ -788,10 +788,10 @@ __weak void HAL_COMP_TriggerCallback(COMP_HandleTypeDef *hcomp)
   */
 
 /**
-  * @brief  Return the COMP handle state.
-  * @param  hcomp  COMP handle
-  * @retval HAL state
-  */
+ * @brief  Return the COMP handle state.
+ * @param  hcomp  COMP handle
+ * @retval HAL state
+ */
 HAL_COMP_StateTypeDef HAL_COMP_GetState(COMP_HandleTypeDef *hcomp)
 {
     /* Check the COMP handle allocation */
@@ -805,10 +805,10 @@ HAL_COMP_StateTypeDef HAL_COMP_GetState(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @brief  Return the COMP error code.
-  * @param hcomp COMP handle
-  * @retval COMP error code
-  */
+ * @brief  Return the COMP error code.
+ * @param hcomp COMP handle
+ * @retval COMP error code
+ */
 uint32_t HAL_COMP_GetError(COMP_HandleTypeDef *hcomp)
 {
     /* Check the parameters */
@@ -817,20 +817,20 @@ uint32_t HAL_COMP_GetError(COMP_HandleTypeDef *hcomp)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #endif /* HAL_COMP_MODULE_ENABLED */
 
 /**
-  * @}
-  */
+ * @}
+ */

@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup ADC Analog Digital Converter
-  * @brief ADC HAL module driver
-  * @{
-  */
+ * @brief ADC HAL module driver
+ * @{
+ */
 
 #ifdef HAL_SDADC_MODULE_ENABLED
 
@@ -23,8 +23,8 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /** @defgroup ADC_Private_Constants ADC Private Constants
-  * @{
-  */
+ * @{
+ */
 
 
 /**
@@ -35,8 +35,8 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /** @defgroup ADC_Private_Functions ADC Private Functions
-  * @{
-  */
+ * @{
+ */
 
 static void SDADC_DMAConvCplt(DMA_HandleTypeDef *hdma);
 static void SDADC_DMAError(DMA_HandleTypeDef *hdma);
@@ -48,8 +48,8 @@ static void SDADC_DMAError(DMA_HandleTypeDef *hdma);
 /* Exported functions ---------------------------------------------------------*/
 
 /** @defgroup SDADC_Exported_Functions SDADC Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup ADC_Exported_Functions_Group1 Initialization/de-initialization functions
  *  @brief    Initialization and Configuration functions
@@ -66,20 +66,20 @@ static void SDADC_DMAError(DMA_HandleTypeDef *hdma);
   */
 
 /**
-  * @brief  Initializes the SDADC peripheral and regular group according to
-  *         parameters specified in structure "ADC_InitTypeDef".
-  * @note   As prerequisite, ADC clock must be configured at RCC top level
-  *         depending on both possible clock sources: APB clock of HSI clock.
-  * @note   Possibility to update parameters on the fly:
-  *         The setting of these parameters is conditioned to ADC state.
-  *         For parameters constraints, see comments of structure
-  *         "ADC_InitTypeDef".
-  * @note   This function configures the SDADC within 2 scopes: scope of entire
-  *         ADC and scope of regular group. For parameters details, see comments
-  *         of structure "SDADC_InitTypeDef".
-  * @param  hadc ADC handle
-  * @retval HAL status
-  */
+ * @brief  Initializes the SDADC peripheral and regular group according to
+ *         parameters specified in structure "ADC_InitTypeDef".
+ * @note   As prerequisite, ADC clock must be configured at RCC top level
+ *         depending on both possible clock sources: APB clock of HSI clock.
+ * @note   Possibility to update parameters on the fly:
+ *         The setting of these parameters is conditioned to ADC state.
+ *         For parameters constraints, see comments of structure
+ *         "ADC_InitTypeDef".
+ * @note   This function configures the SDADC within 2 scopes: scope of entire
+ *         ADC and scope of regular group. For parameters details, see comments
+ *         of structure "SDADC_InitTypeDef".
+ * @param  hadc ADC handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Init(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -205,17 +205,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Init(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Deinitialize the SDADC peripheral registers to their default reset
-  *         values, with deinitialization of the ADC MSP.
-  * @note   For devices with several ADCs: reset of ADC common registers is done
-  *         only if all ADCs sharing the same common group are disabled.
-  *         If this is not the case, reset of these common parameters reset is
-  *         bypassed without error reporting: it can be the intended behaviour in
-  *         case of reset of a single ADC while the other ADCs sharing the same
-  *         common group is still running.
-  * @param  hadc SDADC handle
-  * @retval HAL status
-  */
+ * @brief  Deinitialize the SDADC peripheral registers to their default reset
+ *         values, with deinitialization of the ADC MSP.
+ * @note   For devices with several ADCs: reset of ADC common registers is done
+ *         only if all ADCs sharing the same common group are disabled.
+ *         If this is not the case, reset of these common parameters reset is
+ *         bypassed without error reporting: it can be the intended behaviour in
+ *         case of reset of a single ADC while the other ADCs sharing the same
+ *         common group is still running.
+ * @param  hadc SDADC handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_DeInit(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -266,10 +266,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_DeInit(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Initialize the SDMADC MSP.
-  * @param  hcomp  SDMADC handle
-  * @retval hadc
-  */
+ * @brief  Initialize the SDMADC MSP.
+ * @param  hcomp  SDMADC handle
+ * @retval hadc
+ */
 __weak void HAL_SDADC_MspInit(SDADC_HandleTypeDef *hadc)
 {
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -303,10 +303,10 @@ __weak void HAL_SDADC_MspInit(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  DeInitialize the SDMADC MSP.
-  * @param  hadc  SDMADC handle
-  * @retval None
-  */
+ * @brief  DeInitialize the SDMADC MSP.
+ * @param  hadc  SDMADC handle
+ * @retval None
+ */
 __weak void HAL_SDADC_MspDeInit(SDADC_HandleTypeDef *hadc)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -316,8 +316,8 @@ __weak void HAL_SDADC_MspDeInit(SDADC_HandleTypeDef *hadc)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SDADC_Exported_Functions_Group2 IO operation functions
  *  @brief    IO operation functions
@@ -342,11 +342,11 @@ __weak void HAL_SDADC_MspDeInit(SDADC_HandleTypeDef *hadc)
   */
 
 /**
-  * @brief  Enables SDADC, starts conversion of regular group.
-  *         Interruptions enabled in this function: None.
-  * @param  hadc SDADC handle
-  * @retval HAL status
-  */
+ * @brief  Enables SDADC, starts conversion of regular group.
+ *         Interruptions enabled in this function: None.
+ * @param  hadc SDADC handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -413,10 +413,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Stop ADC conversion of regular group, disable ADC peripheral.
-  * @param  hadc ADC handle
-  * @retval HAL status.
-  */
+ * @brief  Stop ADC conversion of regular group, disable ADC peripheral.
+ * @param  hadc ADC handle
+ * @retval HAL status.
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -445,11 +445,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Wait for regular group conversion to be completed.
-  * @param  hadc SDADC handle
-  * @param  Timeout Timeout value in millisecond.
-  * @retval HAL status
-  */
+ * @brief  Wait for regular group conversion to be completed.
+ * @param  hadc SDADC handle
+ * @param  Timeout Timeout value in millisecond.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_PollForConversion(SDADC_HandleTypeDef *hadc, uint32_t Timeout)
 {
     uint32_t tickstart;
@@ -512,16 +512,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_PollForConversion(SDADC_HandleTypeDef
 }
 
 /**
-  * @brief  Enables SDADC, starts conversion of regular group with interruption.
-  *         Interruptions enabled in this function:
-  *          - EOC (end of conversion of regular group) or EOS (end of
-  *            sequence of regular group) depending on ADC initialization
-  *            parameter "EOCSelection"
-  *          - overrun (if available)
-  *         Each of these interruptions has its dedicated callback function.
-  * @param  hadc SDADC handle
-  * @retval HAL status
-  */
+ * @brief  Enables SDADC, starts conversion of regular group with interruption.
+ *         Interruptions enabled in this function:
+ *          - EOC (end of conversion of regular group) or EOS (end of
+ *            sequence of regular group) depending on ADC initialization
+ *            parameter "EOCSelection"
+ *          - overrun (if available)
+ *         Each of these interruptions has its dedicated callback function.
+ * @param  hadc SDADC handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start_IT(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -548,11 +548,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start_IT(SDADC_HandleTypeDef *hadc)
 
 
 /**
-  * @brief  Stop SDADC conversion of regular group, disable interruption of
-  *         end-of-conversion, disable ADC peripheral.
-  * @param  hadc SDADC handle
-  * @retval HAL status.
-  */
+ * @brief  Stop SDADC conversion of regular group, disable interruption of
+ *         end-of-conversion, disable ADC peripheral.
+ * @param  hadc SDADC handle
+ * @retval HAL status.
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop_IT(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -579,18 +579,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop_IT(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Enables SDADC, starts conversion of regular group and transfers result
-  *         through DMA.
-  *         Interruptions enabled in this function:
-  *          - DMA transfer complete
-  *          - DMA half transfer
-  *          - overrun
-  *         Each of these interruptions has its dedicated callback function.
-  * @param  hadc SDADC handle
-  * @param  pData The destination Buffer address.
-  * @param  Length The length of data to be transferred from ADC peripheral to memory.
-  * @retval None
-  */
+ * @brief  Enables SDADC, starts conversion of regular group and transfers result
+ *         through DMA.
+ *         Interruptions enabled in this function:
+ *          - DMA transfer complete
+ *          - DMA half transfer
+ *          - overrun
+ *         Each of these interruptions has its dedicated callback function.
+ * @param  hadc SDADC handle
+ * @param  pData The destination Buffer address.
+ * @param  Length The length of data to be transferred from ADC peripheral to memory.
+ * @retval None
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start_DMA(SDADC_HandleTypeDef *hadc, uint32_t *pData, uint32_t Length)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -635,12 +635,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Start_DMA(SDADC_HandleTypeDef *hadc, 
 }
 
 /**
-  * @brief  Stop SDADC conversion of regular group, disable ADC DMA transfer, disable
-  *         ADC peripheral.
-  *         Each of these interruptions has its dedicated callback function.
-  * @param  hadc SDADC handle
-  * @retval HAL status.
-  */
+ * @brief  Stop SDADC conversion of regular group, disable ADC DMA transfer, disable
+ *         ADC peripheral.
+ *         Each of these interruptions has its dedicated callback function.
+ * @param  hadc SDADC handle
+ * @retval HAL status.
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop_DMA(SDADC_HandleTypeDef *hadc)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -667,24 +667,24 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_Stop_DMA(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Get SDADC regular group conversion result.
-  * @note   Reading register DR automatically clears ADC flag EOC
-  *         (ADC group regular end of unitary conversion).
-  * @note   This function does not clear ADC flag EOS
-  *         (ADC group regular end of sequence conversion).
-  *         Occurrence of flag EOS rising:
-  *          - If sequencer is composed of 1 rank, flag EOS is equivalent
-  *            to flag EOC.
-  *          - If sequencer is composed of several ranks, during the scan
-  *            sequence flag EOC only is raised, at the end of the scan sequence
-  *            both flags EOC and EOS are raised.
-  *         To clear this flag, either use function:
-  *         in programming model IT: @ref HAL_ADC_IRQHandler(), in programming
-  *         model polling: @ref HAL_ADC_PollForConversion()
-  *         or @ref __HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_EOS).
-  * @param  hadc SDADC handle
-  * @retval ADC group regular conversion data
-  */
+ * @brief  Get SDADC regular group conversion result.
+ * @note   Reading register DR automatically clears ADC flag EOC
+ *         (ADC group regular end of unitary conversion).
+ * @note   This function does not clear ADC flag EOS
+ *         (ADC group regular end of sequence conversion).
+ *         Occurrence of flag EOS rising:
+ *          - If sequencer is composed of 1 rank, flag EOS is equivalent
+ *            to flag EOC.
+ *          - If sequencer is composed of several ranks, during the scan
+ *            sequence flag EOC only is raised, at the end of the scan sequence
+ *            both flags EOC and EOS are raised.
+ *         To clear this flag, either use function:
+ *         in programming model IT: @ref HAL_ADC_IRQHandler(), in programming
+ *         model polling: @ref HAL_ADC_PollForConversion()
+ *         or @ref __HAL_ADC_CLEAR_FLAG(&hadc, ADC_FLAG_EOS).
+ * @param  hadc SDADC handle
+ * @retval ADC group regular conversion data
+ */
 __HAL_ROM_USED uint32_t HAL_SDADC_GetValue(SDADC_HandleTypeDef *hadc, uint32_t slot)
 {
     uint32_t value;
@@ -744,10 +744,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_SetTimer(SDADC_HandleTypeDef *hadc, H
 
 
 /**
-  * @brief  Handles SDADC interrupt request.
-  * @param  hadc SDADC handle
-  * @retval None
-  */
+ * @brief  Handles SDADC interrupt request.
+ * @param  hadc SDADC handle
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_SDADC_IRQHandler(SDADC_HandleTypeDef *hadc)
 {
     /* Clear ISR */
@@ -758,10 +758,10 @@ __HAL_ROM_USED void HAL_SDADC_IRQHandler(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Conversion complete callback in non blocking mode
-  * @param  hadc ADC handle
-  * @retval None
-  */
+ * @brief  Conversion complete callback in non blocking mode
+ * @param  hadc ADC handle
+ * @retval None
+ */
 __weak void HAL_SDADC_ConvCpltCallback(SDADC_HandleTypeDef *hadc)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -774,8 +774,8 @@ __weak void HAL_SDADC_ConvCpltCallback(SDADC_HandleTypeDef *hadc)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup ADC_Exported_Functions_Group3 Peripheral Control functions
  *  @brief    Peripheral Control functions
@@ -793,29 +793,29 @@ __weak void HAL_SDADC_ConvCpltCallback(SDADC_HandleTypeDef *hadc)
   */
 
 /**
-  * @brief  Configures the the selected channel to be linked to the regular
-  *         group.
-  * @note   In case of usage of internal measurement channels:
-  *         VrefInt/Vbat/TempSensor.
-  *         Sampling time constraints must be respected (sampling time can be
-  *         adjusted in function of ADC clock frequency and sampling time
-  *         setting).
-  *         Refer to device datasheet for timings values, parameters TS_vrefint,
-  *         TS_vbat, TS_temp (values rough order: 5us to 17us).
-  *         These internal paths can be be disabled using function
-  *         HAL_SDADC_DeInit().
-  * @note   Possibility to update parameters on the fly:
-  *         This function initializes channel into regular group, following
-  *         calls to this function can be used to reconfigure some parameters
-  *         of structure "SDADC_ChannelConfTypeDef" on the fly, without reseting
-  *         the SDADC.
-  *         The setting of these parameters is conditioned to ADC state.
-  *         For parameters constraints, see comments of structure
-  *         "ADC_ChannelConfTypeDef".
-  * @param  hadc ADC handle
-  * @param  sConfig Structure of ADC channel for regular group.
-  * @retval HAL status
-  */
+ * @brief  Configures the the selected channel to be linked to the regular
+ *         group.
+ * @note   In case of usage of internal measurement channels:
+ *         VrefInt/Vbat/TempSensor.
+ *         Sampling time constraints must be respected (sampling time can be
+ *         adjusted in function of ADC clock frequency and sampling time
+ *         setting).
+ *         Refer to device datasheet for timings values, parameters TS_vrefint,
+ *         TS_vbat, TS_temp (values rough order: 5us to 17us).
+ *         These internal paths can be be disabled using function
+ *         HAL_SDADC_DeInit().
+ * @note   Possibility to update parameters on the fly:
+ *         This function initializes channel into regular group, following
+ *         calls to this function can be used to reconfigure some parameters
+ *         of structure "SDADC_ChannelConfTypeDef" on the fly, without reseting
+ *         the SDADC.
+ *         The setting of these parameters is conditioned to ADC state.
+ *         For parameters constraints, see comments of structure
+ *         "ADC_ChannelConfTypeDef".
+ * @param  hadc ADC handle
+ * @param  sConfig Structure of ADC channel for regular group.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_ConfigChannel(SDADC_HandleTypeDef *hadc, SDADC_ChannelConfTypeDef *sConfig)
 {
     HAL_StatusTypeDef tmp_hal_status = HAL_OK;
@@ -936,8 +936,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_EnableSlot(SDADC_HandleTypeDef *hadc,
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroupSD ADC_Exported_Functions_Group4 Peripheral State functions
@@ -958,15 +958,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SDADC_EnableSlot(SDADC_HandleTypeDef *hadc,
   */
 
 /**
-  * @brief  Return the SDADC state
-  * @note   ADC state machine is managed by bitfields, ADC status must be
-  *         compared with states bits.
-  *         For example:
-  *           " if (HAL_IS_BIT_SET(HAL_ADC_GetState(hadc1), HAL_ADC_STATE_REG_BUSY)) "
-  *           " if (HAL_IS_BIT_SET(HAL_ADC_GetState(hadc1), HAL_ADC_STATE_AWD1)    ) "
-  * @param  hadc ADC handle
-  * @retval HAL state
-  */
+ * @brief  Return the SDADC state
+ * @note   ADC state machine is managed by bitfields, ADC status must be
+ *         compared with states bits.
+ *         For example:
+ *           " if (HAL_IS_BIT_SET(HAL_ADC_GetState(hadc1), HAL_ADC_STATE_REG_BUSY)) "
+ *           " if (HAL_IS_BIT_SET(HAL_ADC_GetState(hadc1), HAL_ADC_STATE_AWD1)    ) "
+ * @param  hadc ADC handle
+ * @retval HAL state
+ */
 __HAL_ROM_USED uint32_t HAL_SDADC_GetState(SDADC_HandleTypeDef *hadc)
 {
     /* Return ADC state */
@@ -974,33 +974,33 @@ __HAL_ROM_USED uint32_t HAL_SDADC_GetState(SDADC_HandleTypeDef *hadc)
 }
 
 /**
-  * @brief  Return the ADC error code
-  * @param  hadc ADC handle
-  * @retval ADC Error Code
-  */
+ * @brief  Return the ADC error code
+ * @param  hadc ADC handle
+ * @retval ADC Error Code
+ */
 __HAL_ROM_USED uint32_t HAL_SDADC_GetError(SDADC_HandleTypeDef *hadc)
 {
     return hadc->ErrorCode;
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup ADC_Private_Functions ADC Private Functions
-  * @{
-  */
+ * @{
+ */
 
 
 /**
-  * @brief  DMA transfer complete callback.
-  * @param  hdma pointer to DMA handle.
-  * @retval None
-  */
+ * @brief  DMA transfer complete callback.
+ * @param  hdma pointer to DMA handle.
+ * @retval None
+ */
 static void SDADC_DMAConvCplt(DMA_HandleTypeDef *hdma)
 {
     /* Retrieve ADC handle corresponding to current DMA handle */
@@ -1024,10 +1024,10 @@ static void SDADC_DMAConvCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA error callback
-  * @param  hdma pointer to DMA handle.
-  * @retval None
-  */
+ * @brief  DMA error callback
+ * @param  hdma pointer to DMA handle.
+ * @retval None
+ */
 static void SDADC_DMAError(DMA_HandleTypeDef *hdma)
 {
     /* Retrieve ADC handle corresponding to current DMA handle */
@@ -1042,11 +1042,11 @@ static void SDADC_DMAError(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Convert a raw SDADC register value to voltage (mV); same formula as GADC.
-  * @param  reg_value: raw register value
-  * @param  context:   calibration context (contains offset and ratio)
-  * @retval voltage (mV)
-  */
+ * @brief  Convert a raw SDADC register value to voltage (mV); same formula as GADC.
+ * @param  reg_value: raw register value
+ * @param  context:   calibration context (contains offset and ratio)
+ * @retval voltage (mV)
+ */
 __weak float HAL_SDADC_RegToVoltageFloat(float reg_value, const HAL_SDADC_CalibContextTypeDef *context)
 {
     if (context == NULL)
@@ -1056,8 +1056,8 @@ __weak float HAL_SDADC_RegToVoltageFloat(float reg_value, const HAL_SDADC_CalibC
 }
 
 /**
-  * @brief  Initialize the calibration context with the chip default macro values.
-  */
+ * @brief  Initialize the calibration context with the chip default macro values.
+ */
 static HAL_StatusTypeDef HAL_SDADC_SetDefaultCalibration(HAL_SDADC_CalibContextTypeDef *ctx)
 {
     if (ctx == NULL)
@@ -1072,20 +1072,20 @@ static HAL_StatusTypeDef HAL_SDADC_SetDefaultCalibration(HAL_SDADC_CalibContextT
 }
 
 /**
-  * @brief  Two-point calibration.
-  * @param  reg1:   register value of calibration point 1
-  * @param  mv1:    voltage (mV) of calibration point 1
-  * @param  reg2:   register value of calibration point 2
-  * @param  mv2:    voltage (mV) of calibration point 2
-  * @param  result: output calibration result (offset, ratio, threshold_reg)
-  * @retval HAL_OK or HAL_ERROR
-  *
-  * Formula:
-  *   gap_reg = |reg2 - reg1|
-  *   gap_mv  = |mV2  - mV1 |
-  *   ratio   = gap_mv * ACCURATE / gap_reg
-  *   offset  = reg1 - mV1 * ACCURATE / ratio
-  */
+ * @brief  Two-point calibration.
+ * @param  reg1:   register value of calibration point 1
+ * @param  mv1:    voltage (mV) of calibration point 1
+ * @param  reg2:   register value of calibration point 2
+ * @param  mv2:    voltage (mV) of calibration point 2
+ * @param  result: output calibration result (offset, ratio, threshold_reg)
+ * @retval HAL_OK or HAL_ERROR
+ *
+ * Formula:
+ *   gap_reg = |reg2 - reg1|
+ *   gap_mv  = |mV2  - mV1 |
+ *   ratio   = gap_mv * ACCURATE / gap_reg
+ *   offset  = reg1 - mV1 * ACCURATE / ratio
+ */
 static HAL_StatusTypeDef HAL_SDADC_Calibration(
     uint32_t reg1, uint32_t mv1,
     uint32_t reg2, uint32_t mv2,
@@ -1114,17 +1114,17 @@ static HAL_StatusTypeDef HAL_SDADC_Calibration(
 }
 
 /**
-  * @brief  Load the SDADC calibration parameters: set defaults first, then try to
-  *         override them with the factory calibration.
-  * @param  context: calibration context to be filled in
-  * @retval HAL_OK:    context is always populated with usable values. When factory
-  *                    calibration is present and valid it is applied and the
-  *                    HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag is set; otherwise the
-  *                    chip default calibration is kept and the flag stays clear.
-  *         HAL_ERROR: invalid argument (context == NULL) only.
-  * @note   Callers should NOT treat a cleared HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag
-  *         as "no data" — the default calibration is still usable.
-  */
+ * @brief  Load the SDADC calibration parameters: set defaults first, then try to
+ *         override them with the factory calibration.
+ * @param  context: calibration context to be filled in
+ * @retval HAL_OK:    context is always populated with usable values. When factory
+ *                    calibration is present and valid it is applied and the
+ *                    HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag is set; otherwise the
+ *                    chip default calibration is kept and the flag stays clear.
+ *         HAL_ERROR: invalid argument (context == NULL) only.
+ * @note   Callers should NOT treat a cleared HAL_SDADC_CALIB_CTX_F_FACTORY_VALID flag
+ *         as "no data" — the default calibration is still usable.
+ */
 __weak HAL_StatusTypeDef HAL_SDADC_CalibLoad(HAL_SDADC_CalibContextTypeDef *context)
 {
     HAL_StatusTypeDef status;
@@ -1157,14 +1157,14 @@ __weak HAL_StatusTypeDef HAL_SDADC_CalibLoad(HAL_SDADC_CalibContextTypeDef *cont
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_SDADC_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

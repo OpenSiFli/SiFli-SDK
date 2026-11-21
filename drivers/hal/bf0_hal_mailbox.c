@@ -8,39 +8,39 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup MAILBOX
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_MAILBOX_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /** @defgroup MAILBOX_Private_Constants MAILBOX Private Constants
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private macros ------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /** @defgroup MAILBOX_Private_Functions MAILBOX Private Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup MAILBOX_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup MAILBOX_Exported_Functions_Group1
  *  @brief    Initialization and de-initialization functions
@@ -65,10 +65,10 @@
   */
 
 /**
-  * @brief  Initialize the MAILBOX peripheral.
-  * @param  hmailbox MAILBOX handle
-  * @retval HAL status
-  */
+ * @brief  Initialize the MAILBOX peripheral.
+ * @param  hmailbox MAILBOX handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MAILBOX_Init(MAILBOX_HandleTypeDef *hmailbox)
 {
     HAL_StatusTypeDef err = HAL_OK;
@@ -78,10 +78,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MAILBOX_Init(MAILBOX_HandleTypeDef *hmailbo
 }
 
 /**
-  * @brief  DeInitialize the MAILBOX peripheral.
-  * @param  hmailbox MAILBOX handle
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the MAILBOX peripheral.
+ * @param  hmailbox MAILBOX handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_MAILBOX_DeInit(MAILBOX_HandleTypeDef *hmailbox)
 {
     HAL_StatusTypeDef err = HAL_OK;
@@ -91,10 +91,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_MAILBOX_DeInit(MAILBOX_HandleTypeDef *hmail
 }
 
 /**
-  * @brief Initialize the MAILBOX MSP.
-  * @param  hmailbox MAILBOX handle
-  * @retval None
-  */
+ * @brief Initialize the MAILBOX MSP.
+ * @param  hmailbox MAILBOX handle
+ * @retval None
+ */
 __weak void HAL_MAILBOX_MspInit(MAILBOX_HandleTypeDef *hmailbox)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -106,10 +106,10 @@ __weak void HAL_MAILBOX_MspInit(MAILBOX_HandleTypeDef *hmailbox)
 }
 
 /**
-  * @brief MAILBOX MSP DeInit
-  * @param  hmailbox MAILBOX handle
-  * @retval None
-  */
+ * @brief MAILBOX MSP DeInit
+ * @param  hmailbox MAILBOX handle
+ * @retval None
+ */
 __weak void HAL_MAILBOX_MspDeInit(MAILBOX_HandleTypeDef *hmailbox)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -121,8 +121,8 @@ __weak void HAL_MAILBOX_MspDeInit(MAILBOX_HandleTypeDef *hmailbox)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @addtogroup MAILBOX_Exported_Functions_Group3
@@ -141,10 +141,10 @@ __weak void HAL_MAILBOX_MspDeInit(MAILBOX_HandleTypeDef *hmailbox)
   */
 
 /**
-  * @brief Return the MAILBOX handle state.
-  * @param  hmailbox MAILBOX handle
-  * @retval MAILBOX handle state
-  */
+ * @brief Return the MAILBOX handle state.
+ * @param  hmailbox MAILBOX handle
+ * @retval MAILBOX handle state
+ */
 __HAL_ROM_USED HAL_MAILBOX_StateTypeDef HAL_MAILBOX_GetState(MAILBOX_HandleTypeDef const *const hmailbox)
 {
     return hmailbox->State;
@@ -243,8 +243,8 @@ __HAL_ROM_USED void HAL_MAILBOX_UnLock(MUTEX_HandleTypeDef const *const hmutex, 
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 
@@ -281,25 +281,25 @@ __HAL_ROM_USED void HAL_MAILBOX_IRQHandler(MAILBOX_HandleTypeDef *hmailbox)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup MAILBOX_Private_Functions
-  * @{
-  */
+ * @{
+ */
 
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_MAILBOX_MODULE_ENABLED */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

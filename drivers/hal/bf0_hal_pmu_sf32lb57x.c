@@ -11,13 +11,13 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PMU PMU
-  * @brief PMU HAL module driver
-  * @{
-  */
+ * @brief PMU HAL module driver
+ * @{
+ */
 
 #ifdef HAL_PMU_MODULE_ENABLED
 
@@ -300,9 +300,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_LpCLockSelect(PMU_LpClockTypeDef lp_clo
 
 #endif /* HAL_PMU_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

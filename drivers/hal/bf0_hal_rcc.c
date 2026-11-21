@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup RCC Reset and control
-  * @brief RCC HAL module driver
-  * @{
-  */
+ * @brief RCC HAL module driver
+ * @{
+ */
 
 #if defined(HAL_RCC_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -3062,9 +3062,9 @@ LPSYS_DvfsModeTypeDef HAL_RCC_LCPU_GetCurrentDvfsMode(void)
 
 #endif /* HAL_RCC_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

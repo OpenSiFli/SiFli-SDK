@@ -10,8 +10,8 @@
 #include "rtconfig.h"
 #include "register.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 #ifdef HAL_SYSTEM_CONFIG_ENABLED
 
@@ -170,5 +170,5 @@ __weak uint32_t BSP_GetOtpBase(void)
 #endif //HAL_SYSTEM_CONFIG_ENABLED
 
 /**
-  * @}
-  */
+ * @}
+ */

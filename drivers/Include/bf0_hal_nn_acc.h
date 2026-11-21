@@ -16,17 +16,17 @@
 #include <stdint.h>
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup NNACC CNN accelerator
-  * @brief Neural network CNN accelerator.
-  * @{
-  */
+ * @brief Neural network CNN accelerator.
+ * @{
+ */
 
 /**
-  * @brief  HAL NNACC State structures definition
-  */
+ * @brief  HAL NNACC State structures definition
+ */
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,33 +84,33 @@ typedef struct __NNACC_HandleTypeDef
 
 
 /**
-  * @brief initialize the Neural network accelerator
-  * @param[in] nn_acc The Neural network accelerator instance
-  * @retval HAL_OK if success, otherwise failed.
-*/
+ * @brief initialize the Neural network accelerator
+ * @param[in] nn_acc The Neural network accelerator instance
+ * @retval HAL_OK if success, otherwise failed.
+ */
 HAL_StatusTypeDef HAL_NNACC_Init(NNACC_HandleTypeDef *nn_acc);
 
 /**
-  * @brief Start Neural network CNN calulation
-  * @param[in] nn_acc The Neural network accelerator instance
-  * @param[in] config CNN configuration
-  * @retval HAL_OK if success, otherwise failed.
-*/
+ * @brief Start Neural network CNN calulation
+ * @param[in] nn_acc The Neural network accelerator instance
+ * @param[in] config CNN configuration
+ * @retval HAL_OK if success, otherwise failed.
+ */
 HAL_StatusTypeDef HAL_NNACC_Start(NNACC_HandleTypeDef *nn_acc, NNACC_ConfigTypeDef *config);
 
 /**
-  * @brief Start Neural network CNN calulation with interrupt mode
-  * @param[in] nn_acc The Neural network accelerator instance
-  * @param[in] config CNN configuration
-  * @retval HAL_OK if success, otherwise failed.
-*/
+ * @brief Start Neural network CNN calulation with interrupt mode
+ * @param[in] nn_acc The Neural network accelerator instance
+ * @param[in] config CNN configuration
+ * @retval HAL_OK if success, otherwise failed.
+ */
 HAL_StatusTypeDef HAL_NNACC_Start_IT(NNACC_HandleTypeDef *nn_acc, NNACC_ConfigTypeDef *config);
 
 /**
-  * @brief CNN calulation interrupt handler
-  * @param[in] nn_acc The Neural network accelerator instance
-  * @retval None.
-*/
+ * @brief CNN calulation interrupt handler
+ * @param[in] nn_acc The Neural network accelerator instance
+ * @retval None.
+ */
 void HAL_NNACC_IRQHandler(NNACC_HandleTypeDef *nn_acc);
 
 ///@} NNACC

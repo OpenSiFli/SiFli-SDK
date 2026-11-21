@@ -10,10 +10,10 @@
 #if defined(HAL_PTC_ENABLED) ||defined(_SIFLI_DOXYGEN_)
 
 /**
-* @brief  Initialize PTC
-* @param  hptc Handle of PTC
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Initialize PTC
+ * @param  hptc Handle of PTC
+ * @retval HAL_OK if successful, otherwise error
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PTC_Init(PTC_HandleTypeDef *hptc)
 {
     uint32_t address;
@@ -31,10 +31,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PTC_Init(PTC_HandleTypeDef *hptc)
 }
 
 /**
-* @brief  Enable/disable PTC
-* @param  hptc Handle of PTC
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Enable/disable PTC
+ * @param  hptc Handle of PTC
+ * @retval HAL_OK if successful, otherwise error
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PTC_Enable(PTC_HandleTypeDef *hptc, int enable)
 {
     if (enable)
@@ -91,10 +91,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PTC_Enable(PTC_HandleTypeDef *hptc, int ena
 }
 
 /**
-* @brief  Handle PTC interrupt
-* @param  hptc Handle of PTC
-* @retval None
-*/
+ * @brief  Handle PTC interrupt
+ * @param  hptc Handle of PTC
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_PTC_IRQHandler(PTC_HandleTypeDef *hptc)
 {
     hptc->Instance->ICR |= (1 << hptc->Init.Channel);        // Clear PTC interrupt.

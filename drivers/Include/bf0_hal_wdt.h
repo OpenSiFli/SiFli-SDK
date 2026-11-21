@@ -20,21 +20,21 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup WDT
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup WDT_Exported_Types WDT Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  WDT Init structure definition
-  */
+ * @brief  WDT Init structure definition
+ */
 typedef struct
 {
 
@@ -46,8 +46,8 @@ typedef struct
 } WDT_InitTypeDef;
 
 /**
-  * @brief  WDT Handle Structure definition
-  */
+ * @brief  WDT Handle Structure definition
+ */
 typedef struct
 {
     WDT_TypeDef                 *Instance;  /*!< Register base address    */
@@ -57,13 +57,13 @@ typedef struct
 } WDT_HandleTypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup WDT_Exported_Constants WDT Exported Constants
-  * @{
-  */
+ * @{
+ */
 #define WDT_CMD_START                 0x00000076U  /*!< WDT start       */
 #define WDT_CMD_STOP                  0x00000034U  /*!< WDT stop      */
 
@@ -73,20 +73,20 @@ typedef struct
 #define HAL_WDT_DEFAULT_TIMEOUT       48000U
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup WDT_Exported_Macros WDT Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Start the WDT count down.
-  * @param  \__HANDLE__  WDT handle
-  * @retval None
-  */
+ * @brief  Start the WDT count down.
+ * @param  \__HANDLE__  WDT handle
+ * @retval None
+ */
 #define __HAL_WDT_START(__HANDLE__)    \
 { \
     unsigned int cnt=0U;\
@@ -98,10 +98,10 @@ typedef struct
 }
 
 /**
-  * @brief  Stop the WDT count down.
-  * @param  \__HANDLE__  WDT handle
-  * @retval None
-  */
+ * @brief  Stop the WDT count down.
+ * @param  \__HANDLE__  WDT handle
+ * @retval None
+ */
 #define __HAL_WDT_STOP(__HANDLE__)     \
 {\
     unsigned int cnt=0U;\
@@ -115,24 +115,24 @@ typedef struct
 }
 
 /**
-  * @brief  Clear interrupt
-  * @param  \__HANDLE__  WDT handle
-  * @retval None
-  */
+ * @brief  Clear interrupt
+ * @param  \__HANDLE__  WDT handle
+ * @retval None
+ */
 #define __HAL_WDT_CLEAR(__HANDLE__)                MODIFY_REG((__HANDLE__)->Instance->WDT_ICR,0,WDT_WDT_ICR_INT_CLR)
 
 /**
-  * @brief  WDT generate interrupt or reset only
-  * @param  \__HANDLE__  WDT handle
-  * @param  INT  1: Generate interrupt and reset   0:Reset only
-  * @retval None
-  */
+ * @brief  WDT generate interrupt or reset only
+ * @param  \__HANDLE__  WDT handle
+ * @param  INT  1: Generate interrupt and reset   0:Reset only
+ * @retval None
+ */
 #define __HAL_WDT_INT(__HANDLE__,INT)              MODIFY_REG((__HANDLE__)->Instance->WDT_CR,WDT_WDT_CR_RESPONSE_MODE,INT?WDT_WDT_CR_RESPONSE_MODE:0)
 
 /**
-  * @brief  Disable WDT.
-  * @retval None
-  */
+ * @brief  Disable WDT.
+ * @retval None
+ */
 #ifdef SOC_BF0_HCPU
 #define __HAL_WDT_DISABLE()                       WRITE_REG(hwp_wdt1->WDT_CCR, WDT_CMD_STOP)
 #else
@@ -145,95 +145,95 @@ typedef struct
 #endif
 
 /**
-  * @brief  Reload WDT counter 1 with value defined in the reload register
-  * @param  \__HANDLE__  WDT handle
-  * @retval None
-  */
+ * @brief  Reload WDT counter 1 with value defined in the reload register
+ * @param  \__HANDLE__  WDT handle
+ * @retval None
+ */
 #define __HAL_WDT_RELOAD_COUNTER(__HANDLE__)       WRITE_REG((__HANDLE__)->Instance->WDT_CVR0,(__HANDLE__)->Init.Reload)
 
 /**
-  * @brief  Reload WDT counter 2 with value defined in the reload register
-  * @param  \__HANDLE__  WDT handle
-  * @retval None
-  */
+ * @brief  Reload WDT counter 2 with value defined in the reload register
+ * @param  \__HANDLE__  WDT handle
+ * @retval None
+ */
 #define __HAL_WDT_RELOAD_COUNTER2(__HANDLE__)       WRITE_REG((__HANDLE__)->Instance->WDT_CVR1,(__HANDLE__)->Init.Reload2)
 
 
 #define WDT_PROTECT_MAGIC 0x58ab99fc
 #define WDT_RELEASE_MAGIC 0x51ff8621
 /**
-  * @brief  Protect WDT write
-  * @param  \__HANDLE__  WDT handle
-  * @param  PROTECT 1: Protect ,  0: Release
-  * @retval None
-  */
+ * @brief  Protect WDT write
+ * @param  \__HANDLE__  WDT handle
+ * @param  PROTECT 1: Protect ,  0: Release
+ * @retval None
+ */
 #define __HAL_WDT_PROTECT(__HANDLE__,PROTECT)       MODIFY_REG((__HANDLE__)->Instance->WDT_WP,WDT_WDT_WP_WRPT_Msk,PROTECT?WDT_PROTECT_MAGIC:WDT_RELEASE_MAGIC)
 
 
 /**
-  * @brief  Check whether WDT write is protected
-  * @param  \__HANDLE__  WDT handle
-  * @retval Non-Zer0 is protected, 0 is not protected
-  */
+ * @brief  Check whether WDT write is protected
+ * @param  \__HANDLE__  WDT handle
+ * @retval Non-Zer0 is protected, 0 is not protected
+ */
 #define __HAL_WDT_IS_PROTECTED(__HANDLE__) (((__HANDLE__)->Instance->WDT_WP&WDT_WDT_WP_WRPT_ST_Msk)==WDT_WDT_WP_WRPT_ST)
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup WDT_Exported_Functions  WDT Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup WDT_Exported_Functions_Group1 Initialization and Start functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Initialize Watchdog timer.
-  * @param  wdt  WDT handle
-  * @retval Status of initialization, 0 OK, non-Zer0 error.
-  */
+ * @brief  Initialize Watchdog timer.
+ * @param  wdt  WDT handle
+ * @retval Status of initialization, 0 OK, non-Zer0 error.
+ */
 HAL_StatusTypeDef HAL_WDT_Init(WDT_HandleTypeDef *wdt);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup WDT_Exported_Functions_Group2 IO operation functions
-  * @{
-  */
+ * @{
+ */
 /**
-  * @brief  Kick Watchdog timer.
-  * @param  wdt  WDT handle
-  * @retval Status of kick, 0 OK, non-Zer0 error.
-  */
+ * @brief  Kick Watchdog timer.
+ * @param  wdt  WDT handle
+ * @retval Status of kick, 0 OK, non-Zer0 error.
+ */
 HAL_StatusTypeDef HAL_WDT_Refresh(WDT_HandleTypeDef *wdt);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private constants ---------------------------------------------------------*/
 /** @defgroup WDT_Private_Constants WDT Private Constants
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  WDT Command Register value
-  */
+ * @brief  WDT Command Register value
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private macros ------------------------------------------------------------*/
 /** @defgroup WDT_Private_Macros WDT Private Macros
-  * @{
-  */
+ * @{
+ */
 #ifdef hwp_wdt1
 #define IS_WDT_ALL_INSTANCE(wdt)    ((wdt)==hwp_wdt1||(wdt)==hwp_wdt2||(wdt)==hwp_iwdt)
 #else
@@ -243,16 +243,16 @@ HAL_StatusTypeDef HAL_WDT_Refresh(WDT_HandleTypeDef *wdt);
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #ifdef __cplusplus

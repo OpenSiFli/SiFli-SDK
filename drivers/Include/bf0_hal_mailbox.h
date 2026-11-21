@@ -17,23 +17,23 @@ extern "C" {
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup MAILBOX MAILBOX
-  * @brief MAILBOX HAL module driver
-  * @{
-  */
+ * @brief MAILBOX HAL module driver
+ * @{
+ */
 
 /* Exported constants --------------------------------------------------------*/
 
 /** @defgroup MAILBOX_Exported_Constants MAILBOX Exported Constants
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup MAILBOX_Channel MAILBOX Channel
-  * @{
-  */
+ * @{
+ */
 #define MAILBOX_CHANNEL_1 0x00000000U
 #define MAILBOX_CHANNEL_2 0x00000001U
 #define MAILBOX_CHANNEL_3 0x00000002U
@@ -52,17 +52,17 @@ extern "C" {
 #define MAILBOX_CHANNEL_16 0x0000000FU
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup MAILBOX_Exported_Types MAILBOX Exported Types
-  * @{
-  */
+ * @{
+ */
 
 typedef struct
 {
@@ -104,8 +104,8 @@ typedef struct
 #endif /* SF32LB55X */
 
 /**
-  * @brief HAL MAILBOX State structures definition
-  */
+ * @brief HAL MAILBOX State structures definition
+ */
 typedef enum
 {
     HAL_MAILBOX_STATE_RESET             = 0x00U,  /*!< MAILBOX not yet initialized or disabled  */
@@ -152,172 +152,172 @@ typedef struct __MUTEX_HandleTypeDef
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup MAILBOX_Exported_Macros MAILBOX Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 
 /**
-  * @brief  Mask the specified interrupt.
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__CHINDEX__ specifies the channels number:
-  *         This parameter can be one of the following values (@ref MAILBOX_Channel):
-  *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
-  *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
-  *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
-  *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
-  *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
-  *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
-  */
+ * @brief  Mask the specified interrupt.
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__CHINDEX__ specifies the channels number:
+ *         This parameter can be one of the following values (@ref MAILBOX_Channel):
+ *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
+ *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
+ *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
+ *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
+ *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
+ *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
+ */
 #define __HAL_MAILBOX_MASK_CHANNEL_IT(__HANDLE__, __CHINDEX__) \
                 ((__HANDLE__)->Instance->CxIER &= ~(MAILBOX_C1IER_INT0_Msk << (__CHINDEX__)))
 
 /**
-  * @brief  Unmask the specified interrupt.
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__CHINDEX__ specifies the channels number:
-  *         This parameter can be one of the following values (@ref MAILBOX_Channel):
-  *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
-  *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
-  *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
-  *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
-  *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
-  *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
-  */
+ * @brief  Unmask the specified interrupt.
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__CHINDEX__ specifies the channels number:
+ *         This parameter can be one of the following values (@ref MAILBOX_Channel):
+ *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
+ *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
+ *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
+ *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
+ *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
+ *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
+ */
 #define __HAL_MAILBOX_UNMASK_CHANNEL_IT(__HANDLE__, __CHINDEX__) \
             ((__HANDLE__)->Instance->CxIER |= (MAILBOX_C1IER_INT0_Msk << (__CHINDEX__)))
 
 
 /**
-  * @brief  Trigger the specified interrupt.
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__CHINDEX__ specifies the channels number :
-  *         This parameter can be one of the following values (@ref MAILBOX_Channel):
-  *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
-  *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
-  *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
-  *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
-  *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
-  *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
-  */
+ * @brief  Trigger the specified interrupt.
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__CHINDEX__ specifies the channels number :
+ *         This parameter can be one of the following values (@ref MAILBOX_Channel):
+ *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
+ *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
+ *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
+ *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
+ *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
+ *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
+ */
 #define __HAL_MAILBOX_TRIGGER_CHANNEL_IT(__HANDLE__, __CHINDEX__) \
             ((__HANDLE__)->Instance->CxITR |= (MAILBOX_C1ITR_INT0_Msk << (__CHINDEX__)))
 
 
 /**
-  * @brief  Check whether interrupt has been handled
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__CHINDEX__ specifies the channels number :
-  *         This parameter can be one of the following values (@ref MAILBOX_Channel):
-  *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
-  *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
-  *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
-  *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
-  *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
-  *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
-  * @retval 0 interrupt has been handled
-  * @retval others interrupt has not been handled
-  */
+ * @brief  Check whether interrupt has been handled
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__CHINDEX__ specifies the channels number :
+ *         This parameter can be one of the following values (@ref MAILBOX_Channel):
+ *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
+ *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
+ *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
+ *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
+ *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
+ *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
+ * @retval 0 interrupt has been handled
+ * @retval others interrupt has not been handled
+ */
 #define __HAL_MAILBOX_CHECK_CHANNEL_IT(__HANDLE__, __CHINDEX__) \
             ((__HANDLE__)->Instance->CxISR & (MAILBOX_C1ITR_INT0_Msk << (__CHINDEX__)))
 
 /**
-  * @brief  Clear the specified interrupt.
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__CHINDEX__ specifies the channels number :
-  *         This parameter can be one of the following values (@ref MAILBOX_Channel):
-  *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
-  *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
-  *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
-  *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
-  *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
-  *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
-  */
+ * @brief  Clear the specified interrupt.
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__CHINDEX__ specifies the channels number :
+ *         This parameter can be one of the following values (@ref MAILBOX_Channel):
+ *            @arg MAILBOX_CHANNEL_1: MAILBOX Channel 1
+ *            @arg MAILBOX_CHANNEL_2: MAILBOX Channel 2
+ *            @arg MAILBOX_CHANNEL_3: MAILBOX Channel 3
+ *            @arg MAILBOX_CHANNEL_4: MAILBOX Channel 4
+ *            @arg MAILBOX_CHANNEL_5: MAILBOX Channel 5
+ *            @arg MAILBOX_CHANNEL_6: MAILBOX Channel 6
+ */
 #define __HAL_MAILBOX_CLEAR_CHANNEL_IT(__HANDLE__, __CHINDEX__) \
             ((__HANDLE__)->Instance->CxICR |= (MAILBOX_C1ICR_INT0_Msk << (__CHINDEX__)))
 
 
 /**
-  * @brief  get the masked ISR status
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  *
-  * @retval masked ISR status, uint32_t type
-  */
+ * @brief  get the masked ISR status
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ *
+ * @retval masked ISR status, uint32_t type
+ */
 #define __HAL_MAILBOX_GET_STATUS(__HANDLE__) ((__HANDLE__)->Instance->CxMISR)
 
 /**
-  * @brief  clear the ISR status
-  * @param  \__HANDLE__ specifies the MAILBOX Handle
-  * @param  \__STATUS__ status value to be cleared
-  *
-  */
+ * @brief  clear the ISR status
+ * @param  \__HANDLE__ specifies the MAILBOX Handle
+ * @param  \__STATUS__ status value to be cleared
+ *
+ */
 #define __HAL_MAILBOX_CLEAR_STATUS(__HANDLE__, __STATUS__) ((__HANDLE__)->Instance->CxICR = (__STATUS__))
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup MAILBOX_Exported_Functions MAILBOX Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /* Initialization and de-initialization functions *******************************/
 /** @defgroup MAILBOX_Exported_Functions_Group1 Initialization and deinitialization functions
  *  @{
  */
 /**
-  * @brief  Initialize the MAILBOX peripheral.
-  * @param  hmailbox MAILBOX handle
-  * @retval HAL status
-  */
+ * @brief  Initialize the MAILBOX peripheral.
+ * @param  hmailbox MAILBOX handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_MAILBOX_Init(MAILBOX_HandleTypeDef *hmailbox);
 
 /**
-  * @brief  DeInitialize the MAILBOX peripheral.
-  * @param  hmailbox MAILBOX handle
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the MAILBOX peripheral.
+ * @param  hmailbox MAILBOX handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_MAILBOX_DeInit(MAILBOX_HandleTypeDef *hmailbox);
 
 /**
-  * @brief Initialize the MAILBOX MSP.
-  * @param  hmailbox MAILBOX handle
-  * @retval None
-  */
+ * @brief Initialize the MAILBOX MSP.
+ * @param  hmailbox MAILBOX handle
+ * @retval None
+ */
 void HAL_MAILBOX_MspInit(MAILBOX_HandleTypeDef *hmailbox);
 
 /**
-  * @brief MAILBOX MSP DeInit
-  * @param  hmailbox MAILBOX handle
-  * @retval None
-  */
+ * @brief MAILBOX MSP DeInit
+ * @param  hmailbox MAILBOX handle
+ * @retval None
+ */
 
 void HAL_MAILBOX_MspDeInit(MAILBOX_HandleTypeDef *hmailbox);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup MAILBOX_Exported_Functions_Group3 Peripheral State and Error functions
  *  @{
  */
 /* Peripheral State and Error functions ****************************************/
 /**
-  * @brief Return the MAILBOX handle state.
-  * @param  hmailbox MAILBOX handle
-  * @retval MAILBOX handle state
-  */
+ * @brief Return the MAILBOX handle state.
+ * @param  hmailbox MAILBOX handle
+ * @retval MAILBOX handle state
+ */
 HAL_MAILBOX_StateTypeDef HAL_MAILBOX_GetState(MAILBOX_HandleTypeDef const *const hmailbox);
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup MAILBOX_Exported_Functions_Group4 Mutex lock and unlock functions
  *  @{
@@ -364,8 +364,8 @@ MUTEX_CH_TypeDef *HAL_MAILBOX_GetMutex(uint8_t core_id, uint8_t ch_id);
 void HAL_MAILBOX_UnLock(MUTEX_HandleTypeDef const *const hmutex, uint8_t ch_id);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @brief mailbox irq handler
  *
@@ -375,16 +375,16 @@ void HAL_MAILBOX_UnLock(MUTEX_HandleTypeDef const *const hmutex, uint8_t ch_id);
 void HAL_MAILBOX_IRQHandler(MAILBOX_HandleTypeDef *hmailbox);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

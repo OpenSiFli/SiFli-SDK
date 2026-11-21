@@ -14,18 +14,18 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "bf0_hal_def.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup JPEGD JPEG Decoder hardware engine
-  * @brief JPEG Decoder hardware engine
-  * @{
-  */
+ * @brief JPEG Decoder hardware engine
+ * @{
+ */
 
 /**
-  * @addtogroup  JPEGD_exported_constants
-  * @{
-*/
+ * @addtogroup  JPEGD_exported_constants
+ * @{
+ */
 /**
  * @brief  HAL JPEGD State structures definition
  */
@@ -47,14 +47,14 @@ typedef enum
 } JPEGD_OutputModeTypeDef;
 
 /**
-  * @} JPEGD_exported_constants
-*/
+ * @} JPEGD_exported_constants
+ */
 
 /* Exported types ------------------------------------------------------------*/
 
 /** @defgroup JPEGD_Exported_Types JPG Decoder Exported Types
-  * @{
-  */
+ * @{
+ */
 
 struct _JPEGD_HandleTypeDef;
 typedef void (*JPEGD_CpltCallback)(struct _JPEGD_HandleTypeDef *hdl, void *param);
@@ -119,24 +119,24 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @defgroup JPEGD_exported_functions JPEGD Exported functions
-  * @ingroup JPEGD
-  * @{
-  *
+ * @defgroup JPEGD_exported_functions JPEGD Exported functions
+ * @ingroup JPEGD
+ * @{
+ *
  */
 
 /**
-* @brief  Initialize JPEG Decoder
-* @param  hdl Handle for JPEG decoder
-* @param  cbk Callback functions when decode done
-* @param  user_data user data parameter for callback
-* @retval HAL status
-*/
+ * @brief  Initialize JPEG Decoder
+ * @param  hdl Handle for JPEG decoder
+ * @param  cbk Callback functions when decode done
+ * @param  user_data user data parameter for callback
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_JPEGD_Init(JPEGD_HandleTypeDef *hdl, JPEGD_CpltCallback cbk, void *user_data);
 
 /**
@@ -147,10 +147,10 @@ HAL_StatusTypeDef HAL_JPEGD_Init(JPEGD_HandleTypeDef *hdl, JPEGD_CpltCallback cb
 HAL_StatusTypeDef HAL_JPEGD_IRQHandler(JPEGD_HandleTypeDef *hdl);
 
 /**
-* @brief  Deinitialize JPEG Decoder
-* @param  hdl Handle for JPEG decoder
-* @retval HAL status
-*/
+ * @brief  Deinitialize JPEG Decoder
+ * @param  hdl Handle for JPEG decoder
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_JPEGD_DeInit(JPEGD_HandleTypeDef *hdl);
 
 
@@ -225,16 +225,16 @@ HAL_StatusTypeDef HAL_JPEGD_GetOutputSize(JPEGD_HandleTypeDef *hdl, JPEGD_Decode
 HAL_StatusTypeDef HAL_JPEGD_GetDim(uint8_t *input, uint32_t size, int *width, int *height);
 
 /**
-  *@} JPEGD_exported_functions
-*/
+ *@} JPEGD_exported_functions
+ */
 
 /**
-  *@} JPEGD
-  */
+ *@} JPEGD
+ */
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

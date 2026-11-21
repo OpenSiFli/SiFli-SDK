@@ -8,12 +8,12 @@
 #include "string.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup EZIP
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_EZIP_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -1015,13 +1015,13 @@ HAL_StatusTypeDef HAL_EZIP_DecodeFast_Init(EZIP_HandleTypeDef *hezip)
 
 
 /**
-  * @} EZIP
-  */
+ * @} EZIP
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

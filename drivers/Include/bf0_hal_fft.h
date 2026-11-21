@@ -15,9 +15,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup FFT
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 /**
  * @brief  HAL FFT State structures definition

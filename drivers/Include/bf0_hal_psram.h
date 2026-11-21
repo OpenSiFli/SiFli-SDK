@@ -16,17 +16,17 @@ extern "C" {
 #include "psramc.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup PSRAM
-  * @{
-  */
+ * @{
+ */
 
 
 /**
-  * @brief  HAL State structures definition
-  */
+ * @brief  HAL State structures definition
+ */
 typedef enum
 {
     HAL_PSRAM_STATE_RESET             = 0x00U,  /*!< PSRAM not yet initialized or disabled */
@@ -37,8 +37,8 @@ typedef enum
 } HAL_PSRAMStateTypeDef;
 
 /**
-  * @brief  PSRAM Configuration Structure definition
-  */
+ * @brief  PSRAM Configuration Structure definition
+ */
 typedef struct
 {
     uint32_t delay;
@@ -46,8 +46,8 @@ typedef struct
 
 
 /**
-  * @brief  PSRAM Handle Structure definition
-  */
+ * @brief  PSRAM Handle Structure definition
+ */
 typedef struct
 {
     PSRAMC_TypeDef                 *Instance;  /*!< Register base address    */
@@ -65,8 +65,8 @@ typedef struct
 } PSRAM_HandleTypeDef;
 
 /**
-  * @brief  PSRAM Configure Structure definition, use register table
-  */
+ * @brief  PSRAM Configure Structure definition, use register table
+ */
 typedef struct
 {
     uint32_t ctrl_time;
@@ -136,68 +136,68 @@ typedef struct
 /* Exported functions --------------------------------------------------------*/
 
 /** @addtogroup PSRAM_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup PSRAM_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 /* Initialization and de-initialization functions *****************************/
 
 /**
-* @brief  Initialize PSRAM
-* @param  hpsram Handle of PSRAM
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Initialize PSRAM
+ * @param  hpsram Handle of PSRAM
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_PSRAM_Init(PSRAM_HandleTypeDef *hpsram);
 /**
-* @brief  UnInitialize PSRAM
-* @param  hpsram Handle of PSRAM
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  UnInitialize PSRAM
+ * @param  hpsram Handle of PSRAM
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_PSRAM_DeInit(PSRAM_HandleTypeDef *hpsram);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup PSRAM_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 /* configure operation functions *****************************************************/
 
 /**
-* @brief  Configure PSRAM
-* @param  hpsram Handle of PSRAM
-* @param  conf Configuration of PSRAM
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Configure PSRAM
+ * @param  hpsram Handle of PSRAM
+ * @param  conf Configuration of PSRAM
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_PSRAM_Config(PSRAM_HandleTypeDef *hpsram, PSRAM_CONFIG_HAL_T *conf);
 
 /**
-  * @brief Initialize the PSRAM MSP.
-  * @param hpsram PSRAM handle.
-  * @retval None
-  */
+ * @brief Initialize the PSRAM MSP.
+ * @param hpsram PSRAM handle.
+ * @retval None
+ */
 void HAL_PSRAM_MspInit(PSRAM_HandleTypeDef *hpsram);
 
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

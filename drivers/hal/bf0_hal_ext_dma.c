@@ -8,13 +8,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup ext_dma Ext DMA
-  * @brief EXT_DMA HAL module driver
-  * @{
-  */
+ * @brief EXT_DMA HAL module driver
+ * @{
+ */
 
 #if defined(HAL_EXTDMA_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -34,16 +34,16 @@
 /* Private variables ---------------------------------------------------------*/
 /* Private function prototypes -----------------------------------------------*/
 /** @defgroup EXT_DMA_Private_Functions EXT_DMA Private Functions
-  * @{
-  */
+ * @{
+ */
 static void EXT_DMA_SetConfig(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts);
 /**
-  * @} EXT_DMA_Private_Functions
-  */
+ * @} EXT_DMA_Private_Functions
+ */
 
 /** @defgroup EXT_DMA_Exported_Functions Ext DMA Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup EXT_DMA_Exported_Functions_Group1 Initialization and de-initialization functions
  *  @brief   Initialization and de-initialization functions
@@ -65,12 +65,12 @@ static void EXT_DMA_SetConfig(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, 
   */
 
 /**
-  * @brief  Initialize the DMA according to the specified
-  *         parameters in the DMA_InitTypeDef and initialize the associated handle.
-  * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Initialize the DMA according to the specified
+ *         parameters in the DMA_InitTypeDef and initialize the associated handle.
+ * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_Init(EXT_DMA_HandleTypeDef *hdma)
 {
     uint32_t tmp;
@@ -138,11 +138,11 @@ HAL_StatusTypeDef HAL_EXT_DMA_Init(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DeInitialize the EXT_DMA peripheral.
-  * @param  hdma pointer to a EXT_DMA_HandleTypeDef structure that contains
-  *               the configuration information.
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the EXT_DMA peripheral.
+ * @param  hdma pointer to a EXT_DMA_HandleTypeDef structure that contains
+ *               the configuration information.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_DeInit(EXT_DMA_HandleTypeDef *hdma)
 {
 
@@ -177,8 +177,8 @@ HAL_StatusTypeDef HAL_EXT_DMA_DeInit(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @} EXT_DMA_Exported_Functions_Group1
-  */
+ * @} EXT_DMA_Exported_Functions_Group1
+ */
 
 /** @defgroup EXT_DMA_Exported_Functions_Group2 Input and Output operation functions
  *  @brief   Input and Output operation functions
@@ -200,14 +200,14 @@ HAL_StatusTypeDef HAL_EXT_DMA_DeInit(EXT_DMA_HandleTypeDef *hdma)
   */
 
 /**
-  * @brief  Start the DMA Transfer.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Start the DMA Transfer.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_Start(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -251,14 +251,14 @@ HAL_StatusTypeDef HAL_EXT_DMA_Start(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAdd
 }
 
 /**
-  * @brief  Start the DMA Transfer with interrupt enabled.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Start the DMA Transfer with interrupt enabled.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_Start_IT(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -356,11 +356,11 @@ HAL_StatusTypeDef HAL_EXT_DMA_Abort(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Aborts the DMA Transfer in Interrupt mode.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                 the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Aborts the DMA Transfer in Interrupt mode.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                 the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_Abort_IT(EXT_DMA_HandleTypeDef *hdma)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -399,13 +399,13 @@ HAL_StatusTypeDef HAL_EXT_DMA_Abort_IT(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Polling for transfer complete.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                  the configuration information for the specified DMA Channel.
-  * @param  CompleteLevel Specifies the DMA level complete.
-  * @param  Timeout       Timeout duration.
-  * @retval HAL status
-  */
+ * @brief  Polling for transfer complete.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                  the configuration information for the specified DMA Channel.
+ * @param  CompleteLevel Specifies the DMA level complete.
+ * @param  Timeout       Timeout duration.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_PollForTransfer(EXT_DMA_HandleTypeDef *hdma, HAL_EXT_DMA_LevelCompleteTypeDef CompleteLevel, uint32_t Timeout)
 {
     uint32_t temp;
@@ -495,11 +495,11 @@ HAL_StatusTypeDef HAL_EXT_DMA_PollForTransfer(EXT_DMA_HandleTypeDef *hdma, HAL_E
 }
 
 /**
-  * @brief  Handle DMA interrupt request.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval None
-  */
+ * @brief  Handle DMA interrupt request.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_EXT_DMA_IRQHandler(EXT_DMA_HandleTypeDef *hdma)
 {
     uint32_t flag_it = hdma->Instance->ISR;
@@ -598,15 +598,15 @@ __HAL_ROM_USED void HAL_EXT_DMA_IRQHandler(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Register callbacks
-  * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
-  *                               the configuration information for the specified DMA Channel.
-  * @param  CallbackID           User Callback identifer
-  *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
-  * @param  pCallback            pointer to private callbacsk function which has pointer to
-  *                               a DMA_HandleTypeDef structure as parameter.
-  * @retval HAL status
-  */
+ * @brief  Register callbacks
+ * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
+ *                               the configuration information for the specified DMA Channel.
+ * @param  CallbackID           User Callback identifer
+ *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
+ * @param  pCallback            pointer to private callbacsk function which has pointer to
+ *                               a DMA_HandleTypeDef structure as parameter.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_RegisterCallback(EXT_DMA_HandleTypeDef *hdma, HAL_EXT_DMA_CallbackIDTypeDef CallbackID, void (* pCallback)(EXT_DMA_HandleTypeDef *_hdma))
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -651,13 +651,13 @@ HAL_StatusTypeDef HAL_EXT_DMA_RegisterCallback(EXT_DMA_HandleTypeDef *hdma, HAL_
 }
 
 /**
-  * @brief  UnRegister callbacks
-  * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
-  *                               the configuration information for the specified DMA Channel.
-  * @param  CallbackID           User Callback identifer
-  *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
-  * @retval HAL status
-  */
+ * @brief  UnRegister callbacks
+ * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
+ *                               the configuration information for the specified DMA Channel.
+ * @param  CallbackID           User Callback identifer
+ *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_EXT_DMA_UnRegisterCallback(EXT_DMA_HandleTypeDef *hdma, HAL_EXT_DMA_CallbackIDTypeDef CallbackID)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -709,8 +709,8 @@ HAL_StatusTypeDef HAL_EXT_DMA_UnRegisterCallback(EXT_DMA_HandleTypeDef *hdma, HA
 }
 
 /**
-  * @} EXT_DMA_Exported_Functions_Group2
-  */
+ * @} EXT_DMA_Exported_Functions_Group2
+ */
 
 
 
@@ -731,11 +731,11 @@ HAL_StatusTypeDef HAL_EXT_DMA_UnRegisterCallback(EXT_DMA_HandleTypeDef *hdma, HA
   */
 
 /**
-  * @brief  Return the DMA hande state.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL state
-  */
+ * @brief  Return the DMA hande state.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL state
+ */
 HAL_EXT_DMA_StateTypeDef HAL_EXT_DMA_GetState(EXT_DMA_HandleTypeDef *hdma)
 {
     /* Return DMA handle state */
@@ -743,33 +743,33 @@ HAL_EXT_DMA_StateTypeDef HAL_EXT_DMA_GetState(EXT_DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Return the DMA error code.
-  * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
-  *              the configuration information for the specified DMA Channel.
-  * @retval DMA Error Code
-  */
+ * @brief  Return the DMA error code.
+ * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
+ *              the configuration information for the specified DMA Channel.
+ * @retval DMA Error Code
+ */
 uint32_t HAL_EXT_DMA_GetError(EXT_DMA_HandleTypeDef *hdma)
 {
     return hdma->ErrorCode;
 }
 
 /**
-  * @brief  Return the DMA CMPRQR value.
-  * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
-  *              the configuration information for the specified DMA Channel.
-  * @retval DMA CMPRQR register value
-  */
+ * @brief  Return the DMA CMPRQR value.
+ * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
+ *              the configuration information for the specified DMA Channel.
+ * @retval DMA CMPRQR register value
+ */
 uint32_t HAL_EXT_DMA_GetCMPRQR(EXT_DMA_HandleTypeDef *hdma)
 {
     return hdma->Instance->CMPRQR;
 }
 
 /**
-  * @brief  Return the DMA CMPRDR value.
-  * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
-  *              the configuration information for the specified DMA Channel.
-  * @retval DMA CMPRDR register value
-  */
+ * @brief  Return the DMA CMPRDR value.
+ * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
+ *              the configuration information for the specified DMA Channel.
+ * @retval DMA CMPRDR register value
+ */
 uint32_t HAL_EXT_DMA_GetCMPRDR(EXT_DMA_HandleTypeDef *hdma)
 {
     return hdma->Instance->CMPRDR;
@@ -777,26 +777,26 @@ uint32_t HAL_EXT_DMA_GetCMPRDR(EXT_DMA_HandleTypeDef *hdma)
 
 
 /**
-  * @} EXT_DMA_Exported_Functions_Group3
-  */
+ * @} EXT_DMA_Exported_Functions_Group3
+ */
 
 /**
-  * @} EXT_DMA_Exported_Functions
-  */
+ * @} EXT_DMA_Exported_Functions
+ */
 
 /** @addtogroup DMA_Private_Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Sets the DMA Transfer parameter.
-  * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
-  *                     the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Sets the DMA Transfer parameter.
+ * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
+ *                     the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 static void EXT_DMA_SetConfig(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
     EDMA_InitTypeDef *init_param;
@@ -872,19 +872,19 @@ static void EXT_DMA_SetConfig(EXT_DMA_HandleTypeDef *hdma, uint32_t SrcAddress, 
 
 
 /**
-  * @} DMA_Private_Functions
-  */
+ * @} DMA_Private_Functions
+ */
 
 #endif /* BSP_USING_EXT_DMA */
 /**
-  * @} ext_dma
-  */
+ * @} ext_dma
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */
 
 
 /**
-  * @} file
-  */
+ * @} file
+ */

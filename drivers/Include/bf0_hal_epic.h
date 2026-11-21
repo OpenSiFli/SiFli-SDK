@@ -45,13 +45,13 @@ extern "C" {
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup EPIC EPIC
-  * @brief EPIC HAL module driver
-  * @{
-  */
+ * @brief EPIC HAL module driver
+ * @{
+ */
 
 #ifndef EPIC_DEBUG
 #define EPIC_DEBUG
@@ -125,8 +125,8 @@ extern "C" {
 #define EPIC_IS_MASK_COLOR_MODE(c)   ((EPIC_COLOR_A8 == (c)) || (EPIC_COLOR_A4 == ((c))) || (EPIC_COLOR_A4_SWAP == ((c))))
 
 /** @defgroup EPIC_Output_Color_Mode EPIC Output Color Mode
-  * @{
-  */
+ * @{
+ */
 #define EPIC_OUTPUT_RGB565         EPIC_COLOR_RGB565                     /*!< RGB565 EPIC output color mode   */
 #define EPIC_OUTPUT_ARGB8565       EPIC_COLOR_ARGB8565                   /*!< ARGB8565 EPIC output color mode   */
 #define EPIC_OUTPUT_RGB888         EPIC_COLOR_RGB888                     /*!< RGB888 EPIC output color mode   */
@@ -138,8 +138,8 @@ extern "C" {
 #define EPIC_OUTPUT_GRAY4_SWAP         EPIC_COLOR_GRAY4_SWAP                   /*!< Grayscale 4bit EPIC output color mode with swapped pixels   */
 #define EPIC_OUTPUT_GRAY2_SWAP         EPIC_COLOR_GRAY2_SWAP                   /*!< Grayscale 2bit EPIC output color mode with swapped pixels   */
 /**
-  * @}
-  */
+ * @}
+ */
 #define EPIC_SUPPROT_OUT_FORMAT(cf)  ((EPIC_OUTPUT_RGB565 == (cf)) || (EPIC_OUTPUT_ARGB8565 == (cf)) \
                                         || (EPIC_OUTPUT_RGB888 == (cf)) || (EPIC_OUTPUT_ARGB8888 == (cf)) \
                                         || (EPIC_OUTPUT_A8 == (cf)) || (EPIC_OUTPUT_GRAY8 == (cf)) \
@@ -150,8 +150,8 @@ extern "C" {
                                         || (EPIC_OUTPUT_A8 == (cf)))
 
 /** @defgroup EPIC_Input_Color_Mode EPIC Input Color Mode
-  * @{
-  */
+ * @{
+ */
 #define EPIC_INPUT_RGB565            EPIC_COLOR_RGB565              /*!< RGB565 input color mode */
 #define EPIC_INPUT_ARGB8565          EPIC_COLOR_ARGB8565            /*!< ARGB8565 input color mode   */
 #define EPIC_INPUT_RGB888            EPIC_COLOR_RGB888              /*!< RGB888 input color mode   */
@@ -174,8 +174,8 @@ extern "C" {
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup EPIC_CoengStateFlag EPIC Co-engine state flag
  * @{
@@ -223,16 +223,16 @@ extern "C" {
 #define EPIC_COORDINATES_MAX 1010
 #endif /* !SF32LB52X */
 /**
-  * @brief EPIC Init structure definition
-  */
+ * @brief EPIC Init structure definition
+ */
 typedef struct
 {
     uint32_t            reserved;
 } EPIC_InitTypeDef;
 
 /**
-  * @brief  HAL EPIC State structures definition
-  */
+ * @brief  HAL EPIC State structures definition
+ */
 typedef enum
 {
     HAL_EPIC_STATE_RESET             = 0x00U,    /*!< EPIC not yet initialized or disabled       */
@@ -244,8 +244,8 @@ typedef enum
 } HAL_EPIC_StateTypeDef;
 
 /**
-  * @brief  The blending behaviors of EPIC A4/A8 layer
-  */
+ * @brief  The blending behaviors of EPIC A4/A8 layer
+ */
 typedef enum
 {
     ALPHA_BLEND_INVALID            = 0x00U,    /*!< Invalid                                               */
@@ -339,37 +339,37 @@ typedef struct
 } EPIC_YUVCfgTypeDef;
 
 /**
-  * @brief  HAL EPIC Blend layer structures definition
-  *
-  *
-  *
-  *              |<-------                total_width                               ----->|
-  *
-  *              +------------------------------------------------------------------------+
-  *              |Image buffer                                                            |
-  *              |                                                                        |
-  *              |                                                                        |
-  *              |                         |<-------        width     ----->|             |
-  *              |  (x_offset,y_offset)                                                   |
-  *              |          |------------->+--------------------------------+   ---       |
-  *              |        data             |EPIC layer buffer               |    ^        |
-  *              |                         |                                |    |        |
-  *              |                         |                                |    |        |
-  *              |                         |                                |             |
-  *              |                         |                                |  height     |
-  *              |                         |                                |             |
-  *              |                         |                                |    |        |
-  *              |                         |                                |    |        |
-  *              |                         |                                |    v        |
-  *              |                         +--------------------------------+   ---       |
-  *              |                                                                        |
-  *              |                                                                        |
-  *              |                                                                        |
-  *              |                                                                        |
-  *              +------------------------------------------------------------------------+
-  *
-  *       NOTE:  x_offset&y_offset is NOT relative Image buffer's top-left
-  */
+ * @brief  HAL EPIC Blend layer structures definition
+ *
+ *
+ *
+ *              |<-------                total_width                               ----->|
+ *
+ *              +------------------------------------------------------------------------+
+ *              |Image buffer                                                            |
+ *              |                                                                        |
+ *              |                                                                        |
+ *              |                         |<-------        width     ----->|             |
+ *              |  (x_offset,y_offset)                                                   |
+ *              |          |------------->+--------------------------------+   ---       |
+ *              |        data             |EPIC layer buffer               |    ^        |
+ *              |                         |                                |    |        |
+ *              |                         |                                |    |        |
+ *              |                         |                                |             |
+ *              |                         |                                |  height     |
+ *              |                         |                                |             |
+ *              |                         |                                |    |        |
+ *              |                         |                                |    |        |
+ *              |                         |                                |    v        |
+ *              |                         +--------------------------------+   ---       |
+ *              |                                                                        |
+ *              |                                                                        |
+ *              |                                                                        |
+ *              |                                                                        |
+ *              +------------------------------------------------------------------------+
+ *
+ *       NOTE:  x_offset&y_offset is NOT relative Image buffer's top-left
+ */
 typedef struct
 {
     uint8_t *data;            /**< data, color format is specified by #color_mode,
@@ -777,11 +777,11 @@ HAL_StatusTypeDef HAL_EPIC_BlendStart_IT(EPIC_HandleTypeDef *epic, EPIC_Blending
 
 
 /**
-* @brief  Init an epic rotate cfg struct to default vaules
-*
-* @param rot_cfg EPIC rotation configuration parameter
-* @retval None
-*/
+ * @brief  Init an epic rotate cfg struct to default vaules
+ *
+ * @param rot_cfg EPIC rotation configuration parameter
+ * @retval None
+ */
 void HAL_EPIC_RotDataInit(EPIC_TransformCfgTypeDef *rot_cfg);
 
 /**
@@ -803,30 +803,30 @@ HAL_StatusTypeDef HAL_EPIC_Rotate(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTyp
                                   EPIC_BlendingDataType *bg, EPIC_BlendingDataType *dst, uint8_t alpha);
 
 /**
-* @brief  Rotate and scale src1 based on the image center, blend with bg and output to dst in interrupt mode
-*
-* @param[in]  epic EPIC handle
-* @param[in]  rot_cfg rotation configuration
-* @param[in]  fg configuration of foreground layer that's to be rotated
-* @param[in]  bg background layer configuration
-* @param[in]  dst output layer configuration
-* @param[in]  alpha alpha value
-*
-* @retval HAL status
-*
-* @note fields in fg, bg and dst would be modified
-*
-*/
+ * @brief  Rotate and scale src1 based on the image center, blend with bg and output to dst in interrupt mode
+ *
+ * @param[in]  epic EPIC handle
+ * @param[in]  rot_cfg rotation configuration
+ * @param[in]  fg configuration of foreground layer that's to be rotated
+ * @param[in]  bg background layer configuration
+ * @param[in]  dst output layer configuration
+ * @param[in]  alpha alpha value
+ *
+ * @retval HAL status
+ *
+ * @note fields in fg, bg and dst would be modified
+ *
+ */
 HAL_StatusTypeDef HAL_EPIC_Rotate_IT(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTypeDef *rot_cfg,
                                      EPIC_BlendingDataType *fg,
                                      EPIC_BlendingDataType *bg, EPIC_BlendingDataType *dst, uint8_t alpha);
 
 /**
-* @brief  Init an epic fill cfg struct to default vaules
-*
-* @param param  EPIC fill configuration parameter
-* @retval None
-*/
+ * @brief  Init an epic fill cfg struct to default vaules
+ *
+ * @param param  EPIC fill configuration parameter
+ * @retval None
+ */
 void HAL_EPIC_FillDataInit(EPIC_FillingCfgTypeDef *param);
 
 /**
@@ -869,11 +869,11 @@ HAL_StatusTypeDef HAL_EPIC_FillStart(EPIC_HandleTypeDef *epic, EPIC_FillingCfgTy
 HAL_StatusTypeDef HAL_EPIC_Copy_IT(EPIC_HandleTypeDef *epic, EPIC_BlendingDataType *src, EPIC_BlendingDataType *dst);
 
 /**
-* @brief  Init an epic fill grad cfg struct to default vaules
-*
-* @param param EPIC fill grad configuration parameter
-* @retval None
-*/
+ * @brief  Init an epic fill grad cfg struct to default vaules
+ *
+ * @param param EPIC fill grad configuration parameter
+ * @retval None
+ */
 void HAL_EPIC_FillGradDataInit(EPIC_GradCfgTypeDef *param);
 
 HAL_StatusTypeDef HAL_EPIC_FillGrad_IT(EPIC_HandleTypeDef *epic, EPIC_GradCfgTypeDef *param);
@@ -1003,12 +1003,12 @@ void EPIC_GetMatrixTransfromedArea(sifli_matrix_3x3_t *p_matrix, EPIC_AreaTypeDe
 #include "bf0_hal_epictl.h"
 #endif /* HAL_EPICTL_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #ifdef __cplusplus

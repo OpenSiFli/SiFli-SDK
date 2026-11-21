@@ -9,12 +9,12 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup EPIC
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_EPIC_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 //extern void rt_kprintf(const char *fmt, ...);
@@ -1320,11 +1320,11 @@ static void EPIC_GetRotatedArea_Inner(EPIC_AreaTypeDef *output, uint16_t w, uint
 
 
 /**
-* @brief  Replace the pivot with the center of the layer
-* @param  fg configuration of foreground layer that's to be rotated
-* @param  rot_cfg rotation configuration
-* @retval HAL status
-* */
+ * @brief  Replace the pivot with the center of the layer
+ * @param  fg configuration of foreground layer that's to be rotated
+ * @param  rot_cfg rotation configuration
+ * @retval HAL status
+ * */
 static void EPIC_TransformVideoLayer_ReplacePivot(
     EPIC_BlendingDataType *fg,
     EPIC_TransformCfgTypeDef *rot_cfg,
@@ -4575,11 +4575,11 @@ HAL_StatusTypeDef HAL_EPIC_Init(EPIC_HandleTypeDef *epic)
 }
 
 /**
-* @brief  Init an epic rotate cfg struct to default vaules
-*
-* @param[layer]  EPIC layer
-* @retval None
-*/
+ * @brief  Init an epic rotate cfg struct to default vaules
+ *
+ * @param[layer]  EPIC layer
+ * @retval None
+ */
 void HAL_EPIC_RotDataInit(EPIC_TransformCfgTypeDef *rot_cfg)
 {
     HAL_ASSERT(NULL != rot_cfg);
@@ -5049,22 +5049,22 @@ HAL_StatusTypeDef HAL_EPIC_Rotate(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTyp
 
 
 /**
-* @brief  Rotate and scale fg based on the image center, blend with bg and output to dst in interrupt mode
-*
-* @param  epic EPIC instance
-* @param  rot_cfg rotation configuration
-* @param  scale scale factor*EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE means no scaling,
-   < EPIC_INPUT_SCALE_NONE means scaling up, > EPIC_INPUT_SCALE_NONE means scaling down
-* @param  fg configuration of foreground layer that's to be rotated
-* @param  bg background layer configuration
-* @param  dst output layer configuration
-* @param  alpha alpha value
-*
-* @retval HAL status
-*
-* @note fields in fg, bg and dst would be modified
-*
-*/
+ * @brief  Rotate and scale fg based on the image center, blend with bg and output to dst in interrupt mode
+ *
+ * @param  epic EPIC instance
+ * @param  rot_cfg rotation configuration
+ * @param  scale scale factor*EPIC_INPUT_SCALE_NONE, EPIC_INPUT_SCALE_NONE means no scaling,
+    < EPIC_INPUT_SCALE_NONE means scaling up, > EPIC_INPUT_SCALE_NONE means scaling down
+ * @param  fg configuration of foreground layer that's to be rotated
+ * @param  bg background layer configuration
+ * @param  dst output layer configuration
+ * @param  alpha alpha value
+ *
+ * @retval HAL status
+ *
+ * @note fields in fg, bg and dst would be modified
+ *
+ */
 HAL_StatusTypeDef HAL_EPIC_Rotate_IT(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTypeDef *rot_cfg,
                                      EPIC_BlendingDataType *fg, EPIC_BlendingDataType *bg,
                                      EPIC_BlendingDataType *dst, uint8_t alpha)
@@ -5149,11 +5149,11 @@ HAL_StatusTypeDef HAL_EPIC_Rotate_IT(EPIC_HandleTypeDef *epic, EPIC_TransformCfg
 
 
 /**
-* @brief  Init an epic fill cfg struct to default vaules
-*
-* @param[layer]  EPIC layer
-* @retval None
-*/
+ * @brief  Init an epic fill cfg struct to default vaules
+ *
+ * @param[layer]  EPIC layer
+ * @retval None
+ */
 void HAL_EPIC_FillDataInit(EPIC_FillingCfgTypeDef *param)
 {
     HAL_ASSERT(NULL != param);
@@ -5380,11 +5380,11 @@ __EXIT:
 
 
 /**
-* @brief  Init an epic fill grad cfg struct to default vaules
-*
-* @param[layer]  EPIC layer
-* @retval None
-*/
+ * @brief  Init an epic fill grad cfg struct to default vaules
+ *
+ * @param[layer]  EPIC layer
+ * @retval None
+ */
 void HAL_EPIC_FillGradDataInit(EPIC_GradCfgTypeDef *param)
 {
     HAL_ASSERT(NULL != param);
@@ -7026,13 +7026,13 @@ __EXIT:
 #endif /* HAL_EPIC_MODULE_ENABLED */
 
 /**
-  * @} EPIC
-  */
+ * @} EPIC
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

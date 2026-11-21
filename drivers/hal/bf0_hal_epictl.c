@@ -1,15 +1,15 @@
 /**
-  ******************************************************************************
-  * @file   bf0_hal_epictl.c
-  * @author Sifli software development team
-  * @brief   EPIC Transfer Layer HAL module driver.
-  *          This file provides firmware functions to manage the following functions:
-  *     + Initialization and de-initialization functions
-  *     + Intterrupt handler
-  *     + Data transfer functions in polling and interrupt mode
-  *
-  ******************************************************************************
-*/
+ ******************************************************************************
+ * @file   bf0_hal_epictl.c
+ * @author Sifli software development team
+ * @brief   EPIC Transfer Layer HAL module driver.
+ *          This file provides firmware functions to manage the following functions:
+ *     + Initialization and de-initialization functions
+ *     + Intterrupt handler
+ *     + Data transfer functions in polling and interrupt mode
+ *
+ ******************************************************************************
+ */
 /*
  * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
  *
@@ -220,11 +220,11 @@ void HAL_EPICTL_IRQHandler(EPICTL_HandleTypeDef *epictl)
 }
 
 /**
-* @brief  Initialize an epictl data struct to default vaules
-*
-* @param param  EPICTL data parameter
-* @retval None
-*/
+ * @brief  Initialize an epictl data struct to default vaules
+ *
+ * @param param  EPICTL data parameter
+ * @retval None
+ */
 void HAL_EPICTL_DataInit(EPICTL_DataType *param)
 {
     memset(param, 0, sizeof(EPICTL_DataType));

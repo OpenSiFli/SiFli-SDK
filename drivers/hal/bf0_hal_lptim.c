@@ -8,82 +8,82 @@
 #include "bf0_hal.h"
 #include "bf0_hal_lptim.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup LPTIM Low power hardware timer.
-  * @brief LPTIM HAL module driver.
-  * @{
-  */
+ * @brief LPTIM HAL module driver.
+ * @{
+ */
 
 #if defined(HAL_LPTIM_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 /* Private types -------------------------------------------------------------*/
 /** @defgroup LPTIM_Private_Types LPTIM Private Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private defines -----------------------------------------------------------*/
 /** @defgroup LPTIM_Private_Defines LPTIM Private Defines
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private variables ---------------------------------------------------------*/
 /** @addtogroup LPTIM_Private_Variables LPTIM Private Variables
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private constants ---------------------------------------------------------*/
 /** @addtogroup LPTIM_Private_Constants LPTIM Private Constants
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private macros ------------------------------------------------------------*/
 /** @addtogroup LPTIM_Private_Macros LPTIM Private Macros
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private function prototypes -----------------------------------------------*/
 /** @addtogroup LPTIM_Private_Functions_Prototypes LPTIM Private Functions Prototypes
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private functions ---------------------------------------------------------*/
 /** @addtogroup LPTIM_Private_Functions LPTIM Private Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions ---------------------------------------------------------*/
 /** @defgroup LPTIM_Exported_Functions LPTIM Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup LPTIM_Group1 Initialization/de-initialization functions
  *  @brief    Initialization and Configuration functions.
@@ -125,11 +125,11 @@ __HAL_ROM_USED void HAL_LPTIM_InitDefault(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Initializes the LPTIM according to the specified parameters in the
-  *         LPTIM_InitTypeDef and creates the associated handle.
-  * @param  hlptim LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Initializes the LPTIM according to the specified parameters in the
+ *         LPTIM_InitTypeDef and creates the associated handle.
+ * @param  hlptim LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Init(LPTIM_HandleTypeDef *hlptim)
 {
     uint32_t tmpcfgr = 0U;
@@ -224,10 +224,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Init(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  DeInitializes the LPTIM peripheral.
-  * @param  hlptim LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the LPTIM peripheral.
+ * @param  hlptim LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_DeInit(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the LPTIM handle allocation */
@@ -258,10 +258,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_DeInit(LPTIM_HandleTypeDef *hlptim)
 
 
 /**
-  * @brief  Initializes the LPTIM MSP.
-  * @param  hlptim LPTIM handle
-  * @retval None
-  */
+ * @brief  Initializes the LPTIM MSP.
+ * @param  hlptim LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -272,10 +272,10 @@ __weak void HAL_LPTIM_MspInit(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  DeInitializes LPTIM MSP.
-  * @param  hlptim LPTIM handle
-  * @retval None
-  */
+ * @brief  DeInitializes LPTIM MSP.
+ * @param  hlptim LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -286,8 +286,8 @@ __weak void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup LPTIM_Group2 LPTIM Start-Stop operation functions
@@ -317,15 +317,15 @@ __weak void HAL_LPTIM_MspDeInit(LPTIM_HandleTypeDef *hlptim)
   */
 
 /**
-  * @brief  Starts the LPTIM PWM generation.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  psc_reg Prescale value
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM PWM generation.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  psc_reg Prescale value
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Start(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse, uint32_t psc_reg)
 {
     /* Check the parameters */
@@ -362,10 +362,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Start(LPTIM_HandleTypeDef *hlptim
 }
 
 /**
-  * @brief  Stops the LPTIM PWM generation.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM PWM generation.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Stop(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -385,14 +385,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Stop(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Starts the LPTIM PWM generation in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM PWM generation in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Start_IT(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse)
 {
     /* Check the parameters */
@@ -442,10 +442,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Start_IT(LPTIM_HandleTypeDef *hlp
 }
 
 /**
-  * @brief  Stops the LPTIM PWM generation in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM PWM generation in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Stop_IT(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -481,15 +481,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Stop_IT(LPTIM_HandleTypeDef *hlpt
 }
 
 /**
-  * @brief  Tthe LPTIM PWM set period, pulse, pscaler,  for real-time chang period.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF
-  * @param  psc_reg Prescale value, ref LPTIM_Clock_Prescaler
-  * @retval HAL status
-  */
+ * @brief  Tthe LPTIM PWM set period, pulse, pscaler,  for real-time chang period.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF
+ * @param  psc_reg Prescale value, ref LPTIM_Clock_Prescaler
+ * @retval HAL status
+ */
 
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Set_Period(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse, uint32_t psc_reg)
@@ -522,14 +522,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_PWM_Set_Period(LPTIM_HandleTypeDef *h
 
 
 /**
-  * @brief  Starts the LPTIM One pulse generation.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM One pulse generation.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Start(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse)
 {
     /* Check the parameters */
@@ -563,10 +563,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Start(LPTIM_HandleTypeDef *h
 }
 
 /**
-  * @brief  Stops the LPTIM One pulse generation.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM One pulse generation.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Stop(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -586,14 +586,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Stop(LPTIM_HandleTypeDef *hl
 }
 
 /**
-  * @brief  Starts the LPTIM One pulse generation in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM One pulse generation in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Start_IT(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse)
 {
     /* Check the parameters */
@@ -643,10 +643,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Start_IT(LPTIM_HandleTypeDef
 }
 
 /**
-  * @brief  Stops the LPTIM One pulse generation in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM One pulse generation in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Stop_IT(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -683,14 +683,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_OnePulse_Stop_IT(LPTIM_HandleTypeDef 
 }
 
 /**
-  * @brief  Starts the LPTIM in Set once mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM in Set once mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Start(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse)
 {
     /* Check the parameters */
@@ -724,10 +724,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Start(LPTIM_HandleTypeDef *hl
 }
 
 /**
-  * @brief  Stops the LPTIM Set once mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM Set once mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Stop(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -747,14 +747,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Stop(LPTIM_HandleTypeDef *hlp
 }
 
 /**
-  * @brief  Starts the LPTIM Set once mode in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Pulse  Specifies the compare value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the LPTIM Set once mode in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Pulse  Specifies the compare value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Start_IT(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Pulse)
 {
     /* Check the parameters */
@@ -805,10 +805,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Start_IT(LPTIM_HandleTypeDef 
 }
 
 /**
-  * @brief  Stops the LPTIM Set once mode in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the LPTIM Set once mode in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Stop_IT(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -846,16 +846,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_SetOnce_Stop_IT(LPTIM_HandleTypeDef *
 
 
 /**
-  * @brief  Starts the Timeout function. The first trigger event will start the
-  *         timer, any successive trigger event will reset the counter and
-  *         the timer restarts.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Timeout  Specifies the TimeOut value to rest the counter.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the Timeout function. The first trigger event will start the
+ *         timer, any successive trigger event will reset the counter and
+ *         the timer restarts.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Timeout  Specifies the TimeOut value to rest the counter.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Start(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Timeout)
 {
     /* Check the parameters */
@@ -889,10 +889,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Start(LPTIM_HandleTypeDef *hl
 }
 
 /**
-  * @brief  Stops the Timeout function.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the Timeout function.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Stop(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -915,16 +915,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Stop(LPTIM_HandleTypeDef *hlp
 }
 
 /**
-  * @brief  Starts the Timeout function in interrupt mode. The first trigger
-  *         event will start the timer, any successive trigger event will reset
-  *         the counter and the timer restarts.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @param  Timeout  Specifies the TimeOut value to rest the counter.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the Timeout function in interrupt mode. The first trigger
+ *         event will start the timer, any successive trigger event will reset
+ *         the counter and the timer restarts.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @param  Timeout  Specifies the TimeOut value to rest the counter.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Start_IT(LPTIM_HandleTypeDef *hlptim, uint32_t Period, uint32_t Timeout)
 {
     /* Check the parameters */
@@ -974,10 +974,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Start_IT(LPTIM_HandleTypeDef 
 }
 
 /**
-  * @brief  Stops the Timeout function in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the Timeout function in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Stop_IT(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1017,12 +1017,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_TimeOut_Stop_IT(LPTIM_HandleTypeDef *
 }
 
 /**
-  * @brief  Starts the Counter mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the Counter mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Start(LPTIM_HandleTypeDef *hlptim, uint32_t Period)
 {
     /* Check the parameters */
@@ -1058,10 +1058,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Start(LPTIM_HandleTypeDef *hl
 }
 
 /**
-  * @brief  Stops the Counter mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the Counter mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Stop(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1081,12 +1081,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Stop(LPTIM_HandleTypeDef *hlp
 }
 
 /**
-  * @brief  Starts the Counter mode in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @param  Period  Specifies the Autoreload value.
-  *         This parameter must be a value between 0x000000 and 0xFFFFFF.
-  * @retval HAL status
-  */
+ * @brief  Starts the Counter mode in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @param  Period  Specifies the Autoreload value.
+ *         This parameter must be a value between 0x000000 and 0xFFFFFF.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Start_IT(LPTIM_HandleTypeDef *hlptim, uint32_t Period)
 {
 
@@ -1155,10 +1155,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Start_IT(LPTIM_HandleTypeDef 
 }
 
 /**
-  * @brief  Stops the Counter mode in interrupt mode.
-  * @param  hlptim  LPTIM handle
-  * @retval HAL status
-  */
+ * @brief  Stops the Counter mode in interrupt mode.
+ * @param  hlptim  LPTIM handle
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Stop_IT(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1183,29 +1183,29 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPTIM_Counter_Stop_IT(LPTIM_HandleTypeDef *
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup LPTIM_Group3 LPTIM Read operation functions
-*  @brief  Read operation functions.
-*
-@verbatim
-==============================================================================
-##### LPTIM Read operation functions #####
-==============================================================================
-[..]  This section provides LPTIM Reading functions.
-(+) Read the counter value.
-(+) Read the period (Auto-reload) value.
-(+) Read the pulse (Compare)value.
-@endverbatim
-* @{
-*/
+ *  @brief  Read operation functions.
+ *
+ @verbatim
+ ==============================================================================
+ ##### LPTIM Read operation functions #####
+ ==============================================================================
+ [..]  This section provides LPTIM Reading functions.
+ (+) Read the counter value.
+ (+) Read the period (Auto-reload) value.
+ (+) Read the pulse (Compare)value.
+ @endverbatim
+ * @{
+ */
 
 /**
-  * @brief  This function returns the current counter value.
-  * @param  hlptim LPTIM handle
-  * @retval Counter value.
-  */
+ * @brief  This function returns the current counter value.
+ * @param  hlptim LPTIM handle
+ * @retval Counter value.
+ */
 __HAL_ROM_USED uint32_t HAL_LPTIM_ReadCounter(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1215,10 +1215,10 @@ __HAL_ROM_USED uint32_t HAL_LPTIM_ReadCounter(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  This function return the current Autoreload (Period) value.
-  * @param  hlptim LPTIM handle
-  * @retval Autoreload value.
-  */
+ * @brief  This function return the current Autoreload (Period) value.
+ * @param  hlptim LPTIM handle
+ * @retval Autoreload value.
+ */
 __HAL_ROM_USED uint32_t HAL_LPTIM_ReadAutoReload(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1228,10 +1228,10 @@ __HAL_ROM_USED uint32_t HAL_LPTIM_ReadAutoReload(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  This function return the current Compare (Pulse) value.
-  * @param  hlptim LPTIM handle
-  * @retval Compare value.
-  */
+ * @brief  This function return the current Compare (Pulse) value.
+ * @param  hlptim LPTIM handle
+ * @retval Compare value.
+ */
 __HAL_ROM_USED uint32_t HAL_LPTIM_ReadCompare(LPTIM_HandleTypeDef *hlptim)
 {
     /* Check the parameters */
@@ -1241,8 +1241,8 @@ __HAL_ROM_USED uint32_t HAL_LPTIM_ReadCompare(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup LPTIM_Group4 LPTIM IRQ handler
  *  @brief  LPTIM  IRQ handler.
@@ -1258,10 +1258,10 @@ __HAL_ROM_USED uint32_t HAL_LPTIM_ReadCompare(LPTIM_HandleTypeDef *hlptim)
   */
 
 /**
-  * @brief  This function handles LPTIM interrupt request.
-  * @param  hlptim LPTIM handle
-  * @retval None
-  */
+ * @brief  This function handles LPTIM interrupt request.
+ * @param  hlptim LPTIM handle
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_LPTIM_IRQHandler(LPTIM_HandleTypeDef *hlptim)
 {
     /* Update event interrupt */
@@ -1371,10 +1371,10 @@ __HAL_ROM_USED void HAL_LPTIM_IRQHandler(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Compare match callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Compare match callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_CompareMatchCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1385,10 +1385,10 @@ __weak void HAL_LPTIM_CompareMatchCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Autoreload match callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Autoreload match callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1399,10 +1399,10 @@ __weak void HAL_LPTIM_AutoReloadMatchCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Trigger detected callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Trigger detected callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_TriggerCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1413,10 +1413,10 @@ __weak void HAL_LPTIM_TriggerCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Ouput compare callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Ouput compare callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_OutCompareCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1427,10 +1427,10 @@ __weak void HAL_LPTIM_OutCompareCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Update event callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Update event callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_UpdateEventCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1442,10 +1442,10 @@ __weak void HAL_LPTIM_UpdateEventCallback(LPTIM_HandleTypeDef *hlptim)
 
 
 /**
-  * @brief  Compare write callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Compare write callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_CompareWriteCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1456,10 +1456,10 @@ __weak void HAL_LPTIM_CompareWriteCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Autoreload write callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Autoreload write callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_AutoReloadWriteCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1470,10 +1470,10 @@ __weak void HAL_LPTIM_AutoReloadWriteCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Autoreload write callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Autoreload write callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_OverFlowWakeUpCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1485,10 +1485,10 @@ __weak void HAL_LPTIM_OverFlowWakeUpCallback(LPTIM_HandleTypeDef *hlptim)
 
 
 /**
-  * @brief  Direction counter changed from Down to Up callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Direction counter changed from Down to Up callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_DirectionUpCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1499,10 +1499,10 @@ __weak void HAL_LPTIM_DirectionUpCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @brief  Direction counter changed from Up to Down callback in non blocking mode
-  * @param  hlptim  LPTIM handle
-  * @retval None
-  */
+ * @brief  Direction counter changed from Up to Down callback in non blocking mode
+ * @param  hlptim  LPTIM handle
+ * @retval None
+ */
 __weak void HAL_LPTIM_DirectionDownCallback(LPTIM_HandleTypeDef *hlptim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1513,8 +1513,8 @@ __weak void HAL_LPTIM_DirectionDownCallback(LPTIM_HandleTypeDef *hlptim)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup LPTIM_Group5 Peripheral State functions
  *  @brief   Peripheral State functions.
@@ -1531,29 +1531,29 @@ __weak void HAL_LPTIM_DirectionDownCallback(LPTIM_HandleTypeDef *hlptim)
   */
 
 /**
-  * @brief  Returns the LPTIM state.
-  * @param  hlptim LPTIM handle
-  * @retval HAL state
-  */
+ * @brief  Returns the LPTIM state.
+ * @param  hlptim LPTIM handle
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_LPTIM_StateTypeDef HAL_LPTIM_GetState(LPTIM_HandleTypeDef *hlptim)
 {
     return hlptim->State;
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_LPTIM_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

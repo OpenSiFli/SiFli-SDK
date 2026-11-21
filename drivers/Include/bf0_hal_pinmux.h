@@ -20,19 +20,19 @@ extern "C" {
 #endif /* PIN_MATRIX_FUNC_LIST */
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup PINMUX PINMUX
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 
 /** @defgroup PIN_flags PIN pull flag
-  * @brief PIN Pull-Up or Pull-Down Activation
-  * @{
-  */
+ * @brief PIN Pull-Up or Pull-Down Activation
+ * @{
+ */
 // Pullup: PE=1, PS=1,
 // Pulldown:PE=1, PS=0
 // All pins has same flags position, use HPSYS_PINMUX_PAD_PA_00 flags
@@ -211,11 +211,11 @@ typedef struct
  */
 
 /**
-  * @brief  Select pin function only.
-  * @param  pad: physical pin, #pin_pad
-  * @param  func: Pin function.
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
-  */
+ * @brief  Select pin function only.
+ * @param  pad: physical pin, #pin_pad
+ * @param  func: Pin function.
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
+ */
 void HAL_PIN_Select(int pad, int func, int hcpu);
 
 /**
@@ -264,32 +264,32 @@ int HAL_PIN_Set2(pin_function2 func, int flags);
 #endif /* HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
-  * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
-  * @param  pad: physical pin, #pin_pad
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
+ * @param  pad: physical pin, #pin_pad
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
+ * @retval -1 if invalid, otherwise 0
+ */
 int HAL_PIN_Set_Analog(int pad, int hcpu);
 
 
 /**
-  * @brief  Update pin flags.
-  * @param  pad: physical pin, #pin_pad
-  * @param  flags: Flags for the pin to update
-  * @param  mask: Mask of the flags
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Update pin flags.
+ * @param  pad: physical pin, #pin_pad
+ * @param  flags: Flags for the pin to update
+ * @param  mask: Mask of the flags
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
+ * @retval -1 if invalid, otherwise 0
+ */
 int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hcpu);
 
 /**
-  * @brief  Get pin function.
-  * @param  pad: physical pin, refer #pin_pad
-  * @param  p_func: Pointer of variable to save pin function.
-  * @param  p_mode: Pointer of varibale to save flag of the pin mode, see PIN_ModeTypeDef
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
-  * @retval -1 if invalid, else function idx(>= 0)
-  */
+ * @brief  Get pin function.
+ * @param  pad: physical pin, refer #pin_pad
+ * @param  p_func: Pointer of variable to save pin function.
+ * @param  p_mode: Pointer of varibale to save flag of the pin mode, see PIN_ModeTypeDef
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
+ * @retval -1 if invalid, else function idx(>= 0)
+ */
 int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p_mode, int hcpu);
 
 /**
@@ -460,16 +460,16 @@ HAL_StatusTypeDef HAL_PIN_Backup(PIN_BackupBufTypeDef *buf);
 HAL_StatusTypeDef HAL_PIN_Restore(PIN_BackupBufTypeDef *buf);
 
 /**
-  * @} PIN_Exported_Functions
-  */
+ * @} PIN_Exported_Functions
+ */
 
 /**
-  * @} PINMUX
-  */
+ * @} PINMUX
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

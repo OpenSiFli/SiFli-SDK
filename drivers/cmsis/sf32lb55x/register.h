@@ -8,8 +8,8 @@
 #define _REGISTER_H_
 
 /** @addtogroup CMSIS_Device SiFli CMSIS device interface
-  * @{
-  */
+ * @{
+ */
 
 
 #ifdef __cplusplus
@@ -354,8 +354,8 @@ typedef enum IRQn
 #include "cache.h"
 
 /** @addtogroup Peripheral_memory_map
-  * @{
-  */
+ * @{
+ */
 
 /******************* Base Addresss Definition ******************/
 //================== CORE ===================
@@ -715,36 +715,36 @@ typedef enum
 #define HCPU_IS_SRAM_ADDR(addr)  (((uint32_t)(addr) >= HPSYS_RAM0_BASE) && ((uint32_t)(addr) < HPSYS_RAM_END))
 
 /**
-  * @brief  Convert HCPU SRAM address which can be used by LCPU
-  * @param  addr HCPU SRAM address
-  * @retval address which can be accessed by LCPU
-*/
+ * @brief  Convert HCPU SRAM address which can be used by LCPU
+ * @param  addr HCPU SRAM address
+ * @retval address which can be accessed by LCPU
+ */
 #define HCPU_ADDR_2_LCPU_ADDR(addr)    (HCPU_IS_SRAM_ADDR((addr)) ? (uint32_t)((addr) + HCPU2LCPU_OFFSET) : (uint32_t)(addr))
 
 
 /**
-  * @brief  Convert LCPU SRAM address which can be used by HCPU
-  * @param  addr LCPU SRAM address
-  * @retval address which can be accessed by HCPU
-*/
+ * @brief  Convert LCPU SRAM address which can be used by HCPU
+ * @param  addr LCPU SRAM address
+ * @retval address which can be accessed by HCPU
+ */
 #define LCPU_ADDR_2_HCPU_ADDR(addr) (addr)
 /**
-  * @brief  Convert LCPU ROM address which can be used by HCPU
-  * @param  addr LCPU ROM address
-  * @retval address which can be accessed by HCPU
-*/
+ * @brief  Convert LCPU ROM address which can be used by HCPU
+ * @param  addr LCPU ROM address
+ * @retval address which can be accessed by HCPU
+ */
 #define LCPU_ROM_ADDR_2_HCPU_ADDR(addr) ((addr) + LCPUROM2HCPU_OFFSET)
 /**
-  * @brief  Convert LCPU ITCM address which can be used by HCPU
-  * @param  addr LCPU ITCM address
-  * @retval address which can be accessed by HCPU
-*/
+ * @brief  Convert LCPU ITCM address which can be used by HCPU
+ * @param  addr LCPU ITCM address
+ * @retval address which can be accessed by HCPU
+ */
 #define LCPU_ITCM_ADDR_2_HCPU_ADDR(addr) ((addr) + LCPUITCM2HCPU_OFFSET)
 /**
-  * @brief  Convert LCPU DTCM address which can be used by HCPU
-  * @param  addr LCPU ITCM address
-  * @retval address which can be accessed by HCPU
-*/
+ * @brief  Convert LCPU DTCM address which can be used by HCPU
+ * @param  addr LCPU ITCM address
+ * @retval address which can be accessed by HCPU
+ */
 #define LCPU_DTCM_ADDR_2_HCPU_ADDR(addr) ((addr) + LCPUDTCM2HCPU_OFFSET)
 
 
@@ -769,11 +769,11 @@ typedef enum
 #endif /* __cplusplus */
 
 /**
-  * @} CMSIS_Device
-  */
+ * @} CMSIS_Device
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif

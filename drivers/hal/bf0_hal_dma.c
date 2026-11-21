@@ -8,13 +8,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup DMA DMA
-  * @brief DMA HAL module driver
-  * @{
-  */
+ * @brief DMA HAL module driver
+ * @{
+ */
 
 #if defined(HAL_DMA_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -38,29 +38,29 @@ static DMA_ChannelAllocTypeDef dma2_ch_pool[DMA2_CHANNEL_NUM];
 
 /* Private function prototypes -----------------------------------------------*/
 /** @defgroup DMA_Private_Functions DMA Private Functions
-  * @{
-  */
+ * @{
+ */
 static void DMA_SetConfig(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts);
 
 #ifdef DMA_SUPPORT_GPDMA
     /**
-    * @brief  Get burst size by fifo size and data width
-    *
-    * @param  fifo_size fifo size in log2, e.g. 6 for 64bytes, 4 for 16bytes
-    * @param  data_width data width value set in register MSIZE/PSIZE, i.e. 0 for 1byte, 1 for 2 bytes
+     * @brief  Get burst size by fifo size and data width
+     *
+     * @param  fifo_size fifo size in log2, e.g. 6 for 64bytes, 4 for 16bytes
+     * @param  data_width data width value set in register MSIZE/PSIZE, i.e. 0 for 1byte, 1 for 2 bytes
 
-    * @retval burst size for SBURST/DBURST register (without left shifing by DBURST_Pos)
-    */
+     * @retval burst size for SBURST/DBURST register (without left shifing by DBURST_Pos)
+     */
     static uint16_t DMA_GetBurstSize(uint16_t fifo_size, uint16_t data_width);
 
     /**
-    * @brief  Set SBURST/DBURST/SFIX/DFIX register in CCR register
-    *
-    * @param  Init DMA init parameters
-    * @param  CCR pointer to CCR register
+     * @brief  Set SBURST/DBURST/SFIX/DFIX register in CCR register
+     *
+     * @param  Init DMA init parameters
+     * @param  CCR pointer to CCR register
 
-    * @return void
-    */
+     * @return void
+     */
     static void DMA_SetBurstSizeAndFix(DMA_InitTypeDef *Init, uint32_t *CCR);
 #endif /* DMA_SUPPORT_GPDMA */
 
@@ -101,16 +101,16 @@ static uint32_t DMA_GetSrcBytes(DMA_HandleTypeDef *hdma, uint32_t Counts)
 #endif
 
 /**
-  * @brief  Get the priority level to be written into the PL field of CCR, which is
-  *         also used by the Control word of a link-list node (CCR compatible).
-  *         m2m always uses low priority to avoid affecting peripheral transmission.
-  *         Peripheral levels are shifted up by one so that every peripheral transmission
-  *         is strictly higher than the LOW used by m2m, while the relative order between
-  *         peripherals is kept, e.g. after the shift a peripheral originally asking for
-  *         MEDIUM still outranks one asking for LOW. The shift saturates at VERY_HIGH.
-  * @param  Init DMA init parameters
-  * @retval priority level to use
-  */
+ * @brief  Get the priority level to be written into the PL field of CCR, which is
+ *         also used by the Control word of a link-list node (CCR compatible).
+ *         m2m always uses low priority to avoid affecting peripheral transmission.
+ *         Peripheral levels are shifted up by one so that every peripheral transmission
+ *         is strictly higher than the LOW used by m2m, while the relative order between
+ *         peripherals is kept, e.g. after the shift a peripheral originally asking for
+ *         MEDIUM still outranks one asking for LOW. The shift saturates at VERY_HIGH.
+ * @param  Init DMA init parameters
+ * @retval priority level to use
+ */
 static uint32_t DMA_AdjustPriority(const DMA_InitTypeDef *Init)
 {
     if (DMA_MEMORY_TO_MEMORY == Init->Direction)
@@ -637,14 +637,14 @@ static void DMA_Start(DMA_HandleTypeDef *hdma, bool InterruptMode)
 
 
 /**
-  * @} DMA_Private_Functions
-  */
+ * @} DMA_Private_Functions
+ */
 
 /* Exported functions ---------------------------------------------------------*/
 
 /** @defgroup DMA_Exported_Functions DMA Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup DMA_Exported_Functions_Group1 Initialization and de-initialization functions
  *  @brief   Initialization and de-initialization functions
@@ -666,12 +666,12 @@ static void DMA_Start(DMA_HandleTypeDef *hdma, bool InterruptMode)
   */
 
 /**
-  * @brief  Initialize the DMA according to the specified
-  *         parameters in the DMA_InitTypeDef and initialize the associated handle.
-  * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Initialize the DMA according to the specified
+ *         parameters in the DMA_InitTypeDef and initialize the associated handle.
+ * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma)
 {
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
@@ -791,11 +791,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Init(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DeInitialize the DMA peripheral.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the DMA peripheral.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
 {
     uint32_t mask;
@@ -905,8 +905,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @} DMA_Exported_Functions_Group1
-  */
+ * @} DMA_Exported_Functions_Group1
+ */
 
 /** @defgroup DMA_Exported_Functions_Group2 Input and Output operation functions
  *  @brief   Input and Output operation functions
@@ -928,14 +928,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_DeInit(DMA_HandleTypeDef *hdma)
   */
 
 /**
-  * @brief  Start the DMA Transfer.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Start the DMA Transfer.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Start(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1012,14 +1012,14 @@ __EXIT:
 }
 
 /**
-  * @brief  Start the DMA Transfer with interrupt enabled.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Start the DMA Transfer with interrupt enabled.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Start_IT(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1323,11 +1323,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Aborts the DMA Transfer in Interrupt mode.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                 the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Aborts the DMA Transfer in Interrupt mode.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                 the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1387,13 +1387,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_Abort_IT(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Polling for transfer complete.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                  the configuration information for the specified DMA Channel.
-  * @param  CompleteLevel Specifies the DMA level complete.
-  * @param  Timeout       Timeout duration.
-  * @retval HAL status
-  */
+ * @brief  Polling for transfer complete.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                  the configuration information for the specified DMA Channel.
+ * @param  CompleteLevel Specifies the DMA level complete.
+ * @param  Timeout       Timeout duration.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_PollForTransfer(DMA_HandleTypeDef *hdma, HAL_DMA_LevelCompleteTypeDef CompleteLevel, uint32_t Timeout)
 {
     uint32_t temp;
@@ -1595,11 +1595,11 @@ HAL_StatusTypeDef HAL_DMA_PollForMultipleTransfer(DMA_HandleTypeDef *hdma, uint3
 #endif /* DMA_LINK_LIST_SUPPORT */
 
 /**
-  * @brief  Handle DMA interrupt request.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval None
-  */
+ * @brief  Handle DMA interrupt request.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma)
 {
     uint32_t flag_it = hdma->DmaBaseAddress->ISR;
@@ -1753,15 +1753,15 @@ __HAL_ROM_USED void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Register callbacks
-  * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
-  *                               the configuration information for the specified DMA Channel.
-  * @param  CallbackID           User Callback identifer
-  *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
-  * @param  pCallback            pointer to private callbacsk function which has pointer to
-  *                               a DMA_HandleTypeDef structure as parameter.
-  * @retval HAL status
-  */
+ * @brief  Register callbacks
+ * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
+ *                               the configuration information for the specified DMA Channel.
+ * @param  CallbackID           User Callback identifer
+ *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
+ * @param  pCallback            pointer to private callbacsk function which has pointer to
+ *                               a DMA_HandleTypeDef structure as parameter.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_RegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_CallbackIDTypeDef CallbackID, void (* pCallback)(DMA_HandleTypeDef *_hdma))
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1806,13 +1806,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_RegisterCallback(DMA_HandleTypeDef *hdm
 }
 
 /**
-  * @brief  UnRegister callbacks
-  * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
-  *                               the configuration information for the specified DMA Channel.
-  * @param  CallbackID           User Callback identifer
-  *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
-  * @retval HAL status
-  */
+ * @brief  UnRegister callbacks
+ * @param  hdma                 pointer to a DMA_HandleTypeDef structure that contains
+ *                               the configuration information for the specified DMA Channel.
+ * @param  CallbackID           User Callback identifer
+ *                               a HAL_DMA_CallbackIDTypeDef ENUM as parameter.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_UnRegisterCallback(DMA_HandleTypeDef *hdma, HAL_DMA_CallbackIDTypeDef CallbackID)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1864,8 +1864,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_UnRegisterCallback(DMA_HandleTypeDef *h
 }
 
 /**
-  * @} DMA_Exported_Functions_Group2
-  */
+ * @} DMA_Exported_Functions_Group2
+ */
 
 
 
@@ -1886,11 +1886,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_UnRegisterCallback(DMA_HandleTypeDef *h
   */
 
 /**
-  * @brief  Return the DMA hande state.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL state
-  */
+ * @brief  Return the DMA hande state.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_DMA_StateTypeDef HAL_DMA_GetState(DMA_HandleTypeDef *hdma)
 {
     /* Return DMA handle state */
@@ -1898,59 +1898,59 @@ __HAL_ROM_USED HAL_DMA_StateTypeDef HAL_DMA_GetState(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Return the DMA error code.
-  * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
-  *              the configuration information for the specified DMA Channel.
-  * @retval DMA Error Code
-  */
+ * @brief  Return the DMA error code.
+ * @param  hdma : pointer to a DMA_HandleTypeDef structure that contains
+ *              the configuration information for the specified DMA Channel.
+ * @retval DMA Error Code
+ */
 __HAL_ROM_USED uint32_t HAL_DMA_GetError(DMA_HandleTypeDef *hdma)
 {
     return hdma->ErrorCode;
 }
 #ifdef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 /**
-  * @brief  Allocates a DMA channel dynamically
-  * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Allocates a DMA channel dynamically
+ * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_AllocChannel(DMA_HandleTypeDef *hdma)
 {
     return DMA_AllocChannel(hdma, false);
 }
 
 /**
-  * @brief  Frees a previously allocated DMA channel
-  * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA Channel.
-  * @retval HAL status
-  */
+ * @brief  Frees a previously allocated DMA channel
+ * @param  hdma Pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA Channel.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_DMA_FreeChannel(DMA_HandleTypeDef *hdma)
 {
     return DMA_FreeChannel(hdma);
 }
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 /**
-  * @} DMA_Exported_Functions_Group3
-  */
+ * @} DMA_Exported_Functions_Group3
+ */
 
 /**
-  * @} DMA_Exported_Functions
-  */
+ * @} DMA_Exported_Functions
+ */
 
 /** @addtogroup DMA_Private_Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Remap memory address for DMA
-            In A0, When HCPU used DMA2(Implemented in LCPU), DMA2 is using LCPU RAM space, Need to map HCPU RAM address to LCPU RAM address.
-  * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
-  *                     the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @retval None
-  */
+ * @brief  Remap memory address for DMA
+           In A0, When HCPU used DMA2(Implemented in LCPU), DMA2 is using LCPU RAM space, Need to map HCPU RAM address to LCPU RAM address.
+ * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
+ *                     the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @retval None
+ */
 void DMA_Remap(DMA_HandleTypeDef *hdma, uint32_t *SrcAddress, uint32_t *DstAddress)
 {
 #if defined(SF32LB58X)
@@ -1985,14 +1985,14 @@ void DMA_Remap(DMA_HandleTypeDef *hdma, uint32_t *SrcAddress, uint32_t *DstAddre
 
 
 /**
-  * @brief  Sets the DMA Transfer parameter.
-  * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
-  *                     the configuration information for the specified DMA Channel.
-  * @param  SrcAddress The source memory Buffer address
-  * @param  DstAddress The destination memory Buffer address
-  * @param  Counts The counts of data transfer action
-  * @retval HAL status
-  */
+ * @brief  Sets the DMA Transfer parameter.
+ * @param  hdma       pointer to a DMA_HandleTypeDef structure that contains
+ *                     the configuration information for the specified DMA Channel.
+ * @param  SrcAddress The source memory Buffer address
+ * @param  DstAddress The destination memory Buffer address
+ * @param  Counts The counts of data transfer action
+ * @retval HAL status
+ */
 static void DMA_SetConfig(DMA_HandleTypeDef *hdma, uint32_t SrcAddress, uint32_t DstAddress, uint32_t Counts)
 {
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
@@ -2262,10 +2262,10 @@ static volatile uint32_t *DMA_ConfigMutiple(DMA_HandleTypeDef *hdma, DMA_LinkLis
 
 
 /**
-  * @brief  Sets the DMA request source
-  * @param  dma_chl     DMA request channel
-  * @param  request     request number
-  */
+ * @brief  Sets the DMA request source
+ * @param  dma_chl     DMA request channel
+ * @param  request     request number
+ */
 __HAL_ROM_USED void HAL_DMA_Select_Source(DMA_Channel_TypeDef *dma_chl, uint8_t request)
 {
     DMAC_TypeDef *t = NULL;
@@ -2418,14 +2418,14 @@ void HAL_DMAC3_CH8_IRQHandler(void)
 #endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
 /**
-  * @} DMA_Private_Functions
-  */
+ * @} DMA_Private_Functions
+ */
 
 #endif /* HAL_DMA_MODULE_ENABLED */
 /**
-  * @} DMA
-  */
+ * @} DMA
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */

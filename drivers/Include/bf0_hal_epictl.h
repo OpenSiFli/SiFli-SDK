@@ -17,8 +17,8 @@ extern "C" {
 #ifdef HAL_EPICTL_ENABLED
 
 /**
-  * @brief  HAL EPICTL State enumeration definition
-  */
+ * @brief  HAL EPICTL State enumeration definition
+ */
 typedef enum
 {
     HAL_EPICTL_STATE_RESET             = 0x00U,    /*!< EPICTL not yet initialized or disabled       */
@@ -71,11 +71,11 @@ void HAL_EPICTL_DeInit(EPICTL_HandleTypeDef *epictl);
 void HAL_EPICTL_IRQHandler(EPICTL_HandleTypeDef *epictl);
 
 /**
-* @brief  Initialize an epictl data struct to default vaules
-*
-* @param param  EPICTL data parameter
-* @retval None
-*/
+ * @brief  Initialize an epictl data struct to default vaules
+ *
+ * @param param  EPICTL data parameter
+ * @retval None
+ */
 void HAL_EPICTL_DataInit(EPICTL_DataType *param);
 
 /**
@@ -102,9 +102,9 @@ HAL_StatusTypeDef HAL_EPICTL_Start(EPICTL_HandleTypeDef *epictl, EPICTL_DataType
 #include "sifli_cmpr.h"
 
 /**
-* @brief Calculate the target size of an chunk_pixels with specified compression rate.
-* @retval Target size
-*/
+ * @brief Calculate the target size of an chunk_pixels with specified compression rate.
+ * @retval Target size
+ */
 uint32_t HAL_EPICTL_CMPR_Target_size(uint32_t chunk_pixels, uint32_t color_mode, uint32_t cmpr_rate);
 
 //Get the bytes of compressed line pixels with specified compression rate

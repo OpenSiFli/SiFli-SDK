@@ -428,11 +428,11 @@ static void bt_mac_enable(void)
 }
 
 /**
-  * @brief  single-carrier test
-  * @param  start or stop test
-  * @param  power value, 0:0dbm 1:4dbm  2:10dbm
-  * @param  set channel N, means 2402+*N MHz
-  */
+ * @brief  single-carrier test
+ * @param  start or stop test
+ * @param  power value, 0:0dbm 1:4dbm  2:10dbm
+ * @param  set channel N, means 2402+*N MHz
+ */
 #define read_memory(addr)        (*(volatile unsigned int *)((addr)))
 //#define write_memory(addr,value) (*(volatile unsigned int *)((addr))) = (value)
 void mac_config(void)

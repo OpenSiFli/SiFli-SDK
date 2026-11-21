@@ -10,13 +10,13 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PIMNUX PINMUX
-  * @brief PINMUX HAL module driver
-  * @{
-  */
+ * @brief PINMUX HAL module driver
+ * @{
+ */
 
 #if defined(HAL_PINMUX_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -43,10 +43,10 @@ static inline void PIN_UpdateFselAndPUPD(__IO uint32_t *pin, uint32_t fsel, uint
 #endif /* HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
-  * @brief  Get pin base.
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @retval Pin Group base address.
-  */
+ * @brief  Get pin base.
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @retval Pin Group base address.
+ */
 __HAL_ROM_USED volatile uint32_t *HAL_PIN_Get_Base(int hcpu)
 {
     volatile uint32_t *pin = NULL;
@@ -68,11 +68,11 @@ __HAL_ROM_USED volatile uint32_t *HAL_PIN_Get_Base(int hcpu)
 }
 
 /**
-  * @brief  Select pin function only.
-  * @param  pad: physical pin
-  * @param  func: Pin function.
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  */
+ * @brief  Select pin function only.
+ * @param  pad: physical pin
+ * @param  func: Pin function.
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ */
 __HAL_ROM_USED void HAL_PIN_Select(int pad, int func, int hcpu)
 {
     volatile uint32_t *pin;
@@ -1203,13 +1203,13 @@ __weak pin_function HAL_PIN_Idx2Func(int pad, int idx,  int hcpu)
 
 
 /**
-  * @brief  Set pin function.
-  * @param  pad: physical pin
-  * @param  func: Pin function.
-  * @param  flags: flag of the pin (pullup/pulldown)
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Set pin function.
+ * @param  pad: physical pin
+ * @param  func: Pin function.
+ * @param  flags: flag of the pin (pullup/pulldown)
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @retval -1 if invalid, otherwise 0
+ */
 __HAL_ROM_USED int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
 {
     volatile uint32_t *pin;
@@ -1398,11 +1398,11 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
 #endif /* !HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
-  * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
-  * @param  pad: physical pin
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
+ * @param  pad: physical pin
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @retval -1 if invalid, otherwise 0
+ */
 // for SF32LB55X pin function is fixed to 10 for analog function, PS/PE should be 0(NOPULL).
 #define PIN_ANALOG_FUNC 0xf
 
@@ -1449,13 +1449,13 @@ int HAL_PIN_Set_Analog(int pad, int hcpu)
 
 
 /**
-  * @brief  Update pin flags.
-  * @param  pad: physical pin
-  * @param  flags: Flags for the pin to update
-  * @param  mask: Mask of the flags
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Update pin flags.
+ * @param  pad: physical pin
+ * @param  flags: Flags for the pin to update
+ * @param  mask: Mask of the flags
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @retval -1 if invalid, otherwise 0
+ */
 __HAL_ROM_USED int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hcpu)
 {
     volatile uint32_t *pin;
@@ -1504,13 +1504,13 @@ __HAL_ROM_USED int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hc
 }
 
 /**
-  * @brief  Get pin function.
-  * @param  pad: physical pin
-  * @param  p_func: Pointer of variable to save pin function.
-  * @param  p_flags: Pointer of varibale to save pin mode
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @retval -1 if invalid, else function idx(>= 0)
-  */
+ * @brief  Get pin function.
+ * @param  pad: physical pin
+ * @param  p_func: Pointer of variable to save pin function.
+ * @param  p_flags: Pointer of varibale to save pin mode
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @retval -1 if invalid, else function idx(>= 0)
+ */
 #ifndef HAL_PINMUX_SUPPORT_MATRIX_FUNCTION
 __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p_mode, int hcpu)
 {
@@ -1732,12 +1732,12 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
 #endif /* !HAL_PINMUX_SUPPORT_MATRIX_FUNCTION */
 
 /**
-  * @brief  Set pin DS0.
-  * @param  pad physical pin
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @param  set 1: select, 0: deselect
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Set pin DS0.
+ * @param  pad physical pin
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @param  set 1: select, 0: deselect
+ * @retval -1 if invalid, otherwise 0
+ */
 __HAL_ROM_USED int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set)
 {
     volatile uint32_t *pin;
@@ -1795,12 +1795,12 @@ __HAL_ROM_USED int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set)
 }
 
 /**
-  * @brief  Set pin DS1.
-  * @param  pad physical pin
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
-  * @param  set 1: select, 0: deselect
-  * @retval -1 if invalid, otherwise 0
-  */
+ * @brief  Set pin DS1.
+ * @param  pad physical pin
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @param  set 1: select, 0: deselect
+ * @retval -1 if invalid, otherwise 0
+ */
 __HAL_ROM_USED int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set)
 {
     volatile uint32_t *pin;
@@ -1859,11 +1859,11 @@ __HAL_ROM_USED int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set)
 }
 
 /**
-  * @brief  Set pin driving capability.
-  * @param  pad physical pin
-  * @param  ds driving capability, see PIN_DrivingStrengthTypeDef
-  * @retval HAL_OK if success, HAL_ERROR if pad is invalid
-  */
+ * @brief  Set pin driving capability.
+ * @param  pad physical pin
+ * @param  ds driving capability, see PIN_DrivingStrengthTypeDef
+ * @retval HAL_OK if success, HAL_ERROR if pad is invalid
+ */
 HAL_StatusTypeDef HAL_PIN_SetDS(int pad, PIN_DrivingStrengthTypeDef ds)
 {
     int r;
@@ -2671,10 +2671,10 @@ HAL_RAM_RET_CODE_SECT(HAL_PIN_Restore, HAL_StatusTypeDef HAL_PIN_Restore(PIN_Bac
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */

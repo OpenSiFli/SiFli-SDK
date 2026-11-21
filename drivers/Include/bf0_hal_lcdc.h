@@ -20,13 +20,13 @@ extern "C" {
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup LCDC LCD Controller
-  * @brief LCDC HAL module driver
-  * @{
-  */
+ * @brief LCDC HAL module driver
+ * @{
+ */
 
 /*
   PTC ramless function
@@ -144,12 +144,12 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 
 /** @defgroup LCDC_Exported_Types LCDC Exported Types
-  * @brief
-  * @{
-  */
+ * @brief
+ * @{
+ */
 /** @defgroup LCDC_Output_HW_Interface LCDC Output Interface
-  * @{
-  */
+ * @{
+ */
 typedef enum
 {
     LCDC_INTF_DBI_8BIT_A,                   //!< MIPI DBI type A interface(8080 8-bit  Clocked E mode)
@@ -184,15 +184,15 @@ typedef enum
 } HAL_LCDC_IF_TypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 
 
 /** @defgroup LCDC_Color_Mode LCDC Pixel format
-  * @{
-  */
+ * @{
+ */
 typedef enum
 {
     LCDC_PIXEL_FORMAT_MONO = 0,
@@ -212,8 +212,8 @@ typedef enum
     LCDC_PIXEL_FORMAT_F2_SWAP,   /*Swap pixel order in each byte*/
 } HAL_LCDC_PixelFormat;
 /**
-  * @}
-  */
+ * @}
+ */
 
 typedef enum
 {
@@ -400,9 +400,9 @@ typedef struct
 } EPD_LCD_CFG;
 
 /** @defgroup LCD_init_config_param LCD init configuration data struct
-  * @brief LCD Init structure definition
-  * @{
-  */
+ * @brief LCD Init structure definition
+ * @{
+ */
 typedef struct
 {
     HAL_LCDC_IF_TypeDef lcd_itf;     /*!< LCD HW connection interface .*/
@@ -423,13 +423,13 @@ typedef struct
     } cfg;                           /*!< LCD interface config union*/
 } LCDC_InitTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @brief LCDC color structure definition
-  */
+ * @brief LCDC color structure definition
+ */
 typedef struct
 {
     uint8_t r;
@@ -438,8 +438,8 @@ typedef struct
 } LCDC_ColorDef;
 
 /**
-  * @brief LCDC alpha color structure definition
-  */
+ * @brief LCDC alpha color structure definition
+ */
 typedef struct
 {
     uint8_t a;
@@ -450,8 +450,8 @@ typedef struct
 
 
 /**
-  * @brief LCDC area structure definition
-  */
+ * @brief LCDC area structure definition
+ */
 typedef struct
 {
     uint16_t x0;
@@ -461,8 +461,8 @@ typedef struct
 } LCDC_AreaDef;
 
 /**
-  * @brief LCDC Layer structure definition
-  */
+ * @brief LCDC Layer structure definition
+ */
 typedef struct
 {
     uint8_t *data;                      //!< Layer buffer ptr
@@ -488,8 +488,8 @@ typedef struct
 } LCDC_LayerCfgTypeDef;
 
 /**
-  * @brief  HAL LCDC State structures definition
-  */
+ * @brief  HAL LCDC State structures definition
+ */
 typedef enum
 {
     HAL_LCDC_STATE_RESET             = 0x00U,    /*!< LCDC not yet initialized or disabled       */
@@ -614,29 +614,29 @@ typedef struct __LCDC_HandleTypeDef
 } LCDC_HandleTypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup LCDC_Exported_Constants LCDC Exported Constants
-  * @{
-  */
+ * @{
+ */
 
 
 /** @defgroup LCDC_Rest_Pulse_Type LCDC Reset Pulse Type
-  * @brief Keep RESTB pin in NEG/POS level for a period of time
-  * @{
-  */
+ * @brief Keep RESTB pin in NEG/POS level for a period of time
+ * @{
+ */
 #define LCDC_RESX_NEG_PULSE  0
 #define LCDC_RESX_POS_PULSE  1
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup LCDC_Error_Code LCDC Error Code
-  * @{
-  */
+ * @{
+ */
 #define HAL_LCDC_ERROR_NONE                 0x00000000U    /*!< No error                                */
 #define HAL_LCDC_ERROR_TIMEOUT              0x00000001U    /*!< Wait busy timeout error                 */
 #define HAL_LCDC_ERROR_OVERFLOW             0x00000002U    /*!< Decompress buf overflow error           */
@@ -644,20 +644,20 @@ typedef struct __LCDC_HandleTypeDef
 #define HAL_LCDC_ERROR_HAL_LOCKED           0x80000000U    /*!< HAL LCDC locked error                   */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @} LCDC_Exported_Constants
-  */
+ * @} LCDC_Exported_Constants
+ */
 
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup LCDC_Exported_Macros LCDC Exported Macros
-  * @brief
-  * @{
-  */
+ * @brief
+ * @{
+ */
 
 #define HAL_LCDC_IS_SPI_IF(lcd_itf) (((lcd_itf) >= LCDC_INTF_SPI_START) && ((lcd_itf) <= LCDC_INTF_SPI_END))
 #define HAL_LCDC_IS_AHB_IF(lcd_itf) ((lcd_itf) == LCDC_INTF_AHB)
@@ -678,38 +678,38 @@ typedef struct __LCDC_HandleTypeDef
 #define HAL_LCDC_LOOKUP_TABLE_SIZE          (256*4)
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup LCDC_Exported_Functions LCDC Exported Functions
-  * @brief
-  * @{
-  */
+ * @brief
+ * @{
+ */
 
 /**
-* @brief  Initialize LCD controller hardware
-* @param  lcdc LCD controller handle
-* @retval HAL status
-*/
+ * @brief  Initialize LCD controller hardware
+ * @param  lcdc LCD controller handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_LCDC_Init(LCDC_HandleTypeDef *lcdc);
 
 /**
-* @brief  De-Initialize LCD controller hardware
-* @param  lcdc LCD controller handle
-* @retval HAL status
-*/
+ * @brief  De-Initialize LCD controller hardware
+ * @param  lcdc LCD controller handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_LCDC_DeInit(LCDC_HandleTypeDef *lcdc);
 
 //Obsolete
 HAL_StatusTypeDef HAL_LCDC_ResetLCD(LCDC_HandleTypeDef *lcdc, uint8_t pulse_type, uint32_t pulse_us);
 
 /**
-* @brief  Reset LCD controller hardware
-* @param  lcdc LCD controller handle
-* @retval HAL status
-*/
+ * @brief  Reset LCD controller hardware
+ * @param  lcdc LCD controller handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_LCDC_Reset(LCDC_HandleTypeDef *lcdc);
 
 /**
@@ -937,17 +937,17 @@ HAL_StatusTypeDef HAL_LCDC_LayerDisable(LCDC_HandleTypeDef *lcdc,    HAL_LCDC_La
 HAL_StatusTypeDef HAL_LCDC_SetBgColor(LCDC_HandleTypeDef *lcdc, uint8_t r, uint8_t g, uint8_t b);
 
 /**
-* @brief  LCD controller interrupt handler
-* @param  lcdc LCD controller handle
-* @retval None
-*/
+ * @brief  LCD controller interrupt handler
+ * @param  lcdc LCD controller handle
+ * @retval None
+ */
 void HAL_LCDC_IRQHandler(LCDC_HandleTypeDef *lcdc);
 
 /**
-* @brief  Send layer data when TE comming
-* @param  lcdc LCD controller handle
-* @retval None
-*/
+ * @brief  Send layer data when TE comming
+ * @param  lcdc LCD controller handle
+ * @retval None
+ */
 void HAL_LCDC_TE_IRQHandler(LCDC_HandleTypeDef *lcdc);
 
 /**
@@ -1072,33 +1072,33 @@ HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg_IT(LCDC_HandleTypeDef *lcdc, uint32
 HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *lcdc, uint32_t addr, uint32_t addr_len);
 
 /**
-* @brief  LCD controller send layer data complete callback.
-* @param  lcdc LCD controller handle
-* @retval None
-*/
+ * @brief  LCD controller send layer data complete callback.
+ * @param  lcdc LCD controller handle
+ * @retval None
+ */
 void HAL_LCDC_SendLayerDataCpltCbk(LCDC_HandleTypeDef *lcdc);
 
 /**
-* @brief  LCD controller sent lines(Base on HAL_LCDC_SetROIArea's y0) complete callback.
-* @param  lcdc LCD controller handle
-* @param  line Sent lines
-* @retval None
-*/
+ * @brief  LCD controller sent lines(Base on HAL_LCDC_SetROIArea's y0) complete callback.
+ * @param  lcdc LCD controller handle
+ * @param  line Sent lines
+ * @retval None
+ */
 void HAL_LCDC_SendLineCpltCbk(LCDC_HandleTypeDef *lcdc, uint32_t line);
 
 /**
-* @brief  Setup next frame's TE, auto restore to default TE after send framebuffer
-* @param  lcdc LCD controller handle
-* @param  en  enable TE if ture
-* @retval None
-*/
+ * @brief  Setup next frame's TE, auto restore to default TE after send framebuffer
+ * @param  lcdc LCD controller handle
+ * @param  en  enable TE if ture
+ * @retval None
+ */
 void HAL_LCDC_Next_Frame_TE(LCDC_HandleTypeDef *lcdc, bool en);
 /**
-* @brief  Enable/Disable TE
-* @param  lcdc LCD controller handle
-* @param  en  enable TE if ture
-* @retval None
-*/
+ * @brief  Enable/Disable TE
+ * @param  lcdc LCD controller handle
+ * @param  en  enable TE if ture
+ * @retval None
+ */
 void HAL_LCDC_Enable_TE(LCDC_HandleTypeDef *lcdc, bool en);
 
 /**
@@ -1132,10 +1132,10 @@ HAL_StatusTypeDef HAL_LCDC_Resume(LCDC_HandleTypeDef *lcdc);
 
 #if !(defined(SF32LB55X) || defined(SOC_BF0_LCPU))
 /**
-* @brief  Use LCDC2' TE signal on LCDC1
-* @param  lcdc LCD controller handle
-* @retval None
-*/
+ * @brief  Use LCDC2' TE signal on LCDC1
+ * @param  lcdc LCD controller handle
+ * @retval None
+ */
 void HAL_LCDC_UseLCDC2TE(LCDC_HandleTypeDef *lcdc);
 #endif
 
@@ -1219,16 +1219,16 @@ void HAL_LCDC_SoftSpiSetPin(SOFT_SPI_PIN_Def pin, uint32_t high1low0);
 uint32_t HAL_LCDC_SoftSPI_Read(LCDC_HandleTypeDef *lcdc, uint32_t addr, uint32_t addr_len, uint32_t data_len);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #ifdef __cplusplus

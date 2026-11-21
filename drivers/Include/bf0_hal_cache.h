@@ -15,9 +15,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup CACHE
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 
 /**

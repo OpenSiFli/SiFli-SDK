@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup FACC FACC
-  * @brief FACC HAL module driver
-  * @{
-  */
+ * @brief FACC HAL module driver
+ * @{
+ */
 
 #if defined(HAL_FACC_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -278,9 +278,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_FACC_Start_IT(FACC_HandleTypeDef *facc, uin
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

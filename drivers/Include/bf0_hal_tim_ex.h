@@ -17,18 +17,18 @@ extern "C" {
 
 
 /** @addtogroup TIMEx
-  * @ingroup TIM
-  * @{
-  */
+ * @ingroup TIM
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup TIMEx_Exported_Types TIM Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  TIM Hall sensor Configuration Structure definition
-  */
+ * @brief  TIM Hall sensor Configuration Structure definition
+ */
 
 typedef struct
 {
@@ -47,8 +47,8 @@ typedef struct
 } GPT_HallSensor_InitTypeDef;
 
 /**
-  * @brief  TIM Break/Break2 input configuration
-  */
+ * @brief  TIM Break/Break2 input configuration
+ */
 typedef struct
 {
     uint32_t Source;         /*!< Specifies the source of the timer break input.*/
@@ -58,10 +58,10 @@ typedef struct
 TIMEx_BreakInputConfigTypeDef;
 
 /**
-  * @brief  TIM Master configuration Structure definition
-  * @note   Advanced timers provide TRGO2 internal line which is redirected
-  *         to the ADC
-  */
+ * @brief  TIM Master configuration Structure definition
+ * @note   Advanced timers provide TRGO2 internal line which is redirected
+ *         to the ADC
+ */
 typedef struct
 {
     uint32_t  MasterOutputTrigger;   /*!< Trigger output (TRGO) selection */
@@ -76,10 +76,10 @@ typedef struct
 
 
 /**
-  * @brief  TIM Break input(s) and Dead time configuration Structure definition
-  * @note   2 break inputs can be configured (BKIN and BKIN2) with configurable
-  *        filter and polarity.
-  */
+ * @brief  TIM Break input(s) and Dead time configuration Structure definition
+ * @note   2 break inputs can be configured (BKIN and BKIN2) with configurable
+ *        filter and polarity.
+ */
 typedef struct
 {
     uint32_t OffStateRunMode;      /*!< TIM off state in run mode*/
@@ -101,65 +101,65 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup TIMEx_Exported_Constants  TIM Extended Exported Constants
-  * @{
-  */
+ * @{
+ */
 
 #if defined(TIM_BREAK_INPUT_SUPPORT)
 
 /** @defgroup TIMEx_Break_Input TIM Extended Break input
-  * @{
-  */
+ * @{
+ */
 #define TIM_BREAKINPUT_BRK     0x00000001U                                      /* !< Timer break input  */
 #define TIM_BREAKINPUT_BRK2    0x00000002U                                      /* !< Timer break2 input */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup TIMEx_Break_Input_Source TIM Extended Break input source
-  * @{
-  */
+ * @{
+ */
 #define TIM_BREAKINPUTSOURCE_BKIN     0x00000001U                               /* !< An external source (GPIO) is connected to the BKIN pin  */
 #define TIM_BREAKINPUTSOURCE_COMP1    0x00000002U                               /* !< The COMP1 output is connected to the break input */
 #define TIM_BREAKINPUTSOURCE_COMP2    0x00000004U                               /* !< The COMP2 output is connected to the break input */
 #define TIM_BREAKINPUTSOURCE_DFSDM1   0x00000008U                               /* !< The analog watchdog output of the DFSDM1 peripheral is connected to the break input */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup TIMEx_Break_Input_Source_Enable TIM Extended Break input source enabling
-  * @{
-  */
+ * @{
+ */
 #define TIM_BREAKINPUTSOURCE_DISABLE     0x00000000U                            /* !< Break input source is disabled */
 #define TIM_BREAKINPUTSOURCE_ENABLE      0x00000001U                            /* !< Break input source is enabled */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup TIMEx_Break_Input_Source_Polarity TIM Extended Break input polarity
-  * @{
-  */
+ * @{
+ */
 #define TIM_BREAKINPUTSOURCE_POLARITY_LOW     0x00000001U                       /* !< Break input source is active low */
 #define TIM_BREAKINPUTSOURCE_POLARITY_HIGH    0x00000000U                       /* !< Break input source is active_high */
 /**
-  * @}
-  */
+ * @}
+ */
 #endif /* TIM_BREAK_INPUT_SUPPORT */
 
 
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup TIMEx_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 /*  Timer Hall Sensor functions  **********************************************/
 HAL_StatusTypeDef HAL_TIMEx_HallSensor_Init(GPT_HandleTypeDef *htim, GPT_HallSensor_InitTypeDef *sConfig);
 HAL_StatusTypeDef HAL_TIMEx_HallSensor_DeInit(GPT_HandleTypeDef *htim);
@@ -177,12 +177,12 @@ HAL_StatusTypeDef HAL_TIMEx_HallSensor_Stop_IT(GPT_HandleTypeDef *htim);
 HAL_StatusTypeDef HAL_TIMEx_HallSensor_Start_DMA(GPT_HandleTypeDef *htim, uint32_t *pData, uint16_t Length);
 HAL_StatusTypeDef HAL_TIMEx_HallSensor_Stop_DMA(GPT_HandleTypeDef *htim);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 /*  Timer Complementary Output Compare functions  *****************************/
 /* Blocking mode: Polling */
 HAL_StatusTypeDef HAL_TIMEx_OCN_Start(GPT_HandleTypeDef *htim, uint32_t Channel);
@@ -196,12 +196,12 @@ HAL_StatusTypeDef HAL_TIMEx_OCN_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Channe
 HAL_StatusTypeDef HAL_TIMEx_OCN_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length);
 HAL_StatusTypeDef HAL_TIMEx_OCN_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group3
-  * @{
-  */
+ * @{
+ */
 /*  Timer Complementary PWM functions  ****************************************/
 /* Blocking mode: Polling */
 HAL_StatusTypeDef HAL_TIMEx_PWMN_Start(GPT_HandleTypeDef *htim, uint32_t Channel);
@@ -214,12 +214,12 @@ HAL_StatusTypeDef HAL_TIMEx_PWMN_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Chann
 HAL_StatusTypeDef HAL_TIMEx_PWMN_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length);
 HAL_StatusTypeDef HAL_TIMEx_PWMN_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group4
-  * @{
-  */
+ * @{
+ */
 /*  Timer Complementary One Pulse functions  **********************************/
 /* Blocking mode: Polling */
 HAL_StatusTypeDef HAL_TIMEx_OnePulseN_Start(GPT_HandleTypeDef *htim, uint32_t OutputChannel);
@@ -229,12 +229,12 @@ HAL_StatusTypeDef HAL_TIMEx_OnePulseN_Stop(GPT_HandleTypeDef *htim, uint32_t Out
 HAL_StatusTypeDef HAL_TIMEx_OnePulseN_Start_IT(GPT_HandleTypeDef *htim, uint32_t OutputChannel);
 HAL_StatusTypeDef HAL_TIMEx_OnePulseN_Stop_IT(GPT_HandleTypeDef *htim, uint32_t OutputChannel);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group5
-  * @{
-  */
+ * @{
+ */
 /* Extension Control functions  ************************************************/
 HAL_StatusTypeDef HAL_TIMEx_ConfigCommutationEvent(GPT_HandleTypeDef *htim, uint32_t  InputTrigger, uint32_t  CommutationSource);
 HAL_StatusTypeDef HAL_TIMEx_ConfigCommutationEvent_IT(GPT_HandleTypeDef *htim, uint32_t  InputTrigger, uint32_t  CommutationSource);
@@ -243,12 +243,12 @@ HAL_StatusTypeDef HAL_TIMEx_MasterConfigSynchronization(GPT_HandleTypeDef *htim,
 HAL_StatusTypeDef HAL_TIMEx_ConfigBreakDeadTime(GPT_HandleTypeDef *htim, TIMEx_BreakDeadTimeConfigTypeDef *sBreakDeadTimeConfig);
 HAL_StatusTypeDef HAL_TIMEx_RemapConfig(GPT_HandleTypeDef *htim, uint32_t Remap);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group6
-  * @{
-  */
+ * @{
+ */
 /* Extension Callback *********************************************************/
 void HAL_TIMEx_CommutationCallback(GPT_HandleTypeDef *htim);
 void HAL_TIMEx_BreakCallback(GPT_HandleTypeDef *htim);
@@ -256,31 +256,31 @@ void HAL_TIMEx_Break2Callback(GPT_HandleTypeDef *htim);
 void TIMEx_DMACommutationCplt(DMA_HandleTypeDef *hdma);
 void TIMEx_DMACommutationHalfCplt(DMA_HandleTypeDef *hdma);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup TIMEx_Exported_Functions_Group7
-  * @{
-  */
+ * @{
+ */
 /* Extension Peripheral State functions  **************************************/
 HAL_GPT_StateTypeDef HAL_TIMEx_HallSensor_GetState(GPT_HandleTypeDef *htim);
 HAL_GPT_ChannelStateTypeDef HAL_TIMEx_GetChannelNState(GPT_HandleTypeDef *htim,  uint32_t ChannelN);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private types -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /* Private constants ---------------------------------------------------------*/
 /* Private macros ------------------------------------------------------------*/
 /** @defgroup TIMEx_Private_Macros TIM Private Macros
-  * @{
-  */
+ * @{
+ */
 #define IS_GPT_REMAP(GPT_REMAP)   (((GPT_REMAP) == GPT_TIM2_TIM8_TRGO)||\
                                   ((GPT_REMAP) == GPT_TIM2_ETH_PTP)||\
                                   ((GPT_REMAP) == GPT_TIM2_USBFS_SOF)||\
@@ -325,33 +325,33 @@ HAL_GPT_ChannelStateTypeDef HAL_TIMEx_GetChannelNState(GPT_HandleTypeDef *htim, 
 
 #if 0
 /**
-  * @brief  Gets the TIM dead-time prescaler.
-  * @param  \__HANDLE__ TIM handle.
-  * @retval 1-bit value of dead-time prescaler, 0:dead-time is tCLK*(DTG+1), 1:dead-time is tCLK*(DTG+1)*16.
-  */
+ * @brief  Gets the TIM dead-time prescaler.
+ * @param  \__HANDLE__ TIM handle.
+ * @retval 1-bit value of dead-time prescaler, 0:dead-time is tCLK*(DTG+1), 1:dead-time is tCLK*(DTG+1)*16.
+ */
 #define __HAL_GPT_GET_DTPSC(__HANDLE__) (((__HANDLE__)->Instance->BDTR >> ATIM_BDTR_DTPSC_Pos) & 0x1UL)
 #endif
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private functions ---------------------------------------------------------*/
 /** @defgroup TIMEx_Private_Functions TIM Private Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

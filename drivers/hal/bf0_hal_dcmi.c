@@ -8,12 +8,12 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 /** @defgroup DCMI DCMI
-  * @brief DCMI HAL module driver
-  * @{
-  */
+ * @brief DCMI HAL module driver
+ * @{
+ */
 
 #ifdef HAL_DCMI_MODULE_ENABLED
 
@@ -31,8 +31,8 @@ static void       DCMI_DMAError(DMA_HandleTypeDef *hdma);
 /* Exported functions --------------------------------------------------------*/
 
 /** @defgroup DCMI_Exported_Functions DCMI Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup DCMI_Exported_Functions_Group1 Initialization and Configuration functions
  *  @brief   Initialization and Configuration functions
@@ -50,12 +50,12 @@ static void       DCMI_DMAError(DMA_HandleTypeDef *hdma);
   */
 
 /**
-  * @brief  Initializes the DCMI according to the specified
-  *         parameters in the DCMI_InitTypeDef and create the associated handle.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL status
-  */
+ * @brief  Initializes the DCMI according to the specified
+ *         parameters in the DCMI_InitTypeDef and create the associated handle.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
 {
     /* Check the DCMI peripheral state */
@@ -177,12 +177,12 @@ HAL_StatusTypeDef HAL_DCMI_Init(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Deinitializes the DCMI peripheral registers to their default reset
-  *         values.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL status
-  */
+ * @brief  Deinitializes the DCMI peripheral registers to their default reset
+ *         values.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL status
+ */
 
 HAL_StatusTypeDef HAL_DCMI_DeInit(DCMI_HandleTypeDef *hdcmi)
 {
@@ -213,11 +213,11 @@ HAL_StatusTypeDef HAL_DCMI_DeInit(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Initializes the DCMI MSP.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  Initializes the DCMI MSP.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -229,11 +229,11 @@ __weak void HAL_DCMI_MspInit(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  DeInitializes the DCMI MSP.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  DeInitializes the DCMI MSP.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -245,8 +245,8 @@ __weak void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 /** @defgroup DCMI_Exported_Functions_Group2 IO operation functions
  *  @brief   IO operation functions
  *
@@ -265,12 +265,12 @@ __weak void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef *hdcmi)
   */
 
 /**
-  * @brief  Discard the words still sitting in the DCMI RX FIFO.
-  * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
-  *                    the configuration information for DCMI.
-  * @param  max_words Upper bound on the number of words dropped.
-  * @retval None
-  */
+ * @brief  Discard the words still sitting in the DCMI RX FIFO.
+ * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
+ *                    the configuration information for DCMI.
+ * @param  max_words Upper bound on the number of words dropped.
+ * @retval None
+ */
 static void DCMI_DrainRxFifo(DCMI_HandleTypeDef *hdcmi, uint32_t max_words)
 {
     while (((hdcmi->Instance->SR & DCMI_SR_FNE) != 0U) && (max_words > 0U))
@@ -281,14 +281,14 @@ static void DCMI_DrainRxFifo(DCMI_HandleTypeDef *hdcmi, uint32_t max_words)
 }
 
 /**
-  * @brief  Enables DCMI DMA request and enables DCMI capture
-  * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
-  *                    the configuration information for DCMI.
-  * @param  DCMI_Mode DCMI capture mode snapshot or continuous grab.
-  * @param  pData     The destination memory Buffer address (LCD Frame buffer).
-  * @param  Length    The length of capture to be transferred.
-  * @retval HAL status
-  */
+ * @brief  Enables DCMI DMA request and enables DCMI capture
+ * @param  hdcmi     pointer to a DCMI_HandleTypeDef structure that contains
+ *                    the configuration information for DCMI.
+ * @param  DCMI_Mode DCMI capture mode snapshot or continuous grab.
+ * @param  pData     The destination memory Buffer address (LCD Frame buffer).
+ * @param  Length    The length of capture to be transferred.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mode, uint32_t pData, uint32_t Length)
 {
     /* Initialize the second memory address */
@@ -378,11 +378,11 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mo
 }
 
 /**
-  * @brief  Disable DCMI DMA request and Disable DCMI capture
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL status
-  */
+ * @brief  Disable DCMI DMA request and Disable DCMI capture
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef *hdcmi)
 {
     register uint32_t count = HAL_TIMEOUT_DCMI_STOP * (SystemCoreClock / 8U / 1000U);
@@ -431,11 +431,11 @@ HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Suspend DCMI capture
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL status
-  */
+ * @brief  Suspend DCMI capture
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DCMI_Suspend(DCMI_HandleTypeDef *hdcmi)
 {
     register uint32_t count = HAL_TIMEOUT_DCMI_STOP * (SystemCoreClock / 8U / 1000U);
@@ -477,11 +477,11 @@ HAL_StatusTypeDef HAL_DCMI_Suspend(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Resume DCMI capture
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL status
-  */
+ * @brief  Resume DCMI capture
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DCMI_Resume(DCMI_HandleTypeDef *hdcmi)
 {
     /* Process locked */
@@ -503,11 +503,11 @@ HAL_StatusTypeDef HAL_DCMI_Resume(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Handles DCMI interrupt request.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for the DCMI.
-  * @retval None
-  */
+ * @brief  Handles DCMI interrupt request.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for the DCMI.
+ * @retval None
+ */
 void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
 {
     uint32_t isr_value = READ_REG(hdcmi->Instance->MIS);
@@ -691,11 +691,11 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Error DCMI callback.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  Error DCMI callback.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -707,11 +707,11 @@ __weak void HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Line Event callback.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  Line Event callback.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     /* NOTE : This function Should not be modified, when the callback is needed,
@@ -720,11 +720,11 @@ __weak void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  VSYNC Event callback.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  VSYNC Event callback.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -736,11 +736,11 @@ __weak void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @brief  Frame Event callback.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval None
-  */
+ * @brief  Frame Event callback.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval None
+ */
 __weak void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -752,8 +752,8 @@ __weak void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup DCMI_Exported_Functions_Group3 Peripheral Control functions
  *  @brief    Peripheral Control functions
@@ -770,13 +770,13 @@ __weak void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
   */
 
 /**
-  * @brief  Set embedded synchronization delimiters unmasks.
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *               the configuration information for DCMI.
-  * @param  SyncUnmask pointer to a DCMI_SyncUnmaskTypeDef structure that contains
-  *                    the embedded synchronization delimiters unmasks.
-  * @retval HAL status
-  */
+ * @brief  Set embedded synchronization delimiters unmasks.
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *               the configuration information for DCMI.
+ * @param  SyncUnmask pointer to a DCMI_SyncUnmaskTypeDef structure that contains
+ *                    the embedded synchronization delimiters unmasks.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef  HAL_DCMI_ConfigSyncUnmask(DCMI_HandleTypeDef *hdcmi, DCMI_SyncUnmaskTypeDef *SyncUnmask)
 {
     /* Process Locked */
@@ -823,8 +823,8 @@ uint32_t HAL_DCMI_GetRemainingCount(DCMI_HandleTypeDef *hdcmi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup DCMI_Exported_Functions_Group4 Peripheral State functions
  *  @brief    Peripheral State functions
@@ -843,11 +843,11 @@ uint32_t HAL_DCMI_GetRemainingCount(DCMI_HandleTypeDef *hdcmi)
   */
 
 /**
-  * @brief  Return the DCMI state
-  * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
-  *                the configuration information for DCMI.
-  * @retval HAL state
-  */
+ * @brief  Return the DCMI state
+ * @param  hdcmi pointer to a DCMI_HandleTypeDef structure that contains
+ *                the configuration information for DCMI.
+ * @retval HAL state
+ */
 HAL_DCMI_StateTypeDef HAL_DCMI_GetState(DCMI_HandleTypeDef *hdcmi)
 {
     return hdcmi->State;
@@ -866,13 +866,13 @@ uint32_t HAL_DCMI_GetError(DCMI_HandleTypeDef *hdcmi)
 
 #if (USE_HAL_DCMI_REGISTER_CALLBACKS == 1)
 /**
-  * @brief DCMI Callback registering
-  * @param hdcmi        pointer to a DCMI_HandleTypeDef structure that contains
-  *                     the configuration information for DCMI.
-  * @param CallbackID   dcmi Callback ID
-  * @param pCallback    pointer to DCMI_CallbackTypeDef structure
-  * @retval status
-  */
+ * @brief DCMI Callback registering
+ * @param hdcmi        pointer to a DCMI_HandleTypeDef structure that contains
+ *                     the configuration information for DCMI.
+ * @param CallbackID   dcmi Callback ID
+ * @param pCallback    pointer to DCMI_CallbackTypeDef structure
+ * @retval status
+ */
 HAL_StatusTypeDef HAL_DCMI_RegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCMI_CallbackIDTypeDef CallbackID, pDCMI_CallbackTypeDef pCallback)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -953,11 +953,11 @@ HAL_StatusTypeDef HAL_DCMI_RegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCMI_
 }
 
 /**
-  * @brief DCMI Callback Unregistering
-  * @param hdcmi       dcmi handle
-  * @param CallbackID  dcmi Callback ID
-  * @retval status
-  */
+ * @brief DCMI Callback Unregistering
+ * @param hdcmi       dcmi handle
+ * @param CallbackID  dcmi Callback ID
+ * @retval status
+ */
 HAL_StatusTypeDef HAL_DCMI_UnRegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCMI_CallbackIDTypeDef CallbackID)
 {
     HAL_StatusTypeDef status = HAL_OK;
@@ -1031,18 +1031,18 @@ HAL_StatusTypeDef HAL_DCMI_UnRegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCM
 #endif /* USE_HAL_DCMI_REGISTER_CALLBACKS */
 
 /**
-  * @}
-  */
+ * @}
+ */
 /* Private functions ---------------------------------------------------------*/
 /** @defgroup DCMI_Private_Functions DCMI Private Functions
-  * @{
-  */
+ * @{
+ */
 /**
-* @brief  DMA conversion complete callback.
-* @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-*                the configuration information for the specified DMA module.
-* @retval None
-*/
+ * @brief  DMA conversion complete callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 {
     uint32_t tmp = 0;
@@ -1065,11 +1065,11 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA error callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA error callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void DCMI_DMAError(DMA_HandleTypeDef *hdma)
 {
     DCMI_HandleTypeDef *hdcmi = (DCMI_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -1094,19 +1094,19 @@ static void DCMI_DMAError(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 #endif /* HAL_DCMI_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

@@ -9,13 +9,13 @@
 #include <stdlib.h>
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PSRAM PSRAM
-  * @brief PSRAM HAL module driver
-  * @{
-  */
+ * @brief PSRAM HAL module driver
+ * @{
+ */
 
 #if defined(HAL_MPI_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 

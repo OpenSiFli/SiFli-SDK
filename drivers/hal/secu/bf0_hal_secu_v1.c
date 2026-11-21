@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SECU Security
-  * @brief Security HAL module driver
-  * @{
-  */
+ * @brief Security HAL module driver
+ * @{
+ */
 
 #if defined(HAL_SECU_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -327,11 +327,11 @@ HAL_StatusTypeDef HAL_SECU_Lock(SECU_GROUP_TYPE group)
 
 #endif /* HAL_SECU_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

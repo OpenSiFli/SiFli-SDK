@@ -110,14 +110,14 @@ typedef struct
 } PTM_TypeDef;
 
 /**
-  * @brief One core slice of PTM_TypeDef, i.e. the registers of a single core.
-  *
-  * The register block of the cores is repeated every 0x30 bytes starting at CCR0,
-  * so this structure must stay identical to one core block of PTM_TypeDef,
-  * reserved words included: its size is the distance between the registers of two
-  * cores (PTM_CORE_REG_STRIDE in bf0_hal_ptm.c).  Keep the two definitions next
-  * to each other when the register map changes.
-  */
+ * @brief One core slice of PTM_TypeDef, i.e. the registers of a single core.
+ *
+ * The register block of the cores is repeated every 0x30 bytes starting at CCR0,
+ * so this structure must stay identical to one core block of PTM_TypeDef,
+ * reserved words included: its size is the distance between the registers of two
+ * cores (PTM_CORE_REG_STRIDE in bf0_hal_ptm.c).  Keep the two definitions next
+ * to each other when the register map changes.
+ */
 typedef struct
 {
     __IO uint32_t CCR;      /*!< 0x00 control: PSC / REP / END0 / END1              */

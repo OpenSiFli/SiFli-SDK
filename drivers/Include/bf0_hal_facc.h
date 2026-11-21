@@ -15,9 +15,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup FACC
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 #define FACC_MAX_FIFO_SIZE  256
 #define FACC_FIR_STATE_SIZE 260     // 64*32/8+4

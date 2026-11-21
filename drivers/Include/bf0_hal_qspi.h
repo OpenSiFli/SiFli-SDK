@@ -20,17 +20,17 @@ extern "C" {
 #ifdef SF32LB55X
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SPI_FLASH
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup SPI_FLASH_Exported_Types SPI_FLASH Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /** SPI_FLASH OTP default base address
  *  OTP address is in range [base+start_idx*page_size, base+(start_idx+otp_page_num)*page_size))
@@ -49,8 +49,8 @@ extern "C" {
 #define SPI_FLASH_IS_VALID_OTP_PAGE_IDX(idx)  (((idx) >= SPI_FLASH_OTP_PAGE_START_IDX) && ((idx) < (SPI_FLASH_OTP_PAGE_START_IDX + hflash->ctable->mode_reg)))
 
 /**
-  * @brief  SPI_FLASH configure tyep
-  */
+ * @brief  SPI_FLASH configure tyep
+ */
 typedef struct
 {
     QSPI_TypeDef        *Instance;    /*!< qspi controller instance        */
@@ -61,8 +61,8 @@ typedef struct
 } qspi_configure_t;
 
 /**
-  * @brief  SPI_FLASH manual command
-  */
+ * @brief  SPI_FLASH manual command
+ */
 typedef struct
 {
     uint8_t cmd;
@@ -77,8 +77,8 @@ typedef struct
 } FLASH_CMD_CFG_T;
 
 /**
-  * @brief  SPI_FLASH command index
-  */
+ * @brief  SPI_FLASH command index
+ */
 typedef enum
 {
     SPI_FLASH_CMD_WREN = 0,  /*!<  write enable, nor+nand    */
@@ -142,8 +142,8 @@ typedef enum
 } SPI_FLASH_CMD_E;
 
 /**
-  * @brief  SPI_FLASH command table
-  */
+ * @brief  SPI_FLASH command table
+ */
 typedef struct
 {
     uint8_t flash_mode; /*!<  SPI_FLASH_MODE_E    */
@@ -181,8 +181,8 @@ typedef struct nor_ext_cfg_tag
 } nor_ext_cfg_t;
 
 /**
-  * @brief  SPI_FLASH manufactory id
-  */
+ * @brief  SPI_FLASH manufactory id
+ */
 typedef enum
 {
     FLASH_INVALID_ID = 0x00,    /*!< Initial id        */
@@ -202,8 +202,8 @@ typedef enum
 } FLASH_MANUF_ID_T;
 
 /**
-  * @brief  SPI_FLASH status define
-  */
+ * @brief  SPI_FLASH status define
+ */
 typedef enum
 {
     HAL_FLASH_STATE_RESET      = 0x00U,    /*!< Peripheral not Initialized                         */
@@ -214,8 +214,8 @@ typedef enum
 } HAL_FLASH_StateTypeDef;
 
 /**
-  * @brief  SPI_FLASH spi line mode
-  */
+ * @brief  SPI_FLASH spi line mode
+ */
 typedef enum
 {
     HAL_FLASH_NOR_MODE      = 0x00U,     /*!< Flash single spi mode      */
@@ -224,8 +224,8 @@ typedef enum
 } HAL_FLASH_ModeDef;
 
 /**
-  * @brief  SPI_FLASH AES mode
-  */
+ * @brief  SPI_FLASH AES mode
+ */
 typedef enum
 {
     HAL_FLASH_AES128      = 0x00U,  /*!<  AES 128      */
@@ -233,8 +233,8 @@ typedef enum
 } HAL_FLASH_AES_Mode;
 
 /**
-  * @brief  SPI_FLASH flash type
-  */
+ * @brief  SPI_FLASH flash type
+ */
 typedef enum
 {
     SPI_MODE_NOR = 0,         /*!< Flash TYPE NOR mode      */
@@ -244,8 +244,8 @@ typedef enum
 } SPI_FLASH_MODE_E;
 
 /**
-  * @brief  SPI_FLASH clear fifo mode
-  */
+ * @brief  SPI_FLASH clear fifo mode
+ */
 typedef enum
 {
     HAL_FLASH_CLR_RX_FIFO = 1,      /*!< Clear flash RX FIFO      */
@@ -254,8 +254,8 @@ typedef enum
 } HAL_FLASH_ClearFifo;
 
 /**
-  * @brief  SPI_FLASH initial structure definition
-  */
+ * @brief  SPI_FLASH initial structure definition
+ */
 typedef struct __FLASH_HandleTypeDef
 {
     QSPI_TypeDef                      *Instance;
@@ -284,250 +284,250 @@ typedef struct __FLASH_HandleTypeDef
                                                       */
 } FLASH_HandleTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported macro ------------------------------------------------------------*/
 
 /** @defgroup SPI_FLASH_Exported_Macros SPI_FLASH Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief QSPI Enable Hardware Interface .
-  * @param  \__HANDLE__ SPI FLASH handle
-  * @retval None
-  */
+ * @brief QSPI Enable Hardware Interface .
+ * @param  \__HANDLE__ SPI FLASH handle
+ * @retval None
+ */
 #define __HAL_QSPI_EN_HWI(__HANDLE__)        (((__HANDLE__)->Instance->CR) |= QSPI_CR_HWIFE)
 
 /**
-  * @brief QSPI Disable Hardware Interface .
-  * @param  \__HANDLE__ SPI FLASH handle
-  * @retval None
-  */
+ * @brief QSPI Disable Hardware Interface .
+ * @param  \__HANDLE__ SPI FLASH handle
+ * @retval None
+ */
 #define __HAL_QSPI_DIS_HWI(__HANDLE__)        (((__HANDLE__)->Instance->CR) &= ~(QSPI_CR_HWIFE))
 
 /**
-  * @brief QSPI Set Command , do not wait TCF.
-  * @param  \__HANDLE__ SPI FLASH handle
-  * @param  \__CMD__ Command for FLASH or PSRAM
-  * @retval None
-  */
+ * @brief QSPI Set Command , do not wait TCF.
+ * @param  \__HANDLE__ SPI FLASH handle
+ * @param  \__CMD__ Command for FLASH or PSRAM
+ * @retval None
+ */
 #define __HAL_QSPI_SET_CMD(__HANDLE__, __CMD__)        (((__HANDLE__)->Instance->CMDR1) = (__CMD__&0XFF))
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup SPI_FLASH_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SPI_FLASH_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  SPI_FLASH set ahb read command
-  * @param  hflash  SPI_FLASH handle
-  * @param  cmd read command index
-  * @retval HAL status
-  */
+ * @brief  SPI_FLASH set ahb read command
+ * @param  hflash  SPI_FLASH handle
+ * @param  cmd read command index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_SET_AHB_RCMD(FLASH_HandleTypeDef *hflash, uint8_t cmd);
 
 /**
-  * @brief  SPI_FLASH set ahb write command
-  * @param  hflash  SPI_FLASH handle
-  * @param  cmd write command index
-  * @retval HAL status
-  */
+ * @brief  SPI_FLASH set ahb write command
+ * @param  hflash  SPI_FLASH handle
+ * @param  cmd write command index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_SET_AHB_WCMD(FLASH_HandleTypeDef *hflash, uint8_t cmd);
 
 /**
-  * @brief  SPI_FLASH configure AHB read command
-  * @param  hflash  SPI_FLASH handle
-  * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  dum_cyc  dummy cycle
-  * @param  ab_size  ab size in bit
-  * @param  ab_mod  ab mode, 1/2/4 line
-  * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
-  * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  cmd_mode  command mode, it should be 1
-  * @retval None
-  */
+ * @brief  SPI_FLASH configure AHB read command
+ * @param  hflash  SPI_FLASH handle
+ * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  dum_cyc  dummy cycle
+ * @param  ab_size  ab size in bit
+ * @param  ab_mod  ab mode, 1/2/4 line
+ * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
+ * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  cmd_mode  command mode, it should be 1
+ * @retval None
+ */
 void HAL_FLASH_CFG_AHB_RCMD(FLASH_HandleTypeDef *hflash, int8_t data_mod,
                             int8_t dum_cyc, int8_t ab_size, int8_t ab_mod,
                             int8_t addr_size, int8_t addr_mod, int8_t cmd_mode);
 
 /**
-  * @brief  SPI_FLASH config AHB write command
-  * @param  hflash  SPI_FLASH handle
-  * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  dum_cyc  dummy cycle
-  * @param  ab_size  ab size in bit
-  * @param  ab_mod  ab mode, 1/2/4 line
-  * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
-  * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  cmd_mode  command mode, it should be 1
-  * @retval None
-  */
+ * @brief  SPI_FLASH config AHB write command
+ * @param  hflash  SPI_FLASH handle
+ * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  dum_cyc  dummy cycle
+ * @param  ab_size  ab size in bit
+ * @param  ab_mod  ab mode, 1/2/4 line
+ * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
+ * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  cmd_mode  command mode, it should be 1
+ * @retval None
+ */
 void HAL_FLASH_CFG_AHB_WCMD(FLASH_HandleTypeDef *hflash, int8_t data_mod,
                             int8_t dum_cyc, int8_t ab_size, int8_t ab_mod,
                             int8_t addr_size, int8_t addr_mod, int8_t cmd_mode);
 
 /**
-  * @brief  SPI_FLASH enable QSPI mode
-  * @param  hflash  SPI_FLASH handle
-  * @param  en enable QSPI mode
-  * @retval HAL status
-  */
+ * @brief  SPI_FLASH enable QSPI mode
+ * @param  hflash  SPI_FLASH handle
+ * @param  en enable QSPI mode
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_ENABLE_QSPI(FLASH_HandleTypeDef *hflash, uint8_t en);
 
 
 /**
-  * @brief  SPI_FLASH set flash command to register
-  * @param  hflash  SPI_FLASH handle
-  * @param  cmd command index
-  * @param  addr address
-  * @retval HAL status
-  */
+ * @brief  SPI_FLASH set flash command to register
+ * @param  hflash  SPI_FLASH handle
+ * @param  cmd command index
+ * @param  addr address
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_SET_CMD(FLASH_HandleTypeDef *hflash, uint8_t cmd, uint32_t addr);
 
 /**
-  * @brief  SPI_FLASH write data length
-  * @param  hflash  FLASH handle
-  * @param  len data length
-  * @retval HAL status
-*/
+ * @brief  SPI_FLASH write data length
+ * @param  hflash  FLASH handle
+ * @param  len data length
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_WRITE_DLEN(FLASH_HandleTypeDef *hflash, uint32_t len);
 
 /**
-  * @brief  SPI_FLASH write data length to command 2
-  * @param  hflash  FLASH handle
-  * @param  len data length
-  * @retval HAL status
-*/
+ * @brief  SPI_FLASH write data length to command 2
+ * @param  hflash  FLASH handle
+ * @param  len data length
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_WRITE_DLEN2(FLASH_HandleTypeDef *hflash, uint16_t len);
 
 /**
-  * @brief  SPI_FLASH write a word to fifo
-  * @param  hflash  FLASH handle
-  * @param  data u32 data
-  * @retval HAL status
-*/
+ * @brief  SPI_FLASH write a word to fifo
+ * @param  hflash  FLASH handle
+ * @param  data u32 data
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_FLASH_WRITE_WORD(FLASH_HandleTypeDef *hflash, uint32_t data);
 
 /**
-  * @brief  SPI_FLASH is rx fifo empty
-  * @param  hflash  FLASH handle
-  * @retval fifo status
-*/
+ * @brief  SPI_FLASH is rx fifo empty
+ * @param  hflash  FLASH handle
+ * @retval fifo status
+ */
 bool HAL_FLASH_IS_RX_EMPTY(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH is tx fifo full
-  * @param  hflash  FLASH handle
-  * @retval fifo status
-*/
+ * @brief  SPI_FLASH is tx fifo full
+ * @param  hflash  FLASH handle
+ * @retval fifo status
+ */
 bool HAL_FLASH_IS_TX_FULL(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH is tx fifo empty
-  * @param  hflash  FLASH handle
-  * @retval fifo status
-*/
+ * @brief  SPI_FLASH is tx fifo empty
+ * @param  hflash  FLASH handle
+ * @retval fifo status
+ */
 bool HAL_FLASH_IS_TX_EMPTY(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH is busy
-  * @param  hflash  FLASH handle
-  * @retval flash status
-*/
+ * @brief  SPI_FLASH is busy
+ * @param  hflash  FLASH handle
+ * @retval flash status
+ */
 bool HAL_FLASH_IS_BUSY(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH status match previous setting
-  * @param  hflash  FLASH handle
-  * @retval flash status
-*/
+ * @brief  SPI_FLASH status match previous setting
+ * @param  hflash  FLASH handle
+ * @retval flash status
+ */
 bool HAL_FLASH_STATUS_MATCH(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH if command finish
-  * @param  hflash  FLASH handle
-  * @retval flash status
-*/
+ * @brief  SPI_FLASH if command finish
+ * @param  hflash  FLASH handle
+ * @retval flash status
+ */
 
 bool HAL_FLASH_IS_CMD_DONE(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH clear command done status
-  * @param  hflash  FLASH handle
-  * @retval none
-*/
+ * @brief  SPI_FLASH clear command done status
+ * @param  hflash  FLASH handle
+ * @retval none
+ */
 void HAL_FLASH_CLR_CMD_DONE(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH check if program done
-  * @param  hflash  FLASH handle
-  * @retval flash status
-*/
+ * @brief  SPI_FLASH check if program done
+ * @param  hflash  FLASH handle
+ * @retval flash status
+ */
 bool HAL_FLASH_IS_PROG_DONE(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH read 32 bits data from fifo
-  * @param  hflash  FLASH handle
-  * @retval data in fifo
-*/
+ * @brief  SPI_FLASH read 32 bits data from fifo
+ * @param  hflash  FLASH handle
+ * @retval data in fifo
+ */
 uint32_t HAL_FLASH_READ32(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH get received count
-  * @param  hflash  FLASH handle
-  * @retval rx count
-*/
+ * @brief  SPI_FLASH get received count
+ * @param  hflash  FLASH handle
+ * @retval rx count
+ */
 uint8_t HAL_FLASH_GET_RX_CNT(FLASH_HandleTypeDef *hflash);
 
 /**
-  * @brief  SPI_FLASH set clock divider
-  * @param  hflash  FLASH handle
-  * @param  div clock divider
-  * @retval none
-*/
+ * @brief  SPI_FLASH set clock divider
+ * @param  hflash  FLASH handle
+ * @param  div clock divider
+ * @retval none
+ */
 void HAL_FLASH_SET_CLK_rom(FLASH_HandleTypeDef *hflash, uint8_t div);
 
 /**
-  * @brief  SPI_FLASH flush flash fifo
-  * @param  hflash  FLASH handle
-  * @param  mode RX or tx OR ALL
-  * @retval none
-*/
+ * @brief  SPI_FLASH flush flash fifo
+ * @param  hflash  FLASH handle
+ * @param  mode RX or tx OR ALL
+ * @retval none
+ */
 void HAL_FLASH_CLEAR_FIFO(FLASH_HandleTypeDef *hflash, HAL_FLASH_ClearFifo mode);
 
 /**
-  * @brief  SPI_FLASH set tx slot to meet DMA request
-  * @param  hflash  FLASH handle
-  * @param  slot burst width
-  * @retval none
-*/
+ * @brief  SPI_FLASH set tx slot to meet DMA request
+ * @param  hflash  FLASH handle
+ * @param  slot burst width
+ * @retval none
+ */
 void HAL_FLASH_SET_TXSLOT(FLASH_HandleTypeDef *hflash, uint8_t slot);
 
 
 /**
-  * @brief  SPI_FLASH config command parameter
-  * @param  hflash  SPI_FLASH handle
-  * @param  func_mod function mode, read or write
-  * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  dum_cyc  dummy cycle
-  * @param  ab_size  ab size in bit
-  * @param  ab_mod  ab mode, 1/2/4 line
-  * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
-  * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
-  * @param  cmd_mode  command mode, it should be 1
-  * @retval None
-  */
+ * @brief  SPI_FLASH config command parameter
+ * @param  hflash  SPI_FLASH handle
+ * @param  func_mod function mode, read or write
+ * @param  data_mod  data mode, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  dum_cyc  dummy cycle
+ * @param  ab_size  ab size in bit
+ * @param  ab_mod  ab mode, 1/2/4 line
+ * @param  addr_size  address size, 0 for 1 byte ... 3 for 4 bytes
+ * @param  addr_mod  address mode, 1/2/4 line, 1 for single line, 2 for dual line, 3 for 4line
+ * @param  cmd_mode  command mode, it should be 1
+ * @retval None
+ */
 void HAL_FLASH_MANUAL_CMD(FLASH_HandleTypeDef *hflash, int8_t func_mod, int8_t data_mod,
                           int8_t dum_cyc, int8_t ab_size, int8_t ab_mod,
                           int8_t addr_size, int8_t addr_mod, int8_t cmd_mode);
@@ -567,21 +567,21 @@ HAL_StatusTypeDef HAL_FLASH_ENABLE_CMD2(FLASH_HandleTypeDef *hflash, uint8_t en)
 HAL_StatusTypeDef HAL_FLASH_STAUS_MATCH_CMD2(FLASH_HandleTypeDef *hflash, uint8_t en);
 
 /**
-  * @brief  SPI_FLASH clear flash status
-  * @param  hflash  FLASH handle
-  * @param  status value
-  * @retval none
-*/
+ * @brief  SPI_FLASH clear flash status
+ * @param  hflash  FLASH handle
+ * @param  status value
+ * @retval none
+ */
 void HAL_FLASH_CLR_STATUS(FLASH_HandleTypeDef *hflash, uint32_t status);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @addtogroup SPI_FLASH_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 
 /**
  * @brief  SPI_FLASH for boot mode
@@ -731,12 +731,12 @@ int HAL_FLASH_ISSUE_CMD(FLASH_HandleTypeDef *handle, SPI_FLASH_CMD_E cmd, uint32
 int HAL_FLASH_ISSUE_CMD_SEQ(FLASH_HandleTypeDef *handle, SPI_FLASH_CMD_E cmd1, uint32_t addr, SPI_FLASH_CMD_E cmd2, uint32_t param);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup SPI_FLASH_Exported_Functions_Group3
-  * @{
-  */
+ * @{
+ */
 
 /**
  * @brief  SPI_FLASH set qual spi mode
@@ -848,20 +848,20 @@ static inline uint32_t HAL_FLASH_GetOtpBase(FLASH_HandleTypeDef *handle)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* SF32LB55X */
 

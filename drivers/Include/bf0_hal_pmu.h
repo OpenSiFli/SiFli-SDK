@@ -17,9 +17,9 @@ extern "C" {
 #include "bf0_pin_const.h"
 
 /** @addtogroup PMU PMU
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup PMU_Exported_Types PMU Exported Types
@@ -206,10 +206,10 @@ typedef enum
 
 
 /**
-  * @brief  Select LPSYS Power Switch
-  * @param[in] psw power switch flag, see @ref PMU_LPSYS_PSW
-  * @retval None
-  */
+ * @brief  Select LPSYS Power Switch
+ * @param[in] psw power switch flag, see @ref PMU_LPSYS_PSW
+ * @retval None
+ */
 #define HAL_PMU_SELECT_LPSYS_PWR(psw)  \
             do \
             {  \
@@ -218,10 +218,10 @@ typedef enum
             while (0)
 
 /**
-* @brief  Select LPSYS Power Switch
-* @param[in] psw power switch flag, see @ref PMU_LPSYS_PSW
-* @retval None
-*/
+ * @brief  Select LPSYS Power Switch
+ * @param[in] psw power switch flag, see @ref PMU_LPSYS_PSW
+ * @retval None
+ */
 #define HAL_PMU_SELECT_BLESYS_PWR(psw)  \
             do \
             {  \

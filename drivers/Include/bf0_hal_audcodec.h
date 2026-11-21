@@ -15,22 +15,22 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup AUDCODEC
-  * @brief AUDCODEC HAL module driver
-  * @{
-  */
+ * @brief AUDCODEC HAL module driver
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup AUDCODEC_Exported_Types AUDCODEC Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief AUDCODEC TX/RX channel configure structure definition
-  */
+ * @brief AUDCODEC TX/RX channel configure structure definition
+ */
 typedef struct
 {
     uint8_t     clk_ana_pol;
@@ -66,8 +66,8 @@ typedef struct
 } AUDCODEC_AdcChnlCfgTypeDef;
 
 /**
-  * @brief  AUDCODEC DAC clock config definition
-  */
+ * @brief  AUDCODEC DAC clock config definition
+ */
 typedef struct
 {
     uint32_t  samplerate;
@@ -87,8 +87,8 @@ typedef struct
 } AUDCODE_DAC_CLK_CONFIG_TYPE;
 
 /**
-  * @brief  AUDCODEC ADC clock config definition
-  */
+ * @brief  AUDCODEC ADC clock config definition
+ */
 typedef struct
 {
     uint32_t  samplerate;
@@ -103,8 +103,8 @@ typedef struct
 
 
 /**
-  * @brief AUDCODEC DAC PATH configure structure definition
-  */
+ * @brief AUDCODEC DAC PATH configure structure definition
+ */
 
 typedef struct
 {
@@ -113,8 +113,8 @@ typedef struct
 } AUDCODEC_DACCfgTypeDef;
 
 /**
-  * @brief AUDCODEC ADC PATH configure structure definition
-  */
+ * @brief AUDCODEC ADC PATH configure structure definition
+ */
 typedef struct
 {
     uint8_t     opmode;
@@ -122,8 +122,8 @@ typedef struct
 } AUDCODEC_ADCCfgTypeDef;
 
 /**
-  * @brief AUDCODEC Init structure definition
-  */
+ * @brief AUDCODEC Init structure definition
+ */
 typedef struct
 {
     //uint32_t     clk_div;      /*!<  Source clk for AUDCODEC module */
@@ -135,8 +135,8 @@ typedef struct
 } AUDCODEC_InitTypeDef;
 
 /**
-  * @brief  HAL State structures definition
-  */
+ * @brief  HAL State structures definition
+ */
 typedef enum
 {
     HAL_AUDCODEC_STATE_RESET      = 0x00U,  /*!< AUDCODEC not yet initialized or disabled                */
@@ -149,8 +149,8 @@ typedef enum
 } HAL_AUDCODEC_StateTypeDef;
 
 /**
-  * @brief  AUDCODEC TX/RX BUFFER/DMA ENUM definition
-  */
+ * @brief  AUDCODEC TX/RX BUFFER/DMA ENUM definition
+ */
 typedef enum
 {
     HAL_AUDCODEC_DAC_CH0         = 0x00U,  /*!< AUDCODEC DAC channel 0  */
@@ -162,8 +162,8 @@ typedef enum
 
 
 /**
-  * @brief AUDCODEC handle Structure definition
-  */
+ * @brief AUDCODEC handle Structure definition
+ */
 typedef struct
 {
 #ifdef AUDCODEC_BASE
@@ -196,16 +196,16 @@ typedef struct
                                                 This parameter can be a value of @ref AUDCODEC_Error */
 } AUDCODEC_HandleTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup AUDCODEC_Exported_Constants AUDCODEC Exported Constants
-  * @{
-  */
+ * @{
+ */
 /** @defgroup AUDCODEC_Error AUDCODEC Error
-  * @{
-  */
+ * @{
+ */
 #define HAL_AUDCODEC_ERROR_NONE      (0x00000000U)  /*!< No error           */
 #define HAL_AUDCODEC_ERROR_TIMEOUT   (0x00000001U)  /*!< Timeout error      */
 #define HAL_AUDCODEC_ERROR_OVR       (0x00000002U)  /*!< OVR error          */
@@ -213,13 +213,13 @@ typedef struct
 #define HAL_AUDCODEC_ERROR_DMA       (0x00000008U)  /*!< DMA transfer error */
 #define HAL_AUDCODEC_ERROR_UNKNOW    (0x00000010U)  /*!< Unknow Error error */
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup AUDCODEC_Flag_definition AUDCODEC Flag definition
-  * @{
-  */
+ * @{
+ */
 
 #define AUDCODEC_TX_OUT1_FIFO_UNDERF              (1<<9)  /*!< AUDCODEC STATUS TX OUT1 FIFO UNDER FLOW            */
 #define AUDCODEC_TX_OUT0_FIFO_UNDERF              (1<<8)  /*!< AUDCODEC STATUS TX OUT0 FIFO UNDER FLOW          */
@@ -234,135 +234,135 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @} AUDCODEC_Exported_Constants
-  */
+ * @} AUDCODEC_Exported_Constants
+ */
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup AUDCODEC_Exported_macros AUDCODEC Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 #ifdef AUDCODEC_CFG_DAC_ENABLE
 
 /** @brief  Enable audio codec .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_DAC_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG |= AUDCODEC_CFG_DAC_ENABLE)
 
 /** @brief  Disable the AUDCODEC .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_DAC_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG &= (~AUDCODEC_CFG_DAC_ENABLE))
 
 
 /** @brief  Disable the AUDCODEC DAC CHannel0.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_DAC_CH0_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->DAC_CH0_CFG &= (~AUDCODEC_DAC_CH0_CFG_ENABLE))
 
 /** @brief  Disable the AUDCODEC DAC CHannel1.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_DAC_CH1_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->DAC_CH1_CFG &= (~AUDCODEC_DAC_CH1_CFG_ENABLE))
 
 
 /** @brief  Enable audio prc .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_ADC_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG |= AUDCODEC_CFG_ADC_ENABLE)
 
 /** @brief  Disable the AUDCODEC .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_ADC_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG &= (~AUDCODEC_CFG_ADC_ENABLE))
 
 /** @brief  Disable the AUDCODEC ADC CHannel0.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_ADC_CH0_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->ADC_CH0_CFG &= (~AUDCODEC_ADC_CH0_CFG_ENABLE))
 
 /** @brief  Disable the AUDCODEC ADC CHannel1.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_ADC_CH1_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->ADC_CH1_CFG &= (~AUDCODEC_ADC_CH1_CFG_ENABLE))
 
 #else
 
 /** @brief  Enable audio codec .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_ENABLE(__HANDLE__) ((__HANDLE__)->Instance_hp->CFG |= AUDCODEC_HP_CFG_ENABLE)
 
 /** @brief  Disable the AUDCODEC .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_hp->CFG &= (~AUDCODEC_HP_CFG_ENABLE))
 
 
 /** @brief  Disable the AUDCODEC DAC CHannel0.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_DAC_CH0_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_hp->DAC_CH0_CFG &= (~AUDCODEC_HP_DAC_CH0_CFG_ENABLE))
 
 /** @brief  Disable the AUDCODEC DAC CHannel1.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_DAC_CH1_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_hp->DAC_CH1_CFG &= (~AUDCODEC_HP_DAC_CH1_CFG_ENABLE))
 
 
 
 
 /** @brief  Enable audio prc .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_LP_ENABLE(__HANDLE__) ((__HANDLE__)->Instance_lp->CFG |= AUDCODEC_LP_CFG_ENABLE)
 
 /** @brief  Disable the AUDCODEC .
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_LP_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_lp->CFG &= (~AUDCODEC_LP_CFG_ENABLE))
 
 /** @brief  Disable the AUDCODEC ADC CHannel0.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_ADC_CH0_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_lp->ADC_CH0_CFG &= (~AUDCODEC_LP_ADC_CH0_CFG_ENABLE))
 
 /** @brief  Disable the AUDCODEC ADC CHannel1.
-  * @param  \__HANDLE__ specifies the AUDCODEC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDCODEC Handle.
+ * @retval None
+ */
 #define __HAL_AUDCODEC_HP_ADC_CH1_DISABLE(__HANDLE__) ((__HANDLE__)->Instance_lp->ADC_CH1_CFG &= (~AUDCODEC_LP_ADC_CH1_CFG_ENABLE))
 
 #endif
 
 /**
-  * @} AUDCODEC_Exported_macros
-  */
+ * @} AUDCODEC_Exported_macros
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup AUDCODEC_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_Analog_DACPath(AUDCODE_DAC_CLK_CONFIG_TYPE *cfg);
 void HAL_TURN_OFF_PLL();
 
@@ -376,70 +376,70 @@ void HAL_AUDCODEC_Close_Analog_ADCPath(void);
 
 
 /** @addtogroup AUDCODEC_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 /* Initialization/de-initialization functions  **********************************/
 
 /**
-  * @brief Initializes the AUDCODEC according to the specified parameters
-  *         in the AUDCODEC_InitTypeDef and create the associated handle.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval HAL status
-  */
+ * @brief Initializes the AUDCODEC according to the specified parameters
+ *         in the AUDCODEC_InitTypeDef and create the associated handle.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Init(AUDCODEC_HandleTypeDef *hacodec);
 
 /**
-  * @brief DeInitializes the AUDCODEC peripheral
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval HAL status
-  */
+ * @brief DeInitializes the AUDCODEC peripheral
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_DeInit(AUDCODEC_HandleTypeDef *hacodec);
 
 /**
-  * @brief Initializes the AUDCODEC pin setting.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval None
-  */
+ * @brief Initializes the AUDCODEC pin setting.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval None
+ */
 void HAL_AUDCODEC_MspInit(AUDCODEC_HandleTypeDef *hacodec);
 
 /**
-  * @brief deunitializes the AUDCODEC pin setting.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval None
-  */
+ * @brief deunitializes the AUDCODEC pin setting.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval None
+ */
 void HAL_AUDCODEC_MspDeInit(AUDCODEC_HandleTypeDef *hacodec);
 /**
-  * @} AUDCODEC_Exported_Functions_Group1
-  */
+ * @} AUDCODEC_Exported_Functions_Group1
+ */
 
 /** @addtogroup AUDCODEC_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 /* I/O operation functions  ***************************************************/
 /* Configure AUDCODEC parameters  */
 
 /**
-  * @brief Set AUDCODEC transmit channel configures.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: configure channel number
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC transmit channel configures.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: configure channel number
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_TChanel(AUDCODEC_HandleTypeDef *hacodec, int channel, AUDCODEC_DACCfgTypeDef *cfg);
 
 /**
-  * @brief Set AUDCODEC Receive configures.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: configure channel number
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC Receive configures.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: configure channel number
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_RChanel(AUDCODEC_HandleTypeDef *hacodec, int channel, AUDCODEC_ADCCfgTypeDef *cfg);
 
 
@@ -454,93 +454,93 @@ HAL_StatusTypeDef HAL_AUDCODEC_Clear_All_Channel(AUDCODEC_HandleTypeDef *hacodec
 
 
 /**
-  * @brief  Configure DAC path volume.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~54dB, unit is 0.5db, use fix point Q15.1 format
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path volume.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~54dB, unit is 0.5db, use fix point Q15.1 format
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath_Volume(AUDCODEC_HandleTypeDef *hacodec, int channel, int volume);
 
 /**
-  * @brief  Bypass DAC path.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param  bypass 1:enable, 0: disable
-  * @retval HAL status
-  */
+ * @brief  Bypass DAC path.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param  bypass 1:enable, 0: disable
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath(AUDCODEC_HandleTypeDef *hacodec, uint16_t bypass);
 
 
 /**
-  * @brief  Configure DAC path mute.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param mute: is mute or not
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path mute.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param mute: is mute or not
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Mute_DACPath(AUDCODEC_HandleTypeDef *hacodec, int mute);
 
 /**
-  * @brief  Configure ADC path volume.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~54dB
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path volume.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~54dB
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_ADCPath_Volume(AUDCODEC_HandleTypeDef *hacodec, int channel, int volume);
 
 /**
-  * @brief  Configure ADC path.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Config_ADCPath(AUDCODEC_HandleTypeDef *hacodec, AUDCODEC_ADCCfgTypeDef *cfg);
 
 
 /**
-  * @} AUDCODEC_Exported_Functions_Group2
-  */
+ * @} AUDCODEC_Exported_Functions_Group2
+ */
 
 /** @addtogroup AUDCODEC_Exported_Functions_Group3
-  * @{
-  */
+ * @{
+ */
 /* DMA operation functions  ***************************************************/
 
 /**
-  * @brief Set AUDCODEC Transmit data with DMA mode.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param pData: data buffer
-  * @param Size: data length need to be transmit
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC Transmit data with DMA mode.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param pData: data buffer
+ * @param Size: data length need to be transmit
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 
 HAL_StatusTypeDef HAL_AUDCODEC_Transmit_DMA(AUDCODEC_HandleTypeDef *hacodec, uint8_t *pData, uint32_t Size, uint32_t did);
 
 /**
-  * @brief Set AUDCODEC Receive configures.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param pData: data buffer
-  * @param Size: data length need to be transmit
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC Receive configures.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param pData: data buffer
+ * @param Size: data length need to be transmit
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_Receive_DMA(AUDCODEC_HandleTypeDef *hacodec, uint8_t *pData, uint32_t Size, uint32_t did);
 
 /**
-  * @brief Stop AUD PRC DMA.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Stop AUD PRC DMA.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDCODEC_DMAStop(AUDCODEC_HandleTypeDef *hacodec, uint32_t did);
 
 void set_pll_state(uint8_t state);
@@ -553,20 +553,20 @@ void bf0_disable_pll();
 void HAL_TURN_ON_PLL();
 
 /**
-  * @} AUDCODEC_Exported_Functions_Group3
-  */
+ * @} AUDCODEC_Exported_Functions_Group3
+ */
 
 /**
-  * @} AUDCODEC_Exported_Functions
-*/
+ * @} AUDCODEC_Exported_Functions
+ */
 
 /**
-  * @} AUDCODEC
-*/
+ * @} AUDCODEC
+ */
 
 /**
-  * @} BF0_HAL_Driver
-*/
+ * @} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

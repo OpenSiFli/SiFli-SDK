@@ -239,8 +239,8 @@ __STATIC_INLINE bool HAL_LOCK_Write8(volatile uint8_t *addr, uint8_t value)
 
 
 /**
-  * @brief  General Purpose backup registers in RTC, used to share value among H/L CPU
-  */
+ * @brief  General Purpose backup registers in RTC, used to share value among H/L CPU
+ */
 #define RTC_BACKUP_FLAGS_RESET  1               /*!< Inform other CPU core that RTC is reset*/
 #define RTC_BACKUP_FLAGS_ACK    0x80000         /*!< Ack for RTC reset from other CPU core*/
 typedef enum
@@ -262,9 +262,9 @@ typedef enum
 } RTC_BACKUP;
 
 /**
-  * @name BOOTOPT backup register fields
-  * @{
-  */
+ * @name BOOTOPT backup register fields
+ * @{
+ */
 #define RTC_BACKUP_BOOTOPT_SRC_Pos 0U
 #define RTC_BACKUP_BOOTOPT_SRC_Msk (0xFUL << RTC_BACKUP_BOOTOPT_SRC_Pos)
 #define RTC_BACKUP_BOOTOPT_PD_DELAY_Pos 4U
@@ -276,20 +276,20 @@ typedef enum
 #define RTC_BACKUP_BOOTOPT_NOR_RESET_DELAY_Msk (0xFFUL << RTC_BACKUP_BOOTOPT_NOR_RESET_DELAY_Pos)
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @brief Set boot options PD delay
-  * @param delay PD delay in ms
-  */
+ * @brief Set boot options PD delay
+ * @param delay PD delay in ms
+ */
 #define RTC_BACKUP_BOOTOPT_PD_DELAY_MS(delay) \
     (((delay) << RTC_BACKUP_BOOTOPT_PD_DELAY_Pos) & RTC_BACKUP_BOOTOPT_PD_DELAY_Msk)
 
 /**
-  * @brief Set boot options PU delay
-  * @param delay PU delay in ms
-  */
+ * @brief Set boot options PU delay
+ * @param delay PU delay in ms
+ */
 #define RTC_BACKUP_BOOTOPT_PU_DELAY_MS(delay) \
     (((delay) << RTC_BACKUP_BOOTOPT_PU_DELAY_Pos) & RTC_BACKUP_BOOTOPT_PU_DELAY_Msk)
 
@@ -298,58 +298,58 @@ typedef enum
 #define HAL_Get_backup(idx) 0
 #else
 /**
-  * @brief  Set the RTC backup register, used to share value between H/L CPU
-  * @param  idx index of backup register
-  * @param  value value to set into backup register
-  * @retval None
-  */
+ * @brief  Set the RTC backup register, used to share value between H/L CPU
+ * @param  idx index of backup register
+ * @param  value value to set into backup register
+ * @retval None
+ */
 void HAL_Set_backup(uint8_t idx, uint32_t value);
 
 /**
-  * @brief  Get the RTC backup register, used to share value between H/L CPU
-  * @param  idx index of backup register
-  * @retval value saved in the backup register
-  */
+ * @brief  Get the RTC backup register, used to share value between H/L CPU
+ * @param  idx index of backup register
+ * @retval value saved in the backup register
+ */
 uint32_t HAL_Get_backup(uint8_t idx);
 #endif
 
 /**
-  * @brief  Convert a hex string to integer.
-  * @param[in] astr hex string
-  * @retval integer represented by astr.
-  */
+ * @brief  Convert a hex string to integer.
+ * @param[in] astr hex string
+ * @retval integer represented by astr.
+ */
 uint32_t atoh(char *astr);
 
 /**
-  * @brief  Convert a hex string to byte array
-  * @param[in] hexstr hex string
-  * @param[in, out] data byte array
-  * @param[in] max_len max length of byte array
-  * @retval length of hex data array.
-  */
+ * @brief  Convert a hex string to byte array
+ * @param[in] hexstr hex string
+ * @param[in, out] data byte array
+ * @param[in] max_len max length of byte array
+ * @retval length of hex data array.
+ */
 int hex2data(char *hexstr, uint8_t *data, uint8_t max_len);
 
 /**
-  * @brief  Convert a hex string to byte array in revert sequence
-  * @param[in] hexstr hex string
-  * @param[in, out] data byte array
-  * @param[in] max_len max length of byte array
-  * @retval integer represented by astr.
-  */
+ * @brief  Convert a hex string to byte array in revert sequence
+ * @param[in] hexstr hex string
+ * @param[in, out] data byte array
+ * @param[in] max_len max length of byte array
+ * @retval integer represented by astr.
+ */
 int hex2data_revert(char *hexstr, uint8_t *data, uint8_t max_len);
 
 
 /**
-  *@} HAL_DBG_exported_functions
-*/
+ *@} HAL_DBG_exported_functions
+ */
 
 /**
-  *@} HAL_DBG
-  */
+ *@} HAL_DBG
+ */
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 #include "pmu_ldo_update.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup EFUSE EFUSE
-  * @brief EFUSE HAL module driver
-  * @{
-  */
+ * @brief EFUSE HAL module driver
+ * @{
+ */
 
 #if (defined(HAL_EFUSE_MODULE_ENABLED))||defined(_SIFLI_DOXYGEN_)
 
@@ -403,9 +403,9 @@ HAL_RAM_RET_CODE_SECT(HAL_EFUSE_Read2, int32_t HAL_EFUSE_Read2(uint16_t bit_offs
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

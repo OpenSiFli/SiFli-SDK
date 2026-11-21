@@ -15,10 +15,10 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @defgroup PATCH ROM Patch
-  * @ingroup BF0_HAL_Driver
-  * @brief Handle patch for ROM
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @brief Handle patch for ROM
+ * @{
+ */
 
 
 #ifdef SOC_SF32LB55X
@@ -43,33 +43,33 @@ struct patch_entry_desc
 #define PATCH_TAG 0x50544348
 
 /**
-  * @brief  Advanced API to install patches for LCPU/BCPU
-  * @param  patch_entries Patch descriptor arrays
-  * @param  size size of patch_entries in bytes.
-  * @param  cer Previous patch enable register value, used in restore patch from standby.
-  * @retval 32-bit value, each bit represent on patch installed.
-*/
+ * @brief  Advanced API to install patches for LCPU/BCPU
+ * @param  patch_entries Patch descriptor arrays
+ * @param  size size of patch_entries in bytes.
+ * @param  cer Previous patch enable register value, used in restore patch from standby.
+ * @retval 32-bit value, each bit represent on patch installed.
+ */
 int HAL_PATCH_install2(struct patch_entry_desc *patch_entries, uint32_t size, int cer);
 
 
 /**
-  * @brief  Install patches LCPU/BCPU
-  * @retval 32-bit value, each bit represent on patch installed.
-*/
+ * @brief  Install patches LCPU/BCPU
+ * @retval 32-bit value, each bit represent on patch installed.
+ */
 int HAL_PATCH_install(void);
 
 /**
-  * @brief  Save patches
-  * @param  patch_entries Patch descriptor arrays
-  * @param  size size of patch_entries in bytes.
-  * @param[out]  cer Previous patch enable register value, used in restore patch from standby.
-  * @retval Save patch numbers.
-*/
+ * @brief  Save patches
+ * @param  patch_entries Patch descriptor arrays
+ * @param  size size of patch_entries in bytes.
+ * @param[out]  cer Previous patch enable register value, used in restore patch from standby.
+ * @retval Save patch numbers.
+ */
 int HAL_PATCH_save(struct patch_entry_desc *patch_entries, uint32_t size, uint32_t *cer);
 
 /**
-  * @brief  Patch image entry, used to install hooks
-*/
+ * @brief  Patch image entry, used to install hooks
+ */
 void HAL_PATCH_Entry(void);
 
 

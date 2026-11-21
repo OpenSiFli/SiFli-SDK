@@ -13,21 +13,21 @@
 #include "bf0_hal_sdhci.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SDEX SD Extertion
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SDEX_SDMMC SDEX SDMMC
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types --------------------------------------------------------*/
 /** @defgroup SDEX_SDMMC_Define SDEX SDMMC Define
-  * @{
-  */
+ * @{
+ */
 
 #define SDMMC_ERROR_NONE                     0x00000000U   /*!< No error                                                      */
 #define SDMMC_ERROR_CMD_CRC_FAIL             0x00000001U   /*!< Command response received (but CRC check failed)              */
@@ -67,8 +67,8 @@
 #define SDMMC_ERROR_TIMEOUT                  0x80000000U   /*!< Timeout error                                                 */
 
 /**
-  * @brief SDMMC Commands Index
-  */
+ * @brief SDMMC Commands Index
+ */
 #define SDMMC_CMD_GO_IDLE_STATE                       ((uint8_t)0)   /*!< Resets the SD memory card.                                                               */
 #define SDMMC_CMD_SEND_OP_COND                        ((uint8_t)1)   /*!< Sends host capacity support information and activates the card's initialization process. */
 #define SDMMC_CMD_ALL_SEND_CID                        ((uint8_t)2)   /*!< Asks any card connected to the host to send the CID numbers on the CMD line.             */
@@ -123,9 +123,9 @@
 #define SDMMC_CMD_NO_CMD                              ((uint8_t)64)  /*!< No command                                                                               */
 
 /**
-  * @brief Following commands are SD Card Specific commands.
-  *        SDMMC_APP_CMD should be sent before sending these commands.
-  */
+ * @brief Following commands are SD Card Specific commands.
+ *        SDMMC_APP_CMD should be sent before sending these commands.
+ */
 #define SDMMC_CMD_APP_SD_SET_BUSWIDTH                 ((uint8_t)6)   /*!< (ACMD6) Defines the data bus width to be used for data transfer. The allowed data bus 
                                                                             widths are given in SCR register.                                                       */
 #define SDMMC_CMD_SD_APP_STATUS                       ((uint8_t)13)  /*!< (ACMD13) Sends the SD status.                                                            */
@@ -139,9 +139,9 @@
 #define SDMMC_CMD_SDMMC_RW_EXTENDED                   ((uint8_t)53)  /*!< For SD I/O card only, reserved for security specification.                               */
 
 /**
-  * @brief Following commands are SD Card Specific security commands.
-  *        SDMMC_CMD_APP_CMD should be sent before sending these commands.
-  */
+ * @brief Following commands are SD Card Specific security commands.
+ *        SDMMC_CMD_APP_CMD should be sent before sending these commands.
+ */
 #define SDMMC_CMD_SD_APP_GET_MKB                      ((uint8_t)43)
 #define SDMMC_CMD_SD_APP_GET_MID                      ((uint8_t)44)
 #define SDMMC_CMD_SD_APP_SET_CER_RN1                  ((uint8_t)45)
@@ -156,8 +156,8 @@
 
 
 /**
-  * @brief  Masks for errors Card Status R1 (OCR Register)
-  */
+ * @brief  Masks for errors Card Status R1 (OCR Register)
+ */
 #define SDMMC_OCR_ADDR_OUT_OF_RANGE        0x80000000U
 #define SDMMC_OCR_ADDR_MISALIGNED          0x40000000U
 #define SDMMC_OCR_BLOCK_LEN_ERR            0x20000000U
@@ -180,8 +180,8 @@
 #define SDMMC_OCR_ERRORBITS                0xFDFFE008U
 
 /**
-  * @brief  Masks for R6 Response
-  */
+ * @brief  Masks for R6 Response
+ */
 #define SDMMC_R6_GENERAL_UNKNOWN_ERROR     0x00002000U
 #define SDMMC_R6_ILLEGAL_CMD               0x00004000U
 #define SDMMC_R6_COM_CRC_FAILED            0x00008000U
@@ -208,16 +208,16 @@
 #define SDMMC_MAX_DATA_LENGTH              0x01FFFFFFU
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SDEX_Exported_Types SDEX Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  SDMMC Configuration Structure definition
-  */
+ * @brief  SDMMC Configuration Structure definition
+ */
 typedef struct
 {
     uint32_t ClockEdge;            /*!< Specifies the clock transition on which the bit capture is made.          */
@@ -238,8 +238,8 @@ typedef struct
 } SDIO_InitTypeDef;
 
 /**
-  * @brief  SDMMC Data Control structure
-  */
+ * @brief  SDMMC Data Control structure
+ */
 typedef struct
 {
     uint32_t DataTimeOut;         /*!< Specifies the data timeout period in card bus clock periods.  */
@@ -257,13 +257,13 @@ typedef struct
 } SDIO_DataInitTypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup SDEX_Exported_Functions SDEX Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /* SDMMC Cards mode management functions */
 HAL_StatusTypeDef SDIO_SetSDMMCReadWaitMode(SDHCI_HandleTypeDef *SDIOx, uint32_t SDIO_ReadWaitMode);
@@ -297,29 +297,29 @@ uint32_t SDMMC_CmdEraseStartAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t StartAdd);
 uint32_t SDMMC_CmdEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #if 1
 
 /** @defgroup SDEX_SDCARD SDEX SDCARD
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types --------------------------------------------------------*/
 /** @defgroup SDEX_SDCARD_Define SDEX SDCARD Define
-  * @{
-  */
+ * @{
+ */
 
 #define BLOCKSIZE   512U /*!< Block size is 512 bytes */
 
 /** @defgroup SD_Exported_Constansts_Group1 SD Error status enumeration Structure definition
-  * @{
-  */
+ * @{
+ */
 #define HAL_SD_ERROR_NONE                     SDMMC_ERROR_NONE                    /*!< No error                                                      */
 #define HAL_SD_ERROR_CMD_CRC_FAIL             SDMMC_ERROR_CMD_CRC_FAIL            /*!< Command response received (but CRC check failed)              */
 #define HAL_SD_ERROR_DATA_CRC_FAIL            SDMMC_ERROR_DATA_CRC_FAIL           /*!< Data block sent/received (CRC check failed)                   */
@@ -358,12 +358,12 @@ uint32_t SDMMC_CmdEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd);
 #define HAL_SD_ERROR_TIMEOUT                  SDMMC_ERROR_TIMEOUT                 /*!< Timeout error                                                 */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Constansts_Group2 SD context enumeration
-  * @{
-  */
+ * @{
+ */
 #define   SD_CONTEXT_NONE                 0x00000000U  /*!< None                             */
 #define   SD_CONTEXT_READ_SINGLE_BLOCK    0x00000001U  /*!< Read single block operation      */
 #define   SD_CONTEXT_READ_MULTIPLE_BLOCK  0x00000002U  /*!< Read multiple blocks operation   */
@@ -373,37 +373,37 @@ uint32_t SDMMC_CmdEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd);
 #define   SD_CONTEXT_DMA                  0x00000080U  /*!< Process in DMA mode              */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Constansts_Group3 SD Supported Memory Cards
-  * @{
-  */
+ * @{
+ */
 #define CARD_SDSC                  0x00000000U
 #define CARD_SDHC_SDXC             0x00000001U
 #define CARD_SECURED               0x00000003U
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Constansts_Group4 SD Supported Version
-  * @{
-  */
+ * @{
+ */
 #define CARD_V1_X                  0x00000000U
 #define CARD_V2_X                  0x00000001U
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup SD_Exported_Types_Group1 SD State enumeration structure
-  * @{
-  */
+ * @{
+ */
 typedef enum
 {
     HAL_SD_STATE_RESET                  = 0x00000000U,  /*!< SD not yet initialized or disabled  */
@@ -416,12 +416,12 @@ typedef enum
     HAL_SD_STATE_ERROR                  = 0x0000000FU   /*!< SD is in error state                */
 } HAL_SD_StateTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Types_Group2 SD Card State enumeration structure
-  * @{
-  */
+ * @{
+ */
 typedef enum
 {
     HAL_SD_CARD_READY                  = 0x00000001U,  /*!< Card state is ready                     */
@@ -435,16 +435,16 @@ typedef enum
     HAL_SD_CARD_ERROR                  = 0x000000FFU   /*!< Card response Error                     */
 } HAL_SD_CardStateTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Types_Group3 SD handle structure
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  SD Card Information Structure definition
-  */
+ * @brief  SD Card Information Structure definition
+ */
 typedef struct
 {
     uint32_t CardType;                     /*!< Specifies the card Type                         */
@@ -466,8 +466,8 @@ typedef struct
 } HAL_SD_CardInfoTypeDef;
 
 /**
-  * @brief  SD handle Structure definition
-  */
+ * @brief  SD handle Structure definition
+ */
 typedef struct
 {
     SDHCI_HandleTypeDef                   *Instance;        /*!< SD registers base address           */
@@ -504,13 +504,13 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup SD_Exported_Types_Group4 Card Specific Data: CSD Register
-  * @{
-  */
+ * @{
+ */
 typedef struct
 {
     __IO uint8_t  CSDStruct;            /*!< CSD structure                         */
@@ -553,12 +553,12 @@ typedef struct
 
 } HAL_SD_CardCSDTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Types_Group5 Card Identification Data: CID Register
-  * @{
-  */
+ * @{
+ */
 typedef struct
 {
     __IO uint8_t  ManufacturerID;  /*!< Manufacturer ID       */
@@ -574,12 +574,12 @@ typedef struct
 
 } HAL_SD_CardCIDTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Types_Group6 SD Card Status returned by ACMD13
-  * @{
-  */
+ * @{
+ */
 typedef struct
 {
     __IO uint8_t  DataBusWidth;           /*!< Shows the currently defined data bus width                 */
@@ -595,24 +595,24 @@ typedef struct
 
 } HAL_SD_CardStatusTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group1 Initialization and de-initialization functions
-* @{
-*/
+ * @{
+ */
 HAL_StatusTypeDef HAL_SD_Init(SD_HandleTypeDef *hsd);
 HAL_StatusTypeDef HAL_SD_InitCard(SD_HandleTypeDef *hsd);
 HAL_StatusTypeDef HAL_SD_DeInit(SD_HandleTypeDef *hsd);
 void HAL_SD_MspInit(SD_HandleTypeDef *hsd);
 void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd);
 /**
-* @}
-*/
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group2 Input and Output operation functions
-* @{
-*/
+ * @{
+ */
 /* Blocking mode: Polling */
 HAL_StatusTypeDef HAL_SD_ReadBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks, uint32_t Timeout);
 HAL_StatusTypeDef HAL_SD_WriteBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks, uint32_t Timeout);
@@ -632,20 +632,20 @@ void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd);
 void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd);
 void HAL_SD_AbortCallback(SD_HandleTypeDef *hsd);
 /**
-* @}
-*/
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group3 Peripheral Control functions
-* @{
-*/
+ * @{
+ */
 HAL_StatusTypeDef HAL_SD_ConfigWideBusOperation(SD_HandleTypeDef *hsd, uint32_t WideMode);
 /**
-* @}
-*/
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group4 SD card related functions
-* @{
-*/
+ * @{
+ */
 HAL_StatusTypeDef       HAL_SD_SendSDStatus(SD_HandleTypeDef *hsd, uint32_t *pSDstatus);
 HAL_SD_CardStateTypeDef HAL_SD_GetCardState(SD_HandleTypeDef *hsd);
 HAL_StatusTypeDef       HAL_SD_GetCardCID(SD_HandleTypeDef *hsd, HAL_SD_CardCIDTypeDef *pCID);
@@ -653,39 +653,39 @@ HAL_StatusTypeDef       HAL_SD_GetCardCSD(SD_HandleTypeDef *hsd, HAL_SD_CardCSDT
 HAL_StatusTypeDef       HAL_SD_GetCardStatus(SD_HandleTypeDef *hsd, HAL_SD_CardStatusTypeDef *pStatus);
 HAL_StatusTypeDef       HAL_SD_GetCardInfo(SD_HandleTypeDef *hsd, HAL_SD_CardInfoTypeDef *pCardInfo);
 /**
-* @}
-*/
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group5 Peripheral State and Errors functions
-* @{
-*/
+ * @{
+ */
 HAL_SD_StateTypeDef HAL_SD_GetState(SD_HandleTypeDef *hsd);
 uint32_t HAL_SD_GetError(SD_HandleTypeDef *hsd);
 /**
-* @}
-*/
+ * @}
+ */
 
 /** @defgroup SD_Exported_Functions_Group6 Perioheral Abort management
-* @{
-*/
+ * @{
+ */
 HAL_StatusTypeDef HAL_SD_Abort(SD_HandleTypeDef *hsd);
 HAL_StatusTypeDef HAL_SD_Abort_IT(SD_HandleTypeDef *hsd);
 /**
-* @}
-*/
+ * @}
+ */
 
 #endif
 
 /**
-  * @}
-*/
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* __BF0_HAL_SDHCI_EX_H__ */

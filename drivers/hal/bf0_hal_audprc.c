@@ -22,12 +22,12 @@ static void AUDPRC_DMAHalfRxCplt(DMA_HandleTypeDef *hdma);
 static void AUDPRC_DMAError(DMA_HandleTypeDef *hdma);
 
 /**
-  * @brief Initializes the AUDPRC according to the specified parameters
-  *         in the AUDPRC_InitTypeDef and create the associated handle.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval HAL status
-  */
+ * @brief Initializes the AUDPRC according to the specified parameters
+ *         in the AUDPRC_InitTypeDef and create the associated handle.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Init(AUDPRC_HandleTypeDef *haprc)
 {
     int i = 0;
@@ -144,11 +144,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Init(AUDPRC_HandleTypeDef *haprc)
 }
 
 /**
-  * @brief DeInitializes the AUDPRC peripheral
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval HAL status
-  */
+ * @brief DeInitializes the AUDPRC peripheral
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_DeInit(AUDPRC_HandleTypeDef *haprc)
 {
     int i;
@@ -220,11 +220,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_DeInit(AUDPRC_HandleTypeDef *haprc)
 }
 
 /**
-  * @brief Initializes the AUDPRC pin setting.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval None
-  */
+ * @brief Initializes the AUDPRC pin setting.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_AUDPRC_MspInit(AUDPRC_HandleTypeDef *haprc)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -232,11 +232,11 @@ __HAL_ROM_USED void HAL_AUDPRC_MspInit(AUDPRC_HandleTypeDef *haprc)
 }
 
 /**
-  * @brief deunitializes the AUDPRC pin setting.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval None
-  */
+ * @brief deunitializes the AUDPRC pin setting.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_AUDPRC_MspDeInit(AUDPRC_HandleTypeDef *haprc)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -244,12 +244,12 @@ __HAL_ROM_USED void HAL_AUDPRC_MspDeInit(AUDPRC_HandleTypeDef *haprc)
 }
 
 /**
-  * @brief Set AUDPRC transmit channel configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC transmit channel configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_TChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -298,12 +298,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_TChanel(AUDPRC_HandleTypeDef 
 }
 
 /**
-  * @brief Set AUDPRC Receive configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC Receive configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_RChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -338,12 +338,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_RChanel(AUDPRC_HandleTypeDef 
 }
 
 /**
-  * @brief Set AUDPRC transmit output channel configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC transmit output channel configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_OutChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -415,13 +415,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Clear_Adc_Channel(AUDPRC_HandleTypeD
 
 
 /**
-  * @brief  Configure DAC path volume.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~60dB
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path volume.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~60dB
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_DACPath_Volume(AUDPRC_HandleTypeDef *haprc, int channel, int volume)
 {
 
@@ -485,12 +485,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_DACPath_Volume(AUDPRC_HandleT
 }
 
 /**
-  * @brief  Configure DAC path.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_DACPath(AUDPRC_HandleTypeDef *haprc, AUDPRC_DACCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -577,13 +577,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_DACPath(AUDPRC_HandleTypeDef 
 
 
 /**
-  * @brief  Configure ADC path volume.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~60dB
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path volume.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~60dB
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_ADCPath_Volume(AUDPRC_HandleTypeDef *haprc, int channel, int volume)
 {
 
@@ -675,12 +675,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_ADCPath_Volume(AUDPRC_HandleT
 }
 
 /**
-  * @brief  Configure ADC path.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDPRC_Config_ADCPath(AUDPRC_HandleTypeDef *haprc, AUDPRC_ADCCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -1019,11 +1019,11 @@ static void AUDPRC_DMATxCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief DMA I2S transmit process half complete callback
-  * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief DMA I2S transmit process half complete callback
+ * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDPRC_DMATxHalfCplt(DMA_HandleTypeDef *hdma)
 {
     AUDPRC_HandleTypeDef *aprc = (AUDPRC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -1066,11 +1066,11 @@ static void AUDPRC_DMARxCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA PDM half receive process complete callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM half receive process complete callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDPRC_DMAHalfRxCplt(DMA_HandleTypeDef *hdma)
 {
     AUDPRC_HandleTypeDef *aprc = (AUDPRC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -1085,11 +1085,11 @@ static void AUDPRC_DMAHalfRxCplt(DMA_HandleTypeDef *hdma)
 
 
 /**
-  * @brief  DMA PDM communication error callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM communication error callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDPRC_DMAError(DMA_HandleTypeDef *hdma)
 {
     AUDPRC_HandleTypeDef *aprc = (AUDPRC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;

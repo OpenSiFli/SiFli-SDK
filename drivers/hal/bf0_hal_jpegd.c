@@ -8,12 +8,12 @@
 #include "string.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup JPEGD
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_JPEGD_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -510,16 +510,16 @@ HAL_StatusTypeDef HAL_JPEGD_GetDim(uint8_t *input, uint32_t size, int *width, in
 
 
 /**
-  * @} JPEGD
-  */
+ * @} JPEGD
+ */
 
 /**
-  * @} BF0_HAL_Driver
-  */
+ * @} BF0_HAL_Driver
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
 

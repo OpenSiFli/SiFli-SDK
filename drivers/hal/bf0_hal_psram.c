@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PSRAM PSRAM
-  * @brief PSRAM HAL module driver
-  * @{
-  */
+ * @brief PSRAM HAL module driver
+ * @{
+ */
 #if defined(HAL_PSRAM_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 #include "bf0_hal_psram.h"
 
@@ -190,10 +190,10 @@ HAL_StatusTypeDef HAL_PSRAM_SET_CLOCK(PSRAM_HandleTypeDef *hpsram, uint32_t valu
 }
 
 /**
-  * @brief Initialize the UART MSP.
-  * @param huart UART handle.
-  * @retval None
-  */
+ * @brief Initialize the UART MSP.
+ * @param huart UART handle.
+ * @retval None
+ */
 __weak void HAL_PSRAM_MspInit(PSRAM_HandleTypeDef *hpsram)
 {
     uint32_t state;

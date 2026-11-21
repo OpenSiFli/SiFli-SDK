@@ -10,8 +10,8 @@
 #include "rtconfig.h"
 #include "register.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 #if defined(SF32LB55X) || defined(SF32LB56X) || defined(SF32LB58X)
 
@@ -384,5 +384,5 @@ HAL_RAM_RET_CODE_SECT(BSP_Get_Sip2_Mode, uint32_t BSP_Get_Sip2_Mode())
 #endif /* SF32LB55X || SF32LB56X || SF32LB58X */
 
 /**
-  * @}
-  */
+ * @}
+ */

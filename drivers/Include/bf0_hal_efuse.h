@@ -15,9 +15,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup EFUSE
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 /** EFUSE bank size in bytes */
 #define HAL_EFUSE_BANK_SIZE         32

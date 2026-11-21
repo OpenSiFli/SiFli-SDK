@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup AON AON
-  * @brief AON HAL module driver
-  * @{
-  */
+ * @brief AON HAL module driver
+ * @{
+ */
 
 #ifdef HAL_AON_MODULE_ENABLED
 
@@ -586,9 +586,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_StopGTimer(void)
 
 #endif /* HAL_AON_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

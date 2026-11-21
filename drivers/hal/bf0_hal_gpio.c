@@ -7,19 +7,19 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup GPIO GPIO
-  * @brief GPIO HAL module driver
-  * @{
-  */
+ * @brief GPIO HAL module driver
+ * @{
+ */
 /** MISRA C:2012 deviation rule has been granted for following rules:
-  * Rule-12.2 - Medium: RHS argument is in interval [0,INF] which is out of
-  * range of the shift operator in following API :
-  * HAL_GPIO_Init
-  * HAL_GPIO_DeInit
-  */
+ * Rule-12.2 - Medium: RHS argument is in interval [0,INF] which is out of
+ * range of the shift operator in following API :
+ * HAL_GPIO_Init
+ * HAL_GPIO_DeInit
+ */
 
 #if defined(HAL_GPIO_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -147,8 +147,8 @@ static GPIO_TypeDef *GPIO_GetInstance(GPIO_TypeDef *hgpio, uint16_t gpio_pin, ui
 /* Exported functions --------------------------------------------------------*/
 
 /** @defgroup GPIO_Exported_Functions GPIO Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup GPIO_Exported_Functions_Group1 Initialization/de-initialization functions
  *  @brief    Initialization and Configuration functions
@@ -309,8 +309,8 @@ __HAL_ROM_USED void HAL_GPIO_DeInit(GPIO_TypeDef *hgpio, uint32_t GPIO_Pin)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPIO_Exported_Functions_Group2 IO operation functions
  *  @brief GPIO Read, Write, Toggle, Lock and EXTI management functions.
@@ -835,13 +835,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPIO_ClearPinInterrupt(GPIO_TypeDef *hgpio,
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 static GPIO_TypeDef *GPIO_GetInstance(GPIO_TypeDef *hgpio, uint16_t gpio_pin, uint16_t *offset)
 {
@@ -877,10 +877,10 @@ static GPIO_TypeDef *GPIO_GetInstance(GPIO_TypeDef *hgpio, uint16_t gpio_pin, ui
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */

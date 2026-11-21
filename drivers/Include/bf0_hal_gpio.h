@@ -16,18 +16,18 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup GPIO
-  * @{
-  */
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 
 /** @defgroup GPIO_Exported_Types GPIO Exported Types
-  * @{
-  */
+ * @{
+ */
 
 typedef struct
 {
@@ -73,8 +73,8 @@ typedef struct
 
 
 /**
-  * @brief   GPIO Init structure definition
-*/
+ * @brief   GPIO Init structure definition
+ */
 
 typedef struct
 {
@@ -89,8 +89,8 @@ typedef struct
 } GPIO_InitTypeDef;
 
 /**
-  * @brief  GPIO Bit SET and Bit RESET enumeration
-  */
+ * @brief  GPIO Bit SET and Bit RESET enumeration
+ */
 typedef enum
 {
     GPIO_PIN_RESET = 0U,
@@ -99,8 +99,8 @@ typedef enum
 
 
 /**
-  * @brief   GPIO save&restore buffer type definition
-*/
+ * @brief   GPIO save&restore buffer type definition
+ */
 typedef struct
 {
     __IO uint32_t DOR;
@@ -117,24 +117,24 @@ typedef struct
 #endif /* SF32LB55X */
 } GPIOxRestore_TypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup GPIO_Exported_Constants GPIO Exported Constants
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup GPIO_mode GPIO mode
-  * @brief GPIO Configuration Mode
-  *        Elements values convention: 0xX0yz00YZ
-  *           - X  : GPIO mode or EXTI Mode
-  *           - y  : External IT or Event trigger detection
-  *           - z  : IO configuration on External IT or Event
-  *           - Y  : Output type (Push Pull or Open Drain)
-  *           - Z  : IO Direction mode (Input, Output, Alternate or Analog)
-  * @{
-  */
+ * @brief GPIO Configuration Mode
+ *        Elements values convention: 0xX0yz00YZ
+ *           - X  : GPIO mode or EXTI Mode
+ *           - y  : External IT or Event trigger detection
+ *           - z  : IO configuration on External IT or Event
+ *           - Y  : Output type (Push Pull or Open Drain)
+ *           - Z  : IO Direction mode (Input, Output, Alternate or Analog)
+ * @{
+ */
 #define  GPIO_MODE_INPUT                        (0x00000000u)   /*!< Input Floating Mode                   */
 #define  GPIO_MODE_OUTPUT                       (0x00000001u)   /*!< Output Push Pull Mode                 */
 #define  GPIO_MODE_OUTPUT_OD                    (0x00000011u)   /*!< Output Open Drain Mode                 */
@@ -144,20 +144,20 @@ typedef struct
 #define  GPIO_MODE_IT_HIGH_LEVEL                (0x10410000u)   /*!< External Interrupt Mode with high level detection          */
 #define  GPIO_MODE_IT_LOW_LEVEL                 (0x10510000u)   /*!< External Interrupt Mode with low level detection          */
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup GPIO_pull GPIO pull
-  * @brief GPIO Pull-Up or Pull-Down Activation
-  * @{
-  */
+ * @brief GPIO Pull-Up or Pull-Down Activation
+ * @{
+ */
 #define  GPIO_NOPULL        (0x00000000u)   /*!< No Pull-up or Pull-down activation  */
 #define  GPIO_PULLUP        (0x00000001u)   /*!< Pull-up activation                  */
 #define  GPIO_PULLDOWN      (0x00000002u)   /*!< Pull-down activation                */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /*The maximum gpios in each group*/
 #define GPIO1_PIN_NUM   (96)
@@ -168,22 +168,22 @@ typedef struct
 #endif /* GPIO2_BASE */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported macro ------------------------------------------------------------*/
 /** @defgroup GPIO_Exported_Macros GPIO Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private macros ------------------------------------------------------------*/
 /** @addtogroup GPIO_Private_Macros GPIO Private Macros
-  * @{
-  */
+ * @{
+ */
 #define IS_GPIO_PIN_ACTION(ACTION)  (((ACTION) == GPIO_PIN_RESET) || ((ACTION) == GPIO_PIN_SET))
 
 #define IS_GPIO_MODE(__MODE__)      (((__MODE__) == GPIO_MODE_INPUT)              ||\
@@ -199,14 +199,14 @@ typedef struct
                                      ((__PULL__) == GPIO_PULLUP)   || \
                                      ((__PULL__) == GPIO_PULLDOWN))
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup GPIO_Exported_Functions GPIO Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup GPIO_Exported_Functions_Group1 Initialization/de-initialization functions
  *  @brief    Initialization and Configuration functions
@@ -234,8 +234,8 @@ void              HAL_GPIO_Init(GPIO_TypeDef *hgpio, GPIO_InitTypeDef *GPIO_Init
 void              HAL_GPIO_DeInit(GPIO_TypeDef *hgpio, uint32_t GPIO_Pin);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup GPIO_Exported_Functions_Group2 IO operation functions
  * @{
@@ -340,20 +340,20 @@ HAL_StatusTypeDef HAL_GPIO_ClearInterrupt(GPIO_TypeDef *hgpio);
 HAL_StatusTypeDef HAL_GPIO_ClearPinInterrupt(GPIO_TypeDef *hgpio, uint16_t GPIO_Pin);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

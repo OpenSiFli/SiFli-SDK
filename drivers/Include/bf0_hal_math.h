@@ -35,9 +35,9 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup MATH
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 __STATIC_INLINE uint32_t HAL_MATH_DisableInterrupt(void)
 {

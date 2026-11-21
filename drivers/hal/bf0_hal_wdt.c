@@ -10,14 +10,14 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 #ifdef HAL_WDT_MODULE_ENABLED
 /** @defgroup WDT WDT
-  * @brief WDT HAL module driver.
-  * @{
-  */
+ * @brief WDT HAL module driver.
+ * @{
+ */
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -28,12 +28,12 @@
 /* Exported functions --------------------------------------------------------*/
 
 /** @addtogroup WDT_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup WDT_Exported_Functions_Group1
-  *  @brief    Initialization and Start functions.
-  *
+ *  @brief    Initialization and Start functions.
+ *
 @verbatim
  ===============================================================================
           ##### Initialization and Start functions #####
@@ -45,17 +45,17 @@
           is reloaded in order to exit function with correct time base.
 
 @endverbatim
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Initialize the WDT according to the specified parameters in the
-  *         WDT_InitTypeDef and start watchdog. Before exiting function,
-  *         watchdog is refreshed in order to have correct time base.
-  * @param  hwdt  pointer to a WDT_HandleTypeDef structure that contains
-  *                the configuration information for the specified WDT module.
-  * @retval HAL status
-  */
+ * @brief  Initialize the WDT according to the specified parameters in the
+ *         WDT_InitTypeDef and start watchdog. Before exiting function,
+ *         watchdog is refreshed in order to have correct time base.
+ * @param  hwdt  pointer to a WDT_HandleTypeDef structure that contains
+ *                the configuration information for the specified WDT module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_WDT_Init(WDT_HandleTypeDef *hwdt)
 {
 
@@ -98,12 +98,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_WDT_Init(WDT_HandleTypeDef *hwdt)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup WDT_Exported_Functions_Group2
-  *  @brief   IO operation functions
-  *
+ *  @brief   IO operation functions
+ *
 @verbatim
  ===============================================================================
                       ##### IO operation functions #####
@@ -112,15 +112,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_WDT_Init(WDT_HandleTypeDef *hwdt)
       (+) Refresh the WDT.
 
 @endverbatim
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Refresh the WDT.
-  * @param  hwdt  pointer to a WDT_HandleTypeDef structure that contains
-  *                the configuration information for the specified WDT module.
-  * @retval HAL status
-  */
+ * @brief  Refresh the WDT.
+ * @param  hwdt  pointer to a WDT_HandleTypeDef structure that contains
+ *                the configuration information for the specified WDT module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_WDT_Refresh(WDT_HandleTypeDef *hwdt)
 {
     __HAL_WDT_START(hwdt);
@@ -131,18 +131,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_WDT_Refresh(WDT_HandleTypeDef *hwdt)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_WDT_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

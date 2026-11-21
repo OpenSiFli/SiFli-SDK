@@ -9,12 +9,12 @@
 #include "bf0_hal_lcdc_private.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup LCDC LCD Controller
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_LCD_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 typedef enum
@@ -104,12 +104,12 @@ static void HAL_LCDC_JDIParallelInit(LCDC_HandleTypeDef *lcdc);
 
 #ifdef HAL_DSI_MODULE_ENABLED
     /**
-    * @brief  [Obsolete]   Send layer data to LCD by several memory write ops.
-    * @param  lcdc LCD controller handle
-    * @param  write_cmd - LCD memory write command
-    * @param  rg_cb - Callback to set LCD current written colunms & rows, NULL - use continue mode
-    * @retval HAL status
-    */
+     * @brief  [Obsolete]   Send layer data to LCD by several memory write ops.
+     * @param  lcdc LCD controller handle
+     * @param  write_cmd - LCD memory write command
+     * @param  rg_cb - Callback to set LCD current written colunms & rows, NULL - use continue mode
+     * @retval HAL status
+     */
     static HAL_StatusTypeDef _DSI_StartPartialWrite(LCDC_HandleTypeDef *lcdc, LCDC_AsyncModeTypeDef sync_mode, uint8_t write_cmd, SetRegion_cb_t rg_cb);
     static bool _PartialWriteContinue(LCDC_HandleTypeDef *lcdc, LCDC_AsyncModeTypeDef sync_mode);
     static HAL_StatusTypeDef DSI_SetOutFormat(LCDC_HandleTypeDef *lcdc);
@@ -6303,9 +6303,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_Resume(LCDC_HandleTypeDef *lcdc)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

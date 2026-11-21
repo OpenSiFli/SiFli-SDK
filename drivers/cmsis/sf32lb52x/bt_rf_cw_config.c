@@ -147,11 +147,11 @@ static void cw_config_stop(void)
 }
 
 /**
-  * @brief  single-carrier test(2MHz frequency interval)
-  * @param  start or stop test
-  * @param  power value, 0:0dbm 1:4dbm  2:10dbm
-  * @param  set channel N, means 2402+2*N MHz
-  */
+ * @brief  single-carrier test(2MHz frequency interval)
+ * @param  start or stop test
+ * @param  power value, 0:0dbm 1:4dbm  2:10dbm
+ * @param  set channel N, means 2402+2*N MHz
+ */
 
 void cw_config(uint8_t is_start, uint8_t pa, uint8_t channel)
 {
@@ -166,11 +166,11 @@ void cw_config(uint8_t is_start, uint8_t pa, uint8_t channel)
     }
 }
 /**
-  * @brief  single-carrier test(1MHz frequency interval)
-  * @param  start or stop test
-  * @param  power value, 0:0dbm 1:4dbm  2:10dbm
-  * @param  set channel N, means 2402+ N MHz
-  */
+ * @brief  single-carrier test(1MHz frequency interval)
+ * @param  start or stop test
+ * @param  power value, 0:0dbm 1:4dbm  2:10dbm
+ * @param  set channel N, means 2402+ N MHz
+ */
 void cw_config_bt(uint8_t is_start, uint8_t pa, uint8_t channel)
 {
     if (is_start)

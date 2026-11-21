@@ -9,21 +9,21 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 #ifdef HAL_DSI_MODULE_ENABLED
 #include "bf0_hal_dsi.h"
 
 /** @addtogroup DSI
-  * @{
-  */
+ * @{
+ */
 
 /* Private types -------------------------------------------------------------*/
 /* Private defines -----------------------------------------------------------*/
 /** @addtogroup DSI_Private_Constants
-  * @{
-  */
+ * @{
+ */
 #define DSI_TIMEOUT_VALUE ((uint32_t)1000U)  /* 1s */
 
 #define DSI_ERROR_ACK_MASK (DSI_HOST_INT_MASK1_SOT | DSI_HOST_INT_MASK1_SOT_SYNC | DSI_HOST_INT_MASK1_EOT_SYNC | DSI_HOST_INT_MASK1_ESC_ENTRY_CMD | \
@@ -50,8 +50,8 @@
 #define SHOW_BTA_LOG //For debug purpose
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 typedef struct Freq2DLLMap
 {
@@ -144,19 +144,19 @@ static void DSI_ConfigPacketHeader(DSI_HOST_TypeDef *DSIx, uint32_t ChannelID, u
 
 /* Private functions ---------------------------------------------------------*/
 /**
-  * @brief  Generic DSI packet header configuration
-  * @param  DSIx  Pointer to DSI register base
-  * @param  ChannelID Virtual channel ID of the header packet
-  * @param  DataType  Packet data type of the header packet
-  *                   This parameter can be any value of :
-  *                      @ref DSI_SHORT_WRITE_PKT_Data_Type
-  *                   or @ref DSI_LONG_WRITE_PKT_Data_Type
-  *                   or @ref DSI_SHORT_READ_PKT_Data_Type
-  *                   or DSI_MAX_RETURN_PKT_SIZE
-  * @param  Data0  Word count LSB
-  * @param  Data1  Word count MSB
-  * @retval None
-  */
+ * @brief  Generic DSI packet header configuration
+ * @param  DSIx  Pointer to DSI register base
+ * @param  ChannelID Virtual channel ID of the header packet
+ * @param  DataType  Packet data type of the header packet
+ *                   This parameter can be any value of :
+ *                      @ref DSI_SHORT_WRITE_PKT_Data_Type
+ *                   or @ref DSI_LONG_WRITE_PKT_Data_Type
+ *                   or @ref DSI_SHORT_READ_PKT_Data_Type
+ *                   or DSI_MAX_RETURN_PKT_SIZE
+ * @param  Data0  Word count LSB
+ * @param  Data1  Word count MSB
+ * @retval None
+ */
 static void DSI_ConfigPacketHeader(DSI_HOST_TypeDef *DSIx,
                                    uint32_t ChannelID,
                                    uint32_t DataType,
@@ -169,8 +169,8 @@ static void DSI_ConfigPacketHeader(DSI_HOST_TypeDef *DSIx,
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup DSI_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup DSI_Group1 Initialization and Configuration functions
  *  @brief   Initialization and Configuration functions
@@ -215,12 +215,12 @@ static Freq2PhyCfgMap_t GetPHYCfgMap(uint32_t freq)
 }
 
 /**
-  * @brief  Initializes the DSI according to the specified
-  *         parameters in the DSI_InitTypeDef and create the associated handle.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Initializes the DSI according to the specified
+ *         parameters in the DSI_InitTypeDef and create the associated handle.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Init(DSI_HandleTypeDef *hdsi)
 {
     uint32_t tickstart;
@@ -363,12 +363,12 @@ HAL_StatusTypeDef HAL_DSI_Init(DSI_HandleTypeDef *hdsi)
 
 
 /**
-  * @brief  De-initializes the DSI peripheral registers to their default reset
-  *         values.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  De-initializes the DSI peripheral registers to their default reset
+ *         values.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_DeInit(DSI_HandleTypeDef *hdsi)
 {
     /* Check the DSI handle allocation */
@@ -411,13 +411,13 @@ HAL_StatusTypeDef HAL_DSI_DeInit(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  Enable the error monitor flags
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  ActiveErrors  indicates which error interrupts will be enabled.
-  *                      This parameter can be any combination of @ref DSI_Error_Data_Type.
-  * @retval HAL status
-  */
+ * @brief  Enable the error monitor flags
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  ActiveErrors  indicates which error interrupts will be enabled.
+ *                      This parameter can be any combination of @ref DSI_Error_Data_Type.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigErrorMonitor(DSI_HandleTypeDef *hdsi, uint32_t ActiveErrors)
 {
     /* Process locked */
@@ -496,11 +496,11 @@ HAL_StatusTypeDef HAL_DSI_ConfigErrorMonitor(DSI_HandleTypeDef *hdsi, uint32_t A
 }
 
 /**
-  * @brief  Initializes the DSI MSP.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval None
-  */
+ * @brief  Initializes the DSI MSP.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval None
+ */
 __weak void HAL_DSI_MspInit(DSI_HandleTypeDef *hdsi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -511,11 +511,11 @@ __weak void HAL_DSI_MspInit(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  De-initializes the DSI MSP.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval None
-  */
+ * @brief  De-initializes the DSI MSP.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval None
+ */
 __weak void HAL_DSI_MspDeInit(DSI_HandleTypeDef *hdsi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -526,8 +526,8 @@ __weak void HAL_DSI_MspDeInit(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup DSI_Group2 IO operation functions
  *  @brief    IO operation functions
@@ -543,11 +543,11 @@ __weak void HAL_DSI_MspDeInit(DSI_HandleTypeDef *hdsi)
   * @{
   */
 /**
-  * @brief  Handles DSI interrupt request.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Handles DSI interrupt request.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 uint32_t prev_IntStatus1 = 0;
 uint32_t IntStatus1_cnt = 0;
 extern void rt_kprintf(const char *fmt, ...);
@@ -683,11 +683,11 @@ void HAL_DSI_IRQHandler(DSI_HandleTypeDef *hdsi)
 
 
 /**
-  * @brief  Tearing Effect DSI callback.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval None
-  */
+ * @brief  Tearing Effect DSI callback.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval None
+ */
 __weak void HAL_DSI_TearingEffectCallback(DSI_HandleTypeDef *hdsi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -698,11 +698,11 @@ __weak void HAL_DSI_TearingEffectCallback(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  End of Refresh DSI callback.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval None
-  */
+ * @brief  End of Refresh DSI callback.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval None
+ */
 __weak void HAL_DSI_EndOfRefreshCallback(DSI_HandleTypeDef *hdsi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -713,11 +713,11 @@ __weak void HAL_DSI_EndOfRefreshCallback(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  Operation Error DSI callback.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval None
-  */
+ * @brief  Operation Error DSI callback.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval None
+ */
 __weak void HAL_DSI_ErrorCallback(DSI_HandleTypeDef *hdsi)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -728,8 +728,8 @@ __weak void HAL_DSI_ErrorCallback(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup DSI_Group3 Peripheral Control functions
  *  @brief    Peripheral Control functions
@@ -772,12 +772,12 @@ __weak void HAL_DSI_ErrorCallback(DSI_HandleTypeDef *hdsi)
   */
 
 /**
-  * @brief  Configure the Generic interface read-back Virtual Channel ID.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  VirtualChannelID  Virtual channel ID
-  * @retval HAL status
-  */
+ * @brief  Configure the Generic interface read-back Virtual Channel ID.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  VirtualChannelID  Virtual channel ID
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetGenericVCID(DSI_HandleTypeDef *hdsi, uint32_t VirtualChannelID)
 {
     /* Process locked */
@@ -795,13 +795,13 @@ HAL_StatusTypeDef HAL_DSI_SetGenericVCID(DSI_HandleTypeDef *hdsi, uint32_t Virtu
 
 
 /**
-  * @brief  Select video mode and configure the corresponding parameters
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  VidCfg pointer to a DSI_VidCfgTypeDef structure that contains
-  *                the DSI video mode configuration parameters
-  * @retval HAL status
-  */
+ * @brief  Select video mode and configure the corresponding parameters
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  VidCfg pointer to a DSI_VidCfgTypeDef structure that contains
+ *                the DSI video mode configuration parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigVideoMode(DSI_HandleTypeDef *hdsi, DSI_VidCfgTypeDef *VidCfg)
 {
     /* Process locked */
@@ -884,13 +884,13 @@ HAL_StatusTypeDef HAL_DSI_ConfigVideoMode(DSI_HandleTypeDef *hdsi, DSI_VidCfgTyp
 }
 
 /**
-  * @brief  Select adapted command mode and configure the corresponding parameters
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  CmdCfg  pointer to a DSI_CmdCfgTypeDef structure that contains
-  *                 the DSI command mode configuration parameters
-  * @retval HAL status
-  */
+ * @brief  Select adapted command mode and configure the corresponding parameters
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  CmdCfg  pointer to a DSI_CmdCfgTypeDef structure that contains
+ *                 the DSI command mode configuration parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigAdaptedCommandMode(DSI_HandleTypeDef *hdsi, DSI_CmdCfgTypeDef *CmdCfg)
 {
     /* Process locked */
@@ -994,14 +994,14 @@ HAL_StatusTypeDef HAL_DSI_ConfigAdaptedCommandMode(DSI_HandleTypeDef *hdsi, DSI_
 }
 
 /**
-  * @brief  Configure command transmission mode: High-speed or Low-power
-  *         and enable/disable acknowledge request after packet transmission
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  LPCmd  pointer to a DSI_LPCmdTypeDef structure that contains
-  *                the DSI command transmission mode configuration parameters
-  * @retval HAL status
-  */
+ * @brief  Configure command transmission mode: High-speed or Low-power
+ *         and enable/disable acknowledge request after packet transmission
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  LPCmd  pointer to a DSI_LPCmdTypeDef structure that contains
+ *                the DSI command transmission mode configuration parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigCommand(DSI_HandleTypeDef *hdsi, DSI_LPCmdTypeDef *LPCmd)
 {
     /* Process locked */
@@ -1083,13 +1083,13 @@ uint8_t HAL_DSI_ISForceEnableAck(void)
 }
 
 /**
-  * @brief  Configure the flow control parameters
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  FlowControl  flow control feature(s) to be enabled.
-  *                      This parameter can be any combination of @ref DSI_FlowControl.
-  * @retval HAL status
-  */
+ * @brief  Configure the flow control parameters
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  FlowControl  flow control feature(s) to be enabled.
+ *                      This parameter can be any combination of @ref DSI_FlowControl.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigFlowControl(DSI_HandleTypeDef *hdsi, uint32_t FlowControl)
 {
     /* Process locked */
@@ -1109,13 +1109,13 @@ HAL_StatusTypeDef HAL_DSI_ConfigFlowControl(DSI_HandleTypeDef *hdsi, uint32_t Fl
 }
 
 /**
-  * @brief  Configure the DSI PHY timer parameters
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  PhyTimers  DSI_PHY_TimerTypeDef structure that contains
-  *                    the DSI PHY timing parameters
-  * @retval HAL status
-  */
+ * @brief  Configure the DSI PHY timer parameters
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  PhyTimers  DSI_PHY_TimerTypeDef structure that contains
+ *                    the DSI PHY timing parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigPhyTimer(DSI_HandleTypeDef *hdsi, DSI_PHY_TimerTypeDef *PhyTimers)
 {
     uint32_t maxTime;
@@ -1153,13 +1153,13 @@ HAL_StatusTypeDef HAL_DSI_ConfigPhyTimer(DSI_HandleTypeDef *hdsi, DSI_PHY_TimerT
 }
 
 /**
-  * @brief  Configure the DSI HOST timeout parameters
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  HostTimeouts  DSI_HOST_TimeoutTypeDef structure that contains
-  *                       the DSI host timeout parameters
-  * @retval HAL status
-  */
+ * @brief  Configure the DSI HOST timeout parameters
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  HostTimeouts  DSI_HOST_TimeoutTypeDef structure that contains
+ *                       the DSI host timeout parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigHostTimeouts(DSI_HandleTypeDef *hdsi, DSI_HOST_TimeoutTypeDef *HostTimeouts)
 {
     /* Process locked */
@@ -1205,12 +1205,12 @@ HAL_StatusTypeDef HAL_DSI_ConfigHostTimeouts(DSI_HandleTypeDef *hdsi, DSI_HOST_T
 
 
 /**
-  * @brief  Configure the DSI PHY frequency.
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  freq  DSI frequency.
-  * @retval HAL status
-  */
+ * @brief  Configure the DSI PHY frequency.
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  freq  DSI frequency.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ConfigPhyFreq(DSI_HandleTypeDef *hdsi, uint32_t freq)
 {
     uint32_t tickstart;
@@ -1307,11 +1307,11 @@ HAL_StatusTypeDef HAL_DSI_ConfigPhyFreq(DSI_HandleTypeDef *hdsi, uint32_t freq)
 }
 
 /**
-  * @brief  Start the DSI module
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Start the DSI module
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Start(DSI_HandleTypeDef *hdsi)
 {
     /* Process locked */
@@ -1336,11 +1336,11 @@ HAL_StatusTypeDef HAL_DSI_Start(DSI_HandleTypeDef *hdsi)
 #if 0
 
 /**
-  * @brief  Start the DSI module and keep on ULPM mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Start the DSI module and keep on ULPM mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Start_ULPM(DSI_HandleTypeDef *hdsi)
 {
     /* Process locked */
@@ -1470,11 +1470,11 @@ HAL_StatusTypeDef HAL_DSI_bypass_output(DSI_HandleTypeDef *hdsi, bool bypass)
 }
 
 /**
-  * @brief  Stop the DSI module
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Stop the DSI module
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Stop(DSI_HandleTypeDef *hdsi)
 {
     /* Process locked */
@@ -1493,11 +1493,11 @@ HAL_StatusTypeDef HAL_DSI_Stop(DSI_HandleTypeDef *hdsi)
 }
 #ifdef DSI_FIX_ME
 /**
-  * @brief  Refresh the display in command mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Refresh the display in command mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Refresh(DSI_HandleTypeDef *hdsi)
 {
     /* Process locked */
@@ -1514,13 +1514,13 @@ HAL_StatusTypeDef HAL_DSI_Refresh(DSI_HandleTypeDef *hdsi)
 
 
 /**
-  * @brief  Controls the display color mode in Video mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  ColorMode  Color mode (full or 8-colors).
-  *                    This parameter can be any value of @ref DSI_Color_Mode
-  * @retval HAL status
-  */
+ * @brief  Controls the display color mode in Video mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  ColorMode  Color mode (full or 8-colors).
+ *                    This parameter can be any value of @ref DSI_Color_Mode
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ColorMode(DSI_HandleTypeDef *hdsi, uint32_t ColorMode)
 {
     /* Process locked */
@@ -1540,13 +1540,13 @@ HAL_StatusTypeDef HAL_DSI_ColorMode(DSI_HandleTypeDef *hdsi, uint32_t ColorMode)
 }
 
 /**
-  * @brief  Control the display shutdown in Video mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  Shutdown  Shut-down (Display-ON or Display-OFF).
-  *                   This parameter can be any value of @ref DSI_ShutDown
-  * @retval HAL status
-  */
+ * @brief  Control the display shutdown in Video mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  Shutdown  Shut-down (Display-ON or Display-OFF).
+ *                   This parameter can be any value of @ref DSI_ShutDown
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Shutdown(DSI_HandleTypeDef *hdsi, uint32_t Shutdown)
 {
     /* Process locked */
@@ -1614,18 +1614,18 @@ HAL_StatusTypeDef HAL_DSI_DirectSend(DSI_HandleTypeDef *hdsi,
 #endif /* !SF32LB55X */
 
 /**
-  * @brief  write short DCS or short Generic command
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  ChannelID  Virtual channel ID.
-  * @param  Mode  DSI short packet data type.
-  *               This parameter can be any value of @ref DSI_SHORT_WRITE_PKT_Data_Type.
-  * @param  Param1  DSC command or first generic parameter.
-  *                 This parameter can be any value of @ref DSI_DCS_Command or a
-  *                 generic command code.
-  * @param  Param2  DSC parameter or second generic parameter.
-  * @retval HAL status
-  */
+ * @brief  write short DCS or short Generic command
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  ChannelID  Virtual channel ID.
+ * @param  Mode  DSI short packet data type.
+ *               This parameter can be any value of @ref DSI_SHORT_WRITE_PKT_Data_Type.
+ * @param  Param1  DSC command or first generic parameter.
+ *                 This parameter can be any value of @ref DSI_DCS_Command or a
+ *                 generic command code.
+ * @param  Param2  DSC parameter or second generic parameter.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ShortWrite(DSI_HandleTypeDef *hdsi,
                                      uint32_t ChannelID,
                                      uint32_t Mode,
@@ -1677,19 +1677,19 @@ HAL_StatusTypeDef HAL_DSI_ShortWrite(DSI_HandleTypeDef *hdsi,
 }
 
 /**
-  * @brief  write long DCS or long Generic command
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  ChannelID  Virtual channel ID.
-  * @param  Mode  DSI long packet data type.
-  *               This parameter can be any value of @ref DSI_LONG_WRITE_PKT_Data_Type.
-  * @param  NbParams  Number of parameters.
-  * @param  Param1  DSC command or first generic parameter.
-  *                 This parameter can be any value of @ref DSI_DCS_Command or a
-  *                 generic command code
-  * @param  ParametersTable  Pointer to parameter values table.
-  * @retval HAL status
-  */
+ * @brief  write long DCS or long Generic command
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  ChannelID  Virtual channel ID.
+ * @param  Mode  DSI long packet data type.
+ *               This parameter can be any value of @ref DSI_LONG_WRITE_PKT_Data_Type.
+ * @param  NbParams  Number of parameters.
+ * @param  Param1  DSC command or first generic parameter.
+ *                 This parameter can be any value of @ref DSI_DCS_Command or a
+ *                 generic command code
+ * @param  ParametersTable  Pointer to parameter values table.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_LongWrite(DSI_HandleTypeDef *hdsi,
                                     uint32_t ChannelID,
                                     uint32_t Mode,
@@ -1769,18 +1769,18 @@ HAL_StatusTypeDef HAL_DSI_LongWrite(DSI_HandleTypeDef *hdsi,
 }
 
 /**
-  * @brief  Read command (DCS or generic)
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  ChannelNbr  Virtual channel ID
-  * @param  Array pointer to a buffer to store the payload of a read back operation.
-  * @param  Size  Data size to be read (in byte).
-  * @param  Mode  DSI read packet data type.
-  *               This parameter can be any value of @ref DSI_SHORT_READ_PKT_Data_Type.
-  * @param  DCSCmd  DCS get/read command.
-  * @param  ParametersTable  Pointer to parameter values table.
-  * @retval HAL status
-*/
+ * @brief  Read command (DCS or generic)
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  ChannelNbr  Virtual channel ID
+ * @param  Array pointer to a buffer to store the payload of a read back operation.
+ * @param  Size  Data size to be read (in byte).
+ * @param  Mode  DSI read packet data type.
+ *               This parameter can be any value of @ref DSI_SHORT_READ_PKT_Data_Type.
+ * @param  DCSCmd  DCS get/read command.
+ * @param  ParametersTable  Pointer to parameter values table.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_Read(DSI_HandleTypeDef *hdsi,
                                uint32_t ChannelNbr,
                                uint8_t *Array,
@@ -1999,12 +1999,12 @@ HAL_StatusTypeDef HAL_DSI_Read(DSI_HandleTypeDef *hdsi,
 }
 
 /**
-  * @brief  Enter the ULPM (Ultra Low Power Mode) with the D-PHY PLL running
-  *         (only data lanes are in ULPM)
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Enter the ULPM (Ultra Low Power Mode) with the D-PHY PLL running
+ *         (only data lanes are in ULPM)
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_EnterULPMData(DSI_HandleTypeDef *hdsi)
 {
     uint32_t tickstart;
@@ -2062,12 +2062,12 @@ HAL_StatusTypeDef HAL_DSI_EnterULPMData(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  Exit the ULPM (Ultra Low Power Mode) with the D-PHY PLL running
-  *         (only data lanes are in ULPM)
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Exit the ULPM (Ultra Low Power Mode) with the D-PHY PLL running
+ *         (only data lanes are in ULPM)
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ExitULPMData(DSI_HandleTypeDef *hdsi)
 {
     uint32_t tickstart;
@@ -2131,12 +2131,12 @@ HAL_StatusTypeDef HAL_DSI_ExitULPMData(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @brief  Enter the ULPM (Ultra Low Power Mode) with the D-PHY PLL turned off
-  *         (both data and clock lanes are in ULPM)
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Enter the ULPM (Ultra Low Power Mode) with the D-PHY PLL turned off
+ *         (both data and clock lanes are in ULPM)
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_EnterULPM(DSI_HandleTypeDef *hdsi)
 {
     uint32_t tickstart;
@@ -2220,12 +2220,12 @@ _ERR_HANDLE:
 }
 
 /**
-  * @brief  Exit the ULPM (Ultra Low Power Mode) with the D-PHY PLL turned off
-  *         (both data and clock lanes are in ULPM)
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL status
-  */
+ * @brief  Exit the ULPM (Ultra Low Power Mode) with the D-PHY PLL turned off
+ *         (both data and clock lanes are in ULPM)
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ExitULPM(DSI_HandleTypeDef *hdsi)
 {
     uint32_t tickstart;
@@ -2372,16 +2372,16 @@ uint8_t HAL_DSI_IsBusy(DSI_HandleTypeDef *hdsi)
 #ifdef DSI_FIX_ME  //PHY timing
 
 /**
-  * @brief  Set Slew-Rate And Delay Tuning
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  CommDelay  Communication delay to be adjusted.
-  *                    This parameter can be any value of @ref DSI_Communication_Delay
-  * @param  Lane  select between clock or data lanes.
-  *               This parameter can be any value of @ref DSI_Lane_Group
-  * @param  Value  Custom value of the slew-rate or delay
-  * @retval HAL status
-  */
+ * @brief  Set Slew-Rate And Delay Tuning
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  CommDelay  Communication delay to be adjusted.
+ *                    This parameter can be any value of @ref DSI_Communication_Delay
+ * @param  Lane  select between clock or data lanes.
+ *               This parameter can be any value of @ref DSI_Lane_Group
+ * @param  Value  Custom value of the slew-rate or delay
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetSlewRateAndDelayTuning(DSI_HandleTypeDef *hdsi, uint32_t CommDelay, uint32_t Lane, uint32_t Value)
 {
     /* Process locked */
@@ -2467,12 +2467,12 @@ HAL_StatusTypeDef HAL_DSI_SetSlewRateAndDelayTuning(DSI_HandleTypeDef *hdsi, uin
 }
 
 /**
-  * @brief  Low-Power Reception Filter Tuning
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  Frequency  cutoff frequency of low-pass filter at the input of LPRX
-  * @retval HAL status
-  */
+ * @brief  Low-Power Reception Filter Tuning
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  Frequency  cutoff frequency of low-pass filter at the input of LPRX
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetLowPowerRXFilter(DSI_HandleTypeDef *hdsi, uint32_t Frequency)
 {
     /* Process locked */
@@ -2489,13 +2489,13 @@ HAL_StatusTypeDef HAL_DSI_SetLowPowerRXFilter(DSI_HandleTypeDef *hdsi, uint32_t 
 }
 
 /**
-  * @brief  Activate an additional current path on all lanes to meet the SDDTx parameter
-  *         defined in the MIPI D-PHY specification
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Activate an additional current path on all lanes to meet the SDDTx parameter
+ *         defined in the MIPI D-PHY specification
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetSDD(DSI_HandleTypeDef *hdsi, FunctionalState State)
 {
     /* Process locked */
@@ -2516,16 +2516,16 @@ HAL_StatusTypeDef HAL_DSI_SetSDD(DSI_HandleTypeDef *hdsi, FunctionalState State)
 #endif /* DSI_FIX_ME */
 
 /**
-  * @brief  Custom lane pins configuration
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  CustomLane  Function to be applyed on selected lane.
-  *                     This parameter can be any value of @ref DSI_CustomLane
-  * @param  Lane  select between clock or data lane 0 or data lane 1.
-  *               This parameter can be any value of @ref DSI_Lane_Select
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Custom lane pins configuration
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  CustomLane  Function to be applyed on selected lane.
+ *                     This parameter can be any value of @ref DSI_CustomLane
+ * @param  Lane  select between clock or data lane 0 or data lane 1.
+ *               This parameter can be any value of @ref DSI_Lane_Select
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetLanePinsConfiguration(DSI_HandleTypeDef *hdsi, uint32_t CustomLane, uint32_t Lane, FunctionalState State)
 {
     /* Process locked */
@@ -2606,15 +2606,15 @@ HAL_StatusTypeDef HAL_DSI_SetLanePinsConfiguration(DSI_HandleTypeDef *hdsi, uint
 #ifdef  DSI_FIX_ME   //PHY TIMING
 
 /**
-  * @brief  Set custom timing for the PHY
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  Timing  PHY timing to be adjusted.
-  *                 This parameter can be any value of @ref DSI_PHY_Timing
-  * @param  State  ENABLE or DISABLE
-  * @param  Value  Custom value of the timing
-  * @retval HAL status
-  */
+ * @brief  Set custom timing for the PHY
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  Timing  PHY timing to be adjusted.
+ *                 This parameter can be any value of @ref DSI_PHY_Timing
+ * @param  State  ENABLE or DISABLE
+ * @param  Value  Custom value of the timing
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetPHYTimings(DSI_HandleTypeDef *hdsi, uint32_t Timing, FunctionalState State, uint32_t Value)
 {
     /* Process locked */
@@ -2754,14 +2754,14 @@ HAL_StatusTypeDef HAL_DSI_SetPHYTimings(DSI_HandleTypeDef *hdsi, uint32_t Timing
 }
 
 /**
-  * @brief  Force the Clock/Data Lane in TX Stop Mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  Lane  select between clock or data lanes.
-  *               This parameter can be any value of @ref DSI_Lane_Group
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Force the Clock/Data Lane in TX Stop Mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  Lane  select between clock or data lanes.
+ *               This parameter can be any value of @ref DSI_Lane_Group
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ForceTXStopMode(DSI_HandleTypeDef *hdsi, uint32_t Lane, FunctionalState State)
 {
     /* Process locked */
@@ -2798,12 +2798,12 @@ HAL_StatusTypeDef HAL_DSI_ForceTXStopMode(DSI_HandleTypeDef *hdsi, uint32_t Lane
 }
 
 /**
-  * @brief  Force LP Receiver in Low-Power Mode
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Force LP Receiver in Low-Power Mode
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ForceRXLowPower(DSI_HandleTypeDef *hdsi, FunctionalState State)
 {
     /* Process locked */
@@ -2823,12 +2823,12 @@ HAL_StatusTypeDef HAL_DSI_ForceRXLowPower(DSI_HandleTypeDef *hdsi, FunctionalSta
 }
 
 /**
-  * @brief  Force Data Lanes in RX Mode after a BTA
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Force Data Lanes in RX Mode after a BTA
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_ForceDataLanesInRX(DSI_HandleTypeDef *hdsi, FunctionalState State)
 {
     /* Process locked */
@@ -2848,12 +2848,12 @@ HAL_StatusTypeDef HAL_DSI_ForceDataLanesInRX(DSI_HandleTypeDef *hdsi, Functional
 }
 
 /**
-  * @brief  Enable a pull-down on the lanes to prevent from floating states when unused
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Enable a pull-down on the lanes to prevent from floating states when unused
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetPullDown(DSI_HandleTypeDef *hdsi, FunctionalState State)
 {
     /* Process locked */
@@ -2874,12 +2874,12 @@ HAL_StatusTypeDef HAL_DSI_SetPullDown(DSI_HandleTypeDef *hdsi, FunctionalState S
 #endif
 
 /**
-  * @brief  Switch off the contention detection on data lanes
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @param  State  ENABLE or DISABLE
-  * @retval HAL status
-  */
+ * @brief  Switch off the contention detection on data lanes
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @param  State  ENABLE or DISABLE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_DSI_SetContentionDetectionOff(DSI_HandleTypeDef *hdsi, FunctionalState State)
 {
     /* Process locked */
@@ -2899,8 +2899,8 @@ HAL_StatusTypeDef HAL_DSI_SetContentionDetectionOff(DSI_HandleTypeDef *hdsi, Fun
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup DSI_Group4 Peripheral State and Errors functions
  *  @brief    Peripheral State and Errors functions
@@ -2919,22 +2919,22 @@ HAL_StatusTypeDef HAL_DSI_SetContentionDetectionOff(DSI_HandleTypeDef *hdsi, Fun
   */
 
 /**
-  * @brief  Return the DSI state
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval HAL state
-  */
+ * @brief  Return the DSI state
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval HAL state
+ */
 HAL_DSI_StateTypeDef HAL_DSI_GetState(DSI_HandleTypeDef *hdsi)
 {
     return hdsi->State;
 }
 
 /**
-  * @brief  Return the DSI error code
-  * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
-  *               the configuration information for the DSI.
-  * @retval DSI Error Code
-  */
+ * @brief  Return the DSI error code
+ * @param  hdsi  pointer to a DSI_HandleTypeDef structure that contains
+ *               the configuration information for the DSI.
+ * @retval DSI Error Code
+ */
 uint32_t HAL_DSI_GetError(DSI_HandleTypeDef *hdsi)
 {
     /* Get the error code */
@@ -2942,18 +2942,18 @@ uint32_t HAL_DSI_GetError(DSI_HandleTypeDef *hdsi)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_DSI_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */

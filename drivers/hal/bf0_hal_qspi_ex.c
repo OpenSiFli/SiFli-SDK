@@ -9,13 +9,13 @@
 #include <stdlib.h>
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup FLASH FLASH
-  * @brief FLASH HAL module driver
-  * @{
-  */
+ * @brief FLASH HAL module driver
+ * @{
+ */
 
 #define DEBUG_JLINK         0
 #if DEBUG_JLINK

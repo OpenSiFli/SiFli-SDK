@@ -38,12 +38,12 @@ static uint32_t SDMMC_GetCmdResp6(SDHCI_HandleTypeDef *SDIOx, uint8_t SD_CMD, ui
 static uint32_t SDMMC_GetCmdResp7(SDHCI_HandleTypeDef *SDIOx);
 
 /**
-  * @brief  Initializes the SDMMC according to the specified
-  *         parameters in the SDMMC_InitTypeDef and create the associated handle.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  Init SDMMC initialization structure
-  * @retval HAL status
-  */
+ * @brief  Initializes the SDMMC according to the specified
+ *         parameters in the SDMMC_InitTypeDef and create the associated handle.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  Init SDMMC initialization structure
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_Init(SDHCI_HandleTypeDef *SDIOx, SDIO_InitTypeDef Init)
 {
     uint32_t tmpreg = 0U;
@@ -74,8 +74,8 @@ HAL_StatusTypeDef SDIO_Init(SDHCI_HandleTypeDef *SDIOx, SDIO_InitTypeDef Init)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup HAL_SDMMC_LL_Group2 IO operation functions
  *  @brief   Data transfers functions
@@ -93,10 +93,10 @@ HAL_StatusTypeDef SDIO_Init(SDHCI_HandleTypeDef *SDIOx, SDIO_InitTypeDef Init)
   */
 
 /**
-  * @brief  Read data (word) from Rx FIFO in blocking mode (polling)
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Read data (word) from Rx FIFO in blocking mode (polling)
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 uint32_t SDIO_ReadFIFO(SDHCI_HandleTypeDef *SDIOx)
 {
     /* Read data from Rx FIFO */
@@ -104,11 +104,11 @@ uint32_t SDIO_ReadFIFO(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Write data (word) to Tx FIFO in blocking mode (polling)
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  pWriteData pointer to data to write
-  * @retval HAL status
-  */
+ * @brief  Write data (word) to Tx FIFO in blocking mode (polling)
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  pWriteData pointer to data to write
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_WriteFIFO(SDHCI_HandleTypeDef *SDIOx, uint32_t *pWriteData)
 {
     /* Write data to FIFO */
@@ -118,8 +118,8 @@ HAL_StatusTypeDef SDIO_WriteFIFO(SDHCI_HandleTypeDef *SDIOx, uint32_t *pWriteDat
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup HAL_SDMMC_LL_Group3 Peripheral Control functions
  *  @brief   management functions
@@ -137,10 +137,10 @@ HAL_StatusTypeDef SDIO_WriteFIFO(SDHCI_HandleTypeDef *SDIOx, uint32_t *pWriteDat
   */
 
 /**
-  * @brief  Set SDMMC Power state to ON.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Set SDMMC Power state to ON.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_PowerState_ON(SDHCI_HandleTypeDef *SDIOx)
 {
     /* Set power state to ON */
@@ -150,10 +150,10 @@ HAL_StatusTypeDef SDIO_PowerState_ON(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Set SDMMC Power state to OFF.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Set SDMMC Power state to OFF.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_PowerState_OFF(SDHCI_HandleTypeDef *SDIOx)
 {
     /* Set power state to OFF */
@@ -163,27 +163,27 @@ HAL_StatusTypeDef SDIO_PowerState_OFF(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Get SDMMC Power state.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval Power status of the controller. The returned value can be one of the
-  *         following values:
-  *            - 0x00: Power OFF
-  *            - 0x02: Power UP
-  *            - 0x03: Power ON
-  */
+ * @brief  Get SDMMC Power state.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval Power status of the controller. The returned value can be one of the
+ *         following values:
+ *            - 0x00: Power OFF
+ *            - 0x02: Power UP
+ *            - 0x03: Power ON
+ */
 uint32_t SDIO_GetPowerState(SDHCI_HandleTypeDef *SDIOx)
 {
     return 3; //(SDIOx->POWER & SDIO_POWER_PWRCTRL);
 }
 
 /**
-  * @brief  Configure the SDMMC command path according to the specified parameters in
-  *         SDIO_CmdInitTypeDef structure and send the command
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  Command pointer to a SDIO_CmdInitTypeDef structure that contains
-  *         the configuration information for the SDMMC command
-  * @retval HAL status
-  */
+ * @brief  Configure the SDMMC command path according to the specified parameters in
+ *         SDIO_CmdInitTypeDef structure and send the command
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  Command pointer to a SDIO_CmdInitTypeDef structure that contains
+ *         the configuration information for the SDMMC command
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_SendCommand(SDHCI_HandleTypeDef *SDIOx, SDHCI_CmdArgTypeDef *Command)
 {
     hal_sdhci_send_command(SDIOx, Command);
@@ -194,29 +194,29 @@ HAL_StatusTypeDef SDIO_SendCommand(SDHCI_HandleTypeDef *SDIOx, SDHCI_CmdArgTypeD
 
 
 /**
-  * @brief  Return the response received from the card for the last command
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  Response Specifies the SDMMC response register.
-  *          This parameter can be one of the following values:
-  *            @arg SDIO_RESP1: Response Register 1
-  *            @arg SDIO_RESP1: Response Register 2
-  *            @arg SDIO_RESP1: Response Register 3
-  *            @arg SDIO_RESP1: Response Register 4
-  * @retval The Corresponding response register value
-  */
+ * @brief  Return the response received from the card for the last command
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  Response Specifies the SDMMC response register.
+ *          This parameter can be one of the following values:
+ *            @arg SDIO_RESP1: Response Register 1
+ *            @arg SDIO_RESP1: Response Register 2
+ *            @arg SDIO_RESP1: Response Register 3
+ *            @arg SDIO_RESP1: Response Register 4
+ * @retval The Corresponding response register value
+ */
 uint32_t SDIO_GetResponse(SDHCI_HandleTypeDef *SDIOx, uint32_t Response)
 {
     return hal_sdhci_get_response(SDIOx, Response);
 }
 
 /**
-  * @brief  Configure the SDMMC data path according to the specified
-  *         parameters in the SDIO_DataInitTypeDef.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  Data  pointer to a SDIO_DataInitTypeDef structure
-  *         that contains the configuration information for the SDMMC data.
-  * @retval HAL status
-  */
+ * @brief  Configure the SDMMC data path according to the specified
+ *         parameters in the SDIO_DataInitTypeDef.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  Data  pointer to a SDIO_DataInitTypeDef structure
+ *         that contains the configuration information for the SDMMC data.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef SDIO_ConfigData(SDHCI_HandleTypeDef *SDIOx, SDIO_DataInitTypeDef *Data)
 {
 #if 0
@@ -293,34 +293,34 @@ HAL_StatusTypeDef SDIO_ConfigData(SDHCI_HandleTypeDef *SDIOx, SDIO_DataInitTypeD
 }
 
 /**
-  * @brief  Returns number of remaining data bytes to be transferred.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval Number of remaining data bytes to be transferred
-  */
+ * @brief  Returns number of remaining data bytes to be transferred.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval Number of remaining data bytes to be transferred
+ */
 uint32_t SDIO_GetDataCounter(SDHCI_HandleTypeDef *SDIOx)
 {
     return 0; //(SDIOx->DCOUNT);
 }
 
 /**
-  * @brief  Get the FIFO data
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval Data received
-  */
+ * @brief  Get the FIFO data
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval Data received
+ */
 uint32_t SDIO_GetFIFOCount(SDHCI_HandleTypeDef *SDIOx)
 {
     return 0; //(SDIOx->FIFO);
 }
 
 /**
-  * @brief  Sets one of the two options of inserting read wait interval.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @param  SDIO_ReadWaitMode SDMMC Read Wait operation mode.
-  *          This parameter can be:
-  *            @arg SDIO_READ_WAIT_MODE_CLK: Read Wait control by stopping SDMMCCLK
-  *            @arg SDIO_READ_WAIT_MODE_DATA2: Read Wait control using SDMMC_DATA2
-  * @retval None
-  */
+ * @brief  Sets one of the two options of inserting read wait interval.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @param  SDIO_ReadWaitMode SDMMC Read Wait operation mode.
+ *          This parameter can be:
+ *            @arg SDIO_READ_WAIT_MODE_CLK: Read Wait control by stopping SDMMCCLK
+ *            @arg SDIO_READ_WAIT_MODE_DATA2: Read Wait control using SDMMC_DATA2
+ * @retval None
+ */
 HAL_StatusTypeDef SDIO_SetSDMMCReadWaitMode(SDHCI_HandleTypeDef *SDIOx, uint32_t SDIO_ReadWaitMode)
 {
     /* Set SDMMC read wait mode */
@@ -330,15 +330,15 @@ HAL_StatusTypeDef SDIO_SetSDMMCReadWaitMode(SDHCI_HandleTypeDef *SDIOx, uint32_t
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @brief  Send the Data Block Lenght command and check the response
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Send the Data Block Lenght command and check the response
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdBlockLength(SDHCI_HandleTypeDef *SDIOx, uint32_t BlockSize)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -359,10 +359,10 @@ uint32_t SDMMC_CmdBlockLength(SDHCI_HandleTypeDef *SDIOx, uint32_t BlockSize)
 }
 
 /**
-  * @brief  Send the Read Single Block command and check the response
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Send the Read Single Block command and check the response
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdReadSingleBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t ReadAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -381,10 +381,10 @@ uint32_t SDMMC_CmdReadSingleBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t ReadAdd)
 }
 
 /**
-  * @brief  Send the Read Multi Block command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Read Multi Block command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdReadMultiBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t ReadAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -404,10 +404,10 @@ uint32_t SDMMC_CmdReadMultiBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t ReadAdd)
 }
 
 /**
-  * @brief  Send the Write Single Block command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Write Single Block command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdWriteSingleBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t WriteAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -427,10 +427,10 @@ uint32_t SDMMC_CmdWriteSingleBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t WriteAdd
 }
 
 /**
-  * @brief  Send the Write Multi Block command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Write Multi Block command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdWriteMultiBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t WriteAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -450,10 +450,10 @@ uint32_t SDMMC_CmdWriteMultiBlock(SDHCI_HandleTypeDef *SDIOx, uint32_t WriteAdd)
 }
 
 /**
-  * @brief  Send the Start Address Erase command for SD and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Start Address Erase command for SD and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSDEraseStartAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t StartAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -472,10 +472,10 @@ uint32_t SDMMC_CmdSDEraseStartAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t StartAdd)
 }
 
 /**
-  * @brief  Send the End Address Erase command for SD and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the End Address Erase command for SD and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSDEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -495,10 +495,10 @@ uint32_t SDMMC_CmdSDEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd)
 }
 
 /**
-  * @brief  Send the Start Address Erase command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Start Address Erase command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdEraseStartAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t StartAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -517,10 +517,10 @@ uint32_t SDMMC_CmdEraseStartAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t StartAdd)
 }
 
 /**
-  * @brief  Send the End Address Erase command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the End Address Erase command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -540,10 +540,10 @@ uint32_t SDMMC_CmdEraseEndAdd(SDHCI_HandleTypeDef *SDIOx, uint32_t EndAdd)
 }
 
 /**
-  * @brief  Send the Erase command and check the response
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Erase command and check the response
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdErase(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -563,10 +563,10 @@ uint32_t SDMMC_CmdErase(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Stop Transfer command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Stop Transfer command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdStopTransfer(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -585,11 +585,11 @@ uint32_t SDMMC_CmdStopTransfer(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Select Deselect command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @param  addr Address of the card to be selected
-  * @retval HAL status
-  */
+ * @brief  Send the Select Deselect command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @param  addr Address of the card to be selected
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSelDesel(SDHCI_HandleTypeDef *SDIOx, uint64_t Addr)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -609,10 +609,10 @@ uint32_t SDMMC_CmdSelDesel(SDHCI_HandleTypeDef *SDIOx, uint64_t Addr)
 }
 
 /**
-  * @brief  Send the Go Idle State command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Go Idle State command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdGoIdleState(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -631,10 +631,10 @@ uint32_t SDMMC_CmdGoIdleState(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Operating Condition command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Operating Condition command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdOperCond(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -658,12 +658,12 @@ uint32_t SDMMC_CmdOperCond(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Application command to verify that that the next command
-  *         is an application specific com-mand rather than a standard command
-  *         and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Application command to verify that that the next command
+ *         is an application specific com-mand rather than a standard command
+ *         and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdAppCommand(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -685,11 +685,11 @@ uint32_t SDMMC_CmdAppCommand(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 }
 
 /**
-  * @brief  Send the command asking the accessed card to send its operating
-  *         condition register (OCR)
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the command asking the accessed card to send its operating
+ *         condition register (OCR)
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdAppOperCommand(SDHCI_HandleTypeDef *SDIOx, uint32_t SdType)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -708,10 +708,10 @@ uint32_t SDMMC_CmdAppOperCommand(SDHCI_HandleTypeDef *SDIOx, uint32_t SdType)
 }
 
 /**
-  * @brief  Send the Bus Width command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Bus Width command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdBusWidth(SDHCI_HandleTypeDef *SDIOx, uint32_t BusWidth)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -730,10 +730,10 @@ uint32_t SDMMC_CmdBusWidth(SDHCI_HandleTypeDef *SDIOx, uint32_t BusWidth)
 }
 
 /**
-  * @brief  Send the Send SCR command and check the response.
-  * @param  SDIOx Pointer to SDMMC register base
-  * @retval HAL status
-  */
+ * @brief  Send the Send SCR command and check the response.
+ * @param  SDIOx Pointer to SDMMC register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSendSCR(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -753,10 +753,10 @@ uint32_t SDMMC_CmdSendSCR(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Send CID command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Send CID command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSendCID(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -776,10 +776,10 @@ uint32_t SDMMC_CmdSendCID(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Send the Send CSD command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Send CSD command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSendCSD(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -800,10 +800,10 @@ uint32_t SDMMC_CmdSendCSD(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 }
 
 /**
-  * @brief  Send the Send CSD command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Send CSD command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSetRelAdd(SDHCI_HandleTypeDef *SDIOx, uint16_t *pRCA)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -823,10 +823,10 @@ uint32_t SDMMC_CmdSetRelAdd(SDHCI_HandleTypeDef *SDIOx, uint16_t *pRCA)
 }
 
 /**
-  * @brief  Send the Status command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Status command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSendStatus(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -845,10 +845,10 @@ uint32_t SDMMC_CmdSendStatus(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 }
 
 /**
-  * @brief  Send the Status register command and check the response.
-  * @param  SDIOx Pointer to SDIO register base
-  * @retval HAL status
-  */
+ * @brief  Send the Status register command and check the response.
+ * @param  SDIOx Pointer to SDIO register base
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdStatusRegister(SDHCI_HandleTypeDef *SDIOx)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -867,12 +867,12 @@ uint32_t SDMMC_CmdStatusRegister(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Sends host capacity support information and activates the card's
-  *         initialization process. Send SDMMC_CMD_SEND_OP_COND command
-  * @param  SDIOx Pointer to SDIO register base
-  * @parame Argument Argument used for the command
-  * @retval HAL status
-  */
+ * @brief  Sends host capacity support information and activates the card's
+ *         initialization process. Send SDMMC_CMD_SEND_OP_COND command
+ * @param  SDIOx Pointer to SDIO register base
+ * @parame Argument Argument used for the command
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdOpCondition(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -891,11 +891,11 @@ uint32_t SDMMC_CmdOpCondition(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 }
 
 /**
-  * @brief  Checks switchable function and switch card function. SDMMC_CMD_HS_SWITCH comand
-  * @param  SDIOx Pointer to SDIO register base
-  * @parame Argument Argument used for the command
-  * @retval HAL status
-  */
+ * @brief  Checks switchable function and switch card function. SDMMC_CMD_HS_SWITCH comand
+ * @param  SDIOx Pointer to SDIO register base
+ * @parame Argument Argument used for the command
+ * @retval HAL status
+ */
 uint32_t SDMMC_CmdSwitch(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 {
     SDHCI_CmdArgTypeDef  sdmmc_cmdinit;
@@ -914,19 +914,19 @@ uint32_t SDMMC_CmdSwitch(SDHCI_HandleTypeDef *SDIOx, uint32_t Argument)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private function ----------------------------------------------------------*/
 /** @addtogroup SD_Private_Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Checks for error conditions for CMD0.
-  * @param  hsd SD handle
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for CMD0.
+ * @param  hsd SD handle
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdError(SDHCI_HandleTypeDef *SDIOx)
 {
     int res;
@@ -946,11 +946,11 @@ static uint32_t SDMMC_GetCmdError(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Checks for error conditions for R1 response.
-  * @param  hsd SD handle
-  * @param  SD_CMD The sent command index
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for R1 response.
+ * @param  hsd SD handle
+ * @param  SD_CMD The sent command index
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdResp1(SDHCI_HandleTypeDef *SDIOx, uint8_t SD_CMD, uint32_t Timeout)
 {
     uint32_t response_r1;
@@ -1055,10 +1055,10 @@ static uint32_t SDMMC_GetCmdResp1(SDHCI_HandleTypeDef *SDIOx, uint8_t SD_CMD, ui
 }
 
 /**
-  * @brief  Checks for error conditions for R2 (CID or CSD) response.
-  * @param  hsd SD handle
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for R2 (CID or CSD) response.
+ * @param  hsd SD handle
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdResp2(SDHCI_HandleTypeDef *SDIOx)
 {
     int res;
@@ -1083,10 +1083,10 @@ static uint32_t SDMMC_GetCmdResp2(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Checks for error conditions for R3 (OCR) response.
-  * @param  hsd SD handle
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for R3 (OCR) response.
+ * @param  hsd SD handle
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdResp3(SDHCI_HandleTypeDef *SDIOx)
 {
     int res;
@@ -1110,13 +1110,13 @@ static uint32_t SDMMC_GetCmdResp3(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @brief  Checks for error conditions for R6 (RCA) response.
-  * @param  hsd SD handle
-  * @param  SD_CMD The sent command index
-  * @param  pRCA Pointer to the variable that will contain the SD card relative
-  *         address RCA
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for R6 (RCA) response.
+ * @param  hsd SD handle
+ * @param  SD_CMD The sent command index
+ * @param  pRCA Pointer to the variable that will contain the SD card relative
+ *         address RCA
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdResp6(SDHCI_HandleTypeDef *SDIOx, uint8_t SD_CMD, uint16_t *pRCA)
 {
     uint32_t response_r1;
@@ -1157,10 +1157,10 @@ static uint32_t SDMMC_GetCmdResp6(SDHCI_HandleTypeDef *SDIOx, uint8_t SD_CMD, ui
 }
 
 /**
-  * @brief  Checks for error conditions for R7 response.
-  * @param  hsd SD handle
-  * @retval SD Card error state
-  */
+ * @brief  Checks for error conditions for R7 response.
+ * @param  hsd SD handle
+ * @retval SD Card error state
+ */
 static uint32_t SDMMC_GetCmdResp7(SDHCI_HandleTypeDef *SDIOx)
 {
     int res;
@@ -1184,8 +1184,8 @@ static uint32_t SDMMC_GetCmdResp7(SDHCI_HandleTypeDef *SDIOx)
 }
 
 /**
-  * @}
-*/
+ * @}
+ */
 
 
 #if 1
@@ -1194,8 +1194,8 @@ static uint32_t SDMMC_GetCmdResp7(SDHCI_HandleTypeDef *SDIOx)
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 /** @defgroup SD_Private_Functions SD Private Functions
-  * @{
-  */
+ * @{
+ */
 static uint32_t SD_InitCard(SD_HandleTypeDef *hsd);
 static uint32_t SD_PowerON(SD_HandleTypeDef *hsd);
 static uint32_t SD_SendSDStatus(SD_HandleTypeDef *hsd, uint32_t *pSDstatus);
@@ -1215,13 +1215,13 @@ static HAL_StatusTypeDef SD_PowerOFF(SD_HandleTypeDef *hsd);
     static void SD_DMARxAbort(DMA_HandleTypeDef *hdma);
 #endif
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup SD_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SD_Exported_Functions_Group1
  *  @brief   Initialization and de-initialization functions
@@ -1239,11 +1239,11 @@ static HAL_StatusTypeDef SD_PowerOFF(SD_HandleTypeDef *hsd);
   */
 
 /**
-  * @brief  Initializes the SD according to the specified parameters in the
-            SD_HandleTypeDef and create the associated handle.
-  * @param  hsd Pointer to the SD handle
-  * @retval HAL status
-  */
+ * @brief  Initializes the SD according to the specified parameters in the
+           SD_HandleTypeDef and create the associated handle.
+ * @param  hsd Pointer to the SD handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_Init(SD_HandleTypeDef *hsd)
 {
     HAL_StatusTypeDef ret = HAL_OK;
@@ -1289,12 +1289,12 @@ HAL_StatusTypeDef HAL_SD_Init(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Initializes the SD Card.
-  * @param  hsd Pointer to SD handle
-  * @note   This function initializes the SD card. It could be used when a card
-            re-initialization is needed.
-  * @retval HAL status
-  */
+ * @brief  Initializes the SD Card.
+ * @param  hsd Pointer to SD handle
+ * @note   This function initializes the SD card. It could be used when a card
+           re-initialization is needed.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_InitCard(SD_HandleTypeDef *hsd)
 {
     uint32_t errorstate = HAL_SD_ERROR_NONE;
@@ -1348,10 +1348,10 @@ HAL_StatusTypeDef HAL_SD_InitCard(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  De-Initializes the SD card.
-  * @param  hsd Pointer to SD handle
-  * @retval HAL status
-  */
+ * @brief  De-Initializes the SD card.
+ * @param  hsd Pointer to SD handle
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_DeInit(SD_HandleTypeDef *hsd)
 {
     /* Check the SD handle allocation */
@@ -1376,10 +1376,10 @@ HAL_StatusTypeDef HAL_SD_DeInit(SD_HandleTypeDef *hsd)
 
 
 /**
-  * @brief  Initializes the SD MSP.
-  * @param  hsd Pointer to SD handle
-  * @retval None
-  */
+ * @brief  Initializes the SD MSP.
+ * @param  hsd Pointer to SD handle
+ * @retval None
+ */
 __weak void HAL_SD_MspInit(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1391,10 +1391,10 @@ __weak void HAL_SD_MspInit(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  De-Initialize SD MSP.
-  * @param  hsd Pointer to SD handle
-  * @retval None
-  */
+ * @brief  De-Initialize SD MSP.
+ * @param  hsd Pointer to SD handle
+ * @retval None
+ */
 __weak void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1406,8 +1406,8 @@ __weak void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup SD_Exported_Functions_Group2
  *  @brief   Data transfer functions
@@ -1425,17 +1425,17 @@ __weak void HAL_SD_MspDeInit(SD_HandleTypeDef *hsd)
   */
 
 /**
-  * @brief  Reads block(s) from a specified address in a card. The Data transfer
-  *         is managed by polling mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @param  hsd Pointer to SD handle
-  * @param  pData pointer to the buffer that will contain the received data
-  * @param  BlockAdd Block Address from where data is to be read
-  * @param  NumberOfBlocks Number of SD blocks to read
-  * @param  Timeout Specify timeout value
-  * @retval HAL status
-  */
+ * @brief  Reads block(s) from a specified address in a card. The Data transfer
+ *         is managed by polling mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @param  hsd Pointer to SD handle
+ * @param  pData pointer to the buffer that will contain the received data
+ * @param  BlockAdd Block Address from where data is to be read
+ * @param  NumberOfBlocks Number of SD blocks to read
+ * @param  Timeout Specify timeout value
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_ReadBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks, uint32_t Timeout)
 {
     SDIO_DataInitTypeDef config;
@@ -1536,17 +1536,17 @@ HAL_StatusTypeDef HAL_SD_ReadBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint3
 }
 
 /**
-  * @brief  Allows to write block(s) to a specified address in a card. The Data
-  *         transfer is managed by polling mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @param  hsd Pointer to SD handle
-  * @param  pData pointer to the buffer that will contain the data to transmit
-  * @param  BlockAdd Block Address where data will be written
-  * @param  NumberOfBlocks Number of SD blocks to write
-  * @param  Timeout Specify timeout value
-  * @retval HAL status
-  */
+ * @brief  Allows to write block(s) to a specified address in a card. The Data
+ *         transfer is managed by polling mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @param  hsd Pointer to SD handle
+ * @param  pData pointer to the buffer that will contain the data to transmit
+ * @param  BlockAdd Block Address where data will be written
+ * @param  NumberOfBlocks Number of SD blocks to write
+ * @param  Timeout Specify timeout value
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_WriteBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks, uint32_t Timeout)
 {
     SDIO_DataInitTypeDef config;
@@ -1643,18 +1643,18 @@ HAL_StatusTypeDef HAL_SD_WriteBlocks(SD_HandleTypeDef *hsd, uint8_t *pData, uint
 }
 
 /**
-  * @brief  Reads block(s) from a specified address in a card. The Data transfer
-  *         is managed in interrupt mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @note   You could also check the IT transfer process through the SD Rx
-  *         interrupt event.
-  * @param  hsd Pointer to SD handle
-  * @param  pData Pointer to the buffer that will contain the received data
-  * @param  BlockAdd Block Address from where data is to be read
-  * @param  NumberOfBlocks Number of blocks to read.
-  * @retval HAL status
-  */
+ * @brief  Reads block(s) from a specified address in a card. The Data transfer
+ *         is managed in interrupt mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @note   You could also check the IT transfer process through the SD Rx
+ *         interrupt event.
+ * @param  hsd Pointer to SD handle
+ * @param  pData Pointer to the buffer that will contain the received data
+ * @param  BlockAdd Block Address from where data is to be read
+ * @param  NumberOfBlocks Number of blocks to read.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_ReadBlocks_IT(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks)
 {
     SDIO_DataInitTypeDef config;
@@ -1741,18 +1741,18 @@ HAL_StatusTypeDef HAL_SD_ReadBlocks_IT(SD_HandleTypeDef *hsd, uint8_t *pData, ui
 }
 
 /**
-  * @brief  Writes block(s) to a specified address in a card. The Data transfer
-  *         is managed in interrupt mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @note   You could also check the IT transfer process through the SD Tx
-  *         interrupt event.
-  * @param  hsd Pointer to SD handle
-  * @param  pData Pointer to the buffer that will contain the data to transmit
-  * @param  BlockAdd Block Address where data will be written
-  * @param  NumberOfBlocks Number of blocks to write
-  * @retval HAL status
-  */
+ * @brief  Writes block(s) to a specified address in a card. The Data transfer
+ *         is managed in interrupt mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @note   You could also check the IT transfer process through the SD Tx
+ *         interrupt event.
+ * @param  hsd Pointer to SD handle
+ * @param  pData Pointer to the buffer that will contain the data to transmit
+ * @param  BlockAdd Block Address where data will be written
+ * @param  NumberOfBlocks Number of blocks to write
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_WriteBlocks_IT(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks)
 {
     SDIO_DataInitTypeDef config;
@@ -1841,18 +1841,18 @@ HAL_StatusTypeDef HAL_SD_WriteBlocks_IT(SD_HandleTypeDef *hsd, uint8_t *pData, u
 }
 
 /**
-  * @brief  Reads block(s) from a specified address in a card. The Data transfer
-  *         is managed by DMA mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @note   You could also check the DMA transfer process through the SD Rx
-  *         interrupt event.
-  * @param  hsd Pointer SD handle
-  * @param  pData Pointer to the buffer that will contain the received data
-  * @param  BlockAdd Block Address from where data is to be read
-  * @param  NumberOfBlocks Number of blocks to read.
-  * @retval HAL status
-  */
+ * @brief  Reads block(s) from a specified address in a card. The Data transfer
+ *         is managed by DMA mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @note   You could also check the DMA transfer process through the SD Rx
+ *         interrupt event.
+ * @param  hsd Pointer SD handle
+ * @param  pData Pointer to the buffer that will contain the received data
+ * @param  BlockAdd Block Address from where data is to be read
+ * @param  NumberOfBlocks Number of blocks to read.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_ReadBlocks_DMA(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks)
 {
     SDIO_DataInitTypeDef config;
@@ -1936,18 +1936,18 @@ HAL_StatusTypeDef HAL_SD_ReadBlocks_DMA(SD_HandleTypeDef *hsd, uint8_t *pData, u
 }
 
 /**
-  * @brief  Writes block(s) to a specified address in a card. The Data transfer
-  *         is managed by DMA mode.
-  * @note   This API should be followed by a check on the card state through
-  *         HAL_SD_GetCardState().
-  * @note   You could also check the DMA transfer process through the SD Tx
-  *         interrupt event.
-  * @param  hsd Pointer to SD handle
-  * @param  pData Pointer to the buffer that will contain the data to transmit
-  * @param  BlockAdd Block Address where data will be written
-  * @param  NumberOfBlocks Number of blocks to write
-  * @retval HAL status
-  */
+ * @brief  Writes block(s) to a specified address in a card. The Data transfer
+ *         is managed by DMA mode.
+ * @note   This API should be followed by a check on the card state through
+ *         HAL_SD_GetCardState().
+ * @note   You could also check the DMA transfer process through the SD Tx
+ *         interrupt event.
+ * @param  hsd Pointer to SD handle
+ * @param  pData Pointer to the buffer that will contain the data to transmit
+ * @param  BlockAdd Block Address where data will be written
+ * @param  NumberOfBlocks Number of blocks to write
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_WriteBlocks_DMA(SD_HandleTypeDef *hsd, uint8_t *pData, uint32_t BlockAdd, uint32_t NumberOfBlocks)
 {
     SDIO_DataInitTypeDef config;
@@ -2050,10 +2050,10 @@ void HAL_SD_IRQHandler(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief return the SD state
-  * @param hsd Pointer to sd handle
-  * @retval HAL state
-  */
+ * @brief return the SD state
+ * @param hsd Pointer to sd handle
+ * @retval HAL state
+ */
 HAL_SD_StateTypeDef HAL_SD_GetState(SD_HandleTypeDef *hsd)
 {
     return hsd->State;
@@ -2071,10 +2071,10 @@ uint32_t HAL_SD_GetError(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief Tx Transfer completed callbacks
-  * @param hsd Pointer to SD handle
-  * @retval None
-  */
+ * @brief Tx Transfer completed callbacks
+ * @param hsd Pointer to SD handle
+ * @retval None
+ */
 __weak void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2086,10 +2086,10 @@ __weak void HAL_SD_TxCpltCallback(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief Rx Transfer completed callbacks
-  * @param hsd Pointer SD handle
-  * @retval None
-  */
+ * @brief Rx Transfer completed callbacks
+ * @param hsd Pointer SD handle
+ * @retval None
+ */
 __weak void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2101,10 +2101,10 @@ __weak void HAL_SD_RxCpltCallback(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief SD error callbacks
-  * @param hsd Pointer SD handle
-  * @retval None
-  */
+ * @brief SD error callbacks
+ * @param hsd Pointer SD handle
+ * @retval None
+ */
 __weak void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2116,10 +2116,10 @@ __weak void HAL_SD_ErrorCallback(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief SD Abort callbacks
-  * @param hsd Pointer SD handle
-  * @retval None
-  */
+ * @brief SD Abort callbacks
+ * @param hsd Pointer SD handle
+ * @retval None
+ */
 __weak void HAL_SD_AbortCallback(SD_HandleTypeDef *hsd)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2132,8 +2132,8 @@ __weak void HAL_SD_AbortCallback(SD_HandleTypeDef *hsd)
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup SD_Exported_Functions_Group3
  *  @brief   management functions
@@ -2151,13 +2151,13 @@ __weak void HAL_SD_AbortCallback(SD_HandleTypeDef *hsd)
   */
 
 /**
-  * @brief  Returns information the information of the card which are stored on
-  *         the CID register.
-  * @param  hsd Pointer to SD handle
-  * @param  pCID Pointer to a HAL_SD_CIDTypeDef structure that
-  *         contains all CID register parameters
-  * @retval HAL status
-  */
+ * @brief  Returns information the information of the card which are stored on
+ *         the CID register.
+ * @param  hsd Pointer to SD handle
+ * @param  pCID Pointer to a HAL_SD_CIDTypeDef structure that
+ *         contains all CID register parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_GetCardCID(SD_HandleTypeDef *hsd, HAL_SD_CardCIDTypeDef *pCID)
 {
     uint32_t tmp = 0U;
@@ -2232,13 +2232,13 @@ HAL_StatusTypeDef HAL_SD_GetCardCID(SD_HandleTypeDef *hsd, HAL_SD_CardCIDTypeDef
 }
 
 /**
-  * @brief  Returns information the information of the card which are stored on
-  *         the CSD register.
-  * @param  hsd Pointer to SD handle
-  * @param  pCSD Pointer to a HAL_SD_CardCSDTypeDef structure that
-  *         contains all CSD register parameters
-  * @retval HAL status
-  */
+ * @brief  Returns information the information of the card which are stored on
+ *         the CSD register.
+ * @param  hsd Pointer to SD handle
+ * @param  pCSD Pointer to a HAL_SD_CardCSDTypeDef structure that
+ *         contains all CSD register parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_GetCardCSD(SD_HandleTypeDef *hsd, HAL_SD_CardCSDTypeDef *pCSD)
 {
     uint32_t tmp = 0U;
@@ -2383,12 +2383,12 @@ HAL_StatusTypeDef HAL_SD_GetCardCSD(SD_HandleTypeDef *hsd, HAL_SD_CardCSDTypeDef
 }
 
 /**
-  * @brief  Gets the SD status info.
-  * @param  hsd Pointer to SD handle
-  * @param  pStatus Pointer to the HAL_SD_CardStatusTypeDef structure that
-  *         will contain the SD card status information
-  * @retval HAL status
-  */
+ * @brief  Gets the SD status info.
+ * @param  hsd Pointer to SD handle
+ * @param  pStatus Pointer to the HAL_SD_CardStatusTypeDef structure that
+ *         will contain the SD card status information
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_GetCardStatus(SD_HandleTypeDef *hsd, HAL_SD_CardStatusTypeDef *pStatus)
 {
     uint32_t tmp = 0U;
@@ -2471,12 +2471,12 @@ HAL_StatusTypeDef HAL_SD_GetCardStatus(SD_HandleTypeDef *hsd, HAL_SD_CardStatusT
 }
 
 /**
-  * @brief  Gets the SD card info.
-  * @param  hsd Pointer to SD handle
-  * @param  pCardInfo Pointer to the HAL_SD_CardInfoTypeDef structure that
-  *         will contain the SD card status information
-  * @retval HAL status
-  */
+ * @brief  Gets the SD card info.
+ * @param  hsd Pointer to SD handle
+ * @param  pCardInfo Pointer to the HAL_SD_CardInfoTypeDef structure that
+ *         will contain the SD card status information
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_GetCardInfo(SD_HandleTypeDef *hsd, HAL_SD_CardInfoTypeDef *pCardInfo)
 {
     pCardInfo->CardType     = (uint32_t)(hsd->SdCard.CardType);
@@ -2492,16 +2492,16 @@ HAL_StatusTypeDef HAL_SD_GetCardInfo(SD_HandleTypeDef *hsd, HAL_SD_CardInfoTypeD
 }
 
 /**
-  * @brief  Enables wide bus operation for the requested card if supported by
-  *         card.
-  * @param  hsd Pointer to SD handle
-  * @param  WideMode Specifies the SD card wide bus mode
-  *          This parameter can be one of the following values:
-  *            @arg SDIO_BUS_WIDE_8B: 8-bit data transfer
-  *            @arg SDIO_BUS_WIDE_4B: 4-bit data transfer
-  *            @arg SDIO_BUS_WIDE_1B: 1-bit data transfer
-  * @retval HAL status
-  */
+ * @brief  Enables wide bus operation for the requested card if supported by
+ *         card.
+ * @param  hsd Pointer to SD handle
+ * @param  WideMode Specifies the SD card wide bus mode
+ *          This parameter can be one of the following values:
+ *            @arg SDIO_BUS_WIDE_8B: 8-bit data transfer
+ *            @arg SDIO_BUS_WIDE_4B: 4-bit data transfer
+ *            @arg SDIO_BUS_WIDE_1B: 1-bit data transfer
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_ConfigWideBusOperation(SD_HandleTypeDef *hsd, uint32_t WideMode)
 {
     SDIO_InitTypeDef Init;
@@ -2571,10 +2571,10 @@ HAL_StatusTypeDef HAL_SD_ConfigWideBusOperation(SD_HandleTypeDef *hsd, uint32_t 
 
 
 /**
-  * @brief  Gets the current sd card data state.
-  * @param  hsd pointer to SD handle
-  * @retval Card state
-  */
+ * @brief  Gets the current sd card data state.
+ * @param  hsd pointer to SD handle
+ * @retval Card state
+ */
 HAL_SD_CardStateTypeDef HAL_SD_GetCardState(SD_HandleTypeDef *hsd)
 {
     HAL_SD_CardStateTypeDef cardstate =  HAL_SD_CARD_TRANSFER;
@@ -2593,11 +2593,11 @@ HAL_SD_CardStateTypeDef HAL_SD_GetCardState(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Abort the current transfer and disable the SD.
-  * @param  hsd pointer to a SD_HandleTypeDef structure that contains
-  *                the configuration information for SD module.
-  * @retval HAL status
-  */
+ * @brief  Abort the current transfer and disable the SD.
+ * @param  hsd pointer to a SD_HandleTypeDef structure that contains
+ *                the configuration information for SD module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_Abort(SD_HandleTypeDef *hsd)
 {
     HAL_SD_CardStateTypeDef CardState;
@@ -2618,11 +2618,11 @@ HAL_StatusTypeDef HAL_SD_Abort(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Abort the current transfer and disable the SD (IT mode).
-  * @param  hsd pointer to a SD_HandleTypeDef structure that contains
-  *                the configuration information for SD module.
-  * @retval HAL status
-  */
+ * @brief  Abort the current transfer and disable the SD (IT mode).
+ * @param  hsd pointer to a SD_HandleTypeDef structure that contains
+ *                the configuration information for SD module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SD_Abort_IT(SD_HandleTypeDef *hsd)
 {
     HAL_SD_CardStateTypeDef CardState;
@@ -2652,23 +2652,23 @@ HAL_StatusTypeDef HAL_SD_Abort_IT(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Private function ----------------------------------------------------------*/
 /** @addtogroup SD_Private_Functions
-  * @{
-  */
+ * @{
+ */
 #if 0
 /**
-  * @brief  DMA SD transmit process complete callback
-  * @param  hdma DMA handle
-  * @retval None
-  */
+ * @brief  DMA SD transmit process complete callback
+ * @param  hdma DMA handle
+ * @retval None
+ */
 static void SD_DMATransmitCplt(DMA_HandleTypeDef *hdma)
 {
     //SD_HandleTypeDef *hsd = (SD_HandleTypeDef *)(hdma->Parent);
@@ -2678,10 +2678,10 @@ static void SD_DMATransmitCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA SD receive process complete callback
-  * @param  hdma DMA handle
-  * @retval None
-  */
+ * @brief  DMA SD receive process complete callback
+ * @param  hdma DMA handle
+ * @retval None
+ */
 static void SD_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
 {
     SD_HandleTypeDef *hsd = (SD_HandleTypeDef *)(hdma->Parent);
@@ -2711,10 +2711,10 @@ static void SD_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA SD communication error callback
-  * @param  hdma DMA handle
-  * @retval None
-  */
+ * @brief  DMA SD communication error callback
+ * @param  hdma DMA handle
+ * @retval None
+ */
 static void SD_DMAError(DMA_HandleTypeDef *hdma)
 {
     SD_HandleTypeDef *hsd = (SD_HandleTypeDef *)(hdma->Parent);
@@ -2737,10 +2737,10 @@ static void SD_DMAError(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA SD Tx Abort callback
-  * @param  hdma DMA handle
-  * @retval None
-  */
+ * @brief  DMA SD Tx Abort callback
+ * @param  hdma DMA handle
+ * @retval None
+ */
 static void SD_DMATxAbort(DMA_HandleTypeDef *hdma)
 {
     SD_HandleTypeDef *hsd = (SD_HandleTypeDef *)(hdma->Parent);
@@ -2774,10 +2774,10 @@ static void SD_DMATxAbort(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA SD Rx Abort callback
-  * @param  hdma DMA handle
-  * @retval None
-  */
+ * @brief  DMA SD Rx Abort callback
+ * @param  hdma DMA handle
+ * @retval None
+ */
 static void SD_DMARxAbort(DMA_HandleTypeDef *hdma)
 {
     SD_HandleTypeDef *hsd = (SD_HandleTypeDef *)(hdma->Parent);
@@ -2812,10 +2812,10 @@ static void SD_DMARxAbort(DMA_HandleTypeDef *hdma)
 #endif
 
 /**
-  * @brief  Initializes the sd card.
-  * @param  hsd Pointer to SD handle
-  * @retval SD Card error state
-  */
+ * @brief  Initializes the sd card.
+ * @param  hsd Pointer to SD handle
+ * @retval SD Card error state
+ */
 static uint32_t SD_InitCard(SD_HandleTypeDef *hsd)
 {
     HAL_SD_CardCSDTypeDef CSD;
@@ -2908,12 +2908,12 @@ static uint32_t SD_InitCard(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Enquires cards about their operating voltage and configures clock
-  *         controls and stores SD information that will be needed in future
-  *         in the SD handle.
-  * @param  hsd Pointer to SD handle
-  * @retval error state
-  */
+ * @brief  Enquires cards about their operating voltage and configures clock
+ *         controls and stores SD information that will be needed in future
+ *         in the SD handle.
+ * @param  hsd Pointer to SD handle
+ * @retval error state
+ */
 static uint32_t SD_PowerON(SD_HandleTypeDef *hsd)
 {
     __IO uint32_t count = 0U;
@@ -3024,10 +3024,10 @@ static uint32_t SD_PowerON(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Turns the SDIO output signals off.
-  * @param  hsd Pointer to SD handle
-  * @retval HAL status
-  */
+ * @brief  Turns the SDIO output signals off.
+ * @param  hsd Pointer to SD handle
+ * @retval HAL status
+ */
 static HAL_StatusTypeDef SD_PowerOFF(SD_HandleTypeDef *hsd)
 {
     /* Set Power State to OFF */
@@ -3037,12 +3037,12 @@ static HAL_StatusTypeDef SD_PowerOFF(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Send Status info command.
-  * @param  hsd pointer to SD handle
-  * @param  pSDstatus Pointer to the buffer that will contain the SD card status
-  *         SD Status register)
-  * @retval error state
-  */
+ * @brief  Send Status info command.
+ * @param  hsd pointer to SD handle
+ * @param  pSDstatus Pointer to the buffer that will contain the SD card status
+ *         SD Status register)
+ * @retval error state
+ */
 static uint32_t SD_SendSDStatus(SD_HandleTypeDef *hsd, uint32_t *pSDstatus)
 {
     SDIO_DataInitTypeDef config;
@@ -3100,12 +3100,12 @@ static uint32_t SD_SendSDStatus(SD_HandleTypeDef *hsd, uint32_t *pSDstatus)
 }
 
 /**
-  * @brief  Returns the current card's status.
-  * @param  hsd Pointer to SD handle
-  * @param  pCardStatus pointer to the buffer that will contain the SD card
-  *         status (Card Status register)
-  * @retval error state
-  */
+ * @brief  Returns the current card's status.
+ * @param  hsd Pointer to SD handle
+ * @param  pCardStatus pointer to the buffer that will contain the SD card
+ *         status (Card Status register)
+ * @retval error state
+ */
 static uint32_t SD_SendStatus(SD_HandleTypeDef *hsd, uint32_t *pCardStatus)
 {
     uint32_t errorstate = HAL_SD_ERROR_NONE;
@@ -3129,10 +3129,10 @@ static uint32_t SD_SendStatus(SD_HandleTypeDef *hsd, uint32_t *pCardStatus)
 }
 
 /**
-  * @brief  Enables the SDIO wide bus mode.
-  * @param  hsd pointer to SD handle
-  * @retval error state
-  */
+ * @brief  Enables the SDIO wide bus mode.
+ * @param  hsd pointer to SD handle
+ * @retval error state
+ */
 static uint32_t SD_WideBus_Enable(SD_HandleTypeDef *hsd)
 {
     uint32_t scr[2U] = {0U, 0U};
@@ -3179,10 +3179,10 @@ static uint32_t SD_WideBus_Enable(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Disables the SDIO wide bus mode.
-  * @param  hsd Pointer to SD handle
-  * @retval error state
-  */
+ * @brief  Disables the SDIO wide bus mode.
+ * @param  hsd Pointer to SD handle
+ * @retval error state
+ */
 static uint32_t SD_WideBus_Disable(SD_HandleTypeDef *hsd)
 {
     uint32_t scr[2U] = {0U, 0U};
@@ -3227,11 +3227,11 @@ static uint32_t SD_WideBus_Disable(SD_HandleTypeDef *hsd)
 
 
 /**
-  * @brief  Finds the SD card SCR register value.
-  * @param  hsd Pointer to SD handle
-  * @param  pSCR pointer to the buffer that will contain the SCR value
-  * @retval error state
-  */
+ * @brief  Finds the SD card SCR register value.
+ * @param  hsd Pointer to SD handle
+ * @param  pSCR pointer to the buffer that will contain the SCR value
+ * @retval error state
+ */
 static uint32_t SD_FindSCR(SD_HandleTypeDef *hsd, uint32_t *pSCR)
 {
     SDIO_DataInitTypeDef config;
@@ -3316,11 +3316,11 @@ static uint32_t SD_FindSCR(SD_HandleTypeDef *hsd, uint32_t *pSCR)
 
 #if 0
 /**
-  * @brief  Wrap up reading in non-blocking mode.
-  * @param  hsd pointer to a SD_HandleTypeDef structure that contains
-  *              the configuration information.
-  * @retval HAL status
-  */
+ * @brief  Wrap up reading in non-blocking mode.
+ * @param  hsd pointer to a SD_HandleTypeDef structure that contains
+ *              the configuration information.
+ * @retval HAL status
+ */
 static HAL_StatusTypeDef SD_Read_IT(SD_HandleTypeDef *hsd)
 {
     uint8_t *tmp;
@@ -3342,11 +3342,11 @@ static HAL_StatusTypeDef SD_Read_IT(SD_HandleTypeDef *hsd)
 }
 
 /**
-  * @brief  Wrap up writing in non-blocking mode.
-  * @param  hsd pointer to a SD_HandleTypeDef structure that contains
-  *              the configuration information.
-  * @retval HAL status
-  */
+ * @brief  Wrap up writing in non-blocking mode.
+ * @param  hsd pointer to a SD_HandleTypeDef structure that contains
+ *              the configuration information.
+ * @retval HAL status
+ */
 static HAL_StatusTypeDef SD_Write_IT(SD_HandleTypeDef *hsd)
 {
     uint8_t *tmp;
@@ -3369,8 +3369,8 @@ static HAL_StatusTypeDef SD_Write_IT(SD_HandleTypeDef *hsd)
 #endif
 
 /**
-  * @}
-  */
+ * @}
+ */
 #endif
 
 #endif /* HAL_SDHCI_MODULE_ENABLED */

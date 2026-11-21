@@ -17,8 +17,8 @@ extern "C" {
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup EZIP EZIP
  * @brief EZIP HAL module driver
@@ -397,12 +397,12 @@ HAL_StatusTypeDef HAL_EZIP_DecodeFast_Init(EZIP_HandleTypeDef *hezip);
 HAL_StatusTypeDef HAL_EZIP_DecodeFast_IT(EZIP_HandleTypeDef *hezip);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #ifdef __cplusplus

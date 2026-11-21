@@ -8,12 +8,12 @@
 #include "bf0_hal_crc.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup TSEN
-  * @{
-  */
+ * @{
+ */
 
 #if defined(HAL_TSEN_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -82,9 +82,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_TSEN_DeInit(TSEN_HandleTypeDef *htsen)
 
 
 /**
-  * @brief  Power on TSEN for preparing reading.
-  * @param  htsen pointer to a TSEN_HandleTypeDef structure.
-  */
+ * @brief  Power on TSEN for preparing reading.
+ * @param  htsen pointer to a TSEN_HandleTypeDef structure.
+ */
 static void HAL_TSEN_Enable(TSEN_HandleTypeDef *htsen)
 {
 #if !defined(SF32LB55X) && !defined(SF32LB56X) && !defined(SF32LB58X)
@@ -129,9 +129,9 @@ static void HAL_TSEN_Enable(TSEN_HandleTypeDef *htsen)
 
 
 /**
-  * @brief  Power down TSEN after reading.
-  * @param  htsen pointer to a TSEN_HandleTypeDef structure.
-  */
+ * @brief  Power down TSEN after reading.
+ * @param  htsen pointer to a TSEN_HandleTypeDef structure.
+ */
 static void HAL_TSEN_Disable(TSEN_HandleTypeDef *htsen)
 {
 #ifndef SF32LB52X
@@ -224,9 +224,9 @@ __HAL_ROM_USED HAL_TSEN_StateTypeDef HAL_TSEN_GetState(TSEN_HandleTypeDef *htsen
 
 #endif /* HAL_TSEN_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

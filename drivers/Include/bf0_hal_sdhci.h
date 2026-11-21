@@ -12,16 +12,16 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SDHCI SD Host Controller Interface
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SDHCI_Register_Types SDHCI Register Types
-  * @{
-  */
+ * @{
+ */
 
 /*
  * Controller registers list, not use register table
@@ -217,13 +217,13 @@ extern "C" {
 #endif
 /******************** Register Description End ************************************/
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup SDHCI_Exported_Types SDHCI Exported Types
-  * @{
-  */
+ * @{
+ */
 
 #define SDHCI_ADMA_MAX_SIZE         (65536)        /*!< SDADC Max support transfer size  */
 
@@ -233,8 +233,8 @@ extern "C" {
 #define SDHCI_DEVICE_DEAD   (1<<3)      /*!<  Device unresponsive */
 
 /**
-  * @brief  ENUM definition of DMA transfer mode
-  */
+ * @brief  ENUM definition of DMA transfer mode
+ */
 enum HAL_SD_DMA_MODE_E
 {
     SDHCI_DMA_PIO    = 0,   /*!<  Host use cpu copy */
@@ -245,8 +245,8 @@ enum HAL_SD_DMA_MODE_E
 
 
 /**
-  * @brief  ENUM definition of aDMA attributes
-  */
+ * @brief  ENUM definition of aDMA attributes
+ */
 enum HAL_ATTR_ACT_E
 {
     ATTR_ACT_NOP    = 0,    /*!<  nop */
@@ -256,8 +256,8 @@ enum HAL_ATTR_ACT_E
 };
 
 /**
-  * @brief  structure to fill adma descriptor
-  */
+ * @brief  structure to fill adma descriptor
+ */
 typedef struct
 {
     uint8_t attr;   /*!<  bit5 act2, 4 act1; bit 2 Int, 1 End, 0 Valid
@@ -271,8 +271,8 @@ typedef struct
 } hal_sdhci_adma_des_line_t;
 
 /**
-  * @brief  SDHCI Initial structure
-  */
+ * @brief  SDHCI Initial structure
+ */
 typedef struct
 {
     uint32_t        flags;      /*!<   Host attributes */
@@ -283,8 +283,8 @@ typedef struct
 
 
 /**
-  * @brief  SDHCI command parameter
-  */
+ * @brief  SDHCI command parameter
+ */
 typedef struct
 {
     uint32_t        Arg;             /*!<   argument */
@@ -294,8 +294,8 @@ typedef struct
 } SDHCI_CmdArgTypeDef;
 
 /**
-  * @brief  SDHCI handle type define
-  */
+ * @brief  SDHCI handle type define
+ */
 typedef struct
 {
     uint32_t                        Instance;    /*!<   Mapped address */
@@ -306,328 +306,328 @@ typedef struct
 } SDHCI_HandleTypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup SDHCI_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SDHCI_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief Get SD host version.
-  * @param handle SDHCI handle.
-  * @retval host version
-  */
+ * @brief Get SD host version.
+ * @param handle SDHCI handle.
+ * @retval host version
+ */
 uint16_t hal_sdhci_get_host_version(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief Get SD host capbility.
-  * @param handle SDHCI handle.
-  * @retval host capbility
-  */
+ * @brief Get SD host capbility.
+ * @param handle SDHCI handle.
+ * @retval host capbility
+ */
 uint32_t hal_sdhci_get_host_cap(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief set irq mask  .
-  * @param handle SDHCI handle.
-  * @param set irq need to be set or clear.
-  * @retval none
-  */
+ * @brief set irq mask  .
+ * @param handle SDHCI handle.
+ * @param set irq need to be set or clear.
+ * @retval none
+ */
 void hal_sdhci_clear_mask_irqs(SDHCI_HandleTypeDef *handle, uint32_t set);
 
 /**
-  * @brief unmask irq .
-  * @param handle SDHCI handle.
-  * @param irqs irq bits.
-  * @retval none
-  */
+ * @brief unmask irq .
+ * @param handle SDHCI handle.
+ * @param irqs irq bits.
+ * @retval none
+ */
 void hal_sdhci_unmask_irqs(SDHCI_HandleTypeDef *handle, uint32_t irqs);
 
 /**
-  * @brief mask irq .
-  * @param handle SDHCI handle.
-  * @param irqs irq bits.
-  * @retval none
-  */
+ * @brief mask irq .
+ * @param handle SDHCI handle.
+ * @param irqs irq bits.
+ * @retval none
+ */
 void hal_sdhci_mask_irqs(SDHCI_HandleTypeDef *handle, uint32_t irqs);
 
 /**
-  * @brief get irq value.
-  * @param handle SDHCI handle.
-  * @retval irq set bits
-  */
+ * @brief get irq value.
+ * @param handle SDHCI handle.
+ * @retval irq set bits
+ */
 uint32_t hal_sdhci_get_int_value(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief Clear irq .
-  * @param handle SDHCI handle.
-  * @param irq irq need to be cleared.
-  * @retval none
-  */
+ * @brief Clear irq .
+ * @param handle SDHCI handle.
+ * @param irq irq need to be cleared.
+ * @retval none
+ */
 void hal_sdhci_clear_int(SDHCI_HandleTypeDef *handle, uint32_t irq);
 
 /**
-  * @brief enable sd card detect.
-  * @param handle SDHCI handle.
-  * @retval none
-  */
+ * @brief enable sd card detect.
+ * @param handle SDHCI handle.
+ * @retval none
+ */
 void hal_sdhci_enable_card_detection(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief disable sd card detect.
-  * @param handle SDHCI handle.
-  * @retval none
-  */
+ * @brief disable sd card detect.
+ * @param handle SDHCI handle.
+ * @retval none
+ */
 void hal_sdhci_disable_card_detection(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief set time out value.
-  * @param handle SDHCI handle.
-  * @param timeo time out value.
-  * @retval none
-  */
+ * @brief set time out value.
+ * @param handle SDHCI handle.
+ * @param timeo time out value.
+ * @retval none
+ */
 void hal_sdhci_set_timeout(SDHCI_HandleTypeDef *handle, uint8_t timeo);
 
 /**
-  * @brief set ADMA address.
-  * @param handle SDHCI handle.
-  * @param addr address set to register.
-  * @retval none
-  */
+ * @brief set ADMA address.
+ * @param handle SDHCI handle.
+ * @param addr address set to register.
+ * @retval none
+ */
 void hal_sdhic_set_adma_addr(SDHCI_HandleTypeDef *handle, uint32_t addr);
 
 /**
-  * @brief set DMA address.
-  * @param handle SDHCI handle.
-  * @param addr address set to register.
-  * @retval none
-  */
+ * @brief set DMA address.
+ * @param handle SDHCI handle.
+ * @param addr address set to register.
+ * @retval none
+ */
 void hal_sdhci_set_dma_addr(SDHCI_HandleTypeDef *handle, uint32_t addr);
 
 /**
-  * @brief reset ADMA address.
-  * @param handle SDHCI handle.
-  * @retval none
-  */
+ * @brief reset ADMA address.
+ * @param handle SDHCI handle.
+ * @retval none
+ */
 void hal_sdhci_reset_dma_addr(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief set SDHCI DMA MODE
-  * @param handle SDHCI handle.
-  * @param flag for DMA mode, include ADMA/SDMA/PIO.
-  * @retval none
-  */
+ * @brief set SDHCI DMA MODE
+ * @param handle SDHCI handle.
+ * @param flag for DMA mode, include ADMA/SDMA/PIO.
+ * @retval none
+ */
 void hal_sdhci_set_dma_mode(SDHCI_HandleTypeDef *handle, uint8_t flag);
 
 /**
-  * @brief set SDHCI transfer mode.
-  * @param handle SDHCI handle.
-  * @param mode DMA or not DMA.
-  * @retval none
-  */
+ * @brief set SDHCI transfer mode.
+ * @param handle SDHCI handle.
+ * @param mode DMA or not DMA.
+ * @retval none
+ */
 void hal_sdhci_set_transfer_mode(SDHCI_HandleTypeDef *handle, uint16_t mode);
 
 /**
-  * @brief set boot mode.
-  * @param handle SDHCI handle.
-  * @param boot boot mode or not.
-  * @retval none
-  */
+ * @brief set boot mode.
+ * @param handle SDHCI handle.
+ * @param boot boot mode or not.
+ * @retval none
+ */
 void hal_sdhci_set_boot_mode(SDHCI_HandleTypeDef *handle, uint16_t boot);
 
 /**
-  * @brief transmit block setting.
-  * @param handle SDHCI handle.
-  * @param blk_size each block size .
-  * @param blk_cnt block number .
-  * @retval none
-  */
+ * @brief transmit block setting.
+ * @param handle SDHCI handle.
+ * @param blk_size each block size .
+ * @param blk_cnt block number .
+ * @retval none
+ */
 void hal_sdhci_set_blk(SDHCI_HandleTypeDef *handle, uint32_t blk_size, uint32_t blk_cnt);
 
 /**
-  * @brief get present state.
-  * @param handle SDHCI handle.
-  * @retval present state
-  */
+ * @brief get present state.
+ * @param handle SDHCI handle.
+ * @retval present state
+ */
 uint32_t hal_sdhci_get_present_state(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief set sd bit width.
-  * @param handle SDHCI handle.
-  * @param width 1 bit or 4 bits.
-  * @retval none
-  */
+ * @brief set sd bit width.
+ * @param handle SDHCI handle.
+ * @param width 1 bit or 4 bits.
+ * @retval none
+ */
 void hal_sdhci_set_bus_width(SDHCI_HandleTypeDef *handle, uint8_t width);
 
 /**
-  * @brief set sd command.
-  * @param handle SDHCI handle.
-  * @param cmd SD command structure.
-  * @retval none
-  */
+ * @brief set sd command.
+ * @param handle SDHCI handle.
+ * @param cmd SD command structure.
+ * @retval none
+ */
 void hal_sdhci_send_command(SDHCI_HandleTypeDef *handle, SDHCI_CmdArgTypeDef *cmd);
 
 /**
-  * @brief get sd command response.
-  * @param handle SDHCI handle.
-  * @param res_id response index, 0 ~ 3.
-  * @retval response data
-  */
+ * @brief get sd command response.
+ * @param handle SDHCI handle.
+ * @param res_id response index, 0 ~ 3.
+ * @retval response data
+ */
 uint32_t hal_sdhci_get_response(SDHCI_HandleTypeDef *handle, int res_id);
 
 /**
-  * @brief read/write data without DMA.
-  * @param handle SDHCI handle.
-  * @param is_read read or write.
-  * @param data data buffer.
-  * @param size data size need to be transmit.
-  * @retval none
-  */
+ * @brief read/write data without DMA.
+ * @param handle SDHCI handle.
+ * @param is_read read or write.
+ * @param data data buffer.
+ * @param size data size need to be transmit.
+ * @retval none
+ */
 void hal_sdhci_transfer_pio(SDHCI_HandleTypeDef *handle, uint8_t is_read, uint8_t *data, uint32_t size);
 
 /**
-  * @brief prepare adma table.
-  * @param handle SDHCI handle.
-  * @param data data buffer.
-  * @param size data size need to be transmit.
-  * @retval none
-  */
+ * @brief prepare adma table.
+ * @param handle SDHCI handle.
+ * @param data data buffer.
+ * @param size data size need to be transmit.
+ * @retval none
+ */
 int hal_sdhci_adma_table_pre(SDHCI_HandleTypeDef *handle, uint8_t *data, uint32_t size);
 
 /**
-  * @brief enable irq of transfer bits.
-  * @param handle SDHCI handle.
-  * @retval none
-  */
+ * @brief enable irq of transfer bits.
+ * @param handle SDHCI handle.
+ * @retval none
+ */
 void hal_sdhci_set_transfer_irqs(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief set SD power mode.
-  * @param handle SDHCI handle.
-  * @param power power mode.
-  * @retval none
-  */
+ * @brief set SD power mode.
+ * @param handle SDHCI handle.
+ * @param power power mode.
+ * @retval none
+ */
 void hal_sdhci_set_power(SDHCI_HandleTypeDef *handle, unsigned short power);
 
 /**
-  * @brief set SD clock .
-  * @param handle SDHCI handle.
-  * @param clock clock freq for SD.
-  * @param max_clk max system clock input.
-  * @retval none
-  */
+ * @brief set SD clock .
+ * @param handle SDHCI handle.
+ * @param clock clock freq for SD.
+ * @param max_clk max system clock input.
+ * @retval none
+ */
 void hal_sdhci_set_clk(SDHCI_HandleTypeDef *handle, uint32_t clock, uint32_t max_clk);
 
 /**
-  * @brief set DDR mode for MMC .
-  * @param handle SDHCI handle.
-  * @param ddr DDR mode enable.
-  * @retval none
-  */
+ * @brief set DDR mode for MMC .
+ * @param handle SDHCI handle.
+ * @param ddr DDR mode enable.
+ * @retval none
+ */
 void hal_sdhci_set_ddr(SDHCI_HandleTypeDef *handle, uint8_t ddr);
 
 /**
-  * @brief Enable or disable SD card clock (configure SDHCI_CLOCK_CARD_EN)
-  * @param handle SDHCI handle
-  * @param en true: enable clock, false: disable clock
-  * @retval none
-  */
+ * @brief Enable or disable SD card clock (configure SDHCI_CLOCK_CARD_EN)
+ * @param handle SDHCI handle
+ * @param en true: enable clock, false: disable clock
+ * @retval none
+ */
 void hal_sdhci_clk_ctrl(SDHCI_HandleTypeDef *handle, bool en);
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup SDHCI_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief reset SDHCI .
-  * @param handle SDHCI handle.
-  * @param mask mask bit.
-  * @retval none
-  */
+ * @brief reset SDHCI .
+ * @param handle SDHCI handle.
+ * @param mask mask bit.
+ * @retval none
+ */
 void hal_sdhci_reset(SDHCI_HandleTypeDef *handle, uint8_t mask);
 
 /**
-  * @brief initial sd hardware .
-  * @param handle SDHCI handle.
-  * @param soft just reset command and data.
-  * @retval none
-  */
+ * @brief initial sd hardware .
+ * @param handle SDHCI handle.
+ * @param soft just reset command and data.
+ * @retval none
+ */
 void hal_sdhci_init(SDHCI_HandleTypeDef *handle, int soft);
 
 /**
-  * @brief reinitial sd with command and data .
-  * @param handle SDHCI handle.
-  * @retval none
-  */
+ * @brief reinitial sd with command and data .
+ * @param handle SDHCI handle.
+ * @retval none
+ */
 void hal_sdhci_reinit(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief Wait command finish or error .
-  * @param handle SDHCI handle.
-  * @param timeout wait time out in ms.
-  * @retval irq value, -1 if fail
-  */
+ * @brief Wait command finish or error .
+ * @param handle SDHCI handle.
+ * @param timeout wait time out in ms.
+ * @retval irq value, -1 if fail
+ */
 int hal_sdhci_command_finish(SDHCI_HandleTypeDef *handle, uint32_t timeout);
 
 /**
-  * @brief Wait data transfer finish or error .
-  * @param handle SDHCI handle.
-  * @param timeout wait time out in ms.
-  * @retval irq value, -1 if fail
-  */
+ * @brief Wait data transfer finish or error .
+ * @param handle SDHCI handle.
+ * @param timeout wait time out in ms.
+ * @retval irq value, -1 if fail
+ */
 int hal_sdhci_data_finish(SDHCI_HandleTypeDef *handle, uint32_t timeout);
 
 
 /**
-  * @brief Read SD data in fifo.
-  * @param handle SDHCI handle.
-  * @retval data in fifo
-  */
+ * @brief Read SD data in fifo.
+ * @param handle SDHCI handle.
+ * @retval data in fifo
+ */
 uint32_t hal_sdhci_read_fifo(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @brief Write data to SD fifo.
-  * @param handle SDHCI handle.
-  * @param value data with 32 bits.
-  * @retval none
-  */
+ * @brief Write data to SD fifo.
+ * @param handle SDHCI handle.
+ * @param value data with 32 bits.
+ * @retval none
+ */
 void hal_sdhci_write_fifo(SDHCI_HandleTypeDef *handle, uint32_t value);
 
 /**
-  * @brief Initial SD msp.
-  * @param handle SDHCI handle.
-  * @retval none.
-  */
+ * @brief Initial SD msp.
+ * @param handle SDHCI handle.
+ * @retval none.
+ */
 void HAL_SDHCI_MspInit(SDHCI_HandleTypeDef *handle);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

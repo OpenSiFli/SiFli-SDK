@@ -16,9 +16,9 @@ extern "C" {
 #include "bf0_pin_const.h"
 
 /** @addtogroup AON AON
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 /* Feature list, define supported feature macro in chip specific aon header file, such as bf0_hal_aon_sf32lb52x */
 /* PMUC and HPSYS_AON share the same pin wakeup source register */
@@ -583,9 +583,9 @@ HAL_StatusTypeDef HAL_HPAON_GetWakeupPinMode(uint8_t wakeup_pin, AON_PinModeType
  */
 void HAL_HPAON_Deactivate(void);
 /**
-* @brief  Enable Oscillator from HPSYS
-* @retval void
-*/
+ * @brief  Enable Oscillator from HPSYS
+ * @retval void
+ */
 void HAL_HPAON_EnableRC(void);
 
 /**
@@ -595,15 +595,15 @@ void HAL_HPAON_EnableRC(void);
 void HAL_HPAON_DisableRC(void);
 
 /**
-* @brief  Enable XTAL48 from HPSYS
-* @retval void
-*/
+ * @brief  Enable XTAL48 from HPSYS
+ * @retval void
+ */
 void HAL_HPAON_EnableXT48(void);
 
 /**
-* @brief  Revoke XTAL48 from HPSYS
-* @retval void
-*/
+ * @brief  Revoke XTAL48 from HPSYS
+ * @retval void
+ */
 void HAL_HPAON_DisableXT48(void);
 
 
@@ -784,15 +784,15 @@ void HAL_LPAON_EnableRC(void);
 void HAL_LPAON_DisableRC(void);
 
 /**
-* @brief  Enable XTAL48 from LPSYS
-* @retval void
-*/
+ * @brief  Enable XTAL48 from LPSYS
+ * @retval void
+ */
 void HAL_LPAON_EnableXT48(void);
 
 /**
-* @brief  Revoke XTAL48 from LPSYS
-* @retval void
-*/
+ * @brief  Revoke XTAL48 from LPSYS
+ * @retval void
+ */
 void HAL_LPAON_DisableXT48(void);
 
 /**
@@ -802,11 +802,11 @@ void HAL_LPAON_DisableXT48(void);
 
 void HAL_LPAON_Sleep(void);
 /**
-* @brief  Check GTimer timeout or not
-* @param[in] ctx Context for GTimer, should be start GTimer read
-* @param[in] timeout_count Count for timeout
-* @retval HAL_OK: Not timeout  HAL_TIMEOUT:Timeout
-*/
+ * @brief  Check GTimer timeout or not
+ * @param[in] ctx Context for GTimer, should be start GTimer read
+ * @param[in] timeout_count Count for timeout
+ * @retval HAL_OK: Not timeout  HAL_TIMEOUT:Timeout
+ */
 HAL_StatusTypeDef HAL_GTIMER_Check(uint32_t ctx, uint32_t timeout_count);
 
 ///@} AON

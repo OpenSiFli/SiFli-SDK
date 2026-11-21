@@ -8,13 +8,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup TIM Hardware Timer
-  * @brief TIM HAL module driver
-  * @{
-  */
+ * @brief TIM HAL module driver
+ * @{
+ */
 #if defined(HAL_PWM_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 #include "bf0_hal_pwm.h"
 
@@ -23,19 +23,19 @@
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /** @addtogroup PWM_Private_Functions
-  * @{
-  */
+ * @{
+ */
 /* Private function prototypes -----------------------------------------------*/
 static void PWM_OC_SetConfig(PWM_ChannelTypeDef *PWM_Channel, PWM_OC_InitTypeDef *OC_Config);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup PWM_Exported_Functions TIM Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PWM_Exported_Functions_Group1 Time Base functions
  *  @brief    Time Base functions
@@ -59,12 +59,12 @@ static void PWM_OC_SetConfig(PWM_ChannelTypeDef *PWM_Channel, PWM_OC_InitTypeDef
   * @{
   */
 /**
-  * @brief  Initializes the TIM Time base Unit according to the specified
-  *         parameters in the PWM_HandleTypeDef and create the associated handle.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Time base Unit according to the specified
+ *         parameters in the PWM_HandleTypeDef and create the associated handle.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Init(PWM_HandleTypeDef *hpwm)
 {
     /* Check the TIM handle allocation */
@@ -107,11 +107,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Init(PWM_HandleTypeDef *hpwm)
 }
 
 /**
-  * @brief  DeInitializes the TIM Base peripheral
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM Base peripheral
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_DeInit(PWM_HandleTypeDef *hpwm)
 {
     /* Check the parameters */
@@ -138,11 +138,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_DeInit(PWM_HandleTypeDef *hpwm)
 }
 
 /**
-  * @brief  Initializes the TIM Base MSP.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM Base MSP.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_PWM_MspInit(PWM_HandleTypeDef *hpwm)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -153,11 +153,11 @@ __weak void HAL_PWM_MspInit(PWM_HandleTypeDef *hpwm)
 }
 
 /**
-  * @brief  DeInitializes TIM Base MSP.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM Base MSP.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_PWM_MspDeInit(PWM_HandleTypeDef *hpwm)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -191,17 +191,17 @@ __weak void HAL_PWM_MspDeInit(PWM_HandleTypeDef *hpwm)
   */
 
 /**
-  * @brief  Starts the PWM signal generation.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the PWM signal generation.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start(PWM_HandleTypeDef *hpwm, uint32_t Channel)
 {
     /* Check the parameters */
@@ -219,17 +219,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start(PWM_HandleTypeDef *hpwm, uint32_t
 }
 
 /**
-  * @brief  Stops the PWM signal generation.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the PWM signal generation.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Stop(PWM_HandleTypeDef *hpwm, uint32_t Channel)
 {
     /* Check the parameters */
@@ -250,17 +250,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Stop(PWM_HandleTypeDef *hpwm, uint32_t 
 }
 
 /**
-  * @brief  Starts the PWM signal generation in interrupt mode.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the PWM signal generation in interrupt mode.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start_IT(PWM_HandleTypeDef *hpwm, uint32_t Channel)
 {
     /* Check the parameters */
@@ -280,17 +280,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start_IT(PWM_HandleTypeDef *hpwm, uint3
 }
 
 /**
-  * @brief  Stops the PWM signal generation in interrupt mode.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the PWM signal generation in interrupt mode.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Stop_IT(PWM_HandleTypeDef *hpwm, uint32_t Channel)
 {
     /* Check the parameters */
@@ -310,19 +310,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Stop_IT(PWM_HandleTypeDef *hpwm, uint32
 }
 
 /**
-  * @brief  Starts the TIM PWM signal generation in CCX DMA mode.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @param  pData The source Buffer address.
-  * @param  Length The length of data to be transferred from memory to TIM peripheral
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM PWM signal generation in CCX DMA mode.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @param  pData The source Buffer address.
+ * @param  Length The length of data to be transferred from memory to TIM peripheral
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start_DMA(PWM_HandleTypeDef *hpwm, uint32_t Channel, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -432,19 +432,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_Start_DMA(PWM_HandleTypeDef *hpwm, uint
 }
 
 /**
-  * @brief  Initializes the TIM PWM  channels according to the specified
-  *         parameters in the PWM_OC_InitTypeDef.
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM PWM configuration structure
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
-  *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
-  *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
-  *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM PWM  channels according to the specified
+ *         parameters in the PWM_OC_InitTypeDef.
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM PWM configuration structure
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg PWM_CHANNEL_1: TIM Channel 1 selected
+ *            @arg PWM_CHANNEL_2: TIM Channel 2 selected
+ *            @arg PWM_CHANNEL_3: TIM Channel 3 selected
+ *            @arg PWM_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_ConfigChannel(PWM_HandleTypeDef *hpwm, PWM_OC_InitTypeDef *sConfig, uint32_t Channel)
 {
     PWM_ChannelTypeDef *pwm_channel;
@@ -473,23 +473,23 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_ConfigChannel(PWM_HandleTypeDef *hpwm, 
 
 
 /**
-  * @brief  Generate a software event
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  EventSource specifies the event source.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_EVENTSOURCE_UPDATE: Timer update Event source
-  *            @arg GPT_EVENTSOURCE_CC1: Timer Capture Compare 1 Event source
-  *            @arg GPT_EVENTSOURCE_CC2: Timer Capture Compare 2 Event source
-  *            @arg GPT_EVENTSOURCE_CC3: Timer Capture Compare 3 Event source
-  *            @arg GPT_EVENTSOURCE_CC4: Timer Capture Compare 4 Event source
-  *            @arg GPT_EVENTSOURCE_COM: Timer COM event source
-  *            @arg GPT_EVENTSOURCE_TRIGGER: Timer Trigger Event source
-  *            @arg GPT_EVENTSOURCE_BREAK: Timer Break event source
-  * @note   TIM6 and TIM7 can only generate an update event.
-  * @note   GPT_EVENTSOURCE_COM and GPT_EVENTSOURCE_BREAK are used only with TIM1 and TIM8.
-  * @retval HAL status
-  */
+ * @brief  Generate a software event
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  EventSource specifies the event source.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_EVENTSOURCE_UPDATE: Timer update Event source
+ *            @arg GPT_EVENTSOURCE_CC1: Timer Capture Compare 1 Event source
+ *            @arg GPT_EVENTSOURCE_CC2: Timer Capture Compare 2 Event source
+ *            @arg GPT_EVENTSOURCE_CC3: Timer Capture Compare 3 Event source
+ *            @arg GPT_EVENTSOURCE_CC4: Timer Capture Compare 4 Event source
+ *            @arg GPT_EVENTSOURCE_COM: Timer COM event source
+ *            @arg GPT_EVENTSOURCE_TRIGGER: Timer Trigger Event source
+ *            @arg GPT_EVENTSOURCE_BREAK: Timer Break event source
+ * @note   TIM6 and TIM7 can only generate an update event.
+ * @note   GPT_EVENTSOURCE_COM and GPT_EVENTSOURCE_BREAK are used only with TIM1 and TIM8.
+ * @retval HAL status
+ */
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PWM_GenerateEvent(PWM_HandleTypeDef *hpwm, uint32_t EventSource)
 {
@@ -541,22 +541,22 @@ __weak void HAL_PWM_ErrorCallback(PWM_HandleTypeDef *hpwm)
   */
 
 /**
-  * @brief  Return the TIM Base state
-  * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM Base state
+ * @param  hpwm pointer to a PWM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_PWM_StateTypeDef HAL_PWM_GetState(PWM_HandleTypeDef *hpwm)
 {
     return hpwm->State;
 }
 
 /**
-  * @brief  TIM DMA error callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA error callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 __HAL_ROM_USED void PWM_DMAError(DMA_HandleTypeDef *hdma)
 {
     PWM_HandleTypeDef *hpwm = (PWM_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -567,18 +567,18 @@ __HAL_ROM_USED void PWM_DMAError(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Enables or disables the TIM Capture Compare Channel x.
-  * @param  TIMx to select the TIM peripheral
-  * @param  Channel specifies the TIM Channel
-  *          This parameter can be one of the following values:
-  *            @arg PWM_Channel_1: TIM Channel 1
-  *            @arg PWM_Channel_2: TIM Channel 2
-  *            @arg PWM_Channel_3: TIM Channel 3
-  *            @arg PWM_Channel_4: TIM Channel 4
-  * @param  ChannelState specifies the TIM Channel CCxE bit new state.
-  *          This parameter can be: PWM_CCx_ENABLE or PWM_CCx_Disable.
-  * @retval None
-  */
+ * @brief  Enables or disables the TIM Capture Compare Channel x.
+ * @param  TIMx to select the TIM peripheral
+ * @param  Channel specifies the TIM Channel
+ *          This parameter can be one of the following values:
+ *            @arg PWM_Channel_1: TIM Channel 1
+ *            @arg PWM_Channel_2: TIM Channel 2
+ *            @arg PWM_Channel_3: TIM Channel 3
+ *            @arg PWM_Channel_4: TIM Channel 4
+ * @param  ChannelState specifies the TIM Channel CCxE bit new state.
+ *          This parameter can be: PWM_CCx_ENABLE or PWM_CCx_Disable.
+ * @retval None
+ */
 void PWM_CCxChannelCmd(PWM_TypeDef *PWMx, uint32_t Channel, uint32_t ChannelState)
 {
     PWM_ChannelTypeDef *pwm_channel;
@@ -595,11 +595,11 @@ void PWM_CCxChannelCmd(PWM_TypeDef *PWMx, uint32_t Channel, uint32_t ChannelStat
 
 
 /**
-  * @brief  Time Output Compare 1 configuration
-  * @param  TIMx to select the TIM peripheral
-  * @param  OC_Config The output configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 1 configuration
+ * @param  TIMx to select the TIM peripheral
+ * @param  OC_Config The output configuration structure
+ * @retval None
+ */
 static void PWM_OC_SetConfig(PWM_ChannelTypeDef *PWM_Channel, PWM_OC_InitTypeDef *OC_Config)
 {
     uint32_t tmpcr;
@@ -628,9 +628,9 @@ static void PWM_OC_SetConfig(PWM_ChannelTypeDef *PWM_Channel, PWM_OC_InitTypeDef
 
 #endif /* HAL_PWM_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

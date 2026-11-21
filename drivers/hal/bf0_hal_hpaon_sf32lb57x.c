@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup AON AON
-  * @brief AON HAL module driver
-  * @{
-  */
+ * @brief AON HAL module driver
+ * @{
+ */
 
 #ifdef HAL_AON_MODULE_ENABLED
 __HAL_ROM_USED int8_t HAL_HPAON_QueryWakeupPin(GPIO_TypeDef *gpio, uint16_t gpio_pin)
@@ -138,9 +138,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_DisableWakeupSrc(HPAON_WakeupSrcTypeD
 
 #endif /* HAL_AON_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

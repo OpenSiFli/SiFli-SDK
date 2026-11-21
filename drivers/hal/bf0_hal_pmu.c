@@ -11,13 +11,13 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PMU PMU
-  * @brief PMU HAL module driver
-  * @{
-  */
+ * @brief PMU HAL module driver
+ * @{
+ */
 
 #ifdef HAL_PMU_MODULE_ENABLED
 
@@ -1564,9 +1564,9 @@ HAL_RAM_RET_CODE_SECT(HAL_PMU_GetHpsysVoutRef, HAL_StatusTypeDef HAL_PMU_ConfigH
 
 #endif /* HAL_PMU_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

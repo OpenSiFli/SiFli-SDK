@@ -19,13 +19,13 @@
 #endif
 */
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup TIM Hardware Timer
-  * @brief TIM HAL module driver
-  * @{
-  */
+ * @brief TIM HAL module driver
+ * @{
+ */
 #if defined(HAL_GPT_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,8 +33,8 @@
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 /** @addtogroup GPT_Private_Functions
-  * @{
-  */
+ * @{
+ */
 /* Private function prototypes -----------------------------------------------*/
 static void GPT_OC1_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config);
 static void GPT_OC3_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config);
@@ -58,13 +58,13 @@ static void GPT_DMATriggerCplt(DMA_HandleTypeDef *hdma);
 static void GPT_SlaveTimer_SetConfig(GPT_HandleTypeDef *htim,
                                      GPT_SlaveConfigTypeDef *sSlaveConfig);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup GPT_Exported_Functions TIM Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup GPT_Exported_Functions_Group1 Time Base functions
  *  @brief    Time Base functions
@@ -88,12 +88,12 @@ static void GPT_SlaveTimer_SetConfig(GPT_HandleTypeDef *htim,
   * @{
   */
 /**
-  * @brief  Initializes the TIM Time base Unit according to the specified
-  *         parameters in the GPT_HandleTypeDef and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Time base Unit according to the specified
+ *         parameters in the GPT_HandleTypeDef and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Init(GPT_HandleTypeDef *htim)
 {
     /* Check the TIM handle allocation */
@@ -174,11 +174,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Init(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes the TIM Base peripheral
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM Base peripheral
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -202,11 +202,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_DeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Initializes the TIM Base MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM Base MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_Base_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -217,11 +217,11 @@ __weak void HAL_GPT_Base_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM Base MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM Base MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_Base_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -232,11 +232,11 @@ __weak void HAL_GPT_Base_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Base generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Base generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -256,11 +256,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Stops the TIM Base generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Base generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -280,11 +280,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Base generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Base generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start_IT(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -301,11 +301,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start_IT(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Stops the TIM Base generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Base generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop_IT(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -321,13 +321,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop_IT(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Base generation in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  pData The source Buffer address.
-  * @param  Length The length of data to be transferred from memory to peripheral.
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Base generation in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  pData The source Buffer address.
+ * @param  Length The length of data to be transferred from memory to peripheral.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start_DMA(GPT_HandleTypeDef *htim, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -368,11 +368,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Start_DMA(GPT_HandleTypeDef *htim,
 }
 
 /**
-  * @brief  Stops the TIM Base generation in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Base generation in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop_DMA(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -391,8 +391,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop_DMA(GPT_HandleTypeDef *htim)
     return HAL_OK;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group2 Time Output Compare functions
  *  @brief    Time Output Compare functions
@@ -416,12 +416,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Base_Stop_DMA(GPT_HandleTypeDef *htim)
   * @{
   */
 /**
-  * @brief  Initializes the TIM Output Compare according to the specified
-  *         parameters in the GPT_HandleTypeDef and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Output Compare according to the specified
+ *         parameters in the GPT_HandleTypeDef and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Init(GPT_HandleTypeDef *htim)
 {
     /* Check the TIM handle allocation */
@@ -455,11 +455,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Init(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes the TIM peripheral
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM peripheral
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -483,11 +483,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_DeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Initializes the TIM Output Compare MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM Output Compare MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_OC_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -498,11 +498,11 @@ __weak void HAL_GPT_OC_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM Output Compare MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM Output Compare MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_OC_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -513,17 +513,17 @@ __weak void HAL_GPT_OC_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Output Compare signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Output Compare signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -546,17 +546,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start(GPT_HandleTypeDef *htim, uint3
 }
 
 /**
-  * @brief  Stops the TIM Output Compare signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Output Compare signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -579,17 +579,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop(GPT_HandleTypeDef *htim, uint32
 }
 
 /**
-  * @brief  Starts the TIM Output Compare signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Output Compare signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -646,17 +646,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start_IT(GPT_HandleTypeDef *htim, ui
 }
 
 /**
-  * @brief  Stops the TIM Output Compare signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Output Compare signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -713,19 +713,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop_IT(GPT_HandleTypeDef *htim, uin
 }
 
 /**
-  * @brief  Starts the TIM Output Compare signal generation in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @param  pData The source Buffer address.
-  * @param  Length The length of data to be transferred from memory to TIM peripheral
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Output Compare signal generation in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @param  pData The source Buffer address.
+ * @param  Length The length of data to be transferred from memory to TIM peripheral
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -833,17 +833,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Start_DMA(GPT_HandleTypeDef *htim, u
 }
 
 /**
-  * @brief  Stops the TIM Output Compare signal generation in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Output Compare signal generation in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -902,8 +902,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop_DMA(GPT_HandleTypeDef *htim, ui
     return HAL_OK;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group3 Time PWM functions
  *  @brief    Time PWM functions
@@ -927,12 +927,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_Stop_DMA(GPT_HandleTypeDef *htim, ui
   * @{
   */
 /**
-  * @brief  Initializes the TIM PWM Time Base according to the specified
-  *         parameters in the GPT_HandleTypeDef and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM PWM Time Base according to the specified
+ *         parameters in the GPT_HandleTypeDef and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Init(GPT_HandleTypeDef *htim)
 {
     /* Check the TIM handle allocation */
@@ -966,11 +966,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Init(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes the TIM peripheral
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM peripheral
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -994,11 +994,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_DeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Initializes the TIM PWM MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM PWM MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_PWM_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1009,11 +1009,11 @@ __weak void HAL_GPT_PWM_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM PWM MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM PWM MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_PWM_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1024,17 +1024,17 @@ __weak void HAL_GPT_PWM_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the PWM signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the PWM signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1057,17 +1057,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start(GPT_HandleTypeDef *htim, uint
 }
 
 /**
-  * @brief  Stops the PWM signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the PWM signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1093,17 +1093,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop(GPT_HandleTypeDef *htim, uint3
 }
 
 /**
-  * @brief  Starts the PWM signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channel to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the PWM signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channel to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1160,17 +1160,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start_IT(GPT_HandleTypeDef *htim, u
 }
 
 /**
-  * @brief  Stops the PWM signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the PWM signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1227,19 +1227,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop_IT(GPT_HandleTypeDef *htim, ui
 }
 
 /**
-  * @brief  Starts the TIM PWM signal generation in CCX DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @param  pData The source Buffer address.
-  * @param  Length The length of data to be transferred from memory to TIM peripheral
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM PWM signal generation in CCX DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @param  pData The source Buffer address.
+ * @param  Length The length of data to be transferred from memory to TIM peripheral
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -1347,19 +1347,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Start_DMA(GPT_HandleTypeDef *htim, 
 }
 
 /**
-  * @brief  Starts the TIM PWM signal generation in Update DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @param  pData The source Buffer address.
-  * @param  Length The length of data to be transferred from memory to TIM peripheral
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM PWM signal generation in Update DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @param  pData The source Buffer address.
+ * @param  Length The length of data to be transferred from memory to TIM peripheral
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_GPT_PWM_Update_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -1442,17 +1442,17 @@ HAL_StatusTypeDef HAL_GPT_PWM_Update_Start_DMA(GPT_HandleTypeDef *htim, uint32_t
 }
 
 /**
-  * @brief  Stops the TIM PWM signal generation in CCX DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM PWM signal generation in CCX DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1512,17 +1512,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_Stop_DMA(GPT_HandleTypeDef *htim, u
 }
 
 /**
-  * @brief  Stops the TIM PWM signal generation in Update DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM PWM signal generation in Update DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_GPT_PWM_Update_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1550,8 +1550,8 @@ HAL_StatusTypeDef HAL_GPT_PWM_Update_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t 
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group4 Time Input Capture functions
  *  @brief    Time Input Capture functions
@@ -1575,12 +1575,12 @@ HAL_StatusTypeDef HAL_GPT_PWM_Update_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t 
   * @{
   */
 /**
-  * @brief  Initializes the TIM Input Capture Time base according to the specified
-  *         parameters in the GPT_HandleTypeDef and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Input Capture Time base according to the specified
+ *         parameters in the GPT_HandleTypeDef and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Init(GPT_HandleTypeDef *htim)
 {
     /* Check the TIM handle allocation */
@@ -1614,11 +1614,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Init(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes the TIM peripheral
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM peripheral
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -1642,11 +1642,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_DeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Initializes the TIM INput Capture MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM INput Capture MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_IC_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1657,11 +1657,11 @@ __weak void HAL_GPT_IC_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM Input Capture MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM Input Capture MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_IC_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -1672,17 +1672,17 @@ __weak void HAL_GPT_IC_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Input Capture measurement.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Input Capture measurement.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1699,17 +1699,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start(GPT_HandleTypeDef *htim, uint3
 }
 
 /**
-  * @brief  Stops the TIM Input Capture measurement.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Input Capture measurement.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1726,17 +1726,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop(GPT_HandleTypeDef *htim, uint32
 }
 
 /**
-  * @brief  Starts the TIM Input Capture measurement in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Input Capture measurement in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1786,17 +1786,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start_IT(GPT_HandleTypeDef *htim, ui
 }
 
 /**
-  * @brief  Stops the TIM Input Capture measurement in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Input Capture measurement in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -1847,19 +1847,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop_IT(GPT_HandleTypeDef *htim, uin
 }
 
 /**
-  * @brief  Starts the TIM Input Capture measurement on in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @param  pData The destination Buffer address.
-  * @param  Length The length of data to be transferred from TIM peripheral to memory.
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Input Capture measurement on in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @param  pData The destination Buffer address.
+ * @param  Length The length of data to be transferred from TIM peripheral to memory.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData, uint16_t Length)
 {
     /* Check the parameters */
@@ -1963,17 +1963,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Start_DMA(GPT_HandleTypeDef *htim, u
 }
 
 /**
-  * @brief  Stops the TIM Input Capture measurement on in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Input Capture measurement on in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2027,8 +2027,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop_DMA(GPT_HandleTypeDef *htim, ui
     return HAL_OK;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group5 Time One Pulse functions
  *  @brief    Time One Pulse functions
@@ -2052,16 +2052,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_Stop_DMA(GPT_HandleTypeDef *htim, ui
   * @{
   */
 /**
-  * @brief  Initializes the TIM One Pulse Time Base according to the specified
-  *         parameters in the GPT_HandleTypeDef and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  OnePulseMode Select the One pulse mode.
-  *         This parameter can be one of the following values:
-  *            @arg GPT_OPMODE_SINGLE: Only one pulse will be generated.
-  *            @arg GPT_OPMODE_REPETITIVE: Repetitive pulses will be generated.
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM One Pulse Time Base according to the specified
+ *         parameters in the GPT_HandleTypeDef and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  OnePulseMode Select the One pulse mode.
+ *         This parameter can be one of the following values:
+ *            @arg GPT_OPMODE_SINGLE: Only one pulse will be generated.
+ *            @arg GPT_OPMODE_REPETITIVE: Repetitive pulses will be generated.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Init(GPT_HandleTypeDef *htim, uint32_t OnePulseMode)
 {
     /* Check the TIM handle allocation */
@@ -2102,11 +2102,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Init(GPT_HandleTypeDef *htim, 
 }
 
 /**
-  * @brief  DeInitializes the TIM One Pulse
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM One Pulse
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -2130,11 +2130,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_DeInit(GPT_HandleTypeDef *htim
 }
 
 /**
-  * @brief  Initializes the TIM One Pulse MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM One Pulse MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_OnePulse_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2145,11 +2145,11 @@ __weak void HAL_GPT_OnePulse_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM One Pulse MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM One Pulse MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_OnePulse_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2160,15 +2160,15 @@ __weak void HAL_GPT_OnePulse_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM One Pulse signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  OutputChannel  TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM One Pulse signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  OutputChannel  TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Start(GPT_HandleTypeDef *htim, uint32_t OutputChannel)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2197,15 +2197,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Start(GPT_HandleTypeDef *htim,
 }
 
 /**
-  * @brief  Stops the TIM One Pulse signal generation.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  OutputChannel  TIM Channels to be disable.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM One Pulse signal generation.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  OutputChannel  TIM Channels to be disable.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Stop(GPT_HandleTypeDef *htim, uint32_t OutputChannel)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2234,15 +2234,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Stop(GPT_HandleTypeDef *htim, 
 }
 
 /**
-  * @brief  Starts the TIM One Pulse signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  OutputChannel  TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM One Pulse signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  OutputChannel  TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Start_IT(GPT_HandleTypeDef *htim, uint32_t OutputChannel)
 {
     /* Enable the Capture compare and the Input Capture channels
@@ -2277,15 +2277,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Start_IT(GPT_HandleTypeDef *ht
 }
 
 /**
-  * @brief  Stops the TIM One Pulse signal generation in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  OutputChannel  TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM One Pulse signal generation in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  OutputChannel  TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Stop_IT(GPT_HandleTypeDef *htim, uint32_t OutputChannel)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2318,8 +2318,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Stop_IT(GPT_HandleTypeDef *hti
     return HAL_OK;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group6 Time Encoder functions
  *  @brief    Time Encoder functions
@@ -2343,12 +2343,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_Stop_IT(GPT_HandleTypeDef *hti
   * @{
   */
 /**
-  * @brief  Initializes the TIM Encoder Interface and create the associated handle.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM Encoder Interface configuration structure
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Encoder Interface and create the associated handle.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM Encoder Interface configuration structure
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Init(GPT_HandleTypeDef *htim,  GPT_Encoder_InitTypeDef *sConfig)
 {
     uint32_t tmpsmcr = 0U;
@@ -2434,11 +2434,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Init(GPT_HandleTypeDef *htim,  
 }
 
 /**
-  * @brief  DeInitializes the TIM Encoder interface
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitializes the TIM Encoder interface
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_DeInit(GPT_HandleTypeDef *htim)
 {
     /* Check the parameters */
@@ -2462,11 +2462,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_DeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Initializes the TIM Encoder Interface MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Initializes the TIM Encoder Interface MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_Encoder_MspInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2477,11 +2477,11 @@ __weak void HAL_GPT_Encoder_MspInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  DeInitializes TIM Encoder Interface MSP.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  DeInitializes TIM Encoder Interface MSP.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_Encoder_MspDeInit(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -2492,16 +2492,16 @@ __weak void HAL_GPT_Encoder_MspDeInit(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Starts the TIM Encoder Interface.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Encoder Interface.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2535,16 +2535,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start(GPT_HandleTypeDef *htim, 
 }
 
 /**
-  * @brief  Stops the TIM Encoder Interface.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Encoder Interface.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2579,16 +2579,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop(GPT_HandleTypeDef *htim, u
 }
 
 /**
-  * @brief  Starts the TIM Encoder Interface in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Encoder Interface in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2628,16 +2628,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start_IT(GPT_HandleTypeDef *hti
 }
 
 /**
-  * @brief  Stops the TIM Encoder Interface in interrupt mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be disabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Encoder Interface in interrupt mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be disabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop_IT(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2680,19 +2680,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop_IT(GPT_HandleTypeDef *htim
 }
 
 /**
-  * @brief  Starts the TIM Encoder Interface in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @param  pData1 The destination Buffer address for IC1.
-  * @param  pData2 The destination Buffer address for IC2.
-  * @param  Length The length of data to be transferred from TIM peripheral to memory.
-  * @retval HAL status
-  */
+ * @brief  Starts the TIM Encoder Interface in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @param  pData1 The destination Buffer address for IC1.
+ * @param  pData2 The destination Buffer address for IC2.
+ * @param  Length The length of data to be transferred from TIM peripheral to memory.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start_DMA(GPT_HandleTypeDef *htim, uint32_t Channel, uint32_t *pData1, uint32_t *pData2, uint16_t Length)
 {
     /* Check the parameters */
@@ -2801,16 +2801,16 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Start_DMA(GPT_HandleTypeDef *ht
 }
 
 /**
-  * @brief  Stops the TIM Encoder Interface in DMA mode.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM Encoder Interface in DMA mode.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_ALL: TIM Channel 1 and TIM Channel 2 are selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop_DMA(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     /* Check the parameters */
@@ -2852,8 +2852,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop_DMA(GPT_HandleTypeDef *hti
     return HAL_OK;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group7 TIM IRQ handler management
  *  @brief    IRQ handler management
@@ -2869,11 +2869,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_Encoder_Stop_DMA(GPT_HandleTypeDef *hti
   * @{
   */
 /**
-  * @brief  This function handles TIM interrupts requests.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  This function handles TIM interrupts requests.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_GPT_IRQHandler(GPT_HandleTypeDef *htim)
 {
     /* Capture compare 1 event */
@@ -3001,8 +3001,8 @@ __HAL_ROM_USED void HAL_GPT_IRQHandler(GPT_HandleTypeDef *htim)
     }
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group8 Peripheral Control functions
  *  @brief      Peripheral Control functions
@@ -3024,19 +3024,19 @@ __HAL_ROM_USED void HAL_GPT_IRQHandler(GPT_HandleTypeDef *htim)
   */
 
 /**
-  * @brief  Initializes the TIM Output Compare Channels according to the specified
-  *         parameters in the GPT_OC_InitTypeDef.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM Output Compare configuration structure
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Output Compare Channels according to the specified
+ *         parameters in the GPT_OC_InitTypeDef.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM Output Compare configuration structure
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_ConfigChannel(GPT_HandleTypeDef *htim, GPT_OC_InitTypeDef *sConfig, uint32_t Channel)
 {
     /* Check the parameters */
@@ -3094,19 +3094,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OC_ConfigChannel(GPT_HandleTypeDef *hti
 }
 
 /**
-  * @brief  Initializes the TIM Input Capture Channels according to the specified
-  *         parameters in the GPT_IC_InitTypeDef.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM Input Capture configuration structure
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM Input Capture Channels according to the specified
+ *         parameters in the GPT_IC_InitTypeDef.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM Input Capture configuration structure
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_ConfigChannel(GPT_HandleTypeDef *htim, GPT_IC_InitTypeDef *sConfig, uint32_t Channel)
 {
     /* Check the parameters */
@@ -3191,19 +3191,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_IC_ConfigChannel(GPT_HandleTypeDef *hti
 }
 
 /**
-  * @brief  Initializes the TIM PWM  channels according to the specified
-  *         parameters in the GPT_OC_InitTypeDef.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM PWM configuration structure
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM PWM  channels according to the specified
+ *         parameters in the GPT_OC_InitTypeDef.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM PWM configuration structure
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_ConfigChannel(GPT_HandleTypeDef *htim, GPT_OC_InitTypeDef *sConfig, uint32_t Channel)
 {
     __HAL_LOCK(htim);
@@ -3275,21 +3275,21 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_PWM_ConfigChannel(GPT_HandleTypeDef *ht
 }
 
 /**
-  * @brief  Initializes the TIM One Pulse Channels according to the specified
-  *         parameters in the GPT_OnePulse_InitTypeDef.
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sConfig TIM One Pulse configuration structure
-  * @param  OutputChannel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @param  InputChannel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  * @retval HAL status
-  */
+ * @brief  Initializes the TIM One Pulse Channels according to the specified
+ *         parameters in the GPT_OnePulse_InitTypeDef.
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sConfig TIM One Pulse configuration structure
+ * @param  OutputChannel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @param  InputChannel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_ConfigChannel(GPT_HandleTypeDef *htim,  GPT_OnePulse_InitTypeDef *sConfig, uint32_t OutputChannel,  uint32_t InputChannel)
 {
     GPT_OC_InitTypeDef temp1;
@@ -3389,44 +3389,44 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_OnePulse_ConfigChannel(GPT_HandleTypeDe
 }
 
 /**
-  * @brief  Configure the DMA Burst to transfer Data from the memory to the TIM peripheral
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  BurstBaseAddress TIM Base address from when the DMA will starts the Data write.
-  *         This parameters can be on of the following values:
-  *            @arg GPT_DMABASE_CR1
-  *            @arg GPT_DMABASE_CR2
-  *            @arg GPT_DMABASE_SMCR
-  *            @arg GPT_DMABASE_DIER
-  *            @arg GPT_DMABASE_SR
-  *            @arg GPT_DMABASE_EGR
-  *            @arg GPT_DMABASE_CCMR1
-  *            @arg GPT_DMABASE_CCMR2
-  *            @arg GPT_DMABASE_CCER
-  *            @arg GPT_DMABASE_CNT
-  *            @arg GPT_DMABASE_PSC
-  *            @arg GPT_DMABASE_ARR
-  *            @arg GPT_DMABASE_RCR
-  *            @arg GPT_DMABASE_CCR1
-  *            @arg GPT_DMABASE_CCR2
-  *            @arg GPT_DMABASE_CCR3
-  *            @arg GPT_DMABASE_CCR4
-  *            @arg GPT_DMABASE_BDTR
-  *            @arg GPT_DMABASE_DCR
-  * @param  BurstRequestSrc TIM DMA Request sources.
-  *         This parameters can be on of the following values:
-  *            @arg GPT_DMA_UPDATE: TIM update Interrupt source
-  *            @arg GPT_DMA_CC1: TIM Capture Compare 1 DMA source
-  *            @arg GPT_DMA_CC2: TIM Capture Compare 2 DMA source
-  *            @arg GPT_DMA_CC3: TIM Capture Compare 3 DMA source
-  *            @arg GPT_DMA_CC4: TIM Capture Compare 4 DMA source
-  *            @arg GPT_DMA_COM: TIM Commutation DMA source
-  *            @arg GPT_DMA_TRIGGER: TIM Trigger DMA source
-  * @param  BurstBuffer The Buffer address.
-  * @param  BurstLength DMA Burst length. This parameter can be one value
-  *         between GPT_DMABURSTLENGTH_1TRANSFER and GPT_DMABURSTLENGTH_18TRANSFERS.
-  * @retval HAL status
-  */
+ * @brief  Configure the DMA Burst to transfer Data from the memory to the TIM peripheral
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  BurstBaseAddress TIM Base address from when the DMA will starts the Data write.
+ *         This parameters can be on of the following values:
+ *            @arg GPT_DMABASE_CR1
+ *            @arg GPT_DMABASE_CR2
+ *            @arg GPT_DMABASE_SMCR
+ *            @arg GPT_DMABASE_DIER
+ *            @arg GPT_DMABASE_SR
+ *            @arg GPT_DMABASE_EGR
+ *            @arg GPT_DMABASE_CCMR1
+ *            @arg GPT_DMABASE_CCMR2
+ *            @arg GPT_DMABASE_CCER
+ *            @arg GPT_DMABASE_CNT
+ *            @arg GPT_DMABASE_PSC
+ *            @arg GPT_DMABASE_ARR
+ *            @arg GPT_DMABASE_RCR
+ *            @arg GPT_DMABASE_CCR1
+ *            @arg GPT_DMABASE_CCR2
+ *            @arg GPT_DMABASE_CCR3
+ *            @arg GPT_DMABASE_CCR4
+ *            @arg GPT_DMABASE_BDTR
+ *            @arg GPT_DMABASE_DCR
+ * @param  BurstRequestSrc TIM DMA Request sources.
+ *         This parameters can be on of the following values:
+ *            @arg GPT_DMA_UPDATE: TIM update Interrupt source
+ *            @arg GPT_DMA_CC1: TIM Capture Compare 1 DMA source
+ *            @arg GPT_DMA_CC2: TIM Capture Compare 2 DMA source
+ *            @arg GPT_DMA_CC3: TIM Capture Compare 3 DMA source
+ *            @arg GPT_DMA_CC4: TIM Capture Compare 4 DMA source
+ *            @arg GPT_DMA_COM: TIM Commutation DMA source
+ *            @arg GPT_DMA_TRIGGER: TIM Trigger DMA source
+ * @param  BurstBuffer The Buffer address.
+ * @param  BurstLength DMA Burst length. This parameter can be one value
+ *         between GPT_DMABURSTLENGTH_1TRANSFER and GPT_DMABURSTLENGTH_18TRANSFERS.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_WriteStart(GPT_HandleTypeDef *htim, uint32_t BurstBaseAddress, uint32_t BurstRequestSrc,
         uint32_t *BurstBuffer, uint32_t  BurstLength)
 {
@@ -3556,12 +3556,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_WriteStart(GPT_HandleTypeDef *
 }
 
 /**
-  * @brief  Stops the TIM DMA Burst mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  BurstRequestSrc TIM DMA Request sources to disable
-  * @retval HAL status
-  */
+ * @brief  Stops the TIM DMA Burst mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  BurstRequestSrc TIM DMA Request sources to disable
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_WriteStop(GPT_HandleTypeDef *htim, uint32_t BurstRequestSrc)
 {
     /* Check the parameters */
@@ -3617,44 +3617,44 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_WriteStop(GPT_HandleTypeDef *h
 }
 
 /**
-  * @brief  Configure the DMA Burst to transfer Data from the TIM peripheral to the memory
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  BurstBaseAddress TIM Base address from when the DMA will starts the Data read.
-  *         This parameters can be on of the following values:
-  *            @arg GPT_DMABASE_CR1
-  *            @arg GPT_DMABASE_CR2
-  *            @arg GPT_DMABASE_SMCR
-  *            @arg GPT_DMABASE_DIER
-  *            @arg GPT_DMABASE_SR
-  *            @arg GPT_DMABASE_EGR
-  *            @arg GPT_DMABASE_CCMR1
-  *            @arg GPT_DMABASE_CCMR2
-  *            @arg GPT_DMABASE_CCER
-  *            @arg GPT_DMABASE_CNT
-  *            @arg GPT_DMABASE_PSC
-  *            @arg GPT_DMABASE_ARR
-  *            @arg GPT_DMABASE_RCR
-  *            @arg GPT_DMABASE_CCR1
-  *            @arg GPT_DMABASE_CCR2
-  *            @arg GPT_DMABASE_CCR3
-  *            @arg GPT_DMABASE_CCR4
-  *            @arg GPT_DMABASE_BDTR
-  *            @arg GPT_DMABASE_DCR
-  * @param  BurstRequestSrc TIM DMA Request sources.
-  *         This parameters can be on of the following values:
-  *            @arg GPT_DMA_UPDATE: TIM update Interrupt source
-  *            @arg GPT_DMA_CC1: TIM Capture Compare 1 DMA source
-  *            @arg GPT_DMA_CC2: TIM Capture Compare 2 DMA source
-  *            @arg GPT_DMA_CC3: TIM Capture Compare 3 DMA source
-  *            @arg GPT_DMA_CC4: TIM Capture Compare 4 DMA source
-  *            @arg GPT_DMA_COM: TIM Commutation DMA source
-  *            @arg GPT_DMA_TRIGGER: TIM Trigger DMA source
-  * @param  BurstBuffer The Buffer address.
-  * @param  BurstLength DMA Burst length. This parameter can be one value
-  *         between GPT_DMABURSTLENGTH_1TRANSFER and GPT_DMABURSTLENGTH_18TRANSFERS.
-  * @retval HAL status
-  */
+ * @brief  Configure the DMA Burst to transfer Data from the TIM peripheral to the memory
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  BurstBaseAddress TIM Base address from when the DMA will starts the Data read.
+ *         This parameters can be on of the following values:
+ *            @arg GPT_DMABASE_CR1
+ *            @arg GPT_DMABASE_CR2
+ *            @arg GPT_DMABASE_SMCR
+ *            @arg GPT_DMABASE_DIER
+ *            @arg GPT_DMABASE_SR
+ *            @arg GPT_DMABASE_EGR
+ *            @arg GPT_DMABASE_CCMR1
+ *            @arg GPT_DMABASE_CCMR2
+ *            @arg GPT_DMABASE_CCER
+ *            @arg GPT_DMABASE_CNT
+ *            @arg GPT_DMABASE_PSC
+ *            @arg GPT_DMABASE_ARR
+ *            @arg GPT_DMABASE_RCR
+ *            @arg GPT_DMABASE_CCR1
+ *            @arg GPT_DMABASE_CCR2
+ *            @arg GPT_DMABASE_CCR3
+ *            @arg GPT_DMABASE_CCR4
+ *            @arg GPT_DMABASE_BDTR
+ *            @arg GPT_DMABASE_DCR
+ * @param  BurstRequestSrc TIM DMA Request sources.
+ *         This parameters can be on of the following values:
+ *            @arg GPT_DMA_UPDATE: TIM update Interrupt source
+ *            @arg GPT_DMA_CC1: TIM Capture Compare 1 DMA source
+ *            @arg GPT_DMA_CC2: TIM Capture Compare 2 DMA source
+ *            @arg GPT_DMA_CC3: TIM Capture Compare 3 DMA source
+ *            @arg GPT_DMA_CC4: TIM Capture Compare 4 DMA source
+ *            @arg GPT_DMA_COM: TIM Commutation DMA source
+ *            @arg GPT_DMA_TRIGGER: TIM Trigger DMA source
+ * @param  BurstBuffer The Buffer address.
+ * @param  BurstLength DMA Burst length. This parameter can be one value
+ *         between GPT_DMABURSTLENGTH_1TRANSFER and GPT_DMABURSTLENGTH_18TRANSFERS.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_ReadStart(GPT_HandleTypeDef *htim, uint32_t BurstBaseAddress, uint32_t BurstRequestSrc,
         uint32_t  *BurstBuffer, uint32_t  BurstLength)
 {
@@ -3785,12 +3785,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_ReadStart(GPT_HandleTypeDef *h
 }
 
 /**
-  * @brief  Stop the DMA burst reading
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  BurstRequestSrc TIM DMA Request sources to disable.
-  * @retval HAL status
-  */
+ * @brief  Stop the DMA burst reading
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  BurstRequestSrc TIM DMA Request sources to disable.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_ReadStop(GPT_HandleTypeDef *htim, uint32_t BurstRequestSrc)
 {
     /* Check the parameters */
@@ -3846,23 +3846,23 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_DMABurst_ReadStop(GPT_HandleTypeDef *ht
 }
 
 /**
-  * @brief  Generate a software event
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  EventSource specifies the event source.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_EVENTSOURCE_UPDATE: Timer update Event source
-  *            @arg GPT_EVENTSOURCE_CC1: Timer Capture Compare 1 Event source
-  *            @arg GPT_EVENTSOURCE_CC2: Timer Capture Compare 2 Event source
-  *            @arg GPT_EVENTSOURCE_CC3: Timer Capture Compare 3 Event source
-  *            @arg GPT_EVENTSOURCE_CC4: Timer Capture Compare 4 Event source
-  *            @arg GPT_EVENTSOURCE_COM: Timer COM event source
-  *            @arg GPT_EVENTSOURCE_TRIGGER: Timer Trigger Event source
-  *            @arg GPT_EVENTSOURCE_BREAK: Timer Break event source
-  * @note   TIM6 and TIM7 can only generate an update event.
-  * @note   GPT_EVENTSOURCE_COM and GPT_EVENTSOURCE_BREAK are used only with TIM1 and TIM8.
-  * @retval HAL status
-  */
+ * @brief  Generate a software event
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  EventSource specifies the event source.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_EVENTSOURCE_UPDATE: Timer update Event source
+ *            @arg GPT_EVENTSOURCE_CC1: Timer Capture Compare 1 Event source
+ *            @arg GPT_EVENTSOURCE_CC2: Timer Capture Compare 2 Event source
+ *            @arg GPT_EVENTSOURCE_CC3: Timer Capture Compare 3 Event source
+ *            @arg GPT_EVENTSOURCE_CC4: Timer Capture Compare 4 Event source
+ *            @arg GPT_EVENTSOURCE_COM: Timer COM event source
+ *            @arg GPT_EVENTSOURCE_TRIGGER: Timer Trigger Event source
+ *            @arg GPT_EVENTSOURCE_BREAK: Timer Break event source
+ * @note   TIM6 and TIM7 can only generate an update event.
+ * @note   GPT_EVENTSOURCE_COM and GPT_EVENTSOURCE_BREAK are used only with TIM1 and TIM8.
+ * @retval HAL status
+ */
 
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_GenerateEvent(GPT_HandleTypeDef *htim, uint32_t EventSource)
 {
@@ -3889,19 +3889,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_GenerateEvent(GPT_HandleTypeDef *htim, 
 }
 
 /**
-  * @brief  Configures the OCRef clear feature
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sClearInputConfig pointer to a GPT_ClearInputConfigTypeDef structure that
-  *         contains the OCREF clear feature and parameters for the TIM peripheral.
-  * @param  Channel specifies the TIM Channel.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval HAL status
-  */
+ * @brief  Configures the OCRef clear feature
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sClearInputConfig pointer to a GPT_ClearInputConfigTypeDef structure that
+ *         contains the OCREF clear feature and parameters for the TIM peripheral.
+ * @param  Channel specifies the TIM Channel.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigOCrefClear(GPT_HandleTypeDef *htim, GPT_ClearInputConfigTypeDef *sClearInputConfig, uint32_t Channel)
 {
     /* Check the parameters */
@@ -3998,13 +3998,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigOCrefClear(GPT_HandleTypeDef *hti
 }
 
 /**
-  * @brief   Configures the clock source to be used
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sClockSourceConfig pointer to a GPT_ClockConfigTypeDef structure that
-  *         contains the clock source information for the TIM peripheral.
-  * @retval HAL status
-  */
+ * @brief   Configures the clock source to be used
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sClockSourceConfig pointer to a GPT_ClockConfigTypeDef structure that
+ *         contains the clock source information for the TIM peripheral.
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigClockSource(GPT_HandleTypeDef *htim, GPT_ClockConfigTypeDef *sClockSourceConfig)
 {
     uint32_t tmpsmcr = 0U;
@@ -4154,18 +4154,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigClockSource(GPT_HandleTypeDef *ht
 }
 
 /**
-  * @brief  Selects the signal connected to the TI1 input: direct from CH1_input
-  *         or a XOR combination between CH1_input, CH2_input & CH3_input
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  TI1_Selection Indicate whether or not channel 1 is connected to the
-  *         output of a XOR gate.
-  *         This parameter can be one of the following values:
-  *            @arg GPT_TI1SELECTION_CH1: The TIMx_CH1 pin is connected to TI1 input
-  *            @arg GPT_TI1SELECTION_XORCOMBINATION: The TIMx_CH1, CH2 and CH3
-  *            pins are connected to the TI1 input (XOR combination)
-  * @retval HAL status
-  */
+ * @brief  Selects the signal connected to the TI1 input: direct from CH1_input
+ *         or a XOR combination between CH1_input, CH2_input & CH3_input
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  TI1_Selection Indicate whether or not channel 1 is connected to the
+ *         output of a XOR gate.
+ *         This parameter can be one of the following values:
+ *            @arg GPT_TI1SELECTION_CH1: The TIMx_CH1 pin is connected to TI1 input
+ *            @arg GPT_TI1SELECTION_XORCOMBINATION: The TIMx_CH1, CH2 and CH3
+ *            pins are connected to the TI1 input (XOR combination)
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigTI1Input(GPT_HandleTypeDef *htim, uint32_t TI1_Selection)
 {
     uint32_t tmpcr2 = 0U;
@@ -4190,15 +4190,15 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_ConfigTI1Input(GPT_HandleTypeDef *htim,
 }
 
 /**
-  * @brief  Configures the TIM in Slave mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sSlaveConfig pointer to a GPT_SlaveConfigTypeDef structure that
-  *         contains the selected trigger (internal trigger input, filtered
-  *         timer input or external trigger input) and the ) and the Slave
-  *         mode (Disable, Reset, Gated, Trigger, External clock mode 1).
-  * @retval HAL status
-  */
+ * @brief  Configures the TIM in Slave mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sSlaveConfig pointer to a GPT_SlaveConfigTypeDef structure that
+ *         contains the selected trigger (internal trigger input, filtered
+ *         timer input or external trigger input) and the ) and the Slave
+ *         mode (Disable, Reset, Gated, Trigger, External clock mode 1).
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_SlaveConfigSynchronization(GPT_HandleTypeDef *htim, GPT_SlaveConfigTypeDef *sSlaveConfig)
 {
     /* Check the parameters */
@@ -4226,14 +4226,14 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_SlaveConfigSynchronization(GPT_HandleTy
 }
 
 /**
-  * @brief  Configures the TIM in Slave mode in interrupt mode
-  * @param  htim TIM handle.
-  * @param  sSlaveConfig pointer to a GPT_SlaveConfigTypeDef structure that
-  *         contains the selected trigger (internal trigger input, filtered
-  *         timer input or external trigger input) and the ) and the Slave
-  *         mode (Disable, Reset, Gated, Trigger, External clock mode 1).
-  * @retval HAL status
-  */
+ * @brief  Configures the TIM in Slave mode in interrupt mode
+ * @param  htim TIM handle.
+ * @param  sSlaveConfig pointer to a GPT_SlaveConfigTypeDef structure that
+ *         contains the selected trigger (internal trigger input, filtered
+ *         timer input or external trigger input) and the ) and the Slave
+ *         mode (Disable, Reset, Gated, Trigger, External clock mode 1).
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_SlaveConfigSynchronization_IT(GPT_HandleTypeDef *htim,
         GPT_SlaveConfigTypeDef *sSlaveConfig)
 {
@@ -4262,17 +4262,17 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_GPT_SlaveConfigSynchronization_IT(GPT_Handl
 }
 
 /**
-  * @brief  Read the captured value from Capture Compare unit
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  Channel TIM Channels to be enabled.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
-  *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
-  *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
-  *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
-  * @retval Captured value
-  */
+ * @brief  Read the captured value from Capture Compare unit
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  Channel TIM Channels to be enabled.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_CHANNEL_1: TIM Channel 1 selected
+ *            @arg GPT_CHANNEL_2: TIM Channel 2 selected
+ *            @arg GPT_CHANNEL_3: TIM Channel 3 selected
+ *            @arg GPT_CHANNEL_4: TIM Channel 4 selected
+ * @retval Captured value
+ */
 __HAL_ROM_USED uint32_t HAL_GPT_ReadCapturedValue(GPT_HandleTypeDef *htim, uint32_t Channel)
 {
     uint32_t tmpreg = 0U;
@@ -4332,8 +4332,8 @@ __HAL_ROM_USED uint32_t HAL_GPT_ReadCapturedValue(GPT_HandleTypeDef *htim, uint3
     return tmpreg;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group9 TIM Callbacks functions
  *  @brief    TIM Callbacks functions
@@ -4355,11 +4355,11 @@ __HAL_ROM_USED uint32_t HAL_GPT_ReadCapturedValue(GPT_HandleTypeDef *htim, uint3
   */
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_PeriodElapsedCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4370,11 +4370,11 @@ __weak void HAL_GPT_PeriodElapsedCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Output Compare callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Output Compare callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_OC_DelayElapsedCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4385,11 +4385,11 @@ __weak void HAL_GPT_OC_DelayElapsedCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Input Capture callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Input Capture callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_IC_CaptureCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4400,10 +4400,10 @@ __weak void HAL_GPT_IC_CaptureCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Input Capture half complete callback in non-blocking mode
-  * @param  htim TIM IC handle
-  * @retval None
-  */
+ * @brief  Input Capture half complete callback in non-blocking mode
+ * @param  htim TIM IC handle
+ * @retval None
+ */
 __weak void HAL_GPT_IC_CaptureHalfCpltCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4415,11 +4415,11 @@ __weak void HAL_GPT_IC_CaptureHalfCpltCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  PWM Pulse finished callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  PWM Pulse finished callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_PWM_PulseFinishedCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4430,10 +4430,10 @@ __weak void HAL_GPT_PWM_PulseFinishedCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  PWM Pulse finished half complete callback in non-blocking mode
-  * @param  htim TIM handle
-  * @retval None
-  */
+ * @brief  PWM Pulse finished half complete callback in non-blocking mode
+ * @param  htim TIM handle
+ * @retval None
+ */
 __weak void HAL_GPT_PWM_PulseFinishedHalfCpltCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4446,11 +4446,11 @@ __weak void HAL_GPT_PWM_PulseFinishedHalfCpltCallback(GPT_HandleTypeDef *htim)
 
 
 /**
-  * @brief  Hall Trigger detection callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Hall Trigger detection callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_TriggerCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4461,11 +4461,11 @@ __weak void HAL_GPT_TriggerCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Timer error callback in non blocking mode
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Timer error callback in non blocking mode
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_GPT_ErrorCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -4475,8 +4475,8 @@ __weak void HAL_GPT_ErrorCallback(GPT_HandleTypeDef *htim)
      */
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup GPT_Exported_Functions_Group10 Peripheral State functions
  *  @brief   Peripheral State functions
@@ -4494,80 +4494,80 @@ __weak void HAL_GPT_ErrorCallback(GPT_HandleTypeDef *htim)
   */
 
 /**
-  * @brief  Return the TIM Base state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM Base state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_Base_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 
 /**
-  * @brief  Return the TIM OC state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM OC state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_OC_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 
 /**
-  * @brief  Return the TIM PWM state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM PWM state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_PWM_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 
 /**
-  * @brief  Return the TIM Input Capture state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM Input Capture state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_IC_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 
 /**
-  * @brief  Return the TIM One Pulse Mode state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM One Pulse Mode state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_OnePulse_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 
 /**
-  * @brief  Return the TIM Encoder Mode state
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval HAL state
-  */
+ * @brief  Return the TIM Encoder Mode state
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval HAL state
+ */
 __HAL_ROM_USED HAL_GPT_StateTypeDef HAL_GPT_Encoder_GetState(GPT_HandleTypeDef *htim)
 {
     return htim->State;
 }
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @brief  Time Base configuration
-  * @param  TIMx TIM peripheral
-  * @param  Structure pointer on TIM Time Base required parameters
-  * @retval None
-  */
+ * @brief  Time Base configuration
+ * @param  TIMx TIM peripheral
+ * @param  Structure pointer on TIM Time Base required parameters
+ * @retval None
+ */
 __HAL_ROM_USED void GPT_Base_SetConfig(GPT_TypeDef *TIMx, GPT_Base_InitTypeDef *Structure)
 {
     uint32_t tmpcr1 = 0U;
@@ -4603,25 +4603,25 @@ __HAL_ROM_USED void GPT_Base_SetConfig(GPT_TypeDef *TIMx, GPT_Base_InitTypeDef *
 }
 
 /**
-  * @brief  Configure the TI1 as Input.
-  * @param  TIMx to select the TIM peripheral.
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICSelection specifies the input to be used.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICSelection_DirectTI: TIM Input 1 is selected to be connected to IC1.
-  *            @arg GPT_ICSelection_IndirectTI: TIM Input 1 is selected to be connected to IC2.
-  *            @arg GPT_ICSelection_TRC: TIM Input 1 is selected to be connected to TRC.
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI2FP1
-  *       (on channel2 path) is used as the input signal. Therefore CCMR1 must be
-  *        protected against un-initialized filter and polarity values.
-  * @retval None
-  */
+ * @brief  Configure the TI1 as Input.
+ * @param  TIMx to select the TIM peripheral.
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICSelection specifies the input to be used.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICSelection_DirectTI: TIM Input 1 is selected to be connected to IC1.
+ *            @arg GPT_ICSelection_IndirectTI: TIM Input 1 is selected to be connected to IC2.
+ *            @arg GPT_ICSelection_TRC: TIM Input 1 is selected to be connected to TRC.
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI2FP1
+ *       (on channel2 path) is used as the input signal. Therefore CCMR1 must be
+ *        protected against un-initialized filter and polarity values.
+ * @retval None
+ */
 __HAL_ROM_USED void GPT_TI1_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICSelection,
                                       uint32_t GPT_ICFilter)
 {
@@ -4659,11 +4659,11 @@ __HAL_ROM_USED void GPT_TI1_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity
 }
 
 /**
-  * @brief  Time Output Compare 2 configuration
-  * @param  TIMx to select the TIM peripheral
-  * @param  OC_Config The output configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 2 configuration
+ * @param  TIMx to select the TIM peripheral
+ * @param  OC_Config The output configuration structure
+ * @retval None
+ */
 __HAL_ROM_USED void GPT_OC2_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 {
     uint32_t tmpccmrx = 0U;
@@ -4726,11 +4726,11 @@ __HAL_ROM_USED void GPT_OC2_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_
 }
 
 /**
-  * @brief  TIM DMA Delay Pulse complete callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA Delay Pulse complete callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 __HAL_ROM_USED void GPT_DMADelayPulseCplt(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4760,11 +4760,11 @@ __HAL_ROM_USED void GPT_DMADelayPulseCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  TIM DMA error callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA error callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 __HAL_ROM_USED void GPT_DMAError(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4775,11 +4775,11 @@ __HAL_ROM_USED void GPT_DMAError(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  TIM DMA Capture complete callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA Capture complete callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 void GPT_DMACaptureCplt(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4809,10 +4809,10 @@ void GPT_DMACaptureCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  TIM DMA Capture half complete callback.
-  * @param  hdma pointer to DMA handle.
-  * @retval None
-  */
+ * @brief  TIM DMA Capture half complete callback.
+ * @param  hdma pointer to DMA handle.
+ * @retval None
+ */
 void GPT_DMACaptureHalfCplt(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4845,18 +4845,18 @@ void GPT_DMACaptureHalfCplt(DMA_HandleTypeDef *hdma)
 
 
 /**
-  * @brief  Enables or disables the TIM Capture Compare Channel x.
-  * @param  TIMx to select the TIM peripheral
-  * @param  Channel specifies the TIM Channel
-  *          This parameter can be one of the following values:
-  *            @arg GPT_Channel_1: TIM Channel 1
-  *            @arg GPT_Channel_2: TIM Channel 2
-  *            @arg GPT_Channel_3: TIM Channel 3
-  *            @arg GPT_Channel_4: TIM Channel 4
-  * @param  ChannelState specifies the TIM Channel CCxE bit new state.
-  *          This parameter can be: GPT_CCx_ENABLE or GPT_CCx_Disable.
-  * @retval None
-  */
+ * @brief  Enables or disables the TIM Capture Compare Channel x.
+ * @param  TIMx to select the TIM peripheral
+ * @param  Channel specifies the TIM Channel
+ *          This parameter can be one of the following values:
+ *            @arg GPT_Channel_1: TIM Channel 1
+ *            @arg GPT_Channel_2: TIM Channel 2
+ *            @arg GPT_Channel_3: TIM Channel 3
+ *            @arg GPT_Channel_4: TIM Channel 4
+ * @param  ChannelState specifies the TIM Channel CCxE bit new state.
+ *          This parameter can be: GPT_CCx_ENABLE or GPT_CCx_Disable.
+ * @retval None
+ */
 void GPT_CCxChannelCmd(GPT_TypeDef *TIMx, uint32_t Channel, uint32_t ChannelState)
 {
     uint32_t tmp = 0U;
@@ -4875,11 +4875,11 @@ void GPT_CCxChannelCmd(GPT_TypeDef *TIMx, uint32_t Channel, uint32_t ChannelStat
 }
 
 /**
-  * @brief  TIM DMA Period Elapse complete callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA Period Elapse complete callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void GPT_DMAPeriodElapsedCplt(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4890,11 +4890,11 @@ static void GPT_DMAPeriodElapsedCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  TIM DMA Trigger callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  TIM DMA Trigger callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void GPT_DMATriggerCplt(DMA_HandleTypeDef *hdma)
 {
     GPT_HandleTypeDef *htim = (GPT_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -4905,11 +4905,11 @@ static void GPT_DMATriggerCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  Time Output Compare 1 configuration
-  * @param  TIMx to select the TIM peripheral
-  * @param  OC_Config The output configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 1 configuration
+ * @param  TIMx to select the TIM peripheral
+ * @param  OC_Config The output configuration structure
+ * @retval None
+ */
 static void GPT_OC1_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 {
     uint32_t tmpccmrx = 0U;
@@ -4970,11 +4970,11 @@ static void GPT_OC1_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 }
 
 /**
-  * @brief  Time Output Compare 3 configuration
-  * @param  TIMx to select the TIM peripheral
-  * @param  OC_Config The output configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 3 configuration
+ * @param  TIMx to select the TIM peripheral
+ * @param  OC_Config The output configuration structure
+ * @retval None
+ */
 static void GPT_OC3_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 {
     uint32_t tmpccmrx = 0U;
@@ -5038,11 +5038,11 @@ static void GPT_OC3_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 }
 
 /**
-  * @brief  Time Output Compare 4 configuration
-  * @param  TIMx to select the TIM peripheral
-  * @param  OC_Config The output configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 4 configuration
+ * @param  TIMx to select the TIM peripheral
+ * @param  OC_Config The output configuration structure
+ * @retval None
+ */
 static void GPT_OC4_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 {
     uint32_t tmpccmrx = 0U;
@@ -5095,12 +5095,12 @@ static void GPT_OC4_SetConfig(GPT_TypeDef *TIMx, GPT_OC_InitTypeDef *OC_Config)
 }
 
 /**
-  * @brief  Time Output Compare 4 configuration
-  * @param  htim pointer to a GPT_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @param  sSlaveConfig The slave configuration structure
-  * @retval None
-  */
+ * @brief  Time Output Compare 4 configuration
+ * @param  htim pointer to a GPT_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @param  sSlaveConfig The slave configuration structure
+ * @retval None
+ */
 static void GPT_SlaveTimer_SetConfig(GPT_HandleTypeDef *htim,
                                      GPT_SlaveConfigTypeDef *sSlaveConfig)
 {
@@ -5227,17 +5227,17 @@ static void GPT_SlaveTimer_SetConfig(GPT_HandleTypeDef *htim,
 
 
 /**
-  * @brief  Configure the Polarity and Filter for TI1.
-  * @param  TIMx to select the TIM peripheral.
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @retval None
-  */
+ * @brief  Configure the Polarity and Filter for TI1.
+ * @param  TIMx to select the TIM peripheral.
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @retval None
+ */
 static void GPT_TI1_ConfigInputStage(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICFilter)
 {
     uint32_t tmpccmr1 = 0U;
@@ -5262,25 +5262,25 @@ static void GPT_TI1_ConfigInputStage(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity,
 }
 
 /**
-  * @brief  Configure the TI2 as Input.
-  * @param  TIMx to select the TIM peripheral
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICSelection specifies the input to be used.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICSelection_DirectTI: TIM Input 2 is selected to be connected to IC2.
-  *            @arg GPT_ICSelection_IndirectTI: TIM Input 2 is selected to be connected to IC1.
-  *            @arg GPT_ICSelection_TRC: TIM Input 2 is selected to be connected to TRC.
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI1FP2
-  *       (on channel1 path) is used as the input signal. Therefore CCMR1 must be
-  *        protected against un-initialized filter and polarity values.
-  * @retval None
-  */
+ * @brief  Configure the TI2 as Input.
+ * @param  TIMx to select the TIM peripheral
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICSelection specifies the input to be used.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICSelection_DirectTI: TIM Input 2 is selected to be connected to IC2.
+ *            @arg GPT_ICSelection_IndirectTI: TIM Input 2 is selected to be connected to IC1.
+ *            @arg GPT_ICSelection_TRC: TIM Input 2 is selected to be connected to TRC.
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI1FP2
+ *       (on channel1 path) is used as the input signal. Therefore CCMR1 must be
+ *        protected against un-initialized filter and polarity values.
+ * @retval None
+ */
 static void GPT_TI2_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICSelection,
                               uint32_t GPT_ICFilter)
 {
@@ -5310,17 +5310,17 @@ static void GPT_TI2_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32
 }
 
 /**
-  * @brief  Configure the Polarity and Filter for TI2.
-  * @param  TIMx to select the TIM peripheral.
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @retval None
-  */
+ * @brief  Configure the Polarity and Filter for TI2.
+ * @param  TIMx to select the TIM peripheral.
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @retval None
+ */
 static void GPT_TI2_ConfigInputStage(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICFilter)
 {
     uint32_t tmpccmr1 = 0U;
@@ -5345,25 +5345,25 @@ static void GPT_TI2_ConfigInputStage(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity,
 }
 
 /**
-  * @brief  Configure the TI3 as Input.
-  * @param  TIMx to select the TIM peripheral
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICSelection specifies the input to be used.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICSelection_DirectTI: TIM Input 3 is selected to be connected to IC3.
-  *            @arg GPT_ICSelection_IndirectTI: TIM Input 3 is selected to be connected to IC4.
-  *            @arg GPT_ICSelection_TRC: TIM Input 3 is selected to be connected to TRC.
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI4FP3
-  *       (on channel4 path) is used as the input signal. Therefore CCMR2 must be
-  *        protected against un-initialized filter and polarity values.
-  * @retval None
-  */
+ * @brief  Configure the TI3 as Input.
+ * @param  TIMx to select the TIM peripheral
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICSelection specifies the input to be used.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICSelection_DirectTI: TIM Input 3 is selected to be connected to IC3.
+ *            @arg GPT_ICSelection_IndirectTI: TIM Input 3 is selected to be connected to IC4.
+ *            @arg GPT_ICSelection_TRC: TIM Input 3 is selected to be connected to TRC.
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI4FP3
+ *       (on channel4 path) is used as the input signal. Therefore CCMR2 must be
+ *        protected against un-initialized filter and polarity values.
+ * @retval None
+ */
 static void GPT_TI3_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICSelection,
                               uint32_t GPT_ICFilter)
 {
@@ -5393,25 +5393,25 @@ static void GPT_TI3_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32
 }
 
 /**
-  * @brief  Configure the TI4 as Input.
-  * @param  TIMx to select the TIM peripheral
-  * @param  GPT_ICPolarity  The Input Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICPolarity_Rising
-  *            @arg GPT_ICPolarity_Falling
-  *            @arg GPT_ICPolarity_BothEdge
-  * @param  GPT_ICSelection specifies the input to be used.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ICSelection_DirectTI: TIM Input 4 is selected to be connected to IC4.
-  *            @arg GPT_ICSelection_IndirectTI: TIM Input 4 is selected to be connected to IC3.
-  *            @arg GPT_ICSelection_TRC: TIM Input 4 is selected to be connected to TRC.
-  * @param  GPT_ICFilter Specifies the Input Capture Filter.
-  *          This parameter must be a value between 0x00 and 0x0F.
-  * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI3FP4
-  *       (on channel3 path) is used as the input signal. Therefore CCMR2 must be
-  *        protected against un-initialized filter and polarity values.
-  * @retval None
-  */
+ * @brief  Configure the TI4 as Input.
+ * @param  TIMx to select the TIM peripheral
+ * @param  GPT_ICPolarity  The Input Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICPolarity_Rising
+ *            @arg GPT_ICPolarity_Falling
+ *            @arg GPT_ICPolarity_BothEdge
+ * @param  GPT_ICSelection specifies the input to be used.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ICSelection_DirectTI: TIM Input 4 is selected to be connected to IC4.
+ *            @arg GPT_ICSelection_IndirectTI: TIM Input 4 is selected to be connected to IC3.
+ *            @arg GPT_ICSelection_TRC: TIM Input 4 is selected to be connected to TRC.
+ * @param  GPT_ICFilter Specifies the Input Capture Filter.
+ *          This parameter must be a value between 0x00 and 0x0F.
+ * @note GPT_ICFilter and GPT_ICPolarity are not used in INDIRECT mode as TI3FP4
+ *       (on channel3 path) is used as the input signal. Therefore CCMR2 must be
+ *        protected against un-initialized filter and polarity values.
+ * @retval None
+ */
 static void GPT_TI4_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32_t GPT_ICSelection,
                               uint32_t GPT_ICFilter)
 {
@@ -5441,20 +5441,20 @@ static void GPT_TI4_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ICPolarity, uint32
 }
 
 /**
-  * @brief  Selects the Input Trigger source
-  * @param  TIMx to select the TIM peripheral
-  * @param  GPT_ITRx The Input Trigger source.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_TS_ITR0: Internal Trigger 0
-  *            @arg GPT_TS_ITR1: Internal Trigger 1
-  *            @arg GPT_TS_ITR2: Internal Trigger 2
-  *            @arg GPT_TS_ITR3: Internal Trigger 3
-  *            @arg GPT_TS_TI1F_ED: TI1 Edge Detector
-  *            @arg GPT_TS_TI1FP1: Filtered Timer Input 1
-  *            @arg GPT_TS_TI2FP2: Filtered Timer Input 2
-  *            @arg GPT_TS_ETRF: External Trigger input
-  * @retval None
-  */
+ * @brief  Selects the Input Trigger source
+ * @param  TIMx to select the TIM peripheral
+ * @param  GPT_ITRx The Input Trigger source.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_TS_ITR0: Internal Trigger 0
+ *            @arg GPT_TS_ITR1: Internal Trigger 1
+ *            @arg GPT_TS_ITR2: Internal Trigger 2
+ *            @arg GPT_TS_ITR3: Internal Trigger 3
+ *            @arg GPT_TS_TI1F_ED: TI1 Edge Detector
+ *            @arg GPT_TS_TI1FP1: Filtered Timer Input 1
+ *            @arg GPT_TS_TI2FP2: Filtered Timer Input 2
+ *            @arg GPT_TS_ETRF: External Trigger input
+ * @retval None
+ */
 static void GPT_ITRx_SetConfig(GPT_TypeDef *TIMx, uint16_t GPT_ITRx)
 {
     uint32_t tmpsmcr = 0U;
@@ -5470,22 +5470,22 @@ static void GPT_ITRx_SetConfig(GPT_TypeDef *TIMx, uint16_t GPT_ITRx)
 }
 
 /**
-  * @brief  Configures the TIMx External Trigger (ETR).
-  * @param  TIMx to select the TIM peripheral
-  * @param  GPT_ExtTRGPrescaler The external Trigger Prescaler.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ETRPRESCALER_DIV1 : ETRP Prescaler OFF.
-  *            @arg GPT_ETRPRESCALER_DIV2 : ETRP frequency divided by 2.
-  *            @arg GPT_ETRPRESCALER_DIV4 : ETRP frequency divided by 4.
-  *            @arg GPT_ETRPRESCALER_DIV8 : ETRP frequency divided by 8.
-  * @param  GPT_ExtTRGPolarity The external Trigger Polarity.
-  *          This parameter can be one of the following values:
-  *            @arg GPT_ETRPOLARITY_INVERTED : active low or falling edge active.
-  *            @arg GPT_ETRPOLARITY_NONINVERTED : active high or rising edge active.
-  * @param  ExtTRGFilter External Trigger Filter.
-  *          This parameter must be a value between 0x00 and 0x0F
-  * @retval None
-  */
+ * @brief  Configures the TIMx External Trigger (ETR).
+ * @param  TIMx to select the TIM peripheral
+ * @param  GPT_ExtTRGPrescaler The external Trigger Prescaler.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ETRPRESCALER_DIV1 : ETRP Prescaler OFF.
+ *            @arg GPT_ETRPRESCALER_DIV2 : ETRP frequency divided by 2.
+ *            @arg GPT_ETRPRESCALER_DIV4 : ETRP frequency divided by 4.
+ *            @arg GPT_ETRPRESCALER_DIV8 : ETRP frequency divided by 8.
+ * @param  GPT_ExtTRGPolarity The external Trigger Polarity.
+ *          This parameter can be one of the following values:
+ *            @arg GPT_ETRPOLARITY_INVERTED : active low or falling edge active.
+ *            @arg GPT_ETRPOLARITY_NONINVERTED : active high or rising edge active.
+ * @param  ExtTRGFilter External Trigger Filter.
+ *          This parameter must be a value between 0x00 and 0x0F
+ * @retval None
+ */
 static void GPT_ETR_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ExtTRGPrescaler,
                               uint32_t GPT_ExtTRGPolarity, uint32_t ExtTRGFilter)
 {
@@ -5504,15 +5504,15 @@ static void GPT_ETR_SetConfig(GPT_TypeDef *TIMx, uint32_t GPT_ExtTRGPrescaler,
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-* @brief  Hall commutation changed callback in non blocking mode
-* @param  htim pointer to a TIM_HandleTypeDef structure that contains
-*                the configuration information for TIM module.
-* @retval None
-*/
+ * @brief  Hall commutation changed callback in non blocking mode
+ * @param  htim pointer to a TIM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_TIMEx_CommutationCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -5523,11 +5523,11 @@ __weak void HAL_TIMEx_CommutationCallback(GPT_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  Hall Break detection callback in non blocking mode
-  * @param  htim pointer to a TIM_HandleTypeDef structure that contains
-  *                the configuration information for TIM module.
-  * @retval None
-  */
+ * @brief  Hall Break detection callback in non blocking mode
+ * @param  htim pointer to a TIM_HandleTypeDef structure that contains
+ *                the configuration information for TIM module.
+ * @retval None
+ */
 __weak void HAL_TIMEx_BreakCallback(GPT_HandleTypeDef *htim)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -5540,9 +5540,9 @@ __weak void HAL_TIMEx_BreakCallback(GPT_HandleTypeDef *htim)
 
 #endif /* HAL_GPT_MODULE_ENABLED */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

@@ -287,11 +287,11 @@ error:
 
 
 /**
-  * @brief Stop the DMA Transfer.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval HAL status
-  */
+ * @brief Stop the DMA Transfer.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_PDM_DMAStop(PDM_HandleTypeDef *hpdm)
 {
     /* The Lock is not implemented on this API to allow the user application
@@ -383,11 +383,11 @@ __weak void HAL_PDM_AbortCpltCallback(PDM_HandleTypeDef *hpdm)
 
 
 /**
-  * @brief DMA PDM receive process complete callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief DMA PDM receive process complete callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void PDM_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
 {
     PDM_HandleTypeDef *hpdm = (PDM_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -417,11 +417,11 @@ static void PDM_DMAReceiveCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA PDM half receive process complete callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM half receive process complete callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void PDM_DMAHalfReceiveCplt(DMA_HandleTypeDef *hdma)
 {
     PDM_HandleTypeDef *hpdm = (PDM_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -431,11 +431,11 @@ static void PDM_DMAHalfReceiveCplt(DMA_HandleTypeDef *hdma)
 
 
 /**
-  * @brief  DMA PDM communication error callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM communication error callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void PDM_DMAError(DMA_HandleTypeDef *hdma)
 {
     PDM_HandleTypeDef *hpdm = (PDM_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;

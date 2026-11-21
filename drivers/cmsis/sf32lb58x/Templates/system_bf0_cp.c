@@ -8,20 +8,20 @@
 #include "register.h"
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_TypesDefinitions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_Defines
-  * @{
-  */
+ * @{
+ */
 #if !defined  (HSE_VALUE)
     #define HSE_VALUE    ((uint32_t)8000000) /*!< Default value of the External oscillator in Hz.
     This value can be provided and adapted by the user application. */
@@ -37,20 +37,20 @@
     This value can be provided and adapted by the user application. */
 #endif /* HSI48_VALUE */
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_Macros
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_Variables
-  * @{
-  */
+ * @{
+ */
 /* This variable is updated in three ways:
     1) by calling CMSIS function SystemCoreClockUpdate()
     2) by calling HAL API function HAL_RCC_GetHCLKFreq()
@@ -65,27 +65,27 @@ const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 
 const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_FunctionPrototypes
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup BF0_CP_System_Private_Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief  Setup the microcontroller system.
-  *         Initialize the default HSI clock source, vector table location and the PLL configuration is reset.
-  * @param  None
-  * @retval None
-  */
+ * @brief  Setup the microcontroller system.
+ *         Initialize the default HSI clock source, vector table location and the PLL configuration is reset.
+ * @param  None
+ * @retval None
+ */
 #if defined (__VTOR_PRESENT) && (__VTOR_PRESENT == 1U)
     extern uint32_t __Vectors;
 #endif
@@ -175,15 +175,15 @@ void SystemCoreClockUpdate(void)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 

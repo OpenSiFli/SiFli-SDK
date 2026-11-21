@@ -15,17 +15,17 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup SDMMC SDMMC Low layer(Z0)
-  * @{
-  */
+ * @{
+ */
 
 /* Register address and description define ------------------------------------------------------------*/
 /** @defgroup SDMMC_Register_Types SDMMC Register Types
-  * @{
-  */
+ * @{
+ */
 
 #define HAL_SDMMC_DEFAULT_TIMEOUT       (400000)          /*!<   SDMMC default timeout config */
 
@@ -40,285 +40,285 @@ extern "C" {
 #define HAL_SDMMC_WIRE_OLINE            (2<<SD_DCR_WIRE_MODE_Pos)    /*!<   8 line mode */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup SDMMC_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief SDMMC initial.
-  * @param hsd sd handle.
-  * @retval HAL status
-  */
+ * @brief SDMMC initial.
+ * @param hsd sd handle.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_INIT(SD_TypeDef *hsd);
 
 /**
-  * @brief Get sd command response.
-  * @param hsd sd handle.
-  * @param resp response data buffer.
-  * @retval HAL status
-  */
+ * @brief Get sd command response.
+ * @param hsd sd handle.
+ * @param resp response data buffer.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_GET_RESP(SD_TypeDef *hsd, uint32_t *resp);
 
 /**
-  * @brief Set sd timeout.
-  * @param hsd sd handle.
-  * @param timeout timeout value.
-  * @retval HAL status
-  */
+ * @brief Set sd timeout.
+ * @param hsd sd handle.
+ * @param timeout timeout value.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_TIMEOUT(SD_TypeDef *hsd, uint32_t timeout);
 
 /**
-  * @brief Set sd transfer data length.
-  * @param hsd sd handle.
-  * @param len data lenght.
-  * @retval HAL status
-  */
+ * @brief Set sd transfer data length.
+ * @param hsd sd handle.
+ * @param len data lenght.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_DATALEN(SD_TypeDef *hsd, uint32_t len);
 
 /**
-  * @brief Clear data lenght.
-  * @param hsd sd handle.
-  * @retval HAL status
-  */
+ * @brief Clear data lenght.
+ * @param hsd sd handle.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_CLR_DATA_CTRL(SD_TypeDef *hsd);
 
 /**
-  * @brief Set tranmite configure.
-  * @param hsd sd handle.
-  * @param blk_size block size.
-  * @param direct read or write.
-  * @param wire wire mode.
-  * @param mode block or stream.
-  * @retval HAL status
-  */
+ * @brief Set tranmite configure.
+ * @param hsd sd handle.
+ * @param blk_size block size.
+ * @param direct read or write.
+ * @param wire wire mode.
+ * @param mode block or stream.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_DATA_CTRL(SD_TypeDef *hsd, uint32_t blk_size,
         uint32_t direct, uint32_t wire, uint32_t mode);
 
 /**
-  * @brief Set sd line more.
-  * @param hsd sd handle.
-  * @param wire 1 line, 4 line or 8 line.
-  * @retval HAL status
-  */
+ * @brief Set sd line more.
+ * @param hsd sd handle.
+ * @param wire 1 line, 4 line or 8 line.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_WIRE(SD_TypeDef *hsd, uint32_t wire);
 
 /**
-  * @brief set data read/write mode.
-  * @param hsd sd handle.
-  * @param direct read or write.
-  * @retval HAL status
-  */
+ * @brief set data read/write mode.
+ * @param hsd sd handle.
+ * @param direct read or write.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_DIRECT(SD_TypeDef *hsd, uint32_t direct);
 
 /**
-  * @brief Set stream mode or block mode.
-  * @param hsd sd handle.
-  * @param stream stream mode or block mode.
-  * @retval HAL status
-  */
+ * @brief Set stream mode or block mode.
+ * @param hsd sd handle.
+ * @param stream stream mode or block mode.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_STREAM(SD_TypeDef *hsd, uint32_t stream);
 
 /**
-  * @brief Set transmit block size.
-  * @param hsd sd handle.
-  * @param blk_size block size, not larger than 2048.
-  * @retval HAL status
-  */
+ * @brief Set transmit block size.
+ * @param hsd sd handle.
+ * @param blk_size block size, not larger than 2048.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_BLOCK_SIZE(SD_TypeDef *hsd, uint32_t blk_size);
 
 /**
-  * @brief Enable data transfer, it should be set before command setting.
-  * @param hsd sd handle.
-  * @param data_en data transmit enable.
-  * @retval HAL status
-  */
+ * @brief Enable data transfer, it should be set before command setting.
+ * @param hsd sd handle.
+ * @param data_en data transmit enable.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_DATA_EN(SD_TypeDef *hsd, uint32_t data_en);
 
 /**
-  * @brief start data transfer.
-  * @param hsd sd handle.
-  * @param start start or stop.
-  * @retval HAL status
-  */
+ * @brief start data transfer.
+ * @param hsd sd handle.
+ * @param start start or stop.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_DATA_START(SD_TypeDef *hsd, uint32_t start);
 
 /**
-  * @brief Set SD IRQ mask.
-  * @param hsd sd handle.
-  * @param mask irq bit to be mask.
-  * @retval HAL status
-  */
+ * @brief Set SD IRQ mask.
+ * @param hsd sd handle.
+ * @param mask irq bit to be mask.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_IRQ_MASK(SD_TypeDef *hsd, uint32_t mask);
 
 /**
-  * @brief Get current IRQ setting.
-  * @param hsd sd handle.
-  * @retval IRQ MASK setting.
-  */
+ * @brief Get current IRQ setting.
+ * @param hsd sd handle.
+ * @retval IRQ MASK setting.
+ */
 uint32_t HAL_SDMMC_GET_IRQ_MASK(SD_TypeDef *hsd);
 
 /**
-  * @brief set sd command.
-  * @param hsd sd handle.
-  * @param cmd_idx command index.
-  * @param resp response flag.
-  * @param arg argument.
-  * @retval HAL status
-  */
+ * @brief set sd command.
+ * @param hsd sd handle.
+ * @param cmd_idx command index.
+ * @param resp response flag.
+ * @param arg argument.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_CMD(SD_TypeDef *hsd, uint32_t cmd_idx,
                                     uint32_t resp, uint32_t arg);
 
 /**
-  * @brief Get SDMMC status.
-  * @param hsd sd handle.
-  * @retval status.
-  */
+ * @brief Get SDMMC status.
+ * @param hsd sd handle.
+ * @retval status.
+ */
 uint32_t HAL_SDMMC_GET_STA(SD_TypeDef *hsd);
 
 /**
-  * @brief Clear irq bits.
-  * @param hsd sd handle.
-  * @param irq irq bits to be clear.
-  * @retval HAL status
-  */
+ * @brief Clear irq bits.
+ * @param hsd sd handle.
+ * @param irq irq bits to be clear.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_CLR_INT(SD_TypeDef *hsd, uint32_t irq);
 
 /**
-  * @brief Set SD clock.
-  * @param hsd sd handle.
-  * @param div clock divider.
-  * @param en enable clock or not
-  * @retval HAL status
-  */
+ * @brief Set SD clock.
+ * @param hsd sd handle.
+ * @param div clock divider.
+ * @param en enable clock or not
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_CLK_SET(SD_TypeDef *hsd, uint32_t div, uint8_t en);
 
 /**
-  * @brief Set SD power mode.
-  * @param hsd sd handle.
-  * @param pow power mode.
-  * @retval HAL status
-  */
+ * @brief Set SD power mode.
+ * @param hsd sd handle.
+ * @param pow power mode.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_POWER_SET(SD_TypeDef *hsd, uint32_t pow);
 
 /**
-  * @brief SD write data.
-  * @param hsd sd handle.
-  * @param buf data buffer.
-  * @param size data size.
-  * @retval HAL status
-  */
+ * @brief SD write data.
+ * @param hsd sd handle.
+ * @param buf data buffer.
+ * @param size data size.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_WIRTE(SD_TypeDef *hsd, uint32_t *buf, uint32_t size);
 
 /**
-  * @brief SD read data.
-  * @param hsd sd handle.
-  * @param buf data buffer.
-  * @param size data size.
-  * @retval HAL status
-  */
+ * @brief SD read data.
+ * @param hsd sd handle.
+ * @param buf data buffer.
+ * @param size data size.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_READ(SD_TypeDef *hsd, uint32_t *buf, uint32_t size);
 
 /**
-  * @brief get RCI.
-  * @param hsd sd handle.
-  * @retval rci value
-  */
+ * @brief get RCI.
+ * @param hsd sd handle.
+ * @retval rci value
+ */
 uint32_t HAL_SDMMC_GET_RCI(SD_TypeDef *hsd);
 
 /**
-  * @brief Switch sd to normal driver access.
-  * @param hsd sd handle.
-  * @retval HAL status
-  */
+ * @brief Switch sd to normal driver access.
+ * @param hsd sd handle.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SWITCH_NORMAL(SD_TypeDef *hsd);
 
 /**
-  * @brief Switch sd to AHB access.
-  * @param hsd sd handle.
-  * @retval HAL status
-  */
+ * @brief Switch sd to AHB access.
+ * @param hsd sd handle.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SWITCH_AHB(SD_TypeDef *hsd);
 
 /**
-  * @brief Configure SD version (size larger than 2GB address will be block based).
-  * @param hsd sd handle.
-  * @param blk_mode block for read/write param (size larger than 2GB).
-  * @retval HAL status
-  */
+ * @brief Configure SD version (size larger than 2GB address will be block based).
+ * @param hsd sd handle.
+ * @param blk_mode block for read/write param (size larger than 2GB).
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SELECT_VERSION(SD_TypeDef *hsd, uint8_t blk_mode);
 
 /**
-  * @brief Enable AHB read cache data, or AHB read return dummy.
-  * @param hsd sd handle.
-  * @param en cache enable or not.
-  * @retval HAL status
-  */
+ * @brief Enable AHB read cache data, or AHB read return dummy.
+ * @param hsd sd handle.
+ * @param en cache enable or not.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_CACHE_EN(SD_TypeDef *hsd, uint8_t en);
 
 /**
-  * @brief Enable AHB read time out recover.
-  * @param hsd sd handle.
-  * @param en timeout enable or not.
-  * @retval HAL status
-  */
+ * @brief Enable AHB read time out recover.
+ * @param hsd sd handle.
+ * @param en timeout enable or not.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_CACHE_TO_EN(SD_TypeDef *hsd, uint8_t en);
 
 /**
-  * @brief Configure MPI3/SD2 AHB space user.
-  * @param hsd sd handle.
-  * @param sd_map_en map for SD2 if enable, or for MPI3.
-  * @retval HAL status
-  */
+ * @brief Configure MPI3/SD2 AHB space user.
+ * @param hsd sd handle.
+ * @param sd_map_en map for SD2 if enable, or for MPI3.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_ENABLE_AHB_MAP(SD_TypeDef *hsd, uint8_t sd_map_en);
 
 /**
-  * @brief Set cache OFFSET for AHB.
-  * @param hsd sd handle.
-  * @param offset AHB cache offset, it depend on card version.
-  * @retval HAL status
-  */
+ * @brief Set cache OFFSET for AHB.
+ * @param hsd sd handle.
+ * @param offset AHB cache offset, it depend on card version.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_SET_CAOFFSET(SD_TypeDef *hsd, uint32_t offset);
 
 /**
-  * @brief Enable void fifo function.
-  * @param hsd sd handle.
-  * @param en enable void fifo function or not.
-  * @retval HAL status
-  */
+ * @brief Enable void fifo function.
+ * @param hsd sd handle.
+ * @param en enable void fifo function or not.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SDMMC_VOID_FIFO(SD_TypeDef *hsd, uint8_t en);
 
 /**
-  * @brief Enable CE-ATA (SDIO) mode and configure SDIO interrupt support.
-  * @param hsd SDMMC instance handle.
-  * @param single Enable SDIO IRQ support for single-block transfers (non-zero to enable).
-  * @param multi  Enable SDIO IRQ support for multi-block transfers (non-zero to enable).
-  * @retval HAL status (HAL_OK on success, HAL_ERROR on failure)
-  */
+ * @brief Enable CE-ATA (SDIO) mode and configure SDIO interrupt support.
+ * @param hsd SDMMC instance handle.
+ * @param single Enable SDIO IRQ support for single-block transfers (non-zero to enable).
+ * @param multi  Enable SDIO IRQ support for multi-block transfers (non-zero to enable).
+ * @retval HAL status (HAL_OK on success, HAL_ERROR on failure)
+ */
 HAL_StatusTypeDef HAL_SDMMC_ENABLE_CEATA_MODE(SD_TypeDef *hsd, uint8_t single, uint8_t multi);
 
 /**
-  * @brief Disable CE-ATA (SDIO IRQ) mode and clear related settings.
-  * @param hsd SDMMC instance handle.
-  * @retval Current IRQ mask register (IER) value after disabling; 0 if @p hsd is NULL.
-  */
+ * @brief Disable CE-ATA (SDIO IRQ) mode and clear related settings.
+ * @param hsd SDMMC instance handle.
+ * @retval Current IRQ mask register (IER) value after disabling; 0 if @p hsd is NULL.
+ */
 uint32_t HAL_SDMMC_DISABLE_CEATA_MODE(SD_TypeDef *hsd);
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

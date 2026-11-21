@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SDMMC_HAL SDMMC Low Layer
-  * @brief Low layer module for SD
-  * @{
-  */
+ * @brief Low layer module for SD
+ * @{
+ */
 #if defined(HAL_SD_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
 HAL_StatusTypeDef HAL_SDMMC_INIT(SD_TypeDef *hsd)
@@ -467,13 +467,13 @@ HAL_StatusTypeDef HAL_SDMMC_VOID_FIFO(SD_TypeDef *hsd, uint8_t en)
 
 #endif
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @} file
-  */
+ * @} file
+ */

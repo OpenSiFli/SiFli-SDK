@@ -15,16 +15,16 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup RCC Reset and control
-  * @ingroup BF0_HAL_Driver
-  * @{
-  */
+ * @ingroup BF0_HAL_Driver
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup RCC_Exported_Types RCC Exported Types
-  * @{
-  *
-  * @brief  RCC System, lock configuration definition
-  */
+ * @{
+ *
+ * @brief  RCC System, lock configuration definition
+ */
 
 #define RCC_MOD_TYPE_HPSYS                  (0U)
 #define RCC_MOD_TYPE_LPSYS                  (1U)
@@ -391,11 +391,11 @@ typedef enum
 
 /***********************************For HCPU****************************************/
 /**
-  * @brief  Reset RCC module for HCPU.
-  * @param  modules modules to be reset, defined in hpsys_rcc.h, HPSYS_RCC_RSTR_XXX
-  * @param  reset 1: reset(bit set), 0:Release reset(bit clear).
-  * @retval None
-  */
+ * @brief  Reset RCC module for HCPU.
+ * @param  modules modules to be reset, defined in hpsys_rcc.h, HPSYS_RCC_RSTR_XXX
+ * @param  reset 1: reset(bit set), 0:Release reset(bit clear).
+ * @retval None
+ */
 
 #define HAL_RCC_HCPU_reset(modules, reset) \
 { \
@@ -414,11 +414,11 @@ typedef enum
 }
 
 /**
-  * @brief  enable/disable RCC module for HCPU.
-  * @param  modules modules to be enabled/disabled. defined in hpsys_rcc.h, HPSYS_RCC_ENR_XXX
-  * @param  enabled 1: enable(bit set), 0:disable(bit clear).
-  * @retval None
-  */
+ * @brief  enable/disable RCC module for HCPU.
+ * @param  modules modules to be enabled/disabled. defined in hpsys_rcc.h, HPSYS_RCC_ENR_XXX
+ * @param  enabled 1: enable(bit set), 0:disable(bit clear).
+ * @retval None
+ */
 
 #define HAL_RCC_HCPU_enable(modules,enabled) {\
     if (enabled) \
@@ -435,9 +435,9 @@ typedef enum
 }
 
 /**
-  * @brief  Release all HPSYS modules
-  * @retval None
-  */
+ * @brief  Release all HPSYS modules
+ * @retval None
+ */
 #define HAL_RCC_HCPU_RELEASE_ALL()  \
     do                              \
     {                               \
@@ -448,11 +448,11 @@ typedef enum
 
 
 /**
-  * @brief  Select clock source for HCPU HW module.
-  * @param  clk_module module for clock, RCC_CLK_MOD_XXX
-  * @param  src clock source.
-  * @retval None
-  */
+ * @brief  Select clock source for HCPU HW module.
+ * @param  clk_module module for clock, RCC_CLK_MOD_XXX
+ * @param  src clock source.
+ * @retval None
+ */
 void HAL_RCC_HCPU_ClockSelect(int clk_module, int src);
 
 /**
@@ -483,57 +483,57 @@ void HAL_RCC_HCPU_GetDiv(int *div, int *pdiv1, int *pdiv2);
 
 
 /**
-  * @brief  Enable DLL1
-  * @param  freq Freqency of DLL1
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Enable DLL1
+ * @param  freq Freqency of DLL1
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_EnableDLL1(uint32_t freq);
 
 /**
-  * @brief  Disable DLL1
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Disable DLL1
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL1(void);
 
 /**
-  * @brief  Get DLL1 freqency
-  * @retval Frequency of DLL1, 0 if not enabled
-  */
+ * @brief  Get DLL1 freqency
+ * @retval Frequency of DLL1, 0 if not enabled
+ */
 uint32_t HAL_RCC_HCPU_GetDLL1Freq(void);
 
 /**
-  * @brief  Enable DLL2
-  * @param  freq Freqency of DLL2
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Enable DLL2
+ * @param  freq Freqency of DLL2
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_EnableDLL2(uint32_t freq);
 
 /**
-  * @brief  Disable DLL2
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Disable DLL2
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL2(void);
 
 /**
-  * @brief  Get DLL2 freqency
-  * @retval Frequency of DLL2, 0 if not enabled
-  */
+ * @brief  Get DLL2 freqency
+ * @retval Frequency of DLL2, 0 if not enabled
+ */
 uint32_t HAL_RCC_HCPU_GetDLL2Freq(void);
 
 
 uint32_t HAL_RCC_HCPU_GetDLL3Freq(void);
 
 /**
-  * @brief  Enable DLL3
-  * @param  freq Freqency of DLL3
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Enable DLL3
+ * @param  freq Freqency of DLL3
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_EnableDLL3(uint32_t freq);
 
 /**
-  * @brief  Disable DLL3
-  * @retval HAL_OK if successful, Otherwise HAL_ERROR
-  */
+ * @brief  Disable DLL3
+ * @retval HAL_OK if successful, Otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL3(void);
 
 
@@ -541,11 +541,11 @@ HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL3(void);
 /***********************************For LCPU****************************************/
 
 /**
-  * @brief  Reset RCC module for LCPU.
-  * @param  modules modules to be reset, defined in lpsys_rcc.h, LPSYS_RCC_RSTR_XXX
-  * @param  reset 1: reset(bit set), 0:Release reset(bit clear).
-  * @retval None
-  */
+ * @brief  Reset RCC module for LCPU.
+ * @param  modules modules to be reset, defined in lpsys_rcc.h, LPSYS_RCC_RSTR_XXX
+ * @param  reset 1: reset(bit set), 0:Release reset(bit clear).
+ * @retval None
+ */
 
 #define HAL_RCC_LCPU_reset(modules, reset) { \
     if (reset) \
@@ -555,18 +555,18 @@ HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL3(void);
 }
 
 /**
-  * @brief  Release all LPSYS modules
-  * @retval void
-  */
+ * @brief  Release all LPSYS modules
+ * @retval void
+ */
 #define HAL_RCC_LCPU_RELEASE_ALL()  (hwp_lpsys_rcc->RSTR1 = 0)
 
 
 /**
-  * @brief  enable/disable RCC module for LCPU.
-  * @param  modules modules to be enabled/disabled. defined in lpsys_rcc.h, LPSYS_RCC_ENR_XXX
-  * @param  enabled 1: enable(bit set), 0:disable(bit clear).
-  * @retval None
-  */
+ * @brief  enable/disable RCC module for LCPU.
+ * @param  modules modules to be enabled/disabled. defined in lpsys_rcc.h, LPSYS_RCC_ENR_XXX
+ * @param  enabled 1: enable(bit set), 0:disable(bit clear).
+ * @retval None
+ */
 #define HAL_RCC_LCPU_enable(modules,enabled) {\
     if (enabled) \
         hwp_lpsys_rcc->ENR1|=(modules);\
@@ -583,11 +583,11 @@ HAL_StatusTypeDef HAL_RCC_HCPU_DisableDLL3(void);
 
 
 /**
-  * @brief  Select clock source for LCPU HW module.
-  * @param  clk_module module for clock, RCC_CLK_MOD_XXX
-  * @param  src clock 0:RCC_SYSCLK_HRC48, 1:RCC_SYSCLK_HXT48
-  * @retval None
-  */
+ * @brief  Select clock source for LCPU HW module.
+ * @param  clk_module module for clock, RCC_CLK_MOD_XXX
+ * @param  src clock 0:RCC_SYSCLK_HRC48, 1:RCC_SYSCLK_HXT48
+ * @retval None
+ */
 __STATIC_INLINE void HAL_RCC_LCPU_ClockSelect(int clk_module, int src)
 {
     uint32_t csr = hwp_lpsys_rcc->CSR;
@@ -627,12 +627,12 @@ __STATIC_INLINE void HAL_RCC_LCPU_ClockSelect(int clk_module, int src)
 int HAL_RCC_LCPU_GetClockSrc(int clk_module);
 
 /**
-  * @brief  Set divider for clock of LCPU.
-  * @param  div main divider HCLK=LPCLK/div
-  * @param  pdiv1 divider for pclk1= HCLK/ (2^PDIV1) default 1
-  * @param  pdiv2 divider for pclk2= HCLK/ (2^PDIV2) default 3
-  * @retval None
-  */
+ * @brief  Set divider for clock of LCPU.
+ * @param  div main divider HCLK=LPCLK/div
+ * @param  pdiv1 divider for pclk1= HCLK/ (2^PDIV1) default 1
+ * @param  pdiv2 divider for pclk2= HCLK/ (2^PDIV2) default 3
+ * @retval None
+ */
 void HAL_RCC_LCPU_SetDiv(int div, int pdiv1, int pdiv2);
 
 /**
@@ -646,18 +646,18 @@ void HAL_RCC_LCPU_GetDiv(int *div, int *pdiv1, int *pdiv2);
 
 /***********************************For BCPU****************************************/
 /**
-  * @brief  Reset RCC module for BCPU.
-  * @param  modules modules to be reset, defined in ble_rcc.h, BLE_RCC_RSTR_XXX
-  * @retval None
-  */
+ * @brief  Reset RCC module for BCPU.
+ * @param  modules modules to be reset, defined in ble_rcc.h, BLE_RCC_RSTR_XXX
+ * @retval None
+ */
 #define HAL_RCC_BCPU_reset(modules) hwp_ble_rcc->RSTR|=(modules)
 
 /**
-  * @brief  enable/disable RCC module for BCPU.
-  * @param  modules modules to be enabled/disabled. defined in ble_rcc.h, BLE_RCC_ENR_XXX
-  * @param  enabled 1: enable(bit set), 0:disable(bit clear).
-  * @retval None
-  */
+ * @brief  enable/disable RCC module for BCPU.
+ * @param  modules modules to be enabled/disabled. defined in ble_rcc.h, BLE_RCC_ENR_XXX
+ * @param  enabled 1: enable(bit set), 0:disable(bit clear).
+ * @retval None
+ */
 #define HAL_RCC_BCPU_enable(modules,enabled) {\
     if (enabled) \
         hwp_ble_rcc->ENR|=(modules);\
@@ -666,22 +666,22 @@ void HAL_RCC_LCPU_GetDiv(int *div, int *pdiv1, int *pdiv2);
 }
 
 /**
-  * @brief  Select clock source for BCPU HW module.
-  * @param  clk_module module for clock
-  * @param  src clock 0:RCC_SYSCLK_HRC48, 1:RCC_SYSCLK_HXT48
-  * @retval None
-  */
+ * @brief  Select clock source for BCPU HW module.
+ * @param  clk_module module for clock
+ * @param  src clock 0:RCC_SYSCLK_HRC48, 1:RCC_SYSCLK_HXT48
+ * @retval None
+ */
 #define HAL_RCC_BCPU_ClockSelect(clk_module,src) hwp_ble_rcc->CSR=src
 
 /**
-  * @brief  Set divider for clock of BCPU.
-  * @param  div main divider HCLK=BLECLK(48M)/div
-  * @param  pdiv divider for pclk,
-            HCLK not divided; 100 - HCLK divided by 2; 101 - divided by 4; 110 - divided by 8; 111 - divided by 16
-  * @param  macdiv divider for MACCLK = HCLK / MACDIV
-  * @param  macfreq frequency of BLE MAC master clock
-  * @retval None
-  */
+ * @brief  Set divider for clock of BCPU.
+ * @param  div main divider HCLK=BLECLK(48M)/div
+ * @param  pdiv divider for pclk,
+           HCLK not divided; 100 - HCLK divided by 2; 101 - divided by 4; 110 - divided by 8; 111 - divided by 16
+ * @param  macdiv divider for MACCLK = HCLK / MACDIV
+ * @param  macfreq frequency of BLE MAC master clock
+ * @retval None
+ */
 void HAL_RCC_BCPU_SetDiv(int div, int pdiv, int macdiv, int macfreq);
 
 /********************************For all cores***********************************************/

@@ -154,10 +154,10 @@ static int8_t find_sel(const HAL_BUSMON_FuncTypeDef busmon_sel[][HAL_BUSMON_MAXC
 }
 
 /**
-* @brief  Initialize Busmonitor
-* @param  hbusmon Handle of busmonitor
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Initialize Busmonitor
+ * @param  hbusmon Handle of busmonitor
+ * @retval HAL_OK if successful, otherwise error
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_BUSMON_Init(BUSMON_HandleTypeDef *hbusmon)
 {
     uint32_t address, cr;
@@ -200,10 +200,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_BUSMON_Init(BUSMON_HandleTypeDef *hbusmon)
 }
 
 /**
-* @brief  Enable/disable Busmonitor
-* @param  hbusmon Handle of busmonitor
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Enable/disable Busmonitor
+ * @param  hbusmon Handle of busmonitor
+ * @retval HAL_OK if successful, otherwise error
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_BUSMON_Enable(BUSMON_HandleTypeDef *hbusmon, int enable)
 {
     if (enable)
@@ -222,11 +222,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_BUSMON_Enable(BUSMON_HandleTypeDef *hbusmon
 
 
 /**
-* @brief  Get Busmonitor count
-* @param  hbusmon Handle of busmonitor
-* @param  count count for bus monitor
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Get Busmonitor count
+ * @param  hbusmon Handle of busmonitor
+ * @param  count count for bus monitor
+ * @retval HAL_OK if successful, otherwise error
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_BUSMON_GetCount(BUSMON_HandleTypeDef *hbusmon, int32_t *count)
 {
     if (hbusmon->State > HAL_BUSMON_STATE_RESET)

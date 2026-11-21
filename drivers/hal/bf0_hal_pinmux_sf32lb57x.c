@@ -10,13 +10,13 @@
 
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PIMNUX PINMUX
-  * @brief PINMUX HAL module driver
-  * @{
-  */
+ * @brief PINMUX HAL module driver
+ * @{
+ */
 
 #if defined(HAL_PINMUX_MODULE_ENABLED)
 
@@ -227,10 +227,10 @@ void HAL_PIN_SetSipPsram2(PIN_MpiPinmapMode pinmap_mode)
 #endif /* HAL_PINMUX_MODULE_ENABLED */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */

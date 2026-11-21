@@ -25,8 +25,8 @@
 #define CAN_CLOCK_FREQ_HZ   (48000000)
 
 /** @defgroup CAN_Exported_Functions CAN Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup CAN_Exported_Functions_Group1 Initialization and de-initialization functions
  *  @brief    Initialization and Configuration functions
@@ -46,12 +46,12 @@
   */
 
 /**
-  * @brief  Initializes the CAN peripheral according to the specified
-  *         parameters in the CAN_InitStruct.
-  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval HAL status
-  */
+ * @brief  Initializes the CAN peripheral according to the specified
+ *         parameters in the CAN_InitStruct.
+ * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_CAN_Init(CAN_HandleTypeDef *hcan)
 {
     CAN_TypeDef *inst;
@@ -95,12 +95,12 @@ HAL_StatusTypeDef HAL_CAN_Init(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @brief  Deinitializes the CAN peripheral registers to their default
-  *         reset values.
-  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval HAL status
-  */
+ * @brief  Deinitializes the CAN peripheral registers to their default
+ *         reset values.
+ * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_CAN_DeInit(CAN_HandleTypeDef *hcan)
 {
     if (hcan == NULL)
@@ -115,11 +115,11 @@ HAL_StatusTypeDef HAL_CAN_DeInit(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @brief  Initializes the CAN MSP.
-  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval None
-  */
+ * @brief  Initializes the CAN MSP.
+ * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval None
+ */
 __weak void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -131,11 +131,11 @@ __weak void HAL_CAN_MspInit(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @brief  DeInitializes the CAN MSP.
-  * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval None
-  */
+ * @brief  DeInitializes the CAN MSP.
+ * @param  hcan pointer to a CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval None
+ */
 __weak void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -147,8 +147,8 @@ __weak void HAL_CAN_MspDeInit(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup CAN_Exported_Functions_Group2 Configuration functions
  *  @brief    Configuration functions.
@@ -431,8 +431,8 @@ int32_t HAL_CAN_CalcTiming(CAN_HandleTypeDef *hcan, uint32_t bitrate)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup CAN_Exported_Functions_Group3 Control functions
  *  @brief    Control functions
@@ -462,11 +462,11 @@ int32_t HAL_CAN_CalcTiming(CAN_HandleTypeDef *hcan, uint32_t bitrate)
   */
 
 /**
-  * @brief  Start the CAN module.
-  * @param  hcan pointer to an CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval HAL status
-  */
+ * @brief  Start the CAN module.
+ * @param  hcan pointer to an CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_CAN_Start(CAN_HandleTypeDef *hcan)
 {
     if (hcan == NULL)
@@ -486,11 +486,11 @@ HAL_StatusTypeDef HAL_CAN_Start(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @brief  Stop the CAN module and enable access to configuration registers.
-  * @param  hcan pointer to an CAN_HandleTypeDef structure that contains
-  *         the configuration information for the specified CAN.
-  * @retval HAL status
-  */
+ * @brief  Stop the CAN module and enable access to configuration registers.
+ * @param  hcan pointer to an CAN_HandleTypeDef structure that contains
+ *         the configuration information for the specified CAN.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_CAN_Stop(CAN_HandleTypeDef *hcan)
 {
     if (hcan == NULL)
@@ -765,8 +765,8 @@ HAL_StatusTypeDef HAL_CAN_GetRxMessage(CAN_HandleTypeDef *hcan,  CAN_RxHeaderTyp
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup CAN_Exported_Functions_Group4 Interrupts management
  *  @brief    Interrupts management
@@ -903,8 +903,8 @@ void HAL_CAN_IRQHandler(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup CAN_Exported_Functions_Group5 Callback functions
  *  @brief   CAN Callback functions
@@ -965,12 +965,12 @@ __weak void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
 }
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #endif /* HAL_CAN_MODULE_ENABLED */

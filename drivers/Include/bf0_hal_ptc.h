@@ -15,17 +15,17 @@ extern "C" {
 #include "bf0_hal_def.h"
 #include "ptm_ins.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PTC Peripheral Task controller
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @addtogroup  PTC_exported_constants
-  * @{
-*/
+ * @addtogroup  PTC_exported_constants
+ * @{
+ */
 #define PTC_OP_WRITE    0
 #define PTC_OP_XOR      4
 #define PTC_OP_OR       5
@@ -1506,12 +1506,12 @@ enum
 #endif
 
 /**
-  * @} PTC_exported_constants
-*/
+ * @} PTC_exported_constants
+ */
 
 /** @defgroup PTC_Exported_Types PTC Handle Structure definition
-  * @{
-  */
+ * @{
+ */
 typedef struct
 {
     uint32_t    Address;    /*!< Task Address register     */
@@ -1539,62 +1539,62 @@ typedef struct
     PTC_StateTypeDef        State;      /*!< State for PTC   */
 } PTC_HandleTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 
 /**
-  * @defgroup PTC_exported_functions Bus monitor Exported functions
-  * @ingroup PTC
-  * @{
-  *
+ * @defgroup PTC_exported_functions Bus monitor Exported functions
+ * @ingroup PTC
+ * @{
+ *
  */
 /**
-* @brief  Initialize PTC
-* @param  hptc Handle of PTC
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Initialize PTC
+ * @param  hptc Handle of PTC
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_PTC_Init(PTC_HandleTypeDef *hptc);
 
 /**
-* @brief  Enable/disable PTC
-* @param  hptc Handle of PTC
-* @param  enable 1: enable, 0: disable
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Enable/disable PTC
+ * @param  hptc Handle of PTC
+ * @param  enable 1: enable, 0: disable
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_PTC_Enable(PTC_HandleTypeDef *hptc, int enable);
 
 
 /**
-* @brief  Get PTC Data
-* @param  hptc Handle of PTC
-* @retval PTC data
-*
-* TDR is a plain __IO uint32_t in PTC_ChnTypeDef, so the dereference this used
-* to carry could not compile, and nothing in the SDK expanded the macro -- which
-* is how it survived.
-*/
+ * @brief  Get PTC Data
+ * @param  hptc Handle of PTC
+ * @retval PTC data
+ *
+ * TDR is a plain __IO uint32_t in PTC_ChnTypeDef, so the dereference this used
+ * to carry could not compile, and nothing in the SDK expanded the macro -- which
+ * is how it survived.
+ */
 #define HAL_PTC_GetData(hptc) ((hptc)->Chn->TDR)
 
 /**
-* @brief  Handle PTC interrupt
-* @param  hptc Handle of PTC
-* @retval None
-*/
+ * @brief  Handle PTC interrupt
+ * @param  hptc Handle of PTC
+ * @retval None
+ */
 void HAL_PTC_IRQHandler(PTC_HandleTypeDef *hptc);
 
 /**
-  *@} PTC_exported_functions
-*/
+ *@} PTC_exported_functions
+ */
 
 /**
-  *@} PTC
-  */
+ *@} PTC
+ */
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

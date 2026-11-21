@@ -1,11 +1,11 @@
 /**
-  ******************************************************************************
-  * @file   sifli_cmpr.h
-  * @author Sifli software development team
-  * @brief  SiFli compression module
-  *
-  ******************************************************************************
-*/
+ ******************************************************************************
+ * @file   sifli_cmpr.h
+ * @author Sifli software development team
+ * @brief  SiFli compression module
+ *
+ ******************************************************************************
+ */
 /*
  * SPDX-FileCopyrightText: 2019-2025 SiFli Technologies(Nanjing) Co., Ltd
  *

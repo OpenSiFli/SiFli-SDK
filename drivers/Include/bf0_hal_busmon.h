@@ -14,18 +14,18 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "bf0_hal_def.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup BUSMON Bus monitor
-  * @brief Bus monitor for debug purpose.
-  * @{
-  */
+ * @brief Bus monitor for debug purpose.
+ * @{
+ */
 
 /**
-  * @addtogroup  BUSMON_exported_constants
-  * @{
-*/
+ * @addtogroup  BUSMON_exported_constants
+ * @{
+ */
 #define BUSMON_OPFLAG_READ      0
 #define BUSMON_OPFLAG_WRITE     1
 #define BUSMON_OPFLAG_RW        3
@@ -142,12 +142,12 @@ typedef enum
 
 
 /**
-  * @} BUSMON_exported_constants
-*/
+ * @} BUSMON_exported_constants
+ */
 
 /** @defgroup BUSMON_Exported_Types BUSMON Handle Structure definition
-  * @{
-  */
+ * @{
+ */
 typedef struct
 {
     uint32_t             Min;       /*!< Busmon rangme minimal address   */
@@ -167,53 +167,53 @@ typedef struct
     HAL_BUSMON_StateTypeDef     State;      /*!< State for Busmon   */
 } BUSMON_HandleTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 
 /**
-  * @defgroup BUSMON_exported_functions Bus monitor Exported functions
-  * @ingroup BUSMON
-  * @{
-  *
+ * @defgroup BUSMON_exported_functions Bus monitor Exported functions
+ * @ingroup BUSMON
+ * @{
+ *
  */
 /**
-* @brief  Initialize Busmonitor
-* @param  hbusmon Handle of busmonitor
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Initialize Busmonitor
+ * @param  hbusmon Handle of busmonitor
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_BUSMON_Init(BUSMON_HandleTypeDef *hbusmon);
 
 /**
-* @brief  Enable/disable Busmonitor
-* @param  hbusmon Handle of busmonitor
-* @param  enable 1: enable, 0: disable
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Enable/disable Busmonitor
+ * @param  hbusmon Handle of busmonitor
+ * @param  enable 1: enable, 0: disable
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_BUSMON_Enable(BUSMON_HandleTypeDef *hbusmon, int enable);
 
 
 /**
-* @brief  Get Busmonitor count
-* @param  hbusmon Handle of busmonitor
-* @param  count count for bus monitor
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Get Busmonitor count
+ * @param  hbusmon Handle of busmonitor
+ * @param  count count for bus monitor
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_BUSMON_GetCount(BUSMON_HandleTypeDef *hbusmon, int32_t *count);
 
 
 /**
-  *@} BUSMON_exported_functions
-*/
+ *@} BUSMON_exported_functions
+ */
 
 /**
-  *@} BUSMON
-  */
+ *@} BUSMON
+ */
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

@@ -20,13 +20,13 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup PDM PDM
-  * @brief Pulse Density Modulation.
-  * @{
-  */
+ * @brief Pulse Density Modulation.
+ * @{
+ */
 
 #if defined(SF32LB55X) || defined(SF32LB56X) || defined(SF32LB58X) || defined(SF32LB52X)
 #define PDM_PLL_CLK_FREQ  (3072000)
@@ -37,8 +37,8 @@ extern "C" {
 #define PDM_XTAL_CLK_FREQ  (9600000)
 
 /**
-  * @brief  HAL PDM State structures definition
-  */
+ * @brief  HAL PDM State structures definition
+ */
 typedef enum
 {
     PDM_STATE_RESET             = 0x00U,    /*!< PDM not yet initialized or disabled       */
@@ -53,8 +53,8 @@ typedef enum
 
 
 /** @defgroup PDM_Error_Code PDM Error Code
-  * @{
-  */
+ * @{
+ */
 typedef enum
 {
 
@@ -65,8 +65,8 @@ typedef enum
 } PDM_ErrorTypeDef;
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 
@@ -168,36 +168,36 @@ typedef struct
 
 
 /**
-  * @brief  Initialize the PDM according to the specified
-  *         parameters in the PDM_InitTypeDef and initialize the associated handle.
-  * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval HAL status
-  */
+ * @brief  Initialize the PDM according to the specified
+ *         parameters in the PDM_InitTypeDef and initialize the associated handle.
+ * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_PDM_Init(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief  DeInitialize the PDM peripheral.
-  * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval HAL status
-  */
+ * @brief  DeInitialize the PDM peripheral.
+ * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_PDM_DeInit(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief  Initialize the PDM MSP.
-  * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief  Initialize the PDM MSP.
+ * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_MspInit(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief  De-Initialize the PDM MSP.
-  * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief  De-Initialize the PDM MSP.
+ * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_MspDeInit(PDM_HandleTypeDef *hpdm);
 
 
@@ -212,12 +212,12 @@ void HAL_PDM_MspDeInit(PDM_HandleTypeDef *hpdm);
 HAL_StatusTypeDef HAL_PDM_Set_Gain(PDM_HandleTypeDef *hpdm, PDM_ChannelTypeDef channel, uint8_t value);
 
 /**
-  * @brief  Configure PDM parameters.
-  * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @param  type Configure mode
-  * @retval HAL status
-  */
+ * @brief  Configure PDM parameters.
+ * @param  hpdm Pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @param  type Configure mode
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_PDM_Config(PDM_HandleTypeDef *hpdm, PDM_ConfigureTypeDef type);
 
 /**
@@ -232,51 +232,51 @@ HAL_StatusTypeDef HAL_PDM_Receive_DMA(PDM_HandleTypeDef *hpdm, uint8_t *pData, u
 
 
 /**
-  * @brief Stop the DMA Transfer.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval HAL status
-  */
+ * @brief Stop the DMA Transfer.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_PDM_DMAStop(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief General PDM interrupt handler.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None.
-  */
+ * @brief General PDM interrupt handler.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None.
+ */
 void HAL_PDM_IRQHandler(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief Rx Half Transfer completed callback.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief Rx Half Transfer completed callback.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_RxHalfCpltCallback(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief Rx Transfer completed callback.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief Rx Transfer completed callback.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_RxCpltCallback(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief PDM error callback.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief PDM error callback.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_ErrorCallback(PDM_HandleTypeDef *hpdm);
 
 /**
-  * @brief  PDM Abort Complete callback.
-  * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
-  *               the configuration information for the specified PDM module.
-  * @retval None
-  */
+ * @brief  PDM Abort Complete callback.
+ * @param  hpdm pointer to a PDM_HandleTypeDef structure that contains
+ *               the configuration information for the specified PDM module.
+ * @retval None
+ */
 void HAL_PDM_AbortCpltCallback(PDM_HandleTypeDef *hpdm);
 
 

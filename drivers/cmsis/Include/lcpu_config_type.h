@@ -10,8 +10,8 @@
 #include "lcpu_config_type_int.h"
 
 /**
-  * @brief  ENUM definition of configration type.
-*/
+ * @brief  ENUM definition of configration type.
+ */
 
 
 typedef enum

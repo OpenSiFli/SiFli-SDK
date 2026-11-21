@@ -16,20 +16,20 @@ extern "C" {
 #include "lcpu_config_type.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 
 /** @defgroup LPCONFIG LCPU configure
-  * @brief LCOU configure to share parameter with HCPU
-  * @{
-  */
+ * @brief LCOU configure to share parameter with HCPU
+ * @{
+ */
 
 
 /**
-  * @addtogroup  LPCONFIG_exported_constants
-  * @{
-*/
+ * @addtogroup  LPCONFIG_exported_constants
+ * @{
+ */
 
 #define HAL_LCPU_CONFIG_SN_MAX_NUM 128
 
@@ -38,8 +38,8 @@ extern "C" {
 #endif
 
 /**
-  * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V1.
-*/
+ * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V1.
+ */
 typedef struct
 {
     uint16_t vol10;     /*!< Reg value for low voltage. */
@@ -52,8 +52,8 @@ typedef struct
 
 
 /**
-  * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V2.
-*/
+ * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V2.
+ */
 typedef struct
 {
     uint16_t vol10;     /*!< Reg value for low voltage. */
@@ -64,8 +64,8 @@ typedef struct
 
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V1.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V1.
+ */
 typedef struct
 {
     uint32_t vol_mv;
@@ -73,8 +73,8 @@ typedef struct
 } HAL_LCPU_CONFIG_SDMADC_T;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V2.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V2.
+ */
 typedef struct
 {
     uint32_t vol_mv;
@@ -83,16 +83,16 @@ typedef struct
 
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V1.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V1.
+ */
 typedef struct
 {
     uint8_t sn[HAL_LCPU_CONFIG_SN_MAX_NUM];
 } HAL_LCPU_CONFIG_SN_T;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V2.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V2.
+ */
 typedef struct
 {
     uint16_t sn_len;
@@ -102,8 +102,8 @@ typedef struct
 
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V1.  ax+b   a*10000 for integer
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V1.  ax+b   a*10000 for integer
+ */
 typedef struct
 {
     int magic;
@@ -112,8 +112,8 @@ typedef struct
 } HAL_LCPU_CONFIG_BATTERY_T;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V2.  ax+b   a*10000 for integer
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V2.  ax+b   a*10000 for integer
+ */
 typedef struct
 {
     int magic;
@@ -126,8 +126,8 @@ typedef struct
 #define HAL_LCPU_CONFIG_EM_BUF_MAX_NUM 40
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_EM_BUF.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_EM_BUF.
+ */
 typedef struct
 {
     uint8_t is_valid;
@@ -136,8 +136,8 @@ typedef struct
 
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_ACT_CFG.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_ACT_CFG.
+ */
 typedef struct
 {
     // max valid bit is 7
@@ -153,8 +153,8 @@ typedef struct
 } hal_lcpu_bluetooth_act_configt_t;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_CONFIG.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_CONFIG.
+ */
 typedef struct
 {
     // max valid bit is 11
@@ -179,8 +179,8 @@ typedef struct
 } hal_lcpu_bluetooth_rom_config_t;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_KE_BUF.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_KE_BUF.
+ */
 typedef struct
 {
     //  max valid bit is 5, buf and size should be aligned.
@@ -201,8 +201,8 @@ typedef struct
 } hal_lcpu_ble_mem_config_t;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_ACTMOVE_CONFIG.
-*/
+ * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_ACTMOVE_CONFIG.
+ */
 typedef struct
 {
     //  max valid bit is 5, buf and size should be aligned.
@@ -225,41 +225,41 @@ typedef struct
     uint8_t ch_scan_inv;//in 12.5ms unit
 } hal_lcpu_bluetooth_afh_config_t;
 /**
-  * @} LPCONFIG_exported_constants
-*/
+ * @} LPCONFIG_exported_constants
+ */
 
 
 /**
-  * @defgroup LPCONFIG_exported_functions LCPU configure Exported functions
-  * @ingroup LPCONFIG
-  * @{
-  *
+ * @defgroup LPCONFIG_exported_functions LCPU configure Exported functions
+ * @ingroup LPCONFIG
+ * @{
+ *
  */
 
 
 
 /**
-* @brief  Set configure parameter, only support in HCPU
-* @param type Parameter type
-* @param value Parameter values
-* @param length Parameter length
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Set configure parameter, only support in HCPU
+ * @param type Parameter type
+ * @param value Parameter values
+ * @param length Parameter length
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_TYPE_T type, void *value, uint16_t length);
 
 /**
-* @brief  Get configure parameter
-* @param type Parameter type
-* @param value Parameter values
-* @param length Parameter length
-* @retval HAL_OK if successful, otherwise error
-*/
+ * @brief  Get configure parameter
+ * @param type Parameter type
+ * @param value Parameter values
+ * @param length Parameter length
+ * @retval HAL_OK if successful, otherwise error
+ */
 HAL_StatusTypeDef HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_TYPE_T type, uint8_t *value, uint16_t *length);
 
 /**
-* @brief Force init context without check
-* @return void
-*/
+ * @brief Force init context without check
+ * @return void
+ */
 void HAL_LCPU_CONFIG_InitContext(void);
 
 /**
@@ -280,18 +280,18 @@ void HAL_LCPU_ASSERT_INFO_clear(void);
 
 
 /**
-  *@} LPCONFIG_exported_functions
-*/
+ *@} LPCONFIG_exported_functions
+ */
 
 
 /**
-  *@} LPCONFIG
-  */
+ *@} LPCONFIG
+ */
 
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 
 
@@ -303,5 +303,5 @@ void HAL_LCPU_ASSERT_INFO_clear(void);
 #endif // __BF0_HAL_LCPU_CONFIG_H
 
 /**
-  *@}
-  */
+ *@}
+ */

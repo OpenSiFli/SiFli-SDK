@@ -270,11 +270,11 @@ static uint8_t edr_rf_power_set(int8_t txpwr)
 }
 
 /**
-  * @brief  RF set power interface,just used for RF test
-  * @param[in]  type, 0:ble or br, 1:edr
-  * @param[in]  tx power,dbm unit
-  * @param[out]     return param,0:sucess, other:error
-  */
+ * @brief  RF set power interface,just used for RF test
+ * @param[in]  type, 0:ble or br, 1:edr
+ * @param[in]  tx power,dbm unit
+ * @param[out]     return param,0:sucess, other:error
+ */
 uint8_t btdm_rf_power_set(uint8_t type, int8_t txpwr)
 {
     uint8_t ret = 0;

@@ -7,13 +7,13 @@
 #include "bf0_hal.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup FFT FFT
-  * @brief FFT HAL module driver
-  * @{
-  */
+ * @brief FFT HAL module driver
+ * @{
+ */
 
 #if defined(HAL_FFT_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
@@ -427,9 +427,9 @@ __EXIT:
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */

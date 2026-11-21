@@ -15,22 +15,22 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup AUDPRC
-  * @brief AUDPRC HAL module driver
-  * @{
-  */
+ * @brief AUDPRC HAL module driver
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup AUDPRC_Exported_Types AUDPRC Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /**
-  * @brief AUDPRC TX/RX channel configure structure definition
-  */
+ * @brief AUDPRC TX/RX channel configure structure definition
+ */
 typedef struct
 {
     uint8_t     dma_mask;      /*!<  dma mask */
@@ -41,8 +41,8 @@ typedef struct
 } AUDPRC_ChnlCfgTypeDef;
 
 /**
-  * @brief AUDPRC DAC PATH configure structure definition
-  */
+ * @brief AUDPRC DAC PATH configure structure definition
+ */
 
 typedef struct
 {
@@ -72,8 +72,8 @@ typedef struct
 } AUDPRC_DACCfgTypeDef;
 
 /**
-  * @brief AUDPRC ADC PATH configure structure definition
-  */
+ * @brief AUDPRC ADC PATH configure structure definition
+ */
 typedef struct
 {
     uint8_t     src_hbf3_mode;
@@ -93,8 +93,8 @@ typedef struct
 } AUDPRC_ADCCfgTypeDef;
 
 /**
-  * @brief AUDPRC Init structure definition
-  */
+ * @brief AUDPRC Init structure definition
+ */
 typedef struct
 {
     uint32_t     clk_div;      /*!<  Source clk for AUDPRC module */
@@ -106,8 +106,8 @@ typedef struct
 } AUDPRC_InitTypeDef;
 
 /**
-  * @brief  audprc  clock config definition
-  */
+ * @brief  audprc  clock config definition
+ */
 typedef struct
 {
     uint32_t  samplerate;
@@ -116,8 +116,8 @@ typedef struct
 } AUDPRC_CLK_CONFIG_TYPE;
 
 /**
-  * @brief  HAL State structures definition
-  */
+ * @brief  HAL State structures definition
+ */
 typedef enum
 {
     HAL_AUDPRC_STATE_RESET      = 0x00U,  /*!< AUDPRC not yet initialized or disabled                */
@@ -130,8 +130,8 @@ typedef enum
 } HAL_AUDPRC_StateTypeDef;
 
 /**
-  * @brief  AUDPRC TX/RX BUFFER/DMA ENUM definition
-  */
+ * @brief  AUDPRC TX/RX BUFFER/DMA ENUM definition
+ */
 typedef enum
 {
     HAL_AUDPRC_TX_CH0         = 0x00U,  /*!< AUDPRC TX channel 0  */
@@ -146,8 +146,8 @@ typedef enum
 } HAL_AUDPRC_ChannelTypeDef;
 
 /**
-  * @brief AUDPRC handle Structure definition
-  */
+ * @brief AUDPRC handle Structure definition
+ */
 typedef struct
 {
     AUDPRC_TypeDef                *Instance;    /*!< AUDPRC registers base address */
@@ -189,16 +189,16 @@ typedef struct
     AUDPRC_ChnlCfgTypeDef      cfg1;
 } AUDPRC_HandleTypeDef;
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /** @defgroup AUDPRC_Exported_Constants AUDPRC Exported Constants
-  * @{
-  */
+ * @{
+ */
 /** @defgroup AUDPRC_Error AUDPRC Error
-  * @{
-  */
+ * @{
+ */
 #define HAL_AUDPRC_ERROR_NONE      (0x00000000U)  /*!< No error           */
 #define HAL_AUDPRC_ERROR_TIMEOUT   (0x00000001U)  /*!< Timeout error      */
 #define HAL_AUDPRC_ERROR_OVR       (0x00000002U)  /*!< OVR error          */
@@ -206,13 +206,13 @@ typedef struct
 #define HAL_AUDPRC_ERROR_DMA       (0x00000008U)  /*!< DMA transfer error */
 #define HAL_AUDPRC_ERROR_UNKNOW    (0x00000010U)  /*!< Unknow Error error */
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup AUDPRC_Flag_definition AUDPRC Flag definition
-  * @{
-  */
+ * @{
+ */
 
 #define AUDPRC_TX_OUT1_FIFO_UNDERF              (1<<9)  /*!< AUDPRC STATUS TX OUT1 FIFO UNDER FLOW            */
 #define AUDPRC_TX_OUT0_FIFO_UNDERF              (1<<8)  /*!< AUDPRC STATUS TX OUT0 FIFO UNDER FLOW          */
@@ -226,262 +226,262 @@ typedef struct
 #define AUDPRC_TX0_FIFO_OVERF                   (1<<0)  /*!< AUDPRC STATUS Tx0 FIFO OVER FLOW    */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /** @defgroup AUDPRC_Source_definition AUDPRC Source definition
-  * @{
-  */
+ * @{
+ */
 
 #define AUDPRC_RX_FROM_CODEC            (0)  /*!< AUDPRC Source from audio codec */
 #define AUDPRC_RX_FROM_I2S              (1)  /*!< AUDPRC Srouce from external interface */
 
 /**
-  * @}
-  */
+ * @}
+ */
 /** @defgroup AUDPRC_Input_definition AUDPRC Input definition
-  * @{
-  */
+ * @{
+ */
 
 #define AUDPRC_RX_TO_MEM              (0)  /*!< AUDPRC Output to RX buffer */
 #define AUDPRC_RX_TO_MUX              (1)  /*!< AUDPRC Output to DAC MUX */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup AUDPRC_Output_definition AUDPRC Output definition
-  * @{
-  */
+ * @{
+ */
 
 #define AUDPRC_TX_TO_MEM              (2)  /*!< AUDPRC Output to TX OUT buffer */
 #define AUDPRC_TX_TO_I2S              (1)  /*!< AUDPRC Output to I2S TX */
 #define AUDPRC_TX_TO_CODEC            (0)  /*!< AUDPRC Output to audio codec  */
 
 /**
-  * @}
-  */
+ * @}
+ */
 #define AUDPRC_EQ_ENABLE              (1)
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported macros -----------------------------------------------------------*/
 /** @defgroup AUDPRC_Exported_macros AUDPRC Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 /** @brief  Reset AUDPRC handle state
-  * @param  \__HANDLE__ AUDPRC handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ AUDPRC handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = HAL_AUDPRC_STATE_RESET)
 
 /** @brief  Enable audio prc .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG |= AUDPRC_CFG_ENABLE)
 
 /** @brief  Disable the AUDPRC .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG &= (~AUDPRC_CFG_ENABLE))
 
 /** @brief  Disable the AUDPRC dac path .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DACPATH_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG &= (~AUDPRC_CFG_DAC_PATH_EN))
 
 /** @brief  Enable audprc dac path .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DACPATH_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG |= AUDPRC_CFG_DAC_PATH_EN)
 
 /** @brief  Disable the AUDPRC adc path .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ADCPATH_DISABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG &= (~AUDPRC_CFG_ADC_PATH_EN))
 
 /** @brief  Enable the audprc adc path .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ADCPATH_ENABLE(__HANDLE__) ((__HANDLE__)->Instance->CFG |= AUDPRC_CFG_ADC_PATH_EN)
 
 /** @brief AUDPRC soft reset start.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_SRESET_START(__HANDLE__) (((__HANDLE__)->Instance->CFG) |= (AUDPRC_CFG_SRESET))
 
 /** @brief AUDPRC soft reset stop.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_SRESET_STOP(__HANDLE__) (((__HANDLE__)->Instance->CFG) &= (~AUDPRC_CFG_SRESET))
 
 /** @brief AUDPRC DAC PATH soft reset.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DACPATH_SRESET(__HANDLE__) (((__HANDLE__)->Instance->CFG) |= (AUDPRC_CFG_DAC_PATH_SRESET))
 
 /** @brief AUDPRC ADC PATH soft reset.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ADCPATH_SRESET(__HANDLE__) (((__HANDLE__)->Instance->CFG) |= (AUDPRC_CFG_ADC_PATH_SRESET))
 
 /** @brief AUDPRC auto clock gate enable.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_AUTO_GATE_EN(__HANDLE__) (((__HANDLE__)->Instance->CFG) |= (AUDPRC_CFG_AUTO_GATE_EN))
 
 /** @brief Set the AUDPRC clock from crystal.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_CLK_XTAL(__HANDLE__) (((__HANDLE__)->Instance->CFG) &= (~AUDPRC_CFG_STB_CLK_SEL))
 
 /** @brief Set the AUDPRC clock from pll.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_CLK_PLL(__HANDLE__) (((__HANDLE__)->Instance->CFG) |= (AUDPRC_CFG_STB_CLK_SEL))
 
 /** @brief Set the AUDPRC DAC dest to audio codec.
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DAC_DST_CODEC(__HANDLE__) (MODIFY_REG(((__HANDLE__)->Instance->DAC_PATH_CFG0), AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk,\
                MAKE_REG_VAL(AUDPRC_TX_TO_CODEC, AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk, AUDPRC_DAC_PATH_CFG0_DST_SEL_Pos)))
 
 /** @brief Set the AUDPRC DAC dest to exteral interface(I2S).
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DAC_DST_I2S(__HANDLE__) (MODIFY_REG(((__HANDLE__)->Instance->DAC_PATH_CFG0), AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk,\
                MAKE_REG_VAL(AUDPRC_TX_TO_I2S, AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk, AUDPRC_DAC_PATH_CFG0_DST_SEL_Pos)))
 
 /** @brief Set the AUDPRC DAC dest to APB interface(memory) .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_DAC_DST_MEM(__HANDLE__) (MODIFY_REG(((__HANDLE__)->Instance->DAC_PATH_CFG0), AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk,\
                MAKE_REG_VAL(AUDPRC_TX_TO_MEM, AUDPRC_DAC_PATH_CFG0_DST_SEL_Msk, AUDPRC_DAC_PATH_CFG0_DST_SEL_Pos)))
 
 /** @brief Set the AUDPRC ADC source from audio codec .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ADC_SRC_CODEC(__HANDLE__) (((__HANDLE__)->Instance->ADC_PATH_CFG0) &= (~AUDPRC_ADC_PATH_CFG0_SRC_SEL))
 
 /** @brief Set the AUDPRC ADC source from external interface(I2S) .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @retval None
+ */
 #define __HAL_AUDPRC_ADC_SRC_I2S(__HANDLE__) (((__HANDLE__)->Instance->ADC_PATH_CFG0) |= (AUDPRC_ADC_PATH_CFG0_SRC_SEL))
 
 /** @brief Set the AUDPRC STB div clk .
-  * @param  \__HANDLE__ specifies the AUDPRC Handle.
-  * @param  adc_div adc clock divider.
-  * @param  dac_div dac clock divider.
-  * @retval None
-  */
+ * @param  \__HANDLE__ specifies the AUDPRC Handle.
+ * @param  adc_div adc clock divider.
+ * @param  dac_div dac clock divider.
+ * @retval None
+ */
 #define __HAL_AUDPRC_STB_DIV_CLK(__HANDLE__, adc_div, dac_div) (((__HANDLE__)->Instance->STB) = ((uint32_t)(adc_div) << AUDPRC_STB_ADC_DIV_Pos) | ((uint32_t)(dac_div) << AUDPRC_STB_DAC_DIV_Pos))
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @addtogroup AUDPRC_Exported_Functions
-  * @{
-  */
+ * @{
+ */
 
 /** @addtogroup AUDPRC_Exported_Functions_Group1
-  * @{
-  */
+ * @{
+ */
 /* Initialization/de-initialization functions  **********************************/
 
 /**
-  * @brief Initializes the AUDPRC according to the specified parameters
-  *         in the AUDPRC_InitTypeDef and create the associated handle.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval HAL status
-  */
+ * @brief Initializes the AUDPRC according to the specified parameters
+ *         in the AUDPRC_InitTypeDef and create the associated handle.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Init(AUDPRC_HandleTypeDef *haprc);
 
 /**
-  * @brief DeInitializes the AUDPRC peripheral
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval HAL status
-  */
+ * @brief DeInitializes the AUDPRC peripheral
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_DeInit(AUDPRC_HandleTypeDef *haprc);
 
 /**
-  * @brief Initializes the AUDPRC pin setting.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval None
-  */
+ * @brief Initializes the AUDPRC pin setting.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval None
+ */
 void HAL_AUDPRC_MspInit(AUDPRC_HandleTypeDef *haprc);
 
 /**
-  * @brief deunitializes the AUDPRC pin setting.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @retval None
-  */
+ * @brief deunitializes the AUDPRC pin setting.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @retval None
+ */
 void HAL_AUDPRC_MspDeInit(AUDPRC_HandleTypeDef *haprc);
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup AUDPRC_Exported_Functions_Group2
-  * @{
-  */
+ * @{
+ */
 /* I/O operation functions  ***************************************************/
 /* Configure AUDPRC parameters  */
 
 /**
-  * @brief Set AUDPRC transmit channel configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: configure channel
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC transmit channel configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: configure channel
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_TChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg);
 
 /**
-  * @brief Set AUDPRC Receive configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: configure channel
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC Receive configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: configure channel
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_RChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg);
 
 /**
-  * @brief Set AUDPRC transmit output channel configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: configure channel
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC transmit output channel configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: configure channel
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_OutChanel(AUDPRC_HandleTypeDef *haprc, int channel, AUDPRC_ChnlCfgTypeDef *cfg);
 
 /**
@@ -495,91 +495,91 @@ HAL_StatusTypeDef HAL_AUDPRC_Clear_Adc_Channel(AUDPRC_HandleTypeDef *haprc);
 HAL_StatusTypeDef HAL_AUDPRC_Clear_Dac_Channel(AUDPRC_HandleTypeDef *haprc);
 
 /**
-  * @brief  Configure DAC path.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_DACPath(AUDPRC_HandleTypeDef *haprc, AUDPRC_DACCfgTypeDef *cfg);
 
 /**
-  * @brief  Configure ADC path volume.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~60dB
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path volume.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~60dB
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_ADCPath_Volume(AUDPRC_HandleTypeDef *haprc, int channel, int volume);
 
 /**
-  * @brief  Configure ADC path.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Config_ADCPath(AUDPRC_HandleTypeDef *haprc, AUDPRC_ADCCfgTypeDef *cfg);
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @addtogroup AUDPRC_Exported_Functions_Group3
-  * @{
-  */
+ * @{
+ */
 /* DMA operation functions  ***************************************************/
 
 /**
-  * @brief Set AUDPRC Transmit data with DMA mode.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param pData: data buffer
-  * @param Size: data length need to be transmit
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC Transmit data with DMA mode.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param pData: data buffer
+ * @param Size: data length need to be transmit
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 
 HAL_StatusTypeDef HAL_AUDPRC_Transmit_DMA(AUDPRC_HandleTypeDef *haprc, uint8_t *pData, uint32_t Size, uint32_t did);
 
 /**
-  * @brief Set AUDPRC Receive configures.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param pData: data buffer
-  * @param Size: data length need to be transmit
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Set AUDPRC Receive configures.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param pData: data buffer
+ * @param Size: data length need to be transmit
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_Receive_DMA(AUDPRC_HandleTypeDef *haprc, uint8_t *pData, uint32_t Size, uint32_t did);
 
 /**
-  * @brief Stop AUD PRC DMA.
-  * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
-  *         the configuration information for AUDPRC module
-  * @param did:  DMA channel index
-  * @retval HAL status
-  */
+ * @brief Stop AUD PRC DMA.
+ * @param  haprc: pointer to a AUDPRC_HandleTypeDef structure that contains
+ *         the configuration information for AUDPRC module
+ * @param did:  DMA channel index
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_AUDPRC_DMAStop(AUDPRC_HandleTypeDef *haprc, uint32_t did);
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

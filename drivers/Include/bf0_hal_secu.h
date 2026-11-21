@@ -15,18 +15,18 @@ extern "C" {
 #include "bf0_hal_def.h"
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SECU SECU
-  * @brief SECU HAL module driver
-  * @{
-  */
+ * @brief SECU HAL module driver
+ * @{
+ */
 
 /* Exported types ------------------------------------------------------------*/
 /** @defgroup SECU_Exported_Types SECU Exported Types
-  * @{
-  */
+ * @{
+ */
 
 /** Security supported SECU groups definition  */
 typedef enum
@@ -109,39 +109,39 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /** @defgroup SECU_Exported_Macros SECU Exported Macros
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup SECU_Flag  Security setting flags
-  * @{
-  */
+ * @{
+ */
 #define SECU_FLAG_NONE      (0x00UL)           /* !< None security mode and none privilege mode*/
 #define SECU_FLAG_PRIV      (0x01UL)           /* !< Privilege mode */
 #define SECU_FLAG_SECU      (0x02UL)           /* !< Security  mode */
 #define SECU_FLAG_SEC_WR    (0x04UL)           /* !< Only Security mode can write, flag for memory*/
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /** @defgroup SECU_Role  Security role
-  * @{
-  */
+ * @{
+ */
 #define SECU_ROLE_MASTER    (0x01UL)         /*!< Master role */
 #define SECU_ROLE_SLAVE     (0x02UL)         /*!< Slave role */
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 #define SECU_MEM_MIN_BLOCK (1024)           /*!< Minimal security block size*/
@@ -153,54 +153,54 @@ typedef struct
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /* Exported functions --------------------------------------------------------*/
 /** @defgroup SECU_Exported_Functions SECU Exported Functions
-  * @{
-  */
+ * @{
+ */
 
 
 /**
-  * @brief  Config a module's security.
-  * @param  module  - module control by SECU, the value is in type of #SECU_MODULE_TYPE
-  * @param  role   - apply security on module while it act as this role @ref SECU_Role
-  * @param  flag - module's security attribute, @ref SECU_Flag
-  * @retval HAL status
-  */
+ * @brief  Config a module's security.
+ * @param  module  - module control by SECU, the value is in type of #SECU_MODULE_TYPE
+ * @param  role   - apply security on module while it act as this role @ref SECU_Role
+ * @param  flag - module's security attribute, @ref SECU_Flag
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SECU_SetAttr(SECU_MODULE_TYPE module, uint32_t role, uint32_t flag);
 
 /**
-  * @brief  Config memory's security.
-  * @param  memory_type  - memory control by SECU, the value can be one of #SECU_MEM_TYPE
-  * @param  attrs        - memory's security attributes
-  * @param  attrs_cnt     - length of attrs
-  * @retval HAL status
-  */
+ * @brief  Config memory's security.
+ * @param  memory_type  - memory control by SECU, the value can be one of #SECU_MEM_TYPE
+ * @param  attrs        - memory's security attributes
+ * @param  attrs_cnt     - length of attrs
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SECU_SetMemoryAttr(SECU_MEM_TYPE memory_type, const SECU_MemAttr_Type *attrs, uint32_t attrs_cnt);
 
 /**
-  * @brief  Lock security group configurations, once locked, the configurations of this group
-  *         can not be changed until next system reset.
-  * @param  group  - group of SECU, the value can be one of @ref SECU_GROUP_TYPE
-  * @retval HAL status
-  */
+ * @brief  Lock security group configurations, once locked, the configurations of this group
+ *         can not be changed until next system reset.
+ * @param  group  - group of SECU, the value can be one of @ref SECU_GROUP_TYPE
+ * @retval HAL status
+ */
 HAL_StatusTypeDef HAL_SECU_Lock(SECU_GROUP_TYPE group);
 
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 #ifdef __cplusplus
 }

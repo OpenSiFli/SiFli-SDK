@@ -17,18 +17,18 @@ extern "C" {
 #if defined(HAL_AES_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup AES AES Encrypt/decrypt engine
-  * @brief AES encrypt/decrypt enginer hardware interface.
-  * @{
-  */
+ * @brief AES encrypt/decrypt enginer hardware interface.
+ * @{
+ */
 
 /**
-  * @addtogroup  AES_exported_constants
-  * @{
-*/
+ * @addtogroup  AES_exported_constants
+ * @{
+ */
 #define AES_DEC 0
 #define AES_ENC 1
 
@@ -43,56 +43,56 @@ extern "C" {
 #define AES_KEY_LEN_192 1
 #define AES_KEY_LEN_256 2
 /**
-  * @} AES_exported_constants
-*/
+ * @} AES_exported_constants
+ */
 
 
 /**
-  * @defgroup AES_exported_functions AES Exported functions
-  * @ingroup AES
-  * @{
-  *
+ * @defgroup AES_exported_functions AES Exported functions
+ * @ingroup AES
+ * @{
+ *
  */
 /**
-* @brief  Initialize AES hardware block
-* @param  key aes key, must be 32bit aligned
-* @param  key_size aes key size in bytes
-* @param  iv initial vector, must be 32bit aligned
-* @param  mode aes mode
-* @retval 0 if successful, otherwise -1
-*/
+ * @brief  Initialize AES hardware block
+ * @param  key aes key, must be 32bit aligned
+ * @param  key_size aes key size in bytes
+ * @param  iv initial vector, must be 32bit aligned
+ * @param  mode aes mode
+ * @retval 0 if successful, otherwise -1
+ */
 int HAL_AES_init(uint32_t *key, int key_size, uint32_t *iv, uint32_t mode);
 int HAL_AES_init_ns(uint32_t *key, int key_size, uint32_t *iv, uint32_t mode);
 
 /**
-* @brief  run AES hardware enc/dec
-* @param  enc 1:encoding, 0:decoding
-* @param  in_data input data, input data could not in ITCM or Retention memory
-* @param  out_data output data, output data could not in ITCM or Retention memory
-* @param  size length of input/output data in bytes, must be multiple of 16 bytes.
-* @retval HAL_OK if successful, otherwise HAL_ERROR
-*/
+ * @brief  run AES hardware enc/dec
+ * @param  enc 1:encoding, 0:decoding
+ * @param  in_data input data, input data could not in ITCM or Retention memory
+ * @param  out_data output data, output data could not in ITCM or Retention memory
+ * @param  size length of input/output data in bytes, must be multiple of 16 bytes.
+ * @retval HAL_OK if successful, otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_AES_run(uint8_t enc, uint8_t *in_data, uint8_t *out_data, int size);
 HAL_StatusTypeDef HAL_AES_run_ns(uint8_t enc, uint8_t *in_data, uint8_t *out_data, int size);
 
 /**
-* @brief  run AES hardware enc/dec, generate interrupt when done.
-* @param  enc 1:encoding, 0:decoding
-* @param  in_data input data, input data could not in ITCM or Retention memory
-* @param  out_data output data, output data could not in ITCM or Retention memory
-* @param  size length of input/output data in bytes, must be multiple of 16 bytes.
-* @retval HAL_OK if successful, otherwise HAL_ERROR
-*/
+ * @brief  run AES hardware enc/dec, generate interrupt when done.
+ * @param  enc 1:encoding, 0:decoding
+ * @param  in_data input data, input data could not in ITCM or Retention memory
+ * @param  out_data output data, output data could not in ITCM or Retention memory
+ * @param  size length of input/output data in bytes, must be multiple of 16 bytes.
+ * @retval HAL_OK if successful, otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_AES_run_IT(uint8_t enc, uint8_t *in_data, uint8_t *out_data, int size);
 HAL_StatusTypeDef HAL_AES_run_IT_ns(uint8_t enc, uint8_t *in_data, uint8_t *out_data, int size);
 
 /**
-* @brief  Copy 'src' to 'dst' like DMA, with no encoding either decoding.
-* @param  src source data, source data could not in ITCM or Retention memory
-* @param  dst destination data, destination data could not in ITCM or Retention memory
-* @param  size length of src/dst data in bytes, must be multiple of 16 bytes.
-* @retval HAL_OK if successful, otherwise HAL_ERROR
-*/
+ * @brief  Copy 'src' to 'dst' like DMA, with no encoding either decoding.
+ * @param  src source data, source data could not in ITCM or Retention memory
+ * @param  dst destination data, destination data could not in ITCM or Retention memory
+ * @param  size length of src/dst data in bytes, must be multiple of 16 bytes.
+ * @retval HAL_OK if successful, otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_AES_copy_IT_ns(uint8_t *src, uint8_t *dst, int size);
 
 
@@ -101,42 +101,42 @@ HAL_StatusTypeDef HAL_AES_copy_IT_ns(uint8_t *src, uint8_t *dst, int size);
 #define HAL_AES_busy() (hwp_aes_acc->STATUS & AES_ACC_STATUS_BUSY)
 
 /**
-* @brief  Reset AES hardware block
-* @retval 0 if successful, otherwise -1
-*/
+ * @brief  Reset AES hardware block
+ * @retval 0 if successful, otherwise -1
+ */
 int HAL_AES_reset(void);
 int HAL_AES_reset_ns(void);
 
 /**
-* @brief  AES IRQ handler
-*/
+ * @brief  AES IRQ handler
+ */
 void HAL_AES_IRQHandler(void);
 void HAL_AES_IRQHandler_ns(void);
 
 /**
-  *@} AES_exported_functions
-*/
+ *@} AES_exported_functions
+ */
 #endif
 
 /**
-  *@} AES
-  */
+ *@} AES
+ */
 
 /** @defgroup HASH Hash engine
-  * @brief Hash engine hardware interface.
-  * @{
-  */
+ * @brief Hash engine hardware interface.
+ * @{
+ */
 
 /**
-  * @addtogroup  HASH_exported_constants
-  * @{
-*/
+ * @addtogroup  HASH_exported_constants
+ * @{
+ */
 
 /**
-  * @defgroup HASH_ALGO_XXX Hash algorithm
-  * @brief  Hash algorithm definitions
-  * @{
-  */
+ * @defgroup HASH_ALGO_XXX Hash algorithm
+ * @brief  Hash algorithm definitions
+ * @{
+ */
 enum
 {
     HASH_ALGO_SHA1      = 0,    /*!< HASH algorithm SHA1 */
@@ -146,8 +146,8 @@ enum
     HASH_ALGO_MAX       = 3     /*!< MAX HASH algorithm */
 } ;
 /**
-  * @} HASH_ALGO_XXX
-*/
+ * @} HASH_ALGO_XXX
+ */
 
 
 #define HASH_SHA1_SIZE      20     /*!< SHA1 size */
@@ -158,54 +158,54 @@ enum
 
 
 /**
-  * @} HASH_exported_constants
-*/
+ * @} HASH_exported_constants
+ */
 
 
 #if defined(HAL_HASH_MODULE_ENABLED)||defined(_SIFLI_DOXYGEN_)
 /**
-  * @defgroup HASH_exported_functions HASH Exported functions
-  * @ingroup AES
-  * @{
-  *
+ * @defgroup HASH_exported_functions HASH Exported functions
+ * @ingroup AES
+ * @{
+ *
  */
 /**
-* @brief  Initialize AES Hash hardware block
-* @param  iv initial vector, must be 32bit aligned, if NULL, use algorithm default initial vector.
-          Initial vector is previous finished hash result, reload this to resume hash calculation.
-          Previous finished hash block length, must be 64 bytes aligned.
-* @param  algo hash algorithm, see @ref HASH_ALGO_XXX
-* @param  length previous finished length, must be 64bytes aligned.
-* @retval 0 if successful, otherwise -1
-*/
+ * @brief  Initialize AES Hash hardware block
+ * @param  iv initial vector, must be 32bit aligned, if NULL, use algorithm default initial vector.
+           Initial vector is previous finished hash result, reload this to resume hash calculation.
+           Previous finished hash block length, must be 64 bytes aligned.
+ * @param  algo hash algorithm, see @ref HASH_ALGO_XXX
+ * @param  length previous finished length, must be 64bytes aligned.
+ * @retval 0 if successful, otherwise -1
+ */
 int HAL_HASH_init(uint32_t *iv, uint8_t algo, uint32_t length);
 int HAL_HASH_init_ns(uint32_t *iv, uint8_t algo, uint32_t length);
 
 /**
-* @brief  run Hash hardware
-* @param  in_data input data, input data could not in ITCM or Retention memory
-* @param  size length of input data in bytes. if not last block, size must be 64 bytes aligned.
-* @param  final Last block
-* @retval HAL_OK if successful, otherwise HAL_ERROR
-*/
+ * @brief  run Hash hardware
+ * @param  in_data input data, input data could not in ITCM or Retention memory
+ * @param  size length of input data in bytes. if not last block, size must be 64 bytes aligned.
+ * @param  final Last block
+ * @retval HAL_OK if successful, otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_HASH_run(uint8_t *in_data, int size, int final);
 HAL_StatusTypeDef HAL_HASH_run_ns(uint8_t *in_data, int size, int final);
 
 /**
-* @brief  run Hash hardware, return immediately, generate AES HASH interrupt when done.
-* @param  in_data input data, input data could not in ITCM or Retention memory
-* @param  size length of input data in bytes. if not last block, size must be 64 bytes aligned
-* @param  final Last block
-* @retval HAL_OK if successful, otherwise HAL_ERROR
-*/
+ * @brief  run Hash hardware, return immediately, generate AES HASH interrupt when done.
+ * @param  in_data input data, input data could not in ITCM or Retention memory
+ * @param  size length of input data in bytes. if not last block, size must be 64 bytes aligned
+ * @param  final Last block
+ * @retval HAL_OK if successful, otherwise HAL_ERROR
+ */
 HAL_StatusTypeDef HAL_HASH_run_IT(uint8_t *in_data, int size, int final);
 HAL_StatusTypeDef HAL_HASH_run_IT_ns(uint8_t *in_data, int size, int final);
 
 /**
-* @brief  Get hash result.
-* @param  out_data output data, Size of out_data depends on hash algorithm
-* @note  SHA224 result is 28 bytes, but internal need 32 byte, please allocate 32 bytes for usage.
-*/
+ * @brief  Get hash result.
+ * @param  out_data output data, Size of out_data depends on hash algorithm
+ * @note  SHA224 result is 28 bytes, but internal need 32 byte, please allocate 32 bytes for usage.
+ */
 void HAL_HASH_result(uint8_t *out_data);
 void HAL_HASH_result_ns(uint8_t *out_data);
 
@@ -213,20 +213,20 @@ void HAL_HASH_result_ns(uint8_t *out_data);
 #define HAL_HASH_busy HAL_AES_busy
 
 /**
-* @brief  Reset AES HASH hardware block
-* @retval 0 if successful, otherwise -1
-*/
+ * @brief  Reset AES HASH hardware block
+ * @retval 0 if successful, otherwise -1
+ */
 int HAL_HASH_reset(void);
 int HAL_HASH_reset_ns(void);
 
 /**
-* @brief  AES HASH IRQ handler
-*/
+ * @brief  AES HASH IRQ handler
+ */
 void HAL_HASH_IRQHandler(void);
 void HAL_HASH_IRQHandler_ns(void);
 /**
-  *@} HASH_exported_functions
-*/
+ *@} HASH_exported_functions
+ */
 
 #define HASH_IRQHandler AES_IRQHandler
 #else
@@ -242,12 +242,12 @@ HAL_StatusTypeDef HAL_AES_Regist_IT_cb_ns(pAESCallback cb);
 #define HAL_HASH_Regist_IT_cb_ns HAL_AES_Regist_IT_cb_ns
 
 /**
-  *@} Hash
-  */
+ *@} Hash
+ */
 
 /**
-  *@} BF0_HAL_Driver
-  */
+ *@} BF0_HAL_Driver
+ */
 
 #ifdef __cplusplus
 }

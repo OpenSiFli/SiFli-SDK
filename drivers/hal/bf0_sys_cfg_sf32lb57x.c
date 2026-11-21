@@ -10,8 +10,8 @@
 #include "rtconfig.h"
 #include "register.h"
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 #ifdef SF32LB57X
 
 #ifdef HAL_SYSTEM_CONFIG_ENABLED
@@ -182,5 +182,5 @@ int BSP_CONFIG_get(int type, uint8_t *buf, int length)
 
 #endif /* SF32LB57X */
 /**
-  * @}
-  */
+ * @}
+ */

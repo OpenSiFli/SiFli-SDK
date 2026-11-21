@@ -12,13 +12,13 @@ extern "C" {
 #endif
 
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup COMMON Common
-  * @brief Common HAL common type definition
-  * @{
-  */
+ * @brief Common HAL common type definition
+ * @{
+ */
 
 
 /* Includes ------------------------------------------------------------------*/
@@ -365,8 +365,8 @@ extern "C" {
 #define HAL_CONCAT_2(p1, p2)      HAL_CONCAT_2_(p1, p2)
 
 /**
-  * @brief  HAL Status structures definition
-  */
+ * @brief  HAL Status structures definition
+ */
 typedef enum
 {
     HAL_OK       = 0x00, /**< No error */
@@ -378,8 +378,8 @@ typedef enum
 } HAL_StatusTypeDef;
 
 /**
-  * @brief  HAL Lock structures definition
-  */
+ * @brief  HAL Lock structures definition
+ */
 typedef enum
 {
     HAL_UNLOCKED = 0x00,
@@ -412,20 +412,20 @@ typedef enum
                         } while(0)
 
 /** @brief Reset the Handle's State field.
-  * @param  \__HANDLE__: specifies the Peripheral Handle.
-  * @note  This macro can be used for the following purpose:
-  *          - When the Handle is declared as local variable; before passing it as parameter
-  *            to HAL_PPP_Init() for the first time, it is mandatory to use this macro
-  *            to set to 0 the Handle's "State" field.
-  *            Otherwise, "State" field may have any random value and the first time the function
-  *            HAL_PPP_Init() is called, the low level hardware initialization will be missed
-  *            (i.e. HAL_PPP_MspInit() will not be executed).
-  *          - When there is a need to reconfigure the low level hardware: instead of calling
-  *            HAL_PPP_DeInit() then HAL_PPP_Init(), user can make a call to this macro then HAL_PPP_Init().
-  *            In this later function, when the Handle's "State" field is set to 0, it will execute the function
-  *            HAL_PPP_MspInit() which will reconfigure the low level hardware.
-  * @retval None
-  */
+ * @param  \__HANDLE__: specifies the Peripheral Handle.
+ * @note  This macro can be used for the following purpose:
+ *          - When the Handle is declared as local variable; before passing it as parameter
+ *            to HAL_PPP_Init() for the first time, it is mandatory to use this macro
+ *            to set to 0 the Handle's "State" field.
+ *            Otherwise, "State" field may have any random value and the first time the function
+ *            HAL_PPP_Init() is called, the low level hardware initialization will be missed
+ *            (i.e. HAL_PPP_MspInit() will not be executed).
+ *          - When there is a need to reconfigure the low level hardware: instead of calling
+ *            HAL_PPP_DeInit() then HAL_PPP_Init(), user can make a call to this macro then HAL_PPP_Init().
+ *            In this later function, when the Handle's "State" field is set to 0, it will execute the function
+ *            HAL_PPP_MspInit() which will reconfigure the low level hardware.
+ * @retval None
+ */
 #define __HAL_RESET_HANDLE_STATE(__HANDLE__) ((__HANDLE__)->State = 0)
 
 #define __HAL_LOCK(__HANDLE__)                                           \
@@ -477,8 +477,8 @@ typedef enum
 #endif /* __GNUC__ */
 
 /**
-  * @brief  __RAM_FUNC definition
-  */
+ * @brief  __RAM_FUNC definition
+ */
 #if defined ( __CC_ARM   )
 /* ARM Compiler
    ------------
@@ -571,8 +571,8 @@ typedef enum
 
 
 /**
-  * @brief  __NOINLINE definition
-  */
+ * @brief  __NOINLINE definition
+ */
 #if defined ( __CC_ARM   ) || defined   (  __GNUC__  )
 /* ARM & GNUCompiler
    ----------------
@@ -589,12 +589,12 @@ typedef enum
 
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 /**
-  * @}
-  */
+ * @}
+ */
 
 
 

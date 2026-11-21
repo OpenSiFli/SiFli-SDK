@@ -617,12 +617,12 @@ __HAL_ROM_USED void HAL_AUDCODEC_Close_Analog_ADCPath(void)
 
 
 /**
-  * @brief Initializes the AUDCODEC according to the specified parameters
-  *         in the AUDCODEC_InitTypeDef and create the associated handle.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval HAL status
-  */
+ * @brief Initializes the AUDCODEC according to the specified parameters
+ *         in the AUDCODEC_InitTypeDef and create the associated handle.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Init(AUDCODEC_HandleTypeDef *hacodec)
 {
     int i = 0;
@@ -681,11 +681,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Init(AUDCODEC_HandleTypeDef *hacod
 }
 
 /**
-  * @brief DeInitializes the AUDCODEC peripheral
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval HAL status
-  */
+ * @brief DeInitializes the AUDCODEC peripheral
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_DeInit(AUDCODEC_HandleTypeDef *hacodec)
 {
     int i;
@@ -725,11 +725,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_DeInit(AUDCODEC_HandleTypeDef *hac
 }
 
 /**
-  * @brief Initializes the AUDCODEC pin setting.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval None
-  */
+ * @brief Initializes the AUDCODEC pin setting.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_AUDCODEC_MspInit(AUDCODEC_HandleTypeDef *hacodec)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -737,11 +737,11 @@ __HAL_ROM_USED void HAL_AUDCODEC_MspInit(AUDCODEC_HandleTypeDef *hacodec)
 }
 
 /**
-  * @brief deunitializes the AUDCODEC pin setting.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval None
-  */
+ * @brief deunitializes the AUDCODEC pin setting.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval None
+ */
 __HAL_ROM_USED void HAL_AUDCODEC_MspDeInit(AUDCODEC_HandleTypeDef *hacodec)
 {
     /* Prevent unused argument(s) compilation warning */
@@ -749,12 +749,12 @@ __HAL_ROM_USED void HAL_AUDCODEC_MspDeInit(AUDCODEC_HandleTypeDef *hacodec)
 }
 
 /**
-  * @brief Set AUDCODEC transmit channel configures.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC transmit channel configures.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_TChanel(AUDCODEC_HandleTypeDef *hacodec, int channel, AUDCODEC_DACCfgTypeDef *cfg)
 {
     AUDCODE_DAC_CLK_CONFIG_TYPE *dac_clk = cfg->dac_clk;
@@ -827,12 +827,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_TChanel(AUDCODEC_HandleType
 }
 
 /**
-  * @brief Set AUDCODEC Receive configures.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief Set AUDCODEC Receive configures.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_RChanel(AUDCODEC_HandleTypeDef *hacodec, int channel, AUDCODEC_ADCCfgTypeDef *cfg)
 {
     AUDCODE_ADC_CLK_CONFIG_TYPE *adc_clk = cfg->adc_clk;
@@ -915,13 +915,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Clear_All_Channel(AUDCODEC_HandleT
 }
 
 /**
-  * @brief  Configure DAC path volume.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~54dB, unit is 0.5db, use fix point Q15.1 format
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path volume.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~54dB, unit is 0.5db, use fix point Q15.1 format
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath_Volume(AUDCODEC_HandleTypeDef *hacodec, int channel, int volume)
 {
     uint32_t rough_vol, fine_vol;
@@ -996,13 +996,13 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath_Volume(AUDCODEC_Han
 }
 
 /**
-  * @brief  Configure ADC path volume.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param channel: channel 0 or 1
-  * @param volume: configure volume -36dB~54dB
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path volume.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param channel: channel 0 or 1
+ * @param volume: configure volume -36dB~54dB
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_ADCPath_Volume(AUDCODEC_HandleTypeDef *hacodec, int channel, int volume)
 {
     uint32_t rough_vol, fine_vol;
@@ -1054,11 +1054,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_ADCPath_Volume(AUDCODEC_Han
 
 
 /**
-  * @brief  Config DAC path.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @retval HAL status
-  */
+ * @brief  Config DAC path.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath(AUDCODEC_HandleTypeDef *hacodec, uint16_t bypass)
 {
 
@@ -1098,12 +1098,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_DACPath(AUDCODEC_HandleType
 }
 
 /**
-  * @brief  Configure DAC path mute.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param mute: is mute or not
-  * @retval HAL status
-  */
+ * @brief  Configure DAC path mute.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param mute: is mute or not
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Mute_DACPath(AUDCODEC_HandleTypeDef *hacodec, int mute)
 {
     static int fine_vol_0, fine_vol_1;
@@ -1140,12 +1140,12 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Mute_DACPath(AUDCODEC_HandleTypeDe
 #if 0
 
 /**
-  * @brief  Configure ADC path.
-  * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
-  *         the configuration information for AUDCODEC module
-  * @param cfg: configure parameters
-  * @retval HAL status
-  */
+ * @brief  Configure ADC path.
+ * @param  hacodec: pointer to a AUDCODEC_HandleTypeDef structure that contains
+ *         the configuration information for AUDCODEC module
+ * @param cfg: configure parameters
+ * @retval HAL status
+ */
 __HAL_ROM_USED HAL_StatusTypeDef HAL_AUDCODEC_Config_ADCPath(AUDCODEC_HandleTypeDef *hacodec, AUDCODEC_ADCCfgTypeDef *cfg)
 {
     uint32_t value;
@@ -1440,11 +1440,11 @@ static void AUDCODEC_DMATxCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief DMA I2S transmit process half complete callback
-  * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
-  *                the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief DMA I2S transmit process half complete callback
+ * @param  hdma: pointer to a DMA_HandleTypeDef structure that contains
+ *                the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDCODEC_DMATxHalfCplt(DMA_HandleTypeDef *hdma)
 {
     AUDCODEC_HandleTypeDef *aprc = (AUDCODEC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -1473,11 +1473,11 @@ static void AUDCODEC_DMARxCplt(DMA_HandleTypeDef *hdma)
 }
 
 /**
-  * @brief  DMA PDM half receive process complete callback
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM half receive process complete callback
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDCODEC_DMAHalfRxCplt(DMA_HandleTypeDef *hdma)
 {
     AUDCODEC_HandleTypeDef *aprc = (AUDCODEC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
@@ -1492,11 +1492,11 @@ static void AUDCODEC_DMAHalfRxCplt(DMA_HandleTypeDef *hdma)
 
 
 /**
-  * @brief  DMA PDM communication error callback.
-  * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
-  *               the configuration information for the specified DMA module.
-  * @retval None
-  */
+ * @brief  DMA PDM communication error callback.
+ * @param  hdma pointer to a DMA_HandleTypeDef structure that contains
+ *               the configuration information for the specified DMA module.
+ * @retval None
+ */
 static void AUDCODEC_DMAError(DMA_HandleTypeDef *hdma)
 {
     AUDCODEC_HandleTypeDef *aprc = (AUDCODEC_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;

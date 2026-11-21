@@ -12,13 +12,13 @@
     #include "bf0_hal_hlp.h"
 #endif
 /** @addtogroup BF0_HAL_Driver
-  * @{
-  */
+ * @{
+ */
 
 /** @defgroup HAL_DBG Hal Debug functions
-  * @brief HAL debug driver
-  * @{
-  */
+ * @brief HAL debug driver
+ * @{
+ */
 #ifdef  USE_HAL_DRIVER
 __WEAK void HAL_DBG_printf(const char *fmt, ...)
 {
@@ -26,11 +26,11 @@ __WEAK void HAL_DBG_printf(const char *fmt, ...)
 #endif
 
 /**
-  * @brief  Print a byte value in hex string.
-  * @param[in,out] p: hex string.
-  * @param[in] d: a byte value.
-  * @retval None.
-  */
+ * @brief  Print a byte value in hex string.
+ * @param[in,out] p: hex string.
+ * @param[in] d: a byte value.
+ * @retval None.
+ */
 static void print_hex(unsigned char *p, unsigned char d)
 {
     (*p) = d & 0xf0;
@@ -49,12 +49,12 @@ static void print_hex(unsigned char *p, unsigned char d)
 }
 
 /**
-  * @brief  Set ascii output for a char, if not visible, display '.' .
-  * @param[in] buffer: buffer for current line
-  * @param[in] ch: char to display
-  * @param[in] offset: offset for current line.
-  * @retval None.
-  */
+ * @brief  Set ascii output for a char, if not visible, display '.' .
+ * @param[in] buffer: buffer for current line
+ * @param[in] ch: char to display
+ * @param[in] offset: offset for current line.
+ * @retval None.
+ */
 static void setchar(char *buffer, unsigned char ch, int offset)
 {
     if (ch > ' ' && ch < '~')
@@ -65,12 +65,12 @@ static void setchar(char *buffer, unsigned char ch, int offset)
 
 
 /**
-  * @brief  Dump a data in hex, also display ASCII on the right.
-  * @param[in] data: data to dump.
-  * @param[in] offset: start offset from data.
-  * @param[in] len: length of data to dump.
-  * @retval None.
-  */
+ * @brief  Dump a data in hex, also display ASCII on the right.
+ * @param[in] data: data to dump.
+ * @param[in] offset: start offset from data.
+ * @param[in] len: length of data to dump.
+ * @retval None.
+ */
 __HAL_ROM_USED void HAL_DBG_print_data(char *data, unsigned int offset, int len)
 {
     int i;
@@ -219,10 +219,10 @@ static int8_t atohex(char ch)
 }
 
 /**
-  * @brief  Convert a hex string to integer.
-  * @param[in] astr hex string
-  * @retval integer represented by astr.
-  */
+ * @brief  Convert a hex string to integer.
+ * @param[in] astr hex string
+ * @retval integer represented by astr.
+ */
 __HAL_ROM_USED uint32_t atoh(char *astr)
 {
     uint32_t r = 0;
@@ -240,12 +240,12 @@ __HAL_ROM_USED uint32_t atoh(char *astr)
 }
 
 /**
-  * @brief  Convert a hex string to byte array
-  * @param[in] hexstr hex string
-  * @param[in, out] byte array
-  * @param[in] max_len max length of byte array
-  * @retval length of hex data array.
-  */
+ * @brief  Convert a hex string to byte array
+ * @param[in] hexstr hex string
+ * @param[in, out] byte array
+ * @param[in] max_len max length of byte array
+ * @retval length of hex data array.
+ */
 __HAL_ROM_USED int hex2data(char *hexstr, uint8_t *data, uint8_t max_len)
 {
     int i = 0;
@@ -266,12 +266,12 @@ __HAL_ROM_USED int hex2data(char *hexstr, uint8_t *data, uint8_t max_len)
 }
 
 /**
-  * @brief  Convert a hex string to byte array in revert sequence
-  * @param[in] hexstr hex string
-  * @param[in, out] byte array
-  * @param[in] max_len max length of byte array
-  * @retval integer represented by astr.
-  */
+ * @brief  Convert a hex string to byte array in revert sequence
+ * @param[in] hexstr hex string
+ * @param[in, out] byte array
+ * @param[in] max_len max length of byte array
+ * @retval integer represented by astr.
+ */
 __HAL_ROM_USED int hex2data_revert(char *hexstr, uint8_t *data, uint8_t max_len)
 {
     int i = max_len - 1;
@@ -294,13 +294,13 @@ __HAL_ROM_USED int hex2data_revert(char *hexstr, uint8_t *data, uint8_t max_len)
 #ifdef USE_HAL_DRIVER
 
 /**
-  * @brief  Set the RTC backup register, used to share value between H/L CPU
-  * @param  hrtc pointer to a RTC_HandleTypeDef structure that contains
-  *                the configuration information for RTC.
-  * @param  idx index of backup register
-  * @param  value value to set into backup register
-  * @retval None
-  */
+ * @brief  Set the RTC backup register, used to share value between H/L CPU
+ * @param  hrtc pointer to a RTC_HandleTypeDef structure that contains
+ *                the configuration information for RTC.
+ * @param  idx index of backup register
+ * @param  value value to set into backup register
+ * @retval None
+ */
 
 HAL_RAM_RET_CODE_SECT(HAL_Set_backup, __HAL_ROM_USED void HAL_Set_backup(uint8_t idx, uint32_t value))
 {
@@ -309,12 +309,12 @@ HAL_RAM_RET_CODE_SECT(HAL_Set_backup, __HAL_ROM_USED void HAL_Set_backup(uint8_t
 }
 
 /**
-  * @brief  Get the RTC backup register, used to share value between H/L CPU
-  * @param  hrtc pointer to a RTC_HandleTypeDef structure that contains
-  *                the configuration information for RTC.
-  * @param  idx index of backup register
-  * @retval value saved in the backup register
-  */
+ * @brief  Get the RTC backup register, used to share value between H/L CPU
+ * @param  hrtc pointer to a RTC_HandleTypeDef structure that contains
+ *                the configuration information for RTC.
+ * @param  idx index of backup register
+ * @retval value saved in the backup register
+ */
 HAL_RAM_RET_CODE_SECT(HAL_Get_backup, __HAL_ROM_USED uint32_t HAL_Get_backup(uint8_t idx))
 {
     volatile uint32_t *p = &hwp_rtc->BKP0R;
