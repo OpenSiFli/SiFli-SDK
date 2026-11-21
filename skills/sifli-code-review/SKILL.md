@@ -259,7 +259,9 @@ Check against the project's `.clang-format` (Allman brace style, 4-space indent)
 - Are magic numbers replaced with named constants or macros?
 - Are function names descriptive of what they do?
 - Is there appropriate use of `LOG_D`/`LOG_I`/`LOG_W`/`LOG_E` (via ulog, not `rt_kprintf`) for logging?
-- Are key design decisions or non-obvious behaviors commented?
+- Do comments explain non-obvious constraints, formulas, references and design, rather than only
+  paraphrasing the adjacent statement (required doxygen headings aside)? Flag comments that record
+  the authoring or debugging process, or earlier versions and alternatives.
 
 ### 2.6 Functional Correctness
 

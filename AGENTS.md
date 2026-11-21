@@ -171,6 +171,12 @@ Hardware (Cortex-M33 HCPU, optional low-power LCPU co-processor)
 - C comments follow [Coding Style](docs/source/en/contribute/coding_style.md): English only, doxygen style
   for functions (`/** ... */` with `@brief`, `@param`, `@return`) and for struct members / enum values
   (`/**< ... */`)
+- Beyond the doxygen headings above, a comment states only what a maintainer needs to know to
+  change the code safely and cannot infer from it: non-obvious constraints (timing, ordering,
+  alignment, hardware errata), formulas, register/protocol references, or the design summary of a
+  non-trivial block. This narrows the linked Coding Style: a comment explains intent and design,
+  not a line-by-line account of what the next statement does. Never record the authoring or
+  debugging process, or earlier versions and alternatives.
 
 ## Multi-Agent Collaboration (Orchestrator)
 
