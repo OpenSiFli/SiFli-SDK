@@ -146,6 +146,9 @@ Also check for untracked files:
 git status -s
 ```
 
+The working design document lives in `docs/design/wip/`, which is git-ignored, so it never shows
+up there; when the task has one, read it from the path given in the task prompt.
+
 ## Step 1: Classify Changed Files
 
 Classify each changed file into one of six categories:
@@ -528,6 +531,7 @@ Why is the change needed and how does it work?
 - **Lead with the point**: The first sentence names the problem or the decision. Length is not the problem — a long body is fine when every paragraph carries something the diff cannot show; ordering is what buries the point.
 - **No diff recital — flag as 问题**: The body must not tour the diff ("the first block adds…, the second renames…, the third updates the call site"). Name a file, function or flag only where the reader needs it to follow the decision. If the body can be reconstructed by reading the diff hunk by hunk, it adds nothing and the important part is lost among the rest.
 - **Clarity**: The description should be understandable to someone not familiar with the specific bug/feature. Avoid internal jargon without explanation.
+- **Body width**: Wrap the body at 72 columns, as `.commit_template` asks for.
 - **Redmine links**: Include the `ext-redmine: #id, REDMINE-id` footer; it is required on `main` and `release/*` branches.
 
 ### 5.3 English Quality
