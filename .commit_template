@@ -5,13 +5,18 @@
 #   subject one line, imperative, lowercase, no trailing period
 #
 # Body (optional): why the change is needed and how it works, wrapped at 72 columns.
-# Lead with the problem or the decision; name a file or function only when the
-# reader needs it to follow that. A body that tours the diff adds nothing to it.
+# Lead with the point: the problem when the body reports one, otherwise the decision;
+# name a file or function only when the reader needs it to follow that. A body that
+# tours the diff adds nothing to it.
+# Put the problem paragraph before the resolution paragraph, in separate paragraphs; each must be
+# identifiable from its first sentence without a `Problem:`/`Resolution:` prefix.
 # Breaking change: write type(scope)!: ... and add a "BREAKING CHANGE: ..." footer.
 # ---------------------------------------------------------------------------
 
 <type>(<scope>): short imperative summary
 
-ext-redmine: #id, REDMINE-id
+# Explain why the change is needed.
+#
+# Then what the change does about it.
 
-# Explain why the change is needed and how it works.
+ext-redmine: #id, REDMINE-id

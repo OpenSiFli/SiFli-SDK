@@ -480,9 +480,11 @@ The project follows a commit template (from `.commit_template`):
 ```text
 <type>(<scope>): one line description
 
-ext-redmine: #id, REDMINE-id
+The problem the commit addresses.
 
-Why is the change needed and how does it work?
+What the commit does about it.
+
+ext-redmine: #id, REDMINE-id
 ```
 
 ### 5.1 Subject Line (First Line)
@@ -528,7 +530,8 @@ Why is the change needed and how does it work?
 
 - **Explanation of WHY**: The description should explain **why** the change was made, not just restate what the diff shows. What problem existed? How was it discovered?
 - **Explanation of HOW**: For non-trivial fixes, explain the approach: why was this specific fix chosen over alternatives? Are there any trade-offs?
-- **Lead with the point**: The first sentence names the problem or the decision. Length is not the problem — a long body is fine when every paragraph carries something the diff cannot show; ordering is what buries the point.
+- **Lead with the point**: The first sentence names the point — the problem when the body reports one, otherwise the decision. Length is not the problem — a long body is fine when every paragraph carries something the diff cannot show; ordering is what buries the point.
+- **Problem and resolution split — flag as 问题**: when the body carries both, each gets its own paragraph, separated by a blank line, and the roles must be obvious from the first sentence without a label: the first paragraph describes the failing state and its consequence; the second opens with the decision or the approach ("State …", "Replace …", "Keep …"), not with a restatement of the problem. A single block that interleaves them, or two paragraphs the reader has to disambiguate, fails this check.
 - **No diff recital — flag as 问题**: The body must not tour the diff ("the first block adds…, the second renames…, the third updates the call site"). Name a file, function or flag only where the reader needs it to follow the decision. If the body can be reconstructed by reading the diff hunk by hunk, it adds nothing and the important part is lost among the rest.
 - **Clarity**: The description should be understandable to someone not familiar with the specific bug/feature. Avoid internal jargon without explanation.
 - **Body width**: Wrap the body at 72 columns, as `.commit_template` asks for.
