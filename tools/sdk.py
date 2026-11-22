@@ -686,9 +686,9 @@ def _find_usable_locale() -> str:
 if __name__ == "__main__":
     try:
         if "MSYSTEM" in os.environ:
-            print_warning(
-                "MSys/Mingw is no longer supported. Please follow the getting started guide in the documentation "
-                "to set up a suitable environment, or continue at your own risk."
+            raise SdkEnvironmentError(
+                "MSys/MinGW is not supported. Run sdk.py from PowerShell ('. .\\export.ps1') or from a "
+                "Linux/macOS shell, not from Git Bash / MSYS."
             )
         elif os.name == "posix" and not _valid_unicode_config():
             best_locale = _find_usable_locale()

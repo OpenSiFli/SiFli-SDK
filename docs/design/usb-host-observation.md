@@ -508,5 +508,5 @@ python tools\lab_agent\runner.py -c E:\code2\lab\sifli-lab.yaml   # serve
 python tools\sdk.py test run -T example/cherryusb/device/cdc_acm -p sf32lb52-lcd_a128r16_hcpu
 ```
 
-From Git Bash, clear `MSYSTEM` before calling `sdk.py`, or it prints
-"MSys/Mingw is no longer supported" and runs nothing.
+From Git Bash, clear `MSYSTEM` before calling `sdk.py`: with it set, `sdk.py`
+refuses to run under MSys/MinGW and exits 3.
