@@ -38,3 +38,5 @@ sf-pkgs/
 .dsh-scratch/
 # working design documents of agent sessions; durable records live in docs/design/
 docs/design/wip/
+# local skill copies for the Claude Code harness; the rule source is skills/
+.claude/skills/
