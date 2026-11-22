@@ -246,18 +246,21 @@ if it is, use the Claude Code column; if not, inline the role file.
    ignored also means a forgotten draft does not show up in `git status` — at task close it must
    hold no document this task wrote. User-facing documentation that must outlive the task belongs
    in `docs/source/{en,zh_CN}/` or a component's `DESIGN.md`.
-1. **Direct edits: do them yourself.** Single existing file, ≤ ~20 lines, no new file, no public
-   API/config/format change. An existing documentation file (`.md`) and an existing rule file
-   are `direct:` edits at any size; rule 4 still sends the rule file to a fresh Reviewer.
+1. **Direct edits: do them yourself, then get them reviewed.** Single existing file, ≤ ~20 lines,
+   no new file, no public API/config/format change. An existing documentation file (`.md`) and an
+   existing rule file are `direct:` edits at any size. A `direct:` edit needs no design document;
+   it is reviewed in the current context, except a rule-file edit, which rule 4 sends to a fresh
+   Reviewer. Either way the commit message is reviewed.
 2. Research before implementation when the codebase is unfamiliar or the root cause is unclear.
 3. Design first (Architect) when the change spans ≥3 modules or crosses layers, or changes a public
    contract (header API, CLI, config schema, on-flash/protocol format).
-4. Two kinds of diff get a **fresh Reviewer** before you report completion: one that is not a
-   `direct:` edit, and one that touches a file loaded into a later agent session — instructions,
-   role or skill (`AGENTS.md`, `.claude/CLAUDE.md`, `.agents/`, `.claude/agents/`, `skills/`,
-   `.dsh/skills/`). A re-check after a fix goes back to the same Reviewer (continue that agent, do
-   not start a new one). Every other diff skips the fresh agent, not the review: check it against
-   Step 1–Step 2 and the matching step in the current context before committing.
+4. The review always happens; this rule decides only **who** performs it. Two kinds of diff get a
+   **fresh Reviewer**: one that is not a `direct:` edit, and one that touches a file loaded into a
+   later agent session — instructions, role or skill (`AGENTS.md`, `.claude/CLAUDE.md`, `.agents/`,
+   `.claude/agents/`, `skills/`, `.dsh/skills/`) — so an existing rule file always does. Every
+   other diff is reviewed in the current context, by the same rules and to the same verdict. A
+   re-check after a fix goes back to the same Reviewer (continue that agent; do not start a new
+   one), or is re-run in the current context.
 5. Add Tester when tests can actually run **or when the change needs test design** (failure modes,
    seams, what cannot be executed). With no runnable environment the Tester still delivers the test
    plan and an explicit unverified list. Add Security Reviewer when a security trigger is hit; add
@@ -291,29 +294,38 @@ if it is, use the Claude Code column; if not, inline the role file.
 4. Do not trust a child's summary: check `git status`/`git diff`, build output, and cited
    `path:line` before accepting.
 5. Fix loop: Developer → compile → Reviewer → fix → same Reviewer re-checks (continue that agent with
-   the new diff; open a fresh Reviewer only for final high-risk sign-off). **Max 2 fix rounds**;
-   after that, report the conflict and options to the user instead of looping.
+   the new diff; open a fresh Reviewer only for final high-risk sign-off). **Max 2 fix rounds**
+   either way — a review in the current context is capped the same as a Reviewer loop; after that,
+   report the conflict and options to the user instead of looping.
 
 ### Review gate
 
-The Reviewer's rules live in one file: `skills/sifli-code-review/SKILL.md` (single source; this
+A review is the same act whoever performs it: apply Step 1–Step 2, the step that matches the diff,
+and Step 5 to the commit message, then state a `verdict` — `block` for any 严重 finding that is
+not waived, `comment` when only 问题 remain, `approve` otherwise — and list the findings and
+待确认 items under the same headings either way. Rule 4 decides who performs it. A review run in
+the current context is recorded as `self-checked` together with its verdict — it is not an
+independent review, because the same context wrote the diff and the message.
+
+The rules live in one file: `skills/sifli-code-review/SKILL.md` (single source; this
 workspace does not split `references/`). In DSH, `skill("sifli-code-review")` returns only the entry
 shell under `.dsh/skills/`, so the rules themselves still come from that file. Its default target is
 Step 0c — the local uncommitted changes — and that needs no checkout. Read Step 1–Step 2, then the
 step that matches the change: Step 4 for `example/` code, Step 3 for example READMEs, Step 3b for
 `docs/` (also `.agents/` and `AGENTS.md`-style agent docs), Step 5 for commit messages, Step 6 for
 test assets (`pytest/`, `testcase.yaml`, `tools/sdk_test/tests/**`, `tools/lab_agent/tests/**`,
-`tests/**`), Step 7 for the severity labels. The report skeleton is the role file's own output format
-and a `verdict` line is mandatory. The skill is named `sifli-code-review` in both harnesses.
+`tests/**`), Step 7 for the severity labels. The report skeleton is the role file's own output
+format for a Reviewer; a review in the current context uses those same headings. A `verdict` line
+is mandatory either way. The skill is named `sifli-code-review` in both harnesses.
 
-Accept only a report with `verdict` (`block`/`comment`/`approve`), findings carrying the skill's
-severity label (严重/问题/建议/OK), `path:line`, trigger, consequence and minimal fix; items that
-cannot be verified go to "待确认" and are not counted as findings. For test assets Step 6.3 overrides
-that: missing reverse-verification evidence is a finding (问题), not 待确认. `approve` means "no
-blocking issue found", not "proven correct"; security, concurrency-model, public-contract and
-persistence changes still need a human decision. The Security Reviewer maps its own labels onto the
-same scale: Critical/High → 严重 (`block`), Medium → 问题 (`comment`), Low → 建议, unproven paths →
-待确认.
+A review is acceptable only when it states a `verdict` (`block`/`comment`/`approve`), its
+findings carry the skill's severity label (严重/问题/建议/OK), `path:line`, trigger, consequence
+and minimal fix; items that cannot be verified go to "待确认" and are not counted as findings.
+For test assets Step 6.3 overrides that: missing reverse-verification evidence is a finding
+(问题), not 待确认. `approve` means "no blocking issue found", not "proven correct"; security,
+concurrency-model, public-contract and persistence changes still need a human decision. The
+Security Reviewer maps its own labels onto the same scale: Critical/High → 严重 (`block`),
+Medium → 问题 (`comment`), Low → 建议, unproven paths → 待确认.
 
 For a public-contract change, give the Reviewer the accepted design document and the acceptance
 criteria together with the diff; the Reviewer checks the implementation against the design, not
@@ -325,8 +337,9 @@ the diff in isolation.
 - Diff contains only task-related changes (no drive-by formatting/renames).
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
 - Process evidence: the dispatch path taken (`direct` / `research → design → dev → review`),
-  the accepted design document path (N/A for a `direct:` task), and the Reviewer verdict — or,
-  for a self-checked diff, the check outcome and the step it was checked against.
+  the accepted design document path (N/A for a `direct:` task), and the review record — verdict,
+  the steps checked (the diff's own step plus Step 5 on the commit message), and whether a fresh
+  Reviewer or `self-checked`.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 - No document this task wrote is left under `docs/design/wip/`; a kept one is committed under
   `docs/design/`.
@@ -336,22 +349,25 @@ the diff in isolation.
 The review gate above already names the steps; these are the ones that are
 easy to skip. Do them in this order:
 
-1. Draft the commit message **before** the Reviewer's pass and give it to the
-   Reviewer with the diff, so Step 5 reviews the text that will actually be
-   committed. Do not write the message after the review. Apply Step 5.2 of the
-   review skill while drafting: the first body sentence names the problem or the
-   decision; name a file or function only where the reader needs it to follow
-   that point; length is fine as long as every paragraph carries something the
-   diff cannot show; a body that tours the diff hunk by hunk is a 问题.
+1. Draft the commit message **before** the review — the Reviewer's, or your own
+   for a `direct:` diff — and review it with the diff, so Step 5 covers the text
+   that will actually be committed. Do not write the message after the review.
+   Apply Step 5.2 of the review skill while drafting: the first body sentence
+   names the problem or the decision; name a file or function only where the
+   reader needs it to follow that point; length is fine as long as every
+   paragraph carries something the diff cannot show; a body that tours the diff
+   hunk by hunk is a 问题.
 2. A diff that touches `docs/` is reviewed with Step 3b; for a bilingual doc,
    check `en` and `zh_CN` in the same pass.
-3. If the diff changed after the review, send it back to the same Reviewer;
-   do not commit a diff the verdict predates.
+3. If the diff changed after the review, send it back to the same reviewer — the
+   fresh Reviewer, or a re-run of your own check; do not commit a diff the
+   verdict predates.
 4. Stage explicit paths; `git status` must show only task files (no drive-by
    submodule or untracked changes).
-5. Record the executed test/board evidence and the Reviewer's verdict — or, for a
-   diff with no Reviewer, the self-check outcome — in the report or the commit
-   body; "not executed" stays "not executed".
+5. Record the executed test/board evidence and the review record — verdict, the
+   steps checked (the diff's own step plus Step 5), and fresh Reviewer vs
+   `self-checked` — in the report or the commit body; "not executed" stays
+   "not executed".
 
 ### If you are a subagent
 
