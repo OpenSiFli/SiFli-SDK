@@ -238,7 +238,7 @@ if it is, use the Claude Code column; if not, inline the role file.
    `design:` tasks only. Unless the user asked to keep the document (say so in the
    classification line, `design: docs/design/wip/<topic>.md (keep)`), delete
    `docs/design/wip/<topic>.md` at close-out, after the task's last implementation commit and
-   the final review round; it is never committed. Keeping it is a close-out step of that same
+   the final review; it is never committed. Keeping it is a close-out step of that same
    task, not a new task to classify: move the file to `docs/design/<topic>.md`, review it as a
    normal `docs/` change together with its commit message (Step 3b and Step 5), then, only once
    the review closes with no unresolved 严重 (blocking) finding, `git add` it (`git mv` rejects
@@ -294,18 +294,29 @@ if it is, use the Claude Code column; if not, inline the role file.
 4. Do not trust a child's summary: check `git status`/`git diff`, build output, and cited
    `path:line` before accepting.
 5. Fix loop: Developer → compile → Reviewer → fix → same Reviewer re-checks (continue that agent with
-   the new diff; open a fresh Reviewer only for final high-risk sign-off). **Max 2 fix rounds**
-   either way — a review in the current context is capped the same as a Reviewer loop; after that,
-   report the conflict and options to the user instead of looping.
+   the new diff; open a fresh Reviewer only for final high-risk sign-off). A fix round is one fix
+   plus its re-check; the first review is not a round, and the budget is per reviewed diff (one
+   commit's change set), not per task. **Max 2 fix rounds** either way — a review in the current
+   context is capped the same as a Reviewer loop. The Orchestrator never resets the count on its
+   own: at the cap it reports the last verdict. With `comment` the user may accept the open 问题
+   and commit; with `block` or `comment` the user may also authorize a new round of fixes and
+   restart the count, or change the scope, which re-enters rule 0 as a new task with a fresh
+   budget while the earlier rounds stay on record. An `approve` commits as usual.
 
 ### Review gate
 
 A review is the same act whoever performs it: apply Step 1–Step 2, the step that matches the diff,
-and Step 5 to the commit message, then state a `verdict` — `block` for any 严重 finding that is
-not waived, `comment` when only 问题 remain, `approve` otherwise — and list the findings and
+and Step 5 to the commit message, then state a `verdict` — `block` for any 严重 finding (a 严重
+is never waived), `comment` when only 问题 remain, `approve` otherwise — and list the findings and
 待确认 items under the same headings either way. Rule 4 decides who performs it. A review run in
 the current context is recorded as `self-checked` together with its verdict — it is not an
 independent review, because the same context wrote the diff and the message.
+
+Running out of rounds never turns into an approval: the last verdict stands unchanged. A diff with
+any 严重 finding is never committed, whatever the round count; when only 问题 remain, it is
+committed only after the user explicitly accepts them, and the commit body names the accepted
+findings and the verdict — so `git log` distinguishes "reviewed and approved" from "committed with
+accepted findings".
 
 The rules live in one file: `skills/sifli-code-review/SKILL.md` (single source; this
 workspace does not split `references/`). In DSH, `skill("sifli-code-review")` returns only the entry
@@ -320,7 +331,8 @@ is mandatory either way. The skill is named `sifli-code-review` in both harnesse
 
 A review is acceptable only when it states a `verdict` (`block`/`comment`/`approve`), its
 findings carry the skill's severity label (严重/问题/建议/OK), `path:line`, trigger, consequence
-and minimal fix; items that cannot be verified go to "待确认" and are not counted as findings.
+and minimal fix; items that cannot be verified go to "待确认" and are not counted as findings
+(they never need acceptance; the report lists them).
 For test assets Step 6.3 overrides that: missing reverse-verification evidence is a finding
 (问题), not 待确认. `approve` means "no blocking issue found", not "proven correct"; security,
 concurrency-model, public-contract and persistence changes still need a human decision. The
@@ -338,8 +350,10 @@ the diff in isolation.
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
 - Process evidence: the dispatch path taken (`direct` / `research → design → dev → review`),
   the accepted design document path (N/A for a `direct:` task), and the review record — verdict,
-  the steps checked (the diff's own step plus Step 5 on the commit message), and whether a fresh
-  Reviewer or `self-checked`.
+  the steps checked (the diff's own step plus Step 5 on the commit message), whether a fresh
+  Reviewer or `self-checked`, plus any user acceptance of open 问题 (named in the commit body),
+  authorization to restart the round count, or scope change re-entering rule 0 as a new task with
+  the earlier rounds on record.
 - Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
 - No document this task wrote is left under `docs/design/wip/`; a kept one is committed under
   `docs/design/`.
@@ -365,9 +379,9 @@ easy to skip. Do them in this order:
 4. Stage explicit paths; `git status` must show only task files (no drive-by
    submodule or untracked changes).
 5. Record the executed test/board evidence and the review record — verdict, the
-   steps checked (the diff's own step plus Step 5), and fresh Reviewer vs
-   `self-checked` — in the report or the commit body; "not executed" stays
-   "not executed".
+   steps checked (the diff's own step plus Step 5), fresh Reviewer vs
+   `self-checked` — in the report; a commit carrying accepted 问题 names them and
+   the verdict in its own body. "Not executed" stays "not executed".
 
 ### If you are a subagent
 

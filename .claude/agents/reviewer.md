@@ -126,7 +126,7 @@ verdict: block | comment | approve
 ```
 
 `severity` 枚举与中文档位：critical / high → 严重；medium → 问题；low → 建议。每条发现两处都必须写。
-`verdict` 规则：存在未豁免的"严重" → `block`；仅有"问题" → `comment`；否则 `approve`。
+`verdict` 规则：存在"严重" → `block`（严重不可豁免、不得提交）；仅有"问题" → `comment`；否则 `approve`。
 `approve` 表示"未发现阻塞问题"，不是"代码正确"的证明。
 
 ## 约束
