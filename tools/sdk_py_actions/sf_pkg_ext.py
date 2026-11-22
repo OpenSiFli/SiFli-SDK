@@ -267,8 +267,10 @@ def _ensure_public_remote(sdk_ctx: SdkContext) -> str:
 _ROOT_MANIFEST_TEMPLATE = """\
 # ------------------------------------------------------------------
 # Project level external components (sf-pkg).
-# Each entry is <package>/<version>@<namespace>, e.g.
+# Each entry is a plain <package>/<version>@<namespace> string, e.g.
 #   - sht30/0.0.4@caisong123
+# Per-entry `enable` is supported in module/board manifests only; a mapping
+# entry here is rejected (put gated dependencies in a module/board manifest).
 # SDK built-in modules may additionally declare their own components in a
 # local sf-pkg.yaml next to their Kconfig; those are merged here at install
 # time (see docs: sf_pkg/module_deps).
@@ -284,10 +286,13 @@ _ROOT_MANIFEST_TEMPLATE = """\
 #     - <MODULE_ENABLE_SYMBOL>
 #   requires:
 #     - <package>/<version>@<namespace>
+#     - package: <package>/<version>@<namespace>   # fetched only while ...
+#       enable:                                    # ... any symbol below is 'y'
+#         - <MODULE_FEATURE_SYMBOL>
 #   support_sdk_version: "^2.4"   # optional
 #
 # `enable` entries are Kconfig symbol names as defined in Kconfig (no
-# CONFIG_ prefix guessing). The field is honored in module manifests only
+# CONFIG_ prefix guessing). The field is honored in module/board manifests only
 # and never in this file.
 # ------------------------------------------------------------------
 
@@ -307,6 +312,9 @@ def init_callback(sdk_ctx: SdkContext) -> None:
         f.write(_ROOT_MANIFEST_TEMPLATE)
     print("Created sf-pkg.yaml. Add dependent packages under 'requires':")
     print("  - <package>/<version>@<namespace>")
+    print(
+        "  (entry-level 'enable' is only supported in module/board manifests)"
+    )
     legacy = os.path.join(sdk_ctx.project_dir, "conanfile.py")
     if os.path.isfile(legacy):
         print_warning(

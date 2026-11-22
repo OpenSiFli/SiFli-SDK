@@ -34,13 +34,33 @@ requires:
 
 ### sf-pkg.yaml 字段说明
 
-`sf-pkg.yaml` 同时用于工程根与 SDK 内置模块，字段说明如下：
+`sf-pkg.yaml` 同时用于工程根、SDK 内置模块与板级清单，字段说明如下：
 
-- `requires`（列表，可选）：本工程/本模块需要的外置组件。每一项格式为 `<包名>/<版本号>@<用户名>`，版本可写区间（Conan 语法），例如 `sht30/0.0.4@caisong123`、`battery_calculator/[>=1.2 <2.0]@sifli`。为空或不写等价于无依赖。
+- `requires`（列表，可选）：本工程/本模块需要的外置组件。每一项要么是普通的 Conan 引用字符串 `<包名>/<版本号>@<用户名>`（总是参与），要么是映射 `{package: <引用>, enable: <符号或符号列表>}`，后者仅当其中任一符号为 `y` 时才参与（见[条目级使能](#条目级使能模块清单与板级清单)）。版本可写区间（Conan 语法），例如 `sht30/0.0.4@caisong123`、`battery_calculator/[>=1.2 <2.0]@sifli`。为空或不写等价于无依赖。
 - `support_sdk_version`（字符串，可选）：声明要求的 SDK 版本区间，使用 npm 风格 semver（如 `>=2.4 <3`、`>=2.4.1 <2.5.0`，简写形式 `^2.4`、`~2.4.1` 也支持，注意与 `requires` 的语法不同）；不写则不检查，等同于写成 `"*"`。安装/构建时会用环境变量 `SIFLI_SDK_VERSION` 校验，不满足即在联网前报错并指明来源文件。工程根与每个模块各自声明、分别校验。
-- `enable`（列表，可选，**仅模块清单使用**）：模块的 Kconfig 使能符号，列表中**任一**为 `y` 即视为"本模块参与编译"，此时它的 `requires` 才会并入拉取集合；全部不满足则不拉取。这里填 Kconfig 中定义的**真实符号名**（`.config` 行首的 `CONFIG_` 是 kconfig 写文件时自动加的，不算符号名的一部分；若符号名本身就以 `CONFIG_` 开头，则如实填写）。若省略/为空则视为"总是参与"，仅适合确实没有开关的固定模块。
+- `enable`（列表，可选，**仅模块/板级清单使用**）：模块的 Kconfig 使能符号，列表中**任一**为 `y` 即视为"本模块参与编译"，此时它的 `requires` 才会并入拉取集合；全部不满足则不拉取。这里填 Kconfig 中定义的**真实符号名**（`.config` 行首的 `CONFIG_` 是 kconfig 写文件时自动加的，不算符号名的一部分；若符号名本身就以 `CONFIG_` 开头，则如实填写）。若省略/为空则视为"总是参与"，仅适合确实没有开关的固定模块。
 
-工程根 `sf-pkg.yaml` 中 `enable` 不生效——工程根是固定依赖，`sf-pkg.yaml` 只需写 `requires`（和可选的 `support_sdk_version`）。
+工程根 `sf-pkg.yaml` 中 `enable` 不生效——工程根是固定依赖，`sf-pkg.yaml` 只需写 `requires`（和可选的 `support_sdk_version`）。工程根 `requires` **只接受字符串条目**；写成带条目级 `enable` 的映射会直接报错并指明文件与条目序号，条目级使能只属于模块/板级清单。
+
+### 条目级使能（模块清单与板级清单）
+
+除了清单级 `enable`，模块或板级清单的每个 `requires` 条目还可以带自己的 `enable`：
+
+```yaml
+requires:
+  - common-util/1.0.0@acme                # 无条目级开关，总是参与
+  - package: hw-codec/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT           # 单个符号或符号列表均可
+  - package: camera-lib/2.0.0@sifli
+    enable:
+      - BOARD_CAMERA_ENABLE
+      - BOARD_CAMERA_OV2640                # 任一符号为 y 即可
+```
+
+- 条目生效 = 清单级门控通过 **且** 条目自身 `enable` 中至少一个符号为 `y`；多个符号之间是"或"，与清单级 `enable` 语义一致。条目不写 `enable` 或写成空列表表示无条件参与。
+- 符号是 Kconfig 中的真实符号名，不写 `CONFIG_` 前缀，规则同清单级字段。
+- 门控只决定"拉不拉"；包是否编入仍由模块 Kconfig `select` `Kconfig.conandeps` 中的包符号决定。
+- 工程根不支持条目级门控：需要按开关拉取的依赖请放到模块或板级清单里。
 
 ### 版本区间写法
 
@@ -145,10 +165,13 @@ enable:
   - BLE_STACK            # Kconfig 使能符号，任一为 y 即参与
 requires:
   - mesh-lib/1.3.0@acme  # conan 引用，格式同工程根
+  - package: codec-lib/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT   # 再加一层条目级开关
 support_sdk_version: ">=2.4 <3"   # 可选，同工程根语义
 ```
 
-- 这份清单必须与其模块的 Kconfig 放在**同一目录**，且该 Kconfig 要在当前板子的配置树内被解析到，否则清单不会被发现（不参与就不会拉取）。
+- 这份清单必须与其模块的 Kconfig 放在**同一目录**，且该 Kconfig 要在当前板子的配置树内被解析到，否则清单不会被发现（不参与就不会拉取）。放在板级目录（与板级 `Kconfig.board` 同目录）的清单遵循同一发现规则，条目级门控也同样生效。
+- 条目生效条件是清单级 `enable` 与条目级 `enable` 相与；上面的 `mesh-lib` 这类纯字符串条目在清单启用后无条件参与。
 - 模块启用时，除拉取外还要让包参与链接：在模块自己的 Kconfig 里对包在 `Kconfig.conandeps` 中声明的使能符号做 `select`。
 - 更完整的机制与约定见 [模块级依赖设计文档](design/module_deps.md)。
 

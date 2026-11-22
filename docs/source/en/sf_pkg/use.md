@@ -34,13 +34,33 @@ Older SDK versions declared dependencies through `conanfile.py`. If a project ro
 
 ### sf-pkg.yaml Field Reference
 
-`sf-pkg.yaml` is used both at the project root and by SDK built-in modules:
+`sf-pkg.yaml` is used at the project root, by SDK built-in modules, and by board manifests:
 
-- `requires` (list, optional): external components needed by this project/module. Each entry is `<package>/<version>@<username>`; version ranges are allowed (Conan syntax), e.g. `sht30/0.0.4@caisong123` or `battery_calculator/[>=1.2 <2.0]@sifli`. Empty/absent means no dependencies.
+- `requires` (list, optional): external components needed by this project/module. Each entry is either a plain Conan reference `<package>/<version>@<username>` (always participates) or a mapping `{package: <reference>, enable: <symbol or list of symbols>}` whose entry participates only when one of its symbols is `y` (see [Entry-Level Enable](#entry-level-enable-module-and-board-manifests)). Version ranges are allowed (Conan syntax), e.g. `sht30/0.0.4@caisong123` or `battery_calculator/[>=1.2 <2.0]@sifli`. Empty/absent means no dependencies.
 - `support_sdk_version` (string, optional): required SDK version range in npm-style semver (e.g. `>=2.4 <3`, `>=2.4.1 <2.5.0`; the shorthand forms `^2.4` and `~2.4.1` also work, and note the syntax differs from `requires`); unchecked when absent, which is equivalent to `"*"`. During install/build it is validated against the `SIFLI_SDK_VERSION` environment variable and fails before any network access, naming the source file. The project root and each module declare and are checked separately.
-- `enable` (list, optional, **module manifests only**): the module's Kconfig enable symbols. If **any** of them is `y`, the module is considered to participate in the build and its `requires` are pulled; otherwise they are not. These are the real symbol names as defined in Kconfig (kconfig only prepends a `CONFIG_` prefix when writing `.config`; if a symbol's own name already starts with `CONFIG_`, write it as is). When absent/empty the module is treated as "always participating", which is only suitable for fixed modules without a switch.
+- `enable` (list, optional, **module/board manifests only**): the module's Kconfig enable symbols. If **any** of them is `y`, the module is considered to participate in the build and its `requires` are pulled; otherwise they are not. These are the real symbol names as defined in Kconfig (kconfig only prepends a `CONFIG_` prefix when writing `.config`; if a symbol's own name already starts with `CONFIG_`, write it as is). When absent/empty the module is treated as "always participating", which is only suitable for fixed modules without a switch.
 
-`enable` has no effect at the project root: the root is a fixed dependency and only `requires` (and optionally `support_sdk_version`) belong there.
+`enable` has no effect at the project root: the root is a fixed dependency and only `requires` (and optionally `support_sdk_version`) belong there. The project root `requires` accepts plain references only; a mapping entry with per-entry `enable` is rejected with an error naming the file and the entry, because entry-level gating belongs to module/board manifests.
+
+### Entry-Level Enable (Module and Board Manifests)
+
+Besides the manifest-level `enable`, every `requires` entry of a module or board manifest can carry its own `enable`:
+
+```yaml
+requires:
+  - common-util/1.0.0@acme                # unconditional
+  - package: hw-codec/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT           # a single symbol or a list
+  - package: camera-lib/2.0.0@sifli
+    enable:
+      - BOARD_CAMERA_ENABLE
+      - BOARD_CAMERA_OV2640                # any symbol being 'y' is enough
+```
+
+- An entry participates only when its manifest-level gate passes **and** at least one of its own `enable` symbols is `y`. Multiple symbols are ORed, exactly like the manifest-level field. An absent or empty `enable` list makes the entry unconditional.
+- Symbols are real Kconfig names without the `CONFIG_` prefix, the same rule as the manifest-level field.
+- Gating decides only whether a package is **fetched**. Whether it is compiled is still decided by the module Kconfig `select`ing the package symbol declared in `Kconfig.conandeps`.
+- The project root does not support entry-level gating: put a gated dependency in a module or board manifest instead.
 
 ### Version Range Syntax
 
@@ -146,10 +166,13 @@ enable:
   - BLE_STACK            # Kconfig enable symbol; any 'y' means "participates"
 requires:
   - mesh-lib/1.3.0@acme  # conan reference, same format as the project root
+  - package: codec-lib/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT   # additionally gated per entry
 support_sdk_version: ">=2.4 <3"   # optional, same meaning as the project root
 ```
 
-- The manifest must sit **next to the module's Kconfig**, and that Kconfig must be parsed in the current board's config tree; otherwise the manifest is not discovered (no participation, no fetching).
+- The manifest must sit **next to the module's Kconfig**, and that Kconfig must be parsed in the current board's config tree; otherwise the manifest is not discovered (no participation, no fetching). A manifest in a board directory (next to the board `Kconfig.board`) follows the same discovery rule and gates its entries the same way.
+- Entries are gated by the manifest-level `enable` AND their own entry-level `enable`; plain string entries (like `mesh-lib` above) stay unconditional within an enabled manifest.
 - When a module is enabled, also `select` the package's enable symbol declared in `Kconfig.conandeps` from the module's own Kconfig so the package actually links into the build.
 - See the [module level dependencies design](design/module_deps.md) for the full mechanism and conventions.
 

@@ -75,8 +75,13 @@ def _yaml():
     return yaml
 
 
-def load_manifest(path: str) -> Dict:
-    """Parse one sf-pkg.yaml into a normalized dict."""
+def load_manifest(path: str, allow_entry_enable: bool = True) -> Dict:
+    """Parse one sf-pkg.yaml into a normalized dict.
+
+    ``allow_entry_enable=False`` is used for the project root manifest, whose
+    ``requires`` accepts strings only: per-entry ``enable`` belongs to module
+    and board manifests.
+    """
     yaml = _yaml()
     with open(path, "r", encoding="utf-8") as f:
         text = f.read()
@@ -88,7 +93,9 @@ def load_manifest(path: str) -> Dict:
     if not isinstance(doc, dict):
         raise SfPkgError("Manifest '{}' must be a YAML mapping".format(path))
 
-    requires = _as_str_list(doc.get("requires"), "requires", path)
+    if not allow_entry_enable:
+        _reject_root_mapping_requires(doc.get("requires"), path)
+    requires = _parse_require_entries(doc.get("requires"), path)
     enable = _as_str_list(doc.get("enable"), "enable", path)
     support = doc.get("support_sdk_version")
     if support is not None and not isinstance(support, str):
@@ -125,6 +132,88 @@ def _as_str_list(value, field, path) -> List[str]:
     return out
 
 
+def _parse_require_entries(value, path: str) -> List[Dict[str, object]]:
+    """Normalize the ``requires`` field into a list of package entries.
+
+    Accepts the legacy flat list of Conan reference strings (unconditional) and
+    mapping entries ``{"package": <reference>, "enable": <symbols>}``.  A
+    normalized entry is ``{"package": str, "enable": [str]}``; an empty
+    ``enable`` list means "always participates".  Unknown keys, a missing or
+    empty ``package`` and non-string entries raise SfPkgError naming the file
+    and the entry index.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, (list, tuple)):
+        raise SfPkgError(
+            "Manifest '{}': 'requires' must be a list of package entries "
+            "(strings or mappings)".format(path)
+        )
+    entries: List[Dict[str, object]] = []
+    for index, item in enumerate(value):
+        if isinstance(item, str):
+            package = item.strip()
+            if not package:
+                raise SfPkgError(
+                    "Manifest '{}': requires[{}] must be a non-empty "
+                    "string".format(path, index)
+                )
+            entries.append({"package": package, "enable": []})
+            continue
+        if not isinstance(item, dict):
+            raise SfPkgError(
+                "Manifest '{}': requires[{}] must be a string or a mapping "
+                "with 'package'".format(path, index)
+            )
+        unknown = [key for key in item if key not in ("package", "enable")]
+        if unknown:
+            raise SfPkgError(
+                "Manifest '{}': requires[{}] has unknown key '{}' (allowed: "
+                "'package', 'enable')".format(path, index, unknown[0])
+            )
+        package = item.get("package")
+        if not isinstance(package, str) or not package.strip():
+            raise SfPkgError(
+                "Manifest '{}': requires[{}].package must be a non-empty "
+                "string".format(path, index)
+            )
+        entries.append(
+            {
+                "package": package.strip(),
+                "enable": _parse_entry_enable(item.get("enable"), path, index),
+            }
+        )
+    return entries
+
+
+def _parse_entry_enable(value, path: str, index: int) -> List[str]:
+    """Per-entry enable symbols: a string or list of strings; empty = always."""
+    return _as_str_list(value, "requires[{}].enable".format(index), path)
+
+
+def _reject_root_mapping_requires(value, path: str) -> None:
+    """Fail when the project root manifest uses mapping ``requires`` entries.
+
+    Per-entry ``enable`` is meaningful only for module and board manifests
+    (discovered through ``kconfiglist``); the root is a fixed dependency list.
+    """
+    if isinstance(value, str):
+        return
+    if not isinstance(value, (list, tuple)):
+        return
+    for index, item in enumerate(value):
+        if isinstance(item, dict):
+            raise SfPkgError(
+                "Manifest '{}': requires[{}] is a mapping, but mapping entries "
+                "are only supported in module/board manifests. Put this "
+                "dependency in a module or board manifest instead.".format(
+                    path, index
+                )
+            )
+
+
 def detect_mode(project_dir: str) -> str:
     """Return 'yaml', 'advanced' or 'none' for a project root.
 
@@ -145,7 +234,7 @@ def load_root_manifest(project_dir: str) -> Optional[Dict]:
     path = os.path.join(project_dir, MANIFEST_FILENAME)
     if not os.path.isfile(path):
         return None
-    return load_manifest(path)
+    return load_manifest(path, allow_entry_enable=False)
 
 
 def manifests_from_kconfiglist(kconfiglist_path: str) -> List[Dict]:
@@ -232,13 +321,31 @@ def manifest_enabled(manifest: Dict, config: Dict[str, str]) -> bool:
     return any(config_symbol_enabled(config, sym) for sym in enable)
 
 
+def entry_enabled(entry: Dict, config: Dict[str, str]) -> bool:
+    """A requires entry participates when any of its enable symbols is 'y'.
+
+    An entry without ``enable`` (the legacy string form) is always
+    unconditional.  This gate is ANDed with the manifest-level gate.
+    """
+    enable = entry.get("enable") or []
+    if not enable:
+        return True
+    return any(config_symbol_enabled(config, sym) for sym in enable)
+
+
 def collect_requires(manifests: Sequence[Dict], config: Dict[str, str]) -> List[str]:
-    """requires of every manifest that participates under the given config."""
+    """Package references of participating manifests and entries.
+
+    Both the manifest-level ``enable`` and the per-entry ``enable`` must pass;
+    the result is a flat list of Conan references so aggregation,
+    fingerprinting and consumer generation stay unchanged.
+    """
     return [
-        req
+        entry["package"]
         for manifest in manifests
         if manifest_enabled(manifest, config)
-        for req in (manifest.get("requires") or [])
+        for entry in (manifest.get("requires") or [])
+        if entry_enabled(entry, config)
     ]
 
 
@@ -718,6 +825,26 @@ def resolve_for_board(
     return enabled, config, root
 
 
+def _count_contributing_manifests(
+    root: Optional[Dict],
+    manifests: Sequence[Dict],
+    config: Dict[str, str],
+) -> int:
+    """Number of manifests that contribute at least one participating entry."""
+    count = 0
+    if root and any(
+        entry_enabled(entry, config) for entry in (root.get("requires") or [])
+    ):
+        count += 1
+    for manifest in manifests:
+        if manifest_enabled(manifest, config) and any(
+            entry_enabled(entry, config)
+            for entry in (manifest.get("requires") or [])
+        ):
+            count += 1
+    return count
+
+
 def ensure_board_deps(project_dir: str, build_dir: Optional[str] = None) -> bool:
     """Auto install external deps required by modules enabled in this board.
 
@@ -730,7 +857,13 @@ def ensure_board_deps(project_dir: str, build_dir: Optional[str] = None) -> bool
         return False
 
     enabled, config, root = resolve_for_board(project_dir, build_dir)
-    root_requires = list(root.get("requires") or []) if root else []
+    # Root requires are always strings (load_root_manifest rejects mapping
+    # entries), so they need no per-entry gating.
+    root_requires = (
+        [entry["package"] for entry in (root.get("requires") or [])]
+        if root
+        else []
+    )
 
     manifests_to_check = list(enabled)
     if root:
@@ -766,7 +899,9 @@ def ensure_board_deps(project_dir: str, build_dir: Optional[str] = None) -> bool
 
     print(
         "[sf-pkg] Installing {} external component(s) contributed by "
-        "{} module(s) into sf-pkgs/ ...".format(len(merged), len(enabled))
+        "{} manifest(s) into sf-pkgs/ ...".format(
+            len(merged), _count_contributing_manifests(root, enabled, config)
+        )
     )
     wipe_sf_pkgs(project_dir)
     consumer = generate_consumer_conanfile(project_dir, merged)

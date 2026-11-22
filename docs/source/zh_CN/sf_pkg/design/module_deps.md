@@ -15,7 +15,7 @@
 
 1. 解析方式：**单图聚合**——各模块依赖汇总到一张 consumer conanfile，仍只做一次 `conan install`，由 Conan 统一版本解析与去重。
 2. 参与判定：**配置静态解析**——读取本次构建已解析的 `.config`，而非在 SCons 运行时判定。
-3. 粒度：**随模块使能符号**——某模块的使能符号为 `y` 时，其依赖才并入拉取集合。
+3. 粒度：**清单级 + 条目级**——某模块的使能符号为 `y` 时其依赖才并入拉取集合；清单启用后，每个 `requires` 条目还可再挂自己的使能符号，两层门控都通过才拉取。
 4. 编译门控：**模块自身 Kconfig `select` 包符号**——拉取层只保证包源码进 `sf-pkgs/`，包是否编入由模块 Kconfig 决定，两者解耦。
 5. 触发点：**构建入口自动触发**（board 已知、`.config` 已解析），独立的 `sf-pkg install` 保留并支持 `--board`。
 
@@ -31,7 +31,7 @@ support_sdk_version: ">=2.4 <3"   # 可选：工程要求的 SDK 区间（npm se
 ```
 
 - 选择 YAML 而非 JSON：可写注释、无尾逗号/引号这类易错语法，工程开发者与模块作者都可读可改。
-- 与模块清单共用 schema（`requires` / `support_sdk_version` 字段一致）；工程根没有 `enable`，视为工程级固定依赖。
+- 与模块清单共用 schema（`requires` / `support_sdk_version` 字段一致）；工程根没有 `enable`，视为工程级固定依赖。工程根 `requires` 只接受纯引用字符串：条目级 `enable` 属于模块/板级清单，工程根写映射条目会直接报错并指明文件。
 - Conan 本身不认 YAML：`sf-pkg` 在拉取前把“工程根 requires + 命中模块 requires”合并，生成一份标准 consumer conanfile——基座由官方 `conan new sf-pkg-project` 模板产出（随 conan config bundle 一起更新），SDK 仅把 requires 列表注入其中，落于 `.sf-pkg/conanfile.py`（gitignore），再对它执行 `conan install`。
 - 好处：聚合降级为纯数据合并，不再需要“import/继承用户任意 python recipe”；`conanfile.py` 的用户入口消失，不会与手写 recipe 打架。
 - 逃生口：若个别工程确需 python 级高级能力（条件依赖、`tool_requires`、复杂 conf），保留“高级模式”——工程根存在 `conanfile.py` 且无 `sf-pkg.yaml` 时，`sf-pkg install` 直接对它执行 `conan install`（旧行为），模块级依赖不参与。`sf-pkg init` 只生成 `sf-pkg.yaml`；老工程没有该文件即自动回落到旧行为，无破坏性迁移。
@@ -47,13 +47,15 @@ enable:
 requires:
   - mesh-lib/1.3.0@acme    # conan 引用串，可写版本区间
   - crypto/2.0.1@sifli
+  - package: hw-codec/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT   # 条目级开关，与清单级开关相与
 support_sdk_version: ">=2.4 <3"   # 可选：本模块要求的 SDK 区间（npm semver），缺省不检查
 ```
 
 字段说明：
 
 - `enable`：本模块的 Kconfig 使能符号。数组内任一为 `y` 即视为参与；缺失视为“总是参与”，仅用于确实无开关的固定模块。
-- `requires`：与工程根相同的 Conan 包引用格式。
+- `requires`：Conan 引用，支持两种形态。纯字符串（`mesh-lib/1.3.0@acme`）在清单启用后无条件参与；映射 `{package: <引用>, enable: <符号或列表>}` 仅当其中至少一个符号为 `y` 时参与，多符号之间是“或”，不写或空列表表示无条件。未知键、`package` 缺失/为空/非字符串、条目非字符串均会报错，信息带文件路径与条目序号。
 - `support_sdk_version`：npm 风格 semver 区间（如 `>=2.4 <3`、`>=2.4.1 <2.5.0`；简写形式 `^2.4`、`~2.4.1` 也支持，注意用空格分隔条件、不要用逗号）。语义与包 recipe 的类属性 `support_sdk_version`、以及基类 `sf-pkg-base.SourceOnlyBase.validate()` 完全一致：用 `semantic_version.NpmSpec` 解析，版本取环境变量 `SIFLI_SDK_VERSION`（由 `export.ps1` / `set_env.bat` 设置，形如 `2.4` / `2.4.1`）。
 
 ### 候选模块发现：基于 `kconfiglist`，不做全盘扫描
@@ -84,9 +86,9 @@ scons --board=<b>
       ├─ LoadRtconfig / InitBuild(#1)          生成 build_dir/{.config,rtconfig.h,kconfiglist}
       ├─ BuildOptionUpdate(BuildOptions)
       ├─ EnsureSfPkgDepsForBoard(b)
-      │    ├─ manifests_from_kconfiglist(kconfiglist)        → 候选模块清单
-      │    ├─ load_root_manifest(project)                    → 工程根 requires
-      │    ├─ collect_requires(启用模块)                     → 模块 requires
+      │    ├─ manifests_from_kconfiglist(kconfiglist)        → 候选模块/板级清单
+      │    ├─ load_root_manifest(project)                    → 工程根 requires（纯字符串）
+      │    ├─ collect_requires(启用模块)                     → 清单级门控 AND 条目级门控
       │    ├─ check_sdk_versions(...)                        → 失败即报错
       │    ├─ fingerprint(merged_requires, sdk_ver)
       │    ├─ 与 .sf-pkg/installed.fingerprint 相同? → 直接返回

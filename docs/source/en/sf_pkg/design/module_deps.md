@@ -33,8 +33,10 @@ on behalf of SDK modules.
    `conan install`; Conan performs unified version resolution/dedup.
 2. Participation: **static config resolution** - read the resolved `.config`
    of the current build, not evaluated at SCons runtime.
-3. Granularity: **per module enable symbol** - a module's dependencies are
-   merged only when its enable symbol is `y`.
+3. Granularity: **manifest-level and entry-level gates** - a module's
+   dependencies are merged only when its enable symbol is `y`; inside an
+   enabled manifest each `requires` entry may additionally carry its own
+   enable symbol, and both gates must pass.
 4. Compile gating: **module Kconfig `select`s the package symbol** - the
    fetch layer only guarantees package sources land in `sf-pkgs/`; whether a
    package is actually compiled is decided by the module Kconfig (decoupled).
@@ -58,7 +60,9 @@ support_sdk_version: ">=2.4 <3"   # optional: SDK range (npm semver), unchecked 
   read and edit it.
 - It shares the schema with module manifests (`requires` /
   `support_sdk_version`); the project root has no `enable` and is treated as a
-  project-level fixed dependency.
+  project-level fixed dependency. Its `requires` accepts plain reference
+  strings only: entry-level `enable` belongs to module/board manifests, and a
+  mapping entry at the root is rejected with an error naming the file.
 - Conan does not understand YAML: before fetching, `sf-pkg` merges "project
   root requires + matched module requires" into a standard consumer
   conanfile. The base is produced by the official `conan new sf-pkg-project`
@@ -90,6 +94,8 @@ enable:
 requires:
   - mesh-lib/1.3.0@acme    # conan reference; version ranges allowed
   - crypto/2.0.1@sifli
+  - package: hw-codec/2.1.0@sifli
+    enable: MODULE_CODEC_SUPPORT   # per-entry gate, ANDed with the manifest gate
 support_sdk_version: ">=2.4 <3"   # optional: SDK range this module needs (npm semver)
 ```
 
@@ -99,7 +105,13 @@ Fields:
   the module is considered participating; if the field is absent/empty the
   module is treated as "always participating" (only for fixed modules that
   have no switch).
-- `requires`: same Conan reference format as the project root.
+- `requires`: Conan references in two forms. A plain string
+  (`mesh-lib/1.3.0@acme`) is unconditional inside a participating manifest. A
+  mapping `{package: <reference>, enable: <symbol or list>}` participates only
+  when at least one of its symbols is `y`; several symbols are ORed, and an
+  absent/empty `enable` makes the entry unconditional. Unknown keys, a
+  missing/empty/non-string `package` and non-string entries are rejected with
+  an error naming the file and the entry index.
 - `support_sdk_version`: npm-style semver range (e.g. `>=2.4 <3`,
   `>=2.4.1 <2.5.0`; the shorthand forms `^2.4` and `~2.4.1` also work - separate
   conditions with spaces, not commas). Semantics match the package recipe class attribute
@@ -154,9 +166,9 @@ scons --board=<b>
       ├─ LoadRtconfig / InitBuild(#1)          generates build_dir/{.config,rtconfig.h,kconfiglist}
       ├─ BuildOptionUpdate(BuildOptions)
       ├─ EnsureSfPkgDepsForBoard(b)
-      │    ├─ manifests_from_kconfiglist(kconfiglist)        → candidate module manifests
-      │    ├─ load_root_manifest(project)                    → project root requires
-      │    ├─ collect_requires(enabled modules)              → module requires
+      │    ├─ manifests_from_kconfiglist(kconfiglist)        → candidate module/board manifests
+      │    ├─ load_root_manifest(project)                    → root requires (plain strings)
+      │    ├─ collect_requires(enabled modules)              → manifest gate AND entry gate
       │    ├─ check_sdk_versions(...)                        → fail on mismatch
       │    ├─ fingerprint(merged_requires, sdk_ver)
       │    ├─ same as .sf-pkg/installed.fingerprint? → return
