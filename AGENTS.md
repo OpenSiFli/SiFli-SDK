@@ -20,6 +20,11 @@ in that environment — `sdk.py`, `tools/**/*.py`, the test harness — because 
 . .\export.ps1        # dot-source, so the environment persists in this shell
 ```
 
+Use PowerShell on Windows even when your shell is Git Bash / MSYS. On Windows, the generated helper
+writes `PATH` in Windows form (backslashes, `;`), so no entry resolves in a POSIX shell: `python` and
+`tail` are not found. A PowerShell started from Git Bash inherits `MSYSTEM`, which `sdk.py` rejects;
+clear it with `Remove-Item Env:MSYSTEM` before running it.
+
 ### Linux/macOS
 
 ```bash
