@@ -31,13 +31,11 @@ typedef struct
 #define CACHE_CCR_IRANGE                CACHE_CCR_IRANGE_Msk
 #define CACHE_CCR_IRANGE_MPI1           (1UL << CACHE_CCR_IRANGE_Pos)
 #define CACHE_CCR_IRANGE_MPI2           (2UL << CACHE_CCR_IRANGE_Pos)
-#define CACHE_CCR_IRANGE_MPI3           (4UL << CACHE_CCR_IRANGE_Pos)
 #define CACHE_CCR_DRANGE_Pos            (24U)
 #define CACHE_CCR_DRANGE_Msk            (0x1FUL << CACHE_CCR_DRANGE_Pos)
 #define CACHE_CCR_DRANGE                CACHE_CCR_DRANGE_Msk
 #define CACHE_CCR_DRANGE_MPI1           (1UL << CACHE_CCR_DRANGE_Pos)
 #define CACHE_CCR_DRANGE_MPI2           (2UL << CACHE_CCR_DRANGE_Pos)
-#define CACHE_CCR_DRANGE_MPI3           (4UL << CACHE_CCR_DRANGE_Pos)
 
 /******************* Bit definition for CACHE_IMCR register *******************/
 #define CACHE_IMCR_IMISS_Pos            (0U)
