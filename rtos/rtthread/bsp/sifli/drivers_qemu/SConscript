@@ -9,7 +9,7 @@ src = ['board.c', 'system_qemu.c', 'uart_console.c']
 LIBS = []
 LIBPATH = []
 CPPPATH = [cwd,
-           SIFLI_SDK + '/drivers/include/',
+           SIFLI_SDK + '/drivers/Include/',
            SIFLI_SDK + '/external/CMSIS/Include']
 CPPDEFINES = []
 
