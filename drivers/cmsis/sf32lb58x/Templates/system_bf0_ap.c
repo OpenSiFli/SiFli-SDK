@@ -327,6 +327,19 @@ __WEAK int mpu_icache_invalidate(void *data, uint32_t size)
     return r;
 }
 
+__WEAK void cache_enable(void)
+{
+    SCB_EnableICache();
+    SCB_EnableDCache();
+
+}
+
+__WEAK void cache_disable(void)
+{
+    SCB_DisableICache();
+    SCB_DisableDCache();
+}
+
 typedef void (*scatter_load_fun)(uint32_t, uint32_t, uint32_t);
 
 typedef struct

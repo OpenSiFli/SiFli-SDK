@@ -267,6 +267,11 @@ __WEAK void cache_enable(void)
 
 }
 
+__WEAK void cache_disable(void)
+{
+    SCB_DisableICache();
+    SCB_DisableDCache();
+}
 
 typedef void (*scatter_load_fun)(uint32_t, uint32_t, uint32_t);
 
