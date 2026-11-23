@@ -64,6 +64,9 @@ void lv_draw_epic_layer(lv_draw_task_t *draw_task, const lv_draw_image_dsc_t *dr
 void lv_draw_epic_label(lv_draw_task_t *draw_task, const lv_draw_label_dsc_t *dsc,
                         const lv_area_t *coords);
 
+void lv_draw_epic_letter(lv_draw_task_t *draw_task, const lv_draw_letter_dsc_t *dsc,
+                         const lv_area_t *coords);
+
 void lv_draw_epic_border(lv_draw_task_t *draw_task, const lv_draw_border_dsc_t *dsc,
                          const lv_area_t *coords);
 void lv_draw_epic_shadow(lv_draw_task_t *draw_task, const lv_draw_box_shadow_dsc_t *dsc,

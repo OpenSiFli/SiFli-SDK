@@ -119,6 +119,66 @@ void lv_draw_epic_label(lv_draw_task_t *draw_task,
     label_draw_ctx_reset();
 }
 
+void lv_draw_epic_letter(lv_draw_task_t *draw_task,
+                         const lv_draw_letter_dsc_t *dsc, const lv_area_t *coords)
+{
+    if (dsc->opa <= LV_OPA_MIN)
+        return;
+
+    if (dsc->font == NULL || draw_task->target_layer == NULL ||
+        dsc->skew_x != 0 || dsc->skew_y != 0 ||
+        dsc->scale_x != LV_SCALE_NONE || dsc->scale_y != LV_SCALE_NONE ||
+        dsc->blend_mode != LV_BLEND_MODE_NORMAL)
+    {
+        LV_LOG_ERROR("EPIC: Unsupported letter descriptor");
+        LV_ASSERT(0);
+        return;
+    }
+
+    label_draw_ctx_reset();
+    g_label_ctx.render_buf = render_list_get_current_buf();
+    if (g_label_ctx.render_buf == NULL)
+    {
+        LV_LOG_ERROR("EPIC: No render buffer available for letter operation");
+        LV_ASSERT(0);
+        label_draw_ctx_reset();
+        return;
+    }
+
+    lv_epic_get_coord_offset(draw_task, &g_label_ctx.coord_offset_x,
+                             &g_label_ctx.coord_offset_y, NULL);
+    lv_area_t clip;
+    if (!lv_area_intersect(&clip, &draw_task->clip_area, &draw_task->target_layer->buf_area))
+    {
+        label_draw_ctx_reset();
+        return;
+    }
+
+    lv_epic_area_to_render_coords(&clip, g_label_ctx.coord_offset_x,
+                                  g_label_ctx.coord_offset_y, &g_label_ctx.clip_area);
+    if (!lv_epic_clip_area_by_render_buf(&g_label_ctx.clip_area, g_label_ctx.render_buf))
+    {
+        label_draw_ctx_reset();
+        return;
+    }
+
+    lv_draw_glyph_dsc_t glyph_dsc;
+    lv_draw_glyph_dsc_init(&glyph_dsc);
+    glyph_dsc.color = dsc->color;
+    glyph_dsc.opa = dsc->opa;
+    glyph_dsc.rotation = dsc->rotation;
+    glyph_dsc.pivot = dsc->pivot;
+    glyph_dsc.outline_stroke_color = dsc->outline_stroke_color;
+    glyph_dsc.outline_stroke_opa = dsc->outline_stroke_opa;
+    glyph_dsc.outline_stroke_width = dsc->outline_stroke_width;
+
+    lv_point_t pos = {coords->x1, coords->y1};
+    lv_draw_unit_draw_letter(draw_task, &glyph_dsc, &pos, dsc->font,
+                             dsc->unicode, _draw_epic_letter);
+    label_draw_ctx_flush_pending_op();
+    label_draw_ctx_reset();
+}
+
 /**********************
  *   STATIC FUNCTIONS
  **********************/

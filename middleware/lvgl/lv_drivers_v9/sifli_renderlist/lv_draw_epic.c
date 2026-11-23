@@ -927,6 +927,9 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
     case LV_DRAW_TASK_TYPE_LABEL:
         lv_draw_epic_label(t, t->draw_dsc, &t->area);
         break;
+    case LV_DRAW_TASK_TYPE_LETTER:
+        lv_draw_epic_letter(t, t->draw_dsc, &t->area);
+        break;
     case LV_DRAW_TASK_TYPE_LAYER:
     {
         lv_draw_epic_layer(t, t->draw_dsc, &t->area);
