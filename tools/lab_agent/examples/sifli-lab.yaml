@@ -40,6 +40,19 @@ testbed:
           port: COM6           # the bt_peer instrument
           baud: 1000000
 
+      # The DUT's USB device port is plugged into this PC. Device-side cases
+      # declare `harness_config.fixture: usb_host` and get the host's view of
+      # that bus through the agent (no port number appears in a test case).
+      # The suffix `:...` is a capability, not an option -- usb_host has none,
+      # so write it bare. Options live under `usb:`.
+      # - fixture: usb_host
+      #   usb:
+      #     backend: auto
+      #     exclude_ports: []      # extra only; the reserved ones are automatic
+      #     allow_fixed_drives: false
+      #     max_file_bytes: 4194304
+      #     serial_baud: 115200
+
     # -- 以下两块是 Lab-Agent 私有，SDK 侧只解析不解释 --
 
     flash:
