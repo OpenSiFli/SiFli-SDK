@@ -84,11 +84,13 @@ artifact_catalog:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 
 # Publish the latest default-branch catalog as the fixed internal entry page.
-# Smoke runs only replace it when CATALOG_PUBLISH=1 is set explicitly.
+# release/v2.5 also publishes, so its catalog reaches history without waiting for main.
+# The branch list below must match HISTORY_REFS in tools/ci/artifact_catalog.py.
+# Smoke runs only replace it when CATALOG_PUBLISH=1 is set explicitly, and only on the default branch.
 # Build failures fail the child pipeline, so this runs `always` and the script
 # publishes only when artifact_catalog succeeded with a complete catalog.
-# Publishing is serialized and never lets an older pipeline that finishes late
-# replace a catalog that a newer pipeline actually deployed.
+# Publishing is serialized; the script skips when a deployment that started after
+# this catalog finished already includes it.
 pages:
   stage: build
   tags:
@@ -109,9 +111,10 @@ pages:
       - public/
     expire_in: 1 day
   rules:
-    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+    # Must match HISTORY_REFS in tools/ci/artifact_catalog.py.
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_COMMIT_BRANCH != "release/v2.5"'
       when: never
-    - if: '$CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CATALOG_PUBLISH == "1"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CATALOG_SMOKE_TEST == "1" && $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $CATALOG_PUBLISH == "1"'
       when: always
     - if: '$CATALOG_SMOKE_TEST == "1"'
       when: never

@@ -2,18 +2,22 @@
 
 **固定入口：`http://10.21.10.172:8091`**（公司内网或 VPN）。打开后自动进入 `main`
 分支最近一次完整构建的产物目录，首次访问需登录具有项目访问权限的 GitLab 账号。
-该页面由父流水线的 `pages` 任务发布，每次 `main` 分支的完整构建（schedule/web/api 且设置
-`BUILD_SDK`）完成后自动更新；MR 和其他分支的流水线不会替换它。
+该页面由父流水线的 `pages` 任务发布。`main` 和 `release/v2.5` 的完整构建（schedule/web/api 且设置
+`BUILD_SDK`）完成后都会尝试发布；其他分支（包括 MR）不发布。无论哪个分支完成，入口始终显示最新的 `main` 完整构建。
 只有完整的目录才会发布：编译失败只是目录中的失败状态，不影响发布（编译失败会使子流水线失败，
 因此 `pages` 任务设为 `when: always`，由脚本通过 API 核验本流水线父 `artifact_catalog` 任务成功）；
 目录本身有异常（collector 索引缺失、上传失败、权限错误等）或父目录任务失败/取消时，
 `pages` 任务失败且不生成 `public/`，保留原入口，不会发布失败任务遗留的目录文件。
-发布任务通过 `resource_group` 串行执行，发布前检查是否已有更新的 `main` 流水线**实际部署成功**：
-依据 GitLab 在每次 `pages` 任务成功后异步生成的 `pages:deploy` 状态，而不是 `pages` 任务状态；
-包含重试前的历史尝试，部署成功后再重试失败也算已发布，任务成功但部署失败不算。
-更新的流水线部署仍在进行（或部署状态尚未生成）时，最多等待 10 分钟，超时则任务失败、不发布。
-较早的流水线晚完成时会跳过发布（任务以退出码 3 显示为允许失败），不会让入口回退；
-GitLab 自身也会拒绝提交 SHA 已过期且已有更新流水线部署的发布。
+发布任务通过 `resource_group` 串行执行。发布前检查是否已有一次**在本流水线 `artifact_catalog` 完成之后才开始**的
+`pages` 尝试，并且该尝试实际部署成功：此时那次发布必然已包含本目录，因此跳过（任务以退出码 3 显示为允许失败）。
+检查范围是 `main` 和 `release/v2.5` 在本流水线完成之后更新过的流水线（不限流水线 ID 大小，排除本流水线和子流水线）。
+部署成功的依据是 GitLab 在每次 `pages` 任务成功后异步生成的 `pages:deploy` 状态，而不是 `pages` 任务状态。
+该状态不带任务 ID，无法可靠对应到具体尝试，因此只在候选流水线**恰好有一次成功的 `pages` 尝试**（重试的历史尝试也计入）时判断：
+该尝试必须在本流水线 `artifact_catalog` 完成之后才开始，且其 `pages:deploy` 状态为成功才跳过。
+有多次成功尝试时无法判断，不跳过，直接再发布一次（多发布一次无害，漏发布才是问题）。
+仍在进行的部署状态（或唯一成功尝试尚未生成部署状态）最多等待 10 分钟，超时则任务失败、不发布。
+冒烟目录（`CATALOG_SMOKE_TEST=1`）和超过保留期的流水线不进入历史，因此不做跳过检查，直接发布。
+ID 较小的流水线晚完成时不会被 ID 较大的早期部署跳过，入口也不会回退。
 服务器 nginx 将 `8091` 的根路径重定向到 Pages 站点 `/sw/SiFli-SDK/`。
 页面中的下载链接仍指向对应构建任务，产物过期（通常一周）后链接失效，需等待下一次构建。
 固定入口同时汇总 `main` 和 `release/v2.5` 最近 3 天内的完整构建。页面顶部可切换分支，
@@ -43,6 +47,18 @@ GitLab 自身也会拒绝提交 SHA 已过期且已有更新流水线部署的�
 外网无法访问预览入口时，仍可下载 `index.html` 本地打开，
 也可以在 GitLab 中查看 `README.md` 的完整目标清单。
 
+## 发布注意事项
+
+- GitLab 自身的 `validate_outdated_sha`：`pages` 任务本身仍然成功，但 GitLab 异步生成的 `pages:deploy` 状态为 failed，
+  描述为 `build SHA is outdated for this ref`。若某流水线的提交 SHA 已不是其分支的 tip，该状态被标为 allow_failure，
+  因此流水线不会因此失败。两种典型场景：
+  - 某条流水线晚完成，但它的 SHA 已不是分支 tip，而 ID 更大的流水线已经部署过：该部署被拒绝；
+  - 2.5（ID 更大）先部署成功，之后 main 在构建期间有了新提交，main 的部署因此被拒绝。
+  两种情况下，跳过判据都不会把失败的部署算作已部署，因此这个目录会在下一次发布时出现，入口不会回退。
+- 2.5 的发布使用 `release/v2.5` 分支上的 `tools/ci/artifact_catalog.py`、`tools/ci/artifact_catalog.html` 和
+  `.gitlab/ci/build_sdk.yml` 中的 `pages` 规则。这些文件在 `main` 与 `release/v2.5` 之间需要保持同步：修改其中一个分支，
+  另一个分支也要同步修改，否则 2.5 的发布会沿用旧的发布逻辑。
+
 ## 快速验证，不编译固件
 
 代码进入 GitLab 的待测分支后，在 **Build → Pipelines → Run pipeline** 选择该分支，
@@ -54,7 +70,8 @@ GitLab 自身也会拒绝提交 SHA 已过期且已有更新流水线部署的�
 预期失败的模拟编译任务允许失败；收集、上传、目录及父流水线入口仍严格检查错误。
 目录显示“快速验证数据”，测试文件不含可烧录固件。
 快速验证默认不更新固定入口；需要验证 Pages 发布时，在 `main` 分支运行并额外设置
-`CATALOG_PUBLISH=1`。模拟数据不会进入构建历史：最近 3 天已有完整构建时，入口仍按上述规则显示可用的真实构建，
+`CATALOG_PUBLISH=1`。在 `release/v2.5` 上运行的冒烟目录即使设置了 `CATALOG_PUBLISH=1` 也不会发布，
+`pages` 规则不运行，脚本也会拒绝发布（只允许默认分支）。模拟数据不会进入构建历史：最近 3 天已有完整构建时，入口仍按上述规则显示可用的真实构建，
 可用来验证历史汇总和发布流程；没有任何历史时，入口才会暂时显示模拟数据，直到下一次完整构建覆盖。
 
 它会实际验证 Generic Package 指针读写、单文件 artifact API 权限、目录生成和父流水线入口。
@@ -94,15 +111,25 @@ python3 -m unittest discover -s tests -p 'test_artifact_catalog.py'
   查询 trigger/bridge 优先使用 `CI_JOB_TOKEN`；若服务器拒绝该 API，则使用 `GITLAB_API_READ_TOKEN`。
 - 冒烟目录会严格核验三个目标、两份小型测试文件和三个日志，并确认预期失败目标没有产物；
   任一项缺失或状态不符都会使目录任务失败。
+
 - 目录及分组 artifact 保留一周。链接不会在过期后指向其他构建；下载时 GitLab 可能提示文件不存在。
   目录页生成时确认文件清单可读，页面打开后不会实时探测文件是否已过期或被手动删除。
 
+## Pages 紧凑格式
+
+- Pages 发布物（根目录 `catalog.json`、`index.html` 内嵌的数据、`pipelines/<流水线 ID>/catalog.json`）省略可由行的
+  `job_url`、`label` 和文件名推导出的 `url`。推导结果与原值不一致的条目保留原 `url`，因此不会丢失信息。
+- 默认构建只写在根目录 `catalog.json` 与 `index.html` 中，不再写出 `pipelines/<默认流水线 ID>/catalog.json`。
+- 父 `artifact_catalog` 任务产物中的 `catalog.json` 保持完整格式（每个文件都有 `url`）。`load_history()` 读取并校验它，
+  外部工具也可能使用它。因此 Pages 根目录的 `catalog.json` 与该产物内容不同，不能直接当作完整清单使用。
+- 页面 JavaScript 在校验前按同样规则补齐缺失的 `url`，编码与 Python `urllib.parse.quote(path, safe='/')` 逐字节一致。
+  直接读取 Pages 上 `catalog.json` 的脚本需要先按此规则补齐 `url`。
 ## 服务配置与保留策略
 
 需要启用本项目 Package Registry，且流水线的 `CI_JOB_TOKEN` 能上传/下载 Generic Packages
 以及读取同项目的 job artifacts。SDK 项目目前已启用 Package Registry。
 如服务器不允许 `CI_JOB_TOKEN` 读取任务列表、Pipelines Bridges API 或单个 job artifact，
-以及 `pages` 任务使用的流水线列表和提交状态（commit statuses）API，则需配置 masked CI/CD 变量
+以及 `pages` 任务使用的流水线列表、流水线任务列表（含重试尝试）和提交状态（commit statuses）API，则需配置 masked CI/CD 变量
 `GITLAB_API_READ_TOKEN`，其只读 API token 至少具有 `read_api` 权限。可将变量限制在受信任的分支，
 并在测试分支受保护时设为 protected。若两种认证均不可用，父目录入口会明确失败，不会回退显示旧目录。
 这些权限需要在真实 CI 中验证；目录生成失败时查看任务日志中的 HTTP 状态码。

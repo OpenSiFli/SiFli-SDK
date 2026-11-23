@@ -8,6 +8,8 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -60,7 +62,7 @@ class ArtifactCatalogTests(unittest.TestCase):
             {'id': 900, 'name': 'build_batch_001', 'retried': False, 'status': 'success'},
         ])
         self.assertEqual(self.client.current_collector_jobs(), {
-            'collect_batch_001': {'id': '789', 'status': 'success'}})
+            'collect_batch_001': {'id': '789', 'status': 'success', 'started_at': None, 'finished_at': None}})
         self.assertEqual(self.client.json_request.call_args.args[0],
                          'pipelines/123/jobs?per_page=100&page=1')
 
@@ -133,7 +135,7 @@ class ArtifactCatalogTests(unittest.TestCase):
                     {'id': 'bad', 'name': 'artifact_catalog', 'retried': False, 'status': 'success'}]
         self.client.json_request = Mock(side_effect=[page_one, page_two])
         self.assertEqual(self.client.latest_job('123', 'artifact_catalog'),
-                         {'id': '720', 'status': 'failed'})
+                         {'id': '720', 'status': 'failed', 'started_at': None, 'finished_at': None})
         self.assertEqual([call.args[0] for call in self.client.json_request.call_args_list], [
             'pipelines/123/jobs?per_page=100&page=1',
             'pipelines/123/jobs?per_page=100&page=2',
@@ -269,7 +271,7 @@ class ArtifactCatalogTests(unittest.TestCase):
 
     def test_generated_html_renders_without_history_entry(self):
         template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text()
-        self.assertIn('} else displayCatalog(data);', template)
+        self.assertIn('} else { restoreUrls(data); displayCatalog(data); }', template)
 
     def test_history_skips_pipelines_without_catalog_job_silently(self):
         recent = self.now.isoformat()
@@ -380,18 +382,21 @@ class ArtifactCatalogTests(unittest.TestCase):
             self.assertTrue((Path(temp) / 'index.html').is_file())
             self.assertTrue((Path(temp) / 'catalog.json').is_file())
 
-    def write_pages_source(self, root, issues=(), commit='abc123'):
+    def write_pages_source(self, root, issues=(), commit='abc123', index=None):
         source = Path(root) / 'artifact_catalog'
         source.mkdir()
-        result = self.build()
+        result = self.build(index)
         result.update(pipeline_id='124', commit=commit, issues=list(issues))
         result['rows'][0]['status'] = 'failed'
         catalog.write_catalog(result, source)
         return source
 
     CATALOG_JOB_PATH = 'pipelines/123/jobs?per_page=100&page=1'
-    PIPELINES_PATH = 'pipelines?ref=main&order_by=id&sort=desc&per_page=100&page=1'
-    CATALOG_PASSED = [{'id': 1230, 'name': 'artifact_catalog', 'status': 'success', 'retried': False}]
+    CATALOG_FINISHED = '2026-11-04T05:00:00Z'
+    CATALOG_FINISHED_QUERY = '2026-11-04T05:00:00+00:00'
+    CATALOG_PASSED = [{'id': 1230, 'name': 'artifact_catalog', 'status': 'success', 'retried': False,
+                       'started_at': '2026-11-04T04:59:00Z', 'finished_at': CATALOG_FINISHED}]
+    DEPLOY_CREATED = '2026-11-04T05:45:00Z'
 
     @staticmethod
     def status_path(pipeline_id, name):
@@ -399,33 +404,73 @@ class ArtifactCatalogTests(unittest.TestCase):
         return (f'repository/commits/def456/statuses?pipeline_id={pipeline_id}'
                 f'&name={name}&all=true&per_page=100&page=1')
 
-    def fake_pages_api(self, catalog_jobs=CATALOG_PASSED, pipelines=(), statuses=None, history=(), extra=None):
-        """statuses maps (pipeline, name) to status lists, or to one list per poll."""
-        responses = {self.CATALOG_JOB_PATH: catalog_jobs, self.PIPELINES_PATH: [
-            {'id': pipeline_id, 'source': source, 'sha': 'def456'} for pipeline_id, source in pipelines]}
+    @staticmethod
+    def candidate(pipeline_id, source='schedule', created_at='2026-11-04T04:00:00Z'):
+        return {'id': int(pipeline_id), 'source': source, 'sha': 'def456', 'created_at': created_at}
+
+    @staticmethod
+    def pages_job(job_id, status, started_at, retried=False):
+        return {'id': job_id, 'name': 'pages', 'status': status, 'started_at': started_at, 'retried': retried}
+
+    @classmethod
+    def deploy_status(cls, value):
+        status, created_at = value if isinstance(value, tuple) else (value, cls.DEPLOY_CREATED)
+        return {'name': 'pages:deploy', 'status': status, 'created_at': created_at}
+
+    def frozen_clock(self):
+        moment = self.now
+
+        class FrozenDateTime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return moment if tz else moment.replace(tzinfo=None)
+        return patch.object(catalog, 'datetime', FrozenDateTime)
+
+    def fake_pages_api(self, catalog_jobs=CATALOG_PASSED, candidates=None, pages_jobs=None,
+                       statuses=None, history=(), extra=None):
+        """Serve the GitLab responses that publish_pages reads.
+
+        catalog_jobs: jobs of pipeline 123, or {pipeline_id: jobs} for other pipelines.
+        candidates: {branch: pipelines} returned for the skip check (updated_after == CATALOG_FINISHED).
+        history: {branch: pipelines} (or one list for every branch) returned for load_history.
+        pages_jobs: {pipeline_id: jobs} returned with include_retried=true.
+        statuses: {(pipeline_id, 'pages:deploy'): values}; each value is a status or
+                  (status, created_at), and a list of such lists answers successive polls.
+        """
+        if isinstance(catalog_jobs, list):
+            catalog_jobs = {'123': catalog_jobs}
+        candidates = candidates or {}
+        pages_jobs = pages_jobs or {}
+        responses = {f'pipelines/{pid}/jobs?per_page=100&page=1': jobs for pid, jobs in catalog_jobs.items()}
+        for items in candidates.values():
+            for item in items:
+                responses.setdefault(f'pipelines/{item["id"]}/jobs?include_retried=true&per_page=100&page=1', [])
+        for pid, jobs in pages_jobs.items():
+            responses[f'pipelines/{pid}/jobs?include_retried=true&per_page=100&page=1'] = jobs
         responses.update(extra or {})
         polls = {}
-        for (pipeline_id, name), values in (statuses or {}).items():
-            path = self.status_path(pipeline_id, name)
+        for (pipeline_id, _name), values in (statuses or {}).items():
+            path = self.status_path(pipeline_id, 'pages:deploy')
             if values and isinstance(values[0], list):
-                polls[path] = iter(values)
+                polls[path] = iter([[self.deploy_status(value) for value in poll] for poll in values])
             else:
-                responses[path] = values
+                responses[path] = [self.deploy_status(value) for value in values]
 
         def respond(path, **_kwargs):
             if path.startswith('pipelines?') and 'updated_after=' in path:
-                page = int(parse_qs(urlsplit(path).query)['page'][0])
-                if isinstance(history, Exception):
-                    raise history
-                branch = parse_qs(urlsplit(path).query)['ref'][0]
-                branch_history = history.get(branch, []) if isinstance(history, dict) else history
-                branch_history = list(branch_history)
-                return copy.deepcopy(branch_history[(page - 1) * 100:page * 100])
+                query = parse_qs(urlsplit(path).query)
+                branch = query['ref'][0]
+                if query['updated_after'][0] == self.CATALOG_FINISHED_QUERY:
+                    items = candidates.get(branch, [])
+                else:
+                    if isinstance(history, Exception):
+                        raise history
+                    items = history.get(branch, []) if isinstance(history, dict) else history
+                page = int(query['page'][0])
+                return copy.deepcopy(list(items)[(page - 1) * 100:page * 100])
             if path not in polls and path not in responses:
                 raise AssertionError(f'unexpected GitLab request: {path}')
             values = next(polls[path]) if path in polls else responses[path]
-            if path.startswith('repository/'):
-                return [{'name': 'pages', 'status': status} for status in values]
             if isinstance(values, Exception):
                 raise values
             return copy.deepcopy(values)
@@ -435,23 +480,23 @@ class ArtifactCatalogTests(unittest.TestCase):
         return [call.args[0] for call in self.client.json_request.call_args_list]
 
     def test_pages_publishes_complete_catalog_with_failed_builds(self):
-        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}):
+        with TemporaryDirectory() as temp, self.frozen_clock():
             source = self.write_pages_source(temp)
             output = Path(temp) / 'public'
             (output / 'stale').mkdir(parents=True)
-            self.fake_pages_api(pipelines=[(123, 'schedule'), (100, 'web')])
+            self.fake_pages_api()
             self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            # The default build lives in the root catalog.json and index.html only.
             self.assertEqual(sorted(p.name for p in output.iterdir()),
-                             ['README.md', 'catalog.json', 'history.json', 'index.html', 'pipelines'])
-            self.assertEqual(self.requested_paths()[:2], [self.CATALOG_JOB_PATH, self.PIPELINES_PATH])
-            self.assertIn('updated_after=', self.requested_paths()[2])
-            self.assertIn('ref=release%2Fv2.5', self.requested_paths()[3])
+                             ['README.md', 'catalog.json', 'history.json', 'index.html'])
+            self.assertEqual(self.requested_paths()[0], self.CATALOG_JOB_PATH)
+            self.assertTrue(any('ref=release%2Fv2.5' in path for path in self.requested_paths()))
             history = json.loads((output / 'history.json').read_text())
             self.assertEqual(history, [{'pipeline_id': '123', 'ref': 'main', 'commit': 'abc123',
                                        'created_at': '2026-11-04T00:00:00Z',
                                        'success_count': 0, 'failed_count': 1}])
-            self.assertEqual(json.loads((output / 'pipelines/123/catalog.json').read_text()),
-                             json.loads((source / 'catalog.json').read_text()))
+            self.assertEqual(json.loads((output / 'catalog.json').read_text()),
+                             catalog.compact_catalog(json.loads((source / 'catalog.json').read_text())))
             self.assertFalse((output / 'stale').exists())
 
     def test_load_history_queries_each_branch_filters_boundaries_and_validates_catalogs(self):
@@ -633,7 +678,9 @@ class ArtifactCatalogTests(unittest.TestCase):
                 history[parse_qs(urlsplit(path).query)['ref'][0]] if path.startswith('pipelines?')
                 else main_catalog if path.startswith('jobs/1200/') else release_catalog))
             output = Path(temp) / 'public'
-            catalog.publish_pages(self.client, source, output)
+            # The skip check has its own tests; this one covers default selection only.
+            with patch.object(catalog, 'newer_published_pipeline', return_value=None), self.frozen_clock():
+                catalog.publish_pages(self.client, source, output)
             embedded = json.loads((output / 'catalog.json').read_text())
             history_data = json.loads((output / 'index.html').read_text().split(
                 'id="history-data">', 1)[1].split('</script>', 1)[0])
@@ -730,58 +777,232 @@ class ArtifactCatalogTests(unittest.TestCase):
                 self.assertFalse((Path(temp) / 'public').exists())
                 self.assertEqual(self.requested_paths(), [self.CATALOG_JOB_PATH])
 
-    def test_pages_does_not_let_older_pipeline_replace_newer_deployment(self):
-        statuses = {
-            # The job uploaded artifacts but GitLab failed to deploy them: not live.
-            (130, 'pages'): ['success'], (130, 'pages:deploy'): ['failed'],
-            # Deployed once, then a retried attempt failed to deploy: still live.
-            (126, 'pages'): ['success', 'success'], (126, 'pages:deploy'): ['success', 'failed'],
-        }
-        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+    TRICKY_NAMES = ['sub/core #1.bin', 'a b/中文 名.bin', "x!'()*.bin", 'a#b?c%d&e=f+g.bin', '100%.bin',
+                    'emoji 😀.bin']
+
+    def tricky_index(self):
+        index = copy.deepcopy(self.index)
+        target = index['jobs']['target']
+        target['artifacts'] = [{'path': f'target/artifacts/target/{name}', 'size': 42} for name in self.TRICKY_NAMES]
+        target['logs'] = [{'path': f'target/ci_build_logs/{name}', 'size': 7} for name in self.TRICKY_NAMES]
+        return index
+
+    def test_compact_catalog_drops_only_urls_that_rebuild_exactly(self):
+        result = self.build(self.tricky_index())
+        row = result['rows'][0]
+        self.assertEqual(len(row['files']), len(self.TRICKY_NAMES))
+        before = copy.deepcopy(result)
+        row['files'][1]['url'] = 'https://elsewhere.example/odd.bin'
+        row['logs'][0]['url'] += '&changed=1'
+        expected = copy.deepcopy(result)
+        compact = catalog.compact_catalog(result)
+        self.assertEqual(result, expected)  # the input is never modified
+        self.assertEqual(compact['rows'][0]['files'][1], {'name': row['files'][1]['name'],
+                                                          'size': 42,
+                                                          'url': 'https://elsewhere.example/odd.bin'})
+        self.assertEqual(compact['rows'][0]['logs'][0]['url'], expected['rows'][0]['logs'][0]['url'])
+        for category in ('files', 'logs'):
+            for index, entry in enumerate(compact['rows'][0][category]):
+                if (category, index) in {('files', 1), ('logs', 0)}:
+                    continue
+                with self.subTest(category=category, name=entry['name']):
+                    self.assertNotIn('url', entry)
+                    full = before['rows'][0][category][index]
+                    self.assertEqual(catalog.derived_file_url(row, category, entry['name']), full['url'])
+        self.assertEqual(before['rows'][0]['files'][0]['name'], self.TRICKY_NAMES[0])
+
+    def test_pages_output_drops_only_urls_that_rebuild_exactly(self):
+        with TemporaryDirectory() as temp, self.frozen_clock():
+            source = self.write_pages_source(temp, index=self.tricky_index())
+            full = json.loads((source / 'catalog.json').read_text())
+            # A URL that differs from the rebuilt one must survive in every Pages copy.
+            full['rows'][0]['files'][1]['url'] = 'https://elsewhere.example/odd.bin'
+            (source / 'catalog.json').write_text(json.dumps(full), encoding='utf-8')
+            self.fake_pages_api()
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            compact = json.loads((output / 'catalog.json').read_text())
+            page = (output / 'index.html').read_text()
+            self.assertEqual(json.loads(page.split('id="data">', 1)[1].split('</script>', 1)[0]), compact)
+            self.assertEqual(compact, catalog.compact_catalog(full))
+            for category in ('files', 'logs'):
+                for index, entry in enumerate(compact['rows'][0][category]):
+                    full_entry = full['rows'][0][category][index]
+                    with self.subTest(category=category, name=entry['name']):
+                        if (category, index) == ('files', 1):
+                            self.assertEqual(entry['url'], 'https://elsewhere.example/odd.bin')
+                        else:
+                            self.assertNotIn('url', entry)
+                            self.assertEqual(catalog.derived_file_url(compact['rows'][0], category, entry['name']),
+                                             full_entry['url'])
+            # The job artifact keeps the full form that load_history() validates.
+            self.assertEqual(json.loads((source / 'catalog.json').read_text()), full)
+            self.assertTrue(all('url' in entry for entry in full['rows'][0]['files'] + full['rows'][0]['logs']))
+
+    def test_pages_history_writes_non_default_builds_only_and_compact(self):
+        release = self.build(self.tricky_index())
+        release.update(project_id='38', commit='def456', pipeline_id='1250', issues=[])
+        with TemporaryDirectory() as temp, self.frozen_clock():
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                catalog_jobs={'123': self.CATALOG_PASSED, '125': [
+                    {'id': 1250, 'name': 'artifact_catalog', 'status': 'success', 'retried': False,
+                     'started_at': '2026-11-04T03:59:00Z', 'finished_at': '2026-11-04T04:00:00Z'}]},
+                history={'release/v2.5': [self.candidate(125, created_at='2026-11-04T03:00:00Z')]},
+                extra={'jobs/1250/artifacts/artifact_catalog/catalog.json': release})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertEqual(sorted(p.name for p in (output / 'pipelines').iterdir()), ['125'])
+            stored = json.loads((output / 'pipelines/125/catalog.json').read_text())
+            self.assertEqual(stored, catalog.compact_catalog(release))
+            self.assertNotIn('url', stored['rows'][0]['files'][0])
+            page = (output / 'index.html').read_text()
+            history_data = json.loads(page.split('id="history-data">', 1)[1].split('</script>', 1)[0])
+            self.assertEqual(history_data['default_pipeline_id'], '123')
+
+    @unittest.skipUnless(shutil.which('node'), 'node is not installed')
+    def test_js_rebuilds_urls_byte_for_byte_like_python(self):
+        result = self.build(self.tricky_index())
+        full = copy.deepcopy(result)
+        compact = catalog.compact_catalog(result)
+        script = self.js_url_helpers() + (
+            "\nconst input = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+            "\nrestoreUrls(input);"
+            "\nprocess.stdout.write(JSON.stringify(input));")
+        completed = subprocess.run(['node', '-e', script], input=json.dumps(compact), capture_output=True,
+                                   text=True, encoding='utf-8', check=True)
+        restored = json.loads(completed.stdout)
+        self.assertEqual(restored['rows'][0]['files'], full['rows'][0]['files'])
+        self.assertEqual(restored['rows'][0]['logs'], full['rows'][0]['logs'])
+
+    @staticmethod
+    def js_url_helpers():
+        page = Path(catalog.__file__).with_name('artifact_catalog.html').read_text(encoding='utf-8')
+        return page.split('// BEGIN url helpers', 1)[1].split('\n', 1)[1].split('// END url helpers', 1)[0]
+
+    def test_page_fetches_only_non_default_builds(self):
+        template = Path(catalog.__file__).with_name('artifact_catalog.html').read_text(encoding='utf-8')
+        # Every eviction goes through forget(), which never drops the embedded default build.
+        self.assertEqual(template.count('cache.delete('), 1)
+        self.assertIn('const forget = id => { if (id !== embeddedId) cache.delete(id); };', template)
+        self.assertIn('forget(id);', template)
+        self.assertIn('const embeddedId = historyData ? historyData.default_pipeline_id : null;', template)
+        self.assertIn('if (embeddedId) cache.set(embeddedId, data);', template)
+        self.assertIn('} else { restoreUrls(data); displayCatalog(data); }', template)
+
+    def test_pages_skips_when_attempt_started_after_catalog_and_deployed(self):
+        with TemporaryDirectory() as temp, self.frozen_clock(), \
                 patch.object(catalog.time, 'sleep') as sleep:
             source = self.write_pages_source(temp)
-            self.fake_pages_api(pipelines=[(130, 'web'), (128, 'parent_pipeline'), (126, 'schedule'),
-                                           (123, 'schedule')], statuses=statuses)
-            self.assertEqual(catalog.publish_pages(self.client, source, Path(temp) / 'public'), '126')
-            self.assertFalse((Path(temp) / 'public').exists())
+            # An attempt starting exactly when the catalog finished counts.
+            for started_at in ('2026-11-04T05:00:00Z', '2026-11-04T05:30:00Z'):
+                with self.subTest(started_at=started_at):
+                    self.fake_pages_api(
+                        candidates={'main': [self.candidate(130)]},
+                        pages_jobs={'130': [self.pages_job(1301, 'success', started_at)]},
+                        statuses={('130', 'pages:deploy'): [('success', '2026-11-04T05:40:00Z')]})
+                    output = Path(temp) / 'public'
+                    self.assertEqual(catalog.publish_pages(self.client, source, output), '130')
+                    self.assertFalse(output.exists())
             sleep.assert_not_called()
-            paths = self.requested_paths()
-            self.assertIn('repository/commits/def456/statuses?pipeline_id=126'
-                          '&name=pages%3Adeploy&all=true&per_page=100&page=1', paths)
-            # The child pipeline and older pipelines are never scanned.
-            self.assertFalse(any('pipeline_id=128' in path or 'pipeline_id=123' in path for path in paths))
 
-    def test_pages_publishes_when_newer_job_succeeded_but_deployment_failed(self):
-        statuses = {
-            (125, 'pages'): ['failed', 'success'], (125, 'pages:deploy'): ['failed'],
-            # A newer pipeline without pages, e.g. the GitHub sync schedule.
-            (124, 'pages'): [], (124, 'pages:deploy'): [],
-        }
-        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
-                patch.object(catalog.time, 'sleep') as sleep:
+    def test_pages_does_not_skip_for_attempt_started_before_catalog_finished(self):
+        with TemporaryDirectory() as temp, self.frozen_clock():
             source = self.write_pages_source(temp)
-            self.fake_pages_api(pipelines=[(125, 'web'), (124, 'schedule'), (123, 'schedule')],
-                                statuses=statuses)
-            self.assertIsNone(catalog.publish_pages(self.client, source, Path(temp) / 'public'))
-            self.assertTrue((Path(temp) / 'public' / 'index.html').is_file())
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1301, 'success', '2026-11-04T04:50:00Z')]},
+                statuses={('130', 'pages:deploy'): [('success', '2026-11-04T05:10:00Z')]})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertTrue((output / 'index.html').is_file())
+            self.assertFalse(any('statuses' in path for path in self.requested_paths()))
+
+    def test_pages_does_not_skip_when_attempts_after_catalog_did_not_deploy(self):
+        cases = [
+            ([self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')], [('failed', '2026-11-04T05:40:00Z')]),
+            ([self.pages_job(1301, 'failed', '2026-11-04T05:30:00Z')], []),
+        ]
+        for jobs, deploys in cases:
+            with self.subTest(jobs=jobs, deploys=deploys), TemporaryDirectory() as temp, \
+                    self.frozen_clock(), patch.object(catalog.time, 'sleep'):
+                source = self.write_pages_source(temp)
+                self.fake_pages_api(candidates={'main': [self.candidate(130)]},
+                                    pages_jobs={'130': jobs}, statuses={('130', 'pages:deploy'): deploys})
+                output = Path(temp) / 'public'
+                self.assertIsNone(catalog.publish_pages(self.client, source, output))
+                self.assertTrue((output / 'index.html').is_file())
+
+    def test_pages_skip_is_not_used_when_several_attempts_succeeded(self):
+        # Two successful attempts produce two pages:deploy statuses, and their order cannot be matched
+        # to the attempts. The check must not skip (publishing again is harmless) and must not wait.
+        with TemporaryDirectory() as temp, self.frozen_clock(), patch.object(catalog.time, 'sleep') as sleep:
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1300, 'success', '2026-11-04T05:10:00Z'),
+                                    self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')]},
+                statuses={('130', 'pages:deploy'): [[('success', '2026-11-04T05:20:00Z')],
+                                                    [('success', '2026-11-04T05:40:00Z')]]})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertTrue((output / 'index.html').is_file())
             sleep.assert_not_called()
 
-    def test_pages_waits_until_newer_deployment_finishes(self):
-        for result, expected in [('success', '125'), ('failed', None)]:
-            # The job succeeded before GitLab created, then ran, its pages:deploy status.
-            statuses = {(125, 'pages'): ['success'],
-                        (125, 'pages:deploy'): [[], ['running'], [result]]}
-            with self.subTest(result=result), TemporaryDirectory() as temp, \
-                    patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+    def test_pages_skip_follows_the_only_successful_attempt_result(self):
+        # The earlier attempt failed. The only successful one started after the catalog, but its
+        # deployment failed, so the catalog must be published rather than skipped.
+        with TemporaryDirectory() as temp, self.frozen_clock(), patch.object(catalog.time, 'sleep') as sleep:
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1300, 'failed', '2026-11-04T05:10:00Z'),
+                                    self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')]},
+                statuses={('130', 'pages:deploy'): [[('failed', '2026-11-04T05:40:00Z')]]})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertTrue((output / 'index.html').is_file())
+            sleep.assert_not_called()
+
+    def test_pages_skip_does_not_query_deployments_without_a_successful_attempt(self):
+        with TemporaryDirectory() as temp, self.frozen_clock():
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1301, 'failed', '2026-11-04T05:30:00Z')]},
+                statuses={('130', 'pages:deploy'): [('success', '2026-11-04T05:40:00Z')]})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertTrue((output / 'index.html').is_file())
+            self.assertFalse(any('statuses' in path for path in self.requested_paths()))
+
+    def test_pages_skip_counts_retried_attempts_and_requests_them(self):
+        with TemporaryDirectory() as temp, self.frozen_clock():
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1301, 'failed', '2026-11-04T05:10:00Z', retried=True),
+                                    self.pages_job(1302, 'success', '2026-11-04T05:20:00Z')]},
+                statuses={('130', 'pages:deploy'): [('success', '2026-11-04T05:30:00Z')]})
+            self.assertEqual(catalog.publish_pages(self.client, source, Path(temp) / 'public'), '130')
+            self.assertIn('pipelines/130/jobs?include_retried=true&per_page=100&page=1', self.requested_paths())
+
+    def test_pages_skip_waits_for_pending_deployment_then_follows_its_result(self):
+        for result, expected in [('success', '130'), ('failed', None)]:
+            with self.subTest(result=result), TemporaryDirectory() as temp, self.frozen_clock(), \
                     patch.object(catalog.time, 'sleep') as sleep:
                 source = self.write_pages_source(temp)
-                self.fake_pages_api(pipelines=[(125, 'web'), (123, 'schedule')], statuses=statuses)
-                self.assertEqual(catalog.publish_pages(self.client, source, Path(temp) / 'public'), expected)
-                self.assertEqual((Path(temp) / 'public').exists(), expected is None)
+                self.fake_pages_api(
+                    candidates={'main': [self.candidate(130)]},
+                    pages_jobs={'130': [self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')]},
+                    statuses={('130', 'pages:deploy'): [[], ['running'], [(result, '2026-11-04T05:40:00Z')]]})
+                output = Path(temp) / 'public'
+                self.assertEqual(catalog.publish_pages(self.client, source, output), expected)
+                self.assertEqual(output.exists(), expected is None)
                 self.assertEqual(sleep.call_count, 2)
 
-    def test_pages_does_not_wait_forever_for_newer_deployment(self):
-        statuses = {(125, 'pages'): ['success'], (125, 'pages:deploy'): ['pending']}
+    def test_pages_skip_does_not_wait_forever_for_pending_deployment(self):
+        statuses = {('130', 'pages:deploy'): ['running']}
         clock = iter(range(0, catalog.PAGES_DEPLOY_TIMEOUT * 2, catalog.PAGES_DEPLOY_POLL))
 
         def tick():
@@ -789,15 +1010,129 @@ class ArtifactCatalogTests(unittest.TestCase):
             if now is None:
                 raise AssertionError('waited past the deadline')
             return now
-        with TemporaryDirectory() as temp, patch.dict(os.environ, {'CI_DEFAULT_BRANCH': 'main'}), \
+        with TemporaryDirectory() as temp, self.frozen_clock(), \
                 patch.object(catalog.time, 'sleep') as sleep, \
                 patch.object(catalog.time, 'monotonic', side_effect=tick):
             source = self.write_pages_source(temp)
-            self.fake_pages_api(pipelines=[(125, 'web'), (123, 'schedule')], statuses=statuses)
+            self.fake_pages_api(candidates={'main': [self.candidate(130)]},
+                                pages_jobs={'130': [self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')]},
+                                statuses=statuses)
             with self.assertRaisesRegex(ValueError, 'still unfinished'):
                 catalog.publish_pages(self.client, source, Path(temp) / 'public')
             self.assertFalse((Path(temp) / 'public').exists())
             self.assertEqual(sleep.call_count, catalog.PAGES_DEPLOY_TIMEOUT // catalog.PAGES_DEPLOY_POLL - 1)
+
+    def test_pages_skip_ignores_self_and_child_pipelines(self):
+        with TemporaryDirectory() as temp, self.frozen_clock():
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(123), self.candidate(128, source='parent_pipeline')]},
+                pages_jobs={'123': [self.pages_job(1231, 'success', '2026-11-04T05:30:00Z')],
+                            '128': [self.pages_job(1281, 'success', '2026-11-04T05:30:00Z')]},
+                statuses={('123', 'pages:deploy'): [('success', '2026-11-04T05:40:00Z')],
+                          ('128', 'pages:deploy'): [('success', '2026-11-04T05:40:00Z')]})
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            self.assertTrue((output / 'index.html').is_file())
+            paths = self.requested_paths()
+            self.assertFalse(any(path.startswith('pipelines/123/jobs?include_retried') for path in paths))
+            self.assertFalse(any('pipeline_id=128' in path for path in paths))
+
+    def main_history(self):
+        """Arguments for main #130 as the default build: complete, and created before the catalog."""
+        main_catalog = self.build()
+        main_catalog.update(project_id='38', commit='def456', pipeline_id='1300', issues=[])
+        return {
+            'catalog_jobs': {'123': self.CATALOG_PASSED, '130': [
+                {'id': 1300, 'name': 'artifact_catalog', 'status': 'success', 'retried': False,
+                 'started_at': '2026-11-04T03:59:00Z', 'finished_at': '2026-11-04T04:01:00Z'}]},
+            'history': {'main': [self.candidate(130)]},
+            'extra': {'jobs/1300/artifacts/artifact_catalog/catalog.json': main_catalog},
+        }
+
+    def test_release_catalog_is_not_skipped_by_earlier_main_deployment_with_larger_id(self):
+        # Release #123 finishes after main #130 deployed. #130 started before the release catalog,
+        # so its deployment cannot include it, whatever the ID order.
+        with TemporaryDirectory() as temp, self.frozen_clock(), \
+                patch.dict(os.environ, {'CI_COMMIT_REF_NAME': 'release/v2.5'}):
+            source = self.write_pages_source(temp)
+            self.fake_pages_api(
+                candidates={'main': [self.candidate(130)]},
+                pages_jobs={'130': [self.pages_job(1301, 'success', '2026-11-04T04:00:00Z')]},
+                statuses={('130', 'pages:deploy'): [('success', '2026-11-04T04:10:00Z')]},
+                **self.main_history())
+            output = Path(temp) / 'public'
+            self.assertIsNone(catalog.publish_pages(self.client, source, output))
+            history_data = json.loads((output / 'index.html').read_text().split(
+                'id="history-data">', 1)[1].split('</script>', 1)[0])
+            self.assertEqual(history_data['default_pipeline_id'], '130')
+            self.assertEqual(sorted(entry['pipeline_id'] for entry in history_data['pipelines']), ['123', '130'])
+
+    def test_pages_skip_only_applies_to_catalogs_that_enter_history(self):
+        # A smoke catalog and a pipeline older than the retention window are not in history,
+        # so a later deployment does not include them.
+        cases = [('smoke', {}), ('expired', {'CI_PIPELINE_CREATED_AT': '2026-10-01T00:00:00Z'})]
+        for name, env in cases:
+            with self.subTest(name=name), TemporaryDirectory() as temp, self.frozen_clock(), \
+                    patch.dict(os.environ, env):
+                source = self.write_pages_source(temp)
+                if name == 'smoke':
+                    current = json.loads((source / 'catalog.json').read_text())
+                    current['smoke_test'] = True
+                    catalog.write_catalog(current, source)
+                self.fake_pages_api(
+                    candidates={'main': [self.candidate(130)]},
+                    pages_jobs={'130': [self.pages_job(1301, 'success', '2026-11-04T05:30:00Z')]},
+                    statuses={('130', 'pages:deploy'): [('success', '2026-11-04T05:40:00Z')]},
+                    **self.main_history())
+                output = Path(temp) / 'public'
+                self.assertIsNone(catalog.publish_pages(self.client, source, output))
+                self.assertFalse(any('statuses' in path for path in self.requested_paths()))
+
+    def test_pages_rejects_ref_outside_history_refs_before_any_api_call(self):
+        with TemporaryDirectory() as temp, self.frozen_clock(), \
+                patch.dict(os.environ, {'CI_COMMIT_REF_NAME': 'feature/pages'}):
+            source = self.write_pages_source(temp)
+            self.client.json_request = Mock(side_effect=AssertionError('no API call expected'))
+            with self.assertRaisesRegex(ValueError, 'not a catalog branch'):
+                catalog.publish_pages(self.client, source, Path(temp) / 'public')
+            self.client.json_request.assert_not_called()
+            self.assertFalse((Path(temp) / 'public').exists())
+
+    def test_smoke_catalog_is_not_published_from_release_branch(self):
+        with TemporaryDirectory() as temp, self.frozen_clock(), patch.dict(os.environ, {
+                'CI_COMMIT_REF_NAME': 'release/v2.5', 'CI_DEFAULT_BRANCH': 'main'}):
+            source = self.write_pages_source(temp)
+            current = json.loads((source / 'catalog.json').read_text())
+            current['smoke_test'] = True
+            catalog.write_catalog(current, source)
+            self.fake_pages_api()
+            output = Path(temp) / 'public'
+            with self.assertRaisesRegex(ValueError, 'only from the default branch'):
+                catalog.publish_pages(self.client, source, output)
+            self.assertFalse(output.exists())
+
+    def test_pages_skip_rejects_malformed_api_values(self):
+        catalog_job = {'id': '1230', 'status': 'success'}
+        self.client.json_request = Mock(side_effect=AssertionError('no API call expected'))
+        with self.assertRaisesRegex(ValueError, 'finish time is missing'):
+            catalog.newer_published_pipeline(self.client, catalog_job)
+        with self.assertRaisesRegex(ValueError, 'no timezone'):
+            catalog.newer_published_pipeline(self.client, dict(catalog_job, finished_at='2026-11-04T05:00:00'))
+        bad_jobs = [
+            [{'name': 'pages', 'status': 'success', 'started_at': 'not-a-time'}],
+            [{'name': 'pages', 'status': 42, 'started_at': self.CATALOG_FINISHED}],
+            ['not-a-job'],
+        ]
+        for jobs in bad_jobs:
+            self.client.json_request = Mock(return_value=jobs)
+            with self.subTest(jobs=jobs), self.assertRaises(ValueError):
+                catalog.pages_attempts(self.client, '130')
+        for statuses, message in [([{'created_at': None, 'status': 'success'}], 'creation time is missing'),
+                                  (['not-a-status'], 'invalid commit status')]:
+            self.client.json_request = Mock(return_value=statuses)
+            with self.subTest(statuses=statuses), self.assertRaisesRegex(ValueError, message):
+                catalog.commit_statuses(self.client, 'def456', '130', 'pages:deploy')
 
     def test_pages_skip_uses_allowed_failure_exit_code(self):
         with patch('sys.argv', ['artifact_catalog.py', 'pages']), patch.object(catalog, 'GitLab'), \

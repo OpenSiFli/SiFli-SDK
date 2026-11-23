@@ -24,11 +24,13 @@ from dynamic_pipeline import DynamicPipelineGenerator
 PACKAGE_NAME = 'sdk-artifact-catalog-pointers'
 INDEX_PATH = 'merged_artifacts/file_index.json'
 HISTORY_DAYS = 3
+# Branches whose complete catalogs enter history and may publish Pages.
+# Must match the `pages` rules in .gitlab/ci/build_sdk.yml.
 HISTORY_REFS = ('main', 'release/v2.5')
 HISTORY_WORKERS = 4
-# Allowed-failure exit code: a newer pipeline already owns the published entry.
+# Allowed-failure exit code: a deployment made after this catalog already includes it.
 PAGES_SKIPPED = 3
-# GitLab deploys a successful pages job asynchronously; wait this long for a newer one.
+# GitLab deploys a successful pages job asynchronously; wait this long for a deployment still in progress.
 PAGES_DEPLOY_TIMEOUT = 600
 PAGES_DEPLOY_POLL = 10
 FINISHED_STATUSES = ('success', 'failed', 'canceled', 'skipped')
@@ -135,7 +137,8 @@ class GitLab:
             if not job_id.isdecimal() or int(job_id) < 1:
                 continue
             if name not in current or int(job_id) > int(current[name]['id']):
-                current[name] = {'id': job_id, 'status': job.get('status')}
+                current[name] = {'id': job_id, 'status': job.get('status'),
+                                 'started_at': job.get('started_at'), 'finished_at': job.get('finished_at')}
         return current
 
     def latest_job(self, pipeline_id, name):
@@ -220,32 +223,81 @@ def load_parent_catalog(client):
     return catalog
 
 
-def newer_published_pipeline(client):
-    """Return a newer default-branch pipeline whose Pages deployment succeeded."""
-    ref = quote(os.environ['CI_DEFAULT_BRANCH'], safe='')
+def api_time(value, name):
+    """Parse a GitLab timestamp; a value without a timezone is rejected."""
+    if not isinstance(value, str):
+        raise ValueError(f'{name} is missing')
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    if parsed.tzinfo is None:
+        raise ValueError(f'{name} has no timezone')
+    return parsed
+
+
+def pipeline_created_at(value):
+    return api_time(value, 'pipeline creation time')
+
+
+def pages_attempts(client, pipeline_id):
+    """Return (started_at, status) of every started pages attempt of the pipeline.
+
+    Retried attempts are included: a retried job may be the one GitLab deployed.
+    """
+    attempts = []
     page = 1
     while True:
-        pipelines = client.read_json(
-            f'pipelines?ref={ref}&order_by=id&sort=desc&per_page=100&page={page}', 'pipelines')
-        if not isinstance(pipelines, list):
-            raise ValueError('invalid pipeline list')
-        for pipeline in pipelines:
-            pipeline_id = str(pipeline.get('id', '')) if isinstance(pipeline, dict) else ''
-            if not pipeline_id.isdecimal():
+        jobs = client.read_json(
+            f'pipelines/{pipeline_id}/jobs?include_retried=true&per_page=100&page={page}', 'pipeline jobs')
+        if not isinstance(jobs, list):
+            raise ValueError('invalid pipeline job list')
+        for job in jobs:
+            if (not isinstance(job, dict) or not isinstance(job.get('name'), str)
+                    or not isinstance(job.get('status'), str)):
+                raise ValueError('invalid pipeline job')
+            # A pages job that never started has nothing to deploy.
+            if job['name'] != 'pages' or job.get('started_at') is None:
                 continue
-            if int(pipeline_id) <= int(client.pipeline):
-                return None
-            # Child pipelines hold thousands of build jobs and never run pages.
-            if pipeline.get('source') == 'parent_pipeline':
-                continue
-            sha = pipeline.get('sha')
-            if not isinstance(sha, str) or not sha:
-                raise ValueError(f'pipeline #{pipeline_id} has no commit SHA')
-            if pages_deployed(client, pipeline_id, sha):
-                return pipeline_id
-        if len(pipelines) < 100:
-            return None
+            attempts.append((api_time(job['started_at'], 'pages job start time'), job['status']))
+        if len(jobs) < 100:
+            return attempts
         page += 1
+
+
+def newer_published_pipeline(client, catalog_job):
+    """Return the ID of a pipeline whose pages attempt started after this catalog finished and deployed.
+
+    Such an attempt reads a history that already contains this catalog, so its successful
+    deployment covers it. An attempt that started earlier may have deployed an older history
+    and never counts, whatever the pipeline ID.
+    """
+    since = api_time(catalog_job.get('finished_at'), 'artifact_catalog finish time')
+    updated_after = quote(since.isoformat(), safe='')
+    for branch in HISTORY_REFS:
+        ref = quote(branch, safe='')
+        page = 1
+        while True:
+            pipelines = client.read_json(
+                f'pipelines?ref={ref}&updated_after={updated_after}'
+                f'&order_by=id&sort=desc&per_page=100&page={page}', 'pipelines')
+            if not isinstance(pipelines, list):
+                raise ValueError('invalid pipeline list')
+            for pipeline in pipelines:
+                if not isinstance(pipeline, dict):
+                    raise ValueError('invalid pipeline list')
+                pipeline_id = str(pipeline.get('id', ''))
+                if not pipeline_id.isdecimal() or int(pipeline_id) < 1:
+                    raise ValueError('invalid pipeline ID')
+                # Child pipelines hold thousands of build jobs and never run pages.
+                if int(pipeline_id) == int(client.pipeline) or pipeline.get('source') == 'parent_pipeline':
+                    continue
+                sha = pipeline.get('sha')
+                if not isinstance(sha, str) or not sha:
+                    raise ValueError(f'pipeline #{pipeline_id} has no commit SHA')
+                if pages_deployed_after(client, pipeline_id, sha, since, pages_attempts(client, pipeline_id)):
+                    return pipeline_id
+            if len(pipelines) < 100:
+                break
+            page += 1
+    return None
 
 
 def commit_statuses(client, sha, pipeline_id, name):
@@ -258,42 +310,42 @@ def commit_statuses(client, sha, pipeline_id, name):
             f'&name={quote(name, safe="")}&all=true&per_page=100&page={page}', 'commit statuses')
         if not isinstance(batch, list):
             raise ValueError('invalid commit status list')
-        statuses.extend(status.get('status') for status in batch if isinstance(status, dict))
+        for status in batch:
+            if not isinstance(status, dict) or not isinstance(status.get('status'), str):
+                raise ValueError('invalid commit status')
+            statuses.append({
+                'status': status['status'],
+                'created_at': api_time(status.get('created_at'), 'commit status creation time'),
+            })
         if len(batch) < 100:
             return statuses
         page += 1
 
 
-def pages_deployed(client, pipeline_id, sha):
-    """Return whether GitLab actually deployed a pages attempt of the pipeline.
+def pages_deployed_after(client, pipeline_id, sha, since, attempts):
+    """Return whether the pipeline's only successful pages attempt started after `since` and deployed.
 
-    A successful pages job only uploads artifacts; GitLab then deploys them
-    asynchronously and records the result as a pages:deploy status.
+    A successful pages job only uploads artifacts; GitLab then deploys them asynchronously and
+    records the result as a pages:deploy status. That status carries no job ID, so it can be
+    matched to an attempt only when the pipeline has exactly one successful attempt: then every
+    pages:deploy status of the pipeline belongs to it. With several successful attempts the match
+    is ambiguous, so this returns False and the catalog is published again, which is harmless.
     """
+    successes = [started_at for started_at, status in attempts if status == 'success']
+    if len(successes) != 1 or successes[0] < since:
+        return False
     deadline = time.monotonic() + PAGES_DEPLOY_TIMEOUT
     while True:
         deploys = commit_statuses(client, sha, pipeline_id, 'pages:deploy')
-        if 'success' in deploys:
+        if any(item['status'] == 'success' for item in deploys):
             return True
-        jobs = commit_statuses(client, sha, pipeline_id, 'pages')
-        # Every successful pages job gets one pages:deploy status once GitLab picks it up.
-        pending = (any(status not in FINISHED_STATUSES for status in deploys)
-                   or jobs.count('success') > len(deploys))
+        # The one successful attempt has no pages:deploy status until GitLab picks it up.
+        pending = not deploys or any(item['status'] not in FINISHED_STATUSES for item in deploys)
         if not pending:
             return False
         if time.monotonic() >= deadline:
             raise ValueError(f'Pages deployment of pipeline #{pipeline_id} is still unfinished')
         time.sleep(PAGES_DEPLOY_POLL)
-
-
-
-def pipeline_created_at(value):
-    if not isinstance(value, str):
-        raise ValueError('pipeline has no creation time')
-    created = datetime.fromisoformat(value.replace('Z', '+00:00'))
-    if created.tzinfo is None:
-        raise ValueError('pipeline creation time has no timezone')
-    return created
 
 
 def history_entry(pipeline, catalog, project):
@@ -386,6 +438,9 @@ def load_history(client):
 
 
 def publish_pages(client, source, output):
+    ref = os.environ['CI_COMMIT_REF_NAME']
+    if ref not in HISTORY_REFS:
+        raise ValueError(f'{ref} is not a catalog branch; keeping the published entry')
     # Pages also runs after build failures, so only publish files from a catalog job that passed.
     catalog_job = client.latest_job(client.pipeline, 'artifact_catalog')
     if catalog_job is None or catalog_job['status'] != 'success':
@@ -396,18 +451,24 @@ def publish_pages(client, source, output):
             or not isinstance(catalog.get('issues'), list)
             or not isinstance(catalog.get('rows'), list) or not (source / 'index.html').is_file()):
         raise ValueError('catalog page is missing or belongs to another commit')
+    # Simulated smoke output is published only from the default branch, as build_sdk.yml allows.
+    if catalog.get('smoke_test') and ref != os.environ['CI_DEFAULT_BRANCH']:
+        raise ValueError('smoke catalog is published only from the default branch; keeping the published entry')
     # Build failures are row statuses; issues mean the catalog itself is incomplete.
     if catalog['issues']:
         raise ValueError(f'catalog has {len(catalog["issues"])} issues; keeping the published entry')
-    newer = newer_published_pipeline(client)
-    if newer:
-        return newer
-    history = load_history(client)
     created_at = os.environ['CI_PIPELINE_CREATED_AT']
     cutoff = datetime.now(timezone.utc) - timedelta(days=HISTORY_DAYS)
-    if not catalog.get('smoke_test') and pipeline_created_at(created_at) >= cutoff:
+    # Smoke catalogs never enter history, so no later deployment can cover them.
+    in_history = not catalog.get('smoke_test') and pipeline_created_at(created_at) >= cutoff
+    if in_history:
+        newer = newer_published_pipeline(client, catalog_job)
+        if newer:
+            return newer
+    history = load_history(client)
+    if in_history:
         history.append(history_entry(
-            {'id': client.pipeline, 'ref': os.environ['CI_COMMIT_REF_NAME'],
+            {'id': client.pipeline, 'ref': ref,
              'sha': os.environ['CI_COMMIT_SHA'], 'created_at': created_at},
             catalog, client.project))
     history.sort(key=lambda entry: (pipeline_created_at(entry['created_at']), int(entry['pipeline_id'])),
@@ -422,13 +483,17 @@ def publish_pages(client, source, output):
     write_catalog(latest, output, history={
         'days': HISTORY_DAYS, 'pipelines': index,
         'default_pipeline_id': default_entry['pipeline_id'] if default_entry else None,
-    } if history else None)
+    } if history else None, compact=True)
     (output / 'history.json').write_text(json.dumps(index, ensure_ascii=False), encoding='utf-8')
     for entry in history:
+        if entry is default_entry:
+            # The root catalog.json and the embedded page already hold the default build.
+            continue
         directory = output / 'pipelines' / entry['pipeline_id']
         directory.mkdir(parents=True)
         (directory / 'catalog.json').write_text(
-            json.dumps(entry['catalog'], ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+            json.dumps(compact_catalog(entry['catalog']), ensure_ascii=False, separators=(',', ':')),
+            encoding='utf-8')
     return None
 
 
@@ -580,8 +645,46 @@ def validate_smoke_catalog(catalog):
         row.pop('_indexed_artifact_count', None)
 
 
-def write_catalog(catalog, output, history=None):
+def derived_file_url(row, category, name):
+    """Rebuild the URL that build_catalog() stores for a file ('artifacts') or a log ('logs')."""
+    label = row['label']
+    if category == 'logs':
+        path = f'{label}/ci_build_logs/{name}'
+        return f'{row["job_url"]}/artifacts/file/merged_artifacts/{quote(path, safe="/")}'
+    path = f'{label}/artifacts/{label}/{name}'
+    return f'{row["job_url"]}/artifacts/raw/merged_artifacts/{quote(path, safe="/")}?inline=false'
+
+
+def compact_entry(row, category, entry):
+    name = entry.get('name')
+    # Drop the URL only when the rebuilt value is identical; anything else is kept as is.
+    if isinstance(name, str) and entry.get('url') == derived_file_url(row, category, name):
+        return {key: value for key, value in entry.items() if key != 'url'}
+    return entry
+
+
+def compact_catalog(catalog):
+    """Return a copy for Pages output in which rebuildable file URLs are omitted.
+
+    The input is never modified; job artifacts keep the full form.
+    """
+    rows = []
+    for row in catalog['rows']:
+        if not isinstance(row.get('job_url'), str) or not isinstance(row.get('label'), str):
+            rows.append(row)
+            continue
+        compact_row = dict(row)
+        for category in ('files', 'logs'):
+            compact_row[category] = [compact_entry(row, category, entry) for entry in row[category]]
+        rows.append(compact_row)
+    return dict(catalog, rows=rows)
+
+
+def write_catalog(catalog, output, history=None, compact=False):
     output.mkdir(parents=True, exist_ok=True)
+    if compact:
+        # The page rebuilds the omitted URLs in JavaScript; see restoreUrls() in artifact_catalog.html.
+        catalog = compact_catalog(catalog)
     payload = json.dumps(catalog, ensure_ascii=False, separators=(',', ':'))
     (output / 'catalog.json').write_text(payload, encoding='utf-8')
     # Embedded data makes the page work offline, without CORS or a user API token.

@@ -169,11 +169,38 @@
   let entries = [], selectedBranch = '', selectedId = '', expiryTimer;
   let searchable = [], page = 0, request = 0;
   const cache = new Map();
-  if (historyData && historyData.default_pipeline_id) cache.set(historyData.default_pipeline_id, data);
+  // The default build is embedded and cached, so it must never be fetched or evicted.
+  const embeddedId = historyData ? historyData.default_pipeline_id : null;
+  if (embeddedId) cache.set(embeddedId, data);
+  const forget = id => { if (id !== embeddedId) cache.delete(id); };
   const fresh = () => allEntries.filter(entry => Date.parse(entry.created_at) >= Date.now() - historyData.days * DAY);
 
+  // BEGIN url helpers: Pages output omits file URLs that build_catalog() rebuilds exactly.
+  // Keep encodePath() byte-identical to Python urllib.parse.quote(path, safe='/').
+  const encodeSegment = text => encodeURIComponent(text).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  const encodePath = path => path.split('/').map(encodeSegment).join('/');
+  const fileUrl = (row, category, name) => category === 'logs'
+    ? `${row.job_url}/artifacts/file/merged_artifacts/${encodePath(`${row.label}/ci_build_logs/${name}`)}`
+    : `${row.job_url}/artifacts/raw/merged_artifacts/${encodePath(`${row.label}/artifacts/${row.label}/${name}`)}?inline=false`;
+  function restoreUrls(catalog) {
+    if (!catalog || !Array.isArray(catalog.rows)) return;
+    for (const row of catalog.rows) {
+      if (!row || typeof row !== 'object' || typeof row.job_url !== 'string' || typeof row.label !== 'string') continue;
+      for (const category of ['files', 'logs']) {
+        if (!Array.isArray(row[category])) continue;
+        for (const file of row[category]) {
+          if (!file || typeof file !== 'object' || file.url !== undefined || typeof file.name !== 'string') continue;
+          try { file.url = fileUrl(row, category, file.name); } catch (_) { /* Unencodable names stay without URL and fail validation. */ }
+        }
+      }
+    }
+  }
+  // END url helpers
+
   function validateCatalog(catalog, entry) {
-    if (!catalog || typeof catalog !== 'object' || catalog.commit !== entry.commit
+    if (!catalog || typeof catalog !== 'object') return false;
+    restoreUrls(catalog);
+    if (catalog.commit !== entry.commit
         || !/^\d+$/.test(String(catalog.pipeline_id)) || typeof catalog.pipeline_url !== 'string'
         || !Number.isFinite(Date.parse(catalog.generated_at)) || !Array.isArray(catalog.rows)
         || !Array.isArray(catalog.issues) || catalog.issues.length || catalog.smoke_test) return false;
@@ -301,14 +328,14 @@
       if (ticket !== request) return;
     }
     if (!validateCatalog(catalog, entry)) {
-      cache.delete(id);
+      forget(id);
       displayCatalog(null);
       setMessage('所选构建目录格式无效，未显示该目录。', true);
       return;
     }
     setMessage('');
     if (!displayCatalog(catalog, entry)) {
-      cache.delete(id);
+      forget(id);
       setMessage('所选构建渲染失败，请重新加载。', true);
       return;
     }
@@ -413,6 +440,6 @@
     byId('build').addEventListener('change', () => selectBuild(byId('build').value, true));
     window.addEventListener('popstate', openSharedBuild);
     openSharedBuild();
-  } else displayCatalog(data);
+  } else { restoreUrls(data); displayCatalog(data); }
 </script>
 </html>
