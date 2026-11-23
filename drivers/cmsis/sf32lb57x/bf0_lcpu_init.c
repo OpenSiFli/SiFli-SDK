@@ -5,6 +5,7 @@
  */
 #include <rtconfig.h>
 #include <bf0_hal.h>
+#include "bf0_lcpu_init.h"
 #include <string.h>
 
 

@@ -916,8 +916,6 @@ static char *cmd_line(int argc, char **argv)
 }
 
 #if defined(SOC_BF0_HCPU) && !defined(SOC_BF0_ACPU) && !defined(CFG_BOOTLOADER) && !defined(CFG_FACTORY_DEBUG)
-uint8_t lcpu_power_on(void);
-uint8_t lcpu_power_off(void);
 
 __ROM_USED int lcpu(int argc, char **argv)
 {

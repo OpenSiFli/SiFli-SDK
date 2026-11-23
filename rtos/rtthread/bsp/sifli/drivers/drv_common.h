@@ -28,10 +28,6 @@ void _Error_Handler(char *s, int num);
 
 #define DMA_NOT_AVAILABLE ((DMA_INSTANCE_TYPE *)0xFFFFFFFFU)
 
-#ifdef BSP_USING_LCPU_IMG
-void lcpu_img_install(void);
-#endif
-
 typedef struct
 {
     uint32_t sysclk;

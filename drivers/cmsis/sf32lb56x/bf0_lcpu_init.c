@@ -6,6 +6,7 @@
 
 #include <rtconfig.h>
 #include <bf0_hal.h>
+#include "bf0_lcpu_init.h"
 #include <string.h>
 
 #if defined (APP_BSP_TEST)
