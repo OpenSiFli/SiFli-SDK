@@ -342,6 +342,7 @@ void print_letter_map(uint32_t letter, const uint8_t *map_p, uint16_t box_w, uin
                     input_layers[1].height = glyph_height;
                     input_layers[1].color_mode = EPIC_INPUT_A8;
                     input_layers[1].total_width = mask_stride;
+                    input_layers[1].data_size = mask_stride * glyph_height;
 
                     LV_EPIC_LOG("glyph_draw_dsc->bitmap %p, color=%u, w=%u, h=%u, stride=%u",
                                input_layers[1].data, lv_color_to_u32(glyph_draw_dsc->color),
