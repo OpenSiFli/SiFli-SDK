@@ -863,6 +863,14 @@ static int32_t evaluate(lv_draw_unit_t *draw_unit, lv_draw_task_t *t)
             t->preference_score = 90;
         break;
 
+    case LV_DRAW_TASK_TYPE_BOX_SHADOW:
+        if (t->preference_score > 90)
+        {
+            t->preference_score = 90;
+            t->preferred_draw_unit_id = DRAW_UNIT_ID_EPIC;
+        }
+        break;
+
     case LV_DRAW_TASK_TYPE_IMAGE:
         if (t->preference_score > 80)
             t->preference_score = 80;
@@ -912,6 +920,9 @@ static void execute_drawing(lv_draw_epic_unit_t *u)
         break;
     case LV_DRAW_TASK_TYPE_BORDER:
         lv_draw_epic_border(t, t->draw_dsc, &t->area);
+        break;
+    case LV_DRAW_TASK_TYPE_BOX_SHADOW:
+        lv_draw_epic_shadow(t, t->draw_dsc, &t->area);
         break;
     case LV_DRAW_TASK_TYPE_LABEL:
         lv_draw_epic_label(t, t->draw_dsc, &t->area);
