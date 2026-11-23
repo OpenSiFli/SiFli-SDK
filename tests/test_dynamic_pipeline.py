@@ -1,8 +1,10 @@
 # SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
 # SPDX-License-Identifier: Apache-2.0
 
+import ast
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -210,9 +212,16 @@ python3() {{
         self.assertEqual(pages['resource_group'], 'sdk-artifact-catalog-pages')
         self.assertEqual(pages['allow_failure'], {'exit_codes': [3]})
         rules = [(rule['if'], rule['when']) for rule in pages['rules']]
-        self.assertEqual(rules[0], ('$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH', 'never'))
-        # A smoke run must not replace the real catalog unless publishing is requested.
+        # Only the history branches publish; the list must match HISTORY_REFS in artifact_catalog.py.
+        history_refs = ast.literal_eval(re.search(r'^HISTORY_REFS = (\(.*\))$',
+                                      (REPO_ROOT / 'tools/ci/artifact_catalog.py').read_text(encoding='utf-8'),
+                                      re.M).group(1))
+        self.assertEqual(history_refs, ('main', 'release/v2.5'))
+        self.assertEqual(rules[0], ('$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH && $CI_COMMIT_BRANCH != "release/v2.5"',
+                                    'never'))
+        # A smoke run must not replace the real catalog unless publishing is requested, and only on the default branch.
         self.assertIn('$CATALOG_PUBLISH == "1"', rules[1][0])
+        self.assertIn('$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH', rules[1][0])
         self.assertEqual(rules[2], ('$CATALOG_SMOKE_TEST == "1"', 'never'))
         # Build failures fail the upstream trigger; the script itself checks artifact_catalog.
         self.assertEqual([when for _condition, when in rules if when != 'never'], ['always', 'always'])
