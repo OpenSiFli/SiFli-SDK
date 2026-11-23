@@ -1426,8 +1426,10 @@ test:
 | fixture 类型有哪些选项、从哪取 | `tools/sdk_test/fixture_types.yaml` | 框架维护者（随代码评审） | 否 |
 | 实际的 AP 参数与秘密值 | `params.yaml`（仓库外） | 实验室 / 使用者 | `psk` 等标了 `secret` 的值 |
 
-目前契约里只有一个类型：`wifi_ap`（`ssid` 必填；`security` 取 `open`/`wpa2`/`wpa3`，默认 `wpa2`；
+目前只有 `wifi_ap` 是参数化的类型（`ssid` 必填；`security` 取 `open`/`wpa2`/`wpa3`，默认 `wpa2`；
 `psk` 在 `security != open` 时必填，且是秘密）。
+另一个 Wi-Fi 类型 `wifi_peer` 故意没有选项：它对应跑 `example/test/wifi_peer/` 的那块板，
+SSID 与密码由用例自己给定（`ap.start ssid=... key=...`），不从 `params.yaml` 取。
 
 **binding 只声明能力，不写 ssid/psk**：
 

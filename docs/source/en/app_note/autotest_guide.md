@@ -1507,8 +1507,11 @@ Three pieces of data, three responsibilities:
 | Which options a fixture type has, and where each comes from | `tools/sdk_test/fixture_types.yaml` | framework maintainers (reviewed with the code) | no |
 | The actual AP parameters and secret values | `params.yaml` (outside the repo) | the lab / the user | `psk` and anything marked `secret` |
 
-The contract has one type today: `wifi_ap` (`ssid` is required; `security` is one of `open`/`wpa2`/`wpa3`,
-default `wpa2`; `psk` is required when `security != open`, and is secret).
+Only one type is parameterized today: `wifi_ap` (`ssid` is required; `security` is one of
+`open`/`wpa2`/`wpa3`, default `wpa2`; `psk` is required when `security != open`, and is secret).
+`wifi_peer` is the other Wi-Fi type, and it deliberately has no options: that instrument is a board
+running `example/test/wifi_peer/`, so the test itself chooses the SSID and the passphrase
+(`ap.start ssid=... key=...`) and nothing is taken from `params.yaml`.
 
 **A binding declares capability only -- no ssid/psk**:
 

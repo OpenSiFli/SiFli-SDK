@@ -73,6 +73,7 @@ class TestFixtureTypesCommand(SdkTestCase):
         self.assertIn("spi_nand_flash", text)
         self.assertIn("i2c_sensor", text)
         self.assertIn("wifi_ap", text)
+        self.assertIn("wifi_peer", text)
 
     def test_each_type_says_whether_its_spec_is_an_identity(self):
         lines = []

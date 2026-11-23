@@ -113,6 +113,16 @@ class TestCatalogueEntries(SdkTestCase):
         # The matching rule must not change: bt_peer is still not an identity.
         self.assertFalse(fixture_types.is_parameterized_type("bt_peer"))
 
+    def test_the_shipped_wifi_peer_entry_is_a_vocabulary_not_a_contract(self):
+        # `wifi_peer` is a board we control: the test picks the SSID and the
+        # passphrase, so there is nothing to resolve from params.yaml and the
+        # spec stays a capability list rather than an identity.
+        contract = fixture_types.default_fixture_types().get("wifi_peer")
+        self.assertIsNotNone(contract)
+        self.assertEqual(contract.capabilities, ("ap",))
+        self.assertEqual(contract.options, ())
+        self.assertFalse(fixture_types.is_parameterized_type("wifi_peer"))
+
     def test_the_shipped_bus_fixtures_have_no_capability_vocabulary(self):
         # `spi_nor_flash:spi1` names a bus, not a capability, so the token must
         # not be checked against a vocabulary.

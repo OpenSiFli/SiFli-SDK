@@ -55,6 +55,10 @@ spi_nand_flash:
 i2c_sensor:
   description: A sensor wired to an I2C bus.
 
+wifi_peer:
+  description: A second board running the Wi-Fi peer firmware, offering a SoftAP over its own console.
+  capabilities: [ap]
+
 wifi_ap:
   description: An access point the DUT can associate with.
   capabilities: [2g, 5g]
