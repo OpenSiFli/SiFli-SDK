@@ -186,7 +186,7 @@ DSH 的 Agent Preset 是**插件组合**（Cordis YAML，profile 级），用于
 | Build/Tooling | `SConscript`、`SConstruct`、`Kconfig*`、`tools/`、`tests/` | 可复现构建、配置优先级、Python 兼容与可诊断 |
 
 - 输入：任务与验收标准、方案要点、涉及/禁止触碰的文件、可用构建板型。
-- 输出：改动清单、行为变化、构建结果、未验证项、风险。
+- 输出：改动清单、行为变化、构建结果、未验证清单、风险。
 - 边界：最小改动、不顺手重构/格式化、不改公共 API（除非任务要求）、不 commit。
 
 后续可扩展 Graphics Developer、Connectivity Developer，只需新增角色文件并在
@@ -540,7 +540,7 @@ Orchestrator 在报告完成前逐项检查：
 - 执行了可执行的测试（`pytest tests/` 或 `python -m unittest discover ...`、交叉编译）。
 - 本仓没有可用的 cppcheck / CodeChecker，静态分析不作为基线，也不允许当作"已检查"的证据。
 - 区分"已执行"与"未执行"；不用编译通过冒充功能正确。
-- 未验证场景有清单与原因。
+- 未验证清单：逐项写明原因。
 
 ### 文档
 
@@ -555,7 +555,7 @@ Orchestrator 在报告完成前逐项检查：
 2. 主要修改文件；
 3. 重要技术决策（与方案的差异）；
 4. 已执行的构建与测试（命令 + 结果）；
-5. 未执行的验证及原因；
+5. 未验证清单（逐项写明原因）；
 6. 已知问题与限制；
 7. 审查结论（verdict + 问题数）；
 8. 流程证据：所走的调度路径（`direct` / `research → design → dev → review`）、

@@ -272,11 +272,11 @@ if it is, use the Claude Code column; if not, inline the role file.
    "No runnable environment" is a conclusion to establish, not a default: check what `export.ps1` /
    `export.sh` provides (compiler and SDK Python environment), whether a board is reachable through
    the probe or the lab-runner config, and which suites exist; when a resource you need is missing,
-   name it in 待确认 and the unverified list, and ask the user. Add Tester when tests can actually
-   run **or when the change needs test design** (failure modes, seams, what cannot be executed);
-   with no runnable environment the Tester still delivers the test plan and an explicit unverified
-   list. Add Security Reviewer when a security trigger is hit; add Documentation Engineer when a
-   user-visible contract changed.
+   name it in 待确认 and the report's unverified list (what was not run or not confirmed), and ask
+   the user. Add Tester when tests can actually run **or when the change needs test design**
+   (failure modes, seams, what cannot be executed); with no runnable environment the Tester still
+   delivers the test plan and fills in the unverified list. Add Security Reviewer when a security
+   trigger is hit; add Documentation Engineer when a user-visible contract changed.
 6. Batch independent delegations in one message and keep working. Use a workflow script only for
    large, homogeneous fan-out, and only when the user asks for one or agrees to it — Claude Code's
    tool contract requires that opt-in and DSH's does not, so asking first is the safe rule on both.
@@ -362,7 +362,8 @@ the diff in isolation.
 
 ### Acceptance before reporting
 
-- Build/test actually executed, with command and result recorded; unverified cases listed with reasons.
+- Build/test actually executed, with command and result recorded; the unverified list names what was
+  not run or not confirmed, and why.
 - Diff contains only task-related changes (no drive-by formatting/renames).
 - Public API/Kconfig/format compatibility checked; docs updated when user-visible behavior changed.
 - Process evidence: the dispatch path taken (`direct` / `research → design → dev → review`),
@@ -371,7 +372,8 @@ the diff in isolation.
   Reviewer or `self-checked`, plus any user acceptance of open 问题 (named in the commit body),
   authorization to restart the round count, or scope change re-entering rule 0 as a new task with
   the earlier rounds on record.
-- Final report: what changed, files, key decisions, build/test evidence, unverified items, review verdict.
+- Final report: what changed, files, key decisions, build/test evidence, the unverified list,
+  review verdict.
 - No document this task wrote is left under `docs/design/wip/`; a kept one is committed under
   `docs/design/`.
 
