@@ -288,13 +288,16 @@ if it is, use the Claude Code column; if not, inline the role file.
 1. Compose the task prompt. It must be self-contained, because the child does not see this
    conversation unless it inherits context: `## 任务` (goal + verifiable done criteria), `## 上下文`
    (paths, prior findings, board, constraints), `## 验收` (how you will check), `## 边界` (do not
-   delegate; stop and report when out of scope). `## 上下文` carries the execution evidence: the
-   commands run and what came back (build, host tests, QEMU or board), plus the Tester's level/seam
-   table and reverse-verification results when a Tester ran; without that evidence the Reviewer sees
-   only the diff and cannot tell "not done" from "not written". When an Architect has run, include
-   the accepted design document path in `## 上下文`; a Reviewer of a public-contract change needs it to
-   check the implementation against the design. The working document is git-ignored, so pass it by
-   path: `git status` will not surface it.
+   delegate; stop and report when out of scope). A dispatch made once the change has been built or
+   run carries the execution evidence: the commands run and what came back (build, host tests, QEMU
+   or board), plus the Tester's level/seam table and reverse-verification results when a Tester
+   ran; without that evidence the Reviewer sees only the diff and cannot tell "not done" from "not
+   written". A dispatch made before the change has been built or run — the first Researcher pass —
+   carries the clues instead: the question, the observed behavior, the paths and the scope, and
+   says why nothing has been run. When an Architect has run, include the accepted design document
+   path in `## 上下文`; a Reviewer of a public-contract change needs it to check the implementation
+   against the design. The working document is git-ignored, so pass it by path: `git status` will
+   not surface it.
 2. Deliver it the way the harness expects:
    - Roles auto-registered (Claude Code): `Agent(subagent_type="<role>", prompt=<task prompt>)`.
    - Roles not registered (DSH): prepend the role file body verbatim (without the YAML frontmatter)
