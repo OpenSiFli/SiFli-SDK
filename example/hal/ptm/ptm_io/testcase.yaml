@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/ptm/ptm_io exercises the PTM block from the CPU side only: it muxes one pad to a PTM
+# channel, drives two output channels.
+# Step 0 only prints "pad muxed to the PTM channel" because PTM_IO_PIN_SETUP=1 muxes PAD_PA35 to
+# PTM1_CH0; on a board that already uses PA35 the demo takes the pad over, so such a board must not
+# be listed here.
+
+tests:
+  - id: ptm_io.boot
+    description: Drive PTM IO channels and both FIFOs from the CPU and check the register read-backs
+    harness: console
+    tags: [console, hal, ptm_io, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-epd_n16r16
+    integration_platforms: [sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        - 'PTM example: IO channels and FIFOs from the CPU side'
+        - '\[0\] pin mux'
+        - 'pad muxed to the PTM channel'
+        - '\[1\] an output channel driven by the CPU'
+        - 'enable = 0x1, value = 0x1\b'
+        - 'value after the second write = 0x0\b'
+        - '\[2\] the output FIFO'
+        - 'pushed one word into OFIFO'
+        - 'OFIFO is not empty and not full'
+        - 'OFIFO address for the DMA: 0x[0-9a-f]+'
+        - '\[3\] the input FIFO'
+        - 'read 0x[0-9a-f]+ from IFIFO'
+        - 'done'

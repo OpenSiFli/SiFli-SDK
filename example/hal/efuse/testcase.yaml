@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# efuse is a bare command-line tool, not a demo: main() only sleeps and the whole example is two
+# msh commands, `efuse_write` and `efuse_read`.
+# Negative check: remove the argc check at src/main.c:41 and the argument-less `efuse_write` no
+# longer prints the usage block, so efuse.cli must go red -- and it would also try to burn bits.
+
+tests:
+  - id: efuse.cli
+    description: the efuse_write and efuse_read msh commands reject a missing argument list and read back without burning
+    harness: pytest
+    tags: [pytest, hal, efuse]
+    timeout: 300
+    project_dir: project
+    # Verified on the 57 board; add a board here only after the example builds and runs there.
+    platform_allow: [sf32lb57-lcd_n16r16_dpi]
+    integration_platforms: [sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      pytest_root: pytest

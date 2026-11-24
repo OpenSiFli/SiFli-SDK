@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/gpio toggles one GPIO every second and expects the edge to arrive on a second GPIO
+# configured as a rising/falling interrupt input. The jumper between the two pads is a bench
+# precondition the framework cannot request: without it the interrupt never fires.
+
+tests:
+  - id: hal_gpio.boot
+    description: Toggle an output GPIO and check the jumper loopback raises matching interrupt reports
+    harness: console
+    tags: [console, hal, gpio, smoke]
+    timeout: 120
+    platform_allow:
+      - sf32lb52-nano_a128r16
+      - sf32lb52-nano_n16r16
+      - sf32lb52-lcd_52d
+      - sf32lb52-lcd_a128r16
+      - sf32lb52-lcd_n16r8
+      - sf32lb52-lcd_n16r8_jdi
+      - sf32lb58-lcd_a128r32n1_a1_dsi
+      - sf32lb58-lcd_a128r32n1_dsi
+      - sf32lb58-lcd_a128r32n1_qspi
+      - sf32lb58-lcd_e4r32n1_dsi
+      - sf32lb58-lcd_n16r16n1_qspi
+      - sf32lb58-lcd_n16r32n1_a1_dpi
+      - sf32lb58-lcd_n16r32n1_a1_dsi
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r32n1_dsi
+      - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb58-lcd_n16r64n4
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-epd_n16r16
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r64n4, sf32lb57-lcd_n16r16_dpi]
+    project_dir: project
+    harness_config:
+      record:
+        - 'Start gpio demo!'
+        - 'Interrupt occurred!'
+        - regex: 'Pin_Out \d+ has been toggle, value = 1\s+Pin_In \d+, value = 1'
+          type: multi_line
+          ordered: false
+        - regex: 'Pin_Out \d+ has been toggle, value = 0\s+Pin_In \d+, value = 0'
+          type: multi_line
+          ordered: false

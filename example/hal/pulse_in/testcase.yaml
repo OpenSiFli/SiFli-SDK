@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# pulse_in drives one GPT as a 200Hz/20% PWM source and a second GPT in PWM input mode to measure
+# it, printing period/frequency/pulse/duty once per second.
+# The PWM output pin must be jumpered to the PWM input pin; without that wire the example keeps
+# printing "no capture event, check the jumper wire!" and this case cannot pass.
+# Negative check: change the PWM period in testcfg to 10 ms and the captured period/pulse/duty
+# move outside the window below, so pulse_in.boot must go red.
+
+tests:
+  - id: pulse_in.boot
+    description: PWM source plus input capture measure 5 ms / 200 Hz / 20% and keep printing once per second
+    harness: console
+    tags: [console, hal, pulse_in, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb52-lcd_a128r16, sf32lb52-nano_a128r16, sf32lb52-nano_n16r16, sf32lb56-lcd_a128r12n1, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_a128r32n1_qspi, sf32lb58-lcd_n16r32n1_qspi]
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Start PWM signal source!'
+        - 'GPT_clock \d+,psc \d+, Period \d+,Pulse \d+'
+        - 'PWM signal source setup done!'
+        - 'Start input capture demo \(interrupt mode\)!'
+        - 'connect PWM output pin to capture input pin with a jumper wire'
+        - regex: 'captured\(IT\): period=(49\d\d|50\d\d) us, freq=(19\d|20\d) Hz, pulse=(9[5-9]\d|10[0-5]\d) us, duty=(19|20|21)%'
+          repeat: 2

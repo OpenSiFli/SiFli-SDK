@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# epic blends two layers with the EPIC/EZIP hardware and pushes the result to the LCD; there is no
+# msh command and no interaction, so the case reads the log and the visible phenomenon.
+# Negative check: break the layer geometry and the blend prints "EPIC blend failed (N)" instead,
+# so epic.boot must go red.
+
+tests:
+  - id: epic.boot
+    description: EPIC initialises, fills two layers, blends them and hands the result to the LCD
+    harness: console
+    tags: [console, hal, epic, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb52-lchspi-ulp
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_a128r32n1_a1_dsi
+      - sf32lb58-lcd_a128r32n1_dsi
+      - sf32lb58-lcd_a128r32n1_qspi
+      - sf32lb58-lcd_e4r32n1_dsi
+      - sf32lb58-lcd_n16r16n1_qspi
+      - sf32lb58-lcd_n16r32n1_a1_dpi
+      - sf32lb58-lcd_n16r32n1_a1_dsi
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r32n1_dsi
+      - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb58-lcd_n16r64n4
+      - sf32lb57-lcd_n16r16_dpi
+    integration_platforms: [sf32lb52-lchspi-ulp, sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        - 'Application started'
+        - 'HAL_EPIC_Init ok'
+        - 'Starting EPIC blend demo\.\.\.'
+        - 'EPIC blend succeeded'
+        - 'in lcd_display\.\.\.'
+        - 'LCD Info: Width=\d+, Height=\d+, BPP=\d+'
+        - 'draw_rect_async called'

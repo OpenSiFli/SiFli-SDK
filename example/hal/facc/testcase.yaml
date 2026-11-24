@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/facc runs one FIR pass through the FACC accelerator in main() and compares the
+# 1024-byte output with a reference table.
+
+tests:
+  - id: facc.boot
+    description: Run one FIR filter through FACC and check the result against the reference table
+    harness: console
+    tags: [console, hal, facc, smoke]
+    timeout: 120
+    platform_allow:
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_a128r32n1_a1_dsi
+      - sf32lb58-lcd_a128r32n1_dsi
+      - sf32lb58-lcd_a128r32n1_qspi
+      - sf32lb58-lcd_e4r32n1_dsi
+      - sf32lb58-lcd_n16r16n1_qspi
+      - sf32lb58-lcd_n16r32n1_a1_dpi
+      - sf32lb58-lcd_n16r32n1_a1_dsi
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r32n1_dsi
+      - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb58-lcd_n16r64n4
+    integration_platforms: [sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r64n4]
+    project_dir: project
+    harness_config:
+      record:
+        - 'Start facc!'
+        - 'FACC_OK'

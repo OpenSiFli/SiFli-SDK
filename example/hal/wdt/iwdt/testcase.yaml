@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# iwdt starts the independent watchdog in reset-only mode (__HAL_WDT_INT(&hwdt, 0),
+# src/main.c:55), feeds it every 5 s (src/main.c:79-93: rt_thread_mdelay(5000), HAL_WDT_Refresh.
+# Negative check: drop the HAL_WDT_Refresh call and the board resets after 10 s, so the second and
+# third "Watchdog feeding." never appear and iwdt.boot goes red.
+
+tests:
+  - id: wdt_iwdt.boot
+    description: the independent watchdog is configured for 10 s and refreshed while the example feeds it
+    harness: console
+    tags: [console, hal, wdt, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb52-lcd_52d
+      - sf32lb52-lcd_a128r16
+      - sf32lb52-lcd_n16r8
+      - sf32lb52-lcd_n16r8_jdi
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_a128r32n1_a1_dsi
+      - sf32lb58-lcd_a128r32n1_dsi
+      - sf32lb58-lcd_a128r32n1_qspi
+      - sf32lb58-lcd_e4r32n1_dsi
+      - sf32lb58-lcd_n16r16n1_qspi
+      - sf32lb58-lcd_n16r32n1_a1_dpi
+      - sf32lb58-lcd_n16r32n1_a1_dsi
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r32n1_dsi
+      - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb58-lcd_n16r64n4
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-epd_n16r16
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'WDT Example:'
+        - 'IWDT init OK\. Timeout: 10\(s\)'
+        - 'WDT_CVR0:0x[0-9A-Fa-f]+ WDT_CVR1:0x[0-9A-Fa-f]+'
+        - regex: 'Watchdog feeding\.'
+          repeat: 3

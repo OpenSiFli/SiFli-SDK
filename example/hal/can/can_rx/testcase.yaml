@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# can_rx is the receiving half of a two-board CAN demo: with USE_CAN_IT=1 it arms the receive
+# interrupt, prints one banner and then blocks on a semaphore until a frame arrives.
+# The .peer and .stream entries need a second CAN node on the bus: an operator-prepared board
+# running can_tx. Without it the receiver blocks on its semaphore and only the banner entry passes.
+# Negative check: set USE_CAN_IT to 0 and the banner becomes the polling one ("CAN polling mode:
+# RX-only board.").
+
+tests:
+  - id: can_can_rx.boot
+    description: the CAN receiver arms its receive interrupt and enters interrupt mode
+    harness: console
+    tags: [console, hal, can_can_rx, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r64n4, sf32lb58-lcd_n16r32n1_dpi]
+    # Both boards must be prepared and wired by hand before this entry can pass; it stays in the
+    # integration plan because the planner requires a platform for every case in the tree.
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        - 'CAN IT mode: RX-only board \(semaphore \+ GetRxMessage\)\.'
+
+  - id: can_can_rx.peer
+    description: the CAN receiver actually gets the frame the peer board sends over the bus
+    harness: console
+    tags: [console, hal, can_can_rx, peer]
+    timeout: 180
+    project_dir: project
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r64n4, sf32lb58-lcd_n16r32n1_dpi]
+    # Both boards must be prepared and wired by hand before this entry can pass; it stays in the
+    # integration plan because the planner requires a platform for every case in the tree.
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        - 'CAN IT mode: RX-only board \(semaphore \+ GetRxMessage\)\.'
+        - '\[RECV Primary\] ID=0x123, DLC=8, Data=0x11223344 0x55667788'
+        - '\[RECV Secondary\] ID=0x103, DLC=8, Data=0xAAAA0003 0xBBBB0003'
+
+  - id: can_can_rx.stream
+    description: an already running CAN receiver keeps printing the frames its peer sends
+    harness: console
+    tags: [console, hal, can_can_rx, stream]
+    timeout: 180
+    project_dir: project
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r64n4, sf32lb58-lcd_n16r32n1_dpi]
+    # Both boards must be prepared and wired by hand before this entry can pass; it stays in the
+    # integration plan because the planner requires a platform for every case in the tree.
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        # One record per round: the two frames must arrive together, twice. Two independent
+        # repeat counters could be satisfied by different rounds (a lost Secondary in one round
+        # plus a lost Primary in the next).
+        - {regex: '\[RECV Primary\] ID=0x123, DLC=8, Data=0x11223344 0x55667788\s+.*?\[RECV Secondary\] ID=0x103, DLC=8, Data=0xAAAA0003 0xBBBB0003',
+           type: multi_line, repeat: 2}

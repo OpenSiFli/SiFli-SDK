@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# spi/dma runs SPI1 with TX and RX DMA in circular mode and counts DMA half/full callbacks.
+# Negative check: change SPI_DMA_SAMPLE_BYTES from 8 to 4; the dump then prints "rx[0..3]:" and
+# the sample regex below fails, so spi_dma.boot must go red.
+
+tests:
+  - id: spi_dma.boot
+    description: SPI1 TX/RX DMA circular transfer keeps counting half/full callbacks with err=0 and dumps RX samples
+    harness: console
+    tags: [console, hal, spi_dma, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb58-lcd_n16r64n4, sf32lb52-lcd_a128r16]
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Start spi dma circular demo!'
+        - 'spi dma running, tx/rx circular started\.'
+        - 'tip: short SPI1 MOSI\(DIO/DO\) to MISO\(DI\) for loopback verification\.'
+        - regex: 'half=[1-9]\d*, full=[1-9]\d*, err=0'
+          repeat: 2
+        - 'rx\[0\.\.7\]: 00 01 02 03 04 05 06 07, rx\[mid\.\.mid\+7\]: 80 81 82 83 84 85 86 87'

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/ptm/ptm_macro loads two hand written PTM programs, built with the instruction macros
+# from ptm_ins.h instead of an assembler (ptm_asm.h is deliberately not used).
+# Negative check: change the jump offset in PTM_JMP(-1, ...) to 0; the program then ends early with a
+# different X, so the "X = 18 after 5 jumps" assertion fails.
+
+tests:
+  - id: ptm_macro.boot
+    description: Run the two macro-built PTM programs and check the core registers they leave behind
+    harness: console
+    tags: [console, hal, ptm_macro, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb57-lcd_n16r16_dpi
+      - sf32lb57-lcd_n16r16_qspi
+      - sf32lb57-lcd_n16r8_dpi
+      - sf32lb57-epd_n16r16
+    integration_platforms: [sf32lb57-lcd_n16r16_dpi]
+    harness_config:
+      record:
+        - 'PTM example: programs built with the instruction macros'
+        - '\(no assembler, ptm_asm\.h is not used\)'
+        - '\[1\] straight line program, polling mode'
+        - 'completed: X = 0x1234, Y = 0x1235\b'
+        - '\[2\] loop with a hand written jump offset'
+        - 'completed: X = 18 after 5 jumps'
+        - 'done'

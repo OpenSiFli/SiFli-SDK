@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/i2c/slave is the slave half of a two-board I2C demo: main() prints "Start I2C Slave
+# Demo!".
+# On the 58 boards the example drives I2C6 on PB28 (SCL) and PB29 (SDA), header IO3 and IO2.
+# Verified on hardware on 2026-11-19; the negative check is to point SLAVE_ADDRESS at 0x33, after
+# which no master ever reaches the slave and both data lines stop appearing.
+
+tests:
+  - id: i2c_slave.boot
+    description: Initialise the I2C slave at address 0x5A and block waiting for a master
+    harness: console
+    tags: [console, hal, i2c_slave, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb52-lcd_n16r8
+      - sf32lb52-lcd_a128r16
+      - sf32lb58-lcd_n16r64n4
+      - sf32lb56-lcd_n16r12n1
+    integration_platforms: [sf32lb52-lcd_n16r8, sf32lb56-lcd_n16r12n1, sf32lb58-lcd_n16r64n4]
+    harness_config:
+      record:
+        - 'Start I2C Slave Demo!'
+        - 'I2C Slave Init Success!'
+
+  - id: i2c_slave.peer
+    description: receive four bytes from the master example and answer with the preset pattern
+    harness: console
+    tags: [console, hal, i2c_slave, peer]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb52-lcd_n16r8
+      - sf32lb52-lcd_a128r16
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r64n4
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb57-lcd_n16r16_dpi
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Start I2C Slave Demo!'
+        - 'I2C Slave Init Success!'
+        - 'Slave Receive Success, data: 0x11  0x22  0x33  0x44'
+        - 'Slave Transmit Success!'

@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/lcd drives the HTM-H070A20 1024x600 RGB panel from the LCDC HAL (project/proj.conf
+# leaves CONFIG_BSP_USING_LCD off on purpose.
+# Negative check: break the panel timing (or clear the backlight call) and the flush callback
+# reports "LCDC transfer error"; the case then still needs the four "show ..." lines.
+# A broken panel is not caught: the "show ..." lines are printed before the flush, and console
+# records cannot assert that an error line never appeared.
+
+tests:
+  - id: lcd.boot
+    description: Initialise the 1024x600 DPI panel from the LCDC HAL and cycle colour bars and solid colours
+    harness: console
+    tags: [console, hal, lcd, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb58-lcd_n16r32n1_dpi]
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        - 'hal\.lcd main: HAL LCD\(DPI\) display example start'
+        - 'Panel 1024x600, 2 frame buffers @[0-9a-fA-Fx]+ \(1228800 bytes each\)'
+        - 'show color bars'
+        - 'show solid color 0'
+        - 'show solid color 1'
+        - 'show solid color 2'
+        - 'show solid color 3'
+        - 'show color bars'

@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# crc is a self-checking example: main() dumps a fixed input buffer and then walks every hardware
+# CRC mode, printing the result of each.
+# Negative check: change one byte of the input buffer in src/main.c and every result below
+# changes, so crc.boot must go red.
+
+tests:
+  - id: crc.boot
+    description: all 16 hardware CRC modes and the custom polynomial return the documented vectors
+    harness: console
+    tags: [console, hal, crc, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow:
+      - sf32lb52-lcd_52d
+      - sf32lb52-lcd_a128r16
+      - sf32lb52-lcd_n16r8
+      - sf32lb52-lcd_n16r8_jdi
+      - sf32lb56-lcd_a128r12n1
+      - sf32lb56-lcd_n16r12n1
+      - sf32lb58-lcd_a128r32n1_a1_dsi
+      - sf32lb58-lcd_a128r32n1_dsi
+      - sf32lb58-lcd_a128r32n1_qspi
+      - sf32lb58-lcd_e4r32n1_dsi
+      - sf32lb58-lcd_n16r16n1_qspi
+      - sf32lb58-lcd_n16r32n1_a1_dpi
+      - sf32lb58-lcd_n16r32n1_a1_dsi
+      - sf32lb58-lcd_n16r32n1_dpi
+      - sf32lb58-lcd_n16r32n1_dsi
+      - sf32lb58-lcd_n16r32n1_qspi
+      - sf32lb58-lcd_n16r64n4
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Input raw data:'
+        - '0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20,'
+        - 'CRC Result\(mode:0\):\s*0x61\b'
+        - 'CRC Result\(mode:1\):\s*0x62\b'
+        - 'CRC Result\(mode:2\):\s*0x37\b'
+        - 'CRC Result\(mode:3\):\s*0xCD\b'
+        - 'CRC Result\(mode:4\):\s*0xBA\b'
+        - 'CRC Result\(mode:5\):\s*0x5263\b'
+        - 'CRC Result\(mode:6\):\s*0xAD9C\b'
+        - 'CRC Result\(mode:7\):\s*0x72F2\b'
+        - 'CRC Result\(mode:8\):\s*0x8D0D\b'
+        - 'CRC Result\(mode:9\):\s*0xFC57\b'
+        - 'CRC Result\(mode:10\):\s*0xBED\b'
+        - 'CRC Result\(mode:11\):\s*0xA52A\b'
+        - 'CRC Result\(mode:12\):\s*0x4A88\b'
+        - 'CRC Result\(mode:13\):\s*0xD423\b'
+        - 'CRC Result\(mode:14\):\s*0x15B6B604\b'
+        - 'CRC Result\(mode:15\):\s*0x42F1290F\b'
+        - 'CRC Result\(CRC_8 initial value:0xFF poly:0x1D\):\s*0x45\b'

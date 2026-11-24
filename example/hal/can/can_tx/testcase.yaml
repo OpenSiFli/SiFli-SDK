@@ -1,0 +1,40 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# can_tx is the sending half of a two-board CAN demo: with USE_CAN_IT=1 it queues one primary
+# frame and then three secondary frames and logs each submit.
+# CAVEAT -- one board is not enough for the bus to work: the bus needs a second node to ACK,
+# so these entries assume an operator-prepared peer board (can_rx). The submit lines are printed
+# when the frame is queued, before any ACK, so they still appear on a silent bus.
+
+tests:
+  - id: can_can_tx.boot
+    description: the CAN sender queues one primary and three secondary frames and logs every submit
+    harness: console
+    tags: [console, hal, can_can_tx, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r64n4, sf32lb58-lcd_n16r32n1_dpi]
+    # Both boards must be prepared and wired by hand before this entry can pass; it stays in the
+    # integration plan because the planner requires a platform for every case in the tree.
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        - 'CAN IT mode: Board A \(send-first\)\.'
+        - '\[TX-IT\] Primary submit: ID=0x123, Data=0x11223344 0x55667788'
+        - '\[TX-IT\] Secondary submit: 3 frames: 0x101, 0x102, 0x103'
+
+  - id: can_can_tx.stream
+    description: an already running CAN sender keeps queueing the primary and secondary frames
+    harness: console
+    tags: [console, hal, can_can_tx, stream]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r64n4, sf32lb58-lcd_n16r32n1_dpi]
+    # Both boards must be prepared and wired by hand before this entry can pass; it stays in the
+    # integration plan because the planner requires a platform for every case in the tree.
+    integration_platforms: [sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        # Both submits of one round must be seen twice, not two arbitrary submits.
+        - {regex: '\[TX-IT\] Primary submit: ID=0x123, Data=0x11223344 0x55667788\s+.*?\[TX-IT\] Secondary submit: 3 frames: 0x101, 0x102, 0x103',
+           type: multi_line, repeat: 2}

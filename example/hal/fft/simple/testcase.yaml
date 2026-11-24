@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/fft/simple runs three transforms in main() - real FFT, complex FFT and the
+# forward+inverse pair of test_inverse_fft() - and prints the first 128 result words in hex.
+
+tests:
+  - id: fft_simple.boot
+    description: Run the real, complex and inverse FFT tests and check each transform completes with the documented head word
+    harness: console
+    tags: [console, hal, fft_simple, smoke]
+    timeout: 120
+    platform_allow: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r32n1_dpi]
+    integration_platforms: [sf32lb56-lcd_a128r12n1, sf32lb58-lcd_n16r32n1_dpi]
+    project_dir: project
+    harness_config:
+      record:
+        - 'FFT HAL Module Example'
+        - 'FFT Example: Using FFT1 \(HCPU\)'
+        - 'FFT initialization successful'
+        - '=== Real FFT Test ==='
+        - 'Real FFT completed successfully'
+        - '\[0\] = 0x0B73'
+        - '=== Complex FFT Test ==='
+        - 'Complex FFT completed successfully'
+        - '\[0\] = 0x0599'
+        - '=== Inverse FFT Test ==='
+        - 'Inverse FFT completed successfully'
+        - '\[0\] = 0x0599'
+        - 'FFT Example Complete'

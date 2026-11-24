@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# spi/polling sends a 16-byte ramp with HAL_SPI_TransmitReceive() every 500 ms and prints the HAL
+# return code, the number of mismatched bytes and both the TX and the RX frame. The MOSI-MISO
+# short is a bench precondition the framework cannot request, so the board must be wired.
+# Negative check: remove the MOSI-MISO short and mismatch becomes non-zero, so spi_polling.boot
+# must go red.
+
+tests:
+  - id: spi_polling.boot
+    description: SPI loopback transmits a 16-byte ramp per round and every byte comes back unchanged
+    harness: console
+    tags: [console, hal, spi_polling, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb52-lcd_n16r8, sf32lb58-lcd_n16r64n4, sf32lb57-lcd_n16r16_qspi, sf32lb56-lcd_n16r12n1, sf32lb52-lcd_a128r16]
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Start spi polling loopback demo!'
+        - 'tip: short SPI1 or SPI2 MOSI\(DIO/DO\) to MISO\(DI\) for loopback verification\.'
+        - 'round=0 ret=0 mismatch=0 tx: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f rx: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f'
+        - 'round=1 ret=0 mismatch=0 tx: 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 rx: 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10'
+        - 'round=2 ret=0 mismatch=0 tx: 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11 rx: 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10 11'

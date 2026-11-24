@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# example/hal/nnacc is a self-checking test of the Neural Network Accelerator: main() fills the
+# weight/bias/input/output buffers with rand() data.
+# Negative check: flip NNACC_OUT_SHIFT by one and the compare loop prints "out_x=.. out_y=..
+# out_ch=.." lines plus "Test failed: NNACC result mismatch.", so the record fails at the "Test
+# passed" step.
+
+tests:
+  - id: hal_nnacc.boot
+    description: Run the depthwise convolution sanity test through HAL_NNACC and compare against the C reference
+    harness: console
+    tags: [console, hal, nnacc, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb58-lcd_a128r32n1_dsi, sf32lb58-lcd_n16r32n1_dpi]
+    integration_platforms: [sf32lb58-lcd_a128r32n1_dsi, sf32lb58-lcd_n16r32n1_dpi]
+    harness_config:
+      record:
+        - 'Buffers initialized successfully\.'
+        - 'testcase start\.'
+        - 'fill_with_random_data\. '
+        - 'HAL_NNACC_Start\.'
+        - 'Test passed: NNACC result is correct\.'

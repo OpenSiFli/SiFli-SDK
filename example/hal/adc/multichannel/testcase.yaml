@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 SiFli Technologies(Nanjing) Co., Ltd
+# SPDX-License-Identifier: Apache-2.0
+# multichannel runs one single-channel conversion in main() and prints the raw register value with
+# the calibrated voltage, then stops; it exports no msh command, so the case reads the log only.
+# Negative check (executed 2026-11-19): comment out the HAL_ADC_Start(&hadc) call at
+# src/main.c:168 - "ADC reg value" and "adc demo end!" disappear and the case goes red.
+
+tests:
+  - id: adc_multichannel.boot
+    description: the example converts one ADC channel, prints reg value and voltage, then ends
+    harness: console
+    tags: [console, hal, adc_multichannel, smoke]
+    timeout: 120
+    project_dir: project
+    platform_allow: [sf32lb52-lcd_n16r8]
+    integration_platforms: [sf32lb52-lcd_n16r8]
+    harness_config:
+      record:
+        - 'Start adc demo!'
+        - 'GPADC :vol10: \d+ mv, \d+; vol25: \d+ mv reg \d+; offset -?[0-9.]+, ratio [0-9.]+, max reg \d+;'
+        - 'ADC Get calibration res 0'
+        - 'ADC reg value \d+\s+voltage -?[0-9.]+ mv'
+        - 'adc demo end!'
