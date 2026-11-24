@@ -266,10 +266,17 @@ if it is, use the Claude Code column; if not, inline the role file.
    other diff is reviewed in the current context, by the same rules and to the same verdict. A
    re-check after a fix goes back to the same Reviewer (continue that agent; do not start a new
    one), or is re-run in the current context.
-5. Add Tester when tests can actually run **or when the change needs test design** (failure modes,
-   seams, what cannot be executed). With no runnable environment the Tester still delivers the test
-   plan and an explicit unverified list. Add Security Reviewer when a security trigger is hit; add
-   Documentation Engineer when a user-visible contract changed.
+5. Test the change before the first review, and let the change decide how: the SDK's own suites
+   (`tests/`, `tools/sdk_test/tests`, `tools/lab_agent/tests`), a cross-build, the QEMU carrier, or
+   the board. A change that admits no test (docs only) records that instead of skipping silently.
+   "No runnable environment" is a conclusion to establish, not a default: check what `export.ps1` /
+   `export.sh` provides (compiler and SDK Python environment), whether a board is reachable through
+   the probe or the lab-runner config, and which suites exist; when a resource you need is missing,
+   name it in 待确认 and the unverified list, and ask the user. Add Tester when tests can actually
+   run **or when the change needs test design** (failure modes, seams, what cannot be executed);
+   with no runnable environment the Tester still delivers the test plan and an explicit unverified
+   list. Add Security Reviewer when a security trigger is hit; add Documentation Engineer when a
+   user-visible contract changed.
 6. Batch independent delegations in one message and keep working. Use a workflow script only for
    large, homogeneous fan-out, and only when the user asks for one or agrees to it — Claude Code's
    tool contract requires that opt-in and DSH's does not, so asking first is the safe rule on both.
@@ -281,12 +288,13 @@ if it is, use the Claude Code column; if not, inline the role file.
 1. Compose the task prompt. It must be self-contained, because the child does not see this
    conversation unless it inherits context: `## 任务` (goal + verifiable done criteria), `## 上下文`
    (paths, prior findings, board, constraints), `## 验收` (how you will check), `## 边界` (do not
-   delegate; stop and report when out of scope). When a Tester has run, include its level/seam table
-   and reverse-verification evidence in `## 上下文`; otherwise the Reviewer sees only the diff and
-   cannot tell "not done" from "not written". When an Architect has run, include the accepted
-   design document path in `## 上下文`; a Reviewer of a public-contract change needs it to check the
-   implementation against the design. The working document is git-ignored, so pass it by path:
-   `git status` will not surface it.
+   delegate; stop and report when out of scope). `## 上下文` carries the execution evidence: the
+   commands run and what came back (build, host tests, QEMU or board), plus the Tester's level/seam
+   table and reverse-verification results when a Tester ran; without that evidence the Reviewer sees
+   only the diff and cannot tell "not done" from "not written". When an Architect has run, include
+   the accepted design document path in `## 上下文`; a Reviewer of a public-contract change needs it to
+   check the implementation against the design. The working document is git-ignored, so pass it by
+   path: `git status` will not surface it.
 2. Deliver it the way the harness expects:
    - Roles auto-registered (Claude Code): `Agent(subagent_type="<role>", prompt=<task prompt>)`.
    - Roles not registered (DSH): prepend the role file body verbatim (without the YAML frontmatter)
@@ -298,15 +306,16 @@ if it is, use the Claude Code column; if not, inline the role file.
    child genuinely needs this conversation's history.
 4. Do not trust a child's summary: check `git status`/`git diff`, build output, and cited
    `path:line` before accepting.
-5. Fix loop: Developer → compile → Reviewer → fix → same Reviewer re-checks (continue that agent with
-   the new diff; open a fresh Reviewer only for final high-risk sign-off). A fix round is one fix
-   plus its re-check; the first review is not a round, and the budget is per reviewed diff (one
-   commit's change set), not per task. **Max 2 fix rounds** either way — a review in the current
-   context is capped the same as a Reviewer loop. The Orchestrator never resets the count on its
-   own: at the cap it reports the last verdict. With `comment` the user may accept the open 问题
-   and commit; with `block` or `comment` the user may also authorize a new round of fixes and
-   restart the count, or change the scope, which re-enters rule 0 as a new task with a fresh
-   budget while the earlier rounds stay on record. An `approve` commits as usual.
+5. Fix loop: Developer → compile and test → Reviewer → fix → same Reviewer re-checks (continue that
+   agent with the new diff; open a fresh Reviewer only for final high-risk sign-off). A fix changes
+   behavior, so the re-check is given the fix's own build and test results rather than the ones from
+   before it. A fix round is one fix plus its re-check; the first review is not a round, and the
+   budget is per reviewed diff (one commit's change set), not per task. **Max 2 fix rounds** either
+   way — a review in the current context is capped the same as a Reviewer loop. The Orchestrator
+   never resets the count on its own: at the cap it reports the last verdict. With `comment` the
+   user may accept the open 问题 and commit; with `block` or `comment` the user may also authorize a
+   new round of fixes and restart the count, or change the scope, which re-enters rule 0 as a new
+   task with a fresh budget while the earlier rounds stay on record. An `approve` commits as usual.
 
 ### Review gate
 

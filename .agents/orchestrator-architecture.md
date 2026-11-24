@@ -372,7 +372,8 @@ User → Orchestrator → 直接读改 → 必要验证 → 完成
 
 ```
 Orchestrator → Researcher → Orchestrator 定方案 → Developer
-            → Orchestrator 集成/编译 → Reviewer → 修复 → 验收
+            → Orchestrator 集成/编译 → 测试执行（载体按改动选择：宿主/交叉编译/QEMU/真板）
+            → Reviewer → 修复 → 验收
 ```
 
 例：给现有驱动加功能、改初始化流程、加一个配置项。
@@ -387,7 +388,7 @@ Orchestrator
    → 集成与编译
    → Tester（执行）
    → Reviewer（必要时 Security Reviewer）
-   → 修复 → 复审 → 验收
+   → 修复（复跑受影响的测试）→ 复审 → 验收
 ```
 
 Tester 可以在开发前参与测试设计，也可以在实现后执行；不绑定单一阶段。
@@ -419,7 +420,7 @@ Tester 可以在开发前参与测试设计，也可以在实现后执行；不�
 - 已知结论：<Researcher/Architect 的关键结论>
 - 设计文档：docs/design/wip/<topic>.md（被 gitignore，不在 git status 中，请按此路径直接读取）
 - 约束：<不许改什么、必须用什么机制、构建板型>
-- Tester 证据：<级别/接缝表、反向验证表；Tester 跑过时必填>
+- 执行证据：<构建与测试命令及结果（宿主/交叉编译/QEMU/真板）；Tester 跑过时附级别/接缝表与反向验证表>
 
 ## 验收
 <Orchestrator 将如何检查：编译、测试、diff 范围、输出格式>
@@ -501,9 +502,9 @@ Low → 建议，合并 verdict 时按此折算（AGENTS.md 的 Review gate 也�
 ### 7.3 返工回路
 
 ```
-Developer 完成 → Orchestrator 检查 diff/编译 → Reviewer
+Developer 完成 → Orchestrator 检查 diff/编译/测试 → Reviewer
     → 有"严重"或必须处理的"问题"？
-        是 → Developer 修复 → 重新编译 → 同一 Reviewer 复核
+        是 → Developer 修复 → 重新编译并复跑受影响的测试 → 同一 Reviewer 复核
         否 → 验收
 ```
 
