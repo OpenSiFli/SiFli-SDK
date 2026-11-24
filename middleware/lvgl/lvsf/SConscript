@@ -20,6 +20,7 @@ if os.path.isdir(gui_widgets_dir):
 
 # add LittlevGL Sifli watch component code
 src = src + Glob('./*.c')
+src += [os.path.join(gui_widgets_dir, 'lvsf_glyph_bitmap.c')]
 if not (GetDepend('PKG_USING_UI_BINARY_LOADER') or GetDepend('PKG_USING_UI_XML_LOADER')):
     SrcRemove(src, 'lv_layout_loader.c')
 
