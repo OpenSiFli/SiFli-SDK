@@ -60,7 +60,9 @@ extern int __bss_end;
 #endif
 
 void SystemClock_Config(void);
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void aw9523_ensure_init(void);
+#endif
 
 #ifdef __cplusplus
 }

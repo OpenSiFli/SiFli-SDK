@@ -5,7 +5,9 @@
  */
 
 #include "bsp_board.h"
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 #include "aw9523.h"
+#endif
 
 #ifdef BSP_USING_RTTHREAD
     #include <rtthread.h>
@@ -17,12 +19,14 @@
 
 static int pdm_mic_ref;
 
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void aw9523_ensure_init(void)
 {
     static uint8_t inited = 0;
     if (!inited && aw9523_init() == 0)
         inited = 1;
 }
+#endif
 
 void BSP_GPIO_Set(int pin, int val, int is_porta)
 {
@@ -78,6 +82,7 @@ void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
 }
 
 
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void BSP_CAMERA_PowerUp(void)
 {
 #ifdef BSP_USING_DCMI
@@ -106,9 +111,11 @@ void BSP_CAMERA_PowerDown(void)
     /* Camera power down: DVP_PDN=1 (AW9523 P0_6). */
     aw9523_set_pin(AW9523_PIN_DVP_PDN, 1);
 }
+#endif
 
 #ifdef BSP_USING_RTTHREAD
 
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void BSP_SPK_PowerUp(void)
 {
     aw9523_ensure_init();
@@ -174,5 +181,6 @@ void BSP_MIC2_PowerDown(void)
 {
     pdm_mic_power(0);
 }
+#endif
 
 #endif /* BSP_USING_RTTHREAD */

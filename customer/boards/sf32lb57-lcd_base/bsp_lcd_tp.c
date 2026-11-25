@@ -5,7 +5,9 @@
  */
 
 #include "bsp_board.h"
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 #include "aw9523.h"
+#endif
 
 #define EPD_GMODE_PIN           (54)         // GPIO_A54
 
@@ -15,6 +17,7 @@
 
 extern void BSP_GPIO_Set(int pin, int val, int is_porta);
 
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void BSP_LCD_Reset(uint8_t high1_low0)
 {
     aw9523_ensure_init();
@@ -26,6 +29,8 @@ void BSP_LCD_PowerDown(void)
 {
     BSP_LCD_Reset(0);
 }
+#endif
+
 static void QSPI_PIN_Set(int pad, pin_function func, int flags, int hcpu)
 {
     HAL_PIN_Set(pad, func, flags, hcpu);
@@ -40,7 +45,7 @@ static void QSPI_PIN_Set(int pad, pin_function func, int flags, int hcpu)
 
 void BSP_LCD_PowerUp(void)
 {
-#if defined(BSP_USING_DCMI)
+#if defined(BSP_USING_DCMI) && defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
     /*
      * The panel and the DVP camera share PA32/PA33/PA43/PA44/PA45 on this
      * devkit, so only one of them can own those pads. Power the camera down
@@ -192,7 +197,9 @@ void BSP_LCD_PowerUp(void)
     /* Release the panel reset. On this board it is driven by the AW9523
        (P1_7) and drv_lcd never calls BSP_LCD_Reset() on its own, so without
        this the panel stays in reset and never answers the ID read. */
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
     BSP_LCD_Reset(1);
+#endif
 }
 
 void BSP_LCD_GMODE_Set(uint8_t high1_low0)
@@ -201,6 +208,7 @@ void BSP_LCD_GMODE_Set(uint8_t high1_low0)
 }
 
 
+#if defined(BSP_USING_AW9523) && !defined(SOC_BF0_ACPU)
 void BSP_TP_PowerUp(void)
 {
     aw9523_ensure_init();
@@ -223,6 +231,7 @@ void BSP_TP_Reset(uint8_t high1_low0)
     aw9523_ensure_init();
     aw9523_set_pin(AW9523_PIN_CTP_RST, high1_low0);
 }
+#endif
 
 uint32_t BSP_GET_DPI_AUX_VSYNC_PIN(void)
 {
