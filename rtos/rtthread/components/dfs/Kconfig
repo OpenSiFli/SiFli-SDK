@@ -149,9 +149,13 @@ if RT_USING_DFS
             config RT_DHARA_BBM_ENABLED
                 bool "Enable Dhara bac block management"
                 default n
-            config RT_DFS_ELM_DHARA_NOR_MODE                
+            config RT_DFS_ELM_DHARA_NOR_MODE
                 bool "NOR Mode"
+                depends on !RT_USING_MTD_DHARA && !RT_LFS_DHARA_ENABLED
                 default n
+                help
+                    Select the NOR backend only when no NAND-based Dhara
+                    consumer is enabled.
         endif
         endmenu
     endif
