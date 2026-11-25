@@ -50,6 +50,10 @@ if rtconfig.PLATFORM == 'mingw':
 if rtconfig.PLATFORM == 'armcc' and rtconfig.ARCH == 'arm' and rtconfig.CPU == 'arm926':
     ASFLAGS = ' --cpreproc'
 
+if GetDepend('RT_USING_SMP'):
+    assert rtconfig.PLATFORM == 'gcc' and rtconfig.CPU == 'cortex-m33', 'Experimental SMP requires Cortex-M33 GCC'
+    ASFLAGS += ' -DRT_USING_SMP'
+
 CPPPATH = [RTT_ROOT + '/libcpu/' + arch + '/' + rtconfig.CPU, RTT_ROOT + '/libcpu/' + arch + '/common']
 group = DefineGroup(rtconfig.CPU.upper(), src, depend = [''], CPPPATH = CPPPATH, ASFLAGS = ASFLAGS, LIBPATH=LIBPATH)
 

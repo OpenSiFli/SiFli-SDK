@@ -30,7 +30,12 @@
 #include <rthw.h>
 
 extern rt_list_t rt_thread_priority_table[RT_THREAD_PRIORITY_MAX];
+#ifdef RT_USING_SMP
+    #include <rtsmp.h>
+    #define rt_current_thread (rt_cpu_self()->current_thread)
+#else
 extern struct rt_thread *rt_current_thread;
+#endif
 extern rt_list_t rt_thread_defunct;
 extern struct rt_thread idle;
 #ifdef RT_USING_HOOK
@@ -106,6 +111,9 @@ __ROM_USED void rt_thread_exit(void)
     {
         /* insert to defunct thread list */
         rt_list_insert_after(&rt_thread_defunct, &(thread->tlist));
+#ifdef RT_USING_SMP
+        rt_smp_reaper_notify();
+#endif
     }
 
     /* enable interrupt */
@@ -170,6 +178,10 @@ static rt_err_t _rt_thread_init(struct rt_thread *thread,
     /* error and flags */
     thread->error = RT_EOK;
     thread->stat  = RT_THREAD_INIT;
+#ifdef RT_USING_SMP
+    thread->bind_cpu = 0; /* keep existing SDK services on HCPU by default */
+    thread->oncpu = RT_CPU_DETACHED;
+#endif
 
     /* initialize cleanup function and user data */
     thread->cleanup   = 0;
@@ -261,7 +273,16 @@ RTM_EXPORT(rt_thread_init);
  */
 __ROM_USED rt_thread_t rt_thread_self(void)
 {
+#ifdef RT_USING_SMP
+    /* CPU ID and its current-thread load must belong to one CPU residency.
+     * Otherwise an unbound thread can migrate between the two loads. */
+    rt_base_t level = rt_hw_local_irq_disable();
+    rt_thread_t thread = rt_current_thread;
+    rt_hw_local_irq_enable(level);
+    return thread;
+#else
     return rt_current_thread;
+#endif
 }
 RTM_EXPORT(rt_thread_self);
 #endif
@@ -325,6 +346,17 @@ __ROM_USED rt_err_t rt_thread_detach(rt_thread_t thread)
     RT_ASSERT(rt_object_get_type((rt_object_t)thread) == RT_Object_Class_Thread);
     RT_ASSERT(rt_object_is_systemobject((rt_object_t)thread));
 
+#ifdef RT_USING_SMP
+    rt_base_t lifecycle_level = rt_hw_interrupt_disable();
+    /* Running threads leave through rt_thread_exit. Remote forced deletion
+     * needs a stop acknowledgement protocol and is outside this prototype. */
+    if (thread->oncpu != RT_CPU_DETACHED)
+    {
+        rt_hw_interrupt_enable(lifecycle_level);
+        return -RT_EBUSY;
+    }
+#endif
+
     if ((thread->stat & RT_THREAD_STAT_MASK) != RT_THREAD_INIT)
     {
         /* remove from schedule */
@@ -348,10 +380,16 @@ __ROM_USED rt_err_t rt_thread_detach(rt_thread_t thread)
         lock = rt_hw_interrupt_disable();
         /* insert to defunct thread list */
         rt_list_insert_after(&rt_thread_defunct, &(thread->tlist));
+#ifdef RT_USING_SMP
+        rt_smp_reaper_notify();
+#endif
         /* enable interrupt */
         rt_hw_interrupt_enable(lock);
     }
 
+#ifdef RT_USING_SMP
+    rt_hw_interrupt_enable(lifecycle_level);
+#endif
     return RT_EOK;
 }
 RTM_EXPORT(rt_thread_detach);
@@ -424,6 +462,17 @@ __ROM_USED rt_err_t rt_thread_delete(rt_thread_t thread)
     RT_ASSERT(rt_object_get_type((rt_object_t)thread) == RT_Object_Class_Thread);
     RT_ASSERT(rt_object_is_systemobject((rt_object_t)thread) == RT_FALSE);
 
+#ifdef RT_USING_SMP
+    rt_base_t lifecycle_level = rt_hw_interrupt_disable();
+    /* Running threads leave through rt_thread_exit. Remote forced deletion
+     * needs a stop acknowledgement protocol and is outside this prototype. */
+    if (thread->oncpu != RT_CPU_DETACHED)
+    {
+        rt_hw_interrupt_enable(lifecycle_level);
+        return -RT_EBUSY;
+    }
+#endif
+
     if ((thread->stat & RT_THREAD_STAT_MASK) != RT_THREAD_INIT)
     {
         /* remove from schedule */
@@ -441,10 +490,16 @@ __ROM_USED rt_err_t rt_thread_delete(rt_thread_t thread)
 
     /* insert to defunct thread list */
     rt_list_insert_after(&rt_thread_defunct, &(thread->tlist));
+#ifdef RT_USING_SMP
+    rt_smp_reaper_notify();
+#endif
 
     /* enable interrupt */
     rt_hw_interrupt_enable(lock);
 
+#ifdef RT_USING_SMP
+    rt_hw_interrupt_enable(lifecycle_level);
+#endif
     return RT_EOK;
 }
 RTM_EXPORT(rt_thread_delete);
@@ -588,6 +643,10 @@ __ROM_USED rt_err_t rt_thread_control(rt_thread_t thread, int cmd, void *arg)
 
     switch (cmd)
     {
+#ifdef RT_USING_SMP
+    case RT_THREAD_CTRL_BIND_CPU:
+        return rt_smp_bind(thread, (rt_ubase_t)arg);
+#endif
     case RT_THREAD_CTRL_CHANGE_PRIORITY:
         /* disable interrupt */
         temp = rt_hw_interrupt_disable();
@@ -670,16 +729,16 @@ __ROM_USED rt_err_t rt_thread_suspend(rt_thread_t thread)
 
     RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread suspend:  %s\n", thread->name));
 
+    temp = rt_hw_interrupt_disable();
+
     if ((thread->stat & RT_THREAD_STAT_MASK) != RT_THREAD_READY)
     {
         RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread suspend: thread disorder, 0x%2x\n",
                                        thread->stat));
 
+        rt_hw_interrupt_enable(temp);
         return -RT_ERROR;
     }
-
-    /* disable interrupt */
-    temp = rt_hw_interrupt_disable();
 
     /* change thread stat */
     thread->stat = RT_THREAD_SUSPEND | (thread->stat & ~RT_THREAD_STAT_MASK);
@@ -713,27 +772,25 @@ __ROM_USED rt_err_t rt_thread_resume(rt_thread_t thread)
 
     RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread resume:  %s\n", thread->name));
 
+    temp = rt_hw_interrupt_disable();
+
     if ((thread->stat & RT_THREAD_STAT_MASK) != RT_THREAD_SUSPEND)
     {
         RT_DEBUG_LOG(RT_DEBUG_THREAD, ("thread resume: thread disorder, %d\n",
                                        thread->stat));
 
+        rt_hw_interrupt_enable(temp);
         return -RT_ERROR;
     }
-
-    /* disable interrupt */
-    temp = rt_hw_interrupt_disable();
 
     /* remove from suspend list */
     rt_list_remove(&(thread->tlist));
 
     rt_timer_stop(&thread->thread_timer);
 
-    /* enable interrupt */
-    rt_hw_interrupt_enable(temp);
-
-    /* insert to schedule ready list */
+    /* insert atomically with the state transition */
     rt_schedule_insert_thread(thread);
+    rt_hw_interrupt_enable(temp);
 
     RT_OBJECT_HOOK_CALL(rt_thread_resume_hook, (thread));
     return RT_EOK;
@@ -754,8 +811,17 @@ __ROM_USED void rt_thread_timeout(void *parameter)
 
     /* thread check */
     RT_ASSERT(thread != RT_NULL);
-    RT_ASSERT((thread->stat & RT_THREAD_STAT_MASK) == RT_THREAD_SUSPEND);
     RT_ASSERT(rt_object_get_type((rt_object_t)thread) == RT_Object_Class_Thread);
+#ifdef RT_USING_SMP
+    rt_base_t timeout_level = rt_hw_interrupt_disable();
+    if ((thread->stat & RT_THREAD_STAT_MASK) != RT_THREAD_SUSPEND)
+    {
+        rt_hw_interrupt_enable(timeout_level);
+        return;
+    }
+#else
+    RT_ASSERT((thread->stat & RT_THREAD_STAT_MASK) == RT_THREAD_SUSPEND);
+#endif
 
     /* set error number */
     thread->error = -RT_ETIMEOUT;
@@ -768,6 +834,9 @@ __ROM_USED void rt_thread_timeout(void *parameter)
 
     /* do schedule */
     rt_schedule();
+#ifdef RT_USING_SMP
+    rt_hw_interrupt_enable(timeout_level);
+#endif
 }
 RTM_EXPORT(rt_thread_timeout);
 

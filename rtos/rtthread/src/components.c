@@ -373,7 +373,9 @@ __ROM_USED void rt_application_init(void)
 
 __ROM_USED int rtthread_startup(void)
 {
-    rt_hw_interrupt_disable();
+    /* Startup masks only this CPU. A global lock cannot be carried into
+     * the first PendSV, which completes on a different execution stack. */
+    rt_hw_local_irq_disable();
 
     /* board level initialization
      * NOTE: please initialize heap inside board initialization.

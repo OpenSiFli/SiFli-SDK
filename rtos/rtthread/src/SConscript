@@ -3,6 +3,10 @@ Import('rtconfig')
 from building import *
 
 src = Glob('*.c')
+if GetDepend('RT_USING_SMP'):
+    SrcRemove(src, ['scheduler.c'])
+else:
+    SrcRemove(src, ['scheduler_smp.c'])
 
 CPPPATH = [RTT_ROOT + '/include']
 

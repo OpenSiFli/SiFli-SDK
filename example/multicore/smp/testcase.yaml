@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: Apache-2.0
+tests:
+  - id: smp.console
+    description: Dual-core IPC, heap handoff, FP migration, and thread reclamation.
+    harness: console
+    project_dir: project
+    tags: [smp, smoke]
+    platform_allow: [dpi-hdk_lb57gyd7n6_epd_hcpu]
+    timeout: 120
+    harness_config:
+      record:
+        # One match owns the whole run. Separate ordered patterns can borrow a
+        # missing result from the next boot. Reject any earlier SMP marker and
+        # any repeated BEGIN, failed RESULT, or FAIL before the terminal PASS.
+        # These totals belong to the example's default 32-round configuration;
+        # elapsed ticks depend on the selected memory policy and clock.
+        - regex: |-
+            (?xms)\A
+            (?:(?!SMP_(?:BEGIN|RESULT|PASS|FAIL)).)*?
+            ^SMP_BEGIN\r*\n
+            (?:(?!SMP_(?:BEGIN|RESULT|PASS|FAIL)).)*?
+            ^(?:msh[ ]/?>)?SMP_RESULT[ ]rounds=32[ ]threads=64[ ]migrations=2048
+            [ ]errors=0[ ]heap_restored=1[ ]cpus=3[ ]ticks=[0-9]+\r*\n
+            ^SMP_PASS\r*\n
