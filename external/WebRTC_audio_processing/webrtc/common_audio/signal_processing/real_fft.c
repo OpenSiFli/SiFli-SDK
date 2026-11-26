@@ -22,7 +22,11 @@
 #endif
 #include "webrtc_mem.h"
 
+#if BF0_ACPU
+#undef AUDIO_MEM_ALLOC
+#else
 #define AUDIO_MEM_ALLOC 1
+#endif
 //#define MALLOC_EVERYTIME   1
 
 struct RealFFT

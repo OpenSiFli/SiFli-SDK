@@ -33,11 +33,19 @@
     #include "mp3dec.h"
     #include "libhelix_acpu.h"
 #endif
+#if ACPU_USE_APP_HEAP
+    #if !RT_USING_MEMHEAP || !RT_USING_MEMHEAP_AS_HEAP
+        #error "should config RT_USING_MEMHEAP && RT_USING_MEMHEAP_AS_HEAP"
+    #endif
+#endif
 
 static struct rt_semaphore acpu_call_hcpu_sema;
 static rt_mailbox_t g_call_mb;
 static acpu_ctrl_ipc_msg_t *p_received_msg;
 static struct rt_mutex s_ah_ipc_tx_mutex;
+#if ACPU_USE_APP_HEAP
+    static struct rt_memheap app_heap;
+#endif
 #ifdef DRV_EPIC_NEW_API
     static rt_mailbox_t g_epic_mb;
 #endif /* DRV_EPIC_NEW_API */
@@ -144,6 +152,7 @@ static void *req_hcpu_run_task(uint8_t task_name, void *param, uint32_t param_si
     return (void *)msg.ret_value;
 }
 
+#if !ACPU_USE_APP_HEAP
 void *acpu_call_hcpu_malloc(uint32_t size)
 {
     return req_hcpu_run_task(HCPU_TASK_MALLOC, (void *)size, sizeof(size), NULL);
@@ -167,6 +176,7 @@ void *acpu_call_hcpu_realloc(void *address, uint32_t newsize)
 {
     return req_hcpu_run_task(HCPU_TASK_REALLOC, address, newsize, NULL);
 }
+#endif
 
 void acpu_printf(const char *fmt, ...)
 {
@@ -178,6 +188,60 @@ void acpu_printf(const char *fmt, ...)
     print_buffer[128 - 1] = '\0';
 
     req_hcpu_run_task(HCPU_TASK_PRINTF, print_buffer, sizeof(print_buffer), NULL);
+}
+
+void *acpu_app_malloc(uint32_t size)
+{
+#if ACPU_USE_APP_HEAP
+    void *p = rt_malloc(size);
+    if (!p)
+    {
+        acpu_printf("no mem s=%d\n", size);
+    }
+    return p;
+#else
+    return acpu_call_hcpu_malloc(size);
+#endif
+}
+
+void *acpu_app_calloc(uint32_t c, uint32_t n)
+{
+#if ACPU_USE_APP_HEAP
+    void *p = rt_calloc(c, n);
+    if (!p)
+    {
+        acpu_printf("no mem s=%d\n", c * n);
+    }
+    return p;
+#else
+    return acpu_call_hcpu_calloc(c, n);
+#endif
+}
+
+void acpu_app_free(void *p)
+{
+    if (!p)
+        return;
+
+#if ACPU_USE_APP_HEAP
+    rt_free(p);
+#else
+    acpu_call_hcpu_free(p);
+#endif
+}
+
+void *acpu_app_realloc(void *ptr, rt_size_t newsize)
+{
+#if ACPU_USE_APP_HEAP
+    void *p = rt_realloc(ptr, newsize);
+    if (newsize > 0 && !p)
+    {
+        acpu_printf("no new mem s=%d\n", newsize);
+    }
+    return p;
+#else
+    return acpu_call_hcpu_realloc(ptr, newsize);
+#endif
 }
 
 void acpu_send_assert(const char *file, int line)
@@ -220,7 +284,32 @@ void acpu_send_result(uint32_t err_code, uint32_t ret_value)
     acpu_send_result2(p_received_msg, err_code, ret_value);
 }
 
+static void print_heap_info()
+{
+#ifdef RT_USING_MEMHEAP
+    int maxlen;
+    struct rt_memheap *mh;
+    struct rt_list_node *node;
+    const char *item_title = "memheap";
+    struct rt_object_information *info = rt_object_get_information(RT_Object_Class_MemHeap);
+    struct rt_list_node *list = &info->object_list;
+    acpu_printf(" heap name | pool size | max used size | available size\n");
+    for (node = list->next; node != list; node = node->next)
+    {
+        mh = (struct rt_memheap *)rt_list_entry(node, struct rt_object, list);
 
+        acpu_printf("%s - %d - %d - %d\n",
+                    mh->parent.name,
+                    mh->pool_size,
+                    mh->max_used_size,
+                    mh->available_size);
+    }
+#else
+    extern rt_uint32_t used_sram_size(void);
+    extern rt_uint32_t max_sram_size(void);
+    acpu_printf("acpu mem total=%d used=%d\n", max_sram_size(), used_sram_size());
+#endif
+}
 
 __WEAK void acpu_main(uint8_t task_name, void *param)
 {
@@ -228,9 +317,6 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
     {
     case ACPU_TASK_0:
     {
-        extern rt_uint32_t used_sram_size(void);
-        extern rt_uint32_t max_sram_size(void);
-        acpu_printf("acpu mem total=%d used=%d\n", max_sram_size(), used_sram_size());
         acpu_send_result(0, (uint32_t)"task_0");
         break;
     }
@@ -383,8 +469,10 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
     }
     case ACPU_TASK_webrtc_downlink:
     {
+#if WEBRTC_DOWNLINK_IN_ACPU
         acpu_webrtc_downlink_parameter_t *arg = (acpu_webrtc_downlink_parameter_t *)param;
         int ret = acpu_webrtc_downlink(arg->thiz->agcInst, arg->in, arg->out, arg->samplerate);
+#endif
         acpu_send_result((uint32_t)0, 0);
         break;
     }
@@ -405,6 +493,22 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
 #endif
 
 #if LIBHELIX_RUN_IN_ACPU
+    case ACPU_TASK_MP3Init:
+    {
+        //    extern rt_base_t rt_hw_interrupt_disable(void);
+        //    rt_hw_interrupt_disable();
+        //    __asm("B .");
+
+        HMP3Decoder decode = MP3InitDecoder();
+        acpu_send_result(0, (uint32_t)decode);
+        break;
+    }
+    case ACPU_TASK_MP3Deinit:
+    {
+        MP3FreeDecoder((HMP3Decoder)param);
+        acpu_send_result(0, 0);
+        break;
+    }
     case ACPU_TASK_MP3Decode:
     {
         libhelix_decode_parameter_t *arg = (libhelix_decode_parameter_t *)param;
@@ -413,7 +517,13 @@ __WEAK void acpu_main(uint8_t task_name, void *param)
         break;
     }
 #endif
+    case ACPU_TASK_print_heap_info:
+    {
+        print_heap_info();
 
+        acpu_send_result(0, 0);
+        break;
+    }
     default:
     {
         //here will come sometimes
@@ -590,7 +700,7 @@ int main(void)
     g_call_mb = rt_mb_create("recv_req", ACPU_MAX_MAILBOX, RT_IPC_FLAG_FIFO);
     RT_ASSERT(g_call_mb);
 
-    result = rt_sem_init(&acpu_call_hcpu_sema, "a_call_h", ACPU2HCPU_CALL_MBOX_SIZE, RT_IPC_FLAG_FIFO);
+    result = rt_sem_init(&acpu_call_hcpu_sema, "a_call_h", 1/*ACPU2HCPU_CALL_MBOX_SIZE*/, RT_IPC_FLAG_FIFO);
     RT_ASSERT(RT_EOK == result);
 
 #ifdef DRV_EPIC_NEW_API

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <board.h>
 #include "rtthread.h"
+#include "bf0_pm.h"
 
 #if defined(SOC_BF0_HCPU)&&!defined(SOC_BF0_ACPU)
 #include "ipc_queue.h"
@@ -78,7 +79,9 @@ static void acpu_caller_entry(void *parameter)
         if (rt_mb_recv(g_call_mb, (rt_uint32_t *)&p_msg, RT_WAITING_FOREVER) == RT_EOK)
         {
             RT_ASSERT(p_msg);
-            if (p_msg->task_id == HCPU_TASK_MALLOC)
+            switch (p_msg->task_id)
+            {
+            case HCPU_TASK_MALLOC:
             {
                 size_t size = (size_t)p_msg->task_param;
                 void *p = rt_malloc(size);
@@ -88,32 +91,37 @@ static void acpu_caller_entry(void *parameter)
                     RT_ASSERT(0);
                 }
                 p_msg->ret_value = (uint32_t)p;
+                break;
             }
-            else if (p_msg->task_id == HCPU_TASK_REALLOC)
+            case HCPU_TASK_REALLOC:
             {
                 void *addr = p_msg->task_param;
                 uint32_t size = p_msg->task_param_size;
                 void *p = rt_realloc(addr, size);
-                if (!p)
+                if (!p && size > 0)
                 {
-                    rt_kprintf("realloc %d\n", size);
+                    rt_kprintf("realloc addr %d size=%d\n", addr, size);
                     RT_ASSERT(0);
                 }
                 p_msg->ret_value = (uint32_t)p;
+                break;
             }
-            else if (p_msg->task_id == HCPU_TASK_FREE)
+            case HCPU_TASK_FREE:
             {
                 rt_free((void *)p_msg->task_param);
                 p_msg->ret_value = 0;
+                break;
             }
-            else if (p_msg->task_id == HCPU_TASK_PRINTF)
+            case HCPU_TASK_PRINTF:
             {
                 rt_kprintf("%s\n", (char *)p_msg->task_param);
+                break;
             }
-            else
+            default:
             {
                 rt_kprintf("acpu call hcpu unknow %d\n", p_msg->task_id);
                 RT_ASSERT(0);
+            }
             }
 
             p_msg->is_rsp = 1;
@@ -214,7 +222,12 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
+    rt_pm_hw_device_start();
+#if defined(SF32LB57X)
+    pm_scenario_start(PM_SCENARIO_ACPU);
+#endif
 #endif /* RT_USING_PM */
+
 
     run_request();
 
@@ -270,6 +283,11 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 
 
 #ifdef RT_USING_PM
+#if defined(SF32LB57X)
+    pm_scenario_stop(PM_SCENARIO_ACPU);
+#endif
+
+    rt_pm_hw_device_stop();
     rt_pm_release(PM_SLEEP_MODE_IDLE);
 #endif /* RT_USING_PM */
 
@@ -365,7 +383,7 @@ MSH_CMD_EXPORT(acpu, acpu control);
 
 __ROM_USED int acpu_mem(int argc, char **argv)
 {
-    acpu_run_task(ACPU_TASK_0, NULL, 0, NULL);
+    acpu_run_task(ACPU_TASK_print_heap_info, NULL, 0, NULL);
     return 0;
 }
 MSH_CMD_EXPORT(acpu_mem, acpu mem);

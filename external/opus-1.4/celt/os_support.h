@@ -59,11 +59,9 @@ static OPUS_INLINE void *do_opus_alloc (size_t size, const char *file, int line)
 {
     void *p;
 #if defined(BF0_ACPU)
-    p  = malloc(size);
-    if (!p)
     {
-        extern void* acpu_call_hcpu_malloc(uint32_t size);
-        p = acpu_call_hcpu_malloc(size);
+        extern void* acpu_app_malloc(uint32_t size);
+        p = acpu_app_malloc(size);
     }
     return p;
 #else
@@ -96,17 +94,8 @@ static OPUS_INLINE void *opus_alloc_scratch (size_t size)
 static OPUS_INLINE void opus_free (void *ptr)
 {
 #if defined(BF0_ACPU)
-    if ((uint32_t)ptr >= 0x20200000)
-    {
-        //acpu
-        free(ptr);
-    }
-    else
-    {
-        //hcpu
-        extern void* acpu_call_hcpu_free(void *p);
-        acpu_call_hcpu_free(ptr);
-    }
+    extern void acpu_app_free(void *p);
+    acpu_app_free(ptr);
     return;
 #else
 #ifdef SOLUTION

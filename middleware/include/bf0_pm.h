@@ -85,6 +85,8 @@ typedef enum
     PM_SCENARIO_BLE,
     PM_SCENARIO_APP,
     PM_SCENARIO_RFTEST,
+    PM_SCENARIO_USB,
+    PM_SCENARIO_ACPU,
 } pm_scenario_name_t;
 
 #ifdef PM_DEBUG_PIN_ENABLED

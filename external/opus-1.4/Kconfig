@@ -1,3 +1,4 @@
 config PKG_LIB_OPUS
     bool "libopus"
+    default y if BF0_ACPU
     default n

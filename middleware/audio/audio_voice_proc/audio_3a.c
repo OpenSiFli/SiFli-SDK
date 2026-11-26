@@ -371,13 +371,46 @@ int16_t audio_aec_proc(void *aecmInst, aec_input_para_t *pt_input_para, uint16_t
 #endif
 
 #ifdef WEBRTC_AGC_FIX
+static int16_t downlink_agc_init(audio_3a_t *thiz, uint16_t samplerate)
+{
+    int32_t minLevel = 0;
+    int32_t maxLevel = 255;
+    uint8_t dlagcMode = kAgcModeFixedDigital; //kAgcModeFixedDigital;// 0, 1, 2, 3     unsupport adapitve mode
+
+    WebRtcAgcConfig agcConfig;
+
+    agcConfig.compressionGaindB = g_dl_agc_compression_gain_db;
+    agcConfig.limiterEnable = 1;
+    agcConfig.targetLevelDbfs = g_dl_agc_target_level_dbfs;
+    agcConfig.thrhold = g_dl_agc_thrhold;
+    thiz->dwlink_agcInst = WebRtcAgc_Create();
+    if (thiz->dwlink_agcInst != NULL)
+    {
+        if (0 != WebRtcAgc_Init(thiz->dwlink_agcInst, minLevel, maxLevel, dlagcMode, samplerate))
+        {
+            LOG_W("downlink WebRtcAgc_Init para error !\n");
+            return 1;
+        }
+
+        if (0 != WebRtcAgc_set_config(thiz->dwlink_agcInst, agcConfig))
+        {
+            LOG_W("dowmlink WebRtcAgc_set_config para error !\n");
+            return 2;
+        }
+        LOG_I("downlink WebRtc Agc Init finish !\n");
+    }
+    else
+    {
+        return 3;
+    }
+    return 0;
+}
 
 int16_t audio_agc_init(audio_3a_t *p_3a_env, uint16_t samplerate)
 {
     int32_t minLevel = 0;
     int32_t maxLevel = 255;
     uint8_t ulagcMode = kAgcModeFixedDigital; //kAgcModeFixedDigital;// 0, 1, 2, 3     unsupport adapitve mode
-    uint8_t dlagcMode = kAgcModeFixedDigital; //kAgcModeFixedDigital;// 0, 1, 2, 3     unsupport adapitve mode
 
     WebRtcAgcConfig agcConfig;
     agcConfig.compressionGaindB = g_ul_agc_compression_gain_db;
@@ -411,30 +444,7 @@ int16_t audio_agc_init(audio_3a_t *p_3a_env, uint16_t samplerate)
         return 3;
     }
 #if DOWN_LINK_AGC_ENABLE
-    agcConfig.compressionGaindB = g_dl_agc_compression_gain_db;
-    agcConfig.limiterEnable = 1;
-    agcConfig.targetLevelDbfs = g_dl_agc_target_level_dbfs;
-    agcConfig.thrhold = g_dl_agc_thrhold;
-    p_3a_env->dwlink_agcInst = WebRtcAgc_Create();
-    if (p_3a_env->dwlink_agcInst != NULL)
-    {
-        if (0 != WebRtcAgc_Init(p_3a_env->dwlink_agcInst, minLevel, maxLevel, dlagcMode, samplerate))
-        {
-            LOG_W("downlink WebRtcAgc_Init para error !\n");
-            return 1;
-        }
-
-        if (0 != WebRtcAgc_set_config(p_3a_env->dwlink_agcInst, agcConfig))
-        {
-            LOG_W("dowmlink WebRtcAgc_set_config para error !\n");
-            return 2;
-        }
-        LOG_I("downlink WebRtc Agc Init finish !\n");
-    }
-    else
-    {
-        return 3;
-    }
+    return downlink_agc_init(p_3a_env, samplerate);
 #endif
     return 0;
 }
@@ -480,6 +490,9 @@ void audio_3a_module_init(audio_3a_t *p_3a_env, uint32_t samplerate)
     arg.samplerate = samplerate;
     acpu_run_task(ACPU_TASK_webrtc_open, &arg, sizeof(arg), &error_code);
     RT_ASSERT(error_code == 0);
+#if !WEBRTC_DOWNLINK_IN_ACPU
+    downlink_agc_init(p_3a_env, samplerate);
+#endif
 #else // WEBRTC_RUN_IN_ACPU
 #ifdef WEBRTC_ANS_FIX
     ret = audio_ans_init(p_3a_env, samplerate);
@@ -553,14 +566,9 @@ void dc_cancellation_proc(int16_t spframe[160], uint16_t len)
 
 void audio_3a_data_process(audio_3a_t *p_3a_env, uint8_t *fifo, uint16_t fifo_size)
 {
-#ifdef AUDIO_MEM_ALLOC
-    int16_t *frame1 = audio_mem_malloc(160 * 2);
-    int16_t *frame2 = audio_mem_malloc(160 * 2);
-    RT_ASSERT(frame1 && frame2);
-#else
     int16_t frame1[160];
     int16_t frame2[160];
-#endif
+
     uint16_t getsize, putsize;
     int16_t  *in;
     int16_t  *out;
@@ -685,11 +693,6 @@ bypass_3a:
     {
         LOG_I("3a_w rbuf_out full\n");
     }
-
-#ifdef AUDIO_MEM_ALLOC
-    audio_mem_free(frame1);
-    audio_mem_free(frame2);
-#endif
 }
 
 void audio_3a_module_free(audio_3a_t *p_3a_env)
@@ -715,11 +718,11 @@ void audio_3a_module_free(audio_3a_t *p_3a_env)
 #endif
 #ifdef WEBRTC_AGC_FIX
     WebRtcAgc_Free(p_3a_env->agcInst);
-    LOG_I("3a_w WebRtcAgc_Free\n");
+    LOG_I("3a_w uplink WebRtcAgc_Free\n");
     p_3a_env->agcInst = NULL;
-#if DOWN_LINK_AGC_ENABLE
+#if DOWN_LINK_AGC_ENABLE && !WEBRTC_DOWNLINK_IN_ACPU
     WebRtcAgc_Free(p_3a_env->dwlink_agcInst);
-    LOG_I("3a_w WebRtcAgc_Free\n");
+    LOG_I("3a_w downlink WebRtcAgc_Free\n");
     p_3a_env->dwlink_agcInst = NULL;
 #endif
 #endif
@@ -948,13 +951,9 @@ void audio_3a_downlink(uint8_t *fifo, uint16_t size)
         return;
     }
 
-#ifdef AUDIO_MEM_ALLOC
-    uint8_t  *data1 = audio_mem_malloc(320);
-    uint8_t  *data2 = audio_mem_malloc(320);
-#else
     uint8_t  data1[320];
     uint8_t  data2[320];
-#endif
+
     uint8_t  *data_in, *data_out;
     if (rt_ringbuffer_space_len(p_3a_env->rbuf_dwlink) >= size)
     {
@@ -989,7 +988,7 @@ void audio_3a_downlink(uint8_t *fifo, uint16_t size)
         if (g_u16_test_agc == 1)
         {
             data_out = data2;
-#if WEBRTC_RUN_IN_ACPU
+#if WEBRTC_RUN_IN_ACPU && WEBRTC_DOWNLINK_IN_ACPU
             uint8_t error_code = 1;
             acpu_webrtc_downlink_parameter_t arg = {0};
             arg.thiz = p_3a_env;
@@ -1007,10 +1006,6 @@ void audio_3a_downlink(uint8_t *fifo, uint16_t size)
 #endif
         speaker_ring_put(data_out, p_3a_env->frame_len);
     }
-#ifdef AUDIO_MEM_ALLOC
-    audio_mem_free(data1);
-    audio_mem_free(data2);
-#endif
 }
 
 void audio_3a_uplink(uint8_t *fifo, uint16_t fifo_size, uint8_t is_mute, uint8_t is_bt_voice)

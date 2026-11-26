@@ -72,6 +72,12 @@
 HMP3Decoder MP3InitDecoder(void)
 {
 	MP3DecInfo *mp3DecInfo;
+#if 0 //LIBHELIX_RUN_IN_ACPU && defined(BF0_HCPU) && !defined(BF0_ACPU)
+    uint8_t error_code = 1;
+    mp3DecInfo = (MP3DecInfo *)acpu_run_task(ACPU_TASK_MP3Init, NULL, 0, &error_code);
+    RT_ASSERT(error_code == 0);
+    return mp3DecInfo;
+#endif
 
 	mp3DecInfo = AllocateBuffers();
 
@@ -96,6 +102,12 @@ void MP3FreeDecoder(HMP3Decoder hMP3Decoder)
 
 	if (!mp3DecInfo)
 		return;
+#if 0 //LIBHELIX_RUN_IN_ACPU && defined(BF0_HCPU) && !defined(BF0_ACPU)
+    uint8_t error_code = 1;
+    mp3DecInfo = (MP3DecInfo *)acpu_run_task(ACPU_TASK_MP3Deinit, mp3DecInfo, sizeof(mp3DecInfo), &error_code);
+    RT_ASSERT(error_code == 0);
+    return;
+#endif
 
 	FreeBuffers(mp3DecInfo);
 }
@@ -303,18 +315,19 @@ int MP3Decode(HMP3Decoder hMP3Decoder, unsigned char **inbuf, int *bytesLeft, sh
 	if (!mp3DecInfo || *bytesLeft < 32)
 		return ERR_MP3_NULL_POINTER;
 #if LIBHELIX_RUN_IN_ACPU && defined(BF0_HCPU) && !defined(BF0_ACPU)
-    uint8_t error_code = 1;
-    libhelix_decode_parameter_t arg = {0};
-    arg.hMP3Decoder = hMP3Decoder;
-    arg.inbuf = inbuf;
-    arg.bytesLeft = bytesLeft;
-    arg.outbuf = outbuf;
-    arg.useSize = useSize;
-    arg.is_seeking = is_seeking;
-    int ret = (int)acpu_run_task(ACPU_TASK_MP3Decode, &arg, sizeof(arg), &error_code);
-    RT_ASSERT(error_code == 0);
-    return ret;
+	uint8_t error_code = 1;
+	libhelix_decode_parameter_t arg = {0};
+	arg.hMP3Decoder = hMP3Decoder;
+	arg.inbuf = inbuf;
+	arg.bytesLeft = bytesLeft;
+	arg.outbuf = outbuf;
+	arg.useSize = useSize;
+	arg.is_seeking = is_seeking;
+	int ret = (int)acpu_run_task(ACPU_TASK_MP3Decode, &arg, sizeof(arg), &error_code);
+	RT_ASSERT(error_code == 0);
+	return ret;
 #endif
+
 	/* unpack frame header */
 	fhBytes = UnpackFrameHeader(mp3DecInfo, *inbuf);
 	if (fhBytes < 0)

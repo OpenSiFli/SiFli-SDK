@@ -28,6 +28,15 @@ extern "C" {
 #define ACPU_ERR_ASSERT     0xff
 
 #define ACPU_MAX_MAILBOX    3
+#define ACPU_USE_APP_HEAP   0
+
+#if ACPU_USE_APP_HEAP
+#define ACPU_APP_HEAP_SIZE  200000
+#else
+#define ACPU_APP_HEAP_SIZE  0
+#endif
+
+#define WEBRTC_DOWNLINK_IN_ACPU    0
 
 typedef struct
 {
@@ -89,6 +98,14 @@ typedef struct
     void *p_scaled_area;
 } epic_rl_arg_t;
 
+typedef struct
+{
+    uint32_t heap_addr;
+    uint32_t heap_size;
+    uint32_t is_acpu_ready;
+    uint32_t reserved;
+} hcpu_acpu_share_mem_t;
+
 /** ACPU task name macro */
 #define ACPU_TASK_INVALID                (0)
 #define ACPU_TASK_0                      (1)
@@ -112,6 +129,11 @@ typedef struct
 #define ACPU_TASK_webrtc_uplink          (19)
 #define ACPU_TASK_webrtc_downlink        (20)
 #define ACPU_TASK_MP3Decode              (21)
+#define ACPU_TASK_MP3Init                (22)
+#define ACPU_TASK_MP3Deinit              (23)
+#define ACPU_TASK_print_heap_info        (24)
+
+
 
 
 /** HCPU task name */

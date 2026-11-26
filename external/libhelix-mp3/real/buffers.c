@@ -49,17 +49,28 @@
 #include <string.h>
 #include "coder.h"
 
-#ifdef AUDIO
-#include "audio_mem.h"
+#if LIBHELIX_RUN_IN_ACPU
+    #include "acpu_ctrl.h"
+    #include "libhelix_acpu.h"
+#endif
+
 #undef malloc
 #undef free
-#define malloc audio_mem_malloc
-#define free audio_mem_free
+
+#if LIBHELIX_RUN_IN_ACPU && defined(BF0_ACPU)
+    extern void *acpu_app_malloc(uint32_t size);
+    extern void acpu_app_free(void *p);
+    #define malloc acpu_app_malloc
+    #define free   acpu_app_free
 #else
-#undef malloc
-#undef free
-#define malloc rt_malloc
-#define free rt_free
+    #ifdef AUDIO
+        #include "audio_mem.h"
+        #define malloc audio_mem_malloc
+        #define free audio_mem_free
+    #else
+        #define malloc rt_malloc
+        #define free rt_free
+    #endif
 #endif
 
 /**************************************************************************************

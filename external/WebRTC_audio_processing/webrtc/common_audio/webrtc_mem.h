@@ -16,24 +16,15 @@
     #undef free
     #undef calloc
     #undef realloc
-    extern void *acpu_call_hcpu_malloc(uint32_t size);
-    extern void acpu_call_hcpu_free(void *p);
-    extern void *acpu_call_hcpu_calloc(uint32_t count, uint32_t size);
-    extern void *acpu_call_hcpu_realloc(void *address, uint32_t newsize);
+    extern void *acpu_app_malloc(uint32_t size);
+    extern void acpu_app_free(void *p);
+    extern void *acpu_app_calloc(uint32_t count, uint32_t size);
+    extern void *acpu_app_realloc(void *address, uint32_t newsize);
 
     extern void acpu_printf(const char *fmt, ...);
     static inline void *webrtc_acpu_malloc(uint32_t size)
     {
-#ifdef SOC_SF32LB58X
-        void *p = rt_malloc(size);
-#else
-        void *p = acpu_call_hcpu_malloc(size);
-#endif
-        if (!p)
-        {
-            acpu_printf("acpu malloc failed\n");
-            RT_ASSERT(0);
-        }
+        void *p = acpu_app_malloc(size);
         return p;
     }
     static inline void *webrtc_acpu_calloc(uint32_t c, uint32_t size)
@@ -47,27 +38,14 @@
     }
     static inline void *webrtc_acpu_realloc(void *m, uint32_t size)
     {
-#ifdef SOC_SF32LB58X
-        void *p = rt_realloc(m, size);
-#else
-        void *p = acpu_call_hcpu_realloc(m, size);
-#endif
-        if (!p && (m != NULL) && (size != 0))
-        {
-            acpu_printf("acpu realloc failed\n");
-            RT_ASSERT(0);
-        }
+        void *p = acpu_app_realloc(m, size);
         return p;
     }
     static inline void webrtc_acpu_free(void *p)
     {
         if (p)
         {
-#ifdef SOC_SF32LB58X
-            rt_free(p);
-#else
-            acpu_call_hcpu_free(p);
-#endif
+            acpu_app_free(p);
         }
     }
     #define malloc(size)    webrtc_acpu_malloc(size)

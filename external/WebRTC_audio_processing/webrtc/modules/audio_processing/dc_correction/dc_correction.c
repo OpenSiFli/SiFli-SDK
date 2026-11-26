@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2026 SiFli Technologies(Nanjing) Co., Ltd
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "webrtc/modules/audio_processing/dc_correction/dc_correction.h"
 
 #include <assert.h>
@@ -41,7 +47,7 @@ int DcCorrection_Init(void *dcInst, int bypass)
     sst->frameCnt = 0;
     sst->dc_sum = 0;
 
-    return 1;
+    return 0;
 }
 
 void DcCorrection_Process(void *dcInst, const int16_t *input, int16_t *output, int16_t nrOfSamples)
